@@ -1,0 +1,739 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "lastUpdated": "2025-12-01T12:00:00Z",
+    "categories": {
+      "compra-venda": {
+        "eletronicos": "Eletrônicos",
+        "livros": "Livros",
+        "moveis": "Móveis",
+        "vestuario": "Vestuário",
+        "esportes": "Esportes",
+        "outros": "Outros"
+      },
+      "achados-perdidos": {
+        "perdido": "Perdido",
+        "encontrado": "Encontrado"
+      },
+      "caronas": {
+        "oferecendo": "Oferecendo Carona",
+        "procurando": "Procurando Carona"
+      },
+      "eventos": {
+        "academico": "Acadêmico",
+        "social": "Social",
+        "esportes": "Esportes",
+        "workshop": "Workshop",
+        "palestra": "Palestra"
+      },
+      "moradia": {
+        "aluga": "Para Alugar",
+        "procura": "Procurando"
+      },
+      "oportunidades": {
+        "estagio": "Estágio",
+        "trabalho": "Trabalho",
+        "aulas": "Aulas",
+        "freelancer": "Freelancer",
+        "outro": "Outro"
+      }
+    },
+    "conditions": ["Novo", "Seminovo", "Bom estado", "Excelente estado"]
+  },
+  "compra-venda": [
+    {
+      "id": 1,
+      "title": "Notebook Dell Inspiron i5 - 8ª geração, 8GB RAM, SSD 256GB",
+      "category": "eletronicos",
+      "price": "R$ 1.800,00",
+      "priceNumeric": 1800,
+      "condition": "Bom estado",
+      "emoji": "💻",
+      "description": "Notebook em ótimo estado, pouco uso. Intel Core i5 8ª geração, 8GB RAM, SSD 256GB. Tela 15.6\" Full HD. Bateria com boa duração. Sem marcas de uso.",
+      "images": [
+        "https://images.unsplash.com/photo-1588872657840-790ff3bde4c5?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&h=500&fit=crop"
+      ],
+      "author": "Lucas Martins",
+      "authorId": "user_001",
+      "authorAvatar": "https://i.pravatar.cc/150?img=1",
+      "rating": 4.9,
+      "verified": true,
+      "timestamp": "2 horas",
+      "timestampDate": "2025-12-01T10:00:00Z",
+      "likes": 156,
+      "comments": 23,
+      "views": 342,
+      "location": "Campus Central",
+      "contact": {
+        "phone": "(62) 99999-1111",
+        "whatsapp": "(62) 99999-1111"
+      },
+      "specifications": {
+        "processador": "Intel Core i5 8ª geração",
+        "memoria": "8GB RAM",
+        "armazenamento": "SSD 256GB",
+        "tela": "15.6\" Full HD",
+        "bateria": "Até 6 horas"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Livro Cálculo Vol.1 - James Stewart (8ª Edição) - Excelente estado",
+      "category": "livros",
+      "price": "R$ 120,00",
+      "priceNumeric": 120,
+      "condition": "Excelente estado",
+      "emoji": "📚",
+      "description": "Livro de Cálculo Volume 1 do James Stewart, 8ª edição. Excelente estado de conservação, sem marcações ou desgastes. Ideal para estudantes de Engenharia e Matemática.",
+      "images": [
+        "https://images.unsplash.com/photo-1507842217343-583f20270319?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1543002588-d83cedbc4bfe?w=500&h=500&fit=crop"
+      ],
+      "author": "Maria Souza",
+      "authorId": "user_002",
+      "authorAvatar": "https://i.pravatar.cc/150?img=11",
+      "rating": 4.7,
+      "verified": true,
+      "timestamp": "2 horas",
+      "timestampDate": "2025-12-01T10:00:00Z",
+      "likes": 89,
+      "comments": 12,
+      "views": 234,
+      "location": "Biblioteca Central",
+      "contact": {
+        "phone": "(62) 98888-2222",
+        "whatsapp": "(62) 98888-2222"
+      },
+      "specifications": {
+        "autor": "James Stewart",
+        "edicao": "8ª",
+        "volume": "1",
+        "paginas": "1000",
+        "idioma": "Português"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Sofá 3 Lugares - Cinza Claro",
+      "category": "moveis",
+      "price": "R$ 450,00",
+      "priceNumeric": 450,
+      "condition": "Seminovo",
+      "emoji": "🛋️",
+      "description": "Sofá 3 lugares em cinza claro, seminovo, muito bem conservado. Sem manchas ou defeitos. Medidas: 2,10m de comprimento. Perfeito para sala de estar.",
+      "images": [
+        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500&h=500&fit=crop"
+      ],
+      "author": "João Santos",
+      "authorId": "user_003",
+      "authorAvatar": "https://i.pravatar.cc/150?img=3",
+      "rating": 4.7,
+      "verified": true,
+      "timestamp": "3 dias",
+      "timestampDate": "2025-11-28T10:00:00Z",
+      "likes": 45,
+      "comments": 8,
+      "views": 156,
+      "location": "Bairro Central",
+      "contact": {
+        "phone": "(62) 97777-3333",
+        "whatsapp": "(62) 97777-3333"
+      },
+      "specifications": {
+        "cor": "Cinza Claro",
+        "lugares": "3",
+        "comprimento": "2,10m",
+        "material": "Tecido",
+        "estado": "Seminovo"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Jaqueta de Couro - Tamanho M",
+      "category": "vestuario",
+      "price": "R$ 120,00",
+      "priceNumeric": 120,
+      "condition": "Bom estado",
+      "emoji": "🧥",
+      "description": "Jaqueta de couro legítimo, tamanho M, cor preta. Bem conservada, sem defeitos. Perfeita para o inverno. Marca reconhecida.",
+      "images": [
+        "https://images.unsplash.com/photo-1551028719-00167b16ebc5?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1520975867468-30ee46944675?w=500&h=500&fit=crop"
+      ],
+      "author": "Ana Costa",
+      "authorId": "user_004",
+      "authorAvatar": "https://i.pravatar.cc/150?img=4",
+      "rating": 4.6,
+      "verified": true,
+      "timestamp": "5 dias",
+      "timestampDate": "2025-11-26T10:00:00Z",
+      "likes": 67,
+      "comments": 15,
+      "views": 198,
+      "location": "Setor Oeste",
+      "contact": {
+        "phone": "(62) 96666-4444",
+        "whatsapp": "(62) 96666-4444"
+      },
+      "specifications": {
+        "tamanho": "M",
+        "cor": "Preta",
+        "material": "Couro Legítimo",
+        "marca": "Premium",
+        "estado": "Bom estado"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Fone Bluetooth Sony - WH-CH720N",
+      "category": "eletronicos",
+      "price": "R$ 350,00",
+      "priceNumeric": 350,
+      "condition": "Novo",
+      "emoji": "🎧",
+      "description": "Fone Bluetooth Sony WH-CH720N, novo, lacrado. Cancelamento de ruído ativo, bateria de até 35 horas. Qualidade de som premium.",
+      "images": [
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=500&h=500&fit=crop"
+      ],
+      "author": "Pedro Oliveira",
+      "authorId": "user_005",
+      "authorAvatar": "https://i.pravatar.cc/150?img=5",
+      "rating": 5.0,
+      "verified": true,
+      "timestamp": "6 horas",
+      "timestampDate": "2025-12-01T06:00:00Z",
+      "likes": 234,
+      "comments": 31,
+      "views": 567,
+      "location": "Campus Central",
+      "contact": {
+        "phone": "(62) 95555-5555",
+        "whatsapp": "(62) 95555-5555"
+      },
+      "specifications": {
+        "marca": "Sony",
+        "modelo": "WH-CH720N",
+        "tipo": "Over-ear",
+        "bateria": "35 horas",
+        "cancelamento": "Ativo"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Livro - O Poder do Hábito",
+      "category": "livros",
+      "price": "R$ 45,00",
+      "priceNumeric": 45,
+      "condition": "Seminovo",
+      "emoji": "📖",
+      "description": "Livro 'O Poder do Hábito' de Charles Duhigg. Seminovo, poucas marcações. Ótima leitura para desenvolvimento pessoal e profissional.",
+      "images": [
+        "https://images.unsplash.com/photo-150784272343-583f20270319?w=500&h=500&fit=crop"
+      ],
+      "author": "Carla Mendes",
+      "authorId": "user_006",
+      "authorAvatar": "https://i.pravatar.cc/150?img=6",
+      "rating": 4.8,
+      "verified": false,
+      "timestamp": "2 dias",
+      "timestampDate": "2025-11-29T10:00:00Z",
+      "likes": 56,
+      "comments": 9,
+      "views": 145,
+      "location": "Campus Central",
+      "contact": {
+        "phone": "(62) 94444-6666",
+        "whatsapp": "(62) 94444-6666"
+      },
+      "specifications": {
+        "autor": "Charles Duhigg",
+        "genero": "Desenvolvimento Pessoal",
+        "paginas": "408",
+        "idioma": "Português"
+      }
+    }
+  ],
+  "achados-perdidos": [
+    {
+      "id": 101,
+      "title": "Mochila Azul Perdida - Campus",
+      "type": "perdido",
+      "emoji": "🎒",
+      "description": "Mochila azul escuro perdida no campus. Contém documentos importantes e materiais de estudo. Marca Mochilete.",
+      "images": [
+        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&h=500&fit=crop"
+      ],
+      "location": "Biblioteca Central",
+      "author": "Felipe Costa",
+      "authorId": "user_007",
+      "authorAvatar": "https://i.pravatar.cc/150?img=7",
+      "timestamp": "3 horas",
+      "timestampDate": "2025-12-01T09:00:00Z",
+      "likes": 23,
+      "comments": 5,
+      "views": 89,
+      "contact": {
+        "phone": "(62) 93333-7777",
+        "whatsapp": "(62) 93333-7777"
+      }
+    },
+    {
+      "id": 102,
+      "title": "Óculos Pretos Encontrados",
+      "type": "encontrado",
+      "emoji": "👓",
+      "description": "Óculos pretos encontrados na entrada do RU. Marca Rayban. Quem perdeu, favor entrar em contato. Estão na secretaria.",
+      "images": [
+        "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500&h=500&fit=crop"
+      ],
+      "location": "Restaurante Universitário",
+      "author": "Beatriz Lima",
+      "authorId": "user_008",
+      "authorAvatar": "https://i.pravatar.cc/150?img=8",
+      "timestamp": "1 dia",
+      "timestampDate": "2025-11-30T10:00:00Z",
+      "likes": 45,
+      "comments": 12,
+      "views": 156,
+      "contact": {
+        "phone": "(62) 92222-8888",
+        "whatsapp": "(62) 92222-8888"
+      }
+    },
+    {
+      "id": 103,
+      "title": "Carteira Marrom Encontrada",
+      "type": "encontrado",
+      "emoji": "👛",
+      "description": "Carteira marrom encontrada no pátio. Contém documentos. Procure na secretaria do campus. Marca Couro Legítimo.",
+      "images": [
+        "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&h=500&fit=crop"
+      ],
+      "location": "Pátio Principal",
+      "author": "Roberto Dias",
+      "authorId": "user_009",
+      "authorAvatar": "https://i.pravatar.cc/150?img=9",
+      "timestamp": "2 dias",
+      "timestampDate": "2025-11-29T10:00:00Z",
+      "likes": 67,
+      "comments": 18,
+      "views": 234,
+      "contact": {
+        "phone": "(62) 91111-9999",
+        "whatsapp": "(62) 91111-9999"
+      }
+    }
+  ],
+  "caronas": [
+    {
+      "id": 201,
+      "title": "Carona para o Centro - Sábado",
+      "type": "oferecendo",
+      "emoji": "🚗",
+      "description": "Saindo do campus para o centro no sábado às 14h. Tenho 3 lugares disponíveis. Contribuição: R$ 10,00. Carro confortável e climatizado.",
+      "images": [
+        "https://images.unsplash.com/photo-1552820728-8ac41f1ce891?w=500&h=500&fit=crop"
+      ],
+      "departure": "Campus",
+      "destination": "Centro",
+      "date": "Sábado, 4 de dezembro",
+      "time": "14:00",
+      "author": "Lucas Martins",
+      "authorId": "user_010",
+      "authorAvatar": "https://i.pravatar.cc/150?img=10",
+      "available_seats": 3,
+      "timestamp": "2 horas",
+      "timestampDate": "2025-12-01T10:00:00Z",
+      "likes": 34,
+      "comments": 8,
+      "views": 123,
+      "contact": {
+        "phone": "(62) 90000-1111",
+        "whatsapp": "(62) 90000-1111"
+      },
+      "carDetails": {
+        "modelo": "Fiat Uno",
+        "cor": "Prata",
+        "placa": "ABC-1234",
+        "condicao": "Excelente"
+      }
+    },
+    {
+      "id": 202,
+      "title": "Carona Diária - Campus para Bairro X",
+      "type": "oferecendo",
+      "emoji": "🚙",
+      "description": "Faço carona diária de segunda a sexta. Saída às 7:30 da manhã. Valor: R$ 50/mês. Motorista responsável com experiência.",
+      "images": [
+        "https://images.unsplash.com/photo-1552820728-8ac41f1ce891?w=500&h=500&fit=crop"
+      ],
+      "departure": "Campus",
+      "destination": "Bairro X",
+      "date": "Segunda a Sexta",
+      "time": "07:30",
+      "author": "Maria Silva",
+      "authorId": "user_011",
+      "authorAvatar": "https://i.pravatar.cc/150?img=12",
+      "available_seats": 2,
+      "timestamp": "1 dia",
+      "timestampDate": "2025-11-30T10:00:00Z",
+      "likes": 89,
+      "comments": 23,
+      "views": 345,
+      "contact": {
+        "phone": "(62) 89999-2222",
+        "whatsapp": "(62) 89999-2222"
+      },
+      "carDetails": {
+        "modelo": "Chevrolet Onix",
+        "cor": "Branco",
+        "placa": "XYZ-5678",
+        "condicao": "Bom"
+      }
+    },
+    {
+      "id": 203,
+      "title": "Procuro Carona - Volta para Casa",
+      "type": "procurando",
+      "emoji": "🚕",
+      "description": "Procuro carona para voltar para casa no feriado. Saída segunda-feira à noite. Contribuo com combustível. Sou responsável e educado.",
+      "images": [
+        "https://images.unsplash.com/photo-1552820728-8ac41f1ce891?w=500&h=500&fit=crop"
+      ],
+      "departure": "Campus",
+      "destination": "Cidade Y",
+      "date": "Segunda-feira",
+      "time": "19:00",
+      "author": "João Santos",
+      "authorId": "user_012",
+      "authorAvatar": "https://i.pravatar.cc/150?img=13",
+      "available_seats": 1,
+      "timestamp": "3 horas",
+      "timestampDate": "2025-12-01T09:00:00Z",
+      "likes": 12,
+      "comments": 4,
+      "views": 56,
+      "contact": {
+        "phone": "(62) 88888-3333",
+        "whatsapp": "(62) 88888-3333"
+      },
+      "carDetails": null
+    }
+  ],
+  "eventos": [
+    {
+      "id": 301,
+      "title": "Festa de Integração - Calouros 2025",
+      "category": "social",
+      "emoji": "🎉",
+      "description": "Venha conhecer seus colegas! Haverá música ao vivo, comida e bebida. Entrada: R$ 20,00. Evento imperdível para os calouros!",
+      "images": [
+        "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&h=500&fit=crop"
+      ],
+      "date": "Sexta-feira, 5 de dezembro",
+      "dateTime": "2025-12-05T20:00:00Z",
+      "time": "20:00",
+      "location": "Quadra Poliesportiva",
+      "author": "Centro Acadêmico",
+      "authorId": "org_001",
+      "authorAvatar": "https://i.pravatar.cc/150?img=14",
+      "attending": 234,
+      "timestamp": "2 dias",
+      "timestampDate": "2025-11-29T10:00:00Z",
+      "likes": 156,
+      "comments": 45,
+      "views": 567,
+      "contact": {
+        "phone": "(62) 87777-4444",
+        "whatsapp": "(62) 87777-4444"
+      },
+      "eventDetails": {
+        "preco": "R$ 20,00",
+        "duracao": "4 horas",
+        "capacidade": "500 pessoas",
+        "atracao": "Banda ao vivo"
+      }
+    },
+    {
+      "id": 302,
+      "title": "Workshop: Práticas Sustentáveis no Campus Universitário",
+      "category": "workshop",
+      "emoji": "🌱",
+      "description": "Workshop com especialistas em sustentabilidade. Temas: reciclagem, economia de energia e práticas eco-friendly no campus. Entrada gratuita.",
+      "images": [
+        "https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=500&fit=crop"
+      ],
+      "date": "Quarta-feira, 3 de dezembro",
+      "dateTime": "2025-12-03T14:00:00Z",
+      "time": "14:00",
+      "location": "Auditório Principal",
+      "author": "Diretoria de Extensão",
+      "authorId": "org_002",
+      "authorAvatar": "https://i.pravatar.cc/150?img=15",
+      "attending": 89,
+      "timestamp": "4 dias",
+      "timestampDate": "2025-11-27T10:00:00Z",
+      "likes": 67,
+      "comments": 18,
+      "views": 234,
+      "contact": {
+        "phone": "(62) 86666-5555",
+        "whatsapp": "(62) 86666-5555"
+      },
+      "eventDetails": {
+        "preco": "Gratuito",
+        "duracao": "2 horas",
+        "capacidade": "150 pessoas",
+        "palestrante": "Dr. João Silva"
+      }
+    },
+    {
+      "id": 303,
+      "title": "Campeonato de Futsal",
+      "category": "esportes",
+      "emoji": "⚽",
+      "description": "Inscrições abertas para o campeonato de futsal. Equipes de 5 jogadores. Taxa: R$ 100,00 por equipe. Premiação para os vencedores!",
+      "images": [
+        "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1552667466-07d71e725e34?w=500&h=500&fit=crop"
+      ],
+      "date": "Próximo mês",
+      "dateTime": "2025-12-15T18:00:00Z",
+      "time": "18:00",
+      "location": "Ginásio",
+      "author": "Diretoria de Esportes",
+      "authorId": "org_003",
+      "authorAvatar": "https://i.pravatar.cc/150?img=16",
+      "attending": 45,
+      "timestamp": "1 semana",
+      "timestampDate": "2025-11-24T10:00:00Z",
+      "likes": 123,
+      "comments": 34,
+      "views": 456,
+      "contact": {
+        "phone": "(62) 85555-6666",
+        "whatsapp": "(62) 85555-6666"
+      },
+      "eventDetails": {
+        "preco": "R$ 100,00",
+        "duracao": "3 semanas",
+        "capacidade": "16 equipes",
+        "premiacao": "Troféu e medalhas"
+      }
+    }
+  ],
+  "moradia": [
+    {
+      "id": 401,
+      "title": "Aluga-se Quarto em Apartamento",
+      "type": "aluga",
+      "emoji": "🏠",
+      "description": "Quarto em apartamento bem localizado. Próximo ao campus. Cozinha compartilhada. Valor: R$ 600,00/mês. Sem taxa de condomínio.",
+      "images": [
+        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&h=500&fit=crop"
+      ],
+      "price": "R$ 600,00",
+      "priceNumeric": 600,
+      "location": "Bairro Central",
+      "author": "Ana Costa",
+      "authorId": "user_013",
+      "authorAvatar": "https://i.pravatar.cc/150?img=17",
+      "timestamp": "2 dias",
+      "timestampDate": "2025-11-29T10:00:00Z",
+      "likes": 78,
+      "comments": 14,
+      "views": 234,
+      "contact": {
+        "phone": "(62) 84444-7777",
+        "whatsapp": "(62) 84444-7777"
+      },
+      "propertyDetails": {
+        "tipo": "Apartamento",
+        "quartos": "1",
+        "banheiros": "1",
+        "area": "12m²",
+        "mobiliado": "Não",
+        "condicoes": "Cozinha compartilhada, Sem taxa de condomínio"
+      }
+    },
+    {
+      "id": 402,
+      "title": "Procuro Colega para Dividir Apartamento",
+      "type": "procura",
+      "emoji": "🏡",
+      "description": "Tenho apartamento 2 quartos e procuro colega para dividir. Valor: R$ 800,00 cada. Próximo ao campus. Cozinha e sala compartilhadas.",
+      "images": [
+        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=500&fit=crop"
+      ],
+      "price": "R$ 800,00",
+      "priceNumeric": 800,
+      "location": "Próximo ao Campus",
+      "author": "Pedro Oliveira",
+      "authorId": "user_014",
+      "authorAvatar": "https://i.pravatar.cc/150?img=18",
+      "timestamp": "3 dias",
+      "timestampDate": "2025-11-28T10:00:00Z",
+      "likes": 45,
+      "comments": 9,
+      "views": 156,
+      "contact": {
+        "phone": "(62) 83333-8888",
+        "whatsapp": "(62) 83333-8888"
+      },
+      "propertyDetails": {
+        "tipo": "Apartamento",
+        "quartos": "2",
+        "banheiros": "1",
+        "area": "50m²",
+        "mobiliado": "Parcialmente",
+        "condicoes": "Cozinha e sala compartilhadas"
+      }
+    },
+    {
+      "id": 403,
+      "title": "Aluga-se Kitnet Mobiliada",
+      "type": "aluga",
+      "emoji": "🏘️",
+      "description": "Kitnet mobiliada, completa. Água e luz inclusos. Próximo ao campus. Valor: R$ 700,00/mês. Disponível imediatamente.",
+      "images": [
+        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=500&fit=crop"
+      ],
+      "price": "R$ 700,00",
+      "priceNumeric": 700,
+      "location": "Zona Universitária",
+      "author": "Carla Mendes",
+      "authorId": "user_015",
+      "authorAvatar": "https://i.pravatar.cc/150?img=19",
+      "timestamp": "1 dia",
+      "timestampDate": "2025-11-30T10:00:00Z",
+      "likes": 92,
+      "comments": 21,
+      "views": 345,
+      "contact": {
+        "phone": "(62) 82222-9999",
+        "whatsapp": "(62) 82222-9999"
+      },
+      "propertyDetails": {
+        "tipo": "Kitnet",
+        "quartos": "1",
+        "banheiros": "1",
+        "area": "25m²",
+        "mobiliado": "Sim",
+        "condicoes": "Água e luz inclusos"
+      }
+    }
+  ],
+  "oportunidades": [
+    {
+      "id": 501,
+      "title": "Vaga de Estágio - Empresa de Tecnologia",
+      "category": "estagio",
+      "emoji": "💻",
+      "description": "Procuramos estagiários para área de desenvolvimento. Conhecimento em Python e JavaScript. Bolsa: R$ 1.500,00. Horário flexível.",
+      "images": [
+        "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=500&fit=crop"
+      ],
+      "company": "TechCorp",
+      "salary": "R$ 1.500,00",
+      "salaryNumeric": 1500,
+      "author": "RH TechCorp",
+      "authorId": "company_001",
+      "authorAvatar": "https://i.pravatar.cc/150?img=20",
+      "timestamp": "2 horas",
+      "timestampDate": "2025-12-01T10:00:00Z",
+      "likes": 234,
+      "comments": 56,
+      "views": 789,
+      "contact": {
+        "phone": "(62) 81111-0000",
+        "email": "rh@techcorp.com",
+        "website": "www.techcorp.com"
+      },
+      "jobDetails": {
+        "tipo": "Estágio",
+        "duracao": "6 meses",
+        "horario": "Flexível",
+        "requisitos": "Python, JavaScript, Git",
+        "beneficios": "Vale refeição, Vale transporte"
+      }
+    },
+    {
+      "id": 502,
+      "title": "Aulas Particulares de Matemática",
+      "category": "aulas",
+      "emoji": "📐",
+      "description": "Ofereço aulas particulares de matemática para alunos de ensino médio e superior. Valor: R$ 50,00/hora. Experiência de 5 anos.",
+      "images": [
+        "https://images.unsplash.com/photo-1516321318423-f06f70504c8a?w=500&h=500&fit=crop",
+        "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=500&h=500&fit=crop"
+      ],
+      "company": "Autônomo",
+      "salary": "R$ 50,00/hora",
+      "salaryNumeric": 50,
+      "author": "Felipe Costa",
+      "authorId": "user_016",
+      "authorAvatar": "https://i.pravatar.cc/150?img=21",
+      "timestamp": "1 dia",
+      "timestampDate": "2025-11-30T10:00:00Z",
+      "likes": 45,
+      "comments": 12,
+      "views": 167,
+      "contact": {
+        "phone": "(62) 80000-1111",
+        "whatsapp": "(62) 80000-1111"
+      },
+      "jobDetails": {
+        "tipo": "Aulas Particulares",
+        "duracao": "Por hora",
+        "horario": "Flexível",
+        "experiencia": "5 anos",
+        "especialidade": "Cálculo, Álgebra, Geometria"
+      }
+    },
+    {
+      "id": 503,
+      "title": "Procuro Freelancer - Desenvolvimento Web",
+      "category": "freelancer",
+      "emoji": "🌐",
+      "description": "Procuro desenvolvedor web para projeto. Conhecimento em React e Node.js. Valor a negociar. Projeto de 3 meses.",
+      "images": [
+        "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&h=500&fit=crop"
+      ],
+      "company": "Startup",
+      "salary": "A negociar",
+      "salaryNumeric": 0,
+      "author": "João Silva",
+      "authorId": "company_002",
+      "authorAvatar": "https://i.pravatar.cc/150?img=22",
+      "timestamp": "3 dias",
+      "timestampDate": "2025-11-28T10:00:00Z",
+      "likes": 67,
+      "comments": 18,
+      "views": 234,
+      "contact": {
+        "phone": "(62) 79999-2222",
+        "email": "contato@startup.com",
+        "website": "www.startup.com"
+      },
+      "jobDetails": {
+        "tipo": "Freelancer",
+        "duracao": "3 meses",
+        "horario": "Flexível",
+        "requisitos": "React, Node.js, MongoDB",
+        "escopo": "Desenvolvimento de plataforma web"
+      }
+    }
+  ]
+}

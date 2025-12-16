@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Publicação - KinoCampus</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .kc-create-post-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .kc-create-post-header {
+            background-color: var(--kc-surface-dark);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--kc-border-dark);
+        }
+
+        .kc-create-post-header h1 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 10px 0;
+            color: var(--kc-text-dark-primary);
+        }
+
+        .kc-create-post-header p {
+            color: var(--kc-text-dark-secondary);
+            margin: 0;
+        }
+
+        .kc-category-selection {
+            background-color: var(--kc-surface-dark);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--kc-border-dark);
+        }
+
+        .kc-category-selection h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 20px 0;
+            color: var(--kc-text-dark-primary);
+            font-size: 1.3em;
+        }
+
+        .kc-category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .kc-category-card {
+            background-color: var(--kc-background-dark);
+            border: 2px solid var(--kc-border-dark);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            text-decoration: none;
+            color: var(--kc-text-dark-primary);
+        }
+
+        .kc-category-card:hover {
+            border-color: var(--kc-primary-brand);
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(255, 107, 0, 0.2);
+            text-decoration: none;
+        }
+
+        .kc-category-card.selected {
+            border-color: var(--kc-primary-brand);
+            background-color: rgba(255, 107, 0, 0.1);
+        }
+
+        .kc-category-icon {
+            font-size: 3em;
+            color: var(--kc-primary-brand);
+            margin-bottom: 10px;
+        }
+
+        .kc-category-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .kc-category-description {
+            font-size: 0.85em;
+            color: var(--kc-text-dark-secondary);
+        }
+
+        .kc-form-section {
+            background-color: var(--kc-surface-dark);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--kc-border-dark);
+            display: none;
+        }
+
+        .kc-form-section.active {
+            display: block;
+        }
+
+        .kc-form-group {
+            margin-bottom: 20px;
+        }
+
+        .kc-form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--kc-text-dark-primary);
+        }
+
+        .kc-form-group input,
+        .kc-form-group textarea,
+        .kc-form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--kc-border-dark);
+            border-radius: 8px;
+            background-color: var(--kc-background-dark);
+            color: var(--kc-text-dark-primary);
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        .kc-form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .kc-form-group input:focus,
+        .kc-form-group textarea:focus,
+        .kc-form-group select:focus {
+            outline: none;
+            border-color: var(--kc-primary-brand);
+        }
+
+        .kc-form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .kc-image-upload {
+            border: 2px dashed var(--kc-border-dark);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .kc-image-upload:hover {
+            border-color: var(--kc-primary-brand);
+            background-color: rgba(255, 107, 0, 0.05);
+        }
+
+        .kc-image-upload i {
+            font-size: 3em;
+            color: var(--kc-text-dark-secondary);
+            margin-bottom: 10px;
+        }
+
+        .kc-form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+
+        .kc-btn-cancel {
+            background-color: var(--kc-surface-dark);
+            color: var(--kc-text-dark-primary);
+            border: 1px solid var(--kc-border-dark);
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            text-decoration: none;
+        }
+
+        .kc-btn-cancel:hover {
+            background-color: var(--kc-surface-dark-hover);
+        }
+
+        @media (max-width: 768px) {
+            .kc-category-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .kc-form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <!-- Header -->
+    <header class="kc-header">
+        <div class="kc-header-container">
+            <div class="kc-logo">
+<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+<span class="kc-logo-text">
+<span class="kc-logo-name">Kino<span>Campus</span></span>
+<span class="kc-logo-sub">Comunidade UFG</span>
+</span>
+</a>
+</div>
+
+            <nav class="kc-nav-links">
+                <a href="achados-perdidos.html">
+                    <i class="fas fa-search"></i>
+                    <span>Achados/Perdidos</span>
+                </a>
+                <a href="eventos.html">
+                    <i class="fas fa-calendar"></i>
+                    <span>Eventos</span>
+                </a>
+                <a href="moradia.html">
+                    <i class="fas fa-home"></i>
+                    <span>Moradia</span>
+                </a>
+                <a href="oportunidades.html">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Oportunidades</span>
+                </a>
+            </nav>
+
+            <div class="kc-search-bar">
+                <input id="searchInput" type="search" placeholder="Busque por itens, eventos, vagas na UFG...">
+                <button type="button" aria-label="Buscar">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+
+            <div class="kc-user-actions">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+                    <i class="fas fa-sun"></i>
+                </button>
+                <a href="#login" class="btn-login">Login/Cadastro</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="kc-create-post-page">
+        <!-- Header -->
+        <div class="kc-create-post-header">
+            <h1>
+                <i class="fas fa-plus-circle"></i>
+                Criar Nova Publicação
+            </h1>
+            <p>Compartilhe itens, serviços, eventos ou oportunidades com a comunidade UFG</p>
+        </div>
+
+        <!-- Category Selection -->
+        <div class="kc-category-selection">
+            <h2>
+                <i class="fas fa-th-large"></i>
+                Escolha a Categoria
+            </h2>
+            <div class="kc-category-grid">
+                <div class="kc-category-card" onclick="selectCategory('compra-venda', this)">
+                    <div class="kc-category-icon">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+                    <div class="kc-category-name">Compra e Venda</div>
+                    <div class="kc-category-description">Livros, eletrônicos, roupas e mais</div>
+                </div>
+
+                <div class="kc-category-card" onclick="selectCategory('caronas', this)">
+                    <div class="kc-category-icon">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <div class="kc-category-name">Caronas</div>
+                    <div class="kc-category-description">Ofereça ou procure caronas</div>
+                </div>
+
+                <div class="kc-category-card" onclick="selectCategory('eventos', this)">
+                    <div class="kc-category-icon">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="kc-category-name">Eventos</div>
+                    <div class="kc-category-description">Workshops, palestras e encontros</div>
+                </div>
+
+                <div class="kc-category-card" onclick="selectCategory('moradia', this)">
+                    <div class="kc-category-icon">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <div class="kc-category-name">Moradia</div>
+                    <div class="kc-category-description">Quartos, repúblicas e apartamentos</div>
+                </div>
+
+                <div class="kc-category-card" onclick="selectCategory('oportunidades', this)">
+                    <div class="kc-category-icon">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="kc-category-name">Oportunidades</div>
+                    <div class="kc-category-description">Estágios, empregos e freelances</div>
+                </div>
+
+                <div class="kc-category-card" onclick="selectCategory('achados-perdidos', this)">
+                    <div class="kc-category-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="kc-category-name">Achados e Perdidos</div>
+                    <div class="kc-category-description">Objetos encontrados ou perdidos</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Section (Initially Hidden) -->
+        <div class="kc-form-section" id="postForm">
+            <h2>
+                <i class="fas fa-edit"></i>
+                Detalhes da Publicação
+            </h2>
+
+            <form id="createPostForm" onsubmit="submitPost(event)">
+                <div class="kc-form-group">
+                    <label for="title">Título da Publicação *</label>
+                    <input type="text" id="title" placeholder="Ex: Livro Cálculo Vol.1 - James Stewart" required>
+                </div>
+
+                <div class="kc-form-group">
+                    <label for="description">Descrição *</label>
+                    <textarea id="description" placeholder="Descreva detalhadamente o que você está oferecendo..." required></textarea>
+                </div>
+
+                <div class="kc-form-row">
+                    <div class="kc-form-group">
+                        <label for="price">Preço (R$)</label>
+                        <input type="number" id="price" placeholder="0,00" step="0.01">
+                    </div>
+
+                    <div class="kc-form-group">
+                        <label for="condition">Condição</label>
+                        <select id="condition">
+                            <option value="">Selecione...</option>
+                            <option value="novo">Novo</option>
+                            <option value="seminovo">Seminovo</option>
+                            <option value="usado">Usado</option>
+                            <option value="excelente">Excelente Estado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="kc-form-group">
+                    <label for="location">Localização</label>
+                    <input type="text" id="location" placeholder="Ex: Campus Samambaia, Setor Universitário...">
+                </div>
+
+                <div class="kc-form-group">
+                    <label>Imagens</label>
+                    <div class="kc-image-upload" onclick="document.getElementById('imageInput').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Clique para adicionar imagens</p>
+                        <small>Máximo 5 imagens (JPG, PNG)</small>
+                    </div>
+                    <div id="imagePreview" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;"></div>
+                    <input type="file" id="imageInput" multiple accept="image/*" style="display: none;">
+                </div>
+
+                <div class="kc-form-group">
+                    <label>
+                        <input type="checkbox" id="sustainability">
+                        Esta publicação contribui para a sustentabilidade
+                    </label>
+                </div>
+
+                <div class="kc-form-actions">
+                    <a href="index.html" class="kc-btn-cancel">Cancelar</a>
+                    <button type="submit" class="kc-btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        Publicar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <nav class="kc-mobile-nav">
+        <a href="index.html">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="eventos.html">
+            <i class="fas fa-calendar"></i>
+            <span>Eventos</span>
+        </a>
+        <a href="create-post.html" class="kc-create-btn active">
+            <i class="fas fa-plus"></i>
+        </a>
+        <a href="caronas-feed.html">
+            <i class="fas fa-car"></i>
+            <span>Caronas</span>
+        </a>
+        <button class="kc-menu-toggle" onclick="openMobileMenu()">
+            <i class="fas fa-bars"></i>
+            <span>Menu</span>
+        </button>
+    </nav>
+
+    <!-- Mobile Menu Drawer -->
+    <div class="kc-mobile-menu-drawer" id="mobileMenuDrawer">
+        <div class="kc-mobile-menu-header">
+            <h3>Menu</h3>
+            <button onclick="closeMobileMenu()" class="kc-close-menu">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="kc-mobile-menu-content">
+            <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+            <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+            <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+            <a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+            <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+            <a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+            <hr>
+            <a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
+        </div>
+    </div>
+    <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+
+    <script src="script.js"></script>
+    <script src="search.js"></script>
+    <script>
+        let selectedModule = null;
+
+        function moduleToLabel(modulo) {
+            const map = {
+                'compra-venda': 'Compra e Venda',
+                'caronas': 'Caronas',
+                'eventos': 'Eventos',
+                'moradia': 'Moradia',
+                'oportunidades': 'Oportunidades',
+                'achados-perdidos': 'Achados/Perdidos'
+            };
+            return map[modulo] || modulo;
+        }
+
+        function moduleToEmoji(modulo) {
+            const map = {
+                'compra-venda': '🛍️',
+                'caronas': '🚗',
+                'eventos': '📅',
+                'moradia': '🏠',
+                'oportunidades': '💼',
+                'achados-perdidos': '🔎'
+            };
+            return map[modulo] || '✨';
+        }
+
+        function selectCategory(category, el) {
+            selectedModule = category;
+
+            // Remove selected class from all cards
+            document.querySelectorAll('.kc-category-card').forEach(card => card.classList.remove('selected'));
+            if (el) el.classList.add('selected');
+
+            // Show form
+            document.getElementById('postForm').classList.add('active');
+            document.getElementById('postForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function submitPost(event) {
+            event.preventDefault();
+
+            if (!selectedModule) {
+                showToast('Selecione uma categoria antes de publicar', 'error');
+                return;
+            }
+
+            const titulo = document.getElementById('title')?.value?.trim();
+            const descricao = document.getElementById('description')?.value?.trim();
+            const priceStr = document.getElementById('price')?.value;
+            const condicao = document.getElementById('condition')?.value || '';
+            const localizacao = document.getElementById('location')?.value?.trim() || '';
+            const sustentabilidade = !!document.getElementById('sustainability')?.checked;
+
+            if (!titulo || !descricao) {
+                showToast('Preencha título e descrição', 'error');
+                return;
+            }
+
+            const precoNum = priceStr ? Number(priceStr) : null;
+            const preco = Number.isFinite(precoNum) ? precoNum : null;
+
+            // Tentar ler até 5 imagens pequenas (DataURL). Se ficar grande demais, salva sem imagens.
+            const input = document.getElementById('imageInput');
+            const files = input?.files ? Array.from(input.files).slice(0, 5) : [];
+            const imagens = [];
+            const MAX_BYTES = 900 * 1024; // ~900KB por imagem (localStorage)
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) continue;
+                if (file.size > MAX_BYTES) continue;
+                const dataUrl = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result || ''));
+                    reader.onerror = () => resolve('');
+                    reader.readAsDataURL(file);
+                });
+                if (dataUrl) imagens.push(dataUrl);
+            }
+
+            const post = window.kcUserPosts?.create ? window.kcUserPosts.create({
+                modulo: selectedModule,
+                moduloLabel: moduleToLabel(selectedModule),
+                titulo,
+                descricao,
+                preco,
+                condicao,
+                localizacao,
+                sustentabilidade,
+                imagens,
+                emoji: moduleToEmoji(selectedModule),
+                autor: 'Você',
+                timestamp: 'Agora',
+                tags: titulo.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 8)
+            }) : null;
+
+            if (!post) {
+                showToast('Não foi possível salvar. Verifique se o script.js carregou.', 'error');
+                return;
+            }
+
+            showToast('Publicação criada! Abrindo detalhes…', 'info', 1800);
+            window.location.href = `product.html?id=${encodeURIComponent(post.id)}`;
+        }
+
+        // Preview simples das imagens (client-side)
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('imageInput');
+            const preview = document.getElementById('imagePreview');
+            if (!input || !preview) return;
+
+            input.addEventListener('change', () => {
+                preview.innerHTML = '';
+                const files = input.files ? Array.from(input.files).slice(0, 5) : [];
+                if (!files.length) return;
+
+                files.forEach(file => {
+                    if (!file.type.startsWith('image/')) return;
+
+                    const wrapper = document.createElement('div');
+                    wrapper.style.width = '72px';
+                    wrapper.style.height = '72px';
+                    wrapper.style.borderRadius = '10px';
+                    wrapper.style.overflow = 'hidden';
+                    wrapper.style.border = '1px solid var(--kc-border-dark)';
+                    wrapper.style.background = 'var(--kc-background-dark)';
+
+                    const img = document.createElement('img');
+                    img.alt = file.name;
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+
+                    const url = URL.createObjectURL(file);
+                    img.src = url;
+                    img.onload = () => URL.revokeObjectURL(url);
+
+                    wrapper.appendChild(img);
+                    preview.appendChild(wrapper);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

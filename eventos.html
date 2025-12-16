@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Eventos - KinoCampus</title>
+<link href="styles.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+</head>
+<body data-theme="light">
+<!-- Header -->
+<header class="kc-header">
+<div class="kc-header-container">
+<div class="kc-logo">
+<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+<span class="kc-logo-text">
+<span class="kc-logo-name">Kino<span>Campus</span></span>
+<span class="kc-logo-sub">Comunidade UFG</span>
+</span>
+</a>
+</div>
+<nav class="kc-nav-links">
+<a href="achados-perdidos.html">
+<i class="fas fa-search"></i>
+<span>Achados/Perdidos</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a href="moradia.html">
+<i class="fas fa-home"></i>
+<span>Moradia</span>
+</a>
+<a href="oportunidades.html">
+<i class="fas fa-briefcase"></i>
+<span>Oportunidades</span>
+</a>
+</nav>
+<div class="kc-search-bar">
+<input id="searchInput" onkeyup="filterPosts()" placeholder="Busque por eventos na UFG..." type="search"/>
+<button aria-label="Buscar" type="button">
+<i class="fas fa-search"></i>
+</button>
+</div>
+<div class="kc-user-actions">
+<button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+<i class="fas fa-sun"></i>
+</button>
+<a class="btn-login" href="#login">Login/Cadastro</a>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="kc-main-content">
+<!-- Feed Section -->
+<section class="kc-feed-section">
+<h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+<i class="fas fa-calendar"></i>
+                Eventos na UFG
+            </h2>
+<!-- Feed Tabs -->
+<div class="kc-feed-tabs">
+<a class="active" href="#">
+<i class="fas fa-fire"></i>
+<span>Todos</span>
+</a>
+<a href="#sustentabilidade">
+<i class="fas fa-leaf"></i>
+<span>Sustentabilidade</span>
+</a>
+<a href="#academicos">
+<i class="fas fa-graduation-cap"></i>
+<span>Acadêmicos</span>
+</a>
+<a href="#culturais">
+<i class="fas fa-theater-masks"></i>
+<span>Culturais</span>
+</a>
+<a href="#esportivos">
+<i class="fas fa-running"></i>
+<span>Esportivos</span>
+</a>
+<a href="#workshops">
+<i class="fas fa-chalkboard-teacher"></i>
+<span>Workshops</span>
+</a>
+</div>
+<!-- Feed List -->
+<div class="kc-feed-list">
+<!-- Event 1 - Workshop -->
+<article class="kc-card" data-post-id="29">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            👋
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eventos • Sustentabilidade • <a href="#">@oficial</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Amanhã</div>
+</div>
+<a class="kc-card__title" href="product.html?id=29">
+                                Workshop: Práticas Sustentáveis no Campus Universitário
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-gift"></i>
+                                Gratuito
+                                <small>com inscrição prévia</small>
+</div>
+<div class="kc-card__description-preview">
+                                Workshop prático sobre implementação de práticas sustentáveis no dia a dia universitário. Local: Auditório da Faculdade de Ciências Ambientais. Horário: 14h às 17h.
+                            </div>
+<div class="kc-card__author">
+<img alt="Centro Acadêmico" src="https://i.pravatar.cc/150?img=14"/>
+<span>Organizado por <strong>CA Ciências Ambientais</strong></span>
+<i class="fas fa-star"></i> 4.9
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>56</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=29#comments">
+<i class="fas fa-comment"></i>
+<span>7 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=29">
+                            Inscrever-se
+                        </a>
+</div>
+</article>
+<!-- Event 2 - Palestra -->
+<article class="kc-card" data-post-id="30">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            🎤
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eventos • Acadêmico • <a href="#">@oficial</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Próxima semana</div>
+</div>
+<a class="kc-card__title" href="product.html?id=30">
+                                Palestra: Inteligência Artificial e o Futuro do Trabalho
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-gift"></i>
+                                Gratuito
+                            </div>
+<div class="kc-card__description-preview">
+                                Palestra com o Prof. Dr. João Santos sobre as transformações no mercado de trabalho com a ascensão da IA. Auditório Central, 19h.
+                            </div>
+<div class="kc-card__author">
+<img alt="Instituto" src="https://i.pravatar.cc/150?img=15"/>
+<span>Organizado por <strong>Instituto de Informática</strong></span>
+<i class="fas fa-star"></i> 4.8
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>89</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=30#comments">
+<i class="fas fa-comment"></i>
+<span>15 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=30">
+                            Inscrever-se
+                        </a>
+</div>
+</article>
+<!-- Event 3 - Festival -->
+<article class="kc-card" data-post-id="31">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<img alt="Festival" src="https://via.placeholder.com/100x100/FF6B00/fff?text=Festival"/>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eventos • Cultural • <a href="#">@oficial</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Em 2 semanas</div>
+</div>
+<a class="kc-card__title" href="product.html?id=31">
+                                Festival Cultural UFG 2025 - Música, Arte e Diversidade
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-gift"></i>
+                                Gratuito
+                                <small>aberto ao público</small>
+</div>
+<div class="kc-card__description-preview">
+                                Três dias de apresentações musicais, exposições de arte, teatro e gastronomia. Praça Universitária, das 14h às 22h.
+                            </div>
+<div class="kc-card__author">
+<img alt="Reitoria" src="https://i.pravatar.cc/150?img=16"/>
+<span>Organizado por <strong>Pró-Reitoria de Extensão</strong></span>
+<i class="fas fa-star"></i> 5.0
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>142</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=31#comments">
+<i class="fas fa-comment"></i>
+<span>28 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=31">
+                            Mais Informações
+                        </a>
+</div>
+</article>
+<!-- Event 4 - Competição -->
+<article class="kc-card" data-post-id="32">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<img alt="Competição" src="https://via.placeholder.com/100x100/FFD700/333?text=Esporte"/>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eventos • Esportivo
+                                </div>
+<div class="kc-card__timestamp">Sábado</div>
+</div>
+<a class="kc-card__title" href="product.html?id=32">
+                                Torneio Interuniversitário de Futsal - Fase Classificatória
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-gift"></i>
+                                Gratuito
+                                <small>entrada livre</small>
+</div>
+<div class="kc-card__description-preview">
+                                Venha torcer pela equipe da UFG no torneio interuniversitário. Ginásio Poliesportivo, a partir das 9h.
+                            </div>
+<div class="kc-card__author">
+<img alt="Atlética" src="https://i.pravatar.cc/150?img=17"/>
+<span>Organizado por <strong>Atlética UFG</strong></span>
+<i class="fas fa-star"></i> 4.6
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>67</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=32#comments">
+<i class="fas fa-comment"></i>
+<span>12 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=32">
+                            Ver Detalhes
+                        </a>
+</div>
+</article>
+<!-- Event 5 - Feira -->
+<article class="kc-card" data-post-id="33">
+<span class="kc-cashback-badge">
+<i class="fas fa-leaf"></i> Evento Sustentável
+                    </span>
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            🎉
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eventos • Sustentabilidade • <a href="#">@oficial</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Sexta-feira</div>
+</div>
+<a class="kc-card__title" href="product.html?id=33">
+                                Feira de Troca de Materiais Acadêmicos
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-gift"></i>
+                                Gratuito
+                                <small>traga seus materiais</small>
+</div>
+<div class="kc-card__description-preview">
+                                Traga seus livros, apostilas e materiais acadêmicos usados e troque por outros que você precisa. Praça da Biblioteca Central, das 10h às 16h.
+                            </div>
+<div class="kc-card__author">
+<img alt="DCE" src="https://i.pravatar.cc/150?img=18"/>
+<span>Organizado por <strong>DCE UFG</strong></span>
+<i class="fas fa-star"></i> 4.7
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>95</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=33#comments">
+<i class="fas fa-comment"></i>
+<span>21 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=33">
+                            Participar
+                        </a>
+</div>
+</article>
+</div>
+</section>
+<!-- Sidebar -->
+<aside class="kc-sidebar">
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-calendar-alt"></i>
+                    Calendário de Eventos
+                </h3>
+<div style="background-color: var(--kc-background-dark); padding: 15px; border-radius: 8px; text-align: center;">
+<p style="margin: 0; color: var(--kc-text-dark-secondary);">
+<i class="fas fa-calendar"></i><br/>
+                        Outubro 2025<br/>
+<strong style="font-size: 2em; color: var(--kc-primary-brand);">07</strong>
+</p>
+</div>
+</div>
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-fire"></i>
+                    Eventos em Destaque
+                </h3>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<a href="#" style="padding: 10px; background-color: var(--kc-background-dark); border-radius: 8px; display: block;">
+<strong>Semana de Sustentabilidade</strong><br/>
+<small style="color: var(--kc-text-dark-secondary);">10-15 de Maio</small>
+</a>
+<a href="#" style="padding: 10px; background-color: var(--kc-background-dark); border-radius: 8px; display: block;">
+<strong>Festival Cultural UFG</strong><br/>
+<small style="color: var(--kc-text-dark-secondary);">20-22 de Maio</small>
+</a>
+<a href="#" style="padding: 10px; background-color: var(--kc-background-dark); border-radius: 8px; display: block;">
+<strong>Hackathon UFG 2025</strong><br/>
+<small style="color: var(--kc-text-dark-secondary);">3-5 de Junho</small>
+</a>
+</div>
+</div>
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-th-large"></i>
+                    Categorias
+                </h3>
+<div class="kc-category-list">
+<a class="kc-category-item" href="#sustentabilidade">
+<i class="fas fa-leaf"></i>
+<span>Sustentabilidade</span>
+<span class="kc-category-count">12</span>
+</a>
+<a class="kc-category-item" href="#academicos">
+<i class="fas fa-graduation-cap"></i>
+<span>Acadêmicos</span>
+<span class="kc-category-count">28</span>
+</a>
+<a class="kc-category-item" href="#culturais">
+<i class="fas fa-theater-masks"></i>
+<span>Culturais</span>
+<span class="kc-category-count">15</span>
+</a>
+<a class="kc-category-item" href="#esportivos">
+<i class="fas fa-running"></i>
+<span>Esportivos</span>
+<span class="kc-category-count">9</span>
+</a>
+</div>
+</div>
+</aside>
+</main>
+<!-- Mobile Navigation -->
+<nav class="kc-mobile-nav">
+<a href="index.html">
+<i class="fas fa-home"></i>
+<span>Início</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a class="kc-create-btn" href="create-post.html">
+<i class="fas fa-plus"></i>
+</a>
+<a href="compra-venda-feed.html">
+<i class="fas fa-shopping-bag"></i>
+<span>Comprar</span>
+</a>
+<button class="kc-menu-toggle" onclick="openMobileMenu()">
+<i class="fas fa-bars"></i>
+<span>Menu</span>
+</button>
+</nav>
+<!-- Mobile Menu Drawer -->
+<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
+<div class="kc-mobile-menu-header">
+<h3>Menu</h3>
+<button class="kc-close-menu" onclick="closeMobileMenu()">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="kc-mobile-menu-content">
+<a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+<a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+<a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+<a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+<a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+<a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+<hr/>
+<a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
+</div>
+</div>
+<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+<script src="script.js"></script>
+<script src="search.js"></script>
+<script>
+        // Filtro de categorias
+        document.querySelectorAll('.kc-feed-tabs a').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.kc-feed-tabs a').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                const category = this.getAttribute('href').substring(1) || 'todos';
+                filterByCategory(category);
+            });
+        });
+        
+        function filterByCategory(category) {
+            const cards = document.querySelectorAll('.kc-card');
+            cards.forEach(card => {
+                if (category === 'todos') {
+                    card.style.display = 'block';
+                } else {
+                    const cardCategory = card.querySelector('.kc-card__category-source').textContent.toLowerCase();
+                    card.style.display = cardCategory.includes(category) ? 'block' : 'none';
+                }
+            });
+        }
+        
+        function filterPosts() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.kc-card');
+            
+            cards.forEach(card => {
+                const title = card.querySelector('.kc-card__title').textContent.toLowerCase();
+                const description = card.querySelector('.kc-card__description-preview').textContent.toLowerCase();
+                
+                if (title.includes(searchInput) || description.includes(searchInput)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Oportunidades - KinoCampus</title>
+<link href="styles.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+</head>
+<body data-theme="light">
+<!-- Header -->
+<header class="kc-header">
+<div class="kc-header-container">
+<div class="kc-logo">
+<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+<span class="kc-logo-text">
+<span class="kc-logo-name">Kino<span>Campus</span></span>
+<span class="kc-logo-sub">Comunidade UFG</span>
+</span>
+</a>
+</div>
+<nav class="kc-nav-links">
+<a href="achados-perdidos.html">
+<i class="fas fa-search"></i>
+<span>Achados/Perdidos</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a href="moradia.html">
+<i class="fas fa-home"></i>
+<span>Moradia</span>
+</a>
+<a href="oportunidades.html">
+<i class="fas fa-briefcase"></i>
+<span>Oportunidades</span>
+</a>
+</nav>
+<div class="kc-search-bar">
+<input id="searchInput" onkeyup="filterPosts()" placeholder="Busque por vagas e oportunidades..." type="search"/>
+<button aria-label="Buscar" type="button">
+<i class="fas fa-search"></i>
+</button>
+</div>
+<div class="kc-user-actions">
+<button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+<i class="fas fa-sun"></i>
+</button>
+<a class="btn-login" href="#login">Login/Cadastro</a>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="kc-main-content">
+<!-- Feed Section -->
+<section class="kc-feed-section">
+<h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+<i class="fas fa-briefcase"></i>
+                Oportunidades de Estágio e Emprego
+            </h2>
+<!-- Feed Tabs -->
+<div class="kc-feed-tabs">
+<a class="active" href="#">
+<i class="fas fa-fire"></i>
+<span>Todas</span>
+</a>
+<a href="#estagios">
+<i class="fas fa-user-graduate"></i>
+<span>Estágios</span>
+</a>
+<a href="#empregos">
+<i class="fas fa-briefcase"></i>
+<span>Empregos</span>
+</a>
+<a href="#freelancer">
+<i class="fas fa-laptop-code"></i>
+<span>Freelancer</span>
+</a>
+<a href="#monitoria">
+<i class="fas fa-chalkboard-teacher"></i>
+<span>Monitoria</span>
+</a>
+<a href="#voluntariado">
+<i class="fas fa-hands-helping"></i>
+<span>Voluntariado</span>
+</a>
+</div>
+<!-- Feed List -->
+<div class="kc-feed-list">
+<!-- Job 1 - Estágio -->
+<article class="kc-card" data-post-id="38">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            💻
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Estágio • Desenvolvimento • <a href="#">@verificado</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Há 1 dia</div>
+</div>
+<a class="kc-card__title" href="product.html?id=38">
+                                Estágio em Desenvolvimento Web - React e Node.js
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-money-bill-wave"></i>
+                                R$ 1.200,00/mês
+                                <small>+ benefícios</small>
+</div>
+<div class="kc-card__description-preview">
+                                Startup de tecnologia busca estagiário para desenvolvimento web. Conhecimentos em React, Node.js e Git. Modalidade híbrida (2x presencial). Ambiente jovem e dinâmico...
+                            </div>
+<div class="kc-card__author">
+<img alt="TechStart" src="https://i.pravatar.cc/150?img=30"/>
+<span>Anunciado por <strong>TechStart Soluções</strong></span>
+<i class="fas fa-star"></i> 4.8
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>124</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=38#comments">
+<i class="fas fa-comment"></i>
+<span>32 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=38">
+                            Candidatar-se
+                        </a>
+</div>
+</article>
+<!-- Job 2 - Emprego -->
+<article class="kc-card" data-post-id="39">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            💼
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Emprego • Marketing • <a href="#">@verificado</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Há 3 horas</div>
+</div>
+<a class="kc-card__title" href="product.html?id=39">
+                                Analista de Marketing Digital Júnior - CLT
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-money-bill-wave"></i>
+                                R$ 2.800,00/mês
+                                <small>+ VT, VR, plano de saúde</small>
+</div>
+<div class="kc-card__description-preview">
+                                Agência de marketing digital contrata analista júnior. Experiência com Google Ads, Facebook Ads e Analytics. Formação em Marketing, Publicidade ou áreas afins...
+                            </div>
+<div class="kc-card__author">
+<img alt="Digital" src="https://i.pravatar.cc/150?img=31"/>
+<span>Anunciado por <strong>Digital Marketing Agency</strong></span>
+<i class="fas fa-star"></i> 4.6
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>98</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=39#comments">
+<i class="fas fa-comment"></i>
+<span>24 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=39">
+                            Candidatar-se
+                        </a>
+</div>
+</article>
+<!-- Job 3 - Freelancer -->
+<article class="kc-card" data-post-id="40">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<i class="fas fa-laptop-code" style="font-size: 3em; color: var(--kc-secondary-brand);"></i>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Freelancer • Design • Projeto
+                                </div>
+<div class="kc-card__timestamp">Há 2 dias</div>
+</div>
+<a class="kc-card__title" href="product.html?id=40">
+                                Designer para Criação de Identidade Visual - Projeto Pontual
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-money-bill-wave"></i>
+                                R$ 800,00
+                                <small>pagamento único</small>
+</div>
+<div class="kc-card__description-preview">
+                                Preciso de designer para criar identidade visual completa (logo, paleta de cores, tipografia) para startup. Prazo: 15 dias. Portfólio necessário...
+                            </div>
+<div class="kc-card__author">
+<img alt="Empreendedor" src="https://i.pravatar.cc/150?img=32"/>
+<span>Anunciado por <strong>Lucas Ferreira</strong></span>
+<i class="fas fa-star"></i> 4.9
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>67</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=40#comments">
+<i class="fas fa-comment"></i>
+<span>15 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=40">
+                            Enviar Proposta
+                        </a>
+</div>
+</article>
+<!-- Job 4 - Monitoria -->
+<article class="kc-card" data-post-id="41">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<i class="fas fa-chalkboard-teacher" style="font-size: 3em; color: var(--kc-tertiary-color);"></i>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Monitoria • Matemática • UFG
+                                </div>
+<div class="kc-card__timestamp">Há 1 semana</div>
+</div>
+<a class="kc-card__title" href="product.html?id=41">
+                                Vaga de Monitor Voluntário - Cálculo I e II
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-secondary-brand);">
+<i class="fas fa-heart"></i>
+                                Voluntário
+                                <small>certificado de 40h</small>
+</div>
+<div class="kc-card__description-preview">
+                                Instituto de Matemática busca monitores voluntários para auxiliar alunos em Cálculo I e II. Horário flexível, 4h semanais. Certificado ao final do semestre...
+                            </div>
+<div class="kc-card__author">
+<img alt="IME" src="https://i.pravatar.cc/150?img=33"/>
+<span>Anunciado por <strong>Instituto de Matemática - UFG</strong></span>
+<i class="fas fa-star"></i> 5.0
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>45</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=41#comments">
+<i class="fas fa-comment"></i>
+<span>8 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=41">
+                            Candidatar-se
+                        </a>
+</div>
+</article>
+<!-- Job 5 - Voluntariado -->
+<article class="kc-card" data-post-id="42">
+<span class="kc-cashback-badge">
+<i class="fas fa-heart"></i> Impacto Social
+                    </span>
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            🌐
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Voluntariado • Educação • ONG
+                                </div>
+<div class="kc-card__timestamp">Há 3 dias</div>
+</div>
+<a class="kc-card__title" href="product.html?id=42">
+                                Voluntários para Aulas de Reforço - Comunidade Carente
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-secondary-brand);">
+<i class="fas fa-heart"></i>
+                                Voluntário
+                                <small>sábados, 14h às 17h</small>
+</div>
+<div class="kc-card__description-preview">
+                                ONG busca voluntários para dar aulas de reforço escolar (português e matemática) para crianças de comunidade carente. Experiência com ensino é um diferencial...
+                            </div>
+<div class="kc-card__author">
+<img alt="ONG" src="https://i.pravatar.cc/150?img=34"/>
+<span>Anunciado por <strong>ONG Educação para Todos</strong></span>
+<i class="fas fa-star"></i> 4.9
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>82</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=42#comments">
+<i class="fas fa-comment"></i>
+<span>19 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=42">
+                            Participar
+                        </a>
+</div>
+</article>
+</div>
+</section>
+<!-- Sidebar -->
+<aside class="kc-sidebar">
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-filter"></i>
+                    Filtros
+                </h3>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<label style="display: flex; align-items: center; gap: 8px;">
+<input checked="" type="checkbox"/>
+<span>Estágios</span>
+</label>
+<label style="display: flex; align-items: center; gap: 8px;">
+<input checked="" type="checkbox"/>
+<span>Empregos CLT</span>
+</label>
+<label style="display: flex; align-items: center; gap: 8px;">
+<input type="checkbox"/>
+<span>Freelancer</span>
+</label>
+<label style="display: flex; align-items: center; gap: 8px;">
+<input type="checkbox"/>
+<span>Remoto</span>
+</label>
+<label style="display: flex; align-items: center; gap: 8px;">
+<input type="checkbox"/>
+<span>Presencial</span>
+</label>
+</div>
+</div>
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-th-large"></i>
+                    Áreas Populares
+                </h3>
+<div class="kc-category-list">
+<a class="kc-category-item" href="#tecnologia">
+<i class="fas fa-laptop-code"></i>
+<span>Tecnologia</span>
+<span class="kc-category-count">52</span>
+</a>
+<a class="kc-category-item" href="#marketing">
+<i class="fas fa-bullhorn"></i>
+<span>Marketing</span>
+<span class="kc-category-count">31</span>
+</a>
+<a class="kc-category-item" href="#design">
+<i class="fas fa-palette"></i>
+<span>Design</span>
+<span class="kc-category-count">28</span>
+</a>
+<a class="kc-category-item" href="#educacao">
+<i class="fas fa-graduation-cap"></i>
+<span>Educação</span>
+<span class="kc-category-count">45</span>
+</a>
+</div>
+</div>
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-lightbulb"></i>
+                    Dicas para Candidatos
+                </h3>
+<div style="line-height: 1.6; font-size: 0.9em; color: var(--kc-text-dark-secondary);">
+<p><strong>✓ Atualize seu currículo</strong> regularmente</p>
+<p><strong>✓ Personalize</strong> sua carta de apresentação</p>
+<p><strong>✓ Pesquise</strong> sobre a empresa antes da entrevista</p>
+<p><strong>✓ Seja pontual</strong> e profissional</p>
+</div>
+</div>
+</aside>
+</main>
+<!-- Mobile Navigation -->
+<nav class="kc-mobile-nav">
+<a href="index.html">
+<i class="fas fa-home"></i>
+<span>Início</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a class="kc-create-btn" href="create-post.html">
+<i class="fas fa-plus"></i>
+</a>
+<a href="compra-venda-feed.html">
+<i class="fas fa-shopping-bag"></i>
+<span>Comprar</span>
+</a>
+<button class="kc-menu-toggle" onclick="openMobileMenu()">
+<i class="fas fa-bars"></i>
+<span>Menu</span>
+</button>
+</nav>
+<!-- Mobile Menu Drawer -->
+<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
+<div class="kc-mobile-menu-header">
+<h3>Menu</h3>
+<button class="kc-close-menu" onclick="closeMobileMenu()">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="kc-mobile-menu-content">
+<a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+<a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+<a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+<a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+<a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+<a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+<hr/>
+<a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
+</div>
+</div>
+<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+<script src="script.js"></script>
+<script src="search.js"></script>
+<script>
+        // Filtro de categorias
+        document.querySelectorAll('.kc-feed-tabs a').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.kc-feed-tabs a').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                const category = this.getAttribute('href').substring(1) || 'todos';
+                filterByCategory(category);
+            });
+        });
+        
+        function filterByCategory(category) {
+            const cards = document.querySelectorAll('.kc-card');
+            cards.forEach(card => {
+                if (category === 'todos') {
+                    card.style.display = 'block';
+                } else {
+                    const cardCategory = card.querySelector('.kc-card__category-source').textContent.toLowerCase();
+                    card.style.display = cardCategory.includes(category) ? 'block' : 'none';
+                }
+            });
+        }
+        
+        function filterPosts() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.kc-card');
+            
+            cards.forEach(card => {
+                const title = card.querySelector('.kc-card__title').textContent.toLowerCase();
+                const description = card.querySelector('.kc-card__description-preview').textContent.toLowerCase();
+                
+                if (title.includes(searchInput) || description.includes(searchInput)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
