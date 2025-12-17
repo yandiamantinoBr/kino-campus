@@ -449,6 +449,7 @@ function initSearch() {
         searchInput.addEventListener('input', function(e) {
             const query = e.target.value;
             if (resultsPage) renderResultsToPage(query);
+            else if (hasPageFilter) { if (typeof window.filterPosts === 'function') window.filterPosts(query); return; }
             else filterCurrentPageCards(query);
         });
         
@@ -458,6 +459,7 @@ function initSearch() {
                 e.preventDefault();
                 const q = this.value;
                 if (resultsPage) renderResultsToPage(q);
+                else if (hasPageFilter) { if (typeof window.filterPosts === 'function') window.filterPosts(q); }
                 else globalSearch(q, true);
             }
         });
@@ -469,6 +471,7 @@ function initSearch() {
             e.preventDefault();
             const q = searchInput ? searchInput.value : '';
             if (resultsPage) renderResultsToPage(q);
+            else if (hasPageFilter) { if (typeof window.filterPosts === 'function') window.filterPosts(q); }
             else globalSearch(q, true);
         });
     }

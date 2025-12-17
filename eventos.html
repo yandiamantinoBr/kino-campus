@@ -8,7 +8,7 @@
 <link href="styles.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
-<body data-theme="light">
+<body data-theme="light" data-kc-filters="tab-search">
 <!-- Header -->
 <header class="kc-header">
 <div class="kc-header-container">
@@ -462,47 +462,7 @@
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 <script src="script.js"></script>
+<script src="filters.js"></script>
 <script src="search.js"></script>
-<script>
-        // Filtro de categorias
-        document.querySelectorAll('.kc-feed-tabs a').forEach(tab => {
-            tab.addEventListener('click', function(e) {
-                e.preventDefault();
-                document.querySelectorAll('.kc-feed-tabs a').forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                const category = this.getAttribute('href').substring(1) || 'todos';
-                filterByCategory(category);
-            });
-        });
-        
-        function filterByCategory(category) {
-            const cards = document.querySelectorAll('.kc-card');
-            cards.forEach(card => {
-                if (category === 'todos') {
-                    card.style.display = 'block';
-                } else {
-                    const cardCategory = card.querySelector('.kc-card__category-source').textContent.toLowerCase();
-                    card.style.display = cardCategory.includes(category) ? 'block' : 'none';
-                }
-            });
-        }
-        
-        function filterPosts() {
-            const searchInput = document.getElementById('searchInput').value.toLowerCase();
-            const cards = document.querySelectorAll('.kc-card');
-            
-            cards.forEach(card => {
-                const title = card.querySelector('.kc-card__title').textContent.toLowerCase();
-                const description = card.querySelector('.kc-card__description-preview').textContent.toLowerCase();
-                
-                if (title.includes(searchInput) || description.includes(searchInput)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-    </script>
 </body>
 </html>
