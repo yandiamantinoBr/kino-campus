@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KinoCampus - Comunidade UFG</title>
+<link href="styles.v554.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+</head>
+<body data-theme="light">
+<!-- Header -->
+<header class="kc-header">
+<div class="kc-header-container">
+<div class="kc-logo">
+<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+<span class="kc-logo-text">
+<span class="kc-logo-name">Kino<span>Campus</span></span>
+<span class="kc-logo-sub">Comunidade UFG</span>
+</span>
+</a>
+</div>
+<nav class="kc-nav-links">
+<a href="achados-perdidos.html">
+<i class="fas fa-search"></i>
+<span>Achados/Perdidos</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a href="moradia.html">
+<i class="fas fa-home"></i>
+<span>Moradia</span>
+</a>
+<a href="oportunidades.html">
+<i class="fas fa-briefcase"></i>
+<span>Oportunidades</span>
+</a>
+</nav>
+<div class="kc-search-bar">
+<input id="searchInput" placeholder="Busque por itens, eventos, vagas na UFG..." type="search"/>
+<button aria-label="Buscar" type="button">
+<i class="fas fa-search"></i>
+</button>
+</div>
+<div class="kc-user-actions">
+<button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+<i class="fas fa-sun"></i>
+</button>
+<a class="btn-login" href="#login">Login/Cadastro</a>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="kc-main-content">
+<!-- Feed Section -->
+<section class="kc-feed-section">
+<!-- Banner Hero Carousel -->
+<div class="kc-hero-carousel">
+<div class="kc-hero-slides">
+<div class="kc-hero-banner active" data-hero-icon="calendar">
+<div class="kc-hero-inner">
+<div class="kc-hero-content">
+<span class="kc-hero-pill">Destaque</span>
+<h1>Semana de Sustentabilidade UFG</h1>
+<p>Troque materiais, ganhe cashback em dobro e suba no ranking de impacto!</p>
+<a class="kc-btn-primary" href="eventos.html?filter=sustentabilidade">Ver Programação</a>
+</div>
+<div aria-hidden="true" class="kc-hero-illustration">
+<i class="fas fa-calendar-alt"></i>
+</div>
+</div>
+</div>
+<div class="kc-hero-banner" data-hero-icon="exchange">
+<div class="kc-hero-inner">
+<div class="kc-hero-content">
+<span class="kc-hero-pill">Destaque</span>
+<h1>Feira de Troca de Materiais</h1>
+<p>Traga seus materiais acadêmicos usados e troque por outros que você precisa.</p>
+<a class="kc-btn-primary" href="eventos.html">Participar</a>
+</div>
+<div aria-hidden="true" class="kc-hero-illustration">
+<i class="fas fa-exchange-alt"></i>
+</div>
+</div>
+</div>
+<div class="kc-hero-banner" data-hero-icon="launch">
+<div class="kc-hero-inner">
+<div class="kc-hero-content">
+<span class="kc-hero-pill">Novidade</span>
+<h1>Lançamento do KinoCampus na UFG</h1>
+<p>A plataforma colaborativa e sustentável desenvolvida para a comunidade UFG.</p>
+<a class="kc-btn-primary" href="product.html?id=1">Saiba Mais</a>
+</div>
+<div aria-hidden="true" class="kc-hero-illustration">
+<i class="fas fa-campground"></i>
+</div>
+</div>
+</div>
+</div>
+<button class="kc-carousel-btn kc-carousel-prev" onclick="changeSlide(-1)">
+<i class="fas fa-chevron-left"></i>
+</button>
+<button class="kc-carousel-btn kc-carousel-next" onclick="changeSlide(1)">
+<i class="fas fa-chevron-right"></i>
+</button>
+<div class="kc-carousel-dots">
+<span class="kc-dot active" onclick="goToSlide(0)"></span>
+<span class="kc-dot" onclick="goToSlide(1)"></span>
+<span class="kc-dot" onclick="goToSlide(2)"></span>
+</div>
+</div>
+<!-- Top Contributors -->
+<div class="kc-ranking-banner">
+<div class="kc-ranking-title">
+<i class="fas fa-trophy"></i>
+<span>Top Contribuidores da UFG</span>
+</div>
+<div class="kc-ranking-users">
+<div class="kc-ranking-user">
+<div class="kc-ranking-user-avatar">
+<img alt="Ana Silva" src="https://i.pravatar.cc/150?img=1"/>
+<span class="kc-ranking-user-position">1</span>
+</div>
+<span class="kc-ranking-user-name">Ana Silva</span>
+</div>
+<div class="kc-ranking-user">
+<div class="kc-ranking-user-avatar">
+<img alt="Pedro Sá" src="https://i.pravatar.cc/150?img=2"/>
+<span class="kc-ranking-user-position">2</span>
+</div>
+<span class="kc-ranking-user-name">Pedro Sá</span>
+</div>
+<div class="kc-ranking-user">
+<div class="kc-ranking-user-avatar">
+<img alt="Carla Dias" src="https://i.pravatar.cc/150?img=3"/>
+<span class="kc-ranking-user-position">3</span>
+</div>
+<span class="kc-ranking-user-name">Carla Dias</span>
+</div>
+<div class="kc-ranking-user">
+<div class="kc-ranking-user-avatar">
+<img alt="Lucas M." src="https://i.pravatar.cc/150?img=4"/>
+<span class="kc-ranking-user-position">4</span>
+</div>
+<span class="kc-ranking-user-name">Lucas M.</span>
+</div>
+<div class="kc-ranking-user">
+<div class="kc-ranking-user-avatar">
+<img alt="Júlia R." src="https://i.pravatar.cc/150?img=5"/>
+<span class="kc-ranking-user-position">5</span>
+</div>
+<span class="kc-ranking-user-name">Júlia R.</span>
+</div>
+</div>
+</div>
+<!-- Feed Tabs -->
+<div class="kc-feed-tabs">
+<a class="active" href="#">
+<i class="fas fa-fire"></i>
+<span>Destaque</span>
+</a>
+<a href="compra-venda-feed.html">
+<i class="fas fa-shopping-bag"></i>
+<span>Compra e Venda</span>
+</a>
+<a href="caronas-feed.html">
+<i class="fas fa-car"></i>
+<span>Caronas</span>
+</a>
+<a href="compra-venda-feed.html?filter=livros">
+<i class="fas fa-book"></i>
+<span>Livros</span>
+</a>
+<a href="compra-venda-feed.html?filter=eletronicos">
+<i class="fas fa-laptop"></i>
+<span>Eletrônicos</span>
+</a>
+<a href="compra-venda-feed.html?filter=vestuario">
+<i class="fas fa-tshirt"></i>
+<span>Roupas</span>
+</a>
+<a href="moradia.html">
+<i class="fas fa-home"></i>
+<span>Moradia</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a href="eventos.html?filter=sustentabilidade">
+<i class="fas fa-leaf"></i>
+<span>Sustentabilidade</span>
+</a>
+</div>
+<!-- Feed List -->
+<div class="kc-feed-list">
+<!-- Card 1 - Livro -->
+<article class="kc-card" data-category="livros" data-post-id="43">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<img alt="Livro Cálculo Vol.1" src="https://images.unsplash.com/photo-1507842217343-583f20270319?w=500&amp;h=500&amp;fit=crop"/>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Livros • Exatas • <a href="#">@verificado</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Há 2 horas</div>
+</div>
+<a class="kc-card__title" href="product.html?id=43">
+                                Livro Cálculo Vol.1 - James Stewart (8ª Edição) - Excelente estado
+                            </a>
+<div class="kc-card__price">
+<i class="fas fa-money-bill-wave"></i>
+                                R$ 120,00
+                                <small>ou R$ 110/PIX</small>
+<span class="kc-card__discount">-40%</span>
+</div>
+<div class="kc-card__author">
+<img alt="Maria Souza" src="https://i.pravatar.cc/150?img=16"/>
+<span>Anunciado por <strong>Maria Souza</strong></span>
+<i class="fas fa-star"></i> 4.7
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>42</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=43#comments">
+<i class="fas fa-comment"></i>
+<span>8 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=43">
+                            Ver Detalhes
+                        </a>
+</div>
+</article>
+<!-- Card 2 - Notebook -->
+<article class="kc-card" data-category="eletronicos" data-post-id="44">
+<span class="kc-cashback-badge">
+<i class="fas fa-coins"></i> 22kg CO₂ evitado
+                    </span>
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<img alt="Notebook Dell" src="https://images.unsplash.com/photo-1588872657840-790ff3bde4c5?w=500&amp;h=500&amp;fit=crop"/>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Compra/Venda • Informática • <a href="#">@verificado</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Há 1 hora</div>
+</div>
+<a class="kc-card__title" href="product.html?id=44">
+                                Notebook Dell Inspiron i5 - 8ª geração, 8GB RAM, SSD 256GB
+                            </a>
+<div class="kc-card__price">
+<i class="fas fa-money-bill-wave"></i>
+                                R$ 2.500,00
+                                <small>ou R$ 2.350/PIX</small>
+<span class="kc-card__highlight">Negociável</span>
+</div>
+<div class="kc-card__description-preview">
+                                Vendo notebook Dell Inspiron 15 3000 em excelente estado, comprado há 1 ano e pouco usado. Ideal para estudos...
+                            </div>
+<div class="kc-card__author">
+<img alt="Rafael Almeida" src="https://i.pravatar.cc/150?img=12"/>
+<span>Anunciado por <strong>Rafael Almeida</strong></span>
+<i class="fas fa-star"></i> 4.7
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>28</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=44#comments">
+<i class="fas fa-comment"></i>
+<span>7 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=44">
+                            Ver Detalhes
+                        </a>
+</div>
+</article>
+<!-- Card 3 - Carona -->
+<article class="kc-card" data-category="caronas" data-post-id="19">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<i class="fas fa-car" style="font-size: 3em; color: var(--kc-primary-brand);"></i>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Caronas • Setor Universitário
+                                </div>
+<div class="kc-card__timestamp">Há 1 hora</div>
+</div>
+<a class="kc-card__title" href="product.html?id=19">
+                                Carona Campus Samambaia → Setor Universitário (Segunda a Sexta)
+                            </a>
+<div class="kc-card__price">
+<i class="fas fa-money-bill-wave"></i>
+                                R$ 5,00
+                                <small>por trecho</small>
+</div>
+<div class="kc-card__description-preview">
+                                Saída às 18h30 do campus/retorno às 7h. Carro com ar. Aceito PIX ou dinheiro...
+                            </div>
+<div class="kc-card__author">
+<img alt="Carlos Henrique" src="https://i.pravatar.cc/150?img=13"/>
+<span>Oferecido por <strong>Carlos Henrique</strong></span>
+<i class="fas fa-star"></i> 4.8
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>36</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=19#comments">
+<i class="fas fa-comment"></i>
+<span>12 comentários</span>
+</a>
+</div>
+<a class="kc-action-button" href="product.html?id=19">
+                            Reservar Vaga
+                        </a>
+</div>
+</article>
+<!-- Card 4 - Workshop -->
+<article class="kc-card" data-category="eventos" data-post-id="29">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<img alt="Workshop Sustentabilidade" src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&amp;h=500&amp;fit=crop"/>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eventos • Sustentabilidade • <a href="#">@oficial</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Há 2 dias</div>
+</div>
+<a class="kc-card__title" href="product.html?id=29">
+                                Workshop: Práticas Sustentáveis no Campus Universitário
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-green-check);">
+<i class="fas fa-gift"></i>
+                                Gratuito
+                                <small>com inscrição prévia</small>
+</div>
+<div class="kc-card__description-preview">
+                                Workshop prático sobre implementação de práticas sustentáveis no dia a dia universitário...
+                            </div>
+<div class="kc-card__author">
+<img alt="Centro Acadêmico" src="https://i.pravatar.cc/150?img=14"/>
+<span>Organizado por <strong>CA Ciências Ambientais</strong></span>
+<i class="fas fa-star"></i> 4.9
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>56</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=29#comments">
+<i class="fas fa-comment"></i>
+<span>7 comentários</span>
+</a>
+</div>
+<a class="kc-action-button" href="product.html?id=29">
+                            Inscrever-se
+                        </a>
+</div>
+</article>
+</div>
+</section>
+<!-- Sidebar -->
+<aside class="kc-sidebar">
+<!-- Criar Publicação -->
+<div class="kc-sidebar-section">
+<a class="kc-create-post-btn" href="create-post.html">
+<i class="fas fa-plus"></i>
+                    Criar Publicação
+                </a>
+</div>
+<!-- Impacto Sustentável -->
+<div class="kc-sidebar-section kc-impact-section-simple">
+<h3>
+<i class="fas fa-chart-line"></i>
+                    Seu Impacto Sustentável
+                </h3>
+<div class="kc-impact-progress">
+<div class="kc-impact-progress-bar">
+<div class="kc-impact-progress-fill" style="width: 65%;"></div>
+</div>
+<div class="kc-impact-progress-text">
+<span>Nível 3: Eco-Consciente</span>
+<span>650/1000 pts</span>
+</div>
+</div>
+<div class="kc-impact-stats-simple">
+<div class="kc-impact-stat-item">
+<div class="kc-impact-stat-value">12kg</div>
+<div class="kc-impact-stat-label">CO₂ evitado</div>
+</div>
+<div class="kc-impact-stat-item">
+<div class="kc-impact-stat-value">R$180</div>
+<div class="kc-impact-stat-label">Economia</div>
+</div>
+</div>
+</div>
+<!-- Saldo Cashback -->
+<div class="kc-sidebar-section kc-cashback-section-simple">
+<div class="kc-cashback-header">
+<span class="kc-cashback-label">Saldo Cashback:</span>
+<span class="kc-cashback-amount-simple">R$ 25,50</span>
+</div>
+<div class="kc-cashback-footer">
+<span class="kc-cashback-validity-simple">Válido até 30/06/2025</span>
+<a class="kc-cashback-link-simple" href="compra-venda-feed.html">Ver detalhes</a>
+</div>
+</div>
+<!-- Categorias -->
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-th-large"></i>
+                    Categorias
+                </h3>
+<div class="kc-category-list">
+<a class="kc-category-item" href="compra-venda-feed.html?filter=livros">
+<i class="fas fa-book"></i>
+<span>Livros e Materiais</span>
+<span class="kc-category-count">85</span>
+</a>
+<a class="kc-category-item" href="compra-venda-feed.html?filter=eletronicos">
+<i class="fas fa-laptop"></i>
+<span>Eletrônicos</span>
+<span class="kc-category-count">38</span>
+</a>
+<a class="kc-category-item" href="compra-venda-feed.html?filter=vestuario">
+<i class="fas fa-tshirt"></i>
+<span>Vestuário</span>
+<span class="kc-category-count">37</span>
+</a>
+<a class="kc-category-item" href="compra-venda-feed.html">
+<i class="fas fa-shopping-bag"></i>
+<span>Compra e Venda</span>
+<span class="kc-category-count">142</span>
+</a>
+<a class="kc-category-item" href="moradia.html">
+<i class="fas fa-home"></i>
+<span>Moradia</span>
+<span class="kc-category-count">38</span>
+</a>
+<a class="kc-category-item" href="caronas-feed.html">
+<i class="fas fa-car"></i>
+<span>Caronas</span>
+<span class="kc-category-count">5</span>
+</a>
+<a class="kc-category-item" href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+<span class="kc-category-count">9</span>
+</a>
+<a class="kc-category-item" href="oportunidades.html">
+<i class="fas fa-briefcase"></i>
+<span>Estágios e Empregos</span>
+<span class="kc-category-count">41</span>
+</a>
+<a class="kc-category-item" href="oportunidades.html?filter=monitoria">
+<i class="fas fa-chalkboard-teacher"></i>
+<span>Monitoria e Aulas</span>
+<span class="kc-category-count">92</span>
+</a>
+</div>
+</div>
+<!-- ODS em Destaque -->
+<div class="kc-sidebar-section kc-ods-section">
+<h3>
+<i class="fas fa-globe"></i>
+                    ODS em Destaque
+                </h3>
+<p class="kc-ods-description">
+                    O Kino Campus contribui diretamente para os Objetivos de Desenvolvimento Sustentável da ONU.
+                </p>
+<div class="kc-ods-badges">
+<div class="kc-ods-badge" title="ODS 04: Educação de Qualidade">ODS 04</div>
+<div class="kc-ods-badge" title="ODS 11: Cidades e Comunidades Sustentáveis">ODS 11</div>
+<div class="kc-ods-badge" title="ODS 12: Consumo e Produção Responsáveis">ODS 12</div>
+<div class="kc-ods-badge" title="ODS 13: Ação Contra a Mudança Global do Clima">ODS 13</div>
+</div>
+</div>
+<!-- Impacto da Comunidade -->
+<div class="kc-sidebar-section kc-community-impact-section">
+<h3>
+<i class="fas fa-users"></i>
+                    Impacto da Comunidade
+                </h3>
+<div class="kc-community-stat">
+<div class="kc-community-stat-value">R$ 15.420</div>
+<div class="kc-community-stat-label">Economizados pela comunidade</div>
+</div>
+<div class="kc-community-stat">
+<div class="kc-community-stat-value">850kg</div>
+<div class="kc-community-stat-label">CO₂ evitado este mês</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- Mobile Navigation -->
+<nav class="kc-mobile-nav">
+<a class="active" href="index.html">
+<i class="fas fa-home"></i>
+<span>Início</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a class="kc-create-btn" href="create-post.html">
+<i class="fas fa-plus"></i>
+</a>
+<a href="compra-venda-feed.html">
+<i class="fas fa-shopping-bag"></i>
+<span>Comprar</span>
+</a>
+<button class="kc-menu-toggle" onclick="openMobileMenu()">
+<i class="fas fa-bars"></i>
+<span>Menu</span>
+</button>
+</nav>
+<!-- Mobile Menu Drawer -->
+<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
+<div class="kc-mobile-menu-header">
+<h3>Menu</h3>
+<button class="kc-close-menu" onclick="closeMobileMenu()">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="kc-mobile-menu-content">
+<a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+<a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+<a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+<a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+<hr/>
+<a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
+</div>
+</div>
+<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+<script src="script.v554.js"></script>
+<script src="search.js"></script>
+</body>
+</html>
