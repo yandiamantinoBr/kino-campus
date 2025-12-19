@@ -1,4 +1,4 @@
-# KinoCampus — Protótipo WEB (V5.5.4)
+# KinoCampus — Protótipo WEB (V5.5.6)
 
 KinoCampus é um **protótipo de plataforma universitária** voltada para a comunidade (ex.: UFG), com foco em **compartilhamento de oportunidades** e **publicações por módulos** (Compra & Venda, Caronas, Moradia, Eventos, Achados/Perdidos e Oportunidades).
 
@@ -134,4 +134,4 @@ Se quiser rodar 100% offline, substitua por ícones locais (download do CSS/font
 ---
 
 ## Versão
-- **V5.5.4** — foco em melhorias de mobile/cards/tabs + modal de publicação + schema por módulo.
+- **V5.5.6** — ajuste de redimensionamento dos cards no mobile para evitar travamentos de largura.
