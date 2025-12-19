@@ -1,0 +1,350 @@
+/*
+  KinoCampus V5.5.6 - Edge Mobile Fit (engine-driven)
+  Principal alteração: padroniza gutters/tamanhos com CSS variables (clamp)
+  e remove as margens negativas/conflitos que criavam overflow e aparência de
+  "não redimensiona" em diferentes presets mobile (Edge).
+
+  Foco: kc-hero-slides, kc-ranking-banner, kc-feed-tabs, kc-card (kc-feed-list)
+*/
+
+/* Base de layout (anti-overflow) */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* clip é melhor que hidden (não cria scrollbars fantasmas) */
+@supports (overflow: clip) {
+  html, body { overflow-x: clip; }
+}
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }
+}
+
+:root {
+  /* gutter único para todo o layout (bom entre 268px e 540px) */
+  --kc-page-gutter: clamp(10px, 3.4vw, 16px);
+
+  /* tamanhos fluidos p/ mobile */
+  --kc-card-media: clamp(64px, 18vw, 92px);
+  --kc-chip-py: clamp(8px, 2.4vw, 10px);
+  --kc-chip-px: clamp(12px, 3.2vw, 14px);
+
+  --kc-hero-py: clamp(16px, 4.6vw, 26px);
+  --kc-hero-px: clamp(14px, 4.0vw, 22px);
+  --kc-hero-min-h: clamp(172px, 34vw, 220px);
+
+  /* header height já é atualizado pelo JS do projeto; aqui só garante fallback */
+  --kc-header-height: 72px;
+  --kc-safe-top: env(safe-area-inset-top, 0px);
+}
+
+/* Padroniza o container principal (sem depender de versões antigas) */
+main,
+.kc-main-content,
+.kc-container,
+.kc-feed-container {
+  padding-left: var(--kc-page-gutter) !important;
+  padding-right: var(--kc-page-gutter) !important;
+}
+
+/* Evita que grids/flex empurrem para fora em telas estreitas */
+main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
+  min-width: 0;
+}
+
+/* ============
+   HERO (kc-hero-slides)
+   ============ */
+
+.kc-hero-carousel,
+.kc-hero-slides {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* garante que o banner ativo nunca estoure */
+.kc-hero-banner.active {
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .kc-hero-carousel {
+    border-radius: 18px;
+    margin-bottom: 14px;
+  }
+
+  .kc-hero-banner {
+    border-radius: 18px;
+    padding: var(--kc-hero-py) var(--kc-hero-px) calc(var(--kc-hero-py) + 34px) !important;
+    min-height: var(--kc-hero-min-h) !important;
+  }
+
+  .kc-hero-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .kc-hero-illustration {
+    display: none;
+  }
+
+  .kc-hero-content {
+    max-width: 100% !important;
+  }
+
+  .kc-hero-content h1 {
+    font-size: clamp(1.10rem, 4.8vw, 1.55rem) !important;
+    line-height: 1.14 !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .kc-hero-content p {
+    font-size: clamp(0.88rem, 3.6vw, 0.98rem) !important;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: 100% !important;
+  }
+
+  /* setas normalmente atrapalham em touch; deixa dots */
+  .kc-carousel-btn {
+    display: none !important;
+  }
+
+  .kc-carousel-dots {
+    bottom: 12px;
+  }
+
+  .kc-dot {
+    width: 11px;
+    height: 11px;
+  }
+}
+
+@media (max-width: 320px) {
+  .kc-hero-banner {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* ============
+   RANKING (kc-ranking-banner)
+   ============ */
+
+.kc-ranking-banner {
+  width: 100%;
+  max-width: 100%;
+}
+
+.kc-ranking-users {
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  scroll-padding-left: var(--kc-page-gutter);
+  touch-action: pan-x;
+}
+
+.kc-ranking-users::-webkit-scrollbar { display: none; }
+
+.kc-ranking-user {
+  scroll-snap-align: start;
+}
+
+@media (max-width: 520px) {
+  .kc-ranking-banner { padding: 14px !important; }
+  .kc-ranking-users { gap: 12px !important; }
+
+  .kc-ranking-user { width: clamp(52px, 14vw, 64px) !important; }
+  .kc-ranking-user-avatar { width: clamp(34px, 10vw, 44px) !important; height: clamp(34px, 10vw, 44px) !important; }
+  .kc-ranking-user-name { font-size: 0.76em !important; }
+}
+
+/* ============
+   TABS (kc-feed-tabs)
+   ============ */
+
+/* Remove margens negativas antigas (causavam overflow) */
+.kc-feed-tabs {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .kc-feed-tabs {
+    position: sticky;
+    top: calc(var(--kc-safe-top) + var(--kc-header-height));
+    z-index: 110;
+
+    display: flex;
+    gap: 10px;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    padding: 10px 0 !important;
+    margin: 0 0 14px 0 !important;
+
+    scroll-snap-type: x proximity;
+    scroll-padding-left: var(--kc-page-gutter);
+
+    background: var(--kc-background-dark);
+    border-bottom: 1px solid var(--kc-border-dark);
+    box-shadow: none !important;
+    touch-action: pan-x;
+  }
+
+  .kc-feed-tabs::-webkit-scrollbar { height: 0; display: none; }
+
+  .kc-feed-tabs a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
+
+    padding: var(--kc-chip-py) var(--kc-chip-px) !important;
+    border-radius: 999px;
+
+    font-size: clamp(0.82rem, 3.2vw, 0.92rem) !important;
+    line-height: 1;
+    min-height: 40px;
+  }
+
+  /* garante contraste do active sem depender de :hover (touch) */
+  .kc-feed-tabs a.active,
+  .kc-feed-tabs a.active:hover,
+  .kc-feed-tabs a.active:focus,
+  .kc-feed-tabs a.active:focus-visible {
+    color: #fff !important;
+  }
+}
+
+@media (max-width: 320px) {
+  .kc-feed-tabs a { min-height: 38px; }
+}
+
+/* ============
+   CARDS (kc-card dentro de kc-feed-list)
+   ============ */
+
+/* remove "full-bleed" antigo (margin negativa) */
+.kc-card {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+@media (max-width: 768px) {
+  .kc-feed-list { gap: 12px !important; }
+
+  .kc-card {
+    border-radius: 18px !important;
+    overflow: hidden;
+    transform: none !important;
+  }
+
+  .kc-card__main {
+    display: grid;
+    grid-template-columns: var(--kc-card-media) minmax(0, 1fr) !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+
+  .kc-card__image-wrapper {
+    width: var(--kc-card-media) !important;
+    height: var(--kc-card-media) !important;
+    min-width: var(--kc-card-media) !important;
+    border-radius: 14px !important;
+    overflow: hidden;
+  }
+
+  .kc-card__image-wrapper img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    display: block;
+    object-fit: cover;
+  }
+
+  .kc-card__content { min-width: 0 !important; }
+
+  .kc-card__category-source {
+    font-size: clamp(0.74rem, 2.9vw, 0.84rem) !important;
+  }
+
+  .kc-card__timestamp {
+    font-size: clamp(0.72rem, 2.7vw, 0.82rem) !important;
+  }
+
+  .kc-card__title {
+    font-size: clamp(0.96rem, 3.6vw, 1.06rem) !important;
+    line-height: 1.18 !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .kc-card__price {
+    font-size: clamp(0.98rem, 3.8vw, 1.06rem) !important;
+    overflow-wrap: anywhere;
+  }
+
+  /* footer flexível: tenta 1 linha, mas pode quebrar sem overflow */
+  .kc-card__footer {
+    padding: 10px 12px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .kc-card__interactions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .kc-card__footer .kc-action-button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 360px) {
+  .kc-card__footer { gap: 8px; }
+  .kc-card__footer .kc-action-button {
+    width: 100% !important;
+    justify-content: center;
+  }
+}
+
+/* Touch: remove hover que "gruda" em chips/cards */
+@media (hover: none) and (pointer: coarse) {
+  .kc-card:hover { transform: none !important; }
+}

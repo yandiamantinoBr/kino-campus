@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KinoCampus - Nova Publicação</title>
+  <link rel="stylesheet" href="styles.v554.css"/>
+<link rel="stylesheet" href="styles.v556.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+</head>
+
+<body data-theme="light">
+  <!-- Header -->
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+
+      <nav class="kc-nav-links">
+        <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
+        <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
+        <a href="moradia.html"><i class="fas fa-home"></i><span>Moradia</span></a>
+        <a href="oportunidades.html"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
+      </nav>
+
+      <div class="kc-search-bar">
+        <input id="searchInput" placeholder="Busque por itens, eventos, vagas na UFG..." type="search"/>
+        <button aria-label="Buscar" type="button"><i class="fas fa-search"></i></button>
+      </div>
+
+      <div class="kc-user-actions">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <section class="kc-feed-section" style="padding-top: 20px;">
+      <div class="kc-card" style="padding: 18px;">
+        <h2 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px;">
+          <i class="fas fa-plus-circle"></i>
+          Nova Publicação
+        </h2>
+        <p style="margin: 0; color: var(--kc-text-dark-secondary);">
+          O formulário abre como um modal (com fundo desfocado). Se não abrir, verifique se o JavaScript está ativo.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Mobile Nav -->
+  <nav class="kc-mobile-nav">
+    <a href="index.html"><i class="fas fa-home"></i><span>Início</span></a>
+    <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
+    <a class="kc-create-btn active" href="create-post.html"><i class="fas fa-plus"></i></a>
+    <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i><span>Comprar</span></a>
+    <button class="kc-menu-toggle" onclick="openMobileMenu()"><i class="fas fa-bars"></i><span>Menu</span></button>
+  </nav>
+
+  <!-- Mobile Menu Drawer -->
+  <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
+    <div class="kc-mobile-menu-header">
+      <h3>Menu</h3>
+      <button class="kc-close-menu" onclick="closeMobileMenu()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="kc-mobile-menu-content">
+      <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+      <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+      <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+      <a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+      <hr/>
+      <a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
+    </div>
+  </div>
+  <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+
+  <script src="script.v554.js"></script>
+<script src="script.v556.js"></script>
+  <script src="search.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="0; url=caronas-feed.html" />
+  <title>Caronas • Redirecionando</title>
+  <link rel="stylesheet" href="styles.v554.css" />
+<link rel="stylesheet" href="styles.v556.css">
+</head>
+<body data-theme="light">
+  <main style="max-width: 720px; margin: 60px auto; padding: 0 16px;">
+    <div style="background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 20px; text-align: center;">
+      <h1 style="margin-bottom: 10px;">Redirecionando…</h1>
+      <p style="color: var(--kc-text-dark-secondary); margin-bottom: 16px;">
+        Esta página foi atualizada. Você será levado automaticamente para a versão atual.
+      </p>
+      <a class="kc-btn-primary" href="caronas-feed.html">Ir agora</a>
+    </div>
+  </main>
+  <script>
+    (function() {
+      try {
+        var theme = localStorage.getItem('theme') || 'light';
+        document.body.setAttribute('data-theme', theme);
+      } catch(e) {}
+      window.location.replace("caronas-feed.html");
+    })();
+  </script>
+</body>
+</html>

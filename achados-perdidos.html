@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Achados e Perdidos - KinoCampus</title>
+<link href="styles.v554.css" rel="stylesheet"/>
+<link href="styles.v556.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+</head>
+<body data-theme="light" data-kc-filters="tab-search">
+<!-- Header -->
+<header class="kc-header">
+<div class="kc-header-container">
+<div class="kc-logo">
+<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+<span class="kc-logo-text">
+<span class="kc-logo-name">Kino<span>Campus</span></span>
+<span class="kc-logo-sub">Comunidade UFG</span>
+</span>
+</a>
+</div>
+<nav class="kc-nav-links">
+<a href="achados-perdidos.html">
+<i class="fas fa-search"></i>
+<span>Achados/Perdidos</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a href="moradia.html">
+<i class="fas fa-home"></i>
+<span>Moradia</span>
+</a>
+<a href="oportunidades.html">
+<i class="fas fa-briefcase"></i>
+<span>Oportunidades</span>
+</a>
+</nav>
+<div class="kc-search-bar">
+<input id="searchInput" onkeyup="filterPosts()" placeholder="Busque por itens perdidos ou encontrados..." type="search"/>
+<button aria-label="Buscar" type="button">
+<i class="fas fa-search"></i>
+</button>
+</div>
+<div class="kc-user-actions">
+<button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+<i class="fas fa-sun"></i>
+</button>
+<a class="btn-login" href="#login">Login/Cadastro</a>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="kc-main-content">
+<!-- Feed Section -->
+<section class="kc-feed-section">
+<h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+<i class="fas fa-search"></i>
+                Achados e Perdidos
+            </h2>
+<!-- Feed Tabs -->
+<div class="kc-feed-tabs">
+<a class="active" href="#">
+<i class="fas fa-fire"></i>
+<span>Todos</span>
+</a>
+<a href="#perdidos">
+<i class="fas fa-exclamation-circle"></i>
+<span>Perdidos</span>
+</a>
+<a href="#encontrados">
+<i class="fas fa-check-circle"></i>
+<span>Encontrados</span>
+</a>
+<a href="#documentos">
+<i class="fas fa-id-card"></i>
+<span>Documentos</span>
+</a>
+<a href="#eletronicos">
+<i class="fas fa-mobile-alt"></i>
+<span>Eletrônicos</span>
+</a>
+<a href="#outros">
+<i class="fas fa-box"></i>
+<span>Outros</span>
+</a>
+</div>
+<!-- Feed List -->
+<div class="kc-feed-list">
+<!-- Item 1 - Perdido -->
+<article class="kc-card" data-post-id="25">
+<span class="kc-cashback-badge" style="background-color: var(--kc-red-alert);">
+<i class="fas fa-exclamation-circle"></i> Perdido
+                    </span>
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            💳
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Perdido • Documentos • Campus Samambaia
+                                </div>
+<div class="kc-card__timestamp">Há 2 horas</div>
+</div>
+<a class="kc-card__title" href="product.html?id=25">
+                                Carteira Marrom com Documentos e Cartões
+                            </a>
+<div class="kc-card__description-preview">
+                                Perdi minha carteira marrom de couro próximo à Biblioteca Central do Campus Samambaia. Contém RG, CNH, cartões bancários e carteirinha da UFG. Recompensa para quem encontrar!
+                            </div>
+<div class="kc-card__author">
+<img alt="Fernando" src="https://i.pravatar.cc/150?img=35"/>
+<span>Reportado por <strong>Fernando Santos</strong></span>
+</div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>45</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=25#comments">
+<i class="fas fa-comment"></i>
+<span>8 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=25">
+                            Encontrei!
+                        </a>
+</div>
+</article>
+<!-- Item 2 - Encontrado -->
+<article class="kc-card" data-post-id="26">
+<span class="kc-cashback-badge">
+<i class="fas fa-check-circle"></i> Encontrado
+                    </span>
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            📱
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Encontrado • Eletrônicos • RU Campus II
+                                </div>
+<div class="kc-card__timestamp">Há 1 dia</div>
+</div>
+<a class="kc-card__title" href="product.html?id=26">
+                                Celular Samsung Galaxy Encontrado no RU
+                            </a>
+<div class="kc-card__description-preview">
+                                Encontrei um celular Samsung Galaxy (modelo não identificado) no Restaurante Universitário do Campus II. Está com a tela bloqueada. Deixei na recepção da administração do RU.
+                            </div>
+<div class="kc-card__author">
+<img alt="Beatriz" src="https://i.pravatar.cc/150?img=36"/>
+<span>Reportado por <strong>Beatriz Lima</strong></span>
+</div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>67</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=26#comments">
+<i class="fas fa-comment"></i>
+<span>12 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=26">
+                            É Meu!
+                        </a>
+</div>
+</article>
+<!-- Item 3 - Perdido -->
+<article class="kc-card" data-post-id="27">
+<span class="kc-cashback-badge" style="background-color: var(--kc-red-alert);">
+<i class="fas fa-exclamation-circle"></i> Perdido
+                    </span>
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            🔑
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Perdido • Outros • Estacionamento
+                                </div>
+<div class="kc-card__timestamp">Há 3 dias</div>
+</div>
+<a class="kc-card__title" href="product.html?id=27">
+                                Molho de Chaves com Chaveiro da UFG
+                            </a>
+<div class="kc-card__description-preview">
+                                Perdi um molho de chaves (3 chaves) com chaveiro verde da UFG no estacionamento do Campus Samambaia, próximo ao bloco de Engenharia. Por favor, se encontrar, entre em contato!
+                            </div>
+<div class="kc-card__author">
+<img alt="Roberto" src="https://i.pravatar.cc/150?img=37"/>
+<span>Reportado por <strong>Roberto Oliveira</strong></span>
+</div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>32</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=27#comments">
+<i class="fas fa-comment"></i>
+<span>5 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=27">
+                            Encontrei!
+                        </a>
+</div>
+</article>
+<!-- Item 4 - Encontrado -->
+<article class="kc-card" data-post-id="28">
+<span class="kc-cashback-badge">
+<i class="fas fa-check-circle"></i> Encontrado
+                    </span>
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<img alt="Livro" src="https://via.placeholder.com/100x100/70E291/fff?text=Livro"/>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Encontrado • Livros • Biblioteca
+                                </div>
+<div class="kc-card__timestamp">Há 1 semana</div>
+</div>
+<a class="kc-card__title" href="product.html?id=28">
+                                Livro de Física Encontrado na Biblioteca
+                            </a>
+<div class="kc-card__description-preview">
+                                Encontrei um livro "Fundamentos de Física - Halliday" na mesa de estudos da Biblioteca Central. Tem anotações e nome na primeira página. Entreguei na recepção da biblioteca.
+                            </div>
+<div class="kc-card__author">
+<img alt="Amanda" src="https://i.pravatar.cc/150?img=38"/>
+<span>Reportado por <strong>Amanda Rodrigues</strong></span>
+</div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>28</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=28#comments">
+<i class="fas fa-comment"></i>
+<span>3 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=28">
+                            É Meu!
+                        </a>
+</div>
+</article>
+</div>
+</section>
+<!-- Sidebar -->
+<aside class="kc-sidebar">
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-info-circle"></i>
+                    Como Funciona
+                </h3>
+<div style="line-height: 1.6; font-size: 0.9em; color: var(--kc-text-dark-secondary);">
+<p><strong>Perdeu algo?</strong></p>
+<p>Crie um post descrevendo o item perdido, local e data. A comunidade pode ajudar a encontrar!</p>
+<br/>
+<p><strong>Encontrou algo?</strong></p>
+<p>Publique uma foto e descrição do item encontrado. O dono poderá identificar e entrar em contato.</p>
+</div>
+</div>
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-map-marker-alt"></i>
+                    Locais Comuns
+                </h3>
+<div class="kc-category-list">
+<a class="kc-category-item" href="#biblioteca">
+<i class="fas fa-book"></i>
+<span>Biblioteca Central</span>
+<span class="kc-category-count">18</span>
+</a>
+<a class="kc-category-item" href="#ru">
+<i class="fas fa-utensils"></i>
+<span>Restaurante Universitário</span>
+<span class="kc-category-count">12</span>
+</a>
+<a class="kc-category-item" href="#estacionamento">
+<i class="fas fa-parking"></i>
+<span>Estacionamento</span>
+<span class="kc-category-count">9</span>
+</a>
+<a class="kc-category-item" href="#salas">
+<i class="fas fa-door-open"></i>
+<span>Salas de Aula</span>
+<span class="kc-category-count">15</span>
+</a>
+</div>
+</div>
+<div class="kc-sidebar-section">
+<h3>
+<i class="fas fa-lightbulb"></i>
+                    Dicas
+                </h3>
+<div style="line-height: 1.6; font-size: 0.9em; color: var(--kc-text-dark-secondary);">
+<p><strong>✓ Seja específico</strong> na descrição</p>
+<p><strong>✓ Inclua fotos</strong> quando possível</p>
+<p><strong>✓ Informe o local</strong> e data exatos</p>
+<p><strong>✓ Verifique regularmente</strong> os posts</p>
+</div>
+</div>
+</aside>
+</main>
+<!-- Mobile Navigation -->
+<nav class="kc-mobile-nav">
+<a href="index.html">
+<i class="fas fa-home"></i>
+<span>Início</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a class="kc-create-btn" href="create-post.html">
+<i class="fas fa-plus"></i>
+</a>
+<a href="compra-venda-feed.html">
+<i class="fas fa-shopping-bag"></i>
+<span>Comprar</span>
+</a>
+<button class="kc-menu-toggle" onclick="openMobileMenu()">
+<i class="fas fa-bars"></i>
+<span>Menu</span>
+</button>
+</nav>
+<!-- Mobile Menu Drawer -->
+<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
+<div class="kc-mobile-menu-header">
+<h3>Menu</h3>
+<button class="kc-close-menu" onclick="closeMobileMenu()">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="kc-mobile-menu-content">
+<a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+<a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+<a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+<a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+<a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+<a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+<hr/>
+<a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
+</div>
+</div>
+<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+<script src="script.v554.js"></script>
+<script src="script.v556.js"></script>
+<script src="filters.js"></script>
+<script src="search.js"></script>
+</body>
+</html>
