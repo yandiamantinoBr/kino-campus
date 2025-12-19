@@ -4001,6 +4001,21 @@ header,
 
   .kc-card__footer {
     padding: 10px 12px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .kc-card__interactions {
+    width: 100% !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .kc-card__footer .kc-action-button {
+    width: 100% !important;
+    justify-content: center !important;
   }
 
   /* 3) Hero mais harmônico */
