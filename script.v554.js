@@ -40,6 +40,10 @@ function applySavedTheme() {
 let currentSlide = 0;
 let autoSlideInterval = null;
 
+function kcHasReactHero() {
+  return document.body && document.body.getAttribute('data-kc-react-hero') === 'true';
+}
+
 function showSlide(index) {
   const slides = document.querySelectorAll('.kc-hero-banner');
   const dots = document.querySelectorAll('.kc-dot');
@@ -1595,6 +1599,7 @@ function kcInitHorizontalDragAreas() {
 }
 
 function kcInitHeroSwipe() {
+  if (kcHasReactHero()) return;
   const carousel = document.querySelector(".kc-hero-carousel");
   if (!carousel) return;
 
@@ -1763,7 +1768,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { passive: true });
 
   // carousel
-  if (document.querySelector('.kc-hero-carousel')) {
+  if (document.querySelector('.kc-hero-carousel') && !kcHasReactHero()) {
     showSlide(0);
     startAutoSlide();
   }

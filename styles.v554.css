@@ -268,7 +268,7 @@ main {
     display: none;
     background: linear-gradient(90deg, var(--kc-primary-brand), var(--kc-secondary-brand));
     border-radius: 24px;
-    padding: 46px 44px 70px;
+    padding: clamp(28px, 4vw, 46px) clamp(24px, 4vw, 44px) clamp(48px, 6vw, 70px);
     color: white;
     position: relative;
     overflow: hidden;
@@ -326,14 +326,14 @@ main {
 }
 
 .kc-hero-content h1 {
-    font-size: 2.9rem;
+    font-size: clamp(1.9rem, 3.5vw, 2.9rem);
     line-height: 1.05;
     margin-bottom: 12px;
     text-align: left;
 }
 
 .kc-hero-content p {
-    font-size: 1.1rem;
+    font-size: clamp(1rem, 2vw, 1.1rem);
     margin-bottom: 22px;
     opacity: 0.95;
     text-align: left;
@@ -355,6 +355,19 @@ main {
 .kc-hero-illustration i {
     font-size: 7rem;
     color: rgba(255,255,255,0.86);
+}
+
+@media (max-width: 900px) {
+    .kc-hero-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .kc-hero-illustration {
+        width: 120px;
+        height: 120px;
+        align-self: flex-end;
+    }
 }
 
 .kc-btn-primary {
@@ -429,6 +442,9 @@ main {
     background-color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
     transition: all var(--transition-speed) ease;
+    border: none;
+    padding: 0;
+    appearance: none;
 }
 
 .kc-dot.active {
@@ -471,6 +487,7 @@ main {
     overflow-x: auto;
     padding-bottom: 5px;
     scrollbar-width: thin;
+    scroll-snap-type: x mandatory;
 }
 
 .kc-ranking-user {
@@ -481,6 +498,7 @@ main {
     flex-shrink: 0;
     transition: transform var(--transition-speed) ease;
     cursor: pointer;
+    scroll-snap-align: start;
 }
 
 .kc-ranking-user:hover {
@@ -536,6 +554,8 @@ main {
     overflow-x: auto;
     padding-bottom: 10px;
     scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 12px;
 }
 
 .kc-feed-tabs::-webkit-scrollbar {
@@ -556,6 +576,7 @@ main {
     gap: 5px;
     transition: all var(--transition-speed) ease;
     border: 1px solid var(--kc-border-dark);
+    scroll-snap-align: start;
 }
 
 .kc-feed-tabs a.active {
@@ -600,14 +621,14 @@ main {
 
 .kc-card__main {
     display: grid;
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: minmax(96px, 120px) 1fr;
     gap: 12px;
     padding: 12px;
 }
 
 .kc-card__image-wrapper {
-    width: 100px;
-    height: 100px;
+    width: clamp(96px, 12vw, 120px);
+    height: clamp(96px, 12vw, 120px);
     background-color: var(--kc-background-dark);
     display: flex;
     align-items: center;
@@ -626,6 +647,11 @@ main {
 .kc-card__emoji {
     font-size: 2.1em;
     line-height: 1;
+}
+
+.kc-card__image-icon {
+    font-size: clamp(2.4rem, 4vw, 3rem);
+    color: var(--kc-primary-brand);
 }
 
 .kc-card:hover .kc-card__image-wrapper img {
@@ -691,6 +717,21 @@ main {
     align-items: center;
     flex-wrap: wrap;
     gap: 5px;
+}
+
+.kc-card__price--success {
+    color: var(--kc-green-check);
+}
+
+@media (max-width: 640px) {
+    .kc-card__main {
+        grid-template-columns: 1fr;
+    }
+
+    .kc-card__image-wrapper {
+        width: 100%;
+        height: clamp(160px, 40vw, 220px);
+    }
 }
 
 .kc-card__price i {
