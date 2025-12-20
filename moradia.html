@@ -4,12 +4,36 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+
+<script>
+  // KinoCampus - Theme boot (sem flash)
+  (function () {
+    const STORAGE_KEY = 'theme';
+    const root = document.documentElement;
+    root.classList.add('kc-theme-preload');
+
+    let saved = null;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+
+    let theme = (saved === 'light' || saved === 'dark')
+      ? saved
+      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+    root.setAttribute('data-theme', theme);
+    // melhora o UI nativo (inputs/scrollbar) em ambos os temas
+    root.style.colorScheme = theme;
+  })();
+</script>
+<style>
+  /* evita transições durante o primeiro paint */
+  html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
+</style>
 <title>Moradia - KinoCampus</title>
 <link href="styles.v554.css" rel="stylesheet"/>
 <link href="styles.v556.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
-<body data-theme="light" data-kc-filters="tab-search">
+<body data-kc-filters="tab-search">
 <!-- Header -->
 <header class="kc-header">
 <div class="kc-header-container">
@@ -383,6 +407,7 @@
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 <script src="script.v554.js"></script>
+<script src="theme.v556.js"></script>
 <script src="script.v556.js"></script>
 <script src="filters.js"></script>
 <script src="search.js"></script>
