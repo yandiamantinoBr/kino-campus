@@ -1,4 +1,4 @@
-# KinoCampus — Protótipo WEB (V6.0.1) — Vercel compat + estrutura pronta para Backend
+# KinoCampus — Protótipo WEB (V6.0.2) — Vercel compat + estrutura pronta para Backend
 
 KinoCampus é um **protótipo de plataforma universitária** voltada para a comunidade (ex.: UFG), com foco em **compartilhamento de oportunidades** e **publicações por módulos** (Compra & Venda, Caronas, Moradia, Eventos, Achados/Perdidos e Oportunidades).
 
@@ -100,7 +100,7 @@ search-results.html?q=notebook
 
 ---
 
-## 📁 Estrutura de arquivos (V6.0.1)
+## 📁 Estrutura de arquivos (V6.0.2)
 
 ```
 kino-campus/
@@ -163,4 +163,14 @@ Se quiser rodar 100% offline, substitua por ícones locais (download do CSS/font
 ---
 
 ## Versão
-- **V6.0.1** — correção de deploy no Vercel via `vercel.json` (rotas apontando para `frontend/`).
+- **V6.0.2** — correção de deploy no Vercel via `vercel.json` (rotas apontando para `frontend/`).
+
+
+## Deploy no Vercel (sem 404)
+
+Este repositório mantém o Frontend em `frontend/`, mas inclui **shims de redirecionamento** na raiz (ex.: `index.html`, `moradia.html`, etc.) para garantir que o Vercel encontre uma página inicial e que **links diretos** também funcionem.
+
+- Acesse `/` → redireciona para `/frontend/index.html`
+- Acesse `/moradia.html` → redireciona para `/frontend/moradia.html`
+
+Se você preferir, também pode configurar o **Root Directory** do projeto no Vercel para `frontend/` (nesse caso, você nem precisa dos shims), mas esta versão funciona mesmo sem mexer nas configurações.

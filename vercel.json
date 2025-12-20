@@ -1,12 +1,13 @@
 {
-  "redirects": [
-    {
-      "source": "/frontend/(.*)",
-      "destination": "/$1",
-      "permanent": false
-    }
-  ],
   "rewrites": [
+    {
+      "source": "/",
+      "destination": "/frontend/index.html"
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": "/frontend/assets/$1"
+    },
     {
       "source": "/(.*)",
       "destination": "/frontend/$1"
