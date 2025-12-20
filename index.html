@@ -4,17 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="refresh" content="0; url=/frontend/index.html" />
-  <title>Kino Campus</title>
+  <title>KinoCampus</title>
   <script>
     (function() {
-      var dest = '/frontend/index.html';
-      if (window.location.pathname !== dest) {
-        window.location.replace(dest);
-      }
+      var target = "/frontend/index.html" + (window.location.search || "") + (window.location.hash || "");
+      window.location.replace(target);
     })();
   </script>
 </head>
-<body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px;">
-  <p>Redirecionando para <a href="/frontend/index.html">/frontend/index.html</a>...</p>
+<body>
+  <p>Redirecionando…</p>
 </body>
 </html>

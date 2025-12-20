@@ -339,13 +339,31 @@
     }
 
     async function fetchDatabase() {
+      // Prefer KCAPI (V6) - keeps path consistent across pages
       try {
-        const res = await fetch('data/database.json', { cache: 'no-store' });
-        if (!res.ok) throw new Error('db');
-        return await res.json();
+        if (window.KCAPI && typeof window.KCAPI.getDatabase === 'function') {
+          const db = await window.KCAPI.getDatabase();
+          if (db) return db;
+        }
       } catch (e) {
-        return null;
+        // ignore and fallback
       }
+
+      // Fallbacks (compat)
+      const candidates = [
+        'assets/data/database.json',
+        'data/database.json'
+      ];
+
+      for (const url of candidates) {
+        try {
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) continue;
+          const db = await res.json();
+          if (db) return db;
+        } catch (e) {}
+      }
+      return null;
     }
 
     function setBreadcrumb(post) {
