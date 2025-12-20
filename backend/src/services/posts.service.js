@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', '..', 'frontend', 'assets', 'data', 'database.json');
+const DB_PATH = path.join(__dirname, '..', '..', '..', 'data', 'database.json');
 
 function loadDB() {
   const raw = fs.readFileSync(DB_PATH, 'utf8');

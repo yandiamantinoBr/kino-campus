@@ -1,4 +1,11 @@
-# KinoCampus — Protótipo WEB (V6.0.0) — Estrutura pronta para Backend
+# KinoCampus — Protótipo WEB (V6.1.0) — Estrutura pronta para Backend
+
+## V6.1.0 — Estrutura padronizada (Vercel-ready)
+
+- **HTML na raiz** (Vercel encontra `index.html` automaticamente)
+- **Assets padronizados** em `assets/` (CSS/JS sem sufixos de versão)
+- **Banco local** em `assets/data/database.json` e **alias** em `data/database.json` (compat)
+
 
 KinoCampus é um **protótipo de plataforma universitária** voltada para a comunidade (ex.: UFG), com foco em **compartilhamento de oportunidades** e **publicações por módulos** (Compra & Venda, Caronas, Moradia, Eventos, Achados/Perdidos e Oportunidades).
 
@@ -39,7 +46,7 @@ location.reload();
 ```
 
 ### 2) Banco de dados de exemplo (JSON)
-- Arquivo: `frontend/assets/data/database.json`
+- Arquivo: `assets/data/database.json`
 - Estrutura:
   - `anuncios`: lista de anúncios (seed / exemplos)
   - `categorias`: mapeamentos de categorias/subcategorias
@@ -54,7 +61,7 @@ location.reload();
 ### Opção A — VSCode Live Server (mais simples)
 1. Abra a pasta no VSCode  
 2. Clique em **“Go Live”**
-3. Acesse `frontend/index.html`
+3. Acesse `index.html`
 
 ### Opção B — Python (servidor local rápido)
 Na pasta do projeto:
@@ -62,9 +69,9 @@ Na pasta do projeto:
 python -m http.server 5500
 ```
 Abra:
-- `http://localhost:5500/frontend/index.html`
+- `http://localhost:5500/index.html`
 
-> Rodar via servidor local melhora compatibilidade com `fetch('frontend/assets/data/database.json')`.
+> Rodar via servidor local melhora compatibilidade com `fetch('assets/data/database.json')`.
 
 ---
 
@@ -84,7 +91,7 @@ search-results.html?q=notebook
 
 ```
 kino-campus/
-├─ frontend/
+├─ 
 │  ├─ index.html
 │  ├─ compra-venda-feed.html
 │  ├─ caronas-feed.html
@@ -151,4 +158,4 @@ Se quiser rodar 100% offline, substitua por ícones locais (download do CSS/font
 - Build Command: (vazio)
 - Output Directory: (vazio)
 
-Este projeto possui páginas "shim" na raiz (ex.: `product.html?id=19`) que redirecionam para `/frontend/...` preservando querystring.
+Este projeto possui páginas "shim" na raiz (ex.: `product.html?id=19`) que redirecionam para `/...` preservando querystring.
