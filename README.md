@@ -1,4 +1,4 @@
-# KinoCampus — Protótipo WEB (V5.5.4)
+# KinoCampus — Protótipo WEB (V6.0.0) — Estrutura pronta para Backend
 
 KinoCampus é um **protótipo de plataforma universitária** voltada para a comunidade (ex.: UFG), com foco em **compartilhamento de oportunidades** e **publicações por módulos** (Compra & Venda, Caronas, Moradia, Eventos, Achados/Perdidos e Oportunidades).
 
@@ -39,7 +39,7 @@ location.reload();
 ```
 
 ### 2) Banco de dados de exemplo (JSON)
-- Arquivo: `data/database.json`
+- Arquivo: `frontend/assets/data/database.json`
 - Estrutura:
   - `anuncios`: lista de anúncios (seed / exemplos)
   - `categorias`: mapeamentos de categorias/subcategorias
@@ -54,7 +54,7 @@ location.reload();
 ### Opção A — VSCode Live Server (mais simples)
 1. Abra a pasta no VSCode  
 2. Clique em **“Go Live”**
-3. Acesse `index.html`
+3. Acesse `frontend/index.html`
 
 ### Opção B — Python (servidor local rápido)
 Na pasta do projeto:
@@ -62,9 +62,9 @@ Na pasta do projeto:
 python -m http.server 5500
 ```
 Abra:
-- `http://localhost:5500/index.html`
+- `http://localhost:5500/frontend/index.html`
 
-> Rodar via servidor local melhora compatibilidade com `fetch('data/database.json')`.
+> Rodar via servidor local melhora compatibilidade com `fetch('frontend/assets/data/database.json')`.
 
 ---
 
@@ -80,28 +80,36 @@ search-results.html?q=notebook
 
 ---
 
-## 📁 Estrutura de arquivos (clean)
+## 📁 Estrutura de arquivos (V6.0.0)
 
 ```
-/
-├─ index.html
-├─ compra-venda-feed.html
-├─ compra-venda.html
-├─ caronas-feed.html
-├─ caronas.html
-├─ achados-perdidos.html
-├─ eventos.html
-├─ moradia.html
-├─ oportunidades.html
-├─ product.html
-├─ search-results.html
-├─ styles.v554.css
-├─ script.v554.js
-├─ filters.js
-├─ search.js
-└─ data/
-   └─ database.json
+kino-campus/
+├─ frontend/
+│  ├─ index.html
+│  ├─ compra-venda-feed.html
+│  ├─ caronas-feed.html
+│  ├─ moradia.html
+│  ├─ eventos.html
+│  ├─ ... (demais páginas)
+│  └─ assets/
+│     ├─ css/
+│     │  ├─ styles.v554.css
+│     │  └─ styles.v556.css
+│     ├─ js/
+│     │  ├─ script.v554.js
+│     │  ├─ theme.v556.js
+│     │  ├─ script.v556.js
+│     │  ├─ filters.js
+│     │  ├─ search.js
+│     │  ├─ kc-utils.v600.js
+│     │  └─ kc-api.client.v600.js
+│     └─ data/
+│        └─ database.json
+└─ backend/ (placeholder)
+   ├─ package.json
+   └─ src/...
 ```
+
 
 ---
 

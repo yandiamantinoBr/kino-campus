@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+<script>
+  // KinoCampus - Theme boot (sem flash)
+  (function () {
+    const STORAGE_KEY = 'theme';
+    const root = document.documentElement;
+    root.classList.add('kc-theme-preload');
+
+    let saved = null;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+
+    let theme = (saved === 'light' || saved === 'dark')
+      ? saved
+      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+    root.setAttribute('data-theme', theme);
+    // melhora o UI nativo (inputs/scrollbar) em ambos os temas
+    root.style.colorScheme = theme;
+  })();
+</script>
+<style>
+  /* evita transições durante o primeiro paint */
+  html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
+</style>
+<title>KinoCampus - Detalhes</title>
+
+  <link rel="stylesheet" href="assets/css/styles.v554.css" />
+<link rel="stylesheet" href="assets/css/styles.v556.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+  <style>
+    /* Ajustes pontuais de layout para a página de detalhes (mantém o design existente do projeto) */
+    .kc-product-page .kc-main-content { padding-top: 30px; }
+    .kc-product-section { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+    .kc-post-breadcrumb { display:flex; align-items:center; gap:10px; font-size:.9em; margin-bottom: 20px; color: var(--kc-text-dark-secondary); flex-wrap: wrap; }
+    .kc-post-breadcrumb a { color: var(--kc-text-dark-secondary); text-decoration:none; }
+    .kc-post-breadcrumb a:hover { color: var(--kc-primary-brand); }
+
+    .kc-product-container { display:grid; grid-template-columns: 1fr; gap: 30px; margin-bottom: 30px; }
+    @media (min-width: 900px) { .kc-product-container { grid-template-columns: 1fr 1fr; } }
+
+    .kc-product-gallery { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 20px; border: 1px solid var(--kc-border-dark); }
+    .kc-gallery-main { display:flex; align-items:center; justify-content:center; background-color: var(--kc-background-dark); border-radius: 10px; padding: 15px; min-height: 320px; }
+    .kc-gallery-main img { max-width: 100%; max-height: 520px; object-fit: contain; border-radius: 10px; }
+    .kc-emoji-cover { font-size: 5rem; line-height: 1; display:flex; align-items:center; justify-content:center; width:100%; min-height: 320px; }
+    .kc-gallery-thumbnails { display:flex; gap: 10px; margin-top: 15px; overflow:auto; padding-bottom: 5px; }
+    .kc-thumbnail { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; cursor:pointer; border: 2px solid transparent; opacity: .85; }
+    .kc-thumbnail.active { border-color: var(--kc-primary-brand); opacity: 1; }
+
+    .kc-product-details { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 25px; border: 1px solid var(--kc-border-dark); }
+    .kc-product-title { font-size: 1.6em; margin-bottom: 12px; line-height: 1.25; }
+
+    .kc-product-badges { display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+    .kc-badge { display:inline-flex; align-items:center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-size: .85em; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark); }
+
+    .kc-product-price { font-size: 2em; font-weight: bold; color: var(--kc-hot-color); margin: 15px 0 10px; display:flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .kc-product-price small { font-size: .45em; font-weight: normal; color: var(--kc-text-dark-secondary); }
+    .kc-price-original { text-decoration: line-through; font-size: .45em; color: var(--kc-text-dark-secondary); font-weight: normal; }
+    .kc-price-discount { font-size: .45em; background-color: var(--kc-hot-color); color: #fff; padding: 4px 10px; border-radius: 999px; }
+
+    .kc-product-description { margin: 15px 0 20px; line-height: 1.6; color: var(--kc-text-dark); }
+    .kc-product-description p { margin: 0 0 10px; }
+
+    .kc-product-specs { margin: 18px 0; padding: 18px; border-radius: 10px; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark); }
+    .kc-product-specs h3 { display:flex; align-items:center; gap: 10px; margin-bottom: 12px; font-size: 1.05em; }
+    .kc-specs-grid { display:grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 520px) { .kc-specs-grid { grid-template-columns: 1fr 1fr; } }
+    .kc-spec-item { display:flex; align-items:flex-start; gap: 10px; font-size: .95em; color: var(--kc-text-dark-secondary); }
+    .kc-spec-item i { width: 18px; text-align:center; margin-top: 2px; }
+
+    .kc-product-actions { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .kc-btn-primary { background-color: var(--kc-primary-brand); color: #fff; border:none; padding: 12px 18px; border-radius: 10px; cursor:pointer; display:inline-flex; align-items:center; gap: 8px; }
+    .kc-btn-secondary { background-color: var(--kc-background-dark); color: var(--kc-text-dark); border: 1px solid var(--kc-border-dark); padding: 12px 18px; border-radius: 10px; cursor:pointer; display:inline-flex; align-items:center; gap: 8px; }
+    .kc-btn-full { width: 100%; justify-content:center; }
+
+    .kc-seller-card { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 20px; border: 1px solid var(--kc-border-dark); margin-bottom: 20px; }
+    .kc-seller-card h3 { display:flex; align-items:center; gap: 8px; margin-bottom: 15px; }
+    .kc-seller-profile { display:flex; gap: 15px; align-items:center; }
+    .kc-seller-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark); }
+    .kc-seller-name { font-weight: bold; display:flex; align-items:center; gap: 8px; }
+    .kc-seller-stats { display:flex; flex-wrap: wrap; gap: 12px; font-size: .85em; color: var(--kc-text-dark-secondary); margin-top: 4px; }
+    .kc-seller-stats i { margin-right: 6px; }
+
+    .kc-comments-section { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 25px; border: 1px solid var(--kc-border-dark); margin-bottom: 20px; }
+    .kc-comments-section h3 { display:flex; align-items:center; gap: 10px; margin-bottom: 18px; font-size: 1.2em; }
+    .kc-comment-editor { border: 1px solid var(--kc-border-dark); border-radius: 8px; overflow:hidden; background-color: var(--kc-background-dark); }
+    .kc-comment-editor textarea { width: 100%; padding: 14px; border: none; background: transparent; color: var(--kc-text-dark); font-family: inherit; min-height: 110px; resize: vertical; }
+    .kc-editor-toolbar { display:flex; gap: 6px; padding: 10px; border-top: 1px solid var(--kc-border-dark); background-color: var(--kc-background-dark); flex-wrap: wrap; }
+    .kc-editor-toolbar button { padding: 8px 12px; border: 1px solid var(--kc-border-dark); border-radius: 6px; background-color: transparent; color: var(--kc-text-dark); cursor:pointer; }
+
+    .kc-related-section { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 20px; border: 1px solid var(--kc-border-dark); margin-bottom: 40px; }
+    .kc-related-section h3 { display:flex; align-items:center; gap: 8px; margin-bottom: 15px; }
+    .kc-related-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+    .kc-related-card { background-color: var(--kc-background-dark); border-radius: 10px; padding: 14px; border: 1px solid var(--kc-border-dark); cursor:pointer; transition: transform .15s ease, box-shadow .15s ease; }
+    .kc-related-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,.12); }
+    .kc-related-card h4 { margin: 0 0 8px; font-size: 1em; }
+    .kc-related-meta { color: var(--kc-text-dark-secondary); font-size: .85em; display:flex; gap: 10px; flex-wrap: wrap; }
+  </style>
+</head>
+
+<body class="kc-product-page">
+  <!-- Header -->
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+<span class="kc-logo-text">
+<span class="kc-logo-name">Kino<span>Campus</span></span>
+<span class="kc-logo-sub">Comunidade UFG</span>
+</span>
+</a>
+</div>
+
+      <nav class="kc-nav-links">
+        <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
+        <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
+        <a href="moradia.html"><i class="fas fa-home"></i><span>Moradia</span></a>
+        <a href="oportunidades.html"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
+      </nav>
+
+      <div class="kc-search-bar">
+        <input id="searchInput" type="search" placeholder="Busque por itens, eventos, vagas na UFG..." />
+        <button type="submit" aria-label="Buscar"><i class="fas fa-search"></i></button>
+      </div>
+
+      <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema">
+          <i class="fas fa-sun"></i>
+        </button>
+        <a href="#login" class="btn-login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <section class="kc-product-section">
+      <div class="kc-post-breadcrumb" id="breadcrumb">
+        <a href="index.html"><i class="fas fa-home"></i> KinoCampus</a>
+        <i class="fas fa-chevron-right"></i>
+        <span>Detalhes</span>
+      </div>
+
+      <div class="kc-product-container">
+        <!-- Gallery -->
+        <div class="kc-product-gallery">
+          <div class="kc-gallery-main">
+            <img id="mainImage" alt="Imagem da publicação" style="display:none;" />
+            <div class="kc-emoji-cover" id="emojiCover" aria-hidden="true">✨</div>
+          </div>
+          <div class="kc-gallery-thumbnails" id="thumbnails" style="display:none;"></div>
+        </div>
+
+        <!-- Details -->
+        <div class="kc-product-details">
+          <h1 class="kc-product-title" id="postTitle">Carregando…</h1>
+
+          <div class="kc-product-badges" id="badges"></div>
+
+          <div class="kc-product-price" id="priceBlock" style="display:none;">
+            <i class="fas fa-money-bill-wave" id="priceIcon"></i>
+            <span id="priceValue"></span>
+            <small id="priceSmall"></small>
+            <span class="kc-price-original" id="priceOriginal" style="display:none;"></span>
+            <span class="kc-price-discount" id="priceDiscount" style="display:none;"></span>
+          </div>
+
+          <div class="kc-product-description" id="postDescription"></div>
+
+          <div class="kc-product-specs" id="specsBlock" style="display:none;">
+            <h3><i class="fas fa-info-circle"></i> Informações</h3>
+            <div class="kc-specs-grid" id="specsGrid"></div>
+          </div>
+
+          <div class="kc-product-actions">
+            <button class="kc-btn-primary" id="primaryCta">
+              <i class="fas fa-paper-plane"></i> Entrar em contato
+            </button>
+            <button class="kc-btn-secondary" onclick="navigator.clipboard?.writeText(window.location.href); showToast('Link copiado!', 'info', 1800)">
+              <i class="fas fa-share-alt"></i> Compartilhar
+            </button>
+            <a class="kc-btn-secondary" href="create-post.html" style="text-decoration:none;">
+              <i class="fas fa-plus"></i> Criar publicação
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seller -->
+      <div class="kc-seller-card" id="sellerCard" style="display:none;">
+        <h3><i class="fas fa-user"></i> Autor</h3>
+        <div class="kc-seller-profile">
+          <img class="kc-seller-avatar" id="sellerAvatar" alt="Avatar do autor" />
+          <div>
+            <div class="kc-seller-name" id="sellerName"></div>
+            <div class="kc-seller-stats" id="sellerStats"></div>
+          </div>
+        </div>
+        <button class="kc-btn-secondary kc-btn-full" onclick="showToast('Simulação: perfil ainda não implementado', 'info', 2200)">
+          <i class="fas fa-id-badge"></i> Ver perfil
+        </button>
+      </div>
+
+      <!-- Comments -->
+      <div class="kc-comments-section" id="comments">
+        <h3><i class="fas fa-comments"></i> Comentários</h3>
+
+        <div style="display:flex; gap: 12px; margin-bottom: 14px; align-items:flex-start;">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=commenter" alt="Seu avatar" style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark);" />
+          <div style="flex: 1;">
+            <input id="commentAuthor" type="text" name="author" placeholder="Seu nome" style="width:100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background-color: var(--kc-background-dark); color: var(--kc-text-dark); font-family: inherit;" />
+            <div class="kc-comment-editor">
+              <textarea id="commentText" placeholder="Deixe o seu comentário"></textarea>
+              <div class="kc-editor-toolbar">
+                <button type="button" onclick="formatText('bold')" title="Negrito"><i class="fas fa-bold"></i></button>
+                <button type="button" onclick="formatText('italic')" title="Itálico"><i class="fas fa-italic"></i></button>
+                <button type="button" onclick="formatText('underline')" title="Sublinhado"><i class="fas fa-underline"></i></button>
+                <button type="button" onclick="formatText('strikethrough')" title="Tachado"><i class="fas fa-strikethrough"></i></button>
+                <div style="flex: 1;"></div>
+                <button type="button" onclick="submitComment()" style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">
+                  <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="commentsContainer" style="display:flex; flex-direction: column; gap: 10px;"></div>
+      </div>
+
+      <!-- Related -->
+      <div class="kc-related-section" id="relatedSection" style="display:none;">
+        <h3><i class="fas fa-layer-group"></i> Outras publicações</h3>
+        <div class="kc-related-grid" id="relatedGrid"></div>
+      </div>
+
+      <!-- Not found -->
+      <div class="kc-related-section" id="notFound" style="display:none;">
+        <h3><i class="fas fa-triangle-exclamation"></i> Publicação não encontrada</h3>
+        <p style="color: var(--kc-text-dark-secondary); line-height: 1.6; margin: 0 0 12px;">
+          Não foi possível carregar esta publicação. Ela pode ter sido removida ou o link está incorreto.
+        </p>
+        <a class="kc-btn-primary" href="index.html" style="text-decoration:none;">
+          <i class="fas fa-home"></i> Voltar ao início
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Mobile Navigation -->
+  <nav class="kc-mobile-nav">
+    <a href="index.html">
+      <i class="fas fa-home"></i>
+      <span>Início</span>
+    </a>
+    <a href="eventos.html">
+      <i class="fas fa-calendar"></i>
+      <span>Eventos</span>
+    </a>
+    <a href="create-post.html" class="kc-create-btn">
+      <i class="fas fa-plus"></i>
+    </a>
+    <a href="compra-venda-feed.html">
+      <i class="fas fa-shopping-bag"></i>
+      <span>Comprar</span>
+    </a>
+    <button onclick="openMobileMenu()" class="kc-menu-toggle">
+      <i class="fas fa-bars"></i>
+      <span>Menu</span>
+    </button>
+  </nav>
+
+  <!-- Mobile Menu Drawer -->
+  <div class="kc-mobile-menu-drawer" id="mobileMenuDrawer" aria-hidden="true">
+    <div class="kc-mobile-menu-header">
+      <h3>Menu</h3>
+      <button onclick="closeMobileMenu()" class="kc-close-menu" aria-label="Fechar menu">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="kc-mobile-menu-content">
+      <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+      <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+      <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+      <a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+      <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+      <a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+      <hr />
+      <a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
+    </div>
+  </div>
+  <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true" onclick="closeMobileMenu()"></div>
+
+  <script src="assets/js/kc-utils.v600.js"></script>
+<script src="assets/js/kc-api.client.v600.js"></script>
+<script src="assets/js/script.v554.js"></script>
+<script src="assets/js/theme.v556.js"></script>
+<script src="assets/js/script.v556.js"></script>
+  <script src="assets/js/search.js"></script>
+
+  <script>
+    function moduleLabel(mod) {
+      const m = String(mod || '').toLowerCase();
+      const map = {
+        'compra-venda': 'Compra e Venda',
+        'livros': 'Livros',
+        'caronas': 'Caronas',
+        'moradia': 'Moradia',
+        'eventos': 'Eventos',
+        'oportunidades': 'Oportunidades',
+        'achados-perdidos': 'Achados/Perdidos'
+      };
+      return map[m] || (mod || 'Publicação');
+    }
+
+    function modulePage(mod) {
+      const m = String(mod || '').toLowerCase();
+      const map = {
+        'compra-venda': 'compra-venda-feed.html',
+        'livros': 'compra-venda-feed.html?filter=livros',
+        'caronas': 'caronas-feed.html',
+        'oportunidades': 'oportunidades.html',
+        'achados-perdidos': 'achados-perdidos.html',
+        'eventos': 'eventos.html',
+        'moradia': 'moradia.html'
+      };
+      return map[m] || 'index.html';
+    }
+
+    function getParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    async function fetchDatabase() {
+      try {
+        const res = await fetch('data/database.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error('db');
+        return await res.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function setBreadcrumb(post) {
+      const bc = document.getElementById('breadcrumb');
+      const mod = moduleLabel(post.modulo || post.moduloLabel);
+      const cat = post.categoria ? String(post.categoria) : '';
+      const sub = post.subcategoria ? String(post.subcategoria) : '';
+
+      const parts = [
+        '<a href="index.html"><i class="fas fa-home"></i> KinoCampus</a>',
+        '<i class="fas fa-chevron-right"></i>',
+        '<a href="' + modulePage(post.modulo || post.moduloLabel) + '">' + escapeHtml(mod) + '</a>'
+      ];
+
+      if (cat) {
+        parts.push('<i class="fas fa-chevron-right"></i>');
+        parts.push('<span>' + escapeHtml(cat) + '</span>');
+      }
+      if (sub) {
+        parts.push('<i class="fas fa-chevron-right"></i>');
+        parts.push('<span>' + escapeHtml(sub) + '</span>');
+      }
+
+      bc.innerHTML = parts.join(' ');
+    }
+
+    function setBadges(post) {
+      const badges = document.getElementById('badges');
+      const arr = [];
+
+      const mod = moduleLabel(post.modulo || post.moduloLabel);
+      arr.push('<span class="kc-badge"><i class="fas fa-layer-group"></i> ' + escapeHtml(mod) + '</span>');
+
+      if (post.categoria) arr.push('<span class="kc-badge"><i class="fas fa-tag"></i> ' + escapeHtml(post.categoria) + '</span>');
+      if (post.subcategoria) arr.push('<span class="kc-badge"><i class="fas fa-hashtag"></i> ' + escapeHtml(post.subcategoria) + '</span>');
+
+      if (post.verificado) arr.push('<span class="kc-badge"><i class="fas fa-check-circle" style="color: var(--kc-green-check);"></i> Verificado</span>');
+      if (post.condicao) arr.push('<span class="kc-badge"><i class="fas fa-star"></i> ' + escapeHtml(post.condicao) + '</span>');
+
+      if (post.timestamp) arr.push('<span class="kc-badge"><i class="fas fa-clock"></i> ' + escapeHtml(post.timestamp) + '</span>');
+
+      badges.innerHTML = arr.join('');
+    }
+
+    function setPrice(post) {
+      const block = document.getElementById('priceBlock');
+      const icon = document.getElementById('priceIcon');
+      const value = document.getElementById('priceValue');
+      const small = document.getElementById('priceSmall');
+      const original = document.getElementById('priceOriginal');
+      const discount = document.getElementById('priceDiscount');
+
+      let shown = false;
+      let mainText = '';
+      let smallText = '';
+
+      if (post.precoTexto) {
+        mainText = String(post.precoTexto);
+        shown = true;
+      } else if (typeof post.preco === 'number') {
+        if (post.preco === 0) {
+          icon.className = 'fas fa-gift';
+          mainText = 'Gratuito';
+          shown = true;
+        } else {
+          icon.className = 'fas fa-money-bill-wave';
+          mainText = formatCurrencyBRL(post.preco);
+          shown = true;
+        }
+      }
+
+      // small helpers
+      if (post.preco === null && !post.precoTexto && (post.modulo === 'oportunidades' || post.modulo === 'achados-perdidos')) {
+        shown = false;
+      }
+
+      if (shown) {
+        block.style.display = 'flex';
+        value.textContent = mainText;
+        small.textContent = smallText;
+
+        if (typeof post.precoOriginal === 'number' && post.precoOriginal > 0 && typeof post.preco === 'number' && post.preco > 0 && post.precoOriginal > post.preco) {
+          original.style.display = 'inline';
+          original.textContent = formatCurrencyBRL(post.precoOriginal);
+          const pct = Math.round((1 - (post.preco / post.precoOriginal)) * 100);
+          discount.style.display = 'inline';
+          discount.textContent = '-' + pct + '%';
+        } else {
+          original.style.display = 'none';
+          discount.style.display = 'none';
+        }
+      } else {
+        block.style.display = 'none';
+      }
+    }
+
+    function setDescription(post) {
+      const el = document.getElementById('postDescription');
+      const text = String(post.descricao || '').trim();
+      if (!text) {
+        el.innerHTML = '<p style="color: var(--kc-text-dark-secondary);">Sem descrição.</p>';
+        return;
+      }
+      const parts = text.split(/\n+/).map(p => p.trim()).filter(Boolean);
+      el.innerHTML = parts.map(p => '<p>' + escapeHtml(p) + '</p>').join('');
+    }
+
+    function addSpec(container, icon, label, value) {
+      const div = document.createElement('div');
+      div.className = 'kc-spec-item';
+      div.innerHTML = '<i class="' + icon + '"></i><span><strong>' + escapeHtml(label) + ':</strong> ' + escapeHtml(String(value)) + '</span>';
+      container.appendChild(div);
+    }
+
+    function setSpecs(post) {
+      const block = document.getElementById('specsBlock');
+      const grid = document.getElementById('specsGrid');
+      grid.innerHTML = '';
+
+      const pairs = [];
+
+      if (post.tags && Array.isArray(post.tags) && post.tags.length) pairs.push(['fas fa-hashtag', 'Tags', post.tags.slice(0, 8).join(', ')]);
+      if (post.modulo) pairs.push(['fas fa-layer-group', 'Módulo', moduleLabel(post.modulo)]);
+      if (post.categoria) pairs.push(['fas fa-tag', 'Categoria', post.categoria]);
+      if (post.subcategoria) pairs.push(['fas fa-hashtag', 'Subcategoria', post.subcategoria]);
+      if (post.verificado != null) pairs.push(['fas fa-check-circle', 'Verificação', post.verificado ? 'Sim' : 'Não']);
+      if (post.condicao) pairs.push(['fas fa-star', 'Condição', post.condicao]);
+
+      if (!pairs.length) {
+        block.style.display = 'none';
+        return;
+      }
+
+      pairs.forEach(p => addSpec(grid, p[0], p[1], p[2]));
+      block.style.display = 'block';
+    }
+
+    function setSeller(post) {
+      const card = document.getElementById('sellerCard');
+      const avatar = document.getElementById('sellerAvatar');
+      const name = document.getElementById('sellerName');
+      const stats = document.getElementById('sellerStats');
+
+      const author = post.autor || 'Autor';
+      const avatarUrl = post.autorAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
+
+      avatar.src = avatarUrl;
+      name.innerHTML = escapeHtml(author) + (post.verificado ? ' <i class="fas fa-check-circle" style="color: var(--kc-green-check);" title="Verificado"></i>' : '');
+
+      const items = [];
+      if (typeof post.rating === 'number') items.push('<span><i class="fas fa-star" style="color: var(--kc-yellow-badge);"></i> ' + post.rating.toFixed(1) + '</span>');
+      if (typeof post.votos === 'number') items.push('<span><i class="fas fa-fire"></i> ' + post.votos + '</span>');
+      if (typeof post.comentarios === 'number') items.push('<span><i class="fas fa-comments"></i> ' + post.comentarios + '</span>');
+
+      stats.innerHTML = items.join('');
+      card.style.display = 'block';
+    }
+
+    function setGallery(post) {
+      const mainImg = document.getElementById('mainImage');
+      const emojiCover = document.getElementById('emojiCover');
+      const thumbs = document.getElementById('thumbnails');
+
+      const images = (Array.isArray(post.imagens) ? post.imagens : (Array.isArray(post.images) ? post.images : []));
+      const emoji = post.emoji || '✨';
+
+      if (images && images.length) {
+        mainImg.src = images[0];
+        mainImg.style.display = 'block';
+        emojiCover.style.display = 'none';
+
+        thumbs.innerHTML = '';
+        images.forEach((src, idx) => {
+          const img = document.createElement('img');
+          img.src = src;
+          img.alt = 'Miniatura ' + (idx + 1);
+          img.className = 'kc-thumbnail' + (idx === 0 ? ' active' : '');
+          img.setAttribute('data-full-src', src);
+          img.addEventListener('click', () => changeMainImage(img));
+          thumbs.appendChild(img);
+        });
+
+        thumbs.style.display = images.length > 1 ? 'flex' : 'none';
+      } else {
+        mainImg.style.display = 'none';
+        emojiCover.style.display = 'flex';
+        emojiCover.textContent = emoji;
+        thumbs.style.display = 'none';
+      }
+    }
+
+    function setCTA(post) {
+      const btn = document.getElementById('primaryCta');
+      const mod = String(post.modulo || '');
+      let label = 'Entrar em contato';
+
+      if (mod === 'compra-venda' || mod === 'livros') label = 'Fazer proposta';
+      if (mod === 'caronas') label = 'Reservar vaga';
+      if (mod === 'eventos') label = 'Inscrever-se';
+      if (mod === 'moradia') label = 'Enviar mensagem';
+      if (mod === 'oportunidades') label = 'Candidatar-se';
+      if (mod === 'achados-perdidos') label = 'Tenho informações';
+
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + label;
+      btn.onclick = () => showToast('Simulação: ação "' + label + '"', 'info', 2200);
+    }
+
+    function setRelated(db, post) {
+      const section = document.getElementById('relatedSection');
+      const grid = document.getElementById('relatedGrid');
+      grid.innerHTML = '';
+
+      const dbItems = (db && Array.isArray(db.anuncios)) ? db.anuncios : [];
+      const userItems = (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') ? window.kcUserPosts.list() : [];
+      const allItems = [...dbItems, ...userItems];
+
+      const currentId = String(post.id);
+      const moduleKey = String(post.modulo || '');
+
+      const related = allItems
+        .filter(a => String(a.id) !== currentId && String(a.modulo || '') === moduleKey)
+        .slice(0, 6);
+
+      if (!related.length) {
+        section.style.display = 'none';
+        return;
+      }
+
+      related.slice(0, 4).forEach(a => {
+        const card = document.createElement('div');
+        card.className = 'kc-related-card';
+        card.onclick = () => window.location.href = 'product.html?id=' + encodeURIComponent(a.id);
+
+        const price = (typeof a.preco === 'number')
+          ? (a.preco === 0 ? 'Gratuito' : formatCurrencyBRL(a.preco))
+          : '';
+
+        card.innerHTML = `
+          <h4>${escapeHtml(a.titulo || 'Publicação')}</h4>
+          <div class="kc-related-meta">
+            <span><i class="fas fa-user"></i> ${escapeHtml(a.autor || 'Autor')}</span>
+            ${price ? `<span><i class="fas fa-tag"></i> ${escapeHtml(price)}</span>` : ''}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      section.style.display = 'block';
+    }
+
+    function showNotFound() {
+      document.getElementById('notFound').style.display = 'block';
+      document.getElementById('relatedSection').style.display = 'none';
+      document.getElementById('sellerCard').style.display = 'none';
+      document.getElementById('postTitle').textContent = 'Publicação não encontrada';
+      document.getElementById('postDescription').innerHTML = '';
+      document.getElementById('badges').innerHTML = '';
+      document.getElementById('priceBlock').style.display = 'none';
+      document.getElementById('specsBlock').style.display = 'none';
+      document.getElementById('emojiCover').textContent = '❓';
+      document.getElementById('emojiCover').style.display = 'flex';
+      document.getElementById('mainImage').style.display = 'none';
+      document.getElementById('thumbnails').style.display = 'none';
+    }
+
+    async function loadPost() {
+      const id = getParam('id');
+      if (!id) { showNotFound(); return; }
+
+      window.kcCurrentPostId = id;
+      document.body.setAttribute('data-post-id', id);
+
+      // Bind comment inputs to this post id (script.js procura por data-post-id)
+      const author = document.getElementById('commentAuthor');
+      const text = document.getElementById('commentText');
+      author.setAttribute('data-post-id', id);
+      text.setAttribute('data-post-id', id);
+
+      const db = await fetchDatabase();
+      let post = null;
+
+      // User posts first if looks like user id
+      if (String(id).startsWith('u_')) {
+        post = window.kcUserPosts?.getById?.(id) || null;
+      }
+
+      if (!post) {
+        // Database post by numeric id
+        if (db && Array.isArray(db.anuncios)) {
+          post = db.anuncios.find(a => String(a.id) === String(id)) || null;
+        }
+      }
+
+      if (!post) {
+        // fallback: user posts list
+        post = window.kcUserPosts?.getById?.(id) || null;
+      }
+
+      if (!post) { showNotFound(); return; }
+
+      // Render
+      document.getElementById('notFound').style.display = 'none';
+      document.getElementById('postTitle').textContent = post.titulo || 'Detalhes';
+      setBreadcrumb(post);
+      setBadges(post);
+      setGallery(post);
+      setPrice(post);
+      setDescription(post);
+      setSpecs(post);
+      setSeller(post);
+      setCTA(post);
+      setRelated(db, post);
+
+      // Comments
+      renderComments(id, 'commentsContainer');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadPost);
+  </script>
+</body>
+</html>
