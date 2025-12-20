@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    {
+      "source": "/frontend/(.*)",
+      "destination": "/$1",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
+    }
+  ]
+}

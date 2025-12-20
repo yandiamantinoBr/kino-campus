@@ -1,4 +1,4 @@
-# KinoCampus — Protótipo WEB (V6.0.0) — Estrutura pronta para Backend
+# KinoCampus — Protótipo WEB (V6.0.1) — Vercel compat + estrutura pronta para Backend
 
 KinoCampus é um **protótipo de plataforma universitária** voltada para a comunidade (ex.: UFG), com foco em **compartilhamento de oportunidades** e **publicações por módulos** (Compra & Venda, Caronas, Moradia, Eventos, Achados/Perdidos e Oportunidades).
 
@@ -68,6 +68,26 @@ Abra:
 
 ---
 
+## ☁️ Deploy no Vercel (sem erro 404)
+
+Este projeto mantém o Frontend dentro de `frontend/`. No Vercel, isso costuma gerar **404** quando não existe `index.html` na raiz.
+
+✅ **Correção aplicada nesta versão:** foi adicionado um `vercel.json` na raiz que **reescreve** as rotas para `frontend/`.
+
+### Passo a passo (recomendado)
+1) No Vercel, importe o repositório.
+2) Em **Project Settings → General → Root Directory**, selecione a pasta que contém `vercel.json` e a pasta `frontend/`.
+   - Se seu repo já está na raiz do projeto, deixe como `.`
+3) Em **Build & Output Settings**:
+   - Framework Preset: **Other**
+   - Build Command: **(vazio)**
+   - Output Directory: **(vazio)**
+4) Faça o Deploy.
+
+Após o deploy, a home abre em `/` (sem precisar de `/frontend`).
+
+---
+
 ## 🔎 Busca
 - Script: `search.js`
 - Página: `search-results.html`
@@ -80,10 +100,11 @@ search-results.html?q=notebook
 
 ---
 
-## 📁 Estrutura de arquivos (V6.0.0)
+## 📁 Estrutura de arquivos (V6.0.1)
 
 ```
 kino-campus/
+├─ vercel.json
 ├─ frontend/
 │  ├─ index.html
 │  ├─ compra-venda-feed.html
@@ -142,4 +163,4 @@ Se quiser rodar 100% offline, substitua por ícones locais (download do CSS/font
 ---
 
 ## Versão
-- **V5.5.4** — foco em melhorias de mobile/cards/tabs + modal de publicação + schema por módulo.
+- **V6.0.1** — correção de deploy no Vercel via `vercel.json` (rotas apontando para `frontend/`).
