@@ -348,3 +348,30 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
 @media (hover: none) and (pointer: coarse) {
   .kc-card:hover { transform: none !important; }
 }
+
+/* =========================================================
+   V5.5.6 - Tema persistente (sem flash) + consistência
+   Principal função: garantir compatibilidade com data-theme no <html>
+   ========================================================= */
+
+:root[data-theme="dark"] { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+
+/* Placeholders legíveis nos dois temas */
+input::placeholder,
+textarea::placeholder {
+  color: var(--kc-text-dark-secondary);
+  opacity: 0.85;
+}
+
+/* Compat: regras antigas usavam body[data-theme] (agora o atributo fica no <html>) */
+@media (max-width: 520px) {
+  :root[data-theme="light"] {
+    --kc-background-dark: #efefef;
+  }
+
+  :root[data-theme="dark"] .kc-card {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35) !important;
+  }
+}

@@ -3,7 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KinoCampus - Detalhes</title>
+  
+<script>
+  // KinoCampus - Theme boot (sem flash)
+  (function () {
+    const STORAGE_KEY = 'theme';
+    const root = document.documentElement;
+    root.classList.add('kc-theme-preload');
+
+    let saved = null;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+
+    let theme = (saved === 'light' || saved === 'dark')
+      ? saved
+      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+    root.setAttribute('data-theme', theme);
+    // melhora o UI nativo (inputs/scrollbar) em ambos os temas
+    root.style.colorScheme = theme;
+  })();
+</script>
+<style>
+  /* evita transições durante o primeiro paint */
+  html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
+</style>
+<title>KinoCampus - Detalhes</title>
 
   <link rel="stylesheet" href="styles.v554.css" />
 <link rel="stylesheet" href="styles.v556.css">
@@ -80,7 +104,7 @@
   </style>
 </head>
 
-<body data-theme="light" class="kc-product-page">
+<body class="kc-product-page">
   <!-- Header -->
   <header class="kc-header">
     <div class="kc-header-container">
@@ -274,6 +298,7 @@
   <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true" onclick="closeMobileMenu()"></div>
 
   <script src="script.v554.js"></script>
+<script src="theme.v556.js"></script>
 <script src="script.v556.js"></script>
   <script src="search.js"></script>
 
