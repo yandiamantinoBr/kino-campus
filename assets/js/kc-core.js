@@ -1,12 +1,12 @@
-/* KinoCampus kc-core.js (merged from script.v554.js + script.v556.js) */
+/* KinoCampus kc-core.js */
 
 /**
- * KinoCampus - Core UI scripts (V7.0.0)
+ * KinoCampus - Core UI scripts (V7.1.2)
  *
  * Mantém apenas funcionalidades compartilhadas para evitar conflitos com scripts
  * específicos de páginas (ex.: filtros/feeds inline).
  *
- * NOTE (V7.0.0): camada KCAPI agora oferece MOCK_USERS + authorId para preparar o backend.
+ * NOTE (V7.1.2): renderização de cards centralizada em KCUtils.renderPostCard para preparar MVC.
  */
 
 // -----------------------------
@@ -436,16 +436,40 @@ function kcCreateUserPost(data) {
   const posts = kcLoadUserPosts();
   const id = `u_${Date.now().toString(36)}`;
 
-  const post = {
+  // Modelo (MVC): persistimos no contrato V7.x, mas sem quebrar legado.
+  const createdAt = new Date().toISOString();
+  const raw = {
     id,
-    createdAt: new Date().toISOString(),
-    ...data,
+    createdAt,
+    timestamp: (data && (data.timestamp || data.createdAt)) ? (data.timestamp || data.createdAt) : 'Agora',
+    authorId: (data && data.authorId) ? data.authorId : 'USER_SELF',
+    // Legado: manter campos "autor" para compatibilidade com páginas antigas.
+    autor: (data && (data.autor || data.author)) ? (data.autor || data.author) : 'Você',
+    autorAvatar: (data && (data.autorAvatar || data.authorAvatar))
+      ? (data.autorAvatar || data.authorAvatar)
+      : (() => {
+          try {
+            if (window.KCAPI && typeof window.KCAPI.getAuthorById === 'function') {
+              const u = window.KCAPI.getAuthorById('USER_SELF');
+              return (u && (u.avatarUrl || u.avatar)) ? (u.avatarUrl || u.avatar) : '';
+            }
+          } catch (_) {}
+          return '';
+        })(),
+    ...(data || {}),
   };
+
+  const normalized = (window.KCAPI && typeof window.KCAPI.normalizePost === 'function')
+    ? window.KCAPI.normalizePost(raw)
+    : raw;
+
+  // Mantém createdAt para ordenação local futura (não interfere no card).
+  const post = { ...normalized, createdAt };
 
   posts.unshift(post);
   kcSaveUserPosts(posts);
 
-  // V6.0.0: pronto para backend (sem quebrar o modo estático)
+  // V7.1.2: pronto para backend (sem quebrar o modo estático)
   // Se existir KCAPI configurado, espelha o post no servidor.
   try {
     if (window.KCAPI && typeof window.KCAPI.isBackendEnabled === 'function' && window.KCAPI.isBackendEnabled()) {
@@ -502,94 +526,38 @@ function kcModulePage(modulo) {
 }
 
 // Minimal card injection (works on pages with .kc-feed-list)
+// NOTE (V7.1.2): A View (HTML do card) fica centralizada em KCUtils.renderPostCard.
 function kcInjectUserPostsIntoFeed() {
   const feed = document.querySelector('.kc-feed-list');
   if (!feed) return;
 
-  const filterModulo = kcGetModuloFilterForPage();
-  const posts = kcLoadUserPosts().filter(p => !filterModulo || String(p.modulo) === String(filterModulo));
-  if (!posts.length) return;
-
-  // Avoid duplicating if already injected
+  // Evita duplicação se já tiver sido injetado.
   if (feed.querySelector('[data-kc-user-post="true"]')) return;
 
-  const fragment = document.createDocumentFragment();
-  posts.slice(0, 20).forEach(p => {
-    const article = document.createElement('article');
-    article.className = 'kc-card';
-    article.setAttribute('data-kc-user-post', 'true');
+  const filterModulo = kcGetModuloFilterForPage();
+  const userPosts = kcLoadUserPosts()
+    .filter(p => !filterModulo || String(p.modulo) === String(filterModulo))
+    .slice(0, 20);
 
-    // Compatibilidade com filtros específicos (ex: Compra e Venda)
-    article.setAttribute('data-verified', String(!!p.verificado));
-    if (p.condicao) {
-      const raw = String(p.condicao).toLowerCase();
-      const norm = raw.includes('semi') ? 'seminovo' : (raw.includes('novo') ? 'novo' : raw.replace(/\s+/g, ''));
-      article.setAttribute('data-condition', norm);
-    }
+  if (!userPosts.length) return;
+  if (!window.KCUtils || typeof window.KCUtils.renderPostCard !== 'function') return;
 
-    // Para filtros: preferir chaves (sem acento) em data-* e manter labels no texto
-    const catKey = p.categoriaKey || p.categoria || '';
-    if (catKey) article.setAttribute('data-category', String(catKey));
-
-    const tagKeys = Array.isArray(p.tagKeys)
-      ? p.tagKeys
-      : (Array.isArray(p.tags) ? p.tags : []);
-    if (tagKeys.length) article.setAttribute('data-kc-tags', tagKeys.map(String).join(' '));
-
-    const emoji = p.emoji || '✨';
-    const images = (Array.isArray(p.imagens) ? p.imagens : (Array.isArray(p.images) ? p.images : []));
-    const coverSrc = (images && images.length) ? images[0] : null;
-    const priceValue = p.preco;
-    const priceText = (typeof priceValue === 'number')
-      ? formatCurrencyBRL(priceValue)
-      : (priceValue ? String(priceValue) : '');
-
-    const priceHtml = priceText ? `
-      <div class="kc-card__price"><i class="fas fa-money-bill-wave"></i> ${escapeHtml(priceText)}</div>
-    ` : '';
-
-    const moduleLabel = p.moduloLabel || kcModuleLabel(p.modulo);
-    const catLabel = p.categoriaLabel || (p.categoria && typeof p.categoria === 'string' ? p.categoria : '');
-    const subLabel = p.subcategoriaLabel || (p.subcategoria && typeof p.subcategoria === 'string' ? p.subcategoria : '');
-    const categoryLine = [moduleLabel, catLabel, subLabel].filter(Boolean).join(' • ');
-
-    const desc = String(p.descricao || '').trim();
-
-    article.innerHTML = `
-      <div class="kc-card__main">
-        <div class="kc-card__image-wrapper">
-          ${coverSrc ? `<img src="${escapeHtml(coverSrc)}" alt="Capa da publicação" />` : `<span aria-hidden="true" class="kc-card__emoji">${emoji}</span>`}
-        </div>
-        <div class="kc-card__content">
-          <div class="kc-card__header">
-            <div class="kc-card__category-source">${escapeHtml(categoryLine || 'Publicação')}</div>
-            <div class="kc-card__timestamp">Agora</div>
-          </div>
-          <a href="product.html?id=${encodeURIComponent(p.id)}" class="kc-card__title">${escapeHtml(p.titulo || 'Nova publicação')}</a>
-          ${priceHtml}
-          ${desc ? `<div class="kc-card__description-preview">${escapeHtml(desc)}</div>` : ''}
-          <div class="kc-card__author">
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.autor || 'Você')}" alt="${escapeHtml(p.autor || 'Você')}">
-            <span>Por <strong>${escapeHtml(p.autor || 'Você')}</strong></span>
-          </div>
-        </div>
-      </div>
-      <div class="kc-card__footer">
-        <div class="kc-card__interactions">
-          <div class="kc-vote-box">
-            <button class="hot" onclick="vote(this, 'hot')"><i class="fas fa-fire"></i></button>
-            <span>0</span>
-            <button class="cold" onclick="vote(this, 'cold')"><i class="fas fa-snowflake"></i></button>
-          </div>
-          <a href="product.html?id=${encodeURIComponent(p.id)}" class="kc-comment-link"><i class="fas fa-comment"></i><span>0</span></a>
-        </div>
-      </div>
-    `;
-
-    fragment.appendChild(article);
+  const normalized = userPosts.map((p) => {
+    const np = (window.KCAPI && typeof window.KCAPI.normalizePost === 'function')
+      ? window.KCAPI.normalizePost(p)
+      : (p || {});
+    // Marca como post do usuário para evitar duplicação (e permitir estilo futuro).
+    np._kcUserPost = true;
+    if (!np.timestamp) np.timestamp = 'Agora';
+    return np;
   });
 
-  feed.prepend(fragment);
+  try {
+    const html = normalized.map(window.KCUtils.renderPostCard).join('\n');
+    feed.insertAdjacentHTML('afterbegin', html);
+  } catch (e) {
+    console.warn('[KinoCampus] Falha ao injetar posts do usuário no feed.', e);
+  }
 }
 
 // Expose small API

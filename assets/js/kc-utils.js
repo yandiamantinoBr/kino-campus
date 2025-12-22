@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Shared Utils (V7.1.1.1)
+  KinoCampus - Shared Utils (V7.1.2)
 
   Principal função:
   - Centralizar utilitários repetidos (normalize/escape/currency/debounce)
@@ -11,6 +11,17 @@
 
 (function () {
   'use strict';
+
+  // Labels para exibição (mantém consistência visual com os feeds)
+  const MODULE_LABEL_MAP = Object.freeze({
+    'moradia': 'Moradia',
+    'eventos': 'Eventos',
+    'oportunidades': 'Oportunidades',
+    'achados-perdidos': 'Achados/Perdidos',
+    'caronas': 'Caronas',
+    'compra-venda': 'Compra e Venda',
+    'livros': 'Livros',
+  });
 
   function normalizeText(str) {
     return (str || '')
@@ -77,8 +88,6 @@
     };
   }
 
-  
-
   // Renderização padrão de um card (estrutura idêntica aos .kc-card do HTML)
   // - Recebe um post normalizado (authorId)
   // - Busca autor via KCAPI.getAuthorById(post.authorId)
@@ -88,16 +97,7 @@
     const id = p.id != null ? String(p.id) : '';
     const emoji = (p.emoji || '✨');
 
-    const moduleLabelMap = {
-      'moradia': 'Moradia',
-      'eventos': 'Eventos',
-      'oportunidades': 'Oportunidades',
-      'achados-perdidos': 'Achados/Perdidos',
-      'caronas': 'Caronas',
-      'compra-venda': 'Compra e Venda',
-      'livros': 'Livros',
-    };
-    const moduleLabel = moduleLabelMap[String(p.modulo || '').toLowerCase()] || 'Kino Campus';
+    const moduleLabel = MODULE_LABEL_MAP[String(p.modulo || '').toLowerCase()] || 'Kino Campus';
 
     // Preferir labels amigáveis quando existirem; senão, usar a categoria "raw"
     const catLabel = (p.categoriaLabel || p.categoria || '');
@@ -159,15 +159,21 @@
     if (id) attrs.push(`data-post-id="${escapeHtml(id)}"`);
     attrs.push(`data-verified="${escapeHtml(String(!!p.verificado))}"`);
 
+    // Marcação de post do usuário (evita duplicação de injeção pelo kc-core.js)
+    if (p._kcUserPost === true) attrs.push('data-kc-user-post="true"');
+
     if (p.condicao) {
       const raw = String(p.condicao).toLowerCase();
       const norm = raw.includes('semi') ? 'seminovo' : (raw.includes('novo') ? 'novo' : raw.replace(/\s+/g, ''));
       attrs.push(`data-condition="${escapeHtml(norm)}"`);
     }
-    if (p.categoria) attrs.push(`data-category="${escapeHtml(String(p.categoria))}"`);
-    if (Array.isArray(p.tags) && p.tags.length) {
-      attrs.push(`data-kc-tags="${escapeHtml(p.tags.map(String).join(' '))}"`);
-    }
+    // data-category: preferir chave (categoriaKey) para filtros; label fica no texto
+    const dataCategory = (p.categoriaKey || p.categoria || '');
+    if (dataCategory) attrs.push(`data-category="${escapeHtml(String(dataCategory))}"`);
+
+    // data-kc-tags: preferir tagKeys para filtros
+    const tagKeys = Array.isArray(p.tagKeys) ? p.tagKeys : (Array.isArray(p.tags) ? p.tags : []);
+    if (tagKeys.length) attrs.push(`data-kc-tags="${escapeHtml(tagKeys.map(String).join(' '))}"`);
 
     // Estrutura do card (mesmas classes)
     return `
@@ -183,7 +189,7 @@
               </div>
               <div class="kc-card__timestamp">${escapeHtml(ts)}</div>
             </div>
-            <a class="kc-card__title" href="product.html?id=${escapeHtml(id)}">
+            <a class="kc-card__title" href="product.html?id=${encodeURIComponent(id)}">
               ${escapeHtml(String(p.titulo || ''))}
             </a>
             ${priceHtml ? priceHtml : ''}
@@ -208,12 +214,12 @@
                 <i class="fas fa-snowflake"></i>
               </button>
             </div>
-            <a class="kc-comment-link" href="product.html?id=${escapeHtml(id)}#comments">
+            <a class="kc-comment-link" href="product.html?id=${encodeURIComponent(id)}#comments">
               <i class="fas fa-comment"></i>
               <span>${escapeHtml(String(Number.isFinite(comentarios) ? comentarios : 0))} comentários</span>
             </a>
           </div>
-          <a class="kc-action-button kc-get-coupon-button" href="product.html?id=${escapeHtml(id)}">
+          <a class="kc-action-button kc-get-coupon-button" href="product.html?id=${encodeURIComponent(id)}">
             Ver Detalhes
           </a>
         </div>
@@ -221,8 +227,7 @@
     `.trim();
   }
 
-
-window.KCUtils = Object.freeze({
+  window.KCUtils = Object.freeze({
     normalizeText,
     canonicalCategory,
     escapeHtml,

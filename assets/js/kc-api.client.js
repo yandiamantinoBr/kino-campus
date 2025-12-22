@@ -1,5 +1,5 @@
 /*
-  KinoCampus - API Client (V7.1.1.1)
+  KinoCampus - API Client (V7.1.2)
 
   Objetivo (Fase 1 - Saneamento):
   - Simular chamadas de API em um ponto único (sem frameworks).
@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '7.1.1.1';
+  const VERSION = '7.1.2';
 
   const DEFAULTS = {
     // Backend poderá servir /api/v1
@@ -27,8 +27,8 @@
 
   /**
    * MOCK_USERS (extraído do database.json da V6.1.0)
-   * - IDs estáveis (USER_01..USER_42) para preparar o future backend.
-   * - displayName + avatarUrl são suficientes para o frontend atual.
+   * - IDs estáveis (USER_01..USER_42) para preparar o futuro backend.
+   * - USER_SELF é um perfil local para posts criados pelo usuário.
    */
   const MOCK_USERS = Object.freeze({
     'USER_01': { id: 'USER_01', displayName: 'Rafael Almeida', avatarUrl: 'https://i.pravatar.cc/150?img=12' }, // USER_01: Rafael Almeida (img=12)
@@ -73,6 +73,9 @@
     'USER_40': { id: 'USER_40', displayName: 'Instituto de Matemática - UFG', avatarUrl: 'https://i.pravatar.cc/150?img=33' }, // USER_40: Instituto de Matemática - UFG (img=33)
     'USER_41': { id: 'USER_41', displayName: 'ONG Educação para Todos', avatarUrl: 'https://i.pravatar.cc/150?img=34' }, // USER_41: ONG Educação para Todos (img=34)
     'USER_42': { id: 'USER_42', displayName: 'Maria Souza', avatarUrl: 'https://i.pravatar.cc/150?img=16' }, // USER_42: Maria Souza (img=16)
+
+    // Perfil do próprio usuário (posts criados via modal / localStorage)
+    'USER_SELF': { id: 'USER_SELF', displayName: 'Você', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=voce' },
   });
 
   const MOCK_USERS_LIST = Object.freeze(Object.values(MOCK_USERS));
@@ -181,6 +184,9 @@
     const emoji = r.emoji || '✨';
     const verificado = Boolean(r.verificado ?? r.verified ?? false);
 
+    const tagLabels = Array.isArray(r.tags) ? r.tags : [];
+    const tagKeys = Array.isArray(r.tagKeys) ? r.tagKeys : (tagLabels.length ? tagLabels : []);
+
     return {
       // Contrato padrão (campos base)
       id,
@@ -195,8 +201,13 @@
       verificado,
 
       // Campos auxiliares (mantidos para não haver regressão de conteúdo/UX nos cards)
+      categoriaKey: r.categoriaKey || r.categoryKey || '',
+      categoriaLabel: r.categoriaLabel || r.categoryLabel || '',
       subcategoria: r.subcategoria || r.subcategory || '',
-      tags: Array.isArray(r.tags) ? r.tags : (Array.isArray(r.tagKeys) ? r.tagKeys : []),
+      subcategoriaKey: r.subcategoriaKey || r.subcategoryKey || '',
+      subcategoriaLabel: r.subcategoriaLabel || r.subcategoryLabel || '',
+      tags: tagLabels,
+      tagKeys,
       rating: (r.rating != null ? r.rating : null),
       votos: (r.votos != null ? r.votos : null),
       comentarios: (r.comentarios != null ? r.comentarios : null),
@@ -282,7 +293,15 @@
       const existing = (() => {
         try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { return []; }
       })();
-      const next = { ...(body || {}), id: Date.now() };
+      // Normaliza o payload para o contrato V7.x e garante autor local.
+      const raw = { ...(body || {}) };
+      if (!raw.id) raw.id = Date.now();
+      if (!raw.authorId) raw.authorId = 'USER_SELF';
+      if (!raw.autor && !raw._legacyAuthorName) raw.autor = 'Você';
+      if (!raw.autorAvatar && !raw._legacyAuthorAvatar) raw.autorAvatar = (MOCK_USERS_BY_ID.USER_SELF && MOCK_USERS_BY_ID.USER_SELF.avatarUrl) || '';
+      if (!raw.timestamp && !raw.createdAt) raw.timestamp = 'Agora';
+
+      const next = normalizePost(raw);
       existing.unshift(next);
       try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
       return next;
