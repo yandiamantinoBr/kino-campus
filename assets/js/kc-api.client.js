@@ -1,5 +1,5 @@
 /*
-  KinoCampus - API Client (V7.0.1)
+  KinoCampus - API Client (V7.1.1.1)
 
   Objetivo (Fase 1 - Saneamento):
   - Simular chamadas de API em um ponto único (sem frameworks).
@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '7.0.0';
+  const VERSION = '7.1.1.1';
 
   const DEFAULTS = {
     // Backend poderá servir /api/v1
@@ -124,8 +124,25 @@
   }
 
   // ---------- Normalização: USERS ----------
+  // Compatibilidade: internamente o MOCK_USERS usa {displayName, avatarUrl} (legado).
+  // Para o frontend, expomos também {name, avatar} para padronização do contrato.
+  function normalizeUserProfile(u) {
+    if (!u) return null;
+    const name = u.name || u.displayName || '';
+    const avatar = u.avatar || u.avatarUrl || '';
+    return Object.freeze({
+      id: u.id,
+      // novo (preferencial)
+      name,
+      avatar,
+      // legado (mantido)
+      displayName: name,
+      avatarUrl: avatar,
+    });
+  }
+
   function getAuthorById(id) {
-    return MOCK_USERS_BY_ID[String(id)] || null;
+    return normalizeUserProfile(MOCK_USERS_BY_ID[String(id)]) || null;
   }
 
   function resolveAuthorId(legacyName, legacyAvatarUrl) {
@@ -153,8 +170,11 @@
     const descricao = r.descricao || r.description || '';
     const preco = (typeof r.preco === 'number') ? r.preco : ((r.price != null) ? r.price : null);
 
+    const legacyAuthorName = r.autor || r.author || '';
+    const legacyAuthorAvatar = r.autorAvatar || r.authorAvatar || '';
+
     const authorId = r.authorId
-      || resolveAuthorId(r.autor || r.author, r.autorAvatar || r.authorAvatar)
+      || resolveAuthorId(legacyAuthorName, legacyAuthorAvatar)
       || null;
 
     const timestamp = r.timestamp || r.createdAt || r.created_at || '';
@@ -184,7 +204,8 @@
       precoOriginal: (r.precoOriginal != null ? r.precoOriginal : null),
       precoTexto: r.precoTexto || r.priceText || null,
       imagens: Array.isArray(r.imagens) ? r.imagens : (Array.isArray(r.images) ? r.images : null),
-      _legacyAuthorAvatar: r.autorAvatar || r.authorAvatar || null,
+      _legacyAuthorName: legacyAuthorName || null,
+      _legacyAuthorAvatar: legacyAuthorAvatar || null,
     };
   }
 

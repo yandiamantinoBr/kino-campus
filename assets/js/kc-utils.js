@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Shared Utils (V7.0.1)
+  KinoCampus - Shared Utils (V7.1.1.1)
 
   Principal função:
   - Centralizar utilitários repetidos (normalize/escape/currency/debounce)
@@ -135,8 +135,14 @@
       ? window.KCAPI.getAuthorById(authorId)
       : null;
 
-    const authorName = (author && author.name) ? author.name : (p.autor || p.author || 'Autor');
-    const authorAvatar = (author && author.avatar) ? author.avatar : (p._legacyAuthorAvatar || p.autorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=kc');
+    // Compatibilidade: KCAPI pode expor {displayName, avatarUrl} (legado) OU {name, avatar} (novo)
+    const authorName = (author && (author.name || author.displayName))
+      ? (author.name || author.displayName)
+      : (p._legacyAuthorName || p.autor || p.author || 'Autor');
+
+    const authorAvatar = (author && (author.avatar || author.avatarUrl))
+      ? (author.avatar || author.avatarUrl)
+      : (p._legacyAuthorAvatar || p.autorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=kc');
 
     const rating = (p.rating != null && p.rating !== '') ? Number(p.rating) : null;
     const ratingHtml = Number.isFinite(rating)
