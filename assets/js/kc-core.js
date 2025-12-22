@@ -1,10 +1,12 @@
 /* KinoCampus kc-core.js (merged from script.v554.js + script.v556.js) */
 
 /**
- * KinoCampus - Core UI scripts (V5.5.2 mobile-pelando-polish)
+ * KinoCampus - Core UI scripts (V7.0.0)
  *
  * Mantém apenas funcionalidades compartilhadas para evitar conflitos com scripts
  * específicos de páginas (ex.: filtros/feeds inline).
+ *
+ * NOTE (V7.0.0): camada KCAPI agora oferece MOCK_USERS + authorId para preparar o backend.
  */
 
 // -----------------------------
