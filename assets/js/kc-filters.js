@@ -21,6 +21,7 @@
     ready: false,
     category: "todas",
     query: "",
+    extraPredicate: null,
     opts: { ...DEFAULTS },
   };
 
@@ -84,7 +85,8 @@
         queryMatches(desc, state.query) ||
         queryMatches(cat, state.query);
 
-      const show = matchesCategory && matchesQuery;
+      const matchesExtra = (typeof state.extraPredicate === 'function') ? !!state.extraPredicate(card, state) : true;
+      const show = matchesCategory && matchesQuery && matchesExtra;
       card.style.display = show ? "" : "none";
       if (show) visible += 1;
     });
@@ -174,6 +176,29 @@
     canonicalCategory,
     apply,
     initTabSearchFilter: init,
+
+    // Permite filtros adicionais por página (ex.: compra-venda: condição/verificado/categorias múltiplas)
+    setExtraPredicate: function (fn) {
+      state.extraPredicate = (typeof fn === 'function') ? fn : null;
+      apply();
+    },
+
+    setCategory: function (categoryKey) {
+      state.category = categoryKey || 'todas';
+      setActiveTab(state.category);
+      apply();
+    },
+
+    setQuery: function (q) {
+      state.query = q || '';
+      const input = document.getElementById(state.opts.searchInputId);
+      if (input && input.value !== (q || '')) input.value = q || '';
+      apply();
+    },
+
+    getState: function () {
+      return { ...state };
+    }
   };
 
   // Importante: expõe filterPosts cedo para o search.js reconhecer que a página tem filtro próprio

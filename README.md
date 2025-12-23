@@ -1,161 +1,83 @@
-# KinoCampus — Protótipo WEB (V6.1.0) — Estrutura pronta para Backend
+# Kino Campus — Protótipo WEB (V8.1.2.4.3) — Supabase Write & Auth
 
-## V6.1.0 — Estrutura padronizada (Vercel-ready)
+Este repositório é o **protótipo web offline-first** do **Kino Campus** (plataforma universitária por módulos), agora com **integração Supabase-first** (Postgres + Auth + Storage) na linha **V8.1.x**.
 
-- **HTML na raiz** (Vercel encontra `index.html` automaticamente)
-- **Assets padronizados** em `assets/` (CSS/JS sem sufixos de versão)
-- **Banco local** em `assets/data/database.json` e **alias** em `data/database.json` (compat)
+A **V8.1.2.4.3** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`), evitando qualquer quebra. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
 
-
-KinoCampus é um **protótipo de plataforma universitária** voltada para a comunidade (ex.: UFG), com foco em **compartilhamento de oportunidades** e **publicações por módulos** (Compra & Venda, Caronas, Moradia, Eventos, Achados/Perdidos e Oportunidades).
-
-Este repositório/ZIP foi organizado para rodar **sem backend**, com dados iniciais em JSON e publicações do usuário salvas em **localStorage**.
+- **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
+- **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.
+- **Auth**: `KCAPI.login(email, password)`, `KCAPI.logout()` e `KCAPI.getCurrentUser()`.
 
 ---
 
-## ✅ O que está pronto
+## ✅ O que esta versão garante
 
-### Publicações (posts)
-- **Criar publicação via modal “Nova Publicação”** (overlay/blur, grid de módulos e campos dinâmicos).
-- Campos **se adaptam ao módulo e ao subtópico/tag** (ex.: Compra & Venda → Compro/Vendo + condição; Moradia → Repúblicas/Quartos/Apartamentos/Procurando; Eventos → Sustentabilidade/Acadêmicos/Culturais/Esportivos/Workshops).
-- **Upload de imagens**: até **5 imagens** (**1 capa + 4 adicionais**) com preview, remover e selecionar capa (⭐).
-- Ao publicar, o usuário é **redirecionado para a página do módulo**, e o post passa a aparecer nos cards do feed do módulo correspondente.
+- **Offline-first mantido (default)**
+  - Seed local: `data/database.json`
+  - Posts do usuário: `localStorage["kc_user_posts"]`
 
-### Filtros e navegação
-- **Tabs / subcategorias** (`kc-feed-tabs`) para filtrar rapidamente os posts da página.
-- **Busca** (barra de busca + página de resultados).
-- **Tema claro/escuro** com persistência.
+- **Driver Pattern (KC_ENV)**
+  - Arquivo: `assets/js/kc-env.js`
+  - `driver: "local" | "supabase"` (default: `local`)
+  - *Safe boot:* se o Supabase não estiver configurado, o driver continua `local`.
 
-### Responsividade
-- Layout adaptado para mobile (cards, grids e espaçamentos).
-- Navegação inferior no mobile (quando presente no HTML).
+- **Contrato único de Post (MVC-ready)**
+  - Normalização: `KCAPI.normalizePost()`
+  - Regras de apresentação: `KCUtils.applyPresentationRules()`
+  - Model: `KCPostModel.from(raw, { pageModule, view })`
 
----
-
-## 🧠 Como funciona a persistência
-
-### 1) Publicações do usuário (localStorage)
-- As publicações criadas pelo modal são salvas no navegador em:
-  - `localStorage["kc_user_posts"]`
-- Imagens são armazenadas como **DataURL (base64)** junto do post (atenção ao limite de armazenamento do navegador).
-
-**Reset rápido (limpar suas publicações):**
-```js
-localStorage.removeItem("kc_user_posts");
-location.reload();
-```
-
-### 2) Banco de dados de exemplo (JSON)
-- Arquivo: `assets/data/database.json`
-- Estrutura:
-  - `anuncios`: lista de anúncios (seed / exemplos)
-  - `categorias`: mapeamentos de categorias/subcategorias
-  - `sinonimos`: sinônimos usados na busca
-
-> Observação: a busca carrega esse JSON via `fetch()`. Para evitar bloqueios de CORS quando abrir pelo `file://`, recomenda-se rodar com um servidor local (veja “Como rodar”).
+- **Create Post com duas rotas (sem regressão)**
+  - `driver = local`: salva no `localStorage` como antes.
+  - `driver = supabase`: exige sessão (RLS) e publica no Supabase (Storage + Postgres).
 
 ---
 
 ## 🚀 Como rodar (recomendado)
 
-### Opção A — VSCode Live Server (mais simples)
-1. Abra a pasta no VSCode  
+### Opção A — VS Code Live Server
+1. Abra a pasta `kino-campus/` no VS Code
 2. Clique em **“Go Live”**
 3. Acesse `index.html`
 
-### Opção B — Python (servidor local rápido)
-Na pasta do projeto:
+### Opção B — Python
+Na pasta `kino-campus/`:
+
 ```bash
 python -m http.server 5500
 ```
+
 Abra:
 - `http://localhost:5500/index.html`
 
-> Rodar via servidor local melhora compatibilidade com `fetch('assets/data/database.json')`.
+---
+
+## 🧩 Supabase (ativação manual)
+
+### 1) Schema
+- SQL para copiar/colar no Supabase SQL Editor:
+  - `supabase/schema-bootstrap-v8.1.2.3.sql`
+
+### 2) Storage
+- Bucket esperado: `kino-media` (configurado em `KC_ENV.supabase.storageBucket`).
+- O driver de escrita usa caminhos:
+  - `posts/{timestamp}-image-{n}.{ext}`
+
+> Para funcionar com `<img src="...">` no protótipo, o ideal é o bucket estar público (ou você adaptará para Signed URLs na próxima fase).
+
+### 3) Config (KC_ENV)
+Edite `assets/js/kc-env.js`:
+- `driver: "supabase"`
+- `supabase.url` e `supabase.anonKey`
 
 ---
 
-## 🔎 Busca
-- Script: `search.js`
-- Página: `search-results.html`
-- A busca lê o parâmetro `q` na URL e consulta o banco `data/database.json`.
+## 🔜 Próxima sprint sugerida (V8.1.2.5)
 
-Exemplo:
-```
-search-results.html?q=notebook
-```
+- **UI de autenticação** (sem quebrar o modo local):
+  - Tela/modal de login (email/senha) consumindo `KCAPI.login/logout/getCurrentUser`.
+  - Indicador de sessão ("Olá, Nome") no header.
 
----
+- **Pós-publicação no modo Supabase**
+  - Redirecionar para `product.html?id=<uuid>` após `createPost`.
+  - Garantir que os feeds em `driver=supabase` reflitam imediatamente o novo post (com paginação).
 
-## 📁 Estrutura de arquivos (V6.0.0)
-
-```
-kino-campus/
-├─ 
-│  ├─ index.html
-│  ├─ compra-venda-feed.html
-│  ├─ caronas-feed.html
-│  ├─ moradia.html
-│  ├─ eventos.html
-│  ├─ ... (demais páginas)
-│  └─ assets/
-│     ├─ css/
-│     │  ├─ styles.v554.css
-│     │  └─ styles.v556.css
-│     ├─ js/
-│     │  ├─ script.v554.js
-│     │  ├─ theme.v556.js
-│     │  ├─ script.v556.js
-│     │  ├─ filters.js
-│     │  ├─ search.js
-│     │  ├─ kc-utils.v600.js
-│     │  └─ kc-api.client.v600.js
-│     └─ data/
-│        └─ database.json
-└─ backend/ (placeholder)
-   ├─ package.json
-   └─ src/...
-```
-
-
----
-
-## ⚙️ Onde editar módulos, tags e campos do “Nova Publicação”
-As regras (quais módulos existem, quais tags/subtópicos e quais campos aparecem) ficam no:
-- `script.v554.js`
-
-Procure por algo como:
-- `KC_CREATE_SCHEMA`
-- funções relacionadas a “create modal” / “kcEnsureCreateModal”
-
-Ali você consegue:
-- adicionar/remover módulos
-- mudar tags/subtópicos
-- alterar validações e quais campos aparecem
-
----
-
-## 🧩 Dependências
-- **Font Awesome** via CDN (ícones).  
-Se quiser rodar 100% offline, substitua por ícones locais (download do CSS/fontes) e ajuste o `<link>` no HTML.
-
----
-
-## 📝 Notas e limitações conhecidas
-- Sem backend: tudo fica no **client-side**.
-- localStorage tem limite (imagens podem ocupar espaço rapidamente).
-- Recomenda-se rodar com servidor local para evitar bloqueios ao carregar JSON via `fetch()`.
-
----
-
-## Versão
-- **V5.5.4** — foco em melhorias de mobile/cards/tabs + modal de publicação + schema por módulo.
-
-
-## Deploy no Vercel (estático)
-- Root Directory: `.` (pasta raiz do projeto)
-- Framework: Other
-- Build Command: (vazio)
-- Output Directory: (vazio)
-
-Este projeto possui páginas "shim" na raiz (ex.: `product.html?id=19`) que redirecionam para `/...` preservando querystring.

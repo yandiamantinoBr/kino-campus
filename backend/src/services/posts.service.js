@@ -1,6 +1,6 @@
 /*
   Placeholder service:
-  - Por enquanto usa JSON local (frontend/assets/data/database.json) como base
+  - Por enquanto usa JSON local (frontend/data/database.json) como base
   - Na próxima etapa, trocar por DB (PostgreSQL + Prisma, por exemplo)
 */
 

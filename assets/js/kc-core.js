@@ -1,13 +1,156 @@
 /* KinoCampus kc-core.js */
 
 /**
- * KinoCampus - Core UI scripts (V7.1.2)
+ * KinoCampus - Core UI scripts (V8.1.2.4.3)
  *
  * Mantém apenas funcionalidades compartilhadas para evitar conflitos com scripts
  * específicos de páginas (ex.: filtros/feeds inline).
  *
  * NOTE (V7.1.2): renderização de cards centralizada em KCUtils.renderPostCard para preparar MVC.
  */
+
+// -----------------------------
+// Model layer (V8.1.2.4.3) - contrato único de Post
+// -----------------------------
+// Objetivo: garantir que todo post (de API/mock/localStorage) seja normalizado
+// com os mesmos campos esperados pela View (KCUtils.renderPostCard).
+//
+// Exposição: window.KCPostModel.from(raw, { module })
+//
+// Obs.: não adiciona dependências e mantém compatibilidade com KCAPI.normalizePost.
+
+window.KCPostModel = window.KCPostModel || {
+  from: function (raw, context) {
+    const ctx = context || {};
+    let post = raw || {};
+
+
+    // --- Time/Badges helpers (V8.1.2.4.3) ---
+    function _kcLooksISO(s) {
+      return /^\d{4}-\d{2}-\d{2}T/.test(String(s || ''));
+    }
+
+    function _kcMonthIndex(name) {
+      const n = String(name || '').toLowerCase();
+      const map = {
+        january: 0, janeiro: 0,
+        february: 1, fevereiro: 1,
+        march: 2, marco: 2, março: 2,
+        april: 3, abril: 3,
+        may: 4, maio: 4,
+        june: 5, junho: 5,
+        july: 6, julho: 6,
+        august: 7, agosto: 7,
+        september: 8, setembro: 8,
+        october: 9, outubro: 9,
+        november: 10, novembro: 10,
+        december: 11, dezembro: 11,
+      };
+      return (map[n] != null) ? map[n] : 1;
+    }
+
+    function _kcGetNowFor(dateObj) {
+      let now = new Date();
+      try {
+        const clamp = (window.KC_ENV && window.KC_ENV.clamp) ? window.KC_ENV.clamp : null;
+        if (clamp && typeof clamp.year === 'number' && clamp.month) {
+          const mi = _kcMonthIndex(clamp.month);
+          if (dateObj && dateObj.getUTCFullYear && dateObj.getUTCFullYear() === clamp.year && dateObj.getUTCMonth() === mi) {
+            // Base fixa para UX do protótipo (temporal clamp)
+            now = new Date(Date.UTC(clamp.year, mi, 15, 14, 0, 0));
+          }
+        }
+      } catch (_) {}
+      return now;
+    }
+
+    function _kcRelativeTimeFromISO(iso) {
+      const rawTs = String(iso || '').trim();
+      if (!rawTs || !_kcLooksISO(rawTs)) return '';
+
+      const d = new Date(rawTs);
+      if (isNaN(d.getTime())) return '';
+
+      const now = _kcGetNowFor(d);
+      let diffMs = now.getTime() - d.getTime();
+      if (!isFinite(diffMs) || diffMs < 0) return '';
+
+      const sec = Math.floor(diffMs / 1000);
+      if (sec < 60) return 'Agora';
+      const min = Math.floor(sec / 60);
+      if (min < 60) return `Há ${min} minuto${min === 1 ? '' : 's'}`;
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return `Há ${hr} hora${hr === 1 ? '' : 's'}`;
+      const day = Math.floor(hr / 24);
+      if (day < 7) return `Há ${day} dia${day === 1 ? '' : 's'}`;
+      const week = Math.floor(day / 7);
+      if (week < 5) return `Há ${week} semana${week === 1 ? '' : 's'}`;
+      const month = Math.floor(day / 30);
+      if (month < 12) return `Há ${month} mês${month === 1 ? '' : 'es'}`;
+      const year = Math.floor(day / 365);
+      return `Há ${year} ano${year === 1 ? '' : 's'}`;
+    }
+
+    // Normalização base (preferir KCAPI)
+    if (window.KCAPI && typeof window.KCAPI.normalizePost === 'function') {
+      post = window.KCAPI.normalizePost(post);
+    } else {
+      post = { ...(post || {}) };
+    }
+
+    // Garantias mínimas de contrato
+    if (post.id == null && post._id != null) post.id = post._id;
+    if (post.id == null) post.id = Date.now();
+
+    // módulo
+    if (!post.modulo && (post.module || ctx.module)) post.modulo = post.module || ctx.module;
+
+    // authorId: manter string (quando existir)
+    if (post.authorId != null) post.authorId = String(post.authorId);
+
+    // Compatibilidade com dados legados
+    if (!post._legacyAuthorName && (post.autor || post.author)) post._legacyAuthorName = post.autor || post.author;
+    if (!post._legacyAuthorAvatar && (post.autorAvatar || post.authorAvatar)) post._legacyAuthorAvatar = post.autorAvatar || post.authorAvatar;
+
+    // Timestamp (badge de tempo): se vier como ISO (Supabase), converte para relativo
+    // e mantém a string original em createdAt/created_at.
+    try {
+      const iso = post.createdAt || post.created_at || ( _kcLooksISO(post.timestamp) ? post.timestamp : '' );
+      const rel = _kcRelativeTimeFromISO(iso);
+      if (rel) {
+        post._kcRelativeTime = rel;
+        if (!post.timestamp || _kcLooksISO(post.timestamp)) post.timestamp = rel;
+      }
+    } catch (_) {}
+
+    // Link de módulo (breadcrumbs/UX do product)
+    if (!post._kcModulePage) {
+      const mk = String(post.modulo || '').toLowerCase();
+      const map = {
+        'compra-venda': 'compra-venda-feed.html',
+        'livros': 'compra-venda-feed.html?filter=livros',
+        'caronas': 'caronas-feed.html',
+        'moradia': 'moradia.html',
+        'eventos': 'eventos.html',
+        'oportunidades': 'oportunidades.html',
+        'achados-perdidos': 'achados-perdidos.html'
+      };
+      post._kcModulePage = map[mk] || 'index.html';
+    }
+
+    // Regras centrais (View contract): aplica apenas se disponível
+    try {
+      if (window.KCUtils && typeof window.KCUtils.applyPresentationRules === 'function') {
+        const pm = String(ctx.pageModule || ctx.module || post.modulo || '').toLowerCase();
+        post = window.KCUtils.applyPresentationRules(post, { pageModule: pm, view: ctx.view || '' });
+      }
+    } catch (e) {
+      // mantém sem regra para evitar quebra
+    }
+
+    return post;
+  }
+};
 
 // -----------------------------
 // Hero carousel (index)
@@ -437,7 +580,40 @@ function kcCreateUserPost(data) {
   const id = `u_${Date.now().toString(36)}`;
 
   // Modelo (MVC): persistimos no contrato V7.x, mas sem quebrar legado.
-  const createdAt = new Date().toISOString();
+  // V8.1.2.4.3: temporal clamp (Fevereiro/2026) para consistência do protótipo
+  function _kcMonthIndexLocal(name) {
+    const n = String(name || "").toLowerCase();
+    const map = {
+      january: 0, janeiro: 0,
+      february: 1, fevereiro: 1,
+      march: 2, marco: 2, março: 2,
+      april: 3, abril: 3,
+      may: 4, maio: 4,
+      june: 5, junho: 5,
+      july: 6, julho: 6,
+      august: 7, agosto: 7,
+      september: 8, setembro: 8,
+      october: 9, outubro: 9,
+      november: 10, novembro: 10,
+      december: 11, dezembro: 11,
+    };
+    return (map[n] != null) ? map[n] : 1;
+  }
+
+  function _kcClampCreatedAtISO() {
+    try {
+      const clamp = (window.KC_ENV && window.KC_ENV.clamp) ? window.KC_ENV.clamp : null;
+      if (clamp && typeof clamp.year === "number" && clamp.month) {
+        const mi = _kcMonthIndexLocal(clamp.month);
+        const base = Date.UTC(clamp.year, mi, 15, 14, 0, 0);
+        const jitter = (Date.now() % 60000);
+        return new Date(base - jitter).toISOString();
+      }
+    } catch (_) {}
+    return new Date().toISOString();
+  }
+
+  const createdAt = _kcClampCreatedAtISO();
   const raw = {
     id,
     createdAt,
@@ -458,6 +634,42 @@ function kcCreateUserPost(data) {
         })(),
     ...(data || {}),
   };
+
+  // V8.1.2.4.3: normaliza chaves de categoria/subcategoria para filtros (tabs/checkboxes)
+  try {
+    const mk = String(raw.modulo || raw.module || '').toLowerCase();
+    const meta = (raw.metadata && typeof raw.metadata === 'object' && !Array.isArray(raw.metadata)) ? raw.metadata : {};
+    raw.metadata = meta;
+
+    if (!raw.categoriaKey && raw.categoryKey) raw.categoriaKey = raw.categoryKey;
+    if (!raw.categoryKey && raw.categoriaKey) raw.categoryKey = raw.categoriaKey;
+    if (!raw.categoriaKey && meta.categoryKey) raw.categoriaKey = meta.categoryKey;
+    if (!meta.categoryKey && raw.categoriaKey) meta.categoryKey = raw.categoriaKey;
+
+    if (!raw.subcategoriaKey && raw.subcategoryKey) raw.subcategoriaKey = raw.subcategoryKey;
+    if (!raw.subcategoryKey && raw.subcategoriaKey) raw.subcategoryKey = raw.subcategoriaKey;
+    if (!raw.subcategoriaKey && meta.subcategoryKey) raw.subcategoriaKey = meta.subcategoryKey;
+
+    const desiredSub = String(raw.subcategoriaKey || raw.subcategoryKey || meta.subcategory || '').trim();
+    if (!meta.subcategory && desiredSub) meta.subcategory = desiredSub;
+    if (!meta.subcategoryKey && desiredSub) meta.subcategoryKey = desiredSub;
+
+    // Compra e Venda: tabs são por categoria (ex.: eletronicos), não pela ação (vendo/compro)
+    if (mk === 'compra-venda') {
+      const actionish = ['vendo','compro','troco','doacao','doação','procuro'];
+      const subk = String(raw.subcategoriaKey || '').toLowerCase();
+      if (raw.categoriaKey && actionish.includes(subk)) {
+        raw.subcategoriaKey = raw.categoriaKey;
+        raw.subcategoryKey = raw.categoriaKey;
+        meta.subcategory = raw.categoriaKey;
+        meta.subcategoryKey = raw.categoriaKey;
+      }
+      if (raw.categoriaKey && !meta.subcategory) {
+        meta.subcategory = raw.categoriaKey;
+        meta.subcategoryKey = raw.categoriaKey;
+      }
+    }
+  } catch (_) {}
 
   const normalized = (window.KCAPI && typeof window.KCAPI.normalizePost === 'function')
     ? window.KCAPI.normalizePost(raw)
@@ -1322,7 +1534,7 @@ function kcCloseCreatePostModal() {
   }
 }
 
-function kcHandleCreateSubmit() {
+async function kcHandleCreateSubmit() {
   kcCaptureCreateValues();
   const schema = kcGetSchema(kcCreateState.moduleKey);
   if (!schema) {
@@ -1375,26 +1587,80 @@ function kcHandleCreateSubmit() {
 
   const imagens = kcGetOrderedCreateImages();
 
-  const post = kcCreateUserPost({
+  // Payload do formulário (contrato legado) - o driver decide como persistir.
+  // IMPORTANTE: categoria/subcategoria devem ser persistidos como *keys* para
+  // permitir filtros por sub-módulo (ex: Eletrônicos) sem depender de acentos.
+  const payload = {
     modulo: kcCreateState.moduleKey,
     moduloLabel: schema.label,
-    categoria: catLabel || '',
+
+    // categoria/subcategoria (compat: mantém label e key)
+    categoria: catKey || (catLabel || ''),
+    categoriaLabel: catLabel || '',
     categoriaKey: catKey || '',
-    subcategoria: subLabel || '',
+
+    subcategoria: subKey || (subLabel || ''),
+    subcategoriaLabel: subLabel || '',
     subcategoriaKey: subKey || '',
+
+    // tags (UI)
     tags: tagLabels,
     tagKeys,
+
+    // conteúdo
     titulo: title,
     descricao: desc,
     preco,
     precoTexto,
     condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
     localizacao: kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : '',
+
+    // flags
     verificado: false,
     emoji: schema.emoji,
     imagens,
     sustentavel: !!kcCreateState.values.sustentavel,
-  });
+
+    // metadata (modo local e Supabase): usado para filtros JSONB
+    metadata: {
+      subcategory: subKey || '',
+      categoria: catLabel || '',
+      categoriaKey: catKey || '',
+      subcategoria: subLabel || '',
+      subcategoriaKey: subKey || '',
+    },
+  };
+
+  const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && typeof window.KCAPI.createPost === 'function');
+  let post = null;
+
+  if (useSupabase) {
+    // Exige autenticação no driver Supabase (RLS)
+    let user = null;
+    try {
+      if (typeof window.KCAPI.getCurrentUser === 'function') user = await window.KCAPI.getCurrentUser();
+    } catch (_) {}
+
+    if (!user) {
+      showToast('Faça login para publicar.', 'warn', 2600);
+      return;
+    }
+
+    showToast('Publicando...', 'info', 1600);
+    try {
+      post = await window.KCAPI.createPost(payload);
+    } catch (_) {
+      post = null;
+    }
+
+    if (!post) {
+      showToast('Não foi possível publicar agora. Tente novamente.', 'error', 2800);
+      return;
+    }
+  } else {
+    // Modo local/offline-first (default)
+    post = kcCreateUserPost(payload);
+  }
 
   showToast('Publicado com sucesso!', 'success', 2200);
   kcCloseCreatePostModal();
@@ -1409,7 +1675,6 @@ function kcHandleCreateSubmit() {
   }
   window.location.href = targetUrl;
 }
-
 function kcInitCreatePostTriggers() {
   // Intercepta links e botões existentes
   document.body.addEventListener('click', (e) => {

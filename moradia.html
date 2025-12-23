@@ -407,29 +407,13 @@
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 <script src="assets/js/kc-utils.js"></script>
+<script src="assets/js/kc-env.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/kc-api.client.js"></script>
-<script>
-  // KinoCampus V7.1.2 - Piloto: Moradia dinâmico via KCAPI + KCUtils (fallback: mantém HTML estático)
-  document.addEventListener('DOMContentLoaded', async function () {
-    try {
-      if (!window.KCAPI || typeof window.KCAPI.getPosts !== 'function') return;
-      if (!window.KCUtils || typeof window.KCUtils.renderPostCard !== 'function') return;
-
-      const feed = document.querySelector('.kc-feed-list');
-      if (!feed) return;
-
-      const posts = await window.KCAPI.getPosts({ module: 'moradia' });
-      if (!Array.isArray(posts) || !posts.length) return;
-
-      feed.innerHTML = posts.map(window.KCUtils.renderPostCard).join('\n');
-    } catch (e) {
-      console.warn('[KinoCampus] Falha ao carregar Moradia via KCAPI. Usando fallback estático.', e);
-    }
-  });
-</script>
 <script src="assets/js/kc-core.js"></script>
 <script src="assets/js/kc-theme.js"></script>
 <script src="assets/js/kc-filters.js"></script>
 <script src="assets/js/kc-search.js"></script>
+  <script src="assets/js/controllers/moradia.controller.js"></script>
 </body>
 </html>

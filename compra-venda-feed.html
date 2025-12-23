@@ -5,34 +5,16 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 
-<script>
-  // KinoCampus - Theme boot (sem flash)
-  (function () {
-    const STORAGE_KEY = 'theme';
-    const root = document.documentElement;
-    root.classList.add('kc-theme-preload');
 
-    let saved = null;
-    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+<link rel="stylesheet" href="assets/css/kc-theme-boot.css">
+<script src="assets/js/kc-theme-boot.js"></script>
 
-    let theme = (saved === 'light' || saved === 'dark')
-      ? saved
-      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
-    root.setAttribute('data-theme', theme);
-    // melhora o UI nativo (inputs/scrollbar) em ambos os temas
-    root.style.colorScheme = theme;
-  })();
-</script>
-<style>
-  /* evita transições durante o primeiro paint */
-  html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
-</style>
 <title>Compra e Venda - KinoCampus</title>
 <link href="assets/css/styles.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
-<body>
+<body data-kc-filters="tab-search">
 <!-- Header -->
 <header class="kc-header">
 <div class="kc-header-container">
@@ -64,8 +46,8 @@
 </a>
 </nav>
 <div class="kc-search-bar">
-<input id="searchInput" onkeyup="handleSearch()" placeholder="Busque por produtos..." type="search"/>
-<button aria-label="Buscar" onclick="handleSearch()" type="button">
+<input id="searchInput" placeholder="Busque por produtos..." type="search"/>
+<button aria-label="Buscar" type="button">
 <i class="fas fa-search"></i>
 </button>
 </div>
@@ -539,7 +521,7 @@
 <i class="fas fa-search" style="font-size: 3em; margin-bottom: 15px; opacity: 0.5;"></i>
 <h3>Nenhum resultado encontrado</h3>
 <p>Tente ajustar os filtros ou buscar por outros termos.</p>
-<button class="kc-btn-primary" onclick="clearFilters()" style="margin-top: 15px;">Limpar Filtros</button>
+<button class="kc-btn-primary" style="margin-top: 15px;">Limpar Filtros</button>
 </div>
 </section>
 <!-- Sidebar - Reorganizada estilo Oportunidades -->
@@ -552,36 +534,36 @@
                 </h3>
 <div class="kc-filter-list">
 <label class="kc-filter-item">
-<input checked="" id="filterEletronicos" onchange="applyFilters()" type="checkbox"/>
+<input checked="" id="filterEletronicos" type="checkbox"/>
 <span>Eletrônicos</span>
 </label>
 <label class="kc-filter-item">
-<input checked="" id="filterLivros" onchange="applyFilters()" type="checkbox"/>
+<input checked="" id="filterLivros" type="checkbox"/>
 <span>Livros</span>
 </label>
 <label class="kc-filter-item">
-<input checked="" id="filterMoveis" onchange="applyFilters()" type="checkbox"/>
+<input checked="" id="filterMoveis" type="checkbox"/>
 <span>Móveis</span>
 </label>
 <label class="kc-filter-item">
-<input checked="" id="filterVestuario" onchange="applyFilters()" type="checkbox"/>
+<input checked="" id="filterVestuario" type="checkbox"/>
 <span>Vestuário</span>
 </label>
 <label class="kc-filter-item">
-<input checked="" id="filterOutros" onchange="applyFilters()" type="checkbox"/>
+<input checked="" id="filterOutros" type="checkbox"/>
 <span>Outros</span>
 </label>
 <hr style="border: none; border-top: 1px solid var(--kc-border-dark); margin: 10px 0;"/>
 <label class="kc-filter-item">
-<input id="filterNovo" onchange="applyFilters()" type="checkbox"/>
+<input id="filterNovo" type="checkbox"/>
 <span>Novos</span>
 </label>
 <label class="kc-filter-item">
-<input id="filterSeminovo" onchange="applyFilters()" type="checkbox"/>
+<input id="filterSeminovo" type="checkbox"/>
 <span>Semi-novos</span>
 </label>
 <label class="kc-filter-item">
-<input id="filterVerificado" onchange="applyFilters()" type="checkbox"/>
+<input id="filterVerificado" type="checkbox"/>
 <span>Somente verificados</span>
 </label>
 </div>
@@ -593,22 +575,22 @@
                     Categorias Populares
                 </h3>
 <div class="kc-category-cards">
-<a class="kc-category-card" href="#eletronicos" onclick="filterByCategory('eletronicos')">
+<a class="kc-category-card" href="#eletronicos">
 <i class="fas fa-laptop"></i>
 <span class="kc-category-card-name">Eletrônicos</span>
 <span class="kc-category-card-count">142</span>
 </a>
-<a class="kc-category-card" href="#livros" onclick="filterByCategory('livros')">
+<a class="kc-category-card" href="#livros">
 <i class="fas fa-book"></i>
 <span class="kc-category-card-name">Livros</span>
 <span class="kc-category-card-count">98</span>
 </a>
-<a class="kc-category-card" href="#moveis" onclick="filterByCategory('moveis')">
+<a class="kc-category-card" href="#moveis">
 <i class="fas fa-couch"></i>
 <span class="kc-category-card-name">Móveis</span>
 <span class="kc-category-card-count">67</span>
 </a>
-<a class="kc-category-card" href="#vestuario" onclick="filterByCategory('vestuario')">
+<a class="kc-category-card" href="#vestuario">
 <i class="fas fa-tshirt"></i>
 <span class="kc-category-card-name">Vestuário</span>
 <span class="kc-category-card-count">54</span>
@@ -689,184 +671,14 @@
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 <script src="assets/js/kc-utils.js"></script>
+<script src="assets/js/kc-env.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/kc-api.client.js"></script>
 <script src="assets/js/kc-core.js"></script>
+<script src="assets/js/controllers/kc-feed.controller.js"></script>
+<script src="assets/js/controllers/compra-venda-feed.controller.js"></script>
 <script src="assets/js/kc-theme.js"></script>
+<script src="assets/js/kc-filters.js"></script>
 <script src="assets/js/kc-search.js"></script>
-<script>
-        // Estado atual dos filtros
-        let currentCategory = 'todas';
-        let currentSearch = '';
-        
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', function() {
-            // Resetar filtros de condição no carregamento
-            document.getElementById('filterNovo').checked = false;
-            document.getElementById('filterSeminovo').checked = false;
-            document.getElementById('filterVerificado').checked = false;
-            
-            // Configurar tabs de categoria
-            document.querySelectorAll('.kc-feed-tabs a').forEach(tab => {
-                tab.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const category = this.getAttribute('data-category') || 'todas';
-                    filterByCategoryCV(category);
-                });
-            });
-            
-            // Verificar parâmetros da URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const filterParam = urlParams.get('filter');
-            if (filterParam) {
-                filterByCategoryCV(filterParam);
-            } else {
-                // Aplicar filtros iniciais
-                applyFilters();
-            }
-        });
-        
-        // Filtrar por categoria (tabs) - Renomeado para evitar conflito com script.js
-        function filterByCategoryCV(category) {
-            currentCategory = category;
-            
-            // Atualizar tabs ativas
-            document.querySelectorAll('.kc-feed-tabs a').forEach(tab => {
-                tab.classList.remove('active');
-                if (tab.getAttribute('data-category') === category) {
-                    tab.classList.add('active');
-                }
-            });
-            
-            // Atualizar checkboxes da sidebar
-            if (category !== 'todas') {
-                // Desmarcar todos e marcar apenas a categoria selecionada
-                document.getElementById('filterEletronicos').checked = (category === 'eletronicos');
-                document.getElementById('filterLivros').checked = (category === 'livros');
-                document.getElementById('filterMoveis').checked = (category === 'moveis');
-                document.getElementById('filterVestuario').checked = (category === 'vestuario');
-                document.getElementById('filterOutros').checked = (category === 'outros');
-            } else {
-                // Marcar todos
-                document.getElementById('filterEletronicos').checked = true;
-                document.getElementById('filterLivros').checked = true;
-                document.getElementById('filterMoveis').checked = true;
-                document.getElementById('filterVestuario').checked = true;
-                document.getElementById('filterOutros').checked = true;
-            }
-            
-            // Resetar filtros de condição e verificado ao mudar categoria
-            document.getElementById('filterNovo').checked = false;
-            document.getElementById('filterSeminovo').checked = false;
-            document.getElementById('filterVerificado').checked = false;
-            
-            applyFilters();
-        }
-        
-        // Aplicar todos os filtros
-        function applyFilters() {
-            const cards = document.querySelectorAll('.kc-card');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-            
-            // Obter categorias selecionadas
-            const selectedCategories = [];
-            if (document.getElementById('filterEletronicos').checked) selectedCategories.push('eletronicos');
-            if (document.getElementById('filterLivros').checked) selectedCategories.push('livros');
-            if (document.getElementById('filterMoveis').checked) selectedCategories.push('moveis');
-            if (document.getElementById('filterVestuario').checked) selectedCategories.push('vestuario');
-            if (document.getElementById('filterOutros').checked) selectedCategories.push('outros');
-            
-            // Obter filtros de condição
-            const filterNovo = document.getElementById('filterNovo').checked;
-            const filterSeminovo = document.getElementById('filterSeminovo').checked;
-            const filterVerificado = document.getElementById('filterVerificado').checked;
-            
-            let visibleCount = 0;
-            
-            cards.forEach(card => {
-                const cardCategory = card.getAttribute('data-category');
-                const cardCondition = card.getAttribute('data-condition');
-                const cardVerified = card.getAttribute('data-verified') === 'true';
-                
-                // Obter texto para busca
-                const titleEl = card.querySelector('.kc-card__title');
-                const descEl = card.querySelector('.kc-card__description-preview');
-                const catEl = card.querySelector('.kc-card__category-source');
-                
-                const title = titleEl ? titleEl.textContent.toLowerCase() : '';
-                const description = descEl ? descEl.textContent.toLowerCase() : '';
-                const categorySource = catEl ? catEl.textContent.toLowerCase() : '';
-                
-                let showCard = true;
-                
-                // Filtro por categoria
-                if (selectedCategories.length > 0 && !selectedCategories.includes(cardCategory)) {
-                    showCard = false;
-                }
-                
-                // Filtro por condição (apenas se algum estiver marcado)
-                if (showCard && (filterNovo || filterSeminovo)) {
-                    const matchesCondition = 
-                        (filterNovo && cardCondition === 'novo') ||
-                        (filterSeminovo && cardCondition === 'seminovo');
-                    if (!matchesCondition) {
-                        showCard = false;
-                    }
-                }
-                
-                // Filtro por verificado
-                if (showCard && filterVerificado && !cardVerified) {
-                    showCard = false;
-                }
-                
-                // Filtro por busca
-                if (showCard && searchTerm) {
-                    const matchesSearch = title.includes(searchTerm) || 
-                                         description.includes(searchTerm) || 
-                                         categorySource.includes(searchTerm);
-                    if (!matchesSearch) {
-                        showCard = false;
-                    }
-                }
-                
-                card.style.display = showCard ? '' : 'none';
-                if (showCard) visibleCount++;
-            });
-            
-            // Mostrar/esconder mensagem de "nenhum resultado"
-            const noResults = document.getElementById('noResults');
-            if (noResults) {
-                noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-            }
-        }
-        
-        // Busca
-        function handleSearch() {
-            applyFilters();
-        }
-        
-        // Limpar filtros
-        function clearFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('filterEletronicos').checked = true;
-            document.getElementById('filterLivros').checked = true;
-            document.getElementById('filterMoveis').checked = true;
-            document.getElementById('filterVestuario').checked = true;
-            document.getElementById('filterOutros').checked = true;
-            document.getElementById('filterNovo').checked = false;
-            document.getElementById('filterSeminovo').checked = false;
-            document.getElementById('filterVerificado').checked = false;
-            
-            // Resetar tab ativa
-            document.querySelectorAll('.kc-feed-tabs a').forEach(tab => {
-                tab.classList.remove('active');
-                if (tab.getAttribute('data-category') === 'todas') {
-                    tab.classList.add('active');
-                }
-            });
-            
-            currentCategory = 'todas';
-            applyFilters();
-        }
-    </script>
 </body>
 </html>

@@ -385,12 +385,20 @@
 <i class="fas fa-calendar-alt"></i>
                     Calendário de Eventos
                 </h3>
-<div style="background-color: var(--kc-background-dark); padding: 15px; border-radius: 8px; text-align: center;">
-<p style="margin: 0; color: var(--kc-text-dark-secondary);">
-<i class="fas fa-calendar"></i><br/>
-                        Outubro 2025<br/>
-<strong style="font-size: 2em; color: var(--kc-primary-brand);">07</strong>
-</p>
+<div class="kc-events-calendar" data-kc-events-calendar style="background-color: var(--kc-background-dark); padding: 15px; border-radius: 8px; text-align: center; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+  <button type="button" class="kc-cal-nav" data-kc-cal-prev aria-label="Mês anterior" style="background: transparent; border: 0; color: var(--kc-text-dark-secondary); font-size: 1.1em; padding: 6px; cursor: pointer;">
+    <i class="fas fa-chevron-left"></i>
+  </button>
+
+  <p style="margin: 0; color: var(--kc-text-dark-secondary); flex: 1;">
+    <i class="fas fa-calendar"></i><br/>
+    <span data-kc-cal-month>Fevereiro 2026</span><br/>
+    <strong data-kc-cal-day style="font-size: 2em; color: var(--kc-primary-brand);">07</strong>
+  </p>
+
+  <button type="button" class="kc-cal-nav" data-kc-cal-next aria-label="Próximo mês" style="background: transparent; border: 0; color: var(--kc-text-dark-secondary); font-size: 1.1em; padding: 6px; cursor: pointer;">
+    <i class="fas fa-chevron-right"></i>
+  </button>
 </div>
 </div>
 <div class="kc-sidebar-section">
@@ -486,10 +494,13 @@
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 <script src="assets/js/kc-utils.js"></script>
+<script src="assets/js/kc-env.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/kc-api.client.js"></script>
 <script src="assets/js/kc-core.js"></script>
 <script src="assets/js/kc-theme.js"></script>
 <script src="assets/js/kc-filters.js"></script>
 <script src="assets/js/kc-search.js"></script>
+  <script src="assets/js/controllers/eventos.controller.js"></script>
 </body>
 </html>

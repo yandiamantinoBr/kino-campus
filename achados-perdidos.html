@@ -5,29 +5,11 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 
-<script>
-  // KinoCampus - Theme boot (sem flash)
-  (function () {
-    const STORAGE_KEY = 'theme';
-    const root = document.documentElement;
-    root.classList.add('kc-theme-preload');
 
-    let saved = null;
-    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+<link rel="stylesheet" href="assets/css/kc-theme-boot.css">
+<script src="assets/js/kc-theme-boot.js"></script>
 
-    let theme = (saved === 'light' || saved === 'dark')
-      ? saved
-      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
-    root.setAttribute('data-theme', theme);
-    // melhora o UI nativo (inputs/scrollbar) em ambos os temas
-    root.style.colorScheme = theme;
-  })();
-</script>
-<style>
-  /* evita transições durante o primeiro paint */
-  html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
-</style>
 <title>Achados e Perdidos - KinoCampus</title>
 <link href="assets/css/styles.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
@@ -412,8 +394,12 @@
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 <script src="assets/js/kc-utils.js"></script>
+<script src="assets/js/kc-env.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/kc-api.client.js"></script>
 <script src="assets/js/kc-core.js"></script>
+<script src="assets/js/controllers/kc-feed.controller.js"></script>
+<script src="assets/js/controllers/achados-perdidos.controller.js"></script>
 <script src="assets/js/kc-theme.js"></script>
 <script src="assets/js/kc-filters.js"></script>
 <script src="assets/js/kc-search.js"></script>
