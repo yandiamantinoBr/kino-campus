@@ -28,18 +28,17 @@
     @media (min-width: 900px) { .kc-product-container { grid-template-columns: 1fr 1fr; } }
 
     .kc-product-gallery { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 20px; border: 1px solid var(--kc-border-dark); }
-    .kc-gallery-main { display:flex; align-items:center; justify-content:center; background-color: var(--kc-background-dark); border-radius: 10px; padding: 15px; min-height: 320px; max-height: 520px; overflow: hidden; width: 100%; }
-    .kc-gallery-main img { display: block; width: 100%; height: auto; max-width: 100%; max-height: 520px; object-fit: contain; border-radius: 10px; }
-    .kc-emoji-cover { font-size: 5rem; line-height: 1; display:flex; align-items:center; justify-content:center; width:100%; min-height: 320px; }
+    .kc-gallery-main { display:flex; align-items:center; justify-content:center; background-color: var(--kc-background-dark); border-radius: 10px; padding: 12px; width: 100%; aspect-ratio: 4 / 3; max-height: min(520px, 60vh); overflow: hidden; }
+    .kc-gallery-main img { display: block; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; }
+    .kc-emoji-cover { font-size: 5rem; line-height: 1; display:flex; align-items:center; justify-content:center; width:100%; height: 100%; }
     .kc-gallery-thumbnails { display:flex; gap: 10px; margin-top: 15px; overflow:auto; padding-bottom: 5px; }
     .kc-thumbnail { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; cursor:pointer; border: 2px solid transparent; opacity: .85; }
     .kc-thumbnail.active { border-color: var(--kc-primary-brand); opacity: 1; }
 
-    /* V8.1.2.4.3: Evita imagem "estourada" no detalhe (mobile) */
+    /* V8.1.2.4.4: Evita imagem "estourada" no detalhe (mobile) */
     @media (max-width: 520px) {
-      .kc-gallery-main { min-height: 240px; max-height: 360px; }
-      .kc-gallery-main img { max-height: 360px; }
-      .kc-emoji-cover { min-height: 240px; }
+      .kc-gallery-main { max-height: min(360px, 52vh); }
+      .kc-emoji-cover { font-size: 4rem; }
     }
 
 
@@ -141,7 +140,7 @@
         <!-- Gallery -->
         <div class="kc-product-gallery">
           <div class="kc-gallery-main">
-            <img id="mainImage" alt="Imagem da publicação" style="display:none;" />
+            <img id="mainImage" alt="Imagem da publicação" width="1200" height="900" decoding="async" style="display:none;" />
             <div class="kc-emoji-cover" id="emojiCover" aria-hidden="true">✨</div>
           </div>
           <div class="kc-gallery-thumbnails" id="thumbnails" style="display:none;"></div>

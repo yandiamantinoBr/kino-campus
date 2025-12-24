@@ -1,5 +1,5 @@
 /*
-  KinoCampus - API Client (V8.1.2.4.3)
+  KinoCampus - API Client (V8.1.2.4.4)
 
   Objetivo (Fase 1 - Saneamento):
   - Simular chamadas de API em um ponto único (sem frameworks).
@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.1.2.4.3';
+  const VERSION = '8.1.2.4.4';
 
   // -------- Bootstrap de Configuração (KC_ENV) --------
   // Regra de fallback: se kc-env.js não estiver carregado, assume driver local.
@@ -285,7 +285,7 @@
       _legacyAuthorAvatar: legacyAuthorAvatar || null,
     };
 
-    // V8.1.2.4.3: garante consistência de chaves usadas nos filtros (tabs/checkboxes/JSONB)
+    // V8.1.2.4.4: garante consistência de chaves usadas nos filtros (tabs/checkboxes/JSONB)
     try {
       const mk = String(out.modulo || '').toLowerCase();
 
@@ -453,6 +453,34 @@
       if (!raw.autorAvatar && !raw._legacyAuthorAvatar) raw.autorAvatar = (MOCK_USERS_BY_ID.USER_SELF && MOCK_USERS_BY_ID.USER_SELF.avatarUrl) || '';
       if (!raw.timestamp && !raw.createdAt) raw.timestamp = 'Agora';
 
+      // V8.1.2.4.4: garante persistência consistente de categoria/sub-módulo no modo local
+      // (mesma semântica do driver Supabase, para que os filters/tabs funcionem igual).
+      try {
+        const m = String(raw.modulo || raw.module || '').trim();
+        const catKey = toSlug(raw.categoriaKey || raw.categoryKey || raw.category || raw.categoria || '');
+        if (catKey) {
+          raw.categoriaKey = catKey;
+          if (!raw.categoria) raw.categoria = catKey;
+        }
+
+        let subKey = toSlug(raw.subcategoriaKey || raw.subcategoryKey || raw.subcategory || '');
+        const actionish = ['vendo','compro','troco','doacao','alugo','procuro'];
+        // compra-venda: tabs usam categoria (eletronicos...), não ação
+        if (m === 'compra-venda' && subKey && actionish.includes(subKey) && catKey) {
+          subKey = catKey;
+          raw.subcategoriaKey = catKey;
+        } else if (subKey) {
+          raw.subcategoriaKey = subKey;
+        }
+
+        if (!raw.metadata || typeof raw.metadata !== 'object') raw.metadata = {};
+        if (catKey) raw.metadata.categoriaKey = raw.metadata.categoriaKey || catKey;
+        if (subKey) {
+          raw.metadata.subcategory = raw.metadata.subcategory || subKey;
+          raw.metadata.subcategoryKey = raw.metadata.subcategoryKey || subKey;
+        }
+      } catch (_) {}
+
       const next = normalizePost(raw);
       existing.unshift(next);
       try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
@@ -466,7 +494,7 @@
     });
   }
 
-  // ---------- Driver Pattern (V8.1.2.4.3) ----------
+  // ---------- Driver Pattern (V8.1.2.4.4) ----------
   // Objetivo: permitir trocar a fonte de dados (local <-> supabase) alterando apenas KC_ENV.driver.
   const driverLocal = Object.freeze({
     name: 'local',
@@ -476,11 +504,11 @@
   });
 
   function supabaseNotReady(method) {
-    console.error(`[KCAPI][Supabase] Método "${method}" chamado, mas o driver Supabase ainda é um esqueleto (V8.1.2.4.3).`);
+    console.error(`[KCAPI][Supabase] Método "${method}" chamado, mas o driver Supabase ainda é um esqueleto (V8.1.2.4.4).`);
     return Promise.reject(new Error('KCAPI_SUPABASE_DRIVER_NOT_READY'));
   }
 
-  // ---------- Supabase Client Bootstrap (V8.1.2.4.3) ----------
+  // ---------- Supabase Client Bootstrap (V8.1.2.4.4) ----------
   // Cria o cliente apenas quando necessário (driver="supabase").
   let supabaseClient = null;
 
@@ -515,7 +543,7 @@
     }
   }
 
-  // ---------- Supabase Auth & Storage (V8.1.2.4.3) ----------
+  // ---------- Supabase Auth & Storage (V8.1.2.4.4) ----------
   async function supabaseGetCurrentUser() {
     const client = getSupabaseClient();
     if (!client) return null;
@@ -936,7 +964,7 @@
 
 
 
-  // ---------- Supabase Write Path (V8.1.2.4.3) ----------
+  // ---------- Supabase Write Path (V8.1.2.4.4) ----------
   function parsePriceMaybe(v) {
     if (v == null || v === '') return null;
     if (typeof v === 'number' && Number.isFinite(v)) return v;
@@ -996,7 +1024,7 @@
     const moduleDB = toSlug(modulo);
     const categoryDB = toSlug(categoryKey || categoriaLabel);
 
-    // V8.1.2.4.3: compra-venda usa tabs por categoria (ex.: eletronicos).
+    // V8.1.2.4.4: compra-venda usa tabs por categoria (ex.: eletronicos).
     // Se algum payload vier com subKey=ação, normalizamos para a categoria.
     const actionish = ['vendo','compro','troco','doacao','doação','procuro'];
     const subKeySlug = toSlug(subKey);
@@ -1135,7 +1163,7 @@
       return null;
     }
   }
-  // Driver Supabase (V8.1.2.4.3)
+  // Driver Supabase (V8.1.2.4.4)
   // Nesta versão: getPostById já é real. Outros métodos seguem como esqueleto.
   const driverSupabase = Object.freeze({
     name: 'supabase',

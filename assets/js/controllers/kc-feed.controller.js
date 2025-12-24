@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Feed Controller Helper (V8.1.2.4.3)
+  KinoCampus - Feed Controller Helper (V8.1.2.4.4)
   - Utilitário para páginas de feed (MVC: Controller)
   - Preserva fallback estático (HTML) se a API falhar
   - Reaplica filtros/busca após injeção dinâmica

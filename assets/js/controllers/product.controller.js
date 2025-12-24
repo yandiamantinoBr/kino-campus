@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Product (Detalhes) Controller (V8.1.2.4.3)
+  KinoCampus - Product (Detalhes) Controller (V8.1.2.4.4)
   - Carrega post por ID usando KCAPI + KCPostModel
   - Aplica regras centrais (KCUtils.applyPresentationRules)
   - Mantém comentários e UI existente (sem regressão visual)
@@ -362,7 +362,7 @@
 
     let raw = null;
 
-    // Preferir driver unificado (V8.1.2.4.3): localStorage + seed JSON (+ futuro UUID/backend)
+    // Preferir driver unificado (V8.1.2.4.4): localStorage + seed JSON (+ futuro UUID/backend)
     try {
       if (window.KCAPI && typeof window.KCAPI.getPostById === 'function') {
         raw = await window.KCAPI.getPostById(id);

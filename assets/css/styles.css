@@ -671,7 +671,7 @@ main {
 
 
 /* -----------------------------------------------------
-   KC Badges (Cards + Product) — V8.1.2.4.3
+   KC Badges (Cards + Product) — V8.1.2.4.4
 ----------------------------------------------------- */
 .kc-card__badges {
     display: flex;
@@ -4412,32 +4412,43 @@ textarea::placeholder {
 
 
 /* =========================================================
-   V8.1.2.4.3 - Final Fix Pack (UI Mobile + Estabilidade Visual)
-   - Evita layout shift/glitch em troca de tabs no mobile
-   - Garante proporção consistente e imagens sem "pulo" na renderização
+   V8.1.2.4.4 - Estabilidade Visual Total + Validação de CLS (Mobile)
+   - Reserva espaço para mídias (aspect-ratio + min-height)
+   - Remove transições que possam causar reflow perceptível em trocas de feed
    ========================================================= */
 
 /* 1) Estabilidade: trava proporção do wrapper (mobile) */
 @media (max-width: 768px) {
+  /* elimina animações que possam dar sensação de "glitch" durante a troca de tabs */
+  .kc-card,
+  .kc-card__main,
+  .kc-card__content {
+    transition: none !important;
+  }
+
+  /* evita colapso momentâneo durante troca de feed */
   .kc-card {
-    /* evita colapso momentâneo durante troca de feed */
-    min-height: 112px;
+    min-height: calc((var(--kc-card-media) * 0.75) + 40px);
   }
 
   .kc-card__main {
-    min-height: 96px;
+    min-height: calc((var(--kc-card-media) * 0.75) + 24px);
+    align-items: stretch;
   }
 
   .kc-card__image-wrapper {
     /* largura já é definida nos breakpoints; altura passa a derivar da largura */
     height: auto !important;
     aspect-ratio: 4 / 3;
-    min-height: 70px;
+    min-height: calc(var(--kc-card-media) * 0.75);
+    /* placeholder neutro enquanto a imagem carrega */
+    background-color: rgba(255, 255, 255, 0.04);
+    contain: layout paint;
   }
 
   .kc-card__image-wrapper img {
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
     object-fit: cover;
     /* remove transições no mobile para evitar "glitch" */
     transition: none !important;

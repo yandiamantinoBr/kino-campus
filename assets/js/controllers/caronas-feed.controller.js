@@ -1,4 +1,4 @@
-/* KinoCampus - Caronas Feed Controller (V8.1.2.4.3) */
+/* KinoCampus - Caronas Feed Controller (V8.1.2.4.4) */
 (function () {
   'use strict';
   document.addEventListener('DOMContentLoaded', () => {

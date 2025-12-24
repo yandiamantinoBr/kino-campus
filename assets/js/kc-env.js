@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Environment Bootstrap (V8.1.2.4.3)
+  KinoCampus - Environment Bootstrap (V8.1.2.4.4)
 
   Objetivo:
   - Fonte Única de Verdade para configuração do app (Driver Pattern).
@@ -13,7 +13,7 @@
   'use strict';
 
   const DEFAULT_ENV = {
-    version: '8.1.2.4.3',
+    version: '8.1.2.4.4',
     driver: 'local', // Opções: "local" | "supabase"
     debug: true,
     supabase: {

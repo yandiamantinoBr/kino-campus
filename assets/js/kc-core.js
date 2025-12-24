@@ -1,7 +1,7 @@
 /* KinoCampus kc-core.js */
 
 /**
- * KinoCampus - Core UI scripts (V8.1.2.4.3)
+ * KinoCampus - Core UI scripts (V8.1.2.4.4)
  *
  * Mantém apenas funcionalidades compartilhadas para evitar conflitos com scripts
  * específicos de páginas (ex.: filtros/feeds inline).
@@ -10,7 +10,7 @@
  */
 
 // -----------------------------
-// Model layer (V8.1.2.4.3) - contrato único de Post
+// Model layer (V8.1.2.4.4) - contrato único de Post
 // -----------------------------
 // Objetivo: garantir que todo post (de API/mock/localStorage) seja normalizado
 // com os mesmos campos esperados pela View (KCUtils.renderPostCard).
@@ -25,7 +25,7 @@ window.KCPostModel = window.KCPostModel || {
     let post = raw || {};
 
 
-    // --- Time/Badges helpers (V8.1.2.4.3) ---
+    // --- Time/Badges helpers (V8.1.2.4.4) ---
     function _kcLooksISO(s) {
       return /^\d{4}-\d{2}-\d{2}T/.test(String(s || ''));
     }
@@ -580,7 +580,7 @@ function kcCreateUserPost(data) {
   const id = `u_${Date.now().toString(36)}`;
 
   // Modelo (MVC): persistimos no contrato V7.x, mas sem quebrar legado.
-  // V8.1.2.4.3: temporal clamp (Fevereiro/2026) para consistência do protótipo
+  // V8.1.2.4.4: temporal clamp (Fevereiro/2026) para consistência do protótipo
   function _kcMonthIndexLocal(name) {
     const n = String(name || "").toLowerCase();
     const map = {
@@ -635,7 +635,7 @@ function kcCreateUserPost(data) {
     ...(data || {}),
   };
 
-  // V8.1.2.4.3: normaliza chaves de categoria/subcategoria para filtros (tabs/checkboxes)
+  // V8.1.2.4.4: normaliza chaves de categoria/subcategoria para filtros (tabs/checkboxes)
   try {
     const mk = String(raw.modulo || raw.module || '').toLowerCase();
     const meta = (raw.metadata && typeof raw.metadata === 'object' && !Array.isArray(raw.metadata)) ? raw.metadata : {};
@@ -1565,6 +1565,16 @@ async function kcHandleCreateSubmit() {
   const subKey = otherGroups.length ? kcCreateState.selections[otherGroups[0].id] : '';
   const subLabel = subKey ? kcTagLabel(schema, otherGroups[0].id, subKey) : '';
 
+  // V8.1.2.4.4: Compra e Venda usa tabs por *categoria* (eletronicos, livros...),
+  // mas o 2º grupo do formulário é 'ação' (vendo/compro...).
+  // - Persistimos a ação em subcategoria/subcategoriaKey (UI)
+  // - Persistimos o filtro de sub-módulo em metadata.subcategory (key da categoria)
+  const isCompraVenda = kcCreateState.moduleKey === 'compra-venda';
+  const actionKey = isCompraVenda ? (subKey || '') : '';
+  const actionLabel = isCompraVenda ? (subLabel || '') : '';
+  const filterSubKey = isCompraVenda ? (catKey || '') : (subKey || '');
+  const filterSubLabel = isCompraVenda ? (catLabel || '') : (subLabel || '');
+
   const tagKeys = Object.values(kcCreateState.selections).filter(Boolean);
   const tagLabels = Object.entries(kcCreateState.selections)
     .map(([gid, key]) => (key ? kcTagLabel(schema, gid, key) : ''))
@@ -1599,9 +1609,10 @@ async function kcHandleCreateSubmit() {
     categoriaLabel: catLabel || '',
     categoriaKey: catKey || '',
 
-    subcategoria: subKey || (subLabel || ''),
-    subcategoriaLabel: subLabel || '',
-    subcategoriaKey: subKey || '',
+    // subcategoria (UI): em compra-venda, isso representa a *ação* (vendo/compro)
+    subcategoria: isCompraVenda ? (actionLabel || actionKey) : (subKey || (subLabel || '')),
+    subcategoriaLabel: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
+    subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
 
     // tags (UI)
     tags: tagLabels,
@@ -1623,11 +1634,21 @@ async function kcHandleCreateSubmit() {
 
     // metadata (modo local e Supabase): usado para filtros JSONB
     metadata: {
-      subcategory: subKey || '',
+      // subcategory (filtro): chave esperada pelos controllers (.eq('metadata->>subcategory', ...))
+      subcategory: filterSubKey || '',
+      subcategoryLabel: filterSubLabel || '',
+
+      // categoria principal (UI + filtros)
       categoria: catLabel || '',
       categoriaKey: catKey || '',
-      subcategoria: subLabel || '',
-      subcategoriaKey: subKey || '',
+
+      // ação/subcategoria (UI)
+      subcategoria: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
+      subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
+
+      // compra-venda: guardar ação explicitamente (útil para futuras buscas e edição)
+      actionKey: actionKey || '',
+      actionLabel: actionLabel || '',
     },
   };
 

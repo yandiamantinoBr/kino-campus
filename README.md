@@ -1,8 +1,8 @@
-# Kino Campus — Protótipo WEB (V8.1.2.4.3) — Supabase Write & Auth
+# Kino Campus — Protótipo WEB (V8.1.2.4.4) — Supabase Write & Auth
 
 Este repositório é o **protótipo web offline-first** do **Kino Campus** (plataforma universitária por módulos), agora com **integração Supabase-first** (Postgres + Auth + Storage) na linha **V8.1.x**.
 
-A **V8.1.2.4.3** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`), evitando qualquer quebra. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
+A **V8.1.2.4.4** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`), evitando qualquer quebra. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
 
 - **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
 - **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.
@@ -29,6 +29,20 @@ A **V8.1.2.4.3** mantém o app **100% funcional em modo local** por padrão (`KC
 - **Create Post com duas rotas (sem regressão)**
   - `driver = local`: salva no `localStorage` como antes.
   - `driver = supabase`: exige sessão (RLS) e publica no Supabase (Storage + Postgres).
+
+---
+
+## ✅ Checklist (Roadmap 8.1.2)
+
+Validação rápida do que o Roadmap exige na seção **8.1.2 (Supabase-first)**:
+
+- **Schema SQL** (`supabase/schema-bootstrap-v8.1.2.3.sql`)
+  - Tabelas **`profiles`**, **`posts`** e **`post_media`** criadas.
+  - **RLS habilitado** e políticas (leitura pública / escrita do dono) declaradas.
+- **Storage**
+  - Bucket **`kino-media`** referenciado no SQL (criação/garantia do bucket) e usado pelo upload no driver.
+- **Compat `legacy_id`**
+  - `getPostById(id)` tenta UUID e faz fallback para `legacy_id` (mantém compatibilidade com o seed `database.json`).
 
 ---
 

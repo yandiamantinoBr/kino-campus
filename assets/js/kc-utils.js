@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Shared Utils (V8.1.2.4.3)
+  KinoCampus - Shared Utils (V8.1.2.4.4)
 
   Principal função:
   - Centralizar utilitários repetidos (normalize/escape/currency/debounce)
@@ -380,7 +380,7 @@
       p._kcVerifiedTag = p._kcVerifiedTag || '';
     }
     // Badge (status/promo/sustentável)
-    // + Badges de topo (contexto + tempo) (V8.1.2.4.3)
+    // + Badges de topo (contexto + tempo) (V8.1.2.4.4)
     let _kcStatusLabel = '';
 
     if (!p._kcBadgeText) {
@@ -555,13 +555,13 @@
       ? String(p._kcCtaText)
       : 'Ver Detalhes';
 
-    // V8.1.2.4.3: CTA mais curto no mobile para evitar quebra de linha
+    // V8.1.2.4.4: CTA mais curto no mobile para evitar quebra de linha
     try {
       const isMobile = (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) || false;
       if (isMobile && String(ctaText).trim().toLowerCase() === 'ver detalhes') ctaText = 'Ver Mais';
     } catch (_) {}
 
-    const compactComments = true; // V8.1.2.4.3: padrão obrigatório (ícone + número)
+    const compactComments = true; // V8.1.2.4.4: padrão obrigatório (ícone + número)
 
     // Badge (opcional)
     const badgeHtml = (p._kcBadgeText)
@@ -572,7 +572,7 @@
       : '';
 
 
-    // Badges de topo (contexto + tempo) — V8.1.2.4.3
+    // Badges de topo (contexto + tempo) — V8.1.2.4.4
     const contextBadgeHtml = p._kcContextBadgeHtml || '';
     const timeBadgeHtml = p._kcTimeBadgeHtml || '';
     const topBadgesHtml = (contextBadgeHtml || timeBadgeHtml)
@@ -591,7 +591,7 @@
     const imgSrc = images.length ? String(images[0]) : '';
     const imageWrapperHtml = imgSrc
       ? `<div class="kc-card__image-wrapper">
-           <img alt="${escapeHtml(String(p.titulo || 'Imagem'))}" src="${escapeHtml(imgSrc)}"/>
+           <img alt="${escapeHtml(String(p.titulo || 'Imagem'))}" src="${escapeHtml(imgSrc)}" width="400" height="300" loading="lazy" decoding="async"/>
          </div>`
       : `<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
            ${escapeHtml(String(emoji))}
