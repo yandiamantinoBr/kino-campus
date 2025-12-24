@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Compra e Venda Feed Controller (V8.1.2.4.4)
+  KinoCampus - Compra e Venda Feed Controller (V8.1.2.4.5)
   - Consumo dinâmico (KCAPI.getPosts) com fallback estático
   - Regras centrais via KCPostModel + KCUtils.applyPresentationRules
   - Filtros unificados (kc-filters) + filtros avançados (checkboxes: categoria/condição/verificado)

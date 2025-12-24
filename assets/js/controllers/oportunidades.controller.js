@@ -1,4 +1,4 @@
-/* KinoCampus - oportunidades controller (V8.1.2.4.4) */
+/* KinoCampus - oportunidades controller (V8.1.2.4.5) */
 (function () {
   'use strict';
 

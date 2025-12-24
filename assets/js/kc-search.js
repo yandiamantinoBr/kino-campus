@@ -1,5 +1,5 @@
 /**
- * KinoCampus - Sistema de Busca Global (V8.1.2.4.4)
+ * KinoCampus - Sistema de Busca Global (V8.1.2.4.5)
  * Objetivo do saneamento:
  * - Remover montagem manual redundante de .kc-card (usa KCUtils.renderPostCard)
  * - Reaproveitar normalização via KCAPI quando disponível
