@@ -671,13 +671,13 @@ main {
 
 
 /* -----------------------------------------------------
-   KC Badges (Cards + Product) — V8.1.2.4.4
+   KC Badges (Cards + Product) — V8.1.2.4.5
 ----------------------------------------------------- */
 .kc-card__badges {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 0 0 8px 0;
+    margin: 6px 0 8px 0;
 }
 
 /* Badge pill (usado no product e agora também nos cards) */
@@ -688,8 +688,17 @@ main {
     padding: 6px 12px;
     border-radius: 999px;
     font-size: 0.8em;
-    background-color: var(--kc-background-light);
-    border: 1px solid var(--kc-border-light);
+    /*
+      V8.1.2.4.6
+      Garantir destaque real dos badges em TODOS os feeds.
+      As variáveis --kc-background-light / --kc-border-light não existem no projeto,
+      então usamos as variáveis canônicas do tema.
+
+      - Fundo: var(--kc-background-dark) contrasta com cards (var(--kc-surface-dark))
+      - Borda: var(--kc-border-dark)
+    */
+    background-color: var(--kc-background-dark);
+    border: 1px solid var(--kc-border-dark);
     color: var(--kc-text-dark-secondary);
 }
 
@@ -4412,7 +4421,7 @@ textarea::placeholder {
 
 
 /* =========================================================
-   V8.1.2.4.4 - Estabilidade Visual Total + Validação de CLS (Mobile)
+   V8.1.2.4.5 - Estabilidade Visual Total + Validação de CLS (Mobile)
    - Reserva espaço para mídias (aspect-ratio + min-height)
    - Remove transições que possam causar reflow perceptível em trocas de feed
    ========================================================= */

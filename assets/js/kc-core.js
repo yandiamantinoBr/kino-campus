@@ -1,7 +1,7 @@
 /* KinoCampus kc-core.js */
 
 /**
- * KinoCampus - Core UI scripts (V8.1.2.4.4)
+ * KinoCampus - Core UI scripts (V8.1.2.4.5)
  *
  * Mantém apenas funcionalidades compartilhadas para evitar conflitos com scripts
  * específicos de páginas (ex.: filtros/feeds inline).
@@ -10,7 +10,7 @@
  */
 
 // -----------------------------
-// Model layer (V8.1.2.4.4) - contrato único de Post
+// Model layer (V8.1.2.4.5) - contrato único de Post
 // -----------------------------
 // Objetivo: garantir que todo post (de API/mock/localStorage) seja normalizado
 // com os mesmos campos esperados pela View (KCUtils.renderPostCard).
@@ -25,7 +25,7 @@ window.KCPostModel = window.KCPostModel || {
     let post = raw || {};
 
 
-    // --- Time/Badges helpers (V8.1.2.4.4) ---
+    // --- Time/Badges helpers (V8.1.2.4.5) ---
     function _kcLooksISO(s) {
       return /^\d{4}-\d{2}-\d{2}T/.test(String(s || ''));
     }
@@ -580,7 +580,7 @@ function kcCreateUserPost(data) {
   const id = `u_${Date.now().toString(36)}`;
 
   // Modelo (MVC): persistimos no contrato V7.x, mas sem quebrar legado.
-  // V8.1.2.4.4: temporal clamp (Fevereiro/2026) para consistência do protótipo
+  // V8.1.2.4.5: temporal clamp (Fevereiro/2026) para consistência do protótipo
   function _kcMonthIndexLocal(name) {
     const n = String(name || "").toLowerCase();
     const map = {
@@ -635,7 +635,7 @@ function kcCreateUserPost(data) {
     ...(data || {}),
   };
 
-  // V8.1.2.4.4: normaliza chaves de categoria/subcategoria para filtros (tabs/checkboxes)
+  // V8.1.2.4.5: normaliza chaves de categoria/subcategoria para filtros (tabs/checkboxes)
   try {
     const mk = String(raw.modulo || raw.module || '').toLowerCase();
     const meta = (raw.metadata && typeof raw.metadata === 'object' && !Array.isArray(raw.metadata)) ? raw.metadata : {};
@@ -1565,7 +1565,7 @@ async function kcHandleCreateSubmit() {
   const subKey = otherGroups.length ? kcCreateState.selections[otherGroups[0].id] : '';
   const subLabel = subKey ? kcTagLabel(schema, otherGroups[0].id, subKey) : '';
 
-  // V8.1.2.4.4: Compra e Venda usa tabs por *categoria* (eletronicos, livros...),
+  // V8.1.2.4.5: Compra e Venda usa tabs por *categoria* (eletronicos, livros...),
   // mas o 2º grupo do formulário é 'ação' (vendo/compro...).
   // - Persistimos a ação em subcategoria/subcategoriaKey (UI)
   // - Persistimos o filtro de sub-módulo em metadata.subcategory (key da categoria)

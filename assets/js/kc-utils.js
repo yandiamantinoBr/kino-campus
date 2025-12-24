@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Shared Utils (V8.1.2.4.4)
+  KinoCampus - Shared Utils (V8.1.2.4.6)
 
   Principal função:
   - Centralizar utilitários repetidos (normalize/escape/currency/debounce)
@@ -21,6 +21,17 @@
     'caronas': 'Caronas',
     'compra-venda': 'Compra e Venda',
     'livros': 'Livros',
+  });
+
+  // Ícones (Font Awesome) por módulo — usado em badges (cards + product)
+  const MODULE_ICON_MAP = Object.freeze({
+    'moradia': 'fas fa-home',
+    'eventos': 'fas fa-calendar-alt',
+    'oportunidades': 'fas fa-briefcase',
+    'achados-perdidos': 'fas fa-search',
+    'caronas': 'fas fa-car',
+    'compra-venda': 'fas fa-layer-group',
+    'livros': 'fas fa-book',
   });
 
   // Labels “humanizados” por categoria/subcategoria (casos conhecidos do protótipo)
@@ -111,6 +122,11 @@
   function getModuleLabel(moduleKey) {
     const key = normalizeText(moduleKey);
     return MODULE_LABEL_MAP[key] || beautifyKey(key) || String(moduleKey || '');
+  }
+
+  function getModuleIconClass(moduleKey) {
+    const key = normalizeText(moduleKey);
+    return MODULE_ICON_MAP[key] || 'fas fa-layer-group';
   }
 
   function getCategoryLabel(moduleKey, catKey) {
@@ -380,7 +396,7 @@
       p._kcVerifiedTag = p._kcVerifiedTag || '';
     }
     // Badge (status/promo/sustentável)
-    // + Badges de topo (contexto + tempo) (V8.1.2.4.4)
+    // + Badges de topo (contexto + tempo) (V8.1.2.4.5)
     let _kcStatusLabel = '';
 
     if (!p._kcBadgeText) {
@@ -437,24 +453,6 @@
         }
       }
     }
-
-    // Badges do topo do card (contexto + tempo)
-    try {
-      const relTime = p._kcRelativeTime || p.timestamp || '';
-      if (relTime && !p._kcTimeBadgeHtml) {
-        p._kcTimeBadgeHtml = `<span class="kc-badge"><i class="fas fa-clock"></i> ${escapeHtml(String(relTime))}</span>`;
-      }
-
-      // Contexto: preferir status (achados), senão subcategoria/categoria
-      const ctxLabel = (_kcStatusLabel || p.subcategoriaLabel || p.subcategoria || p.categoriaLabel || p.categoria || '');
-      if (!p._kcContextBadgeHtml) {
-        if (p._kcStatusBadgeHtml) {
-          p._kcContextBadgeHtml = p._kcStatusBadgeHtml;
-        } else if (ctxLabel) {
-          p._kcContextBadgeHtml = `<span class="kc-badge"><i class="fas fa-tag"></i> ${escapeHtml(String(ctxLabel))}</span>`;
-        }
-      }
-    } catch (_) {}
 
 
     // Preço (ícone/estilo e split main/small)
@@ -555,13 +553,13 @@
       ? String(p._kcCtaText)
       : 'Ver Detalhes';
 
-    // V8.1.2.4.4: CTA mais curto no mobile para evitar quebra de linha
+    // V8.1.2.4.5: CTA mais curto no mobile para evitar quebra de linha
     try {
       const isMobile = (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) || false;
       if (isMobile && String(ctaText).trim().toLowerCase() === 'ver detalhes') ctaText = 'Ver Mais';
     } catch (_) {}
 
-    const compactComments = true; // V8.1.2.4.4: padrão obrigatório (ícone + número)
+    const compactComments = true; // V8.1.2.4.5: padrão obrigatório (ícone + número)
 
     // Badge (opcional)
     const badgeHtml = (p._kcBadgeText)
@@ -571,12 +569,32 @@
         </span>`
       : '';
 
+    // Badges (pills) — alinhados ao padrão do product (módulo/condição/tempo)
+    const badges = [];
 
-    // Badges de topo (contexto + tempo) — V8.1.2.4.4
-    const contextBadgeHtml = p._kcContextBadgeHtml || '';
-    const timeBadgeHtml = p._kcTimeBadgeHtml || '';
-    const topBadgesHtml = (contextBadgeHtml || timeBadgeHtml)
-      ? `<div class="kc-card__badges">${contextBadgeHtml}${timeBadgeHtml}</div>`
+    // Módulo
+    if (p.modulo) {
+      const modLabel = getModuleLabel(p.modulo);
+      const modIcon = getModuleIconClass(p.modulo);
+      badges.push(`<span class="kc-badge"><i class="${escapeHtml(modIcon)}"></i> ${escapeHtml(modLabel)}</span>`);
+    }
+
+    // Status (Achados/Perdidos)
+    if (p._kcStatusBadgeHtml) badges.push(p._kcStatusBadgeHtml);
+
+    // Condição (Compra e Venda)
+    if (p.condicao) {
+      badges.push(`<span class="kc-badge"><i class="fas fa-star"></i> ${escapeHtml(String(p.condicao))}</span>`);
+    }
+
+    // Tempo relativo (único lugar no card)
+    const relTime = p._kcRelativeTime || p.timestamp;
+    if (relTime) {
+      badges.push(`<span class="kc-badge"><i class="fas fa-clock"></i> ${escapeHtml(String(relTime))}</span>`);
+    }
+
+    const topBadgesHtml = badges.length
+      ? `<div class="kc-card__badges">${badges.join(' ')}</div>`
       : '';
 
     // Category line (com marcador de verificação quando aplicável)
@@ -694,12 +712,11 @@
               <div class="kc-card__category-source">
                 ${categoryLineHtml}
               </div>
-              <div class="kc-card__timestamp">${escapeHtml(ts)}</div>
             </div>
-            ${topBadgesHtml}
             <a class="kc-card__title" href="product.html?id=${encodeURIComponent(id)}">
               ${escapeHtml(String(p.titulo || ''))}
             </a>
+            ${topBadgesHtml}
             ${priceHtml ? priceHtml : ''}
             <div class="kc-card__description-preview">
               ${escapeHtml(preview)}
@@ -741,6 +758,7 @@
     titleCase,
     beautifyKey,
     getModuleLabel,
+    getModuleIconClass,
     getCategoryLabel,
     getSubcategoryLabel,
     getConditionLabel,
