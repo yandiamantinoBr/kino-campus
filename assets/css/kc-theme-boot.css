@@ -1,6 +1,0 @@
-/* KinoCampus - Theme boot (evita flash de transição ao aplicar tema salvo) */
-.kc-theme-preload *,
-.kc-theme-preload *::before,
-.kc-theme-preload *::after {
-  transition: none !important;
-}
