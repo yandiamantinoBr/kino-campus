@@ -15,6 +15,7 @@
     --kc-green-check: #70E291;
     --kc-yellow-badge: #FFD700;
     --kc-red-alert: #FF5252;
+    --kc-whatsapp-green: #25D366;
     --transition-speed: 0.3s;
 }
 
@@ -707,6 +708,47 @@ main {
     opacity: 0.9;
 }
 
+/* WhatsApp Share Button (kc-card) — V8.1.2.4.8 */
+.kc-share-whatsapp {
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--kc-border-dark);
+    background-color: var(--kc-surface-dark);
+    padding: 8px 12px;
+    aspect-ratio: 1;
+    height: 34px;
+    width: 34px;
+    transition: background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
+    flex: 0 0 auto;
+}
+
+.kc-share-whatsapp:hover {
+    background-color: var(--kc-surface-dark-hover);
+}
+
+.kc-share-whatsapp:active {
+    transform: scale(0.98);
+}
+
+.kc-share-whatsapp svg {
+    width: 18px;
+    height: 18px;
+    color: var(--kc-whatsapp-green);
+    display: block;
+}
+
+.kc-share-whatsapp[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+
 /* Quando existe corner badge (kc-cashback-badge), evitar sobreposição no topo */
 .kc-card--has-corner-badge .kc-card__timestamp {
     display: none;
@@ -814,6 +856,17 @@ main {
     display: flex;
     gap: 12px;
     align-items: center;
+}
+
+/* Ações do card (direita): Share WhatsApp + CTA
+   - Evita centralização do share no desktop (quando havia 3 filhos no footer)
+   - Mantém harmonia no mobile (footer em grid) */
+.kc-card__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex: 0 0 auto;
 }
 
 .kc-vote-box {
