@@ -1,5 +1,5 @@
 /*
-  KinoCampus - API Client (V8.1.2.4.5)
+  KinoCampus - API Client (V8.1.3.1)
 
   Objetivo (Fase 1 - Saneamento):
   - Simular chamadas de API em um ponto único (sem frameworks).
@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.1.2.4.5';
+  const VERSION = '8.1.3.2';
 
   // -------- Bootstrap de Configuração (KC_ENV) --------
   // Regra de fallback: se kc-env.js não estiver carregado, assume driver local.
@@ -27,6 +27,8 @@
       version: VERSION,
       driver: 'local',
       debug: true,
+      SUPABASE_URL: 'https://placeholder-project.supabase.co',
+      SUPABASE_ANON_KEY: 'eyJhbG...placeholder',
       supabase: {
         url: 'https://placeholder-project.supabase.co',
         anonKey: 'eyJhbG...placeholder',
@@ -42,7 +44,19 @@
       clamp: { ...fallback.clamp, ...(((env || {}).clamp) || {}) },
     };
 
-    if (merged.driver !== 'local' && merged.driver !== 'supabase') merged.driver = 'local';
+    const rawDriver = String((merged.DATA_DRIVER || merged.driver || 'local')).toLowerCase();
+    merged.driver = (rawDriver === 'supabase') ? 'supabase' : 'local';
+    merged.DATA_DRIVER = merged.driver;
+
+    // Normaliza Supabase (aliases)
+    if (!merged.supabase || typeof merged.supabase !== 'object') merged.supabase = {};
+    const url = String(merged.SUPABASE_URL || merged.supabase.url || '').trim();
+    const anonKey = String(merged.SUPABASE_ANON_KEY || merged.supabase.anonKey || '').trim();
+    if (url) merged.supabase.url = url;
+    if (anonKey) merged.supabase.anonKey = anonKey;
+    merged.SUPABASE_URL = merged.supabase.url;
+    merged.SUPABASE_ANON_KEY = merged.supabase.anonKey;
+
     return merged;
   }
 
@@ -241,7 +255,18 @@
     const created_at = r.created_at || r.createdAt || null;
     const timestamp = r.timestamp || createdAt || '';
     const emoji = r.emoji || '✨';
-    const verificado = Boolean(r.verificado ?? r.verified ?? false);
+
+    // V8.1.3.2: verificação passa a ser atributo do AUTOR (profiles.verified).
+    // Mantém compat com o legado (posts com r.verificado / r.verified no mock/local).
+    const authorVerified = Boolean(
+      r.authorVerified ??
+      r.author_verified ??
+      (r.profiles && r.profiles.verified) ??
+      (r.author && r.author.verified) ??
+      false
+    );
+
+    const verificado = (Boolean(r.verificado ?? r.verified ?? false) || authorVerified);
 
     const tagLabels = Array.isArray(r.tags) ? r.tags : [];
     const tagKeys = Array.isArray(r.tagKeys) ? r.tagKeys : (tagLabels.length ? tagLabels : []);
@@ -257,12 +282,17 @@
       descricao,
       preco,
       authorId,
+      // V8.1.3.2: status do autor (profiles.verified)
+      authorVerified,
       timestamp,
       // Datas (úteis para badges/ordenação; não quebra o contrato legado)
       createdAt,
       created_at,
       emoji,
       verificado,
+
+      // Autor (status)
+      authorVerified,
 
       // Campos auxiliares (mantidos para não haver regressão de conteúdo/UX nos cards)
       categoriaKey: r.categoriaKey || r.categoryKey || '',
@@ -285,7 +315,7 @@
       _legacyAuthorAvatar: legacyAuthorAvatar || null,
     };
 
-    // V8.1.2.4.5: garante consistência de chaves usadas nos filtros (tabs/checkboxes/JSONB)
+    // V8.1.3.1: garante consistência de chaves usadas nos filtros (tabs/checkboxes/JSONB)
     try {
       const mk = String(out.modulo || '').toLowerCase();
 
@@ -453,7 +483,7 @@
       if (!raw.autorAvatar && !raw._legacyAuthorAvatar) raw.autorAvatar = (MOCK_USERS_BY_ID.USER_SELF && MOCK_USERS_BY_ID.USER_SELF.avatarUrl) || '';
       if (!raw.timestamp && !raw.createdAt) raw.timestamp = 'Agora';
 
-      // V8.1.2.4.5: garante persistência consistente de categoria/sub-módulo no modo local
+      // V8.1.3.1: garante persistência consistente de categoria/sub-módulo no modo local
       // (mesma semântica do driver Supabase, para que os filters/tabs funcionem igual).
       try {
         const m = String(raw.modulo || raw.module || '').trim();
@@ -494,7 +524,7 @@
     });
   }
 
-  // ---------- Driver Pattern (V8.1.2.4.5) ----------
+  // ---------- Driver Pattern (V8.1.3.1) ----------
   // Objetivo: permitir trocar a fonte de dados (local <-> supabase) alterando apenas KC_ENV.driver.
   const driverLocal = Object.freeze({
     name: 'local',
@@ -504,11 +534,11 @@
   });
 
   function supabaseNotReady(method) {
-    console.error(`[KCAPI][Supabase] Método "${method}" chamado, mas o driver Supabase ainda é um esqueleto (V8.1.2.4.5).`);
+    console.error(`[KCAPI][Supabase] Método "${method}" chamado, mas o driver Supabase ainda é um esqueleto (V8.1.3.1).`);
     return Promise.reject(new Error('KCAPI_SUPABASE_DRIVER_NOT_READY'));
   }
 
-  // ---------- Supabase Client Bootstrap (V8.1.2.4.5) ----------
+  // ---------- Supabase Client Bootstrap (V8.1.3.1) ----------
   // Cria o cliente apenas quando necessário (driver="supabase").
   let supabaseClient = null;
 
@@ -521,16 +551,25 @@
   function getSupabaseClient() {
     if (supabaseClient) return supabaseClient;
 
+    // Preferimos o Facade (Auth/Sessão) para manter o SDK isolado
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getClient === 'function') {
+        supabaseClient = window.KCSupabase.getClient();
+        return supabaseClient;
+      }
+    } catch (_) {}
+
+    // Fallback (mantém compatibilidade caso o Facade não esteja carregado)
     if (!hasSupabaseLib()) {
       console.error('[KCAPI][Supabase] Biblioteca supabase-js não carregada (CDN ausente ou sem internet).');
       return null;
     }
 
-    const url = (ENV.supabase && ENV.supabase.url) ? String(ENV.supabase.url).trim() : '';
-    const anonKey = (ENV.supabase && ENV.supabase.anonKey) ? String(ENV.supabase.anonKey).trim() : '';
+    const url = (ENV.SUPABASE_URL || (ENV.supabase && ENV.supabase.url)) ? String(ENV.SUPABASE_URL || ENV.supabase.url).trim() : '';
+    const anonKey = (ENV.SUPABASE_ANON_KEY || (ENV.supabase && ENV.supabase.anonKey)) ? String(ENV.SUPABASE_ANON_KEY || ENV.supabase.anonKey).trim() : '';
 
     if (!url || !anonKey || anonKey.includes('placeholder')) {
-      console.error('[KCAPI][Supabase] KC_ENV.supabase.url/anonKey ausentes ou placeholders. Configure antes de usar driver="supabase".');
+      console.error('[KCAPI][Supabase] KC_ENV SUPABASE_URL/SUPABASE_ANON_KEY ausentes ou placeholders. Configure antes de usar driver="supabase".');
       return null;
     }
 
@@ -543,13 +582,18 @@
     }
   }
 
-  // ---------- Supabase Auth & Storage (V8.1.2.4.5) ----------
+  // ---------- Supabase Auth & Storage (V8.1.3.1) ----------
   async function supabaseGetCurrentUser() {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
+        return await window.KCSupabase.getCurrentUser();
+      }
+    } catch (_) {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
     try {
-      // getUser() é o caminho mais direto no supabase-js v2
       if (client.auth && typeof client.auth.getUser === 'function') {
         const r = await client.auth.getUser();
         if (r && r.error) {
@@ -559,7 +603,6 @@
         return (r && r.data && r.data.user) ? r.data.user : null;
       }
 
-      // fallback: getSession()
       if (client.auth && typeof client.auth.getSession === 'function') {
         const r = await client.auth.getSession();
         if (r && r.error) {
@@ -575,54 +618,20 @@
     return null;
   }
 
-  async function ensureSupabaseProfile(client, user) {
-    if (!client || !user || !user.id) return null;
-
-    const fullName = (
-      (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name))
-      || user.email
-      || 'Usuário'
-    );
-
-    const avatarUrl = (
-      (user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.avatar))
-      || ''
-    );
-
-    try {
-      // 1) tenta ler
-      const s = await client
-        .from('profiles')
-        .select('id, full_name, avatar_url, email')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (s && s.data) return s.data;
-
-      // 2) tenta upsert (depende das políticas RLS)
-      const payload = { id: user.id, full_name: fullName, avatar_url: avatarUrl, email: user.email || null };
-      const u = await client
-        .from('profiles')
-        .upsert(payload, { onConflict: 'id' })
-        .select('id, full_name, avatar_url, email')
-        .maybeSingle();
-
-      if (u && u.data) return u.data;
-    } catch (e) {
-      // Não quebra o fluxo (alguns projetos travam upsert por RLS)
-      console.warn('[KCAPI][Supabase] Não consegui garantir profile (RLS/trigger):', e);
-    }
-
-    return null;
-  }
-
   async function supabaseLogin(email, password) {
-    const client = getSupabaseClient();
-    if (!client) return null;
-
     const em = String(email || '').trim();
     const pw = String(password || '').trim();
     if (!em || !pw) return null;
+
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.signIn === 'function') {
+        const r = await window.KCSupabase.signIn(em, pw);
+        return (r && r.user) ? r.user : null;
+      }
+    } catch (_) {}
+
+    const client = getSupabaseClient();
+    if (!client) return null;
 
     try {
       const r = await client.auth.signInWithPassword({ email: em, password: pw });
@@ -630,18 +639,44 @@
         console.error('[KCAPI][Supabase] login erro:', r.error);
         return null;
       }
-      const user = (r && r.data && r.data.user) ? r.data.user : null;
-      if (user) {
-        try { await ensureSupabaseProfile(client, user); } catch (_) {}
-      }
-      return user;
+      return (r && r.data && r.data.user) ? r.data.user : null;
     } catch (e) {
       console.error('[KCAPI][Supabase] login falhou:', e);
       return null;
     }
   }
 
+  async function supabaseSignUp(email, password) {
+    const em = String(email || '').trim();
+    const pw = String(password || '').trim();
+    if (!em || !pw) return { user: null, session: null, error: { message: 'E-mail e senha são obrigatórios.' } };
+
+    // Preferimos o facade (V8.1.3.1) para validação de domínio/erros consistentes
+    if (window.KCSupabase && typeof window.KCSupabase.signUp === 'function') {
+      return window.KCSupabase.signUp(em, pw);
+    }
+
+    const client = getSupabaseClient();
+    if (!client) return { user: null, session: null, error: { message: 'Supabase não configurado.' } };
+
+    try {
+      const r = await client.auth.signUp({ email: em, password: pw });
+      if (r && r.error) return { user: null, session: null, error: r.error };
+      return { user: (r && r.data && r.data.user) ? r.data.user : null, session: (r && r.data && r.data.session) ? r.data.session : null, error: null };
+    } catch (e) {
+      return { user: null, session: null, error: { message: 'Falha no cadastro.' } };
+    }
+  }
+
+
   async function supabaseLogout() {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.signOut === 'function') {
+        const r = await window.KCSupabase.signOut();
+        return !!(r && r.ok);
+      }
+    } catch (_) {}
+
     const client = getSupabaseClient();
     if (!client) return false;
 
@@ -782,6 +817,8 @@
     // Saída híbrida (compatível com KCAPI.normalizePost + views legadas):
     // - snake_case e camelCase para campos novos
     // - campos PT-BR usados pelo UI (titulo, descricao, preco, modulo, categoria, timestamp)
+    const authorVerified = !!(author && author.verified);
+
     const out = {
       // IDs
       id: row.id,
@@ -816,6 +853,12 @@
       autor: (author && (author.full_name || author.email)) ? (author.full_name || author.email) : '',
       autorAvatar: (author && author.avatar_url) ? author.avatar_url : '',
 
+      // Verificação do autor (V8.1.3.2)
+      authorVerified,
+      author_verified: authorVerified,
+      verificado: authorVerified,
+      verified: authorVerified,
+
       imagens: imageUrls,
       images: imageUrls,
 
@@ -833,6 +876,14 @@
   }
 
   function buildSupabasePostSelect(client) {
+    return client
+      .from('posts')
+      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, email, verified), post_media (id, url, is_cover)')
+      .limit(1);
+  }
+
+  // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
+  function buildSupabasePostSelectFallback(client) {
     return client
       .from('posts')
       .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, email), post_media (id, url, is_cover)')
@@ -854,6 +905,11 @@
         const r1 = await buildSupabasePostSelect(client).eq('id', key).maybeSingle();
         if (r1 && r1.error) {
           console.error('[KCAPI][Supabase] getPostById(id) erro:', r1.error);
+          // Fallback para schema sem profiles.verified (pré-v8.1.3.2)
+          if (isMissingVerifiedColumnError(r1.error)) {
+            const r1b = await buildSupabasePostSelectFallback(client).eq('id', key).maybeSingle();
+            if (r1b && r1b.data) return mapSupabasePost(r1b.data);
+          }
         }
         if (r1 && r1.data) return mapSupabasePost(r1.data);
       }
@@ -862,6 +918,11 @@
       const r2 = await buildSupabasePostSelect(client).eq('legacy_id', key).maybeSingle();
       if (r2 && r2.error) {
         console.error('[KCAPI][Supabase] getPostById(legacy_id) erro:', r2.error);
+        // Fallback para schema sem profiles.verified (pré-v8.1.3.2)
+        if (isMissingVerifiedColumnError(r2.error)) {
+          const r2b = await buildSupabasePostSelectFallback(client).eq('legacy_id', key).maybeSingle();
+          if (r2b && r2b.data) return mapSupabasePost(r2b.data);
+        }
         return null;
       }
       if (r2 && r2.data) return mapSupabasePost(r2.data);
@@ -877,7 +938,20 @@
   function buildSupabasePostsQuery(client) {
     return client
       .from('posts')
+      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, email, verified), post_media (id, url, is_cover)');
+  }
+
+  // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
+  function buildSupabasePostsQueryFallback(client) {
+    return client
+      .from('posts')
       .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, email), post_media (id, url, is_cover)');
+  }
+
+  function isMissingVerifiedColumnError(err) {
+    if (!err) return false;
+    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
+    return msg.includes('verified') && msg.includes('does not exist');
   }
 
   function normalizeSupabaseFilters(filters) {
@@ -930,7 +1004,25 @@
 
       q = q.range(from, to);
 
-      const res = await q;
+      let res = await q;
+
+      // Compat: schema sem profiles.verified (pré-v8.1.3.2)
+      if (res && res.error && isMissingVerifiedColumnError(res.error)) {
+        try {
+          let q2 = buildSupabasePostsQueryFallback(client).order('created_at', { ascending: false });
+
+          if (f.module) q2 = q2.eq('module', f.module);
+          if (f.category) q2 = q2.eq('category', f.category);
+          if (f.subcategory) q2 = q2.eq('metadata->>subcategory', f.subcategory);
+          if (f.q) q2 = q2.or(buildOrILike(f.q));
+
+          q2 = q2.range(from, to);
+          res = await q2;
+        } catch (e2) {
+          console.error('[KCAPI][Supabase] getPosts fallback falhou:', e2);
+        }
+      }
+
       if (res && res.error) {
         console.error('[KCAPI][Supabase] getPosts erro:', res.error);
         return [];
@@ -964,7 +1056,7 @@
 
 
 
-  // ---------- Supabase Write Path (V8.1.2.4.5) ----------
+  // ---------- Supabase Write Path (V8.1.3.1) ----------
   function parsePriceMaybe(v) {
     if (v == null || v === '') return null;
     if (typeof v === 'number' && Number.isFinite(v)) return v;
@@ -1024,7 +1116,7 @@
     const moduleDB = toSlug(modulo);
     const categoryDB = toSlug(categoryKey || categoriaLabel);
 
-    // V8.1.2.4.5: compra-venda usa tabs por categoria (ex.: eletronicos).
+    // V8.1.3.1: compra-venda usa tabs por categoria (ex.: eletronicos).
     // Se algum payload vier com subKey=ação, normalizamos para a categoria.
     const actionish = ['vendo','compro','troco','doacao','doação','procuro'];
     const subKeySlug = toSlug(subKey);
@@ -1163,7 +1255,7 @@
       return null;
     }
   }
-  // Driver Supabase (V8.1.2.4.5)
+  // Driver Supabase (V8.1.3.1)
   // Nesta versão: getPostById já é real. Outros métodos seguem como esqueleto.
   const driverSupabase = Object.freeze({
     name: 'supabase',
@@ -1179,20 +1271,63 @@
   async function getPostById(id) { return activeDriver.getPostById(id); }
   async function createPost(body) { return activeDriver.createPost(body); }
 
+  
   // Auth facade (sem quebrar modo local)
+  // - signIn/signUp retornam { user, error }
   async function getCurrentUser() {
     if (ENV.driver !== 'supabase') return null;
     return supabaseGetCurrentUser();
   }
 
+  async function signIn(email, password) {
+    if (ENV.driver !== 'supabase') return { user: null, error: { message: 'Modo local (Auth desabilitado).' } };
+    const user = await supabaseLogin(email, password);
+    return user ? { user, error: null } : { user: null, error: { message: 'Não foi possível entrar. Verifique seus dados.' } };
+  }
+
+  async function signUp(email, password) {
+    if (ENV.driver !== 'supabase') return { user: null, error: { message: 'Modo local (Auth desabilitado).' } };
+    const r = await supabaseSignUp(email, password);
+    return r || { user: null, error: { message: 'Não foi possível cadastrar.' } };
+  }
+
+  // Aliases (compat)
   async function login(email, password) {
-    if (ENV.driver !== 'supabase') return null;
-    return supabaseLogin(email, password);
+    const r = await signIn(email, password);
+    return r && r.user ? r.user : null;
   }
 
   async function logout() {
     if (ENV.driver !== 'supabase') return false;
     return supabaseLogout();
+  }
+
+
+  // Profiles facade (V8.1.3.2)
+  // - Leitura pública (profiles_select_public)
+  // - Sincronização do usuário logado via UPSERT ao autenticar
+  function getCurrentProfile() {
+    if (ENV.driver !== 'supabase') return null;
+    if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+      return window.KCProfiles.getCurrentProfile();
+    }
+    return null;
+  }
+
+  async function getProfileById(id) {
+    if (ENV.driver !== 'supabase') return null;
+    if (window.KCProfiles && typeof window.KCProfiles.getProfileById === 'function') {
+      return window.KCProfiles.getProfileById(id);
+    }
+    return null;
+  }
+
+  async function syncProfile() {
+    if (ENV.driver !== 'supabase') return null;
+    if (window.KCProfiles && typeof window.KCProfiles.ensureSynced === 'function') {
+      return window.KCProfiles.ensureSynced();
+    }
+    return null;
   }
 
 
@@ -1217,8 +1352,16 @@
     createPost,
     // Auth (Supabase)
     getCurrentUser,
+    signIn,
+    signUp,
+    // compat
     login,
     logout,
+
+    // Profiles (Supabase)
+    getCurrentProfile,
+    getProfileById,
+    syncProfile,
 
 
     // Users

@@ -15,6 +15,7 @@
     --kc-green-check: #70E291;
     --kc-yellow-badge: #FFD700;
     --kc-red-alert: #FF5252;
+    --kc-whatsapp-green: #25D366;
     --transition-speed: 0.3s;
 }
 
@@ -208,6 +209,47 @@ header {
     border-radius: 18px;
     font-weight: bold;
     transition: background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+/* Header identity (V8.1.3.2) */
+.kc-user-actions a.btn-login.is-auth {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+}
+
+.kc-header-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+}
+
+.kc-header-user__avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: rgba(255,255,255,0.25);
+}
+
+.kc-header-user__name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kc-header-user__verified {
+    color: var(--kc-green-check);
+    font-size: 1.05em;
+}
+
+@media (max-width: 480px) {
+    .kc-header-user__name {
+        max-width: 120px;
+    }
 }
 
 .kc-user-actions button:hover,
@@ -707,6 +749,47 @@ main {
     opacity: 0.9;
 }
 
+/* WhatsApp Share Button (kc-card) — V8.1.2.4.8 */
+.kc-share-whatsapp {
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--kc-border-dark);
+    background-color: var(--kc-surface-dark);
+    padding: 8px 12px;
+    aspect-ratio: 1;
+    height: 34px;
+    width: 34px;
+    transition: background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
+    flex: 0 0 auto;
+}
+
+.kc-share-whatsapp:hover {
+    background-color: var(--kc-surface-dark-hover);
+}
+
+.kc-share-whatsapp:active {
+    transform: scale(0.98);
+}
+
+.kc-share-whatsapp svg {
+    width: 18px;
+    height: 18px;
+    color: var(--kc-whatsapp-green);
+    display: block;
+}
+
+.kc-share-whatsapp[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+
 /* Quando existe corner badge (kc-cashback-badge), evitar sobreposição no topo */
 .kc-card--has-corner-badge .kc-card__timestamp {
     display: none;
@@ -814,6 +897,17 @@ main {
     display: flex;
     gap: 12px;
     align-items: center;
+}
+
+/* Ações do card (direita): Share WhatsApp + CTA
+   - Evita centralização do share no desktop (quando havia 3 filhos no footer)
+   - Mantém harmonia no mobile (footer em grid) */
+.kc-card__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex: 0 0 auto;
 }
 
 .kc-vote-box {
@@ -4479,4 +4573,492 @@ textarea::placeholder {
   .kc-card:hover .kc-card__image-wrapper img {
     transform: none !important;
   }
+}
+
+/* -----------------------------
+   Auth Modal (V8.1.3.1)
+----------------------------- */
+.kc-auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 9998;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.kc-auth-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.kc-auth-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
+}
+
+.kc-auth-modal.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.kc-auth-card {
+  width: min(520px, 100%);
+  background: var(--card-bg, rgba(255,255,255,0.06));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.kc-auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.kc-auth-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.kc-auth-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.kc-auth-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.kc-auth-body {
+  padding: 14px 16px 16px;
+}
+
+.kc-auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.kc-auth-tab {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.kc-auth-tab.active {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.kc-auth-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.kc-auth-field {
+  display: grid;
+  gap: 6px;
+}
+
+.kc-auth-field label {
+  font-size: 0.9rem;
+  opacity: 0.92;
+}
+
+.kc-auth-field input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  padding: 10px 12px;
+  border-radius: 14px;
+  outline: none;
+}
+
+.kc-auth-field input:focus {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.kc-auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.kc-auth-btn {
+  border: 0;
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.kc-auth-btn.primary {
+  background: rgba(46, 204, 113, 0.20);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+}
+
+.kc-auth-btn.danger {
+  background: rgba(231, 76, 60, 0.20);
+  border: 1px solid rgba(231, 76, 60, 0.35);
+}
+
+.kc-auth-status {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.92rem;
+  display: none;
+}
+
+.kc-auth-status.show { display: block; }
+.kc-auth-status.info { border-color: rgba(52, 152, 219, 0.35); }
+.kc-auth-status.success { border-color: rgba(46, 204, 113, 0.35); }
+.kc-auth-status.warn { border-color: rgba(241, 196, 15, 0.38); }
+.kc-auth-status.error { border-color: rgba(231, 76, 60, 0.38); }
+
+.kc-auth-user {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-auth-user strong {
+  font-size: 0.95rem;
+}
+
+/* Link/botões desabilitados por ausência de sessão (sem bloquear clique, pois abre login) */
+.kc-disabled {
+  opacity: 0.58;
+  filter: grayscale(0.25);
+}
+
+.kc-disabled:hover {
+  opacity: 0.68;
+}
+
+@media (max-width: 520px) {
+  .kc-auth-card { border-radius: 16px; }
+}
+
+/* =========================================================
+   V8.1.3.1.2 - kc-card__footer harmonization (mobile + web)
+   - Evita sobreposição no mobile (vote/comment/share/CTA)
+   - Mesma altura para: .kc-vote-box, .kc-comment-link, .kc-share-whatsapp, .kc-action-button
+   - WhatsApp maior no desktop
+   - Vote box ainda mais compacto no mobile (libera espaço para comment/share/CTA)
+   ========================================================= */
+
+:root {
+  /* 48px deixa o WhatsApp perceptivelmente maior no desktop e mantém o footer touch-friendly */
+  --kc-card-footer-control-h: 48px;
+  --kc-card-footer-share-size: 48px;
+  --kc-card-footer-share-icon: 26px;
+}
+
+/* Altura consistente (desktop + mobile) */
+.kc-card__footer .kc-vote-box,
+.kc-card__footer .kc-comment-link,
+.kc-card__footer .kc-share-whatsapp,
+.kc-card__footer .kc-action-button {
+  height: var(--kc-card-footer-control-h);
+  min-height: var(--kc-card-footer-control-h);
+}
+
+/* Vote box menor (mesma altura, menos largura) */
+.kc-card__footer .kc-vote-box {
+  padding: 0 10px;
+  gap: 6px;
+  border-radius: 999px;
+}
+
+.kc-card__footer .kc-vote-box button {
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.kc-card__footer .kc-vote-box span {
+  min-width: 26px;
+  text-align: center;
+  font-size: 0.9em;
+}
+
+/* Comentários: um pouco mais largo e "alto" (altura vem do control-h) */
+.kc-card__footer .kc-comment-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+/* CTA no footer: mesma altura e alinhamento */
+.kc-card__footer .kc-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+/* WhatsApp: maior e harmônico com os demais (desktop incluso) */
+.kc-card__footer .kc-share-whatsapp {
+  height: var(--kc-card-footer-share-size);
+  width: var(--kc-card-footer-share-size);
+  padding: 0;
+  aspect-ratio: 1 / 1;
+}
+
+.kc-card__footer .kc-share-whatsapp svg {
+  width: var(--kc-card-footer-share-icon);
+  height: var(--kc-card-footer-share-icon);
+}
+
+/* Mobile: evita sobreposição e melhora proporção (wrap inteligente) */
+@media (max-width: 576px) {
+  .kc-card__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .kc-card__interactions {
+    /* Interações podem encolher; prioridade é não esmagar as ações */
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .kc-card__actions {
+    /* Não deixa o bloco de ações encolher a ponto de "invadir" e gerar overlap.
+       Se não couber, ele quebra para a próxima linha (por causa do flex-wrap do footer). */
+    flex: 0 0 auto;
+    min-width: 0;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .kc-card__footer .kc-comment-link {
+    flex: 1 1 auto;
+    min-width: 86px;
+  }
+
+  /* CTA ocupa o restante do bloco de ações (sem encostar no WhatsApp) */
+  .kc-card__actions .kc-action-button {
+    flex: 1 1 auto;
+    white-space: nowrap;
+  }
+
+  /* Vote box ainda mais compacto no mobile */
+  .kc-card__footer .kc-vote-box {
+    padding: 0 6px;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  .kc-card__footer .kc-vote-box button {
+    padding: 0 6px;
+  }
+
+  .kc-card__footer .kc-vote-box i {
+    font-size: 0.95em;
+  }
+
+  .kc-card__footer .kc-vote-box span {
+    min-width: 22px;
+  }
+
+  /* Comentários um pouco mais largos para balancear o footer */
+  .kc-card__footer .kc-comment-link {
+    padding: 0 12px;
+    min-width: 92px;
+  }
+}
+
+/* Telas bem pequenas: ações quebram para baixo (sem overlap) */
+@media (max-width: 380px) {
+  .kc-card__actions {
+    flex: 1 1 100%;
+  }
+  .kc-card__actions .kc-action-button {
+    flex: 1 1 100%;
+  }
+}
+
+/* =========================================================
+   V8.1.3.1.3 - kc-card__footer mobile guardrails
+   Problema observado:
+   - No mobile, o .kc-vote-box ainda consumia largura excessiva;
+   - Em alguns breakpoints, regras antigas (width:100% / justify-content:space-between)
+     faziam o .kc-comment-link avançar visualmente para a área do WhatsApp/CTA.
+
+   Solução:
+   - No mobile, o footer vira GRID (minmax(0,1fr) + auto), garantindo limites claros
+     entre interações (coluna 1) e ações (coluna 2) — sem “invadir”/sobrepor.
+   - Compactação agressiva do .kc-vote-box (menos padding, botões com largura fixa)
+     mantendo altura touch-friendly do conjunto.
+   ========================================================= */
+
+@media (max-width: 576px) {
+  /* Limites rígidos: interações nunca entram na coluna das ações */
+  .kc-card__footer {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Neutraliza regras móveis antigas que forçavam width:100% e space-between */
+  .kc-card__interactions {
+    width: auto !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .kc-card__actions {
+    min-width: 0;
+    justify-content: flex-end;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  /* Comentários: não expande para ocupar “o resto” e não invade as ações */
+  .kc-card__footer .kc-comment-link {
+    flex: 0 0 auto !important;
+    min-width: 78px;
+  }
+
+  /* Vote box bem mais compacto (principal ajuste solicitado) */
+  .kc-card__footer .kc-vote-box {
+    padding: 0 4px !important;
+    gap: 2px !important;
+    flex: 0 0 auto;
+  }
+
+  .kc-card__footer .kc-vote-box button {
+    padding: 0 !important;
+    width: 30px;
+  }
+
+  .kc-card__footer .kc-vote-box i {
+    font-size: 0.9em;
+  }
+
+  .kc-card__footer .kc-vote-box span {
+    min-width: 20px !important;
+    font-size: 0.88em;
+  }
+}
+
+/* Telas bem pequenas: ações descem para a linha de baixo (sem esmagar texto) */
+@media (max-width: 380px) {
+  .kc-card__footer {
+    grid-template-columns: 1fr;
+  }
+
+  .kc-card__actions {
+    justify-content: flex-end;
+  }
+
+  .kc-card__actions .kc-action-button {
+    width: 100% !important;
+    justify-content: center;
+  }
+}
+
+/* =========================================================
+   V8.1.3.1.4 - kc-card__footer: estabilidade real no mobile
+   Ajustes motivados por:
+   - CTA com textos longos (por módulo) estourando a coluna das ações;
+   - kc-comment-link variando largura (1/2/3 dígitos) e "encostando" no WhatsApp;
+   - kc-vote-box ainda consumindo espaço demais.
+
+   Solução:
+   - CTA unificado em "Ver Mais" (JS) e layout reforçado (CSS);
+   - Reserva de largura para o número de comentários (min-width em ch);
+   - Vote box ainda mais compacto mantendo altura touch-friendly.
+   ========================================================= */
+
+@media (max-width: 576px) {
+  /* Reserva largura do número (1-3 dígitos) sem alterar o pill inteiro */
+  .kc-card__footer .kc-comment-link span {
+    display: inline-block;
+    min-width: 3ch; /* 000 */
+    text-align: center;
+  }
+
+  /* Garante que comentários não "esticam" e não comprimem ações */
+  .kc-card__footer .kc-comment-link {
+    flex: 0 0 auto !important;
+  }
+
+  /* Vote box mais estreito (libera espaço real no footer) */
+  .kc-card__footer .kc-vote-box {
+    padding: 0 2px !important;
+    gap: 1px !important;
+  }
+
+  .kc-card__footer .kc-vote-box button {
+    width: 28px;
+  }
+
+  .kc-card__footer .kc-vote-box span {
+    min-width: 2ch !important;
+  }
+}
+
+
+/* Destaque temporário do botão de Login/Cadastro (V8.1.3.2.1) */
+.kc-attention {
+  outline: 2px solid var(--kc-primary-brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(255, 107, 0, 0.18);
+  border-radius: 999px;
 }
