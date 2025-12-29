@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+
+
+<link rel="stylesheet" href="assets/css/kc-theme-boot.css">
+<script src="assets/js/kc-theme-boot.js"></script>
+
+
+<title>Compra e Venda - KinoCampus</title>
+<link href="assets/css/styles.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+</head>
+<body data-kc-filters="tab-search">
+<!-- Header -->
+<header class="kc-header">
+<div class="kc-header-container">
+<div class="kc-logo">
+<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+<span class="kc-logo-text">
+<span class="kc-logo-name">Kino<span>Campus</span></span>
+<span class="kc-logo-sub">Comunidade UFG</span>
+</span>
+</a>
+</div>
+<nav class="kc-nav-links">
+<a href="achados-perdidos.html">
+<i class="fas fa-search"></i>
+<span>Achados/Perdidos</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a href="moradia.html">
+<i class="fas fa-home"></i>
+<span>Moradia</span>
+</a>
+<a href="oportunidades.html">
+<i class="fas fa-briefcase"></i>
+<span>Oportunidades</span>
+</a>
+</nav>
+<div class="kc-search-bar">
+<input id="searchInput" placeholder="Busque por produtos..." type="search"/>
+<button aria-label="Buscar" type="button">
+<i class="fas fa-search"></i>
+</button>
+</div>
+<div class="kc-user-actions">
+<button class="theme-toggle" title="Alternar tema">
+<i class="fas fa-sun"></i>
+</button>
+<a class="btn-login" href="#login">Login/Cadastro</a>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="kc-main-content">
+<!-- Feed Section -->
+<section class="kc-feed-section">
+<h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+<i class="fas fa-shopping-bag"></i>
+                Compra e Venda
+            </h2>
+<!-- Feed Tabs -->
+<div class="kc-feed-tabs">
+<a class="active" data-category="todas" href="#todas">
+<i class="fas fa-fire"></i>
+<span>Todas</span>
+</a>
+<a data-category="eletronicos" href="#eletronicos">
+<i class="fas fa-laptop"></i>
+<span>Eletrônicos</span>
+</a>
+<a data-category="livros" href="#livros">
+<i class="fas fa-book"></i>
+<span>Livros</span>
+</a>
+<a data-category="moveis" href="#moveis">
+<i class="fas fa-couch"></i>
+<span>Móveis</span>
+</a>
+<a data-category="vestuario" href="#vestuario">
+<i class="fas fa-tshirt"></i>
+<span>Vestuário</span>
+</a>
+<a data-category="outros" href="#outros">
+<i class="fas fa-box"></i>
+<span>Outros</span>
+</a>
+</div>
+<!-- Feed List -->
+<div class="kc-feed-list" id="feedList">
+<!-- Produto 1 - Eletrônicos -->
+<article class="kc-card" data-category="eletronicos" data-condition="seminovo" data-post-id="1" data-subcategory="notebook" data-verified="true">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            💻
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eletrônicos • Notebook • <a href="#">@verificado</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Há 2 horas</div>
+</div>
+<a class="kc-card__title" href="product.html?id=1">
+                                Notebook Dell Inspiron 15 - i5 8GB 256GB SSD
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-hot-color);">
+<i class="fas fa-tag"></i>
+                                R$ 1.800,00
+                                <small>Aceito propostas</small>
+</div>
+<div class="kc-card__description-preview">
+                                Notebook em ótimo estado, pouco uso. Intel Core i5 10ª geração, 8GB RAM, SSD 256GB. Tela 15.6" Full HD. Bateria com boa duração. Acompanha carregador original. Sem arranhões ou defeitos...
+                            </div>
+<div class="kc-card__author">
+<img alt="Rafael Almeida" src="https://i.pravatar.cc/150?img=12"/>
+<span>Anunciado por <strong>Rafael Almeida</strong></span>
+<i class="fas fa-star"></i> 4.7
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>156</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=1#comments">
+<i class="fas fa-comment"></i>
+<span>23 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=1">
+                            Ver Mais
+                        </a>
+</div>
+</article>
+<!-- Produto 2 - Livros -->
+<article class="kc-card" data-category="livros" data-condition="seminovo" data-post-id="2" data-subcategory="engenharia" data-verified="false">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            📚
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Livros • Engenharia • Cálculo
+                                </div>
+<div class="kc-card__timestamp">Há 1 dia</div>
+</div>
+<a class="kc-card__title" href="product.html?id=2">
+                                Kit Livros Cálculo I, II e III - James Stewart
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-hot-color);">
+<i class="fas fa-tag"></i>
+                                R$ 280,00
+                                <small>Os 3 volumes</small>
+</div>
+<div class="kc-card__description-preview">
+                                Vendo kit completo de livros de Cálculo do James Stewart (7ª edição). Volumes I, II e III em bom estado de conservação. Algumas anotações a lápis. Perfeito para estudantes de Engenharia e Matemática...
+                            </div>
+<div class="kc-card__author">
+<img alt="Fernanda Lima" src="https://i.pravatar.cc/150?img=35"/>
+<span>Anunciado por <strong>Fernanda Lima</strong></span>
+<i class="fas fa-star"></i> 5.0
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>92</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=2#comments">
+<i class="fas fa-comment"></i>
+<span>15 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=2">
+                            Ver Mais
+                        </a>
+</div>
+</article>
+<!-- Produto 3 - Móveis -->
+<article class="kc-card" data-category="moveis" data-condition="seminovo" data-post-id="3" data-subcategory="quarto" data-verified="false">
+<span class="kc-cashback-badge">
+<i class="fas fa-percent"></i> Promoção
+                    </span>
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            🛋️
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Móveis • Quarto • Semi-novo
+                                </div>
+<div class="kc-card__timestamp">Há 3 horas</div>
+</div>
+<a class="kc-card__title" href="product.html?id=3">
+                                Cama Box Solteiro + Colchão Ortobom - Semi-novo
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-hot-color);">
+<i class="fas fa-tag"></i>
+                                R$ 450,00
+                                <small>De R$ 600,00</small>
+</div>
+<div class="kc-card__description-preview">
+                                Cama box solteiro com colchão Ortobom em excelente estado. Apenas 6 meses de uso. Motivo da venda: mudança de cidade. Retirada no local (Setor Universitário). Não entrego...
+                            </div>
+<div class="kc-card__author">
+<img alt="Ricardo Souza" src="https://i.pravatar.cc/150?img=28"/>
+<span>Anunciado por <strong>Ricardo Souza</strong></span>
+<i class="fas fa-star"></i> 4.7
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>78</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=3#comments">
+<i class="fas fa-comment"></i>
+<span>11 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=3">
+                            Ver Mais
+                        </a>
+</div>
+</article>
+<!-- Produto 4 - Eletrônicos -->
+<article class="kc-card" data-category="eletronicos" data-condition="seminovo" data-post-id="4" data-subcategory="smartphone" data-verified="true">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            📱
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eletrônicos • Smartphone • <a href="#">@verificado</a> <i class="fas fa-check-circle"></i>
+</div>
+<div class="kc-card__timestamp">Há 5 horas</div>
+</div>
+<a class="kc-card__title" href="product.html?id=4">
+                                iPhone 12 64GB - Preto (Seminovo)
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-hot-color);">
+<i class="fas fa-tag"></i>
+                                R$ 2.200,00
+                                <small>Aceito cartão</small>
+</div>
+<div class="kc-card__description-preview">
+                                iPhone 12 em ótimo estado. Bateria com 89% de saúde. Sem arranhões na tela (sempre usou película). Acompanha caixa original, carregador e fone. Nota fiscal disponível. Aceito cartão com acréscimo...
+                            </div>
+<div class="kc-card__author">
+<img alt="Camila Rodrigues" src="https://i.pravatar.cc/150?img=42"/>
+<span>Anunciado por <strong>Camila Rodrigues</strong></span>
+<i class="fas fa-star"></i> 4.8
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>134</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=4#comments">
+<i class="fas fa-comment"></i>
+<span>28 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=4">
+                            Ver Mais
+                        </a>
+</div>
+</article>
+<!-- Produto 5 - Vestuário -->
+<article class="kc-card" data-category="vestuario" data-condition="seminovo" data-post-id="5" data-subcategory="roupas" data-verified="false">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
+                            👕
+                        </div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Vestuário • Roupas • Feminino
+                                </div>
+<div class="kc-card__timestamp">Há 2 dias</div>
+</div>
+<a class="kc-card__title" href="product.html?id=5">
+                                Lote Roupas Femininas - 15 Peças (P e M)
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-hot-color);">
+<i class="fas fa-tag"></i>
+                                R$ 120,00
+                                <small>Lote completo</small>
+</div>
+<div class="kc-card__description-preview">
+                                Vendo lote com 15 peças de roupas femininas (blusas, vestidos e saias). Tamanhos P e M. Todas em bom estado, pouco uso. Marcas variadas. Ótimo para brechó ou uso pessoal. Venda apenas do lote completo...
+                            </div>
+<div class="kc-card__author">
+<img alt="Beatriz Santos" src="https://i.pravatar.cc/150?img=48"/>
+<span>Anunciado por <strong>Beatriz Santos</strong></span>
+<i class="fas fa-star"></i> 4.6
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>45</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=5#comments">
+<i class="fas fa-comment"></i>
+<span>8 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=5">
+                            Ver Mais
+                        </a>
+</div>
+</article>
+<!-- Produto 6 - Eletrônicos -->
+<article class="kc-card" data-category="eletronicos" data-condition="novo" data-post-id="6" data-subcategory="audio" data-verified="false">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<i class="fas fa-headphones" style="font-size: 3em; color: var(--kc-primary-brand);"></i>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Eletrônicos • Áudio • Novo
+                                </div>
+<div class="kc-card__timestamp">Há 6 horas</div>
+</div>
+<a class="kc-card__title" href="product.html?id=6">
+                                Fone Bluetooth JBL Tune 510BT - Novo na Caixa
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-hot-color);">
+<i class="fas fa-tag"></i>
+                                R$ 180,00
+                                <small>Lacrado</small>
+</div>
+<div class="kc-card__description-preview">
+                                Fone de ouvido Bluetooth JBL Tune 510BT novo, lacrado na caixa. Ganhei de presente mas já tenho um. Cor preta. Bateria de até 40h. Som de qualidade JBL. Aceito PIX ou dinheiro...
+                            </div>
+<div class="kc-card__author">
+<img alt="Thiago Alves" src="https://i.pravatar.cc/150?img=52"/>
+<span>Anunciado por <strong>Thiago Alves</strong></span>
+<i class="fas fa-star"></i> 4.9
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>112</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=6#comments">
+<i class="fas fa-comment"></i>
+<span>19 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=6">
+                            Ver Mais
+                        </a>
+</div>
+</article>
+<!-- Produto 7 - Livros -->
+<article class="kc-card" data-category="livros" data-condition="seminovo" data-post-id="7" data-subcategory="medicina" data-verified="false">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<i class="fas fa-book-medical" style="font-size: 3em; color: var(--kc-tertiary-color);"></i>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Livros • Medicina • Semi-novo
+                                </div>
+<div class="kc-card__timestamp">Há 1 semana</div>
+</div>
+<a class="kc-card__title" href="product.html?id=7">
+                                Tratado de Fisiologia Médica - Guyton 13ª Edição
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-hot-color);">
+<i class="fas fa-tag"></i>
+                                R$ 320,00
+                                <small>Aceito propostas</small>
+</div>
+<div class="kc-card__description-preview">
+                                Livro Guyton de Fisiologia Médica, 13ª edição. Em bom estado, algumas anotações a lápis e marca-textos. Capa dura. Essencial para estudantes de Medicina e áreas da saúde. Retirada no Campus Samambaia...
+                            </div>
+<div class="kc-card__author">
+<img alt="Gabriela Mendes" src="https://i.pravatar.cc/150?img=60"/>
+<span>Anunciado por <strong>Gabriela Mendes</strong></span>
+<i class="fas fa-star"></i> 5.0
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>67</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=7#comments">
+<i class="fas fa-comment"></i>
+<span>13 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=7">
+                            Ver Mais
+                        </a>
+</div>
+</article>
+<!-- Produto 8 - Outros -->
+<article class="kc-card" data-category="outros" data-condition="seminovo" data-post-id="8" data-subcategory="bicicleta" data-verified="false">
+<div class="kc-card__main">
+<div class="kc-card__image-wrapper">
+<i class="fas fa-bicycle" style="font-size: 3em; color: var(--kc-secondary-brand);"></i>
+</div>
+<div class="kc-card__content">
+<div class="kc-card__header">
+<div class="kc-card__category-source">
+                                    Outros • Bicicleta • Semi-novo
+                                </div>
+<div class="kc-card__timestamp">Há 4 dias</div>
+</div>
+<a class="kc-card__title" href="product.html?id=8">
+                                Bicicleta Mountain Bike Caloi 21 Marchas
+                            </a>
+<div class="kc-card__price" style="color: var(--kc-hot-color);">
+<i class="fas fa-tag"></i>
+                                R$ 650,00
+                                <small>Negociável</small>
+</div>
+<div class="kc-card__description-preview">
+                                Bicicleta Caloi Mountain Bike em bom estado. 21 marchas, aro 26, freios a disco. Revisada recentemente. Ótima para deslocamento no campus. Motivo da venda: comprei carro. Aceito propostas razoáveis...
+                            </div>
+<div class="kc-card__author">
+<img alt="Felipe Costa" src="https://i.pravatar.cc/150?img=65"/>
+<span>Anunciado por <strong>Felipe Costa</strong></span>
+<i class="fas fa-star"></i> 4.7
+                            </div>
+</div>
+</div>
+<div class="kc-card__footer">
+<div class="kc-card__interactions">
+<div class="kc-vote-box">
+<button class="hot" onclick="vote(this, 'hot')">
+<i class="fas fa-fire"></i>
+</button>
+<span>89</span>
+<button class="cold" onclick="vote(this, 'cold')">
+<i class="fas fa-snowflake"></i>
+</button>
+</div>
+<a class="kc-comment-link" href="product.html?id=8#comments">
+<i class="fas fa-comment"></i>
+<span>16 comentários</span>
+</a>
+</div>
+<a class="kc-action-button kc-get-coupon-button" href="product.html?id=8">
+                            Ver Mais
+                        </a>
+</div>
+</article>
+</div>
+<!-- No Results Message -->
+<div class="kc-no-results" id="noResults" style="display: none; text-align: center; padding: 40px; color: var(--kc-text-dark-secondary);">
+<i class="fas fa-search" style="font-size: 3em; margin-bottom: 15px; opacity: 0.5;"></i>
+<h3>Nenhum resultado encontrado</h3>
+<p>Tente ajustar os filtros ou buscar por outros termos.</p>
+<button class="kc-btn-primary" style="margin-top: 15px;">Limpar Filtros</button>
+</div>
+</section>
+<!-- Sidebar - Reorganizada estilo Oportunidades -->
+<aside class="kc-sidebar">
+<!-- Filtros Section -->
+<div class="kc-sidebar-section kc-filters-section">
+<h3>
+<i class="fas fa-filter"></i>
+                    Filtros
+                </h3>
+<div class="kc-filter-list">
+<label class="kc-filter-item">
+<input checked="" id="filterEletronicos" type="checkbox"/>
+<span>Eletrônicos</span>
+</label>
+<label class="kc-filter-item">
+<input checked="" id="filterLivros" type="checkbox"/>
+<span>Livros</span>
+</label>
+<label class="kc-filter-item">
+<input checked="" id="filterMoveis" type="checkbox"/>
+<span>Móveis</span>
+</label>
+<label class="kc-filter-item">
+<input checked="" id="filterVestuario" type="checkbox"/>
+<span>Vestuário</span>
+</label>
+<label class="kc-filter-item">
+<input checked="" id="filterOutros" type="checkbox"/>
+<span>Outros</span>
+</label>
+<hr style="border: none; border-top: 1px solid var(--kc-border-dark); margin: 10px 0;"/>
+<label class="kc-filter-item">
+<input id="filterNovo" type="checkbox"/>
+<span>Novos</span>
+</label>
+<label class="kc-filter-item">
+<input id="filterSeminovo" type="checkbox"/>
+<span>Semi-novos</span>
+</label>
+<label class="kc-filter-item">
+<input id="filterVerificado" type="checkbox"/>
+<span>Somente verificados</span>
+</label>
+</div>
+</div>
+<!-- Categorias Populares Section -->
+<div class="kc-sidebar-section kc-categories-section">
+<h3>
+<i class="fas fa-th-large"></i>
+                    Categorias Populares
+                </h3>
+<div class="kc-category-cards">
+<a class="kc-category-card" href="#eletronicos">
+<i class="fas fa-laptop"></i>
+<span class="kc-category-card-name">Eletrônicos</span>
+<span class="kc-category-card-count">142</span>
+</a>
+<a class="kc-category-card" href="#livros">
+<i class="fas fa-book"></i>
+<span class="kc-category-card-name">Livros</span>
+<span class="kc-category-card-count">98</span>
+</a>
+<a class="kc-category-card" href="#moveis">
+<i class="fas fa-couch"></i>
+<span class="kc-category-card-name">Móveis</span>
+<span class="kc-category-card-count">67</span>
+</a>
+<a class="kc-category-card" href="#vestuario">
+<i class="fas fa-tshirt"></i>
+<span class="kc-category-card-name">Vestuário</span>
+<span class="kc-category-card-count">54</span>
+</a>
+</div>
+</div>
+<!-- Dicas para Vendedores Section -->
+<div class="kc-sidebar-section kc-tips-section">
+<h3>
+<i class="fas fa-lightbulb"></i>
+                    Dicas para Vendedores
+                </h3>
+<div class="kc-tips-list">
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Tire fotos claras do produto</span>
+</div>
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Descreva detalhadamente o estado</span>
+</div>
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Seja honesto sobre defeitos</span>
+</div>
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Responda rápido aos interessados</span>
+</div>
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Combine local seguro para entrega</span>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- Mobile Navigation -->
+<nav class="kc-mobile-nav">
+<a href="index.html">
+<i class="fas fa-home"></i>
+<span>Início</span>
+</a>
+<a href="eventos.html">
+<i class="fas fa-calendar"></i>
+<span>Eventos</span>
+</a>
+<a class="kc-create-btn" href="create-post.html">
+<i class="fas fa-plus"></i>
+</a>
+<a class="active" href="compra-venda-feed.html">
+<i class="fas fa-shopping-bag"></i>
+<span>Compra/Venda</span>
+</a>
+<button class="kc-menu-toggle" onclick="openMobileMenu()">
+<i class="fas fa-bars"></i>
+<span>Menu</span>
+</button>
+</nav>
+<!-- Mobile Menu Drawer -->
+<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
+<div class="kc-mobile-menu-header">
+<h3>Menu</h3>
+<button class="kc-close-menu" onclick="closeMobileMenu()">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="kc-mobile-menu-content">
+<a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+<a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+<a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+<a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+<a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+<a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+<hr/>
+<a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
+</div>
+</div>
+<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+<script src="assets/js/kc-utils.js"></script>
+<script src="assets/js/kc-env.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="assets/js/kc-supabase.client.js"></script>
+<script src="assets/js/kc-api.client.js"></script>
+<script src="assets/js/kc-profiles.client.js"></script>
+<script src="assets/js/kc-core.js"></script>
+
+<script src="assets/js/kc-auth.ui.js"></script>
+<script src="assets/js/controllers/kc-feed.controller.js"></script>
+<script src="assets/js/controllers/compra-venda-feed.controller.js"></script>
+<script src="assets/js/kc-theme.js"></script>
+<script src="assets/js/kc-filters.js"></script>
+<script src="assets/js/kc-search.js"></script>
+</body>
+</html>

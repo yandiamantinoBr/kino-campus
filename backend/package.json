@@ -1,0 +1,14 @@
+{
+  "name": "kinocampus-backend",
+  "version": "6.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/app.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
