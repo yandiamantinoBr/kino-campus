@@ -565,6 +565,9 @@
     getPosts: localGetPosts,
     getPostById: localGetPostById,
     createPost: localCreatePost,
+    reportPost: async function () {
+      return { ok: false, error: { message: 'Denúncias disponíveis apenas no Supabase.' } };
+    },
   });
 
   function supabaseNotReady(method) {
@@ -949,7 +952,8 @@
       created_at: row.created_at || '',
 
       // Para manter retrocompatibilidade visual (fallback do render):
-      autor: (author && (author.full_name || author.email)) ? (author.full_name || author.email) : '',
+      // Hardening de privacidade: NÃO depender de profiles.email para exibir nome.
+      autor: (author && author.full_name) ? String(author.full_name || '') : '',
       autorAvatar: (author && author.avatar_url) ? author.avatar_url : '',
 
       // Verificação do autor (V8.1.3.2)
@@ -996,7 +1000,7 @@
   function buildSupabasePostSelect(client) {
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, email, verified), post_media (id, url, is_cover)')
+      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, verified), post_media (id, url, is_cover)')
       .limit(1);
   }
 
@@ -1004,7 +1008,7 @@
   function buildSupabasePostSelectFallback(client) {
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, email), post_media (id, url, is_cover)')
+      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url), post_media (id, url, is_cover)')
       .limit(1);
   }
 
@@ -1108,14 +1112,14 @@
   function buildSupabasePostsQuery(client) {
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, email, verified), post_media (id, url, is_cover)');
+      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, verified), post_media (id, url, is_cover)');
   }
 
   // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
   function buildSupabasePostsQueryFallback(client) {
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, email), post_media (id, url, is_cover)');
+      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url), post_media (id, url, is_cover)');
   }
 
   function isMissingVerifiedColumnError(err) {
@@ -1404,6 +1408,65 @@
       return null;
     }
   }
+
+  // ---------- Reports (V8.1.6.2) ----------
+  // Denunciar Post: insere 1 linha em public.reports (RLS força reporter_id = auth.uid())
+  // Retorno: { ok, data?, error? }
+  async function supabaseReportPost(postId, payload = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para denunciar.' } };
+
+    // resolve UUID do post (aceita uuid direto; para legacy numérico tenta resolver via getPostById)
+    let postUuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
+    if (!postUuid && postId != null) {
+      try {
+        const p = await supabaseGetPostById(String(postId));
+        if (p && p.uuid && UUID_RE.test(String(p.uuid))) postUuid = String(p.uuid);
+        else if (p && p.id && UUID_RE.test(String(p.id))) postUuid = String(p.id);
+      } catch (_) {}
+    }
+    if (!postUuid) return { ok: false, error: { message: 'Post inválido para denúncia.' } };
+
+    const reason = String(payload.reason || '').trim().toLowerCase();
+    const allowed = new Set(['spam', 'scam', 'inappropriate', 'hate', 'illegal', 'duplicate', 'other']);
+    if (!allowed.has(reason)) return { ok: false, error: { message: 'Selecione um motivo válido.' } };
+
+    const detailsRaw = (payload.details == null) ? '' : String(payload.details);
+    const details = detailsRaw.trim().slice(0, 1000);
+
+    try {
+      const ins = await client
+        .from('reports')
+        .insert({
+          post_id: postUuid,
+          reporter_id: user.id,
+          reason,
+          details: details ? details : null,
+          status: 'open',
+        })
+        .select('id, created_at')
+        .maybeSingle();
+
+      if (ins && ins.error) {
+        // UNIQUE parcial: reports_unique_open_post_reporter
+        const code = String(ins.error.code || '');
+        const msg = String(ins.error.message || '').toLowerCase();
+        if (code === '23505' || msg.includes('reports_unique_open_post_reporter') || msg.includes('duplicate')) {
+          return { ok: false, error: { message: 'Você já denunciou este post.' }, meta: { duplicate: true } };
+        }
+        console.error('[KCAPI][Supabase] reportPost erro:', ins.error);
+        return { ok: false, error: { message: 'Não foi possível registrar a denúncia.' } };
+      }
+
+      return { ok: true, data: (ins && ins.data) ? ins.data : { id: null } };
+    } catch (e) {
+      console.error('[KCAPI][Supabase] reportPost exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível registrar a denúncia.' } };
+    }
+  }
   // Driver Supabase (V8.1.3.1)
   // Nesta versão: getPostById já é real. Outros métodos seguem como esqueleto.
   const driverSupabase = Object.freeze({
@@ -1411,6 +1474,7 @@
     getPosts: supabaseGetPosts,
     getPostById: supabaseGetPostById,
     createPost: supabaseCreatePost,
+    reportPost: supabaseReportPost,
   });
 
   const activeDriver = (ENV.driver === 'supabase') ? driverSupabase : driverLocal;
@@ -1419,6 +1483,13 @@
   async function getPosts(params = {}) { return activeDriver.getPosts(params); }
   async function getPostById(id) { return activeDriver.getPostById(id); }
   async function createPost(body) { return activeDriver.createPost(body); }
+
+  async function reportPost(postId, payload) {
+    if (!activeDriver.reportPost) {
+      return { ok: false, error: { message: 'Denúncias indisponíveis neste driver.' } };
+    }
+    return activeDriver.reportPost(postId, payload);
+  }
 
   
   // Auth facade (sem quebrar modo local)
@@ -1499,6 +1570,7 @@
     getPosts,
     getPostById,
     createPost,
+    reportPost,
     // Auth (Supabase)
     getCurrentUser,
     signIn,

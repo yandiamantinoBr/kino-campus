@@ -155,7 +155,7 @@
         const q = client
           .from('profiles')
           .upsert(payload, { onConflict: 'id' })
-          .select('id, email, full_name, avatar_url, verified, created_at, updated_at');
+          .select('id, full_name, avatar_url, verified, created_at, updated_at');
 
         const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();
 
@@ -176,7 +176,7 @@
         try {
           const q2 = client
             .from('profiles')
-            .select('id, email, full_name, avatar_url, verified, created_at, updated_at')
+            .select('id, full_name, avatar_url, verified, created_at, updated_at')
             .eq('id', u.id);
 
           const r2 = (typeof q2.maybeSingle === 'function') ? await q2.maybeSingle() : await q2.single();
@@ -219,7 +219,7 @@
     try {
       const q = client
         .from('profiles')
-        .select('id, email, full_name, avatar_url, verified, created_at, updated_at')
+        .select('id, full_name, avatar_url, verified, created_at, updated_at')
         .eq('id', key);
 
       const r = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();

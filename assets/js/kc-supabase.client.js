@@ -302,8 +302,8 @@
 
   function buildPostsSelect(includeVerified, mediaRel) {
     const profileFields = includeVerified
-      ? 'id, full_name, avatar_url, email, verified'
-      : 'id, full_name, avatar_url, email';
+      ? 'id, full_name, avatar_url, verified'
+      : 'id, full_name, avatar_url';
 
     // mediaRel: post_media (padrão do schema) | post_images (compat)
     return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)`;
@@ -313,8 +313,8 @@
 
   function buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder) {
     const profileFields = includeVerified
-      ? "id, full_name, avatar_url, email, verified"
-      : "id, full_name, avatar_url, email";
+      ? "id, full_name, avatar_url, verified"
+      : "id, full_name, avatar_url";
 
     const mediaFields = includeSortOrder
       ? "id, url, is_cover, sort_order"

@@ -18,7 +18,9 @@
 
   // Patch: inclui hardening server-side de verificação de e-mail (V8.1.3.3 retro)
   // + Paginação paritária no Read Path (V8.1.4.2)
-  const VERSION = '8.1.5.1';
+  // V8.1.5.4: migração assistida de “Meus Posts” (localStorage kc_user_posts) -> Supabase
+  // V8.1.6.1: hardening RLS/colunas sensíveis (verified, author_id) via migration SQL
+  const VERSION = '8.1.6.2';
 
   const DEFAULT_ENV = {
     // versões (compat)
@@ -102,4 +104,51 @@
   merged.APP_VERSION = VERSION;
 
   window.KC_ENV = merged;
+
+  // -----------------------------
+  // V8.1.5.4 — Migração assistida “Meus Posts” (localStorage -> Supabase)
+  // - Carrega o módulo de migração apenas quando o driver Supabase estiver ativo
+  // - Em driver Supabase, filtra (apenas na leitura) posts já migrados para evitar duplicação
+  //   em feeds/listagens que ainda consomem localStorage.
+  // -----------------------------
+  try {
+    if (merged.driver === 'supabase') {
+      const KEY = 'kc_user_posts';
+
+      // Patch de leitura: remove (apenas na leitura) itens marcados como migrados.
+      // Mantém o dado original no storage (sem apagar).
+      try {
+        if (!localStorage.__kcMigrateMyPostsPatched) {
+          const origGet = localStorage.getItem.bind(localStorage);
+          // expõe o original para o módulo de migração calcular stats/backup sem ser afetado pelo filtro
+          if (!window.__KC_ORIG_LS_GETITEM) window.__KC_ORIG_LS_GETITEM = origGet;
+          localStorage.__kcMigrateMyPostsPatched = '1';
+          localStorage.getItem = function (k) {
+            const raw = origGet(k);
+            if (k !== KEY || !raw) return raw;
+            try {
+              const data = JSON.parse(raw);
+              if (!Array.isArray(data)) return raw;
+              const filtered = data.filter((p) => {
+                const meta = (p && p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
+                return !(meta.migratedToSupabase === true || meta.supabaseId || meta.supabase_id);
+              });
+              return JSON.stringify(filtered);
+            } catch (_) {
+              return raw;
+            }
+          };
+        }
+      } catch (_) {}
+
+      // Loader do módulo de migração (sem precisar editar HTML)
+      if (!document.querySelector('script[data-kc-migrate="myposts"]')) {
+        const s = document.createElement('script');
+        s.src = 'assets/js/kc-migrate.myposts.js';
+        s.defer = true;
+        s.dataset.kcMigrate = 'myposts';
+        (document.head || document.documentElement).appendChild(s);
+      }
+    }
+  } catch (_) {}
 })();

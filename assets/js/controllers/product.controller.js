@@ -377,6 +377,12 @@
       ? window.KCPostModel.from(raw, { pageModule: (raw && raw.modulo) || '', view: 'product' })
       : ((window.KCAPI && typeof window.KCAPI.normalizePost === 'function') ? window.KCAPI.normalizePost(raw) : raw);
 
+    // V8.1.6.2: Denúncia requer UUID real do post (Supabase). Guardar para o botão/modal.
+    const postUuid = (post && post.uuid) ? String(post.uuid)
+      : ((raw && raw.uuid) ? String(raw.uuid) : null);
+    window.kcCurrentPostUuid = postUuid;
+    if (postUuid) document.body.setAttribute('data-post-uuid', postUuid);
+
     // Render
     hide('notFound');
     setText('postTitle', post.titulo || 'Detalhes');
@@ -390,10 +396,230 @@
     setCTA(post);
     setRelated(db, post);
 
+    // V8.1.6.2: wire botão Denunciar (gated por driver + auth)
+    wireReportButton({ postId: postUuid || id, postTitle: post.titulo || post.title || 'Publicação' });
+
     // Comments
     if (typeof window.renderComments === 'function') {
       window.renderComments(id, 'commentsContainer');
     }
+  }
+
+  // ---------------- Reports UI (V8.1.6.2) ----------------
+  // UI mínima: botão “Denunciar” (product.html) + modal com motivo/detalhes.
+  // Segurança: nenhuma injeção de HTML com dados do usuário (textContent apenas).
+  let _reportUI = null;
+
+  function wireReportButton(ctx) {
+    const btn = document.getElementById('reportButton');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      const driver = (window.KC_ENV && window.KC_ENV.driver) ? window.KC_ENV.driver : 'local';
+      if (driver !== 'supabase') {
+        try { showToast('Denúncias disponíveis apenas no modo Supabase.', 'info', 2200); } catch (_) {}
+        return;
+      }
+
+      // Requer login
+      let user = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+          user = await window.KCAPI.getCurrentUser();
+        }
+      } catch (_) {}
+
+      if (!user) {
+        try { showToast('Faça login para denunciar.', 'info', 2200); } catch (_) {}
+        try { if (typeof window.kcOpenAuthModal === 'function') window.kcOpenAuthModal(); } catch (_) {}
+        return;
+      }
+
+      if (!_reportUI) _reportUI = buildReportUI();
+      _reportUI.open({ postId: ctx.postId, postTitle: ctx.postTitle });
+    });
+  }
+
+  function buildReportUI() {
+    // overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'kcReportOverlay';
+    overlay.className = 'kc-modal-overlay';
+    overlay.style.display = 'none';
+
+    const modal = document.createElement('div');
+    modal.className = 'kc-create-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+
+    // header
+    const header = document.createElement('div');
+    header.className = 'kc-create-modal-header';
+
+    const h2 = document.createElement('h2');
+    h2.className = 'kc-create-modal-title';
+    h2.textContent = 'Denunciar publicação';
+
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'kc-modal-close';
+    close.setAttribute('aria-label', 'Fechar');
+    close.textContent = '×';
+
+    header.appendChild(h2);
+    header.appendChild(close);
+
+    const body = document.createElement('div');
+    body.className = 'kc-create-modal-body';
+
+    const subtitle = document.createElement('p');
+    subtitle.style.margin = '0 0 10px 0';
+    subtitle.style.color = 'var(--text-muted, #64748b)';
+    subtitle.style.fontSize = '0.95rem';
+    subtitle.textContent = 'Ajude a manter a comunidade segura. Escolha um motivo e descreva, se quiser.';
+
+    const postLine = document.createElement('div');
+    postLine.style.margin = '0 0 14px 0';
+    postLine.style.fontSize = '0.95rem';
+    const postLabel = document.createElement('span');
+    postLabel.textContent = 'Post: ';
+    const postTitle = document.createElement('strong');
+    postTitle.textContent = '';
+    postLine.appendChild(postLabel);
+    postLine.appendChild(postTitle);
+
+    const reasonWrap = document.createElement('div');
+    reasonWrap.className = 'kc-form-group';
+    const reasonLabel = document.createElement('label');
+    reasonLabel.textContent = 'Motivo (obrigatório)';
+    const reasonSel = document.createElement('select');
+    reasonSel.className = 'kc-input';
+    reasonSel.style.width = '100%';
+    const reasons = [
+      { v: '', t: 'Selecione…' },
+      { v: 'spam', t: 'Spam / conteúdo repetitivo' },
+      { v: 'scam', t: 'Golpe / fraude' },
+      { v: 'inappropriate', t: 'Conteúdo impróprio' },
+      { v: 'hate', t: 'Ódio / assédio' },
+      { v: 'illegal', t: 'Ilegal / proibido' },
+      { v: 'duplicate', t: 'Duplicado' },
+      { v: 'other', t: 'Outro' },
+    ];
+    reasons.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.v;
+      opt.textContent = r.t;
+      reasonSel.appendChild(opt);
+    });
+    reasonWrap.appendChild(reasonLabel);
+    reasonWrap.appendChild(reasonSel);
+
+    const detailsWrap = document.createElement('div');
+    detailsWrap.className = 'kc-form-group';
+    const detailsLabel = document.createElement('label');
+    detailsLabel.textContent = 'Detalhes (opcional)';
+    const details = document.createElement('textarea');
+    details.className = 'kc-input';
+    details.rows = 4;
+    details.maxLength = 1000;
+    details.placeholder = 'Conte o que aconteceu (máx. 1000 caracteres).';
+    details.style.width = '100%';
+    detailsWrap.appendChild(detailsLabel);
+    detailsWrap.appendChild(details);
+
+    const status = document.createElement('div');
+    status.style.marginTop = '8px';
+    status.style.fontSize = '0.95rem';
+    status.style.color = 'var(--text-muted, #64748b)';
+    status.textContent = '';
+
+    const actions = document.createElement('div');
+    actions.className = 'kc-create-actions';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'kc-btn-secondary';
+    cancel.textContent = 'Cancelar';
+
+    const submit = document.createElement('button');
+    submit.type = 'button';
+    submit.className = 'kc-btn-primary';
+    submit.textContent = 'Enviar denúncia';
+
+    actions.appendChild(cancel);
+    actions.appendChild(submit);
+
+    body.appendChild(subtitle);
+    body.appendChild(postLine);
+    body.appendChild(reasonWrap);
+    body.appendChild(detailsWrap);
+    body.appendChild(status);
+    body.appendChild(actions);
+
+    modal.appendChild(header);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    let currentPostId = null;
+
+    function closeModal() {
+      overlay.style.display = 'none';
+      reasonSel.value = '';
+      details.value = '';
+      status.textContent = '';
+      submit.disabled = false;
+      cancel.disabled = false;
+    }
+
+    function open(ctx) {
+      currentPostId = ctx.postId;
+      postTitle.textContent = String(ctx.postTitle || 'Publicação');
+      overlay.style.display = 'flex';
+      // foco inicial
+      try { reasonSel.focus(); } catch (_) {}
+    }
+
+    async function submitReport() {
+      const reason = String(reasonSel.value || '').trim();
+      if (!reason) {
+        status.textContent = 'Selecione um motivo.';
+        return;
+      }
+      submit.disabled = true;
+      cancel.disabled = true;
+      status.textContent = 'Enviando…';
+
+      let res = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.reportPost === 'function') {
+          res = await window.KCAPI.reportPost(currentPostId, { reason, details: details.value });
+        }
+      } catch (e) {
+        res = { ok: false, error: { message: 'Falha ao enviar.' } };
+      }
+
+      if (res && res.ok) {
+        status.textContent = 'Obrigado! Sua denúncia foi registrada.';
+        try { showToast('Denúncia registrada. Obrigado!', 'success', 2200); } catch (_) {}
+        setTimeout(closeModal, 650);
+        return;
+      }
+
+      const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível registrar a denúncia.';
+      status.textContent = msg;
+      try { showToast(msg, 'error', 2600); } catch (_) {}
+      submit.disabled = false;
+      cancel.disabled = false;
+    }
+
+    // wire
+    close.addEventListener('click', closeModal);
+    cancel.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    submit.addEventListener('click', submitReport);
+
+    return { open, close: closeModal };
   }
 
   document.addEventListener('DOMContentLoaded', loadPost);
