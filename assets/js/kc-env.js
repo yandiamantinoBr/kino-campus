@@ -18,7 +18,7 @@
 
   // Patch: inclui hardening server-side de verificação de e-mail (V8.1.3.3 retro)
   // + Paginação paritária no Read Path (V8.1.4.2)
-  const VERSION = '8.1.4.4';
+  const VERSION = '8.1.5.1';
 
   const DEFAULT_ENV = {
     // versões (compat)

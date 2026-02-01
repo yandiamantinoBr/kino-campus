@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.1.4.4';
+  const VERSION = '8.1.5.1';
 
   // -------- Bootstrap de Configuração (KC_ENV) --------
   // Regra de fallback: se kc-env.js não estiver carregado, assume driver local.
@@ -765,21 +765,41 @@
       .slice(0, 80) || 'image';
   }
 
-  async function uploadImagesToSupabaseStorage(client, images) {
-    const bucket = (ENV.supabase && ENV.supabase.storageBucket) ? String(ENV.supabase.storageBucket) : 'kino-media';
+    async function uploadImagesToSupabaseStorage(client, images, options) {
+    // Bucket (compat): prefer STORAGE_BUCKET_POST_MEDIA (roadmap), senão ENV.supabase.storageBucket
+    const bucket = (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
+      ? String(ENV.STORAGE_BUCKET_POST_MEDIA || ENV.supabase.storageBucket)
+      : 'kino-media';
+
     const list = Array.isArray(images) ? images.filter(Boolean) : [];
     if (!list.length) return [];
+
+    // Hard limits (mínimo anti-abuso)
+    const maxImages = 5;
+    const maxBytes = (ENV && ENV.supabase && Number.isFinite(ENV.supabase.maxImageBytes))
+      ? Number(ENV.supabase.maxImageBytes)
+      : (5 * 1024 * 1024); // 5MB
+
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+    const opts = (options && typeof options === 'object') ? options : {};
+    const userId = (opts.userId != null) ? String(opts.userId) : '';
+    const postId = (opts.postId != null) ? String(opts.postId) : '';
+
+    // Path controlado: post-media/{userId}/{postId}/{filename}
+    // Se não houver userId/postId, cai em modo "compat" (menos seguro) e loga warning.
+    const hasStrongPath = !!(userId && postId);
 
     const storage = client.storage.from(bucket);
     const ts = Date.now();
 
     const uploaded = [];
-    for (let i = 0; i < list.length; i++) {
+    for (let i = 0; i < Math.min(list.length, maxImages); i++) {
       const item = list[i];
 
       // Se já for URL http(s), reaproveita.
       if (typeof item === 'string' && /^https?:\/\//i.test(item)) {
-        uploaded.push({ url: item, is_cover: i === 0 });
+        uploaded.push({ url: item, is_cover: i === 0, sort_order: i });
         continue;
       }
 
@@ -790,11 +810,29 @@
         continue;
       }
 
-      const ext = extFromMime(blob.type);
-      const filename = sanitizeFilename(`image-${i + 1}.${ext}`);
-      const path = `posts/${ts}-${filename}`;
+      // Valida tipo/tamanho
+      const mime = String(blob.type || '').toLowerCase();
+      if (!allowedTypes.has(mime)) {
+        console.warn('[KCAPI][Supabase] Tipo de imagem não permitido:', mime);
+        continue;
+      }
+      if (blob.size > maxBytes) {
+        console.warn('[KCAPI][Supabase] Imagem excede tamanho máximo (bytes):', blob.size, '>', maxBytes);
+        continue;
+      }
 
-      const up = await storage.upload(path, blob, { contentType: blob.type || 'application/octet-stream', upsert: false });
+      const ext = extFromMime(mime);
+      const filename = sanitizeFilename(`image-${i + 1}.${ext}`);
+
+      const path = hasStrongPath
+        ? `post-media/${userId}/${postId}/${ts}-${i + 1}-${filename}`
+        : `posts/${ts}-${filename}`; // compat (evitar quebra caso postId/userId não exista)
+
+      if (!hasStrongPath) {
+        console.warn('[KCAPI][Supabase] Upload com path fraco (sem userId/postId). Considere hardening via post-media/{userId}/{postId}.');
+      }
+
+      const up = await storage.upload(path, blob, { contentType: mime || 'application/octet-stream', upsert: false });
       if (up && up.error) {
         console.error('[KCAPI][Supabase] Upload falhou:', up.error);
         return null;
@@ -806,11 +844,12 @@
         console.warn('[KCAPI][Supabase] Upload OK, mas não consegui obter URL pública:', path);
       }
 
-      uploaded.push({ url: publicUrl || path, is_cover: i === 0 });
+      uploaded.push({ url: publicUrl || path, is_cover: i === 0, sort_order: i });
     }
 
     return uploaded;
   }
+
 
 
   function mergeMetadataSafe(target, metadata) {
@@ -1269,14 +1308,9 @@
     // garante perfil (quando RLS permitir)
     await ensureSupabaseProfile(client, user);
 
-    // 1) Upload das imagens (se houver)
-    const uploaded = await uploadImagesToSupabaseStorage(client, parsed.images);
-    if (uploaded === null) {
-      // uploadImages retorna null em erro hard
-      return null;
-    }
+    try {
 
-    // 2) Insere post
+    // 1) Insere post primeiro (para obter postId) e habilitar path controlado no Storage
     const createdAt = clampCreatedAtISO();
 
     const insertPayload = {
@@ -1291,45 +1325,71 @@
       created_at: createdAt,
     };
 
-    try {
-      const ins = await client
-        .from('posts')
-        .insert(insertPayload)
-        .select('id')
-        .maybeSingle();
-
-      if (ins && ins.error) {
-        console.error('[KCAPI][Supabase] insert posts erro:', ins.error);
-        return null;
+    // Helper de rollback (evita órfãos quando upload falha após INSERT)
+    async function rollbackCreatedPost(postId) {
+      try {
+        const del = await client.from('posts').delete().eq('id', postId);
+        if (del && del.error) console.warn('[KCAPI][Supabase] rollback delete falhou:', del.error);
+      } catch (e) {
+        console.warn('[KCAPI][Supabase] rollback delete exceção:', e);
       }
+    }
 
-      const postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
-      if (!postId) {
-        console.error('[KCAPI][Supabase] insert posts sem id retornado.');
-        return null;
-      }
+    // 2) INSERT posts (gera UUID)
+    let postId = null;
+    const ins = await client
+      .from('posts')
+      .insert(insertPayload)
+      .select('id')
+      .maybeSingle();
 
-      // 3) Insere mídias (post_media)
-      if (Array.isArray(uploaded) && uploaded.length) {
-        const mediaRows = uploaded
-          .filter((m) => m && m.url)
-          .map((m, idx) => ({
-            post_id: postId,
-            url: String(m.url),
-            is_cover: !!m.is_cover,
-          }));
+    if (ins && ins.error) {
+      console.error('[KCAPI][Supabase] insert posts erro:', ins.error);
+      return null;
+    }
 
-        const mr = await client
-          .from('post_media')
-          .insert(mediaRows);
+    postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
+    if (!postId) {
+      console.error('[KCAPI][Supabase] insert posts sem id retornado.');
+      return null;
+    }
 
-        if (mr && mr.error) {
-          console.error('[KCAPI][Supabase] insert post_media erro:', mr.error);
-          return null;
+    // 3) Upload das imagens (se houver) com path controlado (post-media/{userId}/{postId}/...)
+    const uploaded = await uploadImagesToSupabaseStorage(client, parsed.images, { userId: user.id, postId });
+    if (uploaded === null) {
+      await rollbackCreatedPost(postId);
+      return null;
+    }
+
+    // 4) Insere mídias (post_media) com capa + ordem
+    if (Array.isArray(uploaded) && uploaded.length) {
+      const mediaRowsFull = uploaded
+        .filter((m) => m && m.url)
+        .map((m, idx) => ({
+          post_id: postId,
+          url: String(m.url),
+          is_cover: idx === 0, // regra: capa = 1ª imagem ordenada
+          sort_order: Number.isFinite(m.sort_order) ? m.sort_order : idx,
+        }));
+
+      // Tenta com sort_order (V8.1.5.1); fallback se schema ainda não tiver coluna.
+      let mr = await client.from('post_media').insert(mediaRowsFull);
+      if (mr && mr.error) {
+        const msg = String(mr.error.message || '').toLowerCase();
+        if (msg.includes('sort_order')) {
+          const mediaRowsCompat = mediaRowsFull.map(({ sort_order, ...rest }) => rest);
+          mr = await client.from('post_media').insert(mediaRowsCompat);
         }
       }
 
-      // 4) Rebusca completo (com JOINs) e normaliza no contrato do modo local
+      if (mr && mr.error) {
+        console.error('[KCAPI][Supabase] insert post_media erro:', mr.error);
+        // não apaga post automaticamente (pode ser útil depurar), mas registra dívida
+        return null;
+      }
+    }
+
+    // 5) Rebusca completo (com JOINs) e normaliza no contrato do modo local (com JOINs) e normaliza no contrato do modo local
       const mapped = await supabaseGetPostById(postId);
       if (!mapped) return null;
 
