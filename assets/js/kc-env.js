@@ -18,9 +18,12 @@
 
   // Patch: inclui hardening server-side de verificação de e-mail (V8.1.3.3 retro)
   // + Paginação paritária no Read Path (V8.1.4.2)
-  // V8.1.5.4: migração assistida de “Meus Posts” (localStorage kc_user_posts) -> Supabase
+  // V8.1.5.4: migração assistida de "Meus Posts" (localStorage kc_user_posts) -> Supabase
   // V8.1.6.1: hardening RLS/colunas sensíveis (verified, author_id) via migration SQL
-  const VERSION = '8.1.6.2';
+  // V8.1.6.2: tabela reports + privacidade profiles.email
+  // V8.1.7.0: coluna posts.status + policy posts_select_published (moderação de conteúdo)
+  // V8.1.7.1: rate-limit trigger em reports (max 5/hora) + fix XSS comentários + CSP headers
+  const VERSION = '8.1.7.1';
 
   const DEFAULT_ENV = {
     // versões (compat)
