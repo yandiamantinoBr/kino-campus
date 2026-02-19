@@ -16,8 +16,8 @@ const postsRouter = require('./routes/posts.routes');
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
-// Static: o build inicial pode ser apenas servir a pasta frontend
-const FRONTEND_DIR = path.join(__dirname, '..', '..', 'frontend');
+// Static: serve os arquivos da raiz do projeto (HTML, assets, data)
+const FRONTEND_DIR = path.join(__dirname, '..', '..');
 app.use('/', express.static(FRONTEND_DIR));
 
 // API v1
