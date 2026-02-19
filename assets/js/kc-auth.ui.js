@@ -33,6 +33,10 @@
   }
 
   function escapeHtml(value) {
+    // Delegate to KCUtils canonical implementation when available; fallback is kept for safety.
+    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
+      return window.KCUtils.escapeHtml(value);
+    }
     return String(value ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
