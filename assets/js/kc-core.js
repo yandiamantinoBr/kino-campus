@@ -463,20 +463,31 @@ function renderComments(postId, containerId = 'commentsContainer') {
   container.innerHTML = comments.map(c => `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${c.author}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escapeHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
         <div style="flex: 1;">
-          <div style="font-weight: bold;">${c.author}</div>
-          <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${c.timestamp}</div>
+          <div style="font-weight: bold;">${escapeHtml(c.author)}</div>
+          <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escapeHtml(c.timestamp)}</div>
         </div>
       </div>
       <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escapeHtml(c.text)}</div>
       <div style="margin-left: 50px; display: flex; gap: 15px; font-size: 0.9em;">
-        <button onclick="likeComment('${id}', '${c.id}', '${containerId}')" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
+        <button data-post-id="${escapeHtml(String(id))}" data-comment-id="${escapeHtml(String(c.id))}" data-container="${escapeHtml(containerId)}" class="kc-like-comment-btn" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
           <i class="fas fa-thumbs-up"></i> ${c.likes || 0}
         </button>
       </div>
     </div>
   `).join('');
+
+  // Event delegation: set up once per container so it persists across re-renders.
+  // Avoids repeated listener attachment on each renderComments call.
+  if (!container._kcLikeListenerAttached) {
+    container._kcLikeListenerAttached = true;
+    container.addEventListener('click', function(e) {
+      const btn = e.target.closest('.kc-like-comment-btn');
+      if (!btn) return;
+      likeComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.container);
+    });
+  }
 }
 
 function submitComment(postId = null, containerId = 'commentsContainer') {
@@ -1724,6 +1735,10 @@ function kcInitCreatePostTriggers() {
 // Helpers
 // -----------------------------
 function escapeHtml(str) {
+  // Delegate to KCUtils canonical implementation when available; fallback is kept for safety.
+  if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
+    return window.KCUtils.escapeHtml(str);
+  }
   const s = String(str ?? '');
   return s
     .replace(/&/g, '&amp;')
