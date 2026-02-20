@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Confirmando sua conta — KinoCampus</title>
+  <link href="assets/css/styles.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+  <script>
+    /* Theme boot sem flash */
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem('theme'); } catch(e) {}
+      var theme = (saved === 'light' || saved === 'dark') ? saved
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    })();
+  </script>
+
+  <style>
+    /* ── Callback page layout ── */
+    .kc-callback-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      background: var(--kc-background-dark);
+    }
+
+    .kc-callback-card {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      animation: kc-card-in 0.4s ease;
+    }
+
+    @keyframes kc-card-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    .kc-callback-logo {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--kc-text-dark-primary);
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .kc-callback-logo span { color: var(--kc-primary-brand); }
+
+    .kc-callback-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto 24px;
+      transition: background 0.4s, color 0.4s;
+    }
+
+    .kc-callback-icon.loading {
+      background: rgba(65, 181, 211, 0.15);
+      color: var(--kc-secondary-brand);
+      animation: kc-pulse 1.4s ease-in-out infinite;
+    }
+
+    .kc-callback-icon.success {
+      background: rgba(112, 226, 145, 0.15);
+      color: var(--kc-green-check);
+    }
+
+    .kc-callback-icon.error {
+      background: rgba(255, 82, 82, 0.15);
+      color: var(--kc-red-alert);
+    }
+
+    @keyframes kc-pulse {
+      0%, 100% { opacity: 1;   transform: scale(1);    }
+      50%       { opacity: 0.6; transform: scale(0.94); }
+    }
+
+    .kc-callback-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--kc-text-dark-primary);
+      margin: 0 0 10px;
+    }
+
+    .kc-callback-msg {
+      font-size: 0.97rem;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.6;
+      margin: 0 0 32px;
+    }
+
+    .kc-callback-msg strong { color: var(--kc-text-dark-primary); }
+
+    .kc-callback-progress {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--kc-border-dark);
+      overflow: hidden;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .kc-callback-progress.visible { display: block; }
+
+    .kc-callback-progress-bar {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--kc-primary-brand), var(--kc-secondary-brand));
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .kc-callback-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 28px;
+      border-radius: 12px;
+      font-size: 0.97rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .kc-callback-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .kc-callback-cta.primary {
+      background: var(--kc-primary-brand);
+      color: #fff;
+    }
+
+    .kc-callback-cta.secondary {
+      background: var(--kc-border-dark);
+      color: var(--kc-text-dark-primary);
+    }
+
+    .kc-callback-countdown {
+      font-size: 0.85rem;
+      color: var(--kc-text-dark-secondary);
+      margin-top: 16px;
+    }
+
+    .kc-callback-footer {
+      margin-top: 32px;
+      font-size: 0.8rem;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    @media (max-width: 480px) {
+      .kc-callback-card { padding: 32px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="kc-callback-page">
+  <div class="kc-callback-card">
+
+    <!-- Logo -->
+    <div class="kc-callback-logo">
+      <i class="fas fa-campground" style="color: var(--kc-primary-brand)"></i>
+      Kino<span>Campus</span>
+    </div>
+
+    <!-- Ícone de estado -->
+    <div class="kc-callback-icon loading" id="cbIcon">
+      <i class="fas fa-spinner fa-spin" id="cbIconInner"></i>
+    </div>
+
+    <!-- Título -->
+    <h1 class="kc-callback-title" id="cbTitle">Confirmando sua conta…</h1>
+
+    <!-- Mensagem -->
+    <p class="kc-callback-msg" id="cbMsg">
+      Aguarde enquanto verificamos seu e-mail. Isso levará apenas um segundo.
+    </p>
+
+    <!-- Barra de progresso -->
+    <div class="kc-callback-progress" id="cbProgress">
+      <div class="kc-callback-progress-bar" id="cbProgressBar"></div>
+    </div>
+
+    <!-- Botão de ação (oculto inicialmente) -->
+    <a href="index.html" class="kc-callback-cta primary" id="cbBtn" style="display:none">
+      <i class="fas fa-home"></i>
+      Ir para o feed
+    </a>
+
+    <!-- Contagem regressiva -->
+    <p class="kc-callback-countdown" id="cbCountdown" style="display:none"></p>
+
+    <div class="kc-callback-footer">
+      KinoCampus · Comunidade UFG &middot; <a href="index.html" style="color:var(--kc-primary-brand)">Voltar ao início</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- Scripts (mesma ordem do index.html) -->
+<script src="assets/js/kc-env.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/kc-supabase.client.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  var REDIRECT_DELAY = 4000; // ms até redirecionar automaticamente após sucesso
+
+  // ── Helpers DOM ──────────────────────────────────────────────────────────
+  function el(id) { return document.getElementById(id); }
+
+  function setState(type, icon, title, msg, showBtn, showProgress) {
+    var iconEl    = el('cbIcon');
+    var iconInner = el('cbIconInner');
+    var titleEl   = el('cbTitle');
+    var msgEl     = el('cbMsg');
+    var btnEl     = el('cbBtn');
+    var progress  = el('cbProgress');
+
+    iconEl.className     = 'kc-callback-icon ' + type;
+    iconInner.className  = icon;
+    titleEl.textContent  = title;
+    msgEl.innerHTML      = msg;
+    btnEl.style.display  = showBtn ? 'inline-flex' : 'none';
+
+    if (showProgress) {
+      progress.classList.add('visible');
+    } else {
+      progress.classList.remove('visible');
+    }
+  }
+
+  function startCountdown(seconds) {
+    var countEl = el('cbCountdown');
+    countEl.style.display = 'block';
+    var left = seconds;
+
+    var tick = function () {
+      countEl.textContent = 'Redirecionando em ' + left + ' segundo' + (left !== 1 ? 's' : '') + '…';
+      if (left <= 0) {
+        window.location.href = 'index.html';
+        return;
+      }
+      left--;
+      setTimeout(tick, 1000);
+    };
+    tick();
+
+    // Barra de progresso animada
+    var bar = el('cbProgressBar');
+    var progressEl = el('cbProgress');
+    progressEl.classList.add('visible');
+    var start = Date.now();
+    var total = seconds * 1000;
+
+    var animateBar = function () {
+      var elapsed = Date.now() - start;
+      var pct = Math.min(100, (elapsed / total) * 100);
+      bar.style.width = pct + '%';
+      if (pct < 100) requestAnimationFrame(animateBar);
+    };
+    requestAnimationFrame(animateBar);
+  }
+
+  function showSuccess(email) {
+    setState(
+      'success',
+      'fas fa-check',
+      'E-mail confirmado! 🎉',
+      'Bem-vindo(a) ao <strong>KinoCampus</strong>! Sua conta' +
+        (email ? ' (<strong>' + email + '</strong>)' : '') +
+        ' foi verificada com sucesso. Você já está logado.',
+      true,
+      false
+    );
+    startCountdown(Math.round(REDIRECT_DELAY / 1000));
+  }
+
+  function showError(msg) {
+    setState(
+      'error',
+      'fas fa-exclamation-triangle',
+      'Não foi possível confirmar',
+      msg || 'O link de confirmação pode ter expirado ou já foi usado.<br>' +
+             'Tente fazer login novamente ou solicite um novo e-mail de confirmação.',
+      true,
+      false
+    );
+    el('cbBtn').textContent = '';
+    el('cbBtn').innerHTML = '<i class="fas fa-arrow-left"></i> Voltar ao início';
+    el('cbBtn').href = 'index.html';
+    el('cbCountdown').style.display = 'none';
+  }
+
+  function showAlreadyLogged(email) {
+    setState(
+      'success',
+      'fas fa-user-check',
+      'Você já está logado!',
+      'A sessão de <strong>' + (email || 'sua conta') + '</strong> está ativa.' +
+        ' Redirecionando para o feed…',
+      true,
+      false
+    );
+    startCountdown(Math.round(REDIRECT_DELAY / 1000));
+  }
+
+  // ── Lógica principal ──────────────────────────────────────────────────────
+  async function handleCallback() {
+    // Aguarda Supabase JS e KC_ENV carregarem
+    var maxWait = 4000;
+    var waited  = 0;
+    while ((!window.supabase || !window.KC_ENV) && waited < maxWait) {
+      await new Promise(function(r) { setTimeout(r, 80); });
+      waited += 80;
+    }
+
+    var env = window.KC_ENV || {};
+    var url  = String(env.SUPABASE_URL || (env.supabase && env.supabase.url) || '').trim();
+    var anon = String(env.SUPABASE_ANON_KEY || (env.supabase && env.supabase.anonKey) || '').trim();
+
+    if (!url || !anon || /placeholder/i.test(url)) {
+      showError('Configuração do servidor não encontrada. Tente recarregar a página.');
+      return;
+    }
+
+    var client;
+    try {
+      client = window.supabase.createClient(url, anon, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      });
+    } catch(e) {
+      showError('Erro ao conectar com o servidor de autenticação.');
+      return;
+    }
+
+    // Aguarda Supabase processar o token da URL (hash ou query param)
+    // O detectSessionInUrl: true faz isso automaticamente ao criar o client
+    await new Promise(function(r) { setTimeout(r, 600); });
+
+    try {
+      var result = await client.auth.getSession();
+      var session = result && result.data && result.data.session;
+
+      if (session && session.user) {
+        // Sincroniza com o KCSupabase global (se disponível)
+        if (window.KCSupabase && typeof window.KCSupabase.refreshSession === 'function') {
+          try { await window.KCSupabase.refreshSession(); } catch(_) {}
+        }
+        showSuccess(session.user.email || '');
+      } else {
+        // Verifica se há erro de expiração no hash
+        var hash = window.location.hash || '';
+        var params = new URLSearchParams(hash.replace(/^#/, ''));
+        var errorCode = params.get('error_code') || params.get('error');
+        var errorDesc = params.get('error_description') || '';
+
+        if (errorCode === 'otp_expired' || errorDesc.toLowerCase().includes('expired')) {
+          showError('O link de confirmação <strong>expirou</strong>. Por favor, solicite um novo cadastro e confirme em até 24 horas.');
+        } else if (errorCode) {
+          showError('Erro de autenticação: <em>' + errorDesc + '</em>');
+        } else {
+          // Pode ser que o usuário já estava logado e o link foi reutilizado
+          // Tenta verificar a sessão atual
+          var userResult = await client.auth.getUser();
+          if (userResult && userResult.data && userResult.data.user) {
+            showAlreadyLogged(userResult.data.user.email || '');
+          } else {
+            showError('Link de confirmação inválido ou já utilizado.<br>Se você já confirmou seu e-mail, tente fazer login normalmente.');
+          }
+        }
+      }
+    } catch(e) {
+      console.error('[KC Auth Callback]', e);
+      showError('Ocorreu um erro inesperado. Tente novamente ou entre em contato com o suporte.');
+    }
+  }
+
+  // Inicia após DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', handleCallback);
+  } else {
+    handleCallback();
+  }
+})();
+</script>
+
+</body>
+</html>

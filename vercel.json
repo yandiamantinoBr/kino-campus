@@ -2,7 +2,8 @@
   "buildCommand": "node scripts/inject-env.js",
   "outputDirectory": ".",
   "rewrites": [
-    { "source": "/", "destination": "/index.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/auth/callback", "destination": "/auth-callback.html" }
   ],
   "headers": [
     {
