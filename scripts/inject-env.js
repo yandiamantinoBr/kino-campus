@@ -138,19 +138,51 @@ if (!content.includes(SUPABASE_ANON_KEY)) {
 }
 
 // 4) Ativar driver 'supabase' em produção
+//    Bug fix v3: a regex anterior usava "=" para DATA_DRIVER, mas no kc-env.js
+//    a propriedade usa ":" (é um object literal, não assignment).
+//    Resultado: DATA_DRIVER ficava 'local' e o runtime resolvia driver='local'.
 content = content.replace(
   /(\bdriver\s*:\s*)(['"`])local\2/g,
   `$1'supabase'`
 );
+// Cobre DATA_DRIVER com ":" (object literal) E "=" (assignment)
 content = content.replace(
-  /(\bDATA_DRIVER\s*=\s*)(['"`])local\2/g,
+  /(\bDATA_DRIVER\s*[=:]\s*)(['"`])local\2/g,
   `$1'supabase'`
 );
+
+// 5) Adicionar 'egresso.ufg.br' à allowlist de domínios (frontend)
+//    O kc-auth.ui.js verifica AUTH_ALLOWED_DOMAINS ANTES de enviar ao Supabase.
+//    Sem isso, e-mails @egresso.ufg.br são bloqueados no frontend.
+if (!content.includes('egresso.ufg.br')) {
+  // Padrão: AUTH_ALLOWED_DOMAINS: ['ufg.br', 'discente.ufg.br']
+  content = content.replace(
+    /(AUTH_ALLOWED_DOMAINS\s*:\s*\[)([^\]]*)\]/g,
+    (match, prefix, items) => {
+      const trimmed = items.trim();
+      if (trimmed.includes('egresso.ufg.br')) return match;
+      const newItems = trimmed ? `${trimmed}, 'egresso.ufg.br'` : `'egresso.ufg.br'`;
+      return `${prefix}${newItems}]`;
+    }
+  );
+  // Padrão: allowedEmailDomains: ['ufg.br', 'discente.ufg.br']
+  content = content.replace(
+    /(allowedEmailDomains\s*:\s*\[)([^\]]*)\]/g,
+    (match, prefix, items) => {
+      const trimmed = items.trim();
+      if (trimmed.includes('egresso.ufg.br')) return match;
+      const newItems = trimmed ? `${trimmed}, 'egresso.ufg.br'` : `'egresso.ufg.br'`;
+      return `${prefix}${newItems}]`;
+    }
+  );
+}
 
 // ── Verificação ──────────────────────────────────────────────────────────────
 const urlInjected   = content.includes(SUPABASE_URL);
 const keyInjected   = content.includes(SUPABASE_ANON_KEY);
-const stillHasLocal = /driver\s*:\s*['"`]local['"`]/.test(content);
+const stillHasLocal = /driver\s*:\s*['"`]local['"`]/.test(content) ||
+                      /DATA_DRIVER\s*[=:]\s*['"`]local['"`]/.test(content);
+const hasEgresso    = content.includes('egresso.ufg.br');
 
 if (!urlInjected) {
   console.error('❌ inject-env.js: SUPABASE_URL não foi injetada no kc-env.js.');
@@ -178,5 +210,6 @@ console.log('✅ inject-env.js: kc-env.js atualizado com sucesso!');
 console.log('   SUPABASE_URL      →', SUPABASE_URL);
 console.log('   SUPABASE_ANON_KEY →', SUPABASE_ANON_KEY.substring(0, 20) + '...');
 console.log('   driver            →', stillHasLocal ? '⚠️  ainda contém "local" — verifique o kc-env.js' : '✅ supabase');
+console.log('   egresso.ufg.br    →', hasEgresso ? '✅ adicionado à allowlist' : '⚠️  não encontrado na allowlist');
 console.log('   Arquivo           →', ENV_FILE);
 console.log('');
