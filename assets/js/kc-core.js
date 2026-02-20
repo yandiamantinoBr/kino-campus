@@ -220,9 +220,25 @@ function vote(button, type) {
 
   // micro animation
   scoreElement.style.transform = 'scale(1.15)';
-  setTimeout(() => {
-    scoreElement.style.transform = 'scale(1)';
-  }, 160);
+  setTimeout(() => { scoreElement.style.transform = 'scale(1)'; }, 160);
+
+  // Persistência server-side (Supabase mode): fire-and-forget
+  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
+    const postId = button.closest('[data-post-id]')?.dataset.postId || getCurrentPostId();
+    if (postId) {
+      // Passing `type` always: the server toggles off if the same direction is voted again.
+      window.KCAPI.votePost(postId, type).then(function(res) {
+        // Sincroniza score real do servidor com o DOM
+        if (res && res.ok && typeof res.score === 'number') {
+          scoreElement.textContent = String(res.score);
+        }
+        // Atualiza estado visual: se toggle off, nenhum botão ativo
+        if (res && res.ok && res.direction === null) {
+          voteBox.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+        }
+      }).catch(function() {});
+    }
+  }
 }
 
 // -----------------------------
@@ -433,8 +449,31 @@ function addComment(postId, commentText, authorName = 'Anônimo') {
   return newComment;
 }
 
+// Normaliza campos de um comentário independentemente da origem (localStorage ou Supabase)
+function normalizeCommentForRender(c) {
+  return {
+    id:        c.id,
+    author:    c.author_name || c.author || 'Anônimo',
+    text:      c.body       || c.text   || '',
+    timestamp: c.created_at
+                 ? new Date(c.created_at).toLocaleString('pt-BR')
+                 : (c.timestamp || ''),
+    likes:     c.likes || 0,
+  };
+}
+
 function likeComment(postId, commentId, containerId = 'commentsContainer') {
   const id = String(postId);
+
+  // Driver Supabase: persiste via KCAPI (async, re-render ao resolver)
+  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
+    window.KCAPI.likeComment(commentId).then(function() {
+      renderComments(id, containerId);
+    }).catch(function() {});
+    return;
+  }
+
+  // Driver local: localStorage
   const comments = loadComments(id);
   const comment = comments.find(c => String(c.id) === String(commentId));
   if (!comment) return;
@@ -444,13 +483,11 @@ function likeComment(postId, commentId, containerId = 'commentsContainer') {
   renderComments(id, containerId);
 }
 
-function renderComments(postId, containerId = 'commentsContainer') {
-  const id = String(postId);
+function _renderCommentList(id, containerId, comments) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const comments = loadComments(id);
-  if (comments.length === 0) {
+  if (!Array.isArray(comments) || comments.length === 0) {
     container.innerHTML = `
       <div style="padding: 20px; text-align: center; color: var(--kc-text-dark-secondary);">
         <i class="fas fa-comments" style="font-size: 2em; margin-bottom: 10px; opacity: 0.5;"></i>
@@ -460,7 +497,9 @@ function renderComments(postId, containerId = 'commentsContainer') {
     return;
   }
 
-  container.innerHTML = comments.map(c => `
+  container.innerHTML = comments.map(function(raw) {
+    const c = normalizeCommentForRender(raw);
+    return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escapeHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
@@ -475,11 +514,10 @@ function renderComments(postId, containerId = 'commentsContainer') {
           <i class="fas fa-thumbs-up"></i> ${c.likes || 0}
         </button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   // Event delegation: set up once per container so it persists across re-renders.
-  // Avoids repeated listener attachment on each renderComments call.
   if (!container._kcLikeListenerAttached) {
     container._kcLikeListenerAttached = true;
     container.addEventListener('click', function(e) {
@@ -488,6 +526,23 @@ function renderComments(postId, containerId = 'commentsContainer') {
       likeComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.container);
     });
   }
+}
+
+function renderComments(postId, containerId = 'commentsContainer') {
+  const id = String(postId);
+
+  // Driver Supabase: carrega async, depois renderiza
+  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
+    window.KCAPI.getComments(id).then(function(comments) {
+      _renderCommentList(id, containerId, comments || []);
+    }).catch(function() {
+      _renderCommentList(id, containerId, []);
+    });
+    return;
+  }
+
+  // Driver local: localStorage (síncrono)
+  _renderCommentList(id, containerId, loadComments(id));
 }
 
 function submitComment(postId = null, containerId = 'commentsContainer') {
@@ -504,10 +559,29 @@ function submitComment(postId = null, containerId = 'commentsContainer') {
     return;
   }
 
+  const text = textarea.value.trim();
+
+  // Driver Supabase: persiste via KCAPI (async)
+  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
+    window.KCAPI.addComment(id, text).then(function(res) {
+      if (res && res.ok) {
+        textarea.value = '';
+        renderComments(id, containerId);
+        showToast('Comentário enviado!', 'info', 1800);
+      } else {
+        const msg = (res && res.error && res.error.message) || 'Não foi possível comentar.';
+        showToast(msg, 'error');
+      }
+    }).catch(function() {
+      showToast('Erro ao enviar comentário.', 'error');
+    });
+    return;
+  }
+
+  // Driver local: localStorage
   const authorInput = document.querySelector(`input[data-post-id="${cssEscape(id)}"][name="author"]`);
   const authorName = authorInput?.value?.trim() || 'Anônimo';
-
-  addComment(id, textarea.value.trim(), authorName);
+  addComment(id, text, authorName);
   textarea.value = '';
   renderComments(id, containerId);
   showToast('Comentário enviado!', 'info', 1800);

@@ -568,6 +568,13 @@
     reportPost: async function () {
       return { ok: false, error: { message: 'Denúncias disponíveis apenas no Supabase.' } };
     },
+    // Comentários e votos no driver local são geridos diretamente por kc-core.js (localStorage).
+    // As funções abaixo existem apenas para uniformidade da interface; kc-core.js não as usa.
+    getComments: async function () { return null; },
+    addComment:  async function () { return null; },
+    likeComment: async function () { return null; },
+    votePost:    async function () { return null; },
+    getMyVote:   async function () { return null; },
   });
 
   function supabaseNotReady(method) {
@@ -1467,14 +1474,163 @@
       return { ok: false, error: { message: 'Não foi possível registrar a denúncia.' } };
     }
   }
-  // Driver Supabase (V8.1.3.1)
-  // Nesta versão: getPostById já é real. Outros métodos seguem como esqueleto.
+  // ---------- Comments (V8.1.7.2) ----------
+
+  // Busca comentários de um post (ordenados por created_at asc)
+  async function supabaseGetComments(postId) {
+    const client = getSupabaseClient();
+    if (!client) return [];
+    const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
+    if (!uuid) return [];
+    try {
+      const { data, error } = await client
+        .from('comments')
+        .select('id, created_at, author_id, author_name, body, likes')
+        .eq('post_id', uuid)
+        .order('created_at', { ascending: true });
+      if (error) { console.error('[KCAPI][comments] getComments:', error); return []; }
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.error('[KCAPI][comments] getComments exceção:', e);
+      return [];
+    }
+  }
+
+  // Insere um novo comentário (author_id e author_name do usuário logado)
+  async function supabaseAddComment(postId, body) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para comentar.' } };
+    const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
+    if (!uuid) return { ok: false, error: { message: 'Post inválido.' } };
+    const text = String(body || '').trim().slice(0, 2000);
+    if (!text) return { ok: false, error: { message: 'Comentário não pode ser vazio.' } };
+
+    // Busca nome de exibição do profile
+    let authorName = 'Anônimo';
+    try {
+      const { data: prof } = await client
+        .from('profiles')
+        .select('display_name, full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (prof) authorName = String(prof.display_name || prof.full_name || 'Anônimo').trim() || 'Anônimo';
+    } catch (_) {}
+
+    try {
+      const { data, error } = await client
+        .from('comments')
+        .insert({ post_id: uuid, author_id: user.id, author_name: authorName, body: text })
+        .select('id, created_at, author_id, author_name, body, likes')
+        .maybeSingle();
+      if (error) {
+        console.error('[KCAPI][comments] addComment:', error);
+        return { ok: false, error: { message: 'Não foi possível comentar.' } };
+      }
+      return { ok: true, data };
+    } catch (e) {
+      console.error('[KCAPI][comments] addComment exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível comentar.' } };
+    }
+  }
+
+  // Incrementa likes de um comentário (operação simples; sem tabela separada de likes)
+  async function supabaseLikeComment(commentId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para curtir.' } };
+    const uuid = (typeof commentId === 'string' && UUID_RE.test(commentId)) ? commentId : null;
+    if (!uuid) return { ok: false };
+    try {
+      const { data, error } = await client.rpc('increment_comment_likes', { comment_uuid: uuid });
+      if (error) { console.error('[KCAPI][comments] likeComment:', error); return { ok: false }; }
+      return { ok: true, data };
+    } catch (e) {
+      console.error('[KCAPI][comments] likeComment exceção:', e);
+      return { ok: false };
+    }
+  }
+
+  // ---------- Votes (V8.1.7.3) ----------
+
+  // Busca o voto do usuário logado para um post (null se não votou)
+  async function supabaseGetMyVote(postId) {
+    const client = getSupabaseClient();
+    if (!client) return null;
+    const user = await supabaseGetCurrentUser();
+    if (!user) return null;
+    const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
+    if (!uuid) return null;
+    try {
+      const { data } = await client
+        .from('post_votes')
+        .select('id, direction')
+        .eq('post_id', uuid)
+        .eq('voter_id', user.id)
+        .maybeSingle();
+      return data || null;
+    } catch (_) { return null; }
+  }
+
+  // Toggle voto num post: se já votou igual, remove (toggle off). Caso contrário, insere/substitui.
+  // Retorna { ok, direction: null|'hot'|'cold', score }
+  async function supabaseVotePost(postId, direction) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para votar.' } };
+    if (direction !== 'hot' && direction !== 'cold') return { ok: false, error: { message: 'Direção inválida.' } };
+
+    const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
+    if (!uuid) {
+      // tenta resolver UUID para posts legacy
+      try {
+        const p = await supabaseGetPostById(String(postId));
+        const resolved = (p && (p.uuid || p.id));
+        if (!resolved || !UUID_RE.test(String(resolved))) return { ok: false, error: { message: 'Post inválido.' } };
+        return supabaseVotePost(String(resolved), direction);
+      } catch (_) { return { ok: false, error: { message: 'Post inválido.' } }; }
+    }
+
+    try {
+      // Verifica voto existente
+      const existing = await supabaseGetMyVote(uuid);
+
+      if (existing && existing.direction === direction) {
+        // Toggle off: remove voto
+        await client.from('post_votes').delete().eq('id', existing.id);
+        const { data: post } = await client.from('posts').select('votos').eq('id', uuid).maybeSingle();
+        return { ok: true, direction: null, score: post ? post.votos : 0 };
+      }
+
+      if (existing) {
+        // Muda direção: remove antigo e insere novo
+        await client.from('post_votes').delete().eq('id', existing.id);
+      }
+
+      await client.from('post_votes').insert({ post_id: uuid, voter_id: user.id, direction });
+      const { data: post } = await client.from('posts').select('votos').eq('id', uuid).maybeSingle();
+      return { ok: true, direction, score: post ? post.votos : 0 };
+    } catch (e) {
+      console.error('[KCAPI][votes] votePost exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível registrar voto.' } };
+    }
+  }
+
+  // Driver Supabase (V8.1.7.2+)
   const driverSupabase = Object.freeze({
     name: 'supabase',
     getPosts: supabaseGetPosts,
     getPostById: supabaseGetPostById,
     createPost: supabaseCreatePost,
     reportPost: supabaseReportPost,
+    getComments: supabaseGetComments,
+    addComment:  supabaseAddComment,
+    likeComment: supabaseLikeComment,
+    votePost:    supabaseVotePost,
+    getMyVote:   supabaseGetMyVote,
   });
 
   const activeDriver = (ENV.driver === 'supabase') ? driverSupabase : driverLocal;
@@ -1553,7 +1709,34 @@
 
   function isBackendEnabled() { return !!cfg.baseURL; }
 
-  
+  // Comments facade (V8.1.7.2)
+  // Em driver=supabase: usa tabela public.comments.
+  // Em driver=local: retorna null; kc-core.js usa localStorage diretamente.
+  async function getComments(postId) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getComments) return null;
+    return activeDriver.getComments(postId);
+  }
+
+  async function addComment(postId, body) {
+    if (ENV.driver !== 'supabase' || !activeDriver.addComment) return null;
+    return activeDriver.addComment(postId, body);
+  }
+
+  async function likeComment(commentId) {
+    if (ENV.driver !== 'supabase' || !activeDriver.likeComment) return null;
+    return activeDriver.likeComment(commentId);
+  }
+
+  // Votes facade (V8.1.7.3)
+  async function votePost(postId, direction) {
+    if (ENV.driver !== 'supabase' || !activeDriver.votePost) return null;
+    return activeDriver.votePost(postId, direction);
+  }
+
+  async function getMyVote(postId) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getMyVote) return null;
+    return activeDriver.getMyVote(postId);
+  }
 
   window.KCAPI = Object.freeze({
     VERSION,
@@ -1571,6 +1754,16 @@
     getPostById,
     createPost,
     reportPost,
+
+    // Comments (Supabase) — V8.1.7.2
+    getComments,
+    addComment,
+    likeComment,
+
+    // Votes (Supabase) — V8.1.7.3
+    votePost,
+    getMyVote,
+
     // Auth (Supabase)
     getCurrentUser,
     signIn,
