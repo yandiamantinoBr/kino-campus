@@ -5,6 +5,7 @@
   const state = {
     user: null,
     profile: null,
+    postStatus: '',
   };
 
   function safeName(profile, user) {
@@ -68,6 +69,10 @@
     list.innerHTML = '';
 
     if (!Array.isArray(posts) || posts.length === 0) {
+      const emptyMsg = state.postStatus
+        ? 'Você ainda não publicou nada com este status.'
+        : 'Você ainda não publicou nada.';
+      if (empty) empty.textContent = emptyMsg;
       if (empty) empty.style.display = 'block';
       return;
     }
@@ -80,13 +85,20 @@
 
       const title = document.createElement('a');
       title.className = 'kc-profile-post__title';
-      title.href = `product.html?id=${encodeURIComponent(post.id)}`;
+      title.href = `product.html?id=${encodeURIComponent(post.id || post.uuid || '')}`;
       title.textContent = post.title || 'Sem título';
 
       const meta = document.createElement('div');
       meta.className = 'kc-profile-post__meta';
       const dateStr = post.created_at ? new Date(post.created_at).toLocaleDateString('pt-BR') : 'Data indisponível';
-      meta.textContent = `${dateStr} • ${post.status || 'published'}`;
+      const status = String(post.status || 'published').toLowerCase();
+      const label = ({
+        published: 'Publicado',
+        pending: 'Pendente',
+        hidden: 'Oculto',
+        deleted: 'Excluído',
+      })[status] || status;
+      meta.textContent = `${dateStr} • ${label}`;
 
       card.appendChild(title);
       card.appendChild(meta);
@@ -98,8 +110,18 @@
     const loading = $('#profile-loading');
     if (loading) loading.style.display = 'block';
 
-    state.profile = await window.KCAPI.getMyProfile();
-    renderHeader();
+    try {
+      state.profile = await window.KCAPI.getMyProfile();
+      if (!state.profile && typeof window.KCAPI.syncProfile === 'function') {
+        await window.KCAPI.syncProfile();
+        state.profile = await window.KCAPI.getMyProfile();
+      }
+      renderHeader();
+    } catch (_) {
+      state.profile = null;
+      renderHeader();
+      setStatus('Não foi possível carregar seu perfil agora.', 'warn');
+    }
 
     if (loading) loading.style.display = 'none';
     const content = $('#profile-content');
@@ -109,9 +131,21 @@
   async function loadMyPosts() {
     const loading = $('#profile-posts-loading');
     if (loading) loading.style.display = 'block';
+    const list = $('#profile-posts-list');
+    if (list) list.innerHTML = '';
+    const empty = $('#profile-posts-empty');
+    if (empty) empty.style.display = 'none';
 
-    const posts = await window.KCAPI.getMyPosts({ page: 1, limit: 20 });
-    renderMyPosts(posts);
+    try {
+      const query = { page: 1, limit: 20 };
+      if (state.postStatus) query.status = state.postStatus;
+      const posts = await window.KCAPI.getMyPosts(query);
+      renderMyPosts(posts);
+    } catch (_) {
+      if (loading) loading.style.display = 'none';
+      setStatus('Não foi possível carregar seus posts no momento.', 'warn');
+      renderMyPosts([]);
+    }
   }
 
   async function onSaveDisplayName(evt) {
@@ -129,18 +163,32 @@
     setStatus('Salvando nome…', 'info');
     if (submit) submit.disabled = true;
 
-    const result = await window.KCAPI.updateMyProfile({ display_name: displayName });
+    try {
+      const result = await window.KCAPI.updateMyProfile({ display_name: displayName });
 
-    if (!result || !result.ok) {
+      if (!result || !result.ok) {
+        setStatus('No momento, não é possível alterar seu nome. Tente novamente mais tarde.', 'error');
+        return;
+      }
+
+      if (result.data) {
+        state.profile = result.data;
+      } else {
+        state.profile = await window.KCAPI.getMyProfile();
+      }
+      renderHeader();
+      setStatus('Nome atualizado.', 'success');
+    } catch (_) {
       setStatus('No momento, não é possível alterar seu nome. Tente novamente mais tarde.', 'error');
+    } finally {
       if (submit) submit.disabled = false;
-      return;
     }
+  }
 
-    state.profile = result.data || state.profile;
-    renderHeader();
-    setStatus('Nome atualizado.', 'success');
-    if (submit) submit.disabled = false;
+  async function onPostsStatusChange(evt) {
+    const value = String((evt && evt.target && evt.target.value) || '').trim().toLowerCase();
+    state.postStatus = value;
+    await loadMyPosts();
   }
 
   async function init() {
@@ -157,6 +205,11 @@
 
     const form = $('#display-name-form');
     if (form) form.addEventListener('submit', onSaveDisplayName);
+    const statusFilter = $('#profile-posts-status');
+    if (statusFilter) {
+      statusFilter.addEventListener('change', onPostsStatusChange);
+      state.postStatus = String(statusFilter.value || '').trim().toLowerCase();
+    }
 
     await loadProfile();
     await loadMyPosts();

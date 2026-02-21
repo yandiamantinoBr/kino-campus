@@ -454,6 +454,8 @@ function normalizeCommentForRender(c) {
   const profile = c.author_profile || c.profiles || null;
   const resolvedAuthor = (
     (profile && (profile.display_name || profile.full_name))
+    || c.display_name
+    || c.full_name
     || c.author_name
     || c.author
     || 'Anônimo'
