@@ -1,8 +1,8 @@
-# Kino Campus — Protótipo WEB (V8.1.8.1) — Front modules com versão unificada
+# Kino Campus — Protótipo WEB (V8.1.8.2) — Cleanup & Fonte Única de Verdade
 
 Este repositório é o **protótipo web offline-first** do **Kino Campus** (plataforma universitária por módulos), agora com **integração Supabase-first** (Postgres + Auth + Storage) na linha **V8.1.x**.
 
-A **V8.1.8.1** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`) e consolida uma **versão única alvo** para os módulos JS de front, evitando drift entre clientes. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
+A **V8.1.8.2** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`) e preserva o runtime oficial como **front estático + Supabase** (sem backend Node ativo no deploy). Também mantém a **versão única alvo** dos módulos JS de front (8.1.8.1), evitando drift entre clientes. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
 
 - **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
 - **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.
