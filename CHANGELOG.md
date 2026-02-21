@@ -1,5 +1,20 @@
 # Changelog
 
+## [8.1.11.1] - 2026-02-21
+
+### Added
+- Migration `supabase/migrations/v8.1.11.1_admin_reports_threshold_notify.sql` com estratégia event-driven (trigger em `public.reports` -> HTTP assinado para Edge Function).
+- Edge Function `supabase/functions/notify-admin-reports-threshold/index.ts` para:
+  - validar `post_id` e assinatura HMAC,
+  - contar reports abertos,
+  - agregar motivos (`reason`),
+  - enviar webhook admin com link do post,
+  - aplicar anti-spam por janela usando `public.audit_log` (`reports_threshold_notified`).
+- Guia operacional/QA em `docs/qa/v8.1.11.1-admin-reports-threshold.md`.
+
+### Changed
+- README atualizado com ordem de migrations até `v8.1.11.1` e com seção de configuração/deploy da nova Edge Function.
+
 ## [8.1.8.2] - 2026-02-21
 
 ### Changed

@@ -143,6 +143,10 @@ Abra:
   5) `supabase/migrations/v8.1.6.1_rls_column_hardening.sql` (REVOKE de colunas sensíveis)
   6) `supabase/migrations/v8.1.6.2_reports_privacy_hardening.sql` (reports + privacidade do email)
   7) `supabase/migrations/v8.1.7.5_auth_egresso_domain.sql` (inclui `@egresso.ufg.br` na regra institucional + backfill de `profiles.verified`)
+  8) `supabase/migrations/v8.1.9.1_admin_posts_select.sql` (SELECT de posts para admins)
+  9) `supabase/migrations/v8.1.10.0_profile_mvp_display_name.sql` (display_name em profiles)
+  10) `supabase/migrations/v8.1.11.0_audit_log.sql` (audit log de moderação/compliance)
+  11) `supabase/migrations/v8.1.11.1_admin_reports_threshold_notify.sql` (trigger -> Edge Function para alerta de denúncias)
 
 > Nota de deploy: o ajuste histórico de `docs/legacy/sql/13_fix_auth_egresso_domain.sql` já está consolidado na esteira oficial (`supabase/migrations/v8.1.7.5_auth_egresso_domain.sql`). Para comportamento crítico de autenticação, use apenas arquivos de `supabase/migrations/`.
 
@@ -158,6 +162,22 @@ Edite `assets/js/kc-env.js`:
 - `driver: "supabase"`
 - `supabase.url` e `supabase.anonKey`
 
+### 4) Edge Function (alerta admin por denúncias)
+1. Deploy da função:
+   - `supabase functions deploy notify-admin-reports-threshold`
+2. Configurar secrets da função:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `KC_APP_BASE_URL` (ex.: `https://<seu-dominio>`)
+   - `ADMIN_REPORTS_WEBHOOK_URL`
+   - `KC_NOTIFY_HMAC_SECRET` (segredo forte compartilhado com o banco)
+   - `REPORTS_THRESHOLD` (opcional; default `3`)
+   - `REPORTS_NOTIFY_COOLDOWN_HOURS` (opcional; default `24`)
+3. Configurar settings no banco (fora do git):
+   - `app.settings.kc_notify_function_url` = URL completa da função
+   - `app.settings.kc_notify_function_auth_token` = JWT de autorização da função (ex.: service role)
+   - `app.settings.kc_notify_hmac_secret` = mesmo valor de `KC_NOTIFY_HMAC_SECRET`
+
 ---
 
 
@@ -167,6 +187,7 @@ Para validação manual e de segurança (RLS), consulte:
 
 - `docs/qa/e2e-checklist.md`
 - `docs/qa/rls-smoke.sql`
+- `docs/qa/v8.1.11.1-admin-reports-threshold.md`
 
 ## 🔜 Próxima sprint sugerida (V8.1.6.3)
 
