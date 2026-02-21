@@ -17,9 +17,8 @@
 
   function escapeHtml(str) {
     if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') return window.KCUtils.escapeHtml(str);
-    return String(str ?? '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    console.error('[KC Admin Reports] KCUtils.escapeHtml indisponível.');
+    return '';
   }
 
   function $(sel, root) { return (root || document).querySelector(sel); }
@@ -222,7 +221,7 @@
         <tr>
           <td style="padding:8px;font-size:.85em;">${escapeHtml(reasonLabel(r.reason))}</td>
           <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${escapeHtml(r.details || '—')}</td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${formatDate(r.created_at)}</td>
+          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${escapeHtml(formatDate(r.created_at))}</td>
           <td style="padding:8px;">
             <span style="padding:2px 8px;border-radius:4px;font-size:.8em;background:${r.status === 'open' ? '#ff5722' : '#9e9e9e'};color:#fff;">${escapeHtml(r.status)}</span>
           </td>
