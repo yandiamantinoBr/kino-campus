@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.1.8.2] - 2026-02-21
+
+### Changed
+- Movido `backend/` para `docs/legacy/backend-placeholder/` como referência histórica/placeholder.
+- Adicionado `docs/legacy/backend-placeholder/README.md` com status de legado e esclarecimento de que o runtime oficial é front estático + Supabase.
+- Atualizadas notas de readiness para apontar o novo local legado e evitar entendimento de backend ativo no fluxo atual.
+
 ## [8.1.8.1] - 2026-02-21
 
 ### Changed
