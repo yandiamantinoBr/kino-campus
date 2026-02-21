@@ -144,14 +144,23 @@
   }
 
   function emailAllowed(email, allowedDomains) {
+    if (window.KCUtils && typeof window.KCUtils.isInstitutionalEmailAllowed === 'function') {
+      return window.KCUtils.isInstitutionalEmailAllowed(email, allowedDomains);
+    }
+
     const em = String(email || '').trim().toLowerCase();
-    if (!em.includes('@')) return false;
-    const domain = em.split('@').pop() || '';
+    const at = em.lastIndexOf('@');
+    if (at < 0) return false;
+    const domain = em.slice(at + 1);
 
-    const list = Array.isArray(allowedDomains) ? allowedDomains.filter(Boolean).map(d => String(d).trim().toLowerCase()) : [];
+    const list = Array.isArray(allowedDomains)
+      ? Array.from(new Set(allowedDomains
+        .map((d) => String(d || '').trim().toLowerCase())
+        .filter(Boolean)))
+      : [];
+
     if (!list.length) return true; // sem restrição
-
-    return list.some((d) => domain === d || domain.endsWith(`.${d}`) || domain.endsWith(d));
+    return list.includes(domain);
   }
 
   async function signIn(email, password) {
