@@ -1,11 +1,13 @@
 /*
-  KinoCampus — Admin Moderation Controller (V8.1.9.1)
-  Moderação independente de denúncias.
+  KinoCampus — Admin Moderation Controller (V8.1.11.0)
+  Moderacao de posts + observabilidade (audit log).
 */
 (function () {
   'use strict';
 
   const PAGE_SIZE = 25;
+  const AUDIT_LIMIT = 50;
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const state = {
     statusFilter: 'all',
     search: '',
@@ -13,6 +15,12 @@
     hasMore: false,
     posts: [],
     sessionActions: [],
+    audit: {
+      entityType: 'all',
+      action: 'all',
+      actorId: '',
+      rows: [],
+    },
   };
 
   const fallbackEscapeHtml = (str) => String(str ?? '')
@@ -53,6 +61,18 @@
   function setLoading(visible) {
     const el = $('#admin-loading');
     if (el) el.style.display = visible ? 'flex' : 'none';
+  }
+
+  function setAuditError(msg) {
+    const el = $('#audit-log-error');
+    if (!el) return;
+    if (!msg) {
+      el.textContent = '';
+      el.style.display = 'none';
+      return;
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
   }
 
   async function checkAdminAccess() {
@@ -132,6 +152,96 @@
 
     state.offset += PAGE_SIZE;
     renderPosts();
+  }
+
+  function formatPayload(payload) {
+    try {
+      return JSON.stringify(payload || {}, null, 2);
+    } catch (_) {
+      return '{}';
+    }
+  }
+
+  function renderAuditLogs() {
+    const body = $('#audit-log-body');
+    if (!body) return;
+
+    const empty = $('#audit-log-empty');
+    const rows = Array.isArray(state.audit.rows) ? state.audit.rows : [];
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:20px;">Nenhum log encontrado para os filtros selecionados.</td></tr>';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+
+    if (empty) empty.style.display = 'none';
+    body.innerHTML = rows.map((row, idx) => {
+      const detailId = `audit-detail-${idx}`;
+      const payload = escape(formatPayload(row.payload));
+
+      return `<tr>
+        <td>${escape(fmtDate(row.created_at))}</td>
+        <td><code>${escape(row.action || '—')}</code></td>
+        <td><code>${escape(row.entity_type || '—')}</code></td>
+        <td><code>${escape(row.entity_id || '—')}</code></td>
+        <td><code>${escape(row.actor_id || 'service_role/system')}</code></td>
+        <td>
+          <button
+            type="button"
+            data-audit-detail="${detailId}"
+            style="padding:6px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);cursor:pointer;font-size:.82em;"
+          >
+            Ver detalhes
+          </button>
+        </td>
+      </tr>
+      <tr id="${detailId}" class="kc-audit-details-row" style="display:none;">
+        <td colspan="6">
+          <pre class="kc-audit-details">${payload}</pre>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function fetchAuditLogs() {
+    const client = getClient();
+    if (!client) return;
+
+    const body = $('#audit-log-body');
+    if (body) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:18px;">Carregando logs…</td></tr>';
+    }
+    setAuditError('');
+
+    const actor = String(state.audit.actorId || '').trim();
+    if (actor && !UUID_RE.test(actor)) {
+      state.audit.rows = [];
+      renderAuditLogs();
+      setAuditError('O filtro actor_id deve ser um UUID completo.');
+      return;
+    }
+
+    let query = client
+      .from('audit_log')
+      .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
+      .order('created_at', { ascending: false })
+      .limit(AUDIT_LIMIT);
+
+    if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
+    if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
+    if (actor) query = query.eq('actor_id', actor);
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('[Admin moderation] fetchAuditLogs:', error);
+      state.audit.rows = [];
+      renderAuditLogs();
+      setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
+      return;
+    }
+
+    state.audit.rows = data || [];
+    renderAuditLogs();
   }
 
   function statusBadge(status) {
@@ -218,6 +328,7 @@
     renderPosts();
     renderSessionActions();
     showFeedback(status === 'hidden' ? 'Post ocultado.' : status === 'published' ? 'Post restaurado/publicado.' : 'Post marcado como deletado.');
+    await fetchAuditLogs();
   }
 
   function initStatusFilter() {
@@ -262,6 +373,59 @@
 
     const loadMore = $('#moderation-load-more');
     if (loadMore) loadMore.addEventListener('click', () => fetchPosts(false));
+
+    const auditEntity = $('#audit-entity-type-filter');
+    if (auditEntity) {
+      auditEntity.addEventListener('change', async () => {
+        state.audit.entityType = auditEntity.value || 'all';
+        await fetchAuditLogs();
+      });
+    }
+
+    const auditAction = $('#audit-action-filter');
+    if (auditAction) {
+      auditAction.addEventListener('change', async () => {
+        state.audit.action = auditAction.value || 'all';
+        await fetchAuditLogs();
+      });
+    }
+
+    const auditActor = $('#audit-actor-id-filter');
+    if (auditActor) {
+      auditActor.addEventListener('change', async () => {
+        state.audit.actorId = String(auditActor.value || '').trim();
+        await fetchAuditLogs();
+      });
+      auditActor.addEventListener('keydown', async (ev) => {
+        if (ev.key !== 'Enter') return;
+        ev.preventDefault();
+        state.audit.actorId = String(auditActor.value || '').trim();
+        await fetchAuditLogs();
+      });
+    }
+
+    const auditRefresh = $('#audit-refresh');
+    if (auditRefresh) {
+      auditRefresh.addEventListener('click', async () => {
+        if (auditActor) state.audit.actorId = String(auditActor.value || '').trim();
+        await fetchAuditLogs();
+      });
+    }
+
+    const auditBody = $('#audit-log-body');
+    if (auditBody) {
+      auditBody.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button[data-audit-detail]');
+        if (!btn) return;
+        const detailId = btn.getAttribute('data-audit-detail');
+        if (!detailId) return;
+        const detail = document.getElementById(detailId);
+        if (!detail) return;
+        const isOpen = detail.style.display !== 'none';
+        detail.style.display = isOpen ? 'none' : 'table-row';
+        btn.textContent = isOpen ? 'Ver detalhes' : 'Ocultar detalhes';
+      });
+    }
   }
 
   async function boot() {
@@ -274,7 +438,7 @@
     $('#admin-content').style.display = 'block';
     bindEvents();
     renderSessionActions();
-    await fetchPosts(true);
+    await Promise.all([fetchPosts(true), fetchAuditLogs()]);
   }
 
   document.addEventListener('DOMContentLoaded', boot);

@@ -37,6 +37,34 @@
     .kc-admin-actions button { padding:6px 10px;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:.8em; }
     .kc-admin-actions button[disabled] { opacity:.6;cursor:not-allowed; }
     .kc-admin-panel { background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:10px;padding:14px 16px;margin-top:16px; }
+    .kc-audit-filters { display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 14px; }
+    .kc-audit-filters select,.kc-audit-filters input { padding:8px 12px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);font-size:.88em; }
+    .kc-audit-filters button { padding:8px 14px;border-radius:8px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer; }
+    .kc-audit-table { min-width:980px; }
+    .kc-audit-details-row td { background:rgba(255,255,255,.02); }
+    .kc-audit-details {
+      margin:0;
+      padding:10px;
+      border-radius:8px;
+      border:1px solid var(--kc-border-dark);
+      background:var(--kc-background-dark);
+      color:var(--kc-text-dark-secondary);
+      font-size:.8em;
+      line-height:1.35;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    #audit-log-error {
+      display:none;
+      margin:0 0 12px;
+      border-radius:8px;
+      padding:10px 12px;
+      font-size:.85em;
+      color:#ef9a9a;
+      border:1px solid rgba(244,67,54,.35);
+      background:rgba(244,67,54,.12);
+    }
+    #audit-log-empty { margin:10px 0 0;color:var(--kc-text-dark-secondary);font-size:.9em; }
   </style>
 </head>
 <body class="kc-admin-page">
@@ -96,7 +124,45 @@
 
         <div class="kc-admin-panel">
           <h3 style="margin:0 0 8px 0;font-size:1em;">Audit Log</h3>
-          <p style="margin:0;color:var(--kc-text-dark-secondary);">Audit log será exibido aqui quando V8.1.11.0 estiver concluída.</p>
+          <p style="margin:0;color:var(--kc-text-dark-secondary);font-size:.9em;">Últimos 50 eventos de moderação/compliance.</p>
+
+          <div class="kc-audit-filters">
+            <select id="audit-entity-type-filter" aria-label="Filtrar por entidade">
+              <option value="all">Todas entidades</option>
+              <option value="posts">posts</option>
+              <option value="reports">reports</option>
+            </select>
+            <select id="audit-action-filter" aria-label="Filtrar por ação">
+              <option value="all">Todas ações</option>
+              <option value="post_status_changed">post_status_changed</option>
+              <option value="report_closed">report_closed</option>
+              <option value="post_deleted">post_deleted</option>
+            </select>
+            <input id="audit-actor-id-filter" type="search" placeholder="Filtrar por actor_id (uuid)" />
+            <button id="audit-refresh"><i class="fas fa-sync-alt"></i> Atualizar logs</button>
+          </div>
+
+          <div id="audit-log-error" role="alert"></div>
+
+          <div class="kc-admin-posts-table-wrap">
+            <table class="kc-admin-posts-table kc-audit-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Ação</th>
+                  <th>Entidade</th>
+                  <th>entity_id</th>
+                  <th>actor_id</th>
+                  <th>Detalhes</th>
+                </tr>
+              </thead>
+              <tbody id="audit-log-body">
+                <tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:18px;">Carregando logs…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p id="audit-log-empty" style="display:none;">Nenhum log encontrado para os filtros selecionados.</p>
         </div>
       </div>
     </div>
