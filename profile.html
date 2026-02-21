@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css">
+  <script src="assets/js/kc-theme-boot.js"></script>
+  <title>KinoCampus — Meu perfil</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .kc-profile-wrap { max-width: 920px; margin: 0 auto; padding: 20px 16px 56px; }
+    .kc-profile-card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+    .kc-profile-head { display: flex; gap: 14px; align-items: center; }
+    .kc-profile-avatar { width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--kc-border-dark); object-fit: cover; background: #202429; }
+    .kc-profile-name { margin: 0; font-size: 1.25rem; }
+    .kc-profile-badge { display: inline-flex; margin-top: 6px; padding: 4px 10px; border-radius: 999px; font-size: .85rem; }
+    .kc-profile-badge.is-verified { color: #8fe3b2; border: 1px solid rgba(83, 214, 129, .45); background: rgba(83, 214, 129, .1); }
+    .kc-profile-badge.is-unverified { color: var(--kc-text-dark-secondary); border: 1px solid var(--kc-border-dark); }
+    .kc-profile-feedback { display: none; margin: 0 0 12px; border-radius: 10px; padding: 10px 12px; font-size: .92rem; }
+    .kc-profile-feedback.is-success { background: rgba(56, 142, 60, .14); color: #9ae6a0; border: 1px solid rgba(56, 142, 60, .35); }
+    .kc-profile-feedback.is-error { background: rgba(229, 57, 53, .14); color: #ffb4b1; border: 1px solid rgba(229, 57, 53, .45); }
+    .kc-profile-feedback.is-warn, .kc-profile-feedback.is-info { background: rgba(255, 255, 255, .04); color: var(--kc-text-dark-secondary); border: 1px solid var(--kc-border-dark); }
+    .kc-profile-form { display: flex; gap: 10px; flex-wrap: wrap; }
+    .kc-profile-form input { flex: 1; min-width: 220px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--kc-border-dark); background: #1a1f24; color: var(--kc-text-dark); }
+    .kc-profile-form button { border: 0; border-radius: 10px; padding: 10px 16px; background: var(--kc-primary-brand); color: white; cursor: pointer; }
+    .kc-profile-posts { display: grid; gap: 10px; }
+    .kc-profile-post { border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; background: rgba(255,255,255,.02); }
+    .kc-profile-post__title { color: var(--kc-text-dark); font-weight: 600; text-decoration: none; }
+    .kc-profile-post__title:hover { color: var(--kc-primary-brand); }
+    .kc-profile-post__meta { color: var(--kc-text-dark-secondary); font-size: .88rem; margin-top: 6px; }
+    @media (max-width: 600px) {
+      .kc-profile-name { font-size: 1.05rem; }
+      .kc-profile-avatar { width: 62px; height: 62px; }
+      .kc-profile-form { flex-direction: column; }
+      .kc-profile-form button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <div class="kc-profile-wrap">
+      <p id="profile-loading" style="margin: 0 0 16px; color: var(--kc-text-dark-secondary);">Carregando perfil…</p>
+      <p id="profile-feedback" class="kc-profile-feedback" role="alert"></p>
+
+      <section id="profile-content" style="display: none;">
+        <article class="kc-profile-card">
+          <div class="kc-profile-head">
+            <img id="profile-avatar" class="kc-profile-avatar" src="" alt="Avatar do usuário" />
+            <div>
+              <h1 class="kc-profile-name" id="profile-display-name">Usuário</h1>
+              <span id="profile-verified-badge" class="kc-profile-badge is-unverified">Não verificado</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="kc-profile-card">
+          <h2 style="margin-top:0;">Editar nome</h2>
+          <form id="display-name-form" class="kc-profile-form">
+            <input id="display-name-input" name="display_name" maxlength="80" placeholder="Como você quer aparecer no KinoCampus" required />
+            <button id="display-name-submit" type="submit">Salvar</button>
+          </form>
+        </article>
+
+        <article class="kc-profile-card">
+          <h2 style="margin-top:0;">Meus posts</h2>
+          <p id="profile-posts-loading" style="margin: 0 0 12px; color: var(--kc-text-dark-secondary);">Carregando posts…</p>
+          <p id="profile-posts-empty" style="display:none; color: var(--kc-text-dark-secondary);">Você ainda não publicou nada.</p>
+          <div id="profile-posts-list" class="kc-profile-posts"></div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/kc-utils.js"></script>
+  <script src="assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
+  <script src="assets/js/controllers/profile.controller.js"></script>
+</body>
+</html>

@@ -1599,13 +1599,31 @@
     const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
     if (!uuid) return [];
     try {
-      const { data, error } = await client
+      let result = await client
         .from('comments')
-        .select('id, created_at, author_id, author_name, body, likes')
+        .select('id, created_at, author_id, author_name, body, likes, author_profile:profiles!comments_author_id_fkey(display_name, full_name)')
         .eq('post_id', uuid)
         .order('created_at', { ascending: true });
-      if (error) { console.error('[KCAPI][comments] getComments:', error); return []; }
-      return Array.isArray(data) ? data : [];
+
+      if (result && result.error) {
+        result = await client
+          .from('comments')
+          .select('id, created_at, author_id, author_name, body, likes')
+          .eq('post_id', uuid)
+          .order('created_at', { ascending: true });
+      }
+
+      if (result && result.error) { console.error('[KCAPI][comments] getComments:', result.error); return []; }
+      const rows = (result && Array.isArray(result.data)) ? result.data : [];
+      return rows.map((row) => {
+        const prof = row && row.author_profile ? row.author_profile : null;
+        const resolvedName = String(
+          (prof && (prof.display_name || prof.full_name))
+          || row.author_name
+          || 'Anônimo'
+        ).trim() || 'Anônimo';
+        return { ...row, author_name: resolvedName };
+      });
     } catch (e) {
       console.error('[KCAPI][comments] getComments exceção:', e);
       return [];
@@ -1648,6 +1666,107 @@
     } catch (e) {
       console.error('[KCAPI][comments] addComment exceção:', e);
       return { ok: false, error: { message: 'Não foi possível comentar.' } };
+    }
+  }
+
+  async function supabaseGetMyProfile() {
+    const client = getSupabaseClient();
+    if (!client) return null;
+    const user = await supabaseGetCurrentUser();
+    if (!user) return null;
+
+    try {
+      let res = await client
+        .from('profiles')
+        .select('id, display_name, full_name, avatar_url, verified, updated_at')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (res && res.error && isMissingTokenError(res.error, 'display_name')) {
+        res = await client
+          .from('profiles')
+          .select('id, full_name, avatar_url, verified, updated_at')
+          .eq('id', user.id)
+          .maybeSingle();
+      }
+      if (res && res.error) {
+        console.error('[KCAPI][profile] getMyProfile:', res.error);
+        return null;
+      }
+      return (res && res.data) ? res.data : null;
+    } catch (e) {
+      console.error('[KCAPI][profile] getMyProfile exceção:', e);
+      return null;
+    }
+  }
+
+  async function supabaseUpdateMyProfile(patch = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para editar seu perfil.' } };
+
+    const displayName = String((patch && patch.display_name) || '').trim().slice(0, 80);
+    if (!displayName) return { ok: false, error: { message: 'Informe um nome válido.' } };
+
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .update({ display_name: displayName })
+        .eq('id', user.id)
+        .select('id, display_name, full_name, avatar_url, verified, updated_at')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[KCAPI][profile] updateMyProfile:', error);
+        return { ok: false, error: { message: error.message || 'Não foi possível atualizar seu perfil.' } };
+      }
+      return { ok: true, data: data || null };
+    } catch (e) {
+      console.error('[KCAPI][profile] updateMyProfile exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível atualizar seu perfil.' } };
+    }
+  }
+
+  async function supabaseGetMyPosts(params = {}) {
+    const client = getSupabaseClient();
+    if (!client) return [];
+    const user = await supabaseGetCurrentUser();
+    if (!user) return [];
+
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    const status = String(params.status || '').trim().toLowerCase();
+
+    try {
+      let query = client
+        .from('posts')
+        .select('id, legacy_id, title, created_at, status, module, category')
+        .eq('author_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (status) query = query.eq('status', status);
+      const { data, error } = await query;
+      if (error) {
+        console.error('[KCAPI][profile] getMyPosts:', error);
+        return [];
+      }
+
+      return (Array.isArray(data) ? data : []).map((row) => ({
+        id: row.legacy_id || row.id,
+        uuid: row.id,
+        title: row.title || 'Sem título',
+        created_at: row.created_at || null,
+        status: row.status || 'published',
+        module: row.module || '',
+        category: row.category || '',
+      }));
+    } catch (e) {
+      console.error('[KCAPI][profile] getMyPosts exceção:', e);
+      return [];
     }
   }
 
@@ -1749,6 +1868,9 @@
     likeComment: supabaseLikeComment,
     votePost:    supabaseVotePost,
     getMyVote:   supabaseGetMyVote,
+    getMyProfile: supabaseGetMyProfile,
+    updateMyProfile: supabaseUpdateMyProfile,
+    getMyPosts: supabaseGetMyPosts,
   });
 
   const activeDriver = (ENV.driver === 'supabase') ? driverSupabase : driverLocal;
@@ -1864,6 +1986,21 @@
     return activeDriver.getMyVote(postId);
   }
 
+  async function getMyProfile() {
+    if (ENV.driver !== 'supabase' || !activeDriver.getMyProfile) return null;
+    return activeDriver.getMyProfile();
+  }
+
+  async function updateMyProfile(patch = {}) {
+    if (ENV.driver !== 'supabase' || !activeDriver.updateMyProfile) return { ok: false, error: { message: 'Perfil indisponível neste driver.' } };
+    return activeDriver.updateMyProfile(patch);
+  }
+
+  async function getMyPosts(params = {}) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getMyPosts) return [];
+    return activeDriver.getMyPosts(params);
+  }
+
   window.KCAPI = Object.freeze({
     VERSION,
     ENV,
@@ -1891,6 +2028,9 @@
     // Votes (Supabase) — V8.1.7.3
     votePost,
     getMyVote,
+    getMyProfile,
+    updateMyProfile,
+    getMyPosts,
 
     // Auth (Supabase)
     getCurrentUser,
