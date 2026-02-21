@@ -1416,6 +1416,122 @@
     }
   }
 
+  function kcApiError(message) {
+    return { ok: false, error: { message: String(message || 'Operação não concluída.') } };
+  }
+
+  function normalizeUpdatePayload(data) {
+    const parsed = normalizeCreatePayload(data);
+    if (!parsed.title) return { ok: false, error: { message: 'Título é obrigatório.' } };
+    if (!parsed.description) return { ok: false, error: { message: 'Descrição é obrigatória.' } };
+    if (!parsed.moduleDB) return { ok: false, error: { message: 'Módulo é obrigatório.' } };
+    if (!parsed.categoryDB) return { ok: false, error: { message: 'Categoria é obrigatória.' } };
+
+    return {
+      ok: true,
+      data: {
+        title: parsed.title,
+        description: parsed.description,
+        price: parsed.price,
+        location: parsed.location,
+        module: parsed.moduleDB,
+        category: parsed.categoryDB,
+        metadata: parsed.metadata,
+      },
+    };
+  }
+
+  async function resolvePostUuid(postId) {
+    if (typeof postId === 'string' && UUID_RE.test(postId)) return String(postId);
+    if (postId == null) return null;
+    try {
+      const post = await supabaseGetPostById(String(postId));
+      if (post && post.uuid && UUID_RE.test(String(post.uuid))) return String(post.uuid);
+      if (post && post.id && UUID_RE.test(String(post.id))) return String(post.id);
+    } catch (_) {}
+    return null;
+  }
+
+  async function supabaseUpdatePost(postId, payload) {
+    const client = getSupabaseClient();
+    if (!client) return kcApiError('Supabase não inicializado.');
+
+    const user = await supabaseGetCurrentUser();
+    if (!user) return kcApiError('Faça login para editar.');
+
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return kcApiError('Payload inválido para edição.');
+    }
+
+    const parsed = normalizeUpdatePayload(payload);
+    if (!parsed.ok) return parsed;
+
+    const postUuid = await resolvePostUuid(postId);
+    if (!postUuid) return kcApiError('Post inválido para edição.');
+
+    try {
+      const own = await client.from('posts').select('id, author_id').eq('id', postUuid).maybeSingle();
+      if (own && own.error) {
+        console.error('[KCAPI][Supabase] updatePost ownership check erro:', own.error);
+        return kcApiError('Não foi possível validar permissão de edição.');
+      }
+      if (!own || !own.data) return kcApiError('Publicação não encontrada.');
+      if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('Você não pode editar este post.');
+
+      const upd = await client
+        .from('posts')
+        .update(parsed.data)
+        .eq('id', postUuid)
+        .eq('author_id', user.id)
+        .select('id')
+        .maybeSingle();
+
+      if (upd && upd.error) {
+        console.error('[KCAPI][Supabase] updatePost erro:', upd.error);
+        return kcApiError('Não foi possível salvar alterações.');
+      }
+
+      const updated = await supabaseGetPostById(postUuid);
+      if (!updated) return kcApiError('Post atualizado, mas não foi possível recarregar.');
+
+      return { ok: true, data: updated };
+    } catch (e) {
+      console.error('[KCAPI][Supabase] updatePost exceção:', e);
+      return kcApiError('Não foi possível salvar alterações.');
+    }
+  }
+
+  async function supabaseDeletePost(postId) {
+    const client = getSupabaseClient();
+    if (!client) return kcApiError('Supabase não inicializado.');
+
+    const user = await supabaseGetCurrentUser();
+    if (!user) return kcApiError('Faça login para excluir.');
+
+    const postUuid = await resolvePostUuid(postId);
+    if (!postUuid) return kcApiError('Post inválido para exclusão.');
+
+    try {
+      const own = await client.from('posts').select('id, author_id').eq('id', postUuid).maybeSingle();
+      if (own && own.error) {
+        console.error('[KCAPI][Supabase] deletePost ownership check erro:', own.error);
+        return kcApiError('Não foi possível validar permissão de exclusão.');
+      }
+      if (!own || !own.data) return kcApiError('Publicação não encontrada.');
+      if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('Você não pode excluir este post.');
+
+      const del = await client.from('posts').delete().eq('id', postUuid).eq('author_id', user.id);
+      if (del && del.error) {
+        console.error('[KCAPI][Supabase] deletePost erro:', del.error);
+        return kcApiError('Não foi possível excluir a publicação.');
+      }
+      return { ok: true };
+    } catch (e) {
+      console.error('[KCAPI][Supabase] deletePost exceção:', e);
+      return kcApiError('Não foi possível excluir a publicação.');
+    }
+  }
+
   // ---------- Reports (V8.1.6.2) ----------
   // Denunciar Post: insere 1 linha em public.reports (RLS força reporter_id = auth.uid())
   // Retorno: { ok, data?, error? }
@@ -1625,6 +1741,8 @@
     getPosts: supabaseGetPosts,
     getPostById: supabaseGetPostById,
     createPost: supabaseCreatePost,
+    updatePost: supabaseUpdatePost,
+    deletePost: supabaseDeletePost,
     reportPost: supabaseReportPost,
     getComments: supabaseGetComments,
     addComment:  supabaseAddComment,
@@ -1639,6 +1757,14 @@
   async function getPosts(params = {}) { return activeDriver.getPosts(params); }
   async function getPostById(id) { return activeDriver.getPostById(id); }
   async function createPost(body) { return activeDriver.createPost(body); }
+  async function updatePost(postId, payload) {
+    if (!activeDriver.updatePost) return kcApiError('Edição indisponível neste driver.');
+    return activeDriver.updatePost(postId, payload);
+  }
+  async function deletePost(postId) {
+    if (!activeDriver.deletePost) return kcApiError('Exclusão indisponível neste driver.');
+    return activeDriver.deletePost(postId);
+  }
 
   async function reportPost(postId, payload) {
     if (!activeDriver.reportPost) {
@@ -1753,6 +1879,8 @@
     getPosts,
     getPostById,
     createPost,
+    updatePost,
+    deletePost,
     reportPost,
 
     // Comments (Supabase) — V8.1.7.2
