@@ -451,9 +451,17 @@ function addComment(postId, commentText, authorName = 'Anônimo') {
 
 // Normaliza campos de um comentário independentemente da origem (localStorage ou Supabase)
 function normalizeCommentForRender(c) {
+  const profile = c.author_profile || c.profiles || null;
+  const resolvedAuthor = (
+    (profile && (profile.display_name || profile.full_name))
+    || c.author_name
+    || c.author
+    || 'Anônimo'
+  );
+
   return {
     id:        c.id,
-    author:    c.author_name || c.author || 'Anônimo',
+    author:    String(resolvedAuthor || 'Anônimo').trim() || 'Anônimo',
     text:      c.body       || c.text   || '',
     timestamp: c.created_at
                  ? new Date(c.created_at).toLocaleString('pt-BR')
