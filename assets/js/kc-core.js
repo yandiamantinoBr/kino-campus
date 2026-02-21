@@ -502,15 +502,15 @@ function _renderCommentList(id, containerId, comments) {
     return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escapeHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escape(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
         <div style="flex: 1;">
-          <div style="font-weight: bold;">${escapeHtml(c.author)}</div>
-          <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escapeHtml(c.timestamp)}</div>
+          <div style="font-weight: bold;">${escape(c.author)}</div>
+          <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escape(c.timestamp)}</div>
         </div>
       </div>
-      <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escapeHtml(c.text)}</div>
+      <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escape(c.text)}</div>
       <div style="margin-left: 50px; display: flex; gap: 15px; font-size: 0.9em;">
-        <button data-post-id="${escapeHtml(String(id))}" data-comment-id="${escapeHtml(String(c.id))}" data-container="${escapeHtml(containerId)}" class="kc-like-comment-btn" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
+        <button data-post-id="${escape(String(id))}" data-comment-id="${escape(String(c.id))}" data-container="${escape(containerId)}" class="kc-like-comment-btn" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
           <i class="fas fa-thumbs-up"></i> ${c.likes || 0}
         </button>
       </div>
@@ -1344,13 +1344,13 @@ function kcCreateImagesSectionHtml() {
     const isCover = kcCreateState.coverImageId && String(kcCreateState.coverImageId) === String(img.id);
     return `
       <div class="kc-img-thumb${isCover ? ' is-cover' : ''}">
-        <img src="${escapeHtml(img.dataUrl)}" alt="Imagem da publicação" loading="lazy" />
+        <img src="${escape(img.dataUrl)}" alt="Imagem da publicação" loading="lazy" />
         ${isCover ? `<div class="kc-img-badge"><i class="fas fa-star"></i> Capa</div>` : ''}
         <div class="kc-img-actions">
-          <button type="button" class="kc-img-action" data-kc-img-action="cover" data-kc-img-id="${escapeHtml(img.id)}" title="Definir como capa">
+          <button type="button" class="kc-img-action" data-kc-img-action="cover" data-kc-img-id="${escape(img.id)}" title="Definir como capa">
             <i class="fas fa-star"></i>
           </button>
-          <button type="button" class="kc-img-action" data-kc-img-action="remove" data-kc-img-id="${escapeHtml(img.id)}" title="Remover">
+          <button type="button" class="kc-img-action" data-kc-img-action="remove" data-kc-img-id="${escape(img.id)}" title="Remover">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -1480,7 +1480,7 @@ function kcRenderCreateModal() {
       btn.setAttribute('data-kc-module', key);
       btn.innerHTML = `
         <i class="${schema.icon}"></i>
-        <span>${escapeHtml(schema.label.replace(' na UFG', ''))}</span>
+        <span>${escape(schema.label.replace(' na UFG', ''))}</span>
       `;
       grid.appendChild(btn);
     });
@@ -1504,10 +1504,10 @@ function kcRenderCreateModal() {
   if (schema.tagGroups && schema.tagGroups.length) {
     schema.tagGroups.forEach((g) => {
       const selectedKey = kcCreateState.selections[g.id] || '';
-      parts.push(`<div class="kc-create-group"><div class="kc-create-group__head"><span>${escapeHtml(g.label)}${g.required ? ' *' : ''}</span></div><div class="kc-chip-row">`);
+      parts.push(`<div class="kc-create-group"><div class="kc-create-group__head"><span>${escape(g.label)}${g.required ? ' *' : ''}</span></div><div class="kc-chip-row">`);
       g.options.forEach((opt) => {
         const active = selectedKey === opt.key ? ' active' : '';
-        parts.push(`<button type="button" class="kc-chip${active}" data-kc-group="${escapeHtml(g.id)}" data-kc-chip="${escapeHtml(opt.key)}">${escapeHtml(opt.label)}</button>`);
+        parts.push(`<button type="button" class="kc-chip${active}" data-kc-group="${escape(g.id)}" data-kc-chip="${escape(opt.key)}">${escape(opt.label)}</button>`);
       });
       parts.push('</div></div>');
     });
@@ -1519,24 +1519,24 @@ function kcRenderCreateModal() {
   fields.forEach((f) => {
     const val = kcCreateState.values[f.name];
     const required = f.required ? 'required' : '';
-    const label = escapeHtml(f.label);
+    const label = escape(f.label);
     const id = 'kcField_' + f.name;
     if (f.type === 'textarea') {
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <textarea id="${id}" name="${escapeHtml(f.name)}" rows="${f.rows || 4}" placeholder="${escapeHtml(f.placeholder || '')}" ${required}>${escapeHtml(val || '')}</textarea>
+          <textarea id="${id}" name="${escape(f.name)}" rows="${f.rows || 4}" placeholder="${escape(f.placeholder || '')}" ${required}>${escape(val || '')}</textarea>
         </div>
       `);
     } else if (f.type === 'select') {
       const opts = (f.options || []).map(o => {
         const isSel = String(val || '') === String(o);
-        return `<option value="${escapeHtml(o)}" ${isSel ? 'selected' : ''}>${escapeHtml(o)}</option>`;
+        return `<option value="${escape(o)}" ${isSel ? 'selected' : ''}>${escape(o)}</option>`;
       }).join('');
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <select id="${id}" name="${escapeHtml(f.name)}" ${required}>
+          <select id="${id}" name="${escape(f.name)}" ${required}>
             <option value="" ${!val ? 'selected' : ''} disabled>Selecione...</option>
             ${opts}
           </select>
@@ -1546,20 +1546,20 @@ function kcRenderCreateModal() {
       const checked = val === true || val === 'true' ? 'checked' : '';
       parts.push(`
         <label class="kc-check" for="${id}">
-          <input id="${id}" name="${escapeHtml(f.name)}" type="checkbox" ${checked} />
+          <input id="${id}" name="${escape(f.name)}" type="checkbox" ${checked} />
           <span>${label}</span>
         </label>
       `);
     } else {
-      const type = escapeHtml(f.type);
-      const placeholder = escapeHtml(f.placeholder || '');
-      const valueAttr = (val != null && f.type !== 'file') ? `value="${escapeHtml(val)}"` : '';
-      const min = (f.min != null) ? `min="${escapeHtml(f.min)}"` : '';
-      const max = (f.max != null) ? `max="${escapeHtml(f.max)}"` : '';
+      const type = escape(f.type);
+      const placeholder = escape(f.placeholder || '');
+      const valueAttr = (val != null && f.type !== 'file') ? `value="${escape(val)}"` : '';
+      const min = (f.min != null) ? `min="${escape(f.min)}"` : '';
+      const max = (f.max != null) ? `max="${escape(f.max)}"` : '';
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <input id="${id}" name="${escapeHtml(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} />
+          <input id="${id}" name="${escape(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} />
         </div>
       `);
     }
@@ -1808,7 +1808,7 @@ function kcInitCreatePostTriggers() {
 // -----------------------------
 // Helpers
 // -----------------------------
-function escapeHtml(str) {
+function escape(str) {
   // Delegate to KCUtils canonical implementation when available; fallback is kept for safety.
   if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
     return window.KCUtils.escapeHtml(str);

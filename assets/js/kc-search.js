@@ -46,16 +46,16 @@
       .trim();
   }
 
-  function escapeHtml(str) {
-    if (KCUtils && typeof KCUtils.escapeHtml === 'function') return KCUtils.escapeHtml(str);
-    const s = String(str ?? '');
-    return s
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  const fallbackEscapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const escape = (value) => ((window.KCUtils && typeof window.KCUtils.escapeHtml === 'function')
+    ? window.KCUtils.escapeHtml(value)
+    : fallbackEscapeHtml(value));
 
   function getQueryParam(name) {
     try {
@@ -310,12 +310,12 @@
     return `
       <article class="kc-card">
         <div class="kc-card__main">
-          <div class="kc-card__image-wrapper" style="font-size: 3em; display:flex; align-items:center; justify-content:center;">${escapeHtml(post.emoji || '✨')}</div>
+          <div class="kc-card__image-wrapper" style="font-size: 3em; display:flex; align-items:center; justify-content:center;">${escape(post.emoji || '✨')}</div>
           <div class="kc-card__content">
-            <div class="kc-card__header"><div class="kc-card__category-source">${escapeHtml(post.modulo || '')}</div><div class="kc-card__timestamp">${escapeHtml(post.timestamp || '')}</div></div>
-            <a class="kc-card__title" href="${href}">${escapeHtml(post.titulo || '')}</a>
-            <div class="kc-card__description-preview">${escapeHtml(post.descricao || '')}</div>
-            <div class="kc-card__author"><span>Por <strong>${escapeHtml(post.autor || 'Autor')}</strong></span></div>
+            <div class="kc-card__header"><div class="kc-card__category-source">${escape(post.modulo || '')}</div><div class="kc-card__timestamp">${escape(post.timestamp || '')}</div></div>
+            <a class="kc-card__title" href="${href}">${escape(post.titulo || '')}</a>
+            <div class="kc-card__description-preview">${escape(post.descricao || '')}</div>
+            <div class="kc-card__author"><span>Por <strong>${escape(post.autor || 'Autor')}</strong></span></div>
           </div>
         </div>
       </article>

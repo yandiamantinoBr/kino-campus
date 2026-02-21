@@ -32,18 +32,16 @@
     el.textContent = String(text ?? '');
   }
 
-  function escapeHtml(value) {
-    // Delegate to KCUtils canonical implementation when available; fallback is kept for safety.
-    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
-      return window.KCUtils.escapeHtml(value);
-    }
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  const fallbackEscapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const escape = (value) => ((window.KCUtils && typeof window.KCUtils.escapeHtml === 'function')
+    ? window.KCUtils.escapeHtml(value)
+    : fallbackEscapeHtml(value));
 
   function normalizeEmail(email) {
     if (window.KCUtils && typeof window.KCUtils.normalizeEmail === 'function') {
@@ -457,9 +455,9 @@
       // Hardening (V8.1.3.3 retro): badge deve refletir SOMENTE o valor retornado do banco (profiles.verified)
       const verified = !!(profile && (profile.verified === true));
 
-      const displayEsc = escapeHtml(display);
-      const avatarEsc = escapeHtml(avatar);
-      const altEsc = escapeHtml((String(display).split(' ')[0] || 'Usuário'));
+      const displayEsc = escape(display);
+      const avatarEsc = escape(avatar);
+      const altEsc = escape((String(display).split(' ')[0] || 'Usuário'));
 
       btn.innerHTML = `
         <span class="kc-header-user">
