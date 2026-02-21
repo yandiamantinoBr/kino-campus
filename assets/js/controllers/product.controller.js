@@ -20,7 +20,8 @@
 
   function esc(str) {
     if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') return window.KCUtils.escapeHtml(str);
-    return String(str || '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    console.error('[KC Product] KCUtils.escapeHtml indisponível.');
+    return '';
   }
 
   function moduleLabel(key) {
@@ -79,7 +80,10 @@
 
     const parts = [];
     parts.push(`<a href="index.html"><i class="fas fa-home"></i> KinoCampus</a>`);
-    if (modKey) parts.push(`<i class="fas fa-chevron-right"></i><a href="${esc((post._kcModulePage || '') || 'index.html')}">${esc(modLbl)}</a>`);
+    const rawModulePage = String((post._kcModulePage || '') || 'index.html').trim();
+    const safeModulePage = /^[a-z0-9_-]+\.html(?:[?#].*)?$/i.test(rawModulePage) ? rawModulePage : 'index.html';
+
+    if (modKey) parts.push(`<i class="fas fa-chevron-right"></i><a href="${esc(safeModulePage)}">${esc(modLbl)}</a>`);
     parts.push(`<i class="fas fa-chevron-right"></i><span>${esc(catLbl || 'Detalhes')}</span>`);
     if (subLbl) parts.push(`<i class="fas fa-chevron-right"></i><span>${esc(subLbl)}</span>`);
 
