@@ -160,6 +160,14 @@ Edite `assets/js/kc-env.js`:
 
 ---
 
+
+## 🧪 QA (checklists e smoke tests)
+
+Para validação manual e de segurança (RLS), consulte:
+
+- `docs/qa/e2e-checklist.md`
+- `docs/qa/rls-smoke.sql`
+
 ## 🔜 Próxima sprint sugerida (V8.1.6.3)
 
 - **Aprimorar moderação (triagem mínima / status) — se houver schema previsto no Roadmap**
