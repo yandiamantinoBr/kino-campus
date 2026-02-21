@@ -262,7 +262,7 @@
         module: ['compra-venda', 'livros'],
         pageModule: 'compra-venda',
         containerSelector: '.kc-feed-list',
-        onAfterInject: function () {
+        onAfterAppend: function () {
           setupAdvancedFilters();
           // reaplicar após configuração (garante que predicate já está em vigor)
           if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();

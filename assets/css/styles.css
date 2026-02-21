@@ -5062,3 +5062,34 @@ textarea::placeholder {
   box-shadow: 0 0 0 6px rgba(255, 107, 0, 0.18);
   border-radius: 999px;
 }
+
+/* V8.1.9.0 - Feed pager */
+.kc-feed-pager {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 18px 0 24px;
+}
+
+.kc-feed-pager__btn,
+.kc-feed-pager__retry {
+  width: min(100%, 320px);
+  justify-content: center;
+}
+
+.kc-feed-pager__status {
+  margin: 0;
+  text-align: center;
+  color: var(--kc-text-light);
+  word-break: break-word;
+  max-width: min(100%, 320px);
+}
+
+@media (max-width: 420px) {
+  .kc-feed-pager {
+    margin: 16px 0 20px;
+    padding: 0 8px;
+  }
+}
