@@ -100,12 +100,40 @@
     if (!postIds.length) return {};
     const client = getClient();
     if (!client) return {};
-    const { data } = await client
+    const { data, error } = await client
       .from('posts')
-      .select('id, titulo, status')
+      .select('id, title, status')
       .in('id', postIds);
+
+    let posts = data || [];
+
+    if (error) {
+      const message = String(error.message || '').toLowerCase();
+      const details = String(error.details || '').toLowerCase();
+      const legacySchemaMissingTitle = (message.includes('column') || details.includes('column'))
+        && (message.includes('title') || details.includes('title'))
+        && (message.includes('does not exist') || details.includes('does not exist'));
+
+      if (!legacySchemaMissingTitle) {
+        console.error('[Admin] loadPostTitles:', error);
+        return {};
+      }
+
+      const { data: legacyData, error: legacyError } = await client
+        .from('posts')
+        .select('id, titulo, status')
+        .in('id', postIds);
+
+      if (legacyError) {
+        console.error('[Admin] loadPostTitles legacy fallback:', legacyError);
+        return {};
+      }
+
+      posts = legacyData || [];
+    }
+
     const map = {};
-    (data || []).forEach(p => { map[p.id] = p; });
+    posts.forEach(p => { map[p.id] = p; });
     return map;
   }
 
@@ -175,7 +203,7 @@
       const items = grouped[pid];
       const open = items.filter(r => r.status === 'open');
       const post = postMap[pid] || {};
-      const postTitle = escapeHtml(post.titulo || pid);
+      const postTitle = escapeHtml(post.title || post.titulo || pid);
       const postStatus = post.status || 'unknown';
 
       // Contagem por motivo
