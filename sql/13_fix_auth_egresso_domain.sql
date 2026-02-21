@@ -1,3 +1,7 @@
+-- ⚠️ Legado: este patch foi incorporado oficialmente em
+-- `supabase/migrations/v8.1.7.5_auth_egresso_domain.sql`.
+-- Mantenha este arquivo apenas para referência histórica.
+
 -- Kino Campus — Fix V8.1.7.5
 -- Adiciona @egresso.ufg.br à allowlist de e-mails institucionais
 --

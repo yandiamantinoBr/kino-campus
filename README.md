@@ -100,6 +100,9 @@ Abra:
   4) `supabase/migrations/v8.1.5.1_write_path_hardening.sql` (Storage hardening + `post_media.sort_order`)
   5) `supabase/migrations/v8.1.6.1_rls_column_hardening.sql` (REVOKE de colunas sensíveis)
   6) `supabase/migrations/v8.1.6.2_reports_privacy_hardening.sql` (reports + privacidade do email)
+  7) `supabase/migrations/v8.1.7.5_auth_egresso_domain.sql` (inclui `@egresso.ufg.br` na regra institucional + backfill de `profiles.verified`)
+
+> Nota de deploy: o ajuste que existia em `sql/13_fix_auth_egresso_domain.sql` foi incorporado oficialmente na esteira de migrations do Supabase. Para comportamento crítico de autenticação, use apenas arquivos de `supabase/migrations/`.
 
 ### 2) Storage
 - Bucket esperado: `kino-media` (configurado em `KC_ENV.supabase.storageBucket`).
