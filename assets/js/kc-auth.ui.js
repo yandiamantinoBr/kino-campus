@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.1.4.1';
+  const VERSION = '8.1.8.1';
 
   function readEnv() {
     const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : {};

@@ -1,14 +1,35 @@
-# Kino Campus — Protótipo WEB (V8.1.6.2) — Denunciar Post (Reports) + Privacidade de Email (Supabase-first)
+# Kino Campus — Protótipo WEB (V8.1.8.1) — Front modules com versão unificada
 
 Este repositório é o **protótipo web offline-first** do **Kino Campus** (plataforma universitária por módulos), agora com **integração Supabase-first** (Postgres + Auth + Storage) na linha **V8.1.x**.
 
-A **V8.1.6.2** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`), evitando qualquer quebra. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
+A **V8.1.8.1** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`) e consolida uma **versão única alvo** para os módulos JS de front, evitando drift entre clientes. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
 
 - **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
 - **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.
 - **Auth**: `KCAPI.login(email, password)`, `KCAPI.logout()` e `KCAPI.getCurrentUser()`.
 
 ---
+
+
+## 🧭 Mapa de versão do front (arquivo → versão)
+
+Versão-alvo única atual: **`8.1.8.1`**
+
+- `assets/js/kc-env.js` → `8.1.8.1`
+- `assets/js/kc-api.client.js` → `8.1.8.1`
+- `assets/js/kc-supabase.client.js` → `8.1.8.1`
+- `assets/js/kc-auth.ui.js` → `8.1.8.1`
+
+> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.1.8.1` (derivado de `assets/js/kc-auth.ui.js`).
+
+## 📦 Regra de release (anti-drift)
+
+Sempre que houver release do front:
+
+1. Definir uma versão-alvo única (`major.minor.patch.build`) para todos os módulos de front.
+2. Atualizar em lote as constantes `VERSION` dos arquivos mapeados acima.
+3. Validar referências visuais de versão na UI (ex.: rodapé do modal de auth).
+4. Registrar o mapa “arquivo → versão” no `README.md` e no `CHANGELOG.md`.
 
 ## ✅ O que esta versão garante
 

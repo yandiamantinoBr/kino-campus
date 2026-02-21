@@ -16,7 +16,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.1.4.4';
+  const VERSION = '8.1.8.1';
 
   const state = {
     inited: false,
