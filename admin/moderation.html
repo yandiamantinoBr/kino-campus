@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
+  <script src="../assets/js/kc-theme-boot.js"></script>
+  <style>
+    html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
+  </style>
+
+  <title>KinoCampus — Admin: Moderação</title>
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    .kc-admin-page .kc-main-content { padding-top: 24px; }
+    .kc-admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+    .kc-admin-header-bar { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--kc-border-dark); }
+    .kc-admin-header-bar h1 { font-size:1.4em;font-weight:700;margin:0; }
+    .kc-admin-header-bar h1 i { margin-right:8px;color:var(--kc-primary-brand); }
+    #admin-loading { display:flex;align-items:center;justify-content:center;gap:12px;padding:60px 0;color:var(--kc-text-dark-secondary); }
+    #admin-error,#admin-feedback { display:none;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:.95em; }
+    #admin-error { background:rgba(244,67,54,.12);border:1px solid rgba(244,67,54,.35);color:#ef9a9a; }
+    #admin-feedback { background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.35);color:#a5d6a7; }
+    #admin-content { display:none; }
+    .kc-admin-filters { display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px; }
+    .kc-admin-filters select,.kc-admin-filters input { padding:8px 12px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.9em; }
+    .kc-admin-filters button { padding:8px 16px;border-radius:8px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.9em;cursor:pointer; }
+    .kc-admin-posts-table-wrap { overflow-x:auto;border:1px solid var(--kc-border-dark);border-radius:10px; }
+    .kc-admin-posts-table { width:100%;border-collapse:collapse;min-width:860px; }
+    .kc-admin-posts-table th,.kc-admin-posts-table td { padding:10px;border-bottom:1px solid var(--kc-border-dark);font-size:.9em;text-align:left;vertical-align:top; }
+    .kc-admin-posts-table tr:last-child td { border-bottom:none; }
+    .kc-badge { display:inline-block;padding:2px 8px;border-radius:999px;font-size:.78em;color:#fff; }
+    .kc-admin-actions { display:flex;gap:6px;flex-wrap:wrap; }
+    .kc-admin-actions button { padding:6px 10px;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:.8em; }
+    .kc-admin-actions button[disabled] { opacity:.6;cursor:not-allowed; }
+    .kc-admin-panel { background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:10px;padding:14px 16px;margin-top:16px; }
+  </style>
+</head>
+<body class="kc-admin-page">
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <a href="../index.html" class="kc-logo" style="font-size:1.2em;font-weight:800;text-decoration:none;">
+        <i class="fas fa-graduation-cap" style="margin-right:8px;color:var(--kc-primary-brand);"></i>KinoCampus
+      </a>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span id="admin-greeting" style="font-size:.9em;color:var(--kc-text-dark-secondary);"></span>
+        <a href="reports.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-flag"></i> Denúncias</a>
+        <a href="../index.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-arrow-left"></i> Voltar</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <div class="kc-admin-wrapper">
+      <div id="admin-loading"><i class="fas fa-spinner fa-spin" style="font-size:1.6em;"></i><span>Verificando acesso…</span></div>
+      <div id="admin-error" role="alert"></div>
+      <div id="admin-feedback" role="status"></div>
+
+      <div id="admin-content">
+        <div class="kc-admin-header-bar">
+          <h1><i class="fas fa-shield-halved"></i>Moderação de Posts</h1>
+          <div class="kc-admin-filters">
+            <select id="moderation-status-filter"></select>
+            <input id="moderation-search" type="search" placeholder="Buscar por título ou ID" />
+            <button id="moderation-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
+          </div>
+        </div>
+
+        <div class="kc-admin-posts-table-wrap">
+          <table class="kc-admin-posts-table">
+            <thead>
+              <tr>
+                <th>Post</th>
+                <th>Autor</th>
+                <th>Módulo/Categoria</th>
+                <th>Status</th>
+                <th>Atualizado em</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="moderation-posts-body"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+          <button id="moderation-load-more" style="display:none;padding:8px 14px;border-radius:8px;border:none;background:#424242;color:#fff;cursor:pointer;">Carregar mais</button>
+        </div>
+
+        <div class="kc-admin-panel">
+          <h3 style="margin:0 0 8px 0;font-size:1em;">Ações recentes nesta sessão</h3>
+          <ul id="moderation-session-actions" style="margin:0;padding-left:18px;color:var(--kc-text-dark-secondary);"></ul>
+        </div>
+
+        <div class="kc-admin-panel">
+          <h3 style="margin:0 0 8px 0;font-size:1em;">Audit Log</h3>
+          <p style="margin:0;color:var(--kc-text-dark-secondary);">Audit log será exibido aqui quando V8.1.11.0 estiver concluída.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../assets/js/kc-utils.js"></script>
+  <script src="../assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../assets/js/kc-supabase.client.js"></script>
+  <script src="../assets/js/kc-api.client.js"></script>
+  <script src="../assets/js/kc-profiles.client.js"></script>
+  <script src="../assets/js/kc-auth.ui.js"></script>
+  <script src="../assets/js/kc-theme.js"></script>
+  <script src="../assets/js/controllers/admin-moderation.controller.js"></script>
+</body>
+</html>
