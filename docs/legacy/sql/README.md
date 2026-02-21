@@ -24,7 +24,7 @@ Esta pasta preserva scripts SQL antigos usados em etapas anteriores do projeto.
 | `10_v8.1.7.4_admin_setup.sql` | Consolidado em migration oficial (`supabase/migrations/v8.1.7.4_admin_setup.sql`). |
 | `11_seed_posts.sql` | Seed de bootstrap antigo baseado em `data/database.json`; fora do fluxo operacional atual. |
 | `12_validacao_rls.sql` | Script de validação manual pontual (apoio de auditoria), não migration operacional. |
-| `13_fix_auth_egresso_domain.sql` | Patch duplicado e já incorporado em `supabase/migrations/v8.1.7.5_auth_egresso_domain.sql`. |
+| `13_fix_auth_egresso_domain.sql` | Ajuste histórico já consolidado em `supabase/migrations/v8.1.7.5_auth_egresso_domain.sql`. |
 | `14_fix_votes_anon_read.sql` | Patch ad hoc pós-migration, mantido apenas para referência histórica. |
 | `15_add_display_name_to_profiles.sql` | Patch de bootstrap antigo ainda não promovido à esteira versionada oficial; mantido como histórico. |
 

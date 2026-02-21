@@ -31,6 +31,25 @@ Sempre que houver release do front:
 3. Validar referências visuais de versão na UI (ex.: rodapé do modal de auth).
 4. Registrar o mapa “arquivo → versão” no `README.md` e no `CHANGELOG.md`.
 
+## 🗃️ Fonte Única de Verdade (Banco)
+
+Para governança de banco no projeto, a **fonte única de verdade** é a esteira SQL oficial do Supabase.
+
+### Regra explícita (mudanças críticas)
+
+Qualquer mudança crítica de banco (incluindo, mas não limitado a: **auth, `verified`, policies, triggers, RLS, storage policies, grants/revokes**) deve existir **somente** em:
+
+- `supabase/schema-*.sql`
+- `supabase/migrations/*.sql`
+
+### Procedimento obrigatório para SQL fora do fluxo oficial
+
+Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação antiga, experimento):
+
+1. **Mover** o arquivo para `docs/legacy/sql/`.
+2. **Documentar** no `docs/legacy/sql/README.md` o motivo de legado (com referência ao arquivo oficial quando existir).
+3. **Não usar operacionalmente** esse SQL em deploy/setup/update.
+
 ## ✅ O que esta versão garante
 
 - **Hardening RLS / Colunas Sensíveis (Roadmap 8.1.6.1)**
@@ -123,7 +142,7 @@ Abra:
   6) `supabase/migrations/v8.1.6.2_reports_privacy_hardening.sql` (reports + privacidade do email)
   7) `supabase/migrations/v8.1.7.5_auth_egresso_domain.sql` (inclui `@egresso.ufg.br` na regra institucional + backfill de `profiles.verified`)
 
-> Nota de deploy: o ajuste que existia em `docs/legacy/sql/13_fix_auth_egresso_domain.sql` foi incorporado oficialmente na esteira de migrations do Supabase. Para comportamento crítico de autenticação, use apenas arquivos de `supabase/migrations/`.
+> Nota de deploy: o ajuste histórico de `docs/legacy/sql/13_fix_auth_egresso_domain.sql` já está consolidado na esteira oficial (`supabase/migrations/v8.1.7.5_auth_egresso_domain.sql`). Para comportamento crítico de autenticação, use apenas arquivos de `supabase/migrations/`.
 
 ### 2) Storage
 - Bucket esperado: `kino-media` (configurado em `KC_ENV.supabase.storageBucket`).
@@ -143,4 +162,3 @@ Edite `assets/js/kc-env.js`:
 
 - **Aprimorar moderação (triagem mínima / status) — se houver schema previsto no Roadmap**
 - **Signed URLs no Storage** (se o bucket deixar de ser público)
-
