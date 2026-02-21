@@ -35,6 +35,8 @@ Sempre que houver release do front:
 
 Para governança de banco no projeto, a **fonte única de verdade** é a esteira SQL oficial do Supabase.
 
+Para visão consolidada dos artefatos legados e critérios de remoção, consulte o **Legacy Map** em `docs/legacy/README.md`.
+
 ### Regra explícita (mudanças críticas)
 
 Qualquer mudança crítica de banco (incluindo, mas não limitado a: **auth, `verified`, policies, triggers, RLS, storage policies, grants/revokes**) deve existir **somente** em:
