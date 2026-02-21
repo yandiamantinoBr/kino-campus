@@ -15,11 +15,16 @@
 
   // ---- Helpers ----
 
-  function escapeHtml(str) {
-    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') return window.KCUtils.escapeHtml(str);
-    console.error('[KC Admin Reports] KCUtils.escapeHtml indisponível.');
-    return '';
-  }
+  const fallbackEscapeHtml = (str) => String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const escape = (str) => ((window.KCUtils && typeof window.KCUtils.escapeHtml === 'function')
+    ? window.KCUtils.escapeHtml(str)
+    : fallbackEscapeHtml(str));
 
   function $(sel, root) { return (root || document).querySelector(sel); }
 
@@ -202,7 +207,7 @@
       const items = grouped[pid];
       const open = items.filter(r => r.status === 'open');
       const post = postMap[pid] || {};
-      const postTitle = escapeHtml(post.title || post.titulo || pid);
+      const postTitle = escape(post.title || post.titulo || pid);
       const postStatus = post.status || 'unknown';
 
       // Contagem por motivo
@@ -210,20 +215,20 @@
       items.forEach(r => { reasonCounts[r.reason] = (reasonCounts[r.reason] || 0) + 1; });
       const reasonSummary = Object.entries(reasonCounts)
         .sort((a, b) => b[1] - a[1])
-        .map(([r, n]) => `<span class="kc-badge" style="background:var(--kc-surface-dark);margin:2px;">${escapeHtml(reasonLabel(r))}: <strong>${n}</strong></span>`)
+        .map(([r, n]) => `<span class="kc-badge" style="background:var(--kc-surface-dark);margin:2px;">${escape(reasonLabel(r))}: <strong>${n}</strong></span>`)
         .join(' ');
 
       const statusColor = postStatus === 'published' ? '#4caf50' : postStatus === 'hidden' ? '#ff9800' : '#f44336';
-      const postStatusBadge = `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:.8em;background:${statusColor};color:#fff;">${escapeHtml(postStatus)}</span>`;
+      const postStatusBadge = `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:.8em;background:${statusColor};color:#fff;">${escape(postStatus)}</span>`;
 
       // Tabela de denúncias individuais (apenas open)
       const rows = open.map(r => `
         <tr>
-          <td style="padding:8px;font-size:.85em;">${escapeHtml(reasonLabel(r.reason))}</td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${escapeHtml(r.details || '—')}</td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${escapeHtml(formatDate(r.created_at))}</td>
+          <td style="padding:8px;font-size:.85em;">${escape(reasonLabel(r.reason))}</td>
+          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${escape(r.details || '—')}</td>
+          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${escape(formatDate(r.created_at))}</td>
           <td style="padding:8px;">
-            <span style="padding:2px 8px;border-radius:4px;font-size:.8em;background:${r.status === 'open' ? '#ff5722' : '#9e9e9e'};color:#fff;">${escapeHtml(r.status)}</span>
+            <span style="padding:2px 8px;border-radius:4px;font-size:.8em;background:${r.status === 'open' ? '#ff5722' : '#9e9e9e'};color:#fff;">${escape(r.status)}</span>
           </td>
         </tr>`).join('');
 
@@ -236,7 +241,7 @@
               ${postTitle} ${postStatusBadge}
             </div>
             <div style="font-size:.8em;color:var(--kc-text-dark-secondary);margin-bottom:6px;">
-              ID: <code>${escapeHtml(pid)}</code>
+              ID: <code>${escape(pid)}</code>
               &nbsp;·&nbsp; Total denúncias: <strong>${items.length}</strong>
               &nbsp;·&nbsp; Em aberto: <strong>${open.length}</strong>
             </div>
@@ -248,21 +253,21 @@
                <i class="fas fa-eye"></i> Ver post
             </a>
             ${open.length > 0 ? `
-            <button onclick="KCAdmin.closeReports('${escapeHtml(pid)}')"
+            <button onclick="KCAdmin.closeReports('${escape(pid)}')"
                     style="padding:7px 14px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
               <i class="fas fa-check"></i> Fechar denúncias
             </button>` : ''}
             ${postStatus === 'published' ? `
-            <button onclick="KCAdmin.setPostStatus('${escapeHtml(pid)}', 'hidden')"
+            <button onclick="KCAdmin.setPostStatus('${escape(pid)}', 'hidden')"
                     style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
               <i class="fas fa-eye-slash"></i> Ocultar post
             </button>` : ''}
             ${postStatus === 'hidden' ? `
-            <button onclick="KCAdmin.setPostStatus('${escapeHtml(pid)}', 'published')"
+            <button onclick="KCAdmin.setPostStatus('${escape(pid)}', 'published')"
                     style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
               <i class="fas fa-eye"></i> Restaurar post
             </button>` : ''}
-            <button onclick="KCAdmin.setPostStatus('${escapeHtml(pid)}', 'deleted')"
+            <button onclick="KCAdmin.setPostStatus('${escape(pid)}', 'deleted')"
                     style="padding:7px 14px;background:#b71c1c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;"
                     title="Esta ação não pode ser desfeita pelo painel.">
               <i class="fas fa-trash"></i> Deletar post
