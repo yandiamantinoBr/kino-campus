@@ -50,9 +50,9 @@
     // - Se vazio, não restringe domínio
     // - Se preenchido, valida e-mail no signUp
     // - IMPORTANTE: `profiles.verified` é forçado no BANCO via trigger (Supabase SQL)
-    AUTH_ALLOWED_DOMAINS: ['ufg.br', 'discente.ufg.br'],
+    AUTH_ALLOWED_DOMAINS: ['ufg.br', 'discente.ufg.br', 'egresso.ufg.br'],
     auth: {
-      allowedEmailDomains: ['ufg.br', 'discente.ufg.br'],
+      allowedEmailDomains: ['ufg.br', 'discente.ufg.br', 'egresso.ufg.br'],
     },
 
     // clamp temporal (protótipo)

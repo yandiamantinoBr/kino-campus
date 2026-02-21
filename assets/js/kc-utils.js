@@ -154,6 +154,35 @@
       .trim();
   }
 
+  function normalizeEmail(email) {
+    return String(email || '').trim().toLowerCase();
+  }
+
+  function getEmailDomain(email) {
+    const em = normalizeEmail(email);
+    const at = em.lastIndexOf('@');
+    if (at < 0) return '';
+    return em.slice(at + 1);
+  }
+
+  function normalizeAllowedDomains(allowedDomains) {
+    if (!Array.isArray(allowedDomains)) return [];
+    return Array.from(new Set(
+      allowedDomains
+        .map((d) => String(d || '').trim().toLowerCase())
+        .filter(Boolean)
+    ));
+  }
+
+  function isInstitutionalEmailAllowed(email, allowedDomains) {
+    const list = normalizeAllowedDomains(allowedDomains);
+    if (!list.length) return true; // sem restrição
+    const domain = getEmailDomain(email);
+    if (!domain) return false;
+    // Regra única: aceita apenas domínio explícito na allowlist.
+    return list.includes(domain);
+  }
+
   function canonicalCategory(str) {
     let s = normalizeText(str);
     s = s.replace(/^#/, '');
@@ -752,6 +781,10 @@
 
   window.KCUtils = Object.freeze({
     normalizeText,
+    normalizeEmail,
+    getEmailDomain,
+    normalizeAllowedDomains,
+    isInstitutionalEmailAllowed,
     canonicalCategory,
     titleCase,
     beautifyKey,

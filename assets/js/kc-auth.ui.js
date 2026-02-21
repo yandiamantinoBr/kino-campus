@@ -46,24 +46,49 @@
   }
 
   function normalizeEmail(email) {
+    if (window.KCUtils && typeof window.KCUtils.normalizeEmail === 'function') {
+      return window.KCUtils.normalizeEmail(email);
+    }
     return String(email || '').trim().toLowerCase();
   }
 
   function getEmailDomain(email) {
+    if (window.KCUtils && typeof window.KCUtils.getEmailDomain === 'function') {
+      return window.KCUtils.getEmailDomain(email);
+    }
     const em = normalizeEmail(email);
     const at = em.lastIndexOf('@');
     if (at < 0) return '';
     return em.slice(at + 1);
   }
 
+  function normalizeAllowedDomains(allowedDomains) {
+    if (window.KCUtils && typeof window.KCUtils.normalizeAllowedDomains === 'function') {
+      return window.KCUtils.normalizeAllowedDomains(allowedDomains);
+    }
+    if (!Array.isArray(allowedDomains)) return [];
+    return Array.from(new Set(
+      allowedDomains
+        .map((d) => String(d || '').trim().toLowerCase())
+        .filter(Boolean)
+    ));
+  }
+
   function isAllowedDomain(email, allowedDomains) {
-    const list = Array.isArray(allowedDomains) ? allowedDomains.filter(Boolean) : [];
+    if (window.KCUtils && typeof window.KCUtils.isInstitutionalEmailAllowed === 'function') {
+      return window.KCUtils.isInstitutionalEmailAllowed(email, allowedDomains);
+    }
+    const list = normalizeAllowedDomains(allowedDomains);
     if (!list.length) return true; // sem restrição
     const d = getEmailDomain(email);
     if (!d) return false;
-    // Alinhado ao hardening server-side (V8.1.3.3): aceitar SOMENTE domínios explícitos da allowlist.
-    // Ex.: 'ufg.br' e 'discente.ufg.br' (não aceitar subdomínios adicionais como 'alumni.ufg.br').
-    return list.some((ad) => d === String(ad).toLowerCase());
+    return list.includes(d);
+  }
+
+  function formatAllowedDomains(allowedDomains) {
+    const domains = normalizeAllowedDomains(allowedDomains);
+    if (!domains.length) return '';
+    return domains.map((d) => `@${d}`).join(', ');
   }
 
   function getLoginTriggers() {
@@ -348,8 +373,9 @@
     }
 
     if (!isAllowedDomain(email, allowedDomains)) {
-      const hint = Array.isArray(allowedDomains) && allowedDomains.length
-        ? `Use um e-mail institucional (${allowedDomains.join(', ')}).`
+      const allowlistHint = formatAllowedDomains(allowedDomains);
+      const hint = allowlistHint
+        ? `Use um e-mail institucional de um domínio aceito (${allowlistHint}).`
         : 'Use um e-mail institucional.';
       setStatus(hint, 'warn');
       return;
