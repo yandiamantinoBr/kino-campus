@@ -24,6 +24,10 @@
     .kc-profile-form { display: flex; gap: 10px; flex-wrap: wrap; }
     .kc-profile-form input { flex: 1; min-width: 220px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--kc-border-dark); background: #1a1f24; color: var(--kc-text-dark); }
     .kc-profile-form button { border: 0; border-radius: 10px; padding: 10px 16px; background: var(--kc-primary-brand); color: white; cursor: pointer; }
+    .kc-profile-posts-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+    .kc-profile-select { min-width: 180px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--kc-border-dark); background: #1a1f24; color: var(--kc-text-dark); }
+    .kc-profile-hint { margin: 8px 0 0; color: var(--kc-text-dark-secondary); font-size: .88rem; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
     .kc-profile-posts { display: grid; gap: 10px; }
     .kc-profile-post { border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; background: rgba(255,255,255,.02); }
     .kc-profile-post__title { color: var(--kc-text-dark); font-weight: 600; text-decoration: none; }
@@ -34,6 +38,8 @@
       .kc-profile-avatar { width: 62px; height: 62px; }
       .kc-profile-form { flex-direction: column; }
       .kc-profile-form button { width: 100%; }
+      .kc-profile-posts-toolbar { justify-content: stretch; }
+      .kc-profile-select { width: 100%; }
     }
   </style>
 </head>
@@ -68,6 +74,7 @@
             <div>
               <h1 class="kc-profile-name" id="profile-display-name">Usuário</h1>
               <span id="profile-verified-badge" class="kc-profile-badge is-unverified">Não verificado</span>
+              <p class="kc-profile-hint" id="profile-avatar-hint">Foto de perfil personalizada em breve.</p>
             </div>
           </div>
         </article>
@@ -82,6 +89,16 @@
 
         <article class="kc-profile-card">
           <h2 style="margin-top:0;">Meus posts</h2>
+          <div class="kc-profile-posts-toolbar">
+            <label for="profile-posts-status" class="sr-only">Filtrar por status</label>
+            <select id="profile-posts-status" class="kc-profile-select">
+              <option value="">Todos os status</option>
+              <option value="published">Publicado</option>
+              <option value="pending">Pendente</option>
+              <option value="hidden">Oculto</option>
+              <option value="deleted">Excluído</option>
+            </select>
+          </div>
           <p id="profile-posts-loading" style="margin: 0 0 12px; color: var(--kc-text-dark-secondary);">Carregando posts…</p>
           <p id="profile-posts-empty" style="display:none; color: var(--kc-text-dark-secondary);">Você ainda não publicou nada.</p>
           <div id="profile-posts-list" class="kc-profile-posts"></div>

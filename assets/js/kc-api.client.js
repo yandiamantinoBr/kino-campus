@@ -1615,10 +1615,37 @@
 
       if (result && result.error) { console.error('[KCAPI][comments] getComments:', result.error); return []; }
       const rows = (result && Array.isArray(result.data)) ? result.data : [];
+
+      let profilesById = Object.create(null);
+      const missingProfileJoin = rows.some((row) => !row.author_profile && row.author_id);
+      if (missingProfileJoin) {
+        try {
+          let profRes = await client
+            .from('profiles')
+            .select('id, display_name, full_name')
+            .in('id', Array.from(new Set(rows.map((r) => r.author_id).filter(Boolean))));
+
+          if (profRes && profRes.error && isMissingTokenError(profRes.error, 'display_name')) {
+            profRes = await client
+              .from('profiles')
+              .select('id, full_name')
+              .in('id', Array.from(new Set(rows.map((r) => r.author_id).filter(Boolean))));
+          }
+
+          if (profRes && Array.isArray(profRes.data)) {
+            profRes.data.forEach((p) => {
+              if (p && p.id) profilesById[p.id] = p;
+            });
+          }
+        } catch (_) {}
+      }
+
       return rows.map((row) => {
-        const prof = row && row.author_profile ? row.author_profile : null;
+        const prof = row && row.author_profile ? row.author_profile : (row && row.author_id ? profilesById[row.author_id] : null);
         const resolvedName = String(
           (prof && (prof.display_name || prof.full_name))
+          || row.display_name
+          || row.full_name
           || row.author_name
           || 'Anônimo'
         ).trim() || 'Anônimo';
@@ -1644,11 +1671,21 @@
     // Busca nome de exibição do profile
     let authorName = 'Anônimo';
     try {
-      const { data: prof } = await client
+      let profRes = await client
         .from('profiles')
         .select('display_name, full_name')
         .eq('id', user.id)
         .maybeSingle();
+
+      if (profRes && profRes.error && isMissingTokenError(profRes.error, 'display_name')) {
+        profRes = await client
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .maybeSingle();
+      }
+
+      const prof = profRes && profRes.data ? profRes.data : null;
       if (prof) authorName = String(prof.display_name || prof.full_name || 'Anônimo').trim() || 'Anônimo';
     } catch (_) {}
 
@@ -1721,7 +1758,10 @@
         console.error('[KCAPI][profile] updateMyProfile:', error);
         return { ok: false, error: { message: error.message || 'Não foi possível atualizar seu perfil.' } };
       }
-      return { ok: true, data: data || null };
+      if (!data) {
+        return { ok: false, error: { message: 'No momento, não é possível alterar seu nome.' } };
+      }
+      return { ok: true, data };
     } catch (e) {
       console.error('[KCAPI][profile] updateMyProfile exceção:', e);
       return { ok: false, error: { message: 'Não foi possível atualizar seu perfil.' } };

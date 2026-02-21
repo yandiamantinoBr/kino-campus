@@ -442,8 +442,8 @@
         : null);
 
     if (user && user.email) {
-      const nameFromProfile = profile && (profile.full_name || profile.display_name || profile.displayName || profile.name)
-        ? String(profile.full_name || profile.display_name || profile.displayName || profile.name)
+      const nameFromProfile = profile && (profile.display_name || profile.full_name || profile.displayName || profile.name)
+        ? String(profile.display_name || profile.full_name || profile.displayName || profile.name)
         : '';
 
       const display = nameFromProfile || String(user.email).split('@')[0] || 'Minha conta';
