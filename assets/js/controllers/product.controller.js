@@ -8,6 +8,11 @@
 (function () {
   'use strict';
 
+  let currentPost = null;
+  let currentUser = null;
+  let currentDb = null;
+  let editUI = null;
+
   function getParam(name) {
     const params = new URLSearchParams(window.location.search || '');
     return params.get(name);
@@ -340,6 +345,116 @@
     section.style.display = 'block';
   }
 
+  function isAuthor(post, user) {
+    if (!post || !user || !user.id) return false;
+    const postAuthorId = String(post.autorId || post.authorId || post.author_id || '').trim();
+    return !!postAuthorId && postAuthorId === String(user.id).trim();
+  }
+
+  function getPostIdForMutation(post) {
+    if (!post) return null;
+    return post.uuid || post.id || null;
+  }
+
+  function buildEditPayload(form, sourcePost) {
+    const tagsRaw = String(form.tags.value || '').trim();
+    const metadata = {
+      ...(sourcePost && sourcePost.metadata && typeof sourcePost.metadata === 'object' ? sourcePost.metadata : {}),
+      ...(form.subcategory.value ? { subcategory: String(form.subcategory.value).trim() } : {}),
+      ...(form.condition.value ? { condicao: String(form.condition.value).trim() } : {}),
+      ...(form.emoji.value ? { emoji: String(form.emoji.value).trim() } : {}),
+    };
+
+    if (tagsRaw) metadata.tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+    else delete metadata.tags;
+
+    return {
+      title: String(form.title.value || '').trim(),
+      description: String(form.description.value || '').trim(),
+      module: String(form.module.value || '').trim(),
+      category: String(form.category.value || '').trim(),
+      location: String(form.location.value || '').trim(),
+      price: String(form.price.value || '').trim(),
+      metadata,
+    };
+  }
+
+  function upsertOwnerActions(post, user) {
+    const actions = document.querySelector('.kc-product-actions');
+    if (!actions) return;
+
+    const canManage = isAuthor(post, user);
+    const existing = document.getElementById('ownerActionsWrap');
+    if (existing) existing.remove();
+    if (!canManage) return;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'ownerActionsWrap';
+    wrap.style.display = 'contents';
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'kc-btn-secondary';
+    editBtn.id = 'editPostButton';
+    editBtn.innerHTML = '<i class="fas fa-pen"></i> Editar';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'kc-btn-secondary';
+    deleteBtn.id = 'deletePostButton';
+    deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Excluir';
+
+    wrap.appendChild(editBtn);
+    wrap.appendChild(deleteBtn);
+
+    const reportBtn = document.getElementById('reportButton');
+    if (reportBtn && reportBtn.parentNode === actions) actions.insertBefore(wrap, reportBtn);
+    else actions.appendChild(wrap);
+
+    editBtn.addEventListener('click', () => {
+      if (!editUI) editUI = buildEditUI();
+      editUI.open(post);
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      const confirmed = window.confirm('Tem certeza que deseja excluir esta publicação?');
+      if (!confirmed) return;
+
+      let res = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.deletePost === 'function') {
+          res = await window.KCAPI.deletePost(getPostIdForMutation(post));
+        }
+      } catch (_) {}
+
+      if (res && res.ok) {
+        try { showToast('Publicação excluída com sucesso.', 'success', 2000); } catch (_) {}
+        setTimeout(() => { window.location.href = 'index.html'; }, 300);
+        return;
+      }
+
+      const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível excluir a publicação.';
+      try { showToast(msg, 'error', 2800); } catch (_) {}
+    });
+  }
+
+  function renderPost(post) {
+    currentPost = post;
+    hide('notFound');
+    setText('postTitle', post.titulo || 'Detalhes');
+    setBreadcrumb(post);
+    setBadges(post);
+    setGallery(post);
+    setPrice(post);
+    setDescription(post);
+    setSpecs(post);
+    setSeller(post);
+    setCTA(post);
+    setRelated(currentDb, post);
+    upsertOwnerActions(post, currentUser);
+    wireReportButton({ postId: (post && post.uuid) ? post.uuid : post.id, postTitle: post.titulo || post.title || 'Publicação' });
+  }
+
   async function loadPost() {
     const id = getParam('id');
     if (!id) { showNotFound(); return; }
@@ -372,6 +487,14 @@
 
     if (!raw) { showNotFound(); return; }
 
+    try {
+      if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+        currentUser = await window.KCAPI.getCurrentUser();
+      }
+    } catch (_) {
+      currentUser = null;
+    }
+
     // Contrato único (Model) + regras centrais
     const post = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
       ? window.KCPostModel.from(raw, { pageModule: (raw && raw.modulo) || '', view: 'product' })
@@ -383,26 +506,140 @@
     window.kcCurrentPostUuid = postUuid;
     if (postUuid) document.body.setAttribute('data-post-uuid', postUuid);
 
-    // Render
-    hide('notFound');
-    setText('postTitle', post.titulo || 'Detalhes');
-    setBreadcrumb(post);
-    setBadges(post);
-    setGallery(post);
-    setPrice(post);
-    setDescription(post);
-    setSpecs(post);
-    setSeller(post);
-    setCTA(post);
-    setRelated(db, post);
+    currentDb = db;
+    renderPost(post);
 
     // V8.1.6.2: wire botão Denunciar (gated por driver + auth)
-    wireReportButton({ postId: postUuid || id, postTitle: post.titulo || post.title || 'Publicação' });
-
     // Comments
     if (typeof window.renderComments === 'function') {
       window.renderComments(id, 'commentsContainer');
     }
+  }
+
+  function buildEditUI() {
+    const overlay = document.createElement('div');
+    overlay.className = 'kc-modal-overlay';
+    overlay.style.display = 'none';
+
+    const modal = document.createElement('div');
+    modal.className = 'kc-create-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+
+    modal.innerHTML = `
+      <div class="kc-create-modal-header">
+        <h2 class="kc-create-modal-title">Editar publicação</h2>
+        <button type="button" class="kc-modal-close" aria-label="Fechar">×</button>
+      </div>
+      <div class="kc-create-modal-body">
+        <div class="kc-form-group"><label>Título</label><input class="kc-input" name="title" /></div>
+        <div class="kc-form-group"><label>Descrição</label><textarea class="kc-input" name="description" rows="4"></textarea></div>
+        <div class="kc-form-group"><label>Preço</label><input class="kc-input" name="price" placeholder="Ex.: 99,90" /></div>
+        <div class="kc-form-group"><label>Localização</label><input class="kc-input" name="location" /></div>
+        <div class="kc-form-group"><label>Módulo</label><input class="kc-input" name="module" /></div>
+        <div class="kc-form-group"><label>Categoria</label><input class="kc-input" name="category" /></div>
+        <div class="kc-form-group"><label>Subcategoria</label><input class="kc-input" name="subcategory" /></div>
+        <div class="kc-form-group"><label>Condição</label><input class="kc-input" name="condition" /></div>
+        <div class="kc-form-group"><label>Emoji</label><input class="kc-input" name="emoji" maxlength="4" /></div>
+        <div class="kc-form-group"><label>Tags (vírgula)</label><input class="kc-input" name="tags" /></div>
+        <div class="kc-create-actions">
+          <button type="button" class="kc-btn-secondary" data-action="cancel">Cancelar</button>
+          <button type="button" class="kc-btn-primary" data-action="save">Salvar</button>
+        </div>
+        <div data-role="status" style="margin-top:8px;color:var(--text-muted, #64748b);"></div>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const closeBtn = modal.querySelector('.kc-modal-close');
+    const cancelBtn = modal.querySelector('[data-action="cancel"]');
+    const saveBtn = modal.querySelector('[data-action="save"]');
+    const status = modal.querySelector('[data-role="status"]');
+
+    const form = {
+      title: modal.querySelector('[name="title"]'),
+      description: modal.querySelector('[name="description"]'),
+      price: modal.querySelector('[name="price"]'),
+      location: modal.querySelector('[name="location"]'),
+      module: modal.querySelector('[name="module"]'),
+      category: modal.querySelector('[name="category"]'),
+      subcategory: modal.querySelector('[name="subcategory"]'),
+      condition: modal.querySelector('[name="condition"]'),
+      emoji: modal.querySelector('[name="emoji"]'),
+      tags: modal.querySelector('[name="tags"]'),
+    };
+
+    let editingPost = null;
+
+    function close() {
+      overlay.style.display = 'none';
+      status.textContent = '';
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+    }
+
+    function open(post) {
+      editingPost = post;
+      const md = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
+      form.title.value = post.titulo || post.title || '';
+      form.description.value = post.descricao || post.description || '';
+      form.price.value = (post.preco != null) ? String(post.preco) : '';
+      form.location.value = post.location || '';
+      form.module.value = post.modulo || post.module || '';
+      form.category.value = post.category || post.categoria || '';
+      form.subcategory.value = post.subcategoria || md.subcategory || '';
+      form.condition.value = post.condicao || md.condicao || '';
+      form.emoji.value = post.emoji || md.emoji || '';
+      const tags = Array.isArray(post.tags) ? post.tags : (Array.isArray(md.tags) ? md.tags : []);
+      form.tags.value = tags.join(', ');
+
+      overlay.style.display = 'flex';
+      try { form.title.focus(); } catch (_) {}
+    }
+
+    async function save() {
+      if (!editingPost || !isAuthor(editingPost, currentUser)) {
+        status.textContent = 'Você não tem permissão para editar este post.';
+        return;
+      }
+
+      saveBtn.disabled = true;
+      cancelBtn.disabled = true;
+      status.textContent = 'Salvando...';
+
+      const payload = buildEditPayload(form, editingPost);
+      let res = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.updatePost === 'function') {
+          res = await window.KCAPI.updatePost(getPostIdForMutation(editingPost), payload);
+        }
+      } catch (_) {}
+
+      if (res && res.ok && res.data) {
+        const next = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
+          ? window.KCPostModel.from(res.data, { pageModule: (res.data && res.data.modulo) || '', view: 'product' })
+          : res.data;
+        renderPost(next);
+        try { showToast('Publicação atualizada com sucesso.', 'success', 2000); } catch (_) {}
+        close();
+        return;
+      }
+
+      const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível atualizar a publicação.';
+      status.textContent = msg;
+      try { showToast(msg, 'error', 2400); } catch (_) {}
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+    }
+
+    closeBtn.addEventListener('click', close);
+    cancelBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    saveBtn.addEventListener('click', save);
+
+    return { open, close };
   }
 
   // ---------------- Reports UI (V8.1.6.2) ----------------
@@ -414,7 +651,21 @@
     const btn = document.getElementById('reportButton');
     if (!btn) return;
 
+    if (btn.dataset.kcReportBound === '1') {
+      btn.dataset.kcReportPostId = String(ctx.postId || '');
+      btn.dataset.kcReportPostTitle = String(ctx.postTitle || 'Publicação');
+      return;
+    }
+
+    btn.dataset.kcReportBound = '1';
+    btn.dataset.kcReportPostId = String(ctx.postId || '');
+    btn.dataset.kcReportPostTitle = String(ctx.postTitle || 'Publicação');
+
     btn.addEventListener('click', async () => {
+      const payloadCtx = {
+        postId: btn.dataset.kcReportPostId || ctx.postId,
+        postTitle: btn.dataset.kcReportPostTitle || ctx.postTitle,
+      };
       const driver = (window.KC_ENV && window.KC_ENV.driver) ? window.KC_ENV.driver : 'local';
       if (driver !== 'supabase') {
         try { showToast('Denúncias disponíveis apenas no modo Supabase.', 'info', 2200); } catch (_) {}
@@ -436,7 +687,7 @@
       }
 
       if (!_reportUI) _reportUI = buildReportUI();
-      _reportUI.open({ postId: ctx.postId, postTitle: ctx.postTitle });
+      _reportUI.open({ postId: payloadCtx.postId, postTitle: payloadCtx.postTitle });
     });
   }
 
