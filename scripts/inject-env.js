@@ -106,42 +106,29 @@ const original = content;
 
 // ── Substituições ────────────────────────────────────────────────────────────
 
-// 1) URL do Supabase — substitui qualquer URL supabase.co (incluindo placeholders)
-content = content.replace(
-  /(['"`])https:\/\/[a-zA-Z0-9\-]+\.supabase\.co\1/g,
-  `'${SUPABASE_URL}'`
-);
+const REQUIRED_PLACEHOLDERS = [
+  '__KC_SUPABASE_URL__',
+  '__KC_SUPABASE_ANON_KEY__',
+  '__KC_DRIVER__',
+];
 
-// 2) Anon Key — substitui chaves que contenham "placeholder" no nome
-content = content.replace(
-  /(['"`])eyJ[a-zA-Z0-9._\-]*(?:placeholder|PLACEHOLDER|example)[a-zA-Z0-9._\-]*\1/gi,
-  `'${SUPABASE_ANON_KEY}'`
-);
-
-// 3) Fallback: substitui qualquer chave JWT longa que não seja a chave real
-if (!content.includes(SUPABASE_ANON_KEY)) {
-  content = content.replace(
-    /(['"`])(eyJ[a-zA-Z0-9._\-+/=]{50,})\1/g,
-    (match, quote, existingKey) => {
-      if (existingKey === SUPABASE_ANON_KEY) return match;
-      return `'${SUPABASE_ANON_KEY}'`;
-    }
-  );
+const missingPlaceholders = REQUIRED_PLACEHOLDERS.filter(token => !content.includes(token));
+if (missingPlaceholders.length > 0) {
+  console.error('❌ inject-env.js: placeholder não encontrado no kc-env.js.');
+  missingPlaceholders.forEach(token => console.error('   -', token));
+  console.error('   Abortei para evitar injeção parcial silenciosa.');
+  process.exit(1);
 }
 
-// 4) Ativar driver 'supabase' em produção
-//    Bug fix v3: a regex anterior usava "=" para DATA_DRIVER, mas no kc-env.js
-//    a propriedade usa ":" (é um object literal, não assignment).
-//    Resultado: DATA_DRIVER ficava 'local' e o runtime resolvia driver='local'.
-content = content.replace(
-  /(\bdriver\s*:\s*)(['"`])local\2/g,
-  `$1'supabase'`
-);
-// Cobre DATA_DRIVER com ":" (object literal) E "=" (assignment)
-content = content.replace(
-  /(\bDATA_DRIVER\s*[=:]\s*)(['"`])local\2/g,
-  `$1'supabase'`
-);
+const REPLACEMENTS = {
+  __KC_SUPABASE_URL__: SUPABASE_URL,
+  __KC_SUPABASE_ANON_KEY__: SUPABASE_ANON_KEY,
+  __KC_DRIVER__: 'supabase',
+};
+
+for (const [token, value] of Object.entries(REPLACEMENTS)) {
+  content = content.split(token).join(value);
+}
 
 // 5) Adicionar 'egresso.ufg.br' à allowlist de domínios (frontend)
 //    O kc-auth.ui.js verifica AUTH_ALLOWED_DOMAINS ANTES de enviar ao Supabase.
@@ -172,8 +159,7 @@ if (!content.includes('egresso.ufg.br')) {
 // ── Verificação ──────────────────────────────────────────────────────────────
 const urlInjected   = content.includes(SUPABASE_URL);
 const keyInjected   = content.includes(SUPABASE_ANON_KEY);
-const stillHasLocal = /driver\s*:\s*['"`]local['"`]/.test(content) ||
-                      /DATA_DRIVER\s*[=:]\s*['"`]local['"`]/.test(content);
+const stillHasDriverPlaceholder = content.includes('__KC_DRIVER__');
 const hasEgresso    = content.includes('egresso.ufg.br');
 
 if (!urlInjected) {
@@ -201,7 +187,7 @@ console.log('');
 console.log('✅ inject-env.js: kc-env.js atualizado com sucesso!');
 console.log('   SUPABASE_URL      →', SUPABASE_URL);
 console.log('   SUPABASE_ANON_KEY →', SUPABASE_ANON_KEY.substring(0, 20) + '...');
-console.log('   driver            →', stillHasLocal ? '⚠️  ainda contém "local" — verifique o kc-env.js' : '✅ supabase');
+console.log('   driver            →', stillHasDriverPlaceholder ? '⚠️  placeholder __KC_DRIVER__ ainda presente' : '✅ supabase');
 console.log('   egresso.ufg.br    →', hasEgresso ? '✅ adicionado à allowlist' : '⚠️  não encontrado na allowlist');
 console.log('   Arquivo           →', ENV_FILE);
 console.log('');
