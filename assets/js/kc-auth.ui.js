@@ -32,16 +32,7 @@
     el.textContent = String(text ?? '');
   }
 
-  const fallbackEscapeHtml = (value) => String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-  const escape = (value) => ((window.KCUtils && typeof window.KCUtils.escapeHtml === 'function')
-    ? window.KCUtils.escapeHtml(value)
-    : fallbackEscapeHtml(value));
+  const escape = (value) => window.KCUtils.escapeHtml(value);
 
   function normalizeEmail(email) {
     if (window.KCUtils && typeof window.KCUtils.normalizeEmail === 'function') {

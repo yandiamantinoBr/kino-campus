@@ -1819,17 +1819,7 @@ function kcInitCreatePostTriggers() {
 // Helpers
 // -----------------------------
 function escape(str) {
-  // Delegate to KCUtils canonical implementation when available; fallback is kept for safety.
-  if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
-    return window.KCUtils.escapeHtml(str);
-  }
-  const s = String(str ?? '');
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return window.KCUtils.escapeHtml(str);
 }
 
 function cssEscape(str) {
