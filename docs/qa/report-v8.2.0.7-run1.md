@@ -1,58 +1,86 @@
 # Report QA — v8.2.0.7 (run1)
 
-## Metadados obrigatórios
+> **STATUS GERAL DESTA RODADA: PENDENTE DE EXECUÇÃO REAL**
+>
+> Este documento é um template executável. Não marque **PASSOU** sem evidência real (print/log/URL/data-hora).
+
+## 1) Metadados da execução
 
 | Campo | Valor |
 |---|---|
-| Ambiente | **Preview/Prod** (execução solicitada), porém **não disponibilizado para validação** |
-| URL base | **N/D** (nenhuma URL Preview/Prod informada) |
-| Data/hora (timezone local) | **2026-02-22 02:56:34 UTC+0000** |
-| Conta usuário comum | **N/D** (credencial não fornecida) |
-| Conta admin | **N/D** (credencial não fornecida) |
-| Status do webhook | **N/D** (não foi possível confirmar ativo/inativo sem acesso ao ambiente) |
-| Caminho de armazenamento das evidências | `docs/qa/evidence/v8.2.0.7-run1/` |
+| Status da rodada | **PENDENTE** |
+| Ambiente alvo (Preview ou Prod) | PREENCHER |
+| URL base validada | PREENCHER |
+| Data/hora início (timezone local) | PREENCHER |
+| Data/hora fim (timezone local) | PREENCHER |
+| Responsável pela execução | PREENCHER |
+| Conta usuário comum | PREENCHER |
+| Conta admin | PREENCHER |
+| Projeto Supabase (`project_ref`) | PREENCHER |
+| Webhook de alerta configurado? | PREENCHER (SIM/NÃO/N/A) |
+| Pasta de evidências | `docs/qa/evidence/v8.2.0.7-run1/` |
 
-## Execução E2E
+---
 
-Status consolidado: **BLOQUEADA** por ausência de URL base publicada (Preview/Prod) e ausência de contas de teste (usuário comum + admin).
+## 2) Execução E2E (1–9)
 
-| Caso E2E | Resultado | Evidência (arquivo) | Caminho completo | Observações |
-|---|---|---|---|---|
-| E2E-01 — Login | BLOQUEADO | `E2E-01-login.png` | `docs/qa/evidence/v8.2.0.7-run1/E2E-01-login.png` | Sem URL e sem credenciais válidas. |
-| E2E-02 — Criar post | BLOQUEADO | `E2E-02-create-post.png` | `docs/qa/evidence/v8.2.0.7-run1/E2E-02-create-post.png` | Dependente de login funcional. |
-| E2E-03 — Comentar | BLOQUEADO | `E2E-03-comment.png` | `docs/qa/evidence/v8.2.0.7-run1/E2E-03-comment.png` | Dependente de post criado e sessão autenticada. |
-| E2E-04 — Denunciar post | BLOQUEADO | `E2E-04-report.png` | `docs/qa/evidence/v8.2.0.7-run1/E2E-04-report.png` | Dependente de post acessível e usuário autenticado. |
-| ADM-01 — Painel de reports/moderação | BLOQUEADO | `ADM-01-reports-panel.png` | `docs/qa/evidence/v8.2.0.7-run1/ADM-01-reports-panel.png` | Sem conta admin e sem ambiente acessível. |
+Referência: `docs/qa/e2e-checklist.md`
 
-## Execução RLS Smoke
+> Resultado permitido por caso: **PASSOU / FALHOU / BLOQUEADO**.
 
-Referência de roteiro: `docs/qa/rls-smoke.sql`.
+| ID | Cenário | Resultado | Evidência (arquivo/link) | URL usada | Observações |
+|---|---|---|---|---|---|
+| E2E-01 | Cadastro | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
+| E2E-02 | Confirmação de e-mail (callback) | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
+| E2E-03 | Login | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
+| E2E-04 | Criar post (sem imagem e com imagem) | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
+| E2E-05 | Abrir detalhe do post | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
+| E2E-06 | Comentar | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
+| E2E-07 | Votar (hot/cold) | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
+| E2E-08 | Denunciar post | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
+| E2E-09 | Admin: acessar painel e fechar denúncia/moderar | BLOQUEADO | PENDENTE | PENDENTE | PENDENTE |
 
-| Teste RLS | Resultado | Evidência (arquivo) | Caminho completo | Referência de print |
-|---|---|---|---|---|
-| RLS-01 — reports anon select | BLOQUEADO | `RLS-01-test1.png` | `docs/qa/evidence/v8.2.0.7-run1/RLS-01-test1.png` | Print planejado para captura de execução do teste 1 |
-| RLS-02 — posts.author_id update | BLOQUEADO | `RLS-02-test2.png` | `docs/qa/evidence/v8.2.0.7-run1/RLS-02-test2.png` | Print planejado para captura de execução do teste 2 |
-| RLS-03 — profiles insert mismatched id | BLOQUEADO | `RLS-03-test3.png` | `docs/qa/evidence/v8.2.0.7-run1/RLS-03-test3.png` | Print planejado para captura de execução do teste 3 |
+---
 
-## Execução de limiar/webhook
+## 3) Execução RLS Smoke (1–3)
 
-**N/A (justificado).**
+Referência: `docs/qa/rls-smoke.sql`
 
-Não foi possível executar cenários de limiar e webhook, porque o ambiente alvo (Preview/Prod), URL base e credenciais não foram fornecidos nesta rodada. Sem acesso ao fluxo funcional (criação/denúncia/moderação), não há como observar disparo de webhook nem validar status ativo/inativo com evidência executada.
+| ID | Teste | Resultado esperado | Resultado atual | Evidência (print/log/link) | Observações |
+|---|---|---|---|---|---|
+| RLS-01 | `reports` anon select | Erro de permissão **ou** retorno vazio | BLOQUEADO | PENDENTE | PENDENTE |
+| RLS-02 | `posts.author_id` update indevido | UPDATE bloqueado | BLOQUEADO | PENDENTE | PENDENTE |
+| RLS-03 | `profiles` insert com id divergente | INSERT bloqueado | BLOQUEADO | PENDENTE | PENDENTE |
 
-## Lista de bugs
+---
 
-### Bloqueadores
+## 4) Webhook/Alerta (limiar de denúncias)
 
-1. **BLOQ-01 — Impossibilidade de execução QA ponta a ponta**  
-   Sem URL de ambiente (Preview/Prod) e sem credenciais (usuário/admin), a rodada não consegue validar regressão funcional nem segurança (RLS).
+| Item | Resultado |
+|---|---|
+| Executado? | **N/A (PENDENTE)** |
+| Justificativa | Execução real ainda não realizada nesta rodada. |
+| Evidência | PENDENTE |
+| Endpoint/integração validado | PENDENTE |
 
-### Não bloqueadores
+---
 
-- Nenhum bug funcional adicional identificado nesta rodada, pois não houve execução efetiva dos cenários.
+## 5) Bugs encontrados nesta rodada
 
-## Conclusão
+Classificação obrigatória: **BLOQUEADOR / ALTO / MÉDIO / BAIXO**.
 
-## Apto para 8.2.2.0? **NÃO**
+| ID | Severidade | Status | Resumo | Evidência | Link commit/PR |
+|---|---|---|---|---|---|
+| QA-8207-001 | BLOQUEADOR | ABERTO | Execução E2E 1–9 não realizada | `docs/qa/report-v8.2.0.7-run1.md` (seção E2E) | PENDENTE |
+| QA-8207-002 | BLOQUEADOR | ABERTO | RLS Smoke 1–3 não executado | `docs/qa/report-v8.2.0.7-run1.md` (seção RLS) | PENDENTE |
+| QA-8207-003 | BLOQUEADOR | RESOLVIDO | Ausência do report obrigatório da rodada | Este arquivo criado/padronizado nesta V8.2.1.0 | PENDENTE |
 
-**Justificativa:** a rodada v8.2.0.7-run1 ficou bloqueada em pré-condições essenciais (ambiente, contas e validação de webhook). Sem execução E2E, sem smoke RLS efetivo e sem evidências reais de comportamento em runtime, não há base de qualidade para declarar aptidão da versão 8.2.2.0.
+---
+
+## 6) Conclusão
+
+### Apto para seguir para próxima etapa?
+**NÃO (no estado atual deste arquivo/template).**
+
+### Justificativa
+A rodada está marcada como **PENDENTE** até que alguém execute os testes reais (E2E + RLS + webhook quando aplicável), anexe evidências e atualize os resultados caso a caso.
