@@ -171,7 +171,7 @@
             <button class="kc-btn-primary" id="primaryCta">
               <i class="fas fa-paper-plane"></i> Entrar em contato
             </button>
-            <button class="kc-btn-secondary" onclick="navigator.clipboard?.writeText(window.location.href); showToast('Link copiado!', 'info', 1800)">
+            <button class="kc-btn-secondary" type="button" data-kc-share="link">
               <i class="fas fa-share-alt"></i> Compartilhar
             </button>
             <button class="kc-btn-secondary" id="reportButton" type="button">
@@ -194,7 +194,7 @@
             <div class="kc-seller-stats" id="sellerStats"></div>
           </div>
         </div>
-        <button class="kc-btn-secondary kc-btn-full" onclick="showToast('Simulação: perfil ainda não implementado', 'info', 2200)">
+        <button class="kc-btn-secondary kc-btn-full" type="button" data-kc-view-profile="1">
           <i class="fas fa-id-badge"></i> Ver perfil
         </button>
       </div>
@@ -210,12 +210,12 @@
             <div class="kc-comment-editor">
               <textarea id="commentText" placeholder="Deixe o seu comentário"></textarea>
               <div class="kc-editor-toolbar">
-                <button type="button" onclick="formatText('bold')" title="Negrito"><i class="fas fa-bold"></i></button>
-                <button type="button" onclick="formatText('italic')" title="Itálico"><i class="fas fa-italic"></i></button>
-                <button type="button" onclick="formatText('underline')" title="Sublinhado"><i class="fas fa-underline"></i></button>
-                <button type="button" onclick="formatText('strikethrough')" title="Tachado"><i class="fas fa-strikethrough"></i></button>
+                <button type="button" data-kc-format="bold" title="Negrito"><i class="fas fa-bold"></i></button>
+                <button type="button" data-kc-format="italic" title="Itálico"><i class="fas fa-italic"></i></button>
+                <button type="button" data-kc-format="underline" title="Sublinhado"><i class="fas fa-underline"></i></button>
+                <button type="button" data-kc-format="strikethrough" title="Tachado"><i class="fas fa-strikethrough"></i></button>
                 <div style="flex: 1;"></div>
-                <button type="button" onclick="submitComment()" style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">
+                <button type="button" data-kc-submit-comment="1" style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">
                   <i class="fas fa-paper-plane"></i> Enviar
                 </button>
               </div>
@@ -262,7 +262,7 @@
       <i class="fas fa-shopping-bag"></i>
       <span>Comprar</span>
     </a>
-    <button onclick="openMobileMenu()" class="kc-menu-toggle">
+    <button data-kc-mobile-menu="open" class="kc-menu-toggle">
       <i class="fas fa-bars"></i>
       <span>Menu</span>
     </button>
@@ -272,7 +272,7 @@
   <div class="kc-mobile-menu-drawer" id="mobileMenuDrawer" aria-hidden="true">
     <div class="kc-mobile-menu-header">
       <h3>Menu</h3>
-      <button onclick="closeMobileMenu()" class="kc-close-menu" aria-label="Fechar menu">
+      <button data-kc-mobile-menu="close" class="kc-close-menu" aria-label="Fechar menu">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -287,7 +287,7 @@
       <a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
     </div>
   </div>
-  <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true" onclick="closeMobileMenu()"></div>
+  <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true" data-kc-mobile-menu="close"></div>
 
   <script src="assets/js/kc-utils.js"></script>
 <script src="assets/js/kc-env.js"></script>

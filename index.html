@@ -124,16 +124,16 @@
 </div>
 </div>
 </div>
-<button class="kc-carousel-btn kc-carousel-prev" onclick="changeSlide(-1)">
+<button class="kc-carousel-btn kc-carousel-prev" data-kc-slide="prev">
 <i class="fas fa-chevron-left"></i>
 </button>
-<button class="kc-carousel-btn kc-carousel-next" onclick="changeSlide(1)">
+<button class="kc-carousel-btn kc-carousel-next" data-kc-slide="next">
 <i class="fas fa-chevron-right"></i>
 </button>
 <div class="kc-carousel-dots">
-<span class="kc-dot active" onclick="goToSlide(0)"></span>
-<span class="kc-dot" onclick="goToSlide(1)"></span>
-<span class="kc-dot" onclick="goToSlide(2)"></span>
+<span class="kc-dot active" data-kc-slide="0"></span>
+<span class="kc-dot" data-kc-slide="1"></span>
+<span class="kc-dot" data-kc-slide="2"></span>
 </div>
 </div>
 <!-- Top Contributors -->
@@ -253,11 +253,11 @@
 <div class="kc-card__footer">
 <div class="kc-card__interactions">
 <div class="kc-vote-box">
-<button class="hot" onclick="vote(this, 'hot')">
+<button class="hot" data-kc-vote="hot">
 <i class="fas fa-fire"></i>
 </button>
 <span>42</span>
-<button class="cold" onclick="vote(this, 'cold')">
+<button class="cold" data-kc-vote="cold">
 <i class="fas fa-snowflake"></i>
 </button>
 </div>
@@ -309,11 +309,11 @@
 <div class="kc-card__footer">
 <div class="kc-card__interactions">
 <div class="kc-vote-box">
-<button class="hot" onclick="vote(this, 'hot')">
+<button class="hot" data-kc-vote="hot">
 <i class="fas fa-fire"></i>
 </button>
 <span>28</span>
-<button class="cold" onclick="vote(this, 'cold')">
+<button class="cold" data-kc-vote="cold">
 <i class="fas fa-snowflake"></i>
 </button>
 </div>
@@ -361,11 +361,11 @@
 <div class="kc-card__footer">
 <div class="kc-card__interactions">
 <div class="kc-vote-box">
-<button class="hot" onclick="vote(this, 'hot')">
+<button class="hot" data-kc-vote="hot">
 <i class="fas fa-fire"></i>
 </button>
 <span>36</span>
-<button class="cold" onclick="vote(this, 'cold')">
+<button class="cold" data-kc-vote="cold">
 <i class="fas fa-snowflake"></i>
 </button>
 </div>
@@ -413,11 +413,11 @@
 <div class="kc-card__footer">
 <div class="kc-card__interactions">
 <div class="kc-vote-box">
-<button class="hot" onclick="vote(this, 'hot')">
+<button class="hot" data-kc-vote="hot">
 <i class="fas fa-fire"></i>
 </button>
 <span>56</span>
-<button class="cold" onclick="vote(this, 'cold')">
+<button class="cold" data-kc-vote="cold">
 <i class="fas fa-snowflake"></i>
 </button>
 </div>
@@ -583,7 +583,7 @@
 <i class="fas fa-shopping-bag"></i>
 <span>Comprar</span>
 </a>
-<button class="kc-menu-toggle" onclick="openMobileMenu()">
+<button class="kc-menu-toggle" data-kc-mobile-menu="open">
 <i class="fas fa-bars"></i>
 <span>Menu</span>
 </button>
@@ -592,7 +592,7 @@
 <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
 <div class="kc-mobile-menu-header">
 <h3>Menu</h3>
-<button class="kc-close-menu" onclick="closeMobileMenu()">
+<button class="kc-close-menu" data-kc-mobile-menu="close">
 <i class="fas fa-times"></i>
 </button>
 </div>
@@ -605,7 +605,7 @@
 <a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
 </div>
 </div>
-<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
 <script src="assets/js/kc-utils.js"></script>
 <script src="assets/js/kc-env.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -622,3 +622,4 @@
   <script src="assets/js/controllers/index.controller.js"></script>
 </body>
 </html>
+

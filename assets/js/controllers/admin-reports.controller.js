@@ -26,6 +26,55 @@
     if (el) { el.textContent = msg; el.style.display = 'block'; }
   }
 
+  function showToastSafe(message, type, duration) {
+    const msg = String(message || '').trim();
+    if (!msg) return;
+
+    try {
+      if (typeof window.showToast === 'function') {
+        window.showToast(msg, type || 'info', duration || 2600);
+        return;
+      }
+    } catch (_) {}
+
+    const id = 'kc-admin-toast-fallback';
+    let toast = document.getElementById(id);
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = id;
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.style.position = 'fixed';
+      toast.style.right = '16px';
+      toast.style.bottom = '16px';
+      toast.style.padding = '10px 14px';
+      toast.style.borderRadius = '10px';
+      toast.style.zIndex = '9999';
+      toast.style.fontSize = '.9rem';
+      toast.style.maxWidth = 'min(92vw, 420px)';
+      toast.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.25)';
+      document.body.appendChild(toast);
+    }
+
+    const t = String(type || 'info').toLowerCase();
+    if (t === 'error') {
+      toast.style.background = '#b71c1c';
+      toast.style.color = '#fff';
+    } else if (t === 'success') {
+      toast.style.background = '#2e7d32';
+      toast.style.color = '#fff';
+    } else {
+      toast.style.background = '#1565c0';
+      toast.style.color = '#fff';
+    }
+
+    toast.textContent = msg;
+    clearTimeout(toast._kcTimer);
+    toast._kcTimer = setTimeout(() => {
+      if (toast && toast.parentNode) toast.parentNode.removeChild(toast);
+    }, Number.isFinite(duration) ? duration : 2600);
+  }
+
   function setLoading(visible) {
     const el = $('#admin-loading');
     if (el) el.style.display = visible ? 'flex' : 'none';
@@ -36,6 +85,13 @@
       return window.KCSupabase.getClient();
     }
     return null;
+  }
+
+  function getErrorMessage(error, fallback) {
+    if (!error) return fallback;
+    if (typeof error === 'string' && error.trim()) return error.trim();
+    if (error.message) return String(error.message);
+    return fallback;
   }
 
   // ---- Acesso / Auth ----
@@ -138,40 +194,88 @@
 
   async function closeReports(postId) {
     const client = getClient();
-    if (!client) return;
-    await client.from('reports').update({ status: 'closed' }).eq('post_id', postId).eq('status', 'open');
-    await render();
+    if (!client) return { ok: false, error: { message: 'Supabase client não disponível.' } };
+
+    try {
+      const { data, error } = await client
+        .from('reports')
+        .update({ status: 'closed' })
+        .eq('post_id', postId)
+        .eq('status', 'open')
+        .select('id');
+
+      if (error) return { ok: false, error };
+      if (!Array.isArray(data) || data.length === 0) {
+        return { ok: false, error: { message: 'Nenhuma denúncia aberta foi atualizada para este post.' } };
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e };
+    }
   }
 
   async function setPostStatus(postId, status) {
     const client = getClient();
-    if (!client) return;
-    await client.from('posts').update({ status }).eq('id', postId);
-    await render();
+    if (!client) return { ok: false, error: { message: 'Supabase client não disponível.' } };
+
+    try {
+      const { data, error } = await client
+        .from('posts')
+        .update({ status })
+        .eq('id', postId)
+        .select('id');
+
+      if (error) return { ok: false, error };
+      if (!Array.isArray(data) || data.length === 0) {
+        return { ok: false, error: { message: 'Nenhum post foi atualizado. Verifique permissões RLS/admin ou se o post existe.' } };
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e };
+    }
   }
 
   async function handleAction(action, dataset) {
     const postId = dataset.postId;
+    let result = { ok: true };
 
     switch (action) {
       case 'refresh':
         await render();
-        return;
+        return { ok: true };
       case 'closeReports':
-        if (postId) await closeReports(postId);
-        return;
-      case 'hidePost':
-        if (postId) await setPostStatus(postId, 'hidden');
-        return;
-      case 'restorePost':
-        if (postId) await setPostStatus(postId, 'published');
-        return;
-      case 'deletePost':
-        if (postId) await setPostStatus(postId, 'deleted');
-        return;
-      default:
+        if (!postId) return { ok: false, error: { message: 'post_id ausente para fechar denúncias.' } };
+        result = await closeReports(postId);
         break;
+      case 'hidePost':
+        if (!postId) return { ok: false, error: { message: 'post_id ausente para ocultar post.' } };
+        result = await setPostStatus(postId, 'hidden');
+        break;
+      case 'restorePost':
+        if (!postId) return { ok: false, error: { message: 'post_id ausente para restaurar post.' } };
+        result = await setPostStatus(postId, 'published');
+        break;
+      case 'deletePost':
+        if (!postId) return { ok: false, error: { message: 'post_id ausente para deletar post.' } };
+        result = await setPostStatus(postId, 'deleted');
+        break;
+      default:
+        return { ok: false, error: { message: `Ação desconhecida: ${action}` } };
     }
+
+    if (!result.ok) {
+      console.error('[Admin Reports] ação falhou:', {
+        action,
+        postId,
+        error: result.error || null,
+      });
+      showToastSafe(getErrorMessage(result.error, 'Não foi possível concluir a ação.'), 'error', 3200);
+      return result;
+    }
+
+    await render();
+    showToastSafe('Ação concluída com sucesso.', 'success', 1800);
+    return result;
   }
 
   // ---- Render ----
@@ -322,7 +426,15 @@
       const actionEl = event.target.closest('[data-action]');
       if (!actionEl || !root.contains(actionEl)) return;
 
-      await handleAction(actionEl.dataset.action, actionEl.dataset);
+      if (actionEl.dataset.kcBusy === '1') return;
+      actionEl.dataset.kcBusy = '1';
+      actionEl.disabled = true;
+      try {
+        await handleAction(actionEl.dataset.action, actionEl.dataset);
+      } finally {
+        actionEl.disabled = false;
+        delete actionEl.dataset.kcBusy;
+      }
     });
   }
 

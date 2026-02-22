@@ -1768,11 +1768,18 @@ async function kcHandleCreateSubmit() {
     showToast('Publicando...', 'info', 1600);
     try {
       post = await window.KCAPI.createPost(payload);
-    } catch (_) {
+    } catch (err) {
+      console.error('[KinoCampus] Exceção ao criar publicação:', err);
       post = null;
     }
 
     if (!post) {
+      try {
+        if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
+          const createErr = window.KCAPI.getLastCreatePostError();
+          console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
+        }
+      } catch (_) {}
       showToast('Não foi possível publicar agora. Tente novamente.', 'error', 2800);
       return;
     }
@@ -2233,6 +2240,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 140);
   window.addEventListener("resize", onResize, { passive: true });
 
+
+  // mobile menu data-* delegation
+  document.body.addEventListener('click', (e) => {
+    const menuTrigger = e.target.closest('[data-kc-mobile-menu]');
+    if (!menuTrigger) return;
+
+    const action = String(menuTrigger.getAttribute('data-kc-mobile-menu') || '').trim().toLowerCase();
+    if (action === 'open') {
+      openMobileMenu();
+      return;
+    }
+    if (action === 'close') {
+      closeMobileMenu();
+    }
+  });
 
   // ripple delegation
   document.body.addEventListener('click', (e) => {

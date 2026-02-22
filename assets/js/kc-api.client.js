@@ -61,6 +61,71 @@
   }
 
   const ENV = readEnv();
+  let lastCreatePostError = null;
+
+  function normalizeErrorForDiagnostics(err) {
+    if (!err) {
+      return {
+        message: 'Erro desconhecido.',
+        code: 'UNKNOWN',
+        details: null,
+        hint: null,
+      };
+    }
+
+    if (typeof err === 'string') {
+      return {
+        message: err,
+        code: 'ERROR_STRING',
+        details: null,
+        hint: null,
+      };
+    }
+
+    const message = String(err.message || err.msg || 'Erro desconhecido.');
+    const code = (err.code != null && String(err.code).trim()) ? String(err.code).trim() : 'UNKNOWN';
+    const details = (err.details != null) ? err.details : null;
+    const hint = (err.hint != null) ? err.hint : null;
+
+    return { message, code, details, hint };
+  }
+
+  function summarizeCreatePayloadForDiagnostics(parsed) {
+    const p = (parsed && typeof parsed === 'object') ? parsed : {};
+    return {
+      moduleDB: p.moduleDB || '',
+      categoryDB: p.categoryDB || '',
+      subcategoryDB: p.subcategoryDB || '',
+      titleLength: String(p.title || '').length,
+      descriptionLength: String(p.description || '').length,
+      imagesCount: Array.isArray(p.images) ? p.images.length : 0,
+    };
+  }
+
+  function setLastCreatePostError(stage, err, context) {
+    const normalized = normalizeErrorForDiagnostics(err);
+    const payload = {
+      stage: String(stage || 'EXCEPTION'),
+      message: normalized.message,
+      code: normalized.code,
+      details: normalized.details,
+      hint: normalized.hint,
+      context: (context && typeof context === 'object') ? context : null,
+      at: new Date().toISOString(),
+    };
+
+    lastCreatePostError = Object.freeze(payload);
+    console.error('[KCAPI][Supabase] createPost falhou:', lastCreatePostError);
+    return lastCreatePostError;
+  }
+
+  function clearLastCreatePostError() {
+    lastCreatePostError = null;
+  }
+
+  function getLastCreatePostError() {
+    return lastCreatePostError ? { ...lastCreatePostError } : null;
+  }
 
 
   const DRIVER_PRESETS = Object.freeze({
@@ -737,6 +802,68 @@
     }
   }
 
+  function getUserDisplayNameForProfile(user) {
+    const meta = (user && user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
+    const direct = meta.display_name || meta.full_name || meta.name || meta.username || meta.preferred_username;
+    if (direct && String(direct).trim()) return String(direct).trim();
+
+    const email = String((user && user.email) || '').trim();
+    if (email.includes('@')) return email.split('@')[0];
+    return 'Usuário';
+  }
+
+  function getUserAvatarForProfile(user) {
+    const meta = (user && user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
+    const direct = meta.avatar_url || meta.avatar || meta.picture || meta.photo_url;
+    if (direct && String(direct).trim()) return String(direct).trim();
+
+    const seed = encodeURIComponent(String((user && (user.email || user.id)) || 'kc').trim().toLowerCase());
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+  }
+
+  async function ensureSupabaseProfileForCreate(client, user) {
+    if (!client || !user || !user.id) {
+      return {
+        ok: false,
+        error: {
+          message: 'Pré-condição inválida para sincronizar profile.',
+          code: 'PROFILE_SYNC_PRECONDITION_FAILED',
+        }
+      };
+    }
+
+    try {
+      if (window.KCProfiles && typeof window.KCProfiles.ensureSynced === 'function') {
+        const synced = await window.KCProfiles.ensureSynced();
+        if (!synced || synced.id == null || String(synced.id) === String(user.id)) {
+          return { ok: true };
+        }
+      }
+    } catch (e) {
+      console.warn('[KCAPI][Supabase] ensureSynced (KCProfiles) falhou; fallback upsert será usado.', e);
+    }
+
+    const payload = {
+      id: user.id,
+      email: user.email || null,
+      full_name: getUserDisplayNameForProfile(user),
+      avatar_url: getUserAvatarForProfile(user),
+    };
+
+    try {
+      const q = client
+        .from('profiles')
+        .upsert(payload, { onConflict: 'id' })
+        .select('id');
+
+      const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();
+      if (res && res.error) return { ok: false, error: res.error };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e };
+    }
+  }
+
   function dataUrlToBlob(dataUrl) {
     const s = String(dataUrl || '');
     const m = s.match(/^data:([^;]+);base64,(.*)$/);
@@ -775,14 +902,14 @@
       .slice(0, 80) || 'image';
   }
 
-    async function uploadImagesToSupabaseStorage(client, images, options) {
+  async function uploadImagesToSupabaseStorage(client, images, options) {
     // Bucket (compat): prefer STORAGE_BUCKET_POST_MEDIA (roadmap), senão ENV.supabase.storageBucket
     const bucket = (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
       ? String(ENV.STORAGE_BUCKET_POST_MEDIA || ENV.supabase.storageBucket)
       : 'kino-media';
 
     const list = Array.isArray(images) ? images.filter(Boolean) : [];
-    if (!list.length) return [];
+    if (!list.length) return { ok: true, uploaded: [] };
 
     // Hard limits (mínimo anti-abuso)
     const maxImages = 5;
@@ -844,8 +971,18 @@
 
       const up = await storage.upload(path, blob, { contentType: mime || 'application/octet-stream', upsert: false });
       if (up && up.error) {
-        console.error('[KCAPI][Supabase] Upload falhou:', up.error);
-        return null;
+        return {
+          ok: false,
+          error: {
+            message: 'Falha no upload de imagem para o Storage.',
+            code: (up.error.code != null && String(up.error.code).trim()) ? String(up.error.code).trim() : 'STORAGE_UPLOAD_FAILED',
+            details: up.error.details || null,
+            hint: up.error.hint || null,
+            bucket,
+            path,
+            imageIndex: i,
+          },
+        };
       }
 
       const pub = storage.getPublicUrl(path);
@@ -857,7 +994,7 @@
       uploaded.push({ url: publicUrl || path, is_cover: i === 0, sort_order: i });
     }
 
-    return uploaded;
+    return { ok: true, uploaded };
   }
 
 
@@ -1301,23 +1438,43 @@
   }
 
   async function supabaseCreatePost(data) {
+    clearLastCreatePostError();
+
     const client = getSupabaseClient();
-    if (!client) return null;
+    if (!client) {
+      setLastCreatePostError('AUTH', {
+        message: 'Supabase client não disponível para createPost.',
+        code: 'SUPABASE_CLIENT_MISSING',
+      }, { driver: ENV.driver });
+      return null;
+    }
 
     const user = await supabaseGetCurrentUser();
     if (!user) {
-      console.warn('[KCAPI][Supabase] createPost bloqueado: usuário não autenticado.');
+      setLastCreatePostError('AUTH', {
+        message: 'Usuário não autenticado para createPost.',
+        code: 'NOT_AUTHENTICATED',
+      }, { driver: ENV.driver });
       return null;
     }
 
     const parsed = normalizeCreatePayload(data);
+    const payloadSummary = summarizeCreatePayloadForDiagnostics(parsed);
     if (!parsed.title || !parsed.description || !parsed.moduleDB) {
-      console.warn('[KCAPI][Supabase] createPost payload incompleto (título/descrição/módulo).');
+      setLastCreatePostError('PAYLOAD', {
+        message: 'Payload de createPost incompleto (título/descrição/módulo).',
+        code: 'INVALID_CREATE_PAYLOAD',
+      }, payloadSummary);
       return null;
     }
 
-    // garante perfil (quando RLS permitir)
-    await ensureSupabaseProfile(client, user);
+    const profileSync = await ensureSupabaseProfileForCreate(client, user);
+    if (!profileSync.ok) {
+      setLastCreatePostError('PROFILE_SYNC', profileSync.error, {
+        userId: user.id,
+      });
+      return null;
+    }
 
     try {
 
@@ -1355,22 +1512,37 @@
       .maybeSingle();
 
     if (ins && ins.error) {
-      console.error('[KCAPI][Supabase] insert posts erro:', ins.error);
+      setLastCreatePostError('POST_INSERT', ins.error, {
+        userId: user.id,
+        payload: payloadSummary,
+      });
       return null;
     }
 
     postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
     if (!postId) {
-      console.error('[KCAPI][Supabase] insert posts sem id retornado.');
+      setLastCreatePostError('POST_INSERT', {
+        message: 'INSERT em posts não retornou id.',
+        code: 'POST_INSERT_NO_ID',
+      }, {
+        userId: user.id,
+        payload: payloadSummary,
+      });
       return null;
     }
 
     // 3) Upload das imagens (se houver) com path controlado (post-media/{userId}/{postId}/...)
-    const uploaded = await uploadImagesToSupabaseStorage(client, parsed.images, { userId: user.id, postId });
-    if (uploaded === null) {
+    const uploadResult = await uploadImagesToSupabaseStorage(client, parsed.images, { userId: user.id, postId });
+    if (!uploadResult || !uploadResult.ok) {
       await rollbackCreatedPost(postId);
+      setLastCreatePostError('STORAGE_UPLOAD', uploadResult ? uploadResult.error : null, {
+        postId,
+        userId: user.id,
+        imagesCount: Array.isArray(parsed.images) ? parsed.images.length : 0,
+      });
       return null;
     }
+    const uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
 
     // 4) Insere mídias (post_media) com capa + ordem
     if (Array.isArray(uploaded) && uploaded.length) {
@@ -1394,7 +1566,10 @@
       }
 
       if (mr && mr.error) {
-        console.error('[KCAPI][Supabase] insert post_media erro:', mr.error);
+        setLastCreatePostError('POST_MEDIA_INSERT', mr.error, {
+          postId,
+          mediaCount: mediaRowsFull.length,
+        });
         // não apaga post automaticamente (pode ser útil depurar), mas registra dívida
         return null;
       }
@@ -1402,16 +1577,26 @@
 
     // 5) Rebusca completo (com JOINs) e normaliza no contrato do modo local (com JOINs) e normaliza no contrato do modo local
       const mapped = await supabaseGetPostById(postId);
-      if (!mapped) return null;
+      if (!mapped) {
+        setLastCreatePostError('POST_FETCH', {
+          message: 'Post criado, mas a leitura final falhou.',
+          code: 'POST_FETCH_EMPTY',
+        }, { postId });
+        return null;
+      }
 
       // injeta labels do payload bruto (caso category esteja em slug)
       const raw = { ...mapped };
       if (parsed.raw && parsed.raw.categoria && !raw.categoria) raw.categoria = parsed.raw.categoria;
       if (parsed.raw && parsed.raw.subcategoria && !raw.subcategoria) raw.subcategoria = parsed.raw.subcategoria;
 
+      clearLastCreatePostError();
       return normalizePost(raw);
     } catch (e) {
-      console.error('[KCAPI][Supabase] createPost falhou:', e);
+      setLastCreatePostError('EXCEPTION', e, {
+        userId: user.id,
+        payload: payloadSummary,
+      });
       return null;
     }
   }
@@ -2084,6 +2269,7 @@
     getCurrentProfile,
     getProfileById,
     syncProfile,
+    getLastCreatePostError,
 
 
     // Users

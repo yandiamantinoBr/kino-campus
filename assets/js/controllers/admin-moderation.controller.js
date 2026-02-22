@@ -49,6 +49,55 @@
     }, 2500);
   }
 
+  function showToastSafe(message, type, duration) {
+    const msg = String(message || '').trim();
+    if (!msg) return;
+
+    try {
+      if (typeof window.showToast === 'function') {
+        window.showToast(msg, type || 'info', duration || 2600);
+        return;
+      }
+    } catch (_) {}
+
+    const id = 'kc-admin-moderation-toast-fallback';
+    let toast = document.getElementById(id);
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = id;
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.style.position = 'fixed';
+      toast.style.right = '16px';
+      toast.style.bottom = '16px';
+      toast.style.padding = '10px 14px';
+      toast.style.borderRadius = '10px';
+      toast.style.zIndex = '9999';
+      toast.style.fontSize = '.9rem';
+      toast.style.maxWidth = 'min(92vw, 420px)';
+      toast.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.25)';
+      document.body.appendChild(toast);
+    }
+
+    const t = String(type || 'info').toLowerCase();
+    if (t === 'error') {
+      toast.style.background = '#b71c1c';
+      toast.style.color = '#fff';
+    } else if (t === 'success') {
+      toast.style.background = '#2e7d32';
+      toast.style.color = '#fff';
+    } else {
+      toast.style.background = '#1565c0';
+      toast.style.color = '#fff';
+    }
+
+    toast.textContent = msg;
+    clearTimeout(toast._kcTimer);
+    toast._kcTimer = setTimeout(() => {
+      if (toast && toast.parentNode) toast.parentNode.removeChild(toast);
+    }, Number.isFinite(duration) ? duration : 2600);
+  }
+
   function setLoading(visible) {
     const el = $('#admin-loading');
     if (el) el.style.display = visible ? 'flex' : 'none';
@@ -64,6 +113,13 @@
     }
     el.textContent = msg;
     el.style.display = 'block';
+  }
+
+  function getErrorMessage(error, fallback) {
+    if (!error) return fallback;
+    if (typeof error === 'string' && error.trim()) return error.trim();
+    if (error.message) return String(error.message);
+    return fallback;
   }
 
   async function checkAdminAccess() {
@@ -297,16 +353,47 @@
   }
 
   async function updatePostStatus(postId, status) {
-    if (status === 'deleted' && !window.confirm('Tem certeza que deseja deletar este post?')) return;
+    if (status === 'deleted' && !window.confirm('Tem certeza que deseja deletar este post?')) {
+      return { ok: false, cancelled: true };
+    }
 
     const client = getClient();
-    if (!client) return;
+    if (!client) return { ok: false, error: { message: 'Supabase client não disponível.' } };
 
-    const { error } = await client.from('posts').update({ status }).eq('id', postId);
+    let error = null;
+    let data = null;
+    try {
+      const res = await client
+        .from('posts')
+        .update({ status })
+        .eq('id', postId)
+        .select('id');
+      error = res ? res.error : null;
+      data = res ? res.data : null;
+    } catch (e) {
+      error = e;
+    }
+
     if (error) {
-      console.error('[Admin moderation] updatePostStatus:', error);
+      console.error('[Admin moderation] updatePostStatus:', {
+        postId,
+        status,
+        error,
+      });
       showError(`Falha ao atualizar post ${postId}.`, false);
-      return;
+      showToastSafe(getErrorMessage(error, 'Não foi possível atualizar o status do post.'), 'error', 3200);
+      return { ok: false, error };
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+      const noRowsError = { message: 'Nenhum post foi atualizado. Verifique permissões RLS/admin ou se o post existe.' };
+      console.error('[Admin moderation] updatePostStatus sem linhas afetadas:', {
+        postId,
+        status,
+      });
+      showError(`Falha ao atualizar post ${postId}.`, false);
+      showToastSafe(noRowsError.message, 'error', 3200);
+      return { ok: false, error: noRowsError };
     }
 
     const post = state.posts.find((i) => i.id === postId);
@@ -319,7 +406,9 @@
     renderPosts();
     renderSessionActions();
     showFeedback(status === 'hidden' ? 'Post ocultado.' : status === 'published' ? 'Post restaurado/publicado.' : 'Post marcado como deletado.');
+    showToastSafe('Ação concluída com sucesso.', 'success', 1800);
     await fetchAuditLogs();
+    return { ok: true };
   }
 
   function initStatusFilter() {
@@ -337,9 +426,15 @@
         if (!btn) return;
         const row = ev.target.closest('tr[data-id]');
         if (!row) return;
+        if (btn.dataset.kcBusy === '1') return;
+        btn.dataset.kcBusy = '1';
         btn.disabled = true;
-        await updatePostStatus(row.getAttribute('data-id'), btn.getAttribute('data-action'));
-        btn.disabled = false;
+        try {
+          await updatePostStatus(row.getAttribute('data-id'), btn.getAttribute('data-action'));
+        } finally {
+          btn.disabled = false;
+          delete btn.dataset.kcBusy;
+        }
       });
     }
 
