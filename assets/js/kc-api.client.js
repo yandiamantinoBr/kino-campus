@@ -612,7 +612,23 @@
 
       const next = normalizePost(raw);
       existing.unshift(next);
-      try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
+
+      try {
+        localStorage.setItem(key, JSON.stringify(existing));
+      } catch (err) {
+        const message = (err && err.message) ? String(err.message) : 'Falha ao persistir publicação no localStorage.';
+        const errorPayload = {
+          code: 'LOCAL_STORAGE_SET_ITEM_FAILED',
+          message,
+        };
+        console.error('[KCAPI] localCreatePost persist error', {
+          driver: ENV.driver,
+          storageKey: key,
+          message,
+        });
+        return { ok: false, error: errorPayload };
+      }
+
       return next;
     }
 

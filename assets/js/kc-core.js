@@ -1740,8 +1740,10 @@ async function kcHandleCreateSubmit() {
     },
   };
 
-  const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && typeof window.KCAPI.createPost === 'function');
+  const hasApiCreatePost = !!(window.KCAPI && typeof window.KCAPI.createPost === 'function');
+  const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
   let post = null;
+  let createError = null;
 
   if (useSupabase) {
     // Exige autenticação no driver Supabase (RLS)
@@ -1768,8 +1770,16 @@ async function kcHandleCreateSubmit() {
     showToast('Publicando...', 'info', 1600);
     try {
       post = await window.KCAPI.createPost(payload);
+      if (post && post.ok === false && post.error) {
+        createError = post.error;
+        post = null;
+      }
     } catch (err) {
       console.error('[KinoCampus] Exceção ao criar publicação:', err);
+      createError = {
+        code: 'CREATE_POST_EXCEPTION',
+        message: (err && err.message) ? String(err.message) : 'Erro inesperado ao publicar.',
+      };
       post = null;
     }
 
@@ -1780,12 +1790,40 @@ async function kcHandleCreateSubmit() {
           console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
         }
       } catch (_) {}
-      showToast('Não foi possível publicar agora. Tente novamente.', 'error', 2800);
+      const feedbackMessage = (createError && createError.message)
+        ? String(createError.message)
+        : 'Não foi possível publicar agora. Tente novamente.';
+      showToast(feedbackMessage, 'error', 2800);
       return;
     }
   } else {
-    // Modo local/offline-first (default)
-    post = kcCreateUserPost(payload);
+    // Modo local/offline-first (default): só confirma sucesso após persistência efetiva.
+    try {
+      if (hasApiCreatePost) {
+        post = await window.KCAPI.createPost(payload);
+      } else {
+        post = kcCreateUserPost(payload);
+      }
+      if (post && post.ok === false && post.error) {
+        createError = post.error;
+        post = null;
+      }
+    } catch (err) {
+      console.error('[KinoCampus] Exceção no modo local ao criar publicação:', err);
+      createError = {
+        code: 'LOCAL_CREATE_POST_EXCEPTION',
+        message: (err && err.message) ? String(err.message) : 'Erro inesperado ao salvar publicação.',
+      };
+      post = null;
+    }
+
+    if (!post) {
+      const feedbackMessage = (createError && createError.message)
+        ? String(createError.message)
+        : 'Não foi possível salvar sua publicação no dispositivo.';
+      showToast(feedbackMessage, 'error', 3200);
+      return;
+    }
   }
 
   showToast('Publicado com sucesso!', 'success', 2200);
