@@ -13,6 +13,8 @@
 (function () {
   'use strict';
 
+  let handlersBound = false;
+
   // ---- Helpers ----
 
   const fallbackEscapeHtml = (str) => String(str ?? '')
@@ -157,6 +159,30 @@
     await render();
   }
 
+  async function handleAction(action, dataset) {
+    const postId = dataset.postId;
+
+    switch (action) {
+      case 'refresh':
+        await render();
+        return;
+      case 'closeReports':
+        if (postId) await closeReports(postId);
+        return;
+      case 'hidePost':
+        if (postId) await setPostStatus(postId, 'hidden');
+        return;
+      case 'restorePost':
+        if (postId) await setPostStatus(postId, 'published');
+        return;
+      case 'deletePost':
+        if (postId) await setPostStatus(postId, 'deleted');
+        return;
+      default:
+        break;
+    }
+  }
+
   // ---- Render ----
 
   const REASON_LABELS = {
@@ -253,21 +279,21 @@
                <i class="fas fa-eye"></i> Ver post
             </a>
             ${open.length > 0 ? `
-            <button onclick="KCAdmin.closeReports('${escape(pid)}')"
+            <button type="button" data-action="closeReports" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
               <i class="fas fa-check"></i> Fechar denúncias
             </button>` : ''}
             ${postStatus === 'published' ? `
-            <button onclick="KCAdmin.setPostStatus('${escape(pid)}', 'hidden')"
+            <button type="button" data-action="hidePost" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
               <i class="fas fa-eye-slash"></i> Ocultar post
             </button>` : ''}
             ${postStatus === 'hidden' ? `
-            <button onclick="KCAdmin.setPostStatus('${escape(pid)}', 'published')"
+            <button type="button" data-action="restorePost" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
               <i class="fas fa-eye"></i> Restaurar post
             </button>` : ''}
-            <button onclick="KCAdmin.setPostStatus('${escape(pid)}', 'deleted')"
+            <button type="button" data-action="deletePost" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#b71c1c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;"
                     title="Esta ação não pode ser desfeita pelo painel.">
               <i class="fas fa-trash"></i> Deletar post
@@ -294,6 +320,21 @@
     container.innerHTML = html;
   }
 
+  function setupEventDelegation() {
+    if (handlersBound) return;
+    handlersBound = true;
+
+    const root = $('#admin-content');
+    if (!root) return;
+
+    root.addEventListener('click', async (event) => {
+      const actionEl = event.target.closest('[data-action]');
+      if (!actionEl || !root.contains(actionEl)) return;
+
+      await handleAction(actionEl.dataset.action, actionEl.dataset);
+    });
+  }
+
   // ---- Boot ----
 
   async function boot() {
@@ -303,11 +344,9 @@
     if (!ok) return;
 
     $('#admin-content').style.display = 'block';
+    setupEventDelegation();
     await render();
   }
-
-  // Expose actions globally for onclick handlers in rendered HTML
-  window.KCAdmin = { closeReports, setPostStatus, _render: render };
 
   document.addEventListener('DOMContentLoaded', boot);
 })();
