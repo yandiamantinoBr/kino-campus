@@ -1,5 +1,19 @@
 # Changelog
 
+## [8.2.0.0] - 2026-02-22
+
+### Objetivo da V8.2
+- Cutover de saneamento cleanroom + QA, sem adição de features, com foco em disciplina de versão e risco mínimo de regressão.
+
+### Gates / Critérios de sucesso
+- Versão única dos módulos centrais alinhada em `8.2.0.0` (`kc-env`, `kc-api.client`, `kc-supabase.client`, `kc-auth.ui`).
+- `README.md` e `CHANGELOG.md` refletindo o estágio V8.2 e a microentrega `8.2.0.0`.
+- Validação estática sem drift de versão nos módulos centrais e smoke de navegação/auth sem erros novos no console.
+
+### Changed
+- Bump em lote das constantes `VERSION` para `8.2.0.0` nos módulos centrais de front.
+- Documentação de cutover V8.2 registrada no `README.md` e neste `CHANGELOG.md`.
+
 ## [8.1.12.0] - 2026-02-22
 
 ### Added
