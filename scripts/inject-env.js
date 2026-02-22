@@ -53,18 +53,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('   NEXT_PUBLIC_SUPABASE_URL =', process.env.NEXT_PUBLIC_SUPABASE_URL || '(vazio)');
   console.error('   SUPABASE_ANON_KEY        =', process.env.SUPABASE_ANON_KEY        || '(vazio)');
   console.error('');
-  console.error('   SOLUÇÃO:');
-  console.error('   1. Acesse: https://vercel.com/yannakamurabrs-projects/kino-campus/settings/environment-variables');
-  console.error('   2. Clique em "Add New"');
-  console.error('   3. Adicione:');
-  console.error('      Name: SUPABASE_URL');
-  console.error('      Value: https://wacyrkwhkvzwkqpolrbg.supabase.co');
-  console.error('      Environments: ✅ Production ✅ Preview ✅ Development');
-  console.error('   4. Adicione também:');
-  console.error('      Name: SUPABASE_ANON_KEY');
-  console.error('      Value: (sua anon key do Supabase Settings → API)');
-  console.error('      Environments: ✅ Production ✅ Preview ✅ Development');
-  console.error('   5. Clique em Redeploy');
+  console.error('   Como corrigir:');
+  console.error('   1. Configure as variáveis obrigatórias SUPABASE_URL e SUPABASE_ANON_KEY.');
+  console.error('   2. Defina essas variáveis no provedor de CI/deploy usado pelo projeto.');
+  console.error('   3. Após salvar, execute um novo deploy/redeploy para aplicar os valores.');
   console.error('');
   process.exit(1);
 }
