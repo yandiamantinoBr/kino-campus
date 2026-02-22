@@ -19,15 +19,15 @@
 
 -- [SETUP] como localizar um post_id real
 -- O que este bloco faz:
---   Busca 1 post real para usar em testes posteriores, sem inventar dado.
+--   Busca os 5 posts mais recentes para usar em testes posteriores, sem inventar dado.
 -- Resultado esperado:
---   Retorna 1 linha com id (ou vazio, caso não exista post).
+--   Retorna até 5 linhas com id (ou vazio, caso não exista post).
 -- Como interpretar:
 --   - Se vazio: crie pelo menos 1 post no app e rode de novo.
 select id, title, author_id, created_at
 from public.posts
 order by created_at desc
-limit 1;
+limit 5;
 
 
 -- [TEST 1] reports anon select
@@ -77,16 +77,18 @@ with target as (
 select * from target;
 
 -- Passo 2: ataque simulado (NÃO deve funcionar em contexto de usuário comum).
--- Substitua <POST_ID_REAL> por um UUID real do passo anterior.
+-- Substitua __POST_ID__ por um UUID real do passo anterior.
 -- Substitua <OUTRO_UUID> por um UUID diferente (qualquer UUID válido).
+-- Copie o UUID exatamente como aparece na query de setup (sem < >).
 update public.posts
 set author_id = '<OUTRO_UUID>'::uuid
-where id = '<POST_ID_REAL>'::uuid;
+where id = '__POST_ID__'::uuid;
 
 -- Verificação (apenas leitura):
+-- Copie o UUID exatamente como aparece na query de setup (sem < >).
 select id, author_id
 from public.posts
-where id = '<POST_ID_REAL>'::uuid;
+where id = '__POST_ID__'::uuid;
 
 -- Alternativa confiável (sessão real authenticated no navegador):
 --   Com usuário comum logado, tente ação equivalente via client/devtools (sem endpoint admin).
