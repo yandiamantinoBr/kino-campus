@@ -1,8 +1,8 @@
-# Kino Campus — Protótipo WEB (V8.1.8.2) — Cleanup & Fonte Única de Verdade
+# Kino Campus — Protótipo WEB (V8.1.12.0) — Cleanup & Fonte Única de Verdade
 
 Este repositório é o **protótipo web offline-first** do **Kino Campus** (plataforma universitária por módulos), agora com **integração Supabase-first** (Postgres + Auth + Storage) na linha **V8.1.x**.
 
-A **V8.1.8.2** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`) e preserva o runtime oficial como **front estático + Supabase** (sem backend Node ativo no deploy). Também mantém a **versão única alvo** dos módulos JS de front (8.1.8.1), evitando drift entre clientes. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
+A **V8.1.12.0** mantém o app **100% funcional em modo local** por padrão (`KC_ENV.driver = "local"`) e preserva o runtime oficial como **front estático + Supabase** (sem backend Node ativo no deploy). Também mantém a **versão única alvo** dos módulos JS de front (8.1.12.0), evitando drift entre clientes. Ao mesmo tempo, quando você ativa manualmente `KC_ENV.driver = "supabase"` e configura `KC_ENV.supabase.url/anonKey`, o app passa a usar:
 
 - **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
 - **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.
@@ -13,14 +13,14 @@ A **V8.1.8.2** mantém o app **100% funcional em modo local** por padrão (`KC_E
 
 ## 🧭 Mapa de versão do front (arquivo → versão)
 
-Versão-alvo única atual: **`8.1.8.1`**
+Versão-alvo única atual: **`8.1.12.0`**
 
-- `assets/js/kc-env.js` → `8.1.8.1`
-- `assets/js/kc-api.client.js` → `8.1.8.1`
-- `assets/js/kc-supabase.client.js` → `8.1.8.1`
-- `assets/js/kc-auth.ui.js` → `8.1.8.1`
+- `assets/js/kc-env.js` → `8.1.12.0`
+- `assets/js/kc-api.client.js` → `8.1.12.0`
+- `assets/js/kc-supabase.client.js` → `8.1.12.0`
+- `assets/js/kc-auth.ui.js` → `8.1.12.0`
 
-> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.1.8.1` (derivado de `assets/js/kc-auth.ui.js`).
+> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.1.12.0` (derivado de `assets/js/kc-auth.ui.js`).
 
 ## 📦 Regra de release (anti-drift)
 
@@ -87,6 +87,11 @@ Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação a
   - Arquivo: `assets/js/kc-env.js`
   - `driver: "local" | "supabase"` (default: `local`)
   - *Safe boot:* se o Supabase não estiver configurado, o driver continua `local`.
+
+- **Realtime opcional no feed (Roadmap 8.1.12.0)**
+  - `KCSupabase.subscribeNewPosts({ filter, onPost })` + façade `KCRealtime`.
+  - Buffer no feed com banner “Novo post disponível” e inserção no topo sem reload.
+  - Defesa adicional de visibilidade no client: apenas `status = 'published'`.
 
 - **Contrato único de Post (MVC-ready)**
   - Normalização: `KCAPI.normalizePost()`

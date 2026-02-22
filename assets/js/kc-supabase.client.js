@@ -16,7 +16,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.1.8.1';
+  const VERSION = '8.1.12.0';
 
   const state = {
     inited: false,
@@ -476,6 +476,94 @@
     return (res && Array.isArray(res.data)) ? res.data : [];
   }
 
+  function noopSubscription() {
+    return { unsubscribe: function () {} };
+  }
+
+  function normalizeModuleFilter(filter) {
+    const f = (filter && typeof filter === 'object' && !Array.isArray(filter))
+      ? (filter.module || filter.modules || filter.modulo || filter.modulos || null)
+      : filter;
+
+    const list = Array.isArray(f) ? f : (f != null ? [f] : []);
+    const set = new Set();
+    list.forEach((v) => {
+      const s = String(v || '').trim().toLowerCase();
+      if (s) set.add(s);
+    });
+    return set;
+  }
+
+  function subscribeNewPosts(options = {}) {
+    const opt = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const { driver } = readEnv();
+    if (driver !== 'supabase') return noopSubscription();
+
+    const client = getClient();
+    if (!client || typeof client.channel !== 'function') return noopSubscription();
+
+    const moduleSet = normalizeModuleFilter(opt.filter || null);
+    const channelName = `posts-feed-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    let channel = null;
+    let unsubscribed = false;
+
+    try {
+      channel = client
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'posts' },
+          (payload) => {
+            const row = (payload && payload.new && typeof payload.new === 'object') ? payload.new : null;
+            if (!row) return;
+
+            // Defesa em profundidade: mesmo com RLS, o feed público só consome published.
+            const status = String(row.status || '').trim().toLowerCase();
+            if (status !== 'published') return;
+
+            if (moduleSet.size) {
+              const mk = String(row.module || row.modulo || '').trim().toLowerCase();
+              if (!mk || !moduleSet.has(mk)) return;
+            }
+
+            try {
+              if (typeof opt.onPost === 'function') opt.onPost({ row, payload });
+            } catch (cbErr) {
+              try {
+                if (typeof opt.onError === 'function') opt.onError(cbErr);
+              } catch (_) {}
+            }
+          }
+        );
+
+      if (typeof channel.subscribe === 'function') {
+        channel.subscribe((status) => {
+          try {
+            if (typeof opt.onStatus === 'function') opt.onStatus(status);
+          } catch (_) {}
+        });
+      }
+    } catch (e) {
+      try {
+        if (typeof opt.onError === 'function') opt.onError(e);
+      } catch (_) {}
+      return noopSubscription();
+    }
+
+    return {
+      unsubscribe: function () {
+        if (unsubscribed) return;
+        unsubscribed = true;
+        try {
+          if (channel && typeof channel.unsubscribe === 'function') channel.unsubscribe();
+        } catch (_) {}
+        try {
+          if (channel && typeof client.removeChannel === 'function') client.removeChannel(channel);
+        } catch (_) {}
+      }
+    };
+  }
+
   function onAuthStateChange(callback) {
     const client = getClient();
     if (!client || !client.auth || typeof client.auth.onAuthStateChange !== 'function') {
@@ -530,7 +618,21 @@
     signUp,
     signOut,
     onAuthStateChange,
+    subscribeNewPosts,
   });
+
+  // Facade dedicada para realtime de feed (evita acoplamento dos controllers ao client direto).
+  try {
+    window.KCRealtime = Object.freeze({
+      VERSION,
+      subscribeNewPosts: function (options) {
+        if (window.KCSupabase && typeof window.KCSupabase.subscribeNewPosts === 'function') {
+          return window.KCSupabase.subscribeNewPosts(options);
+        }
+        return noopSubscription();
+      },
+    });
+  } catch (_) {}
 
   // Boot automático (sem bloquear render)
   try {

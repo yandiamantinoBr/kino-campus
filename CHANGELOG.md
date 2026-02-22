@@ -1,5 +1,18 @@
 # Changelog
 
+## [8.1.12.0] - 2026-02-22
+
+### Added
+- Realtime opcional de feed via `KCSupabase.subscribeNewPosts({ filter, onPost })` e fachada `KCRealtime.subscribeNewPosts`.
+- Banner de buffer no feed (“Novo post disponível”) com botão para inserir cards no topo sem reload.
+- Cleanup explícito em `KCControllers.createFeedPager()` com `destroy()` e unsubscribe no `pagehide`.
+
+### Changed
+- Controller de feed com anti-duplicação reforçada (aliases de ID + buffer IDs) para paginação + realtime.
+- Estilos para banner realtime e highlight temporário de novos cards (`.kc-card--new`), incluindo ajuste para mobile 360px.
+- Bump da versão dos módulos de front para `8.1.12.0` (`kc-env`, `kc-api.client`, `kc-supabase.client`, `kc-auth.ui`).
+- README atualizado com mapa de versão corrente e nota de realtime opcional no feed.
+
 ## [8.1.11.1] - 2026-02-21
 
 ### Added

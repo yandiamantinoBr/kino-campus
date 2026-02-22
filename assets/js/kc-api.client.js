@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.1.8.1';
+  const VERSION = '8.1.12.0';
 
   // -------- Bootstrap de Configuração (KC_ENV) --------
   // Regra de fallback: se kc-env.js não estiver carregado, assume driver local.
