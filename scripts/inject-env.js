@@ -153,37 +153,10 @@ for (const [token, value] of Object.entries(REPLACEMENTS)) {
   content = content.split(token).join(value);
 }
 
-// 5) Adicionar 'egresso.ufg.br' à allowlist de domínios (frontend)
-//    O kc-auth.ui.js verifica AUTH_ALLOWED_DOMAINS ANTES de enviar ao Supabase.
-//    Sem isso, e-mails @egresso.ufg.br são bloqueados no frontend.
-if (!content.includes('egresso.ufg.br')) {
-  // Padrão: AUTH_ALLOWED_DOMAINS: ['ufg.br', 'discente.ufg.br']
-  content = content.replace(
-    /(AUTH_ALLOWED_DOMAINS\s*:\s*\[)([^\]]*)\]/g,
-    (match, prefix, items) => {
-      const trimmed = items.trim();
-      if (trimmed.includes('egresso.ufg.br')) return match;
-      const newItems = trimmed ? `${trimmed}, 'egresso.ufg.br'` : `'egresso.ufg.br'`;
-      return `${prefix}${newItems}]`;
-    }
-  );
-  // Padrão: allowedEmailDomains: ['ufg.br', 'discente.ufg.br']
-  content = content.replace(
-    /(allowedEmailDomains\s*:\s*\[)([^\]]*)\]/g,
-    (match, prefix, items) => {
-      const trimmed = items.trim();
-      if (trimmed.includes('egresso.ufg.br')) return match;
-      const newItems = trimmed ? `${trimmed}, 'egresso.ufg.br'` : `'egresso.ufg.br'`;
-      return `${prefix}${newItems}]`;
-    }
-  );
-}
-
 // ── Verificação ──────────────────────────────────────────────────────────────
 const urlInjected   = content.includes(SUPABASE_URL);
 const keyInjected   = content.includes(SUPABASE_ANON_KEY);
 const stillHasDriverPlaceholder = content.includes('__KC_DRIVER__');
-const hasEgresso    = content.includes('egresso.ufg.br');
 
 if (!urlInjected) {
   console.error('❌ inject-env.js: SUPABASE_URL não foi injetada no kc-env.js.');
@@ -211,6 +184,5 @@ console.log('✅ inject-env.js: kc-env.js atualizado com sucesso!');
 console.log('   SUPABASE_URL      →', SUPABASE_URL);
 console.log('   SUPABASE_ANON_KEY →', keyLogSummary(SUPABASE_ANON_KEY));
 console.log('   driver            →', stillHasDriverPlaceholder ? '⚠️  placeholder __KC_DRIVER__ ainda presente' : '✅ supabase');
-console.log('   egresso.ufg.br    →', hasEgresso ? '✅ adicionado à allowlist' : '⚠️  não encontrado na allowlist');
 console.log('   Arquivo           →', ENV_FILE);
 console.log('');
