@@ -60,6 +60,12 @@ const SUPABASE_ANON_KEY = resolveEnv([
   'REACT_APP_SUPABASE_ANON_KEY',
 ]);
 
+function keyLogSummary(key, prefixLength = 6) {
+  if (!key) return 'detected: no';
+  const safePrefix = key.slice(0, prefixLength);
+  return safePrefix ? `${safePrefix}***` : 'detected: yes';
+}
+
 // ── Validação ───────────────────────────────────────────────────────────────
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('');
@@ -68,7 +74,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('   Variáveis verificadas (todas estão ausentes ou vazias):');
   console.error('   SUPABASE_URL            =', process.env.SUPABASE_URL            || '(vazio)');
   console.error('   NEXT_PUBLIC_SUPABASE_URL =', process.env.NEXT_PUBLIC_SUPABASE_URL || '(vazio)');
-  console.error('   SUPABASE_ANON_KEY        =', process.env.SUPABASE_ANON_KEY        || '(vazio)');
+  console.error('   SUPABASE_ANON_KEY        =', `detected: ${process.env.SUPABASE_ANON_KEY ? 'yes' : 'no'}`);
   console.error('');
   console.error('   Como corrigir:');
   console.error('   1. Configure as variáveis obrigatórias SUPABASE_URL e SUPABASE_ANON_KEY.');
@@ -203,7 +209,7 @@ if (content === original) {
 console.log('');
 console.log('✅ inject-env.js: kc-env.js atualizado com sucesso!');
 console.log('   SUPABASE_URL      →', SUPABASE_URL);
-console.log('   SUPABASE_ANON_KEY →', SUPABASE_ANON_KEY.substring(0, 20) + '...');
+console.log('   SUPABASE_ANON_KEY →', keyLogSummary(SUPABASE_ANON_KEY));
 console.log('   driver            →', stillHasDriverPlaceholder ? '⚠️  placeholder __KC_DRIVER__ ainda presente' : '✅ supabase');
 console.log('   egresso.ufg.br    →', hasEgresso ? '✅ adicionado à allowlist' : '⚠️  não encontrado na allowlist');
 console.log('   Arquivo           →', ENV_FILE);
