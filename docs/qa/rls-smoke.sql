@@ -104,11 +104,11 @@ where id = '<POST_ID_REAL>'::uuid;
 
 -- Ataque simulado (NÃO deve funcionar como usuário comum):
 -- Troque UUID_EXTERNO por um UUID que NÃO seja o uid da sessão autenticada.
-insert into public.profiles (id, name, email)
+insert into public.profiles (id, full_name, email)
 values ('UUID_EXTERNO'::uuid, 'Ataque Smoke', 'ataque-smoke@exemplo.com');
 
 -- Verificação opcional de leitura (se policies permitirem):
-select id, name, email
+select id, full_name, email
 from public.profiles
 where id = 'UUID_EXTERNO'::uuid;
 

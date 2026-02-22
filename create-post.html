@@ -85,14 +85,14 @@
     <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
     <a class="kc-create-btn active" href="create-post.html"><i class="fas fa-plus"></i></a>
     <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i><span>Comprar</span></a>
-    <button class="kc-menu-toggle" onclick="openMobileMenu()"><i class="fas fa-bars"></i><span>Menu</span></button>
+    <button class="kc-menu-toggle" data-kc-mobile-menu="open"><i class="fas fa-bars"></i><span>Menu</span></button>
   </nav>
 
   <!-- Mobile Menu Drawer -->
   <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
     <div class="kc-mobile-menu-header">
       <h3>Menu</h3>
-      <button class="kc-close-menu" onclick="closeMobileMenu()"><i class="fas fa-times"></i></button>
+      <button class="kc-close-menu" data-kc-mobile-menu="close"><i class="fas fa-times"></i></button>
     </div>
     <div class="kc-mobile-menu-content">
       <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
@@ -103,7 +103,7 @@
       <a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
     </div>
   </div>
-  <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+  <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
 
   <script src="assets/js/kc-utils.js"></script>
 <script src="assets/js/kc-env.js"></script>

@@ -12,6 +12,7 @@
   let currentUser = null;
   let currentDb = null;
   let editUI = null;
+  let staticInteractionsBound = false;
 
   function getParam(name) {
     const params = new URLSearchParams(window.location.search || '');
@@ -52,6 +53,76 @@
   function hide(id) {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
+  }
+
+  function toast(message, type, duration) {
+    try {
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, type, duration);
+      }
+    } catch (_) {}
+  }
+
+  function bindStaticInteractions() {
+    if (staticInteractionsBound) return;
+    staticInteractionsBound = true;
+
+    document.body.addEventListener('click', async (event) => {
+      const shareBtn = event.target.closest('[data-kc-share]');
+      if (shareBtn) {
+        event.preventDefault();
+        try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(window.location.href);
+            toast('Link copiado!', 'info', 1800);
+          } else {
+            throw new Error('clipboard_api_unavailable');
+          }
+        } catch (e) {
+          console.error('[KC Product] Falha ao copiar link:', e);
+          toast('Não foi possível copiar o link.', 'error', 2200);
+        }
+        return;
+      }
+
+      const viewProfileBtn = event.target.closest('[data-kc-view-profile]');
+      if (viewProfileBtn) {
+        event.preventDefault();
+        toast('Simulação: perfil ainda não implementado', 'info', 2200);
+        return;
+      }
+
+      const formatBtn = event.target.closest('[data-kc-format]');
+      if (formatBtn) {
+        event.preventDefault();
+        const fmt = String(formatBtn.dataset.kcFormat || '').trim();
+        if (fmt && typeof window.formatText === 'function') {
+          window.formatText(fmt);
+        }
+        return;
+      }
+
+      const submitCommentBtn = event.target.closest('[data-kc-submit-comment]');
+      if (submitCommentBtn) {
+        event.preventDefault();
+        if (typeof window.submitComment === 'function') {
+          window.submitComment();
+        }
+        return;
+      }
+
+      const mobileMenuBtn = event.target.closest('[data-kc-mobile-menu]');
+      if (mobileMenuBtn) {
+        const action = String(mobileMenuBtn.dataset.kcMobileMenu || '').trim().toLowerCase();
+        if (action === 'open' && typeof window.openMobileMenu === 'function') {
+          window.openMobileMenu();
+          return;
+        }
+        if (action === 'close' && typeof window.closeMobileMenu === 'function') {
+          window.closeMobileMenu();
+        }
+      }
+    });
   }
 
   function showNotFound() {
@@ -877,5 +948,8 @@
     return { open, close: closeModal };
   }
 
-  document.addEventListener('DOMContentLoaded', loadPost);
+  document.addEventListener('DOMContentLoaded', () => {
+    bindStaticInteractions();
+    loadPost();
+  });
 })();
