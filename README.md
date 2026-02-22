@@ -34,6 +34,7 @@ Sempre que houver release do front:
 ## 🗃️ Fonte Única de Verdade (Banco)
 
 Para governança de banco no projeto, a **fonte única de verdade** é a esteira SQL oficial do Supabase.
+Não existe caminho operacional por `sql/` na raiz.
 
 Para visão consolidada dos artefatos legados e critérios de remoção, consulte o **Legacy Map** em `docs/legacy/README.md`.
 
@@ -49,8 +50,9 @@ Qualquer mudança crítica de banco (incluindo, mas não limitado a: **auth, `ve
 Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação antiga, experimento):
 
 1. **Mover** o arquivo para `docs/legacy/sql/`.
-2. **Documentar** no `docs/legacy/sql/README.md` o motivo de legado (com referência ao arquivo oficial quando existir).
+2. **Documentar** no `docs/legacy/README.md` o motivo de legado (com referência ao arquivo oficial quando existir).
 3. **Não usar operacionalmente** esse SQL em deploy/setup/update.
+4. **Não recriar** diretório `sql/` na raiz do projeto.
 
 ## ✅ O que esta versão garante
 
