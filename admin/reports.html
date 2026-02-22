@@ -133,7 +133,7 @@
             <i class="fas fa-flag"></i>Triagem de Denúncias
           </h1>
           <div class="kc-admin-filters">
-            <button onclick="KCAdmin.refresh()" title="Recarregar dados">
+            <button type="button" data-action="refresh" title="Recarregar dados">
               <i class="fas fa-sync-alt"></i> Atualizar
             </button>
           </div>
@@ -162,18 +162,5 @@
   <script src="../assets/js/kc-theme.js"></script>
   <script src="../assets/js/controllers/admin-reports.controller.js"></script>
 
-  <script>
-    // Expor refresh para o botão Atualizar (invoca re-render sem recheck de acesso)
-    document.addEventListener('DOMContentLoaded', function() {
-      if (window.KCAdmin) {
-        window.KCAdmin.refresh = function() {
-          const c = document.getElementById('admin-reports-container');
-          if (c) c.innerHTML = '<div style="text-align:center;padding:30px;color:var(--kc-text-dark-secondary);"><i class="fas fa-spinner fa-spin"></i> Carregando…</div>';
-          // renderiza via closure interna do controller
-          if (typeof KCAdmin._render === 'function') KCAdmin._render();
-        };
-      }
-    });
-  </script>
 </body>
 </html>
