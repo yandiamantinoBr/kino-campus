@@ -18,6 +18,23 @@
 const fs   = require('fs');
 const path = require('path');
 
+// ── Contexto de execução (CI vs local) ─────────────────────────────────────
+const isCI = (
+  process.env.CI === 'true' ||
+  process.env.CI === '1' ||
+  process.env.GITHUB_ACTIONS === 'true' ||
+  process.env.GITLAB_CI === 'true' ||
+  process.env.BUILD_ID ||
+  process.env.VERCEL === '1'
+);
+
+const isLocalExecution = !isCI || process.stdout.isTTY;
+
+if (isLocalExecution && process.env.KC_ALLOW_LOCAL_INJECT !== '1') {
+  console.error('❌ Execução local bloqueada. Use conscientemente: KC_ALLOW_LOCAL_INJECT=1 node scripts/inject-env.js');
+  process.exit(1);
+}
+
 // ── Resolução de variáveis (tenta vários nomes alternativos) ──────────────
 // A integração oficial Vercel-Supabase pode usar nomes ligeiramente diferentes
 function resolveEnv(candidates) {
