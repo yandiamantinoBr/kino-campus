@@ -23,16 +23,7 @@
     },
   };
 
-  const fallbackEscapeHtml = (str) => String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-  const escape = (str) => ((window.KCUtils && typeof window.KCUtils.escapeHtml === 'function')
-    ? window.KCUtils.escapeHtml(str)
-    : fallbackEscapeHtml(str));
+  const escape = (str) => window.KCUtils.escapeHtml(str);
 
   function $(sel, root) { return (root || document).querySelector(sel); }
 
