@@ -207,6 +207,49 @@
     return { total, migrated, eligible };
   }
 
+  function sanitizeErrorMessage(raw) {
+    const msg = String(raw == null ? '' : raw)
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    return msg.slice(0, 240);
+  }
+
+  function detectBackupFailureType(err) {
+    const msg = sanitizeErrorMessage(err && err.message ? err.message : err).toLowerCase();
+    if (!msg) return 'unknown';
+    if (msg.includes('quota') || msg.includes('exceeded') || msg.includes('space')) return 'quota_exceeded';
+    if (msg.includes('security') || msg.includes('access is denied') || msg.includes('not available') || msg.includes('disabled')) return 'storage_unavailable';
+    return 'unknown';
+  }
+
+  function compactStack(err) {
+    try {
+      const stack = String((err && err.stack) || '').trim();
+      if (!stack) return null;
+      return stack
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(' | ');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function logStructuredError(payload) {
+    try {
+      const item = (payload && typeof payload === 'object') ? payload : {};
+      console.error('[KinoCampus][MigrateMyPosts]', {
+        code: item.code || 'UNKNOWN',
+        message: sanitizeErrorMessage(item.message || 'Erro não especificado'),
+        backupKey: item.backupKey || null,
+        stack: item.stack || null,
+      });
+    } catch (_) {}
+  }
+
   // ------------- migrate core -------------
 
   async function migrate(opts) {
@@ -250,7 +293,23 @@
       localStorage.setItem(backupKey, JSON.stringify(list));
     } catch (e) {
       window.__KC_MIGRATE_MYPOSTS_RUNNING = false;
-      return { ok: false, code: 'BACKUP_FAILED', message: 'Falha ao criar backup no localStorage.', error: String(e && e.message ? e.message : e) };
+      const sanitizedMessage = sanitizeErrorMessage(e && e.message ? e.message : e);
+      const errorType = detectBackupFailureType(e);
+      logStructuredError({
+        code: 'BACKUP_FAILED',
+        message: sanitizedMessage || 'Falha ao criar backup no localStorage.',
+        backupKey,
+        stack: compactStack(e),
+      });
+      return {
+        ok: false,
+        code: 'BACKUP_FAILED',
+        message: 'Falha ao criar backup no localStorage.',
+        error: {
+          probableType: errorType,
+          originalMessage: sanitizedMessage || 'Erro sem mensagem disponível.',
+        }
+      };
     }
 
     const details = [];
@@ -644,6 +703,13 @@
             modal.progressLabel.textContent = `Concluído: ${res.migratedNow} migrado(s), ${res.failed} falha(s), ${res.skipped} pulado(s) — ${elapsed}s`;
           } else {
             modal.progressLabel.textContent = `Falhou: ${res && res.code ? res.code : 'UNKNOWN'} — ${elapsed}s`;
+            appendResult(modal.list, 'QA: teste fora do modo privado e confirme permissão de armazenamento local.');
+            logStructuredError({
+              code: (res && res.code) || 'UNKNOWN',
+              message: (res && res.message) || 'Falha desconhecida na migração.',
+              backupKey: res && res.backupKey,
+              stack: null,
+            });
           }
 
           // Atualiza banner (agora talvez não tenha mais elegíveis)
