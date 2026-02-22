@@ -98,20 +98,36 @@ where id = '__POST_ID__'::uuid;
 -- O que este teste tenta fazer (ataque simulado):
 --   Inserir profile com id diferente de auth.uid() (forjar identidade).
 -- Resultado esperado (PASS):
---   - INSERT bloqueado por policy de profiles.
+--   - INSERT/UPDATE bloqueado por policy de profiles.
 -- Como interpretar o erro:
---   - “new row violates row-level security policy” ou “permission denied” = PASSOU.
---   - Se inserir profile com id falso = FALHOU (risco crítico).
+--   - “new row violates row-level security policy”,
+--     “permission denied” ou erro de RLS equivalente = PASSOU.
+--   - Se inserir/alterar profile com id de outro usuário = FALHOU (risco crítico).
 
--- Ataque simulado (NÃO deve funcionar como usuário comum):
--- Troque UUID_EXTERNO por um UUID que NÃO seja o uid da sessão autenticada.
+-- [3A] Ataque simulado de INSERT (NÃO deve funcionar como usuário comum):
+-- Usa UUID válido gerado no próprio SQL para evitar falso negativo por cast inválido.
 insert into public.profiles (id, full_name, email)
-values ('UUID_EXTERNO'::uuid, 'Ataque Smoke', 'ataque-smoke@exemplo.com');
+values (gen_random_uuid(), 'Ataque Smoke', 'ataque-smoke@exemplo.com');
+
+-- [3B] Variante guiada com placeholder (quando quiser reproduzir com id conhecido):
+-- 1) Descubra o UID real de OUTRO usuário (ex.: tabela auth.users no painel admin).
+-- 2) Substitua __OTHER_USER_ID__ por esse UUID válido.
+-- 3) Execute em sessão autenticada do usuário A (diferente do dono de __OTHER_USER_ID__).
+-- 4) PASSA se o INSERT/UPDATE for bloqueado por RLS/permissão.
+-- insert into public.profiles (id, full_name, email)
+-- values ('__OTHER_USER_ID__'::uuid, 'Ataque Smoke', 'ataque-smoke@exemplo.com');
+
+-- [3C] Ataque simulado de UPDATE (NÃO deve funcionar como usuário comum):
+-- Tenta alterar campos de um profile cujo id não é auth.uid().
+-- Requer substituir __OTHER_USER_ID__ por UUID válido de outro usuário.
+update public.profiles
+set full_name = 'Ataque Smoke UPDATE'
+where id = '__OTHER_USER_ID__'::uuid;
 
 -- Verificação opcional de leitura (se policies permitirem):
 select id, full_name, email
 from public.profiles
-where id = 'UUID_EXTERNO'::uuid;
+where id = '__OTHER_USER_ID__'::uuid;
 
 -- Alternativa confiável (client autenticado no navegador):
 --   Logue com usuário A e tente inserir profile com id do usuário B via supabase-js.
