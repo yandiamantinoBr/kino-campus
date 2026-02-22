@@ -77,15 +77,14 @@ with target as (
 select * from target;
 
 -- Passo 2: ataque simulado (NÃO deve funcionar em contexto de usuário comum).
--- Substitua __POST_ID__ por um UUID real do passo anterior.
--- Substitua <OUTRO_UUID> por um UUID diferente (qualquer UUID válido).
--- Copie o UUID exatamente como aparece na query de setup (sem < >).
+-- IMPORTANTE: apenas __POST_ID__ precisa ser substituído.
+-- O novo author_id será gerado automaticamente por gen_random_uuid().
 update public.posts
-set author_id = '<OUTRO_UUID>'::uuid
+set author_id = gen_random_uuid()
 where id = '__POST_ID__'::uuid;
 
--- Verificação (apenas leitura):
--- Copie o UUID exatamente como aparece na query de setup (sem < >).
+-- Passo 3: verificação (apenas leitura).
+-- Use o mesmo __POST_ID__ do Passo 2.
 select id, author_id
 from public.posts
 where id = '__POST_ID__'::uuid;
