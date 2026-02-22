@@ -32,17 +32,17 @@
     APP_VERSION: VERSION,
 
     // driver (compat)
-    driver: 'local', // Opções: "local" | "supabase"
-    DATA_DRIVER: 'local',
+    driver: '__KC_DRIVER__', // Opções: "local" | "supabase"
+    DATA_DRIVER: '__KC_DRIVER__',
 
     debug: true,
 
     // Supabase (aliases + bloco)
-    SUPABASE_URL: 'https://placeholder-project.supabase.co',
-    SUPABASE_ANON_KEY: 'eyJhbG...placeholder',
+    SUPABASE_URL: '__KC_SUPABASE_URL__',
+    SUPABASE_ANON_KEY: '__KC_SUPABASE_ANON_KEY__',
     supabase: {
-      url: 'https://placeholder-project.supabase.co',
-      anonKey: 'eyJhbG...placeholder',
+      url: '__KC_SUPABASE_URL__',
+      anonKey: '__KC_SUPABASE_ANON_KEY__',
       storageBucket: 'kino-media',
     },
 
