@@ -25,27 +25,6 @@
           return;
         }
       }
-
-      const voteEl = event.target.closest('[data-kc-vote]');
-      if (voteEl) {
-        const voteType = String(voteEl.dataset.kcVote || '').trim().toLowerCase();
-        if ((voteType === 'hot' || voteType === 'cold') && typeof window.vote === 'function') {
-          window.vote(voteEl, voteType);
-        }
-        return;
-      }
-
-      const mobileEl = event.target.closest('[data-kc-mobile-menu]');
-      if (mobileEl) {
-        const menuAction = String(mobileEl.dataset.kcMobileMenu || '').trim().toLowerCase();
-        if (menuAction === 'open') {
-          if (typeof window.openMobileMenu === 'function') window.openMobileMenu();
-          return;
-        }
-        if (menuAction === 'close') {
-          if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
-        }
-      }
     });
   }
 
