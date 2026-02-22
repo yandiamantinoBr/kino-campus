@@ -1,29 +1,58 @@
 # Report QA — v8.2.0.7 (run1)
 
-- Checklist base: `docs/qa/e2e-checklist.md`
-- Ambiente alvo solicitado: Vercel Preview/Prod com Supabase ativo.
-- Execução: **BLOQUEADA** por ausência de URLs de Preview/Prod e credenciais de teste (usuário comum/admin + acesso ao e-mail para confirmação).
+## Metadados obrigatórios
 
-## Tabela E2E (passos 1 a 9)
+| Campo | Valor |
+|---|---|
+| Ambiente | **Preview/Prod** (execução solicitada), porém **não disponibilizado para validação** |
+| URL base | **N/D** (nenhuma URL Preview/Prod informada) |
+| Data/hora (timezone local) | **2026-02-22 02:56:34 UTC+0000** |
+| Conta usuário comum | **N/D** (credencial não fornecida) |
+| Conta admin | **N/D** (credencial não fornecida) |
+| Status do webhook | **N/D** (não foi possível confirmar ativo/inativo sem acesso ao ambiente) |
+| Caminho de armazenamento das evidências | `docs/qa/evidence/v8.2.0.7-run1/` |
 
-| Passo | Status | URL acessada | Data/hora local | Evidência (path) | Observações |
-|---|---|---|---|---|---|
-| 1) Cadastro | BLOQUEADO | N/D (URL Preview/Prod não informada) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/` | Sem URL publicada e sem conta de teste para iniciar cadastro. |
-| 2) Confirmação de e-mail (callback) | BLOQUEADO | N/D (link de confirmação indisponível) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/` | Dependente do passo 1 + acesso à caixa de e-mail de teste. |
-| 3) Login | BLOQUEADO | N/D (URL Preview/Prod não informada) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/E2E-01-login.png` (não gerado) | Sem URL e sem credenciais validadas. |
-| 4) Criar post (com e sem imagem) | BLOQUEADO | N/D (URL Preview/Prod não informada) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/E2E-02-create-post.png` (não gerado) | Dependente de login funcional em Supabase. |
-| 5) Abrir detalhe do post | BLOQUEADO | N/D (post não criado) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/` | Dependente do passo 4. |
-| 6) Comentar | BLOQUEADO | N/D (detalhe não disponível) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/E2E-03-comment.png` (não gerado) | Dependente dos passos 4 e 5. |
-| 7) Votar (hot/cold) | BLOQUEADO | N/D (post/detalhe não disponível) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/` | Dependente dos passos 4 e 5. |
-| 8) Denunciar post | BLOQUEADO | N/D (post não disponível) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/E2E-04-report.png` (não gerado) | Dependente de login e post acessível. |
-| 9) Acessar Admin e fechar denúncia / moderar | BLOQUEADO | N/D (admin panel inacessível sem URL/credenciais) | 2026-02-22 02:38:13 UTC | `docs/qa/evidence/v8.2.0.7-run1/ADM-01-reports-panel.png` (não gerado) | Sem conta admin de teste e sem denúncia aberta criada no passo 8. |
+## Execução E2E
 
-## Evidências esperadas para esta rodada
+Status consolidado: **BLOQUEADA** por ausência de URL base publicada (Preview/Prod) e ausência de contas de teste (usuário comum + admin).
 
-> Arquivos solicitados (não gerados nesta execução bloqueada):
+| Caso E2E | Resultado | Evidência (arquivo) | Caminho completo | Observações |
+|---|---|---|---|---|
+| E2E-01 — Login | BLOQUEADO | `E2E-01-login.png` | `docs/qa/evidence/v8.2.0.7-run1/E2E-01-login.png` | Sem URL e sem credenciais válidas. |
+| E2E-02 — Criar post | BLOQUEADO | `E2E-02-create-post.png` | `docs/qa/evidence/v8.2.0.7-run1/E2E-02-create-post.png` | Dependente de login funcional. |
+| E2E-03 — Comentar | BLOQUEADO | `E2E-03-comment.png` | `docs/qa/evidence/v8.2.0.7-run1/E2E-03-comment.png` | Dependente de post criado e sessão autenticada. |
+| E2E-04 — Denunciar post | BLOQUEADO | `E2E-04-report.png` | `docs/qa/evidence/v8.2.0.7-run1/E2E-04-report.png` | Dependente de post acessível e usuário autenticado. |
+| ADM-01 — Painel de reports/moderação | BLOQUEADO | `ADM-01-reports-panel.png` | `docs/qa/evidence/v8.2.0.7-run1/ADM-01-reports-panel.png` | Sem conta admin e sem ambiente acessível. |
 
-- `docs/qa/evidence/v8.2.0.7-run1/E2E-01-login.png`
-- `docs/qa/evidence/v8.2.0.7-run1/E2E-02-create-post.png`
-- `docs/qa/evidence/v8.2.0.7-run1/E2E-03-comment.png`
-- `docs/qa/evidence/v8.2.0.7-run1/E2E-04-report.png`
-- `docs/qa/evidence/v8.2.0.7-run1/ADM-01-reports-panel.png`
+## Execução RLS Smoke
+
+Referência de roteiro: `docs/qa/rls-smoke.sql`.
+
+| Teste RLS | Resultado | Evidência (arquivo) | Caminho completo | Referência de print |
+|---|---|---|---|---|
+| RLS-01 — reports anon select | BLOQUEADO | `RLS-01-test1.png` | `docs/qa/evidence/v8.2.0.7-run1/RLS-01-test1.png` | Print planejado para captura de execução do teste 1 |
+| RLS-02 — posts.author_id update | BLOQUEADO | `RLS-02-test2.png` | `docs/qa/evidence/v8.2.0.7-run1/RLS-02-test2.png` | Print planejado para captura de execução do teste 2 |
+| RLS-03 — profiles insert mismatched id | BLOQUEADO | `RLS-03-test3.png` | `docs/qa/evidence/v8.2.0.7-run1/RLS-03-test3.png` | Print planejado para captura de execução do teste 3 |
+
+## Execução de limiar/webhook
+
+**N/A (justificado).**
+
+Não foi possível executar cenários de limiar e webhook, porque o ambiente alvo (Preview/Prod), URL base e credenciais não foram fornecidos nesta rodada. Sem acesso ao fluxo funcional (criação/denúncia/moderação), não há como observar disparo de webhook nem validar status ativo/inativo com evidência executada.
+
+## Lista de bugs
+
+### Bloqueadores
+
+1. **BLOQ-01 — Impossibilidade de execução QA ponta a ponta**  
+   Sem URL de ambiente (Preview/Prod) e sem credenciais (usuário/admin), a rodada não consegue validar regressão funcional nem segurança (RLS).
+
+### Não bloqueadores
+
+- Nenhum bug funcional adicional identificado nesta rodada, pois não houve execução efetiva dos cenários.
+
+## Conclusão
+
+## Apto para 8.2.2.0? **NÃO**
+
+**Justificativa:** a rodada v8.2.0.7-run1 ficou bloqueada em pré-condições essenciais (ambiente, contas e validação de webhook). Sem execução E2E, sem smoke RLS efetivo e sem evidências reais de comportamento em runtime, não há base de qualidade para declarar aptidão da versão 8.2.2.0.
