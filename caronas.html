@@ -54,7 +54,15 @@
         var theme = localStorage.getItem('theme') || 'light';
         document.body.setAttribute('data-theme', theme);
       } catch(e) {}
-      window.location.replace("caronas-feed.html");
+
+      var targetBase = 'caronas-feed.html';
+      var target = targetBase + window.location.search + window.location.hash;
+      var currentPathname = window.location.pathname;
+      var targetPathname = new URL(targetBase, window.location.href).pathname;
+
+      if (currentPathname !== targetPathname) {
+        window.location.replace(target);
+      }
     })();
   </script>
 </body>
