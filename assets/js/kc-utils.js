@@ -748,11 +748,11 @@
         <div class="kc-card__footer">
           <div class="kc-card__interactions">
             <div class="kc-vote-box">
-              <button class="hot" onclick="vote(this, 'hot')">
+              <button class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(id)}">
                 <i class="fas fa-fire"></i>
               </button>
               <span>${escapeHtml(String(Number.isFinite(votos) ? votos : 0))}</span>
-              <button class="cold" onclick="vote(this, 'cold')">
+              <button class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(id)}">
                 <i class="fas fa-snowflake"></i>
               </button>
             </div>

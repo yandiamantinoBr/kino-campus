@@ -145,11 +145,11 @@
 <div class="kc-card__footer">
 <div class="kc-card__interactions">
 <div class="kc-vote-box">
-<button class="hot" onclick="vote(this, 'hot')">
+<button class="hot" data-action="vote-hot">
 <i class="fas fa-fire"></i>
 </button>
 <span>78</span>
-<button class="cold" onclick="vote(this, 'cold')">
+<button class="cold" data-action="vote-cold">
 <i class="fas fa-snowflake"></i>
 </button>
 </div>
@@ -197,11 +197,11 @@
 <div class="kc-card__footer">
 <div class="kc-card__interactions">
 <div class="kc-vote-box">
-<button class="hot" onclick="vote(this, 'hot')">
+<button class="hot" data-action="vote-hot">
 <i class="fas fa-fire"></i>
 </button>
 <span>52</span>
-<button class="cold" onclick="vote(this, 'cold')">
+<button class="cold" data-action="vote-cold">
 <i class="fas fa-snowflake"></i>
 </button>
 </div>
@@ -249,11 +249,11 @@
 <div class="kc-card__footer">
 <div class="kc-card__interactions">
 <div class="kc-vote-box">
-<button class="hot" onclick="vote(this, 'hot')">
+<button class="hot" data-action="vote-hot">
 <i class="fas fa-fire"></i>
 </button>
 <span>64</span>
-<button class="cold" onclick="vote(this, 'cold')">
+<button class="cold" data-action="vote-cold">
 <i class="fas fa-snowflake"></i>
 </button>
 </div>
@@ -300,11 +300,11 @@
 <div class="kc-card__footer">
 <div class="kc-card__interactions">
 <div class="kc-vote-box">
-<button class="hot" onclick="vote(this, 'hot')">
+<button class="hot" data-action="vote-hot">
 <i class="fas fa-fire"></i>
 </button>
 <span>31</span>
-<button class="cold" onclick="vote(this, 'cold')">
+<button class="cold" data-action="vote-cold">
 <i class="fas fa-snowflake"></i>
 </button>
 </div>
@@ -381,7 +381,7 @@
 <i class="fas fa-shopping-bag"></i>
 <span>Comprar</span>
 </a>
-<button class="kc-menu-toggle" onclick="openMobileMenu()">
+<button class="kc-menu-toggle" data-kc-mobile-menu="open">
 <i class="fas fa-bars"></i>
 <span>Menu</span>
 </button>
@@ -390,7 +390,7 @@
 <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
 <div class="kc-mobile-menu-header">
 <h3>Menu</h3>
-<button class="kc-close-menu" onclick="closeMobileMenu()">
+<button class="kc-close-menu" data-kc-mobile-menu="close">
 <i class="fas fa-times"></i>
 </button>
 </div>
@@ -405,7 +405,7 @@
 <a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
 </div>
 </div>
-<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
 <script src="assets/js/kc-utils.js"></script>
 <script src="assets/js/kc-env.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
