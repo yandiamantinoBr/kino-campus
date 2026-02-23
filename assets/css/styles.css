@@ -3155,9 +3155,21 @@ html, body {
 
 @media (max-width: 480px) {
     .kc-modal-overlay { padding: 10px; }
-    .kc-create-modal { border-radius: 20px; }
+    .kc-create-modal {
+        width: 100%;
+        max-width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 20px;
+    }
     .kc-create-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .kc-create-modal__body { padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px)); }
+    .kc-create-modal__body {
+        padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+        max-height: calc(90vh - 86px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 }
 
 /* Feed Tabs Mobile - Scroll horizontal */
@@ -3242,11 +3254,21 @@ html, body {
     }
 
     .kc-hero-banner {
-        min-height: 180px;
+        min-height: clamp(200px, 52vw, 260px);
         padding: 20px 16px 62px;
         text-align: left;
         overflow-wrap: anywhere;
         word-break: break-word;
+    }
+
+    .kc-hero-banner img,
+    .kc-hero-banner picture img,
+    .kc-hero-banner .kc-hero-illustration img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
     }
 
     .kc-hero-content h1 {
