@@ -3454,7 +3454,7 @@ header,
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
   scroll-padding-left: 12px;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
 }
 
 .kc-feed-tabs a {
@@ -3498,7 +3498,7 @@ header,
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
   scroll-padding-left: 12px;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
 }
 
 .kc-ranking-users::-webkit-scrollbar {
@@ -4316,7 +4316,7 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
   scrollbar-width: none;
   scroll-snap-type: x proximity;
   scroll-padding-left: var(--kc-page-gutter);
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
 }
 
 .kc-ranking-users::-webkit-scrollbar { display: none; }
@@ -4369,7 +4369,7 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
     background: var(--kc-background-dark);
     border-bottom: 1px solid var(--kc-border-dark);
     box-shadow: none !important;
-    touch-action: pan-x;
+    touch-action: pan-x pan-y;
   }
 
   .kc-feed-tabs::-webkit-scrollbar { height: 0; display: none; }
