@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -164,3 +165,171 @@
 
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
+  <script src="../assets/js/kc-theme-boot.js"></script>
+  <style>
+    html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
+  </style>
+
+  <title>KinoCampus — Admin: Denúncias</title>
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    .kc-admin-page .kc-main-content { padding-top: 24px; }
+    .kc-admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+
+    .kc-admin-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--kc-border-dark);
+    }
+    .kc-admin-header-bar h1 {
+      font-size: 1.4em;
+      font-weight: 700;
+      margin: 0;
+    }
+    .kc-admin-header-bar h1 i { margin-right: 8px; color: var(--kc-primary-brand); }
+
+    #admin-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px 0;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    #admin-error {
+      display: none;
+      background: rgba(244, 67, 54, 0.12);
+      border: 1px solid rgba(244, 67, 54, 0.35);
+      color: #ef9a9a;
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin-bottom: 24px;
+      font-size: .95em;
+    }
+
+    #admin-content { display: none; }
+
+    .kc-admin-filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .kc-admin-filters select {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark);
+      font-size: .9em;
+      cursor: pointer;
+    }
+    .kc-admin-filters button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      background: var(--kc-primary-brand);
+      color: #fff;
+      font-size: .9em;
+      cursor: pointer;
+    }
+
+    .kc-admin-report-group button:hover { filter: brightness(1.1); }
+    .kc-admin-report-group a:hover { border-color: var(--kc-primary-brand) !important; }
+
+    .kc-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--kc-text-dark-secondary);
+      text-decoration: none;
+      font-size: .9em;
+      margin-bottom: 20px;
+    }
+    .kc-back-link:hover { color: var(--kc-primary-brand); }
+  </style>
+</head>
+<body class="kc-admin-page">
+
+  <!-- Header (compat com o layout existente) -->
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <a href="../index.html" class="kc-logo" style="font-size:1.2em;font-weight:800;text-decoration:none;">
+        <i class="fas fa-graduation-cap" style="margin-right:8px;color:var(--kc-primary-brand);"></i>KinoCampus
+      </a>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span id="admin-greeting" style="font-size:.9em;color:var(--kc-text-dark-secondary);"></span>
+        <a href="moderation.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;">
+          <i class="fas fa-shield-halved"></i> Moderação
+        </a>
+        <a href="../index.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;">
+          <i class="fas fa-arrow-left"></i> Voltar ao site
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <div class="kc-admin-wrapper">
+
+      <div id="admin-loading">
+        <i class="fas fa-spinner fa-spin" style="font-size:1.6em;"></i>
+        <span>Verificando acesso…</span>
+      </div>
+
+      <div id="admin-error" role="alert"></div>
+
+      <div id="admin-content">
+        <div class="kc-admin-header-bar">
+          <h1>
+            <i class="fas fa-flag"></i>Triagem de Denúncias
+          </h1>
+          <div class="kc-admin-filters">
+            <button type="button" data-action="refresh" title="Recarregar dados">
+              <i class="fas fa-sync-alt"></i> Atualizar
+            </button>
+          </div>
+        </div>
+
+        <p style="color:var(--kc-text-dark-secondary);font-size:.9em;margin-bottom:20px;">
+          Posts agrupados por número de denúncias em aberto. Ações disponíveis: fechar denúncias,
+          ocultar post (remove do feed) ou deletar permanentemente.
+          A UI só atualiza após confirmação de persistência no Supabase.
+        </p>
+
+        <div id="admin-reports-container"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Scripts (mesma ordem dos outros módulos) -->
+  <script src="../assets/js/kc-utils.js"></script>
+  <script src="../assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../assets/js/kc-supabase.client.js"></script>
+  <script src="../assets/js/kc-api.client.js"></script>
+  <script src="../assets/js/kc-profiles.client.js"></script>
+  <script src="../assets/js/kc-auth.ui.js"></script>
+  <script src="../assets/js/kc-theme.js"></script>
+  <script src="../assets/js/controllers/admin-reports.controller.js"></script>
+
+</body>
+</html>
+>>>>>>> Stashed changes
