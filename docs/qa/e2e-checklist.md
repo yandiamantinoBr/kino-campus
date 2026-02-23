@@ -1,9 +1,16 @@
-# E2E Checklist (Kino Campus) — V8.1.8.4
+# E2E Checklist (Kino Campus) — V8.2.2.0
 
 ## Visão geral
 Este guia é um passo a passo para validar o fluxo completo do Kino Campus do início ao fim (E2E = “teste de ponta a ponta”).
-
 Objetivo: qualquer pessoa, mesmo sem experiência técnica, conseguir marcar se **passou** ou **não passou**, com prova (print/log).
+
+## Ambientes (preencher com URL REAL do Vercel)
+- URL de produção (Vercel): `__VERCEL_PROD_URL__`
+- URL de preview/homologação (Vercel): `__VERCEL_PREVIEW_URL__`
+
+> Regra (sem suposições):
+> - Descobrir a(s) URL(s) no próprio repositório (ex.: README, docs, vercel.json),
+>   ou então deixar como placeholder explicitamente, mas **NÃO inventar**.
 
 ### Termos rápidos (em linguagem simples)
 - **Feed**: lista principal de posts.
@@ -17,8 +24,8 @@ Objetivo: qualquer pessoa, mesmo sem experiência técnica, conseguir marcar se 
 Antes de começar, confirme:
 
 1. **Ambiente**
-   - URL de produção: `https://SEU-DOMINIO-VERCEL` (preencher)
-   - URL de preview/homologação: `https://SEU-PREVIEW-VERCEL` (preencher)
+   - URL de produção: `__VERCEL_PROD_URL__` (preencher)
+   - URL de preview/homologação: `__VERCEL_PREVIEW_URL__` (preencher)
 2. **Contas de teste**
    - 1 conta comum (usuário normal)
    - 1 conta admin (se já existir no ambiente)
@@ -234,9 +241,9 @@ Antes de começar, confirme:
 ## Tabela de registro final
 Preencha ao final da rodada de testes:
 
-| Data | Ambiente | Passou/Não passou | Observações | Links/prints |
-|---|---|---|---|---|
-| AAAA-MM-DD | Produção/Preview | Passou ou Não passou | Resumo curto do que aconteceu | URLs de pasta, prints e logs |
+| Data | Ambiente | Passou/Não passou | Observações | Links/prints | Commit testado |
+|---|---|---|---|---|---|
+| AAAA-MM-DD | Produção/Preview | Passou ou Não passou | Resumo curto do que aconteceu | URLs de pasta, prints e logs | V8.2.2.0 |
 
 ---
 
