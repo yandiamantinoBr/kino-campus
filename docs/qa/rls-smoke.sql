@@ -3,71 +3,81 @@
 -- Arquivo: docs/qa/rls-smoke.sql
 -- =========================================================
 -- Onde rodar:
---   - Supabase Dashboard > SQL Editor
+-- - Supabase Dashboard > SQL Editor
 --
 -- Contexto de role (importante):
---   - SQL Editor normalmente roda com privilégios altos (owner/service role),
---     então pode NÃO refletir 100% o comportamento de anon/authenticated.
---   - Por isso, cada teste abaixo inclui alternativa confiável usando:
---       (a) client no navegador (sessão real), ou
---       (b) REST com anon key (somente chave pública anon).
+-- - SQL Editor normalmente roda com privilégios altos (owner/service role),
+--   então pode NÃO refletir 100% o comportamento de anon/authenticated.
+-- - Por isso, quando houver alternativa via REST (anon key), prefira ela.
 --
 -- Regra de ouro para interpretar:
---   - PASSA quando ataque é bloqueado por erro de permissão/RLS,
---     OU retorna vazio quando a policy esconde dados.
+-- - PASSA quando ataque é bloqueado por erro de permissão/RLS,
+--   OU retorna vazio quando a policy esconde dados.
 -- =========================================================
 
--- [SETUP] como localizar um post_id real
--- O que este bloco faz:
---   Busca os 5 posts mais recentes para usar em testes posteriores, sem inventar dado.
--- Resultado esperado:
---   Retorna até 5 linhas com id (ou vazio, caso não exista post).
--- Como interpretar:
---   - Se vazio: crie pelo menos 1 post no app e rode de novo.
-select id, title, author_id, created_at
+
+-- =========================================================
+-- [SETUP A] Como localizar um __POST_ID__ real (sem inventar dado)
+-- Objetivo: pegar IDs reais para usar nos testes.
+-- Esperado: até 5 linhas (ou vazio se não houver posts).
+-- Se vier vazio: crie ao menos 1 post no app e rode de novo.
+-- =========================================================
+select
+  id,
+  title,
+  author_id,
+  created_at
 from public.posts
 order by created_at desc
 limit 5;
 
 
--- [TEST 1] reports anon select
--- O que este teste tenta fazer (ataque simulado):
---   Simular leitura indevida de denúncias por usuário anônimo.
--- Resultado esperado (PASS):
---   - Erro de permissão/RLS, OU
---   - retorno vazio (nenhuma linha), dependendo da policy aplicada.
--- Como interpretar o erro:
---   - “permission denied” / “RLS violation” = política bloqueou (PASSOU).
---   - Se retornar dados de denúncias para não-admin = FALHOU (risco alto).
+-- =========================================================
+-- [SETUP B] Como localizar um __OTHER_PROFILE_ID__ real (sem inventar dado)
+-- Objetivo: pegar IDs reais de profiles para usar no Test 3.
+-- Importante: escolha um ID de OUTRO usuário (não o seu).
+-- Esperado: até 5 linhas (ou vazio se não houver profiles).
+-- =========================================================
+select
+  id,
+  full_name
+from public.profiles
+limit 5;
 
--- Tentativa direta no SQL Editor (pode não reproduzir anon por limitação de contexto):
-select id, post_id, reporter_id, reason, status, created_at
+
+-- =========================================================
+-- [TEST 1] reports — leitura por anon (ataque simulado)
+-- O que tenta: ler denúncias (reports) sem permissão.
+-- PASSA se: erro de permissão/RLS OU retorno vazio ([])
+-- FALHA se: retornar dados sensíveis para não-admin/anon.
+-- =========================================================
+
+-- Tentativa direta no SQL Editor (pode não reproduzir "anon" por ser owner):
+select
+  id, post_id, reporter_id, reason, status, created_at
 from public.reports
 limit 20;
 
--- Alternativa confiável A (REST com anon key pública):
--- 1) No terminal local (não coloque service_role):
---    curl -s \
---      -H "apikey: <SUPABASE_ANON_KEY>" \
---      -H "Authorization: Bearer <SUPABASE_ANON_KEY>" \
---      "https://<PROJECT_REF>.supabase.co/rest/v1/reports?select=id,post_id,reason,status&limit=20"
--- 2) PASSA se vier [] (vazio) ou erro de permissão.
-
--- Alternativa confiável B (navegador sem login):
---   Abra app em aba anônima, sem sessão, e tente fluxo que consultaria reports.
---   PASSA se não houver exposição de lista de denúncias.
+-- Alternativa confiável (REST com anon key pública):
+-- curl -s \
+--  -H "apikey: <SUPABASE_ANON_KEY>" \
+--  -H "Authorization: Bearer <SUPABASE_ANON_KEY>" \
+--  "https://<PROJECT_REF>.supabase.co/rest/v1/reports?select=id,post_id,reason,status&limit=20"
+--
+-- PASSA se vier [] (vazio) ou erro de permissão.
 
 
--- [TEST 2] posts.author_id update
--- O que este teste tenta fazer (ataque simulado):
---   Trocar o dono de um post alterando author_id manualmente.
--- Resultado esperado (PASS):
---   - UPDATE bloqueado por permissão/RLS/REVOKE de coluna.
--- Como interpretar o erro:
---   - Erro citando column-level privilege, RLS, ou permission denied = PASSOU.
---   - Se UPDATE efetivar e mudar author_id = FALHOU (risco crítico).
+-- =========================================================
+-- [TEST 2] posts.author_id UPDATE (ataque simulado)
+-- O que tenta: trocar o dono do post alterando author_id manualmente.
+-- PASSA se: UPDATE bloqueado por RLS/permissão/REVOKE de coluna.
+-- FALHA se: UPDATE efetivar e mudar author_id.
+--
+-- Usa placeholder: __POST_ID__
+-- =========================================================
 
--- Passo 1: pegue um alvo real (copie o id retornado).
+-- (2A) Confira um alvo real:
+-- Copie um id real da lista do SETUP A e cole no placeholder do UPDATE abaixo.
 with target as (
   select id, author_id
   from public.posts
@@ -76,77 +86,43 @@ with target as (
 )
 select * from target;
 
--- Passo 2: ataque simulado (NÃO deve funcionar em contexto de usuário comum).
--- IMPORTANTE: apenas __POST_ID__ precisa ser substituído.
--- O novo author_id será gerado automaticamente por gen_random_uuid().
+-- (2B) Ataque simulado (NÃO deve funcionar para usuário comum):
+-- Substitua __POST_ID__ pelo id real do post.
 update public.posts
 set author_id = gen_random_uuid()
 where id = '__POST_ID__'::uuid;
 
--- Passo 3: verificação (apenas leitura).
--- Use o mesmo __POST_ID__ do Passo 2.
+-- (2C) Verificação:
 select id, author_id
 from public.posts
 where id = '__POST_ID__'::uuid;
 
--- Alternativa confiável (sessão real authenticated no navegador):
---   Com usuário comum logado, tente ação equivalente via client/devtools (sem endpoint admin).
---   PASSA se receber erro e author_id permanecer igual.
 
+-- =========================================================
+-- [TEST 3] profiles — UPDATE em perfil de outro usuário (ataque simulado)
+-- O que tenta: alterar full_name de um profile que NÃO é do usuário logado.
+-- PASSA se: UPDATE bloqueado por RLS/permissão.
+-- FALHA se: UPDATE efetivar em perfil de outro usuário.
+--
+-- Usa placeholder: __OTHER_PROFILE_ID__
+-- =========================================================
 
--- [TEST 3] profiles insert mismatched id
--- O que este teste tenta fazer (ataque simulado):
---   Inserir profile com id diferente de auth.uid() (forjar identidade).
--- Resultado esperado (PASS):
---   - INSERT/UPDATE bloqueado por policy de profiles.
--- Como interpretar o erro:
---   - “new row violates row-level security policy”,
---     “permission denied” ou erro de RLS equivalente = PASSOU.
---   - Se inserir/alterar profile com id de outro usuário = FALHOU (risco crítico).
-
--- [3A] Ataque simulado de INSERT (NÃO deve funcionar como usuário comum):
--- V8.2.2.0: usa UUID dinâmico para evitar colisão de chave primária (erro 23505).
--- Usa UUID válido gerado no próprio SQL para evitar falso negativo por cast inválido.
-insert into public.profiles (id, full_name, email)
-values (gen_random_uuid(), 'Ataque Smoke', 'ataque-smoke@exemplo.com');
-
--- [3B] Variante guiada com placeholder (quando quiser reproduzir com id conhecido):
--- 1) Descubra o UID real de OUTRO usuário (ex.: tabela auth.users no painel admin).
--- 2) Substitua __OTHER_USER_ID__ por esse UUID válido.
--- 3) Execute em sessão autenticada do usuário A (diferente do dono de __OTHER_USER_ID__).
--- 4) PASSA se o INSERT/UPDATE for bloqueado por RLS/permissão.
--- insert into public.profiles (id, full_name, email)
--- values ('__OTHER_USER_ID__'::uuid, 'Ataque Smoke', 'ataque-smoke@exemplo.com');
-
--- [3C] Ataque simulado de UPDATE (NÃO deve funcionar como usuário comum):
--- Tenta alterar campos de um profile cujo id não é auth.uid().
--- Requer substituir __OTHER_USER_ID__ por UUID válido de outro usuário.
+-- (3A) Ataque simulado:
+-- Substitua __OTHER_PROFILE_ID__ por um UUID real de OUTRO profile (SETUP B).
 update public.profiles
-set full_name = 'Ataque Smoke UPDATE'
-where id = '__OTHER_USER_ID__'::uuid;
+set full_name = 'Ataque Smoke UPDATE (V8.2.2.0)'
+where id = '__OTHER_PROFILE_ID__'::uuid;
 
--- Verificação opcional de leitura (se policies permitirem):
-select id, full_name, email
+-- (3B) Verificação (opcional):
+select id, full_name
 from public.profiles
-where id = '__OTHER_USER_ID__'::uuid;
-
--- Alternativa confiável (client autenticado no navegador):
---   Logue com usuário A e tente inserir profile com id do usuário B via supabase-js.
---   PASSA se for bloqueado por RLS.
+where id = '__OTHER_PROFILE_ID__'::uuid;
 
 
+-- =========================================================
 -- [NOTES] diferenças entre “erro” e “retornar vazio”
 -- - “Erro” geralmente indica bloqueio explícito por permissão/policy.
--- - “Retornar vazio” pode indicar policy de SELECT que esconde linhas.
--- - Para segurança de leitura de reports, ambos podem ser aceitáveis,
---   desde que dados sensíveis não sejam expostos.
--- - Classificação prática:
---    PASSA: erro de permissão OU retorno vazio.
---    FALHA: dados sensíveis retornados para perfil não autorizado.
-
-
--- [EVIDENCE] como copiar prints e logs de erro do SQL Editor
--- 1) Tire print da query executada + resultado.
--- 2) Se houver erro, tire print da mensagem completa.
--- 3) Salve data/hora aproximada e ambiente (prod/preview).
--- 4) Registre no relatório QA: teste, resultado (PASSA/FALHA), evidência.
+-- - “Vazio” pode indicar policy de SELECT que esconde linhas.
+-- - PASSA: erro de permissão OU retorno vazio (quando aplicável).
+-- - FALHA: dados sensíveis retornados para perfil não autorizado.
+-- =========================================================
