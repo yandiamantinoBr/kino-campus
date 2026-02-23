@@ -102,29 +102,10 @@
     };
   }
 
-  const CREATE_POST_STEP_ALIASES = Object.freeze({
-    AUTH: 'AUTH_SESSION',
-    PAYLOAD: 'VALIDATE_FORM',
-    PROFILE_SYNC: 'PROFILE_SYNC',
-    POST_INSERT: 'INSERT_POST',
-    STORAGE_UPLOAD: 'UPLOAD_STORAGE',
-    POST_MEDIA_INSERT: 'INSERT_POST_MEDIA',
-    POST_FETCH: 'FETCH_CREATED_POST',
-    EXCEPTION: 'EXCEPTION',
-  });
-
-  function normalizeCreatePostStep(stage) {
-    const raw = String(stage || 'EXCEPTION').trim().toUpperCase();
-    if (!raw) return 'EXCEPTION';
-    return CREATE_POST_STEP_ALIASES[raw] || raw;
-  }
-
   function setLastCreatePostError(stage, err, context) {
     const normalized = normalizeErrorForDiagnostics(err);
-    const step = normalizeCreatePostStep(stage);
     const payload = {
-      stage: step,
-      step,
+      stage: String(stage || 'EXCEPTION'),
       message: normalized.message,
       code: normalized.code,
       details: normalized.details,
@@ -134,11 +115,6 @@
     };
 
     lastCreatePostError = Object.freeze(payload);
-    console.error('[KC][CREATE_POST]', {
-      step: payload.step,
-      error: normalized,
-      data: payload.context,
-    });
     console.error('[KCAPI][Supabase] createPost falhou:', lastCreatePostError);
     return lastCreatePostError;
   }
@@ -1482,22 +1458,16 @@
 
     const client = getSupabaseClient();
     if (!client) {
-      setLastCreatePostError('AUTH_SESSION', {
+      setLastCreatePostError('AUTH', {
         message: 'Supabase client não disponível para createPost.',
         code: 'SUPABASE_CLIENT_MISSING',
       }, { driver: ENV.driver });
       return null;
     }
 
-    let user = null;
-    try {
-      user = await supabaseGetCurrentUser();
-    } catch (e) {
-      setLastCreatePostError('AUTH_SESSION', e, { driver: ENV.driver });
-      return null;
-    }
+    const user = await supabaseGetCurrentUser();
     if (!user) {
-      setLastCreatePostError('AUTH_SESSION', {
+      setLastCreatePostError('AUTH', {
         message: 'Usuário não autenticado para createPost.',
         code: 'NOT_AUTHENTICATED',
       }, { driver: ENV.driver });
@@ -1507,30 +1477,22 @@
     const parsed = normalizeCreatePayload(data);
     const payloadSummary = summarizeCreatePayloadForDiagnostics(parsed);
     if (!parsed.title || !parsed.description || !parsed.moduleDB) {
-      setLastCreatePostError('VALIDATE_FORM', {
+      setLastCreatePostError('PAYLOAD', {
         message: 'Payload de createPost incompleto (título/descrição/módulo).',
         code: 'INVALID_CREATE_PAYLOAD',
       }, payloadSummary);
       return null;
     }
 
-    let profileSync = null;
-    try {
-      profileSync = await ensureSupabaseProfileForCreate(client, user);
-    } catch (e) {
-      setLastCreatePostError('PROFILE_SYNC', e, {
-        userId: user.id,
-        payload: payloadSummary,
-      });
-      return null;
-    }
+    const profileSync = await ensureSupabaseProfileForCreate(client, user);
     if (!profileSync.ok) {
       setLastCreatePostError('PROFILE_SYNC', profileSync.error, {
         userId: user.id,
-        payload: payloadSummary,
       });
       return null;
     }
+
+    try {
 
     // 1) Insere post primeiro (para obter postId) e habilitar path controlado no Storage
     const createdAt = clampCreatedAtISO();
@@ -1559,34 +1521,26 @@
 
     // 2) INSERT posts (gera UUID)
     let postId = null;
-    try {
-      const ins = await client
-        .from('posts')
-        .insert(insertPayload)
-        .select('id')
-        .maybeSingle();
+    const ins = await client
+      .from('posts')
+      .insert(insertPayload)
+      .select('id')
+      .maybeSingle();
 
-      if (ins && ins.error) {
-        setLastCreatePostError('INSERT_POST', ins.error, {
-          userId: user.id,
-          payload: payloadSummary,
-        });
-        return null;
-      }
+    if (ins && ins.error) {
+      setLastCreatePostError('POST_INSERT', ins.error, {
+        userId: user.id,
+        payload: payloadSummary,
+      });
+      return null;
+    }
 
-      postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
-      if (!postId) {
-        setLastCreatePostError('INSERT_POST', {
-          message: 'INSERT em posts não retornou id.',
-          code: 'POST_INSERT_NO_ID',
-        }, {
-          userId: user.id,
-          payload: payloadSummary,
-        });
-        return null;
-      }
-    } catch (e) {
-      setLastCreatePostError('INSERT_POST', e, {
+    postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
+    if (!postId) {
+      setLastCreatePostError('POST_INSERT', {
+        message: 'INSERT em posts não retornou id.',
+        code: 'POST_INSERT_NO_ID',
+      }, {
         userId: user.id,
         payload: payloadSummary,
       });
@@ -1594,77 +1548,53 @@
     }
 
     // 3) Upload das imagens (se houver) com path controlado (post-media/{userId}/{postId}/...)
-    let uploaded = [];
-    try {
-      const uploadResult = await uploadImagesToSupabaseStorage(client, parsed.images, { userId: user.id, postId });
-      if (!uploadResult || !uploadResult.ok) {
-        await rollbackCreatedPost(postId);
-        const uploadErr = uploadResult ? uploadResult.error : null;
-        setLastCreatePostError('UPLOAD_STORAGE', uploadErr, {
-          postId,
-          userId: user.id,
-          imagesCount: Array.isArray(parsed.images) ? parsed.images.length : 0,
-          bucket: uploadErr && uploadErr.bucket ? String(uploadErr.bucket) : null,
-          path: uploadErr && uploadErr.path ? String(uploadErr.path) : null,
-          status: uploadErr && uploadErr.status ? uploadErr.status : null,
-        });
-        return null;
-      }
-      uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
-    } catch (e) {
+    const uploadResult = await uploadImagesToSupabaseStorage(client, parsed.images, { userId: user.id, postId });
+    if (!uploadResult || !uploadResult.ok) {
       await rollbackCreatedPost(postId);
-      setLastCreatePostError('UPLOAD_STORAGE', e, {
+      setLastCreatePostError('STORAGE_UPLOAD', uploadResult ? uploadResult.error : null, {
         postId,
         userId: user.id,
         imagesCount: Array.isArray(parsed.images) ? parsed.images.length : 0,
       });
       return null;
     }
+    const uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
 
     // 4) Insere mídias (post_media) com capa + ordem
     if (Array.isArray(uploaded) && uploaded.length) {
-      try {
-        const mediaRowsFull = uploaded
-          .filter((m) => m && m.url)
-          .map((m, idx) => ({
-            post_id: postId,
-            url: String(m.url),
-            is_cover: idx === 0, // regra: capa = 1ª imagem ordenada
-            sort_order: Number.isFinite(m.sort_order) ? m.sort_order : idx,
-          }));
+      const mediaRowsFull = uploaded
+        .filter((m) => m && m.url)
+        .map((m, idx) => ({
+          post_id: postId,
+          url: String(m.url),
+          is_cover: idx === 0, // regra: capa = 1ª imagem ordenada
+          sort_order: Number.isFinite(m.sort_order) ? m.sort_order : idx,
+        }));
 
-        // Tenta com sort_order (V8.1.5.1); fallback se schema ainda não tiver coluna.
-        let mr = await client.from('post_media').insert(mediaRowsFull);
-        if (mr && mr.error) {
-          const msg = String(mr.error.message || '').toLowerCase();
-          if (msg.includes('sort_order')) {
-            const mediaRowsCompat = mediaRowsFull.map(({ sort_order, ...rest }) => rest);
-            mr = await client.from('post_media').insert(mediaRowsCompat);
-          }
+      // Tenta com sort_order (V8.1.5.1); fallback se schema ainda não tiver coluna.
+      let mr = await client.from('post_media').insert(mediaRowsFull);
+      if (mr && mr.error) {
+        const msg = String(mr.error.message || '').toLowerCase();
+        if (msg.includes('sort_order')) {
+          const mediaRowsCompat = mediaRowsFull.map(({ sort_order, ...rest }) => rest);
+          mr = await client.from('post_media').insert(mediaRowsCompat);
         }
+      }
 
-        if (mr && mr.error) {
-          setLastCreatePostError('INSERT_POST_MEDIA', mr.error, {
-            postId,
-            mediaCount: mediaRowsFull.length,
-          });
-          // não apaga post automaticamente (pode ser útil depurar), mas registra dívida
-          return null;
-        }
-      } catch (e) {
-        setLastCreatePostError('INSERT_POST_MEDIA', e, {
+      if (mr && mr.error) {
+        setLastCreatePostError('POST_MEDIA_INSERT', mr.error, {
           postId,
-          mediaCount: uploaded.length,
+          mediaCount: mediaRowsFull.length,
         });
+        // não apaga post automaticamente (pode ser útil depurar), mas registra dívida
         return null;
       }
     }
 
     // 5) Rebusca completo (com JOINs) e normaliza no contrato do modo local (com JOINs) e normaliza no contrato do modo local
-    try {
       const mapped = await supabaseGetPostById(postId);
       if (!mapped) {
-        setLastCreatePostError('FETCH_CREATED_POST', {
+        setLastCreatePostError('POST_FETCH', {
           message: 'Post criado, mas a leitura final falhou.',
           code: 'POST_FETCH_EMPTY',
         }, { postId });
@@ -1679,8 +1609,7 @@
       clearLastCreatePostError();
       return normalizePost(raw);
     } catch (e) {
-      setLastCreatePostError('FETCH_CREATED_POST', e, {
-        postId,
+      setLastCreatePostError('EXCEPTION', e, {
         userId: user.id,
         payload: payloadSummary,
       });
