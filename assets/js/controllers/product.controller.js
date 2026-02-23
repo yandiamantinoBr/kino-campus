@@ -68,6 +68,27 @@
     staticInteractionsBound = true;
 
     document.body.addEventListener('click', async (event) => {
+      const actionTrigger = event.target.closest('[data-action]');
+      const action = actionTrigger
+        ? String(actionTrigger.dataset.action || '').trim().toLowerCase()
+        : '';
+
+      if (action === 'share-post') {
+        console.log('[RC-8220][L1] Botão clicado: share-post');
+      } else if (action === 'report-post') {
+        console.log('[RC-8220][L1] Botão clicado: report-post');
+      } else if (action === 'submit-comment') {
+        console.log('[RC-8220][L1] Botão clicado: submit-comment');
+      }
+
+      const commentLikeBtn = event.target.closest('.kc-like-comment-btn');
+      if (commentLikeBtn) {
+        console.log('[RC-8220][L1] Botão clicado: comment-like', {
+          postId: String(commentLikeBtn.dataset.postId || ''),
+          commentId: String(commentLikeBtn.dataset.commentId || ''),
+        });
+      }
+
       const shareBtn = event.target.closest('[data-kc-share]');
       if (shareBtn) {
         event.preventDefault();
@@ -368,11 +389,17 @@
     const icon = cta.iconClass || 'fas fa-paper-plane';
 
     btn.innerHTML = `<i class="${esc(icon)}"></i> ${esc(label)}`;
-    btn.onclick = () => {
-      if (typeof window.showToast === 'function') {
-        window.showToast('Simulação: ação "' + label + '"', 'info', 2200);
-      }
-    };
+    btn.dataset.kcCtaLabel = label;
+
+    if (btn.dataset.kcCtaBound !== '1') {
+      btn.dataset.kcCtaBound = '1';
+      btn.addEventListener('click', () => {
+        const currentLabel = String(btn.dataset.kcCtaLabel || 'Entrar em contato');
+        if (typeof window.showToast === 'function') {
+          window.showToast('Simulação: ação "' + currentLabel + '"', 'info', 2200);
+        }
+      });
+    }
   }
 
   function setRelated(db, post) {
@@ -401,7 +428,9 @@
     related.slice(0, 4).forEach(a => {
       const card = document.createElement('div');
       card.className = 'kc-related-card';
-      card.onclick = () => window.location.href = 'product.html?id=' + encodeURIComponent(a.id);
+      card.addEventListener('click', () => {
+        window.location.href = 'product.html?id=' + encodeURIComponent(a.id);
+      });
 
       const price = (typeof a.preco === 'number')
         ? (a.preco === 0 ? 'Gratuito' : formatCurrency(a.preco))

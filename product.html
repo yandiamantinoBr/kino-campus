@@ -171,10 +171,16 @@
             <button class="kc-btn-primary" id="primaryCta">
               <i class="fas fa-paper-plane"></i> Entrar em contato
             </button>
-            <button class="kc-btn-secondary" type="button" data-kc-share="link">
+            <button
+              class="kc-btn-secondary"
+              id="shareButton"
+              type="button"
+              data-kc-share="link"
+              data-action="share-post"
+            >
               <i class="fas fa-share-alt"></i> Compartilhar
             </button>
-            <button class="kc-btn-secondary" id="reportButton" type="button">
+            <button class="kc-btn-secondary" id="reportButton" type="button" data-action="report-post">
               <i class="fas fa-flag"></i> Denunciar
             </button>
             <a class="kc-btn-secondary" href="create-post.html" style="text-decoration:none;">
@@ -215,7 +221,13 @@
                 <button type="button" data-kc-format="underline" title="Sublinhado"><i class="fas fa-underline"></i></button>
                 <button type="button" data-kc-format="strikethrough" title="Tachado"><i class="fas fa-strikethrough"></i></button>
                 <div style="flex: 1;"></div>
-                <button type="button" data-kc-submit-comment="1" style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">
+                <button
+                  id="submitCommentButton"
+                  type="button"
+                  data-kc-submit-comment="1"
+                  data-action="submit-comment"
+                  style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;"
+                >
                   <i class="fas fa-paper-plane"></i> Enviar
                 </button>
               </div>
