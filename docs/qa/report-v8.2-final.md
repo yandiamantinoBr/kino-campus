@@ -61,6 +61,8 @@ Status: PASSA
 
 ## 3. Evidencias de alteracao
 
+Execução detalhada desta rodada: `docs/qa/report-v8.2.2.0-run1.md`.
+
 Arquivos-chave atualizados na V8.2.2.0:
 - `vercel.json`
 - `product.html`
