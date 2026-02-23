@@ -1674,24 +1674,6 @@ function kcCloseCreatePostModal() {
   }
 }
 
-function kcResolveCreatePostStep(errObj) {
-  if (!errObj || typeof errObj !== 'object') return 'UNKNOWN';
-  const step = String(errObj.step || errObj.stage || '').trim().toUpperCase();
-  return step || 'UNKNOWN';
-}
-
-function kcBuildCreatePostFeedback(createError, diagnostic) {
-  const step = kcResolveCreatePostStep(diagnostic || createError);
-  const diagnosticMessage = (diagnostic && diagnostic.message)
-    ? String(diagnostic.message)
-    : '';
-  const baseMessage = (createError && createError.message)
-    ? String(createError.message)
-    : (diagnosticMessage || 'Não foi possível publicar agora.');
-  if (!step || step === 'UNKNOWN') return baseMessage;
-  return `Falha no passo ${step}. ${baseMessage}`;
-}
-
 async function kcHandleCreateSubmit() {
   kcCaptureCreateValues();
   const schema = kcGetSchema(kcCreateState.moduleKey);
@@ -1845,16 +1827,7 @@ async function kcHandleCreateSubmit() {
         post = null;
       }
     } catch (err) {
-      console.error('[KC][CREATE_POST]', {
-        step: 'EXCEPTION',
-        error: err,
-        data: {
-          module: kcCreateState.moduleKey,
-          titleLength: title.length,
-          descriptionLength: desc.length,
-          imagesCount: imagens.length,
-        },
-      });
+      console.error('[KinoCampus] Exceção ao criar publicação:', err);
       createError = {
         code: 'CREATE_POST_EXCEPTION',
         message: (err && err.message) ? String(err.message) : 'Erro inesperado ao publicar.',
@@ -1863,25 +1836,15 @@ async function kcHandleCreateSubmit() {
     }
 
     if (!post) {
-      let diagnostic = null;
       try {
         if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
-          diagnostic = window.KCAPI.getLastCreatePostError();
-          if (diagnostic) {
-            console.error('[KC][CREATE_POST]', {
-              step: kcResolveCreatePostStep(diagnostic),
-              error: diagnostic,
-              data: {
-                module: kcCreateState.moduleKey,
-                titleLength: title.length,
-                descriptionLength: desc.length,
-                imagesCount: imagens.length,
-              },
-            });
-          }
+          const createErr = window.KCAPI.getLastCreatePostError();
+          console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
         }
       } catch (_) {}
-      const feedbackMessage = kcBuildCreatePostFeedback(createError, diagnostic);
+      const feedbackMessage = (createError && createError.message)
+        ? String(createError.message)
+        : 'Não foi possível publicar agora. Tente novamente.';
       showToast(feedbackMessage, 'error', 2800);
       return;
     }
