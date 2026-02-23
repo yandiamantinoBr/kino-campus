@@ -1,8 +1,8 @@
-# Kino Campus — Protótipo WEB (V8.2.0.0) — Cutover de Saneamento & QA
+# Kino Campus — Protótipo WEB (V8.2.2.0) — RC Cleanroom (LOTE 1)
 
 Este repositório é o **protótipo web offline-first** do **Kino Campus** (plataforma universitária por módulos), agora com **integração Supabase-first** (Postgres + Auth + Storage) na linha **V8.2.x**.
 
-A **V8.2.0.0** marca o cutover de saneamento cleanroom + QA com menor risco de regressão, preservando o runtime oficial como **front estático + Supabase** (sem backend Node ativo no deploy). Nesta microentrega, foi aplicado apenas o alinhamento de versão única dos módulos JS de front (8.2.0.0), evitando drift entre clientes. Ao ativar manualmente `KC_ENV.driver = "supabase"` e configurar `KC_ENV.supabase.url/anonKey`, o app passa a usar:
+A **V8.2.2.0** é o release candidate cleanroom do **LOTE 1**, focado em remover bloqueadores de interação sem feature creep. Nesta microentrega foram consolidados: bump unificado de versão, saneamento de bindings críticos do detalhe e hardening do fluxo de votos Supabase contra `409 (Conflict)`. O runtime oficial permanece **front estático + Supabase** (sem backend Node ativo no deploy). Ao ativar manualmente `KC_ENV.driver = "supabase"` e configurar `KC_ENV.supabase.url/anonKey`, o app passa a usar:
 
 - **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
 - **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.
@@ -13,14 +13,14 @@ A **V8.2.0.0** marca o cutover de saneamento cleanroom + QA com menor risco de r
 
 ## 🧭 Mapa de versão do front (arquivo → versão)
 
-Versão-alvo única atual: **`8.2.0.0`**
+Versão-alvo única atual: **`8.2.2.0`**
 
-- `assets/js/kc-env.js` → `8.2.0.0`
-- `assets/js/kc-api.client.js` → `8.2.0.0`
-- `assets/js/kc-supabase.client.js` → `8.2.0.0`
-- `assets/js/kc-auth.ui.js` → `8.2.0.0`
+- `assets/js/kc-env.js` → `8.2.2.0`
+- `assets/js/kc-api.client.js` → `8.2.2.0`
+- `assets/js/kc-supabase.client.js` → `8.2.2.0`
+- `assets/js/kc-auth.ui.js` → `8.2.2.0`
 
-> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.2.0.0` (derivado de `assets/js/kc-auth.ui.js`).
+> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.2.2.0` (derivado de `assets/js/kc-auth.ui.js`).
 
 ## 📦 Regra de release (anti-drift)
 
