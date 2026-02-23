@@ -26,7 +26,8 @@
 - `admin-reports.controller.js` removeu confirmação otimista: sucesso apenas após verificação de persistência no Supabase (`verifyActionPersistence`).
 - `admin/reports.html` alinhado ao comportamento real de persistência confirmada.
 - `docs/qa/rls-smoke.sql` robustecido para evitar falso bug de colisão (`gen_random_uuid()` no Test 3).
-- Relatórios de QA/release atualizados: `docs/qa/report-v8.2-final.md` e `docs/qa/report-v8.2.2.0-run1.md`.
+- QA kit: rls-smoke + e2e checklist + report templates.
+- Referência: Cobre validação pós-rescue fix anterior (regressão de feed vazio em script crítico).
 
 ### Known Issues
 - Warnings de navegador vistos no vídeo (Tracking Prevention, autocomplete e aviso de `aria-hidden`) permanecem de baixo impacto funcional e não bloqueiam fluxos core.
