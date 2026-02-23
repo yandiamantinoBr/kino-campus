@@ -1,8 +1,13 @@
-# Kino Campus — Protótipo WEB (V8.2.2.0) — RC Cleanroom (LOTE 1)
+# Kino Campus — Protótipo WEB (V8.2.2.0) — RC Cleanroom (LOTES 1-3)
 
 Este repositório é o **protótipo web offline-first** do **Kino Campus** (plataforma universitária por módulos), agora com **integração Supabase-first** (Postgres + Auth + Storage) na linha **V8.2.x**.
 
-A **V8.2.2.0** é o release candidate cleanroom do **LOTE 1**, focado em remover bloqueadores de interação sem feature creep. Nesta microentrega foram consolidados: bump unificado de versão, saneamento de bindings críticos do detalhe e hardening do fluxo de votos Supabase contra `409 (Conflict)`. O runtime oficial permanece **front estático + Supabase** (sem backend Node ativo no deploy). Ao ativar manualmente `KC_ENV.driver = "supabase"` e configurar `KC_ENV.supabase.url/anonKey`, o app passa a usar:
+A **V8.2.2.0** consolida os **LOTEs 1, 2 e 3** do cleanroom RC, sem feature creep:
+- **LOTE 1**: saneamento de interação (CSP/handlers) e hardening de votos contra `409 (Conflict)`.
+- **LOTE 2**: diagnóstico por etapa no create-post (`[KC][CREATE_POST]`) e fluxo admin sem falso positivo de persistência.
+- **LOTE 3**: fechamento mobile/FOUC e kit QA final (`docs/qa/rls-smoke.sql` + relatórios de release).
+
+O runtime oficial permanece **front estático + Supabase** (sem backend Node ativo no deploy). Ao ativar manualmente `KC_ENV.driver = "supabase"` e configurar `KC_ENV.supabase.url/anonKey`, o app passa a usar:
 
 - **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
 - **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.

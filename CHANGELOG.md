@@ -3,7 +3,7 @@
 ## [8.2.2.0] - 2026-02-23
 
 ### Objetivo
-- Release candidate cleanroom do LOTE 1: remover bloqueadores de interação sem adicionar features, com evidência de vídeo/console/network.
+- Release candidate cleanroom de fechamento dos LOTEs 1-3: remover bloqueadores de interação, estabilizar escrita/persistência no Supabase e concluir QA/documentação final.
 
 ### Changed
 - Bump em lote para `8.2.2.0` nos módulos centrais: `assets/js/kc-env.js`, `assets/js/kc-api.client.js`, `assets/js/kc-supabase.client.js`, `assets/js/kc-auth.ui.js`.
@@ -11,11 +11,15 @@
 - `kc-core` com lock de voto por post (`in-flight`) para evitar corrida de cliques e rollback de UI em falha.
 - `product.html`/`product.controller.js` mantidos em binding via `data-action` + listeners (`Compartilhar`, `Denunciar`, `Enviar comentário`, `Like comentário`) com logs temporários `[RC-8220][L1]`.
 - Varredura de handlers inline (`onclick/onchange/onsubmit/oninput`) sem evidência de handler inline ativo em runtime (somente ocorrências em comentário/doc legados).
+- `KCAPI.createPost` reestruturado por etapa (`AUTH_SESSION`, `VALIDATE_FORM`, `INSERT_POST`, `UPLOAD_STORAGE`, `INSERT_POST_MEDIA`, `FETCH_CREATED_POST`) com log padronizado `[KC][CREATE_POST]`.
+- `kc-core` passou a exibir feedback de erro com `step` quando houver diagnóstico (`Falha no passo <STEP>...`).
+- `admin-reports.controller.js` removeu confirmação otimista: sucesso apenas após verificação de persistência no Supabase (`verifyActionPersistence`).
+- `admin/reports.html` alinhado ao comportamento real de persistência confirmada.
+- `docs/qa/rls-smoke.sql` robustecido para evitar falso bug de colisão (`gen_random_uuid()` no Test 3).
+- Relatórios de QA/release atualizados: `docs/qa/report-v8.2-final.md` e `docs/qa/report-v8.2.2.0-run1.md`.
 
-### Not Done (fora do LOTE 1)
-- Fluxo create-post com diagnóstico por etapa (LOTE 2).
-- Persistência admin sem UI otimista falsa (LOTE 2).
-- Ajustes mobile/FOUC e fechamento QA final (LOTE 3).
+### Known Issues
+- Warnings de navegador vistos no vídeo (Tracking Prevention, autocomplete e aviso de `aria-hidden`) permanecem de baixo impacto funcional e não bloqueiam fluxos core.
 
 ## [8.2.0.0] - 2026-02-22
 
