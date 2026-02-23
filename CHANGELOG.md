@@ -1,5 +1,15 @@
 # Changelog
 
+## [8.2.2.0.x] - 2026-02-23
+
+### Fixed
+- Fix regressão de feed vazio causada por conflito Git não resolvido em scripts críticos (`kc-api.client.js`/`kc-core.js`).
+
+### Impacto funcional
+- Arquivos afetados: `assets/js/kc-api.client.js` e `assets/js/kc-core.js`.
+- Impacto observado antes do saneamento: Home e páginas de feed (`index.html`, `explore.html`, `community.html`) podiam abrir com feed vazio por quebra de execução JavaScript.
+- Resultado após saneamento: inicialização do fluxo de feed restabelecida, com renderização normal de posts conforme disponibilidade de dados.
+
 ## [8.2.2.0] - 2026-02-23
 
 ### Objetivo
