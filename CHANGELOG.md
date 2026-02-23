@@ -1,5 +1,18 @@
 # Changelog
 
+## [8.2.2.0] - 2026-02-23
+
+### Objetivo
+- Fechar o saneamento cleanroom com remoção de bloqueadores, estabilidade mobile e trilha QA final.
+
+### Changed
+- **Lote 1:** CSP destravada para Supabase Realtime (`connect-src` com `wss://*.supabase.co`) e botões do detalhe migrados para delegação por `data-action`.
+- **Lote 2:** instrumentação detalhada de diagnóstico no fluxo de criação de post e ajustes mobile para modal de criação e banner principal.
+- **Lote 3:** script de QA `rls-smoke.sql` consolidado com `gen_random_uuid()` no Test 3 para evitar colisão `23505`, menu mobile padronizado com os 6 módulos e relatório final de QA publicado.
+
+### QA
+- Relatório final: `docs/qa/report-v8.2-final.md`.
+
 ## [8.2.0.0] - 2026-02-22
 
 ### Objetivo da V8.2

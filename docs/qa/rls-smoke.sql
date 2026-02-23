@@ -1,5 +1,5 @@
 -- =========================================================
--- Kino Campus — RLS Smoke Test Kit (V8.1.8.4)
+-- Kino Campus — RLS Smoke Test Kit (V8.2.2.0)
 -- Arquivo: docs/qa/rls-smoke.sql
 -- =========================================================
 -- Onde rodar:
@@ -105,6 +105,7 @@ where id = '__POST_ID__'::uuid;
 --   - Se inserir/alterar profile com id de outro usuário = FALHOU (risco crítico).
 
 -- [3A] Ataque simulado de INSERT (NÃO deve funcionar como usuário comum):
+-- V8.2.2.0: usa UUID dinâmico para evitar colisão de chave primária (erro 23505).
 -- Usa UUID válido gerado no próprio SQL para evitar falso negativo por cast inválido.
 insert into public.profiles (id, full_name, email)
 values (gen_random_uuid(), 'Ataque Smoke', 'ataque-smoke@exemplo.com');
