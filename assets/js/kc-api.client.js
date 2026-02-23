@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.2.0.0';
+  const VERSION = '8.2.2.0';
 
   // -------- Bootstrap de Configuração (KC_ENV) --------
   // Regra de fallback: se kc-env.js não estiver carregado, assume driver local.
@@ -2050,9 +2050,67 @@
     } catch (_) { return null; }
   }
 
+  function logVoteError(step, error, context) {
+    console.error('[KCAPI][votes]', {
+      step: String(step || 'UNKNOWN'),
+      error: normalizeErrorForDiagnostics(error),
+      ...(context && typeof context === 'object' ? context : {}),
+    });
+  }
+
+  function isVoteConflict(error) {
+    if (!error) return false;
+    const code = String(error.code || '').trim();
+    const msg = String(error.message || '').toLowerCase();
+    const details = String(error.details || '').toLowerCase();
+    const hint = String(error.hint || '').toLowerCase();
+    return (
+      code === '23505' ||
+      msg.includes('duplicate') ||
+      msg.includes('conflict') ||
+      msg.includes('post_votes_post_id_voter_id_key') ||
+      details.includes('post_votes_post_id_voter_id_key') ||
+      hint.includes('post_votes_post_id_voter_id_key')
+    );
+  }
+
+  function voteFail(step, error, context) {
+    logVoteError(step, error, context);
+    return {
+      ok: false,
+      error: {
+        message: 'Não foi possível registrar voto.',
+        step: String(step || 'UNKNOWN'),
+      },
+    };
+  }
+
+  async function fetchPostScore(client, postUuid) {
+    const scoreRes = await client.from('posts').select('votos').eq('id', postUuid).maybeSingle();
+    if (scoreRes && scoreRes.error) {
+      logVoteError('READ_SCORE', scoreRes.error, { postId: postUuid });
+      return 0;
+    }
+    const value = scoreRes && scoreRes.data ? scoreRes.data.votos : 0;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  async function deleteVoteByPostAndVoter(client, postUuid, userId, step) {
+    const delRes = await client
+      .from('post_votes')
+      .delete()
+      .eq('post_id', postUuid)
+      .eq('voter_id', userId);
+    if (delRes && delRes.error) {
+      return { ok: false, error: delRes.error, step: step || 'DELETE_VOTE' };
+    }
+    return { ok: true };
+  }
+
   // Toggle voto num post: se já votou igual, remove (toggle off). Caso contrário, insere/substitui.
   // Retorna { ok, direction: null|'hot'|'cold', score }
-  async function supabaseVotePost(postId, direction) {
+  async function supabaseVotePost(postId, direction, options = {}) {
     const client = getSupabaseClient();
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
     const user = await supabaseGetCurrentUser();
@@ -2066,32 +2124,62 @@
         const p = await supabaseGetPostById(String(postId));
         const resolved = (p && (p.uuid || p.id));
         if (!resolved || !UUID_RE.test(String(resolved))) return { ok: false, error: { message: 'Post inválido.' } };
-        return supabaseVotePost(String(resolved), direction);
+        return supabaseVotePost(String(resolved), direction, options);
       } catch (_) { return { ok: false, error: { message: 'Post inválido.' } }; }
     }
 
     try {
-      // Verifica voto existente
-      const existing = await supabaseGetMyVote(uuid);
-
-      if (existing && existing.direction === direction) {
-        // Toggle off: remove voto
-        await client.from('post_votes').delete().eq('id', existing.id);
-        const { data: post } = await client.from('posts').select('votos').eq('id', uuid).maybeSingle();
-        return { ok: true, direction: null, score: post ? post.votos : 0 };
+      let shouldToggleOff = false;
+      const hasExplicitToggle = Object.prototype.hasOwnProperty.call(options || {}, 'toggleOff');
+      if (hasExplicitToggle) {
+        shouldToggleOff = !!options.toggleOff;
+      } else {
+        // Compatibilidade: chamadas antigas sem options continuam com toggle no mesmo botão.
+        const existing = await supabaseGetMyVote(uuid);
+        shouldToggleOff = !!(existing && existing.direction === direction);
       }
 
-      if (existing) {
-        // Muda direção: remove antigo e insere novo
-        await client.from('post_votes').delete().eq('id', existing.id);
+      if (shouldToggleOff) {
+        const del = await deleteVoteByPostAndVoter(client, uuid, user.id, 'TOGGLE_DELETE');
+        if (!del.ok) return voteFail(del.step, del.error, { postId: uuid, userId: user.id, direction });
+        const score = await fetchPostScore(client, uuid);
+        return { ok: true, direction: null, score };
       }
 
-      await client.from('post_votes').insert({ post_id: uuid, voter_id: user.id, direction });
-      const { data: post } = await client.from('posts').select('votos').eq('id', uuid).maybeSingle();
-      return { ok: true, direction, score: post ? post.votos : 0 };
+      // Escrita idempotente: limpa voto existente antes de inserir nova direção.
+      const preDelete = await deleteVoteByPostAndVoter(client, uuid, user.id, 'PREPARE_DELETE');
+      if (!preDelete.ok) return voteFail(preDelete.step, preDelete.error, { postId: uuid, userId: user.id, direction });
+
+      let insertRes = await client
+        .from('post_votes')
+        .insert({ post_id: uuid, voter_id: user.id, direction });
+
+      // Corrida de concorrência: tenta 1 ciclo de recuperação.
+      if (insertRes && insertRes.error) {
+        if (!isVoteConflict(insertRes.error)) {
+          return voteFail('INSERT', insertRes.error, { postId: uuid, userId: user.id, direction });
+        }
+
+        logVoteError('INSERT_CONFLICT_RECOVERY_START', insertRes.error, { postId: uuid, userId: user.id, direction });
+
+        const recoveryDelete = await deleteVoteByPostAndVoter(client, uuid, user.id, 'RECOVERY_DELETE');
+        if (!recoveryDelete.ok) {
+          return voteFail(recoveryDelete.step, recoveryDelete.error, { postId: uuid, userId: user.id, direction });
+        }
+
+        insertRes = await client
+          .from('post_votes')
+          .insert({ post_id: uuid, voter_id: user.id, direction });
+
+        if (insertRes && insertRes.error) {
+          return voteFail('RECOVERY_INSERT', insertRes.error, { postId: uuid, userId: user.id, direction });
+        }
+      }
+
+      const score = await fetchPostScore(client, uuid);
+      return { ok: true, direction, score };
     } catch (e) {
-      console.error('[KCAPI][votes] votePost exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível registrar voto.' } };
+      return voteFail('EXCEPTION', e, { postId: uuid, userId: user.id, direction });
     }
   }
 
@@ -2217,9 +2305,9 @@
   }
 
   // Votes facade (V8.1.7.3)
-  async function votePost(postId, direction) {
+  async function votePost(postId, direction, options = {}) {
     if (ENV.driver !== 'supabase' || !activeDriver.votePost) return null;
-    return activeDriver.votePost(postId, direction);
+    return activeDriver.votePost(postId, direction, options);
   }
 
   async function getMyVote(postId) {

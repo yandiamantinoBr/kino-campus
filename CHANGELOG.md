@@ -3,15 +3,19 @@
 ## [8.2.2.0] - 2026-02-23
 
 ### Objetivo
-- Fechar o saneamento cleanroom com remoção de bloqueadores, estabilidade mobile e trilha QA final.
+- Release candidate cleanroom do LOTE 1: remover bloqueadores de interação sem adicionar features, com evidência de vídeo/console/network.
 
 ### Changed
-- **Lote 1:** CSP destravada para Supabase Realtime (`connect-src` com `wss://*.supabase.co`) e botões do detalhe migrados para delegação por `data-action`.
-- **Lote 2:** instrumentação detalhada de diagnóstico no fluxo de criação de post e ajustes mobile para modal de criação e banner principal.
-- **Lote 3:** script de QA `rls-smoke.sql` consolidado com `gen_random_uuid()` no Test 3 para evitar colisão `23505`, menu mobile padronizado com os 6 módulos e relatório final de QA publicado.
+- Bump em lote para `8.2.2.0` nos módulos centrais: `assets/js/kc-env.js`, `assets/js/kc-api.client.js`, `assets/js/kc-supabase.client.js`, `assets/js/kc-auth.ui.js`.
+- `KCAPI.votePost(postId, direction, options?)` atualizado para fluxo idempotente em Supabase (delete+insert com recuperação de conflito) e logs estruturados `[KCAPI][votes]`.
+- `kc-core` com lock de voto por post (`in-flight`) para evitar corrida de cliques e rollback de UI em falha.
+- `product.html`/`product.controller.js` mantidos em binding via `data-action` + listeners (`Compartilhar`, `Denunciar`, `Enviar comentário`, `Like comentário`) com logs temporários `[RC-8220][L1]`.
+- Varredura de handlers inline (`onclick/onchange/onsubmit/oninput`) sem evidência de handler inline ativo em runtime (somente ocorrências em comentário/doc legados).
 
-### QA
-- Relatório final: `docs/qa/report-v8.2-final.md`.
+### Not Done (fora do LOTE 1)
+- Fluxo create-post com diagnóstico por etapa (LOTE 2).
+- Persistência admin sem UI otimista falsa (LOTE 2).
+- Ajustes mobile/FOUC e fechamento QA final (LOTE 3).
 
 ## [8.2.0.0] - 2026-02-22
 

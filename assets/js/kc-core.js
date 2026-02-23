@@ -197,18 +197,52 @@ function resetAutoSlide() {
 // -----------------------------
 // Vote box
 // -----------------------------
+const KC_VOTE_IN_FLIGHT = new Set();
+
+function setVoteBoxPending(voteBox, pending) {
+  if (!voteBox) return;
+  voteBox.querySelectorAll('button').forEach((btn) => {
+    if (pending) btn.setAttribute('disabled', 'disabled');
+    else btn.removeAttribute('disabled');
+  });
+  voteBox.dataset.kcVotePending = pending ? '1' : '0';
+}
+
+function restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates) {
+  if (scoreElement) scoreElement.textContent = String(previousScoreText);
+  const voteButtons = voteBox ? Array.from(voteBox.querySelectorAll('button')) : [];
+  voteButtons.forEach((btn, idx) => {
+    btn.classList.toggle('active', !!previousActiveStates[idx]);
+  });
+}
+
 function vote(button, type) {
   const voteBox = button.closest('.kc-vote-box');
   if (!voteBox) return;
 
   const scoreElement = voteBox.querySelector('span');
   if (!scoreElement) return;
+  const voteButtons = Array.from(voteBox.querySelectorAll('button'));
+  if (!voteButtons.length) return;
 
   const currentScore = parseInt(scoreElement.textContent, 10) || 0;
   const isActive = button.classList.contains('active');
+  const previousScoreText = scoreElement.textContent;
+  const previousActiveStates = voteButtons.map((btn) => btn.classList.contains('active'));
+
+  const isSupabaseMode = !!(window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase');
+  const postId = button.closest('[data-post-id]')?.dataset.postId || getCurrentPostId();
+  const lockKey = String(postId || '').trim();
+
+  if (isSupabaseMode && !lockKey) {
+    showToast('Não foi possível identificar a publicação para votar.', 'error');
+    return;
+  }
+
+  if (isSupabaseMode && KC_VOTE_IN_FLIGHT.has(lockKey)) return;
 
   // clear
-  voteBox.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+  voteButtons.forEach(btn => btn.classList.remove('active'));
 
   let newScore = currentScore;
   if (!isActive) {
@@ -222,23 +256,41 @@ function vote(button, type) {
   scoreElement.style.transform = 'scale(1.15)';
   setTimeout(() => { scoreElement.style.transform = 'scale(1)'; }, 160);
 
-  // Persistência server-side (Supabase mode): fire-and-forget
-  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
-    const postId = button.closest('[data-post-id]')?.dataset.postId || getCurrentPostId();
-    if (postId) {
-      // Passing `type` always: the server toggles off if the same direction is voted again.
-      window.KCAPI.votePost(postId, type).then(function(res) {
-        // Sincroniza score real do servidor com o DOM
-        if (res && res.ok && typeof res.score === 'number') {
-          scoreElement.textContent = String(res.score);
-        }
-        // Atualiza estado visual: se toggle off, nenhum botão ativo
-        if (res && res.ok && res.direction === null) {
-          voteBox.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-        }
-      }).catch(function() {});
+  // Modo local: mantém UX otimista sem escrita remota.
+  if (!isSupabaseMode) return;
+
+  KC_VOTE_IN_FLIGHT.add(lockKey);
+  setVoteBoxPending(voteBox, true);
+
+  // Supabase: explicita intenção de toggle para reduzir corrida de múltiplos cliques.
+  window.KCAPI.votePost(postId, type, { toggleOff: isActive }).then(function(res) {
+    if (res && res.ok) {
+      if (typeof res.score === 'number') {
+        scoreElement.textContent = String(res.score);
+      }
+
+      if (res.direction === null) {
+        voteButtons.forEach((btn) => btn.classList.remove('active'));
+      } else {
+        voteButtons.forEach((btn) => {
+          const action = String(btn.getAttribute('data-action') || '').trim().toLowerCase();
+          const btnType = action === 'vote-hot' ? 'hot' : (action === 'vote-cold' ? 'cold' : '');
+          btn.classList.toggle('active', btnType === res.direction);
+        });
+      }
+      return;
     }
-  }
+
+    restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates);
+    const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível registrar voto.';
+    showToast(msg, 'error');
+  }).catch(function() {
+    restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates);
+    showToast('Não foi possível registrar voto.', 'error');
+  }).finally(function() {
+    KC_VOTE_IN_FLIGHT.delete(lockKey);
+    setVoteBoxPending(voteBox, false);
+  });
 }
 
 // -----------------------------
