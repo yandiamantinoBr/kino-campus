@@ -192,10 +192,8 @@
 
     const merged = [];
     for (const mk of moduleKeys) {
-      try {
-        const part = await window.KCAPI.getPosts({ module: mk, page, limit });
-        if (Array.isArray(part) && part.length) merged.push(...part);
-      } catch (_) {}
+      const part = await window.KCAPI.getPosts({ module: mk, page, limit });
+      if (Array.isArray(part) && part.length) merged.push(...part);
     }
     return merged;
   }
@@ -388,6 +386,7 @@
     async function loadNextPage() {
       if (state.loading || state.done || state.destroyed) return;
       state.loading = true;
+      state.lastError = null;
       setStatus('loading', 'Carregando...');
 
       const apiPage = state.page + 1;
@@ -447,8 +446,13 @@
       } catch (err) {
         state.lastError = err;
         if (!state.hydrated) container.innerHTML = fallbackHTML;
-        warn('[KCControllers] Falha ao carregar próxima página do feed.', err);
-        setStatus('error', 'Não foi possível carregar mais posts.');
+        console.error('[KCControllers] Falha ao carregar posts do feed.', {
+          page: apiPage,
+          limit,
+          modules: moduleKeys.length ? moduleKeys.slice() : ['all'],
+          message: err && err.message ? err.message : String(err || 'Erro desconhecido'),
+        });
+        setStatus('error', 'Não foi possível carregar os posts. Tente novamente.');
       } finally {
         state.loading = false;
         if (state.status !== 'error' && !state.done) setStatus('idle', '');
