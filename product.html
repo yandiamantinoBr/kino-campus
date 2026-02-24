@@ -1,95 +1,442 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
-<link rel="stylesheet" href="assets/css/kc-theme-boot.css">
+
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css">
   <script src="assets/js/kc-theme-boot.js"></script>
-<style>
-  /* evita transições durante o primeiro paint */
-  html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
-</style>
-<title>KinoCampus - Detalhes</title>
+  <style>
+    /* evita transições durante o primeiro paint */
+    html.kc-theme-preload,
+    html.kc-theme-preload * {
+      transition: none !important;
+    }
+  </style>
+  <title>KinoCampus - Detalhes</title>
 
   <link rel="stylesheet" href="assets/css/styles.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
   <style>
     /* Ajustes pontuais de layout para a página de detalhes (mantém o design existente do projeto) */
-    .kc-product-page .kc-main-content { padding-top: 30px; }
-    .kc-product-section { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    .kc-product-page .kc-main-content {
+      padding-top: 30px;
+    }
 
-    .kc-post-breadcrumb { display:flex; align-items:center; gap:10px; font-size:.9em; margin-bottom: 20px; color: var(--kc-text-dark-secondary); flex-wrap: wrap; }
-    .kc-post-breadcrumb a { color: var(--kc-text-dark-secondary); text-decoration:none; }
-    .kc-post-breadcrumb a:hover { color: var(--kc-primary-brand); }
+    .kc-product-section {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
 
-    .kc-product-container { display:grid; grid-template-columns: 1fr; gap: 30px; margin-bottom: 30px; }
-    @media (min-width: 900px) { .kc-product-container { grid-template-columns: 1fr 1fr; } }
+    .kc-post-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .9em;
+      margin-bottom: 20px;
+      color: var(--kc-text-dark-secondary);
+      flex-wrap: wrap;
+    }
 
-    .kc-product-gallery { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 20px; border: 1px solid var(--kc-border-dark); }
-    .kc-gallery-main { display:flex; align-items:center; justify-content:center; background-color: var(--kc-background-dark); border-radius: 10px; padding: 12px; width: 100%; aspect-ratio: 4 / 3; max-height: min(520px, 60vh); overflow: hidden; }
-    .kc-gallery-main img { display: block; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; }
-    .kc-emoji-cover { font-size: 5rem; line-height: 1; display:flex; align-items:center; justify-content:center; width:100%; height: 100%; }
-    .kc-gallery-thumbnails { display:flex; gap: 10px; margin-top: 15px; overflow:auto; padding-bottom: 5px; }
-    .kc-thumbnail { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; cursor:pointer; border: 2px solid transparent; opacity: .85; }
-    .kc-thumbnail.active { border-color: var(--kc-primary-brand); opacity: 1; }
+    .kc-post-breadcrumb a {
+      color: var(--kc-text-dark-secondary);
+      text-decoration: none;
+    }
+
+    .kc-post-breadcrumb a:hover {
+      color: var(--kc-primary-brand);
+    }
+
+    .kc-product-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    @media (min-width: 900px) {
+      .kc-product-container {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .kc-product-gallery {
+      background-color: var(--kc-surface-dark);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--kc-border-dark);
+    }
+
+    .kc-gallery-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--kc-background-dark);
+      border-radius: 10px;
+      padding: 12px;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      max-height: min(520px, 60vh);
+      overflow: hidden;
+    }
+
+    .kc-gallery-main img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+
+    .kc-emoji-cover {
+      font-size: 5rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .kc-gallery-thumbnails {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      overflow: auto;
+      padding-bottom: 5px;
+    }
+
+    .kc-thumbnail {
+      width: 90px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      opacity: .85;
+    }
+
+    .kc-thumbnail.active {
+      border-color: var(--kc-primary-brand);
+      opacity: 1;
+    }
 
     /* V8.1.2.4.6: Evita imagem "estourada" no detalhe (mobile) */
     @media (max-width: 520px) {
-      .kc-gallery-main { max-height: min(360px, 52vh); }
-      .kc-emoji-cover { font-size: 4rem; }
+      .kc-gallery-main {
+        max-height: min(360px, 52vh);
+      }
+
+      .kc-emoji-cover {
+        font-size: 4rem;
+      }
     }
 
 
-    .kc-product-details { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 25px; border: 1px solid var(--kc-border-dark); }
-    .kc-product-title { font-size: 1.6em; margin-bottom: 12px; line-height: 1.25; }
+    .kc-product-details {
+      background-color: var(--kc-surface-dark);
+      border-radius: 12px;
+      padding: 25px;
+      border: 1px solid var(--kc-border-dark);
+    }
 
-    .kc-product-badges { display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
-    .kc-badge { display:inline-flex; align-items:center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-size: .85em; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark); }
+    .kc-product-title {
+      font-size: 1.6em;
+      margin-bottom: 12px;
+      line-height: 1.25;
+    }
 
-    .kc-product-price { font-size: 2em; font-weight: bold; color: var(--kc-hot-color); margin: 15px 0 10px; display:flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-    .kc-product-price small { font-size: .45em; font-weight: normal; color: var(--kc-text-dark-secondary); }
-    .kc-price-original { text-decoration: line-through; font-size: .45em; color: var(--kc-text-dark-secondary); font-weight: normal; }
-    .kc-price-discount { font-size: .45em; background-color: var(--kc-hot-color); color: #fff; padding: 4px 10px; border-radius: 999px; }
+    .kc-product-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
 
-    .kc-product-description { margin: 15px 0 20px; line-height: 1.6; color: var(--kc-text-dark); }
-    .kc-product-description p { margin: 0 0 10px; }
+    .kc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: .85em;
+      background-color: var(--kc-background-dark);
+      border: 1px solid var(--kc-border-dark);
+    }
 
-    .kc-product-specs { margin: 18px 0; padding: 18px; border-radius: 10px; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark); }
-    .kc-product-specs h3 { display:flex; align-items:center; gap: 10px; margin-bottom: 12px; font-size: 1.05em; }
-    .kc-specs-grid { display:grid; grid-template-columns: 1fr; gap: 10px; }
-    @media (min-width: 520px) { .kc-specs-grid { grid-template-columns: 1fr 1fr; } }
-    .kc-spec-item { display:flex; align-items:flex-start; gap: 10px; font-size: .95em; color: var(--kc-text-dark-secondary); }
-    .kc-spec-item i { width: 18px; text-align:center; margin-top: 2px; }
+    .kc-product-price {
+      font-size: 2em;
+      font-weight: bold;
+      color: var(--kc-hot-color);
+      margin: 15px 0 10px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
-    .kc-product-actions { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
-    .kc-btn-primary { background-color: var(--kc-primary-brand); color: #fff; border:none; padding: 12px 18px; border-radius: 10px; cursor:pointer; display:inline-flex; align-items:center; gap: 8px; }
-    .kc-btn-secondary { background-color: var(--kc-background-dark); color: var(--kc-text-dark); border: 1px solid var(--kc-border-dark); padding: 12px 18px; border-radius: 10px; cursor:pointer; display:inline-flex; align-items:center; gap: 8px; }
-    .kc-btn-full { width: 100%; justify-content:center; }
+    .kc-product-price small {
+      font-size: .45em;
+      font-weight: normal;
+      color: var(--kc-text-dark-secondary);
+    }
 
-    .kc-seller-card { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 20px; border: 1px solid var(--kc-border-dark); margin-bottom: 20px; }
-    .kc-seller-card h3 { display:flex; align-items:center; gap: 8px; margin-bottom: 15px; }
-    .kc-seller-profile { display:flex; gap: 15px; align-items:center; }
-    .kc-seller-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark); }
-    .kc-seller-name { font-weight: bold; display:flex; align-items:center; gap: 8px; }
-    .kc-seller-stats { display:flex; flex-wrap: wrap; gap: 12px; font-size: .85em; color: var(--kc-text-dark-secondary); margin-top: 4px; }
-    .kc-seller-stats i { margin-right: 6px; }
+    .kc-price-original {
+      text-decoration: line-through;
+      font-size: .45em;
+      color: var(--kc-text-dark-secondary);
+      font-weight: normal;
+    }
 
-    .kc-comments-section { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 25px; border: 1px solid var(--kc-border-dark); margin-bottom: 20px; }
-    .kc-comments-section h3 { display:flex; align-items:center; gap: 10px; margin-bottom: 18px; font-size: 1.2em; }
-    .kc-comment-editor { border: 1px solid var(--kc-border-dark); border-radius: 8px; overflow:hidden; background-color: var(--kc-background-dark); }
-    .kc-comment-editor textarea { width: 100%; padding: 14px; border: none; background: transparent; color: var(--kc-text-dark); font-family: inherit; min-height: 110px; resize: vertical; }
-    .kc-editor-toolbar { display:flex; gap: 6px; padding: 10px; border-top: 1px solid var(--kc-border-dark); background-color: var(--kc-background-dark); flex-wrap: wrap; }
-    .kc-editor-toolbar button { padding: 8px 12px; border: 1px solid var(--kc-border-dark); border-radius: 6px; background-color: transparent; color: var(--kc-text-dark); cursor:pointer; }
+    .kc-price-discount {
+      font-size: .45em;
+      background-color: var(--kc-hot-color);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
 
-    .kc-related-section { background-color: var(--kc-surface-dark); border-radius: 12px; padding: 20px; border: 1px solid var(--kc-border-dark); margin-bottom: 40px; }
-    .kc-related-section h3 { display:flex; align-items:center; gap: 8px; margin-bottom: 15px; }
-    .kc-related-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
-    .kc-related-card { background-color: var(--kc-background-dark); border-radius: 10px; padding: 14px; border: 1px solid var(--kc-border-dark); cursor:pointer; transition: transform .15s ease, box-shadow .15s ease; }
-    .kc-related-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,.12); }
-    .kc-related-card h4 { margin: 0 0 8px; font-size: 1em; }
-    .kc-related-meta { color: var(--kc-text-dark-secondary); font-size: .85em; display:flex; gap: 10px; flex-wrap: wrap; }
+    .kc-product-description {
+      margin: 15px 0 20px;
+      line-height: 1.6;
+      color: var(--kc-text-dark);
+    }
+
+    .kc-product-description p {
+      margin: 0 0 10px;
+    }
+
+    .kc-product-specs {
+      margin: 18px 0;
+      padding: 18px;
+      border-radius: 10px;
+      background-color: var(--kc-background-dark);
+      border: 1px solid var(--kc-border-dark);
+    }
+
+    .kc-product-specs h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 1.05em;
+    }
+
+    .kc-specs-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    @media (min-width: 520px) {
+      .kc-specs-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .kc-spec-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: .95em;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-spec-item i {
+      width: 18px;
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    .kc-product-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .kc-btn-primary {
+      background-color: var(--kc-primary-brand);
+      color: #fff;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .kc-btn-secondary {
+      background-color: var(--kc-background-dark);
+      color: var(--kc-text-dark);
+      border: 1px solid var(--kc-border-dark);
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .kc-btn-full {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .kc-seller-card {
+      background-color: var(--kc-surface-dark);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--kc-border-dark);
+      margin-bottom: 20px;
+    }
+
+    .kc-seller-card h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .kc-seller-profile {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .kc-seller-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      background-color: var(--kc-background-dark);
+      border: 1px solid var(--kc-border-dark);
+    }
+
+    .kc-seller-name {
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .kc-seller-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: .85em;
+      color: var(--kc-text-dark-secondary);
+      margin-top: 4px;
+    }
+
+    .kc-seller-stats i {
+      margin-right: 6px;
+    }
+
+    .kc-comments-section {
+      background-color: var(--kc-surface-dark);
+      border-radius: 12px;
+      padding: 25px;
+      border: 1px solid var(--kc-border-dark);
+      margin-bottom: 20px;
+    }
+
+    .kc-comments-section h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      font-size: 1.2em;
+    }
+
+    .kc-comment-editor {
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: var(--kc-background-dark);
+    }
+
+    .kc-comment-editor textarea {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      background: transparent;
+      color: var(--kc-text-dark);
+      font-family: inherit;
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .kc-editor-toolbar {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+      border-top: 1px solid var(--kc-border-dark);
+      background-color: var(--kc-background-dark);
+      flex-wrap: wrap;
+    }
+
+    .kc-editor-toolbar button {
+      padding: 8px 12px;
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 6px;
+      background-color: transparent;
+      color: var(--kc-text-dark);
+      cursor: pointer;
+    }
+
+    .kc-related-section {
+      background-color: var(--kc-surface-dark);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--kc-border-dark);
+      margin-bottom: 40px;
+    }
+
+    .kc-related-section h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .kc-related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .kc-related-card {
+      background-color: var(--kc-background-dark);
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid var(--kc-border-dark);
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    .kc-related-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, .12);
+    }
+
+    .kc-related-card h4 {
+      margin: 0 0 8px;
+      font-size: 1em;
+    }
+
+    .kc-related-meta {
+      color: var(--kc-text-dark-secondary);
+      font-size: .85em;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 
@@ -98,14 +445,14 @@
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
-<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
-<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
-<span class="kc-logo-text">
-<span class="kc-logo-name">Kino<span>Campus</span></span>
-<span class="kc-logo-sub">Comunidade UFG</span>
-</span>
-</a>
-</div>
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
 
       <nav class="kc-nav-links">
         <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
@@ -140,7 +487,8 @@
         <!-- Gallery -->
         <div class="kc-product-gallery">
           <div class="kc-gallery-main">
-            <img id="mainImage" alt="Imagem da publicação" width="1200" height="900" decoding="async" style="display:none;" />
+            <img id="mainImage" alt="Imagem da publicação" width="1200" height="900" decoding="async"
+              style="display:none;" />
             <div class="kc-emoji-cover" id="emojiCover" aria-hidden="true">✨</div>
           </div>
           <div class="kc-gallery-thumbnails" id="thumbnails" style="display:none;"></div>
@@ -171,13 +519,8 @@
             <button class="kc-btn-primary" id="primaryCta">
               <i class="fas fa-paper-plane"></i> Entrar em contato
             </button>
-            <button
-              class="kc-btn-secondary"
-              id="shareButton"
-              type="button"
-              data-kc-share="link"
-              data-action="share-post"
-            >
+            <button class="kc-btn-secondary" id="shareButton" type="button" data-kc-share="link"
+              data-action="share-post">
               <i class="fas fa-share-alt"></i> Compartilhar
             </button>
             <button class="kc-btn-secondary" id="reportButton" type="button" data-action="report-post">
@@ -210,24 +553,23 @@
         <h3><i class="fas fa-comments"></i> Comentários</h3>
 
         <div style="display:flex; gap: 12px; margin-bottom: 14px; align-items:flex-start;">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=commenter" alt="Seu avatar" style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark);" />
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=commenter" alt="Seu avatar"
+            style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark);" />
           <div style="flex: 1;">
-            <input id="commentAuthor" type="text" name="author" placeholder="Seu nome" style="width:100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background-color: var(--kc-background-dark); color: var(--kc-text-dark); font-family: inherit;" />
+            <input id="commentAuthor" type="text" name="author" placeholder="Seu nome"
+              style="width:100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background-color: var(--kc-background-dark); color: var(--kc-text-dark); font-family: inherit;" />
             <div class="kc-comment-editor">
               <textarea id="commentText" placeholder="Deixe o seu comentário"></textarea>
               <div class="kc-editor-toolbar">
                 <button type="button" data-kc-format="bold" title="Negrito"><i class="fas fa-bold"></i></button>
                 <button type="button" data-kc-format="italic" title="Itálico"><i class="fas fa-italic"></i></button>
-                <button type="button" data-kc-format="underline" title="Sublinhado"><i class="fas fa-underline"></i></button>
-                <button type="button" data-kc-format="strikethrough" title="Tachado"><i class="fas fa-strikethrough"></i></button>
+                <button type="button" data-kc-format="underline" title="Sublinhado"><i
+                    class="fas fa-underline"></i></button>
+                <button type="button" data-kc-format="strikethrough" title="Tachado"><i
+                    class="fas fa-strikethrough"></i></button>
                 <div style="flex: 1;"></div>
-                <button
-                  id="submitCommentButton"
-                  type="button"
-                  data-kc-submit-comment="1"
-                  data-action="submit-comment"
-                  style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;"
-                >
+                <button id="submitCommentButton" type="button" data-kc-submit-comment="1" data-action="submit-comment"
+                  style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">
                   <i class="fas fa-paper-plane"></i> Enviar
                 </button>
               </div>
@@ -302,18 +644,19 @@
   <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true" data-kc-mobile-menu="close"></div>
 
   <script src="assets/js/kc-utils.js"></script>
-<script src="assets/js/kc-env.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="assets/js/kc-supabase.client.js"></script>
-<script src="assets/js/kc-api.client.js"></script>
-<script src="assets/js/kc-profiles.client.js"></script>
-<script src="assets/js/kc-core.js"></script>
-  
-<script src="assets/js/kc-auth.ui.js"></script>
-<script src="assets/js/controllers/product.controller.js"></script>
-<script src="assets/js/kc-theme.js"></script>
-<script src="assets/js/kc-search.js"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-core.js"></script>
+
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/controllers/product.controller.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
+  <script src="assets/js/kc-search.js"></script>
 
 </body>
+
 </html>
