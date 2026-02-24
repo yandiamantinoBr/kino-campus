@@ -16,7 +16,7 @@
   let activePager = null;
 
   function warn(msg, err) {
-    try { console.warn(msg, err || ''); } catch (_) {}
+    try { console.warn(msg, err || ''); } catch (_) { }
   }
 
   function getCtx(options) {
@@ -35,7 +35,7 @@
       } else if (typeof window.filterPosts === 'function') {
         window.filterPosts();
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function getPostIdentity(post, idx) {
@@ -163,7 +163,7 @@
           legacyId: row.legacy_id || full.legacyId || full.legacy_id || null,
         };
       }
-    } catch (_) {}
+    } catch (_) { }
 
     return {
       ...(row || {}),
@@ -235,7 +235,7 @@
     const useRealtime = opt.realtime !== false;
 
     if (activePager && typeof activePager.destroy === 'function') {
-      try { activePager.destroy(); } catch (_) {}
+      try { activePager.destroy(); } catch (_) { }
       activePager = null;
     }
 
@@ -263,6 +263,7 @@
       realtimeSub: null,
       destroyed: false,
       lastError: null,
+      observer: null,
     };
 
     function setStatus(next, message) {
@@ -273,16 +274,16 @@
       if (next === 'loading') {
         pagerUI.loadMoreBtn.disabled = true;
         pagerUI.loadMoreBtn.textContent = 'Carregando...';
+        pagerUI.loadMoreBtn.style.display = 'inline-flex';
       } else {
         pagerUI.loadMoreBtn.disabled = state.done || state.loading;
         pagerUI.loadMoreBtn.textContent = 'Carregar mais';
+        pagerUI.loadMoreBtn.style.display = 'none';
       }
 
       if (state.done) {
         pagerUI.loadMoreBtn.style.display = 'none';
         if (next !== 'error') pagerUI.status.textContent = 'Fim da lista';
-      } else {
-        pagerUI.loadMoreBtn.style.display = 'inline-flex';
       }
     }
 
@@ -333,7 +334,7 @@
       inserted.forEach((card) => {
         card.classList.add('kc-card--new');
         setTimeout(() => {
-          try { card.classList.remove('kc-card--new'); } catch (_) {}
+          try { card.classList.remove('kc-card--new'); } catch (_) { }
         }, NEW_CARD_HIGHLIGHT_MS);
       });
 
@@ -398,7 +399,7 @@
         if (apiPage === 1) {
           try {
             if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') userRaw = window.kcUserPosts.list();
-          } catch (_) {}
+          } catch (_) { }
           if (Array.isArray(userRaw) && userRaw.length && moduleKeys.length) {
             const set = new Set(moduleKeys.map(String));
             userRaw = userRaw.filter((p) => set.has(String(p && p.modulo)));
@@ -429,7 +430,7 @@
           container.insertAdjacentHTML('beforeend', html);
 
           if (typeof opt.onAfterAppend === 'function') {
-            try { opt.onAfterAppend({ container, posts: fresh, state: { ...state } }); } catch (_) {}
+            try { opt.onAfterAppend({ container, posts: fresh, state: { ...state } }); } catch (_) { }
           }
 
           reapplyFiltersAndSearch();
@@ -469,21 +470,27 @@
       if (state.destroyed) return;
       state.destroyed = true;
 
-      try { pagerUI.loadMoreBtn.removeEventListener('click', onLoadMoreClick); } catch (_) {}
-      try { pagerUI.retryBtn.removeEventListener('click', onRetryClick); } catch (_) {}
-      try { realtimeUI.btn.removeEventListener('click', onRealtimeClick); } catch (_) {}
-      try { window.removeEventListener('pagehide', onPageHide); } catch (_) {}
+      try { pagerUI.loadMoreBtn.removeEventListener('click', onLoadMoreClick); } catch (_) { }
+      try { pagerUI.retryBtn.removeEventListener('click', onRetryClick); } catch (_) { }
+      try { realtimeUI.btn.removeEventListener('click', onRealtimeClick); } catch (_) { }
+      try { window.removeEventListener('pagehide', onPageHide); } catch (_) { }
       try {
         if (state.realtimeSub && typeof state.realtimeSub.unsubscribe === 'function') {
           state.realtimeSub.unsubscribe();
         }
-      } catch (_) {}
+      } catch (_) { }
+      try {
+        if (state.observer) {
+          state.observer.disconnect();
+          state.observer = null;
+        }
+      } catch (_) { }
 
       state.realtimeSub = null;
       clearPendingRealtime();
 
-      try { pagerUI.wrap.remove(); } catch (_) {}
-      try { realtimeUI.banner.remove(); } catch (_) {}
+      try { pagerUI.wrap.remove(); } catch (_) { }
+      try { realtimeUI.banner.remove(); } catch (_) { }
 
       if (activePager && activePager === api) activePager = null;
     }
@@ -493,6 +500,18 @@
     realtimeUI.btn.addEventListener('click', onRealtimeClick);
     window.addEventListener('pagehide', onPageHide);
 
+    function setupObserver() {
+      if (!window.IntersectionObserver) return;
+      state.observer = new IntersectionObserver((entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && !state.loading && !state.done && !state.destroyed && state.status !== 'error') {
+          loadNextPage();
+        }
+      }, { rootMargin: '400px' });
+      state.observer.observe(pagerUI.wrap);
+    }
+
+    setupObserver();
     loadNextPage();
     startRealtime();
 
