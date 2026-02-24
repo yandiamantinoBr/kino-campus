@@ -36,7 +36,7 @@
         window.showToast(msg, type || 'info', duration || 2600);
         return;
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const id = 'kc-admin-toast-fallback';
     let toast = document.getElementById(id);
@@ -510,7 +510,10 @@
     setLoading(true);
     const ok = await checkAdminAccess();
     setLoading(false);
-    if (!ok) return;
+    if (!ok) {
+      setTimeout(() => { window.location.replace('../index.html'); }, 2500);
+      return;
+    }
 
     $('#admin-content').style.display = 'block';
     setupEventDelegation();
