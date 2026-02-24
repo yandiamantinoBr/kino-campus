@@ -109,7 +109,12 @@
       const viewProfileBtn = event.target.closest('[data-kc-view-profile]');
       if (viewProfileBtn) {
         event.preventDefault();
-        toast('Simulação: perfil ainda não implementado', 'info', 2200);
+        const authorId = (currentPost && (currentPost.autorId || currentPost.authorId || currentPost.author_id)) || null;
+        if (authorId) {
+          window.location.href = 'profile.html?id=' + encodeURIComponent(authorId);
+        } else {
+          toast('Perfil indisponível para esta publicação.', 'warn', 2000);
+        }
         return;
       }
 
