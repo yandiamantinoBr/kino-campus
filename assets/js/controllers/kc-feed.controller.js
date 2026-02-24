@@ -177,10 +177,13 @@
     };
   }
 
-  // P1-B fix: aceita parâmetro q (busca textual) e o repassa ao KCAPI.getPosts
-  async function fetchPostsByModule(moduleKeys, page, limit, q) {
+  // P1-B fix: aceita parâmetros q (busca textual) e tag (filtro por chave canônica)
+  async function fetchPostsByModule(moduleKeys, page, limit, q, tag) {
     if (!window.KCAPI || typeof window.KCAPI.getPosts !== 'function') return [];
-    const extra = (q && String(q).trim()) ? { q: String(q).trim() } : {};
+    const extra = {
+      ...((q && String(q).trim()) ? { q: String(q).trim() } : {}),
+      ...((tag && String(tag).trim()) ? { tag: String(tag).trim() } : {}),
+    };
 
     if (moduleKeys.length === 0) {
       const posts = await window.KCAPI.getPosts({ page, limit, ...extra });
@@ -236,6 +239,7 @@
     const limit = (opt.limit != null) ? Math.max(1, parseInt(String(opt.limit), 10) || POSTS_LIMIT) : POSTS_LIMIT;
     const useRealtime = opt.realtime !== false;
     const searchQuery = (opt.q && String(opt.q).trim()) ? String(opt.q).trim() : '';
+    const tagFilter = (opt.tag && String(opt.tag).trim()) ? String(opt.tag).trim() : '';
 
     if (activePager && typeof activePager.destroy === 'function') {
       try { activePager.destroy(); } catch (_) { }
@@ -396,7 +400,7 @@
       const apiPage = state.page + 1;
 
       try {
-        const dbPosts = await fetchPostsByModule(moduleKeys, apiPage, limit, searchQuery);
+        const dbPosts = await fetchPostsByModule(moduleKeys, apiPage, limit, searchQuery, tagFilter);
 
         let userRaw = [];
         if (apiPage === 1) {

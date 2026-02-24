@@ -30,10 +30,15 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.KCControllers && typeof window.KCControllers.injectFeed === 'function') {
-      // P1-B fix: lê ?q= da URL para filtrar feed via busca no Supabase
+      // P1-B fix: lê ?q= e ?tag= da URL para filtrar feed via Supabase
       var urlQ = '';
-      try { urlQ = new URLSearchParams(window.location.search).get('q') || ''; } catch (_) {}
-      window.KCControllers.injectFeed({ module: null, pageModule: '', q: urlQ });
+      var urlTag = '';
+      try {
+        var search = new URLSearchParams(window.location.search);
+        urlQ = search.get('q') || '';
+        urlTag = search.get('tag') || '';
+      } catch (_) {}
+      window.KCControllers.injectFeed({ module: null, pageModule: '', q: urlQ, tag: urlTag });
     }
     bindIndexInteractions();
   });
