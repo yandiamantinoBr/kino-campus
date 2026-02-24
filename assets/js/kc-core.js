@@ -64,32 +64,7 @@ window.KCPostModel = window.KCPostModel || {
       return now;
     }
 
-    function _kcRelativeTimeFromISO(iso) {
-      const rawTs = String(iso || '').trim();
-      if (!rawTs || !_kcLooksISO(rawTs)) return '';
 
-      const d = new Date(rawTs);
-      if (isNaN(d.getTime())) return '';
-
-      const now = _kcGetNowFor(d);
-      let diffMs = now.getTime() - d.getTime();
-      if (!isFinite(diffMs) || diffMs < 0) return '';
-
-      const sec = Math.floor(diffMs / 1000);
-      if (sec < 60) return 'Agora';
-      const min = Math.floor(sec / 60);
-      if (min < 60) return `Há ${min} minuto${min === 1 ? '' : 's'}`;
-      const hr = Math.floor(min / 60);
-      if (hr < 24) return `Há ${hr} hora${hr === 1 ? '' : 's'}`;
-      const day = Math.floor(hr / 24);
-      if (day < 7) return `Há ${day} dia${day === 1 ? '' : 's'}`;
-      const week = Math.floor(day / 7);
-      if (week < 5) return `Há ${week} semana${week === 1 ? '' : 's'}`;
-      const month = Math.floor(day / 30);
-      if (month < 12) return `Há ${month} mês${month === 1 ? '' : 'es'}`;
-      const year = Math.floor(day / 365);
-      return `Há ${year} ano${year === 1 ? '' : 's'}`;
-    }
 
     // Normalização base (preferir KCAPI)
     if (window.KCAPI && typeof window.KCAPI.normalizePost === 'function') {
@@ -112,16 +87,7 @@ window.KCPostModel = window.KCPostModel || {
     if (!post._legacyAuthorName && (post.autor || post.author)) post._legacyAuthorName = post.autor || post.author;
     if (!post._legacyAuthorAvatar && (post.autorAvatar || post.authorAvatar)) post._legacyAuthorAvatar = post.autorAvatar || post.authorAvatar;
 
-    // Timestamp (badge de tempo): se vier como ISO (Supabase), converte para relativo
-    // e mantém a string original em createdAt/created_at.
-    try {
-      const iso = post.createdAt || post.created_at || (_kcLooksISO(post.timestamp) ? post.timestamp : '');
-      const rel = _kcRelativeTimeFromISO(iso);
-      if (rel) {
-        post._kcRelativeTime = rel;
-        if (!post.timestamp || _kcLooksISO(post.timestamp)) post.timestamp = rel;
-      }
-    } catch (_) { }
+
 
     // Link de módulo (breadcrumbs/UX do product)
     if (!post._kcModulePage) {
