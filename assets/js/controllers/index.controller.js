@@ -30,7 +30,10 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.KCControllers && typeof window.KCControllers.injectFeed === 'function') {
-      window.KCControllers.injectFeed({ module: null, pageModule: '' });
+      // P1-B fix: lê ?q= da URL para filtrar feed via busca no Supabase
+      var urlQ = '';
+      try { urlQ = new URLSearchParams(window.location.search).get('q') || ''; } catch (_) {}
+      window.KCControllers.injectFeed({ module: null, pageModule: '', q: urlQ });
     }
     bindIndexInteractions();
   });

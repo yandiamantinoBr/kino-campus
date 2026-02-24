@@ -177,22 +177,24 @@
     };
   }
 
-  async function fetchPostsByModule(moduleKeys, page, limit) {
+  // P1-B fix: aceita parâmetro q (busca textual) e o repassa ao KCAPI.getPosts
+  async function fetchPostsByModule(moduleKeys, page, limit, q) {
     if (!window.KCAPI || typeof window.KCAPI.getPosts !== 'function') return [];
+    const extra = (q && String(q).trim()) ? { q: String(q).trim() } : {};
 
     if (moduleKeys.length === 0) {
-      const posts = await window.KCAPI.getPosts({ page, limit });
+      const posts = await window.KCAPI.getPosts({ page, limit, ...extra });
       return Array.isArray(posts) ? posts : [];
     }
 
     if (moduleKeys.length === 1) {
-      const posts = await window.KCAPI.getPosts({ module: moduleKeys[0], page, limit });
+      const posts = await window.KCAPI.getPosts({ module: moduleKeys[0], page, limit, ...extra });
       return Array.isArray(posts) ? posts : [];
     }
 
     const merged = [];
     for (const mk of moduleKeys) {
-      const part = await window.KCAPI.getPosts({ module: mk, page, limit });
+      const part = await window.KCAPI.getPosts({ module: mk, page, limit, ...extra });
       if (Array.isArray(part) && part.length) merged.push(...part);
     }
     return merged;
@@ -233,6 +235,7 @@
     const pageModule = opt.pageModule || (moduleKeys.length === 1 ? moduleKeys[0] : '') || '';
     const limit = (opt.limit != null) ? Math.max(1, parseInt(String(opt.limit), 10) || POSTS_LIMIT) : POSTS_LIMIT;
     const useRealtime = opt.realtime !== false;
+    const searchQuery = (opt.q && String(opt.q).trim()) ? String(opt.q).trim() : '';
 
     if (activePager && typeof activePager.destroy === 'function') {
       try { activePager.destroy(); } catch (_) { }
@@ -393,7 +396,7 @@
       const apiPage = state.page + 1;
 
       try {
-        const dbPosts = await fetchPostsByModule(moduleKeys, apiPage, limit);
+        const dbPosts = await fetchPostsByModule(moduleKeys, apiPage, limit, searchQuery);
 
         let userRaw = [];
         if (apiPage === 1) {
