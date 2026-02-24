@@ -1,35 +1,39 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-<script>
-  // KinoCampus - Theme boot (sem flash)
-  (function () {
-    const STORAGE_KEY = 'theme';
-    const root = document.documentElement;
-    root.classList.add('kc-theme-preload');
 
-    let saved = null;
-    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+    <script>
+        // KinoCampus - Theme boot (sem flash)
+        (function () {
+            const STORAGE_KEY = 'theme';
+            const root = document.documentElement;
+            root.classList.add('kc-theme-preload');
 
-    let theme = (saved === 'light' || saved === 'dark')
-      ? saved
-      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            let saved = null;
+            try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) { }
 
-    root.setAttribute('data-theme', theme);
-    // melhora o UI nativo (inputs/scrollbar) em ambos os temas
-    root.style.colorScheme = theme;
-  })();
-</script>
-<style>
-  /* evita transições durante o primeiro paint */
-  html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
-</style>
-<title>Resultados de Busca - KinoCampus</title>
+            let theme = (saved === 'light' || saved === 'dark')
+                ? saved
+                : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+            root.setAttribute('data-theme', theme);
+            // melhora o UI nativo (inputs/scrollbar) em ambos os temas
+            root.style.colorScheme = theme;
+        })();
+    </script>
+    <style>
+        /* evita transições durante o primeiro paint */
+        html.kc-theme-preload,
+        html.kc-theme-preload * {
+            transition: none !important;
+        }
+    </style>
+    <title>Resultados de Busca - KinoCampus</title>
     <link rel="stylesheet" href="assets/css/styles.css" />
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <style>
         .kc-search-results-header {
             display: flex;
@@ -39,13 +43,16 @@
             margin: 20px 0;
             flex-wrap: wrap;
         }
+
         .kc-search-results-header h1 {
             margin: 0;
             font-size: 1.4em;
         }
+
         .kc-search-results-meta {
             color: var(--kc-text-dark-secondary);
         }
+
         #noResults {
             background-color: var(--kc-surface-dark);
             border: 1px solid var(--kc-border-dark);
@@ -55,6 +62,7 @@
             color: var(--kc-text-dark-secondary);
             display: none;
         }
+
         #noResults i {
             font-size: 2em;
             opacity: 0.5;
@@ -62,19 +70,20 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Header -->
     <header class="kc-header">
         <div class="kc-header-container">
             <div class="kc-logo">
-<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
-<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
-<span class="kc-logo-text">
-<span class="kc-logo-name">Kino<span>Campus</span></span>
-<span class="kc-logo-sub">Comunidade UFG</span>
-</span>
-</a>
-</div>
+                <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+                    <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+                    <span class="kc-logo-text">
+                        <span class="kc-logo-name">Kino<span>Campus</span></span>
+                        <span class="kc-logo-sub">Comunidade UFG</span>
+                    </span>
+                </a>
+            </div>
 
             <nav class="kc-nav-links">
                 <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
@@ -95,7 +104,7 @@
         </div>
     </header>
 
-    <main class="kc-main-content">
+    <main class="kc-main-content" style="grid-template-columns: 1fr;">
         <div class="kc-search-results-header">
             <div>
                 <h1>Mostrando resultados para: <span id="searchQueryText"></span></h1>
@@ -145,16 +154,17 @@
     <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
 
     <script src="assets/js/kc-utils.js"></script>
-<script src="assets/js/kc-env.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/js/kc-env.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="assets/js/kc-supabase.client.js"></script>
-<script src="assets/js/kc-api.client.js"></script>
-<script src="assets/js/kc-profiles.client.js"></script>
-<script src="assets/js/kc-core.js"></script>
+    <script src="assets/js/kc-supabase.client.js"></script>
+    <script src="assets/js/kc-api.client.js"></script>
+    <script src="assets/js/kc-profiles.client.js"></script>
+    <script src="assets/js/kc-core.js"></script>
 
-<script src="assets/js/kc-auth.ui.js"></script>
-<script src="assets/js/kc-theme.js"></script>
-<script src="assets/js/kc-search.js"></script>
+    <script src="assets/js/kc-auth.ui.js"></script>
+    <script src="assets/js/kc-theme.js"></script>
+    <script src="assets/js/kc-search.js"></script>
 </body>
+
 </html>

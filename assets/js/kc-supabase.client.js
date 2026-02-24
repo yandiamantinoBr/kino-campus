@@ -315,7 +315,7 @@
       : 'id, full_name, avatar_url';
 
     // mediaRel: post_media (padrão do schema) | post_images (compat)
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)`;
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover), comments(count)`;
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -329,7 +329,7 @@
       ? "id, url, is_cover, sort_order"
       : "id, url, is_cover";
 
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})`;
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields}), comments(count)`;
   }
 
   function isMaybeSingleMissing(err) {
@@ -361,9 +361,9 @@
 
       // Ordenação por sort_order quando existir (sem assumir schema)
       if (includeSortOrder) {
-        try { q = q.order("sort_order", { foreignTable: mediaRel, ascending: true }); } catch (_) {}
+        try { q = q.order("sort_order", { foreignTable: mediaRel, ascending: true }); } catch (_) { }
       }
-      try { q = q.order("is_cover", { foreignTable: mediaRel, ascending: false }); } catch (_) {}
+      try { q = q.order("is_cover", { foreignTable: mediaRel, ascending: false }); } catch (_) { }
 
       if (typeof q.maybeSingle === "function") return await q.maybeSingle();
       return await q.single();
@@ -406,7 +406,7 @@
 
     if (res && res.error) {
       if (isMaybeSingleMissing(res.error)) return null;
-      try { console.error("[KCSupabase] getPostById erro:", res.error); } catch (_) {}
+      try { console.error("[KCSupabase] getPostById erro:", res.error); } catch (_) { }
       return null;
     }
 
@@ -469,7 +469,7 @@
     }
 
     if (res && res.error) {
-      try { console.error('[KCSupabase] getPosts erro:', res.error); } catch (_) {}
+      try { console.error('[KCSupabase] getPosts erro:', res.error); } catch (_) { }
       return [];
     }
 
@@ -477,7 +477,7 @@
   }
 
   function noopSubscription() {
-    return { unsubscribe: function () {} };
+    return { unsubscribe: function () { } };
   }
 
   function normalizeModuleFilter(filter) {
@@ -531,7 +531,7 @@
             } catch (cbErr) {
               try {
                 if (typeof opt.onError === 'function') opt.onError(cbErr);
-              } catch (_) {}
+              } catch (_) { }
             }
           }
         );
@@ -540,13 +540,13 @@
         channel.subscribe((status) => {
           try {
             if (typeof opt.onStatus === 'function') opt.onStatus(status);
-          } catch (_) {}
+          } catch (_) { }
         });
       }
     } catch (e) {
       try {
         if (typeof opt.onError === 'function') opt.onError(e);
-      } catch (_) {}
+      } catch (_) { }
       return noopSubscription();
     }
 
@@ -556,10 +556,10 @@
         unsubscribed = true;
         try {
           if (channel && typeof channel.unsubscribe === 'function') channel.unsubscribe();
-        } catch (_) {}
+        } catch (_) { }
         try {
           if (channel && typeof client.removeChannel === 'function') client.removeChannel(channel);
-        } catch (_) {}
+        } catch (_) { }
       }
     };
   }
@@ -567,7 +567,7 @@
   function onAuthStateChange(callback) {
     const client = getClient();
     if (!client || !client.auth || typeof client.auth.onAuthStateChange !== 'function') {
-      return { data: { subscription: { unsubscribe: function () {} } } };
+      return { data: { subscription: { unsubscribe: function () { } } } };
     }
 
     return client.auth.onAuthStateChange((event, session) => {
@@ -577,7 +577,7 @@
 
       try {
         if (typeof callback === 'function') callback({ event, session: state.session, user: state.user });
-      } catch (_) {}
+      } catch (_) { }
     });
   }
 
@@ -600,7 +600,7 @@
     // Escuta ativa
     try {
       state.authSub = onAuthStateChange();
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // Exposição pública
@@ -632,12 +632,12 @@
         return noopSubscription();
       },
     });
-  } catch (_) {}
+  } catch (_) { }
 
   // Boot automático (sem bloquear render)
   try {
     // inicia o mais cedo possível
     init();
     document.addEventListener('DOMContentLoaded', init, { once: true });
-  } catch (_) {}
+  } catch (_) { }
 })();

@@ -60,36 +60,11 @@ window.KCPostModel = window.KCPostModel || {
             now = new Date(Date.UTC(clamp.year, mi, 15, 14, 0, 0));
           }
         }
-      } catch (_) {}
+      } catch (_) { }
       return now;
     }
 
-    function _kcRelativeTimeFromISO(iso) {
-      const rawTs = String(iso || '').trim();
-      if (!rawTs || !_kcLooksISO(rawTs)) return '';
 
-      const d = new Date(rawTs);
-      if (isNaN(d.getTime())) return '';
-
-      const now = _kcGetNowFor(d);
-      let diffMs = now.getTime() - d.getTime();
-      if (!isFinite(diffMs) || diffMs < 0) return '';
-
-      const sec = Math.floor(diffMs / 1000);
-      if (sec < 60) return 'Agora';
-      const min = Math.floor(sec / 60);
-      if (min < 60) return `Há ${min} minuto${min === 1 ? '' : 's'}`;
-      const hr = Math.floor(min / 60);
-      if (hr < 24) return `Há ${hr} hora${hr === 1 ? '' : 's'}`;
-      const day = Math.floor(hr / 24);
-      if (day < 7) return `Há ${day} dia${day === 1 ? '' : 's'}`;
-      const week = Math.floor(day / 7);
-      if (week < 5) return `Há ${week} semana${week === 1 ? '' : 's'}`;
-      const month = Math.floor(day / 30);
-      if (month < 12) return `Há ${month} mês${month === 1 ? '' : 'es'}`;
-      const year = Math.floor(day / 365);
-      return `Há ${year} ano${year === 1 ? '' : 's'}`;
-    }
 
     // Normalização base (preferir KCAPI)
     if (window.KCAPI && typeof window.KCAPI.normalizePost === 'function') {
@@ -112,16 +87,7 @@ window.KCPostModel = window.KCPostModel || {
     if (!post._legacyAuthorName && (post.autor || post.author)) post._legacyAuthorName = post.autor || post.author;
     if (!post._legacyAuthorAvatar && (post.autorAvatar || post.authorAvatar)) post._legacyAuthorAvatar = post.autorAvatar || post.authorAvatar;
 
-    // Timestamp (badge de tempo): se vier como ISO (Supabase), converte para relativo
-    // e mantém a string original em createdAt/created_at.
-    try {
-      const iso = post.createdAt || post.created_at || ( _kcLooksISO(post.timestamp) ? post.timestamp : '' );
-      const rel = _kcRelativeTimeFromISO(iso);
-      if (rel) {
-        post._kcRelativeTime = rel;
-        if (!post.timestamp || _kcLooksISO(post.timestamp)) post.timestamp = rel;
-      }
-    } catch (_) {}
+
 
     // Link de módulo (breadcrumbs/UX do product)
     if (!post._kcModulePage) {
@@ -244,10 +210,29 @@ function vote(button, type) {
   // clear
   voteButtons.forEach(btn => btn.classList.remove('active'));
 
-  let newScore = currentScore;
+  // Qual tipo estava ativo?
+  let previouslyActiveType = null;
+  voteButtons.forEach((btn, idx) => {
+    if (previousActiveStates[idx]) {
+      const action = String(btn.getAttribute('data-action') || '');
+      if (action.includes('hot')) previouslyActiveType = 'hot';
+      if (action.includes('cold')) previouslyActiveType = 'cold';
+    }
+  });
+
+  // Reverte o efeito do voto anterior na view local
+  let baseScore = currentScore;
+  if (previouslyActiveType === 'hot') {
+    baseScore -= 1;
+  } else if (previouslyActiveType === 'cold') {
+    baseScore += 1;
+  }
+
+  // Aplica o novo estado otimista
+  let newScore = baseScore;
   if (!isActive) {
     button.classList.add('active');
-    newScore = type === 'hot' ? currentScore + 1 : currentScore - 1;
+    newScore = type === 'hot' ? baseScore + 1 : baseScore - 1;
   }
 
   scoreElement.textContent = String(newScore);
@@ -263,7 +248,7 @@ function vote(button, type) {
   setVoteBoxPending(voteBox, true);
 
   // Supabase: explicita intenção de toggle para reduzir corrida de múltiplos cliques.
-  window.KCAPI.votePost(postId, type, { toggleOff: isActive }).then(function(res) {
+  window.KCAPI.votePost(postId, type, { toggleOff: isActive }).then(function (res) {
     if (res && res.ok) {
       if (typeof res.score === 'number') {
         scoreElement.textContent = String(res.score);
@@ -284,10 +269,10 @@ function vote(button, type) {
     restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates);
     const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível registrar voto.';
     showToast(msg, 'error');
-  }).catch(function() {
+  }).catch(function () {
     restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates);
     showToast('Não foi possível registrar voto.', 'error');
-  }).finally(function() {
+  }).finally(function () {
     KC_VOTE_IN_FLIGHT.delete(lockKey);
     setVoteBoxPending(voteBox, false);
   });
@@ -514,13 +499,13 @@ function normalizeCommentForRender(c) {
   );
 
   return {
-    id:        c.id,
-    author:    String(resolvedAuthor || 'Anônimo').trim() || 'Anônimo',
-    text:      c.body       || c.text   || '',
+    id: c.id,
+    author: String(resolvedAuthor || 'Anônimo').trim() || 'Anônimo',
+    text: c.body || c.text || '',
     timestamp: c.created_at
-                 ? new Date(c.created_at).toLocaleString('pt-BR')
-                 : (c.timestamp || ''),
-    likes:     c.likes || 0,
+      ? new Date(c.created_at).toLocaleString('pt-BR')
+      : (c.timestamp || ''),
+    likes: c.likes || 0,
   };
 }
 
@@ -529,9 +514,9 @@ function likeComment(postId, commentId, containerId = 'commentsContainer') {
 
   // Driver Supabase: persiste via KCAPI (async, re-render ao resolver)
   if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
-    window.KCAPI.likeComment(commentId).then(function() {
+    window.KCAPI.likeComment(commentId).then(function () {
       renderComments(id, containerId);
-    }).catch(function() {});
+    }).catch(function () { });
     return;
   }
 
@@ -559,7 +544,7 @@ function _renderCommentList(id, containerId, comments) {
     return;
   }
 
-  container.innerHTML = comments.map(function(raw) {
+  container.innerHTML = comments.map(function (raw) {
     const c = normalizeCommentForRender(raw);
     return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
@@ -582,7 +567,7 @@ function _renderCommentList(id, containerId, comments) {
   // Event delegation: set up once per container so it persists across re-renders.
   if (!container._kcLikeListenerAttached) {
     container._kcLikeListenerAttached = true;
-    container.addEventListener('click', function(e) {
+    container.addEventListener('click', function (e) {
       const btn = e.target.closest('.kc-like-comment-btn');
       if (!btn) return;
       likeComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.container);
@@ -595,9 +580,9 @@ function renderComments(postId, containerId = 'commentsContainer') {
 
   // Driver Supabase: carrega async, depois renderiza
   if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
-    window.KCAPI.getComments(id).then(function(comments) {
+    window.KCAPI.getComments(id).then(function (comments) {
       _renderCommentList(id, containerId, comments || []);
-    }).catch(function() {
+    }).catch(function () {
       _renderCommentList(id, containerId, []);
     });
     return;
@@ -625,7 +610,7 @@ function submitComment(postId = null, containerId = 'commentsContainer') {
 
   // Driver Supabase: persiste via KCAPI (async)
   if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
-    window.KCAPI.addComment(id, text).then(function(res) {
+    window.KCAPI.addComment(id, text).then(function (res) {
       if (res && res.ok) {
         textarea.value = '';
         renderComments(id, containerId);
@@ -634,7 +619,7 @@ function submitComment(postId = null, containerId = 'commentsContainer') {
         const msg = (res && res.error && res.error.message) || 'Não foi possível comentar.';
         showToast(msg, 'error');
       }
-    }).catch(function() {
+    }).catch(function () {
       showToast('Erro ao enviar comentário.', 'error');
     });
     return;
@@ -749,7 +734,7 @@ function kcCreateUserPost(data) {
         const jitter = (Date.now() % 60000);
         return new Date(base - jitter).toISOString();
       }
-    } catch (_) {}
+    } catch (_) { }
     return new Date().toISOString();
   }
 
@@ -764,14 +749,14 @@ function kcCreateUserPost(data) {
     autorAvatar: (data && (data.autorAvatar || data.authorAvatar))
       ? (data.autorAvatar || data.authorAvatar)
       : (() => {
-          try {
-            if (window.KCAPI && typeof window.KCAPI.getAuthorById === 'function') {
-              const u = window.KCAPI.getAuthorById('USER_SELF');
-              return (u && (u.avatarUrl || u.avatar)) ? (u.avatarUrl || u.avatar) : '';
-            }
-          } catch (_) {}
-          return '';
-        })(),
+        try {
+          if (window.KCAPI && typeof window.KCAPI.getAuthorById === 'function') {
+            const u = window.KCAPI.getAuthorById('USER_SELF');
+            return (u && (u.avatarUrl || u.avatar)) ? (u.avatarUrl || u.avatar) : '';
+          }
+        } catch (_) { }
+        return '';
+      })(),
     ...(data || {}),
   };
 
@@ -796,7 +781,7 @@ function kcCreateUserPost(data) {
 
     // Compra e Venda: tabs são por categoria (ex.: eletronicos), não pela ação (vendo/compro)
     if (mk === 'compra-venda') {
-      const actionish = ['vendo','compro','troco','doacao','doação','procuro'];
+      const actionish = ['vendo', 'compro', 'troco', 'doacao', 'doação', 'procuro'];
       const subk = String(raw.subcategoriaKey || '').toLowerCase();
       if (raw.categoriaKey && actionish.includes(subk)) {
         raw.subcategoriaKey = raw.categoriaKey;
@@ -809,7 +794,7 @@ function kcCreateUserPost(data) {
         meta.subcategoryKey = raw.categoriaKey;
       }
     }
-  } catch (_) {}
+  } catch (_) { }
 
   const normalized = (window.KCAPI && typeof window.KCAPI.normalizePost === 'function')
     ? window.KCAPI.normalizePost(raw)
@@ -825,9 +810,10 @@ function kcCreateUserPost(data) {
   // Se existir KCAPI configurado, espelha o post no servidor.
   try {
     if (window.KCAPI && typeof window.KCAPI.isBackendEnabled === 'function' && window.KCAPI.isBackendEnabled()) {
-      if (typeof window.KCAPI.createPost === 'function') window.KCAPI.createPost(post);
+      const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : window.KCAPI.createPost;
+      if (typeof apiCreateFn === 'function') apiCreateFn(post);
     }
-  } catch (_) {}
+  } catch (_) { }
 
   return post;
 }
@@ -1173,26 +1159,26 @@ function kcEnsureCreateModal() {
       if (groupId === 'topico' && key === 'sustentabilidade') kcCreateState.values.sustentavel = true;
       kcRenderCreateModal();
       return;
-  }
+    }
 
-  const imgActionBtn = e.target.closest('[data-kc-img-action]');
-  if (imgActionBtn) {
-    const action = imgActionBtn.getAttribute('data-kc-img-action');
-    const id = imgActionBtn.getAttribute('data-kc-img-id');
-    if (action === 'remove') kcRemoveCreateImageById(id);
-    if (action === 'cover') kcSetCreateCoverImageById(id);
-    return;
-  }
+    const imgActionBtn = e.target.closest('[data-kc-img-action]');
+    if (imgActionBtn) {
+      const action = imgActionBtn.getAttribute('data-kc-img-action');
+      const id = imgActionBtn.getAttribute('data-kc-img-id');
+      if (action === 'remove') kcRemoveCreateImageById(id);
+      if (action === 'cover') kcSetCreateCoverImageById(id);
+      return;
+    }
 
-  const openImagesBtn = e.target.closest('[data-kc-open-images]');
-  if (openImagesBtn) {
-    const input = overlay.querySelector('#kcImagesInput');
-    if (input && !input.disabled) input.click();
-    return;
-  }
-});
+    const openImagesBtn = e.target.closest('[data-kc-open-images]');
+    if (openImagesBtn) {
+      const input = overlay.querySelector('#kcImagesInput');
+      if (input && !input.disabled) input.click();
+      return;
+    }
+  });
 
-// Form: input binding
+  // Form: input binding
   const form = overlay.querySelector('#kcCreatePostForm');
   if (form) {
     form.addEventListener('input', () => kcCaptureCreateValues());
@@ -1203,39 +1189,39 @@ function kcEnsureCreateModal() {
     });
   }
 
-// Imagens: input/drag&drop
-overlay.addEventListener('change', async (e) => {
-  const target = e.target;
-  if (!target || target.id !== 'kcImagesInput') return;
-  const files = target.files;
-  if (files && files.length) await kcAddImagesFromFiles(files);
-  // permite selecionar o mesmo arquivo novamente
-  try { target.value = ''; } catch {}
-});
+  // Imagens: input/drag&drop
+  overlay.addEventListener('change', async (e) => {
+    const target = e.target;
+    if (!target || target.id !== 'kcImagesInput') return;
+    const files = target.files;
+    if (files && files.length) await kcAddImagesFromFiles(files);
+    // permite selecionar o mesmo arquivo novamente
+    try { target.value = ''; } catch { }
+  });
 
-overlay.addEventListener('dragover', (e) => {
-  const dz = e.target && e.target.closest ? e.target.closest('.kc-img-dropzone') : null;
-  if (!dz) return;
-  e.preventDefault();
-  dz.classList.add('is-dragover');
-});
+  overlay.addEventListener('dragover', (e) => {
+    const dz = e.target && e.target.closest ? e.target.closest('.kc-img-dropzone') : null;
+    if (!dz) return;
+    e.preventDefault();
+    dz.classList.add('is-dragover');
+  });
 
-overlay.addEventListener('dragleave', (e) => {
-  const dz = e.target && e.target.closest ? e.target.closest('.kc-img-dropzone') : null;
-  if (!dz) return;
-  dz.classList.remove('is-dragover');
-});
+  overlay.addEventListener('dragleave', (e) => {
+    const dz = e.target && e.target.closest ? e.target.closest('.kc-img-dropzone') : null;
+    if (!dz) return;
+    dz.classList.remove('is-dragover');
+  });
 
-overlay.addEventListener('drop', async (e) => {
-  const dz = e.target && e.target.closest ? e.target.closest('.kc-img-dropzone') : null;
-  if (!dz) return;
-  e.preventDefault();
-  dz.classList.remove('is-dragover');
-  const files = e.dataTransfer ? e.dataTransfer.files : null;
-  if (files && files.length) await kcAddImagesFromFiles(files);
-});
+  overlay.addEventListener('drop', async (e) => {
+    const dz = e.target && e.target.closest ? e.target.closest('.kc-img-dropzone') : null;
+    if (!dz) return;
+    e.preventDefault();
+    dz.classList.remove('is-dragover');
+    const files = e.dataTransfer ? e.dataTransfer.files : null;
+    if (files && files.length) await kcAddImagesFromFiles(files);
+  });
 
-// ESC fecha
+  // ESC fecha
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && kcCreateState.open) kcCloseCreatePostModal();
@@ -1670,7 +1656,7 @@ function kcCloseCreatePostModal() {
   document.body.classList.remove('kc-modal-open');
 
   if (kcLastFocus && typeof kcLastFocus.focus === 'function') {
-    try { kcLastFocus.focus(); } catch {}
+    try { kcLastFocus.focus(); } catch { }
   }
 }
 
@@ -1792,17 +1778,19 @@ async function kcHandleCreateSubmit() {
     },
   };
 
-  const hasApiCreatePost = !!(window.KCAPI && typeof window.KCAPI.createPost === 'function');
+  const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
   const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
   let post = null;
   let createError = null;
+
+  const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
 
   if (useSupabase) {
     // Exige autenticação no driver Supabase (RLS)
     let user = null;
     try {
       if (typeof window.KCAPI.getCurrentUser === 'function') user = await window.KCAPI.getCurrentUser();
-    } catch (_) {}
+    } catch (_) { }
 
     if (!user) {
       showToast('Faça login para publicar.', 'warn', 2600);
@@ -1811,17 +1799,17 @@ async function kcHandleCreateSubmit() {
         const btn = document.querySelector('a.btn-login') || document.querySelector('a[href="#login"]');
         if (btn) {
           btn.classList.add('kc-attention');
-          try { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
-          try { btn.focus(); } catch (_) {}
+          try { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { }
+          try { btn.focus(); } catch (_) { }
           setTimeout(() => btn.classList.remove('kc-attention'), 900);
         }
-      } catch (_) {}
+      } catch (_) { }
       return;
     }
 
     showToast('Publicando...', 'info', 1600);
     try {
-      post = await window.KCAPI.createPost(payload);
+      post = await apiCreateFn(payload);
       if (post && post.ok === false && post.error) {
         createError = post.error;
         post = null;
@@ -1841,7 +1829,7 @@ async function kcHandleCreateSubmit() {
           const createErr = window.KCAPI.getLastCreatePostError();
           console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
         }
-      } catch (_) {}
+      } catch (_) { }
       const feedbackMessage = (createError && createError.message)
         ? String(createError.message)
         : 'Não foi possível publicar agora. Tente novamente.';
@@ -1852,7 +1840,7 @@ async function kcHandleCreateSubmit() {
     // Modo local/offline-first (default): só confirma sucesso após persistência efetiva.
     try {
       if (hasApiCreatePost) {
-        post = await window.KCAPI.createPost(payload);
+        post = await apiCreateFn(payload);
       } else {
         post = kcCreateUserPost(payload);
       }
@@ -1979,7 +1967,7 @@ function kcEnableDragToScroll(el) {
       dragging = true;
       el.classList.add('is-dragging');
       document.documentElement.classList.add('kc-no-select');
-      try { el.setPointerCapture(pointerId); } catch (_) {}
+      try { el.setPointerCapture(pointerId); } catch (_) { }
     }
 
     if (!dragging) return;
@@ -2033,7 +2021,7 @@ function kcInitHeroSwipe() {
     if (e.target && e.target.closest && e.target.closest("a, button")) return;
     pointerId = e.pointerId;
     startX = e.clientX;
-    try { carousel.setPointerCapture(pointerId); } catch (_) {}
+    try { carousel.setPointerCapture(pointerId); } catch (_) { }
   }, { passive: true });
 
   carousel.addEventListener("pointerup", (e) => {
@@ -2305,7 +2293,7 @@ function kcInitWhatsAppShare() {
       }
     });
     obs.observe(document.body, { childList: true, subtree: true });
-  } catch (_) {}
+  } catch (_) { }
 }
 // Init
 // -----------------------------
@@ -2510,7 +2498,7 @@ document.addEventListener('DOMContentLoaded', () => {
         moved = true;
         el.classList.add('is-dragging');
         document.documentElement.classList.add('kc-no-select');
-        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        try { el.setPointerCapture(e.pointerId); } catch (_) { }
       }
 
       if (!moved) return;

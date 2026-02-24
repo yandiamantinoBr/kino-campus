@@ -113,6 +113,33 @@
       .join(' ');
   }
 
+  function timeAgo(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return String(dateString);
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+
+    // Se for no futuro (possível descompasso de relógio) ou na hora
+    if (diffMs < 60000) return 'Agora mesmo';
+
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 60) return `Há ${diffMin} min`;
+
+    const diffHoras = Math.floor(diffMin / 60);
+    if (diffHoras < 24) return diffHoras === 1 ? 'Há 1 hora' : `Há ${diffHoras} horas`;
+
+    const diffDias = Math.floor(diffHoras / 24);
+    if (diffDias < 30) return diffDias === 1 ? 'Há 1 dia' : `Há ${diffDias} dias`;
+
+    const diffMeses = Math.floor(diffDias / 30);
+    if (diffMeses < 12) return diffMeses === 1 ? 'Há 1 mês' : `Há ${diffMeses} meses`;
+
+    const diffAnos = Math.floor(diffDias / 365);
+    return diffAnos === 1 ? 'Há 1 ano' : `Há ${diffAnos} anos`;
+  }
+
   function beautifyKey(key) {
     const s = String(key || '').trim();
     if (!s) return '';
@@ -371,6 +398,11 @@
 
     // UI: comentários compactos (ícone + número)
     if (p._kcCompactComments == null) p._kcCompactComments = true;
+
+    // Tempo Relativo (timeAgo)
+    if (p.created_at || p.timestamp) {
+      p._kcRelativeTime = timeAgo(p.created_at || p.timestamp);
+    }
 
 
     // Labels (sem quebrar caso já existam)

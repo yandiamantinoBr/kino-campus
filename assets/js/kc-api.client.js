@@ -395,7 +395,7 @@
       if (!meta.subcategoryKey && desiredSub) meta.subcategoryKey = desiredSub;
 
       if (mk === 'compra-venda') {
-        const actionish = ['vendo','compro','troco','doacao','doação','procuro'];
+        const actionish = ['vendo', 'compro', 'troco', 'doacao', 'doação', 'procuro'];
         const subk = String(out.subcategoriaKey || '').toLowerCase();
         if (out.categoriaKey && actionish.includes(subk)) {
           out.subcategoriaKey = out.categoriaKey;
@@ -407,7 +407,7 @@
           meta.subcategoryKey = out.categoriaKey;
         }
       }
-    } catch (_e) {}
+    } catch (_e) { }
 
     return out;
   }
@@ -496,7 +496,7 @@
       const end = start + limit;
       const slice = Array.isArray(filtered) ? filtered.slice(start, end) : [];
 
-      try { console.debug(`[KCAPI:local] Serving page ${page} (${slice.length} items) [limit=${limit}]`); } catch (_) {}
+      try { console.debug(`[KCAPI:local] Serving page ${page} (${slice.length} items) [limit=${limit}]`); } catch (_) { }
 
       return slice;
     }
@@ -529,7 +529,7 @@
             const pid = (p && (p.id ?? p._id ?? p.legacy_id ?? p.legacyId ?? p.uuid)) ?? null;
             return pid != null && String(pid) === key;
           }) || null;
-        } catch (_) {}
+        } catch (_) { }
         return null;
       }
     }
@@ -545,7 +545,7 @@
         });
         if (found) return found;
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 2) Seed JSON (data/database.json)
     try {
@@ -560,7 +560,7 @@
         return false;
       });
       if (found) return found;
-    } catch (_) {}
+    } catch (_) { }
 
     return null;
   }
@@ -593,7 +593,7 @@
         }
 
         let subKey = toSlug(raw.subcategoriaKey || raw.subcategoryKey || raw.subcategory || '');
-        const actionish = ['vendo','compro','troco','doacao','alugo','procuro'];
+        const actionish = ['vendo', 'compro', 'troco', 'doacao', 'alugo', 'procuro'];
         // compra-venda: tabs usam categoria (eletronicos...), não ação
         if (m === 'compra-venda' && subKey && actionish.includes(subKey) && catKey) {
           subKey = catKey;
@@ -608,7 +608,7 @@
           raw.metadata.subcategory = raw.metadata.subcategory || subKey;
           raw.metadata.subcategoryKey = raw.metadata.subcategoryKey || subKey;
         }
-      } catch (_) {}
+      } catch (_) { }
 
       const next = normalizePost(raw);
       existing.unshift(next);
@@ -652,10 +652,10 @@
     // Comentários e votos no driver local são geridos diretamente por kc-core.js (localStorage).
     // As funções abaixo existem apenas para uniformidade da interface; kc-core.js não as usa.
     getComments: async function () { return null; },
-    addComment:  async function () { return null; },
+    addComment: async function () { return null; },
     likeComment: async function () { return null; },
-    votePost:    async function () { return null; },
-    getMyVote:   async function () { return null; },
+    votePost: async function () { return null; },
+    getMyVote: async function () { return null; },
   });
 
   function supabaseNotReady(method) {
@@ -682,7 +682,7 @@
         supabaseClient = window.KCSupabase.getClient();
         return supabaseClient;
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Fallback (mantém compatibilidade caso o Facade não esteja carregado)
     if (!hasSupabaseLib()) {
@@ -713,7 +713,7 @@
       if (window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
         return await window.KCSupabase.getCurrentUser();
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const client = getSupabaseClient();
     if (!client) return null;
@@ -753,7 +753,7 @@
         const r = await window.KCSupabase.signIn(em, pw);
         return (r && r.user) ? r.user : null;
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const client = getSupabaseClient();
     if (!client) return null;
@@ -800,7 +800,7 @@
         const r = await window.KCSupabase.signOut();
         return !!(r && r.ok);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const client = getSupabaseClient();
     if (!client) return false;
@@ -1125,6 +1125,8 @@
       imagens: imageUrls,
       images: imageUrls,
 
+      comentarios: (Array.isArray(row.comments) && row.comments[0] && row.comments[0].count != null) ? row.comments[0].count : 0,
+
       metadata,
     };
 
@@ -1160,7 +1162,7 @@
   function buildSupabasePostSelect(client) {
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, verified), post_media (id, url, is_cover)')
+      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, verified), post_media (id, url, is_cover), comments(count)')
       .limit(1);
   }
 
@@ -1168,7 +1170,7 @@
   function buildSupabasePostSelectFallback(client) {
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url), post_media (id, url, is_cover)')
+      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url), post_media (id, url, is_cover), comments(count)')
       .limit(1);
   }
 
@@ -1332,7 +1334,7 @@
         const limitRaw = (f.limit != null) ? parseInt(String(f.limit), 10) : (out.length || 0);
         const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
         const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : (out.length || 0);
-        try { console.debug(`[KCAPI:supabase] Loaded page ${page} (${out.length} items) [limit=${limit}]`); } catch (_) {}
+        try { console.debug(`[KCAPI:supabase] Loaded page ${page} (${out.length} items) [limit=${limit}]`); } catch (_) { }
 
         return out;
       }
@@ -1410,7 +1412,7 @@
 
     // V8.1.3.1: compra-venda usa tabs por categoria (ex.: eletronicos).
     // Se algum payload vier com subKey=ação, normalizamos para a categoria.
-    const actionish = ['vendo','compro','troco','doacao','doação','procuro'];
+    const actionish = ['vendo', 'compro', 'troco', 'doacao', 'doação', 'procuro'];
     const subKeySlug = toSlug(subKey);
     const effectiveSubKey = (moduleDB === 'compra-venda' && subKeySlug && actionish.includes(subKeySlug) && categoryKey)
       ? categoryKey
@@ -1494,104 +1496,104 @@
 
     try {
 
-    // 1) Insere post primeiro (para obter postId) e habilitar path controlado no Storage
-    const createdAt = clampCreatedAtISO();
+      // 1) Insere post primeiro (para obter postId) e habilitar path controlado no Storage
+      const createdAt = clampCreatedAtISO();
 
-    const insertPayload = {
-      author_id: user.id,
-      title: parsed.title,
-      description: parsed.description,
-      price: parsed.price,
-      location: parsed.location,
-      module: parsed.moduleDB,
-      category: parsed.categoryDB,
-      metadata: parsed.metadata,
-      created_at: createdAt,
-    };
+      const insertPayload = {
+        author_id: user.id,
+        title: parsed.title,
+        description: parsed.description,
+        price: parsed.price,
+        location: parsed.location,
+        module: parsed.moduleDB,
+        category: parsed.categoryDB,
+        metadata: parsed.metadata,
+        created_at: createdAt,
+      };
 
-    // Helper de rollback (evita órfãos quando upload falha após INSERT)
-    async function rollbackCreatedPost(postId) {
-      try {
-        const del = await client.from('posts').delete().eq('id', postId);
-        if (del && del.error) console.warn('[KCAPI][Supabase] rollback delete falhou:', del.error);
-      } catch (e) {
-        console.warn('[KCAPI][Supabase] rollback delete exceção:', e);
-      }
-    }
-
-    // 2) INSERT posts (gera UUID)
-    let postId = null;
-    const ins = await client
-      .from('posts')
-      .insert(insertPayload)
-      .select('id')
-      .maybeSingle();
-
-    if (ins && ins.error) {
-      setLastCreatePostError('POST_INSERT', ins.error, {
-        userId: user.id,
-        payload: payloadSummary,
-      });
-      return null;
-    }
-
-    postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
-    if (!postId) {
-      setLastCreatePostError('POST_INSERT', {
-        message: 'INSERT em posts não retornou id.',
-        code: 'POST_INSERT_NO_ID',
-      }, {
-        userId: user.id,
-        payload: payloadSummary,
-      });
-      return null;
-    }
-
-    // 3) Upload das imagens (se houver) com path controlado (post-media/{userId}/{postId}/...)
-    const uploadResult = await uploadImagesToSupabaseStorage(client, parsed.images, { userId: user.id, postId });
-    if (!uploadResult || !uploadResult.ok) {
-      await rollbackCreatedPost(postId);
-      setLastCreatePostError('STORAGE_UPLOAD', uploadResult ? uploadResult.error : null, {
-        postId,
-        userId: user.id,
-        imagesCount: Array.isArray(parsed.images) ? parsed.images.length : 0,
-      });
-      return null;
-    }
-    const uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
-
-    // 4) Insere mídias (post_media) com capa + ordem
-    if (Array.isArray(uploaded) && uploaded.length) {
-      const mediaRowsFull = uploaded
-        .filter((m) => m && m.url)
-        .map((m, idx) => ({
-          post_id: postId,
-          url: String(m.url),
-          is_cover: idx === 0, // regra: capa = 1ª imagem ordenada
-          sort_order: Number.isFinite(m.sort_order) ? m.sort_order : idx,
-        }));
-
-      // Tenta com sort_order (V8.1.5.1); fallback se schema ainda não tiver coluna.
-      let mr = await client.from('post_media').insert(mediaRowsFull);
-      if (mr && mr.error) {
-        const msg = String(mr.error.message || '').toLowerCase();
-        if (msg.includes('sort_order')) {
-          const mediaRowsCompat = mediaRowsFull.map(({ sort_order, ...rest }) => rest);
-          mr = await client.from('post_media').insert(mediaRowsCompat);
+      // Helper de rollback (evita órfãos quando upload falha após INSERT)
+      async function rollbackCreatedPost(postId) {
+        try {
+          const del = await client.from('posts').delete().eq('id', postId);
+          if (del && del.error) console.warn('[KCAPI][Supabase] rollback delete falhou:', del.error);
+        } catch (e) {
+          console.warn('[KCAPI][Supabase] rollback delete exceção:', e);
         }
       }
 
-      if (mr && mr.error) {
-        setLastCreatePostError('POST_MEDIA_INSERT', mr.error, {
-          postId,
-          mediaCount: mediaRowsFull.length,
+      // 2) INSERT posts (gera UUID)
+      let postId = null;
+      const ins = await client
+        .from('posts')
+        .insert(insertPayload)
+        .select('id')
+        .maybeSingle();
+
+      if (ins && ins.error) {
+        setLastCreatePostError('POST_INSERT', ins.error, {
+          userId: user.id,
+          payload: payloadSummary,
         });
-        // não apaga post automaticamente (pode ser útil depurar), mas registra dívida
         return null;
       }
-    }
 
-    // 5) Rebusca completo (com JOINs) e normaliza no contrato do modo local (com JOINs) e normaliza no contrato do modo local
+      postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
+      if (!postId) {
+        setLastCreatePostError('POST_INSERT', {
+          message: 'INSERT em posts não retornou id.',
+          code: 'POST_INSERT_NO_ID',
+        }, {
+          userId: user.id,
+          payload: payloadSummary,
+        });
+        return null;
+      }
+
+      // 3) Upload das imagens (se houver) com path controlado (post-media/{userId}/{postId}/...)
+      const uploadResult = await uploadImagesToSupabaseStorage(client, parsed.images, { userId: user.id, postId });
+      if (!uploadResult || !uploadResult.ok) {
+        await rollbackCreatedPost(postId);
+        setLastCreatePostError('STORAGE_UPLOAD', uploadResult ? uploadResult.error : null, {
+          postId,
+          userId: user.id,
+          imagesCount: Array.isArray(parsed.images) ? parsed.images.length : 0,
+        });
+        return null;
+      }
+      const uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
+
+      // 4) Insere mídias (post_media) com capa + ordem
+      if (Array.isArray(uploaded) && uploaded.length) {
+        const mediaRowsFull = uploaded
+          .filter((m) => m && m.url)
+          .map((m, idx) => ({
+            post_id: postId,
+            url: String(m.url),
+            is_cover: idx === 0, // regra: capa = 1ª imagem ordenada
+            sort_order: Number.isFinite(m.sort_order) ? m.sort_order : idx,
+          }));
+
+        // Tenta com sort_order (V8.1.5.1); fallback se schema ainda não tiver coluna.
+        let mr = await client.from('post_media').insert(mediaRowsFull);
+        if (mr && mr.error) {
+          const msg = String(mr.error.message || '').toLowerCase();
+          if (msg.includes('sort_order')) {
+            const mediaRowsCompat = mediaRowsFull.map(({ sort_order, ...rest }) => rest);
+            mr = await client.from('post_media').insert(mediaRowsCompat);
+          }
+        }
+
+        if (mr && mr.error) {
+          setLastCreatePostError('POST_MEDIA_INSERT', mr.error, {
+            postId,
+            mediaCount: mediaRowsFull.length,
+          });
+          // não apaga post automaticamente (pode ser útil depurar), mas registra dívida
+          return null;
+        }
+      }
+
+      // 5) Rebusca completo (com JOINs) e normaliza no contrato do modo local (com JOINs) e normaliza no contrato do modo local
       const mapped = await supabaseGetPostById(postId);
       if (!mapped) {
         setLastCreatePostError('POST_FETCH', {
@@ -1649,7 +1651,7 @@
       const post = await supabaseGetPostById(String(postId));
       if (post && post.uuid && UUID_RE.test(String(post.uuid))) return String(post.uuid);
       if (post && post.id && UUID_RE.test(String(post.id))) return String(post.id);
-    } catch (_) {}
+    } catch (_) { }
     return null;
   }
 
@@ -1750,7 +1752,7 @@
         const p = await supabaseGetPostById(String(postId));
         if (p && p.uuid && UUID_RE.test(String(p.uuid))) postUuid = String(p.uuid);
         else if (p && p.id && UUID_RE.test(String(p.id))) postUuid = String(p.id);
-      } catch (_) {}
+      } catch (_) { }
     }
     if (!postUuid) return { ok: false, error: { message: 'Post inválido para denúncia.' } };
 
@@ -1838,7 +1840,7 @@
               if (p && p.id) profilesById[p.id] = p;
             });
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       return rows.map((row) => {
@@ -1888,7 +1890,7 @@
 
       const prof = profRes && profRes.data ? profRes.data : null;
       if (prof) authorName = String(prof.display_name || prof.full_name || 'Anônimo').trim() || 'Anônimo';
-    } catch (_) {}
+    } catch (_) { }
 
     try {
       const { data, error } = await client
@@ -2193,10 +2195,10 @@
     deletePost: supabaseDeletePost,
     reportPost: supabaseReportPost,
     getComments: supabaseGetComments,
-    addComment:  supabaseAddComment,
+    addComment: supabaseAddComment,
     likeComment: supabaseLikeComment,
-    votePost:    supabaseVotePost,
-    getMyVote:   supabaseGetMyVote,
+    votePost: supabaseVotePost,
+    getMyVote: supabaseGetMyVote,
     getMyProfile: supabaseGetMyProfile,
     updateMyProfile: supabaseUpdateMyProfile,
     getMyPosts: supabaseGetMyPosts,
@@ -2224,7 +2226,7 @@
     return activeDriver.reportPost(postId, payload);
   }
 
-  
+
   // Auth facade (sem quebrar modo local)
   // - signIn/signUp retornam { user, error }
   async function getCurrentUser() {
