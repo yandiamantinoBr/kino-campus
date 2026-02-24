@@ -2154,6 +2154,10 @@ input:focus-visible {
 }
 
 @media (max-width: 767px) {
+    body {
+        padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px));
+    }
+
     .kc-mobile-nav {
         display: flex;
     }
@@ -3260,6 +3264,7 @@ html, body {
         text-align: left;
         overflow-wrap: anywhere;
         word-break: break-word;
+        overflow-y: auto;
     }
 
     .kc-hero-banner img,
