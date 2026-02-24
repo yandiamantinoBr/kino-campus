@@ -834,5 +834,6 @@
     splitPriceText,
     applyPresentationRules,
     renderPostCard,
+    timeAgo,
   });
 })();

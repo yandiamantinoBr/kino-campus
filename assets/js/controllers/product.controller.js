@@ -60,7 +60,7 @@
       if (typeof window.showToast === 'function') {
         window.showToast(message, type, duration);
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function bindStaticInteractions() {
@@ -205,7 +205,7 @@
     if (post.condicao) badges.push(`<span class="kc-badge"><i class="fas fa-star"></i> ${esc(post.condicao)}</span>`);
 
     // Tempo relativo
-    const relTime = post._kcRelativeTime || post.timestamp;
+    const relTime = post._kcRelativeTime || (window.KCUtils && window.KCUtils.timeAgo ? window.KCUtils.timeAgo(post.timestamp || post.created_at) : (post.timestamp || post.created_at));
     if (relTime) badges.push(`<span class="kc-badge"><i class="fas fa-clock"></i> ${esc(relTime)}</span>`);
 
     el.innerHTML = badges.join(' ');
@@ -298,7 +298,7 @@
     if (post._kcPriceStyle && typeof post._kcPriceStyle === 'object') {
       try {
         Object.entries(post._kcPriceStyle).forEach(([k, v]) => block.style.setProperty(k, v));
-      } catch (_) {}
+      } catch (_) { }
     }
 
     block.style.display = 'flex';
@@ -529,16 +529,16 @@
         if (window.KCAPI && typeof window.KCAPI.deletePost === 'function') {
           res = await window.KCAPI.deletePost(getPostIdForMutation(post));
         }
-      } catch (_) {}
+      } catch (_) { }
 
       if (res && res.ok) {
-        try { showToast('Publicação excluída com sucesso.', 'success', 2000); } catch (_) {}
+        try { showToast('Publicação excluída com sucesso.', 'success', 2000); } catch (_) { }
         setTimeout(() => { window.location.href = 'index.html'; }, 300);
         return;
       }
 
       const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível excluir a publicação.';
-      try { showToast(msg, 'error', 2800); } catch (_) {}
+      try { showToast(msg, 'error', 2800); } catch (_) { }
     });
   }
 
@@ -577,7 +577,7 @@
       if (window.KCAPI && typeof window.KCAPI.getDatabaseNormalized === 'function') {
         db = await window.KCAPI.getDatabaseNormalized();
       }
-    } catch (_) {}
+    } catch (_) { }
 
     let raw = null;
 
@@ -586,7 +586,7 @@
       if (window.KCAPI && typeof window.KCAPI.getPostById === 'function') {
         raw = await window.KCAPI.getPostById(id);
       }
-    } catch (_) {}
+    } catch (_) { }
 
 
     if (!raw) { showNotFound(); return; }
@@ -700,7 +700,7 @@
       form.tags.value = tags.join(', ');
 
       overlay.style.display = 'flex';
-      try { form.title.focus(); } catch (_) {}
+      try { form.title.focus(); } catch (_) { }
     }
 
     async function save() {
@@ -719,21 +719,21 @@
         if (window.KCAPI && typeof window.KCAPI.updatePost === 'function') {
           res = await window.KCAPI.updatePost(getPostIdForMutation(editingPost), payload);
         }
-      } catch (_) {}
+      } catch (_) { }
 
       if (res && res.ok && res.data) {
         const next = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
           ? window.KCPostModel.from(res.data, { pageModule: (res.data && res.data.modulo) || '', view: 'product' })
           : res.data;
         renderPost(next);
-        try { showToast('Publicação atualizada com sucesso.', 'success', 2000); } catch (_) {}
+        try { showToast('Publicação atualizada com sucesso.', 'success', 2000); } catch (_) { }
         close();
         return;
       }
 
       const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível atualizar a publicação.';
       status.textContent = msg;
-      try { showToast(msg, 'error', 2400); } catch (_) {}
+      try { showToast(msg, 'error', 2400); } catch (_) { }
       saveBtn.disabled = false;
       cancelBtn.disabled = false;
     }
@@ -772,7 +772,7 @@
       };
       const driver = (window.KC_ENV && window.KC_ENV.driver) ? window.KC_ENV.driver : 'local';
       if (driver !== 'supabase') {
-        try { showToast('Denúncias disponíveis apenas no modo Supabase.', 'info', 2200); } catch (_) {}
+        try { showToast('Denúncias disponíveis apenas no modo Supabase.', 'info', 2200); } catch (_) { }
         return;
       }
 
@@ -782,11 +782,11 @@
         if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
           user = await window.KCAPI.getCurrentUser();
         }
-      } catch (_) {}
+      } catch (_) { }
 
       if (!user) {
-        try { showToast('Faça login para denunciar.', 'info', 2200); } catch (_) {}
-        try { if (typeof window.kcOpenAuthModal === 'function') window.kcOpenAuthModal(); } catch (_) {}
+        try { showToast('Faça login para denunciar.', 'info', 2200); } catch (_) { }
+        try { if (typeof window.kcOpenAuthModal === 'function') window.kcOpenAuthModal(); } catch (_) { }
         return;
       }
 
@@ -932,7 +932,7 @@
       postTitle.textContent = String(ctx.postTitle || 'Publicação');
       overlay.style.display = 'flex';
       // foco inicial
-      try { reasonSel.focus(); } catch (_) {}
+      try { reasonSel.focus(); } catch (_) { }
     }
 
     async function submitReport() {
@@ -956,14 +956,14 @@
 
       if (res && res.ok) {
         status.textContent = 'Obrigado! Sua denúncia foi registrada.';
-        try { showToast('Denúncia registrada. Obrigado!', 'success', 2200); } catch (_) {}
+        try { showToast('Denúncia registrada. Obrigado!', 'success', 2200); } catch (_) { }
         setTimeout(closeModal, 650);
         return;
       }
 
       const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível registrar a denúncia.';
       status.textContent = msg;
-      try { showToast(msg, 'error', 2600); } catch (_) {}
+      try { showToast(msg, 'error', 2600); } catch (_) { }
       submit.disabled = false;
       cancel.disabled = false;
     }
