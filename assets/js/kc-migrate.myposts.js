@@ -49,7 +49,7 @@
       if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
         return await window.KCAPI.getCurrentUser();
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Fallback: facade do Supabase
     try {
@@ -59,7 +59,7 @@
       if (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') {
         return window.KCSupabase.getUser();
       }
-    } catch (_) {}
+    } catch (_) { }
 
     return null;
   }
@@ -69,7 +69,7 @@
       if (window.__KC_ORIG_LS_GETITEM && typeof window.__KC_ORIG_LS_GETITEM === 'function') {
         return window.__KC_ORIG_LS_GETITEM.call(localStorage, k);
       }
-    } catch (_) {}
+    } catch (_) { }
     try { return localStorage.getItem(k); } catch (_) { return null; }
   }
 
@@ -247,7 +247,7 @@
         backupKey: item.backupKey || null,
         stack: item.stack || null,
       });
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // ------------- migrate core -------------
@@ -266,8 +266,9 @@
       return { ok: false, code: 'NOT_AUTHENTICATED', message: 'Você precisa estar logado para migrar.' };
     }
 
-    if (!(window.KCAPI && typeof window.KCAPI.createPost === 'function')) {
-      return { ok: false, code: 'KCAPI_CREATEPOST_MISSING', message: 'KCAPI.createPost não está disponível.' };
+    const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
+    if (typeof apiCreateFn !== 'function') {
+      return { ok: false, code: 'KCAPI_CREATEPOST_MISSING', message: 'createPost não está disponível (KCActions/KCAPI).' };
     }
 
     // trava simples
@@ -321,7 +322,7 @@
       if (!onProgress) return;
       try {
         onProgress({ stage, current, total, ...extra });
-      } catch (_) {}
+      } catch (_) { }
     }
 
     progress('START', 0, work.length, { backupKey });
@@ -349,7 +350,7 @@
       progress('UPLOAD', i, work.length, { localId });
 
       try {
-        const created = await window.KCAPI.createPost(normalized.payload);
+        const created = await apiCreateFn(normalized.payload);
         const supabaseId = created && (created.id || created.uuid || created.post_id) ? String(created.id || created.uuid || created.post_id) : null;
 
         if (!supabaseId) {
@@ -413,7 +414,7 @@
       Object.keys(styles).forEach((k) => {
         node.style[k] = styles[k];
       });
-    } catch (_) {}
+    } catch (_) { }
     return node;
   }
 
@@ -422,7 +423,7 @@
   }
 
   function dismissForSession() {
-    try { sessionStorage.setItem('kc_migrate_myposts_dismissed', '1'); } catch (_) {}
+    try { sessionStorage.setItem('kc_migrate_myposts_dismissed', '1'); } catch (_) { }
   }
 
   function isDismissed() {
@@ -642,7 +643,7 @@
 
     dismiss.addEventListener('click', () => {
       dismissForSession();
-      try { wrap.remove(); } catch (_) {}
+      try { wrap.remove(); } catch (_) { }
     });
 
     btn.addEventListener('click', () => {
@@ -654,7 +655,7 @@
             // fallback: apenas informa
             console.info('[KinoCampus] Abra o modal de autenticação para continuar.');
           }
-        } catch (_) {}
+        } catch (_) { }
         return;
       }
 
@@ -716,16 +717,16 @@
           try {
             const after = makeStats();
             if (!after.eligible) wrap.remove();
-          } catch (_) {}
+          } catch (_) { }
 
           // Recarrega o feed para buscar os novos posts do Supabase
           try {
             if (res && res.ok) {
               setTimeout(() => {
-                try { window.location.reload(); } catch (_) {}
+                try { window.location.reload(); } catch (_) { }
               }, 900);
             }
-          } catch (_) {}
+          } catch (_) { }
         });
       }
 
@@ -736,7 +737,7 @@
     try {
       main.insertBefore(wrap, main.firstChild);
     } catch (_) {
-      try { main.appendChild(wrap); } catch (_) {}
+      try { main.appendChild(wrap); } catch (_) { }
     }
   }
 
@@ -750,10 +751,10 @@
   try {
     document.addEventListener('kc:authchange', () => {
       // Reavalia quando login/logout acontecer
-      try { initMigrationCTA(); } catch (_) {}
+      try { initMigrationCTA(); } catch (_) { }
     });
     document.addEventListener('DOMContentLoaded', initMigrationCTA, { once: true });
     // fallback tardio (caso scripts carreguem fora de ordem)
     setTimeout(initMigrationCTA, 1200);
-  } catch (_) {}
+  } catch (_) { }
 })();

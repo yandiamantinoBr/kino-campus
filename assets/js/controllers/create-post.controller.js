@@ -33,7 +33,7 @@
     try {
       if (window.KCAPI && window.KCAPI.activeDriver) return String(window.KCAPI.activeDriver);
       if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver) return String(window.KCAPI.ENV.driver);
-    } catch (_) {}
+    } catch (_) { }
     return 'local';
   }
 
@@ -149,19 +149,20 @@
     if (window.KCAPI[WRAP_FLAG] === true) return true;
 
     const originalCreatePost = window.KCAPI.createPost.bind(window.KCAPI);
-    window.KCAPI.createPost = async function wrappedCreatePost(payload) {
+    window.KCActions = window.KCActions || {};
+    window.KCActions.createPost = async function wrappedCreatePost(payload) {
       return createPostWithDiagnostics(originalCreatePost, payload);
     };
 
     try {
-      Object.defineProperty(window.KCAPI, WRAP_FLAG, {
+      Object.defineProperty(window.KCActions, WRAP_FLAG, {
         value: true,
         configurable: false,
         enumerable: false,
         writable: false,
       });
     } catch (_) {
-      window.KCAPI[WRAP_FLAG] = true;
+      window.KCActions[WRAP_FLAG] = true;
     }
 
     console.log(LOG_TAG + ' Wrapper de diagnostico instalado.');

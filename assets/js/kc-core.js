@@ -844,7 +844,8 @@ function kcCreateUserPost(data) {
   // Se existir KCAPI configurado, espelha o post no servidor.
   try {
     if (window.KCAPI && typeof window.KCAPI.isBackendEnabled === 'function' && window.KCAPI.isBackendEnabled()) {
-      if (typeof window.KCAPI.createPost === 'function') window.KCAPI.createPost(post);
+      const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : window.KCAPI.createPost;
+      if (typeof apiCreateFn === 'function') apiCreateFn(post);
     }
   } catch (_) { }
 
@@ -1811,10 +1812,12 @@ async function kcHandleCreateSubmit() {
     },
   };
 
-  const hasApiCreatePost = !!(window.KCAPI && typeof window.KCAPI.createPost === 'function');
+  const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
   const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
   let post = null;
   let createError = null;
+
+  const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
 
   if (useSupabase) {
     // Exige autenticação no driver Supabase (RLS)
@@ -1840,7 +1843,7 @@ async function kcHandleCreateSubmit() {
 
     showToast('Publicando...', 'info', 1600);
     try {
-      post = await window.KCAPI.createPost(payload);
+      post = await apiCreateFn(payload);
       if (post && post.ok === false && post.error) {
         createError = post.error;
         post = null;
@@ -1871,7 +1874,7 @@ async function kcHandleCreateSubmit() {
     // Modo local/offline-first (default): só confirma sucesso após persistência efetiva.
     try {
       if (hasApiCreatePost) {
-        post = await window.KCAPI.createPost(payload);
+        post = await apiCreateFn(payload);
       } else {
         post = kcCreateUserPost(payload);
       }
