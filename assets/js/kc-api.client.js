@@ -432,6 +432,21 @@
     const categoryFilter = (p.category || p.categoria || '').toString().trim().toLowerCase() || null;
     const subcategoryFilter = (p.subcategory || p.subcategoria || '').toString().trim().toLowerCase() || null;
     const q = (p.q || p.query || '').toString().trim().toLowerCase();
+    const tagFilter = (p.tag || p.tagKey || p.tag_key || '').toString().trim().toLowerCase();
+
+    const normalizeTag = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      try {
+        return raw
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      } catch (_e) {
+        return raw;
+      }
+    };
 
     const getMetaSub = (post) => {
       try {
@@ -453,6 +468,19 @@
       if (moduleFilter && mod !== moduleFilter) return false;
       if (categoryFilter && cat !== categoryFilter) return false;
       if (subcategoryFilter && sub !== subcategoryFilter) return false;
+
+      if (tagFilter) {
+        const tagPool = [];
+        if (Array.isArray(post.tagKeys)) tagPool.push(...post.tagKeys);
+        if (Array.isArray(post.tags)) tagPool.push(...post.tags);
+        const meta = post && (post.metadata || post.meta || post._meta);
+        if (meta && Array.isArray(meta.tagKeys)) tagPool.push(...meta.tagKeys);
+        if (meta && Array.isArray(meta.tags)) tagPool.push(...meta.tags);
+
+        const tagsNorm = tagPool.map(normalizeTag).filter(Boolean);
+        const wanted = normalizeTag(tagFilter);
+        if (!wanted || !tagsNorm.includes(wanted)) return false;
+      }
 
       if (q) {
         const hay = `${post.titulo || post.title || ''} ${post.descricao || post.description || ''}`.toLowerCase();

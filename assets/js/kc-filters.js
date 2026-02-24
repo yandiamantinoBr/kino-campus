@@ -141,15 +141,24 @@
       });
     }
 
-    // Categoria inicial (hash > tab ativa > "todas")
-    const hashCat = (window.location.hash || '').replace('#', '');
-    if (hashCat) {
-      const tabCats = Array.from(tabs).map(t => {
-        const hrefCat = (t.getAttribute('href') || '').replace('#', '');
-        const dataCat = t.getAttribute('data-category') || '';
-        return dataCat || hrefCat || '';
-      }).filter(Boolean);
+    // Categoria inicial (?tag > hash > tab ativa > "todas")
+    let urlTag = '';
+    try { urlTag = new URLSearchParams(window.location.search).get('tag') || ''; } catch (_) {}
 
+    const tabCats = Array.from(tabs).map(t => {
+      const hrefCat = (t.getAttribute('href') || '').replace('#', '');
+      const dataCat = t.getAttribute('data-category') || '';
+      return dataCat || hrefCat || '';
+    }).filter(Boolean);
+
+    if (urlTag) {
+      const match = tabCats.find(c => canonicalCategory(c) === canonicalCategory(urlTag));
+      state.category = match || urlTag;
+      setActiveTab(state.category);
+    }
+
+    const hashCat = (window.location.hash || '').replace('#', '');
+    if (!urlTag && hashCat) {
       const match = tabCats.find(c => canonicalCategory(c) === canonicalCategory(hashCat));
       if (match) {
         state.category = match;
@@ -157,7 +166,7 @@
       }
     }
 
-    if (!hashCat) {
+    if (!urlTag && !hashCat) {
       const active = document.querySelector(`${state.opts.tabsSelector}.active`);
       if (active) {
         const hrefCat = (active.getAttribute("href") || "").replace("#", "");

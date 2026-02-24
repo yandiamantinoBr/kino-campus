@@ -256,6 +256,7 @@
     const module = (p.module || p.modulo || null);
     const category = (p.category || p.categoria || null);
     const subcategory = (p.subcategory || p.subcategoria || null);
+    const tag = (p.tag || p.tagKey || p.tag_key || null);
 
     const q = (p.q || p.query || p.search || '').toString().trim();
 
@@ -271,10 +272,25 @@
       return s ? s : null;
     };
 
+    const normalizeTagKey = (v) => {
+      const base = norm(v);
+      if (!base) return null;
+      try {
+        return base
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') || null;
+      } catch (_) {
+        return base;
+      }
+    };
+
     return {
       module: norm(module),
       category: norm(category),
       subcategory: norm(subcategory),
+      tag: normalizeTagKey(tag),
       q,
       page,
       limit,
@@ -433,6 +449,7 @@
       if (f.module) q = q.eq('module', f.module);
       if (f.category) q = q.eq('category', f.category);
       if (f.subcategory) q = q.eq('metadata->>subcategory', f.subcategory);
+      if (f.tag) q = q.contains('metadata->tagKeys', [f.tag]);
       if (f.q) q = q.or(buildOrILike(f.q));
 
       return await q.range(from, to);
