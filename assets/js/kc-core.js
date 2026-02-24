@@ -494,6 +494,23 @@ function addComment(postId, commentText, authorName = 'Anônimo') {
   return newComment;
 }
 
+function resolveCurrentUserDisplayName(user) {
+  if (!user || typeof user !== 'object') return '';
+  const userMetadata = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : null;
+  const candidates = [
+    userMetadata && userMetadata.full_name,
+    user.display_name,
+    user.email,
+  ];
+
+  for (let i = 0; i < candidates.length; i += 1) {
+    const value = String(candidates[i] || '').trim();
+    if (value) return value;
+  }
+
+  return '';
+}
+
 // Normaliza campos de um comentário independentemente da origem (localStorage ou Supabase)
 function normalizeCommentForRender(c) {
   const profile = c.author_profile || c.profiles || null;
@@ -503,12 +520,19 @@ function normalizeCommentForRender(c) {
     || c.full_name
     || c.author_name
     || c.author
-    || 'Anônimo'
   );
+  const normalizedAuthor = String(resolvedAuthor || '').trim();
+  if (!normalizedAuthor) {
+    console.warn('[KC Comments] Comentário sem autoria preenchida, aplicando fallback.', {
+      commentId: c && c.id,
+      hasAuthorProfile: !!profile,
+      raw: c,
+    });
+  }
 
   return {
     id: c.id,
-    author: String(resolvedAuthor || 'Anônimo').trim() || 'Anônimo',
+    author: normalizedAuthor || 'Anônimo',
     text: c.body || c.text || '',
     timestamp: c.created_at
       ? new Date(c.created_at).toLocaleString('pt-BR')
@@ -600,7 +624,7 @@ function renderComments(postId, containerId = 'commentsContainer') {
   _renderCommentList(id, containerId, loadComments(id));
 }
 
-function submitComment(postId = null, containerId = 'commentsContainer') {
+async function submitComment(postId = null, containerId = 'commentsContainer') {
   const resolved = postId != null ? String(postId) : getCurrentPostId();
   if (!resolved) {
     showToast('Não foi possível identificar esta publicação', 'error');
@@ -641,7 +665,15 @@ function submitComment(postId = null, containerId = 'commentsContainer') {
 
   // Driver local: localStorage
   const authorInput = document.querySelector(`input[data-post-id="${cssEscape(id)}"][name="author"]`);
-  const authorName = authorInput?.value?.trim() || 'Anônimo';
+  let sessionAuthorName = '';
+  try {
+    if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+      const currentUser = await window.KCAPI.getCurrentUser();
+      sessionAuthorName = resolveCurrentUserDisplayName(currentUser);
+    }
+  } catch (_) { }
+
+  const authorName = sessionAuthorName || authorInput?.value?.trim() || 'Anônimo';
   addComment(id, text, authorName);
   textarea.value = '';
   renderComments(id, containerId);

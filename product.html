@@ -556,8 +556,9 @@
           <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=commenter" alt="Seu avatar"
             style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark);" />
           <div style="flex: 1;">
-            <input id="commentAuthor" type="text" name="author" placeholder="Seu nome"
-              style="width:100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background-color: var(--kc-background-dark); color: var(--kc-text-dark); font-family: inherit;" />
+            <input id="commentAuthor" type="text" name="author" placeholder="Seu nome (opcional apenas no modo local/dev)"
+              style="width:100%; padding: 10px; margin-bottom: 6px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background-color: var(--kc-background-dark); color: var(--kc-text-dark); font-family: inherit;" />
+            <small style="display:block; margin-bottom: 10px; color: var(--kc-text-dark-secondary);">Campo opcional somente no modo local/dev; com sessão ativa, o nome da conta é usado automaticamente.</small>
             <div class="kc-comment-editor">
               <textarea id="commentText" placeholder="Deixe o seu comentário"></textarea>
               <div class="kc-editor-toolbar">

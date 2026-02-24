@@ -63,6 +63,21 @@
     } catch (_) { }
   }
 
+  function resolveCurrentUserDisplayName(user) {
+    if (!user || typeof user !== 'object') return '';
+    const userMetadata = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : null;
+    const candidates = [
+      userMetadata && userMetadata.full_name,
+      user.display_name,
+      user.email,
+    ];
+    for (let i = 0; i < candidates.length; i += 1) {
+      const value = String(candidates[i] || '').trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
   function bindStaticInteractions() {
     if (staticInteractionsBound) return;
     staticInteractionsBound = true;
@@ -725,6 +740,12 @@
       }
     } catch (_) {
       currentUser = null;
+    }
+
+    const commentAuthorInput = document.getElementById('commentAuthor');
+    if (commentAuthorInput) {
+      const resolvedIdentity = resolveCurrentUserDisplayName(currentUser);
+      if (resolvedIdentity) commentAuthorInput.value = resolvedIdentity;
     }
 
     // Contrato único (Model) + regras centrais
