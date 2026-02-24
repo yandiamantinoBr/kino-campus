@@ -7,7 +7,7 @@ A **V8.2.2.0** consolida os **LOTEs 1, 2 e 3** do cleanroom RC, sem feature cree
 - **LOTE 2**: diagnóstico por etapa no create-post (`[KC][CREATE_POST]`) e fluxo admin sem falso positivo de persistência.
 - **LOTE 3**: fechamento mobile/FOUC e kit QA final (`docs/qa/rls-smoke.sql` + relatórios de release).
 
-O runtime oficial permanece **front estático + Supabase** (sem backend Node ativo no deploy). Ao ativar manualmente `KC_ENV.driver = "supabase"` e configurar `KC_ENV.supabase.url/anonKey`, o app passa a usar:
+O runtime oficial permanece **front estático + Supabase** (sem backend Node ativo no deploy). Em **produção**, `KC_ENV.driver = "supabase"` é obrigatório e não existe fallback silencioso para `local`; o modo `local` é permitido somente em desenvolvimento.
 
 - **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
 - **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.
@@ -79,9 +79,9 @@ Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação a
   - O front não seleciona mais `profiles.email` em JOINs (`posts → profiles`).
   - Arquivo: `supabase/migrations/v8.1.6.2_reports_privacy_hardening.sql`
 
-- **Offline-first mantido (default)**
+- **Offline-first em desenvolvimento**
   - Seed local: `data/database.json`
-  - Posts do usuário: `localStorage["kc_user_posts"]`
+  - Posts do usuário: `localStorage["kc_user_posts"]` (somente ambiente `development`)
 
 - **Migração assistida (Roadmap 8.1.5.4)**
   - Em `driver = supabase` + usuário logado, se houver posts locais não migrados, aparece um CTA “Você tem X posts locais. Migrar?”
@@ -90,10 +90,12 @@ Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação a
     - migra de forma idempotente (marca `metadata.migratedToSupabase` e `metadata.supabaseId`)
     - mostra progresso e relatório final (sucessos/falhas)
 
-- **Driver Pattern (KC_ENV)**
+- **Driver Pattern (KC_ENV) com política de ambiente**
   - Arquivo: `assets/js/kc-env.js`
-  - `driver: "local" | "supabase"` (default: `local`)
-  - *Safe boot:* se o Supabase não estiver configurado, o driver continua `local`.
+  - `environment / APP_ENV: "development" | "production"`
+  - `driver: "local" | "supabase"`
+  - Em `production`, `driver` obrigatório = `"supabase"` (sem *safe boot* silencioso para `local`).
+  - Em `development`, `driver = "local"` continua suportado para fluxo offline-first.
 
 - **Realtime opcional no feed (Roadmap 8.1.12.0)**
   - `KCSupabase.subscribeNewPosts({ filter, onPost })` + façade `KCRealtime`.
@@ -105,9 +107,9 @@ Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação a
   - Regras de apresentação: `KCUtils.applyPresentationRules()`
   - Model: `KCPostModel.from(raw, { pageModule, view })`
 
-- **Create Post com duas rotas (sem regressão)**
-  - `driver = local`: salva no `localStorage` como antes.
-  - `driver = supabase`: exige sessão (RLS) e publica no Supabase (Storage + Postgres).
+- **Ações críticas (produção x desenvolvimento)**
+  - `createPost`, `votePost` e `addComment` exigem Supabase em `production` (retornam erro explícito quando o driver não é `supabase`).
+  - Persistência em `localStorage` para criação de post/comentário permanece apenas em `development`.
 
 ---
 
@@ -171,6 +173,7 @@ Abra:
 
 ### 3) Config (KC_ENV)
 Edite `assets/js/kc-env.js`:
+- `environment: "production"` (ou `APP_ENV: "production"`)
 - `driver: "supabase"`
 - `supabase.url` e `supabase.anonKey`
 
