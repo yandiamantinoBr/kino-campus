@@ -438,7 +438,8 @@ main {
     align-items: center;
     justify-content: center;
     transition: all var(--transition-speed) ease;
-    z-index: 10;
+    z-index: 20; /* P2-A fix: aumentado para ficar acima do texto e ::before do banner */
+    pointer-events: auto;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
@@ -1614,12 +1615,14 @@ main {
     z-index: 199;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    pointer-events: none; /* P2-B fix: garante que cliques passem pelo overlay quando invisible */
+    transition: opacity 0.3s ease, visibility 0.3s ease; /* P2-B fix: transition explícito evita conflito */
 }
 
 .kc-mobile-menu-overlay.active {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto; /* P2-B fix: habilita cliques somente quando o overlay está visível */
 }
 
 /* Melhorias Responsivas Adicionais */

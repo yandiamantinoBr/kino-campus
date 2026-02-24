@@ -1621,9 +1621,9 @@ function kcRenderCreateModal() {
 
   if (dynamic) dynamic.innerHTML = parts.join('');
 
-  // habilitar submit quando tags obrigatórias selecionadas
-  const missingTag = (schema.tagGroups || []).some(g => g.required && !kcCreateState.selections[g.id]);
-  if (submitBtn) submitBtn.disabled = missingTag;
+  // P0-A fix: botão sempre habilitado; kcHandleCreateSubmit valida e exibe toast
+  // (botão disabled impedia o evento submit de disparar → "nada acontecia" sem feedback)
+  if (submitBtn) submitBtn.disabled = false;
 }
 
 function kcOpenCreatePostModal(prefModuleKey) {

@@ -1497,7 +1497,7 @@
     try {
 
       // 1) Insere post primeiro (para obter postId) e habilitar path controlado no Storage
-      const createdAt = clampCreatedAtISO();
+      // Não enviamos created_at: o BD usa DEFAULT now() para garantir ordenação correta (P0-C fix)
 
       const insertPayload = {
         author_id: user.id,
@@ -1508,7 +1508,6 @@
         module: parsed.moduleDB,
         category: parsed.categoryDB,
         metadata: parsed.metadata,
-        created_at: createdAt,
       };
 
       // Helper de rollback (evita órfãos quando upload falha após INSERT)
@@ -1889,8 +1888,10 @@
       }
 
       const prof = profRes && profRes.data ? profRes.data : null;
-      if (prof) authorName = String(prof.display_name || prof.full_name || 'Anônimo').trim() || 'Anônimo';
+      if (prof) authorName = String(prof.display_name || prof.full_name || '').trim();
     } catch (_) { }
+    // Fallback para metadados de auth quando o perfil não tem nome (P1-A fix)
+    if (!authorName) authorName = getUserDisplayNameForProfile(user);
 
     try {
       const { data, error } = await client
