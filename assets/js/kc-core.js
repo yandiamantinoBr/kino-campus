@@ -1676,6 +1676,7 @@ function kcCloseCreatePostModal() {
 
 async function kcHandleCreateSubmit() {
   kcCaptureCreateValues();
+  const form = document.getElementById('kcCreatePostForm');
   const schema = kcGetSchema(kcCreateState.moduleKey);
   if (!schema) {
     showToast('Selecione um módulo para publicar.', 'warn', 2200);
@@ -1689,10 +1690,29 @@ async function kcHandleCreateSubmit() {
     return;
   }
 
+  if (form) {
+    const titleInput = form.querySelector('input[name="titulo"]');
+    const descInput = form.querySelector('textarea[name="descricao"]');
+
+    if (titleInput && typeof titleInput.setCustomValidity === 'function') {
+      titleInput.setCustomValidity(String(titleInput.value || '').trim() ? '' : 'Informe um título válido.');
+    }
+    if (descInput && typeof descInput.setCustomValidity === 'function') {
+      descInput.setCustomValidity(String(descInput.value || '').trim() ? '' : 'Informe uma descrição válida.');
+    }
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      showToast('Revise os campos destacados e tente novamente.', 'warn', 2600);
+      return;
+    }
+  }
+
   const title = String(kcCreateState.values.titulo || '').trim();
   const desc = String(kcCreateState.values.descricao || '').trim();
   if (!title || !desc) {
-    showToast('Preencha título e descrição.', 'warn', 2400);
+    // Fallback defensivo para payload em caso de DOM inconsistente.
+    showToast('Revise os campos destacados e tente novamente.', 'warn', 2600);
     return;
   }
 
@@ -1830,7 +1850,10 @@ async function kcHandleCreateSubmit() {
         post = null;
       }
     } catch (err) {
-      console.error('[KinoCampus] Exceção ao criar publicação:', err);
+      console.error('[KinoCampus] Exceção ao criar publicação (supabase):', {
+        payload,
+        error: err,
+      });
       createError = {
         code: 'CREATE_POST_EXCEPTION',
         message: (err && err.message) ? String(err.message) : 'Erro inesperado ao publicar.',
@@ -1839,6 +1862,10 @@ async function kcHandleCreateSubmit() {
     }
 
     if (!post) {
+      console.error('[KinoCampus] Falha ao criar publicação (supabase) sem retorno de post.', {
+        payload,
+        createError,
+      });
       try {
         if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
           const createErr = window.KCAPI.getLastCreatePostError();
@@ -1869,7 +1896,10 @@ async function kcHandleCreateSubmit() {
         post = null;
       }
     } catch (err) {
-      console.error('[KinoCampus] Exceção no modo local ao criar publicação:', err);
+      console.error('[KinoCampus] Exceção no modo local ao criar publicação:', {
+        payload,
+        error: err,
+      });
       createError = {
         code: 'LOCAL_CREATE_POST_EXCEPTION',
         message: (err && err.message) ? String(err.message) : 'Erro inesperado ao salvar publicação.',
@@ -1878,6 +1908,10 @@ async function kcHandleCreateSubmit() {
     }
 
     if (!post) {
+      console.error('[KinoCampus] Falha ao criar publicação no modo local sem retorno de post.', {
+        payload,
+        createError,
+      });
       const feedbackMessage = (createError && createError.message)
         ? String(createError.message)
         : 'Não foi possível salvar sua publicação no dispositivo.';
