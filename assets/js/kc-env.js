@@ -31,6 +31,11 @@
     version: VERSION,
     APP_VERSION: VERSION,
 
+    // Ambiente da aplicação (separação explícita dev/prod)
+    // Opções: "development" | "production"
+    environment: '__KC_APP_ENV__',
+    APP_ENV: '__KC_APP_ENV__',
+
     // driver (compat)
     driver: '__KC_DRIVER__', // Opções: "local" | "supabase"
     DATA_DRIVER: '__KC_DRIVER__',
@@ -61,6 +66,22 @@
 
   const current = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : null;
 
+  function detectRuntimeEnvironment() {
+    const host = String((window.location && window.location.hostname) || '').toLowerCase();
+    if (!host) return 'development';
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return 'development';
+    if (host.endsWith('.local')) return 'development';
+    return 'production';
+  }
+
+  function normalizeEnvironment(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'prod') return 'production';
+    if (raw === 'dev') return 'development';
+    if (raw === 'production' || raw === 'development') return raw;
+    return '';
+  }
+
   // Merge seguro (mantém estrutura obrigatória e permite override manual).
   const merged = {
     ...DEFAULT_ENV,
@@ -79,10 +100,31 @@
     },
   };
 
+  const resolvedEnvironment = normalizeEnvironment(merged.APP_ENV || merged.environment) || detectRuntimeEnvironment();
+  merged.environment = resolvedEnvironment;
+  merged.APP_ENV = resolvedEnvironment;
+  merged.isProduction = resolvedEnvironment === 'production';
+
   // Resolve driver (compat)
   const rawDriver = String((merged.DATA_DRIVER || merged.driver || 'local')).toLowerCase();
-  merged.driver = (rawDriver === 'supabase') ? 'supabase' : 'local';
-  merged.DATA_DRIVER = merged.driver;
+  const normalizedDriver = (rawDriver === 'supabase' || rawDriver === 'local') ? rawDriver : 'local';
+  const productionRequiresSupabase = merged.isProduction && normalizedDriver !== 'supabase';
+
+  if (productionRequiresSupabase) {
+    merged.driver = '__invalid_production_driver__';
+    merged.DATA_DRIVER = merged.driver;
+    merged.driverPolicyError = {
+      code: 'PRODUCTION_REQUIRES_SUPABASE',
+      message: 'Em produção, KC_ENV.driver deve ser "supabase". O fallback silencioso para local foi bloqueado.',
+      received: rawDriver || '(empty)',
+      environment: merged.environment,
+    };
+    console.error('[KC_ENV] Política de ambiente violada:', merged.driverPolicyError);
+  } else {
+    merged.driver = normalizedDriver;
+    merged.DATA_DRIVER = merged.driver;
+    delete merged.driverPolicyError;
+  }
 
   // Normaliza Supabase (preferindo aliases caso o usuário tenha setado)
   const url = String(merged.SUPABASE_URL || merged.supabase.url || '').trim();

@@ -117,6 +117,14 @@ window.KCPostModel = window.KCPostModel || {
 let currentSlide = 0;
 let autoSlideInterval = null;
 
+function isProductionRuntime() {
+  return !!(window.KC_ENV && window.KC_ENV.isProduction === true);
+}
+
+function isSupabaseRuntime() {
+  return !!(window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase');
+}
+
 function showSlide(index) {
   const slides = document.querySelectorAll('.kc-hero-banner');
   const dots = document.querySelectorAll('.kc-dot');
@@ -196,7 +204,7 @@ function vote(button, type) {
   const previousScoreText = scoreElement.textContent;
   const previousActiveStates = voteButtons.map((btn) => btn.classList.contains('active'));
 
-  const isSupabaseMode = !!(window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase');
+  const isSupabaseMode = isSupabaseRuntime();
   const postId = button.closest('[data-post-id]')?.dataset.postId || getCurrentPostId();
   const lockKey = String(postId || '').trim();
 
@@ -513,7 +521,7 @@ function likeComment(postId, commentId, containerId = 'commentsContainer') {
   const id = String(postId);
 
   // Driver Supabase: persiste via KCAPI (async, re-render ao resolver)
-  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
+  if (isSupabaseRuntime()) {
     window.KCAPI.likeComment(commentId).then(function () {
       renderComments(id, containerId);
     }).catch(function () { });
@@ -579,7 +587,7 @@ function renderComments(postId, containerId = 'commentsContainer') {
   const id = String(postId);
 
   // Driver Supabase: carrega async, depois renderiza
-  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
+  if (isSupabaseRuntime()) {
     window.KCAPI.getComments(id).then(function (comments) {
       _renderCommentList(id, containerId, comments || []);
     }).catch(function () {
@@ -622,6 +630,12 @@ function submitComment(postId = null, containerId = 'commentsContainer') {
     }).catch(function () {
       showToast('Erro ao enviar comentário.', 'error');
     });
+    return;
+  }
+
+  // Política de produção: impedir persistência local de operação crítica.
+  if (isProductionRuntime()) {
+    showToast('Comentário bloqueado: em produção, use Supabase.', 'error');
     return;
   }
 
@@ -1780,6 +1794,7 @@ async function kcHandleCreateSubmit() {
 
   const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
   const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
+  const blockLocalCriticalPersistence = isProductionRuntime() && !useSupabase;
   let post = null;
   let createError = null;
 
@@ -1837,6 +1852,11 @@ async function kcHandleCreateSubmit() {
       return;
     }
   } else {
+    if (blockLocalCriticalPersistence) {
+      showToast('Publicação bloqueada: em produção, o driver Supabase é obrigatório.', 'error', 3200);
+      return;
+    }
+
     // Modo local/offline-first (default): só confirma sucesso após persistência efetiva.
     try {
       if (hasApiCreatePost) {

@@ -26,6 +26,9 @@
     const fallback = {
       version: VERSION,
       driver: 'local',
+      environment: 'development',
+      APP_ENV: 'development',
+      isProduction: false,
       debug: true,
       SUPABASE_URL: 'https://placeholder-project.supabase.co',
       SUPABASE_ANON_KEY: 'eyJhbG...placeholder',
@@ -44,8 +47,18 @@
       clamp: { ...fallback.clamp, ...(((env || {}).clamp) || {}) },
     };
 
+    const rawEnv = String((merged.APP_ENV || merged.environment || '')).trim().toLowerCase();
+    const normalizedEnv = (rawEnv === 'production' || rawEnv === 'prod') ? 'production' : 'development';
+    merged.environment = normalizedEnv;
+    merged.APP_ENV = normalizedEnv;
+    merged.isProduction = normalizedEnv === 'production';
+
     const rawDriver = String((merged.DATA_DRIVER || merged.driver || 'local')).toLowerCase();
-    merged.driver = (rawDriver === 'supabase') ? 'supabase' : 'local';
+    if (rawDriver === '__invalid_production_driver__') {
+      merged.driver = '__invalid_production_driver__';
+    } else {
+      merged.driver = (rawDriver === 'supabase') ? 'supabase' : 'local';
+    }
     merged.DATA_DRIVER = merged.driver;
 
     // Normaliza Supabase (aliases)
@@ -1622,6 +1635,18 @@
     return { ok: false, error: { message: String(message || 'Operação não concluída.') } };
   }
 
+  function enforceSupabaseOnProduction(operationName) {
+    if (!ENV.isProduction) return null;
+    if (ENV.driver === 'supabase') return null;
+    return {
+      ok: false,
+      error: {
+        code: 'PRODUCTION_REQUIRES_SUPABASE',
+        message: `Operação crítica "${String(operationName || 'unknown')}" bloqueada: em produção, o driver "supabase" é obrigatório.`,
+      },
+    };
+  }
+
   function normalizeUpdatePayload(data) {
     const parsed = normalizeCreatePayload(data);
     if (!parsed.title) return { ok: false, error: { message: 'Título é obrigatório.' } };
@@ -2210,7 +2235,11 @@
   // Facade pública (mantém a API estável)
   async function getPosts(params = {}) { return activeDriver.getPosts(params); }
   async function getPostById(id) { return activeDriver.getPostById(id); }
-  async function createPost(body) { return activeDriver.createPost(body); }
+  async function createPost(body) {
+    const policyError = enforceSupabaseOnProduction('createPost');
+    if (policyError) return policyError;
+    return activeDriver.createPost(body);
+  }
   async function updatePost(postId, payload) {
     if (!activeDriver.updatePost) return kcApiError('Edição indisponível neste driver.');
     return activeDriver.updatePost(postId, payload);
@@ -2298,6 +2327,8 @@
   }
 
   async function addComment(postId, body) {
+    const policyError = enforceSupabaseOnProduction('addComment');
+    if (policyError) return policyError;
     if (ENV.driver !== 'supabase' || !activeDriver.addComment) return null;
     return activeDriver.addComment(postId, body);
   }
@@ -2309,6 +2340,8 @@
 
   // Votes facade (V8.1.7.3)
   async function votePost(postId, direction, options = {}) {
+    const policyError = enforceSupabaseOnProduction('votePost');
+    if (policyError) return policyError;
     if (ENV.driver !== 'supabase' || !activeDriver.votePost) return null;
     return activeDriver.votePost(postId, direction, options);
   }
