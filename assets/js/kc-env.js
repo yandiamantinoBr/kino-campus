@@ -60,8 +60,13 @@
       allowedEmailDomains: ['ufg.br', 'discente.ufg.br', 'egresso.ufg.br'],
     },
 
-    // clamp temporal (protótipo)
-    clamp: { month: 'February', year: 2026 },
+    // clamp temporal (protótipo) — dinâmico: usa mês/ano corrente para evitar timestamps obsoletos
+    clamp: (function () {
+      var MONTHS = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+      var d = new Date();
+      return { month: MONTHS[d.getMonth()], year: d.getFullYear() };
+    }()),
   };
 
   const current = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : null;

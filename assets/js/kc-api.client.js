@@ -1422,10 +1422,16 @@
   }
 
   function clampCreatedAtISO() {
-    // Temporal clamp: Fevereiro de 2026 (configurável via KC_ENV.clamp)
-    const y = (ENV.clamp && ENV.clamp.year) ? parseInt(String(ENV.clamp.year), 10) : 2026;
-    const yy = Number.isFinite(y) ? y : 2026;
-    return `${yy}-02-15T12:00:00.000Z`;
+    // Temporal clamp dinâmico (configurável via KC_ENV.clamp)
+    const MONTH_MAP = { january:1,february:2,march:3,april:4,may:5,june:6,
+                        july:7,august:8,september:9,october:10,november:11,december:12 };
+    const d = new Date();
+    const y = (ENV.clamp && ENV.clamp.year) ? parseInt(String(ENV.clamp.year), 10) : d.getFullYear();
+    const yy = Number.isFinite(y) ? y : d.getFullYear();
+    const rawMonth = (ENV.clamp && ENV.clamp.month) ? String(ENV.clamp.month).toLowerCase() : null;
+    const mi = (rawMonth && MONTH_MAP[rawMonth]) ? MONTH_MAP[rawMonth] : (d.getMonth() + 1);
+    const mm = String(mi).padStart(2, '0');
+    return `${yy}-${mm}-15T12:00:00.000Z`;
   }
 
   function normalizeCreatePayload(data) {
@@ -1624,11 +1630,11 @@
         }
 
         if (mr && mr.error) {
+          await rollbackCreatedPost(postId);
           setLastCreatePostError('POST_MEDIA_INSERT', mr.error, {
             postId,
             mediaCount: mediaRowsFull.length,
           });
-          // não apaga post automaticamente (pode ser útil depurar), mas registra dívida
           return null;
         }
       }
@@ -1651,6 +1657,7 @@
       clearLastCreatePostError();
       return normalizePost(raw);
     } catch (e) {
+      if (postId) await rollbackCreatedPost(postId);
       setLastCreatePostError('EXCEPTION', e, {
         userId: user.id,
         payload: payloadSummary,
