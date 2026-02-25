@@ -325,18 +325,19 @@
     return `title.ilike."${pattern}",description.ilike."${pattern}"`;
   }
 
-  function buildPostsSelect(includeVerified, mediaRel) {
+  function buildPostsSelect(includeVerified, mediaRel, includeComments) {
     const profileFields = includeVerified
       ? 'id, full_name, avatar_url, verified'
       : 'id, full_name, avatar_url';
 
     // mediaRel: post_media (padrão do schema) | post_images (compat)
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover), comments(count)`;
+    const commentsField = includeComments ? ', comments(count)' : '';
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsField}`;
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-  function buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder) {
+  function buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments) {
     const profileFields = includeVerified
       ? "id, full_name, avatar_url, verified"
       : "id, full_name, avatar_url";
@@ -345,7 +346,15 @@
       ? "id, url, is_cover, sort_order"
       : "id, url, is_cover";
 
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields}), comments(count)`;
+    const commentsField = includeComments ? ', comments(count)' : '';
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsField}`;
+  }
+
+  function isMissingCommentsEmbedError(err) {
+    if (!err) return false;
+    if (isMissingTokenError(err, 'comments')) return true;
+    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
+    return msg.includes('comments') && msg.includes('relationship');
   }
 
   function isMaybeSingleMissing(err) {
@@ -388,20 +397,35 @@
     let mediaRel = "post_media";
     let includeVerified = true;
     let includeSortOrder = true;
+    let includeComments = true;
 
     // Tentativa 1: post_media + verified + sort_order
-    let res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder), mediaRel, includeSortOrder, includeVerified);
+    let res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
 
     // Compat: coluna verified ausente
     if (res && res.error && isMissingTokenError(res.error, "verified")) {
       includeVerified = false;
-      res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder), mediaRel, includeSortOrder, includeVerified);
+      res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
     }
 
     // Compat: sort_order ausente
     if (res && res.error && isMissingTokenError(res.error, "sort_order")) {
       includeSortOrder = false;
-      res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder), mediaRel, includeSortOrder, includeVerified);
+      res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
+    }
+
+    // Compat: embed comments(count) ausente
+    if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
+      includeComments = false;
+      res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
+      if (res && res.error && isMissingTokenError(res.error, "verified")) {
+        includeVerified = false;
+        res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
+      }
+      if (res && res.error && isMissingTokenError(res.error, "sort_order")) {
+        includeSortOrder = false;
+        res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
+      }
     }
 
     // Compat: relação post_media ausente
@@ -409,14 +433,26 @@
       mediaRel = "post_images";
       includeVerified = true;
       includeSortOrder = true;
-      res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder), mediaRel, includeSortOrder, includeVerified);
+      res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
       if (res && res.error && isMissingTokenError(res.error, "verified")) {
         includeVerified = false;
-        res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder), mediaRel, includeSortOrder, includeVerified);
+        res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
       }
       if (res && res.error && isMissingTokenError(res.error, "sort_order")) {
         includeSortOrder = false;
-        res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder), mediaRel, includeSortOrder, includeVerified);
+        res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
+      }
+      if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
+        includeComments = false;
+        res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
+        if (res && res.error && isMissingTokenError(res.error, "verified")) {
+          includeVerified = false;
+          res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
+        }
+        if (res && res.error && isMissingTokenError(res.error, "sort_order")) {
+          includeSortOrder = false;
+          res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments), mediaRel, includeSortOrder, includeVerified);
+        }
       }
     }
 
@@ -457,19 +493,36 @@
 
     // 1) tentativa padrão (post_media + profiles.verified)
     let mediaRel = 'post_media';
-    let res = await run(buildPostsSelect(true, mediaRel));
+    let includeComments = true;
+    let res = await run(buildPostsSelect(true, mediaRel, includeComments));
 
     // 2) compat: schema sem profiles.verified
     if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-      res = await run(buildPostsSelect(false, mediaRel));
+      res = await run(buildPostsSelect(false, mediaRel, includeComments));
+    }
+
+    // 2.1) compat: embed comments(count) ausente
+    if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
+      includeComments = false;
+      res = await run(buildPostsSelect(true, mediaRel, includeComments));
+      if (res && res.error && isMissingTokenError(res.error, 'verified')) {
+        res = await run(buildPostsSelect(false, mediaRel, includeComments));
+      }
     }
 
     // 3) compat: schema com relação post_images (ao invés de post_media)
     if (res && res.error && (isMissingTokenError(res.error, 'post_media') || isMissingTokenError(res.error, 'post_media ') || isMissingTokenError(res.error, 'post_media('))) {
       mediaRel = 'post_images';
-      res = await run(buildPostsSelect(true, mediaRel));
+      res = await run(buildPostsSelect(true, mediaRel, includeComments));
       if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-        res = await run(buildPostsSelect(false, mediaRel));
+        res = await run(buildPostsSelect(false, mediaRel, includeComments));
+      }
+      if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
+        includeComments = false;
+        res = await run(buildPostsSelect(true, mediaRel, includeComments));
+        if (res && res.error && isMissingTokenError(res.error, 'verified')) {
+          res = await run(buildPostsSelect(false, mediaRel, includeComments));
+        }
       }
     }
 
@@ -478,9 +531,16 @@
       const msg = String(res.error.message || '').toLowerCase();
       if (msg.includes('post_media') && msg.includes('relationship')) {
         mediaRel = 'post_images';
-        res = await run(buildPostsSelect(true, mediaRel));
+        res = await run(buildPostsSelect(true, mediaRel, includeComments));
         if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-          res = await run(buildPostsSelect(false, mediaRel));
+          res = await run(buildPostsSelect(false, mediaRel, includeComments));
+        }
+        if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
+          includeComments = false;
+          res = await run(buildPostsSelect(true, mediaRel, includeComments));
+          if (res && res.error && isMissingTokenError(res.error, 'verified')) {
+            res = await run(buildPostsSelect(false, mediaRel, includeComments));
+          }
         }
       }
     }

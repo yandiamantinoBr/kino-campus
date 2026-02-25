@@ -1200,19 +1200,26 @@
     return normalizePost(raw);
   }
 
-  function buildSupabasePostSelect(client) {
+  function buildSupabasePostSelect(client, includeVerified = true, includeComments = true) {
+    const profileFields = includeVerified
+      ? 'id, full_name, avatar_url, verified'
+      : 'id, full_name, avatar_url';
+    const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, verified), post_media (id, url, is_cover), comments(count)')
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`)
       .limit(1);
   }
 
   // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
-  function buildSupabasePostSelectFallback(client) {
-    return client
-      .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url), post_media (id, url, is_cover), comments(count)')
-      .limit(1);
+  function buildSupabasePostSelectFallback(client, includeComments = true) {
+    return buildSupabasePostSelect(client, false, includeComments);
+  }
+
+  function isMissingCommentsEmbedError(err) {
+    if (!err) return false;
+    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
+    return msg.includes('comments') && (msg.includes('does not exist') || msg.includes('relationship'));
   }
 
   async function supabaseGetPostById(id) {
@@ -1255,40 +1262,43 @@
     const isNumeric = /^\d+$/.test(key);
     const legacyNum = (!isUuid && isNumeric) ? parseInt(key, 10) : null;
 
+    const runPostQueryWithFallback = async (field, value) => {
+      let includeVerified = true;
+      let includeComments = true;
+
+      let res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+      if (res && res.error && isMissingVerifiedColumnError(res.error)) {
+        includeVerified = false;
+        res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+      }
+      if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
+        includeComments = false;
+        res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+        if (res && res.error && includeVerified && isMissingVerifiedColumnError(res.error)) {
+          includeVerified = false;
+          res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+        }
+      }
+
+      return res;
+    };
+
     try {
       // 1) tenta por UUID (posts.id)
       if (isUuid) {
-        const r1 = await buildSupabasePostSelect(client).eq("id", key).maybeSingle();
+        const r1 = await runPostQueryWithFallback('id', key);
         if (r1 && r1.error) {
           console.error("[KCAPI][Supabase] getPostById(id) erro:", r1.error);
-          // Fallback para schema sem profiles.verified
-          if (isMissingVerifiedColumnError(r1.error)) {
-            const r1b = await buildSupabasePostSelectFallback(client).eq("id", key).maybeSingle();
-            if (r1b && r1b.data) return mapSupabasePost(r1b.data, { allImages: true });
-          }
+          return null;
         }
         if (r1 && r1.data) return mapSupabasePost(r1.data, { allImages: true });
       }
 
       // 2) legacy_id (IDs numéricos antigos)
       if (legacyNum != null) {
-        const r2 = await buildSupabasePostSelect(client).eq("legacy_id", legacyNum).maybeSingle();
+        const r2 = await runPostQueryWithFallback('legacy_id', legacyNum);
         if (r2 && r2.error) {
           console.error("[KCAPI][Supabase] getPostById(legacy_id) erro:", r2.error);
-          if (isMissingVerifiedColumnError(r2.error)) {
-            const r2b = await buildSupabasePostSelectFallback(client).eq("legacy_id", legacyNum).maybeSingle();
-            if (r2b && r2b.data) {
-              const mapped = mapSupabasePost(r2b.data, { allImages: true });
-              if (mapped) {
-                const legacy = mapped.legacyId || mapped.legacy_id || null;
-                if (legacy != null && legacy !== "") {
-                  mapped.uuid = mapped.id;
-                  mapped.id = legacy;
-                }
-              }
-              return mapped;
-            }
-          }
           return null;
         }
         if (r2 && r2.data) {
@@ -1312,17 +1322,19 @@
   }
 
 
-  function buildSupabasePostsQuery(client) {
+  function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true) {
+    const profileFields = includeVerified
+      ? 'id, full_name, avatar_url, verified'
+      : 'id, full_name, avatar_url';
+    const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, verified), post_media (id, url, is_cover)');
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`);
   }
 
   // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
-  function buildSupabasePostsQueryFallback(client) {
-    return client
-      .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url), post_media (id, url, is_cover)');
+  function buildSupabasePostsQueryFallback(client, includeComments = true) {
+    return buildSupabasePostsQuery(client, false, includeComments);
   }
 
   function isMissingVerifiedColumnError(err) {
