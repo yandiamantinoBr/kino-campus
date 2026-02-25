@@ -1142,6 +1142,12 @@ function kcParseBRLNumber(input) {
   return Number.isFinite(n) ? n : null;
 }
 
+function kcNormalizeMoneyInput(input) {
+  const n = kcParseBRLNumber(input);
+  if (n == null) return null;
+  return n.toFixed(2).replace('.', ',');
+}
+
 function kcGetSchema(moduleKey) {
   return KC_CREATE_SCHEMA[String(moduleKey || '')] || null;
 }
@@ -1488,9 +1494,14 @@ function kcCreateSustainSectionHtml() {
 
 function kcBuildFieldsForModule(moduleKey, selections, values) {
   const fields = [];
+  const moneyFieldMeta = {
+    type: 'text',
+    inputmode: 'decimal',
+    pattern: '^\\d{1,3}(?:\\.\\d{3})*(?:,\\d{1,2})?$|^\\d+(?:[\\.,]\\d{1,2})?$'
+  };
 
   // comuns
-  fields.push({ type: 'text', name: 'titulo', label: 'Título', placeholder: 'Ex: Livro de Cálculo Vol. 1', required: true });
+  fields.push({ type: 'text', name: 'titulo', label: 'Título', placeholder: 'Ex: Livro de Cálculo Vol. 1', required: true, maxLength: 80 });
   fields.push({ type: 'textarea', name: 'descricao', label: 'Descrição', placeholder: 'Descreva com detalhes…', required: true, rows: 4 });
 
   if (moduleKey === 'compra-venda') {
@@ -1498,10 +1509,10 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     fields.push({ type: 'text', name: 'localizacao', label: 'Localização', placeholder: 'Ex: Campus Samambaia', required: false });
 
     if (acao === 'vendo') {
-      fields.push({ type: 'text', name: 'preco', label: 'Preço (R$)', placeholder: '0,00', required: true });
+      fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Preço (R$)', placeholder: '0,00', required: true });
       fields.push({ type: 'select', name: 'condicao', label: 'Condição', required: true, options: ['Novo', 'Semi-novo', 'Usado'] });
     } else {
-      fields.push({ type: 'text', name: 'preco', label: 'Orçamento (opcional)', placeholder: '0,00', required: false });
+      fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Orçamento (opcional)', placeholder: '0,00', required: false });
     }
   }
 
@@ -1509,7 +1520,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     fields.push({ type: 'text', name: 'origem', label: 'Origem', placeholder: 'Ex: Campus Samambaia', required: true });
     fields.push({ type: 'text', name: 'destino', label: 'Destino', placeholder: 'Ex: Centro', required: true });
     fields.push({ type: 'text', name: 'horario', label: 'Horário', placeholder: 'Ex: 18h30', required: false });
-    fields.push({ type: 'text', name: 'contribuicao', label: 'Contribuição (opcional)', placeholder: 'Ex: 5,00', required: false });
+    fields.push({ ...moneyFieldMeta, name: 'contribuicao', label: 'Contribuição (opcional)', placeholder: 'Ex: 5,00', required: false });
     if (selections.tipo === 'ofereco') {
       fields.push({ type: 'number', name: 'vagas', label: 'Vagas', placeholder: '2', required: false, min: 1, max: 8 });
     }
@@ -1519,10 +1530,10 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     const t = selections.tipo;
     if (t === 'procurando') {
       fields.push({ type: 'text', name: 'regiao', label: 'Região desejada', placeholder: 'Ex: Setor Universitário', required: true });
-      fields.push({ type: 'text', name: 'orcamento', label: 'Orçamento máximo (opcional)', placeholder: 'Ex: 800,00', required: false });
+      fields.push({ ...moneyFieldMeta, name: 'orcamento', label: 'Orçamento máximo (opcional)', placeholder: 'Ex: 800,00', required: false });
     } else {
       fields.push({ type: 'text', name: 'localizacao', label: 'Localização', placeholder: 'Ex: Setor Universitário', required: true });
-      fields.push({ type: 'text', name: 'preco', label: 'Valor mensal (R$)', placeholder: '0,00', required: true });
+      fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Valor mensal (R$)', placeholder: '0,00', required: true });
       fields.push({ type: 'text', name: 'detalhes', label: 'Detalhes (opcional)', placeholder: 'Ex: contas inclusas, mobília, vagas…', required: false });
     }
   }
@@ -1534,14 +1545,14 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     fields.push({ type: 'url', name: 'link', label: 'Link/Inscrição (opcional)', placeholder: 'https://…', required: false });
     fields.push({ type: 'checkbox', name: 'gratuito', label: 'Evento gratuito', required: false });
     if (!values.gratuito) {
-      fields.push({ type: 'text', name: 'preco', label: 'Valor (opcional)', placeholder: '0,00', required: false });
+      fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Valor (opcional)', placeholder: '0,00', required: false });
     }
   }
 
   if (moduleKey === 'achados-perdidos') {
     fields.push({ type: 'text', name: 'localizacao', label: 'Local (onde foi perdido/encontrado)', placeholder: 'Ex: Biblioteca Central', required: true });
     if (selections.status === 'perdidos') {
-      fields.push({ type: 'text', name: 'recompensa', label: 'Recompensa (opcional)', placeholder: 'Ex: 20,00', required: false });
+      fields.push({ ...moneyFieldMeta, name: 'recompensa', label: 'Recompensa (opcional)', placeholder: 'Ex: 20,00', required: false });
     } else {
       fields.push({ type: 'text', name: 'entrega', label: 'Onde retirar/entregar', placeholder: 'Ex: Portaria do Bloco B', required: true });
     }
@@ -1549,7 +1560,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
 
   if (moduleKey === 'oportunidades') {
     fields.push({ type: 'text', name: 'localizacao', label: 'Local/Modalidade', placeholder: 'Ex: Remoto / Híbrido', required: false });
-    fields.push({ type: 'text', name: 'remuneracao', label: 'Remuneração (opcional)', placeholder: 'Ex: 1200,00', required: false });
+    fields.push({ ...moneyFieldMeta, name: 'remuneracao', label: 'Remuneração (opcional)', placeholder: 'Ex: 1200,00', required: false });
     fields.push({ type: 'text', name: 'contato', label: 'Contato', placeholder: 'Ex: email@ufg.br', required: true });
   }
 
@@ -1651,10 +1662,14 @@ function kcRenderCreateModal() {
       const valueAttr = (val != null && f.type !== 'file') ? `value="${escape(val)}"` : '';
       const min = (f.min != null) ? `min="${escape(f.min)}"` : '';
       const max = (f.max != null) ? `max="${escape(f.max)}"` : '';
+      const maxlength = (f.maxLength != null) ? `maxlength="${escape(f.maxLength)}"` : '';
+      const step = (f.step != null) ? `step="${escape(f.step)}"` : '';
+      const inputmode = f.inputmode ? `inputmode="${escape(f.inputmode)}"` : '';
+      const pattern = f.pattern ? `pattern="${escape(f.pattern)}"` : '';
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <input id="${id}" name="${escape(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} />
+          <input id="${id}" name="${escape(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} ${maxlength} ${step} ${inputmode} ${pattern} />
         </div>
       `);
     }
@@ -1745,6 +1760,28 @@ async function kcHandleCreateSubmit() {
       if (descInput && typeof descInput.setCustomValidity === 'function') {
         descInput.setCustomValidity(String(descInput.value || '').trim() ? '' : 'Informe uma descrição válida.');
       }
+
+      const moneyFields = ['preco', 'orcamento', 'recompensa', 'contribuicao', 'remuneracao'];
+      moneyFields.forEach((name) => {
+        const input = form.querySelector(`input[name="${name}"]`);
+        if (!input || typeof input.setCustomValidity !== 'function') return;
+
+        const raw = String(kcCreateState.values[name] || '').trim();
+        if (!raw) {
+          input.setCustomValidity('');
+          return;
+        }
+
+        const normalized = kcNormalizeMoneyInput(raw);
+        if (normalized == null) {
+          input.setCustomValidity('Informe um valor numérico válido (ex.: 10,00).');
+          return;
+        }
+
+        input.setCustomValidity('');
+        input.value = normalized;
+        kcCreateState.values[name] = normalized;
+      });
 
       if (!form.checkValidity()) {
         form.reportValidity();
