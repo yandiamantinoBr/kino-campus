@@ -297,6 +297,55 @@
     };
   }
 
+  function normalizeModuleKey(v) {
+    const raw = String(v || '').trim().toLowerCase();
+    if (!raw) return '';
+
+    let base = raw;
+    try {
+      base = base
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    } catch (_) { }
+
+    base = base
+      .replace(/[_\s]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    if (['compra-venda', 'compra-e-venda', 'vendas', 'venda'].includes(base)) return 'compra-venda';
+    if (['achados-perdidos', 'achados-e-perdidos', 'achados', 'perdidos'].includes(base)) return 'achados-perdidos';
+    if (['carona', 'caronas'].includes(base)) return 'caronas';
+    if (['evento', 'eventos'].includes(base)) return 'eventos';
+    if (['oportunidade', 'oportunidades'].includes(base)) return 'oportunidades';
+    if (['moradia', 'moradias'].includes(base)) return 'moradia';
+
+    return base;
+  }
+
+  function rowModuleMatches(row, moduleFilter) {
+    const target = normalizeModuleKey(moduleFilter);
+    if (!target) return true;
+    if (!row || typeof row !== 'object') return false;
+
+    const direct = normalizeModuleKey(row.module || row.modulo || '');
+    if (direct && direct === target) return true;
+
+    const meta = (row.metadata && typeof row.metadata === 'object') ? row.metadata : null;
+    if (!meta) return false;
+
+    const fromMeta = [
+      meta.module,
+      meta.modulo,
+      meta.moduleKey,
+      meta.moduloKey,
+      meta.feed,
+      meta.feedModule,
+    ];
+
+    return fromMeta.some((v) => normalizeModuleKey(v) === target);
+  }
+
   function isMissingTokenError(err, token) {
     if (!err || !token) return false;
     const msg = String(err.message || err.details || err.hint || '').toLowerCase();
@@ -476,13 +525,13 @@
     const from = (f.page - 1) * f.limit;
     const to = from + f.limit - 1;
 
-    const run = async (selectStr) => {
+    const run = async (selectStr, moduleEqValue) => {
       let q = client
         .from('posts')
         .select(selectStr)
         .order('created_at', { ascending: false });
 
-      if (f.module) q = q.eq('module', f.module);
+      if (moduleEqValue) q = q.eq('module', moduleEqValue);
       if (f.category) q = q.eq('category', f.category);
       if (f.subcategory) q = q.eq('metadata->>subcategory', f.subcategory);
       if (f.tag) q = q.contains('metadata->tagKeys', [f.tag]);
@@ -494,34 +543,34 @@
     // 1) tentativa padrão (post_media + profiles.verified)
     let mediaRel = 'post_media';
     let includeComments = true;
-    let res = await run(buildPostsSelect(true, mediaRel, includeComments));
+    let res = await run(buildPostsSelect(true, mediaRel, includeComments), f.module);
 
     // 2) compat: schema sem profiles.verified
     if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-      res = await run(buildPostsSelect(false, mediaRel, includeComments));
+      res = await run(buildPostsSelect(false, mediaRel, includeComments), f.module);
     }
 
     // 2.1) compat: embed comments(count) ausente
     if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
       includeComments = false;
-      res = await run(buildPostsSelect(true, mediaRel, includeComments));
+      res = await run(buildPostsSelect(true, mediaRel, includeComments), f.module);
       if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-        res = await run(buildPostsSelect(false, mediaRel, includeComments));
+        res = await run(buildPostsSelect(false, mediaRel, includeComments), f.module);
       }
     }
 
     // 3) compat: schema com relação post_images (ao invés de post_media)
     if (res && res.error && (isMissingTokenError(res.error, 'post_media') || isMissingTokenError(res.error, 'post_media ') || isMissingTokenError(res.error, 'post_media('))) {
       mediaRel = 'post_images';
-      res = await run(buildPostsSelect(true, mediaRel, includeComments));
+      res = await run(buildPostsSelect(true, mediaRel, includeComments), f.module);
       if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-        res = await run(buildPostsSelect(false, mediaRel, includeComments));
+        res = await run(buildPostsSelect(false, mediaRel, includeComments), f.module);
       }
       if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
         includeComments = false;
-        res = await run(buildPostsSelect(true, mediaRel, includeComments));
+        res = await run(buildPostsSelect(true, mediaRel, includeComments), f.module);
         if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-          res = await run(buildPostsSelect(false, mediaRel, includeComments));
+          res = await run(buildPostsSelect(false, mediaRel, includeComments), f.module);
         }
       }
     }
@@ -531,15 +580,15 @@
       const msg = String(res.error.message || '').toLowerCase();
       if (msg.includes('post_media') && msg.includes('relationship')) {
         mediaRel = 'post_images';
-        res = await run(buildPostsSelect(true, mediaRel, includeComments));
+        res = await run(buildPostsSelect(true, mediaRel, includeComments), f.module);
         if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-          res = await run(buildPostsSelect(false, mediaRel, includeComments));
+          res = await run(buildPostsSelect(false, mediaRel, includeComments), f.module);
         }
         if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
           includeComments = false;
-          res = await run(buildPostsSelect(true, mediaRel, includeComments));
+          res = await run(buildPostsSelect(true, mediaRel, includeComments), f.module);
           if (res && res.error && isMissingTokenError(res.error, 'verified')) {
-            res = await run(buildPostsSelect(false, mediaRel, includeComments));
+            res = await run(buildPostsSelect(false, mediaRel, includeComments), f.module);
           }
         }
       }
@@ -550,7 +599,27 @@
       return [];
     }
 
-    return (res && Array.isArray(res.data)) ? res.data : [];
+    let rows = (res && Array.isArray(res.data)) ? res.data : [];
+
+    // Fallback resiliente: se o filtro module via eq não retornar linhas,
+    // tenta buscar sem filtro e filtra no client com normalização/aliases.
+    if (f.module && rows.length === 0) {
+      const retryNoModule = await run(buildPostsSelect(true, mediaRel, includeComments), null);
+      if (retryNoModule && retryNoModule.error && isMissingTokenError(retryNoModule.error, 'verified')) {
+        const retryNoModuleNoVerified = await run(buildPostsSelect(false, mediaRel, includeComments), null);
+        if (!retryNoModuleNoVerified || !retryNoModuleNoVerified.error) {
+          rows = Array.isArray(retryNoModuleNoVerified && retryNoModuleNoVerified.data)
+            ? retryNoModuleNoVerified.data
+            : [];
+        }
+      } else if (retryNoModule && !retryNoModule.error) {
+        rows = Array.isArray(retryNoModule.data) ? retryNoModule.data : [];
+      }
+
+      if (rows.length) rows = rows.filter((row) => rowModuleMatches(row, f.module));
+    }
+
+    return rows;
   }
 
   function noopSubscription() {
