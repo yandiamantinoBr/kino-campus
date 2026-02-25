@@ -24,7 +24,8 @@
   // V8.1.7.0: coluna posts.status + policy posts_select_published (moderação de conteúdo)
   // V8.1.7.1: rate-limit trigger em reports (max 5/hora) + fix XSS comentários + CSP headers
   // V8.2.2.0: release candidate cleanroom (LOTE 1)
-  const VERSION = '8.2.2.0';
+  // V8.2.5.0: remove 'unsafe-inline' da CSP (BUG-003); externaliza scripts inline em 6 HTMLs
+  const VERSION = '8.2.5.0';
 
   const DEFAULT_ENV = {
     // versões (compat)

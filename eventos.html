@@ -6,25 +6,7 @@
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
 
-  <script>
-    // KinoCampus - Theme boot (sem flash)
-    (function () {
-      const STORAGE_KEY = 'theme';
-      const root = document.documentElement;
-      root.classList.add('kc-theme-preload');
-
-      let saved = null;
-      try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) { }
-
-      let theme = (saved === 'light' || saved === 'dark')
-        ? saved
-        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-      root.setAttribute('data-theme', theme);
-      // melhora o UI nativo (inputs/scrollbar) em ambos os temas
-      root.style.colorScheme = theme;
-    })();
-  </script>
+  <script src="assets/js/kc-theme-boot.js"></script>
   <style>
     /* evita transições durante o primeiro paint */
     html.kc-theme-preload,
