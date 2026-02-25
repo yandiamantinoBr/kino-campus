@@ -801,6 +801,8 @@ main {
     margin: 4px 0;
     color: var(--kc-text-dark-primary);
     text-decoration: none;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -855,6 +857,8 @@ main {
     font-size: 0.9em;
     color: var(--kc-text-dark-secondary);
     margin: 5px 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -3965,14 +3969,10 @@ header,
   .kc-card__title {
     font-size: 1.02rem;
     line-height: 1.25;
-    overflow-wrap: anywhere;
-    word-break: break-word;
     -webkit-line-clamp: 2;
   }
 
   .kc-card__description-preview {
-    overflow-wrap: anywhere;
-    word-break: break-word;
     -webkit-line-clamp: 2;
   }
 
@@ -4467,8 +4467,6 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
   .kc-card__title {
     font-size: clamp(0.96rem, 3.6vw, 1.06rem) !important;
     line-height: 1.18 !important;
-    overflow-wrap: anywhere;
-    word-break: break-word;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
