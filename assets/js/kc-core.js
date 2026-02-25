@@ -1123,6 +1123,7 @@ const kcCreateState = {
   moduleKey: null,
   selections: {}, // groupId -> key
   values: {},
+  submitting: false,
 
   // Imagens (máx 5: 1 capa + 4)
   images: [], // [{ id, dataUrl, name, size }]
@@ -1707,263 +1708,285 @@ function kcCloseCreatePostModal() {
 }
 
 async function kcHandleCreateSubmit() {
+  if (kcCreateState.submitting === true) return;
+
   kcCaptureCreateValues();
   const form = document.getElementById('kcCreatePostForm');
-  const schema = kcGetSchema(kcCreateState.moduleKey);
-  if (!schema) {
-    showToast('Selecione um módulo para publicar.', 'warn', 2200);
-    return;
+  const submitBtn = form ? form.querySelector('.kc-create-submit') : null;
+  const originalSubmitText = submitBtn ? submitBtn.textContent : '';
+
+  kcCreateState.submitting = true;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Publicando...';
   }
 
-  // valida tags obrigatórias
-  const missing = (schema.tagGroups || []).filter(g => g.required && !kcCreateState.selections[g.id]);
-  if (missing.length) {
-    showToast('Selecione: ' + missing.map(m => m.label).join(', '), 'warn', 2600);
-    return;
-  }
-
-  if (form) {
-    const titleInput = form.querySelector('input[name="titulo"]');
-    const descInput = form.querySelector('textarea[name="descricao"]');
-
-    if (titleInput && typeof titleInput.setCustomValidity === 'function') {
-      titleInput.setCustomValidity(String(titleInput.value || '').trim() ? '' : 'Informe um título válido.');
-    }
-    if (descInput && typeof descInput.setCustomValidity === 'function') {
-      descInput.setCustomValidity(String(descInput.value || '').trim() ? '' : 'Informe uma descrição válida.');
+  try {
+    const schema = kcGetSchema(kcCreateState.moduleKey);
+    if (!schema) {
+      showToast('Selecione um módulo para publicar.', 'warn', 2200);
+      return;
     }
 
-    if (!form.checkValidity()) {
-      form.reportValidity();
+    // valida tags obrigatórias
+    const missing = (schema.tagGroups || []).filter(g => g.required && !kcCreateState.selections[g.id]);
+    if (missing.length) {
+      showToast('Selecione: ' + missing.map(m => m.label).join(', '), 'warn', 2600);
+      return;
+    }
+
+    if (form) {
+      const titleInput = form.querySelector('input[name="titulo"]');
+      const descInput = form.querySelector('textarea[name="descricao"]');
+
+      if (titleInput && typeof titleInput.setCustomValidity === 'function') {
+        titleInput.setCustomValidity(String(titleInput.value || '').trim() ? '' : 'Informe um título válido.');
+      }
+      if (descInput && typeof descInput.setCustomValidity === 'function') {
+        descInput.setCustomValidity(String(descInput.value || '').trim() ? '' : 'Informe uma descrição válida.');
+      }
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        showToast('Revise os campos destacados e tente novamente.', 'warn', 2600);
+        return;
+      }
+    }
+
+    const title = String(kcCreateState.values.titulo || '').trim();
+    const desc = String(kcCreateState.values.descricao || '').trim();
+    if (!title || !desc) {
+      // Fallback defensivo para payload em caso de DOM inconsistente.
       showToast('Revise os campos destacados e tente novamente.', 'warn', 2600);
       return;
     }
-  }
 
-  const title = String(kcCreateState.values.titulo || '').trim();
-  const desc = String(kcCreateState.values.descricao || '').trim();
-  if (!title || !desc) {
-    // Fallback defensivo para payload em caso de DOM inconsistente.
-    showToast('Revise os campos destacados e tente novamente.', 'warn', 2600);
-    return;
-  }
+    const categoryGroupId = schema.categoryGroupId;
+    const catKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
+    const catLabel = catKey ? kcTagLabel(schema, categoryGroupId, catKey) : '';
 
-  const categoryGroupId = schema.categoryGroupId;
-  const catKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
-  const catLabel = catKey ? kcTagLabel(schema, categoryGroupId, catKey) : '';
+    // subcategoria: tenta usar 2º grupo (quando existir)
+    const otherGroups = (schema.tagGroups || []).filter(g => g.id !== categoryGroupId);
+    const subKey = otherGroups.length ? kcCreateState.selections[otherGroups[0].id] : '';
+    const subLabel = subKey ? kcTagLabel(schema, otherGroups[0].id, subKey) : '';
 
-  // subcategoria: tenta usar 2º grupo (quando existir)
-  const otherGroups = (schema.tagGroups || []).filter(g => g.id !== categoryGroupId);
-  const subKey = otherGroups.length ? kcCreateState.selections[otherGroups[0].id] : '';
-  const subLabel = subKey ? kcTagLabel(schema, otherGroups[0].id, subKey) : '';
+    // V8.1.2.4.5: Compra e Venda usa tabs por *categoria* (eletronicos, livros...),
+    // mas o 2º grupo do formulário é 'ação' (vendo/compro...).
+    // - Persistimos a ação em subcategoria/subcategoriaKey (UI)
+    // - Persistimos o filtro de sub-módulo em metadata.subcategory (key da categoria)
+    const isCompraVenda = kcCreateState.moduleKey === 'compra-venda';
+    const actionKey = isCompraVenda ? (subKey || '') : '';
+    const actionLabel = isCompraVenda ? (subLabel || '') : '';
+    const filterSubKey = isCompraVenda ? (catKey || '') : (subKey || '');
+    const filterSubLabel = isCompraVenda ? (catLabel || '') : (subLabel || '');
 
-  // V8.1.2.4.5: Compra e Venda usa tabs por *categoria* (eletronicos, livros...),
-  // mas o 2º grupo do formulário é 'ação' (vendo/compro...).
-  // - Persistimos a ação em subcategoria/subcategoriaKey (UI)
-  // - Persistimos o filtro de sub-módulo em metadata.subcategory (key da categoria)
-  const isCompraVenda = kcCreateState.moduleKey === 'compra-venda';
-  const actionKey = isCompraVenda ? (subKey || '') : '';
-  const actionLabel = isCompraVenda ? (subLabel || '') : '';
-  const filterSubKey = isCompraVenda ? (catKey || '') : (subKey || '');
-  const filterSubLabel = isCompraVenda ? (catLabel || '') : (subLabel || '');
+    const tagKeys = Object.values(kcCreateState.selections).filter(Boolean);
+    const tagLabels = Object.entries(kcCreateState.selections)
+      .map(([gid, key]) => (key ? kcTagLabel(schema, gid, key) : ''))
+      .filter(Boolean);
 
-  const tagKeys = Object.values(kcCreateState.selections).filter(Boolean);
-  const tagLabels = Object.entries(kcCreateState.selections)
-    .map(([gid, key]) => (key ? kcTagLabel(schema, gid, key) : ''))
-    .filter(Boolean);
+    // preço (quando existe)
+    let preco = null;
+    let precoTexto = null;
+    if (kcCreateState.moduleKey === 'eventos' && (kcCreateState.values.gratuito === true || kcCreateState.values.gratuito === 'true')) {
+      preco = 0;
+    } else {
+      const n = kcParseBRLNumber(kcCreateState.values.preco);
+      if (n != null) preco = n;
+    }
 
-  // preço (quando existe)
-  let preco = null;
-  let precoTexto = null;
-  if (kcCreateState.moduleKey === 'eventos' && (kcCreateState.values.gratuito === true || kcCreateState.values.gratuito === 'true')) {
-    preco = 0;
-  } else {
-    const n = kcParseBRLNumber(kcCreateState.values.preco);
-    if (n != null) preco = n;
-  }
+    if (kcCreateState.moduleKey === 'achados-perdidos' && kcCreateState.selections.status === 'perdidos') {
+      const r = String(kcCreateState.values.recompensa || '').trim();
+      if (r) precoTexto = 'Recompensa: R$ ' + r;
+    }
 
-  if (kcCreateState.moduleKey === 'achados-perdidos' && kcCreateState.selections.status === 'perdidos') {
-    const r = String(kcCreateState.values.recompensa || '').trim();
-    if (r) precoTexto = 'Recompensa: R$ ' + r;
-  }
+    const imagens = kcGetOrderedCreateImages();
 
-  const imagens = kcGetOrderedCreateImages();
+    // Payload do formulário (contrato legado) - o driver decide como persistir.
+    // IMPORTANTE: categoria/subcategoria devem ser persistidos como *keys* para
+    // permitir filtros por sub-módulo (ex: Eletrônicos) sem depender de acentos.
+    const payload = {
+      modulo: kcCreateState.moduleKey,
+      moduloLabel: schema.label,
 
-  // Payload do formulário (contrato legado) - o driver decide como persistir.
-  // IMPORTANTE: categoria/subcategoria devem ser persistidos como *keys* para
-  // permitir filtros por sub-módulo (ex: Eletrônicos) sem depender de acentos.
-  const payload = {
-    modulo: kcCreateState.moduleKey,
-    moduloLabel: schema.label,
-
-    // categoria/subcategoria (compat: mantém label e key)
-    categoria: catKey || (catLabel || ''),
-    categoriaLabel: catLabel || '',
-    categoriaKey: catKey || '',
-
-    // subcategoria (UI): em compra-venda, isso representa a *ação* (vendo/compro)
-    subcategoria: isCompraVenda ? (actionLabel || actionKey) : (subKey || (subLabel || '')),
-    subcategoriaLabel: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
-    subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
-
-    // tags (UI)
-    tags: tagLabels,
-    tagKeys,
-
-    // conteúdo
-    titulo: title,
-    descricao: desc,
-    preco,
-    precoTexto,
-    condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
-    localizacao: kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : '',
-
-    // flags
-    verificado: false,
-    emoji: schema.emoji,
-    imagens,
-    sustentavel: !!kcCreateState.values.sustentavel,
-
-    // metadata (modo local e Supabase): usado para filtros JSONB
-    metadata: {
-      // subcategory (filtro): chave esperada pelos controllers (.eq('metadata->>subcategory', ...))
-      subcategory: filterSubKey || '',
-      subcategoryLabel: filterSubLabel || '',
-
-      // categoria principal (UI + filtros)
-      categoria: catLabel || '',
+      // categoria/subcategoria (compat: mantém label e key)
+      categoria: catKey || (catLabel || ''),
+      categoriaLabel: catLabel || '',
       categoriaKey: catKey || '',
 
-      // ação/subcategoria (UI)
-      subcategoria: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
+      // subcategoria (UI): em compra-venda, isso representa a *ação* (vendo/compro)
+      subcategoria: isCompraVenda ? (actionLabel || actionKey) : (subKey || (subLabel || '')),
+      subcategoriaLabel: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
       subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
 
-      // compra-venda: guardar ação explicitamente (útil para futuras buscas e edição)
-      actionKey: actionKey || '',
-      actionLabel: actionLabel || '',
-    },
-  };
+      // tags (UI)
+      tags: tagLabels,
+      tagKeys,
 
-  const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
-  const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
-  const blockLocalCriticalPersistence = isProductionRuntime() && !useSupabase;
-  let post = null;
-  let createError = null;
+      // conteúdo
+      titulo: title,
+      descricao: desc,
+      preco,
+      precoTexto,
+      condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
+      localizacao: kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : '',
 
-  const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
+      // flags
+      verificado: false,
+      emoji: schema.emoji,
+      imagens,
+      sustentavel: !!kcCreateState.values.sustentavel,
 
-  if (useSupabase) {
-    // Exige autenticação no driver Supabase (RLS)
-    let user = null;
-    try {
-      if (typeof window.KCAPI.getCurrentUser === 'function') user = await window.KCAPI.getCurrentUser();
-    } catch (_) { }
+      // metadata (modo local e Supabase): usado para filtros JSONB
+      metadata: {
+        // subcategory (filtro): chave esperada pelos controllers (.eq('metadata->>subcategory', ...))
+        subcategory: filterSubKey || '',
+        subcategoryLabel: filterSubLabel || '',
 
-    if (!user) {
-      showToast('Faça login para publicar.', 'warn', 2600);
-      // V8.1.3.2.1: não abre o modal automaticamente; direciona o usuário ao botão de Login/Cadastro.
+        // categoria principal (UI + filtros)
+        categoria: catLabel || '',
+        categoriaKey: catKey || '',
+
+        // ação/subcategoria (UI)
+        subcategoria: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
+        subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
+
+        // compra-venda: guardar ação explicitamente (útil para futuras buscas e edição)
+        actionKey: actionKey || '',
+        actionLabel: actionLabel || '',
+      },
+    };
+
+    const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
+    const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
+    const blockLocalCriticalPersistence = isProductionRuntime() && !useSupabase;
+    let post = null;
+    let createError = null;
+
+    const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
+
+    if (useSupabase) {
+      // Exige autenticação no driver Supabase (RLS)
+      let user = null;
       try {
-        const btn = document.querySelector('a.btn-login') || document.querySelector('a[href="#login"]');
-        if (btn) {
-          btn.classList.add('kc-attention');
-          try { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { }
-          try { btn.focus(); } catch (_) { }
-          setTimeout(() => btn.classList.remove('kc-attention'), 900);
-        }
+        if (typeof window.KCAPI.getCurrentUser === 'function') user = await window.KCAPI.getCurrentUser();
       } catch (_) { }
-      return;
-    }
 
-    showToast('Publicando...', 'info', 1600);
-    try {
-      post = await apiCreateFn(payload);
-      if (post && post.ok === false && post.error) {
-        createError = post.error;
-        post = null;
+      if (!user) {
+        showToast('Faça login para publicar.', 'warn', 2600);
+        // V8.1.3.2.1: não abre o modal automaticamente; direciona o usuário ao botão de Login/Cadastro.
+        try {
+          const btn = document.querySelector('a.btn-login') || document.querySelector('a[href="#login"]');
+          if (btn) {
+            btn.classList.add('kc-attention');
+            try { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { }
+            try { btn.focus(); } catch (_) { }
+            setTimeout(() => btn.classList.remove('kc-attention'), 900);
+          }
+        } catch (_) { }
+        return;
       }
-    } catch (err) {
-      console.error('[KinoCampus] Exceção ao criar publicação (supabase):', {
-        payload,
-        error: err,
-      });
-      createError = {
-        code: 'CREATE_POST_EXCEPTION',
-        message: (err && err.message) ? String(err.message) : 'Erro inesperado ao publicar.',
-      };
-      post = null;
-    }
 
-    if (!post) {
-      console.error('[KinoCampus] Falha ao criar publicação (supabase) sem retorno de post.', {
-        payload,
-        createError,
-      });
+      showToast('Publicando...', 'info', 1600);
       try {
-        if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
-          const createErr = window.KCAPI.getLastCreatePostError();
-          console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
-        }
-      } catch (_) { }
-      const feedbackMessage = (createError && createError.message)
-        ? String(createError.message)
-        : 'Não foi possível publicar agora. Tente novamente.';
-      showToast(feedbackMessage, 'error', 2800);
-      return;
-    }
-  } else {
-    if (blockLocalCriticalPersistence) {
-      showToast('Publicação bloqueada: em produção, o driver Supabase é obrigatório.', 'error', 3200);
-      return;
-    }
-
-    // Modo local/offline-first (default): só confirma sucesso após persistência efetiva.
-    try {
-      if (hasApiCreatePost) {
         post = await apiCreateFn(payload);
-      } else {
-        post = kcCreateUserPost(payload);
-      }
-      if (post && post.ok === false && post.error) {
-        createError = post.error;
+        if (post && post.ok === false && post.error) {
+          createError = post.error;
+          post = null;
+        }
+      } catch (err) {
+        console.error('[KinoCampus] Exceção ao criar publicação (supabase):', {
+          payload,
+          error: err,
+        });
+        createError = {
+          code: 'CREATE_POST_EXCEPTION',
+          message: (err && err.message) ? String(err.message) : 'Erro inesperado ao publicar.',
+        };
         post = null;
       }
-    } catch (err) {
-      console.error('[KinoCampus] Exceção no modo local ao criar publicação:', {
-        payload,
-        error: err,
-      });
-      createError = {
-        code: 'LOCAL_CREATE_POST_EXCEPTION',
-        message: (err && err.message) ? String(err.message) : 'Erro inesperado ao salvar publicação.',
-      };
-      post = null;
+
+      if (!post) {
+        console.error('[KinoCampus] Falha ao criar publicação (supabase) sem retorno de post.', {
+          payload,
+          createError,
+        });
+        try {
+          if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
+            const createErr = window.KCAPI.getLastCreatePostError();
+            console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
+          }
+        } catch (_) { }
+        const feedbackMessage = (createError && createError.message)
+          ? String(createError.message)
+          : 'Não foi possível publicar agora. Tente novamente.';
+        showToast(feedbackMessage, 'error', 2800);
+        return;
+      }
+    } else {
+      if (blockLocalCriticalPersistence) {
+        showToast('Publicação bloqueada: em produção, o driver Supabase é obrigatório.', 'error', 3200);
+        return;
+      }
+
+      // Modo local/offline-first (default): só confirma sucesso após persistência efetiva.
+      try {
+        if (hasApiCreatePost) {
+          post = await apiCreateFn(payload);
+        } else {
+          post = kcCreateUserPost(payload);
+        }
+        if (post && post.ok === false && post.error) {
+          createError = post.error;
+          post = null;
+        }
+      } catch (err) {
+        console.error('[KinoCampus] Exceção no modo local ao criar publicação:', {
+          payload,
+          error: err,
+        });
+        createError = {
+          code: 'LOCAL_CREATE_POST_EXCEPTION',
+          message: (err && err.message) ? String(err.message) : 'Erro inesperado ao salvar publicação.',
+        };
+        post = null;
+      }
+
+      if (!post) {
+        console.error('[KinoCampus] Falha ao criar publicação no modo local sem retorno de post.', {
+          payload,
+          createError,
+        });
+        const feedbackMessage = (createError && createError.message)
+          ? String(createError.message)
+          : 'Não foi possível salvar sua publicação no dispositivo.';
+        showToast(feedbackMessage, 'error', 3200);
+        return;
+      }
     }
 
-    if (!post) {
-      console.error('[KinoCampus] Falha ao criar publicação no modo local sem retorno de post.', {
-        payload,
-        createError,
-      });
-      const feedbackMessage = (createError && createError.message)
-        ? String(createError.message)
-        : 'Não foi possível salvar sua publicação no dispositivo.';
-      showToast(feedbackMessage, 'error', 3200);
-      return;
+    showToast('Publicado com sucesso!', 'success', 2200);
+    kcCloseCreatePostModal();
+
+    // Redireciona para o módulo + hash do subtópico
+    const base = schema.redirect || kcModulePage(kcCreateState.moduleKey);
+    let targetUrl = base;
+    if (kcCreateState.moduleKey === 'compra-venda' && catKey) {
+      targetUrl += (targetUrl.includes('?') ? '&' : '?') + 'filter=' + encodeURIComponent(catKey);
+    } else if (catKey) {
+      targetUrl += '#' + encodeURIComponent(catKey);
+    }
+    window.location.href = targetUrl;
+  } catch (err) {
+    console.error('[KinoCampus] Erro inesperado no submit de criação:', err);
+    showToast('Não foi possível publicar agora. Tente novamente.', 'error', 2800);
+  } finally {
+    kcCreateState.submitting = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText || 'Publicar Agora';
     }
   }
-
-  showToast('Publicado com sucesso!', 'success', 2200);
-  kcCloseCreatePostModal();
-
-  // Redireciona para o módulo + hash do subtópico
-  const base = schema.redirect || kcModulePage(kcCreateState.moduleKey);
-  let targetUrl = base;
-  if (kcCreateState.moduleKey === 'compra-venda' && catKey) {
-    targetUrl += (targetUrl.includes('?') ? '&' : '?') + 'filter=' + encodeURIComponent(catKey);
-  } else if (catKey) {
-    targetUrl += '#' + encodeURIComponent(catKey);
-  }
-  window.location.href = targetUrl;
 }
 function kcInitCreatePostTriggers() {
   // Intercepta links e botões existentes
