@@ -2884,7 +2884,7 @@ html, body {
 .kc-create-form {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px; /* V8.2.4.3: aumentado de 14px para 16px para respiração uniforme entre grupos */
 }
 
 .kc-create-group {
@@ -2892,6 +2892,7 @@ html, body {
     border-radius: 16px;
     border: 1px solid var(--kc-border-dark);
     background: var(--kc-surface-dark-hover);
+    margin-bottom: 24px; /* V8.2.4.3: respiro visual abaixo de cada bloco de campos */
 }
 
 .kc-create-group__head {
@@ -3152,6 +3153,7 @@ html, body {
     position: sticky;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     z-index: 2;
+    margin-top: 16px; /* V8.2.4.3: descola o botão da dica/grupo acima */
 }
 
 .kc-create-submit:disabled {
