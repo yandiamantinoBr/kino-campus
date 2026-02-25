@@ -63,6 +63,21 @@
     } catch (_) { }
   }
 
+  function resolveCurrentUserDisplayName(user) {
+    if (!user || typeof user !== 'object') return '';
+    const userMetadata = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : null;
+    const candidates = [
+      userMetadata && userMetadata.full_name,
+      user.display_name,
+      user.email,
+    ];
+    for (let i = 0; i < candidates.length; i += 1) {
+      const value = String(candidates[i] || '').trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
   function bindStaticInteractions() {
     if (staticInteractionsBound) return;
     staticInteractionsBound = true;
@@ -385,6 +400,78 @@
     card.style.display = 'block';
   }
 
+  function normalizeWhatsAppPhone(raw) {
+    const digits = String(raw || '').replace(/\D+/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('55')) return digits;
+    return '55' + digits;
+  }
+
+  function getPostContactAction(post) {
+    const meta = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
+    const moduleKey = String(post.modulo || post.module || '').trim().toLowerCase();
+    const categoryKey = String(post.categoria || post.category || '').trim().toLowerCase();
+
+    const whatsappRaw = post.whatsapp || post.whatsappNumber || post.contatoWhatsapp || meta.whatsapp;
+    const whatsapp = normalizeWhatsAppPhone(whatsappRaw);
+    if (whatsapp) {
+      return {
+        type: 'whatsapp',
+        href: 'https://wa.me/' + encodeURIComponent(whatsapp),
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      };
+    }
+
+    const externalUrl = String(post.link || post.externalUrl || post.url || post.formUrl || meta.formUrl || meta.externalUrl || '').trim();
+    if (/^https?:\/\//i.test(externalUrl)) {
+      return {
+        type: 'external_link',
+        href: externalUrl,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      };
+    }
+
+    const isOpportunityForm = moduleKey === 'oportunidades' || categoryKey === 'estagio' || categoryKey === 'emprego';
+    if (isOpportunityForm && typeof window.openFormModal === 'function') {
+      return {
+        type: 'real_form',
+        handler: () => window.openFormModal({ postId: post.id || post.uuid || null, post }),
+      };
+    }
+
+    const authorId = (post && (post.autorId || post.authorId || post.author_id)) || null;
+    if (authorId) {
+      return {
+        type: 'open_contact',
+        href: 'profile.html?id=' + encodeURIComponent(authorId),
+      };
+    }
+
+    return {
+      type: 'safe_fallback',
+      handler: () => {
+        toast('Contato indisponível para esta publicação.', 'warn', 2400);
+      },
+    };
+  }
+
+  function reportCtaError(reason, details) {
+    const payload = {
+      reason: String(reason || 'unknown_cta_error'),
+      details: details && typeof details === 'object' ? details : {},
+      at: new Date().toISOString(),
+      page: window.location && window.location.pathname ? window.location.pathname : 'unknown',
+    };
+    try {
+      console.error('[KC Product][CTA]', payload);
+    } catch (_) { }
+    try {
+      window.dispatchEvent(new CustomEvent('kc:cta-error', { detail: payload }));
+    } catch (_) { }
+  }
+
   function setCTA(post) {
     const btn = document.getElementById('primaryCta');
     if (!btn) return;
@@ -395,13 +482,64 @@
 
     btn.innerHTML = `<i class="${esc(icon)}"></i> ${esc(label)}`;
     btn.dataset.kcCtaLabel = label;
+    btn.dataset.kcCtaHref = '';
+    btn.dataset.kcCtaTarget = '';
+    btn.dataset.kcCtaRel = '';
+    btn.dataset.kcCtaActionType = '';
+
+    const action = getPostContactAction(post);
+    btn.dataset.kcCtaActionType = action.type || 'safe_fallback';
+
+    if (action.href) {
+      btn.dataset.kcCtaHref = action.href;
+      btn.dataset.kcCtaTarget = action.target || '';
+      btn.dataset.kcCtaRel = action.rel || '';
+    }
+
+    if (btn.tagName === 'A') {
+      btn.setAttribute('href', action.href || '#');
+      if (action.target) btn.setAttribute('target', action.target);
+      else btn.removeAttribute('target');
+      if (action.rel) btn.setAttribute('rel', action.rel);
+      else btn.removeAttribute('rel');
+    }
 
     if (btn.dataset.kcCtaBound !== '1') {
       btn.dataset.kcCtaBound = '1';
-      btn.addEventListener('click', () => {
-        const currentLabel = String(btn.dataset.kcCtaLabel || 'Entrar em contato');
-        if (typeof window.showToast === 'function') {
-          window.showToast('Simulação: ação "' + currentLabel + '"', 'info', 2200);
+      btn.addEventListener('click', (event) => {
+        try {
+          const href = String(btn.dataset.kcCtaHref || '').trim();
+          const actionType = String(btn.dataset.kcCtaActionType || '').trim();
+          const target = String(btn.dataset.kcCtaTarget || '').trim();
+
+          if (href) {
+            if (btn.tagName === 'A') return;
+            event.preventDefault();
+            if (target === '_blank') {
+              window.open(href, '_blank', 'noopener,noreferrer');
+            } else {
+              window.location.href = href;
+            }
+            return;
+          }
+
+          const liveAction = getPostContactAction(currentPost || post || {});
+          if (typeof liveAction.handler === 'function') {
+            event.preventDefault();
+            liveAction.handler();
+            return;
+          }
+
+          throw new Error('cta_action_unresolved:' + actionType);
+        } catch (error) {
+          event.preventDefault();
+          reportCtaError('cta_click_failed', {
+            message: error && error.message ? String(error.message) : 'unknown',
+            postId: (currentPost && (currentPost.id || currentPost.uuid)) || (post && (post.id || post.uuid)) || null,
+            module: (currentPost && (currentPost.modulo || currentPost.module)) || null,
+            category: (currentPost && (currentPost.categoria || currentPost.category)) || null,
+          });
+          toast('Não foi possível executar esta ação agora.', 'error', 2400);
         }
       });
     }
@@ -602,6 +740,12 @@
       }
     } catch (_) {
       currentUser = null;
+    }
+
+    const commentAuthorInput = document.getElementById('commentAuthor');
+    if (commentAuthorInput) {
+      const resolvedIdentity = resolveCurrentUserDisplayName(currentUser);
+      if (resolvedIdentity) commentAuthorInput.value = resolvedIdentity;
     }
 
     // Contrato único (Model) + regras centrais

@@ -117,6 +117,14 @@ window.KCPostModel = window.KCPostModel || {
 let currentSlide = 0;
 let autoSlideInterval = null;
 
+function isProductionRuntime() {
+  return !!(window.KC_ENV && window.KC_ENV.isProduction === true);
+}
+
+function isSupabaseRuntime() {
+  return !!(window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase');
+}
+
 function showSlide(index) {
   const slides = document.querySelectorAll('.kc-hero-banner');
   const dots = document.querySelectorAll('.kc-dot');
@@ -196,7 +204,7 @@ function vote(button, type) {
   const previousScoreText = scoreElement.textContent;
   const previousActiveStates = voteButtons.map((btn) => btn.classList.contains('active'));
 
-  const isSupabaseMode = !!(window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase');
+  const isSupabaseMode = isSupabaseRuntime();
   const postId = button.closest('[data-post-id]')?.dataset.postId || getCurrentPostId();
   const lockKey = String(postId || '').trim();
 
@@ -486,6 +494,23 @@ function addComment(postId, commentText, authorName = 'Anônimo') {
   return newComment;
 }
 
+function resolveCurrentUserDisplayName(user) {
+  if (!user || typeof user !== 'object') return '';
+  const userMetadata = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : null;
+  const candidates = [
+    userMetadata && userMetadata.full_name,
+    user.display_name,
+    user.email,
+  ];
+
+  for (let i = 0; i < candidates.length; i += 1) {
+    const value = String(candidates[i] || '').trim();
+    if (value) return value;
+  }
+
+  return '';
+}
+
 // Normaliza campos de um comentário independentemente da origem (localStorage ou Supabase)
 function normalizeCommentForRender(c) {
   const profile = c.author_profile || c.profiles || null;
@@ -495,12 +520,19 @@ function normalizeCommentForRender(c) {
     || c.full_name
     || c.author_name
     || c.author
-    || 'Anônimo'
   );
+  const normalizedAuthor = String(resolvedAuthor || '').trim();
+  if (!normalizedAuthor) {
+    console.warn('[KC Comments] Comentário sem autoria preenchida, aplicando fallback.', {
+      commentId: c && c.id,
+      hasAuthorProfile: !!profile,
+      raw: c,
+    });
+  }
 
   return {
     id: c.id,
-    author: String(resolvedAuthor || 'Anônimo').trim() || 'Anônimo',
+    author: normalizedAuthor || 'Anônimo',
     text: c.body || c.text || '',
     timestamp: c.created_at
       ? new Date(c.created_at).toLocaleString('pt-BR')
@@ -513,7 +545,7 @@ function likeComment(postId, commentId, containerId = 'commentsContainer') {
   const id = String(postId);
 
   // Driver Supabase: persiste via KCAPI (async, re-render ao resolver)
-  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
+  if (isSupabaseRuntime()) {
     window.KCAPI.likeComment(commentId).then(function () {
       renderComments(id, containerId);
     }).catch(function () { });
@@ -549,15 +581,15 @@ function _renderCommentList(id, containerId, comments) {
     return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escape(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
         <div style="flex: 1;">
-          <div style="font-weight: bold;">${escape(c.author)}</div>
-          <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escape(c.timestamp)}</div>
+          <div style="font-weight: bold;">${escHtml(c.author)}</div>
+          <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escHtml(c.timestamp)}</div>
         </div>
       </div>
-      <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escape(c.text)}</div>
+      <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escHtml(c.text)}</div>
       <div style="margin-left: 50px; display: flex; gap: 15px; font-size: 0.9em;">
-        <button data-post-id="${escape(String(id))}" data-comment-id="${escape(String(c.id))}" data-container="${escape(containerId)}" class="kc-like-comment-btn" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
+        <button data-post-id="${escHtml(String(id))}" data-comment-id="${escHtml(String(c.id))}" data-container="${escHtml(containerId)}" class="kc-like-comment-btn" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
           <i class="fas fa-thumbs-up"></i> ${c.likes || 0}
         </button>
       </div>
@@ -579,7 +611,7 @@ function renderComments(postId, containerId = 'commentsContainer') {
   const id = String(postId);
 
   // Driver Supabase: carrega async, depois renderiza
-  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
+  if (isSupabaseRuntime()) {
     window.KCAPI.getComments(id).then(function (comments) {
       _renderCommentList(id, containerId, comments || []);
     }).catch(function () {
@@ -592,7 +624,7 @@ function renderComments(postId, containerId = 'commentsContainer') {
   _renderCommentList(id, containerId, loadComments(id));
 }
 
-function submitComment(postId = null, containerId = 'commentsContainer') {
+async function submitComment(postId = null, containerId = 'commentsContainer') {
   const resolved = postId != null ? String(postId) : getCurrentPostId();
   if (!resolved) {
     showToast('Não foi possível identificar esta publicação', 'error');
@@ -625,9 +657,23 @@ function submitComment(postId = null, containerId = 'commentsContainer') {
     return;
   }
 
+  // Política de produção: impedir persistência local de operação crítica.
+  if (isProductionRuntime()) {
+    showToast('Comentário bloqueado: em produção, use Supabase.', 'error');
+    return;
+  }
+
   // Driver local: localStorage
   const authorInput = document.querySelector(`input[data-post-id="${cssEscape(id)}"][name="author"]`);
-  const authorName = authorInput?.value?.trim() || 'Anônimo';
+  let sessionAuthorName = '';
+  try {
+    if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+      const currentUser = await window.KCAPI.getCurrentUser();
+      sessionAuthorName = resolveCurrentUserDisplayName(currentUser);
+    }
+  } catch (_) { }
+
+  const authorName = sessionAuthorName || authorInput?.value?.trim() || 'Anônimo';
   addComment(id, text, authorName);
   textarea.value = '';
   renderComments(id, containerId);
@@ -1077,6 +1123,7 @@ const kcCreateState = {
   moduleKey: null,
   selections: {}, // groupId -> key
   values: {},
+  submitting: false,
 
   // Imagens (máx 5: 1 capa + 4)
   images: [], // [{ id, dataUrl, name, size }]
@@ -1093,6 +1140,12 @@ function kcParseBRLNumber(input) {
   const cleaned = s.replace(/[^0-9,.-]/g, '').replace(/\./g, '').replace(',', '.');
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
+}
+
+function kcNormalizeMoneyInput(input) {
+  const n = kcParseBRLNumber(input);
+  if (n == null) return null;
+  return n.toFixed(2).replace('.', ',');
 }
 
 function kcGetSchema(moduleKey) {
@@ -1392,13 +1445,13 @@ function kcCreateImagesSectionHtml() {
     const isCover = kcCreateState.coverImageId && String(kcCreateState.coverImageId) === String(img.id);
     return `
       <div class="kc-img-thumb${isCover ? ' is-cover' : ''}">
-        <img src="${escape(img.dataUrl)}" alt="Imagem da publicação" loading="lazy" />
+        <img src="${escHtml(img.dataUrl)}" alt="Imagem da publicação" loading="lazy" />
         ${isCover ? `<div class="kc-img-badge"><i class="fas fa-star"></i> Capa</div>` : ''}
         <div class="kc-img-actions">
-          <button type="button" class="kc-img-action" data-kc-img-action="cover" data-kc-img-id="${escape(img.id)}" title="Definir como capa">
+          <button type="button" class="kc-img-action" data-kc-img-action="cover" data-kc-img-id="${escHtml(img.id)}" title="Definir como capa">
             <i class="fas fa-star"></i>
           </button>
-          <button type="button" class="kc-img-action" data-kc-img-action="remove" data-kc-img-id="${escape(img.id)}" title="Remover">
+          <button type="button" class="kc-img-action" data-kc-img-action="remove" data-kc-img-id="${escHtml(img.id)}" title="Remover">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -1441,9 +1494,14 @@ function kcCreateSustainSectionHtml() {
 
 function kcBuildFieldsForModule(moduleKey, selections, values) {
   const fields = [];
+  const moneyFieldMeta = {
+    type: 'text',
+    inputmode: 'decimal',
+    pattern: '^\\d{1,3}(?:\\.\\d{3})*(?:,\\d{1,2})?$|^\\d+(?:[\\.,]\\d{1,2})?$'
+  };
 
   // comuns
-  fields.push({ type: 'text', name: 'titulo', label: 'Título', placeholder: 'Ex: Livro de Cálculo Vol. 1', required: true });
+  fields.push({ type: 'text', name: 'titulo', label: 'Título', placeholder: 'Ex: Livro de Cálculo Vol. 1', required: true, maxLength: 80 });
   fields.push({ type: 'textarea', name: 'descricao', label: 'Descrição', placeholder: 'Descreva com detalhes…', required: true, rows: 4 });
 
   if (moduleKey === 'compra-venda') {
@@ -1451,10 +1509,10 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     fields.push({ type: 'text', name: 'localizacao', label: 'Localização', placeholder: 'Ex: Campus Samambaia', required: false });
 
     if (acao === 'vendo') {
-      fields.push({ type: 'text', name: 'preco', label: 'Preço (R$)', placeholder: '0,00', required: true });
+      fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Preço (R$)', placeholder: '0,00', required: true });
       fields.push({ type: 'select', name: 'condicao', label: 'Condição', required: true, options: ['Novo', 'Semi-novo', 'Usado'] });
     } else {
-      fields.push({ type: 'text', name: 'preco', label: 'Orçamento (opcional)', placeholder: '0,00', required: false });
+      fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Orçamento (opcional)', placeholder: '0,00', required: false });
     }
   }
 
@@ -1462,7 +1520,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     fields.push({ type: 'text', name: 'origem', label: 'Origem', placeholder: 'Ex: Campus Samambaia', required: true });
     fields.push({ type: 'text', name: 'destino', label: 'Destino', placeholder: 'Ex: Centro', required: true });
     fields.push({ type: 'text', name: 'horario', label: 'Horário', placeholder: 'Ex: 18h30', required: false });
-    fields.push({ type: 'text', name: 'contribuicao', label: 'Contribuição (opcional)', placeholder: 'Ex: 5,00', required: false });
+    fields.push({ ...moneyFieldMeta, name: 'contribuicao', label: 'Contribuição (opcional)', placeholder: 'Ex: 5,00', required: false });
     if (selections.tipo === 'ofereco') {
       fields.push({ type: 'number', name: 'vagas', label: 'Vagas', placeholder: '2', required: false, min: 1, max: 8 });
     }
@@ -1472,10 +1530,10 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     const t = selections.tipo;
     if (t === 'procurando') {
       fields.push({ type: 'text', name: 'regiao', label: 'Região desejada', placeholder: 'Ex: Setor Universitário', required: true });
-      fields.push({ type: 'text', name: 'orcamento', label: 'Orçamento máximo (opcional)', placeholder: 'Ex: 800,00', required: false });
+      fields.push({ ...moneyFieldMeta, name: 'orcamento', label: 'Orçamento máximo (opcional)', placeholder: 'Ex: 800,00', required: false });
     } else {
       fields.push({ type: 'text', name: 'localizacao', label: 'Localização', placeholder: 'Ex: Setor Universitário', required: true });
-      fields.push({ type: 'text', name: 'preco', label: 'Valor mensal (R$)', placeholder: '0,00', required: true });
+      fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Valor mensal (R$)', placeholder: '0,00', required: true });
       fields.push({ type: 'text', name: 'detalhes', label: 'Detalhes (opcional)', placeholder: 'Ex: contas inclusas, mobília, vagas…', required: false });
     }
   }
@@ -1487,14 +1545,14 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     fields.push({ type: 'url', name: 'link', label: 'Link/Inscrição (opcional)', placeholder: 'https://…', required: false });
     fields.push({ type: 'checkbox', name: 'gratuito', label: 'Evento gratuito', required: false });
     if (!values.gratuito) {
-      fields.push({ type: 'text', name: 'preco', label: 'Valor (opcional)', placeholder: '0,00', required: false });
+      fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Valor (opcional)', placeholder: '0,00', required: false });
     }
   }
 
   if (moduleKey === 'achados-perdidos') {
     fields.push({ type: 'text', name: 'localizacao', label: 'Local (onde foi perdido/encontrado)', placeholder: 'Ex: Biblioteca Central', required: true });
     if (selections.status === 'perdidos') {
-      fields.push({ type: 'text', name: 'recompensa', label: 'Recompensa (opcional)', placeholder: 'Ex: 20,00', required: false });
+      fields.push({ ...moneyFieldMeta, name: 'recompensa', label: 'Recompensa (opcional)', placeholder: 'Ex: 20,00', required: false });
     } else {
       fields.push({ type: 'text', name: 'entrega', label: 'Onde retirar/entregar', placeholder: 'Ex: Portaria do Bloco B', required: true });
     }
@@ -1502,7 +1560,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
 
   if (moduleKey === 'oportunidades') {
     fields.push({ type: 'text', name: 'localizacao', label: 'Local/Modalidade', placeholder: 'Ex: Remoto / Híbrido', required: false });
-    fields.push({ type: 'text', name: 'remuneracao', label: 'Remuneração (opcional)', placeholder: 'Ex: 1200,00', required: false });
+    fields.push({ ...moneyFieldMeta, name: 'remuneracao', label: 'Remuneração (opcional)', placeholder: 'Ex: 1200,00', required: false });
     fields.push({ type: 'text', name: 'contato', label: 'Contato', placeholder: 'Ex: email@ufg.br', required: true });
   }
 
@@ -1528,7 +1586,7 @@ function kcRenderCreateModal() {
       btn.setAttribute('data-kc-module', key);
       btn.innerHTML = `
         <i class="${schema.icon}"></i>
-        <span>${escape(schema.label.replace(' na UFG', ''))}</span>
+        <span>${escHtml(schema.label.replace(' na UFG', ''))}</span>
       `;
       grid.appendChild(btn);
     });
@@ -1552,10 +1610,10 @@ function kcRenderCreateModal() {
   if (schema.tagGroups && schema.tagGroups.length) {
     schema.tagGroups.forEach((g) => {
       const selectedKey = kcCreateState.selections[g.id] || '';
-      parts.push(`<div class="kc-create-group"><div class="kc-create-group__head"><span>${escape(g.label)}${g.required ? ' *' : ''}</span></div><div class="kc-chip-row">`);
+      parts.push(`<div class="kc-create-group"><div class="kc-create-group__head"><span>${escHtml(g.label)}${g.required ? ' *' : ''}</span></div><div class="kc-chip-row">`);
       g.options.forEach((opt) => {
         const active = selectedKey === opt.key ? ' active' : '';
-        parts.push(`<button type="button" class="kc-chip${active}" data-kc-group="${escape(g.id)}" data-kc-chip="${escape(opt.key)}">${escape(opt.label)}</button>`);
+        parts.push(`<button type="button" class="kc-chip${active}" data-kc-group="${escHtml(g.id)}" data-kc-chip="${escHtml(opt.key)}">${escHtml(opt.label)}</button>`);
       });
       parts.push('</div></div>');
     });
@@ -1567,24 +1625,24 @@ function kcRenderCreateModal() {
   fields.forEach((f) => {
     const val = kcCreateState.values[f.name];
     const required = f.required ? 'required' : '';
-    const label = escape(f.label);
+    const label = escHtml(f.label);
     const id = 'kcField_' + f.name;
     if (f.type === 'textarea') {
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <textarea id="${id}" name="${escape(f.name)}" rows="${f.rows || 4}" placeholder="${escape(f.placeholder || '')}" ${required}>${escape(val || '')}</textarea>
+          <textarea id="${id}" name="${escHtml(f.name)}" rows="${f.rows || 4}" placeholder="${escHtml(f.placeholder || '')}" ${required}>${escHtml(val || '')}</textarea>
         </div>
       `);
     } else if (f.type === 'select') {
       const opts = (f.options || []).map(o => {
         const isSel = String(val || '') === String(o);
-        return `<option value="${escape(o)}" ${isSel ? 'selected' : ''}>${escape(o)}</option>`;
+        return `<option value="${escHtml(o)}" ${isSel ? 'selected' : ''}>${escHtml(o)}</option>`;
       }).join('');
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <select id="${id}" name="${escape(f.name)}" ${required}>
+          <select id="${id}" name="${escHtml(f.name)}" ${required}>
             <option value="" ${!val ? 'selected' : ''} disabled>Selecione...</option>
             ${opts}
           </select>
@@ -1594,20 +1652,24 @@ function kcRenderCreateModal() {
       const checked = val === true || val === 'true' ? 'checked' : '';
       parts.push(`
         <label class="kc-check" for="${id}">
-          <input id="${id}" name="${escape(f.name)}" type="checkbox" ${checked} />
+          <input id="${id}" name="${escHtml(f.name)}" type="checkbox" ${checked} />
           <span>${label}</span>
         </label>
       `);
     } else {
-      const type = escape(f.type);
-      const placeholder = escape(f.placeholder || '');
-      const valueAttr = (val != null && f.type !== 'file') ? `value="${escape(val)}"` : '';
-      const min = (f.min != null) ? `min="${escape(f.min)}"` : '';
-      const max = (f.max != null) ? `max="${escape(f.max)}"` : '';
+      const type = escHtml(f.type);
+      const placeholder = escHtml(f.placeholder || '');
+      const valueAttr = (val != null && f.type !== 'file') ? `value="${escHtml(val)}"` : '';
+      const min = (f.min != null) ? `min="${escHtml(f.min)}"` : '';
+      const max = (f.max != null) ? `max="${escHtml(f.max)}"` : '';
+      const maxlength = (f.maxLength != null) ? `maxlength="${escHtml(f.maxLength)}"` : '';
+      const step = (f.step != null) ? `step="${escHtml(f.step)}"` : '';
+      const inputmode = f.inputmode ? `inputmode="${escHtml(f.inputmode)}"` : '';
+      const pattern = f.pattern ? `pattern="${escHtml(f.pattern)}"` : '';
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <input id="${id}" name="${escape(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} />
+          <input id="${id}" name="${escHtml(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} ${maxlength} ${step} ${inputmode} ${pattern} />
         </div>
       `);
     }
@@ -1621,9 +1683,9 @@ function kcRenderCreateModal() {
 
   if (dynamic) dynamic.innerHTML = parts.join('');
 
-  // habilitar submit quando tags obrigatórias selecionadas
-  const missingTag = (schema.tagGroups || []).some(g => g.required && !kcCreateState.selections[g.id]);
-  if (submitBtn) submitBtn.disabled = missingTag;
+  // P0-A fix: botão sempre habilitado; kcHandleCreateSubmit valida e exibe toast
+  // (botão disabled impedia o evento submit de disparar → "nada acontecia" sem feedback)
+  if (submitBtn) submitBtn.disabled = false;
 }
 
 function kcOpenCreatePostModal(prefModuleKey) {
@@ -1661,223 +1723,307 @@ function kcCloseCreatePostModal() {
 }
 
 async function kcHandleCreateSubmit() {
+  if (kcCreateState.submitting === true) return;
+
   kcCaptureCreateValues();
-  const schema = kcGetSchema(kcCreateState.moduleKey);
-  if (!schema) {
-    showToast('Selecione um módulo para publicar.', 'warn', 2200);
-    return;
+  const form = document.getElementById('kcCreatePostForm');
+  const submitBtn = form ? form.querySelector('.kc-create-submit') : null;
+  const originalSubmitText = submitBtn ? submitBtn.textContent : '';
+
+  kcCreateState.submitting = true;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Publicando...';
   }
 
-  // valida tags obrigatórias
-  const missing = (schema.tagGroups || []).filter(g => g.required && !kcCreateState.selections[g.id]);
-  if (missing.length) {
-    showToast('Selecione: ' + missing.map(m => m.label).join(', '), 'warn', 2600);
-    return;
-  }
+  try {
+    const schema = kcGetSchema(kcCreateState.moduleKey);
+    if (!schema) {
+      showToast('Selecione um módulo para publicar.', 'warn', 2200);
+      return;
+    }
 
-  const title = String(kcCreateState.values.titulo || '').trim();
-  const desc = String(kcCreateState.values.descricao || '').trim();
-  if (!title || !desc) {
-    showToast('Preencha título e descrição.', 'warn', 2400);
-    return;
-  }
+    // valida tags obrigatórias
+    const missing = (schema.tagGroups || []).filter(g => g.required && !kcCreateState.selections[g.id]);
+    if (missing.length) {
+      showToast('Selecione: ' + missing.map(m => m.label).join(', '), 'warn', 2600);
+      return;
+    }
 
-  const categoryGroupId = schema.categoryGroupId;
-  const catKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
-  const catLabel = catKey ? kcTagLabel(schema, categoryGroupId, catKey) : '';
+    if (form) {
+      const titleInput = form.querySelector('input[name="titulo"]');
+      const descInput = form.querySelector('textarea[name="descricao"]');
 
-  // subcategoria: tenta usar 2º grupo (quando existir)
-  const otherGroups = (schema.tagGroups || []).filter(g => g.id !== categoryGroupId);
-  const subKey = otherGroups.length ? kcCreateState.selections[otherGroups[0].id] : '';
-  const subLabel = subKey ? kcTagLabel(schema, otherGroups[0].id, subKey) : '';
+      if (titleInput && typeof titleInput.setCustomValidity === 'function') {
+        titleInput.setCustomValidity(String(titleInput.value || '').trim() ? '' : 'Informe um título válido.');
+      }
+      if (descInput && typeof descInput.setCustomValidity === 'function') {
+        descInput.setCustomValidity(String(descInput.value || '').trim() ? '' : 'Informe uma descrição válida.');
+      }
 
-  // V8.1.2.4.5: Compra e Venda usa tabs por *categoria* (eletronicos, livros...),
-  // mas o 2º grupo do formulário é 'ação' (vendo/compro...).
-  // - Persistimos a ação em subcategoria/subcategoriaKey (UI)
-  // - Persistimos o filtro de sub-módulo em metadata.subcategory (key da categoria)
-  const isCompraVenda = kcCreateState.moduleKey === 'compra-venda';
-  const actionKey = isCompraVenda ? (subKey || '') : '';
-  const actionLabel = isCompraVenda ? (subLabel || '') : '';
-  const filterSubKey = isCompraVenda ? (catKey || '') : (subKey || '');
-  const filterSubLabel = isCompraVenda ? (catLabel || '') : (subLabel || '');
+      const moneyFields = ['preco', 'orcamento', 'recompensa', 'contribuicao', 'remuneracao'];
+      moneyFields.forEach((name) => {
+        const input = form.querySelector(`input[name="${name}"]`);
+        if (!input || typeof input.setCustomValidity !== 'function') return;
 
-  const tagKeys = Object.values(kcCreateState.selections).filter(Boolean);
-  const tagLabels = Object.entries(kcCreateState.selections)
-    .map(([gid, key]) => (key ? kcTagLabel(schema, gid, key) : ''))
-    .filter(Boolean);
+        const raw = String(kcCreateState.values[name] || '').trim();
+        if (!raw) {
+          input.setCustomValidity('');
+          return;
+        }
 
-  // preço (quando existe)
-  let preco = null;
-  let precoTexto = null;
-  if (kcCreateState.moduleKey === 'eventos' && (kcCreateState.values.gratuito === true || kcCreateState.values.gratuito === 'true')) {
-    preco = 0;
-  } else {
-    const n = kcParseBRLNumber(kcCreateState.values.preco);
-    if (n != null) preco = n;
-  }
+        const normalized = kcNormalizeMoneyInput(raw);
+        if (normalized == null) {
+          input.setCustomValidity('Informe um valor numérico válido (ex.: 10,00).');
+          return;
+        }
 
-  if (kcCreateState.moduleKey === 'achados-perdidos' && kcCreateState.selections.status === 'perdidos') {
-    const r = String(kcCreateState.values.recompensa || '').trim();
-    if (r) precoTexto = 'Recompensa: R$ ' + r;
-  }
+        input.setCustomValidity('');
+        input.value = normalized;
+        kcCreateState.values[name] = normalized;
+      });
 
-  const imagens = kcGetOrderedCreateImages();
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        showToast('Revise os campos destacados e tente novamente.', 'warn', 2600);
+        return;
+      }
+    }
 
-  // Payload do formulário (contrato legado) - o driver decide como persistir.
-  // IMPORTANTE: categoria/subcategoria devem ser persistidos como *keys* para
-  // permitir filtros por sub-módulo (ex: Eletrônicos) sem depender de acentos.
-  const payload = {
-    modulo: kcCreateState.moduleKey,
-    moduloLabel: schema.label,
+    const title = String(kcCreateState.values.titulo || '').trim();
+    const desc = String(kcCreateState.values.descricao || '').trim();
+    if (!title || !desc) {
+      // Fallback defensivo para payload em caso de DOM inconsistente.
+      showToast('Revise os campos destacados e tente novamente.', 'warn', 2600);
+      return;
+    }
 
-    // categoria/subcategoria (compat: mantém label e key)
-    categoria: catKey || (catLabel || ''),
-    categoriaLabel: catLabel || '',
-    categoriaKey: catKey || '',
+    const categoryGroupId = schema.categoryGroupId;
+    const catKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
+    const catLabel = catKey ? kcTagLabel(schema, categoryGroupId, catKey) : '';
 
-    // subcategoria (UI): em compra-venda, isso representa a *ação* (vendo/compro)
-    subcategoria: isCompraVenda ? (actionLabel || actionKey) : (subKey || (subLabel || '')),
-    subcategoriaLabel: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
-    subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
+    // subcategoria: tenta usar 2º grupo (quando existir)
+    const otherGroups = (schema.tagGroups || []).filter(g => g.id !== categoryGroupId);
+    const subKey = otherGroups.length ? kcCreateState.selections[otherGroups[0].id] : '';
+    const subLabel = subKey ? kcTagLabel(schema, otherGroups[0].id, subKey) : '';
 
-    // tags (UI)
-    tags: tagLabels,
-    tagKeys,
+    // V8.1.2.4.5: Compra e Venda usa tabs por *categoria* (eletronicos, livros...),
+    // mas o 2º grupo do formulário é 'ação' (vendo/compro...).
+    // - Persistimos a ação em subcategoria/subcategoriaKey (UI)
+    // - Persistimos o filtro de sub-módulo em metadata.subcategory (key da categoria)
+    const isCompraVenda = kcCreateState.moduleKey === 'compra-venda';
+    const actionKey = isCompraVenda ? (subKey || '') : '';
+    const actionLabel = isCompraVenda ? (subLabel || '') : '';
+    const filterSubKey = isCompraVenda ? (catKey || '') : (subKey || '');
+    const filterSubLabel = isCompraVenda ? (catLabel || '') : (subLabel || '');
 
-    // conteúdo
-    titulo: title,
-    descricao: desc,
-    preco,
-    precoTexto,
-    condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
-    localizacao: kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : '',
+    const tagKeys = Object.values(kcCreateState.selections).filter(Boolean);
+    const tagLabels = Object.entries(kcCreateState.selections)
+      .map(([gid, key]) => (key ? kcTagLabel(schema, gid, key) : ''))
+      .filter(Boolean);
 
-    // flags
-    verificado: false,
-    emoji: schema.emoji,
-    imagens,
-    sustentavel: !!kcCreateState.values.sustentavel,
+    // preço (quando existe)
+    let preco = null;
+    let precoTexto = null;
+    if (kcCreateState.moduleKey === 'eventos' && (kcCreateState.values.gratuito === true || kcCreateState.values.gratuito === 'true')) {
+      preco = 0;
+    } else {
+      const n = kcParseBRLNumber(kcCreateState.values.preco);
+      if (n != null) preco = n;
+    }
 
-    // metadata (modo local e Supabase): usado para filtros JSONB
-    metadata: {
-      // subcategory (filtro): chave esperada pelos controllers (.eq('metadata->>subcategory', ...))
-      subcategory: filterSubKey || '',
-      subcategoryLabel: filterSubLabel || '',
+    if (kcCreateState.moduleKey === 'achados-perdidos' && kcCreateState.selections.status === 'perdidos') {
+      const r = String(kcCreateState.values.recompensa || '').trim();
+      if (r) precoTexto = 'Recompensa: R$ ' + r;
+    }
 
-      // categoria principal (UI + filtros)
-      categoria: catLabel || '',
+    const imagens = kcGetOrderedCreateImages();
+
+    // Payload do formulário (contrato legado) - o driver decide como persistir.
+    // IMPORTANTE: categoria/subcategoria devem ser persistidos como *keys* para
+    // permitir filtros por sub-módulo (ex: Eletrônicos) sem depender de acentos.
+    const payload = {
+      modulo: kcCreateState.moduleKey,
+      moduloLabel: schema.label,
+
+      // categoria/subcategoria (compat: mantém label e key)
+      categoria: catKey || (catLabel || ''),
+      categoriaLabel: catLabel || '',
       categoriaKey: catKey || '',
 
-      // ação/subcategoria (UI)
-      subcategoria: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
+      // subcategoria (UI): em compra-venda, isso representa a *ação* (vendo/compro)
+      subcategoria: isCompraVenda ? (actionLabel || actionKey) : (subKey || (subLabel || '')),
+      subcategoriaLabel: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
       subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
 
-      // compra-venda: guardar ação explicitamente (útil para futuras buscas e edição)
-      actionKey: actionKey || '',
-      actionLabel: actionLabel || '',
-    },
-  };
+      // tags (UI)
+      tags: tagLabels,
+      tagKeys,
 
-  const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
-  const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
-  let post = null;
-  let createError = null;
+      // conteúdo
+      titulo: title,
+      descricao: desc,
+      preco,
+      precoTexto,
+      condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
+      localizacao: kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : '',
 
-  const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
+      // flags
+      verificado: false,
+      emoji: schema.emoji,
+      imagens,
+      sustentavel: !!kcCreateState.values.sustentavel,
 
-  if (useSupabase) {
-    // Exige autenticação no driver Supabase (RLS)
-    let user = null;
-    try {
-      if (typeof window.KCAPI.getCurrentUser === 'function') user = await window.KCAPI.getCurrentUser();
-    } catch (_) { }
+      // metadata (modo local e Supabase): usado para filtros JSONB
+      metadata: {
+        // subcategory (filtro): chave esperada pelos controllers (.eq('metadata->>subcategory', ...))
+        subcategory: filterSubKey || '',
+        subcategoryLabel: filterSubLabel || '',
 
-    if (!user) {
-      showToast('Faça login para publicar.', 'warn', 2600);
-      // V8.1.3.2.1: não abre o modal automaticamente; direciona o usuário ao botão de Login/Cadastro.
+        // categoria principal (UI + filtros)
+        categoria: catLabel || '',
+        categoriaKey: catKey || '',
+
+        // ação/subcategoria (UI)
+        subcategoria: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
+        subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
+
+        // compra-venda: guardar ação explicitamente (útil para futuras buscas e edição)
+        actionKey: actionKey || '',
+        actionLabel: actionLabel || '',
+      },
+    };
+
+    const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
+    const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
+    const blockLocalCriticalPersistence = isProductionRuntime() && !useSupabase;
+    let post = null;
+    let createError = null;
+
+    const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
+
+    if (useSupabase) {
+      // Exige autenticação no driver Supabase (RLS)
+      let user = null;
       try {
-        const btn = document.querySelector('a.btn-login') || document.querySelector('a[href="#login"]');
-        if (btn) {
-          btn.classList.add('kc-attention');
-          try { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { }
-          try { btn.focus(); } catch (_) { }
-          setTimeout(() => btn.classList.remove('kc-attention'), 900);
-        }
+        if (typeof window.KCAPI.getCurrentUser === 'function') user = await window.KCAPI.getCurrentUser();
       } catch (_) { }
-      return;
-    }
 
-    showToast('Publicando...', 'info', 1600);
-    try {
-      post = await apiCreateFn(payload);
-      if (post && post.ok === false && post.error) {
-        createError = post.error;
-        post = null;
+      if (!user) {
+        showToast('Faça login para publicar.', 'warn', 2600);
+        // V8.1.3.2.1: não abre o modal automaticamente; direciona o usuário ao botão de Login/Cadastro.
+        try {
+          const btn = document.querySelector('a.btn-login') || document.querySelector('a[href="#login"]');
+          if (btn) {
+            btn.classList.add('kc-attention');
+            try { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { }
+            try { btn.focus(); } catch (_) { }
+            setTimeout(() => btn.classList.remove('kc-attention'), 900);
+          }
+        } catch (_) { }
+        return;
       }
-    } catch (err) {
-      console.error('[KinoCampus] Exceção ao criar publicação:', err);
-      createError = {
-        code: 'CREATE_POST_EXCEPTION',
-        message: (err && err.message) ? String(err.message) : 'Erro inesperado ao publicar.',
-      };
-      post = null;
-    }
 
-    if (!post) {
+      showToast('Publicando...', 'info', 1600);
       try {
-        if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
-          const createErr = window.KCAPI.getLastCreatePostError();
-          console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
-        }
-      } catch (_) { }
-      const feedbackMessage = (createError && createError.message)
-        ? String(createError.message)
-        : 'Não foi possível publicar agora. Tente novamente.';
-      showToast(feedbackMessage, 'error', 2800);
-      return;
-    }
-  } else {
-    // Modo local/offline-first (default): só confirma sucesso após persistência efetiva.
-    try {
-      if (hasApiCreatePost) {
         post = await apiCreateFn(payload);
-      } else {
-        post = kcCreateUserPost(payload);
-      }
-      if (post && post.ok === false && post.error) {
-        createError = post.error;
+        if (post && post.ok === false && post.error) {
+          createError = post.error;
+          post = null;
+        }
+      } catch (err) {
+        console.error('[KinoCampus] Exceção ao criar publicação (supabase):', {
+          payload,
+          error: err,
+        });
+        createError = {
+          code: 'CREATE_POST_EXCEPTION',
+          message: (err && err.message) ? String(err.message) : 'Erro inesperado ao publicar.',
+        };
         post = null;
       }
-    } catch (err) {
-      console.error('[KinoCampus] Exceção no modo local ao criar publicação:', err);
-      createError = {
-        code: 'LOCAL_CREATE_POST_EXCEPTION',
-        message: (err && err.message) ? String(err.message) : 'Erro inesperado ao salvar publicação.',
-      };
-      post = null;
+
+      if (!post) {
+        console.error('[KinoCampus] Falha ao criar publicação (supabase) sem retorno de post.', {
+          payload,
+          createError,
+        });
+        try {
+          if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
+            const createErr = window.KCAPI.getLastCreatePostError();
+            console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
+          }
+        } catch (_) { }
+        const feedbackMessage = (createError && createError.message)
+          ? String(createError.message)
+          : 'Não foi possível publicar agora. Tente novamente.';
+        showToast(feedbackMessage, 'error', 2800);
+        return;
+      }
+    } else {
+      if (blockLocalCriticalPersistence) {
+        showToast('Publicação bloqueada: em produção, o driver Supabase é obrigatório.', 'error', 3200);
+        return;
+      }
+
+      // Modo local/offline-first (default): só confirma sucesso após persistência efetiva.
+      try {
+        if (hasApiCreatePost) {
+          post = await apiCreateFn(payload);
+        } else {
+          post = kcCreateUserPost(payload);
+        }
+        if (post && post.ok === false && post.error) {
+          createError = post.error;
+          post = null;
+        }
+      } catch (err) {
+        console.error('[KinoCampus] Exceção no modo local ao criar publicação:', {
+          payload,
+          error: err,
+        });
+        createError = {
+          code: 'LOCAL_CREATE_POST_EXCEPTION',
+          message: (err && err.message) ? String(err.message) : 'Erro inesperado ao salvar publicação.',
+        };
+        post = null;
+      }
+
+      if (!post) {
+        console.error('[KinoCampus] Falha ao criar publicação no modo local sem retorno de post.', {
+          payload,
+          createError,
+        });
+        const feedbackMessage = (createError && createError.message)
+          ? String(createError.message)
+          : 'Não foi possível salvar sua publicação no dispositivo.';
+        showToast(feedbackMessage, 'error', 3200);
+        return;
+      }
     }
 
-    if (!post) {
-      const feedbackMessage = (createError && createError.message)
-        ? String(createError.message)
-        : 'Não foi possível salvar sua publicação no dispositivo.';
-      showToast(feedbackMessage, 'error', 3200);
-      return;
+    showToast('Publicado com sucesso!', 'success', 2200);
+    kcCloseCreatePostModal();
+
+    // Redireciona para o módulo + hash do subtópico
+    const base = schema.redirect || kcModulePage(kcCreateState.moduleKey);
+    let targetUrl = base;
+    if (kcCreateState.moduleKey === 'compra-venda' && catKey) {
+      targetUrl += (targetUrl.includes('?') ? '&' : '?') + 'filter=' + encodeURIComponent(catKey);
+    } else if (catKey) {
+      targetUrl += '#' + encodeURIComponent(catKey);
+    }
+    window.location.href = targetUrl;
+  } catch (err) {
+    console.error('[KinoCampus] Erro inesperado no submit de criação:', err);
+    showToast('Não foi possível publicar agora. Tente novamente.', 'error', 2800);
+  } finally {
+    kcCreateState.submitting = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText || 'Publicar Agora';
     }
   }
-
-  showToast('Publicado com sucesso!', 'success', 2200);
-  kcCloseCreatePostModal();
-
-  // Redireciona para o módulo + hash do subtópico
-  const base = schema.redirect || kcModulePage(kcCreateState.moduleKey);
-  let targetUrl = base;
-  if (kcCreateState.moduleKey === 'compra-venda' && catKey) {
-    targetUrl += (targetUrl.includes('?') ? '&' : '?') + 'filter=' + encodeURIComponent(catKey);
-  } else if (catKey) {
-    targetUrl += '#' + encodeURIComponent(catKey);
-  }
-  window.location.href = targetUrl;
 }
 function kcInitCreatePostTriggers() {
   // Intercepta links e botões existentes
@@ -1903,7 +2049,7 @@ function kcInitCreatePostTriggers() {
 // -----------------------------
 // Helpers
 // -----------------------------
-function escape(str) {
+function escHtml(str) {
   return window.KCUtils.escapeHtml(str);
 }
 

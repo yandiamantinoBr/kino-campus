@@ -26,11 +26,18 @@
   // V8.2.2.0: release candidate cleanroom (LOTE 1)
   // V8.2.6.0: fix carregamento de publicações — compat comments em kc-supabase.client.js
   const VERSION = '8.2.6.0';
+  // V8.2.5.0: remove 'unsafe-inline' da CSP (BUG-003); externaliza scripts inline em 6 HTMLs
+  const VERSION = '8.2.5.0';
 
   const DEFAULT_ENV = {
     // versões (compat)
     version: VERSION,
     APP_VERSION: VERSION,
+
+    // Ambiente da aplicação (separação explícita dev/prod)
+    // Opções: "development" | "production"
+    environment: '__KC_APP_ENV__',
+    APP_ENV: '__KC_APP_ENV__',
 
     // driver (compat)
     driver: '__KC_DRIVER__', // Opções: "local" | "supabase"
@@ -56,11 +63,32 @@
       allowedEmailDomains: ['ufg.br', 'discente.ufg.br', 'egresso.ufg.br'],
     },
 
-    // clamp temporal (protótipo)
-    clamp: { month: 'February', year: 2026 },
+    // clamp temporal (protótipo) — dinâmico: usa mês/ano corrente para evitar timestamps obsoletos
+    clamp: (function () {
+      var MONTHS = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+      var d = new Date();
+      return { month: MONTHS[d.getMonth()], year: d.getFullYear() };
+    }()),
   };
 
   const current = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : null;
+
+  function detectRuntimeEnvironment() {
+    const host = String((window.location && window.location.hostname) || '').toLowerCase();
+    if (!host) return 'development';
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return 'development';
+    if (host.endsWith('.local')) return 'development';
+    return 'production';
+  }
+
+  function normalizeEnvironment(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'prod') return 'production';
+    if (raw === 'dev') return 'development';
+    if (raw === 'production' || raw === 'development') return raw;
+    return '';
+  }
 
   // Merge seguro (mantém estrutura obrigatória e permite override manual).
   const merged = {
@@ -80,10 +108,31 @@
     },
   };
 
+  const resolvedEnvironment = normalizeEnvironment(merged.APP_ENV || merged.environment) || detectRuntimeEnvironment();
+  merged.environment = resolvedEnvironment;
+  merged.APP_ENV = resolvedEnvironment;
+  merged.isProduction = resolvedEnvironment === 'production';
+
   // Resolve driver (compat)
   const rawDriver = String((merged.DATA_DRIVER || merged.driver || 'local')).toLowerCase();
-  merged.driver = (rawDriver === 'supabase') ? 'supabase' : 'local';
-  merged.DATA_DRIVER = merged.driver;
+  const normalizedDriver = (rawDriver === 'supabase' || rawDriver === 'local') ? rawDriver : 'local';
+  const productionRequiresSupabase = merged.isProduction && normalizedDriver !== 'supabase';
+
+  if (productionRequiresSupabase) {
+    merged.driver = '__invalid_production_driver__';
+    merged.DATA_DRIVER = merged.driver;
+    merged.driverPolicyError = {
+      code: 'PRODUCTION_REQUIRES_SUPABASE',
+      message: 'Em produção, KC_ENV.driver deve ser "supabase". O fallback silencioso para local foi bloqueado.',
+      received: rawDriver || '(empty)',
+      environment: merged.environment,
+    };
+    console.error('[KC_ENV] Política de ambiente violada:', merged.driverPolicyError);
+  } else {
+    merged.driver = normalizedDriver;
+    merged.DATA_DRIVER = merged.driver;
+    delete merged.driverPolicyError;
+  }
 
   // Normaliza Supabase (preferindo aliases caso o usuário tenha setado)
   const url = String(merged.SUPABASE_URL || merged.supabase.url || '').trim();

@@ -26,6 +26,9 @@
     const fallback = {
       version: VERSION,
       driver: 'local',
+      environment: 'development',
+      APP_ENV: 'development',
+      isProduction: false,
       debug: true,
       SUPABASE_URL: 'https://placeholder-project.supabase.co',
       SUPABASE_ANON_KEY: 'eyJhbG...placeholder',
@@ -44,8 +47,18 @@
       clamp: { ...fallback.clamp, ...(((env || {}).clamp) || {}) },
     };
 
+    const rawEnv = String((merged.APP_ENV || merged.environment || '')).trim().toLowerCase();
+    const normalizedEnv = (rawEnv === 'production' || rawEnv === 'prod') ? 'production' : 'development';
+    merged.environment = normalizedEnv;
+    merged.APP_ENV = normalizedEnv;
+    merged.isProduction = normalizedEnv === 'production';
+
     const rawDriver = String((merged.DATA_DRIVER || merged.driver || 'local')).toLowerCase();
-    merged.driver = (rawDriver === 'supabase') ? 'supabase' : 'local';
+    if (rawDriver === '__invalid_production_driver__') {
+      merged.driver = '__invalid_production_driver__';
+    } else {
+      merged.driver = (rawDriver === 'supabase') ? 'supabase' : 'local';
+    }
     merged.DATA_DRIVER = merged.driver;
 
     // Normaliza Supabase (aliases)
@@ -419,6 +432,21 @@
     const categoryFilter = (p.category || p.categoria || '').toString().trim().toLowerCase() || null;
     const subcategoryFilter = (p.subcategory || p.subcategoria || '').toString().trim().toLowerCase() || null;
     const q = (p.q || p.query || '').toString().trim().toLowerCase();
+    const tagFilter = (p.tag || p.tagKey || p.tag_key || '').toString().trim().toLowerCase();
+
+    const normalizeTag = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      try {
+        return raw
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      } catch (_e) {
+        return raw;
+      }
+    };
 
     const getMetaSub = (post) => {
       try {
@@ -440,6 +468,19 @@
       if (moduleFilter && mod !== moduleFilter) return false;
       if (categoryFilter && cat !== categoryFilter) return false;
       if (subcategoryFilter && sub !== subcategoryFilter) return false;
+
+      if (tagFilter) {
+        const tagPool = [];
+        if (Array.isArray(post.tagKeys)) tagPool.push(...post.tagKeys);
+        if (Array.isArray(post.tags)) tagPool.push(...post.tags);
+        const meta = post && (post.metadata || post.meta || post._meta);
+        if (meta && Array.isArray(meta.tagKeys)) tagPool.push(...meta.tagKeys);
+        if (meta && Array.isArray(meta.tags)) tagPool.push(...meta.tags);
+
+        const tagsNorm = tagPool.map(normalizeTag).filter(Boolean);
+        const wanted = normalizeTag(tagFilter);
+        if (!wanted || !tagsNorm.includes(wanted)) return false;
+      }
 
       if (q) {
         const hay = `${post.titulo || post.title || ''} ${post.descricao || post.description || ''}`.toLowerCase();
@@ -1159,19 +1200,26 @@
     return normalizePost(raw);
   }
 
-  function buildSupabasePostSelect(client) {
+  function buildSupabasePostSelect(client, includeVerified = true, includeComments = true) {
+    const profileFields = includeVerified
+      ? 'id, full_name, avatar_url, verified'
+      : 'id, full_name, avatar_url';
+    const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, verified), post_media (id, url, is_cover), comments(count)')
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`)
       .limit(1);
   }
 
   // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
-  function buildSupabasePostSelectFallback(client) {
-    return client
-      .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url), post_media (id, url, is_cover), comments(count)')
-      .limit(1);
+  function buildSupabasePostSelectFallback(client, includeComments = true) {
+    return buildSupabasePostSelect(client, false, includeComments);
+  }
+
+  function isMissingCommentsEmbedError(err) {
+    if (!err) return false;
+    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
+    return msg.includes('comments') && (msg.includes('does not exist') || msg.includes('relationship'));
   }
 
   async function supabaseGetPostById(id) {
@@ -1214,40 +1262,43 @@
     const isNumeric = /^\d+$/.test(key);
     const legacyNum = (!isUuid && isNumeric) ? parseInt(key, 10) : null;
 
+    const runPostQueryWithFallback = async (field, value) => {
+      let includeVerified = true;
+      let includeComments = true;
+
+      let res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+      if (res && res.error && isMissingVerifiedColumnError(res.error)) {
+        includeVerified = false;
+        res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+      }
+      if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
+        includeComments = false;
+        res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+        if (res && res.error && includeVerified && isMissingVerifiedColumnError(res.error)) {
+          includeVerified = false;
+          res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+        }
+      }
+
+      return res;
+    };
+
     try {
       // 1) tenta por UUID (posts.id)
       if (isUuid) {
-        const r1 = await buildSupabasePostSelect(client).eq("id", key).maybeSingle();
+        const r1 = await runPostQueryWithFallback('id', key);
         if (r1 && r1.error) {
           console.error("[KCAPI][Supabase] getPostById(id) erro:", r1.error);
-          // Fallback para schema sem profiles.verified
-          if (isMissingVerifiedColumnError(r1.error)) {
-            const r1b = await buildSupabasePostSelectFallback(client).eq("id", key).maybeSingle();
-            if (r1b && r1b.data) return mapSupabasePost(r1b.data, { allImages: true });
-          }
+          return null;
         }
         if (r1 && r1.data) return mapSupabasePost(r1.data, { allImages: true });
       }
 
       // 2) legacy_id (IDs numéricos antigos)
       if (legacyNum != null) {
-        const r2 = await buildSupabasePostSelect(client).eq("legacy_id", legacyNum).maybeSingle();
+        const r2 = await runPostQueryWithFallback('legacy_id', legacyNum);
         if (r2 && r2.error) {
           console.error("[KCAPI][Supabase] getPostById(legacy_id) erro:", r2.error);
-          if (isMissingVerifiedColumnError(r2.error)) {
-            const r2b = await buildSupabasePostSelectFallback(client).eq("legacy_id", legacyNum).maybeSingle();
-            if (r2b && r2b.data) {
-              const mapped = mapSupabasePost(r2b.data, { allImages: true });
-              if (mapped) {
-                const legacy = mapped.legacyId || mapped.legacy_id || null;
-                if (legacy != null && legacy !== "") {
-                  mapped.uuid = mapped.id;
-                  mapped.id = legacy;
-                }
-              }
-              return mapped;
-            }
-          }
           return null;
         }
         if (r2 && r2.data) {
@@ -1271,17 +1322,19 @@
   }
 
 
-  function buildSupabasePostsQuery(client) {
+  function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true) {
+    const profileFields = includeVerified
+      ? 'id, full_name, avatar_url, verified'
+      : 'id, full_name, avatar_url';
+    const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url, verified), post_media (id, url, is_cover)');
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`);
   }
 
   // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
-  function buildSupabasePostsQueryFallback(client) {
-    return client
-      .from('posts')
-      .select('id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (id, full_name, avatar_url), post_media (id, url, is_cover)');
+  function buildSupabasePostsQueryFallback(client, includeComments = true) {
+    return buildSupabasePostsQuery(client, false, includeComments);
   }
 
   function isMissingVerifiedColumnError(err) {
@@ -1381,10 +1434,16 @@
   }
 
   function clampCreatedAtISO() {
-    // Temporal clamp: Fevereiro de 2026 (configurável via KC_ENV.clamp)
-    const y = (ENV.clamp && ENV.clamp.year) ? parseInt(String(ENV.clamp.year), 10) : 2026;
-    const yy = Number.isFinite(y) ? y : 2026;
-    return `${yy}-02-15T12:00:00.000Z`;
+    // Temporal clamp dinâmico (configurável via KC_ENV.clamp)
+    const MONTH_MAP = { january:1,february:2,march:3,april:4,may:5,june:6,
+                        july:7,august:8,september:9,october:10,november:11,december:12 };
+    const d = new Date();
+    const y = (ENV.clamp && ENV.clamp.year) ? parseInt(String(ENV.clamp.year), 10) : d.getFullYear();
+    const yy = Number.isFinite(y) ? y : d.getFullYear();
+    const rawMonth = (ENV.clamp && ENV.clamp.month) ? String(ENV.clamp.month).toLowerCase() : null;
+    const mi = (rawMonth && MONTH_MAP[rawMonth]) ? MONTH_MAP[rawMonth] : (d.getMonth() + 1);
+    const mm = String(mi).padStart(2, '0');
+    return `${yy}-${mm}-15T12:00:00.000Z`;
   }
 
   function normalizeCreatePayload(data) {
@@ -1497,7 +1556,7 @@
     try {
 
       // 1) Insere post primeiro (para obter postId) e habilitar path controlado no Storage
-      const createdAt = clampCreatedAtISO();
+      // Não enviamos created_at: o BD usa DEFAULT now() para garantir ordenação correta (P0-C fix)
 
       const insertPayload = {
         author_id: user.id,
@@ -1508,7 +1567,6 @@
         module: parsed.moduleDB,
         category: parsed.categoryDB,
         metadata: parsed.metadata,
-        created_at: createdAt,
       };
 
       // Helper de rollback (evita órfãos quando upload falha após INSERT)
@@ -1584,11 +1642,11 @@
         }
 
         if (mr && mr.error) {
+          await rollbackCreatedPost(postId);
           setLastCreatePostError('POST_MEDIA_INSERT', mr.error, {
             postId,
             mediaCount: mediaRowsFull.length,
           });
-          // não apaga post automaticamente (pode ser útil depurar), mas registra dívida
           return null;
         }
       }
@@ -1611,6 +1669,7 @@
       clearLastCreatePostError();
       return normalizePost(raw);
     } catch (e) {
+      if (postId) await rollbackCreatedPost(postId);
       setLastCreatePostError('EXCEPTION', e, {
         userId: user.id,
         payload: payloadSummary,
@@ -1621,6 +1680,18 @@
 
   function kcApiError(message) {
     return { ok: false, error: { message: String(message || 'Operação não concluída.') } };
+  }
+
+  function enforceSupabaseOnProduction(operationName) {
+    if (!ENV.isProduction) return null;
+    if (ENV.driver === 'supabase') return null;
+    return {
+      ok: false,
+      error: {
+        code: 'PRODUCTION_REQUIRES_SUPABASE',
+        message: `Operação crítica "${String(operationName || 'unknown')}" bloqueada: em produção, o driver "supabase" é obrigatório.`,
+      },
+    };
   }
 
   function normalizeUpdatePayload(data) {
@@ -1889,8 +1960,10 @@
       }
 
       const prof = profRes && profRes.data ? profRes.data : null;
-      if (prof) authorName = String(prof.display_name || prof.full_name || 'Anônimo').trim() || 'Anônimo';
+      if (prof) authorName = String(prof.display_name || prof.full_name || '').trim();
     } catch (_) { }
+    // Fallback para metadados de auth quando o perfil não tem nome (P1-A fix)
+    if (!authorName) authorName = getUserDisplayNameForProfile(user);
 
     try {
       const { data, error } = await client
@@ -2209,7 +2282,11 @@
   // Facade pública (mantém a API estável)
   async function getPosts(params = {}) { return activeDriver.getPosts(params); }
   async function getPostById(id) { return activeDriver.getPostById(id); }
-  async function createPost(body) { return activeDriver.createPost(body); }
+  async function createPost(body) {
+    const policyError = enforceSupabaseOnProduction('createPost');
+    if (policyError) return policyError;
+    return activeDriver.createPost(body);
+  }
   async function updatePost(postId, payload) {
     if (!activeDriver.updatePost) return kcApiError('Edição indisponível neste driver.');
     return activeDriver.updatePost(postId, payload);
@@ -2297,6 +2374,8 @@
   }
 
   async function addComment(postId, body) {
+    const policyError = enforceSupabaseOnProduction('addComment');
+    if (policyError) return policyError;
     if (ENV.driver !== 'supabase' || !activeDriver.addComment) return null;
     return activeDriver.addComment(postId, body);
   }
@@ -2308,6 +2387,8 @@
 
   // Votes facade (V8.1.7.3)
   async function votePost(postId, direction, options = {}) {
+    const policyError = enforceSupabaseOnProduction('votePost');
+    if (policyError) return policyError;
     if (ENV.driver !== 'supabase' || !activeDriver.votePost) return null;
     return activeDriver.votePost(postId, direction, options);
   }
