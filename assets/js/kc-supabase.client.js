@@ -380,8 +380,9 @@
       : 'id, full_name, avatar_url';
 
     // mediaRel: post_media (padrão do schema) | post_images (compat)
-    const commentsField = includeComments ? ', comments(count)' : '';
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsField}`;
+    // includeComments: false quando tabela comments ainda não existe no schema (compat)
+    const commentsStr = (includeComments !== false) ? ', comments(count)' : '';
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsStr}`;
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -395,15 +396,9 @@
       ? "id, url, is_cover, sort_order"
       : "id, url, is_cover";
 
-    const commentsField = includeComments ? ', comments(count)' : '';
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsField}`;
-  }
-
-  function isMissingCommentsEmbedError(err) {
-    if (!err) return false;
-    if (isMissingTokenError(err, 'comments')) return true;
-    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
-    return msg.includes('comments') && msg.includes('relationship');
+    // includeComments: false quando tabela comments ainda não existe no schema (compat)
+    const commentsStr = (includeComments !== false) ? ', comments(count)' : '';
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsStr}`;
   }
 
   function isMaybeSingleMissing(err) {
@@ -505,6 +500,18 @@
       }
     }
 
+    // Compat: tabela comments ainda não existe (migration v8.1.7.2 não aplicada)
+    if (res && res.error) {
+      const commentsMsg = String(res.error.message || res.error.details || "").toLowerCase();
+      if (commentsMsg.includes("comments") && (commentsMsg.includes("does not exist") || commentsMsg.includes("relationship"))) {
+        res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, false), mediaRel, includeSortOrder, includeVerified);
+        if (res && res.error && isMissingTokenError(res.error, "verified")) {
+          includeVerified = false;
+          res = await run(buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, false), mediaRel, includeSortOrder, includeVerified);
+        }
+      }
+    }
+
     if (res && res.error) {
       if (isMaybeSingleMissing(res.error)) return null;
       try { console.error("[KCSupabase] getPostById erro:", res.error); } catch (_) { }
@@ -590,6 +597,17 @@
           if (res && res.error && isMissingTokenError(res.error, 'verified')) {
             res = await run(buildPostsSelect(false, mediaRel, includeComments), f.module);
           }
+        }
+      }
+    }
+
+    // 4) compat: tabela comments ainda não existe (migration v8.1.7.2 não aplicada)
+    if (res && res.error) {
+      const commentsMsg = String(res.error.message || res.error.details || '').toLowerCase();
+      if (commentsMsg.includes('comments') && (commentsMsg.includes('does not exist') || commentsMsg.includes('relationship'))) {
+        res = await run(buildPostsSelect(true, mediaRel, false));
+        if (res && res.error && isMissingTokenError(res.error, 'verified')) {
+          res = await run(buildPostsSelect(false, mediaRel, false));
         }
       }
     }
