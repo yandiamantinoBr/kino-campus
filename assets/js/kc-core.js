@@ -581,15 +581,15 @@ function _renderCommentList(id, containerId, comments) {
     return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escape(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
         <div style="flex: 1;">
-          <div style="font-weight: bold;">${escape(c.author)}</div>
-          <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escape(c.timestamp)}</div>
+          <div style="font-weight: bold;">${escHtml(c.author)}</div>
+          <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escHtml(c.timestamp)}</div>
         </div>
       </div>
-      <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escape(c.text)}</div>
+      <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escHtml(c.text)}</div>
       <div style="margin-left: 50px; display: flex; gap: 15px; font-size: 0.9em;">
-        <button data-post-id="${escape(String(id))}" data-comment-id="${escape(String(c.id))}" data-container="${escape(containerId)}" class="kc-like-comment-btn" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
+        <button data-post-id="${escHtml(String(id))}" data-comment-id="${escHtml(String(c.id))}" data-container="${escHtml(containerId)}" class="kc-like-comment-btn" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
           <i class="fas fa-thumbs-up"></i> ${c.likes || 0}
         </button>
       </div>
@@ -1445,13 +1445,13 @@ function kcCreateImagesSectionHtml() {
     const isCover = kcCreateState.coverImageId && String(kcCreateState.coverImageId) === String(img.id);
     return `
       <div class="kc-img-thumb${isCover ? ' is-cover' : ''}">
-        <img src="${escape(img.dataUrl)}" alt="Imagem da publicação" loading="lazy" />
+        <img src="${escHtml(img.dataUrl)}" alt="Imagem da publicação" loading="lazy" />
         ${isCover ? `<div class="kc-img-badge"><i class="fas fa-star"></i> Capa</div>` : ''}
         <div class="kc-img-actions">
-          <button type="button" class="kc-img-action" data-kc-img-action="cover" data-kc-img-id="${escape(img.id)}" title="Definir como capa">
+          <button type="button" class="kc-img-action" data-kc-img-action="cover" data-kc-img-id="${escHtml(img.id)}" title="Definir como capa">
             <i class="fas fa-star"></i>
           </button>
-          <button type="button" class="kc-img-action" data-kc-img-action="remove" data-kc-img-id="${escape(img.id)}" title="Remover">
+          <button type="button" class="kc-img-action" data-kc-img-action="remove" data-kc-img-id="${escHtml(img.id)}" title="Remover">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -1586,7 +1586,7 @@ function kcRenderCreateModal() {
       btn.setAttribute('data-kc-module', key);
       btn.innerHTML = `
         <i class="${schema.icon}"></i>
-        <span>${escape(schema.label.replace(' na UFG', ''))}</span>
+        <span>${escHtml(schema.label.replace(' na UFG', ''))}</span>
       `;
       grid.appendChild(btn);
     });
@@ -1610,10 +1610,10 @@ function kcRenderCreateModal() {
   if (schema.tagGroups && schema.tagGroups.length) {
     schema.tagGroups.forEach((g) => {
       const selectedKey = kcCreateState.selections[g.id] || '';
-      parts.push(`<div class="kc-create-group"><div class="kc-create-group__head"><span>${escape(g.label)}${g.required ? ' *' : ''}</span></div><div class="kc-chip-row">`);
+      parts.push(`<div class="kc-create-group"><div class="kc-create-group__head"><span>${escHtml(g.label)}${g.required ? ' *' : ''}</span></div><div class="kc-chip-row">`);
       g.options.forEach((opt) => {
         const active = selectedKey === opt.key ? ' active' : '';
-        parts.push(`<button type="button" class="kc-chip${active}" data-kc-group="${escape(g.id)}" data-kc-chip="${escape(opt.key)}">${escape(opt.label)}</button>`);
+        parts.push(`<button type="button" class="kc-chip${active}" data-kc-group="${escHtml(g.id)}" data-kc-chip="${escHtml(opt.key)}">${escHtml(opt.label)}</button>`);
       });
       parts.push('</div></div>');
     });
@@ -1625,24 +1625,24 @@ function kcRenderCreateModal() {
   fields.forEach((f) => {
     const val = kcCreateState.values[f.name];
     const required = f.required ? 'required' : '';
-    const label = escape(f.label);
+    const label = escHtml(f.label);
     const id = 'kcField_' + f.name;
     if (f.type === 'textarea') {
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <textarea id="${id}" name="${escape(f.name)}" rows="${f.rows || 4}" placeholder="${escape(f.placeholder || '')}" ${required}>${escape(val || '')}</textarea>
+          <textarea id="${id}" name="${escHtml(f.name)}" rows="${f.rows || 4}" placeholder="${escHtml(f.placeholder || '')}" ${required}>${escHtml(val || '')}</textarea>
         </div>
       `);
     } else if (f.type === 'select') {
       const opts = (f.options || []).map(o => {
         const isSel = String(val || '') === String(o);
-        return `<option value="${escape(o)}" ${isSel ? 'selected' : ''}>${escape(o)}</option>`;
+        return `<option value="${escHtml(o)}" ${isSel ? 'selected' : ''}>${escHtml(o)}</option>`;
       }).join('');
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <select id="${id}" name="${escape(f.name)}" ${required}>
+          <select id="${id}" name="${escHtml(f.name)}" ${required}>
             <option value="" ${!val ? 'selected' : ''} disabled>Selecione...</option>
             ${opts}
           </select>
@@ -1652,24 +1652,24 @@ function kcRenderCreateModal() {
       const checked = val === true || val === 'true' ? 'checked' : '';
       parts.push(`
         <label class="kc-check" for="${id}">
-          <input id="${id}" name="${escape(f.name)}" type="checkbox" ${checked} />
+          <input id="${id}" name="${escHtml(f.name)}" type="checkbox" ${checked} />
           <span>${label}</span>
         </label>
       `);
     } else {
-      const type = escape(f.type);
-      const placeholder = escape(f.placeholder || '');
-      const valueAttr = (val != null && f.type !== 'file') ? `value="${escape(val)}"` : '';
-      const min = (f.min != null) ? `min="${escape(f.min)}"` : '';
-      const max = (f.max != null) ? `max="${escape(f.max)}"` : '';
-      const maxlength = (f.maxLength != null) ? `maxlength="${escape(f.maxLength)}"` : '';
-      const step = (f.step != null) ? `step="${escape(f.step)}"` : '';
-      const inputmode = f.inputmode ? `inputmode="${escape(f.inputmode)}"` : '';
-      const pattern = f.pattern ? `pattern="${escape(f.pattern)}"` : '';
+      const type = escHtml(f.type);
+      const placeholder = escHtml(f.placeholder || '');
+      const valueAttr = (val != null && f.type !== 'file') ? `value="${escHtml(val)}"` : '';
+      const min = (f.min != null) ? `min="${escHtml(f.min)}"` : '';
+      const max = (f.max != null) ? `max="${escHtml(f.max)}"` : '';
+      const maxlength = (f.maxLength != null) ? `maxlength="${escHtml(f.maxLength)}"` : '';
+      const step = (f.step != null) ? `step="${escHtml(f.step)}"` : '';
+      const inputmode = f.inputmode ? `inputmode="${escHtml(f.inputmode)}"` : '';
+      const pattern = f.pattern ? `pattern="${escHtml(f.pattern)}"` : '';
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <input id="${id}" name="${escape(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} ${maxlength} ${step} ${inputmode} ${pattern} />
+          <input id="${id}" name="${escHtml(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} ${maxlength} ${step} ${inputmode} ${pattern} />
         </div>
       `);
     }
@@ -2049,7 +2049,7 @@ function kcInitCreatePostTriggers() {
 // -----------------------------
 // Helpers
 // -----------------------------
-function escape(str) {
+function escHtml(str) {
   return window.KCUtils.escapeHtml(str);
 }
 
