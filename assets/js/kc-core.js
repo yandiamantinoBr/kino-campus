@@ -494,13 +494,19 @@ function addComment(postId, commentText, authorName = 'Anônimo') {
   return newComment;
 }
 
-function resolveCurrentUserDisplayName(user) {
-  if (!user || typeof user !== 'object') return '';
-  const userMetadata = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : null;
+function resolveCurrentUserDisplayName(user, profile) {
+  const normalizedProfile = (profile && typeof profile === 'object') ? profile : null;
+  const normalizedUser = (user && typeof user === 'object') ? user : null;
+  const userMetadata = (normalizedUser && normalizedUser.user_metadata && typeof normalizedUser.user_metadata === 'object')
+    ? normalizedUser.user_metadata
+    : null;
   const candidates = [
+    normalizedProfile && normalizedProfile.display_name,
+    normalizedProfile && normalizedProfile.full_name,
     userMetadata && userMetadata.full_name,
-    user.display_name,
-    user.email,
+    normalizedUser && normalizedUser.display_name,
+    normalizedUser && normalizedUser.full_name,
+    normalizedUser && normalizedUser.email,
   ];
 
   for (let i = 0; i < candidates.length; i += 1) {
@@ -665,15 +671,35 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
 
   // Driver local: localStorage
   const authorInput = document.querySelector(`input[data-post-id="${cssEscape(id)}"][name="author"]`);
-  let sessionAuthorName = '';
+  let sessionUser = null;
+  let sessionProfile = null;
   try {
     if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-      const currentUser = await window.KCAPI.getCurrentUser();
-      sessionAuthorName = resolveCurrentUserDisplayName(currentUser);
+      sessionUser = await window.KCAPI.getCurrentUser();
     }
   } catch (_) { }
 
-  const authorName = sessionAuthorName || authorInput?.value?.trim() || 'Anônimo';
+  if (sessionUser) {
+    try {
+      if (window.KCAPI && typeof window.KCAPI.getMyProfile === 'function') {
+        sessionProfile = await window.KCAPI.getMyProfile();
+      }
+    } catch (_) { }
+
+    if (!sessionProfile) {
+      try {
+        if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+          sessionProfile = window.KCProfiles.getCurrentProfile();
+        }
+      } catch (_) { }
+    }
+  }
+
+  const sessionAuthorName = resolveCurrentUserDisplayName(sessionUser, sessionProfile);
+  const hasSession = !!(sessionUser && sessionUser.email);
+  const authorName = hasSession
+    ? (sessionAuthorName || 'Conta autenticada')
+    : (sessionAuthorName || authorInput?.value?.trim() || 'Anônimo');
   addComment(id, text, authorName);
   textarea.value = '';
   renderComments(id, containerId);
