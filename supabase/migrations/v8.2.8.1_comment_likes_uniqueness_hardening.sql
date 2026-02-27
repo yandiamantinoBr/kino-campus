@@ -3,6 +3,18 @@
 
 begin;
 
+-- Bootstrap defensivo: em ambientes onde a v8.2.8.0 não rodou por completo,
+-- garantimos a existência da tabela antes do hardening de duplicidade.
+create table if not exists public.comment_likes (
+  id         uuid primary key default gen_random_uuid(),
+  comment_id uuid not null references public.comments(id) on delete cascade,
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists comment_likes_comment_id_idx on public.comment_likes(comment_id);
+create index if not exists comment_likes_user_id_idx on public.comment_likes(user_id);
+
 -- Remove duplicatas antigas mantendo o registro mais recente.
 with ranked as (
   select
