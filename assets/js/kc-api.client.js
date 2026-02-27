@@ -1945,7 +1945,7 @@
     try {
       let result = await client
         .from('comments')
-        .select('id, created_at, author_id, author_name, body, likes, author_profile:profiles!comments_author_id_fkey(display_name, full_name)')
+        .select('id, created_at, author_id, author_name, body, likes, author_profile:profiles!comments_author_id_fkey(display_name, full_name, avatar_url)')
         .eq('post_id', uuid)
         .order('created_at', { ascending: true });
 
@@ -1966,13 +1966,13 @@
         try {
           let profRes = await client
             .from('profiles')
-            .select('id, display_name, full_name')
+            .select('id, display_name, full_name, avatar_url')
             .in('id', Array.from(new Set(rows.map((r) => r.author_id).filter(Boolean))));
 
           if (profRes && profRes.error && isMissingTokenError(profRes.error, 'display_name')) {
             profRes = await client
               .from('profiles')
-              .select('id, full_name')
+              .select('id, full_name, avatar_url')
               .in('id', Array.from(new Set(rows.map((r) => r.author_id).filter(Boolean))));
           }
 
@@ -2014,6 +2014,7 @@
         return {
           ...row,
           author_name: resolvedName,
+          author_avatar: String((prof && prof.avatar_url) || row.author_avatar || '').trim(),
           liked_by_me: likedByMe.has(row && row.id),
         };
       });
@@ -2261,7 +2262,11 @@
 
       const payloadOk = !data || data.ok !== false;
       if (!payloadOk) {
-        return { ok: false, error: { message: String(data.message || 'Não foi possível curtir.') } };
+        const code = String(data && data.code || '').trim().toUpperCase();
+        if (code === 'AUTH_REQUIRED') {
+          return { ok: false, error: { message: 'Faça login para curtir.' }, code };
+        }
+        return { ok: false, error: { message: String(data.message || 'Não foi possível curtir.') }, code };
       }
 
       return { ok: true, data };

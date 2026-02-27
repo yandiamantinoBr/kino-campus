@@ -29,6 +29,24 @@
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed.toLowerCase())}`;
   }
 
+  function deriveFallbackPublicIdentity(posts) {
+    if (!Array.isArray(posts) || posts.length === 0) return null;
+    const first = posts.find((post) => post && (post.authorName || post.autor || post.author || post.authorAvatar || post.autorAvatar));
+    if (!first) return null;
+
+    const name = String(first.authorName || first.autor || first.author || '').trim();
+    const avatar = String(first.authorAvatar || first.autorAvatar || '').trim();
+    if (!name && !avatar) return null;
+
+    return {
+      id: state.profileId,
+      display_name: name || '',
+      full_name: name || '',
+      avatar_url: avatar || '',
+      verified: false,
+    };
+  }
+
   function setStatus(message, tone) {
     const el = $('#profile-feedback');
     if (!el) return;
@@ -138,6 +156,11 @@
     try {
       if (state.isPublicView) {
         state.profile = await window.KCAPI.getProfileById(state.profileId);
+        if (!state.profile || (!state.profile.display_name && !state.profile.full_name)) {
+          const fallbackPosts = await window.KCAPI.getPostsByAuthorId(state.profileId, { page: 1, limit: 1 });
+          const fallbackProfile = deriveFallbackPublicIdentity(fallbackPosts);
+          if (fallbackProfile) state.profile = fallbackProfile;
+        }
       } else {
         state.profile = await window.KCAPI.getMyProfile();
         if (!state.profile && typeof window.KCAPI.syncProfile === 'function') {

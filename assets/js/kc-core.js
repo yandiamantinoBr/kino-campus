@@ -536,15 +536,24 @@ function normalizeCommentForRender(c) {
     });
   }
 
+  const resolvedAvatar = String(
+    (profile && profile.avatar_url)
+    || c.author_avatar
+    || c.avatar_url
+    || ''
+  ).trim();
+
   return {
     id: c.id,
     author: normalizedAuthor || 'Anônimo',
+    avatar: resolvedAvatar,
     text: c.body || c.text || '',
     timestamp: c.created_at
       ? new Date(c.created_at).toLocaleString('pt-BR')
       : (c.timestamp || ''),
     likes: c.likes || 0,
     likedByMe: !!(c && (c.liked_by_me || c.likedByMe)),
+    canLike: (c && c._kcCanLike !== false),
   };
 }
 
@@ -583,8 +592,15 @@ async function likeComment(postId, commentId, containerId = 'commentsContainer')
       renderComments(id, containerId);
       if (res && res.ok && res.alreadyLiked) {
         showToast('Você já curtiu este comentário.', 'info', 1800);
+        return;
       }
-    }).catch(function () { });
+      if (!res || !res.ok) {
+        const msg = (res && res.error && res.error.message) || 'Não foi possível curtir este comentário.';
+        showToast(msg, 'error', 2200);
+      }
+    }).catch(function () {
+      showToast('Não foi possível curtir este comentário.', 'error', 2200);
+    });
     return;
   }
 
@@ -624,13 +640,13 @@ function _renderCommentList(id, containerId, comments) {
 
   container.innerHTML = comments.map(function (raw) {
     const c = normalizeCommentForRender(raw);
-    const likeDisabled = !!c.likedByMe;
+    const likeDisabled = !!c.likedByMe || !c.canLike;
     const likeStateColor = likeDisabled ? 'var(--kc-accent, #3b82f6)' : 'var(--kc-text-dark-secondary)';
     const likeStateWeight = likeDisabled ? '600' : '400';
     return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
+        <img src="${escHtml(c.avatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(c.author)))}" alt="${escHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
         <div style="flex: 1;">
           <div style="font-weight: bold;">${escHtml(c.author)}</div>
           <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escHtml(c.timestamp)}</div>
@@ -639,7 +655,7 @@ function _renderCommentList(id, containerId, comments) {
       <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escHtml(c.text)}</div>
       <div style="margin-left: 50px; display: flex; gap: 15px; font-size: 0.9em;">
         <button data-post-id="${escHtml(String(id))}" data-comment-id="${escHtml(String(c.id))}" data-container="${escHtml(containerId)}" class="kc-like-comment-btn ${likeDisabled ? 'is-liked' : ''}" ${likeDisabled ? 'disabled aria-disabled="true"' : ''} style="background: none; border: none; cursor: ${likeDisabled ? 'not-allowed' : 'pointer'}; color: ${likeStateColor}; font-weight: ${likeStateWeight}; opacity: ${likeDisabled ? '0.95' : '1'};">
-          <i class="fas fa-thumbs-up"></i> ${c.likes || 0}${likeDisabled ? ' • Curtido' : ''}
+          <i class="fas fa-thumbs-up"></i> ${c.likes || 0}${c.likedByMe ? ' • Curtido' : (c.canLike ? '' : ' • Entrar para curtir')}
         </button>
       </div>
     </div>`;
@@ -661,8 +677,15 @@ function renderComments(postId, containerId = 'commentsContainer') {
 
   // Driver Supabase: carrega async, depois renderiza
   if (isSupabaseRuntime()) {
-    window.KCAPI.getComments(id).then(function (comments) {
-      _renderCommentList(id, containerId, comments || []);
+    Promise.all([
+      window.KCAPI.getComments(id),
+      (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') ? window.KCAPI.getCurrentUser() : Promise.resolve(null),
+    ]).then(function (results) {
+      const comments = Array.isArray(results[0]) ? results[0] : [];
+      const user = results[1] || null;
+      const canLike = !!(user && user.id);
+      const enriched = comments.map(function (comment) { return { ...comment, _kcCanLike: canLike }; });
+      _renderCommentList(id, containerId, enriched);
     }).catch(function () {
       _renderCommentList(id, containerId, []);
     });
@@ -749,7 +772,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
   }
 
   const sessionAuthorName = resolveCurrentUserDisplayName(sessionUser, sessionProfile);
-  const hasSession = !!(sessionUser && sessionUser.email);
+  const hasSession = !!(sessionUser && sessionUser.id);
   const authorName = hasSession
     ? (sessionAuthorName || 'Conta autenticada')
     : (sessionAuthorName || authorInput?.value?.trim() || 'Anônimo');
