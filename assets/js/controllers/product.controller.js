@@ -63,19 +63,85 @@
     } catch (_) { }
   }
 
-  function resolveCurrentUserDisplayName(user) {
-    if (!user || typeof user !== 'object') return '';
-    const userMetadata = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : null;
+  function resolveCurrentUserDisplayName(user, profile) {
+    const normalizedProfile = (profile && typeof profile === 'object') ? profile : null;
+    const normalizedUser = (user && typeof user === 'object') ? user : null;
+    const userMetadata = (normalizedUser && normalizedUser.user_metadata && typeof normalizedUser.user_metadata === 'object')
+      ? normalizedUser.user_metadata
+      : null;
+
     const candidates = [
+      normalizedProfile && normalizedProfile.display_name,
+      normalizedProfile && normalizedProfile.full_name,
       userMetadata && userMetadata.full_name,
-      user.display_name,
-      user.email,
+      normalizedUser && normalizedUser.display_name,
+      normalizedUser && normalizedUser.full_name,
+      normalizedUser && normalizedUser.email,
     ];
+
     for (let i = 0; i < candidates.length; i += 1) {
       const value = String(candidates[i] || '').trim();
       if (value) return value;
     }
     return '';
+  }
+
+  function resolveCurrentUserAvatar(user, profile) {
+    const normalizedProfile = (profile && typeof profile === 'object') ? profile : null;
+    const normalizedUser = (user && typeof user === 'object') ? user : null;
+    const userMetadata = (normalizedUser && normalizedUser.user_metadata && typeof normalizedUser.user_metadata === 'object')
+      ? normalizedUser.user_metadata
+      : null;
+    const candidates = [
+      normalizedProfile && normalizedProfile.avatar_url,
+      normalizedProfile && normalizedProfile.avatarUrl,
+      normalizedProfile && normalizedProfile.avatar,
+      userMetadata && userMetadata.avatar_url,
+      userMetadata && userMetadata.avatar,
+      normalizedUser && normalizedUser.avatar_url,
+      normalizedUser && normalizedUser.avatarUrl,
+      normalizedUser && normalizedUser.avatar,
+    ];
+
+    for (let i = 0; i < candidates.length; i += 1) {
+      const value = String(candidates[i] || '').trim();
+      if (value) return value;
+    }
+
+    return '';
+  }
+
+  function applyCommentComposerSessionState(user, profile) {
+    const commentAuthorInput = document.getElementById('commentAuthor');
+    const commentAuthorHint = document.getElementById('commentAuthorHint');
+    const composerAvatar = document.getElementById('commentComposerAvatar');
+    if (!commentAuthorInput) return;
+
+    const resolvedIdentity = resolveCurrentUserDisplayName(user, profile);
+    const resolvedAvatar = resolveCurrentUserAvatar(user, profile);
+    const isAuthenticated = !!(user && user.email);
+
+    if (resolvedIdentity) commentAuthorInput.value = resolvedIdentity;
+
+    if (isAuthenticated) {
+      commentAuthorInput.setAttribute('readonly', 'readonly');
+      commentAuthorInput.removeAttribute('placeholder');
+      if (!commentAuthorInput.value) commentAuthorInput.value = 'Conta autenticada';
+      if (commentAuthorHint) commentAuthorHint.textContent = 'nome da conta';
+    } else {
+      commentAuthorInput.removeAttribute('readonly');
+      commentAuthorInput.setAttribute('placeholder', 'Seu nome (opcional apenas no modo local/dev)');
+      if (commentAuthorHint) commentAuthorHint.textContent = 'Campo opcional somente no modo local/dev; com sessão ativa, o nome da conta é usado automaticamente.';
+    }
+
+    if (composerAvatar) {
+      if (resolvedAvatar) {
+        composerAvatar.src = resolvedAvatar;
+      } else {
+        const seed = String((resolvedIdentity || (user && (user.email || user.id)) || 'commenter')).toLowerCase();
+        composerAvatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(seed);
+      }
+    }
   }
 
   function bindStaticInteractions() {
@@ -761,11 +827,24 @@
       currentUser = null;
     }
 
-    const commentAuthorInput = document.getElementById('commentAuthor');
-    if (commentAuthorInput) {
-      const resolvedIdentity = resolveCurrentUserDisplayName(currentUser);
-      if (resolvedIdentity) commentAuthorInput.value = resolvedIdentity;
+    let currentProfile = null;
+    try {
+      if (window.KCAPI && typeof window.KCAPI.getMyProfile === 'function') {
+        currentProfile = await window.KCAPI.getMyProfile();
+      }
+    } catch (_) {
+      currentProfile = null;
     }
+    if (!currentProfile) {
+      try {
+        if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+          currentProfile = window.KCProfiles.getCurrentProfile();
+        }
+      } catch (_) {
+        currentProfile = null;
+      }
+    }
+    applyCommentComposerSessionState(currentUser, currentProfile);
 
     // Contrato único (Model) + regras centrais
     const post = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
