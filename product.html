@@ -437,6 +437,95 @@
       gap: 10px;
       flex-wrap: wrap;
     }
+
+    /* Hardening mobile layout: evita estouro horizontal em posts com foto */
+    .kc-product-page .kc-main-content,
+    .kc-product-section,
+    .kc-product-container,
+    .kc-product-container > *,
+    .kc-product-gallery,
+    .kc-product-details,
+    .kc-comments-section,
+    .kc-seller-card,
+    .kc-related-section {
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    .kc-thumbnail {
+      flex: 0 0 auto;
+    }
+
+    .kc-product-actions > * {
+      min-width: 0;
+    }
+
+    .kc-comment-composer,
+    .kc-comment-composer-main {
+      min-width: 0;
+    }
+
+    @media (max-width: 640px) {
+      .kc-product-page .kc-main-content {
+        padding-top: 16px;
+      }
+
+      .kc-product-gallery,
+      .kc-product-details,
+      .kc-comments-section,
+      .kc-seller-card,
+      .kc-related-section {
+        padding: 14px;
+      }
+
+      .kc-product-container {
+        gap: 16px;
+      }
+
+      .kc-gallery-main {
+        padding: 8px;
+        aspect-ratio: 1 / 1;
+        max-height: min(340px, 48vh);
+      }
+
+      .kc-gallery-thumbnails {
+        gap: 8px;
+      }
+
+      .kc-thumbnail {
+        width: 72px;
+        height: 72px;
+      }
+
+      .kc-product-title {
+        font-size: 1.2em;
+      }
+
+      .kc-product-price {
+        font-size: 1.8em;
+      }
+
+      .kc-product-actions {
+        gap: 8px;
+      }
+
+      .kc-product-actions .kc-btn-primary,
+      .kc-product-actions .kc-btn-secondary {
+        flex: 1 1 calc(50% - 8px);
+        justify-content: center;
+        padding: 10px 12px;
+        font-size: .92em;
+        white-space: normal;
+      }
+
+      .kc-comment-composer {
+        gap: 10px !important;
+      }
+
+      .kc-comment-composer-main small {
+        overflow-wrap: anywhere;
+      }
+    }
   </style>
 </head>
 
@@ -552,10 +641,10 @@
       <div class="kc-comments-section" id="comments">
         <h3><i class="fas fa-comments"></i> Comentários</h3>
 
-        <div style="display:flex; gap: 12px; margin-bottom: 14px; align-items:flex-start;">
+        <div class="kc-comment-composer" style="display:flex; gap: 12px; margin-bottom: 14px; align-items:flex-start;">
           <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=commenter" alt="Seu avatar"
             style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark);" />
-          <div style="flex: 1;">
+          <div class="kc-comment-composer-main" style="flex: 1;">
             <input id="commentAuthor" type="text" name="author" placeholder="Seu nome (opcional apenas no modo local/dev)"
               style="width:100%; padding: 10px; margin-bottom: 6px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background-color: var(--kc-background-dark); color: var(--kc-text-dark); font-family: inherit;" />
             <small style="display:block; margin-bottom: 10px; color: var(--kc-text-dark-secondary);">Campo opcional somente no modo local/dev; com sessão ativa, o nome da conta é usado automaticamente.</small>
