@@ -2156,6 +2156,45 @@
     }
   }
 
+  async function supabaseGetPostsByAuthorId(authorId, params = {}) {
+    const client = getSupabaseClient();
+    const author = String(authorId || '').trim();
+    if (!client || !author) return [];
+
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    try {
+      const { data, error } = await client
+        .from('posts')
+        .select('id, legacy_id, title, created_at, status, module, category')
+        .eq('author_id', author)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) {
+        console.error('[KCAPI][profile] getPostsByAuthorId:', error);
+        return [];
+      }
+
+      return (Array.isArray(data) ? data : []).map((row) => ({
+        id: row.legacy_id || row.id,
+        uuid: row.id,
+        title: row.title || 'Sem título',
+        created_at: row.created_at || null,
+        status: row.status || 'published',
+        module: row.module || '',
+        category: row.category || '',
+      }));
+    } catch (e) {
+      console.error('[KCAPI][profile] getPostsByAuthorId exceção:', e);
+      return [];
+    }
+  }
+
   // Incrementa likes de um comentário (operação simples; sem tabela separada de likes)
   async function supabaseLikeComment(commentId) {
     const client = getSupabaseClient();
@@ -2345,6 +2384,7 @@
     getMyProfile: supabaseGetMyProfile,
     updateMyProfile: supabaseUpdateMyProfile,
     getMyPosts: supabaseGetMyPosts,
+    getPostsByAuthorId: supabaseGetPostsByAuthorId,
   });
 
   const activeDriver = (ENV.driver === 'supabase') ? driverSupabase : driverLocal;
@@ -2483,6 +2523,11 @@
     return activeDriver.getMyPosts(params);
   }
 
+  async function getPostsByAuthorId(authorId, params = {}) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getPostsByAuthorId) return [];
+    return activeDriver.getPostsByAuthorId(authorId, params);
+  }
+
   window.KCAPI = Object.freeze({
     VERSION,
     ENV,
@@ -2513,6 +2558,7 @@
     getMyProfile,
     updateMyProfile,
     getMyPosts,
+    getPostsByAuthorId,
 
     // Auth (Supabase)
     getCurrentUser,
