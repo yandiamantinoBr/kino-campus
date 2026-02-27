@@ -544,16 +544,46 @@ function normalizeCommentForRender(c) {
       ? new Date(c.created_at).toLocaleString('pt-BR')
       : (c.timestamp || ''),
     likes: c.likes || 0,
+    likedByMe: !!(c && (c.liked_by_me || c.likedByMe)),
   };
 }
 
-function likeComment(postId, commentId, containerId = 'commentsContainer') {
+function getLocalLikeKey(postId, commentId, userId) {
+  return `kc_comment_likes_${postId}_${commentId}_${userId}`;
+}
+
+async function resolveCurrentLikeUserId() {
+  try {
+    if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+      const user = await window.KCAPI.getCurrentUser();
+      if (user && user.id) return String(user.id);
+    }
+  } catch (_) { }
+
+  try {
+    const key = 'kc_local_like_user_id';
+    let localId = String(localStorage.getItem(key) || '').trim();
+    if (!localId) {
+      localId = `guest_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem(key, localId);
+    }
+    return localId;
+  } catch (_) {
+    return 'guest_fallback';
+  }
+}
+
+async function likeComment(postId, commentId, containerId = 'commentsContainer') {
+
   const id = String(postId);
 
   // Driver Supabase: persiste via KCAPI (async, re-render ao resolver)
   if (isSupabaseRuntime()) {
-    window.KCAPI.likeComment(commentId).then(function () {
+    window.KCAPI.likeComment(commentId).then(function (res) {
       renderComments(id, containerId);
+      if (res && res.ok && res.alreadyLiked) {
+        showToast('Você já curtiu este comentário.', 'info', 1800);
+      }
     }).catch(function () { });
     return;
   }
@@ -563,8 +593,18 @@ function likeComment(postId, commentId, containerId = 'commentsContainer') {
   const comment = comments.find(c => String(c.id) === String(commentId));
   if (!comment) return;
 
+  const userId = await resolveCurrentLikeUserId();
+  const likeKey = getLocalLikeKey(id, commentId, userId);
+  try {
+    if (localStorage.getItem(likeKey)) {
+      showToast('Você já curtiu este comentário.', 'info', 1800);
+      return;
+    }
+  } catch (_) { }
+
   comment.likes = (comment.likes || 0) + 1;
   saveComments(id, comments);
+  try { localStorage.setItem(likeKey, '1'); } catch (_) { }
   renderComments(id, containerId);
 }
 
@@ -584,6 +624,9 @@ function _renderCommentList(id, containerId, comments) {
 
   container.innerHTML = comments.map(function (raw) {
     const c = normalizeCommentForRender(raw);
+    const likeDisabled = !!c.likedByMe;
+    const likeStateColor = likeDisabled ? 'var(--kc-accent, #3b82f6)' : 'var(--kc-text-dark-secondary)';
+    const likeStateWeight = likeDisabled ? '600' : '400';
     return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -595,8 +638,8 @@ function _renderCommentList(id, containerId, comments) {
       </div>
       <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escHtml(c.text)}</div>
       <div style="margin-left: 50px; display: flex; gap: 15px; font-size: 0.9em;">
-        <button data-post-id="${escHtml(String(id))}" data-comment-id="${escHtml(String(c.id))}" data-container="${escHtml(containerId)}" class="kc-like-comment-btn" style="background: none; border: none; cursor: pointer; color: var(--kc-text-dark-secondary);">
-          <i class="fas fa-thumbs-up"></i> ${c.likes || 0}
+        <button data-post-id="${escHtml(String(id))}" data-comment-id="${escHtml(String(c.id))}" data-container="${escHtml(containerId)}" class="kc-like-comment-btn ${likeDisabled ? 'is-liked' : ''}" ${likeDisabled ? 'disabled aria-disabled="true"' : ''} style="background: none; border: none; cursor: ${likeDisabled ? 'not-allowed' : 'pointer'}; color: ${likeStateColor}; font-weight: ${likeStateWeight}; opacity: ${likeDisabled ? '0.95' : '1'};">
+          <i class="fas fa-thumbs-up"></i> ${c.likes || 0}${likeDisabled ? ' • Curtido' : ''}
         </button>
       </div>
     </div>`;
@@ -626,8 +669,18 @@ function renderComments(postId, containerId = 'commentsContainer') {
     return;
   }
 
-  // Driver local: localStorage (síncrono)
-  _renderCommentList(id, containerId, loadComments(id));
+  // Driver local/dev: localStorage + chave de like por usuário
+  Promise.resolve(resolveCurrentLikeUserId()).then(function (userId) {
+    const comments = (loadComments(id) || []).map(function (comment) {
+      const likeKey = getLocalLikeKey(id, comment && comment.id, userId);
+      let likedByMe = false;
+      try { likedByMe = !!localStorage.getItem(likeKey); } catch (_) { }
+      return { ...comment, likedByMe };
+    });
+    _renderCommentList(id, containerId, comments);
+  }).catch(function () {
+    _renderCommentList(id, containerId, loadComments(id));
+  });
 }
 
 async function submitComment(postId = null, containerId = 'commentsContainer') {
