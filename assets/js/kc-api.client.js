@@ -1984,6 +1984,24 @@
         } catch (_) { }
       }
 
+      const commentIds = rows.map((row) => row && row.id).filter(Boolean);
+      let likedByMe = new Set();
+      if (commentIds.length > 0) {
+        try {
+          const me = await supabaseGetCurrentUser();
+          if (me && me.id) {
+            const likesRes = await client
+              .from('comment_likes')
+              .select('comment_id')
+              .eq('user_id', me.id)
+              .in('comment_id', commentIds);
+            if (likesRes && Array.isArray(likesRes.data)) {
+              likedByMe = new Set(likesRes.data.map((item) => item && item.comment_id).filter(Boolean));
+            }
+          }
+        } catch (_) { }
+      }
+
       return rows.map((row) => {
         const prof = row && row.author_profile ? row.author_profile : (row && row.author_id ? profilesById[row.author_id] : null);
         const resolvedName = String(
@@ -1993,7 +2011,11 @@
           || row.author_name
           || 'Anônimo'
         ).trim() || 'Anônimo';
-        return { ...row, author_name: resolvedName };
+        return {
+          ...row,
+          author_name: resolvedName,
+          liked_by_me: likedByMe.has(row && row.id),
+        };
       });
     } catch (e) {
       console.error('[KCAPI][comments] getComments exceção:', e);
@@ -2195,7 +2217,27 @@
     }
   }
 
-  // Incrementa likes de um comentário (operação simples; sem tabela separada de likes)
+  function isCommentLikeAlreadyLiked(payload, error) {
+    const code = String((error && error.code) || '').trim();
+    const msg = String((error && error.message) || '').toLowerCase();
+    const details = String((error && error.details) || '').toLowerCase();
+    if (
+      code === '23505'
+      || msg.includes('duplicate')
+      || msg.includes('comment_likes_comment_user_unique')
+      || details.includes('comment_likes_comment_user_unique')
+    ) {
+      return true;
+    }
+
+    return !!(
+      payload
+      && typeof payload === 'object'
+      && (payload.already_liked === true || payload.liked === false)
+    );
+  }
+
+  // Incrementa likes de um comentário respeitando 1 like por usuário
   async function supabaseLikeComment(commentId) {
     const client = getSupabaseClient();
     if (!client) return { ok: false };
@@ -2205,7 +2247,23 @@
     if (!uuid) return { ok: false };
     try {
       const { data, error } = await client.rpc('increment_comment_likes', { comment_uuid: uuid });
-      if (error) { console.error('[KCAPI][comments] likeComment:', error); return { ok: false }; }
+      if (error) {
+        if (isCommentLikeAlreadyLiked(null, error)) {
+          return { ok: true, alreadyLiked: true, data: { liked: false } };
+        }
+        console.error('[KCAPI][comments] likeComment:', error);
+        return { ok: false };
+      }
+
+      if (isCommentLikeAlreadyLiked(data, null)) {
+        return { ok: true, alreadyLiked: true, data };
+      }
+
+      const payloadOk = !data || data.ok !== false;
+      if (!payloadOk) {
+        return { ok: false, error: { message: String(data.message || 'Não foi possível curtir.') } };
+      }
+
       return { ok: true, data };
     } catch (e) {
       console.error('[KCAPI][comments] likeComment exceção:', e);
