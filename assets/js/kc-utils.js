@@ -121,8 +121,9 @@
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
 
-    // Se for no futuro (possível descompasso de relógio) ou na hora
-    if (diffMs < 60000) return 'Agora mesmo';
+    // Se for no futuro (possível descompasso de relógio) ou acabou de ser publicado.
+    // Aceita até 5 minutos de desvio de relógio (positivo ou negativo).
+    if (diffMs <= 0 || diffMs < 300000) return 'Agora mesmo';
 
     const diffMin = Math.floor(diffMs / 60000);
     if (diffMin < 60) return `Há ${diffMin} min`;
