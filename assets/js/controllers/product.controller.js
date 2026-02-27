@@ -119,12 +119,13 @@
 
     const resolvedIdentity = resolveCurrentUserDisplayName(user, profile);
     const resolvedAvatar = resolveCurrentUserAvatar(user, profile);
-    const isAuthenticated = !!(user && user.email);
+    const isAuthenticated = !!(user && user.id);
 
     if (resolvedIdentity) commentAuthorInput.value = resolvedIdentity;
 
     if (isAuthenticated) {
       commentAuthorInput.setAttribute('readonly', 'readonly');
+      commentAuthorInput.setAttribute('aria-readonly', 'true');
       commentAuthorInput.removeAttribute('placeholder');
       if (!commentAuthorInput.value) commentAuthorInput.value = 'Conta autenticada';
       if (commentAuthorHint) commentAuthorHint.textContent = 'nome da conta';
@@ -457,21 +458,11 @@
     const stats = document.getElementById('sellerStats');
     if (!card || !avatar || !name || !stats) return;
 
-    const authorId = getPostAuthorId(post);
     const normalizedName = post.authorName || post.autor || post.author || '';
     const normalizedAvatar = post.authorAvatar || post.autorAvatar || '';
 
-    const authorProfile = (authorId && window.KCAPI && typeof window.KCAPI.getAuthorById === 'function')
-      ? window.KCAPI.getAuthorById(authorId)
-      : null;
-
-    const author = normalizedName
-      || (authorProfile && (authorProfile.name || authorProfile.displayName))
-      || 'Autor';
-
-    const avatarUrl = normalizedAvatar
-      || (authorProfile && (authorProfile.avatar || authorProfile.avatarUrl))
-      || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
+    const author = normalizedName || 'Autor';
+    const avatarUrl = normalizedAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
 
     avatar.src = avatarUrl;
     name.innerHTML = esc(author) + (post.verificado ? ' <i class="fas fa-check-circle" style="color: var(--kc-green-check);" title="Verificado"></i>' : '');
@@ -483,6 +474,41 @@
 
     stats.innerHTML = items.join('');
     card.style.display = 'block';
+  }
+
+  async function enrichPostAuthorFromProfile(post) {
+    const authorId = getPostAuthorId(post);
+    if (!authorId || !window.KCAPI || typeof window.KCAPI.getProfileById !== 'function') return post;
+
+    let profile = null;
+    try {
+      profile = await window.KCAPI.getProfileById(authorId);
+    } catch (_) {
+      profile = null;
+    }
+
+    if (!profile) return post;
+
+    const profileName = String(profile.display_name || profile.full_name || '').trim();
+    const profileAvatar = String(profile.avatar_url || '').trim();
+    const fallbackName = String(post.authorName || post.autor || post.author || '').trim();
+    const fallbackAvatar = String(post.authorAvatar || post.autorAvatar || '').trim();
+
+    const mergedName = profileName || fallbackName || 'Autor';
+    const mergedAvatar = profileAvatar
+      || fallbackAvatar
+      || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(mergedName));
+
+    return {
+      ...post,
+      authorName: mergedName,
+      author: mergedName,
+      autor: mergedName,
+      authorAvatar: mergedAvatar,
+      autorAvatar: mergedAvatar,
+      verified: profile.verified === true ? true : post.verified,
+      verificado: profile.verified === true ? true : post.verificado,
+    };
   }
 
   function normalizeWhatsAppPhone(raw) {
@@ -847,9 +873,11 @@
     applyCommentComposerSessionState(currentUser, currentProfile);
 
     // Contrato único (Model) + regras centrais
-    const post = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
+    let post = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
       ? window.KCPostModel.from(raw, { pageModule: (raw && raw.modulo) || '', view: 'product' })
       : ((window.KCAPI && typeof window.KCAPI.normalizePost === 'function') ? window.KCAPI.normalizePost(raw) : raw);
+
+    post = await enrichPostAuthorFromProfile(post);
 
     // V8.1.6.2: Denúncia requer UUID real do post (Supabase). Guardar para o botão/modal.
     const postUuid = (post && post.uuid) ? String(post.uuid)
