@@ -24,7 +24,75 @@ update public.posts
 
 -- 3) Garante coluna legacy_id (idempotente — deve já existir)
 alter table public.posts
-  add column if not exists legacy_id text unique;
+  add column if not exists legacy_id text;
+
+-- 3.1) Bloco defensivo: detecta/normaliza duplicatas de legacy_id antes da unicidade
+do $$
+declare
+  v_dup_groups integer;
+  v_rows_normalized integer;
+begin
+  select count(*)
+    into v_dup_groups
+  from (
+    select legacy_id
+      from public.posts
+     where legacy_id is not null
+     group by legacy_id
+    having count(*) > 1
+  ) dups;
+
+  if v_dup_groups > 0 then
+    with ranked as (
+      select
+        ctid,
+        row_number() over (
+          partition by legacy_id
+          order by created_at asc nulls last, id asc
+        ) as rn
+      from public.posts
+      where legacy_id is not null
+    )
+    update public.posts p
+       set legacy_id = null
+      from ranked r
+     where p.ctid = r.ctid
+       and r.rn > 1;
+
+    get diagnostics v_rows_normalized = row_count;
+
+    raise warning
+      'Foram detectados % grupos duplicados de legacy_id. % registros foram normalizados (legacy_id => NULL) para permitir a constraint única.',
+      v_dup_groups,
+      v_rows_normalized;
+  end if;
+end
+$$;
+
+-- 3.2) Garante unicidade em legacy_id (equivalente ao índice parcial WHERE legacy_id IS NOT NULL)
+do $$
+begin
+  if exists (
+    select 1
+      from pg_constraint
+     where conname = 'posts_legacy_id_unique'
+       and conrelid = 'public.posts'::regclass
+  ) then
+    null;
+  elsif exists (
+    select 1
+      from pg_constraint
+     where conname = 'posts_legacy_id_key'
+       and conrelid = 'public.posts'::regclass
+  ) then
+    alter table public.posts
+      rename constraint posts_legacy_id_key to posts_legacy_id_unique;
+  else
+    alter table public.posts
+      add constraint posts_legacy_id_unique unique (legacy_id);
+  end if;
+end
+$$;
 
 -- 4) Upsert dos 44 posts seed sem a guarda post_count = 0
 insert into public.posts
@@ -80,7 +148,7 @@ values
   -- livros (2 posts)
   ('43', NULL, 'Livro Cálculo Vol.1 - James Stewart (8ª Edição) - Excelente estado', 'Livro em excelente estado, sem anotações. Perfeito para estudantes de Engenharia, Matemática e Física. Aceito PIX.', 120, 'livros', 'livros', 'published', 42, '{"emoji":"📚","subcategoria":"","condicao":null,"verificado":true,"precoOriginal":null,"precoTexto":"R$ 120,00 ou R$ 110/PIX","autorNome":"Maria Souza","autorAvatar":"https://i.pravatar.cc/150?img=16","rating":4.7,"comentarios":8,"timestamp":"Há 2 horas","tags":["livro","calculo","james","stewart","edicao","excelente","estado"]}'),
   ('44', NULL, 'Notebook Dell Inspiron i5 - 8ª geração, 8GB RAM, SSD 256GB', 'Vendo notebook Dell Inspiron 15 3000 em excelente estado, comprado há 1 ano e pouco usado. Ideal para estudos.', 2500, 'compra-venda', 'eletronicos', 'published', 28, '{"emoji":"🛍️","subcategoria":"","condicao":null,"verificado":true,"precoOriginal":null,"precoTexto":"R$ 2.500,00 ou R$ 2.350/PIX","autorNome":"Rafael Almeida","autorAvatar":"https://i.pravatar.cc/150?img=12","rating":4.7,"comentarios":7,"timestamp":"Há 1 hora","tags":["notebook","dell","inspiron","8gb","ram","ssd","256gb"]}')
-on conflict (legacy_id) do update set
+on conflict on constraint posts_legacy_id_unique do update set
   module   = excluded.module,
   category = excluded.category,
   status   = excluded.status;
