@@ -38,7 +38,12 @@ grant select on table public.comment_likes to anon, authenticated;
 grant insert, delete on table public.comment_likes to authenticated;
 grant all on table public.comment_likes to service_role;
 
-create or replace function public.increment_comment_likes(comment_uuid uuid)
+-- Compatibilidade com bases que já possuem increment_comment_likes(uuid) retornando integer
+-- (migrações v8.1.x). CREATE OR REPLACE não permite alterar tipo de retorno,
+-- então removemos a assinatura antes de recriar em jsonb.
+drop function if exists public.increment_comment_likes(uuid);
+
+create function public.increment_comment_likes(comment_uuid uuid)
 returns jsonb
 language plpgsql
 security definer
