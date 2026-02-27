@@ -385,8 +385,21 @@
     const stats = document.getElementById('sellerStats');
     if (!card || !avatar || !name || !stats) return;
 
-    const author = post.autor || 'Autor';
-    const avatarUrl = post.autorAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
+    const authorId = (post && (post.autorId || post.authorId || post.author_id)) || null;
+    const normalizedName = post.authorName || post.autor || post.author || '';
+    const normalizedAvatar = post.authorAvatar || post.autorAvatar || '';
+
+    const authorProfile = (authorId && window.KCAPI && typeof window.KCAPI.getAuthorById === 'function')
+      ? window.KCAPI.getAuthorById(authorId)
+      : null;
+
+    const author = normalizedName
+      || (authorProfile && (authorProfile.name || authorProfile.displayName))
+      || 'Autor';
+
+    const avatarUrl = normalizedAvatar
+      || (authorProfile && (authorProfile.avatar || authorProfile.avatarUrl))
+      || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
 
     avatar.src = avatarUrl;
     name.innerHTML = esc(author) + (post.verificado ? ' <i class="fas fa-check-circle" style="color: var(--kc-green-check);" title="Verificado"></i>' : '');

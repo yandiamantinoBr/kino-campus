@@ -322,12 +322,20 @@
     const descricao = r.descricao || r.description || '';
     const preco = (typeof r.preco === 'number') ? r.preco : ((r.price != null) ? r.price : null);
 
-    const legacyAuthorName = r.autor || r.author || '';
-    const legacyAuthorAvatar = r.autorAvatar || r.authorAvatar || '';
+    const meta = (r.metadata && typeof r.metadata === 'object' && !Array.isArray(r.metadata)) ? { ...r.metadata } : {};
+    const legacyAuthorName = pickFirstNonEmpty([r.autor, r.author, meta.autorNome]);
+    const legacyAuthorAvatar = pickFirstNonEmpty([r.autorAvatar, r.authorAvatar, meta.autorAvatar]);
 
     const authorId = r.authorId
       || resolveAuthorId(legacyAuthorName, legacyAuthorAvatar)
       || null;
+
+    const normalizedAuthorName = pickFirstNonEmpty([r.authorName, legacyAuthorName, 'Autor']);
+    const normalizedAuthorAvatar = pickFirstNonEmpty([
+      r.authorAvatar,
+      legacyAuthorAvatar,
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(normalizedAuthorName || 'kc'),
+    ]);
 
     const createdAt = r.createdAt || r.created_at || null;
     const created_at = r.created_at || r.createdAt || null;
@@ -348,8 +356,6 @@
 
     const tagLabels = Array.isArray(r.tags) ? r.tags : [];
     const tagKeys = Array.isArray(r.tagKeys) ? r.tagKeys : (tagLabels.length ? tagLabels : []);
-
-    const meta = (r.metadata && typeof r.metadata === 'object' && !Array.isArray(r.metadata)) ? { ...r.metadata } : {};
 
     const out = {
       // Contrato padrão (campos base)
@@ -389,6 +395,11 @@
       imagens: Array.isArray(r.imagens) ? r.imagens : (Array.isArray(r.images) ? r.images : null),
       // Metadata (JSONB/local): mantém subcategory e labels para filtros
       metadata: meta,
+      autor: normalizedAuthorName,
+      author: normalizedAuthorName,
+      autorAvatar: normalizedAuthorAvatar,
+      authorAvatar: normalizedAuthorAvatar,
+      authorName: normalizedAuthorName,
       _legacyAuthorName: legacyAuthorName || null,
       _legacyAuthorAvatar: legacyAuthorAvatar || null,
     };
@@ -1066,6 +1077,43 @@
     return base;
   }
 
+  function pickFirstNonEmpty(values) {
+    if (!Array.isArray(values)) return '';
+    for (const item of values) {
+      const value = String(item == null ? '' : item).trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function resolveNormalizedAuthorName(author, metadata, legacyName) {
+    return pickFirstNonEmpty([
+      author && author.display_name,
+      author && author.full_name,
+      metadata && metadata.autorNome,
+      legacyName,
+      'Autor',
+    ]);
+  }
+
+  function resolveNormalizedAuthorAvatar(author, metadata, authorName, legacyAvatar) {
+    const direct = pickFirstNonEmpty([
+      author && author.avatar_url,
+      metadata && metadata.autorAvatar,
+      legacyAvatar,
+    ]);
+    if (direct) return direct;
+    const seed = encodeURIComponent(String(authorName || 'kc').trim() || 'kc');
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+  }
+
+  function logAuthorDiagnosticsDev(payload) {
+    if (ENV.isProduction) return;
+    try {
+      console.debug('[KCAPI][Author][diagnostics]', payload);
+    } catch (_) { }
+  }
+
   function mapSupabasePost(row, options) {
     if (!row) return null;
 
@@ -1113,6 +1161,7 @@
     }
 
     const metadata = (row.metadata && typeof row.metadata === 'object') ? row.metadata : {};
+    const authorId = row.author_id || (author && author.id) || null;
     const categoriaLabel = (metadata && (metadata.categoria || metadata.categoriaLabel || metadata.categoryLabel))
       ? String(metadata.categoria || metadata.categoriaLabel || metadata.categoryLabel)
       : (row.category || "");
@@ -1123,6 +1172,23 @@
     const authorVerified = !!(author && author.verified);
 
     const legacyId = (row.legacy_id == null) ? null : String(row.legacy_id).trim();
+    const normalizedAuthorName = resolveNormalizedAuthorName(author, metadata, row.author_name || row.autor || row.author || '');
+    const normalizedAuthorAvatar = resolveNormalizedAuthorAvatar(author, metadata, normalizedAuthorName, row.author_avatar || row.autorAvatar || row.authorAvatar || '');
+
+    if (authorId) {
+      const hasProfileName = !!pickFirstNonEmpty([author && author.display_name, author && author.full_name]);
+      const hasProfileAvatar = !!pickFirstNonEmpty([author && author.avatar_url]);
+      if (!hasProfileName || !hasProfileAvatar) {
+        logAuthorDiagnosticsDev({
+          postId: row.id || null,
+          authorId,
+          missingName: !hasProfileName,
+          missingAvatar: !hasProfileAvatar,
+          metadataHasAutorNome: !!pickFirstNonEmpty([metadata && metadata.autorNome]),
+          metadataHasAutorAvatar: !!pickFirstNonEmpty([metadata && metadata.autorAvatar]),
+        });
+      }
+    }
 
     const out = {
       // IDs
@@ -1132,7 +1198,7 @@
       legacy_id: legacyId,
 
       // Autor
-      authorId: row.author_id || (author && author.id) || null,
+      authorId,
       author_id: row.author_id || null,
 
       // Contrato (PT-BR + aliases EN)
@@ -1157,8 +1223,8 @@
 
       // Para manter retrocompatibilidade visual (fallback do render):
       // Hardening de privacidade: NÃO depender de profiles.email para exibir nome.
-      autor: (author && author.full_name) ? String(author.full_name || '') : '',
-      autorAvatar: (author && author.avatar_url) ? author.avatar_url : '',
+      autor: normalizedAuthorName,
+      autorAvatar: normalizedAuthorAvatar,
 
       // Verificação do autor (V8.1.3.2)
       authorVerified,
@@ -1172,6 +1238,9 @@
       comentarios: (Array.isArray(row.comments) && row.comments[0] && row.comments[0].count != null) ? row.comments[0].count : 0,
 
       metadata,
+
+      authorName: normalizedAuthorName,
+      authorAvatar: normalizedAuthorAvatar,
     };
 
     // Aliases legados (alguns trechos usam author/authorAvatar)
@@ -1205,8 +1274,8 @@
 
   function buildSupabasePostSelect(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, full_name, avatar_url, verified'
-      : 'id, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified'
+      : 'id, display_name, full_name, avatar_url';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
@@ -1325,8 +1394,8 @@
 
   function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, full_name, avatar_url, verified'
-      : 'id, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified'
+      : 'id, display_name, full_name, avatar_url';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
