@@ -1122,11 +1122,14 @@
     // - campos PT-BR usados pelo UI (titulo, descricao, preco, modulo, categoria, timestamp)
     const authorVerified = !!(author && author.verified);
 
+    const legacyId = (row.legacy_id == null) ? null : String(row.legacy_id).trim();
+
     const out = {
       // IDs
       id: row.id,
-      legacyId: row.legacy_id || null,
-      legacy_id: row.legacy_id || null,
+      uuid: row.id || null,
+      legacyId,
+      legacy_id: legacyId,
 
       // Autor
       authorId: row.author_id || (author && author.id) || null,
@@ -1238,10 +1241,9 @@
         const mapped = mapSupabasePost(row, { allImages: true });
         if (!mapped) return null;
 
-        // Se foi chamado com legacy numérico, manter id no formato do protótipo
+        // Se foi chamado com legacy_id, manter id no formato do protótipo
         const isUuid = UUID_RE.test(key);
-        const isNumeric = /^\d+$/.test(key);
-        if (!isUuid && isNumeric) {
+        if (!isUuid) {
           const legacy = mapped.legacyId || mapped.legacy_id || null;
           if (legacy != null && legacy !== "") {
             mapped.uuid = mapped.id; // preserva UUID real
@@ -1259,8 +1261,7 @@
     if (!client) return null;
 
     const isUuid = UUID_RE.test(key);
-    const isNumeric = /^\d+$/.test(key);
-    const legacyNum = (!isUuid && isNumeric) ? parseInt(key, 10) : null;
+    const legacyKey = key.trim();
 
     const runPostQueryWithFallback = async (field, value) => {
       let includeVerified = true;
@@ -1294,9 +1295,9 @@
         if (r1 && r1.data) return mapSupabasePost(r1.data, { allImages: true });
       }
 
-      // 2) legacy_id (IDs numéricos antigos)
-      if (legacyNum != null) {
-        const r2 = await runPostQueryWithFallback('legacy_id', legacyNum);
+      // 2) legacy_id (compatibilidade de IDs legados)
+      if (!isUuid) {
+        const r2 = await runPostQueryWithFallback('legacy_id', legacyKey);
         if (r2 && r2.error) {
           console.error("[KCAPI][Supabase] getPostById(legacy_id) erro:", r2.error);
           return null;
