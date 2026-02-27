@@ -420,13 +420,12 @@
     if (!client) return null;
 
     const isUuid = UUID_RE.test(key);
-    const legacyNum = (!isUuid && /^\d+$/.test(key)) ? parseInt(key, 10) : null;
+    const legacyKey = key.trim();
 
     const run = async (selectStr, mediaRel, includeSortOrder, includeVerified) => {
       let q = client.from("posts").select(selectStr).limit(1);
       if (isUuid) q = q.eq("id", key);
-      else if (legacyNum != null) q = q.eq("legacy_id", legacyNum);
-      else return { data: null, error: null };
+      else q = q.eq("legacy_id", legacyKey);
 
       // Ordenação por sort_order quando existir (sem assumir schema)
       if (includeSortOrder) {
