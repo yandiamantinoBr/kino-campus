@@ -6,7 +6,14 @@
     user: null,
     profile: null,
     postStatus: '',
+    profileId: '',
+    isPublicView: false,
   };
+
+  function readProfileIdFromQuery() {
+    const raw = new URLSearchParams(window.location.search).get('id');
+    return String(raw || '').trim();
+  }
 
   function safeName(profile, user) {
     return String(
@@ -59,6 +66,22 @@
     if (input) input.value = p.display_name || p.full_name || '';
   }
 
+  function applyViewModeUI() {
+    const isPublic = state.isPublicView;
+
+    const editForm = $('#display-name-form');
+    const editCard = editForm ? editForm.closest('.kc-profile-card') : null;
+    if (editCard) editCard.style.display = isPublic ? 'none' : 'block';
+
+    const postsStatus = $('#profile-posts-status');
+    const postsToolbar = postsStatus ? postsStatus.closest('.kc-profile-posts-toolbar') : null;
+    const postsCard = postsToolbar ? postsToolbar.closest('.kc-profile-card') : null;
+    const postsTitle = postsCard ? postsCard.querySelector('h2') : null;
+
+    if (postsToolbar) postsToolbar.style.display = isPublic ? 'none' : 'flex';
+    if (postsTitle) postsTitle.textContent = isPublic ? 'Posts do autor' : 'Meus posts';
+  }
+
   function renderMyPosts(posts) {
     const loading = $('#profile-posts-loading');
     const empty = $('#profile-posts-empty');
@@ -69,9 +92,11 @@
     list.innerHTML = '';
 
     if (!Array.isArray(posts) || posts.length === 0) {
-      const emptyMsg = state.postStatus
-        ? 'Você ainda não publicou nada com este status.'
-        : 'Você ainda não publicou nada.';
+      const emptyMsg = state.isPublicView
+        ? 'Este autor ainda não publicou nada.'
+        : (state.postStatus
+          ? 'Você ainda não publicou nada com este status.'
+          : 'Você ainda não publicou nada.');
       if (empty) empty.textContent = emptyMsg;
       if (empty) empty.style.display = 'block';
       return;
@@ -111,16 +136,20 @@
     if (loading) loading.style.display = 'block';
 
     try {
-      state.profile = await window.KCAPI.getMyProfile();
-      if (!state.profile && typeof window.KCAPI.syncProfile === 'function') {
-        await window.KCAPI.syncProfile();
+      if (state.isPublicView) {
+        state.profile = await window.KCAPI.getProfileById(state.profileId);
+      } else {
         state.profile = await window.KCAPI.getMyProfile();
+        if (!state.profile && typeof window.KCAPI.syncProfile === 'function') {
+          await window.KCAPI.syncProfile();
+          state.profile = await window.KCAPI.getMyProfile();
+        }
       }
       renderHeader();
     } catch (_) {
       state.profile = null;
       renderHeader();
-      setStatus('Não foi possível carregar seu perfil agora.', 'warn');
+      setStatus(state.isPublicView ? 'Não foi possível carregar este perfil agora.' : 'Não foi possível carregar seu perfil agora.', 'warn');
     }
 
     if (loading) loading.style.display = 'none';
@@ -138,12 +167,14 @@
 
     try {
       const query = { page: 1, limit: 20 };
-      if (state.postStatus) query.status = state.postStatus;
-      const posts = await window.KCAPI.getMyPosts(query);
+      if (!state.isPublicView && state.postStatus) query.status = state.postStatus;
+      const posts = state.isPublicView
+        ? await window.KCAPI.getPostsByAuthorId(state.profileId, query)
+        : await window.KCAPI.getMyPosts(query);
       renderMyPosts(posts);
     } catch (_) {
       if (loading) loading.style.display = 'none';
-      setStatus('Não foi possível carregar seus posts no momento.', 'warn');
+      setStatus(state.isPublicView ? 'Não foi possível carregar os posts deste autor.' : 'Não foi possível carregar seus posts no momento.', 'warn');
       renderMyPosts([]);
     }
   }
@@ -193,6 +224,17 @@
 
   async function init() {
     if (!window.KCAPI || typeof window.KCAPI.getCurrentUser !== 'function') return;
+
+    state.profileId = readProfileIdFromQuery();
+    state.isPublicView = !!state.profileId;
+
+    applyViewModeUI();
+
+    if (state.isPublicView) {
+      await loadProfile();
+      await loadMyPosts();
+      return;
+    }
 
     state.user = await window.KCAPI.getCurrentUser();
     if (!state.user) {

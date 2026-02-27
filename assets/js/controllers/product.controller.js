@@ -124,7 +124,7 @@
       const viewProfileBtn = event.target.closest('[data-kc-view-profile]');
       if (viewProfileBtn) {
         event.preventDefault();
-        const authorId = (currentPost && (currentPost.autorId || currentPost.authorId || currentPost.author_id)) || null;
+        const authorId = getPostAuthorId(currentPost);
         if (authorId) {
           window.location.href = 'profile.html?id=' + encodeURIComponent(authorId);
         } else {
@@ -164,6 +164,12 @@
         }
       }
     });
+  }
+
+
+  function getPostAuthorId(post) {
+    const raw = post && (post.autorId || post.authorId || post.author_id);
+    return String(raw || '').trim() || null;
   }
 
   function showNotFound() {
@@ -385,7 +391,7 @@
     const stats = document.getElementById('sellerStats');
     if (!card || !avatar || !name || !stats) return;
 
-    const authorId = (post && (post.autorId || post.authorId || post.author_id)) || null;
+    const authorId = getPostAuthorId(post);
     const normalizedName = post.authorName || post.autor || post.author || '';
     const normalizedAvatar = post.authorAvatar || post.autorAvatar || '';
 
@@ -454,7 +460,7 @@
       };
     }
 
-    const authorId = (post && (post.autorId || post.authorId || post.author_id)) || null;
+    const authorId = getPostAuthorId(post);
     if (authorId) {
       return {
         type: 'open_contact',
