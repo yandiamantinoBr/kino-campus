@@ -148,6 +148,9 @@
       font-size: 1.6em;
       margin-bottom: 12px;
       line-height: 1.25;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .kc-product-badges {
@@ -204,6 +207,9 @@
       margin: 15px 0 20px;
       line-height: 1.6;
       color: var(--kc-text-dark);
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .kc-product-description p {
@@ -390,6 +396,92 @@
       cursor: pointer;
     }
 
+    .kc-comment-composer {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+
+    .kc-comment-composer-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background-color: var(--kc-background-dark);
+      border: 1px solid var(--kc-border-dark);
+      flex-shrink: 0;
+    }
+
+    .kc-comment-author-wrap {
+      margin-bottom: 10px;
+    }
+
+    .kc-comment-author-inline {
+      width: 100%;
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: transparent;
+      color: var(--kc-text-dark);
+      font-family: inherit;
+      font-size: 1.12rem;
+      font-weight: 700;
+      line-height: 1.2;
+      border-radius: 0;
+    }
+
+    .kc-comment-author-inline:focus {
+      outline: none;
+      box-shadow: none;
+    }
+
+    .kc-comment-author-inline[readonly] {
+      pointer-events: none;
+    }
+
+    .kc-comment-editor {
+      margin-left: -56px;
+      width: calc(100% + 56px);
+    }
+
+    .kc-comment-preview {
+      border-top: 1px dashed var(--kc-border-dark);
+      padding: 10px 14px;
+      color: var(--kc-text-dark-secondary);
+      font-size: .95em;
+      background: rgba(255, 255, 255, .01);
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .kc-comment-preview strong {
+      font-weight: 700;
+      color: var(--kc-text-dark);
+    }
+
+    .kc-comment-preview em {
+      font-style: italic;
+      color: var(--kc-text-dark);
+    }
+
+    .kc-comment-preview u {
+      text-decoration: underline;
+      color: var(--kc-text-dark);
+    }
+
+    .kc-comment-preview s {
+      text-decoration: line-through;
+    }
+
+    .kc-comment-preview code {
+      background: rgba(0, 0, 0, .25);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 4px;
+      padding: 1px 4px;
+      color: var(--kc-text-dark);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
     .kc-related-section {
       background-color: var(--kc-surface-dark);
       border-radius: 12px;
@@ -522,6 +614,11 @@
         gap: 10px !important;
       }
 
+      .kc-comment-editor {
+        margin-left: 0;
+        width: 100%;
+      }
+
       .kc-comment-composer-main small {
         overflow-wrap: anywhere;
       }
@@ -641,13 +738,13 @@
       <div class="kc-comments-section" id="comments">
         <h3><i class="fas fa-comments"></i> Comentários</h3>
 
-        <div class="kc-comment-composer" style="display:flex; gap: 12px; margin-bottom: 14px; align-items:flex-start;">
-          <img id="commentComposerAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=commenter" alt="Seu avatar"
-            style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--kc-background-dark); border: 1px solid var(--kc-border-dark);" />
+        <div class="kc-comment-composer">
+          <img id="commentComposerAvatar" class="kc-comment-composer-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=commenter" alt="Seu avatar" />
           <div class="kc-comment-composer-main" style="flex: 1;">
-            <input id="commentAuthor" type="text" name="author" placeholder=""
-              style="width:100%; padding: 10px; margin-bottom: 6px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background-color: var(--kc-background-dark); color: var(--kc-text-dark); font-family: inherit;" />
-            <small id="commentAuthorHint" style="display:block; margin-bottom: 10px; color: var(--kc-text-dark-secondary);">nome da conta</small>
+            <div class="kc-comment-author-wrap">
+              <input id="commentAuthor" class="kc-comment-author-inline" type="text" name="author" placeholder="" />
+              <small id="commentAuthorHint" style="display:block; margin-top: 4px; color: var(--kc-text-dark-secondary);">nome da conta</small>
+            </div>
             <div class="kc-comment-editor">
               <textarea id="commentText" placeholder="Deixe o seu comentário"></textarea>
               <div class="kc-editor-toolbar">
@@ -657,12 +754,17 @@
                     class="fas fa-underline"></i></button>
                 <button type="button" data-kc-format="strikethrough" title="Tachado"><i
                     class="fas fa-strikethrough"></i></button>
+                <button type="button" data-kc-format="inlinecode" title="Código inline"><i class="fas fa-code"></i></button>
+                <button type="button" data-kc-format="quote" title="Citação"><i class="fas fa-quote-right"></i></button>
+                <button type="button" data-kc-format="bullet" title="Lista"><i class="fas fa-list-ul"></i></button>
+                <button type="button" data-kc-format="link" title="Link"><i class="fas fa-link"></i></button>
                 <div style="flex: 1;"></div>
                 <button id="submitCommentButton" type="button" data-kc-submit-comment="1" data-action="submit-comment"
                   style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">
                   <i class="fas fa-paper-plane"></i> Enviar
                 </button>
               </div>
+              <div class="kc-comment-preview" id="commentPreview">Pré-visualização: use a barra para formatar o comentário.</div>
             </div>
           </div>
         </div>

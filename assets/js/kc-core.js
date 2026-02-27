@@ -517,6 +517,54 @@ function resolveCurrentUserDisplayName(user, profile) {
   return '';
 }
 
+function renderCommentMarkdownInline(raw) {
+  const source = String(raw || '');
+  let html = escHtml(source);
+
+  const links = [];
+  html = html.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, function (_, label, url) {
+    const safeUrl = String(url || '').trim();
+    const safeLabel = String(label || '').trim() || safeUrl;
+    const token = `__KC_LINK_${links.length}__`;
+    links.push(`<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`);
+    return token;
+  });
+
+  html = html
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<u>$1</u>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/~~([^~]+)~~/g, '<s>$1</s>');
+
+  html = html.replace(/^&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>');
+  html = html.replace(/(?:^|\n)-\s+(.+)(?=\n|$)/g, '<li>$1</li>');
+  html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+  html = html.replace(/\n/g, '<br>');
+
+  links.forEach((tag, idx) => {
+    html = html.replace(`__KC_LINK_${idx}__`, tag);
+  });
+
+  return html;
+}
+
+function updateCommentPreview(postId = null) {
+  const id = postId != null ? String(postId) : getCurrentPostId();
+  if (!id) return;
+  const textarea = document.querySelector(`textarea[data-post-id="${cssEscape(id)}"]`) || document.getElementById('commentText');
+  const preview = document.getElementById('commentPreview');
+  if (!textarea || !preview) return;
+
+  const value = String(textarea.value || '').trim();
+  if (!value) {
+    preview.innerHTML = 'Pré-visualização: use a barra para formatar o comentário.';
+    return;
+  }
+
+  preview.innerHTML = renderCommentMarkdownInline(value);
+}
+
 // Normaliza campos de um comentário independentemente da origem (localStorage ou Supabase)
 function normalizeCommentForRender(c) {
   const profile = c.author_profile || c.profiles || null;
@@ -536,15 +584,24 @@ function normalizeCommentForRender(c) {
     });
   }
 
+  const resolvedAvatar = String(
+    (profile && profile.avatar_url)
+    || c.author_avatar
+    || c.avatar_url
+    || ''
+  ).trim();
+
   return {
     id: c.id,
     author: normalizedAuthor || 'Anônimo',
+    avatar: resolvedAvatar,
     text: c.body || c.text || '',
     timestamp: c.created_at
       ? new Date(c.created_at).toLocaleString('pt-BR')
       : (c.timestamp || ''),
     likes: c.likes || 0,
     likedByMe: !!(c && (c.liked_by_me || c.likedByMe)),
+    canLike: (c && c._kcCanLike !== false),
   };
 }
 
@@ -583,8 +640,15 @@ async function likeComment(postId, commentId, containerId = 'commentsContainer')
       renderComments(id, containerId);
       if (res && res.ok && res.alreadyLiked) {
         showToast('Você já curtiu este comentário.', 'info', 1800);
+        return;
       }
-    }).catch(function () { });
+      if (!res || !res.ok) {
+        const msg = (res && res.error && res.error.message) || 'Não foi possível curtir este comentário.';
+        showToast(msg, 'error', 2200);
+      }
+    }).catch(function () {
+      showToast('Não foi possível curtir este comentário.', 'error', 2200);
+    });
     return;
   }
 
@@ -624,22 +688,22 @@ function _renderCommentList(id, containerId, comments) {
 
   container.innerHTML = comments.map(function (raw) {
     const c = normalizeCommentForRender(raw);
-    const likeDisabled = !!c.likedByMe;
+    const likeDisabled = !!c.likedByMe || !c.canLike;
     const likeStateColor = likeDisabled ? 'var(--kc-accent, #3b82f6)' : 'var(--kc-text-dark-secondary)';
     const likeStateWeight = likeDisabled ? '600' : '400';
     return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.author)}" alt="${escHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
+        <img src="${escHtml(c.avatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(c.author)))}" alt="${escHtml(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
         <div style="flex: 1;">
           <div style="font-weight: bold;">${escHtml(c.author)}</div>
           <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${escHtml(c.timestamp)}</div>
         </div>
       </div>
-      <div style="margin-left: 50px; margin-bottom: 10px; white-space: pre-wrap;">${escHtml(c.text)}</div>
+      <div style="margin-left: 50px; margin-bottom: 10px; white-space: normal; line-height: 1.6;">${renderCommentMarkdownInline(c.text)}</div>
       <div style="margin-left: 50px; display: flex; gap: 15px; font-size: 0.9em;">
         <button data-post-id="${escHtml(String(id))}" data-comment-id="${escHtml(String(c.id))}" data-container="${escHtml(containerId)}" class="kc-like-comment-btn ${likeDisabled ? 'is-liked' : ''}" ${likeDisabled ? 'disabled aria-disabled="true"' : ''} style="background: none; border: none; cursor: ${likeDisabled ? 'not-allowed' : 'pointer'}; color: ${likeStateColor}; font-weight: ${likeStateWeight}; opacity: ${likeDisabled ? '0.95' : '1'};">
-          <i class="fas fa-thumbs-up"></i> ${c.likes || 0}${likeDisabled ? ' • Curtido' : ''}
+          <i class="fas fa-thumbs-up"></i> ${c.likes || 0}${c.likedByMe ? ' • Curtido' : (c.canLike ? '' : ' • Entrar para curtir')}
         </button>
       </div>
     </div>`;
@@ -657,14 +721,24 @@ function _renderCommentList(id, containerId, comments) {
 }
 
 function renderComments(postId, containerId = 'commentsContainer') {
+  bindCommentPreviewSync();
   const id = String(postId);
 
   // Driver Supabase: carrega async, depois renderiza
   if (isSupabaseRuntime()) {
-    window.KCAPI.getComments(id).then(function (comments) {
-      _renderCommentList(id, containerId, comments || []);
+    Promise.all([
+      window.KCAPI.getComments(id),
+      (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') ? window.KCAPI.getCurrentUser() : Promise.resolve(null),
+    ]).then(function (results) {
+      const comments = Array.isArray(results[0]) ? results[0] : [];
+      const user = results[1] || null;
+      const canLike = !!(user && user.id);
+      const enriched = comments.map(function (comment) { return { ...comment, _kcCanLike: canLike }; });
+      _renderCommentList(id, containerId, enriched);
     }).catch(function () {
       _renderCommentList(id, containerId, []);
+    }).finally(function () {
+      updateCommentPreview(id);
     });
     return;
   }
@@ -680,6 +754,19 @@ function renderComments(postId, containerId = 'commentsContainer') {
     _renderCommentList(id, containerId, comments);
   }).catch(function () {
     _renderCommentList(id, containerId, loadComments(id));
+  }).finally(function () {
+    updateCommentPreview(id);
+  });
+}
+
+function bindCommentPreviewSync() {
+  if (document.body && document.body.dataset.kcCommentPreviewBound === '1') return;
+  if (document.body) document.body.dataset.kcCommentPreviewBound = '1';
+
+  document.addEventListener('input', function (event) {
+    const target = event.target;
+    if (!target || target.id !== 'commentText') return;
+    updateCommentPreview();
   });
 }
 
@@ -704,6 +791,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
     window.KCAPI.addComment(id, text).then(function (res) {
       if (res && res.ok) {
         textarea.value = '';
+        updateCommentPreview(id);
         renderComments(id, containerId);
         showToast('Comentário enviado!', 'info', 1800);
       } else {
@@ -749,12 +837,13 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
   }
 
   const sessionAuthorName = resolveCurrentUserDisplayName(sessionUser, sessionProfile);
-  const hasSession = !!(sessionUser && sessionUser.email);
+  const hasSession = !!(sessionUser && sessionUser.id);
   const authorName = hasSession
     ? (sessionAuthorName || 'Conta autenticada')
     : (sessionAuthorName || authorInput?.value?.trim() || 'Anônimo');
   addComment(id, text, authorName);
   textarea.value = '';
+  updateCommentPreview(id);
   renderComments(id, containerId);
   showToast('Comentário enviado!', 'info', 1800);
 }
@@ -770,40 +859,66 @@ function formatText(format, postId = null) {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
-  if (!selectedText) {
-    showToast('Selecione um texto para formatar', 'error');
-    return;
-  }
+  const hasSelection = !!selectedText;
 
-  let wrapperStart = '';
-  let wrapperEnd = '';
+  const wrapSelection = function (before, after, fallbackText) {
+    const baseText = hasSelection ? selectedText : (fallbackText || 'texto');
+    const formatted = `${before}${baseText}${after}`;
+    textarea.value = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
+    textarea.focus();
+    const cursorEnd = start + formatted.length;
+    textarea.selectionStart = cursorEnd;
+    textarea.selectionEnd = cursorEnd;
+  };
+
+  const insertBlock = function (blockText) {
+    const prefix = (start > 0 && textarea.value[start - 1] !== '\n') ? '\n' : '';
+    const suffix = (end < textarea.value.length && textarea.value[end] !== '\n') ? '\n' : '';
+    const formatted = `${prefix}${blockText}${suffix}`;
+    textarea.value = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
+    textarea.focus();
+    const cursorEnd = start + formatted.length;
+    textarea.selectionStart = cursorEnd;
+    textarea.selectionEnd = cursorEnd;
+  };
 
   switch (format) {
     case 'bold':
-      wrapperStart = '**';
-      wrapperEnd = '**';
+      wrapSelection('**', '**', 'negrito');
       break;
     case 'italic':
-      wrapperStart = '*';
-      wrapperEnd = '*';
+      wrapSelection('*', '*', 'itálico');
       break;
     case 'underline':
-      wrapperStart = '__';
-      wrapperEnd = '__';
+      wrapSelection('__', '__', 'sublinhado');
       break;
     case 'strikethrough':
-      wrapperStart = '~~';
-      wrapperEnd = '~~';
+      wrapSelection('~~', '~~', 'tachado');
       break;
+    case 'inlinecode':
+      wrapSelection('`', '`', 'código');
+      break;
+    case 'quote':
+      insertBlock(`> ${hasSelection ? selectedText : 'citação'}`);
+      break;
+    case 'bullet':
+      insertBlock(`- ${hasSelection ? selectedText : 'item da lista'}`);
+      break;
+    case 'link': {
+      const label = hasSelection ? selectedText : 'texto do link';
+      const formatted = `[${label}](https://)`;
+      textarea.value = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
+      const cursorStart = start + formatted.length - 1;
+      textarea.focus();
+      textarea.selectionStart = cursorStart;
+      textarea.selectionEnd = cursorStart;
+      break;
+    }
     default:
       return;
   }
 
-  const formatted = `${wrapperStart}${selectedText}${wrapperEnd}`;
-  textarea.value = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
-  textarea.focus();
-  textarea.selectionStart = start + formatted.length;
-  textarea.selectionEnd = start + formatted.length;
+  updateCommentPreview(id);
 }
 
 // -----------------------------
@@ -1581,7 +1696,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
 
   // comuns
   fields.push({ type: 'text', name: 'titulo', label: 'Título', placeholder: 'Ex: Livro de Cálculo Vol. 1', required: true, maxLength: 80 });
-  fields.push({ type: 'textarea', name: 'descricao', label: 'Descrição', placeholder: 'Descreva com detalhes…', required: true, rows: 4 });
+  fields.push({ type: 'textarea', name: 'descricao', label: 'Descrição', placeholder: 'Descreva com detalhes…', required: true, rows: 4, maxLength: 2000 });
 
   if (moduleKey === 'compra-venda') {
     const acao = selections.acao;
@@ -1707,10 +1822,11 @@ function kcRenderCreateModal() {
     const label = escHtml(f.label);
     const id = 'kcField_' + f.name;
     if (f.type === 'textarea') {
+      const maxlength = (f.maxLength != null) ? `maxlength="${escHtml(f.maxLength)}"` : '';
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
-          <textarea id="${id}" name="${escHtml(f.name)}" rows="${f.rows || 4}" placeholder="${escHtml(f.placeholder || '')}" ${required}>${escHtml(val || '')}</textarea>
+          <textarea id="${id}" name="${escHtml(f.name)}" rows="${f.rows || 4}" placeholder="${escHtml(f.placeholder || '')}" ${required} ${maxlength}>${escHtml(val || '')}</textarea>
         </div>
       `);
     } else if (f.type === 'select') {
@@ -1837,7 +1953,14 @@ async function kcHandleCreateSubmit() {
         titleInput.setCustomValidity(String(titleInput.value || '').trim() ? '' : 'Informe um título válido.');
       }
       if (descInput && typeof descInput.setCustomValidity === 'function') {
-        descInput.setCustomValidity(String(descInput.value || '').trim() ? '' : 'Informe uma descrição válida.');
+        const normalizedDesc = String(descInput.value || '').trim();
+        if (!normalizedDesc) {
+          descInput.setCustomValidity('Informe uma descrição válida.');
+        } else if (normalizedDesc.length > 2000) {
+          descInput.setCustomValidity('A descrição deve ter no máximo 2000 caracteres.');
+        } else {
+          descInput.setCustomValidity('');
+        }
       }
 
       const moneyFields = ['preco', 'orcamento', 'recompensa', 'contribuicao', 'remuneracao'];
