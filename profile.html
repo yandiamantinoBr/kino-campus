@@ -5,41 +5,261 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="assets/css/kc-theme-boot.css">
   <script src="assets/js/kc-theme-boot.js"></script>
-  <title>KinoCampus — Meu perfil</title>
+  <title>KinoCampus — Perfil</title>
   <link rel="stylesheet" href="assets/css/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    .kc-profile-wrap { max-width: 920px; margin: 0 auto; padding: 20px 16px 56px; }
-    .kc-profile-card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
-    .kc-profile-head { display: flex; gap: 14px; align-items: center; }
-    .kc-profile-avatar { width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--kc-border-dark); object-fit: cover; background: #202429; }
-    .kc-profile-name { margin: 0; font-size: 1.25rem; }
-    .kc-profile-badge { display: inline-flex; margin-top: 6px; padding: 4px 10px; border-radius: 999px; font-size: .85rem; }
-    .kc-profile-badge.is-verified { color: #8fe3b2; border: 1px solid rgba(83, 214, 129, .45); background: rgba(83, 214, 129, .1); }
-    .kc-profile-badge.is-unverified { color: var(--kc-text-dark-secondary); border: 1px solid var(--kc-border-dark); }
-    .kc-profile-feedback { display: none; margin: 0 0 12px; border-radius: 10px; padding: 10px 12px; font-size: .92rem; }
-    .kc-profile-feedback.is-success { background: rgba(56, 142, 60, .14); color: #9ae6a0; border: 1px solid rgba(56, 142, 60, .35); }
-    .kc-profile-feedback.is-error { background: rgba(229, 57, 53, .14); color: #ffb4b1; border: 1px solid rgba(229, 57, 53, .45); }
-    .kc-profile-feedback.is-warn, .kc-profile-feedback.is-info { background: rgba(255, 255, 255, .04); color: var(--kc-text-dark-secondary); border: 1px solid var(--kc-border-dark); }
-    .kc-profile-form { display: flex; gap: 10px; flex-wrap: wrap; }
-    .kc-profile-form input { flex: 1; min-width: 220px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--kc-border-dark); background: #1a1f24; color: var(--kc-text-dark); }
-    .kc-profile-form button { border: 0; border-radius: 10px; padding: 10px 16px; background: var(--kc-primary-brand); color: white; cursor: pointer; }
-    .kc-profile-posts-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
-    .kc-profile-select { min-width: 180px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--kc-border-dark); background: #1a1f24; color: var(--kc-text-dark); }
-    .kc-profile-hint { margin: 8px 0 0; color: var(--kc-text-dark-secondary); font-size: .88rem; }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-    .kc-profile-posts { display: grid; gap: 10px; }
-    .kc-profile-post { border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; background: rgba(255,255,255,.02); }
-    .kc-profile-post__title { color: var(--kc-text-dark); font-weight: 600; text-decoration: none; }
-    .kc-profile-post__title:hover { color: var(--kc-primary-brand); }
-    .kc-profile-post__meta { color: var(--kc-text-dark-secondary); font-size: .88rem; margin-top: 6px; }
+    /* ── Layout geral ──────────────────────── */
+    .kc-profile-page { max-width: 860px; margin: 0 auto; padding: 20px 14px 80px; }
+
+    /* ── Card de cabeçalho do perfil ──────── */
+    .kc-profile-hero {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 16px;
+      padding: 24px 20px 18px;
+      margin-bottom: 14px;
+      position: relative;
+    }
+    .kc-profile-hero-top { display: flex; align-items: flex-start; gap: 16px; }
+    .kc-profile-avatar-wrap { position: relative; flex-shrink: 0; }
+    .kc-profile-avatar {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      display: block;
+    }
+    .kc-profile-verified-icon {
+      position: absolute; bottom: 2px; right: 2px;
+      width: 22px; height: 22px;
+      background: #53d681; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7em; color: #111;
+      border: 2px solid var(--kc-surface-dark);
+    }
+    .kc-profile-info { flex: 1; min-width: 0; }
+    .kc-profile-name {
+      margin: 0 0 2px;
+      font-size: 1.3rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .kc-profile-handle {
+      font-size: .88rem; color: var(--kc-primary-brand);
+      margin-bottom: 6px; font-weight: 500;
+    }
+    .kc-profile-meta {
+      font-size: .82rem; color: var(--kc-text-dark-secondary);
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    }
+    .kc-profile-meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+    /* Stats bar */
+    .kc-profile-stats {
+      display: flex; gap: 0;
+      margin-top: 18px; padding-top: 16px;
+      border-top: 1px solid var(--kc-border-dark);
+    }
+    .kc-profile-stat {
+      flex: 1; text-align: center;
+      padding: 4px 6px;
+      border-right: 1px solid var(--kc-border-dark);
+    }
+    .kc-profile-stat:last-child { border-right: none; }
+    .kc-profile-stat__value { font-size: 1.35rem; font-weight: 700; display: block; line-height: 1.1; }
+    .kc-profile-stat__label { font-size: .75rem; color: var(--kc-text-dark-secondary); }
+
+    /* ── Edit card (só para usuário próprio) ── */
+    .kc-profile-edit-card {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .kc-profile-edit-card h2 { margin: 0 0 12px; font-size: 1em; }
+    .kc-profile-form { display: flex; gap: 8px; flex-wrap: wrap; }
+    .kc-profile-form input {
+      flex: 1; min-width: 200px;
+      padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark); font-size: .95rem;
+    }
+    .kc-profile-form button {
+      padding: 10px 18px; border-radius: 10px;
+      border: none; background: var(--kc-primary-brand);
+      color: #fff; cursor: pointer; font-size: .95rem; font-weight: 600;
+    }
+    .kc-profile-feedback {
+      display: none; margin: 8px 0 0; border-radius: 8px;
+      padding: 8px 12px; font-size: .88rem;
+    }
+    .kc-profile-feedback.is-success { background: rgba(56,142,60,.14); color: #9ae6a0; border: 1px solid rgba(56,142,60,.35); }
+    .kc-profile-feedback.is-error   { background: rgba(229,57,53,.14); color: #ffb4b1; border: 1px solid rgba(229,57,53,.45); }
+    .kc-profile-feedback.is-info,
+    .kc-profile-feedback.is-warn    { background: rgba(255,255,255,.04); color: var(--kc-text-dark-secondary); border: 1px solid var(--kc-border-dark); }
+
+    /* ── Tabs ────────────────────────────── */
+    .kc-profile-tabs {
+      display: flex; gap: 0;
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 12px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .kc-profile-tab {
+      flex: 1; padding: 12px 8px;
+      background: none; border: none;
+      color: var(--kc-text-dark-secondary);
+      font-size: .9rem; font-weight: 500;
+      cursor: pointer; text-align: center;
+      border-bottom: 3px solid transparent;
+      transition: color .2s, border-color .2s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .kc-profile-tab:hover { color: var(--kc-text-dark); }
+    .kc-profile-tab.active {
+      color: var(--kc-primary-brand);
+      border-bottom-color: var(--kc-primary-brand);
+      background: rgba(255,110,30,.06);
+    }
+    .kc-profile-tab i { font-size: .85em; }
+    .kc-profile-tab-badge {
+      display: inline-block;
+      min-width: 18px; height: 18px; line-height: 18px;
+      padding: 0 5px; border-radius: 9px;
+      background: var(--kc-border-dark); font-size: .72em;
+      font-weight: 700; text-align: center;
+    }
+    .kc-profile-tab.active .kc-profile-tab-badge { background: var(--kc-primary-brand); color: #fff; }
+
+    /* ── Conteúdo das tabs ──────────────── */
+    .kc-profile-tab-panel { display: none; }
+    .kc-profile-tab-panel.active { display: block; }
+
+    /* Toolbar de filtro */
+    .kc-profile-toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px; gap: 8px; flex-wrap: wrap;
+    }
+    .kc-profile-toolbar-title {
+      font-size: .95rem; font-weight: 600;
+      color: var(--kc-text-dark-secondary);
+    }
+    .kc-profile-select {
+      padding: 8px 10px; border-radius: 8px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark); font-size: .88rem; cursor: pointer;
+    }
+
+    /* ── Cards de posts ─────────────────── */
+    .kc-profile-posts-list { display: flex; flex-direction: column; gap: 10px; }
+    .kc-profile-post-card {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 12px; padding: 14px;
+      text-decoration: none;
+      display: block; transition: border-color .2s;
+    }
+    .kc-profile-post-card:hover { border-color: var(--kc-primary-brand); }
+    .kc-profile-post-card__title {
+      font-weight: 600; font-size: .95rem;
+      color: var(--kc-text-dark); margin-bottom: 5px;
+    }
+    .kc-profile-post-card__meta {
+      font-size: .8rem; color: var(--kc-text-dark-secondary);
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .kc-status-badge {
+      display: inline-block; padding: 1px 8px; border-radius: 4px;
+      font-size: .76em; font-weight: 600; color: #fff;
+    }
+    .kc-status-badge--published { background: #2e7d32; }
+    .kc-status-badge--pending   { background: #7b1fa2; }
+    .kc-status-badge--hidden    { background: #e65100; }
+    .kc-status-badge--deleted   { background: #b71c1c; }
+
+    /* ── Cards de comentários ─────────────── */
+    .kc-profile-comments-list { display: flex; flex-direction: column; gap: 10px; }
+    .kc-profile-comment-card {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 12px; padding: 14px;
+    }
+    .kc-profile-comment-card__body {
+      font-size: .9rem; color: var(--kc-text-dark);
+      margin-bottom: 8px; line-height: 1.5;
+    }
+    .kc-profile-comment-card__meta {
+      font-size: .78rem; color: var(--kc-text-dark-secondary);
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .kc-profile-comment-card__post-link {
+      color: var(--kc-primary-brand); text-decoration: none; font-weight: 500;
+    }
+    .kc-profile-comment-card__post-link:hover { text-decoration: underline; }
+
+    /* ── Feed de atividades ────────────── */
+    .kc-profile-activity-list { display: flex; flex-direction: column; gap: 10px; }
+    .kc-profile-activity-item {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 12px; padding: 12px 14px;
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .kc-profile-activity-icon {
+      width: 34px; height: 34px; flex-shrink: 0;
+      background: rgba(255,110,30,.12);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--kc-primary-brand); font-size: .9rem;
+    }
+    .kc-profile-activity-content { flex: 1; min-width: 0; }
+    .kc-profile-activity-label { font-size: .88rem; color: var(--kc-text-dark); margin-bottom: 2px; }
+    .kc-profile-activity-label a { color: var(--kc-primary-brand); text-decoration: none; font-weight: 500; }
+    .kc-profile-activity-label a:hover { text-decoration: underline; }
+    .kc-profile-activity-meta { font-size: .76rem; color: var(--kc-text-dark-secondary); }
+
+    /* ── Estados vazios / loading ─────────── */
+    .kc-profile-empty {
+      text-align: center; padding: 40px 20px;
+      color: var(--kc-text-dark-secondary); font-size: .92rem;
+    }
+    .kc-profile-empty i { display: block; font-size: 2.5rem; margin-bottom: 10px; opacity: .4; }
+    .kc-profile-loading { padding: 30px; text-align: center; color: var(--kc-text-dark-secondary); font-size: .92rem; }
+    .kc-profile-loading i { margin-right: 8px; }
+
+    /* Load more */
+    .kc-profile-load-more {
+      display: block; width: 100%; margin-top: 14px;
+      padding: 12px; border-radius: 10px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-secondary); font-size: .9rem;
+      cursor: pointer; text-align: center; transition: border-color .2s;
+    }
+    .kc-profile-load-more:hover { border-color: var(--kc-primary-brand); color: var(--kc-primary-brand); }
+
+    /* sr-only */
+    .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap; }
+
+    /* ── Responsivo ──────────────────────── */
     @media (max-width: 600px) {
-      .kc-profile-name { font-size: 1.05rem; }
-      .kc-profile-avatar { width: 62px; height: 62px; }
+      .kc-profile-hero { padding: 16px 14px 14px; }
+      .kc-profile-avatar { width: 64px; height: 64px; }
+      .kc-profile-name { font-size: 1.1rem; }
+      .kc-profile-stats { overflow-x: auto; }
+      .kc-profile-stat { min-width: 70px; }
       .kc-profile-form { flex-direction: column; }
-      .kc-profile-form button { width: 100%; }
-      .kc-profile-posts-toolbar { justify-content: stretch; }
-      .kc-profile-select { width: 100%; }
+      .kc-profile-form input,
+      .kc-profile-form button { width: 100%; box-sizing: border-box; }
+      .kc-profile-tab { font-size: .8rem; padding: 10px 4px; gap: 3px; }
+      .kc-profile-tab span { display: none; }
+      .kc-profile-tab i { font-size: 1.1em; }
     }
   </style>
 </head>
@@ -63,47 +283,138 @@
   </header>
 
   <main class="kc-main-content">
-    <div class="kc-profile-wrap">
-      <p id="profile-loading" style="margin: 0 0 16px; color: var(--kc-text-dark-secondary);">Carregando perfil…</p>
-      <p id="profile-feedback" class="kc-profile-feedback" role="alert"></p>
+    <div class="kc-profile-page">
 
-      <section id="profile-content" style="display: none;">
-        <article class="kc-profile-card">
-          <div class="kc-profile-head">
-            <img id="profile-avatar" class="kc-profile-avatar" src="" alt="Avatar do usuário" />
-            <div>
+      <!-- Loading state -->
+      <div id="profile-loading" class="kc-profile-loading">
+        <i class="fas fa-spinner fa-spin"></i> Carregando perfil…
+      </div>
+
+      <!-- Hero card (aparece após carregamento) -->
+      <div id="profile-content" style="display:none;">
+
+        <!-- Card do perfil -->
+        <section class="kc-profile-hero">
+          <div class="kc-profile-hero-top">
+            <div class="kc-profile-avatar-wrap">
+              <img id="profile-avatar" class="kc-profile-avatar" src="" alt="Avatar" />
+              <span id="profile-verified-icon" class="kc-profile-verified-icon" style="display:none;" title="Usuário verificado">
+                <i class="fas fa-check"></i>
+              </span>
+            </div>
+            <div class="kc-profile-info">
               <h1 class="kc-profile-name" id="profile-display-name">Usuário</h1>
-              <span id="profile-verified-badge" class="kc-profile-badge is-unverified">Não verificado</span>
-              <p class="kc-profile-hint" id="profile-avatar-hint">Foto de perfil personalizada em breve.</p>
+              <div class="kc-profile-handle" id="profile-handle" style="display:none;"></div>
+              <div class="kc-profile-meta">
+                <span id="profile-member-since" style="display:none;"><i class="fas fa-calendar-alt"></i> <span></span></span>
+              </div>
             </div>
           </div>
-        </article>
 
-        <article class="kc-profile-card">
-          <h2 style="margin-top:0;">Editar nome</h2>
+          <!-- Stats bar -->
+          <div class="kc-profile-stats">
+            <div class="kc-profile-stat">
+              <span class="kc-profile-stat__value" id="stat-posts">–</span>
+              <span class="kc-profile-stat__label">Publicações</span>
+            </div>
+            <div class="kc-profile-stat">
+              <span class="kc-profile-stat__value" id="stat-comments">–</span>
+              <span class="kc-profile-stat__label">Comentários</span>
+            </div>
+            <div class="kc-profile-stat">
+              <span class="kc-profile-stat__value" id="stat-votes">–</span>
+              <span class="kc-profile-stat__label">Votos recebidos</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Card de edição (somente para o próprio usuário) -->
+        <section class="kc-profile-edit-card" id="profile-edit-section" style="display:none;">
+          <h2><i class="fas fa-pen" style="color:var(--kc-primary-brand);margin-right:6px;"></i>Editar nome de exibição</h2>
           <form id="display-name-form" class="kc-profile-form">
-            <input id="display-name-input" name="display_name" maxlength="80" placeholder="Como você quer aparecer no KinoCampus" required />
+            <input id="display-name-input" name="display_name" maxlength="80"
+                   placeholder="Como você quer aparecer no KinoCampus" required />
             <button id="display-name-submit" type="submit">Salvar</button>
           </form>
-        </article>
+          <p id="profile-feedback" class="kc-profile-feedback" role="alert"></p>
+        </section>
 
-        <article class="kc-profile-card">
-          <h2 style="margin-top:0;">Meus posts</h2>
-          <div class="kc-profile-posts-toolbar">
-            <label for="profile-posts-status" class="sr-only">Filtrar por status</label>
+        <!-- Tabs -->
+        <div class="kc-profile-tabs" role="tablist" aria-label="Seções do perfil">
+          <button class="kc-profile-tab active" role="tab" aria-selected="true"
+                  aria-controls="tab-activities" id="btn-tab-activities" data-kc-tab="activities">
+            <i class="fas fa-bolt"></i> <span>Atividades</span>
+          </button>
+          <button class="kc-profile-tab" role="tab" aria-selected="false"
+                  aria-controls="tab-posts" id="btn-tab-posts" data-kc-tab="posts">
+            <i class="fas fa-newspaper"></i> <span>Posts</span>
+            <span class="kc-profile-tab-badge" id="badge-posts">0</span>
+          </button>
+          <button class="kc-profile-tab" role="tab" aria-selected="false"
+                  aria-controls="tab-comments" id="btn-tab-comments" data-kc-tab="comments">
+            <i class="fas fa-comments"></i> <span>Comentários</span>
+            <span class="kc-profile-tab-badge" id="badge-comments">0</span>
+          </button>
+        </div>
+
+        <!-- Painel: Atividades -->
+        <div class="kc-profile-tab-panel active" role="tabpanel"
+             aria-labelledby="btn-tab-activities" id="tab-activities">
+          <div id="activities-loading" class="kc-profile-loading" style="display:none;">
+            <i class="fas fa-spinner fa-spin"></i> Carregando…
+          </div>
+          <div id="activities-list" class="kc-profile-activity-list"></div>
+          <div id="activities-empty" class="kc-profile-empty" style="display:none;">
+            <i class="fas fa-history"></i>
+            Nenhuma atividade registrada ainda.
+          </div>
+        </div>
+
+        <!-- Painel: Posts -->
+        <div class="kc-profile-tab-panel" role="tabpanel"
+             aria-labelledby="btn-tab-posts" id="tab-posts">
+          <div class="kc-profile-toolbar" id="posts-toolbar">
+            <span class="kc-profile-toolbar-title">Publicações</span>
+            <label class="sr-only" for="profile-posts-status">Filtrar por status</label>
             <select id="profile-posts-status" class="kc-profile-select">
-              <option value="">Todos os status</option>
+              <option value="">Todos</option>
               <option value="published">Publicado</option>
               <option value="pending">Pendente</option>
               <option value="hidden">Oculto</option>
               <option value="deleted">Excluído</option>
             </select>
           </div>
-          <p id="profile-posts-loading" style="margin: 0 0 12px; color: var(--kc-text-dark-secondary);">Carregando posts…</p>
-          <p id="profile-posts-empty" style="display:none; color: var(--kc-text-dark-secondary);">Você ainda não publicou nada.</p>
-          <div id="profile-posts-list" class="kc-profile-posts"></div>
-        </article>
-      </section>
+          <div id="posts-loading" class="kc-profile-loading" style="display:none;">
+            <i class="fas fa-spinner fa-spin"></i> Carregando…
+          </div>
+          <div id="posts-list" class="kc-profile-posts-list"></div>
+          <div id="posts-empty" class="kc-profile-empty" style="display:none;">
+            <i class="fas fa-box-open"></i>
+            Nenhum post encontrado.
+          </div>
+          <button id="posts-load-more" class="kc-profile-load-more" style="display:none;">
+            <i class="fas fa-chevron-down"></i> Carregar mais
+          </button>
+        </div>
+
+        <!-- Painel: Comentários -->
+        <div class="kc-profile-tab-panel" role="tabpanel"
+             aria-labelledby="btn-tab-comments" id="tab-comments">
+          <div id="comments-loading" class="kc-profile-loading" style="display:none;">
+            <i class="fas fa-spinner fa-spin"></i> Carregando…
+          </div>
+          <div id="comments-list" class="kc-profile-comments-list"></div>
+          <div id="comments-empty" class="kc-profile-empty" style="display:none;">
+            <i class="fas fa-comment-slash"></i>
+            Nenhum comentário encontrado.
+          </div>
+          <button id="comments-load-more" class="kc-profile-load-more" style="display:none;">
+            <i class="fas fa-chevron-down"></i> Carregar mais
+          </button>
+        </div>
+
+      </div><!-- /profile-content -->
+
     </div>
   </main>
 

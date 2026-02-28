@@ -271,11 +271,11 @@
       const payload = escape(formatPayload(row.payload));
 
       return `<tr>
-        <td>${escape(fmtDate(row.created_at))}</td>
-        <td><code>${escape(row.action || '—')}</code></td>
-        <td><code>${escape(row.entity_type || '—')}</code></td>
-        <td><code>${escape(row.entity_id || '—')}</code></td>
-        <td>${(() => {
+        <td data-label="Data">${escape(fmtDate(row.created_at))}</td>
+        <td data-label="Ação"><code>${escape(row.action || '—')}</code></td>
+        <td data-label="Entidade"><code>${escape(row.entity_type || '—')}</code></td>
+        <td data-label="entity_id"><code style="font-size:.8em;">${escape((row.entity_id || '—').substring(0,12))}…</code></td>
+        <td data-label="Autor da ação">${(() => {
           const actorId = String(row.actor_id || '');
           if (!actorId) return '<code>service_role/system</code>';
           const actor = state.audit.actorsById && state.audit.actorsById[actorId];
@@ -283,7 +283,7 @@
           if (!actorName) return `<code>${escape(actorId)}</code>`;
           return `<div><strong>${escape(actorName)}</strong></div><div style="font-size:.78em;color:var(--kc-text-dark-secondary);"><code>${escape(actorId)}</code></div>`;
         })()}</td>
-        <td>
+        <td data-label="Detalhes">
           <button
             type="button"
             data-audit-detail="${detailId}"
@@ -382,15 +382,15 @@
         const idRef = p.legacy_id ? `${escape(p.legacy_id)} · ${escape(p.id)}` : escape(p.id);
 
         return `<tr data-id="${escape(p.id)}">
-          <td>
+          <td data-label="Post">
             <strong>${escape(p.title || '(sem título)')}</strong><br>
             <span style="font-size:.8em;color:var(--kc-text-dark-secondary);">${idRef}</span>
           </td>
-          <td>${escape(author)}</td>
-          <td>${escape(moduleInfo)}</td>
-          <td data-col="status">${statusBadge(p.status)}</td>
-          <td data-col="updated">${escape(fmtDate(p.updated_at || p.created_at))}</td>
-          <td>
+          <td data-label="Autor">${escape(author)}</td>
+          <td data-label="Módulo/Categoria">${escape(moduleInfo)}</td>
+          <td data-label="Status" data-col="status">${statusBadge(p.status)}</td>
+          <td data-label="Atualizado em" data-col="updated">${escape(fmtDate(p.updated_at || p.created_at))}</td>
+          <td data-label="Ações">
             <div class="kc-admin-actions">
               ${actionButton('Ocultar', 'hidden', '#ef6c00', p.status === 'hidden')}
               ${actionButton('Restaurar', 'published', '#2e7d32', p.status === 'published')}

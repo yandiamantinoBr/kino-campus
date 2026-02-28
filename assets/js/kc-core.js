@@ -322,6 +322,9 @@ function openMobileMenu() {
 
   menu.setAttribute('aria-hidden', 'false');
   overlay.setAttribute('aria-hidden', 'false');
+
+  const toggleBtn = document.querySelector('[data-kc-mobile-menu="toggle"]');
+  if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
 }
 
 function closeMobileMenu() {
@@ -334,6 +337,9 @@ function closeMobileMenu() {
 
   menu.setAttribute('aria-hidden', 'true');
   overlay.setAttribute('aria-hidden', 'true');
+
+  const toggleBtn = document.querySelector('[data-kc-mobile-menu="toggle"]');
+  if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
 }
 
 function toggleMobileMenu(event) {
@@ -2675,6 +2681,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const action = String(menuTrigger.getAttribute('data-kc-mobile-menu') || '').trim().toLowerCase();
     if (action === 'open') {
       openMobileMenu();
+      return;
+    }
+    if (action === 'toggle') {
+      toggleMobileMenu(e);
       return;
     }
     if (action === 'close') {

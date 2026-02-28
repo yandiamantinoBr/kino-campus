@@ -142,18 +142,35 @@
 
   // ---- Data ----
 
+  // Estado de filtros
+  const _filters = { status: 'open', reason: 'all' };
+
+  function readFilters() {
+    const statusEl = $('#reports-status-filter');
+    const reasonEl = $('#reports-reason-filter');
+    if (statusEl) _filters.status = statusEl.value || 'open';
+    if (reasonEl) _filters.reason = reasonEl.value || 'all';
+  }
+
   async function loadReports() {
     const client = getClient();
     if (!client) return [];
-    const { data, error } = await client
-      .from('reports')
-      .select(`
-        id, created_at, reason, details, status,
-        post_id,
-        reporter_id
-      `)
-      .order('created_at', { ascending: false });
 
+    let query = client
+      .from('reports')
+      .select('id, created_at, reason, details, status, post_id, reporter_id')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    // Filtro de status
+    if (_filters.status === 'open')   query = query.eq('status', 'open');
+    if (_filters.status === 'closed') query = query.eq('status', 'closed');
+    // 'all' -> sem filtro de status
+
+    // Filtro de motivo
+    if (_filters.reason && _filters.reason !== 'all') query = query.eq('reason', _filters.reason);
+
+    const { data, error } = await query;
     if (error) { console.error('[Admin] loadReports:', error); return []; }
     return data || [];
   }
@@ -164,7 +181,7 @@
     if (!client) return {};
     const { data, error } = await client
       .from('posts')
-      .select('id, title, status')
+      .select('id, title, titulo, status, author_id')
       .in('id', postIds);
 
     let posts = data || [];
@@ -183,7 +200,7 @@
 
       const { data: legacyData, error: legacyError } = await client
         .from('posts')
-        .select('id, titulo, status')
+        .select('id, titulo, status, author_id')
         .in('id', postIds);
 
       if (legacyError) {
@@ -197,6 +214,45 @@
     const map = {};
     posts.forEach(p => { map[p.id] = p; });
     return map;
+  }
+
+  async function loadReporterNames(reporterIds) {
+    if (!reporterIds || !reporterIds.length) return {};
+    const client = getClient();
+    if (!client) return {};
+
+    const uniqueIds = [...new Set(reporterIds.filter(Boolean))];
+    if (!uniqueIds.length) return {};
+
+    try {
+      // Tenta com display_name
+      const { data, error } = await client
+        .from('profiles')
+        .select('id, display_name, full_name, email')
+        .in('id', uniqueIds);
+
+      if (error) {
+        // Fallback: só full_name
+        const { data: d2 } = await client
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', uniqueIds);
+        const map = {};
+        (d2 || []).forEach(p => { map[p.id] = { name: p.full_name || '—', email: '' }; });
+        return map;
+      }
+
+      const map = {};
+      (data || []).forEach(p => {
+        map[p.id] = {
+          name: String(p.display_name || p.full_name || '—').trim(),
+          email: String(p.email || '').trim(),
+        };
+      });
+      return map;
+    } catch (_) {
+      return {};
+    }
   }
 
   // ---- Ações ----
@@ -387,18 +443,25 @@
     const container = $('#admin-reports-container');
     if (!container) return;
 
+    readFilters();
+
     setLoading(true);
     const reports = await loadReports();
     setLoading(false);
 
     if (!reports.length) {
+      const statusLabel = _filters.status === 'open' ? 'em aberto' : _filters.status === 'closed' ? 'fechadas' : '';
       container.innerHTML = `
         <div style="text-align:center;padding:40px;color:var(--kc-text-dark-secondary);">
-          <i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;"></i>
-          <p style="font-size:1.1em;">Nenhuma denúncia em aberto.</p>
+          <i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;display:block;"></i>
+          <p style="font-size:1.1em;">Nenhuma denúncia ${statusLabel} encontrada${_filters.reason !== 'all' ? ' com este motivo' : ''}.</p>
         </div>`;
       return;
     }
+
+    // Carregar nomes dos reporters
+    const allReporterIds = [...new Set(reports.map(r => r.reporter_id).filter(Boolean))];
+    const reporterMap = await loadReporterNames(allReporterIds);
 
     // Agrupar por post_id
     const grouped = {};
@@ -407,88 +470,109 @@
       grouped[r.post_id].push(r);
     });
 
-    const postIds = Object.keys(grouped);
+    // Ordenar grupos: mais denúncias abertas primeiro
+    const postIds = Object.keys(grouped).sort((a, b) => {
+      const aOpen = grouped[a].filter(r => r.status === 'open').length;
+      const bOpen = grouped[b].filter(r => r.status === 'open').length;
+      return bOpen - aOpen;
+    });
+
     const postMap = await loadPostTitles(postIds);
 
     const html = postIds.map(pid => {
       const items = grouped[pid];
       const open = items.filter(r => r.status === 'open');
+      const closed = items.filter(r => r.status !== 'open');
       const post = postMap[pid] || {};
-      const postTitle = escape(post.title || post.titulo || pid);
+      const postTitle = escape(post.title || post.titulo || '(título não carregado)');
       const postStatus = post.status || 'unknown';
+      const authorId = post.author_id || '';
 
-      // Contagem por motivo
+      // Contagem por motivo (todos)
       const reasonCounts = {};
       items.forEach(r => { reasonCounts[r.reason] = (reasonCounts[r.reason] || 0) + 1; });
       const reasonSummary = Object.entries(reasonCounts)
         .sort((a, b) => b[1] - a[1])
-        .map(([r, n]) => `<span class="kc-badge" style="background:var(--kc-surface-dark);margin:2px;">${escape(reasonLabel(r))}: <strong>${n}</strong></span>`)
+        .map(([r, n]) => `<span class="kc-badge" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);padding:2px 8px;border-radius:4px;margin:2px;font-size:.78em;">${escape(reasonLabel(r))}: <strong>${n}</strong></span>`)
         .join(' ');
 
-      const statusColor = postStatus === 'published' ? '#4caf50' : postStatus === 'hidden' ? '#ff9800' : '#f44336';
-      const postStatusBadge = `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:.8em;background:${statusColor};color:#fff;">${escape(postStatus)}</span>`;
+      const statusColor = { published: '#4caf50', hidden: '#ff9800', deleted: '#f44336', pending: '#9c27b0' }[postStatus] || '#757575';
+      const postStatusBadge = `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:.78em;background:${statusColor};color:#fff;margin-left:6px;">${escape(postStatus)}</span>`;
 
-      // Tabela de denúncias individuais (apenas open)
-      const rows = open.map(r => `
-        <tr>
-          <td style="padding:8px;font-size:.85em;">${escape(reasonLabel(r.reason))}</td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${escape(r.details || '—')}</td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);">${escape(formatDate(r.created_at))}</td>
-          <td style="padding:8px;">
-            <span style="padding:2px 8px;border-radius:4px;font-size:.8em;background:${r.status === 'open' ? '#ff5722' : '#9e9e9e'};color:#fff;">${escape(r.status)}</span>
+      // Linhas da tabela de denúncias individuais
+      const displayItems = _filters.status === 'open' ? open : _filters.status === 'closed' ? closed : items;
+      const rows = displayItems.map(r => {
+        const reporter = reporterMap[r.reporter_id] || {};
+        const reporterName = reporter.name || '—';
+        const reporterEmail = reporter.email ? `<br><small style="color:var(--kc-text-dark-secondary);font-size:.85em;">${escape(reporter.email)}</small>` : '';
+        return `
+        <tr style="border-bottom:1px solid var(--kc-border-dark);">
+          <td style="padding:8px;font-size:.85em;white-space:nowrap;">${escape(reasonLabel(r.reason))}</td>
+          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);max-width:220px;">${escape(r.details || '—')}</td>
+          <td style="padding:8px;font-size:.8em;">
+            ${escape(reporterName)}${reporterEmail}
+            ${r.reporter_id ? `<br><small style="color:var(--kc-text-dark-secondary);font-size:.82em;font-family:monospace;">${escape(r.reporter_id.substring(0,8))}…</small>` : ''}
           </td>
-        </tr>`).join('');
+          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);white-space:nowrap;">${escape(formatDate(r.created_at))}</td>
+          <td style="padding:8px;">
+            <span style="padding:2px 8px;border-radius:4px;font-size:.78em;background:${r.status === 'open' ? '#ff5722' : '#9e9e9e'};color:#fff;">${escape(r.status)}</span>
+          </td>
+        </tr>`;
+      }).join('');
 
       return `
       <div class="kc-admin-report-group" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:12px;padding:20px;margin-bottom:20px;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-          <div>
+          <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:1.05em;margin-bottom:4px;">
               <i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;"></i>
-              ${postTitle} ${postStatusBadge}
+              ${postTitle}${postStatusBadge}
             </div>
-            <div style="font-size:.8em;color:var(--kc-text-dark-secondary);margin-bottom:6px;">
-              ID: <code>${escape(pid)}</code>
-              &nbsp;·&nbsp; Total denúncias: <strong>${items.length}</strong>
-              &nbsp;·&nbsp; Em aberto: <strong>${open.length}</strong>
+            <div style="font-size:.8em;color:var(--kc-text-dark-secondary);margin-bottom:6px;word-break:break-all;">
+              ID: <code style="font-size:.9em;">${escape(pid)}</code>
+              &nbsp;·&nbsp; <strong style="color:var(--kc-text-dark);">${open.length}</strong> em aberto
+              &nbsp;·&nbsp; <strong>${items.length}</strong> total
+              ${authorId ? `&nbsp;·&nbsp; <a href="../profile.html?id=${encodeURIComponent(authorId)}" target="_blank" style="color:var(--kc-primary-brand);font-size:.95em;">Ver perfil do autor</a>` : ''}
             </div>
-            <div>${reasonSummary}</div>
+            <div style="flex-wrap:wrap;display:flex;gap:2px;">${reasonSummary}</div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
             <a href="../product.html?id=${encodeURIComponent(pid)}" target="_blank"
-               style="padding:7px 14px;background:var(--kc-background-dark);border:1px solid var(--kc-border-dark);border-radius:6px;text-decoration:none;font-size:.85em;color:var(--kc-text-dark);">
+               style="padding:7px 14px;background:var(--kc-background-dark);border:1px solid var(--kc-border-dark);border-radius:6px;text-decoration:none;font-size:.85em;color:var(--kc-text-dark);display:inline-flex;align-items:center;gap:5px;">
                <i class="fas fa-eye"></i> Ver post
             </a>
             ${open.length > 0 ? `
             <button type="button" data-action="closeReports" data-post-id="${escape(pid)}"
-                    style="padding:7px 14px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
+                    style="padding:7px 14px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
               <i class="fas fa-check"></i> Fechar denúncias
             </button>` : ''}
             ${postStatus === 'published' ? `
             <button type="button" data-action="hidePost" data-post-id="${escape(pid)}"
-                    style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
-              <i class="fas fa-eye-slash"></i> Ocultar post
+                    style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
+              <i class="fas fa-eye-slash"></i> Ocultar
             </button>` : ''}
             ${postStatus === 'hidden' ? `
             <button type="button" data-action="restorePost" data-post-id="${escape(pid)}"
-                    style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;">
-              <i class="fas fa-eye"></i> Restaurar post
+                    style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
+              <i class="fas fa-eye"></i> Restaurar
             </button>` : ''}
+            ${postStatus !== 'deleted' ? `
             <button type="button" data-action="deletePost" data-post-id="${escape(pid)}"
-                    style="padding:7px 14px;background:#b71c1c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;"
+                    style="padding:7px 14px;background:#b71c1c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;"
                     title="Esta ação não pode ser desfeita pelo painel.">
-              <i class="fas fa-trash"></i> Deletar post
-            </button>
+              <i class="fas fa-trash"></i> Deletar
+            </button>` : ''}
           </div>
         </div>
-        ${open.length > 0 ? `
+        ${displayItems.length > 0 ? `
         <div style="overflow-x:auto;margin-top:10px;">
-          <table style="width:100%;border-collapse:collapse;font-size:.9em;">
+          <table style="width:100%;border-collapse:collapse;font-size:.9em;min-width:560px;">
             <thead>
-              <tr style="border-bottom:1px solid var(--kc-border-dark);">
-                <th style="padding:8px;text-align:left;font-weight:600;">Motivo</th>
+              <tr style="border-bottom:2px solid var(--kc-border-dark);">
+                <th style="padding:8px;text-align:left;font-weight:600;white-space:nowrap;">Motivo</th>
                 <th style="padding:8px;text-align:left;font-weight:600;">Detalhes</th>
-                <th style="padding:8px;text-align:left;font-weight:600;">Data</th>
+                <th style="padding:8px;text-align:left;font-weight:600;">Quem denunciou</th>
+                <th style="padding:8px;text-align:left;font-weight:600;white-space:nowrap;">Data</th>
                 <th style="padding:8px;text-align:left;font-weight:600;">Status</th>
               </tr>
             </thead>
@@ -522,6 +606,12 @@
         delete actionEl.dataset.kcBusy;
       }
     });
+
+    // Filtros: status e motivo
+    const statusFilter = $('#reports-status-filter');
+    const reasonFilter = $('#reports-reason-filter');
+    if (statusFilter) statusFilter.addEventListener('change', () => render());
+    if (reasonFilter)  reasonFilter.addEventListener('change', () => render());
   }
 
   // ---- Boot ----

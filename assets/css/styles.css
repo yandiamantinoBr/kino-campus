@@ -1701,10 +1701,38 @@ main {
     color: var(--kc-primary-brand);
 }
 
-.kc-mobile-menu-content hr {
+.kc-mobile-menu-content hr,
+.kc-mobile-menu-divider {
     border: none;
     border-top: 1px solid var(--kc-border-dark);
     margin: 10px 20px;
+}
+
+/* Seção de usuário no menu mobile */
+.kc-mobile-menu-user-section {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--kc-border-dark);
+    margin-bottom: 4px;
+}
+.kc-mobile-menu-user-link {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0 !important;
+    background: none !important;
+    text-decoration: none;
+}
+.kc-mobile-menu-user-link:hover { background: none !important; }
+.kc-mobile-menu-user-avatar-wrap {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.kc-mobile-menu-user-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--kc-border-dark);
 }
 
 .kc-mobile-menu-overlay {
