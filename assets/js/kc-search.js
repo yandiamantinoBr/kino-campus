@@ -363,13 +363,137 @@
     if (countEl) countEl.textContent = String(len);
   }
 
+  // ─── Dropdown de sugestões em tempo real (V8.2.3) ──────────────────────────
+
+  let dropdownDebounceTimer = null;
+
+  function getOrCreateDropdown(searchBarEl) {
+    let dropdown = document.getElementById('kcSearchDropdown');
+    if (!dropdown && searchBarEl) {
+      dropdown = document.createElement('div');
+      dropdown.id = 'kcSearchDropdown';
+      dropdown.className = 'kc-search-dropdown';
+      dropdown.setAttribute('role', 'listbox');
+      dropdown.setAttribute('aria-label', 'Sugestões de busca');
+      searchBarEl.appendChild(dropdown);
+    }
+    return dropdown;
+  }
+
+  function formatPrice(post) {
+    if (post.precoTexto) return post.precoTexto;
+    if (post.preco === 0 || post.preco === '0') return 'Grátis';
+    if (post.preco) return `R$ ${Number(post.preco).toFixed(2).replace('.', ',')}`;
+    return '';
+  }
+
+  function getPostHref(post) {
+    if (post.id) return `product.html?id=${encodeURIComponent(post.id)}`;
+    return '#';
+  }
+
+  function renderDropdown(dropdown, results, query) {
+    dropdown.innerHTML = '';
+
+    if (!results.length) {
+      const empty = document.createElement('div');
+      empty.className = 'kc-search-dropdown__empty';
+      empty.textContent = `Nenhum resultado para "${query}"`;
+      dropdown.appendChild(empty);
+      dropdown.classList.add('active');
+      return;
+    }
+
+    const maxItems = 6;
+    const shown = results.slice(0, maxItems);
+
+    shown.forEach((post) => {
+      const item = document.createElement('a');
+      item.className = 'kc-search-dropdown__item';
+      item.href = getPostHref(post);
+      item.setAttribute('role', 'option');
+
+      const emoji = document.createElement('span');
+      emoji.className = 'kc-search-dropdown__emoji';
+      emoji.textContent = post.emoji || '✨';
+
+      const info = document.createElement('div');
+      info.className = 'kc-search-dropdown__info';
+
+      const title = document.createElement('div');
+      title.className = 'kc-search-dropdown__title';
+      title.textContent = post.titulo || '(sem título)';
+
+      const meta = document.createElement('div');
+      meta.className = 'kc-search-dropdown__meta';
+      const parts = [post.categoria || post.modulo || ''].filter(Boolean);
+      if (post.autor) parts.push(`por ${post.autor}`);
+      meta.textContent = parts.join(' · ');
+
+      info.appendChild(title);
+      info.appendChild(meta);
+
+      const priceStr = formatPrice(post);
+      if (priceStr) {
+        const price = document.createElement('span');
+        price.className = 'kc-search-dropdown__price';
+        price.textContent = priceStr;
+        item.appendChild(emoji);
+        item.appendChild(info);
+        item.appendChild(price);
+      } else {
+        item.appendChild(emoji);
+        item.appendChild(info);
+      }
+
+      dropdown.appendChild(item);
+    });
+
+    if (results.length > maxItems) {
+      const footer = document.createElement('div');
+      footer.className = 'kc-search-dropdown__footer';
+      footer.textContent = `Ver todos os ${results.length} resultados →`;
+      footer.addEventListener('click', () => {
+        window.location.href = `search-results.html?q=${encodeURIComponent(query)}`;
+      });
+      dropdown.appendChild(footer);
+    }
+
+    dropdown.classList.add('active');
+  }
+
+  function closeDropdown() {
+    const dropdown = document.getElementById('kcSearchDropdown');
+    if (dropdown) dropdown.classList.remove('active');
+  }
+
+  async function updateDropdown(query, dropdown) {
+    const q = String(query || '').trim();
+    if (q.length < 2) {
+      closeDropdown();
+      return;
+    }
+    try {
+      const results = await searchPosts(q, { limit: 8, minScore: 0.2 });
+      renderDropdown(dropdown, results, q);
+    } catch (_) {
+      closeDropdown();
+    }
+  }
+
+  // ─── initSearch ─────────────────────────────────────────────────────────────
+
   function initSearch() {
     const searchInput = document.getElementById('searchInput');
+    const searchBarEl = searchInput ? searchInput.closest('.kc-search-bar') : null;
     const searchButton = document.querySelector('.kc-search-bar button');
     const resultsPage = isResultsPage();
 
     // Se a página tem kc-filters, respeitar a função padrão (tab-search)
     const hasPageFilter = (!resultsPage) && (typeof window.filterPosts === 'function');
+
+    // Dropdown de sugestões (apenas fora da página de resultados)
+    const dropdown = (!resultsPage && searchBarEl) ? getOrCreateDropdown(searchBarEl) : null;
 
     // Não pré-carregamos o seed (database.json) aqui: em driver supabase evita download desnecessário.
 
@@ -380,24 +504,43 @@
       renderResultsToPage(searchInput ? searchInput.value : qParam);
     }
 
+    // Fechar dropdown ao clicar fora
+    if (dropdown) {
+      document.addEventListener('click', function (e) {
+        if (searchBarEl && !searchBarEl.contains(e.target)) closeDropdown();
+      }, true);
+    }
+
     // Input de busca
     if (searchInput) {
       searchInput.addEventListener('input', function (e) {
         const q = e.target.value;
+
         if (resultsPage) {
           renderResultsToPage(q);
           return;
         }
         if (hasPageFilter) {
           window.filterPosts(q);
-          return;
+        } else {
+          filterCurrentPageCards(q);
         }
-        filterCurrentPageCards(q);
+
+        // Atualizar dropdown com debounce
+        if (dropdown) {
+          clearTimeout(dropdownDebounceTimer);
+          dropdownDebounceTimer = setTimeout(() => updateDropdown(q, dropdown), 180);
+        }
       });
 
-      searchInput.addEventListener('keypress', function (e) {
+      searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          closeDropdown();
+          return;
+        }
         if (e.key !== 'Enter') return;
         e.preventDefault();
+        closeDropdown();
         const q = this.value;
         if (resultsPage) {
           renderResultsToPage(q);
@@ -409,11 +552,18 @@
         }
         globalSearch(q, true);
       });
+
+      searchInput.addEventListener('focus', function () {
+        if (dropdown && this.value.trim().length >= 2) {
+          updateDropdown(this.value, dropdown);
+        }
+      });
     }
 
     if (searchButton) {
       searchButton.addEventListener('click', function (e) {
         e.preventDefault();
+        closeDropdown();
         const q = searchInput ? searchInput.value : '';
         if (resultsPage) {
           renderResultsToPage(q);

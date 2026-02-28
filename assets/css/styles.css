@@ -180,6 +180,109 @@ header {
     transform: scale(1.1);
 }
 
+/* Search Dropdown (V8.2.3) */
+.kc-search-bar {
+    position: relative;
+}
+
+.kc-search-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background-color: var(--kc-surface-dark);
+    border: 1px solid var(--kc-border-dark);
+    border-radius: 14px;
+    max-height: 340px;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    z-index: 150;
+}
+
+.kc-search-dropdown.active {
+    display: block;
+}
+
+.kc-search-dropdown__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--kc-text-dark-primary);
+    border-bottom: 1px solid var(--kc-border-dark);
+    transition: background var(--transition-speed) ease;
+    font-size: 0.88em;
+}
+
+.kc-search-dropdown__item:last-child {
+    border-bottom: none;
+}
+
+.kc-search-dropdown__item:hover,
+.kc-search-dropdown__item:focus {
+    background-color: var(--kc-background-dark);
+    outline: none;
+}
+
+.kc-search-dropdown__emoji {
+    font-size: 1.3em;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+
+.kc-search-dropdown__info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.kc-search-dropdown__title {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kc-search-dropdown__meta {
+    font-size: 0.78em;
+    color: var(--kc-text-dark-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kc-search-dropdown__price {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: var(--kc-primary-brand);
+    flex-shrink: 0;
+}
+
+.kc-search-dropdown__empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--kc-text-dark-secondary);
+    font-size: 0.9em;
+}
+
+.kc-search-dropdown__footer {
+    padding: 8px 14px;
+    text-align: center;
+    font-size: 0.82em;
+    color: var(--kc-primary-brand);
+    border-top: 1px solid var(--kc-border-dark);
+    cursor: pointer;
+    font-weight: 600;
+    transition: background var(--transition-speed) ease;
+}
+
+.kc-search-dropdown__footer:hover {
+    background-color: var(--kc-background-dark);
+}
+
 .kc-nav-links {
     display: none;
 }
@@ -1633,26 +1736,40 @@ main {
 @media (max-width: 576px) {
     .kc-header-container {
         padding: 10px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
-    
+
     .kc-logo a {
         font-size: 1.3em;
     }
-    
+
     .kc-logo-text {
         display: none;
     }
-    
+
     .kc-search-bar {
-        max-width: 100%;
-        order: 3;
-        flex-basis: 100%;
-        margin-top: 10px;
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+        order: unset;
+        flex-basis: auto;
+        margin-top: 0;
     }
-    
+
     .kc-user-actions .btn-login {
+        display: inline-flex;
+    }
+
+    .kc-user-actions a.btn-login.is-auth {
+        padding: 4px 6px;
+    }
+
+    .kc-header-user__name {
         display: none;
+    }
+
+    .kc-header-user {
+        gap: 4px;
     }
     
     .kc-hero-content h1 {
@@ -1860,7 +1977,7 @@ main {
     padding: 12px 24px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    z-index: 300;
+    z-index: 9997;
     opacity: 0;
     transition: all 0.3s ease;
     border-left: 4px solid var(--kc-primary-brand);
@@ -1969,19 +2086,38 @@ input:focus-visible {
         display: none;
     }
     
-    /* Barra de busca ocupar largura total */
-    .kc-search-bar {
-        order: 3;
-        flex-basis: 100%;
-        max-width: 100%;
-        margin-top: 8px;
+    /* Header linha única no mobile */
+    .kc-header-container {
+        flex-wrap: nowrap;
     }
-    
-    /* Esconder botão de login no mobile */
+
+    /* Barra de busca compacta no mobile */
+    .kc-search-bar {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+        order: unset;
+        flex-basis: auto;
+        margin-top: 0;
+    }
+
+    /* Mostrar botão de login compacto no mobile */
     .kc-user-actions .btn-login {
+        display: inline-flex;
+    }
+
+    .kc-user-actions a.btn-login.is-auth {
+        padding: 4px 6px;
+    }
+
+    .kc-header-user__name {
         display: none;
     }
-    
+
+    .kc-header-user {
+        gap: 4px;
+    }
+
     /* Main content sem margens laterais */
     main {
         margin: 10px 0;
@@ -2208,24 +2344,44 @@ input:focus-visible {
 /* Breakpoint específico para smartphones pequenos (268-412px) */
 @media (max-width: 420px) {
     header {
-        padding: 8px 12px;
+        padding: 8px 10px;
     }
-    
+
     .kc-header-container {
-        gap: 8px;
+        gap: 6px;
+        flex-wrap: nowrap;
     }
-    
+
     .kc-logo a {
         font-size: 1.2em;
     }
-    
+
     .kc-search-bar {
-        margin-top: 6px;
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-top: 0;
     }
-    
+
     .kc-search-bar input {
-        padding: 8px 10px;
-        font-size: 0.9em;
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .kc-user-actions {
+        gap: 6px;
+    }
+
+    .kc-user-actions a.btn-login.is-auth {
+        padding: 3px 4px;
+    }
+
+    .kc-header-user__name {
+        display: none;
+    }
+
+    .kc-header-user__avatar {
+        width: 22px;
+        height: 22px;
     }
     
     main {
@@ -2527,35 +2683,56 @@ html, body {
     
     
     .kc-search-bar {
-        width: 100%;
-        max-width: 100%;
-        order: 3;
-        flex-basis: 100%;
-        margin-top: 8px;
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+        order: unset;
+        flex-basis: auto;
+        margin-top: 0;
     }
-    
+
     .kc-search-bar input {
-        font-size: 14px;
-        padding: 8px 12px;
+        font-size: 13px;
+        padding: 7px 8px;
     }
-    
+
+    .kc-search-bar button {
+        padding: 6px;
+    }
+
     .kc-header-actions {
         gap: 5px;
     }
-    
+
     .kc-header-actions .theme-toggle {
         padding: 6px 8px;
         font-size: 0.9em;
     }
-    
+
     .kc-header-actions .kc-login-btn {
         padding: 6px 10px;
         font-size: 0.85em;
     }
-    
+
     /* Esconder texto do botão de login em telas muito pequenas */
     .kc-login-btn span {
         display: none;
+    }
+
+    .kc-user-actions a.btn-login.is-auth {
+        padding: 3px 5px;
+    }
+
+    .kc-header-user__name {
+        display: none;
+    }
+
+    .kc-header-user {
+        gap: 3px;
+    }
+
+    .kc-header-container {
+        flex-wrap: nowrap;
     }
 }
 
