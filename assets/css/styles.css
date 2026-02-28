@@ -2810,6 +2810,14 @@ html, body {
         text-overflow: ellipsis;
         max-width: 100%;
     }
+
+    .kc-mobile-nav a span.kc-mobile-nav-label-long,
+    .kc-mobile-nav button span.kc-mobile-nav-label-long {
+        white-space: normal;
+        line-height: 1.05;
+        text-align: center;
+        display: inline-block;
+    }
     
     .kc-mobile-nav a.active,
     .kc-mobile-nav button.active {

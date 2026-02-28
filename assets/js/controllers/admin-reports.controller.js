@@ -133,9 +133,6 @@
       return false;
     }
 
-    const name = profile.display_name || profile.full_name || user.email || 'Admin';
-    const greeting = $('#admin-greeting');
-    if (greeting) greeting.textContent = `Olá, ${name}`;
 
     return true;
   }
@@ -434,6 +431,30 @@
 
   function reasonLabel(r) { return REASON_LABELS[r] || r; }
 
+
+  function renderSummary(reports) {
+    const box = $('#reports-summary');
+    if (!box) return;
+
+    const list = Array.isArray(reports) ? reports : [];
+    const open = list.filter((r) => r.status === 'open').length;
+    const closed = list.filter((r) => r.status === 'closed').length;
+    const reporters = new Set(list.map((r) => r.reporter_id).filter(Boolean)).size;
+
+    const card = (label, value, icon) => `
+      <article style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:10px;padding:10px 12px;">
+        <div style="font-size:.8em;color:var(--kc-text-dark-secondary);"><i class="${icon}"></i> ${label}</div>
+        <strong style="font-size:1.2em;">${value}</strong>
+      </article>`;
+
+    box.innerHTML = [
+      card('Total filtrado', list.length, 'fas fa-list'),
+      card('Em aberto', open, 'fas fa-flag'),
+      card('Fechadas', closed, 'fas fa-check-circle'),
+      card('Usuários que denunciaram', reporters, 'fas fa-users')
+    ].join('');
+  }
+
   function formatDate(iso) {
     if (!iso) return '—';
     try { return new Date(iso).toLocaleString('pt-BR'); } catch (_) { return iso; }
@@ -448,6 +469,8 @@
     setLoading(true);
     const reports = await loadReports();
     setLoading(false);
+
+    renderSummary(reports);
 
     if (!reports.length) {
       const statusLabel = _filters.status === 'open' ? 'em aberto' : _filters.status === 'closed' ? 'fechadas' : '';
