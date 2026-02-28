@@ -1905,6 +1905,36 @@
     const details = detailsRaw.trim().slice(0, 1000);
 
     try {
+      // Caminho preferencial (V8.2.9.1): RPC server-side para reduzir fragilidade de RLS no client.
+      const rpc = await client.rpc('kc_report_post', {
+        p_post_id: postUuid,
+        p_reason: reason,
+        p_details: details ? details : null,
+      });
+
+      if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
+        if (rpc.data.ok) {
+          return {
+            ok: true,
+            data: {
+              id: rpc.data.id || null,
+              post_id: rpc.data.post_id || postUuid,
+            },
+          };
+        }
+
+        const rpcMessage = String(rpc.data.message || '').trim();
+        const rpcCode = String(rpc.data.code || '').trim().toUpperCase();
+        if (rpcCode === 'ALREADY_REPORTED') {
+          return { ok: false, error: { message: rpcMessage || 'Você já denunciou este post.' }, meta: { duplicate: true } };
+        }
+
+        if (rpcMessage) {
+          return { ok: false, error: { message: rpcMessage } };
+        }
+      }
+
+      // Fallback legado: INSERT direto
       const ins = await client
         .from('reports')
         .insert({
