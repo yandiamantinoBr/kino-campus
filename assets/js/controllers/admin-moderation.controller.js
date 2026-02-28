@@ -18,8 +18,9 @@
     audit: {
       entityType: 'all',
       action: 'all',
-      actorId: '',
+      actorQuery: '',
       rows: [],
+      actorsById: {},
     },
   };
 
@@ -188,10 +189,13 @@
 
     if (state.search) {
       const s = state.search.toLowerCase();
-      const filtered = list.filter((p) =>
-        String(p.title || '').toLowerCase().includes(s)
-        || String(p.legacy_id || '').toLowerCase().includes(s)
-        || String(p.id || '').toLowerCase().includes(s));
+      const filtered = list.filter((p) => {
+        const authorName = String((p.author && (p.author.display_name || p.author.full_name)) || '').toLowerCase();
+        return String(p.title || '').toLowerCase().includes(s)
+          || String(p.legacy_id || '').toLowerCase().includes(s)
+          || String(p.id || '').toLowerCase().includes(s)
+          || authorName.includes(s);
+      });
       state.posts = reset ? filtered : state.posts.concat(filtered);
     } else {
       state.posts = reset ? list : state.posts.concat(list);
@@ -206,6 +210,39 @@
       return JSON.stringify(payload || {}, null, 2);
     } catch (_) {
       return '{}';
+    }
+  }
+
+  async function loadActorsById(actorIds) {
+    const client = getClient();
+    if (!client) return {};
+
+    const ids = Array.from(new Set((actorIds || []).filter((id) => UUID_RE.test(String(id || '')))));
+    if (!ids.length) return {};
+
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select('id, display_name, full_name')
+        .in('id', ids);
+
+      if (error) {
+        console.error('[Admin moderation] loadActorsById:', error);
+        return {};
+      }
+
+      const map = {};
+      (data || []).forEach((row) => {
+        map[row.id] = {
+          id: row.id,
+          display_name: row.display_name || '',
+          full_name: row.full_name || '',
+        };
+      });
+      return map;
+    } catch (e) {
+      console.error('[Admin moderation] loadActorsById exceção:', e);
+      return {};
     }
   }
 
@@ -231,7 +268,14 @@
         <td><code>${escape(row.action || '—')}</code></td>
         <td><code>${escape(row.entity_type || '—')}</code></td>
         <td><code>${escape(row.entity_id || '—')}</code></td>
-        <td><code>${escape(row.actor_id || 'service_role/system')}</code></td>
+        <td>${(() => {
+          const actorId = String(row.actor_id || '');
+          if (!actorId) return '<code>service_role/system</code>';
+          const actor = state.audit.actorsById && state.audit.actorsById[actorId];
+          const actorName = actor ? (actor.display_name || actor.full_name || '') : '';
+          if (!actorName) return `<code>${escape(actorId)}</code>`;
+          return `<div><strong>${escape(actorName)}</strong></div><div style="font-size:.78em;color:var(--kc-text-dark-secondary);"><code>${escape(actorId)}</code></div>`;
+        })()}</td>
         <td>
           <button
             type="button"
@@ -260,23 +304,19 @@
     }
     setAuditError('');
 
-    const actor = String(state.audit.actorId || '').trim();
-    if (actor && !UUID_RE.test(actor)) {
-      state.audit.rows = [];
-      renderAuditLogs();
-      setAuditError('O filtro actor_id deve ser um UUID completo.');
-      return;
-    }
+    const actorQuery = String(state.audit.actorQuery || '').trim();
+    const actorQueryLower = actorQuery.toLowerCase();
+    const actorQueryIsUuid = actorQuery && UUID_RE.test(actorQuery);
 
     let query = client
       .from('audit_log')
       .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
       .order('created_at', { ascending: false })
-      .limit(AUDIT_LIMIT);
+      .limit(actorQuery ? Math.max(AUDIT_LIMIT, 200) : AUDIT_LIMIT);
 
     if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
     if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
-    if (actor) query = query.eq('actor_id', actor);
+    if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
 
     const { data, error } = await query;
     if (error) {
@@ -287,7 +327,24 @@
       return;
     }
 
-    state.audit.rows = data || [];
+    const rows = data || [];
+    const actorIds = rows.map((row) => row.actor_id).filter(Boolean);
+    state.audit.actorsById = await loadActorsById(actorIds);
+
+    if (actorQuery && !actorQueryIsUuid) {
+      state.audit.rows = rows.filter((row) => {
+        const actorId = String(row.actor_id || '').toLowerCase();
+        const actor = state.audit.actorsById[String(row.actor_id || '')] || null;
+        const displayName = String(actor && actor.display_name || '').toLowerCase();
+        const fullName = String(actor && actor.full_name || '').toLowerCase();
+        return actorId.includes(actorQueryLower)
+          || displayName.includes(actorQueryLower)
+          || fullName.includes(actorQueryLower);
+      });
+    } else {
+      state.audit.rows = rows;
+    }
+
     renderAuditLogs();
   }
 
@@ -363,13 +420,30 @@
     let error = null;
     let data = null;
     try {
-      const res = await client
-        .from('posts')
-        .update({ status })
-        .eq('id', postId)
-        .select('id');
-      error = res ? res.error : null;
-      data = res ? res.data : null;
+      const rpc = await client.rpc('kc_admin_set_post_status', {
+        p_post_id: postId,
+        p_status: status,
+        p_close_reports: false,
+      });
+
+      if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
+        if (rpc.data.ok && Number(rpc.data.updated_posts || 0) > 0) {
+          data = [{ id: postId }];
+        } else {
+          const fallbackMsg = (rpc.data && rpc.data.code === 'UPDATE_NOT_APPLIED')
+            ? 'A ação foi aceita, mas o banco não aplicou a alteração (RLS/role). Rode a migration v8.2.9.2 no projeto Supabase em produção.'
+            : 'Não foi possível moderar o post.';
+          error = { message: rpc.data.message || fallbackMsg };
+        }
+      } else {
+        const res = await client
+          .from('posts')
+          .update({ status })
+          .eq('id', postId)
+          .select('id');
+        error = res ? res.error : null;
+        data = res ? res.data : null;
+      }
     } catch (e) {
       error = e;
     }
@@ -479,13 +553,13 @@
     const auditActor = $('#audit-actor-id-filter');
     if (auditActor) {
       auditActor.addEventListener('change', async () => {
-        state.audit.actorId = String(auditActor.value || '').trim();
+        state.audit.actorQuery = String(auditActor.value || '').trim();
         await fetchAuditLogs();
       });
       auditActor.addEventListener('keydown', async (ev) => {
         if (ev.key !== 'Enter') return;
         ev.preventDefault();
-        state.audit.actorId = String(auditActor.value || '').trim();
+        state.audit.actorQuery = String(auditActor.value || '').trim();
         await fetchAuditLogs();
       });
     }
@@ -493,7 +567,7 @@
     const auditRefresh = $('#audit-refresh');
     if (auditRefresh) {
       auditRefresh.addEventListener('click', async () => {
-        if (auditActor) state.audit.actorId = String(auditActor.value || '').trim();
+        if (auditActor) state.audit.actorQuery = String(auditActor.value || '').trim();
         await fetchAuditLogs();
       });
     }

@@ -92,7 +92,7 @@
           <h1><i class="fas fa-shield-halved"></i>Moderação de Posts</h1>
           <div class="kc-admin-filters">
             <select id="moderation-status-filter"></select>
-            <input id="moderation-search" type="search" placeholder="Buscar por título ou ID" />
+            <input id="moderation-search" type="search" placeholder="Buscar por título, ID, nome ou nickname" />
             <button id="moderation-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
           </div>
         </div>
@@ -138,7 +138,7 @@
               <option value="report_closed">report_closed</option>
               <option value="post_deleted">post_deleted</option>
             </select>
-            <input id="audit-actor-id-filter" type="search" placeholder="Filtrar por actor_id (uuid)" />
+            <input id="audit-actor-id-filter" type="search" placeholder="Filtrar por actor_id, nome ou nickname" />
             <button id="audit-refresh"><i class="fas fa-sync-alt"></i> Atualizar logs</button>
           </div>
 
@@ -152,7 +152,7 @@
                   <th>Ação</th>
                   <th>Entidade</th>
                   <th>entity_id</th>
-                  <th>actor_id</th>
+                  <th>Autor da ação</th>
                   <th>Detalhes</th>
                 </tr>
               </thead>
