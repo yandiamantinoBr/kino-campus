@@ -206,6 +206,12 @@
     if (!client) return { ok: false, error: { message: 'Supabase client não disponível.' } };
 
     try {
+      const rpc = await client.rpc('kc_admin_close_reports', { p_post_id: postId });
+      if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
+        if (rpc.data.ok) return { ok: true };
+        return { ok: false, error: { message: rpc.data.message || 'Não foi possível fechar denúncias.' } };
+      }
+
       const { data, error } = await client
         .from('reports')
         .update({ status: 'closed' })
@@ -228,6 +234,17 @@
     if (!client) return { ok: false, error: { message: 'Supabase client não disponível.' } };
 
     try {
+      const rpc = await client.rpc('kc_admin_set_post_status', {
+        p_post_id: postId,
+        p_status: status,
+        p_close_reports: false,
+      });
+
+      if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
+        if (rpc.data.ok) return { ok: true };
+        return { ok: false, error: { message: rpc.data.message || 'Não foi possível moderar o post.' } };
+      }
+
       const { data, error } = await client
         .from('posts')
         .update({ status })
