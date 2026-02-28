@@ -111,6 +111,22 @@
     return '';
   }
 
+  /**
+   * Extrai o "login" do usuário: prefixo do e-mail (ex.: "yandiamantinobr").
+   * Prioridades: email do profile > email do user.
+   */
+  function resolveCurrentUserLogin(user, profile) {
+    const emailSources = [
+      profile && profile.email,
+      user && user.email,
+    ];
+    for (let i = 0; i < emailSources.length; i++) {
+      const email = String(emailSources[i] || '').trim();
+      if (email.includes('@')) return email.split('@')[0];
+    }
+    return '';
+  }
+
   function applyCommentComposerSessionState(user, profile) {
     const commentAuthorInput = document.getElementById('commentAuthor');
     const commentAuthorHint = document.getElementById('commentAuthorHint');
@@ -119,6 +135,7 @@
 
     const resolvedIdentity = resolveCurrentUserDisplayName(user, profile);
     const resolvedAvatar = resolveCurrentUserAvatar(user, profile);
+    const resolvedLogin = resolveCurrentUserLogin(user, profile);
     const isAuthenticated = !!(user && user.id);
 
     if (resolvedIdentity) commentAuthorInput.value = resolvedIdentity;
@@ -128,11 +145,18 @@
       commentAuthorInput.setAttribute('aria-readonly', 'true');
       commentAuthorInput.removeAttribute('placeholder');
       if (!commentAuthorInput.value) commentAuthorInput.value = 'Conta autenticada';
-      if (commentAuthorHint) commentAuthorHint.textContent = 'nome da conta';
+      // Hint: mostra o login (@handle) abaixo do nome de exibição
+      if (commentAuthorHint) {
+        commentAuthorHint.textContent = resolvedLogin ? ('@' + resolvedLogin) : '';
+        commentAuthorHint.style.display = resolvedLogin ? 'block' : 'none';
+      }
     } else {
       commentAuthorInput.removeAttribute('readonly');
-      commentAuthorInput.setAttribute('placeholder', 'Seu nome (opcional apenas no modo local/dev)');
-      if (commentAuthorHint) commentAuthorHint.textContent = 'Campo opcional somente no modo local/dev; com sessão ativa, o nome da conta é usado automaticamente.';
+      commentAuthorInput.setAttribute('placeholder', 'Seu nome (opcional no modo local/dev)');
+      if (commentAuthorHint) {
+        commentAuthorHint.textContent = '';
+        commentAuthorHint.style.display = 'none';
+      }
     }
 
     if (composerAvatar) {
@@ -455,11 +479,13 @@
     const card = document.getElementById('sellerCard');
     const avatar = document.getElementById('sellerAvatar');
     const name = document.getElementById('sellerName');
+    const handle = document.getElementById('sellerHandle');
     const stats = document.getElementById('sellerStats');
     if (!card || !avatar || !name || !stats) return;
 
     const normalizedName = post.authorName || post.autor || post.author || '';
     const normalizedAvatar = post.authorAvatar || post.autorAvatar || '';
+    const authorEmail = post.authorEmail || '';
 
     const author = normalizedName || 'Autor';
     const avatarUrl = normalizedAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
@@ -467,10 +493,52 @@
     avatar.src = avatarUrl;
     name.innerHTML = esc(author) + (post.verificado ? ' <i class="fas fa-check-circle" style="color: var(--kc-green-check);" title="Verificado"></i>' : '');
 
+    // Handle (@login) abaixo do nome
+    if (handle) {
+      const loginHandle = authorEmail.includes('@') ? ('@' + authorEmail.split('@')[0]) : '';
+      if (loginHandle) {
+        handle.textContent = loginHandle;
+        handle.style.display = 'block';
+      } else {
+        handle.style.display = 'none';
+      }
+    }
+
     const items = [];
-    if (typeof post.rating === 'number') items.push('<span><i class="fas fa-star" style="color: var(--kc-yellow-badge);"></i> ' + post.rating.toFixed(1) + '</span>');
-    if (typeof post.votos === 'number') items.push('<span><i class="fas fa-fire"></i> ' + post.votos + '</span>');
-    if (typeof post.comentarios === 'number') items.push('<span><i class="fas fa-comments"></i> ' + post.comentarios + '</span>');
+
+    // Engajamento da publicação atual
+    if (typeof post.votos === 'number' && post.votos > 0) {
+      items.push('<span><i class="fas fa-fire"></i> ' + post.votos + ' voto' + (post.votos !== 1 ? 's' : '') + '</span>');
+    }
+    if (typeof post.comentarios === 'number' && post.comentarios > 0) {
+      items.push('<span><i class="fas fa-comments"></i> ' + post.comentarios + ' coment' + (post.comentarios !== 1 ? 'ários' : 'ário') + '</span>');
+    }
+
+    // Outras publicações deste autor no banco local
+    const authorId = getPostAuthorId(post);
+    if (authorId && currentDb) {
+      const allPosts = (Array.isArray(currentDb.posts) ? currentDb.posts
+        : (Array.isArray(currentDb.anuncios) ? currentDb.anuncios : []));
+      const authorPostCount = allPosts.filter(function (p) {
+        if (!p) return false;
+        const pid = String(p.autorId || p.authorId || p.author_id || '').trim();
+        return pid && pid === String(authorId).trim() && String(p.id) !== String(post.id);
+      }).length;
+      if (authorPostCount > 0) {
+        items.push('<span><i class="fas fa-layer-group"></i> ' + authorPostCount + ' publicaç' + (authorPostCount === 1 ? 'ão' : 'ões') + '</span>');
+      }
+    }
+
+    // Membro desde (data de cadastro do perfil)
+    if (post.authorCreatedAt) {
+      try {
+        const d = new Date(post.authorCreatedAt);
+        if (!isNaN(d.getTime())) {
+          const formatted = d.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+          items.push('<span><i class="fas fa-calendar-alt"></i> Desde ' + formatted + '</span>');
+        }
+      } catch (_) { }
+    }
 
     stats.innerHTML = items.join('');
     card.style.display = 'block';
@@ -508,6 +576,8 @@
       autorAvatar: mergedAvatar,
       verified: profile.verified === true ? true : post.verified,
       verificado: profile.verified === true ? true : post.verificado,
+      authorCreatedAt: profile.created_at || post.authorCreatedAt || null,
+      authorEmail: profile.email || post.authorEmail || '',
     };
   }
 
@@ -656,47 +726,183 @@
     }
   }
 
+  /**
+   * Calcula pontuação de relevância entre um candidato e o post atual.
+   * Pontuação mais alta = mais relevante.
+   */
+  function scoreRelated(candidate, currentPost, searchHistory, voteHistory) {
+    var score = 0;
+
+    // 1. Mesma categoria → +20
+    var currentCat = String(currentPost.categoria || currentPost.category || '').toLowerCase().trim();
+    var candidateCat = String(candidate.categoria || candidate.category || '').toLowerCase().trim();
+    if (currentCat && candidateCat && currentCat === candidateCat) score += 20;
+
+    // 2. Mesma subcategoria → +15
+    var currentSubCat = String(
+      currentPost.subcategoria
+      || (currentPost.metadata && currentPost.metadata.subcategory)
+      || ''
+    ).toLowerCase().trim();
+    var candidateSubCat = String(
+      candidate.subcategoria
+      || (candidate.metadata && candidate.metadata.subcategory)
+      || ''
+    ).toLowerCase().trim();
+    if (currentSubCat && candidateSubCat && currentSubCat === candidateSubCat) score += 15;
+
+    // 3. Tags em comum → +6 por tag coincidente (máx +24)
+    var currentTags = Array.isArray(currentPost.tags)
+      ? currentPost.tags.map(function (t) { return String(t).toLowerCase().trim(); })
+      : [];
+    var candidateTags = Array.isArray(candidate.tags)
+      ? candidate.tags.map(function (t) { return String(t).toLowerCase().trim(); })
+      : [];
+    if (currentTags.length && candidateTags.length) {
+      var tagOverlap = currentTags.filter(function (t) { return t && candidateTags.indexOf(t) !== -1; }).length;
+      score += Math.min(tagOverlap * 6, 24);
+    }
+
+    // 4. Coincide com histórico de buscas do usuário → +8 por termo (máx +24)
+    if (Array.isArray(searchHistory) && searchHistory.length) {
+      var title = String(candidate.titulo || candidate.title || '').toLowerCase();
+      var desc = String(candidate.descricao || candidate.description || '').toLowerCase();
+      var searchHits = 0;
+      searchHistory.forEach(function (term) {
+        var t = String(term || '').toLowerCase().trim();
+        if (t && t.length >= 2 && (title.indexOf(t) !== -1 || desc.indexOf(t) !== -1)) searchHits++;
+      });
+      score += Math.min(searchHits * 8, 24);
+    }
+
+    // 5. Usuário votou positivamente em post similar → +12
+    if (Array.isArray(voteHistory) && voteHistory.indexOf(String(candidate.id)) !== -1) {
+      score += 12;
+    }
+
+    // 6. Votos do post candidato (normalizado 0-10)
+    var votos = typeof candidate.votos === 'number' ? candidate.votos : 0;
+    if (votos > 0) score += Math.min(Math.floor(votos / 3), 10);
+
+    // 7. Recência (posts recentes ganham bônus)
+    if (candidate.created_at || candidate.criadoEm) {
+      try {
+        var ts = new Date(candidate.created_at || candidate.criadoEm).getTime();
+        if (!isNaN(ts)) {
+          var daysDiff = (Date.now() - ts) / 86400000;
+          if (daysDiff < 1)       score += 10;
+          else if (daysDiff < 3)  score += 7;
+          else if (daysDiff < 7)  score += 5;
+          else if (daysDiff < 14) score += 2;
+        }
+      } catch (_) { }
+    }
+
+    // 8. Mesmo autor (pode ser interessante ver mais do mesmo autor) → +5
+    var currentAuthorId = String(currentPost.autorId || currentPost.authorId || currentPost.author_id || '').trim();
+    var candidateAuthorId = String(candidate.autorId || candidate.authorId || candidate.author_id || '').trim();
+    if (currentAuthorId && candidateAuthorId && currentAuthorId === candidateAuthorId) score += 5;
+
+    return score;
+  }
+
+  /** Lê o histórico de buscas salvo pelo sistema de busca global */
+  function getRelatedSearchHistory() {
+    try {
+      // Tenta o formato usado pelo kc-search.js
+      var raw = localStorage.getItem('kc_search_history')
+        || localStorage.getItem('kcSearchHistory')
+        || localStorage.getItem('kc:search:history');
+      if (!raw) {
+        // Fallback: query param atual (usuário chegou via busca)
+        try {
+          var q = new URLSearchParams(document.referrer.split('?')[1] || '').get('q');
+          if (q && q.trim()) return [q.trim()];
+        } catch (_) { }
+        return [];
+      }
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.slice(0, 10).map(String);
+      if (typeof parsed === 'string') return [parsed];
+      return [];
+    } catch (_) { return []; }
+  }
+
+  /** Lê IDs de posts que o usuário votou positivamente (localStorage) */
+  function getRelatedVoteHistory() {
+    try {
+      var raw = localStorage.getItem('kc_upvoted_posts')
+        || localStorage.getItem('kcUpvotedPosts')
+        || localStorage.getItem('kc:votes:up');
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch (_) { return []; }
+  }
+
   function setRelated(db, post) {
-    const section = document.getElementById('relatedSection');
-    const grid = document.getElementById('relatedGrid');
+    var section = document.getElementById('relatedSection');
+    var grid = document.getElementById('relatedGrid');
     if (!section || !grid) return;
 
     grid.innerHTML = '';
 
-    const dbItems = (db && Array.isArray(db.posts)) ? db.posts : ((db && Array.isArray(db.anuncios)) ? db.anuncios : []);
-    const userItems = (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') ? window.kcUserPosts.list() : [];
-    const allItems = [...dbItems, ...userItems];
+    var dbItems = (db && Array.isArray(db.posts)) ? db.posts
+      : ((db && Array.isArray(db.anuncios)) ? db.anuncios : []);
+    var userItems = (window.kcUserPosts && typeof window.kcUserPosts.list === 'function')
+      ? window.kcUserPosts.list() : [];
+    var allItems = dbItems.concat(userItems);
 
-    const currentId = String(post.id);
-    const moduleKey = String(post.modulo || '');
+    var currentId = String(post.id);
+    var moduleKey = String(post.modulo || '');
 
-    const related = allItems
-      .filter(a => String(a && a.id) !== currentId && String(a && a.modulo || '') === moduleKey)
-      .slice(0, 6);
+    // Filtra por módulo e exclui publicação atual
+    var candidates = allItems.filter(function (a) {
+      if (!a || String(a.id) === currentId) return false;
+      return String(a.modulo || '') === moduleKey;
+    });
 
-    if (!related.length) {
+    if (!candidates.length) {
       section.style.display = 'none';
       return;
     }
 
-    related.slice(0, 4).forEach(a => {
-      const card = document.createElement('div');
+    var searchHistory = getRelatedSearchHistory();
+    var voteHistory = getRelatedVoteHistory();
+
+    // Pontua e ordena por relevância (desc)
+    var scored = candidates.map(function (a) {
+      return { item: a, score: scoreRelated(a, post, searchHistory, voteHistory) };
+    });
+    scored.sort(function (x, y) { return y.score - x.score; });
+
+    // Exibe os 4 mais relevantes
+    scored.slice(0, 4).forEach(function (entry) {
+      var a = entry.item;
+      var card = document.createElement('div');
       card.className = 'kc-related-card';
-      card.addEventListener('click', () => {
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.addEventListener('click', function () {
         window.location.href = 'product.html?id=' + encodeURIComponent(a.id);
       });
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          window.location.href = 'product.html?id=' + encodeURIComponent(a.id);
+        }
+      });
 
-      const price = (typeof a.preco === 'number')
+      var price = (typeof a.preco === 'number')
         ? (a.preco === 0 ? 'Gratuito' : formatCurrency(a.preco))
         : '';
 
-      card.innerHTML = `
-        <h4>${esc(a.titulo || 'Publicação')}</h4>
-        <div class="kc-related-meta">
-          <span><i class="fas fa-user"></i> ${esc(a.autor || 'Autor')}</span>
-          ${price ? `<span><i class="fas fa-tag"></i> ${esc(price)}</span>` : ''}
-        </div>
-      `;
+      card.innerHTML = '<h4>' + esc(a.titulo || 'Publicação') + '</h4>'
+        + '<div class="kc-related-meta">'
+        + '<span><i class="fas fa-user"></i> ' + esc(a.autor || 'Autor') + '</span>'
+        + (price ? '<span><i class="fas fa-tag"></i> ' + esc(price) + '</span>' : '')
+        + '</div>';
+
       grid.appendChild(card);
     });
 
@@ -1021,13 +1227,23 @@
     return { open, close };
   }
 
-  // ---------------- Reports UI (V8.1.6.2) ----------------
-  // UI mínima: botão “Denunciar” (product.html) + modal com motivo/detalhes.
+  // ─── Reports UI V8.3.0 — Popover / Bottom-Sheet ──────────────────────────
+  // Desktop: popover ancorado ao botão; Mobile: bottom sheet deslizante.
   // Segurança: nenhuma injeção de HTML com dados do usuário (textContent apenas).
-  let _reportUI = null;
+  var _reportPopover = null;
+
+  var REPORT_REASONS = [
+    { value: 'spam',          label: 'Spam / conteúdo repetitivo',   icon: 'fas fa-ban' },
+    { value: 'scam',          label: 'Golpe / fraude',               icon: 'fas fa-exclamation-triangle' },
+    { value: 'inappropriate', label: 'Conteúdo impróprio',           icon: 'fas fa-eye-slash' },
+    { value: 'hate',          label: 'Ódio / assédio',               icon: 'fas fa-frown' },
+    { value: 'illegal',       label: 'Ilegal / proibido',            icon: 'fas fa-gavel' },
+    { value: 'duplicate',     label: 'Publicação duplicada',         icon: 'fas fa-copy' },
+    { value: 'other',         label: 'Outro motivo',                 icon: 'fas fa-comment-dots' },
+  ];
 
   function wireReportButton(ctx) {
-    const btn = document.getElementById('reportButton');
+    var btn = document.getElementById('reportButton');
     if (!btn) return;
 
     if (btn.dataset.kcReportBound === '1') {
@@ -1040,19 +1256,22 @@
     btn.dataset.kcReportPostId = String(ctx.postId || '');
     btn.dataset.kcReportPostTitle = String(ctx.postTitle || 'Publicação');
 
-    btn.addEventListener('click', async () => {
-      const payloadCtx = {
+    btn.addEventListener('click', async function (e) {
+      e.stopPropagation();
+
+      var payloadCtx = {
         postId: btn.dataset.kcReportPostId || ctx.postId,
         postTitle: btn.dataset.kcReportPostTitle || ctx.postTitle,
       };
-      const driver = (window.KC_ENV && window.KC_ENV.driver) ? window.KC_ENV.driver : 'local';
+
+      var driver = (window.KC_ENV && window.KC_ENV.driver) ? window.KC_ENV.driver : 'local';
       if (driver !== 'supabase') {
         try { showToast('Denúncias disponíveis apenas no modo Supabase.', 'info', 2200); } catch (_) { }
         return;
       }
 
       // Requer login
-      let user = null;
+      var user = null;
       try {
         if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
           user = await window.KCAPI.getCurrentUser();
@@ -1065,192 +1284,317 @@
         return;
       }
 
-      if (!_reportUI) _reportUI = buildReportUI();
-      _reportUI.open({ postId: payloadCtx.postId, postTitle: payloadCtx.postTitle });
+      if (!_reportPopover) _reportPopover = buildReportPopover();
+      _reportPopover.open(payloadCtx, btn);
     });
   }
 
-  function buildReportUI() {
-    // overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'kcReportOverlay';
-    overlay.className = 'kc-modal-overlay';
-    overlay.style.display = 'none';
+  /**
+   * buildReportPopover — cria uma vez e reutiliza.
+   * Desktop: popover ancorado ao botão clicado.
+   * Mobile (≤640px): bottom sheet.
+   */
+  function buildReportPopover() {
+    // ── Backdrop ──────────────────────────────────────────────────
+    var backdrop = document.createElement('div');
+    backdrop.className = 'kc-report-popover-backdrop';
+    backdrop.style.display = 'none';
+    document.body.appendChild(backdrop);
 
-    const modal = document.createElement('div');
-    modal.className = 'kc-create-modal';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
+    // ── Popover container ──────────────────────────────────────────
+    var popover = document.createElement('div');
+    popover.className = 'kc-report-popover';
+    popover.setAttribute('role', 'dialog');
+    popover.setAttribute('aria-modal', 'true');
+    popover.setAttribute('aria-label', 'Denunciar publicação');
+    popover.style.display = 'none';
+    document.body.appendChild(popover);
 
-    // header
-    const header = document.createElement('div');
-    header.className = 'kc-create-modal-header';
+    // ── Shared elements ────────────────────────────────────────────
+    var header = document.createElement('div');
+    header.className = 'kc-report-popover-header';
 
-    const h2 = document.createElement('h2');
-    h2.className = 'kc-create-modal-title';
-    h2.textContent = 'Denunciar publicação';
+    var headerTitle = document.createElement('h3');
 
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'kc-modal-close';
-    close.setAttribute('aria-label', 'Fechar');
-    close.textContent = '×';
+    var headerActions = document.createElement('div');
+    headerActions.className = 'kc-report-popover-header-actions';
 
-    header.appendChild(h2);
-    header.appendChild(close);
+    var btnBack = document.createElement('button');
+    btnBack.type = 'button';
+    btnBack.className = 'kc-report-btn-back';
+    btnBack.setAttribute('aria-label', 'Voltar');
+    btnBack.innerHTML = '<i class=”fas fa-arrow-left”></i>';
+    btnBack.style.display = 'none';
 
-    const body = document.createElement('div');
-    body.className = 'kc-create-modal-body';
+    var btnClose = document.createElement('button');
+    btnClose.type = 'button';
+    btnClose.className = 'kc-report-btn-close';
+    btnClose.setAttribute('aria-label', 'Fechar');
+    btnClose.innerHTML = '<i class=”fas fa-times”></i>';
 
-    const subtitle = document.createElement('p');
-    subtitle.style.margin = '0 0 10px 0';
-    subtitle.style.color = 'var(--text-muted, #64748b)';
-    subtitle.style.fontSize = '0.95rem';
-    subtitle.textContent = 'Ajude a manter a comunidade segura. Escolha um motivo e descreva, se quiser.';
+    headerActions.appendChild(btnBack);
+    headerActions.appendChild(btnClose);
+    header.appendChild(headerTitle);
+    header.appendChild(headerActions);
 
-    const postLine = document.createElement('div');
-    postLine.style.margin = '0 0 14px 0';
-    postLine.style.fontSize = '0.95rem';
-    const postLabel = document.createElement('span');
-    postLabel.textContent = 'Post: ';
-    const postTitle = document.createElement('strong');
-    postTitle.textContent = '';
-    postLine.appendChild(postLabel);
-    postLine.appendChild(postTitle);
+    var postLabel = document.createElement('div');
+    postLabel.className = 'kc-report-post-label';
 
-    const reasonWrap = document.createElement('div');
-    reasonWrap.className = 'kc-form-group';
-    const reasonLabel = document.createElement('label');
-    reasonLabel.textContent = 'Motivo (obrigatório)';
-    const reasonSel = document.createElement('select');
-    reasonSel.className = 'kc-input';
-    reasonSel.style.width = '100%';
-    const reasons = [
-      { v: '', t: 'Selecione…' },
-      { v: 'spam', t: 'Spam / conteúdo repetitivo' },
-      { v: 'scam', t: 'Golpe / fraude' },
-      { v: 'inappropriate', t: 'Conteúdo impróprio' },
-      { v: 'hate', t: 'Ódio / assédio' },
-      { v: 'illegal', t: 'Ilegal / proibido' },
-      { v: 'duplicate', t: 'Duplicado' },
-      { v: 'other', t: 'Outro' },
-    ];
-    reasons.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r.v;
-      opt.textContent = r.t;
-      reasonSel.appendChild(opt);
+    // ── Step 1: lista de motivos ───────────────────────────────────
+    var stepReasons = document.createElement('div');
+
+    var reasonList = document.createElement('ul');
+    reasonList.className = 'kc-report-reason-list';
+    reasonList.setAttribute('role', 'listbox');
+
+    REPORT_REASONS.forEach(function (r, idx) {
+      var li = document.createElement('li');
+      li.setAttribute('role', 'option');
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'kc-report-reason-item';
+      btn.dataset.kcReasonValue = r.value;
+
+      var icon = document.createElement('i');
+      icon.className = r.icon;
+      icon.setAttribute('aria-hidden', 'true');
+
+      var labelSpan = document.createElement('span');
+      labelSpan.textContent = r.label;
+
+      var chevron = document.createElement('i');
+      chevron.className = 'fas fa-chevron-right kc-report-chevron';
+      chevron.setAttribute('aria-hidden', 'true');
+
+      btn.appendChild(icon);
+      btn.appendChild(labelSpan);
+      btn.appendChild(chevron);
+      li.appendChild(btn);
+
+      // Separador entre itens (exceto último)
+      if (idx < REPORT_REASONS.length - 1) {
+        var sep = document.createElement('hr');
+        sep.className = 'kc-report-reason-separator';
+        li.appendChild(sep);
+      }
+
+      btn.addEventListener('click', function () {
+        goToConfirm(r.value, r.label);
+      });
+
+      reasonList.appendChild(li);
     });
-    reasonWrap.appendChild(reasonLabel);
-    reasonWrap.appendChild(reasonSel);
 
-    const detailsWrap = document.createElement('div');
-    detailsWrap.className = 'kc-form-group';
-    const detailsLabel = document.createElement('label');
-    detailsLabel.textContent = 'Detalhes (opcional)';
-    const details = document.createElement('textarea');
-    details.className = 'kc-input';
-    details.rows = 4;
-    details.maxLength = 1000;
-    details.placeholder = 'Conte o que aconteceu (máx. 1000 caracteres).';
-    details.style.width = '100%';
-    detailsWrap.appendChild(detailsLabel);
-    detailsWrap.appendChild(details);
+    stepReasons.appendChild(reasonList);
 
-    const status = document.createElement('div');
-    status.style.marginTop = '8px';
-    status.style.fontSize = '0.95rem';
-    status.style.color = 'var(--text-muted, #64748b)';
-    status.textContent = '';
+    // ── Step 2: confirmação + detalhes ────────────────────────────
+    var stepConfirm = document.createElement('div');
+    stepConfirm.style.display = 'none';
 
-    const actions = document.createElement('div');
-    actions.className = 'kc-create-actions';
+    var confirmBody = document.createElement('div');
+    confirmBody.className = 'kc-report-confirm-body';
 
-    const cancel = document.createElement('button');
-    cancel.type = 'button';
-    cancel.className = 'kc-btn-secondary';
-    cancel.textContent = 'Cancelar';
+    var confirmInfo = document.createElement('p');
+    confirmInfo.className = 'kc-report-confirm-info';
+    confirmInfo.textContent = 'Deseja confirmar esta denúncia? Adicione detalhes se quiser.';
 
-    const submit = document.createElement('button');
-    submit.type = 'button';
-    submit.className = 'kc-btn-primary';
-    submit.textContent = 'Enviar denúncia';
+    var detailsLabel = document.createElement('label');
+    detailsLabel.className = 'kc-report-details-label';
+    detailsLabel.textContent = 'Detalhes adicionais (opcional, máx. 1000 caracteres)';
 
-    actions.appendChild(cancel);
-    actions.appendChild(submit);
+    var detailsField = document.createElement('textarea');
+    detailsField.className = 'kc-report-details-field';
+    detailsField.maxLength = 1000;
+    detailsField.placeholder = 'Descreva o problema com mais detalhes…';
+    detailsField.rows = 3;
 
-    body.appendChild(subtitle);
-    body.appendChild(postLine);
-    body.appendChild(reasonWrap);
-    body.appendChild(detailsWrap);
-    body.appendChild(status);
-    body.appendChild(actions);
+    var statusEl = document.createElement('div');
+    statusEl.className = 'kc-report-status';
 
-    modal.appendChild(header);
-    modal.appendChild(body);
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
+    var confirmActions = document.createElement('div');
+    confirmActions.className = 'kc-report-confirm-actions';
 
-    let currentPostId = null;
+    var btnCancel = document.createElement('button');
+    btnCancel.type = 'button';
+    btnCancel.className = 'kc-btn-secondary';
+    btnCancel.textContent = 'Cancelar';
 
-    function closeModal() {
-      overlay.style.display = 'none';
-      reasonSel.value = '';
-      details.value = '';
-      status.textContent = '';
-      submit.disabled = false;
-      cancel.disabled = false;
+    var btnSubmit = document.createElement('button');
+    btnSubmit.type = 'button';
+    btnSubmit.className = 'kc-btn-primary';
+    btnSubmit.innerHTML = '<i class=”fas fa-flag”></i> Enviar denúncia';
+
+    confirmActions.appendChild(btnCancel);
+    confirmActions.appendChild(btnSubmit);
+
+    confirmBody.appendChild(confirmInfo);
+    confirmBody.appendChild(detailsLabel);
+    confirmBody.appendChild(detailsField);
+    confirmBody.appendChild(statusEl);
+    confirmBody.appendChild(confirmActions);
+    stepConfirm.appendChild(confirmBody);
+
+    // ── Assemble ───────────────────────────────────────────────────
+    popover.appendChild(header);
+    popover.appendChild(postLabel);
+    popover.appendChild(stepReasons);
+    popover.appendChild(stepConfirm);
+
+    // ── State ──────────────────────────────────────────────────────
+    var currentPostId = null;
+    var currentReason = null;
+
+    // ── Positioning (desktop) ──────────────────────────────────────
+    function positionPopover(anchorBtn) {
+      var isMobile = window.innerWidth <= 640;
+      if (isMobile) {
+        // bottom sheet: CSS handles it
+        popover.style.removeProperty('top');
+        popover.style.removeProperty('left');
+        popover.style.removeProperty('right');
+        return;
+      }
+
+      var rect = anchorBtn.getBoundingClientRect();
+      var popW = 310; // matches CSS width
+      var margin = 8;
+
+      var left = rect.left;
+      var top = rect.bottom + margin;
+
+      // Evita sair pela direita
+      if (left + popW > window.innerWidth - margin) {
+        left = window.innerWidth - popW - margin;
+      }
+      // Evita sair pela esquerda
+      if (left < margin) left = margin;
+
+      // Se não cabe abaixo, abre acima
+      var popH = Math.min(popover.scrollHeight || 400, window.innerHeight * 0.8);
+      if (top + popH > window.innerHeight - margin) {
+        top = rect.top - popH - margin;
+        if (top < margin) top = margin;
+      }
+
+      popover.style.top = top + 'px';
+      popover.style.left = left + 'px';
+      popover.style.right = 'auto';
+      popover.style.bottom = 'auto';
     }
 
-    function open(ctx) {
+    // ── Steps ──────────────────────────────────────────────────────
+    function showStep1() {
+      headerTitle.innerHTML = '<i class=”fas fa-flag” aria-hidden=”true”></i> Denunciar';
+      btnBack.style.display = 'none';
+      stepReasons.style.display = '';
+      stepConfirm.style.display = 'none';
+      detailsField.value = '';
+      statusEl.textContent = '';
+      btnSubmit.disabled = false;
+      btnCancel.disabled = false;
+    }
+
+    function goToConfirm(reasonValue, reasonLabel) {
+      currentReason = reasonValue;
+      headerTitle.innerHTML = '<i class=”fas fa-flag” aria-hidden=”true”></i> ' + esc(reasonLabel);
+      btnBack.style.display = '';
+      stepReasons.style.display = 'none';
+      stepConfirm.style.display = '';
+      statusEl.textContent = '';
+      try { detailsField.focus(); } catch (_) { }
+    }
+
+    // ── Open / Close ───────────────────────────────────────────────
+    function open(ctx, anchorBtn) {
       currentPostId = ctx.postId;
-      postTitle.textContent = String(ctx.postTitle || 'Publicação');
-      overlay.style.display = 'flex';
-      // foco inicial
-      try { reasonSel.focus(); } catch (_) { }
+
+      var title = String(ctx.postTitle || 'Publicação');
+      postLabel.textContent = title;
+
+      showStep1();
+
+      backdrop.style.display = '';
+      popover.style.display = '';
+
+      // Positioning must happen after display (to measure dimensions)
+      requestAnimationFrame(function () {
+        positionPopover(anchorBtn);
+      });
+
+      try { reasonList.querySelector('.kc-report-reason-item').focus(); } catch (_) { }
+    }
+
+    function closePopover() {
+      backdrop.style.display = 'none';
+      popover.style.display = 'none';
+      currentPostId = null;
+      currentReason = null;
+      showStep1();
     }
 
     async function submitReport() {
-      const reason = String(reasonSel.value || '').trim();
-      if (!reason) {
-        status.textContent = 'Selecione um motivo.';
-        return;
-      }
-      submit.disabled = true;
-      cancel.disabled = true;
-      status.textContent = 'Enviando…';
+      if (!currentReason) return;
 
-      let res = null;
+      btnSubmit.disabled = true;
+      btnCancel.disabled = true;
+      statusEl.textContent = 'Enviando…';
+
+      var res = null;
       try {
         if (window.KCAPI && typeof window.KCAPI.reportPost === 'function') {
-          res = await window.KCAPI.reportPost(currentPostId, { reason, details: details.value });
+          res = await window.KCAPI.reportPost(currentPostId, {
+            reason: currentReason,
+            details: detailsField.value,
+          });
         }
       } catch (e) {
         res = { ok: false, error: { message: 'Falha ao enviar.' } };
       }
 
       if (res && res.ok) {
-        status.textContent = 'Obrigado! Sua denúncia foi registrada.';
+        statusEl.textContent = 'Denúncia registrada. Obrigado!';
+        statusEl.style.color = 'var(--kc-green-check, #22c55e)';
         try { showToast('Denúncia registrada. Obrigado!', 'success', 2200); } catch (_) { }
-        setTimeout(closeModal, 650);
+        setTimeout(closePopover, 900);
         return;
       }
 
-      const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível registrar a denúncia.';
-      status.textContent = msg;
+      var msg = (res && res.error && res.error.message)
+        ? String(res.error.message)
+        : 'Não foi possível registrar a denúncia.';
+      statusEl.textContent = msg;
+      statusEl.style.color = '';
       try { showToast(msg, 'error', 2600); } catch (_) { }
-      submit.disabled = false;
-      cancel.disabled = false;
+      btnSubmit.disabled = false;
+      btnCancel.disabled = false;
     }
 
-    // wire
-    close.addEventListener('click', closeModal);
-    cancel.addEventListener('click', closeModal);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
-    submit.addEventListener('click', submitReport);
+    // ── Event wiring ───────────────────────────────────────────────
+    btnClose.addEventListener('click', closePopover);
+    btnCancel.addEventListener('click', closePopover);
+    btnBack.addEventListener('click', showStep1);
+    btnSubmit.addEventListener('click', submitReport);
 
-    return { open, close: closeModal };
+    // Fechar ao clicar no backdrop
+    backdrop.addEventListener('click', closePopover);
+
+    // Fechar com Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && popover.style.display !== 'none') closePopover();
+    });
+
+    // Reposicionar no resize (desktop)
+    window.addEventListener('resize', function () {
+      if (popover.style.display !== 'none' && window.innerWidth > 640) {
+        var anchorEl = document.getElementById('reportButton');
+        if (anchorEl) positionPopover(anchorEl);
+      }
+    });
+
+    return { open: open, close: closePopover };
   }
+  // ─────────────────────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', () => {
     bindStaticInteractions();

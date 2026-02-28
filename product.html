@@ -312,7 +312,8 @@
     .kc-seller-profile {
       display: flex;
       gap: 15px;
-      align-items: center;
+      align-items: flex-start;
+      margin-bottom: 14px;
     }
 
     .kc-seller-avatar {
@@ -321,7 +322,13 @@
       border-radius: 50%;
       object-fit: cover;
       background-color: var(--kc-background-dark);
-      border: 1px solid var(--kc-border-dark);
+      border: 2px solid var(--kc-border-dark);
+      flex-shrink: 0;
+    }
+
+    .kc-seller-info {
+      flex: 1;
+      min-width: 0;
     }
 
     .kc-seller-name {
@@ -329,19 +336,29 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .kc-seller-handle {
+      font-size: .82em;
+      color: var(--kc-primary-brand);
+      font-weight: 500;
+      margin-top: 1px;
+      margin-bottom: 6px;
     }
 
     .kc-seller-stats {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
-      font-size: .85em;
+      gap: 10px;
+      font-size: .82em;
       color: var(--kc-text-dark-secondary);
-      margin-top: 4px;
     }
 
-    .kc-seller-stats i {
-      margin-right: 6px;
+    .kc-seller-stats span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .kc-comments-section {
@@ -396,24 +413,42 @@
       cursor: pointer;
     }
 
+    /* Comment composer — CSS Grid para alinhar editor à borda do avatar */
     .kc-comment-composer {
-      display: flex;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 12px;
+      row-gap: 10px;
       margin-bottom: 14px;
-      align-items: flex-start;
     }
 
     .kc-comment-composer-avatar {
+      grid-column: 1;
+      grid-row: 1;
       width: 44px;
       height: 44px;
       border-radius: 50%;
       background-color: var(--kc-background-dark);
       border: 1px solid var(--kc-border-dark);
+      align-self: center;
       flex-shrink: 0;
     }
 
+    .kc-comment-composer-main {
+      grid-column: 2;
+      grid-row: 1;
+      min-width: 0;
+    }
+
+    /* Editor ocupa toda a largura (colunas 1+2) — alinha com borda do avatar */
+    .kc-comment-editor-wrap {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
     .kc-comment-author-wrap {
-      margin-bottom: 10px;
+      margin-bottom: 2px;
     }
 
     .kc-comment-author-inline {
@@ -424,9 +459,9 @@
       background: transparent;
       color: var(--kc-text-dark);
       font-family: inherit;
-      font-size: 1.12rem;
+      font-size: 1.05rem;
       font-weight: 700;
-      line-height: 1.2;
+      line-height: 1.3;
       border-radius: 0;
     }
 
@@ -439,9 +474,16 @@
       pointer-events: none;
     }
 
+    .kc-comment-author-hint {
+      font-size: .82em;
+      color: var(--kc-primary-brand);
+      margin-top: 1px;
+      display: block;
+    }
+
+    /* Editor não precisa mais de margem negativa — já está no grid correto */
     .kc-comment-editor {
-      margin-left: -56px;
-      width: calc(100% + 56px);
+      /* sem margin-left negativa — herdado do grid wrapper */
     }
 
     .kc-comment-preview {
@@ -557,6 +599,233 @@
       min-width: 0;
     }
 
+    /* ─── Report Popover ─────────────────────────────────────── */
+    .kc-report-popover-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .45);
+      z-index: 8000;
+      animation: kc-fade-in .18s ease;
+    }
+
+    @keyframes kc-fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes kc-sheet-up {
+      from { transform: translateY(24px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    @keyframes kc-pop-in {
+      from { transform: scale(.95) translateY(-6px); opacity: 0; }
+      to   { transform: scale(1)   translateY(0);    opacity: 1; }
+    }
+
+    .kc-report-popover {
+      position: fixed;
+      z-index: 8001;
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
+      overflow: hidden;
+    }
+
+    /* Desktop: popover ancorado ao botão */
+    @media (min-width: 641px) {
+      .kc-report-popover {
+        border-radius: 14px;
+        width: 310px;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: kc-pop-in .18s cubic-bezier(.22, 1, .36, 1);
+      }
+    }
+
+    /* Mobile: bottom sheet */
+    @media (max-width: 640px) {
+      .kc-report-popover {
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-radius: 20px 20px 0 0;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: kc-sheet-up .22s cubic-bezier(.22, 1, .36, 1);
+      }
+    }
+
+    .kc-report-popover-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--kc-border-dark);
+      position: sticky;
+      top: 0;
+      background: var(--kc-surface-dark);
+      z-index: 1;
+    }
+
+    .kc-report-popover-header h3 {
+      margin: 0;
+      font-size: .97rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .kc-report-popover-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kc-report-btn-back,
+    .kc-report-btn-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--kc-text-dark-secondary);
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      transition: background .12s, color .12s;
+    }
+
+    .kc-report-btn-back:hover,
+    .kc-report-btn-close:hover {
+      background: rgba(255, 255, 255, .07);
+      color: var(--kc-text-dark);
+    }
+
+    .kc-report-post-label {
+      padding: 10px 18px;
+      font-size: .82em;
+      color: var(--kc-text-dark-secondary);
+      background: var(--kc-background-dark);
+      border-bottom: 1px solid var(--kc-border-dark);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kc-report-reason-list {
+      list-style: none;
+      margin: 0;
+      padding: 6px 0;
+    }
+
+    .kc-report-reason-item {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 13px 18px;
+      cursor: pointer;
+      transition: background .1s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      color: var(--kc-text-dark);
+      font-family: inherit;
+      font-size: .93rem;
+    }
+
+    .kc-report-reason-item:hover {
+      background: rgba(255, 255, 255, .05);
+    }
+
+    .kc-report-reason-item i {
+      width: 20px;
+      text-align: center;
+      font-size: .9rem;
+      color: var(--kc-text-dark-secondary);
+      flex-shrink: 0;
+    }
+
+    .kc-report-reason-item span {
+      flex: 1;
+    }
+
+    .kc-report-reason-item .kc-report-chevron {
+      font-size: .75rem;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-report-reason-separator {
+      height: 1px;
+      background: var(--kc-border-dark);
+      margin: 0;
+    }
+
+    .kc-report-confirm-body {
+      padding: 16px 18px;
+    }
+
+    .kc-report-confirm-info {
+      font-size: .9rem;
+      color: var(--kc-text-dark-secondary);
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    .kc-report-details-field {
+      width: 100%;
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 8px;
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark);
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: .9rem;
+      resize: none;
+      min-height: 80px;
+      box-sizing: border-box;
+      transition: border-color .15s;
+    }
+
+    .kc-report-details-field:focus {
+      outline: none;
+      border-color: var(--kc-primary-brand);
+    }
+
+    .kc-report-details-label {
+      display: block;
+      font-size: .82em;
+      color: var(--kc-text-dark-secondary);
+      margin-bottom: 6px;
+    }
+
+    .kc-report-status {
+      font-size: .87rem;
+      color: var(--kc-text-dark-secondary);
+      min-height: 1.2em;
+      margin-top: 10px;
+    }
+
+    .kc-report-confirm-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
+    .kc-report-confirm-actions .kc-btn-primary {
+      padding: 10px 18px;
+      font-size: .9rem;
+    }
+
+    .kc-report-confirm-actions .kc-btn-secondary {
+      padding: 10px 18px;
+      font-size: .9rem;
+    }
+    /* ─────────────────────────────────────────────────────────── */
+
     @media (max-width: 640px) {
       .kc-product-page .kc-main-content {
         padding-top: 16px;
@@ -611,12 +880,7 @@
       }
 
       .kc-comment-composer {
-        gap: 10px !important;
-      }
-
-      .kc-comment-editor {
-        margin-left: 0;
-        width: 100%;
+        column-gap: 10px;
       }
 
       .kc-comment-composer-main small {
@@ -724,8 +988,9 @@
         <h3><i class="fas fa-user"></i> Autor</h3>
         <div class="kc-seller-profile">
           <img class="kc-seller-avatar" id="sellerAvatar" alt="Avatar do autor" />
-          <div>
+          <div class="kc-seller-info">
             <div class="kc-seller-name" id="sellerName"></div>
+            <div class="kc-seller-handle" id="sellerHandle" style="display:none;"></div>
             <div class="kc-seller-stats" id="sellerStats"></div>
           </div>
         </div>
@@ -739,21 +1004,24 @@
         <h3><i class="fas fa-comments"></i> Comentários</h3>
 
         <div class="kc-comment-composer">
+          <!-- Coluna 1: avatar -->
           <img id="commentComposerAvatar" class="kc-comment-composer-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=commenter" alt="Seu avatar" />
-          <div class="kc-comment-composer-main" style="flex: 1;">
+          <!-- Coluna 2: nome do autor -->
+          <div class="kc-comment-composer-main">
             <div class="kc-comment-author-wrap">
-              <input id="commentAuthor" class="kc-comment-author-inline" type="text" name="author" placeholder="" />
-              <small id="commentAuthorHint" style="display:block; margin-top: 4px; color: var(--kc-text-dark-secondary);">nome da conta</small>
+              <input id="commentAuthor" class="kc-comment-author-inline" type="text" name="author" placeholder="" autocomplete="off" />
+              <small id="commentAuthorHint" class="kc-comment-author-hint"></small>
             </div>
+          </div>
+          <!-- Linha 2: editor ocupa colunas 1+2 (ver CSS grid-column: 1/-1) -->
+          <div class="kc-comment-editor-wrap">
             <div class="kc-comment-editor">
               <textarea id="commentText" placeholder="Deixe o seu comentário"></textarea>
               <div class="kc-editor-toolbar">
                 <button type="button" data-kc-format="bold" title="Negrito"><i class="fas fa-bold"></i></button>
                 <button type="button" data-kc-format="italic" title="Itálico"><i class="fas fa-italic"></i></button>
-                <button type="button" data-kc-format="underline" title="Sublinhado"><i
-                    class="fas fa-underline"></i></button>
-                <button type="button" data-kc-format="strikethrough" title="Tachado"><i
-                    class="fas fa-strikethrough"></i></button>
+                <button type="button" data-kc-format="underline" title="Sublinhado"><i class="fas fa-underline"></i></button>
+                <button type="button" data-kc-format="strikethrough" title="Tachado"><i class="fas fa-strikethrough"></i></button>
                 <button type="button" data-kc-format="inlinecode" title="Código inline"><i class="fas fa-code"></i></button>
                 <button type="button" data-kc-format="quote" title="Citação"><i class="fas fa-quote-right"></i></button>
                 <button type="button" data-kc-format="bullet" title="Lista"><i class="fas fa-list-ul"></i></button>
