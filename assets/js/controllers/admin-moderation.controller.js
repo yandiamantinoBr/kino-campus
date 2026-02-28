@@ -132,7 +132,11 @@
 
     const user = await window.KCAPI.getCurrentUser();
     if (!user) {
-      showError('Você precisa estar autenticado para acessar este painel.', true);
+      // FIX v8.2.9.4: Sessão expirada é a causa mais comum de "nada acontece" ao clicar botões.
+      // O token JWT do Supabase expira em ~1h. Após a expiração, getCurrentUser() retorna null,
+      // boot() retorna antes de chamar bindEvents(), e os botões ficam sem listener de clique.
+      showError('Sessão expirada ou não autenticado. Faça login novamente.', true);
+      showToastSafe('Sua sessão expirou. Redirecionando para login…', 'error', 4000);
       return false;
     }
 
@@ -146,7 +150,10 @@
       .maybeSingle();
 
     if (error || !profile) {
-      showError('Não foi possível validar permissões de administrador.', true);
+      // Erro ao buscar perfil — pode ser RLS, coluna ausente ou usuário sem perfil.
+      const detail = error ? ` (${error.message})` : ' (perfil não encontrado)';
+      showError(`Não foi possível validar permissões de administrador.${detail}`, true);
+      showToastSafe(`Erro ao carregar perfil: ${error ? error.message : 'não encontrado'}`, 'error', 5000);
       return false;
     }
 
