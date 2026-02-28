@@ -102,8 +102,12 @@
   <!-- Header (compat com o layout existente) -->
   <header class="kc-header">
     <div class="kc-header-container">
-      <a href="../index.html" class="kc-logo" style="font-size:1.2em;font-weight:800;text-decoration:none;">
-        <i class="fas fa-graduation-cap" style="margin-right:8px;color:var(--kc-primary-brand);"></i>KinoCampus
+      <a href="../index.html" class="kc-logo" aria-label="KinoCampus - Comunidade UFG">
+        <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+        <span class="kc-logo-text">
+          <span class="kc-logo-name">Kino<span>Campus</span></span>
+          <span class="kc-logo-sub">Comunidade UFG</span>
+        </span>
       </a>
       <div style="display:flex;align-items:center;gap:16px;">
         <span id="admin-greeting" style="font-size:.9em;color:var(--kc-text-dark-secondary);"></span>
@@ -133,6 +137,21 @@
             <i class="fas fa-flag"></i>Triagem de Denúncias
           </h1>
           <div class="kc-admin-filters">
+            <select id="reports-status-filter" title="Filtrar por status da denúncia">
+              <option value="open">Em aberto</option>
+              <option value="all">Todas</option>
+              <option value="closed">Fechadas</option>
+            </select>
+            <select id="reports-reason-filter" title="Filtrar por motivo">
+              <option value="all">Todos os motivos</option>
+              <option value="spam">Spam</option>
+              <option value="scam">Golpe/Fraude</option>
+              <option value="inappropriate">Inapropriado</option>
+              <option value="hate">Discurso de ódio</option>
+              <option value="illegal">Ilegal</option>
+              <option value="duplicate">Duplicado</option>
+              <option value="other">Outro</option>
+            </select>
             <button type="button" data-action="refresh" title="Recarregar dados">
               <i class="fas fa-sync-alt"></i> Atualizar
             </button>
@@ -140,8 +159,8 @@
         </div>
 
         <p style="color:var(--kc-text-dark-secondary);font-size:.9em;margin-bottom:20px;">
-          Posts agrupados por número de denúncias em aberto. Ações disponíveis: fechar denúncias,
-          ocultar post (remove do feed) ou deletar permanentemente.
+          Posts agrupados por número de denúncias. Filtros aplicados em tempo real.
+          Ações disponíveis: fechar denúncias, ocultar post (remove do feed) ou deletar permanentemente.
           A UI só atualiza após confirmação de persistência no Supabase.
         </p>
 

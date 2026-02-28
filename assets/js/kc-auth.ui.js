@@ -421,6 +421,63 @@
     }
   }
 
+  function refreshMobileMenuUser(user, profile) {
+    // Atualiza o link de usuário no menu mobile (mobileMenuUserLink)
+    const mobileUserLink = document.getElementById('mobileMenuUserLink');
+    const mobileUserName  = document.getElementById('mobileMenuUserName');
+    const mobileProfileLink = document.getElementById('mobileMenuProfileLink');
+    const mobileAdminLink   = document.getElementById('mobileMenuAdminLink');
+
+    if (!mobileUserLink) return;
+
+    if (user && user.email) {
+      const nameFromProfile = profile && (profile.display_name || profile.full_name)
+        ? String(profile.display_name || profile.full_name)
+        : '';
+      const display = nameFromProfile || String(user.email).split('@')[0] || 'Minha conta';
+      const handle  = String(user.email).split('@')[0];
+      const avatar  = profile && profile.avatar_url
+        ? String(profile.avatar_url)
+        : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(String(user.email || user.id || 'kc').toLowerCase())}`;
+      const verified = !!(profile && profile.verified === true);
+
+      // Atualiza o link de usuário
+      const avatarWrap = mobileUserLink.querySelector('.kc-mobile-menu-user-avatar-wrap');
+      if (avatarWrap) {
+        avatarWrap.innerHTML = `<img src="${escape(avatar)}" alt="${escape(display.split(' ')[0])}" class="kc-mobile-menu-user-avatar" loading="lazy" />`;
+      }
+      if (mobileUserName) {
+        mobileUserName.innerHTML = `${escape(display)}${verified ? ' <i class="fas fa-check-circle" style="color:#53d681;font-size:.8em;"></i>' : ''}<br><small style="color:var(--kc-text-dark-secondary);font-size:.8em;">@${escape(handle)}</small>`;
+      }
+      mobileUserLink.href = '#login';
+      mobileUserLink.title = user.email;
+
+      // Mostra link de perfil
+      if (mobileProfileLink) {
+        mobileProfileLink.style.display = 'flex';
+        const uid = user.id || (profile && profile.id) || '';
+        if (uid) mobileProfileLink.href = `profile.html?id=${encodeURIComponent(uid)}`;
+      }
+
+      // Mostra link de admin se is_admin
+      if (mobileAdminLink) {
+        const isAdmin = !!(profile && profile.is_admin === true);
+        mobileAdminLink.style.display = isAdmin ? 'flex' : 'none';
+      }
+    } else {
+      // Usuário não autenticado
+      const avatarWrap = mobileUserLink.querySelector('.kc-mobile-menu-user-avatar-wrap');
+      if (avatarWrap) {
+        avatarWrap.innerHTML = '<i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>';
+      }
+      if (mobileUserName) mobileUserName.textContent = 'Login / Cadastro';
+      mobileUserLink.href = '#login';
+      mobileUserLink.removeAttribute('title');
+      if (mobileProfileLink) mobileProfileLink.style.display = 'none';
+      if (mobileAdminLink) mobileAdminLink.style.display = 'none';
+    }
+  }
+
   function refreshHeaderLabel(user) {
     const btn = $('a.btn-login') || $('a[href="#login"]');
     if (!btn) return;
@@ -431,6 +488,9 @@
       : ((window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function')
         ? window.KCProfiles.getCurrentProfile()
         : null);
+
+    // Também atualiza o menu mobile
+    refreshMobileMenuUser(user, profile);
 
     if (user && user.email) {
       const nameFromProfile = profile && (profile.display_name || profile.full_name || profile.displayName || profile.name)

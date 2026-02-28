@@ -318,28 +318,41 @@
 <i class="fas fa-shopping-bag"></i>
 <span>Compra e Venda</span>
 </a>
-<button class="kc-menu-toggle" data-kc-mobile-menu="open">
+<button class="kc-menu-toggle" data-kc-mobile-menu="toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer">
 <i class="fas fa-bars"></i>
 <span>Menu</span>
 </button>
 </nav>
 <!-- Mobile Menu Drawer -->
-<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer">
+<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
 <div class="kc-mobile-menu-header">
 <h3>Menu</h3>
-<button class="kc-close-menu" data-kc-mobile-menu="close">
+<button class="kc-close-menu" data-kc-mobile-menu="close" aria-label="Fechar menu">
 <i class="fas fa-times"></i>
 </button>
 </div>
 <div class="kc-mobile-menu-content">
+<!-- Seção de usuário (atualizada pelo kc-auth.ui.js) -->
+<div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
+  <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
+    <span class="kc-mobile-menu-user-avatar-wrap">
+      <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
+    </span>
+    <span id="mobileMenuUserName">Login / Cadastro</span>
+  </a>
+</div>
+<hr class="kc-mobile-menu-divider"/>
+<!-- Links de perfil (visíveis quando autenticado) -->
+<a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
+<!-- Link de Admin (visível apenas para is_admin=true) -->
+<a href="admin/moderation.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
+<hr class="kc-mobile-menu-divider"/>
 <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
 <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
 <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
 <a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
 <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
 <a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
-<hr/>
-<a href="#login"><i class="fas fa-user"></i> Login/Cadastro</a>
 </div>
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
