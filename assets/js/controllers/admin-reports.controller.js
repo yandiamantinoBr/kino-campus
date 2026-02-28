@@ -241,8 +241,11 @@
       });
 
       if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
-        if (rpc.data.ok) return { ok: true };
-        return { ok: false, error: { message: rpc.data.message || 'Não foi possível moderar o post.' } };
+        if (rpc.data.ok && Number(rpc.data.updated_posts || 0) > 0) return { ok: true };
+        const fallbackMsg = (rpc.data && rpc.data.code === 'UPDATE_NOT_APPLIED')
+          ? 'A ação foi aceita, mas o banco não aplicou a alteração (RLS/role). Rode a migration v8.2.9.2 no projeto Supabase em produção.'
+          : 'Não foi possível moderar o post.';
+        return { ok: false, error: { message: rpc.data.message || fallbackMsg } };
       }
 
       const { data, error } = await client
