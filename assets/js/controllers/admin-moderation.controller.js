@@ -415,7 +415,16 @@
     }
 
     const client = getClient();
-    if (!client) return { ok: false, error: { message: 'Supabase client não disponível.' } };
+    if (!client) {
+      // FIX v8.2.9.3: falha silenciosa — exibir toast em vez de retornar silenciosamente.
+      // Causa raiz: variável de ambiente ausente no Vercel (SUPABASE_URL / KC_SUPABASE_URL).
+      showToastSafe(
+        'Supabase client não inicializado. Verifique se SUPABASE_URL e SUPABASE_ANON_KEY estão configurados no Vercel.',
+        'error',
+        5000
+      );
+      return { ok: false, error: { message: 'Supabase client não disponível.' } };
+    }
 
     let error = null;
     let data = null;
@@ -431,7 +440,7 @@
           data = [{ id: postId }];
         } else {
           const fallbackMsg = (rpc.data && rpc.data.code === 'UPDATE_NOT_APPLIED')
-            ? 'A ação foi aceita, mas o banco não aplicou a alteração (RLS/role). Rode a migration v8.2.9.2 no projeto Supabase em produção.'
+            ? 'A ação foi aceita, mas o banco não aplicou a alteração (RLS/role). Rode a migration v8.2.9.3 no projeto Supabase em produção.'
             : 'Não foi possível moderar o post.';
           error = { message: rpc.data.message || fallbackMsg };
         }

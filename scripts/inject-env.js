@@ -9,6 +9,7 @@
  * Compatível com:
  *   - Variáveis adicionadas manualmente no Vercel
  *   - Variáveis criadas pela integração oficial Vercel-Supabase
+ *   - Variáveis com prefixo KC_ (padrão documentado em .env.example)
  *   - Variáveis com prefixo NEXT_PUBLIC_ (projetos Next.js)
  *
  * Uso local (teste):
@@ -47,6 +48,7 @@ function resolveEnv(candidates) {
 
 const SUPABASE_URL = resolveEnv([
   'SUPABASE_URL',
+  'KC_SUPABASE_URL',              // prefixo documentado no .env.example
   'NEXT_PUBLIC_SUPABASE_URL',
   'VITE_SUPABASE_URL',
   'REACT_APP_SUPABASE_URL',
@@ -54,6 +56,7 @@ const SUPABASE_URL = resolveEnv([
 
 const SUPABASE_PUBLIC_KEY = resolveEnv([
   'SUPABASE_ANON_KEY',
+  'KC_SUPABASE_ANON_KEY',         // prefixo documentado no .env.example
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_PUBLIC_KEY',
   'NEXT_PUBLIC_SUPABASE_PUBLIC_KEY',
@@ -77,8 +80,10 @@ if (!SUPABASE_URL || !SUPABASE_PUBLIC_KEY) {
   console.error('');
   console.error('   Variáveis verificadas (todas estão ausentes ou vazias):');
   console.error('   SUPABASE_URL            =', process.env.SUPABASE_URL            || '(vazio)');
+  console.error('   KC_SUPABASE_URL         =', process.env.KC_SUPABASE_URL         || '(vazio)');
   console.error('   NEXT_PUBLIC_SUPABASE_URL =', process.env.NEXT_PUBLIC_SUPABASE_URL || '(vazio)');
   console.error('   SUPABASE_ANON_KEY        =', `detected: ${process.env.SUPABASE_ANON_KEY ? 'yes' : 'no'}`);
+  console.error('   KC_SUPABASE_ANON_KEY     =', `detected: ${process.env.KC_SUPABASE_ANON_KEY ? 'yes' : 'no'}`);
   console.error('   SUPABASE_PUBLIC_KEY      =', `detected: ${process.env.SUPABASE_PUBLIC_KEY ? 'yes' : 'no'}`);
   console.error('');
   console.error('   Como corrigir:');
