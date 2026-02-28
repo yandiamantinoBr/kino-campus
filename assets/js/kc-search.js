@@ -367,17 +367,37 @@
 
   let dropdownDebounceTimer = null;
 
-  function getOrCreateDropdown(searchBarEl) {
+  function getOrCreateDropdown() {
     let dropdown = document.getElementById('kcSearchDropdown');
-    if (!dropdown && searchBarEl) {
+    if (!dropdown) {
       dropdown = document.createElement('div');
       dropdown.id = 'kcSearchDropdown';
       dropdown.className = 'kc-search-dropdown';
       dropdown.setAttribute('role', 'listbox');
       dropdown.setAttribute('aria-label', 'Sugestões de busca');
-      searchBarEl.appendChild(dropdown);
+      // Append to body to escape any stacking context (e.g. sticky header + kc-feed-tabs)
+      document.body.appendChild(dropdown);
     }
     return dropdown;
+  }
+
+  function positionDropdown(dropdown, searchBarEl) {
+    if (!dropdown || !searchBarEl) return;
+    const rect = searchBarEl.getBoundingClientRect();
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+
+    // Use search bar width, but at least 280px, and fit within viewport
+    let width = Math.max(rect.width, 280);
+    let left = rect.left;
+
+    // Clamp so dropdown doesn't overflow right edge
+    if (left + width > vw - 8) left = Math.max(8, vw - width - 8);
+    if (left < 8) left = 8;
+    if (width > vw - 16) width = vw - 16;
+
+    dropdown.style.top = `${rect.bottom + 6}px`;
+    dropdown.style.left = `${left}px`;
+    dropdown.style.width = `${width}px`;
   }
 
   function formatPrice(post) {
@@ -467,14 +487,22 @@
     if (dropdown) dropdown.classList.remove('active');
   }
 
-  async function updateDropdown(query, dropdown) {
+  async function updateDropdown(query, dropdown, searchBarEl) {
     const q = String(query || '').trim();
     if (q.length < 2) {
       closeDropdown();
       return;
     }
     try {
-      const results = await searchPosts(q, { limit: 8, minScore: 0.2 });
+      let results;
+      // Prefer live Supabase data via KCAPI.getPosts; fallback to local search
+      if (KCAPI && typeof KCAPI.getPosts === 'function') {
+        results = await KCAPI.getPosts({ q, limit: 8, page: 1 });
+      } else {
+        results = await searchPosts(q, { limit: 8, minScore: 0.2 });
+      }
+      if (!Array.isArray(results)) results = [];
+      positionDropdown(dropdown, searchBarEl);
       renderDropdown(dropdown, results, q);
     } catch (_) {
       closeDropdown();
@@ -493,7 +521,7 @@
     const hasPageFilter = (!resultsPage) && (typeof window.filterPosts === 'function');
 
     // Dropdown de sugestões (apenas fora da página de resultados)
-    const dropdown = (!resultsPage && searchBarEl) ? getOrCreateDropdown(searchBarEl) : null;
+    const dropdown = (!resultsPage && searchBarEl) ? getOrCreateDropdown() : null;
 
     // Não pré-carregamos o seed (database.json) aqui: em driver supabase evita download desnecessário.
 
@@ -504,11 +532,20 @@
       renderResultsToPage(searchInput ? searchInput.value : qParam);
     }
 
-    // Fechar dropdown ao clicar fora
+    // Fechar dropdown ao clicar fora (dropdown está no body, checar ambos)
     if (dropdown) {
       document.addEventListener('click', function (e) {
-        if (searchBarEl && !searchBarEl.contains(e.target)) closeDropdown();
+        const isInsideBar = searchBarEl && searchBarEl.contains(e.target);
+        const isInsideDropdown = dropdown.contains(e.target);
+        if (!isInsideBar && !isInsideDropdown) closeDropdown();
       }, true);
+
+      // Reposicionar ao redimensionar a janela
+      window.addEventListener('resize', function () {
+        if (dropdown.classList.contains('active')) {
+          positionDropdown(dropdown, searchBarEl);
+        }
+      });
     }
 
     // Input de busca
@@ -529,7 +566,7 @@
         // Atualizar dropdown com debounce
         if (dropdown) {
           clearTimeout(dropdownDebounceTimer);
-          dropdownDebounceTimer = setTimeout(() => updateDropdown(q, dropdown), 180);
+          dropdownDebounceTimer = setTimeout(() => updateDropdown(q, dropdown, searchBarEl), 180);
         }
       });
 
@@ -555,7 +592,7 @@
 
       searchInput.addEventListener('focus', function () {
         if (dropdown && this.value.trim().length >= 2) {
-          updateDropdown(this.value, dropdown);
+          updateDropdown(this.value, dropdown, searchBarEl);
         }
       });
     }
