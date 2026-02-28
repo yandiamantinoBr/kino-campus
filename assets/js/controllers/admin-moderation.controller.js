@@ -363,13 +363,27 @@
     let error = null;
     let data = null;
     try {
-      const res = await client
-        .from('posts')
-        .update({ status })
-        .eq('id', postId)
-        .select('id');
-      error = res ? res.error : null;
-      data = res ? res.data : null;
+      const rpc = await client.rpc('kc_admin_set_post_status', {
+        p_post_id: postId,
+        p_status: status,
+        p_close_reports: false,
+      });
+
+      if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
+        if (rpc.data.ok) {
+          data = [{ id: postId }];
+        } else {
+          error = { message: rpc.data.message || 'Não foi possível moderar o post.' };
+        }
+      } else {
+        const res = await client
+          .from('posts')
+          .update({ status })
+          .eq('id', postId)
+          .select('id');
+        error = res ? res.error : null;
+        data = res ? res.data : null;
+      }
     } catch (e) {
       error = e;
     }
