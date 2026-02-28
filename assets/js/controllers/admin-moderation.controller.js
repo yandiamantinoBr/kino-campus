@@ -162,8 +162,6 @@
       return false;
     }
 
-    const greeting = $('#admin-greeting');
-    if (greeting) greeting.textContent = `Olá, ${profile.display_name || profile.full_name || user.email || 'Admin'}`;
     return true;
   }
 

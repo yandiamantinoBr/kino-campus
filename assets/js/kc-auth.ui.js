@@ -422,6 +422,10 @@
   }
 
   function refreshMobileMenuUser(user, profile) {
+    const isAdminArea = window.location.pathname.includes('/admin/');
+    const profileHref = isAdminArea ? '../profile.html' : 'profile.html';
+    const adminHref = isAdminArea ? 'index.html' : 'admin/index.html';
+
     // Atualiza o link de usuário no menu mobile (mobileMenuUserLink)
     const mobileUserLink = document.getElementById('mobileMenuUserLink');
     const mobileUserName  = document.getElementById('mobileMenuUserName');
@@ -456,13 +460,14 @@
       if (mobileProfileLink) {
         mobileProfileLink.style.display = 'flex';
         const uid = user.id || (profile && profile.id) || '';
-        if (uid) mobileProfileLink.href = `profile.html?id=${encodeURIComponent(uid)}`;
+        if (uid) mobileProfileLink.href = `${profileHref}?id=${encodeURIComponent(uid)}`;
       }
 
       // Mostra link de admin se is_admin
       if (mobileAdminLink) {
         const isAdmin = !!(profile && profile.is_admin === true);
         mobileAdminLink.style.display = isAdmin ? 'flex' : 'none';
+        mobileAdminLink.href = adminHref;
       }
     } else {
       // Usuário não autenticado
@@ -476,6 +481,62 @@
       if (mobileProfileLink) mobileProfileLink.style.display = 'none';
       if (mobileAdminLink) mobileAdminLink.style.display = 'none';
     }
+  }
+
+  function ensureMobileMenuStructure() {
+    const drawer = document.querySelector('.kc-mobile-menu-drawer, .kc-mobile-menu');
+    const content = drawer ? drawer.querySelector('.kc-mobile-menu-content, .kc-mobile-menu-nav') : null;
+    if (!content) return;
+
+    const isAdminArea = window.location.pathname.includes('/admin/');
+    const profileHref = isAdminArea ? '../profile.html' : 'profile.html';
+    const adminHref = isAdminArea ? 'index.html' : 'admin/index.html';
+
+    let userSection = document.getElementById('mobileMenuUserSection');
+    if (!userSection) {
+      userSection = document.createElement('div');
+      userSection.className = 'kc-mobile-menu-user-section';
+      userSection.id = 'mobileMenuUserSection';
+      userSection.innerHTML = `
+        <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
+          <span class="kc-mobile-menu-user-avatar-wrap">
+            <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
+          </span>
+          <span id="mobileMenuUserName">Login / Cadastro</span>
+        </a>
+      `;
+      content.insertBefore(userSection, content.firstChild);
+    }
+
+    let profileLink = document.getElementById('mobileMenuProfileLink');
+    if (!profileLink) {
+      profileLink = document.createElement('a');
+      profileLink.id = 'mobileMenuProfileLink';
+      profileLink.href = profileHref;
+      profileLink.style.display = 'none';
+      profileLink.innerHTML = '<i class="fas fa-id-badge"></i> Meu Perfil';
+      content.insertBefore(profileLink, userSection.nextSibling);
+    }
+
+    let adminLink = document.getElementById('mobileMenuAdminLink');
+    if (!adminLink) {
+      adminLink = document.createElement('a');
+      adminLink.id = 'mobileMenuAdminLink';
+      adminLink.href = adminHref;
+      adminLink.style.display = 'none';
+      adminLink.innerHTML = '<i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração';
+      content.insertBefore(adminLink, profileLink.nextSibling);
+    }
+
+    const navLinks = document.querySelectorAll('.kc-mobile-nav a, .kc-mobile-nav button');
+    navLinks.forEach((link) => {
+      const href = String(link.getAttribute('href') || '').toLowerCase();
+      const span = link.querySelector('span');
+      if (!span || !href.includes('compra-venda-feed.html')) return;
+      span.textContent = 'Compra/Venda';
+      span.classList.add('kc-mobile-nav-label-long');
+      link.setAttribute('title', 'Compra e Venda');
+    });
   }
 
   function refreshHeaderLabel(user) {
@@ -625,6 +686,7 @@
   window.kcCloseAuthModal = closeModal;
 
   function init() {
+    ensureMobileMenuStructure();
     wireTriggers();
 
     // Primeiro paint: tenta recuperar sessão e desenhar header
