@@ -195,9 +195,26 @@
       } catch (_) {}
 
       // Loader do módulo de migração (sem precisar editar HTML)
-      if (!document.querySelector('script[data-kc-migrate="myposts"]')) {
+      // Em páginas /admin não usamos esse módulo e evitamos ruído de caminho/CSP no console.
+      const pathname = String((window.location && window.location.pathname) || '').toLowerCase();
+      const isAdminPage = pathname.includes('/admin/');
+      if (!isAdminPage && !document.querySelector('script[data-kc-migrate="myposts"]')) {
         const s = document.createElement('script');
-        s.src = 'assets/js/kc-migrate.myposts.js';
+
+        // Resolve caminho relativo ao próprio kc-env.js para funcionar em / e /admin/
+        // sem depender da URL atual da página.
+        const currentScript = document.currentScript;
+        const currentSrc = currentScript && currentScript.src ? String(currentScript.src) : '';
+        if (currentSrc) {
+          try {
+            s.src = new URL('kc-migrate.myposts.js', currentSrc).toString();
+          } catch (_) {
+            s.src = '/assets/js/kc-migrate.myposts.js';
+          }
+        } else {
+          s.src = '/assets/js/kc-migrate.myposts.js';
+        }
+
         s.defer = true;
         s.dataset.kcMigrate = 'myposts';
         (document.head || document.documentElement).appendChild(s);
