@@ -483,6 +483,23 @@
     }
   }
 
+
+  function cleanupLegacyMobileAuthLinks(content) {
+    if (!content) return;
+
+    const links = Array.from(content.querySelectorAll('a[href="#login"], a[data-kc-login]'));
+    links.forEach((link) => {
+      const id = String(link.id || '');
+      if (id === 'mobileMenuUserLink') return;
+      link.remove();
+    });
+
+    const duplicateDividers = Array.from(content.querySelectorAll('.kc-mobile-menu-divider'));
+    if (duplicateDividers.length > 2) {
+      duplicateDividers.slice(2).forEach((el) => el.remove());
+    }
+  }
+
   function ensureMobileMenuStructure() {
     const drawer = document.querySelector('.kc-mobile-menu-drawer, .kc-mobile-menu');
     const content = drawer ? drawer.querySelector('.kc-mobile-menu-content, .kc-mobile-menu-nav') : null;
@@ -508,6 +525,16 @@
       content.insertBefore(userSection, content.firstChild);
     }
 
+    let topDivider = content.querySelector('.kc-mobile-menu-divider[data-kc-divider="top"]');
+    if (!topDivider) {
+      topDivider = document.createElement('hr');
+      topDivider.className = 'kc-mobile-menu-divider';
+      topDivider.setAttribute('data-kc-divider', 'top');
+      content.insertBefore(topDivider, userSection.nextSibling);
+    }
+
+    cleanupLegacyMobileAuthLinks(content);
+
     let profileLink = document.getElementById('mobileMenuProfileLink');
     if (!profileLink) {
       profileLink = document.createElement('a');
@@ -526,6 +553,14 @@
       adminLink.style.display = 'none';
       adminLink.innerHTML = '<i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração';
       content.insertBefore(adminLink, profileLink.nextSibling);
+    }
+
+    let profileDivider = content.querySelector('.kc-mobile-menu-divider[data-kc-divider="profile"]');
+    if (!profileDivider) {
+      profileDivider = document.createElement('hr');
+      profileDivider.className = 'kc-mobile-menu-divider';
+      profileDivider.setAttribute('data-kc-divider', 'profile');
+      content.insertBefore(profileDivider, adminLink.nextSibling);
     }
 
     const navLinks = document.querySelectorAll('.kc-mobile-nav a, .kc-mobile-nav button');

@@ -8,6 +8,12 @@
     return null;
   }
 
+  function isPermissionError(error) {
+    if (!error) return false;
+    const message = String(error.message || error.details || error.hint || '').toLowerCase();
+    return message.includes('permission') || message.includes('row-level security') || message.includes('rls');
+  }
+
   function showError(message) {
     const el = $('#admin-error');
     if (!el) return;
@@ -47,13 +53,51 @@
   async function loadMetrics() {
     const client = getClient();
 
-    const [{ count: openReports }, { count: totalReports }, { count: hiddenPosts }, { count: deletedPosts }, { data: auditRows }] = await Promise.all([
+    const [openRes, totalRes, hiddenRes, deletedRes, auditRes] = await Promise.all([
       client.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'open'),
       client.from('reports').select('id', { count: 'exact', head: true }),
       client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'hidden'),
       client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'deleted'),
       client.from('audit_log').select('created_at, action, entity_type, actor_id').order('created_at', { ascending: false }).limit(8)
     ]);
+
+    let openReports = openRes.count || 0;
+    let totalReports = totalRes.count || 0;
+    let hiddenPosts = hiddenRes.count || 0;
+    let deletedPosts = deletedRes.count || 0;
+    let auditRows = Array.isArray(auditRes.data) ? auditRes.data : [];
+
+    if ((openRes.error || totalRes.error) && (isPermissionError(openRes.error) || isPermissionError(totalRes.error))) {
+      const rpcReports = await client.rpc('kc_admin_list_reports', { p_status: 'all', p_reason: 'all', p_limit: 500 });
+      if (!rpcReports.error && Array.isArray(rpcReports.data)) {
+        totalReports = rpcReports.data.length;
+        openReports = rpcReports.data.filter((item) => String(item.status || '').toLowerCase() === 'open').length;
+      }
+    }
+
+    if ((hiddenRes.error || deletedRes.error) && (isPermissionError(hiddenRes.error) || isPermissionError(deletedRes.error))) {
+      const postRes = await client
+        .from('posts')
+        .select('status')
+        .in('status', ['hidden', 'deleted'])
+        .limit(1000);
+      if (!postRes.error && Array.isArray(postRes.data)) {
+        hiddenPosts = postRes.data.filter((row) => row.status === 'hidden').length;
+        deletedPosts = postRes.data.filter((row) => row.status === 'deleted').length;
+      }
+    }
+
+    if (auditRes.error && isPermissionError(auditRes.error)) {
+      const rpcAudit = await client.rpc('kc_admin_list_audit_logs', {
+        p_entity_type: 'all',
+        p_action: 'all',
+        p_actor_query: null,
+        p_limit: 8,
+      });
+      if (!rpcAudit.error && Array.isArray(rpcAudit.data)) {
+        auditRows = rpcAudit.data;
+      }
+    }
 
     const metrics = $('#admin-metrics');
     if (metrics) {

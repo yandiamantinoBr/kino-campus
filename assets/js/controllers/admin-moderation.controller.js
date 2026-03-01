@@ -116,6 +116,15 @@
     el.style.display = 'block';
   }
 
+  function isPermissionError(error) {
+    if (!error) return false;
+    const message = String(error.message || error.details || error.hint || '').toLowerCase();
+    return message.includes('permission')
+      || message.includes('row-level security')
+      || message.includes('rls')
+      || message.includes('jwt');
+  }
+
   function getErrorMessage(error, fallback) {
     if (!error) return fallback;
     if (typeof error === 'string' && error.trim()) return error.trim();
@@ -324,15 +333,44 @@
     if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
 
     const { data, error } = await query;
+    let rows = data || [];
+
     if (error) {
       console.error('[Admin moderation] fetchAuditLogs:', error);
-      state.audit.rows = [];
-      renderAuditLogs();
-      setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
-      return;
+
+      if (isPermissionError(error)) {
+        try {
+          const rpc = await client.rpc('kc_admin_list_audit_logs', {
+            p_entity_type: state.audit.entityType,
+            p_action: state.audit.action,
+            p_actor_query: actorQuery || null,
+            p_limit: actorQuery ? Math.max(AUDIT_LIMIT, 200) : AUDIT_LIMIT,
+          });
+
+          if (rpc && !rpc.error && Array.isArray(rpc.data)) {
+            rows = rpc.data;
+          } else {
+            if (rpc && rpc.error) console.error('[Admin moderation] fetchAuditLogs rpc:', rpc.error);
+            state.audit.rows = [];
+            renderAuditLogs();
+            setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
+            return;
+          }
+        } catch (rpcError) {
+          console.error('[Admin moderation] fetchAuditLogs rpc exceção:', rpcError);
+          state.audit.rows = [];
+          renderAuditLogs();
+          setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
+          return;
+        }
+      } else {
+        state.audit.rows = [];
+        renderAuditLogs();
+        setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
+        return;
+      }
     }
 
-    const rows = data || [];
     const actorIds = rows.map((row) => row.actor_id).filter(Boolean);
     state.audit.actorsById = await loadActorsById(actorIds);
 

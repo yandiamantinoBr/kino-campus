@@ -95,6 +95,15 @@
     return fallback;
   }
 
+  function isPermissionError(error) {
+    if (!error) return false;
+    const message = String(error.message || error.details || error.hint || '').toLowerCase();
+    return message.includes('permission')
+      || message.includes('row-level security')
+      || message.includes('rls')
+      || message.includes('jwt');
+  }
+
   function logAdminError(step, error, data) {
     console.error(LOG_TAG, {
       step: String(step || 'UNKNOWN'),
@@ -168,8 +177,26 @@
     if (_filters.reason && _filters.reason !== 'all') query = query.eq('reason', _filters.reason);
 
     const { data, error } = await query;
-    if (error) { console.error('[Admin] loadReports:', error); return []; }
-    return data || [];
+    if (!error) return data || [];
+
+    console.error('[Admin] loadReports:', error);
+
+    if (!isPermissionError(error)) return [];
+
+    // Fallback via RPC SECURITY DEFINER para ambientes com RLS mais restritiva.
+    try {
+      const rpc = await client.rpc('kc_admin_list_reports', {
+        p_status: _filters.status,
+        p_reason: _filters.reason,
+        p_limit: 200,
+      });
+      if (rpc && !rpc.error && Array.isArray(rpc.data)) return rpc.data;
+      if (rpc && rpc.error) console.error('[Admin] loadReports rpc fallback:', rpc.error);
+    } catch (rpcError) {
+      console.error('[Admin] loadReports rpc exceção:', rpcError);
+    }
+
+    return [];
   }
 
   async function loadPostTitles(postIds) {

@@ -112,6 +112,7 @@
       display_name: fullName,
       avatar_url: avatarUrl,
       verified,
+      is_admin: r.is_admin === true || fb.is_admin === true,
       created_at: r.created_at || null,
       updated_at: r.updated_at || null,
     });
@@ -143,6 +144,7 @@
       email: u.email || null,
       full_name: computeDisplayName(u),
       avatar_url: computeAvatarUrl(u),
+      is_admin: false,
     };
 
     state.syncing = true;
@@ -155,7 +157,7 @@
         const q = client
           .from('profiles')
           .upsert(payload, { onConflict: 'id' })
-          .select('id, full_name, avatar_url, verified, created_at, updated_at');
+          .select('id, full_name, avatar_url, verified, is_admin, created_at, updated_at');
 
         const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();
 
@@ -176,7 +178,7 @@
         try {
           const q2 = client
             .from('profiles')
-            .select('id, full_name, avatar_url, verified, created_at, updated_at')
+            .select('id, full_name, avatar_url, verified, is_admin, created_at, updated_at')
             .eq('id', u.id);
 
           const r2 = (typeof q2.maybeSingle === 'function') ? await q2.maybeSingle() : await q2.single();
@@ -219,7 +221,7 @@
     try {
       const q = client
         .from('profiles')
-        .select('id, full_name, avatar_url, verified, created_at, updated_at')
+        .select('id, full_name, avatar_url, verified, is_admin, created_at, updated_at')
         .eq('id', key);
 
       const r = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();
