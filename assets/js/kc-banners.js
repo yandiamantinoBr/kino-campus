@@ -72,8 +72,10 @@
       // Atualiza dots
       dotsEl.innerHTML = buildDotsHTML(data.length);
 
-      // Reinicializa o carrossel (funções globais de kc-core.js)
-      if (typeof window.showSlide === 'function') {
+      // Reinicializa o carrossel após troca dinâmica de slides/dots
+      if (typeof window.kcRefreshHeroCarousel === 'function') {
+        window.kcRefreshHeroCarousel();
+      } else if (typeof window.showSlide === 'function') {
         window.showSlide(0);
       }
     } catch (_) {
