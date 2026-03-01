@@ -309,12 +309,13 @@ header {
     transition: background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
 }
 
-/* Header identity (V8.1.3.2) */
+/* Header identity (V8.1.3.2 / V8.3.1) */
 .kc-user-actions a.btn-login.is-auth {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    padding: 7px 14px;
+    cursor: pointer;
 }
 
 .kc-header-user {
@@ -5393,4 +5394,174 @@ textarea::placeholder {
     min-width: 92px;
     padding-inline: 12px;
   }
+}
+
+/* =========================================================
+   V8.3.1 — Profile Dropdown + Chevron + Mobile Logout
+   ========================================================= */
+
+/* ── Chevron no botão de perfil ── */
+.kc-header-user__chevron {
+  font-size: 0.68em;
+  opacity: 0.75;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.kc-user-actions a.btn-login.is-auth.kc-dropdown-open .kc-header-user__chevron {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+/* ── Profile dropdown flutuante (desktop) ── */
+.kc-profile-dropdown {
+  position: fixed;
+  z-index: 300;
+  min-width: 230px;
+  background: var(--kc-surface-dark);
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 14px;
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.97);
+  transition: opacity 0.16s ease, visibility 0.16s ease, transform 0.16s ease;
+  overflow: hidden;
+}
+
+.kc-profile-dropdown.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.kc-profile-dropdown__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--kc-border-dark);
+}
+
+.kc-profile-dropdown__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--kc-border-dark);
+  flex-shrink: 0;
+}
+
+.kc-profile-dropdown__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.kc-profile-dropdown__name {
+  font-weight: 600;
+  font-size: 0.93em;
+  color: var(--kc-text-dark-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kc-profile-dropdown__handle {
+  font-size: 0.79em;
+  color: var(--kc-text-dark-secondary);
+}
+
+.kc-profile-dropdown__divider {
+  border: none;
+  border-top: 1px solid var(--kc-border-dark);
+  margin: 3px 0;
+}
+
+.kc-profile-dropdown__menu {
+  padding: 4px 0 6px;
+}
+
+.kc-profile-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: var(--kc-text-dark-primary);
+  text-decoration: none;
+  font-size: 0.91em;
+  transition: background 0.13s ease, color 0.13s ease;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.kc-profile-dropdown__item:hover,
+.kc-profile-dropdown__item:focus {
+  background: var(--kc-background-dark);
+  color: var(--kc-primary-brand);
+  outline: none;
+}
+
+.kc-profile-dropdown__item i {
+  width: 18px;
+  text-align: center;
+  color: var(--kc-primary-brand);
+  flex-shrink: 0;
+  font-size: 0.95em;
+}
+
+.kc-profile-dropdown__logout {
+  color: #ff5c5c !important;
+  font-weight: 600;
+}
+
+.kc-profile-dropdown__logout i {
+  color: #ff5c5c !important;
+}
+
+.kc-profile-dropdown__logout:hover,
+.kc-profile-dropdown__logout:focus {
+  background: rgba(255, 80, 80, 0.09) !important;
+  color: #ff5c5c !important;
+}
+
+/* ── Botão "Sair" destacado no drawer mobile ── */
+.kc-mobile-menu-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 32px);
+  margin: 8px 16px 16px;
+  padding: 13px 18px;
+  background: rgba(255, 80, 80, 0.1);
+  color: #ff5c5c;
+  font-weight: 700;
+  font-size: 1em;
+  border: 1.5px solid rgba(255, 80, 80, 0.28);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s ease, transform 0.12s ease, border-color 0.18s ease;
+}
+
+.kc-mobile-menu-logout-btn:hover,
+.kc-mobile-menu-logout-btn:focus {
+  background: rgba(255, 80, 80, 0.2);
+  border-color: rgba(255, 80, 80, 0.5);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.kc-mobile-menu-logout-btn i {
+  font-size: 1em;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
 }

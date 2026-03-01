@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.2.2.0';
+  const VERSION = '8.3.1.0';
 
   function readEnv() {
     const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : {};
@@ -421,6 +421,125 @@
     }
   }
 
+  // ── Profile Dropdown (desktop) ──────────────────────────────────────────
+  function ensureProfileDropdown() {
+    if (document.getElementById('kcProfileDropdown')) return;
+    const dropdown = document.createElement('div');
+    dropdown.id = 'kcProfileDropdown';
+    dropdown.className = 'kc-profile-dropdown';
+    dropdown.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(dropdown);
+
+    document.addEventListener('click', (e) => {
+      const dd = document.getElementById('kcProfileDropdown');
+      if (!dd || !dd.classList.contains('active')) return;
+      const btn = document.querySelector('a.btn-login.is-auth');
+      if (btn && btn.contains(e.target)) return;
+      if (!dd.contains(e.target)) closeProfileDropdown();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeProfileDropdown();
+    });
+  }
+
+  function buildDropdownContent(user, profile) {
+    const isAdminArea = window.location.pathname.includes('/admin/');
+    const profileHref = isAdminArea ? '../profile.html' : 'profile.html';
+    const adminHref   = isAdminArea ? 'index.html' : 'admin/index.html';
+    const helpHref    = isAdminArea ? '../ajuda.html' : 'ajuda.html';
+
+    const nameFromProfile = profile && (profile.display_name || profile.full_name)
+      ? String(profile.display_name || profile.full_name) : '';
+    const display  = nameFromProfile || (user ? String(user.email || '').split('@')[0] : '') || 'Minha conta';
+    const email    = user ? String(user.email || '') : '';
+    const handle   = email ? email.split('@')[0] : '';
+    const avatar   = profile && (profile.avatar_url || profile.avatarUrl || profile.avatar)
+      ? String(profile.avatar_url || profile.avatarUrl || profile.avatar)
+      : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(String(email || 'kc').toLowerCase())}`;
+    const verified = !!(profile && profile.verified === true);
+    const isAdmin  = !!(profile && profile.is_admin === true);
+    const uid      = (user && user.id) || (profile && profile.id) || '';
+    const profileWithId = uid ? `${profileHref}?id=${encodeURIComponent(uid)}` : profileHref;
+
+    return `
+      <div class="kc-profile-dropdown__header">
+        <img class="kc-profile-dropdown__avatar" src="${escape(avatar)}" alt="${escape((String(display).split(' ')[0] || 'Usuário'))}" loading="lazy" />
+        <div class="kc-profile-dropdown__info">
+          <span class="kc-profile-dropdown__name">${escape(display)}${verified ? ' <i class="fas fa-check-circle" style="color:#53d681;font-size:.8em;"></i>' : ''}</span>
+          ${handle ? `<span class="kc-profile-dropdown__handle">@${escape(handle)}</span>` : ''}
+        </div>
+      </div>
+      <hr class="kc-profile-dropdown__divider" />
+      <nav class="kc-profile-dropdown__menu">
+        <a href="${escape(profileWithId)}" class="kc-profile-dropdown__item">
+          <i class="fas fa-id-badge"></i><span>Meu Perfil</span>
+        </a>
+        ${isAdmin ? `<a href="${escape(adminHref)}" class="kc-profile-dropdown__item">
+          <i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i><span>Administração</span>
+        </a>` : ''}
+        <hr class="kc-profile-dropdown__divider" />
+        <a href="${escape(helpHref)}" class="kc-profile-dropdown__item">
+          <i class="fas fa-circle-question"></i><span>Central de Ajuda</span>
+        </a>
+        <hr class="kc-profile-dropdown__divider" />
+        <button type="button" class="kc-profile-dropdown__item kc-profile-dropdown__logout" id="kcDropdownLogoutBtn">
+          <i class="fas fa-right-from-bracket"></i><span>Sair da conta</span>
+        </button>
+      </nav>
+    `;
+  }
+
+  function openProfileDropdown(btn) {
+    ensureProfileDropdown();
+    const dropdown = document.getElementById('kcProfileDropdown');
+    if (!dropdown) return;
+
+    const user    = (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') ? window.KCSupabase.getUser() : null;
+    const profile = (window.KCAPI && typeof window.KCAPI.getCurrentProfile === 'function') ? window.KCAPI.getCurrentProfile() : null;
+
+    dropdown.innerHTML = buildDropdownContent(user, profile);
+
+    const rect     = btn.getBoundingClientRect();
+    const dropWidth = 230;
+    let leftPos = rect.right - dropWidth;
+    if (leftPos < 8) leftPos = 8;
+    dropdown.style.top  = (rect.bottom + 8) + 'px';
+    dropdown.style.left = leftPos + 'px';
+
+    dropdown.classList.add('active');
+    dropdown.setAttribute('aria-hidden', 'false');
+    btn.classList.add('kc-dropdown-open');
+
+    const logoutBtn = document.getElementById('kcDropdownLogoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        closeProfileDropdown();
+        await doLogout();
+      });
+    }
+  }
+
+  function closeProfileDropdown() {
+    const dropdown = document.getElementById('kcProfileDropdown');
+    if (dropdown) {
+      dropdown.classList.remove('active');
+      dropdown.setAttribute('aria-hidden', 'true');
+    }
+    const btn = document.querySelector('a.btn-login.kc-dropdown-open');
+    if (btn) btn.classList.remove('kc-dropdown-open');
+  }
+
+  function toggleProfileDropdown(btn) {
+    const dropdown = document.getElementById('kcProfileDropdown');
+    if (dropdown && dropdown.classList.contains('active')) {
+      closeProfileDropdown();
+    } else {
+      openProfileDropdown(btn);
+    }
+  }
+
+  // ── Mobile menu user section ─────────────────────────────────────────────
   function refreshMobileMenuUser(user, profile) {
     const isAdminArea = window.location.pathname.includes('/admin/');
     const profileHref = isAdminArea ? '../profile.html' : 'profile.html';
@@ -480,6 +599,12 @@
       mobileUserLink.removeAttribute('title');
       if (mobileProfileLink) mobileProfileLink.style.display = 'none';
       if (mobileAdminLink) mobileAdminLink.style.display = 'none';
+    }
+
+    // Mostra/oculta botão Sair
+    const mobileLogoutBtn = document.getElementById('mobileMenuLogoutBtn');
+    if (mobileLogoutBtn) {
+      mobileLogoutBtn.style.display = (user && user.email) ? 'flex' : 'none';
     }
   }
 
@@ -563,6 +688,41 @@
       content.insertBefore(profileDivider, adminLink.nextSibling);
     }
 
+    // Central de Ajuda
+    let helpLink = document.getElementById('mobileMenuHelpLink');
+    if (!helpLink) {
+      helpLink = document.createElement('a');
+      helpLink.id = 'mobileMenuHelpLink';
+      helpLink.href = isAdminArea ? '../ajuda.html' : 'ajuda.html';
+      helpLink.innerHTML = '<i class="fas fa-circle-question"></i> Central de Ajuda';
+      content.appendChild(helpLink);
+    }
+
+    // Divisor final
+    let bottomDivider = content.querySelector('.kc-mobile-menu-divider[data-kc-divider="bottom"]');
+    if (!bottomDivider) {
+      bottomDivider = document.createElement('hr');
+      bottomDivider.className = 'kc-mobile-menu-divider';
+      bottomDivider.setAttribute('data-kc-divider', 'bottom');
+      content.appendChild(bottomDivider);
+    }
+
+    // Botão Sair (destacado)
+    let logoutBtn = document.getElementById('mobileMenuLogoutBtn');
+    if (!logoutBtn) {
+      logoutBtn = document.createElement('button');
+      logoutBtn.id = 'mobileMenuLogoutBtn';
+      logoutBtn.type = 'button';
+      logoutBtn.className = 'kc-mobile-menu-logout-btn';
+      logoutBtn.style.display = 'none';
+      logoutBtn.innerHTML = '<i class="fas fa-right-from-bracket"></i><span>Sair da conta</span>';
+      logoutBtn.addEventListener('click', async () => {
+        if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
+        await doLogout();
+      });
+      content.appendChild(logoutBtn);
+    }
+
     const navLinks = document.querySelectorAll('.kc-mobile-nav a, .kc-mobile-nav button');
     navLinks.forEach((link) => {
       const href = String(link.getAttribute('href') || '').toLowerCase();
@@ -611,6 +771,7 @@
           <img class="kc-header-user__avatar" src="${avatarEsc}" alt="${altEsc}" loading="lazy" decoding="async" />
           <span class="kc-header-user__name">${displayEsc}</span>
           ${verified ? '<i class="fas fa-check-circle kc-header-user__verified" aria-label="Verificado"></i>' : ''}
+          <i class="fas fa-chevron-down kc-header-user__chevron" aria-hidden="true"></i>
         </span>
       `.trim();
       btn.classList.add('is-auth');
@@ -712,13 +873,29 @@
       const trg = e.target && e.target.closest ? e.target.closest('[data-kc-login], a[href="#login"]') : null;
       if (!trg) return;
       e.preventDefault();
+
+      // Botão de perfil (is-auth): dropdown no desktop, drawer no mobile
+      if (trg.classList.contains('is-auth')) {
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        const drawer   = document.querySelector('.kc-mobile-menu-drawer, .kc-mobile-menu');
+        if (isMobile && drawer && typeof window.openMobileMenu === 'function') {
+          window.openMobileMenu();
+          return;
+        }
+        // Desktop: dropdown flutuante
+        toggleProfileDropdown(trg);
+        return;
+      }
+
       openModal();
     });
   }
 
   // Exposição para integração com outras áreas (ex.: create-post)
-  window.kcOpenAuthModal = openModal;
-  window.kcCloseAuthModal = closeModal;
+  window.kcOpenAuthModal       = openModal;
+  window.kcCloseAuthModal      = closeModal;
+  window.kcOpenProfileDropdown  = openProfileDropdown;
+  window.kcCloseProfileDropdown = closeProfileDropdown;
 
   function init() {
     ensureMobileMenuStructure();
