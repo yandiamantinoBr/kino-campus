@@ -237,6 +237,159 @@ function kcUpdateVoteScoreInDOM(postId, score) {
   if (!encoded) return;
   const scoreText = String(Number.isFinite(Number(score)) ? Number(score) : 0);
 
+  document.querySelectorAll(`.kc-vote-box [data-post-uuid="${encoded}"], .kc-vote-box [data-post-id="${encoded}"]`).forEach((btn) => {
+    const voteBox = btn.closest('.kc-vote-box');
+    const scoreEl = voteBox ? voteBox.querySelector('span') : null;
+    if (scoreEl) scoreEl.textContent = scoreText;
+  });
+}
+
+function kcIsUuid(value) {
+  return KC_UUID_RE.test(String(value || '').trim());
+}
+
+function kcInitVotesRealtime() {
+  if (!isSupabaseRuntime()) return;
+  if (kcVotesRealtimeChannel) return;
+
+  const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+    ? window.KCSupabase.getClient()
+    : null;
+  if (!client || typeof client.channel !== 'function') {
+    if (!kcVotesRealtimeRetryTimer) {
+      kcVotesRealtimeRetryTimer = setTimeout(() => {
+        kcVotesRealtimeRetryTimer = null;
+        kcInitVotesRealtime();
+      }, 1200);
+    }
+    return;
+  }
+
+  const refreshVisibleScores = async () => {
+    try {
+      const ids = Array.from(new Set(Array.from(document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]'))
+        .map((el) => {
+          const rawUuid = String(el.getAttribute('data-post-uuid') || '').trim();
+          const rawId = String(el.getAttribute('data-post-id') || '').trim();
+          const chosen = rawUuid || rawId;
+          return chosen ? decodeURIComponent(chosen) : '';
+        })
+        .filter((id) => kcIsUuid(id))));
+      if (!ids.length) return;
+
+      const { data, error } = await client
+        .from('posts')
+        .select('id, votos')
+        .in('id', ids);
+
+      if (error || !Array.isArray(data)) return;
+      data.forEach((row) => {
+        if (!row || !row.id) return;
+        kcUpdateVoteScoreInDOM(row.id, row.votos);
+      });
+    } catch (_) { }
+  };
+
+  try {
+    kcVotesRealtimeChannel = client
+      .channel(`kc-votes-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        (payload) => {
+          const row = payload && payload.new ? payload.new : null;
+          if (!row || !row.id) return;
+          if (!Object.prototype.hasOwnProperty.call(row, 'votos')) return;
+          kcUpdateVoteScoreInDOM(row.id, row.votos);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_votes' },
+        () => { refreshVisibleScores(); }
+      )
+      .subscribe();
+
+    if (!kcVotesPollingTimer) {
+      kcVotesPollingTimer = setInterval(() => {
+        if (document.hidden) return;
+        refreshVisibleScores();
+      }, 5000);
+    }
+
+    refreshVisibleScores();
+  } catch (_) {
+    kcVotesRealtimeChannel = null;
+  }
+}
+
+function refreshHeroCarousel() {
+  if (!document.querySelector('.kc-hero-carousel')) return;
+  showSlide(0);
+  startAutoSlide();
+
+  if (!heroControlsBound) {
+    heroControlsBound = true;
+
+    const carousel = document.querySelector('.kc-hero-carousel');
+    const prevBtn = document.querySelector('.kc-carousel-prev[data-kc-slide="prev"]');
+    const nextBtn = document.querySelector('.kc-carousel-next[data-kc-slide="next"]');
+    const dotsWrap = document.getElementById('kc-carousel-dots');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        changeSlide(-1);
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        changeSlide(1);
+      });
+    }
+
+    if (dotsWrap) {
+      dotsWrap.addEventListener('click', (e) => {
+        const dot = e.target.closest('.kc-dot[data-kc-slide]');
+        if (!dot) return;
+        const index = Number.parseInt(String(dot.getAttribute('data-kc-slide') || ''), 10);
+        if (!Number.isFinite(index)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        goToSlide(index);
+      });
+    }
+
+    // Fallback: em alguns devices/cliques o alvo chega como .kc-hero-carousel
+    // (e não no botão), então usamos zonas laterais para prev/next.
+    if (carousel) {
+      carousel.addEventListener('click', (e) => {
+        if (e.target.closest('.kc-carousel-prev, .kc-carousel-next, .kc-dot, .kc-btn-primary')) return;
+        const r = carousel.getBoundingClientRect();
+        const x = e.clientX;
+        const edge = Math.max(56, Math.min(88, r.width * 0.12));
+        if (x <= r.left + edge) {
+          changeSlide(-1);
+        } else if (x >= r.right - edge) {
+          changeSlide(1);
+        }
+      });
+    }
+  }
+}
+
+let kcVotesRealtimeChannel = null;
+let kcVotesRealtimeRetryTimer = null;
+let kcVotesPollingTimer = null;
+
+function kcUpdateVoteScoreInDOM(postId, score) {
+  const encoded = encodeURIComponent(String(postId || ''));
+  if (!encoded) return;
+  const scoreText = String(Number.isFinite(Number(score)) ? Number(score) : 0);
+
   document.querySelectorAll(`.kc-vote-box [data-post-id="${encoded}"]`).forEach((btn) => {
     const voteBox = btn.closest('.kc-vote-box');
     const scoreEl = voteBox ? voteBox.querySelector('span') : null;
@@ -499,7 +652,11 @@ function vote(button, type) {
   const previousActiveStates = voteButtons.map((btn) => btn.classList.contains('active'));
 
   const isSupabaseMode = isSupabaseRuntime();
-  const postId = button.closest('[data-post-id]')?.dataset.postId || getCurrentPostId();
+  const buttonUuid = button.getAttribute('data-post-uuid');
+  const buttonPostId = button.getAttribute('data-post-id');
+  const decodedUuid = buttonUuid ? decodeURIComponent(String(buttonUuid)) : '';
+  const decodedPostId = buttonPostId ? decodeURIComponent(String(buttonPostId)) : '';
+  const postId = decodedUuid || decodedPostId || button.closest('[data-post-id]')?.dataset.postId || getCurrentPostId();
   const lockKey = String(postId || '').trim();
 
   if (isSupabaseMode && !lockKey) {
@@ -593,9 +750,10 @@ async function kcInitVoteStates() {
   // Coleta todos os post-ids presentes no DOM
   const postIds = [];
   const idSet = new Set();
-  document.querySelectorAll('[data-action="vote-hot"][data-post-id]').forEach((btn) => {
+  document.querySelectorAll('[data-action="vote-hot"][data-post-id], [data-action="vote-hot"][data-post-uuid]').forEach((btn) => {
+    const rawUuid = btn.getAttribute('data-post-uuid');
     const rawId = btn.getAttribute('data-post-id');
-    const id = rawId ? decodeURIComponent(rawId) : null;
+    const id = rawUuid ? decodeURIComponent(rawUuid) : (rawId ? decodeURIComponent(rawId) : null);
     if (id && kcIsUuid(id) && !idSet.has(id)) {
       idSet.add(id);
       postIds.push(id);
@@ -2283,7 +2441,13 @@ function kcRenderCreateModal() {
 }
 
 function kcOpenCreatePostModal(prefModuleKey) {
-  kcEnsureCreateModal();
+  try {
+    kcEnsureCreateModal();
+  } catch (err) {
+    console.error('[KinoCampus] Falha ao preparar modal de criação.', err);
+    showToast('Não foi possível abrir o formulário agora.', 'error', 2600);
+    return false;
+  }
   kcLastFocus = document.activeElement;
 
   if (prefModuleKey && KC_CREATE_SCHEMA[prefModuleKey]) kcCreateState.moduleKey = prefModuleKey;
@@ -2296,11 +2460,21 @@ function kcOpenCreatePostModal(prefModuleKey) {
   overlay.setAttribute('aria-hidden', 'false');
   document.body.classList.add('kc-modal-open');
 
-  kcRenderCreateModal();
+  try {
+    kcRenderCreateModal();
+  } catch (err) {
+    console.error('[KinoCampus] Erro ao renderizar modal de criação.', err);
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('kc-modal-open');
+    showToast('Não foi possível abrir o formulário agora.', 'error', 2800);
+    return false;
+  }
 
   // foco no fechar
   const closeBtn = overlay.querySelector('.kc-create-modal__close');
   if (closeBtn) closeBtn.focus();
+  return true;
 }
 
 function kcCloseCreatePostModal() {
@@ -2786,12 +2960,20 @@ function kcInitCreatePostTriggers() {
     const trigger = e.target.closest('a[href="create-post.html"], .kc-create-btn, .kc-create-post-btn');
     if (!trigger) return;
 
-    // Evita quebrar navegação quando estiver no create-post (abrirá modal)
-    e.preventDefault();
+    const href = String(trigger.getAttribute('href') || '').trim();
+    const isCreateLink = href.toLowerCase().includes('create-post.html');
 
     // tenta inferir módulo atual pela página
     const mod = kcGetModuloFilterForPage();
-    kcOpenCreatePostModal(mod || null);
+    const opened = kcOpenCreatePostModal(mod || null);
+
+    // Só bloqueia navegação se o modal abriu corretamente.
+    if (opened) {
+      e.preventDefault();
+    } else if (isCreateLink) {
+      // fallback explícito
+      window.location.href = href;
+    }
   });
 
   // Autopen: se a pessoa abrir create-post.html direto
@@ -2963,6 +3145,14 @@ function kcInitHeroSwipe() {
     }
   }, { passive: true });
 }
+
+window.showSlide = showSlide;
+window.changeSlide = changeSlide;
+window.goToSlide = goToSlide;
+window.startAutoSlide = startAutoSlide;
+window.stopAutoSlide = stopAutoSlide;
+window.resetAutoSlide = resetAutoSlide;
+window.kcRefreshHeroCarousel = refreshHeroCarousel;
 
 window.showSlide = showSlide;
 window.changeSlide = changeSlide;
@@ -3315,6 +3505,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (document.querySelector('.kc-hero-carousel')) {
     refreshHeroCarousel();
   }
+
+  kcInitVotesRealtime();
+
+  document.addEventListener('kc:authchange', () => {
+    kcInitVotesRealtime();
+  });
 
   kcInitVotesRealtime();
 

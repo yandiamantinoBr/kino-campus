@@ -752,7 +752,9 @@
     if (p.categoriaKey && !tagKeys.includes(String(p.categoriaKey))) tagKeys.push(String(p.categoriaKey));
     if (tagKeys.length) attrs.push(`data-kc-tags="${escapeHtml(tagKeys.join(' '))}"`);
 
-    const votePostId = (p && p.uuid) ? String(p.uuid) : String(id);
+    const votePostId = String(id);
+    const votePostUuid = (p && p.uuid) ? String(p.uuid) : '';
+    const voteUuidAttr = votePostUuid ? ` data-post-uuid="${encodeURIComponent(votePostUuid)}"` : '';
 
     return `
       <article ${attrs.join(' ')}>
@@ -783,11 +785,11 @@
         <div class="kc-card__footer">
           <div class="kc-card__interactions">
             <div class="kc-vote-box">
-              <button class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}">
+              <button class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr}>
                 <i class="fas fa-fire"></i>
               </button>
               <span>${escapeHtml(String(Number.isFinite(votos) ? votos : 0))}</span>
-              <button class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}">
+              <button class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr}>
                 <i class="fas fa-snowflake"></i>
               </button>
             </div>
