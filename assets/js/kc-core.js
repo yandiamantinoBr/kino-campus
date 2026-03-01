@@ -1326,8 +1326,13 @@ const kcCreateState = {
   submitting: false,
 
   // Imagens (máx 5: 1 capa + 4)
-  images: [], // [{ id, dataUrl, name, size }]
+  images: [], // [{ id, dataUrl, name, size, isExisting? }]
   coverImageId: null,
+
+  // Modo edição
+  editMode: false,
+  editPostId: null,
+  editCallback: null,
 };
 
 let kcLastFocus = null;
@@ -1775,21 +1780,36 @@ function kcRenderCreateModal() {
   const dynamic = overlay.querySelector('#kcCreateDynamic');
   const submitBtn = overlay.querySelector('.kc-create-submit');
 
-  // módulo grid
+  // Modo edição: ajusta título e botão, oculta seleção de módulo
+  const titleEl = overlay.querySelector('#kcCreateModalTitle');
+  const stepEl  = overlay.querySelector('.kc-create-step');
+  if (kcCreateState.editMode) {
+    if (titleEl) titleEl.innerHTML = '<i class="fas fa-pen-to-square"></i> Alterar Publicação';
+    if (stepEl)  stepEl.style.display = 'none';
+  } else {
+    if (titleEl) titleEl.innerHTML = '<i class="fas fa-plus-circle"></i> Nova Publicação';
+    if (stepEl)  stepEl.style.display = '';
+  }
+
+  // módulo grid (oculto no modo edição)
   if (grid) {
-    grid.innerHTML = '';
-    Object.keys(KC_CREATE_SCHEMA).forEach((key) => {
-      const schema = KC_CREATE_SCHEMA[key];
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'kc-create-cat-btn' + (kcCreateState.moduleKey === key ? ' active' : '');
-      btn.setAttribute('data-kc-module', key);
-      btn.innerHTML = `
-        <i class="${schema.icon}"></i>
-        <span>${escHtml(schema.label.replace(' na UFG', ''))}</span>
-      `;
-      grid.appendChild(btn);
-    });
+    if (kcCreateState.editMode) {
+      grid.innerHTML = '';
+    } else {
+      grid.innerHTML = '';
+      Object.keys(KC_CREATE_SCHEMA).forEach((key) => {
+        const schema = KC_CREATE_SCHEMA[key];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'kc-create-cat-btn' + (kcCreateState.moduleKey === key ? ' active' : '');
+        btn.setAttribute('data-kc-module', key);
+        btn.innerHTML = `
+          <i class="${schema.icon}"></i>
+          <span>${escHtml(schema.label.replace(' na UFG', ''))}</span>
+        `;
+        grid.appendChild(btn);
+      });
+    }
   }
 
   const schema = kcGetSchema(kcCreateState.moduleKey);
@@ -1884,9 +1904,12 @@ function kcRenderCreateModal() {
 
   if (dynamic) dynamic.innerHTML = parts.join('');
 
-  // P0-A fix: botão sempre habilitado; kcHandleCreateSubmit valida e exibe toast
-  // (botão disabled impedia o evento submit de disparar → "nada acontecia" sem feedback)
-  if (submitBtn) submitBtn.disabled = false;
+  // Texto do botão de submit (edição vs criação)
+  if (submitBtn) {
+    submitBtn.textContent = kcCreateState.editMode ? 'Salvar Alterações' : 'Publicar Agora';
+    // P0-A fix: botão sempre habilitado; kcHandleCreateSubmit valida e exibe toast
+    submitBtn.disabled = false;
+  }
 }
 
 function kcOpenCreatePostModal(prefModuleKey) {
@@ -1914,6 +1937,10 @@ function kcCloseCreatePostModal() {
   const overlay = document.getElementById(KC_CREATE_MODAL_ID);
   if (!overlay) return;
   kcCreateState.open = false;
+  // Reset edit state
+  kcCreateState.editMode = false;
+  kcCreateState.editPostId = null;
+  kcCreateState.editCallback = null;
   overlay.classList.remove('active');
   overlay.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('kc-modal-open');
@@ -1922,6 +1949,100 @@ function kcCloseCreatePostModal() {
     try { kcLastFocus.focus(); } catch { }
   }
 }
+
+/**
+ * kcOpenEditPostModal — abre o kc-create-modal preenchido com os dados do post.
+ * @param {object} post     Dados normalizados do post (KCPostModel)
+ * @param {function} callback  Chamado com os dados atualizados após salvar
+ */
+function kcOpenEditPostModal(post, callback) {
+  if (!post) return;
+  kcEnsureCreateModal();
+  kcLastFocus = document.activeElement;
+
+  const moduleKey = post.modulo || post.module || '';
+  const schema    = KC_CREATE_SCHEMA[moduleKey];
+  const md        = (post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
+
+  // ── State ──
+  kcCreateState.moduleKey    = moduleKey;
+  kcCreateState.editMode     = true;
+  kcCreateState.editPostId   = String(post.uuid || post.id || post.legacyId || '');
+  kcCreateState.editCallback = typeof callback === 'function' ? callback : null;
+  kcCreateState.open         = true;
+
+  // ── Seleções (tags) ──
+  kcCreateState.selections = {};
+  if (schema) {
+    (schema.tagGroups || []).forEach((g) => {
+      // Tenta encontrar o valor correspondente nos dados do post
+      let key = '';
+      if (g.id === schema.categoryGroupId) {
+        key = post.categoriaKey || post.categoria || md.categoriaKey || md.categoria || '';
+      } else if (g.id === 'acao') {
+        key = post.subcategoriaKey || md.actionKey || md.subcategoriaKey || '';
+      } else {
+        key = kcCreateState.selections[g.id] || post[g.id] || md[g.id] || md.subcategoriaKey || '';
+      }
+      // Valida que a key existe nas opções do grupo
+      if (key && g.options && g.options.some((o) => o.key === key)) {
+        kcCreateState.selections[g.id] = key;
+      }
+    });
+  }
+
+  // ── Valores dos campos ──
+  kcCreateState.values = {
+    titulo:       post.titulo     || post.title        || '',
+    descricao:    post.descricao  || post.description  || '',
+    preco:        post.preco != null ? String(post.preco) : '',
+    localizacao:  post.location   || post.localizacao  || md.localizacao || '',
+    condicao:     post.condicao   || md.condicao       || '',
+    sustentavel:  !!(post.sustentavel || post.sustainable || md.sustentavel),
+    // Campos de módulos específicos (extraídos de metadata)
+    origem:        md.origem       || '',
+    destino:       md.destino      || '',
+    horario:       md.horario      || '',
+    vagas:         md.vagas        || '',
+    data:          md.data         || '',
+    hora:          md.hora         || '',
+    link:          md.link         || '',
+    gratuito:      md.gratuito     || false,
+    contato:       md.contato      || '',
+    remuneracao:   md.remuneracao  || '',
+    recompensa:    md.recompensa   || '',
+    contribuicao:  md.contribuicao || '',
+    orcamento:     md.orcamento    || '',
+  };
+
+  // ── Imagens existentes ──
+  const existingImgs = Array.isArray(post.imagens) ? post.imagens
+    : (Array.isArray(post.images) ? post.images : []);
+  kcCreateState.images = existingImgs
+    .filter(Boolean)
+    .map((url, idx) => ({
+      id:         'existing_' + idx,
+      dataUrl:    String(url),
+      name:       'imagem_' + (idx + 1) + '.jpg',
+      size:       0,
+      isExisting: true,
+    }));
+  kcCreateState.coverImageId = kcCreateState.images.length > 0 ? kcCreateState.images[0].id : null;
+
+  // ── Abre o overlay ──
+  const overlay = document.getElementById(KC_CREATE_MODAL_ID);
+  if (!overlay) return;
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('kc-modal-open');
+
+  kcRenderCreateModal();
+
+  // Foco no botão fechar
+  const closeBtn = overlay.querySelector('.kc-create-modal__close');
+  if (closeBtn) closeBtn.focus();
+}
+window.kcOpenEditPostModal = kcOpenEditPostModal;
 
 async function kcHandleCreateSubmit() {
   if (kcCreateState.submitting === true) return;
@@ -1934,7 +2055,7 @@ async function kcHandleCreateSubmit() {
   kcCreateState.submitting = true;
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Publicando...';
+    submitBtn.textContent = kcCreateState.editMode ? 'Salvando...' : 'Publicando...';
   }
 
   try {
@@ -2102,6 +2223,39 @@ async function kcHandleCreateSubmit() {
       },
     };
 
+    // ── MODO EDIÇÃO ──────────────────────────────────────────────────────────
+    if (kcCreateState.editMode && kcCreateState.editPostId) {
+      if (submitBtn) submitBtn.textContent = 'Salvando...';
+      showToast('Salvando alterações...', 'info', 1600);
+
+      let editRes = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.updatePost === 'function') {
+          editRes = await window.KCAPI.updatePost(kcCreateState.editPostId, payload);
+        } else {
+          editRes = { ok: false, error: { message: 'Edição não suportada neste ambiente.' } };
+        }
+      } catch (err) {
+        editRes = { ok: false, error: { message: (err && err.message) ? String(err.message) : 'Erro inesperado ao salvar.' } };
+      }
+
+      if (editRes && editRes.ok) {
+        showToast('Publicação atualizada com sucesso!', 'success', 2200);
+        const editCb = kcCreateState.editCallback;
+        const editedData = editRes.data;
+        kcCloseCreatePostModal(); // também zera editMode / editCallback
+        if (typeof editCb === 'function') editCb(editedData);
+        return;
+      }
+
+      const editErrMsg = (editRes && editRes.error && editRes.error.message)
+        ? String(editRes.error.message)
+        : 'Não foi possível atualizar a publicação.';
+      showToast(editErrMsg, 'error', 2800);
+      return;
+    }
+    // ── FIM MODO EDIÇÃO ───────────────────────────────────────────────────────
+
     const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
     const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
     const blockLocalCriticalPersistence = isProductionRuntime() && !useSupabase;
@@ -2229,7 +2383,7 @@ async function kcHandleCreateSubmit() {
     kcCreateState.submitting = false;
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = originalSubmitText || 'Publicar Agora';
+      submitBtn.textContent = originalSubmitText || (kcCreateState.editMode ? 'Salvar Alterações' : 'Publicar Agora');
     }
   }
 }

@@ -45,34 +45,90 @@
     #admin-loading { display:flex; align-items:center; gap:10px; color:var(--kc-text-dark-secondary); padding: 36px 0; }
     #admin-error { display:none; padding:14px; border-radius:10px; border:1px solid #ef9a9a; color:#ef9a9a; background: rgba(244,67,54,.12); margin-bottom: 10px; }
     #admin-content { display:none; }
-    #admin-last-sync { color: var(--kc-text-dark-secondary); font-size: .82rem; }
+    #admin-last-sync { color: var(--kc-text-dark-secondary); font-size: .82rem; margin-bottom: 8px; }
 
-    .kc-admin-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); margin: 14px 0 20px; }
+    /* ── Metric grids ── */
+    .kc-admin-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); margin: 14px 0 20px; }
     .kc-admin-card { background:var(--kc-surface-dark); border:1px solid var(--kc-border-dark); border-radius:12px; padding:14px; }
-    .kc-admin-card__label { color: var(--kc-text-dark-secondary); font-size: .9rem; display:flex; gap:8px; align-items:center; }
+    .kc-admin-card__label { color: var(--kc-text-dark-secondary); font-size: .88rem; display:flex; gap:8px; align-items:center; }
     .kc-admin-card strong { display:block; font-size:1.85rem; margin-top:8px; line-height: 1; }
+    .kc-admin-section-title { font-size: .78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--kc-text-dark-secondary); margin: 20px 0 6px; }
 
+    /* ── Sections ── */
     .kc-admin-section {
       background: var(--kc-surface-dark);
       border: 1px solid var(--kc-border-dark);
       border-radius: 12px;
       padding: 14px;
+      margin-bottom: 16px;
     }
-    .kc-admin-section h3 { margin: 0 0 8px; font-size: 1.06rem; }
+    .kc-admin-section h3 { margin: 0 0 12px; font-size: 1.06rem; }
 
-    .kc-admin-audit-wrap { overflow: auto; }
-    table { width:100%; border-collapse:collapse; min-width: 600px; }
+    /* ── Audit log table — desktop ── */
+    .kc-admin-audit-wrap { overflow-x: auto; }
+    .kc-admin-audit-wrap table { width:100%; border-collapse:collapse; min-width: 560px; }
     th,td { padding:10px 8px; border-bottom:1px solid var(--kc-border-dark); text-align:left; font-size:.9rem; vertical-align: top; }
 
+    /* ── Search trends ── */
+    .kc-trend-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .kc-trend-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: .92rem;
+    }
+    .kc-trend-bar-wrap { flex: 1; height: 6px; background: var(--kc-border-dark); border-radius: 4px; overflow: hidden; }
+    .kc-trend-bar { height: 100%; background: var(--kc-primary-brand); border-radius: 4px; transition: width .4s; }
+    .kc-trend-term { min-width: 100px; color: var(--kc-text-dark-primary); font-weight: 500; }
+    .kc-trend-count { min-width: 30px; text-align: right; color: var(--kc-text-dark-secondary); font-size: .85rem; }
+    .kc-trend-empty { color: var(--kc-text-dark-secondary); font-size: .9rem; }
+
+    /* ── Mobile responsive ── */
     @media (max-width: 760px) {
       .kc-user-actions { width: 100%; justify-content: flex-start; }
       .kc-admin-hero { padding: 14px; }
       .kc-admin-hero h1 { font-size: 1.2rem; }
       .kc-admin-toolbar { width: 100%; }
       .kc-admin-toolbar a,
-      .kc-admin-toolbar button { flex: 1; justify-content: center; min-width: 135px; }
-      .kc-admin-card strong { font-size: 1.65rem; }
-      .kc-admin-audit-wrap table { min-width: 520px; }
+      .kc-admin-toolbar button { flex: 1; justify-content: center; min-width: 120px; }
+      .kc-admin-card strong { font-size: 1.6rem; }
+      .kc-admin-grid { grid-template-columns: repeat(2, 1fr); }
+
+      /* Audit log: card layout on mobile */
+      .kc-admin-audit-wrap { overflow: visible; }
+      .kc-admin-audit-wrap table,
+      .kc-admin-audit-wrap thead,
+      .kc-admin-audit-wrap tbody,
+      .kc-admin-audit-wrap th,
+      .kc-admin-audit-wrap td,
+      .kc-admin-audit-wrap tr { display: block; }
+      .kc-admin-audit-wrap thead { display: none; }
+      .kc-admin-audit-wrap tr {
+        background: var(--kc-surface-dark);
+        border: 1px solid var(--kc-border-dark);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        padding: 10px;
+      }
+      .kc-admin-audit-wrap tr:last-child { margin-bottom: 0; }
+      .kc-admin-audit-wrap td {
+        border: none;
+        padding: 4px 0;
+        font-size: .88rem;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      .kc-admin-audit-wrap td::before {
+        content: attr(data-label);
+        color: var(--kc-text-dark-secondary);
+        font-size: .78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        min-width: 68px;
+        flex-shrink: 0;
+        padding-top: 1px;
+      }
     }
   </style>
 </head>
@@ -105,7 +161,7 @@
         <section class="kc-admin-hero">
           <div>
             <h1><i class="fas fa-chart-line"></i> Dashboard Administrativo</h1>
-            <p>Métricas consolidadas de denúncias, moderação e auditoria em tempo real.</p>
+            <p>Métricas consolidadas de denúncias, moderação, atividade e buscas em tempo real.</p>
           </div>
           <div class="kc-admin-toolbar">
             <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
@@ -116,10 +172,25 @@
 
         <div id="admin-last-sync" aria-live="polite"></div>
 
+        <!-- Métricas de moderação -->
+        <div class="kc-admin-section-title"><i class="fas fa-shield-halved"></i> Moderação</div>
         <div class="kc-admin-grid" id="admin-metrics"></div>
 
+        <!-- Métricas de atividade -->
+        <div class="kc-admin-section-title"><i class="fas fa-activity"></i> Atividade da plataforma (últimos 30 dias)</div>
+        <div class="kc-admin-grid" id="admin-activity-metrics"></div>
+
+        <!-- Tendências de busca -->
         <section class="kc-admin-section">
-          <h3>Últimos eventos do audit log</h3>
+          <h3><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca (top 10)</h3>
+          <ul class="kc-trend-list" id="admin-trends-list">
+            <li class="kc-trend-empty">Carregando…</li>
+          </ul>
+        </section>
+
+        <!-- Audit log -->
+        <section class="kc-admin-section">
+          <h3><i class="fas fa-clock-rotate-left"></i> Últimos eventos do audit log</h3>
           <div class="kc-admin-audit-wrap">
             <table>
               <thead>
