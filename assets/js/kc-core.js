@@ -168,6 +168,54 @@ function resetAutoSlide() {
   startAutoSlide();
 }
 
+function refreshHeroCarousel() {
+  if (!document.querySelector('.kc-hero-carousel')) return;
+  showSlide(0);
+  startAutoSlide();
+}
+
+let kcVotesRealtimeChannel = null;
+
+function kcUpdateVoteScoreInDOM(postId, score) {
+  const encoded = encodeURIComponent(String(postId || ''));
+  if (!encoded) return;
+  const scoreText = String(Number.isFinite(Number(score)) ? Number(score) : 0);
+
+  document.querySelectorAll(`.kc-vote-box [data-post-id="${encoded}"]`).forEach((btn) => {
+    const voteBox = btn.closest('.kc-vote-box');
+    const scoreEl = voteBox ? voteBox.querySelector('span') : null;
+    if (scoreEl) scoreEl.textContent = scoreText;
+  });
+}
+
+function kcInitVotesRealtime() {
+  if (!isSupabaseRuntime()) return;
+  if (kcVotesRealtimeChannel) return;
+
+  const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+    ? window.KCSupabase.getClient()
+    : null;
+  if (!client || typeof client.channel !== 'function') return;
+
+  try {
+    kcVotesRealtimeChannel = client
+      .channel(`kc-votes-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        (payload) => {
+          const row = payload && payload.new ? payload.new : null;
+          if (!row || !row.id) return;
+          if (!Object.prototype.hasOwnProperty.call(row, 'votos')) return;
+          kcUpdateVoteScoreInDOM(row.id, row.votos);
+        }
+      )
+      .subscribe();
+  } catch (_) {
+    kcVotesRealtimeChannel = null;
+  }
+}
+
 // -----------------------------
 // Vote box
 // -----------------------------
@@ -2649,6 +2697,14 @@ function kcInitHeroSwipe() {
   carousel.addEventListener("pointercancel", () => { pointerId = null; }, { passive: true });
 }
 
+window.showSlide = showSlide;
+window.changeSlide = changeSlide;
+window.goToSlide = goToSlide;
+window.startAutoSlide = startAutoSlide;
+window.stopAutoSlide = stopAutoSlide;
+window.resetAutoSlide = resetAutoSlide;
+window.kcRefreshHeroCarousel = refreshHeroCarousel;
+
 
 // -----------------------------
 // Image fallbacks (offline/local)
@@ -2969,6 +3025,30 @@ document.addEventListener('DOMContentLoaded', () => {
     vote(voteTrigger, voteType);
   });
 
+  // hero carousel controls
+  document.body.addEventListener('click', (e) => {
+    const slideTrigger = e.target.closest('[data-kc-slide]');
+    if (!slideTrigger) return;
+
+    const action = String(slideTrigger.getAttribute('data-kc-slide') || '').trim().toLowerCase();
+    if (action === 'prev') {
+      e.preventDefault();
+      changeSlide(-1);
+      return;
+    }
+    if (action === 'next') {
+      e.preventDefault();
+      changeSlide(1);
+      return;
+    }
+
+    const index = Number.parseInt(action, 10);
+    if (Number.isFinite(index)) {
+      e.preventDefault();
+      goToSlide(index);
+    }
+  });
+
   // ripple delegation
   document.body.addEventListener('click', (e) => {
     const target = e.target.closest('button, .kc-action-button, .kc-btn-primary, .kc-btn-secondary');
@@ -2982,9 +3062,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // carousel
   if (document.querySelector('.kc-hero-carousel')) {
-    showSlide(0);
-    startAutoSlide();
+    refreshHeroCarousel();
   }
+
+  kcInitVotesRealtime();
 
   // auto-inject local user posts
   kcInjectUserPostsIntoFeed();

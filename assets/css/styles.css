@@ -1691,7 +1691,7 @@ main {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* scroll suave no iOS */
     /* Garante espaço extra na base para safe-area (notch/home indicator) */
-    padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
+    padding-bottom: max(88px, calc(env(safe-area-inset-bottom, 0px) + 72px));
 }
 
 .kc-mobile-menu-content a {
@@ -5552,7 +5552,7 @@ textarea::placeholder {
   align-items: center;
   gap: 12px;
   width: calc(100% - 32px);
-  margin: 8px 16px 16px;
+  margin: 8px 16px max(16px, env(safe-area-inset-bottom, 16px));
   padding: 13px 18px;
   background: rgba(255, 80, 80, 0.1);
   color: #ff5c5c;
@@ -5562,7 +5562,13 @@ textarea::placeholder {
   border-radius: 10px;
   cursor: pointer;
   font-family: inherit;
+  position: sticky;
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
   transition: background 0.18s ease, transform 0.12s ease, border-color 0.18s ease;
+}
+
+.kc-hero-carousel {
+  touch-action: pan-y;
 }
 
 .kc-mobile-menu-logout-btn:hover,

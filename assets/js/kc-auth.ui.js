@@ -619,10 +619,13 @@
       link.remove();
     });
 
-    const duplicateDividers = Array.from(content.querySelectorAll('.kc-mobile-menu-divider'));
-    if (duplicateDividers.length > 2) {
-      duplicateDividers.slice(2).forEach((el) => el.remove());
-    }
+    const seen = new Set();
+    Array.from(content.querySelectorAll('.kc-mobile-menu-divider')).forEach((divider) => {
+      const key = String(divider.getAttribute('data-kc-divider') || '').trim().toLowerCase();
+      if (!key) return;
+      if (seen.has(key)) divider.remove();
+      else seen.add(key);
+    });
   }
 
   function ensureMobileMenuStructure() {
@@ -688,6 +691,15 @@
       content.insertBefore(profileDivider, adminLink.nextSibling);
     }
 
+    // Divisor entre módulos e central de ajuda
+    let helpDivider = content.querySelector('.kc-mobile-menu-divider[data-kc-divider="help"]');
+    if (!helpDivider) {
+      helpDivider = document.createElement('hr');
+      helpDivider.className = 'kc-mobile-menu-divider';
+      helpDivider.setAttribute('data-kc-divider', 'help');
+      content.appendChild(helpDivider);
+    }
+
     // Central de Ajuda
     let helpLink = document.getElementById('mobileMenuHelpLink');
     if (!helpLink) {
@@ -707,6 +719,11 @@
       content.appendChild(bottomDivider);
     }
 
+    // Ordem defensiva: módulos -> helpDivider -> helpLink -> bottomDivider -> logout
+    if (helpDivider.parentNode === content) content.appendChild(helpDivider);
+    if (helpLink.parentNode === content) content.appendChild(helpLink);
+    if (bottomDivider.parentNode === content) content.appendChild(bottomDivider);
+
     // Botão Sair (destacado)
     let logoutBtn = document.getElementById('mobileMenuLogoutBtn');
     if (!logoutBtn) {
@@ -722,6 +739,7 @@
       });
       content.appendChild(logoutBtn);
     }
+    if (logoutBtn.parentNode === content) content.appendChild(logoutBtn);
 
     const navLinks = document.querySelectorAll('.kc-mobile-nav a, .kc-mobile-nav button');
     navLinks.forEach((link) => {
