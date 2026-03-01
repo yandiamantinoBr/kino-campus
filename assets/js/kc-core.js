@@ -800,6 +800,29 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
         updateCommentPreview(id);
         renderComments(id, containerId);
         showToast('Comentário enviado!', 'info', 1800);
+
+        // Audit log: registra comentário (fire-and-forget)
+        try {
+          const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+            ? window.KCSupabase.getClient() : null;
+          const commentId = (res.data && res.data.id) ? String(res.data.id) : id;
+          if (kcClient) {
+            let actorId = null;
+            try {
+              if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+                window.KCAPI.getCurrentUser().then(function (u) {
+                  if (u) actorId = u.id;
+                  kcClient.from('audit_log').insert({
+                    action: 'comment_created',
+                    entity_type: 'comments',
+                    entity_id: commentId,
+                    actor_id: actorId,
+                  }).then(() => {}).catch(() => {});
+                }).catch(() => {});
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
       } else {
         const msg = (res && res.error && res.error.message) || 'Não foi possível comentar.';
         showToast(msg, 'error');
@@ -2365,6 +2388,29 @@ async function kcHandleCreateSubmit() {
     }
 
     showToast('Publicado com sucesso!', 'success', 2200);
+
+    // Audit log: registra criação do post (fire-and-forget)
+    try {
+      const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+        ? window.KCSupabase.getClient() : null;
+      const postId = (post && (post.uuid || post.id || post.legacyId)) ? String(post.uuid || post.id || post.legacyId) : '';
+      let actorId = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+          const u = await window.KCAPI.getCurrentUser();
+          if (u) actorId = u.id;
+        }
+      } catch (_) {}
+      if (kcClient && actorId) {
+        kcClient.from('audit_log').insert({
+          action: 'post_created',
+          entity_type: 'posts',
+          entity_id: postId,
+          actor_id: actorId,
+        }).then(() => {}).catch(() => {});
+      }
+    } catch (_) {}
+
     kcCloseCreatePostModal();
 
     // Redireciona para o módulo + hash do subtópico
