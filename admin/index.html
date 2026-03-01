@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
+  <script src="../assets/js/kc-theme-boot.js"></script>
+  <title>KinoCampus — Admin Dashboard</title>
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .kc-admin-wrapper { max-width: 1120px; margin: 0 auto; padding: 18px 16px 72px; }
+    .kc-admin-hero {
+      background: linear-gradient(120deg, rgba(255, 107, 0, 0.16), rgba(255, 107, 0, 0.05));
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .kc-admin-hero h1 { margin: 0; font-size: 1.45rem; }
+    .kc-admin-hero p { margin: 6px 0 0; color: var(--kc-text-dark-secondary); font-size: .92rem; }
+    .kc-admin-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .kc-admin-toolbar button,
+    .kc-admin-toolbar a {
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      border-radius: 10px;
+      text-decoration: none;
+      padding: 9px 12px;
+      font-size: .9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .kc-admin-toolbar button:hover,
+    .kc-admin-toolbar a:hover { border-color: var(--kc-primary-brand); }
+
+    #admin-loading { display:flex; align-items:center; gap:10px; color:var(--kc-text-dark-secondary); padding: 36px 0; }
+    #admin-error { display:none; padding:14px; border-radius:10px; border:1px solid #ef9a9a; color:#ef9a9a; background: rgba(244,67,54,.12); margin-bottom: 10px; }
+    #admin-content { display:none; }
+    #admin-last-sync { color: var(--kc-text-dark-secondary); font-size: .82rem; }
+
+    .kc-admin-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); margin: 14px 0 20px; }
+    .kc-admin-card { background:var(--kc-surface-dark); border:1px solid var(--kc-border-dark); border-radius:12px; padding:14px; }
+    .kc-admin-card__label { color: var(--kc-text-dark-secondary); font-size: .9rem; display:flex; gap:8px; align-items:center; }
+    .kc-admin-card strong { display:block; font-size:1.85rem; margin-top:8px; line-height: 1; }
+
+    .kc-admin-section {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .kc-admin-section h3 { margin: 0 0 8px; font-size: 1.06rem; }
+
+    .kc-admin-audit-wrap { overflow: auto; }
+    table { width:100%; border-collapse:collapse; min-width: 600px; }
+    th,td { padding:10px 8px; border-bottom:1px solid var(--kc-border-dark); text-align:left; font-size:.9rem; vertical-align: top; }
+
+    @media (max-width: 760px) {
+      .kc-user-actions { width: 100%; justify-content: flex-start; }
+      .kc-admin-hero { padding: 14px; }
+      .kc-admin-hero h1 { font-size: 1.2rem; }
+      .kc-admin-toolbar { width: 100%; }
+      .kc-admin-toolbar a,
+      .kc-admin-toolbar button { flex: 1; justify-content: center; min-width: 135px; }
+      .kc-admin-card strong { font-size: 1.65rem; }
+      .kc-admin-audit-wrap table { min-width: 520px; }
+    }
+  </style>
+</head>
+<body class="kc-admin-page">
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="../index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
+        <a href="moderation.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-shield-halved"></i> Moderação</a>
+        <a href="reports.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-flag"></i> Denúncias</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <div class="kc-admin-wrapper">
+      <div id="admin-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando dashboard…</span></div>
+      <div id="admin-error" role="alert"></div>
+
+      <section id="admin-content">
+        <section class="kc-admin-hero">
+          <div>
+            <h1><i class="fas fa-chart-line"></i> Dashboard Administrativo</h1>
+            <p>Métricas consolidadas de denúncias, moderação e auditoria em tempo real.</p>
+          </div>
+          <div class="kc-admin-toolbar">
+            <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
+            <a href="moderation.html"><i class="fas fa-shield-halved"></i> Ir para Moderação</a>
+            <a href="reports.html"><i class="fas fa-flag"></i> Ir para Denúncias</a>
+          </div>
+        </section>
+
+        <div id="admin-last-sync" aria-live="polite"></div>
+
+        <div class="kc-admin-grid" id="admin-metrics"></div>
+
+        <section class="kc-admin-section">
+          <h3>Últimos eventos do audit log</h3>
+          <div class="kc-admin-audit-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Ação</th>
+                  <th>Entidade</th>
+                  <th>Autor</th>
+                </tr>
+              </thead>
+              <tbody id="admin-audit-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <script src="../assets/js/kc-utils.js"></script>
+  <script src="../assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../assets/js/kc-supabase.client.js"></script>
+  <script src="../assets/js/kc-api.client.js"></script>
+  <script src="../assets/js/kc-profiles.client.js"></script>
+  <script src="../assets/js/kc-auth.ui.js"></script>
+  <script src="../assets/js/kc-theme.js"></script>
+  <script src="../assets/js/controllers/admin-dashboard.controller.js"></script>
+</body>
+</html>

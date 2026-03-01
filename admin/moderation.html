@@ -136,17 +136,19 @@
 <body class="kc-admin-page">
   <header class="kc-header">
     <div class="kc-header-container">
-      <a href="../index.html" class="kc-logo" aria-label="KinoCampus - Comunidade UFG">
+      <div class="kc-logo">
+      <a href="../index.html" aria-label="KinoCampus - Comunidade UFG">
         <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
         <span class="kc-logo-text">
           <span class="kc-logo-name">Kino<span>Campus</span></span>
           <span class="kc-logo-sub">Comunidade UFG</span>
         </span>
       </a>
-      <div style="display:flex;align-items:center;gap:16px;">
-        <span id="admin-greeting" style="font-size:.9em;color:var(--kc-text-dark-secondary);"></span>
+    </div>
+      <div class="kc-user-actions" style="display:flex;align-items:center;gap:16px;">
+        <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
+        <a href="index.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-chart-line"></i> Dashboard</a>
         <a href="reports.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-flag"></i> Denúncias</a>
-        <a href="../index.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-arrow-left"></i> Voltar</a>
       </div>
     </div>
   </header>
