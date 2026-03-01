@@ -259,11 +259,41 @@
     return visibleCount;
   }
 
+  // Registra busca na tabela search_queries (fire-and-forget, sem bloquear UX)
+  function trackSearch(term) {
+    try {
+      const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+        ? window.KCSupabase.getClient() : null;
+      if (!client) return;
+      // session_id anônimo para agrupar buscas da mesma sessão
+      let sid = '';
+      try { sid = sessionStorage.getItem('kc_sid') || ''; } catch (_) {}
+      if (!sid) {
+        sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        try { sessionStorage.setItem('kc_sid', sid); } catch (_) {}
+      }
+      // user_id opcional
+      let uid = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+          // Não aguardamos — fire-and-forget assíncrono
+          window.KCAPI.getCurrentUser().then((u) => {
+            uid = u ? u.id : null;
+            client.from('search_queries').insert({ term, session_id: sid, user_id: uid }).then(() => {});
+          }).catch(() => {});
+          return;
+        }
+      } catch (_) {}
+      client.from('search_queries').insert({ term, session_id: sid, user_id: uid }).then(() => {}).catch(() => {});
+    } catch (_) {}
+  }
+
   function globalSearch(query, redirectToResults = false) {
     const q = String(query || '').trim();
     if (!q) return;
 
     if (redirectToResults) {
+      trackSearch(q);
       window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
       return;
     }

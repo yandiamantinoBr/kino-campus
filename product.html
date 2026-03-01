@@ -265,6 +265,46 @@
       margin-top: 18px;
     }
 
+    /* ── Share popover ───────────────────────────────────── */
+    .kc-share-wrap { position: relative; }
+    .kc-share-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      background: var(--kc-surface-dark, #1e1e2e);
+      border: 1px solid var(--kc-border-dark, #2a2a3c);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
+      min-width: 200px;
+      z-index: 9000;
+      overflow: hidden;
+      display: none;
+    }
+    .kc-share-popover.active { display: block; }
+    .kc-share-option {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 16px; width: 100%; text-align: left;
+      border: none; background: none; cursor: pointer;
+      color: var(--kc-text-dark-primary, #e2e8f0); font-size: .95rem;
+      transition: background .15s;
+    }
+    .kc-share-option:hover { background: rgba(255,255,255,.06); }
+    .kc-share-option i { width: 20px; text-align: center; }
+    .kc-share-option.whatsapp i { color: #25d366; }
+    .kc-share-option.copy i { color: var(--kc-primary-brand, #ff6b00); }
+    .kc-share-popover-backdrop {
+      position: fixed; inset: 0; z-index: 8999; display: none;
+    }
+    .kc-share-popover-backdrop.active { display: block; }
+
+    /* ── Badge editado ───────────────────────────────────── */
+    .kc-post-edited-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: .78rem; color: var(--kc-text-dark-secondary, #94a3b8);
+      margin-top: 4px;
+    }
+    .kc-post-edited-badge i { font-size: .72rem; }
+
     .kc-btn-primary {
       background-color: var(--kc-primary-brand);
       color: #fff;
@@ -969,10 +1009,22 @@
             <button class="kc-btn-primary" id="primaryCta">
               <i class="fas fa-paper-plane"></i> Entrar em contato
             </button>
-            <button class="kc-btn-secondary" id="shareButton" type="button" data-kc-share="link"
-              data-action="share-post">
-              <i class="fas fa-share-alt"></i> Compartilhar
-            </button>
+            <!-- Share com popover -->
+            <div class="kc-share-wrap">
+              <button class="kc-btn-secondary" id="shareButton" type="button" data-action="share-post"
+                aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-share-alt"></i> Compartilhar
+              </button>
+              <div class="kc-share-popover" id="sharePopover" role="menu">
+                <button class="kc-share-option whatsapp" id="shareWhatsApp" type="button">
+                  <i class="fab fa-whatsapp"></i> WhatsApp
+                </button>
+                <button class="kc-share-option copy" id="shareCopyLink" type="button">
+                  <i class="fas fa-link"></i> Copiar link
+                </button>
+              </div>
+            </div>
+            <div class="kc-share-popover-backdrop" id="shareBackdrop"></div>
             <button class="kc-btn-secondary" id="reportButton" type="button" data-action="report-post">
               <i class="fas fa-flag"></i> Denunciar
             </button>

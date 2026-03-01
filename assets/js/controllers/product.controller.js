@@ -14,6 +14,83 @@
   let editUI = null;
   let staticInteractionsBound = false;
 
+  // ── Share popover ────────────────────────────────────────
+  function openSharePopover(btn) {
+    const popover  = document.getElementById('sharePopover');
+    const backdrop = document.getElementById('shareBackdrop');
+    if (!popover) return;
+    popover.classList.add('active');
+    if (backdrop) backdrop.classList.add('active');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+  }
+  function closeSharePopover() {
+    const popover  = document.getElementById('sharePopover');
+    const backdrop = document.getElementById('shareBackdrop');
+    const btn      = document.getElementById('shareButton');
+    if (popover)  popover.classList.remove('active');
+    if (backdrop) backdrop.classList.remove('active');
+    if (btn)      btn.setAttribute('aria-expanded', 'false');
+  }
+  function wireSharePopover() {
+    const shareBtn = document.getElementById('shareButton');
+    const backdrop = document.getElementById('shareBackdrop');
+    const waBtn    = document.getElementById('shareWhatsApp');
+    const copyBtn  = document.getElementById('shareCopyLink');
+    if (!shareBtn) return;
+
+    shareBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const popover = document.getElementById('sharePopover');
+      if (popover && popover.classList.contains('active')) {
+        closeSharePopover();
+      } else {
+        openSharePopover(shareBtn);
+      }
+    });
+    if (backdrop) backdrop.addEventListener('click', closeSharePopover);
+
+    if (waBtn) {
+      waBtn.addEventListener('click', () => {
+        closeSharePopover();
+        const title = (currentPost && (currentPost.titulo || currentPost.title)) || document.title;
+        const url   = window.location.href;
+        const text  = title + '\n' + url;
+        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
+      });
+    }
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        closeSharePopover();
+        try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(window.location.href);
+            toast('Link copiado!', 'info', 1800);
+          } else { throw new Error('no clipboard'); }
+        } catch (_) {
+          toast('Não foi possível copiar o link.', 'error', 2200);
+        }
+      });
+    }
+    // Fechar ao pressionar Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeSharePopover();
+    }, { passive: true });
+  }
+
+  // ── Badge "editado" ──────────────────────────────────────
+  function markPostAsEdited() {
+    // Adiciona indicador abaixo do título
+    const titleEl = document.getElementById('postTitle');
+    if (!titleEl) return;
+    const existing = document.getElementById('kcEditedBadge');
+    if (existing) return;
+    const badge = document.createElement('div');
+    badge.id = 'kcEditedBadge';
+    badge.className = 'kc-post-edited-badge';
+    badge.innerHTML = '<i class="fas fa-pen-to-square"></i> Editado';
+    titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+  }
+
   function getParam(name) {
     const params = new URLSearchParams(window.location.search || '');
     return params.get(name);
@@ -180,7 +257,7 @@
         : '';
 
       if (action === 'share-post') {
-        console.log('[RC-8220][L1] Botão clicado: share-post');
+        // handled by wireSharePopover() directly on the button
       } else if (action === 'report-post') {
         console.log('[RC-8220][L1] Botão clicado: report-post');
       } else if (action === 'submit-comment') {
@@ -195,22 +272,8 @@
         });
       }
 
-      const shareBtn = event.target.closest('[data-kc-share]');
-      if (shareBtn) {
-        event.preventDefault();
-        try {
-          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-            await navigator.clipboard.writeText(window.location.href);
-            toast('Link copiado!', 'info', 1800);
-          } else {
-            throw new Error('clipboard_api_unavailable');
-          }
-        } catch (e) {
-          console.error('[KC Product] Falha ao copiar link:', e);
-          toast('Não foi possível copiar o link.', 'error', 2200);
-        }
-        return;
-      }
+      // [data-kc-share] is now handled by wireSharePopover() directly
+
 
       const viewProfileBtn = event.target.closest('[data-kc-view-profile]');
       if (viewProfileBtn) {
@@ -976,6 +1039,31 @@
     else actions.appendChild(wrap);
 
     editBtn.addEventListener('click', () => {
+      // Usa o kc-create-modal completo em modo edição, se disponível
+      if (typeof window.kcOpenEditPostModal === 'function') {
+        window.kcOpenEditPostModal(post, async (updatedData) => {
+          const next = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
+            ? window.KCPostModel.from(updatedData, { pageModule: updatedData.modulo || '', view: 'product' })
+            : updatedData;
+          renderPost(next);
+          markPostAsEdited();
+          // Log edição no audit_log
+          try {
+            const client = window.KCSupabase && window.KCSupabase.getClient ? window.KCSupabase.getClient() : null;
+            const uid = currentUser && currentUser.id;
+            if (client && uid) {
+              await client.from('audit_log').insert({
+                action: 'post_edited',
+                entity_type: 'posts',
+                entity_id: String(post.uuid || post.id || ''),
+                actor_id: uid,
+              });
+            }
+          } catch (_) { /* silent */ }
+        });
+        return;
+      }
+      // Fallback para o modal antigo
       if (!editUI) editUI = buildEditUI();
       editUI.open(post);
     });
@@ -1597,6 +1685,7 @@
   // ─────────────────────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', () => {
+    wireSharePopover();
     bindStaticInteractions();
     loadPost();
   });
