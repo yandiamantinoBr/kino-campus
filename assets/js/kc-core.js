@@ -318,6 +318,150 @@ function kcInitVotesRealtime() {
   }
 }
 
+function refreshHeroCarousel() {
+  if (!document.querySelector('.kc-hero-carousel')) return;
+  showSlide(0);
+  startAutoSlide();
+
+  if (!heroControlsBound) {
+    heroControlsBound = true;
+
+    const carousel = document.querySelector('.kc-hero-carousel');
+    const prevBtn = document.querySelector('.kc-carousel-prev[data-kc-slide="prev"]');
+    const nextBtn = document.querySelector('.kc-carousel-next[data-kc-slide="next"]');
+    const dotsWrap = document.getElementById('kc-carousel-dots');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        changeSlide(-1);
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        changeSlide(1);
+      });
+    }
+
+    if (dotsWrap) {
+      dotsWrap.addEventListener('click', (e) => {
+        const dot = e.target.closest('.kc-dot[data-kc-slide]');
+        if (!dot) return;
+        const index = Number.parseInt(String(dot.getAttribute('data-kc-slide') || ''), 10);
+        if (!Number.isFinite(index)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        goToSlide(index);
+      });
+    }
+
+    // Fallback: em alguns devices/cliques o alvo chega como .kc-hero-carousel
+    // (e não no botão), então usamos zonas laterais para prev/next.
+    if (carousel) {
+      carousel.addEventListener('click', (e) => {
+        if (e.target.closest('.kc-carousel-prev, .kc-carousel-next, .kc-dot, .kc-btn-primary')) return;
+        const r = carousel.getBoundingClientRect();
+        const x = e.clientX;
+        const edge = Math.max(56, Math.min(88, r.width * 0.12));
+        if (x <= r.left + edge) {
+          changeSlide(-1);
+        } else if (x >= r.right - edge) {
+          changeSlide(1);
+        }
+      });
+    }
+  }
+}
+
+let kcVotesRealtimeChannel = null;
+let kcVotesRealtimeRetryTimer = null;
+let kcVotesPollingTimer = null;
+
+function kcUpdateVoteScoreInDOM(postId, score) {
+  const encoded = encodeURIComponent(String(postId || ''));
+  if (!encoded) return;
+  const scoreText = String(Number.isFinite(Number(score)) ? Number(score) : 0);
+
+  document.querySelectorAll(`.kc-vote-box [data-post-id="${encoded}"]`).forEach((btn) => {
+    const voteBox = btn.closest('.kc-vote-box');
+    const scoreEl = voteBox ? voteBox.querySelector('span') : null;
+    if (scoreEl) scoreEl.textContent = scoreText;
+  });
+}
+
+function kcInitVotesRealtime() {
+  if (!isSupabaseRuntime()) return;
+  if (kcVotesRealtimeChannel) return;
+
+  const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+    ? window.KCSupabase.getClient()
+    : null;
+  if (!client || typeof client.channel !== 'function') {
+    if (!kcVotesRealtimeRetryTimer) {
+      kcVotesRealtimeRetryTimer = setTimeout(() => {
+        kcVotesRealtimeRetryTimer = null;
+        kcInitVotesRealtime();
+      }, 1200);
+    }
+    return;
+  }
+
+  const refreshVisibleScores = async () => {
+    try {
+      const ids = Array.from(new Set(Array.from(document.querySelectorAll('.kc-vote-box [data-post-id]'))
+        .map((el) => decodeURIComponent(String(el.getAttribute('data-post-id') || '')))
+        .filter(Boolean)));
+      if (!ids.length) return;
+
+      const { data, error } = await client
+        .from('posts')
+        .select('id, votos')
+        .in('id', ids);
+
+      if (error || !Array.isArray(data)) return;
+      data.forEach((row) => {
+        if (!row || !row.id) return;
+        kcUpdateVoteScoreInDOM(row.id, row.votos);
+      });
+    } catch (_) { }
+  };
+
+  try {
+    kcVotesRealtimeChannel = client
+      .channel(`kc-votes-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        (payload) => {
+          const row = payload && payload.new ? payload.new : null;
+          if (!row || !row.id) return;
+          if (!Object.prototype.hasOwnProperty.call(row, 'votos')) return;
+          kcUpdateVoteScoreInDOM(row.id, row.votos);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_votes' },
+        () => { refreshVisibleScores(); }
+      )
+      .subscribe();
+
+    if (!kcVotesPollingTimer) {
+      kcVotesPollingTimer = setInterval(() => {
+        if (document.hidden) return;
+        refreshVisibleScores();
+      }, 5000);
+    }
+
+    refreshVisibleScores();
+  } catch (_) {
+    kcVotesRealtimeChannel = null;
+  }
+}
+
 // -----------------------------
 // Vote box
 // -----------------------------
@@ -2828,6 +2972,14 @@ window.stopAutoSlide = stopAutoSlide;
 window.resetAutoSlide = resetAutoSlide;
 window.kcRefreshHeroCarousel = refreshHeroCarousel;
 
+window.showSlide = showSlide;
+window.changeSlide = changeSlide;
+window.goToSlide = goToSlide;
+window.startAutoSlide = startAutoSlide;
+window.stopAutoSlide = stopAutoSlide;
+window.resetAutoSlide = resetAutoSlide;
+window.kcRefreshHeroCarousel = refreshHeroCarousel;
+
 
 // -----------------------------
 // Image fallbacks (offline/local)
@@ -3163,6 +3315,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (document.querySelector('.kc-hero-carousel')) {
     refreshHeroCarousel();
   }
+
+  kcInitVotesRealtime();
+
+  document.addEventListener('kc:authchange', () => {
+    kcInitVotesRealtime();
+  });
 
   kcInitVotesRealtime();
 
