@@ -203,40 +203,86 @@
     if (!postIds.length) return {};
     const client = getClient();
     if (!client) return {};
-    const { data, error } = await client
-      .from('posts')
-      .select('id, title, titulo, status, author_id')
-      .in('id', postIds);
 
-    let posts = data || [];
-
-    if (error) {
-      const message = String(error.message || '').toLowerCase();
-      const details = String(error.details || '').toLowerCase();
-      const legacySchemaMissingTitle = (message.includes('column') || details.includes('column'))
-        && (message.includes('title') || details.includes('title'))
-        && (message.includes('does not exist') || details.includes('does not exist'));
-
-      if (!legacySchemaMissingTitle) {
-        console.error('[Admin] loadPostTitles:', error);
-        return {};
-      }
-
-      const { data: legacyData, error: legacyError } = await client
+    // Tenta schema moderno primeiro (title)
+    let posts = [];
+    let modernError = null;
+    try {
+      const modern = await client
         .from('posts')
-        .select('id, titulo, status, author_id')
+        .select('id, title, status, author_id')
         .in('id', postIds);
 
-      if (legacyError) {
-        console.error('[Admin] loadPostTitles legacy fallback:', legacyError);
-        return {};
-      }
+      modernError = modern && modern.error ? modern.error : null;
+      if (!modernError) posts = modern && Array.isArray(modern.data) ? modern.data : [];
+    } catch (error) {
+      modernError = error;
+    }
 
-      posts = legacyData || [];
+    // Fallback: schema legado (titulo)
+    if (modernError) {
+      const message = String(modernError.message || modernError.details || '').toLowerCase();
+      const missingTitle = message.includes('column') && message.includes('title') && message.includes('does not exist');
+
+      if (!missingTitle) {
+        console.error('[Admin] loadPostTitles modern:', modernError);
+      } else {
+        try {
+          const legacy = await client
+            .from('posts')
+            .select('id, titulo, status, author_id')
+            .in('id', postIds);
+
+          if (legacy && legacy.error) {
+            console.error('[Admin] loadPostTitles legacy:', legacy.error);
+          } else {
+            posts = legacy && Array.isArray(legacy.data) ? legacy.data : [];
+          }
+        } catch (legacyError) {
+          console.error('[Admin] loadPostTitles legacy exceção:', legacyError);
+        }
+      }
     }
 
     const map = {};
-    posts.forEach(p => { map[p.id] = p; });
+    (posts || []).forEach((row) => {
+      if (!row || !row.id) return;
+      map[row.id] = row;
+    });
+
+    // Fallback RPC para IDs faltantes (RLS em posts / linhas não retornadas).
+    const missingIds = postIds.filter((id) => !map[id]);
+    if (missingIds.length) {
+      try {
+        const rpc = await client.rpc('kc_admin_list_posts_by_ids', { p_ids: missingIds });
+        if (rpc && !rpc.error && Array.isArray(rpc.data)) {
+          rpc.data.forEach((row) => {
+            if (!row || !row.id) return;
+            map[row.id] = {
+              id: row.id,
+              title: row.title || 'Post sem título',
+              status: row.status || 'indisponível',
+              author_id: row.author_id || '',
+            };
+          });
+        }
+      } catch (error) {
+        console.error('[Admin] loadPostTitles rpc posts fallback:', error);
+      }
+    }
+
+    // Segurança extra: placeholder quando realmente não existe mais registro do post.
+    postIds.forEach((id) => {
+      if (!map[id]) {
+        map[id] = {
+          id,
+          title: 'Post removido',
+          status: 'indisponível',
+          author_id: '',
+        };
+      }
+    });
+
     return map;
   }
 
@@ -534,8 +580,8 @@
       const open = items.filter(r => r.status === 'open');
       const closed = items.filter(r => r.status !== 'open');
       const post = postMap[pid] || {};
-      const postTitle = escape(post.title || post.titulo || '(título não carregado)');
-      const postStatus = post.status || 'unknown';
+      const postTitle = escape(post.title || post.titulo || 'Post sem título');
+      const postStatus = String(post.status || 'indisponível');
       const authorId = post.author_id || '';
 
       // Contagem por motivo (todos)
@@ -572,7 +618,7 @@
 
       return `
       <div class="kc-admin-report-group" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:12px;padding:20px;margin-bottom:20px;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+        <div class="kc-admin-report-group-head" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
           <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:1.05em;margin-bottom:4px;">
               <i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;"></i>
@@ -586,7 +632,7 @@
             </div>
             <div style="flex-wrap:wrap;display:flex;gap:2px;">${reasonSummary}</div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+          <div class="kc-admin-report-group-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
             <a href="../product.html?id=${encodeURIComponent(pid)}" target="_blank"
                style="padding:7px 14px;background:var(--kc-background-dark);border:1px solid var(--kc-border-dark);border-radius:6px;text-decoration:none;font-size:.85em;color:var(--kc-text-dark);display:inline-flex;align-items:center;gap:5px;">
                <i class="fas fa-eye"></i> Ver post
@@ -616,7 +662,7 @@
         </div>
         ${displayItems.length > 0 ? `
         <div style="overflow-x:auto;margin-top:10px;">
-          <table style="width:100%;border-collapse:collapse;font-size:.9em;min-width:560px;">
+          <table class="kc-admin-report-table" style="width:100%;border-collapse:collapse;font-size:.9em;min-width:560px;">
             <thead>
               <tr style="border-bottom:2px solid var(--kc-border-dark);">
                 <th style="padding:8px;text-align:left;font-weight:600;white-space:nowrap;">Motivo</th>

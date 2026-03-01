@@ -16,7 +16,7 @@
 
   <style>
     .kc-admin-page .kc-main-content { padding-top: 24px; }
-    .kc-admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+    .kc-admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 0 20px 72px; }
 
     .kc-admin-header-bar {
       display: flex;
@@ -24,15 +24,11 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
-      margin-bottom: 28px;
+      margin-bottom: 20px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--kc-border-dark);
     }
-    .kc-admin-header-bar h1 {
-      font-size: 1.4em;
-      font-weight: 700;
-      margin: 0;
-    }
+    .kc-admin-header-bar h1 { font-size: 1.4em; font-weight: 700; margin: 0; }
     .kc-admin-header-bar h1 i { margin-right: 8px; color: var(--kc-primary-brand); }
 
     #admin-loading {
@@ -57,12 +53,7 @@
 
     #admin-content { display: none; }
 
-    .kc-admin-filters {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
+    .kc-admin-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
     .kc-admin-filters select {
       padding: 8px 12px;
       border-radius: 8px;
@@ -84,34 +75,59 @@
 
     .kc-admin-report-group button:hover { filter: brightness(1.1); }
     .kc-admin-report-group a:hover { border-color: var(--kc-primary-brand) !important; }
+    .kc-admin-report-group-head { align-items: flex-start; }
+    .kc-admin-report-group-actions { justify-content: flex-end; }
 
-    .kc-back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--kc-text-dark-secondary);
-      text-decoration: none;
-      font-size: .9em;
-      margin-bottom: 20px;
+    @media (max-width: 860px) {
+      .kc-user-actions { width: 100%; justify-content: flex-start; gap: 10px !important; }
+      .kc-user-actions a.btn-login { width: auto; }
+      .kc-admin-wrapper { padding: 0 12px 74px; }
+      .kc-admin-header-bar h1 { font-size: 1.2rem; }
+      .kc-admin-filters { width: 100%; }
+      .kc-admin-filters select,
+      .kc-admin-filters button { width: 100%; box-sizing: border-box; }
+      #reports-summary { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+      .kc-admin-report-group { padding: 14px !important; }
+      .kc-admin-report-group-head { flex-direction: column; }
+      .kc-admin-report-group-actions { width: 100%; justify-content: stretch; }
+      .kc-admin-report-group-actions > a,
+      .kc-admin-report-group-actions > button { flex: 1 1 100%; justify-content: center; }
+
+      .kc-admin-report-table { min-width: unset !important; }
+      .kc-admin-report-table thead { display: none; }
+      .kc-admin-report-table,
+      .kc-admin-report-table tbody,
+      .kc-admin-report-table tr,
+      .kc-admin-report-table td { display: block; width: 100%; }
+      .kc-admin-report-table tr { border-bottom: 1px solid var(--kc-border-dark); padding: 8px 0; }
+      .kc-admin-report-table td {
+        border-bottom: none;
+        padding: 4px 0 !important;
+        white-space: normal !important;
+      }
+      .kc-admin-report-table td:nth-child(1)::before { content: 'Motivo'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
+      .kc-admin-report-table td:nth-child(2)::before { content: 'Detalhes'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
+      .kc-admin-report-table td:nth-child(3)::before { content: 'Quem denunciou'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
+      .kc-admin-report-table td:nth-child(4)::before { content: 'Data'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
+      .kc-admin-report-table td:nth-child(5)::before { content: 'Status'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
     }
-    .kc-back-link:hover { color: var(--kc-primary-brand); }
   </style>
 </head>
 <body class="kc-admin-page">
 
-  <!-- Header (compat com o layout existente) -->
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
-      <a href="../index.html" aria-label="KinoCampus - Comunidade UFG">
-        <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
-        <span class="kc-logo-text">
-          <span class="kc-logo-name">Kino<span>Campus</span></span>
-          <span class="kc-logo-sub">Comunidade UFG</span>
-        </span>
-      </a>
-    </div>
-      <div class="kc-user-actions" style="display:flex;align-items:center;gap:16px;">
+        <a href="../index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
         <a href="index.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;">
           <i class="fas fa-chart-line"></i> Dashboard
@@ -119,16 +135,12 @@
         <a href="moderation.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;">
           <i class="fas fa-shield-halved"></i> Moderação
         </a>
-        <a href="../index.html" style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;">
-          <i class="fas fa-arrow-left"></i> Voltar ao site
-        </a>
       </div>
     </div>
   </header>
 
   <main class="kc-main-content">
     <div class="kc-admin-wrapper">
-
       <div id="admin-loading">
         <i class="fas fa-spinner fa-spin" style="font-size:1.6em;"></i>
         <span>Verificando acesso…</span>
@@ -138,9 +150,7 @@
 
       <div id="admin-content">
         <div class="kc-admin-header-bar">
-          <h1>
-            <i class="fas fa-flag"></i>Triagem de Denúncias
-          </h1>
+          <h1><i class="fas fa-flag"></i>Triagem de Denúncias</h1>
           <div class="kc-admin-filters">
             <select id="reports-status-filter" title="Filtrar por status da denúncia">
               <option value="open">Em aberto</option>
@@ -163,7 +173,7 @@
           </div>
         </div>
 
-        <p style="color:var(--kc-text-dark-secondary);font-size:.9em;margin-bottom:20px;">
+        <p style="color:var(--kc-text-dark-secondary);font-size:.9em;margin-bottom:18px;">
           Posts agrupados por número de denúncias. Filtros aplicados em tempo real.
           Ações disponíveis: fechar denúncias, ocultar post (remove do feed) ou deletar permanentemente.
           A UI só atualiza após confirmação de persistência no Supabase.
@@ -172,11 +182,9 @@
         <div id="reports-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 16px 0;"></div>
         <div id="admin-reports-container"></div>
       </div>
-
     </div>
   </main>
 
-  <!-- Scripts (mesma ordem dos outros módulos) -->
   <script src="../assets/js/kc-utils.js"></script>
   <script src="../assets/js/kc-env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -186,6 +194,5 @@
   <script src="../assets/js/kc-auth.ui.js"></script>
   <script src="../assets/js/kc-theme.js"></script>
   <script src="../assets/js/controllers/admin-reports.controller.js"></script>
-
 </body>
 </html>

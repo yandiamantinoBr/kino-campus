@@ -21,9 +21,22 @@
     el.style.display = 'block';
   }
 
+  function clearError() {
+    const el = $('#admin-error');
+    if (!el) return;
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+
   function setLoading(isLoading) {
     const loading = $('#admin-loading');
     if (loading) loading.style.display = isLoading ? 'flex' : 'none';
+  }
+
+  function setLastSync() {
+    const el = $('#admin-last-sync');
+    if (!el) return;
+    el.textContent = `Atualizado em ${new Date().toLocaleString('pt-BR')}`;
   }
 
   async function checkAccess() {
@@ -47,7 +60,12 @@
   }
 
   function metricCard(icon, label, value) {
-    return `<article class="kc-admin-card"><span><i class="${icon}"></i> ${label}</span><strong>${value}</strong></article>`;
+    return `
+      <article class="kc-admin-card">
+        <div class="kc-admin-card__label"><i class="${icon}"></i> ${label}</div>
+        <strong>${Number(value || 0)}</strong>
+      </article>
+    `;
   }
 
   async function loadMetrics() {
@@ -58,7 +76,7 @@
       client.from('reports').select('id', { count: 'exact', head: true }),
       client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'hidden'),
       client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'deleted'),
-      client.from('audit_log').select('created_at, action, entity_type, actor_id').order('created_at', { ascending: false }).limit(8)
+      client.from('audit_log').select('created_at, action, entity_type, actor_id').order('created_at', { ascending: false }).limit(10)
     ]);
 
     let openReports = openRes.count || 0;
@@ -92,7 +110,7 @@
         p_entity_type: 'all',
         p_action: 'all',
         p_actor_query: null,
-        p_limit: 8,
+        p_limit: 10,
       });
       if (!rpcAudit.error && Array.isArray(rpcAudit.data)) {
         auditRows = rpcAudit.data;
@@ -102,10 +120,10 @@
     const metrics = $('#admin-metrics');
     if (metrics) {
       metrics.innerHTML = [
-        metricCard('fas fa-flag', 'Denúncias em aberto', openReports || 0),
-        metricCard('fas fa-list', 'Total de denúncias', totalReports || 0),
-        metricCard('fas fa-eye-slash', 'Posts ocultos', hiddenPosts || 0),
-        metricCard('fas fa-trash', 'Posts deletados', deletedPosts || 0)
+        metricCard('fas fa-flag', 'Denúncias em aberto', openReports),
+        metricCard('fas fa-list', 'Total de denúncias', totalReports),
+        metricCard('fas fa-eye-slash', 'Posts ocultos', hiddenPosts),
+        metricCard('fas fa-trash', 'Posts deletados', deletedPosts)
       ].join('');
     }
 
@@ -113,8 +131,30 @@
     if (auditBody) {
       const rows = Array.isArray(auditRows) ? auditRows : [];
       auditBody.innerHTML = rows.length
-        ? rows.map((row) => `<tr><td>${new Date(row.created_at).toLocaleString('pt-BR')}</td><td><code>${row.action || '—'}</code></td><td><code>${row.entity_type || '—'}</code></td><td><code>${row.actor_id || 'system'}</code></td></tr>`).join('')
+        ? rows.map((row) => `
+          <tr>
+            <td>${new Date(row.created_at).toLocaleString('pt-BR')}</td>
+            <td><code>${row.action || '—'}</code></td>
+            <td><code>${row.entity_type || '—'}</code></td>
+            <td><code>${row.actor_id || 'system'}</code></td>
+          </tr>
+        `).join('')
         : '<tr><td colspan="4" style="color:var(--kc-text-dark-secondary);">Nenhum evento encontrado.</td></tr>';
+    }
+
+    setLastSync();
+  }
+
+  async function refreshDashboard() {
+    clearError();
+    setLoading(true);
+    try {
+      await loadMetrics();
+    } catch (error) {
+      console.error('[Admin dashboard] refreshDashboard:', error);
+      showError('Não foi possível atualizar o dashboard no momento.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -129,8 +169,11 @@
     }
 
     $('#admin-content').style.display = 'block';
-    await loadMetrics();
-    setLoading(false);
+
+    const refreshBtn = $('#admin-refresh-btn');
+    if (refreshBtn) refreshBtn.addEventListener('click', refreshDashboard);
+
+    await refreshDashboard();
   }
 
   document.addEventListener('DOMContentLoaded', boot);
