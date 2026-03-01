@@ -1691,7 +1691,7 @@ main {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* scroll suave no iOS */
     /* Garante espaço extra na base para safe-area (notch/home indicator) */
-    padding-bottom: max(88px, calc(env(safe-area-inset-bottom, 0px) + 72px));
+    padding-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 12px));
 }
 
 .kc-mobile-menu-content a {
@@ -5562,8 +5562,6 @@ textarea::placeholder {
   border-radius: 10px;
   cursor: pointer;
   font-family: inherit;
-  position: sticky;
-  bottom: max(8px, env(safe-area-inset-bottom, 0px));
   transition: background 0.18s ease, transform 0.12s ease, border-color 0.18s ease;
 }
 
