@@ -1279,7 +1279,7 @@
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
-      .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`)
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, votos, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`)
       .limit(1);
   }
 

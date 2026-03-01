@@ -398,10 +398,7 @@ main {
 .kc-hero-carousel {
     position: relative;
     border-radius: 24px;
-    /* overflow: visible para que os botões prev/next possam ficar
-       semi-fora do banner sem serem cortados. O clip visual do banner
-       é feito pelo .kc-hero-banner que já tem overflow:hidden. */
-    overflow: visible;
+    overflow: hidden;
     margin-bottom: 20px;
 }
 
@@ -449,6 +446,8 @@ main {
     align-items: center;
     justify-content: space-between;
     gap: 32px;
+    /* Afasta o conteúdo dos botões prev/next (left:10px + 52px = 62px → +6px gap = 68px total) */
+    padding-inline: 24px;
 }
 
 .kc-hero-content {
@@ -552,13 +551,11 @@ main {
 }
 
 .kc-carousel-prev {
-    /* Centraliza o botão na borda esquerda do carousel (metade dentro, metade fora) */
-    left: -26px;
+    left: 10px;
 }
 
 .kc-carousel-next {
-    /* Centraliza o botão na borda direita do carousel (metade dentro, metade fora) */
-    right: -26px;
+    right: 10px;
 }
 
 .kc-carousel-dots {
@@ -1624,11 +1621,14 @@ main {
     right: -300px;
     width: 280px;
     height: 100vh;
+    height: 100dvh; /* dvh = dynamic viewport height: exclui barras do browser (iOS Safari fix) */
     background-color: var(--kc-surface-dark);
     z-index: 200;
     transition: right 0.3s ease;
     box-shadow: -2px 0 10px rgba(0,0,0,0.2);
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* scroll via .kc-mobile-menu-content */
 }
 
 /* Alias: alguns templates usam .kc-mobile-menu-drawer (V5.1)
@@ -1639,11 +1639,14 @@ main {
     right: -300px;
     width: 280px;
     height: 100vh;
+    height: 100dvh;
     background-color: var(--kc-surface-dark);
     z-index: 200;
     transition: right 0.3s ease;
     box-shadow: -2px 0 10px rgba(0,0,0,0.2);
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .kc-mobile-menu-drawer.active {
@@ -1660,6 +1663,7 @@ main {
     align-items: center;
     padding: 20px;
     border-bottom: 1px solid var(--kc-border-dark);
+    flex-shrink: 0; /* não encolhe: header fixo no topo do flex-column */
 }
 
 .kc-mobile-menu-header h3 {
@@ -1683,6 +1687,11 @@ main {
 
 .kc-mobile-menu-content {
     padding: 10px 0;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* scroll suave no iOS */
+    /* Garante espaço extra na base para safe-area (notch/home indicator) */
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
 }
 
 .kc-mobile-menu-content a {
@@ -1881,12 +1890,11 @@ main {
     }
 
     .kc-carousel-prev {
-        /* Mobile: botão menor (32px), centralizado na borda */
-        left: -16px;
+        left: 6px;
     }
 
     .kc-carousel-next {
-        right: -16px;
+        right: 6px;
     }
     
     .kc-card__main {
