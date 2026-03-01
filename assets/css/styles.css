@@ -5569,6 +5569,10 @@ textarea::placeholder {
   touch-action: pan-y;
 }
 
+.kc-hero-carousel {
+  touch-action: pan-y;
+}
+
 .kc-mobile-menu-logout-btn:hover,
 .kc-mobile-menu-logout-btn:focus {
   background: rgba(255, 80, 80, 0.2);
