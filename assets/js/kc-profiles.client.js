@@ -144,6 +144,7 @@
       email: u.email || null,
       full_name: computeDisplayName(u),
       avatar_url: computeAvatarUrl(u),
+      is_admin: false,
     };
 
     state.syncing = true;
