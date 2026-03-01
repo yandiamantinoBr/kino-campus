@@ -323,297 +323,8 @@ function kcInitVotesRealtime() {
   }
 }
 
-function refreshHeroCarousel() {
-  if (!document.querySelector('.kc-hero-carousel')) return;
-  showSlide(0);
-  startAutoSlide();
 
-  if (!heroControlsBound) {
-    heroControlsBound = true;
 
-    const carousel = document.querySelector('.kc-hero-carousel');
-    const prevBtn = document.querySelector('.kc-carousel-prev[data-kc-slide="prev"]');
-    const nextBtn = document.querySelector('.kc-carousel-next[data-kc-slide="next"]');
-    const dotsWrap = document.getElementById('kc-carousel-dots');
-
-    if (prevBtn) {
-      prevBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        changeSlide(-1);
-      });
-    }
-    if (nextBtn) {
-      nextBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        changeSlide(1);
-      });
-    }
-
-    if (dotsWrap) {
-      dotsWrap.addEventListener('click', (e) => {
-        const dot = e.target.closest('.kc-dot[data-kc-slide]');
-        if (!dot) return;
-        const index = Number.parseInt(String(dot.getAttribute('data-kc-slide') || ''), 10);
-        if (!Number.isFinite(index)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        goToSlide(index);
-      });
-    }
-
-    // Fallback: em alguns devices/cliques o alvo chega como .kc-hero-carousel
-    // (e não no botão), então usamos zonas laterais para prev/next.
-    if (carousel) {
-      carousel.addEventListener('click', (e) => {
-        if (e.target.closest('.kc-carousel-prev, .kc-carousel-next, .kc-dot, .kc-btn-primary')) return;
-        const r = carousel.getBoundingClientRect();
-        const x = e.clientX;
-        const edge = Math.max(56, Math.min(88, r.width * 0.12));
-        if (x <= r.left + edge) {
-          changeSlide(-1);
-        } else if (x >= r.right - edge) {
-          changeSlide(1);
-        }
-      });
-    }
-  }
-}
-
-let kcVotesRealtimeChannel = null;
-let kcVotesRealtimeRetryTimer = null;
-let kcVotesPollingTimer = null;
-
-function kcUpdateVoteScoreInDOM(postId, score) {
-  const encoded = encodeURIComponent(String(postId || ''));
-  if (!encoded) return;
-  const scoreText = String(Number.isFinite(Number(score)) ? Number(score) : 0);
-
-  document.querySelectorAll(`.kc-vote-box [data-post-id="${encoded}"]`).forEach((btn) => {
-    const voteBox = btn.closest('.kc-vote-box');
-    const scoreEl = voteBox ? voteBox.querySelector('span') : null;
-    if (scoreEl) scoreEl.textContent = scoreText;
-  });
-}
-
-function kcIsUuid(value) {
-  return KC_UUID_RE.test(String(value || '').trim());
-}
-
-function kcInitVotesRealtime() {
-  if (!isSupabaseRuntime()) return;
-  if (kcVotesRealtimeChannel) return;
-
-  const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
-    ? window.KCSupabase.getClient()
-    : null;
-  if (!client || typeof client.channel !== 'function') {
-    if (!kcVotesRealtimeRetryTimer) {
-      kcVotesRealtimeRetryTimer = setTimeout(() => {
-        kcVotesRealtimeRetryTimer = null;
-        kcInitVotesRealtime();
-      }, 1200);
-    }
-    return;
-  }
-
-  const refreshVisibleScores = async () => {
-    try {
-      const ids = Array.from(new Set(Array.from(document.querySelectorAll('.kc-vote-box [data-post-id]'))
-        .map((el) => decodeURIComponent(String(el.getAttribute('data-post-id') || '')))
-        .filter((id) => kcIsUuid(id))));
-      if (!ids.length) return;
-
-      const { data, error } = await client
-        .from('posts')
-        .select('id, votos')
-        .in('id', ids);
-
-      if (error || !Array.isArray(data)) return;
-      data.forEach((row) => {
-        if (!row || !row.id) return;
-        kcUpdateVoteScoreInDOM(row.id, row.votos);
-      });
-    } catch (_) { }
-  };
-
-  try {
-    kcVotesRealtimeChannel = client
-      .channel(`kc-votes-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'posts' },
-        (payload) => {
-          const row = payload && payload.new ? payload.new : null;
-          if (!row || !row.id) return;
-          if (!Object.prototype.hasOwnProperty.call(row, 'votos')) return;
-          kcUpdateVoteScoreInDOM(row.id, row.votos);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'post_votes' },
-        () => { refreshVisibleScores(); }
-      )
-      .subscribe();
-
-    if (!kcVotesPollingTimer) {
-      kcVotesPollingTimer = setInterval(() => {
-        if (document.hidden) return;
-        refreshVisibleScores();
-      }, 5000);
-    }
-
-    refreshVisibleScores();
-  } catch (_) {
-    kcVotesRealtimeChannel = null;
-  }
-}
-
-function refreshHeroCarousel() {
-  if (!document.querySelector('.kc-hero-carousel')) return;
-  showSlide(0);
-  startAutoSlide();
-
-  if (!heroControlsBound) {
-    heroControlsBound = true;
-
-    const carousel = document.querySelector('.kc-hero-carousel');
-    const prevBtn = document.querySelector('.kc-carousel-prev[data-kc-slide="prev"]');
-    const nextBtn = document.querySelector('.kc-carousel-next[data-kc-slide="next"]');
-    const dotsWrap = document.getElementById('kc-carousel-dots');
-
-    if (prevBtn) {
-      prevBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        changeSlide(-1);
-      });
-    }
-    if (nextBtn) {
-      nextBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        changeSlide(1);
-      });
-    }
-
-    if (dotsWrap) {
-      dotsWrap.addEventListener('click', (e) => {
-        const dot = e.target.closest('.kc-dot[data-kc-slide]');
-        if (!dot) return;
-        const index = Number.parseInt(String(dot.getAttribute('data-kc-slide') || ''), 10);
-        if (!Number.isFinite(index)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        goToSlide(index);
-      });
-    }
-
-    // Fallback: em alguns devices/cliques o alvo chega como .kc-hero-carousel
-    // (e não no botão), então usamos zonas laterais para prev/next.
-    if (carousel) {
-      carousel.addEventListener('click', (e) => {
-        if (e.target.closest('.kc-carousel-prev, .kc-carousel-next, .kc-dot, .kc-btn-primary')) return;
-        const r = carousel.getBoundingClientRect();
-        const x = e.clientX;
-        const edge = Math.max(56, Math.min(88, r.width * 0.12));
-        if (x <= r.left + edge) {
-          changeSlide(-1);
-        } else if (x >= r.right - edge) {
-          changeSlide(1);
-        }
-      });
-    }
-  }
-}
-
-let kcVotesRealtimeChannel = null;
-let kcVotesRealtimeRetryTimer = null;
-let kcVotesPollingTimer = null;
-
-function kcUpdateVoteScoreInDOM(postId, score) {
-  const encoded = encodeURIComponent(String(postId || ''));
-  if (!encoded) return;
-  const scoreText = String(Number.isFinite(Number(score)) ? Number(score) : 0);
-
-  document.querySelectorAll(`.kc-vote-box [data-post-id="${encoded}"]`).forEach((btn) => {
-    const voteBox = btn.closest('.kc-vote-box');
-    const scoreEl = voteBox ? voteBox.querySelector('span') : null;
-    if (scoreEl) scoreEl.textContent = scoreText;
-  });
-}
-
-function kcInitVotesRealtime() {
-  if (!isSupabaseRuntime()) return;
-  if (kcVotesRealtimeChannel) return;
-
-  const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
-    ? window.KCSupabase.getClient()
-    : null;
-  if (!client || typeof client.channel !== 'function') {
-    if (!kcVotesRealtimeRetryTimer) {
-      kcVotesRealtimeRetryTimer = setTimeout(() => {
-        kcVotesRealtimeRetryTimer = null;
-        kcInitVotesRealtime();
-      }, 1200);
-    }
-    return;
-  }
-
-  const refreshVisibleScores = async () => {
-    try {
-      const ids = Array.from(new Set(Array.from(document.querySelectorAll('.kc-vote-box [data-post-id]'))
-        .map((el) => decodeURIComponent(String(el.getAttribute('data-post-id') || '')))
-        .filter(Boolean)));
-      if (!ids.length) return;
-
-      const { data, error } = await client
-        .from('posts')
-        .select('id, votos')
-        .in('id', ids);
-
-      if (error || !Array.isArray(data)) return;
-      data.forEach((row) => {
-        if (!row || !row.id) return;
-        kcUpdateVoteScoreInDOM(row.id, row.votos);
-      });
-    } catch (_) { }
-  };
-
-  try {
-    kcVotesRealtimeChannel = client
-      .channel(`kc-votes-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'posts' },
-        (payload) => {
-          const row = payload && payload.new ? payload.new : null;
-          if (!row || !row.id) return;
-          if (!Object.prototype.hasOwnProperty.call(row, 'votos')) return;
-          kcUpdateVoteScoreInDOM(row.id, row.votos);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'post_votes' },
-        () => { refreshVisibleScores(); }
-      )
-      .subscribe();
-
-    if (!kcVotesPollingTimer) {
-      kcVotesPollingTimer = setInterval(() => {
-        if (document.hidden) return;
-        refreshVisibleScores();
-      }, 5000);
-    }
-
-    refreshVisibleScores();
-  } catch (_) {
-    kcVotesRealtimeChannel = null;
-  }
-}
 
 // -----------------------------
 // Vote box
@@ -779,11 +490,11 @@ async function kcInitVoteStates() {
 
       // Localiza o vote-box pelo data-post-id (pode ser encoded)
       const encoded = encodeURIComponent(postId);
-      const hotBtn  = document.querySelector(`[data-action="vote-hot"][data-post-id="${encoded}"]`);
+      const hotBtn = document.querySelector(`[data-action="vote-hot"][data-post-id="${encoded}"]`);
       const coldBtn = document.querySelector(`[data-action="vote-cold"][data-post-id="${encoded}"]`);
       if (!hotBtn && !coldBtn) return;
 
-      if (hotBtn)  hotBtn.classList.toggle('active',  dir === 'hot');
+      if (hotBtn) hotBtn.classList.toggle('active', dir === 'hot');
       if (coldBtn) coldBtn.classList.toggle('active', dir === 'cold');
     });
   } catch (_) {
@@ -1322,12 +1033,12 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
                     entity_type: 'comments',
                     entity_id: commentId,
                     actor_id: actorId,
-                  }).then(() => {}).catch(() => {});
-                }).catch(() => {});
+                  }).then(() => { }).catch(() => { });
+                }).catch(() => { });
               }
-            } catch (_) {}
+            } catch (_) { }
           }
-        } catch (_) {}
+        } catch (_) { }
       } else {
         const msg = (res && res.error && res.error.message) || 'Não foi possível comentar.';
         showToast(msg, 'error');
@@ -2310,13 +2021,13 @@ function kcRenderCreateModal() {
 
   // Modo edição: ajusta título e botão, oculta seleção de módulo
   const titleEl = overlay.querySelector('#kcCreateModalTitle');
-  const stepEl  = overlay.querySelector('.kc-create-step');
+  const stepEl = overlay.querySelector('.kc-create-step');
   if (kcCreateState.editMode) {
     if (titleEl) titleEl.innerHTML = '<i class="fas fa-pen-to-square"></i> Alterar Publicação';
-    if (stepEl)  stepEl.style.display = 'none';
+    if (stepEl) stepEl.style.display = 'none';
   } else {
     if (titleEl) titleEl.innerHTML = '<i class="fas fa-plus-circle"></i> Nova Publicação';
-    if (stepEl)  stepEl.style.display = '';
+    if (stepEl) stepEl.style.display = '';
   }
 
   // módulo grid (oculto no modo edição)
@@ -2505,15 +2216,15 @@ function kcOpenEditPostModal(post, callback) {
   kcLastFocus = document.activeElement;
 
   const moduleKey = post.modulo || post.module || '';
-  const schema    = KC_CREATE_SCHEMA[moduleKey];
-  const md        = (post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
+  const schema = KC_CREATE_SCHEMA[moduleKey];
+  const md = (post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
 
   // ── State ──
-  kcCreateState.moduleKey    = moduleKey;
-  kcCreateState.editMode     = true;
-  kcCreateState.editPostId   = String(post.uuid || post.id || post.legacyId || '');
+  kcCreateState.moduleKey = moduleKey;
+  kcCreateState.editMode = true;
+  kcCreateState.editPostId = String(post.uuid || post.id || post.legacyId || '');
   kcCreateState.editCallback = typeof callback === 'function' ? callback : null;
-  kcCreateState.open         = true;
+  kcCreateState.open = true;
 
   // ── Seleções (tags) ──
   kcCreateState.selections = {};
@@ -2537,26 +2248,26 @@ function kcOpenEditPostModal(post, callback) {
 
   // ── Valores dos campos ──
   kcCreateState.values = {
-    titulo:       post.titulo     || post.title        || '',
-    descricao:    post.descricao  || post.description  || '',
-    preco:        post.preco != null ? String(post.preco) : '',
-    localizacao:  post.location   || post.localizacao  || md.localizacao || '',
-    condicao:     post.condicao   || md.condicao       || '',
-    sustentavel:  !!(post.sustentavel || post.sustainable || md.sustentavel),
+    titulo: post.titulo || post.title || '',
+    descricao: post.descricao || post.description || '',
+    preco: post.preco != null ? String(post.preco) : '',
+    localizacao: post.location || post.localizacao || md.localizacao || '',
+    condicao: post.condicao || md.condicao || '',
+    sustentavel: !!(post.sustentavel || post.sustainable || md.sustentavel),
     // Campos de módulos específicos (extraídos de metadata)
-    origem:        md.origem       || '',
-    destino:       md.destino      || '',
-    horario:       md.horario      || '',
-    vagas:         md.vagas        || '',
-    data:          md.data         || '',
-    hora:          md.hora         || '',
-    link:          md.link         || '',
-    gratuito:      md.gratuito     || false,
-    contato:       md.contato      || '',
-    remuneracao:   md.remuneracao  || '',
-    recompensa:    md.recompensa   || '',
-    contribuicao:  md.contribuicao || '',
-    orcamento:     md.orcamento    || '',
+    origem: md.origem || '',
+    destino: md.destino || '',
+    horario: md.horario || '',
+    vagas: md.vagas || '',
+    data: md.data || '',
+    hora: md.hora || '',
+    link: md.link || '',
+    gratuito: md.gratuito || false,
+    contato: md.contato || '',
+    remuneracao: md.remuneracao || '',
+    recompensa: md.recompensa || '',
+    contribuicao: md.contribuicao || '',
+    orcamento: md.orcamento || '',
   };
 
   // ── Imagens existentes ──
@@ -2565,10 +2276,10 @@ function kcOpenEditPostModal(post, callback) {
   kcCreateState.images = existingImgs
     .filter(Boolean)
     .map((url, idx) => ({
-      id:         'existing_' + idx,
-      dataUrl:    String(url),
-      name:       'imagem_' + (idx + 1) + '.jpg',
-      size:       0,
+      id: 'existing_' + idx,
+      dataUrl: String(url),
+      name: 'imagem_' + (idx + 1) + '.jpg',
+      size: 0,
       isExisting: true,
     }));
   kcCreateState.coverImageId = kcCreateState.images.length > 0 ? kcCreateState.images[0].id : null;
@@ -2921,16 +2632,16 @@ async function kcHandleCreateSubmit() {
           const u = await window.KCAPI.getCurrentUser();
           if (u) actorId = u.id;
         }
-      } catch (_) {}
+      } catch (_) { }
       if (kcClient && actorId) {
         kcClient.from('audit_log').insert({
           action: 'post_created',
           entity_type: 'posts',
           entity_id: postId,
           actor_id: actorId,
-        }).then(() => {}).catch(() => {});
+        }).then(() => { }).catch(() => { });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     kcCloseCreatePostModal();
 
