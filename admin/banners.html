@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
+  <script src="../assets/js/kc-theme-boot.js"></script>
+  <title>KinoCampus — Gerenciar Banners</title>
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* ── Layout base ── */
+    .kc-admin-wrapper { max-width: 1120px; margin: 0 auto; padding: 18px 16px 80px; }
+
+    .kc-admin-hero {
+      background: linear-gradient(120deg, rgba(255,107,0,.16), rgba(255,107,0,.05));
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kc-admin-hero h1  { margin: 0; font-size: 1.45rem; }
+    .kc-admin-hero p   { margin: 6px 0 0; color: var(--kc-text-dark-secondary); font-size: .92rem; }
+
+    .kc-admin-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .kc-admin-toolbar button,
+    .kc-admin-toolbar a {
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      border-radius: 10px;
+      text-decoration: none;
+      padding: 9px 14px;
+      font-size: .9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .kc-admin-toolbar button:hover,
+    .kc-admin-toolbar a:hover { border-color: var(--kc-primary-brand); }
+    .kc-btn-brand {
+      background: var(--kc-primary-brand) !important;
+      color: #fff !important;
+      border-color: var(--kc-primary-brand) !important;
+    }
+    .kc-btn-brand:hover { opacity: .9; }
+
+    /* ── Mensagens de estado ── */
+    #banners-loading { display:flex; align-items:center; gap:10px; color:var(--kc-text-dark-secondary); padding: 36px 0; }
+    #banners-error   { display:none; padding:14px; border-radius:10px; border:1px solid #ef9a9a; color:#ef9a9a; background:rgba(244,67,54,.12); margin-bottom:14px; }
+    #banners-content { display:none; }
+
+    /* ── Lista de banners ── */
+    .kc-banners-list { display:flex; flex-direction:column; gap:14px; }
+
+    .kc-banner-item {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .kc-banner-item.is-inactive { opacity: .55; }
+    .kc-banner-item:hover { border-color: var(--kc-primary-brand-muted, #ff6b0055); }
+
+    /* Cabeçalho do item */
+    .kc-banner-item-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .kc-banner-drag-handle {
+      color: var(--kc-text-dark-secondary);
+      font-size: 1.1rem;
+      cursor: grab;
+      flex-shrink: 0;
+    }
+
+    /* Preview mini do banner */
+    .kc-banner-preview-mini {
+      width: 52px;
+      height: 44px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.5rem;
+      color: rgba(255,255,255,.9);
+    }
+
+    .kc-banner-meta { flex: 1; min-width: 0; }
+    .kc-banner-meta strong {
+      display: block;
+      font-size: .98rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .kc-banner-meta small {
+      color: var(--kc-text-dark-secondary);
+      font-size: .82rem;
+    }
+
+    .kc-banner-status {
+      font-size: .76rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .kc-banner-status.active  { background: rgba(34,197,94,.18); color: #22c55e; }
+    .kc-banner-status.inactive{ background: rgba(239,68,68,.15);  color: #ef4444; }
+
+    .kc-banner-actions { display:flex; gap:6px; flex-shrink:0; }
+    .kc-banner-actions button {
+      background: none;
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 8px;
+      color: var(--kc-text-dark-secondary);
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: .88rem;
+      transition: border-color .2s, color .2s;
+    }
+    .kc-banner-actions button:hover { border-color: var(--kc-primary-brand); color: var(--kc-primary-brand); }
+    .kc-banner-actions .btn-delete:hover { border-color: #ef4444; color: #ef4444; }
+
+    /* Expansível: histórico de auditoria */
+    .kc-banner-audit {
+      display: none;
+      border-top: 1px solid var(--kc-border-dark);
+      padding: 12px 16px 14px;
+      background: rgba(0,0,0,.04);
+    }
+    .kc-banner-audit.open { display: block; }
+    .kc-banner-audit h4 {
+      font-size: .82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--kc-text-dark-secondary);
+      margin: 0 0 10px;
+    }
+    .kc-audit-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: start;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--kc-border-dark);
+      font-size: .85rem;
+    }
+    .kc-audit-row:last-child { border-bottom: none; }
+    .kc-audit-badge {
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .kc-audit-badge.create { background: rgba(34,197,94,.18); color:#22c55e; }
+    .kc-audit-badge.update { background: rgba(59,130,246,.18); color:#3b82f6; }
+    .kc-audit-badge.delete { background: rgba(239,68,68,.15);  color:#ef4444; }
+    .kc-audit-meta { color: var(--kc-text-dark-secondary); font-size:.8rem; }
+
+    /* ── Modal ── */
+    .kc-modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn .18s ease;
+    }
+    .kc-modal {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+    .kc-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--kc-border-dark);
+      position: sticky;
+      top: 0;
+      background: var(--kc-surface-dark);
+      z-index: 1;
+    }
+    .kc-modal-header h2 { margin: 0; font-size: 1.1rem; }
+    .kc-modal-close {
+      background: none; border: none; font-size: 1.3rem;
+      color: var(--kc-text-dark-secondary); cursor: pointer;
+      padding: 4px 8px; border-radius: 8px;
+      transition: color .2s;
+    }
+    .kc-modal-close:hover { color: var(--kc-text-dark-primary); }
+    .kc-modal-body { padding: 20px; }
+    .kc-modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--kc-border-dark);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* ── Formulário ── */
+    .kc-form-grid { display: grid; gap: 14px; }
+    .kc-form-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .kc-form-field { display: flex; flex-direction: column; gap: 6px; }
+    .kc-form-field label {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--kc-text-dark-secondary);
+    }
+    .kc-form-field input,
+    .kc-form-field textarea,
+    .kc-form-field select {
+      background: var(--kc-bg-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 10px;
+      color: var(--kc-text-dark-primary);
+      padding: 10px 12px;
+      font-size: .92rem;
+      outline: none;
+      transition: border-color .2s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .kc-form-field input:focus,
+    .kc-form-field textarea:focus { border-color: var(--kc-primary-brand); }
+
+    /* Preview ao vivo */
+    .kc-banner-live-preview {
+      border-radius: 14px;
+      padding: 28px 32px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      justify-content: space-between;
+      min-height: 140px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: background .3s;
+    }
+    .kc-banner-live-preview::before {
+      content: "";
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 240px; height: 240px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.1);
+      filter: blur(16px);
+    }
+    .kc-banner-live-preview .preview-pill {
+      display: inline-block;
+      background: rgba(255,255,255,.2);
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: .7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      margin-bottom: 8px;
+    }
+    .kc-banner-live-preview h3 { margin: 0 0 6px; font-size: 1.4rem; line-height: 1.1; }
+    .kc-banner-live-preview p  { margin: 0 0 14px; font-size: .9rem; opacity: .9; }
+    .kc-banner-live-preview .preview-btn {
+      display: inline-block;
+      background: #fff;
+      color: #333;
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: .88rem;
+      text-decoration: none;
+    }
+    .kc-banner-live-preview .preview-icon {
+      font-size: 4rem;
+      opacity: .7;
+      flex-shrink: 0;
+    }
+
+    /* Gradiente picker row */
+    .kc-gradient-row { display: flex; gap: 10px; align-items: flex-end; }
+    .kc-gradient-row .kc-form-field { flex: 1; }
+    .kc-color-swatch {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      border: 2px solid var(--kc-border-dark);
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .kc-color-swatch input[type="color"] {
+      width: 110%; height: 110%;
+      border: none; padding: 0;
+      cursor: pointer;
+      opacity: 0;
+      position: absolute;
+    }
+    .kc-color-swatch { position: relative; }
+
+    /* Toggle active */
+    .kc-toggle-wrap { display: flex; align-items: center; gap: 10px; }
+    .kc-toggle {
+      width: 44px; height: 24px;
+      background: var(--kc-border-dark);
+      border-radius: 999px;
+      position: relative;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .kc-toggle.on { background: #22c55e; }
+    .kc-toggle::after {
+      content: "";
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform .2s;
+    }
+    .kc-toggle.on::after { transform: translateX(20px); }
+
+    /* Icon picker */
+    .kc-icon-suggestions { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+    .kc-icon-sug-btn {
+      background: var(--kc-bg-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 8px;
+      color: var(--kc-text-dark-secondary);
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: .95rem;
+      transition: border-color .2s;
+    }
+    .kc-icon-sug-btn:hover,
+    .kc-icon-sug-btn.selected { border-color: var(--kc-primary-brand); color: var(--kc-primary-brand); }
+
+    /* Botões do form */
+    .kc-btn { padding: 10px 20px; border-radius: 10px; cursor: pointer; font-size: .92rem; font-weight: 700; border: none; }
+    .kc-btn-primary-action { background: var(--kc-primary-brand); color: #fff; }
+    .kc-btn-secondary { background: var(--kc-surface-dark); color: var(--kc-text-dark-primary); border: 1px solid var(--kc-border-dark); }
+
+    /* Drag and drop */
+    .kc-banner-item.drag-over { border: 2px dashed var(--kc-primary-brand); }
+    .kc-banner-item.dragging  { opacity: .45; }
+
+    /* Toast */
+    #kc-banners-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1e1e1e; color: #fff;
+      padding: 12px 22px; border-radius: 12px;
+      font-size: .9rem; font-weight: 500;
+      box-shadow: 0 8px 28px rgba(0,0,0,.4);
+      z-index: 2000;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    #kc-banners-toast.show { opacity: 1; pointer-events: auto; }
+    #kc-banners-toast.success { border-left: 4px solid #22c55e; }
+    #kc-banners-toast.error   { border-left: 4px solid #ef4444; }
+
+    @media (max-width: 600px) {
+      .kc-form-row { grid-template-columns: 1fr; }
+      .kc-banner-item-header { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body class="kc-admin-page">
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="../index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
+        <a href="index.html"       style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <a href="moderation.html"  style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-shield-halved"></i> Moderação</a>
+        <a href="reports.html"     style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-flag"></i> Denúncias</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <div class="kc-admin-wrapper">
+
+      <div id="banners-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando banners…</span></div>
+      <div id="banners-error"  role="alert"></div>
+
+      <section id="banners-content">
+        <!-- Hero -->
+        <section class="kc-admin-hero">
+          <div>
+            <h1><i class="fas fa-images"></i> Gerenciar Banners</h1>
+            <p>Edite, reordene, ative ou desative os banners do carrossel da página inicial.</p>
+          </div>
+          <div class="kc-admin-toolbar">
+            <button type="button" id="btn-refresh"><i class="fas fa-rotate"></i> Atualizar</button>
+            <button type="button" id="btn-add-banner" class="kc-btn-brand"><i class="fas fa-plus"></i> Novo Banner</button>
+            <a href="index.html"><i class="fas fa-arrow-left"></i> Dashboard</a>
+          </div>
+        </section>
+
+        <!-- Lista -->
+        <div class="kc-banners-list" id="banners-list"></div>
+        <div id="banners-empty" style="display:none;color:var(--kc-text-dark-secondary);padding:32px 0;text-align:center;">
+          <i class="fas fa-images" style="font-size:2.4rem;opacity:.35;display:block;margin-bottom:12px;"></i>
+          Nenhum banner cadastrado. Clique em <strong>Novo Banner</strong> para começar.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ── Modal de edição ── -->
+  <div id="banner-modal" class="kc-modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="kc-modal">
+      <div class="kc-modal-header">
+        <h2 id="modal-title">Novo Banner</h2>
+        <button class="kc-modal-close" id="modal-close" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+      </div>
+
+      <div class="kc-modal-body">
+        <!-- Preview ao vivo -->
+        <div class="kc-banner-live-preview" id="banner-preview">
+          <div>
+            <span class="preview-pill" id="prev-pill">Destaque</span>
+            <h3 id="prev-title">Título do Banner</h3>
+            <p  id="prev-sub">Subtítulo do banner aparece aqui.</p>
+            <a  class="preview-btn" id="prev-btn">Ver mais</a>
+          </div>
+          <i class="fas fa-star preview-icon" id="prev-icon"></i>
+        </div>
+
+        <input type="hidden" id="f-id" />
+
+        <div class="kc-form-grid">
+          <!-- Linha 1 -->
+          <div class="kc-form-row">
+            <div class="kc-form-field">
+              <label for="f-pill">Rótulo (pill) <span style="color:#ef4444">*</span></label>
+              <input id="f-pill" type="text" placeholder="ex: Destaque" maxlength="30" />
+            </div>
+            <div class="kc-form-field">
+              <label>Status</label>
+              <div class="kc-toggle-wrap">
+                <div class="kc-toggle on" id="f-active-toggle" role="switch" aria-checked="true" tabindex="0"></div>
+                <span id="f-active-label">Ativo</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Título -->
+          <div class="kc-form-field">
+            <label for="f-title">Título <span style="color:#ef4444">*</span></label>
+            <input id="f-title" type="text" placeholder="ex: Semana de Sustentabilidade UFG" />
+          </div>
+
+          <!-- Subtítulo -->
+          <div class="kc-form-field">
+            <label for="f-subtitle">Subtítulo / Descrição</label>
+            <textarea id="f-subtitle" rows="2" placeholder="ex: Troque materiais, ganhe cashback em dobro…"></textarea>
+          </div>
+
+          <!-- Botão -->
+          <div class="kc-form-row">
+            <div class="kc-form-field">
+              <label for="f-btn-text">Texto do botão</label>
+              <input id="f-btn-text" type="text" placeholder="ex: Ver Programação" maxlength="32" />
+            </div>
+            <div class="kc-form-field">
+              <label for="f-btn-url">Link do botão</label>
+              <input id="f-btn-url" type="text" placeholder="ex: eventos.html" />
+            </div>
+          </div>
+
+          <!-- Ícone -->
+          <div class="kc-form-field">
+            <label for="f-icon">Ícone (classe Font Awesome)</label>
+            <input id="f-icon" type="text" placeholder="ex: fas fa-calendar-alt" />
+            <div class="kc-icon-suggestions" id="icon-suggestions"></div>
+          </div>
+
+          <!-- Gradiente -->
+          <div class="kc-form-field">
+            <label>Cor de fundo (gradiente)</label>
+            <div class="kc-gradient-row">
+              <div class="kc-form-field">
+                <label for="f-grad-from" style="font-size:.78rem;">De</label>
+                <input id="f-grad-from" type="text" placeholder="#4F46E5" />
+              </div>
+              <div class="kc-color-swatch" title="Escolher cor inicial">
+                <input type="color" id="f-grad-from-picker" />
+              </div>
+              <div class="kc-form-field">
+                <label for="f-grad-to" style="font-size:.78rem;">Para</label>
+                <input id="f-grad-to" type="text" placeholder="#7C3AED" />
+              </div>
+              <div class="kc-color-swatch" title="Escolher cor final">
+                <input type="color" id="f-grad-to-picker" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Ordem -->
+          <div class="kc-form-field" style="max-width:160px;">
+            <label for="f-order">Posição (ordem)</label>
+            <input id="f-order" type="number" min="0" step="1" value="0" />
+          </div>
+        </div>
+      </div>
+
+      <div class="kc-modal-footer">
+        <button class="kc-btn kc-btn-secondary" id="modal-cancel">Cancelar</button>
+        <button class="kc-btn kc-btn-primary-action" id="modal-save"><i class="fas fa-floppy-disk"></i> Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast ── -->
+  <div id="kc-banners-toast" role="status" aria-live="polite"></div>
+
+  <!-- ── Scripts ── -->
+  <script src="../assets/js/kc-utils.js"></script>
+  <script src="../assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../assets/js/kc-supabase.client.js"></script>
+  <script src="../assets/js/kc-api.client.js"></script>
+  <script src="../assets/js/kc-profiles.client.js"></script>
+  <script src="../assets/js/kc-auth.ui.js"></script>
+  <script src="../assets/js/kc-theme.js"></script>
+  <script src="../assets/js/controllers/admin-banners.controller.js"></script>
+</body>
+</html>

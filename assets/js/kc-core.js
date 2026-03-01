@@ -287,6 +287,57 @@ function vote(button, type) {
 }
 
 // -----------------------------
+// Inicializa estados hot/cold dos vote-boxes visíveis
+// Chama a RPC kc_get_my_votes para obter os votos do
+// usuário autenticado para todos os posts no feed.
+// -----------------------------
+async function kcInitVoteStates() {
+  if (!isSupabaseRuntime()) return;
+
+  // Coleta todos os post-ids presentes no DOM
+  const postIds = [];
+  const idSet = new Set();
+  document.querySelectorAll('[data-action="vote-hot"][data-post-id]').forEach((btn) => {
+    const rawId = btn.getAttribute('data-post-id');
+    const id = rawId ? decodeURIComponent(rawId) : null;
+    if (id && !idSet.has(id)) {
+      idSet.add(id);
+      postIds.push(id);
+    }
+  });
+  if (!postIds.length) return;
+
+  try {
+    const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function' ? window.KCSupabase.getClient() : null;
+    if (!client) return;
+
+    const { data, error } = await client.rpc('kc_get_my_votes', { p_post_ids: postIds });
+    if (error || !Array.isArray(data)) return;
+
+    // Monta mapa: post_id -> direction
+    const voteMap = {};
+    data.forEach((row) => { voteMap[row.post_id] = row.direction; });
+
+    // Aplica ao DOM
+    idSet.forEach((postId) => {
+      const dir = voteMap[postId];
+      if (!dir) return; // sem voto registrado
+
+      // Localiza o vote-box pelo data-post-id (pode ser encoded)
+      const encoded = encodeURIComponent(postId);
+      const hotBtn  = document.querySelector(`[data-action="vote-hot"][data-post-id="${encoded}"]`);
+      const coldBtn = document.querySelector(`[data-action="vote-cold"][data-post-id="${encoded}"]`);
+      if (!hotBtn && !coldBtn) return;
+
+      if (hotBtn)  hotBtn.classList.toggle('active',  dir === 'hot');
+      if (coldBtn) coldBtn.classList.toggle('active', dir === 'cold');
+    });
+  } catch (_) {
+    // silencioso — não quebra o feed
+  }
+}
+
+// -----------------------------
 // Product gallery helper
 // -----------------------------
 function changeMainImage(thumbnail) {
@@ -2568,24 +2619,31 @@ function kcInitHeroSwipe() {
   if (!carousel) return;
 
   let startX = 0;
+  let startY = 0;
   let pointerId = null;
+  const SWIPE_THRESHOLD = 45;
+  const AXIS_LOCK_RATIO = 1.5; // horizontal deve ser 1.5x mais que vertical
 
   carousel.addEventListener("pointerdown", (e) => {
-    // não iniciar swipe quando interagindo com botões/links do banner
-    if (e.target && e.target.closest && e.target.closest("a, button")) return;
+    // Permite iniciar swipe em qualquer área do carrossel,
+    // incluindo nas proximidades dos botões prev/next.
+    // A distinção tap vs. swipe é feita pelo threshold de movimento.
     pointerId = e.pointerId;
     startX = e.clientX;
+    startY = e.clientY;
     try { carousel.setPointerCapture(pointerId); } catch (_) { }
   }, { passive: true });
 
   carousel.addEventListener("pointerup", (e) => {
     if (pointerId == null) return;
     const dx = e.clientX - startX;
-    // threshold
-    if (Math.abs(dx) > 45) {
+    const dy = e.clientY - startY;
+    pointerId = null;
+
+    // Só troca slide se for gesto predominantemente horizontal
+    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * AXIS_LOCK_RATIO) {
       changeSlide(dx < 0 ? 1 : -1);
     }
-    pointerId = null;
   }, { passive: true });
 
   carousel.addEventListener("pointercancel", () => { pointerId = null; }, { passive: true });

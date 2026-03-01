@@ -398,7 +398,10 @@ main {
 .kc-hero-carousel {
     position: relative;
     border-radius: 24px;
-    overflow: hidden;
+    /* overflow: visible para que os botões prev/next possam ficar
+       semi-fora do banner sem serem cortados. O clip visual do banner
+       é feito pelo .kc-hero-banner que já tem overflow:hidden. */
+    overflow: visible;
     margin-bottom: 20px;
 }
 
@@ -549,11 +552,13 @@ main {
 }
 
 .kc-carousel-prev {
-    left: 10px;
+    /* Centraliza o botão na borda esquerda do carousel (metade dentro, metade fora) */
+    left: -26px;
 }
 
 .kc-carousel-next {
-    right: 10px;
+    /* Centraliza o botão na borda direita do carousel (metade dentro, metade fora) */
+    right: -26px;
 }
 
 .kc-carousel-dots {
@@ -1874,13 +1879,14 @@ main {
         height: 32px;
         font-size: 0.9em;
     }
-    
+
     .kc-carousel-prev {
-        left: 5px;
+        /* Mobile: botão menor (32px), centralizado na borda */
+        left: -16px;
     }
-    
+
     .kc-carousel-next {
-        right: 5px;
+        right: -16px;
     }
     
     .kc-card__main {

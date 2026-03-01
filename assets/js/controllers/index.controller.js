@@ -38,7 +38,15 @@
         urlQ = search.get('q') || '';
         urlTag = search.get('tag') || '';
       } catch (_) {}
-      window.KCControllers.injectFeed({ module: null, pageModule: '', q: urlQ, tag: urlTag });
+      window.KCControllers.injectFeed({
+        module: null,
+        pageModule: '',
+        q: urlQ,
+        tag: urlTag,
+        onAfterAppend: function () {
+          if (typeof kcInitVoteStates === 'function') kcInitVoteStates();
+        }
+      });
     }
     bindIndexInteractions();
   });

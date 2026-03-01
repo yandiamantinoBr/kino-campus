@@ -374,7 +374,7 @@
     return `title.ilike."${pattern}",description.ilike."${pattern}"`;
   }
 
-  function buildPostsSelect(includeVerified, mediaRel, includeComments) {
+  function buildPostsSelect(includeVerified, mediaRel, includeComments, includeVotos = true) {
     const profileFields = includeVerified
       ? 'id, full_name, avatar_url, verified'
       : 'id, full_name, avatar_url';
@@ -382,7 +382,8 @@
     // mediaRel: post_media (padrão do schema) | post_images (compat)
     // includeComments: false quando tabela comments ainda não existe no schema (compat)
     const commentsStr = (includeComments !== false) ? ', comments(count)' : '';
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsStr}`;
+    const votosStr = (includeVotos !== false) ? ', votos' : '';
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at${votosStr}, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsStr}`;
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -398,7 +399,7 @@
 
     // includeComments: false quando tabela comments ainda não existe no schema (compat)
     const commentsStr = (includeComments !== false) ? ', comments(count)' : '';
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsStr}`;
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, votos, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsStr}`;
   }
 
   function isMaybeSingleMissing(err) {

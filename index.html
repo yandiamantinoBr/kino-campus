@@ -59,9 +59,10 @@
 <main class="kc-main-content">
 <!-- Feed Section -->
 <section class="kc-feed-section">
-<!-- Banner Hero Carousel -->
-<div class="kc-hero-carousel">
-<div class="kc-hero-slides">
+<!-- Banner Hero Carousel — preenchido dinamicamente pelo kc-banners.js -->
+<!-- Em modo local ou quando o Supabase não responder, os 3 banners abaixo são o fallback -->
+<div class="kc-hero-carousel" id="kc-hero-carousel">
+<div class="kc-hero-slides" id="kc-hero-slides">
 <div class="kc-hero-banner active" data-hero-icon="calendar">
 <div class="kc-hero-inner">
 <div class="kc-hero-content">
@@ -108,7 +109,7 @@
 <button class="kc-carousel-btn kc-carousel-next" data-kc-slide="next">
 <i class="fas fa-chevron-right"></i>
 </button>
-<div class="kc-carousel-dots">
+<div class="kc-carousel-dots" id="kc-carousel-dots">
 <span class="kc-dot active" data-kc-slide="0"></span>
 <span class="kc-dot" data-kc-slide="1"></span>
 <span class="kc-dot" data-kc-slide="2"></span>
@@ -371,5 +372,6 @@
 <script src="assets/js/kc-search.js"></script>
   <script src="assets/js/controllers/kc-feed.controller.js"></script>
   <script src="assets/js/controllers/index.controller.js"></script>
+  <script src="assets/js/kc-banners.js"></script>
 </body>
 </html>

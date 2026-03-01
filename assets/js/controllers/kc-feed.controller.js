@@ -440,6 +440,11 @@
             try { opt.onAfterAppend({ container, posts: fresh, state: { ...state } }); } catch (_) { }
           }
 
+          // Inicializa estados hot/cold dos botões de voto após cada lote
+          if (typeof kcInitVoteStates === 'function') {
+            setTimeout(() => { try { kcInitVoteStates(); } catch (_) { } }, 0);
+          }
+
           reapplyFiltersAndSearch();
         }
 
