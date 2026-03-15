@@ -100,6 +100,12 @@
                     <span>Voluntariado</span>
                 </a>
             </div>
+            <div class="kc-opportunity-mobile-rail" data-kc-opp-mobile-rail="true" aria-label="Seções rápidas de oportunidades">
+                <button class="kc-opportunity-mobile-rail__button is-loading" type="button" disabled>
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Carregando seções...</span>
+                </button>
+            </div>
             <!-- Feed List -->
             <div class="kc-feed-list">
                 <!-- Posts dinâmicos serão injetados aqui via JS -->
@@ -112,7 +118,7 @@
         </section>
         <!-- Sidebar -->
         <aside class="kc-sidebar kc-sidebar--opportunities" data-kc-opp-sidebar="true">
-            <div class="kc-sidebar-section">
+            <div class="kc-sidebar-section" data-kc-opp-section="filters">
                 <h3>
                     <i class="fas fa-filter"></i>
                     Filtros
@@ -142,7 +148,7 @@
                 </div>
                 <button class="kc-opportunity-clear" data-kc-opp-clear-filters="true" type="button">Limpar filtros</button>
             </div>
-            <div class="kc-sidebar-section">
+            <div class="kc-sidebar-section" data-kc-opp-section="areas">
                 <h3>
                     <i class="fas fa-th-large"></i>
                     Áreas Populares
@@ -156,7 +162,7 @@
                     </button>
                 </div>
             </div>
-            <div class="kc-sidebar-section">
+            <div class="kc-sidebar-section" data-kc-opp-section="tips">
                 <h3>
                     <i class="fas fa-lightbulb"></i>
                     Dicas para Candidatos

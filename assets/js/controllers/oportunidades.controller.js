@@ -1,4 +1,4 @@
-/* KinoCampus - oportunidades controller (V8.2.0.0) */
+/* KinoCampus - oportunidades controller (V8.3.0.0) */
 (function () {
   'use strict';
 
@@ -6,17 +6,25 @@
     { key: 'tecnologia', label: 'Tecnologia', icon: 'fas fa-laptop-code' },
     { key: 'marketing', label: 'Marketing', icon: 'fas fa-bullhorn' },
     { key: 'design', label: 'Design', icon: 'fas fa-palette' },
-    { key: 'educacao', label: 'Educa\u00e7\u00e3o', icon: 'fas fa-graduation-cap' },
+    { key: 'educacao', label: 'Educação', icon: 'fas fa-graduation-cap' },
+    { key: 'musica', label: 'Música', icon: 'fas fa-music' },
   ];
+
+  const MOBILE_SECTION_MODAL_ID = 'kcOpportunitySectionOverlay';
 
   const state = {
     selectedTypeFilters: new Set(),
     selectedModeFilters: new Set(),
     selectedArea: '',
     posts: new Map(),
+    sections: [],
     refreshQueued: false,
     fetchStarted: false,
     applyWrapped: false,
+    activeSectionKey: '',
+    activeSectionNode: null,
+    activeSectionPlaceholder: null,
+    lastMobileTrigger: null,
   };
 
   function normalizeText(value) {
@@ -49,6 +57,11 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function isMobileViewport() {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+    return window.matchMedia('(max-width: 768px)').matches;
   }
 
   function getFilterState() {
@@ -124,7 +137,7 @@
     const isRemote = isHybrid || text.includes('remoto') || text.includes('home office') || text.includes('home-office');
     const isPresential = isHybrid || text.includes('presencial') || text.includes('onsite') || text.includes('on site');
 
-    if (isHybrid) return { key: 'hibrido', label: 'H\u00edbrido', remote: true, presencial: true };
+    if (isHybrid) return { key: 'hibrido', label: 'Híbrido', remote: true, presencial: true };
     if (isRemote) return { key: 'remoto', label: 'Remoto', remote: true, presencial: false };
     if (isPresential) return { key: 'presencial', label: 'Presencial', remote: false, presencial: true };
     return { key: '', label: '', remote: false, presencial: false };
@@ -149,7 +162,7 @@
       return { key: 'jovem-aprendiz', label: 'Jovem Aprendiz' };
     }
     if (text.includes('temporario')) {
-      return { key: 'temporario', label: 'Tempor\u00e1rio' };
+      return { key: 'temporario', label: 'Temporário' };
     }
     if (text.includes('clt')) return { key: 'clt', label: 'CLT' };
     if (text.includes('pj') || text.includes('pessoa juridica')) return { key: 'pj', label: 'PJ' };
@@ -180,6 +193,8 @@
       post.subcategoriaLabel,
       post.subcategoria,
       post.area,
+      meta.areaLabel,
+      meta.area,
     ].filter(Boolean).join(' ');
 
     const type = normalizeOpportunityType(post.categoriaKey || post.categoria || meta.categoryKey || meta.category, aggregateText);
@@ -187,7 +202,7 @@
     const workMode = resolveWorkMode(post);
     const regime = resolveEmploymentType(post);
     const fallbackAreaKey = areaInfo && areaInfo.key ? areaInfo.key : 'outras-areas';
-    const fallbackAreaLabel = areaInfo && areaInfo.label ? areaInfo.label : 'Outras \u00e1reas';
+    const fallbackAreaLabel = areaInfo && areaInfo.label ? areaInfo.label : 'Outras áreas';
 
     return {
       identity: getPostIdentity(post),
@@ -203,6 +218,16 @@
     };
   }
 
+  function syncAreaHistoryCache() {
+    window.__KC_OPPORTUNITY_AREA_HISTORY = Array.from(state.posts.values())
+      .filter((summary) => summary && summary.areaKey && summary.areaLabel)
+      .map((summary) => ({
+        key: summary.areaKey,
+        label: summary.areaLabel,
+        icon: summary.areaIcon || 'fas fa-briefcase',
+      }));
+  }
+
   function upsertPosts(list) {
     if (!Array.isArray(list)) return;
     list.forEach((post) => {
@@ -210,6 +235,7 @@
       if (!summary || !summary.identity) return;
       state.posts.set(summary.identity, summary);
     });
+    syncAreaHistoryCache();
   }
 
   function applyCardDataset(card, summary) {
@@ -279,17 +305,6 @@
 
     if (state.selectedArea && area !== state.selectedArea) return false;
     return true;
-  }
-
-  function queueRefresh() {
-    if (state.refreshQueued) return;
-    state.refreshQueued = true;
-    const schedule = window.requestAnimationFrame || function (cb) { return window.setTimeout(cb, 16); };
-    schedule(function () {
-      state.refreshQueued = false;
-      renderAreaButtons();
-      syncClearButtonState();
-    });
   }
 
   function categoryMatches(summary, selectedCategory) {
@@ -394,7 +409,7 @@
     items.push(
       '<button class="kc-category-item ' + (!state.selectedArea ? 'is-active' : '') + '" type="button" data-kc-opp-area="" aria-pressed="' + (!state.selectedArea ? 'true' : 'false') + '">' +
         '<i class="fas fa-layer-group"></i>' +
-        '<span>Todas as \u00e1reas</span>' +
+        '<span>Todas as áreas</span>' +
         '<span class="kc-category-count">' + total + '</span>' +
       '</button>'
     );
@@ -420,6 +435,175 @@
     if (!clearButton) return;
     const hasFilters = state.selectedTypeFilters.size > 0 || state.selectedModeFilters.size > 0 || !!state.selectedArea;
     clearButton.disabled = !hasFilters;
+  }
+
+  function getSidebarSections() {
+    return state.sections.slice();
+  }
+
+  function collectSidebarSections() {
+    const nodes = Array.from(document.querySelectorAll('[data-kc-opp-sidebar="true"] .kc-sidebar-section[data-kc-opp-section]'));
+    state.sections = nodes.map((section, index) => {
+      const key = String(section.getAttribute('data-kc-opp-section') || ('section-' + index)).trim();
+      const heading = section.querySelector('h3');
+      let title = 'Seção';
+      let icon = 'fas fa-layer-group';
+
+      if (heading) {
+        const iconEl = heading.querySelector('i');
+        if (iconEl && iconEl.className) icon = iconEl.className;
+        const clone = heading.cloneNode(true);
+        const clonedIcon = clone.querySelector('i');
+        if (clonedIcon) clonedIcon.remove();
+        title = String(clone.textContent || '').trim() || title;
+      }
+
+      return { key, title, icon, node: section };
+    });
+  }
+
+  function renderMobileRail() {
+    const rail = document.querySelector('[data-kc-opp-mobile-rail="true"]');
+    if (!rail) return;
+
+    const sections = getSidebarSections();
+    if (!sections.length) return;
+
+    rail.innerHTML = sections.map((section) => {
+      const isActive = state.activeSectionKey === section.key;
+      return (
+        '<button class="kc-opportunity-mobile-rail__button ' + (isActive ? 'is-active' : '') + '" type="button" data-kc-opp-open-section="' + escapeHtml(section.key) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '">' +
+          '<i class="' + escapeHtml(section.icon || 'fas fa-layer-group') + '"></i>' +
+          '<span>' + escapeHtml(section.title) + '</span>' +
+        '</button>'
+      );
+    }).join('');
+  }
+
+  function ensureMobileSectionModal() {
+    let overlay = document.getElementById(MOBILE_SECTION_MODAL_ID);
+    if (overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = MOBILE_SECTION_MODAL_ID;
+    overlay.className = 'kc-modal-overlay kc-opportunity-section-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = [
+      '<div class="kc-create-modal kc-opportunity-section-modal" role="dialog" aria-modal="true" aria-labelledby="kcOpportunitySectionTitle">',
+      '  <div class="kc-create-modal__header">',
+      '    <h2 id="kcOpportunitySectionTitle"><i class="fas fa-layer-group"></i><span>Seção</span></h2>',
+      '    <button type="button" class="kc-create-modal__close" aria-label="Fechar" data-kc-opp-close-section-modal="true"><i class="fas fa-times"></i></button>',
+      '  </div>',
+      '  <div class="kc-create-modal__body">',
+      '    <div class="kc-opportunity-section-modal__content" data-kc-opp-section-modal-slot="true"></div>',
+      '  </div>',
+      '</div>'
+    ].join('');
+
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay || event.target.closest('[data-kc-opp-close-section-modal="true"]')) {
+        closeMobileSectionModal();
+      }
+    });
+
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function openMobileSectionModal(sectionKey, trigger) {
+    const sectionMeta = getSidebarSections().find((entry) => entry.key === sectionKey);
+    if (!sectionMeta || !sectionMeta.node) return;
+
+    const overlay = ensureMobileSectionModal();
+    const slot = overlay.querySelector('[data-kc-opp-section-modal-slot="true"]');
+    const title = overlay.querySelector('#kcOpportunitySectionTitle span');
+    const titleIcon = overlay.querySelector('#kcOpportunitySectionTitle i');
+    if (!slot || !title || !titleIcon) return;
+
+    closeMobileSectionModal();
+
+    const placeholder = document.createElement('div');
+    placeholder.hidden = true;
+    placeholder.setAttribute('data-kc-opp-section-placeholder', sectionMeta.key);
+
+    sectionMeta.node.parentNode.insertBefore(placeholder, sectionMeta.node);
+    slot.innerHTML = '';
+    slot.appendChild(sectionMeta.node);
+
+    state.activeSectionKey = sectionMeta.key;
+    state.activeSectionNode = sectionMeta.node;
+    state.activeSectionPlaceholder = placeholder;
+    state.lastMobileTrigger = trigger || null;
+
+    title.textContent = sectionMeta.title;
+    titleIcon.className = sectionMeta.icon || 'fas fa-layer-group';
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('kc-modal-open');
+
+    renderMobileRail();
+
+    const closeBtn = overlay.querySelector('[data-kc-opp-close-section-modal="true"]');
+    if (closeBtn) closeBtn.focus();
+  }
+
+  function closeMobileSectionModal() {
+    const overlay = document.getElementById(MOBILE_SECTION_MODAL_ID);
+    const slot = overlay ? overlay.querySelector('[data-kc-opp-section-modal-slot="true"]') : null;
+    const wasActive = !!(overlay && overlay.classList.contains('active'));
+    const focusTarget = state.lastMobileTrigger && typeof state.lastMobileTrigger.focus === 'function'
+      ? state.lastMobileTrigger
+      : null;
+    let focusHandled = false;
+
+    if (overlay && document.activeElement && overlay.contains(document.activeElement)) {
+      if (focusTarget) {
+        try {
+          focusTarget.focus();
+          focusHandled = true;
+        } catch (_) { }
+      }
+
+      if (!focusHandled && typeof document.activeElement.blur === 'function') {
+        try {
+          document.activeElement.blur();
+          focusHandled = true;
+        } catch (_) { }
+      }
+    }
+
+    if (state.activeSectionNode && state.activeSectionPlaceholder && state.activeSectionPlaceholder.parentNode) {
+      state.activeSectionPlaceholder.parentNode.replaceChild(state.activeSectionNode, state.activeSectionPlaceholder);
+    }
+
+    state.activeSectionKey = '';
+    state.activeSectionNode = null;
+    state.activeSectionPlaceholder = null;
+
+    if (slot) slot.innerHTML = '';
+    if (overlay) {
+      overlay.classList.remove('active');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    if (wasActive) document.body.classList.remove('kc-modal-open');
+    renderMobileRail();
+
+    if (!focusHandled && focusTarget) {
+      try { focusTarget.focus(); } catch (_) { }
+    }
+    state.lastMobileTrigger = null;
+  }
+
+  function queueRefresh() {
+    if (state.refreshQueued) return;
+    state.refreshQueued = true;
+    const schedule = window.requestAnimationFrame || function (cb) { return window.setTimeout(cb, 16); };
+    schedule(function () {
+      state.refreshQueued = false;
+      renderAreaButtons();
+      renderMobileRail();
+      syncClearButtonState();
+    });
   }
 
   function applySidebarFilters() {
@@ -449,13 +633,28 @@
 
     document.addEventListener('click', function (event) {
       const areaButton = event.target.closest('[data-kc-opp-area]');
-      if (!areaButton) return;
-      state.selectedArea = String(areaButton.getAttribute('data-kc-opp-area') || '').trim();
-      if (window.kcFilters && typeof window.kcFilters.apply === 'function') {
-        window.kcFilters.apply();
-      } else {
-        queueRefresh();
+      if (areaButton) {
+        state.selectedArea = String(areaButton.getAttribute('data-kc-opp-area') || '').trim();
+        if (window.kcFilters && typeof window.kcFilters.apply === 'function') {
+          window.kcFilters.apply();
+        } else {
+          queueRefresh();
+        }
+        return;
       }
+
+      const sectionButton = event.target.closest('[data-kc-opp-open-section]');
+      if (sectionButton && isMobileViewport()) {
+        openMobileSectionModal(String(sectionButton.getAttribute('data-kc-opp-open-section') || '').trim(), sectionButton);
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeMobileSectionModal();
+    });
+
+    window.addEventListener('resize', function () {
+      if (!isMobileViewport()) closeMobileSectionModal();
     });
   }
 
@@ -529,6 +728,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    collectSidebarSections();
+    ensureMobileSectionModal();
     wrapFilterApply();
     syncStateFromInputs();
     bindSidebarEvents();

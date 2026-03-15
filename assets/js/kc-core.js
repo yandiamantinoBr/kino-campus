@@ -1787,8 +1787,20 @@ function kcGetOpportunityTypeOptionKey(value) {
 }
 
 function kcResolveOpportunityAreaValue(value, fallbackSource) {
+  const history = [];
+  if (Array.isArray(window.__KC_OPPORTUNITY_AREA_HISTORY)) history.push(...window.__KC_OPPORTUNITY_AREA_HISTORY);
+  if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
+    try {
+      const userPosts = window.kcUserPosts.list();
+      if (Array.isArray(userPosts)) {
+        history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'oportunidades'));
+      }
+    } catch (_) { }
+  }
+
   if (window.KCUtils && typeof window.KCUtils.resolveOpportunityArea === 'function') {
-    const options = fallbackSource ? { textParts: [fallbackSource] } : {};
+    const options = { history };
+    if (fallbackSource) options.textParts = [fallbackSource];
     return window.KCUtils.resolveOpportunityArea(value || fallbackSource || '', options);
   }
 
@@ -1807,6 +1819,7 @@ function kcGetOpportunityAreaOptions() {
     { key: 'marketing', label: 'Marketing', icon: 'fas fa-bullhorn' },
     { key: 'design', label: 'Design', icon: 'fas fa-palette' },
     { key: 'educacao', label: 'Educa\u00e7\u00e3o', icon: 'fas fa-graduation-cap' },
+    { key: 'musica', label: 'M\u00fasica', icon: 'fas fa-music' },
   ];
 }
 
@@ -2230,7 +2243,7 @@ function kcRenderCreateModal() {
           <input id="${id}" name="${escHtml(f.name)}" type="text" placeholder="${escHtml(f.placeholder || '')}" value="${escHtml(val || '')}" list="kcOpportunityAreaOptions" data-kc-opportunity-area-input="true" ${required} />
           <datalist id="kcOpportunityAreaOptions">${listItems}</datalist>
           <div class="kc-field-pill-row">${suggestions}</div>
-          <small class="kc-field-hint">Escolha uma sugestão ou digite outra área. O sistema corrige variações como "eduucacão" para "Educação".</small>
+          <small class="kc-field-hint">Escolha uma sugestão ou digite outra área.</small>
         </div>
       `);
     } else if (f.type === 'select') {
@@ -2560,6 +2573,17 @@ async function kcHandleCreateSubmit() {
       filterSubKey = opportunityArea.key || '';
       filterSubLabel = opportunityArea.label || '';
       if (opportunityArea.label) kcCreateState.values.areaAtuacao = opportunityArea.label;
+      if (opportunityArea.key && opportunityArea.label) {
+        const history = Array.isArray(window.__KC_OPPORTUNITY_AREA_HISTORY)
+          ? window.__KC_OPPORTUNITY_AREA_HISTORY.slice()
+          : [];
+        history.unshift({
+          key: opportunityArea.key,
+          label: opportunityArea.label,
+          icon: opportunityArea.icon || 'fas fa-briefcase',
+        });
+        window.__KC_OPPORTUNITY_AREA_HISTORY = history;
+      }
     }
 
     const tagMap = new Map();

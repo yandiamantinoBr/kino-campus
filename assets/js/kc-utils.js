@@ -156,6 +156,16 @@
       ]),
     }),
     Object.freeze({
+      key: 'musica',
+      label: 'M\u00fasica',
+      icon: 'fas fa-music',
+      aliases: Object.freeze([
+        'musica', 'm\u00fasica', 'musical', 'instrumento', 'instrumentos',
+        'canto', 'cantor', 'cantora', 'producao musical', 'produ\u00e7\u00e3o musical',
+        'banda', 'violao', 'viol\u00e3o', 'teclado', 'piano', 'guitarra'
+      ]),
+    }),
+    Object.freeze({
       key: 'administrativo',
       label: 'Administrativo',
       icon: 'fas fa-clipboard-list',
@@ -384,6 +394,232 @@
     return OPPORTUNITY_AREA_DEFINITIONS.find((entry) => entry.key === wanted) || null;
   }
 
+  function firstNonEmptyValue(values) {
+    if (!Array.isArray(values)) return '';
+    for (let i = 0; i < values.length; i += 1) {
+      const value = String(values[i] || '').trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function formatOpportunityAreaLabel(value) {
+    const raw = String(value || '').trim().replace(/\s+/g, ' ');
+    if (!raw) return '';
+    if (raw !== normalizeText(raw)) return raw;
+    return titleCase(raw);
+  }
+
+  function scoreOpportunityAreaLabel(value) {
+    const label = String(value || '').trim();
+    if (!label) return 0;
+    let score = Math.min(label.length, 32) / 32;
+    if (/[A-ZÀ-Ý]/.test(label)) score += 1.5;
+    if (label.normalize('NFD') !== label) score += 2;
+    if (label.includes(' ')) score += 0.5;
+    return score;
+  }
+
+  function pickPreferredOpportunityAreaLabel(current, candidate) {
+    const currentLabel = String(current || '').trim();
+    const candidateLabel = String(candidate || '').trim();
+    if (!currentLabel) return candidateLabel;
+    if (!candidateLabel) return currentLabel;
+    return scoreOpportunityAreaLabel(candidateLabel) > scoreOpportunityAreaLabel(currentLabel)
+      ? candidateLabel
+      : currentLabel;
+  }
+
+  function buildOfficialOpportunityAreaMaps() {
+    const aliasMap = new Map();
+    OPPORTUNITY_AREA_DEFINITIONS.forEach((entry) => {
+      const values = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])];
+      values.forEach((value) => {
+        const normalized = normalizeText(value);
+        if (normalized && !aliasMap.has(normalized)) aliasMap.set(normalized, entry);
+      });
+    });
+    return aliasMap;
+  }
+
+  function getOpportunityAreaFuzzyThreshold(source, target) {
+    const maxLength = Math.max(String(source || '').length, String(target || '').length);
+    if (maxLength <= 6) return 1;
+    if (maxLength <= 12) return 2;
+    return 3;
+  }
+
+  function getOpportunityAreaSimilarityScore(source, target) {
+    const left = String(source || '');
+    const right = String(target || '');
+    const maxLength = Math.max(left.length, right.length);
+    if (!maxLength) return 0;
+    const distance = levenshteinDistance(left, right);
+    return 1 - (distance / maxLength);
+  }
+
+  function isCloseOpportunityAreaAlias(candidate, alias) {
+    const normalizedCandidate = normalizeText(candidate);
+    const normalizedAlias = normalizeText(alias);
+    if (!normalizedCandidate || !normalizedAlias) return false;
+    if (normalizedCandidate === normalizedAlias) return true;
+    if (normalizedCandidate.length < 5 || normalizedAlias.length < 5) return false;
+
+    const threshold = getOpportunityAreaFuzzyThreshold(normalizedCandidate, normalizedAlias);
+    if (Math.abs(normalizedCandidate.length - normalizedAlias.length) > threshold) return false;
+
+    const distance = levenshteinDistance(normalizedCandidate, normalizedAlias);
+    if (distance > threshold) return false;
+
+    const similarity = getOpportunityAreaSimilarityScore(normalizedCandidate, normalizedAlias);
+    const minSimilarity = Math.max(normalizedCandidate.length, normalizedAlias.length) >= 10 ? 0.72 : 0.78;
+    return similarity >= minSimilarity;
+  }
+
+  function findBestOfficialOpportunityArea(candidate, officialAliasMap) {
+    const normalized = normalizeText(candidate);
+    if (!normalized) return null;
+
+    if (officialAliasMap && officialAliasMap.has(normalized)) {
+      return officialAliasMap.get(normalized);
+    }
+
+    if (normalized.length >= 5 && officialAliasMap) {
+      for (const [alias, entry] of officialAliasMap.entries()) {
+        if (normalized.includes(alias) || alias.includes(normalized)) return entry;
+      }
+    }
+
+    return findBestFuzzyOpportunityArea(candidate, OPPORTUNITY_AREA_DEFINITIONS);
+  }
+
+  function extractOpportunityAreaHistoryEntries(history) {
+    const list = Array.isArray(history) ? history : [];
+    const entries = [];
+
+    list.forEach((item) => {
+      if (!item) return;
+
+      if (typeof item === 'string') {
+        const label = formatOpportunityAreaLabel(item);
+        const key = slugifyText(item);
+        if (label || key) entries.push({ label, key, icon: 'fas fa-briefcase' });
+        return;
+      }
+
+      if (typeof item !== 'object' || Array.isArray(item)) return;
+
+      const meta = (item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata))
+        ? item.metadata
+        : {};
+      const label = formatOpportunityAreaLabel(firstNonEmptyValue([
+        item.label,
+        item.areaLabel, item.area,
+        meta.areaLabel, meta.area,
+        item.subcategoriaLabel, item.subcategoria,
+        item.subcategoryLabel, item.subcategory,
+        meta.subcategoryLabel, meta.subcategory
+      ]));
+      const key = slugifyText(firstNonEmptyValue([
+        item.key,
+        item.areaKey,
+        meta.areaKey,
+        item.subcategoriaKey,
+        item.subcategoryKey,
+        meta.subcategoryKey,
+        label
+      ]));
+      const icon = firstNonEmptyValue([
+        item.icon,
+        item.areaIcon,
+        meta.areaIcon
+      ]) || 'fas fa-briefcase';
+
+      if (label || key) entries.push({ label, key, icon });
+    });
+
+    return entries;
+  }
+
+  function buildHistoryOpportunityAreaMaps(history, officialAliasMap) {
+    const catalog = new Map();
+    const aliasMap = new Map();
+    const entries = extractOpportunityAreaHistoryEntries(history);
+
+    entries.forEach((entry) => {
+      const normalizedLabel = normalizeText(entry.label);
+      const normalizedKey = normalizeText(entry.key);
+      if (!normalizedLabel && !normalizedKey) return;
+      if ((normalizedLabel && officialAliasMap.has(normalizedLabel)) || (normalizedKey && officialAliasMap.has(normalizedKey))) return;
+      if (findBestOfficialOpportunityArea(entry.label, officialAliasMap) || findBestOfficialOpportunityArea(entry.key, officialAliasMap)) return;
+
+      const finalKey = slugifyText(entry.key || entry.label);
+      if (!finalKey) return;
+
+      const existing = catalog.get(finalKey);
+      const finalLabel = pickPreferredOpportunityAreaLabel(existing && existing.label, entry.label || finalKey);
+      const item = {
+        key: finalKey,
+        label: finalLabel || formatOpportunityAreaLabel(finalKey),
+        icon: entry.icon || (existing && existing.icon) || 'fas fa-briefcase',
+        isKnown: false,
+      };
+
+      catalog.set(finalKey, item);
+      [normalizedLabel, normalizedKey].filter(Boolean).forEach((alias) => {
+        if (!aliasMap.has(alias)) aliasMap.set(alias, item);
+      });
+    });
+
+    return { catalog, aliasMap };
+  }
+
+  function findBestOfficialContextArea(combinedText) {
+    if (!combinedText) return null;
+
+    const ranked = OPPORTUNITY_AREA_DEFINITIONS
+      .map((entry) => {
+        const score = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
+          .map((value) => normalizeText(value))
+          .filter(Boolean)
+          .reduce((acc, alias) => {
+            if (!combinedText.includes(alias)) return acc;
+            return acc + (alias.includes(' ') ? 3 : 2);
+          }, 0);
+        return { entry, score };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    return ranked.length ? ranked[0].entry : null;
+  }
+
+  function findBestFuzzyOpportunityArea(candidate, collection) {
+    const normalized = normalizeText(candidate);
+    if (!normalized || normalized.length < 5) return null;
+
+    let best = null;
+    collection.forEach((entry) => {
+      const aliases = Array.isArray(entry.aliases) && entry.aliases.length
+        ? entry.aliases
+        : [entry.label, entry.key];
+
+      aliases.forEach((aliasValue) => {
+        const alias = normalizeText(aliasValue);
+        if (!alias) return;
+        const distance = levenshteinDistance(normalized, alias);
+        if (!isCloseOpportunityAreaAlias(normalized, alias)) return;
+        const similarity = getOpportunityAreaSimilarityScore(normalized, alias);
+
+        if (!best || distance < best.distance || (distance === best.distance && similarity > best.similarity)) {
+          best = { entry, distance, similarity };
+        }
+      });
+    });
+
+    return best ? best.entry : null;
+  }
+
   function resolveOpportunityArea(source, options = {}) {
     const built = buildOpportunityTextParts(source, options.tags);
     const textParts = Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [];
@@ -395,76 +631,56 @@
       ...textParts
     ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
 
-    const aliases = [];
-    OPPORTUNITY_AREA_DEFINITIONS.forEach((entry) => {
-      aliases.push(entry.label);
-      aliases.push(entry.key);
-      entry.aliases.forEach((alias) => aliases.push(alias));
-    });
-
-    const aliasMap = new Map();
-    OPPORTUNITY_AREA_DEFINITIONS.forEach((entry) => {
-      const values = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])];
-      values.forEach((value) => {
-        const normalized = normalizeText(value);
-        if (normalized && !aliasMap.has(normalized)) aliasMap.set(normalized, entry);
-      });
-    });
+    const officialAliasMap = buildOfficialOpportunityAreaMaps();
+    const historySource = Array.isArray(options.history)
+      ? options.history
+      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_OPPORTUNITY_AREA_HISTORY)) ? window.__KC_OPPORTUNITY_AREA_HISTORY : []);
+    const historyMaps = buildHistoryOpportunityAreaMaps(historySource, officialAliasMap);
+    const historyEntries = Array.from(historyMaps.catalog.values()).map((entry) => ({
+      ...entry,
+      aliases: [entry.label, entry.key],
+    }));
 
     for (const candidate of explicitCandidates) {
       const normalized = normalizeText(candidate);
       if (!normalized) continue;
-      if (aliasMap.has(normalized)) {
-        const match = aliasMap.get(normalized);
-        return { key: match.key, label: match.label, icon: match.icon, isKnown: true, source: 'explicit' };
+
+      if (officialAliasMap.has(normalized)) {
+        const match = officialAliasMap.get(normalized);
+        return { key: match.key, label: match.label, icon: match.icon, isKnown: true, source: 'official-exact' };
       }
 
-      for (const [alias, entry] of aliasMap.entries()) {
-        if (normalized.includes(alias) || alias.includes(normalized)) {
-          return { key: entry.key, label: entry.label, icon: entry.icon, isKnown: true, source: 'explicit-partial' };
-        }
-      }
-    }
-
-    if (combinedText) {
-      const ranked = OPPORTUNITY_AREA_DEFINITIONS
-        .map((entry) => {
-          const score = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
-            .map((value) => normalizeText(value))
-            .filter(Boolean)
-            .reduce((acc, alias) => {
-              if (!combinedText.includes(alias)) return acc;
-              const weight = alias.includes(' ') ? 3 : 2;
-              return acc + weight;
-            }, 0);
-          return { entry, score };
-        })
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score);
-
-      if (ranked.length) {
-        const best = ranked[0].entry;
-        return { key: best.key, label: best.label, icon: best.icon, isKnown: true, source: 'context' };
+      if (historyMaps.aliasMap.has(normalized)) {
+        const match = historyMaps.aliasMap.get(normalized);
+        return { key: match.key, label: match.label, icon: match.icon, isKnown: false, source: 'history-exact' };
       }
     }
 
     for (const candidate of explicitCandidates) {
       const normalized = normalizeText(candidate);
-      if (!normalized || normalized.length < 4) continue;
+      if (!normalized || normalized.length < 5) continue;
 
-      let best = null;
-      let bestDistance = Infinity;
-      aliasMap.forEach((entry, alias) => {
-        const distance = levenshteinDistance(normalized, alias);
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          best = entry;
+      for (const [alias, entry] of officialAliasMap.entries()) {
+        if (normalized.includes(alias) || alias.includes(normalized)) {
+          return { key: entry.key, label: entry.label, icon: entry.icon, isKnown: true, source: 'official-partial' };
         }
-      });
+      }
+    }
 
-      const threshold = normalized.length >= 9 ? 2 : 1;
-      if (best && bestDistance <= threshold) {
-        return { key: best.key, label: best.label, icon: best.icon, isKnown: true, source: 'fuzzy' };
+    const contextMatch = findBestOfficialContextArea(combinedText);
+    if (contextMatch) {
+      return { key: contextMatch.key, label: contextMatch.label, icon: contextMatch.icon, isKnown: true, source: 'context' };
+    }
+
+    for (const candidate of explicitCandidates) {
+      const officialFuzzy = findBestFuzzyOpportunityArea(candidate, OPPORTUNITY_AREA_DEFINITIONS);
+      if (officialFuzzy) {
+        return { key: officialFuzzy.key, label: officialFuzzy.label, icon: officialFuzzy.icon, isKnown: true, source: 'official-fuzzy' };
+      }
+
+      const historyFuzzy = findBestFuzzyOpportunityArea(candidate, historyEntries);
+      if (historyFuzzy) {
+        return { key: historyFuzzy.key, label: historyFuzzy.label, icon: historyFuzzy.icon, isKnown: false, source: 'history-fuzzy' };
       }
     }
 
@@ -473,7 +689,7 @@
     if (fallbackKey) {
       return {
         key: fallbackKey,
-        label: beautifyKey(fallbackKey) || beautifyKey(fallbackRaw) || fallbackRaw,
+        label: formatOpportunityAreaLabel(fallbackRaw) || beautifyKey(fallbackKey) || fallbackRaw,
         icon: 'fas fa-briefcase',
         isKnown: false,
         source: 'custom',
