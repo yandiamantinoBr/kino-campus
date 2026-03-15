@@ -5591,3 +5591,173 @@ textarea::placeholder {
   text-align: center;
   flex-shrink: 0;
 }
+
+.kc-sidebar-help {
+  margin: -4px 0 14px;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.92em;
+  line-height: 1.5;
+}
+
+.kc-opportunity-filter-list {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-sidebar-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 12px;
+  background: var(--kc-background-dark);
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.kc-sidebar-check:hover {
+  border-color: rgba(241, 91, 41, 0.35);
+  background: rgba(241, 91, 41, 0.06);
+  transform: translateY(-1px);
+}
+
+.kc-sidebar-check input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--kc-primary-brand);
+  flex-shrink: 0;
+}
+
+.kc-sidebar-check span {
+  color: var(--kc-text-dark-primary);
+  font-weight: 500;
+}
+
+.kc-sidebar-check:has(input:checked) {
+  border-color: rgba(241, 91, 41, 0.55);
+  background: rgba(241, 91, 41, 0.1);
+}
+
+.kc-opportunity-clear {
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--kc-text-dark-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, color var(--transition-speed) ease, background-color var(--transition-speed) ease;
+}
+
+.kc-opportunity-clear:hover:not(:disabled) {
+  border-color: rgba(241, 91, 41, 0.45);
+  color: var(--kc-primary-brand);
+  background: rgba(241, 91, 41, 0.06);
+}
+
+.kc-opportunity-clear:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.kc-sidebar--opportunities .kc-category-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.kc-sidebar--opportunities .kc-category-item {
+  width: 100%;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, transform var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+.kc-sidebar--opportunities .kc-category-item:hover:not(:disabled) {
+  border-color: rgba(241, 91, 41, 0.38);
+  background: rgba(241, 91, 41, 0.06);
+  transform: translateY(-1px);
+}
+
+.kc-sidebar--opportunities .kc-category-item.is-active {
+  border-color: rgba(241, 91, 41, 0.7);
+  background: rgba(241, 91, 41, 0.12);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-sidebar--opportunities .kc-category-item.is-active .kc-category-count {
+  background: rgba(241, 91, 41, 0.18);
+  color: var(--kc-primary-brand);
+}
+
+.kc-sidebar--opportunities .kc-category-item.is-disabled {
+  opacity: 0.62;
+}
+
+.kc-sidebar--opportunities .kc-category-item:disabled {
+  cursor: not-allowed;
+}
+
+.kc-field-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.kc-field-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  font: inherit;
+  font-size: 0.92em;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.kc-field-pill:hover {
+  border-color: rgba(241, 91, 41, 0.4);
+  background: rgba(241, 91, 41, 0.08);
+  transform: translateY(-1px);
+}
+
+.kc-field-pill i {
+  color: var(--kc-primary-brand);
+}
+
+.kc-field-hint {
+  display: block;
+  margin-top: 8px;
+  color: var(--kc-text-dark-secondary);
+  line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--opportunities[data-kc-opp-sidebar="true"] {
+    display: block !important;
+    width: 100%;
+    order: -1;
+    margin-bottom: 16px;
+  }
+
+  .kc-sidebar--opportunities .kc-category-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kc-sidebar--opportunities .kc-sidebar-section {
+    margin-bottom: 14px;
+  }
+}

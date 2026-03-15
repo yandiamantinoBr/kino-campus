@@ -1658,6 +1658,15 @@ function kcEnsureCreateModal() {
       return;
     }
 
+    const areaSuggestion = e.target.closest('[data-kc-area-suggestion]');
+    if (areaSuggestion) {
+      const value = areaSuggestion.getAttribute('data-kc-area-suggestion') || '';
+      kcCreateState.values.areaAtuacao = value;
+      const areaInput = overlay.querySelector('input[name="areaAtuacao"]');
+      if (areaInput) areaInput.value = value;
+      return;
+    }
+
     const imgActionBtn = e.target.closest('[data-kc-img-action]');
     if (imgActionBtn) {
       const action = imgActionBtn.getAttribute('data-kc-img-action');
@@ -1689,7 +1698,16 @@ function kcEnsureCreateModal() {
   // Imagens: input/drag&drop
   overlay.addEventListener('change', async (e) => {
     const target = e.target;
-    if (!target || target.id !== 'kcImagesInput') return;
+    if (!target) return;
+    if (target.matches && target.matches('[data-kc-opportunity-area-input]')) {
+      const resolved = kcResolveOpportunityAreaValue(target.value);
+      if (resolved && resolved.label) {
+        target.value = resolved.label;
+        kcCreateState.values[target.name] = resolved.label;
+      }
+      return;
+    }
+    if (target.id !== 'kcImagesInput') return;
     const files = target.files;
     if (files && files.length) await kcAddImagesFromFiles(files);
     // permite selecionar o mesmo arquivo novamente
@@ -1745,6 +1763,84 @@ function kcTagLabel(schema, groupId, key) {
   const group = (schema && Array.isArray(schema.tagGroups)) ? schema.tagGroups.find(g => g.id === groupId) : null;
   const opt = group && Array.isArray(group.options) ? group.options.find(o => o.key === key) : null;
   return opt ? opt.label : '';
+}
+
+function kcNormalizeOpportunityTypeKey(value) {
+  const canonical = window.KCUtils && typeof window.KCUtils.canonicalCategory === 'function'
+    ? window.KCUtils.canonicalCategory(value)
+    : String(value || '').trim().toLowerCase();
+
+  if (!canonical) return '';
+  if (canonical.includes('estagio')) return 'estagio';
+  if (canonical.includes('emprego')) return 'emprego';
+  if (canonical.includes('freelancer')) return 'freelancer';
+  if (canonical.includes('monitor')) return 'monitoria';
+  if (canonical.includes('volunt')) return 'voluntariado';
+  return canonical;
+}
+
+function kcGetOpportunityTypeOptionKey(value) {
+  const normalized = kcNormalizeOpportunityTypeKey(value);
+  if (normalized === 'estagio') return 'estagios';
+  if (normalized === 'emprego') return 'empregos';
+  return normalized;
+}
+
+function kcResolveOpportunityAreaValue(value, fallbackSource) {
+  if (window.KCUtils && typeof window.KCUtils.resolveOpportunityArea === 'function') {
+    const options = fallbackSource ? { textParts: [fallbackSource] } : {};
+    return window.KCUtils.resolveOpportunityArea(value || fallbackSource || '', options);
+  }
+
+  const raw = String(value || '').trim();
+  const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return { key, label: raw, icon: 'fas fa-briefcase', isKnown: false };
+}
+
+function kcGetOpportunityAreaOptions() {
+  if (window.KCUtils && typeof window.KCUtils.getOpportunityAreaDefinitions === 'function') {
+    return window.KCUtils.getOpportunityAreaDefinitions();
+  }
+
+  return [
+    { key: 'tecnologia', label: 'Tecnologia', icon: 'fas fa-laptop-code' },
+    { key: 'marketing', label: 'Marketing', icon: 'fas fa-bullhorn' },
+    { key: 'design', label: 'Design', icon: 'fas fa-palette' },
+    { key: 'educacao', label: 'Educa\u00e7\u00e3o', icon: 'fas fa-graduation-cap' },
+  ];
+}
+
+function kcResolveOpportunityWorkMode(value) {
+  const raw = String(value || '').trim();
+  const normalized = (window.KCUtils && typeof window.KCUtils.normalizeText === 'function')
+    ? window.KCUtils.normalizeText(raw)
+    : raw.toLowerCase();
+
+  if (!normalized) return { key: '', label: '' };
+  if (normalized.includes('hibrid')) return { key: 'hibrido', label: 'H\u00edbrido' };
+  if (normalized.includes('remot') || normalized.includes('home office')) return { key: 'remoto', label: 'Remoto' };
+  if (normalized.includes('presencial') || normalized.includes('onsite') || normalized.includes('on-site')) {
+    return { key: 'presencial', label: 'Presencial' };
+  }
+  return { key: '', label: raw };
+}
+
+function kcResolveOpportunityRegime(value) {
+  const raw = String(value || '').trim();
+  const normalized = (window.KCUtils && typeof window.KCUtils.normalizeText === 'function')
+    ? window.KCUtils.normalizeText(raw)
+    : raw.toLowerCase();
+
+  if (!normalized) return { key: '', label: '' };
+  if (normalized.includes('clt')) return { key: 'clt', label: 'CLT' };
+  if (normalized.includes('pj')) return { key: 'pj', label: 'PJ' };
+  if (normalized.includes('tempor')) return { key: 'temporario', label: 'Tempor\u00e1rio' };
+  if (normalized.includes('aprendiz')) return { key: 'aprendiz', label: 'Jovem Aprendiz' };
+  if (normalized.includes('bolsa')) return { key: 'bolsa', label: 'Bolsa' };
+  return {
+    key: normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+    label: raw,
+  };
 }
 
 const KC_CREATE_MAX_IMAGES = 5;
@@ -2003,7 +2099,31 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
   }
 
   if (moduleKey === 'oportunidades') {
-    fields.push({ type: 'text', name: 'localizacao', label: 'Local/Modalidade', placeholder: 'Ex: Remoto / Híbrido', required: false });
+    fields.push({
+      type: 'opportunity-area',
+      name: 'areaAtuacao',
+      label: 'Área',
+      placeholder: 'Ex: Educação',
+      required: true,
+      options: kcGetOpportunityAreaOptions(),
+    });
+    fields.push({
+      type: 'select',
+      name: 'modalidadeTrabalho',
+      label: 'Modalidade',
+      required: true,
+      options: ['Remoto', 'Híbrido', 'Presencial']
+    });
+    if (kcNormalizeOpportunityTypeKey(selections.tipo) === 'emprego') {
+      fields.push({
+        type: 'select',
+        name: 'regimeContratacao',
+        label: 'Regime/Vínculo',
+        required: true,
+        options: ['CLT', 'PJ', 'Temporário', 'Jovem Aprendiz']
+      });
+    }
+    fields.push({ type: 'text', name: 'localizacao', label: 'Cidade/Campus (opcional)', placeholder: 'Ex: Goiânia / Campus Samambaia', required: false });
     fields.push({ ...moneyFieldMeta, name: 'remuneracao', label: 'Remuneração (opcional)', placeholder: 'Ex: 1200,00', required: false });
     fields.push({ type: 'text', name: 'contato', label: 'Contato', placeholder: 'Ex: email@ufg.br', required: true });
   }
@@ -2092,6 +2212,25 @@ function kcRenderCreateModal() {
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
           <textarea id="${id}" name="${escHtml(f.name)}" rows="${f.rows || 4}" placeholder="${escHtml(f.placeholder || '')}" ${required} ${maxlength}>${escHtml(val || '')}</textarea>
+        </div>
+      `);
+    } else if (f.type === 'opportunity-area') {
+      const suggestions = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+        <button type="button" class="kc-field-pill" data-kc-area-suggestion="${escHtml(opt.label)}">
+          <i class="${escHtml(opt.icon || 'fas fa-briefcase')}"></i>
+          <span>${escHtml(opt.label)}</span>
+        </button>
+      `).join('');
+      const listItems = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+        <option value="${escHtml(opt.label)}"></option>
+      `).join('');
+      parts.push(`
+        <div class="kc-field kc-field--opportunity-area">
+          <label for="${id}">${label}${f.required ? ' *' : ''}</label>
+          <input id="${id}" name="${escHtml(f.name)}" type="text" placeholder="${escHtml(f.placeholder || '')}" value="${escHtml(val || '')}" list="kcOpportunityAreaOptions" data-kc-opportunity-area-input="true" ${required} />
+          <datalist id="kcOpportunityAreaOptions">${listItems}</datalist>
+          <div class="kc-field-pill-row">${suggestions}</div>
+          <small class="kc-field-hint">Escolha uma sugestão ou digite outra área. O sistema corrige variações como "eduucacão" para "Educação".</small>
         </div>
       `);
     } else if (f.type === 'select') {
@@ -2234,6 +2373,7 @@ function kcOpenEditPostModal(post, callback) {
       let key = '';
       if (g.id === schema.categoryGroupId) {
         key = post.categoriaKey || post.categoria || md.categoriaKey || md.categoria || '';
+        if (moduleKey === 'oportunidades') key = kcGetOpportunityTypeOptionKey(key);
       } else if (g.id === 'acao') {
         key = post.subcategoriaKey || md.actionKey || md.subcategoriaKey || '';
       } else {
@@ -2265,6 +2405,9 @@ function kcOpenEditPostModal(post, callback) {
     gratuito: md.gratuito || false,
     contato: md.contato || '',
     remuneracao: md.remuneracao || '',
+    areaAtuacao: md.areaLabel || md.area || post.subcategoriaLabel || post.subcategoria || '',
+    modalidadeTrabalho: md.workModeLabel || md.modalidadeTrabalho || (md.workMode ? kcResolveOpportunityWorkMode(md.workMode).label : '') || '',
+    regimeContratacao: md.employmentTypeLabel || md.regimeContratacao || (md.employmentType ? kcResolveOpportunityRegime(md.employmentType).label : '') || '',
     recompensa: md.recompensa || '',
     contribuicao: md.contribuicao || '',
     orcamento: md.orcamento || '',
@@ -2383,8 +2526,10 @@ async function kcHandleCreateSubmit() {
     }
 
     const categoryGroupId = schema.categoryGroupId;
-    const catKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
-    const catLabel = catKey ? kcTagLabel(schema, categoryGroupId, catKey) : '';
+    const rawCatKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
+    const isOpportunity = kcCreateState.moduleKey === 'oportunidades';
+    const catKey = isOpportunity ? kcNormalizeOpportunityTypeKey(rawCatKey) : rawCatKey;
+    const catLabel = rawCatKey ? kcTagLabel(schema, categoryGroupId, rawCatKey) : '';
 
     // subcategoria: tenta usar 2º grupo (quando existir)
     const otherGroups = (schema.tagGroups || []).filter(g => g.id !== categoryGroupId);
@@ -2398,13 +2543,32 @@ async function kcHandleCreateSubmit() {
     const isCompraVenda = kcCreateState.moduleKey === 'compra-venda';
     const actionKey = isCompraVenda ? (subKey || '') : '';
     const actionLabel = isCompraVenda ? (subLabel || '') : '';
-    const filterSubKey = isCompraVenda ? (catKey || '') : (subKey || '');
-    const filterSubLabel = isCompraVenda ? (catLabel || '') : (subLabel || '');
+    let filterSubKey = isCompraVenda ? (catKey || '') : (subKey || '');
+    let filterSubLabel = isCompraVenda ? (catLabel || '') : (subLabel || '');
+    let finalSubKey = isCompraVenda ? (actionKey || '') : (subKey || '');
+    let finalSubLabel = isCompraVenda ? (actionLabel || '') : (subLabel || '');
 
-    const tagKeys = Object.values(kcCreateState.selections).filter(Boolean);
-    const tagLabels = Object.entries(kcCreateState.selections)
-      .map(([gid, key]) => (key ? kcTagLabel(schema, gid, key) : ''))
-      .filter(Boolean);
+    const opportunityArea = isOpportunity
+      ? kcResolveOpportunityAreaValue(
+        kcCreateState.values.areaAtuacao || subLabel || subKey || '',
+        `${title} ${desc} ${kcCreateState.values.localizacao || ''}`
+      )
+      : { key: '', label: '', icon: '' };
+    if (isOpportunity) {
+      finalSubKey = opportunityArea.key || '';
+      finalSubLabel = opportunityArea.label || '';
+      filterSubKey = opportunityArea.key || '';
+      filterSubLabel = opportunityArea.label || '';
+      if (opportunityArea.label) kcCreateState.values.areaAtuacao = opportunityArea.label;
+    }
+
+    const tagMap = new Map();
+    Object.entries(kcCreateState.selections).forEach(([gid, key]) => {
+      if (!key) return;
+      const normalizedKey = (isOpportunity && gid === categoryGroupId) ? kcNormalizeOpportunityTypeKey(key) : key;
+      const labelForTag = kcTagLabel(schema, gid, key);
+      if (normalizedKey && !tagMap.has(normalizedKey)) tagMap.set(normalizedKey, labelForTag || normalizedKey);
+    });
 
     // preço (quando existe)
     let preco = null;
@@ -2421,6 +2585,43 @@ async function kcHandleCreateSubmit() {
       if (r) precoTexto = 'Recompensa: R$ ' + r;
     }
 
+    const opportunityTypeKey = isOpportunity ? kcNormalizeOpportunityTypeKey(rawCatKey) : '';
+    const opportunityUsesRegime = opportunityTypeKey === 'emprego';
+    const opportunityWorkMode = isOpportunity
+      ? kcResolveOpportunityWorkMode(kcCreateState.values.modalidadeTrabalho || '')
+      : { key: '', label: '' };
+    const opportunityRegime = (isOpportunity && opportunityUsesRegime)
+      ? kcResolveOpportunityRegime(kcCreateState.values.regimeContratacao || '')
+      : { key: '', label: '' };
+
+    if (isOpportunity) {
+      const remunValue = kcParseBRLNumber(kcCreateState.values.remuneracao);
+      if (remunValue != null) preco = remunValue;
+
+      const remunText = String(kcCreateState.values.remuneracao || '').trim();
+      if (remunText) {
+        const suffix = opportunityTypeKey === 'freelancer' ? '/projeto' : '/mês';
+        precoTexto = 'R$ ' + remunText + suffix;
+      }
+
+      if (opportunityArea.key && !tagMap.has(opportunityArea.key)) {
+        tagMap.set(opportunityArea.key, opportunityArea.label || opportunityArea.key);
+      }
+      if (opportunityWorkMode.key) {
+        if (!tagMap.has(opportunityWorkMode.key)) tagMap.set(opportunityWorkMode.key, opportunityWorkMode.label || opportunityWorkMode.key);
+        if (opportunityWorkMode.key === 'hibrido') {
+          if (!tagMap.has('remoto')) tagMap.set('remoto', 'Remoto');
+          if (!tagMap.has('presencial')) tagMap.set('presencial', 'Presencial');
+        }
+      }
+      if (opportunityRegime.key && !tagMap.has(opportunityRegime.key)) {
+        tagMap.set(opportunityRegime.key, opportunityRegime.label || opportunityRegime.key);
+      }
+    }
+
+    const tagKeys = Array.from(tagMap.keys()).filter(Boolean);
+    const tagLabels = Array.from(tagMap.values()).filter(Boolean);
+
     const imagens = kcGetOrderedCreateImages();
 
     // Payload do formulário (contrato legado) - o driver decide como persistir.
@@ -2436,9 +2637,9 @@ async function kcHandleCreateSubmit() {
       categoriaKey: catKey || '',
 
       // subcategoria (UI): em compra-venda, isso representa a *ação* (vendo/compro)
-      subcategoria: isCompraVenda ? (actionLabel || actionKey) : (subKey || (subLabel || '')),
-      subcategoriaLabel: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
-      subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
+      subcategoria: finalSubKey || (finalSubLabel || ''),
+      subcategoriaLabel: finalSubLabel || '',
+      subcategoriaKey: finalSubKey || '',
 
       // tags (UI)
       tags: tagLabels,
@@ -2451,6 +2652,12 @@ async function kcHandleCreateSubmit() {
       precoTexto,
       condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
       localizacao: kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : '',
+      area: isOpportunity ? (opportunityArea.label || '') : '',
+      areaKey: isOpportunity ? (opportunityArea.key || '') : '',
+      modalidadeTrabalho: isOpportunity ? (opportunityWorkMode.label || '') : '',
+      regimeContratacao: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.label || '') : '',
+      contato: kcCreateState.values.contato ? String(kcCreateState.values.contato) : '',
+      remuneracao: kcCreateState.values.remuneracao ? String(kcCreateState.values.remuneracao) : '',
 
       // flags
       verificado: false,
@@ -2469,12 +2676,23 @@ async function kcHandleCreateSubmit() {
         categoriaKey: catKey || '',
 
         // ação/subcategoria (UI)
-        subcategoria: isCompraVenda ? (actionLabel || '') : (subLabel || ''),
-        subcategoriaKey: isCompraVenda ? (actionKey || '') : (subKey || ''),
+        subcategoria: finalSubLabel || '',
+        subcategoriaKey: finalSubKey || '',
 
         // compra-venda: guardar ação explicitamente (útil para futuras buscas e edição)
         actionKey: actionKey || '',
         actionLabel: actionLabel || '',
+        area: isOpportunity ? (opportunityArea.label || '') : '',
+        areaLabel: isOpportunity ? (opportunityArea.label || '') : '',
+        areaKey: isOpportunity ? (opportunityArea.key || '') : '',
+        workMode: isOpportunity ? (opportunityWorkMode.key || '') : '',
+        workModeLabel: isOpportunity ? (opportunityWorkMode.label || '') : '',
+        employmentType: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.key || '') : '',
+        employmentTypeLabel: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.label || '') : '',
+        regimeContratacao: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.label || '') : '',
+        contato: kcCreateState.values.contato ? String(kcCreateState.values.contato) : '',
+        remuneracao: kcCreateState.values.remuneracao ? String(kcCreateState.values.remuneracao) : '',
+        modalidadeTrabalho: kcCreateState.values.modalidadeTrabalho ? String(kcCreateState.values.modalidadeTrabalho) : '',
       },
     };
 

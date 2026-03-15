@@ -64,8 +64,14 @@
     }),
     'oportunidades': Object.freeze({
       'estagio': 'Estágio',
+      'estagios': 'Estágio',
       'emprego': 'Emprego',
+      'empregos': 'Emprego',
       'freelancer': 'Freelancer',
+      'monitoria': 'Monitoria',
+      'monitorias': 'Monitoria',
+      'voluntariado': 'Voluntariado',
+      'voluntariados': 'Voluntariado',
       'bolsa': 'Bolsa',
       'vagas': 'Vagas',
       'bolsas': 'Bolsas',
@@ -103,6 +109,92 @@
       'saida-agora': 'Saída Agora',
     }),
   });
+
+  const OPPORTUNITY_AREA_DEFINITIONS = Object.freeze([
+    Object.freeze({
+      key: 'tecnologia',
+      label: 'Tecnologia',
+      icon: 'fas fa-laptop-code',
+      aliases: Object.freeze([
+        'tecnologia', 'tech', 'ti', 'software', 'sistemas', 'desenvolvimento',
+        'desenvolvedor', 'desenvolvedora', 'dev', 'programacao', 'programação',
+        'engenharia de software', 'dados', 'data', 'analytics', 'analise de dados',
+        'análise de dados', 'frontend', 'front-end', 'backend', 'back-end',
+        'full stack', 'fullstack', 'ux engineering', 'qa', 'react', 'node',
+        'javascript', 'typescript', 'python'
+      ]),
+    }),
+    Object.freeze({
+      key: 'marketing',
+      label: 'Marketing',
+      icon: 'fas fa-bullhorn',
+      aliases: Object.freeze([
+        'marketing', 'growth', 'branding', 'midia', 'mídia', 'social media',
+        'redes sociais', 'trafego', 'tráfego', 'seo', 'ads', 'copy', 'copywriting',
+        'conteudo', 'conteúdo', 'publicidade', 'comunicacao', 'comunicação'
+      ]),
+    }),
+    Object.freeze({
+      key: 'design',
+      label: 'Design',
+      icon: 'fas fa-palette',
+      aliases: Object.freeze([
+        'design', 'designer', 'ux', 'ui', 'produto visual', 'grafico', 'gráfico',
+        'identidade visual', 'criacao visual', 'criação visual', 'ilustracao',
+        'ilustração', 'direcao de arte', 'direção de arte'
+      ]),
+    }),
+    Object.freeze({
+      key: 'educacao',
+      label: 'Educação',
+      icon: 'fas fa-graduation-cap',
+      aliases: Object.freeze([
+        'educacao', 'educação', 'ensino', 'pedagogia', 'monitoria', 'monitor',
+        'tutoria', 'tutor', 'professor', 'professora', 'aulas', 'reforco',
+        'reforço', 'escolar', 'licenciatura', 'didatica', 'didática', 'calculo',
+        'cálculo'
+      ]),
+    }),
+    Object.freeze({
+      key: 'administrativo',
+      label: 'Administrativo',
+      icon: 'fas fa-clipboard-list',
+      aliases: Object.freeze([
+        'administrativo', 'administracao', 'administração', 'operacoes', 'operações',
+        'secretaria', 'rh', 'recursos humanos', 'financeiro', 'financas', 'finanças',
+        'backoffice', 'office', 'assistente administrativo'
+      ]),
+    }),
+    Object.freeze({
+      key: 'engenharia',
+      label: 'Engenharia',
+      icon: 'fas fa-drafting-compass',
+      aliases: Object.freeze([
+        'engenharia', 'engenheiro', 'engenheira', 'civil', 'mecanica', 'mecânica',
+        'eletrica', 'elétrica', 'projetos', 'projeto tecnico', 'projeto técnico',
+        'autocad', 'cad'
+      ]),
+    }),
+    Object.freeze({
+      key: 'saude',
+      label: 'Saúde',
+      icon: 'fas fa-heartbeat',
+      aliases: Object.freeze([
+        'saude', 'saúde', 'medicina', 'enfermagem', 'psicologia', 'farmacia',
+        'farmácia', 'nutricao', 'nutrição', 'clinica', 'clínica'
+      ]),
+    }),
+    Object.freeze({
+      key: 'pesquisa',
+      label: 'Pesquisa',
+      icon: 'fas fa-microscope',
+      aliases: Object.freeze([
+        'pesquisa', 'cientifica', 'científica', 'iniciacao cientifica',
+        'iniciação científica', 'laboratorio', 'laboratório', 'academica',
+        'acadêmica', 'bolsa pesquisa'
+      ]),
+    }),
+  ]);
 
   function titleCase(str) {
     return String(str || '')
@@ -217,6 +309,178 @@
     // plural básico (pt-BR)
     if (s.length > 3 && s.endsWith('s')) s = s.slice(0, -1);
     return s;
+  }
+
+  function slugifyText(str) {
+    return normalizeText(str).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  function levenshteinDistance(a, b) {
+    const left = String(a || '');
+    const right = String(b || '');
+    if (!left) return right.length;
+    if (!right) return left.length;
+
+    const matrix = Array.from({ length: left.length + 1 }, () => new Array(right.length + 1).fill(0));
+    for (let i = 0; i <= left.length; i += 1) matrix[i][0] = i;
+    for (let j = 0; j <= right.length; j += 1) matrix[0][j] = j;
+
+    for (let i = 1; i <= left.length; i += 1) {
+      for (let j = 1; j <= right.length; j += 1) {
+        const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+
+    return matrix[left.length][right.length];
+  }
+
+  function getOpportunityAreaDefinitions() {
+    return OPPORTUNITY_AREA_DEFINITIONS.slice();
+  }
+
+  function buildOpportunityTextParts(source, fallbackTags) {
+    if (source && typeof source === 'object' && !Array.isArray(source)) {
+      const meta = (source.metadata && typeof source.metadata === 'object' && !Array.isArray(source.metadata)) ? source.metadata : {};
+      const tagValues = [];
+      if (Array.isArray(source.tags)) tagValues.push(...source.tags);
+      if (Array.isArray(source.tagKeys)) tagValues.push(...source.tagKeys);
+      if (Array.isArray(meta.tags)) tagValues.push(...meta.tags);
+      if (Array.isArray(meta.tagKeys)) tagValues.push(...meta.tagKeys);
+
+      return {
+        explicit: [
+          source.areaLabel, source.area, source.areaKey,
+          meta.areaLabel, meta.area, meta.areaKey,
+          source.subcategoriaLabel, source.subcategoria, source.subcategoriaKey,
+          source.subcategoryLabel, source.subcategory, source.subcategoryKey,
+          meta.subcategoria, meta.subcategoriaKey,
+          meta.subcategoryLabel, meta.subcategory, meta.subcategoryKey
+        ].filter(Boolean),
+        text: [
+          source.titulo, source.title,
+          source.descricao, source.description,
+          source.localizacao, source.location,
+          meta.localizacao, meta.location
+        ].filter(Boolean),
+        tags: tagValues.filter(Boolean),
+      };
+    }
+
+    return {
+      explicit: source ? [source] : [],
+      text: [],
+      tags: Array.isArray(fallbackTags) ? fallbackTags.filter(Boolean) : [],
+    };
+  }
+
+  function getOpportunityAreaInfoByKey(key) {
+    const wanted = slugifyText(key);
+    if (!wanted) return null;
+    return OPPORTUNITY_AREA_DEFINITIONS.find((entry) => entry.key === wanted) || null;
+  }
+
+  function resolveOpportunityArea(source, options = {}) {
+    const built = buildOpportunityTextParts(source, options.tags);
+    const textParts = Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [];
+    const explicitCandidates = built.explicit.map((value) => String(value || '').trim()).filter(Boolean);
+    const combinedText = [
+      ...explicitCandidates,
+      ...built.tags,
+      ...built.text,
+      ...textParts
+    ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
+
+    const aliases = [];
+    OPPORTUNITY_AREA_DEFINITIONS.forEach((entry) => {
+      aliases.push(entry.label);
+      aliases.push(entry.key);
+      entry.aliases.forEach((alias) => aliases.push(alias));
+    });
+
+    const aliasMap = new Map();
+    OPPORTUNITY_AREA_DEFINITIONS.forEach((entry) => {
+      const values = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])];
+      values.forEach((value) => {
+        const normalized = normalizeText(value);
+        if (normalized && !aliasMap.has(normalized)) aliasMap.set(normalized, entry);
+      });
+    });
+
+    for (const candidate of explicitCandidates) {
+      const normalized = normalizeText(candidate);
+      if (!normalized) continue;
+      if (aliasMap.has(normalized)) {
+        const match = aliasMap.get(normalized);
+        return { key: match.key, label: match.label, icon: match.icon, isKnown: true, source: 'explicit' };
+      }
+
+      for (const [alias, entry] of aliasMap.entries()) {
+        if (normalized.includes(alias) || alias.includes(normalized)) {
+          return { key: entry.key, label: entry.label, icon: entry.icon, isKnown: true, source: 'explicit-partial' };
+        }
+      }
+    }
+
+    if (combinedText) {
+      const ranked = OPPORTUNITY_AREA_DEFINITIONS
+        .map((entry) => {
+          const score = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
+            .map((value) => normalizeText(value))
+            .filter(Boolean)
+            .reduce((acc, alias) => {
+              if (!combinedText.includes(alias)) return acc;
+              const weight = alias.includes(' ') ? 3 : 2;
+              return acc + weight;
+            }, 0);
+          return { entry, score };
+        })
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      if (ranked.length) {
+        const best = ranked[0].entry;
+        return { key: best.key, label: best.label, icon: best.icon, isKnown: true, source: 'context' };
+      }
+    }
+
+    for (const candidate of explicitCandidates) {
+      const normalized = normalizeText(candidate);
+      if (!normalized || normalized.length < 4) continue;
+
+      let best = null;
+      let bestDistance = Infinity;
+      aliasMap.forEach((entry, alias) => {
+        const distance = levenshteinDistance(normalized, alias);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = entry;
+        }
+      });
+
+      const threshold = normalized.length >= 9 ? 2 : 1;
+      if (best && bestDistance <= threshold) {
+        return { key: best.key, label: best.label, icon: best.icon, isKnown: true, source: 'fuzzy' };
+      }
+    }
+
+    const fallbackRaw = explicitCandidates[0] || '';
+    const fallbackKey = slugifyText(fallbackRaw);
+    if (fallbackKey) {
+      return {
+        key: fallbackKey,
+        label: beautifyKey(fallbackKey) || beautifyKey(fallbackRaw) || fallbackRaw,
+        icon: 'fas fa-briefcase',
+        isKnown: false,
+        source: 'custom',
+      };
+    }
+
+    return { key: '', label: '', icon: 'fas fa-briefcase', isKnown: false, source: 'empty' };
   }
 
   function escapeHtml(str) {
@@ -337,14 +601,9 @@
     return '';
   }
 
-  function inferOportunidadesSubcategory(rawSub, tags = []) {
-    const s = normalizeText(rawSub);
-    if (s) return beautifyKey(s);
-    const t = (Array.isArray(tags) ? tags : []).map(x => normalizeText(x));
-    // preferir tags mais informativas
-    const blacklist = new Set(['estagio', 'estágio', 'emprego', 'freelancer', 'junior', 'clt', 'vaga', 'vagas', 'bolsa', 'bolsas']);
-    const pick = t.find(x => x && x.length > 3 && !blacklist.has(x));
-    return pick ? beautifyKey(pick) : '';
+  function inferOportunidadesSubcategory(source, tags = []) {
+    const resolved = resolveOpportunityArea(source, { tags });
+    return resolved && resolved.label ? resolved.label : '';
   }
 
   function inferEventosCategory(rawCat, tags = []) {
@@ -408,12 +667,12 @@
 
     // Labels (sem quebrar caso já existam)
     if (!p.categoriaLabel) p.categoriaLabel = getCategoryLabel(moduleKey, p.categoriaKey || p.categoria);
-    if (!p.subcategoriaLabel) {
-      if (moduleKey === 'oportunidades') {
-        p.subcategoriaLabel = inferOportunidadesSubcategory(p.subcategoria, tags);
-      } else {
-        p.subcategoriaLabel = getSubcategoryLabel(moduleKey, p.subcategoriaKey || p.subcategoria);
-      }
+    if (moduleKey === 'oportunidades') {
+      const areaInfo = resolveOpportunityArea(p, { tags });
+      if (!p.subcategoriaKey && areaInfo.key) p.subcategoriaKey = areaInfo.key;
+      if (!p.subcategoriaLabel) p.subcategoriaLabel = areaInfo.label || inferOportunidadesSubcategory(p, tags);
+    } else if (!p.subcategoriaLabel) {
+      p.subcategoriaLabel = getSubcategoryLabel(moduleKey, p.subcategoriaKey || p.subcategoria);
     }
 
     // Contexto (páginas de módulo podem omitir o nome do módulo)
@@ -830,6 +1089,9 @@
     getCategoryLabel,
     getSubcategoryLabel,
     getConditionLabel,
+    getOpportunityAreaDefinitions,
+    getOpportunityAreaInfoByKey,
+    resolveOpportunityArea,
     escapeHtml,
     cssEscape,
     formatCurrencyBRL,
