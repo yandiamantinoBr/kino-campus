@@ -88,11 +88,18 @@
       'feira': 'Sustentabilidade',
     }),
     'moradia': Object.freeze({
+      'republica': 'República',
+      'republicas': 'República',
       'quarto': 'Quarto',
+      'quartos': 'Quarto',
       'dividir-quarto': 'Dividir Quarto',
       'apartamento': 'Apartamento',
+      'apartamentos': 'Apartamento',
+      'casa': 'Casa',
+      'casas': 'Casa',
       'kitnet': 'Kitnet',
-      'republica': 'República',
+      'procurando': 'Procurando',
+      'procuro': 'Procurando',
     }),
     'livros': Object.freeze({
       'exatas': 'Exatas',
@@ -204,6 +211,124 @@
         'acadêmica', 'bolsa pesquisa'
       ]),
     }),
+  ]);
+
+  const HOUSING_REGION_DEFINITIONS = Object.freeze([
+    Object.freeze({
+      key: 'campus-samambaia',
+      label: 'Campus Samambaia',
+      icon: 'fas fa-university',
+      zoneKey: 'campus-samambaia',
+      zoneLabel: 'Campus Samambaia',
+      aliases: Object.freeze([
+        'campus samambaia', 'samambaia', 'campus ii', 'campus 2', 'campus samambaia ufg'
+      ]),
+    }),
+    Object.freeze({
+      key: 'vila-itatiaia',
+      label: 'Vila Itatiaia',
+      icon: 'fas fa-map-pin',
+      zoneKey: 'campus-samambaia',
+      zoneLabel: 'Campus Samambaia',
+      aliases: Object.freeze([
+        'vila itatiaia', 'itatiaia'
+      ]),
+    }),
+    Object.freeze({
+      key: 'sao-judas-tadeu',
+      label: 'São Judas Tadeu',
+      icon: 'fas fa-map-pin',
+      zoneKey: 'campus-samambaia',
+      zoneLabel: 'Campus Samambaia',
+      aliases: Object.freeze([
+        'sao judas', 'são judas', 'sao judas tadeu'
+      ]),
+    }),
+    Object.freeze({
+      key: 'chacaras-california',
+      label: 'Chácaras Califórnia',
+      icon: 'fas fa-map-pin',
+      zoneKey: 'campus-samambaia',
+      zoneLabel: 'Campus Samambaia',
+      aliases: Object.freeze([
+        'chacaras california', 'chácaras califórnia', 'chacara california', 'california'
+      ]),
+    }),
+    Object.freeze({
+      key: 'jardim-pompeia',
+      label: 'Jardim Pompéia',
+      icon: 'fas fa-map-pin',
+      zoneKey: 'campus-samambaia',
+      zoneLabel: 'Campus Samambaia',
+      aliases: Object.freeze([
+        'jardim pompeia', 'jardim pompéia', 'pompeia', 'pompéia'
+      ]),
+    }),
+    Object.freeze({
+      key: 'campus-colemar',
+      label: 'Campus Colemar',
+      icon: 'fas fa-university',
+      zoneKey: 'campus-colemar',
+      zoneLabel: 'Campus Colemar',
+      aliases: Object.freeze([
+        'campus colemar', 'colemar', 'campus i', 'campus 1', 'colemar natal e silva'
+      ]),
+    }),
+    Object.freeze({
+      key: 'setor-universitario',
+      label: 'Setor Universitário',
+      icon: 'fas fa-map-pin',
+      zoneKey: 'campus-colemar',
+      zoneLabel: 'Campus Colemar',
+      aliases: Object.freeze([
+        'setor universitario', 'praça universitária', 'praca universitaria', 'universitario'
+      ]),
+    }),
+    Object.freeze({
+      key: 'setor-leste-universitario',
+      label: 'Setor Leste Universitário',
+      icon: 'fas fa-map-pin',
+      zoneKey: 'campus-colemar',
+      zoneLabel: 'Campus Colemar',
+      aliases: Object.freeze([
+        'setor leste universitario', 'setor leste', 'leste universitario'
+      ]),
+    }),
+    Object.freeze({
+      key: 'setor-leste-vila-nova',
+      label: 'Setor Leste Vila Nova',
+      icon: 'fas fa-map-pin',
+      zoneKey: 'campus-colemar',
+      zoneLabel: 'Campus Colemar',
+      aliases: Object.freeze([
+        'setor leste vila nova', 'leste vila nova', 'vila nova'
+      ]),
+    }),
+    Object.freeze({
+      key: 'centro',
+      label: 'Centro',
+      icon: 'fas fa-map-pin',
+      zoneKey: 'campus-colemar',
+      zoneLabel: 'Campus Colemar',
+      aliases: Object.freeze([
+        'centro', 'centro de goiania', 'centro de goiânia'
+      ]),
+    }),
+  ]);
+
+  const HOUSING_FEATURE_DEFINITIONS = Object.freeze([
+    Object.freeze({ key: 'aceita-pets', label: 'Aceita pets', aliases: Object.freeze(['aceita pets', 'pet friendly', 'pets', 'animais', 'aceita animal']) }),
+    Object.freeze({ key: 'lgbtqiapn', label: 'LGBTQIAPN+', aliases: Object.freeze(['lgbtqiapn+', 'lgbtqiapn', 'lgbt', 'ambiente lgbtqiapn+', 'acolhedor lgbt']) }),
+    Object.freeze({ key: 'apenas-mulheres', label: 'Apenas mulheres', aliases: Object.freeze(['apenas mulheres', 'somente mulheres', 'republica feminina', 'república feminina', 'feminina']) }),
+    Object.freeze({ key: 'apenas-homens', label: 'Apenas homens', aliases: Object.freeze(['apenas homens', 'somente homens', 'republica masculina', 'república masculina', 'masculina']) }),
+    Object.freeze({ key: 'mobiliado', label: 'Mobiliado', aliases: Object.freeze(['mobiliado', 'mobilhado', 'com mobilia', 'com mobília', 'mobilia completa', 'mobília completa']) }),
+    Object.freeze({ key: 'contas-inclusas', label: 'Contas inclusas', aliases: Object.freeze(['contas inclusas', 'com contas', 'agua inclusa', 'água inclusa', 'luz inclusa']) }),
+    Object.freeze({ key: 'internet-inclusa', label: 'Internet inclusa', aliases: Object.freeze(['internet inclusa', 'wifi incluso', 'wi-fi incluso', 'wifi inclusa']) }),
+    Object.freeze({ key: 'banheiro-privativo', label: 'Banheiro privativo', aliases: Object.freeze(['banheiro privativo', 'suite', 'suíte', 'banheiro individual']) }),
+    Object.freeze({ key: 'vaga-de-garagem', label: 'Vaga de garagem', aliases: Object.freeze(['vaga de garagem', 'garagem', 'estacionamento']) }),
+    Object.freeze({ key: 'ambiente-familiar', label: 'Ambiente familiar', aliases: Object.freeze(['ambiente familiar', 'familiar', 'casa de familia', 'casa de família']) }),
+    Object.freeze({ key: 'nao-fumantes', label: 'Não fumantes', aliases: Object.freeze(['nao fumantes', 'não fumantes', 'sem fumar', 'nao fumar', 'não fumar']) }),
+    Object.freeze({ key: 'proximo-ao-campus', label: 'Próximo ao campus', aliases: Object.freeze(['proximo ao campus', 'próximo ao campus', 'perto do campus', 'ao lado da ufg']) }),
   ]);
 
   function titleCase(str) {
@@ -699,6 +824,594 @@
     return { key: '', label: '', icon: 'fas fa-briefcase', isKnown: false, source: 'empty' };
   }
 
+  function getHousingRegionDefinitions() {
+    return HOUSING_REGION_DEFINITIONS.slice();
+  }
+
+  function getHousingFeatureDefinitions() {
+    return HOUSING_FEATURE_DEFINITIONS.slice();
+  }
+
+  function toStringArray(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item || '').trim()).filter(Boolean);
+    }
+    if (value == null || value === false) return [];
+    if (typeof value === 'string') {
+      const raw = value.trim();
+      if (!raw) return [];
+      if ((raw.startsWith('[') && raw.endsWith(']')) || (raw.startsWith('"') && raw.endsWith('"'))) {
+        try {
+          const parsed = JSON.parse(raw);
+          return toStringArray(parsed);
+        } catch (_) { }
+      }
+      return raw.split(/[|,]\s*/).map((item) => String(item || '').trim()).filter(Boolean);
+    }
+    if (typeof value === 'object') {
+      if (Array.isArray(value.values)) return toStringArray(value.values);
+      if (Array.isArray(value.items)) return toStringArray(value.items);
+    }
+    return [String(value).trim()].filter(Boolean);
+  }
+
+  function scoreHousingLabel(value) {
+    const label = String(value || '').trim();
+    if (!label) return 0;
+    let score = Math.min(label.length, 32) / 32;
+    if (/[A-ZÀ-Ý]/.test(label)) score += 1.4;
+    if (label.normalize('NFD') !== label) score += 1.9;
+    if (label.includes(' ')) score += 0.45;
+    if (/[+]/.test(label)) score += 0.25;
+    return score;
+  }
+
+  function pickPreferredHousingLabel(current, candidate) {
+    const currentLabel = String(current || '').trim();
+    const candidateLabel = String(candidate || '').trim();
+    if (!currentLabel) return candidateLabel;
+    if (!candidateLabel) return currentLabel;
+    return scoreHousingLabel(candidateLabel) > scoreHousingLabel(currentLabel)
+      ? candidateLabel
+      : currentLabel;
+  }
+
+  function formatHousingLabel(value) {
+    const raw = String(value || '').trim().replace(/\s+/g, ' ');
+    if (!raw) return '';
+    if (/[A-ZÀ-Ý]/.test(raw) || raw.normalize('NFD') !== raw || raw.includes('+')) return raw;
+    return titleCase(raw);
+  }
+
+  function buildDefinitionAliasMap(definitions) {
+    const aliasMap = new Map();
+    (Array.isArray(definitions) ? definitions : []).forEach((entry) => {
+      [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
+        .map((value) => normalizeText(value))
+        .filter(Boolean)
+        .forEach((alias) => {
+          if (!aliasMap.has(alias)) aliasMap.set(alias, entry);
+        });
+    });
+    return aliasMap;
+  }
+
+  function getHousingFuzzyThreshold(source, target) {
+    const maxLength = Math.max(String(source || '').length, String(target || '').length);
+    if (maxLength <= 6) return 1;
+    if (maxLength <= 12) return 2;
+    return 3;
+  }
+
+  function getHousingSimilarityScore(source, target) {
+    const left = String(source || '');
+    const right = String(target || '');
+    const maxLength = Math.max(left.length, right.length);
+    if (!maxLength) return 0;
+    const distance = levenshteinDistance(left, right);
+    return 1 - (distance / maxLength);
+  }
+
+  function isCloseHousingAlias(candidate, alias) {
+    const normalizedCandidate = normalizeText(candidate);
+    const normalizedAlias = normalizeText(alias);
+    if (!normalizedCandidate || !normalizedAlias) return false;
+    if (normalizedCandidate === normalizedAlias) return true;
+    if (normalizedCandidate.length < 5 || normalizedAlias.length < 5) return false;
+
+    const threshold = getHousingFuzzyThreshold(normalizedCandidate, normalizedAlias);
+    if (Math.abs(normalizedCandidate.length - normalizedAlias.length) > threshold) return false;
+
+    const distance = levenshteinDistance(normalizedCandidate, normalizedAlias);
+    if (distance > threshold) return false;
+
+    const similarity = getHousingSimilarityScore(normalizedCandidate, normalizedAlias);
+    const minSimilarity = Math.max(normalizedCandidate.length, normalizedAlias.length) >= 10 ? 0.72 : 0.79;
+    return similarity >= minSimilarity;
+  }
+
+  function findBestFuzzyHousingEntry(candidate, collection) {
+    const normalized = normalizeText(candidate);
+    if (!normalized || normalized.length < 5) return null;
+
+    let best = null;
+    (Array.isArray(collection) ? collection : []).forEach((entry) => {
+      const aliases = Array.isArray(entry.aliases) && entry.aliases.length
+        ? entry.aliases
+        : [entry.label, entry.key];
+
+      aliases.forEach((aliasValue) => {
+        const alias = normalizeText(aliasValue);
+        if (!alias || !isCloseHousingAlias(normalized, alias)) return;
+        const distance = levenshteinDistance(normalized, alias);
+        const similarity = getHousingSimilarityScore(normalized, alias);
+        if (!best || distance < best.distance || (distance === best.distance && similarity > best.similarity)) {
+          best = { entry, distance, similarity };
+        }
+      });
+    });
+
+    return best ? best.entry : null;
+  }
+
+  function buildHousingTextParts(source, fallbackTags) {
+    if (Array.isArray(source)) {
+      return {
+        explicitRegions: [],
+        explicitFeatures: source.filter(Boolean),
+        text: [],
+        tags: Array.isArray(fallbackTags) ? fallbackTags.filter(Boolean) : [],
+      };
+    }
+
+    if (source && typeof source === 'object' && !Array.isArray(source)) {
+      const meta = (source.metadata && typeof source.metadata === 'object' && !Array.isArray(source.metadata)) ? source.metadata : {};
+      const tagValues = [];
+      if (Array.isArray(source.tags)) tagValues.push(...source.tags);
+      if (Array.isArray(source.tagKeys)) tagValues.push(...source.tagKeys);
+      if (Array.isArray(meta.tags)) tagValues.push(...meta.tags);
+      if (Array.isArray(meta.tagKeys)) tagValues.push(...meta.tagKeys);
+
+      return {
+        explicitRegions: [
+          source.regionLabel, source.region, source.regionKey,
+          meta.regionLabel, meta.regiao, meta.regiaoLabel, meta.region, meta.regionKey,
+          source.localizacao, source.location, meta.localizacao, meta.location
+        ].filter(Boolean),
+        explicitFeatures: [
+          ...toStringArray(source.housingFeatureLabels),
+          ...toStringArray(source.housingFeatureKeys),
+          ...toStringArray(source.marcadoresMoradia),
+          ...toStringArray(source.features),
+          ...toStringArray(meta.housingFeatureLabels),
+          ...toStringArray(meta.housingFeatureKeys),
+          ...toStringArray(meta.marcadoresMoradia),
+          ...toStringArray(meta.features),
+        ].filter(Boolean),
+        text: [
+          source.titulo, source.title,
+          source.descricao, source.description,
+          source.localizacao, source.location,
+          meta.localizacao, meta.location,
+          meta.detalhes
+        ].filter(Boolean),
+        tags: tagValues.filter(Boolean),
+      };
+    }
+
+    return {
+      explicitRegions: source ? [source] : [],
+      explicitFeatures: [],
+      text: [],
+      tags: Array.isArray(fallbackTags) ? fallbackTags.filter(Boolean) : [],
+    };
+  }
+
+  function getHousingRegionInfoByKey(key) {
+    const wanted = slugifyText(key);
+    if (!wanted) return null;
+    return HOUSING_REGION_DEFINITIONS.find((entry) => entry.key === wanted) || null;
+  }
+
+  function getHousingFeatureInfoByKey(key) {
+    const wanted = slugifyText(key);
+    if (!wanted) return null;
+    return HOUSING_FEATURE_DEFINITIONS.find((entry) => entry.key === wanted) || null;
+  }
+
+  function extractHousingRegionHistoryEntries(history) {
+    const list = Array.isArray(history) ? history : [];
+    const entries = [];
+
+    list.forEach((item) => {
+      if (!item) return;
+      if (typeof item === 'string') {
+        const label = formatHousingLabel(item);
+        const key = slugifyText(item);
+        if (label || key) entries.push({ key, label, icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '' });
+        return;
+      }
+      if (typeof item !== 'object' || Array.isArray(item)) return;
+
+      const meta = (item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)) ? item.metadata : {};
+      const label = formatHousingLabel(firstNonEmptyValue([
+        item.regionLabel, item.region, item.regiao, item.label,
+        meta.regionLabel, meta.region, meta.regiao, meta.regiaoLabel,
+      ]));
+      const key = slugifyText(firstNonEmptyValue([
+        item.regionKey, meta.regionKey, item.key, label
+      ]));
+      const zoneKey = slugifyText(firstNonEmptyValue([
+        item.regionZoneKey, meta.regionZoneKey, item.zoneKey
+      ]));
+      const zoneLabel = formatHousingLabel(firstNonEmptyValue([
+        item.regionZoneLabel, meta.regionZoneLabel, item.zoneLabel
+      ]));
+      if (label || key) entries.push({
+        key,
+        label,
+        icon: firstNonEmptyValue([item.icon, meta.regionIcon]) || 'fas fa-map-pin',
+        zoneKey,
+        zoneLabel,
+      });
+    });
+
+    return entries;
+  }
+
+  function buildHousingRegionHistoryMaps(history, officialAliasMap) {
+    const catalog = new Map();
+    const aliasMap = new Map();
+    extractHousingRegionHistoryEntries(history).forEach((entry) => {
+      const normalizedLabel = normalizeText(entry.label);
+      const normalizedKey = normalizeText(entry.key);
+      if (!normalizedLabel && !normalizedKey) return;
+      if ((normalizedLabel && officialAliasMap.has(normalizedLabel)) || (normalizedKey && officialAliasMap.has(normalizedKey))) return;
+
+      const finalKey = slugifyText(entry.key || entry.label);
+      if (!finalKey) return;
+
+      const existing = catalog.get(finalKey);
+      const finalLabel = pickPreferredHousingLabel(existing && existing.label, entry.label || finalKey);
+      const item = {
+        key: finalKey,
+        label: finalLabel || formatHousingLabel(finalKey),
+        icon: entry.icon || (existing && existing.icon) || 'fas fa-map-pin',
+        zoneKey: entry.zoneKey || (existing && existing.zoneKey) || '',
+        zoneLabel: entry.zoneLabel || (existing && existing.zoneLabel) || '',
+        isKnown: false,
+      };
+      catalog.set(finalKey, item);
+      [normalizedLabel, normalizedKey].filter(Boolean).forEach((alias) => {
+        if (!aliasMap.has(alias)) aliasMap.set(alias, item);
+      });
+    });
+
+    return { catalog, aliasMap };
+  }
+
+  function resolveHousingRegion(source, options = {}) {
+    const built = buildHousingTextParts(source, options.tags);
+    const explicitCandidates = built.explicitRegions.map((value) => String(value || '').trim()).filter(Boolean);
+    const combinedText = [
+      ...explicitCandidates,
+      ...built.tags,
+      ...built.text,
+      ...(Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [])
+    ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
+
+    const officialAliasMap = buildDefinitionAliasMap(HOUSING_REGION_DEFINITIONS);
+    const historySource = Array.isArray(options.history)
+      ? options.history
+      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_HOUSING_REGION_HISTORY)) ? window.__KC_HOUSING_REGION_HISTORY : []);
+    const historyMaps = buildHousingRegionHistoryMaps(historySource, officialAliasMap);
+    const historyEntries = Array.from(historyMaps.catalog.values()).map((entry) => ({
+      ...entry,
+      aliases: [entry.label, entry.key],
+    }));
+
+    for (const candidate of explicitCandidates) {
+      const normalized = normalizeText(candidate);
+      if (!normalized) continue;
+      if (officialAliasMap.has(normalized)) {
+        const match = officialAliasMap.get(normalized);
+        return {
+          key: match.key,
+          label: match.label,
+          icon: match.icon || 'fas fa-map-pin',
+          zoneKey: match.zoneKey || match.key,
+          zoneLabel: match.zoneLabel || match.label,
+          isKnown: true,
+          source: 'official-exact',
+        };
+      }
+      if (historyMaps.aliasMap.has(normalized)) {
+        const match = historyMaps.aliasMap.get(normalized);
+        return {
+          key: match.key,
+          label: match.label,
+          icon: match.icon || 'fas fa-map-pin',
+          zoneKey: match.zoneKey || '',
+          zoneLabel: match.zoneLabel || '',
+          isKnown: false,
+          source: 'history-exact',
+        };
+      }
+    }
+
+    for (const candidate of explicitCandidates) {
+      const normalized = normalizeText(candidate);
+      if (!normalized || normalized.length < 5) continue;
+      for (const [alias, entry] of officialAliasMap.entries()) {
+        if (normalized.includes(alias) || alias.includes(normalized)) {
+          return {
+            key: entry.key,
+            label: entry.label,
+            icon: entry.icon || 'fas fa-map-pin',
+            zoneKey: entry.zoneKey || entry.key,
+            zoneLabel: entry.zoneLabel || entry.label,
+            isKnown: true,
+            source: 'official-partial',
+          };
+        }
+      }
+    }
+
+    if (combinedText) {
+      const ranked = HOUSING_REGION_DEFINITIONS
+        .map((entry) => {
+          const score = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
+            .map((value) => normalizeText(value))
+            .filter(Boolean)
+            .reduce((acc, alias) => combinedText.includes(alias) ? acc + (alias.includes(' ') ? 3 : 2) : acc, 0);
+          return { entry, score };
+        })
+        .filter((item) => item.score > 0)
+        .sort((left, right) => right.score - left.score);
+      if (ranked.length) {
+        const match = ranked[0].entry;
+        return {
+          key: match.key,
+          label: match.label,
+          icon: match.icon || 'fas fa-map-pin',
+          zoneKey: match.zoneKey || match.key,
+          zoneLabel: match.zoneLabel || match.label,
+          isKnown: true,
+          source: 'context',
+        };
+      }
+    }
+
+    for (const candidate of explicitCandidates) {
+      const officialFuzzy = findBestFuzzyHousingEntry(candidate, HOUSING_REGION_DEFINITIONS);
+      if (officialFuzzy) {
+        return {
+          key: officialFuzzy.key,
+          label: officialFuzzy.label,
+          icon: officialFuzzy.icon || 'fas fa-map-pin',
+          zoneKey: officialFuzzy.zoneKey || officialFuzzy.key,
+          zoneLabel: officialFuzzy.zoneLabel || officialFuzzy.label,
+          isKnown: true,
+          source: 'official-fuzzy',
+        };
+      }
+      const historyFuzzy = findBestFuzzyHousingEntry(candidate, historyEntries);
+      if (historyFuzzy) {
+        return {
+          key: historyFuzzy.key,
+          label: historyFuzzy.label,
+          icon: historyFuzzy.icon || 'fas fa-map-pin',
+          zoneKey: historyFuzzy.zoneKey || '',
+          zoneLabel: historyFuzzy.zoneLabel || '',
+          isKnown: false,
+          source: 'history-fuzzy',
+        };
+      }
+    }
+
+    const fallbackRaw = explicitCandidates[0] || '';
+    const fallbackKey = slugifyText(fallbackRaw);
+    if (fallbackKey) {
+      return {
+        key: fallbackKey,
+        label: formatHousingLabel(fallbackRaw) || beautifyKey(fallbackKey) || fallbackRaw,
+        icon: 'fas fa-map-pin',
+        zoneKey: '',
+        zoneLabel: '',
+        isKnown: false,
+        source: 'custom',
+      };
+    }
+
+    return { key: '', label: '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isKnown: false, source: 'empty' };
+  }
+
+  function extractHousingFeatureHistoryEntries(history) {
+    const list = Array.isArray(history) ? history : [];
+    const entries = [];
+
+    list.forEach((item) => {
+      if (!item) return;
+      if (typeof item === 'string') {
+        const label = formatHousingLabel(item);
+        const key = slugifyText(item);
+        if (label || key) entries.push({ key, label, emoji: '🏷️' });
+        return;
+      }
+      if (typeof item !== 'object' || Array.isArray(item)) return;
+
+      const meta = (item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)) ? item.metadata : {};
+      const labels = [
+        ...toStringArray(item.housingFeatureLabels),
+        ...toStringArray(item.marcadoresMoradia),
+        ...toStringArray(item.features),
+        ...toStringArray(meta.housingFeatureLabels),
+        ...toStringArray(meta.marcadoresMoradia),
+        ...toStringArray(meta.features),
+      ];
+      const keys = [
+        ...toStringArray(item.housingFeatureKeys),
+        ...toStringArray(meta.housingFeatureKeys),
+      ];
+
+      labels.forEach((label, index) => {
+        const normalizedLabel = formatHousingLabel(label);
+        const key = slugifyText(keys[index] || normalizedLabel);
+        if (normalizedLabel || key) entries.push({
+          key,
+          label: normalizedLabel || beautifyKey(key),
+          emoji: item.emoji || meta.featureEmoji || '🏷️',
+        });
+      });
+    });
+
+    return entries;
+  }
+
+  function buildHousingFeatureHistoryMaps(history, officialAliasMap) {
+    const catalog = new Map();
+    const aliasMap = new Map();
+    extractHousingFeatureHistoryEntries(history).forEach((entry) => {
+      const normalizedLabel = normalizeText(entry.label);
+      const normalizedKey = normalizeText(entry.key);
+      if (!normalizedLabel && !normalizedKey) return;
+      if ((normalizedLabel && officialAliasMap.has(normalizedLabel)) || (normalizedKey && officialAliasMap.has(normalizedKey))) return;
+
+      const finalKey = slugifyText(entry.key || entry.label);
+      if (!finalKey) return;
+
+      const existing = catalog.get(finalKey);
+      const item = {
+        key: finalKey,
+        label: pickPreferredHousingLabel(existing && existing.label, entry.label || finalKey) || formatHousingLabel(finalKey),
+        emoji: entry.emoji || (existing && existing.emoji) || '🏷️',
+        isKnown: false,
+      };
+      catalog.set(finalKey, item);
+      [normalizedLabel, normalizedKey].filter(Boolean).forEach((alias) => {
+        if (!aliasMap.has(alias)) aliasMap.set(alias, item);
+      });
+    });
+
+    return { catalog, aliasMap };
+  }
+
+  function resolveSingleHousingFeature(value, options = {}) {
+    const raw = String(value || '').trim();
+    const normalized = normalizeText(raw);
+    if (!normalized) return null;
+
+    const officialAliasMap = options.officialAliasMap || buildDefinitionAliasMap(HOUSING_FEATURE_DEFINITIONS);
+    if (officialAliasMap.has(normalized)) {
+      const official = officialAliasMap.get(normalized);
+      return { key: official.key, label: official.label, emoji: '', isKnown: true };
+    }
+    if (options.historyMaps && options.historyMaps.aliasMap.has(normalized)) {
+      const historyEntry = options.historyMaps.aliasMap.get(normalized);
+      return { key: historyEntry.key, label: historyEntry.label, emoji: historyEntry.emoji || '🏷️', isKnown: false };
+    }
+
+    for (const [alias, entry] of officialAliasMap.entries()) {
+      if (normalized.includes(alias) || alias.includes(normalized)) {
+        return { key: entry.key, label: entry.label, emoji: '', isKnown: true };
+      }
+    }
+
+    const historyEntries = options.historyEntries || [];
+    const officialFuzzy = findBestFuzzyHousingEntry(raw, HOUSING_FEATURE_DEFINITIONS);
+    if (officialFuzzy) return { key: officialFuzzy.key, label: officialFuzzy.label, emoji: '', isKnown: true };
+
+    const historyFuzzy = findBestFuzzyHousingEntry(raw, historyEntries);
+    if (historyFuzzy) {
+      return {
+        key: historyFuzzy.key,
+        label: historyFuzzy.label,
+        emoji: historyFuzzy.emoji || '🏷️',
+        isKnown: false,
+      };
+    }
+
+    const fallbackKey = slugifyText(raw);
+    if (!fallbackKey) return null;
+    return {
+      key: fallbackKey,
+      label: formatHousingLabel(raw) || beautifyKey(fallbackKey) || raw,
+      emoji: '🏷️',
+      isKnown: false,
+    };
+  }
+
+  function resolveHousingFeatures(source, options = {}) {
+    const built = buildHousingTextParts(source, options.tags);
+    const officialAliasMap = buildDefinitionAliasMap(HOUSING_FEATURE_DEFINITIONS);
+    const historySource = Array.isArray(options.history)
+      ? options.history
+      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_HOUSING_FEATURE_HISTORY)) ? window.__KC_HOUSING_FEATURE_HISTORY : []);
+    const historyMaps = buildHousingFeatureHistoryMaps(historySource, officialAliasMap);
+    const historyEntries = Array.from(historyMaps.catalog.values()).map((entry) => ({
+      ...entry,
+      aliases: [entry.label, entry.key],
+    }));
+
+    const resolved = [];
+    const seen = new Set();
+    const addFeature = (feature) => {
+      if (!feature || !feature.key || seen.has(feature.key)) return;
+      seen.add(feature.key);
+      resolved.push(feature);
+    };
+
+    built.explicitFeatures.forEach((candidate) => {
+      addFeature(resolveSingleHousingFeature(candidate, { officialAliasMap, historyMaps, historyEntries }));
+    });
+
+    const combinedText = [
+      ...built.tags,
+      ...built.text,
+      ...(Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [])
+    ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
+
+    if (combinedText) {
+      HOUSING_FEATURE_DEFINITIONS.forEach((entry) => {
+        const aliases = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])].map((value) => normalizeText(value)).filter(Boolean);
+        if (aliases.some((alias) => combinedText.includes(alias))) {
+          addFeature({ key: entry.key, label: entry.label, emoji: '', isKnown: true });
+        }
+      });
+    }
+
+    return resolved;
+  }
+
+  function resolveHousingTypeKey(source) {
+    const normalized = normalizeText(source);
+    if (!normalized) return '';
+    if (normalized === 'moradia' || normalized === 'moradia estudantil') return '';
+    if (normalized.includes('procur')) return 'procurando';
+    if (normalized.includes('apart') || normalized.includes('kitnet') || normalized.includes('studio')) return 'apartamento';
+    if (normalized.includes('casa') || normalized.includes('sobrado')) return 'casa';
+    if (normalized.includes('republic')) return 'republica';
+    if (normalized.includes('quart') || normalized.includes('suite') || normalized.includes('suíte')) return 'quarto';
+    return canonicalCategory(normalized);
+  }
+
+  function resolveHousingTypeFromCandidates(values) {
+    const list = Array.isArray(values) ? values : [values];
+    const generic = new Set(['moradia', 'moradia estudantil']);
+
+    for (const value of list) {
+      const key = resolveHousingTypeKey(value);
+      if (key && !generic.has(key)) return key;
+    }
+
+    const combined = list
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+      .join(' ');
+    const combinedKey = resolveHousingTypeKey(combined);
+    return generic.has(combinedKey) ? '' : combinedKey;
+  }
+
   function escapeHtml(str) {
     return String(str ?? '')
       .replace(/&/g, '&amp;')
@@ -844,6 +1557,28 @@
     const tags = Array.isArray(p.tags) ? p.tags : (Array.isArray(p.tagKeys) ? p.tagKeys : []);
     const normTags = (Array.isArray(tags) ? tags : []).map(t => normalizeText(t));
     const meta = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
+    const housingTypeKey = moduleKey === 'moradia'
+      ? resolveHousingTypeFromCandidates([
+        meta.housingTypeKey,
+        meta.housingTypeLabel,
+        p.housingTypeKey,
+        p.housingTypeLabel,
+        p.categoriaKey,
+        p.categoria,
+        meta.categoriaKey,
+        meta.categoria,
+        p.titulo,
+        p.title,
+        p.descricao,
+        p.description
+      ])
+      : '';
+    const housingRegionInfo = moduleKey === 'moradia'
+      ? resolveHousingRegion(p, { tags })
+      : null;
+    const housingFeatures = moduleKey === 'moradia'
+      ? resolveHousingFeatures(p, { tags })
+      : [];
 
     // Derivar chaves (mantém consistência para filtros)
     if (!p.categoriaKey) {
@@ -862,6 +1597,10 @@
 
       if (moduleKey === 'eventos') {
         key = inferEventosCategory(key, normTags);
+      }
+
+      if (moduleKey === 'moradia') {
+        key = housingTypeKey || key;
       }
 
       p.categoriaKey = key || '';
@@ -883,7 +1622,50 @@
 
     // Labels (sem quebrar caso já existam)
     if (!p.categoriaLabel) p.categoriaLabel = getCategoryLabel(moduleKey, p.categoriaKey || p.categoria);
-    if (moduleKey === 'oportunidades') {
+    if (moduleKey === 'moradia') {
+      if ((!p.categoriaKey || normalizeText(p.categoriaKey) === 'moradia') && housingTypeKey) p.categoriaKey = housingTypeKey;
+      if (!p.categoriaLabel) p.categoriaLabel = getCategoryLabel(moduleKey, housingTypeKey || p.categoria);
+
+      const tagKeys = Array.isArray(p.tagKeys) ? p.tagKeys.slice() : [];
+      const tagLabels = Array.isArray(p.tags) ? p.tags.slice() : [];
+      const appendTag = (key, label) => {
+        const normalizedKey = String(key || '').trim();
+        const normalizedLabel = String(label || '').trim();
+        if (normalizedKey && !tagKeys.includes(normalizedKey)) tagKeys.push(normalizedKey);
+        if (normalizedLabel && !tagLabels.includes(normalizedLabel)) tagLabels.push(normalizedLabel);
+      };
+
+      if (housingRegionInfo && housingRegionInfo.key) {
+        p.regionKey = p.regionKey || housingRegionInfo.key;
+        p.regionLabel = p.regionLabel || housingRegionInfo.label;
+        p.regionZoneKey = p.regionZoneKey || housingRegionInfo.zoneKey || '';
+        p.regionZoneLabel = p.regionZoneLabel || housingRegionInfo.zoneLabel || '';
+        appendTag(housingRegionInfo.key, housingRegionInfo.label);
+        if (housingRegionInfo.zoneKey && housingRegionInfo.zoneKey !== housingRegionInfo.key) {
+          appendTag(housingRegionInfo.zoneKey, housingRegionInfo.zoneLabel || housingRegionInfo.zoneKey);
+        }
+      }
+
+      const featureKeys = [];
+      const featureLabels = [];
+      housingFeatures.forEach((feature) => {
+        if (!feature || !feature.key || !feature.label) return;
+        featureKeys.push(feature.key);
+        featureLabels.push(feature.label);
+        appendTag(feature.key, feature.label);
+      });
+
+      p.tagKeys = tagKeys;
+      p.tags = tagLabels;
+      p.housingFeatureKeys = featureKeys;
+      p.housingFeatureLabels = featureLabels;
+      p._kcHousingInfo = {
+        typeKey: housingTypeKey || p.categoriaKey || '',
+        region: housingRegionInfo && housingRegionInfo.key ? housingRegionInfo : null,
+        features: housingFeatures.slice(),
+      };
+      if (!p.subcategoriaLabel && housingRegionInfo && housingRegionInfo.label) p.subcategoriaLabel = housingRegionInfo.label;
+    } else if (moduleKey === 'oportunidades') {
       const areaInfo = resolveOpportunityArea(p, { tags });
       if (!p.subcategoriaKey && areaInfo.key) p.subcategoriaKey = areaInfo.key;
       if (!p.subcategoriaLabel) p.subcategoriaLabel = areaInfo.label || inferOportunidadesSubcategory(p, tags);
@@ -1030,6 +1812,9 @@
         if (p.categoriaLabel) segments.push(String(p.categoriaLabel));
         if (p.subcategoriaLabel) segments.push(String(p.subcategoriaLabel));
         if (p.condicao) segments.push(getConditionLabel(p.condicao));
+      } else if (moduleKey === 'moradia') {
+        if (p.categoriaLabel) segments.push(String(p.categoriaLabel));
+        if (housingRegionInfo && housingRegionInfo.label) segments.push(String(housingRegionInfo.label));
       } else if (moduleKey === 'achados-perdidos') {
         const lost = String(p.categoriaKey || '').includes('perd');
         segments.push(lost ? 'Perdido' : 'Encontrado');
@@ -1050,6 +1835,7 @@
     // Categoria usada para tabs (data-category). Ex.: módulo "livros" aparece como aba "Livros" em compra-venda.
     if (!p._kcTabCategoryKey) {
       if (moduleKey === 'livros') p._kcTabCategoryKey = 'livros';
+      else if (moduleKey === 'moradia') p._kcTabCategoryKey = housingTypeKey || p.categoriaKey || canonicalCategory(p.categoria) || '';
       else p._kcTabCategoryKey = p.categoriaKey || canonicalCategory(p.categoria) || '';
     }
 
@@ -1165,6 +1951,16 @@
       `.trim();
     }
 
+    const housingInfo = (moduleKey === 'moradia' && p._kcHousingInfo && typeof p._kcHousingInfo === 'object')
+      ? p._kcHousingInfo
+      : null;
+    const housingFeaturesHtml = housingInfo && Array.isArray(housingInfo.features) && housingInfo.features.length
+      ? '<div class="kc-card__tag-row kc-card__tag-row--housing">' + housingInfo.features.slice(0, 3).map((feature) => {
+        const emojiText = feature && feature.emoji ? `<span class="kc-card__tag-emoji">${escapeHtml(String(feature.emoji))}</span>` : '';
+        return `<span class="kc-card__tag">${emojiText}<span>${escapeHtml(String(feature && feature.label || ''))}</span></span>`;
+      }).join('') + '</div>'
+      : '';
+
     // Descrição (preview)
     const rawDesc = String(p.descricao || '').trim();
     const preview = rawDesc.length > 140 ? (rawDesc.slice(0, 140).trim() + '...') : rawDesc;
@@ -1226,6 +2022,12 @@
     // garantir que a categoria principal participe do filtro por tabs
     if (p.categoriaKey && !tagKeys.includes(String(p.categoriaKey))) tagKeys.push(String(p.categoriaKey));
     if (tagKeys.length) attrs.push(`data-kc-tags="${escapeHtml(tagKeys.join(' '))}"`);
+    if (housingInfo && housingInfo.typeKey) attrs.push(`data-kc-housing-type="${escapeHtml(String(housingInfo.typeKey))}"`);
+    if (housingInfo && housingInfo.region && housingInfo.region.key) attrs.push(`data-kc-housing-region="${escapeHtml(String(housingInfo.region.key))}"`);
+    if (housingInfo && housingInfo.region && housingInfo.region.zoneKey) attrs.push(`data-kc-housing-zone="${escapeHtml(String(housingInfo.region.zoneKey))}"`);
+    if (housingInfo && Array.isArray(housingInfo.features) && housingInfo.features.length) {
+      attrs.push(`data-kc-housing-features="${escapeHtml(housingInfo.features.map((feature) => String(feature && feature.key || '')).filter(Boolean).join(' '))}"`);
+    }
 
     const votePostId = String(id);
     const votePostUuid = (p && p.uuid) ? String(p.uuid) : '';
@@ -1247,6 +2049,7 @@
             </a>
             ${topBadgesHtml}
             ${priceHtml ? priceHtml : ''}
+            ${housingFeaturesHtml}
             <div class="kc-card__description-preview">
               ${escapeHtml(preview)}
             </div>
@@ -1307,7 +2110,15 @@
     getConditionLabel,
     getOpportunityAreaDefinitions,
     getOpportunityAreaInfoByKey,
+    getHousingRegionDefinitions,
+    getHousingRegionInfoByKey,
+    getHousingFeatureDefinitions,
+    getHousingFeatureInfoByKey,
     resolveOpportunityArea,
+    resolveHousingRegion,
+    resolveHousingFeatures,
+    resolveHousingTypeKey,
+    toStringArray,
     escapeHtml,
     cssEscape,
     formatCurrencyBRL,

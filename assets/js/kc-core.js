@@ -1461,7 +1461,7 @@ const KC_CREATE_SCHEMA = {
     ]
   },
   'moradia': {
-    label: 'Moradia Estudantil',
+    label: 'Moradia',
     icon: 'fas fa-home',
     emoji: '🏡',
     categoryGroupId: 'tipo',
@@ -1476,6 +1476,7 @@ const KC_CREATE_SCHEMA = {
           { key: 'republicas', label: 'Repúblicas' },
           { key: 'quartos', label: 'Quartos' },
           { key: 'apartamentos', label: 'Apartamentos' },
+          { key: 'casas', label: 'Casas' },
           { key: 'procurando', label: 'Procurando' },
         ]
       }
@@ -1667,6 +1668,50 @@ function kcEnsureCreateModal() {
       return;
     }
 
+    const housingRegionSuggestion = e.target.closest('[data-kc-housing-region-suggestion]');
+    if (housingRegionSuggestion) {
+      const value = housingRegionSuggestion.getAttribute('data-kc-housing-region-suggestion') || '';
+      kcCreateState.values.regiao = value;
+      const regionInput = overlay.querySelector('input[name="regiao"]');
+      if (regionInput) {
+        regionInput.value = value;
+        kcSyncHousingRegionInput(regionInput);
+      }
+      return;
+    }
+
+    const housingFeatureSuggestion = e.target.closest('[data-kc-housing-feature-suggestion]');
+    if (housingFeatureSuggestion) {
+      const field = kcGetHousingFeatureFieldContext(housingFeatureSuggestion);
+      const hidden = field ? field.querySelector('[data-kc-housing-features-value]') : null;
+      const current = kcParseStringArrayValue(hidden ? hidden.value : '');
+      const nextValue = housingFeatureSuggestion.getAttribute('data-kc-housing-feature-suggestion') || '';
+      const resolvedEntry = kcResolveHousingFeatureEntries(current).find((entry) => entry.label === nextValue);
+      const nextList = resolvedEntry
+        ? kcResolveHousingFeatureEntries(current).filter((entry) => entry.key !== resolvedEntry.key).map((entry) => entry.label)
+        : current.concat(nextValue);
+      kcSyncHousingFeatureField(field, nextList);
+      return;
+    }
+
+    const removeHousingFeature = e.target.closest('[data-kc-housing-feature-remove]');
+    if (removeHousingFeature) {
+      const field = kcGetHousingFeatureFieldContext(removeHousingFeature);
+      const hidden = field ? field.querySelector('[data-kc-housing-features-value]') : null;
+      const current = kcResolveHousingFeatureEntries(hidden ? hidden.value : '');
+      const removeKey = removeHousingFeature.getAttribute('data-kc-housing-feature-remove') || '';
+      kcSyncHousingFeatureField(field, current.filter((entry) => entry.key !== removeKey).map((entry) => entry.label));
+      return;
+    }
+
+    const addHousingFeature = e.target.closest('[data-kc-housing-feature-add]');
+    if (addHousingFeature) {
+      const field = kcGetHousingFeatureFieldContext(addHousingFeature);
+      const input = field ? field.querySelector('[data-kc-housing-features-input="true"]') : null;
+      kcAppendHousingFeatureFromInput(input);
+      return;
+    }
+
     const imgActionBtn = e.target.closest('[data-kc-img-action]');
     if (imgActionBtn) {
       const action = imgActionBtn.getAttribute('data-kc-img-action');
@@ -1689,6 +1734,15 @@ function kcEnsureCreateModal() {
   if (form) {
     form.addEventListener('input', () => kcCaptureCreateValues());
     form.addEventListener('change', () => kcCaptureCreateValues());
+    form.addEventListener('keydown', (e) => {
+      const target = e.target;
+      if (!target || !target.matches || !target.matches('[data-kc-housing-features-input="true"]')) return;
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        kcAppendHousingFeatureFromInput(target);
+        kcCaptureCreateValues();
+      }
+    });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       kcHandleCreateSubmit();
@@ -1705,6 +1759,10 @@ function kcEnsureCreateModal() {
         target.value = resolved.label;
         kcCreateState.values[target.name] = resolved.label;
       }
+      return;
+    }
+    if (target.matches && target.matches('[data-kc-housing-region-input]')) {
+      kcSyncHousingRegionInput(target);
       return;
     }
     if (target.id !== 'kcImagesInput') return;
@@ -1755,6 +1813,11 @@ function kcCaptureCreateValues() {
     const name = cb.getAttribute('name');
     if (!name) return;
     values[name] = cb.checked;
+  });
+  form.querySelectorAll('[data-kc-housing-features-value]').forEach((input) => {
+    const name = input.getAttribute('name');
+    if (!name) return;
+    values[name] = kcParseStringArrayValue(input.value);
   });
   kcCreateState.values = values;
 }
@@ -1821,6 +1884,199 @@ function kcGetOpportunityAreaOptions() {
     { key: 'educacao', label: 'Educa\u00e7\u00e3o', icon: 'fas fa-graduation-cap' },
     { key: 'musica', label: 'M\u00fasica', icon: 'fas fa-music' },
   ];
+}
+
+function kcNormalizeHousingTypeKey(value) {
+  const canonical = window.KCUtils && typeof window.KCUtils.resolveHousingTypeKey === 'function'
+    ? window.KCUtils.resolveHousingTypeKey(value)
+    : String(value || '').trim().toLowerCase();
+
+  if (!canonical) return '';
+  if (canonical.includes('republic')) return 'republica';
+  if (canonical.includes('quart') || canonical.includes('suite')) return 'quarto';
+  if (canonical.includes('apart') || canonical.includes('kitnet')) return 'apartamento';
+  if (canonical.includes('casa')) return 'casa';
+  if (canonical.includes('procur')) return 'procurando';
+  return canonical;
+}
+
+function kcGetHousingTypeOptionKey(value) {
+  const normalized = kcNormalizeHousingTypeKey(value);
+  if (normalized === 'republica') return 'republicas';
+  if (normalized === 'quarto') return 'quartos';
+  if (normalized === 'apartamento') return 'apartamentos';
+  if (normalized === 'casa') return 'casas';
+  return normalized;
+}
+
+function kcParseStringArrayValue(value) {
+  if (window.KCUtils && typeof window.KCUtils.toStringArray === 'function') {
+    return window.KCUtils.toStringArray(value);
+  }
+  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map((item) => String(item || '').trim()).filter(Boolean);
+  } catch (_) { }
+  return raw.split(/[|,]\s*/).map((item) => String(item || '').trim()).filter(Boolean);
+}
+
+function kcSerializeHousingFeatureValues(values) {
+  return JSON.stringify(kcParseStringArrayValue(values));
+}
+
+function kcResolveHousingRegionValue(value, fallbackSource) {
+  const history = [];
+  if (Array.isArray(window.__KC_HOUSING_REGION_HISTORY)) history.push(...window.__KC_HOUSING_REGION_HISTORY);
+  if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
+    try {
+      const userPosts = window.kcUserPosts.list();
+      if (Array.isArray(userPosts)) {
+        history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'moradia'));
+      }
+    } catch (_) { }
+  }
+
+  if (window.KCUtils && typeof window.KCUtils.resolveHousingRegion === 'function') {
+    const options = { history };
+    if (fallbackSource) options.textParts = [fallbackSource];
+    return window.KCUtils.resolveHousingRegion(value || fallbackSource || '', options);
+  }
+
+  const raw = String(value || '').trim();
+  const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return { key, label: raw, icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isKnown: false };
+}
+
+function kcGetHousingRegionOptions() {
+  if (window.KCUtils && typeof window.KCUtils.getHousingRegionDefinitions === 'function') {
+    return window.KCUtils.getHousingRegionDefinitions();
+  }
+
+  return [
+    { key: 'campus-samambaia', label: 'Campus Samambaia', icon: 'fas fa-university' },
+    { key: 'vila-itatiaia', label: 'Vila Itatiaia', icon: 'fas fa-map-pin' },
+    { key: 'sao-judas-tadeu', label: 'São Judas Tadeu', icon: 'fas fa-map-pin' },
+    { key: 'setor-universitario', label: 'Setor Universitário', icon: 'fas fa-map-pin' },
+    { key: 'setor-leste-universitario', label: 'Setor Leste Universitário', icon: 'fas fa-map-pin' },
+    { key: 'centro', label: 'Centro', icon: 'fas fa-map-pin' },
+  ];
+}
+
+function kcResolveHousingFeatureValues(values, fallbackSource) {
+  const explicitValues = kcParseStringArrayValue(values);
+  const history = [];
+  if (Array.isArray(window.__KC_HOUSING_FEATURE_HISTORY)) history.push(...window.__KC_HOUSING_FEATURE_HISTORY);
+  if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
+    try {
+      const userPosts = window.kcUserPosts.list();
+      if (Array.isArray(userPosts)) {
+        history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'moradia'));
+      }
+    } catch (_) { }
+  }
+
+  if (window.KCUtils && typeof window.KCUtils.resolveHousingFeatures === 'function') {
+    const source = explicitValues.length ? explicitValues : (fallbackSource || '');
+    const options = { history };
+    if (fallbackSource) options.textParts = [fallbackSource];
+    return window.KCUtils.resolveHousingFeatures(source, options);
+  }
+
+  return explicitValues.map((value) => ({
+    key: String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+    label: String(value || '').trim(),
+    emoji: '\u{1F3F7}\uFE0F',
+    isKnown: false,
+  })).filter((entry) => entry.key && entry.label);
+}
+
+function kcGetHousingFeatureOptions() {
+  if (window.KCUtils && typeof window.KCUtils.getHousingFeatureDefinitions === 'function') {
+    return window.KCUtils.getHousingFeatureDefinitions();
+  }
+
+  return [
+    { key: 'aceita-pets', label: 'Aceita pets' },
+    { key: 'lgbtqiapn', label: 'LGBTQIAPN+' },
+    { key: 'apenas-mulheres', label: 'Apenas mulheres' },
+    { key: 'mobiliado', label: 'Mobiliado' },
+    { key: 'contas-inclusas', label: 'Contas inclusas' },
+    { key: 'proximo-ao-campus', label: 'Próximo ao campus' },
+  ];
+}
+
+function kcSyncHousingRegionInput(input) {
+  if (!input) return null;
+  const resolved = kcResolveHousingRegionValue(input.value || '');
+  if (resolved && resolved.label) {
+    input.value = resolved.label;
+    kcCreateState.values[input.name] = resolved.label;
+  }
+  return resolved;
+}
+
+function kcGetHousingFeatureFieldContext(element) {
+  return element && element.closest ? element.closest('[data-kc-housing-features-field="true"]') : null;
+}
+
+function kcResolveHousingFeatureEntries(values) {
+  return kcResolveHousingFeatureValues(values).map((entry) => ({
+    key: String(entry && entry.key || '').trim(),
+    label: String(entry && entry.label || '').trim(),
+    emoji: String(entry && entry.emoji || '').trim(),
+    isKnown: !!(entry && entry.isKnown),
+  })).filter((entry) => entry.key && entry.label);
+}
+
+function kcSyncHousingFeatureField(fieldRoot, values) {
+  const root = fieldRoot || null;
+  if (!root) return [];
+
+  const hidden = root.querySelector('[data-kc-housing-features-value]');
+  const list = root.querySelector('[data-kc-housing-features-selected]');
+  const pills = Array.from(root.querySelectorAll('[data-kc-housing-feature-suggestion]'));
+  const entries = kcResolveHousingFeatureEntries(values);
+  const labels = entries.map((entry) => entry.label);
+  const keys = new Set(entries.map((entry) => entry.key));
+
+  if (hidden) {
+    hidden.value = kcSerializeHousingFeatureValues(labels);
+    if (hidden.name) kcCreateState.values[hidden.name] = labels.slice();
+  }
+
+  if (list) {
+    list.innerHTML = entries.length
+      ? entries.map((entry) => (
+        '<button class="kc-field-chip" type="button" data-kc-housing-feature-remove="' + escHtml(entry.key) + '" aria-label="Remover ' + escHtml(entry.label) + '">' +
+          (entry.emoji ? '<span class="kc-field-chip__emoji">' + escHtml(entry.emoji) + '</span>' : '') +
+          '<span>' + escHtml(entry.label) + '</span>' +
+          '<i class="fas fa-times"></i>' +
+        '</button>'
+      )).join('')
+      : '<span class="kc-field-chip__empty">Nenhum marcador selecionado.</span>';
+  }
+
+  pills.forEach((pill) => {
+    const key = String(pill.getAttribute('data-kc-housing-feature-key') || '').trim();
+    const active = key && keys.has(key);
+    pill.classList.toggle('is-active', active);
+    pill.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  return entries;
+}
+
+function kcAppendHousingFeatureFromInput(input) {
+  const field = kcGetHousingFeatureFieldContext(input);
+  if (!field || !input) return;
+  const current = kcParseStringArrayValue((field.querySelector('[data-kc-housing-features-value]') || {}).value);
+  const nextValue = String(input.value || '').trim();
+  if (!nextValue) return;
+  kcSyncHousingFeatureField(field, current.concat(nextValue));
+  input.value = '';
 }
 
 function kcResolveOpportunityWorkMode(value) {
@@ -2082,10 +2338,41 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
   if (moduleKey === 'moradia') {
     const t = selections.tipo;
     if (t === 'procurando') {
-      fields.push({ type: 'text', name: 'regiao', label: 'Região desejada', placeholder: 'Ex: Setor Universitário', required: true });
+      fields.push({
+        type: 'housing-region',
+        name: 'regiao',
+        label: 'Região desejada',
+        placeholder: 'Ex: Setor Universitário',
+        required: true,
+        options: kcGetHousingRegionOptions(),
+      });
+      fields.push({
+        type: 'housing-features',
+        name: 'marcadoresMoradia',
+        label: 'Marcadores do ambiente',
+        placeholder: 'Ex: Aceita pets',
+        required: false,
+        options: kcGetHousingFeatureOptions(),
+      });
       fields.push({ ...moneyFieldMeta, name: 'orcamento', label: 'Orçamento máximo (opcional)', placeholder: 'Ex: 800,00', required: false });
     } else {
-      fields.push({ type: 'text', name: 'localizacao', label: 'Localização', placeholder: 'Ex: Setor Universitário', required: true });
+      fields.push({
+        type: 'housing-region',
+        name: 'regiao',
+        label: 'Região',
+        placeholder: 'Ex: Vila Itatiaia',
+        required: true,
+        options: kcGetHousingRegionOptions(),
+      });
+      fields.push({
+        type: 'housing-features',
+        name: 'marcadoresMoradia',
+        label: 'Marcadores do ambiente',
+        placeholder: 'Ex: Mobiliado',
+        required: false,
+        options: kcGetHousingFeatureOptions(),
+      });
+      fields.push({ type: 'text', name: 'localizacao', label: 'Ponto de referência (opcional)', placeholder: 'Ex: 5 min do portão principal', required: false });
       fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Valor mensal (R$)', placeholder: '0,00', required: true });
       fields.push({ type: 'text', name: 'detalhes', label: 'Detalhes (opcional)', placeholder: 'Ex: contas inclusas, mobília, vagas…', required: false });
     }
@@ -2246,6 +2533,62 @@ function kcRenderCreateModal() {
           <small class="kc-field-hint">Escolha uma sugestão ou digite outra área.</small>
         </div>
       `);
+    } else if (f.type === 'housing-region') {
+      const listId = id + 'Options';
+      const suggestions = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+        <button type="button" class="kc-field-pill" data-kc-housing-region-suggestion="${escHtml(opt.label)}">
+          <i class="${escHtml(opt.icon || 'fas fa-map-pin')}"></i>
+          <span>${escHtml(opt.label)}</span>
+        </button>
+      `).join('');
+      const listItems = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+        <option value="${escHtml(opt.label)}"></option>
+      `).join('');
+      parts.push(`
+        <div class="kc-field kc-field--housing-region">
+          <label for="${id}">${label}${f.required ? ' *' : ''}</label>
+          <input id="${id}" name="${escHtml(f.name)}" type="text" placeholder="${escHtml(f.placeholder || '')}" value="${escHtml(val || '')}" list="${listId}" data-kc-housing-region-input="true" ${required} />
+          <datalist id="${listId}">${listItems}</datalist>
+          <div class="kc-field-pill-row">${suggestions}</div>
+          <small class="kc-field-hint">Escolha uma sugestão ou digite outra região.</small>
+        </div>
+      `);
+    } else if (f.type === 'housing-features') {
+      const listId = id + 'Options';
+      const selectedEntries = kcResolveHousingFeatureEntries(val);
+      const selectedLabels = selectedEntries.map((entry) => entry.label);
+      const selectedHtml = selectedEntries.length
+        ? selectedEntries.map((entry) => `
+          <button class="kc-field-chip" type="button" data-kc-housing-feature-remove="${escHtml(entry.key)}" aria-label="Remover ${escHtml(entry.label)}">
+            ${entry.emoji ? `<span class="kc-field-chip__emoji">${escHtml(entry.emoji)}</span>` : ''}
+            <span>${escHtml(entry.label)}</span>
+            <i class="fas fa-times"></i>
+          </button>
+        `).join('')
+        : '<span class="kc-field-chip__empty">Nenhum marcador selecionado.</span>';
+      const selectedKeys = new Set(selectedEntries.map((entry) => entry.key));
+      const suggestions = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+        <button type="button" class="kc-field-pill${selectedKeys.has(String(opt.key || '').trim()) ? ' is-active' : ''}" data-kc-housing-feature-suggestion="${escHtml(opt.label)}" data-kc-housing-feature-key="${escHtml(opt.key || '')}" aria-pressed="${selectedKeys.has(String(opt.key || '').trim()) ? 'true' : 'false'}">
+          <span>${escHtml(opt.label)}</span>
+        </button>
+      `).join('');
+      const listItems = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+        <option value="${escHtml(opt.label)}"></option>
+      `).join('');
+      parts.push(`
+        <div class="kc-field kc-field--housing-features" data-kc-housing-features-field="true">
+          <label for="${id}">${label}${f.required ? ' *' : ''}</label>
+          <input type="hidden" name="${escHtml(f.name)}" value="${escHtml(kcSerializeHousingFeatureValues(selectedLabels))}" data-kc-housing-features-value="true" />
+          <div class="kc-field-chip-row" data-kc-housing-features-selected="true">${selectedHtml}</div>
+          <div class="kc-field-inline">
+            <input id="${id}" type="text" placeholder="${escHtml(f.placeholder || '')}" list="${listId}" data-kc-housing-features-input="true" />
+            <button class="kc-field-inline__action" type="button" data-kc-housing-feature-add="true">Adicionar</button>
+          </div>
+          <datalist id="${listId}">${listItems}</datalist>
+          <div class="kc-field-pill-row">${suggestions}</div>
+          <small class="kc-field-hint">Escolha sugestões ou adicione outros marcadores para o ambiente.</small>
+        </div>
+      `);
     } else if (f.type === 'select') {
       const opts = (f.options || []).map(o => {
         const isSel = String(val || '') === String(o);
@@ -2387,6 +2730,7 @@ function kcOpenEditPostModal(post, callback) {
       if (g.id === schema.categoryGroupId) {
         key = post.categoriaKey || post.categoria || md.categoriaKey || md.categoria || '';
         if (moduleKey === 'oportunidades') key = kcGetOpportunityTypeOptionKey(key);
+        if (moduleKey === 'moradia') key = kcGetHousingTypeOptionKey(key);
       } else if (g.id === 'acao') {
         key = post.subcategoriaKey || md.actionKey || md.subcategoriaKey || '';
       } else {
@@ -2421,6 +2765,9 @@ function kcOpenEditPostModal(post, callback) {
     areaAtuacao: md.areaLabel || md.area || post.subcategoriaLabel || post.subcategoria || '',
     modalidadeTrabalho: md.workModeLabel || md.modalidadeTrabalho || (md.workMode ? kcResolveOpportunityWorkMode(md.workMode).label : '') || '',
     regimeContratacao: md.employmentTypeLabel || md.regimeContratacao || (md.employmentType ? kcResolveOpportunityRegime(md.employmentType).label : '') || '',
+    regiao: md.regionLabel || md.regiaoLabel || md.region || md.regiao || post.regionLabel || post.regiao || '',
+    marcadoresMoradia: kcParseStringArrayValue(md.housingFeatureLabels || md.marcadoresMoradia || md.features || post.housingFeatureLabels || post.marcadoresMoradia || post.features || []),
+    detalhes: md.detalhes || '',
     recompensa: md.recompensa || '',
     contribuicao: md.contribuicao || '',
     orcamento: md.orcamento || '',
@@ -2541,7 +2888,10 @@ async function kcHandleCreateSubmit() {
     const categoryGroupId = schema.categoryGroupId;
     const rawCatKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
     const isOpportunity = kcCreateState.moduleKey === 'oportunidades';
-    const catKey = isOpportunity ? kcNormalizeOpportunityTypeKey(rawCatKey) : rawCatKey;
+    const isMoradia = kcCreateState.moduleKey === 'moradia';
+    const catKey = isOpportunity
+      ? kcNormalizeOpportunityTypeKey(rawCatKey)
+      : (isMoradia ? kcNormalizeHousingTypeKey(rawCatKey) : rawCatKey);
     const catLabel = rawCatKey ? kcTagLabel(schema, categoryGroupId, rawCatKey) : '';
 
     // subcategoria: tenta usar 2º grupo (quando existir)
@@ -2586,10 +2936,52 @@ async function kcHandleCreateSubmit() {
       }
     }
 
+    const housingRegion = isMoradia
+      ? kcResolveHousingRegionValue(
+        kcCreateState.values.regiao || kcCreateState.values.localizacao || '',
+        `${title} ${desc} ${kcCreateState.values.localizacao || ''}`
+      )
+      : { key: '', label: '', icon: '', zoneKey: '', zoneLabel: '' };
+    const housingFeatures = isMoradia
+      ? kcResolveHousingFeatureValues(kcCreateState.values.marcadoresMoradia || [])
+      : [];
+    if (isMoradia) {
+      if (housingRegion.label) kcCreateState.values.regiao = housingRegion.label;
+      if (housingRegion.key && housingRegion.label) {
+        const history = Array.isArray(window.__KC_HOUSING_REGION_HISTORY)
+          ? window.__KC_HOUSING_REGION_HISTORY.slice()
+          : [];
+        history.unshift({
+          key: housingRegion.key,
+          label: housingRegion.label,
+          icon: housingRegion.icon || 'fas fa-map-pin',
+          zoneKey: housingRegion.zoneKey || '',
+          zoneLabel: housingRegion.zoneLabel || '',
+        });
+        window.__KC_HOUSING_REGION_HISTORY = history;
+      }
+      if (housingFeatures.length) {
+        const history = Array.isArray(window.__KC_HOUSING_FEATURE_HISTORY)
+          ? window.__KC_HOUSING_FEATURE_HISTORY.slice()
+          : [];
+        housingFeatures.forEach((feature) => {
+          history.unshift({
+            key: feature.key,
+            label: feature.label,
+            emoji: feature.emoji || '',
+          });
+        });
+        window.__KC_HOUSING_FEATURE_HISTORY = history;
+        kcCreateState.values.marcadoresMoradia = housingFeatures.map((feature) => feature.label);
+      }
+    }
+
     const tagMap = new Map();
     Object.entries(kcCreateState.selections).forEach(([gid, key]) => {
       if (!key) return;
-      const normalizedKey = (isOpportunity && gid === categoryGroupId) ? kcNormalizeOpportunityTypeKey(key) : key;
+      const normalizedKey = (isOpportunity && gid === categoryGroupId)
+        ? kcNormalizeOpportunityTypeKey(key)
+        : ((isMoradia && gid === categoryGroupId) ? kcNormalizeHousingTypeKey(key) : key);
       const labelForTag = kcTagLabel(schema, gid, key);
       if (normalizedKey && !tagMap.has(normalizedKey)) tagMap.set(normalizedKey, labelForTag || normalizedKey);
     });
@@ -2607,6 +2999,13 @@ async function kcHandleCreateSubmit() {
     if (kcCreateState.moduleKey === 'achados-perdidos' && kcCreateState.selections.status === 'perdidos') {
       const r = String(kcCreateState.values.recompensa || '').trim();
       if (r) precoTexto = 'Recompensa: R$ ' + r;
+    }
+
+    if (isMoradia && kcNormalizeHousingTypeKey(rawCatKey) === 'procurando') {
+      const budgetValue = kcParseBRLNumber(kcCreateState.values.orcamento);
+      if (budgetValue != null) preco = budgetValue;
+      const budgetText = String(kcCreateState.values.orcamento || '').trim();
+      if (budgetText) precoTexto = 'Até R$ ' + budgetText + '/mês';
     }
 
     const opportunityTypeKey = isOpportunity ? kcNormalizeOpportunityTypeKey(rawCatKey) : '';
@@ -2643,6 +3042,19 @@ async function kcHandleCreateSubmit() {
       }
     }
 
+    if (isMoradia) {
+      if (housingRegion.key && !tagMap.has(housingRegion.key)) {
+        tagMap.set(housingRegion.key, housingRegion.label || housingRegion.key);
+      }
+      if (housingRegion.zoneKey && !tagMap.has(housingRegion.zoneKey)) {
+        tagMap.set(housingRegion.zoneKey, housingRegion.zoneLabel || housingRegion.zoneKey);
+      }
+      housingFeatures.forEach((feature) => {
+        if (!feature || !feature.key) return;
+        if (!tagMap.has(feature.key)) tagMap.set(feature.key, feature.label || feature.key);
+      });
+    }
+
     const tagKeys = Array.from(tagMap.keys()).filter(Boolean);
     const tagLabels = Array.from(tagMap.values()).filter(Boolean);
 
@@ -2676,10 +3088,15 @@ async function kcHandleCreateSubmit() {
       precoTexto,
       condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
       localizacao: kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : '',
+      regiao: isMoradia ? (housingRegion.label || '') : '',
+      regionLabel: isMoradia ? (housingRegion.label || '') : '',
+      regionKey: isMoradia ? (housingRegion.key || '') : '',
       area: isOpportunity ? (opportunityArea.label || '') : '',
       areaKey: isOpportunity ? (opportunityArea.key || '') : '',
       modalidadeTrabalho: isOpportunity ? (opportunityWorkMode.label || '') : '',
       regimeContratacao: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.label || '') : '',
+      housingFeatureLabels: isMoradia ? housingFeatures.map((feature) => feature.label) : [],
+      housingFeatureKeys: isMoradia ? housingFeatures.map((feature) => feature.key) : [],
       contato: kcCreateState.values.contato ? String(kcCreateState.values.contato) : '',
       remuneracao: kcCreateState.values.remuneracao ? String(kcCreateState.values.remuneracao) : '',
 
@@ -2706,6 +3123,19 @@ async function kcHandleCreateSubmit() {
         // compra-venda: guardar ação explicitamente (útil para futuras buscas e edição)
         actionKey: actionKey || '',
         actionLabel: actionLabel || '',
+        regionKey: isMoradia ? (housingRegion.key || '') : '',
+        regionLabel: isMoradia ? (housingRegion.label || '') : '',
+        regionZoneKey: isMoradia ? (housingRegion.zoneKey || '') : '',
+        regionZoneLabel: isMoradia ? (housingRegion.zoneLabel || '') : '',
+        regiao: isMoradia ? (housingRegion.label || '') : '',
+        regiaoLabel: isMoradia ? (housingRegion.label || '') : '',
+        housingTypeKey: isMoradia ? (catKey || '') : '',
+        housingTypeLabel: isMoradia ? (catLabel || '') : '',
+        housingFeatureKeys: isMoradia ? housingFeatures.map((feature) => feature.key) : [],
+        housingFeatureLabels: isMoradia ? housingFeatures.map((feature) => feature.label) : [],
+        marcadoresMoradia: isMoradia ? housingFeatures.map((feature) => feature.label) : [],
+        detalhes: kcCreateState.values.detalhes ? String(kcCreateState.values.detalhes) : '',
+        orcamento: kcCreateState.values.orcamento ? String(kcCreateState.values.orcamento) : '',
         area: isOpportunity ? (opportunityArea.label || '') : '',
         areaLabel: isOpportunity ? (opportunityArea.label || '') : '',
         areaKey: isOpportunity ? (opportunityArea.key || '') : '',
