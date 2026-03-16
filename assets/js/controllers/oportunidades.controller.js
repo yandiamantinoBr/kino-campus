@@ -1,4 +1,4 @@
-/* KinoCampus - oportunidades controller (V8.3.0.0) */
+/* KinoCampus - oportunidades controller (V8.4.0.0) */
 (function () {
   'use strict';
 
@@ -25,6 +25,7 @@
     activeSectionNode: null,
     activeSectionPlaceholder: null,
     lastMobileTrigger: null,
+    modalDraft: null,
   };
 
   function normalizeText(value) {
@@ -57,6 +58,10 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function cloneSet(set) {
+    return new Set(Array.from(set || []));
   }
 
   function isMobileViewport() {
@@ -118,8 +123,43 @@
     return direct || '';
   }
 
+  function resolveWorkModeValue(value) {
+    const normalized = normalizeText(value);
+    if (!normalized) return null;
+    if (normalized.includes('hibrid') || normalized.includes('hybrid')) {
+      return { key: 'hibrido', label: 'Híbrido', remote: true, presencial: true };
+    }
+    if (normalized.includes('remot') || normalized.includes('home office') || normalized.includes('home-office')) {
+      return { key: 'remoto', label: 'Remoto', remote: true, presencial: false };
+    }
+    if (normalized.includes('presencial') || normalized.includes('onsite') || normalized.includes('on site') || normalized.includes('on-site')) {
+      return { key: 'presencial', label: 'Presencial', remote: false, presencial: true };
+    }
+    return null;
+  }
+
   function resolveWorkMode(post) {
     const meta = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
+    const explicitMatch = [
+      meta.workModeLabel,
+      meta.workMode,
+      meta.modalidadeTrabalho,
+      post && post.modalidadeTrabalho,
+      post && post.workMode,
+    ].map(resolveWorkModeValue).find(Boolean);
+    if (explicitMatch) return explicitMatch;
+
+    const textMatch = resolveWorkModeValue([
+      post && post.titulo,
+      post && post.descricao,
+      ...(Array.isArray(post && post.tags) ? post.tags : []),
+      ...(Array.isArray(post && post.tagKeys) ? post.tagKeys : []),
+      ...(Array.isArray(meta.tags) ? meta.tags : []),
+      ...(Array.isArray(meta.tagKeys) ? meta.tagKeys : []),
+    ].filter(Boolean).join(' '));
+    if (textMatch) return textMatch;
+
+    return { key: '', label: '', remote: false, presencial: false };
     const text = normalizeText([
       meta.workModeLabel,
       meta.workMode,
@@ -143,8 +183,44 @@
     return { key: '', label: '', remote: false, presencial: false };
   }
 
+  function resolveEmploymentTypeValue(value) {
+    const normalized = normalizeText(value);
+    if (!normalized) return null;
+    if (normalized.includes('jovem aprendiz') || normalized.includes('aprendiz')) {
+      return { key: 'jovem-aprendiz', label: 'Jovem Aprendiz' };
+    }
+    if (normalized.includes('temporario')) {
+      return { key: 'temporario', label: 'Temporário' };
+    }
+    if (normalized.includes('clt')) return { key: 'clt', label: 'CLT' };
+    if (normalized.includes('pj') || normalized.includes('pessoa juridica')) {
+      return { key: 'pj', label: 'PJ' };
+    }
+    return null;
+  }
+
   function resolveEmploymentType(post) {
     const meta = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
+    const explicitMatch = [
+      meta.employmentTypeLabel,
+      meta.employmentType,
+      meta.regimeContratacao,
+      post && post.regimeContratacao,
+      post && post.employmentType,
+    ].map(resolveEmploymentTypeValue).find(Boolean);
+    if (explicitMatch) return explicitMatch;
+
+    const textMatch = resolveEmploymentTypeValue([
+      post && post.titulo,
+      post && post.descricao,
+      ...(Array.isArray(post && post.tags) ? post.tags : []),
+      ...(Array.isArray(post && post.tagKeys) ? post.tagKeys : []),
+      ...(Array.isArray(meta.tags) ? meta.tags : []),
+      ...(Array.isArray(meta.tagKeys) ? meta.tagKeys : []),
+    ].filter(Boolean).join(' '));
+    if (textMatch) return textMatch;
+
+    return { key: '', label: '' };
     const text = normalizeText([
       meta.employmentTypeLabel,
       meta.employmentType,
@@ -195,6 +271,12 @@
       post.area,
       meta.areaLabel,
       meta.area,
+      meta.workModeLabel,
+      meta.workMode,
+      meta.regimeContratacao,
+      meta.employmentTypeLabel,
+      post.modalidadeTrabalho,
+      post.regimeContratacao,
     ].filter(Boolean).join(' ');
 
     const type = normalizeOpportunityType(post.categoriaKey || post.categoria || meta.categoryKey || meta.category, aggregateText);
@@ -212,6 +294,7 @@
       areaLabel: fallbackAreaLabel,
       areaIcon: (areaInfo && areaInfo.icon) ? areaInfo.icon : 'fas fa-briefcase',
       regimeKey: regime.key || '',
+      workModeKey: workMode.key || '',
       isRemote: !!workMode.remote,
       isPresential: !!workMode.presencial,
       searchText: normalizeText(aggregateText),
@@ -243,6 +326,7 @@
     card.setAttribute('data-kc-opp-type', summary.type || '');
     card.setAttribute('data-kc-opp-area', summary.areaKey || '');
     card.setAttribute('data-kc-opp-regime', summary.regimeKey || '');
+    card.setAttribute('data-kc-opp-work-mode', summary.workModeKey || '');
     card.setAttribute('data-kc-opp-remote', String(!!summary.isRemote));
     card.setAttribute('data-kc-opp-presencial', String(!!summary.isPresential));
   }
@@ -275,21 +359,49 @@
     state.selectedModeFilters = new Set(getSelectedInputs('mode'));
   }
 
+  function syncFilterInputs(typeFilters, modeFilters) {
+    const types = typeFilters || new Set();
+    const modes = modeFilters || new Set();
+
+    document.querySelectorAll('[data-kc-opp-filter-kind="type"]').forEach((input) => {
+      input.checked = types.has(String(input.value || '').trim());
+    });
+
+    document.querySelectorAll('[data-kc-opp-filter-kind="mode"]').forEach((input) => {
+      input.checked = modes.has(String(input.value || '').trim());
+    });
+  }
+
+  function hasTypeModeSelection(typeFilters, modeFilters) {
+    return !!((typeFilters && typeFilters.size) || (modeFilters && modeFilters.size));
+  }
+
+  function isTypeMatch(filterKey, type, regimeKey) {
+    if (filterKey === 'emprego-clt') {
+      return type === 'emprego' && regimeKey === 'clt';
+    }
+    return type === filterKey;
+  }
+
+  function isModeMatch(filterKey, workModeKey, isRemote, isPresential) {
+    if (filterKey === 'hibrido') return workModeKey === 'hibrido';
+    if (filterKey === 'remoto') return isRemote;
+    if (filterKey === 'presencial') return isPresential;
+    return false;
+  }
+
   function cardMatchesSidebarFilters(card) {
     const type = String(card.getAttribute('data-kc-opp-type') || '');
     const area = String(card.getAttribute('data-kc-opp-area') || '');
     const regime = String(card.getAttribute('data-kc-opp-regime') || '');
+    const workModeKey = String(card.getAttribute('data-kc-opp-work-mode') || '');
     const isRemote = String(card.getAttribute('data-kc-opp-remote') || '').toLowerCase() === 'true';
     const isPresential = String(card.getAttribute('data-kc-opp-presencial') || '').toLowerCase() === 'true';
 
     if (state.selectedTypeFilters.size) {
       let typeMatches = false;
       state.selectedTypeFilters.forEach((filterKey) => {
-        if (filterKey === 'emprego-clt') {
-          if (type === 'emprego' && regime === 'clt') typeMatches = true;
-          return;
-        }
-        if (type === filterKey) typeMatches = true;
+        if (isTypeMatch(filterKey, type, regime)) typeMatches = true;
       });
       if (!typeMatches) return false;
     }
@@ -297,8 +409,7 @@
     if (state.selectedModeFilters.size) {
       let modeMatches = false;
       state.selectedModeFilters.forEach((filterKey) => {
-        if (filterKey === 'remoto' && isRemote) modeMatches = true;
-        if (filterKey === 'presencial' && isPresential) modeMatches = true;
+        if (isModeMatch(filterKey, workModeKey, isRemote, isPresential)) modeMatches = true;
       });
       if (!modeMatches) return false;
     }
@@ -331,11 +442,7 @@
     if (state.selectedTypeFilters.size && !cfg.ignoreType) {
       let typeMatches = false;
       state.selectedTypeFilters.forEach((filterKey) => {
-        if (filterKey === 'emprego-clt') {
-          if (summary.type === 'emprego' && summary.regimeKey === 'clt') typeMatches = true;
-          return;
-        }
-        if (summary.type === filterKey) typeMatches = true;
+        if (isTypeMatch(filterKey, summary.type, summary.regimeKey)) typeMatches = true;
       });
       if (!typeMatches) return false;
     }
@@ -343,8 +450,7 @@
     if (state.selectedModeFilters.size && !cfg.ignoreMode) {
       let modeMatches = false;
       state.selectedModeFilters.forEach((filterKey) => {
-        if (filterKey === 'remoto' && summary.isRemote) modeMatches = true;
-        if (filterKey === 'presencial' && summary.isPresential) modeMatches = true;
+        if (isModeMatch(filterKey, summary.workModeKey, summary.isRemote, summary.isPresential)) modeMatches = true;
       });
       if (!modeMatches) return false;
     }
@@ -388,13 +494,26 @@
     });
   }
 
+  function getRenderedAreaSelection() {
+    if (state.modalDraft && state.activeSectionKey === 'areas') {
+      return state.modalDraft.area || '';
+    }
+    return state.selectedArea || '';
+  }
+
+  function getAreaLabel(areaKey) {
+    if (!areaKey) return 'Todas as áreas';
+    const known = getAreaDefinitions().find((entry) => entry.key === areaKey);
+    if (known && known.label) return known.label;
+    const summary = Array.from(state.posts.values()).find((entry) => entry.areaKey === areaKey);
+    return summary && summary.areaLabel ? summary.areaLabel : areaKey;
+  }
+
   function renderAreaButtons() {
     const list = document.querySelector('[data-kc-opp-area-list="true"]');
     if (!list) return;
 
     const allSummaries = Array.from(state.posts.values());
-    if (!allSummaries.length) return;
-
     const baseSummaries = allSummaries.filter((summary) => matchesSummary(summary, { ignoreArea: true }));
     const countMap = new Map();
     baseSummaries.forEach((summary) => {
@@ -404,10 +523,11 @@
 
     const areas = getAreaCatalog(countMap);
     const total = baseSummaries.length;
+    const renderedArea = getRenderedAreaSelection();
     const items = [];
 
     items.push(
-      '<button class="kc-category-item ' + (!state.selectedArea ? 'is-active' : '') + '" type="button" data-kc-opp-area="" aria-pressed="' + (!state.selectedArea ? 'true' : 'false') + '">' +
+      '<button class="kc-category-item ' + (!renderedArea ? 'is-active' : '') + '" type="button" data-kc-opp-area="" aria-pressed="' + (!renderedArea ? 'true' : 'false') + '">' +
         '<i class="fas fa-layer-group"></i>' +
         '<span>Todas as áreas</span>' +
         '<span class="kc-category-count">' + total + '</span>' +
@@ -416,7 +536,7 @@
 
     areas.forEach((area) => {
       const count = countMap.get(area.key) || 0;
-      const isActive = state.selectedArea === area.key;
+      const isActive = renderedArea === area.key;
       const isDisabled = !isActive && count === 0;
       items.push(
         '<button class="kc-category-item ' + (isActive ? 'is-active ' : '') + (isDisabled ? 'is-disabled' : '') + '" type="button" data-kc-opp-area="' + escapeHtml(area.key) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '"' + (isDisabled ? ' disabled' : '') + '>' +
@@ -433,7 +553,7 @@
   function syncClearButtonState() {
     const clearButton = document.querySelector('[data-kc-opp-clear-filters="true"]');
     if (!clearButton) return;
-    const hasFilters = state.selectedTypeFilters.size > 0 || state.selectedModeFilters.size > 0 || !!state.selectedArea;
+    const hasFilters = hasTypeModeSelection(state.selectedTypeFilters, state.selectedModeFilters);
     clearButton.disabled = !hasFilters;
   }
 
@@ -497,6 +617,7 @@
       '  <div class="kc-create-modal__body">',
       '    <div class="kc-opportunity-section-modal__content" data-kc-opp-section-modal-slot="true"></div>',
       '  </div>',
+      '  <div class="kc-opportunity-section-modal__actions" data-kc-opp-section-modal-actions="true"></div>',
       '</div>'
     ].join('');
 
@@ -508,6 +629,52 @@
 
     document.body.appendChild(overlay);
     return overlay;
+  }
+
+  function renderSectionActions() {
+    const overlay = document.getElementById(MOBILE_SECTION_MODAL_ID);
+    const actions = overlay ? overlay.querySelector('[data-kc-opp-section-modal-actions="true"]') : null;
+    const modal = overlay ? overlay.querySelector('.kc-opportunity-section-modal') : null;
+    if (!actions || !modal) return;
+
+    if (!state.activeSectionKey) {
+      modal.removeAttribute('data-kc-opp-section-view');
+      actions.innerHTML = '';
+      return;
+    }
+
+    modal.setAttribute('data-kc-opp-section-view', state.activeSectionKey);
+
+    if (state.activeSectionKey === 'filters') {
+      const draft = state.modalDraft || {
+        typeFilters: cloneSet(state.selectedTypeFilters),
+        modeFilters: cloneSet(state.selectedModeFilters),
+      };
+      const canClear = hasTypeModeSelection(draft.typeFilters, draft.modeFilters);
+      actions.innerHTML = [
+        '<div class="kc-opportunity-section-modal__action-group">',
+        '  <button class="kc-opportunity-clear" type="button" data-kc-opp-modal-clear-filters="true"' + (canClear ? '' : ' disabled') + '>Limpar filtros</button>',
+        '  <button class="kc-opportunity-apply" type="button" data-kc-opp-modal-apply="filters">Aplicar filtros</button>',
+        '</div>'
+      ].join('');
+      return;
+    }
+
+    if (state.activeSectionKey === 'areas') {
+      actions.innerHTML = [
+        '<div class="kc-opportunity-section-modal__action-group">',
+        '  <p class="kc-opportunity-section-modal__caption">Área selecionada: <strong>' + escapeHtml(getAreaLabel((state.modalDraft && state.modalDraft.area) || '')) + '</strong></p>',
+        '  <button class="kc-opportunity-apply" type="button" data-kc-opp-modal-apply="areas">Ver oportunidades</button>',
+        '</div>'
+      ].join('');
+      return;
+    }
+
+    actions.innerHTML = [
+      '<div class="kc-opportunity-section-modal__action-group">',
+      '  <button class="kc-opportunity-apply" type="button" data-kc-opp-modal-apply="tips">Entendido!</button>',
+      '</div>'
+    ].join('');
   }
 
   function openMobileSectionModal(sectionKey, trigger) {
@@ -534,9 +701,17 @@
     state.activeSectionNode = sectionMeta.node;
     state.activeSectionPlaceholder = placeholder;
     state.lastMobileTrigger = trigger || null;
+    state.modalDraft = {
+      typeFilters: cloneSet(state.selectedTypeFilters),
+      modeFilters: cloneSet(state.selectedModeFilters),
+      area: state.selectedArea || '',
+    };
 
     title.textContent = sectionMeta.title;
     titleIcon.className = sectionMeta.icon || 'fas fa-layer-group';
+    syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters);
+    renderAreaButtons();
+    renderSectionActions();
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('kc-modal-open');
@@ -547,9 +722,12 @@
     if (closeBtn) closeBtn.focus();
   }
 
-  function closeMobileSectionModal() {
+  function closeMobileSectionModal(options) {
+    const cfg = options || {};
     const overlay = document.getElementById(MOBILE_SECTION_MODAL_ID);
     const slot = overlay ? overlay.querySelector('[data-kc-opp-section-modal-slot="true"]') : null;
+    const actions = overlay ? overlay.querySelector('[data-kc-opp-section-modal-actions="true"]') : null;
+    const modal = overlay ? overlay.querySelector('.kc-opportunity-section-modal') : null;
     const wasActive = !!(overlay && overlay.classList.contains('active'));
     const focusTarget = state.lastMobileTrigger && typeof state.lastMobileTrigger.focus === 'function'
       ? state.lastMobileTrigger
@@ -572,6 +750,10 @@
       }
     }
 
+    if (!cfg.commit) {
+      syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters);
+    }
+
     if (state.activeSectionNode && state.activeSectionPlaceholder && state.activeSectionPlaceholder.parentNode) {
       state.activeSectionPlaceholder.parentNode.replaceChild(state.activeSectionNode, state.activeSectionPlaceholder);
     }
@@ -579,14 +761,19 @@
     state.activeSectionKey = '';
     state.activeSectionNode = null;
     state.activeSectionPlaceholder = null;
+    state.modalDraft = null;
 
     if (slot) slot.innerHTML = '';
+    if (actions) actions.innerHTML = '';
+    if (modal) modal.removeAttribute('data-kc-opp-section-view');
     if (overlay) {
       overlay.classList.remove('active');
       overlay.setAttribute('aria-hidden', 'true');
     }
     if (wasActive) document.body.classList.remove('kc-modal-open');
+    renderAreaButtons();
     renderMobileRail();
+    syncClearButtonState();
 
     if (!focusHandled && focusTarget) {
       try { focusTarget.focus(); } catch (_) { }
@@ -602,17 +789,29 @@
       state.refreshQueued = false;
       renderAreaButtons();
       renderMobileRail();
+      renderSectionActions();
       syncClearButtonState();
     });
   }
 
-  function applySidebarFilters() {
-    syncStateFromInputs();
+  function applyCurrentFilters() {
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') {
       window.kcFilters.apply();
       return;
     }
     queueRefresh();
+  }
+
+  function applySidebarFilters() {
+    if (state.modalDraft && state.activeSectionKey === 'filters' && isMobileViewport()) {
+      state.modalDraft.typeFilters = new Set(getSelectedInputs('type'));
+      state.modalDraft.modeFilters = new Set(getSelectedInputs('mode'));
+      renderSectionActions();
+      return;
+    }
+
+    syncStateFromInputs();
+    applyCurrentFilters();
   }
 
   function bindSidebarEvents() {
@@ -626,19 +825,53 @@
         document.querySelectorAll('[data-kc-opp-filter-kind]').forEach((input) => {
           input.checked = false;
         });
-        state.selectedArea = '';
         applySidebarFilters();
       });
     }
 
     document.addEventListener('click', function (event) {
+      const clearDraftButton = event.target.closest('[data-kc-opp-modal-clear-filters="true"]');
+      if (clearDraftButton && state.modalDraft) {
+        state.modalDraft.typeFilters = new Set();
+        state.modalDraft.modeFilters = new Set();
+        syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters);
+        renderSectionActions();
+        return;
+      }
+
+      const applyButton = event.target.closest('[data-kc-opp-modal-apply]');
+      if (applyButton) {
+        const action = String(applyButton.getAttribute('data-kc-opp-modal-apply') || '').trim();
+        if (action === 'filters' && state.modalDraft) {
+          state.selectedTypeFilters = cloneSet(state.modalDraft.typeFilters);
+          state.selectedModeFilters = cloneSet(state.modalDraft.modeFilters);
+          syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters);
+          closeMobileSectionModal({ commit: true });
+          applyCurrentFilters();
+          return;
+        }
+        if (action === 'areas' && state.modalDraft) {
+          state.selectedArea = state.modalDraft.area || '';
+          closeMobileSectionModal({ commit: true });
+          applyCurrentFilters();
+          return;
+        }
+        if (action === 'tips') {
+          closeMobileSectionModal({ commit: true });
+          return;
+        }
+      }
+
       const areaButton = event.target.closest('[data-kc-opp-area]');
       if (areaButton) {
-        state.selectedArea = String(areaButton.getAttribute('data-kc-opp-area') || '').trim();
-        if (window.kcFilters && typeof window.kcFilters.apply === 'function') {
-          window.kcFilters.apply();
+        const selectedArea = String(areaButton.getAttribute('data-kc-opp-area') || '').trim();
+        if (state.modalDraft && state.activeSectionKey === 'areas' && isMobileViewport()) {
+          state.modalDraft.area = selectedArea;
+          renderAreaButtons();
+          renderSectionActions();
         } else {
-          queueRefresh();
+          state.selectedArea = selectedArea;
+          applyCurrentFilters();
         }
         return;
       }

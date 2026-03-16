@@ -5665,6 +5665,24 @@ textarea::placeholder {
   cursor: not-allowed;
 }
 
+.kc-opportunity-apply {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--kc-primary-brand);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease, opacity var(--transition-speed) ease;
+}
+
+.kc-opportunity-apply:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(241, 91, 41, 0.18);
+}
+
 .kc-sidebar--opportunities .kc-category-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -5789,6 +5807,11 @@ textarea::placeholder {
   width: min(520px, 100%);
 }
 
+.kc-opportunity-section-modal .kc-sidebar-section > h3,
+.kc-opportunity-section-modal [data-kc-opp-clear-filters="true"] {
+  display: none;
+}
+
 .kc-opportunity-section-modal .kc-sidebar-section {
   margin: 0;
   padding: 0;
@@ -5806,6 +5829,43 @@ textarea::placeholder {
 .kc-opportunity-section-modal__content {
   display: grid;
   gap: 10px;
+}
+
+.kc-opportunity-section-modal__actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+  background: linear-gradient(180deg, rgba(30, 31, 38, 0.82) 0%, var(--kc-surface-dark) 28%);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.kc-opportunity-section-modal__action-group {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-opportunity-section-modal__caption {
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.92em;
+  line-height: 1.45;
+}
+
+.kc-opportunity-section-modal .kc-category-item {
+  position: relative;
+}
+
+.kc-opportunity-section-modal[data-kc-opp-section-view="areas"] .kc-category-item.is-active {
+  border-color: rgba(241, 91, 41, 0.85);
+  background: linear-gradient(135deg, rgba(241, 91, 41, 0.18), rgba(241, 91, 41, 0.06));
+  box-shadow: 0 0 0 1px rgba(241, 91, 41, 0.28);
+}
+
+.kc-opportunity-section-modal[data-kc-opp-section-view="areas"] .kc-category-item.is-active .kc-category-count {
+  background: var(--kc-primary-brand);
+  color: #fff;
 }
 
 @media (max-width: 768px) {
@@ -5835,6 +5895,10 @@ textarea::placeholder {
 
   .kc-opportunity-section-modal {
     width: min(100%, 480px);
+  }
+
+  .kc-opportunity-section-modal__actions {
+    padding: 12px 16px 18px;
   }
 
   .kc-sidebar--opportunities .kc-category-list {
