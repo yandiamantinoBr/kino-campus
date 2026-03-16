@@ -122,6 +122,7 @@
       key: 'tecnologia',
       label: 'Tecnologia',
       icon: 'fas fa-laptop-code',
+      emoji: '💻',
       aliases: Object.freeze([
         'tecnologia', 'tech', 'ti', 'software', 'sistemas', 'desenvolvimento',
         'desenvolvedor', 'desenvolvedora', 'dev', 'programacao', 'programação',
@@ -135,6 +136,7 @@
       key: 'marketing',
       label: 'Marketing',
       icon: 'fas fa-bullhorn',
+      emoji: '📣',
       aliases: Object.freeze([
         'marketing', 'growth', 'branding', 'midia', 'mídia', 'social media',
         'redes sociais', 'trafego', 'tráfego', 'seo', 'ads', 'copy', 'copywriting',
@@ -145,6 +147,7 @@
       key: 'design',
       label: 'Design',
       icon: 'fas fa-palette',
+      emoji: '🎨',
       aliases: Object.freeze([
         'design', 'designer', 'ux', 'ui', 'produto visual', 'grafico', 'gráfico',
         'identidade visual', 'criacao visual', 'criação visual', 'ilustracao',
@@ -155,6 +158,7 @@
       key: 'educacao',
       label: 'Educação',
       icon: 'fas fa-graduation-cap',
+      emoji: '🎓',
       aliases: Object.freeze([
         'educacao', 'educação', 'ensino', 'pedagogia', 'monitoria', 'monitor',
         'tutoria', 'tutor', 'professor', 'professora', 'aulas', 'reforco',
@@ -166,6 +170,7 @@
       key: 'musica',
       label: 'M\u00fasica',
       icon: 'fas fa-music',
+      emoji: '🎵',
       aliases: Object.freeze([
         'musica', 'm\u00fasica', 'musical', 'instrumento', 'instrumentos',
         'canto', 'cantor', 'cantora', 'producao musical', 'produ\u00e7\u00e3o musical',
@@ -176,6 +181,7 @@
       key: 'administrativo',
       label: 'Administrativo',
       icon: 'fas fa-clipboard-list',
+      emoji: '📋',
       aliases: Object.freeze([
         'administrativo', 'administracao', 'administração', 'operacoes', 'operações',
         'secretaria', 'rh', 'recursos humanos', 'financeiro', 'financas', 'finanças',
@@ -186,6 +192,7 @@
       key: 'engenharia',
       label: 'Engenharia',
       icon: 'fas fa-drafting-compass',
+      emoji: '📐',
       aliases: Object.freeze([
         'engenharia', 'engenheiro', 'engenheira', 'civil', 'mecanica', 'mecânica',
         'eletrica', 'elétrica', 'projetos', 'projeto tecnico', 'projeto técnico',
@@ -196,6 +203,7 @@
       key: 'saude',
       label: 'Saúde',
       icon: 'fas fa-heartbeat',
+      emoji: '💚',
       aliases: Object.freeze([
         'saude', 'saúde', 'medicina', 'enfermagem', 'psicologia', 'farmacia',
         'farmácia', 'nutricao', 'nutrição', 'clinica', 'clínica'
@@ -205,6 +213,7 @@
       key: 'pesquisa',
       label: 'Pesquisa',
       icon: 'fas fa-microscope',
+      emoji: '🔬',
       aliases: Object.freeze([
         'pesquisa', 'cientifica', 'científica', 'iniciacao cientifica',
         'iniciação científica', 'laboratorio', 'laboratório', 'academica',
@@ -317,8 +326,8 @@
   ]);
 
   const HOUSING_FEATURE_DEFINITIONS = Object.freeze([
-    Object.freeze({ key: 'aceita-pets', label: 'Aceita pets', aliases: Object.freeze(['aceita pets', 'pet friendly', 'pets', 'animais', 'aceita animal']) }),
-    Object.freeze({ key: 'lgbtqiapn', label: 'LGBTQIAPN+', aliases: Object.freeze(['lgbtqiapn+', 'lgbtqiapn', 'lgbt', 'ambiente lgbtqiapn+', 'acolhedor lgbt']) }),
+    Object.freeze({ key: 'aceita-pets', label: 'Aceita pets', emoji: '🐾', aliases: Object.freeze(['aceita pets', 'pet friendly', 'pets', 'animais', 'aceita animal']) }),
+    Object.freeze({ key: 'lgbtqiapn', label: 'LGBTQIAPN+', emoji: '🌈', aliases: Object.freeze(['lgbtqiapn+', 'lgbtqiapn', 'lgbt', 'ambiente lgbtqiapn+', 'acolhedor lgbt']) }),
     Object.freeze({ key: 'apenas-mulheres', label: 'Apenas mulheres', aliases: Object.freeze(['apenas mulheres', 'somente mulheres', 'republica feminina', 'república feminina', 'feminina']) }),
     Object.freeze({ key: 'apenas-homens', label: 'Apenas homens', aliases: Object.freeze(['apenas homens', 'somente homens', 'republica masculina', 'república masculina', 'masculina']) }),
     Object.freeze({ key: 'mobiliado', label: 'Mobiliado', aliases: Object.freeze(['mobiliado', 'mobilhado', 'com mobilia', 'com mobília', 'mobilia completa', 'mobília completa']) }),
@@ -475,7 +484,10 @@
   }
 
   function getOpportunityAreaDefinitions() {
-    return OPPORTUNITY_AREA_DEFINITIONS.slice();
+    return OPPORTUNITY_AREA_DEFINITIONS.map((entry) => ({
+      ...entry,
+      emoji: entry.emoji || getOpportunityAreaEmoji(entry.key),
+    }));
   }
 
   function buildOpportunityTextParts(source, fallbackTags) {
@@ -516,7 +528,8 @@
   function getOpportunityAreaInfoByKey(key) {
     const wanted = slugifyText(key);
     if (!wanted) return null;
-    return OPPORTUNITY_AREA_DEFINITIONS.find((entry) => entry.key === wanted) || null;
+    const entry = OPPORTUNITY_AREA_DEFINITIONS.find((item) => item.key === wanted);
+    return entry ? { ...entry, emoji: entry.emoji || getOpportunityAreaEmoji(entry.key) } : null;
   }
 
   function firstNonEmptyValue(values) {
@@ -829,7 +842,45 @@
   }
 
   function getHousingFeatureDefinitions() {
-    return HOUSING_FEATURE_DEFINITIONS.slice();
+    return HOUSING_FEATURE_DEFINITIONS.map((entry) => ({
+      ...entry,
+      emoji: entry.emoji || getHousingFeatureEmoji(entry.key),
+    }));
+  }
+
+  function getOpportunityAreaEmoji(key) {
+    const wanted = slugifyText(key);
+    const map = {
+      tecnologia: '💻',
+      marketing: '📣',
+      design: '🎨',
+      educacao: '🎓',
+      musica: '🎵',
+      administrativo: '📋',
+      engenharia: '📐',
+      saude: '💚',
+      pesquisa: '🔬',
+    };
+    return map[wanted] || '🏷️';
+  }
+
+  function getHousingFeatureEmoji(key) {
+    const wanted = slugifyText(key);
+    const map = {
+      'aceita-pets': '🐾',
+      lgbtqiapn: '🌈',
+      'apenas-mulheres': '👩',
+      'apenas-homens': '👨',
+      mobiliado: '🛋️',
+      'contas-inclusas': '💡',
+      'internet-inclusa': '📶',
+      'banheiro-privativo': '🚿',
+      'vaga-de-garagem': '🚗',
+      'ambiente-familiar': '🏡',
+      'nao-fumantes': '🚭',
+      'proximo-ao-campus': '📍',
+    };
+    return map[wanted] || '🏷️';
   }
 
   function toStringArray(value) {
@@ -1016,7 +1067,8 @@
   function getHousingFeatureInfoByKey(key) {
     const wanted = slugifyText(key);
     if (!wanted) return null;
-    return HOUSING_FEATURE_DEFINITIONS.find((entry) => entry.key === wanted) || null;
+    const entry = HOUSING_FEATURE_DEFINITIONS.find((item) => item.key === wanted);
+    return entry ? { ...entry, emoji: entry.emoji || getHousingFeatureEmoji(entry.key) } : null;
   }
 
   function extractHousingRegionHistoryEntries(history) {
@@ -1304,7 +1356,7 @@
     const officialAliasMap = options.officialAliasMap || buildDefinitionAliasMap(HOUSING_FEATURE_DEFINITIONS);
     if (officialAliasMap.has(normalized)) {
       const official = officialAliasMap.get(normalized);
-      return { key: official.key, label: official.label, emoji: '', isKnown: true };
+      return { key: official.key, label: official.label, emoji: official.emoji || getHousingFeatureEmoji(official.key), isKnown: true };
     }
     if (options.historyMaps && options.historyMaps.aliasMap.has(normalized)) {
       const historyEntry = options.historyMaps.aliasMap.get(normalized);
@@ -1313,13 +1365,13 @@
 
     for (const [alias, entry] of officialAliasMap.entries()) {
       if (normalized.includes(alias) || alias.includes(normalized)) {
-        return { key: entry.key, label: entry.label, emoji: '', isKnown: true };
+        return { key: entry.key, label: entry.label, emoji: entry.emoji || getHousingFeatureEmoji(entry.key), isKnown: true };
       }
     }
 
     const historyEntries = options.historyEntries || [];
     const officialFuzzy = findBestFuzzyHousingEntry(raw, HOUSING_FEATURE_DEFINITIONS);
-    if (officialFuzzy) return { key: officialFuzzy.key, label: officialFuzzy.label, emoji: '', isKnown: true };
+    if (officialFuzzy) return { key: officialFuzzy.key, label: officialFuzzy.label, emoji: officialFuzzy.emoji || getHousingFeatureEmoji(officialFuzzy.key), isKnown: true };
 
     const historyFuzzy = findBestFuzzyHousingEntry(raw, historyEntries);
     if (historyFuzzy) {
@@ -1375,7 +1427,7 @@
       HOUSING_FEATURE_DEFINITIONS.forEach((entry) => {
         const aliases = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])].map((value) => normalizeText(value)).filter(Boolean);
         if (aliases.some((alias) => combinedText.includes(alias))) {
-          addFeature({ key: entry.key, label: entry.label, emoji: '', isKnown: true });
+          addFeature({ key: entry.key, label: entry.label, emoji: entry.emoji || getHousingFeatureEmoji(entry.key), isKnown: true });
         }
       });
     }
@@ -1842,6 +1894,54 @@
     return p;
   }
 
+  function getDisplayMarkerTags(post, options = {}) {
+    const p = applyPresentationRules(post, options.context || {});
+    const moduleKey = String(p.modulo || '').toLowerCase();
+    const limit = Number.isFinite(options.limit) ? Math.max(0, options.limit) : Infinity;
+    const tags = [];
+
+    if (moduleKey === 'moradia') {
+      const housingInfo = (p._kcHousingInfo && typeof p._kcHousingInfo === 'object') ? p._kcHousingInfo : {};
+      const features = Array.isArray(housingInfo.features) ? housingInfo.features : [];
+      features.forEach((feature) => {
+        if (!feature || !feature.key || !feature.label) return;
+        tags.push({
+          key: `moradia:${feature.key}`,
+          label: feature.label,
+          emoji: feature.emoji || getHousingFeatureEmoji(feature.key),
+        });
+      });
+    }
+
+    if (moduleKey === 'oportunidades') {
+      const areaInfo = resolveOpportunityArea(p, { tags: Array.isArray(p.tags) ? p.tags : [] });
+      if (areaInfo && areaInfo.key && areaInfo.label) {
+        tags.push({
+          key: `oportunidades:${areaInfo.key}`,
+          label: areaInfo.label,
+          emoji: areaInfo.emoji || getOpportunityAreaEmoji(areaInfo.key),
+        });
+      }
+    }
+
+    return tags.slice(0, limit);
+  }
+
+  function renderMarkerTags(tags, options = {}) {
+    const items = Array.isArray(tags) ? tags.filter((tag) => tag && tag.label) : [];
+    if (!items.length) return '';
+
+    const containerClass = String(options.containerClass || 'kc-card__tag-row').trim();
+    const itemClass = String(options.itemClass || 'kc-card__tag').trim();
+    const emojiClass = itemClass.includes('kc-tag') ? 'kc-tag__emoji' : 'kc-card__tag-emoji';
+
+    return `<div class="${escapeHtml(containerClass)}">` + items.map((tag) => {
+      const emoji = String(tag.emoji || '🏷️').trim();
+      const label = String(tag.label || '').trim();
+      return `<span class="${escapeHtml(itemClass)}">${emoji ? `<span class="${escapeHtml(emojiClass)}">${escapeHtml(emoji)}</span>` : ''}<span>${escapeHtml(label)}</span></span>`;
+    }).join('') + '</div>';
+  }
+
   // Renderização padrão de um card (estrutura idêntica aos .kc-card do HTML)
   // - Recebe um post normalizado (authorId)
   // - Busca autor via KCAPI.getAuthorById(post.authorId)
@@ -1954,12 +2054,10 @@
     const housingInfo = (moduleKey === 'moradia' && p._kcHousingInfo && typeof p._kcHousingInfo === 'object')
       ? p._kcHousingInfo
       : null;
-    const housingFeaturesHtml = housingInfo && Array.isArray(housingInfo.features) && housingInfo.features.length
-      ? '<div class="kc-card__tag-row kc-card__tag-row--housing">' + housingInfo.features.slice(0, 3).map((feature) => {
-        const emojiText = feature && feature.emoji ? `<span class="kc-card__tag-emoji">${escapeHtml(String(feature.emoji))}</span>` : '';
-        return `<span class="kc-card__tag">${emojiText}<span>${escapeHtml(String(feature && feature.label || ''))}</span></span>`;
-      }).join('') + '</div>'
-      : '';
+    const markerTagsHtml = renderMarkerTags(getDisplayMarkerTags(p, { limit: 3 }), {
+      containerClass: 'kc-card__tag-row kc-card__tag-row--markers',
+      itemClass: 'kc-card__tag',
+    });
 
     // Descrição (preview)
     const rawDesc = String(p.descricao || '').trim();
@@ -2049,7 +2147,7 @@
             </a>
             ${topBadgesHtml}
             ${priceHtml ? priceHtml : ''}
-            ${housingFeaturesHtml}
+            ${markerTagsHtml}
             <div class="kc-card__description-preview">
               ${escapeHtml(preview)}
             </div>
@@ -2112,13 +2210,15 @@
     getOpportunityAreaInfoByKey,
     getHousingRegionDefinitions,
     getHousingRegionInfoByKey,
-    getHousingFeatureDefinitions,
-    getHousingFeatureInfoByKey,
-    resolveOpportunityArea,
-    resolveHousingRegion,
-    resolveHousingFeatures,
-    resolveHousingTypeKey,
-    toStringArray,
+      getHousingFeatureDefinitions,
+      getHousingFeatureInfoByKey,
+      getDisplayMarkerTags,
+      resolveOpportunityArea,
+      resolveHousingRegion,
+      resolveHousingFeatures,
+      resolveHousingTypeKey,
+      renderMarkerTags,
+      toStringArray,
     escapeHtml,
     cssEscape,
     formatCurrencyBRL,
