@@ -1999,11 +1999,11 @@ function kcGetHousingFeatureOptions() {
   }
 
   return [
-    { key: 'aceita-pets', label: 'Aceita pets' },
-    { key: 'lgbtqiapn', label: 'LGBTQIAPN+' },
-    { key: 'apenas-mulheres', label: 'Apenas mulheres' },
-    { key: 'mobiliado', label: 'Mobiliado' },
-    { key: 'contas-inclusas', label: 'Contas inclusas' },
+    { key: 'aceita-pets', label: 'Aceita pets', emoji: '🐾' },
+    { key: 'lgbtqiapn', label: 'LGBTQIAPN+', emoji: '🌈' },
+    { key: 'apenas-mulheres', label: 'Apenas mulheres', emoji: '👩' },
+    { key: 'mobiliado', label: 'Mobiliado', emoji: '🛋️' },
+    { key: 'contas-inclusas', label: 'Contas inclusas', emoji: '💡' },
     { key: 'proximo-ao-campus', label: 'Próximo ao campus' },
   ];
 }
@@ -2349,7 +2349,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
       fields.push({
         type: 'housing-features',
         name: 'marcadoresMoradia',
-        label: 'Marcadores do ambiente',
+        label: 'Características do ambiente',
         placeholder: 'Ex: Aceita pets',
         required: false,
         options: kcGetHousingFeatureOptions(),
@@ -2367,7 +2367,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
       fields.push({
         type: 'housing-features',
         name: 'marcadoresMoradia',
-        label: 'Marcadores do ambiente',
+        label: 'Características do ambiente',
         placeholder: 'Ex: Mobiliado',
         required: false,
         options: kcGetHousingFeatureOptions(),
@@ -2565,13 +2565,14 @@ function kcRenderCreateModal() {
             <i class="fas fa-times"></i>
           </button>
         `).join('')
-        : '<span class="kc-field-chip__empty">Nenhum marcador selecionado.</span>';
+        : '<span class="kc-field-chip__empty">Nenhuma característica selecionada.</span>';
       const selectedKeys = new Set(selectedEntries.map((entry) => entry.key));
-      const suggestions = (Array.isArray(f.options) ? f.options : []).map((opt) => `
-        <button type="button" class="kc-field-pill${selectedKeys.has(String(opt.key || '').trim()) ? ' is-active' : ''}" data-kc-housing-feature-suggestion="${escHtml(opt.label)}" data-kc-housing-feature-key="${escHtml(opt.key || '')}" aria-pressed="${selectedKeys.has(String(opt.key || '').trim()) ? 'true' : 'false'}">
-          <span>${escHtml(opt.label)}</span>
-        </button>
-      `).join('');
+        const suggestions = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+          <button type="button" class="kc-field-pill${selectedKeys.has(String(opt.key || '').trim()) ? ' is-active' : ''}" data-kc-housing-feature-suggestion="${escHtml(opt.label)}" data-kc-housing-feature-key="${escHtml(opt.key || '')}" aria-pressed="${selectedKeys.has(String(opt.key || '').trim()) ? 'true' : 'false'}">
+            ${opt.emoji ? `<span class="kc-field-pill__emoji">${escHtml(opt.emoji)}</span>` : ''}
+            <span>${escHtml(opt.label)}</span>
+          </button>
+        `).join('');
       const listItems = (Array.isArray(f.options) ? f.options : []).map((opt) => `
         <option value="${escHtml(opt.label)}"></option>
       `).join('');
@@ -2636,7 +2637,11 @@ function kcRenderCreateModal() {
   // Sustentabilidade
   parts.push(kcCreateSustainSectionHtml());
 
-  if (dynamic) dynamic.innerHTML = parts.join('');
+  const renderedFieldsHtml = parts.join('')
+    .replace(/Marcadores do ambiente/g, 'Características do ambiente')
+    .replace(/Nenhum marcador selecionado\./g, 'Nenhuma característica selecionada.')
+    .replace(/outros marcadores para o ambiente/g, 'outras características do ambiente');
+  if (dynamic) dynamic.innerHTML = renderedFieldsHtml;
 
   // Texto do botão de submit (edição vs criação)
   if (submitBtn) {

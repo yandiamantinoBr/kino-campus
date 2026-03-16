@@ -5756,6 +5756,11 @@ textarea::placeholder {
   color: var(--kc-primary-brand);
 }
 
+.kc-field-pill__emoji {
+  font-size: 0.98em;
+  line-height: 1;
+}
+
 .kc-field-hint {
   display: block;
   margin-top: 8px;
@@ -6095,25 +6100,59 @@ textarea::placeholder {
 .kc-card__tag-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .kc-card__tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--kc-text-dark-primary);
-  font-size: 0.83em;
+  background: rgba(241, 91, 41, 0.06);
+  border: 1px solid rgba(241, 91, 41, 0.14);
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.74em;
   font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
 }
 
 .kc-card__tag-emoji {
-  font-size: 1em;
+  font-size: 0.98em;
+  line-height: 1;
+}
+
+.kc-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.kc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(241, 91, 41, 0.14);
+  background: rgba(241, 91, 41, 0.05);
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.78em;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.kc-tag--marker {
+  background: rgba(241, 91, 41, 0.08);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-tag__emoji {
+  font-size: 0.98em;
+  line-height: 1;
 }
 
 .kc-sidebar--housing .kc-housing-filter-list {
@@ -6227,6 +6266,31 @@ textarea::placeholder {
 .kc-housing-section-modal__content {
   display: grid;
   gap: 10px;
+}
+
+.kc-housing-section-modal .kc-housing-filter-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kc-housing-section-modal .kc-sidebar-check {
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 100%;
+  padding: 10px 11px;
+  border-radius: 10px;
+}
+
+.kc-housing-section-modal .kc-sidebar-check input {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+.kc-housing-section-modal .kc-sidebar-check span {
+  font-size: 0.87em;
+  line-height: 1.3;
 }
 
 .kc-housing-section-modal__actions {

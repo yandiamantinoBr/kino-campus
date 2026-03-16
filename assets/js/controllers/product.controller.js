@@ -487,14 +487,35 @@
   function setDescription(post) {
     const desc = esc(post.descricao || post.description || '');
     const tags = Array.isArray(post.tags) ? post.tags.slice(0, 10) : [];
+    const markerTags = (window.KCUtils && typeof window.KCUtils.getDisplayMarkerTags === 'function')
+      ? window.KCUtils.getDisplayMarkerTags(post, { limit: 10 })
+      : [];
+    const normalize = (window.KCUtils && typeof window.KCUtils.normalizeText === 'function')
+      ? window.KCUtils.normalizeText
+      : ((value) => String(value || '').toLowerCase().trim());
+    const markerLabels = new Set(markerTags.map((tag) => normalize(tag && tag.label)));
+    const plainTags = tags
+      .filter((tag) => !markerLabels.has(normalize(tag)))
+      .map((tag) => ({ label: tag, emoji: '🏷️' }));
 
     let html = '';
     if (desc) {
       html += `<h3><i class="fas fa-align-left"></i> Descrição</h3><p>${desc}</p>`;
     }
-    if (tags.length) {
-      html += `<div style="margin-top: 12px; display:flex; flex-wrap: wrap; gap: 8px;">` +
-        tags.map(t => `<span class="kc-tag">${esc(t)}</span>`).join('') +
+    if (markerTags.length && window.KCUtils && typeof window.KCUtils.renderMarkerTags === 'function') {
+      html += window.KCUtils.renderMarkerTags(markerTags, {
+        containerClass: 'kc-tags-list kc-tags-list--markers',
+        itemClass: 'kc-tag kc-tag--marker',
+      });
+    }
+    if (plainTags.length && window.KCUtils && typeof window.KCUtils.renderMarkerTags === 'function') {
+      html += window.KCUtils.renderMarkerTags(plainTags, {
+        containerClass: 'kc-tags-list kc-tags-list--plain',
+        itemClass: 'kc-tag',
+      });
+    } else if (plainTags.length) {
+      html += `<div class="kc-tags-list kc-tags-list--plain">` +
+        plainTags.map((tag) => `<span class="kc-tag"><span class="kc-tag__emoji">${esc(tag.emoji)}</span><span>${esc(tag.label)}</span></span>`).join('') +
         `</div>`;
     }
 
