@@ -6037,12 +6037,245 @@ textarea::placeholder {
   color: #fff;
 }
 
+.kc-field-pill.is-active {
+  border-color: rgba(241, 91, 41, 0.68);
+  background: rgba(241, 91, 41, 0.14);
+  color: var(--kc-primary-brand);
+}
+
+.kc-field-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.kc-field-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(241, 91, 41, 0.28);
+  border-radius: 999px;
+  background: rgba(241, 91, 41, 0.08);
+  color: var(--kc-text-dark-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.kc-field-chip i,
+.kc-field-chip__emoji {
+  color: var(--kc-primary-brand);
+}
+
+.kc-field-chip__empty {
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.92em;
+}
+
+.kc-field-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.kc-field-inline__action {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(241, 91, 41, 0.28);
+  border-radius: 14px;
+  background: rgba(241, 91, 41, 0.08);
+  color: var(--kc-primary-brand);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kc-card__tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.kc-card__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--kc-text-dark-primary);
+  font-size: 0.83em;
+  font-weight: 600;
+}
+
+.kc-card__tag-emoji {
+  font-size: 1em;
+}
+
+.kc-sidebar--housing .kc-housing-filter-list {
+  display: grid;
+  gap: 12px;
+}
+
+.kc-sidebar--housing .kc-category-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.kc-sidebar--housing .kc-category-item {
+  width: 100%;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, transform var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+.kc-sidebar--housing .kc-category-item:hover:not(:disabled) {
+  border-color: rgba(241, 91, 41, 0.38);
+  background: rgba(241, 91, 41, 0.06);
+  transform: translateY(-1px);
+}
+
+.kc-sidebar--housing .kc-category-item.is-active {
+  border-color: rgba(241, 91, 41, 0.7);
+  background: rgba(241, 91, 41, 0.12);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-sidebar--housing .kc-category-item.is-active .kc-category-count {
+  background: rgba(241, 91, 41, 0.18);
+  color: var(--kc-primary-brand);
+}
+
+.kc-sidebar--housing .kc-category-item.is-disabled {
+  opacity: 0.62;
+}
+
+.kc-sidebar--housing .kc-category-item:disabled {
+  cursor: not-allowed;
+}
+
+.kc-housing-mobile-rail {
+  display: none;
+}
+
+.kc-housing-mobile-rail__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  background: var(--kc-surface-dark);
+  color: var(--kc-text-dark-primary);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.kc-housing-mobile-rail__button i {
+  color: var(--kc-primary-brand);
+}
+
+.kc-housing-mobile-rail__button.is-active,
+.kc-housing-mobile-rail__button:hover:not(:disabled) {
+  border-color: rgba(241, 91, 41, 0.45);
+  background: rgba(241, 91, 41, 0.08);
+  color: var(--kc-primary-brand);
+  transform: translateY(-1px);
+}
+
+.kc-housing-mobile-rail__button:disabled,
+.kc-housing-mobile-rail__button.is-loading {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.kc-housing-section-modal {
+  width: min(520px, 100%);
+}
+
+.kc-housing-section-modal .kc-sidebar-section > h3,
+.kc-housing-section-modal [data-kc-housing-clear-filters="true"] {
+  display: none;
+}
+
+.kc-housing-section-modal .kc-sidebar-section {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.kc-housing-section-modal .kc-sidebar-section:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.kc-housing-section-modal__content {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-housing-section-modal__actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+  background: var(--kc-surface-dark);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.kc-housing-section-modal__action-group {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-housing-section-modal__caption {
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.92em;
+  line-height: 1.45;
+}
+
+.kc-housing-section-modal .kc-category-item {
+  position: relative;
+}
+
+.kc-housing-section-modal[data-kc-housing-section-view="regions"] .kc-category-item.is-active {
+  border-color: rgba(241, 91, 41, 0.85);
+  background: linear-gradient(135deg, rgba(241, 91, 41, 0.18), rgba(241, 91, 41, 0.06));
+  box-shadow: 0 0 0 1px rgba(241, 91, 41, 0.28);
+}
+
+.kc-housing-section-modal[data-kc-housing-section-view="regions"] .kc-category-item.is-active .kc-category-count {
+  background: var(--kc-primary-brand);
+  color: #fff;
+}
+
 @media (max-width: 768px) {
   body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--opportunities[data-kc-opp-sidebar="true"] {
     display: none !important;
   }
 
   body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--marketplace[data-kc-market-sidebar="true"] {
+    display: none !important;
+  }
+
+  body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--housing[data-kc-housing-sidebar="true"] {
     display: none !important;
   }
 
@@ -6102,6 +6335,34 @@ textarea::placeholder {
     padding: 12px 16px 18px;
   }
 
+  .kc-housing-mobile-rail {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 4px 0 14px;
+    margin-bottom: 6px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kc-housing-mobile-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kc-housing-mobile-rail__button {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .kc-housing-section-modal {
+    width: min(100%, 480px);
+  }
+
+  .kc-housing-section-modal__actions {
+    padding: 12px 16px 18px;
+  }
+
   .kc-sidebar--opportunities .kc-category-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -6118,11 +6379,23 @@ textarea::placeholder {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .kc-housing-section-modal .kc-category-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .kc-opportunity-section-modal .kc-opportunity-filter-list {
     gap: 12px;
   }
 
   .kc-marketplace-section-modal .kc-marketplace-filter-list {
     gap: 14px;
+  }
+
+  .kc-housing-section-modal .kc-housing-filter-list {
+    gap: 14px;
+  }
+
+  .kc-field-inline {
+    grid-template-columns: 1fr;
   }
 }

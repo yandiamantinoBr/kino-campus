@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- KinoCampus Moradia (V7.1.1.1) -->
+<!-- KinoCampus Moradia (V8.6.0.0) -->
 
 <html lang="pt-BR">
 <head>
@@ -9,15 +9,16 @@
 <link rel="stylesheet" href="assets/css/kc-theme-boot.css">
 <script src="assets/js/kc-theme-boot.js"></script>
 <style>
-  /* evita transições durante o primeiro paint */
-  html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
+  html.kc-theme-preload,
+  html.kc-theme-preload * {
+    transition: none !important;
+  }
 </style>
 <title>Moradia - KinoCampus</title>
 <link href="assets/css/styles.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
 <body data-kc-filters="tab-search">
-<!-- Header -->
 <header class="kc-header">
 <div class="kc-header-container">
 <div class="kc-logo">
@@ -61,15 +62,12 @@
 </div>
 </div>
 </header>
-<!-- Main Content -->
 <main class="kc-main-content">
-<!-- Feed Section -->
 <section class="kc-feed-section">
 <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
 <i class="fas fa-home"></i>
-                Moradia Estudantil
+                Moradia
             </h2>
-<!-- Feed Tabs -->
 <div class="kc-feed-tabs">
 <a class="active" href="#">
 <i class="fas fa-fire"></i>
@@ -87,61 +85,71 @@
 <i class="fas fa-building"></i>
 <span>Apartamentos</span>
 </a>
+<a href="#casas">
+<i class="fas fa-house"></i>
+<span>Casas</span>
+</a>
 <a href="#procurando">
 <i class="fas fa-search"></i>
 <span>Procurando</span>
 </a>
 </div>
-<!-- Feed List -->
+<div class="kc-housing-mobile-rail" data-kc-housing-mobile-rail="true" aria-label="Seções rápidas de moradia">
+<button class="kc-housing-mobile-rail__button is-loading" type="button" disabled>
+<i class="fas fa-spinner fa-spin"></i>
+<span>Carregando seções...</span>
+</button>
+</div>
 <div class="kc-feed-list">
-<!-- Cards injetados via JS -->
+<div id="posts-loading" class="kc-posts-loading" style="text-align: center; padding: 40px; color: var(--kc-text-dark-secondary);">
+<i class="fas fa-spinner fa-spin" style="font-size: 2em; margin-bottom: 10px;"></i>
+<p>Carregando postagens...</p>
+</div>
 </div>
 </section>
-<!-- Sidebar -->
-<aside class="kc-sidebar">
-<div class="kc-sidebar-section">
+<aside class="kc-sidebar kc-sidebar--housing" data-kc-housing-sidebar="true">
+<div class="kc-sidebar-section" data-kc-housing-section="filters">
+<h3>
+<i class="fas fa-tags"></i>
+                    Marcadores do Ambiente
+                </h3>
+<p class="kc-sidebar-help">Combine marcadores para refinar o perfil da moradia.</p>
+<div class="kc-housing-filter-list" data-kc-housing-feature-list="true">
+<label class="kc-sidebar-check">
+<input data-kc-housing-filter-kind="feature" type="checkbox" value="aceita-pets"/>
+<span>Aceita pets</span>
+</label>
+</div>
+<button class="kc-opportunity-clear" data-kc-housing-clear-filters="true" type="button">Limpar filtros</button>
+</div>
+<div class="kc-sidebar-section" data-kc-housing-section="regions">
 <h3>
 <i class="fas fa-map-marked-alt"></i>
                     Regiões Populares
                 </h3>
-<div class="kc-category-list">
-<a class="kc-category-item" href="#setor-universitario">
+<p class="kc-sidebar-help">Escolha uma região e veja quantos anúncios ativos existem por perto.</p>
+<div class="kc-category-list" data-kc-housing-region-list="true">
+<button class="kc-category-item" disabled type="button">
 <i class="fas fa-map-pin"></i>
-<span>Setor Universitário</span>
-<span class="kc-category-count">42</span>
-</a>
-<a class="kc-category-item" href="#campus-samambaia">
-<i class="fas fa-map-pin"></i>
-<span>Campus Samambaia</span>
-<span class="kc-category-count">28</span>
-</a>
-<a class="kc-category-item" href="#setor-leste">
-<i class="fas fa-map-pin"></i>
-<span>Setor Leste Universitário</span>
-<span class="kc-category-count">35</span>
-</a>
-<a class="kc-category-item" href="#setor-oeste">
-<i class="fas fa-map-pin"></i>
-<span>Setor Oeste</span>
-<span class="kc-category-count">19</span>
-</a>
+<span>Carregando regiões...</span>
+<span class="kc-category-count">0</span>
+</button>
 </div>
 </div>
-<div class="kc-sidebar-section">
+<div class="kc-sidebar-section" data-kc-housing-section="tips">
 <h3>
 <i class="fas fa-info-circle"></i>
                     Dicas de Moradia
                 </h3>
 <div style="line-height: 1.6; font-size: 0.9em; color: var(--kc-text-dark-secondary);">
-<p><strong>✓ Visite pessoalmente</strong> antes de fechar negócio</p>
-<p><strong>✓ Peça referências</strong> de moradores anteriores</p>
-<p><strong>✓ Leia o contrato</strong> com atenção</p>
-<p><strong>✓ Verifique as condições</strong> de água, luz e internet</p>
+<p><strong>✓ Visite pessoalmente</strong> o local antes de fechar negócio</p>
+<p><strong>✓ Confirme custos extras</strong> como contas, caução e internet</p>
+<p><strong>✓ Leia o contrato</strong> com atenção e alinhe as regras da casa</p>
+<p><strong>✓ Priorize trajetos seguros</strong> e compatibilidade com sua rotina</p>
 </div>
 </div>
 </aside>
 </main>
-<!-- Mobile Navigation -->
 <nav class="kc-mobile-nav">
 <a href="index.html">
 <i class="fas fa-home"></i>
@@ -163,7 +171,6 @@
 <span>Menu</span>
 </button>
 </nav>
-<!-- Mobile Menu Drawer -->
 <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
 <div class="kc-mobile-menu-header">
 <h3>Menu</h3>
@@ -172,7 +179,6 @@
 </button>
 </div>
 <div class="kc-mobile-menu-content">
-<!-- Seção de usuário (atualizada pelo kc-auth.ui.js) -->
 <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
   <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
     <span class="kc-mobile-menu-user-avatar-wrap">
@@ -182,9 +188,7 @@
   </a>
 </div>
 <hr data-kc-divider="top" class="kc-mobile-menu-divider"/>
-<!-- Links de perfil (visíveis quando autenticado) -->
 <a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
-<!-- Link de Admin (visível apenas para is_admin=true) -->
 <a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
 <hr data-kc-divider="profile" class="kc-mobile-menu-divider"/>
 <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
@@ -209,7 +213,7 @@
 <script src="assets/js/kc-theme.js"></script>
 <script src="assets/js/kc-filters.js"></script>
 <script src="assets/js/kc-search.js"></script>
-  <script src="assets/js/controllers/kc-feed.controller.js"></script>
-  <script src="assets/js/controllers/moradia.controller.js"></script>
+<script src="assets/js/controllers/kc-feed.controller.js"></script>
+<script src="assets/js/controllers/moradia.controller.js"></script>
 </body>
 </html>
