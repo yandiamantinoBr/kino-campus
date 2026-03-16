@@ -5837,8 +5837,8 @@ textarea::placeholder {
   display: grid;
   gap: 10px;
   padding: 14px 18px 18px;
-  background: linear-gradient(180deg, rgba(30, 31, 38, 0.82) 0%, var(--kc-surface-dark) 28%);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--kc-surface-dark);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .kc-opportunity-section-modal__action-group {
@@ -5868,8 +5868,181 @@ textarea::placeholder {
   color: #fff;
 }
 
+.kc-sidebar--marketplace .kc-category-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.kc-sidebar--marketplace .kc-category-item {
+  width: 100%;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, transform var(--transition-speed) ease, color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+.kc-sidebar--marketplace .kc-category-item:hover:not(:disabled) {
+  border-color: rgba(241, 91, 41, 0.38);
+  background: rgba(241, 91, 41, 0.06);
+  transform: translateY(-1px);
+}
+
+.kc-sidebar--marketplace .kc-category-item.is-active {
+  border-color: rgba(241, 91, 41, 0.7);
+  background: rgba(241, 91, 41, 0.12);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-sidebar--marketplace .kc-category-item.is-active .kc-category-count {
+  background: rgba(241, 91, 41, 0.18);
+  color: var(--kc-primary-brand);
+}
+
+.kc-sidebar--marketplace .kc-category-item.is-disabled {
+  opacity: 0.62;
+}
+
+.kc-sidebar--marketplace .kc-category-item:disabled {
+  cursor: not-allowed;
+}
+
+.kc-marketplace-filter-list {
+  display: grid;
+  gap: 16px;
+}
+
+.kc-marketplace-filter-group {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-marketplace-filter-group__title {
+  margin: 0;
+  color: var(--kc-text-dark-primary);
+  font-size: 0.92em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.kc-marketplace-filter-group__options {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-marketplace-mobile-rail {
+  display: none;
+}
+
+.kc-marketplace-mobile-rail__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  background: var(--kc-surface-dark);
+  color: var(--kc-text-dark-primary);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.kc-marketplace-mobile-rail__button i {
+  color: var(--kc-primary-brand);
+  font-size: 1em;
+}
+
+.kc-marketplace-mobile-rail__button.is-active,
+.kc-marketplace-mobile-rail__button:hover:not(:disabled) {
+  border-color: rgba(241, 91, 41, 0.45);
+  background: rgba(241, 91, 41, 0.08);
+  color: var(--kc-primary-brand);
+  transform: translateY(-1px);
+}
+
+.kc-marketplace-mobile-rail__button:disabled,
+.kc-marketplace-mobile-rail__button.is-loading {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.kc-marketplace-section-modal {
+  width: min(520px, 100%);
+}
+
+.kc-marketplace-section-modal .kc-sidebar-section > h3,
+.kc-marketplace-section-modal [data-kc-market-clear-sidebar="true"] {
+  display: none;
+}
+
+.kc-marketplace-section-modal .kc-sidebar-section {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.kc-marketplace-section-modal .kc-sidebar-section:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.kc-marketplace-section-modal__content {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-marketplace-section-modal__actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+  background: var(--kc-surface-dark);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.kc-marketplace-section-modal__action-group {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-marketplace-section-modal__caption {
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.92em;
+  line-height: 1.45;
+}
+
+.kc-marketplace-section-modal .kc-category-item {
+  position: relative;
+}
+
+.kc-marketplace-section-modal[data-kc-market-section-view="categories"] .kc-category-item.is-active {
+  border-color: rgba(241, 91, 41, 0.85);
+  background: linear-gradient(135deg, rgba(241, 91, 41, 0.18), rgba(241, 91, 41, 0.06));
+  box-shadow: 0 0 0 1px rgba(241, 91, 41, 0.28);
+}
+
+.kc-marketplace-section-modal[data-kc-market-section-view="categories"] .kc-category-item.is-active .kc-category-count {
+  background: var(--kc-primary-brand);
+  color: #fff;
+}
+
 @media (max-width: 768px) {
   body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--opportunities[data-kc-opp-sidebar="true"] {
+    display: none !important;
+  }
+
+  body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--marketplace[data-kc-market-sidebar="true"] {
     display: none !important;
   }
 
@@ -5901,7 +6074,39 @@ textarea::placeholder {
     padding: 12px 16px 18px;
   }
 
+  .kc-marketplace-mobile-rail {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 4px 0 14px;
+    margin-bottom: 6px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kc-marketplace-mobile-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kc-marketplace-mobile-rail__button {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .kc-marketplace-section-modal {
+    width: min(100%, 480px);
+  }
+
+  .kc-marketplace-section-modal__actions {
+    padding: 12px 16px 18px;
+  }
+
   .kc-sidebar--opportunities .kc-category-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kc-sidebar--marketplace .kc-category-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -5909,7 +6114,15 @@ textarea::placeholder {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .kc-marketplace-section-modal .kc-category-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .kc-opportunity-section-modal .kc-opportunity-filter-list {
     gap: 12px;
+  }
+
+  .kc-marketplace-section-modal .kc-marketplace-filter-list {
+    gap: 14px;
   }
 }

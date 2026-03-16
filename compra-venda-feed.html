@@ -94,6 +94,12 @@
 <span>Outros</span>
 </a>
 </div>
+<div class="kc-marketplace-mobile-rail" data-kc-market-mobile-rail="true" aria-label="Seções rápidas de compra e venda">
+<button class="kc-marketplace-mobile-rail__button is-loading" type="button" disabled>
+<i class="fas fa-spinner fa-spin"></i>
+<span>Carregando seções...</span>
+</button>
+</div>
 <!-- Feed List -->
 <div class="kc-feed-list" id="feedList">
 <!-- Cards injetados via JS -->
@@ -106,81 +112,84 @@
 <button class="kc-btn-primary" style="margin-top: 15px;">Limpar Filtros</button>
 </div>
 </section>
-<!-- Sidebar - Reorganizada estilo Oportunidades -->
-<aside class="kc-sidebar">
-<!-- Filtros Section -->
-<div class="kc-sidebar-section kc-filters-section">
+<!-- Sidebar -->
+<aside class="kc-sidebar kc-sidebar--marketplace" data-kc-market-sidebar="true">
+<div class="kc-sidebar-section" data-kc-market-section="filters">
 <h3>
 <i class="fas fa-filter"></i>
                     Filtros
                 </h3>
-<div class="kc-filter-list">
-<label class="kc-filter-item">
-<input checked="" id="filterEletronicos" type="checkbox"/>
+<p class="kc-sidebar-help">Refine por categoria, condição e verificação.</p>
+<div class="kc-marketplace-filter-list">
+<div class="kc-marketplace-filter-group">
+<p class="kc-marketplace-filter-group__title">Categorias</p>
+<div class="kc-marketplace-filter-group__options">
+<label class="kc-sidebar-check">
+<input checked="" data-kc-market-filter-kind="category" id="filterEletronicos" type="checkbox" value="eletronicos"/>
 <span>Eletrônicos</span>
 </label>
-<label class="kc-filter-item">
-<input checked="" id="filterLivros" type="checkbox"/>
+<label class="kc-sidebar-check">
+<input checked="" data-kc-market-filter-kind="category" id="filterLivros" type="checkbox" value="livros"/>
 <span>Livros</span>
 </label>
-<label class="kc-filter-item">
-<input checked="" id="filterMoveis" type="checkbox"/>
+<label class="kc-sidebar-check">
+<input checked="" data-kc-market-filter-kind="category" id="filterMoveis" type="checkbox" value="moveis"/>
 <span>Móveis</span>
 </label>
-<label class="kc-filter-item">
-<input checked="" id="filterVestuario" type="checkbox"/>
+<label class="kc-sidebar-check">
+<input checked="" data-kc-market-filter-kind="category" id="filterVestuario" type="checkbox" value="vestuario"/>
 <span>Vestuário</span>
 </label>
-<label class="kc-filter-item">
-<input checked="" id="filterOutros" type="checkbox"/>
+<label class="kc-sidebar-check">
+<input checked="" data-kc-market-filter-kind="category" id="filterOutros" type="checkbox" value="outros"/>
 <span>Outros</span>
 </label>
-<hr style="border: none; border-top: 1px solid var(--kc-border-dark); margin: 10px 0;"/>
-<label class="kc-filter-item">
-<input id="filterNovo" type="checkbox"/>
-<span>Novos</span>
+</div>
+</div>
+<div class="kc-marketplace-filter-group">
+<p class="kc-marketplace-filter-group__title">Condição</p>
+<div class="kc-marketplace-filter-group__options">
+<label class="kc-sidebar-check">
+<input data-kc-market-filter-kind="condition" id="filterNovo" type="checkbox" value="novo"/>
+<span>Novo</span>
 </label>
-<label class="kc-filter-item">
-<input id="filterSeminovo" type="checkbox"/>
-<span>Semi-novos</span>
+<label class="kc-sidebar-check">
+<input data-kc-market-filter-kind="condition" id="filterSeminovo" type="checkbox" value="seminovo"/>
+<span>Semi-novo</span>
 </label>
-<label class="kc-filter-item">
-<input id="filterVerificado" type="checkbox"/>
+<label class="kc-sidebar-check">
+<input data-kc-market-filter-kind="condition" id="filterUsado" type="checkbox" value="usado"/>
+<span>Usado</span>
+</label>
+</div>
+</div>
+<div class="kc-marketplace-filter-group">
+<p class="kc-marketplace-filter-group__title">Confiança</p>
+<div class="kc-marketplace-filter-group__options">
+<label class="kc-sidebar-check">
+<input data-kc-market-filter-kind="verified" id="filterVerificado" type="checkbox" value="true"/>
 <span>Somente verificados</span>
 </label>
 </div>
 </div>
-<!-- Categorias Populares Section -->
-<div class="kc-sidebar-section kc-categories-section">
+</div>
+<button class="kc-opportunity-clear" data-kc-market-clear-sidebar="true" type="button">Limpar filtros</button>
+</div>
+<div class="kc-sidebar-section" data-kc-market-section="categories">
 <h3>
 <i class="fas fa-th-large"></i>
                     Categorias Populares
                 </h3>
-<div class="kc-category-cards">
-<a class="kc-category-card" href="#eletronicos">
-<i class="fas fa-laptop"></i>
-<span class="kc-category-card-name">Eletrônicos</span>
-<span class="kc-category-card-count">142</span>
-</a>
-<a class="kc-category-card" href="#livros">
-<i class="fas fa-book"></i>
-<span class="kc-category-card-name">Livros</span>
-<span class="kc-category-card-count">98</span>
-</a>
-<a class="kc-category-card" href="#moveis">
-<i class="fas fa-couch"></i>
-<span class="kc-category-card-name">Móveis</span>
-<span class="kc-category-card-count">67</span>
-</a>
-<a class="kc-category-card" href="#vestuario">
-<i class="fas fa-tshirt"></i>
-<span class="kc-category-card-name">Vestuário</span>
-<span class="kc-category-card-count">54</span>
-</a>
+<p class="kc-sidebar-help">Escolha uma categoria e veja quantos anúncios estão ativos.</p>
+<div class="kc-category-list" data-kc-market-category-list="true">
+<button class="kc-category-item" disabled type="button">
+<i class="fas fa-layer-group"></i>
+<span>Carregando categorias...</span>
+<span class="kc-category-count">0</span>
+</button>
 </div>
 </div>
-<!-- Dicas para Vendedores Section -->
-<div class="kc-sidebar-section kc-tips-section">
+<div class="kc-sidebar-section" data-kc-market-section="seller-tips">
 <h3>
 <i class="fas fa-lightbulb"></i>
                     Dicas para Vendedores
@@ -205,6 +214,34 @@
 <div class="kc-tip-item">
 <i class="fas fa-check"></i>
 <span>Combine local seguro para entrega</span>
+</div>
+</div>
+</div>
+<div class="kc-sidebar-section" data-kc-market-section="buyer-tips">
+<h3>
+<i class="fas fa-shield-heart"></i>
+                    Dicas para Compradores
+                </h3>
+<div class="kc-tips-list">
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Peça fotos e detalhes atuais do item</span>
+</div>
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Compare o preço com produtos semelhantes</span>
+</div>
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Confirme defeitos e acessórios antes de fechar</span>
+</div>
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Prefira locais movimentados para entrega</span>
+</div>
+<div class="kc-tip-item">
+<i class="fas fa-check"></i>
+<span>Teste o produto quando isso fizer sentido</span>
 </div>
 </div>
 </div>
