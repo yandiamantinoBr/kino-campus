@@ -24,46 +24,57 @@ begin
   end if;
 end $$;
 
-alter table storage.objects enable row level security;
+do $storage_policies$
+begin
+  execute 'drop policy if exists storage_kino_media_profile_avatar_insert on storage.objects';
+  execute $sql$
+    create policy storage_kino_media_profile_avatar_insert
+    on storage.objects for insert
+    to authenticated
+    with check (
+      bucket_id = 'kino-media'
+      and auth.role() = 'authenticated'
+      and (storage.foldername(name))[1] = 'profile-avatars'
+      and (storage.foldername(name))[2] = auth.uid()::text
+    )
+  $sql$;
 
-drop policy if exists storage_kino_media_profile_avatar_insert on storage.objects;
-create policy storage_kino_media_profile_avatar_insert
-on storage.objects for insert
-to authenticated
-with check (
-  bucket_id = 'kino-media'
-  and auth.role() = 'authenticated'
-  and (storage.foldername(name))[1] = 'profile-avatars'
-  and (storage.foldername(name))[2] = auth.uid()::text
-);
+  execute 'drop policy if exists storage_kino_media_profile_avatar_update on storage.objects';
+  execute $sql$
+    create policy storage_kino_media_profile_avatar_update
+    on storage.objects for update
+    to authenticated
+    using (
+      bucket_id = 'kino-media'
+      and auth.uid() = owner
+      and (storage.foldername(name))[1] = 'profile-avatars'
+      and (storage.foldername(name))[2] = auth.uid()::text
+    )
+    with check (
+      bucket_id = 'kino-media'
+      and auth.uid() = owner
+      and (storage.foldername(name))[1] = 'profile-avatars'
+      and (storage.foldername(name))[2] = auth.uid()::text
+    )
+  $sql$;
 
-drop policy if exists storage_kino_media_profile_avatar_update on storage.objects;
-create policy storage_kino_media_profile_avatar_update
-on storage.objects for update
-to authenticated
-using (
-  bucket_id = 'kino-media'
-  and auth.uid() = owner
-  and (storage.foldername(name))[1] = 'profile-avatars'
-  and (storage.foldername(name))[2] = auth.uid()::text
-)
-with check (
-  bucket_id = 'kino-media'
-  and auth.uid() = owner
-  and (storage.foldername(name))[1] = 'profile-avatars'
-  and (storage.foldername(name))[2] = auth.uid()::text
-);
-
-drop policy if exists storage_kino_media_profile_avatar_delete on storage.objects;
-create policy storage_kino_media_profile_avatar_delete
-on storage.objects for delete
-to authenticated
-using (
-  bucket_id = 'kino-media'
-  and auth.uid() = owner
-  and (storage.foldername(name))[1] = 'profile-avatars'
-  and (storage.foldername(name))[2] = auth.uid()::text
-);
+  execute 'drop policy if exists storage_kino_media_profile_avatar_delete on storage.objects';
+  execute $sql$
+    create policy storage_kino_media_profile_avatar_delete
+    on storage.objects for delete
+    to authenticated
+    using (
+      bucket_id = 'kino-media'
+      and auth.uid() = owner
+      and (storage.foldername(name))[1] = 'profile-avatars'
+      and (storage.foldername(name))[2] = auth.uid()::text
+    )
+  $sql$;
+exception
+  when insufficient_privilege then
+    raise notice 'Skipping storage.objects avatar policies in migration v8.3.4.1. Run supabase/manual/v8.3.4.1_profile_avatar_storage_policies.sql in the Supabase SQL Editor as a project owner/admin.';
+end;
+$storage_policies$;
 
 alter table if exists public.saved_posts
   drop constraint if exists saved_posts_user_post_unique;
