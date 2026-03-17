@@ -2631,7 +2631,6 @@ function kcRenderCreateModal() {
       const listId = id + 'Options';
       const suggestions = (Array.isArray(f.options) ? f.options : []).map((opt) => `
         <button type="button" class="kc-field-pill" data-kc-lostfound-location-suggestion="${escHtml(opt.label)}">
-          ${opt.emoji ? `<span class="kc-field-pill__emoji">${escHtml(opt.emoji)}</span>` : ''}
           <i class="${escHtml(opt.icon || 'fas fa-map-marker-alt')}"></i>
           <span>${escHtml(opt.label)}</span>
         </button>

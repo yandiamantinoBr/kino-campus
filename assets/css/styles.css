@@ -3177,6 +3177,7 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    margin-top: 8px;
 }
 
 .kc-img-dropzone {

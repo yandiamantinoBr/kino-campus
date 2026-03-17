@@ -915,7 +915,6 @@
       id: user.id,
       email: user.email || null,
       full_name: getUserDisplayNameForProfile(user),
-      avatar_url: getUserAvatarForProfile(user),
     };
 
     try {
@@ -1063,6 +1062,80 @@
     }
 
     return { ok: true, uploaded };
+  }
+
+  async function uploadProfileAvatarToSupabaseStorage(client, fileOrDataUrl, options) {
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+
+    const bucket = (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
+      ? String(ENV.STORAGE_BUCKET_POST_MEDIA || ENV.supabase.storageBucket)
+      : 'kino-media';
+
+    const opts = (options && typeof options === 'object') ? options : {};
+    const userId = String(opts.userId || '').trim();
+    if (!userId) return { ok: false, error: { message: 'Usuário inválido para upload do avatar.' } };
+
+    const maxBytes = (ENV && ENV.supabase && Number.isFinite(ENV.supabase.maxImageBytes))
+      ? Number(ENV.supabase.maxImageBytes)
+      : (5 * 1024 * 1024);
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+    let blob = null;
+    let directUrl = '';
+
+    if (typeof fileOrDataUrl === 'string') {
+      const raw = String(fileOrDataUrl || '').trim();
+      if (!raw) return { ok: false, error: { message: 'Imagem inválida para avatar.' } };
+      if (/^https?:\/\//i.test(raw)) {
+        directUrl = raw;
+      } else {
+        blob = dataUrlToBlob(raw);
+      }
+    } else if (typeof Blob !== 'undefined' && fileOrDataUrl instanceof Blob) {
+      blob = fileOrDataUrl;
+    }
+
+    if (directUrl) {
+      return { ok: true, data: { url: directUrl } };
+    }
+
+    if (!blob) return { ok: false, error: { message: 'Formato de imagem inválido para avatar.' } };
+
+    const mime = String(blob.type || '').toLowerCase();
+    if (!allowedTypes.has(mime)) {
+      return { ok: false, error: { message: 'Use uma imagem JPG, PNG ou WEBP.' } };
+    }
+    if (blob.size > maxBytes) {
+      return { ok: false, error: { message: 'A imagem do avatar excede o limite permitido.' } };
+    }
+
+    const ext = extFromMime(mime);
+    const filename = sanitizeFilename(`avatar.${ext}`);
+    const path = `profile-avatars/${userId}/${Date.now()}-${filename}`;
+    const storage = client.storage.from(bucket);
+
+    const up = await storage.upload(path, blob, { contentType: mime || 'application/octet-stream', upsert: false });
+    if (up && up.error) {
+      return {
+        ok: false,
+        error: {
+          message: 'Falha no upload do avatar.',
+          code: (up.error.code != null && String(up.error.code).trim()) ? String(up.error.code).trim() : 'PROFILE_AVATAR_UPLOAD_FAILED',
+          details: up.error.details || null,
+          hint: up.error.hint || null,
+          bucket,
+          path,
+        },
+      };
+    }
+
+    const pub = storage.getPublicUrl(path);
+    const publicUrl = (pub && pub.data && pub.data.publicUrl) ? pub.data.publicUrl : '';
+    if (!publicUrl) {
+      return { ok: false, error: { message: 'Não foi possível obter a URL pública do avatar.' } };
+    }
+
+    return { ok: true, data: { url: publicUrl, path } };
   }
 
 
@@ -2114,14 +2187,14 @@
     try {
       let res = await client
         .from('profiles')
-        .select('id, display_name, full_name, avatar_url, verified, updated_at')
+        .select('id, email, display_name, full_name, avatar_url, bio, verified, created_at, updated_at')
         .eq('id', user.id)
         .maybeSingle();
 
       if (res && res.error && isMissingTokenError(res.error, 'display_name')) {
         res = await client
           .from('profiles')
-          .select('id, full_name, avatar_url, verified, updated_at')
+          .select('id, email, full_name, avatar_url, verified, created_at, updated_at')
           .eq('id', user.id)
           .maybeSingle();
       }
@@ -2136,21 +2209,51 @@
     }
   }
 
+  function syncCurrentProfileCache(profile) {
+    if (window.KCProfiles && typeof window.KCProfiles.commitProfile === 'function') {
+      try {
+        return window.KCProfiles.commitProfile(profile);
+      } catch (_) { }
+    }
+    try {
+      document.dispatchEvent(new CustomEvent('kc:profilechange', { detail: { profile: profile || null } }));
+    } catch (_) { }
+    return profile || null;
+  }
+
   async function supabaseUpdateMyProfile(patch = {}) {
     const client = getSupabaseClient();
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
     const user = await supabaseGetCurrentUser();
     if (!user) return { ok: false, error: { message: 'Faça login para editar seu perfil.' } };
 
-    const displayName = String((patch && patch.display_name) || '').trim().slice(0, 80);
+    let displayName = '__skip__';
+    const updates = {};
+    if (patch && Object.prototype.hasOwnProperty.call(patch, 'display_name')) {
+      displayName = String(patch.display_name || '').trim().slice(0, 80);
+      updates.display_name = displayName;
+    }
+    if (patch && Object.prototype.hasOwnProperty.call(patch, 'bio')) {
+      updates.bio = String(patch.bio || '').trim().slice(0, 200);
+    }
+    if (patch && Object.prototype.hasOwnProperty.call(patch, 'avatar_url')) {
+      const avatarUrl = String(patch.avatar_url || '').trim();
+      if (avatarUrl && !/^https?:\/\//i.test(avatarUrl)) {
+        return { ok: false, error: { message: 'URL de avatar inválida.' } };
+      }
+      updates.avatar_url = avatarUrl || null;
+    }
+    if (!Object.keys(updates).length) {
+      return { ok: false, error: { message: 'Nenhuma alteração informada.' } };
+    }
     if (!displayName) return { ok: false, error: { message: 'Informe um nome válido.' } };
 
     try {
       const { data, error } = await client
         .from('profiles')
-        .update({ display_name: displayName })
+        .update(updates)
         .eq('id', user.id)
-        .select('id, display_name, full_name, avatar_url, verified, updated_at')
+        .select('id, email, display_name, full_name, avatar_url, bio, verified, created_at, updated_at')
         .maybeSingle();
 
       if (error) {
@@ -2160,10 +2263,25 @@
       if (!data) {
         return { ok: false, error: { message: 'No momento, não é possível alterar seu nome.' } };
       }
+      syncCurrentProfileCache(data);
       return { ok: true, data };
     } catch (e) {
       console.error('[KCAPI][profile] updateMyProfile exceção:', e);
       return { ok: false, error: { message: 'Não foi possível atualizar seu perfil.' } };
+    }
+  }
+
+  async function supabaseUploadProfileAvatar(fileOrDataUrl) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para atualizar seu avatar.' } };
+
+    try {
+      return await uploadProfileAvatarToSupabaseStorage(client, fileOrDataUrl, { userId: user.id });
+    } catch (e) {
+      console.error('[KCAPI][profile] uploadProfileAvatar exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível enviar o avatar.' } };
     }
   }
 
@@ -2451,6 +2569,286 @@
     }
   }
 
+  function normalizeSaveKind(kind) {
+    const value = String(kind || '').trim().toLowerCase();
+    return ['favorite', 'later', 'highlight'].includes(value) ? value : '';
+  }
+
+  function normalizeSaveKinds(kinds) {
+    const list = Array.isArray(kinds) ? kinds : [kinds];
+    return Array.from(new Set(list.map(normalizeSaveKind).filter(Boolean)));
+  }
+
+  function mapSavedSummaryRow(row) {
+    if (!row) return null;
+    return {
+      id: row.legacy_id || row.post_id || row.post_uuid,
+      uuid: row.post_uuid || row.post_id || '',
+      title: row.title || 'Sem título',
+      created_at: row.created_at || null,
+      status: row.status || 'published',
+      module: row.module || '',
+      category: row.category || '',
+      save_kinds: normalizeSaveKinds(row.save_kinds),
+      saved_at: row.saved_at || null,
+    };
+  }
+
+  function aggregateSavedRows(rows, options = {}) {
+    const includeStatus = !!options.includeStatus;
+    const onlyPublished = !!options.onlyPublished;
+    const byPost = new Map();
+
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const post = row && row.post ? row.post : {};
+      const uuid = String(post.id || row.post_id || '').trim();
+      if (!uuid) return;
+      const status = String(post.status || 'published').toLowerCase();
+      if (onlyPublished && status !== 'published') return;
+
+      const saveKind = normalizeSaveKind(row.kind);
+      const savedAt = row.updated_at || row.created_at || null;
+      const existing = byPost.get(uuid);
+      if (!existing) {
+        byPost.set(uuid, {
+          id: post.legacy_id || post.id,
+          uuid,
+          title: post.title || 'Sem título',
+          created_at: post.created_at || null,
+          status: includeStatus ? status : 'published',
+          module: post.module || '',
+          category: post.category || '',
+          save_kinds: saveKind ? [saveKind] : [],
+          saved_at: savedAt,
+        });
+        return;
+      }
+
+      if (saveKind && !existing.save_kinds.includes(saveKind)) existing.save_kinds.push(saveKind);
+      if (savedAt && (!existing.saved_at || new Date(savedAt) > new Date(existing.saved_at))) {
+        existing.saved_at = savedAt;
+      }
+    });
+
+    return Array.from(byPost.values()).sort((left, right) => {
+      const leftAt = left.saved_at ? new Date(left.saved_at).getTime() : 0;
+      const rightAt = right.saved_at ? new Date(right.saved_at).getTime() : 0;
+      return rightAt - leftAt;
+    });
+  }
+
+  function paginateList(items, page, limit) {
+    const from = (page - 1) * limit;
+    return items.slice(from, from + limit);
+  }
+
+  async function fetchSavedRowsFallback(client, userId, params = {}) {
+    const kind = normalizeSaveKind(params.kind);
+    let query = client
+      .from('saved_posts')
+      .select('kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, module, category)')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (kind) query = query.eq('kind', kind);
+    const { data, error } = await query;
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  }
+
+  async function supabaseGetSavedPostStateMulti(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { kinds: [] };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { kinds: [] };
+
+    const uuid = await resolvePostUuidForSavedPosts(postId);
+    if (!uuid) return { kinds: [] };
+
+    try {
+      const { data, error } = await client
+        .from('saved_posts')
+        .select('kind')
+        .eq('post_id', uuid)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[KCAPI][saved_posts] getSavedPostStateMulti:', error);
+        return { kinds: [] };
+      }
+
+      return { kinds: normalizeSaveKinds((Array.isArray(data) ? data : []).map((row) => row && row.kind)) };
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] getSavedPostStateMulti exceção:', e);
+      return { kinds: [] };
+    }
+  }
+
+  async function supabaseClearSavedPostStateMulti(postId, kind) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para remover salvos.' } };
+
+    const uuid = await resolvePostUuidForSavedPosts(postId);
+    if (!uuid) return { ok: false, error: { message: 'Publicação inválida.' } };
+
+    try {
+      let query = client
+        .from('saved_posts')
+        .delete()
+        .eq('post_id', uuid)
+        .eq('user_id', user.id);
+
+      const saveKind = normalizeSaveKind(kind);
+      if (saveKind) query = query.eq('kind', saveKind);
+      const { error } = await query;
+      if (error) {
+        console.error('[KCAPI][saved_posts] clearSavedPostStateMulti:', error);
+        return { ok: false, error: { message: error.message || 'Não foi possível remover o item salvo.' } };
+      }
+      return { ok: true, cleared: saveKind || 'all' };
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] clearSavedPostStateMulti exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível remover o item salvo.' } };
+    }
+  }
+
+  async function supabaseSetSavedPostStateMulti(postId, kind, enabled) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para salvar publicações.' } };
+
+    const saveKind = normalizeSaveKind(kind);
+    if (!saveKind) {
+      return { ok: false, error: { message: 'Tipo de salvamento inválido.' } };
+    }
+
+    const uuid = await resolvePostUuidForSavedPosts(postId);
+    if (!uuid) return { ok: false, error: { message: 'Publicação inválida.' } };
+
+    const shouldEnable = enabled !== false;
+    try {
+      if (shouldEnable) {
+        const { data, error } = await client
+          .from('saved_posts')
+          .upsert({
+            user_id: user.id,
+            post_id: uuid,
+            kind: saveKind,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'user_id,post_id,kind',
+          })
+          .select('id, kind')
+          .maybeSingle();
+
+        if (error) {
+          console.error('[KCAPI][saved_posts] setSavedPostStateMulti:', error);
+          return { ok: false, error: { message: error.message || 'Não foi possível salvar a publicação.' } };
+        }
+
+        return { ok: true, data: data || { kind: saveKind }, enabled: true };
+      }
+
+      return await supabaseClearSavedPostStateMulti(postId, saveKind);
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] setSavedPostStateMulti exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível salvar a publicação.' } };
+    }
+  }
+
+  async function supabaseGetMySavedPostsMulti(params = {}) {
+    const client = getSupabaseClient();
+    if (!client) return [];
+    const user = await supabaseGetCurrentUser();
+    if (!user) return [];
+
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
+    const kind = normalizeSaveKind(params.kind);
+
+    try {
+      const rpc = await client.rpc('kc_get_my_saved_posts', { p_kind: kind || null, p_page: page, p_limit: limit });
+      if (rpc && !rpc.error) {
+        return (Array.isArray(rpc.data) ? rpc.data : []).map(mapSavedSummaryRow).filter(Boolean);
+      }
+    } catch (_) { }
+
+    try {
+      const rows = await fetchSavedRowsFallback(client, user.id, { kind });
+      return paginateList(aggregateSavedRows(rows, { includeStatus: true }), page, limit);
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] getMySavedPostsMulti exceção:', e);
+      return [];
+    }
+  }
+
+  async function supabaseGetMySavedPostsCount(params = {}) {
+    const client = getSupabaseClient();
+    if (!client) return 0;
+    const user = await supabaseGetCurrentUser();
+    if (!user) return 0;
+
+    const kind = normalizeSaveKind(params.kind);
+    try {
+      const rpc = await client.rpc('kc_get_my_saved_posts_count', { p_kind: kind || null });
+      if (!(rpc && rpc.error)) return Number(rpc && rpc.data) || 0;
+    } catch (_) { }
+
+    try {
+      const rows = await fetchSavedRowsFallback(client, user.id, { kind });
+      return aggregateSavedRows(rows, { includeStatus: true }).length;
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] getMySavedPostsCount exceção:', e);
+      return 0;
+    }
+  }
+
+  async function supabaseGetProfileHighlightsMulti(profileId, params = {}) {
+    const client = getSupabaseClient();
+    const author = String(profileId || '').trim();
+    if (!client || !author) return [];
+
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
+
+    try {
+      const rpc = await client.rpc('kc_get_profile_highlights', { p_profile_id: author, p_page: page, p_limit: limit });
+      if (rpc && !rpc.error) {
+        return (Array.isArray(rpc.data) ? rpc.data : []).map(mapSavedSummaryRow).filter(Boolean);
+      }
+    } catch (_) { }
+
+    try {
+      const rows = await fetchSavedRowsFallback(client, author, { kind: 'highlight' });
+      return paginateList(aggregateSavedRows(rows, { includeStatus: false, onlyPublished: true }), page, limit);
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] getProfileHighlightsMulti exceção:', e);
+      return [];
+    }
+  }
+
+  async function supabaseGetProfileHighlightsCount(profileId) {
+    const client = getSupabaseClient();
+    const author = String(profileId || '').trim();
+    if (!client || !author) return 0;
+
+    try {
+      const rpc = await client.rpc('kc_get_profile_highlights_count', { p_profile_id: author });
+      if (!(rpc && rpc.error)) return Number(rpc && rpc.data) || 0;
+    } catch (_) { }
+
+    try {
+      const rows = await fetchSavedRowsFallback(client, author, { kind: 'highlight' });
+      return aggregateSavedRows(rows, { includeStatus: false, onlyPublished: true }).length;
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] getProfileHighlightsCount exceção:', e);
+      return 0;
+    }
+  }
+
   function isCommentLikeAlreadyLiked(payload, error) {
     const code = String((error && error.code) || '').trim();
     const msg = String((error && error.message) || '').toLowerCase();
@@ -2679,13 +3077,16 @@
     getMyVote: supabaseGetMyVote,
     getMyProfile: supabaseGetMyProfile,
     updateMyProfile: supabaseUpdateMyProfile,
+    uploadProfileAvatar: supabaseUploadProfileAvatar,
     getMyPosts: supabaseGetMyPosts,
     getPostsByAuthorId: supabaseGetPostsByAuthorId,
-    getSavedPostState: supabaseGetSavedPostState,
-    setSavedPostState: supabaseSetSavedPostState,
-    clearSavedPostState: supabaseClearSavedPostState,
-    getMySavedPosts: supabaseGetMySavedPosts,
-    getProfileHighlights: supabaseGetProfileHighlights,
+    getSavedPostState: supabaseGetSavedPostStateMulti,
+    setSavedPostState: supabaseSetSavedPostStateMulti,
+    clearSavedPostState: supabaseClearSavedPostStateMulti,
+    getMySavedPosts: supabaseGetMySavedPostsMulti,
+    getMySavedPostsCount: supabaseGetMySavedPostsCount,
+    getProfileHighlights: supabaseGetProfileHighlightsMulti,
+    getProfileHighlightsCount: supabaseGetProfileHighlightsCount,
   });
 
   const activeDriver = (ENV.driver === 'supabase') ? driverSupabase : driverLocal;
@@ -2819,6 +3220,13 @@
     return activeDriver.updateMyProfile(patch);
   }
 
+  async function uploadProfileAvatar(fileOrDataUrl) {
+    if (ENV.driver !== 'supabase' || !activeDriver.uploadProfileAvatar) {
+      return { ok: false, error: { message: 'Upload de avatar indisponível neste driver.' } };
+    }
+    return activeDriver.uploadProfileAvatar(fileOrDataUrl);
+  }
+
   async function getMyPosts(params = {}) {
     if (ENV.driver !== 'supabase' || !activeDriver.getMyPosts) return [];
     return activeDriver.getMyPosts(params);
@@ -2830,22 +3238,22 @@
   }
 
   async function getSavedPostState(postId) {
-    if (ENV.driver !== 'supabase' || !activeDriver.getSavedPostState) return { kind: '' };
+    if (ENV.driver !== 'supabase' || !activeDriver.getSavedPostState) return { kinds: [] };
     return activeDriver.getSavedPostState(postId);
   }
 
-  async function setSavedPostState(postId, kind) {
+  async function setSavedPostState(postId, kind, enabled) {
     if (ENV.driver !== 'supabase' || !activeDriver.setSavedPostState) {
       return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
     }
-    return activeDriver.setSavedPostState(postId, kind);
+    return activeDriver.setSavedPostState(postId, kind, enabled);
   }
 
-  async function clearSavedPostState(postId) {
+  async function clearSavedPostState(postId, kind) {
     if (ENV.driver !== 'supabase' || !activeDriver.clearSavedPostState) {
       return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
     }
-    return activeDriver.clearSavedPostState(postId);
+    return activeDriver.clearSavedPostState(postId, kind);
   }
 
   async function getMySavedPosts(params = {}) {
@@ -2853,9 +3261,19 @@
     return activeDriver.getMySavedPosts(params);
   }
 
+  async function getMySavedPostsCount(params = {}) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getMySavedPostsCount) return 0;
+    return activeDriver.getMySavedPostsCount(params);
+  }
+
   async function getProfileHighlights(profileId, params = {}) {
     if (ENV.driver !== 'supabase' || !activeDriver.getProfileHighlights) return [];
     return activeDriver.getProfileHighlights(profileId, params);
+  }
+
+  async function getProfileHighlightsCount(profileId) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getProfileHighlightsCount) return 0;
+    return activeDriver.getProfileHighlightsCount(profileId);
   }
 
   window.KCAPI = Object.freeze({
@@ -2887,13 +3305,16 @@
     getMyVote,
     getMyProfile,
     updateMyProfile,
+    uploadProfileAvatar,
     getMyPosts,
     getPostsByAuthorId,
     getSavedPostState,
     setSavedPostState,
     clearSavedPostState,
     getMySavedPosts,
+    getMySavedPostsCount,
     getProfileHighlights,
+    getProfileHighlightsCount,
 
     // Auth (Supabase)
     getCurrentUser,

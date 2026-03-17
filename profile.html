@@ -17,8 +17,8 @@
       background: var(--kc-surface-dark);
       border: 1px solid var(--kc-border-dark);
       border-radius: 16px;
-      padding: 24px 20px 18px;
-      margin-bottom: 14px;
+      padding: 24px 20px 20px;
+      margin-bottom: 18px;
       position: relative;
     }
     .kc-profile-hero-top { display: flex; align-items: flex-start; gap: 16px; }
@@ -40,10 +40,35 @@
       border: 2px solid var(--kc-surface-dark);
     }
     .kc-profile-info { flex: 1; min-width: 0; }
+    .kc-profile-heading-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
     .kc-profile-name {
       margin: 0 0 2px;
       font-size: 1.3rem; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .kc-profile-hero-action {
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark-primary);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: .84rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      transition: border-color .16s ease, background-color .16s ease, color .16s ease;
+    }
+    .kc-profile-hero-action:hover {
+      border-color: rgba(255,110,30,.42);
+      color: var(--kc-primary-brand);
     }
     .kc-profile-handle {
       font-size: .88rem; color: var(--kc-primary-brand);
@@ -54,6 +79,115 @@
       display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
     }
     .kc-profile-meta span { display: inline-flex; align-items: center; gap: 4px; }
+    .kc-profile-avatar-edit {
+      position: absolute;
+      right: -2px;
+      top: -2px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(17, 24, 39, .9);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0,0,0,.24);
+    }
+    .kc-profile-avatar-edit:hover {
+      background: rgba(255,110,30,.9);
+    }
+    .kc-profile-avatar-edit input { display: none; }
+    .kc-profile-bio {
+      margin: 12px 0 0;
+      color: var(--kc-text-dark-secondary);
+      font-size: .92rem;
+      line-height: 1.6;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .kc-profile-bio a {
+      color: var(--kc-primary-brand);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .kc-profile-bio a:hover {
+      text-decoration: underline;
+    }
+    .kc-profile-bio.is-empty {
+      color: var(--kc-text-dark-secondary);
+      opacity: .78;
+      font-style: italic;
+    }
+    .kc-profile-inline-form {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--kc-border-dark);
+      display: none;
+      gap: 12px;
+    }
+    .kc-profile-inline-form.is-active {
+      display: grid;
+    }
+    .kc-profile-inline-form__field {
+      display: grid;
+      gap: 6px;
+    }
+    .kc-profile-inline-form__field label {
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--kc-text-dark-secondary);
+    }
+    .kc-profile-inline-form__field input,
+    .kc-profile-inline-form__field textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 12px;
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark);
+      padding: 12px 14px;
+      font: inherit;
+    }
+    .kc-profile-inline-form__field textarea {
+      min-height: 96px;
+      resize: vertical;
+    }
+    .kc-profile-inline-form__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .kc-profile-char-counter {
+      font-size: .8rem;
+      color: var(--kc-text-dark-secondary);
+    }
+    .kc-profile-char-counter.is-limit {
+      color: #ffd54f;
+    }
+    .kc-profile-inline-form__actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .kc-profile-inline-form__actions button {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark-primary);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .kc-profile-inline-form__actions .kc-profile-submit {
+      background: var(--kc-primary-brand);
+      border-color: transparent;
+      color: #fff;
+    }
 
     /* Stats bar */
     .kc-profile-stats {
@@ -146,7 +280,8 @@
       margin-bottom: 12px; gap: 8px; flex-wrap: wrap;
     }
     .kc-profile-toolbar-title {
-      font-size: .95rem; font-weight: 600;
+      display: none;
+      font-size: .95rem; font-weight: 700;
       color: var(--kc-text-dark-secondary);
     }
     .kc-profile-select {
@@ -272,6 +407,17 @@
     @media (max-width: 600px) {
       .kc-profile-hero { padding: 16px 14px 14px; }
       .kc-profile-avatar { width: 64px; height: 64px; }
+      .kc-profile-avatar-edit {
+        width: 32px;
+        height: 32px;
+      }
+      .kc-profile-heading-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .kc-profile-hero-action {
+        width: fit-content;
+      }
       .kc-profile-name { font-size: 1.1rem; }
       .kc-profile-stats { overflow-x: auto; }
       .kc-profile-stat { min-width: 70px; }
@@ -281,6 +427,17 @@
       .kc-profile-tab { font-size: .8rem; padding: 10px 4px; gap: 3px; }
       .kc-profile-tab span { display: none; }
       .kc-profile-tab i { font-size: 1.1em; }
+      .kc-profile-toolbar-title { display: inline-flex; }
+      .kc-profile-inline-form__footer {
+        align-items: stretch;
+      }
+      .kc-profile-inline-form__actions {
+        width: 100%;
+      }
+      .kc-profile-inline-form__actions button {
+        flex: 1;
+        justify-content: center;
+      }
     }
   </style>
 </head>
@@ -322,13 +479,41 @@
               <span id="profile-verified-icon" class="kc-profile-verified-icon" style="display:none;" title="Usuário verificado">
                 <i class="fas fa-check"></i>
               </span>
+              <label id="profile-avatar-edit" class="kc-profile-avatar-edit" style="display:none;" aria-label="Alterar foto do perfil">
+                <input id="profile-avatar-input" type="file" accept="image/png,image/jpeg,image/webp" />
+                <i class="fas fa-camera"></i>
+              </label>
             </div>
             <div class="kc-profile-info">
+              <div class="kc-profile-heading-row">
               <h1 class="kc-profile-name" id="profile-display-name">Usuário</h1>
+                <button id="profile-edit-toggle" class="kc-profile-hero-action" type="button" style="display:none;">
+                  <i class="fas fa-pen"></i> Editar perfil
+                </button>
+              </div>
               <div class="kc-profile-handle" id="profile-handle" style="display:none;"></div>
               <div class="kc-profile-meta">
                 <span id="profile-member-since" style="display:none;"><i class="fas fa-calendar-alt"></i> <span></span></span>
               </div>
+              <p class="kc-profile-bio" id="profile-bio" style="display:none;"></p>
+              <form id="profile-inline-form" class="kc-profile-inline-form" style="display:none;">
+                <div class="kc-profile-inline-form__field">
+                  <label for="display-name-input">Nome de exibição</label>
+                  <input id="display-name-input" name="display_name" maxlength="80"
+                         placeholder="Como você quer aparecer no KinoCampus" required />
+                </div>
+                <div class="kc-profile-inline-form__field">
+                  <label for="profile-bio-input">Descrição do perfil</label>
+                  <textarea id="profile-bio-input" name="bio" maxlength="200" placeholder="Fale um pouco sobre você, seu curso ou o que procura por aqui."></textarea>
+                </div>
+                <div class="kc-profile-inline-form__footer">
+                  <span id="profile-bio-counter" class="kc-profile-char-counter">0/200</span>
+                  <div class="kc-profile-inline-form__actions">
+                    <button id="profile-edit-cancel" type="button">Cancelar</button>
+                    <button id="profile-save-submit" class="kc-profile-submit" type="submit">Salvar perfil</button>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
 
@@ -347,17 +532,18 @@
               <span class="kc-profile-stat__label">Votos recebidos</span>
             </div>
           </div>
+          <p id="profile-feedback" class="kc-profile-feedback" role="alert" style="display:none;"></p>
         </section>
 
         <!-- Card de edição (somente para o próprio usuário) -->
-        <section class="kc-profile-edit-card" id="profile-edit-section" style="display:none;">
+        <section class="kc-profile-edit-card" id="profile-edit-section-legacy" style="display:none;" hidden aria-hidden="true">
           <h2><i class="fas fa-pen" style="color:var(--kc-primary-brand);margin-right:6px;"></i>Editar nome de exibição</h2>
-          <form id="display-name-form" class="kc-profile-form">
-            <input id="display-name-input" name="display_name" maxlength="80"
+          <form id="display-name-form-legacy" class="kc-profile-form">
+            <input id="display-name-input-legacy" name="display_name" maxlength="80"
                    placeholder="Como você quer aparecer no KinoCampus" required />
-            <button id="display-name-submit" type="submit">Salvar</button>
+            <button id="display-name-submit-legacy" type="submit">Salvar</button>
           </form>
-          <p id="profile-feedback" class="kc-profile-feedback" role="alert"></p>
+          <p id="profile-feedback-legacy" class="kc-profile-feedback" role="alert"></p>
         </section>
 
         <!-- Tabs -->
@@ -378,7 +564,7 @@
           </button>
           <button class="kc-profile-tab" role="tab" aria-selected="false"
                   aria-controls="tab-saved" id="btn-tab-saved" data-kc-tab="saved">
-            <i class="fas fa-bookmark"></i> <span id="saved-tab-label">Salvos</span>
+            <i class="fas fa-star"></i> <span id="saved-tab-label">Salvos</span>
             <span class="kc-profile-tab-badge" id="badge-saved">0</span>
           </button>
         </div>
@@ -386,6 +572,9 @@
         <!-- Painel: Atividades -->
         <div class="kc-profile-tab-panel active" role="tabpanel"
              aria-labelledby="btn-tab-activities" id="tab-activities">
+          <div class="kc-profile-toolbar">
+            <span class="kc-profile-toolbar-title">Atividades</span>
+          </div>
           <div id="activities-loading" class="kc-profile-loading" style="display:none;">
             <i class="fas fa-spinner fa-spin"></i> Carregando…
           </div>
@@ -426,6 +615,9 @@
         <!-- Painel: Comentários -->
         <div class="kc-profile-tab-panel" role="tabpanel"
              aria-labelledby="btn-tab-comments" id="tab-comments">
+          <div class="kc-profile-toolbar">
+            <span class="kc-profile-toolbar-title">Comentários</span>
+          </div>
           <div id="comments-loading" class="kc-profile-loading" style="display:none;">
             <i class="fas fa-spinner fa-spin"></i> Carregando…
           </div>
@@ -457,7 +649,7 @@
           </div>
           <div id="saved-list" class="kc-profile-posts-list"></div>
           <div id="saved-empty" class="kc-profile-empty" style="display:none;">
-            <i class="fas fa-bookmark"></i>
+            <i class="fas fa-star"></i>
             Nenhuma publicação salva ainda.
           </div>
           <button id="saved-load-more" class="kc-profile-load-more" style="display:none;">

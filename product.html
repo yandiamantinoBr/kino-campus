@@ -279,6 +279,161 @@
       margin-top: 18px;
     }
 
+    .kc-save-wrap { position: relative; }
+    .kc-save-trigger.is-active {
+      border-color: rgba(255, 193, 7, .38);
+      background: rgba(255, 193, 7, .12);
+      color: #ffd54f;
+    }
+    .kc-save-trigger.is-loading {
+      opacity: .72;
+      pointer-events: none;
+    }
+    .kc-save-trigger__count {
+      min-width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 6px;
+      background: rgba(255,255,255,.08);
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    .kc-save-popover-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .42);
+      backdrop-filter: blur(6px);
+      z-index: 8898;
+      display: none;
+    }
+    .kc-save-popover-backdrop.active { display: block; }
+    .kc-save-popover {
+      background: var(--kc-surface-dark, #1e1e2e);
+      border: 1px solid var(--kc-border-dark, #2a2a3c);
+      box-shadow: 0 12px 32px rgba(0,0,0,.28);
+      z-index: 8899;
+      display: none;
+      overflow: hidden;
+    }
+    .kc-save-popover.active { display: block; }
+    .kc-save-popover__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+    }
+    .kc-save-popover__title {
+      margin: 0;
+      font-size: .98rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .kc-save-popover__close {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--kc-border-dark);
+      background: transparent;
+      color: var(--kc-text-dark-primary);
+      cursor: pointer;
+    }
+    .kc-save-popover__body {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+    }
+    .kc-save-option {
+      width: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark-primary);
+      text-align: left;
+      cursor: pointer;
+      transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
+    }
+    .kc-save-option:hover {
+      transform: translateY(-1px);
+    }
+    .kc-save-option__icon {
+      width: 18px;
+      text-align: center;
+      font-size: 1rem;
+    }
+    .kc-save-option__body {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+    .kc-save-option__title {
+      font-weight: 700;
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-save-option__hint {
+      font-size: .82rem;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.35;
+    }
+    .kc-save-option__state {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid var(--kc-border-dark);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .78rem;
+      color: transparent;
+      background: transparent;
+      transition: border-color .16s ease, background-color .16s ease, color .16s ease;
+    }
+    .kc-save-option[data-kc-save-kind="favorite"].is-active {
+      border-color: rgba(255, 102, 163, .42);
+      background: rgba(255, 102, 163, .12);
+    }
+    .kc-save-option[data-kc-save-kind="favorite"].is-active .kc-save-option__icon,
+    .kc-save-option[data-kc-save-kind="favorite"].is-active .kc-save-option__state {
+      color: #ff7fb6;
+      border-color: rgba(255, 102, 163, .42);
+      background: rgba(255, 102, 163, .14);
+    }
+    .kc-save-option[data-kc-save-kind="later"].is-active {
+      border-color: rgba(76, 175, 80, .42);
+      background: rgba(76, 175, 80, .12);
+    }
+    .kc-save-option[data-kc-save-kind="later"].is-active .kc-save-option__icon,
+    .kc-save-option[data-kc-save-kind="later"].is-active .kc-save-option__state {
+      color: #7fe38a;
+      border-color: rgba(76, 175, 80, .42);
+      background: rgba(76, 175, 80, .14);
+    }
+    .kc-save-option[data-kc-save-kind="highlight"].is-active {
+      border-color: rgba(255, 193, 7, .42);
+      background: rgba(255, 193, 7, .12);
+    }
+    .kc-save-option[data-kc-save-kind="highlight"].is-active .kc-save-option__icon,
+    .kc-save-option[data-kc-save-kind="highlight"].is-active .kc-save-option__state {
+      color: #ffd54f;
+      border-color: rgba(255, 193, 7, .42);
+      background: rgba(255, 193, 7, .14);
+    }
+    .kc-save-option.is-loading {
+      opacity: .72;
+      pointer-events: none;
+    }
+
     /* ── Share popover ───────────────────────────────────── */
     .kc-share-wrap { position: relative; }
     .kc-share-popover {
@@ -341,24 +496,6 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-    }
-
-    .kc-save-action[data-kc-save-kind="favorite"].is-active {
-      border-color: rgba(255, 102, 163, .42);
-      background: rgba(255, 102, 163, .12);
-      color: #ff7fb6;
-    }
-
-    .kc-save-action[data-kc-save-kind="later"].is-active {
-      border-color: rgba(76, 175, 80, .42);
-      background: rgba(76, 175, 80, .12);
-      color: #7fe38a;
-    }
-
-    .kc-save-action[data-kc-save-kind="highlight"].is-active {
-      border-color: rgba(255, 193, 7, .42);
-      background: rgba(255, 193, 7, .12);
-      color: #ffd54f;
     }
 
     .kc-save-action.is-loading {
@@ -711,6 +848,15 @@
 
     /* Desktop: popover ancorado ao botão */
     @media (min-width: 641px) {
+      .kc-save-popover {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        width: min(330px, calc(100vw - 32px));
+        border-radius: 16px;
+        animation: kc-pop-in .18s cubic-bezier(.22, 1, .36, 1);
+      }
+      .kc-save-popover__close { display: none; }
       .kc-report-popover {
         border-radius: 14px;
         width: 310px;
@@ -722,6 +868,15 @@
 
     /* Mobile: bottom sheet */
     @media (max-width: 640px) {
+      .kc-save-popover {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 20px 20px 0 0;
+        max-height: 84vh;
+        animation: kc-sheet-up .22s cubic-bezier(.22, 1, .36, 1);
+      }
       .kc-report-popover {
         bottom: 0;
         left: 0;
@@ -1046,15 +1201,47 @@
             <button class="kc-btn-primary" id="primaryCta">
               <i class="fas fa-paper-plane"></i> Entrar em contato
             </button>
-            <button class="kc-btn-secondary kc-save-action" id="saveFavoriteButton" type="button" data-kc-save-kind="favorite" aria-pressed="false">
-              <i class="fas fa-heart"></i> Favorito
-            </button>
-            <button class="kc-btn-secondary kc-save-action" id="saveLaterButton" type="button" data-kc-save-kind="later" aria-pressed="false">
-              <i class="fas fa-bookmark"></i> Lembrar Depois
-            </button>
-            <button class="kc-btn-secondary kc-save-action" id="saveHighlightButton" type="button" data-kc-save-kind="highlight" aria-pressed="false">
-              <i class="fas fa-star"></i> Destaque
-            </button>
+            <div class="kc-save-wrap">
+              <button class="kc-btn-secondary kc-save-trigger" id="saveButton" type="button" aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-bookmark"></i> Salvar
+                <span class="kc-save-trigger__count" id="saveButtonCount" style="display:none;">0</span>
+              </button>
+              <div class="kc-save-popover" id="savePopover" role="menu" aria-hidden="true">
+                <div class="kc-save-popover__header">
+                  <h3 class="kc-save-popover__title"><i class="fas fa-bookmark"></i> Salvar publicação</h3>
+                  <button class="kc-save-popover__close" id="savePopoverClose" type="button" aria-label="Fechar opções de salvar">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div class="kc-save-popover__body">
+                  <button class="kc-save-option kc-save-action" id="saveFavoriteButton" type="button" data-kc-save-kind="favorite" aria-pressed="false">
+                    <i class="kc-save-option__icon fas fa-heart"></i>
+                    <span class="kc-save-option__body">
+                      <span class="kc-save-option__title">Favorito</span>
+                      <span class="kc-save-option__hint">Guarde como publicação favorita.</span>
+                    </span>
+                    <span class="kc-save-option__state" aria-hidden="true"><i class="fas fa-check"></i></span>
+                  </button>
+                  <button class="kc-save-option kc-save-action" id="saveLaterButton" type="button" data-kc-save-kind="later" aria-pressed="false">
+                    <i class="kc-save-option__icon fas fa-bookmark"></i>
+                    <span class="kc-save-option__body">
+                      <span class="kc-save-option__title">Lembrar Depois</span>
+                      <span class="kc-save-option__hint">Deixe separado para voltar depois.</span>
+                    </span>
+                    <span class="kc-save-option__state" aria-hidden="true"><i class="fas fa-check"></i></span>
+                  </button>
+                  <button class="kc-save-option kc-save-action" id="saveHighlightButton" type="button" data-kc-save-kind="highlight" aria-pressed="false">
+                    <i class="kc-save-option__icon fas fa-star"></i>
+                    <span class="kc-save-option__body">
+                      <span class="kc-save-option__title">Destaque</span>
+                      <span class="kc-save-option__hint">Mostre este anúncio na área pública do seu perfil.</span>
+                    </span>
+                    <span class="kc-save-option__state" aria-hidden="true"><i class="fas fa-check"></i></span>
+                  </button>
+                </div>
+              </div>
+              <div class="kc-save-popover-backdrop" id="saveBackdrop"></div>
+            </div>
             <!-- Share com popover -->
             <div class="kc-share-wrap">
               <button class="kc-btn-secondary" id="shareButton" type="button" data-action="share-post"

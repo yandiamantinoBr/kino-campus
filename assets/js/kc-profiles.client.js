@@ -100,8 +100,10 @@
 
     const id = r.id || fb.id || null;
     const email = r.email || fb.email || '';
-    const fullName = r.full_name || r.display_name || fb.full_name || fb.display_name || '';
+    const fullName = r.full_name || fb.full_name || '';
+    const displayName = r.display_name || fb.display_name || fullName || '';
     const avatarUrl = r.avatar_url || fb.avatar_url || '';
+    const bio = r.bio || fb.bio || '';
     // Hardening: badge deve refletir SOMENTE o valor retornado do banco.
     const verified = (r.verified === true);
 
@@ -109,13 +111,27 @@
       id,
       email,
       full_name: fullName,
-      display_name: fullName,
+      display_name: displayName,
       avatar_url: avatarUrl,
+      bio,
       verified,
       is_admin: r.is_admin === true || fb.is_admin === true,
       created_at: r.created_at || null,
       updated_at: r.updated_at || null,
     });
+  }
+
+  function commitProfile(profile, fallback) {
+    const normalized = normalizeProfile(profile, fallback);
+    if (normalized && normalized.id) {
+      state.profile = normalized;
+      state.cache[String(normalized.id)] = normalized;
+      state.lastSyncedUserId = normalized.id;
+    } else {
+      state.profile = normalized;
+    }
+    dispatchProfileChange(normalized);
+    return normalized;
   }
 
   function dispatchProfileChange(profile) {
@@ -143,8 +159,6 @@
       id: u.id,
       email: u.email || null,
       full_name: computeDisplayName(u),
-      avatar_url: computeAvatarUrl(u),
-      is_admin: false,
     };
 
     state.syncing = true;
@@ -157,7 +171,7 @@
         const q = client
           .from('profiles')
           .upsert(payload, { onConflict: 'id' })
-          .select('id, full_name, avatar_url, verified, is_admin, created_at, updated_at');
+          .select('id, email, display_name, full_name, avatar_url, bio, verified, is_admin, created_at, updated_at');
 
         const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();
 
@@ -178,7 +192,7 @@
         try {
           const q2 = client
             .from('profiles')
-            .select('id, full_name, avatar_url, verified, is_admin, created_at, updated_at')
+            .select('id, email, display_name, full_name, avatar_url, bio, verified, is_admin, created_at, updated_at')
             .eq('id', u.id);
 
           const r2 = (typeof q2.maybeSingle === 'function') ? await q2.maybeSingle() : await q2.single();
@@ -194,13 +208,14 @@
         }
       }
 
-      const profile = normalizeProfile(profileRow, payload);
-      state.profile = profile;
-      state.cache[String(profile.id)] = profile;
-      state.lastSyncedUserId = u.id;
-
-      dispatchProfileChange(profile);
-      return profile;
+      return commitProfile(profileRow, {
+        id: u.id,
+        email: u.email || null,
+        full_name: computeDisplayName(u),
+        display_name: '',
+        avatar_url: '',
+        bio: '',
+      });
     } finally {
       state.syncing = false;
     }
@@ -221,7 +236,7 @@
     try {
       const q = client
         .from('profiles')
-        .select('id, full_name, avatar_url, verified, is_admin, created_at, updated_at')
+        .select('id, email, display_name, full_name, avatar_url, bio, verified, is_admin, created_at, updated_at')
         .eq('id', key);
 
       const r = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();
@@ -297,6 +312,7 @@
     upsertProfileForUser,
     getCurrentProfile,
     getProfileById,
+    commitProfile,
     getLastError: () => state.lastError,
   });
 
