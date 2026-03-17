@@ -252,6 +252,20 @@
       color: var(--kc-text-dark-secondary);
     }
 
+    .kc-spec-item__body {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .kc-spec-item__html {
+      min-width: 0;
+    }
+
+    .kc-tags-list--specs {
+      margin-top: 0;
+    }
+
     .kc-spec-item i {
       width: 18px;
       text-align: center;
@@ -327,6 +341,29 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .kc-save-action[data-kc-save-kind="favorite"].is-active {
+      border-color: rgba(255, 102, 163, .42);
+      background: rgba(255, 102, 163, .12);
+      color: #ff7fb6;
+    }
+
+    .kc-save-action[data-kc-save-kind="later"].is-active {
+      border-color: rgba(76, 175, 80, .42);
+      background: rgba(76, 175, 80, .12);
+      color: #7fe38a;
+    }
+
+    .kc-save-action[data-kc-save-kind="highlight"].is-active {
+      border-color: rgba(255, 193, 7, .42);
+      background: rgba(255, 193, 7, .12);
+      color: #ffd54f;
+    }
+
+    .kc-save-action.is-loading {
+      opacity: .72;
+      pointer-events: none;
     }
 
     .kc-btn-full {
@@ -1008,6 +1045,15 @@
           <div class="kc-product-actions">
             <button class="kc-btn-primary" id="primaryCta">
               <i class="fas fa-paper-plane"></i> Entrar em contato
+            </button>
+            <button class="kc-btn-secondary kc-save-action" id="saveFavoriteButton" type="button" data-kc-save-kind="favorite" aria-pressed="false">
+              <i class="fas fa-heart"></i> Favorito
+            </button>
+            <button class="kc-btn-secondary kc-save-action" id="saveLaterButton" type="button" data-kc-save-kind="later" aria-pressed="false">
+              <i class="fas fa-bookmark"></i> Lembrar Depois
+            </button>
+            <button class="kc-btn-secondary kc-save-action" id="saveHighlightButton" type="button" data-kc-save-kind="highlight" aria-pressed="false">
+              <i class="fas fa-star"></i> Destaque
             </button>
             <!-- Share com popover -->
             <div class="kc-share-wrap">

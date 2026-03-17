@@ -2248,6 +2248,209 @@
     }
   }
 
+  async function resolvePostUuidForSavedPosts(postId) {
+    const raw = String(postId || '').trim();
+    if (!raw) return null;
+    if (UUID_RE.test(raw)) return raw;
+    try {
+      const post = await supabaseGetPostById(raw);
+      const candidate = post && (post.uuid || post.id) ? String(post.uuid || post.id).trim() : '';
+      return candidate && UUID_RE.test(candidate) ? candidate : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function supabaseGetSavedPostState(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { kind: '' };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { kind: '' };
+
+    const uuid = await resolvePostUuidForSavedPosts(postId);
+    if (!uuid) return { kind: '' };
+
+    try {
+      const { data, error } = await client
+        .from('saved_posts')
+        .select('kind')
+        .eq('post_id', uuid)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[KCAPI][saved_posts] getSavedPostState:', error);
+        return { kind: '' };
+      }
+
+      return { kind: data && data.kind ? String(data.kind) : '' };
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] getSavedPostState exceção:', e);
+      return { kind: '' };
+    }
+  }
+
+  async function supabaseSetSavedPostState(postId, kind) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para salvar publicações.' } };
+
+    const saveKind = String(kind || '').trim().toLowerCase();
+    if (!['favorite', 'later', 'highlight'].includes(saveKind)) {
+      return { ok: false, error: { message: 'Tipo de salvamento inválido.' } };
+    }
+
+    const uuid = await resolvePostUuidForSavedPosts(postId);
+    if (!uuid) return { ok: false, error: { message: 'Publicação inválida.' } };
+
+    try {
+      const { data, error } = await client
+        .from('saved_posts')
+        .upsert({
+          user_id: user.id,
+          post_id: uuid,
+          kind: saveKind,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,post_id',
+        })
+        .select('id, kind')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[KCAPI][saved_posts] setSavedPostState:', error);
+        return { ok: false, error: { message: error.message || 'Não foi possível salvar a publicação.' } };
+      }
+
+      return { ok: true, data: data || { kind: saveKind } };
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] setSavedPostState exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível salvar a publicação.' } };
+    }
+  }
+
+  async function supabaseClearSavedPostState(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    if (!user) return { ok: false, error: { message: 'Faça login para remover salvos.' } };
+
+    const uuid = await resolvePostUuidForSavedPosts(postId);
+    if (!uuid) return { ok: false, error: { message: 'Publicação inválida.' } };
+
+    try {
+      const { error } = await client
+        .from('saved_posts')
+        .delete()
+        .eq('post_id', uuid)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[KCAPI][saved_posts] clearSavedPostState:', error);
+        return { ok: false, error: { message: error.message || 'Não foi possível remover o item salvo.' } };
+      }
+
+      return { ok: true };
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] clearSavedPostState exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível remover o item salvo.' } };
+    }
+  }
+
+  async function supabaseGetMySavedPosts(params = {}) {
+    const client = getSupabaseClient();
+    if (!client) return [];
+    const user = await supabaseGetCurrentUser();
+    if (!user) return [];
+
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    const kind = String(params.kind || '').trim().toLowerCase();
+
+    try {
+      let query = client
+        .from('saved_posts')
+        .select('id, kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, module, category)')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .range(from, to);
+
+      if (kind) query = query.eq('kind', kind);
+      const { data, error } = await query;
+      if (error) {
+        console.error('[KCAPI][saved_posts] getMySavedPosts:', error);
+        return [];
+      }
+
+      return (Array.isArray(data) ? data : []).map((row) => {
+        const post = row.post || {};
+        return {
+          id: post.legacy_id || post.id,
+          uuid: post.id,
+          title: post.title || 'Sem título',
+          created_at: post.created_at || null,
+          status: post.status || 'published',
+          module: post.module || '',
+          category: post.category || '',
+          save_kind: row.kind || '',
+          saved_at: row.updated_at || row.created_at || null,
+        };
+      });
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] getMySavedPosts exceção:', e);
+      return [];
+    }
+  }
+
+  async function supabaseGetProfileHighlights(profileId, params = {}) {
+    const client = getSupabaseClient();
+    const author = String(profileId || '').trim();
+    if (!client || !author) return [];
+
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    try {
+      const { data, error } = await client
+        .from('saved_posts')
+        .select('id, kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, module, category)')
+        .eq('user_id', author)
+        .eq('kind', 'highlight')
+        .order('updated_at', { ascending: false })
+        .range(from, to);
+
+      if (error) {
+        console.error('[KCAPI][saved_posts] getProfileHighlights:', error);
+        return [];
+      }
+
+      return (Array.isArray(data) ? data : [])
+        .filter((row) => row && row.post && String(row.post.status || '').toLowerCase() === 'published')
+        .map((row) => {
+          const post = row.post || {};
+          return {
+            id: post.legacy_id || post.id,
+            uuid: post.id,
+            title: post.title || 'Sem título',
+            created_at: post.created_at || null,
+            status: post.status || 'published',
+            module: post.module || '',
+            category: post.category || '',
+            save_kind: 'highlight',
+            saved_at: row.updated_at || row.created_at || null,
+          };
+        });
+    } catch (e) {
+      console.error('[KCAPI][saved_posts] getProfileHighlights exceção:', e);
+      return [];
+    }
+  }
+
   function isCommentLikeAlreadyLiked(payload, error) {
     const code = String((error && error.code) || '').trim();
     const msg = String((error && error.message) || '').toLowerCase();
@@ -2478,6 +2681,11 @@
     updateMyProfile: supabaseUpdateMyProfile,
     getMyPosts: supabaseGetMyPosts,
     getPostsByAuthorId: supabaseGetPostsByAuthorId,
+    getSavedPostState: supabaseGetSavedPostState,
+    setSavedPostState: supabaseSetSavedPostState,
+    clearSavedPostState: supabaseClearSavedPostState,
+    getMySavedPosts: supabaseGetMySavedPosts,
+    getProfileHighlights: supabaseGetProfileHighlights,
   });
 
   const activeDriver = (ENV.driver === 'supabase') ? driverSupabase : driverLocal;
@@ -2621,6 +2829,35 @@
     return activeDriver.getPostsByAuthorId(authorId, params);
   }
 
+  async function getSavedPostState(postId) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getSavedPostState) return { kind: '' };
+    return activeDriver.getSavedPostState(postId);
+  }
+
+  async function setSavedPostState(postId, kind) {
+    if (ENV.driver !== 'supabase' || !activeDriver.setSavedPostState) {
+      return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
+    }
+    return activeDriver.setSavedPostState(postId, kind);
+  }
+
+  async function clearSavedPostState(postId) {
+    if (ENV.driver !== 'supabase' || !activeDriver.clearSavedPostState) {
+      return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
+    }
+    return activeDriver.clearSavedPostState(postId);
+  }
+
+  async function getMySavedPosts(params = {}) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getMySavedPosts) return [];
+    return activeDriver.getMySavedPosts(params);
+  }
+
+  async function getProfileHighlights(profileId, params = {}) {
+    if (ENV.driver !== 'supabase' || !activeDriver.getProfileHighlights) return [];
+    return activeDriver.getProfileHighlights(profileId, params);
+  }
+
   window.KCAPI = Object.freeze({
     VERSION,
     ENV,
@@ -2652,6 +2889,11 @@
     updateMyProfile,
     getMyPosts,
     getPostsByAuthorId,
+    getSavedPostState,
+    setSavedPostState,
+    clearSavedPostState,
+    getMySavedPosts,
+    getProfileHighlights,
 
     // Auth (Supabase)
     getCurrentUser,

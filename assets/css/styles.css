@@ -6330,6 +6330,197 @@ textarea::placeholder {
   color: #fff;
 }
 
+.kc-sidebar--lostfound .kc-category-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.kc-sidebar--lostfound .kc-category-item {
+  width: 100%;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, transform var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+.kc-sidebar--lostfound .kc-category-item:hover:not(:disabled) {
+  border-color: rgba(241, 91, 41, 0.38);
+  background: rgba(241, 91, 41, 0.06);
+  transform: translateY(-1px);
+}
+
+.kc-sidebar--lostfound .kc-category-item.is-active {
+  border-color: rgba(241, 91, 41, 0.7);
+  background: rgba(241, 91, 41, 0.12);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-sidebar--lostfound .kc-category-item.is-active .kc-category-count {
+  background: rgba(241, 91, 41, 0.18);
+  color: var(--kc-primary-brand);
+}
+
+.kc-sidebar--lostfound .kc-category-item.is-disabled {
+  opacity: 0.62;
+}
+
+.kc-sidebar--lostfound .kc-category-item:disabled {
+  cursor: not-allowed;
+}
+
+.kc-lostfound-filter-list {
+  display: grid;
+  gap: 16px;
+}
+
+.kc-lostfound-filter-group {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-lostfound-filter-group__title {
+  margin: 0;
+  color: var(--kc-text-dark-primary);
+  font-size: 0.92em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.kc-lostfound-filter-group__options {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-lostfound-mobile-rail {
+  display: none;
+}
+
+.kc-lostfound-mobile-rail__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  background: var(--kc-surface-dark);
+  color: var(--kc-text-dark-primary);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.kc-lostfound-mobile-rail__button i {
+  color: var(--kc-primary-brand);
+}
+
+.kc-lostfound-mobile-rail__button.is-active,
+.kc-lostfound-mobile-rail__button:hover:not(:disabled) {
+  border-color: rgba(241, 91, 41, 0.45);
+  background: rgba(241, 91, 41, 0.08);
+  color: var(--kc-primary-brand);
+  transform: translateY(-1px);
+}
+
+.kc-lostfound-mobile-rail__button:disabled,
+.kc-lostfound-mobile-rail__button.is-loading {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.kc-lostfound-section-modal {
+  width: min(520px, 100%);
+}
+
+.kc-lostfound-section-modal .kc-sidebar-section > h3,
+.kc-lostfound-section-modal [data-kc-achados-clear-filters="true"] {
+  display: none;
+}
+
+.kc-lostfound-section-modal .kc-sidebar-section {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.kc-lostfound-section-modal .kc-sidebar-section:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.kc-lostfound-section-modal__content {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-lostfound-section-modal .kc-lostfound-filter-group__options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kc-lostfound-section-modal .kc-sidebar-check {
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 100%;
+  padding: 10px 11px;
+  border-radius: 10px;
+}
+
+.kc-lostfound-section-modal .kc-sidebar-check input {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+.kc-lostfound-section-modal .kc-sidebar-check span {
+  font-size: 0.87em;
+  line-height: 1.3;
+}
+
+.kc-lostfound-section-modal__actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+  background: var(--kc-surface-dark);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.kc-lostfound-section-modal__action-group {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-lostfound-section-modal__caption {
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.92em;
+  line-height: 1.45;
+}
+
+.kc-lostfound-section-modal .kc-category-item {
+  position: relative;
+}
+
+.kc-lostfound-section-modal[data-kc-achados-section-view="locations"] .kc-category-item.is-active {
+  border-color: rgba(241, 91, 41, 0.85);
+  background: linear-gradient(135deg, rgba(241, 91, 41, 0.18), rgba(241, 91, 41, 0.06));
+  box-shadow: 0 0 0 1px rgba(241, 91, 41, 0.28);
+}
+
+.kc-lostfound-section-modal[data-kc-achados-section-view="locations"] .kc-category-item.is-active .kc-category-count {
+  background: var(--kc-primary-brand);
+  color: #fff;
+}
+
 @media (max-width: 768px) {
   body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--opportunities[data-kc-opp-sidebar="true"] {
     display: none !important;
@@ -6340,6 +6531,10 @@ textarea::placeholder {
   }
 
   body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--housing[data-kc-housing-sidebar="true"] {
+    display: none !important;
+  }
+
+  body[data-kc-filters="tab-search"] aside.kc-sidebar.kc-sidebar--lostfound[data-kc-achados-sidebar="true"] {
     display: none !important;
   }
 
@@ -6427,6 +6622,34 @@ textarea::placeholder {
     padding: 12px 16px 18px;
   }
 
+  .kc-lostfound-mobile-rail {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 4px 0 14px;
+    margin-bottom: 6px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kc-lostfound-mobile-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kc-lostfound-mobile-rail__button {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .kc-lostfound-section-modal {
+    width: min(100%, 480px);
+  }
+
+  .kc-lostfound-section-modal__actions {
+    padding: 12px 16px 18px;
+  }
+
   .kc-sidebar--opportunities .kc-category-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -6447,6 +6670,10 @@ textarea::placeholder {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .kc-lostfound-section-modal .kc-category-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .kc-opportunity-section-modal .kc-opportunity-filter-list {
     gap: 12px;
   }
@@ -6456,6 +6683,10 @@ textarea::placeholder {
   }
 
   .kc-housing-section-modal .kc-housing-filter-list {
+    gap: 14px;
+  }
+
+  .kc-lostfound-section-modal .kc-lostfound-filter-list {
     gap: 14px;
   }
 

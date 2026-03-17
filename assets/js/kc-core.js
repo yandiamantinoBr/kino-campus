@@ -1680,6 +1680,18 @@ function kcEnsureCreateModal() {
       return;
     }
 
+    const lostFoundLocationSuggestion = e.target.closest('[data-kc-lostfound-location-suggestion]');
+    if (lostFoundLocationSuggestion) {
+      const value = lostFoundLocationSuggestion.getAttribute('data-kc-lostfound-location-suggestion') || '';
+      kcCreateState.values.localizacao = value;
+      const locationInput = overlay.querySelector('input[name="localizacao"]');
+      if (locationInput) {
+        locationInput.value = value;
+        kcSyncLostFoundLocationInput(locationInput);
+      }
+      return;
+    }
+
     const housingFeatureSuggestion = e.target.closest('[data-kc-housing-feature-suggestion]');
     if (housingFeatureSuggestion) {
       const field = kcGetHousingFeatureFieldContext(housingFeatureSuggestion);
@@ -1763,6 +1775,10 @@ function kcEnsureCreateModal() {
     }
     if (target.matches && target.matches('[data-kc-housing-region-input]')) {
       kcSyncHousingRegionInput(target);
+      return;
+    }
+    if (target.matches && target.matches('[data-kc-lostfound-location-input]')) {
+      kcSyncLostFoundLocationInput(target);
       return;
     }
     if (target.id !== 'kcImagesInput') return;
@@ -2079,6 +2095,57 @@ function kcAppendHousingFeatureFromInput(input) {
   input.value = '';
 }
 
+function kcResolveLostFoundLocationValue(value, fallbackSource) {
+  const history = [];
+  if (Array.isArray(window.__KC_LOST_FOUND_LOCATION_HISTORY)) history.push(...window.__KC_LOST_FOUND_LOCATION_HISTORY);
+  if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
+    try {
+      const userPosts = window.kcUserPosts.list();
+      if (Array.isArray(userPosts)) {
+        history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'achados-perdidos'));
+      }
+    } catch (_) { }
+  }
+
+  if (window.KCUtils && typeof window.KCUtils.resolveLostFoundLocation === 'function') {
+    const options = { history };
+    if (fallbackSource) options.textParts = [fallbackSource];
+    return window.KCUtils.resolveLostFoundLocation(value || fallbackSource || '', options);
+  }
+
+  const raw = String(value || '').trim();
+  const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return { key, label: raw, icon: 'fas fa-map-marker-alt', emoji: '📍', isKnown: false };
+}
+
+function kcGetLostFoundLocationOptions() {
+  if (window.KCUtils && typeof window.KCUtils.getLostFoundLocationDefinitions === 'function') {
+    return window.KCUtils.getLostFoundLocationDefinitions();
+  }
+
+  return [
+    { key: 'biblioteca-central', label: 'Biblioteca Central', icon: 'fas fa-book', emoji: '📚' },
+    { key: 'restaurante-universitario', label: 'Restaurante Universitário', icon: 'fas fa-utensils', emoji: '🍽️' },
+    { key: 'estacionamento', label: 'Estacionamento', icon: 'fas fa-parking', emoji: '🅿️' },
+    { key: 'salas-de-aula', label: 'Salas de Aula', icon: 'fas fa-door-open', emoji: '🚪' },
+    { key: 'blocos-e-laboratorios', label: 'Blocos e Laboratórios', icon: 'fas fa-flask', emoji: '🧪' },
+    { key: 'centro-de-aulas', label: 'Centro de Aulas', icon: 'fas fa-school', emoji: '🏫' },
+    { key: 'praca-universitaria', label: 'Praça Universitária', icon: 'fas fa-landmark', emoji: '🏛️' },
+    { key: 'campus-samambaia', label: 'Campus Samambaia', icon: 'fas fa-tree', emoji: '🌳' },
+    { key: 'campus-colemar', label: 'Campus Colemar', icon: 'fas fa-graduation-cap', emoji: '🎓' },
+  ];
+}
+
+function kcSyncLostFoundLocationInput(input) {
+  if (!input) return null;
+  const resolved = kcResolveLostFoundLocationValue(input.value || '');
+  if (resolved && resolved.label) {
+    input.value = resolved.label;
+    kcCreateState.values[input.name] = resolved.label;
+  }
+  return resolved;
+}
+
 function kcResolveOpportunityWorkMode(value) {
   const raw = String(value || '').trim();
   const normalized = (window.KCUtils && typeof window.KCUtils.normalizeText === 'function')
@@ -2390,7 +2457,14 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
   }
 
   if (moduleKey === 'achados-perdidos') {
-    fields.push({ type: 'text', name: 'localizacao', label: 'Local (onde foi perdido/encontrado)', placeholder: 'Ex: Biblioteca Central', required: true });
+    fields.push({
+      type: 'achados-location',
+      name: 'localizacao',
+      label: 'Local (onde foi perdido/encontrado)',
+      placeholder: 'Ex: Biblioteca Central',
+      required: true,
+      options: kcGetLostFoundLocationOptions(),
+    });
     if (selections.status === 'perdidos') {
       fields.push({ ...moneyFieldMeta, name: 'recompensa', label: 'Recompensa (opcional)', placeholder: 'Ex: 20,00', required: false });
     } else {
@@ -2551,6 +2625,27 @@ function kcRenderCreateModal() {
           <datalist id="${listId}">${listItems}</datalist>
           <div class="kc-field-pill-row">${suggestions}</div>
           <small class="kc-field-hint">Escolha uma sugestão ou digite outra região.</small>
+        </div>
+      `);
+    } else if (f.type === 'achados-location') {
+      const listId = id + 'Options';
+      const suggestions = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+        <button type="button" class="kc-field-pill" data-kc-lostfound-location-suggestion="${escHtml(opt.label)}">
+          ${opt.emoji ? `<span class="kc-field-pill__emoji">${escHtml(opt.emoji)}</span>` : ''}
+          <i class="${escHtml(opt.icon || 'fas fa-map-marker-alt')}"></i>
+          <span>${escHtml(opt.label)}</span>
+        </button>
+      `).join('');
+      const listItems = (Array.isArray(f.options) ? f.options : []).map((opt) => `
+        <option value="${escHtml(opt.label)}"></option>
+      `).join('');
+      parts.push(`
+        <div class="kc-field kc-field--lostfound-location">
+          <label for="${id}">${label}${f.required ? ' *' : ''}</label>
+          <input id="${id}" name="${escHtml(f.name)}" type="text" placeholder="${escHtml(f.placeholder || '')}" value="${escHtml(val || '')}" list="${listId}" data-kc-lostfound-location-input="true" ${required} />
+          <datalist id="${listId}">${listItems}</datalist>
+          <div class="kc-field-pill-row">${suggestions}</div>
+          <small class="kc-field-hint">Escolha um local comum ou digite outro ponto de referência.</small>
         </div>
       `);
     } else if (f.type === 'housing-features') {
@@ -2753,7 +2848,7 @@ function kcOpenEditPostModal(post, callback) {
     titulo: post.titulo || post.title || '',
     descricao: post.descricao || post.description || '',
     preco: post.preco != null ? String(post.preco) : '',
-    localizacao: post.location || post.localizacao || md.localizacao || '',
+    localizacao: md.lostFoundLocationLabel || post.lostFoundLocationLabel || post.location || post.localizacao || md.localizacao || '',
     condicao: post.condicao || md.condicao || '',
     sustentavel: !!(post.sustentavel || post.sustainable || md.sustentavel),
     // Campos de módulos específicos (extraídos de metadata)
@@ -2894,6 +2989,7 @@ async function kcHandleCreateSubmit() {
     const rawCatKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
     const isOpportunity = kcCreateState.moduleKey === 'oportunidades';
     const isMoradia = kcCreateState.moduleKey === 'moradia';
+    const isAchados = kcCreateState.moduleKey === 'achados-perdidos';
     const catKey = isOpportunity
       ? kcNormalizeOpportunityTypeKey(rawCatKey)
       : (isMoradia ? kcNormalizeHousingTypeKey(rawCatKey) : rawCatKey);
@@ -2950,6 +3046,12 @@ async function kcHandleCreateSubmit() {
     const housingFeatures = isMoradia
       ? kcResolveHousingFeatureValues(kcCreateState.values.marcadoresMoradia || [])
       : [];
+    const lostFoundLocation = isAchados
+      ? kcResolveLostFoundLocationValue(
+        kcCreateState.values.localizacao || '',
+        `${title} ${desc} ${kcCreateState.values.localizacao || ''}`
+      )
+      : { key: '', label: '', icon: '', emoji: '' };
     if (isMoradia) {
       if (housingRegion.label) kcCreateState.values.regiao = housingRegion.label;
       if (housingRegion.key && housingRegion.label) {
@@ -2978,6 +3080,21 @@ async function kcHandleCreateSubmit() {
         });
         window.__KC_HOUSING_FEATURE_HISTORY = history;
         kcCreateState.values.marcadoresMoradia = housingFeatures.map((feature) => feature.label);
+      }
+    }
+    if (isAchados) {
+      if (lostFoundLocation.label) kcCreateState.values.localizacao = lostFoundLocation.label;
+      if (lostFoundLocation.key && lostFoundLocation.label) {
+        const history = Array.isArray(window.__KC_LOST_FOUND_LOCATION_HISTORY)
+          ? window.__KC_LOST_FOUND_LOCATION_HISTORY.slice()
+          : [];
+        history.unshift({
+          key: lostFoundLocation.key,
+          label: lostFoundLocation.label,
+          icon: lostFoundLocation.icon || 'fas fa-map-marker-alt',
+          emoji: lostFoundLocation.emoji || '📍',
+        });
+        window.__KC_LOST_FOUND_LOCATION_HISTORY = history;
       }
     }
 
@@ -3059,6 +3176,9 @@ async function kcHandleCreateSubmit() {
         if (!tagMap.has(feature.key)) tagMap.set(feature.key, feature.label || feature.key);
       });
     }
+    if (isAchados && lostFoundLocation.key) {
+      if (!tagMap.has(lostFoundLocation.key)) tagMap.set(lostFoundLocation.key, lostFoundLocation.label || lostFoundLocation.key);
+    }
 
     const tagKeys = Array.from(tagMap.keys()).filter(Boolean);
     const tagLabels = Array.from(tagMap.values()).filter(Boolean);
@@ -3092,7 +3212,10 @@ async function kcHandleCreateSubmit() {
       preco,
       precoTexto,
       condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
-      localizacao: kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : '',
+      localizacao: isAchados ? (lostFoundLocation.label || String(kcCreateState.values.localizacao || '')) : (kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : ''),
+      lostFoundLocationKey: isAchados ? (lostFoundLocation.key || '') : '',
+      lostFoundLocationLabel: isAchados ? (lostFoundLocation.label || '') : '',
+      lostFoundLocationIcon: isAchados ? (lostFoundLocation.icon || '') : '',
       regiao: isMoradia ? (housingRegion.label || '') : '',
       regionLabel: isMoradia ? (housingRegion.label || '') : '',
       regionKey: isMoradia ? (housingRegion.key || '') : '',
@@ -3139,6 +3262,10 @@ async function kcHandleCreateSubmit() {
         housingFeatureKeys: isMoradia ? housingFeatures.map((feature) => feature.key) : [],
         housingFeatureLabels: isMoradia ? housingFeatures.map((feature) => feature.label) : [],
         marcadoresMoradia: isMoradia ? housingFeatures.map((feature) => feature.label) : [],
+        lostFoundLocationKey: isAchados ? (lostFoundLocation.key || '') : '',
+        lostFoundLocationLabel: isAchados ? (lostFoundLocation.label || '') : '',
+        lostFoundLocationIcon: isAchados ? (lostFoundLocation.icon || '') : '',
+        lostFoundLocationEmoji: isAchados ? (lostFoundLocation.emoji || '') : '',
         detalhes: kcCreateState.values.detalhes ? String(kcCreateState.values.detalhes) : '',
         orcamento: kcCreateState.values.orcamento ? String(kcCreateState.values.orcamento) : '',
         area: isOpportunity ? (opportunityArea.label || '') : '',
@@ -3152,6 +3279,8 @@ async function kcHandleCreateSubmit() {
         contato: kcCreateState.values.contato ? String(kcCreateState.values.contato) : '',
         remuneracao: kcCreateState.values.remuneracao ? String(kcCreateState.values.remuneracao) : '',
         modalidadeTrabalho: kcCreateState.values.modalidadeTrabalho ? String(kcCreateState.values.modalidadeTrabalho) : '',
+        recompensa: kcCreateState.values.recompensa ? String(kcCreateState.values.recompensa) : '',
+        entrega: kcCreateState.values.entrega ? String(kcCreateState.values.entrega) : '',
       },
     };
 

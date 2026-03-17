@@ -13,6 +13,7 @@
   let currentDb = null;
   let editUI = null;
   let staticInteractionsBound = false;
+  let savedPostState = { kind: '', loaded: false, pending: false };
 
   // ── Share popover ────────────────────────────────────────
   function openSharePopover(btn) {
@@ -559,6 +560,98 @@
     block.style.display = 'block';
   }
 
+  function buildTagEntries(post) {
+    const tags = Array.isArray(post.tags) ? post.tags.slice(0, 14) : [];
+    const markerTags = (window.KCUtils && typeof window.KCUtils.getDisplayMarkerTags === 'function')
+      ? window.KCUtils.getDisplayMarkerTags(post, { limit: 14 })
+      : [];
+    const normalize = (window.KCUtils && typeof window.KCUtils.normalizeText === 'function')
+      ? window.KCUtils.normalizeText
+      : ((value) => String(value || '').toLowerCase().trim());
+    const markerLabels = new Set(markerTags.map((tag) => normalize(tag && tag.label)));
+    const plainTags = tags
+      .filter((tag) => !markerLabels.has(normalize(tag)))
+      .map((tag) => ({ label: tag, emoji: '🏷️' }));
+
+    return { markerTags, plainTags };
+  }
+
+  function buildTagsSpecHtml(post) {
+    const entries = buildTagEntries(post);
+    if (!entries.markerTags.length && !entries.plainTags.length) return '';
+
+    const renderTag = (tag, itemClass) => {
+      const emoji = esc(String(tag && tag.emoji || '🏷️').trim());
+      const label = esc(String(tag && tag.label || '').trim());
+      return `<span class="${itemClass}">${emoji ? `<span class="kc-tag__emoji">${emoji}</span>` : ''}<span>${label}</span></span>`;
+    };
+
+    return '<div class="kc-tags-list kc-tags-list--specs">'
+      + entries.markerTags.map((tag) => renderTag(tag, 'kc-tag kc-tag--marker')).join('')
+      + entries.plainTags.map((tag) => renderTag(tag, 'kc-tag')).join('')
+      + '</div>';
+  }
+
+  function setDescription(post) {
+    const desc = esc(post.descricao || post.description || '');
+    let html = '';
+    if (desc) {
+      html += `<h3><i class="fas fa-align-left"></i> Descrição</h3><p>${desc}</p>`;
+    }
+    setHTML('postDescription', html);
+  }
+
+  function addSpec(grid, iconClass, label, value) {
+    const item = document.createElement('div');
+    item.className = 'kc-spec-item';
+    item.innerHTML = `
+      <i class="${esc(iconClass)}"></i>
+      <div class="kc-spec-item__body">
+        <strong>${esc(label)}</strong>
+        <span>${esc(value)}</span>
+      </div>
+    `;
+    grid.appendChild(item);
+  }
+
+  function addSpecHtml(grid, iconClass, label, html) {
+    const item = document.createElement('div');
+    item.className = 'kc-spec-item';
+    item.innerHTML = `
+      <i class="${esc(iconClass)}"></i>
+      <div class="kc-spec-item__body">
+        <strong>${esc(label)}</strong>
+        <div class="kc-spec-item__html">${html || ''}</div>
+      </div>
+    `;
+    grid.appendChild(item);
+  }
+
+  function setSpecs(post) {
+    const block = document.getElementById('specsBlock');
+    const grid = document.getElementById('specsGrid');
+    if (!block || !grid) return;
+
+    grid.innerHTML = '';
+
+    const pairs = [];
+    const tagsHtml = buildTagsSpecHtml(post);
+    if (tagsHtml) addSpecHtml(grid, 'fas fa-hashtag', 'Tags', tagsHtml);
+    if (post.modulo) pairs.push(['fas fa-layer-group', 'Módulo', moduleLabel(post.modulo)]);
+    if (post.categoriaLabel || post.categoria) pairs.push(['fas fa-tag', 'Categoria', post.categoriaLabel || post.categoria]);
+    if (post.subcategoriaLabel || post.subcategoria) pairs.push(['fas fa-hashtag', 'Subcategoria', post.subcategoriaLabel || post.subcategoria]);
+    if (post.verificado != null) pairs.push(['fas fa-check-circle', 'Verificação', post.verificado ? 'Sim' : 'Não']);
+    if (post.condicao) pairs.push(['fas fa-star', 'Condição', post.condicao]);
+
+    if (!pairs.length && !tagsHtml) {
+      block.style.display = 'none';
+      return;
+    }
+
+    pairs.forEach((pair) => addSpec(grid, pair[0], pair[1], pair[2]));
+    block.style.display = 'block';
+  }
+
   function setSeller(post) {
     const card = document.getElementById('sellerCard');
     const avatar = document.getElementById('sellerAvatar');
@@ -814,6 +907,103 @@
    * Calcula pontuação de relevância entre um candidato e o post atual.
    * Pontuação mais alta = mais relevante.
    */
+  function getSavedButtons() {
+    return Array.from(document.querySelectorAll('[data-kc-save-kind]'));
+  }
+
+  function getSaveKindLabel(kind) {
+    if (kind === 'favorite') return 'Favorito';
+    if (kind === 'later') return 'Lembrar Depois';
+    if (kind === 'highlight') return 'Destaque';
+    return '';
+  }
+
+  function updateSavedButtonsUI() {
+    const activeKind = String(savedPostState && savedPostState.kind || '').trim();
+    const loading = !!(savedPostState && savedPostState.pending);
+    getSavedButtons().forEach((button) => {
+      const kind = String(button.getAttribute('data-kc-save-kind') || '').trim();
+      const active = !!kind && kind === activeKind;
+      button.classList.toggle('is-active', active);
+      button.classList.toggle('is-loading', loading);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (loading) button.setAttribute('aria-busy', 'true');
+      else button.removeAttribute('aria-busy');
+    });
+  }
+
+  async function refreshSavedState(post) {
+    const postId = getPostIdForMutation(post);
+    if (!postId || !window.KCAPI || typeof window.KCAPI.getSavedPostState !== 'function') {
+      savedPostState = { kind: '', loaded: true, pending: false };
+      updateSavedButtonsUI();
+      return;
+    }
+
+    try {
+      const result = await window.KCAPI.getSavedPostState(postId);
+      savedPostState = {
+        kind: result && result.kind ? String(result.kind) : '',
+        loaded: true,
+        pending: false,
+      };
+    } catch (_) {
+      savedPostState = { kind: '', loaded: true, pending: false };
+    }
+    updateSavedButtonsUI();
+  }
+
+  function bindSavedActions(post) {
+    const postId = getPostIdForMutation(post);
+    getSavedButtons().forEach((button) => {
+      if (button.dataset.kcSaveBound === '1') return;
+      button.dataset.kcSaveBound = '1';
+      button.addEventListener('click', async () => {
+        if (!postId || !window.KCAPI) return;
+        if (!currentUser || !currentUser.id) {
+          toast('Faça login para salvar esta publicação.', 'warn', 2400);
+          return;
+        }
+        const kind = String(button.getAttribute('data-kc-save-kind') || '').trim();
+        if (!kind) return;
+
+        savedPostState = { ...savedPostState, pending: true };
+        updateSavedButtonsUI();
+
+        try {
+          if (savedPostState.kind === kind) {
+            const result = (typeof window.KCAPI.clearSavedPostState === 'function')
+              ? await window.KCAPI.clearSavedPostState(postId)
+              : { ok: false, error: { message: 'Recurso indisponível.' } };
+            if (!result || result.ok === false) {
+              const message = result && result.error && result.error.message ? String(result.error.message) : 'Não foi possível remover o item salvo.';
+              toast(message, 'error', 2600);
+            } else {
+              savedPostState = { kind: '', loaded: true, pending: false };
+              toast('Salvamento removido.', 'info', 2000);
+            }
+          } else {
+            const result = (typeof window.KCAPI.setSavedPostState === 'function')
+              ? await window.KCAPI.setSavedPostState(postId, kind)
+              : { ok: false, error: { message: 'Recurso indisponível.' } };
+            if (!result || result.ok === false) {
+              const message = result && result.error && result.error.message ? String(result.error.message) : 'Não foi possível salvar a publicação.';
+              toast(message, 'error', 2600);
+            } else {
+              savedPostState = { kind, loaded: true, pending: false };
+              toast(`${getSaveKindLabel(kind)} salvo com sucesso.`, 'success', 2200);
+            }
+          }
+        } catch (_) {
+          toast('Não foi possível atualizar este salvamento agora.', 'error', 2600);
+        } finally {
+          savedPostState = { ...savedPostState, pending: false };
+          updateSavedButtonsUI();
+        }
+      });
+    });
+  }
+
   function scoreRelated(candidate, currentPost, searchHistory, voteHistory) {
     var score = 0;
 
@@ -1125,6 +1315,25 @@
     setCTA(post);
     setRelated(currentDb, post);
     upsertOwnerActions(post, currentUser);
+    wireReportButton({ postId: (post && post.uuid) ? post.uuid : post.id, postTitle: post.titulo || post.title || 'Publicação' });
+  }
+
+  function renderPost(post) {
+    currentPost = post;
+    hide('notFound');
+    setText('postTitle', post.titulo || 'Detalhes');
+    setBreadcrumb(post);
+    setBadges(post);
+    setGallery(post);
+    setPrice(post);
+    setDescription(post);
+    setSpecs(post);
+    setSeller(post);
+    setCTA(post);
+    setRelated(currentDb, post);
+    upsertOwnerActions(post, currentUser);
+    bindSavedActions(post);
+    refreshSavedState(post).catch(() => { });
     wireReportButton({ postId: (post && post.uuid) ? post.uuid : post.id, postTitle: post.titulo || post.title || 'Publicação' });
   }
 

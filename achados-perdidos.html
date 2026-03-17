@@ -6,10 +6,8 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
 
-
     <link rel="stylesheet" href="assets/css/kc-theme-boot.css">
     <script src="assets/js/kc-theme-boot.js"></script>
-
 
     <title>Achados e Perdidos - KinoCampus</title>
     <link href="assets/css/styles.css" rel="stylesheet" />
@@ -17,7 +15,6 @@
 </head>
 
 <body data-kc-filters="tab-search">
-    <!-- Header -->
     <header class="kc-header">
         <div class="kc-header-container">
             <div class="kc-logo">
@@ -61,44 +58,46 @@
             </div>
         </div>
     </header>
-    <!-- Main Content -->
+
     <main class="kc-main-content">
-        <!-- Feed Section -->
         <section class="kc-feed-section">
             <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
                 <i class="fas fa-search"></i>
                 Achados e Perdidos
             </h2>
-            <!-- Feed Tabs -->
             <div class="kc-feed-tabs">
-                <a class="active" href="#">
+                <a class="active" data-category="todas" href="#">
                     <i class="fas fa-fire"></i>
                     <span>Todos</span>
                 </a>
-                <a href="#perdidos">
+                <a data-category="perdidos" href="#perdidos">
                     <i class="fas fa-exclamation-circle"></i>
                     <span>Perdidos</span>
                 </a>
-                <a href="#encontrados">
+                <a data-category="encontrados" href="#encontrados">
                     <i class="fas fa-check-circle"></i>
                     <span>Encontrados</span>
                 </a>
-                <a href="#documentos">
+                <a data-category="documentos" href="#documentos">
                     <i class="fas fa-id-card"></i>
                     <span>Documentos</span>
                 </a>
-                <a href="#eletronicos">
+                <a data-category="eletronicos" href="#eletronicos">
                     <i class="fas fa-mobile-alt"></i>
                     <span>Eletrônicos</span>
                 </a>
-                <a href="#outros">
+                <a data-category="outros" href="#outros">
                     <i class="fas fa-box"></i>
                     <span>Outros</span>
                 </a>
             </div>
-            <!-- Feed List -->
+            <div class="kc-lostfound-mobile-rail" data-kc-achados-mobile-rail="true" aria-label="Seções rápidas de achados e perdidos">
+                <button class="kc-lostfound-mobile-rail__button is-loading" type="button" disabled>
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Carregando seções...</span>
+                </button>
+            </div>
             <div class="kc-feed-list">
-                <!-- Posts dinâmicos serão injetados aqui via JS -->
                 <div id="posts-loading" class="kc-posts-loading"
                     style="text-align: center; padding: 40px; color: var(--kc-text-dark-secondary);">
                     <i class="fas fa-spinner fa-spin" style="font-size: 2em; margin-bottom: 10px;"></i>
@@ -106,65 +105,79 @@
                 </div>
             </div>
         </section>
-        <!-- Sidebar -->
-        <aside class="kc-sidebar">
-            <div class="kc-sidebar-section">
+
+        <aside class="kc-sidebar kc-sidebar--lostfound" data-kc-achados-sidebar="true">
+            <div class="kc-sidebar-section" data-kc-achados-section="filters">
                 <h3>
-                    <i class="fas fa-info-circle"></i>
-                    Como Funciona
+                    <i class="fas fa-sliders-h"></i>
+                    Filtros
                 </h3>
-                <div style="line-height: 1.6; font-size: 0.9em; color: var(--kc-text-dark-secondary);">
-                    <p><strong>Perdeu algo?</strong></p>
-                    <p>Crie um post descrevendo o item perdido, local e data. A comunidade pode ajudar a encontrar!</p>
-                    <br />
-                    <p><strong>Encontrou algo?</strong></p>
-                    <p>Publique uma foto e descrição do item encontrado. O dono poderá identificar e entrar em contato.
-                    </p>
+                <p class="kc-sidebar-help">Refine por status e tipo do item sem perder a busca atual.</p>
+                <div class="kc-lostfound-filter-list">
+                    <div class="kc-lostfound-filter-group">
+                        <p class="kc-lostfound-filter-group__title">Status</p>
+                        <div class="kc-lostfound-filter-group__options">
+                            <label class="kc-sidebar-check">
+                                <input data-kc-achados-filter-kind="status" type="checkbox" value="perdidos" />
+                                <span>Perdidos</span>
+                            </label>
+                            <label class="kc-sidebar-check">
+                                <input data-kc-achados-filter-kind="status" type="checkbox" value="encontrados" />
+                                <span>Encontrados</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="kc-lostfound-filter-group">
+                        <p class="kc-lostfound-filter-group__title">Tipo do item</p>
+                        <div class="kc-lostfound-filter-group__options">
+                            <label class="kc-sidebar-check">
+                                <input data-kc-achados-filter-kind="type" type="checkbox" value="documentos" />
+                                <span>Documentos</span>
+                            </label>
+                            <label class="kc-sidebar-check">
+                                <input data-kc-achados-filter-kind="type" type="checkbox" value="eletronicos" />
+                                <span>Eletrônicos</span>
+                            </label>
+                            <label class="kc-sidebar-check">
+                                <input data-kc-achados-filter-kind="type" type="checkbox" value="outros" />
+                                <span>Outros</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
+                <button class="kc-opportunity-clear" data-kc-achados-clear-filters="true" type="button">Limpar filtros</button>
             </div>
-            <div class="kc-sidebar-section">
+
+            <div class="kc-sidebar-section" data-kc-achados-section="locations">
                 <h3>
                     <i class="fas fa-map-marker-alt"></i>
                     Locais Comuns
                 </h3>
-                <div class="kc-category-list">
-                    <a class="kc-category-item" href="#biblioteca">
-                        <i class="fas fa-book"></i>
-                        <span>Biblioteca Central</span>
-                        <span class="kc-category-count">18</span>
-                    </a>
-                    <a class="kc-category-item" href="#ru">
-                        <i class="fas fa-utensils"></i>
-                        <span>Restaurante Universitário</span>
-                        <span class="kc-category-count">12</span>
-                    </a>
-                    <a class="kc-category-item" href="#estacionamento">
-                        <i class="fas fa-parking"></i>
-                        <span>Estacionamento</span>
-                        <span class="kc-category-count">9</span>
-                    </a>
-                    <a class="kc-category-item" href="#salas">
-                        <i class="fas fa-door-open"></i>
-                        <span>Salas de Aula</span>
-                        <span class="kc-category-count">15</span>
-                    </a>
+                <p class="kc-sidebar-help">Escolha um local e veja quantas publicações ativas existem nele.</p>
+                <div class="kc-category-list" data-kc-achados-location-list="true">
+                    <button class="kc-category-item" disabled type="button">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Carregando locais...</span>
+                        <span class="kc-category-count">0</span>
+                    </button>
                 </div>
             </div>
-            <div class="kc-sidebar-section">
+
+            <div class="kc-sidebar-section" data-kc-achados-section="tips">
                 <h3>
                     <i class="fas fa-lightbulb"></i>
                     Dicas
                 </h3>
                 <div style="line-height: 1.6; font-size: 0.9em; color: var(--kc-text-dark-secondary);">
-                    <p><strong>✓ Seja específico</strong> na descrição</p>
-                    <p><strong>✓ Inclua fotos</strong> quando possível</p>
-                    <p><strong>✓ Informe o local</strong> e data exatos</p>
-                    <p><strong>✓ Verifique regularmente</strong> os posts</p>
+                    <p><strong>✓ Descreva bem</strong> cor, marca, capa ou sinais únicos.</p>
+                    <p><strong>✓ Informe o local exato</strong> para aumentar a chance de devolução.</p>
+                    <p><strong>✓ Use foto quando possível</strong> e atualize o post ao resolver.</p>
+                    <p><strong>✓ Combine a entrega com cuidado</strong> e confirme a identificação.</p>
                 </div>
             </div>
         </aside>
     </main>
-    <!-- Mobile Navigation -->
+
     <nav class="kc-mobile-nav">
         <a href="index.html">
             <i class="fas fa-home"></i>
@@ -186,7 +199,7 @@
             <span>Menu</span>
         </button>
     </nav>
-    <!-- Mobile Menu Drawer -->
+
     <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
         <div class="kc-mobile-menu-header">
             <h3>Menu</h3>
@@ -195,39 +208,35 @@
             </button>
         </div>
         <div class="kc-mobile-menu-content">
-<!-- Seção de usuário (atualizada pelo kc-auth.ui.js) -->
-<div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
-  <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
-    <span class="kc-mobile-menu-user-avatar-wrap">
-      <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
-    </span>
-    <span id="mobileMenuUserName">Login / Cadastro</span>
-  </a>
-</div>
-<hr data-kc-divider="top" class="kc-mobile-menu-divider"/>
-<!-- Links de perfil (visíveis quando autenticado) -->
-<a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
-<!-- Link de Admin (visível apenas para is_admin=true) -->
-<a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
-<hr data-kc-divider="profile" class="kc-mobile-menu-divider"/>
-<a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
-<a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
-<a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
-<a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
-<a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
-<a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
-</div>
+            <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
+                <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
+                    <span class="kc-mobile-menu-user-avatar-wrap">
+                        <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
+                    </span>
+                    <span id="mobileMenuUserName">Login / Cadastro</span>
+                </a>
+            </div>
+            <hr data-kc-divider="top" class="kc-mobile-menu-divider" />
+            <a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
+            <a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
+            <hr data-kc-divider="profile" class="kc-mobile-menu-divider" />
+            <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+            <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+            <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+            <a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+            <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+            <a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+        </div>
     </div>
     <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
+
     <script src="assets/js/kc-utils.js"></script>
     <script src="assets/js/kc-env.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <script src="assets/js/kc-supabase.client.js"></script>
     <script src="assets/js/kc-api.client.js"></script>
     <script src="assets/js/kc-profiles.client.js"></script>
     <script src="assets/js/kc-core.js"></script>
-
     <script src="assets/js/kc-auth.ui.js"></script>
     <script src="assets/js/controllers/kc-feed.controller.js"></script>
     <script src="assets/js/controllers/achados-perdidos.controller.js"></script>

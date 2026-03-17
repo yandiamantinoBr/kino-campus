@@ -340,6 +340,18 @@
     Object.freeze({ key: 'proximo-ao-campus', label: 'Próximo ao campus', aliases: Object.freeze(['proximo ao campus', 'próximo ao campus', 'perto do campus', 'ao lado da ufg']) }),
   ]);
 
+  const LOST_FOUND_LOCATION_DEFINITIONS = Object.freeze([
+    Object.freeze({ key: 'biblioteca-central', label: 'Biblioteca Central', icon: 'fas fa-book', emoji: '📚', aliases: Object.freeze(['biblioteca central', 'biblioteca', 'bc', 'bibliotca central', 'biblioteca ufg']) }),
+    Object.freeze({ key: 'restaurante-universitario', label: 'Restaurante Universitário', icon: 'fas fa-utensils', emoji: '🍽️', aliases: Object.freeze(['restaurante universitario', 'restaurante universitário', 'ru', 'r.u.', 'restaurante da ufg']) }),
+    Object.freeze({ key: 'estacionamento', label: 'Estacionamento', icon: 'fas fa-parking', emoji: '🅿️', aliases: Object.freeze(['estacionamento', 'parking', 'vaga', 'garagem']) }),
+    Object.freeze({ key: 'salas-de-aula', label: 'Salas de Aula', icon: 'fas fa-door-open', emoji: '🚪', aliases: Object.freeze(['salas de aula', 'sala de aula', 'salas', 'sala', 'sala de aula bloco']) }),
+    Object.freeze({ key: 'blocos-e-laboratorios', label: 'Blocos e Laboratórios', icon: 'fas fa-flask', emoji: '🧪', aliases: Object.freeze(['blocos e laboratorios', 'blocos e laboratórios', 'blocos', 'laboratorios', 'laboratórios', 'labs', 'laboratorio']) }),
+    Object.freeze({ key: 'centro-de-aulas', label: 'Centro de Aulas', icon: 'fas fa-school', emoji: '🏫', aliases: Object.freeze(['centro de aulas', 'centro aulas', 'ca', 'centro de aula']) }),
+    Object.freeze({ key: 'praca-universitaria', label: 'Praça Universitária', icon: 'fas fa-landmark', emoji: '🏛️', aliases: Object.freeze(['praca universitaria', 'praça universitária', 'praca', 'praça universitária']) }),
+    Object.freeze({ key: 'campus-samambaia', label: 'Campus Samambaia', icon: 'fas fa-tree', emoji: '🌳', aliases: Object.freeze(['campus samambaia', 'samambaia', 'campus ii', 'campus 2', 'campus 2 ufg']) }),
+    Object.freeze({ key: 'campus-colemar', label: 'Campus Colemar', icon: 'fas fa-graduation-cap', emoji: '🎓', aliases: Object.freeze(['campus colemar', 'colemar', 'campus i', 'campus 1', 'colemar natal e silva']) }),
+  ]);
+
   function titleCase(str) {
     return String(str || '')
       .trim()
@@ -883,6 +895,22 @@
     return map[wanted] || '🏷️';
   }
 
+  function getLostFoundLocationEmoji(key) {
+    const wanted = slugifyText(key);
+    const map = {
+      'biblioteca-central': '📚',
+      'restaurante-universitario': '🍽️',
+      estacionamento: '🅿️',
+      'salas-de-aula': '🚪',
+      'blocos-e-laboratorios': '🧪',
+      'centro-de-aulas': '🏫',
+      'praca-universitaria': '🏛️',
+      'campus-samambaia': '🌳',
+      'campus-colemar': '🎓',
+    };
+    return map[wanted] || '📍';
+  }
+
   function toStringArray(value) {
     if (Array.isArray(value)) {
       return value.map((item) => String(item || '').trim()).filter(Boolean);
@@ -1069,6 +1097,20 @@
     if (!wanted) return null;
     const entry = HOUSING_FEATURE_DEFINITIONS.find((item) => item.key === wanted);
     return entry ? { ...entry, emoji: entry.emoji || getHousingFeatureEmoji(entry.key) } : null;
+  }
+
+  function getLostFoundLocationDefinitions() {
+    return LOST_FOUND_LOCATION_DEFINITIONS.map((entry) => ({
+      ...entry,
+      emoji: entry.emoji || getLostFoundLocationEmoji(entry.key),
+    }));
+  }
+
+  function getLostFoundLocationInfoByKey(key) {
+    const wanted = slugifyText(key);
+    if (!wanted) return null;
+    const entry = LOST_FOUND_LOCATION_DEFINITIONS.find((item) => item.key === wanted);
+    return entry ? { ...entry, emoji: entry.emoji || getLostFoundLocationEmoji(entry.key) } : null;
   }
 
   function extractHousingRegionHistoryEntries(history) {
@@ -1447,6 +1489,226 @@
     return canonicalCategory(normalized);
   }
 
+  function buildLostFoundTextParts(source, fallbackTags) {
+    if (source && typeof source === 'object' && !Array.isArray(source)) {
+      const meta = (source.metadata && typeof source.metadata === 'object' && !Array.isArray(source.metadata)) ? source.metadata : {};
+      const tagValues = [];
+      if (Array.isArray(source.tags)) tagValues.push(...source.tags);
+      if (Array.isArray(source.tagKeys)) tagValues.push(...source.tagKeys);
+      if (Array.isArray(meta.tags)) tagValues.push(...meta.tags);
+      if (Array.isArray(meta.tagKeys)) tagValues.push(...meta.tagKeys);
+
+      return {
+        explicit: [
+          source.lostFoundLocationLabel, source.lostFoundLocationKey, source.localizacao, source.location,
+          meta.lostFoundLocationLabel, meta.lostFoundLocationKey, meta.localizacao, meta.location
+        ].filter(Boolean),
+        text: [
+          source.titulo, source.title,
+          source.descricao, source.description,
+          source.localizacao, source.location,
+          meta.localizacao, meta.location,
+          meta.entrega
+        ].filter(Boolean),
+        tags: tagValues.filter(Boolean),
+      };
+    }
+
+    return {
+      explicit: source ? [source] : [],
+      text: [],
+      tags: Array.isArray(fallbackTags) ? fallbackTags.filter(Boolean) : [],
+    };
+  }
+
+  function extractLostFoundLocationHistoryEntries(history) {
+    const list = Array.isArray(history) ? history : [];
+    const entries = [];
+
+    list.forEach((item) => {
+      if (!item) return;
+      if (typeof item === 'string') {
+        const label = formatHousingLabel(item);
+        const key = slugifyText(item);
+        if (label || key) entries.push({ key, label, icon: 'fas fa-map-marker-alt', emoji: '📍' });
+        return;
+      }
+      if (typeof item !== 'object' || Array.isArray(item)) return;
+
+      const meta = (item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)) ? item.metadata : {};
+      const label = formatHousingLabel(firstNonEmptyValue([
+        item.lostFoundLocationLabel, item.localizacao, item.location, item.label,
+        meta.lostFoundLocationLabel, meta.localizacao, meta.location
+      ]));
+      const key = slugifyText(firstNonEmptyValue([
+        item.lostFoundLocationKey, meta.lostFoundLocationKey, item.key, label
+      ]));
+      const icon = firstNonEmptyValue([item.lostFoundLocationIcon, meta.lostFoundLocationIcon, item.icon]) || 'fas fa-map-marker-alt';
+      const emoji = firstNonEmptyValue([item.lostFoundLocationEmoji, meta.lostFoundLocationEmoji, item.emoji]) || '📍';
+      if (label || key) entries.push({ key, label, icon, emoji });
+    });
+
+    return entries;
+  }
+
+  function buildLostFoundHistoryMaps(history, officialAliasMap) {
+    const catalog = new Map();
+    const aliasMap = new Map();
+    extractLostFoundLocationHistoryEntries(history).forEach((entry) => {
+      const normalizedLabel = normalizeText(entry.label);
+      const normalizedKey = normalizeText(entry.key);
+      if (!normalizedLabel && !normalizedKey) return;
+      if ((normalizedLabel && officialAliasMap.has(normalizedLabel)) || (normalizedKey && officialAliasMap.has(normalizedKey))) return;
+
+      const finalKey = slugifyText(entry.key || entry.label);
+      if (!finalKey) return;
+
+      const existing = catalog.get(finalKey);
+      const item = {
+        key: finalKey,
+        label: pickPreferredHousingLabel(existing && existing.label, entry.label || finalKey) || formatHousingLabel(finalKey),
+        icon: entry.icon || (existing && existing.icon) || 'fas fa-map-marker-alt',
+        emoji: entry.emoji || (existing && existing.emoji) || '📍',
+        isKnown: false,
+      };
+      catalog.set(finalKey, item);
+      [normalizedLabel, normalizedKey].filter(Boolean).forEach((alias) => {
+        if (!aliasMap.has(alias)) aliasMap.set(alias, item);
+      });
+    });
+
+    return { catalog, aliasMap };
+  }
+
+  function resolveLostFoundLocation(source, options = {}) {
+    const built = buildLostFoundTextParts(source, options.tags);
+    const explicitCandidates = built.explicit.map((value) => String(value || '').trim()).filter(Boolean);
+    const combinedText = [
+      ...explicitCandidates,
+      ...built.tags,
+      ...built.text,
+      ...(Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [])
+    ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
+
+    const officialAliasMap = buildDefinitionAliasMap(LOST_FOUND_LOCATION_DEFINITIONS);
+    const historySource = Array.isArray(options.history)
+      ? options.history
+      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_LOST_FOUND_LOCATION_HISTORY)) ? window.__KC_LOST_FOUND_LOCATION_HISTORY : []);
+    const historyMaps = buildLostFoundHistoryMaps(historySource, officialAliasMap);
+    const historyEntries = Array.from(historyMaps.catalog.values()).map((entry) => ({
+      ...entry,
+      aliases: [entry.label, entry.key],
+    }));
+
+    for (const candidate of explicitCandidates) {
+      const normalized = normalizeText(candidate);
+      if (!normalized) continue;
+      if (officialAliasMap.has(normalized)) {
+        const match = officialAliasMap.get(normalized);
+        return {
+          key: match.key,
+          label: match.label,
+          icon: match.icon || 'fas fa-map-marker-alt',
+          emoji: match.emoji || getLostFoundLocationEmoji(match.key),
+          isKnown: true,
+          source: 'official-exact',
+        };
+      }
+      if (historyMaps.aliasMap.has(normalized)) {
+        const match = historyMaps.aliasMap.get(normalized);
+        return {
+          key: match.key,
+          label: match.label,
+          icon: match.icon || 'fas fa-map-marker-alt',
+          emoji: match.emoji || '📍',
+          isKnown: false,
+          source: 'history-exact',
+        };
+      }
+    }
+
+    for (const candidate of explicitCandidates) {
+      const normalized = normalizeText(candidate);
+      if (!normalized || normalized.length < 3) continue;
+      for (const [alias, entry] of officialAliasMap.entries()) {
+        if (normalized.includes(alias) || alias.includes(normalized)) {
+          return {
+            key: entry.key,
+            label: entry.label,
+            icon: entry.icon || 'fas fa-map-marker-alt',
+            emoji: entry.emoji || getLostFoundLocationEmoji(entry.key),
+            isKnown: true,
+            source: 'official-partial',
+          };
+        }
+      }
+    }
+
+    if (combinedText) {
+      const ranked = LOST_FOUND_LOCATION_DEFINITIONS
+        .map((entry) => {
+          const score = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
+            .map((value) => normalizeText(value))
+            .filter(Boolean)
+            .reduce((acc, alias) => combinedText.includes(alias) ? acc + (alias.length >= 8 ? 3 : 2) : acc, 0);
+          return { entry, score };
+        })
+        .filter((item) => item.score > 0)
+        .sort((left, right) => right.score - left.score);
+      if (ranked.length) {
+        const match = ranked[0].entry;
+        return {
+          key: match.key,
+          label: match.label,
+          icon: match.icon || 'fas fa-map-marker-alt',
+          emoji: match.emoji || getLostFoundLocationEmoji(match.key),
+          isKnown: true,
+          source: 'context',
+        };
+      }
+    }
+
+    for (const candidate of explicitCandidates) {
+      const officialFuzzy = findBestFuzzyHousingEntry(candidate, LOST_FOUND_LOCATION_DEFINITIONS);
+      if (officialFuzzy) {
+        return {
+          key: officialFuzzy.key,
+          label: officialFuzzy.label,
+          icon: officialFuzzy.icon || 'fas fa-map-marker-alt',
+          emoji: officialFuzzy.emoji || getLostFoundLocationEmoji(officialFuzzy.key),
+          isKnown: true,
+          source: 'official-fuzzy',
+        };
+      }
+      const historyFuzzy = findBestFuzzyHousingEntry(candidate, historyEntries);
+      if (historyFuzzy) {
+        return {
+          key: historyFuzzy.key,
+          label: historyFuzzy.label,
+          icon: historyFuzzy.icon || 'fas fa-map-marker-alt',
+          emoji: historyFuzzy.emoji || '📍',
+          isKnown: false,
+          source: 'history-fuzzy',
+        };
+      }
+    }
+
+    const fallbackRaw = explicitCandidates[0] || '';
+    const fallbackKey = slugifyText(fallbackRaw);
+    if (fallbackKey) {
+      return {
+        key: fallbackKey,
+        label: formatHousingLabel(fallbackRaw) || beautifyKey(fallbackKey) || fallbackRaw,
+        icon: 'fas fa-map-marker-alt',
+        emoji: '📍',
+        isKnown: false,
+        source: 'custom',
+      };
+    }
+
+    return { key: '', label: '', icon: 'fas fa-map-marker-alt', emoji: '📍', isKnown: false, source: 'empty' };
+  }
+
   function resolveHousingTypeFromCandidates(values) {
     const list = Array.isArray(values) ? values : [values];
     const generic = new Set(['moradia', 'moradia estudantil']);
@@ -1569,17 +1831,9 @@
     return { from: beautifyKey(left), to: beautifyKey(right) };
   }
 
-  function inferAchadosLocation(tags = []) {
-    const t = (Array.isArray(tags) ? tags : []).map(x => normalizeText(x));
-    if (t.includes('samambaia')) return 'Campus Samambaia';
-    if (t.includes('universitario') || t.includes('universitário')) return 'Campus Universitário';
-    if (t.includes('biblioteca')) return 'Biblioteca';
-    if (t.includes('ru')) return 'Restaurante Universitário';
-    if (t.includes('estacionamento')) return 'Estacionamento';
-    // Heurística simples: juntar "campus" com o próximo termo (se existir)
-    const i = t.indexOf('campus');
-    if (i >= 0 && t[i + 1]) return 'Campus ' + beautifyKey(t[i + 1]);
-    return '';
+  function inferAchadosLocation(source, tags = []) {
+    const resolved = resolveLostFoundLocation(source, { tags });
+    return resolved && resolved.label ? resolved.label : '';
   }
 
   function inferOportunidadesSubcategory(source, tags = []) {
@@ -1631,6 +1885,9 @@
     const housingFeatures = moduleKey === 'moradia'
       ? resolveHousingFeatures(p, { tags })
       : [];
+    const lostFoundLocationInfo = moduleKey === 'achados-perdidos'
+      ? resolveLostFoundLocation(p, { tags })
+      : null;
 
     // Derivar chaves (mantém consistência para filtros)
     if (!p.categoriaKey) {
@@ -1717,6 +1974,24 @@
         features: housingFeatures.slice(),
       };
       if (!p.subcategoriaLabel && housingRegionInfo && housingRegionInfo.label) p.subcategoriaLabel = housingRegionInfo.label;
+    } else if (moduleKey === 'achados-perdidos') {
+      if (lostFoundLocationInfo && lostFoundLocationInfo.key) {
+        const tagKeys = Array.isArray(p.tagKeys) ? p.tagKeys.slice() : [];
+        const tagLabels = Array.isArray(p.tags) ? p.tags.slice() : [];
+        if (!tagKeys.includes(lostFoundLocationInfo.key)) tagKeys.push(lostFoundLocationInfo.key);
+        if (!tagLabels.includes(lostFoundLocationInfo.label)) tagLabels.push(lostFoundLocationInfo.label);
+        p.tagKeys = tagKeys;
+        p.tags = tagLabels;
+        p.lostFoundLocationKey = p.lostFoundLocationKey || lostFoundLocationInfo.key;
+        p.lostFoundLocationLabel = p.lostFoundLocationLabel || lostFoundLocationInfo.label;
+        p.lostFoundLocationIcon = p.lostFoundLocationIcon || lostFoundLocationInfo.icon;
+        p.lostFoundLocationEmoji = p.lostFoundLocationEmoji || lostFoundLocationInfo.emoji;
+        p._kcLostFoundInfo = {
+          location: lostFoundLocationInfo,
+        };
+        if (!p.subcategoriaLabel && lostFoundLocationInfo.label) p.subcategoriaLabel = lostFoundLocationInfo.label;
+      }
+      if (!p.subcategoriaLabel) p.subcategoriaLabel = getSubcategoryLabel(moduleKey, p.subcategoriaKey || p.subcategoria);
     } else if (moduleKey === 'oportunidades') {
       const areaInfo = resolveOpportunityArea(p, { tags });
       if (!p.subcategoriaKey && areaInfo.key) p.subcategoriaKey = areaInfo.key;
@@ -1871,7 +2146,7 @@
         const lost = String(p.categoriaKey || '').includes('perd');
         segments.push(lost ? 'Perdido' : 'Encontrado');
         if (p.subcategoriaLabel) segments.push(String(p.subcategoriaLabel));
-        const loc = inferAchadosLocation(tags);
+        const loc = inferAchadosLocation(p, tags);
         if (loc) segments.push(loc);
       } else if (moduleKey === 'oportunidades') {
         if (p.categoriaLabel) segments.push(String(p.categoriaLabel));
@@ -1920,6 +2195,17 @@
           key: `oportunidades:${areaInfo.key}`,
           label: areaInfo.label,
           emoji: areaInfo.emoji || getOpportunityAreaEmoji(areaInfo.key),
+        });
+      }
+    }
+
+    if (moduleKey === 'achados-perdidos') {
+      const locationInfo = resolveLostFoundLocation(p, { tags: Array.isArray(p.tags) ? p.tags : [] });
+      if (locationInfo && locationInfo.key && locationInfo.label) {
+        tags.push({
+          key: `achados:${locationInfo.key}`,
+          label: locationInfo.label,
+          emoji: locationInfo.emoji || getLostFoundLocationEmoji(locationInfo.key),
         });
       }
     }
@@ -2210,11 +2496,14 @@
     getOpportunityAreaInfoByKey,
     getHousingRegionDefinitions,
     getHousingRegionInfoByKey,
+    getLostFoundLocationDefinitions,
+    getLostFoundLocationInfoByKey,
       getHousingFeatureDefinitions,
       getHousingFeatureInfoByKey,
       getDisplayMarkerTags,
       resolveOpportunityArea,
       resolveHousingRegion,
+      resolveLostFoundLocation,
       resolveHousingFeatures,
       resolveHousingTypeKey,
       renderMarkerTags,
