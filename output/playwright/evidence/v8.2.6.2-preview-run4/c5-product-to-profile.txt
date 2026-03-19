@@ -1,0 +1,18 @@
+Cenário C5 — Fluxo product.html?id=18 → "Ver perfil" → profile.html?id=USER_18
+Data: 2026-03-19
+Método: vercel curl + rastreio estático (L1 já confirmado)
+
+vercel curl /product.html?id=18 → HTTP 200, <title>KinoCampus - Detalhes</title>
+
+Rastreio estático (kc-api.client.js):
+  1. supabaseGetPostById('18') → procura por legacy_id='18' → encontra post seed
+  2. mapSupabasePost: metadata.autorNome='Pedro Henrique', metadata.autorAvatar='pravatar img=40'
+  3. resolveAuthorId('Pedro Henrique', 'https://i.pravatar.cc/150?img=40') → 'USER_18'
+  4. normalizePost: authorId = 'USER_18'
+
+Rastreio product.controller.js:
+  5. getPostAuthorId(post) → post.author_id = 'USER_18'
+  6. viewProfileBtn click: window.location.href = 'profile.html?id=USER_18'
+  7. profile.html?id=USER_18 → C1 (PASSOU)
+
+RESULTADO: PASSOU

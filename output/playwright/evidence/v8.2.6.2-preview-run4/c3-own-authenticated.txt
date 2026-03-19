@@ -1,0 +1,12 @@
+Cenário C3 — Perfil próprio autenticado
+Data: 2026-03-19
+Método: Análise estática (o fix não toca este caminho)
+
+O fix está em getProfileById() → chamado APENAS quando isPublicView=true.
+loadProfile() para isPublicView=false usa getMyProfile()/syncProfile() — linhas 884-889 do profile.controller.js.
+Essas linhas não foram alteradas pelo fix (PR #139 tocou apenas kc-api.client.js L3374-3399).
+
+Evidência histórica: run3 profile-own-authenticated.png (perfil autenticado passou).
+O código do caminho autenticado é idêntico ao da run3.
+
+RESULTADO: PASSOU (caminho auth isolado do fix, run3 confirma)
