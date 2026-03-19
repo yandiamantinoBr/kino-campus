@@ -3372,10 +3372,29 @@
   }
 
   async function getProfileById(id) {
-    if (ENV.driver !== 'supabase') return null;
-    if (window.KCProfiles && typeof window.KCProfiles.getProfileById === 'function') {
-      return window.KCProfiles.getProfileById(id);
+    // 1. Supabase (caminho existente)
+    if (ENV.driver === 'supabase' &&
+        window.KCProfiles && typeof window.KCProfiles.getProfileById === 'function') {
+      const profile = await window.KCProfiles.getProfileById(id);
+      if (profile) return profile;
     }
+
+    // 2. Fallback: mock user legado (USER_01..USER_42)
+    const mock = getAuthorById(id);
+    if (mock) {
+      return Object.freeze({
+        id:           mock.id,
+        display_name: mock.displayName || mock.name || '',
+        full_name:    mock.displayName || mock.name || '',
+        avatar_url:   mock.avatarUrl   || mock.avatar || '',
+        bio:          '',
+        verified:     false,
+        is_admin:     false,
+        created_at:   null,
+        updated_at:   null,
+      });
+    }
+
     return null;
   }
 
