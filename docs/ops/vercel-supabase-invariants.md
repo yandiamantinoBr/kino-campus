@@ -7,10 +7,13 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
 - O build do projeto deve continuar usando `node scripts/inject-env.js`, conforme [vercel.json](/C:/Users/yan1n/Documents/GitHub/kino-campus/vercel.json).
 - A saída continua estática (`outputDirectory: "."`).
 - O rewrite `/auth/callback -> /auth-callback.html` é obrigatório para o callback do Supabase Auth funcionar sem framework server-side.
+- Previews podem ficar protegidos por Vercel Authentication mesmo quando o deploy é publicado com sucesso.
+- Em ambiente Windows, a validação protegida via `vercel curl` pode exigir `-- --ssl-no-revoke` por causa do `curl`/Schannel.
 - A CSP deve continuar permitindo:
   - `script-src` e `script-src-elem` com `self` e `https://cdn.jsdelivr.net`
   - `style-src` com `self`, `unsafe-inline` e `https://cdnjs.cloudflare.com`
   - `connect-src` com `self`, `https://*.supabase.co` e `wss://*.supabase.co`
+- Em previews protegidos, o script de feedback `https://vercel.live/_next-live/feedback/feedback.js` pode aparecer bloqueado pela CSP atual; isso não deve ser tratado como regressão funcional automática sem evidência de impacto real no app.
 
 ## 2. scripts/inject-env.js
 
