@@ -1,21 +1,23 @@
 # Changelog
 
-## [8.2.6.1] - 2026-03-19
+## [8.2.6.2] - 2026-03-19
 
 ### Objetivo
-- Patch tecnico pos-release focado em higiene estatica, rastreabilidade e guardrails leves, sem mudanca funcional de produto.
+- Patch técnico pós-release focado em contrato operacional Vercel/Supabase, higiene de release e guardrails de regressão.
 
 ### Changed
-- Bump da versao canonica do frontend para `8.2.6.1` em `README.md`, `assets/js/kc-env.js`, `assets/js/kc-api.client.js`, `assets/js/kc-supabase.client.js`, `assets/js/kc-auth.ui.js` e `assets/js/kc-profiles.client.js`.
+- Bump coordenado da versão canônica do frontend para `8.2.6.2` em `README.md`, `assets/js/kc-env.js`, `assets/js/kc-api.client.js`, `assets/js/kc-supabase.client.js`, `assets/js/kc-auth.ui.js` e `assets/js/kc-profiles.client.js`.
+- `kc-profiles.client.js` e o fallback de sync em `kc-api.client.js` deixaram de persistir `email` no `upsert` de `profiles`.
 - `auth-callback.html`, `create-post.html` e `search-results.html` passaram a carregar `assets/css/kc-theme-boot.css` junto de `assets/js/kc-theme-boot.js`.
 
 ### Added
-- `scripts/hygiene-check.js`: checagem local minima para drift de versao, paridade de theme boot e deteccao de inline handlers em HTML runtime.
-- `docs/qa/README.md`: indice curto para leitura do historico de runs e dos artefatos canonicos de QA.
+- `docs/qa/README.md`: mapa curto dos artefatos históricos e canônicos de QA.
+- `docs/ops/vercel-supabase-invariants.md`: resumo operacional dos invariantes entre Vercel, `inject-env.js`, `kc-env.js`, manual avatar policy e Edge Function.
+- `scripts/hygiene-check.js`: checagem local mínima para drift de versão, theme boot, inline handlers, contrato de `profiles` e invariantes estáticos de deploy.
 
 ### Fixed
-- F-005: drift de versao no escopo corrente do frontend.
-- F-009: paginas com `kc-theme-boot.js` sem o CSS correspondente.
+- Contrato de perfil alinhado para não tratar `profiles.email` como parte do perfil público sincronizado.
+- Drift de release metadata no escopo ativo do frontend.
 
 ---
 

@@ -1,5 +1,5 @@
 /*
-  KinoCampus - API Client (V8.2.6.1)
+  KinoCampus - API Client (V8.2.6.2)
 
   Objetivo (Fase 1 - Saneamento):
   - Simular chamadas de API em um ponto único (sem frameworks).
@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.2.6.1';
+  const VERSION = '8.2.6.2';
 
   // -------- Bootstrap de Configuração (KC_ENV) --------
   // Regra de fallback: se kc-env.js não estiver carregado, assume driver local.
@@ -913,7 +913,6 @@
 
     const payload = {
       id: user.id,
-      email: user.email || null,
       full_name: getUserDisplayNameForProfile(user),
     };
 

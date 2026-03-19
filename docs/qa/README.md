@@ -1,29 +1,29 @@
 # QA Reports Map
 
-Este diretorio preserva o historico operacional de QA da linha `8.2.x` sem reescrever evidencias antigas.
+Este diretório preserva o histórico operacional de QA da linha `8.2.x` sem reescrever evidências antigas.
 
-## Canonicos atuais
+## Artefatos canônicos atuais
 
 - `e2e-checklist.md`: checklist operacional principal.
-- `rls-smoke.sql`: roteiro de validacao RLS.
+- `rls-smoke.sql`: roteiro de validação RLS.
 - `report-v8.2-final.md`: consolidado final da release validada.
 - `bugs-v8.2.md`: tracker consolidado de bugs e gates.
 
-## Sequencia de runs da release 8.2.2.0
+## Sequência de runs da release 8.2.2.0
 
 - `report-v8.2.2.0-run1.md`: primeira rodada formal da release cleanroom.
-- `report-v8.2.2.0-run2.md`: rodada publica real em producao.
-- `report-v8.2.2.0-run3.md`: rodada de reteste e fechamento do bug do perfil publico.
+- `report-v8.2.2.0-run2.md`: rodada pública real em produção.
+- `report-v8.2.2.0-run3.md`: rodada de reteste e fechamento do bug do perfil público.
 - `report-v8.2.2.0-run4.md`: rodada autenticada final que sustentou o GO.
 
-## Historico preservado
+## Histórico preservado
 
-- Arquivos com naming parecido, como `report-v8.2.2-run1.md` e `report-v8.2.2.0-run1.md`, sao mantidos por rastreabilidade historica.
-- Nesta fase de higiene, eles nao devem ser apagados nem renomeados sem uma consolidacao documental explicita.
+- Arquivos com naming parecido, como `report-v8.2.2-run1.md` e `report-v8.2.2.0-run1.md`, são mantidos por rastreabilidade histórica.
+- Nesta fase, esses arquivos não devem ser apagados nem renomeados sem uma consolidação documental explícita.
 
-## Leitura recomendada
+## Ordem de leitura recomendada
 
 1. Comece em `report-v8.2-final.md`.
-2. Consulte `bugs-v8.2.md` para estado dos gates.
-3. Use `report-v8.2.2.0-run1.md` a `report-v8.2.2.0-run4.md` para a trilha cronologica de execucao.
-4. Use `e2e-checklist.md` e `rls-smoke.sql` como scripts operacionais de reproducao.
+2. Consulte `bugs-v8.2.md` para o estado dos gates.
+3. Use `report-v8.2.2.0-run1.md` até `report-v8.2.2.0-run4.md` para a trilha cronológica de execução.
+4. Use `e2e-checklist.md` e `rls-smoke.sql` como scripts operacionais de reprodução.

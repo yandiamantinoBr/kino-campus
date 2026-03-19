@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Auth UI (Modal no Header) (V8.2.6.1)
+  KinoCampus - Auth UI (Modal no Header) (V8.2.6.2)
 
   Objetivos:
   - UX mínima de sessão: Login, Cadastro e Logout sem redirecionamento.
@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.2.6.1';
+  const VERSION = '8.2.6.2';
 
   function readEnv() {
     const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : {};

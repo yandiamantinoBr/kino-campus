@@ -6,68 +6,24 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
-const canonicalVersion = '8.2.6.1';
+const canonicalVersion = '8.2.6.2';
 const errors = [];
 const warnings = [];
 
-const versionChecks = [
-  {
-    file: 'README.md',
-    patterns: [
-      /V8\.2\.6\.1/,
-      /Versao-alvo unica atual:\s+\*\*`8\.2\.6\.1`\*\*/,
-      /`assets\/js\/kc-profiles\.client\.js`[\s\S]{0,24}`8\.2\.6\.1`/,
-    ],
-  },
-  {
-    file: 'CHANGELOG.md',
-    patterns: [
-      /^## \[8\.2\.6\.1\] - 2026-03-19$/m,
-    ],
-  },
-  {
-    file: 'assets/js/kc-env.js',
-    patterns: [
-      /const VERSION = '8\.2\.6\.1';/,
-      /Environment Bootstrap \(V8\.2\.6\.1\)/,
-    ],
-  },
-  {
-    file: 'assets/js/kc-api.client.js',
-    patterns: [
-      /const VERSION = '8\.2\.6\.1';/,
-      /API Client \(V8\.2\.6\.1\)/,
-    ],
-  },
-  {
-    file: 'assets/js/kc-supabase.client.js',
-    patterns: [
-      /const VERSION = '8\.2\.6\.1';/,
-      /Supabase Client \+ Auth Session \(V8\.2\.6\.1\)/,
-    ],
-  },
-  {
-    file: 'assets/js/kc-auth.ui.js',
-    patterns: [
-      /const VERSION = '8\.2\.6\.1';/,
-      /Auth UI \(Modal no Header\) \(V8\.2\.6\.1\)/,
-    ],
-  },
-  {
-    file: 'assets/js/kc-profiles.client.js',
-    patterns: [
-      /const VERSION = '8\.2\.6\.1';/,
-      /Profiles Client \(V8\.2\.6\.1\)/,
-    ],
-  },
+const versionFiles = [
+  'assets/js/kc-env.js',
+  'assets/js/kc-api.client.js',
+  'assets/js/kc-supabase.client.js',
+  'assets/js/kc-auth.ui.js',
+  'assets/js/kc-profiles.client.js',
 ];
 
-const runtimeHtmlFiles = [
+const htmlFiles = [
   ...readHtmlFiles(rootDir),
   ...readHtmlFiles(path.join(rootDir, 'admin'), 'admin'),
 ];
 
-const knownInlineHandlers = new Set([
+const inlineHandlers = new Set([
   'onabort', 'onauxclick', 'onbeforeinput', 'onbeforematch', 'onbeforetoggle',
   'onblur', 'oncancel', 'oncanplay', 'oncanplaythrough', 'onchange', 'onclick',
   'onclose', 'oncontextlost', 'oncontextmenu', 'oncontextrestored', 'oncopy',
@@ -87,7 +43,9 @@ const knownInlineHandlers = new Set([
 runVersionChecks();
 runThemeBootChecks();
 runInlineHandlerChecks();
-runQaNamingWarnings();
+runProfileContractChecks();
+runDeployInvariantChecks();
+runQaWarnings();
 
 if (warnings.length) {
   console.warn('Warnings:');
@@ -102,36 +60,34 @@ if (errors.length) {
   console.log(`Hygiene check passed for version ${canonicalVersion}.`);
 }
 
-function readHtmlFiles(baseDir, prefix = '') {
-  if (!fs.existsSync(baseDir)) return [];
-
-  return fs.readdirSync(baseDir)
-    .filter((name) => name.endsWith('.html'))
-    .map((name) => ({
-      relPath: toPosixPath(path.join(prefix, name)),
-      absPath: path.join(baseDir, name),
-    }));
-}
-
 function runVersionChecks() {
-  versionChecks.forEach(({ file, patterns }) => {
-    const absolutePath = path.join(rootDir, file);
-    const content = safeRead(absolutePath);
-
-    patterns.forEach((pattern) => {
-      if (!pattern.test(content)) {
-        errors.push(`${file} is missing expected version invariant: ${pattern}`);
-      }
-    });
+  versionFiles.forEach((file) => {
+    const content = read(file);
+    const expected = `const VERSION = '${canonicalVersion}';`;
+    if (!content.includes(expected)) {
+      errors.push(`${file} is missing canonical VERSION ${canonicalVersion}`);
+    }
   });
+
+  const readme = normalize(read('README.md'));
+  if (!readme.includes(`versao-alvo unica atual: **\`${canonicalVersion}\`**`)) {
+    errors.push('README.md is missing the canonical front version map header');
+  }
+  if (!readme.includes(`assets/js/kc-profiles.client.js`) || !readme.includes(`auth ui v${canonicalVersion}`)) {
+    errors.push('README.md is missing the canonical version references for kc-profiles/auth UI');
+  }
+
+  const changelog = read('CHANGELOG.md');
+  if (!new RegExp(`^## \\[${escapeRegExp(canonicalVersion)}\\] - 2026-03-19$`, 'm').test(changelog)) {
+    errors.push('CHANGELOG.md is missing the top entry for 8.2.6.2');
+  }
 }
 
 function runThemeBootChecks() {
-  runtimeHtmlFiles.forEach(({ relPath, absPath }) => {
-    const content = safeRead(absPath);
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const content = fs.readFileSync(absPath, 'utf8');
     const hasBootJs = /kc-theme-boot\.js/.test(content);
     const hasBootCss = /kc-theme-boot\.css/.test(content);
-
     if (hasBootJs && !hasBootCss) {
       errors.push(`${relPath} loads kc-theme-boot.js without kc-theme-boot.css`);
     }
@@ -139,27 +95,88 @@ function runThemeBootChecks() {
 }
 
 function runInlineHandlerChecks() {
-  runtimeHtmlFiles.forEach(({ relPath, absPath }) => {
-    const content = safeRead(absPath);
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const content = fs.readFileSync(absPath, 'utf8');
     const matches = [...content.matchAll(/\s([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=/g)];
-
     matches.forEach((match) => {
-      const attributeName = String(match[1] || '').toLowerCase();
-      if (knownInlineHandlers.has(attributeName)) {
-        errors.push(`${relPath} contains inline handler attribute ${attributeName}`);
+      const attr = String(match[1] || '').toLowerCase();
+      if (inlineHandlers.has(attr)) {
+        errors.push(`${relPath} contains inline handler ${attr}`);
       }
     });
   });
 }
 
-function runQaNamingWarnings() {
+function runProfileContractChecks() {
+  const profilesClient = read('assets/js/kc-profiles.client.js');
+  const apiClient = read('assets/js/kc-api.client.js');
+
+  const disallowedProfilesPatterns = [
+    /\bemail\s*:\s*u\.email\b/,
+    /\bemail\s*:\s*user\.email\b/,
+    /\bconst email = r\.email\b/,
+    /\br\.email\b/,
+    /\bfb\.email\b/,
+  ];
+
+  disallowedProfilesPatterns.forEach((pattern) => {
+    if (pattern.test(profilesClient)) {
+      errors.push(`assets/js/kc-profiles.client.js still exposes profile email contract: ${pattern}`);
+    }
+  });
+
+  if (/\bemail\s*:\s*user\.email\b/.test(apiClient)) {
+    errors.push('assets/js/kc-api.client.js still persists email in the profile sync fallback');
+  }
+}
+
+function runDeployInvariantChecks() {
+  const vercel = JSON.parse(read('vercel.json'));
+
+  if (vercel.buildCommand !== 'node scripts/inject-env.js') {
+    errors.push('vercel.json must keep buildCommand = node scripts/inject-env.js');
+  }
+
+  const hasAuthCallbackRewrite = Array.isArray(vercel.rewrites) && vercel.rewrites.some((rewrite) =>
+    rewrite &&
+    rewrite.source === '/auth/callback' &&
+    rewrite.destination === '/auth-callback.html'
+  );
+  if (!hasAuthCallbackRewrite) {
+    errors.push('vercel.json must keep the /auth/callback rewrite');
+  }
+
+  const cspHeader = findCspHeader(vercel);
+  if (!cspHeader) {
+    errors.push('vercel.json is missing the global Content-Security-Policy header');
+  } else {
+    const csp = String(cspHeader);
+    if (!csp.includes('connect-src')) {
+      errors.push('vercel.json CSP is missing connect-src');
+    }
+    if (!csp.includes('https://*.supabase.co') || !csp.includes('wss://*.supabase.co')) {
+      errors.push('vercel.json CSP connect-src must allow Supabase HTTPS and WSS endpoints');
+    }
+    if (!csp.includes("script-src 'self' https://cdn.jsdelivr.net")) {
+      errors.push('vercel.json CSP must preserve script-src compatibility for the Supabase/browser runtime');
+    }
+  }
+
+  const kcEnv = read('assets/js/kc-env.js');
+  ['__KC_SUPABASE_URL__', '__KC_SUPABASE_ANON_KEY__', '__KC_DRIVER__', '__KC_APP_ENV__'].forEach((token) => {
+    if (!kcEnv.includes(token)) {
+      errors.push(`assets/js/kc-env.js is missing placeholder ${token}`);
+    }
+  });
+}
+
+function runQaWarnings() {
   const qaDir = path.join(rootDir, 'docs', 'qa');
   if (!fs.existsSync(qaDir)) return;
 
-  const reportFiles = fs.readdirSync(qaDir)
-    .filter((name) => /^report-v.+\.md$/i.test(name));
-
+  const reportFiles = fs.readdirSync(qaDir).filter((name) => /^report-v.+\.md$/i.test(name));
   const groups = new Map();
+
   reportFiles.forEach((name) => {
     const normalized = name.replace(/\.0(?=-run\d+\.md$)/g, '');
     const current = groups.get(normalized) || [];
@@ -174,10 +191,44 @@ function runQaNamingWarnings() {
   });
 }
 
-function safeRead(absolutePath) {
-  return fs.readFileSync(absolutePath, 'utf8');
+function read(relPath) {
+  return fs.readFileSync(path.join(rootDir, relPath), 'utf8');
 }
 
-function toPosixPath(value) {
+function readHtmlFiles(dir, prefix = '') {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .filter((name) => name.endsWith('.html'))
+    .map((name) => ({
+      relPath: toPosix(path.join(prefix, name)),
+      absPath: path.join(dir, name),
+    }));
+}
+
+function findCspHeader(vercelConfig) {
+  const headers = Array.isArray(vercelConfig.headers) ? vercelConfig.headers : [];
+  for (const block of headers) {
+    const blockHeaders = Array.isArray(block && block.headers) ? block.headers : [];
+    for (const header of blockHeaders) {
+      if (header && header.key === 'Content-Security-Policy') {
+        return header.value;
+      }
+    }
+  }
+  return '';
+}
+
+function toPosix(value) {
   return value.split(path.sep).join('/');
+}
+
+function normalize(value) {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -1,4 +1,4 @@
-# Kino Campus — Prototipo WEB (V8.2.6.1) — Pos-release Hygiene
+# Kino Campus — Protótipo WEB (V8.2.6.2) — Guardrails Vercel/Supabase
 
 Este repositorio e o **prototipo web offline-first** do **Kino Campus** (plataforma universitaria por modulos), agora com **integracao Supabase-first** (Postgres + Auth + Storage) na linha **V8.2.x**.
 
@@ -7,10 +7,10 @@ A release **V8.2.2.0** consolidou os **LOTEs 1, 2 e 3** do cleanroom RC, sem fea
 - **LOTE 2**: diagnóstico por etapa no create-post (`[KC][CREATE_POST]`) e fluxo admin sem falso positivo de persistência.
 - **LOTE 3**: fechamento mobile/FOUC e kit QA final (`docs/qa/rls-smoke.sql` + relatórios de release).
 
-A **V8.2.6.1** abre uma fase tecnica de pos-release focada em **higiene estatica, rastreabilidade e guardrails leves**, sem mudar regras de negocio:
-- consistencia de versionamento nos modulos correntes do front;
-- paridade entre `kc-theme-boot.js` e `kc-theme-boot.css` nas paginas runtime;
-- harness minima local em `scripts/hygiene-check.js`.
+A **V8.2.6.2** abre um patch técnico pós-release focado em contrato operacional entre frontend, Vercel e Supabase:
+- limpeza do contrato de `profiles` para não persistir `email` como parte do perfil público sincronizado;
+- guardrails estáticos para deploy/env/runtime;
+- documentação operacional enxuta e harness mínima de regressão.
 
 O runtime oficial permanece **front estático + Supabase** (sem backend Node ativo no deploy). Em **produção**, `KC_ENV.driver = "supabase"` é obrigatório e não existe fallback silencioso para `local`; o modo `local` é permitido somente em desenvolvimento.
 
@@ -23,15 +23,15 @@ O runtime oficial permanece **front estático + Supabase** (sem backend Node ati
 
 ## 🧭 Mapa de versao do front (arquivo → versao)
 
-Versao-alvo unica atual: **`8.2.6.1`**
+Versão-alvo única atual: **`8.2.6.2`**
 
-- `assets/js/kc-env.js` → `8.2.6.1`
-- `assets/js/kc-api.client.js` → `8.2.6.1`
-- `assets/js/kc-supabase.client.js` → `8.2.6.1`
-- `assets/js/kc-auth.ui.js` → `8.2.6.1`
-- `assets/js/kc-profiles.client.js` → `8.2.6.1`
+- `assets/js/kc-env.js` → `8.2.6.2`
+- `assets/js/kc-api.client.js` → `8.2.6.2`
+- `assets/js/kc-supabase.client.js` → `8.2.6.2`
+- `assets/js/kc-auth.ui.js` → `8.2.6.2`
+- `assets/js/kc-profiles.client.js` → `8.2.6.2`
 
-> Referencia visual: o rodape do modal de autenticacao exibe `Auth UI v8.2.6.1` (derivado de `assets/js/kc-auth.ui.js`).
+> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.2.6.2` (derivado de `assets/js/kc-auth.ui.js`).
 
 ## 📦 Regra de release (anti-drift)
 
@@ -82,7 +82,7 @@ Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação a
 
 - **Privacidade: `profiles.email` (solidez)**
   - Hardening preferido aplicado: `REVOKE SELECT(email)` para `anon` e `authenticated`.
-  - O front não seleciona mais `profiles.email` em JOINs (`posts → profiles`).
+  - O front não seleciona mais `profiles.email` em JOINs (`posts → profiles`) e não persiste `email` no sync de `profiles`.
   - Arquivo: `supabase/migrations/v8.1.6.2_reports_privacy_hardening.sql`
 
 - **Offline-first em desenvolvimento**

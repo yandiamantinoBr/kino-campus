@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Environment Bootstrap (V8.2.6.1)
+  KinoCampus - Environment Bootstrap (V8.2.6.2)
 
   Objetivo:
   - Fonte Única de Verdade para configuração do app (Driver Pattern).
@@ -26,7 +26,8 @@
   // V8.2.2.0: release candidate cleanroom (LOTE 1)
   // V8.2.5.0: remove 'unsafe-inline' da CSP (BUG-003); externaliza scripts inline em 6 HTMLs
   // V8.2.6.0: fix carregamento de publicações — compat comments em kc-supabase.client.js
-  const VERSION = '8.2.6.1';
+  // V8.2.6.2: guardrails de contrato Vercel/Supabase e higiene de release
+  const VERSION = '8.2.6.2';
 
   const DEFAULT_ENV = {
     // versões (compat)

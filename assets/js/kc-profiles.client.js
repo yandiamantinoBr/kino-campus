@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Profiles Client (V8.2.6.1)
+  KinoCampus - Profiles Client (V8.2.6.2)
 
   Objetivo:
   - Sincronizar automaticamente o usuário autenticado (Supabase Auth) com a tabela public.profiles.
@@ -19,7 +19,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.2.6.1';
+  const VERSION = '8.2.6.2';
 
   const state = {
     inited: false,
@@ -49,10 +49,6 @@
   function getSupabaseClient() {
     if (!window.KCSupabase || typeof window.KCSupabase.getClient !== 'function') return null;
     return window.KCSupabase.getClient();
-  }
-
-  function normalizeEmail(email) {
-    return String(email || '').trim().toLowerCase();
   }
 
   // OBS (V8.1.3.3 retro): a definição de `profiles.verified` é server-side (trigger no Postgres).
@@ -99,7 +95,6 @@
     const fb = (fallback && typeof fallback === 'object') ? fallback : {};
 
     const id = r.id || fb.id || null;
-    const email = r.email || fb.email || '';
     const fullName = r.full_name || fb.full_name || '';
     const displayName = r.display_name || fb.display_name || fullName || '';
     const avatarUrl = r.avatar_url || fb.avatar_url || '';
@@ -109,7 +104,6 @@
 
     return Object.freeze({
       id,
-      email,
       full_name: fullName,
       display_name: displayName,
       avatar_url: avatarUrl,
@@ -157,7 +151,6 @@
 
     const payload = {
       id: u.id,
-      email: u.email || null,
       full_name: computeDisplayName(u),
     };
 
@@ -210,7 +203,6 @@
 
       return commitProfile(profileRow, {
         id: u.id,
-        email: u.email || null,
         full_name: computeDisplayName(u),
         display_name: '',
         avatar_url: '',
