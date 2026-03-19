@@ -1,5 +1,24 @@
 # Changelog
 
+## [8.2.6.1] - 2026-03-19
+
+### Objetivo
+- Patch tecnico pos-release focado em higiene estatica, rastreabilidade e guardrails leves, sem mudanca funcional de produto.
+
+### Changed
+- Bump da versao canonica do frontend para `8.2.6.1` em `README.md`, `assets/js/kc-env.js`, `assets/js/kc-api.client.js`, `assets/js/kc-supabase.client.js`, `assets/js/kc-auth.ui.js` e `assets/js/kc-profiles.client.js`.
+- `auth-callback.html`, `create-post.html` e `search-results.html` passaram a carregar `assets/css/kc-theme-boot.css` junto de `assets/js/kc-theme-boot.js`.
+
+### Added
+- `scripts/hygiene-check.js`: checagem local minima para drift de versao, paridade de theme boot e deteccao de inline handlers em HTML runtime.
+- `docs/qa/README.md`: indice curto para leitura do historico de runs e dos artefatos canonicos de QA.
+
+### Fixed
+- F-005: drift de versao no escopo corrente do frontend.
+- F-009: paginas com `kc-theme-boot.js` sem o CSS correspondente.
+
+---
+
 ## [8.2.5.0] - 2026-02-25
 
 ### Objetivo

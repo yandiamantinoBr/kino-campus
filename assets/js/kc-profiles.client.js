@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Profiles Client (V8.1.3.2)
+  KinoCampus - Profiles Client (V8.2.6.1)
 
   Objetivo:
   - Sincronizar automaticamente o usuário autenticado (Supabase Auth) com a tabela public.profiles.
@@ -19,7 +19,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.1.4.1-FIXED-8.1.3.3';
+  const VERSION = '8.2.6.1';
 
   const state = {
     inited: false,
