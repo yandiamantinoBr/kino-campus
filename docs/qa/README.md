@@ -9,6 +9,7 @@ Este diretório preserva o histórico operacional de QA da linha `8.2.x` sem ree
 - `report-v8.2-final.md`: consolidado final da release validada.
 - `bugs-v8.2.md`: tracker consolidado de bugs e gates.
 - `report-v8.2.6.2-preview-run1.md`: rodada leve de preview do patch técnico pós-release `8.2.6.2`.
+- `report-v8.2.6.2-preview-run2.md`: tentativa da rodada autenticada do patch `8.2.6.2`, bloqueada por ausência de credenciais reais no contexto do agente.
 
 ## Sequência de runs da release 8.2.2.0
 
