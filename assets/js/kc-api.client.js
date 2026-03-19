@@ -969,11 +969,155 @@
       .slice(0, 80) || 'image';
   }
 
-  async function uploadImagesToSupabaseStorage(client, images, options) {
-    // Bucket (compat): prefer STORAGE_BUCKET_POST_MEDIA (roadmap), senão ENV.supabase.storageBucket
-    const bucket = (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
+  function getPostMediaStorageBucket() {
+    return (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
       ? String(ENV.STORAGE_BUCKET_POST_MEDIA || ENV.supabase.storageBucket)
       : 'kino-media';
+  }
+
+  function escapeRegExp(text) {
+    return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function stripSearchAndHash(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const hashIndex = raw.indexOf('#');
+    const withoutHash = hashIndex >= 0 ? raw.slice(0, hashIndex) : raw;
+    const queryIndex = withoutHash.indexOf('?');
+    return queryIndex >= 0 ? withoutHash.slice(0, queryIndex) : withoutHash;
+  }
+
+  function safeDecodeUriComponent(value) {
+    const raw = String(value || '');
+    if (!raw) return '';
+    try {
+      return decodeURIComponent(raw);
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  function extractStoragePathFromPostMediaValue(value, bucket) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const normalizedBucket = String(bucket || getPostMediaStorageBucket()).trim();
+    const stripped = stripSearchAndHash(raw);
+
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const parsed = new URL(raw);
+        const pathname = safeDecodeUriComponent(String(parsed.pathname || ''));
+        const patterns = [
+          new RegExp(`/storage/v1/object/public/${escapeRegExp(normalizedBucket)}/(.+)$`, 'i'),
+          new RegExp(`/storage/v1/object/sign/${escapeRegExp(normalizedBucket)}/(.+)$`, 'i'),
+          new RegExp(`/storage/v1/object/authenticated/${escapeRegExp(normalizedBucket)}/(.+)$`, 'i'),
+        ];
+
+        for (let i = 0; i < patterns.length; i++) {
+          const match = pathname.match(patterns[i]);
+          if (match && match[1]) {
+            return safeDecodeUriComponent(stripSearchAndHash(match[1]).replace(/^\/+/, ''));
+          }
+        }
+      } catch (_) {
+        // fallback to direct normalization below
+      }
+    }
+
+    return safeDecodeUriComponent(stripped.replace(/^\/+/, ''));
+  }
+
+  function buildPostMediaCleanupContext(summary) {
+    const cleanup = (summary && typeof summary === 'object') ? summary : {};
+    return {
+      bucket: String(cleanup.bucket || getPostMediaStorageBucket()),
+      managedPaths: Array.isArray(cleanup.managedPaths) ? cleanup.managedPaths.slice() : [],
+      removedPaths: Array.isArray(cleanup.removedPaths) ? cleanup.removedPaths.slice() : [],
+      failedPaths: Array.isArray(cleanup.failedPaths) ? cleanup.failedPaths.slice() : [],
+      skippedItems: Array.isArray(cleanup.skippedItems)
+        ? cleanup.skippedItems.map((item) => ({
+          raw: String((item && item.raw) || ''),
+          path: String((item && item.path) || ''),
+          reason: String((item && item.reason) || 'skipped'),
+        }))
+        : [],
+    };
+  }
+
+  async function cleanupManagedPostMediaStorage(client, items, options) {
+    const bucket = getPostMediaStorageBucket();
+    const opts = (options && typeof options === 'object') ? options : {};
+    const userId = (opts.userId != null) ? String(opts.userId).trim() : '';
+    const postId = (opts.postId != null) ? String(opts.postId).trim() : '';
+    const scopePrefix = (userId && postId) ? `post-media/${userId}/${postId}/` : '';
+    const summary = {
+      ok: true,
+      bucket,
+      managedPaths: [],
+      removedPaths: [],
+      failedPaths: [],
+      skippedItems: [],
+    };
+
+    const list = Array.isArray(items) ? items.filter(Boolean) : [];
+    if (!list.length) return summary;
+
+    const managedSet = new Set();
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+      const rawValue = (typeof item === 'string')
+        ? item
+        : ((item && typeof item === 'object')
+          ? (item.path || item.url || item.publicUrl || '')
+          : '');
+      const normalizedPath = extractStoragePathFromPostMediaValue(rawValue, bucket);
+
+      if (!normalizedPath) {
+        summary.skippedItems.push({ raw: String(rawValue || ''), path: '', reason: 'empty_or_unparseable' });
+        continue;
+      }
+
+      if (!scopePrefix) {
+        summary.skippedItems.push({ raw: String(rawValue || ''), path: normalizedPath, reason: 'missing_scope' });
+        continue;
+      }
+
+      if (!normalizedPath.startsWith(scopePrefix)) {
+        summary.skippedItems.push({ raw: String(rawValue || ''), path: normalizedPath, reason: 'unmanaged_path' });
+        continue;
+      }
+
+      managedSet.add(normalizedPath);
+    }
+
+    summary.managedPaths = Array.from(managedSet);
+    if (!summary.managedPaths.length) return summary;
+
+    try {
+      const storage = client.storage.from(bucket);
+      const removal = await storage.remove(summary.managedPaths);
+      if (removal && removal.error) {
+        summary.ok = false;
+        summary.failedPaths = summary.managedPaths.slice();
+        console.error('[KCAPI][Supabase] post-media cleanup falhou:', removal.error, summary);
+        return summary;
+      }
+
+      summary.removedPaths = summary.managedPaths.slice();
+      return summary;
+    } catch (e) {
+      summary.ok = false;
+      summary.failedPaths = summary.managedPaths.slice();
+      console.error('[KCAPI][Supabase] post-media cleanup excecao:', e, summary);
+      return summary;
+    }
+  }
+
+  async function uploadImagesToSupabaseStorage(client, images, options) {
+    // Bucket (compat): prefer STORAGE_BUCKET_POST_MEDIA (roadmap), senão ENV.supabase.storageBucket
+    const bucket = getPostMediaStorageBucket();
 
     const list = Array.isArray(images) ? images.filter(Boolean) : [];
     if (!list.length) return { ok: true, uploaded: [] };
@@ -1003,7 +1147,7 @@
 
       // Se já for URL http(s), reaproveita.
       if (typeof item === 'string' && /^https?:\/\//i.test(item)) {
-        uploaded.push({ url: item, is_cover: i === 0, sort_order: i });
+        uploaded.push({ url: item, path: '', is_cover: i === 0, sort_order: i });
         continue;
       }
 
@@ -1038,6 +1182,7 @@
 
       const up = await storage.upload(path, blob, { contentType: mime || 'application/octet-stream', upsert: false });
       if (up && up.error) {
+        const cleanup = await cleanupManagedPostMediaStorage(client, uploaded, { userId, postId });
         return {
           ok: false,
           error: {
@@ -1048,6 +1193,7 @@
             bucket,
             path,
             imageIndex: i,
+            cleanup,
           },
         };
       }
@@ -1058,7 +1204,7 @@
         console.warn('[KCAPI][Supabase] Upload OK, mas não consegui obter URL pública:', path);
       }
 
-      uploaded.push({ url: publicUrl || path, is_cover: i === 0, sort_order: i });
+      uploaded.push({ url: publicUrl || path, path, is_cover: i === 0, sort_order: i });
     }
 
     return { ok: true, uploaded };
@@ -1696,6 +1842,24 @@
       return null;
     }
 
+    let postId = null;
+    let uploaded = [];
+
+    async function rollbackCreatedPostSafely(targetPostId) {
+      if (!targetPostId) return { ok: false };
+      try {
+        const del = await client.from('posts').delete().eq('id', targetPostId);
+        if (del && del.error) {
+          console.warn('[KCAPI][Supabase] rollback delete falhou:', del.error);
+          return { ok: false, error: del.error };
+        }
+        return { ok: true };
+      } catch (e) {
+        console.warn('[KCAPI][Supabase] rollback delete excecao:', e);
+        return { ok: false, error: e };
+      }
+    }
+
     try {
 
       // 1) Insere post primeiro (para obter postId) e habilitar path controlado no Storage
@@ -1723,7 +1887,6 @@
       }
 
       // 2) INSERT posts (gera UUID)
-      let postId = null;
       const ins = await client
         .from('posts')
         .insert(insertPayload)
@@ -1753,15 +1916,23 @@
       // 3) Upload das imagens (se houver) com path controlado (post-media/{userId}/{postId}/...)
       const uploadResult = await uploadImagesToSupabaseStorage(client, parsed.images, { userId: user.id, postId });
       if (!uploadResult || !uploadResult.ok) {
-        await rollbackCreatedPost(postId);
+        const uploadCleanup = buildPostMediaCleanupContext(uploadResult && uploadResult.error ? uploadResult.error.cleanup : null);
+        const cleanupFailed = uploadCleanup.failedPaths.length > 0;
+        if (!cleanupFailed) {
+          await rollbackCreatedPostSafely(postId);
+        } else {
+          console.warn('[KCAPI][Supabase] rollback do post ignorado apos falha no cleanup do upload:', uploadCleanup);
+        }
         setLastCreatePostError('STORAGE_UPLOAD', uploadResult ? uploadResult.error : null, {
           postId,
           userId: user.id,
           imagesCount: Array.isArray(parsed.images) ? parsed.images.length : 0,
+          rollbackSkipped: cleanupFailed,
+          ...uploadCleanup,
         });
         return null;
       }
-      const uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
+      uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
 
       // 4) Insere mídias (post_media) com capa + ordem
       if (Array.isArray(uploaded) && uploaded.length) {
@@ -1785,10 +1956,19 @@
         }
 
         if (mr && mr.error) {
-          await rollbackCreatedPost(postId);
+          const cleanup = await cleanupManagedPostMediaStorage(client, uploaded, { userId: user.id, postId });
+          const cleanupContext = buildPostMediaCleanupContext(cleanup);
+          const cleanupFailed = cleanupContext.failedPaths.length > 0;
+          if (!cleanupFailed) {
+            await rollbackCreatedPostSafely(postId);
+          } else {
+            console.warn('[KCAPI][Supabase] rollback do post ignorado apos falha no cleanup de post_media:', cleanupContext);
+          }
           setLastCreatePostError('POST_MEDIA_INSERT', mr.error, {
             postId,
             mediaCount: mediaRowsFull.length,
+            rollbackSkipped: cleanupFailed,
+            ...cleanupContext,
           });
           return null;
         }
@@ -1812,10 +1992,22 @@
       clearLastCreatePostError();
       return normalizePost(raw);
     } catch (e) {
-      if (postId) await rollbackCreatedPost(postId);
+      let cleanupContext = buildPostMediaCleanupContext(null);
+      if (postId && Array.isArray(uploaded) && uploaded.length) {
+        cleanupContext = buildPostMediaCleanupContext(await cleanupManagedPostMediaStorage(client, uploaded, { userId: user.id, postId }));
+      }
+      const cleanupFailed = cleanupContext.failedPaths.length > 0;
+      if (postId && !cleanupFailed) {
+        await rollbackCreatedPostSafely(postId);
+      } else if (postId && cleanupFailed) {
+        console.warn('[KCAPI][Supabase] rollback do post ignorado apos falha no cleanup de excecao:', cleanupContext);
+      }
       setLastCreatePostError('EXCEPTION', e, {
         userId: user.id,
         payload: payloadSummary,
+        postId,
+        rollbackSkipped: !!(postId && cleanupFailed),
+        ...cleanupContext,
       });
       return null;
     }
@@ -1936,6 +2128,28 @@
       }
       if (!own || !own.data) return kcApiError('Publicação não encontrada.');
       if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('Você não pode excluir este post.');
+
+      const media = await client.from('post_media').select('id, url').eq('post_id', postUuid);
+      if (media && media.error) {
+        console.error('[KCAPI][Supabase] deletePost leitura de post_media falhou:', media.error);
+        return kcApiError('NÃ£o foi possÃ­vel validar as mÃ­dias da publicaÃ§Ã£o.');
+      }
+
+      const cleanup = await cleanupManagedPostMediaStorage(client, (media && media.data) ? media.data : [], {
+        userId: user.id,
+        postId: postUuid,
+      });
+      if (Array.isArray(cleanup.failedPaths) && cleanup.failedPaths.length) {
+        console.error('[KCAPI][Supabase] deletePost cleanup bloqueou a exclusao:', cleanup);
+        return {
+          ok: false,
+          error: {
+            message: 'Nao foi possivel excluir a publicacao porque a remocao das midias falhou. Tente novamente.',
+            code: 'POST_MEDIA_STORAGE_CLEANUP_FAILED',
+            details: cleanup,
+          },
+        };
+      }
 
       const del = await client.from('posts').delete().eq('id', postUuid).eq('author_id', user.id);
       if (del && del.error) {
