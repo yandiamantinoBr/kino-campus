@@ -667,7 +667,21 @@
           .eq('author_id', authorId)
           .order('created_at', { ascending: false })
           .limit(8);
-        (Array.isArray(commentResult && commentResult.data) ? commentResult.data : []).forEach((comment) => {
+
+        let commentPayload = [];
+        if (commentResult && !commentResult.error && Array.isArray(commentResult.data)) {
+          commentPayload = commentResult.data;
+        } else {
+          const fallback = await client
+            .from('comments')
+            .select('id, created_at, body, post_id')
+            .eq('author_id', authorId)
+            .order('created_at', { ascending: false })
+            .limit(8);
+          commentPayload = Array.isArray(fallback && fallback.data) ? fallback.data : [];
+        }
+
+        commentPayload.forEach((comment) => {
           const post = comment.post || {};
           activities.push({
             type: 'comment',
