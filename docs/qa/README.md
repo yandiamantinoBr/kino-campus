@@ -8,6 +8,7 @@ Este diretório preserva o histórico operacional de QA da linha `8.2.x` sem ree
 - `rls-smoke.sql`: roteiro de validação RLS.
 - `report-v8.2-final.md`: consolidado final da release validada.
 - `bugs-v8.2.md`: tracker consolidado de bugs e gates.
+- `report-v8.2.6.2-preview-run1.md`: rodada leve de preview do patch técnico pós-release `8.2.6.2`.
 
 ## Sequência de runs da release 8.2.2.0
 
