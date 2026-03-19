@@ -1,3 +1,5 @@
 .playwright-cli/
 .vercel/
 output/playwright/profile-*/
+
+.vercel

@@ -6,11 +6,11 @@ Objetivo: qualquer pessoa, mesmo sem experiencia tecnica, conseguir marcar se pa
 
 ## Ambientes
 - URL de producao em uso na rodada real: [https://www.kinocampus.com.br](https://www.kinocampus.com.br)
-- URL de preview/homologacao (Vercel): [https://kino-campus-nq1v16jrm-yannakamurabrs-projects.vercel.app](https://kino-campus-nq1v16jrm-yannakamurabrs-projects.vercel.app)
+- URL de preview/homologacao (Vercel): [https://kino-campus-jxqai7y78-yannakamurabrs-projects.vercel.app](https://kino-campus-jxqai7y78-yannakamurabrs-projects.vercel.app)
 
 > Regra:
 > - Nunca inventar URL.
-> - A Iteracao 4 publicou o preview real acima.
+> - A Iteracao 5 publicou e validou o preview real acima antes do promote.
 > - Esse preview esta protegido por Vercel Authentication; browser sem bypass/share link cai na tela de login da Vercel.
 
 ## Termos rapidos
@@ -24,7 +24,7 @@ Objetivo: qualquer pessoa, mesmo sem experiencia tecnica, conseguir marcar se pa
 ## Pre-requisitos
 1. Ambiente
    - URL de producao: `https://www.kinocampus.com.br`
-   - URL de preview/homologacao: `https://kino-campus-nq1v16jrm-yannakamurabrs-projects.vercel.app`
+   - URL de preview/homologacao: `https://kino-campus-jxqai7y78-yannakamurabrs-projects.vercel.app`
 2. Contas de teste
    - 1 conta comum (usuario normal)
    - 1 conta admin (se ja existir no ambiente)
@@ -272,11 +272,49 @@ Evidencia:
 
 ---
 
+## Execucao de fechamento - Run 4 (2026-03-19)
+- Preview inicial executado: `https://kino-campus-nq1v16jrm-yannakamurabrs-projects.vercel.app`
+- Preview corrigido/validado: `https://kino-campus-jxqai7y78-yannakamurabrs-projects.vercel.app`
+- Producao promovida ao final: `https://www.kinocampus.com.br`
+- Branch local de continuidade: `codex/deep-review-it5-auth-qa-and-promote`
+- Resultado da rodada: PASSOU
+- Observacao: a rodada usou contas reais/controladas preconfirmadas, executou os gates autenticados/admin/RLS/Storage, corrigiu um falso negativo em `admin/reports`, validou o fix em preview novo e promoveu para producao com smoke final.
+
+### Status por etapa (1 a 9)
+| Etapa | Status | Evidencia | Observacoes |
+|---|---|---|---|
+| 1) Cadastro | NAO EXERCITADO NESTA RUN | N/A | A rodada usou contas reais/controladas preconfirmadas; signup ad-hoc segue sensivel a `over_email_send_rate_limit`, mas nao fez parte do gate de fechamento desta iteracao. |
+| 2) Confirmacao de e-mail (callback) | NAO EXERCITADO NESTA RUN | N/A | Dependente de signup novo; contas preconfirmadas foram usadas para destravar o QA autenticado real. |
+| 3) Login | PASSOU | [run4-login-common.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run4/run4-login-common.png) | Login comum passou no preview; login admin passou no preview e no smoke admin em producao. |
+| 4) Criar post (com e sem imagem) | PASSOU | [run4-feed-vote-and-posts.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run4/run4-feed-vote-and-posts.png) | Create real com 1, 2 e 5 imagens no preview e create/delete controlado adicional em producao. |
+| 5) Abrir detalhe do post | PASSOU | [report-v8.2.2.0-run4.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run4.md) | O fluxo autenticado foi exercitado sobre posts recem-criados e a navegacao permaneceu funcional. |
+| 6) Comentar | PASSOU | [report-v8.2.2.0-run4.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run4.md) | Comentario autenticado persistido no preview (`ca36315f-22c6-4d61-b6cc-f2e1c917255f`). |
+| 7) Votar (hot/cold) | PASSOU | [run4-feed-vote-and-posts.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run4/run4-feed-vote-and-posts.png) | Voto `hot` e depois `cold` exercitados; estado final persistido em banco. |
+| 8) Denunciar post | PASSOU | [report-v8.2.2.0-run4.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run4.md) | Denuncia autenticada enviada no preview e fechada pelo admin. |
+| 9) Admin: fechar denuncia/moderar | PASSOU | [run4-admin-reports-persistence-warning.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run4/run4-admin-reports-persistence-warning.png) e [run4-production-admin-banners.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run4/run4-production-admin-banners.png) | `admin/reports` passou apos o patch da rodada e `admin/banners` passou em preview e producao. |
+
+### Cenarios de saneamento / hardening
+| Cenario | Status | Evidencia | Observacoes |
+|---|---|---|---|
+| Home publica | PASSOU | [report-v8.2.2.0-run4.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run4.md) | Home e feed permaneceram funcionais apos a rodada autenticada e apos o promote. |
+| Perfil publico sem regressao de privacidade | PASSOU | [profile-public-local-supabase-it4-fixed.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run3/profile-public-local-supabase-it4-fixed.png) | O fix do perfil passou em preview/prod-backed e no smoke publico pos-promote. |
+| Admin reports sem exposicao indevida | PASSOU | [report-v8.2.2.0-run4.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run4.md) | O fluxo admin ficou funcional sem reexpor e-mail do denunciante; a verificacao de persistencia passou a usar RPC fallback. |
+| Admin banners sob CSP real | PASSOU | [run4-admin-banners-reactivated.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run4/run4-admin-banners-reactivated.png) e [run4-production-admin-banners.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run4/run4-production-admin-banners.png) | Fluxo passou em preview e em smoke admin essencial de producao. |
+| Create/delete com midia gerenciada | PASSOU | [report-v8.2.2.0-run4.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run4.md) | Create com 1/2/5 imagens no preview e smoke create/delete em producao sem residuos. |
+| Delete com midia legada/external URL | NAO EXERCITADO | N/A | Nao houve fixture segura dessa classe na rodada. |
+| Avatar upload/delete | PASSOU | [run4-profile-avatar-uploaded.png](/C:/Users/yan1n/Documents/GitHub/kino-campus/output/playwright/evidence/v8.2.2.0-run4/run4-profile-avatar-uploaded.png) | Upload funcional passou e cleanup deixou `avatar_url = null` e `avatar_storage_objects = 0`. |
+| RLS Test 1 (`reports` anon) | PASSOU | [report-v8.2.2.0-run2.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run2.md) | Mantido como evidenciado na rodada anterior. |
+| RLS Test 2 (`posts.author_id` update) | PASSOU | [report-v8.2.2.0-run4.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run4.md) | `PATCH` com JWT real recebeu `403` e nao persistiu. |
+| RLS Test 3 (`profiles` update de terceiro) | PASSOU | [report-v8.2.2.0-run4.md](/C:/Users/yan1n/Documents/GitHub/kino-campus/docs/qa/report-v8.2.2.0-run4.md) | Mutacao nao persistiu no perfil alvo. |
+
+---
+
 ## Tabela de registro final
 | Data | Ambiente | Passou/Nao passou | Observacoes | Links/prints | Commit testado |
 |---|---|---|---|---|---|
 | 2026-03-19 | Producao | Nao passou | Rodada publica real executada; detalhe publico e home ok, perfil publico com erro `400` em atividades/comentarios, fluxos autenticados/admin/RLS 2-3 bloqueados por ausencia de credenciais/acesso autenticado no contexto do agente. | `output/playwright/evidence/v8.2.2.0-run2/` e `docs/qa/report-v8.2.2.0-run2.md` | `codex/deep-review-it3-qa-release-hardening` |
 | 2026-03-19 | Preview publicado + runtime local prod-backed | Nao passou | Preview da Iteracao 4 publicado; perfil publico corrigido e validado sem `400` contra o Supabase real; fluxos autenticados/admin/RLS 2-3 continuaram bloqueados por falta de credenciais confirmadas. | `output/playwright/evidence/v8.2.2.0-run3/` e `docs/qa/report-v8.2.2.0-run3.md` | `codex/deep-review-it4-auth-qa-release-closure` |
+| 2026-03-19 | Preview publicado + producao promovida | Passou | Rodada autenticada completa exercitada com contas reais/controladas, cleanup validado em banco/Storage, RLS 2/3 aprovados com JWT real, falso negativo de `admin/reports` corrigido e revalidado, promote realizado com smoke final de producao. | `output/playwright/evidence/v8.2.2.0-run4/` e `docs/qa/report-v8.2.2.0-run4.md` | `codex/deep-review-it5-auth-qa-and-promote` |
 
 ---
 

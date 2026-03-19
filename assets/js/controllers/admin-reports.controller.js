@@ -399,7 +399,22 @@
         .eq('post_id', postId)
         .eq('status', 'open')
         .limit(1);
-      if (error) return { ok: false, error };
+      if (error) {
+        if (!isPermissionError(error)) return { ok: false, error };
+
+        try {
+          const rpc = await client.rpc('kc_admin_list_reports', {
+            p_status: 'open',
+            p_reason: 'all',
+            p_limit: 200,
+          });
+          if (rpc && rpc.error) return { ok: false, error: rpc.error };
+          const rows = Array.isArray(rpc && rpc.data) ? rpc.data : [];
+          return { ok: !rows.some((row) => String((row && row.post_id) || '') === String(postId || '')) };
+        } catch (rpcError) {
+          return { ok: false, error: rpcError };
+        }
+      }
       return { ok: !Array.isArray(data) || data.length === 0 };
     } catch (e) {
       return { ok: false, error: e };
@@ -415,9 +430,21 @@
         .select('id, status')
         .eq('id', postId)
         .maybeSingle();
-      if (error) return { ok: false, error };
-      if (!data) return { ok: false, error: { message: 'Post não encontrado para verificação.' } };
-      const current = String(data.status || '').toLowerCase();
+      let row = data;
+      if (error) {
+        if (!isPermissionError(error)) return { ok: false, error };
+
+        try {
+          const rpc = await client.rpc('kc_admin_list_posts_by_ids', { p_ids: [postId] });
+          if (rpc && rpc.error) return { ok: false, error: rpc.error };
+          const rows = Array.isArray(rpc && rpc.data) ? rpc.data : [];
+          row = rows.find((item) => String((item && item.id) || '') === String(postId || '')) || null;
+        } catch (rpcError) {
+          return { ok: false, error: rpcError };
+        }
+      }
+      if (!row) return { ok: false, error: { message: 'Post não encontrado para verificação.' } };
+      const current = String(row.status || '').toLowerCase();
       const expected = String(expectedStatus || '').toLowerCase();
       if (current !== expected) {
         return { ok: false, error: { message: `Persistência divergente: esperado "${expected}", atual "${current || 'unknown'}".` } };
