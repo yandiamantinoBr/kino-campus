@@ -12,6 +12,7 @@ Este diretório preserva o histórico operacional de QA da linha `8.2.x` sem ree
 - `report-v8.2.6.2-preview-run2.md`: tentativa da rodada autenticada do patch `8.2.6.2`, bloqueada por ausência de credenciais reais no contexto do agente.
 - `report-v8.2.6.2-preview-run3.md`: rodada autenticada final do patch `8.2.6.2`; login, shell autenticado e perfil próprio passaram, mas um perfil público com `author_id` legado (`USER_18`) terminou em `Perfil nao encontrado`.
 - `report-phase5-legacy-profile-compat.md`: correção de compatibilidade de perfil público para autores legados `USER_xx` — fallback via `MOCK_USERS` no facade `getProfileById()`.
+- `report-v8.2.6.2-preview-run4.md`: run4 pós-fix phase5; deploy preview criado, validação lógica 5/5 passou, validação browser pendente manual (Playwright MCP indisponível na sessão).
 
 ## Sequência de runs da release 8.2.2.0
 
