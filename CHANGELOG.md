@@ -1,5 +1,26 @@
 # Changelog
 
+## [8.2.6.2] - 2026-03-19
+
+### Objetivo
+- Patch técnico pós-release focado em contrato operacional Vercel/Supabase, higiene de release e guardrails de regressão.
+
+### Changed
+- Bump coordenado da versão canônica do frontend para `8.2.6.2` em `README.md`, `assets/js/kc-env.js`, `assets/js/kc-api.client.js`, `assets/js/kc-supabase.client.js`, `assets/js/kc-auth.ui.js` e `assets/js/kc-profiles.client.js`.
+- `kc-profiles.client.js` e o fallback de sync em `kc-api.client.js` deixaram de persistir `email` no `upsert` de `profiles`.
+- `auth-callback.html`, `create-post.html` e `search-results.html` passaram a carregar `assets/css/kc-theme-boot.css` junto de `assets/js/kc-theme-boot.js`.
+
+### Added
+- `docs/qa/README.md`: mapa curto dos artefatos históricos e canônicos de QA.
+- `docs/ops/vercel-supabase-invariants.md`: resumo operacional dos invariantes entre Vercel, `inject-env.js`, `kc-env.js`, manual avatar policy e Edge Function.
+- `scripts/hygiene-check.js`: checagem local mínima para drift de versão, theme boot, inline handlers, contrato de `profiles` e invariantes estáticos de deploy.
+
+### Fixed
+- Contrato de perfil alinhado para não tratar `profiles.email` como parte do perfil público sincronizado.
+- Drift de release metadata no escopo ativo do frontend.
+
+---
+
 ## [8.2.5.0] - 2026-02-25
 
 ### Objetivo
