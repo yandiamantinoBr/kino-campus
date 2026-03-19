@@ -5,14 +5,15 @@ Este guia é um passo a passo para validar o fluxo completo do Kino Campus do in
 Objetivo: qualquer pessoa, mesmo sem experiência técnica, conseguir marcar se **passou** ou **não passou**, com prova (print/log).
 
 ## Ambientes (preencher com URL REAL do Vercel)
-- URL de produção (Vercel): `__VERCEL_PROD_URL__`
+- URL de produção em uso na rodada real: `https://www.kinocampus.com.br`
 - URL de preview/homologação (Vercel): `__VERCEL_PREVIEW_URL__`
 
 > Regra (sem suposições):
 > - Descobrir a(s) URL(s) no próprio repositório (ex.: README, docs, vercel.json),
 >   ou então deixar como placeholder explicitamente, mas **NÃO inventar**.
-> - Não foi encontrada URL real do Vercel no repositório até este momento.
-> - Manter placeholders acima e preencher antes da execução E2E oficial.
+> - A rodada real de 2026-03-19 confirmou a URL pública `https://www.kinocampus.com.br`.
+> - Não foi encontrada URL real de preview no repositório nem via tooling autenticada.
+> - Manter o placeholder de preview acima até descoberta operacional real.
 
 ### Termos rápidos (em linguagem simples)
 - **Feed**: lista principal de posts.
@@ -26,8 +27,8 @@ Objetivo: qualquer pessoa, mesmo sem experiência técnica, conseguir marcar se 
 Antes de começar, confirme:
 
 1. **Ambiente**
-   - URL de produção: `__VERCEL_PROD_URL__` (preencher)
-   - URL de preview/homologação: `__VERCEL_PREVIEW_URL__` (preencher)
+   - URL de produção: `https://www.kinocampus.com.br`
+   - URL de preview/homologação: `__VERCEL_PREVIEW_URL__` (não descoberta)
 2. **Contas de teste**
    - 1 conta comum (usuário normal)
    - 1 conta admin (se já existir no ambiente)
@@ -240,12 +241,49 @@ Antes de começar, confirme:
 
 ---
 
+## Execução real - Run 2 (2026-03-19)
+- Ambiente executado: Produção
+- URL executada: `https://www.kinocampus.com.br`
+- Janela aproximada: 01:00-01:20 BRT
+- Branch local de continuidade: `codex/deep-review-it3-qa-release-hardening`
+- Resultado da rodada: NÃO PASSOU
+- Observação: a rodada pública real foi executada; fluxos autenticados, admin e SQL Editor autenticado ficaram bloqueados por ausência de credenciais de teste no contexto do agente.
+
+### Status por etapa (1 a 9)
+| Etapa | Status | Evidência | Observações |
+|---|---|---|---|
+| 1) Cadastro | BLOQUEADO | N/A | Sem conta nova, caixa de e-mail institucional e credenciais de teste no contexto do agente. |
+| 2) Confirmação de e-mail (callback) | BLOQUEADO | N/A | Dependente da etapa 1 e de acesso ao e-mail real. |
+| 3) Login | BLOQUEADO | N/A | Sem credenciais de teste reaproveitáveis no workspace. |
+| 4) Criar post (com e sem imagem) | BLOQUEADO | `output/playwright/evidence/v8.2.2.0-run2/E2E-create-post-unauth-page.png` | A página/modal abriu sem login em `create-post.html`, mas a publicação autenticada com 1, 2 e 5 imagens não foi exercitada. |
+| 5) Abrir detalhe do post | PASSOU | `output/playwright/evidence/v8.2.2.0-run2/E2E-product-detail-public.png` | O detalhe público abriu em `product.html?id=89a1eb50-ccb9-437d-926b-fa04e2d7a072`. |
+| 6) Comentar | BLOQUEADO | `output/playwright/evidence/v8.2.2.0-run2/E2E-product-comment-login-guard.png` | O guard para usuário sem sessão respondeu com `Faça login para comentar.`, mas o envio autenticado não foi exercitado. |
+| 7) Votar (hot/cold) | BLOQUEADO | N/A | Fluxo autenticado não exercitado. |
+| 8) Denunciar post | BLOQUEADO | `output/playwright/evidence/v8.2.2.0-run2/E2E-product-report-login-modal.png` | O clique em denunciar abriu modal de auth (`Conta KinoCampus`), mas o envio autenticado não foi exercitado. |
+| 9) Admin: fechar denúncia/moderar | BLOQUEADO | `output/playwright/evidence/v8.2.2.0-run2/E2E-admin-dashboard-unauth-redirect.png` | O acesso sem sessão a `/admin/` redirecionou para `index.html`; moderação autenticada não foi exercitada. |
+
+### Cenários de saneamento / hardening
+| Cenário | Status | Evidência | Observações |
+|---|---|---|---|
+| Home pública | PASSOU COM RESSALVAS | `output/playwright/evidence/v8.2.2.0-run2/E2E-home-prod.png` | Home carregou e feed renderizou, com ruído de console por script externo bloqueado por CSP e favicon 404. |
+| Perfil público sem regressão de privacidade | FALHOU | `output/playwright/evidence/v8.2.2.0-run2/E2E-profile-public.png` | A tela abriu, mas a consulta de atividades/comentários disparou `400` no endpoint `comments?...post:posts!comments_post_id_fkey(...)`. |
+| Admin reports sem exposição indevida | BLOQUEADO | N/A | Exige conta admin real. |
+| Admin banners sob CSP real | BLOQUEADO | N/A | Exige conta admin real. |
+| Create/delete com mídia gerenciada | BLOQUEADO | N/A | Exige conta autenticada e fixture segura para create/delete com Storage. |
+| Delete com mídia legada/external URL | BLOQUEADO | N/A | Não havia fixture segura no ambiente acessível pelo agente. |
+| Avatar upload/delete | BLOQUEADO | N/A | Exige conta autenticada e verificação da policy manual `supabase/manual/v8.3.4.1_profile_avatar_storage_policies.sql` no ambiente real. |
+| RLS Test 1 (`reports` anon) | PASSOU | `STATUS=401` | A consulta REST anon em `reports?select=id,post_id,reason,status&limit=20` retornou `401`, sem exposição de dados. |
+| RLS Test 2 (`posts.author_id` update) | BLOQUEADO | N/A | Exige sessão autenticada/SQL Editor real com alvo controlado. |
+| RLS Test 3 (`profiles` update de terceiro) | BLOQUEADO | N/A | Exige sessão autenticada/SQL Editor real com alvo controlado. |
+
+---
+
 ## Tabela de registro final
 Preencha ao final da rodada de testes:
 
 | Data | Ambiente | Passou/Não passou | Observações | Links/prints | Commit testado |
 |---|---|---|---|---|---|
-| AAAA-MM-DD | Produção/Preview | Passou ou Não passou | Resumo curto do que aconteceu | URLs de pasta, prints e logs | V8.2.2.0 |
+| 2026-03-19 | Produção | Não passou | Rodada pública real executada; detalhe público e home ok, perfil público com erro 400 em atividades/comentários, fluxos autenticados/admin/RLS 2-3 bloqueados por ausência de credenciais/acesso autenticado no contexto do agente. | `output/playwright/evidence/v8.2.2.0-run2/` e `docs/qa/report-v8.2.2.0-run2.md` | `codex/deep-review-it3-qa-release-hardening` |
 
 ---
 
