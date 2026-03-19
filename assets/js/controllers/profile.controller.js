@@ -500,6 +500,72 @@
     if (loadMore) loadMore.style.display = state.commentHasMore ? 'block' : 'none';
   }
 
+  async function fetchPostsByIds(client, postIds) {
+    const ids = Array.from(new Set((Array.isArray(postIds) ? postIds : [])
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)));
+
+    if (!client || !ids.length) return Object.create(null);
+
+    const postsById = Object.create(null);
+    const chunkSize = 50;
+
+    for (let index = 0; index < ids.length; index += chunkSize) {
+      const batch = ids.slice(index, index + chunkSize);
+      try {
+        const result = await client
+          .from('posts')
+          .select('id, legacy_id, title')
+          .in('id', batch);
+
+        if (result && result.error) {
+          console.warn('[Profile] fetchPostsByIds:', result.error);
+          continue;
+        }
+
+        (Array.isArray(result && result.data) ? result.data : []).forEach((post) => {
+          if (!post || !post.id) return;
+          postsById[String(post.id)] = Object.assign({}, post, {
+            titulo: post.title || '',
+          });
+        });
+      } catch (error) {
+        console.warn('[Profile] fetchPostsByIds:', error);
+      }
+    }
+
+    return postsById;
+  }
+
+  async function loadProfileComments(client, authorId, options) {
+    if (!client || !authorId) return [];
+
+    let query = client
+      .from('comments')
+      .select('id, created_at, body, post_id')
+      .eq('author_id', authorId)
+      .order('created_at', { ascending: false });
+
+    if (options && Number.isInteger(options.from) && Number.isInteger(options.to)) {
+      query = query.range(options.from, options.to);
+    } else if (options && Number.isInteger(options.limit)) {
+      query = query.limit(options.limit);
+    }
+
+    const result = await query;
+    if (result && result.error) throw result.error;
+
+    const comments = Array.isArray(result && result.data) ? result.data : [];
+    const postsById = await fetchPostsByIds(client, comments.map((comment) => comment && comment.post_id));
+
+    return comments.map((comment) => {
+      const postId = String((comment && comment.post_id) || '').trim();
+      return Object.assign({}, comment, {
+        post: postsById[postId] || null,
+      });
+    });
+  }
+
   async function loadComments(reset) {
     const loading = $('#comments-loading');
     const empty = $('#comments-empty');
@@ -526,26 +592,7 @@
     try {
       const from = (state.commentPage - 1) * COMMENT_PAGE_SIZE;
       const to = from + COMMENT_PAGE_SIZE - 1;
-      let payload = [];
-
-      const query = await client
-        .from('comments')
-        .select('id, created_at, body, post_id, post:posts!comments_post_id_fkey(id, legacy_id, title, titulo)')
-        .eq('author_id', authorId)
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (query && !query.error && Array.isArray(query.data)) {
-        payload = query.data;
-      } else {
-        const fallback = await client
-          .from('comments')
-          .select('id, created_at, body, post_id')
-          .eq('author_id', authorId)
-          .order('created_at', { ascending: false })
-          .range(from, to);
-        payload = Array.isArray(fallback && fallback.data) ? fallback.data : [];
-      }
+      const payload = await loadProfileComments(client, authorId, { from, to });
 
       state.comments = reset ? payload : state.comments.concat(payload);
       state.commentHasMore = payload.length >= COMMENT_PAGE_SIZE;
@@ -661,26 +708,7 @@
 
     if (client && authorId) {
       try {
-        const commentResult = await client
-          .from('comments')
-          .select('id, created_at, body, post_id, post:posts!comments_post_id_fkey(id, legacy_id, title, titulo)')
-          .eq('author_id', authorId)
-          .order('created_at', { ascending: false })
-          .limit(8);
-
-        let commentPayload = [];
-        if (commentResult && !commentResult.error && Array.isArray(commentResult.data)) {
-          commentPayload = commentResult.data;
-        } else {
-          const fallback = await client
-            .from('comments')
-            .select('id, created_at, body, post_id')
-            .eq('author_id', authorId)
-            .order('created_at', { ascending: false })
-            .limit(8);
-          commentPayload = Array.isArray(fallback && fallback.data) ? fallback.data : [];
-        }
-
+        const commentPayload = await loadProfileComments(client, authorId, { limit: 8 });
         commentPayload.forEach((comment) => {
           const post = comment.post || {};
           activities.push({
