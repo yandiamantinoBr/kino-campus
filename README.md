@@ -1,8 +1,8 @@
 # Kino Campus — Protótipo WEB (V8.2.6.2) — Guardrails Vercel/Supabase
 
-Este repositório é o **protótipo web offline-first** do **Kino Campus** (plataforma universitária por módulos), agora com **integração Supabase-first** (Postgres + Auth + Storage) na linha **V8.2.x**.
+Este repositorio e o **prototipo web offline-first** do **Kino Campus** (plataforma universitaria por modulos), agora com **integracao Supabase-first** (Postgres + Auth + Storage) na linha **V8.2.x**.
 
-A **V8.2.2.0** consolida os **LOTEs 1, 2 e 3** do cleanroom RC, sem feature creep:
+A release **V8.2.2.0** consolidou os **LOTEs 1, 2 e 3** do cleanroom RC, sem feature creep:
 - **LOTE 1**: saneamento de interação (CSP/handlers) e hardening de votos contra `409 (Conflict)`.
 - **LOTE 2**: diagnóstico por etapa no create-post (`[KC][CREATE_POST]`) e fluxo admin sem falso positivo de persistência.
 - **LOTE 3**: fechamento mobile/FOUC e kit QA final (`docs/qa/rls-smoke.sql` + relatórios de release).
@@ -21,7 +21,7 @@ O runtime oficial permanece **front estático + Supabase** (sem backend Node ati
 ---
 
 
-## 🧭 Mapa de versão do front (arquivo → versão)
+## 🧭 Mapa de versao do front (arquivo → versao)
 
 Versão-alvo única atual: **`8.2.6.2`**
 
@@ -40,7 +40,7 @@ Sempre que houver release do front:
 1. Definir uma versão-alvo única (`major.minor.patch.build`) para todos os módulos de front.
 2. Atualizar em lote as constantes `VERSION` dos arquivos mapeados acima.
 3. Validar referências visuais de versão na UI (ex.: rodapé do modal de auth).
-4. Registrar o mapa “arquivo → versão” no `README.md` e no `CHANGELOG.md`.
+4. Registrar o mapa "arquivo → versao" no `README.md` e no `CHANGELOG.md`.
 
 ## 🗃️ Fonte Única de Verdade (Banco)
 
