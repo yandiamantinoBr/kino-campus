@@ -235,17 +235,16 @@
   }
 
   /**
-   * Extrai o "login" do usuário: prefixo do e-mail (ex.: "yandiamantinobr").
-   * Prioridades: email do profile > email do user.
+   * Extrai o "login" do contexto autenticado do próprio usuário.
+   * Sem e-mail da sessão, cai para um handle público derivado do nome.
    */
   function resolveCurrentUserLogin(user, profile) {
-    const emailSources = [
-      profile && profile.email,
-      user && user.email,
-    ];
-    for (let i = 0; i < emailSources.length; i++) {
-      const email = String(emailSources[i] || '').trim();
-      if (email.includes('@')) return email.split('@')[0];
+    const ownEmail = String((user && user.email) || '').trim();
+    if (ownEmail.includes('@')) return ownEmail.split('@')[0];
+
+    if (window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function') {
+      const publicHandle = window.KCUtils.buildPublicHandle(profile && (profile.display_name || profile.full_name), { prefix: false });
+      if (publicHandle) return publicHandle;
     }
     return '';
   }
@@ -707,7 +706,10 @@
 
     const normalizedName = post.authorName || post.autor || post.author || '';
     const normalizedAvatar = post.authorAvatar || post.autorAvatar || '';
-    const authorEmail = post.authorEmail || '';
+    const publicHandle = String(post.authorHandle || '').trim()
+      || (window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function'
+        ? window.KCUtils.buildPublicHandle(normalizedName)
+        : '');
 
     const author = normalizedName || 'Autor';
     const avatarUrl = normalizedAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
@@ -717,9 +719,8 @@
 
     // Handle (@login) abaixo do nome
     if (handle) {
-      const loginHandle = authorEmail.includes('@') ? ('@' + authorEmail.split('@')[0]) : '';
-      if (loginHandle) {
-        handle.textContent = loginHandle;
+      if (publicHandle) {
+        handle.textContent = publicHandle;
         handle.style.display = 'block';
       } else {
         handle.style.display = 'none';
@@ -783,6 +784,9 @@
     const profileAvatar = String(profile.avatar_url || '').trim();
     const fallbackName = String(post.authorName || post.autor || post.author || '').trim();
     const fallbackAvatar = String(post.authorAvatar || post.autorAvatar || '').trim();
+    const publicHandle = window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function'
+      ? window.KCUtils.buildPublicHandle(profileName || fallbackName)
+      : '';
 
     const mergedName = profileName || fallbackName || 'Autor';
     const mergedAvatar = profileAvatar
@@ -799,7 +803,8 @@
       verified: profile.verified === true ? true : post.verified,
       verificado: profile.verified === true ? true : post.verificado,
       authorCreatedAt: profile.created_at || post.authorCreatedAt || null,
-      authorEmail: profile.email || post.authorEmail || '',
+      authorHandle: publicHandle || post.authorHandle || '',
+      authorEmail: post.authorEmail || '',
     };
   }
 

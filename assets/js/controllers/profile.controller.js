@@ -63,17 +63,26 @@
     return 'Usuario';
   }
 
+  function buildPublicHandle(profile) {
+    const source = profile && (profile.display_name || profile.full_name);
+    if (window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function') {
+      return window.KCUtils.buildPublicHandle(source);
+    }
+    const normalized = String(source || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return normalized ? ('@' + normalized.slice(0, 32)) : '';
+  }
+
   function safeHandle(profile, user) {
-    const email = (profile && profile.email) || (user && user.email) || '';
-    if (!email || !String(email).includes('@')) return '';
-    return '@' + String(email).split('@')[0];
+    const email = user && user.email ? String(user.email) : '';
+    if (!state.isPublicView && email.includes('@')) return '@' + email.split('@')[0];
+    return buildPublicHandle(profile);
   }
 
   function currentAvatarUrl() {
     if (state.avatarPreviewUrl) return state.avatarPreviewUrl;
     const avatarUrl = state.profile && state.profile.avatar_url ? String(state.profile.avatar_url) : '';
     if (avatarUrl) return avatarUrl;
-    const seedBase = (state.profile && (state.profile.email || state.profile.id))
+    const seedBase = (state.profile && (state.profile.display_name || state.profile.full_name || state.profile.id))
       || (state.user && (state.user.email || state.user.id))
       || 'kinocampus';
     return 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(String(seedBase).toLowerCase());
@@ -845,11 +854,11 @@
     if (!state.profile) return false;
 
     const client = getClient();
-    if (client && (!state.profile.created_at || !state.profile.email)) {
+    if (client && !state.profile.created_at) {
       try {
         const extra = await client
           .from('profiles')
-          .select('created_at, email, bio, avatar_url, display_name, full_name, verified')
+          .select('created_at, bio, avatar_url, display_name, full_name, verified')
           .eq('id', state.profileId)
           .maybeSingle();
         if (extra && extra.data) state.profile = Object.assign({}, state.profile, extra.data);

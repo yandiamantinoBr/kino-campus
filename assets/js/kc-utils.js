@@ -471,6 +471,13 @@
     return normalizeText(str).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
 
+  function buildPublicHandle(value, options) {
+    const slug = slugifyText(value).slice(0, 32);
+    if (!slug) return '';
+    const prefix = options && options.prefix === false ? '' : '@';
+    return prefix + slug;
+  }
+
   function levenshteinDistance(a, b) {
     const left = String(a || '');
     const right = String(b || '');
@@ -2485,6 +2492,8 @@
     normalizeAllowedDomains,
     isInstitutionalEmailAllowed,
     canonicalCategory,
+    slugifyText,
+    buildPublicHandle,
     titleCase,
     beautifyKey,
     getModuleLabel,

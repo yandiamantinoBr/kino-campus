@@ -2187,14 +2187,14 @@
     try {
       let res = await client
         .from('profiles')
-        .select('id, email, display_name, full_name, avatar_url, bio, verified, created_at, updated_at')
+        .select('id, display_name, full_name, avatar_url, bio, verified, created_at, updated_at')
         .eq('id', user.id)
         .maybeSingle();
 
       if (res && res.error && isMissingTokenError(res.error, 'display_name')) {
         res = await client
           .from('profiles')
-          .select('id, email, full_name, avatar_url, verified, created_at, updated_at')
+          .select('id, full_name, avatar_url, verified, created_at, updated_at')
           .eq('id', user.id)
           .maybeSingle();
       }
@@ -2253,7 +2253,7 @@
         .from('profiles')
         .update(updates)
         .eq('id', user.id)
-        .select('id, email, display_name, full_name, avatar_url, bio, verified, created_at, updated_at')
+        .select('id, display_name, full_name, avatar_url, bio, verified, created_at, updated_at')
         .maybeSingle();
 
       if (error) {

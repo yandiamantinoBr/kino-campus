@@ -298,7 +298,7 @@
       // Tenta com display_name
       const { data, error } = await client
         .from('profiles')
-        .select('id, display_name, full_name, email')
+        .select('id, display_name, full_name')
         .in('id', uniqueIds);
 
       if (error) {
@@ -308,7 +308,7 @@
           .select('id, full_name')
           .in('id', uniqueIds);
         const map = {};
-        (d2 || []).forEach(p => { map[p.id] = { name: p.full_name || '—', email: '' }; });
+        (d2 || []).forEach(p => { map[p.id] = { name: p.full_name || '—' }; });
         return map;
       }
 
@@ -316,7 +316,6 @@
       (data || []).forEach(p => {
         map[p.id] = {
           name: String(p.display_name || p.full_name || '—').trim(),
-          email: String(p.email || '').trim(),
         };
       });
       return map;
@@ -600,13 +599,12 @@
       const rows = displayItems.map(r => {
         const reporter = reporterMap[r.reporter_id] || {};
         const reporterName = reporter.name || '—';
-        const reporterEmail = reporter.email ? `<br><small style="color:var(--kc-text-dark-secondary);font-size:.85em;">${escape(reporter.email)}</small>` : '';
         return `
         <tr style="border-bottom:1px solid var(--kc-border-dark);">
           <td style="padding:8px;font-size:.85em;white-space:nowrap;">${escape(reasonLabel(r.reason))}</td>
           <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);max-width:220px;">${escape(r.details || '—')}</td>
           <td style="padding:8px;font-size:.8em;">
-            ${escape(reporterName)}${reporterEmail}
+            ${escape(reporterName)}
             ${r.reporter_id ? `<br><small style="color:var(--kc-text-dark-secondary);font-size:.82em;font-family:monospace;">${escape(r.reporter_id.substring(0,8))}…</small>` : ''}
           </td>
           <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);white-space:nowrap;">${escape(formatDate(r.created_at))}</td>

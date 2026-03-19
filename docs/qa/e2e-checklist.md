@@ -9,13 +9,10 @@ Objetivo: qualquer pessoa, mesmo sem experiência técnica, conseguir marcar se 
 - URL de preview/homologação (Vercel): `__VERCEL_PREVIEW_URL__`
 
 > Regra (sem suposições):
-<<<<<<< HEAD
 > - Descobrir a(s) URL(s) no próprio repositório (ex.: README, docs, vercel.json),
 >   ou então deixar como placeholder explicitamente, mas **NÃO inventar**.
-=======
 > - Não foi encontrada URL real do Vercel no repositório até este momento.
 > - Manter placeholders acima e preencher antes da execução E2E oficial.
->>>>>>> 36695e3f84c84be8f699918a2ff09043326dc204
 
 ### Termos rápidos (em linguagem simples)
 - **Feed**: lista principal de posts.

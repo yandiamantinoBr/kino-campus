@@ -172,7 +172,7 @@
           <small>${esc(banner.pill_text)} · Posição ${banner.sort_order}</small>
         </div>
         <span class="kc-banner-status ${statusCls}">${statusTxt}</span>
-        <div class="kc-banner-actions" onclick="event.stopPropagation()">
+        <div class="kc-banner-actions">
           <button type="button" data-action="edit"   data-id="${esc(banner.id)}" title="Editar">
             <i class="fas fa-pen"></i>
           </button>
