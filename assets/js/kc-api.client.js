@@ -515,27 +515,27 @@
 
 
   // Facade pública (mantém a API estável)
-  async function getPosts(params = {}) { return activeDriver.getPosts(params); }
-  async function getPostById(id) { return activeDriver.getPostById(id); }
+  async function getPosts(params = {}) { return getActiveDriver().getPosts(params); }
+  async function getPostById(id) { return getActiveDriver().getPostById(id); }
   async function createPost(body) {
     const policyError = enforceSupabaseOnProduction('createPost');
     if (policyError) return policyError;
-    return activeDriver.createPost(body);
+    return getActiveDriver().createPost(body);
   }
   async function updatePost(postId, payload) {
-    if (!activeDriver.updatePost) return kcApiError('Edição indisponível neste driver.');
-    return activeDriver.updatePost(postId, payload);
+    if (!getActiveDriver().updatePost) return kcApiError('Edição indisponível neste driver.');
+    return getActiveDriver().updatePost(postId, payload);
   }
   async function deletePost(postId) {
-    if (!activeDriver.deletePost) return kcApiError('Exclusão indisponível neste driver.');
-    return activeDriver.deletePost(postId);
+    if (!getActiveDriver().deletePost) return kcApiError('Exclusão indisponível neste driver.');
+    return getActiveDriver().deletePost(postId);
   }
 
   async function reportPost(postId, payload) {
-    if (!activeDriver.reportPost) {
+    if (!getActiveDriver().reportPost) {
       return { ok: false, error: { message: 'Denúncias indisponíveis neste driver.' } };
     }
-    return activeDriver.reportPost(postId, payload);
+    return getActiveDriver().reportPost(postId, payload);
   }
 
 
@@ -722,7 +722,7 @@
     VERSION,
     ENV,
     config: cfg,
-    activeDriver: getActiveDriver().name,
+    get activeDriver() { try { return getActiveDriver().name; } catch(e) { return 'pending'; } },
 
     setConfig,
     fetchJSON,
