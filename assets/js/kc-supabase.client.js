@@ -352,6 +352,12 @@
     return msg.includes(String(token).toLowerCase()) && msg.includes('does not exist');
   }
 
+  function isMissingCommentsEmbedError(err) {
+    if (!err) return false;
+    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
+    return (msg.includes('comments') && (msg.includes('does not exist') || msg.includes('relationship') || msg.includes('could not find')));
+  }
+
   function buildOrILike(q) {
     const raw = String(q || '').trim();
     if (!raw) return 'title.ilike.%%,description.ilike.%%';
