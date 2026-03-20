@@ -68,34 +68,10 @@
   }
 
   function normalizeAnyPost(raw) {
-    // Preferir a normalização padrão do projeto
-    if (KCAPI && typeof KCAPI.normalizePost === 'function') {
-      const p = KCAPI.normalizePost(raw);
-      // marcação para evitar duplicação (kc-core injeta no feed em páginas de listagem)
-      if (raw && raw._kcUserPost === true) p._kcUserPost = true;
-      return p;
-    }
-
-    // Fallback mínimo (mantém compat com database.json)
-    const r = raw || {};
-    return {
-      id: r.id,
-      modulo: r.modulo || 'publicacao',
-      titulo: r.titulo || '',
-      descricao: r.descricao || '',
-      tags: Array.isArray(r.tags) ? r.tags : [],
-      emoji: r.emoji || '✨',
-      verificado: !!r.verificado,
-      votos: r.votos ?? 0,
-      comentarios: r.comentarios ?? 0,
-      timestamp: r.timestamp || '',
-      autor: r.autor || 'Autor',
-      autorAvatar: r.autorAvatar || '',
-      categoria: r.categoria || '',
-      subcategoria: r.subcategoria || '',
-      preco: r.preco,
-      precoTexto: r.precoTexto || null,
-    };
+    const p = KCAPI.normalizePost(raw);
+    // marcação para evitar duplicação (kc-core injeta no feed em páginas de listagem)
+    if (raw && raw._kcUserPost === true) p._kcUserPost = true;
+    return p;
   }
 
   function normalizeUserPost(raw) {
@@ -331,12 +307,12 @@
     return `
       <article class="kc-card">
         <div class="kc-card__main">
-          <div class="kc-card__image-wrapper" style="font-size: 3em; display:flex; align-items:center; justify-content:center;">${escHtml(post.emoji || '✨')}</div>
+          <div class="kc-card__image-wrapper" style="font-size: 3em; display:flex; align-items:center; justify-content:center;">${escape(post.emoji || '✨')}</div>
           <div class="kc-card__content">
-            <div class="kc-card__header"><div class="kc-card__category-source">${escHtml(post.modulo || '')}</div><div class="kc-card__timestamp">${escHtml(post.timestamp || '')}</div></div>
-            <a class="kc-card__title" href="${href}">${escHtml(post.titulo || '')}</a>
-            <div class="kc-card__description-preview">${escHtml(post.descricao || '')}</div>
-            <div class="kc-card__author"><span>Por <strong>${escHtml(post.autor || 'Autor')}</strong></span></div>
+            <div class="kc-card__header"><div class="kc-card__category-source">${escape(post.modulo || '')}</div><div class="kc-card__timestamp">${escape(post.timestamp || '')}</div></div>
+            <a class="kc-card__title" href="${href}">${escape(post.titulo || '')}</a>
+            <div class="kc-card__description-preview">${escape(post.descricao || '')}</div>
+            <div class="kc-card__author"><span>Por <strong>${escape(post.autor || 'Autor')}</strong></span></div>
           </div>
         </div>
       </article>

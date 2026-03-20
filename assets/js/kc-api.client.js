@@ -141,36 +141,17 @@
   }
 
 
-  const DRIVER_PRESETS = Object.freeze({
-    local: {
-      baseURL: '',
-      // Fonte local (offline-first)
-      fallbackDatabaseURLs: ['data/database.json'],
-    },
-    // Placeholder: supabase driver será implementado na próxima fase (V8.1.2.x)
-    supabase: {
-      baseURL: '',
-      // Mantemos o seed como fallback até o driver supabase estar ativo
-      fallbackDatabaseURLs: ['data/database.json'],
-    },
-  });
-
   const DEFAULTS = {
-    // Backend poderá servir /api/v1 (quando driver evoluir)
     baseURL: '',
-    // Fonte única do database (local/offline-first)
-    fallbackDatabaseURLs: DRIVER_PRESETS.local.fallbackDatabaseURLs.slice(),
+    fallbackDatabaseURLs: ['data/database.json'],
     timeoutMs: 10000,
     debug: false,
   };
 
   const cfg = { ...DEFAULTS };
 
-  // Boot inicial (lê KC_ENV e aplica preset do driver)
+  // Boot inicial (lê KC_ENV e aplica debug)
   (function bootstrapConfig() {
-    const preset = DRIVER_PRESETS[ENV.driver] || DRIVER_PRESETS.local;
-    cfg.baseURL = preset.baseURL;
-    cfg.fallbackDatabaseURLs = preset.fallbackDatabaseURLs.slice();
     cfg.debug = Boolean(ENV.debug);
   })();
 
@@ -598,11 +579,6 @@
       }
     } catch (_) { }
     return false;
-  }
-
-  function supabaseNotReady(method) {
-    console.error(`[KCAPI][Supabase] Método "${method}" chamado, mas o driver Supabase ainda é um esqueleto (V8.1.3.1).`);
-    return Promise.reject(new Error('KCAPI_SUPABASE_DRIVER_NOT_READY'));
   }
 
   function getActiveDriver() {
