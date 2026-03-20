@@ -3,8 +3,7 @@
  * Gerencia a confirmação de e-mail / OTP após redirecionamento do Supabase Auth.
  * Depende de: kc-env.js, supabase-js (CDN), kc-supabase.client.js
  */
-import { KC_ENV } from './kc-env.js';
-import { KCSupabase } from './kc-supabase.client.js';
+
   var REDIRECT_DELAY = 4000; // ms até redirecionar automaticamente após sucesso
 
   // ── Helpers DOM ──────────────────────────────────────────────────────────

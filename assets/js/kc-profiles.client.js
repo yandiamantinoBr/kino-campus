@@ -13,8 +13,6 @@
   - 'kc:profilechange' (detail: { profile })
 */
 
-import { KC_ENV } from './kc-env.js';
-import { KCSupabase } from './kc-supabase.client.js';
 
   const VERSION = '8.2.6.2';
 
@@ -297,7 +295,7 @@ import { KCSupabase } from './kc-supabase.client.js';
     }, 30);
   }
 
-  const KCProfiles = Object.freeze({
+  window.KCProfiles = Object.freeze({
     VERSION,
     init,
     ensureSynced,
@@ -314,4 +312,4 @@ import { KCSupabase } from './kc-supabase.client.js';
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } catch (_) {}
 
-  export { KCProfiles };
+

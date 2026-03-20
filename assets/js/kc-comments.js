@@ -3,11 +3,6 @@
    Extraído de kc-core.js (F1).
 */
 
-import { KC_ENV } from './kc-env.js';
-import { KCAPI } from './kc-api.client.js';
-import { KCSupabase } from './kc-supabase.client.js';
-import { KCUtils } from './kc-utils.js';
-import { showToast } from './components/toast.js';
 
 // Helpers globais para ambiente
 function isSupabaseRuntime() {
@@ -515,10 +510,3 @@ function formatText(format, postId = null) {
 
   updateCommentPreview(id);
 }
-
-export {
-  getCurrentPostId,
-  renderComments,
-  submitComment,
-  formatText
-};

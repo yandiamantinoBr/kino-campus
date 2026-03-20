@@ -1,7 +1,6 @@
 /* KinoCampus - Local Adapter */
-import { KCAPI } from '../kc-api.client.js';
 
-const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = KCAPI;
+const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = window.KCAPI;
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
@@ -217,4 +216,4 @@ const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID
   });
 
 
-KCAPI.registerAdapter('local', driverLocal);
+window.KCAPI.registerAdapter('local', driverLocal);

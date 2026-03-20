@@ -1,7 +1,4 @@
-import { KCAPI } from '../kc-api.client.js';
-import { KCSupabase } from '../kc-supabase.client.js';
-
-const { ENV, normalizePost } = KCAPI;
+const { ENV, normalizePost } = window.KCAPI;
 
 
   // ---------- Supabase Client Bootstrap (V8.1.3.1) ----------
@@ -2592,4 +2589,4 @@ const { ENV, normalizePost } = KCAPI;
   });
 
 
-KCAPI.registerAdapter('supabase', driverSupabase);
+window.KCAPI.registerAdapter('supabase', driverSupabase);

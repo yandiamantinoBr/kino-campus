@@ -2,7 +2,7 @@
 // -----------------------------
 // Toast
 // -----------------------------
-export function showToast(message, type = 'info', duration = 3000) {
+function showToast(message, type = 'info', duration = 3000) {
   const existing = document.querySelector('.kc-toast');
   if (existing) existing.remove();
 

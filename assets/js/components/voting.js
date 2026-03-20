@@ -1,13 +1,10 @@
 /* KinoCampus - Voting Component */
-import { KCAPI } from '../kc-api.client.js';
-import { KCSupabase } from '../kc-supabase.client.js';
-import { showToast } from './toast.js';
 
 let kcVotesRealtimeChannel = null;
 let kcVotesRealtimeRetryTimer = null;
 let kcVotesPollingTimer = null;
 
-export function kcUpdateVoteScoreInDOM(postId, score) {
+function kcUpdateVoteScoreInDOM(postId, score) {
   const encoded = encodeURIComponent(String(postId || ''));
   if (!encoded) return;
   const scoreText = String(Number.isFinite(Number(score)) ? Number(score) : 0);
@@ -19,16 +16,16 @@ export function kcUpdateVoteScoreInDOM(postId, score) {
   });
 }
 
-export function kcIsUuid(value) {
+function kcIsUuid(value) {
   return KC_UUID_RE.test(String(value || '').trim());
 }
 
-export function kcInitVotesRealtime() {
+function kcInitVotesRealtime() {
   if (!isSupabaseRuntime()) return;
   if (kcVotesRealtimeChannel) return;
 
-  const client = KCSupabase && typeof KCSupabase.getClient === 'function'
-    ? KCSupabase.getClient()
+  const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+    ? window.KCSupabase.getClient()
     : null;
   if (!client || typeof client.channel !== 'function') {
     if (!kcVotesRealtimeRetryTimer) {
@@ -106,7 +103,7 @@ export function kcInitVotesRealtime() {
 // -----------------------------
 const KC_VOTE_IN_FLIGHT = new Set();
 
-export function setVoteBoxPending(voteBox, pending) {
+function setVoteBoxPending(voteBox, pending) {
   if (!voteBox) return;
   voteBox.querySelectorAll('button').forEach((btn) => {
     if (pending) btn.setAttribute('disabled', 'disabled');
@@ -115,7 +112,7 @@ export function setVoteBoxPending(voteBox, pending) {
   voteBox.dataset.kcVotePending = pending ? '1' : '0';
 }
 
-export function restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates) {
+function restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates) {
   if (scoreElement) scoreElement.textContent = String(previousScoreText);
   const voteButtons = voteBox ? Array.from(voteBox.querySelectorAll('button')) : [];
   voteButtons.forEach((btn, idx) => {
@@ -123,7 +120,7 @@ export function restoreVoteUI(voteBox, scoreElement, previousScoreText, previous
   });
 }
 
-export function vote(button, type) {
+function vote(button, type) {
   const voteBox = button.closest('.kc-vote-box');
   if (!voteBox) return;
 
@@ -230,7 +227,7 @@ export function vote(button, type) {
 // Chama a RPC kc_get_my_votes para obter os votos do
 // usuário autenticado para todos os posts no feed.
 // -----------------------------
-export async function kcInitVoteStates() {
+async function kcInitVoteStates() {
   if (!isSupabaseRuntime()) return;
 
   // Coleta todos os post-ids presentes no DOM

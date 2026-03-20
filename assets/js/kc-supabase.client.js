@@ -13,9 +13,6 @@
   - 'kc:authchange' (detail: { event, session, user })
 */
 
-import { KC_ENV } from './kc-env.js';
-import { KCUtils } from './kc-utils.js';
-
   const VERSION = '8.2.6.2';
 
   const state = {
@@ -28,7 +25,7 @@ import { KCUtils } from './kc-utils.js';
   };
 
   function readEnv() {
-    const env = (KC_ENV && typeof KC_ENV === 'object') ? KC_ENV : {};
+    const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : {};
     const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
 
     const url = String(env.SUPABASE_URL || ((env.supabase || {}).url) || '').trim();
@@ -794,7 +791,7 @@ import { KCUtils } from './kc-utils.js';
   }
 
   // Exposição pública
-  export const KCSupabase = Object.freeze({
+  window.KCSupabase = Object.freeze({
     VERSION,
     init,
     getClient,

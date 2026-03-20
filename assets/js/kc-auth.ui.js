@@ -10,10 +10,6 @@
   - window.KCSupabase (client/auth)
 */
 
-import { KC_ENV } from './kc-env.js';
-import { KCAPI } from './kc-api.client.js';
-import { KCSupabase } from './kc-supabase.client.js';
-import { KCUtils } from './kc-utils.js';
 
   const VERSION = '8.2.6.2';
 
@@ -912,7 +908,10 @@ import { KCUtils } from './kc-utils.js';
   }
 
   // Exposição para integração com outras áreas (ex.: create-post)
-  export { openModal as kcOpenAuthModal, closeModal as kcCloseAuthModal, openProfileDropdown as kcOpenProfileDropdown, closeProfileDropdown as kcCloseProfileDropdown };
+  window.kcOpenAuthModal = openModal;
+  window.kcCloseAuthModal = closeModal;
+  window.kcOpenProfileDropdown = openProfileDropdown;
+  window.kcCloseProfileDropdown = closeProfileDropdown;
 
   function init() {
     ensureMobileMenuStructure();

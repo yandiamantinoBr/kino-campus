@@ -341,7 +341,7 @@
     Object.freeze({ key: 'campus-colemar', label: 'Campus Colemar', icon: 'fas fa-graduation-cap', emoji: '🎓', aliases: Object.freeze(['campus colemar', 'colemar', 'campus i', 'campus 1', 'colemar natal e silva']) }),
   ]);
 
-export const KC_CONSTANTS = Object.freeze({
+window.KC_CONSTANTS = Object.freeze({
   MODULE_LABEL_MAP,
   MODULE_ICON_MAP,
   CATEGORY_LABELS,

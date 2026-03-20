@@ -10,9 +10,6 @@
   - window.KCAPI
 */
 
-import { KC_ENV as envDefault } from './kc-env.js';
-import { KCSupabase } from './kc-supabase.client.js';
-import { KCUtils } from './kc-utils.js';
 
 
   const VERSION = '8.2.6.2';
@@ -20,7 +17,7 @@ import { KCUtils } from './kc-utils.js';
   // -------- Bootstrap de Configuração (KC_ENV) --------
   // Regra de fallback: se kc-env.js não estiver carregado, assume driver local.
   function readEnv() {
-    const env = (envDefault && typeof envDefault === 'object') ? envDefault : null;
+    const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : null;
     if (!env) {
       console.warn('[KCAPI] window.KC_ENV não encontrado. Usando defaults (driver=local).');
     }
@@ -799,7 +796,7 @@ import { KCUtils } from './kc-utils.js';
     return getActiveDriver().getProfileHighlightsCount(profileId);
   }
 
-  export const KCAPI = Object.freeze({
+  window.KCAPI = Object.freeze({
     VERSION,
     ENV,
     config: cfg,

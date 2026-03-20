@@ -8,19 +8,7 @@
  *
  * NOTE (V7.1.2): renderização de cards centralizada em KCUtils.renderPostCard para preparar MVC.
  */
-import { KC_ENV } from './kc-env.js';
-import { KCAPI } from './kc-api.client.js';
-import { KCUtils } from './kc-utils.js';
-import {
-  refreshHeroCarousel,
-  changeSlide,
-  showSlide,
-  goToSlide,
-  startAutoSlide,
-  stopAutoSlide,
-  resetAutoSlide
-} from './components/carousel.js';
-import { vote, kcInitVotesRealtime } from './components/voting.js';
+
 
 // -----------------------------
 // Model layer (V8.1.2.4.5) - contrato único de Post
@@ -32,7 +20,7 @@ import { vote, kcInitVotesRealtime } from './components/voting.js';
 //
 // Obs.: não adiciona dependências e mantém compatibilidade com KCAPI.normalizePost.
 
-export const KCPostModel = {
+window.KCPostModel = {
   from: function (raw, context) {
     const ctx = context || {};
     let post = raw || {};
@@ -479,7 +467,7 @@ function kcInjectUserPostsIntoFeed() {
 }
 
 // Expose small API
-export const kcUserPosts = {
+window.kcUserPosts = {
   create: kcCreateUserPost,
   getById: kcGetUserPostById,
   list: kcLoadUserPosts,

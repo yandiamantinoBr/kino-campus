@@ -155,7 +155,7 @@
   merged.version = VERSION;
   merged.APP_VERSION = VERSION;
 
-  export const KC_ENV = merged;
+  window.KC_ENV = merged;
 
   // -----------------------------
   // V8.1.5.4 — Migração assistida “Meus Posts” (localStorage -> Supabase)

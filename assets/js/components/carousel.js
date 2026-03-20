@@ -1,8 +1,5 @@
-/* KinoCampus - Carousel Component */
+/* KinoCampus - Hero Carousel (V8.1.2.4.5) */
 // -----------------------------
-// -----------------------------
-import { KC_ENV } from '../kc-env.js';
-import { KCAPI } from '../kc-api.client.js';
 
 let _kcCurrentSlide = 0;
 let _kcAutoSlideInterval = null;
@@ -60,7 +57,7 @@ function resetAutoSlide() {
   startAutoSlide();
 }
 
-export function refreshHeroCarousel() {
+function refreshHeroCarousel() {
   if (!document.querySelector('.kc-hero-carousel')) return;
   showSlide(0);
   startAutoSlide();

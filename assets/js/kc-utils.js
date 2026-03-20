@@ -1,15 +1,10 @@
 /*
   KinoCampus - Shared Utils (V8.1.2.4.6)
 
-/*
-  KinoCampus - Shared Utils (V8.1.2.4.6)
-
   Principal função:
   - Centralizar utilitários repetidos (normalize/escape/currency/debounce)
   - Evitar divergência entre scripts (search, filters, etc.)
 */
-import { KC_CONSTANTS } from './kc-constants.js';
-
   const {
     MODULE_LABEL_MAP,
     MODULE_ICON_MAP,
@@ -19,7 +14,7 @@ import { KC_CONSTANTS } from './kc-constants.js';
     HOUSING_REGION_DEFINITIONS,
     HOUSING_FEATURE_DEFINITIONS,
     LOST_FOUND_LOCATION_DEFINITIONS
-  } = KC_CONSTANTS;
+  } = (window.KC_CONSTANTS || {});
 
   function titleCase(str) {
     return String(str || '')
@@ -2154,7 +2149,8 @@ import { KC_CONSTANTS } from './kc-constants.js';
     `.trim();
   }
 
-export const KCUtils = Object.freeze({
+window.KCUtils = Object.freeze({
+    escapeHtml,
     normalizeText,
     normalizeEmail,
     getEmailDomain,
@@ -2176,14 +2172,14 @@ export const KCUtils = Object.freeze({
     getHousingRegionInfoByKey,
     getLostFoundLocationDefinitions,
     getLostFoundLocationInfoByKey,
-      getHousingFeatureDefinitions,
-      getHousingFeatureInfoByKey,
-      getDisplayMarkerTags,
-      resolveOpportunityArea,
-      resolveHousingRegion,
-      resolveLostFoundLocation,
-      resolveHousingFeatures,
-      resolveHousingTypeKey,
+    getHousingFeatureDefinitions,
+    getHousingFeatureInfoByKey,
+    getDisplayMarkerTags,
+    resolveOpportunityArea,
+    resolveHousingRegion,
+    resolveLostFoundLocation,
+    resolveHousingFeatures,
+    resolveHousingTypeKey,
     clamp,
     debounce,
     splitPriceText,
