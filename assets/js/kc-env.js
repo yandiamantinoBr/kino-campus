@@ -13,8 +13,6 @@
   - window.KC_ENV
 */
 
-(function () {
-  'use strict';
 
   // Patch: inclui hardening server-side de verificação de e-mail (V8.1.3.3 retro)
   // + Paginação paritária no Read Path (V8.1.4.2)
@@ -157,7 +155,7 @@
   merged.version = VERSION;
   merged.APP_VERSION = VERSION;
 
-  window.KC_ENV = merged;
+  export const KC_ENV = merged;
 
   // -----------------------------
   // V8.1.5.4 — Migração assistida “Meus Posts” (localStorage -> Supabase)
@@ -222,4 +220,3 @@
       }
     }
   } catch (_) {}
-})();

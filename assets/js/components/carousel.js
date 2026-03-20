@@ -1,18 +1,20 @@
 /* KinoCampus - Carousel Component */
 // -----------------------------
-// Hero carousel (index)
 // -----------------------------
+import { KC_ENV } from '../kc-env.js';
+import { KCAPI } from '../kc-api.client.js';
+
 let _kcCurrentSlide = 0;
 let _kcAutoSlideInterval = null;
 let _kcHeroControlsBound = false;
 const KC_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isProductionRuntime() {
-  return !!(window.KC_ENV && window.KC_ENV.isProduction === true);
+  return !!(KC_ENV && KC_ENV.isProduction === true);
 }
 
 function isSupabaseRuntime() {
-  return !!(window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase');
+  return !!(KCAPI && KCAPI.ENV && KCAPI.ENV.driver === 'supabase');
 }
 
 function showSlide(index) {
@@ -58,7 +60,7 @@ function resetAutoSlide() {
   startAutoSlide();
 }
 
-function refreshHeroCarousel() {
+export function refreshHeroCarousel() {
   if (!document.querySelector('.kc-hero-carousel')) return;
   showSlide(0);
   startAutoSlide();

@@ -1,8 +1,7 @@
 /* KinoCampus - Local Adapter */
-(function() {
-'use strict';
+import { KCAPI } from '../kc-api.client.js';
 
-  const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = window.KCAPI;
+const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = KCAPI;
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
@@ -218,5 +217,4 @@
   });
 
 
-window.KCLocalAdapter = driverLocal;
-})();
+KCAPI.registerAdapter('local', driverLocal);

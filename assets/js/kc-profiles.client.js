@@ -11,13 +11,10 @@
 
   Eventos:
   - 'kc:profilechange' (detail: { profile })
-
-  Exposição:
-  - window.KCProfiles
 */
 
-(function () {
-  'use strict';
+import { KC_ENV } from './kc-env.js';
+import { KCSupabase } from './kc-supabase.client.js';
 
   const VERSION = '8.2.6.2';
 
@@ -31,7 +28,7 @@
   };
 
   function readEnv() {
-    const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : {};
+    const env = KC_ENV || {};
     const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
 
     const allowedDomains = Array.isArray(env.AUTH_ALLOWED_DOMAINS)
@@ -47,8 +44,8 @@
   }
 
   function getSupabaseClient() {
-    if (!window.KCSupabase || typeof window.KCSupabase.getClient !== 'function') return null;
-    return window.KCSupabase.getClient();
+    if (!KCSupabase || typeof KCSupabase.getClient !== 'function') return null;
+    return KCSupabase.getClient();
   }
 
   // OBS (V8.1.3.3 retro): a definição de `profiles.verified` é server-side (trigger no Postgres).
@@ -251,11 +248,11 @@
     if (driver !== 'supabase') return null;
 
     // Preferimos usar o cache local do KCSupabase; se não tiver, tenta getCurrentUser
-    const u = (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') ? window.KCSupabase.getUser() : null;
+    const u = (KCSupabase && typeof KCSupabase.getUser === 'function') ? KCSupabase.getUser() : null;
     if (u && u.id) return upsertProfileForUser(u);
 
-    if (window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
-      const u2 = await window.KCSupabase.getCurrentUser();
+    if (KCSupabase && typeof KCSupabase.getCurrentUser === 'function') {
+      const u2 = await KCSupabase.getCurrentUser();
       if (u2 && u2.id) return upsertProfileForUser(u2);
     }
 
@@ -300,7 +297,7 @@
     }, 30);
   }
 
-  window.KCProfiles = Object.freeze({
+  const KCProfiles = Object.freeze({
     VERSION,
     init,
     ensureSynced,
@@ -316,4 +313,5 @@
     init();
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } catch (_) {}
-})();
+
+  export { KCProfiles };

@@ -13,8 +13,8 @@
   - 'kc:authchange' (detail: { event, session, user })
 */
 
-(function () {
-  'use strict';
+import { KC_ENV } from './kc-env.js';
+import { KCUtils } from './kc-utils.js';
 
   const VERSION = '8.2.6.2';
 
@@ -28,7 +28,7 @@
   };
 
   function readEnv() {
-    const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : {};
+    const env = (KC_ENV && typeof KC_ENV === 'object') ? KC_ENV : {};
     const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
 
     const url = String(env.SUPABASE_URL || ((env.supabase || {}).url) || '').trim();
@@ -144,8 +144,8 @@
   }
 
   function emailAllowed(email, allowedDomains) {
-    if (window.KCUtils && typeof window.KCUtils.isInstitutionalEmailAllowed === 'function') {
-      return window.KCUtils.isInstitutionalEmailAllowed(email, allowedDomains);
+    if (KCUtils && typeof KCUtils.isInstitutionalEmailAllowed === 'function') {
+      return KCUtils.isInstitutionalEmailAllowed(email, allowedDomains);
     }
 
     const em = String(email || '').trim().toLowerCase();
@@ -794,7 +794,7 @@
   }
 
   // Exposição pública
-  window.KCSupabase = Object.freeze({
+  export const KCSupabase = Object.freeze({
     VERSION,
     init,
     getClient,
@@ -830,4 +830,3 @@
     init();
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } catch (err) { console.warn('[KCSupabase] Boot falhou:', err && err.message || err); }
-})();

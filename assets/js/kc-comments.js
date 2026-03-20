@@ -1,12 +1,24 @@
 /* KinoCampus — kc-comments.js
    Sistema de comentários (localStorage + Supabase).
    Extraído de kc-core.js (F1).
-   Depende de: carousel.js (isSupabaseRuntime/isProductionRuntime), toast.js (showToast),
-               window.KCAPI, window.KCSupabase, window.KCProfiles
 */
 
+import { KC_ENV } from './kc-env.js';
+import { KCAPI } from './kc-api.client.js';
+import { KCSupabase } from './kc-supabase.client.js';
+import { KCUtils } from './kc-utils.js';
+import { showToast } from './components/toast.js';
+
+// Helpers globais para ambiente
+function isSupabaseRuntime() {
+  return !!(KCAPI && KCAPI.ENV && KCAPI.ENV.driver === 'supabase');
+}
+function isProductionRuntime() {
+  return !!(KC_ENV && KC_ENV.isProduction === true);
+}
+
 // Helpers locais
-function _esc(str) { return window.KCUtils.escapeHtml(str); }
+function _esc(str) { return KCUtils.escapeHtml(str); }
 function _cssEsc(str) { return String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"'); }
 
 // -----------------------------
@@ -171,8 +183,8 @@ function getLocalLikeKey(postId, commentId, userId) {
 
 async function resolveCurrentLikeUserId() {
   try {
-    if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-      const user = await window.KCAPI.getCurrentUser();
+    if (KCAPI && typeof KCAPI.getCurrentUser === 'function') {
+      const user = await KCAPI.getCurrentUser();
       if (user && user.id) return String(user.id);
     }
   } catch (_) { }
@@ -196,7 +208,7 @@ async function likeComment(postId, commentId, containerId = 'commentsContainer')
 
   // Driver Supabase: persiste via KCAPI (async, re-render ao resolver)
   if (isSupabaseRuntime()) {
-    window.KCAPI.likeComment(commentId).then(function (res) {
+    KCAPI.likeComment(commentId).then(function (res) {
       renderComments(id, containerId);
       if (res && res.ok && res.alreadyLiked) {
         showToast('Você já curtiu este comentário.', 'info', 1800);
@@ -287,8 +299,8 @@ function renderComments(postId, containerId = 'commentsContainer') {
   // Driver Supabase: carrega async, depois renderiza
   if (isSupabaseRuntime()) {
     Promise.all([
-      window.KCAPI.getComments(id),
-      (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') ? window.KCAPI.getCurrentUser() : Promise.resolve(null),
+      KCAPI.getComments(id),
+      (KCAPI && typeof KCAPI.getCurrentUser === 'function') ? KCAPI.getCurrentUser() : Promise.resolve(null),
     ]).then(function (results) {
       const comments = Array.isArray(results[0]) ? results[0] : [];
       const user = results[1] || null;
@@ -347,8 +359,8 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
   const text = textarea.value.trim();
 
   // Driver Supabase: persiste via KCAPI (async)
-  if (window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase') {
-    window.KCAPI.addComment(id, text).then(function (res) {
+  if (KCAPI && KCAPI.ENV && KCAPI.ENV.driver === 'supabase') {
+    KCAPI.addComment(id, text).then(function (res) {
       if (res && res.ok) {
         textarea.value = '';
         updateCommentPreview(id);
@@ -357,14 +369,14 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
 
         // Audit log: registra comentário (fire-and-forget)
         try {
-          const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
-            ? window.KCSupabase.getClient() : null;
+          const kcClient = KCSupabase && typeof KCSupabase.getClient === 'function'
+            ? KCSupabase.getClient() : null;
           const commentId = (res.data && res.data.id) ? String(res.data.id) : id;
           if (kcClient) {
             let actorId = null;
             try {
-              if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-                window.KCAPI.getCurrentUser().then(function (u) {
+              if (KCAPI && typeof KCAPI.getCurrentUser === 'function') {
+                KCAPI.getCurrentUser().then(function (u) {
                   if (u) actorId = u.id;
                   kcClient.from('audit_log').insert({
                     action: 'comment_created',
@@ -398,15 +410,15 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
   let sessionUser = null;
   let sessionProfile = null;
   try {
-    if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-      sessionUser = await window.KCAPI.getCurrentUser();
+    if (KCAPI && typeof KCAPI.getCurrentUser === 'function') {
+      sessionUser = await KCAPI.getCurrentUser();
     }
   } catch (_) { }
 
   if (sessionUser) {
     try {
-      if (window.KCAPI && typeof window.KCAPI.getMyProfile === 'function') {
-        sessionProfile = await window.KCAPI.getMyProfile();
+      if (KCAPI && typeof KCAPI.getMyProfile === 'function') {
+        sessionProfile = await KCAPI.getMyProfile();
       }
     } catch (_) { }
 
@@ -503,3 +515,10 @@ function formatText(format, postId = null) {
 
   updateCommentPreview(id);
 }
+
+export {
+  getCurrentPostId,
+  renderComments,
+  submitComment,
+  formatText
+};

@@ -3,9 +3,8 @@
  * Gerencia a confirmação de e-mail / OTP após redirecionamento do Supabase Auth.
  * Depende de: kc-env.js, supabase-js (CDN), kc-supabase.client.js
  */
-(function () {
-  'use strict';
-
+import { KC_ENV } from './kc-env.js';
+import { KCSupabase } from './kc-supabase.client.js';
   var REDIRECT_DELAY = 4000; // ms até redirecionar automaticamente após sucesso
 
   // ── Helpers DOM ──────────────────────────────────────────────────────────
@@ -112,12 +111,12 @@
     // Aguarda Supabase JS e KC_ENV carregarem
     var maxWait = 4000;
     var waited  = 0;
-    while ((!window.supabase || !window.KC_ENV) && waited < maxWait) {
+    while ((!window.supabase || !KC_ENV) && waited < maxWait) {
       await new Promise(function(r) { setTimeout(r, 80); });
       waited += 80;
     }
 
-    var env = window.KC_ENV || {};
+    var env = KC_ENV || {};
     var url  = String(env.SUPABASE_URL || (env.supabase && env.supabase.url) || '').trim();
     var anon = String(env.SUPABASE_ANON_KEY || (env.supabase && env.supabase.anonKey) || '').trim();
 
@@ -145,9 +144,9 @@
       var session = result && result.data && result.data.session;
 
       if (session && session.user) {
-        // Sincroniza com o KCSupabase global (se disponível)
-        if (window.KCSupabase && typeof window.KCSupabase.refreshSession === 'function') {
-          try { await window.KCSupabase.refreshSession(); } catch(_) {}
+        // Sincroniza com o KCSupabase (se disponível)
+        if (KCSupabase && typeof KCSupabase.refreshSession === 'function') {
+          try { await KCSupabase.refreshSession(); } catch(_) {}
         }
         showSuccess(session.user.email || '');
       } else {
@@ -184,4 +183,3 @@
   } else {
     handleCallback();
   }
-})();

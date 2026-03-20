@@ -10,13 +10,15 @@
   - window.KCSupabase (client/auth)
 */
 
-(function () {
-  'use strict';
+import { KC_ENV } from './kc-env.js';
+import { KCAPI } from './kc-api.client.js';
+import { KCSupabase } from './kc-supabase.client.js';
+import { KCUtils } from './kc-utils.js';
 
   const VERSION = '8.2.6.2';
 
   function readEnv() {
-    const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : {};
+    const env = (KC_ENV && typeof KC_ENV === 'object') ? KC_ENV : {};
     const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
     const allowedDomains = Array.isArray(env.AUTH_ALLOWED_DOMAINS)
       ? env.AUTH_ALLOWED_DOMAINS
@@ -32,18 +34,18 @@
     el.textContent = String(text ?? '');
   }
 
-  const escape = (value) => window.KCUtils.escapeHtml(value);
+  const escape = (value) => KCUtils.escapeHtml(value);
 
   function normalizeEmail(email) {
-    if (window.KCUtils && typeof window.KCUtils.normalizeEmail === 'function') {
-      return window.KCUtils.normalizeEmail(email);
+    if (KCUtils && typeof KCUtils.normalizeEmail === 'function') {
+      return KCUtils.normalizeEmail(email);
     }
     return String(email || '').trim().toLowerCase();
   }
 
   function getEmailDomain(email) {
-    if (window.KCUtils && typeof window.KCUtils.getEmailDomain === 'function') {
-      return window.KCUtils.getEmailDomain(email);
+    if (KCUtils && typeof KCUtils.getEmailDomain === 'function') {
+      return KCUtils.getEmailDomain(email);
     }
     const em = normalizeEmail(email);
     const at = em.lastIndexOf('@');
@@ -52,8 +54,8 @@
   }
 
   function normalizeAllowedDomains(allowedDomains) {
-    if (window.KCUtils && typeof window.KCUtils.normalizeAllowedDomains === 'function') {
-      return window.KCUtils.normalizeAllowedDomains(allowedDomains);
+    if (KCUtils && typeof KCUtils.normalizeAllowedDomains === 'function') {
+      return KCUtils.normalizeAllowedDomains(allowedDomains);
     }
     if (!Array.isArray(allowedDomains)) return [];
     return Array.from(new Set(
@@ -64,8 +66,8 @@
   }
 
   function isAllowedDomain(email, allowedDomains) {
-    if (window.KCUtils && typeof window.KCUtils.isInstitutionalEmailAllowed === 'function') {
-      return window.KCUtils.isInstitutionalEmailAllowed(email, allowedDomains);
+    if (KCUtils && typeof KCUtils.isInstitutionalEmailAllowed === 'function') {
+      return KCUtils.isInstitutionalEmailAllowed(email, allowedDomains);
     }
     const list = normalizeAllowedDomains(allowedDomains);
     if (!list.length) return true; // sem restrição
@@ -269,7 +271,7 @@
 
     // mantém foco no primeiro input visível
     setTimeout(() => {
-      const user = (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') ? window.KCSupabase.getUser() : null;
+      const user = (KCSupabase && typeof KCSupabase.getUser === 'function') ? KCSupabase.getUser() : null;
       if (user) {
         const closeBtn = $('#kcAuthCloseBtn');
         if (closeBtn) closeBtn.focus();
@@ -317,8 +319,8 @@
     setStatus('Entrando...', 'info');
 
     try {
-      if (window.KCAPI && typeof window.KCAPI.signIn === 'function') {
-        const r = await window.KCAPI.signIn(email, password);
+      if (KCAPI && typeof KCAPI.signIn === 'function') {
+        const r = await KCAPI.signIn(email, password);
         if (r && r.error) {
           setStatus(r.error.message || 'Não foi possível entrar. Verifique seus dados.', 'error');
           return;
@@ -373,8 +375,8 @@
     setStatus('Criando conta...', 'info');
 
     try {
-      if (window.KCAPI && typeof window.KCAPI.signUp === 'function') {
-        const r = await window.KCAPI.signUp(email, password);
+      if (KCAPI && typeof KCAPI.signUp === 'function') {
+        const r = await KCAPI.signUp(email, password);
         if (r && r.error) {
           setStatus(r.error.message || 'Não foi possível criar sua conta.', 'error');
           return;
@@ -409,8 +411,8 @@
     setStatus('Saindo...', 'info');
 
     try {
-      if (window.KCAPI && typeof window.KCAPI.logout === 'function') {
-        await window.KCAPI.logout();
+      if (KCAPI && typeof KCAPI.logout === 'function') {
+        await KCAPI.logout();
         setStatus('Sessão encerrada.', 'success');
         return;
       }
@@ -495,8 +497,8 @@
     const dropdown = document.getElementById('kcProfileDropdown');
     if (!dropdown) return;
 
-    const user    = (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') ? window.KCSupabase.getUser() : null;
-    const profile = (window.KCAPI && typeof window.KCAPI.getCurrentProfile === 'function') ? window.KCAPI.getCurrentProfile() : null;
+    const user    = (KCSupabase && typeof KCSupabase.getUser === 'function') ? KCSupabase.getUser() : null;
+    const profile = (KCAPI && typeof KCAPI.getCurrentProfile === 'function') ? KCAPI.getCurrentProfile() : null;
 
     dropdown.innerHTML = buildDropdownContent(user, profile);
 
@@ -757,8 +759,8 @@
     if (!btn) return;
 
     // Perfil (quando disponível)
-    const profile = (window.KCAPI && typeof window.KCAPI.getCurrentProfile === 'function')
-      ? window.KCAPI.getCurrentProfile()
+    const profile = (KCAPI && typeof KCAPI.getCurrentProfile === 'function')
+      ? KCAPI.getCurrentProfile()
       : ((window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function')
         ? window.KCProfiles.getCurrentProfile()
         : null);
@@ -821,7 +823,7 @@
           : null;
         if (!trigger) return;
 
-        const u = (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') ? window.KCSupabase.getUser() : null;
+        const u = (KCSupabase && typeof KCSupabase.getUser === 'function') ? KCSupabase.getUser() : null;
         const ok = !!(u && u.id);
         if (ok) return;
 
@@ -853,8 +855,8 @@
   }
 
   function refreshUIFromUser() {
-    const user = (window.KCSupabase && typeof window.KCSupabase.getUser === 'function')
-      ? window.KCSupabase.getUser()
+    const user = (KCSupabase && typeof KCSupabase.getUser === 'function')
+      ? KCSupabase.getUser()
       : null;
 
     refreshHeaderLabel(user);
@@ -910,10 +912,7 @@
   }
 
   // Exposição para integração com outras áreas (ex.: create-post)
-  window.kcOpenAuthModal       = openModal;
-  window.kcCloseAuthModal      = closeModal;
-  window.kcOpenProfileDropdown  = openProfileDropdown;
-  window.kcCloseProfileDropdown = closeProfileDropdown;
+  export { openModal as kcOpenAuthModal, closeModal as kcCloseAuthModal, openProfileDropdown as kcOpenProfileDropdown, closeProfileDropdown as kcCloseProfileDropdown };
 
   function init() {
     ensureMobileMenuStructure();
@@ -921,8 +920,8 @@
 
     // Primeiro paint: tenta recuperar sessão e desenhar header
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.refreshSession === 'function') {
-        window.KCSupabase.refreshSession().finally(() => refreshUIFromUser());
+      if (KCSupabase && typeof KCSupabase.refreshSession === 'function') {
+        KCSupabase.refreshSession().finally(() => refreshUIFromUser());
       } else {
         refreshUIFromUser();
       }
@@ -943,4 +942,3 @@
   try {
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } catch (_) {}
-})();

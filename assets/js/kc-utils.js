@@ -1,16 +1,14 @@
 /*
   KinoCampus - Shared Utils (V8.1.2.4.6)
 
+/*
+  KinoCampus - Shared Utils (V8.1.2.4.6)
+
   Principal função:
   - Centralizar utilitários repetidos (normalize/escape/currency/debounce)
   - Evitar divergência entre scripts (search, filters, etc.)
-
-  Exposição:
-  - window.KCUtils
 */
-
-(function () {
-  'use strict';
+import { KC_CONSTANTS } from './kc-constants.js';
 
   const {
     MODULE_LABEL_MAP,
@@ -21,7 +19,7 @@
     HOUSING_REGION_DEFINITIONS,
     HOUSING_FEATURE_DEFINITIONS,
     LOST_FOUND_LOCATION_DEFINITIONS
-  } = window.KC_CONSTANTS;
+  } = KC_CONSTANTS;
 
   function titleCase(str) {
     return String(str || '')
@@ -2156,7 +2154,7 @@
     `.trim();
   }
 
-  window.KCUtils = Object.freeze({
+export const KCUtils = Object.freeze({
     normalizeText,
     normalizeEmail,
     getEmailDomain,
@@ -2186,12 +2184,6 @@
       resolveLostFoundLocation,
       resolveHousingFeatures,
       resolveHousingTypeKey,
-      renderMarkerTags,
-      toStringArray,
-    escapeHtml,
-    cssEscape,
-    formatCurrencyBRL,
-    parseBRLNumber,
     clamp,
     debounce,
     splitPriceText,
@@ -2199,4 +2191,3 @@
     renderPostCard,
     timeAgo,
   });
-})();

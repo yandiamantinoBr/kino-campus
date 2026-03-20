@@ -1,8 +1,7 @@
-/* KinoCampus - Supabase Adapter */
-(function() {
-'use strict';
+import { KCAPI } from '../kc-api.client.js';
+import { KCSupabase } from '../kc-supabase.client.js';
 
-  const { ENV, normalizePost } = window.KCAPI;
+const { ENV, normalizePost } = KCAPI;
 
 
   // ---------- Supabase Client Bootstrap (V8.1.3.1) ----------
@@ -20,8 +19,8 @@
 
     // Preferimos o Facade (Auth/Sessão) para manter o SDK isolado
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.getClient === 'function') {
-        supabaseClient = window.KCSupabase.getClient();
+      if (KCSupabase && typeof KCSupabase.getClient === 'function') {
+        supabaseClient = KCSupabase.getClient();
         return supabaseClient;
       }
     } catch (_) { }
@@ -52,8 +51,8 @@
   // ---------- Supabase Auth & Storage (V8.1.3.1) ----------
   async function supabaseGetCurrentUser() {
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
-        return await window.KCSupabase.getCurrentUser();
+      if (KCSupabase && typeof KCSupabase.getCurrentUser === 'function') {
+        return await KCSupabase.getCurrentUser();
       }
     } catch (_) { }
 
@@ -91,8 +90,8 @@
     if (!em || !pw) return null;
 
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.signIn === 'function') {
-        const r = await window.KCSupabase.signIn(em, pw);
+      if (KCSupabase && typeof KCSupabase.signIn === 'function') {
+        const r = await KCSupabase.signIn(em, pw);
         return (r && r.user) ? r.user : null;
       }
     } catch (_) { }
@@ -119,8 +118,8 @@
     if (!em || !pw) return { user: null, session: null, error: { message: 'E-mail e senha são obrigatórios.' } };
 
     // Preferimos o facade (V8.1.3.1) para validação de domínio/erros consistentes
-    if (window.KCSupabase && typeof window.KCSupabase.signUp === 'function') {
-      return window.KCSupabase.signUp(em, pw);
+    if (KCSupabase && typeof KCSupabase.signUp === 'function') {
+      return KCSupabase.signUp(em, pw);
     }
 
     const client = getSupabaseClient();
@@ -138,8 +137,8 @@
 
   async function supabaseLogout() {
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.signOut === 'function') {
-        const r = await window.KCSupabase.signOut();
+      if (KCSupabase && typeof KCSupabase.signOut === 'function') {
+        const r = await KCSupabase.signOut();
         return !!(r && r.ok);
       }
     } catch (_) { }
@@ -2593,5 +2592,4 @@
   });
 
 
-window.KCSupabaseAdapter = driverSupabase;
-})();
+KCAPI.registerAdapter('supabase', driverSupabase);

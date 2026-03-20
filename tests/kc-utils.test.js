@@ -1,26 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-
-// Ler o código fonte dos utilitários
-const constantsPath = path.resolve(__dirname, '../assets/js/kc-constants.js');
-const utilsPath = path.resolve(__dirname, '../assets/js/kc-utils.js');
-
-const constantsCode = fs.readFileSync(constantsPath, 'utf8');
-const utilsCode = fs.readFileSync(utilsPath, 'utf8');
-
-// O jest-environment-jsdom expõe o "window" e "document" globalmente.
-// Executamos os códigos no contexto atual para popular o window.
-beforeAll(() => {
-  // Executando no escopo global para simular o browser incluí-las
-  eval(constantsCode);
-  eval(utilsCode);
-});
+import { KC_CONSTANTS } from '../assets/js/kc-constants.js';
+import { KCUtils } from '../assets/js/kc-utils.js';
 
 describe('KCUtils - Funções Utilitárias', () => {
   let utils;
 
   beforeEach(() => {
-    utils = window.KCUtils;
+    utils = KCUtils;
   });
 
   describe('normalizeText', () => {

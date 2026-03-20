@@ -1,12 +1,21 @@
 /* KinoCampus — kc-create-post.js
    Modal de criação/edição de publicações.
    Extraído de kc-core.js (F1).
-   Depende de: kc-core.js (kcModuleLabel, kcModulePage, kcGetModuloFilterForPage, kcCreateUserPost, kcLoadUserPosts),
-               toast.js (showToast), window.KCAPI, window.KCSupabase, window.KCUtils
 */
 
+import { KC_ENV } from './kc-env.js';
+import { KCAPI } from './kc-api.client.js';
+import { KCSupabase } from './kc-supabase.client.js';
+import { KCUtils } from './kc-utils.js';
+import { showToast } from './components/toast.js';
+import { kcModuleLabel, kcModulePage, kcGetModuloFilterForPage, kcCreateUserPost, kcLoadUserPosts, kcUserPosts } from './kc-core.js';
+
+function isProductionRuntime() {
+  return !!(KC_ENV && KC_ENV.isProduction === true);
+}
+
 // Helper local
-function _esc(str) { return window.KCUtils.escapeHtml(str); }
+function _esc(str) { return KCUtils.escapeHtml(str); }
 
 // -----------------------------
 // Create Post Modal (Design React + Form dinâmico por módulo)
@@ -463,8 +472,8 @@ function kcTagLabel(schema, groupId, key) {
 }
 
 function kcNormalizeOpportunityTypeKey(value) {
-  const canonical = window.KCUtils && typeof window.KCUtils.canonicalCategory === 'function'
-    ? window.KCUtils.canonicalCategory(value)
+  const canonical = KCUtils && typeof KCUtils.canonicalCategory === 'function'
+    ? KCUtils.canonicalCategory(value)
     : String(value || '').trim().toLowerCase();
 
   if (!canonical) return '';
@@ -486,19 +495,19 @@ function kcGetOpportunityTypeOptionKey(value) {
 function kcResolveOpportunityAreaValue(value, fallbackSource) {
   const history = [];
   if (Array.isArray(window.__KC_OPPORTUNITY_AREA_HISTORY)) history.push(...window.__KC_OPPORTUNITY_AREA_HISTORY);
-  if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
+  if (kcUserPosts && typeof kcUserPosts.list === 'function') {
     try {
-      const userPosts = window.kcUserPosts.list();
+      const userPosts = kcUserPosts.list();
       if (Array.isArray(userPosts)) {
         history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'oportunidades'));
       }
     } catch (_) { }
   }
 
-  if (window.KCUtils && typeof window.KCUtils.resolveOpportunityArea === 'function') {
+  if (KCUtils && typeof KCUtils.resolveOpportunityArea === 'function') {
     const options = { history };
     if (fallbackSource) options.textParts = [fallbackSource];
-    return window.KCUtils.resolveOpportunityArea(value || fallbackSource || '', options);
+    return KCUtils.resolveOpportunityArea(value || fallbackSource || '', options);
   }
 
   const raw = String(value || '').trim();
@@ -507,8 +516,8 @@ function kcResolveOpportunityAreaValue(value, fallbackSource) {
 }
 
 function kcGetOpportunityAreaOptions() {
-  if (window.KCUtils && typeof window.KCUtils.getOpportunityAreaDefinitions === 'function') {
-    return window.KCUtils.getOpportunityAreaDefinitions();
+  if (KCUtils && typeof KCUtils.getOpportunityAreaDefinitions === 'function') {
+    return KCUtils.getOpportunityAreaDefinitions();
   }
 
   return [
@@ -521,8 +530,8 @@ function kcGetOpportunityAreaOptions() {
 }
 
 function kcNormalizeHousingTypeKey(value) {
-  const canonical = window.KCUtils && typeof window.KCUtils.resolveHousingTypeKey === 'function'
-    ? window.KCUtils.resolveHousingTypeKey(value)
+  const canonical = KCUtils && typeof KCUtils.resolveHousingTypeKey === 'function'
+    ? KCUtils.resolveHousingTypeKey(value)
     : String(value || '').trim().toLowerCase();
 
   if (!canonical) return '';
@@ -544,8 +553,8 @@ function kcGetHousingTypeOptionKey(value) {
 }
 
 function kcParseStringArrayValue(value) {
-  if (window.KCUtils && typeof window.KCUtils.toStringArray === 'function') {
-    return window.KCUtils.toStringArray(value);
+  if (KCUtils && typeof KCUtils.toStringArray === 'function') {
+    return KCUtils.toStringArray(value);
   }
   if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
   const raw = String(value || '').trim();
@@ -564,19 +573,19 @@ function kcSerializeHousingFeatureValues(values) {
 function kcResolveHousingRegionValue(value, fallbackSource) {
   const history = [];
   if (Array.isArray(window.__KC_HOUSING_REGION_HISTORY)) history.push(...window.__KC_HOUSING_REGION_HISTORY);
-  if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
+  if (kcUserPosts && typeof kcUserPosts.list === 'function') {
     try {
-      const userPosts = window.kcUserPosts.list();
+      const userPosts = kcUserPosts.list();
       if (Array.isArray(userPosts)) {
         history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'moradia'));
       }
     } catch (_) { }
   }
 
-  if (window.KCUtils && typeof window.KCUtils.resolveHousingRegion === 'function') {
+  if (KCUtils && typeof KCUtils.resolveHousingRegion === 'function') {
     const options = { history };
     if (fallbackSource) options.textParts = [fallbackSource];
-    return window.KCUtils.resolveHousingRegion(value || fallbackSource || '', options);
+    return KCUtils.resolveHousingRegion(value || fallbackSource || '', options);
   }
 
   const raw = String(value || '').trim();
@@ -585,8 +594,8 @@ function kcResolveHousingRegionValue(value, fallbackSource) {
 }
 
 function kcGetHousingRegionOptions() {
-  if (window.KCUtils && typeof window.KCUtils.getHousingRegionDefinitions === 'function') {
-    return window.KCUtils.getHousingRegionDefinitions();
+  if (KCUtils && typeof KCUtils.getHousingRegionDefinitions === 'function') {
+    return KCUtils.getHousingRegionDefinitions();
   }
 
   return [
@@ -603,20 +612,20 @@ function kcResolveHousingFeatureValues(values, fallbackSource) {
   const explicitValues = kcParseStringArrayValue(values);
   const history = [];
   if (Array.isArray(window.__KC_HOUSING_FEATURE_HISTORY)) history.push(...window.__KC_HOUSING_FEATURE_HISTORY);
-  if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
+  if (kcUserPosts && typeof kcUserPosts.list === 'function') {
     try {
-      const userPosts = window.kcUserPosts.list();
+      const userPosts = kcUserPosts.list();
       if (Array.isArray(userPosts)) {
         history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'moradia'));
       }
     } catch (_) { }
   }
 
-  if (window.KCUtils && typeof window.KCUtils.resolveHousingFeatures === 'function') {
+  if (KCUtils && typeof KCUtils.resolveHousingFeatures === 'function') {
     const source = explicitValues.length ? explicitValues : (fallbackSource || '');
     const options = { history };
     if (fallbackSource) options.textParts = [fallbackSource];
-    return window.KCUtils.resolveHousingFeatures(source, options);
+    return KCUtils.resolveHousingFeatures(source, options);
   }
 
   return explicitValues.map((value) => ({
@@ -628,8 +637,8 @@ function kcResolveHousingFeatureValues(values, fallbackSource) {
 }
 
 function kcGetHousingFeatureOptions() {
-  if (window.KCUtils && typeof window.KCUtils.getHousingFeatureDefinitions === 'function') {
-    return window.KCUtils.getHousingFeatureDefinitions();
+  if (KCUtils && typeof KCUtils.getHousingFeatureDefinitions === 'function') {
+    return KCUtils.getHousingFeatureDefinitions();
   }
 
   return [
@@ -716,19 +725,19 @@ function kcAppendHousingFeatureFromInput(input) {
 function kcResolveLostFoundLocationValue(value, fallbackSource) {
   const history = [];
   if (Array.isArray(window.__KC_LOST_FOUND_LOCATION_HISTORY)) history.push(...window.__KC_LOST_FOUND_LOCATION_HISTORY);
-  if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
+  if (kcUserPosts && typeof kcUserPosts.list === 'function') {
     try {
-      const userPosts = window.kcUserPosts.list();
+      const userPosts = kcUserPosts.list();
       if (Array.isArray(userPosts)) {
         history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'achados-perdidos'));
       }
     } catch (_) { }
   }
 
-  if (window.KCUtils && typeof window.KCUtils.resolveLostFoundLocation === 'function') {
+  if (KCUtils && typeof KCUtils.resolveLostFoundLocation === 'function') {
     const options = { history };
     if (fallbackSource) options.textParts = [fallbackSource];
-    return window.KCUtils.resolveLostFoundLocation(value || fallbackSource || '', options);
+    return KCUtils.resolveLostFoundLocation(value || fallbackSource || '', options);
   }
 
   const raw = String(value || '').trim();
@@ -737,8 +746,8 @@ function kcResolveLostFoundLocationValue(value, fallbackSource) {
 }
 
 function kcGetLostFoundLocationOptions() {
-  if (window.KCUtils && typeof window.KCUtils.getLostFoundLocationDefinitions === 'function') {
-    return window.KCUtils.getLostFoundLocationDefinitions();
+  if (KCUtils && typeof KCUtils.getLostFoundLocationDefinitions === 'function') {
+    return KCUtils.getLostFoundLocationDefinitions();
   }
 
   return [
@@ -766,8 +775,8 @@ function kcSyncLostFoundLocationInput(input) {
 
 function kcResolveOpportunityWorkMode(value) {
   const raw = String(value || '').trim();
-  const normalized = (window.KCUtils && typeof window.KCUtils.normalizeText === 'function')
-    ? window.KCUtils.normalizeText(raw)
+  const normalized = (KCUtils && typeof KCUtils.normalizeText === 'function')
+    ? KCUtils.normalizeText(raw)
     : raw.toLowerCase();
 
   if (!normalized) return { key: '', label: '' };
@@ -781,8 +790,8 @@ function kcResolveOpportunityWorkMode(value) {
 
 function kcResolveOpportunityRegime(value) {
   const raw = String(value || '').trim();
-  const normalized = (window.KCUtils && typeof window.KCUtils.normalizeText === 'function')
-    ? window.KCUtils.normalizeText(raw)
+  const normalized = (KCUtils && typeof KCUtils.normalizeText === 'function')
+    ? KCUtils.normalizeText(raw)
     : raw.toLowerCase();
 
   if (!normalized) return { key: '', label: '' };
@@ -1517,7 +1526,7 @@ function kcOpenEditPostModal(post, callback) {
   const closeBtn = overlay.querySelector('.kc-create-modal__close');
   if (closeBtn) closeBtn.focus();
 }
-window.kcOpenEditPostModal = kcOpenEditPostModal;
+
 
 async function kcHandleCreateSubmit() {
   if (kcCreateState.submitting === true) return;
@@ -1908,8 +1917,8 @@ async function kcHandleCreateSubmit() {
 
       let editRes = null;
       try {
-        if (window.KCAPI && typeof window.KCAPI.updatePost === 'function') {
-          editRes = await window.KCAPI.updatePost(kcCreateState.editPostId, payload);
+        if (KCAPI && typeof KCAPI.updatePost === 'function') {
+          editRes = await KCAPI.updatePost(kcCreateState.editPostId, payload);
         } else {
           editRes = { ok: false, error: { message: 'Edição não suportada neste ambiente.' } };
         }
@@ -1934,19 +1943,19 @@ async function kcHandleCreateSubmit() {
     }
     // ── FIM MODO EDIÇÃO ───────────────────────────────────────────────────────
 
-    const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (window.KCAPI && typeof window.KCAPI.createPost === 'function'));
-    const useSupabase = !!(window.KCAPI && window.KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
+    const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === 'function') || (KCAPI && typeof KCAPI.createPost === 'function'));
+    const useSupabase = !!(KCAPI && KCAPI.activeDriver === 'supabase' && hasApiCreatePost);
     const blockLocalCriticalPersistence = isProductionRuntime() && !useSupabase;
     let post = null;
     let createError = null;
 
-    const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
+    const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (KCAPI ? KCAPI.createPost : null);
 
     if (useSupabase) {
       // Exige autenticação no driver Supabase (RLS)
       let user = null;
       try {
-        if (typeof window.KCAPI.getCurrentUser === 'function') user = await window.KCAPI.getCurrentUser();
+        if (typeof KCAPI.getCurrentUser === 'function') user = await KCAPI.getCurrentUser();
       } catch (_) { }
 
       if (!user) {
@@ -1989,8 +1998,8 @@ async function kcHandleCreateSubmit() {
           createError,
         });
         try {
-          if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
-            const createErr = window.KCAPI.getLastCreatePostError();
+          if (KCAPI && typeof KCAPI.getLastCreatePostError === 'function') {
+            const createErr = KCAPI.getLastCreatePostError();
             console.error('[KinoCampus] createPost retornou null. Diagnóstico:', createErr);
           }
         } catch (_) { }
@@ -2046,13 +2055,13 @@ async function kcHandleCreateSubmit() {
 
     // Audit log: registra criação do post (fire-and-forget)
     try {
-      const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
-        ? window.KCSupabase.getClient() : null;
+      const kcClient = KCSupabase && typeof KCSupabase.getClient === 'function'
+        ? KCSupabase.getClient() : null;
       const postId = (post && (post.uuid || post.id || post.legacyId)) ? String(post.uuid || post.id || post.legacyId) : '';
       let actorId = null;
       try {
-        if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-          const u = await window.KCAPI.getCurrentUser();
+        if (KCAPI && typeof KCAPI.getCurrentUser === 'function') {
+          const u = await KCAPI.getCurrentUser();
           if (u) actorId = u.id;
         }
       } catch (_) { }
@@ -2121,3 +2130,5 @@ function kcInitCreatePostTriggers() {
 document.addEventListener('DOMContentLoaded', function () {
   kcInitCreatePostTriggers();
 });
+
+export { kcOpenCreatePostModal, kcCloseCreatePostModal, kcOpenEditPostModal };

@@ -8,6 +8,19 @@
  *
  * NOTE (V7.1.2): renderização de cards centralizada em KCUtils.renderPostCard para preparar MVC.
  */
+import { KC_ENV } from './kc-env.js';
+import { KCAPI } from './kc-api.client.js';
+import { KCUtils } from './kc-utils.js';
+import {
+  refreshHeroCarousel,
+  changeSlide,
+  showSlide,
+  goToSlide,
+  startAutoSlide,
+  stopAutoSlide,
+  resetAutoSlide
+} from './components/carousel.js';
+import { vote, kcInitVotesRealtime } from './components/voting.js';
 
 // -----------------------------
 // Model layer (V8.1.2.4.5) - contrato único de Post
@@ -19,7 +32,7 @@
 //
 // Obs.: não adiciona dependências e mantém compatibilidade com KCAPI.normalizePost.
 
-window.KCPostModel = window.KCPostModel || {
+export const KCPostModel = {
   from: function (raw, context) {
     const ctx = context || {};
     let post = raw || {};
@@ -52,7 +65,7 @@ window.KCPostModel = window.KCPostModel || {
     function _kcGetNowFor(dateObj) {
       let now = new Date();
       try {
-        const clamp = (window.KC_ENV && window.KC_ENV.clamp) ? window.KC_ENV.clamp : null;
+        const clamp = (KC_ENV && KC_ENV.clamp) ? KC_ENV.clamp : null;
         if (clamp && typeof clamp.year === 'number' && clamp.month) {
           const mi = _kcMonthIndex(clamp.month);
           if (dateObj && dateObj.getUTCFullYear && dateObj.getUTCFullYear() === clamp.year && dateObj.getUTCMonth() === mi) {
@@ -67,8 +80,8 @@ window.KCPostModel = window.KCPostModel || {
 
 
     // Normalização base (preferir KCAPI)
-    if (window.KCAPI && typeof window.KCAPI.normalizePost === 'function') {
-      post = window.KCAPI.normalizePost(post);
+    if (KCAPI && typeof KCAPI.normalizePost === 'function') {
+      post = KCAPI.normalizePost(post);
     } else {
       post = { ...(post || {}) };
     }
@@ -294,7 +307,7 @@ function kcCreateUserPost(data) {
 
   function _kcClampCreatedAtISO() {
     try {
-      const clamp = (window.KC_ENV && window.KC_ENV.clamp) ? window.KC_ENV.clamp : null;
+      const clamp = (KC_ENV && KC_ENV.clamp) ? KC_ENV.clamp : null;
       if (clamp && typeof clamp.year === "number" && clamp.month) {
         const mi = _kcMonthIndexLocal(clamp.month);
         const base = Date.UTC(clamp.year, mi, 15, 14, 0, 0);
@@ -317,8 +330,8 @@ function kcCreateUserPost(data) {
       ? (data.autorAvatar || data.authorAvatar)
       : (() => {
         try {
-          if (window.KCAPI && typeof window.KCAPI.getAuthorById === 'function') {
-            const u = window.KCAPI.getAuthorById('USER_SELF');
+          if (KCAPI && typeof KCAPI.getAuthorById === 'function') {
+            const u = KCAPI.getAuthorById('USER_SELF');
             return (u && (u.avatarUrl || u.avatar)) ? (u.avatarUrl || u.avatar) : '';
           }
         } catch (_) { }
@@ -363,8 +376,8 @@ function kcCreateUserPost(data) {
     }
   } catch (_) { }
 
-  const normalized = (window.KCAPI && typeof window.KCAPI.normalizePost === 'function')
-    ? window.KCAPI.normalizePost(raw)
+  const normalized = (KCAPI && typeof KCAPI.normalizePost === 'function')
+    ? KCAPI.normalizePost(raw)
     : raw;
 
   // Mantém createdAt para ordenação local futura (não interfere no card).
@@ -376,8 +389,8 @@ function kcCreateUserPost(data) {
   // V7.1.2: pronto para backend (sem quebrar o modo estático)
   // Se existir KCAPI configurado, espelha o post no servidor.
   try {
-    if (window.KCAPI && typeof window.KCAPI.isBackendEnabled === 'function' && window.KCAPI.isBackendEnabled()) {
-      const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : window.KCAPI.createPost;
+    if (KCAPI && typeof KCAPI.isBackendEnabled === 'function' && KCAPI.isBackendEnabled()) {
+      const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : KCAPI.createPost;
       if (typeof apiCreateFn === 'function') apiCreateFn(post);
     }
   } catch (_) { }
@@ -445,11 +458,11 @@ function kcInjectUserPostsIntoFeed() {
     .slice(0, 20);
 
   if (!userPosts.length) return;
-  if (!window.KCUtils || typeof window.KCUtils.renderPostCard !== 'function') return;
+  if (!KCUtils || typeof KCUtils.renderPostCard !== 'function') return;
 
   const normalized = userPosts.map((p) => {
-    const np = (window.KCAPI && typeof window.KCAPI.normalizePost === 'function')
-      ? window.KCAPI.normalizePost(p)
+    const np = (KCAPI && typeof KCAPI.normalizePost === 'function')
+      ? KCAPI.normalizePost(p)
       : (p || {});
     // Marca como post do usuário para evitar duplicação (e permitir estilo futuro).
     np._kcUserPost = true;
@@ -458,7 +471,7 @@ function kcInjectUserPostsIntoFeed() {
   });
 
   try {
-    const html = normalized.map(window.KCUtils.renderPostCard).join('\n');
+    const html = normalized.map(KCUtils.renderPostCard).join('\n');
     feed.insertAdjacentHTML('afterbegin', html);
   } catch (e) {
     console.warn('[KinoCampus] Falha ao injetar posts do usuário no feed.', e);
@@ -466,7 +479,7 @@ function kcInjectUserPostsIntoFeed() {
 }
 
 // Expose small API
-window.kcUserPosts = {
+export const kcUserPosts = {
   create: kcCreateUserPost,
   getById: kcGetUserPostById,
   list: kcLoadUserPosts,
@@ -616,13 +629,7 @@ function kcInitHeroSwipe() {
   }, { passive: true });
 }
 
-window.showSlide = showSlide;
-window.changeSlide = changeSlide;
-window.goToSlide = goToSlide;
-window.startAutoSlide = startAutoSlide;
-window.stopAutoSlide = stopAutoSlide;
-window.resetAutoSlide = resetAutoSlide;
-window.kcRefreshHeroCarousel = refreshHeroCarousel;
+
 
 
 // -----------------------------

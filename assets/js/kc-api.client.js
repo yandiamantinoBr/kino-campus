@@ -10,15 +10,17 @@
   - window.KCAPI
 */
 
-(function () {
-  'use strict';
+import { KC_ENV as envDefault } from './kc-env.js';
+import { KCSupabase } from './kc-supabase.client.js';
+import { KCUtils } from './kc-utils.js';
+
 
   const VERSION = '8.2.6.2';
 
   // -------- Bootstrap de Configuração (KC_ENV) --------
   // Regra de fallback: se kc-env.js não estiver carregado, assume driver local.
   function readEnv() {
-    const env = (window.KC_ENV && typeof window.KC_ENV === 'object') ? window.KC_ENV : null;
+    const env = (envDefault && typeof envDefault === 'object') ? envDefault : null;
     if (!env) {
       console.warn('[KCAPI] window.KC_ENV não encontrado. Usando defaults (driver=local).');
     }
@@ -539,8 +541,8 @@
   // ---------- Supabase Auth Delegates ----------
   async function supabaseGetCurrentUser() {
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
-        return await window.KCSupabase.getCurrentUser();
+      if (KCSupabase && typeof KCSupabase.getCurrentUser === 'function') {
+        return await KCSupabase.getCurrentUser();
       }
     } catch (err) { console.warn('[KCAPI] getCurrentUser falhou:', err && err.message || err); }
     return null;
@@ -552,8 +554,8 @@
     if (!em || !pw) return null;
 
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.signIn === 'function') {
-        const r = await window.KCSupabase.signIn(em, pw);
+      if (KCSupabase && typeof KCSupabase.signIn === 'function') {
+        const r = await KCSupabase.signIn(em, pw);
         return (r && r.user) ? r.user : null;
       }
     } catch (err) { console.warn('[KCAPI] login falhou:', err && err.message || err); }
@@ -565,25 +567,30 @@
     const pw = String(password || '').trim();
     if (!em || !pw) return { user: null, session: null, error: { message: 'E-mail e senha são obrigatórios.' } };
 
-    if (window.KCSupabase && typeof window.KCSupabase.signUp === 'function') {
-      return window.KCSupabase.signUp(em, pw);
+    if (KCSupabase && typeof KCSupabase.signUp === 'function') {
+      return KCSupabase.signUp(em, pw);
     }
     return { user: null, session: null, error: { message: 'Supabase não configurado.' } };
   }
 
   async function supabaseLogout() {
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.signOut === 'function') {
-        const r = await window.KCSupabase.signOut();
+      if (KCSupabase && typeof KCSupabase.signOut === 'function') {
+        const r = await KCSupabase.signOut();
         return !!(r && r.ok);
       }
     } catch (err) { console.warn('[KCAPI] logout falhou:', err && err.message || err); }
     return false;
   }
 
+  const _adapters = {};
+  function registerAdapter(name, adapter) {
+    _adapters[name] = adapter;
+  }
+
   function getActiveDriver() {
-    if (ENV.driver === 'supabase' && window.KCSupabaseAdapter) return window.KCSupabaseAdapter;
-    if (window.KCLocalAdapter) return window.KCLocalAdapter;
+    if (ENV.driver === 'supabase' && _adapters['supabase']) return _adapters['supabase'];
+    if (_adapters['local']) return _adapters['local'];
     throw new Error('No driver adapters loaded!');
   }
 
@@ -792,10 +799,11 @@
     return getActiveDriver().getProfileHighlightsCount(profileId);
   }
 
-  window.KCAPI = Object.freeze({
+  export const KCAPI = Object.freeze({
     VERSION,
     ENV,
     config: cfg,
+    registerAdapter,
     get activeDriver() { try { return getActiveDriver().name; } catch(e) { return 'pending'; } },
 
     setConfig,
@@ -861,4 +869,3 @@
     normalizePost,
     isBackendEnabled,
   });
-})();

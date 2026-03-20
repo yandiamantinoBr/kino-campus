@@ -1,9 +1,6 @@
 /*
   KinoCampus - Global Constants
 */
-(function (global) {
-  'use strict';
-
   // Labels para exibição (mantém consistência visual com os feeds)
   const MODULE_LABEL_MAP = Object.freeze({
     'moradia': 'Moradia',
@@ -344,14 +341,13 @@
     Object.freeze({ key: 'campus-colemar', label: 'Campus Colemar', icon: 'fas fa-graduation-cap', emoji: '🎓', aliases: Object.freeze(['campus colemar', 'colemar', 'campus i', 'campus 1', 'colemar natal e silva']) }),
   ]);
 
-  global.KC_CONSTANTS = Object.freeze({
-    MODULE_LABEL_MAP,
-    MODULE_ICON_MAP,
-    CATEGORY_LABELS,
-    SUBCATEGORY_LABELS,
-    OPPORTUNITY_AREA_DEFINITIONS,
-    HOUSING_REGION_DEFINITIONS,
-    HOUSING_FEATURE_DEFINITIONS,
-    LOST_FOUND_LOCATION_DEFINITIONS
-  });
-})(typeof window !== 'undefined' ? window : this);
+export const KC_CONSTANTS = Object.freeze({
+  MODULE_LABEL_MAP,
+  MODULE_ICON_MAP,
+  CATEGORY_LABELS,
+  SUBCATEGORY_LABELS,
+  OPPORTUNITY_AREA_DEFINITIONS,
+  HOUSING_REGION_DEFINITIONS,
+  HOUSING_FEATURE_DEFINITIONS,
+  LOST_FOUND_LOCATION_DEFINITIONS
+});
