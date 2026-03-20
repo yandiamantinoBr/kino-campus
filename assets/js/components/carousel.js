@@ -2,9 +2,9 @@
 // -----------------------------
 // Hero carousel (index)
 // -----------------------------
-let currentSlide = 0;
-let autoSlideInterval = null;
-let heroControlsBound = false;
+let _kcCurrentSlide = 0;
+let _kcAutoSlideInterval = null;
+let _kcHeroControlsBound = false;
 const KC_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isProductionRuntime() {
@@ -21,19 +21,19 @@ function showSlide(index) {
   if (!slides.length) return;
 
   // wrap
-  if (index >= slides.length) currentSlide = 0;
-  else if (index < 0) currentSlide = slides.length - 1;
-  else currentSlide = index;
+  if (index >= slides.length) _kcCurrentSlide = 0;
+  else if (index < 0) _kcCurrentSlide = slides.length - 1;
+  else _kcCurrentSlide = index;
 
   slides.forEach(s => s.classList.remove('active'));
   dots.forEach(d => d.classList.remove('active'));
 
-  slides[currentSlide].classList.add('active');
-  if (dots[currentSlide]) dots[currentSlide].classList.add('active');
+  slides[_kcCurrentSlide].classList.add('active');
+  if (dots[_kcCurrentSlide]) dots[_kcCurrentSlide].classList.add('active');
 }
 
 function changeSlide(direction) {
-  showSlide(currentSlide + direction);
+  showSlide(_kcCurrentSlide + direction);
   resetAutoSlide();
 }
 
@@ -44,13 +44,13 @@ function goToSlide(index) {
 
 function startAutoSlide() {
   stopAutoSlide();
-  autoSlideInterval = setInterval(() => showSlide(currentSlide + 1), 5000);
+  _kcAutoSlideInterval = setInterval(() => showSlide(_kcCurrentSlide + 1), 5000);
 }
 
 function stopAutoSlide() {
-  if (autoSlideInterval) {
-    clearInterval(autoSlideInterval);
-    autoSlideInterval = null;
+  if (_kcAutoSlideInterval) {
+    clearInterval(_kcAutoSlideInterval);
+    _kcAutoSlideInterval = null;
   }
 }
 
@@ -63,8 +63,8 @@ function refreshHeroCarousel() {
   showSlide(0);
   startAutoSlide();
 
-  if (!heroControlsBound) {
-    heroControlsBound = true;
+  if (!_kcHeroControlsBound) {
+    _kcHeroControlsBound = true;
 
     const carousel = document.querySelector('.kc-hero-carousel');
     const prevBtn = document.querySelector('.kc-carousel-prev[data-kc-slide="prev"]');
