@@ -501,12 +501,110 @@
     });
   }
 
+  // ---------- Utilidades internas ----------
+  function pickFirstNonEmpty(values) {
+    if (!Array.isArray(values)) return '';
+    for (const item of values) {
+      const value = String(item == null ? '' : item).trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function kcApiError(message) {
+    return { ok: false, error: { message: String(message || 'Operação não concluída.') } };
+  }
+
+  function enforceSupabaseOnProduction(operationName) {
+    if (!ENV.isProduction) return null;
+    if (ENV.driver === 'supabase') return null;
+    return {
+      ok: false,
+      error: {
+        code: 'PRODUCTION_REQUIRES_SUPABASE',
+        message: `Operação crítica "${String(operationName || 'unknown')}" bloqueada: em produção, o driver "supabase" é obrigatório.`,
+      },
+    };
+  }
+
+  // ---------- Modo estático (fallback) ----------
+  async function getDatabaseRaw() {
+    const urls = (Array.isArray(cfg.fallbackDatabaseURLs) && cfg.fallbackDatabaseURLs.length)
+      ? cfg.fallbackDatabaseURLs
+      : DEFAULTS.fallbackDatabaseURLs;
+
+    let lastErr = null;
+    for (const url of urls) {
+      try {
+        return await fetchJSON(url);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('KCAPI_DB_NOT_FOUND');
+  }
+
+  async function getDatabaseNormalized() {
+    const db = await getDatabaseRaw();
+    const anuncios = Array.isArray(db.anuncios) ? db.anuncios : [];
+    const posts = anuncios.map(normalizePost);
+    return {
+      version: VERSION,
+      users: MOCK_USERS_LIST,
+      posts,
+    };
+  }
+
+  // ---------- Supabase Auth Delegates ----------
+  async function supabaseGetCurrentUser() {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
+        return await window.KCSupabase.getCurrentUser();
+      }
+    } catch (_) { }
+    return null;
+  }
+
+  async function supabaseLogin(email, password) {
+    const em = String(email || '').trim();
+    const pw = String(password || '').trim();
+    if (!em || !pw) return null;
+
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.signIn === 'function') {
+        const r = await window.KCSupabase.signIn(em, pw);
+        return (r && r.user) ? r.user : null;
+      }
+    } catch (_) { }
+    return null;
+  }
+
+  async function supabaseSignUp(email, password) {
+    const em = String(email || '').trim();
+    const pw = String(password || '').trim();
+    if (!em || !pw) return { user: null, session: null, error: { message: 'E-mail e senha são obrigatórios.' } };
+
+    if (window.KCSupabase && typeof window.KCSupabase.signUp === 'function') {
+      return window.KCSupabase.signUp(em, pw);
+    }
+    return { user: null, session: null, error: { message: 'Supabase não configurado.' } };
+  }
+
+  async function supabaseLogout() {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.signOut === 'function') {
+        const r = await window.KCSupabase.signOut();
+        return !!(r && r.ok);
+      }
+    } catch (_) { }
+    return false;
+  }
+
   function supabaseNotReady(method) {
     console.error(`[KCAPI][Supabase] Método "${method}" chamado, mas o driver Supabase ainda é um esqueleto (V8.1.3.1).`);
     return Promise.reject(new Error('KCAPI_SUPABASE_DRIVER_NOT_READY'));
   }
 
-  
   function getActiveDriver() {
     if (ENV.driver === 'supabase' && window.KCSupabaseAdapter) return window.KCSupabaseAdapter;
     if (window.KCLocalAdapter) return window.KCLocalAdapter;
