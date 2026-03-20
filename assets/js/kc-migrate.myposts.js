@@ -266,9 +266,9 @@
       return { ok: false, code: 'NOT_AUTHENTICATED', message: 'Você precisa estar logado para migrar.' };
     }
 
-    const apiCreateFn = (window.KCActions && typeof window.KCActions.createPost === 'function') ? window.KCActions.createPost : (window.KCAPI ? window.KCAPI.createPost : null);
+    const apiCreateFn = (window.KCAPI && typeof window.KCAPI.createPost === 'function') ? window.KCAPI.createPost : null;
     if (typeof apiCreateFn !== 'function') {
-      return { ok: false, code: 'KCAPI_CREATEPOST_MISSING', message: 'createPost não está disponível (KCActions/KCAPI).' };
+      return { ok: false, code: 'KCAPI_CREATEPOST_MISSING', message: 'createPost não está disponível (KCAPI).' };
     }
 
     // trava simples

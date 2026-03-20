@@ -265,6 +265,7 @@
   function reset() {
     state.profile = null;
     state.lastSyncedUserId = null;
+    state.cache = Object.create(null);
     dispatchProfileChange(null);
   }
 

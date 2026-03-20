@@ -60,7 +60,11 @@
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
-      if (error || !Array.isArray(data) || !data.length) return; // fallback estático
+      if (error) {
+        console.warn('[KC Banners] Erro ao carregar banners do Supabase:', error.message || error);
+        return; // fallback estático
+      }
+      if (!Array.isArray(data) || !data.length) return; // sem banners ativos — mantém estáticos
 
       const slidesEl = document.getElementById('kc-hero-slides');
       const dotsEl   = document.getElementById('kc-carousel-dots');
@@ -78,7 +82,8 @@
       } else if (typeof window.showSlide === 'function') {
         window.showSlide(0);
       }
-    } catch (_) {
+    } catch (e) {
+      console.warn('[KC Banners] Exceção ao carregar banners:', e && e.message || e);
       // Fallback silencioso — banners estáticos permanecem
     }
   }
