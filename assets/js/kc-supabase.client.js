@@ -658,6 +658,8 @@
     return set;
   }
 
+  const activeChannels = Object.create(null);
+
   function subscribeNewPosts(options = {}) {
     const opt = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
     const { driver } = readEnv();
@@ -667,21 +669,25 @@
     if (!client || typeof client.channel !== 'function') return noopSubscription();
 
     const moduleSet = normalizeModuleFilter(opt.filter || null);
-    const channelName = `posts-feed-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    let channel = null;
-    let unsubscribed = false;
+    const channelKey = Array.from(moduleSet).sort().join('-') || 'global';
+    const channelName = `posts-feed-${channelKey}`;
 
-    try {
-      channel = client
-        .channel(channelName)
-        .on(
+    if (!activeChannels[channelName]) {
+      const channel = client.channel(channelName);
+      activeChannels[channelName] = { 
+        channel, 
+        listeners: new Set()
+      };
+
+      try {
+        channel.on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'posts' },
           (payload) => {
             const row = (payload && payload.new && typeof payload.new === 'object') ? payload.new : null;
             if (!row) return;
 
-            // Defesa em profundidade: mesmo com RLS, o feed público só consome published.
+            // Defesa em profundidade: feed só de published
             const status = String(row.status || '').trim().toLowerCase();
             if (status !== 'published') return;
 
@@ -690,40 +696,54 @@
               if (!mk || !moduleSet.has(mk)) return;
             }
 
-            try {
-              if (typeof opt.onPost === 'function') opt.onPost({ row, payload });
-            } catch (cbErr) {
-              try {
-                if (typeof opt.onError === 'function') opt.onError(cbErr);
-              } catch (_) { }
+            // Notify all multiplexed listeners
+            if (activeChannels[channelName]) {
+                activeChannels[channelName].listeners.forEach(l => {
+                    try { if (typeof l.onPost === 'function') l.onPost({ row, payload }); } catch (_) {}
+                });
             }
           }
         );
 
-      if (typeof channel.subscribe === 'function') {
-        channel.subscribe((status) => {
-          try {
-            if (typeof opt.onStatus === 'function') opt.onStatus(status);
-          } catch (_) { }
-        });
+        if (typeof channel.subscribe === 'function') {
+          channel.subscribe((status) => {
+            if (activeChannels[channelName]) {
+                activeChannels[channelName].listeners.forEach(l => {
+                    try { if (typeof l.onStatus === 'function') l.onStatus(status); } catch (_) {}
+                });
+            }
+          });
+        }
+      } catch (e) {
+        delete activeChannels[channelName];
+        try { if (typeof opt.onError === 'function') opt.onError(e); } catch (_) {}
+        return noopSubscription();
       }
-    } catch (e) {
-      try {
-        if (typeof opt.onError === 'function') opt.onError(e);
-      } catch (_) { }
-      return noopSubscription();
     }
+
+    const listener = {
+      onPost: opt.onPost,
+      onStatus: opt.onStatus,
+      onError: opt.onError
+    };
+
+    activeChannels[channelName].listeners.add(listener);
+    let localUnsubscribed = false;
 
     return {
       unsubscribe: function () {
-        if (unsubscribed) return;
-        unsubscribed = true;
-        try {
-          if (channel && typeof channel.unsubscribe === 'function') channel.unsubscribe();
-        } catch (_) { }
-        try {
-          if (channel && typeof client.removeChannel === 'function') client.removeChannel(channel);
-        } catch (_) { }
+        if (localUnsubscribed) return;
+        localUnsubscribed = true;
+
+        const entry = activeChannels[channelName];
+        if (entry) {
+          entry.listeners.delete(listener);
+          if (entry.listeners.size === 0) {
+             try { if (typeof entry.channel.unsubscribe === 'function') entry.channel.unsubscribe(); } catch (_) {}
+             try { if (typeof client.removeChannel === 'function') client.removeChannel(entry.channel); } catch (_) {}
+             delete activeChannels[channelName];
+          }
+        }
       }
     };
   }

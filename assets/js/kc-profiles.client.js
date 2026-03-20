@@ -268,6 +268,21 @@
     dispatchProfileChange(null);
   }
 
+  async function handleAuthChange(e) {
+    const d = (e && e.detail) ? e.detail : {};
+    const ev = String(d.event || '').toUpperCase();
+    const user = d.user || null;
+
+    if (!user || !user.id) {
+      reset();
+      return;
+    }
+
+    if (ev === 'SIGNED_IN' || ev === 'SIGNED_UP' || ev === 'INIT' || ev === 'TOKEN_REFRESHED') {
+      await upsertProfileForUser(user);
+    }
+  }
+
   function init() {
     if (state.inited) return;
     state.inited = true;
@@ -276,20 +291,7 @@
     if (driver !== 'supabase') return;
 
     // Sempre que Auth mudar, sincroniza perfil (SIGNED_IN) ou reseta (SIGNED_OUT)
-    document.addEventListener('kc:authchange', async (e) => {
-      const d = (e && e.detail) ? e.detail : {};
-      const ev = String(d.event || '').toUpperCase();
-      const user = d.user || null;
-
-      if (!user || !user.id) {
-        reset();
-        return;
-      }
-
-      if (ev === 'SIGNED_IN' || ev === 'SIGNED_UP' || ev === 'INIT' || ev === 'TOKEN_REFRESHED') {
-        await upsertProfileForUser(user);
-      }
-    });
+    document.addEventListener('kc:authchange', handleAuthChange);
 
     // Cobertura: sessão persistida pode existir antes deste script carregar.
     setTimeout(() => {
