@@ -767,7 +767,7 @@
 
       try {
         if (typeof callback === 'function') callback({ event, session: state.session, user: state.user });
-      } catch (_) { }
+      } catch (err) { console.warn('[KCSupabase] onAuthStateChange callback falhou:', err && err.message || err); }
     });
   }
 
@@ -790,7 +790,7 @@
     // Escuta ativa
     try {
       state.authSub = onAuthStateChange();
-    } catch (_) { }
+    } catch (err) { console.warn('[KCSupabase] Auth subscription falhou:', err && err.message || err); }
   }
 
   // Exposição pública
@@ -829,5 +829,5 @@
     // inicia o mais cedo possível
     init();
     document.addEventListener('DOMContentLoaded', init, { once: true });
-  } catch (_) { }
+  } catch (err) { console.warn('[KCSupabase] Boot falhou:', err && err.message || err); }
 })();

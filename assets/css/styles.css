@@ -2073,7 +2073,9 @@ main {
 /* Focus States for Accessibility */
 a:focus-visible,
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
     outline: 2px solid var(--kc-primary-brand);
     outline-offset: 2px;
 }

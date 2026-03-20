@@ -542,7 +542,7 @@
       if (window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
         return await window.KCSupabase.getCurrentUser();
       }
-    } catch (_) { }
+    } catch (err) { console.warn('[KCAPI] getCurrentUser falhou:', err && err.message || err); }
     return null;
   }
 
@@ -556,7 +556,7 @@
         const r = await window.KCSupabase.signIn(em, pw);
         return (r && r.user) ? r.user : null;
       }
-    } catch (_) { }
+    } catch (err) { console.warn('[KCAPI] login falhou:', err && err.message || err); }
     return null;
   }
 
@@ -577,7 +577,7 @@
         const r = await window.KCSupabase.signOut();
         return !!(r && r.ok);
       }
-    } catch (_) { }
+    } catch (err) { console.warn('[KCAPI] logout falhou:', err && err.message || err); }
     return false;
   }
 

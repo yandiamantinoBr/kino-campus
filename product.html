@@ -1159,11 +1159,13 @@
 
   <main class="kc-main-content">
     <section class="kc-product-section">
+      <nav class="kc-breadcrumb" aria-label="Navegação de trilha">
       <div class="kc-post-breadcrumb" id="breadcrumb">
         <a href="index.html"><i class="fas fa-home"></i> KinoCampus</a>
         <i class="fas fa-chevron-right"></i>
         <span>Detalhes</span>
       </div>
+      </nav>
 
       <div class="kc-product-container">
         <!-- Gallery -->
@@ -1301,7 +1303,7 @@
           <!-- Linha 2: editor ocupa colunas 1+2 (ver CSS grid-column: 1/-1) -->
           <div class="kc-comment-editor-wrap">
             <div class="kc-comment-editor">
-              <textarea id="commentText" placeholder="Deixe o seu comentário"></textarea>
+              <textarea id="commentText" placeholder="Deixe o seu comentário" aria-label="Escreva seu comentário"></textarea>
               <div class="kc-editor-toolbar">
                 <button type="button" data-kc-format="bold" title="Negrito"><i class="fas fa-bold"></i></button>
                 <button type="button" data-kc-format="italic" title="Itálico"><i class="fas fa-italic"></i></button>
