@@ -31,23 +31,36 @@ Supabase é sempre tentado primeiro; fallback mock só ativa quando Supabase ret
 | `node scripts/hygiene-check.js` | Passed (v8.2.6.2) |
 | `git diff --stat` | 1 file, +22/-3 |
 
-## Validação — run4 (2026-03-19) ✅ CONCLUÍDA
+## Validação — run4 (2026-03-19)
 
 **Preview:** `kino-campus-1a3h26jub-yannakamurabrs-projects.vercel.app`
-**Deployment:** `dpl_8qviWBh7Et46ctjiSUno7ywYPV1m` — buildado de `cded2b4` (Merge PR #139)
-**Ferramentas:** Vercel MCP, Supabase MCP (execute_sql), vercel curl, Node.js simulation
+**Nota:** Preview protegido por Vercel Authentication (401 via WebFetch — esperado). Browser automation (Playwright MCP) indisponível nesta sessão. Validação realizada via unit simulation Node.js + PENDENTE MANUAL para cenários browser.
 
-### 5 cenários de aceite — TODOS PASSARAM
+### Validação lógica (Node.js unit simulation) — TODOS PASSARAM
 
-| # | Cenário | Método | Resultado | Evidência |
-|---|---------|--------|-----------|-----------|
-| C1 | Perfil legado `USER_18` | vercel curl HTTP 200 + Node.js sim | ✅ PASSOU | `c1-legacy-user18.txt` |
-| C2 | Perfil moderno UUID `42159797-...` | Supabase MCP + vercel curl HTTP 200 + sim | ✅ PASSOU | `c2-modern-uuid.txt` |
-| C3 | Perfil próprio autenticado | Análise estática + run3 evidence | ✅ PASSOU | `c3-own-authenticated.txt` |
-| C4 | ID inválido `LIXO_INVALIDO_XYZ` | vercel curl HTTP 200 + sim → null | ✅ PASSOU | `c4-invalid-id.txt` |
-| C5 | `product.html?id=18` → "Ver perfil" | vercel curl HTTP 200 + rastreio estático | ✅ PASSOU | `c5-product-to-profile.txt` |
+| # | Cenário | Resultado | Evidência |
+|---|---------|-----------|-----------|
+| C1 | `getProfileById('USER_18')` retorna mock com `display_name='Pedro Henrique'` | ✅ PASSOU | `evidence/v8.2.6.2-preview-run4/validation-logic-unit-test.txt` |
+| C2 | `getProfileById('<uuid-real>')` retorna perfil Supabase | ✅ PASSOU | idem |
+| C4 | `getProfileById('LIXO_INVALIDO')` retorna null | ✅ PASSOU | idem |
+| C1b | Mock retorna `verified:false, is_admin:false` | ✅ PASSOU | idem |
+| C1c | Objeto retornado não expõe campo `email` | ✅ PASSOU | idem |
 
-**Conclusão:** Bug `profiles?id=eq.USER_18 → 400` resolvido. Patch 8.2.6.2 declarado **PRONTO PARA PROMOTE FUTURO**.
+### Cenários browser (PENDENTE MANUAL)
+
+| # | Cenário | URL | Critério |
+|---|---------|-----|---------|
+| 1 | Perfil público legado | `profile.html?id=USER_18` | Mostra "Pedro Henrique" + avatar |
+| 2 | Perfil público moderno | `profile.html?id=<uuid-real>` | Perfil Supabase carrega |
+| 3 | Perfil próprio autenticado | `profile.html` (logado) | Avatar, handle, "Editar perfil" |
+| 4 | ID inválido | `profile.html?id=LIXO_INVALIDO_XYZ` | "Perfil nao encontrado" |
+| 5 | Fluxo produto→perfil | `product.html?id=18` → "Ver perfil" | Renderiza mock profile USER_18 |
+
+**Passos para validação manual:**
+1. Acessar o preview com bypass de autenticação Vercel (share link ou token de sessão válido)
+2. Para C3: fazer login com conta `@ufg.br` válida antes de navegar para `profile.html`
+3. Capturar screenshot de cada cenário em `output/playwright/evidence/v8.2.6.2-preview-run4/`
+4. Nomes sugeridos: `c1-legacy-user18.png`, `c2-modern-uuid.png`, `c3-own-authenticated.png`, `c4-invalid-id.png`, `c5-product-to-profile.png`
 
 ## O que NÃO foi tocado
 
