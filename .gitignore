@@ -3,3 +3,6 @@
 output/playwright/profile-*/
 
 .vercel
+
+node_modules/
+coverage/

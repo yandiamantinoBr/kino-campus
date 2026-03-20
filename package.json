@@ -1,0 +1,28 @@
+{
+  "name": "kino-campus",
+  "version": "1.0.0",
+  "description": "Este repositorio e o **prototipo web offline-first** do **Kino Campus** (plataforma universitaria por modulos), agora com **integracao Supabase-first** (Postgres + Auth + Storage) na linha **V8.2.x**.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yandiamantinoBr/kino-campus.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/yandiamantinoBr/kino-campus/issues"
+  },
+  "homepage": "https://github.com/yandiamantinoBr/kino-campus#readme",
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0"
+  }
+}
