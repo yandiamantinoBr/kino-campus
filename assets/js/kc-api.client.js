@@ -9,6 +9,9 @@
   Exposição:
   - window.KCAPI
 */
+(function () {
+  'use strict';
+
 
 
 
@@ -866,3 +869,5 @@
     normalizePost,
     isBackendEnabled,
   });
+
+})();

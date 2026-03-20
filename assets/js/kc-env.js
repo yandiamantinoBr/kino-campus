@@ -12,6 +12,9 @@
   Exposição:
   - window.KC_ENV
 */
+(function () {
+  'use strict';
+
 
 
   // Patch: inclui hardening server-side de verificação de e-mail (V8.1.3.3 retro)
@@ -220,3 +223,5 @@
       }
     }
   } catch (_) {}
+
+})();

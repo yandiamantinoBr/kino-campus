@@ -1,4 +1,7 @@
 /* KinoCampus - Local Adapter */
+(function () {
+  'use strict';
+
 
 const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = window.KCAPI;
   
@@ -217,3 +220,5 @@ const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID
 
 
 window.KCAPI.registerAdapter('local', driverLocal);
+
+})();

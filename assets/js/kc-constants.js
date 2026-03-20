@@ -1,6 +1,9 @@
 /*
   KinoCampus - Global Constants
 */
+(function () {
+  'use strict';
+
   // Labels para exibição (mantém consistência visual com os feeds)
   const MODULE_LABEL_MAP = Object.freeze({
     'moradia': 'Moradia',
@@ -351,3 +354,5 @@ window.KC_CONSTANTS = Object.freeze({
   HOUSING_FEATURE_DEFINITIONS,
   LOST_FOUND_LOCATION_DEFINITIONS
 });
+
+})();

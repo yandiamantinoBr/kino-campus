@@ -12,6 +12,9 @@
   Eventos:
   - 'kc:profilechange' (detail: { profile })
 */
+(function () {
+  'use strict';
+
 
 
   const VERSION = '8.2.6.2';
@@ -313,3 +316,5 @@
   } catch (_) {}
 
 
+
+})();

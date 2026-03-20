@@ -5,6 +5,9 @@
   - Centralizar utilitários repetidos (normalize/escape/currency/debounce)
   - Evitar divergência entre scripts (search, filters, etc.)
 */
+(function () {
+  'use strict';
+
   const {
     MODULE_LABEL_MAP,
     MODULE_ICON_MAP,
@@ -2187,3 +2190,5 @@ window.KCUtils = Object.freeze({
     renderPostCard,
     timeAgo,
   });
+
+})();

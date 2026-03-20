@@ -12,6 +12,9 @@
   Eventos:
   - 'kc:authchange' (detail: { event, session, user })
 */
+(function () {
+  'use strict';
+
 
   const VERSION = '8.2.6.2';
 
@@ -827,3 +830,5 @@
     init();
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } catch (err) { console.warn('[KCSupabase] Boot falhou:', err && err.message || err); }
+
+})();

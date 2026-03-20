@@ -1,3 +1,6 @@
+
+(function () {
+  'use strict';
 const { ENV, normalizePost } = window.KCAPI;
 
 
@@ -2590,3 +2593,5 @@ const { ENV, normalizePost } = window.KCAPI;
 
 
 window.KCAPI.registerAdapter('supabase', driverSupabase);
+
+})();
