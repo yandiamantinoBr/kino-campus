@@ -114,23 +114,6 @@ window.KCPostModel = window.KCPostModel || {
 
 
 // -----------------------------
-// Product gallery helper
-// -----------------------------
-function changeMainImage(thumbnail) {
-  const mainImage = document.getElementById('mainImage');
-  if (!mainImage || !thumbnail) return;
-
-  const fullSrc = thumbnail.getAttribute('data-full-src');
-  mainImage.src = fullSrc || thumbnail.src;
-
-  // Update active thumbnail
-  document.querySelectorAll('.kc-thumbnail').forEach(thumb => {
-    thumb.classList.remove('active');
-  });
-  thumbnail.classList.add('active');
-}
-
-// -----------------------------
 // Mobile menu
 // -----------------------------
 function getMobileMenuElements() {
@@ -3254,22 +3237,6 @@ function kcInitHeroSwipe() {
     }
   }, { passive: true });
 }
-
-window.showSlide = showSlide;
-window.changeSlide = changeSlide;
-window.goToSlide = goToSlide;
-window.startAutoSlide = startAutoSlide;
-window.stopAutoSlide = stopAutoSlide;
-window.resetAutoSlide = resetAutoSlide;
-window.kcRefreshHeroCarousel = refreshHeroCarousel;
-
-window.showSlide = showSlide;
-window.changeSlide = changeSlide;
-window.goToSlide = goToSlide;
-window.startAutoSlide = startAutoSlide;
-window.stopAutoSlide = stopAutoSlide;
-window.resetAutoSlide = resetAutoSlide;
-window.kcRefreshHeroCarousel = refreshHeroCarousel;
 
 window.showSlide = showSlide;
 window.changeSlide = changeSlide;
