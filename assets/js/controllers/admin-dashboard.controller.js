@@ -312,10 +312,21 @@
       }
 
       const res = await query;
+        .range(offset, offset + limit - 1);
+
+      if (actionFilter && actionFilter !== 'all') {
+        query = query.eq('action', actionFilter);
+      }
+
+      const res = await query;
       if (!res.error) return Array.isArray(res.data) ? res.data : [];
 
       if (isPermissionError(res.error)) {
         const rpc = await client.rpc('kc_admin_list_audit_logs', {
+          p_entity_type: 'all',
+          p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
+          p_actor_query: null,
+          p_limit: limit,
           p_entity_type: 'all',
           p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
           p_actor_query: null,
@@ -539,6 +550,27 @@
       y += 4;
     }
 
+    function checkPage() { if (y > 265) { doc.addPage(); y = 18; } }
+
+    function renderSection(title, metrics) {
+      checkPage();
+      doc.setFontSize(11);
+      doc.setTextColor(40, 40, 40);
+      doc.text(title, marginL, y); y += 5;
+      doc.setDrawColor(220, 220, 220);
+      doc.line(marginL, y, 196, y); y += 5;
+      doc.setFontSize(10);
+      metrics.forEach(function (m) {
+        checkPage();
+        doc.setTextColor(80, 80, 80);
+        doc.text(m[0], marginL + 2, y);
+        doc.setTextColor(30, 30, 30);
+        doc.text(String(m[1]), 150, y, { align: 'right' });
+        y += 6;
+      });
+      y += 4;
+    }
+
     // Cabeçalho
     doc.setFontSize(16);
     doc.setTextColor(255, 107, 0);
@@ -549,10 +581,12 @@
 
     // Seção Moderação
     renderSection('MODERAÇÃO', [
+    renderSection('MODERAÇÃO', [
       ['Denúncias abertas',  data.reportMetrics.open],
       ['Total de denúncias', data.reportMetrics.total],
       ['Posts ocultos',      data.postStatusMetrics.hidden],
       ['Posts deletados',    data.postStatusMetrics.deleted],
+    ]);
     ]);
 
     // Seção Atividade
@@ -575,6 +609,7 @@
     // Tendências de busca
     if (data.trends && data.trends.length) {
       checkPage();
+      checkPage();
       doc.setFontSize(11);
       doc.setTextColor(40, 40, 40);
       doc.text('TENDÊNCIAS DE BUSCA (top 10)', marginL, y); y += 5;
@@ -582,7 +617,10 @@
       doc.setFontSize(10);
       data.trends.forEach(function (t, i) {
         checkPage();
+      data.trends.forEach(function (t, i) {
+        checkPage();
         doc.setTextColor(80, 80, 80);
+        doc.text((i + 1) + '. ' + String(t.term || ''), marginL + 2, y);
         doc.text((i + 1) + '. ' + String(t.term || ''), marginL + 2, y);
         doc.setTextColor(30, 30, 30);
         doc.text(String(Number(t.count) || 0), 150, y, { align: 'right' });
@@ -594,8 +632,10 @@
     // Audit log
     if (data.auditRows && data.auditRows.length) {
       checkPage();
+      checkPage();
       doc.setFontSize(11);
       doc.setTextColor(40, 40, 40);
+      doc.text('AUDIT LOG', marginL, y); y += 5;
       doc.text('AUDIT LOG', marginL, y); y += 5;
       doc.line(marginL, y, 196, y); y += 5;
       doc.setFontSize(8);
@@ -617,8 +657,10 @@
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text('KinoCampus — Pág. ' + p + ' / ' + totalPages, 196, 289, { align: 'right' });
+      doc.text('KinoCampus — Pág. ' + p + ' / ' + totalPages, 196, 289, { align: 'right' });
     }
 
+    doc.save('kc-dashboard-' + new Date().toISOString().slice(0, 10) + '.pdf');
     doc.save('kc-dashboard-' + new Date().toISOString().slice(0, 10) + '.pdf');
   }
 
@@ -680,6 +722,11 @@
       postsEdited,
       commentsCount,
       searchCount,
+      postsTotal,
+      usersTotal,
+      usersNew,
+      votesCount,
+      savedPostsCount,
       postsTotal,
       usersTotal,
       usersNew,
