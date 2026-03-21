@@ -96,23 +96,29 @@
     /* ── Search trends ── */
     .kc-trend-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
     .kc-trend-item { display: flex; align-items: center; gap: 10px; font-size: .92rem; }
+    .kc-trend-rank { min-width: 18px; text-align: right; color: var(--kc-text-dark-secondary); font-size: .78rem; font-weight: 600; flex-shrink: 0; }
     .kc-trend-bar-wrap { flex: 1; height: 6px; background: var(--kc-border-dark); border-radius: 4px; overflow: hidden; }
     .kc-trend-bar { height: 100%; background: var(--kc-primary-brand); border-radius: 4px; transition: width .4s; }
-    .kc-trend-term { min-width: 100px; color: var(--kc-text-dark-primary); font-weight: 500; }
+    .kc-trend-term { min-width: 90px; color: var(--kc-text-dark-primary); font-weight: 500; display: flex; align-items: center; gap: 4px; }
     .kc-trend-count { min-width: 30px; text-align: right; color: var(--kc-text-dark-secondary); font-size: .85rem; }
     .kc-trend-empty { color: var(--kc-text-dark-secondary); font-size: .9rem; }
 
     /* ── Mobile responsive ── */
     @media (max-width: 760px) {
       .kc-admin-wrapper { padding: 14px 10px 72px; }
-      .kc-admin-hero { padding: 12px; gap: 10px; }
+      .kc-admin-hero { padding: 12px; gap: 10px; flex-direction: column; align-items: flex-start; }
       .kc-admin-hero h1 { font-size: 1.15rem; }
       .kc-admin-hero p { display: none; }
       /* Nav duplicados da toolbar ficam ocultos (admin-nav cobre) */
       .kc-admin-toolbar a { display: none; }
-      .kc-admin-toolbar { width: 100%; gap: 6px; }
-      .kc-admin-toolbar button,
-      .kc-admin-toolbar select { flex: 1 1 auto; justify-content: center; font-size: .82rem; padding: 8px 6px; }
+      .kc-admin-toolbar { width: 100%; gap: 6px; flex-wrap: wrap; }
+      /* Período + Atualizar na primeira linha */
+      .kc-admin-toolbar select { flex: 1 1 140px; min-width: 120px; }
+      #admin-refresh-btn { flex: 1 1 auto; justify-content: center; }
+      /* XLSX + PDF na segunda linha */
+      #admin-export-xlsx,
+      #admin-export-pdf { flex: 1 1 auto; justify-content: center; font-size: .82rem; padding: 8px 6px; }
+      .kc-admin-toolbar button { font-size: .82rem; padding: 8px 6px; }
       .kc-admin-card strong { font-size: 1.5rem; }
       .kc-admin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .kc-admin-card { padding: 10px; }
@@ -161,8 +167,14 @@
       .kc-admin-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
       .kc-admin-card strong { font-size: 1.3rem; }
       .kc-admin-card__label { font-size: .78rem; }
-      .kc-admin-wrapper { padding: 12px 10px 80px; }
-      .kc-admin-toolbar button { font-size: .78rem; }
+      .kc-admin-wrapper { padding: 12px 8px 80px; }
+      .kc-admin-toolbar button,
+      .kc-admin-toolbar select { font-size: .78rem; padding: 7px 5px; }
+      .kc-admin-hero { padding: 10px; gap: 8px; }
+      .kc-admin-hero h1 { font-size: 1rem; }
+      /* Trends: rank number hidden to save space */
+      .kc-trend-rank { display: none; }
+      .kc-trend-term { min-width: 72px; font-size: .85rem; }
     }
 
     /* ── Header user-actions: garantir visibilidade em todos os tamanhos ── */
@@ -274,7 +286,7 @@
         <div id="admin-last-sync" aria-live="polite"></div>
 
         <!-- Métricas de moderação -->
-        <div class="kc-admin-section-title"><i class="fas fa-shield-halved"></i> Moderação</div>
+        <div class="kc-admin-section-title" id="admin-moderation-title"><i class="fas fa-shield-halved"></i> Moderação</div>
         <div class="kc-admin-grid" id="admin-metrics"></div>
 
         <!-- Métricas de atividade -->
@@ -282,12 +294,12 @@
         <div class="kc-admin-grid" id="admin-activity-metrics"></div>
 
         <!-- Métricas da comunidade -->
-        <div class="kc-admin-section-title"><i class="fas fa-users"></i> Comunidade</div>
+        <div class="kc-admin-section-title" id="admin-community-title"><i class="fas fa-users"></i> Comunidade</div>
         <div class="kc-admin-grid" id="admin-community-metrics"></div>
 
         <!-- Tendências de busca -->
         <section class="kc-admin-section">
-          <h3><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca</h3>
+          <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca (últimos 30 dias)</h3>
           <div class="kc-trend-module-title"><i class="fas fa-list-ol"></i> Top termos buscados</div>
           <ul class="kc-trend-list" id="admin-trends-list">
             <li class="kc-trend-empty">Carregando…</li>
@@ -299,7 +311,7 @@
 
         <!-- Audit log -->
         <section class="kc-admin-section">
-          <h3><i class="fas fa-clock-rotate-left"></i> Audit log</h3>
+          <h3 id="admin-audit-title"><i class="fas fa-clock-rotate-left"></i> Audit log (últimos 30 dias)</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
             <select id="admin-audit-filter" style="padding:6px 10px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;">
               <option value="all">Todas as ações</option>
