@@ -74,10 +74,14 @@
     opts = opts || {};
     var href = opts.href || null;
     var highlight = opts.highlight && Number(value || 0) > 0;
+    var subtitle = opts.subtitle || null;
     var cardStyle = highlight ? ' style="border-color:rgba(255,107,0,.5);"' : '';
     var inner = '<div class="kc-admin-card__label" title="' + escHtmlAdmin(label) + '">'
       + '<i class="' + icon + '"></i> ' + escHtmlAdmin(label) + '</div>'
       + '<strong>' + Number(value || 0) + '</strong>';
+    if (subtitle) {
+      inner += '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:4px;">' + escHtmlAdmin(subtitle) + '</div>';
+    }
     if (href) {
       inner += '<div style="margin-top:8px;"><a href="' + escHtmlAdmin(href) + '" style="font-size:.78rem;color:var(--kc-primary-brand);text-decoration:none;">Ver detalhes →</a></div>';
     }
@@ -115,17 +119,73 @@
     return days + 'd';
   }
 
-  // ── Classificação de termos de busca por módulo ────────────────────────────
-  var MODULE_KEYWORDS = {
-    'compra-venda':     ['celular','smartphone','notebook','laptop','computador','roupa','móvel','movel','eletrônico','eletronico','venda','compro','iphone','tablet','monitor','cadeira','bicicleta','bike','fone','headphone','airpod','jbl','tv','geladeira','fogão','fogao','mesa','cama','colchão','colchao','câmera','camera','drone','video','game'],
-    'moradia':          ['casa','quarto','república','republica','kitnet','apartamento','aluguel','moradia','dividir','alugar','imóvel','imovel','quarto','vaga','hospedagem','república','room','flat','pensão','pensao','villaggio'],
-    'caronas':          ['carona','caronas','ida','volta','transporte','passagem','ônibus','onibus','condução','conducao','van','moto','buser','uber','99','indriver'],
-    'eventos':          ['evento','eventos','palestra','workshop','semana','feira','festival','show','apresentação','apresentacao','cerimônia','cerimonia','congresso','simpósio','simposio','seminário','seminario','aula','minicurso','encontro','reunião','reuniao'],
-    'oportunidades':    ['estágio','estagio','emprego','vaga','vagas','monitoria','bolsa','freelancer','trainee','trabalho','oportunidade','job','processo seletivo','contratando','recrutamento','residência','residencia','pesquisa','iniciação'],
-    'achados-perdidos': ['perdido','perdidos','achado','achados','encontrei','perdi','carteira','chave','chaves','óculos','oculos','mochila','celular perdido','documento','identidade','rg','cpf','passaporte','cartão','cartao','anel','relógio','relogio'],
-    'livros':           ['livro','livros','apostila','cálculo','calculo','exatas','didático','didatico','material','caderno','atlas','manual','engenharia','química','quimica','física','fisica','biologia','história','historia','matematica','matemática'],
+  // ── Normalização e agrupamento de termos de busca ─────────────────────────
+
+  // Mapa de sinônimos: normaliza variações comuns para o termo canônico
+  var SYNONYMS = {
+    'celulares':    'celular',
+    'smartphones':  'smartphone',
+    'laptops':      'laptop',
+    'notebooks':    'notebook',
+    'quartos':      'quarto',
+    'vagas':        'vaga',
+    'livros':       'livro',
+    'caronas':      'carona',
+    'eventos':      'evento',
+    'perdidos':     'perdido',
+    'achados':      'achado',
+    'chaves':       'chave',
+    'iphones':      'iphone',
+    'bolsas':       'bolsa',
+    'casas':        'casa',
+    'moveis':       'movel',
+    'bicicletas':   'bicicleta',
+    'fones':        'fone',
+    'tablets':      'tablet',
+    'monitores':    'monitor',
+    'cadeiras':     'cadeira',
+    'apostilas':    'apostila',
+    'calculos':     'calculo',
+    'documentos':   'documento',
+    'oculos':       'oculos',
+    'mochilas':     'mochila',
+    'estagios':     'estagio',
+    'republicanas': 'republica',
+    'republicas':   'republica',
+    'kitnets':      'kitnet',
+    'apartamentos': 'apartamento',
+    'emprego':      'vaga',
+    'empregos':     'vaga',
   };
 
+  function canonicalizeTerm(term) {
+    // 1. Lowercase + remove acentos
+    var norm = String(term || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (!norm) return '';
+    // 2. Aplica mapa de sinônimos
+    if (SYNONYMS[norm]) return SYNONYMS[norm];
+    // 3. Stemming básico de plural: remove 's' final se palavra tem 5+ letras
+    if (norm.length >= 5 && norm.endsWith('s') && !norm.endsWith('ss')) {
+      var stem = norm.slice(0, -1);
+      if (SYNONYMS[stem]) return SYNONYMS[stem];
+      return stem;
+    }
+    return norm;
+  }
+
+  // ── Classificação de termos de busca por módulo ────────────────────────────
+  var MODULE_KEYWORDS = {
+    'compra-venda':     ['celular','smartphone','notebook','laptop','computador','roupa','movel','eletronico','venda','compro','iphone','tablet','monitor','cadeira','bicicleta','bike','fone','headphone','airpod','jbl','tv','geladeira','fogao','mesa','cama','colchao','camera','drone','video','game','calcado','tenis','maquina','impressora'],
+    'moradia':          ['casa','quarto','republica','kitnet','apartamento','aluguel','moradia','dividir','alugar','imovel','vaga','hospedagem','room','flat','pensao','villaggio','morar','condominio','studio','andar'],
+    'caronas':          ['carona','ida','volta','transporte','passagem','onibus','conducao','van','moto','buser','uber','99','indriver','carpool','boleia'],
+    'eventos':          ['evento','palestra','workshop','semana','feira','festival','show','apresentacao','cerimonia','congresso','simposio','seminario','aula','minicurso','encontro','reuniao','hackathon','exposicao','teatro'],
+    'oportunidades':    ['estagio','emprego','vaga','monitoria','bolsa','freelancer','trainee','trabalho','oportunidade','job','contratando','recrutamento','residencia','pesquisa','iniciacao','seletivo','curriculo','clf'],
+    'achados-perdidos': ['perdido','achado','encontrei','perdi','carteira','chave','oculos','mochila','documento','identidade','rg','cpf','passaporte','cartao','anel','relogio','airpod','fone','chaves','perda','achou','celular perdido'],
+    'livros':           ['livro','apostila','calculo','exatas','didatico','material','caderno','atlas','manual','engenharia','quimica','fisica','biologia','historia','matematica','literatura','pdf','estudo','prova','gabarito'],
+  };
+
+  // Pesos de correspondência: exata = 10, containment = 3, KC_CONSTANTS = 5
   var MODULE_ICONS = {
     'compra-venda':     'fas fa-layer-group',
     'moradia':          'fas fa-home',
@@ -152,7 +212,7 @@
   }
 
   function classifyTermToModule(term) {
-    var norm = normalizeForClassify(term);
+    var norm = normalizeForClassify(canonicalizeTerm(term));
     if (!norm) return null;
     var bestModule = null;
     var bestScore = 0;
@@ -163,8 +223,9 @@
       var score = 0;
       for (var j = 0; j < keywords.length; j++) {
         var kw = normalizeForClassify(keywords[j]);
-        if (norm === kw) { score += 3; break; }
-        if (norm.indexOf(kw) !== -1 || kw.indexOf(norm) !== -1) { score += 1; }
+        if (norm === kw) { score += 10; break; }           // exact match — highest
+        if (norm.indexOf(kw) !== -1) { score += 3; }       // term contains keyword
+        else if (kw.indexOf(norm) !== -1) { score += 2; }  // keyword contains term
       }
       // Also check KC_CONSTANTS category labels if available
       if (score === 0 && window.KC_CONSTANTS && window.KC_CONSTANTS.CATEGORY_LABELS) {
@@ -173,7 +234,7 @@
           var catKeys = Object.keys(cats);
           for (var k = 0; k < catKeys.length; k++) {
             var ck = normalizeForClassify(catKeys[k]);
-            if (norm === ck || norm.indexOf(ck) !== -1 || ck.indexOf(norm) !== -1) { score += 2; break; }
+            if (norm === ck || norm.indexOf(ck) !== -1 || ck.indexOf(norm) !== -1) { score += 5; break; }
           }
         }
       }
@@ -194,13 +255,14 @@
     return Object.values(byModule).sort(function(a, b) { return b.count - a.count; });
   }
 
-  function renderSearchTrendsByModule(trends) {
+  function renderSearchTrendsByModule(trends, periodDays) {
     var container = $('#admin-trends-modules');
     if (!container) return;
     var moduleData = aggregateTrendsByModule(trends);
     if (!moduleData.length) { container.style.display = 'none'; return; }
     container.style.display = 'flex';
-    var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells"></i> Por módulo (30 dias)</div>';
+    var periodLabel = getPeriodLabel(periodDays || 30);
+    var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells"></i> Por módulo (' + escHtmlAdmin(periodLabel) + ')</div>';
     container.innerHTML = titleHtml + moduleData.map(function(m) {
       var icon = MODULE_ICONS[m.module] || 'fas fa-tag';
       var label = MODULE_LABELS[m.module] || m.module;
@@ -213,22 +275,33 @@
   }
 
   // ── Moderação: Denúncias ────────────────────────────────────────────────────
-  async function loadReportMetrics(client) {
+  async function loadReportMetrics(client, since) {
     try {
       const rpc = await client.rpc('kc_admin_list_reports', { p_status: 'all', p_reason: 'all', p_limit: 2000 });
       if (!rpc.error && Array.isArray(rpc.data)) {
-        const total = rpc.data.length;
-        const open  = rpc.data.filter(r => String(r.status || '').toLowerCase() === 'open').length;
+        var rows = rpc.data;
+        // Filter by period
+        var sinceMs = since ? new Date(since).getTime() : 0;
+        if (sinceMs) {
+          rows = rows.filter(function(r) {
+            return r.created_at && new Date(r.created_at).getTime() >= sinceMs;
+          });
+        }
+        const total = rows.length;
+        const open  = rows.filter(r => String(r.status || '').toLowerCase() === 'open').length;
         return { open, total };
       }
     } catch (_) {}
 
     let open = 0, total = 0;
     try {
-      const [openRes, totalRes] = await Promise.all([
-        client.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'open'),
-        client.from('reports').select('id', { count: 'exact', head: true }),
-      ]);
+      var qOpen  = client.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'open');
+      var qTotal = client.from('reports').select('id', { count: 'exact', head: true });
+      if (since) {
+        qOpen  = qOpen.gte('created_at', since);
+        qTotal = qTotal.gte('created_at', since);
+      }
+      const [openRes, totalRes] = await Promise.all([qOpen, qTotal]);
       open  = openRes.count  || 0;
       total = totalRes.count || 0;
     } catch (_) {}
@@ -236,17 +309,23 @@
   }
 
   // ── Moderação: Posts ocultos/deletados ──────────────────────────────────────
-  async function loadPostStatusMetrics(client) {
+  async function loadPostStatusMetrics(client, since) {
     let hidden = 0, deleted = 0;
     try {
-      const [hiddenRes, deletedRes] = await Promise.all([
-        client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'hidden'),
-        client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'deleted'),
-      ]);
+      var qHidden  = client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'hidden');
+      var qDeleted = client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'deleted');
+      // Filter by when the status was last updated (within period)
+      if (since) {
+        qHidden  = qHidden.gte('updated_at', since);
+        qDeleted = qDeleted.gte('updated_at', since);
+      }
+      const [hiddenRes, deletedRes] = await Promise.all([qHidden, qDeleted]);
 
       if ((hiddenRes.error || deletedRes.error) &&
           (isPermissionError(hiddenRes.error) || isPermissionError(deletedRes.error))) {
-        const fallback = await client.from('posts').select('status').in('status', ['hidden', 'deleted']).limit(2000);
+        var fbQuery = client.from('posts').select('status, updated_at').in('status', ['hidden', 'deleted']).limit(2000);
+        if (since) fbQuery = fbQuery.gte('updated_at', since);
+        const fallback = await fbQuery;
         if (!fallback.error && Array.isArray(fallback.data)) {
           hidden  = fallback.data.filter(r => r.status === 'hidden').length;
           deleted = fallback.data.filter(r => r.status === 'deleted').length;
@@ -311,6 +390,9 @@
         .select('id', { count: 'exact', head: true })
         .gte('created_at', since);
       if (!res.error) return res.count || 0;
+      // Fallback: fetch rows and count
+      const fb = await client.from('search_queries').select('created_at').gte('created_at', since).limit(5000);
+      if (!fb.error && Array.isArray(fb.data)) return fb.data.length;
     } catch (_) {}
     return 0;
   }
@@ -357,11 +439,12 @@
     return 0;
   }
 
-  // ── Comunidade: Posts salvos ──────────────────────────────────────────────
-  async function loadSavedPostsCount(client) {
+  // ── Comunidade: Posts salvos no período ───────────────────────────────────
+  async function loadSavedPostsCount(client, since) {
     try {
-      const res = await client.from('saved_posts')
-        .select('id', { count: 'exact', head: true });
+      var q = client.from('saved_posts').select('id', { count: 'exact', head: true });
+      if (since) q = q.gte('created_at', since);
+      const res = await q;
       if (!res.error) return res.count || 0;
     } catch (_) {}
     return 0;
@@ -402,7 +485,7 @@
   }
 
   // ── Audit log ─────────────────────────────────────────────────────────────
-  async function loadAuditLog(client, limit, offset, actionFilter) {
+  async function loadAuditLog(client, limit, offset, actionFilter, since) {
     limit  = limit  || AUDIT_PAGE_SIZE;
     offset = offset || 0;
     try {
@@ -413,6 +496,9 @@
 
       if (actionFilter && actionFilter !== 'all') {
         query = query.eq('action', actionFilter);
+      }
+      if (since) {
+        query = query.gte('created_at', since);
       }
 
       const res = await query;
@@ -431,12 +517,14 @@
     return [];
   }
 
-  // ── Tendências de busca (com timeout e fallback robusto) ──────────────────
-  async function loadSearchTrendsData(client) {
+  // ── Tendências de busca (com timeout, fallback robusto e filtro de período) ──
+  async function loadSearchTrendsData(client, since) {
     let trends = [];
     try {
-      // Tentativa 1: RPC dedicado com timeout de 8s
-      var rpcPromise = client.rpc('kc_admin_search_trends', { p_limit: 10 });
+      // Tentativa 1: RPC dedicado com timeout de 8s e filtro de período
+      var rpcArgs = { p_limit: 20 };
+      if (since) rpcArgs.p_since = since;
+      var rpcPromise = client.rpc('kc_admin_search_trends', rpcArgs);
       var timeoutPromise = new Promise(function(_, reject) {
         setTimeout(function() { reject(new Error('timeout')); }, 8000);
       });
@@ -449,41 +537,29 @@
       }
 
       if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
-        trends = res.data;
+        // RPC retorna termos já agrupados — aplica canonicalização e re-agrupa
+        trends = canonicalizeTrendsList(res.data);
       } else {
-        // Tentativa 2: query direta com top 500 registros recentes
+        // Tentativa 2: query direta com filtro de período
         if (res.error) {
           console.warn('[Admin trends] RPC error:', res.error.message || res.error);
         }
-        var raw = await client.from('search_queries')
+        var rawQuery = client.from('search_queries')
           .select('term')
           .order('created_at', { ascending: false })
-          .limit(500);
+          .limit(1000);
+        if (since) rawQuery = rawQuery.gte('created_at', since);
+
+        var raw = await rawQuery;
 
         if (!raw.error && Array.isArray(raw.data)) {
-          var freq = {};
-          raw.data.forEach(function(r) {
-            var t = String(r.term || '').trim().toLowerCase();
-            if (t) freq[t] = (freq[t] || 0) + 1;
-          });
-          trends = Object.entries(freq)
-            .sort(function(a, b) { return b[1] - a[1]; })
-            .slice(0, 10)
-            .map(function(e) { return { term: e[0], count: e[1] }; });
+          trends = buildTrendsFromRows(raw.data);
         } else if (raw.error) {
-          // Tentativa 3: query sem filtro de período (caso RLS bloqueie .order)
+          // Tentativa 3: query sem ordenação nem filtro (caso RLS bloqueie)
           console.warn('[Admin trends] Fallback direto falhou:', raw.error.message || raw.error);
-          var raw2 = await client.from('search_queries').select('term').limit(200);
+          var raw2 = await client.from('search_queries').select('term').limit(500);
           if (!raw2.error && Array.isArray(raw2.data)) {
-            var freq2 = {};
-            raw2.data.forEach(function(r) {
-              var t = String(r.term || '').trim().toLowerCase();
-              if (t) freq2[t] = (freq2[t] || 0) + 1;
-            });
-            trends = Object.entries(freq2)
-              .sort(function(a, b) { return b[1] - a[1]; })
-              .slice(0, 10)
-              .map(function(e) { return { term: e[0], count: e[1] }; });
+            trends = buildTrendsFromRows(raw2.data);
           } else if (raw2.error) {
             console.warn('[Admin trends] Todas as tentativas falharam:', raw2.error.message || raw2.error);
           }
@@ -496,27 +572,57 @@
     return trends;
   }
 
-  function renderSearchTrends(trends) {
+  // Agrupa lista de rows {term} em [{term, count}] com canonicalização
+  function buildTrendsFromRows(rows) {
+    var freq = {};
+    rows.forEach(function(r) {
+      var canonical = canonicalizeTerm(r.term);
+      if (canonical) freq[canonical] = (freq[canonical] || 0) + 1;
+    });
+    return Object.entries(freq)
+      .sort(function(a, b) { return b[1] - a[1]; })
+      .slice(0, 10)
+      .map(function(e) { return { term: e[0], count: e[1] }; });
+  }
+
+  // Re-agrupa lista de {term, count} do RPC após canonicalização (merge plurais etc.)
+  function canonicalizeTrendsList(list) {
+    var freq = {};
+    list.forEach(function(item) {
+      var canonical = canonicalizeTerm(item.term);
+      if (canonical) freq[canonical] = (freq[canonical] || 0) + (Number(item.count) || 1);
+    });
+    return Object.entries(freq)
+      .sort(function(a, b) { return b[1] - a[1]; })
+      .slice(0, 10)
+      .map(function(e) { return { term: e[0], count: e[1] }; });
+  }
+
+  function renderSearchTrends(trends, periodDays) {
     const trendsList = $('#admin-trends-list');
     if (!trendsList) return;
     if (!trends || !trends.length) {
       trendsList.innerHTML = '<li class="kc-trend-empty">Nenhuma busca registrada ainda. As buscas feitas na plataforma aparecerão aqui.</li>';
-      // Esconde seção de módulos também
       var modContainer = $('#admin-trends-modules');
       if (modContainer) modContainer.style.display = 'none';
       return;
     }
     const max = Math.max.apply(null, trends.map(function(t) { return Number(t.count) || 1; }).concat([1]));
-    trendsList.innerHTML = trends.map(function(t) {
+    trendsList.innerHTML = trends.map(function(t, i) {
       const pct = Math.round(((Number(t.count) || 0) / max) * 100);
+      var modKey = classifyTermToModule(t.term);
+      var modBadge = modKey
+        ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtmlAdmin(MODULE_LABELS[modKey] || modKey) + '"><i class="' + (MODULE_ICONS[modKey] || 'fas fa-tag') + '"></i></span>'
+        : '';
       return '<li class="kc-trend-item">'
-        + '<span class="kc-trend-term">' + escHtmlAdmin(String(t.term || '')) + '</span>'
+        + '<span class="kc-trend-rank">' + (i + 1) + '</span>'
+        + '<span class="kc-trend-term">' + escHtmlAdmin(String(t.term || '')) + modBadge + '</span>'
         + '<div class="kc-trend-bar-wrap"><div class="kc-trend-bar" style="width:' + pct + '%"></div></div>'
         + '<span class="kc-trend-count">' + (Number(t.count) || 0) + '</span>'
         + '</li>';
     }).join('');
-    // Renderiza classificação por módulo
-    renderSearchTrendsByModule(trends);
+    // Renderiza classificação por módulo com período dinâmico
+    renderSearchTrendsByModule(trends, periodDays);
   }
 
   function auditActionBadge(action) {
@@ -609,11 +715,11 @@
       ['Gerado em: ' + date],
       ['Período: ' + periodLabel],
       [],
-      ['MODERAÇÃO', ''],
+      ['MODERAÇÃO (' + periodLabel + ')', ''],
       ['Métrica', 'Valor'],
       ['Denúncias abertas',  data.reportMetrics.open],
       ['Total de denúncias', data.reportMetrics.total],
-      ['Posts ocultos',      data.postStatusMetrics.hidden],
+      ['Posts ocultados',    data.postStatusMetrics.hidden],
       ['Posts deletados',    data.postStatusMetrics.deleted],
       [],
       ['ATIVIDADE (' + periodLabel + ')', ''],
@@ -624,12 +730,12 @@
       ['Comentários',       data.commentsCount],
       ['Buscas realizadas', data.searchCount],
       [],
-      ['COMUNIDADE', ''],
+      ['COMUNIDADE (' + periodLabel + ')', ''],
       ['Métrica', 'Valor'],
       ['Total de usuários',                            data.usersTotal],
       ['Novos usuários (' + periodLabel + ')',         data.usersNew],
       ['Votos (' + periodLabel + ')',                  data.votesCount],
-      ['Posts salvos',                                  data.savedPostsCount],
+      ['Posts salvos (' + periodLabel + ')',           data.savedPostsCount],
     ];
     const ws1 = window.XLSX.utils.aoa_to_sheet(metricsRows);
     ws1['!cols'] = [{ wch: 36 }, { wch: 12 }];
@@ -637,9 +743,15 @@
 
     // Tendências de busca
     if (data.trends && data.trends.length) {
-      const trendRows = [['Termo', 'Buscas'], ...data.trends.map(t => [t.term, Number(t.count) || 0])];
+      const trendRows = [
+        ['Termo', 'Buscas', 'Módulo'],
+        ...data.trends.map(t => {
+          var mod = classifyTermToModule(t.term);
+          return [t.term, Number(t.count) || 0, mod ? (MODULE_LABELS[mod] || mod) : ''];
+        }),
+      ];
       const ws2 = window.XLSX.utils.aoa_to_sheet(trendRows);
-      ws2['!cols'] = [{ wch: 24 }, { wch: 10 }];
+      ws2['!cols'] = [{ wch: 24 }, { wch: 10 }, { wch: 20 }];
       window.XLSX.utils.book_append_sheet(wb, ws2, 'Tendências');
     }
 
@@ -703,10 +815,10 @@
     doc.text('Gerado em: ' + date + '  |  Período: ' + periodLabel, marginL, y); y += 10;
 
     // Seção Moderação
-    renderSection('MODERAÇÃO', [
+    renderSection('MODERAÇÃO (' + periodLabel + ')', [
       ['Denúncias abertas',  data.reportMetrics.open],
       ['Total de denúncias', data.reportMetrics.total],
-      ['Posts ocultos',      data.postStatusMetrics.hidden],
+      ['Posts ocultados',    data.postStatusMetrics.hidden],
       ['Posts deletados',    data.postStatusMetrics.deleted],
     ]);
 
@@ -720,11 +832,11 @@
     ]);
 
     // Seção Comunidade
-    renderSection('COMUNIDADE', [
+    renderSection('COMUNIDADE (' + periodLabel + ')', [
       ['Total de usuários',                            data.usersTotal],
       ['Novos usuários (' + periodLabel + ')',         data.usersNew],
       ['Votos (' + periodLabel + ')',                  data.votesCount],
-      ['Posts salvos',                                  data.savedPostsCount],
+      ['Posts salvos (' + periodLabel + ')',           data.savedPostsCount],
     ]);
 
     // Tendências de busca
@@ -732,13 +844,15 @@
       checkPage();
       doc.setFontSize(11);
       doc.setTextColor(40, 40, 40);
-      doc.text('TENDÊNCIAS DE BUSCA (top 10)', marginL, y); y += 5;
+      doc.text('TENDÊNCIAS DE BUSCA — top 10 (' + periodLabel + ')', marginL, y); y += 5;
       doc.line(marginL, y, 196, y); y += 5;
       doc.setFontSize(10);
       data.trends.forEach(function (t, i) {
         checkPage();
+        var modKey = classifyTermToModule(t.term);
+        var modLabel = modKey ? ' [' + (MODULE_LABELS[modKey] || modKey) + ']' : '';
         doc.setTextColor(80, 80, 80);
-        doc.text((i + 1) + '. ' + String(t.term || ''), marginL + 2, y);
+        doc.text((i + 1) + '. ' + String(t.term || '') + modLabel, marginL + 2, y);
         doc.setTextColor(30, 30, 30);
         doc.text(String(Number(t.count) || 0), 150, y, { align: 'right' });
         y += 6;
@@ -751,7 +865,7 @@
       checkPage();
       doc.setFontSize(11);
       doc.setTextColor(40, 40, 40);
-      doc.text('AUDIT LOG', marginL, y); y += 5;
+      doc.text('AUDIT LOG (' + periodLabel + ')', marginL, y); y += 5;
       doc.line(marginL, y, 196, y); y += 5;
       doc.setFontSize(8);
       data.auditRows.forEach(function (row) {
@@ -824,11 +938,28 @@
     var periodDays = getSelectedPeriodDays();
     var since = daysAgo(periodDays);
     var shortLabel = getPeriodShortLabel(periodDays);
+    var fullLabel  = getPeriodLabel(periodDays);
 
-    // Atualiza título da seção de atividade
+    // Atualiza títulos das seções com o período selecionado
     var activityTitle = $('#admin-activity-title');
     if (activityTitle) {
-      activityTitle.innerHTML = '<i class="fas fa-chart-bar"></i> Atividade da plataforma (' + getPeriodLabel(periodDays) + ')';
+      activityTitle.innerHTML = '<i class="fas fa-chart-bar"></i> Atividade da plataforma (' + fullLabel + ')';
+    }
+    var moderationTitle = $('#admin-moderation-title');
+    if (moderationTitle) {
+      moderationTitle.innerHTML = '<i class="fas fa-shield-halved"></i> Moderação (' + fullLabel + ')';
+    }
+    var communityTitle = $('#admin-community-title');
+    if (communityTitle) {
+      communityTitle.innerHTML = '<i class="fas fa-users"></i> Comunidade (' + fullLabel + ')';
+    }
+    var trendsTitle = $('#admin-trends-title');
+    if (trendsTitle) {
+      trendsTitle.innerHTML = '<i class="fas fa-magnifying-glass-chart"></i> Tendências de busca (' + fullLabel + ')';
+    }
+    var auditTitle = $('#admin-audit-title');
+    if (auditTitle) {
+      auditTitle.innerHTML = '<i class="fas fa-clock-rotate-left"></i> Audit log (' + fullLabel + ')';
     }
 
     // Carrega todas as métricas em paralelo para melhor performance
@@ -847,8 +978,8 @@
       auditRows,
       trends,
     ] = await Promise.all([
-      loadReportMetrics(client),
-      loadPostStatusMetrics(client),
+      loadReportMetrics(client, since),
+      loadPostStatusMetrics(client, since),
       loadPostsCreated(client, since),
       loadPostsEdited(client, since),
       loadCommentsCount(client, since),
@@ -857,9 +988,9 @@
       loadUsersTotal(client),
       loadUsersNew(client, since),
       loadVotesCount(client, since),
-      loadSavedPostsCount(client),
-      loadAuditLog(client, AUDIT_PAGE_SIZE, 0),
-      loadSearchTrendsData(client),
+      loadSavedPostsCount(client, since),
+      loadAuditLog(client, AUDIT_PAGE_SIZE, 0, 'all', since),
+      loadSearchTrendsData(client, since),
     ]);
 
     _auditOffset = auditRows.length;
@@ -871,10 +1002,10 @@
     const metrics = $('#admin-metrics');
     if (metrics) {
       metrics.innerHTML = [
-        metricCard('fas fa-flag',      'Denúncias abertas',  reportMetrics.open,          { href: 'reports.html', highlight: true }),
-        metricCard('fas fa-list',      'Total de denúncias', reportMetrics.total,         { href: 'reports.html' }),
-        metricCard('fas fa-eye-slash', 'Posts ocultos',      postStatusMetrics.hidden,    { href: 'moderation.html' }),
-        metricCard('fas fa-trash',     'Posts deletados',    postStatusMetrics.deleted,   { href: 'moderation.html' }),
+        metricCard('fas fa-flag',      'Denúncias abertas',  reportMetrics.open,          { href: 'reports.html', highlight: true, subtitle: fullLabel }),
+        metricCard('fas fa-list',      'Total de denúncias', reportMetrics.total,         { href: 'reports.html', subtitle: fullLabel }),
+        metricCard('fas fa-eye-slash', 'Posts ocultados',    postStatusMetrics.hidden,    { href: 'moderation.html', subtitle: fullLabel }),
+        metricCard('fas fa-trash',     'Posts deletados',    postStatusMetrics.deleted,   { href: 'moderation.html', subtitle: fullLabel }),
       ].join('');
     }
 
@@ -897,7 +1028,7 @@
         metricCard('fas fa-users',       'Total de usuários',                   usersTotal),
         metricCard('fas fa-user-plus',   'Novos usuários (' + shortLabel + ')', usersNew),
         metricCard('fas fa-thumbs-up',   'Votos (' + shortLabel + ')',          votesCount),
-        metricCard('fas fa-bookmark',    'Posts salvos',                         savedPostsCount),
+        metricCard('fas fa-bookmark',    'Posts salvos (' + shortLabel + ')',   savedPostsCount),
       ].join('');
     }
 
@@ -905,7 +1036,7 @@
     renderAuditRows(auditRows, false);
 
     // ── Renderiza tendências de busca ──
-    renderSearchTrends(trends);
+    renderSearchTrends(trends, periodDays);
 
     _data = {
       reportMetrics, postStatusMetrics,
@@ -937,11 +1068,13 @@
     if (!client) return;
     var filterEl = $('#admin-audit-filter');
     var actionFilter = filterEl ? filterEl.value : 'all';
+    var periodDays = getSelectedPeriodDays();
+    var since = daysAgo(periodDays);
     var btn = $('#admin-audit-load-more');
     if (btn) btn.disabled = true;
 
     try {
-      var rows = await loadAuditLog(client, AUDIT_PAGE_SIZE, _auditOffset, actionFilter);
+      var rows = await loadAuditLog(client, AUDIT_PAGE_SIZE, _auditOffset, actionFilter, since);
       // Resolve actor names before rendering
       await loadActorsById(client, rows.map(r => r.actor_id));
       _auditOffset += rows.length;
@@ -963,10 +1096,12 @@
     if (!client) return;
     var filterEl = $('#admin-audit-filter');
     var actionFilter = filterEl ? filterEl.value : 'all';
+    var periodDays = getSelectedPeriodDays();
+    var since = daysAgo(periodDays);
     _auditOffset = 0;
 
     try {
-      var rows = await loadAuditLog(client, AUDIT_PAGE_SIZE, 0, actionFilter);
+      var rows = await loadAuditLog(client, AUDIT_PAGE_SIZE, 0, actionFilter, since);
       // Resolve actor names before rendering
       await loadActorsById(client, rows.map(r => r.actor_id));
       _auditOffset = rows.length;
@@ -1002,7 +1137,7 @@
     var auditFilter = $('#admin-audit-filter');
     if (auditFilter) auditFilter.addEventListener('change', filterAudit);
 
-    // Period filter triggers dashboard reload
+    // Period filter triggers full dashboard reload
     var periodFilter = $('#admin-period-filter');
     if (periodFilter) periodFilter.addEventListener('change', refreshDashboard);
 
