@@ -45,7 +45,9 @@
   function setLastSync() {
     const el = $('#admin-last-sync');
     if (!el) return;
-    el.textContent = `Atualizado em ${new Date().toLocaleString('pt-BR')}`;
+    el.innerHTML = '<i class="fas fa-circle-check" style="color:var(--kc-primary-brand);margin-right:5px;"></i>'
+      + 'Atualizado em ' + new Date().toLocaleString('pt-BR')
+      + ' &nbsp;<span style="opacity:.6;font-size:.78rem;">— clique para atualizar</span>';
   }
 
   async function checkAccess() {
@@ -68,13 +70,18 @@
     return { ok: true };
   }
 
-  function metricCard(icon, label, value) {
-    return `
-      <article class="kc-admin-card">
-        <div class="kc-admin-card__label" title="${escHtmlAdmin(label)}"><i class="${icon}"></i> ${escHtmlAdmin(label)}</div>
-        <strong>${Number(value || 0)}</strong>
-      </article>
-    `;
+  function metricCard(icon, label, value, opts) {
+    opts = opts || {};
+    var href = opts.href || null;
+    var highlight = opts.highlight && Number(value || 0) > 0;
+    var cardStyle = highlight ? ' style="border-color:rgba(255,107,0,.5);"' : '';
+    var inner = '<div class="kc-admin-card__label" title="' + escHtmlAdmin(label) + '">'
+      + '<i class="' + icon + '"></i> ' + escHtmlAdmin(label) + '</div>'
+      + '<strong>' + Number(value || 0) + '</strong>';
+    if (href) {
+      inner += '<div style="margin-top:8px;"><a href="' + escHtmlAdmin(href) + '" style="font-size:.78rem;color:var(--kc-primary-brand);text-decoration:none;">Ver detalhes →</a></div>';
+    }
+    return '<article class="kc-admin-card"' + cardStyle + '>' + inner + '</article>';
   }
 
   function daysAgo(n) {
@@ -106,6 +113,103 @@
     if (days === 7) return '7d';
     if (days === 365) return 'ano';
     return days + 'd';
+  }
+
+  // ── Classificação de termos de busca por módulo ────────────────────────────
+  var MODULE_KEYWORDS = {
+    'compra-venda':     ['celular','smartphone','notebook','laptop','computador','roupa','móvel','movel','eletrônico','eletronico','venda','compro','iphone','tablet','monitor','cadeira','bicicleta','bike','fone','headphone','airpod','jbl','tv','geladeira','fogão','fogao','mesa','cama','colchão','colchao','câmera','camera','drone','video','game'],
+    'moradia':          ['casa','quarto','república','republica','kitnet','apartamento','aluguel','moradia','dividir','alugar','imóvel','imovel','quarto','vaga','hospedagem','república','room','flat','pensão','pensao','villaggio'],
+    'caronas':          ['carona','caronas','ida','volta','transporte','passagem','ônibus','onibus','condução','conducao','van','moto','buser','uber','99','indriver'],
+    'eventos':          ['evento','eventos','palestra','workshop','semana','feira','festival','show','apresentação','apresentacao','cerimônia','cerimonia','congresso','simpósio','simposio','seminário','seminario','aula','minicurso','encontro','reunião','reuniao'],
+    'oportunidades':    ['estágio','estagio','emprego','vaga','vagas','monitoria','bolsa','freelancer','trainee','trabalho','oportunidade','job','processo seletivo','contratando','recrutamento','residência','residencia','pesquisa','iniciação'],
+    'achados-perdidos': ['perdido','perdidos','achado','achados','encontrei','perdi','carteira','chave','chaves','óculos','oculos','mochila','celular perdido','documento','identidade','rg','cpf','passaporte','cartão','cartao','anel','relógio','relogio'],
+    'livros':           ['livro','livros','apostila','cálculo','calculo','exatas','didático','didatico','material','caderno','atlas','manual','engenharia','química','quimica','física','fisica','biologia','história','historia','matematica','matemática'],
+  };
+
+  var MODULE_ICONS = {
+    'compra-venda':     'fas fa-layer-group',
+    'moradia':          'fas fa-home',
+    'caronas':          'fas fa-car',
+    'eventos':          'fas fa-calendar-alt',
+    'oportunidades':    'fas fa-briefcase',
+    'achados-perdidos': 'fas fa-search',
+    'livros':           'fas fa-book',
+  };
+
+  var MODULE_LABELS = {
+    'compra-venda':     'Compra e Venda',
+    'moradia':          'Moradia',
+    'caronas':          'Caronas',
+    'eventos':          'Eventos',
+    'oportunidades':    'Oportunidades',
+    'achados-perdidos': 'Achados/Perdidos',
+    'livros':           'Livros',
+  };
+
+  function normalizeForClassify(str) {
+    return String(str || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+
+  function classifyTermToModule(term) {
+    var norm = normalizeForClassify(term);
+    if (!norm) return null;
+    var bestModule = null;
+    var bestScore = 0;
+    var modules = Object.keys(MODULE_KEYWORDS);
+    for (var i = 0; i < modules.length; i++) {
+      var mod = modules[i];
+      var keywords = MODULE_KEYWORDS[mod];
+      var score = 0;
+      for (var j = 0; j < keywords.length; j++) {
+        var kw = normalizeForClassify(keywords[j]);
+        if (norm === kw) { score += 3; break; }
+        if (norm.indexOf(kw) !== -1 || kw.indexOf(norm) !== -1) { score += 1; }
+      }
+      // Also check KC_CONSTANTS category labels if available
+      if (score === 0 && window.KC_CONSTANTS && window.KC_CONSTANTS.CATEGORY_LABELS) {
+        var cats = window.KC_CONSTANTS.CATEGORY_LABELS[mod];
+        if (cats) {
+          var catKeys = Object.keys(cats);
+          for (var k = 0; k < catKeys.length; k++) {
+            var ck = normalizeForClassify(catKeys[k]);
+            if (norm === ck || norm.indexOf(ck) !== -1 || ck.indexOf(norm) !== -1) { score += 2; break; }
+          }
+        }
+      }
+      if (score > bestScore) { bestScore = score; bestModule = mod; }
+    }
+    return bestScore > 0 ? bestModule : null;
+  }
+
+  function aggregateTrendsByModule(trends) {
+    var byModule = {};
+    (trends || []).forEach(function(t) {
+      var mod = classifyTermToModule(t.term);
+      if (!mod) return;
+      if (!byModule[mod]) byModule[mod] = { module: mod, count: 0, terms: [] };
+      byModule[mod].count += Number(t.count) || 1;
+      byModule[mod].terms.push(t.term);
+    });
+    return Object.values(byModule).sort(function(a, b) { return b.count - a.count; });
+  }
+
+  function renderSearchTrendsByModule(trends) {
+    var container = $('#admin-trends-modules');
+    if (!container) return;
+    var moduleData = aggregateTrendsByModule(trends);
+    if (!moduleData.length) { container.style.display = 'none'; return; }
+    container.style.display = 'flex';
+    var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells"></i> Por módulo (30 dias)</div>';
+    container.innerHTML = titleHtml + moduleData.map(function(m) {
+      var icon = MODULE_ICONS[m.module] || 'fas fa-tag';
+      var label = MODULE_LABELS[m.module] || m.module;
+      var topTerms = m.terms.slice(0, 3).map(function(t) { return escHtmlAdmin(t); }).join(', ');
+      return '<span class="kc-trend-module-badge" title="' + escHtmlAdmin(topTerms) + '">'
+        + '<i class="' + icon + '"></i> ' + escHtmlAdmin(label)
+        + '<span class="kc-badge-count">' + m.count + '</span>'
+        + '</span>';
+    }).join('');
   }
 
   // ── Moderação: Denúncias ────────────────────────────────────────────────────
@@ -327,36 +431,68 @@
     return [];
   }
 
-  // ── Tendências de busca (com timeout) ─────────────────────────────────────
+  // ── Tendências de busca (com timeout e fallback robusto) ──────────────────
   async function loadSearchTrendsData(client) {
     let trends = [];
     try {
+      // Tentativa 1: RPC dedicado com timeout de 8s
       var rpcPromise = client.rpc('kc_admin_search_trends', { p_limit: 10 });
       var timeoutPromise = new Promise(function(_, reject) {
         setTimeout(function() { reject(new Error('timeout')); }, 8000);
       });
-      const res = await Promise.race([rpcPromise, timeoutPromise]);
-      if (!res.error && Array.isArray(res.data)) {
+      var res;
+      try {
+        res = await Promise.race([rpcPromise, timeoutPromise]);
+      } catch (rpcErr) {
+        console.warn('[Admin trends] RPC falhou ou timeout:', rpcErr && rpcErr.message);
+        res = { error: rpcErr };
+      }
+
+      if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
         trends = res.data;
       } else {
-        // Fallback: aggregate from search_queries table
-        const raw = await client.from('search_queries')
+        // Tentativa 2: query direta com top 500 registros recentes
+        if (res.error) {
+          console.warn('[Admin trends] RPC error:', res.error.message || res.error);
+        }
+        var raw = await client.from('search_queries')
           .select('term')
           .order('created_at', { ascending: false })
           .limit(500);
+
         if (!raw.error && Array.isArray(raw.data)) {
-          const freq = {};
-          raw.data.forEach(r => {
-            const t = String(r.term || '').trim().toLowerCase();
+          var freq = {};
+          raw.data.forEach(function(r) {
+            var t = String(r.term || '').trim().toLowerCase();
             if (t) freq[t] = (freq[t] || 0) + 1;
           });
           trends = Object.entries(freq)
-            .sort((a, b) => b[1] - a[1])
+            .sort(function(a, b) { return b[1] - a[1]; })
             .slice(0, 10)
-            .map(([term, count]) => ({ term, count }));
+            .map(function(e) { return { term: e[0], count: e[1] }; });
+        } else if (raw.error) {
+          // Tentativa 3: query sem filtro de período (caso RLS bloqueie .order)
+          console.warn('[Admin trends] Fallback direto falhou:', raw.error.message || raw.error);
+          var raw2 = await client.from('search_queries').select('term').limit(200);
+          if (!raw2.error && Array.isArray(raw2.data)) {
+            var freq2 = {};
+            raw2.data.forEach(function(r) {
+              var t = String(r.term || '').trim().toLowerCase();
+              if (t) freq2[t] = (freq2[t] || 0) + 1;
+            });
+            trends = Object.entries(freq2)
+              .sort(function(a, b) { return b[1] - a[1]; })
+              .slice(0, 10)
+              .map(function(e) { return { term: e[0], count: e[1] }; });
+          } else if (raw2.error) {
+            console.warn('[Admin trends] Todas as tentativas falharam:', raw2.error.message || raw2.error);
+          }
         }
       }
-    } catch (_) { trends = []; }
+    } catch (e) {
+      console.error('[Admin trends] Erro inesperado:', e);
+      trends = [];
+    }
     return trends;
   }
 
@@ -364,35 +500,54 @@
     const trendsList = $('#admin-trends-list');
     if (!trendsList) return;
     if (!trends || !trends.length) {
-      trendsList.innerHTML = '<li class="kc-trend-empty">Nenhuma busca registrada ainda.</li>';
+      trendsList.innerHTML = '<li class="kc-trend-empty">Nenhuma busca registrada ainda. As buscas feitas na plataforma aparecerão aqui.</li>';
+      // Esconde seção de módulos também
+      var modContainer = $('#admin-trends-modules');
+      if (modContainer) modContainer.style.display = 'none';
       return;
     }
-    const max = Math.max(...trends.map(t => Number(t.count) || 1), 1);
-    trendsList.innerHTML = trends.map(t => {
+    const max = Math.max.apply(null, trends.map(function(t) { return Number(t.count) || 1; }).concat([1]));
+    trendsList.innerHTML = trends.map(function(t) {
       const pct = Math.round(((Number(t.count) || 0) / max) * 100);
-      return `
-        <li class="kc-trend-item">
-          <span class="kc-trend-term">${escHtmlAdmin(String(t.term || ''))}</span>
-          <div class="kc-trend-bar-wrap"><div class="kc-trend-bar" style="width:${pct}%"></div></div>
-          <span class="kc-trend-count">${Number(t.count) || 0}</span>
-        </li>
-      `;
+      return '<li class="kc-trend-item">'
+        + '<span class="kc-trend-term">' + escHtmlAdmin(String(t.term || '')) + '</span>'
+        + '<div class="kc-trend-bar-wrap"><div class="kc-trend-bar" style="width:' + pct + '%"></div></div>'
+        + '<span class="kc-trend-count">' + (Number(t.count) || 0) + '</span>'
+        + '</li>';
     }).join('');
+    // Renderiza classificação por módulo
+    renderSearchTrendsByModule(trends);
+  }
+
+  function auditActionBadge(action) {
+    var a = String(action || '').toLowerCase();
+    var cls = 'kc-audit-badge--default';
+    var label = action || '—';
+    if (a.includes('delet')) { cls = 'kc-audit-badge--deleted'; label = 'Deletado'; }
+    else if (a.includes('hidden') || a.includes('oculto')) { cls = 'kc-audit-badge--hidden'; label = 'Ocultado'; }
+    else if (a.includes('restored') || a.includes('restaur')) { cls = 'kc-audit-badge--restored'; label = 'Restaurado'; }
+    else if (a.includes('report') || a.includes('closed')) { cls = 'kc-audit-badge--report'; label = 'Denúncia'; }
+    else if (a.includes('status')) { cls = 'kc-audit-badge--hidden'; label = 'Status'; }
+    return '<span class="kc-audit-badge ' + cls + '" title="' + escHtmlAdmin(action || '') + '">' + escHtmlAdmin(label) + '</span>';
   }
 
   function renderAuditRows(rows, append) {
     const auditBody = $('#admin-audit-body');
     if (!auditBody) return;
     var html = rows.length
-      ? rows.map(row => `
-          <tr>
-            <td data-label="Data">${new Date(row.created_at).toLocaleString('pt-BR')}</td>
-            <td data-label="Ação"><code>${escHtmlAdmin(row.action || '—')}</code></td>
-            <td data-label="Entidade"><code>${escHtmlAdmin(row.entity_type || '—')}</code></td>
-            <td data-label="Autor" title="${escHtmlAdmin(row.actor_id || '')}"><code>${escHtmlAdmin(getActorDisplay(row.actor_id))}</code></td>
-          </tr>
-        `).join('')
-      : '<tr><td colspan="4" style="color:var(--kc-text-dark-secondary);">Nenhum evento encontrado.</td></tr>';
+      ? rows.map(function(row) {
+          var dateStr = row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '—';
+          var entity = String(row.entity_type || '—');
+          // Trunca entity longa
+          var entityDisplay = entity.length > 20 ? entity.slice(0, 18) + '…' : entity;
+          return '<tr>'
+            + '<td data-label="Data" style="white-space:nowrap;">' + escHtmlAdmin(dateStr) + '</td>'
+            + '<td data-label="Ação">' + auditActionBadge(row.action) + '</td>'
+            + '<td data-label="Entidade" title="' + escHtmlAdmin(entity) + '"><code>' + escHtmlAdmin(entityDisplay) + '</code></td>'
+            + '<td data-label="Autor" title="' + escHtmlAdmin(row.actor_id || '') + '">' + escHtmlAdmin(getActorDisplay(row.actor_id)) + '</td>'
+            + '</tr>';
+        }).join('')
+      : '<tr><td colspan="4" style="color:var(--kc-text-dark-secondary);padding:20px 8px;">Nenhum evento encontrado.</td></tr>';
 
     if (append) {
       auditBody.insertAdjacentHTML('beforeend', html);
@@ -716,10 +871,10 @@
     const metrics = $('#admin-metrics');
     if (metrics) {
       metrics.innerHTML = [
-        metricCard('fas fa-flag',      'Denúncias abertas',  reportMetrics.open),
-        metricCard('fas fa-list',      'Total de denúncias', reportMetrics.total),
-        metricCard('fas fa-eye-slash', 'Posts ocultos',      postStatusMetrics.hidden),
-        metricCard('fas fa-trash',     'Posts deletados',    postStatusMetrics.deleted),
+        metricCard('fas fa-flag',      'Denúncias abertas',  reportMetrics.open,          { href: 'reports.html', highlight: true }),
+        metricCard('fas fa-list',      'Total de denúncias', reportMetrics.total,         { href: 'reports.html' }),
+        metricCard('fas fa-eye-slash', 'Posts ocultos',      postStatusMetrics.hidden,    { href: 'moderation.html' }),
+        metricCard('fas fa-trash',     'Posts deletados',    postStatusMetrics.deleted,   { href: 'moderation.html' }),
       ].join('');
     }
 
@@ -836,6 +991,10 @@
 
     const refreshBtn = $('#admin-refresh-btn');
     if (refreshBtn) refreshBtn.addEventListener('click', refreshDashboard);
+
+    // Last sync clicável também dispara atualização
+    var lastSyncEl = $('#admin-last-sync');
+    if (lastSyncEl) lastSyncEl.addEventListener('click', refreshDashboard);
 
     var loadMoreBtn = $('#admin-audit-load-more');
     if (loadMoreBtn) loadMoreBtn.addEventListener('click', loadMoreAudit);

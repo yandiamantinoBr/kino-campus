@@ -164,6 +164,58 @@
       .kc-admin-wrapper { padding: 12px 10px 80px; }
       .kc-admin-toolbar button { font-size: .78rem; }
     }
+
+    /* ── Header user-actions: garantir visibilidade em todos os tamanhos ── */
+    .kc-header--admin .kc-user-actions {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    /* Logo compacto em telas muito pequenas */
+    @media (max-width: 400px) {
+      .kc-header--admin .kc-logo-text { display: none; }
+      .kc-header--admin .kc-header-container { gap: 6px; padding: 0 10px; }
+      .kc-admin-wrapper { padding: 10px 8px 80px; }
+      .kc-admin-hero { padding: 10px; gap: 8px; }
+      .kc-admin-hero h1 { font-size: 1rem; }
+      .kc-admin-toolbar button,
+      .kc-admin-toolbar select { font-size: .76rem; padding: 7px 5px; }
+      .kc-admin-grid { gap: 6px; }
+    }
+
+    /* ── Tendências por módulo ── */
+    .kc-trend-modules { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--kc-border-dark); }
+    .kc-trend-module-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark);
+      border-radius: 20px; padding: 5px 12px; font-size: .82rem;
+      color: var(--kc-text-dark-primary); transition: border-color .15s;
+    }
+    .kc-trend-module-badge:hover { border-color: var(--kc-primary-brand); }
+    .kc-trend-module-badge .kc-badge-count {
+      background: var(--kc-primary-brand); color: #fff;
+      border-radius: 10px; padding: 1px 7px; font-size: .76rem; font-weight: 600;
+    }
+    .kc-trend-module-title {
+      font-size: .78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--kc-text-dark-secondary); margin-bottom: 8px;
+    }
+
+    /* ── Audit log action badges ── */
+    .kc-audit-badge {
+      display: inline-block; border-radius: 6px; padding: 2px 7px; font-size: .75rem;
+      font-weight: 600; letter-spacing: .02em; white-space: nowrap;
+    }
+    .kc-audit-badge--deleted  { background: rgba(244,67,54,.15); color: #ef9a9a; }
+    .kc-audit-badge--hidden   { background: rgba(255,152,0,.15);  color: #ffb74d; }
+    .kc-audit-badge--restored { background: rgba(76,175,80,.15);  color: #81c784; }
+    .kc-audit-badge--report   { background: rgba(33,150,243,.15); color: #64b5f6; }
+    .kc-audit-badge--default  { background: var(--kc-border-dark); color: var(--kc-text-dark-secondary); }
+
+    /* ── Last sync clicável ── */
+    #admin-last-sync { cursor: pointer; }
+    #admin-last-sync:hover { text-decoration: underline; }
   </style>
 </head>
 <body class="kc-admin-page">
@@ -186,7 +238,7 @@
       </nav>
       <div class="kc-user-actions">
         <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
-        <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
+        <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
   </header>
@@ -235,10 +287,14 @@
 
         <!-- Tendências de busca -->
         <section class="kc-admin-section">
-          <h3><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca (top 10)</h3>
+          <h3><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca</h3>
+          <div class="kc-trend-module-title"><i class="fas fa-list-ol"></i> Top termos buscados</div>
           <ul class="kc-trend-list" id="admin-trends-list">
             <li class="kc-trend-empty">Carregando…</li>
           </ul>
+          <div id="admin-trends-modules" class="kc-trend-modules" style="display:none;">
+            <!-- renderizado pelo controller -->
+          </div>
         </section>
 
         <!-- Audit log -->
