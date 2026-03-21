@@ -11,7 +11,13 @@
   <link rel="stylesheet" href="../assets/css/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    .kc-admin-wrapper { max-width: 1120px; margin: 0 auto; padding: 18px 16px 72px; }
+    .kc-admin-page { overflow-x: hidden; }
+    .kc-admin-page main.kc-main-content {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      margin: 0 auto;
+    }
+    .kc-admin-wrapper { max-width: 1120px; margin: 0 auto; padding: 18px 16px 72px; box-sizing: border-box; }
     .kc-admin-hero {
       background: linear-gradient(120deg, rgba(255, 107, 0, 0.16), rgba(255, 107, 0, 0.05));
       border: 1px solid var(--kc-border-dark);
@@ -45,6 +51,17 @@
     .kc-admin-toolbar button:hover,
     .kc-admin-toolbar a:hover { border-color: var(--kc-primary-brand); }
     .kc-admin-toolbar button:disabled { opacity:.5; cursor:not-allowed; }
+    .kc-admin-toolbar select {
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: .88rem;
+      cursor: pointer;
+      transition: border-color .15s ease;
+    }
+    .kc-admin-toolbar select:hover { border-color: var(--kc-primary-brand); }
     .kc-admin-toolbar .xlsx { color: #1d6f42; }
     .kc-admin-toolbar .pdf  { color: #d93025; }
 
@@ -54,10 +71,10 @@
     #admin-last-sync { color: var(--kc-text-dark-secondary); font-size: .82rem; margin-bottom: 8px; }
 
     /* ── Metric grids ── */
-    .kc-admin-grid { display:grid; gap:12px; grid-template-columns: repeat(4,1fr); margin: 14px 0 20px; }
-    .kc-admin-card { background:var(--kc-surface-dark); border:1px solid var(--kc-border-dark); border-radius:12px; padding:14px; min-width:0; }
+    .kc-admin-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); margin: 14px 0 20px; }
+    .kc-admin-card { background:var(--kc-surface-dark); border:1px solid var(--kc-border-dark); border-radius:12px; padding:14px; min-width:0; overflow:hidden; word-break:break-word; }
     .kc-admin-card__label { color: var(--kc-text-dark-secondary); font-size: .85rem; display:flex; gap:6px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .kc-admin-card strong { display:block; font-size:1.85rem; margin-top:8px; line-height: 1; }
+    .kc-admin-card strong { display:block; font-size:1.85rem; margin-top:8px; line-height: 1; overflow:hidden; text-overflow:ellipsis; }
     .kc-admin-section-title { font-size: .78rem; font-weight: 600; text-transform: uppercase;
       letter-spacing: .06em; color: var(--kc-text-dark-secondary); margin: 20px 0 6px; }
 
@@ -87,13 +104,15 @@
 
     /* ── Mobile responsive ── */
     @media (max-width: 760px) {
+      .kc-admin-wrapper { padding: 14px 10px 72px; }
       .kc-admin-hero { padding: 12px; gap: 10px; }
       .kc-admin-hero h1 { font-size: 1.15rem; }
       .kc-admin-hero p { display: none; }
       /* Nav duplicados da toolbar ficam ocultos (admin-nav cobre) */
       .kc-admin-toolbar a { display: none; }
       .kc-admin-toolbar { width: 100%; gap: 6px; }
-      .kc-admin-toolbar button { flex: 1 1 auto; justify-content: center; font-size: .82rem; padding: 8px 6px; }
+      .kc-admin-toolbar button,
+      .kc-admin-toolbar select { flex: 1 1 auto; justify-content: center; font-size: .82rem; padding: 8px 6px; }
       .kc-admin-card strong { font-size: 1.5rem; }
       .kc-admin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .kc-admin-card { padding: 10px; }
@@ -166,6 +185,7 @@
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
       </nav>
       <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
         <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
@@ -183,6 +203,13 @@
             <p>Métricas consolidadas de denúncias, moderação, atividade e buscas em tempo real.</p>
           </div>
           <div class="kc-admin-toolbar">
+            <select id="admin-period-filter" title="Período">
+              <option value="1">Hoje</option>
+              <option value="7">Esta semana</option>
+              <option value="30" selected>Últimos 30 dias</option>
+              <option value="90">Últimos 90 dias</option>
+              <option value="365">Este ano</option>
+            </select>
             <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
             <button type="button" class="xlsx" id="admin-export-xlsx" disabled><i class="fas fa-file-excel"></i> XLSX</button>
             <button type="button" class="pdf" id="admin-export-pdf" disabled><i class="fas fa-file-pdf"></i> PDF</button>
@@ -199,8 +226,12 @@
         <div class="kc-admin-grid" id="admin-metrics"></div>
 
         <!-- Métricas de atividade -->
-        <div class="kc-admin-section-title"><i class="fas fa-activity"></i> Atividade da plataforma (últimos 30 dias)</div>
+        <div class="kc-admin-section-title" id="admin-activity-title"><i class="fas fa-chart-bar"></i> Atividade da plataforma (últimos 30 dias)</div>
         <div class="kc-admin-grid" id="admin-activity-metrics"></div>
+
+        <!-- Métricas da comunidade -->
+        <div class="kc-admin-section-title"><i class="fas fa-users"></i> Comunidade</div>
+        <div class="kc-admin-grid" id="admin-community-metrics"></div>
 
         <!-- Tendências de busca -->
         <section class="kc-admin-section">
@@ -212,7 +243,15 @@
 
         <!-- Audit log -->
         <section class="kc-admin-section">
-          <h3><i class="fas fa-clock-rotate-left"></i> Últimos eventos do audit log</h3>
+          <h3><i class="fas fa-clock-rotate-left"></i> Audit log</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+            <select id="admin-audit-filter" style="padding:6px 10px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;">
+              <option value="all">Todas as ações</option>
+              <option value="post_status_changed">Status alterado</option>
+              <option value="post_deleted">Post deletado</option>
+              <option value="report_closed">Denúncia fechada</option>
+            </select>
+          </div>
           <div class="kc-admin-audit-wrap">
             <table>
               <thead>
@@ -226,10 +265,24 @@
               <tbody id="admin-audit-body"></tbody>
             </table>
           </div>
+          <div style="text-align:center;margin-top:10px;">
+            <button type="button" id="admin-audit-load-more" style="padding:8px 18px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;cursor:pointer;">
+              <i class="fas fa-chevron-down"></i> Carregar mais
+            </button>
+          </div>
         </section>
       </section>
     </div>
   </main>
+
+  <!-- Mobile Navigation (admin) -->
+  <nav class="kc-mobile-nav">
+    <a class="active" href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
+    <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
+    <a href="../index.html"><i class="fas fa-home"></i><span>Site</span></a>
+  </nav>
 
   <script src="../assets/js/kc-constants.js"></script>
   <script src="../assets/js/kc-utils.js"></script>

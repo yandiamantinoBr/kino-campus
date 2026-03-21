@@ -6961,22 +6961,36 @@ textarea::placeholder {
   justify-content: center;
 }
 
+/* ── Tablet: compact admin nav links ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .kc-header--admin .kc-admin-nav { gap: 2px; }
+  .kc-admin-nav__link {
+    padding: 6px 8px;
+    font-size: 0.82rem;
+  }
+}
+
 @media (max-width: 768px) {
-  .kc-header--admin .kc-header-container {
-    flex-wrap: wrap;
-  }
-  .kc-header--admin .kc-admin-nav {
-    order: 3;
-    width: 100%;
-    gap: 4px;
-    padding: 8px 0 0;
-    margin-top: 6px;
-    border-top: 1px solid var(--kc-border-dark);
-  }
+  /* Admin nav hidden on mobile — replaced by kc-mobile-nav bottom bar */
+  .kc-header--admin .kc-admin-nav { display: none; }
   .kc-admin-nav__link {
     padding: 6px 10px;
     font-size: 0.8rem;
     gap: 5px;
   }
   .kc-admin-nav__link i { font-size: 0.85em; }
+
+  /* Ensure header shows logo + user-actions on mobile */
+  .kc-header--admin .kc-header-container {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+  .kc-header--admin .kc-user-actions {
+    flex-shrink: 0;
+    display: flex;
+  }
+  .kc-header--admin .kc-logo {
+    flex-shrink: 1;
+    min-width: 0;
+  }
 }
