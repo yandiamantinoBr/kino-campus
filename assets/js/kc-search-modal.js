@@ -11,10 +11,11 @@
   'use strict';
 
   /* ─── Estado ─────────────────────────────────────────────── */
-  let overlay   = null;
-  let card      = null;
-  let modalInput = null;
-  let isOpen    = false;
+  let overlay          = null;
+  let card             = null;
+  let modalInput       = null;
+  let isOpen           = false;
+  let dropdownObserver = null;
 
   /* ─── Placeholder por página ─────────────────────────────── */
   function getPagePlaceholder() {
@@ -104,37 +105,62 @@
   }
 
   /**
+   * Reposiciona o dropdown logo abaixo da barra de busca do modal.
+   * Chamado pelo MutationObserver sempre que o dropdown fica ativo.
+   */
+  function repositionDropdown(dropdown) {
+    if (!card) return;
+    const bar = card.querySelector('.kc-search-modal-card__bar');
+    if (!dropdown || !bar) return;
+    const rect = bar.getBoundingClientRect();
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+    let w = Math.max(rect.width, 280);
+    let l = rect.left;
+    if (l + w > vw - 8) l = Math.max(8, vw - w - 8);
+    if (l < 8) l = 8;
+    if (w > vw - 16) w = vw - 16;
+    dropdown.style.top    = `${rect.bottom + 6}px`;
+    dropdown.style.left   = `${l}px`;
+    dropdown.style.width  = `${w}px`;
+    dropdown.style.zIndex = '10001'; /* acima do overlay (9999) e padrão (10000) */
+  }
+
+  /**
+   * Observa a classe 'active' no dropdown e reposiciona sempre que ele aparecer
+   * enquanto o modal estiver aberto. O kc-search.js debounce de 180 ms faz com
+   * que um simples requestAnimationFrame dispare cedo demais; o Observer garante
+   * que a reposição ocorra exatamente quando o dropdown se torna visível.
+   */
+  function startDropdownObserver() {
+    if (dropdownObserver) return;
+    const tryObserve = () => {
+      const dropdown = document.getElementById('kcSearchDropdown') ||
+                       document.querySelector('.kc-search-dropdown');
+      if (!dropdown) { setTimeout(tryObserve, 100); return; }
+      dropdownObserver = new MutationObserver(() => {
+        if (isOpen && dropdown.classList.contains('active')) {
+          repositionDropdown(dropdown);
+        }
+      });
+      dropdownObserver.observe(dropdown, { attributes: true, attributeFilter: ['class'] });
+    };
+    tryObserve();
+  }
+
+  function stopDropdownObserver() {
+    if (dropdownObserver) { dropdownObserver.disconnect(); dropdownObserver = null; }
+  }
+
+  /**
    * Copia o valor para o #searchInput real e dispara um InputEvent
    * para que o kc-search.js mostre o dropdown.
-   * Em seguida, reposiciona o dropdown para ficar logo abaixo da
-   * barra de busca do modal (e não do input oculto no header).
+   * A reposição é tratada pelo MutationObserver (startDropdownObserver).
    */
   function syncToRealInput(value) {
     const real = document.getElementById('searchInput');
     if (!real) return;
     real.value = value;
     real.dispatchEvent(new Event('input', { bubbles: true }));
-
-    /* Reposiciona o dropdown logo abaixo da barra do modal */
-    requestAnimationFrame(() => {
-      const dropdown = document.getElementById('kcSearchDropdown') ||
-                       document.querySelector('.kc-search-dropdown');
-      const bar = card ? card.querySelector('.kc-search-modal-card__bar') : null;
-      if (!dropdown || !bar) return;
-
-      const rect = bar.getBoundingClientRect();
-      const vw = window.innerWidth || document.documentElement.clientWidth;
-      let w = Math.max(rect.width, 280);
-      let l = rect.left;
-      if (l + w > vw - 8) l = Math.max(8, vw - w - 8);
-      if (l < 8) l = 8;
-      if (w > vw - 16) w = vw - 16;
-
-      dropdown.style.top    = `${rect.bottom + 6}px`;
-      dropdown.style.left   = `${l}px`;
-      dropdown.style.width  = `${w}px`;
-      dropdown.style.zIndex = '10001'; /* acima do overlay (9999) e dropdown padrão (10000) */
-    });
   }
 
   /* ─── Abrir / fechar ─────────────────────────────────────── */
@@ -148,6 +174,9 @@
     document.body.classList.add('kc-modal-open');
     isOpen = true;
 
+    /* Inicia observer para reposicionar dropdown quando ficar ativo */
+    startDropdownObserver();
+
     /* Foco com pequeno delay para a animação CSS completar */
     requestAnimationFrame(() => {
       if (modalInput) modalInput.focus();
@@ -159,6 +188,8 @@
     overlay.classList.remove('active');
     document.body.classList.remove('kc-modal-open');
     isOpen = false;
+
+    stopDropdownObserver();
 
     /* Limpa o input real para não deixar dropdown aberto */
     syncToRealInput('');

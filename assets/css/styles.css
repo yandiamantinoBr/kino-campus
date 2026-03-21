@@ -1169,6 +1169,8 @@ main {
     font-size: 1em;
     padding: 0 3px;
     transition: transform var(--transition-speed) ease, color var(--transition-speed) ease;
+    position: relative;
+    overflow: visible;
 }
 
 .kc-vote-box button:hover {
@@ -1178,19 +1180,42 @@ main {
 .kc-vote-box .hot {
     color: var(--kc-hot-color);
 }
+/* Glow circular apenas ao redor do ícone — não cobre o botão inteiro */
 .kc-vote-box button.hot.active {
-    background: rgba(255, 107, 0, 0.14);
-    border-radius: 8px;
+    background: none;
     color: var(--kc-hot-color);
+}
+.kc-vote-box button.hot.active::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 107, 0, 0.18);
+    pointer-events: none;
 }
 
 .kc-vote-box .cold {
     color: var(--kc-cold-color);
 }
 .kc-vote-box button.cold.active {
-    background: rgba(59, 130, 246, 0.14);
-    border-radius: 8px;
+    background: none;
     color: var(--kc-cold-color);
+}
+.kc-vote-box button.cold.active::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.18);
+    pointer-events: none;
 }
 
 .kc-vote-box span {

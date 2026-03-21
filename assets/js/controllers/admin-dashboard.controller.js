@@ -1,6 +1,9 @@
 (function () {
   'use strict';
 
+  /* Armazena os dados carregados para uso no export */
+  let _data = null;
+
   function $(sel, root) { return (root || document).querySelector(sel); }
 
   function getClient() {
@@ -204,17 +207,13 @@
   }
 
   // ── Tendências de busca ──────────────────────────────────────────────────────
-  async function loadSearchTrends(client) {
-    const trendsList = $('#admin-trends-list');
-    if (!trendsList) return;
-
+  async function loadSearchTrendsData(client) {
     let trends = [];
     try {
       const res = await client.rpc('kc_admin_search_trends', { p_limit: 10 });
       if (!res.error && Array.isArray(res.data)) {
         trends = res.data;
       } else {
-        // Fallback: busca direto da tabela e agrupa em JS
         const raw = await client.from('search_queries')
           .select('term')
           .order('created_at', { ascending: false })
@@ -232,12 +231,16 @@
         }
       }
     } catch (_) { trends = []; }
+    return trends;
+  }
 
+  function renderSearchTrends(trends) {
+    const trendsList = $('#admin-trends-list');
+    if (!trendsList) return;
     if (!trends.length) {
       trendsList.innerHTML = '<li class="kc-trend-empty">Nenhuma busca registrada ainda.</li>';
       return;
     }
-
     const max = Math.max(...trends.map(t => Number(t.count) || 1), 1);
     trendsList.innerHTML = trends.map(t => {
       const pct = Math.round(((Number(t.count) || 0) / max) * 100);
@@ -249,6 +252,212 @@
         </li>
       `;
     }).join('');
+  }
+
+  // ── Exportação XLSX ──────────────────────────────────────────────────────────
+  function exportXLSX(data) {
+    if (!window.XLSX) { alert('Biblioteca XLSX ainda não carregada. Tente novamente.'); return; }
+    const wb = window.XLSX.utils.book_new();
+    const date = new Date().toLocaleString('pt-BR');
+
+    // Dashboard — métricas
+    const metricsRows = [
+      ['KinoCampus — Dashboard Administrativo'],
+      ['Gerado em: ' + date],
+      [],
+      ['MODERAÇÃO', ''],
+      ['Métrica', 'Valor'],
+      ['Denúncias abertas',  data.reportMetrics.open],
+      ['Total de denúncias', data.reportMetrics.total],
+      ['Posts ocultos',      data.postStatusMetrics.hidden],
+      ['Posts deletados',    data.postStatusMetrics.deleted],
+      [],
+      ['ATIVIDADE (últimos 30 dias)', ''],
+      ['Métrica', 'Valor'],
+      ['Posts publicados', data.postsCreated],
+      ['Posts editados',   data.postsEdited],
+      ['Comentários',      data.commentsCount],
+      ['Buscas realizadas',data.searchCount],
+    ];
+    const ws1 = window.XLSX.utils.aoa_to_sheet(metricsRows);
+    ws1['!cols'] = [{ wch: 30 }, { wch: 12 }];
+    window.XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard');
+
+    // Tendências de busca
+    if (data.trends && data.trends.length) {
+      const trendRows = [['Termo', 'Buscas'], ...data.trends.map(t => [t.term, Number(t.count) || 0])];
+      const ws2 = window.XLSX.utils.aoa_to_sheet(trendRows);
+      ws2['!cols'] = [{ wch: 24 }, { wch: 10 }];
+      window.XLSX.utils.book_append_sheet(wb, ws2, 'Tendências');
+    }
+
+    // Audit log
+    if (data.auditRows && data.auditRows.length) {
+      const auditRows2 = [
+        ['Data', 'Ação', 'Entidade', 'Autor'],
+        ...data.auditRows.map(r => [
+          new Date(r.created_at).toLocaleString('pt-BR'),
+          r.action || '—',
+          r.entity_type || '—',
+          r.actor_id || 'system',
+        ]),
+      ];
+      const ws3 = window.XLSX.utils.aoa_to_sheet(auditRows2);
+      ws3['!cols'] = [{ wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 36 }];
+      window.XLSX.utils.book_append_sheet(wb, ws3, 'Audit Log');
+    }
+
+    const filename = `kc-dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    window.XLSX.writeFile(wb, filename);
+  }
+
+  // ── Exportação PDF ───────────────────────────────────────────────────────────
+  function exportPDF(data) {
+    if (!window.jspdf || !window.jspdf.jsPDF) { alert('Biblioteca PDF ainda não carregada. Tente novamente.'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const date = new Date().toLocaleString('pt-BR');
+    const marginL = 14;
+    let y = 18;
+
+    // Cabeçalho
+    doc.setFontSize(16);
+    doc.setTextColor(255, 107, 0);
+    doc.text('KinoCampus — Dashboard Administrativo', marginL, y); y += 7;
+    doc.setFontSize(9);
+    doc.setTextColor(130, 130, 130);
+    doc.text('Gerado em: ' + date, marginL, y); y += 10;
+
+    // Seção Moderação
+    doc.setFontSize(11);
+    doc.setTextColor(40, 40, 40);
+    doc.text('MODERAÇÃO', marginL, y); y += 5;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(marginL, y, 196, y); y += 5;
+
+    const modMetrics = [
+      ['Denúncias abertas',  data.reportMetrics.open],
+      ['Total de denúncias', data.reportMetrics.total],
+      ['Posts ocultos',      data.postStatusMetrics.hidden],
+      ['Posts deletados',    data.postStatusMetrics.deleted],
+    ];
+    doc.setFontSize(10);
+    modMetrics.forEach(([label, value]) => {
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, marginL + 2, y);
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(value), 150, y, { align: 'right' });
+      y += 6;
+    });
+    y += 4;
+
+    // Seção Atividade
+    doc.setFontSize(11);
+    doc.setTextColor(40, 40, 40);
+    doc.text('ATIVIDADE (últimos 30 dias)', marginL, y); y += 5;
+    doc.line(marginL, y, 196, y); y += 5;
+
+    const actMetrics = [
+      ['Posts publicados', data.postsCreated],
+      ['Posts editados',   data.postsEdited],
+      ['Comentários',      data.commentsCount],
+      ['Buscas realizadas',data.searchCount],
+    ];
+    doc.setFontSize(10);
+    actMetrics.forEach(([label, value]) => {
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, marginL + 2, y);
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(value), 150, y, { align: 'right' });
+      y += 6;
+    });
+    y += 4;
+
+    // Tendências de busca
+    if (data.trends && data.trends.length) {
+      doc.setFontSize(11);
+      doc.setTextColor(40, 40, 40);
+      doc.text('TENDÊNCIAS DE BUSCA (top 10)', marginL, y); y += 5;
+      doc.line(marginL, y, 196, y); y += 5;
+      doc.setFontSize(10);
+      data.trends.forEach((t, i) => {
+        doc.setTextColor(80, 80, 80);
+        doc.text(`${i + 1}. ${String(t.term || '')}`, marginL + 2, y);
+        doc.setTextColor(30, 30, 30);
+        doc.text(String(Number(t.count) || 0), 150, y, { align: 'right' });
+        y += 6;
+      });
+      y += 4;
+    }
+
+    // Audit log
+    if (data.auditRows && data.auditRows.length) {
+      if (y > 240) { doc.addPage(); y = 18; }
+      doc.setFontSize(11);
+      doc.setTextColor(40, 40, 40);
+      doc.text('AUDIT LOG (últimos 10 eventos)', marginL, y); y += 5;
+      doc.line(marginL, y, 196, y); y += 5;
+      doc.setFontSize(8);
+      data.auditRows.forEach(row => {
+        if (y > 272) { doc.addPage(); y = 18; }
+        const dateStr = new Date(row.created_at).toLocaleString('pt-BR');
+        const line = `${dateStr}  |  ${row.action || '—'}  |  ${row.entity_type || '—'}  |  ${String(row.actor_id || 'system').slice(0, 16)}`;
+        doc.setTextColor(70, 70, 70);
+        doc.text(line, marginL + 2, y);
+        y += 5;
+      });
+    }
+
+    // Rodapé
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`KinoCampus — Pág. ${p} / ${totalPages}`, 196, 289, { align: 'right' });
+    }
+
+    doc.save(`kc-dashboard-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
+  // ── Habilita painel de exportação após carregamento ──────────────────────────
+  function enableExport() {
+    const panel   = $('#admin-export-panel');
+    const openBtn = $('#admin-export-open-btn');
+    const xlsxBtn = $('#admin-export-xlsx');
+    const pdfBtn  = $('#admin-export-pdf');
+
+    if (panel)   { panel.style.display   = 'flex'; }
+    if (openBtn) { openBtn.style.display = 'inline-flex'; }
+
+    if (xlsxBtn) {
+      xlsxBtn.disabled = false;
+      xlsxBtn.addEventListener('click', () => {
+        if (!_data) return;
+        xlsxBtn.disabled = true;
+        try { exportXLSX(_data); } catch (e) { console.error(e); alert('Falha ao gerar XLSX.'); }
+        finally { xlsxBtn.disabled = false; }
+      });
+    }
+
+    if (pdfBtn) {
+      pdfBtn.disabled = false;
+      pdfBtn.addEventListener('click', () => {
+        if (!_data) return;
+        pdfBtn.disabled = true;
+        try { exportPDF(_data); } catch (e) { console.error(e); alert('Falha ao gerar PDF.'); }
+        finally { pdfBtn.disabled = false; }
+      });
+    }
+
+    // Botão "Exportar" na toolbar faz scroll até o painel
+    if (openBtn && panel) {
+      openBtn.addEventListener('click', () => {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        panel.style.outline = '2px solid var(--kc-primary-brand)';
+        setTimeout(() => { panel.style.outline = ''; }, 1200);
+      });
+    }
   }
 
   function escHtmlAdmin(str) {
@@ -321,8 +530,12 @@
         : '<tr><td colspan="4" style="color:var(--kc-text-dark-secondary);">Nenhum evento encontrado.</td></tr>';
     }
 
-    // ── Renderiza tendências de busca ──
-    await loadSearchTrends(client);
+    // ── Coleta tendências e armazena tudo para export ──
+    const trends = await loadSearchTrendsData(client);
+    renderSearchTrends(trends);
+
+    _data = { reportMetrics, postStatusMetrics, postsCreated, postsEdited, commentsCount, searchCount, auditRows, trends };
+    enableExport();
 
     setLastSync();
   }

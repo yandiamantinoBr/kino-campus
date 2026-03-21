@@ -13,8 +13,8 @@
   let refreshCallback = null;
   let indicator = null;
 
-  const THRESHOLD = 65; // px to pull before triggering refresh
-  const MAX_PULL = 150; // max pull distance for visual feedback
+  const THRESHOLD = 120; // px to pull before triggering refresh
+  const MAX_PULL  = 220; // max pull distance for visual feedback
 
   function createIndicator() {
     const ind = document.createElement('div');

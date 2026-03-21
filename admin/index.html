@@ -87,13 +87,20 @@
     /* ── Mobile responsive ── */
     @media (max-width: 760px) {
       .kc-user-actions { width: 100%; justify-content: flex-start; }
-      .kc-admin-hero { padding: 14px; }
-      .kc-admin-hero h1 { font-size: 1.2rem; }
+      .kc-admin-hero { padding: 12px; gap: 10px; }
+      .kc-admin-hero h1 { font-size: 1.1rem; }
+      .kc-admin-hero p { display: none; } /* economiza espaço; a-nav já orienta */
+      /* Esconde os links de nav duplicados da toolbar (admin-nav já cobre isso) */
+      .kc-admin-toolbar a { display: none; }
       .kc-admin-toolbar { width: 100%; }
-      .kc-admin-toolbar a,
-      .kc-admin-toolbar button { flex: 1; justify-content: center; min-width: 120px; }
-      .kc-admin-card strong { font-size: 1.6rem; }
-      .kc-admin-grid { grid-template-columns: repeat(2, 1fr); }
+      .kc-admin-toolbar button { flex: 1 1 auto; justify-content: center; }
+      .kc-admin-card strong { font-size: 1.5rem; }
+      .kc-admin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .kc-admin-card { padding: 12px; }
+      .kc-admin-section { padding: 12px; }
+      .kc-admin-section h3 { font-size: 0.98rem; margin-bottom: 10px; }
+      /* Export btn full-width em mobile */
+      .kc-admin-export-btn { width: 100%; justify-content: center !important; }
 
       /* Audit log: card layout on mobile */
       .kc-admin-audit-wrap { overflow: visible; }
@@ -132,6 +139,47 @@
         padding-top: 1px;
       }
     }
+    @media (max-width: 400px) {
+      .kc-admin-grid { grid-template-columns: 1fr 1fr; }
+      .kc-admin-card strong { font-size: 1.3rem; }
+      .kc-admin-card__label { font-size: .82rem; }
+      .kc-admin-wrapper { padding: 12px 10px 80px; }
+    }
+
+    /* ── Export panel ── */
+    .kc-admin-export-panel {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .kc-admin-export-panel span {
+      color: var(--kc-text-dark-secondary);
+      font-size: .9rem;
+      flex: 1 1 140px;
+    }
+    .kc-admin-export-btn {
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-size: .9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      transition: border-color .15s ease, background .15s ease;
+    }
+    .kc-admin-export-btn:hover { border-color: var(--kc-primary-brand); }
+    .kc-admin-export-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .kc-admin-export-btn.xlsx { color: #1d6f42; }
+    .kc-admin-export-btn.pdf  { color: #d93025; }
   </style>
 </head>
 <body class="kc-admin-page">
@@ -172,6 +220,7 @@
           </div>
           <div class="kc-admin-toolbar">
             <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
+            <button type="button" id="admin-export-open-btn" style="display:none"><i class="fas fa-file-export"></i> Exportar</button>
             <a href="moderation.html"><i class="fas fa-shield-halved"></i> Ir para Moderação</a>
             <a href="reports.html"><i class="fas fa-flag"></i> Ir para Denúncias</a>
             <a href="banners.html"><i class="fas fa-images"></i> Gerenciar Banners</a>
@@ -179,6 +228,17 @@
         </section>
 
         <div id="admin-last-sync" aria-live="polite"></div>
+
+        <!-- Exportar relatórios -->
+        <div class="kc-admin-export-panel" id="admin-export-panel" style="display:none">
+          <span><i class="fas fa-file-export"></i> Exportar relatório atual</span>
+          <button type="button" class="kc-admin-export-btn xlsx" id="admin-export-xlsx" disabled>
+            <i class="fas fa-file-excel"></i> Baixar XLSX
+          </button>
+          <button type="button" class="kc-admin-export-btn pdf" id="admin-export-pdf" disabled>
+            <i class="fas fa-file-pdf"></i> Baixar PDF
+          </button>
+        </div>
 
         <!-- Métricas de moderação -->
         <div class="kc-admin-section-title"><i class="fas fa-shield-halved"></i> Moderação</div>
@@ -228,6 +288,9 @@
   <script src="../assets/js/kc-profiles.client.js"></script>
   <script src="../assets/js/kc-auth.ui.js"></script>
   <script src="../assets/js/kc-theme.js"></script>
+  <!-- Bibliotecas de exportação (SheetJS + jsPDF) carregadas sob demanda -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="../assets/js/controllers/admin-dashboard.controller.js"></script>
 </body>
 </html>
