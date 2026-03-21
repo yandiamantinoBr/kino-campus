@@ -6959,6 +6959,15 @@ textarea::placeholder {
 .kc-header--admin .kc-admin-nav {
   flex: 1;
   justify-content: center;
+  /* z-index ensures nav scroll overlay never covers user-actions */
+  position: relative;
+  z-index: 1;
+}
+/* user-actions always sits above the scrollable nav */
+.kc-header--admin .kc-user-actions {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
 }
 
 /* ── Tablet: compact admin nav links ── */
@@ -6984,13 +6993,31 @@ textarea::placeholder {
   .kc-header--admin .kc-header-container {
     flex-wrap: nowrap;
     justify-content: space-between;
+    align-items: center;
   }
+  /* Force user-actions visible — overrides any general header rule */
   .kc-header--admin .kc-user-actions {
     flex-shrink: 0;
-    display: flex;
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
   }
   .kc-header--admin .kc-logo {
     flex-shrink: 1;
     min-width: 0;
+  }
+}
+
+/* ── Small mobile: compact user-actions in admin header ── */
+@media (max-width: 480px) {
+  .kc-header--admin .kc-header-container {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  /* Hide user name text — show only avatar + theme toggle to save space */
+  .kc-header--admin .kc-header-user__name { display: none; }
+  .kc-header--admin .kc-header-user__verified { display: none; }
+  .kc-header--admin .kc-user-actions a.btn-login.is-auth {
+    padding: 3px 6px;
   }
 }

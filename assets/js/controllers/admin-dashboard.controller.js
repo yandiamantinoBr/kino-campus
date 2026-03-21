@@ -42,6 +42,30 @@
     if (loading) loading.style.display = isLoading ? 'flex' : 'none';
   }
 
+  // Spinner no botão Atualizar durante refresh
+  var _refreshOrigHtml = null;
+  function setRefreshLoading(isLoading) {
+    var btn = $('#admin-refresh-btn');
+    if (!btn) return;
+    if (isLoading) {
+      _refreshOrigHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando…';
+      btn.classList.add('is-loading');
+    } else {
+      if (_refreshOrigHtml) btn.innerHTML = _refreshOrigHtml;
+      btn.classList.remove('is-loading');
+    }
+  }
+
+  // Marca/desmarca grids de métrica em estado de loading
+  var GRID_IDS = ['admin-metrics', 'admin-activity-metrics', 'admin-community-metrics'];
+  function setGridsLoading(isLoading) {
+    GRID_IDS.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle('is-loading', isLoading);
+    });
+  }
+
   function setLastSync() {
     const el = $('#admin-last-sync');
     if (!el) return;
@@ -517,6 +541,14 @@
     return [];
   }
 
+  // Detecta se o erro é ambiguidade de sobrecarga de função (42725)
+  function isFunctionAmbiguityError(error) {
+    if (!error) return false;
+    var code = String(error.code || '');
+    var msg  = String(error.message || error.hint || '').toLowerCase();
+    return code === '42725' || msg.includes('is not unique') || msg.includes('ambiguous');
+  }
+
   // ── Tendências de busca (com timeout, fallback robusto e filtro de período) ──
   async function loadSearchTrendsData(client, since) {
     let trends = [];
@@ -542,7 +574,13 @@
       } else {
         // Tentativa 2: query direta com filtro de período
         if (res.error) {
-          console.warn('[Admin trends] RPC error:', res.error.message || res.error);
+          var errMsg = res.error.message || String(res.error);
+          // Ambiguidade de sobrecarga (42725) — avisa para aplicar migration v8.3.0.3
+          if (isFunctionAmbiguityError(res.error)) {
+            console.warn('[Admin trends] Ambiguidade de função (42725) — aplique a migration v8.3.0.3 no Supabase. Usando fallback direto.');
+          } else {
+            console.warn('[Admin trends] RPC error:', errMsg);
+          }
         }
         var rawQuery = client.from('search_queries')
           .select('term')
@@ -1051,7 +1089,14 @@
 
   async function refreshDashboard() {
     clearError();
-    setLoading(true);
+    // Primeira carga: spinner principal; refreshes subsequentes: spinner no botão + opacidade nos grids
+    var isFirstLoad = !_data;
+    if (isFirstLoad) {
+      setLoading(true);
+    } else {
+      setRefreshLoading(true);
+      setGridsLoading(true);
+    }
     try {
       await loadMetrics();
     } catch (error) {
@@ -1059,6 +1104,8 @@
       showError('Não foi possível atualizar o dashboard no momento.');
     } finally {
       setLoading(false);
+      setRefreshLoading(false);
+      setGridsLoading(false);
     }
   }
 
