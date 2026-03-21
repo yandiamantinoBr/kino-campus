@@ -17,7 +17,7 @@
 
   <style>
     .kc-admin-page .kc-main-content { padding-top: 24px; }
-    .kc-admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+    .kc-admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 0 20px 80px; }
     .kc-admin-header-bar { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--kc-border-dark); }
     .kc-admin-header-bar h1 { font-size:1.4em;font-weight:700;margin:0; }
     .kc-admin-header-bar h1 i { margin-right:8px;color:var(--kc-primary-brand); }
@@ -69,7 +69,7 @@
 
     /* ── Mobile responsivo ─────────────────────────── */
     @media (max-width: 640px) {
-      .kc-admin-wrapper { padding: 0 12px 60px; }
+      .kc-admin-wrapper { padding: 0 12px 80px; }
       .kc-admin-header-bar { flex-direction: column; align-items: flex-start; }
       .kc-admin-header-bar h1 { font-size: 1.15em; }
       .kc-admin-filters { flex-direction: column; width: 100%; }
@@ -153,6 +153,7 @@
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
       </nav>
       <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
         <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
@@ -244,6 +245,15 @@
       </div>
     </div>
   </main>
+
+  <!-- Mobile Navigation (admin) -->
+  <nav class="kc-mobile-nav">
+    <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+    <a class="active" href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
+    <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
+    <a href="../index.html"><i class="fas fa-home"></i><span>Site</span></a>
+  </nav>
 
   <script src="../assets/js/kc-constants.js"></script>
   <script src="../assets/js/kc-utils.js"></script>
