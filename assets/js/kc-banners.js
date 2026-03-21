@@ -42,10 +42,22 @@
     return dots.join('');
   }
 
+  function getCarouselEl() {
+    return document.querySelector('.kc-hero-carousel');
+  }
+
+  function removeSkeletonClass() {
+    const el = getCarouselEl();
+    if (el) el.classList.remove('kc-hero-loading');
+  }
+
   async function loadBanners() {
     const env = window.KC_ENV || {};
     const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
-    if (driver !== 'supabase') return; // mantém banners estáticos no modo local
+    if (driver !== 'supabase') {
+      removeSkeletonClass(); // modo local → mostra banners estáticos imediatamente
+      return;
+    }
 
     const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
       ? window.KCSupabase.getClient()
@@ -62,13 +74,17 @@
 
       if (error) {
         console.warn('[KC Banners] Erro ao carregar banners do Supabase:', error.message || error);
-        return; // fallback estático
+        removeSkeletonClass(); // mostra banners estáticos em fallback
+        return;
       }
-      if (!Array.isArray(data) || !data.length) return; // sem banners ativos — mantém estáticos
+      if (!Array.isArray(data) || !data.length) {
+        removeSkeletonClass(); // sem banners no banco → mostra estáticos
+        return;
+      }
 
       const slidesEl = document.getElementById('kc-hero-slides');
       const dotsEl   = document.getElementById('kc-carousel-dots');
-      if (!slidesEl || !dotsEl) return;
+      if (!slidesEl || !dotsEl) { removeSkeletonClass(); return; }
 
       // Injeta slides
       slidesEl.innerHTML = data.map((b, i) => buildBannerHTML(b, i === 0)).join('');
@@ -82,9 +98,13 @@
       } else if (typeof window.showSlide === 'function') {
         window.showSlide(0);
       }
+
+      // Revela o carousel (remove skeleton)
+      removeSkeletonClass();
+
     } catch (e) {
       console.warn('[KC Banners] Exceção ao carregar banners:', e && e.message || e);
-      // Fallback silencioso — banners estáticos permanecem
+      removeSkeletonClass(); // Fallback — banners estáticos permanecem
     }
   }
 

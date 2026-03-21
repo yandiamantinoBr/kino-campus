@@ -191,7 +191,7 @@ header {
     max-height: 340px;
     overflow-y: auto;
     box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    z-index: 9990;
+    z-index: 10000; /* acima do modal overlay (9999) */
     min-width: 240px;
 }
 
@@ -279,30 +279,28 @@ header {
 }
 
 /* ── Mobile search button: retângulo idêntico ao kc-search-bar ── */
+/* kc-search-mobile-btn — ícone compacto, mesmo estilo do .theme-toggle */
 .kc-search-mobile-btn {
     display: none;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     background-color: var(--kc-background-dark);
     border: 1px solid var(--kc-border-dark);
-    border-radius: 18px;
-    padding: 8px 14px;
     color: var(--kc-text-dark-secondary);
     cursor: pointer;
-    font-size: 0.9em;
-    flex-grow: 1;
-    max-width: 260px;
-    text-align: left;
+    flex-shrink: 0;
+    padding: 0;
     transition: all var(--transition-speed) ease;
 }
-
-.kc-search-mobile-btn i { font-size: 0.9em; flex-shrink: 0; }
-.kc-search-mobile-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kc-search-mobile-btn i { font-size: 1em; }
+.kc-search-mobile-btn span { display: none; }
 .kc-search-mobile-btn:hover,
 .kc-search-mobile-btn:focus {
+    color: var(--kc-primary-brand);
     border-color: var(--kc-primary-brand);
-    color: var(--kc-text-dark-primary);
-    box-shadow: 0 0 0 2px rgba(255,107,0,0.15);
     outline: none;
 }
 
@@ -1180,8 +1178,18 @@ main {
 .kc-vote-box .hot {
     color: var(--kc-hot-color);
 }
+.kc-vote-box button.hot.active {
+    background: rgba(255, 107, 0, 0.14);
+    border-radius: 8px;
+    color: var(--kc-hot-color);
+}
 
 .kc-vote-box .cold {
+    color: var(--kc-cold-color);
+}
+.kc-vote-box button.cold.active {
+    background: rgba(59, 130, 246, 0.14);
+    border-radius: 8px;
     color: var(--kc-cold-color);
 }
 
@@ -2146,15 +2154,16 @@ main {
     }
 }
 
-/* Loading State */
-.kc-loading {
+/* Loading State — aplicado a contêineres de conteúdo, NÃO ao elemento <html>
+   (html.kc-loading é usado pelo anti-FOUC em kc-theme-boot.css) */
+:not(html).kc-loading {
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 40px;
 }
 
-.kc-loading::after {
+:not(html).kc-loading::after {
     content: '';
     width: 40px;
     height: 40px;
@@ -2966,8 +2975,8 @@ html, body {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
-        padding: 5px 8px;
+        justify-content: flex-start; /* ícone sempre no mesmo topo */
+        padding: 8px 5px 4px;
         font-size: 0.65em;
         color: var(--kc-text-dark-secondary);
         text-decoration: none;
@@ -2977,11 +2986,16 @@ html, body {
         min-width: 50px;
         flex: 1;
         max-width: 70px;
+        height: 100%;
+        box-sizing: border-box;
     }
-    
+
     .kc-mobile-nav a i,
     .kc-mobile-nav button i {
         font-size: 1.4em;
+        height: 20px; /* altura fixa para o ícone nunca mudar de posição */
+        display: flex;
+        align-items: center;
         margin-bottom: 2px;
     }
     

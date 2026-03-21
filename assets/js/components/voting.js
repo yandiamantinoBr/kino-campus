@@ -188,7 +188,8 @@ function vote(button, type) {
   if (!isSupabaseMode) return;
 
   KC_VOTE_IN_FLIGHT.add(lockKey);
-  setVoteBoxPending(voteBox, true);
+  /* Não desabilitamos os botões — a UI otimista já reflete a mudança.
+     KC_VOTE_IN_FLIGHT impede double-submit sem bloquear visualmente. */
 
   // Supabase: explicita intenção de toggle para reduzir corrida de múltiplos cliques.
   KCAPI.votePost(postId, type, { toggleOff: isActive }).then(function (res) {
@@ -218,7 +219,6 @@ function vote(button, type) {
     showToast('Não foi possível registrar voto.', 'error');
   }).finally(function () {
     KC_VOTE_IN_FLIGHT.delete(lockKey);
-    setVoteBoxPending(voteBox, false);
   });
 }
 

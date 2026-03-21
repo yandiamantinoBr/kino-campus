@@ -44,3 +44,50 @@ html:not(.kc-loading) .kc-hero-carousel {
 .kc-header-user {
   transition: opacity 0.22s ease;
 }
+
+/* ─── Hero skeleton enquanto kc-banners.js carrega do Supabase ───────────
+   .kc-hero-loading é adicionado pelo HTML estático e removido pelo JS
+   após a carga (sucesso, erro ou modo local).
+   ──────────────────────────────────────────────────────────────────────── */
+.kc-hero-carousel.kc-hero-loading {
+  min-height: 190px;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  background: var(--kc-surface-dark);
+}
+
+.kc-hero-carousel.kc-hero-loading .kc-hero-slides {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kc-hero-carousel.kc-hero-loading .kc-carousel-controls,
+.kc-hero-carousel.kc-hero-loading .kc-carousel-dots-wrap {
+  display: none;
+}
+
+.kc-hero-carousel.kc-hero-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--kc-surface-dark) 0%,
+    var(--kc-border-dark) 45%,
+    var(--kc-surface-dark) 100%
+  );
+  background-size: 200% 100%;
+  animation: kcSkeletonShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes kcSkeletonShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Fade-in suave quando o skeleton é removido */
+.kc-hero-carousel {
+  transition: opacity 0.28s ease;
+}
+
