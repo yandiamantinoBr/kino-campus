@@ -907,6 +907,10 @@ function kcInitWhatsAppShare() {
 // Init
 // -----------------------------
 document.addEventListener('DOMContentLoaded', () => {
+  // Anti-FOUC: remove loading class after first paint
+  requestAnimationFrame(() => {
+    document.documentElement.classList.remove('kc-loading');
+  });
   if (typeof window.applySavedTheme === 'function') window.applySavedTheme();
   initMobileNavActive();
   initSmoothAnchors();

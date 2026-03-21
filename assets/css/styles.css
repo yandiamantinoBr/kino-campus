@@ -278,6 +278,87 @@ header {
     background-color: var(--kc-background-dark);
 }
 
+/* Mobile search button (hidden on desktop) */
+.kc-search-mobile-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--kc-text-dark-secondary);
+    cursor: pointer;
+    font-size: 1.3em;
+    padding: 5px;
+    transition: color var(--transition-speed) ease;
+}
+
+.kc-search-mobile-btn:hover {
+    color: var(--kc-text-dark-primary);
+}
+
+/* Search modal overlay */
+.kc-search-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--kc-background-dark);
+    z-index: 10000;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.kc-search-modal.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.kc-search-modal__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 0;
+    background-color: var(--kc-background-dark);
+    z-index: 10001;
+}
+
+.kc-search-modal__close {
+    background: none;
+    border: none;
+    color: var(--kc-text-dark-secondary);
+    font-size: 1.3em;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kc-search-modal__input {
+    flex: 1;
+    padding: 12px 16px;
+    background-color: var(--kc-surface-dark);
+    border: 1px solid var(--kc-border-dark);
+    border-radius: 12px;
+    color: var(--kc-text-dark-primary);
+    font-size: 1em;
+    outline: none;
+}
+
+.kc-search-modal__input:focus {
+    border-color: var(--kc-primary-brand);
+    box-shadow: 0 0 0 2px rgba(255, 110, 30, 0.1);
+}
+
+.kc-search-modal__results {
+    flex: 1;
+    margin-top: 20px;
+}
+
 .kc-nav-links {
     display: none;
 }
@@ -1259,24 +1340,32 @@ main {
 @media (min-width: 769px) {
     .kc-nav-links {
         display: flex;
-        gap: 15px;
+        gap: 10px;
+        flex-wrap: wrap;
     }
-    
+
     .kc-nav-links a {
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
         color: var(--kc-text-dark-secondary);
-        font-size: 0.9em;
-        padding: 8px 12px;
+        font-size: 0.85em;
+        padding: 7px 10px;
         border-radius: 8px;
         transition: all var(--transition-speed) ease;
+        white-space: nowrap;
     }
-    
+
     .kc-nav-links a:hover {
         background-color: var(--kc-background-dark);
         color: var(--kc-text-dark-primary);
         text-decoration: none;
+    }
+
+    .kc-nav-links a.active {
+        background-color: rgba(255, 110, 30, 0.1);
+        color: var(--kc-primary-brand);
+        font-weight: 500;
     }
     
     main {
@@ -1297,9 +1386,17 @@ main {
     .kc-nav-links {
         display: none !important;
     }
-    
+
     .kc-mobile-nav {
         display: flex !important;
+    }
+
+    .kc-search-bar {
+        display: none !important;
+    }
+
+    .kc-search-mobile-btn {
+        display: flex;
     }
 }
 
@@ -1312,6 +1409,19 @@ main {
     .kc-hero-content p {
         font-size: 0.95em;
     }
+}
+
+/* Pull-to-Refresh Indicator */
+.kc-pull-to-refresh-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--kc-surface-dark);
+    border: 1px solid var(--kc-border-dark);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 /* Sidebar - Impacto Sustentável */

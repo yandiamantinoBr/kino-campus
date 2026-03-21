@@ -6,6 +6,7 @@
   const STORAGE_KEY = 'theme';
   const root = document.documentElement;
   root.classList.add('kc-theme-preload');
+  root.classList.add('kc-loading');
 
   let saved = null;
   try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
@@ -14,6 +15,6 @@
   const theme = (saved === 'light' || saved === 'dark') ? saved : (prefersDark ? 'dark' : 'light');
 
   root.setAttribute('data-theme', theme);
-  // melhora o UI nativo (inputs/scrollbar) em ambos os temas
+  // melhora o UI nativa (inputs/scrollbar) em ambos os temas
   root.style.colorScheme = theme;
 })();

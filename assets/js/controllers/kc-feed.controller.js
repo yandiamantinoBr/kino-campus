@@ -178,6 +178,45 @@
   }
 
   // P1-B fix: aceita parâmetros q (busca textual) e tag (filtro por chave canônica)
+  // Cache: module-level post caching with 3-minute TTL
+  const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
+  const postCache = {};
+
+  function getCacheKey(moduleKeys, page) {
+    const moduleStr = Array.isArray(moduleKeys) ? moduleKeys.sort().join(',') : String(moduleKeys || '');
+    return `kc_feed_${moduleStr}_page${page}`;
+  }
+
+  function getCachedPosts(moduleKeys, page) {
+    const key = getCacheKey(moduleKeys, page);
+    const cached = postCache[key];
+    if (!cached) return null;
+    const now = Date.now();
+    if (now - cached.timestamp > CACHE_TTL_MS) {
+      delete postCache[key];
+      return null;
+    }
+    return cached.posts;
+  }
+
+  function setCachedPosts(moduleKeys, page, posts) {
+    const key = getCacheKey(moduleKeys, page);
+    postCache[key] = {
+      posts: posts,
+      timestamp: Date.now(),
+    };
+  }
+
+  function invalidateCache(moduleKeys) {
+    const moduleStr = Array.isArray(moduleKeys) ? moduleKeys.sort().join(',') : String(moduleKeys || '');
+    const prefix = `kc_feed_${moduleStr}_`;
+    Object.keys(postCache).forEach((key) => {
+      if (key.indexOf(prefix) === 0) {
+        delete postCache[key];
+      }
+    });
+  }
+
   async function fetchPostsByModule(moduleKeys, page, limit, q, tag) {
     if (!window.KCAPI || typeof window.KCAPI.getPosts !== 'function') return [];
     const extra = {
@@ -185,22 +224,34 @@
       ...((tag && String(tag).trim()) ? { tag: String(tag).trim() } : {}),
     };
 
+    // Only use cache if no search query or tag filter
+    if (!q && !tag) {
+      const cached = getCachedPosts(moduleKeys, page);
+      if (cached) return cached;
+    }
+
+    let posts = [];
     if (moduleKeys.length === 0) {
-      const posts = await window.KCAPI.getPosts({ page, limit, ...extra });
-      return Array.isArray(posts) ? posts : [];
+      posts = await window.KCAPI.getPosts({ page, limit, ...extra });
+    } else if (moduleKeys.length === 1) {
+      posts = await window.KCAPI.getPosts({ module: moduleKeys[0], page, limit, ...extra });
+    } else {
+      const merged = [];
+      for (const mk of moduleKeys) {
+        const part = await window.KCAPI.getPosts({ module: mk, page, limit, ...extra });
+        if (Array.isArray(part) && part.length) merged.push(...part);
+      }
+      posts = merged;
     }
 
-    if (moduleKeys.length === 1) {
-      const posts = await window.KCAPI.getPosts({ module: moduleKeys[0], page, limit, ...extra });
-      return Array.isArray(posts) ? posts : [];
+    posts = Array.isArray(posts) ? posts : [];
+
+    // Cache successful fetch if no filters
+    if (!q && !tag && posts.length > 0) {
+      setCachedPosts(moduleKeys, page, posts);
     }
 
-    const merged = [];
-    for (const mk of moduleKeys) {
-      const part = await window.KCAPI.getPosts({ module: mk, page, limit, ...extra });
-      if (Array.isArray(part) && part.length) merged.push(...part);
-    }
-    return merged;
+    return posts;
   }
 
   function createPagerUI(container) {
@@ -524,6 +575,28 @@
     }
 
     setupObserver();
+
+    // Initialize pull-to-refresh
+    if (typeof window.KCPullToRefresh !== 'undefined') {
+      try {
+        window.KCPullToRefresh.init({
+          container: document.body,
+          onRefresh: () => {
+            // Invalidate cache and reload first page
+            invalidateCache(moduleKeys);
+            state.page = DEFAULT_PAGE;
+            state.done = false;
+            state.seenIds.clear();
+            container.innerHTML = '';
+            clearPendingRealtime();
+            loadNextPage();
+          }
+        });
+      } catch (e) {
+        warn('[KCControllers] Failed to initialize pull-to-refresh:', e);
+      }
+    }
+
     loadNextPage();
     startRealtime();
 

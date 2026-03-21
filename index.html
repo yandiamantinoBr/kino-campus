@@ -40,13 +40,24 @@
 <i class="fas fa-briefcase"></i>
 <span>Oportunidades</span>
 </a>
+<a href="compra-venda-feed.html">
+<i class="fas fa-shopping-bag"></i>
+<span>Compra e Venda</span>
+</a>
+<a href="caronas-feed.html">
+<i class="fas fa-car"></i>
+<span>Caronas</span>
+</a>
 </nav>
-<div class="kc-search-bar">
+<div class="kc-search-bar" id="kcSearchBar">
 <input id="searchInput" placeholder="Busque por itens, eventos, vagas na UFG..." type="search"/>
 <button aria-label="Buscar" type="button">
 <i class="fas fa-search"></i>
 </button>
 </div>
+<button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar">
+<i class="fas fa-search"></i>
+</button>
 <div class="kc-user-actions">
 <button class="theme-toggle" title="Alternar tema">
 <i class="fas fa-sun"></i>
@@ -377,8 +388,10 @@
 <script src="assets/js/kc-auth.ui.js"></script>
 <script src="assets/js/kc-theme.js"></script>
 <script src="assets/js/kc-search.js"></script>
+  <script src="assets/js/kc-pull-to-refresh.js"></script>
   <script src="assets/js/controllers/kc-feed.controller.js"></script>
   <script src="assets/js/controllers/index.controller.js"></script>
   <script src="assets/js/kc-banners.js"></script>
+  <script src="assets/js/kc-search-modal.js"></script>
 </body>
 </html>

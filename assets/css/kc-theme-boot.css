@@ -4,3 +4,26 @@
 .kc-theme-preload *::after {
   transition: none !important;
 }
+
+/* Anti-FOUC during JS boot */
+html.kc-loading .kc-user-actions,
+html.kc-loading .kc-header-user {
+  visibility: hidden;
+}
+
+html.kc-loading .kc-hero-slides {
+  opacity: 0;
+}
+
+html.kc-loading #kc-feed-container {
+  min-height: 300px;
+}
+
+.kc-hero-slides {
+  transition: opacity 0.3s ease;
+}
+
+.kc-app-ready .kc-hero-slides,
+html:not(.kc-loading) .kc-hero-slides {
+  opacity: 1;
+}
