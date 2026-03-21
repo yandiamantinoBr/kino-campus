@@ -3794,6 +3794,12 @@ html, body {
         margin: 0;
         padding: 0 12px;
     }
+
+    /* Admin page: restore centering overridden by rule above */
+    .kc-admin-page .kc-admin-wrapper {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
 }
 
 /* Container principal Mobile */
@@ -6953,11 +6959,12 @@ textarea::placeholder {
 
 /* ── Admin header variant: nav inside header ── */
 .kc-header--admin .kc-header-container {
-  flex-wrap: nowrap;
+  flex-wrap: nowrap !important;
   gap: 10px;
 }
 .kc-header--admin .kc-admin-nav {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0; /* allows nav to shrink below content width, enabling scroll */
   justify-content: center;
   /* z-index ensures nav scroll overlay never covers user-actions */
   position: relative;
@@ -6967,7 +6974,8 @@ textarea::placeholder {
 .kc-header--admin .kc-user-actions {
   position: relative;
   z-index: 2;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  flex-shrink: 0 !important;
 }
 
 /* ── Tablet: compact admin nav links ── */
