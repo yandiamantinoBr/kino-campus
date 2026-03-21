@@ -269,7 +269,8 @@
     if (!q) return;
 
     if (redirectToResults) {
-      trackSearch(q);
+      // trackSearch() is NOT called here — it's called on search-results.html load
+      // to avoid the async insert being aborted by the page navigation.
       window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
       return;
     }
@@ -531,11 +532,16 @@
 
     // Não pré-carregamos o seed (database.json) aqui: em driver supabase evita download desnecessário.
 
-    // Se estiver na página de resultados, renderizar ao carregar
+    // Se estiver na página de resultados, renderizar ao carregar e registrar busca
     if (resultsPage) {
       const qParam = getQueryParam('q');
       if (searchInput && qParam) searchInput.value = qParam;
       renderResultsToPage(searchInput ? searchInput.value : qParam);
+      // Track here (not in globalSearch) so the insert completes after page load,
+      // avoiding abort caused by navigation before the async request finishes.
+      if (qParam && qParam.trim().length >= 2) {
+        trackSearch(qParam.trim());
+      }
     }
 
     // Fechar dropdown ao clicar fora (dropdown está no body, checar ambos)

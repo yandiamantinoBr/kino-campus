@@ -15,9 +15,9 @@
     .kc-admin-page main.kc-main-content {
       padding-left: 0 !important;
       padding-right: 0 !important;
-      margin: 0 auto;
+      margin: 0 auto !important;
     }
-    .kc-admin-wrapper { max-width: 1120px; margin: 0 auto; padding: 18px 16px 72px; box-sizing: border-box; }
+    .kc-admin-wrapper { max-width: 1120px; margin: 0 auto !important; padding: 18px 16px 72px; box-sizing: border-box; }
     .kc-admin-hero {
       background: linear-gradient(120deg, rgba(255, 107, 0, 0.16), rgba(255, 107, 0, 0.05));
       border: 1px solid var(--kc-border-dark);
@@ -184,15 +184,25 @@
       .kc-trend-term { min-width: 72px; font-size: .85rem; }
     }
 
-    /* ── Header user-actions: garantir visibilidade em TODOS os tamanhos ── */
-    /* Regra base reforçada — não depende só de styles.css */
+    /* ── Header admin: nowrap e visibilidade em TODOS os tamanhos ── */
+    .kc-header--admin .kc-header-container {
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+    }
+    /* Nav pode encolher para dar espaço ao user-actions */
+    .kc-header--admin .kc-admin-nav {
+      flex: 1 1 0% !important;
+      min-width: 0 !important;
+    }
+    /* user-actions nunca encolhe nem quebra de linha */
     .kc-header--admin .kc-user-actions {
+      flex: 0 0 auto !important;
       flex-shrink: 0 !important;
       display: flex !important;
       align-items: center;
       gap: 6px;
       position: relative;
-      z-index: 10; /* acima do kc-admin-nav (z-index: 2 no styles.css) */
+      z-index: 10; /* acima do kc-admin-nav */
     }
     /* Logo compacto em telas muito pequenas */
     @media (max-width: 400px) {
