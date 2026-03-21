@@ -72,6 +72,10 @@
 
     /* ── Metric grids ── */
     .kc-admin-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); margin: 14px 0 20px; }
+    /* Grid de 5 itens: último item expande quando sozinho na linha */
+    .kc-admin-grid--5col .kc-admin-card:last-child:nth-child(odd) { grid-column: 1 / -1; max-width: 320px; }
+    /* Loading state: opacidade durante refresh */
+    .kc-admin-grid.is-loading { opacity: 0.45; pointer-events: none; transition: opacity .2s; }
     .kc-admin-card { background:var(--kc-surface-dark); border:1px solid var(--kc-border-dark); border-radius:12px; padding:14px; min-width:0; overflow:hidden; word-break:break-word; }
     .kc-admin-card__label { color: var(--kc-text-dark-secondary); font-size: .85rem; display:flex; gap:6px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .kc-admin-card strong { display:block; font-size:1.85rem; margin-top:8px; line-height: 1; overflow:hidden; text-overflow:ellipsis; }
@@ -102,6 +106,9 @@
     .kc-trend-term { min-width: 90px; color: var(--kc-text-dark-primary); font-weight: 500; display: flex; align-items: center; gap: 4px; }
     .kc-trend-count { min-width: 30px; text-align: right; color: var(--kc-text-dark-secondary); font-size: .85rem; }
     .kc-trend-empty { color: var(--kc-text-dark-secondary); font-size: .9rem; }
+
+    /* ── Loading state spinner no botão Atualizar ── */
+    #admin-refresh-btn.is-loading { opacity: .7; pointer-events: none; }
 
     /* ── Mobile responsive ── */
     @media (max-width: 760px) {
@@ -177,12 +184,15 @@
       .kc-trend-term { min-width: 72px; font-size: .85rem; }
     }
 
-    /* ── Header user-actions: garantir visibilidade em todos os tamanhos ── */
+    /* ── Header user-actions: garantir visibilidade em TODOS os tamanhos ── */
+    /* Regra base reforçada — não depende só de styles.css */
     .kc-header--admin .kc-user-actions {
-      flex-shrink: 0;
-      display: flex;
+      flex-shrink: 0 !important;
+      display: flex !important;
       align-items: center;
       gap: 6px;
+      position: relative;
+      z-index: 10; /* acima do kc-admin-nav (z-index: 2 no styles.css) */
     }
     /* Logo compacto em telas muito pequenas */
     @media (max-width: 400px) {
@@ -291,7 +301,7 @@
 
         <!-- Métricas de atividade -->
         <div class="kc-admin-section-title" id="admin-activity-title"><i class="fas fa-chart-bar"></i> Atividade da plataforma (últimos 30 dias)</div>
-        <div class="kc-admin-grid" id="admin-activity-metrics"></div>
+        <div class="kc-admin-grid kc-admin-grid--5col" id="admin-activity-metrics"></div>
 
         <!-- Métricas da comunidade -->
         <div class="kc-admin-section-title" id="admin-community-title"><i class="fas fa-users"></i> Comunidade</div>
