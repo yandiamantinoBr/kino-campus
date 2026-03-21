@@ -254,9 +254,26 @@
     }).join('');
   }
 
+  // ── Carregamento sob demanda de bibliotecas CDN ────────────────────────────
+  var CDN_XLSX  = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  var CDN_JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
+
+  function loadScript(url) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload  = resolve;
+      s.onerror = function () { reject(new Error('Falha ao carregar: ' + url)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureXLSX() { if (!window.XLSX) await loadScript(CDN_XLSX); }
+  async function ensureJsPDF() { if (!window.jspdf) await loadScript(CDN_JSPDF); }
+
   // ── Exportação XLSX ──────────────────────────────────────────────────────────
-  function exportXLSX(data) {
-    if (!window.XLSX) { alert('Biblioteca XLSX ainda não carregada. Tente novamente.'); return; }
+  async function exportXLSX(data) {
+    await ensureXLSX();
     const wb = window.XLSX.utils.book_new();
     const date = new Date().toLocaleString('pt-BR');
 
@@ -312,8 +329,8 @@
   }
 
   // ── Exportação PDF ───────────────────────────────────────────────────────────
-  function exportPDF(data) {
-    if (!window.jspdf || !window.jspdf.jsPDF) { alert('Biblioteca PDF ainda não carregada. Tente novamente.'); return; }
+  async function exportPDF(data) {
+    await ensureJsPDF();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const date = new Date().toLocaleString('pt-BR');
@@ -420,42 +437,30 @@
     doc.save(`kc-dashboard-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
-  // ── Habilita painel de exportação após carregamento ──────────────────────────
+  // ── Habilita botões de exportação na toolbar ─────────────────────────────────
   function enableExport() {
-    const panel   = $('#admin-export-panel');
-    const openBtn = $('#admin-export-open-btn');
     const xlsxBtn = $('#admin-export-xlsx');
     const pdfBtn  = $('#admin-export-pdf');
 
-    if (panel)   { panel.style.display   = 'flex'; }
-    if (openBtn) { openBtn.style.display = 'inline-flex'; }
-
     if (xlsxBtn) {
       xlsxBtn.disabled = false;
-      xlsxBtn.addEventListener('click', () => {
+      xlsxBtn.addEventListener('click', async () => {
         if (!_data) return;
         xlsxBtn.disabled = true;
-        try { exportXLSX(_data); } catch (e) { console.error(e); alert('Falha ao gerar XLSX.'); }
+        try { await exportXLSX(_data); }
+        catch (e) { console.error('[Admin export XLSX]', e); alert('Falha ao gerar XLSX: ' + e.message); }
         finally { xlsxBtn.disabled = false; }
       });
     }
 
     if (pdfBtn) {
       pdfBtn.disabled = false;
-      pdfBtn.addEventListener('click', () => {
+      pdfBtn.addEventListener('click', async () => {
         if (!_data) return;
         pdfBtn.disabled = true;
-        try { exportPDF(_data); } catch (e) { console.error(e); alert('Falha ao gerar PDF.'); }
+        try { await exportPDF(_data); }
+        catch (e) { console.error('[Admin export PDF]', e); alert('Falha ao gerar PDF: ' + e.message); }
         finally { pdfBtn.disabled = false; }
-      });
-    }
-
-    // Botão "Exportar" na toolbar faz scroll até o painel
-    if (openBtn && panel) {
-      openBtn.addEventListener('click', () => {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        panel.style.outline = '2px solid var(--kc-primary-brand)';
-        setTimeout(() => { panel.style.outline = ''; }, 1200);
       });
     }
   }

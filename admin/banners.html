@@ -393,7 +393,7 @@
   </style>
 </head>
 <body class="kc-admin-page">
-  <header class="kc-header">
+  <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
       <div class="kc-logo">
         <a href="../index.html" aria-label="KinoCampus - Comunidade UFG">
@@ -404,18 +404,17 @@
           </span>
         </a>
       </div>
+      <nav class="kc-admin-nav" aria-label="Navegação admin">
+        <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
+        <a href="banners.html" class="kc-admin-nav__link active"><i class="fas fa-images"></i> Banners</a>
+      </nav>
       <div class="kc-user-actions">
         <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
   </header>
-
-  <nav class="kc-admin-nav" aria-label="Navegação admin">
-    <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
-    <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
-    <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
-    <a href="banners.html" class="kc-admin-nav__link active"><i class="fas fa-images"></i> Banners</a>
-  </nav>
 
   <main class="kc-main-content">
     <div class="kc-admin-wrapper">

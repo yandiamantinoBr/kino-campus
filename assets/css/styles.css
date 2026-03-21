@@ -6905,21 +6905,17 @@ textarea::placeholder {
 
 /* ═══════════════════════════════════════════════════════════
    Admin Navigation Bar (kc-admin-nav)
-   Aparece logo abaixo do kc-header em todas as páginas admin.
+   Lives INSIDE the kc-header on admin pages (.kc-header--admin).
+   Desktop: flows inline between logo and user-actions.
+   Mobile: wraps to its own row inside the header.
    ═══════════════════════════════════════════════════════════ */
 .kc-admin-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  background: var(--kc-surface-dark);
-  border-bottom: 1px solid var(--kc-border-dark);
+  gap: 4px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  position: sticky;
-  top: 60px;  /* abaixo do kc-header fixo */
-  z-index: 90;
 }
 .kc-admin-nav::-webkit-scrollbar { display: none; }
 
@@ -6927,12 +6923,12 @@ textarea::placeholder {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 14px;
+  padding: 7px 13px;
   border-radius: 10px;
   border: 1px solid transparent;
   color: var(--kc-text-dark-secondary);
   text-decoration: none;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 500;
   white-space: nowrap;
   transition: all var(--transition-speed) ease;
@@ -6955,13 +6951,32 @@ textarea::placeholder {
   flex-shrink: 0;
 }
 
+/* ── Admin header variant: nav inside header ── */
+.kc-header--admin .kc-header-container {
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+.kc-header--admin .kc-admin-nav {
+  flex: 1;
+  justify-content: center;
+}
+
 @media (max-width: 768px) {
-  .kc-admin-nav {
-    padding: 8px 12px;
+  .kc-header--admin .kc-header-container {
+    flex-wrap: wrap;
+  }
+  .kc-header--admin .kc-admin-nav {
+    order: 3;
+    width: 100%;
     gap: 4px;
+    padding: 8px 0 0;
+    margin-top: 6px;
+    border-top: 1px solid var(--kc-border-dark);
   }
   .kc-admin-nav__link {
-    padding: 7px 10px;
-    font-size: 0.82rem;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    gap: 5px;
   }
+  .kc-admin-nav__link i { font-size: 0.85em; }
 }
