@@ -403,14 +403,18 @@
           </span>
         </a>
       </div>
-      <div class="kc-user-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="kc-user-actions">
         <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
-        <a href="index.html"       style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html"  style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-shield-halved"></i> Moderação</a>
-        <a href="reports.html"     style="font-size:.9em;color:var(--kc-text-dark-secondary);text-decoration:none;"><i class="fas fa-flag"></i> Denúncias</a>
       </div>
     </div>
   </header>
+
+  <nav class="kc-admin-nav" aria-label="Navegação admin">
+    <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
+    <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
+    <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
+    <a href="banners.html" class="kc-admin-nav__link active"><i class="fas fa-images"></i> Banners</a>
+  </nav>
 
   <main class="kc-main-content">
     <div class="kc-admin-wrapper">

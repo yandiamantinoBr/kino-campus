@@ -5,25 +5,42 @@
   transition: none !important;
 }
 
-/* Anti-FOUC during JS boot */
+/* ─────────────────────────────────────────────────────────────
+   Anti-FOUC: elementos escondidos até o JS terminar de iniciar.
+   kc-theme-boot.js adiciona .kc-loading ao <html> antes do
+   primeiro render; kc-core.js remove via requestAnimationFrame.
+   ───────────────────────────────────────────────────────────── */
+
+/* 1) Área de usuário: login / avatar atualizado pelo kc-auth.ui.js */
 html.kc-loading .kc-user-actions,
 html.kc-loading .kc-header-user {
   visibility: hidden;
-}
-
-html.kc-loading .kc-hero-slides {
   opacity: 0;
 }
 
-html.kc-loading #kc-feed-container {
-  min-height: 300px;
+/* 2) Todo o carrossel hero — evita o flash do banner laranja estático
+      antes do kc-banners.js substituir pelo conteúdo do Supabase */
+html.kc-loading .kc-hero-carousel {
+  opacity: 0;
 }
 
-.kc-hero-slides {
-  transition: opacity 0.3s ease;
+/* 3) Área de feed — reserva espaço para evitar CLS (Cumulative Layout Shift) */
+html.kc-loading #kc-feed-container,
+html.kc-loading .kc-feed-list {
+  min-height: 280px;
 }
 
-.kc-app-ready .kc-hero-slides,
-html:not(.kc-loading) .kc-hero-slides {
+/* ─── Transições suaves na revelação ─── */
+.kc-hero-carousel {
+  transition: opacity 0.28s ease;
+}
+
+html:not(.kc-loading) .kc-hero-carousel {
   opacity: 1;
+}
+
+/* Garante que kc-user-actions não "apareça" abruptamente ao remover kc-loading */
+.kc-user-actions,
+.kc-header-user {
+  transition: opacity 0.22s ease;
 }

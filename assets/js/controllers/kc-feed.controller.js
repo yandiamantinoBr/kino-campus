@@ -446,7 +446,11 @@
       if (state.loading || state.done || state.destroyed) return;
       state.loading = true;
       state.lastError = null;
-      setStatus('loading', 'Carregando...');
+      /* Limpa placeholder estático do HTML na primeira carga */
+      if (!state.hydrated) {
+        container.innerHTML = '';
+      }
+      setStatus('loading');
 
       const apiPage = state.page + 1;
 
@@ -509,7 +513,6 @@
         }
       } catch (err) {
         state.lastError = err;
-        if (!state.hydrated) container.innerHTML = fallbackHTML;
         console.error('[KCControllers] Falha ao carregar posts do feed.', {
           page: apiPage,
           limit,

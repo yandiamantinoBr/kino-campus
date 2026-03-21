@@ -278,86 +278,142 @@ header {
     background-color: var(--kc-background-dark);
 }
 
-/* Mobile search button (hidden on desktop) */
+/* ── Mobile search button: retângulo idêntico ao kc-search-bar ── */
 .kc-search-mobile-btn {
     display: none;
     align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    color: var(--kc-text-dark-secondary);
-    cursor: pointer;
-    font-size: 1.3em;
-    padding: 5px;
-    transition: color var(--transition-speed) ease;
-}
-
-.kc-search-mobile-btn:hover {
-    color: var(--kc-text-dark-primary);
-}
-
-/* Search modal overlay */
-.kc-search-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    gap: 8px;
     background-color: var(--kc-background-dark);
-    z-index: 10000;
-    padding: 20px;
-    overflow-y: auto;
-}
-
-.kc-search-modal.active {
-    display: flex;
-    flex-direction: column;
-}
-
-.kc-search-modal__header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    position: sticky;
-    top: 0;
-    background-color: var(--kc-background-dark);
-    z-index: 10001;
-}
-
-.kc-search-modal__close {
-    background: none;
-    border: none;
-    color: var(--kc-text-dark-secondary);
-    font-size: 1.3em;
-    cursor: pointer;
-    padding: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.kc-search-modal__input {
-    flex: 1;
-    padding: 12px 16px;
-    background-color: var(--kc-surface-dark);
     border: 1px solid var(--kc-border-dark);
-    border-radius: 12px;
+    border-radius: 18px;
+    padding: 8px 14px;
+    color: var(--kc-text-dark-secondary);
+    cursor: pointer;
+    font-size: 0.9em;
+    flex-grow: 1;
+    max-width: 260px;
+    text-align: left;
+    transition: all var(--transition-speed) ease;
+}
+
+.kc-search-mobile-btn i { font-size: 0.9em; flex-shrink: 0; }
+.kc-search-mobile-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kc-search-mobile-btn:hover,
+.kc-search-mobile-btn:focus {
+    border-color: var(--kc-primary-brand);
     color: var(--kc-text-dark-primary);
-    font-size: 1em;
+    box-shadow: 0 0 0 2px rgba(255,107,0,0.15);
     outline: none;
 }
 
-.kc-search-modal__input:focus {
-    border-color: var(--kc-primary-brand);
-    box-shadow: 0 0 0 2px rgba(255, 110, 30, 0.1);
+/* ── Search Modal: overlay com blur (igual ao kc-create-modal) ── */
+.kc-search-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px 16px 24px;
+    background: rgba(0,0,0,0.62);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
 }
 
-.kc-search-modal__results {
-    flex: 1;
-    margin-top: 20px;
+.kc-search-modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
 }
+
+.kc-search-modal-card {
+    width: min(600px, 100%);
+    background: var(--kc-surface-dark);
+    border: 1px solid var(--kc-border-dark);
+    border-radius: 20px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+    overflow: hidden;
+    transform: translateY(-10px) scale(0.98);
+    transition: transform 180ms ease;
+}
+
+.kc-search-modal-overlay.active .kc-search-modal-card {
+    transform: translateY(0) scale(1);
+}
+
+.kc-search-modal-card__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--kc-border-dark);
+}
+
+.kc-search-modal-card__close {
+    background: none;
+    border: none;
+    color: var(--kc-text-dark-secondary);
+    font-size: 1.1em;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+.kc-search-modal-card__close:hover {
+    background: var(--kc-background-dark);
+    color: var(--kc-text-dark-primary);
+}
+
+.kc-search-modal-card__bar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--kc-background-dark);
+    border: 1px solid var(--kc-border-dark);
+    border-radius: 12px;
+    padding: 8px 12px;
+    transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+.kc-search-modal-card__bar:focus-within {
+    border-color: var(--kc-primary-brand);
+    box-shadow: 0 0 0 2px rgba(255,107,0,0.12);
+}
+
+.kc-search-modal-card__icon { color: var(--kc-text-dark-secondary); font-size: 0.9em; flex-shrink: 0; }
+
+.kc-search-modal-card__input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--kc-text-dark-primary);
+    font-size: 1em;
+    outline: none;
+    min-width: 0;
+}
+.kc-search-modal-card__input::placeholder { color: var(--kc-text-dark-secondary); }
+
+.kc-search-modal-card__clear {
+    background: none;
+    border: none;
+    color: var(--kc-text-dark-secondary);
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 0.85em;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    transition: color var(--transition-speed) ease;
+}
+.kc-search-modal-card__clear:hover { color: var(--kc-text-dark-primary); }
+
+/* Dropdown do kc-search.js aparece sobre o modal (position:fixed z-index:10000) */
 
 .kc-nav-links {
     display: none;
@@ -6805,5 +6861,68 @@ textarea::placeholder {
 
   .kc-field-inline {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Admin Navigation Bar (kc-admin-nav)
+   Aparece logo abaixo do kc-header em todas as páginas admin.
+   ═══════════════════════════════════════════════════════════ */
+.kc-admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--kc-surface-dark);
+  border-bottom: 1px solid var(--kc-border-dark);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  position: sticky;
+  top: 60px;  /* abaixo do kc-header fixo */
+  z-index: 90;
+}
+.kc-admin-nav::-webkit-scrollbar { display: none; }
+
+.kc-admin-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  color: var(--kc-text-dark-secondary);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all var(--transition-speed) ease;
+  flex-shrink: 0;
+}
+.kc-admin-nav__link:hover {
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  text-decoration: none;
+  border-color: var(--kc-border-dark);
+}
+.kc-admin-nav__link.active {
+  background: rgba(255,107,0,0.12);
+  color: var(--kc-primary-brand);
+  border-color: rgba(255,107,0,0.25);
+  font-weight: 600;
+}
+.kc-admin-nav__back {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .kc-admin-nav {
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  .kc-admin-nav__link {
+    padding: 7px 10px;
+    font-size: 0.82rem;
   }
 }
