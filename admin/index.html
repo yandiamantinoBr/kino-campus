@@ -5,151 +5,799 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
   <script src="../assets/js/kc-theme-boot.js"></script>
-  <!-- Remove kc-loading após render (esta página não inclui kc-core.js) -->
-  <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      requestAnimationFrame(function () {
+        document.documentElement.classList.remove('kc-loading');
+      });
+    });
+  </script>
   <title>KinoCampus — Admin Dashboard</title>
   <link rel="stylesheet" href="../assets/css/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    .kc-admin-page { overflow-x: hidden; }
+    .kc-admin-page {
+      overflow-x: hidden;
+    }
+
+    html.kc-loading .kc-header--admin .kc-user-actions,
+    html.kc-loading .kc-header--admin .theme-toggle,
+    html.kc-loading .kc-header--admin .btn-login {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
     .kc-admin-page main.kc-main-content {
-      padding-left: 0 !important;
-      padding-right: 0 !important;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) !important;
+      gap: 0 !important;
+      width: 100%;
+      max-width: 100% !important;
+      min-width: 0;
+      padding: 0 !important;
       margin: 0 auto !important;
     }
-    .kc-admin-wrapper { max-width: 1120px; margin: 0 auto !important; padding: 18px 16px 72px; box-sizing: border-box; }
+
+    .kc-admin-page main.kc-main-content > * {
+      min-width: 0;
+    }
+
+    .kc-admin-wrapper {
+      width: 100%;
+      max-width: 1240px;
+      min-width: 0;
+      margin: 0 auto !important;
+      padding: 20px 16px 92px;
+      box-sizing: border-box;
+    }
+
+    .kc-admin-dashboard,
+    .kc-admin-shell,
+    .kc-admin-primary,
+    .kc-admin-sidebar {
+      min-width: 0;
+    }
+
+    .kc-admin-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .kc-admin-primary,
+    .kc-admin-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .kc-admin-sidebar {
+      position: sticky;
+      top: 90px;
+      align-self: start;
+    }
+
     .kc-admin-hero {
-      background: linear-gradient(120deg, rgba(255, 107, 0, 0.16), rgba(255, 107, 0, 0.05));
+      background:
+        radial-gradient(circle at top right, rgba(255, 107, 0, 0.14), transparent 34%),
+        linear-gradient(120deg, rgba(255, 107, 0, 0.16), rgba(255, 107, 0, 0.04));
       border: 1px solid var(--kc-border-dark);
-      border-radius: 14px;
-      padding: 16px;
+      border-radius: 18px;
+      padding: 18px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 14px;
+      min-width: 0;
     }
-    .kc-admin-hero h1 { margin: 0; font-size: 1.45rem; }
-    .kc-admin-hero p { margin: 6px 0 0; color: var(--kc-text-dark-secondary); font-size: .92rem; }
-    .kc-admin-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+    .kc-admin-hero > div,
+    .kc-admin-toolbar,
     .kc-admin-toolbar button,
-    .kc-admin-toolbar a {
-      border: 1px solid var(--kc-border-dark);
-      background: var(--kc-surface-dark);
-      color: var(--kc-text-dark-primary);
-      border-radius: 10px;
-      text-decoration: none;
-      padding: 8px 12px;
-      font-size: .88rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      transition: border-color .15s ease;
+    .kc-admin-toolbar a,
+    .kc-admin-toolbar select {
+      min-width: 0;
     }
-    .kc-admin-toolbar button:hover,
-    .kc-admin-toolbar a:hover { border-color: var(--kc-primary-brand); }
-    .kc-admin-toolbar button:disabled { opacity:.5; cursor:not-allowed; }
+
+    .kc-admin-hero h1 {
+      margin: 0;
+      font-size: 1.55rem;
+      line-height: 1.1;
+    }
+
+    .kc-admin-hero p {
+      margin: 8px 0 0;
+      color: var(--kc-text-dark-secondary);
+      font-size: .93rem;
+      max-width: 60ch;
+    }
+
+    .kc-admin-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .kc-admin-toolbar button,
+    .kc-admin-toolbar a,
     .kc-admin-toolbar select {
       border: 1px solid var(--kc-border-dark);
       background: var(--kc-surface-dark);
       color: var(--kc-text-dark-primary);
-      border-radius: 10px;
-      padding: 8px 12px;
+      border-radius: 12px;
+      text-decoration: none;
+      padding: 9px 12px;
       font-size: .88rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       cursor: pointer;
-      transition: border-color .15s ease;
+      transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+      white-space: nowrap;
     }
-    .kc-admin-toolbar select:hover { border-color: var(--kc-primary-brand); }
-    .kc-admin-toolbar .xlsx { color: #1d6f42; }
-    .kc-admin-toolbar .pdf  { color: #d93025; }
 
-    #admin-loading { display:flex; align-items:center; gap:10px; color:var(--kc-text-dark-secondary); padding: 36px 0; }
-    #admin-error { display:none; padding:14px; border-radius:10px; border:1px solid #ef9a9a; color:#ef9a9a; background: rgba(244,67,54,.12); margin-bottom: 10px; }
-    #admin-content { display:none; }
-    #admin-last-sync { color: var(--kc-text-dark-secondary); font-size: .82rem; margin-bottom: 8px; }
+    .kc-admin-toolbar button:hover,
+    .kc-admin-toolbar a:hover,
+    .kc-admin-toolbar select:hover {
+      border-color: rgba(255, 107, 0, .45);
+      box-shadow: 0 10px 24px rgba(255, 107, 0, .08);
+      transform: translateY(-1px);
+    }
 
-    /* ── Metric grids ── */
-    .kc-admin-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); margin: 14px 0 20px; }
-    /* Grid de 5 itens: último item expande quando sozinho na linha */
-    .kc-admin-grid--5col .kc-admin-card:last-child:nth-child(odd) { grid-column: 1 / -1; max-width: 320px; }
-    /* Loading state: opacidade durante refresh */
-    .kc-admin-grid.is-loading { opacity: 0.45; pointer-events: none; transition: opacity .2s; }
-    .kc-admin-card { background:var(--kc-surface-dark); border:1px solid var(--kc-border-dark); border-radius:12px; padding:14px; min-width:0; overflow:hidden; word-break:break-word; }
-    .kc-admin-card__label { color: var(--kc-text-dark-secondary); font-size: .85rem; display:flex; gap:6px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .kc-admin-card strong { display:block; font-size:1.85rem; margin-top:8px; line-height: 1; overflow:hidden; text-overflow:ellipsis; }
-    .kc-admin-section-title { font-size: .78rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: .06em; color: var(--kc-text-dark-secondary); margin: 20px 0 6px; }
+    .kc-admin-toolbar button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
 
-    /* ── Sections ── */
+    .kc-admin-toolbar .xlsx {
+      color: #1d6f42;
+    }
+
+    .kc-admin-toolbar .pdf {
+      color: #d93025;
+    }
+
+    #admin-loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--kc-text-dark-secondary);
+      padding: 36px 0;
+    }
+
+    #admin-error {
+      display: none;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #ef9a9a;
+      color: #ef9a9a;
+      background: rgba(244, 67, 54, .12);
+      margin-bottom: 12px;
+    }
+
+    #admin-content {
+      display: none;
+    }
+
+    #admin-last-sync {
+      cursor: pointer;
+      color: var(--kc-text-dark-secondary);
+      font-size: .82rem;
+      margin: 2px 0 0;
+    }
+
+    #admin-last-sync:hover {
+      text-decoration: underline;
+    }
+
+    .kc-admin-section-title {
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--kc-text-dark-secondary);
+      margin: 4px 0 -4px;
+    }
+
+    .kc-admin-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      margin: 0;
+      min-width: 0;
+    }
+
+    .kc-admin-grid.is-loading {
+      opacity: .45;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    .kc-admin-card {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 16px;
+      padding: 15px;
+      min-width: 0;
+      overflow: hidden;
+      word-break: break-word;
+      min-height: 148px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .03);
+    }
+
+    .kc-admin-card__label {
+      color: var(--kc-text-dark-secondary);
+      font-size: .85rem;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .kc-admin-card strong {
+      display: block;
+      font-size: 1.92rem;
+      margin-top: 10px;
+      line-height: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .kc-admin-section {
       background: var(--kc-surface-dark);
       border: 1px solid var(--kc-border-dark);
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 16px;
+      border-radius: 18px;
+      padding: 16px;
+      min-width: 0;
+      box-shadow: 0 12px 28px rgba(17, 24, 39, .04);
     }
-    .kc-admin-section h3 { margin: 0 0 12px; font-size: 1.06rem; }
 
-    /* ── Audit log table — desktop ── */
-    .kc-admin-audit-wrap { overflow-x: auto; }
-    .kc-admin-audit-wrap table { width:100%; border-collapse:collapse; min-width: 560px; }
-    th,td { padding:10px 8px; border-bottom:1px solid var(--kc-border-dark); text-align:left; font-size:.9rem; vertical-align: top; }
+    .kc-admin-section h3 {
+      margin: 0 0 10px;
+      font-size: 1.04rem;
+      line-height: 1.2;
+    }
 
-    /* ── Search trends ── */
-    .kc-trend-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-    .kc-trend-item { display: flex; align-items: center; gap: 10px; font-size: .92rem; }
-    .kc-trend-rank { min-width: 18px; text-align: right; color: var(--kc-text-dark-secondary); font-size: .78rem; font-weight: 600; flex-shrink: 0; }
-    .kc-trend-bar-wrap { flex: 1; height: 6px; background: var(--kc-border-dark); border-radius: 4px; overflow: hidden; }
-    .kc-trend-bar { height: 100%; background: var(--kc-primary-brand); border-radius: 4px; transition: width .4s; }
-    .kc-trend-term { min-width: 90px; color: var(--kc-text-dark-primary); font-weight: 500; display: flex; align-items: center; gap: 4px; }
-    .kc-trend-count { min-width: 30px; text-align: right; color: var(--kc-text-dark-secondary); font-size: .85rem; }
-    .kc-trend-empty { color: var(--kc-text-dark-secondary); font-size: .9rem; }
+    .kc-admin-section__eyebrow {
+      margin-bottom: 6px;
+      font-size: .76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--kc-text-dark-secondary);
+    }
 
-    /* ── Loading state spinner no botão Atualizar ── */
-    #admin-refresh-btn.is-loading { opacity: .7; pointer-events: none; }
+    .kc-admin-section__intro {
+      margin: 0 0 14px;
+      color: var(--kc-text-dark-secondary);
+      font-size: .88rem;
+      line-height: 1.45;
+    }
 
-    /* ── Mobile responsive ── */
-    @media (max-width: 760px) {
-      .kc-admin-wrapper { padding: 14px 10px 72px; }
-      .kc-admin-hero { padding: 12px; gap: 10px; flex-direction: column; align-items: flex-start; }
-      .kc-admin-hero h1 { font-size: 1.15rem; }
-      .kc-admin-hero p { display: none; }
-      /* Nav duplicados da toolbar ficam ocultos (admin-nav cobre) */
-      .kc-admin-toolbar a { display: none; }
-      .kc-admin-toolbar { width: 100%; gap: 6px; flex-wrap: wrap; }
-      /* Período + Atualizar na primeira linha */
-      .kc-admin-toolbar select { flex: 1 1 140px; min-width: 120px; }
-      #admin-refresh-btn { flex: 1 1 auto; justify-content: center; }
-      /* XLSX + PDF na segunda linha */
+    .kc-admin-empty {
+      color: var(--kc-text-dark-secondary);
+      font-size: .9rem;
+      padding: 12px 0 4px;
+    }
+
+    .kc-admin-kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .kc-admin-kpi {
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 14px;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, 0));
+      min-width: 0;
+    }
+
+    .kc-admin-kpi__label {
+      display: block;
+      color: var(--kc-text-dark-secondary);
+      font-size: .76rem;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .kc-admin-kpi strong {
+      display: block;
+      font-size: 1.25rem;
+      line-height: 1.1;
+    }
+
+    .kc-admin-kpi small {
+      display: block;
+      margin-top: 4px;
+      color: var(--kc-text-dark-secondary);
+      font-size: .76rem;
+    }
+
+    .kc-admin-chart-shell {
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 16px;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(255, 107, 0, .05), rgba(255, 107, 0, 0));
+    }
+
+    .kc-admin-chart-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .kc-admin-chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      margin-top: 12px;
+      font-size: .8rem;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-admin-chart-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kc-admin-chart-legend i {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .kc-admin-table-shell {
+      overflow-x: auto;
+      min-width: 0;
+    }
+
+    .kc-admin-table-shell table,
+    .kc-admin-audit-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 0;
+    }
+
+    .kc-admin-table-shell table {
+      min-width: 300px;
+    }
+
+    .kc-admin-audit-wrap {
+      overflow-x: auto;
+      min-width: 0;
+    }
+
+    .kc-admin-audit-wrap table {
+      min-width: 560px;
+    }
+
+    th,
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--kc-border-dark);
+      text-align: left;
+      font-size: .9rem;
+      vertical-align: top;
+    }
+
+    .kc-admin-table-shell th,
+    .kc-admin-table-shell td {
+      font-size: .85rem;
+    }
+
+    .kc-admin-table-shell tbody tr:last-child td,
+    .kc-admin-audit-wrap tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .kc-admin-share-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .kc-admin-share-cell i {
+      color: var(--kc-primary-brand);
+      width: 18px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .kc-admin-share-bar {
+      height: 7px;
+      border-radius: 999px;
+      background: var(--kc-border-dark);
+      overflow: hidden;
+      min-width: 90px;
+    }
+
+    .kc-admin-share-bar span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--kc-primary-brand), #ff9f4f);
+    }
+
+    .kc-trend-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .kc-trend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .92rem;
+    }
+
+    .kc-trend-rank {
+      min-width: 18px;
+      text-align: right;
+      color: var(--kc-text-dark-secondary);
+      font-size: .78rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .kc-trend-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: var(--kc-border-dark);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .kc-trend-bar {
+      height: 100%;
+      background: var(--kc-primary-brand);
+      border-radius: 4px;
+      transition: width .4s;
+    }
+
+    .kc-trend-term {
+      min-width: 90px;
+      color: var(--kc-text-dark-primary);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kc-trend-count {
+      min-width: 30px;
+      text-align: right;
+      color: var(--kc-text-dark-secondary);
+      font-size: .85rem;
+    }
+
+    .kc-trend-empty {
+      color: var(--kc-text-dark-secondary);
+      font-size: .9rem;
+    }
+
+    .kc-trend-modules {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--kc-border-dark);
+    }
+
+    .kc-trend-module-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 107, 0, .04);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: .82rem;
+      color: var(--kc-text-dark-primary);
+      transition: border-color .15s;
+    }
+
+    .kc-trend-module-badge:hover {
+      border-color: rgba(255, 107, 0, .35);
+    }
+
+    .kc-trend-module-badge .kc-badge-count {
+      background: var(--kc-primary-brand);
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: .76rem;
+      font-weight: 600;
+    }
+
+    .kc-trend-module-title {
+      font-size: .78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--kc-text-dark-secondary);
+      margin-bottom: 8px;
+    }
+
+    .kc-admin-alert-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .kc-admin-alert {
+      border: 1px solid var(--kc-border-dark);
+      border-left: 4px solid var(--kc-primary-brand);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255, 107, 0, .04);
+    }
+
+    .kc-admin-alert strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: .9rem;
+    }
+
+    .kc-admin-alert p {
+      margin: 0;
+      color: var(--kc-text-dark-secondary);
+      font-size: .84rem;
+      line-height: 1.45;
+    }
+
+    .kc-admin-alert--critical {
+      border-left-color: #ef4444;
+      background: rgba(239, 68, 68, .08);
+    }
+
+    .kc-admin-alert--warning {
+      border-left-color: #f59e0b;
+      background: rgba(245, 158, 11, .08);
+    }
+
+    .kc-admin-alert--info {
+      border-left-color: #3b82f6;
+      background: rgba(59, 130, 246, .08);
+    }
+
+    .kc-admin-alert--positive {
+      border-left-color: #10b981;
+      background: rgba(16, 185, 129, .08);
+    }
+
+    .kc-admin-alert--neutral {
+      border-left-color: #94a3b8;
+      background: rgba(148, 163, 184, .1);
+    }
+
+    .kc-admin-quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .kc-admin-quick-actions a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      text-decoration: none;
+      font-size: .84rem;
+    }
+
+    .kc-admin-quick-actions a:hover {
+      border-color: rgba(255, 107, 0, .4);
+      text-decoration: none;
+    }
+
+    .kc-audit-badge {
+      display: inline-block;
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+
+    .kc-audit-badge--deleted {
+      background: rgba(244, 67, 54, .15);
+      color: #ef9a9a;
+    }
+
+    .kc-audit-badge--hidden {
+      background: rgba(255, 152, 0, .15);
+      color: #ffb74d;
+    }
+
+    .kc-audit-badge--restored {
+      background: rgba(76, 175, 80, .15);
+      color: #81c784;
+    }
+
+    .kc-audit-badge--report {
+      background: rgba(33, 150, 243, .15);
+      color: #64b5f6;
+    }
+
+    .kc-audit-badge--default {
+      background: var(--kc-border-dark);
+      color: var(--kc-text-dark-secondary);
+    }
+
+    #admin-refresh-btn.is-loading {
+      opacity: .7;
+      pointer-events: none;
+    }
+
+    .kc-header--admin .kc-header-container {
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      gap: 10px;
+    }
+
+    .kc-header--admin .kc-admin-nav {
+      flex: 1 1 0% !important;
+      min-width: 0 !important;
+    }
+
+    .kc-header--admin .kc-user-actions {
+      flex: 0 0 auto !important;
+      flex-shrink: 0 !important;
+      display: flex !important;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 10;
+      opacity: 1 !important;
+    }
+
+    .kc-header--admin .kc-user-actions .theme-toggle,
+    .kc-header--admin .kc-user-actions .btn-login {
+      visibility: visible !important;
+      flex-shrink: 0;
+    }
+
+    .kc-header--admin .kc-user-actions .btn-login {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      max-width: min(40vw, 230px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1080px) {
+      .kc-admin-shell {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .kc-admin-sidebar {
+        position: static;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .kc-admin-wrapper {
+        padding: 14px 10px 86px;
+      }
+
+      .kc-admin-hero {
+        padding: 14px;
+        gap: 10px;
+      }
+
+      .kc-admin-hero h1 {
+        font-size: 1.18rem;
+      }
+
+      .kc-admin-hero p {
+        display: none;
+      }
+
+      .kc-admin-toolbar {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .kc-admin-toolbar a {
+        display: none;
+      }
+
+      .kc-admin-toolbar select,
+      .kc-admin-toolbar button {
+        flex: 1 1 140px;
+      }
+
       #admin-export-xlsx,
-      #admin-export-pdf { flex: 1 1 auto; justify-content: center; font-size: .82rem; padding: 8px 6px; }
-      .kc-admin-toolbar button { font-size: .82rem; padding: 8px 6px; }
-      .kc-admin-card strong { font-size: 1.5rem; }
-      .kc-admin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .kc-admin-card { padding: 10px; }
-      .kc-admin-card__label { font-size: .8rem; }
-      .kc-admin-section { padding: 12px; }
-      .kc-admin-section h3 { font-size: 0.96rem; margin-bottom: 10px; }
+      #admin-export-pdf {
+        flex: 1 1 120px;
+      }
 
-      /* Audit log: card layout on mobile */
-      .kc-admin-audit-wrap { overflow: visible; }
+      .kc-admin-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .kc-admin-card {
+        min-height: 134px;
+        padding: 12px;
+      }
+
+      .kc-admin-card strong {
+        font-size: 1.56rem;
+      }
+
+      .kc-admin-section {
+        padding: 14px;
+      }
+
+      .kc-admin-kpi-strip,
+      .kc-admin-quick-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .kc-admin-audit-wrap {
+        overflow: visible;
+      }
+
       .kc-admin-audit-wrap table,
       .kc-admin-audit-wrap thead,
       .kc-admin-audit-wrap tbody,
       .kc-admin-audit-wrap th,
       .kc-admin-audit-wrap td,
-      .kc-admin-audit-wrap tr { display: block; }
-      .kc-admin-audit-wrap thead { display: none; }
+      .kc-admin-audit-wrap tr {
+        display: block;
+      }
+
+      .kc-admin-audit-wrap thead {
+        display: none;
+      }
+
       .kc-admin-audit-wrap tr {
         background: var(--kc-surface-dark);
         border: 1px solid var(--kc-border-dark);
-        border-radius: 10px;
+        border-radius: 12px;
         margin-bottom: 10px;
         padding: 10px;
       }
-      .kc-admin-audit-wrap tr:last-child { margin-bottom: 0; }
+
+      .kc-admin-audit-wrap tr:last-child {
+        margin-bottom: 0;
+      }
+
       .kc-admin-audit-wrap td {
         border: none;
         padding: 4px 0;
@@ -158,6 +806,7 @@
         gap: 8px;
         align-items: flex-start;
       }
+
       .kc-admin-audit-wrap td::before {
         content: attr(data-label);
         color: var(--kc-text-dark-secondary);
@@ -169,85 +818,66 @@
         flex-shrink: 0;
         padding-top: 1px;
       }
+
+      .kc-header--admin .kc-logo-sub {
+        display: none;
+      }
+
+      .kc-header--admin .kc-user-actions .btn-login {
+        max-width: 148px;
+        padding: 7px 10px;
+        font-size: .82rem;
+      }
     }
+
     @media (max-width: 420px) {
-      .kc-admin-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-      .kc-admin-card strong { font-size: 1.3rem; }
-      .kc-admin-card__label { font-size: .78rem; }
-      .kc-admin-wrapper { padding: 12px 8px 80px; }
-      .kc-admin-toolbar button,
-      .kc-admin-toolbar select { font-size: .78rem; padding: 7px 5px; }
-      .kc-admin-hero { padding: 10px; gap: 8px; }
-      .kc-admin-hero h1 { font-size: 1rem; }
-      /* Trends: rank number hidden to save space */
-      .kc-trend-rank { display: none; }
-      .kc-trend-term { min-width: 72px; font-size: .85rem; }
-    }
+      .kc-admin-wrapper {
+        padding: 12px 8px 84px;
+      }
 
-    /* ── Header admin: nowrap e visibilidade em TODOS os tamanhos ── */
-    .kc-header--admin .kc-header-container {
-      flex-wrap: nowrap !important;
-      align-items: center !important;
-    }
-    /* Nav pode encolher para dar espaço ao user-actions */
-    .kc-header--admin .kc-admin-nav {
-      flex: 1 1 0% !important;
-      min-width: 0 !important;
-    }
-    /* user-actions nunca encolhe nem quebra de linha */
-    .kc-header--admin .kc-user-actions {
-      flex: 0 0 auto !important;
-      flex-shrink: 0 !important;
-      display: flex !important;
-      align-items: center;
-      gap: 6px;
-      position: relative;
-      z-index: 10; /* acima do kc-admin-nav */
-    }
-    /* Logo compacto em telas muito pequenas */
-    @media (max-width: 400px) {
-      .kc-header--admin .kc-logo-text { display: none; }
-      .kc-header--admin .kc-header-container { gap: 6px; padding: 0 10px; }
-      .kc-admin-wrapper { padding: 10px 8px 80px; }
-      .kc-admin-hero { padding: 10px; gap: 8px; }
-      .kc-admin-hero h1 { font-size: 1rem; }
-      .kc-admin-toolbar button,
-      .kc-admin-toolbar select { font-size: .76rem; padding: 7px 5px; }
-      .kc-admin-grid { gap: 6px; }
-    }
+      .kc-admin-hero {
+        padding: 12px;
+      }
 
-    /* ── Tendências por módulo ── */
-    .kc-trend-modules { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--kc-border-dark); }
-    .kc-trend-module-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark);
-      border-radius: 20px; padding: 5px 12px; font-size: .82rem;
-      color: var(--kc-text-dark-primary); transition: border-color .15s;
-    }
-    .kc-trend-module-badge:hover { border-color: var(--kc-primary-brand); }
-    .kc-trend-module-badge .kc-badge-count {
-      background: var(--kc-primary-brand); color: #fff;
-      border-radius: 10px; padding: 1px 7px; font-size: .76rem; font-weight: 600;
-    }
-    .kc-trend-module-title {
-      font-size: .78rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: .06em; color: var(--kc-text-dark-secondary); margin-bottom: 8px;
-    }
+      .kc-admin-grid,
+      .kc-admin-kpi-strip,
+      .kc-admin-quick-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
 
-    /* ── Audit log action badges ── */
-    .kc-audit-badge {
-      display: inline-block; border-radius: 6px; padding: 2px 7px; font-size: .75rem;
-      font-weight: 600; letter-spacing: .02em; white-space: nowrap;
-    }
-    .kc-audit-badge--deleted  { background: rgba(244,67,54,.15); color: #ef9a9a; }
-    .kc-audit-badge--hidden   { background: rgba(255,152,0,.15);  color: #ffb74d; }
-    .kc-audit-badge--restored { background: rgba(76,175,80,.15);  color: #81c784; }
-    .kc-audit-badge--report   { background: rgba(33,150,243,.15); color: #64b5f6; }
-    .kc-audit-badge--default  { background: var(--kc-border-dark); color: var(--kc-text-dark-secondary); }
+      .kc-admin-card strong {
+        font-size: 1.32rem;
+      }
 
-    /* ── Last sync clicável ── */
-    #admin-last-sync { cursor: pointer; }
-    #admin-last-sync:hover { text-decoration: underline; }
+      .kc-admin-card__label {
+        font-size: .78rem;
+      }
+
+      .kc-trend-rank {
+        display: none;
+      }
+
+      .kc-trend-term {
+        min-width: 72px;
+        font-size: .85rem;
+      }
+
+      .kc-header--admin .kc-logo-text {
+        display: none;
+      }
+
+      .kc-header--admin .kc-header-container {
+        gap: 6px;
+        padding: 0 10px;
+      }
+
+      .kc-header--admin .kc-user-actions .btn-login {
+        max-width: 122px;
+        padding: 6px 8px;
+        font-size: .78rem;
+      }
+    }
   </style>
 </head>
 <body class="kc-admin-page">
@@ -262,10 +892,10 @@
           </span>
         </a>
       </div>
-      <nav class="kc-admin-nav" aria-label="Navegação admin">
+      <nav class="kc-admin-nav" aria-label="Navegacao admin">
         <a href="index.html" class="kc-admin-nav__link active"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
-        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderacao</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denuncias</a>
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
       </nav>
       <div class="kc-user-actions">
@@ -277,97 +907,133 @@
 
   <main class="kc-main-content">
     <div class="kc-admin-wrapper">
-      <div id="admin-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando dashboard…</span></div>
+      <div id="admin-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando dashboard...</span></div>
       <div id="admin-error" role="alert"></div>
 
-      <section id="admin-content">
-        <section class="kc-admin-hero">
-          <div>
-            <h1><i class="fas fa-chart-line"></i> Dashboard Administrativo</h1>
-            <p>Métricas consolidadas de denúncias, moderação, atividade e buscas em tempo real.</p>
-          </div>
-          <div class="kc-admin-toolbar">
-            <select id="admin-period-filter" title="Período">
-              <option value="1">Hoje</option>
-              <option value="7">Esta semana</option>
-              <option value="30" selected>Últimos 30 dias</option>
-              <option value="90">Últimos 90 dias</option>
-              <option value="365">Este ano</option>
-            </select>
-            <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
-            <button type="button" class="xlsx" id="admin-export-xlsx" disabled><i class="fas fa-file-excel"></i> XLSX</button>
-            <button type="button" class="pdf" id="admin-export-pdf" disabled><i class="fas fa-file-pdf"></i> PDF</button>
-            <a href="moderation.html"><i class="fas fa-shield-halved"></i> Ir para Moderação</a>
-            <a href="reports.html"><i class="fas fa-flag"></i> Ir para Denúncias</a>
-            <a href="banners.html"><i class="fas fa-images"></i> Gerenciar Banners</a>
-          </div>
-        </section>
+      <section id="admin-content" class="kc-admin-dashboard">
+        <div class="kc-admin-shell">
+          <div class="kc-admin-primary">
+            <section class="kc-admin-hero">
+              <div>
+                <h1><i class="fas fa-chart-line"></i> Dashboard Administrativo</h1>
+                <p>Métricas consolidadas de denúncias, moderação, atividade, buscas e saúde operacional em tempo real.</p>
+              </div>
+              <div class="kc-admin-toolbar">
+                <select id="admin-period-filter" title="Periodo">
+                  <option value="1">Hoje</option>
+                  <option value="7">Esta semana</option>
+                  <option value="30" selected>Ultimos 30 dias</option>
+                  <option value="90">Ultimos 90 dias</option>
+                  <option value="365">Este ano</option>
+                </select>
+                <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
+                <button type="button" class="xlsx" id="admin-export-xlsx" disabled><i class="fas fa-file-excel"></i> XLSX</button>
+                <button type="button" class="pdf" id="admin-export-pdf" disabled><i class="fas fa-file-pdf"></i> PDF</button>
+                <a href="moderation.html"><i class="fas fa-shield-halved"></i> Ir para Moderacao</a>
+                <a href="reports.html"><i class="fas fa-flag"></i> Ir para Denuncias</a>
+                <a href="banners.html"><i class="fas fa-images"></i> Gerenciar Banners</a>
+              </div>
+            </section>
 
-        <div id="admin-last-sync" aria-live="polite"></div>
+            <div id="admin-last-sync" aria-live="polite"></div>
 
-        <!-- Métricas de moderação -->
-        <div class="kc-admin-section-title" id="admin-moderation-title"><i class="fas fa-shield-halved"></i> Moderação</div>
-        <div class="kc-admin-grid" id="admin-metrics"></div>
+            <div class="kc-admin-section-title" id="admin-moderation-title"><i class="fas fa-shield-halved"></i> Moderacao</div>
+            <div class="kc-admin-grid" id="admin-metrics"></div>
 
-        <!-- Métricas de atividade -->
-        <div class="kc-admin-section-title" id="admin-activity-title"><i class="fas fa-chart-bar"></i> Atividade da plataforma (últimos 30 dias)</div>
-        <div class="kc-admin-grid kc-admin-grid--5col" id="admin-activity-metrics"></div>
+            <div class="kc-admin-section-title" id="admin-activity-title"><i class="fas fa-chart-bar"></i> Atividade da plataforma</div>
+            <div class="kc-admin-grid" id="admin-activity-metrics"></div>
 
-        <!-- Métricas da comunidade -->
-        <div class="kc-admin-section-title" id="admin-community-title"><i class="fas fa-users"></i> Comunidade</div>
-        <div class="kc-admin-grid" id="admin-community-metrics"></div>
+            <div class="kc-admin-section-title" id="admin-community-title"><i class="fas fa-users"></i> Comunidade</div>
+            <div class="kc-admin-grid" id="admin-community-metrics"></div>
 
-        <!-- Tendências de busca -->
-        <section class="kc-admin-section">
-          <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca (últimos 30 dias)</h3>
-          <div class="kc-trend-module-title"><i class="fas fa-list-ol"></i> Top termos buscados</div>
-          <ul class="kc-trend-list" id="admin-trends-list">
-            <li class="kc-trend-empty">Carregando…</li>
-          </ul>
-          <div id="admin-trends-modules" class="kc-trend-modules" style="display:none;">
-            <!-- renderizado pelo controller -->
+            <section class="kc-admin-section">
+              <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendencias de busca</h3>
+              <div class="kc-trend-module-title"><i class="fas fa-list-ol"></i> Top termos buscados</div>
+              <ul class="kc-trend-list" id="admin-trends-list">
+                <li class="kc-trend-empty">Carregando...</li>
+              </ul>
+              <div id="admin-trends-modules" class="kc-trend-modules" style="display:none;">
+              </div>
+            </section>
+
+            <section class="kc-admin-section">
+              <h3 id="admin-audit-title"><i class="fas fa-clock-rotate-left"></i> Audit log</h3>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+                <select id="admin-audit-filter" style="padding:6px 10px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;">
+                  <option value="all">Todas as acoes</option>
+                  <option value="post_status_changed">Status alterado</option>
+                  <option value="post_deleted">Post deletado</option>
+                  <option value="report_closed">Denuncia fechada</option>
+                </select>
+              </div>
+              <div class="kc-admin-audit-wrap">
+                <table role="table" aria-label="Audit log de acoes administrativas">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Acao</th>
+                      <th>Entidade</th>
+                      <th>Autor</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-audit-body"></tbody>
+                </table>
+              </div>
+              <div style="text-align:center;margin-top:10px;">
+                <button type="button" id="admin-audit-load-more" style="padding:8px 18px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;cursor:pointer;">
+                  <i class="fas fa-chevron-down"></i> Carregar mais
+                </button>
+              </div>
+            </section>
           </div>
-        </section>
 
-        <!-- Audit log -->
-        <section class="kc-admin-section">
-          <h3 id="admin-audit-title"><i class="fas fa-clock-rotate-left"></i> Audit log (últimos 30 dias)</h3>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
-            <select id="admin-audit-filter" style="padding:6px 10px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;">
-              <option value="all">Todas as ações</option>
-              <option value="post_status_changed">Status alterado</option>
-              <option value="post_deleted">Post deletado</option>
-              <option value="report_closed">Denúncia fechada</option>
-            </select>
-          </div>
-          <div class="kc-admin-audit-wrap">
-            <table role="table" aria-label="Audit log de ações administrativas">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Ação</th>
-                  <th>Entidade</th>
-                  <th>Autor</th>
-                </tr>
-              </thead>
-              <tbody id="admin-audit-body"></tbody>
-            </table>
-          </div>
-          <div style="text-align:center;margin-top:10px;">
-            <button type="button" id="admin-audit-load-more" style="padding:8px 18px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;cursor:pointer;">
-              <i class="fas fa-chevron-down"></i> Carregar mais
-            </button>
-          </div>
-        </section>
+          <aside class="kc-admin-sidebar" aria-label="Insights do dashboard">
+            <section class="kc-admin-section">
+              <div class="kc-admin-section__eyebrow">Pulso operacional</div>
+              <h3 id="admin-activity-pulse-title"><i class="fas fa-wave-square"></i> Pulso diario</h3>
+              <p class="kc-admin-section__intro">Leitura visual da atividade consolidada por dia para posts, comentarios, buscas, votos e acoes administrativas.</p>
+              <div id="admin-daily-activity-summary" class="kc-admin-kpi-strip">
+                <div class="kc-admin-empty">Carregando indicadores...</div>
+              </div>
+              <div id="admin-daily-activity-chart" class="kc-admin-chart-shell">
+                <div class="kc-admin-empty">Carregando grafico...</div>
+              </div>
+              <div id="admin-daily-activity-legend" class="kc-admin-chart-legend"></div>
+            </section>
+
+            <section class="kc-admin-section">
+              <div class="kc-admin-section__eyebrow">Participacao de demanda</div>
+              <h3 id="admin-module-share-title"><i class="fas fa-table-cells"></i> Top modulos</h3>
+              <p class="kc-admin-section__intro">Participacao dos modulos na demanda de busca, com share e principais termos do periodo.</p>
+              <div id="admin-module-share-table" class="kc-admin-table-shell">
+                <div class="kc-admin-empty">Carregando tabela...</div>
+              </div>
+            </section>
+
+            <section class="kc-admin-section">
+              <div class="kc-admin-section__eyebrow">Acao priorizada</div>
+              <h3><i class="fas fa-siren-on"></i> Alertas e acoes</h3>
+              <p class="kc-admin-section__intro">Resumo de pontos que merecem atencao imediata e atalhos para manter a operacao fluindo.</p>
+              <ul id="admin-operational-alerts" class="kc-admin-alert-list">
+                <li class="kc-admin-empty">Carregando alertas...</li>
+              </ul>
+              <div class="kc-admin-quick-actions">
+                <a href="reports.html"><i class="fas fa-flag"></i> Denuncias</a>
+                <a href="moderation.html"><i class="fas fa-shield-halved"></i> Moderacao</a>
+                <a href="banners.html"><i class="fas fa-images"></i> Banners</a>
+                <a href="../index.html"><i class="fas fa-home"></i> Ir ao site</a>
+              </div>
+            </section>
+          </aside>
+        </div>
       </section>
     </div>
   </main>
 
-  <!-- Mobile Navigation (admin) -->
   <nav class="kc-mobile-nav">
     <a class="active" href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
-    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderacao</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>Denuncias</span></a>
     <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
     <a href="../index.html"><i class="fas fa-home"></i><span>Site</span></a>
   </nav>
@@ -377,13 +1043,13 @@
   <script src="../assets/js/kc-env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../assets/js/kc-supabase.client.js"></script>
-<script src="../assets/js/kc-api.client.js"></script>
+  <script src="../assets/js/kc-api.client.js"></script>
   <script src="../assets/js/adapters/local.adapter.js"></script>
   <script src="../assets/js/adapters/supabase.adapter.js"></script>
   <script src="../assets/js/kc-profiles.client.js"></script>
   <script src="../assets/js/kc-auth.ui.js"></script>
   <script src="../assets/js/kc-theme.js"></script>
-  <!-- Bibliotecas de exportação (SheetJS + jsPDF) carregadas sob demanda pelo controller -->
+  <script src="../assets/js/controllers/admin-dashboard.shared.js"></script>
   <script src="../assets/js/controllers/admin-dashboard.controller.js"></script>
 </body>
 </html>

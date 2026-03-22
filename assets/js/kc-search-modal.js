@@ -98,7 +98,11 @@
       if (e.key === 'Enter') {
         const q = modalInput.value.trim();
         if (q) {
-          window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
+          if (window.kcSearch && typeof window.kcSearch.navigateToResults === 'function') {
+            window.kcSearch.navigateToResults(q, { source: 'mobile-modal-enter' });
+          } else {
+            window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
+          }
         }
       }
     });

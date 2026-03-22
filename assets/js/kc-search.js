@@ -1,10 +1,6 @@
 /**
- * KinoCampus - Sistema de Busca Global (V8.1.2.4.5)
- * Objetivo do saneamento:
- * - Remover montagem manual redundante de .kc-card (usa KCUtils.renderPostCard)
- * - Reaproveitar normalização via KCAPI quando disponível
- * - Manter UX da página de resultados ("Por [Autor]")
- * - Offline-first (vanilla JS, sem libs)
+ * KinoCampus - Sistema de Busca Global
+ * Busca local/offline-first, pagina de resultados e analytics de buscas.
  */
 
 (function () {
@@ -12,25 +8,42 @@
 
   const KCUtils = (typeof window !== 'undefined' && window.KCUtils) ? window.KCUtils : null;
   const KCAPI = (typeof window !== 'undefined' && window.KCAPI) ? window.KCAPI : null;
+  const KCSearchAnalytics = (typeof window !== 'undefined' && window.KCSearchAnalytics) ? window.KCSearchAnalytics : null;
 
   const DB_FALLBACK_URL = 'data/database.json';
+  const TRACK_BATCH_SIZE = 12;
 
-  // Cache em memória
-  let kcDbPosts = null; // posts do database.json (normalizados quando possível)
+  let kcDbPosts = null;
+  let dropdownDebounceTimer = null;
+  let searchFlushTimer = null;
 
-  // Sinônimos para busca inteligente
+  const MEMORY_STORAGE = (function () {
+    const state = {};
+    return {
+      getItem(key) {
+        return Object.prototype.hasOwnProperty.call(state, key) ? state[key] : null;
+      },
+      setItem(key, value) {
+        state[key] = String(value);
+      },
+      removeItem(key) {
+        delete state[key];
+      }
+    };
+  })();
+
   const SYNONYMS = {
-    notebook: ['laptop', 'computador portátil', 'note', 'computador', 'pc'],
+    notebook: ['laptop', 'computador portatil', 'note', 'computador', 'pc'],
     celular: ['smartphone', 'telefone', 'iphone', 'android', 'mobile', 'fone'],
-    livro: ['livros', 'apostila', 'material didático', 'book'],
-    roupa: ['roupas', 'vestuário', 'vestimenta', 'blusa', 'camisa', 'calça'],
-    cama: ['colchão', 'box', 'móvel quarto', 'cama box'],
+    livro: ['livros', 'apostila', 'material didatico', 'book'],
+    roupa: ['roupas', 'vestuario', 'vestimenta', 'blusa', 'camisa', 'calca'],
+    cama: ['colchao', 'box', 'movel quarto', 'cama box'],
     fone: ['headphone', 'fone de ouvido', 'earphone', 'airpod', 'fones', 'audio'],
     bicicleta: ['bike', 'bici', 'mountain bike'],
     carona: ['transporte', 'viagem', 'ida', 'volta', 'caronas'],
-    estágio: ['estagio', 'trainee', 'jovem aprendiz'],
+    estagio: ['trainee', 'jovem aprendiz'],
     emprego: ['vaga', 'trabalho', 'job', 'oportunidade'],
-    cálculo: ['calculo', 'matemática', 'exatas'],
+    calculo: ['matematica', 'exatas'],
     iphone: ['apple', 'ios', 'celular apple'],
     dell: ['notebook dell', 'laptop dell'],
     jbl: ['fone jbl', 'headphone jbl', 'audio jbl']
@@ -38,21 +51,71 @@
 
   function normalizeText(text) {
     if (KCUtils && typeof KCUtils.normalizeText === 'function') return KCUtils.normalizeText(text);
-    if (!text) return '';
-    return String(text)
+    return String(text || '')
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
   }
 
-  const escape = (value) => window.KCUtils.escapeHtml(value);
+  function escapeHtml(value) {
+    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
+      return window.KCUtils.escapeHtml(value);
+    }
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function getSearchStorage() {
+    try {
+      const testKey = '__kc_search_storage_test__';
+      window.sessionStorage.setItem(testKey, '1');
+      window.sessionStorage.removeItem(testKey);
+      return window.sessionStorage;
+    } catch (_) {
+      return MEMORY_STORAGE;
+    }
+  }
+
+  function getSearchSessionId(storage) {
+    const bag = storage || getSearchStorage();
+    if (KCSearchAnalytics && typeof KCSearchAnalytics.ensureSessionId === 'function') {
+      return KCSearchAnalytics.ensureSessionId(bag, function () {
+        return Math.random().toString(36).slice(2);
+      }, Date.now);
+    }
+
+    let sid = '';
+    try {
+      sid = bag.getItem('kc_search_session_id') || '';
+      if (!sid) {
+        sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        bag.setItem('kc_search_session_id', sid);
+      }
+    } catch (_) {
+      sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+    return sid;
+  }
+
+  async function getTrackedUserId() {
+    try {
+      if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+        const user = await window.KCAPI.getCurrentUser();
+        return user ? user.id : null;
+      }
+    } catch (_) {}
+    return null;
+  }
 
   function getQueryParam(name) {
     try {
       const url = new URL(window.location.href);
-      const v = url.searchParams.get(name);
-      return v ? String(v) : '';
+      const value = url.searchParams.get(name);
+      return value ? String(value) : '';
     } catch (_) {
       return '';
     }
@@ -60,7 +123,7 @@
 
   function getUserPostsRaw() {
     try {
-      const list = window.kcUserPosts?.list ? window.kcUserPosts.list() : [];
+      const list = window.kcUserPosts && window.kcUserPosts.list ? window.kcUserPosts.list() : [];
       return Array.isArray(list) ? list : [];
     } catch (_) {
       return [];
@@ -68,14 +131,15 @@
   }
 
   function normalizeAnyPost(raw) {
-    const p = KCAPI.normalizePost(raw);
-    // marcação para evitar duplicação (kc-core injeta no feed em páginas de listagem)
-    if (raw && raw._kcUserPost === true) p._kcUserPost = true;
-    return p;
+    if (KCAPI && typeof KCAPI.normalizePost === 'function') {
+      const normalized = KCAPI.normalizePost(raw);
+      if (raw && raw._kcUserPost === true) normalized._kcUserPost = true;
+      return normalized;
+    }
+    return Object.assign({}, raw || {});
   }
 
   function normalizeUserPost(raw) {
-    // Posts do usuário podem vir com chaves legadas. Garantir o essencial.
     const base = raw || {};
     const fixed = {
       ...base,
@@ -88,7 +152,7 @@
       votos: base.votos ?? 0,
       comentarios: base.comentarios ?? 0,
       timestamp: base.timestamp || 'Agora',
-      autor: base.autor || 'Você',
+      autor: base.autor || 'Voce',
       autorAvatar: base.autorAvatar || (base.autor ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(base.autor)}` : '')
     };
     fixed._kcUserPost = true;
@@ -99,19 +163,17 @@
     if (kcDbPosts) return kcDbPosts;
 
     try {
-      // Preferir a fonte padrão do projeto
       if (KCAPI && typeof KCAPI.getDatabaseNormalized === 'function') {
         const db = await KCAPI.getDatabaseNormalized();
-        const posts = Array.isArray(db?.posts) ? db.posts : [];
+        const posts = Array.isArray(db && db.posts) ? db.posts : [];
         kcDbPosts = posts.map(normalizeAnyPost);
         return kcDbPosts;
       }
 
-      // Fallback direto no JSON
       const res = await fetch(DB_FALLBACK_URL, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const db = await res.json();
-      const list = Array.isArray(db?.anuncios) ? db.anuncios : [];
+      const list = Array.isArray(db && db.anuncios) ? db.anuncios : [];
       kcDbPosts = list.map(normalizeAnyPost);
       return kcDbPosts;
     } catch (err) {
@@ -124,7 +186,6 @@
   async function getAllPosts() {
     const db = await loadDbPosts();
     const user = getUserPostsRaw().map(normalizeUserPost);
-    // Usuário primeiro (melhor feedback de criação)
     return [...user, ...db];
   }
 
@@ -132,14 +193,14 @@
     const normalized = normalizeText(term);
     const expanded = [normalized];
 
-    for (const [key, values] of Object.entries(SYNONYMS)) {
-      const k = normalizeText(key);
-      const v = values.map((x) => normalizeText(x));
-      if (k === normalized || v.includes(normalized)) {
-        expanded.push(k);
-        expanded.push(...v);
+    Object.entries(SYNONYMS).forEach(([key, values]) => {
+      const normalizedKey = normalizeText(key);
+      const normalizedValues = values.map((item) => normalizeText(item));
+      if (normalizedKey === normalized || normalizedValues.includes(normalized)) {
+        expanded.push(normalizedKey);
+        expanded.push(...normalizedValues);
       }
-    }
+    });
 
     return [...new Set(expanded)].filter(Boolean);
   }
@@ -156,10 +217,9 @@
     } = options;
 
     const all = await getAllPosts();
-
     const normalizedQuery = normalizeText(q);
-    const queryTerms = normalizedQuery.split(/\s+/).filter((t) => t.length > 1);
-    const expandedTerms = queryTerms.flatMap((t) => expandSearchTerm(t));
+    const queryTerms = normalizedQuery.split(/\s+/).filter((item) => item.length > 1);
+    const expandedTerms = queryTerms.flatMap((item) => expandSearchTerm(item));
 
     const results = [];
 
@@ -168,21 +228,20 @@
       if (categoria && anuncio.categoria !== categoria) continue;
 
       let score = 0;
-
       const title = normalizeText(anuncio.titulo);
-      const desc = normalizeText(anuncio.descricao);
-      const tags = (Array.isArray(anuncio.tags) ? anuncio.tags : []).map((t) => normalizeText(t));
-      const cat = normalizeText(anuncio.categoria || anuncio.categoriaLabel || '');
-      const sub = normalizeText(anuncio.subcategoria || anuncio.subcategoriaLabel || '');
+      const description = normalizeText(anuncio.descricao);
+      const tags = (Array.isArray(anuncio.tags) ? anuncio.tags : []).map((item) => normalizeText(item));
+      const category = normalizeText(anuncio.categoria || anuncio.categoriaLabel || '');
+      const subcategory = normalizeText(anuncio.subcategoria || anuncio.subcategoriaLabel || '');
 
-      for (const term of expandedTerms) {
-        if (!term) continue;
+      expandedTerms.forEach((term) => {
+        if (!term) return;
         if (title.includes(term)) score += 0.5;
-        if (desc.includes(term)) score += 0.2;
-        if (tags.some((tg) => tg.includes(term) || term.includes(tg))) score += 0.3;
-      }
+        if (description.includes(term)) score += 0.2;
+        if (tags.some((tag) => tag.includes(term) || term.includes(tag))) score += 0.3;
+      });
 
-      if (cat.includes(normalizedQuery) || sub.includes(normalizedQuery)) score += 0.2;
+      if (category.includes(normalizedQuery) || subcategory.includes(normalizedQuery)) score += 0.2;
 
       if (score >= minScore) {
         results.push({ ...anuncio, relevanceScore: score });
@@ -193,7 +252,6 @@
     return results.slice(0, limit);
   }
 
-  // Filtrar cards já existentes na página (fallback em páginas sem kc-filters)
   function filterCurrentPageCards(query) {
     const cards = document.querySelectorAll('.kc-card');
     const q = String(query || '').trim();
@@ -203,30 +261,28 @@
     let visibleCount = 0;
 
     cards.forEach((card) => {
-      const title = card.querySelector('.kc-card__title')?.textContent || '';
-      const description = card.querySelector('.kc-card__description-preview')?.textContent || '';
-      const categorySource = card.querySelector('.kc-card__category-source')?.textContent || '';
+      const title = card.querySelector('.kc-card__title') ? card.querySelector('.kc-card__title').textContent : '';
+      const description = card.querySelector('.kc-card__description-preview') ? card.querySelector('.kc-card__description-preview').textContent : '';
+      const categorySource = card.querySelector('.kc-card__category-source') ? card.querySelector('.kc-card__category-source').textContent : '';
 
-      const nTitle = normalizeText(title);
-      const nDesc = normalizeText(description);
-      const nCat = normalizeText(categorySource);
+      const normalizedTitle = normalizeText(title);
+      const normalizedDescription = normalizeText(description);
+      const normalizedCategory = normalizeText(categorySource);
 
       let matches = false;
-
       if (!q) {
         matches = true;
       } else {
-        for (const term of expandedTerms) {
-          if (nTitle.includes(term) || nDesc.includes(term) || nCat.includes(term)) {
+        expandedTerms.forEach((term) => {
+          if (matches) return;
+          if (normalizedTitle.includes(term) || normalizedDescription.includes(term) || normalizedCategory.includes(term)) {
             matches = true;
-            break;
           }
-        }
+        });
       }
 
-      // manter layout original do card
       card.style.display = matches ? '' : 'none';
-      if (matches) visibleCount++;
+      if (matches) visibleCount += 1;
     });
 
     const noResults = document.getElementById('noResults');
@@ -235,33 +291,77 @@
     return visibleCount;
   }
 
-  // Registra busca na tabela search_queries (fire-and-forget, sem bloquear UX)
-  function trackSearch(term) {
+  async function insertTrackedTerms(entries) {
+    const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+      ? window.KCSupabase.getClient() : null;
+    if (!client || !entries || !entries.length) return false;
+
+    const storage = getSearchStorage();
+    const sessionId = getSearchSessionId(storage);
+    const userId = await getTrackedUserId();
+    const payload = entries.map((entry) => ({
+      term: entry.term,
+      session_id: sessionId,
+      user_id: userId
+    }));
+
     try {
-      const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
-        ? window.KCSupabase.getClient() : null;
-      if (!client) return;
-      // session_id anônimo para agrupar buscas da mesma sessão
-      let sid = '';
-      try { sid = sessionStorage.getItem('kc_sid') || ''; } catch (_) {}
-      if (!sid) {
-        sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
-        try { sessionStorage.setItem('kc_sid', sid); } catch (_) {}
-      }
-      // user_id opcional
-      let uid = null;
-      try {
-        if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-          // Não aguardamos — fire-and-forget assíncrono
-          window.KCAPI.getCurrentUser().then((u) => {
-            uid = u ? u.id : null;
-            client.from('search_queries').insert({ term, session_id: sid, user_id: uid }).then(() => {});
-          }).catch(() => {});
-          return;
-        }
-      } catch (_) {}
-      client.from('search_queries').insert({ term, session_id: sid, user_id: uid }).then(() => {}).catch(() => {});
-    } catch (_) {}
+      const res = await client.from('search_queries').insert(payload);
+      return !res.error;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function flushPendingTrackedSearches() {
+    if (!KCSearchAnalytics) return false;
+    const storage = getSearchStorage();
+    const pending = KCSearchAnalytics.consumeQueuedTerms(storage, TRACK_BATCH_SIZE);
+    if (!pending.length) return true;
+
+    const ok = await insertTrackedTerms(pending);
+    if (ok) {
+      KCSearchAnalytics.markTermsFlushed(storage, pending, Date.now());
+      const remaining = KCSearchAnalytics.consumeQueuedTerms(storage, TRACK_BATCH_SIZE);
+      if (remaining.length) scheduleTrackedSearchFlush(80);
+    }
+    return ok;
+  }
+
+  function scheduleTrackedSearchFlush(delay = 120) {
+    if (searchFlushTimer) clearTimeout(searchFlushTimer);
+    searchFlushTimer = setTimeout(() => {
+      flushPendingTrackedSearches().catch(() => {});
+    }, delay);
+  }
+
+  function trackSearch(term, meta = {}) {
+    const q = String(term || '').replace(/\s+/g, ' ').trim();
+    if (!q || q.length < 2) return false;
+
+    if (!KCSearchAnalytics) {
+      insertTrackedTerms([{ term: q }]).catch(() => {});
+      return true;
+    }
+
+    const entry = KCSearchAnalytics.queueSearchTerm(
+      getSearchStorage(),
+      q,
+      meta,
+      Date.now(),
+      KCSearchAnalytics.DEFAULT_DEDUPE_WINDOW_MS
+    );
+
+    if (!entry) return false;
+    scheduleTrackedSearchFlush(meta && meta.navigate ? 220 : 60);
+    return true;
+  }
+
+  function navigateToResults(query, meta = {}) {
+    const q = String(query || '').trim();
+    if (!q) return;
+    trackSearch(q, { ...meta, navigate: true });
+    window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
   }
 
   function globalSearch(query, redirectToResults = false) {
@@ -269,13 +369,10 @@
     if (!q) return;
 
     if (redirectToResults) {
-      // trackSearch() is NOT called here — it's called on search-results.html load
-      // to avoid the async insert being aborted by the page navigation.
-      window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
+      navigateToResults(q, { source: 'global-search' });
       return;
     }
 
-    // Se existir filtro da página (kc-filters), use-o; senão, fallback local
     if (typeof window.filterPosts === 'function') {
       window.filterPosts(q);
     } else {
@@ -289,31 +386,28 @@
   }
 
   function buildResultCard(raw) {
-    // Resultado deve manter o texto "Por [Autor]" na UX
     const post = normalizeAnyPost(raw);
     const modeled = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
       ? window.KCPostModel.from(post, {})
       : post;
-    // Ajuste de UX para resultados: manter texto "Por [Autor]"
+
     modeled._kcAuthorPrefix = 'Por';
     modeled._kcCompactComments = true;
-
 
     if (KCUtils && typeof KCUtils.renderPostCard === 'function') {
       return KCUtils.renderPostCard(modeled);
     }
 
-    // Fallback mínimo (não deveria acontecer)
     const href = `product.html?id=${encodeURIComponent(post.id ?? '')}`;
     return `
       <article class="kc-card">
         <div class="kc-card__main">
-          <div class="kc-card__image-wrapper" style="font-size: 3em; display:flex; align-items:center; justify-content:center;">${escape(post.emoji || '✨')}</div>
+          <div class="kc-card__image-wrapper" style="font-size: 3em; display:flex; align-items:center; justify-content:center;">${escapeHtml(post.emoji || '✨')}</div>
           <div class="kc-card__content">
-            <div class="kc-card__header"><div class="kc-card__category-source">${escape(post.modulo || '')}</div><div class="kc-card__timestamp">${escape(post.timestamp || '')}</div></div>
-            <a class="kc-card__title" href="${href}">${escape(post.titulo || '')}</a>
-            <div class="kc-card__description-preview">${escape(post.descricao || '')}</div>
-            <div class="kc-card__author"><span>Por <strong>${escape(post.autor || 'Autor')}</strong></span></div>
+            <div class="kc-card__header"><div class="kc-card__category-source">${escapeHtml(post.modulo || '')}</div><div class="kc-card__timestamp">${escapeHtml(post.timestamp || '')}</div></div>
+            <a class="kc-card__title" href="${href}">${escapeHtml(post.titulo || '')}</a>
+            <div class="kc-card__description-preview">${escapeHtml(post.descricao || '')}</div>
+            <div class="kc-card__author"><span>Por <strong>${escapeHtml(post.autor || 'Autor')}</strong></span></div>
           </div>
         </div>
       </article>
@@ -325,13 +419,11 @@
     if (!listEl) return;
 
     const q = String(query || '').trim();
-
     const titleEl = document.getElementById('searchQueryText');
-    // Anti-XSS: nunca usar innerHTML para o termo pesquisado
-    if (titleEl) titleEl.textContent = q ? `“${q}”` : '';
-
     const noEl = document.getElementById('noResults');
     const countEl = document.getElementById('resultsCount');
+
+    if (titleEl) titleEl.textContent = q ? `“${q}”` : '';
 
     if (!q) {
       listEl.innerHTML = '';
@@ -340,7 +432,6 @@
       return;
     }
 
-    // Filtros opcionais via URL (mantém extensibilidade e paridade com feeds)
     const moduleParam = getQueryParam('module') || getQueryParam('modulo');
     const categoryParam = getQueryParam('category') || getQueryParam('categoria');
     const subcategoryParam = getQueryParam('subcategory') || getQueryParam('subcategoria');
@@ -354,25 +445,19 @@
         if (subcategoryParam) params.subcategory = subcategoryParam;
         results = await KCAPI.getPosts(params);
       } else {
-        // Fallback extremo (bundle incompleto)
         results = await searchPosts(q, { limit: 50, minScore: 0.2 });
       }
-    } catch (e) {
-      console.error('[KinoCampus] Busca falhou:', e);
+    } catch (error) {
+      console.error('[KinoCampus] Busca falhou:', error);
       results = [];
     }
 
     const safeResults = Array.isArray(results) ? results : [];
     listEl.innerHTML = safeResults.map(buildResultCard).join('\n');
 
-    const len = safeResults.length;
-    if (noEl) noEl.style.display = len ? 'none' : 'block';
-    if (countEl) countEl.textContent = String(len);
+    if (noEl) noEl.style.display = safeResults.length ? 'none' : 'block';
+    if (countEl) countEl.textContent = String(safeResults.length);
   }
-
-  // ─── Dropdown de sugestões em tempo real (V8.2.3) ──────────────────────────
-
-  let dropdownDebounceTimer = null;
 
   function getOrCreateDropdown() {
     let dropdown = document.getElementById('kcSearchDropdown');
@@ -381,8 +466,7 @@
       dropdown.id = 'kcSearchDropdown';
       dropdown.className = 'kc-search-dropdown';
       dropdown.setAttribute('role', 'listbox');
-      dropdown.setAttribute('aria-label', 'Sugestões de busca');
-      // Append to body to escape any stacking context (e.g. sticky header + kc-feed-tabs)
+      dropdown.setAttribute('aria-label', 'Sugestoes de busca');
       document.body.appendChild(dropdown);
     }
     return dropdown;
@@ -393,11 +477,9 @@
     const rect = searchBarEl.getBoundingClientRect();
     const vw = window.innerWidth || document.documentElement.clientWidth;
 
-    // Use search bar width, but at least 280px, and fit within viewport
     let width = Math.max(rect.width, 280);
     let left = rect.left;
 
-    // Clamp so dropdown doesn't overflow right edge
     if (left + width > vw - 8) left = Math.max(8, vw - width - 8);
     if (left < 8) left = 8;
     if (width > vw - 16) width = vw - 16;
@@ -409,14 +491,13 @@
 
   function formatPrice(post) {
     if (post.precoTexto) return post.precoTexto;
-    if (post.preco === 0 || post.preco === '0') return 'Grátis';
+    if (post.preco === 0 || post.preco === '0') return 'Gratis';
     if (post.preco) return `R$ ${Number(post.preco).toFixed(2).replace('.', ',')}`;
     return '';
   }
 
   function getPostHref(post) {
-    if (post.id) return `product.html?id=${encodeURIComponent(post.id)}`;
-    return '#';
+    return post && post.id ? `product.html?id=${encodeURIComponent(post.id)}` : '#';
   }
 
   function renderDropdown(dropdown, results, query) {
@@ -431,14 +512,16 @@
       return;
     }
 
-    const maxItems = 6;
-    const shown = results.slice(0, maxItems);
+    const shown = results.slice(0, 6);
 
     shown.forEach((post) => {
       const item = document.createElement('a');
       item.className = 'kc-search-dropdown__item';
       item.href = getPostHref(post);
       item.setAttribute('role', 'option');
+      item.addEventListener('click', () => {
+        trackSearch(query, { source: 'dropdown-item' });
+      });
 
       const emoji = document.createElement('span');
       emoji.className = 'kc-search-dropdown__emoji';
@@ -449,7 +532,7 @@
 
       const title = document.createElement('div');
       title.className = 'kc-search-dropdown__title';
-      title.textContent = post.titulo || '(sem título)';
+      title.textContent = post.titulo || '(sem titulo)';
 
       const meta = document.createElement('div');
       meta.className = 'kc-search-dropdown__meta';
@@ -460,28 +543,26 @@
       info.appendChild(title);
       info.appendChild(meta);
 
+      item.appendChild(emoji);
+      item.appendChild(info);
+
       const priceStr = formatPrice(post);
       if (priceStr) {
         const price = document.createElement('span');
         price.className = 'kc-search-dropdown__price';
         price.textContent = priceStr;
-        item.appendChild(emoji);
-        item.appendChild(info);
         item.appendChild(price);
-      } else {
-        item.appendChild(emoji);
-        item.appendChild(info);
       }
 
       dropdown.appendChild(item);
     });
 
-    if (results.length > maxItems) {
+    if (results.length > shown.length) {
       const footer = document.createElement('div');
       footer.className = 'kc-search-dropdown__footer';
       footer.textContent = `Ver todos os ${results.length} resultados →`;
       footer.addEventListener('click', () => {
-        window.location.href = `search-results.html?q=${encodeURIComponent(query)}`;
+        navigateToResults(query, { source: 'dropdown-footer' });
       });
       dropdown.appendChild(footer);
     }
@@ -500,9 +581,9 @@
       closeDropdown();
       return;
     }
+
     try {
-      let results;
-      // Prefer live Supabase data via KCAPI.getPosts; fallback to local search
+      let results = [];
       if (KCAPI && typeof KCAPI.getPosts === 'function') {
         results = await KCAPI.getPosts({ q, limit: 8, page: 1 });
       } else {
@@ -516,43 +597,42 @@
     }
   }
 
-  // ─── initSearch ─────────────────────────────────────────────────────────────
+  function bindSearchFlushLifecycle() {
+    scheduleTrackedSearchFlush(0);
+    window.addEventListener('online', () => scheduleTrackedSearchFlush(0));
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        scheduleTrackedSearchFlush(0);
+      }
+    });
+  }
 
   function initSearch() {
     const searchInput = document.getElementById('searchInput');
     const searchBarEl = searchInput ? searchInput.closest('.kc-search-bar') : null;
     const searchButton = document.querySelector('.kc-search-bar button');
     const resultsPage = isResultsPage();
-
-    // Se a página tem kc-filters, respeitar a função padrão (tab-search)
     const hasPageFilter = (!resultsPage) && (typeof window.filterPosts === 'function');
-
-    // Dropdown de sugestões (apenas fora da página de resultados)
     const dropdown = (!resultsPage && searchBarEl) ? getOrCreateDropdown() : null;
 
-    // Não pré-carregamos o seed (database.json) aqui: em driver supabase evita download desnecessário.
+    bindSearchFlushLifecycle();
 
-    // Se estiver na página de resultados, renderizar ao carregar e registrar busca
     if (resultsPage) {
       const qParam = getQueryParam('q');
       if (searchInput && qParam) searchInput.value = qParam;
       renderResultsToPage(searchInput ? searchInput.value : qParam);
-      // Track here (not in globalSearch) so the insert completes after page load,
-      // avoiding abort caused by navigation before the async request finishes.
       if (qParam && qParam.trim().length >= 2) {
-        trackSearch(qParam.trim());
+        trackSearch(qParam.trim(), { source: 'results-load' });
       }
     }
 
-    // Fechar dropdown ao clicar fora (dropdown está no body, checar ambos)
     if (dropdown) {
-      document.addEventListener('click', function (e) {
-        const isInsideBar = searchBarEl && searchBarEl.contains(e.target);
-        const isInsideDropdown = dropdown.contains(e.target);
-        if (!isInsideBar && !isInsideDropdown) closeDropdown();
+      document.addEventListener('click', function (event) {
+        const insideBar = searchBarEl && searchBarEl.contains(event.target);
+        const insideDropdown = dropdown.contains(event.target);
+        if (!insideBar && !insideDropdown) closeDropdown();
       }, true);
 
-      // Reposicionar ao redimensionar a janela
       window.addEventListener('resize', function () {
         if (dropdown.classList.contains('active')) {
           positionDropdown(dropdown, searchBarEl);
@@ -560,46 +640,51 @@
       });
     }
 
-    // Input de busca
     if (searchInput) {
-      searchInput.addEventListener('input', function (e) {
-        const q = e.target.value;
+      searchInput.addEventListener('input', function (event) {
+        const q = event.target.value;
 
         if (resultsPage) {
           renderResultsToPage(q);
           return;
         }
+
         if (hasPageFilter) {
           window.filterPosts(q);
         } else {
           filterCurrentPageCards(q);
         }
 
-        // Atualizar dropdown com debounce
         if (dropdown) {
           clearTimeout(dropdownDebounceTimer);
           dropdownDebounceTimer = setTimeout(() => updateDropdown(q, dropdown, searchBarEl), 180);
         }
       });
 
-      searchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
+      searchInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
           closeDropdown();
           return;
         }
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
+        if (event.key !== 'Enter') return;
+
+        event.preventDefault();
         closeDropdown();
         const q = this.value;
+
         if (resultsPage) {
+          trackSearch(q, { source: 'results-submit' });
           renderResultsToPage(q);
           return;
         }
+
         if (hasPageFilter) {
+          trackSearch(q, { source: 'page-filter-submit' });
           window.filterPosts(q);
           return;
         }
-        globalSearch(q, true);
+
+        navigateToResults(q, { source: 'search-enter' });
       });
 
       searchInput.addEventListener('focus', function () {
@@ -610,30 +695,45 @@
     }
 
     if (searchButton) {
-      searchButton.addEventListener('click', function (e) {
-        e.preventDefault();
+      searchButton.addEventListener('click', function (event) {
+        event.preventDefault();
         closeDropdown();
         const q = searchInput ? searchInput.value : '';
+
         if (resultsPage) {
+          trackSearch(q, { source: 'results-submit' });
           renderResultsToPage(q);
           return;
         }
+
         if (hasPageFilter) {
+          trackSearch(q, { source: 'page-filter-submit' });
           window.filterPosts(q);
           return;
         }
-        globalSearch(q, true);
+
+        navigateToResults(q, { source: 'search-button' });
       });
     }
   }
 
   document.addEventListener('DOMContentLoaded', initSearch);
 
-  // Exportar API pública (mantém compat com chamadas existentes)
   window.kcSearch = {
     search: (q, opts) => searchPosts(q, opts),
     filter: filterCurrentPageCards,
     globalSearch,
-    loadDatabase: loadDbPosts
+    loadDatabase: loadDbPosts,
+    navigateToResults,
+    track: trackSearch,
+    flushPending: flushPendingTrackedSearches,
+    __internals: {
+      flushPendingTrackedSearches,
+      getSearchSessionId,
+      getSearchStorage,
+      insertTrackedTerms,
+      navigateToResults,
+      trackSearch
+    }
   };
 })();

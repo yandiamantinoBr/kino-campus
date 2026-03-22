@@ -5,10 +5,20 @@
   let _data = null;
   let _auditOffset = 0;
   var AUDIT_PAGE_SIZE = 20;
+  var _exportBound = false;
 
   /* ── Cache de atores (actor_id → display info) ── */
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var _actorsById = {};
+  var DashboardUtils = window.KCAdminDashboardUtils || {};
+  var SERIES_META = [
+    { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group' },
+    { key: 'comments_count', label: 'Comentarios', color: '#0ea5e9', icon: 'fas fa-comment' },
+    { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass' },
+    { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up' },
+    { key: 'admin_actions_count', label: 'Acoes admin', color: '#f97316', icon: 'fas fa-shield-halved' }
+  ];
+  var SERIES_KEYS = SERIES_META.map(function (series) { return series.key; });
 
   function $(sel, root) { return (root || document).querySelector(sel); }
 
@@ -21,6 +31,48 @@
     if (!error) return false;
     const message = String(error.message || error.details || error.hint || '').toLowerCase();
     return message.includes('permission') || message.includes('row-level security') || message.includes('rls');
+  }
+
+  function isFunctionMissing(error) {
+    if (!error) return false;
+    var code = String(error.code || '');
+    var message = String(error.message || error.details || error.hint || '').toLowerCase();
+    return code === '42883' || (message.includes('function') && message.includes('does not exist'));
+  }
+
+  function isFunctionAmbiguityError(error) {
+    if (!error) return false;
+    var code = String(error.code || '');
+    var msg = String(error.message || error.hint || '').toLowerCase();
+    return code === '42725' || msg.includes('is not unique') || msg.includes('ambiguous');
+  }
+
+  function toNumber(value) {
+    var parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function stabilizeHeaderActions() {
+    var userActions = document.querySelector('.kc-header--admin .kc-user-actions');
+    if (userActions) {
+      userActions.style.visibility = 'visible';
+      userActions.style.opacity = '1';
+      userActions.style.pointerEvents = 'auto';
+    }
+
+    var themeToggle = document.querySelector('.kc-header--admin .theme-toggle');
+    if (themeToggle) {
+      themeToggle.style.visibility = 'visible';
+      themeToggle.style.opacity = '1';
+      themeToggle.disabled = false;
+    }
+
+    var loginBtn = document.querySelector('.kc-header--admin .btn-login');
+    if (loginBtn) {
+      loginBtn.style.visibility = 'visible';
+      loginBtn.style.opacity = '1';
+      loginBtn.style.pointerEvents = 'auto';
+    }
   }
 
   function showError(message) {
@@ -141,6 +193,24 @@
     if (days === 7) return '7d';
     if (days === 365) return 'ano';
     return days + 'd';
+  }
+
+  function updateTitles(days) {
+    var fullLabel = getPeriodLabel(days);
+    var titles = [
+      ['#admin-moderation-title', '<i class="fas fa-shield-halved"></i> Moderacao (' + fullLabel + ')'],
+      ['#admin-activity-title', '<i class="fas fa-chart-bar"></i> Atividade da plataforma (' + fullLabel + ')'],
+      ['#admin-community-title', '<i class="fas fa-users"></i> Comunidade (' + fullLabel + ')'],
+      ['#admin-trends-title', '<i class="fas fa-magnifying-glass-chart"></i> Tendencias de busca (' + fullLabel + ')'],
+      ['#admin-audit-title', '<i class="fas fa-clock-rotate-left"></i> Audit log (' + fullLabel + ')'],
+      ['#admin-activity-pulse-title', '<i class="fas fa-wave-square"></i> Pulso diario (' + fullLabel + ')'],
+      ['#admin-module-share-title', '<i class="fas fa-table-cells"></i> Top modulos (' + fullLabel + ')']
+    ];
+
+    titles.forEach(function (entry) {
+      var el = $(entry[0]);
+      if (el) el.innerHTML = entry[1];
+    });
   }
 
   // ── Normalização e agrupamento de termos de busca ─────────────────────────
@@ -510,43 +580,118 @@
 
   // ── Audit log ─────────────────────────────────────────────────────────────
   async function loadAuditLog(client, limit, offset, actionFilter, since) {
-    limit  = limit  || AUDIT_PAGE_SIZE;
+    limit = limit || AUDIT_PAGE_SIZE;
     offset = offset || 0;
+
+    function filterRows(rows) {
+      var sinceMs = since ? new Date(since).getTime() : 0;
+      return (rows || []).filter(function (row) {
+        if (!row) return false;
+        if (actionFilter && actionFilter !== 'all' && row.action !== actionFilter) return false;
+        if (sinceMs && row.created_at && new Date(row.created_at).getTime() < sinceMs) return false;
+        return true;
+      });
+    }
+
     try {
       var query = client.from('audit_log')
         .select('created_at, action, entity_type, actor_id')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
-      if (actionFilter && actionFilter !== 'all') {
-        query = query.eq('action', actionFilter);
-      }
-      if (since) {
-        query = query.gte('created_at', since);
-      }
+      if (actionFilter && actionFilter !== 'all') query = query.eq('action', actionFilter);
+      if (since) query = query.gte('created_at', since);
 
-      const res = await query;
+      var res = await query;
       if (!res.error) return Array.isArray(res.data) ? res.data : [];
-
-      if (isPermissionError(res.error)) {
-        const rpc = await client.rpc('kc_admin_list_audit_logs', {
-          p_entity_type: 'all',
-          p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
-          p_actor_query: null,
-          p_limit: limit,
-        });
-        if (!rpc.error && Array.isArray(rpc.data)) return rpc.data;
+      if (!isPermissionError(res.error)) {
+        console.warn('[Admin audit] Direct query failed:', res.error.message || res.error);
       }
-    } catch (_) {}
+    } catch (error) {
+      console.warn('[Admin audit] Direct query exception:', error && error.message ? error.message : error);
+    }
+
+    try {
+      var rpc = await client.rpc('kc_admin_list_audit_logs', {
+        p_entity_type: 'all',
+        p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
+        p_actor_query: null,
+        p_limit: limit,
+        p_offset: offset,
+        p_since: since || null
+      });
+      if (!rpc.error && Array.isArray(rpc.data)) return rpc.data;
+      if (!(isFunctionMissing(rpc.error) || isFunctionAmbiguityError(rpc.error))) {
+        console.warn('[Admin audit] New RPC failed:', rpc.error && (rpc.error.message || rpc.error));
+      }
+    } catch (error2) {
+      console.warn('[Admin audit] New RPC exception:', error2 && error2.message ? error2.message : error2);
+    }
+
+    try {
+      var legacyRpc = await client.rpc('kc_admin_list_audit_logs', {
+        p_entity_type: 'all',
+        p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
+        p_actor_query: null,
+        p_limit: Math.max(limit + offset, 150)
+      });
+      if (!legacyRpc.error && Array.isArray(legacyRpc.data)) {
+        return filterRows(legacyRpc.data).slice(offset, offset + limit);
+      }
+      if (legacyRpc.error) {
+        console.warn('[Admin audit] Legacy RPC failed:', legacyRpc.error.message || legacyRpc.error);
+      }
+    } catch (error3) {
+      console.warn('[Admin audit] Legacy RPC exception:', error3 && error3.message ? error3.message : error3);
+    }
+
     return [];
   }
 
   // Detecta se o erro é ambiguidade de sobrecarga de função (42725)
-  function isFunctionAmbiguityError(error) {
-    if (!error) return false;
-    var code = String(error.code || '');
-    var msg  = String(error.message || error.hint || '').toLowerCase();
-    return code === '42725' || msg.includes('is not unique') || msg.includes('ambiguous');
+  async function loadAuditEventRows(client, since) {
+    try {
+      var query = client.from('audit_log')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1500);
+      if (since) query = query.gte('created_at', since);
+      var res = await query;
+      if (!res.error && Array.isArray(res.data)) return res.data;
+    } catch (_) {}
+
+    try {
+      var rpc = await client.rpc('kc_admin_list_audit_logs', {
+        p_entity_type: 'all',
+        p_action: 'all',
+        p_actor_query: null,
+        p_limit: 1500,
+        p_offset: 0,
+        p_since: since || null
+      });
+      if (!rpc.error && Array.isArray(rpc.data)) {
+        return rpc.data.map(function (row) { return { created_at: row.created_at }; });
+      }
+    } catch (_) {}
+
+    try {
+      var legacy = await client.rpc('kc_admin_list_audit_logs', {
+        p_entity_type: 'all',
+        p_action: 'all',
+        p_actor_query: null,
+        p_limit: 1500
+      });
+      if (!legacy.error && Array.isArray(legacy.data)) {
+        var sinceMs = since ? new Date(since).getTime() : 0;
+        return legacy.data.filter(function (row) {
+          return !sinceMs || (row.created_at && new Date(row.created_at).getTime() >= sinceMs);
+        }).map(function (row) {
+          return { created_at: row.created_at };
+        });
+      }
+    } catch (_) {}
+
+    return [];
   }
 
   // ── Tendências de busca (com timeout, fallback robusto e filtro de período) ──
@@ -663,6 +808,178 @@
     renderSearchTrendsByModule(trends, periodDays);
   }
 
+  async function queryCreatedAtRows(client, tableName, since, limit) {
+    try {
+      var query = client.from(tableName)
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(limit || 1500);
+      if (since) query = query.gte('created_at', since);
+      var res = await query;
+      if (!res.error && Array.isArray(res.data)) return res.data;
+    } catch (_) {}
+    return [];
+  }
+
+  async function loadDailyMetrics(client, since) {
+    var until = new Date().toISOString();
+    try {
+      var rpc = await client.rpc('kc_admin_dashboard_daily_metrics', {
+        p_since: since || null
+      });
+      if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length) {
+        if (DashboardUtils.buildDailyMetricsSeries) {
+          return DashboardUtils.buildDailyMetricsSeries(rpc.data, since, until);
+        }
+        return rpc.data;
+      }
+      if (rpc.error && !(isFunctionMissing(rpc.error) || isFunctionAmbiguityError(rpc.error))) {
+        console.warn('[Admin daily metrics] RPC failed:', rpc.error.message || rpc.error);
+      }
+    } catch (error) {
+      console.warn('[Admin daily metrics] RPC exception:', error && error.message ? error.message : error);
+    }
+
+    var eventSets = await Promise.all([
+      queryCreatedAtRows(client, 'posts', since, 1500),
+      queryCreatedAtRows(client, 'comments', since, 1500),
+      queryCreatedAtRows(client, 'search_queries', since, 1500),
+      queryCreatedAtRows(client, 'post_votes', since, 1500),
+      loadAuditEventRows(client, since)
+    ]);
+
+    if (DashboardUtils.buildDailyMetricsFromEventSets) {
+      return DashboardUtils.buildDailyMetricsFromEventSets({
+        posts: eventSets[0],
+        comments: eventSets[1],
+        searches: eventSets[2],
+        votes: eventSets[3],
+        admin_actions: eventSets[4]
+      }, since, until);
+    }
+
+    return [];
+  }
+
+  function renderDailyActivitySummary(summary) {
+    var container = $('#admin-daily-activity-summary');
+    if (!container) return;
+    if (!summary) {
+      container.innerHTML = '<div class="kc-admin-empty">Sem dados diarios para resumir.</div>';
+      return;
+    }
+
+    var peakLabel = summary.peakDay && summary.peakDay.label ? summary.peakDay.label : '--';
+    container.innerHTML = [
+      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Pico diario</span><strong>' + toNumber(summary.peakTotal) + '</strong><small>' + escHtmlAdmin(peakLabel) + '</small></div>',
+      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Media diaria</span><strong>' + escHtmlAdmin(String(summary.averageTotal || 0)) + '</strong><small>Eventos consolidados</small></div>',
+      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Ultimo dia</span><strong>' + toNumber(summary.lastDayTotal) + '</strong><small>Volume mais recente</small></div>',
+      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Total de buscas</span><strong>' + toNumber(summary.totals && summary.totals.searches_count) + '</strong><small>Demanda registrada</small></div>'
+    ].join('');
+  }
+
+  function buildSeriesPath(series, key, maxValue, width, height, padding) {
+    var points = [];
+    var innerWidth = width - (padding * 2);
+    var innerHeight = height - (padding * 2);
+    var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
+    var safeMax = Math.max(maxValue || 0, 1);
+
+    series.forEach(function (row, index) {
+      var value = toNumber(row[key]);
+      var x = padding + (step * index);
+      var y = padding + innerHeight - ((value / safeMax) * innerHeight);
+      points.push((index === 0 ? 'M' : 'L') + x.toFixed(2) + ' ' + y.toFixed(2));
+    });
+
+    return points.join(' ');
+  }
+
+  function renderDailyActivityChart(series) {
+    var chart = $('#admin-daily-activity-chart');
+    var legend = $('#admin-daily-activity-legend');
+    if (!chart || !legend) return;
+
+    if (!Array.isArray(series) || !series.length) {
+      chart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o grafico diario.</div>';
+      legend.innerHTML = '';
+      return;
+    }
+
+    var width = 320;
+    var height = 180;
+    var padding = 18;
+    var maxValue = 0;
+
+    series.forEach(function (row) {
+      SERIES_KEYS.forEach(function (key) {
+        maxValue = Math.max(maxValue, toNumber(row[key]));
+      });
+    });
+
+    var grid = [0.25, 0.5, 0.75, 1].map(function (ratio) {
+      var y = padding + ((height - (padding * 2)) * (1 - ratio));
+      return '<line x1="' + padding + '" y1="' + y.toFixed(2) + '" x2="' + (width - padding) + '" y2="' + y.toFixed(2) + '" stroke="rgba(148,163,184,.24)" stroke-dasharray="4 4" />';
+    }).join('');
+
+    var labels = series.map(function (row, index) {
+      if (series.length > 10 && index % 2 === 1 && index !== series.length - 1) return '';
+      var innerWidth = width - (padding * 2);
+      var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
+      var x = padding + (step * index);
+      return '<text x="' + x.toFixed(2) + '" y="' + (height - 4) + '" text-anchor="middle" fill="var(--kc-text-dark-secondary)" font-size="9">' + escHtmlAdmin(row.label || '') + '</text>';
+    }).join('');
+
+    var lines = SERIES_META.map(function (meta) {
+      return '<path d="' + buildSeriesPath(series, meta.key, maxValue, width, height, padding) + '" fill="none" stroke="' + meta.color + '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>';
+    }).join('');
+
+    chart.innerHTML = '<svg class="kc-admin-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Grafico diario de atividade">' +
+      grid + lines + labels + '</svg>';
+
+    legend.innerHTML = SERIES_META.map(function (meta) {
+      var total = series.reduce(function (sum, row) { return sum + toNumber(row[meta.key]); }, 0);
+      return '<span class="kc-admin-chart-legend__item"><span class="kc-admin-chart-legend__dot" style="background:' + meta.color + ';"></span><i class="' + meta.icon + '"></i> ' + escHtmlAdmin(meta.label) + ' <strong>' + total + '</strong></span>';
+    }).join('');
+  }
+
+  function renderModuleShareTable(rows) {
+    var container = $('#admin-module-share-table');
+    if (!container) return;
+    if (!Array.isArray(rows) || !rows.length) {
+      container.innerHTML = '<div class="kc-admin-empty">Sem buscas suficientes para calcular participacao por modulo.</div>';
+      return;
+    }
+
+    container.innerHTML = '<table><thead><tr><th>Modulo</th><th>Share</th><th>Volume</th></tr></thead><tbody>' +
+      rows.map(function (row) {
+        var topTerms = Array.isArray(row.topTerms) && row.topTerms.length ? row.topTerms.join(', ') : 'Sem termos associados';
+        return '<tr>' +
+          '<td><span style="display:inline-flex;align-items:center;gap:8px;"><i class="' + escHtmlAdmin(row.icon || 'fas fa-tag') + '"></i> ' + escHtmlAdmin(row.label || row.module || 'Modulo') + '</span><div style="margin-top:4px;font-size:.76rem;color:var(--kc-text-dark-secondary);">' + escHtmlAdmin(topTerms) + '</div></td>' +
+          '<td>' + escHtmlAdmin(String(row.share || 0)) + '%</td>' +
+          '<td>' + toNumber(row.count) + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  function renderOperationalAlerts(alerts) {
+    var container = $('#admin-operational-alerts');
+    if (!container) return;
+    if (!Array.isArray(alerts) || !alerts.length) {
+      container.innerHTML = '<li class="kc-admin-empty">Nenhum alerta operacional no momento.</li>';
+      return;
+    }
+
+    container.innerHTML = alerts.map(function (alert) {
+      var toneClass = alert && alert.tone ? 'kc-admin-alert--' + alert.tone : 'kc-admin-alert--neutral';
+      return '<li class="kc-admin-alert ' + toneClass + '">' +
+        '<strong>' + escHtmlAdmin(alert.title || 'Atualizacao') + '</strong>' +
+        '<p>' + escHtmlAdmin(alert.body || '') + '</p>' +
+        '</li>';
+    }).join('');
+  }
+
   function auditActionBadge(action) {
     var a = String(action || '').toLowerCase();
     var cls = 'kc-audit-badge--default';
@@ -678,6 +995,11 @@
   function renderAuditRows(rows, append) {
     const auditBody = $('#admin-audit-body');
     if (!auditBody) return;
+    if (append && (!rows || !rows.length)) {
+      var emptyMoreBtn = $('#admin-audit-load-more');
+      if (emptyMoreBtn) emptyMoreBtn.style.display = 'none';
+      return;
+    }
     var html = rows.length
       ? rows.map(function(row) {
           var dateStr = row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '—';
@@ -780,6 +1102,48 @@
     window.XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard');
 
     // Tendências de busca
+    if (data.dailySummary) {
+      renderSection('PULSO DIARIO (' + periodLabel + ')', [
+        ['Pico diario', toNumber(data.dailySummary.peakTotal)],
+        ['Media diaria', data.dailySummary.averageTotal || 0],
+        ['Ultimo dia', toNumber(data.dailySummary.lastDayTotal)],
+        ['Buscas no periodo', toNumber(data.dailySummary.totals && data.dailySummary.totals.searches_count)]
+      ]);
+    }
+
+    if (data.moduleShareRows && data.moduleShareRows.length) {
+      checkPage();
+      doc.setFontSize(11);
+      doc.setTextColor(40, 40, 40);
+      doc.text('TOP MODULOS POR DEMANDA', marginL, y); y += 5;
+      doc.line(marginL, y, 196, y); y += 5;
+      doc.setFontSize(9);
+      data.moduleShareRows.slice(0, 6).forEach(function (row) {
+        checkPage();
+        var terms = Array.isArray(row.topTerms) && row.topTerms.length ? ' | ' + row.topTerms.join(', ') : '';
+        doc.setTextColor(70, 70, 70);
+        doc.text((row.label || row.module || 'Modulo') + ' - ' + (row.share || 0) + '% - ' + toNumber(row.count) + terms, marginL + 2, y);
+        y += 5;
+      });
+      y += 4;
+    }
+
+    if (data.alerts && data.alerts.length) {
+      checkPage();
+      doc.setFontSize(11);
+      doc.setTextColor(40, 40, 40);
+      doc.text('ALERTAS OPERACIONAIS', marginL, y); y += 5;
+      doc.line(marginL, y, 196, y); y += 5;
+      doc.setFontSize(9);
+      data.alerts.forEach(function (alert) {
+        checkPage();
+        doc.setTextColor(70, 70, 70);
+        doc.text((alert.title || 'Atualizacao') + ': ' + (alert.body || ''), marginL + 2, y);
+        y += 5;
+      });
+      y += 4;
+    }
+
     if (data.trends && data.trends.length) {
       const trendRows = [
         ['Termo', 'Buscas', 'Módulo'],
@@ -791,6 +1155,55 @@
       const ws2 = window.XLSX.utils.aoa_to_sheet(trendRows);
       ws2['!cols'] = [{ wch: 24 }, { wch: 10 }, { wch: 20 }];
       window.XLSX.utils.book_append_sheet(wb, ws2, 'Tendências');
+    }
+
+    if (data.dailyMetrics && data.dailyMetrics.length) {
+      const dailyRows = [
+        ['Dia', 'Posts', 'Comentarios', 'Buscas', 'Votos', 'Acoes admin', 'Total'],
+        ...data.dailyMetrics.map(function (row) {
+          return [
+            row.day || '',
+            toNumber(row.posts_count),
+            toNumber(row.comments_count),
+            toNumber(row.searches_count),
+            toNumber(row.votes_count),
+            toNumber(row.admin_actions_count),
+            toNumber(row.total_count)
+          ];
+        })
+      ];
+      const wsDaily = window.XLSX.utils.aoa_to_sheet(dailyRows);
+      wsDaily['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }];
+      window.XLSX.utils.book_append_sheet(wb, wsDaily, 'Pulso Diario');
+    }
+
+    if (data.moduleShareRows && data.moduleShareRows.length) {
+      const moduleRows = [
+        ['Modulo', 'Share (%)', 'Volume', 'Top termos'],
+        ...data.moduleShareRows.map(function (row) {
+          return [
+            row.label || row.module || '',
+            row.share || 0,
+            toNumber(row.count),
+            Array.isArray(row.topTerms) ? row.topTerms.join(', ') : ''
+          ];
+        })
+      ];
+      const wsModules = window.XLSX.utils.aoa_to_sheet(moduleRows);
+      wsModules['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 40 }];
+      window.XLSX.utils.book_append_sheet(wb, wsModules, 'Top Modulos');
+    }
+
+    if (data.alerts && data.alerts.length) {
+      const alertRows = [
+        ['Tom', 'Titulo', 'Descricao'],
+        ...data.alerts.map(function (alert) {
+          return [alert.tone || 'neutral', alert.title || '', alert.body || ''];
+        })
+      ];
+      const wsAlerts = window.XLSX.utils.aoa_to_sheet(alertRows);
+      wsAlerts['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 60 }];
+      window.XLSX.utils.book_append_sheet(wb, wsAlerts, 'Alertas');
     }
 
     // Audit log
@@ -933,6 +1346,10 @@
   function enableExport() {
     const xlsxBtn = $('#admin-export-xlsx');
     const pdfBtn  = $('#admin-export-pdf');
+    if (xlsxBtn) xlsxBtn.disabled = !_data;
+    if (pdfBtn) pdfBtn.disabled = !_data;
+    if (_exportBound) return;
+    _exportBound = true;
 
     if (xlsxBtn) {
       xlsxBtn.disabled = false;
@@ -1001,6 +1418,9 @@
     }
 
     // Carrega todas as métricas em paralelo para melhor performance
+    stabilizeHeaderActions();
+    updateTitles(periodDays);
+
     const [
       reportMetrics,
       postStatusMetrics,
@@ -1015,6 +1435,7 @@
       savedPostsCount,
       auditRows,
       trends,
+      dailyMetrics,
     ] = await Promise.all([
       loadReportMetrics(client, since),
       loadPostStatusMetrics(client, since),
@@ -1029,12 +1450,30 @@
       loadSavedPostsCount(client, since),
       loadAuditLog(client, AUDIT_PAGE_SIZE, 0, 'all', since),
       loadSearchTrendsData(client, since),
+      loadDailyMetrics(client, since),
     ]);
 
     _auditOffset = auditRows.length;
 
     // ── Resolve nomes dos atores do audit log ──
     await loadActorsById(client, auditRows.map(r => r.actor_id));
+
+    var moduleShareRows = DashboardUtils.buildModuleShareRows
+      ? DashboardUtils.buildModuleShareRows(trends, window.KC_CONSTANTS || {})
+      : [];
+    var dailySummary = DashboardUtils.buildActivityPulseSummary
+      ? DashboardUtils.buildActivityPulseSummary(dailyMetrics)
+      : null;
+    var alerts = DashboardUtils.buildOperationalAlerts
+      ? DashboardUtils.buildOperationalAlerts({
+          openReports: reportMetrics.open,
+          hiddenPosts: postStatusMetrics.hidden,
+          deletedPosts: postStatusMetrics.deleted,
+          searches: searchCount,
+          auditEvents: auditRows.length,
+          peakTotal: dailySummary ? dailySummary.peakTotal : 0
+        })
+      : [];
 
     // ── Renderiza métricas de moderação ──
     const metrics = $('#admin-metrics');
@@ -1075,12 +1514,17 @@
 
     // ── Renderiza tendências de busca ──
     renderSearchTrends(trends, periodDays);
+    renderDailyActivitySummary(dailySummary);
+    renderDailyActivityChart(dailyMetrics);
+    renderModuleShareTable(moduleShareRows);
+    renderOperationalAlerts(alerts);
 
     _data = {
       reportMetrics, postStatusMetrics,
       postsCreated, postsEdited, commentsCount, searchCount, postsTotal,
       usersTotal, usersNew, votesCount, savedPostsCount,
       auditRows, trends, periodDays,
+      dailyMetrics, dailySummary, moduleShareRows, alerts,
     };
     enableExport();
 
@@ -1161,6 +1605,7 @@
 
   async function boot() {
     setLoading(true);
+    stabilizeHeaderActions();
     const access = await checkAccess();
     if (!access.ok) {
       setLoading(false);
