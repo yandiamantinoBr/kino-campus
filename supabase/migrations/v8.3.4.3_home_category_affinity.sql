@@ -346,7 +346,12 @@ as $$
       public.kc_home_match_category(
         p.module,
         p.category,
-        p.subcategory,
+        coalesce(
+          p.metadata ->> 'subcategoria',
+          p.metadata ->> 'subcategory',
+          p.metadata ->> 'subcategoriaKey',
+          p.metadata ->> 'subcategoryKey'
+        ),
         p.title,
         p.description
       ) as category_id
