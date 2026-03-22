@@ -11,7 +11,7 @@
     html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
   </style>
 
-  <title>KinoCampus — Admin: Moderação</title>
+  <title>KinoCampus - Moderação Admin</title>
   <link rel="stylesheet" href="../assets/css/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -133,8 +133,9 @@
       .kc-admin-panel { padding: 12px; }
     }
   </style>
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.3" />
 </head>
-<body class="kc-admin-page">
+<body class="kc-admin-page kc-admin-page--moderation">
   <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -154,7 +155,7 @@
       </nav>
       <div class="kc-user-actions">
         <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
-        <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
+        <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
   </header>
@@ -266,6 +267,7 @@
   <script src="../assets/js/kc-profiles.client.js"></script>
   <script src="../assets/js/kc-auth.ui.js"></script>
   <script src="../assets/js/kc-theme.js"></script>
+  <script src="../assets/js/admin-shell.js?v=8.3.4.3"></script>
   <script src="../assets/js/controllers/admin-moderation.controller.js"></script>
 </body>
 </html>

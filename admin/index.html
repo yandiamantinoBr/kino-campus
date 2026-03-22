@@ -12,14 +12,10 @@
       });
     });
   </script>
-  <title>KinoCampus — Admin Dashboard</title>
+  <title>KinoCampus - Dashboard Admin</title>
   <link rel="stylesheet" href="../assets/css/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    .kc-admin-page {
-      overflow-x: hidden;
-    }
-
     html.kc-loading .kc-header--admin .kc-user-actions,
     html.kc-loading .kc-header--admin .theme-toggle,
     html.kc-loading .kc-header--admin .btn-login {
@@ -879,8 +875,9 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.3" />
 </head>
-<body class="kc-admin-page">
+<body class="kc-admin-page kc-admin-page--dashboard">
   <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -892,10 +889,10 @@
           </span>
         </a>
       </div>
-      <nav class="kc-admin-nav" aria-label="Navegacao admin">
+      <nav class="kc-admin-nav" aria-label="Navegação admin">
         <a href="index.html" class="kc-admin-nav__link active"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderacao</a>
-        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denuncias</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
       </nav>
       <div class="kc-user-actions">
@@ -919,25 +916,25 @@
                 <p>Métricas consolidadas de denúncias, moderação, atividade, buscas e saúde operacional em tempo real.</p>
               </div>
               <div class="kc-admin-toolbar">
-                <select id="admin-period-filter" title="Periodo">
+                <select id="admin-period-filter" title="Período">
                   <option value="1">Hoje</option>
                   <option value="7">Esta semana</option>
-                  <option value="30" selected>Ultimos 30 dias</option>
-                  <option value="90">Ultimos 90 dias</option>
+                  <option value="30" selected>Últimos 30 dias</option>
+                  <option value="90">Últimos 90 dias</option>
                   <option value="365">Este ano</option>
                 </select>
                 <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
                 <button type="button" class="xlsx" id="admin-export-xlsx" disabled><i class="fas fa-file-excel"></i> XLSX</button>
                 <button type="button" class="pdf" id="admin-export-pdf" disabled><i class="fas fa-file-pdf"></i> PDF</button>
-                <a href="moderation.html"><i class="fas fa-shield-halved"></i> Ir para Moderacao</a>
-                <a href="reports.html"><i class="fas fa-flag"></i> Ir para Denuncias</a>
+                <a href="moderation.html"><i class="fas fa-shield-halved"></i> Ir para Moderação</a>
+                <a href="reports.html"><i class="fas fa-flag"></i> Ir para Denúncias</a>
                 <a href="banners.html"><i class="fas fa-images"></i> Gerenciar Banners</a>
               </div>
             </section>
 
             <div id="admin-last-sync" aria-live="polite"></div>
 
-            <div class="kc-admin-section-title" id="admin-moderation-title"><i class="fas fa-shield-halved"></i> Moderacao</div>
+            <div class="kc-admin-section-title" id="admin-moderation-title"><i class="fas fa-shield-halved"></i> Moderação</div>
             <div class="kc-admin-grid" id="admin-metrics"></div>
 
             <div class="kc-admin-section-title" id="admin-activity-title"><i class="fas fa-chart-bar"></i> Atividade da plataforma</div>
@@ -947,7 +944,7 @@
             <div class="kc-admin-grid" id="admin-community-metrics"></div>
 
             <section class="kc-admin-section">
-              <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendencias de busca</h3>
+              <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca</h3>
               <div class="kc-trend-module-title"><i class="fas fa-list-ol"></i> Top termos buscados</div>
               <ul class="kc-trend-list" id="admin-trends-list">
                 <li class="kc-trend-empty">Carregando...</li>
@@ -960,18 +957,18 @@
               <h3 id="admin-audit-title"><i class="fas fa-clock-rotate-left"></i> Audit log</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
                 <select id="admin-audit-filter" style="padding:6px 10px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;">
-                  <option value="all">Todas as acoes</option>
+                  <option value="all">Todas as ações</option>
                   <option value="post_status_changed">Status alterado</option>
                   <option value="post_deleted">Post deletado</option>
-                  <option value="report_closed">Denuncia fechada</option>
+                  <option value="report_closed">Denúncia fechada</option>
                 </select>
               </div>
               <div class="kc-admin-audit-wrap">
-                <table role="table" aria-label="Audit log de acoes administrativas">
+                <table role="table" aria-label="Audit log de ações administrativas">
                   <thead>
                     <tr>
                       <th>Data</th>
-                      <th>Acao</th>
+                      <th>Ação</th>
                       <th>Entidade</th>
                       <th>Autor</th>
                     </tr>
@@ -990,36 +987,44 @@
           <aside class="kc-admin-sidebar" aria-label="Insights do dashboard">
             <section class="kc-admin-section">
               <div class="kc-admin-section__eyebrow">Pulso operacional</div>
-              <h3 id="admin-activity-pulse-title"><i class="fas fa-wave-square"></i> Pulso diario</h3>
-              <p class="kc-admin-section__intro">Leitura visual da atividade consolidada por dia para posts, comentarios, buscas, votos e acoes administrativas.</p>
+              <h3 id="admin-activity-pulse-title"><i class="fas fa-wave-square"></i> Pulso diário</h3>
+              <p class="kc-admin-section__intro">Leitura visual da atividade consolidada por dia para posts, comentários, buscas, votos e ações administrativas.</p>
               <div id="admin-daily-activity-summary" class="kc-admin-kpi-strip">
                 <div class="kc-admin-empty">Carregando indicadores...</div>
               </div>
-              <div id="admin-daily-activity-chart" class="kc-admin-chart-shell">
-                <div class="kc-admin-empty">Carregando grafico...</div>
+              <div class="kc-admin-chart-shell">
+                <div class="kc-admin-chart-shell__header">
+                  <span class="kc-admin-chart-shell__title">Séries por dia</span>
+                  <button type="button" id="admin-chart-expand-btn" class="kc-admin-chart-expand">
+                    <i class="fas fa-expand"></i> Expandir
+                  </button>
+                </div>
+                <div id="admin-daily-activity-chart">
+                  <div class="kc-admin-empty">Carregando gráfico...</div>
+                </div>
               </div>
               <div id="admin-daily-activity-legend" class="kc-admin-chart-legend"></div>
             </section>
 
             <section class="kc-admin-section">
-              <div class="kc-admin-section__eyebrow">Participacao de demanda</div>
-              <h3 id="admin-module-share-title"><i class="fas fa-table-cells"></i> Top modulos</h3>
-              <p class="kc-admin-section__intro">Participacao dos modulos na demanda de busca, com share e principais termos do periodo.</p>
+              <div class="kc-admin-section__eyebrow">Participação de demanda</div>
+              <h3 id="admin-module-share-title"><i class="fas fa-table-cells"></i> Top módulos</h3>
+              <p class="kc-admin-section__intro">Participação dos módulos na demanda de busca, com share e principais termos do período.</p>
               <div id="admin-module-share-table" class="kc-admin-table-shell">
                 <div class="kc-admin-empty">Carregando tabela...</div>
               </div>
             </section>
 
             <section class="kc-admin-section">
-              <div class="kc-admin-section__eyebrow">Acao priorizada</div>
-              <h3><i class="fas fa-siren-on"></i> Alertas e acoes</h3>
-              <p class="kc-admin-section__intro">Resumo de pontos que merecem atencao imediata e atalhos para manter a operacao fluindo.</p>
+              <div class="kc-admin-section__eyebrow">Ação priorizada</div>
+              <h3><i class="fas fa-siren-on"></i> Alertas e ações</h3>
+              <p class="kc-admin-section__intro">Resumo de pontos que merecem atenção imediata e atalhos para manter a operação fluindo.</p>
               <ul id="admin-operational-alerts" class="kc-admin-alert-list">
                 <li class="kc-admin-empty">Carregando alertas...</li>
               </ul>
               <div class="kc-admin-quick-actions">
-                <a href="reports.html"><i class="fas fa-flag"></i> Denuncias</a>
-                <a href="moderation.html"><i class="fas fa-shield-halved"></i> Moderacao</a>
+                <a href="reports.html"><i class="fas fa-flag"></i> Denúncias</a>
+                <a href="moderation.html"><i class="fas fa-shield-halved"></i> Moderação</a>
                 <a href="banners.html"><i class="fas fa-images"></i> Banners</a>
                 <a href="../index.html"><i class="fas fa-home"></i> Ir ao site</a>
               </div>
@@ -1030,10 +1035,30 @@
     </div>
   </main>
 
+  <div id="admin-chart-modal" class="kc-admin-chart-modal-backdrop" aria-hidden="true">
+    <div class="kc-admin-chart-modal" role="dialog" aria-modal="true" aria-labelledby="admin-chart-modal-title">
+      <div class="kc-admin-chart-modal__header">
+        <div>
+          <h3 id="admin-chart-modal-title">Pulso diário ampliado</h3>
+          <p id="admin-chart-modal-meta" class="kc-admin-chart-modal__meta">Visualização detalhada da atividade consolidada por período.</p>
+        </div>
+        <button type="button" id="admin-chart-modal-close" class="kc-admin-chart-modal__close" aria-label="Fechar gráfico ampliado">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+      <div class="kc-admin-chart-modal__body">
+        <div id="admin-chart-modal-content" class="kc-admin-chart-shell">
+          <div class="kc-admin-empty">Carregando gráfico...</div>
+        </div>
+        <div id="admin-chart-modal-legend" class="kc-admin-chart-legend"></div>
+      </div>
+    </div>
+  </div>
+
   <nav class="kc-mobile-nav">
     <a class="active" href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderacao</span></a>
-    <a href="reports.html"><i class="fas fa-flag"></i><span>Denuncias</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
     <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
     <a href="../index.html"><i class="fas fa-home"></i><span>Site</span></a>
   </nav>
@@ -1049,7 +1074,8 @@
   <script src="../assets/js/kc-profiles.client.js"></script>
   <script src="../assets/js/kc-auth.ui.js"></script>
   <script src="../assets/js/kc-theme.js"></script>
+  <script src="../assets/js/admin-shell.js?v=8.3.4.3"></script>
   <script src="../assets/js/controllers/admin-dashboard.shared.js"></script>
-  <script src="../assets/js/controllers/admin-dashboard.controller.js"></script>
+  <script src="../assets/js/controllers/admin-dashboard.controller.js?v=8.3.4.3"></script>
 </body>
 </html>

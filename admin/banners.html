@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
   <script src="../assets/js/kc-theme-boot.js"></script>
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
-  <title>KinoCampus — Gerenciar Banners</title>
+  <title>KinoCampus - Gerenciar Banners</title>
   <link rel="stylesheet" href="../assets/css/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
@@ -391,8 +391,9 @@
       .kc-banner-item-header { flex-wrap: wrap; }
     }
   </style>
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.3" />
 </head>
-<body class="kc-admin-page">
+<body class="kc-admin-page kc-admin-page--banners">
   <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -412,7 +413,7 @@
       </nav>
       <div class="kc-user-actions">
         <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
-        <a class="btn-login is-auth" href="#login" data-kc-login="true">Login/Cadastro</a>
+        <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
   </header>
@@ -420,7 +421,7 @@
   <main class="kc-main-content">
     <div class="kc-admin-wrapper">
 
-      <div id="banners-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando banners…</span></div>
+      <div id="banners-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando banners...</span></div>
       <div id="banners-error"  role="alert"></div>
 
       <section id="banners-content">
@@ -503,7 +504,7 @@
           <!-- Subtítulo -->
           <div class="kc-form-field">
             <label for="f-subtitle">Subtítulo / Descrição</label>
-            <textarea id="f-subtitle" rows="2" placeholder="ex: Troque materiais, ganhe cashback em dobro…"></textarea>
+            <textarea id="f-subtitle" rows="2" placeholder="ex: Troque materiais, ganhe cashback em dobro..."></textarea>
           </div>
 
           <!-- Botão -->
@@ -576,6 +577,7 @@
   <script src="../assets/js/kc-profiles.client.js"></script>
   <script src="../assets/js/kc-auth.ui.js"></script>
   <script src="../assets/js/kc-theme.js"></script>
-  <script src="../assets/js/controllers/admin-banners.controller.js"></script>
+  <script src="../assets/js/admin-shell.js?v=8.3.4.3"></script>
+  <script src="../assets/js/controllers/admin-banners.controller.js?v=8.3.4.3"></script>
 </body>
 </html>

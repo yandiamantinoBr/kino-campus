@@ -4,6 +4,7 @@
   /* Armazena os dados carregados para uso no export */
   let _data = null;
   let _auditOffset = 0;
+  let _chartModalReturnFocus = null;
   var AUDIT_PAGE_SIZE = 20;
   var _exportBound = false;
 
@@ -13,10 +14,10 @@
   var DashboardUtils = window.KCAdminDashboardUtils || {};
   var SERIES_META = [
     { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group' },
-    { key: 'comments_count', label: 'Comentarios', color: '#0ea5e9', icon: 'fas fa-comment' },
+    { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment' },
     { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass' },
     { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up' },
-    { key: 'admin_actions_count', label: 'Acoes admin', color: '#f97316', icon: 'fas fa-shield-halved' }
+    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved' }
   ];
   var SERIES_KEYS = SERIES_META.map(function (series) { return series.key; });
 
@@ -73,6 +74,10 @@
       loginBtn.style.opacity = '1';
       loginBtn.style.pointerEvents = 'auto';
     }
+
+    if (window.KCAdminShell && typeof window.KCAdminShell.syncHeader === 'function') {
+      window.KCAdminShell.syncHeader();
+    }
   }
 
   function showError(message) {
@@ -101,7 +106,7 @@
     if (!btn) return;
     if (isLoading) {
       _refreshOrigHtml = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando…';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
       btn.classList.add('is-loading');
     } else {
       if (_refreshOrigHtml) btn.innerHTML = _refreshOrigHtml;
@@ -123,7 +128,7 @@
     if (!el) return;
     el.innerHTML = '<i class="fas fa-circle-check" style="color:var(--kc-primary-brand);margin-right:5px;"></i>'
       + 'Atualizado em ' + new Date().toLocaleString('pt-BR')
-      + ' &nbsp;<span style="opacity:.6;font-size:.78rem;">— clique para atualizar</span>';
+      + ' &nbsp;<span style="opacity:.6;font-size:.78rem;">- clique para atualizar</span>';
   }
 
   async function checkAccess() {
@@ -159,7 +164,7 @@
       inner += '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:4px;">' + escHtmlAdmin(subtitle) + '</div>';
     }
     if (href) {
-      inner += '<div style="margin-top:8px;"><a href="' + escHtmlAdmin(href) + '" style="font-size:.78rem;color:var(--kc-primary-brand);text-decoration:none;">Ver detalhes →</a></div>';
+      inner += '<div style="margin-top:8px;"><a href="' + escHtmlAdmin(href) + '" style="font-size:.78rem;color:var(--kc-primary-brand);text-decoration:none;">Ver detalhes &rarr;</a></div>';
     }
     return '<article class="kc-admin-card"' + cardStyle + '>' + inner + '</article>';
   }
@@ -198,19 +203,59 @@
   function updateTitles(days) {
     var fullLabel = getPeriodLabel(days);
     var titles = [
-      ['#admin-moderation-title', '<i class="fas fa-shield-halved"></i> Moderacao (' + fullLabel + ')'],
+      ['#admin-moderation-title', '<i class="fas fa-shield-halved"></i> Moderação (' + fullLabel + ')'],
       ['#admin-activity-title', '<i class="fas fa-chart-bar"></i> Atividade da plataforma (' + fullLabel + ')'],
       ['#admin-community-title', '<i class="fas fa-users"></i> Comunidade (' + fullLabel + ')'],
-      ['#admin-trends-title', '<i class="fas fa-magnifying-glass-chart"></i> Tendencias de busca (' + fullLabel + ')'],
+      ['#admin-trends-title', '<i class="fas fa-magnifying-glass-chart"></i> Tendências de busca (' + fullLabel + ')'],
       ['#admin-audit-title', '<i class="fas fa-clock-rotate-left"></i> Audit log (' + fullLabel + ')'],
-      ['#admin-activity-pulse-title', '<i class="fas fa-wave-square"></i> Pulso diario (' + fullLabel + ')'],
-      ['#admin-module-share-title', '<i class="fas fa-table-cells"></i> Top modulos (' + fullLabel + ')']
+      ['#admin-activity-pulse-title', '<i class="fas fa-wave-square"></i> Pulso diário (' + fullLabel + ')'],
+      ['#admin-module-share-title', '<i class="fas fa-table-cells"></i> Top módulos (' + fullLabel + ')']
     ];
 
     titles.forEach(function (entry) {
       var el = $(entry[0]);
       if (el) el.innerHTML = entry[1];
     });
+  }
+
+  function getPeriodRange(periodDays) {
+    return {
+      since: daysAgo(periodDays),
+      until: new Date().toISOString(),
+      label: getPeriodLabel(periodDays)
+    };
+  }
+
+  function formatDateTimeBR(value) {
+    if (!value) return '-';
+    var date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString('pt-BR');
+  }
+
+  function formatDateBR(value) {
+    if (!value) return '-';
+    var date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString('pt-BR');
+  }
+
+  function hexToRgb(hex) {
+    var value = String(hex || '').replace('#', '');
+    if (value.length === 3) {
+      value = value.split('').map(function (part) { return part + part; }).join('');
+    }
+    if (!/^[0-9a-f]{6}$/i.test(value)) return { r: 15, g: 23, b: 42 };
+    return {
+      r: parseInt(value.slice(0, 2), 16),
+      g: parseInt(value.slice(2, 4), 16),
+      b: parseInt(value.slice(4, 6), 16)
+    };
+  }
+
+  function buildExportFilename(extension, periodDays) {
+    var stamp = new Date().toISOString().slice(0, 10);
+    return 'kc-dashboard-' + (periodDays || 30) + 'd-' + stamp + '.' + extension;
   }
 
   // ── Normalização e agrupamento de termos de busca ─────────────────────────
@@ -575,7 +620,7 @@
       if (name) return name;
     }
     // Fallback: show truncated UUID
-    return String(actorId).slice(0, 8) + '…';
+    return String(actorId).slice(0, 8) + '...';
   }
 
   // ── Audit log ─────────────────────────────────────────────────────────────
@@ -865,15 +910,15 @@
     var container = $('#admin-daily-activity-summary');
     if (!container) return;
     if (!summary) {
-      container.innerHTML = '<div class="kc-admin-empty">Sem dados diarios para resumir.</div>';
+      container.innerHTML = '<div class="kc-admin-empty">Sem dados diários para resumir.</div>';
       return;
     }
 
     var peakLabel = summary.peakDay && summary.peakDay.label ? summary.peakDay.label : '--';
     container.innerHTML = [
-      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Pico diario</span><strong>' + toNumber(summary.peakTotal) + '</strong><small>' + escHtmlAdmin(peakLabel) + '</small></div>',
-      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Media diaria</span><strong>' + escHtmlAdmin(String(summary.averageTotal || 0)) + '</strong><small>Eventos consolidados</small></div>',
-      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Ultimo dia</span><strong>' + toNumber(summary.lastDayTotal) + '</strong><small>Volume mais recente</small></div>',
+      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Pico diário</span><strong>' + toNumber(summary.peakTotal) + '</strong><small>' + escHtmlAdmin(peakLabel) + '</small></div>',
+      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Média diária</span><strong>' + escHtmlAdmin(String(summary.averageTotal || 0)) + '</strong><small>Eventos consolidados</small></div>',
+      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Último dia</span><strong>' + toNumber(summary.lastDayTotal) + '</strong><small>Volume mais recente</small></div>',
       '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Total de buscas</span><strong>' + toNumber(summary.totals && summary.totals.searches_count) + '</strong><small>Demanda registrada</small></div>'
     ].join('');
   }
@@ -895,20 +940,33 @@
     return points.join(' ');
   }
 
-  function renderDailyActivityChart(series) {
-    var chart = $('#admin-daily-activity-chart');
-    var legend = $('#admin-daily-activity-legend');
-    if (!chart || !legend) return;
+  function getSeriesTotals(series) {
+    var totals = {};
+    SERIES_META.forEach(function (meta) {
+      totals[meta.key] = (series || []).reduce(function (sum, row) {
+        return sum + toNumber(row && row[meta.key]);
+      }, 0);
+    });
+    return totals;
+  }
 
-    if (!Array.isArray(series) || !series.length) {
-      chart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o grafico diario.</div>';
-      legend.innerHTML = '';
-      return;
-    }
+  function buildDailyActivityLegendMarkup(series) {
+    var totals = getSeriesTotals(series);
+    return SERIES_META.map(function (meta) {
+      return '<span class="kc-admin-chart-legend__item">' +
+        '<span class="kc-admin-chart-legend__dot" style="background:' + meta.color + ';"></span>' +
+        '<span class="kc-admin-chart-legend__label"><i class="' + meta.icon + '"></i> ' + escHtmlAdmin(meta.label) + '</span>' +
+        '<span class="kc-admin-chart-legend__total">' + toNumber(totals[meta.key]) + '</span>' +
+        '</span>';
+    }).join('');
+  }
 
-    var width = 320;
-    var height = 180;
-    var padding = 18;
+  function buildDailyActivityChartSvg(series, options) {
+    options = options || {};
+    var width = options.width || 640;
+    var height = options.height || 240;
+    var padding = options.padding || 22;
+    var fontSize = options.fontSize || 10;
     var maxValue = 0;
 
     series.forEach(function (row) {
@@ -919,43 +977,136 @@
 
     var grid = [0.25, 0.5, 0.75, 1].map(function (ratio) {
       var y = padding + ((height - (padding * 2)) * (1 - ratio));
-      return '<line x1="' + padding + '" y1="' + y.toFixed(2) + '" x2="' + (width - padding) + '" y2="' + y.toFixed(2) + '" stroke="rgba(148,163,184,.24)" stroke-dasharray="4 4" />';
+      return '<line x1="' + padding + '" y1="' + y.toFixed(2) + '" x2="' + (width - padding) + '" y2="' + y.toFixed(2) + '" stroke="rgba(148,163,184,.24)" stroke-dasharray="4 4"></line>';
     }).join('');
 
     var labels = series.map(function (row, index) {
-      if (series.length > 10 && index % 2 === 1 && index !== series.length - 1) return '';
+      if (series.length > 14 && index % 2 === 1 && index !== series.length - 1) return '';
       var innerWidth = width - (padding * 2);
       var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
       var x = padding + (step * index);
-      return '<text x="' + x.toFixed(2) + '" y="' + (height - 4) + '" text-anchor="middle" fill="var(--kc-text-dark-secondary)" font-size="9">' + escHtmlAdmin(row.label || '') + '</text>';
+      return '<text x="' + x.toFixed(2) + '" y="' + (height - 6) + '" text-anchor="middle" fill="var(--kc-text-dark-secondary)" font-size="' + fontSize + '">' + escHtmlAdmin(row.label || '') + '</text>';
     }).join('');
 
     var lines = SERIES_META.map(function (meta) {
       return '<path d="' + buildSeriesPath(series, meta.key, maxValue, width, height, padding) + '" fill="none" stroke="' + meta.color + '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>';
     }).join('');
 
-    chart.innerHTML = '<svg class="kc-admin-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Grafico diario de atividade">' +
+    return '<svg class="kc-admin-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Gráfico diário de atividade">' +
       grid + lines + labels + '</svg>';
+  }
 
-    legend.innerHTML = SERIES_META.map(function (meta) {
-      var total = series.reduce(function (sum, row) { return sum + toNumber(row[meta.key]); }, 0);
-      return '<span class="kc-admin-chart-legend__item"><span class="kc-admin-chart-legend__dot" style="background:' + meta.color + ';"></span><i class="' + meta.icon + '"></i> ' + escHtmlAdmin(meta.label) + ' <strong>' + total + '</strong></span>';
-    }).join('');
+  function renderChartInto(container, series, options) {
+    if (!container) return;
+    if (!Array.isArray(series) || !series.length) {
+      container.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
+      return;
+    }
+    container.innerHTML = buildDailyActivityChartSvg(series, options);
+  }
+
+  function closeDailyActivityChartModal() {
+    var modal = $('#admin-chart-modal');
+    if (!modal) return;
+    modal.setAttribute('aria-hidden', 'true');
+    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
+      window.KCAdminShell.setModalOpen(false);
+    }
+    if (_chartModalReturnFocus && typeof _chartModalReturnFocus.focus === 'function') {
+      try { _chartModalReturnFocus.focus(); } catch (_) {}
+    }
+    _chartModalReturnFocus = null;
+  }
+
+  function openDailyActivityChartModal() {
+    if (!_data || !Array.isArray(_data.dailyMetrics) || !_data.dailyMetrics.length) return;
+    var modal = $('#admin-chart-modal');
+    var closeBtn = $('#admin-chart-modal-close');
+    if (!modal || !closeBtn) return;
+    _chartModalReturnFocus = document.activeElement;
+    modal.setAttribute('aria-hidden', 'false');
+    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
+      window.KCAdminShell.setModalOpen(true);
+    }
+    window.setTimeout(function () {
+      try { closeBtn.focus(); } catch (_) {}
+    }, 40);
+  }
+
+  function bindDailyActivityChartModal() {
+    var expandBtn = $('#admin-chart-expand-btn');
+    var closeBtn = $('#admin-chart-modal-close');
+    var modal = $('#admin-chart-modal');
+
+    if (expandBtn && !expandBtn.dataset.bound) {
+      expandBtn.dataset.bound = 'true';
+      expandBtn.addEventListener('click', openDailyActivityChartModal);
+    }
+
+    if (closeBtn && !closeBtn.dataset.bound) {
+      closeBtn.dataset.bound = 'true';
+      closeBtn.addEventListener('click', closeDailyActivityChartModal);
+    }
+
+    if (modal && !modal.dataset.bound) {
+      modal.dataset.bound = 'true';
+      modal.addEventListener('click', function (event) {
+        if (event.target === modal) closeDailyActivityChartModal();
+      });
+    }
+
+    if (!document.body.dataset.adminChartEscBound) {
+      document.body.dataset.adminChartEscBound = 'true';
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') closeDailyActivityChartModal();
+      });
+    }
+  }
+
+  function renderDailyActivityChart(series) {
+    var chart = $('#admin-daily-activity-chart');
+    var legend = $('#admin-daily-activity-legend');
+    var modalChart = $('#admin-chart-modal-content');
+    var modalLegend = $('#admin-chart-modal-legend');
+    var modalMeta = $('#admin-chart-modal-meta');
+    var expandBtn = $('#admin-chart-expand-btn');
+    if (!chart || !legend) return;
+
+    if (!Array.isArray(series) || !series.length) {
+      chart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
+      legend.innerHTML = '';
+      if (modalChart) modalChart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
+      if (modalLegend) modalLegend.innerHTML = '';
+      if (expandBtn) expandBtn.disabled = true;
+      closeDailyActivityChartModal();
+      return;
+    }
+
+    renderChartInto(chart, series, { width: 640, height: 260, padding: 24, fontSize: 10 });
+    legend.innerHTML = buildDailyActivityLegendMarkup(series);
+
+    if (modalChart) renderChartInto(modalChart, series, { width: 1024, height: 420, padding: 28, fontSize: 12 });
+    if (modalLegend) modalLegend.innerHTML = buildDailyActivityLegendMarkup(series);
+    if (modalMeta) {
+      modalMeta.textContent = 'Período analisado: ' + getPeriodLabel((_data && _data.periodDays) || getSelectedPeriodDays()) +
+        ' • ' + series.length + ' dias consolidados.';
+    }
+    if (expandBtn) expandBtn.disabled = false;
   }
 
   function renderModuleShareTable(rows) {
     var container = $('#admin-module-share-table');
     if (!container) return;
     if (!Array.isArray(rows) || !rows.length) {
-      container.innerHTML = '<div class="kc-admin-empty">Sem buscas suficientes para calcular participacao por modulo.</div>';
+      container.innerHTML = '<div class="kc-admin-empty">Sem buscas suficientes para calcular participação por módulo.</div>';
       return;
     }
 
-    container.innerHTML = '<table><thead><tr><th>Modulo</th><th>Share</th><th>Volume</th></tr></thead><tbody>' +
+    container.innerHTML = '<table><thead><tr><th>Módulo</th><th>Share</th><th>Volume</th></tr></thead><tbody>' +
       rows.map(function (row) {
         var topTerms = Array.isArray(row.topTerms) && row.topTerms.length ? row.topTerms.join(', ') : 'Sem termos associados';
         return '<tr>' +
-          '<td><span style="display:inline-flex;align-items:center;gap:8px;"><i class="' + escHtmlAdmin(row.icon || 'fas fa-tag') + '"></i> ' + escHtmlAdmin(row.label || row.module || 'Modulo') + '</span><div style="margin-top:4px;font-size:.76rem;color:var(--kc-text-dark-secondary);">' + escHtmlAdmin(topTerms) + '</div></td>' +
+          '<td><span style="display:inline-flex;align-items:center;gap:8px;"><i class="' + escHtmlAdmin(row.icon || 'fas fa-tag') + '"></i> ' + escHtmlAdmin(row.label || row.module || 'Módulo') + '</span><div style="margin-top:4px;font-size:.76rem;color:var(--kc-text-dark-secondary);">' + escHtmlAdmin(topTerms) + '</div></td>' +
           '<td>' + escHtmlAdmin(String(row.share || 0)) + '%</td>' +
           '<td>' + toNumber(row.count) + '</td>' +
           '</tr>';
@@ -974,7 +1125,7 @@
     container.innerHTML = alerts.map(function (alert) {
       var toneClass = alert && alert.tone ? 'kc-admin-alert--' + alert.tone : 'kc-admin-alert--neutral';
       return '<li class="kc-admin-alert ' + toneClass + '">' +
-        '<strong>' + escHtmlAdmin(alert.title || 'Atualizacao') + '</strong>' +
+        '<strong>' + escHtmlAdmin(alert.title || 'Atualização') + '</strong>' +
         '<p>' + escHtmlAdmin(alert.body || '') + '</p>' +
         '</li>';
     }).join('');
@@ -983,7 +1134,7 @@
   function auditActionBadge(action) {
     var a = String(action || '').toLowerCase();
     var cls = 'kc-audit-badge--default';
-    var label = action || '—';
+    var label = action || '-';
     if (a.includes('delet')) { cls = 'kc-audit-badge--deleted'; label = 'Deletado'; }
     else if (a.includes('hidden') || a.includes('oculto')) { cls = 'kc-audit-badge--hidden'; label = 'Ocultado'; }
     else if (a.includes('restored') || a.includes('restaur')) { cls = 'kc-audit-badge--restored'; label = 'Restaurado'; }
@@ -1002,10 +1153,10 @@
     }
     var html = rows.length
       ? rows.map(function(row) {
-          var dateStr = row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '—';
-          var entity = String(row.entity_type || '—');
+          var dateStr = row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '-';
+          var entity = String(row.entity_type || '-');
           // Trunca entity longa
-          var entityDisplay = entity.length > 20 ? entity.slice(0, 18) + '…' : entity;
+          var entityDisplay = entity.length > 28 ? entity.slice(0, 25) + '...' : entity;
           return '<tr>'
             + '<td data-label="Data" style="white-space:nowrap;">' + escHtmlAdmin(dateStr) + '</td>'
             + '<td data-label="Ação">' + auditActionBadge(row.action) + '</td>'
@@ -1063,283 +1214,399 @@
   async function ensureJsPDF() { if (!window.jspdf) await loadScriptWithFallback(JSPDF_URLS); }
 
   // ── Exportação XLSX ──────────────────────────────────────────────────────────
+  function buildSummarySheetRows(data, periodLabel, generatedAt) {
+    return [
+      ['KinoCampus - Dashboard Administrativo'],
+      ['Gerado em', generatedAt],
+      ['Período selecionado', periodLabel],
+      ['Data inicial', formatDateBR(data.periodStart)],
+      ['Data final', formatDateBR(data.periodEnd)],
+      [],
+      ['Seção', 'Métrica', 'Valor'],
+      ['Moderação', 'Denúncias abertas', toNumber(data.reportMetrics && data.reportMetrics.open)],
+      ['Moderação', 'Total de denúncias', toNumber(data.reportMetrics && data.reportMetrics.total)],
+      ['Moderação', 'Posts ocultados', toNumber(data.postStatusMetrics && data.postStatusMetrics.hidden)],
+      ['Moderação', 'Posts deletados', toNumber(data.postStatusMetrics && data.postStatusMetrics.deleted)],
+      ['Atividade', 'Total de posts', toNumber(data.postsTotal)],
+      ['Atividade', 'Posts publicados', toNumber(data.postsCreated)],
+      ['Atividade', 'Posts editados', toNumber(data.postsEdited)],
+      ['Atividade', 'Comentários', toNumber(data.commentsCount)],
+      ['Atividade', 'Buscas realizadas', toNumber(data.searchCount)],
+      ['Comunidade', 'Total de usuários', toNumber(data.usersTotal)],
+      ['Comunidade', 'Novos usuários', toNumber(data.usersNew)],
+      ['Comunidade', 'Votos', toNumber(data.votesCount)],
+      ['Comunidade', 'Posts salvos', toNumber(data.savedPostsCount)],
+      ['Pulso diário', 'Pico diário', toNumber(data.dailySummary && data.dailySummary.peakTotal)],
+      ['Pulso diário', 'Média diária', data.dailySummary ? (data.dailySummary.averageTotal || 0) : 0],
+      ['Pulso diário', 'Último dia', toNumber(data.dailySummary && data.dailySummary.lastDayTotal)],
+      ['Pulso diário', 'Total de buscas', toNumber(data.dailySummary && data.dailySummary.totals && data.dailySummary.totals.searches_count)]
+    ];
+  }
+
+  function buildTrendRows(data) {
+    return [
+      ['Posição', 'Termo', 'Buscas', 'Módulo'],
+      ...(data.trends || []).map(function (item, index) {
+        var moduleKey = classifyTermToModule(item && item.term);
+        return [
+          index + 1,
+          item && item.term ? item.term : '',
+          toNumber(item && item.count),
+          moduleKey ? (MODULE_LABELS[moduleKey] || moduleKey) : ''
+        ];
+      })
+    ];
+  }
+
+  function buildDailyRows(data) {
+    return [
+      ['Dia', 'Rótulo', 'Posts', 'Comentários', 'Buscas', 'Votos', 'Ações admin', 'Total'],
+      ...(data.dailyMetrics || []).map(function (row) {
+        return [
+          row.day || '',
+          row.label || '',
+          toNumber(row.posts_count),
+          toNumber(row.comments_count),
+          toNumber(row.searches_count),
+          toNumber(row.votes_count),
+          toNumber(row.admin_actions_count),
+          toNumber(row.total_count)
+        ];
+      })
+    ];
+  }
+
+  function buildSeriesTotalsRows(data) {
+    var totals = getSeriesTotals(data.dailyMetrics || []);
+    return [
+      ['Série', 'Total', 'Cor'],
+      ...SERIES_META.map(function (meta) {
+        return [meta.label, toNumber(totals[meta.key]), meta.color];
+      })
+    ];
+  }
+
+  function buildModuleRows(data) {
+    return [
+      ['Módulo', 'Share (%)', 'Volume', 'Top termos'],
+      ...(data.moduleShareRows || []).map(function (row) {
+        return [
+          row.label || row.module || '',
+          row.share || 0,
+          toNumber(row.count),
+          Array.isArray(row.topTerms) ? row.topTerms.join(', ') : ''
+        ];
+      })
+    ];
+  }
+
+  function buildAlertRows(data) {
+    return [
+      ['Tom', 'Título', 'Descrição'],
+      ...(data.alerts || []).map(function (alert) {
+        return [alert.tone || 'neutral', alert.title || '', alert.body || ''];
+      })
+    ];
+  }
+
+  function buildAuditRows(data) {
+    return [
+      ['Data', 'Ação', 'Entidade', 'Autor'],
+      ...(data.auditRows || []).map(function (row) {
+        return [
+          formatDateTimeBR(row && row.created_at),
+          row && row.action ? row.action : '-',
+          row && row.entity_type ? row.entity_type : '-',
+          getActorDisplay(row && row.actor_id)
+        ];
+      })
+    ];
+  }
+
   async function exportXLSX(data) {
     await ensureXLSX();
-    const wb = window.XLSX.utils.book_new();
-    const date = new Date().toLocaleString('pt-BR');
-    var periodLabel = getPeriodLabel(data.periodDays || 30);
+    var XLSX = window.XLSX;
+    var workbook = XLSX.utils.book_new();
+    var generatedAt = formatDateTimeBR(new Date());
+    var periodLabel = data.periodLabel || getPeriodLabel(data.periodDays || 30);
 
-    // Dashboard — métricas
-    const metricsRows = [
-      ['KinoCampus — Dashboard Administrativo'],
-      ['Gerado em: ' + date],
-      ['Período: ' + periodLabel],
-      [],
-      ['MODERAÇÃO (' + periodLabel + ')', ''],
-      ['Métrica', 'Valor'],
-      ['Denúncias abertas',  data.reportMetrics.open],
-      ['Total de denúncias', data.reportMetrics.total],
-      ['Posts ocultados',    data.postStatusMetrics.hidden],
-      ['Posts deletados',    data.postStatusMetrics.deleted],
-      [],
-      ['ATIVIDADE (' + periodLabel + ')', ''],
-      ['Métrica', 'Valor'],
-      ['Total de posts',    data.postsTotal],
-      ['Posts publicados',  data.postsCreated],
-      ['Posts editados',    data.postsEdited],
-      ['Comentários',       data.commentsCount],
-      ['Buscas realizadas', data.searchCount],
-      [],
-      ['COMUNIDADE (' + periodLabel + ')', ''],
-      ['Métrica', 'Valor'],
-      ['Total de usuários',                            data.usersTotal],
-      ['Novos usuários (' + periodLabel + ')',         data.usersNew],
-      ['Votos (' + periodLabel + ')',                  data.votesCount],
-      ['Posts salvos (' + periodLabel + ')',           data.savedPostsCount],
-    ];
-    const ws1 = window.XLSX.utils.aoa_to_sheet(metricsRows);
-    ws1['!cols'] = [{ wch: 36 }, { wch: 12 }];
-    window.XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard');
+    var summarySheet = XLSX.utils.aoa_to_sheet(buildSummarySheetRows(data, periodLabel, generatedAt));
+    summarySheet['!cols'] = [{ wch: 20 }, { wch: 28 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resumo');
 
-    // Tendências de busca
-    if (data.dailySummary) {
-      renderSection('PULSO DIARIO (' + periodLabel + ')', [
-        ['Pico diario', toNumber(data.dailySummary.peakTotal)],
-        ['Media diaria', data.dailySummary.averageTotal || 0],
-        ['Ultimo dia', toNumber(data.dailySummary.lastDayTotal)],
-        ['Buscas no periodo', toNumber(data.dailySummary.totals && data.dailySummary.totals.searches_count)]
-      ]);
-    }
+    var trendsSheet = XLSX.utils.aoa_to_sheet(buildTrendRows(data));
+    trendsSheet['!cols'] = [{ wch: 8 }, { wch: 28 }, { wch: 10 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(workbook, trendsSheet, 'Tendências');
 
-    if (data.moduleShareRows && data.moduleShareRows.length) {
-      checkPage();
-      doc.setFontSize(11);
-      doc.setTextColor(40, 40, 40);
-      doc.text('TOP MODULOS POR DEMANDA', marginL, y); y += 5;
-      doc.line(marginL, y, 196, y); y += 5;
-      doc.setFontSize(9);
-      data.moduleShareRows.slice(0, 6).forEach(function (row) {
-        checkPage();
-        var terms = Array.isArray(row.topTerms) && row.topTerms.length ? ' | ' + row.topTerms.join(', ') : '';
-        doc.setTextColor(70, 70, 70);
-        doc.text((row.label || row.module || 'Modulo') + ' - ' + (row.share || 0) + '% - ' + toNumber(row.count) + terms, marginL + 2, y);
-        y += 5;
-      });
-      y += 4;
-    }
+    var dailySheet = XLSX.utils.aoa_to_sheet(buildDailyRows(data));
+    dailySheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(workbook, dailySheet, 'Pulso diário');
 
-    if (data.alerts && data.alerts.length) {
-      checkPage();
-      doc.setFontSize(11);
-      doc.setTextColor(40, 40, 40);
-      doc.text('ALERTAS OPERACIONAIS', marginL, y); y += 5;
-      doc.line(marginL, y, 196, y); y += 5;
-      doc.setFontSize(9);
-      data.alerts.forEach(function (alert) {
-        checkPage();
-        doc.setTextColor(70, 70, 70);
-        doc.text((alert.title || 'Atualizacao') + ': ' + (alert.body || ''), marginL + 2, y);
-        y += 5;
-      });
-      y += 4;
-    }
+    var seriesSheet = XLSX.utils.aoa_to_sheet(buildSeriesTotalsRows(data));
+    seriesSheet['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(workbook, seriesSheet, 'Séries');
 
-    if (data.trends && data.trends.length) {
-      const trendRows = [
-        ['Termo', 'Buscas', 'Módulo'],
-        ...data.trends.map(t => {
-          var mod = classifyTermToModule(t.term);
-          return [t.term, Number(t.count) || 0, mod ? (MODULE_LABELS[mod] || mod) : ''];
-        }),
-      ];
-      const ws2 = window.XLSX.utils.aoa_to_sheet(trendRows);
-      ws2['!cols'] = [{ wch: 24 }, { wch: 10 }, { wch: 20 }];
-      window.XLSX.utils.book_append_sheet(wb, ws2, 'Tendências');
-    }
+    var modulesSheet = XLSX.utils.aoa_to_sheet(buildModuleRows(data));
+    modulesSheet['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 42 }];
+    XLSX.utils.book_append_sheet(workbook, modulesSheet, 'Top módulos');
 
-    if (data.dailyMetrics && data.dailyMetrics.length) {
-      const dailyRows = [
-        ['Dia', 'Posts', 'Comentarios', 'Buscas', 'Votos', 'Acoes admin', 'Total'],
-        ...data.dailyMetrics.map(function (row) {
-          return [
-            row.day || '',
-            toNumber(row.posts_count),
-            toNumber(row.comments_count),
-            toNumber(row.searches_count),
-            toNumber(row.votes_count),
-            toNumber(row.admin_actions_count),
-            toNumber(row.total_count)
-          ];
-        })
-      ];
-      const wsDaily = window.XLSX.utils.aoa_to_sheet(dailyRows);
-      wsDaily['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }];
-      window.XLSX.utils.book_append_sheet(wb, wsDaily, 'Pulso Diario');
-    }
+    var alertsSheet = XLSX.utils.aoa_to_sheet(buildAlertRows(data));
+    alertsSheet['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 64 }];
+    XLSX.utils.book_append_sheet(workbook, alertsSheet, 'Alertas');
 
-    if (data.moduleShareRows && data.moduleShareRows.length) {
-      const moduleRows = [
-        ['Modulo', 'Share (%)', 'Volume', 'Top termos'],
-        ...data.moduleShareRows.map(function (row) {
-          return [
-            row.label || row.module || '',
-            row.share || 0,
-            toNumber(row.count),
-            Array.isArray(row.topTerms) ? row.topTerms.join(', ') : ''
-          ];
-        })
-      ];
-      const wsModules = window.XLSX.utils.aoa_to_sheet(moduleRows);
-      wsModules['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 40 }];
-      window.XLSX.utils.book_append_sheet(wb, wsModules, 'Top Modulos');
-    }
+    var auditSheet = XLSX.utils.aoa_to_sheet(buildAuditRows(data));
+    auditSheet['!cols'] = [{ wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 26 }];
+    XLSX.utils.book_append_sheet(workbook, auditSheet, 'Audit log');
 
-    if (data.alerts && data.alerts.length) {
-      const alertRows = [
-        ['Tom', 'Titulo', 'Descricao'],
-        ...data.alerts.map(function (alert) {
-          return [alert.tone || 'neutral', alert.title || '', alert.body || ''];
-        })
-      ];
-      const wsAlerts = window.XLSX.utils.aoa_to_sheet(alertRows);
-      wsAlerts['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 60 }];
-      window.XLSX.utils.book_append_sheet(wb, wsAlerts, 'Alertas');
-    }
-
-    // Audit log
-    if (data.auditRows && data.auditRows.length) {
-      const auditRows2 = [
-        ['Data', 'Ação', 'Entidade', 'Autor'],
-        ...data.auditRows.map(r => [
-          new Date(r.created_at).toLocaleString('pt-BR'),
-          r.action || '—',
-          r.entity_type || '—',
-          getActorDisplay(r.actor_id),
-        ]),
-      ];
-      const ws3 = window.XLSX.utils.aoa_to_sheet(auditRows2);
-      ws3['!cols'] = [{ wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 24 }];
-      window.XLSX.utils.book_append_sheet(wb, ws3, 'Audit Log');
-    }
-
-    const filename = `kc-dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    window.XLSX.writeFile(wb, filename);
+    XLSX.writeFile(workbook, buildExportFilename('xlsx', data.periodDays));
   }
 
   // ── Exportação PDF ───────────────────────────────────────────────────────────
   async function exportPDF(data) {
     await ensureJsPDF();
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const date = new Date().toLocaleString('pt-BR');
-    var periodLabel = getPeriodLabel(data.periodDays || 30);
-    const marginL = 14;
-    let y = 18;
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    var generatedAt = formatDateTimeBR(new Date());
+    var periodLabel = data.periodLabel || getPeriodLabel(data.periodDays || 30);
+    var pageWidth = doc.internal.pageSize.getWidth();
+    var pageHeight = doc.internal.pageSize.getHeight();
+    var margin = 14;
+    var usableWidth = pageWidth - (margin * 2);
+    var y = 18;
 
-    function checkPage() { if (y > 265) { doc.addPage(); y = 18; } }
-
-    function renderSection(title, metrics) {
-      checkPage();
-      doc.setFontSize(11);
-      doc.setTextColor(40, 40, 40);
-      doc.text(title, marginL, y); y += 5;
-      doc.setDrawColor(220, 220, 220);
-      doc.line(marginL, y, 196, y); y += 5;
-      doc.setFontSize(10);
-      metrics.forEach(function (m) {
-        checkPage();
-        doc.setTextColor(80, 80, 80);
-        doc.text(m[0], marginL + 2, y);
-        doc.setTextColor(30, 30, 30);
-        doc.text(String(m[1]), 150, y, { align: 'right' });
-        y += 6;
-      });
-      y += 4;
+    function checkPage(requiredHeight) {
+      if (y + (requiredHeight || 0) <= pageHeight - 18) return;
+      doc.addPage();
+      y = 18;
     }
 
-    // Cabeçalho
-    doc.setFontSize(16);
-    doc.setTextColor(255, 107, 0);
-    doc.text('KinoCampus — Dashboard Administrativo', marginL, y); y += 7;
+    function drawSectionHeader(title, subtitle) {
+      checkPage(subtitle ? 18 : 10);
+      doc.setFontSize(12);
+      doc.setTextColor(31, 41, 55);
+      doc.text(title, margin, y);
+      y += 5;
+      if (subtitle) {
+        var subtitleLines = doc.splitTextToSize(subtitle, usableWidth);
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text(subtitleLines, margin, y);
+        y += subtitleLines.length * 4;
+      }
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 6;
+    }
+
+    function drawMetricCards(items) {
+      var cardWidth = (usableWidth - 6) / 2;
+      var cardHeight = 18;
+      for (var i = 0; i < items.length; i += 2) {
+        checkPage(cardHeight + 8);
+        var row = items.slice(i, i + 2);
+        row.forEach(function (item, index) {
+          var x = margin + (index * (cardWidth + 6));
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(226, 232, 240);
+          doc.roundedRect(x, y, cardWidth, cardHeight, 4, 4, 'FD');
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          doc.text(item.label, x + 4, y + 5);
+          doc.setFontSize(13);
+          doc.setTextColor(17, 24, 39);
+          doc.text(String(item.value), x + 4, y + 12);
+          if (item.detail) {
+            doc.setFontSize(7);
+            doc.setTextColor(100, 116, 139);
+            doc.text(item.detail, x + 4, y + 16);
+          }
+        });
+        y += cardHeight + 6;
+      }
+    }
+
+    function drawDailyChart(series) {
+      if (!Array.isArray(series) || !series.length) return;
+      var chartHeight = 58;
+      checkPage(chartHeight + 24);
+      var chartX = margin;
+      var chartY = y;
+      var chartWidth = usableWidth;
+      var paddingTop = 8;
+      var paddingBottom = 10;
+      var paddingHorizontal = 8;
+      var innerWidth = chartWidth - (paddingHorizontal * 2);
+      var innerHeight = chartHeight - paddingTop - paddingBottom;
+      var maxValue = 0;
+
+      series.forEach(function (row) {
+        SERIES_KEYS.forEach(function (key) {
+          maxValue = Math.max(maxValue, toNumber(row[key]));
+        });
+      });
+      maxValue = Math.max(maxValue, 1);
+
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(chartX, chartY, chartWidth, chartHeight, 5, 5, 'FD');
+
+      for (var gridIndex = 1; gridIndex <= 4; gridIndex += 1) {
+        var gridY = chartY + paddingTop + (innerHeight * (gridIndex / 4));
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.15);
+        doc.line(chartX + paddingHorizontal, gridY, chartX + chartWidth - paddingHorizontal, gridY);
+      }
+
+      SERIES_META.forEach(function (meta) {
+        var rgb = hexToRgb(meta.color);
+        doc.setDrawColor(rgb.r, rgb.g, rgb.b);
+        doc.setLineWidth(0.55);
+        var prevPoint = null;
+        series.forEach(function (row, index) {
+          var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
+          var x = chartX + paddingHorizontal + (step * index);
+          var value = toNumber(row[meta.key]);
+          var yPoint = chartY + paddingTop + innerHeight - ((value / maxValue) * innerHeight);
+          if (prevPoint) {
+            doc.line(prevPoint.x, prevPoint.y, x, yPoint);
+          }
+          prevPoint = { x: x, y: yPoint };
+        });
+      });
+
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      series.forEach(function (row, index) {
+        if (series.length > 14 && index % 2 === 1 && index !== series.length - 1) return;
+        var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
+        var x = chartX + paddingHorizontal + (step * index);
+        doc.text(row.label || '', x, chartY + chartHeight - 2, { align: 'center' });
+      });
+
+      y += chartHeight + 8;
+
+      var totals = getSeriesTotals(series);
+      var legendWidth = (usableWidth - 6) / 2;
+      SERIES_META.forEach(function (meta, index) {
+        checkPage(8);
+        var rgb = hexToRgb(meta.color);
+        var rowIndex = Math.floor(index / 2);
+        var colIndex = index % 2;
+        var x = margin + (colIndex * (legendWidth + 6));
+        var itemY = y + (rowIndex * 6);
+        doc.setFillColor(rgb.r, rgb.g, rgb.b);
+        doc.circle(x + 2, itemY + 1.5, 1.3, 'F');
+        doc.setFontSize(8);
+        doc.setTextColor(31, 41, 55);
+        doc.text(meta.label + ': ' + toNumber(totals[meta.key]), x + 6, itemY + 2.4);
+      });
+      y += Math.ceil(SERIES_META.length / 2) * 6 + 4;
+    }
+
+    function drawWrappedList(title, items, emptyMessage) {
+      drawSectionHeader(title);
+      if (!items.length) {
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text(emptyMessage, margin, y);
+        y += 6;
+        return;
+      }
+      items.forEach(function (item) {
+        var lines = doc.splitTextToSize(item, usableWidth);
+        checkPage((lines.length * 4) + 2);
+        doc.setFontSize(9);
+        doc.setTextColor(55, 65, 81);
+        doc.text(lines, margin, y);
+        y += (lines.length * 4) + 2;
+      });
+      y += 2;
+    }
+
+    doc.setFillColor(255, 107, 0);
+    doc.roundedRect(margin, y, usableWidth, 26, 6, 6, 'F');
+    doc.setFontSize(18);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Dashboard Administrativo', margin + 6, y + 9);
     doc.setFontSize(9);
-    doc.setTextColor(130, 130, 130);
-    doc.text('Gerado em: ' + date + '  |  Período: ' + periodLabel, marginL, y); y += 10;
+    doc.text('KinoCampus - relatório consolidado', margin + 6, y + 15);
+    doc.text('Gerado em ' + generatedAt + ' | Período: ' + periodLabel, margin + 6, y + 20);
+    y += 34;
 
-    // Seção Moderação
-    renderSection('MODERAÇÃO (' + periodLabel + ')', [
-      ['Denúncias abertas',  data.reportMetrics.open],
-      ['Total de denúncias', data.reportMetrics.total],
-      ['Posts ocultados',    data.postStatusMetrics.hidden],
-      ['Posts deletados',    data.postStatusMetrics.deleted],
+    drawSectionHeader('Resumo executivo', 'Janela analisada de ' + formatDateBR(data.periodStart) + ' até ' + formatDateBR(data.periodEnd) + '.');
+    drawMetricCards([
+      { label: 'Denúncias abertas', value: toNumber(data.reportMetrics && data.reportMetrics.open), detail: periodLabel },
+      { label: 'Total de denúncias', value: toNumber(data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
+      { label: 'Posts ocultados', value: toNumber(data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
+      { label: 'Posts deletados', value: toNumber(data.postStatusMetrics && data.postStatusMetrics.deleted), detail: periodLabel },
+      { label: 'Buscas registradas', value: toNumber(data.searchCount), detail: periodLabel },
+      { label: 'Votos', value: toNumber(data.votesCount), detail: periodLabel },
+      { label: 'Novos usuários', value: toNumber(data.usersNew), detail: periodLabel },
+      { label: 'Posts salvos', value: toNumber(data.savedPostsCount), detail: periodLabel }
     ]);
 
-    // Seção Atividade
-    renderSection('ATIVIDADE (' + periodLabel + ')', [
-      ['Total de posts',    data.postsTotal],
-      ['Posts publicados',  data.postsCreated],
-      ['Posts editados',    data.postsEdited],
-      ['Comentários',       data.commentsCount],
-      ['Buscas realizadas', data.searchCount],
-    ]);
+    drawSectionHeader('Pulso diário', 'Atividade consolidada por dia para posts, comentários, buscas, votos e ações administrativas.');
+    drawDailyChart(data.dailyMetrics || []);
 
-    // Seção Comunidade
-    renderSection('COMUNIDADE (' + periodLabel + ')', [
-      ['Total de usuários',                            data.usersTotal],
-      ['Novos usuários (' + periodLabel + ')',         data.usersNew],
-      ['Votos (' + periodLabel + ')',                  data.votesCount],
-      ['Posts salvos (' + periodLabel + ')',           data.savedPostsCount],
-    ]);
+    drawWrappedList(
+      'Top módulos por demanda',
+      (data.moduleShareRows || []).map(function (row) {
+        var topTerms = Array.isArray(row.topTerms) && row.topTerms.length ? ' | Termos: ' + row.topTerms.join(', ') : '';
+        return (row.label || row.module || 'Módulo') + ' - ' + (row.share || 0) + '% - ' + toNumber(row.count) + ' buscas' + topTerms;
+      }),
+      'Sem dados suficientes para participação por módulo.'
+    );
 
-    // Tendências de busca
-    if (data.trends && data.trends.length) {
-      checkPage();
-      doc.setFontSize(11);
-      doc.setTextColor(40, 40, 40);
-      doc.text('TENDÊNCIAS DE BUSCA — top 10 (' + periodLabel + ')', marginL, y); y += 5;
-      doc.line(marginL, y, 196, y); y += 5;
-      doc.setFontSize(10);
-      data.trends.forEach(function (t, i) {
-        checkPage();
-        var modKey = classifyTermToModule(t.term);
-        var modLabel = modKey ? ' [' + (MODULE_LABELS[modKey] || modKey) + ']' : '';
-        doc.setTextColor(80, 80, 80);
-        doc.text((i + 1) + '. ' + String(t.term || '') + modLabel, marginL + 2, y);
-        doc.setTextColor(30, 30, 30);
-        doc.text(String(Number(t.count) || 0), 150, y, { align: 'right' });
-        y += 6;
+    drawWrappedList(
+      'Alertas operacionais',
+      (data.alerts || []).map(function (alert) {
+        return '[' + String((alert && alert.tone) || 'neutral').toUpperCase() + '] ' + (alert.title || 'Atualização') + ' - ' + (alert.body || '');
+      }),
+      'Nenhum alerta operacional no período selecionado.'
+    );
+
+    drawWrappedList(
+      'Tendências de busca',
+      (data.trends || []).slice(0, 12).map(function (item, index) {
+        var moduleKey = classifyTermToModule(item && item.term);
+        return (index + 1) + '. ' + String((item && item.term) || '') + ' - ' + toNumber(item && item.count) +
+          (moduleKey ? ' (' + (MODULE_LABELS[moduleKey] || moduleKey) + ')' : '');
+      }),
+      'Nenhuma busca registrada no período selecionado.'
+    );
+
+    drawSectionHeader('Audit log', 'Apêndice com os eventos administrativos carregados na tela para o período selecionado.');
+    var auditLines = (data.auditRows || []).map(function (row) {
+      return formatDateTimeBR(row && row.created_at) + ' | ' +
+        String((row && row.action) || '-') + ' | ' +
+        String((row && row.entity_type) || '-') + ' | ' +
+        getActorDisplay(row && row.actor_id);
+    });
+    if (!auditLines.length) {
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Nenhum evento encontrado.', margin, y);
+      y += 6;
+    } else {
+      auditLines.forEach(function (line) {
+        var lines = doc.splitTextToSize(line, usableWidth);
+        checkPage((lines.length * 3.6) + 1);
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105);
+        doc.text(lines, margin, y);
+        y += (lines.length * 3.6) + 1.5;
       });
-      y += 4;
     }
 
-    // Audit log
-    if (data.auditRows && data.auditRows.length) {
-      checkPage();
-      doc.setFontSize(11);
-      doc.setTextColor(40, 40, 40);
-      doc.text('AUDIT LOG (' + periodLabel + ')', marginL, y); y += 5;
-      doc.line(marginL, y, 196, y); y += 5;
+    var totalPages = doc.internal.getNumberOfPages();
+    for (var pageIndex = 1; pageIndex <= totalPages; pageIndex += 1) {
+      doc.setPage(pageIndex);
       doc.setFontSize(8);
-      data.auditRows.forEach(function (row) {
-        checkPage();
-        var dateStr = new Date(row.created_at).toLocaleString('pt-BR');
-        var actorName = getActorDisplay(row.actor_id);
-        var line = dateStr + '  |  ' + (row.action || '—') + '  |  ' + (row.entity_type || '—') + '  |  ' + actorName;
-        doc.setTextColor(70, 70, 70);
-        doc.text(line, marginL + 2, y);
-        y += 5;
-      });
+      doc.setTextColor(148, 163, 184);
+      doc.text('KinoCampus - Página ' + pageIndex + ' / ' + totalPages, pageWidth - margin, pageHeight - 8, { align: 'right' });
     }
 
-    // Rodapé
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let p = 1; p <= totalPages; p++) {
-      doc.setPage(p);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text('KinoCampus — Pág. ' + p + ' / ' + totalPages, 196, 289, { align: 'right' });
-    }
-
-    doc.save('kc-dashboard-' + new Date().toISOString().slice(0, 10) + '.pdf');
+    doc.save(buildExportFilename('pdf', data.periodDays));
   }
 
   // ── Habilita botões de exportação na toolbar ─────────────────────────────────
@@ -1357,7 +1624,7 @@
         if (!_data) return;
         xlsxBtn.disabled = true;
         var origHtml = xlsxBtn.innerHTML;
-        xlsxBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando…';
+        xlsxBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
         try { await exportXLSX(_data); }
         catch (e) { console.error('[Admin export XLSX]', e); showError('Falha ao gerar XLSX. Verifique sua conexão e tente novamente.'); }
         finally { xlsxBtn.innerHTML = origHtml; xlsxBtn.disabled = false; }
@@ -1370,7 +1637,7 @@
         if (!_data) return;
         pdfBtn.disabled = true;
         var origHtml = pdfBtn.innerHTML;
-        pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando…';
+        pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
         try { await exportPDF(_data); }
         catch (e) { console.error('[Admin export PDF]', e); showError('Falha ao gerar PDF. Verifique sua conexão e tente novamente.'); }
         finally { pdfBtn.innerHTML = origHtml; pdfBtn.disabled = false; }
@@ -1391,9 +1658,10 @@
     if (!client) { showError('Supabase client não disponível.'); return; }
 
     var periodDays = getSelectedPeriodDays();
-    var since = daysAgo(periodDays);
+    var periodRange = getPeriodRange(periodDays);
+    var since = periodRange.since;
     var shortLabel = getPeriodShortLabel(periodDays);
-    var fullLabel  = getPeriodLabel(periodDays);
+    var fullLabel  = periodRange.label;
 
     // Atualiza títulos das seções com o período selecionado
     var activityTitle = $('#admin-activity-title');
@@ -1525,6 +1793,9 @@
       usersTotal, usersNew, votesCount, savedPostsCount,
       auditRows, trends, periodDays,
       dailyMetrics, dailySummary, moduleShareRows, alerts,
+      periodLabel: fullLabel,
+      periodStart: since,
+      periodEnd: periodRange.until,
     };
     enableExport();
 
@@ -1560,7 +1831,7 @@
     var filterEl = $('#admin-audit-filter');
     var actionFilter = filterEl ? filterEl.value : 'all';
     var periodDays = getSelectedPeriodDays();
-    var since = daysAgo(periodDays);
+    var since = getPeriodRange(periodDays).since;
     var btn = $('#admin-audit-load-more');
     if (btn) btn.disabled = true;
 
@@ -1588,7 +1859,7 @@
     var filterEl = $('#admin-audit-filter');
     var actionFilter = filterEl ? filterEl.value : 'all';
     var periodDays = getSelectedPeriodDays();
-    var since = daysAgo(periodDays);
+    var since = getPeriodRange(periodDays).since;
     _auditOffset = 0;
 
     try {
@@ -1606,6 +1877,7 @@
   async function boot() {
     setLoading(true);
     stabilizeHeaderActions();
+    bindDailyActivityChartModal();
     const access = await checkAccess();
     if (!access.ok) {
       setLoading(false);

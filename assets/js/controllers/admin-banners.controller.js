@@ -317,12 +317,24 @@
 
     updatePreview();
     modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('kc-admin-modal-open');
+    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
+      window.KCAdminShell.setModalOpen(true);
+    }
     document.getElementById('f-title').focus();
   }
 
   function closeModal() {
     const modal = document.getElementById('banner-modal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('kc-admin-modal-open');
+    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
+      window.KCAdminShell.setModalOpen(false);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -592,6 +604,13 @@
     document.getElementById('banner-modal').addEventListener('click', (e) => {
       if (e.target === document.getElementById('banner-modal')) closeModal();
     });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('banner-modal').style.display !== 'none') {
+        e.preventDefault();
+        closeModal();
+      }
+    }, true);
 
     // Listeners do preview e do form
     bindPreviewListeners();
