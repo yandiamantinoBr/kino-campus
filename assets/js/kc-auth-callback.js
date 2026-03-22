@@ -1,184 +1,280 @@
-/**
- * KinoCampus — Auth Callback Handler (V8.2.5.0)
- * Gerencia a confirmação de e-mail / OTP após redirecionamento do Supabase Auth.
- * Depende de: kc-env.js, supabase-js (CDN), kc-supabase.client.js
- */
+(function () {
+  'use strict';
 
-  var REDIRECT_DELAY = 4000; // ms até redirecionar automaticamente após sucesso
+  const shared = window.KCAccountProfileUtils || {};
+  const REDIRECT_DELAY_MS = 1800;
 
-  // ── Helpers DOM ──────────────────────────────────────────────────────────
-  function el(id) { return document.getElementById(id); }
-
-  function setState(type, icon, title, msg, showBtn, showProgress) {
-    var iconEl    = el('cbIcon');
-    var iconInner = el('cbIconInner');
-    var titleEl   = el('cbTitle');
-    var msgEl     = el('cbMsg');
-    var btnEl     = el('cbBtn');
-    var progress  = el('cbProgress');
-
-    iconEl.className     = 'kc-callback-icon ' + type;
-    iconInner.className  = icon;
-    titleEl.textContent  = title;
-    msgEl.innerHTML      = msg;
-    btnEl.style.display  = showBtn ? 'inline-flex' : 'none';
-
-    if (showProgress) {
-      progress.classList.add('visible');
-    } else {
-      progress.classList.remove('visible');
-    }
+  function $(id) {
+    return document.getElementById(id);
   }
 
-  function startCountdown(seconds) {
-    var countEl = el('cbCountdown');
-    countEl.style.display = 'block';
-    var left = seconds;
+  function setState(options) {
+    const config = options && typeof options === 'object' ? options : {};
+    const icon = $('cbIcon');
+    const iconInner = $('cbIconInner');
+    const title = $('cbTitle');
+    const message = $('cbMsg');
+    const action = $('cbBtn');
+    const progress = $('cbProgress');
+    const countdown = $('cbCountdown');
+    const resetPanel = $('cbResetPanel');
 
-    var tick = function () {
-      countEl.textContent = 'Redirecionando em ' + left + ' segundo' + (left !== 1 ? 's' : '') + '…';
-      if (left <= 0) {
-        window.location.href = 'index.html';
+    if (icon) icon.className = `kc-callback-icon ${config.tone || 'loading'}`;
+    if (iconInner) iconInner.className = config.iconClass || 'fas fa-spinner fa-spin';
+    if (title) title.textContent = config.title || 'Conferindo seu link...';
+    if (message) message.innerHTML = config.message || '';
+
+    if (action) {
+      if (config.actionHref) action.href = config.actionHref;
+      action.style.display = config.actionLabel ? 'inline-flex' : 'none';
+      action.innerHTML = config.actionLabel
+        ? `${config.actionIcon ? `<i class="${config.actionIcon}"></i>` : ''}<span>${config.actionLabel}</span>`
+        : '';
+    }
+
+    if (progress) progress.classList.toggle('visible', config.showProgress === true);
+    if (countdown) {
+      countdown.style.display = config.showCountdown ? 'block' : 'none';
+      countdown.textContent = '';
+    }
+    if (resetPanel) resetPanel.style.display = config.showResetPanel ? 'grid' : 'none';
+  }
+
+  function normalizeNextPath(value) {
+    if (shared && typeof shared.normalizeNextPath === 'function') {
+      return shared.normalizeNextPath(value, '/index.html');
+    }
+    const raw = String(value || '').trim();
+    if (!raw) return '/index.html';
+    return raw.charAt(0) === '/' ? raw : `/${raw}`;
+  }
+
+  function getQueryParams() {
+    const search = new URLSearchParams(window.location.search || '');
+    const hash = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+    return {
+      search,
+      hash,
+    };
+  }
+
+  function getAuthType(params) {
+    const searchType = String(params.search.get('type') || params.search.get('mode') || '').trim().toLowerCase();
+    const hashType = String(params.hash.get('type') || '').trim().toLowerCase();
+    return searchType || hashType || '';
+  }
+
+  function getAuthError(params) {
+    const code = String(params.search.get('error_code') || params.hash.get('error_code') || params.search.get('error') || params.hash.get('error') || '').trim();
+    const description = String(params.search.get('error_description') || params.hash.get('error_description') || '').trim();
+    return {
+      code,
+      description,
+    };
+  }
+
+  function startRedirect(nextPath, label) {
+    const countdown = $('cbCountdown');
+    const progressBar = $('cbProgressBar');
+    const totalSeconds = Math.max(1, Math.round(REDIRECT_DELAY_MS / 1000));
+    let remaining = totalSeconds;
+    const target = normalizeNextPath(nextPath);
+
+    setState({
+      tone: 'success',
+      iconClass: 'fas fa-check',
+      title: label || 'Tudo certo por aqui',
+      message: 'Sua autenticacao foi concluida com sucesso. Estamos te levando para a proxima etapa.',
+      actionHref: target,
+      actionLabel: 'Ir agora',
+      actionIcon: 'fas fa-arrow-right',
+      showProgress: true,
+      showCountdown: true,
+      showResetPanel: false,
+    });
+
+    const tick = function () {
+      if (countdown) countdown.textContent = `Redirecionando em ${remaining} segundo${remaining === 1 ? '' : 's'}...`;
+      const elapsed = (totalSeconds - remaining) / totalSeconds;
+      if (progressBar) progressBar.style.width = `${Math.min(100, elapsed * 100)}%`;
+      if (remaining <= 0) {
+        window.location.href = target;
         return;
       }
-      left--;
+      remaining -= 1;
       setTimeout(tick, 1000);
     };
+
     tick();
-
-    // Barra de progresso animada
-    var bar = el('cbProgressBar');
-    var progressEl = el('cbProgress');
-    progressEl.classList.add('visible');
-    var start = Date.now();
-    var total = seconds * 1000;
-
-    var animateBar = function () {
-      var elapsed = Date.now() - start;
-      var pct = Math.min(100, (elapsed / total) * 100);
-      bar.style.width = pct + '%';
-      if (pct < 100) requestAnimationFrame(animateBar);
-    };
-    requestAnimationFrame(animateBar);
+    setTimeout(function () {
+      window.location.href = target;
+    }, REDIRECT_DELAY_MS);
   }
 
-  function showSuccess(email) {
-    setState(
-      'success',
-      'fas fa-check',
-      'E-mail confirmado! 🎉',
-      'Bem-vindo(a) ao <strong>KinoCampus</strong>! Sua conta' +
-        (email ? ' (<strong>' + email + '</strong>)' : '') +
-        ' foi verificada com sucesso. Você já está logado.',
-      true,
-      false
-    );
-    startCountdown(Math.round(REDIRECT_DELAY / 1000));
-  }
-
-  function showError(msg) {
-    setState(
-      'error',
-      'fas fa-exclamation-triangle',
-      'Não foi possível confirmar',
-      msg || 'O link de confirmação pode ter expirado ou já foi usado.<br>' +
-             'Tente fazer login novamente ou solicite um novo e-mail de confirmação.',
-      true,
-      false
-    );
-    el('cbBtn').textContent = '';
-    el('cbBtn').innerHTML = '<i class="fas fa-arrow-left"></i> Voltar ao início';
-    el('cbBtn').href = 'index.html';
-    el('cbCountdown').style.display = 'none';
-  }
-
-  function showAlreadyLogged(email) {
-    setState(
-      'success',
-      'fas fa-user-check',
-      'Você já está logado!',
-      'A sessão de <strong>' + (email || 'sua conta') + '</strong> está ativa.' +
-        ' Redirecionando para o feed…',
-      true,
-      false
-    );
-    startCountdown(Math.round(REDIRECT_DELAY / 1000));
-  }
-
-  // ── Lógica principal ──────────────────────────────────────────────────────
-  async function handleCallback() {
-    // Aguarda Supabase JS e KC_ENV carregarem
-    var maxWait = 4000;
-    var waited  = 0;
-    while ((!window.supabase || !KC_ENV) && waited < maxWait) {
-      await new Promise(function(r) { setTimeout(r, 80); });
-      waited += 80;
+  async function loadProfileForRedirect() {
+    if (!window.KCAPI || typeof window.KCAPI.getMyProfile !== 'function') return null;
+    let profile = await window.KCAPI.getMyProfile();
+    if (!profile && typeof window.KCAPI.syncProfile === 'function') {
+      await window.KCAPI.syncProfile();
+      profile = await window.KCAPI.getMyProfile();
     }
+    return profile;
+  }
 
-    var env = KC_ENV || {};
-    var url  = String(env.SUPABASE_URL || (env.supabase && env.supabase.url) || '').trim();
-    var anon = String(env.SUPABASE_ANON_KEY || (env.supabase && env.supabase.anonKey) || '').trim();
+  function resolvePostAuthRoute(nextPath, profile) {
+    const normalizedNext = normalizeNextPath(nextPath);
+    const complete = shared && typeof shared.isOnboardingComplete === 'function'
+      ? shared.isOnboardingComplete(profile || {})
+      : !!(profile && profile.onboarding_completed_at);
 
-    if (!url || !anon || /placeholder/i.test(url)) {
-      showError('Configuração do servidor não encontrada. Tente recarregar a página.');
-      return;
+    if (!complete) {
+      const setupUrl = new URL('/account-setup.html', window.location.origin);
+      setupUrl.searchParams.set('next', normalizedNext);
+      return `${setupUrl.pathname}${setupUrl.search}`;
     }
+    return normalizedNext;
+  }
 
-    var client;
-    try {
-      client = window.supabase.createClient(url, anon, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  async function completeAuthFlow(nextPath, label) {
+    const profile = await loadProfileForRedirect();
+    startRedirect(resolvePostAuthRoute(nextPath, profile), label);
+  }
+
+  function showErrorState(message) {
+    setState({
+      tone: 'error',
+      iconClass: 'fas fa-circle-exclamation',
+      title: 'Nao foi possivel concluir a autenticacao',
+      message: message || 'O link pode ter expirado, ja ter sido usado ou estar incompleto.',
+      actionHref: '/index.html',
+      actionLabel: 'Voltar ao inicio',
+      actionIcon: 'fas fa-house',
+      showProgress: false,
+      showCountdown: false,
+      showResetPanel: false,
+    });
+  }
+
+  function showRecoveryForm() {
+    setState({
+      tone: 'success',
+      iconClass: 'fas fa-key',
+      title: 'Defina uma nova senha',
+      message: 'Seu link de recuperacao foi validado. Escolha uma nova senha para continuar usando a plataforma.',
+      actionHref: '/index.html',
+      actionLabel: '',
+      showProgress: false,
+      showCountdown: false,
+      showResetPanel: true,
+    });
+  }
+
+  async function handlePasswordResetSubmit(event, nextPath) {
+    event.preventDefault();
+    const password = $('cbResetPassword') ? String($('cbResetPassword').value || '').trim() : '';
+    const confirm = $('cbResetConfirm') ? String($('cbResetConfirm').value || '').trim() : '';
+
+    if (!password || password.length < 6) {
+      setState({
+        tone: 'warn',
+        iconClass: 'fas fa-key',
+        title: 'Defina uma senha mais forte',
+        message: 'Sua nova senha precisa ter pelo menos 6 caracteres.',
+        showResetPanel: true,
       });
-    } catch(e) {
-      showError('Erro ao conectar com o servidor de autenticação.');
       return;
     }
 
-    // Aguarda Supabase processar o token da URL (hash ou query param)
-    // O detectSessionInUrl: true faz isso automaticamente ao criar o client
-    await new Promise(function(r) { setTimeout(r, 600); });
+    if (password !== confirm) {
+      setState({
+        tone: 'warn',
+        iconClass: 'fas fa-key',
+        title: 'As senhas nao conferem',
+        message: 'Repita a mesma senha nos dois campos para concluir a redefinicao.',
+        showResetPanel: true,
+      });
+      return;
+    }
+
+    setState({
+      tone: 'loading',
+      iconClass: 'fas fa-spinner fa-spin',
+      title: 'Atualizando sua senha...',
+      message: 'Estamos salvando sua nova senha com seguranca.',
+      showResetPanel: true,
+    });
+
+    const result = await window.KCAPI.updatePassword(password);
+    if (!result || !result.ok) {
+      showErrorState((result && result.error && result.error.message) || 'Nao foi possivel atualizar sua senha.');
+      $('cbResetPanel').style.display = 'grid';
+      return;
+    }
+
+    await completeAuthFlow(nextPath, 'Senha atualizada com sucesso');
+  }
+
+  async function init() {
+    const params = getQueryParams();
+    const nextPath = normalizeNextPath(params.search.get('next'));
+    const authType = getAuthType(params);
+    const authError = getAuthError(params);
+
+    if (authError.code) {
+      const description = String(authError.description || '').toLowerCase();
+      if (authError.code === 'otp_expired' || description.includes('expired')) {
+        showErrorState('O link expirou. Solicite um novo e-mail de confirmacao ou de recuperacao de senha.');
+      } else {
+        showErrorState(authError.description || 'Nao foi possivel validar este link.');
+      }
+      return;
+    }
+
+    if (!window.KCSupabase || typeof window.KCSupabase.refreshSession !== 'function') {
+      showErrorState('O cliente de autenticacao nao foi carregado corretamente.');
+      return;
+    }
+
+    setState({
+      tone: 'loading',
+      iconClass: 'fas fa-spinner fa-spin',
+      title: 'Conferindo seu link...',
+      message: 'Estamos finalizando sua autenticacao no KinoCampus.',
+      showProgress: true,
+      showCountdown: false,
+      showResetPanel: false,
+    });
 
     try {
-      var result = await client.auth.getSession();
-      var session = result && result.data && result.data.session;
-
-      if (session && session.user) {
-        // Sincroniza com o KCSupabase (se disponível)
-        if (KCSupabase && typeof KCSupabase.refreshSession === 'function') {
-          try { await KCSupabase.refreshSession(); } catch(_) {}
-        }
-        showSuccess(session.user.email || '');
-      } else {
-        // Verifica se há erro de expiração no hash
-        var hash = window.location.hash || '';
-        var params = new URLSearchParams(hash.replace(/^#/, ''));
-        var errorCode = params.get('error_code') || params.get('error');
-        var errorDesc = params.get('error_description') || '';
-
-        if (errorCode === 'otp_expired' || errorDesc.toLowerCase().includes('expired')) {
-          showError('O link de confirmação <strong>expirou</strong>. Por favor, solicite um novo cadastro e confirme em até 24 horas.');
-        } else if (errorCode) {
-          showError('Erro de autenticação: <em>' + errorDesc + '</em>');
-        } else {
-          // Pode ser que o usuário já estava logado e o link foi reutilizado
-          // Tenta verificar a sessão atual
-          var userResult = await client.auth.getUser();
-          if (userResult && userResult.data && userResult.data.user) {
-            showAlreadyLogged(userResult.data.user.email || '');
-          } else {
-            showError('Link de confirmação inválido ou já utilizado.<br>Se você já confirmou seu e-mail, tente fazer login normalmente.');
-          }
-        }
+      await window.KCSupabase.refreshSession();
+      const user = await window.KCSupabase.getCurrentUser();
+      if (!user) {
+        showErrorState('Nao encontramos uma sessao valida para esse link. Tente entrar novamente ou solicite um novo e-mail.');
+        return;
       }
-    } catch(e) {
-      console.error('[KC Auth Callback]', e);
-      showError('Ocorreu um erro inesperado. Tente novamente ou entre em contato com o suporte.');
+
+      if (authType === 'recovery') {
+        showRecoveryForm();
+        const form = $('cbResetForm');
+        if (form && !form.dataset.bound) {
+          form.dataset.bound = '1';
+          form.addEventListener('submit', function (event) {
+            handlePasswordResetSubmit(event, nextPath);
+          });
+        }
+        return;
+      }
+
+      await completeAuthFlow(nextPath, 'Conta confirmada');
+    } catch (error) {
+      console.error('[KCAuthCallback] failed:', error);
+      showErrorState('Nao foi possivel concluir sua autenticacao agora. Tente novamente em alguns instantes.');
     }
   }
 
-  // Inicia após DOMContentLoaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', handleCallback);
+    document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
-    handleCallback();
+    init();
   }
+})();

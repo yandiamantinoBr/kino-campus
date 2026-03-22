@@ -1,218 +1,225 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="kc-loading">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Confirmando sua conta — KinoCampus</title>
-  <link href="assets/css/kc-theme-boot.css" rel="stylesheet"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KinoCampus - Confirmando sua conta</title>
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css" />
   <script src="assets/js/kc-theme-boot.js"></script>
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
-  <link href="assets/css/styles.css" rel="stylesheet"/>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
-
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    /* ── Callback page layout ── */
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(255, 124, 0, 0.18), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(68, 190, 233, 0.16), transparent 26%),
+        var(--kc-background-dark);
+    }
     .kc-callback-page {
       min-height: 100vh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 24px 16px;
-      background: var(--kc-background-dark);
     }
-
     .kc-callback-card {
-      background: var(--kc-surface-dark);
-      border: 1px solid var(--kc-border-dark);
-      border-radius: 20px;
-      padding: 48px 40px;
-      max-width: 440px;
-      width: 100%;
+      width: min(520px, 100%);
+      border-radius: 24px;
+      background: rgba(13, 18, 26, 0.82);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 26px 80px rgba(0,0,0,0.28);
+      backdrop-filter: blur(16px);
+      padding: 32px 28px;
+      display: grid;
+      gap: 18px;
       text-align: center;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-      animation: kc-card-in 0.4s ease;
     }
-
-    @keyframes kc-card-in {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0);    }
-    }
-
     .kc-callback-logo {
-      font-size: 2rem;
-      font-weight: 900;
-      color: var(--kc-text-dark-primary);
-      margin-bottom: 32px;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--kc-text-dark-primary);
     }
-
     .kc-callback-logo span { color: var(--kc-primary-brand); }
-
     .kc-callback-icon {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
+      width: 84px;
+      height: 84px;
+      margin: 0 auto;
+      border-radius: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 2rem;
-      margin: 0 auto 24px;
-      transition: background 0.4s, color 0.4s;
-    }
-
-    .kc-callback-icon.loading {
-      background: rgba(65, 181, 211, 0.15);
-      color: var(--kc-secondary-brand);
-      animation: kc-pulse 1.4s ease-in-out infinite;
-    }
-
-    .kc-callback-icon.success {
-      background: rgba(112, 226, 145, 0.15);
-      color: var(--kc-green-check);
-    }
-
-    .kc-callback-icon.error {
-      background: rgba(255, 82, 82, 0.15);
-      color: var(--kc-red-alert);
-    }
-
-    @keyframes kc-pulse {
-      0%, 100% { opacity: 1;   transform: scale(1);    }
-      50%       { opacity: 0.6; transform: scale(0.94); }
-    }
-
-    .kc-callback-title {
-      font-size: 1.4rem;
-      font-weight: 800;
+      background: rgba(255,255,255,0.04);
       color: var(--kc-text-dark-primary);
-      margin: 0 0 10px;
     }
-
+    .kc-callback-icon.loading {
+      color: #5ec8ff;
+      background: rgba(94, 200, 255, 0.10);
+    }
+    .kc-callback-icon.success {
+      color: #59d487;
+      background: rgba(89, 212, 135, 0.12);
+    }
+    .kc-callback-icon.warn {
+      color: #ffce56;
+      background: rgba(255, 206, 86, 0.12);
+    }
+    .kc-callback-icon.error {
+      color: #ff7b7b;
+      background: rgba(255, 123, 123, 0.12);
+    }
+    .kc-callback-title {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      line-height: 1.08;
+      color: var(--kc-text-dark-primary);
+    }
     .kc-callback-msg {
-      font-size: 0.97rem;
+      margin: 0;
       color: var(--kc-text-dark-secondary);
-      line-height: 1.6;
-      margin: 0 0 32px;
+      line-height: 1.7;
     }
-
-    .kc-callback-msg strong { color: var(--kc-text-dark-primary); }
-
     .kc-callback-progress {
-      height: 4px;
-      border-radius: 2px;
-      background: var(--kc-border-dark);
-      overflow: hidden;
-      margin-bottom: 24px;
       display: none;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
     }
-
     .kc-callback-progress.visible { display: block; }
-
     .kc-callback-progress-bar {
+      width: 0;
       height: 100%;
-      border-radius: 2px;
-      background: linear-gradient(90deg, var(--kc-primary-brand), var(--kc-secondary-brand));
-      width: 0%;
-      transition: width 0.1s linear;
+      background: linear-gradient(90deg, #ff7c00, #4ac9ff);
+      transition: width .2s linear;
     }
-
     .kc-callback-cta {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
-      padding: 13px 28px;
-      border-radius: 12px;
-      font-size: 0.97rem;
-      font-weight: 700;
+      width: fit-content;
+      margin: 0 auto;
+      padding: 13px 20px;
+      border-radius: 14px;
       text-decoration: none;
-      cursor: pointer;
-      border: none;
-      transition: opacity 0.2s, transform 0.2s;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ff7c00, #ff9a3a);
+      color: #fff;
+      box-shadow: 0 18px 34px rgba(255, 124, 0, 0.22);
     }
-
-    .kc-callback-cta:hover { opacity: 0.88; transform: translateY(-1px); }
-
-    .kc-callback-cta.primary {
-      background: var(--kc-primary-brand);
+    .kc-callback-countdown {
+      margin: 0;
+      color: var(--kc-text-dark-secondary);
+      font-size: .88rem;
+    }
+    .kc-callback-reset {
+      display: none;
+      gap: 12px;
+      text-align: left;
+      padding-top: 4px;
+    }
+    .kc-callback-reset label {
+      display: grid;
+      gap: 8px;
+      color: var(--kc-text-dark-primary);
+      font-weight: 700;
+      font-size: .9rem;
+    }
+    .kc-callback-reset input {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(6, 10, 16, 0.72);
+      color: var(--kc-text-dark-primary);
+      padding: 13px 14px;
+      font: inherit;
+    }
+    .kc-callback-reset button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: 14px;
+      padding: 13px 18px;
+      font-weight: 800;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff7c00, #ff9a3a);
       color: #fff;
     }
-
-    .kc-callback-cta.secondary {
-      background: var(--kc-border-dark);
-      color: var(--kc-text-dark-primary);
-    }
-
-    .kc-callback-countdown {
-      font-size: 0.85rem;
-      color: var(--kc-text-dark-secondary);
-      margin-top: 16px;
-    }
-
     .kc-callback-footer {
-      margin-top: 32px;
-      font-size: 0.8rem;
       color: var(--kc-text-dark-secondary);
+      font-size: .84rem;
     }
-
-    @media (max-width: 480px) {
-      .kc-callback-card { padding: 32px 20px; }
+    .kc-callback-footer a {
+      color: var(--kc-primary-brand);
+      text-decoration: none;
+      font-weight: 700;
     }
   </style>
 </head>
 <body>
+  <div class="kc-callback-page">
+    <div class="kc-callback-card">
+      <div class="kc-callback-logo">
+        <i class="fas fa-campground" aria-hidden="true"></i>
+        <span>Kino</span>Campus
+      </div>
 
-<div class="kc-callback-page">
-  <div class="kc-callback-card">
+      <div class="kc-callback-icon loading" id="cbIcon">
+        <i class="fas fa-spinner fa-spin" id="cbIconInner"></i>
+      </div>
 
-    <!-- Logo -->
-    <div class="kc-callback-logo">
-      <i class="fas fa-campground" style="color: var(--kc-primary-brand)"></i>
-      Kino<span>Campus</span>
+      <h1 class="kc-callback-title" id="cbTitle">Conferindo seu link...</h1>
+      <p class="kc-callback-msg" id="cbMsg">Estamos finalizando sua autenticacao no KinoCampus.</p>
+
+      <div class="kc-callback-progress" id="cbProgress">
+        <div class="kc-callback-progress-bar" id="cbProgressBar"></div>
+      </div>
+
+      <form id="cbResetForm" class="kc-callback-reset" autocomplete="on">
+        <label for="cbResetPassword">
+          Nova senha
+          <input id="cbResetPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Minimo de 6 caracteres" />
+        </label>
+        <label for="cbResetConfirm">
+          Confirmar nova senha
+          <input id="cbResetConfirm" type="password" minlength="6" autocomplete="new-password" placeholder="Repita a senha" />
+        </label>
+        <button type="submit">
+          <i class="fas fa-key"></i>
+          <span>Salvar nova senha</span>
+        </button>
+      </form>
+
+      <a id="cbBtn" class="kc-callback-cta" href="/index.html" style="display:none;"></a>
+      <p id="cbCountdown" class="kc-callback-countdown" style="display:none;"></p>
+
+      <div class="kc-callback-footer">
+        KinoCampus · Comunidade UFG · <a href="index.html">Voltar ao inicio</a>
+      </div>
     </div>
-
-    <!-- Ícone de estado -->
-    <div class="kc-callback-icon loading" id="cbIcon">
-      <i class="fas fa-spinner fa-spin" id="cbIconInner"></i>
-    </div>
-
-    <!-- Título -->
-    <h1 class="kc-callback-title" id="cbTitle">Confirmando sua conta…</h1>
-
-    <!-- Mensagem -->
-    <p class="kc-callback-msg" id="cbMsg">
-      Aguarde enquanto verificamos seu e-mail. Isso levará apenas um segundo.
-    </p>
-
-    <!-- Barra de progresso -->
-    <div class="kc-callback-progress" id="cbProgress">
-      <div class="kc-callback-progress-bar" id="cbProgressBar"></div>
-    </div>
-
-    <!-- Botão de ação (oculto inicialmente) -->
-    <a href="index.html" class="kc-callback-cta primary" id="cbBtn" style="display:none">
-      <i class="fas fa-home"></i>
-      Ir para o feed
-    </a>
-
-    <!-- Contagem regressiva -->
-    <p class="kc-callback-countdown" id="cbCountdown" style="display:none"></p>
-
-    <div class="kc-callback-footer">
-      KinoCampus · Comunidade UFG &middot; <a href="index.html" style="color:var(--kc-primary-brand)">Voltar ao início</a>
-    </div>
-
   </div>
-</div>
 
-<!-- Scripts (mesma ordem do index.html) -->
-<script src="assets/js/kc-env.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/js/kc-supabase.client.js"></script>
-<script src="assets/js/kc-auth-callback.js"></script>
-
+  <script src="assets/js/kc-constants.js"></script>
+  <script src="assets/js/kc-utils.js"></script>
+  <script src="assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/adapters/local.adapter.js"></script>
+  <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/account-profile.shared.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-auth-callback.js"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@
   let editUI = null;
   let staticInteractionsBound = false;
   let savedPostState = { kinds: [], loaded: false, pending: false };
+  const shared = window.KCAccountProfileUtils || {};
 
   // ── Share popover ────────────────────────────────────────
   function openSharePopover(btn) {
@@ -186,6 +187,30 @@
     } catch (_) { }
   }
 
+  function buildCurrentPagePath() {
+    const path = String(window.location.pathname || '/product.html').trim() || '/product.html';
+    return `${path}${window.location.search || ''}${window.location.hash || ''}`;
+  }
+
+  function buildPostContactIntent(post) {
+    return {
+      type: 'product_contact',
+      path: buildCurrentPagePath(),
+      postId: String((post && (post.id || post.uuid)) || '').trim(),
+      postUuid: String((post && post.uuid) || '').trim(),
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  function buildProfileHref(profileId) {
+    const normalized = String(profileId || '').trim();
+    return normalized ? `profile.html?id=${encodeURIComponent(normalized)}` : 'profile.html';
+  }
+
+  function isViewerAuthenticated() {
+    return !!(currentUser && currentUser.id);
+  }
+
   function resolveCurrentUserDisplayName(user, profile) {
     const normalizedProfile = (profile && typeof profile === 'object') ? profile : null;
     const normalizedUser = (user && typeof user === 'object') ? user : null;
@@ -232,6 +257,211 @@
     }
 
     return '';
+  }
+
+  function getContactActionPresentation(action, post) {
+    const fallbackCta = post && post._kcCTA ? post._kcCTA : null;
+    const iconMap = {
+      whatsapp: 'fab fa-whatsapp',
+      email_public: 'fas fa-envelope',
+      instagram: 'fab fa-instagram',
+      linkedin: 'fab fa-linkedin',
+      facebook: 'fab fa-facebook',
+      login_required: 'fas fa-right-to-bracket',
+      view_profile: 'fas fa-id-badge',
+      external_link: 'fas fa-arrow-up-right-from-square',
+      real_form: 'fas fa-paper-plane',
+      safe_fallback: 'fas fa-circle-info'
+    };
+
+    return {
+      label: String((action && action.label) || (fallbackCta && fallbackCta.label) || 'Entrar em contato').trim(),
+      iconClass: String((action && action.iconClass) || (fallbackCta && fallbackCta.iconClass) || iconMap[String((action && action.type) || '').trim()] || 'fas fa-paper-plane').trim()
+    };
+  }
+
+  function executeContactAction(action, post) {
+    if (!action) return false;
+
+    if (action.type === 'login_required') {
+      if (typeof window.kcQueueAuthIntent === 'function') {
+        window.kcQueueAuthIntent(buildPostContactIntent(post));
+      }
+      if (typeof window.kcOpenAuthModal === 'function') {
+        window.kcOpenAuthModal({ tab: 'login', nextPath: buildCurrentPagePath() });
+      } else {
+        window.location.href = 'index.html#login';
+      }
+      return true;
+    }
+
+    if (action.href) {
+      if (action.target === '_blank') {
+        window.open(action.href, '_blank', action.rel || 'noopener,noreferrer');
+      } else {
+        window.location.href = action.href;
+      }
+      return true;
+    }
+
+    if (typeof action.handler === 'function') {
+      action.handler();
+      return true;
+    }
+
+    return false;
+  }
+
+  function getPostContactAction(post) {
+    const meta = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
+    const moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
+    const categoryKey = String(post && (post.categoria || post.category) || '').trim().toLowerCase();
+    const authorId = getPostAuthorId(post);
+    const viewProfileHref = buildProfileHref(authorId);
+    const authorProfile = post && post.authorProfile && typeof post.authorProfile === 'object' ? post.authorProfile : null;
+
+    if (authorProfile && shared && typeof shared.buildContactAction === 'function') {
+      const profileAction = shared.buildContactAction({
+        profile: authorProfile,
+        viewerAuthenticated: isViewerAuthenticated(),
+        postTitle: post && (post.titulo || post.title) || '',
+        postUrl: window.location.href,
+        viewProfileHref
+      });
+      if (profileAction && profileAction.type && profileAction.type !== 'unavailable') {
+        return profileAction;
+      }
+    }
+
+    const whatsappRaw = post && (post.whatsapp || post.whatsappNumber || post.contatoWhatsapp) || meta.whatsapp;
+    const whatsapp = normalizeWhatsAppPhone(whatsappRaw);
+    if (whatsapp) {
+      if (!isViewerAuthenticated()) {
+        return { type: 'login_required', label: 'Entrar para contatar' };
+      }
+      const message = shared && typeof shared.buildContactMessage === 'function'
+        ? shared.buildContactMessage(post && (post.titulo || post.title) || '', window.location.href)
+        : `${post && (post.titulo || post.title) || 'KinoCampus'}\n${window.location.href}`;
+      return {
+        type: 'whatsapp',
+        label: 'Falar no WhatsApp',
+        href: 'https://wa.me/' + encodeURIComponent(whatsapp) + '?text=' + encodeURIComponent(message),
+        target: '_blank',
+        rel: 'noopener noreferrer'
+      };
+    }
+
+    const externalUrl = String(post && (post.link || post.externalUrl || post.url || post.formUrl) || meta.formUrl || meta.externalUrl || '').trim();
+    const isOpportunityForm = moduleKey === 'oportunidades' || categoryKey === 'estagio' || categoryKey === 'emprego';
+
+    if (isOpportunityForm && typeof window.openFormModal === 'function') {
+      if (!isViewerAuthenticated()) {
+        return { type: 'login_required', label: 'Entrar para contatar' };
+      }
+      return {
+        type: 'real_form',
+        label: 'Enviar interesse',
+        handler: () => window.openFormModal({ postId: post && (post.id || post.uuid) || null, post })
+      };
+    }
+
+    if (/^https?:\/\//i.test(externalUrl)) {
+      if (!isViewerAuthenticated()) {
+        return { type: 'login_required', label: 'Entrar para contatar' };
+      }
+      return {
+        type: 'external_link',
+        label: 'Abrir canal de contato',
+        href: externalUrl,
+        target: '_blank',
+        rel: 'noopener noreferrer'
+      };
+    }
+
+    if (authorId) {
+      return {
+        type: 'view_profile',
+        label: 'Ver perfil',
+        href: viewProfileHref
+      };
+    }
+
+    return {
+      type: 'safe_fallback',
+      label: 'Contato indisponivel',
+      handler: () => {
+        toast('Contato indisponivel para esta publicacao.', 'warn', 2400);
+      }
+    };
+  }
+
+  function setCTA(post) {
+    const btn = document.getElementById('primaryCta');
+    if (!btn) return;
+
+    const action = getPostContactAction(post);
+    const presentation = getContactActionPresentation(action, post);
+    btn.innerHTML = `<i class="${esc(presentation.iconClass)}"></i> ${esc(presentation.label)}`;
+    btn.dataset.kcCtaLabel = presentation.label;
+    btn.dataset.kcCtaHref = String(action && action.href || '');
+    btn.dataset.kcCtaTarget = String(action && action.target || '');
+    btn.dataset.kcCtaRel = String(action && action.rel || '');
+    btn.dataset.kcCtaActionType = String(action && action.type || 'safe_fallback');
+
+    if (btn.tagName === 'A') {
+      btn.setAttribute('href', action && action.href ? action.href : '#');
+      if (action && action.target) btn.setAttribute('target', action.target);
+      else btn.removeAttribute('target');
+      if (action && action.rel) btn.setAttribute('rel', action.rel);
+      else btn.removeAttribute('rel');
+    }
+
+    if (btn.dataset.kcCtaBound !== '1') {
+      btn.dataset.kcCtaBound = '1';
+      btn.addEventListener('click', (event) => {
+        try {
+          const liveAction = getPostContactAction(currentPost || post || {});
+          if (executeContactAction(liveAction, currentPost || post || {})) {
+            event.preventDefault();
+            return;
+          }
+
+          throw new Error('cta_action_unresolved:' + String(btn.dataset.kcCtaActionType || 'unknown'));
+        } catch (error) {
+          event.preventDefault();
+          reportCtaError('cta_click_failed', {
+            message: error && error.message ? String(error.message) : 'unknown',
+            postId: (currentPost && (currentPost.id || currentPost.uuid)) || (post && (post.id || post.uuid)) || null,
+            module: (currentPost && (currentPost.modulo || currentPost.module)) || null,
+            category: (currentPost && (currentPost.categoria || currentPost.category)) || null,
+          });
+          toast('Nao foi possivel executar esta acao agora.', 'error', 2400);
+        }
+      });
+    }
+  }
+
+  function maybeResumeQueuedContact(post) {
+    if (!post || !isViewerAuthenticated() || typeof window.kcConsumeAuthIntent !== 'function') return;
+
+    const currentPath = buildCurrentPagePath();
+    const identifiers = new Set([
+      String(post.id || '').trim(),
+      String(post.uuid || '').trim()
+    ].filter(Boolean));
+
+    const intent = window.kcConsumeAuthIntent((entry) => {
+      if (!entry || entry.type !== 'product_contact') return false;
+      const entryPath = String(entry.path || '').trim();
+      const entryId = String(entry.postUuid || entry.postId || '').trim();
+      return (entryPath && entryPath === currentPath) || (entryId && identifiers.has(entryId));
+    });
+
+    if (!intent) return;
+    const action = getPostContactAction(post);
+    if (action && action.type !== 'login_required') {
+      executeContactAction(action, post);
+    }
   }
 
   /**
@@ -728,6 +958,14 @@
     }
 
     const items = [];
+    const authorProfile = post && post.authorProfile && typeof post.authorProfile === 'object' ? post.authorProfile : null;
+
+    if (authorProfile && authorProfile.affiliation && shared && typeof shared.formatProfileValue === 'function') {
+      const affiliationLabel = shared.formatProfileValue('affiliation', authorProfile.affiliation);
+      if (affiliationLabel) {
+        items.push('<span><i class="fas fa-user-graduate"></i> ' + esc(affiliationLabel) + '</span>');
+      }
+    }
 
     // Engajamento da publicação atual
     if (typeof post.votos === 'number' && post.votos > 0) {
@@ -804,6 +1042,7 @@
       verificado: profile.verified === true ? true : post.verificado,
       authorCreatedAt: profile.created_at || post.authorCreatedAt || null,
       authorHandle: publicHandle || post.authorHandle || '',
+      authorProfile: profile,
       authorEmail: post.authorEmail || '',
     };
   }
@@ -815,7 +1054,7 @@
     return '55' + digits;
   }
 
-  function getPostContactAction(post) {
+  function getPostContactActionLegacy(post) {
     const meta = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
     const moduleKey = String(post.modulo || post.module || '').trim().toLowerCase();
     const categoryKey = String(post.categoria || post.category || '').trim().toLowerCase();
@@ -880,7 +1119,7 @@
     } catch (_) { }
   }
 
-  function setCTA(post) {
+  function setCTALegacy(post) {
     const btn = document.getElementById('primaryCta');
     if (!btn) return;
 
@@ -1011,6 +1250,42 @@
         count.style.display = 'none';
         count.textContent = '0';
       }
+    }
+  }
+
+  async function refreshViewerState() {
+    let profile = null;
+
+    try {
+      if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+        currentUser = await window.KCAPI.getCurrentUser();
+      }
+    } catch (_) {
+      currentUser = null;
+    }
+
+    try {
+      if (window.KCAPI && typeof window.KCAPI.getMyProfile === 'function') {
+        profile = await window.KCAPI.getMyProfile();
+      }
+    } catch (_) {
+      profile = null;
+    }
+
+    if (!profile) {
+      try {
+        if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+          profile = window.KCProfiles.getCurrentProfile();
+        }
+      } catch (_) {
+        profile = null;
+      }
+    }
+
+    applyCommentComposerSessionState(currentUser, profile);
+    if (currentPost) {
+      setCTA(currentPost);
+      maybeResumeQueuedContact(currentPost);
     }
   }
 
@@ -1433,6 +1708,7 @@
     upsertOwnerActions(post, currentUser);
     bindSavedActions(post);
     refreshSavedState(post).catch(() => { });
+    maybeResumeQueuedContact(post);
     wireReportButton({ postId: (post && post.uuid) ? post.uuid : post.id, postTitle: post.titulo || post.title || 'Publicação' });
   }
 
@@ -1468,32 +1744,7 @@
 
     if (!raw) { showNotFound(); return; }
 
-    try {
-      if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-        currentUser = await window.KCAPI.getCurrentUser();
-      }
-    } catch (_) {
-      currentUser = null;
-    }
-
-    let currentProfile = null;
-    try {
-      if (window.KCAPI && typeof window.KCAPI.getMyProfile === 'function') {
-        currentProfile = await window.KCAPI.getMyProfile();
-      }
-    } catch (_) {
-      currentProfile = null;
-    }
-    if (!currentProfile) {
-      try {
-        if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
-          currentProfile = window.KCProfiles.getCurrentProfile();
-        }
-      } catch (_) {
-        currentProfile = null;
-      }
-    }
-    applyCommentComposerSessionState(currentUser, currentProfile);
+    await refreshViewerState();
 
     // Contrato único (Model) + regras centrais
     let post = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
@@ -2017,6 +2268,18 @@
     wireSharePopover();
     wireSavePopover();
     bindStaticInteractions();
+    document.addEventListener('kc:authchange', () => { refreshViewerState().catch(() => { }); });
+    document.addEventListener('kc:profilechange', () => {
+      if (currentPost) {
+        enrichPostAuthorFromProfile(currentPost).then((post) => {
+          if (!post) return;
+          currentPost = post;
+          setSeller(post);
+          setCTA(post);
+        }).catch(() => { });
+      }
+      refreshViewerState().catch(() => { });
+    });
     loadPost();
   });
 })();

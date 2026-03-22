@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="kc-loading">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KinoCampus - Completar conta</title>
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css" />
+  <script src="assets/js/kc-theme-boot.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body.kc-account-setup-page {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, rgba(255, 124, 0, 0.16), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(70, 182, 232, 0.12), transparent 24%),
+        var(--kc-background-dark);
+    }
+    .kc-account-shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 16px 96px;
+    }
+    .kc-account-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40vh;
+      color: var(--kc-text-dark-secondary);
+      gap: 12px;
+      font-size: 1rem;
+    }
+    .kc-account-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.82fr);
+      gap: 20px;
+    }
+    .kc-account-panel,
+    .kc-account-preview {
+      min-width: 0;
+      background: rgba(13, 18, 26, 0.78);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 22px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.24);
+      backdrop-filter: blur(14px);
+    }
+    .kc-account-panel {
+      display: grid;
+      gap: 18px;
+      padding: 24px;
+    }
+    .kc-account-hero {
+      display: grid;
+      gap: 8px;
+    }
+    .kc-account-eyebrow {
+      color: var(--kc-primary-brand);
+      font-size: .82rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+    .kc-account-title {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      line-height: 1.06;
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-account-copy {
+      margin: 0;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.65;
+      max-width: 62ch;
+    }
+    .kc-account-stepper {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kc-account-step {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 4px;
+      text-align: left;
+      color: var(--kc-text-dark-secondary);
+      cursor: pointer;
+      transition: border-color .18s ease, transform .18s ease, color .18s ease, background-color .18s ease;
+    }
+    .kc-account-step:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.18);
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-account-step.is-active {
+      border-color: rgba(255, 124, 0, 0.45);
+      background: rgba(255, 124, 0, 0.08);
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-account-step.is-complete {
+      border-color: rgba(59, 201, 125, 0.34);
+      background: rgba(59, 201, 125, 0.08);
+    }
+    .kc-account-step small {
+      opacity: .85;
+      font-size: .78rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .kc-account-step strong {
+      font-size: .96rem;
+    }
+    .kc-account-setup-status {
+      display: none;
+      border-radius: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-account-setup-status.is-success {
+      border-color: rgba(59, 201, 125, 0.34);
+      background: rgba(59, 201, 125, 0.08);
+    }
+    .kc-account-setup-status.is-warn {
+      border-color: rgba(255, 196, 0, 0.34);
+      background: rgba(255, 196, 0, 0.08);
+    }
+    .kc-account-setup-status.is-error {
+      border-color: rgba(255, 98, 98, 0.32);
+      background: rgba(255, 98, 98, 0.08);
+    }
+    .kc-account-form-step {
+      display: grid;
+      gap: 18px;
+    }
+    .kc-account-form-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .kc-account-field,
+    .kc-account-field-wide {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+    .kc-account-field-wide {
+      grid-column: 1 / -1;
+    }
+    .kc-account-field label,
+    .kc-account-field-wide label {
+      font-size: .88rem;
+      font-weight: 700;
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-account-field span.kc-field-hint,
+    .kc-account-field-wide span.kc-field-hint {
+      color: var(--kc-text-dark-secondary);
+      font-size: .8rem;
+      line-height: 1.5;
+    }
+    .kc-account-field input,
+    .kc-account-field select,
+    .kc-account-field textarea,
+    .kc-account-field-wide input,
+    .kc-account-field-wide select,
+    .kc-account-field-wide textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(6, 10, 16, 0.78);
+      color: var(--kc-text-dark-primary);
+      padding: 13px 14px;
+      font: inherit;
+    }
+    .kc-account-field textarea,
+    .kc-account-field-wide textarea {
+      min-height: 110px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    .kc-account-field input:focus,
+    .kc-account-field select:focus,
+    .kc-account-field textarea:focus,
+    .kc-account-field-wide input:focus,
+    .kc-account-field-wide select:focus,
+    .kc-account-field-wide textarea:focus {
+      outline: none;
+      border-color: rgba(255, 124, 0, 0.52);
+      box-shadow: 0 0 0 3px rgba(255, 124, 0, 0.12);
+    }
+    .kc-avatar-section {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .kc-avatar-preview {
+      width: 112px;
+      height: 112px;
+      border-radius: 28px;
+      object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+    }
+    .kc-avatar-controls {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+    .kc-avatar-upload {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--kc-text-dark-primary);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .kc-avatar-upload input { display: none; }
+    .kc-avatar-suggestions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kc-avatar-suggestion {
+      padding: 0;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      cursor: pointer;
+      overflow: hidden;
+      min-height: 72px;
+    }
+    .kc-avatar-suggestion.is-active {
+      border-color: rgba(255, 124, 0, 0.45);
+      box-shadow: 0 0 0 2px rgba(255, 124, 0, 0.14);
+    }
+    .kc-avatar-suggestion img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .kc-account-social-grid {
+      display: grid;
+      gap: 12px;
+    }
+    .kc-account-social-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,0.02);
+    }
+    .kc-account-social-item strong {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--kc-text-dark-primary);
+      font-size: .94rem;
+    }
+    .kc-account-social-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--kc-text-dark-secondary);
+      font-size: .84rem;
+      white-space: nowrap;
+    }
+    .kc-account-inline-grid {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr);
+      gap: 10px;
+    }
+    .kc-account-preview {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+      align-self: start;
+      position: sticky;
+      top: 90px;
+    }
+    .kc-preview-card {
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+    .kc-preview-hero {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 14px;
+      align-items: center;
+    }
+    .kc-preview-hero img {
+      width: 74px;
+      height: 74px;
+      border-radius: 22px;
+      object-fit: cover;
+      background: rgba(255,255,255,0.04);
+      border: 2px solid rgba(255,255,255,0.08);
+    }
+    .kc-preview-hero h2 {
+      margin: 0;
+      font-size: 1.08rem;
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-preview-hero p,
+    .kc-preview-card p {
+      margin: 0;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.6;
+    }
+    .kc-preview-list {
+      display: grid;
+      gap: 10px;
+    }
+    .kc-preview-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--kc-text-dark-primary);
+      padding: 8px 12px;
+      font-size: .88rem;
+      font-weight: 700;
+    }
+    .kc-account-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+    .kc-account-actions button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      border-radius: 14px;
+      padding: 13px 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: .95rem;
+    }
+    .kc-account-actions .kc-btn-secondary {
+      background: rgba(255,255,255,0.04);
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-account-actions .kc-btn-primary {
+      background: linear-gradient(135deg, #ff7c00, #ff9b3d);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 18px 34px rgba(255, 124, 0, 0.22);
+    }
+    .kc-account-mini-note {
+      font-size: .82rem;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.6;
+    }
+    @media (max-width: 960px) {
+      .kc-account-layout {
+        grid-template-columns: 1fr;
+      }
+      .kc-account-preview {
+        position: static;
+      }
+    }
+    @media (max-width: 720px) {
+      .kc-account-panel,
+      .kc-account-preview {
+        padding: 18px;
+        border-radius: 18px;
+      }
+      .kc-account-form-grid,
+      .kc-account-inline-grid,
+      .kc-avatar-section,
+      .kc-preview-hero {
+        grid-template-columns: 1fr;
+      }
+      .kc-account-social-item {
+        grid-template-columns: 1fr;
+      }
+      .kc-avatar-suggestions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .kc-account-stepper {
+        grid-template-columns: 1fr;
+      }
+      .kc-account-actions {
+        flex-direction: column;
+      }
+      .kc-account-actions button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="kc-account-setup-page">
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <div class="kc-account-shell">
+      <div id="accountSetupLoading" class="kc-account-loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Carregando sua conta...</span>
+      </div>
+
+      <div id="accountSetupContent" class="kc-account-layout" style="display:none;">
+        <section class="kc-account-panel">
+          <div class="kc-account-hero">
+            <span class="kc-account-eyebrow">Onboarding KinoCampus</span>
+            <h1 class="kc-account-title">Complete sua conta para publicar, conversar e aparecer do seu jeito.</h1>
+            <p class="kc-account-copy">
+              O minimo obrigatorio para seguir e bem simples: seu nome de exibicao, seu vinculo com a UFG e o canal principal de contato.
+              O resto e opcional e pode ser ajustado de novo mais tarde.
+            </p>
+          </div>
+
+          <div class="kc-account-stepper" aria-label="Etapas do onboarding">
+            <button class="kc-account-step is-active" type="button" data-step-chip>
+              <small>Etapa 1</small>
+              <strong>Apresentacao</strong>
+            </button>
+            <button class="kc-account-step" type="button" data-step-chip>
+              <small>Etapa 2</small>
+              <strong>Identidade</strong>
+            </button>
+            <button class="kc-account-step" type="button" data-step-chip>
+              <small>Etapa 3</small>
+              <strong>Contato</strong>
+            </button>
+          </div>
+
+          <div id="accountSetupStatus" class="kc-account-setup-status" role="status" aria-live="polite"></div>
+
+          <section class="kc-account-form-step" data-step-panel="basics">
+            <div class="kc-avatar-section">
+              <img id="accountSetupAvatarPreview" class="kc-avatar-preview" src="" alt="Preview do avatar" />
+              <div class="kc-avatar-controls">
+                <label class="kc-avatar-upload" for="accountSetupAvatarInput">
+                  <i class="fas fa-upload"></i>
+                  <span>Enviar foto</span>
+                  <input id="accountSetupAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" />
+                </label>
+                <div class="kc-avatar-suggestions" id="accountSetupAvatarSuggestions"></div>
+                <p class="kc-account-mini-note">Se preferir, voce pode ficar com um dos avatares sugeridos e trocar depois.</p>
+              </div>
+            </div>
+
+            <div class="kc-account-form-grid">
+              <div class="kc-account-field">
+                <label for="accountSetupDisplayName">Nome de exibicao</label>
+                <input id="accountSetupDisplayName" maxlength="80" placeholder="Como voce quer aparecer no KinoCampus" />
+              </div>
+              <div class="kc-account-field">
+                <label for="accountSetupAffiliation">Vinculo com a UFG</label>
+                <select id="accountSetupAffiliation"></select>
+              </div>
+              <div class="kc-account-field-wide">
+                <label for="accountSetupBio">Breve descricao</label>
+                <span class="kc-field-hint">Opcional. Ajuda a contextualizar seu perfil quando alguem abrir sua pagina.</span>
+                <textarea id="accountSetupBio" maxlength="200" placeholder="Curso, area de interesse, projetos ou o que voce costuma compartilhar por aqui."></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="kc-account-form-step" data-step-panel="identity" style="display:none;">
+            <div class="kc-account-form-grid">
+              <div class="kc-account-field">
+                <label for="accountSetupGenderIdentity">Genero</label>
+                <span class="kc-field-hint">Opcional. O objetivo e deixar o perfil mais fiel a como voce quer se apresentar.</span>
+                <select id="accountSetupGenderIdentity"></select>
+              </div>
+              <div class="kc-account-field">
+                <label for="accountSetupRaceColor">Cor ou raca</label>
+                <span class="kc-field-hint">Opcional. Segue a nomenclatura utilizada pelo IBGE.</span>
+                <select id="accountSetupRaceColor"></select>
+              </div>
+              <div class="kc-account-field-wide" id="accountSetupGenderIdentityCustomWrap" style="display:none;">
+                <label for="accountSetupGenderIdentityCustom">Como voce prefere se autodescrever?</label>
+                <input id="accountSetupGenderIdentityCustom" maxlength="80" placeholder="Escreva do seu jeito" />
+              </div>
+            </div>
+          </section>
+
+          <section class="kc-account-form-step" data-step-panel="contact" style="display:none;">
+            <div class="kc-account-form-grid">
+              <div class="kc-account-field">
+                <label for="accountSetupPrimaryMethod">Canal principal do botao "Entrar em contato"</label>
+                <span class="kc-field-hint">Esse e o canal usado nos anuncios quando outra pessoa estiver logada e clicar em contato.</span>
+                <select id="accountSetupPrimaryMethod"></select>
+              </div>
+              <div class="kc-account-field">
+                <label class="kc-account-social-toggle" for="accountSetupCtaEnabled">
+                  <input id="accountSetupCtaEnabled" type="checkbox" checked />
+                  <span>Permitir CTA publico de contato nos anuncios</span>
+                </label>
+              </div>
+              <div class="kc-account-field-wide">
+                <label>WhatsApp</label>
+                <div class="kc-account-inline-grid">
+                  <input id="accountSetupCountryCode" list="accountSetupCountryCodes" placeholder="+55" />
+                  <input id="accountSetupWhatsappNumber" placeholder="Numero com DDD ou numero local" inputmode="tel" />
+                </div>
+                <datalist id="accountSetupCountryCodes"></datalist>
+                <label class="kc-account-social-toggle" for="accountSetupWhatsappVisible" style="margin-top:8px;">
+                  <input id="accountSetupWhatsappVisible" type="checkbox" data-social-visible="whatsapp" />
+                  <span>Exibir WhatsApp no perfil</span>
+                </label>
+                <p id="accountSetupContactPreview" class="kc-account-mini-note">O contato principal aparecera aqui depois de preenchido.</p>
+              </div>
+            </div>
+
+            <div class="kc-account-social-grid">
+              <div class="kc-account-social-item">
+                <div class="kc-account-field">
+                  <label for="accountSetupInstagram"><strong><i class="fab fa-instagram"></i> Instagram</strong></label>
+                  <input id="accountSetupInstagram" data-social-input="instagram" placeholder="@seuusuario ou URL do perfil" />
+                </div>
+                <label class="kc-account-social-toggle" for="accountSetupInstagramVisible">
+                  <input id="accountSetupInstagramVisible" type="checkbox" data-social-visible="instagram" />
+                  <span>Exibir no perfil</span>
+                </label>
+              </div>
+
+              <div class="kc-account-social-item">
+                <div class="kc-account-field">
+                  <label for="accountSetupLinkedin"><strong><i class="fab fa-linkedin"></i> LinkedIn</strong></label>
+                  <input id="accountSetupLinkedin" data-social-input="linkedin" placeholder="linkedin.com/in/seuperfil" />
+                </div>
+                <label class="kc-account-social-toggle" for="accountSetupLinkedinVisible">
+                  <input id="accountSetupLinkedinVisible" type="checkbox" data-social-visible="linkedin" />
+                  <span>Exibir no perfil</span>
+                </label>
+              </div>
+
+              <div class="kc-account-social-item">
+                <div class="kc-account-field">
+                  <label for="accountSetupEmailPublic"><strong><i class="fas fa-envelope"></i> E-mail publico</strong></label>
+                  <input id="accountSetupEmailPublic" data-social-input="email_public" type="email" placeholder="voce@dominio.com" />
+                </div>
+                <label class="kc-account-social-toggle" for="accountSetupEmailPublicVisible">
+                  <input id="accountSetupEmailPublicVisible" type="checkbox" data-social-visible="email_public" />
+                  <span>Exibir no perfil</span>
+                </label>
+              </div>
+
+              <div class="kc-account-social-item">
+                <div class="kc-account-field">
+                  <label for="accountSetupLattes"><strong><i class="fas fa-graduation-cap"></i> Curriculo Lattes</strong></label>
+                  <input id="accountSetupLattes" data-social-input="lattes" placeholder="URL ou identificador do Lattes" />
+                </div>
+                <label class="kc-account-social-toggle" for="accountSetupLattesVisible">
+                  <input id="accountSetupLattesVisible" type="checkbox" data-social-visible="lattes" />
+                  <span>Exibir no perfil</span>
+                </label>
+              </div>
+
+              <div class="kc-account-social-item">
+                <div class="kc-account-field">
+                  <label for="accountSetupFacebook"><strong><i class="fab fa-facebook"></i> Facebook</strong></label>
+                  <input id="accountSetupFacebook" data-social-input="facebook" placeholder="facebook.com/seuperfil" />
+                </div>
+                <label class="kc-account-social-toggle" for="accountSetupFacebookVisible">
+                  <input id="accountSetupFacebookVisible" type="checkbox" data-social-visible="facebook" />
+                  <span>Exibir no perfil</span>
+                </label>
+              </div>
+
+              <div class="kc-account-social-item">
+                <div class="kc-account-field">
+                  <label for="accountSetupX"><strong><i class="fab fa-x-twitter"></i> X</strong></label>
+                  <input id="accountSetupX" data-social-input="x" placeholder="@seuusuario ou URL do perfil" />
+                </div>
+                <label class="kc-account-social-toggle" for="accountSetupXVisible">
+                  <input id="accountSetupXVisible" type="checkbox" data-social-visible="x" />
+                  <span>Exibir no perfil</span>
+                </label>
+              </div>
+
+              <div class="kc-account-social-item">
+                <div class="kc-account-field">
+                  <label for="accountSetupTiktok"><strong><i class="fab fa-tiktok"></i> TikTok</strong></label>
+                  <input id="accountSetupTiktok" data-social-input="tiktok" placeholder="@seuusuario ou URL do perfil" />
+                </div>
+                <label class="kc-account-social-toggle" for="accountSetupTiktokVisible">
+                  <input id="accountSetupTiktokVisible" type="checkbox" data-social-visible="tiktok" />
+                  <span>Exibir no perfil</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <div class="kc-account-actions">
+            <button id="accountSetupBackButton" class="kc-btn-secondary" type="button">
+              <i class="fas fa-arrow-left"></i>
+              <span>Anterior</span>
+            </button>
+            <button id="accountSetupNextButton" class="kc-btn-primary" type="button">
+              <span>Continuar</span>
+              <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </section>
+
+        <aside class="kc-account-preview">
+          <div class="kc-preview-card">
+            <div class="kc-preview-hero">
+              <img id="accountSetupAvatarPreviewMirror" src="https://api.dicebear.com/7.x/avataaars/svg?seed=kinocampus" alt="" style="display:none;" />
+              <div>
+                <h2>Como seu perfil vai ficar</h2>
+                <p>Esse onboarding ja prepara o que depois vai aparecer no hero do perfil e no CTA dos anuncios.</p>
+              </div>
+            </div>
+            <p class="kc-account-mini-note">Os links sociais so aparecem publicamente se voce marcar a visibilidade da rede correspondente.</p>
+          </div>
+
+          <div class="kc-preview-card">
+            <span class="kc-preview-pill"><i class="fas fa-paper-plane"></i> CTA inteligente por anuncio</span>
+            <p>Quando alguem clicar em <strong>Entrar em contato</strong> na publicacao, o KinoCampus vai usar o canal principal que voce definir agora.</p>
+          </div>
+
+          <div class="kc-preview-card">
+            <div class="kc-preview-list">
+              <span class="kc-preview-pill"><i class="fab fa-whatsapp"></i> WhatsApp com mensagem pronta</span>
+              <span class="kc-preview-pill"><i class="fas fa-user"></i> Perfil com links ordenados</span>
+              <span class="kc-preview-pill"><i class="fas fa-shield-heart"></i> Dados pessoais opcionais</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/kc-constants.js"></script>
+  <script src="assets/js/kc-utils.js"></script>
+  <script src="assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/adapters/local.adapter.js"></script>
+  <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/account-profile.shared.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
+  <script src="assets/js/controllers/account-setup.controller.js"></script>
+</body>
+</html>

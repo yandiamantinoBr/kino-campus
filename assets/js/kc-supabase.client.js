@@ -163,6 +163,20 @@
     return list.includes(domain);
   }
 
+  function buildAuthOptions(options) {
+    const input = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const authOptions = {};
+
+    const redirectTo = String(input.emailRedirectTo || input.redirectTo || '').trim();
+    if (redirectTo) authOptions.emailRedirectTo = redirectTo;
+
+    if (input.data && typeof input.data === 'object' && !Array.isArray(input.data)) {
+      authOptions.data = { ...input.data };
+    }
+
+    return authOptions;
+  }
+
   async function signIn(email, password) {
     const client = getClient();
     if (!client) return { user: null, session: null, error: state.lastError || new Error('SUPABASE_NOT_READY') };
@@ -191,7 +205,7 @@
     }
   }
 
-  async function signUp(email, password) {
+  async function signUp(email, password, options) {
     const client = getClient();
     if (!client) return { user: null, session: null, error: state.lastError || new Error('SUPABASE_NOT_READY') };
 
@@ -205,7 +219,12 @@
     }
 
     try {
-      const r = await client.auth.signUp({ email: em, password: pw });
+      const authOptions = buildAuthOptions(options);
+      const payload = authOptions && Object.keys(authOptions).length
+        ? { email: em, password: pw, options: authOptions }
+        : { email: em, password: pw };
+
+      const r = await client.auth.signUp(payload);
       if (r && r.error) {
         state.lastError = r.error;
         return { user: null, session: null, error: r.error };
@@ -221,6 +240,89 @@
     } catch (e) {
       state.lastError = e;
       return { user: null, session: null, error: e };
+    }
+  }
+
+  async function resendSignUp(email, options) {
+    const client = getClient();
+    if (!client) return { ok: false, error: state.lastError || new Error('SUPABASE_NOT_READY') };
+
+    const em = String(email || '').trim();
+    if (!em) return { ok: false, error: new Error('EMPTY_EMAIL') };
+
+    const { allowedDomains } = readEnv();
+    if (!emailAllowed(em, allowedDomains)) {
+      return { ok: false, error: new Error('EMAIL_DOMAIN_NOT_ALLOWED') };
+    }
+
+    try {
+      const authOptions = buildAuthOptions(options);
+      const payload = {
+        type: 'signup',
+        email: em,
+      };
+      if (authOptions && Object.keys(authOptions).length) payload.options = authOptions;
+
+      const r = await client.auth.resend(payload);
+      if (r && r.error) {
+        state.lastError = r.error;
+        return { ok: false, error: r.error };
+      }
+      return { ok: true, error: null };
+    } catch (e) {
+      state.lastError = e;
+      return { ok: false, error: e };
+    }
+  }
+
+  async function requestPasswordReset(email, options) {
+    const client = getClient();
+    if (!client) return { ok: false, error: state.lastError || new Error('SUPABASE_NOT_READY') };
+
+    const em = String(email || '').trim();
+    if (!em) return { ok: false, error: new Error('EMPTY_EMAIL') };
+
+    try {
+      const authOptions = buildAuthOptions(options);
+      const resetOptions = {};
+      const redirectTo = String(authOptions.emailRedirectTo || authOptions.redirectTo || '').trim();
+      if (redirectTo) resetOptions.redirectTo = redirectTo;
+
+      const r = await client.auth.resetPasswordForEmail(em, resetOptions);
+      if (r && r.error) {
+        state.lastError = r.error;
+        return { ok: false, error: r.error };
+      }
+      return { ok: true, error: null };
+    } catch (e) {
+      state.lastError = e;
+      return { ok: false, error: e };
+    }
+  }
+
+  async function updatePassword(password) {
+    const client = getClient();
+    if (!client) return { ok: false, error: state.lastError || new Error('SUPABASE_NOT_READY') };
+
+    const pw = String(password || '').trim();
+    if (!pw) return { ok: false, error: new Error('EMPTY_PASSWORD') };
+
+    try {
+      const r = await client.auth.updateUser({ password: pw });
+      if (r && r.error) {
+        state.lastError = r.error;
+        return { ok: false, error: r.error };
+      }
+
+      if (r && r.data && r.data.user && state.session) {
+        state.session = { ...state.session, user: r.data.user };
+        state.user = r.data.user;
+        safeDispatchAuthChange('USER_UPDATED', state.session);
+      }
+      return { ok: true, data: r && r.data ? r.data : null, error: null };
+    } catch (e) {
+      state.lastError = e;
+      return { ok: false, error: e };
     }
   }
 
@@ -806,6 +908,9 @@
     getCurrentUser,
     signIn,
     signUp,
+    resendSignUp,
+    requestPasswordReset,
+    updatePassword,
     signOut,
     onAuthStateChange,
     subscribeNewPosts,

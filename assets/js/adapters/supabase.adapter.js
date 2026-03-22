@@ -2,6 +2,15 @@
 (function () {
   'use strict';
 const { ENV, normalizePost } = window.KCAPI;
+  const profileShared = window.KCAccountProfileUtils || {};
+  const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
+
+  function normalizeProfilePatchForAdapter(patch) {
+    if (profileShared && typeof profileShared.normalizeProfilePatch === 'function') {
+      return profileShared.normalizeProfilePatch(patch);
+    }
+    return (patch && typeof patch === 'object' && !Array.isArray(patch)) ? { ...patch } : {};
+  }
 
 
   // ---------- Supabase Client Bootstrap (V8.1.3.1) ----------
@@ -1687,23 +1696,16 @@ const { ENV, normalizePost } = window.KCAPI;
     if (!user) return null;
 
     try {
-      let res = await client
+      const res = await client
         .from('profiles')
-        .select('id, display_name, full_name, avatar_url, bio, verified, created_at, updated_at')
+        .select(OWNER_PROFILE_FIELDS)
         .eq('id', user.id)
         .maybeSingle();
-
-      if (res && res.error && isMissingTokenError(res.error, 'display_name')) {
-        res = await client
-          .from('profiles')
-          .select('id, full_name, avatar_url, verified, created_at, updated_at')
-          .eq('id', user.id)
-          .maybeSingle();
-      }
       if (res && res.error) {
         console.error('[KCAPI][profile] getMyProfile:', res.error);
         return null;
       }
+      if (res && res.data) syncCurrentProfileCache(res.data);
       return (res && res.data) ? res.data : null;
     } catch (e) {
       console.error('[KCAPI][profile] getMyProfile exceção:', e);
@@ -1729,21 +1731,22 @@ const { ENV, normalizePost } = window.KCAPI;
     const user = await supabaseGetCurrentUser();
     if (!user) return { ok: false, error: { message: 'Faça login para editar seu perfil.' } };
 
-    let displayName = '__skip__';
-    const updates = {};
-    if (patch && Object.prototype.hasOwnProperty.call(patch, 'display_name')) {
-      displayName = String(patch.display_name || '').trim().slice(0, 80);
-      updates.display_name = displayName;
+    const updates = normalizeProfilePatchForAdapter(patch);
+    const displayName = Object.prototype.hasOwnProperty.call(updates, 'display_name')
+      ? String(updates.display_name || '').trim()
+      : '__skip__';
+    if (Object.prototype.hasOwnProperty.call(updates, 'display_name') && !String(updates.display_name || '').trim()) {
+      return { ok: false, error: { message: 'Informe um nome valido.' } };
     }
-    if (patch && Object.prototype.hasOwnProperty.call(patch, 'bio')) {
-      updates.bio = String(patch.bio || '').trim().slice(0, 200);
-    }
-    if (patch && Object.prototype.hasOwnProperty.call(patch, 'avatar_url')) {
-      const avatarUrl = String(patch.avatar_url || '').trim();
+    if (Object.prototype.hasOwnProperty.call(updates, 'avatar_url')) {
+      const avatarUrl = String(updates.avatar_url || '').trim();
       if (avatarUrl && !/^https?:\/\//i.test(avatarUrl)) {
         return { ok: false, error: { message: 'URL de avatar inválida.' } };
       }
       updates.avatar_url = avatarUrl || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'avatar_path')) {
+      updates.avatar_path = String(updates.avatar_path || '').trim() || null;
     }
     if (!Object.keys(updates).length) {
       return { ok: false, error: { message: 'Nenhuma alteração informada.' } };
@@ -1755,7 +1758,7 @@ const { ENV, normalizePost } = window.KCAPI;
         .from('profiles')
         .update(updates)
         .eq('id', user.id)
-        .select('id, display_name, full_name, avatar_url, bio, verified, created_at, updated_at')
+        .select(OWNER_PROFILE_FIELDS)
         .maybeSingle();
 
       if (error) {

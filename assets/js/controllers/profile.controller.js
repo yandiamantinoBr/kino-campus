@@ -6,6 +6,7 @@
   const PAGE_SIZE = 12;
   const COMMENT_PAGE_SIZE = 15;
   const BIO_LIMIT = 200;
+  const shared = window.KCAccountProfileUtils || {};
 
   const state = {
     user: null,
@@ -76,6 +77,30 @@
     const email = user && user.email ? String(user.email) : '';
     if (!state.isPublicView && email.includes('@')) return '@' + email.split('@')[0];
     return buildPublicHandle(profile);
+  }
+
+  function buildAccountSetupHref() {
+    const base = '/account-setup.html';
+    const next = `/profile.html${state.profileId ? `?id=${encodeURIComponent(state.profileId)}` : ''}`;
+    if (shared && typeof shared.normalizeNextPath === 'function') {
+      return `${base}?next=${encodeURIComponent(shared.normalizeNextPath(next, '/profile.html'))}`;
+    }
+    return `${base}?next=${encodeURIComponent(next)}`;
+  }
+
+  function formatChoice(field, value) {
+    if (!value) return '';
+    if (shared && typeof shared.formatProfileValue === 'function') {
+      return shared.formatProfileValue(field, value);
+    }
+    return String(value || '').trim();
+  }
+
+  function getProfileVisibleSocialLinks(profile) {
+    if (shared && typeof shared.getVisibleSocialLinks === 'function') {
+      return shared.getVisibleSocialLinks(profile || {});
+    }
+    return [];
   }
 
   function currentAvatarUrl() {
@@ -274,7 +299,12 @@
     if (avatarEdit) avatarEdit.style.display = ownerView ? 'inline-flex' : 'none';
 
     const editToggle = $('#profile-edit-toggle');
-    if (editToggle) editToggle.style.display = ownerView ? 'inline-flex' : 'none';
+    if (editToggle) {
+      editToggle.style.display = ownerView ? 'inline-flex' : 'none';
+      editToggle.innerHTML = shared && typeof shared.isOnboardingComplete === 'function' && !shared.isOnboardingComplete(profile)
+        ? '<i class="fas fa-list-check"></i> Completar cadastro'
+        : '<i class="fas fa-sliders"></i> Configurar conta';
+    }
 
     const nameEl = $('#profile-display-name');
     if (nameEl) nameEl.textContent = name;
@@ -314,6 +344,57 @@
         bio.textContent = '';
         bio.classList.remove('is-empty');
         bio.style.display = 'none';
+      }
+    }
+
+    const meta = $('.kc-profile-meta');
+    if (meta) {
+      meta.innerHTML = '';
+      if (profile && profile.created_at) {
+        meta.insertAdjacentHTML('beforeend', `<span id="profile-member-since"><i class="fas fa-calendar-alt"></i> <span>Desde ${esc(fmtDate(profile.created_at, { month: 'short', year: 'numeric' }))}</span></span>`);
+      }
+      if (profile.affiliation) {
+        const affiliationLabel = formatChoice('affiliation', profile.affiliation);
+        if (affiliationLabel) meta.insertAdjacentHTML('beforeend', `<span><i class="fas fa-user-graduate"></i> ${esc(affiliationLabel)}</span>`);
+      }
+    }
+
+    const contextPills = $('#profile-context-pills');
+    if (contextPills) {
+      const pills = [];
+      const genderLabel = formatChoice('gender_identity', profile.gender_identity);
+      const raceLabel = formatChoice('race_color', profile.race_color);
+      if (genderLabel && profile.gender_identity !== 'prefer_not_to_say') {
+        pills.push(`<span class="kc-profile-context-pill"><i class="fas fa-users"></i> ${esc(genderLabel)}</span>`);
+      }
+      if (profile.gender_identity === 'self_described' && profile.gender_identity_custom) {
+        pills.push(`<span class="kc-profile-context-pill"><i class="fas fa-feather-pointed"></i> ${esc(profile.gender_identity_custom)}</span>`);
+      }
+      if (raceLabel && profile.race_color !== 'prefer_not_to_say') {
+        pills.push(`<span class="kc-profile-context-pill"><i class="fas fa-palette"></i> ${esc(raceLabel)}</span>`);
+      }
+      contextPills.innerHTML = pills.join('');
+      contextPills.style.display = pills.length ? 'flex' : 'none';
+    }
+
+    const socialLinksWrap = $('#profile-social-links');
+    const visibleLinks = getProfileVisibleSocialLinks(profile);
+    if (socialLinksWrap) {
+      socialLinksWrap.innerHTML = visibleLinks.map((entry) => {
+        const label = entry.display || entry.handle || entry.label;
+        return `<a class="kc-profile-social-link" href="${esc(entry.href)}" target="_blank" rel="noopener noreferrer"><i class="${esc(entry.iconClass || 'fas fa-link')}"></i><span>${esc(label)}</span></a>`;
+      }).join('');
+      socialLinksWrap.style.display = visibleLinks.length ? 'flex' : 'none';
+    }
+
+    const setupHint = $('#profile-setup-hint');
+    if (setupHint) {
+      if (ownerView && (!visibleLinks.length || !shared.isOnboardingComplete || !shared.isOnboardingComplete(profile))) {
+        setupHint.innerHTML = `Complete seus links e preferencias de contato em <a href="${esc(buildAccountSetupHref())}">configurar conta</a>.`;
+        setupHint.style.display = 'block';
+      } else {
+        setupHint.textContent = '';
+        setupHint.style.display = 'none';
       }
     }
 
@@ -856,25 +937,16 @@
     const editToggle = $('#profile-edit-toggle');
     if (editToggle) {
       editToggle.addEventListener('click', () => {
-        if (state.isEditing) {
-          setEditing(false);
-        } else {
-          setEditing(true);
-        }
+        window.location.href = buildAccountSetupHref();
       });
     }
 
-    const cancel = $('#profile-edit-cancel');
-    if (cancel) cancel.addEventListener('click', () => setEditing(false));
-
-    const form = $('#profile-inline-form');
-    if (form) form.addEventListener('submit', handleProfileSubmit);
-
-    const bioInput = $('#profile-bio-input');
-    if (bioInput) bioInput.addEventListener('input', updateBioCounter);
-
-    const avatarInput = $('#profile-avatar-input');
-    if (avatarInput) avatarInput.addEventListener('change', handleAvatarChange);
+    const avatarEdit = $('#profile-avatar-edit');
+    if (avatarEdit) {
+      avatarEdit.addEventListener('click', () => {
+        window.location.href = buildAccountSetupHref();
+      });
+    }
   }
 
   async function loadProfile() {

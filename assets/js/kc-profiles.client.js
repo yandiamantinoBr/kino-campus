@@ -1,300 +1,323 @@
-/*
-  KinoCampus - Profiles Client (V8.2.6.2)
-
-  Objetivo:
-  - Sincronizar automaticamente o usuário autenticado (Supabase Auth) com a tabela public.profiles.
-  - Expor um Facade simples para o restante do frontend (controllers não falam com supabase-js).
-
-  Regras:
-  - Em modo local (DATA_DRIVER='local'), este módulo não executa chamadas.
-  - Em modo supabase, faz UPSERT no SIGNED_IN (e também em SIGNED_UP/INIT para cobrir sessão persistida).
-
-  Eventos:
-  - 'kc:profilechange' (detail: { profile })
-*/
 (function () {
   'use strict';
 
+  const VERSION = '8.3.4.4';
 
-
-  const VERSION = '8.2.6.2';
+  const shared = window.KCAccountProfileUtils || {};
+  const OWNER_FIELDS = shared.OWNER_PROFILE_SELECT_FIELDS || [
+    'id',
+    'display_name',
+    'full_name',
+    'avatar_url',
+    'avatar_path',
+    'bio',
+    'verified',
+    'is_admin',
+    'created_at',
+    'updated_at',
+    'onboarding_completed_at',
+    'affiliation',
+    'gender_identity',
+    'gender_identity_custom',
+    'race_color',
+    'contact_primary_method',
+    'contact_cta_enabled',
+    'social_links',
+    'social_visibility'
+  ].join(', ');
+  const PUBLIC_FIELDS = shared.PUBLIC_PROFILE_SELECT_FIELDS || [
+    'id',
+    'display_name',
+    'full_name',
+    'avatar_url',
+    'bio',
+    'verified',
+    'created_at',
+    'updated_at',
+    'onboarding_completed_at',
+    'affiliation',
+    'gender_identity',
+    'gender_identity_custom',
+    'race_color',
+    'contact_primary_method',
+    'contact_cta_enabled',
+    'social_links',
+    'social_visibility'
+  ].join(', ');
 
   const state = {
     inited: false,
     syncing: false,
     lastError: null,
-    lastSyncedUserId: null,
+    lastUserId: '',
     profile: null,
     cache: Object.create(null),
   };
 
   function readEnv() {
-    const env = KC_ENV || {};
+    const env = window.KC_ENV || {};
     const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
-
-    const allowedDomains = Array.isArray(env.AUTH_ALLOWED_DOMAINS)
-      ? env.AUTH_ALLOWED_DOMAINS
-      : (env.auth && Array.isArray(env.auth.allowedEmailDomains) ? env.auth.allowedEmailDomains : []);
-
     return {
-      env,
       driver,
-      allowedDomains: Array.isArray(allowedDomains) ? allowedDomains.filter(Boolean) : [],
       debug: !!env.debug,
     };
   }
 
-  function getSupabaseClient() {
-    if (!KCSupabase || typeof KCSupabase.getClient !== 'function') return null;
-    return KCSupabase.getClient();
+  function getClient() {
+    if (!window.KCSupabase || typeof window.KCSupabase.getClient !== 'function') return null;
+    return window.KCSupabase.getClient();
   }
 
-  // OBS (V8.1.3.3 retro): a definição de `profiles.verified` é server-side (trigger no Postgres).
-  // O frontend NÃO deve computar nem enviar `verified=true/false` no upsert.
-
-  function titleize(s) {
-    const raw = String(s || '').trim();
-    if (!raw) return '';
-    return raw
+  function titleize(value) {
+    return String(value || '')
+      .trim()
       .replace(/[._-]+/g, ' ')
       .replace(/\s+/g, ' ')
       .split(' ')
-      .map((w) => w ? (w[0].toUpperCase() + w.slice(1)) : '')
+      .filter(Boolean)
+      .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
       .join(' ')
       .trim();
   }
 
   function computeDisplayName(user) {
-    if (!user) return 'Usuário';
-    const meta = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
+    const meta = (user && user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
+    const candidate = meta.display_name || meta.full_name || meta.name || meta.preferred_username || '';
+    if (String(candidate || '').trim()) return String(candidate).trim();
 
-    const direct = meta.display_name || meta.full_name || meta.name || meta.username || meta.preferred_username;
-    if (direct && String(direct).trim()) return String(direct).trim();
-
-    const em = String(user.email || '').trim();
-    if (em.includes('@')) return titleize(em.split('@')[0]);
-
-    return 'Usuário';
+    const email = String((user && user.email) || '').trim();
+    if (email.includes('@')) return titleize(email.split('@')[0]);
+    return 'Usuario';
   }
 
   function computeAvatarUrl(user) {
-    if (!user) return 'https://api.dicebear.com/7.x/avataaars/svg?seed=kc';
-    const meta = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
+    const meta = (user && user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
+    const candidate = meta.avatar_url || meta.picture || meta.avatar || '';
+    if (String(candidate || '').trim()) return String(candidate).trim();
 
-    const direct = meta.avatar_url || meta.avatar || meta.picture || meta.photo_url;
-    if (direct && String(direct).trim()) return String(direct).trim();
-
-    const seed = encodeURIComponent(String(user.email || user.id || 'kc').trim().toLowerCase());
+    const seed = encodeURIComponent(String((user && (user.email || user.id)) || 'kinocampus').trim().toLowerCase());
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
   }
 
   function normalizeProfile(row, fallback) {
-    const r = (row && typeof row === 'object') ? row : {};
-    const fb = (fallback && typeof fallback === 'object') ? fallback : {};
+    const source = (row && typeof row === 'object') ? row : {};
+    const base = (fallback && typeof fallback === 'object') ? fallback : {};
 
-    const id = r.id || fb.id || null;
-    const fullName = r.full_name || fb.full_name || '';
-    const displayName = r.display_name || fb.display_name || fullName || '';
-    const avatarUrl = r.avatar_url || fb.avatar_url || '';
-    const bio = r.bio || fb.bio || '';
-    // Hardening: badge deve refletir SOMENTE o valor retornado do banco.
-    const verified = (r.verified === true);
+    const normalized = {
+      id: source.id || base.id || null,
+      full_name: String(source.full_name || base.full_name || '').trim(),
+      display_name: String(source.display_name || base.display_name || source.full_name || base.full_name || '').trim(),
+      avatar_url: String(source.avatar_url || base.avatar_url || '').trim(),
+      avatar_path: String(source.avatar_path || base.avatar_path || '').trim(),
+      bio: String(source.bio || base.bio || '').trim(),
+      verified: source.verified === true,
+      is_admin: source.is_admin === true || base.is_admin === true,
+      created_at: source.created_at || base.created_at || null,
+      updated_at: source.updated_at || base.updated_at || null,
+      onboarding_completed_at: source.onboarding_completed_at || base.onboarding_completed_at || null,
+      affiliation: source.affiliation || base.affiliation || null,
+      gender_identity: source.gender_identity || base.gender_identity || null,
+      gender_identity_custom: source.gender_identity_custom || base.gender_identity_custom || null,
+      race_color: source.race_color || base.race_color || null,
+      contact_primary_method: source.contact_primary_method || base.contact_primary_method || null,
+      contact_cta_enabled: source.contact_cta_enabled !== false && base.contact_cta_enabled !== false,
+      social_links: shared.normalizeSocialLinks
+        ? shared.normalizeSocialLinks(source.social_links || base.social_links || {})
+        : (source.social_links || base.social_links || {}),
+      social_visibility: shared.normalizeSocialVisibility
+        ? shared.normalizeSocialVisibility(source.social_visibility || base.social_visibility || {})
+        : (source.social_visibility || base.social_visibility || {}),
+    };
 
-    return Object.freeze({
-      id,
-      full_name: fullName,
-      display_name: displayName,
-      avatar_url: avatarUrl,
-      bio,
-      verified,
-      is_admin: r.is_admin === true || fb.is_admin === true,
-      created_at: r.created_at || null,
-      updated_at: r.updated_at || null,
-    });
-  }
-
-  function commitProfile(profile, fallback) {
-    const normalized = normalizeProfile(profile, fallback);
-    if (normalized && normalized.id) {
-      state.profile = normalized;
-      state.cache[String(normalized.id)] = normalized;
-      state.lastSyncedUserId = normalized.id;
-    } else {
-      state.profile = normalized;
-    }
-    dispatchProfileChange(normalized);
-    return normalized;
+    return Object.freeze(normalized);
   }
 
   function dispatchProfileChange(profile) {
     try {
       document.dispatchEvent(new CustomEvent('kc:profilechange', { detail: { profile: profile || null } }));
-    } catch (_) {}
+    } catch (_) { }
   }
 
-  async function upsertProfileForUser(user, options = {}) {
-    const { driver, debug } = readEnv();
-    if (driver !== 'supabase') return null;
+  function commitProfile(profile, fallback) {
+    const normalized = normalizeProfile(profile, fallback);
+    state.profile = normalized;
+    if (normalized && normalized.id) {
+      state.cache[String(normalized.id)] = normalized;
+      state.lastUserId = String(normalized.id);
+    }
+    dispatchProfileChange(normalized);
+    return normalized;
+  }
 
-    const u = user || null;
-    if (!u || !u.id) return null;
+  function resetProfileState() {
+    state.profile = null;
+    state.lastUserId = '';
+    state.cache = Object.create(null);
+    dispatchProfileChange(null);
+  }
 
-    const force = !!options.force;
-    if (!force && state.lastSyncedUserId === u.id && state.profile && state.profile.id === u.id) {
+  async function selectProfileById(id, fields) {
+    const client = getClient();
+    if (!client) return null;
+
+    try {
+      const query = client
+        .from('profiles')
+        .select(fields)
+        .eq('id', String(id || '').trim());
+
+      const result = (typeof query.maybeSingle === 'function')
+        ? await query.maybeSingle()
+        : await query.single();
+
+      if (result && result.error) {
+        state.lastError = result.error;
+        return null;
+      }
+      return (result && result.data) ? result.data : null;
+    } catch (error) {
+      state.lastError = error;
+      return null;
+    }
+  }
+
+  async function createProfileFallback(user) {
+    const client = getClient();
+    if (!client || !user || !user.id) return null;
+
+    const payload = {
+      id: user.id,
+      full_name: computeDisplayName(user),
+      display_name: computeDisplayName(user),
+      avatar_url: computeAvatarUrl(user),
+    };
+
+    try {
+      const query = client
+        .from('profiles')
+        .insert(payload)
+        .select(OWNER_FIELDS);
+
+      const result = (typeof query.maybeSingle === 'function')
+        ? await query.maybeSingle()
+        : await query.single();
+
+      if (result && result.error) {
+        state.lastError = result.error;
+        return null;
+      }
+      return (result && result.data) ? result.data : payload;
+    } catch (error) {
+      state.lastError = error;
+      return null;
+    }
+  }
+
+  async function ensureSynced(options) {
+    const env = readEnv();
+    if (env.driver !== 'supabase') return null;
+
+    const user = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+      ? window.KCSupabase.getUser()
+      : null;
+
+    if (!user || !user.id) {
+      resetProfileState();
+      return null;
+    }
+
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const force = !!opts.force;
+    if (!force && state.profile && String(state.profile.id || '') === String(user.id || '')) {
       return state.profile;
     }
 
-    const client = getSupabaseClient();
-    if (!client) return null;
-
-    const payload = {
-      id: u.id,
-      full_name: computeDisplayName(u),
-    };
-
     state.syncing = true;
-    state.lastError = null;
-
     try {
-      // UPSERT
-      let profileRow = null;
-      try {
-        const q = client
-          .from('profiles')
-          .upsert(payload, { onConflict: 'id' })
-          .select('id, display_name, full_name, avatar_url, bio, verified, is_admin, created_at, updated_at');
-
-        const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();
-
-        if (res && res.error) {
-          state.lastError = res.error;
-          if (debug) console.warn('[KCProfiles] upsert erro:', res.error);
-        } else {
-          profileRow = (res && res.data) ? res.data : null;
-        }
-      } catch (e) {
-        // Pode ocorrer se RLS/banco ainda não estiver pronto.
-        state.lastError = e;
-        if (debug) console.warn('[KCProfiles] upsert falhou:', e);
+      let row = await selectProfileById(user.id, OWNER_FIELDS);
+      if (!row) row = await createProfileFallback(user);
+      if (!row) {
+        return commitProfile(null, {
+          id: user.id,
+          full_name: computeDisplayName(user),
+          display_name: computeDisplayName(user),
+          avatar_url: computeAvatarUrl(user),
+          contact_cta_enabled: true,
+          social_links: {},
+          social_visibility: {},
+        });
       }
-
-      // Fallback: tenta SELECT
-      if (!profileRow) {
-        try {
-          const q2 = client
-            .from('profiles')
-            .select('id, display_name, full_name, avatar_url, bio, verified, is_admin, created_at, updated_at')
-            .eq('id', u.id);
-
-          const r2 = (typeof q2.maybeSingle === 'function') ? await q2.maybeSingle() : await q2.single();
-          if (r2 && r2.error) {
-            state.lastError = r2.error;
-            if (debug) console.warn('[KCProfiles] select erro:', r2.error);
-          } else {
-            profileRow = (r2 && r2.data) ? r2.data : null;
-          }
-        } catch (e2) {
-          state.lastError = e2;
-          if (debug) console.warn('[KCProfiles] select falhou:', e2);
-        }
-      }
-
-      return commitProfile(profileRow, {
-        id: u.id,
-        full_name: computeDisplayName(u),
-        display_name: '',
-        avatar_url: '',
-        bio: '',
+      return commitProfile(row, {
+        id: user.id,
+        full_name: computeDisplayName(user),
+        display_name: computeDisplayName(user),
+        avatar_url: computeAvatarUrl(user),
       });
     } finally {
       state.syncing = false;
     }
   }
 
+  async function upsertProfileForUser(user, options) {
+    const sessionUser = user && user.id ? user : (
+      window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+        ? window.KCSupabase.getUser()
+        : null
+    );
+    if (!sessionUser || !sessionUser.id) return null;
+    return ensureSynced(Object.assign({}, options, { force: true }));
+  }
+
   async function getProfileById(id) {
-    const { driver } = readEnv();
-    if (driver !== 'supabase') return null;
+    const env = readEnv();
+    if (env.driver !== 'supabase') return null;
 
     const key = String(id || '').trim();
     if (!key) return null;
-
     if (state.cache[key]) return state.cache[key];
 
-    const client = getSupabaseClient();
-    if (!client) return null;
+    const row = await selectProfileById(key, PUBLIC_FIELDS);
+    if (!row) return null;
 
-    try {
-      const q = client
-        .from('profiles')
-        .select('id, display_name, full_name, avatar_url, bio, verified, is_admin, created_at, updated_at')
-        .eq('id', key);
-
-      const r = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.single();
-      if (r && r.error) return null;
-
-      const profile = normalizeProfile(r && r.data ? r.data : null, { id: key });
-      state.cache[key] = profile;
-      return profile;
-    } catch (_) {
-      return null;
-    }
+    const normalized = normalizeProfile(row, { id: key });
+    state.cache[key] = normalized;
+    return normalized;
   }
 
   function getCurrentProfile() {
     return state.profile;
   }
 
-  async function ensureSynced() {
-    const { driver } = readEnv();
-    if (driver !== 'supabase') return null;
+  async function handleAuthChange(event) {
+    const detail = event && event.detail ? event.detail : {};
+    const authEvent = String(detail.event || '').toUpperCase();
+    const user = detail.user || null;
 
-    // Preferimos usar o cache local do KCSupabase; se não tiver, tenta getCurrentUser
-    const u = (KCSupabase && typeof KCSupabase.getUser === 'function') ? KCSupabase.getUser() : null;
-    if (u && u.id) return upsertProfileForUser(u);
-
-    if (KCSupabase && typeof KCSupabase.getCurrentUser === 'function') {
-      const u2 = await KCSupabase.getCurrentUser();
-      if (u2 && u2.id) return upsertProfileForUser(u2);
-    }
-
-    return null;
-  }
-
-  function reset() {
-    state.profile = null;
-    state.lastSyncedUserId = null;
-    state.cache = Object.create(null);
-    dispatchProfileChange(null);
-  }
-
-  async function handleAuthChange(e) {
-    const d = (e && e.detail) ? e.detail : {};
-    const ev = String(d.event || '').toUpperCase();
-    const user = d.user || null;
-
-    if (!user || !user.id) {
-      reset();
+    if (!user || !user.id || authEvent === 'SIGNED_OUT') {
+      resetProfileState();
       return;
     }
 
-    if (ev === 'SIGNED_IN' || ev === 'SIGNED_UP' || ev === 'INIT' || ev === 'TOKEN_REFRESHED') {
-      await upsertProfileForUser(user);
+    if (authEvent === 'TOKEN_REFRESHED' && state.profile && String(state.profile.id || '') === String(user.id || '')) {
+      return;
     }
+
+    await ensureSynced({ force: authEvent === 'SIGNED_IN' || authEvent === 'SIGNED_UP' || authEvent === 'USER_UPDATED' });
   }
 
   function init() {
     if (state.inited) return;
     state.inited = true;
 
-    const { driver } = readEnv();
-    if (driver !== 'supabase') return;
+    const env = readEnv();
+    if (env.driver !== 'supabase') return;
 
-    // Sempre que Auth mudar, sincroniza perfil (SIGNED_IN) ou reseta (SIGNED_OUT)
     document.addEventListener('kc:authchange', handleAuthChange);
 
-    // Cobertura: sessão persistida pode existir antes deste script carregar.
     setTimeout(() => {
-      ensureSynced();
+      ensureSynced().catch((error) => {
+        state.lastError = error;
+      });
     }, 30);
   }
 
@@ -306,15 +329,11 @@
     getCurrentProfile,
     getProfileById,
     commitProfile,
-    getLastError: () => state.lastError,
+    getLastError: function () { return state.lastError; },
   });
 
-  // Boot
   try {
     init();
     document.addEventListener('DOMContentLoaded', init, { once: true });
-  } catch (_) {}
-
-
-
+  } catch (_) { }
 })();

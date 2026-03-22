@@ -122,6 +122,66 @@
       opacity: .78;
       font-style: italic;
     }
+    .kc-profile-context-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .kc-profile-context-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--kc-border-dark);
+      background: rgba(255,255,255,.04);
+      color: var(--kc-text-dark-primary);
+      font-size: .82rem;
+      font-weight: 700;
+    }
+    .kc-profile-social-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .kc-profile-social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--kc-border-dark);
+      background: rgba(255,255,255,.03);
+      color: var(--kc-text-dark-primary);
+      text-decoration: none;
+      font-size: .86rem;
+      font-weight: 700;
+      transition: border-color .18s ease, color .18s ease, transform .18s ease;
+    }
+    .kc-profile-social-link:hover {
+      border-color: rgba(255,110,30,.42);
+      color: var(--kc-primary-brand);
+      transform: translateY(-1px);
+    }
+    .kc-profile-social-link i {
+      color: var(--kc-primary-brand);
+    }
+    .kc-profile-setup-hint {
+      margin: 14px 0 0;
+      color: var(--kc-text-dark-secondary);
+      font-size: .86rem;
+      line-height: 1.6;
+    }
+    .kc-profile-setup-hint a {
+      color: var(--kc-primary-brand);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .kc-profile-setup-hint a:hover {
+      text-decoration: underline;
+    }
     .kc-profile-inline-form {
       margin-top: 14px;
       padding-top: 14px;
@@ -480,16 +540,15 @@
               <span id="profile-verified-icon" class="kc-profile-verified-icon" style="display:none;" title="Usuário verificado">
                 <i class="fas fa-check"></i>
               </span>
-              <label id="profile-avatar-edit" class="kc-profile-avatar-edit" style="display:none;" aria-label="Alterar foto do perfil">
-                <input id="profile-avatar-input" type="file" accept="image/png,image/jpeg,image/webp" />
+              <button id="profile-avatar-edit" class="kc-profile-avatar-edit" type="button" style="display:none;" aria-label="Configurar perfil">
                 <i class="fas fa-camera"></i>
-              </label>
+              </button>
             </div>
             <div class="kc-profile-info">
               <div class="kc-profile-heading-row">
               <h1 class="kc-profile-name" id="profile-display-name">Usuário</h1>
                 <button id="profile-edit-toggle" class="kc-profile-hero-action" type="button" style="display:none;">
-                  <i class="fas fa-pen"></i> Editar perfil
+                  <i class="fas fa-sliders"></i> Configurar conta
                 </button>
               </div>
               <div class="kc-profile-handle" id="profile-handle" style="display:none;"></div>
@@ -497,6 +556,9 @@
                 <span id="profile-member-since" style="display:none;"><i class="fas fa-calendar-alt"></i> <span></span></span>
               </div>
               <p class="kc-profile-bio" id="profile-bio" style="display:none;"></p>
+              <div id="profile-context-pills" class="kc-profile-context-pills" style="display:none;"></div>
+              <div id="profile-social-links" class="kc-profile-social-links" style="display:none;"></div>
+              <p id="profile-setup-hint" class="kc-profile-setup-hint" style="display:none;"></p>
               <form id="profile-inline-form" class="kc-profile-inline-form" style="display:none;">
                 <div class="kc-profile-inline-form__field">
                   <label for="display-name-input">Nome de exibição</label>
@@ -668,9 +730,10 @@
   <script src="assets/js/kc-env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/kc-supabase.client.js"></script>
-<script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
   <script src="assets/js/adapters/local.adapter.js"></script>
   <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/account-profile.shared.js"></script>
   <script src="assets/js/kc-profiles.client.js"></script>
   <script src="assets/js/kc-auth.ui.js"></script>
   <script src="assets/js/kc-theme.js"></script>
