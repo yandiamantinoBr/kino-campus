@@ -2056,6 +2056,7 @@
     attrs.push(`class="kc-card${badgeHtml ? " kc-card--has-corner-badge" : ""}"`);
     if (id) attrs.push(`data-post-id="${escapeHtml(id)}"`);
     attrs.push(`data-verified="${escapeHtml(String(!!p.verificado))}"`);
+    if (moduleKey) attrs.push(`data-module="${escapeHtml(String(moduleKey))}"`);
 
     // Marcação de post do usuário (evita duplicação de injeção pelo kc-core.js)
     if (p._kcUserPost === true) attrs.push('data-kc-user-post="true"');
@@ -2120,11 +2121,11 @@
         </div>
         <div class="kc-card__footer">
           <div class="kc-card__interactions">
-            <div class="kc-vote-box">
+            <div class="kc-vote-box" data-kc-vote-box="true">
               <button class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr}>
                 <i class="fas fa-fire"></i>
               </button>
-              <span>${escapeHtml(String(Number.isFinite(votos) ? votos : 0))}</span>
+              <span class="kc-vote-score" data-kc-vote-score="true" aria-live="polite">${escapeHtml(String(Number.isFinite(votos) ? votos : 0))}</span>
               <button class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr}>
                 <i class="fas fa-snowflake"></i>
               </button>

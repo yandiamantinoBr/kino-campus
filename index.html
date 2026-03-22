@@ -1,394 +1,339 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<link href="assets/css/kc-theme-boot.css" rel="stylesheet"/>
-<script src="assets/js/kc-theme-boot.js"></script>
-<title>KinoCampus - Comunidade UFG</title>
-<link href="assets/css/styles.css" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <link href="assets/css/kc-theme-boot.css" rel="stylesheet" />
+  <script src="assets/js/kc-theme-boot.js"></script>
+  <title>KinoCampus - Comunidade UFG</title>
+  <link href="assets/css/styles.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
 <body>
-<!-- Header -->
-<header class="kc-header">
-<div class="kc-header-container">
-<div class="kc-logo">
-<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
-<span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
-<span class="kc-logo-text">
-<span class="kc-logo-name">Kino<span>Campus</span></span>
-<span class="kc-logo-sub">Comunidade UFG</span>
-</span>
-</a>
-</div>
-<nav class="kc-nav-links">
-<a href="achados-perdidos.html">
-<i class="fas fa-search"></i>
-<span>Achados/Perdidos</span>
-</a>
-<a href="eventos.html">
-<i class="fas fa-calendar"></i>
-<span>Eventos</span>
-</a>
-<a href="moradia.html">
-<i class="fas fa-home"></i>
-<span>Moradia</span>
-</a>
-<a href="oportunidades.html">
-<i class="fas fa-briefcase"></i>
-<span>Oportunidades</span>
-</a>
-<a href="compra-venda-feed.html">
-<i class="fas fa-shopping-bag"></i>
-<span>Compra e Venda</span>
-</a>
-<a href="caronas-feed.html">
-<i class="fas fa-car"></i>
-<span>Caronas</span>
-</a>
-</nav>
-<div class="kc-search-bar" id="kcSearchBar">
-<input id="searchInput" placeholder="Busque por itens, eventos, vagas na UFG..." type="search"/>
-<button aria-label="Buscar" type="button">
-<i class="fas fa-search"></i>
-</button>
-</div>
-<button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar">
-<i class="fas fa-search"></i>
-</button>
-<div class="kc-user-actions">
-<button class="theme-toggle" title="Alternar tema">
-<i class="fas fa-sun"></i>
-</button>
-<a class="btn-login" href="#login">Login/Cadastro</a>
-</div>
-</div>
-</header>
-<!-- Main Content -->
-<main class="kc-main-content">
-<!-- Feed Section -->
-<section class="kc-feed-section">
-<!-- Banner Hero Carousel — preenchido dinamicamente pelo kc-banners.js -->
-<!-- Em modo local ou quando o Supabase não responder, os 3 banners abaixo são o fallback -->
-<div class="kc-hero-carousel kc-hero-loading" id="kc-hero-carousel">
-<div class="kc-hero-slides" id="kc-hero-slides">
-<div class="kc-hero-banner active" data-hero-icon="calendar">
-<div class="kc-hero-inner">
-<div class="kc-hero-content">
-<span class="kc-hero-pill">Destaque</span>
-<h1>Semana de Sustentabilidade UFG</h1>
-<p>Troque materiais, ganhe cashback em dobro e suba no ranking de impacto!</p>
-<a class="kc-btn-primary" href="eventos.html?filter=sustentabilidade">Ver Programação</a>
-</div>
-<div aria-hidden="true" class="kc-hero-illustration">
-<i class="fas fa-calendar-alt"></i>
-</div>
-</div>
-</div>
-<div class="kc-hero-banner" data-hero-icon="exchange">
-<div class="kc-hero-inner">
-<div class="kc-hero-content">
-<span class="kc-hero-pill">Destaque</span>
-<h1>Feira de Troca de Materiais</h1>
-<p>Traga seus materiais acadêmicos usados e troque por outros que você precisa.</p>
-<a class="kc-btn-primary" href="eventos.html">Participar</a>
-</div>
-<div aria-hidden="true" class="kc-hero-illustration">
-<i class="fas fa-exchange-alt"></i>
-</div>
-</div>
-</div>
-<div class="kc-hero-banner" data-hero-icon="launch">
-<div class="kc-hero-inner">
-<div class="kc-hero-content">
-<span class="kc-hero-pill">Novidade</span>
-<h1>Lançamento do KinoCampus na UFG</h1>
-<p>A plataforma colaborativa e sustentável desenvolvida para a comunidade UFG.</p>
-<a class="kc-btn-primary" href="product.html?id=1">Saiba Mais</a>
-</div>
-<div aria-hidden="true" class="kc-hero-illustration">
-<i class="fas fa-campground"></i>
-</div>
-</div>
-</div>
-</div>
-<button class="kc-carousel-btn kc-carousel-prev" data-kc-slide="prev">
-<i class="fas fa-chevron-left"></i>
-</button>
-<button class="kc-carousel-btn kc-carousel-next" data-kc-slide="next">
-<i class="fas fa-chevron-right"></i>
-</button>
-<div class="kc-carousel-dots" id="kc-carousel-dots">
-<span class="kc-dot active" data-kc-slide="0"></span>
-<span class="kc-dot" data-kc-slide="1"></span>
-<span class="kc-dot" data-kc-slide="2"></span>
-</div>
-</div>
-<!-- Top Contributors -->
-<div class="kc-ranking-banner">
-<div class="kc-ranking-title">
-<i class="fas fa-trophy"></i>
-<span>Top Contribuidores da UFG</span>
-</div>
-<div class="kc-ranking-users">
-<!-- Preenchido via JS (Supabase) -->
-</div>
-</div>
-<!-- Feed Tabs -->
-<div class="kc-feed-tabs">
-<a class="active" href="#">
-<i class="fas fa-fire"></i>
-<span>Destaque</span>
-</a>
-<a href="compra-venda-feed.html">
-<i class="fas fa-shopping-bag"></i>
-<span>Compra e Venda</span>
-</a>
-<a href="caronas-feed.html">
-<i class="fas fa-car"></i>
-<span>Caronas</span>
-</a>
-<a href="compra-venda-feed.html?filter=livros">
-<i class="fas fa-book"></i>
-<span>Livros</span>
-</a>
-<a href="compra-venda-feed.html?filter=eletronicos">
-<i class="fas fa-laptop"></i>
-<span>Eletrônicos</span>
-</a>
-<a href="compra-venda-feed.html?filter=vestuario">
-<i class="fas fa-tshirt"></i>
-<span>Roupas</span>
-</a>
-<a href="moradia.html">
-<i class="fas fa-home"></i>
-<span>Moradia</span>
-</a>
-<a href="eventos.html">
-<i class="fas fa-calendar"></i>
-<span>Eventos</span>
-</a>
-<a href="eventos.html?filter=sustentabilidade">
-<i class="fas fa-leaf"></i>
-<span>Sustentabilidade</span>
-</a>
-</div>
-<!-- Feed List -->
-<div class="kc-feed-list" id="kc-main-feed">
-<!-- Cards injetados via JS -->
-</div>
-</section>
-<!-- Sidebar -->
-<aside class="kc-sidebar">
-<!-- Criar Publicação -->
-<div class="kc-sidebar-section">
-<a class="kc-create-post-btn" href="create-post.html">
-<i class="fas fa-plus"></i>
-                    Criar Publicação
-                </a>
-</div>
-<!-- Impacto Sustentável -->
-<div class="kc-sidebar-section kc-impact-section-simple">
-<h3>
-<i class="fas fa-chart-line"></i>
-                    Seu Impacto Sustentável
-                </h3>
-<div class="kc-impact-progress">
-<div class="kc-impact-progress-bar">
-<div class="kc-impact-progress-fill" style="width: 65%;"></div>
-</div>
-<div class="kc-impact-progress-text">
-<span>Nível 3: Eco-Consciente</span>
-<span>650/1000 pts</span>
-</div>
-</div>
-<div class="kc-impact-stats-simple">
-<div class="kc-impact-stat-item">
-<div class="kc-impact-stat-value">12kg</div>
-<div class="kc-impact-stat-label">CO₂ evitado</div>
-</div>
-<div class="kc-impact-stat-item">
-<div class="kc-impact-stat-value">R$180</div>
-<div class="kc-impact-stat-label">Economia</div>
-</div>
-</div>
-</div>
-<!-- Saldo Cashback -->
-<div class="kc-sidebar-section kc-cashback-section-simple">
-<div class="kc-cashback-header">
-<span class="kc-cashback-label">Saldo Cashback:</span>
-<span class="kc-cashback-amount-simple">R$ 25,50</span>
-</div>
-<div class="kc-cashback-footer">
-<span class="kc-cashback-validity-simple">Válido até 30/06/2025</span>
-<a class="kc-cashback-link-simple" href="compra-venda-feed.html">Ver detalhes</a>
-</div>
-</div>
-<!-- Categorias -->
-<div class="kc-sidebar-section">
-<h3>
-<i class="fas fa-th-large"></i>
-                    Categorias
-                </h3>
-<div class="kc-category-list">
-<a class="kc-category-item" href="compra-venda-feed.html?filter=livros">
-<i class="fas fa-book"></i>
-<span>Livros e Materiais</span>
-<span class="kc-category-count">85</span>
-</a>
-<a class="kc-category-item" href="compra-venda-feed.html?filter=eletronicos">
-<i class="fas fa-laptop"></i>
-<span>Eletrônicos</span>
-<span class="kc-category-count">38</span>
-</a>
-<a class="kc-category-item" href="compra-venda-feed.html?filter=vestuario">
-<i class="fas fa-tshirt"></i>
-<span>Vestuário</span>
-<span class="kc-category-count">37</span>
-</a>
-<a class="kc-category-item" href="compra-venda-feed.html">
-<i class="fas fa-shopping-bag"></i>
-<span>Compra e Venda</span>
-<span class="kc-category-count">142</span>
-</a>
-<a class="kc-category-item" href="moradia.html">
-<i class="fas fa-home"></i>
-<span>Moradia</span>
-<span class="kc-category-count">38</span>
-</a>
-<a class="kc-category-item" href="caronas-feed.html">
-<i class="fas fa-car"></i>
-<span>Caronas</span>
-<span class="kc-category-count">5</span>
-</a>
-<a class="kc-category-item" href="eventos.html">
-<i class="fas fa-calendar"></i>
-<span>Eventos</span>
-<span class="kc-category-count">9</span>
-</a>
-<a class="kc-category-item" href="oportunidades.html">
-<i class="fas fa-briefcase"></i>
-<span>Estágios e Empregos</span>
-<span class="kc-category-count">41</span>
-</a>
-<a class="kc-category-item" href="oportunidades.html?filter=monitoria">
-<i class="fas fa-chalkboard-teacher"></i>
-<span>Monitoria e Aulas</span>
-<span class="kc-category-count">92</span>
-</a>
-</div>
-</div>
-<!-- ODS em Destaque -->
-<div class="kc-sidebar-section kc-ods-section">
-<h3>
-<i class="fas fa-globe"></i>
-                    ODS em Destaque
-                </h3>
-<p class="kc-ods-description">
-                    O Kino Campus contribui diretamente para os Objetivos de Desenvolvimento Sustentável da ONU.
-                </p>
-<div class="kc-ods-badges">
-<div class="kc-ods-badge" title="ODS 04: Educação de Qualidade">ODS 04</div>
-<div class="kc-ods-badge" title="ODS 11: Cidades e Comunidades Sustentáveis">ODS 11</div>
-<div class="kc-ods-badge" title="ODS 12: Consumo e Produção Responsáveis">ODS 12</div>
-<div class="kc-ods-badge" title="ODS 13: Ação Contra a Mudança Global do Clima">ODS 13</div>
-</div>
-</div>
-<!-- Impacto da Comunidade -->
-<div class="kc-sidebar-section kc-community-impact-section">
-<h3>
-<i class="fas fa-users"></i>
-                    Impacto da Comunidade
-                </h3>
-<div class="kc-community-stat">
-<div class="kc-community-stat-value">R$ 15.420</div>
-<div class="kc-community-stat-label">Economizados pela comunidade</div>
-</div>
-<div class="kc-community-stat">
-<div class="kc-community-stat-value">850kg</div>
-<div class="kc-community-stat-label">CO₂ evitado este mês</div>
-</div>
-</div>
-</aside>
-</main>
-<!-- Mobile Navigation -->
-<nav class="kc-mobile-nav">
-<a class="active" href="index.html">
-<i class="fas fa-home"></i>
-<span>Início</span>
-</a>
-<a href="eventos.html">
-<i class="fas fa-calendar"></i>
-<span>Eventos</span>
-</a>
-<a class="kc-create-btn" href="create-post.html">
-<i class="fas fa-plus"></i>
-</a>
-<a href="compra-venda-feed.html">
-<i class="fas fa-shopping-bag"></i>
-<span>Compra/Venda</span>
-</a>
-<button class="kc-menu-toggle" data-kc-mobile-menu="toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer">
-<i class="fas fa-bars"></i>
-<span>Menu</span>
-</button>
-</nav>
-<!-- Mobile Menu Drawer -->
-<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
-<div class="kc-mobile-menu-header">
-<h3>Menu</h3>
-<button class="kc-close-menu" data-kc-mobile-menu="close" aria-label="Fechar menu">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<div class="kc-mobile-menu-content">
-<!-- Seção de usuário (atualizada pelo kc-auth.ui.js) -->
-<div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
-  <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
-    <span class="kc-mobile-menu-user-avatar-wrap">
-      <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
-    </span>
-    <span id="mobileMenuUserName">Login / Cadastro</span>
-  </a>
-</div>
-<hr data-kc-divider="top" class="kc-mobile-menu-divider"/>
-<!-- Links de perfil (visíveis quando autenticado) -->
-<a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
-<!-- Link de Admin (visível apenas para is_admin=true) -->
-<a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
-<hr data-kc-divider="profile" class="kc-mobile-menu-divider"/>
-<a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
-<a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
-<a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
-<a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
-<a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
-<a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
-</div>
-</div>
-<div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
-<script src="assets/js/kc-constants.js"></script>
-<script src="assets/js/kc-utils.js"></script>
-<script src="assets/js/kc-env.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <nav class="kc-nav-links">
+        <a href="achados-perdidos.html">
+          <i class="fas fa-search"></i>
+          <span>Achados/Perdidos</span>
+        </a>
+        <a href="eventos.html">
+          <i class="fas fa-calendar"></i>
+          <span>Eventos</span>
+        </a>
+        <a href="moradia.html">
+          <i class="fas fa-home"></i>
+          <span>Moradia</span>
+        </a>
+        <a href="oportunidades.html">
+          <i class="fas fa-briefcase"></i>
+          <span>Oportunidades</span>
+        </a>
+        <a href="compra-venda-feed.html">
+          <i class="fas fa-shopping-bag"></i>
+          <span>Compra e Venda</span>
+        </a>
+        <a href="caronas-feed.html">
+          <i class="fas fa-car"></i>
+          <span>Caronas</span>
+        </a>
+      </nav>
+      <div class="kc-search-bar" id="kcSearchBar">
+        <input id="searchInput" placeholder="Busque por itens, eventos, vagas na UFG..." type="search" />
+        <button aria-label="Buscar" type="button">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar">
+        <i class="fas fa-search"></i>
+      </button>
+      <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema">
+          <i class="fas fa-sun"></i>
+        </button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
 
-<script src="assets/js/kc-supabase.client.js"></script>
-<script src="assets/js/kc-api.client.js"></script>
-<script src="assets/js/adapters/local.adapter.js"></script>
-<script src="assets/js/adapters/supabase.adapter.js"></script>
-<script src="assets/js/kc-profiles.client.js"></script>
-<script src="assets/js/controllers/create-post.controller.js"></script>
-<script src="assets/js/components/toast.js"></script>
-<script src="assets/js/components/carousel.js"></script>
-<script src="assets/js/components/voting.js"></script>
-<script src="assets/js/kc-core.js"></script>
-<script src="assets/js/kc-create-post.js"></script>
+  <main class="kc-main-content">
+    <section class="kc-feed-section">
+      <div class="kc-hero-carousel kc-hero-loading" id="kc-hero-carousel">
+        <div class="kc-hero-slides" id="kc-hero-slides">
+          <div class="kc-hero-banner active" data-hero-icon="calendar">
+            <div class="kc-hero-inner">
+              <div class="kc-hero-content">
+                <span class="kc-hero-pill">Destaque</span>
+                <h1>Semana de Sustentabilidade UFG</h1>
+                <p>Troque materiais, ganhe cashback em dobro e suba no ranking de impacto!</p>
+                <a class="kc-btn-primary" href="eventos.html?filter=sustentabilidade">Ver Programação</a>
+              </div>
+              <div aria-hidden="true" class="kc-hero-illustration">
+                <i class="fas fa-calendar-alt"></i>
+              </div>
+            </div>
+          </div>
+          <div class="kc-hero-banner" data-hero-icon="exchange">
+            <div class="kc-hero-inner">
+              <div class="kc-hero-content">
+                <span class="kc-hero-pill">Destaque</span>
+                <h1>Feira de Troca de Materiais</h1>
+                <p>Traga seus materiais acadêmicos usados e troque por outros que você precisa.</p>
+                <a class="kc-btn-primary" href="eventos.html">Participar</a>
+              </div>
+              <div aria-hidden="true" class="kc-hero-illustration">
+                <i class="fas fa-exchange-alt"></i>
+              </div>
+            </div>
+          </div>
+          <div class="kc-hero-banner" data-hero-icon="launch">
+            <div class="kc-hero-inner">
+              <div class="kc-hero-content">
+                <span class="kc-hero-pill">Novidade</span>
+                <h1>Lançamento do KinoCampus na UFG</h1>
+                <p>A plataforma colaborativa e sustentável desenvolvida para a comunidade UFG.</p>
+                <a class="kc-btn-primary" href="product.html?id=1">Saiba Mais</a>
+              </div>
+              <div aria-hidden="true" class="kc-hero-illustration">
+                <i class="fas fa-campground"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="kc-carousel-btn kc-carousel-prev" data-kc-slide="prev">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="kc-carousel-btn kc-carousel-next" data-kc-slide="next">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="kc-carousel-dots" id="kc-carousel-dots">
+          <span class="kc-dot active" data-kc-slide="0"></span>
+          <span class="kc-dot" data-kc-slide="1"></span>
+          <span class="kc-dot" data-kc-slide="2"></span>
+        </div>
+      </div>
 
-<script src="assets/js/kc-auth.ui.js"></script>
-<script src="assets/js/kc-theme.js"></script>
-<script src="assets/js/search-analytics.shared.js"></script>
-<script src="assets/js/kc-search.js"></script>
+      <div class="kc-ranking-banner">
+        <div class="kc-ranking-title">
+          <i class="fas fa-trophy"></i>
+          <span>Top Contribuidores da UFG</span>
+        </div>
+        <div class="kc-ranking-users"></div>
+      </div>
+
+      <div class="kc-feed-tabs">
+        <a class="active" href="#">
+          <i class="fas fa-fire"></i>
+          <span>Destaque</span>
+        </a>
+        <a href="compra-venda-feed.html">
+          <i class="fas fa-shopping-bag"></i>
+          <span>Compra e Venda</span>
+        </a>
+        <a href="caronas-feed.html">
+          <i class="fas fa-car"></i>
+          <span>Caronas</span>
+        </a>
+        <a href="compra-venda-feed.html?filter=livros">
+          <i class="fas fa-book"></i>
+          <span>Livros</span>
+        </a>
+        <a href="compra-venda-feed.html?filter=eletronicos">
+          <i class="fas fa-laptop"></i>
+          <span>Eletrônicos</span>
+        </a>
+        <a href="compra-venda-feed.html?filter=vestuario">
+          <i class="fas fa-shirt"></i>
+          <span>Roupas</span>
+        </a>
+        <a href="moradia.html">
+          <i class="fas fa-home"></i>
+          <span>Moradia</span>
+        </a>
+        <a href="eventos.html">
+          <i class="fas fa-calendar"></i>
+          <span>Eventos</span>
+        </a>
+        <a href="eventos.html?filter=sustentabilidade">
+          <i class="fas fa-leaf"></i>
+          <span>Sustentabilidade</span>
+        </a>
+      </div>
+
+      <div class="kc-feed-list" id="kc-main-feed"></div>
+    </section>
+
+    <aside class="kc-sidebar">
+      <div class="kc-sidebar-section">
+        <a class="kc-create-post-btn" href="create-post.html">
+          <i class="fas fa-plus"></i>
+          Criar Publicação
+        </a>
+      </div>
+
+      <div class="kc-sidebar-section kc-sidebar-section--smart" data-kc-home-personal-panel="true">
+        <h3>
+          <i class="fas fa-chart-line"></i>
+          Seu Painel na Comunidade
+        </h3>
+        <p class="kc-home-section-note">Sem números simulados: este bloco lê sinais reais do seu uso quando houver histórico suficiente.</p>
+        <div class="kc-home-metric-grid" data-kc-home-personal-metrics="true">
+          <div class="kc-home-metric-card is-loading">
+            <strong>Carregando personalização...</strong>
+            <span>Ajustando com base em favoritos, votos, comentários e buscas.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kc-sidebar-section kc-sidebar-section--honest" data-kc-home-cashback-panel="true">
+        <div class="kc-home-pill">
+          <i class="fas fa-wallet"></i>
+          <span>Cashback em evolução</span>
+        </div>
+        <p class="kc-home-card-copy">A política de cashback ainda está em consolidação. Quando o modelo estiver pronto, o saldo real aparecerá aqui com regras públicas e verificáveis.</p>
+        <a class="kc-cashback-link-simple" href="compra-venda-feed.html">Explorar trocas da comunidade</a>
+      </div>
+
+      <div class="kc-sidebar-section" data-kc-home-categories-section="true">
+        <h3>
+          <i class="fas fa-th-large"></i>
+          Categorias
+        </h3>
+        <p class="kc-home-section-note">Prioriza o que você mais acessa, comenta, salva e busca. Os contadores mostram publicações ativas por categoria.</p>
+        <div class="kc-home-section-status" data-kc-home-categories-status="true">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Carregando categorias relevantes...</span>
+        </div>
+        <div class="kc-category-list kc-category-list--home" data-kc-home-categories-list="true"></div>
+        <button class="kc-btn-secondary kc-home-load-more" type="button" data-kc-home-categories-more="true" hidden>Carregar +10</button>
+      </div>
+
+      <div class="kc-sidebar-section kc-ods-section">
+        <h3>
+          <i class="fas fa-globe"></i>
+          ODS em Destaque
+        </h3>
+        <p class="kc-ods-description">
+          O Kino Campus contribui diretamente para os Objetivos de Desenvolvimento Sustentável da ONU.
+        </p>
+        <div class="kc-ods-badges">
+          <a class="kc-ods-badge" href="ods.html?goal=4" title="ODS 04: Educação de Qualidade">
+            <strong>ODS 04</strong>
+            <span>Educação</span>
+          </a>
+          <a class="kc-ods-badge" href="ods.html?goal=11" title="ODS 11: Cidades e Comunidades Sustentáveis">
+            <strong>ODS 11</strong>
+            <span>Cidades</span>
+          </a>
+          <a class="kc-ods-badge" href="ods.html?goal=12" title="ODS 12: Consumo e Produção Responsáveis">
+            <strong>ODS 12</strong>
+            <span>Consumo responsável</span>
+          </a>
+          <a class="kc-ods-badge" href="ods.html?goal=13" title="ODS 13: Ação Contra a Mudança Global do Clima">
+            <strong>ODS 13</strong>
+            <span>Ação climática</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="kc-sidebar-section kc-community-impact-section" data-kc-home-community-panel="true">
+        <h3>
+          <i class="fas fa-users"></i>
+          Observatório da Comunidade
+        </h3>
+        <p class="kc-home-section-note">Resumo vivo do que está publicado agora. As métricas amadurecem sem esconder o que ainda está em metodologia.</p>
+        <div class="kc-home-metric-grid" data-kc-home-community-metrics="true">
+          <div class="kc-home-metric-card is-loading">
+            <strong>Carregando pulso da comunidade...</strong>
+            <span>Lendo publicações ativas e categorias com movimento.</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <nav class="kc-mobile-nav">
+    <a class="active" href="index.html">
+      <i class="fas fa-home"></i>
+      <span>Início</span>
+    </a>
+    <a href="eventos.html">
+      <i class="fas fa-calendar"></i>
+      <span>Eventos</span>
+    </a>
+    <a class="kc-create-btn" href="create-post.html">
+      <i class="fas fa-plus"></i>
+    </a>
+    <a href="compra-venda-feed.html">
+      <i class="fas fa-shopping-bag"></i>
+      <span>Compra/Venda</span>
+    </a>
+    <button class="kc-menu-toggle" data-kc-mobile-menu="toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer">
+      <i class="fas fa-bars"></i>
+      <span>Menu</span>
+    </button>
+  </nav>
+
+  <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
+    <div class="kc-mobile-menu-header">
+      <h3>Menu</h3>
+      <button class="kc-close-menu" data-kc-mobile-menu="close" aria-label="Fechar menu">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="kc-mobile-menu-content">
+      <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
+        <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
+          <span class="kc-mobile-menu-user-avatar-wrap">
+            <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
+          </span>
+          <span id="mobileMenuUserName">Login / Cadastro</span>
+        </a>
+      </div>
+      <hr data-kc-divider="top" class="kc-mobile-menu-divider" />
+      <a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
+      <a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
+      <hr data-kc-divider="profile" class="kc-mobile-menu-divider" />
+      <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+      <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+      <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+      <a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+      <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+      <a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+    </div>
+  </div>
+  <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
+
+  <script src="assets/js/kc-constants.js"></script>
+  <script src="assets/js/kc-utils.js"></script>
+  <script src="assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/adapters/local.adapter.js"></script>
+  <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/controllers/create-post.controller.js"></script>
+  <script src="assets/js/components/toast.js"></script>
+  <script src="assets/js/components/carousel.js"></script>
+  <script src="assets/js/components/voting.js"></script>
+  <script src="assets/js/kc-core.js"></script>
+  <script src="assets/js/kc-create-post.js"></script>
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
+  <script src="assets/js/search-analytics.shared.js"></script>
+  <script src="assets/js/home-categories.shared.js"></script>
+  <script src="assets/js/kc-home-categories.js"></script>
+  <script src="assets/js/kc-search.js"></script>
   <script src="assets/js/kc-pull-to-refresh.js"></script>
   <script src="assets/js/controllers/kc-feed.controller.js"></script>
   <script src="assets/js/controllers/index.controller.js"></script>

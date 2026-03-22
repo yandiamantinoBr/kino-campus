@@ -337,6 +337,32 @@ function bindCommentPreviewSync() {
   });
 }
 
+function buildTrackingPostFromNode(node) {
+  if (!node) return null;
+  return {
+    module: node.getAttribute('data-post-module') || node.getAttribute('data-module') || '',
+    category: node.getAttribute('data-post-category') || node.getAttribute('data-category') || '',
+    subcategory: node.getAttribute('data-post-subcategory') || node.getAttribute('data-subcategory') || '',
+    title: (node.querySelector('.kc-card__title') || document.getElementById('postTitle') || {}).textContent || '',
+    description: (node.querySelector('.kc-card__description-preview') || document.getElementById('postDescription') || {}).textContent || '',
+    tagKeys: String(node.getAttribute('data-post-tags') || node.getAttribute('data-kc-tags') || '').split(/\s+/).filter(Boolean)
+  };
+}
+
+function resolveCommentTrackingPost(postId) {
+  const id = String(postId || '').trim();
+  if (!id) return null;
+
+  const card = document.querySelector(`.kc-card[data-post-id="${_cssEsc(id)}"]`);
+  if (card) return buildTrackingPostFromNode(card);
+
+  if (window.kcCurrentPostContext && typeof window.kcCurrentPostContext === 'object') {
+    return window.kcCurrentPostContext;
+  }
+
+  return buildTrackingPostFromNode(document.body);
+}
+
 async function submitComment(postId = null, containerId = 'commentsContainer') {
   const resolved = postId != null ? String(postId) : getCurrentPostId();
   if (!resolved) {
@@ -361,6 +387,13 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
         updateCommentPreview(id);
         renderComments(id, containerId);
         showToast('Comentário enviado!', 'info', 1800);
+        try {
+          if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
+            window.KCHomeCategories.trackEvent('comment', {
+              post: resolveCommentTrackingPost(id)
+            });
+          }
+        } catch (_) { }
 
         // Audit log: registra comentário (fire-and-forget)
         try {
@@ -436,6 +469,13 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
   updateCommentPreview(id);
   renderComments(id, containerId);
   showToast('Comentário enviado!', 'info', 1800);
+  try {
+    if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
+      window.KCHomeCategories.trackEvent('comment', {
+        post: resolveCommentTrackingPost(id)
+      });
+    }
+  } catch (_) { }
 }
 
 // Toolbar formatting (Markdown-like)

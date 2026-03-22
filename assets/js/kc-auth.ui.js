@@ -744,8 +744,6 @@
       const href = String(link.getAttribute('href') || '').toLowerCase();
       const span = link.querySelector('span');
       if (!span || !href.includes('compra-venda-feed.html')) return;
-      span.textContent = 'Compra/Venda';
-      span.classList.add('kc-mobile-nav-label-long');
       link.setAttribute('title', 'Compra e Venda');
     });
   }

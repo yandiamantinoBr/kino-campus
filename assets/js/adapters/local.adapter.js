@@ -3,7 +3,7 @@
   'use strict';
 
 
-const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = window.KCAPI;
+const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = window.KCAPI;
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
@@ -44,7 +44,7 @@ const { config: cfg, fetchJSON, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID
     // KCAPI.setConfig({ baseURL: '/api/v1' })
     if (!cfg.baseURL) {
       const db = await getDatabaseNormalized();
-      const filtered = filterPosts(db.posts, params);
+      const filtered = typeof filterLocalPosts === 'function' ? filterLocalPosts(db.posts, params) : (db.posts || []);
 
       // V8.1.4.2: paginação no driver local (paridade com Supabase)
       const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};

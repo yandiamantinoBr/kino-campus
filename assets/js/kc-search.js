@@ -339,6 +339,12 @@
     const q = String(term || '').replace(/\s+/g, ' ').trim();
     if (!q || q.length < 2) return false;
 
+    try {
+      if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
+        window.KCHomeCategories.trackEvent('search', { term: q, meta });
+      }
+    } catch (_) {}
+
     if (!KCSearchAnalytics) {
       insertTrackedTerms([{ term: q }]).catch(() => {});
       return true;

@@ -974,6 +974,14 @@
       : [];
   }
 
+  function trackHomeCategoryInteraction(eventType, post) {
+    try {
+      if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
+        window.KCHomeCategories.trackEvent(eventType, { post });
+      }
+    } catch (_) { }
+  }
+
   function updateSavedButtonsUI() {
     const activeKinds = new Set(getSaveKinds());
     const loading = !!(savedPostState && savedPostState.pending);
@@ -1076,6 +1084,7 @@
                 pending: false,
               };
               toast(`${getSaveKindLabel(kind)} salvo com sucesso.`, 'success', 2200);
+              trackHomeCategoryInteraction(kind, post);
             }
           }
         } catch (_) {
@@ -1404,6 +1413,12 @@
 
   function renderPost(post) {
     currentPost = post;
+    window.kcCurrentPostContext = post;
+    document.body.setAttribute('data-post-module', String(post && (post.modulo || post.module) || ''));
+    document.body.setAttribute('data-post-category', String(post && (post._kcTabCategoryKey || post.categoriaKey || post.categoria || post.categoryKey || post.category) || ''));
+    document.body.setAttribute('data-post-subcategory', String(post && (post.subcategoriaKey || post.subcategoria || post.subcategoryKey || post.subcategory) || ''));
+    document.body.setAttribute('data-post-tags', Array.isArray(post && post.tagKeys) ? post.tagKeys.join(' ') : (Array.isArray(post && post.tags) ? post.tags.join(' ') : ''));
+    trackHomeCategoryInteraction('post_open', post);
     hide('notFound');
     setText('postTitle', post.titulo || 'Detalhes');
     setBreadcrumb(post);

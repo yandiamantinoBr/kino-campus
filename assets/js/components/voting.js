@@ -4,20 +4,146 @@ let kcVotesRealtimeChannel = null;
 let kcVotesRealtimeRetryTimer = null;
 let kcVotesPollingTimer = null;
 
-function kcUpdateVoteScoreInDOM(postId, score) {
-  const encoded = encodeURIComponent(String(postId || ''));
-  if (!encoded) return;
-  const scoreText = String(Number.isFinite(Number(score)) ? Number(score) : 0);
-
-  document.querySelectorAll(`.kc-vote-box [data-post-uuid="${encoded}"], .kc-vote-box [data-post-id="${encoded}"]`).forEach((btn) => {
-    const voteBox = btn.closest('.kc-vote-box');
-    const scoreEl = voteBox ? voteBox.querySelector('span') : null;
-    if (scoreEl) scoreEl.textContent = scoreText;
-  });
-}
+const KC_VOTE_IN_FLIGHT = new Set();
+const KC_VOTE_PENDING_STATE = new Map();
 
 function kcIsUuid(value) {
   return KC_UUID_RE.test(String(value || '').trim());
+}
+
+function kcDecodeAttr(value) {
+  if (value == null) return '';
+  try {
+    return decodeURIComponent(String(value));
+  } catch (_) {
+    return String(value || '');
+  }
+}
+
+function kcNormalizeDirection(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'hot' || normalized === 'cold' ? normalized : null;
+}
+
+function kcGetVoteScoreEl(voteBox) {
+  return voteBox ? voteBox.querySelector('[data-kc-vote-score]') : null;
+}
+
+function kcGetVoteButtons(voteBox) {
+  return voteBox ? Array.from(voteBox.querySelectorAll('button')) : [];
+}
+
+function kcGetVotePostIdFromButton(button) {
+  if (!button) return '';
+  const rawUuid = kcDecodeAttr(button.getAttribute('data-post-uuid'));
+  const rawId = kcDecodeAttr(button.getAttribute('data-post-id'));
+  return rawUuid || rawId || '';
+}
+
+function kcGetVotePostIdFromBox(voteBox) {
+  if (!voteBox) return '';
+  const firstButton = voteBox.querySelector('[data-post-id], [data-post-uuid]');
+  return kcGetVotePostIdFromButton(firstButton);
+}
+
+function kcGetVoteBoxesForPost(postId) {
+  const wanted = String(postId || '').trim();
+  if (!wanted) return [];
+
+  const boxes = new Set();
+  document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]').forEach((button) => {
+    if (kcGetVotePostIdFromButton(button) !== wanted) return;
+    const voteBox = button.closest('.kc-vote-box');
+    if (voteBox) boxes.add(voteBox);
+  });
+  return Array.from(boxes);
+}
+
+function kcReadVoteState(voteBox) {
+  const scoreEl = kcGetVoteScoreEl(voteBox);
+  const hotBtn = voteBox ? voteBox.querySelector('[data-action="vote-hot"]') : null;
+  const coldBtn = voteBox ? voteBox.querySelector('[data-action="vote-cold"]') : null;
+  return {
+    score: parseInt(scoreEl && scoreEl.textContent, 10) || 0,
+    direction: hotBtn && hotBtn.classList.contains('active')
+      ? 'hot'
+      : ((coldBtn && coldBtn.classList.contains('active')) ? 'cold' : null)
+  };
+}
+
+function kcAnimateVoteScore(scoreEl) {
+  if (!scoreEl) return;
+  scoreEl.classList.remove('is-score-bump');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('is-score-bump');
+  window.setTimeout(() => {
+    try { scoreEl.classList.remove('is-score-bump'); } catch (_) { }
+  }, 220);
+}
+
+function kcSetVoteBoxPending(voteBox, pending) {
+  if (!voteBox) return;
+  kcGetVoteButtons(voteBox).forEach((btn) => {
+    if (pending) btn.setAttribute('disabled', 'disabled');
+    else btn.removeAttribute('disabled');
+  });
+  voteBox.classList.toggle('is-pending', !!pending);
+  voteBox.dataset.kcVotePending = pending ? '1' : '0';
+}
+
+function kcApplyVoteStateToBox(voteBox, state, options = {}) {
+  if (!voteBox || !state) return;
+  const scoreEl = kcGetVoteScoreEl(voteBox);
+  const hotBtn = voteBox.querySelector('[data-action="vote-hot"]');
+  const coldBtn = voteBox.querySelector('[data-action="vote-cold"]');
+  const direction = kcNormalizeDirection(state.direction);
+  const score = Number.isFinite(Number(state.score)) ? Number(state.score) : 0;
+
+  if (scoreEl) {
+    scoreEl.textContent = String(score);
+    if (options.animate) kcAnimateVoteScore(scoreEl);
+  }
+
+  if (hotBtn) hotBtn.classList.toggle('active', direction === 'hot');
+  if (coldBtn) coldBtn.classList.toggle('active', direction === 'cold');
+  kcSetVoteBoxPending(voteBox, !!state.pending);
+}
+
+function kcApplyVoteStateToPost(postId, state, options = {}) {
+  const boxes = kcGetVoteBoxesForPost(postId);
+  boxes.forEach((voteBox) => kcApplyVoteStateToBox(voteBox, state, options));
+}
+
+function kcHasPendingVote(postId) {
+  return KC_VOTE_PENDING_STATE.has(String(postId || '').trim());
+}
+
+function kcUpdateVoteScoreInDOM(postId, score, options = {}) {
+  const targetId = String(postId || '').trim();
+  if (!targetId) return;
+  if (kcHasPendingVote(targetId) && !options.force) return;
+
+  kcGetVoteBoxesForPost(targetId).forEach((voteBox) => {
+    const current = kcReadVoteState(voteBox);
+    kcApplyVoteStateToBox(voteBox, {
+      score,
+      direction: current.direction,
+      pending: false
+    }, options);
+  });
+}
+
+function kcBuildTrackingPost(voteBox) {
+  const card = voteBox ? voteBox.closest('.kc-card') : null;
+  if (!card) return null;
+  return {
+    module: card.getAttribute('data-module') || '',
+    category: card.getAttribute('data-category') || '',
+    subcategory: card.getAttribute('data-subcategory') || '',
+    title: (card.querySelector('.kc-card__title') || {}).textContent || '',
+    description: (card.querySelector('.kc-card__description-preview') || {}).textContent || '',
+    tagKeys: String(card.getAttribute('data-kc-tags') || '').split(/\s+/).filter(Boolean)
+  };
 }
 
 function kcInitVotesRealtime() {
@@ -29,7 +155,7 @@ function kcInitVotesRealtime() {
     : null;
   if (!client || typeof client.channel !== 'function') {
     if (!kcVotesRealtimeRetryTimer) {
-      kcVotesRealtimeRetryTimer = setTimeout(() => {
+      kcVotesRealtimeRetryTimer = window.setTimeout(() => {
         kcVotesRealtimeRetryTimer = null;
         kcInitVotesRealtime();
       }, 1200);
@@ -39,14 +165,11 @@ function kcInitVotesRealtime() {
 
   const refreshVisibleScores = async () => {
     try {
-      const ids = Array.from(new Set(Array.from(document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]'))
-        .map((el) => {
-          const rawUuid = String(el.getAttribute('data-post-uuid') || '').trim();
-          const rawId = String(el.getAttribute('data-post-id') || '').trim();
-          const chosen = rawUuid || rawId;
-          return chosen ? decodeURIComponent(chosen) : '';
-        })
-        .filter((id) => kcIsUuid(id))));
+      const ids = Array.from(new Set(
+        Array.from(document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]'))
+          .map((el) => kcGetVotePostIdFromButton(el))
+          .filter((id) => kcIsUuid(id) && !kcHasPendingVote(id))
+      ));
       if (!ids.length) return;
 
       const { data, error } = await client
@@ -56,7 +179,7 @@ function kcInitVotesRealtime() {
 
       if (error || !Array.isArray(data)) return;
       data.forEach((row) => {
-        if (!row || !row.id) return;
+        if (!row || !row.id || kcHasPendingVote(row.id)) return;
         kcUpdateVoteScoreInDOM(row.id, row.votos);
       });
     } catch (_) { }
@@ -70,8 +193,8 @@ function kcInitVotesRealtime() {
         { event: 'UPDATE', schema: 'public', table: 'posts' },
         (payload) => {
           const row = payload && payload.new ? payload.new : null;
-          if (!row || !row.id) return;
-          if (!Object.prototype.hasOwnProperty.call(row, 'votos')) return;
+          if (!row || !row.id || !Object.prototype.hasOwnProperty.call(row, 'votos')) return;
+          if (kcHasPendingVote(row.id)) return;
           kcUpdateVoteScoreInDOM(row.id, row.votos);
         }
       )
@@ -83,7 +206,7 @@ function kcInitVotesRealtime() {
       .subscribe();
 
     if (!kcVotesPollingTimer) {
-      kcVotesPollingTimer = setInterval(() => {
+      kcVotesPollingTimer = window.setInterval(() => {
         if (document.hidden) return;
         refreshVisibleScores();
       }, 5000);
@@ -95,148 +218,98 @@ function kcInitVotesRealtime() {
   }
 }
 
-
-
-
-// -----------------------------
-// Vote box
-// -----------------------------
-const KC_VOTE_IN_FLIGHT = new Set();
-
-function setVoteBoxPending(voteBox, pending) {
-  if (!voteBox) return;
-  voteBox.querySelectorAll('button').forEach((btn) => {
-    if (pending) btn.setAttribute('disabled', 'disabled');
-    else btn.removeAttribute('disabled');
-  });
-  voteBox.dataset.kcVotePending = pending ? '1' : '0';
-}
-
-function restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates) {
-  if (scoreElement) scoreElement.textContent = String(previousScoreText);
-  const voteButtons = voteBox ? Array.from(voteBox.querySelectorAll('button')) : [];
-  voteButtons.forEach((btn, idx) => {
-    btn.classList.toggle('active', !!previousActiveStates[idx]);
-  });
-}
-
 function vote(button, type) {
-  const voteBox = button.closest('.kc-vote-box');
+  const voteBox = button ? button.closest('.kc-vote-box') : null;
   if (!voteBox) return;
 
-  const scoreElement = voteBox.querySelector('span');
-  if (!scoreElement) return;
-  const voteButtons = Array.from(voteBox.querySelectorAll('button'));
-  if (!voteButtons.length) return;
-
-  const currentScore = parseInt(scoreElement.textContent, 10) || 0;
-  const isActive = button.classList.contains('active');
-  const previousScoreText = scoreElement.textContent;
-  const previousActiveStates = voteButtons.map((btn) => btn.classList.contains('active'));
-
-  const isSupabaseMode = isSupabaseRuntime();
-  const buttonUuid = button.getAttribute('data-post-uuid');
-  const buttonPostId = button.getAttribute('data-post-id');
-  const decodedUuid = buttonUuid ? decodeURIComponent(String(buttonUuid)) : '';
-  const decodedPostId = buttonPostId ? decodeURIComponent(String(buttonPostId)) : '';
-  const postId = decodedUuid || decodedPostId || button.closest('[data-post-id]')?.dataset.postId || getCurrentPostId();
+  const postId = kcGetVotePostIdFromButton(button)
+    || voteBox.closest('[data-post-id]')?.getAttribute('data-post-id')
+    || getCurrentPostId();
   const lockKey = String(postId || '').trim();
 
-  if (isSupabaseMode && !lockKey) {
+  if (!lockKey) {
     showToast('Não foi possível identificar a publicação para votar.', 'error');
     return;
   }
 
-  if (isSupabaseMode && KC_VOTE_IN_FLIGHT.has(lockKey)) return;
-
-  // clear
-  voteButtons.forEach(btn => btn.classList.remove('active'));
-
-  // Qual tipo estava ativo?
-  let previouslyActiveType = null;
-  voteButtons.forEach((btn, idx) => {
-    if (previousActiveStates[idx]) {
-      const action = String(btn.getAttribute('data-action') || '');
-      if (action.includes('hot')) previouslyActiveType = 'hot';
-      if (action.includes('cold')) previouslyActiveType = 'cold';
-    }
-  });
-
-  // Reverte o efeito do voto anterior na view local
-  let baseScore = currentScore;
-  if (previouslyActiveType === 'hot') {
-    baseScore -= 1;
-  } else if (previouslyActiveType === 'cold') {
-    baseScore += 1;
+  if (!isSupabaseRuntime()) {
+    const localState = kcReadVoteState(voteBox);
+    const nextDirection = localState.direction === type ? null : type;
+    let nextScore = localState.score;
+    if (localState.direction === 'hot') nextScore -= 1;
+    if (localState.direction === 'cold') nextScore += 1;
+    if (nextDirection === 'hot') nextScore += 1;
+    if (nextDirection === 'cold') nextScore -= 1;
+    kcApplyVoteStateToPost(lockKey, { score: nextScore, direction: nextDirection, pending: false }, { animate: true });
+    return;
   }
 
-  // Aplica o novo estado otimista
-  let newScore = baseScore;
-  if (!isActive) {
-    button.classList.add('active');
-    newScore = type === 'hot' ? baseScore + 1 : baseScore - 1;
-  }
+  if (KC_VOTE_IN_FLIGHT.has(lockKey)) return;
 
-  scoreElement.textContent = String(newScore);
-  if (postId) kcUpdateVoteScoreInDOM(postId, newScore);
+  const previousState = kcReadVoteState(voteBox);
+  const nextDirection = previousState.direction === type ? null : type;
+  let optimisticScore = previousState.score;
 
-  // micro animation
-  scoreElement.style.transform = 'scale(1.15)';
-  setTimeout(() => { scoreElement.style.transform = 'scale(1)'; }, 160);
-
-  // Modo local: mantém UX otimista sem escrita remota.
-  if (!isSupabaseMode) return;
+  if (previousState.direction === 'hot') optimisticScore -= 1;
+  if (previousState.direction === 'cold') optimisticScore += 1;
+  if (nextDirection === 'hot') optimisticScore += 1;
+  if (nextDirection === 'cold') optimisticScore -= 1;
 
   KC_VOTE_IN_FLIGHT.add(lockKey);
-  /* Não desabilitamos os botões — a UI otimista já reflete a mudança.
-     KC_VOTE_IN_FLIGHT impede double-submit sem bloquear visualmente. */
+  KC_VOTE_PENDING_STATE.set(lockKey, {
+    score: optimisticScore,
+    direction: nextDirection
+  });
 
-  // Supabase: explicita intenção de toggle para reduzir corrida de múltiplos cliques.
-  KCAPI.votePost(postId, type, { toggleOff: isActive }).then(function (res) {
-    if (res && res.ok) {
-      if (typeof res.score === 'number') {
-        scoreElement.textContent = String(res.score);
-        kcUpdateVoteScoreInDOM(postId, res.score);
-      }
+  kcApplyVoteStateToPost(lockKey, {
+    score: optimisticScore,
+    direction: nextDirection,
+    pending: true
+  }, { animate: true });
 
-      if (res.direction === null) {
-        voteButtons.forEach((btn) => btn.classList.remove('active'));
-      } else {
-        voteButtons.forEach((btn) => {
-          const action = String(btn.getAttribute('data-action') || '').trim().toLowerCase();
-          const btnType = action === 'vote-hot' ? 'hot' : (action === 'vote-cold' ? 'cold' : '');
-          btn.classList.toggle('active', btnType === res.direction);
-        });
-      }
+  KCAPI.votePost(lockKey, type, { toggleOff: previousState.direction === type }).then((res) => {
+    if (!res || res.ok === false) {
+      const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível registrar voto.';
+      kcApplyVoteStateToPost(lockKey, {
+        score: previousState.score,
+        direction: previousState.direction,
+        pending: false
+      }, { animate: true, force: true });
+      showToast(msg, 'error');
       return;
     }
 
-    restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates);
-    const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível registrar voto.';
-    showToast(msg, 'error');
-  }).catch(function () {
-    restoreVoteUI(voteBox, scoreElement, previousScoreText, previousActiveStates);
+    const finalDirection = kcNormalizeDirection(res.direction);
+    const finalScore = Number.isFinite(Number(res.score)) ? Number(res.score) : optimisticScore;
+    kcApplyVoteStateToPost(lockKey, {
+      score: finalScore,
+      direction: finalDirection,
+      pending: false
+    }, { animate: true, force: true });
+
+    if (finalDirection && window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
+      window.KCHomeCategories.trackEvent('vote', { post: kcBuildTrackingPost(voteBox) });
+    }
+  }).catch(() => {
+    kcApplyVoteStateToPost(lockKey, {
+      score: previousState.score,
+      direction: previousState.direction,
+      pending: false
+    }, { animate: true, force: true });
     showToast('Não foi possível registrar voto.', 'error');
-  }).finally(function () {
+  }).finally(() => {
     KC_VOTE_IN_FLIGHT.delete(lockKey);
+    KC_VOTE_PENDING_STATE.delete(lockKey);
   });
 }
 
-// -----------------------------
-// Inicializa estados hot/cold dos vote-boxes visíveis
-// Chama a RPC kc_get_my_votes para obter os votos do
-// usuário autenticado para todos os posts no feed.
-// -----------------------------
 async function kcInitVoteStates() {
   if (!isSupabaseRuntime()) return;
 
-  // Coleta todos os post-ids presentes no DOM
   const postIds = [];
   const idSet = new Set();
-  document.querySelectorAll('[data-action="vote-hot"][data-post-id], [data-action="vote-hot"][data-post-uuid]').forEach((btn) => {
-    const rawUuid = btn.getAttribute('data-post-uuid');
-    const rawId = btn.getAttribute('data-post-id');
-    const id = rawUuid ? decodeURIComponent(rawUuid) : (rawId ? decodeURIComponent(rawId) : null);
+  document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]').forEach((btn) => {
+    const id = kcGetVotePostIdFromButton(btn);
     if (id && kcIsUuid(id) && !idSet.has(id)) {
       idSet.add(id);
       postIds.push(id);
@@ -251,23 +324,18 @@ async function kcInitVoteStates() {
     const { data, error } = await client.rpc('kc_get_my_votes', { p_post_ids: postIds });
     if (error || !Array.isArray(data)) return;
 
-    // Monta mapa: post_id -> direction
     const voteMap = {};
-    data.forEach((row) => { voteMap[row.post_id] = row.direction; });
+    data.forEach((row) => {
+      if (row && row.post_id) voteMap[row.post_id] = kcNormalizeDirection(row.direction);
+    });
 
-    // Aplica ao DOM
     idSet.forEach((postId) => {
-      const dir = voteMap[postId];
-      if (!dir) return; // sem voto registrado
-
-      // Localiza o vote-box pelo data-post-id (pode ser encoded)
-      const encoded = encodeURIComponent(postId);
-      const hotBtn = document.querySelector(`[data-action="vote-hot"][data-post-id="${encoded}"]`);
-      const coldBtn = document.querySelector(`[data-action="vote-cold"][data-post-id="${encoded}"]`);
-      if (!hotBtn && !coldBtn) return;
-
-      if (hotBtn) hotBtn.classList.toggle('active', dir === 'hot');
-      if (coldBtn) coldBtn.classList.toggle('active', dir === 'cold');
+      if (kcHasPendingVote(postId)) return;
+      kcApplyVoteStateToPost(postId, {
+        score: kcReadVoteState(kcGetVoteBoxesForPost(postId)[0]).score,
+        direction: voteMap[postId],
+        pending: false
+      }, { force: true });
     });
   } catch (_) {
     // silencioso — não quebra o feed

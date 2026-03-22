@@ -866,6 +866,7 @@
     getAuthorById,
 
     // Utils
+    filterPosts,
     normalizePost,
     isBackendEnabled,
   });

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <link href="assets/css/kc-theme-boot.css" rel="stylesheet" />
+  <script src="assets/js/kc-theme-boot.js"></script>
+  <title>ODS | KinoCampus</title>
+  <link href="assets/css/styles.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <nav class="kc-nav-links">
+        <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
+        <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
+        <a href="moradia.html"><i class="fas fa-home"></i><span>Moradia</span></a>
+        <a href="oportunidades.html"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
+        <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i><span>Compra e Venda</span></a>
+        <a href="caronas-feed.html"><i class="fas fa-car"></i><span>Caronas</span></a>
+      </nav>
+      <div class="kc-search-bar" id="kcSearchBar">
+        <input id="searchInput" placeholder="Busque por itens, eventos, vagas na UFG..." type="search" />
+        <button aria-label="Buscar" type="button">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar">
+        <i class="fas fa-search"></i>
+      </button>
+      <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema">
+          <i class="fas fa-sun"></i>
+        </button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content kc-main-content--ods">
+    <section class="kc-ods-page" data-kc-ods-root>
+      <div class="kc-ods-goal-tabs" data-kc-ods-goal-tabs></div>
+
+      <section class="kc-ods-hero">
+        <div class="kc-ods-hero__copy">
+          <span class="kc-ods-eyebrow" data-kc-ods-eyebrow></span>
+          <h1 id="kcOdsTitle"></h1>
+          <p id="kcOdsSubtitle"></p>
+          <p class="kc-ods-hero__lead" data-kc-ods-lead></p>
+          <div class="kc-ods-hero__actions">
+            <a class="kc-btn-primary" href="index.html">Voltar para a home</a>
+            <a class="kc-btn-secondary" href="eventos.html?filter=sustentabilidade">Ver ações da comunidade</a>
+          </div>
+        </div>
+        <div class="kc-ods-hero__art">
+          <div class="kc-ods-hero__orb"></div>
+          <div class="kc-ods-hero__ring"></div>
+          <i class="fas fa-globe"></i>
+        </div>
+      </section>
+
+      <section class="kc-ods-grid">
+        <article class="kc-ods-panel">
+          <div class="kc-section-heading">
+            <span>Contexto Kino Campus</span>
+            <h2>Por que isso importa aqui</h2>
+          </div>
+          <div class="kc-ods-context" data-kc-ods-context></div>
+        </article>
+
+        <article class="kc-ods-panel">
+          <div class="kc-section-heading">
+            <span>Referências oficiais</span>
+            <h2>Fatos e sinais do objetivo</h2>
+          </div>
+          <div class="kc-ods-stats" data-kc-ods-stats></div>
+        </article>
+      </section>
+
+      <section class="kc-ods-panel">
+        <div class="kc-section-heading">
+          <span>Relação com a plataforma</span>
+          <h2>Onde o objetivo aparece na prática</h2>
+        </div>
+        <div class="kc-ods-module-tabs" data-kc-ods-module-tabs></div>
+        <div class="kc-ods-module-panels" data-kc-ods-module-panels></div>
+      </section>
+
+      <section class="kc-ods-grid">
+        <article class="kc-ods-panel">
+          <div class="kc-section-heading">
+            <span>Leituras rápidas</span>
+            <h2>O que observar</h2>
+          </div>
+          <div class="kc-ods-highlights" data-kc-ods-highlights></div>
+        </article>
+
+        <article class="kc-ods-panel">
+          <div class="kc-section-heading">
+            <span>Fontes e continuidade</span>
+            <h2>Base para aprofundar</h2>
+          </div>
+          <div class="kc-ods-sources" data-kc-ods-sources></div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <nav class="kc-mobile-nav">
+    <a href="index.html">
+      <i class="fas fa-home"></i>
+      <span>Início</span>
+    </a>
+    <a href="eventos.html">
+      <i class="fas fa-calendar"></i>
+      <span>Eventos</span>
+    </a>
+    <a class="kc-create-btn" href="create-post.html">
+      <i class="fas fa-plus"></i>
+    </a>
+    <a href="compra-venda-feed.html">
+      <i class="fas fa-shopping-bag"></i>
+      <span>Compra/Venda</span>
+    </a>
+    <button class="kc-menu-toggle" data-kc-mobile-menu="toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer">
+      <i class="fas fa-bars"></i>
+      <span>Menu</span>
+    </button>
+  </nav>
+
+  <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
+    <div class="kc-mobile-menu-header">
+      <h3>Menu</h3>
+      <button class="kc-close-menu" data-kc-mobile-menu="close" aria-label="Fechar menu">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="kc-mobile-menu-content">
+      <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
+        <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
+          <span class="kc-mobile-menu-user-avatar-wrap">
+            <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
+          </span>
+          <span id="mobileMenuUserName">Login / Cadastro</span>
+        </a>
+      </div>
+      <hr data-kc-divider="top" class="kc-mobile-menu-divider"/>
+      <a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
+      <a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
+      <hr data-kc-divider="profile" class="kc-mobile-menu-divider"/>
+      <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
+      <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
+      <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
+      <a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
+      <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+      <a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+    </div>
+  </div>
+  <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
+
+  <script src="assets/js/kc-constants.js"></script>
+  <script src="assets/js/kc-utils.js"></script>
+  <script src="assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/adapters/local.adapter.js"></script>
+  <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/components/toast.js"></script>
+  <script src="assets/js/components/carousel.js"></script>
+  <script src="assets/js/components/voting.js"></script>
+  <script src="assets/js/kc-core.js"></script>
+  <script src="assets/js/kc-create-post.js"></script>
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
+  <script src="assets/js/search-analytics.shared.js"></script>
+  <script src="assets/js/home-categories.shared.js"></script>
+  <script src="assets/js/kc-home-categories.js"></script>
+  <script src="assets/js/kc-search.js"></script>
+  <script src="assets/js/kc-search-modal.js"></script>
+  <script src="assets/js/ods.shared.js"></script>
+  <script src="assets/js/controllers/ods.controller.js"></script>
+</body>
+</html>
