@@ -166,10 +166,29 @@
       font-weight: 700;
     }
   </style>
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css" />
 </head>
-<body>
-  <div class="kc-callback-page">
-    <div class="kc-callback-card">
+<body class="kc-shell-page kc-auth-callback-route">
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+  <main class="kc-main-content">
+    <div class="kc-callback-page">
+      <div class="kc-callback-card">
       <div class="kc-callback-logo">
         <i class="fas fa-campground" aria-hidden="true"></i>
         <span>Kino</span>Campus
@@ -207,8 +226,9 @@
       <div class="kc-callback-footer">
         KinoCampus · Comunidade UFG · <a href="index.html">Voltar ao inicio</a>
       </div>
+      </div>
     </div>
-  </div>
+  </main>
 
   <script src="assets/js/kc-constants.js"></script>
   <script src="assets/js/kc-utils.js"></script>
@@ -220,6 +240,9 @@
   <script src="assets/js/adapters/supabase.adapter.js"></script>
   <script src="assets/js/account-profile.shared.js"></script>
   <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-public-shell.js"></script>
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
   <script src="assets/js/kc-auth-callback.js"></script>
 </body>
 </html>

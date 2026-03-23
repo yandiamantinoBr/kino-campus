@@ -10,7 +10,10 @@
     currentStep: 0,
     submitting: false,
     avatarFile: null,
+    avatarBatch: 0,
     selectedAvatarUrl: '',
+    selectedEmoji: '',
+    selectedEmojiColor: '',
     nextPath: '/index.html',
   };
 
@@ -76,9 +79,17 @@
   function getSuggestionUrls() {
     const seed = readProfileName(state.profile, state.user) || String((state.user && state.user.id) || 'kinocampus');
     if (shared && typeof shared.getSuggestedAvatarUrls === 'function') {
-      return shared.getSuggestedAvatarUrls(seed);
+      return shared.getSuggestedAvatarUrls(seed, { batch: state.avatarBatch, size: 8 });
     }
     return [];
+  }
+
+  function getEmojiOptions() {
+    return Array.isArray(shared.AVATAR_EMOJI_OPTIONS) ? shared.AVATAR_EMOJI_OPTIONS.slice() : ['🎓', '😄', '✨', '🌱'];
+  }
+
+  function getEmojiColors() {
+    return Array.isArray(shared.AVATAR_COLOR_OPTIONS) ? shared.AVATAR_COLOR_OPTIONS.slice() : ['#FF7C00', '#41B5D3', '#70E291', '#1F2937'];
   }
 
   function updateAvatarPreview() {
@@ -109,7 +120,9 @@
 
     const suggestions = getSuggestionUrls();
     preview.removeAttribute('data-object-url');
-    preview.src = suggestions[0] || 'https://api.dicebear.com/7.x/avataaars/svg?seed=kinocampus';
+    preview.src = suggestions[0] || (shared.buildEmojiAvatarDataUrl
+      ? shared.buildEmojiAvatarDataUrl(getEmojiOptions()[0], getEmojiColors()[0])
+      : 'https://api.dicebear.com/7.x/avataaars/svg?seed=kinocampus');
   }
 
   function releaseAvatarPreview() {
@@ -143,6 +156,59 @@
         if (input) input.value = '';
         releaseAvatarPreview();
         renderAvatarSuggestions();
+        renderEmojiAvatarBuilder();
+        updateAvatarPreview();
+      });
+    });
+  }
+
+  function renderEmojiAvatarBuilder() {
+    const emojiGrid = $('#accountSetupEmojiGrid');
+    const colorGrid = $('#accountSetupEmojiColors');
+    const current = $('#accountSetupEmojiCurrent');
+    if (!emojiGrid || !colorGrid || !shared || typeof shared.buildEmojiAvatarDataUrl !== 'function') return;
+
+    const emojis = getEmojiOptions();
+    const colors = getEmojiColors();
+    if (!state.selectedEmoji) state.selectedEmoji = emojis[0];
+    if (!state.selectedEmojiColor) state.selectedEmojiColor = colors[0];
+
+    emojiGrid.innerHTML = emojis.map((emoji) => {
+      const active = emoji === state.selectedEmoji;
+      return `<button class="kc-avatar-emoji-option${active ? ' is-active' : ''}" type="button" data-avatar-emoji="${esc(emoji)}" aria-pressed="${active ? 'true' : 'false'}">${esc(emoji)}</button>`;
+    }).join('');
+
+    colorGrid.innerHTML = colors.map((color) => {
+      const active = String(color).toUpperCase() === String(state.selectedEmojiColor).toUpperCase();
+      return `<button class="kc-avatar-color-chip${active ? ' is-active' : ''}" type="button" data-avatar-color="${esc(color)}" aria-pressed="${active ? 'true' : 'false'}" style="background:${esc(color)};"></button>`;
+    }).join('');
+
+    if (current) current.textContent = `Emoji atual: ${state.selectedEmoji} em ${state.selectedEmojiColor}`;
+
+    emojiGrid.querySelectorAll('[data-avatar-emoji]').forEach((button) => {
+      button.addEventListener('click', function () {
+        state.selectedEmoji = String(button.getAttribute('data-avatar-emoji') || '').trim() || emojis[0];
+        state.selectedAvatarUrl = shared.buildEmojiAvatarDataUrl(state.selectedEmoji, state.selectedEmojiColor);
+        state.avatarFile = null;
+        const input = $('#accountSetupAvatarInput');
+        if (input) input.value = '';
+        releaseAvatarPreview();
+        renderAvatarSuggestions();
+        renderEmojiAvatarBuilder();
+        updateAvatarPreview();
+      });
+    });
+
+    colorGrid.querySelectorAll('[data-avatar-color]').forEach((button) => {
+      button.addEventListener('click', function () {
+        state.selectedEmojiColor = String(button.getAttribute('data-avatar-color') || '').trim() || colors[0];
+        state.selectedAvatarUrl = shared.buildEmojiAvatarDataUrl(state.selectedEmoji, state.selectedEmojiColor);
+        state.avatarFile = null;
+        const input = $('#accountSetupAvatarInput');
+        if (input) input.value = '';
+        releaseAvatarPreview();
+        renderAvatarSuggestions();
+        renderEmojiAvatarBuilder();
         updateAvatarPreview();
       });
     });
@@ -247,8 +313,12 @@
       }
     });
 
+    state.avatarBatch = 0;
     state.selectedAvatarUrl = '';
+    state.selectedEmoji = getEmojiOptions()[0];
+    state.selectedEmojiColor = getEmojiColors()[0];
     renderAvatarSuggestions();
+    renderEmojiAvatarBuilder();
     updateAvatarPreview();
     updateIdentityConditional();
     updateContactPreview();
@@ -502,6 +572,18 @@
         state.avatarFile = file;
         state.selectedAvatarUrl = '';
         renderAvatarSuggestions();
+        renderEmojiAvatarBuilder();
+        updateAvatarPreview();
+      });
+    }
+
+    const avatarLoadMore = $('#accountSetupAvatarLoadMore');
+    if (avatarLoadMore) {
+      avatarLoadMore.addEventListener('click', function () {
+        state.avatarBatch += 1;
+        state.selectedAvatarUrl = '';
+        renderAvatarSuggestions();
+        renderEmojiAvatarBuilder();
         updateAvatarPreview();
       });
     }

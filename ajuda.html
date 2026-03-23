@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="kc-loading">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KinoCampus - Central de ajuda</title>
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css" />
+  <script src="assets/js/kc-theme-boot.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="kc-shell-page kc-help-page">
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <section class="kc-help-shell">
+      <div class="kc-help-hero">
+        <span class="kc-help-eyebrow">Central de ajuda</span>
+        <h1 class="kc-help-title">Orientações rápidas para entrar, confirmar a conta, completar o perfil e receber contato nos anúncios.</h1>
+        <p class="kc-help-copy">Esta central cobre o fluxo inteiro de conta do KinoCampus: login, cadastro, e-mail de confirmação, onboarding, configurações e o botão de contato dos anúncios.</p>
+      </div>
+
+      <div class="kc-help-grid">
+        <div class="kc-settings-stack">
+          <section class="kc-help-card">
+            <h2>Atalhos úteis</h2>
+            <div class="kc-help-list">
+              <article class="kc-help-item">
+                <strong><i class="fas fa-right-to-bracket"></i> Login e cadastro</strong>
+                <p>Use seu e-mail institucional da UFG. Se ainda não tiver conta, o link de confirmação chega por e-mail.</p>
+                <a class="kc-help-btn is-primary" href="#login" data-kc-login="true">Abrir login</a>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-list-check"></i> Completar conta</strong>
+                <p>Defina nome de exibição, vínculo, canal principal de contato e os links que deseja mostrar publicamente.</p>
+                <a class="kc-help-btn" href="account-setup.html">Abrir onboarding</a>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-sliders"></i> Configurações</strong>
+                <p>Ajuste tema, CTA público dos anúncios, visibilidade dos links sociais e ações de segurança.</p>
+                <a class="kc-help-btn" href="settings.html">Ir para configurações</a>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-id-badge"></i> Perfil público</strong>
+                <p>Veja como seu hero aparece para outras pessoas e confirme se seus links públicos estão do jeito que você quer.</p>
+                <a class="kc-help-btn" href="profile.html">Abrir perfil</a>
+              </article>
+            </div>
+          </section>
+
+          <section class="kc-help-card">
+            <h2>Perguntas frequentes</h2>
+            <div class="kc-help-faq">
+              <details>
+                <summary>Não recebi o e-mail de confirmação. O que fazer?</summary>
+                <p>Verifique a caixa de spam e depois abra o modal de login para usar a ação “Reenviar confirmação”. Você também encontra esse atalho nas configurações da conta.</p>
+              </details>
+              <details>
+                <summary>Por que o botão “Entrar em contato” pede login?</summary>
+                <p>O contato do anúncio só fica disponível para pessoas autenticadas. Isso reduz abuso e preserva melhor o contexto do anúncio e do autor.</p>
+              </details>
+              <details>
+                <summary>Posso esconder minhas redes sociais e manter só um canal principal?</summary>
+                <p>Sim. Em Configurações você escolhe quais links aparecem no perfil e também pode manter o CTA de contato ligado ou desligado nos anúncios.</p>
+              </details>
+              <details>
+                <summary>Posso trocar minha foto por upload, avatar sugerido ou emoji?</summary>
+                <p>Sim. No onboarding você pode enviar uma foto, carregar mais avatares aleatórios do mesmo estilo ou montar uma imagem com emoji e cor.</p>
+              </details>
+              <details>
+                <summary>Qual canal o KinoCampus usa quando alguém clica no meu anúncio?</summary>
+                <p>O canal principal escolhido na conta. Se for WhatsApp, o link já abre com uma mensagem pronta referenciando o anúncio. Se você desligar o CTA, a interface troca para uma alternativa segura.</p>
+              </details>
+            </div>
+          </section>
+        </div>
+
+        <aside class="kc-settings-stack">
+          <section class="kc-help-card">
+            <h2>Fluxo recomendado</h2>
+            <p class="kc-help-copy">Se estiver configurando sua conta agora, este é o caminho mais rápido para deixar o perfil pronto.</p>
+            <div class="kc-help-list">
+              <article class="kc-help-item">
+                <strong><i class="fas fa-envelope"></i> 1. Confirme o e-mail</strong>
+                <p>Abra o link recebido para cair no callback oficial do KinoCampus.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-user-check"></i> 2. Complete o onboarding</strong>
+                <p>Defina nome de exibição, vínculo e o canal principal do contato.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-share-nodes"></i> 3. Revise os links públicos</strong>
+                <p>Ative somente as redes que você quer mostrar no hero do perfil.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-bullhorn"></i> 4. Publique e teste o CTA</strong>
+                <p>Depois de publicar, revise se o botão de contato está abrindo o canal certo.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="kc-help-card">
+            <h2>Precisa revisar o básico?</h2>
+            <div class="kc-settings-actions-row">
+              <a class="kc-help-btn is-primary" href="settings.html"><i class="fas fa-sliders"></i><span>Configurações</span></a>
+              <a class="kc-help-btn" href="account-setup.html"><i class="fas fa-list-check"></i><span>Onboarding</span></a>
+              <a class="kc-help-btn" href="index.html"><i class="fas fa-house"></i><span>Voltar ao início</span></a>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/js/kc-constants.js"></script>
+  <script src="assets/js/kc-utils.js"></script>
+  <script src="assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/adapters/local.adapter.js"></script>
+  <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/account-profile.shared.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-public-shell.js"></script>
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
+</body>
+</html>

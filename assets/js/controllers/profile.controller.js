@@ -88,6 +88,15 @@
     return `${base}?next=${encodeURIComponent(next)}`;
   }
 
+  function buildSettingsHref() {
+    const base = '/settings.html';
+    const next = `/profile.html${state.profileId ? `?id=${encodeURIComponent(state.profileId)}` : ''}`;
+    if (shared && typeof shared.normalizeNextPath === 'function') {
+      return `${base}?next=${encodeURIComponent(shared.normalizeNextPath(next, '/profile.html'))}`;
+    }
+    return `${base}?next=${encodeURIComponent(next)}`;
+  }
+
   function formatChoice(field, value) {
     if (!value) return '';
     if (shared && typeof shared.formatProfileValue === 'function') {
@@ -301,9 +310,10 @@
     const editToggle = $('#profile-edit-toggle');
     if (editToggle) {
       editToggle.style.display = ownerView ? 'inline-flex' : 'none';
-      editToggle.innerHTML = shared && typeof shared.isOnboardingComplete === 'function' && !shared.isOnboardingComplete(profile)
-        ? '<i class="fas fa-list-check"></i> Completar cadastro'
-        : '<i class="fas fa-sliders"></i> Configurar conta';
+      const onboardingComplete = !(shared && typeof shared.isOnboardingComplete === 'function') || shared.isOnboardingComplete(profile);
+      editToggle.innerHTML = onboardingComplete
+        ? '<i class="fas fa-sliders"></i> Configurações'
+        : '<i class="fas fa-list-check"></i> Completar cadastro';
     }
 
     const nameEl = $('#profile-display-name');
@@ -389,8 +399,12 @@
 
     const setupHint = $('#profile-setup-hint');
     if (setupHint) {
-      if (ownerView && (!visibleLinks.length || !shared.isOnboardingComplete || !shared.isOnboardingComplete(profile))) {
-        setupHint.innerHTML = `Complete seus links e preferencias de contato em <a href="${esc(buildAccountSetupHref())}">configurar conta</a>.`;
+      const onboardingComplete = !shared.isOnboardingComplete || shared.isOnboardingComplete(profile);
+      if (ownerView && (!visibleLinks.length || !onboardingComplete)) {
+        setupHint.innerHTML = `Complete seus links e preferências de contato em <a href="${esc(buildAccountSetupHref())}">completar cadastro</a>.`;
+        setupHint.style.display = 'block';
+      } else if (ownerView) {
+        setupHint.innerHTML = `Você pode ajustar seus links públicos e o CTA dos anúncios em <a href="${esc(buildSettingsHref())}">configurações</a>.`;
         setupHint.style.display = 'block';
       } else {
         setupHint.textContent = '';
@@ -937,7 +951,11 @@
     const editToggle = $('#profile-edit-toggle');
     if (editToggle) {
       editToggle.addEventListener('click', () => {
-        window.location.href = buildAccountSetupHref();
+        const profile = state.profile || {};
+        const target = shared && typeof shared.isOnboardingComplete === 'function' && !shared.isOnboardingComplete(profile)
+          ? buildAccountSetupHref()
+          : buildSettingsHref();
+        window.location.href = target;
       });
     }
 

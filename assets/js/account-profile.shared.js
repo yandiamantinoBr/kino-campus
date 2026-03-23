@@ -118,6 +118,22 @@
     Object.freeze({ iso2: 'VE', name: 'Venezuela', dialCode: '58' })
   ]);
 
+  const AVATAR_EMOJI_OPTIONS = Object.freeze([
+    '🎓', '📚', '💡', '🌱', '✨', '😄', '😎', '🤝',
+    '🚲', '🏠', '💻', '🎨', '🧪', '🎧', '☕', '🌻'
+  ]);
+
+  const AVATAR_COLOR_OPTIONS = Object.freeze([
+    '#FF7C00',
+    '#41B5D3',
+    '#70E291',
+    '#5B6CFF',
+    '#F973B7',
+    '#FFC857',
+    '#8E6FF7',
+    '#1F2937'
+  ]);
+
   const SOCIAL_NETWORKS = Object.freeze({
     whatsapp: Object.freeze({ key: 'whatsapp', label: 'WhatsApp', iconClass: 'fab fa-whatsapp', emoji: '💬', canBePrimary: true }),
     instagram: Object.freeze({ key: 'instagram', label: 'Instagram', iconClass: 'fab fa-instagram', emoji: '📸', canBePrimary: true }),
@@ -202,6 +218,13 @@
 
   function stripLeadingHandle(value) {
     return String(value || '').trim().replace(/^@+/, '').replace(/\/+$/, '');
+  }
+
+  function clampInteger(value, minimum, maximum, fallback) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    const rounded = Math.round(numeric);
+    return Math.max(minimum, Math.min(maximum, rounded));
   }
 
   function ensureHttpsUrl(value) {
@@ -522,14 +545,51 @@
     return normalized;
   }
 
-  function getSuggestedAvatarUrls(seedBase) {
+  function hashSeed(value) {
+    const source = String(value || '');
+    let hash = 0;
+    for (let index = 0; index < source.length; index += 1) {
+      hash = ((hash << 5) - hash) + source.charCodeAt(index);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  function getSuggestedAvatarUrls(seedBase, options) {
     const base = trimText(seedBase, 120) || 'kinocampus';
-    return [
-      `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(base)}`,
-      `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(base + '-campus')}`,
-      `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(base + '-ufg')}`,
-      `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(base + '-verde')}`
-    ];
+    const opts = (options && typeof options === 'object') ? options : {};
+    const batch = clampInteger(opts.batch, 0, 9999, 0);
+    const size = clampInteger(opts.size, 1, 12, 8);
+    const flavors = ['campus', 'ufg', 'cerrado', 'ipê', 'sol', 'lua', 'goiás', 'ponte', 'sombra', 'vento', 'brisa', 'vereda'];
+    const hash = hashSeed(base);
+    return Array.from({ length: size }, function (_, index) {
+      const flavor = flavors[(hash + batch + index) % flavors.length];
+      const variant = (hash + (batch * size) + index) % 97;
+      const seed = `${base}-${flavor}-${batch}-${index}-${variant}`;
+      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+    });
+  }
+
+  function isAllowedEmojiAvatar(value) {
+    return AVATAR_EMOJI_OPTIONS.indexOf(String(value || '').trim()) !== -1;
+  }
+
+  function isAllowedAvatarColor(value) {
+    return AVATAR_COLOR_OPTIONS.indexOf(String(value || '').trim().toUpperCase()) !== -1;
+  }
+
+  function buildEmojiAvatarDataUrl(emoji, color) {
+    const chosenEmoji = isAllowedEmojiAvatar(emoji) ? String(emoji).trim() : AVATAR_EMOJI_OPTIONS[0];
+    const chosenColor = isAllowedAvatarColor(color) ? String(color).trim().toUpperCase() : AVATAR_COLOR_OPTIONS[0];
+    const textColor = chosenColor === '#FFC857' ? '#1F2937' : '#FFFFFF';
+    const svg = [
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Avatar emoji KinoCampus">',
+      `<rect width="160" height="160" rx="48" fill="${chosenColor}"/>`,
+      '<circle cx="80" cy="80" r="56" fill="rgba(255,255,255,0.12)"/>',
+      `<text x="80" y="98" text-anchor="middle" font-size="72" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif" fill="${textColor}">${chosenEmoji}</text>`,
+      '</svg>'
+    ].join('');
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 
   function normalizeNextPath(value, fallback) {
@@ -645,6 +705,8 @@
     RACE_COLOR_OPTIONS,
     CONTACT_METHOD_OPTIONS,
     COUNTRY_DIAL_OPTIONS,
+    AVATAR_EMOJI_OPTIONS,
+    AVATAR_COLOR_OPTIONS,
     SOCIAL_NETWORKS,
     SOCIAL_ORDER,
     normalizeKey,
@@ -663,6 +725,7 @@
     isOnboardingComplete,
     buildOnboardingProfilePatch,
     getSuggestedAvatarUrls,
+    buildEmojiAvatarDataUrl,
     normalizeNextPath,
     buildContactMessage,
     buildContactAction

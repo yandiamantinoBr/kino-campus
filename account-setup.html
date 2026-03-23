@@ -414,8 +414,9 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css" />
 </head>
-<body class="kc-account-setup-page">
+<body class="kc-account-setup-page kc-shell-page">
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -473,13 +474,28 @@
             <div class="kc-avatar-section">
               <img id="accountSetupAvatarPreview" class="kc-avatar-preview" src="" alt="Preview do avatar" />
               <div class="kc-avatar-controls">
-                <label class="kc-avatar-upload" for="accountSetupAvatarInput">
-                  <i class="fas fa-upload"></i>
-                  <span>Enviar foto</span>
-                  <input id="accountSetupAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" />
-                </label>
+                <div class="kc-avatar-toolbar">
+                  <div class="kc-avatar-actions">
+                    <label class="kc-avatar-upload" for="accountSetupAvatarInput">
+                      <i class="fas fa-upload"></i>
+                      <span>Enviar foto</span>
+                      <input id="accountSetupAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" />
+                    </label>
+                    <button id="accountSetupAvatarLoadMore" class="kc-avatar-load-more" type="button">
+                      <i class="fas fa-shuffle"></i>
+                      <span>Mostrar outros</span>
+                    </button>
+                  </div>
+                  <p class="kc-avatar-note">Os avatares sugeridos são aleatórios e seguem o mesmo estilo visual.</p>
+                </div>
                 <div class="kc-avatar-suggestions" id="accountSetupAvatarSuggestions"></div>
-                <p class="kc-account-mini-note">Se preferir, voce pode ficar com um dos avatares sugeridos e trocar depois.</p>
+                <div class="kc-avatar-emoji-builder">
+                  <strong>Ou monte um avatar com emoji</strong>
+                  <div id="accountSetupEmojiCurrent" class="kc-avatar-emoji-current">Emoji atual</div>
+                  <div id="accountSetupEmojiGrid" class="kc-avatar-emoji-grid"></div>
+                  <div id="accountSetupEmojiColors" class="kc-avatar-color-grid"></div>
+                </div>
+                <p class="kc-account-mini-note">Se preferir, você pode ficar com uma sugestão, montar um avatar com emoji ou trocar depois nas configurações.</p>
               </div>
             </div>
 
@@ -678,6 +694,7 @@
   <script src="assets/js/adapters/supabase.adapter.js"></script>
   <script src="assets/js/account-profile.shared.js"></script>
   <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-public-shell.js"></script>
   <script src="assets/js/kc-auth.ui.js"></script>
   <script src="assets/js/kc-theme.js"></script>
   <script src="assets/js/controllers/account-setup.controller.js"></script>

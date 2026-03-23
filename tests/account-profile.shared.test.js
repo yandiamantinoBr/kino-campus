@@ -100,4 +100,23 @@ describe('KCAccountProfileUtils', () => {
     });
     expect(typeof patch.onboarding_completed_at).toBe('string');
   });
+
+  test('getSuggestedAvatarUrls gera lotes estáveis e distintos', () => {
+    const firstBatch = AccountProfile.getSuggestedAvatarUrls('yan', { batch: 0, size: 8 });
+    const secondBatch = AccountProfile.getSuggestedAvatarUrls('yan', { batch: 1, size: 8 });
+
+    expect(firstBatch).toHaveLength(8);
+    expect(secondBatch).toHaveLength(8);
+    expect(new Set(firstBatch).size).toBe(8);
+    expect(firstBatch).not.toEqual(secondBatch);
+  });
+
+  test('buildEmojiAvatarDataUrl cria avatar serializado com emoji e cor', () => {
+    const dataUrl = AccountProfile.buildEmojiAvatarDataUrl('🎓', '#FF7C00');
+
+    expect(dataUrl.startsWith('data:image/svg+xml;charset=UTF-8,')).toBe(true);
+    const decoded = decodeURIComponent(dataUrl.replace('data:image/svg+xml;charset=UTF-8,', ''));
+    expect(decoded).toContain('🎓');
+    expect(decoded).toContain('#FF7C00');
+  });
 });

@@ -1,0 +1,640 @@
+body.kc-shell-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(255, 124, 0, 0.14), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(65, 181, 211, 0.12), transparent 24%),
+    var(--kc-background-dark);
+}
+
+body.kc-shell-page .kc-header {
+  z-index: 1100;
+  overflow: visible;
+}
+
+body.kc-shell-page .kc-header-container {
+  max-width: 1180px;
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+}
+
+html.kc-loading body.kc-shell-page .kc-user-actions,
+html.kc-loading body.kc-shell-page .kc-header-user,
+body.kc-shell-page .kc-user-actions,
+body.kc-shell-page .kc-header-user {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+body.kc-shell-page .kc-user-actions {
+  margin-left: auto;
+  position: relative;
+  z-index: 4;
+  flex-shrink: 0;
+}
+
+body.kc-shell-page .kc-user-actions .btn-login {
+  max-width: min(320px, 46vw);
+}
+
+body.kc-shell-page .kc-header-user {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body.kc-shell-page .kc-header-user__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.kc-shell-page .kc-mobile-menu,
+body.kc-shell-page .kc-mobile-menu-drawer {
+  z-index: 1400;
+}
+
+body.kc-shell-page .kc-mobile-menu-overlay {
+  z-index: 1390;
+}
+
+body.kc-shell-page .kc-mobile-menu-header {
+  position: sticky;
+  top: 0;
+  background: var(--kc-surface-dark);
+  z-index: 2;
+}
+
+body.kc-shell-page .kc-main-content {
+  min-width: 0;
+}
+
+body.kc-shell-page .kc-mobile-menu-content {
+  padding-bottom: max(84px, calc(env(safe-area-inset-bottom, 0px) + 24px));
+}
+
+body.kc-profile-route .kc-main-content,
+body.kc-account-setup-page .kc-main-content,
+body.kc-settings-page .kc-main-content,
+body.kc-help-page .kc-main-content,
+body.kc-auth-callback-route .kc-main-content {
+  padding: 0 16px calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+body.kc-profile-route .kc-profile-page,
+body.kc-account-setup-page .kc-account-shell,
+body.kc-settings-page .kc-settings-shell,
+body.kc-help-page .kc-help-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 0 0;
+}
+
+body.kc-profile-route .kc-profile-hero,
+body.kc-profile-route .kc-profile-edit-card,
+body.kc-profile-route .kc-profile-tabs,
+body.kc-profile-route .kc-profile-post-card,
+body.kc-profile-route .kc-profile-comment-card,
+body.kc-profile-route .kc-profile-activity-item,
+body.kc-account-setup-page .kc-account-panel,
+body.kc-account-setup-page .kc-account-preview,
+body.kc-settings-page .kc-settings-card,
+body.kc-help-page .kc-help-card,
+body.kc-auth-callback-route .kc-callback-card {
+  background: var(--kc-surface-dark);
+  border-color: var(--kc-border-dark);
+  color: var(--kc-text-dark-primary);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.16);
+}
+
+body.kc-profile-route .kc-profile-page {
+  max-width: 940px;
+}
+
+body.kc-profile-route .kc-profile-social-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+body.kc-profile-route .kc-profile-social-link {
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+body.kc-profile-route .kc-profile-social-link span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body.kc-profile-route .kc-profile-inline-form__actions button {
+  display: inline-flex;
+  align-items: center;
+}
+
+body.kc-account-setup-page .kc-account-panel,
+body.kc-account-setup-page .kc-account-preview {
+  backdrop-filter: none;
+}
+
+body.kc-account-setup-page .kc-account-copy,
+body.kc-account-setup-page .kc-account-mini-note,
+body.kc-account-setup-page .kc-preview-card p,
+body.kc-account-setup-page .kc-preview-hero p,
+body.kc-auth-callback-route .kc-callback-msg,
+body.kc-help-page .kc-help-copy,
+body.kc-settings-page .kc-settings-copy,
+body.kc-settings-page .kc-settings-help {
+  color: var(--kc-text-dark-secondary);
+}
+
+body.kc-account-setup-page .kc-account-field input,
+body.kc-account-setup-page .kc-account-field select,
+body.kc-account-setup-page .kc-account-field textarea,
+body.kc-account-setup-page .kc-account-field-wide input,
+body.kc-account-setup-page .kc-account-field-wide select,
+body.kc-account-setup-page .kc-account-field-wide textarea,
+body.kc-auth-callback-route .kc-callback-reset input,
+body.kc-settings-page .kc-settings-select,
+body.kc-settings-page .kc-settings-input {
+  background: var(--kc-background-dark);
+  border-color: var(--kc-border-dark);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-avatar-toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.kc-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.kc-avatar-load-more,
+.kc-avatar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kc-avatar-load-more:hover,
+.kc-avatar-toggle:hover {
+  border-color: rgba(255, 124, 0, 0.42);
+  color: var(--kc-primary-brand);
+}
+
+.kc-avatar-note {
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.kc-avatar-emoji-builder {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--kc-border-dark);
+  background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+}
+
+.kc-avatar-emoji-grid,
+.kc-avatar-color-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-avatar-emoji-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.kc-avatar-color-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.kc-avatar-emoji-option,
+.kc-avatar-color-chip {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.kc-avatar-emoji-option {
+  font-size: 1.35rem;
+}
+
+.kc-avatar-color-chip {
+  min-height: 38px;
+}
+
+.kc-avatar-emoji-option.is-active,
+.kc-avatar-color-chip.is-active {
+  border-color: rgba(255, 124, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 124, 0, 0.14);
+  transform: translateY(-1px);
+}
+
+.kc-avatar-emoji-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.84rem;
+}
+
+.kc-settings-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 0 0;
+}
+
+.kc-settings-hero,
+.kc-help-hero {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.kc-settings-eyebrow,
+.kc-help-eyebrow {
+  color: var(--kc-primary-brand);
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.kc-settings-title,
+.kc-help-title {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  line-height: 1.05;
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-settings-layout,
+.kc-help-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.8fr);
+}
+
+.kc-settings-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.kc-settings-card,
+.kc-help-card {
+  padding: 22px;
+  border-radius: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.kc-settings-card h2,
+.kc-help-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.kc-settings-copy,
+.kc-help-copy {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.kc-settings-actions,
+.kc-settings-list,
+.kc-help-list {
+  display: grid;
+  gap: 12px;
+}
+
+.kc-settings-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--kc-border-dark);
+  background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+}
+
+.kc-settings-row strong,
+.kc-settings-network strong {
+  color: var(--kc-text-dark-primary);
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.kc-settings-row p,
+.kc-settings-network p,
+.kc-help-list p {
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  line-height: 1.6;
+}
+
+.kc-settings-network {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--kc-border-dark);
+  background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+}
+
+.kc-settings-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.kc-settings-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.kc-settings-btn,
+.kc-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  text-decoration: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kc-settings-btn:hover,
+.kc-help-btn:hover {
+  border-color: rgba(255, 124, 0, 0.42);
+  color: var(--kc-primary-brand);
+  text-decoration: none;
+}
+
+.kc-settings-btn.is-primary,
+.kc-help-btn.is-primary {
+  background: linear-gradient(135deg, #ff7c00, #ff9b3d);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 18px 34px rgba(255, 124, 0, 0.18);
+}
+
+.kc-settings-btn.is-danger {
+  background: rgba(255, 82, 82, 0.12);
+  border-color: rgba(255, 82, 82, 0.24);
+  color: #ff7b7b;
+}
+
+.kc-settings-status {
+  display: none;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-settings-status.is-visible {
+  display: block;
+}
+
+.kc-settings-select,
+.kc-settings-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font: inherit;
+}
+
+.kc-settings-theme-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kc-settings-theme-btn {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--kc-border-dark);
+  background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+  color: var(--kc-text-dark-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.kc-settings-theme-btn.is-active {
+  border-color: rgba(255, 124, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 124, 0, 0.14);
+}
+
+.kc-settings-theme-preview {
+  height: 72px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+}
+
+.kc-settings-theme-preview[data-theme-preview="light"] {
+  background: linear-gradient(180deg, #ffffff, #f2f2f2);
+  border-color: #e7e7e7;
+}
+
+.kc-settings-theme-preview[data-theme-preview="dark"] {
+  background: linear-gradient(180deg, #2f2f2f, #1e1e1e);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.kc-settings-preview-box {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--kc-border-dark);
+  background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+  display: grid;
+  gap: 10px;
+}
+
+.kc-help-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kc-help-item {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--kc-border-dark);
+  background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+  display: grid;
+  gap: 10px;
+}
+
+.kc-help-faq {
+  display: grid;
+  gap: 10px;
+}
+
+.kc-help-faq details {
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+  padding: 14px 16px;
+}
+
+.kc-help-faq summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-help-faq p {
+  margin: 12px 0 0;
+  color: var(--kc-text-dark-secondary);
+  line-height: 1.7;
+}
+
+body.kc-auth-callback-route .kc-callback-page {
+  min-height: auto;
+  padding: 32px 0 0;
+}
+
+body.kc-auth-callback-route .kc-callback-card {
+  margin: 0 auto;
+}
+
+@media (max-width: 960px) {
+  .kc-settings-layout,
+  .kc-help-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  body.kc-shell-page .kc-header {
+    padding: 10px 12px;
+  }
+
+  body.kc-shell-page .kc-header-container {
+    flex-wrap: nowrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  body.kc-shell-page .kc-logo-sub {
+    display: none;
+  }
+
+  body.kc-shell-page .kc-user-actions .btn-login {
+    max-width: min(50vw, 220px);
+  }
+
+  body.kc-shell-page .kc-user-actions a.btn-login.is-auth {
+    padding: 4px 8px;
+  }
+
+  body.kc-profile-route .kc-profile-page,
+  body.kc-account-setup-page .kc-account-shell,
+  body.kc-settings-page .kc-settings-shell,
+  body.kc-help-page .kc-help-shell {
+    padding-top: 18px;
+  }
+
+  body.kc-profile-route .kc-profile-hero-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.kc-profile-route .kc-profile-heading-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.kc-profile-route .kc-profile-hero-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  body.kc-profile-route .kc-profile-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  body.kc-profile-route .kc-profile-stat {
+    border-right: none;
+    border-radius: 14px;
+    border: 1px solid var(--kc-border-dark);
+    background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+  }
+
+  body.kc-profile-route .kc-profile-social-links {
+    grid-template-columns: 1fr;
+  }
+
+  .kc-avatar-emoji-grid,
+  .kc-avatar-color-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .kc-settings-row,
+  .kc-settings-network {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .kc-help-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  body.kc-shell-page .kc-logo-text {
+    display: none;
+  }
+
+  body.kc-shell-page .kc-header-user__name {
+    display: none !important;
+  }
+
+  .kc-settings-theme-grid {
+    grid-template-columns: 1fr;
+  }
+}

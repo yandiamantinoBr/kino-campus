@@ -1828,6 +1828,7 @@ main {
     display: flex;
     flex-direction: column;
     overflow: hidden; /* scroll via .kc-mobile-menu-content */
+    overscroll-behavior: contain;
 }
 
 /* Alias: alguns templates usam .kc-mobile-menu-drawer (V5.1)
@@ -1889,11 +1890,14 @@ main {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* scroll suave no iOS */
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     /* Garante espaço extra na base para safe-area (notch/home indicator) */
     padding-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 12px));
 }
 
-.kc-mobile-menu-content a {
+.kc-mobile-menu-content a,
+.kc-mobile-menu-content button {
     display: flex;
     align-items: center;
     gap: 15px;
@@ -1902,14 +1906,21 @@ main {
     text-decoration: none;
     transition: all 0.3s ease;
     font-size: 1em;
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font: inherit;
 }
 
-.kc-mobile-menu-content a:hover {
+.kc-mobile-menu-content a:hover,
+.kc-mobile-menu-content button:hover {
     background-color: var(--kc-background-dark);
     color: var(--kc-primary-brand);
 }
 
-.kc-mobile-menu-content a i {
+.kc-mobile-menu-content a i,
+.kc-mobile-menu-content button i {
     width: 24px;
     text-align: center;
     color: var(--kc-primary-brand);
@@ -1947,6 +1958,19 @@ main {
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--kc-border-dark);
+}
+
+.kc-mobile-menu-account-section {
+    display: grid;
+    gap: 2px;
+}
+
+.kc-mobile-menu-account-link span,
+.kc-mobile-menu-account-btn span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .kc-mobile-menu-overlay {
@@ -3147,6 +3171,20 @@ html, body {
 
 .kc-modal-open {
     overflow: hidden;
+    overscroll-behavior: contain;
+}
+
+html.kc-scroll-locked,
+html.kc-scroll-locked body {
+    overscroll-behavior: none;
+}
+
+body.kc-scroll-locked {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100%;
+    overflow: hidden;
 }
 
 .kc-modal-overlay {
@@ -3163,6 +3201,12 @@ html, body {
     opacity: 0;
     pointer-events: none;
     transition: opacity 180ms ease;
+}
+
+.kc-modal-overlay,
+.kc-auth-overlay,
+.kc-mobile-menu-overlay {
+    overscroll-behavior: contain;
 }
 
 .kc-modal-overlay.active {
@@ -3244,6 +3288,9 @@ html, body {
     padding: 16px 18px calc(18px + env(safe-area-inset-bottom, 0px));
     overflow: auto;
     max-height: calc(90vh - 80px);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
 }
 
 .kc-create-step {
@@ -5049,8 +5096,9 @@ textarea::placeholder {
 .kc-auth-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 9998;
   opacity: 0;
   visibility: hidden;
@@ -5088,10 +5136,11 @@ textarea::placeholder {
 
 .kc-auth-card {
   width: min(520px, 100%);
-  background: var(--card-bg, rgba(255,255,255,0.06));
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  background: var(--kc-surface-dark);
+  color: var(--kc-text-dark-primary);
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
   overflow: hidden;
 }
 
@@ -5100,8 +5149,10 @@ textarea::placeholder {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
 }
 
 .kc-auth-header h2 {
@@ -5110,9 +5161,9 @@ textarea::placeholder {
 }
 
 .kc-auth-close {
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
-  color: inherit;
+  color: var(--kc-text-dark-secondary);
   font-size: 20px;
   width: 36px;
   height: 36px;
@@ -5121,11 +5172,17 @@ textarea::placeholder {
 }
 
 .kc-auth-close:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--kc-background-dark);
+  border-color: rgba(255, 107, 0, 0.28);
+  color: var(--kc-primary-brand);
 }
 
 .kc-auth-body {
   padding: 14px 16px 16px;
+  background: var(--kc-surface-dark);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .kc-auth-tabs {
@@ -5136,9 +5193,9 @@ textarea::placeholder {
 }
 
 .kc-auth-tab {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-secondary);
   border-radius: 14px;
   padding: 10px 12px;
   cursor: pointer;
@@ -5146,8 +5203,9 @@ textarea::placeholder {
 }
 
 .kc-auth-tab.active {
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 107, 0, 0.34);
+  background: rgba(255, 107, 0, 0.08);
+  color: var(--kc-text-dark-primary);
 }
 
 .kc-auth-form {
@@ -5168,16 +5226,17 @@ textarea::placeholder {
 
 .kc-auth-field input {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
-  padding: 10px 12px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  padding: 12px 14px;
   border-radius: 14px;
   outline: none;
 }
 
 .kc-auth-field input:focus {
-  border-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 107, 0, 0.38);
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
 }
 
 .kc-auth-actions {
@@ -5189,31 +5248,34 @@ textarea::placeholder {
 }
 
 .kc-auth-btn {
-  border: 0;
-  background: rgba(255, 255, 255, 0.14);
-  color: inherit;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 11px 14px;
   cursor: pointer;
   font-weight: 700;
 }
 
 .kc-auth-btn.primary {
-  background: rgba(46, 204, 113, 0.20);
-  border: 1px solid rgba(46, 204, 113, 0.35);
+  background: linear-gradient(135deg, #ff7c00, #ff9b3d);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 18px 34px rgba(255, 124, 0, 0.18);
 }
 
 .kc-auth-btn.danger {
-  background: rgba(231, 76, 60, 0.20);
-  border: 1px solid rgba(231, 76, 60, 0.35);
+  background: rgba(231, 76, 60, 0.12);
+  border: 1px solid rgba(231, 76, 60, 0.25);
+  color: #ff7b7b;
 }
 
 .kc-auth-status {
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
   font-size: 0.92rem;
   display: none;
 }

@@ -129,7 +129,9 @@ function openMobileMenu() {
 
   menu.classList.add('active');
   overlay.classList.add('active');
-  document.body.style.overflow = 'hidden';
+  if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+    window.KCOverlayLock.lock('mobile-menu');
+  }
 
   menu.setAttribute('aria-hidden', 'false');
   overlay.setAttribute('aria-hidden', 'false');
@@ -144,7 +146,9 @@ function closeMobileMenu() {
 
   menu.classList.remove('active');
   overlay.classList.remove('active');
-  document.body.style.overflow = '';
+  if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+    window.KCOverlayLock.unlock('mobile-menu');
+  }
 
   menu.setAttribute('aria-hidden', 'true');
   overlay.setAttribute('aria-hidden', 'true');

@@ -17,7 +17,7 @@
     const action = $('cbBtn');
     const progress = $('cbProgress');
     const countdown = $('cbCountdown');
-    const resetPanel = $('cbResetPanel');
+    const resetPanel = $('cbResetForm');
 
     if (icon) icon.className = `kc-callback-icon ${config.tone || 'loading'}`;
     if (iconInner) iconInner.className = config.iconClass || 'fas fa-spinner fa-spin';
@@ -84,7 +84,7 @@
       tone: 'success',
       iconClass: 'fas fa-check',
       title: label || 'Tudo certo por aqui',
-      message: 'Sua autenticacao foi concluida com sucesso. Estamos te levando para a proxima etapa.',
+      message: 'Sua autenticação foi concluída com sucesso. Estamos te levando para a próxima etapa.',
       actionHref: target,
       actionLabel: 'Ir agora',
       actionIcon: 'fas fa-arrow-right',
@@ -144,8 +144,8 @@
     setState({
       tone: 'error',
       iconClass: 'fas fa-circle-exclamation',
-      title: 'Nao foi possivel concluir a autenticacao',
-      message: message || 'O link pode ter expirado, ja ter sido usado ou estar incompleto.',
+      title: 'Não foi possível concluir a autenticação',
+      message: message || 'O link pode ter expirado, já ter sido usado ou estar incompleto.',
       actionHref: '/index.html',
       actionLabel: 'Voltar ao inicio',
       actionIcon: 'fas fa-house',
@@ -160,7 +160,7 @@
       tone: 'success',
       iconClass: 'fas fa-key',
       title: 'Defina uma nova senha',
-      message: 'Seu link de recuperacao foi validado. Escolha uma nova senha para continuar usando a plataforma.',
+      message: 'Seu link de recuperação foi validado. Escolha uma nova senha para continuar usando a plataforma.',
       actionHref: '/index.html',
       actionLabel: '',
       showProgress: false,
@@ -207,7 +207,7 @@
     const result = await window.KCAPI.updatePassword(password);
     if (!result || !result.ok) {
       showErrorState((result && result.error && result.error.message) || 'Nao foi possivel atualizar sua senha.');
-      $('cbResetPanel').style.display = 'grid';
+      $('cbResetForm').style.display = 'grid';
       return;
     }
 

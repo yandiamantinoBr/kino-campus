@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="kc-loading">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KinoCampus - Configurações</title>
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css" />
+  <script src="assets/js/kc-theme-boot.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="kc-shell-page kc-settings-page">
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions">
+        <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content">
+    <section class="kc-settings-shell">
+      <div class="kc-settings-hero">
+        <span class="kc-settings-eyebrow">Configurações da conta</span>
+        <h1 class="kc-settings-title">Escolha como seu perfil aparece e como as pessoas entram em contato.</h1>
+        <p class="kc-settings-copy">Tudo aqui tem efeito real: contato dos anúncios, visibilidade dos links públicos, aparência e atalhos do seu fluxo de conta.</p>
+      </div>
+
+      <div id="settingsStatus" class="kc-settings-status" role="status" aria-live="polite"></div>
+
+      <section id="settingsGuest" class="kc-settings-card" style="display:none;">
+        <h2>Entre para configurar sua conta</h2>
+        <p class="kc-settings-copy">As configurações ficam disponíveis quando você está autenticado com seu e-mail institucional.</p>
+        <div class="kc-settings-actions-row">
+          <a class="kc-settings-btn is-primary" href="#login" data-kc-login="true"><i class="fas fa-right-to-bracket"></i><span>Entrar agora</span></a>
+          <a class="kc-settings-btn" href="ajuda.html"><i class="fas fa-circle-question"></i><span>Central de ajuda</span></a>
+        </div>
+      </section>
+
+      <div id="settingsContent" class="kc-settings-layout" style="display:none;">
+        <div class="kc-settings-stack">
+          <section class="kc-settings-card">
+            <h2>Conta e perfil</h2>
+            <p class="kc-settings-copy">Use esta área para acompanhar o onboarding e ir direto para as páginas do seu perfil.</p>
+            <div class="kc-settings-actions-row">
+              <a id="settingsProfileLink" class="kc-settings-btn" href="profile.html"><i class="fas fa-id-badge"></i><span>Ver perfil</span></a>
+              <a id="settingsSetupLink" class="kc-settings-btn is-primary" href="account-setup.html"><i class="fas fa-list-check"></i><span>Completar conta</span></a>
+            </div>
+            <div class="kc-settings-row">
+              <div>
+                <strong><i class="fas fa-circle-info"></i> Status da conta</strong>
+                <p id="settingsOnboardingCopy">Carregando status do onboarding...</p>
+              </div>
+              <span id="settingsOnboardingPill" class="kc-settings-pill">Verificando</span>
+            </div>
+          </section>
+
+          <section class="kc-settings-card">
+            <h2>Contato dos anúncios</h2>
+            <p class="kc-settings-copy">O botão “Entrar em contato” usa este canal principal sempre que outra pessoa logada abrir um anúncio seu.</p>
+            <div class="kc-settings-row">
+              <div>
+                <strong><i class="fas fa-paper-plane"></i> Canal principal</strong>
+                <p>Você pode trocar o canal a qualquer momento. Se o dado ainda não existir, complete no onboarding.</p>
+              </div>
+              <select id="settingsPrimaryMethod" class="kc-settings-select"></select>
+            </div>
+            <div class="kc-settings-row">
+              <div>
+                <strong><i class="fas fa-toggle-on"></i> CTA público</strong>
+                <p>Quando desligado, a interface troca o botão por uma alternativa segura, como “Ver perfil”.</p>
+              </div>
+              <label class="kc-settings-pill" for="settingsCtaEnabled">
+                <input id="settingsCtaEnabled" type="checkbox" checked />
+                <span>Ativo</span>
+              </label>
+            </div>
+            <div class="kc-settings-preview-box">
+              <strong><i class="fas fa-eye"></i> Prévia do CTA</strong>
+              <p id="settingsContactPreview" class="kc-settings-help">Carregando prévia...</p>
+            </div>
+            <div class="kc-settings-actions-row">
+              <button id="settingsSaveContact" type="button" class="kc-settings-btn is-primary"><i class="fas fa-floppy-disk"></i><span>Salvar contato</span></button>
+              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-pen"></i><span>Editar dados do canal</span></a>
+            </div>
+          </section>
+
+          <section class="kc-settings-card">
+            <h2>Links públicos</h2>
+            <p class="kc-settings-copy">Ative só as redes que você realmente quer exibir no hero do perfil. O conteúdo do link continua sendo editado no onboarding.</p>
+            <div id="settingsNetworksList" class="kc-settings-list"></div>
+            <div class="kc-settings-actions-row">
+              <button id="settingsSaveVisibility" type="button" class="kc-settings-btn is-primary"><i class="fas fa-eye"></i><span>Salvar visibilidade</span></button>
+              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-link"></i><span>Editar links</span></a>
+            </div>
+          </section>
+
+          <section class="kc-settings-card">
+            <h2>Aparência</h2>
+            <p class="kc-settings-copy">O tema abaixo muda a plataforma inteira e vale também para o onboarding e o perfil.</p>
+            <div class="kc-settings-theme-grid">
+              <button type="button" class="kc-settings-theme-btn" data-theme-option="light">
+                <span class="kc-settings-theme-preview" data-theme-preview="light"></span>
+                <strong>Tema claro</strong>
+                <span class="kc-settings-help">Leitura mais leve e visual arejado.</span>
+              </button>
+              <button type="button" class="kc-settings-theme-btn" data-theme-option="dark">
+                <span class="kc-settings-theme-preview" data-theme-preview="dark"></span>
+                <strong>Tema escuro</strong>
+                <span class="kc-settings-help">Mais contraste e foco em ambientes noturnos.</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <aside class="kc-settings-stack">
+          <section class="kc-settings-card">
+            <h2>Sessão e segurança</h2>
+            <p id="settingsUserSummary" class="kc-settings-copy">Carregando sua sessão...</p>
+            <div class="kc-settings-actions">
+              <button id="settingsResendConfirmation" type="button" class="kc-settings-btn"><i class="fas fa-envelope-open-text"></i><span>Reenviar confirmação</span></button>
+              <button id="settingsRequestReset" type="button" class="kc-settings-btn"><i class="fas fa-key"></i><span>Receber link de nova senha</span></button>
+              <button id="settingsLogout" type="button" class="kc-settings-btn is-danger"><i class="fas fa-right-from-bracket"></i><span>Sair da conta</span></button>
+            </div>
+          </section>
+
+          <section class="kc-settings-card">
+            <h2>Ajuda rápida</h2>
+            <p class="kc-settings-copy">Se preferir, você pode abrir a central completa ou voltar para o onboarding e revisar tudo em etapas.</p>
+            <div class="kc-settings-actions-row">
+              <a class="kc-settings-btn" href="ajuda.html"><i class="fas fa-circle-question"></i><span>Abrir ajuda</span></a>
+              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-list-check"></i><span>Revisar onboarding</span></a>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/js/kc-constants.js"></script>
+  <script src="assets/js/kc-utils.js"></script>
+  <script src="assets/js/kc-env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/adapters/local.adapter.js"></script>
+  <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/account-profile.shared.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-public-shell.js"></script>
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
+  <script src="assets/js/controllers/settings.controller.js"></script>
+</body>
+</html>
