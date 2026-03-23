@@ -1,4 +1,4 @@
-﻿/* KinoCampus - index controller */
+/* KinoCampus - index controller */
 (function () {
   'use strict';
 
@@ -108,7 +108,7 @@
         <i class="${row.icon}"></i>
         <span class="kc-category-item__body">
           <strong>${row.label}</strong>
-          <small>${row.relevanceLabel || 'Em observacao'} · ${row.relevanceDetail || `${getModuleLabel(row.moduleKey)} combina interesse pessoal com anuncios ativos.`}</small>
+          <small>${row.relevanceLabel || 'Em observação'} · ${row.relevanceDetail || `${getModuleLabel(row.moduleKey)} combina interesse pessoal com anúncios ativos.`}</small>
         </span>
         <span class="kc-category-count">${formatNumber(row.count)}</span>
       </a>
@@ -150,7 +150,7 @@
         refs.more.innerHTML = '<i class="fas fa-layer-group"></i><span>Mostrar mais 10 categorias</span>';
       }
     } catch (_) {
-      setCategoryStatus('error', 'Nao foi possivel carregar as categorias agora.');
+      setCategoryStatus('error', 'Não foi possível carregar as categorias agora.');
       if (refs.more) refs.more.hidden = true;
     }
   }
@@ -172,9 +172,9 @@
 
     if (!user || !user.id) {
       target.innerHTML = [
-        buildMetricCard('Perfil de uso', 'Visitante', 'Entre para guardar afinidade entre sessoes, favoritos e destaques.', 'is-honest'),
-        buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observacao'}` : 'Navegue, busque e interaja para personalizar a ordem.', 'is-honest'),
-        buildMetricCard('Historico pessoal', formatNumber(affinityRows.length), 'Categorias tocadas nesta sessao.', 'is-honest')
+        buildMetricCard('Perfil de uso', 'Visitante', 'Entre para guardar afinidade entre sessões, favoritos e destaques.', 'is-honest'),
+        buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observação'}` : 'Navegue, busque e interaja para personalizar a ordem.', 'is-honest'),
+        buildMetricCard('Histórico pessoal', formatNumber(affinityRows.length), 'Categorias tocadas nesta sessão.', 'is-honest')
       ].join('');
       return;
     }
@@ -194,9 +194,9 @@
     }
 
     target.innerHTML = [
-      buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observacao'}` : 'Continue interagindo para personalizar a home.'),
+      buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observação'}` : 'Continue interagindo para personalizar a home.'),
       buildMetricCard('Itens salvos', formatNumber(favoriteCount + laterCount), `${formatNumber(favoriteCount)} favoritos · ${formatNumber(laterCount)} para ver depois`),
-      buildMetricCard('Destaques pessoais', formatNumber(highlightCount), `${formatNumber(affinityRows.length)} categorias ja tem afinidade registrada`)
+      buildMetricCard('Destaques pessoais', formatNumber(highlightCount), `${formatNumber(affinityRows.length)} categorias já têm afinidade registrada`)
     ].join('');
   }
 
@@ -215,9 +215,9 @@
     const topCategory = topResult && Array.isArray(topResult.rows) ? topResult.rows[0] : null;
 
     target.innerHTML = [
-      buildMetricCard('Publicacoes ativas', formatNumber(totalPosts), 'Total de anuncios e avisos visiveis agora.'),
-      buildMetricCard('Temas em movimento', formatNumber(liveCategories.length), 'Categorias com pelo menos uma publicacao ativa neste momento.'),
-      buildMetricCard('Tema com mais anuncios', topCategory ? topCategory.label : 'Sem destaque', topCategory ? `${formatNumber(topCategory.count)} publicacoes ativas agora` : 'Volte em instantes para conferir o movimento da comunidade.', 'is-honest')
+      buildMetricCard('Publicações ativas', formatNumber(totalPosts), 'Total de anúncios e avisos visíveis agora.'),
+      buildMetricCard('Temas em movimento', formatNumber(liveCategories.length), 'Categorias com pelo menos uma publicação ativa neste momento.'),
+      buildMetricCard('Tema com mais anúncios', topCategory ? topCategory.label : 'Sem destaque', topCategory ? `${formatNumber(topCategory.count)} publicações ativas agora` : 'Volte em instantes para conferir o movimento da comunidade.', 'is-honest')
     ].join('');
   }
 
@@ -230,14 +230,14 @@
   function syncStaticSidebarCopy() {
     const categoriesNote = document.querySelector('[data-kc-home-categories-section="true"] .kc-home-section-note');
     if (categoriesNote) {
-      categoriesNote.textContent = 'A ordem mistura seu interesse recente com a quantidade atual de publicacoes em cada tema.';
+      categoriesNote.textContent = 'A ordem mistura seu interesse recente com a quantidade atual de publicações em cada tema.';
     }
 
     const communityPanel = $('[data-kc-home-community-panel]');
     if (communityPanel) {
       const note = communityPanel.querySelector('.kc-home-section-note');
       if (note) {
-        note.textContent = 'Um resumo rapido do que esta ativo agora: quantas publicacoes existem, quantos temas estao movimentados e onde a comunidade mais interage.';
+        note.textContent = 'Um resumo rápido do que está ativo agora: quantas publicações existem, quantos temas estão movimentados e onde a comunidade mais interage.';
       }
     }
   }

@@ -1,4 +1,4 @@
-﻿(function (root, factory) {
+(function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     module.exports = factory();
     return;
@@ -92,33 +92,33 @@
 
   const CATEGORY_CATALOG = Object.freeze([
     createEntry('compra-venda', 'livros', 'Livros e Materiais', 'fas fa-book', 'compra-venda-feed.html?filter=livros', ['livro', 'apostila', 'apostilas', 'materiais', 'material']),
-    createEntry('compra-venda', 'eletronicos', 'EletrÃ´nicos', 'fas fa-laptop', 'compra-venda-feed.html?filter=eletronicos', ['eletronico', 'celular', 'notebook', 'tablet', 'fone']),
-    createEntry('compra-venda', 'moveis', 'MÃ³veis', 'fas fa-couch', 'compra-venda-feed.html?filter=moveis', ['movel', 'cadeira', 'mesa', 'armario', 'guarda-roupa']),
-    createEntry('compra-venda', 'vestuario', 'VestuÃ¡rio', 'fas fa-shirt', 'compra-venda-feed.html?filter=vestuario', ['roupa', 'roupas', 'camisa', 'casaco', 'calca', 'calÃ§a']),
+    createEntry('compra-venda', 'eletronicos', 'Eletrônicos', 'fas fa-laptop', 'compra-venda-feed.html?filter=eletronicos', ['eletronico', 'celular', 'notebook', 'tablet', 'fone']),
+    createEntry('compra-venda', 'moveis', 'Móveis', 'fas fa-couch', 'compra-venda-feed.html?filter=moveis', ['movel', 'cadeira', 'mesa', 'armario', 'guarda-roupa']),
+    createEntry('compra-venda', 'vestuario', 'Vestuário', 'fas fa-shirt', 'compra-venda-feed.html?filter=vestuario', ['roupa', 'roupas', 'camisa', 'casaco', 'calca', 'calça']),
     createEntry('compra-venda', 'outros', 'Outros itens', 'fas fa-box-open', 'compra-venda-feed.html?filter=outros', ['outro', 'diversos']),
-    createEntry('eventos', 'sustentabilidade', 'Sustentabilidade', 'fas fa-leaf', 'eventos.html#sustentabilidade', ['sustentavel', 'sustentÃ¡vel', 'ambiental', 'eco']),
-    createEntry('eventos', 'academico', 'AcadÃªmicos', 'fas fa-graduation-cap', 'eventos.html#academicos', ['academicos', 'acadÃªmicos', 'palestra', 'seminario', 'seminÃ¡rio']),
+    createEntry('eventos', 'sustentabilidade', 'Sustentabilidade', 'fas fa-leaf', 'eventos.html#sustentabilidade', ['sustentavel', 'sustentável', 'ambiental', 'eco']),
+    createEntry('eventos', 'academico', 'Acadêmicos', 'fas fa-graduation-cap', 'eventos.html#academicos', ['academicos', 'acadêmicos', 'palestra', 'seminario', 'seminário']),
     createEntry('eventos', 'cultural', 'Culturais', 'fas fa-theater-masks', 'eventos.html#culturais', ['culturais', 'cultura', 'show', 'arte']),
     createEntry('eventos', 'esportivo', 'Esportivos', 'fas fa-running', 'eventos.html#esportivos', ['esportivos', 'esporte', 'corrida', 'torneio']),
     createEntry('eventos', 'workshop', 'Workshops', 'fas fa-chalkboard-teacher', 'eventos.html#workshops', ['workshops', 'oficina', 'curso']),
-    createEntry('moradia', 'republica', 'RepÃºblicas', 'fas fa-users', 'moradia.html#republicas', ['republicas', 'repÃºblica', 'repÃºblicas']),
+    createEntry('moradia', 'republica', 'Repúblicas', 'fas fa-users', 'moradia.html#republicas', ['republicas', 'república', 'repúblicas']),
     createEntry('moradia', 'quarto', 'Quartos', 'fas fa-bed', 'moradia.html#quartos', ['quartos', 'dividir-quarto']),
     createEntry('moradia', 'apartamento', 'Apartamentos', 'fas fa-building', 'moradia.html#apartamentos', ['apartamentos', 'apto']),
     createEntry('moradia', 'casa', 'Casas', 'fas fa-house', 'moradia.html#casas', ['casas']),
     createEntry('moradia', 'procurando', 'Procurando moradia', 'fas fa-magnifying-glass-location', 'moradia.html#procurando', ['procuro', 'procurar']),
-    createEntry('oportunidades', 'estagio', 'EstÃ¡gios', 'fas fa-user-graduate', 'oportunidades.html#estagios', ['estagios', 'bolsa-estagio']),
+    createEntry('oportunidades', 'estagio', 'Estágios', 'fas fa-user-graduate', 'oportunidades.html#estagios', ['estagios', 'bolsa-estagio']),
     createEntry('oportunidades', 'emprego', 'Empregos', 'fas fa-briefcase', 'oportunidades.html#empregos', ['empregos', 'vaga', 'vagas', 'clt']),
     createEntry('oportunidades', 'freelancer', 'Freelancer', 'fas fa-laptop-code', 'oportunidades.html#freelancer', ['freela', 'freelas']),
-    createEntry('oportunidades', 'monitoria', 'Monitoria e aulas', 'fas fa-chalkboard-teacher', 'oportunidades.html#monitoria', ['monitorias', 'aulas', 'aula', 'reforco', 'reforÃ§o']),
-    createEntry('oportunidades', 'voluntariado', 'Voluntariado', 'fas fa-hands-helping', 'oportunidades.html#voluntariado', ['voluntariados', 'ong', 'extensao', 'extensÃ£o']),
-    createEntry('caronas', 'ofereco', 'OfereÃ§o carona', 'fas fa-car-side', 'caronas-feed.html#ofereco', ['ofereÃ§o', 'ofereco carona']),
+    createEntry('oportunidades', 'monitoria', 'Monitoria e aulas', 'fas fa-chalkboard-teacher', 'oportunidades.html#monitoria', ['monitorias', 'aulas', 'aula', 'reforco', 'reforço']),
+    createEntry('oportunidades', 'voluntariado', 'Voluntariado', 'fas fa-hands-helping', 'oportunidades.html#voluntariado', ['voluntariados', 'ong', 'extensao', 'extensão']),
+    createEntry('caronas', 'ofereco', 'Ofereço carona', 'fas fa-car-side', 'caronas-feed.html#ofereco', ['ofereço', 'ofereco carona']),
     createEntry('caronas', 'procuro', 'Procuro carona', 'fas fa-hand-paper', 'caronas-feed.html#procuro', ['procuro carona']),
     createEntry('caronas', 'campus', 'Rotas para campus', 'fas fa-university', 'caronas-feed.html#campus', ['samambaia', 'campus ii', 'colemar']),
     createEntry('caronas', 'centro', 'Rotas para o centro', 'fas fa-city', 'caronas-feed.html#centro', ['setor central', 'centro']),
     createEntry('achados-perdidos', 'perdido', 'Itens perdidos', 'fas fa-search', 'achados-perdidos.html#perdidos', ['perdidos', 'sumiu']),
     createEntry('achados-perdidos', 'encontrado', 'Itens encontrados', 'fas fa-hand-holding', 'achados-perdidos.html#encontrados', ['achado', 'encontrados']),
-    createEntry('achados-perdidos', 'documentos', 'Documentos', 'fas fa-id-card', 'achados-perdidos.html#documentos', ['rg', 'cpf', 'cartao', 'cartÃ£o']),
-    createEntry('achados-perdidos', 'eletronicos', 'EletrÃ´nicos', 'fas fa-mobile-alt', 'achados-perdidos.html#eletronicos', ['celular', 'fone', 'notebook']),
+    createEntry('achados-perdidos', 'documentos', 'Documentos', 'fas fa-id-card', 'achados-perdidos.html#documentos', ['rg', 'cpf', 'cartao', 'cartão']),
+    createEntry('achados-perdidos', 'eletronicos', 'Eletrônicos', 'fas fa-mobile-alt', 'achados-perdidos.html#eletronicos', ['celular', 'fone', 'notebook']),
     createEntry('achados-perdidos', 'outros', 'Outros objetos', 'fas fa-box', 'achados-perdidos.html#outros', ['chave', 'garrafa', 'mochila'])
   ]);
 
@@ -523,10 +523,10 @@
 
   function getRelevanceTone(score) {
     const normalized = Number(score) || 0;
-    if (normalized >= 24) return { label: 'Alta para voce', detail: 'Suas interacoes recentes e o volume ativo mantem este tema no topo.' };
-    if (normalized >= 14) return { label: 'Bem alinhada', detail: 'Voce volta bastante a essa categoria e ela segue com publicacoes ativas.' };
-    if (normalized >= 7) return { label: 'Subindo', detail: 'Ha sinais consistentes de interesse e espaco para ganhar prioridade.' };
-    return { label: 'Em observacao', detail: 'Pode subir com novas interacoes e com mais anuncios ativos.' };
+    if (normalized >= 24) return { label: 'Alta para você', detail: 'Suas interações recentes e o volume ativo mantêm este tema no topo.' };
+    if (normalized >= 14) return { label: 'Bem alinhada', detail: 'Você volta bastante a essa categoria e ela segue com publicações ativas.' };
+    if (normalized >= 7) return { label: 'Subindo', detail: 'Há sinais consistentes de interesse e espaço para ganhar prioridade.' };
+    return { label: 'Em observação', detail: 'Pode subir com novas interações e com mais anúncios ativos.' };
   }
 
   function buildCategoryRows(options) {
