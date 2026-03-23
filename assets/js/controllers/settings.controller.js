@@ -312,14 +312,29 @@
   }
 
   async function loadProfile() {
-    if (!window.KCSupabase || typeof window.KCSupabase.getCurrentUser !== 'function') return;
-    state.user = await window.KCSupabase.getCurrentUser();
+    if (!window.KCSupabase) return;
+    state.user = typeof window.KCSupabase.getUser === 'function'
+      ? window.KCSupabase.getUser()
+      : null;
+    if (!state.user && typeof window.KCSupabase.getCurrentUser === 'function') {
+      state.user = await window.KCSupabase.getCurrentUser();
+    }
     if (!state.user) return;
-    if (window.KCAPI && typeof window.KCAPI.getMyProfile === 'function') {
-      state.profile = await window.KCAPI.getMyProfile();
+    if (window.KCAPI) {
+      state.profile = typeof window.KCAPI.getCurrentProfile === 'function'
+        ? window.KCAPI.getCurrentProfile()
+        : null;
+      if (!state.profile && typeof window.KCAPI.getMyProfile === 'function') {
+        state.profile = await window.KCAPI.getMyProfile();
+      }
       if (!state.profile && typeof window.KCAPI.syncProfile === 'function') {
         await window.KCAPI.syncProfile();
-        state.profile = await window.KCAPI.getMyProfile();
+        state.profile = typeof window.KCAPI.getCurrentProfile === 'function'
+          ? window.KCAPI.getCurrentProfile()
+          : null;
+        if (!state.profile && typeof window.KCAPI.getMyProfile === 'function') {
+          state.profile = await window.KCAPI.getMyProfile();
+        }
       }
     }
   }
@@ -330,9 +345,6 @@
     bindEvents();
 
     try {
-      if (window.KCSupabase && typeof window.KCSupabase.refreshSession === 'function') {
-        await window.KCSupabase.refreshSession();
-      }
       await loadProfile();
     } catch (error) {
       console.error('[Settings] init failed:', error);

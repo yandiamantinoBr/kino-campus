@@ -587,11 +587,17 @@
     function open() {
       overlay.classList.add('active');
       document.body.classList.add('kc-modal-open');
+      if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+        window.KCOverlayLock.lock('myposts-modal');
+      }
     }
 
     function close() {
       overlay.classList.remove('active');
       document.body.classList.remove('kc-modal-open');
+      if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+        window.KCOverlayLock.unlock('myposts-modal');
+      }
     }
 
     // Fechar ao clicar no backdrop

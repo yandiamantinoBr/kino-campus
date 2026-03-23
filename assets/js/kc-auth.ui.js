@@ -5,6 +5,7 @@
   const AUTH_INTENT_KEY = 'kc:auth:intents';
   const shared = window.KCAccountProfileUtils || {};
   const modalState = { panel: 'login', nextPath: '', trapHandler: null };
+  const renderState = { inited: false, initScheduled: false, lastUiSignature: '' };
 
   function $(selector, root) { return (root || document).querySelector(selector); }
   function $all(selector, root) { return Array.from((root || document).querySelectorAll(selector)); }
@@ -35,6 +36,21 @@
 
   function getCurrentProfile() {
     return window.KCAPI && typeof window.KCAPI.getCurrentProfile === 'function' ? window.KCAPI.getCurrentProfile() : null;
+  }
+
+  function buildUserUiSignature(user, profile) {
+    if (!user || !user.id) return 'guest';
+    const display = String((profile && (profile.display_name || profile.full_name)) || (user.email ? String(user.email).split('@')[0] : '') || '').trim();
+    const avatar = String((profile && profile.avatar_url) || '').trim();
+    return JSON.stringify({
+      id: String(user.id || ''),
+      email: String(user.email || ''),
+      display,
+      avatar,
+      verified: !!(profile && profile.verified),
+      onboarding: !!isOnboardingComplete(profile),
+      admin: !!(profile && profile.is_admin),
+    });
   }
 
   function normalizeNextPath(value) {
@@ -140,7 +156,6 @@
     const state = {
       keys: new Set(),
       scrollTop: 0,
-      bound: false,
     };
 
     function apply() {
@@ -171,27 +186,7 @@
       release();
     }
 
-    function syncBodyModalClass() {
-      const key = 'body:kc-modal-open';
-      if (document.body.classList.contains('kc-modal-open')) lock(key);
-      else unlock(key);
-    }
-
-    function ensureObserver() {
-      if (state.bound || !document.body || typeof MutationObserver !== 'function') return;
-      state.bound = true;
-      const observer = new MutationObserver(syncBodyModalClass);
-      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-      syncBodyModalClass();
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', ensureObserver, { once: true });
-    } else {
-      ensureObserver();
-    }
-
-    return Object.freeze({ lock, unlock, ensureObserver });
+    return Object.freeze({ lock, unlock });
   }());
 
   window.KCOverlayLock = overlayLock;
@@ -365,6 +360,7 @@
     const drawer = document.querySelector('.kc-mobile-menu-drawer, .kc-mobile-menu');
     const content = drawer ? drawer.querySelector('.kc-mobile-menu-content, .kc-mobile-menu-nav') : null;
     if (!content) return;
+    if (drawer.dataset.kcAccountStructureReady === '1') return;
     let accountSection = $('#mobileMenuAccountSection');
     if (!accountSection) {
       accountSection = document.createElement('div');
@@ -416,6 +412,7 @@
     accountDivider.id = 'mobileMenuAccountDivider';
     accountDivider.setAttribute('data-kc-divider', 'account');
     accountSection.insertAdjacentElement('afterend', accountDivider);
+    drawer.dataset.kcAccountStructureReady = '1';
   }
 
   function refreshMobileMenuUser(user, profile) {
@@ -470,7 +467,7 @@
     overlayLock.lock('auth-modal');
     document.body.classList.add('kc-modal-open');
     trapFocus();
-    refreshUIFromUser();
+    refreshUIFromUser(true);
     setPanel(opts.tab || (getCurrentUser() ? 'user' : 'login'));
     setTimeout(function () {
       const panel = $(`[data-auth-panel="${modalState.panel}"]`, modal) || modal;
@@ -496,10 +493,20 @@
   async function handlePostAuthSuccess(nextPath) {
     let profile = null;
     try {
-      profile = await window.KCAPI.getMyProfile();
+      profile = typeof window.KCAPI.getCurrentProfile === 'function'
+        ? window.KCAPI.getCurrentProfile()
+        : null;
+      if (!profile) {
+        profile = await window.KCAPI.getMyProfile();
+      }
       if (!profile && typeof window.KCAPI.syncProfile === 'function') {
         await window.KCAPI.syncProfile();
-        profile = await window.KCAPI.getMyProfile();
+        profile = typeof window.KCAPI.getCurrentProfile === 'function'
+          ? window.KCAPI.getCurrentProfile()
+          : null;
+        if (!profile) {
+          profile = await window.KCAPI.getMyProfile();
+        }
       }
     } catch (_) { profile = null; }
     closeModal();
@@ -512,7 +519,7 @@
       window.location.href = normalizedNext;
       return;
     }
-    refreshUIFromUser();
+    refreshUIFromUser(true);
   }
 
   async function doLogin(form) {
@@ -592,10 +599,9 @@
     }
   }
 
-  function refreshHeaderLabel(user) {
+  function refreshHeaderLabel(user, profile) {
     const button = $('a.btn-login') || $('a[href="#login"]');
     if (!button) return;
-    const profile = getCurrentProfile();
     refreshMobileMenuUser(user, profile);
     if (user && user.email) {
       const display = String((profile && (profile.display_name || profile.full_name)) || String(user.email).split('@')[0] || 'Minha conta').trim();
@@ -612,6 +618,7 @@
       button.setAttribute('data-kc-login', 'true');
       button.setAttribute('href', '#login');
       button.removeAttribute('title');
+      closeProfileDropdown();
     }
   }
 
@@ -636,10 +643,15 @@
     });
   }
 
-  function refreshUIFromUser() {
+  function refreshUIFromUser(force) {
     const user = getCurrentUser();
     const profile = getCurrentProfile();
-    refreshHeaderLabel(user);
+    ensureMobileMenuStructure();
+    const signature = buildUserUiSignature(user, profile);
+    const shouldForce = force === true;
+    if (!shouldForce && renderState.lastUiSignature === signature) return;
+    renderState.lastUiSignature = signature;
+    refreshHeaderLabel(user, profile);
     setWriteGuards(user);
     const profileLink = $('#kcAuthProfileLink');
     const settingsLink = $('#kcAuthSettingsLink');
@@ -709,17 +721,29 @@
   }
 
   function init() {
+    if (renderState.inited) return;
+    renderState.inited = true;
     ensureMobileMenuStructure();
     ensureModal();
     bindModalEvents();
     wireTriggers();
-    if (window.KCSupabase && typeof window.KCSupabase.refreshSession === 'function') {
-      window.KCSupabase.refreshSession().finally(refreshUIFromUser);
-    } else {
-      refreshUIFromUser();
-    }
+    refreshUIFromUser(true);
     document.addEventListener('kc:authchange', refreshUIFromUser);
     document.addEventListener('kc:profilechange', refreshUIFromUser);
+  }
+
+  function scheduleInit() {
+    if (renderState.inited || renderState.initScheduled) return;
+    renderState.initScheduled = true;
+    const run = function () {
+      renderState.initScheduled = false;
+      init();
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(run);
+      return;
+    }
+    window.setTimeout(run, 0);
   }
 
   window.kcOpenAuthModal = openModal;
@@ -731,5 +755,11 @@
   window.kcOpenProfileDropdown = openProfileDropdown;
   window.kcCloseProfileDropdown = closeProfileDropdown;
 
-  try { document.addEventListener('DOMContentLoaded', init, { once: true }); } catch (_) { }
+  try {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', scheduleInit, { once: true });
+    } else {
+      scheduleInit();
+    }
+  } catch (_) { }
 })();

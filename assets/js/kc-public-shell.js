@@ -1,6 +1,9 @@
 (function () {
   'use strict';
 
+  let headerVisibilityFrame = 0;
+  let initScheduled = false;
+
   const MODULE_LINKS = [
     { href: 'achados-perdidos.html', icon: 'fas fa-search', label: 'Achados/Perdidos' },
     { href: 'eventos.html', icon: 'fas fa-calendar', label: 'Eventos' },
@@ -123,14 +126,15 @@
   function injectShellIfNeeded() {
     const body = document.body;
     if (!body || !body.classList.contains('kc-shell-page')) return;
-
-    const activeKey = String(body.getAttribute('data-kc-mobile-active') || '').trim();
-    const main = document.querySelector('main.kc-main-content') || document.querySelector('main');
-    if (!document.querySelector('.kc-mobile-nav')) {
-      body.insertAdjacentHTML('beforeend', buildMobileNav(activeKey));
-    }
-    if (!document.getElementById('mobileMenuDrawer') && !document.getElementById('mobileMenu')) {
-      body.insertAdjacentHTML('beforeend', buildDrawerHtml());
+    if (body.dataset.kcShellInjected !== '1') {
+      const activeKey = String(body.getAttribute('data-kc-mobile-active') || '').trim();
+      if (!document.querySelector('.kc-mobile-nav')) {
+        body.insertAdjacentHTML('beforeend', buildMobileNav(activeKey));
+      }
+      if (!document.getElementById('mobileMenuDrawer') && !document.getElementById('mobileMenu')) {
+        body.insertAdjacentHTML('beforeend', buildDrawerHtml());
+      }
+      body.dataset.kcShellInjected = '1';
     }
 
     const header = document.querySelector('.kc-header');
@@ -147,20 +151,44 @@
     });
   }
 
+  function scheduleHeaderVisibility() {
+    if (headerVisibilityFrame) return;
+    headerVisibilityFrame = window.requestAnimationFrame(function () {
+      headerVisibilityFrame = 0;
+      forceHeaderVisibility();
+    });
+  }
+
   function init() {
+    if (document.documentElement.dataset.kcPublicShellReady === '1') return;
+    document.documentElement.dataset.kcPublicShellReady = '1';
     injectShellIfNeeded();
     bindMobileMenu();
     forceHeaderVisibility();
   }
 
+  function scheduleInit() {
+    if (document.documentElement.dataset.kcPublicShellReady === '1' || initScheduled) return;
+    initScheduled = true;
+    const run = function () {
+      initScheduled = false;
+      init();
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(run);
+      return;
+    }
+    window.setTimeout(run, 0);
+  }
+
   if (typeof window.openMobileMenu !== 'function') window.openMobileMenu = openMobileMenu;
   if (typeof window.closeMobileMenu !== 'function') window.closeMobileMenu = closeMobileMenu;
 
-  document.addEventListener('kc:profilechange', forceHeaderVisibility);
+  document.addEventListener('kc:profilechange', scheduleHeaderVisibility);
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
+    document.addEventListener('DOMContentLoaded', scheduleInit, { once: true });
   } else {
-    init();
+    scheduleInit();
   }
 }());

@@ -513,6 +513,9 @@
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('kc-modal-open');
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+      window.KCOverlayLock.lock('housing-section-modal');
+    }
     renderRail();
 
     const closeBtn = overlay.querySelector('[data-kc-housing-close-section-modal="true"]');
@@ -559,7 +562,12 @@
       overlay.classList.remove('active');
       overlay.setAttribute('aria-hidden', 'true');
     }
-    if (wasActive) document.body.classList.remove('kc-modal-open');
+    if (wasActive) {
+      document.body.classList.remove('kc-modal-open');
+      if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+        window.KCOverlayLock.unlock('housing-section-modal');
+      }
+    }
 
     renderFeatures();
     renderRegions();

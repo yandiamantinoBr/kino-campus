@@ -176,6 +176,9 @@
 
     overlay.classList.add('active');
     document.body.classList.add('kc-modal-open');
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+      window.KCOverlayLock.lock('search-modal');
+    }
     isOpen = true;
 
     /* Inicia observer para reposicionar dropdown quando ficar ativo */
@@ -191,6 +194,9 @@
     if (!overlay) return;
     overlay.classList.remove('active');
     document.body.classList.remove('kc-modal-open');
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+      window.KCOverlayLock.unlock('search-modal');
+    }
     isOpen = false;
 
     stopDropdownObserver();

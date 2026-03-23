@@ -620,19 +620,34 @@
   async function init() {
     state.nextPath = readNextPath();
 
-    if (!window.KCAPI || typeof window.KCAPI.getCurrentUser !== 'function') return;
+    if (!window.KCAPI) return;
 
-    state.user = await window.KCAPI.getCurrentUser();
+    state.user = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+      ? window.KCSupabase.getUser()
+      : null;
+    if (!state.user && typeof window.KCAPI.getCurrentUser === 'function') {
+      state.user = await window.KCAPI.getCurrentUser();
+    }
     if (!state.user) {
       window.location.href = 'index.html#login';
       return;
     }
 
     try {
-      state.profile = await window.KCAPI.getMyProfile();
+      state.profile = typeof window.KCAPI.getCurrentProfile === 'function'
+        ? window.KCAPI.getCurrentProfile()
+        : null;
+      if (!state.profile && typeof window.KCAPI.getMyProfile === 'function') {
+        state.profile = await window.KCAPI.getMyProfile();
+      }
       if (!state.profile && typeof window.KCAPI.syncProfile === 'function') {
         await window.KCAPI.syncProfile();
-        state.profile = await window.KCAPI.getMyProfile();
+        state.profile = typeof window.KCAPI.getCurrentProfile === 'function'
+          ? window.KCAPI.getCurrentProfile()
+          : null;
+        if (!state.profile && typeof window.KCAPI.getMyProfile === 'function') {
+          state.profile = await window.KCAPI.getMyProfile();
+        }
       }
     } catch (_) {
       state.profile = null;

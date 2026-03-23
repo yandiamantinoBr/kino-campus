@@ -60,6 +60,10 @@ const { ENV, normalizePost } = window.KCAPI;
   // ---------- Supabase Auth & Storage (V8.1.3.1) ----------
   async function supabaseGetCurrentUser() {
     try {
+      if (KCSupabase && typeof KCSupabase.getUser === 'function') {
+        const cachedUser = KCSupabase.getUser();
+        if (cachedUser && cachedUser.id) return cachedUser;
+      }
       if (KCSupabase && typeof KCSupabase.getCurrentUser === 'function') {
         return await KCSupabase.getCurrentUser();
       }

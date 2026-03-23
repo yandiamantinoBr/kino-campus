@@ -1386,6 +1386,9 @@ function kcOpenCreatePostModal(prefModuleKey) {
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
   document.body.classList.add('kc-modal-open');
+  if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+    window.KCOverlayLock.lock('create-post-modal');
+  }
 
   try {
     kcRenderCreateModal();
@@ -1394,6 +1397,9 @@ function kcOpenCreatePostModal(prefModuleKey) {
     overlay.classList.remove('active');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('kc-modal-open');
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+      window.KCOverlayLock.unlock('create-post-modal');
+    }
     showToast('Não foi possível abrir o formulário agora.', 'error', 2800);
     return false;
   }
@@ -1415,6 +1421,9 @@ function kcCloseCreatePostModal() {
   overlay.classList.remove('active');
   overlay.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('kc-modal-open');
+  if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+    window.KCOverlayLock.unlock('create-post-modal');
+  }
 
   if (kcLastFocus && typeof kcLastFocus.focus === 'function') {
     try { kcLastFocus.focus(); } catch { }
@@ -1514,6 +1523,9 @@ function kcOpenEditPostModal(post, callback) {
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
   document.body.classList.add('kc-modal-open');
+  if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+    window.KCOverlayLock.lock('create-post-modal');
+  }
 
   kcRenderCreateModal();
 

@@ -458,6 +458,9 @@
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('kc-modal-open');
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+      window.KCOverlayLock.lock('achados-section-modal');
+    }
     renderRail();
 
     const closeBtn = overlay.querySelector('[data-kc-achados-close-section-modal="true"]');
@@ -504,7 +507,12 @@
       overlay.classList.remove('active');
       overlay.setAttribute('aria-hidden', 'true');
     }
-    if (wasActive) document.body.classList.remove('kc-modal-open');
+    if (wasActive) {
+      document.body.classList.remove('kc-modal-open');
+      if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+        window.KCOverlayLock.unlock('achados-section-modal');
+      }
+    }
 
     renderFilterInputs();
     renderLocations();

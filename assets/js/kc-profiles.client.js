@@ -51,6 +51,9 @@
     lastError: null,
     lastUserId: '',
     profile: null,
+    profileSignature: '',
+    pendingSync: null,
+    pendingSyncUserId: '',
     cache: Object.create(null),
   };
 
@@ -132,6 +135,15 @@
     return Object.freeze(normalized);
   }
 
+  function buildProfileSignature(profile) {
+    if (!profile) return '';
+    try {
+      return JSON.stringify(profile);
+    } catch (_) {
+      return String(profile.id || '');
+    }
+  }
+
   function dispatchProfileChange(profile) {
     try {
       document.dispatchEvent(new CustomEvent('kc:profilechange', { detail: { profile: profile || null } }));
@@ -140,20 +152,25 @@
 
   function commitProfile(profile, fallback) {
     const normalized = normalizeProfile(profile, fallback);
+    const nextSignature = buildProfileSignature(normalized);
+    const changed = nextSignature !== state.profileSignature;
     state.profile = normalized;
+    state.profileSignature = nextSignature;
     if (normalized && normalized.id) {
       state.cache[String(normalized.id)] = normalized;
       state.lastUserId = String(normalized.id);
     }
-    dispatchProfileChange(normalized);
+    if (changed) dispatchProfileChange(normalized);
     return normalized;
   }
 
   function resetProfileState() {
+    const hadState = !!state.profileSignature || !!state.lastUserId || Object.keys(state.cache).length > 0;
     state.profile = null;
+    state.profileSignature = '';
     state.lastUserId = '';
     state.cache = Object.create(null);
-    dispatchProfileChange(null);
+    if (hadState) dispatchProfileChange(null);
   }
 
   async function selectProfileById(id, fields) {
@@ -228,34 +245,51 @@
 
     const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
     const force = !!opts.force;
+    const userId = String(user.id || '');
     if (!force && state.profile && String(state.profile.id || '') === String(user.id || '')) {
       return state.profile;
     }
+    if (state.pendingSync && state.pendingSyncUserId === userId) return state.pendingSync;
 
-    state.syncing = true;
-    try {
-      let row = await selectProfileById(user.id, OWNER_FIELDS);
-      if (!row) row = await createProfileFallback(user);
-      if (!row) {
-        return commitProfile(null, {
+    state.pendingSyncUserId = userId;
+    state.pendingSync = (async function runSync() {
+      state.syncing = true;
+      try {
+        let row = await selectProfileById(user.id, OWNER_FIELDS);
+        if (!row) row = await createProfileFallback(user);
+        const activeUser = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+          ? window.KCSupabase.getUser()
+          : null;
+        if (!activeUser || String(activeUser.id || '') !== userId) {
+          return state.profile;
+        }
+        if (!row) {
+          return commitProfile(null, {
+            id: user.id,
+            full_name: computeDisplayName(user),
+            display_name: computeDisplayName(user),
+            avatar_url: computeAvatarUrl(user),
+            contact_cta_enabled: true,
+            social_links: {},
+            social_visibility: {},
+          });
+        }
+        return commitProfile(row, {
           id: user.id,
           full_name: computeDisplayName(user),
           display_name: computeDisplayName(user),
           avatar_url: computeAvatarUrl(user),
-          contact_cta_enabled: true,
-          social_links: {},
-          social_visibility: {},
         });
+      } finally {
+        state.syncing = false;
+        if (state.pendingSyncUserId === userId) {
+          state.pendingSync = null;
+          state.pendingSyncUserId = '';
+        }
       }
-      return commitProfile(row, {
-        id: user.id,
-        full_name: computeDisplayName(user),
-        display_name: computeDisplayName(user),
-        avatar_url: computeAvatarUrl(user),
-      });
-    } finally {
-      state.syncing = false;
-    }
+    }());
+
+    return state.pendingSync;
   }
 
   async function upsertProfileForUser(user, options) {
@@ -313,12 +347,14 @@
     if (env.driver !== 'supabase') return;
 
     document.addEventListener('kc:authchange', handleAuthChange);
-
-    setTimeout(() => {
+    const user = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+      ? window.KCSupabase.getUser()
+      : null;
+    if (user && user.id) {
       ensureSynced().catch((error) => {
         state.lastError = error;
       });
-    }, 30);
+    }
   }
 
   window.KCProfiles = Object.freeze({
