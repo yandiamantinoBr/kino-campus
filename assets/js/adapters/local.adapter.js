@@ -201,11 +201,70 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
 
   const HELP_REQUESTS_STORAGE_KEY = 'kc_help_requests';
 
+  function migrateLegacyHelpPayload(payload) {
+    const input = (payload && typeof payload === 'object') ? payload : {};
+    const legacyType = String(input.type || '').trim().toLowerCase();
+    const legacyTopic = String(input.topic || '').trim().toLowerCase();
+
+    const nextType = (function resolveType() {
+      if (legacyType === 'complaint') return 'platform_issue';
+      if (legacyType === 'praise') return 'suggestion_praise';
+      if (legacyType === 'report') return 'report';
+      if (legacyType === 'account_access') return 'account_access';
+      if (legacyType === 'question') return 'question';
+      return legacyType || 'question';
+    }());
+
+    const nextTopic = (function resolveTopic() {
+      if (nextType === 'question') {
+        if (legacyTopic === 'profile' || legacyTopic === 'contact') return 'profile_contact';
+        if (legacyTopic === 'platform_use' || legacyTopic === 'posts') return 'publishing_navigation';
+        return 'modules_filters';
+      }
+      if (nextType === 'platform_issue') {
+        if (legacyTopic === 'posts') return 'create_edit_post';
+        if (legacyTopic === 'contact') return 'search_filters';
+        if (legacyTopic === 'security') return 'slow_performance';
+        return 'bugs_crashes';
+      }
+      if (nextType === 'account_access') {
+        if (legacyTopic === 'security') return 'password';
+        if (legacyTopic === 'profile' || legacyTopic === 'contact') return 'onboarding_settings';
+        return 'login_signup';
+      }
+      if (nextType === 'report') {
+        if (legacyTopic === 'profile') return 'profile_user';
+        if (legacyTopic === 'contact') return 'inappropriate_contact';
+        if (legacyTopic === 'security') return 'security';
+        return 'post';
+      }
+      if (nextType === 'suggestion_praise') {
+        if (legacyTopic === 'posts') return 'specific_module';
+        if (legacyTopic === 'payment_benefit') return 'community';
+        return 'general_experience';
+      }
+      return legacyTopic || '';
+    }());
+
+    return {
+      ...input,
+      type: nextType,
+      topic: nextTopic,
+    };
+  }
+
   function readHelpRequests() {
     try {
       const raw = localStorage.getItem(HELP_REQUESTS_STORAGE_KEY);
       const list = raw ? JSON.parse(raw) : [];
-      return Array.isArray(list) ? list : [];
+      if (!Array.isArray(list)) return [];
+      return list.map((item) => {
+        const normalized = normalizeHelpPayload(item);
+        return {
+          ...(item && typeof item === 'object' ? item : {}),
+          ...normalized,
+        };
+      });
     } catch (_) {
       return [];
     }
@@ -222,14 +281,15 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
 
   function normalizeHelpPayload(payload) {
     const shared = window.KCHelpUtils || {};
+    const migrated = migrateLegacyHelpPayload(payload);
     if (shared && typeof shared.normalizeHelpRequestInput === 'function') {
-      return shared.normalizeHelpRequestInput(payload, {});
+      return shared.normalizeHelpRequestInput(migrated, {});
     }
-    const input = (payload && typeof payload === 'object') ? payload : {};
+    const input = (migrated && typeof migrated === 'object') ? migrated : {};
     return {
       user_id: input.user_id || null,
       type: String(input.type || 'question').trim(),
-      topic: String(input.topic || 'platform_use').trim(),
+      topic: String(input.topic || 'publishing_navigation').trim(),
       subtopic: input.subtopic ? String(input.subtopic).trim() : null,
       subject: String(input.subject || '').trim().slice(0, 140),
       message: String(input.message || '').trim().slice(0, 4000),

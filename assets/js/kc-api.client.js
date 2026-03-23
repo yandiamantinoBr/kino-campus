@@ -437,6 +437,8 @@
 
     const verificado = (Boolean(r.verificado ?? r.verified ?? false) || authorVerified);
 
+    const status = String(r.status || '').trim().toLowerCase() || 'published';
+    const visibility = String(r.visibility || meta.visibility || '').trim().toLowerCase() || 'public';
     const tagLabels = Array.isArray(r.tags) ? r.tags : [];
     const tagKeys = Array.isArray(r.tagKeys) ? r.tagKeys : (tagLabels.length ? tagLabels : []);
 
@@ -457,6 +459,8 @@
       created_at,
       emoji,
       verificado,
+      status,
+      visibility,
 
       // Autor (status)
       authorVerified,
@@ -514,6 +518,7 @@
           meta.subcategoryKey = out.categoriaKey;
         }
       }
+      if (!meta.visibility && visibility) meta.visibility = visibility;
     } catch (_e) { }
 
     return out;
@@ -833,6 +838,11 @@
         bio:          '',
         verified:     false,
         is_admin:     false,
+        profile_public: true,
+        contact_primary_method: null,
+        contact_cta_enabled: true,
+        social_links: {},
+        social_visibility: {},
         created_at:   null,
         updated_at:   null,
       });

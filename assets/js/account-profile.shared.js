@@ -23,6 +23,7 @@
     'gender_identity',
     'gender_identity_custom',
     'race_color',
+    'profile_public',
     'contact_primary_method',
     'contact_cta_enabled',
     'social_links',
@@ -43,6 +44,7 @@
     'gender_identity',
     'gender_identity_custom',
     'race_color',
+    'profile_public',
     'contact_primary_method',
     'contact_cta_enabled',
     'social_links',
@@ -387,6 +389,9 @@
     }
     if (Object.prototype.hasOwnProperty.call(input, 'race_color')) {
       normalized.race_color = normalizeChoice(input.race_color, RACE_COLOR_OPTIONS) || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(input, 'profile_public')) {
+      normalized.profile_public = normalizeBoolean(input.profile_public, false);
     }
     if (Object.prototype.hasOwnProperty.call(input, 'contact_primary_method')) {
       normalized.contact_primary_method = normalizeChoice(input.contact_primary_method, CONTACT_METHOD_OPTIONS) || null;

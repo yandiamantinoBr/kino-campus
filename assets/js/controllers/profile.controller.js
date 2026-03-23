@@ -13,6 +13,8 @@
     profile: null,
     profileId: '',
     isPublicView: false,
+    viewerAuthenticated: false,
+    restrictedProfile: false,
     activeTab: 'activities',
     isEditing: false,
     profilePending: false,
@@ -162,6 +164,16 @@
     return `<span class="kc-status-badge kc-status-badge--${esc(key)}">${esc(labels[key] || key)}</span>`;
   }
 
+  function visibilityBadge(visibility) {
+    const key = String(visibility || 'public').trim().toLowerCase();
+    const labels = {
+      public: 'Público',
+      community: 'Comunidade',
+    };
+    const icon = key === 'community' ? 'fas fa-user-group' : 'fas fa-globe';
+    return `<span class="kc-profile-save-badge kc-profile-save-badge--later"><i class="${esc(icon)}"></i> ${esc(labels[key] || 'Público')}</span>`;
+  }
+
   function normalizeSaveKinds(value) {
     const list = Array.isArray(value)
       ? value
@@ -235,6 +247,20 @@
 
   function isOwnerView() {
     return !state.isPublicView;
+  }
+
+  async function probeRestrictedProfile(profileId) {
+    const client = getClient();
+    if (!client || !profileId || state.viewerAuthenticated) return false;
+
+    try {
+      const response = await client.rpc('kc_get_profile_access_state', { p_profile_id: profileId });
+      if (response && response.error) return false;
+      const row = Array.isArray(response && response.data) ? response.data[0] : response && response.data;
+      return !!(row && row.exists === true && row.profile_public === false);
+    } catch (_) {
+      return false;
+    }
   }
 
   function syncFormFromProfile() {
@@ -433,7 +459,7 @@
         .from('posts')
         .select('id', { count: 'exact', head: true })
         .eq('author_id', authorId);
-      if (state.isPublicView) postQuery = postQuery.eq('status', 'published');
+      if (state.isPublicView) postQuery = postQuery.eq('status', 'published').eq('visibility', 'public');
       const postResult = await postQuery;
 
       if (typeof postResult.count === 'number') {
@@ -452,11 +478,13 @@
         setBadgeCount('#badge-comments', commentResult.count);
       }
 
-      const voteResult = await client
+      let voteQuery = client
         .from('posts')
         .select('votos')
         .eq('author_id', authorId)
         .eq('status', 'published');
+      if (state.isPublicView) voteQuery = voteQuery.eq('visibility', 'public');
+      const voteResult = await voteQuery;
       if (Array.isArray(voteResult.data)) {
         const totalVotes = voteResult.data.reduce((sum, item) => sum + (Number(item && item.votos) || 0), 0);
         const statVotes = $('#stat-votes');
@@ -501,6 +529,7 @@
       link.href = 'product.html?id=' + encodeURIComponent(post.uuid || post.id || '');
       const meta = [];
       meta.push(statusBadge(post.status || 'published'));
+      if (!state.isPublicView) meta.push(visibilityBadge(post.visibility || 'public'));
       if (post.module) meta.push(`<span><i class="fas fa-layer-group"></i> ${esc(post.module)}</span>`);
       if (post.category) meta.push(`<span>${esc(post.category)}</span>`);
       if (post.created_at) meta.push(`<span><i class="fas fa-clock"></i> ${esc(fmtRelative(post.created_at))}</span>`);
@@ -721,6 +750,7 @@
       const savedAt = item.saved_at || item.created_at || null;
       const meta = [];
       if (!state.isPublicView) meta.push(statusBadge(item.status || 'published'));
+      if (!state.isPublicView) meta.push(visibilityBadge(item.visibility || 'public'));
       if (badges) meta.push(badges);
       if (item.module) meta.push(`<span><i class="fas fa-layer-group"></i> ${esc(item.module)}</span>`);
       if (item.category) meta.push(`<span>${esc(item.category)}</span>`);
@@ -1026,6 +1056,23 @@
     }
   }
 
+  function showRestrictedProfile() {
+    const loading = $('#profile-loading');
+    const content = $('#profile-content');
+    if (content) content.style.display = 'none';
+    if (loading) {
+      loading.style.display = 'flex';
+      loading.innerHTML = [
+        '<div style="display:grid;gap:12px;justify-items:center;max-width:420px;text-align:center;">',
+        '<i class="fas fa-user-lock" style="font-size:2rem;color:var(--kc-primary-brand);"></i>',
+        '<strong>Este perfil está visível apenas para quem faz parte da comunidade.</strong>',
+        '<span>Entre na plataforma para ver esta página e outros conteúdos restritos à comunidade KinoCampus.</span>',
+        '<a href="/index.html#login" data-kc-login="true" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:var(--kc-primary-brand);color:#fff;text-decoration:none;font-weight:700;"><i class="fas fa-right-to-bracket"></i>Entrar na comunidade</a>',
+        '</div>',
+      ].join('');
+    }
+  }
+
   function bindTabsAndLists() {
     $$('[data-kc-tab]').forEach((button) => {
       button.addEventListener('click', () => switchTab(button.getAttribute('data-kc-tab')));
@@ -1076,6 +1123,7 @@
     if (!state.user) {
       state.user = await window.KCAPI.getCurrentUser();
     }
+    state.viewerAuthenticated = !!state.user;
 
     if (queryId) {
       if (state.user && String(state.user.id) === String(queryId)) {
@@ -1097,6 +1145,14 @@
 
     const loaded = await loadProfile();
     if (!loaded) {
+      if (state.isPublicView && !state.viewerAuthenticated) {
+        const restricted = await probeRestrictedProfile(state.profileId);
+        if (restricted) {
+          state.restrictedProfile = true;
+          showRestrictedProfile();
+          return;
+        }
+      }
       showFatal(state.isPublicView ? 'Perfil não encontrado.' : 'Não foi possível carregar seu perfil.');
       return;
     }

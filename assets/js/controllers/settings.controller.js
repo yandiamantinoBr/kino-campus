@@ -148,6 +148,13 @@
     label.textContent = toggle.checked ? 'Ativo' : 'Desativado';
   }
 
+  function syncProfilePublicLabel() {
+    const label = $('#settingsProfilePublicLabel');
+    const toggle = $('#settingsProfilePublic');
+    if (!label || !toggle) return;
+    label.textContent = toggle.checked ? 'Ativado' : 'Desativado';
+  }
+
   function syncContactControls(mode) {
     const select = $('#settingsPrimaryMethod');
     const toggle = $('#settingsCtaEnabled');
@@ -302,6 +309,7 @@
     const profileLink = $('#settingsProfileLink');
     const primaryMethod = $('#settingsPrimaryMethod');
     const ctaEnabled = $('#settingsCtaEnabled');
+    const profilePublic = $('#settingsProfilePublic');
     const storedPrimaryMethod = String(profile.contact_primary_method || '').trim();
 
     state.lastRealPrimaryMethod = storedPrimaryMethod || state.lastRealPrimaryMethod;
@@ -319,10 +327,14 @@
     if (ctaEnabled) {
       ctaEnabled.checked = profile.contact_cta_enabled !== false;
     }
+    if (profilePublic) {
+      profilePublic.checked = profile.profile_public === true;
+    }
 
     updateOnboardingStatus();
     buildNetworkRows();
     syncContactControls('populate');
+    syncProfilePublicLabel();
     updateContactPreview();
     updateThemeButtons();
   }
@@ -401,6 +413,15 @@
     );
   }
 
+  async function saveProfilePublicSettings() {
+    await savePatch(
+      { profile_public: $('#settingsProfilePublic')?.checked === true },
+      'Preferência de perfil público atualizada.',
+      '#settingsSaveProfilePublic',
+      'Perfil salvo'
+    );
+  }
+
   async function resendConfirmation() {
     if (!state.user || !state.user.email || !window.KCAPI || typeof window.KCAPI.resendConfirmation !== 'function') return;
     setStatus('Reenviando a confirmação...', 'info');
@@ -438,14 +459,17 @@
   function bindEvents() {
     const saveContact = $('#settingsSaveContact');
     const saveVisibility = $('#settingsSaveVisibility');
+    const saveProfilePublic = $('#settingsSaveProfilePublic');
     const resend = $('#settingsResendConfirmation');
     const requestReset = $('#settingsRequestReset');
     const logout = $('#settingsLogout');
     const primaryMethod = $('#settingsPrimaryMethod');
     const ctaEnabled = $('#settingsCtaEnabled');
+    const profilePublic = $('#settingsProfilePublic');
 
     if (saveContact) saveContact.addEventListener('click', saveContactSettings);
     if (saveVisibility) saveVisibility.addEventListener('click', saveVisibilitySettings);
+    if (saveProfilePublic) saveProfilePublic.addEventListener('click', saveProfilePublicSettings);
     if (resend) resend.addEventListener('click', resendConfirmation);
     if (requestReset) requestReset.addEventListener('click', requestResetLink);
     if (logout) logout.addEventListener('click', doLogout);
@@ -463,6 +487,10 @@
         syncContactPillLabel();
         updateContactPreview();
       });
+    }
+
+    if (profilePublic) {
+      profilePublic.addEventListener('change', syncProfilePublicLabel);
     }
 
     $all('[data-theme-option]').forEach((button) => {

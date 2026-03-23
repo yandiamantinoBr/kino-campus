@@ -7,6 +7,7 @@
     user: null,
     profile: null,
     submitting: false,
+    conditionalFieldKeys: [],
   };
 
   function $(selector) {
@@ -42,30 +43,117 @@
       : '<i class="fas fa-paper-plane"></i><span>Enviar pedido</span>';
   }
 
-  function renderOptions(select, options, placeholder) {
+  function renderOptions(select, options, placeholder, emptyLabel) {
     if (!select) return;
     const rows = [];
+    const list = Array.isArray(options) ? options : [];
     if (placeholder) rows.push(`<option value="">${esc(placeholder)}</option>`);
-    (Array.isArray(options) ? options : []).forEach((option) => {
+    if (!list.length && emptyLabel) rows.push(`<option value="">${esc(emptyLabel)}</option>`);
+    list.forEach((option) => {
       if (!option || !option.value) return;
       rows.push(`<option value="${esc(option.value)}">${esc(option.label || option.value)}</option>`);
     });
     select.innerHTML = rows.join('');
+    select.disabled = list.length === 0;
+  }
+
+  function getCurrentType() {
+    return String($('#helpType')?.value || '').trim();
+  }
+
+  function getCurrentTopic() {
+    return String($('#helpTopic')?.value || '').trim();
+  }
+
+  function getCurrentSubtopic() {
+    return String($('#helpSubtopic')?.value || '').trim();
+  }
+
+  function buildSelectFieldOptions(options, value) {
+    const placeholder = '<option value="">Selecione uma opção</option>';
+    const rows = (Array.isArray(options) ? options : []).map((option) => {
+      const selected = String(option.value || '') === String(value || '') ? ' selected' : '';
+      return `<option value="${esc(option.value)}"${selected}>${esc(option.label || option.value)}</option>`;
+    }).join('');
+    return `${placeholder}${rows}`;
+  }
+
+  function renderConditionalFields() {
+    const container = $('#helpConditionalFields');
+    if (!container) return;
+
+    const type = getCurrentType();
+    const topic = getCurrentTopic();
+    const subtopic = getCurrentSubtopic();
+    const fields = Help.getHelpConditionalFields ? Help.getHelpConditionalFields(type, topic, subtopic) : [];
+
+    state.conditionalFieldKeys = (Array.isArray(fields) ? fields : [])
+      .map((field) => String(field && field.key || '').trim())
+      .filter(Boolean);
+
+    if (!fields.length) {
+      container.innerHTML = '';
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'grid';
+    container.innerHTML = fields.map((field) => {
+      const key = String(field.key || '').trim();
+      const id = `helpConditional_${key}`;
+      const label = esc(field.label || key);
+      const wideClass = field.wide ? ' kc-help-field--wide' : '';
+      const currentValue = key === 'page_path'
+        ? String((window.location.pathname || '/ajuda.html') + (window.location.search || ''))
+        : '';
+
+      if (field.type === 'select') {
+        return [
+          `<label class="kc-help-field${wideClass}">`,
+          `<span>${label}</span>`,
+          `<select id="${esc(id)}" data-help-conditional="${esc(key)}">`,
+          buildSelectFieldOptions(field.options, ''),
+          '</select>',
+          '</label>',
+        ].join('');
+      }
+
+      if (field.type === 'textarea') {
+        return [
+          `<label class="kc-help-field${wideClass}">`,
+          `<span>${label}</span>`,
+          `<textarea id="${esc(id)}" data-help-conditional="${esc(key)}" rows="${esc(field.rows || 4)}" maxlength="${esc(field.maxLength || 1200)}" placeholder="${esc(field.placeholder || '')}"></textarea>`,
+          '</label>',
+        ].join('');
+      }
+
+      return [
+        `<label class="kc-help-field${wideClass}">`,
+        `<span>${label}</span>`,
+        `<input id="${esc(id)}" data-help-conditional="${esc(key)}" type="${esc(field.type || 'text')}" maxlength="${esc(field.maxLength || 255)}" placeholder="${esc(field.placeholder || '')}" value="${esc(currentValue)}" />`,
+        '</label>',
+      ].join('');
+    }).join('');
+  }
+
+  function populateTopics() {
+    const topicSelect = $('#helpTopic');
+    const type = getCurrentType();
+    const topics = Help.getHelpTopicOptions ? Help.getHelpTopicOptions(type) : [];
+    renderOptions(topicSelect, topics, topics.length ? 'Selecione o tema' : 'Selecione a categoria principal', topics.length ? '' : 'Sem temas para esta categoria');
+    populateSubtopics();
   }
 
   function populateSubtopics() {
-    const type = String($('#helpType')?.value || '').trim();
-    const topic = String($('#helpTopic')?.value || '').trim();
+    const subtopicSelect = $('#helpSubtopic');
+    const type = getCurrentType();
+    const topic = getCurrentTopic();
     const subtopics = Help.getHelpSubtopicOptions ? Help.getHelpSubtopicOptions(type, topic) : [];
-    renderOptions($('#helpSubtopic'), subtopics, subtopics.length ? 'Selecione um subtipo' : 'Sem subtipo sugerido');
+    renderOptions(subtopicSelect, subtopics, subtopics.length ? 'Selecione o subtipo' : 'Sem subtipo sugerido', subtopics.length ? '' : 'Sem subtipo sugerido');
+    renderConditionalFields();
   }
 
   function prefillContext() {
-    const pagePath = $('#helpPagePath');
-    if (pagePath && !pagePath.value) {
-      pagePath.value = `${window.location.pathname || '/ajuda.html'}${window.location.search || ''}`;
-    }
-
     const emailInput = $('#helpContactEmail');
     if (emailInput && !emailInput.value) {
       const profileEmail = state.profile && state.profile.email ? String(state.profile.email).trim() : '';
@@ -93,7 +181,25 @@
     }
   }
 
+  function collectConditionalMetadata() {
+    const metadata = {
+      route: window.location.pathname || '/ajuda.html',
+      user_agent: navigator.userAgent || '',
+    };
+
+    state.conditionalFieldKeys.forEach((key) => {
+      const field = document.querySelector(`[data-help-conditional="${key}"]`);
+      if (!field) return;
+      const value = String(field.value || '').trim();
+      if (!value) return;
+      metadata[key] = value;
+    });
+
+    return metadata;
+  }
+
   function buildPayload() {
+    const metadata = collectConditionalMetadata();
     const raw = {
       user_id: state.user && state.user.id ? String(state.user.id).trim() : null,
       type: $('#helpType')?.value || '',
@@ -102,13 +208,10 @@
       subject: $('#helpSubject')?.value || '',
       message: $('#helpMessage')?.value || '',
       priority: $('#helpPriority')?.value || '',
-      page_path: $('#helpPagePath')?.value || '',
+      page_path: metadata.page_path || '',
       contact_email: $('#helpContactEmail')?.value || '',
       allow_contact: $('#helpAllowContact')?.checked !== false,
-      metadata: {
-        route: window.location.pathname || '/ajuda.html',
-        user_agent: navigator.userAgent || '',
-      },
+      metadata,
     };
 
     return Help.normalizeHelpRequestInput
@@ -129,7 +232,7 @@
 
     const payload = buildPayload();
     if (!payload.subject || !payload.message || !payload.contact_email || !payload.type || !payload.topic || !payload.priority) {
-      setStatus('Preencha categoria, tema, assunto, descrição, prioridade e e-mail para retorno.', 'warn');
+      setStatus('Preencha categoria, tema, assunto, descrição, urgência e e-mail para retorno.', 'warn');
       return;
     }
 
@@ -147,9 +250,8 @@
       const form = $('#helpRequestForm');
       if (form) form.reset();
       renderOptions($('#helpType'), Help.HELP_TYPE_OPTIONS || [], 'Selecione a categoria principal');
-      renderOptions($('#helpTopic'), Help.HELP_TOPIC_OPTIONS || [], 'Selecione o tema');
       renderOptions($('#helpPriority'), Help.HELP_PRIORITY_OPTIONS || [], 'Selecione a urgência');
-      populateSubtopics();
+      populateTopics();
       prefillContext();
     } catch (error) {
       console.error('[Help] submit failed:', error);
@@ -163,9 +265,8 @@
     const form = $('#helpRequestForm');
     if (form) form.reset();
     renderOptions($('#helpType'), Help.HELP_TYPE_OPTIONS || [], 'Selecione a categoria principal');
-    renderOptions($('#helpTopic'), Help.HELP_TOPIC_OPTIONS || [], 'Selecione o tema');
     renderOptions($('#helpPriority'), Help.HELP_PRIORITY_OPTIONS || [], 'Selecione a urgência');
-    populateSubtopics();
+    populateTopics();
     prefillContext();
     setStatus('', '');
   }
@@ -177,17 +278,26 @@
     const resetButton = $('#helpResetButton');
     if (resetButton) resetButton.addEventListener('click', handleReset);
 
-    ['#helpType', '#helpTopic'].forEach((selector) => {
-      const field = $(selector);
-      if (field) field.addEventListener('change', populateSubtopics);
-    });
+    const typeField = $('#helpType');
+    if (typeField) {
+      typeField.addEventListener('change', populateTopics);
+    }
+
+    const topicField = $('#helpTopic');
+    if (topicField) {
+      topicField.addEventListener('change', populateSubtopics);
+    }
+
+    const subtopicField = $('#helpSubtopic');
+    if (subtopicField) {
+      subtopicField.addEventListener('change', renderConditionalFields);
+    }
   }
 
   async function init() {
     renderOptions($('#helpType'), Help.HELP_TYPE_OPTIONS || [], 'Selecione a categoria principal');
-    renderOptions($('#helpTopic'), Help.HELP_TOPIC_OPTIONS || [], 'Selecione o tema');
     renderOptions($('#helpPriority'), Help.HELP_PRIORITY_OPTIONS || [], 'Selecione a urgência');
-    populateSubtopics();
+    populateTopics();
     bindEvents();
 
     try {

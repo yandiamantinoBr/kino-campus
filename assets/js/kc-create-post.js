@@ -17,6 +17,18 @@ function _esc(str) { return KCUtils.escapeHtml(str); }
 // -----------------------------
 
 const KC_CREATE_MODAL_ID = 'kcCreatePostModalOverlay';
+const KC_POST_VISIBILITY_OPTIONS = Object.freeze([
+  Object.freeze({
+    value: 'community',
+    label: 'Apenas para comunidade',
+    hint: 'Visível só para pessoas com conta no KinoCampus.'
+  }),
+  Object.freeze({
+    value: 'public',
+    label: 'Público',
+    hint: 'Pode aparecer também para visitantes sem conta.'
+  })
+]);
 
 // Definições por módulo (tags/subtópicos + campos)
 const KC_CREATE_SCHEMA = {
@@ -199,6 +211,13 @@ const kcCreateState = {
 
 let kcLastFocus = null;
 
+function kcNormalizePostVisibilityValue(value, fallback) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'public') return 'public';
+  if (raw === 'community') return 'community';
+  return String(fallback || 'community').trim().toLowerCase() === 'public' ? 'public' : 'community';
+}
+
 function kcParseBRLNumber(input) {
   if (input == null) return null;
   const s = String(input).trim();
@@ -367,7 +386,11 @@ function kcEnsureCreateModal() {
   const form = overlay.querySelector('#kcCreatePostForm');
   if (form) {
     form.addEventListener('input', () => kcCaptureCreateValues());
-    form.addEventListener('change', () => kcCaptureCreateValues());
+    form.addEventListener('change', (e) => {
+      kcCaptureCreateValues();
+      const target = e && e.target;
+      if (target && target.name === 'visibility') kcRenderCreateModal();
+    });
     form.addEventListener('keydown', (e) => {
       const target = e.target;
       if (!target || !target.matches || !target.matches('[data-kc-housing-features-input="true"]')) return;
@@ -990,6 +1013,33 @@ function kcCreateSustainSectionHtml() {
   `;
 }
 
+function kcCreateVisibilitySectionHtml() {
+  const selected = kcNormalizePostVisibilityValue(
+    kcCreateState.values.visibility,
+    kcCreateState.editMode ? 'public' : 'community'
+  );
+  const optionsHtml = KC_POST_VISIBILITY_OPTIONS.map((option) => {
+    const active = selected === option.value;
+    return `
+      <label class="kc-create-visibility-option${active ? ' is-active' : ''}">
+        <input type="radio" name="visibility" value="${_esc(option.value)}" ${active ? 'checked' : ''} />
+        <span class="kc-create-visibility-option__label">${_esc(option.label)}</span>
+        <small>${_esc(option.hint)}</small>
+      </label>
+    `;
+  }).join('');
+
+  return `
+    <div class="kc-create-group kc-create-group--visibility">
+      <div class="kc-create-group__head kc-create-group__head--row">
+        <span>Visibilidade</span>
+        <small>Defina quem pode abrir este anúncio.</small>
+      </div>
+      <div class="kc-create-visibility-toggle">${optionsHtml}</div>
+    </div>
+  `;
+}
+
 function kcBuildFieldsForModule(moduleKey, selections, values) {
   const fields = [];
   const moneyFieldMeta = {
@@ -1348,6 +1398,8 @@ function kcRenderCreateModal() {
   });
   parts.push('</div>');
 
+  parts.push(kcCreateVisibilitySectionHtml());
+
   // Imagens (capa + até 4)
   parts.push(kcCreateImagesSectionHtml());
   // Sustentabilidade
@@ -1501,6 +1553,7 @@ function kcOpenEditPostModal(post, callback) {
     recompensa: md.recompensa || '',
     contribuicao: md.contribuicao || '',
     orcamento: md.orcamento || '',
+    visibility: kcNormalizePostVisibilityValue(post.visibility || md.visibility || '', 'public'),
   };
 
   // ── Imagens existentes ──
@@ -1860,6 +1913,7 @@ async function kcHandleCreateSubmit() {
       housingFeatureKeys: isMoradia ? housingFeatures.map((feature) => feature.key) : [],
       contato: kcCreateState.values.contato ? String(kcCreateState.values.contato) : '',
       remuneracao: kcCreateState.values.remuneracao ? String(kcCreateState.values.remuneracao) : '',
+      visibility: kcNormalizePostVisibilityValue(kcCreateState.values.visibility, kcCreateState.editMode ? 'public' : 'community'),
 
       // flags
       verificado: false,
@@ -1914,6 +1968,7 @@ async function kcHandleCreateSubmit() {
         modalidadeTrabalho: kcCreateState.values.modalidadeTrabalho ? String(kcCreateState.values.modalidadeTrabalho) : '',
         recompensa: kcCreateState.values.recompensa ? String(kcCreateState.values.recompensa) : '',
         entrega: kcCreateState.values.entrega ? String(kcCreateState.values.entrega) : '',
+        visibility: kcNormalizePostVisibilityValue(kcCreateState.values.visibility, kcCreateState.editMode ? 'public' : 'community'),
       },
     };
 

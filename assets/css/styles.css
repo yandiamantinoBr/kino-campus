@@ -3667,6 +3667,54 @@ body.kc-scroll-locked {
     color: var(--kc-text-dark-primary);
 }
 
+.kc-create-visibility-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.kc-create-visibility-option {
+    position: relative;
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--kc-border-dark);
+    background: var(--kc-surface-dark);
+    color: var(--kc-text-dark-primary);
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.kc-create-visibility-option:hover {
+    border-color: rgba(255, 107, 0, 0.35);
+    transform: translateY(-1px);
+}
+
+.kc-create-visibility-option input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.kc-create-visibility-option__label {
+    font-weight: 900;
+    color: var(--kc-text-dark-primary);
+}
+
+.kc-create-visibility-option small {
+    color: var(--kc-text-dark-secondary);
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.kc-create-visibility-option.is-active {
+    border-color: rgba(255, 107, 0, 0.45);
+    background: rgba(255, 107, 0, 0.08);
+}
+
 .kc-create-submit {
     width: 100%;
     border: none;
@@ -3713,6 +3761,9 @@ body.kc-scroll-locked {
         max-height: calc(90vh - 86px);
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+    }
+    .kc-create-visibility-toggle {
+        grid-template-columns: 1fr;
     }
 }
 

@@ -3,7 +3,7 @@
   'use strict';
 const { ENV, normalizePost } = window.KCAPI;
   const profileShared = window.KCAccountProfileUtils || {};
-  const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
+  const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, profile_public, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
 
   function normalizeProfilePatchForAdapter(patch) {
     if (profileShared && typeof profileShared.normalizeProfilePatch === 'function') {
@@ -737,6 +737,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
       preco: (row.price != null ? row.price : null),
       price: (row.price != null ? row.price : null),
+      status: String(row.status || 'published').toLowerCase(),
+      visibility: String(row.visibility || (metadata && metadata.visibility) || 'public').toLowerCase(),
 
       location: row.location || '',
 
@@ -802,7 +804,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
-      .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, votos, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`)
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, status, visibility, metadata, created_at, votos, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`)
       .limit(1);
   }
 
@@ -922,7 +924,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
-      .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`);
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, status, visibility, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`);
   }
 
   // Compat: caso o schema ainda nÃ£o tenha profiles.verified (antes do update v8.1.3.2)
@@ -1041,6 +1043,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function normalizeCreatePayload(data) {
     const d = (data && typeof data === 'object') ? data : {};
+    const rawVisibility = String(d.visibility || (d.metadata && d.metadata.visibility) || '').trim().toLowerCase();
+    const visibility = rawVisibility === 'community' ? 'community' : 'public';
 
     const modulo = (d.modulo || d.module || '').toString().trim();
     const categoryKey = (d.categoriaKey || d.categoryKey || d.category || d.categoria || '').toString().trim();
@@ -1090,6 +1094,7 @@ const { ENV, normalizePost } = window.KCAPI;
       ...(typeof d.sustentavel === 'boolean' ? { sustentavel: d.sustentavel } : {}),
       ...(d.emoji ? { emoji: String(d.emoji) } : {}),
       ...(typeof d.verificado === 'boolean' ? { verificado: d.verificado } : {}),
+      visibility,
     };
 
     return {
@@ -1100,6 +1105,7 @@ const { ENV, normalizePost } = window.KCAPI;
       description,
       price,
       location,
+      visibility,
       images,
       metadata,
       // tambÃ©m devolvemos o payload bruto para retorno local (labels)
@@ -1177,6 +1183,7 @@ const { ENV, normalizePost } = window.KCAPI;
         location: parsed.location,
         module: parsed.moduleDB,
         category: parsed.categoryDB,
+        visibility: parsed.visibility,
         metadata: parsed.metadata,
       };
 
@@ -1349,6 +1356,7 @@ const { ENV, normalizePost } = window.KCAPI;
         location: parsed.location,
         module: parsed.moduleDB,
         category: parsed.categoryDB,
+        visibility: parsed.visibility,
         metadata: parsed.metadata,
       },
     };
@@ -1960,7 +1968,7 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       let query = client
         .from('posts')
-        .select('id, legacy_id, title, created_at, status, module, category')
+        .select('id, legacy_id, title, created_at, status, visibility, module, category')
         .eq('author_id', user.id)
         .order('created_at', { ascending: false })
         .range(from, to);
@@ -1978,6 +1986,7 @@ const { ENV, normalizePost } = window.KCAPI;
         title: row.title || 'Sem tÃ­tulo',
         created_at: row.created_at || null,
         status: row.status || 'published',
+        visibility: row.visibility || 'public',
         module: row.module || '',
         category: row.category || '',
       }));
@@ -2000,7 +2009,7 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       const { data, error } = await client
         .from('posts')
-        .select('id, legacy_id, title, created_at, status, module, category')
+        .select('id, legacy_id, title, created_at, status, visibility, module, category')
         .eq('author_id', author)
         .eq('status', 'published')
         .order('created_at', { ascending: false })
@@ -2017,6 +2026,7 @@ const { ENV, normalizePost } = window.KCAPI;
         title: row.title || 'Sem tÃ­tulo',
         created_at: row.created_at || null,
         status: row.status || 'published',
+        visibility: row.visibility || 'public',
         module: row.module || '',
         category: row.category || '',
       }));
@@ -2151,7 +2161,7 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       let query = client
         .from('saved_posts')
-        .select('id, kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, module, category)')
+        .select('id, kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, visibility, module, category)')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
         .range(from, to);
@@ -2171,6 +2181,7 @@ const { ENV, normalizePost } = window.KCAPI;
           title: post.title || 'Sem tÃ­tulo',
           created_at: post.created_at || null,
           status: post.status || 'published',
+          visibility: post.visibility || 'public',
           module: post.module || '',
           category: post.category || '',
           save_kind: row.kind || '',
@@ -2196,7 +2207,7 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       const { data, error } = await client
         .from('saved_posts')
-        .select('id, kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, module, category)')
+        .select('id, kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, visibility, module, category)')
         .eq('user_id', author)
         .eq('kind', 'highlight')
         .order('updated_at', { ascending: false })
@@ -2217,6 +2228,7 @@ const { ENV, normalizePost } = window.KCAPI;
             title: post.title || 'Sem tÃ­tulo',
             created_at: post.created_at || null,
             status: post.status || 'published',
+            visibility: post.visibility || 'public',
             module: post.module || '',
             category: post.category || '',
             save_kind: 'highlight',
@@ -2247,6 +2259,7 @@ const { ENV, normalizePost } = window.KCAPI;
       title: row.title || 'Sem tÃ­tulo',
       created_at: row.created_at || null,
       status: row.status || 'published',
+      visibility: row.visibility || 'public',
       module: row.module || '',
       category: row.category || '',
       save_kinds: normalizeSaveKinds(row.save_kinds),
@@ -2273,11 +2286,12 @@ const { ENV, normalizePost } = window.KCAPI;
         byPost.set(uuid, {
           id: post.legacy_id || post.id,
           uuid,
-          title: post.title || 'Sem tÃ­tulo',
-          created_at: post.created_at || null,
-          status: includeStatus ? status : 'published',
-          module: post.module || '',
-          category: post.category || '',
+        title: post.title || 'Sem tÃ­tulo',
+        created_at: post.created_at || null,
+        status: includeStatus ? status : 'published',
+        visibility: String(post.visibility || 'public').toLowerCase(),
+        module: post.module || '',
+        category: post.category || '',
           save_kinds: saveKind ? [saveKind] : [],
           saved_at: savedAt,
         });
@@ -2306,7 +2320,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const kind = normalizeSaveKind(params.kind);
     let query = client
       .from('saved_posts')
-      .select('kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, module, category)')
+        .select('kind, created_at, updated_at, post:posts!saved_posts_post_id_fkey(id, legacy_id, title, created_at, status, visibility, module, category)')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 

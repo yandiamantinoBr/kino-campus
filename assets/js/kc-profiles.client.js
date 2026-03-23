@@ -20,6 +20,7 @@
     'gender_identity',
     'gender_identity_custom',
     'race_color',
+    'profile_public',
     'contact_primary_method',
     'contact_cta_enabled',
     'social_links',
@@ -39,6 +40,7 @@
     'gender_identity',
     'gender_identity_custom',
     'race_color',
+    'profile_public',
     'contact_primary_method',
     'contact_cta_enabled',
     'social_links',
@@ -118,6 +120,7 @@
       gender_identity: source.gender_identity || base.gender_identity || null,
       gender_identity_custom: source.gender_identity_custom || base.gender_identity_custom || null,
       race_color: source.race_color || base.race_color || null,
+      profile_public: source.profile_public === true || base.profile_public === true,
       contact_primary_method: source.contact_primary_method || base.contact_primary_method || null,
       contact_cta_enabled: source.contact_cta_enabled !== false && base.contact_cta_enabled !== false,
       social_links: shared.normalizeSocialLinks

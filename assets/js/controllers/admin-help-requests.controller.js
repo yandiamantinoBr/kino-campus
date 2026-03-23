@@ -56,9 +56,7 @@
 
   async function checkAdminAccess() {
     const driver = window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver;
-    if (driver === 'local') {
-      return true;
-    }
+    if (driver === 'local') return true;
     if (driver !== 'supabase') {
       showError('O painel de ajuda requer driver=supabase.');
       return false;
@@ -171,6 +169,48 @@
     return raw;
   }
 
+  function buildMetadataChips(row) {
+    const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const chips = [];
+
+    const moduleValue = String(metadata.affected_module || '').trim();
+    if (moduleValue) {
+      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-layer-group"></i>${esc(buildLabel(Help.HELP_MODULE_LABELS, moduleValue, moduleValue))}</span>`);
+    }
+
+    const impactValue = String(metadata.impact_scope || '').trim();
+    if (impactValue) {
+      const impactLabels = {
+        only_me: 'Só comigo',
+        some_people: 'Com outras pessoas',
+        entire_platform: 'Plataforma toda',
+      };
+      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-signal"></i>${esc(impactLabels[impactValue] || impactValue)}</span>`);
+    }
+
+    const pagePath = String((row && row.page_path) || metadata.page_path || '').trim();
+    if (pagePath) {
+      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-file-code"></i>${esc(pagePath)}</span>`);
+    }
+
+    return chips.join('');
+  }
+
+  function buildMetadataSummary(row) {
+    const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const lines = [];
+
+    if (metadata.reproduce_steps) lines.push(`<div><strong>Como reproduzir</strong><span>${esc(metadata.reproduce_steps)}</span></div>`);
+    if (metadata.error_message) lines.push(`<div><strong>Mensagem de erro</strong><span>${esc(metadata.error_message)}</span></div>`);
+    if (metadata.expected_result) lines.push(`<div><strong>Resultado esperado</strong><span>${esc(metadata.expected_result)}</span></div>`);
+    if (metadata.content_link) lines.push(`<div><strong>Link relacionado</strong><span>${esc(metadata.content_link)}</span></div>`);
+    if (metadata.account_email) lines.push(`<div><strong>E-mail da conta</strong><span>${esc(metadata.account_email)}</span></div>`);
+    if (metadata.device_context) lines.push(`<div><strong>Dispositivo ou navegador</strong><span>${esc(metadata.device_context)}</span></div>`);
+
+    if (!lines.length) return '';
+    return `<div class="kc-admin-help-meta">${lines.join('')}</div>`;
+  }
+
   function renderRows(rows) {
     const list = $('#helpRequestsList');
     if (!list) return;
@@ -186,10 +226,12 @@
       const priorityLabel = buildLabel(Help.HELP_PRIORITY_LABELS, row.priority, row.priority);
       const statusLabel = buildLabel(Help.HELP_STATUS_LABELS, row.status, row.status);
       const subtopicLabel = buildSubtopicLabel(row);
-      const pagePath = String(row.page_path || '').trim() || 'Não informado';
+      const pagePath = String((row && row.page_path) || '').trim() || 'Não informado';
       const subject = String(row.subject || '').trim() || 'Sem assunto';
       const message = String(row.message || '').trim() || 'Sem descrição';
       const contactEmail = String(row.contact_email || '').trim() || 'Sem e-mail';
+      const metadataChips = buildMetadataChips(row);
+      const metadataSummary = buildMetadataSummary(row);
 
       return [
         `<article class="kc-admin-help-card" data-help-id="${esc(row.id)}">`,
@@ -199,6 +241,7 @@
         `      <span class="kc-admin-help-chip kc-admin-help-chip--status-${esc(row.status)}"><i class="fas fa-circle"></i>${esc(statusLabel)}</span>`,
         `      <span class="kc-admin-help-chip kc-admin-help-chip--priority-${esc(row.priority)}"><i class="fas fa-bolt"></i>${esc(priorityLabel)}</span>`,
         `      <span class="kc-admin-help-chip"><i class="fas fa-layer-group"></i>${esc(typeLabel)}</span>`,
+        metadataChips,
         '    </div>',
         '  </div>',
         '  <div class="kc-admin-help-meta">',
@@ -209,10 +252,11 @@
         `    <div><strong>Criado em</strong><span>${esc(formatDateTime(row.created_at))}</span></div>`,
         `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Não' : 'Sim'}</span></div>`,
         '  </div>',
+        metadataSummary,
         '  <div class="kc-admin-help-actions">',
         `    <label><span class="sr-only">Status</span><select data-help-status><option value="new"${row.status === 'new' ? ' selected' : ''}>Novo</option><option value="triaged"${row.status === 'triaged' ? ' selected' : ''}>Triado</option><option value="in_progress"${row.status === 'in_progress' ? ' selected' : ''}>Em andamento</option><option value="resolved"${row.status === 'resolved' ? ' selected' : ''}>Resolvido</option><option value="archived"${row.status === 'archived' ? ' selected' : ''}>Arquivado</option></select></label>`,
         `    <label><span class="sr-only">Urgência</span><select data-help-priority><option value="low"${row.priority === 'low' ? ' selected' : ''}>Baixa</option><option value="normal"${row.priority === 'normal' ? ' selected' : ''}>Normal</option><option value="high"${row.priority === 'high' ? ' selected' : ''}>Alta</option><option value="urgent"${row.priority === 'urgent' ? ' selected' : ''}>Urgente</option></select></label>`,
-        `    <button type="button" data-help-save><i class="fas fa-floppy-disk"></i> Salvar triagem</button>`,
+        '    <button type="button" data-help-save><i class="fas fa-floppy-disk"></i> Salvar triagem</button>',
         '  </div>',
         '</article>',
       ].join('');

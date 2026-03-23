@@ -35,14 +35,12 @@
       <div class="kc-settings-hero">
         <span class="kc-settings-eyebrow">Configurações da conta</span>
         <h1 class="kc-settings-title">Escolha como seu perfil aparece e como as pessoas entram em contato.</h1>
-        <p class="kc-settings-copy">Tudo aqui tem efeito real: contato dos anúncios, visibilidade dos links públicos, aparência e atalhos do seu fluxo de conta.</p>
       </div>
 
       <div id="settingsStatus" class="kc-settings-status" role="status" aria-live="polite"></div>
 
       <section id="settingsGuest" class="kc-settings-card" style="display:none;">
         <h2>Entre para configurar sua conta</h2>
-        <p class="kc-settings-copy">As configurações ficam disponíveis quando você está autenticado com seu e-mail institucional.</p>
         <div class="kc-settings-actions-row">
           <a class="kc-settings-btn is-primary" href="#login" data-kc-login="true"><i class="fas fa-right-to-bracket"></i><span>Entrar agora</span></a>
           <a class="kc-settings-btn" href="ajuda.html"><i class="fas fa-circle-question"></i><span>Central de ajuda</span></a>
@@ -53,7 +51,6 @@
         <div class="kc-settings-stack kc-settings-stack--main">
           <section class="kc-settings-card">
             <h2>Conta e perfil</h2>
-            <p class="kc-settings-copy">Use esta área para acompanhar o onboarding e ir direto para as páginas do seu perfil.</p>
             <div class="kc-settings-actions-row">
               <a id="settingsProfileLink" class="kc-settings-btn" href="profile.html"><i class="fas fa-id-badge"></i><span>Ver perfil</span></a>
               <a id="settingsSetupLink" class="kc-settings-btn is-primary" href="account-setup.html"><i class="fas fa-list-check"></i><span>Completar conta</span></a>
@@ -65,11 +62,23 @@
               </div>
               <span id="settingsOnboardingPill" class="kc-settings-pill">Verificando</span>
             </div>
+            <div class="kc-settings-row">
+              <div>
+                <strong><i class="fas fa-user-shield"></i> Perfil público</strong>
+                <p>Controle se visitantes sem conta podem abrir sua página de perfil.</p>
+              </div>
+              <label class="kc-settings-pill" for="settingsProfilePublic">
+                <input id="settingsProfilePublic" type="checkbox" />
+                <span id="settingsProfilePublicLabel">Desativado</span>
+              </label>
+            </div>
+            <div class="kc-settings-actions-row">
+              <button id="settingsSaveProfilePublic" type="button" class="kc-settings-btn"><i class="fas fa-user-lock"></i><span>Salvar perfil público</span></button>
+            </div>
           </section>
 
           <section class="kc-settings-card">
             <h2>Contato</h2>
-            <p class="kc-settings-copy">O botão “Entrar em contato” usa este contato principal sempre que outra pessoa logada abrir um anúncio seu.</p>
             <div class="kc-settings-row">
               <div>
                 <strong><i class="fas fa-paper-plane"></i> Contato principal</strong>
@@ -99,7 +108,6 @@
 
           <section class="kc-settings-card">
             <h2>Aparência</h2>
-            <p class="kc-settings-copy">O tema abaixo muda a plataforma inteira e vale também para o onboarding e o perfil.</p>
             <div class="kc-settings-theme-grid">
               <button type="button" class="kc-settings-theme-btn" data-theme-option="light">
                 <span class="kc-settings-theme-preview" data-theme-preview="light"></span>
@@ -118,7 +126,6 @@
         <aside class="kc-settings-stack kc-settings-stack--aside">
           <section class="kc-settings-card kc-settings-card--links">
             <h2>Links públicos</h2>
-            <p class="kc-settings-copy">Ative só as redes que você realmente quer exibir no hero do perfil. O conteúdo do link continua sendo editado no onboarding.</p>
             <div id="settingsNetworksList" class="kc-settings-list kc-settings-list--networks"></div>
             <div class="kc-settings-actions-row">
               <button id="settingsSaveVisibility" type="button" class="kc-settings-btn is-primary"><i class="fas fa-eye"></i><span>Salvar visibilidade</span></button>
@@ -128,7 +135,7 @@
 
           <section class="kc-settings-card">
             <h2>Sessão e segurança</h2>
-            <p id="settingsUserSummary" class="kc-settings-copy">Carregando sua sessão...</p>
+            <p id="settingsUserSummary" class="kc-settings-help">Carregando sua sessão...</p>
             <div class="kc-settings-actions">
               <button id="settingsResendConfirmation" type="button" class="kc-settings-btn"><i class="fas fa-envelope-open-text"></i><span>Reenviar confirmação</span></button>
               <button id="settingsRequestReset" type="button" class="kc-settings-btn"><i class="fas fa-key"></i><span>Receber link de nova senha</span></button>
@@ -138,7 +145,6 @@
 
           <section class="kc-settings-card">
             <h2>Ajuda rápida</h2>
-            <p class="kc-settings-copy">Se preferir, você pode abrir a central completa ou voltar para o onboarding e revisar tudo em etapas.</p>
             <div class="kc-settings-actions-row">
               <a class="kc-settings-btn" href="ajuda.html"><i class="fas fa-circle-question"></i><span>Abrir ajuda</span></a>
               <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-list-check"></i><span>Revisar onboarding</span></a>

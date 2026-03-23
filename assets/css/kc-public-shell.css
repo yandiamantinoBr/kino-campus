@@ -97,7 +97,6 @@ body.kc-help-page .kc-help-shell {
 }
 
 body.kc-profile-route .kc-profile-hero,
-body.kc-profile-route .kc-profile-edit-card,
 body.kc-profile-route .kc-profile-tabs,
 body.kc-profile-route .kc-profile-post-card,
 body.kc-profile-route .kc-profile-comment-card,
@@ -117,54 +116,6 @@ body.kc-profile-route .kc-profile-page {
   max-width: 940px;
 }
 
-body.kc-profile-route .kc-profile-social-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-body.kc-profile-route .kc-profile-social-link {
-  width: auto;
-  min-width: 0;
-  max-width: 100%;
-  justify-content: flex-start;
-  padding: 6px 10px;
-  font-size: 0.78rem;
-  line-height: 1.15;
-  border-radius: 999px;
-  box-shadow: none;
-}
-
-body.kc-profile-route .kc-profile-avatar-wrap {
-  width: 80px;
-  height: 80px;
-  align-self: flex-start;
-}
-
-body.kc-profile-route .kc-profile-avatar-edit {
-  top: 6px;
-  right: 6px;
-  width: 26px;
-  height: 26px;
-  font-size: 0.78rem;
-}
-
-body.kc-profile-route .kc-profile-verified-icon {
-  right: 4px;
-  bottom: 4px;
-  width: 18px;
-  height: 18px;
-  font-size: 0.62rem;
-}
-
-body.kc-profile-route .kc-profile-social-link span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 body.kc-profile-route .kc-profile-inline-form__actions button {
   display: inline-flex;
   align-items: center;
@@ -180,8 +131,6 @@ body.kc-account-setup-page .kc-account-mini-note,
 body.kc-account-setup-page .kc-preview-card p,
 body.kc-account-setup-page .kc-preview-hero p,
 body.kc-auth-callback-route .kc-callback-msg,
-body.kc-help-page .kc-help-copy,
-body.kc-settings-page .kc-settings-copy,
 body.kc-settings-page .kc-settings-help {
   color: var(--kc-text-dark-secondary);
 }
@@ -422,6 +371,14 @@ body.kc-settings-page .kc-settings-input {
   gap: 12px;
 }
 
+.kc-help-form-grid--nested {
+  grid-column: 1 / -1;
+}
+
+.kc-help-form-grid--nested:empty {
+  display: none;
+}
+
 .kc-help-field {
   display: grid;
   gap: 8px;
@@ -483,12 +440,6 @@ body.kc-settings-page .kc-settings-input {
 .kc-help-card h2 {
   margin: 0;
   font-size: 1.1rem;
-}
-
-.kc-settings-copy,
-.kc-help-copy {
-  margin: 0;
-  line-height: 1.7;
 }
 
 .kc-settings-actions,
@@ -809,41 +760,21 @@ body.kc-auth-callback-route .kc-callback-card {
   }
 
   body.kc-profile-route .kc-profile-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    display: flex;
+    gap: 0;
   }
 
   body.kc-profile-route .kc-profile-stat {
-    border-right: none;
-    border-radius: 14px;
-    border: 1px solid var(--kc-border-dark);
-    background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+    border-right: 1px solid var(--kc-border-dark);
+    border-radius: 0;
+    border: none;
+    background: transparent;
     min-width: 0;
+    padding: 8px 6px;
   }
 
-  body.kc-profile-route .kc-profile-social-links {
-    gap: 8px;
-  }
-
-  body.kc-profile-route .kc-profile-avatar-wrap {
-    width: 64px;
-    height: 64px;
-  }
-
-  body.kc-profile-route .kc-profile-avatar-edit {
-    top: -3px;
-    right: -3px;
-    width: 26px;
-    height: 26px;
-  }
-
-  body.kc-profile-route .kc-profile-verified-icon {
-    right: -1px;
-    bottom: -1px;
-    width: 16px;
-    height: 16px;
-    font-size: 0.56rem;
+  body.kc-profile-route .kc-profile-stat:last-child {
+    border-right: none;
   }
 
   .kc-avatar-emoji-grid,
@@ -879,6 +810,10 @@ body.kc-auth-callback-route .kc-callback-card {
   }
 
   .kc-help-field--wide {
+    grid-column: auto;
+  }
+
+  .kc-help-form-grid--nested {
     grid-column: auto;
   }
 }
