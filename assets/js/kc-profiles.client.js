@@ -6,7 +6,6 @@
   const shared = window.KCAccountProfileUtils || {};
   const OWNER_FIELDS = shared.OWNER_PROFILE_SELECT_FIELDS || [
     'id',
-    'legacy_id',
     'display_name',
     'full_name',
     'avatar_url',
@@ -29,7 +28,6 @@
   ].join(', ');
   const PUBLIC_FIELDS = shared.PUBLIC_PROFILE_SELECT_FIELDS || [
     'id',
-    'legacy_id',
     'display_name',
     'full_name',
     'avatar_url',

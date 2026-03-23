@@ -3,7 +3,7 @@
   'use strict';
 const { ENV, normalizePost } = window.KCAPI;
   const profileShared = window.KCAccountProfileUtils || {};
-  const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, legacy_id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, profile_public, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
+  const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, profile_public, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
   const createPostDiagnostics = Object.freeze({
     clear() {
       try {
@@ -850,8 +850,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildSupabasePostSelect(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, legacy_id, display_name, full_name, avatar_url, verified'
-      : 'id, legacy_id, display_name, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified'
+      : 'id, display_name, full_name, avatar_url';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
@@ -970,8 +970,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, legacy_id, display_name, full_name, avatar_url, verified'
-      : 'id, legacy_id, display_name, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified'
+      : 'id, display_name, full_name, avatar_url';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')

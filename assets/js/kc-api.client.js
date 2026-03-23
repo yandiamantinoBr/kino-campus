@@ -973,7 +973,6 @@
     const result = await supabaseLogin(email, password);
     if (result && result.error) return result;
     return result || { user: null, session: null, error: { message: 'Nao foi possivel entrar. Verifique seus dados.' } };
-    return user ? { user, error: null } : { user: null, error: { message: 'Não foi possível entrar. Verifique seus dados.' } };
   }
 
   async function signUp(email, password, options) {
