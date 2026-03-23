@@ -811,7 +811,11 @@
       if (trigger.classList.contains('is-auth')) {
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
         const drawer = document.querySelector('.kc-mobile-menu-drawer, .kc-mobile-menu');
-        if (isMobile && drawer && typeof window.openMobileMenu === 'function') { window.openMobileMenu(); return; }
+        if (isMobile && drawer && typeof window.openMobileMenu === 'function' && typeof window.closeMobileMenu === 'function') {
+          if (drawer.classList.contains('active')) window.closeMobileMenu();
+          else window.openMobileMenu();
+          return;
+        }
         toggleProfileDropdown(trigger);
         return;
       }

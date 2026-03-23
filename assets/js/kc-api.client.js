@@ -1254,6 +1254,7 @@
     getLastCreatePostError,
     setLastCreatePostError,
     clearLastCreatePostError,
+    summarizeCreatePayloadForDiagnostics,
     rankRelatedPosts,
 
 

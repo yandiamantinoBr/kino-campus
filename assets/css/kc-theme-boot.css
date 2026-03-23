@@ -47,15 +47,17 @@ html:not(.kc-loading) .kc-hero-carousel {
 
 @media (max-width: 768px) {
   html.kc-loading .kc-header-container {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px auto;
     align-items: center;
-    justify-content: space-between;
+    justify-content: initial;
     flex-wrap: nowrap;
     gap: 8px;
   }
 
   html.kc-loading .kc-logo {
     min-width: 0;
+    grid-column: 1;
     flex: 0 1 auto;
   }
 
@@ -64,17 +66,21 @@ html:not(.kc-loading) .kc-hero-carousel {
   }
 
   html.kc-loading .kc-search-mobile-btn {
+    grid-column: 2;
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
     width: 36px;
     height: 36px;
     flex: 0 0 36px;
+    margin: 0;
   }
 
   html.kc-loading .kc-user-actions {
+    grid-column: 3;
     display: flex !important;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
     flex: 0 0 auto;
   }

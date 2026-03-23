@@ -30,6 +30,24 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   });
 
+  function summarizeCreatePayloadForCreateDiagnostics(parsed) {
+    try {
+      if (window.KCAPI && typeof window.KCAPI.summarizeCreatePayloadForDiagnostics === 'function') {
+        return window.KCAPI.summarizeCreatePayloadForDiagnostics(parsed);
+      }
+    } catch (_) { }
+
+    const payload = (parsed && typeof parsed === 'object') ? parsed : {};
+    return {
+      moduleDB: payload.moduleDB || '',
+      categoryDB: payload.categoryDB || '',
+      subcategoryDB: payload.subcategoryDB || '',
+      titleLength: String(payload.title || '').length,
+      descriptionLength: String(payload.description || '').length,
+      imagesCount: Array.isArray(payload.images) ? payload.images.length : 0,
+    };
+  }
+
   function normalizeProfilePatchForAdapter(patch) {
     if (profileShared && typeof profileShared.normalizeProfilePatch === 'function') {
       return profileShared.normalizeProfilePatch(patch);
@@ -1160,7 +1178,7 @@ const { ENV, normalizePost } = window.KCAPI;
     }
 
     const parsed = normalizeCreatePayload(data);
-    const payloadSummary = summarizeCreatePayloadForDiagnostics(parsed);
+    const payloadSummary = summarizeCreatePayloadForCreateDiagnostics(parsed);
     if (!parsed.title || !parsed.description || !parsed.moduleDB) {
       createPostDiagnostics.set('PAYLOAD', {
         message: 'Payload de createPost incompleto (tÃ­tulo/descriÃ§Ã£o/mÃ³dulo).',
