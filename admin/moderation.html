@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -11,7 +11,7 @@
     html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
   </style>
 
-  <title>KinoCampus - ModeraÃ§Ã£o Admin</title>
+  <title>KinoCampus - Moderação Admin</title>
   <link rel="stylesheet" href="../assets/css/styles.css?v=8.3.4.11" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -67,7 +67,7 @@
     }
     #audit-log-empty { margin:10px 0 0;color:var(--kc-text-dark-secondary);font-size:.9em; }
 
-    /* â”€â”€ Mobile responsivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Mobile responsivo ─────────────────────────── */
     @media (max-width: 640px) {
       .kc-admin-wrapper { padding: 0 12px 80px; }
       .kc-admin-header-bar { flex-direction: column; align-items: flex-start; }
@@ -133,7 +133,7 @@
       .kc-admin-panel { padding: 12px; }
     }
   </style>
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.11" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.3" />
 </head>
 <body class="kc-admin-page kc-admin-page--moderation">
   <header class="kc-header kc-header--admin">
@@ -147,10 +147,10 @@
           </span>
         </a>
       </div>
-      <nav class="kc-admin-nav" aria-label="NavegaÃ§Ã£o admin">
+      <nav class="kc-admin-nav" aria-label="Navegação admin">
         <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html" class="kc-admin-nav__link active"><i class="fas fa-shield-halved"></i> ModeraÃ§Ã£o</a>
-        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> DenÃºncias</a>
+        <a href="moderation.html" class="kc-admin-nav__link active"><i class="fas fa-shield-halved"></i> Moderação</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
       </nav>
       <div class="kc-user-actions">
@@ -162,16 +162,16 @@
 
   <main class="kc-main-content">
     <div class="kc-admin-wrapper">
-      <div id="admin-loading"><i class="fas fa-spinner fa-spin" style="font-size:1.6em;"></i><span>Verificando acessoâ€¦</span></div>
+      <div id="admin-loading"><i class="fas fa-spinner fa-spin" style="font-size:1.6em;"></i><span>Verificando acesso…</span></div>
       <div id="admin-error" role="alert"></div>
       <div id="admin-feedback" role="status"></div>
 
       <div id="admin-content">
         <div class="kc-admin-header-bar">
-          <h1><i class="fas fa-shield-halved"></i>ModeraÃ§Ã£o de Posts</h1>
+          <h1><i class="fas fa-shield-halved"></i>Moderação de Posts</h1>
           <div class="kc-admin-filters">
             <select id="moderation-status-filter"></select>
-            <input id="moderation-search" type="search" placeholder="Buscar por tÃ­tulo, ID, nome ou nickname" />
+            <input id="moderation-search" type="search" placeholder="Buscar por título, ID, nome ou nickname" />
             <button id="moderation-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
           </div>
         </div>
@@ -182,10 +182,10 @@
               <tr>
                 <th>Post</th>
                 <th>Autor</th>
-                <th>MÃ³dulo/Categoria</th>
+                <th>Módulo/Categoria</th>
                 <th>Status</th>
                 <th>Atualizado em</th>
-                <th>AÃ§Ãµes</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody id="moderation-posts-body"></tbody>
@@ -197,13 +197,13 @@
         </div>
 
         <div class="kc-admin-panel">
-          <h3 style="margin:0 0 8px 0;font-size:1em;">AÃ§Ãµes recentes nesta sessÃ£o</h3>
+          <h3 style="margin:0 0 8px 0;font-size:1em;">Ações recentes nesta sessão</h3>
           <ul id="moderation-session-actions" style="margin:0;padding-left:18px;color:var(--kc-text-dark-secondary);"></ul>
         </div>
 
         <div class="kc-admin-panel">
           <h3 style="margin:0 0 8px 0;font-size:1em;">Audit Log</h3>
-          <p style="margin:0;color:var(--kc-text-dark-secondary);font-size:.9em;">Ãšltimos 50 eventos de moderaÃ§Ã£o/compliance.</p>
+          <p style="margin:0;color:var(--kc-text-dark-secondary);font-size:.9em;">Últimos 50 eventos de moderação/compliance.</p>
 
           <div class="kc-audit-filters">
             <select id="audit-entity-type-filter" aria-label="Filtrar por entidade">
@@ -211,8 +211,8 @@
               <option value="posts">posts</option>
               <option value="reports">reports</option>
             </select>
-            <select id="audit-action-filter" aria-label="Filtrar por aÃ§Ã£o">
-              <option value="all">Todas aÃ§Ãµes</option>
+            <select id="audit-action-filter" aria-label="Filtrar por ação">
+              <option value="all">Todas ações</option>
               <option value="post_status_changed">post_status_changed</option>
               <option value="report_closed">report_closed</option>
               <option value="post_deleted">post_deleted</option>
@@ -228,15 +228,15 @@
               <thead>
                 <tr>
                   <th>Data</th>
-                  <th>AÃ§Ã£o</th>
+                  <th>Ação</th>
                   <th>Entidade</th>
                   <th>entity_id</th>
-                  <th>Autor da aÃ§Ã£o</th>
+                  <th>Autor da ação</th>
                   <th>Detalhes</th>
                 </tr>
               </thead>
               <tbody id="audit-log-body">
-                <tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:18px;">Carregando logsâ€¦</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:18px;">Carregando logs…</td></tr>
               </tbody>
             </table>
           </div>
@@ -250,26 +250,24 @@
   <!-- Mobile Navigation (admin) -->
   <nav class="kc-mobile-nav">
     <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-    <a class="active" href="moderation.html"><i class="fas fa-shield-halved"></i><span>ModeraÃ§Ã£o</span></a>
-    <a href="reports.html"><i class="fas fa-flag"></i><span>DenÃºncias</span></a>
+    <a class="active" href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
     <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
     <a href="../index.html"><i class="fas fa-home"></i><span>Site</span></a>
   </nav>
 
-  <script src="../assets/js/kc-constants.js?v=8.3.4.11"></script>
-  <script src="../assets/js/kc-utils.js?v=8.3.4.11"></script>
-  <script src="../assets/js/kc-env.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-constants.js"></script>
+  <script src="../assets/js/kc-utils.js"></script>
+  <script src="../assets/js/kc-env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
-<script src="../assets/js/kc-api.client.js?v=8.3.4.11"></script>
-  <script src="../assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
-  <script src="../assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
-  <script src="../assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
-  <script src="../assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
-  <script src="../assets/js/kc-theme.js?v=8.3.4.11"></script>
-  <script src="../assets/js/admin-shell.js?v=8.3.4.11"></script>
-  <script src="../assets/js/controllers/admin-moderation.controller.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-supabase.client.js"></script>
+<script src="../assets/js/kc-api.client.js"></script>
+  <script src="../assets/js/adapters/local.adapter.js"></script>
+  <script src="../assets/js/adapters/supabase.adapter.js"></script>
+  <script src="../assets/js/kc-profiles.client.js"></script>
+  <script src="../assets/js/kc-auth.ui.js"></script>
+  <script src="../assets/js/kc-theme.js"></script>
+  <script src="../assets/js/admin-shell.js?v=8.3.4.3"></script>
+  <script src="../assets/js/controllers/admin-moderation.controller.js"></script>
 </body>
 </html>
-
-

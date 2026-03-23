@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -6,15 +6,15 @@
   <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.3.4.11">
   <script src="assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
-  <title>KinoCampus â€” Perfil</title>
+  <title>KinoCampus — Perfil</title>
   <link rel="stylesheet" href="assets/css/styles.css?v=8.3.4.11" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.3.4.11" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Layout geral Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Layout geral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-page { max-width: 860px; margin: 0 auto; padding: 20px 14px 80px; }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Card de cabeÃƒÂ§alho do perfil Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Card de cabeçalho do perfil â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-hero {
       background: var(--kc-surface-dark);
       border: 1px solid var(--kc-border-dark);
@@ -42,10 +42,10 @@
     }
     .kc-profile-verified-icon {
       position: absolute; bottom: 0; right: 0;
-      width: 26px; height: 26px;
+      width: 24px; height: 24px;
       background: #53d681; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: .78em; color: #111;
+      font-size: .72em; color: #111;
       border: 2px solid var(--kc-surface-dark);
       box-shadow: 0 6px 12px rgba(0,0,0,.12);
       z-index: 2;
@@ -94,10 +94,10 @@
       position: absolute;
       right: 0;
       top: 0;
-      width: 26px;
-      height: 26px;
-      min-width: 26px;
-      min-height: 26px;
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      min-height: 24px;
       padding: 0;
       box-sizing: border-box;
       border-radius: 50%;
@@ -109,7 +109,7 @@
       justify-content: center;
       cursor: pointer;
       box-shadow: 0 6px 14px rgba(0,0,0,.16);
-      font-size: .78rem;
+      font-size: .72rem;
       line-height: 1;
       z-index: 3;
     }
@@ -322,7 +322,7 @@
     .kc-profile-feedback.is-info,
     .kc-profile-feedback.is-warn    { background: rgba(255,255,255,.04); color: var(--kc-text-dark-secondary); border: 1px solid var(--kc-border-dark); }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Tabs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-tabs {
       display: flex; gap: 0;
       background: var(--kc-surface-dark);
@@ -357,7 +357,7 @@
     }
     .kc-profile-tab.active .kc-profile-tab-badge { background: var(--kc-primary-brand); color: #fff; }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ ConteÃƒÂºdo das tabs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Conteúdo das tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-tab-panel { display: none; }
     .kc-profile-tab-panel.active { display: block; }
 
@@ -378,7 +378,7 @@
       color: var(--kc-text-dark); font-size: .88rem; cursor: pointer;
     }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Cards de posts Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Cards de posts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-posts-list { display: flex; flex-direction: column; gap: 10px; }
     .kc-profile-post-card {
       background: var(--kc-surface-dark);
@@ -426,7 +426,7 @@
     .kc-status-badge--hidden    { background: #e65100; }
     .kc-status-badge--deleted   { background: #b71c1c; }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Cards de comentÃƒÂ¡rios Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Cards de comentários â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-comments-list { display: flex; flex-direction: column; gap: 10px; }
     .kc-profile-comment-card {
       background: var(--kc-surface-dark);
@@ -446,7 +446,7 @@
     }
     .kc-profile-comment-card__post-link:hover { text-decoration: underline; }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Feed de atividades Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Feed de atividades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-activity-list { display: flex; flex-direction: column; gap: 10px; }
     .kc-profile-activity-item {
       background: var(--kc-surface-dark);
@@ -467,7 +467,7 @@
     .kc-profile-activity-label a:hover { text-decoration: underline; }
     .kc-profile-activity-meta { font-size: .76rem; color: var(--kc-text-dark-secondary); }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Estados vazios / loading Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Estados vazios / loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-empty {
       text-align: center; padding: 40px 20px;
       color: var(--kc-text-dark-secondary); font-size: .92rem;
@@ -490,23 +490,23 @@
     /* sr-only */
     .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap; }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Responsivo Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* â”€â”€ Responsivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     @media (max-width: 600px) {
       .kc-profile-hero { padding: 16px 14px 14px; }
       .kc-profile-avatar-wrap { width: 64px; height: 64px; }
       .kc-profile-avatar { width: 64px; height: 64px; }
       .kc-profile-avatar-edit {
-        width: 24px;
-        height: 24px;
-        min-width: 24px;
-        min-height: 24px;
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        min-height: 22px;
         top: 0;
         right: 0;
-        font-size: .72rem;
+        font-size: .66rem;
       }
       .kc-profile-verified-icon {
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
         right: 0;
         bottom: 0;
       }
@@ -578,7 +578,7 @@
         <i class="fas fa-spinner fa-spin"></i> Carregando perfil...
       </div>
 
-      <!-- Hero card (aparece apÃ³s carregamento) -->
+      <!-- Hero card (aparece após carregamento) -->
       <div id="profile-content" style="display:none;">
 
         <!-- Card do perfil -->
@@ -586,7 +586,7 @@
           <div class="kc-profile-hero-top">
             <div class="kc-profile-avatar-wrap">
               <img id="profile-avatar" class="kc-profile-avatar" src="" alt="Avatar" />
-              <span id="profile-verified-icon" class="kc-profile-verified-icon" style="display:none;" title="UsuÃ¡rio verificado">
+              <span id="profile-verified-icon" class="kc-profile-verified-icon" style="display:none;" title="Usuário verificado">
                 <i class="fas fa-check"></i>
               </span>
               <button id="profile-avatar-edit" class="kc-profile-avatar-edit" type="button" style="display:none;" aria-label="Configurar perfil">
@@ -595,7 +595,7 @@
             </div>
             <div class="kc-profile-info">
               <div class="kc-profile-heading-row">
-              <h1 class="kc-profile-name" id="profile-display-name">UsuÃ¡rio</h1>
+              <h1 class="kc-profile-name" id="profile-display-name">Usuário</h1>
                 <button id="profile-edit-toggle" class="kc-profile-hero-action" type="button" style="display:none;">
                   <i class="fas fa-sliders"></i> Configurar conta
                 </button>
@@ -610,13 +610,13 @@
               <p id="profile-setup-hint" class="kc-profile-setup-hint" style="display:none;"></p>
               <form id="profile-inline-form" class="kc-profile-inline-form" style="display:none;">
                 <div class="kc-profile-inline-form__field">
-                  <label for="display-name-input">Nome de exibiÃ§Ã£o</label>
+                  <label for="display-name-input">Nome de exibição</label>
                   <input id="display-name-input" name="display_name" maxlength="80"
-                         placeholder="Como vocÃª quer aparecer no KinoCampus" required />
+                         placeholder="Como você quer aparecer no KinoCampus" required />
                 </div>
                 <div class="kc-profile-inline-form__field">
-                  <label for="profile-bio-input">DescriÃ§Ã£o do perfil</label>
-                  <textarea id="profile-bio-input" name="bio" maxlength="200" placeholder="Fale um pouco sobre vocÃª, seu curso ou o que procura por aqui."></textarea>
+                  <label for="profile-bio-input">Descrição do perfil</label>
+                  <textarea id="profile-bio-input" name="bio" maxlength="200" placeholder="Fale um pouco sobre você, seu curso ou o que procura por aqui."></textarea>
                 </div>
                 <div class="kc-profile-inline-form__footer">
                   <span id="profile-bio-counter" class="kc-profile-char-counter">0/200</span>
@@ -632,15 +632,15 @@
           <!-- Stats bar -->
           <div class="kc-profile-stats">
             <div class="kc-profile-stat">
-              <span class="kc-profile-stat__value" id="stat-posts">â€“</span>
-              <span class="kc-profile-stat__label">PublicaÃ§Ãµes</span>
+              <span class="kc-profile-stat__value" id="stat-posts">–</span>
+              <span class="kc-profile-stat__label">Publicações</span>
             </div>
             <div class="kc-profile-stat">
-              <span class="kc-profile-stat__value" id="stat-comments">â€“</span>
-              <span class="kc-profile-stat__label">ComentÃ¡rios</span>
+              <span class="kc-profile-stat__value" id="stat-comments">–</span>
+              <span class="kc-profile-stat__label">Comentários</span>
             </div>
             <div class="kc-profile-stat">
-              <span class="kc-profile-stat__value" id="stat-votes">â€“</span>
+              <span class="kc-profile-stat__value" id="stat-votes">–</span>
               <span class="kc-profile-stat__label">Votos recebidos</span>
             </div>
           </div>
@@ -648,7 +648,7 @@
         </section>
 
         <!-- Tabs -->
-        <div class="kc-profile-tabs" role="tablist" aria-label="SeÃ§Ãµes do perfil">
+        <div class="kc-profile-tabs" role="tablist" aria-label="Seções do perfil">
           <button class="kc-profile-tab active" role="tab" aria-selected="true"
                   aria-controls="tab-activities" id="btn-tab-activities" data-kc-tab="activities">
             <i class="fas fa-bolt"></i> <span>Atividades</span>
@@ -660,7 +660,7 @@
           </button>
           <button class="kc-profile-tab" role="tab" aria-selected="false"
                   aria-controls="tab-comments" id="btn-tab-comments" data-kc-tab="comments">
-            <i class="fas fa-comments"></i> <span>ComentÃ¡rios</span>
+            <i class="fas fa-comments"></i> <span>Comentários</span>
             <span class="kc-profile-tab-badge" id="badge-comments">0</span>
           </button>
           <button class="kc-profile-tab" role="tab" aria-selected="false"
@@ -690,14 +690,14 @@
         <div class="kc-profile-tab-panel" role="tabpanel"
              aria-labelledby="btn-tab-posts" id="tab-posts">
           <div class="kc-profile-toolbar" id="posts-toolbar">
-            <span class="kc-profile-toolbar-title">PublicaÃ§Ãµes</span>
+            <span class="kc-profile-toolbar-title">Publicações</span>
             <label class="sr-only" for="profile-posts-status">Filtrar por status</label>
             <select id="profile-posts-status" class="kc-profile-select">
               <option value="">Todos</option>
               <option value="published">Publicado</option>
               <option value="pending">Pendente</option>
               <option value="hidden">Oculto</option>
-              <option value="deleted">ExcluÃ­do</option>
+              <option value="deleted">Excluído</option>
             </select>
           </div>
           <div id="posts-loading" class="kc-profile-loading" style="display:none;">
@@ -713,11 +713,11 @@
           </button>
         </div>
 
-        <!-- Painel: ComentÃ¡rios -->
+        <!-- Painel: Comentários -->
         <div class="kc-profile-tab-panel" role="tabpanel"
              aria-labelledby="btn-tab-comments" id="tab-comments">
           <div class="kc-profile-toolbar">
-            <span class="kc-profile-toolbar-title">ComentÃ¡rios</span>
+            <span class="kc-profile-toolbar-title">Comentários</span>
           </div>
           <div id="comments-loading" class="kc-profile-loading" style="display:none;">
             <i class="fas fa-spinner fa-spin"></i> Carregando...
@@ -725,7 +725,7 @@
           <div id="comments-list" class="kc-profile-comments-list"></div>
           <div id="comments-empty" class="kc-profile-empty" style="display:none;">
             <i class="fas fa-comment-slash"></i>
-            Nenhum comentÃ¡rio encontrado.
+            Nenhum comentário encontrado.
           </div>
           <button id="comments-load-more" class="kc-profile-load-more" style="display:none;">
             <i class="fas fa-chevron-down"></i> Carregar mais
@@ -751,7 +751,7 @@
           <div id="saved-list" class="kc-profile-posts-list"></div>
           <div id="saved-empty" class="kc-profile-empty" style="display:none;">
             <i class="fas fa-star"></i>
-            Nenhuma publicaÃ§Ã£o salva ainda.
+            Nenhuma publicação salva ainda.
           </div>
           <button id="saved-load-more" class="kc-profile-load-more" style="display:none;">
             <i class="fas fa-chevron-down"></i> Carregar mais
@@ -763,23 +763,21 @@
     </div>
   </main>
 
-  <script src="assets/js/kc-constants.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-utils.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-env.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-constants.js"></script>
+  <script src="assets/js/kc-utils.js"></script>
+  <script src="assets/js/kc-env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-api.client.js?v=8.3.4.11"></script>
-  <script src="assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
-  <script src="assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
-  <script src="assets/js/account-profile.shared.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-comments.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-pull-to-refresh.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-public-shell.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
-  <script src="assets/js/kc-theme.js?v=8.3.4.11"></script>
-  <script src="assets/js/controllers/profile.controller.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-supabase.client.js"></script>
+  <script src="assets/js/kc-api.client.js"></script>
+  <script src="assets/js/adapters/local.adapter.js"></script>
+  <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/account-profile.shared.js"></script>
+  <script src="assets/js/kc-comments.js"></script>
+  <script src="assets/js/kc-profiles.client.js"></script>
+  <script src="assets/js/kc-pull-to-refresh.js"></script>
+  <script src="assets/js/kc-public-shell.js"></script>
+  <script src="assets/js/kc-auth.ui.js"></script>
+  <script src="assets/js/kc-theme.js"></script>
+  <script src="assets/js/controllers/profile.controller.js"></script>
 </body>
 </html>
-
-
