@@ -2,12 +2,17 @@
   'use strict';
 
   const shared = window.KCAccountProfileUtils || {};
+  const NO_PUBLIC_CONTACT_OPTION = Object.freeze({
+    value: 'no_public_contact',
+    label: 'Sem contato público',
+  });
 
   const state = {
     user: null,
     profile: null,
     nextPath: '/index.html',
     saving: false,
+    lastRealPrimaryMethod: '',
   };
 
   function $(selector) {
@@ -56,6 +61,18 @@
     return url.toString();
   }
 
+  function normalizeSocialLinks(profile) {
+    return shared && typeof shared.normalizeSocialLinks === 'function'
+      ? shared.normalizeSocialLinks((profile && profile.social_links) || {})
+      : ((profile && profile.social_links) || {});
+  }
+
+  function normalizeVisibility(profile) {
+    return shared && typeof shared.normalizeSocialVisibility === 'function'
+      ? shared.normalizeSocialVisibility((profile && profile.social_visibility) || {})
+      : ((profile && profile.social_visibility) || {});
+  }
+
   function setStatus(message, tone) {
     const status = $('#settingsStatus');
     if (!status) return;
@@ -69,30 +86,103 @@
     if (tone) status.classList.add(`is-${tone}`);
   }
 
+  function cacheButtonHtml(button) {
+    if (!button) return '';
+    if (!button.dataset.defaultHtml) button.dataset.defaultHtml = button.innerHTML;
+    return button.dataset.defaultHtml;
+  }
+
+  function restoreActionButton(button) {
+    if (!button) return;
+    if (button._kcResetTimer) {
+      clearTimeout(button._kcResetTimer);
+      button._kcResetTimer = null;
+    }
+    button.disabled = false;
+    button.classList.remove('is-loading', 'is-success');
+    const defaultHtml = cacheButtonHtml(button);
+    if (defaultHtml) button.innerHTML = defaultHtml;
+  }
+
+  function setActionButtonState(button, mode, label) {
+    if (!button) return;
+    cacheButtonHtml(button);
+    button.classList.remove('is-loading', 'is-success');
+    button.disabled = false;
+
+    if (mode === 'loading') {
+      button.disabled = true;
+      button.classList.add('is-loading');
+      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>${esc(label || 'Salvando...')}</span>`;
+      return;
+    }
+
+    if (mode === 'success') {
+      button.classList.add('is-success');
+      button.innerHTML = `<i class="fas fa-check"></i><span>${esc(label || 'Salvo')}</span>`;
+      button._kcResetTimer = window.setTimeout(function () {
+        restoreActionButton(button);
+      }, 2200);
+      return;
+    }
+
+    restoreActionButton(button);
+  }
+
+  function getPrimaryMethodOptions() {
+    const options = Array.isArray(shared.CONTACT_METHOD_OPTIONS)
+      ? shared.CONTACT_METHOD_OPTIONS.slice()
+      : [];
+    options.push(NO_PUBLIC_CONTACT_OPTION);
+    return options;
+  }
+
+  function isNoPublicContactSelected() {
+    return String($('#settingsPrimaryMethod')?.value || '').trim() === NO_PUBLIC_CONTACT_OPTION.value;
+  }
+
+  function syncCtaPillLabel() {
+    const label = $('#settingsCtaEnabledLabel');
+    const toggle = $('#settingsCtaEnabled');
+    if (!label || !toggle) return;
+    label.textContent = toggle.checked ? 'Ativo' : 'Desativado';
+  }
+
+  function syncContactControls(mode) {
+    const select = $('#settingsPrimaryMethod');
+    const toggle = $('#settingsCtaEnabled');
+    if (!select || !toggle) return;
+
+    const noPublic = String(select.value || '').trim() === NO_PUBLIC_CONTACT_OPTION.value;
+    const wasDisabled = toggle.disabled === true;
+
+    if (!noPublic && String(select.value || '').trim()) {
+      state.lastRealPrimaryMethod = String(select.value || '').trim();
+    }
+
+    if (noPublic) {
+      toggle.checked = false;
+      toggle.disabled = true;
+    } else {
+      toggle.disabled = false;
+      if (mode === 'select' && wasDisabled) toggle.checked = true;
+    }
+
+    syncCtaPillLabel();
+  }
+
   function renderPrimaryMethodOptions() {
     const select = $('#settingsPrimaryMethod');
     if (!select) return;
-    const options = Array.isArray(shared.CONTACT_METHOD_OPTIONS) ? shared.CONTACT_METHOD_OPTIONS : [];
-    select.innerHTML = options.map((option) => {
+    select.innerHTML = getPrimaryMethodOptions().map((option) => {
       return `<option value="${esc(option.value)}">${esc(option.label)}</option>`;
     }).join('');
-  }
-
-  function normalizeSocialLinks(profile) {
-    return shared && typeof shared.normalizeSocialLinks === 'function'
-      ? shared.normalizeSocialLinks((profile && profile.social_links) || {})
-      : ((profile && profile.social_links) || {});
-  }
-
-  function normalizeVisibility(profile) {
-    return shared && typeof shared.normalizeSocialVisibility === 'function'
-      ? shared.normalizeSocialVisibility((profile && profile.social_visibility) || {})
-      : ((profile && profile.social_visibility) || {});
   }
 
   function buildNetworkRows() {
     const list = $('#settingsNetworksList');
     if (!list) return;
+
     const profile = state.profile || {};
     const networks = Array.isArray(shared.SOCIAL_ORDER) ? shared.SOCIAL_ORDER : [];
     const meta = shared.SOCIAL_NETWORKS || {};
@@ -108,9 +198,9 @@
       const checked = visibility[key] === true && !!rawValue;
       return [
         `<div class="kc-settings-network" data-network-row="${esc(key)}">`,
-        '  <div>',
+        '  <div class="kc-settings-network__body">',
         `    <strong><i class="${esc(entry.iconClass || 'fas fa-link')}"></i>${esc(entry.label || key)}</strong>`,
-        `    <p>${preview ? esc(preview) : 'Preencha este link no onboarding para poder exibi-lo.'}</p>`,
+        `    <p title="${esc(preview || '')}">${preview ? esc(preview) : 'Preencha este link no onboarding para poder exibi-lo.'}</p>`,
         '  </div>',
         `  <label class="kc-settings-pill" for="settingsVisible_${esc(key)}">`,
         `    <input id="settingsVisible_${esc(key)}" type="checkbox" data-network-visible="${esc(key)}"${checked ? ' checked' : ''}${rawValue ? '' : ' disabled'} />`,
@@ -144,16 +234,34 @@
     }
   }
 
+  function buildPreviewProfile() {
+    const selectedValue = String($('#settingsPrimaryMethod')?.value || '').trim();
+    const ctaEnabled = $('#settingsCtaEnabled')?.checked !== false;
+    const fallbackPrimary = state.lastRealPrimaryMethod || String((state.profile && state.profile.contact_primary_method) || '').trim();
+
+    return Object.assign({}, state.profile || {}, {
+      contact_primary_method: selectedValue === NO_PUBLIC_CONTACT_OPTION.value
+        ? (fallbackPrimary || null)
+        : (selectedValue || null),
+      contact_cta_enabled: selectedValue === NO_PUBLIC_CONTACT_OPTION.value
+        ? false
+        : ctaEnabled,
+    });
+  }
+
   function updateContactPreview() {
     const preview = $('#settingsContactPreview');
     if (!preview) return;
-    const profile = Object.assign({}, state.profile || {}, {
-      contact_primary_method: String($('#settingsPrimaryMethod')?.value || '').trim(),
-      contact_cta_enabled: $('#settingsCtaEnabled')?.checked !== false
-    });
+
+    const selectedValue = String($('#settingsPrimaryMethod')?.value || '').trim();
+    if (selectedValue === NO_PUBLIC_CONTACT_OPTION.value) {
+      preview.textContent = 'Estado atual: sem contato público. O botão do anúncio exibirá uma alternativa segura, como “Ver perfil”.';
+      return;
+    }
+
     const action = shared && typeof shared.buildContactAction === 'function'
       ? shared.buildContactAction({
-          profile,
+          profile: buildPreviewProfile(),
           viewerAuthenticated: true,
           postTitle: 'Anúncio de teste',
           postUrl: `${window.location.origin}/product.html?id=demo`,
@@ -169,10 +277,16 @@
     const label = String(action.label || '').trim();
     const href = String(action.href || '').trim();
     if (!href && action.type !== 'login_required') {
-      preview.textContent = `Estado atual: ${label || 'Contato indisponível'}. Complete o valor do canal no onboarding para ativar este CTA.`;
+      preview.textContent = `Estado atual: ${label || 'Contato indisponível'}. Complete o valor do contato no onboarding para ativar este CTA.`;
       return;
     }
-    preview.textContent = `Estado atual: ${label || 'Contato pronto'}. O anúncio vai abrir ${href ? 'o canal configurado' : 'uma alternativa segura'} quando alguém clicar em contato.`;
+
+    if (action.type === 'view_profile') {
+      preview.textContent = `Estado atual: ${label || 'Ver perfil'}. O anúncio exibirá uma alternativa segura no lugar do botão de contato direto.`;
+      return;
+    }
+
+    preview.textContent = `Estado atual: ${label || 'Contato pronto'}. O anúncio vai abrir o canal configurado quando alguém clicar em contato.`;
   }
 
   function updateThemeButtons() {
@@ -188,40 +302,59 @@
     const profileLink = $('#settingsProfileLink');
     const primaryMethod = $('#settingsPrimaryMethod');
     const ctaEnabled = $('#settingsCtaEnabled');
+    const storedPrimaryMethod = String(profile.contact_primary_method || '').trim();
+
+    state.lastRealPrimaryMethod = storedPrimaryMethod || state.lastRealPrimaryMethod;
 
     if (userSummary && state.user) {
       userSummary.textContent = `Conta ativa com ${state.user.email || 'seu e-mail institucional'}. Use estas ações para revisar o fluxo de conta e a segurança da sessão.`;
     }
 
     if (profileLink) profileLink.href = buildProfileHref();
-    if (primaryMethod) primaryMethod.value = String(profile.contact_primary_method || '').trim();
-    if (ctaEnabled) ctaEnabled.checked = profile.contact_cta_enabled !== false;
+    if (primaryMethod) {
+      primaryMethod.value = profile.contact_cta_enabled === false
+        ? NO_PUBLIC_CONTACT_OPTION.value
+        : storedPrimaryMethod;
+    }
+    if (ctaEnabled) {
+      ctaEnabled.checked = profile.contact_cta_enabled !== false;
+    }
 
     updateOnboardingStatus();
     buildNetworkRows();
+    syncContactControls('populate');
     updateContactPreview();
     updateThemeButtons();
   }
 
-  async function savePatch(patch, successMessage) {
+  async function savePatch(patch, successMessage, buttonSelector, successButtonLabel) {
+    const button = buttonSelector ? $(buttonSelector) : null;
     if (!window.KCAPI || typeof window.KCAPI.updateMyProfile !== 'function') {
       setStatus('Perfil indisponível neste ambiente.', 'error');
+      setActionButtonState(button, 'idle');
       return;
     }
     if (state.saving) return;
+
     state.saving = true;
+    setActionButtonState(button, 'loading', 'Salvando...');
     setStatus('Salvando suas configurações...', 'info');
+
     try {
       const result = await window.KCAPI.updateMyProfile(patch);
       if (!result || !result.ok) {
+        setActionButtonState(button, 'idle');
         setStatus((result && result.error && result.error.message) || 'Não foi possível salvar agora.', 'error');
         return;
       }
+
       state.profile = result.data || state.profile;
       populate();
+      setActionButtonState(button, 'success', successButtonLabel || 'Salvo');
       setStatus(successMessage || 'Configurações salvas com sucesso.', 'success');
     } catch (error) {
       console.error('[Settings] save failed:', error);
+      setActionButtonState(button, 'idle');
       setStatus('Não foi possível salvar agora.', 'error');
     } finally {
       state.saving = false;
@@ -229,11 +362,27 @@
   }
 
   async function saveContactSettings() {
+    const selectedValue = String($('#settingsPrimaryMethod')?.value || '').trim();
+    const noPublic = selectedValue === NO_PUBLIC_CONTACT_OPTION.value;
+    const effectivePrimaryMethod = noPublic
+      ? (state.lastRealPrimaryMethod || String((state.profile && state.profile.contact_primary_method) || '').trim() || null)
+      : (selectedValue || null);
+
+    if (!noPublic && effectivePrimaryMethod) {
+      state.lastRealPrimaryMethod = effectivePrimaryMethod;
+    }
+
     const patch = {
-      contact_primary_method: String($('#settingsPrimaryMethod')?.value || '').trim(),
-      contact_cta_enabled: $('#settingsCtaEnabled')?.checked !== false
+      contact_primary_method: effectivePrimaryMethod,
+      contact_cta_enabled: noPublic ? false : ($('#settingsCtaEnabled')?.checked !== false)
     };
-    await savePatch(patch, 'Preferências de contato atualizadas.');
+
+    await savePatch(
+      patch,
+      'Preferências de contato atualizadas.',
+      '#settingsSaveContact',
+      'Contato salvo'
+    );
   }
 
   async function saveVisibilitySettings() {
@@ -243,7 +392,13 @@
       if (!key) return;
       visibility[key] = input.checked === true;
     });
-    await savePatch({ social_visibility: visibility }, 'Visibilidade dos links públicos atualizada.');
+
+    await savePatch(
+      { social_visibility: visibility },
+      'Visibilidade dos links públicos atualizada.',
+      '#settingsSaveVisibility',
+      'Visibilidade salva'
+    );
   }
 
   async function resendConfirmation() {
@@ -286,6 +441,8 @@
     const resend = $('#settingsResendConfirmation');
     const requestReset = $('#settingsRequestReset');
     const logout = $('#settingsLogout');
+    const primaryMethod = $('#settingsPrimaryMethod');
+    const ctaEnabled = $('#settingsCtaEnabled');
 
     if (saveContact) saveContact.addEventListener('click', saveContactSettings);
     if (saveVisibility) saveVisibility.addEventListener('click', saveVisibilitySettings);
@@ -293,12 +450,20 @@
     if (requestReset) requestReset.addEventListener('click', requestResetLink);
     if (logout) logout.addEventListener('click', doLogout);
 
-    ['#settingsPrimaryMethod', '#settingsCtaEnabled'].forEach((selector) => {
-      const field = $(selector);
-      if (!field) return;
-      field.addEventListener('change', updateContactPreview);
-      field.addEventListener('input', updateContactPreview);
-    });
+    if (primaryMethod) {
+      primaryMethod.addEventListener('change', function () {
+        syncContactControls('select');
+        updateContactPreview();
+      });
+      primaryMethod.addEventListener('input', updateContactPreview);
+    }
+
+    if (ctaEnabled) {
+      ctaEnabled.addEventListener('change', function () {
+        syncCtaPillLabel();
+        updateContactPreview();
+      });
+    }
 
     $all('[data-theme-option]').forEach((button) => {
       button.addEventListener('click', function () {
@@ -313,6 +478,7 @@
 
   async function loadProfile() {
     if (!window.KCSupabase) return;
+
     state.user = typeof window.KCSupabase.getUser === 'function'
       ? window.KCSupabase.getUser()
       : null;
@@ -320,6 +486,7 @@
       state.user = await window.KCSupabase.getCurrentUser();
     }
     if (!state.user) return;
+
     if (window.KCAPI) {
       state.profile = typeof window.KCAPI.getCurrentProfile === 'function'
         ? window.KCAPI.getCurrentProfile()

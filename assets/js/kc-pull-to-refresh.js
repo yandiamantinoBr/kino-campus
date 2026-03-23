@@ -16,6 +16,29 @@
   const THRESHOLD = 120; // px to pull before triggering refresh
   const MAX_PULL  = 220; // max pull distance for visual feedback
 
+  function isOverlayGestureBlocked(target) {
+    if (document.documentElement.classList.contains('kc-scroll-locked')) return true;
+    if (document.body.classList.contains('kc-scroll-locked')) return true;
+    if (document.body.classList.contains('kc-modal-open')) return true;
+    if (document.body.classList.contains('kc-admin-modal-open')) return true;
+
+    if (!(target instanceof Element)) return false;
+
+    return !!target.closest(
+      '.kc-mobile-menu,' +
+      '.kc-mobile-menu-drawer,' +
+      '.kc-mobile-menu-content,' +
+      '.kc-auth-overlay,' +
+      '.kc-auth-modal,' +
+      '.kc-auth-card,' +
+      '.kc-create-modal,' +
+      '.kc-search-modal,' +
+      '.kc-modal-overlay.active,' +
+      '.kc-modal-backdrop,' +
+      '[role="dialog"]'
+    );
+  }
+
   function createIndicator() {
     const ind = document.createElement('div');
     ind.className = 'kc-pull-to-refresh-indicator';
@@ -52,6 +75,10 @@
   }
 
   function handleTouchStart(e) {
+    if (isOverlayGestureBlocked(e.target)) {
+      pulling = false;
+      return;
+    }
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     if (scrollTop === 0) {
       startY = e.touches[0].clientY;
@@ -61,6 +88,11 @@
 
   function handleTouchMove(e) {
     if (!pulling) return;
+    if (isOverlayGestureBlocked(e.target)) {
+      pulling = false;
+      hideIndicator();
+      return;
+    }
     currentY = e.touches[0].clientY;
     const diff = currentY - startY;
 
@@ -92,6 +124,7 @@
   function init(options) {
     options = options || {};
     const container = options.container || document.body;
+    pullingContainer = container;
     refreshCallback = options.onRefresh || (() => {});
 
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -104,7 +137,7 @@
   }
 
   function destroy() {
-    const container = document.body;
+    const container = pullingContainer || document.body;
     container.removeEventListener('touchstart', handleTouchStart);
     container.removeEventListener('touchmove', handleTouchMove);
     container.removeEventListener('touchend', handleTouchEnd);
@@ -113,6 +146,7 @@
     }
     indicator = null;
     refreshCallback = null;
+    pullingContainer = null;
   }
 
   window.KCPullToRefresh = Object.freeze({ init, destroy });

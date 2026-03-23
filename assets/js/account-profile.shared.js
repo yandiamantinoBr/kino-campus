@@ -50,15 +50,15 @@
   ].join(', ');
 
   const AFFILIATION_OPTIONS = Object.freeze([
-    Object.freeze({ value: 'undergrad_student', label: 'Estudante de graduacao' }),
-    Object.freeze({ value: 'graduate_student', label: 'Estudante de pos-graduacao' }),
+    Object.freeze({ value: 'undergrad_student', label: 'Estudante de graduação' }),
+    Object.freeze({ value: 'graduate_student', label: 'Estudante de pós-graduação' }),
     Object.freeze({ value: 'professor', label: 'Professor(a)' }),
-    Object.freeze({ value: 'staff', label: 'Tecnico(a)-administrativo(a)' }),
+    Object.freeze({ value: 'staff', label: 'Técnico(a)-administrativo(a)' }),
     Object.freeze({ value: 'alumni', label: 'Egresso(a)' }),
     Object.freeze({ value: 'exchange_student', label: 'Intercambista' }),
     Object.freeze({ value: 'visiting_researcher', label: 'Pesquisador(a) visitante' }),
-    Object.freeze({ value: 'other_ufg', label: 'Outro vinculo com a UFG' }),
-    Object.freeze({ value: 'prefer_not_to_say', label: 'Prefiro nao informar' })
+    Object.freeze({ value: 'other_ufg', label: 'Outro vínculo com a UFG' }),
+    Object.freeze({ value: 'prefer_not_to_say', label: 'Prefiro não informar' })
   ]);
 
   const GENDER_IDENTITY_OPTIONS = Object.freeze([
@@ -66,11 +66,11 @@
     Object.freeze({ value: 'man_cis', label: 'Homem cis' }),
     Object.freeze({ value: 'woman_trans', label: 'Mulher trans' }),
     Object.freeze({ value: 'man_trans', label: 'Homem trans' }),
-    Object.freeze({ value: 'non_binary', label: 'Pessoa nao binaria' }),
+    Object.freeze({ value: 'non_binary', label: 'Pessoa não binária' }),
     Object.freeze({ value: 'travesti', label: 'Travesti' }),
-    Object.freeze({ value: 'agender', label: 'Agenero' }),
+    Object.freeze({ value: 'agender', label: 'Agênero' }),
     Object.freeze({ value: 'self_described', label: 'Prefiro autodescrever' }),
-    Object.freeze({ value: 'prefer_not_to_say', label: 'Prefiro nao informar' })
+    Object.freeze({ value: 'prefer_not_to_say', label: 'Prefiro não informar' })
   ]);
 
   const RACE_COLOR_OPTIONS = Object.freeze([
@@ -78,8 +78,8 @@
     Object.freeze({ value: 'preta', label: 'Preta' }),
     Object.freeze({ value: 'parda', label: 'Parda' }),
     Object.freeze({ value: 'amarela', label: 'Amarela' }),
-    Object.freeze({ value: 'indigena', label: 'Indigena' }),
-    Object.freeze({ value: 'prefer_not_to_say', label: 'Prefiro nao informar' })
+    Object.freeze({ value: 'indigena', label: 'Indígena' }),
+    Object.freeze({ value: 'prefer_not_to_say', label: 'Prefiro não informar' })
   ]);
 
   const CONTACT_METHOD_OPTIONS = Object.freeze([
@@ -93,22 +93,22 @@
   const COUNTRY_DIAL_OPTIONS = Object.freeze([
     Object.freeze({ iso2: 'BR', name: 'Brasil', dialCode: '55' }),
     Object.freeze({ iso2: 'AR', name: 'Argentina', dialCode: '54' }),
-    Object.freeze({ iso2: 'BO', name: 'Bolivia', dialCode: '591' }),
-    Object.freeze({ iso2: 'CA', name: 'Canada', dialCode: '1' }),
+    Object.freeze({ iso2: 'BO', name: 'Bolívia', dialCode: '591' }),
+    Object.freeze({ iso2: 'CA', name: 'Canadá', dialCode: '1' }),
     Object.freeze({ iso2: 'CL', name: 'Chile', dialCode: '56' }),
     Object.freeze({ iso2: 'CN', name: 'China', dialCode: '86' }),
-    Object.freeze({ iso2: 'CO', name: 'Colombia', dialCode: '57' }),
+    Object.freeze({ iso2: 'CO', name: 'Colômbia', dialCode: '57' }),
     Object.freeze({ iso2: 'DE', name: 'Alemanha', dialCode: '49' }),
     Object.freeze({ iso2: 'EC', name: 'Equador', dialCode: '593' }),
     Object.freeze({ iso2: 'ES', name: 'Espanha', dialCode: '34' }),
-    Object.freeze({ iso2: 'FR', name: 'Franca', dialCode: '33' }),
+    Object.freeze({ iso2: 'FR', name: 'França', dialCode: '33' }),
     Object.freeze({ iso2: 'GB', name: 'Reino Unido', dialCode: '44' }),
-    Object.freeze({ iso2: 'IN', name: 'India', dialCode: '91' }),
-    Object.freeze({ iso2: 'IT', name: 'Italia', dialCode: '39' }),
-    Object.freeze({ iso2: 'JP', name: 'Japao', dialCode: '81' }),
+    Object.freeze({ iso2: 'IN', name: 'Índia', dialCode: '91' }),
+    Object.freeze({ iso2: 'IT', name: 'Itália', dialCode: '39' }),
+    Object.freeze({ iso2: 'JP', name: 'Japão', dialCode: '81' }),
     Object.freeze({ iso2: 'KR', name: 'Coreia do Sul', dialCode: '82' }),
-    Object.freeze({ iso2: 'MX', name: 'Mexico', dialCode: '52' }),
-    Object.freeze({ iso2: 'MZ', name: 'Mocambique', dialCode: '258' }),
+    Object.freeze({ iso2: 'MX', name: 'México', dialCode: '52' }),
+    Object.freeze({ iso2: 'MZ', name: 'Moçambique', dialCode: '258' }),
     Object.freeze({ iso2: 'NG', name: 'Nigeria', dialCode: '234' }),
     Object.freeze({ iso2: 'PE', name: 'Peru', dialCode: '51' }),
     Object.freeze({ iso2: 'PT', name: 'Portugal', dialCode: '351' }),
@@ -139,9 +139,9 @@
     instagram: Object.freeze({ key: 'instagram', label: 'Instagram', iconClass: 'fab fa-instagram', emoji: '📸', canBePrimary: true }),
     linkedin: Object.freeze({ key: 'linkedin', label: 'LinkedIn', iconClass: 'fab fa-linkedin', emoji: '💼', canBePrimary: true }),
     email_public: Object.freeze({ key: 'email_public', label: 'E-mail', iconClass: 'fas fa-envelope', emoji: '✉️', canBePrimary: true }),
-    lattes: Object.freeze({ key: 'lattes', label: 'Curriculo Lattes', iconClass: 'fas fa-graduation-cap', emoji: '🎓', canBePrimary: false }),
+    lattes: Object.freeze({ key: 'lattes', label: 'Currículo Lattes', iconClass: 'fas fa-graduation-cap', emoji: '🎓', canBePrimary: false }),
     facebook: Object.freeze({ key: 'facebook', label: 'Facebook', iconClass: 'fab fa-facebook', emoji: '📘', canBePrimary: true }),
-    x: Object.freeze({ key: 'x', label: 'X', iconClass: 'fab fa-x-twitter', emoji: '📰', canBePrimary: false }),
+    x: Object.freeze({ key: 'x', label: 'X', iconClass: 'fab fa-x-twitter', emoji: '𝕏', canBePrimary: false }),
     tiktok: Object.freeze({ key: 'tiktok', label: 'TikTok', iconClass: 'fab fa-tiktok', emoji: '🎵', canBePrimary: false })
   });
 
@@ -434,9 +434,9 @@
   }
 
   function buildContactMessage(postTitle, postUrl) {
-    const title = trimText(postTitle, 120) || 'seu anuncio';
+    const title = trimText(postTitle, 120) || 'seu anúncio';
     const url = String(postUrl || '').trim();
-    return `Oi! Tenho interesse no anuncio "${title}" no KinoCampus.${url ? ` Link: ${url}` : ''}`;
+    return `Oi! Tenho interesse no anúncio "${title}" no KinoCampus.${url ? ` Link: ${url}` : ''}`;
   }
 
   function formatSocialLink(key, rawValue) {
@@ -476,8 +476,8 @@
         iconClass: config.iconClass,
         emoji: config.emoji,
         href: value,
-        display: 'Curriculo Lattes',
-        handle: extractHandleFromUrl(value) || 'Ver curriculo'
+        display: 'Currículo Lattes',
+        handle: extractHandleFromUrl(value) || 'Ver currículo'
       };
     }
 
@@ -655,7 +655,7 @@
         return Object.freeze({
           type: 'email_public',
           label: 'Enviar e-mail',
-          href: buildMailtoHref(value, `Interesse no anuncio: ${postTitle || 'KinoCampus'}`, message)
+          href: buildMailtoHref(value, `Interesse no anúncio: ${postTitle || 'KinoCampus'}`, message)
         });
       }
 

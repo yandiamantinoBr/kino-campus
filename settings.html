@@ -50,7 +50,7 @@
       </section>
 
       <div id="settingsContent" class="kc-settings-layout" style="display:none;">
-        <div class="kc-settings-stack">
+        <div class="kc-settings-stack kc-settings-stack--main">
           <section class="kc-settings-card">
             <h2>Conta e perfil</h2>
             <p class="kc-settings-copy">Use esta área para acompanhar o onboarding e ir direto para as páginas do seu perfil.</p>
@@ -68,23 +68,23 @@
           </section>
 
           <section class="kc-settings-card">
-            <h2>Contato dos anúncios</h2>
-            <p class="kc-settings-copy">O botão “Entrar em contato” usa este canal principal sempre que outra pessoa logada abrir um anúncio seu.</p>
+            <h2>Contato</h2>
+            <p class="kc-settings-copy">O botão “Entrar em contato” usa este contato principal sempre que outra pessoa logada abrir um anúncio seu.</p>
             <div class="kc-settings-row">
               <div>
-                <strong><i class="fas fa-paper-plane"></i> Canal principal</strong>
-                <p>Você pode trocar o canal a qualquer momento. Se o dado ainda não existir, complete no onboarding.</p>
+                <strong><i class="fas fa-paper-plane"></i> Contato principal</strong>
+                <p>Você pode trocar o contato a qualquer momento. Se o dado ainda não existir, complete no onboarding.</p>
               </div>
               <select id="settingsPrimaryMethod" class="kc-settings-select"></select>
             </div>
             <div class="kc-settings-row">
               <div>
-                <strong><i class="fas fa-toggle-on"></i> CTA público</strong>
+                <strong><i class="fas fa-toggle-on"></i> Botão público de contato</strong>
                 <p>Quando desligado, a interface troca o botão por uma alternativa segura, como “Ver perfil”.</p>
               </div>
               <label class="kc-settings-pill" for="settingsCtaEnabled">
                 <input id="settingsCtaEnabled" type="checkbox" checked />
-                <span>Ativo</span>
+                <span id="settingsCtaEnabledLabel">Ativo</span>
               </label>
             </div>
             <div class="kc-settings-preview-box">
@@ -93,17 +93,7 @@
             </div>
             <div class="kc-settings-actions-row">
               <button id="settingsSaveContact" type="button" class="kc-settings-btn is-primary"><i class="fas fa-floppy-disk"></i><span>Salvar contato</span></button>
-              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-pen"></i><span>Editar dados do canal</span></a>
-            </div>
-          </section>
-
-          <section class="kc-settings-card">
-            <h2>Links públicos</h2>
-            <p class="kc-settings-copy">Ative só as redes que você realmente quer exibir no hero do perfil. O conteúdo do link continua sendo editado no onboarding.</p>
-            <div id="settingsNetworksList" class="kc-settings-list"></div>
-            <div class="kc-settings-actions-row">
-              <button id="settingsSaveVisibility" type="button" class="kc-settings-btn is-primary"><i class="fas fa-eye"></i><span>Salvar visibilidade</span></button>
-              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-link"></i><span>Editar links</span></a>
+              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-pen"></i><span>Editar dados do contato</span></a>
             </div>
           </section>
 
@@ -125,7 +115,17 @@
           </section>
         </div>
 
-        <aside class="kc-settings-stack">
+        <aside class="kc-settings-stack kc-settings-stack--aside">
+          <section class="kc-settings-card kc-settings-card--links">
+            <h2>Links públicos</h2>
+            <p class="kc-settings-copy">Ative só as redes que você realmente quer exibir no hero do perfil. O conteúdo do link continua sendo editado no onboarding.</p>
+            <div id="settingsNetworksList" class="kc-settings-list kc-settings-list--networks"></div>
+            <div class="kc-settings-actions-row">
+              <button id="settingsSaveVisibility" type="button" class="kc-settings-btn is-primary"><i class="fas fa-eye"></i><span>Salvar visibilidade</span></button>
+              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-link"></i><span>Editar links</span></a>
+            </div>
+          </section>
+
           <section class="kc-settings-card">
             <h2>Sessão e segurança</h2>
             <p id="settingsUserSummary" class="kc-settings-copy">Carregando sua sessão...</p>

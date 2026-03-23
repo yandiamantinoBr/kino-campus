@@ -347,7 +347,7 @@
     const primaryValue = String(socialLinks[primaryMethod] || '').trim();
 
     if (!primaryMethod) {
-      preview.textContent = formatted ? `WhatsApp pronto para contato: ${formatted}` : 'O contato principal aparecera aqui depois de preenchido.';
+      preview.textContent = formatted ? `WhatsApp pronto para contato: ${formatted}` : 'O contato principal aparecerá aqui depois de preenchido.';
       return;
     }
 
@@ -368,8 +368,8 @@
     };
 
     preview.textContent = labels[primaryMethod]
-      ? `Canal principal pronto: ${labelMap[primaryMethod] || primaryMethod} (${labels[primaryMethod]})`
-      : 'Preencha o valor do canal principal para ativar o CTA dos anuncios.';
+      ? `Contato principal pronto: ${labelMap[primaryMethod] || primaryMethod} (${labels[primaryMethod]})`
+      : 'Preencha o valor do contato principal para ativar o CTA dos anúncios.';
   }
 
   function setSubmitting(active) {
@@ -406,13 +406,13 @@
     if (stepIndex === 2) {
       const primaryMethod = String($('#accountSetupPrimaryMethod')?.value || '').trim();
       if (!primaryMethod) {
-        setStatus('Escolha o canal principal de contato para concluir o onboarding.', 'warn');
+        setStatus('Escolha o contato principal para concluir o onboarding.', 'warn');
         return false;
       }
 
       const socialLinks = collectSocialLinks();
       if (!String(socialLinks[primaryMethod] || '').trim()) {
-        setStatus('Preencha o valor do canal principal escolhido para que o botao de contato funcione.', 'warn');
+        setStatus('Preencha o valor do contato principal escolhido para que o botão de contato funcione.', 'warn');
         return false;
       }
     }
@@ -477,7 +477,7 @@
 
   async function persistProfile() {
     if (!window.KCAPI || typeof window.KCAPI.updateMyProfile !== 'function') {
-      return { ok: false, error: { message: 'Perfil indisponivel neste ambiente.' } };
+      return { ok: false, error: { message: 'Perfil indisponível neste ambiente.' } };
     }
 
     const patch = buildPatch();
@@ -485,13 +485,23 @@
     if (state.avatarFile) {
       const upload = await window.KCAPI.uploadProfileAvatar(state.avatarFile);
       if (!upload || !upload.ok || !upload.data || !upload.data.url) {
-        return { ok: false, error: { message: (upload && upload.error && upload.error.message) || 'Nao foi possivel enviar o avatar.' } };
+        return { ok: false, error: { message: (upload && upload.error && upload.error.message) || 'Não foi possível enviar o avatar.' } };
       }
       patch.avatar_url = upload.data.url;
       patch.avatar_path = upload.data.path || null;
     } else if (String(state.selectedAvatarUrl || '').trim()) {
-      patch.avatar_url = String(state.selectedAvatarUrl || '').trim();
-      patch.avatar_path = null;
+      const avatarSource = String(state.selectedAvatarUrl || '').trim();
+      if (/^data:/i.test(avatarSource)) {
+        const upload = await window.KCAPI.uploadProfileAvatar(avatarSource);
+        if (!upload || !upload.ok || !upload.data || !upload.data.url) {
+          return { ok: false, error: { message: (upload && upload.error && upload.error.message) || 'Não foi possível salvar o avatar escolhido.' } };
+        }
+        patch.avatar_url = upload.data.url;
+        patch.avatar_path = upload.data.path || null;
+      } else {
+        patch.avatar_url = avatarSource;
+        patch.avatar_path = null;
+      }
     }
 
     return window.KCAPI.updateMyProfile(patch);
@@ -539,12 +549,12 @@
     }
 
     setSubmitting(true);
-    setStatus('Salvando suas preferencias...', 'info');
+    setStatus('Salvando suas preferências...', 'info');
 
     try {
       const result = await persistProfile();
       if (!result || !result.ok) {
-        setStatus((result && result.error && result.error.message) || 'Nao foi possivel salvar seu perfil agora.', 'error');
+        setStatus((result && result.error && result.error.message) || 'Não foi possível salvar seu perfil agora.', 'error');
         return;
       }
 
@@ -556,7 +566,7 @@
       }, 600);
     } catch (error) {
       console.error('[AccountSetup] save failed:', error);
-      setStatus('Nao foi possivel concluir seu onboarding agora.', 'error');
+      setStatus('Não foi possível concluir seu onboarding agora.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -653,10 +663,10 @@
       state.profile = null;
     }
 
-    renderSelectOptions('#accountSetupAffiliation', shared.AFFILIATION_OPTIONS || [], 'Selecione seu vinculo');
-    renderSelectOptions('#accountSetupGenderIdentity', shared.GENDER_IDENTITY_OPTIONS || [], 'Prefiro nao informar');
-    renderSelectOptions('#accountSetupRaceColor', shared.RACE_COLOR_OPTIONS || [], 'Prefiro nao informar');
-    renderSelectOptions('#accountSetupPrimaryMethod', getPrimaryMethods(), 'Selecione o canal principal');
+    renderSelectOptions('#accountSetupAffiliation', shared.AFFILIATION_OPTIONS || [], 'Selecione seu vínculo');
+    renderSelectOptions('#accountSetupGenderIdentity', shared.GENDER_IDENTITY_OPTIONS || [], 'Selecione uma opção');
+    renderSelectOptions('#accountSetupRaceColor', shared.RACE_COLOR_OPTIONS || [], 'Selecione uma opção');
+    renderSelectOptions('#accountSetupPrimaryMethod', getPrimaryMethods(), 'Selecione o contato principal');
     renderCountryDatalist();
     populateForm();
     bindEvents();

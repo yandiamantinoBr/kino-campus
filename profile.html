@@ -23,7 +23,13 @@
       position: relative;
     }
     .kc-profile-hero-top { display: flex; align-items: flex-start; gap: 16px; }
-    .kc-profile-avatar-wrap { position: relative; flex-shrink: 0; }
+    .kc-profile-avatar-wrap {
+      position: relative;
+      flex-shrink: 0;
+      width: 80px;
+      height: 80px;
+      align-self: flex-start;
+    }
     .kc-profile-avatar {
       width: 80px; height: 80px;
       border-radius: 50%;
@@ -33,8 +39,8 @@
       display: block;
     }
     .kc-profile-verified-icon {
-      position: absolute; bottom: 2px; right: 2px;
-      width: 22px; height: 22px;
+      position: absolute; bottom: 3px; right: 3px;
+      width: 20px; height: 20px;
       background: #53d681; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: .7em; color: #111;
@@ -82,10 +88,10 @@
     .kc-profile-meta span { display: inline-flex; align-items: center; gap: 4px; }
     .kc-profile-avatar-edit {
       position: absolute;
-      right: -2px;
-      top: -2px;
-      width: 34px;
-      height: 34px;
+      right: 3px;
+      top: 3px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       border: 1px solid rgba(255,255,255,.1);
       background: rgba(17, 24, 39, .9);
@@ -122,43 +128,28 @@
       opacity: .78;
       font-style: italic;
     }
-    .kc-profile-context-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px;
-    }
-    .kc-profile-context-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--kc-border-dark);
-      background: rgba(255,255,255,.04);
-      color: var(--kc-text-dark-primary);
-      font-size: .82rem;
-      font-weight: 700;
-    }
     .kc-profile-social-links {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
       margin-top: 14px;
+      min-width: 0;
     }
     .kc-profile-social-link {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 14px;
+      padding: 9px 12px;
       border-radius: 999px;
       border: 1px solid var(--kc-border-dark);
       background: rgba(255,255,255,.03);
       color: var(--kc-text-dark-primary);
       text-decoration: none;
-      font-size: .86rem;
+      font-size: .82rem;
       font-weight: 700;
       transition: border-color .18s ease, color .18s ease, transform .18s ease;
+      min-width: 0;
+      box-sizing: border-box;
     }
     .kc-profile-social-link:hover {
       border-color: rgba(255,110,30,.42);
@@ -167,6 +158,23 @@
     }
     .kc-profile-social-link i {
       color: var(--kc-primary-brand);
+      width: 16px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .kc-profile-social-link span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .kc-profile-social-glyph {
+      color: var(--kc-primary-brand);
+      font-size: .95rem;
+      font-weight: 800;
+      width: 16px;
+      flex-shrink: 0;
+      text-align: center;
     }
     .kc-profile-setup-hint {
       margin: 14px 0 0;
@@ -264,6 +272,31 @@
     .kc-profile-stat:last-child { border-right: none; }
     .kc-profile-stat__value { font-size: 1.35rem; font-weight: 700; display: block; line-height: 1.1; }
     .kc-profile-stat__label { font-size: .75rem; color: var(--kc-text-dark-secondary); }
+    .kc-profile-comment-card__body,
+    .kc-profile-activity-meta--excerpt {
+      line-height: 1.6;
+      color: var(--kc-text-dark-primary);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .kc-profile-comment-card__body a,
+    .kc-profile-activity-meta--excerpt a {
+      color: var(--kc-primary-brand);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .kc-profile-comment-card__body a:hover,
+    .kc-profile-activity-meta--excerpt a:hover {
+      text-decoration: underline;
+    }
+    .kc-profile-comment-card__body strong,
+    .kc-profile-activity-meta--excerpt strong {
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-profile-comment-card__body em,
+    .kc-profile-activity-meta--excerpt em {
+      color: var(--kc-text-dark-secondary);
+    }
 
     /* ── Edit card (só para usuário próprio) ── */
     .kc-profile-edit-card {
@@ -467,21 +500,39 @@
     /* ── Responsivo ──────────────────────── */
     @media (max-width: 600px) {
       .kc-profile-hero { padding: 16px 14px 14px; }
+      .kc-profile-avatar-wrap { width: 64px; height: 64px; }
       .kc-profile-avatar { width: 64px; height: 64px; }
       .kc-profile-avatar-edit {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
+        top: 2px;
+        right: 2px;
       }
+      .kc-profile-verified-icon { width: 18px; height: 18px; }
       .kc-profile-heading-row {
         flex-direction: column;
         align-items: stretch;
       }
       .kc-profile-hero-action {
-        width: fit-content;
+        width: 100%;
+        justify-content: center;
       }
       .kc-profile-name { font-size: 1.1rem; }
-      .kc-profile-stats { overflow-x: auto; }
-      .kc-profile-stat { min-width: 70px; }
+      .kc-profile-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .kc-profile-stat {
+        min-width: 0;
+        border-right: none;
+        border: 1px solid var(--kc-border-dark);
+        border-radius: 14px;
+        padding: 10px 8px;
+      }
+      .kc-profile-stat__value { font-size: 1.1rem; }
+      .kc-profile-stat__label { font-size: .68rem; }
+      .kc-profile-social-links { grid-template-columns: 1fr; }
       .kc-profile-form { flex-direction: column; }
       .kc-profile-form input,
       .kc-profile-form button { width: 100%; box-sizing: border-box; }
@@ -735,6 +786,7 @@
   <script src="assets/js/adapters/local.adapter.js"></script>
   <script src="assets/js/adapters/supabase.adapter.js"></script>
   <script src="assets/js/account-profile.shared.js"></script>
+  <script src="assets/js/kc-comments.js"></script>
   <script src="assets/js/kc-profiles.client.js"></script>
   <script src="assets/js/kc-public-shell.js"></script>
   <script src="assets/js/kc-auth.ui.js"></script>

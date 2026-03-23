@@ -91,6 +91,11 @@ body.kc-help-page .kc-help-shell {
   padding: 28px 0 0;
 }
 
+body.kc-settings-page .kc-settings-shell,
+body.kc-help-page .kc-help-shell {
+  overflow-x: clip;
+}
+
 body.kc-profile-route .kc-profile-hero,
 body.kc-profile-route .kc-profile-edit-card,
 body.kc-profile-route .kc-profile-tabs,
@@ -114,7 +119,7 @@ body.kc-profile-route .kc-profile-page {
 
 body.kc-profile-route .kc-profile-social-links {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -122,6 +127,22 @@ body.kc-profile-route .kc-profile-social-link {
   width: 100%;
   min-width: 0;
   justify-content: flex-start;
+}
+
+body.kc-profile-route .kc-profile-avatar-wrap {
+  width: 80px;
+  height: 80px;
+  align-self: flex-start;
+}
+
+body.kc-profile-route .kc-profile-avatar-edit {
+  top: 3px;
+  right: 3px;
+}
+
+body.kc-profile-route .kc-profile-verified-icon {
+  right: 3px;
+  bottom: 3px;
 }
 
 body.kc-profile-route .kc-profile-social-link span {
@@ -295,12 +316,15 @@ body.kc-settings-page .kc-settings-input {
 .kc-help-grid {
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.8fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+  align-items: start;
 }
 
 .kc-settings-stack {
   display: grid;
   gap: 18px;
+  min-width: 0;
+  align-content: start;
 }
 
 .kc-settings-card,
@@ -309,6 +333,10 @@ body.kc-settings-page .kc-settings-input {
   border-radius: 22px;
   display: grid;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .kc-settings-card h2,
@@ -328,6 +356,12 @@ body.kc-settings-page .kc-settings-input {
 .kc-help-list {
   display: grid;
   gap: 12px;
+  min-width: 0;
+}
+
+.kc-settings-list--networks {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
 }
 
 .kc-settings-row {
@@ -339,6 +373,9 @@ body.kc-settings-page .kc-settings-input {
   border-radius: 16px;
   border: 1px solid var(--kc-border-dark);
   background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .kc-settings-row strong,
@@ -366,6 +403,25 @@ body.kc-settings-page .kc-settings-input {
   border-radius: 16px;
   border: 1px solid var(--kc-border-dark);
   background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.kc-settings-network__body {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.kc-settings-network p {
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .kc-settings-pill {
@@ -386,6 +442,7 @@ body.kc-settings-page .kc-settings-input {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .kc-settings-btn,
@@ -402,6 +459,8 @@ body.kc-settings-page .kc-settings-input {
   text-decoration: none;
   font-weight: 700;
   cursor: pointer;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .kc-settings-btn:hover,
@@ -423,6 +482,18 @@ body.kc-settings-page .kc-settings-input {
   background: rgba(255, 82, 82, 0.12);
   border-color: rgba(255, 82, 82, 0.24);
   color: #ff7b7b;
+}
+
+.kc-settings-btn.is-loading {
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+.kc-settings-btn.is-success {
+  background: rgba(59, 201, 125, 0.14);
+  border-color: rgba(59, 201, 125, 0.34);
+  color: #9ae6a0;
+  box-shadow: none;
 }
 
 .kc-settings-status {
@@ -594,8 +665,8 @@ body.kc-auth-callback-route .kc-callback-card {
 
   body.kc-profile-route .kc-profile-stats {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
   }
 
   body.kc-profile-route .kc-profile-stat {
@@ -609,6 +680,11 @@ body.kc-auth-callback-route .kc-callback-card {
     grid-template-columns: 1fr;
   }
 
+  body.kc-profile-route .kc-profile-avatar-wrap {
+    width: 64px;
+    height: 64px;
+  }
+
   .kc-avatar-emoji-grid,
   .kc-avatar-color-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -618,6 +694,19 @@ body.kc-auth-callback-route .kc-callback-card {
   .kc-settings-network {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .kc-settings-list--networks {
+    grid-template-columns: 1fr;
+  }
+
+  .kc-settings-actions-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .kc-settings-actions-row > * {
+    width: 100%;
   }
 
   .kc-help-list {

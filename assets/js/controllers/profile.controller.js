@@ -61,7 +61,7 @@
     if (candidate && String(candidate).trim()) return String(candidate).trim();
     const email = user && user.email ? String(user.email) : '';
     if (email.includes('@')) return email.split('@')[0];
-    return 'Usuario';
+    return 'Usuário';
   }
 
   function buildPublicHandle(profile) {
@@ -143,11 +143,11 @@
     const seconds = Math.max(0, Math.floor(delta / 1000));
     if (seconds < 60) return 'agora';
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `ha ${minutes} min`;
+    if (minutes < 60) return `há ${minutes} min`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `ha ${hours}h`;
+    if (hours < 24) return `há ${hours}h`;
     const days = Math.floor(hours / 24);
-    if (days < 30) return `ha ${days} dia${days > 1 ? 's' : ''}`;
+    if (days < 30) return `há ${days} dia${days > 1 ? 's' : ''}`;
     return fmtDate(iso);
   }
 
@@ -157,7 +157,7 @@
       published: 'Publicado',
       pending: 'Pendente',
       hidden: 'Oculto',
-      deleted: 'Excluido',
+      deleted: 'Excluído',
     };
     return `<span class="kc-status-badge kc-status-badge--${esc(key)}">${esc(labels[key] || key)}</span>`;
   }
@@ -292,8 +292,8 @@
     const savedLabel = state.isPublicView ? 'Destaques' : 'Salvos';
     const savedTitle = state.isPublicView ? 'Destaques' : 'Salvos';
     const savedEmptyText = state.isPublicView
-      ? 'Nenhum destaque publico encontrado.'
-      : 'Nenhuma publicacao salva ainda.';
+      ? 'Nenhum destaque público encontrado.'
+      : 'Nenhuma publicação salva ainda.';
 
     const avatar = $('#profile-avatar');
     if (avatar) {
@@ -347,7 +347,7 @@
         bio.classList.remove('is-empty');
         bio.style.display = state.isEditing ? 'none' : 'block';
       } else if (ownerView) {
-        bio.textContent = 'Adicione uma breve descricao para completar seu perfil.';
+        bio.textContent = 'Adicione uma breve descrição para completar seu perfil.';
         bio.classList.add('is-empty');
         bio.style.display = state.isEditing ? 'none' : 'block';
       } else {
@@ -371,20 +371,8 @@
 
     const contextPills = $('#profile-context-pills');
     if (contextPills) {
-      const pills = [];
-      const genderLabel = formatChoice('gender_identity', profile.gender_identity);
-      const raceLabel = formatChoice('race_color', profile.race_color);
-      if (genderLabel && profile.gender_identity !== 'prefer_not_to_say') {
-        pills.push(`<span class="kc-profile-context-pill"><i class="fas fa-users"></i> ${esc(genderLabel)}</span>`);
-      }
-      if (profile.gender_identity === 'self_described' && profile.gender_identity_custom) {
-        pills.push(`<span class="kc-profile-context-pill"><i class="fas fa-feather-pointed"></i> ${esc(profile.gender_identity_custom)}</span>`);
-      }
-      if (raceLabel && profile.race_color !== 'prefer_not_to_say') {
-        pills.push(`<span class="kc-profile-context-pill"><i class="fas fa-palette"></i> ${esc(raceLabel)}</span>`);
-      }
-      contextPills.innerHTML = pills.join('');
-      contextPills.style.display = pills.length ? 'flex' : 'none';
+      contextPills.innerHTML = '';
+      contextPills.style.display = 'none';
     }
 
     const socialLinksWrap = $('#profile-social-links');
@@ -392,9 +380,12 @@
     if (socialLinksWrap) {
       socialLinksWrap.innerHTML = visibleLinks.map((entry) => {
         const label = entry.display || entry.handle || entry.label;
-        return `<a class="kc-profile-social-link" href="${esc(entry.href)}" target="_blank" rel="noopener noreferrer"><i class="${esc(entry.iconClass || 'fas fa-link')}"></i><span>${esc(label)}</span></a>`;
+        const iconHtml = entry.key === 'x'
+          ? `<span class="kc-profile-social-glyph" aria-hidden="true">${esc(entry.emoji || '𝕏')}</span>`
+          : `<i class="${esc(entry.iconClass || 'fas fa-link')}" aria-hidden="true"></i>`;
+        return `<a class="kc-profile-social-link" href="${esc(entry.href)}" target="_blank" rel="noopener noreferrer">${iconHtml}<span>${esc(label)}</span></a>`;
       }).join('');
-      socialLinksWrap.style.display = visibleLinks.length ? 'flex' : 'none';
+      socialLinksWrap.style.display = visibleLinks.length ? 'grid' : 'none';
     }
 
     const setupHint = $('#profile-setup-hint');
@@ -515,7 +506,7 @@
       if (post.created_at) meta.push(`<span><i class="fas fa-clock"></i> ${esc(fmtRelative(post.created_at))}</span>`);
 
       link.innerHTML = [
-        `<div class="kc-profile-post-card__title">${esc(post.title || 'Sem titulo')}</div>`,
+        `<div class="kc-profile-post-card__title">${esc(post.title || 'Sem título')}</div>`,
         `<div class="kc-profile-post-card__meta">${meta.join('')}</div>`,
       ].join('');
       list.appendChild(link);
@@ -583,7 +574,7 @@
       const postId = post.legacy_id || post.id || comment.post_id || '';
       const postUrl = postId ? 'product.html?id=' + encodeURIComponent(postId) : '';
       card.innerHTML = [
-        `<div class="kc-profile-comment-card__body">${esc(comment.body || '')}</div>`,
+        `<div class="kc-profile-comment-card__body">${renderInlineRichText(comment.body || '')}</div>`,
         '<div class="kc-profile-comment-card__meta">',
         `<span><i class="fas fa-clock"></i> ${esc(fmtRelative(comment.created_at))}</span>`,
         postUrl ? `<span>em <a class="kc-profile-comment-card__post-link" href="${esc(postUrl)}">${esc(postTitle)}</a></span>` : '',
@@ -593,6 +584,15 @@
     });
 
     if (loadMore) loadMore.style.display = state.commentHasMore ? 'block' : 'none';
+  }
+
+  function renderInlineRichText(text) {
+    const source = String(text || '').trim();
+    if (!source) return '';
+    if (typeof window.renderCommentMarkdownInline === 'function') {
+      return window.renderCommentMarkdownInline(source);
+    }
+    return linkifyBio(source);
   }
 
   async function fetchPostsByIds(client, postIds) {
@@ -730,7 +730,7 @@
       link.className = 'kc-profile-post-card';
       link.href = 'product.html?id=' + encodeURIComponent(item.uuid || item.id || '');
       link.innerHTML = [
-        `<div class="kc-profile-post-card__title">${esc(item.title || 'Sem titulo')}</div>`,
+        `<div class="kc-profile-post-card__title">${esc(item.title || 'Sem título')}</div>`,
         `<div class="kc-profile-post-card__meta">${meta.join('')}</div>`,
       ].join('');
       list.appendChild(link);
@@ -794,7 +794,7 @@
         activities.push({
           type: 'post',
           date: post.created_at,
-          title: post.title || 'Sem titulo',
+          title: post.title || 'Sem título',
           postId: post.uuid || post.id || '',
           status: post.status || 'published',
         });
@@ -840,8 +840,10 @@
           ].join('');
         }
 
-        const preview = item.body
-          ? `<div class="kc-profile-activity-meta" style="margin-top:4px;font-style:italic;color:var(--kc-text-dark);">"${esc(item.body)}${item.body.length >= 120 ? '...' : ''}"</div>`
+        const rawPreview = String(item.body || '').trim();
+        const bodyPreview = rawPreview.length > 120 ? `${rawPreview.slice(0, 120)}...` : rawPreview;
+        const preview = bodyPreview
+          ? `<div class="kc-profile-activity-meta kc-profile-activity-meta--excerpt">${renderInlineRichText(bodyPreview)}</div>`
           : '';
         return [
           '<div class="kc-profile-activity-item">',
@@ -903,7 +905,7 @@
       if (state.avatarFile) {
         const upload = await window.KCAPI.uploadProfileAvatar(state.avatarFile);
         if (!upload || !upload.ok || !upload.data || !upload.data.url) {
-          setStatus((upload && upload.error && upload.error.message) || 'Nao foi possivel enviar sua foto.', 'error');
+          setStatus((upload && upload.error && upload.error.message) || 'Não foi possível enviar sua foto.', 'error');
           return;
         }
         patch.avatar_url = upload.data.url;
@@ -911,7 +913,7 @@
 
       const result = await window.KCAPI.updateMyProfile(patch);
       if (!result || !result.ok) {
-        setStatus((result && result.error && result.error.message) || 'Nao foi possivel atualizar seu perfil.', 'error');
+        setStatus((result && result.error && result.error.message) || 'Não foi possível atualizar seu perfil.', 'error');
         return;
       }
 
@@ -924,7 +926,7 @@
       setStatus('Perfil atualizado com sucesso.', 'success');
     } catch (error) {
       console.error('[Profile] handleProfileSubmit:', error);
-      setStatus('Nao foi possivel atualizar seu perfil.', 'error');
+      setStatus('Não foi possível atualizar seu perfil.', 'error');
     } finally {
       setProfilePending(false);
     }
@@ -1095,7 +1097,7 @@
 
     const loaded = await loadProfile();
     if (!loaded) {
-      showFatal(state.isPublicView ? 'Perfil nao encontrado.' : 'Nao foi possivel carregar seu perfil.');
+      showFatal(state.isPublicView ? 'Perfil não encontrado.' : 'Não foi possível carregar seu perfil.');
       return;
     }
 

@@ -550,3 +550,5 @@ function formatText(format, postId = null) {
 
   updateCommentPreview(id);
 }
+
+window.renderCommentMarkdownInline = renderCommentMarkdownInline;

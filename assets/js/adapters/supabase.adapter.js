@@ -234,18 +234,24 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function dataUrlToBlob(dataUrl) {
     const s = String(dataUrl || '');
-    const m = s.match(/^data:([^;]+);base64,(.*)$/);
+    const m = s.match(/^data:([^;,]+)(?:;charset=[^;,]+)?(?:;(base64))?,([\s\S]*)$/i);
     if (!m) return null;
 
-    const mime = m[1] || 'application/octet-stream';
-    const b64 = m[2] || '';
+    const mime = String(m[1] || 'application/octet-stream').toLowerCase();
+    const isBase64 = String(m[2] || '').toLowerCase() === 'base64';
+    const payload = m[3] || '';
 
     try {
-      const binStr = atob(b64);
-      const len = binStr.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
-      return new Blob([bytes], { type: mime });
+      if (isBase64) {
+        const binStr = atob(payload);
+        const len = binStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
+        return new Blob([bytes], { type: mime });
+      }
+
+      const decoded = decodeURIComponent(payload);
+      return new Blob([decoded], { type: mime });
     } catch (_) {
       return null;
     }
@@ -257,6 +263,7 @@ const { ENV, normalizePost } = window.KCAPI;
     if (m.includes('png')) return 'png';
     if (m.includes('webp')) return 'webp';
     if (m.includes('gif')) return 'gif';
+    if (m.includes('svg')) return 'svg';
     return 'bin';
   }
 
@@ -429,7 +436,7 @@ const { ENV, normalizePost } = window.KCAPI;
       ? Number(ENV.supabase.maxImageBytes)
       : (5 * 1024 * 1024); // 5MB
 
-    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']);
 
     const opts = (options && typeof options === 'object') ? options : {};
     const userId = (opts.userId != null) ? String(opts.userId) : '';
@@ -550,7 +557,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
     const mime = String(blob.type || '').toLowerCase();
     if (!allowedTypes.has(mime)) {
-      return { ok: false, error: { message: 'Use uma imagem JPG, PNG ou WEBP.' } };
+      return { ok: false, error: { message: 'Use uma imagem JPG, PNG, WEBP ou SVG.' } };
     }
     if (blob.size > maxBytes) {
       return { ok: false, error: { message: 'A imagem do avatar excede o limite permitido.' } };
