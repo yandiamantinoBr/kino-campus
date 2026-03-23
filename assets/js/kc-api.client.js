@@ -151,11 +151,111 @@
   };
 
   const cfg = { ...DEFAULTS };
+  const SESSION_STORE_VERSION = '8.3.4.5';
+  const SESSION_STORE_PREFIX = `kc:${SESSION_STORE_VERSION}`;
 
   // Boot inicial (lê KC_ENV e aplica debug)
   (function bootstrapConfig() {
     cfg.debug = Boolean(ENV.debug);
   })();
+
+  function getSessionStore() {
+    try {
+      return window.sessionStorage || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function buildSessionStoreKey(scope, key) {
+    return `${SESSION_STORE_PREFIX}:${String(scope || 'app').trim()}:${String(key || '').trim()}`;
+  }
+
+  function getSessionCache(scope, key, options) {
+    const storage = getSessionStore();
+    if (!storage) return null;
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+
+    try {
+      const raw = storage.getItem(buildSessionStoreKey(scope, key));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      if (parsed.version !== SESSION_STORE_VERSION) {
+        storage.removeItem(buildSessionStoreKey(scope, key));
+        return null;
+      }
+
+      const maxAge = Number(opts.maxAge) || 0;
+      const age = Date.now() - (Number(parsed.timestamp) || 0);
+      if (maxAge > 0 && (!Number.isFinite(age) || age > maxAge)) {
+        if (opts.removeExpired !== false) storage.removeItem(buildSessionStoreKey(scope, key));
+        return null;
+      }
+
+      return {
+        value: parsed.value,
+        timestamp: Number(parsed.timestamp) || 0,
+        age: Number.isFinite(age) ? age : 0,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function setSessionCache(scope, key, value) {
+    const storage = getSessionStore();
+    if (!storage) return false;
+    try {
+      storage.setItem(buildSessionStoreKey(scope, key), JSON.stringify({
+        version: SESSION_STORE_VERSION,
+        timestamp: Date.now(),
+        value: value == null ? null : value,
+      }));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function removeSessionCache(scope, key) {
+    const storage = getSessionStore();
+    if (!storage) return false;
+    try {
+      storage.removeItem(buildSessionStoreKey(scope, key));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function clearSessionCachePrefix(scope, keyPrefix) {
+    const storage = getSessionStore();
+    if (!storage) return 0;
+    const prefix = buildSessionStoreKey(scope, keyPrefix || '');
+    let removed = 0;
+    try {
+      const toRemove = [];
+      for (let index = 0; index < storage.length; index += 1) {
+        const currentKey = storage.key(index);
+        if (currentKey && currentKey.indexOf(prefix) === 0) toRemove.push(currentKey);
+      }
+      toRemove.forEach((currentKey) => {
+        storage.removeItem(currentKey);
+        removed += 1;
+      });
+    } catch (_) { }
+    return removed;
+  }
+
+  window.KCSessionStore = Object.freeze({
+    version: SESSION_STORE_VERSION,
+    key: buildSessionStoreKey,
+    get: getSessionCache,
+    set: setSessionCache,
+    remove: removeSessionCache,
+    clearPrefix: clearSessionCachePrefix,
+  });
 
   /**
    * MOCK_USERS (extraído do database.json da V6.1.0)
@@ -851,6 +951,28 @@
     return getActiveDriver().getProfileHighlightsCount(profileId);
   }
 
+  async function createHelpRequest(payload = {}) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.createHelpRequest !== 'function') {
+      return { ok: false, error: { message: 'Pedidos de ajuda indisponíveis neste driver.' } };
+    }
+    return driver.createHelpRequest(payload);
+  }
+
+  async function listAdminHelpRequests(filters = {}) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.listAdminHelpRequests !== 'function') return [];
+    return driver.listAdminHelpRequests(filters);
+  }
+
+  async function updateAdminHelpRequest(id, patch = {}) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.updateAdminHelpRequest !== 'function') {
+      return { ok: false, error: { message: 'Triagem de ajuda indisponível neste driver.' } };
+    }
+    return driver.updateAdminHelpRequest(id, patch);
+  }
+
   window.KCAPI = Object.freeze({
     VERSION,
     ENV,
@@ -891,6 +1013,9 @@
     getMySavedPostsCount,
     getProfileHighlights,
     getProfileHighlightsCount,
+    createHelpRequest,
+    listAdminHelpRequests,
+    updateAdminHelpRequest,
 
     // Auth (Supabase)
     getCurrentUser,

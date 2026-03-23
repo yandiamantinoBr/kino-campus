@@ -12,6 +12,8 @@
   const POSTS_LIMIT = 12;
   const DEFAULT_PAGE = 0;
   const NEW_CARD_HIGHLIGHT_MS = 1500;
+  const FEED_CACHE_MAX_AGE_MS = 1000 * 60 * 10;
+  const FEED_REVALIDATE_COOLDOWN_MS = 1000 * 45;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let activePager = null;
 
@@ -26,6 +28,34 @@
   function normalizeModuleKeys(moduleOpt) {
     if (Array.isArray(moduleOpt)) return moduleOpt.filter(Boolean);
     return moduleOpt ? [moduleOpt] : [];
+  }
+
+  function getSessionStore() {
+    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+      ? window.KCSessionStore
+      : null;
+  }
+
+  function buildFeedCacheIdentity(moduleKeys, page, q, tag, limit, pathname) {
+    const modules = Array.isArray(moduleKeys) ? moduleKeys.slice().sort().join(',') : String(moduleKeys || '');
+    return JSON.stringify({
+      pathname: String(pathname || window.location.pathname || '').trim() || '/',
+      modules,
+      page: Number(page) || 0,
+      q: String(q || '').trim().toLowerCase(),
+      tag: String(tag || '').trim().toLowerCase(),
+      limit: Number(limit) || POSTS_LIMIT,
+    });
+  }
+
+  function buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname) {
+    return JSON.stringify({
+      pathname: String(pathname || window.location.pathname || '').trim() || '/',
+      modules: Array.isArray(moduleKeys) ? moduleKeys.slice().sort() : [],
+      q: String(q || '').trim().toLowerCase(),
+      tag: String(tag || '').trim().toLowerCase(),
+      limit: Number(limit) || POSTS_LIMIT,
+    });
   }
 
   function reapplyFiltersAndSearch() {
@@ -182,13 +212,12 @@
   const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
   const postCache = {};
 
-  function getCacheKey(moduleKeys, page) {
-    const moduleStr = Array.isArray(moduleKeys) ? moduleKeys.sort().join(',') : String(moduleKeys || '');
-    return `kc_feed_${moduleStr}_page${page}`;
+  function getCacheKey(moduleKeys, page, q, tag, limit, pathname) {
+    return buildFeedCacheIdentity(moduleKeys, page, q, tag, limit, pathname);
   }
 
-  function getCachedPosts(moduleKeys, page) {
-    const key = getCacheKey(moduleKeys, page);
+  function getCachedPosts(moduleKeys, page, q, tag, limit, pathname) {
+    const key = getCacheKey(moduleKeys, page, q, tag, limit, pathname);
     const cached = postCache[key];
     if (!cached) return null;
     const now = Date.now();
@@ -196,37 +225,58 @@
       delete postCache[key];
       return null;
     }
-    return cached.posts;
+    return {
+      posts: cached.posts,
+      timestamp: cached.timestamp,
+      age: now - cached.timestamp,
+      source: 'memory',
+    };
   }
 
-  function setCachedPosts(moduleKeys, page, posts) {
-    const key = getCacheKey(moduleKeys, page);
+  function setCachedPosts(moduleKeys, page, posts, q, tag, limit, pathname) {
+    const key = getCacheKey(moduleKeys, page, q, tag, limit, pathname);
     postCache[key] = {
       posts: posts,
       timestamp: Date.now(),
     };
   }
 
-  function invalidateCache(moduleKeys) {
-    const moduleStr = Array.isArray(moduleKeys) ? moduleKeys.sort().join(',') : String(moduleKeys || '');
-    const prefix = `kc_feed_${moduleStr}_`;
+  function invalidateCache(moduleKeys, q, tag, limit, pathname) {
+    const targetPath = String(pathname || window.location.pathname || '').trim() || '/';
     Object.keys(postCache).forEach((key) => {
-      if (key.indexOf(prefix) === 0) {
-        delete postCache[key];
-      }
+      try {
+        const parsed = JSON.parse(key);
+        if (
+          parsed &&
+          parsed.pathname === targetPath &&
+          JSON.stringify((parsed.modules || '').split(',').filter(Boolean).sort()) === JSON.stringify((Array.isArray(moduleKeys) ? moduleKeys.slice().sort() : [])) &&
+          String(parsed.q || '') === String(q || '').trim().toLowerCase() &&
+          String(parsed.tag || '') === String(tag || '').trim().toLowerCase() &&
+          Number(parsed.limit || POSTS_LIMIT) === (Number(limit) || POSTS_LIMIT)
+        ) {
+          delete postCache[key];
+        }
+      } catch (_) { }
     });
+
+    const store = getSessionStore();
+    if (store && typeof store.remove === 'function') {
+      store.remove('feeds', buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname));
+    }
   }
 
-  async function fetchPostsByModule(moduleKeys, page, limit, q, tag) {
+  async function fetchPostsByModule(moduleKeys, page, limit, q, tag, options) {
     if (!window.KCAPI || typeof window.KCAPI.getPosts !== 'function') return [];
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const pathname = String(opts.pathname || window.location.pathname || '').trim() || '/';
     const extra = {
       ...((q && String(q).trim()) ? { q: String(q).trim() } : {}),
       ...((tag && String(tag).trim()) ? { tag: String(tag).trim() } : {}),
     };
 
     // Only use cache if no search query or tag filter
-    if (!q && !tag) {
-      const cached = getCachedPosts(moduleKeys, page);
+    if (!q && !tag && opts.forceNetwork !== true) {
+      const cached = getCachedPosts(moduleKeys, page, q, tag, limit, pathname);
       if (cached) return cached;
     }
 
@@ -248,10 +298,15 @@
 
     // Cache successful fetch if no filters
     if (!q && !tag && posts.length > 0) {
-      setCachedPosts(moduleKeys, page, posts);
+      setCachedPosts(moduleKeys, page, posts, q, tag, limit, pathname);
     }
 
-    return posts;
+    return {
+      posts,
+      timestamp: Date.now(),
+      age: 0,
+      source: 'network',
+    };
   }
 
   function createPagerUI(container) {
@@ -315,6 +370,7 @@
       done: false,
       loading: false,
       hydrated: false,
+      renderedPosts: [],
       seenIds: new Set(),
       pendingIds: new Set(),
       pendingRealtimePosts: [],
@@ -322,7 +378,28 @@
       destroyed: false,
       lastError: null,
       observer: null,
+      snapshotAge: 0,
+      lastSnapshotAt: 0,
+      revalidateTimer: null,
     };
+    const pagePath = String(window.location.pathname || '').trim() || '/';
+    const snapshotKey = buildFeedSnapshotKey(moduleKeys, searchQuery, tagFilter, limit, pagePath);
+
+    function persistSnapshot() {
+      const store = getSessionStore();
+      if (!store || typeof store.set !== 'function' || !state.renderedPosts.length) return;
+      store.set('feeds', snapshotKey, {
+        page: state.page,
+        done: !!state.done,
+        posts: state.renderedPosts.slice(0, Math.max(limit * Math.max(state.page, 1), limit * 4)),
+      });
+    }
+
+    function clearSnapshot() {
+      const store = getSessionStore();
+      if (!store || typeof store.remove !== 'function') return;
+      store.remove('feeds', snapshotKey);
+    }
 
     function setStatus(next, message) {
       state.status = next;
@@ -349,6 +426,30 @@
       return (window.KCPostModel && typeof window.KCPostModel.from === 'function')
         ? window.KCPostModel.from(raw, { pageModule })
         : ((window.KCAPI && typeof window.KCAPI.normalizePost === 'function') ? window.KCAPI.normalizePost(raw) : (raw || {}));
+    }
+
+    function appendRenderedPosts(posts, mode) {
+      const batch = Array.isArray(posts) ? posts.filter(Boolean) : [];
+      if (!batch.length || state.destroyed) return;
+      const html = batch.map((post) => window.KCUtils.renderPostCard(post, { pageModule })).join('');
+      if (mode === 'prepend') {
+        container.insertAdjacentHTML('afterbegin', html);
+        state.renderedPosts = batch.concat(state.renderedPosts);
+      } else {
+        container.insertAdjacentHTML('beforeend', html);
+        state.renderedPosts = state.renderedPosts.concat(batch);
+      }
+
+      if (typeof opt.onAfterAppend === 'function') {
+        try { opt.onAfterAppend({ container, posts: batch, state: { ...state } }); } catch (_) { }
+      }
+
+      if (typeof kcInitVoteStates === 'function') {
+        setTimeout(() => { try { kcInitVoteStates(); } catch (_) { } }, 0);
+      }
+
+      persistSnapshot();
+      reapplyFiltersAndSearch();
     }
 
     function clearPendingRealtime() {
@@ -378,8 +479,7 @@
       }
 
       const firstBefore = container.firstElementChild;
-      const html = fresh.map((post) => window.KCUtils.renderPostCard(post, { pageModule })).join('');
-      container.insertAdjacentHTML('afterbegin', html);
+      appendRenderedPosts(fresh, 'prepend');
 
       const inserted = [];
       let node = container.firstElementChild;
@@ -397,7 +497,82 @@
       });
 
       clearPendingRealtime();
-      reapplyFiltersAndSearch();
+    }
+
+    function restoreFromSnapshot() {
+      const store = getSessionStore();
+      if (!store || typeof store.get !== 'function') return false;
+
+      const cached = store.get('feeds', snapshotKey, { maxAge: FEED_CACHE_MAX_AGE_MS });
+      const snapshot = cached && cached.value && typeof cached.value === 'object' ? cached.value : null;
+      const posts = snapshot && Array.isArray(snapshot.posts) ? snapshot.posts.filter(Boolean) : [];
+      if (!posts.length) return false;
+
+      state.page = Math.max(DEFAULT_PAGE, Number(snapshot.page) || 0);
+      state.done = snapshot.done === true;
+      state.hydrated = true;
+      state.snapshotAge = Number(cached.age) || 0;
+      state.lastSnapshotAt = Number(cached.timestamp) || 0;
+      state.renderedPosts = [];
+      state.seenIds.clear();
+      container.innerHTML = '';
+
+      const fresh = [];
+      posts.forEach((post, idx) => {
+        if (hasSeenIdentity(state, post, post, idx)) return;
+        markSeenIdentity(state, post, post, idx);
+        fresh.push(post);
+      });
+
+      appendRenderedPosts(fresh, 'append');
+      if (state.done) {
+        setStatus('done', 'Fim da lista');
+      } else {
+        setStatus('idle', '');
+      }
+      return true;
+    }
+
+    async function revalidateSnapshot() {
+      if (state.destroyed || state.loading) return;
+      const age = state.snapshotAge || (Date.now() - (state.lastSnapshotAt || 0));
+      if (age < FEED_REVALIDATE_COOLDOWN_MS) return;
+
+      try {
+        const response = await fetchPostsByModule(moduleKeys, 1, limit, searchQuery, tagFilter, {
+          forceNetwork: true,
+          pathname: pagePath,
+        });
+        const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
+
+        let userRaw = [];
+        try {
+          if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') userRaw = window.kcUserPosts.list();
+        } catch (_) { }
+        if (Array.isArray(userRaw) && userRaw.length && moduleKeys.length) {
+          const set = new Set(moduleKeys.map(String));
+          userRaw = userRaw.filter((p) => set.has(String(p && p.modulo)));
+        }
+
+        const rawPosts = [
+          ...(Array.isArray(userRaw) ? userRaw.map((p) => ({ ...(p || {}), _kcUserPost: true })) : []),
+          ...dbPosts
+        ];
+        const normalized = rawPosts.map(normalizePost).filter(Boolean);
+        const fresh = [];
+
+        normalized.forEach((post, idx) => {
+          if (hasSeenIdentity(state, post, rawPosts[idx] || post, idx)) return;
+          fresh.push({ post, raw: rawPosts[idx] || post });
+        });
+
+        if (fresh.length) {
+          fresh.forEach((entry) => state.pendingRealtimePosts.push(entry));
+          realtimeUI.update(state.pendingRealtimePosts.length);
+        } else {
+          persistSnapshot();
+        }
+      } catch (_) { }
     }
 
     async function handleRealtimePost(event) {
@@ -455,7 +630,10 @@
       const apiPage = state.page + 1;
 
       try {
-        const dbPosts = await fetchPostsByModule(moduleKeys, apiPage, limit, searchQuery, tagFilter);
+        const response = await fetchPostsByModule(moduleKeys, apiPage, limit, searchQuery, tagFilter, {
+          pathname: pagePath,
+        });
+        const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
 
         let userRaw = [];
         if (apiPage === 1) {
@@ -488,19 +666,7 @@
         }
 
         if (fresh.length) {
-          const html = fresh.map((post) => window.KCUtils.renderPostCard(post, { pageModule })).join('');
-          container.insertAdjacentHTML('beforeend', html);
-
-          if (typeof opt.onAfterAppend === 'function') {
-            try { opt.onAfterAppend({ container, posts: fresh, state: { ...state } }); } catch (_) { }
-          }
-
-          // Inicializa estados hot/cold dos botões de voto após cada lote
-          if (typeof kcInitVoteStates === 'function') {
-            setTimeout(() => { try { kcInitVoteStates(); } catch (_) { } }, 0);
-          }
-
-          reapplyFiltersAndSearch();
+          appendRenderedPosts(fresh, 'append');
         }
 
         const reachedEnd = (!Array.isArray(dbPosts) || dbPosts.length === 0 || dbPosts.length < limit);
@@ -535,6 +701,10 @@
     function destroy() {
       if (state.destroyed) return;
       state.destroyed = true;
+      if (state.revalidateTimer) {
+        clearTimeout(state.revalidateTimer);
+        state.revalidateTimer = null;
+      }
 
       try { pagerUI.loadMoreBtn.removeEventListener('click', onLoadMoreClick); } catch (_) { }
       try { pagerUI.retryBtn.removeEventListener('click', onRetryClick); } catch (_) { }
@@ -586,11 +756,13 @@
           container: document.body,
           onRefresh: () => {
             // Invalidate cache and reload first page
-            invalidateCache(moduleKeys);
+            invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath);
             state.page = DEFAULT_PAGE;
             state.done = false;
+            state.renderedPosts = [];
             state.seenIds.clear();
             container.innerHTML = '';
+            clearSnapshot();
             clearPendingRealtime();
             loadNextPage();
           }
@@ -600,7 +772,12 @@
       }
     }
 
-    loadNextPage();
+    const restored = restoreFromSnapshot();
+    if (restored) {
+      state.revalidateTimer = window.setTimeout(revalidateSnapshot, 40);
+    } else {
+      loadNextPage();
+    }
     startRealtime();
 
     api = {

@@ -12,9 +12,60 @@
     { href: 'compra-venda-feed.html', icon: 'fas fa-shopping-bag', label: 'Compra e Venda' },
     { href: 'caronas-feed.html', icon: 'fas fa-car', label: 'Caronas' }
   ];
+  const SHELL_SNAPSHOT_KEY = 'auth-shell';
+  const SHELL_SNAPSHOT_MAX_AGE = 1000 * 60 * 60 * 12;
 
   function $(selector, root) {
     return (root || document).querySelector(selector);
+  }
+
+  function escapeHtml(value) {
+    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
+      return window.KCUtils.escapeHtml(String(value == null ? '' : value));
+    }
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function getSessionStore() {
+    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+      ? window.KCSessionStore
+      : null;
+  }
+
+  function readShellSnapshot() {
+    const store = getSessionStore();
+    if (!store) return null;
+    const entry = store.get('shell', SHELL_SNAPSHOT_KEY, { maxAge: SHELL_SNAPSHOT_MAX_AGE });
+    return entry && entry.value && typeof entry.value === 'object' ? entry.value : null;
+  }
+
+  function getSnapshotDisplay(snapshot) {
+    const profile = snapshot && snapshot.profile ? snapshot.profile : null;
+    const user = snapshot && snapshot.user ? snapshot.user : null;
+    return String((profile && (profile.display_name || profile.full_name)) || (user && user.email ? String(user.email).split('@')[0] : '') || 'Minha conta').trim();
+  }
+
+  function getSnapshotAvatar() {
+    return '';
+  }
+
+  function buildHeaderAvatarMarkup(avatarUrl, display) {
+    if (avatarUrl) {
+      return `<img class="kc-header-user__avatar" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(display)}" loading="lazy" decoding="async" />`;
+    }
+    return '<span class="kc-header-user__avatar kc-header-user__avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>';
+  }
+
+  function buildMobileAvatarMarkup(avatarUrl, display) {
+    if (avatarUrl) {
+      return `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(display)}" class="kc-mobile-menu-user-avatar" loading="lazy" />`;
+    }
+    return '<span class="kc-mobile-menu-user-avatar kc-mobile-menu-user-avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>';
   }
 
   function buildMobileNav(activeKey) {
@@ -141,6 +192,32 @@
     if (header) header.classList.add('kc-header--shell');
   }
 
+  function hydrateAuthShellFromSnapshot() {
+    const snapshot = readShellSnapshot();
+    if (!snapshot || !snapshot.user || !snapshot.user.id) return;
+
+    const display = getSnapshotDisplay(snapshot);
+    const avatarUrl = getSnapshotAvatar(snapshot);
+    const verified = snapshot.profile && snapshot.profile.verified === true;
+
+    document.querySelectorAll('.kc-user-actions .btn-login:not([data-kc-shell-hydrated="1"])').forEach(function (button) {
+      button.classList.add('is-auth');
+      button.setAttribute('data-kc-shell-hydrated', '1');
+      button.setAttribute('data-kc-login', 'true');
+      button.setAttribute('href', '#login');
+      button.innerHTML = `<span class="kc-header-user">${buildHeaderAvatarMarkup(avatarUrl, display)}<span class="kc-header-user__name">${escapeHtml(display)}</span>${verified ? '<i class="fas fa-check-circle kc-header-user__verified" aria-label="Verificado"></i>' : ''}<i class="fas fa-chevron-down kc-header-user__chevron" aria-hidden="true"></i></span>`;
+    });
+
+    const mobileUserLink = $('#mobileMenuUserLink');
+    const mobileUserName = $('#mobileMenuUserName');
+    const avatarWrap = mobileUserLink ? mobileUserLink.querySelector('.kc-mobile-menu-user-avatar-wrap') : null;
+    if (avatarWrap) avatarWrap.innerHTML = buildMobileAvatarMarkup(avatarUrl, display);
+    if (mobileUserName) {
+      const handle = snapshot.user && snapshot.user.email ? `@${String(snapshot.user.email).split('@')[0]}` : '@minha-conta';
+      mobileUserName.innerHTML = `${escapeHtml(display)}<br><small style="color:var(--kc-text-dark-secondary);font-size:.8em;">${escapeHtml(handle)}</small>`;
+    }
+  }
+
   function forceHeaderVisibility() {
     ['.kc-user-actions', '.kc-header-user'].forEach((selector) => {
       document.querySelectorAll(selector).forEach((element) => {
@@ -164,6 +241,7 @@
     document.documentElement.dataset.kcPublicShellReady = '1';
     injectShellIfNeeded();
     bindMobileMenu();
+    hydrateAuthShellFromSnapshot();
     forceHeaderVisibility();
   }
 

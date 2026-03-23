@@ -3,6 +3,8 @@
 
   const VERSION = '8.3.4.4';
   const AUTH_INTENT_KEY = 'kc:auth:intents';
+  const SHELL_SNAPSHOT_KEY = 'auth-shell';
+  const SHELL_SNAPSHOT_MAX_AGE = 1000 * 60 * 60 * 12;
   const shared = window.KCAccountProfileUtils || {};
   const modalState = { panel: 'login', nextPath: '', trapHandler: null };
   const renderState = { inited: false, initScheduled: false, lastUiSignature: '' };
@@ -38,10 +40,104 @@
     return window.KCAPI && typeof window.KCAPI.getCurrentProfile === 'function' ? window.KCAPI.getCurrentProfile() : null;
   }
 
-  function buildUserUiSignature(user, profile) {
+  function getSessionStore() {
+    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+      ? window.KCSessionStore
+      : null;
+  }
+
+  function readShellSnapshot() {
+    const store = getSessionStore();
+    if (!store) return null;
+    const entry = store.get('shell', SHELL_SNAPSHOT_KEY, { maxAge: SHELL_SNAPSHOT_MAX_AGE });
+    if (!entry || !entry.value || typeof entry.value !== 'object') return null;
+    return entry.value;
+  }
+
+  function writeShellSnapshot(user, profile) {
+    const store = getSessionStore();
+    if (!store) return;
+    if (!user || !user.id) {
+      store.remove('shell', SHELL_SNAPSHOT_KEY);
+      return;
+    }
+    store.set('shell', SHELL_SNAPSHOT_KEY, {
+      user: {
+        id: String(user.id || ''),
+        email: String(user.email || ''),
+      },
+      profile: profile ? {
+        id: String(profile.id || user.id || ''),
+        display_name: String(profile.display_name || profile.full_name || '').trim(),
+        full_name: String(profile.full_name || '').trim(),
+        avatar_url: String(profile.avatar_url || '').trim(),
+        verified: profile.verified === true,
+        is_admin: profile.is_admin === true,
+        onboarding_completed_at: profile.onboarding_completed_at || null,
+      } : null,
+    });
+  }
+
+  function resolveShellState() {
+    const user = getCurrentUser();
+    const profile = getCurrentProfile();
+    const snapshot = readShellSnapshot();
+
+    if (user && user.id) {
+      if (profile) return { user, profile, fromSnapshot: false };
+      if (snapshot && snapshot.user && String(snapshot.user.id || '') === String(user.id || '')) {
+        return { user, profile: snapshot.profile || null, fromSnapshot: true };
+      }
+      return { user, profile: null, fromSnapshot: false };
+    }
+
+    if (snapshot && snapshot.user && snapshot.user.id) {
+      return {
+        user: snapshot.user,
+        profile: snapshot.profile || null,
+        fromSnapshot: true,
+      };
+    }
+
+    return { user: null, profile: null, fromSnapshot: false };
+  }
+
+  function getUserDisplay(user, profile) {
+    return String((profile && (profile.display_name || profile.full_name)) || (user && user.email ? String(user.email).split('@')[0] : '') || 'Minha conta').trim();
+  }
+
+  function getUserAvatarUrl(profile, options) {
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    if (opts.fromSnapshot) return '';
+    return String((profile && profile.avatar_url) || '').trim();
+  }
+
+  function buildHeaderAvatarMarkup(avatarUrl, display) {
+    if (avatarUrl) {
+      return `<img class="kc-header-user__avatar" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(display)}" loading="lazy" decoding="async" />`;
+    }
+    return '<span class="kc-header-user__avatar kc-header-user__avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>';
+  }
+
+  function buildDropdownAvatarMarkup(avatarUrl, display) {
+    if (avatarUrl) {
+      return `<img class="kc-profile-dropdown__avatar" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(display)}" loading="lazy" />`;
+    }
+    return '<span class="kc-profile-dropdown__avatar kc-profile-dropdown__avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>';
+  }
+
+  function buildMobileAvatarMarkup(avatarUrl, display) {
+    if (avatarUrl) {
+      return `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(display)}" class="kc-mobile-menu-user-avatar" loading="lazy" />`;
+    }
+    return '<span class="kc-mobile-menu-user-avatar kc-mobile-menu-user-avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>';
+  }
+
+  function buildUserUiSignature(user, profile, options) {
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
     if (!user || !user.id) return 'guest';
     const display = String((profile && (profile.display_name || profile.full_name)) || (user.email ? String(user.email).split('@')[0] : '') || '').trim();
-    const avatar = String((profile && profile.avatar_url) || '').trim();
+    const avatar = getUserAvatarUrl(profile, { fromSnapshot: opts.fromSnapshot });
     return JSON.stringify({
       id: String(user.id || ''),
       email: String(user.email || ''),
@@ -50,6 +146,7 @@
       verified: !!(profile && profile.verified),
       onboarding: !!isOnboardingComplete(profile),
       admin: !!(profile && profile.is_admin),
+      source: opts.fromSnapshot ? 'snapshot' : 'live',
     });
   }
 
@@ -186,7 +283,11 @@
       release();
     }
 
-    return Object.freeze({ lock, unlock });
+    function isLocked() {
+      return state.keys.size > 0 || document.documentElement.classList.contains('kc-scroll-locked');
+    }
+
+    return Object.freeze({ lock, unlock, isLocked });
   }());
 
   window.KCOverlayLock = overlayLock;
@@ -297,16 +398,17 @@
     });
   }
 
-  function buildDropdownContent(user, profile) {
-    const display = String((profile && (profile.display_name || profile.full_name)) || (user && user.email ? String(user.email).split('@')[0] : 'Minha conta')).trim();
-    const avatar = String((profile && profile.avatar_url) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(String((user && (user.email || user.id)) || 'kc').toLowerCase())}`).trim();
+  function buildDropdownContent(user, profile, options) {
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const display = getUserDisplay(user, profile);
+    const avatar = getUserAvatarUrl(profile, { fromSnapshot: opts.fromSnapshot });
     const verified = profile && profile.verified === true;
     const isAdmin = profile && profile.is_admin === true;
     const onboardingPending = user && !isOnboardingComplete(profile);
     const handle = user && user.email ? `@${String(user.email).split('@')[0]}` : '';
     return [
       '<div class="kc-profile-dropdown__header">',
-      `<img class="kc-profile-dropdown__avatar" src="${escapeHtml(avatar)}" alt="${escapeHtml(display)}" loading="lazy" />`,
+      buildDropdownAvatarMarkup(avatar, display),
       '<div class="kc-profile-dropdown__info">',
       `<span class="kc-profile-dropdown__name">${escapeHtml(display)}${verified ? ' <i class="fas fa-check-circle" style="color:#53d681;font-size:.8em;"></i>' : ''}</span>`,
       handle ? `<span class="kc-profile-dropdown__handle">${escapeHtml(handle)}</span>` : '',
@@ -314,7 +416,7 @@
       `<a href="${escapeHtml(buildProfileHref(user && user.id))}" class="kc-profile-dropdown__item"><i class="fas fa-id-badge"></i><span>Meu perfil</span></a>`,
       `<a href="${escapeHtml(buildSettingsHref(buildCurrentPath()))}" class="kc-profile-dropdown__item"><i class="fas fa-sliders"></i><span>Configurações</span></a>`,
       onboardingPending ? `<a href="${escapeHtml(buildAccountSetupHref(buildCurrentPath()))}" class="kc-profile-dropdown__item"><i class="fas fa-list-check"></i><span>Completar cadastro</span></a>` : '',
-      isAdmin ? `<a href="${escapeHtml(buildAdminHref())}" class="kc-profile-dropdown__item"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i><span>Administracao</span></a>` : '',
+      isAdmin ? `<a href="${escapeHtml(buildAdminHref())}" class="kc-profile-dropdown__item"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i><span>Administração</span></a>` : '',
       `<a href="${escapeHtml(buildHelpHref())}" class="kc-profile-dropdown__item"><i class="fas fa-circle-question"></i><span>Central de ajuda</span></a>`,
       '<hr class="kc-profile-dropdown__divider" /><button type="button" class="kc-profile-dropdown__item kc-profile-dropdown__logout" id="kcDropdownLogoutBtn"><i class="fas fa-right-from-bracket"></i><span>Sair da conta</span></button></nav>'
     ].join('');
@@ -323,10 +425,11 @@
   function openProfileDropdown(button) {
     ensureProfileDropdown();
     const dropdown = $('#kcProfileDropdown');
-    const user = getCurrentUser();
-    const profile = getCurrentProfile();
+    const shellState = resolveShellState();
+    const user = shellState.user;
+    const profile = shellState.profile;
     if (!dropdown || !user) return;
-    dropdown.innerHTML = buildDropdownContent(user, profile);
+    dropdown.innerHTML = buildDropdownContent(user, profile, { fromSnapshot: shellState.fromSnapshot });
     const rect = button.getBoundingClientRect();
     const width = 244;
     let left = rect.right - width;
@@ -415,7 +518,8 @@
     drawer.dataset.kcAccountStructureReady = '1';
   }
 
-  function refreshMobileMenuUser(user, profile) {
+  function refreshMobileMenuUser(user, profile, options) {
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
     const mobileUserLink = $('#mobileMenuUserLink');
     const mobileUserName = $('#mobileMenuUserName');
     const profileLink = $('#mobileMenuProfileLink');
@@ -430,10 +534,10 @@
       helpLink.href = buildHelpHref();
     }
     if (user && user.email) {
-      const display = String((profile && (profile.display_name || profile.full_name)) || String(user.email).split('@')[0] || 'Minha conta').trim();
-      const avatar = String((profile && profile.avatar_url) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(String(user.email || user.id).toLowerCase())}`).trim();
+      const display = getUserDisplay(user, profile);
+      const avatar = getUserAvatarUrl(profile, { fromSnapshot: opts.fromSnapshot });
       const avatarWrap = mobileUserLink.querySelector('.kc-mobile-menu-user-avatar-wrap');
-      if (avatarWrap) avatarWrap.innerHTML = `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(display)}" class="kc-mobile-menu-user-avatar" loading="lazy" />`;
+      if (avatarWrap) avatarWrap.innerHTML = buildMobileAvatarMarkup(avatar, display);
       if (mobileUserName) mobileUserName.innerHTML = `${escapeHtml(display)}<br><small style="color:var(--kc-text-dark-secondary);font-size:.8em;">@${escapeHtml(String(user.email).split('@')[0])}</small>`;
       mobileUserLink.href = '#login';
       if (profileLink) { profileLink.style.display = 'flex'; profileLink.href = buildProfileHref(user.id); }
@@ -443,7 +547,7 @@
       if (logoutButton) logoutButton.style.display = 'flex';
     } else {
       const avatarWrap = mobileUserLink.querySelector('.kc-mobile-menu-user-avatar-wrap');
-      if (avatarWrap) avatarWrap.innerHTML = '<i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>';
+      if (avatarWrap) avatarWrap.innerHTML = buildMobileAvatarMarkup('', 'Conta KinoCampus');
       if (mobileUserName) mobileUserName.textContent = 'Login / Cadastro';
       if (profileLink) profileLink.style.display = 'none';
       if (settingsLink) { settingsLink.style.display = 'flex'; settingsLink.href = buildSettingsHref(buildCurrentPath()); }
@@ -589,6 +693,7 @@
   async function doLogout() {
     setStatus('Saindo...', 'info');
     try {
+      writeShellSnapshot(null, null);
       await window.KCAPI.logout();
       closeProfileDropdown();
       if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
@@ -599,15 +704,16 @@
     }
   }
 
-  function refreshHeaderLabel(user, profile) {
+  function refreshHeaderLabel(user, profile, options) {
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
     const button = $('a.btn-login') || $('a[href="#login"]');
     if (!button) return;
-    refreshMobileMenuUser(user, profile);
+    refreshMobileMenuUser(user, profile, opts);
     if (user && user.email) {
-      const display = String((profile && (profile.display_name || profile.full_name)) || String(user.email).split('@')[0] || 'Minha conta').trim();
-      const avatar = String((profile && profile.avatar_url) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(String(user.email || user.id).toLowerCase())}`).trim();
+      const display = getUserDisplay(user, profile);
+      const avatar = getUserAvatarUrl(profile, { fromSnapshot: opts.fromSnapshot });
       const verified = profile && profile.verified === true;
-      button.innerHTML = `<span class="kc-header-user"><img class="kc-header-user__avatar" src="${escapeHtml(avatar)}" alt="${escapeHtml(display)}" loading="lazy" decoding="async" /><span class="kc-header-user__name">${escapeHtml(display)}</span>${verified ? '<i class="fas fa-check-circle kc-header-user__verified" aria-label="Verificado"></i>' : ''}<i class="fas fa-chevron-down kc-header-user__chevron" aria-hidden="true"></i></span>`;
+      button.innerHTML = `<span class="kc-header-user">${buildHeaderAvatarMarkup(avatar, display)}<span class="kc-header-user__name">${escapeHtml(display)}</span>${verified ? '<i class="fas fa-check-circle kc-header-user__verified" aria-label="Verificado"></i>' : ''}<i class="fas fa-chevron-down kc-header-user__chevron" aria-hidden="true"></i></span>`;
       button.classList.add('is-auth');
       button.setAttribute('data-kc-login', 'true');
       button.setAttribute('href', '#login');
@@ -644,14 +750,16 @@
   }
 
   function refreshUIFromUser(force) {
-    const user = getCurrentUser();
-    const profile = getCurrentProfile();
+    const shellState = resolveShellState();
+    const user = shellState.user;
+    const profile = shellState.profile;
     ensureMobileMenuStructure();
-    const signature = buildUserUiSignature(user, profile);
+    const signature = buildUserUiSignature(user, profile, { fromSnapshot: shellState.fromSnapshot });
     const shouldForce = force === true;
     if (!shouldForce && renderState.lastUiSignature === signature) return;
     renderState.lastUiSignature = signature;
-    refreshHeaderLabel(user, profile);
+    writeShellSnapshot(user, profile);
+    refreshHeaderLabel(user, profile, { fromSnapshot: shellState.fromSnapshot });
     setWriteGuards(user);
     const profileLink = $('#kcAuthProfileLink');
     const settingsLink = $('#kcAuthSettingsLink');

@@ -199,6 +199,107 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     });
   }
 
+  const HELP_REQUESTS_STORAGE_KEY = 'kc_help_requests';
+
+  function readHelpRequests() {
+    try {
+      const raw = localStorage.getItem(HELP_REQUESTS_STORAGE_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function writeHelpRequests(list) {
+    try {
+      localStorage.setItem(HELP_REQUESTS_STORAGE_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function normalizeHelpPayload(payload) {
+    const shared = window.KCHelpUtils || {};
+    if (shared && typeof shared.normalizeHelpRequestInput === 'function') {
+      return shared.normalizeHelpRequestInput(payload, {});
+    }
+    const input = (payload && typeof payload === 'object') ? payload : {};
+    return {
+      user_id: input.user_id || null,
+      type: String(input.type || 'question').trim(),
+      topic: String(input.topic || 'platform_use').trim(),
+      subtopic: input.subtopic ? String(input.subtopic).trim() : null,
+      subject: String(input.subject || '').trim().slice(0, 140),
+      message: String(input.message || '').trim().slice(0, 4000),
+      priority: String(input.priority || 'normal').trim(),
+      status: String(input.status || 'new').trim(),
+      page_path: input.page_path ? String(input.page_path).trim().slice(0, 255) : null,
+      contact_email: String(input.contact_email || '').trim().toLowerCase(),
+      allow_contact: input.allow_contact !== false,
+      metadata: input.metadata && typeof input.metadata === 'object' ? input.metadata : {},
+    };
+  }
+
+  async function localCreateHelpRequest(payload) {
+    const normalized = normalizeHelpPayload(payload);
+    if (!normalized.subject || !normalized.message || !normalized.contact_email) {
+      return { ok: false, error: { message: 'Preencha assunto, descrição e e-mail de retorno.' } };
+    }
+    const list = readHelpRequests();
+    const now = new Date().toISOString();
+    const row = {
+      id: `help_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      ...normalized,
+      created_at: now,
+      updated_at: now,
+    };
+    list.unshift(row);
+    if (!writeHelpRequests(list)) {
+      return { ok: false, error: { message: 'Não foi possível salvar o pedido de ajuda localmente.' } };
+    }
+    return { ok: true, data: row };
+  }
+
+  async function localListAdminHelpRequests(filters = {}) {
+    const current = readHelpRequests();
+    const query = String(filters.query || '').trim().toLowerCase();
+    return current.filter((item) => {
+      if (filters.status && filters.status !== 'all' && String(item.status || '') !== String(filters.status)) return false;
+      if (filters.type && filters.type !== 'all' && String(item.type || '') !== String(filters.type)) return false;
+      if (filters.priority && filters.priority !== 'all' && String(item.priority || '') !== String(filters.priority)) return false;
+      if (!query) return true;
+      const haystack = [
+        item.subject,
+        item.message,
+        item.contact_email,
+        item.page_path,
+        item.type,
+        item.topic,
+        item.subtopic,
+      ].join(' ').toLowerCase();
+      return haystack.indexOf(query) >= 0;
+    });
+  }
+
+  async function localUpdateAdminHelpRequest(id, patch) {
+    const targetId = String(id || '').trim();
+    if (!targetId) return { ok: false, error: { message: 'Pedido inválido.' } };
+    const list = readHelpRequests();
+    const index = list.findIndex((item) => String(item && item.id || '') === targetId);
+    if (index < 0) return { ok: false, error: { message: 'Pedido não encontrado.' } };
+    list[index] = {
+      ...list[index],
+      ...(patch && typeof patch === 'object' ? patch : {}),
+      updated_at: new Date().toISOString(),
+    };
+    if (!writeHelpRequests(list)) {
+      return { ok: false, error: { message: 'Não foi possível atualizar o pedido localmente.' } };
+    }
+    return { ok: true, data: list[index] };
+  }
+
   // ---------- Driver Pattern (V8.1.3.1) ----------
   // Objetivo: permitir trocar a fonte de dados (local <-> supabase) alterando apenas KC_ENV.driver.
   const driverLocal = Object.freeze({
@@ -216,6 +317,9 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     likeComment: async function () { return null; },
     votePost: async function () { return null; },
     getMyVote: async function () { return null; },
+    createHelpRequest: localCreateHelpRequest,
+    listAdminHelpRequests: localListAdminHelpRequests,
+    updateAdminHelpRequest: localUpdateAdminHelpRequest,
   });
 
 

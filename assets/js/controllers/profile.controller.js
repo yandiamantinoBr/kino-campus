@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   const $ = (selector) => document.querySelector(selector);
@@ -116,10 +116,10 @@
     if (state.avatarPreviewUrl) return state.avatarPreviewUrl;
     const avatarUrl = state.profile && state.profile.avatar_url ? String(state.profile.avatar_url) : '';
     if (avatarUrl) return avatarUrl;
-    const seedBase = (state.profile && (state.profile.display_name || state.profile.full_name || state.profile.id))
-      || (state.user && (state.user.email || state.user.id))
-      || 'kinocampus';
-    return 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(String(seedBase).toLowerCase());
+    if (shared && typeof shared.buildDefaultAvatarDataUrl === 'function') {
+      return shared.buildDefaultAvatarDataUrl(safeName(state.profile || {}, state.user || null));
+    }
+    return '';
   }
 
   function fmtDate(iso, options) {
@@ -266,7 +266,7 @@
     }
     if (editToggle) {
       editToggle.innerHTML = state.isEditing
-        ? '<i class="fas fa-times"></i> Fechar edicao'
+        ? '<i class="fas fa-times"></i> Fechar edição'
         : '<i class="fas fa-pen"></i> Editar perfil';
     }
 
@@ -385,7 +385,7 @@
           : `<i class="${esc(entry.iconClass || 'fas fa-link')}" aria-hidden="true"></i>`;
         return `<a class="kc-profile-social-link" href="${esc(entry.href)}" target="_blank" rel="noopener noreferrer">${iconHtml}<span>${esc(label)}</span></a>`;
       }).join('');
-      socialLinksWrap.style.display = visibleLinks.length ? 'grid' : 'none';
+      socialLinksWrap.style.display = visibleLinks.length ? 'flex' : 'none';
     }
 
     const setupHint = $('#profile-setup-hint');
@@ -395,7 +395,7 @@
         setupHint.innerHTML = `Complete seus links e preferências de contato em <a href="${esc(buildAccountSetupHref())}">completar cadastro</a>.`;
         setupHint.style.display = 'block';
       } else if (ownerView) {
-        setupHint.innerHTML = `Você pode ajustar seus links públicos e o CTA dos anúncios em <a href="${esc(buildSettingsHref())}">configurações</a>.`;
+        setupHint.innerHTML = `Você pode ajustar seus links públicos e o contato principal dos anúncios em <a href="${esc(buildSettingsHref())}">configurações</a>.`;
         setupHint.style.display = 'block';
       } else {
         setupHint.textContent = '';
@@ -893,7 +893,7 @@
     const bio = String((bioInput && bioInput.value) || '').trim().slice(0, BIO_LIMIT);
 
     if (!displayName) {
-      setStatus('Informe um nome valido para o perfil.', 'warn');
+      setStatus('Informe um nome válido para o perfil.', 'warn');
       return;
     }
 
@@ -1087,7 +1087,7 @@
       }
     } else {
       if (!state.user) {
-        showFatal('Voce precisa estar logado para ver seu perfil.');
+        showFatal('Você precisa estar logado para ver seu perfil.');
         setTimeout(() => { window.location.href = 'index.html#login'; }, 900);
         return;
       }
@@ -1120,3 +1120,4 @@
   window.addEventListener('beforeunload', releaseAvatarPreview);
   document.addEventListener('DOMContentLoaded', init);
 })();
+

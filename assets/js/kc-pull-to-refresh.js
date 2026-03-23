@@ -17,6 +17,9 @@
   const MAX_PULL  = 220; // max pull distance for visual feedback
 
   function isOverlayGestureBlocked(target) {
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.isLocked === 'function' && window.KCOverlayLock.isLocked()) {
+      return true;
+    }
     if (document.documentElement.classList.contains('kc-scroll-locked')) return true;
     if (document.body.classList.contains('kc-scroll-locked')) return true;
     if (document.body.classList.contains('kc-modal-open')) return true;
@@ -28,13 +31,21 @@
       '.kc-mobile-menu,' +
       '.kc-mobile-menu-drawer,' +
       '.kc-mobile-menu-content,' +
+      '.kc-mobile-menu-header,' +
       '.kc-auth-overlay,' +
       '.kc-auth-modal,' +
       '.kc-auth-card,' +
+      '.kc-auth-card__body,' +
       '.kc-create-modal,' +
+      '.kc-create-modal__body,' +
       '.kc-search-modal,' +
+      '.kc-search-modal-card,' +
       '.kc-modal-overlay.active,' +
+      '.kc-modal-overlay,' +
       '.kc-modal-backdrop,' +
+      '.kc-modal-card,' +
+      '.kc-admin-chart-modal,' +
+      '.kc-admin-chart-modal__dialog,' +
       '[role="dialog"]'
     );
   }
@@ -77,6 +88,7 @@
   function handleTouchStart(e) {
     if (isOverlayGestureBlocked(e.target)) {
       pulling = false;
+      hideIndicator();
       return;
     }
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -106,6 +118,13 @@
 
   function handleTouchEnd(e) {
     if (!pulling) return;
+    if (isOverlayGestureBlocked(e.target)) {
+      pulling = false;
+      hideIndicator();
+      startY = 0;
+      currentY = 0;
+      return;
+    }
     pulling = false;
     const diff = currentY - startY;
 

@@ -15,6 +15,8 @@
   ];
 
   const MODAL_ID = 'kcLostFoundSectionOverlay';
+  const SECTION_CACHE_KEY = 'achados-perdidos:index';
+  const SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10;
   const state = {
     statuses: new Set(),
     types: new Set(),
@@ -43,6 +45,30 @@
 
   function cloneSet(set) { return new Set(Array.from(set || [])); }
   function isMobile() { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }
+  function getSessionStore() {
+    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+      ? window.KCSessionStore
+      : null;
+  }
+
+  function restoreCachedPosts() {
+    const store = getSessionStore();
+    if (!store) return false;
+    const cached = store.get('feed-index', SECTION_CACHE_KEY, { maxAge: SECTION_CACHE_MAX_AGE_MS });
+    const posts = cached && cached.value && Array.isArray(cached.value.posts) ? cached.value.posts : [];
+    if (!posts.length) return false;
+    upsert(posts);
+    queue();
+    return true;
+  }
+
+  function persistCachedPosts(posts) {
+    const store = getSessionStore();
+    if (!store || typeof store.set !== 'function') return;
+    store.set('feed-index', SECTION_CACHE_KEY, {
+      posts: Array.isArray(posts) ? posts.slice(0, 600) : [],
+    });
+  }
 
   function normStatus(value) {
     const normalized = norm(value);
@@ -742,6 +768,7 @@
     } catch (_) { }
 
     upsert(collected);
+    persistCachedPosts(collected);
     queue();
   }
 
@@ -765,6 +792,7 @@
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
       window.kcFilters.setExtraPredicate(function (card) { return matchCard(card); });
     }
+    restoreCachedPosts();
     initFeed();
     fetchAll();
     queue();

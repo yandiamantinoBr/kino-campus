@@ -476,8 +476,8 @@
         iconClass: config.iconClass,
         emoji: config.emoji,
         href: value,
-        display: 'Currículo Lattes',
-        handle: extractHandleFromUrl(value) || 'Ver currículo'
+        display: 'Lattes',
+        handle: extractHandleFromUrl(value) || 'Lattes'
       };
     }
 
@@ -486,8 +486,8 @@
     let display = config.label;
 
     if (key === 'instagram') display = handle ? `@${handle}` : 'Instagram';
-    else if (key === 'facebook') display = handle ? handle : 'Facebook';
-    else if (key === 'linkedin') display = handle ? `linkedin.com/in/${handle}` : 'LinkedIn';
+    else if (key === 'facebook') display = handle ? `@${handle}` : 'Facebook';
+    else if (key === 'linkedin') display = handle ? `@${handle}` : 'LinkedIn';
     else if (key === 'x') display = handle ? `@${handle}` : 'X';
     else if (key === 'tiktok') display = handle ? (handle.charAt(0) === '@' ? handle : `@${handle}`) : 'TikTok';
 
@@ -587,6 +587,24 @@
       `<rect width="160" height="160" rx="48" fill="${chosenColor}"/>`,
       '<circle cx="80" cy="80" r="56" fill="rgba(255,255,255,0.12)"/>',
       `<text x="80" y="98" text-anchor="middle" font-size="72" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif" fill="${textColor}">${chosenEmoji}</text>`,
+      '</svg>'
+    ].join('');
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  }
+
+  function buildDefaultAvatarDataUrl(label) {
+    const safeLabel = trimText(label, 48) || 'Avatar KinoCampus';
+    const svg = [
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="' + safeLabel.replace(/"/g, '&quot;') + '">',
+      '  <defs>',
+      '    <linearGradient id="kcAvatarBg" x1="0%" y1="0%" x2="100%" y2="100%">',
+      '      <stop offset="0%" stop-color="#FF8A1F" />',
+      '      <stop offset="100%" stop-color="#FF6B00" />',
+      '    </linearGradient>',
+      '  </defs>',
+      '  <rect width="160" height="160" rx="44" fill="url(#kcAvatarBg)" />',
+      '  <circle cx="80" cy="58" r="28" fill="#FFF3E8" opacity="0.98" />',
+      '  <path d="M40 136c4-27 20-42 40-42s36 15 40 42" fill="#FFF3E8" opacity="0.98" />',
       '</svg>'
     ].join('');
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
@@ -692,7 +710,7 @@
 
     return Object.freeze({
       type: viewProfileHref ? 'view_profile' : 'unavailable',
-      label: viewProfileHref ? 'Ver perfil' : 'Contato indisponivel',
+      label: viewProfileHref ? 'Ver perfil' : 'Contato indisponível',
       href: viewProfileHref || ''
     });
   }
@@ -726,6 +744,7 @@
     buildOnboardingProfilePatch,
     getSuggestedAvatarUrls,
     buildEmojiAvatarDataUrl,
+    buildDefaultAvatarDataUrl,
     normalizeNextPath,
     buildContactMessage,
     buildContactAction

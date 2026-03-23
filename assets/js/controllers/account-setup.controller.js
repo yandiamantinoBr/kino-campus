@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   const shared = window.KCAccountProfileUtils || {};
@@ -9,6 +9,7 @@
     profile: null,
     currentStep: 0,
     submitting: false,
+    avatarSaving: false,
     avatarFile: null,
     avatarBatch: 0,
     selectedAvatarUrl: '',
@@ -85,7 +86,7 @@
   }
 
   function getEmojiOptions() {
-    return Array.isArray(shared.AVATAR_EMOJI_OPTIONS) ? shared.AVATAR_EMOJI_OPTIONS.slice() : ['🎓', '😄', '✨', '🌱'];
+    return Array.isArray(shared.AVATAR_EMOJI_OPTIONS) ? shared.AVATAR_EMOJI_OPTIONS.slice() : ['ðŸŽ“', 'ðŸ˜„', 'âœ¨', 'ðŸŒ±'];
   }
 
   function getEmojiColors() {
@@ -120,9 +121,14 @@
 
     const suggestions = getSuggestionUrls();
     preview.removeAttribute('data-object-url');
+    if (shared && typeof shared.buildDefaultAvatarDataUrl === 'function') {
+      preview.src = shared.buildDefaultAvatarDataUrl(readProfileName(state.profile, state.user) || 'Avatar KinoCampus');
+      return;
+    }
+
     preview.src = suggestions[0] || (shared.buildEmojiAvatarDataUrl
       ? shared.buildEmojiAvatarDataUrl(getEmojiOptions()[0], getEmojiColors()[0])
-      : 'https://api.dicebear.com/7.x/avataaars/svg?seed=kinocampus');
+      : '');
   }
 
   function releaseAvatarPreview() {
@@ -369,7 +375,7 @@
 
     preview.textContent = labels[primaryMethod]
       ? `Contato principal pronto: ${labelMap[primaryMethod] || primaryMethod} (${labels[primaryMethod]})`
-      : 'Preencha o valor do contato principal para ativar o CTA dos anúncios.';
+      : 'Preencha o valor do contato principal para ativar o contato nos anúncios.';
   }
 
   function setSubmitting(active) {
@@ -394,11 +400,11 @@
       const displayName = String($('#accountSetupDisplayName')?.value || '').trim();
       const affiliation = String($('#accountSetupAffiliation')?.value || '').trim();
       if (!displayName) {
-        setStatus('Informe como voce quer aparecer no KinoCampus.', 'warn');
+        setStatus('Informe como você quer aparecer no KinoCampus.', 'warn');
         return false;
       }
       if (!affiliation) {
-        setStatus('Escolha seu vinculo principal com a UFG.', 'warn');
+        setStatus('Escolha seu vínculo principal com a UFG.', 'warn');
         return false;
       }
     }
@@ -451,6 +457,47 @@
     };
   }
 
+  async function resolveAvatarPatch() {
+    if (state.avatarFile) {
+      const upload = await window.KCAPI.uploadProfileAvatar(state.avatarFile);
+      if (!upload || !upload.ok || !upload.data || !upload.data.url) {
+        return { ok: false, error: { message: (upload && upload.error && upload.error.message) || 'Não foi possível enviar o avatar.' } };
+      }
+      return {
+        ok: true,
+        patch: {
+          avatar_url: upload.data.url,
+          avatar_path: upload.data.path || null,
+        }
+      };
+    }
+
+    const avatarSource = String(state.selectedAvatarUrl || '').trim();
+    if (!avatarSource) return { ok: true, patch: {} };
+
+    if (/^data:/i.test(avatarSource)) {
+      const upload = await window.KCAPI.uploadProfileAvatar(avatarSource);
+      if (!upload || !upload.ok || !upload.data || !upload.data.url) {
+        return { ok: false, error: { message: (upload && upload.error && upload.error.message) || 'Não foi possível salvar o avatar escolhido.' } };
+      }
+      return {
+        ok: true,
+        patch: {
+          avatar_url: upload.data.url,
+          avatar_path: upload.data.path || null,
+        }
+      };
+    }
+
+    return {
+      ok: true,
+      patch: {
+        avatar_url: avatarSource,
+        avatar_path: null,
+      }
+    };
+  }
+
   function buildPatch() {
     const raw = {
       display_name: String($('#accountSetupDisplayName')?.value || '').trim(),
@@ -481,30 +528,67 @@
     }
 
     const patch = buildPatch();
-
-    if (state.avatarFile) {
-      const upload = await window.KCAPI.uploadProfileAvatar(state.avatarFile);
-      if (!upload || !upload.ok || !upload.data || !upload.data.url) {
-        return { ok: false, error: { message: (upload && upload.error && upload.error.message) || 'Não foi possível enviar o avatar.' } };
-      }
-      patch.avatar_url = upload.data.url;
-      patch.avatar_path = upload.data.path || null;
-    } else if (String(state.selectedAvatarUrl || '').trim()) {
-      const avatarSource = String(state.selectedAvatarUrl || '').trim();
-      if (/^data:/i.test(avatarSource)) {
-        const upload = await window.KCAPI.uploadProfileAvatar(avatarSource);
-        if (!upload || !upload.ok || !upload.data || !upload.data.url) {
-          return { ok: false, error: { message: (upload && upload.error && upload.error.message) || 'Não foi possível salvar o avatar escolhido.' } };
-        }
-        patch.avatar_url = upload.data.url;
-        patch.avatar_path = upload.data.path || null;
-      } else {
-        patch.avatar_url = avatarSource;
-        patch.avatar_path = null;
-      }
-    }
+    const avatarResult = await resolveAvatarPatch();
+    if (!avatarResult || !avatarResult.ok) return avatarResult;
+    Object.assign(patch, avatarResult.patch || {});
 
     return window.KCAPI.updateMyProfile(patch);
+  }
+
+  function setAvatarSaving(active) {
+    state.avatarSaving = !!active;
+    const saveButton = $('#accountSetupAvatarSave');
+    if (!saveButton) return;
+    saveButton.disabled = state.avatarSaving || state.submitting;
+    saveButton.innerHTML = state.avatarSaving
+      ? '<i class="fas fa-spinner fa-spin"></i><span>Salvando foto...</span>'
+      : '<i class="fas fa-check"></i><span>Salvar foto agora</span>';
+  }
+
+  async function saveAvatarOnly() {
+    if (state.avatarSaving || state.submitting) return;
+    if (!window.KCAPI || typeof window.KCAPI.updateMyProfile !== 'function') {
+      setStatus('Perfil indisponível neste ambiente.', 'error');
+      return;
+    }
+
+    const avatarResult = await resolveAvatarPatch();
+    if (!avatarResult || !avatarResult.ok) {
+      setStatus((avatarResult && avatarResult.error && avatarResult.error.message) || 'Não foi possível salvar o avatar agora.', 'error');
+      return;
+    }
+
+    if (!avatarResult.patch || !Object.keys(avatarResult.patch).length) {
+      setStatus('Escolha uma foto, um avatar sugerido ou um emoji antes de salvar.', 'warn');
+      return;
+    }
+
+    setAvatarSaving(true);
+    setStatus('Salvando sua foto de perfil...', 'info');
+
+    try {
+      const result = await window.KCAPI.updateMyProfile(avatarResult.patch);
+      if (!result || !result.ok) {
+        setStatus((result && result.error && result.error.message) || 'Não foi possível salvar o avatar agora.', 'error');
+        return;
+      }
+
+      state.profile = result.data || state.profile;
+      state.avatarFile = null;
+      state.selectedAvatarUrl = '';
+      releaseAvatarPreview();
+      const input = $('#accountSetupAvatarInput');
+      if (input) input.value = '';
+      renderAvatarSuggestions();
+      renderEmojiAvatarBuilder();
+      updateAvatarPreview();
+      setStatus('Foto de perfil salva com sucesso.', 'success');
+    } catch (error) {
+      console.error('[AccountSetup] avatar save failed:', error);
+      setStatus('Não foi possível salvar o avatar agora.', 'error');
+    } finally {
+      setAvatarSaving(false);
+    }
   }
 
   function renderStep() {
@@ -598,6 +682,9 @@
       });
     }
 
+    const avatarSave = $('#accountSetupAvatarSave');
+    if (avatarSave) avatarSave.addEventListener('click', saveAvatarOnly);
+
     const genderIdentity = $('#accountSetupGenderIdentity');
     if (genderIdentity) genderIdentity.addEventListener('change', updateIdentityConditional);
 
@@ -681,3 +768,4 @@
   window.addEventListener('beforeunload', releaseAvatarPreview);
   document.addEventListener('DOMContentLoaded', init);
 })();
+

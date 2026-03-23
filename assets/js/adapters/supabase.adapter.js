@@ -1,4 +1,4 @@
-
+﻿
 (function () {
   'use strict';
 const { ENV, normalizePost } = window.KCAPI;
@@ -14,7 +14,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
 
   // ---------- Supabase Client Bootstrap (V8.1.3.1) ----------
-  // Cria o cliente apenas quando necessário (driver="supabase").
+  // Cria o cliente apenas quando necessÃ¡rio (driver="supabase").
   let supabaseClient = null;
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -26,7 +26,7 @@ const { ENV, normalizePost } = window.KCAPI;
   function getSupabaseClient() {
     if (supabaseClient) return supabaseClient;
 
-    // Preferimos o Facade (Auth/Sessão) para manter o SDK isolado
+    // Preferimos o Facade (Auth/SessÃ£o) para manter o SDK isolado
     try {
       if (KCSupabase && typeof KCSupabase.getClient === 'function') {
         supabaseClient = KCSupabase.getClient();
@@ -34,9 +34,9 @@ const { ENV, normalizePost } = window.KCAPI;
       }
     } catch (_) { }
 
-    // Fallback (mantém compatibilidade caso o Facade não esteja carregado)
+    // Fallback (mantÃ©m compatibilidade caso o Facade nÃ£o esteja carregado)
     if (!hasSupabaseLib()) {
-      console.error('[KCAPI][Supabase] Biblioteca supabase-js não carregada (CDN ausente ou sem internet).');
+      console.error('[KCAPI][Supabase] Biblioteca supabase-js nÃ£o carregada (CDN ausente ou sem internet).');
       return null;
     }
 
@@ -128,15 +128,15 @@ const { ENV, normalizePost } = window.KCAPI;
   async function supabaseSignUp(email, password) {
     const em = String(email || '').trim();
     const pw = String(password || '').trim();
-    if (!em || !pw) return { user: null, session: null, error: { message: 'E-mail e senha são obrigatórios.' } };
+    if (!em || !pw) return { user: null, session: null, error: { message: 'E-mail e senha sÃ£o obrigatÃ³rios.' } };
 
-    // Preferimos o facade (V8.1.3.1) para validação de domínio/erros consistentes
+    // Preferimos o facade (V8.1.3.1) para validaÃ§Ã£o de domÃ­nio/erros consistentes
     if (KCSupabase && typeof KCSupabase.signUp === 'function') {
       return KCSupabase.signUp(em, pw);
     }
 
     const client = getSupabaseClient();
-    if (!client) return { user: null, session: null, error: { message: 'Supabase não configurado.' } };
+    if (!client) return { user: null, session: null, error: { message: 'Supabase nÃ£o configurado.' } };
 
     try {
       const r = await client.auth.signUp({ email: em, password: pw });
@@ -179,16 +179,12 @@ const { ENV, normalizePost } = window.KCAPI;
 
     const email = String((user && user.email) || '').trim();
     if (email.includes('@')) return email.split('@')[0];
-    return 'Usuário';
+    return 'UsuÃ¡rio';
   }
 
   function getUserAvatarForProfile(user) {
-    const meta = (user && user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
-    const direct = meta.avatar_url || meta.avatar || meta.picture || meta.photo_url;
-    if (direct && String(direct).trim()) return String(direct).trim();
-
-    const seed = encodeURIComponent(String((user && (user.email || user.id)) || 'kc').trim().toLowerCase());
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+    const profileAvatar = String((user && user.profile && user.profile.avatar_url) || '').trim();
+    return profileAvatar || '';
   }
 
   async function ensureSupabaseProfileForCreate(client, user) {
@@ -196,7 +192,7 @@ const { ENV, normalizePost } = window.KCAPI;
       return {
         ok: false,
         error: {
-          message: 'Pré-condição inválida para sincronizar profile.',
+          message: 'PrÃ©-condiÃ§Ã£o invÃ¡lida para sincronizar profile.',
           code: 'PROFILE_SYNC_PRECONDITION_FAILED',
         }
       };
@@ -210,7 +206,7 @@ const { ENV, normalizePost } = window.KCAPI;
         }
       }
     } catch (e) {
-      console.warn('[KCAPI][Supabase] ensureSynced (KCProfiles) falhou; fallback upsert será usado.', e);
+      console.warn('[KCAPI][Supabase] ensureSynced (KCProfiles) falhou; fallback upsert serÃ¡ usado.', e);
     }
 
     const payload = {
@@ -424,13 +420,13 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   async function uploadImagesToSupabaseStorage(client, images, options) {
-    // Bucket (compat): prefer STORAGE_BUCKET_POST_MEDIA (roadmap), senão ENV.supabase.storageBucket
+    // Bucket (compat): prefer STORAGE_BUCKET_POST_MEDIA (roadmap), senÃ£o ENV.supabase.storageBucket
     const bucket = getPostMediaStorageBucket();
 
     const list = Array.isArray(images) ? images.filter(Boolean) : [];
     if (!list.length) return { ok: true, uploaded: [] };
 
-    // Hard limits (mínimo anti-abuso)
+    // Hard limits (mÃ­nimo anti-abuso)
     const maxImages = 5;
     const maxBytes = (ENV && ENV.supabase && Number.isFinite(ENV.supabase.maxImageBytes))
       ? Number(ENV.supabase.maxImageBytes)
@@ -443,7 +439,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const postId = (opts.postId != null) ? String(opts.postId) : '';
 
     // Path controlado: post-media/{userId}/{postId}/{filename}
-    // Se não houver userId/postId, cai em modo "compat" (menos seguro) e loga warning.
+    // Se nÃ£o houver userId/postId, cai em modo "compat" (menos seguro) e loga warning.
     const hasStrongPath = !!(userId && postId);
 
     const storage = client.storage.from(bucket);
@@ -453,7 +449,7 @@ const { ENV, normalizePost } = window.KCAPI;
     for (let i = 0; i < Math.min(list.length, maxImages); i++) {
       const item = list[i];
 
-      // Se já for URL http(s), reaproveita.
+      // Se jÃ¡ for URL http(s), reaproveita.
       if (typeof item === 'string' && /^https?:\/\//i.test(item)) {
         uploaded.push({ url: item, path: '', is_cover: i === 0, sort_order: i });
         continue;
@@ -462,18 +458,18 @@ const { ENV, normalizePost } = window.KCAPI;
       // dataURL -> Blob
       const blob = dataUrlToBlob(item);
       if (!blob) {
-        console.warn('[KCAPI][Supabase] Imagem inválida (não é dataURL):', item);
+        console.warn('[KCAPI][Supabase] Imagem invÃ¡lida (nÃ£o Ã© dataURL):', item);
         continue;
       }
 
       // Valida tipo/tamanho
       const mime = String(blob.type || '').toLowerCase();
       if (!allowedTypes.has(mime)) {
-        console.warn('[KCAPI][Supabase] Tipo de imagem não permitido:', mime);
+        console.warn('[KCAPI][Supabase] Tipo de imagem nÃ£o permitido:', mime);
         continue;
       }
       if (blob.size > maxBytes) {
-        console.warn('[KCAPI][Supabase] Imagem excede tamanho máximo (bytes):', blob.size, '>', maxBytes);
+        console.warn('[KCAPI][Supabase] Imagem excede tamanho mÃ¡ximo (bytes):', blob.size, '>', maxBytes);
         continue;
       }
 
@@ -482,7 +478,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
       const path = hasStrongPath
         ? `post-media/${userId}/${postId}/${ts}-${i + 1}-${filename}`
-        : `posts/${ts}-${filename}`; // compat (evitar quebra caso postId/userId não exista)
+        : `posts/${ts}-${filename}`; // compat (evitar quebra caso postId/userId nÃ£o exista)
 
       if (!hasStrongPath) {
         console.warn('[KCAPI][Supabase] Upload com path fraco (sem userId/postId). Considere hardening via post-media/{userId}/{postId}.');
@@ -509,7 +505,7 @@ const { ENV, normalizePost } = window.KCAPI;
       const pub = storage.getPublicUrl(path);
       const publicUrl = (pub && pub.data && pub.data.publicUrl) ? pub.data.publicUrl : '';
       if (!publicUrl) {
-        console.warn('[KCAPI][Supabase] Upload OK, mas não consegui obter URL pública:', path);
+        console.warn('[KCAPI][Supabase] Upload OK, mas nÃ£o consegui obter URL pÃºblica:', path);
       }
 
       uploaded.push({ url: publicUrl || path, path, is_cover: i === 0, sort_order: i });
@@ -519,7 +515,7 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   async function uploadProfileAvatarToSupabaseStorage(client, fileOrDataUrl, options) {
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
 
     const bucket = (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
       ? String(ENV.STORAGE_BUCKET_POST_MEDIA || ENV.supabase.storageBucket)
@@ -527,19 +523,19 @@ const { ENV, normalizePost } = window.KCAPI;
 
     const opts = (options && typeof options === 'object') ? options : {};
     const userId = String(opts.userId || '').trim();
-    if (!userId) return { ok: false, error: { message: 'Usuário inválido para upload do avatar.' } };
+    if (!userId) return { ok: false, error: { message: 'UsuÃ¡rio invÃ¡lido para upload do avatar.' } };
 
     const maxBytes = (ENV && ENV.supabase && Number.isFinite(ENV.supabase.maxImageBytes))
       ? Number(ENV.supabase.maxImageBytes)
       : (5 * 1024 * 1024);
-    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']);
 
     let blob = null;
     let directUrl = '';
 
     if (typeof fileOrDataUrl === 'string') {
       const raw = String(fileOrDataUrl || '').trim();
-      if (!raw) return { ok: false, error: { message: 'Imagem inválida para avatar.' } };
+      if (!raw) return { ok: false, error: { message: 'Imagem invÃ¡lida para avatar.' } };
       if (/^https?:\/\//i.test(raw)) {
         directUrl = raw;
       } else {
@@ -553,7 +549,7 @@ const { ENV, normalizePost } = window.KCAPI;
       return { ok: true, data: { url: directUrl } };
     }
 
-    if (!blob) return { ok: false, error: { message: 'Formato de imagem inválido para avatar.' } };
+    if (!blob) return { ok: false, error: { message: 'Formato de imagem invÃ¡lido para avatar.' } };
 
     const mime = String(blob.type || '').toLowerCase();
     if (!allowedTypes.has(mime)) {
@@ -586,7 +582,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const pub = storage.getPublicUrl(path);
     const publicUrl = (pub && pub.data && pub.data.publicUrl) ? pub.data.publicUrl : '';
     if (!publicUrl) {
-      return { ok: false, error: { message: 'Não foi possível obter a URL pública do avatar.' } };
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel obter a URL pÃºblica do avatar.' } };
     }
 
     return { ok: true, data: { url: publicUrl, path } };
@@ -648,7 +644,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const allImages = !!opts.allImages;
 
     const author = row.profiles || null;
-    // Compat: schema pode usar post_media (padrão) ou post_images (variante)
+    // Compat: schema pode usar post_media (padrÃ£o) ou post_images (variante)
     const media = Array.isArray(row.post_media)
       ? row.post_media
       : (Array.isArray(row.post_images) ? row.post_images : []);
@@ -656,7 +652,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const items = media.filter((m) => m && m.url);
     let ordered = items.slice();
 
-    // Ordenação por sort_order (quando existir). Se não existir, prioriza capa.
+    // OrdenaÃ§Ã£o por sort_order (quando existir). Se nÃ£o existir, prioriza capa.
     const hasSortOrder = ordered.some((m) => (m && (m.sort_order != null || m.sortOrder != null)));
     if (hasSortOrder) {
       ordered.sort((a, b) => {
@@ -693,7 +689,7 @@ const { ENV, normalizePost } = window.KCAPI;
       ? String(metadata.categoria || metadata.categoriaLabel || metadata.categoryLabel)
       : (row.category || "");
 
-    // Saída híbrida (compatível com KCAPI.normalizePost + views legadas):
+    // SaÃ­da hÃ­brida (compatÃ­vel com KCAPI.normalizePost + views legadas):
     // - snake_case e camelCase para campos novos
     // - campos PT-BR usados pelo UI (titulo, descricao, preco, modulo, categoria, timestamp)
     const authorVerified = !!(author && author.verified);
@@ -749,11 +745,11 @@ const { ENV, normalizePost } = window.KCAPI;
       created_at: row.created_at || '',
 
       // Para manter retrocompatibilidade visual (fallback do render):
-      // Hardening de privacidade: NÃO depender de profiles.email para exibir nome.
+      // Hardening de privacidade: NÃƒO depender de profiles.email para exibir nome.
       autor: normalizedAuthorName,
       autorAvatar: normalizedAuthorAvatar,
 
-      // Verificação do autor (V8.1.3.2)
+      // VerificaÃ§Ã£o do autor (V8.1.3.2)
       authorVerified,
       author_verified: authorVerified,
       verificado: authorVerified,
@@ -774,22 +770,22 @@ const { ENV, normalizePost } = window.KCAPI;
     out.author = out.autor;
     out.authorAvatar = out.autorAvatar;
 
-    // Injeta campos variáveis (metadata) sem sobrescrever o contrato base
+    // Injeta campos variÃ¡veis (metadata) sem sobrescrever o contrato base
     mergeMetadataSafe(out, metadata);
 
     return out;
   }
 
   // Adapter: linha do Postgres (snake_case + embeds) -> Contrato KCAPI (camelCase/PT-BR)
-  // - Mantém compat com modo local (id pode ser legacy_id)
-  // - Normaliza via normalizePost (contrato único consumido pelos controllers)
+  // - MantÃ©m compat com modo local (id pode ser legacy_id)
+  // - Normaliza via normalizePost (contrato Ãºnico consumido pelos controllers)
   function normalizeSupabasePost(row) {
     const mapped = mapSupabasePost(row);
     if (!mapped) return null;
 
     const raw = { ...(mapped || {}) };
 
-    // Preferir legacy_id como id para manter links/contrato do protótipo
+    // Preferir legacy_id como id para manter links/contrato do protÃ³tipo
     const legacy = raw.legacyId || raw.legacy_id || null;
     if (legacy != null && legacy !== '') {
       raw.uuid = raw.id; // preserva UUID
@@ -810,7 +806,7 @@ const { ENV, normalizePost } = window.KCAPI;
       .limit(1);
   }
 
-  // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
+  // Compat: caso o schema ainda nÃ£o tenha profiles.verified (antes do update v8.1.3.2)
   function buildSupabasePostSelectFallback(client, includeComments = true) {
     return buildSupabasePostSelect(client, false, includeComments);
   }
@@ -825,7 +821,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const key = String(id || "").trim();
     if (!key) return null;
 
-    // IDs locais (u_*) não existem no Supabase
+    // IDs locais (u_*) nÃ£o existem no Supabase
     if (key.startsWith("u_")) return null;
 
     // Preferir Facade (KCSupabase) para evitar KCAPI falando direto com o SDK
@@ -837,7 +833,7 @@ const { ENV, normalizePost } = window.KCAPI;
         const mapped = mapSupabasePost(row, { allImages: true });
         if (!mapped) return null;
 
-        // Se foi chamado com legacy_id, manter id no formato do protótipo
+        // Se foi chamado com legacy_id, manter id no formato do protÃ³tipo
         const isUuid = UUID_RE.test(key);
         if (!isUuid) {
           const legacy = mapped.legacyId || mapped.legacy_id || null;
@@ -929,7 +925,7 @@ const { ENV, normalizePost } = window.KCAPI;
       .select(`id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`);
   }
 
-  // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
+  // Compat: caso o schema ainda nÃ£o tenha profiles.verified (antes do update v8.1.3.2)
   function buildSupabasePostsQueryFallback(client, includeComments = true) {
     return buildSupabasePostsQuery(client, false, includeComments);
   }
@@ -963,7 +959,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildOrILike(q) {
     // PostgREST: valores com caracteres especiais podem ser envoltos em aspas.
-    // Mantemos o padrão pedido (.or('title.ilike.%q%,description.ilike.%q%')) mas com quoting seguro.
+    // Mantemos o padrÃ£o pedido (.or('title.ilike.%q%,description.ilike.%q%')) mas com quoting seguro.
     const safe = String(q || '')
       .replace(/\\/g, '\\\\')
       .replace(/"/g, '\\"');
@@ -993,8 +989,8 @@ const { ENV, normalizePost } = window.KCAPI;
       return [];
     }
 
-    // Fallback defensivo (não deveria ocorrer se o bundle estiver correto)
-    console.warn('[KCAPI][Supabase] KCSupabase.getPosts indisponível; retornando lista vazia.');
+    // Fallback defensivo (nÃ£o deveria ocorrer se o bundle estiver correto)
+    console.warn('[KCAPI][Supabase] KCSupabase.getPosts indisponÃ­vel; retornando lista vazia.');
     return [];
   }
 
@@ -1031,7 +1027,7 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   function clampCreatedAtISO() {
-    // Temporal clamp dinâmico (configurável via KC_ENV.clamp)
+    // Temporal clamp dinÃ¢mico (configurÃ¡vel via KC_ENV.clamp)
     const MONTH_MAP = { january:1,february:2,march:3,april:4,may:5,june:6,
                         july:7,august:8,september:9,october:10,november:11,december:12 };
     const d = new Date();
@@ -1059,7 +1055,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const images = Array.isArray(d.imagens) ? d.imagens : (Array.isArray(d.images) ? d.images : []);
 
     // labels (opcionais) para manter UI rica via metadata
-    // (mantém retrocompatibilidade: payloads antigos usavam d.categoria/d.subcategoria como labels)
+    // (mantÃ©m retrocompatibilidade: payloads antigos usavam d.categoria/d.subcategoria como labels)
     const categoriaLabel = (d.categoriaLabel || d.categoryLabel || (d.categoriaKey ? '' : d.categoria) || (d.categoryKey ? '' : d.category) || '').toString().trim();
     const subcategoriaLabel = (d.subcategoriaLabel || d.subcategoryLabel || (d.subcategoriaKey ? '' : d.subcategoria) || (d.subcategoryKey ? '' : d.subcategory) || '').toString().trim();
 
@@ -1067,8 +1063,8 @@ const { ENV, normalizePost } = window.KCAPI;
     const categoryDB = toSlug(categoryKey || categoriaLabel);
 
     // V8.1.3.1: compra-venda usa tabs por categoria (ex.: eletronicos).
-    // Se algum payload vier com subKey=ação, normalizamos para a categoria.
-    const actionish = ['vendo', 'compro', 'troco', 'doacao', 'doação', 'procuro'];
+    // Se algum payload vier com subKey=aÃ§Ã£o, normalizamos para a categoria.
+    const actionish = ['vendo', 'compro', 'troco', 'doacao', 'doaÃ§Ã£o', 'procuro'];
     const subKeySlug = toSlug(subKey);
     const effectiveSubKey = (moduleDB === 'compra-venda' && subKeySlug && actionish.includes(subKeySlug) && categoryKey)
       ? categoryKey
@@ -1076,7 +1072,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
     const subcategoryDB = toSlug(effectiveSubKey || subcategoriaLabel);
 
-    // metadata: mantém dados extras sem inflar colunas
+    // metadata: mantÃ©m dados extras sem inflar colunas
     const metadata = {
       ...(d.metadata && typeof d.metadata === 'object' ? d.metadata : {}),
       // filtros (JSONB)
@@ -1084,7 +1080,7 @@ const { ENV, normalizePost } = window.KCAPI;
       // labels
       ...(categoriaLabel ? { categoryLabel: categoriaLabel } : {}),
       ...(subcategoriaLabel ? { subcategoryLabel: subcategoriaLabel } : {}),
-      // chaves úteis do formulário
+      // chaves Ãºteis do formulÃ¡rio
       ...((categoryKey || d.categoriaKey || d.categoryKey) ? { categoryKey: toSlug(categoryKey || d.categoriaKey || d.categoryKey) } : {}),
       ...((effectiveSubKey || d.subcategoriaKey || d.subcategoryKey) ? { subcategoryKey: toSlug(effectiveSubKey || d.subcategoriaKey || d.subcategoryKey) } : {}),
       ...(Array.isArray(d.tags) ? { tags: d.tags } : {}),
@@ -1106,7 +1102,7 @@ const { ENV, normalizePost } = window.KCAPI;
       location,
       images,
       metadata,
-      // também devolvemos o payload bruto para retorno local (labels)
+      // tambÃ©m devolvemos o payload bruto para retorno local (labels)
       raw: { ...d },
     };
   }
@@ -1117,7 +1113,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const client = getSupabaseClient();
     if (!client) {
       setLastCreatePostError('AUTH', {
-        message: 'Supabase client não disponível para createPost.',
+        message: 'Supabase client nÃ£o disponÃ­vel para createPost.',
         code: 'SUPABASE_CLIENT_MISSING',
       }, { driver: ENV.driver });
       return null;
@@ -1126,7 +1122,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const user = await supabaseGetCurrentUser();
     if (!user) {
       setLastCreatePostError('AUTH', {
-        message: 'Usuário não autenticado para createPost.',
+        message: 'UsuÃ¡rio nÃ£o autenticado para createPost.',
         code: 'NOT_AUTHENTICATED',
       }, { driver: ENV.driver });
       return null;
@@ -1136,7 +1132,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const payloadSummary = summarizeCreatePayloadForDiagnostics(parsed);
     if (!parsed.title || !parsed.description || !parsed.moduleDB) {
       setLastCreatePostError('PAYLOAD', {
-        message: 'Payload de createPost incompleto (título/descrição/módulo).',
+        message: 'Payload de createPost incompleto (tÃ­tulo/descriÃ§Ã£o/mÃ³dulo).',
         code: 'INVALID_CREATE_PAYLOAD',
       }, payloadSummary);
       return null;
@@ -1171,7 +1167,7 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
 
       // 1) Insere post primeiro (para obter postId) e habilitar path controlado no Storage
-      // Não enviamos created_at: o BD usa DEFAULT now() para garantir ordenação correta (P0-C fix)
+      // NÃ£o enviamos created_at: o BD usa DEFAULT now() para garantir ordenaÃ§Ã£o correta (P0-C fix)
 
       const insertPayload = {
         author_id: user.id,
@@ -1184,13 +1180,13 @@ const { ENV, normalizePost } = window.KCAPI;
         metadata: parsed.metadata,
       };
 
-      // Helper de rollback (evita órfãos quando upload falha após INSERT)
+      // Helper de rollback (evita Ã³rfÃ£os quando upload falha apÃ³s INSERT)
       async function rollbackCreatedPost(postId) {
         try {
           const del = await client.from('posts').delete().eq('id', postId);
           if (del && del.error) console.warn('[KCAPI][Supabase] rollback delete falhou:', del.error);
         } catch (e) {
-          console.warn('[KCAPI][Supabase] rollback delete exceção:', e);
+          console.warn('[KCAPI][Supabase] rollback delete exceÃ§Ã£o:', e);
         }
       }
 
@@ -1212,7 +1208,7 @@ const { ENV, normalizePost } = window.KCAPI;
       postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
       if (!postId) {
         setLastCreatePostError('POST_INSERT', {
-          message: 'INSERT em posts não retornou id.',
+          message: 'INSERT em posts nÃ£o retornou id.',
           code: 'POST_INSERT_NO_ID',
         }, {
           userId: user.id,
@@ -1242,18 +1238,18 @@ const { ENV, normalizePost } = window.KCAPI;
       }
       uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
 
-      // 4) Insere mídias (post_media) com capa + ordem
+      // 4) Insere mÃ­dias (post_media) com capa + ordem
       if (Array.isArray(uploaded) && uploaded.length) {
         const mediaRowsFull = uploaded
           .filter((m) => m && m.url)
           .map((m, idx) => ({
             post_id: postId,
             url: String(m.url),
-            is_cover: idx === 0, // regra: capa = 1ª imagem ordenada
+            is_cover: idx === 0, // regra: capa = 1Âª imagem ordenada
             sort_order: Number.isFinite(m.sort_order) ? m.sort_order : idx,
           }));
 
-        // Tenta com sort_order (V8.1.5.1); fallback se schema ainda não tiver coluna.
+        // Tenta com sort_order (V8.1.5.1); fallback se schema ainda nÃ£o tiver coluna.
         let mr = await client.from('post_media').insert(mediaRowsFull);
         if (mr && mr.error) {
           const msg = String(mr.error.message || '').toLowerCase();
@@ -1322,7 +1318,7 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   function kcApiError(message) {
-    return { ok: false, error: { message: String(message || 'Operação não concluída.') } };
+    return { ok: false, error: { message: String(message || 'OperaÃ§Ã£o nÃ£o concluÃ­da.') } };
   }
 
   function enforceSupabaseOnProduction(operationName) {
@@ -1332,17 +1328,17 @@ const { ENV, normalizePost } = window.KCAPI;
       ok: false,
       error: {
         code: 'PRODUCTION_REQUIRES_SUPABASE',
-        message: `Operação crítica "${String(operationName || 'unknown')}" bloqueada: em produção, o driver "supabase" é obrigatório.`,
+        message: `OperaÃ§Ã£o crÃ­tica "${String(operationName || 'unknown')}" bloqueada: em produÃ§Ã£o, o driver "supabase" Ã© obrigatÃ³rio.`,
       },
     };
   }
 
   function normalizeUpdatePayload(data) {
     const parsed = normalizeCreatePayload(data);
-    if (!parsed.title) return { ok: false, error: { message: 'Título é obrigatório.' } };
-    if (!parsed.description) return { ok: false, error: { message: 'Descrição é obrigatória.' } };
-    if (!parsed.moduleDB) return { ok: false, error: { message: 'Módulo é obrigatório.' } };
-    if (!parsed.categoryDB) return { ok: false, error: { message: 'Categoria é obrigatória.' } };
+    if (!parsed.title) return { ok: false, error: { message: 'TÃ­tulo Ã© obrigatÃ³rio.' } };
+    if (!parsed.description) return { ok: false, error: { message: 'DescriÃ§Ã£o Ã© obrigatÃ³ria.' } };
+    if (!parsed.moduleDB) return { ok: false, error: { message: 'MÃ³dulo Ã© obrigatÃ³rio.' } };
+    if (!parsed.categoryDB) return { ok: false, error: { message: 'Categoria Ã© obrigatÃ³ria.' } };
 
     return {
       ok: true,
@@ -1371,29 +1367,29 @@ const { ENV, normalizePost } = window.KCAPI;
 
   async function supabaseUpdatePost(postId, payload) {
     const client = getSupabaseClient();
-    if (!client) return kcApiError('Supabase não inicializado.');
+    if (!client) return kcApiError('Supabase nÃ£o inicializado.');
 
     const user = await supabaseGetCurrentUser();
-    if (!user) return kcApiError('Faça login para editar.');
+    if (!user) return kcApiError('FaÃ§a login para editar.');
 
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-      return kcApiError('Payload inválido para edição.');
+      return kcApiError('Payload invÃ¡lido para ediÃ§Ã£o.');
     }
 
     const parsed = normalizeUpdatePayload(payload);
     if (!parsed.ok) return parsed;
 
     const postUuid = await resolvePostUuid(postId);
-    if (!postUuid) return kcApiError('Post inválido para edição.');
+    if (!postUuid) return kcApiError('Post invÃ¡lido para ediÃ§Ã£o.');
 
     try {
       const own = await client.from('posts').select('id, author_id').eq('id', postUuid).maybeSingle();
       if (own && own.error) {
         console.error('[KCAPI][Supabase] updatePost ownership check erro:', own.error);
-        return kcApiError('Não foi possível validar permissão de edição.');
+        return kcApiError('NÃ£o foi possÃ­vel validar permissÃ£o de ediÃ§Ã£o.');
       }
-      if (!own || !own.data) return kcApiError('Publicação não encontrada.');
-      if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('Você não pode editar este post.');
+      if (!own || !own.data) return kcApiError('PublicaÃ§Ã£o nÃ£o encontrada.');
+      if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('VocÃª nÃ£o pode editar este post.');
 
       const upd = await client
         .from('posts')
@@ -1405,42 +1401,42 @@ const { ENV, normalizePost } = window.KCAPI;
 
       if (upd && upd.error) {
         console.error('[KCAPI][Supabase] updatePost erro:', upd.error);
-        return kcApiError('Não foi possível salvar alterações.');
+        return kcApiError('NÃ£o foi possÃ­vel salvar alteraÃ§Ãµes.');
       }
 
       const updated = await supabaseGetPostById(postUuid);
-      if (!updated) return kcApiError('Post atualizado, mas não foi possível recarregar.');
+      if (!updated) return kcApiError('Post atualizado, mas nÃ£o foi possÃ­vel recarregar.');
 
       return { ok: true, data: updated };
     } catch (e) {
-      console.error('[KCAPI][Supabase] updatePost exceção:', e);
-      return kcApiError('Não foi possível salvar alterações.');
+      console.error('[KCAPI][Supabase] updatePost exceÃ§Ã£o:', e);
+      return kcApiError('NÃ£o foi possÃ­vel salvar alteraÃ§Ãµes.');
     }
   }
 
   async function supabaseDeletePost(postId) {
     const client = getSupabaseClient();
-    if (!client) return kcApiError('Supabase não inicializado.');
+    if (!client) return kcApiError('Supabase nÃ£o inicializado.');
 
     const user = await supabaseGetCurrentUser();
-    if (!user) return kcApiError('Faça login para excluir.');
+    if (!user) return kcApiError('FaÃ§a login para excluir.');
 
     const postUuid = await resolvePostUuid(postId);
-    if (!postUuid) return kcApiError('Post inválido para exclusão.');
+    if (!postUuid) return kcApiError('Post invÃ¡lido para exclusÃ£o.');
 
     try {
       const own = await client.from('posts').select('id, author_id').eq('id', postUuid).maybeSingle();
       if (own && own.error) {
         console.error('[KCAPI][Supabase] deletePost ownership check erro:', own.error);
-        return kcApiError('Não foi possível validar permissão de exclusão.');
+        return kcApiError('NÃ£o foi possÃ­vel validar permissÃ£o de exclusÃ£o.');
       }
-      if (!own || !own.data) return kcApiError('Publicação não encontrada.');
-      if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('Você não pode excluir este post.');
+      if (!own || !own.data) return kcApiError('PublicaÃ§Ã£o nÃ£o encontrada.');
+      if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('VocÃª nÃ£o pode excluir este post.');
 
       const media = await client.from('post_media').select('id, url').eq('post_id', postUuid);
       if (media && media.error) {
         console.error('[KCAPI][Supabase] deletePost leitura de post_media falhou:', media.error);
-        return kcApiError('NÃ£o foi possÃ­vel validar as mÃ­dias da publicaÃ§Ã£o.');
+        return kcApiError('NÃƒÂ£o foi possÃƒÂ­vel validar as mÃƒÂ­dias da publicaÃƒÂ§ÃƒÂ£o.');
       }
 
       const cleanup = await cleanupManagedPostMediaStorage(client, (media && media.data) ? media.data : [], {
@@ -1462,26 +1458,26 @@ const { ENV, normalizePost } = window.KCAPI;
       const del = await client.from('posts').delete().eq('id', postUuid).eq('author_id', user.id);
       if (del && del.error) {
         console.error('[KCAPI][Supabase] deletePost erro:', del.error);
-        return kcApiError('Não foi possível excluir a publicação.');
+        return kcApiError('NÃ£o foi possÃ­vel excluir a publicaÃ§Ã£o.');
       }
       return { ok: true };
     } catch (e) {
-      console.error('[KCAPI][Supabase] deletePost exceção:', e);
-      return kcApiError('Não foi possível excluir a publicação.');
+      console.error('[KCAPI][Supabase] deletePost exceÃ§Ã£o:', e);
+      return kcApiError('NÃ£o foi possÃ­vel excluir a publicaÃ§Ã£o.');
     }
   }
 
   // ---------- Reports (V8.1.6.2) ----------
-  // Denunciar Post: insere 1 linha em public.reports (RLS força reporter_id = auth.uid())
+  // Denunciar Post: insere 1 linha em public.reports (RLS forÃ§a reporter_id = auth.uid())
   // Retorno: { ok, data?, error? }
   async function supabaseReportPost(postId, payload = {}) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
 
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para denunciar.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para denunciar.' } };
 
-    // resolve UUID do post (aceita uuid direto; para legacy numérico tenta resolver via getPostById)
+    // resolve UUID do post (aceita uuid direto; para legacy numÃ©rico tenta resolver via getPostById)
     let postUuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
     if (!postUuid && postId != null) {
       try {
@@ -1490,11 +1486,11 @@ const { ENV, normalizePost } = window.KCAPI;
         else if (p && p.id && UUID_RE.test(String(p.id))) postUuid = String(p.id);
       } catch (_) { }
     }
-    if (!postUuid) return { ok: false, error: { message: 'Post inválido para denúncia.' } };
+    if (!postUuid) return { ok: false, error: { message: 'Post invÃ¡lido para denÃºncia.' } };
 
     const reason = String(payload.reason || '').trim().toLowerCase();
     const allowed = new Set(['spam', 'scam', 'inappropriate', 'hate', 'illegal', 'duplicate', 'other']);
-    if (!allowed.has(reason)) return { ok: false, error: { message: 'Selecione um motivo válido.' } };
+    if (!allowed.has(reason)) return { ok: false, error: { message: 'Selecione um motivo vÃ¡lido.' } };
 
     const detailsRaw = (payload.details == null) ? '' : String(payload.details);
     const details = detailsRaw.trim().slice(0, 1000);
@@ -1521,7 +1517,7 @@ const { ENV, normalizePost } = window.KCAPI;
         const rpcMessage = String(rpc.data.message || '').trim();
         const rpcCode = String(rpc.data.code || '').trim().toUpperCase();
         if (rpcCode === 'ALREADY_REPORTED') {
-          return { ok: false, error: { message: rpcMessage || 'Você já denunciou este post.' }, meta: { duplicate: true } };
+          return { ok: false, error: { message: rpcMessage || 'VocÃª jÃ¡ denunciou este post.' }, meta: { duplicate: true } };
         }
 
         if (rpcMessage) {
@@ -1547,21 +1543,21 @@ const { ENV, normalizePost } = window.KCAPI;
         const code = String(ins.error.code || '');
         const msg = String(ins.error.message || '').toLowerCase();
         if (code === '23505' || msg.includes('reports_unique_open_post_reporter') || msg.includes('duplicate')) {
-          return { ok: false, error: { message: 'Você já denunciou este post.' }, meta: { duplicate: true } };
+          return { ok: false, error: { message: 'VocÃª jÃ¡ denunciou este post.' }, meta: { duplicate: true } };
         }
         console.error('[KCAPI][Supabase] reportPost erro:', ins.error);
-        return { ok: false, error: { message: 'Não foi possível registrar a denúncia.' } };
+        return { ok: false, error: { message: 'NÃ£o foi possÃ­vel registrar a denÃºncia.' } };
       }
 
       return { ok: true, data: (ins && ins.data) ? ins.data : { id: null } };
     } catch (e) {
-      console.error('[KCAPI][Supabase] reportPost exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível registrar a denúncia.' } };
+      console.error('[KCAPI][Supabase] reportPost exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel registrar a denÃºncia.' } };
     }
   }
   // ---------- Comments (V8.1.7.2) ----------
 
-  // Busca comentários de um post (ordenados por created_at asc)
+  // Busca comentÃ¡rios de um post (ordenados por created_at asc)
   async function supabaseGetComments(postId) {
     const client = getSupabaseClient();
     if (!client) return [];
@@ -1634,8 +1630,8 @@ const { ENV, normalizePost } = window.KCAPI;
           || row.display_name
           || row.full_name
           || row.author_name
-          || 'Anônimo'
-        ).trim() || 'Anônimo';
+          || 'AnÃ´nimo'
+        ).trim() || 'AnÃ´nimo';
         return {
           ...row,
           author_name: resolvedName,
@@ -1644,24 +1640,24 @@ const { ENV, normalizePost } = window.KCAPI;
         };
       });
     } catch (e) {
-      console.error('[KCAPI][comments] getComments exceção:', e);
+      console.error('[KCAPI][comments] getComments exceÃ§Ã£o:', e);
       return [];
     }
   }
 
-  // Insere um novo comentário (author_id e author_name do usuário logado)
+  // Insere um novo comentÃ¡rio (author_id e author_name do usuÃ¡rio logado)
   async function supabaseAddComment(postId, body) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para comentar.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para comentar.' } };
     const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
-    if (!uuid) return { ok: false, error: { message: 'Post inválido.' } };
+    if (!uuid) return { ok: false, error: { message: 'Post invÃ¡lido.' } };
     const text = String(body || '').trim().slice(0, 2000);
-    if (!text) return { ok: false, error: { message: 'Comentário não pode ser vazio.' } };
+    if (!text) return { ok: false, error: { message: 'ComentÃ¡rio nÃ£o pode ser vazio.' } };
 
-    // Busca nome de exibição do profile
-    let authorName = 'Anônimo';
+    // Busca nome de exibiÃ§Ã£o do profile
+    let authorName = 'AnÃ´nimo';
     try {
       let profRes = await client
         .from('profiles')
@@ -1680,7 +1676,7 @@ const { ENV, normalizePost } = window.KCAPI;
       const prof = profRes && profRes.data ? profRes.data : null;
       if (prof) authorName = String(prof.display_name || prof.full_name || '').trim();
     } catch (_) { }
-    // Fallback para metadados de auth quando o perfil não tem nome (P1-A fix)
+    // Fallback para metadados de auth quando o perfil nÃ£o tem nome (P1-A fix)
     if (!authorName) authorName = getUserDisplayNameForProfile(user);
 
     try {
@@ -1691,12 +1687,12 @@ const { ENV, normalizePost } = window.KCAPI;
         .maybeSingle();
       if (error) {
         console.error('[KCAPI][comments] addComment:', error);
-        return { ok: false, error: { message: 'Não foi possível comentar.' } };
+        return { ok: false, error: { message: 'NÃ£o foi possÃ­vel comentar.' } };
       }
       return { ok: true, data };
     } catch (e) {
-      console.error('[KCAPI][comments] addComment exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível comentar.' } };
+      console.error('[KCAPI][comments] addComment exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel comentar.' } };
     }
   }
 
@@ -1719,7 +1715,7 @@ const { ENV, normalizePost } = window.KCAPI;
       if (res && res.data) syncCurrentProfileCache(res.data);
       return (res && res.data) ? res.data : null;
     } catch (e) {
-      console.error('[KCAPI][profile] getMyProfile exceção:', e);
+      console.error('[KCAPI][profile] getMyProfile exceÃ§Ã£o:', e);
       return null;
     }
   }
@@ -1738,9 +1734,9 @@ const { ENV, normalizePost } = window.KCAPI;
 
   async function supabaseUpdateMyProfile(patch = {}) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para editar seu perfil.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para editar seu perfil.' } };
 
     const updates = normalizeProfilePatchForAdapter(patch);
     const displayName = Object.prototype.hasOwnProperty.call(updates, 'display_name')
@@ -1752,7 +1748,7 @@ const { ENV, normalizePost } = window.KCAPI;
     if (Object.prototype.hasOwnProperty.call(updates, 'avatar_url')) {
       const avatarUrl = String(updates.avatar_url || '').trim();
       if (avatarUrl && !/^https?:\/\//i.test(avatarUrl)) {
-        return { ok: false, error: { message: 'URL de avatar inválida.' } };
+        return { ok: false, error: { message: 'URL de avatar invÃ¡lida.' } };
       }
       updates.avatar_url = avatarUrl || null;
     }
@@ -1760,9 +1756,9 @@ const { ENV, normalizePost } = window.KCAPI;
       updates.avatar_path = String(updates.avatar_path || '').trim() || null;
     }
     if (!Object.keys(updates).length) {
-      return { ok: false, error: { message: 'Nenhuma alteração informada.' } };
+      return { ok: false, error: { message: 'Nenhuma alteraÃ§Ã£o informada.' } };
     }
-    if (!displayName) return { ok: false, error: { message: 'Informe um nome válido.' } };
+    if (!displayName) return { ok: false, error: { message: 'Informe um nome vÃ¡lido.' } };
 
     try {
       const { data, error } = await client
@@ -1774,30 +1770,178 @@ const { ENV, normalizePost } = window.KCAPI;
 
       if (error) {
         console.error('[KCAPI][profile] updateMyProfile:', error);
-        return { ok: false, error: { message: error.message || 'Não foi possível atualizar seu perfil.' } };
+        return { ok: false, error: { message: error.message || 'NÃ£o foi possÃ­vel atualizar seu perfil.' } };
       }
       if (!data) {
-        return { ok: false, error: { message: 'No momento, não é possível alterar seu nome.' } };
+        return { ok: false, error: { message: 'No momento, nÃ£o Ã© possÃ­vel alterar seu nome.' } };
       }
       syncCurrentProfileCache(data);
       return { ok: true, data };
     } catch (e) {
-      console.error('[KCAPI][profile] updateMyProfile exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível atualizar seu perfil.' } };
+      console.error('[KCAPI][profile] updateMyProfile exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel atualizar seu perfil.' } };
     }
   }
 
   async function supabaseUploadProfileAvatar(fileOrDataUrl) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para atualizar seu avatar.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para atualizar seu avatar.' } };
 
     try {
       return await uploadProfileAvatarToSupabaseStorage(client, fileOrDataUrl, { userId: user.id });
     } catch (e) {
-      console.error('[KCAPI][profile] uploadProfileAvatar exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível enviar o avatar.' } };
+      console.error('[KCAPI][profile] uploadProfileAvatar exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel enviar o avatar.' } };
+    }
+  }
+
+  function normalizeHelpPayloadForAdapter(payload, user) {
+    const sharedHelp = window.KCHelpUtils || {};
+    if (sharedHelp && typeof sharedHelp.normalizeHelpRequestInput === 'function') {
+      return sharedHelp.normalizeHelpRequestInput(payload, {
+        fallbackEmail: user && user.email ? user.email : '',
+      });
+    }
+    const input = (payload && typeof payload === 'object') ? payload : {};
+    return {
+      user_id: user && user.id ? String(user.id) : null,
+      type: String(input.type || 'question').trim(),
+      topic: String(input.topic || 'platform_use').trim(),
+      subtopic: input.subtopic ? String(input.subtopic).trim() : null,
+      subject: String(input.subject || '').trim().slice(0, 140),
+      message: String(input.message || '').trim().slice(0, 4000),
+      priority: String(input.priority || 'normal').trim(),
+      status: String(input.status || 'new').trim(),
+      page_path: input.page_path ? String(input.page_path).trim().slice(0, 255) : null,
+      contact_email: String(input.contact_email || (user && user.email) || '').trim().toLowerCase(),
+      allow_contact: input.allow_contact !== false,
+      metadata: input.metadata && typeof input.metadata === 'object' ? input.metadata : {},
+    };
+  }
+
+  async function supabaseCreateHelpRequest(payload = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await supabaseGetCurrentUser();
+    const normalized = normalizeHelpPayloadForAdapter(payload, user);
+
+    if (!normalized.subject || !normalized.message || !normalized.contact_email) {
+      return { ok: false, error: { message: 'Preencha assunto, descrição e e-mail de retorno.' } };
+    }
+
+    const insertPayload = {
+      user_id: user && user.id ? user.id : null,
+      type: normalized.type,
+      topic: normalized.topic,
+      subtopic: normalized.subtopic || null,
+      subject: normalized.subject,
+      message: normalized.message,
+      priority: normalized.priority,
+      status: normalized.status,
+      page_path: normalized.page_path || null,
+      contact_email: normalized.contact_email,
+      allow_contact: normalized.allow_contact !== false,
+      metadata: normalized.metadata || {},
+    };
+
+    try {
+      const { data, error } = await client
+        .from('help_requests')
+        .insert(insertPayload)
+        .select('*')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[KCAPI][help] createHelpRequest:', error);
+        return { ok: false, error: { message: error.message || 'Não foi possível enviar o pedido de ajuda.' } };
+      }
+
+      return { ok: true, data: data || insertPayload };
+    } catch (e) {
+      console.error('[KCAPI][help] createHelpRequest exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível enviar o pedido de ajuda.' } };
+    }
+  }
+
+  async function supabaseListAdminHelpRequests(filters = {}) {
+    const client = getSupabaseClient();
+    if (!client) return [];
+
+    try {
+      let query = client
+        .from('help_requests')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (filters.status && filters.status !== 'all') query = query.eq('status', String(filters.status).trim());
+      if (filters.type && filters.type !== 'all') query = query.eq('type', String(filters.type).trim());
+      if (filters.priority && filters.priority !== 'all') query = query.eq('priority', String(filters.priority).trim());
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('[KCAPI][help] listAdminHelpRequests:', error);
+        return [];
+      }
+
+      const rows = Array.isArray(data) ? data : [];
+      const needle = String(filters.query || '').trim().toLowerCase();
+      if (!needle) return rows;
+
+      return rows.filter((row) => {
+        const haystack = [
+          row.subject,
+          row.message,
+          row.contact_email,
+          row.page_path,
+          row.type,
+          row.topic,
+          row.subtopic,
+        ].join(' ').toLowerCase();
+        return haystack.indexOf(needle) >= 0;
+      });
+    } catch (e) {
+      console.error('[KCAPI][help] listAdminHelpRequests exceção:', e);
+      return [];
+    }
+  }
+
+  async function supabaseUpdateAdminHelpRequest(id, patch = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const targetId = String(id || '').trim();
+    if (!targetId) return { ok: false, error: { message: 'Pedido inválido.' } };
+
+    const updates = {};
+    if (Object.prototype.hasOwnProperty.call(patch, 'status')) updates.status = String(patch.status || '').trim() || 'new';
+    if (Object.prototype.hasOwnProperty.call(patch, 'priority')) updates.priority = String(patch.priority || '').trim() || 'normal';
+    if (Object.prototype.hasOwnProperty.call(patch, 'metadata') && patch.metadata && typeof patch.metadata === 'object') {
+      updates.metadata = patch.metadata;
+    }
+
+    if (!Object.keys(updates).length) {
+      return { ok: false, error: { message: 'Nenhuma alteração informada.' } };
+    }
+
+    try {
+      const { data, error } = await client
+        .from('help_requests')
+        .update(updates)
+        .eq('id', targetId)
+        .select('*')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[KCAPI][help] updateAdminHelpRequest:', error);
+        return { ok: false, error: { message: error.message || 'Não foi possível atualizar o pedido.' } };
+      }
+
+      return { ok: true, data: data || null };
+    } catch (e) {
+      console.error('[KCAPI][help] updateAdminHelpRequest exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível atualizar o pedido.' } };
     }
   }
 
@@ -1831,14 +1975,14 @@ const { ENV, normalizePost } = window.KCAPI;
       return (Array.isArray(data) ? data : []).map((row) => ({
         id: row.legacy_id || row.id,
         uuid: row.id,
-        title: row.title || 'Sem título',
+        title: row.title || 'Sem tÃ­tulo',
         created_at: row.created_at || null,
         status: row.status || 'published',
         module: row.module || '',
         category: row.category || '',
       }));
     } catch (e) {
-      console.error('[KCAPI][profile] getMyPosts exceção:', e);
+      console.error('[KCAPI][profile] getMyPosts exceÃ§Ã£o:', e);
       return [];
     }
   }
@@ -1870,14 +2014,14 @@ const { ENV, normalizePost } = window.KCAPI;
       return (Array.isArray(data) ? data : []).map((row) => ({
         id: row.legacy_id || row.id,
         uuid: row.id,
-        title: row.title || 'Sem título',
+        title: row.title || 'Sem tÃ­tulo',
         created_at: row.created_at || null,
         status: row.status || 'published',
         module: row.module || '',
         category: row.category || '',
       }));
     } catch (e) {
-      console.error('[KCAPI][profile] getPostsByAuthorId exceção:', e);
+      console.error('[KCAPI][profile] getPostsByAuthorId exceÃ§Ã£o:', e);
       return [];
     }
   }
@@ -1919,24 +2063,24 @@ const { ENV, normalizePost } = window.KCAPI;
 
       return { kind: data && data.kind ? String(data.kind) : '' };
     } catch (e) {
-      console.error('[KCAPI][saved_posts] getSavedPostState exceção:', e);
+      console.error('[KCAPI][saved_posts] getSavedPostState exceÃ§Ã£o:', e);
       return { kind: '' };
     }
   }
 
   async function supabaseSetSavedPostState(postId, kind) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para salvar publicações.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para salvar publicaÃ§Ãµes.' } };
 
     const saveKind = String(kind || '').trim().toLowerCase();
     if (!['favorite', 'later', 'highlight'].includes(saveKind)) {
-      return { ok: false, error: { message: 'Tipo de salvamento inválido.' } };
+      return { ok: false, error: { message: 'Tipo de salvamento invÃ¡lido.' } };
     }
 
     const uuid = await resolvePostUuidForSavedPosts(postId);
-    if (!uuid) return { ok: false, error: { message: 'Publicação inválida.' } };
+    if (!uuid) return { ok: false, error: { message: 'PublicaÃ§Ã£o invÃ¡lida.' } };
 
     try {
       const { data, error } = await client
@@ -1954,24 +2098,24 @@ const { ENV, normalizePost } = window.KCAPI;
 
       if (error) {
         console.error('[KCAPI][saved_posts] setSavedPostState:', error);
-        return { ok: false, error: { message: error.message || 'Não foi possível salvar a publicação.' } };
+        return { ok: false, error: { message: error.message || 'NÃ£o foi possÃ­vel salvar a publicaÃ§Ã£o.' } };
       }
 
       return { ok: true, data: data || { kind: saveKind } };
     } catch (e) {
-      console.error('[KCAPI][saved_posts] setSavedPostState exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível salvar a publicação.' } };
+      console.error('[KCAPI][saved_posts] setSavedPostState exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel salvar a publicaÃ§Ã£o.' } };
     }
   }
 
   async function supabaseClearSavedPostState(postId) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para remover salvos.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para remover salvos.' } };
 
     const uuid = await resolvePostUuidForSavedPosts(postId);
-    if (!uuid) return { ok: false, error: { message: 'Publicação inválida.' } };
+    if (!uuid) return { ok: false, error: { message: 'PublicaÃ§Ã£o invÃ¡lida.' } };
 
     try {
       const { error } = await client
@@ -1982,13 +2126,13 @@ const { ENV, normalizePost } = window.KCAPI;
 
       if (error) {
         console.error('[KCAPI][saved_posts] clearSavedPostState:', error);
-        return { ok: false, error: { message: error.message || 'Não foi possível remover o item salvo.' } };
+        return { ok: false, error: { message: error.message || 'NÃ£o foi possÃ­vel remover o item salvo.' } };
       }
 
       return { ok: true };
     } catch (e) {
-      console.error('[KCAPI][saved_posts] clearSavedPostState exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível remover o item salvo.' } };
+      console.error('[KCAPI][saved_posts] clearSavedPostState exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel remover o item salvo.' } };
     }
   }
 
@@ -2024,7 +2168,7 @@ const { ENV, normalizePost } = window.KCAPI;
         return {
           id: post.legacy_id || post.id,
           uuid: post.id,
-          title: post.title || 'Sem título',
+          title: post.title || 'Sem tÃ­tulo',
           created_at: post.created_at || null,
           status: post.status || 'published',
           module: post.module || '',
@@ -2034,7 +2178,7 @@ const { ENV, normalizePost } = window.KCAPI;
         };
       });
     } catch (e) {
-      console.error('[KCAPI][saved_posts] getMySavedPosts exceção:', e);
+      console.error('[KCAPI][saved_posts] getMySavedPosts exceÃ§Ã£o:', e);
       return [];
     }
   }
@@ -2070,7 +2214,7 @@ const { ENV, normalizePost } = window.KCAPI;
           return {
             id: post.legacy_id || post.id,
             uuid: post.id,
-            title: post.title || 'Sem título',
+            title: post.title || 'Sem tÃ­tulo',
             created_at: post.created_at || null,
             status: post.status || 'published',
             module: post.module || '',
@@ -2080,7 +2224,7 @@ const { ENV, normalizePost } = window.KCAPI;
           };
         });
     } catch (e) {
-      console.error('[KCAPI][saved_posts] getProfileHighlights exceção:', e);
+      console.error('[KCAPI][saved_posts] getProfileHighlights exceÃ§Ã£o:', e);
       return [];
     }
   }
@@ -2100,7 +2244,7 @@ const { ENV, normalizePost } = window.KCAPI;
     return {
       id: row.legacy_id || row.post_id || row.post_uuid,
       uuid: row.post_uuid || row.post_id || '',
-      title: row.title || 'Sem título',
+      title: row.title || 'Sem tÃ­tulo',
       created_at: row.created_at || null,
       status: row.status || 'published',
       module: row.module || '',
@@ -2129,7 +2273,7 @@ const { ENV, normalizePost } = window.KCAPI;
         byPost.set(uuid, {
           id: post.legacy_id || post.id,
           uuid,
-          title: post.title || 'Sem título',
+          title: post.title || 'Sem tÃ­tulo',
           created_at: post.created_at || null,
           status: includeStatus ? status : 'published',
           module: post.module || '',
@@ -2195,19 +2339,19 @@ const { ENV, normalizePost } = window.KCAPI;
 
       return { kinds: normalizeSaveKinds((Array.isArray(data) ? data : []).map((row) => row && row.kind)) };
     } catch (e) {
-      console.error('[KCAPI][saved_posts] getSavedPostStateMulti exceção:', e);
+      console.error('[KCAPI][saved_posts] getSavedPostStateMulti exceÃ§Ã£o:', e);
       return { kinds: [] };
     }
   }
 
   async function supabaseClearSavedPostStateMulti(postId, kind) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para remover salvos.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para remover salvos.' } };
 
     const uuid = await resolvePostUuidForSavedPosts(postId);
-    if (!uuid) return { ok: false, error: { message: 'Publicação inválida.' } };
+    if (!uuid) return { ok: false, error: { message: 'PublicaÃ§Ã£o invÃ¡lida.' } };
 
     try {
       let query = client
@@ -2221,28 +2365,28 @@ const { ENV, normalizePost } = window.KCAPI;
       const { error } = await query;
       if (error) {
         console.error('[KCAPI][saved_posts] clearSavedPostStateMulti:', error);
-        return { ok: false, error: { message: error.message || 'Não foi possível remover o item salvo.' } };
+        return { ok: false, error: { message: error.message || 'NÃ£o foi possÃ­vel remover o item salvo.' } };
       }
       return { ok: true, cleared: saveKind || 'all' };
     } catch (e) {
-      console.error('[KCAPI][saved_posts] clearSavedPostStateMulti exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível remover o item salvo.' } };
+      console.error('[KCAPI][saved_posts] clearSavedPostStateMulti exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel remover o item salvo.' } };
     }
   }
 
   async function supabaseSetSavedPostStateMulti(postId, kind, enabled) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para salvar publicações.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para salvar publicaÃ§Ãµes.' } };
 
     const saveKind = normalizeSaveKind(kind);
     if (!saveKind) {
-      return { ok: false, error: { message: 'Tipo de salvamento inválido.' } };
+      return { ok: false, error: { message: 'Tipo de salvamento invÃ¡lido.' } };
     }
 
     const uuid = await resolvePostUuidForSavedPosts(postId);
-    if (!uuid) return { ok: false, error: { message: 'Publicação inválida.' } };
+    if (!uuid) return { ok: false, error: { message: 'PublicaÃ§Ã£o invÃ¡lida.' } };
 
     const shouldEnable = enabled !== false;
     try {
@@ -2262,7 +2406,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
         if (error) {
           console.error('[KCAPI][saved_posts] setSavedPostStateMulti:', error);
-          return { ok: false, error: { message: error.message || 'Não foi possível salvar a publicação.' } };
+          return { ok: false, error: { message: error.message || 'NÃ£o foi possÃ­vel salvar a publicaÃ§Ã£o.' } };
         }
 
         return { ok: true, data: data || { kind: saveKind }, enabled: true };
@@ -2270,8 +2414,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
       return await supabaseClearSavedPostStateMulti(postId, saveKind);
     } catch (e) {
-      console.error('[KCAPI][saved_posts] setSavedPostStateMulti exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível salvar a publicação.' } };
+      console.error('[KCAPI][saved_posts] setSavedPostStateMulti exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel salvar a publicaÃ§Ã£o.' } };
     }
   }
 
@@ -2296,7 +2440,7 @@ const { ENV, normalizePost } = window.KCAPI;
       const rows = await fetchSavedRowsFallback(client, user.id, { kind });
       return paginateList(aggregateSavedRows(rows, { includeStatus: true }), page, limit);
     } catch (e) {
-      console.error('[KCAPI][saved_posts] getMySavedPostsMulti exceção:', e);
+      console.error('[KCAPI][saved_posts] getMySavedPostsMulti exceÃ§Ã£o:', e);
       return [];
     }
   }
@@ -2317,7 +2461,7 @@ const { ENV, normalizePost } = window.KCAPI;
       const rows = await fetchSavedRowsFallback(client, user.id, { kind });
       return aggregateSavedRows(rows, { includeStatus: true }).length;
     } catch (e) {
-      console.error('[KCAPI][saved_posts] getMySavedPostsCount exceção:', e);
+      console.error('[KCAPI][saved_posts] getMySavedPostsCount exceÃ§Ã£o:', e);
       return 0;
     }
   }
@@ -2341,7 +2485,7 @@ const { ENV, normalizePost } = window.KCAPI;
       const rows = await fetchSavedRowsFallback(client, author, { kind: 'highlight' });
       return paginateList(aggregateSavedRows(rows, { includeStatus: false, onlyPublished: true }), page, limit);
     } catch (e) {
-      console.error('[KCAPI][saved_posts] getProfileHighlightsMulti exceção:', e);
+      console.error('[KCAPI][saved_posts] getProfileHighlightsMulti exceÃ§Ã£o:', e);
       return [];
     }
   }
@@ -2360,7 +2504,7 @@ const { ENV, normalizePost } = window.KCAPI;
       const rows = await fetchSavedRowsFallback(client, author, { kind: 'highlight' });
       return aggregateSavedRows(rows, { includeStatus: false, onlyPublished: true }).length;
     } catch (e) {
-      console.error('[KCAPI][saved_posts] getProfileHighlightsCount exceção:', e);
+      console.error('[KCAPI][saved_posts] getProfileHighlightsCount exceÃ§Ã£o:', e);
       return 0;
     }
   }
@@ -2385,12 +2529,12 @@ const { ENV, normalizePost } = window.KCAPI;
     );
   }
 
-  // Incrementa likes de um comentário respeitando 1 like por usuário
+  // Incrementa likes de um comentÃ¡rio respeitando 1 like por usuÃ¡rio
   async function supabaseLikeComment(commentId) {
     const client = getSupabaseClient();
     if (!client) return { ok: false };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para curtir.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para curtir.' } };
     const uuid = (typeof commentId === 'string' && UUID_RE.test(commentId)) ? commentId : null;
     if (!uuid) return { ok: false };
     try {
@@ -2411,21 +2555,21 @@ const { ENV, normalizePost } = window.KCAPI;
       if (!payloadOk) {
         const code = String(data && data.code || '').trim().toUpperCase();
         if (code === 'AUTH_REQUIRED') {
-          return { ok: false, error: { message: 'Faça login para curtir.' }, code };
+          return { ok: false, error: { message: 'FaÃ§a login para curtir.' }, code };
         }
-        return { ok: false, error: { message: String(data.message || 'Não foi possível curtir.') }, code };
+        return { ok: false, error: { message: String(data.message || 'NÃ£o foi possÃ­vel curtir.') }, code };
       }
 
       return { ok: true, data };
     } catch (e) {
-      console.error('[KCAPI][comments] likeComment exceção:', e);
+      console.error('[KCAPI][comments] likeComment exceÃ§Ã£o:', e);
       return { ok: false };
     }
   }
 
   // ---------- Votes (V8.1.7.3) ----------
 
-  // Busca o voto do usuário logado para um post (null se não votou)
+  // Busca o voto do usuÃ¡rio logado para um post (null se nÃ£o votou)
   async function supabaseGetMyVote(postId) {
     const client = getSupabaseClient();
     if (!client) return null;
@@ -2473,7 +2617,7 @@ const { ENV, normalizePost } = window.KCAPI;
     return {
       ok: false,
       error: {
-        message: 'Não foi possível registrar voto.',
+        message: 'NÃ£o foi possÃ­vel registrar voto.',
         step: String(step || 'UNKNOWN'),
       },
     };
@@ -2502,14 +2646,14 @@ const { ENV, normalizePost } = window.KCAPI;
     return { ok: true };
   }
 
-  // Toggle voto num post: se já votou igual, remove (toggle off). Caso contrário, insere/substitui.
+  // Toggle voto num post: se jÃ¡ votou igual, remove (toggle off). Caso contrÃ¡rio, insere/substitui.
   // Retorna { ok, direction: null|'hot'|'cold', score }
   async function supabaseVotePost(postId, direction, options = {}) {
     const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
     const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para votar.' } };
-    if (direction !== 'hot' && direction !== 'cold') return { ok: false, error: { message: 'Direção inválida.' } };
+    if (!user) return { ok: false, error: { message: 'FaÃ§a login para votar.' } };
+    if (direction !== 'hot' && direction !== 'cold') return { ok: false, error: { message: 'DireÃ§Ã£o invÃ¡lida.' } };
 
     const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
     if (!uuid) {
@@ -2517,9 +2661,9 @@ const { ENV, normalizePost } = window.KCAPI;
       try {
         const p = await supabaseGetPostById(String(postId));
         const resolved = (p && (p.uuid || p.id));
-        if (!resolved || !UUID_RE.test(String(resolved))) return { ok: false, error: { message: 'Post inválido.' } };
+        if (!resolved || !UUID_RE.test(String(resolved))) return { ok: false, error: { message: 'Post invÃ¡lido.' } };
         return supabaseVotePost(String(resolved), direction, options);
-      } catch (_) { return { ok: false, error: { message: 'Post inválido.' } }; }
+      } catch (_) { return { ok: false, error: { message: 'Post invÃ¡lido.' } }; }
     }
 
     try {
@@ -2528,7 +2672,7 @@ const { ENV, normalizePost } = window.KCAPI;
       if (hasExplicitToggle) {
         shouldToggleOff = !!options.toggleOff;
       } else {
-        // Compatibilidade: chamadas antigas sem options continuam com toggle no mesmo botão.
+        // Compatibilidade: chamadas antigas sem options continuam com toggle no mesmo botÃ£o.
         const existing = await supabaseGetMyVote(uuid);
         shouldToggleOff = !!(existing && existing.direction === direction);
       }
@@ -2540,7 +2684,7 @@ const { ENV, normalizePost } = window.KCAPI;
         return { ok: true, direction: null, score };
       }
 
-      // Escrita idempotente: limpa voto existente antes de inserir nova direção.
+      // Escrita idempotente: limpa voto existente antes de inserir nova direÃ§Ã£o.
       const preDelete = await deleteVoteByPostAndVoter(client, uuid, user.id, 'PREPARE_DELETE');
       if (!preDelete.ok) return voteFail(preDelete.step, preDelete.error, { postId: uuid, userId: user.id, direction });
 
@@ -2548,7 +2692,7 @@ const { ENV, normalizePost } = window.KCAPI;
         .from('post_votes')
         .insert({ post_id: uuid, voter_id: user.id, direction });
 
-      // Corrida de concorrência: tenta 1 ciclo de recuperação.
+      // Corrida de concorrÃªncia: tenta 1 ciclo de recuperaÃ§Ã£o.
       if (insertRes && insertRes.error) {
         if (!isVoteConflict(insertRes.error)) {
           return voteFail('INSERT', insertRes.error, { postId: uuid, userId: user.id, direction });
@@ -2603,9 +2747,13 @@ const { ENV, normalizePost } = window.KCAPI;
     getMySavedPostsCount: supabaseGetMySavedPostsCount,
     getProfileHighlights: supabaseGetProfileHighlightsMulti,
     getProfileHighlightsCount: supabaseGetProfileHighlightsCount,
+    createHelpRequest: supabaseCreateHelpRequest,
+    listAdminHelpRequests: supabaseListAdminHelpRequests,
+    updateAdminHelpRequest: supabaseUpdateAdminHelpRequest,
   });
 
 
 window.KCAPI.registerAdapter('supabase', driverSupabase);
 
 })();
+

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="assets/css/kc-public-shell.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
-<body class="kc-shell-page kc-help-page">
+<body class="kc-shell-page kc-help-page" data-kc-mobile-active="menu">
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -25,7 +25,7 @@
       </div>
       <div class="kc-user-actions">
         <button class="theme-toggle" title="Alternar tema"><i class="fas fa-sun"></i></button>
-        <a class="btn-login" href="#login">Login/Cadastro</a>
+        <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
   </header>
@@ -34,12 +34,27 @@
     <section class="kc-help-shell">
       <div class="kc-help-hero">
         <span class="kc-help-eyebrow">Central de ajuda</span>
-        <h1 class="kc-help-title">Orientações rápidas para entrar, confirmar a conta, completar o perfil e receber contato nos anúncios.</h1>
-        <p class="kc-help-copy">Esta central cobre o fluxo inteiro de conta do KinoCampus: login, cadastro, e-mail de confirmação, onboarding, configurações e o botão de contato dos anúncios.</p>
+        <h1 class="kc-help-title">Oriente sua conta, o contato dos anúncios e o suporte do jeito mais direto possível.</h1>
+        <p class="kc-help-copy">Aqui você encontra o caminho rápido para login, cadastro, confirmação de e-mail, onboarding, configurações de contato e pedidos de ajuda.</p>
       </div>
+
+      <div id="helpStatus" class="kc-settings-status" role="status" aria-live="polite"></div>
 
       <div class="kc-help-grid">
         <div class="kc-settings-stack">
+          <section class="kc-help-card">
+            <h2>Precisa de ajuda agora?</h2>
+            <p class="kc-help-copy">O KinoCampus está sendo mantido neste momento apenas por mim, Yan Diamantino. Eu não consigo responder todas as demandas no mesmo ritmo que gostaria, mas sigo fazendo o meu melhor para apoiar a comunidade e melhorar a plataforma continuamente.</p>
+            <div class="kc-help-inline-chips">
+              <a class="kc-help-chip" href="mailto:ajuda@kinocampus.com.br"><i class="fas fa-envelope"></i><span>ajuda@kinocampus.com.br</span></a>
+              <a class="kc-help-chip" href="mailto:contato@kinocampus.com.br"><i class="fas fa-paper-plane"></i><span>contato@kinocampus.com.br</span></a>
+            </div>
+            <div class="kc-help-disclaimer">
+              <strong><i class="fas fa-heart"></i> Aviso importante</strong>
+              <p>Se a sua solicitação for urgente, sensível ou envolver segurança, descreva o contexto com o máximo de clareza possível no formulário abaixo para facilitar a triagem.</p>
+            </div>
+          </section>
+
           <section class="kc-help-card">
             <h2>Atalhos úteis</h2>
             <div class="kc-help-list">
@@ -50,18 +65,115 @@
               </article>
               <article class="kc-help-item">
                 <strong><i class="fas fa-list-check"></i> Completar conta</strong>
-                <p>Defina nome de exibição, vínculo, canal principal de contato e os links que deseja mostrar publicamente.</p>
+                <p>Defina nome de exibição, vínculo, contato principal e os links que deseja mostrar no seu perfil.</p>
                 <a class="kc-help-btn" href="account-setup.html">Abrir onboarding</a>
               </article>
               <article class="kc-help-item">
                 <strong><i class="fas fa-sliders"></i> Configurações</strong>
-                <p>Ajuste tema, CTA público dos anúncios, visibilidade dos links sociais e ações de segurança.</p>
+                <p>Ajuste aparência, contato público, visibilidade dos links e ações de segurança da sua conta.</p>
                 <a class="kc-help-btn" href="settings.html">Ir para configurações</a>
               </article>
               <article class="kc-help-item">
                 <strong><i class="fas fa-id-badge"></i> Perfil público</strong>
-                <p>Veja como seu hero aparece para outras pessoas e confirme se seus links públicos estão do jeito que você quer.</p>
+                <p>Confira como seu perfil aparece para outras pessoas e revise o seu contato principal.</p>
                 <a class="kc-help-btn" href="profile.html">Abrir perfil</a>
+              </article>
+            </div>
+          </section>
+
+          <section class="kc-help-card">
+            <h2>Enviar pedido de ajuda</h2>
+            <p class="kc-help-copy">Escolha a categoria, detalhe o que aconteceu e indique a página afetada. Isso ajuda bastante a priorizar o atendimento e identificar bugs, dúvidas ou denúncias com mais rapidez.</p>
+            <form id="helpRequestForm" class="kc-help-form">
+              <div class="kc-help-form-grid">
+                <label class="kc-help-field">
+                  <span>Categoria principal</span>
+                  <select id="helpType" name="type" required></select>
+                </label>
+                <label class="kc-help-field">
+                  <span>Tema</span>
+                  <select id="helpTopic" name="topic" required></select>
+                </label>
+                <label class="kc-help-field">
+                  <span>Subtipo</span>
+                  <select id="helpSubtopic" name="subtopic"></select>
+                </label>
+                <label class="kc-help-field">
+                  <span>Impacto ou urgência</span>
+                  <select id="helpPriority" name="priority" required></select>
+                </label>
+                <label class="kc-help-field kc-help-field--wide">
+                  <span>Assunto</span>
+                  <input id="helpSubject" name="subject" type="text" maxlength="140" placeholder="Resumo curto do problema, dúvida ou sugestão" required />
+                </label>
+                <label class="kc-help-field kc-help-field--wide">
+                  <span>Descrição</span>
+                  <textarea id="helpMessage" name="message" rows="7" maxlength="4000" placeholder="Explique o que aconteceu, o que você esperava e como reproduzir o problema, se souber." required></textarea>
+                </label>
+                <label class="kc-help-field">
+                  <span>Página afetada</span>
+                  <input id="helpPagePath" name="page_path" type="text" maxlength="255" placeholder="/index.html" />
+                </label>
+                <label class="kc-help-field">
+                  <span>E-mail para retorno</span>
+                  <input id="helpContactEmail" name="contact_email" type="email" autocomplete="email" placeholder="voce@ufg.br" required />
+                </label>
+                <label class="kc-help-field kc-help-field--checkbox kc-help-field--wide">
+                  <input id="helpAllowContact" name="allow_contact" type="checkbox" checked />
+                  <span>Autorizo que o KinoCampus entre em contato por e-mail para continuar este atendimento.</span>
+                </label>
+              </div>
+              <div class="kc-settings-actions-row">
+                <button id="helpSubmitButton" type="submit" class="kc-help-btn is-primary"><i class="fas fa-paper-plane"></i><span>Enviar pedido</span></button>
+                <button id="helpResetButton" type="button" class="kc-help-btn"><i class="fas fa-rotate-left"></i><span>Limpar formulário</span></button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <aside class="kc-settings-stack">
+          <section class="kc-help-card">
+            <h2>Fluxo recomendado</h2>
+            <p class="kc-help-copy">Se você está ajustando a conta pela primeira vez, este é o caminho mais eficiente.</p>
+            <div class="kc-help-list kc-help-list--single">
+              <article class="kc-help-item">
+                <strong><i class="fas fa-envelope"></i> 1. Confirme o e-mail</strong>
+                <p>Abra o link recebido para cair no callback oficial do KinoCampus.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-user-check"></i> 2. Complete a conta</strong>
+                <p>Defina nome de exibição, vínculo, foto e contato principal.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-share-nodes"></i> 3. Revise os links públicos</strong>
+                <p>Ative somente as redes que você realmente quer mostrar no seu perfil.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-bullhorn"></i> 4. Teste o contato</strong>
+                <p>Depois de publicar, confira se o botão de contato está abrindo o canal correto.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="kc-help-card">
+            <h2>Configurar e-mail Hostinger no Gmail</h2>
+            <p class="kc-help-copy">Para acessar <strong>contato@kinocampus.com.br</strong> ou <strong>ajuda@kinocampus.com.br</strong> no aplicativo do Gmail, adicione a caixa manualmente como conta IMAP.</p>
+            <div class="kc-help-list kc-help-list--single">
+              <article class="kc-help-item">
+                <strong><i class="fas fa-envelope-open-text"></i> Entrada (IMAP)</strong>
+                <p><code>imap.hostinger.com</code> porta <code>993</code> com SSL/TLS.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-paper-plane"></i> Saída (SMTP)</strong>
+                <p><code>smtp.hostinger.com</code> porta <code>465</code> com SSL/TLS ou <code>587</code> com STARTTLS.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-user"></i> Usuário</strong>
+                <p>Use o endereço completo da conta, por exemplo <code>contato@kinocampus.com.br</code>.</p>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-gears"></i> Login e cadastro da plataforma</strong>
+                <p>O e-mail transacional do cadastro deve ser configurado no <strong>Supabase Auth</strong> com SMTP customizado. O Vercel só entra se você criar depois uma rota própria de envio.</p>
               </article>
             </div>
           </section>
@@ -74,55 +186,17 @@
                 <p>Verifique a caixa de spam e depois abra o modal de login para usar a ação “Reenviar confirmação”. Você também encontra esse atalho nas configurações da conta.</p>
               </details>
               <details>
-                <summary>Por que o botão “Entrar em contato” pede login?</summary>
+                <summary>Por que “Entrar em contato” pede login?</summary>
                 <p>O contato do anúncio só fica disponível para pessoas autenticadas. Isso reduz abuso e preserva melhor o contexto do anúncio e do autor.</p>
               </details>
               <details>
-                <summary>Posso esconder minhas redes sociais e manter só um canal principal?</summary>
-                <p>Sim. Em Configurações você escolhe quais links aparecem no perfil e também pode manter o CTA de contato ligado ou desligado nos anúncios.</p>
+                <summary>Posso esconder minhas redes e manter só um contato principal?</summary>
+                <p>Sim. Em Configurações você escolhe quais links aparecem no perfil e também pode deixar o contato público desligado nos anúncios.</p>
               </details>
               <details>
-                <summary>Posso trocar minha foto por upload, avatar sugerido ou emoji?</summary>
-                <p>Sim. No onboarding você pode enviar uma foto, carregar mais avatares aleatórios do mesmo estilo ou montar uma imagem com emoji e cor.</p>
+                <summary>Posso trocar a foto por upload, avatar sugerido ou emoji?</summary>
+                <p>Sim. No onboarding você pode enviar uma foto, carregar outros avatares do mesmo estilo ou montar uma imagem com emoji e cor.</p>
               </details>
-              <details>
-                <summary>Qual canal o KinoCampus usa quando alguém clica no meu anúncio?</summary>
-                <p>O canal principal escolhido na conta. Se for WhatsApp, o link já abre com uma mensagem pronta referenciando o anúncio. Se você desligar o CTA, a interface troca para uma alternativa segura.</p>
-              </details>
-            </div>
-          </section>
-        </div>
-
-        <aside class="kc-settings-stack">
-          <section class="kc-help-card">
-            <h2>Fluxo recomendado</h2>
-            <p class="kc-help-copy">Se estiver configurando sua conta agora, este é o caminho mais rápido para deixar o perfil pronto.</p>
-            <div class="kc-help-list">
-              <article class="kc-help-item">
-                <strong><i class="fas fa-envelope"></i> 1. Confirme o e-mail</strong>
-                <p>Abra o link recebido para cair no callback oficial do KinoCampus.</p>
-              </article>
-              <article class="kc-help-item">
-                <strong><i class="fas fa-user-check"></i> 2. Complete o onboarding</strong>
-                <p>Defina nome de exibição, vínculo e o canal principal do contato.</p>
-              </article>
-              <article class="kc-help-item">
-                <strong><i class="fas fa-share-nodes"></i> 3. Revise os links públicos</strong>
-                <p>Ative somente as redes que você quer mostrar no hero do perfil.</p>
-              </article>
-              <article class="kc-help-item">
-                <strong><i class="fas fa-bullhorn"></i> 4. Publique e teste o CTA</strong>
-                <p>Depois de publicar, revise se o botão de contato está abrindo o canal certo.</p>
-              </article>
-            </div>
-          </section>
-
-          <section class="kc-help-card">
-            <h2>Precisa revisar o básico?</h2>
-            <div class="kc-settings-actions-row">
-              <a class="kc-help-btn is-primary" href="settings.html"><i class="fas fa-sliders"></i><span>Configurações</span></a>
-              <a class="kc-help-btn" href="account-setup.html"><i class="fas fa-list-check"></i><span>Onboarding</span></a>
-              <a class="kc-help-btn" href="index.html"><i class="fas fa-house"></i><span>Voltar ao início</span></a>
             </div>
           </section>
         </aside>
@@ -138,10 +212,12 @@
   <script src="assets/js/kc-api.client.js"></script>
   <script src="assets/js/adapters/local.adapter.js"></script>
   <script src="assets/js/adapters/supabase.adapter.js"></script>
+  <script src="assets/js/help.shared.js"></script>
   <script src="assets/js/account-profile.shared.js"></script>
   <script src="assets/js/kc-profiles.client.js"></script>
   <script src="assets/js/kc-public-shell.js"></script>
   <script src="assets/js/kc-auth.ui.js"></script>
   <script src="assets/js/kc-theme.js"></script>
+  <script src="assets/js/controllers/help.controller.js"></script>
 </body>
 </html>

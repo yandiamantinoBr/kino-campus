@@ -94,12 +94,8 @@
   }
 
   function computeAvatarUrl(user) {
-    const meta = (user && user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
-    const candidate = meta.avatar_url || meta.picture || meta.avatar || '';
-    if (String(candidate || '').trim()) return String(candidate).trim();
-
-    const seed = encodeURIComponent(String((user && (user.email || user.id)) || 'kinocampus').trim().toLowerCase());
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+    void user;
+    return '';
   }
 
   function normalizeProfile(row, fallback) {
@@ -206,8 +202,9 @@
       id: user.id,
       full_name: computeDisplayName(user),
       display_name: computeDisplayName(user),
-      avatar_url: computeAvatarUrl(user),
     };
+    const avatarUrl = computeAvatarUrl(user);
+    if (avatarUrl) payload.avatar_url = avatarUrl;
 
     try {
       const query = client

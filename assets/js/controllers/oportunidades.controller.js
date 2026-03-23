@@ -11,6 +11,8 @@
   ];
 
   const MOBILE_SECTION_MODAL_ID = 'kcOpportunitySectionOverlay';
+  const SECTION_CACHE_KEY = 'oportunidades:index';
+  const SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10;
 
   const state = {
     selectedTypeFilters: new Set(),
@@ -67,6 +69,31 @@
   function isMobileViewport() {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
     return window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function getSessionStore() {
+    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+      ? window.KCSessionStore
+      : null;
+  }
+
+  function restoreCachedPosts() {
+    const store = getSessionStore();
+    if (!store) return false;
+    const cached = store.get('feed-index', SECTION_CACHE_KEY, { maxAge: SECTION_CACHE_MAX_AGE_MS });
+    const posts = cached && cached.value && Array.isArray(cached.value.posts) ? cached.value.posts : [];
+    if (!posts.length) return false;
+    upsertPosts(posts);
+    queueRefresh();
+    return true;
+  }
+
+  function persistCachedPosts(posts) {
+    const store = getSessionStore();
+    if (!store || typeof store.set !== 'function') return;
+    store.set('feed-index', SECTION_CACHE_KEY, {
+      posts: Array.isArray(posts) ? posts.slice(0, 600) : [],
+    });
   }
 
   function getFilterState() {
@@ -946,6 +973,7 @@
     } catch (_) { }
 
     upsertPosts(collected);
+    persistCachedPosts(collected);
     queueRefresh();
   }
 
@@ -975,6 +1003,7 @@
     syncStateFromInputs();
     bindSidebarEvents();
     setupExtraPredicate();
+    restoreCachedPosts();
     initFeed();
     fetchAllPosts();
     queueRefresh();

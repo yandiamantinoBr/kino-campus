@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   const shared = window.KCAccountProfileUtils || {};
@@ -141,7 +141,7 @@
     return String($('#settingsPrimaryMethod')?.value || '').trim() === NO_PUBLIC_CONTACT_OPTION.value;
   }
 
-  function syncCtaPillLabel() {
+  function syncContactPillLabel() {
     const label = $('#settingsCtaEnabledLabel');
     const toggle = $('#settingsCtaEnabled');
     if (!label || !toggle) return;
@@ -168,7 +168,7 @@
       if (mode === 'select' && wasDisabled) toggle.checked = true;
     }
 
-    syncCtaPillLabel();
+    syncContactPillLabel();
   }
 
   function renderPrimaryMethodOptions() {
@@ -255,7 +255,7 @@
 
     const selectedValue = String($('#settingsPrimaryMethod')?.value || '').trim();
     if (selectedValue === NO_PUBLIC_CONTACT_OPTION.value) {
-      preview.textContent = 'Estado atual: sem contato público. O botão do anúncio exibirá uma alternativa segura, como “Ver perfil”.';
+      preview.textContent = 'Estado atual: sem contato público. O anúncio exibirá uma alternativa segura, como “Ver perfil”.';
       return;
     }
 
@@ -270,19 +270,19 @@
       : null;
 
     if (!action) {
-      preview.textContent = 'Não foi possível gerar a prévia do CTA agora.';
+      preview.textContent = 'Não foi possível gerar a prévia do contato agora.';
       return;
     }
 
     const label = String(action.label || '').trim();
     const href = String(action.href || '').trim();
     if (!href && action.type !== 'login_required') {
-      preview.textContent = `Estado atual: ${label || 'Contato indisponível'}. Complete o valor do contato no onboarding para ativar este CTA.`;
+      preview.textContent = `Estado atual: ${label || 'Contato indisponível'}. Complete o valor do contato no onboarding para ativar este botão.`;
       return;
     }
 
     if (action.type === 'view_profile') {
-      preview.textContent = `Estado atual: ${label || 'Ver perfil'}. O anúncio exibirá uma alternativa segura no lugar do botão de contato direto.`;
+      preview.textContent = `Estado atual: ${label || 'Ver perfil'}. O anúncio exibirá uma alternativa segura no lugar do contato direto.`;
       return;
     }
 
@@ -460,7 +460,7 @@
 
     if (ctaEnabled) {
       ctaEnabled.addEventListener('change', function () {
-        syncCtaPillLabel();
+        syncContactPillLabel();
         updateContactPreview();
       });
     }
@@ -532,3 +532,4 @@
     init();
   }
 }());
+

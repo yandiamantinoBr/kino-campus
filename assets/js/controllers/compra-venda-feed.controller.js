@@ -12,6 +12,8 @@
   const CAT_KEYS = CATS.map((entry) => entry.key);
   const MODAL_ID = 'kcMarketplaceSectionOverlay';
   const MODULES = new Set(['compra-venda', 'livros']);
+  const SECTION_CACHE_KEY = 'compra-venda:index';
+  const SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10;
   const state = {
     cats: new Set(CAT_KEYS),
     conds: new Set(),
@@ -41,6 +43,30 @@
   function cloneSet(set) { return new Set(Array.from(set || [])); }
   function isMobile() { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }
   function getParam(name) { try { return new URL(window.location.href).searchParams.get(name); } catch (_) { return null; } }
+  function getSessionStore() {
+    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+      ? window.KCSessionStore
+      : null;
+  }
+
+  function restoreCachedPosts() {
+    const store = getSessionStore();
+    if (!store) return false;
+    const cached = store.get('feed-index', SECTION_CACHE_KEY, { maxAge: SECTION_CACHE_MAX_AGE_MS });
+    const posts = cached && cached.value && Array.isArray(cached.value.posts) ? cached.value.posts : [];
+    if (!posts.length) return false;
+    upsert(posts);
+    queue();
+    return true;
+  }
+
+  function persistCachedPosts(posts) {
+    const store = getSessionStore();
+    if (!store || typeof store.set !== 'function') return;
+    store.set('feed-index', SECTION_CACHE_KEY, {
+      posts: Array.isArray(posts) ? posts.slice(0, 800) : [],
+    });
+  }
 
   function normCat(value) {
     const key = norm(value).replace(/^#/, '');
@@ -536,6 +562,7 @@
       }
     } catch (_) { }
     upsert(collected);
+    persistCachedPosts(collected);
     queue();
   }
 
@@ -565,6 +592,7 @@
     }
     bind();
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') window.kcFilters.setExtraPredicate(function (card) { return matchCard(card); });
+    restoreCachedPosts();
     initFeed();
     fetchAll();
     queue();
