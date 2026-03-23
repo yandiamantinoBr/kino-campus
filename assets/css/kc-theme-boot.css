@@ -45,6 +45,41 @@ html:not(.kc-loading) .kc-hero-carousel {
   transition: opacity 0.22s ease;
 }
 
+@media (max-width: 768px) {
+  html.kc-loading .kc-header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  html.kc-loading .kc-logo {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  html.kc-loading .kc-search-bar {
+    display: none !important;
+  }
+
+  html.kc-loading .kc-search-mobile-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+  }
+
+  html.kc-loading .kc-user-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+}
+
 /* ─── Hero skeleton enquanto kc-banners.js carrega do Supabase ───────────
    .kc-hero-loading é adicionado pelo HTML estático e removido pelo JS
    após a carga (sucesso, erro ou modo local).
@@ -90,4 +125,3 @@ html:not(.kc-loading) .kc-hero-carousel {
 .kc-hero-carousel {
   transition: opacity 0.28s ease;
 }
-

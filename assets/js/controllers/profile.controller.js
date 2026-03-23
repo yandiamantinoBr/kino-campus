@@ -1113,6 +1113,51 @@
     });
   }
 
+  async function refreshProfilePage() {
+    setStatus('Atualizando perfil...', 'info');
+    try {
+      state.user = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+        ? window.KCSupabase.getUser()
+        : state.user;
+      if (!state.user && window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+        state.user = await window.KCAPI.getCurrentUser();
+      }
+      state.viewerAuthenticated = !!state.user;
+
+      const loaded = await loadProfile();
+      if (!loaded) {
+        setStatus('Não foi possível atualizar este perfil agora.', 'error');
+        return;
+      }
+
+      const tasks = [
+        loadStats(state.profileId),
+        loadSavedBadgeCount(state.profileId),
+        loadActivities(),
+      ];
+
+      if (state.activeTab === 'posts' || state.posts.length) tasks.push(loadPosts(true));
+      if (state.activeTab === 'comments' || state.comments.length) tasks.push(loadComments(true));
+      if (state.activeTab === 'saved' || state.savedItems.length) tasks.push(loadSaved(true));
+
+      await Promise.allSettled(tasks);
+      renderHeader();
+      setStatus('Perfil atualizado.', 'success');
+    } catch (error) {
+      console.error('[Profile] refresh failed:', error);
+      setStatus('Não foi possível atualizar este perfil agora.', 'error');
+    }
+  }
+
+  function initPullToRefresh() {
+    if (!window.KCPullToRefresh || document.body.dataset.kcProfilePtrReady === '1') return;
+    document.body.dataset.kcProfilePtrReady = '1';
+    window.KCPullToRefresh.init({
+      container: document.body,
+      onRefresh: refreshProfilePage,
+    });
+  }
+
   async function init() {
     if (!window.KCAPI || typeof window.KCAPI.getCurrentUser !== 'function') return;
 
@@ -1171,8 +1216,10 @@
     loadActivities().catch(() => {});
     renderHeader();
     switchTab('activities');
+    initPullToRefresh();
   }
 
+  window.KCProfileRefresh = refreshProfilePage;
   window.addEventListener('beforeunload', releaseAvatarPreview);
   document.addEventListener('DOMContentLoaded', init);
 })();

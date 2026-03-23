@@ -4,6 +4,31 @@
 const { ENV, normalizePost } = window.KCAPI;
   const profileShared = window.KCAccountProfileUtils || {};
   const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, profile_public, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
+  const createPostDiagnostics = Object.freeze({
+    clear() {
+      try {
+        if (window.KCAPI && typeof window.KCAPI.clearLastCreatePostError === 'function') {
+          window.KCAPI.clearLastCreatePostError();
+        }
+      } catch (_) { }
+    },
+    set(stage, error, context) {
+      try {
+        if (window.KCAPI && typeof window.KCAPI.setLastCreatePostError === 'function') {
+          return window.KCAPI.setLastCreatePostError(stage, error, context);
+        }
+      } catch (_) { }
+      return null;
+    },
+    get() {
+      try {
+        if (window.KCAPI && typeof window.KCAPI.getLastCreatePostError === 'function') {
+          return window.KCAPI.getLastCreatePostError();
+        }
+      } catch (_) { }
+      return null;
+    }
+  });
 
   function normalizeProfilePatchForAdapter(patch) {
     if (profileShared && typeof profileShared.normalizeProfilePatch === 'function') {
@@ -1114,11 +1139,11 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   async function supabaseCreatePost(data) {
-    clearLastCreatePostError();
+    createPostDiagnostics.clear();
 
     const client = getSupabaseClient();
     if (!client) {
-      setLastCreatePostError('AUTH', {
+      createPostDiagnostics.set('AUTH', {
         message: 'Supabase client nÃ£o disponÃ­vel para createPost.',
         code: 'SUPABASE_CLIENT_MISSING',
       }, { driver: ENV.driver });
@@ -1127,7 +1152,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
     const user = await supabaseGetCurrentUser();
     if (!user) {
-      setLastCreatePostError('AUTH', {
+      createPostDiagnostics.set('AUTH', {
         message: 'UsuÃ¡rio nÃ£o autenticado para createPost.',
         code: 'NOT_AUTHENTICATED',
       }, { driver: ENV.driver });
@@ -1137,7 +1162,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const parsed = normalizeCreatePayload(data);
     const payloadSummary = summarizeCreatePayloadForDiagnostics(parsed);
     if (!parsed.title || !parsed.description || !parsed.moduleDB) {
-      setLastCreatePostError('PAYLOAD', {
+      createPostDiagnostics.set('PAYLOAD', {
         message: 'Payload de createPost incompleto (tÃ­tulo/descriÃ§Ã£o/mÃ³dulo).',
         code: 'INVALID_CREATE_PAYLOAD',
       }, payloadSummary);
@@ -1146,7 +1171,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
     const profileSync = await ensureSupabaseProfileForCreate(client, user);
     if (!profileSync.ok) {
-      setLastCreatePostError('PROFILE_SYNC', profileSync.error, {
+      createPostDiagnostics.set('PROFILE_SYNC', profileSync.error, {
         userId: user.id,
       });
       return null;
@@ -1205,7 +1230,7 @@ const { ENV, normalizePost } = window.KCAPI;
         .maybeSingle();
 
       if (ins && ins.error) {
-        setLastCreatePostError('POST_INSERT', ins.error, {
+        createPostDiagnostics.set('POST_INSERT', ins.error, {
           userId: user.id,
           payload: payloadSummary,
         });
@@ -1214,7 +1239,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
       postId = (ins && ins.data && ins.data.id) ? ins.data.id : null;
       if (!postId) {
-        setLastCreatePostError('POST_INSERT', {
+        createPostDiagnostics.set('POST_INSERT', {
           message: 'INSERT em posts nÃ£o retornou id.',
           code: 'POST_INSERT_NO_ID',
         }, {
@@ -1234,7 +1259,7 @@ const { ENV, normalizePost } = window.KCAPI;
         } else {
           console.warn('[KCAPI][Supabase] rollback do post ignorado apos falha no cleanup do upload:', uploadCleanup);
         }
-        setLastCreatePostError('STORAGE_UPLOAD', uploadResult ? uploadResult.error : null, {
+        createPostDiagnostics.set('STORAGE_UPLOAD', uploadResult ? uploadResult.error : null, {
           postId,
           userId: user.id,
           imagesCount: Array.isArray(parsed.images) ? parsed.images.length : 0,
@@ -1275,7 +1300,7 @@ const { ENV, normalizePost } = window.KCAPI;
           } else {
             console.warn('[KCAPI][Supabase] rollback do post ignorado apos falha no cleanup de post_media:', cleanupContext);
           }
-          setLastCreatePostError('POST_MEDIA_INSERT', mr.error, {
+          createPostDiagnostics.set('POST_MEDIA_INSERT', mr.error, {
             postId,
             mediaCount: mediaRowsFull.length,
             rollbackSkipped: cleanupFailed,
@@ -1288,7 +1313,7 @@ const { ENV, normalizePost } = window.KCAPI;
       // 5) Rebusca completo (com JOINs) e normaliza no contrato do modo local (com JOINs) e normaliza no contrato do modo local
       const mapped = await supabaseGetPostById(postId);
       if (!mapped) {
-        setLastCreatePostError('POST_FETCH', {
+        createPostDiagnostics.set('POST_FETCH', {
           message: 'Post criado, mas a leitura final falhou.',
           code: 'POST_FETCH_EMPTY',
         }, { postId });
@@ -1300,7 +1325,7 @@ const { ENV, normalizePost } = window.KCAPI;
       if (parsed.raw && parsed.raw.categoria && !raw.categoria) raw.categoria = parsed.raw.categoria;
       if (parsed.raw && parsed.raw.subcategoria && !raw.subcategoria) raw.subcategoria = parsed.raw.subcategoria;
 
-      clearLastCreatePostError();
+      createPostDiagnostics.clear();
       return normalizePost(raw);
     } catch (e) {
       let cleanupContext = buildPostMediaCleanupContext(null);
@@ -1313,7 +1338,7 @@ const { ENV, normalizePost } = window.KCAPI;
       } else if (postId && cleanupFailed) {
         console.warn('[KCAPI][Supabase] rollback do post ignorado apos falha no cleanup de excecao:', cleanupContext);
       }
-      setLastCreatePostError('EXCEPTION', e, {
+      createPostDiagnostics.set('EXCEPTION', e, {
         userId: user.id,
         payload: payloadSummary,
         postId,
@@ -2036,6 +2061,132 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
+  async function fetchRelatedPostsByIds(client, ids) {
+    const orderedIds = Array.isArray(ids)
+      ? ids.map((value) => String(value || '').trim()).filter(Boolean)
+      : [];
+    if (!client || !orderedIds.length) return [];
+
+    let includeVerified = true;
+    let includeComments = false;
+
+    try {
+      let query = buildSupabasePostsQuery(client, includeVerified, includeComments)
+        .in('id', orderedIds)
+        .eq('status', 'published');
+      let response = await query;
+
+      if (response && response.error && isMissingVerifiedColumnError(response.error)) {
+        includeVerified = false;
+        response = await buildSupabasePostsQuery(client, includeVerified, includeComments)
+          .in('id', orderedIds)
+          .eq('status', 'published');
+      }
+
+      if (response && response.error && includeComments && isMissingCommentsEmbedError(response.error)) {
+        includeComments = false;
+        response = await buildSupabasePostsQuery(client, includeVerified, includeComments)
+          .in('id', orderedIds)
+          .eq('status', 'published');
+      }
+
+      if (response && response.error) {
+        console.error('[KCAPI][product] fetchRelatedPostsByIds:', response.error);
+        return [];
+      }
+
+      const rows = Array.isArray(response && response.data) ? response.data : [];
+      const mappedById = new Map();
+      rows.forEach((row) => {
+        const mapped = mapSupabasePost(row, { allImages: false });
+        if (mapped && mapped.uuid) mappedById.set(String(mapped.uuid), normalizePost(mapped));
+      });
+
+      return orderedIds
+        .map((id) => mappedById.get(String(id)))
+        .filter(Boolean);
+    } catch (error) {
+      console.error('[KCAPI][product] fetchRelatedPostsByIds exceção:', error);
+      return [];
+    }
+  }
+
+  async function supabaseGetRelatedPosts(postId, options = {}) {
+    const client = getSupabaseClient();
+    if (!client) return [];
+
+    const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const limit = Math.min(12, Math.max(1, Number(opts.limit) || 8));
+    const currentPost = opts.currentPost && typeof opts.currentPost === 'object'
+      ? normalizePost(opts.currentPost)
+      : await supabaseGetPostById(postId);
+    if (!currentPost) return [];
+
+    const viewer = await supabaseGetCurrentUser();
+    const viewerAuthenticated = !!(viewer && viewer.id);
+    const currentUuid = String(currentPost.uuid || currentPost.id || '').trim();
+    const currentAuthorId = String(currentPost.authorId || currentPost.autorId || currentPost.author_id || '').trim();
+    const currentModule = String(currentPost.modulo || currentPost.module || '').trim();
+
+    try {
+      const rpc = await client.rpc('kc_related_posts', {
+        p_post_id: currentUuid,
+        p_limit: limit,
+      });
+
+      if (rpc && !rpc.error) {
+        const rows = Array.isArray(rpc.data) ? rpc.data : [];
+        const ids = rows.map((row) => String((row && (row.candidate_id || row.id)) || '').trim()).filter(Boolean);
+        const scoreMap = new Map();
+        rows.forEach((row) => {
+          const id = String((row && (row.candidate_id || row.id)) || '').trim();
+          if (!id) return;
+          scoreMap.set(id, {
+            score: Number(row && row.relevance_score) || 0,
+            reason: String(row && row.reason || '').trim(),
+          });
+        });
+
+        const hydrated = await fetchRelatedPostsByIds(client, ids);
+        if (hydrated.length) {
+          return hydrated.map((item) => {
+            const meta = scoreMap.get(String(item.uuid || item.id || '').trim()) || {};
+            return Object.assign({}, item, {
+              _kcRelatedScore: Number(meta.score) || 0,
+              _kcRelatedReason: meta.reason || item._kcRelatedReason || 'Relacionado',
+            });
+          }).slice(0, limit);
+        }
+      } else if (rpc && rpc.error) {
+        console.warn('[KCAPI][product] kc_related_posts RPC indisponível; usando fallback local:', rpc.error);
+      }
+    } catch (error) {
+      console.warn('[KCAPI][product] kc_related_posts RPC falhou; usando fallback local:', error);
+    }
+
+    const candidateBuckets = [];
+    if (currentAuthorId) {
+      candidateBuckets.push(supabaseGetPostsByAuthorId(currentAuthorId, { page: 1, limit: 24 }));
+    }
+    if (currentModule) {
+      candidateBuckets.push(supabaseGetPosts({ module: currentModule, page: 1, limit: 36 }));
+    }
+
+    let fallbackCandidates = [];
+    try {
+      const resolved = await Promise.all(candidateBuckets);
+      resolved.forEach((list) => {
+        if (Array.isArray(list) && list.length) fallbackCandidates = fallbackCandidates.concat(list);
+      });
+    } catch (_) { }
+
+    const ranked = (window.KCAPI && typeof window.KCAPI.rankRelatedPosts === 'function')
+      ? window.KCAPI.rankRelatedPosts(currentPost, fallbackCandidates, { viewerAuthenticated })
+      : fallbackCandidates;
+
+    return ranked.slice(0, limit);
+  }
+
   async function resolvePostUuidForSavedPosts(postId) {
     const raw = String(postId || '').trim();
     if (!raw) return null;
@@ -2754,6 +2905,7 @@ const { ENV, normalizePost } = window.KCAPI;
     uploadProfileAvatar: supabaseUploadProfileAvatar,
     getMyPosts: supabaseGetMyPosts,
     getPostsByAuthorId: supabaseGetPostsByAuthorId,
+    getRelatedPosts: supabaseGetRelatedPosts,
     getSavedPostState: supabaseGetSavedPostStateMulti,
     setSavedPostState: supabaseSetSavedPostStateMulti,
     clearSavedPostState: supabaseClearSavedPostStateMulti,

@@ -1905,8 +1905,17 @@
     var periodFilter = $('#admin-period-filter');
     if (periodFilter) periodFilter.addEventListener('change', refreshDashboard);
 
+    if (window.KCPullToRefresh && document.body.dataset.kcAdminPtrReady !== '1') {
+      document.body.dataset.kcAdminPtrReady = '1';
+      window.KCPullToRefresh.init({
+        container: document.body,
+        onRefresh: refreshDashboard,
+      });
+    }
+
     await refreshDashboard();
   }
 
+  window.KCAdminDashboardRefresh = refreshDashboard;
   document.addEventListener('DOMContentLoaded', boot);
 })();

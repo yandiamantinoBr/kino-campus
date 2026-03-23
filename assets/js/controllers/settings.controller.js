@@ -534,6 +534,37 @@
     }
   }
 
+  async function refreshSettingsPage() {
+    setStatus('Atualizando configurações...', 'info');
+    try {
+      await loadProfile();
+      const guest = $('#settingsGuest');
+      const content = $('#settingsContent');
+      if (!state.user) {
+        if (guest) guest.style.display = 'grid';
+        if (content) content.style.display = 'none';
+        setStatus('Entre para atualizar suas configurações.', 'warn');
+        return;
+      }
+      if (guest) guest.style.display = 'none';
+      if (content) content.style.display = 'grid';
+      populate();
+      setStatus('Configurações atualizadas.', 'success');
+    } catch (error) {
+      console.error('[Settings] refresh failed:', error);
+      setStatus('Não foi possível atualizar as configurações agora.', 'error');
+    }
+  }
+
+  function initPullToRefresh() {
+    if (!window.KCPullToRefresh || document.body.dataset.kcSettingsPtrReady === '1') return;
+    document.body.dataset.kcSettingsPtrReady = '1';
+    window.KCPullToRefresh.init({
+      container: document.body,
+      onRefresh: refreshSettingsPage,
+    });
+  }
+
   async function init() {
     state.nextPath = readNextPath();
     renderPrimaryMethodOptions();
@@ -547,12 +578,16 @@
 
     if (!state.user) {
       $('#settingsGuest').style.display = 'grid';
+      initPullToRefresh();
       return;
     }
 
     $('#settingsContent').style.display = 'grid';
     populate();
+    initPullToRefresh();
   }
+
+  window.KCSettingsRefresh = refreshSettingsPage;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });

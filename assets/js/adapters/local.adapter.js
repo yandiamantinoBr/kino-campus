@@ -125,6 +125,61 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return null;
   }
 
+  async function localGetRelatedPosts(postId, options = {}) {
+    const current = await localGetPostById(postId);
+    if (!current) return [];
+
+    const limit = Math.min(12, Math.max(1, Number(options.limit) || 8));
+    const viewerAuthenticated = options.viewerAuthenticated !== false;
+    const currentAuthor = String(current.authorId || current.autorId || current.author_id || '').trim();
+    const currentModule = String(current.modulo || current.module || '').trim();
+
+    const db = await getDatabaseNormalized();
+    const dbItems = Array.isArray(db && db.posts) ? db.posts : [];
+    const localItems = (() => {
+      try {
+        const raw = JSON.parse(localStorage.getItem('kc_user_posts') || '[]');
+        return Array.isArray(raw) ? raw.map(normalizePost) : [];
+      } catch (_) {
+        return [];
+      }
+    })();
+
+    const candidates = dbItems.concat(localItems).filter((item) => {
+      if (!item) return false;
+      const candidateId = String(item.uuid || item.id || '').trim();
+      const currentId = String(current.uuid || current.id || '').trim();
+      if (candidateId && currentId && candidateId === currentId) return false;
+      if (String(item.status || 'published').trim().toLowerCase() !== 'published') return false;
+      const visibility = String(item.visibility || 'public').trim().toLowerCase();
+      if (!viewerAuthenticated && visibility !== 'public') return false;
+      return true;
+    });
+
+    const ranked = (window.KCAPI && typeof window.KCAPI.rankRelatedPosts === 'function')
+      ? window.KCAPI.rankRelatedPosts(current, candidates, { viewerAuthenticated })
+      : candidates;
+
+    const prioritized = ranked.sort((left, right) => {
+      const leftAuthor = String(left.authorId || left.autorId || left.author_id || '').trim();
+      const rightAuthor = String(right.authorId || right.autorId || right.author_id || '').trim();
+      const leftModule = String(left.modulo || left.module || '').trim();
+      const rightModule = String(right.modulo || right.module || '').trim();
+
+      const leftSameAuthor = leftAuthor && leftAuthor === currentAuthor;
+      const rightSameAuthor = rightAuthor && rightAuthor === currentAuthor;
+      if (leftSameAuthor !== rightSameAuthor) return leftSameAuthor ? -1 : 1;
+
+      const leftSameModule = leftModule && leftModule === currentModule;
+      const rightSameModule = rightModule && rightModule === currentModule;
+      if (leftSameModule !== rightSameModule) return leftSameModule ? -1 : 1;
+
+      return Number(right._kcRelatedScore || 0) - Number(left._kcRelatedScore || 0);
+    });
+
+    return prioritized.slice(0, limit);
+  }
+
   // POST /api/v1/posts
   async function localCreatePost(body) {
     if (!cfg.baseURL) {
@@ -366,6 +421,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     name: 'local',
     getPosts: localGetPosts,
     getPostById: localGetPostById,
+    getRelatedPosts: localGetRelatedPosts,
     createPost: localCreatePost,
     reportPost: async function () {
       return { ok: false, error: { message: 'Denúncias disponíveis apenas no Supabase.' } };

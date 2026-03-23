@@ -940,6 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // mobile menu data-* delegation
   document.body.addEventListener('click', (e) => {
+    if (document.body && document.body.classList.contains('kc-shell-page')) return;
     const menuTrigger = e.target.closest('[data-kc-mobile-menu]');
     if (!menuTrigger) return;
 

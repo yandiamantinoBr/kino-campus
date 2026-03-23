@@ -12,6 +12,7 @@
   let pullingContainer = null;
   let refreshCallback = null;
   let indicator = null;
+  let refreshing = false;
 
   const THRESHOLD = 120; // px to pull before triggering refresh
   const MAX_PULL  = 220; // max pull distance for visual feedback
@@ -128,10 +129,16 @@
     pulling = false;
     const diff = currentY - startY;
 
-    if (diff > THRESHOLD && refreshCallback) {
+    if (diff > THRESHOLD && refreshCallback && !refreshing) {
       // Trigger refresh
       hideIndicator();
-      refreshCallback();
+      refreshing = true;
+      Promise.resolve()
+        .then(function () { return refreshCallback(); })
+        .catch(function () { })
+        .finally(function () {
+          refreshing = false;
+        });
     } else {
       hideIndicator();
     }
@@ -142,6 +149,7 @@
 
   function init(options) {
     options = options || {};
+    destroy();
     const container = options.container || document.body;
     pullingContainer = container;
     refreshCallback = options.onRefresh || (() => {});
@@ -166,6 +174,10 @@
     indicator = null;
     refreshCallback = null;
     pullingContainer = null;
+    refreshing = false;
+    pulling = false;
+    startY = 0;
+    currentY = 0;
   }
 
   window.KCPullToRefresh = Object.freeze({ init, destroy });

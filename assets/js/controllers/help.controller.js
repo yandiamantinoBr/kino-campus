@@ -181,6 +181,18 @@
     }
   }
 
+  async function refreshHelpPage() {
+    setStatus('Atualizando a central de ajuda...', 'info');
+    try {
+      await hydrateUser();
+      prefillContext();
+      setStatus('Central de ajuda atualizada.', 'success');
+    } catch (error) {
+      console.warn('[Help] refresh failed:', error);
+      setStatus('Não foi possível atualizar a central de ajuda agora.', 'error');
+    }
+  }
+
   function collectConditionalMetadata() {
     const metadata = {
       route: window.location.pathname || '/ajuda.html',
@@ -294,6 +306,15 @@
     }
   }
 
+  function initPullToRefresh() {
+    if (!window.KCPullToRefresh || document.body.dataset.kcHelpPtrReady === '1') return;
+    document.body.dataset.kcHelpPtrReady = '1';
+    window.KCPullToRefresh.init({
+      container: document.body,
+      onRefresh: refreshHelpPage,
+    });
+  }
+
   async function init() {
     renderOptions($('#helpType'), Help.HELP_TYPE_OPTIONS || [], 'Selecione a categoria principal');
     renderOptions($('#helpPriority'), Help.HELP_PRIORITY_OPTIONS || [], 'Selecione a urgência');
@@ -307,7 +328,10 @@
     }
 
     prefillContext();
+    initPullToRefresh();
   }
+
+  window.KCHelpRefresh = refreshHelpPage;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });

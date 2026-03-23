@@ -470,9 +470,7 @@
       accountSection.id = 'mobileMenuAccountSection';
       accountSection.className = 'kc-mobile-menu-account-section';
       const userSection = $('#mobileMenuUserSection');
-      const topDivider = content.querySelector('[data-kc-divider="top"]');
-      if (topDivider) topDivider.insertAdjacentElement('afterend', accountSection);
-      else if (userSection) userSection.insertAdjacentElement('afterend', accountSection);
+      if (userSection) userSection.insertAdjacentElement('afterend', accountSection);
       else content.insertBefore(accountSection, content.firstChild);
     }
 
@@ -505,16 +503,10 @@
     if (adminLink) adminLink.href = buildAdminHref();
     if (helpLink) helpLink.href = buildHelpHref();
 
-    let accountDivider = $('#mobileMenuAccountDivider') || content.querySelector('[data-kc-divider="profile"]');
-    if (!accountDivider) {
-      accountDivider = document.createElement('hr');
-      accountDivider.id = 'mobileMenuAccountDivider';
-      accountDivider.className = 'kc-mobile-menu-divider';
-      accountDivider.setAttribute('data-kc-divider', 'account');
+    const accountDivider = $('#mobileMenuAccountDivider') || content.querySelector('[data-kc-divider="profile"]');
+    if (accountDivider && accountDivider.parentNode) {
+      accountDivider.parentNode.removeChild(accountDivider);
     }
-    accountDivider.id = 'mobileMenuAccountDivider';
-    accountDivider.setAttribute('data-kc-divider', 'account');
-    accountSection.insertAdjacentElement('afterend', accountDivider);
     drawer.dataset.kcAccountStructureReady = '1';
   }
 

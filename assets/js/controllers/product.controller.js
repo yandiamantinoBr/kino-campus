@@ -10,11 +10,11 @@
 
   let currentPost = null;
   let currentUser = null;
-  let currentDb = null;
   let editUI = null;
   let staticInteractionsBound = false;
   let savedPostState = { kinds: [], loaded: false, pending: false };
   const shared = window.KCAccountProfileUtils || {};
+  let sellerStatsRequestToken = 0;
 
   // ── Share popover ────────────────────────────────────────
   function openSharePopover(btn) {
@@ -975,21 +975,6 @@
       items.push('<span><i class="fas fa-comments"></i> ' + post.comentarios + ' coment' + (post.comentarios !== 1 ? 'ários' : 'ário') + '</span>');
     }
 
-    // Outras publicações deste autor no banco local
-    const authorId = getPostAuthorId(post);
-    if (authorId && currentDb) {
-      const allPosts = (Array.isArray(currentDb.posts) ? currentDb.posts
-        : (Array.isArray(currentDb.anuncios) ? currentDb.anuncios : []));
-      const authorPostCount = allPosts.filter(function (p) {
-        if (!p) return false;
-        const pid = String(p.autorId || p.authorId || p.author_id || '').trim();
-        return pid && pid === String(authorId).trim() && String(p.id) !== String(post.id);
-      }).length;
-      if (authorPostCount > 0) {
-        items.push('<span><i class="fas fa-layer-group"></i> ' + authorPostCount + ' publicaç' + (authorPostCount === 1 ? 'ão' : 'ões') + '</span>');
-      }
-    }
-
     // Membro desde (data de cadastro do perfil)
     if (post.authorCreatedAt) {
       try {
@@ -1003,6 +988,32 @@
 
     stats.innerHTML = items.join('');
     card.style.display = 'block';
+    loadSellerAuthorStats(post, stats, items.slice()).catch(() => {});
+  }
+
+  async function loadSellerAuthorStats(post, statsContainer, baseItems) {
+    const authorId = getPostAuthorId(post);
+    if (!authorId || !statsContainer || !window.KCAPI || typeof window.KCAPI.getPostsByAuthorId !== 'function') return;
+
+    const requestToken = ++sellerStatsRequestToken;
+
+    try {
+      const items = await window.KCAPI.getPostsByAuthorId(authorId, { page: 1, limit: 24 });
+      if (requestToken !== sellerStatsRequestToken) return;
+
+      const currentPostId = String(getPostIdForMutation(post) || '').trim();
+      const authorPostCount = (Array.isArray(items) ? items : []).filter(function (item) {
+        if (!item) return false;
+        const itemId = String((item.uuid || item.id) || '').trim();
+        return !currentPostId || itemId !== currentPostId;
+      }).length;
+
+      if (!authorPostCount) return;
+
+      const rows = Array.isArray(baseItems) ? baseItems.slice() : [];
+      rows.push('<span><i class="fas fa-layer-group"></i> ' + authorPostCount + ' publicaç' + (authorPostCount === 1 ? 'ão' : 'ões') + '</span>');
+      statsContainer.innerHTML = rows.join('');
+    } catch (_) { }
   }
 
   async function enrichPostAuthorFromProfile(post) {
@@ -1372,183 +1383,129 @@
     });
   }
 
-  function scoreRelated(candidate, currentPost, searchHistory, voteHistory) {
-    var score = 0;
+  let relatedRequestToken = 0;
 
-    // 1. Mesma categoria → +20
-    var currentCat = String(currentPost.categoria || currentPost.category || '').toLowerCase().trim();
-    var candidateCat = String(candidate.categoria || candidate.category || '').toLowerCase().trim();
-    if (currentCat && candidateCat && currentCat === candidateCat) score += 20;
+  function getRelatedReasonLabel(candidate, currentPost) {
+    var explicitReason = String(candidate && candidate._kcRelatedReason || '').trim();
+    if (explicitReason) return explicitReason;
 
-    // 2. Mesma subcategoria → +15
-    var currentSubCat = String(
-      currentPost.subcategoria
-      || (currentPost.metadata && currentPost.metadata.subcategory)
-      || ''
-    ).toLowerCase().trim();
-    var candidateSubCat = String(
-      candidate.subcategoria
-      || (candidate.metadata && candidate.metadata.subcategory)
-      || ''
-    ).toLowerCase().trim();
-    if (currentSubCat && candidateSubCat && currentSubCat === candidateSubCat) score += 15;
+    var currentAuthorId = getPostAuthorId(currentPost);
+    var candidateAuthorId = getPostAuthorId(candidate);
+    var currentModule = String(currentPost && (currentPost.modulo || currentPost.module) || '').trim().toLowerCase();
+    var candidateModule = String(candidate && (candidate.modulo || candidate.module) || '').trim().toLowerCase();
 
-    // 3. Tags em comum → +6 por tag coincidente (máx +24)
-    var currentTags = Array.isArray(currentPost.tags)
-      ? currentPost.tags.map(function (t) { return String(t).toLowerCase().trim(); })
-      : [];
-    var candidateTags = Array.isArray(candidate.tags)
-      ? candidate.tags.map(function (t) { return String(t).toLowerCase().trim(); })
-      : [];
-    if (currentTags.length && candidateTags.length) {
-      var tagOverlap = currentTags.filter(function (t) { return t && candidateTags.indexOf(t) !== -1; }).length;
-      score += Math.min(tagOverlap * 6, 24);
+    if (currentAuthorId && candidateAuthorId && currentAuthorId === candidateAuthorId && currentModule && currentModule === candidateModule) {
+      return 'Mesmo autor neste módulo';
     }
-
-    // 4. Coincide com histórico de buscas do usuário → +8 por termo (máx +24)
-    if (Array.isArray(searchHistory) && searchHistory.length) {
-      var title = String(candidate.titulo || candidate.title || '').toLowerCase();
-      var desc = String(candidate.descricao || candidate.description || '').toLowerCase();
-      var searchHits = 0;
-      searchHistory.forEach(function (term) {
-        var t = String(term || '').toLowerCase().trim();
-        if (t && t.length >= 2 && (title.indexOf(t) !== -1 || desc.indexOf(t) !== -1)) searchHits++;
-      });
-      score += Math.min(searchHits * 8, 24);
+    if (currentAuthorId && candidateAuthorId && currentAuthorId === candidateAuthorId) {
+      return 'Outro anúncio do mesmo autor';
     }
-
-    // 5. Usuário votou positivamente em post similar → +12
-    if (Array.isArray(voteHistory) && voteHistory.indexOf(String(candidate.id)) !== -1) {
-      score += 12;
+    if (currentModule && candidateModule && currentModule === candidateModule) {
+      return 'Relacionado neste módulo';
     }
-
-    // 6. Votos do post candidato (normalizado 0-10)
-    var votos = typeof candidate.votos === 'number' ? candidate.votos : 0;
-    if (votos > 0) score += Math.min(Math.floor(votos / 3), 10);
-
-    // 7. Recência (posts recentes ganham bônus)
-    if (candidate.created_at || candidate.criadoEm) {
-      try {
-        var ts = new Date(candidate.created_at || candidate.criadoEm).getTime();
-        if (!isNaN(ts)) {
-          var daysDiff = (Date.now() - ts) / 86400000;
-          if (daysDiff < 1)       score += 10;
-          else if (daysDiff < 3)  score += 7;
-          else if (daysDiff < 7)  score += 5;
-          else if (daysDiff < 14) score += 2;
-        }
-      } catch (_) { }
-    }
-
-    // 8. Mesmo autor (pode ser interessante ver mais do mesmo autor) → +5
-    var currentAuthorId = String(currentPost.autorId || currentPost.authorId || currentPost.author_id || '').trim();
-    var candidateAuthorId = String(candidate.autorId || candidate.authorId || candidate.author_id || '').trim();
-    if (currentAuthorId && candidateAuthorId && currentAuthorId === candidateAuthorId) score += 5;
-
-    return score;
+    return 'Publicação relacionada';
   }
 
-  /** Lê o histórico de buscas salvo pelo sistema de busca global */
-  function getRelatedSearchHistory() {
-    try {
-      // Tenta o formato usado pelo kc-search.js
-      var raw = localStorage.getItem('kc_search_history')
-        || localStorage.getItem('kcSearchHistory')
-        || localStorage.getItem('kc:search:history');
-      if (!raw) {
-        // Fallback: query param atual (usuário chegou via busca)
-        try {
-          var q = new URLSearchParams(document.referrer.split('?')[1] || '').get('q');
-          if (q && q.trim()) return [q.trim()];
-        } catch (_) { }
-        return [];
-      }
-      var parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed.slice(0, 10).map(String);
-      if (typeof parsed === 'string') return [parsed];
-      return [];
-    } catch (_) { return []; }
+  function getRelatedImageHtml(post) {
+    var images = Array.isArray(post && post.imagens) ? post.imagens : (Array.isArray(post && post.images) ? post.images : []);
+    var title = String(post && (post.titulo || post.title) || 'Imagem da publicação').trim() || 'Imagem da publicação';
+    if (images.length) {
+      return '<div class="kc-related-card__media"><img src="' + esc(String(images[0])) + '" alt="' + esc(title) + '" loading="lazy" decoding="async" /></div>';
+    }
+
+    var emoji = String(post && post.emoji || '✨').trim() || '✨';
+    return '<div class="kc-related-card__media kc-related-card__media--fallback"><span aria-hidden="true">' + esc(emoji) + '</span></div>';
   }
 
-  /** Lê IDs de posts que o usuário votou positivamente (localStorage) */
-  function getRelatedVoteHistory() {
-    try {
-      var raw = localStorage.getItem('kc_upvoted_posts')
-        || localStorage.getItem('kcUpvotedPosts')
-        || localStorage.getItem('kc:votes:up');
-      if (!raw) return [];
-      var parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.map(String) : [];
-    } catch (_) { return []; }
+  function getRelatedPriceLabel(post) {
+    var price = post && (post.preco != null ? post.preco : post.price);
+    if (price == null || price === '') return '';
+    if (typeof price === 'number') return price === 0 ? 'Gratuito' : formatCurrency(price);
+    var normalized = String(price).trim();
+    return normalized || '';
   }
 
-  function setRelated(db, post) {
+  function renderRelatedPosts(posts, currentPost) {
     var section = document.getElementById('relatedSection');
     var grid = document.getElementById('relatedGrid');
     if (!section || !grid) return;
 
-    grid.innerHTML = '';
-
-    var dbItems = (db && Array.isArray(db.posts)) ? db.posts
-      : ((db && Array.isArray(db.anuncios)) ? db.anuncios : []);
-    var userItems = (window.kcUserPosts && typeof window.kcUserPosts.list === 'function')
-      ? window.kcUserPosts.list() : [];
-    var allItems = dbItems.concat(userItems);
-
-    var currentId = String(post.id);
-    var moduleKey = String(post.modulo || '');
-
-    // Filtra por módulo e exclui publicação atual
-    var candidates = allItems.filter(function (a) {
-      if (!a || String(a.id) === currentId) return false;
-      return String(a.modulo || '') === moduleKey;
-    });
-
-    if (!candidates.length) {
+    var list = Array.isArray(posts) ? posts.filter(Boolean) : [];
+    if (!list.length) {
+      grid.innerHTML = '';
       section.style.display = 'none';
       return;
     }
 
-    var searchHistory = getRelatedSearchHistory();
-    var voteHistory = getRelatedVoteHistory();
+    grid.innerHTML = list.map(function (item) {
+      var postId = String((item && (item.uuid || item.id)) || '').trim();
+      if (!postId) return '';
 
-    // Pontua e ordena por relevância (desc)
-    var scored = candidates.map(function (a) {
-      return { item: a, score: scoreRelated(a, post, searchHistory, voteHistory) };
-    });
-    scored.sort(function (x, y) { return y.score - x.score; });
+      var href = 'product.html?id=' + encodeURIComponent(postId);
+      var title = String(item && (item.titulo || item.title) || 'Publicação').trim() || 'Publicação';
+      var author = String(item && (item.authorName || item.autor || item.author) || 'Autor').trim() || 'Autor';
+      var reason = getRelatedReasonLabel(item, currentPost);
+      var priceLabel = getRelatedPriceLabel(item);
+      var moduleText = moduleLabel(item && (item.modulo || item.module) || '');
+      var categoryText = String(item && (item.categoriaLabel || item.categoria || item.categoryLabel || item.category) || '').trim();
+      var metaParts = [
+        moduleText ? '<span><i class="fas fa-layer-group"></i> ' + esc(moduleText) + '</span>' : '',
+        categoryText ? '<span><i class="fas fa-tag"></i> ' + esc(categoryText) + '</span>' : '',
+        priceLabel ? '<span><i class="fas fa-money-bill-wave"></i> ' + esc(priceLabel) + '</span>' : '',
+      ].filter(Boolean).join('');
 
-    // Exibe os 4 mais relevantes
-    scored.slice(0, 4).forEach(function (entry) {
-      var a = entry.item;
-      var card = document.createElement('div');
-      card.className = 'kc-related-card';
-      card.setAttribute('role', 'button');
-      card.setAttribute('tabindex', '0');
-      card.addEventListener('click', function () {
-        window.location.href = 'product.html?id=' + encodeURIComponent(a.id);
-      });
-      card.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          window.location.href = 'product.html?id=' + encodeURIComponent(a.id);
-        }
-      });
-
-      var price = (typeof a.preco === 'number')
-        ? (a.preco === 0 ? 'Gratuito' : formatCurrency(a.preco))
-        : '';
-
-      card.innerHTML = '<h4>' + esc(a.titulo || 'Publicação') + '</h4>'
-        + '<div class="kc-related-meta">'
-        + '<span><i class="fas fa-user"></i> ' + esc(a.autor || 'Autor') + '</span>'
-        + (price ? '<span><i class="fas fa-tag"></i> ' + esc(price) + '</span>' : '')
-        + '</div>';
-
-      grid.appendChild(card);
-    });
+      return [
+        '<a class="kc-related-card" href="' + href + '">',
+        getRelatedImageHtml(item),
+        '<div class="kc-related-card__body">',
+        '<span class="kc-related-card__reason">' + esc(reason) + '</span>',
+        '<h4 class="kc-related-card__title">' + esc(title) + '</h4>',
+        '<div class="kc-related-card__author"><i class="fas fa-user"></i> ' + esc(author) + '</div>',
+        metaParts ? '<div class="kc-related-card__meta">' + metaParts + '</div>' : '',
+        '</div>',
+        '</a>',
+      ].join('');
+    }).filter(Boolean).join('');
 
     section.style.display = 'block';
+  }
+
+  async function setRelated(post) {
+    var section = document.getElementById('relatedSection');
+    var grid = document.getElementById('relatedGrid');
+    if (!section || !grid || !post || !window.KCAPI || typeof window.KCAPI.getRelatedPosts !== 'function') {
+      if (section) section.style.display = 'none';
+      if (grid) grid.innerHTML = '';
+      return;
+    }
+
+    var currentPostId = getPostIdForMutation(post);
+    if (!currentPostId) {
+      section.style.display = 'none';
+      grid.innerHTML = '';
+      return;
+    }
+
+    var requestToken = ++relatedRequestToken;
+    grid.innerHTML = '<div class="kc-related-loading"><i class="fas fa-spinner fa-spin"></i> Carregando publicações relacionadas...</div>';
+    section.style.display = 'block';
+
+    try {
+      var items = await window.KCAPI.getRelatedPosts(currentPostId, {
+        limit: 8,
+        module: post.modulo || post.module || '',
+        authorId: getPostAuthorId(post),
+        currentPost: post,
+        viewerAuthenticated: isViewerAuthenticated(),
+      });
+      if (requestToken !== relatedRequestToken) return;
+      renderRelatedPosts(items, post);
+    } catch (error) {
+      if (requestToken !== relatedRequestToken) return;
+      console.warn('[KC Product] related posts:', error);
+      grid.innerHTML = '';
+      section.style.display = 'none';
+    }
   }
 
   function isAuthor(post, user) {
@@ -1671,23 +1628,6 @@
 
   function renderPost(post) {
     currentPost = post;
-    hide('notFound');
-    setText('postTitle', post.titulo || 'Detalhes');
-    setBreadcrumb(post);
-    setBadges(post);
-    setGallery(post);
-    setPrice(post);
-    setDescription(post);
-    setSpecs(post);
-    setSeller(post);
-    setCTA(post);
-    setRelated(currentDb, post);
-    upsertOwnerActions(post, currentUser);
-    wireReportButton({ postId: (post && post.uuid) ? post.uuid : post.id, postTitle: post.titulo || post.title || 'Publicação' });
-  }
-
-  function renderPost(post) {
-    currentPost = post;
     window.kcCurrentPostContext = post;
     document.body.setAttribute('data-post-module', String(post && (post.modulo || post.module) || ''));
     document.body.setAttribute('data-post-category', String(post && (post._kcTabCategoryKey || post.categoriaKey || post.categoria || post.categoryKey || post.category) || ''));
@@ -1704,7 +1644,7 @@
     setSpecs(post);
     setSeller(post);
     setCTA(post);
-    setRelated(currentDb, post);
+    setRelated(post);
     upsertOwnerActions(post, currentUser);
     bindSavedActions(post);
     refreshSavedState(post).catch(() => { });
@@ -1724,13 +1664,6 @@
     const text = document.getElementById('commentText');
     if (author) author.setAttribute('data-post-id', id);
     if (text) text.setAttribute('data-post-id', id);
-
-    let db = null;
-    try {
-      if (window.KCAPI && typeof window.KCAPI.getDatabaseNormalized === 'function') {
-        db = await window.KCAPI.getDatabaseNormalized();
-      }
-    } catch (_) { }
 
     let raw = null;
 
@@ -1759,7 +1692,6 @@
     window.kcCurrentPostUuid = postUuid;
     if (postUuid) document.body.setAttribute('data-post-uuid', postUuid);
 
-    currentDb = db;
     renderPost(post);
 
     // V8.1.6.2: wire botão Denunciar (gated por driver + auth)

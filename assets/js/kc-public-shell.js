@@ -100,9 +100,7 @@
       '        <span id="mobileMenuUserName">Login / Cadastro</span>',
       '      </a>',
       '    </div>',
-      '    <hr data-kc-divider="top" class="kc-mobile-menu-divider" />',
       '    <div id="mobileMenuAccountSection" class="kc-mobile-menu-account-section"></div>',
-      '    <hr id="mobileMenuAccountDivider" data-kc-divider="account" class="kc-mobile-menu-divider" />',
       links,
       '  </div>',
       '</div>',
@@ -228,6 +226,13 @@
     });
   }
 
+  function syncHeaderHeight() {
+    const header = document.querySelector('.kc-header') || document.querySelector('header');
+    if (!header) return;
+    const height = header.offsetHeight || 72;
+    document.documentElement.style.setProperty('--kc-header-height', `${height}px`);
+  }
+
   function scheduleHeaderVisibility() {
     if (headerVisibilityFrame) return;
     headerVisibilityFrame = window.requestAnimationFrame(function () {
@@ -242,6 +247,7 @@
     injectShellIfNeeded();
     bindMobileMenu();
     hydrateAuthShellFromSnapshot();
+    syncHeaderHeight();
     forceHeaderVisibility();
   }
 
@@ -259,10 +265,11 @@
     window.setTimeout(run, 0);
   }
 
-  if (typeof window.openMobileMenu !== 'function') window.openMobileMenu = openMobileMenu;
-  if (typeof window.closeMobileMenu !== 'function') window.closeMobileMenu = closeMobileMenu;
+  window.openMobileMenu = openMobileMenu;
+  window.closeMobileMenu = closeMobileMenu;
 
   document.addEventListener('kc:profilechange', scheduleHeaderVisibility);
+  window.addEventListener('resize', syncHeaderHeight);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', scheduleInit, { once: true });

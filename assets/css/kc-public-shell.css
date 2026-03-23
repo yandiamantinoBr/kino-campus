@@ -52,11 +52,11 @@ body.kc-shell-page .kc-header-user__name {
 
 body.kc-shell-page .kc-mobile-menu,
 body.kc-shell-page .kc-mobile-menu-drawer {
-  z-index: 1400;
+  z-index: 205;
 }
 
 body.kc-shell-page .kc-mobile-menu-overlay {
-  z-index: 1390;
+  z-index: 204;
 }
 
 body.kc-shell-page .kc-mobile-menu-header {
