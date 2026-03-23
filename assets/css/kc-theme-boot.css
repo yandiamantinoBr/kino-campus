@@ -46,6 +46,47 @@ html:not(.kc-loading) .kc-hero-carousel {
 }
 
 @media (max-width: 768px) {
+  .kc-header:not(.kc-header--admin) .kc-header-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px auto;
+    align-items: center;
+    justify-content: initial;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo {
+    min-width: 0;
+    grid-column: 1;
+    flex: 0 1 auto;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-search-bar {
+    display: none !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-search-mobile-btn {
+    grid-column: 2;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    margin: 0;
+    flex: 0 0 36px;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions {
+    grid-column: 3;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
   html.kc-loading .kc-header-container {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 36px auto;
@@ -83,6 +124,45 @@ html:not(.kc-loading) .kc-hero-carousel {
     justify-content: flex-end;
     gap: 8px;
     flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .kc-header:not(.kc-header--admin) .kc-logo-text,
+  html.kc-loading .kc-logo-text {
+    display: flex !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo-sub,
+  html.kc-loading .kc-logo-sub {
+    display: none !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo-name,
+  html.kc-loading .kc-logo-name {
+    font-size: 1.05rem !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login.is-auth,
+  html.kc-loading .kc-user-actions a.btn-login.is-auth {
+    padding: 4px 6px !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-user__name,
+  html.kc-loading .kc-header-user__name {
+    display: none !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .kc-header:not(.kc-header--admin) .kc-header-container,
+  html.kc-loading .kc-header-container {
+    gap: 6px !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions,
+  html.kc-loading .kc-user-actions {
+    gap: 6px !important;
   }
 }
 

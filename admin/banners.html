@@ -1,16 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
-  <script src="../assets/js/kc-theme-boot.js"></script>
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.3.4.11">
+  <script src="../assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
   <title>KinoCampus - Gerenciar Banners</title>
-  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.3.4.11" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    /* ── Layout base ── */
+    /* â”€â”€ Layout base â”€â”€ */
     .kc-admin-wrapper { max-width: 1120px; margin: 0 auto; padding: 18px 16px 80px; }
 
     .kc-admin-hero {
@@ -53,12 +53,12 @@
     }
     .kc-btn-brand:hover { opacity: .9; }
 
-    /* ── Mensagens de estado ── */
+    /* â”€â”€ Mensagens de estado â”€â”€ */
     #banners-loading { display:flex; align-items:center; gap:10px; color:var(--kc-text-dark-secondary); padding: 36px 0; }
     #banners-error   { display:none; padding:14px; border-radius:10px; border:1px solid #ef9a9a; color:#ef9a9a; background:rgba(244,67,54,.12); margin-bottom:14px; }
     #banners-content { display:none; }
 
-    /* ── Lista de banners ── */
+    /* â”€â”€ Lista de banners â”€â”€ */
     .kc-banners-list { display:flex; flex-direction:column; gap:14px; }
 
     .kc-banner-item {
@@ -71,7 +71,7 @@
     .kc-banner-item.is-inactive { opacity: .55; }
     .kc-banner-item:hover { border-color: var(--kc-primary-brand-muted, #ff6b0055); }
 
-    /* Cabeçalho do item */
+    /* CabeÃ§alho do item */
     .kc-banner-item-header {
       display: flex;
       align-items: center;
@@ -137,7 +137,7 @@
     .kc-banner-actions button:hover { border-color: var(--kc-primary-brand); color: var(--kc-primary-brand); }
     .kc-banner-actions .btn-delete:hover { border-color: #ef4444; color: #ef4444; }
 
-    /* Expansível: histórico de auditoria */
+    /* ExpansÃ­vel: histÃ³rico de auditoria */
     .kc-banner-audit {
       display: none;
       border-top: 1px solid var(--kc-border-dark);
@@ -176,7 +176,7 @@
     .kc-audit-badge.delete { background: rgba(239,68,68,.15);  color:#ef4444; }
     .kc-audit-meta { color: var(--kc-text-dark-secondary); font-size:.8rem; }
 
-    /* ── Modal ── */
+    /* â”€â”€ Modal â”€â”€ */
     .kc-modal-backdrop {
       position: fixed; inset: 0;
       background: rgba(0,0,0,.55);
@@ -225,7 +225,7 @@
       justify-content: flex-end;
     }
 
-    /* ── Formulário ── */
+    /* â”€â”€ FormulÃ¡rio â”€â”€ */
     .kc-form-grid { display: grid; gap: 14px; }
     .kc-form-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .kc-form-field { display: flex; flex-direction: column; gap: 6px; }
@@ -362,7 +362,7 @@
     .kc-icon-sug-btn:hover,
     .kc-icon-sug-btn.selected { border-color: var(--kc-primary-brand); color: var(--kc-primary-brand); }
 
-    /* Botões do form */
+    /* BotÃµes do form */
     .kc-btn { padding: 10px 20px; border-radius: 10px; cursor: pointer; font-size: .92rem; font-weight: 700; border: none; }
     .kc-btn-primary-action { background: var(--kc-primary-brand); color: #fff; }
     .kc-btn-secondary { background: var(--kc-surface-dark); color: var(--kc-text-dark-primary); border: 1px solid var(--kc-border-dark); }
@@ -391,7 +391,7 @@
       .kc-banner-item-header { flex-wrap: wrap; }
     }
   </style>
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.3" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.11" />
 </head>
 <body class="kc-admin-page kc-admin-page--banners">
   <header class="kc-header kc-header--admin">
@@ -405,10 +405,10 @@
           </span>
         </a>
       </div>
-      <nav class="kc-admin-nav" aria-label="Navegação admin">
+      <nav class="kc-admin-nav" aria-label="NavegaÃ§Ã£o admin">
         <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
-        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> ModeraÃ§Ã£o</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> DenÃºncias</a>
         <a href="banners.html" class="kc-admin-nav__link active"><i class="fas fa-images"></i> Banners</a>
       </nav>
       <div class="kc-user-actions">
@@ -429,7 +429,7 @@
         <section class="kc-admin-hero">
           <div>
             <h1><i class="fas fa-images"></i> Gerenciar Banners</h1>
-            <p>Edite, reordene, ative ou desative os banners do carrossel da página inicial.</p>
+            <p>Edite, reordene, ative ou desative os banners do carrossel da pÃ¡gina inicial.</p>
           </div>
           <div class="kc-admin-toolbar">
             <button type="button" id="btn-refresh"><i class="fas fa-rotate"></i> Atualizar</button>
@@ -442,7 +442,7 @@
         <div class="kc-banners-list" id="banners-list"></div>
         <div id="banners-empty" style="display:none;color:var(--kc-text-dark-secondary);padding:32px 0;text-align:center;">
           <i class="fas fa-images" style="font-size:2.4rem;opacity:.35;display:block;margin-bottom:12px;"></i>
-          Nenhum banner cadastrado. Clique em <strong>Novo Banner</strong> para começar.
+          Nenhum banner cadastrado. Clique em <strong>Novo Banner</strong> para comeÃ§ar.
         </div>
       </section>
     </div>
@@ -451,13 +451,13 @@
   <!-- Mobile Navigation (admin) -->
   <nav class="kc-mobile-nav">
     <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
-    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>ModeraÃ§Ã£o</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>DenÃºncias</span></a>
     <a class="active" href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
     <a href="../index.html"><i class="fas fa-home"></i><span>Site</span></a>
   </nav>
 
-  <!-- ── Modal de edição ── -->
+  <!-- â”€â”€ Modal de ediÃ§Ã£o â”€â”€ -->
   <div id="banner-modal" class="kc-modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="kc-modal">
       <div class="kc-modal-header">
@@ -470,8 +470,8 @@
         <div class="kc-banner-live-preview" id="banner-preview">
           <div>
             <span class="preview-pill" id="prev-pill">Destaque</span>
-            <h3 id="prev-title">Título do Banner</h3>
-            <p  id="prev-sub">Subtítulo do banner aparece aqui.</p>
+            <h3 id="prev-title">TÃ­tulo do Banner</h3>
+            <p  id="prev-sub">SubtÃ­tulo do banner aparece aqui.</p>
             <a  class="preview-btn" id="prev-btn">Ver mais</a>
           </div>
           <i class="fas fa-star preview-icon" id="prev-icon"></i>
@@ -483,7 +483,7 @@
           <!-- Linha 1 -->
           <div class="kc-form-row">
             <div class="kc-form-field">
-              <label for="f-pill">Rótulo (pill) <span style="color:#ef4444">*</span></label>
+              <label for="f-pill">RÃ³tulo (pill) <span style="color:#ef4444">*</span></label>
               <input id="f-pill" type="text" placeholder="ex: Destaque" maxlength="30" />
             </div>
             <div class="kc-form-field">
@@ -495,33 +495,33 @@
             </div>
           </div>
 
-          <!-- Título -->
+          <!-- TÃ­tulo -->
           <div class="kc-form-field">
-            <label for="f-title">Título <span style="color:#ef4444">*</span></label>
+            <label for="f-title">TÃ­tulo <span style="color:#ef4444">*</span></label>
             <input id="f-title" type="text" placeholder="ex: Semana de Sustentabilidade UFG" />
           </div>
 
-          <!-- Subtítulo -->
+          <!-- SubtÃ­tulo -->
           <div class="kc-form-field">
-            <label for="f-subtitle">Subtítulo / Descrição</label>
+            <label for="f-subtitle">SubtÃ­tulo / DescriÃ§Ã£o</label>
             <textarea id="f-subtitle" rows="2" placeholder="ex: Troque materiais, ganhe cashback em dobro..."></textarea>
           </div>
 
-          <!-- Botão -->
+          <!-- BotÃ£o -->
           <div class="kc-form-row">
             <div class="kc-form-field">
-              <label for="f-btn-text">Texto do botão</label>
-              <input id="f-btn-text" type="text" placeholder="ex: Ver Programação" maxlength="32" />
+              <label for="f-btn-text">Texto do botÃ£o</label>
+              <input id="f-btn-text" type="text" placeholder="ex: Ver ProgramaÃ§Ã£o" maxlength="32" />
             </div>
             <div class="kc-form-field">
-              <label for="f-btn-url">Link do botão</label>
+              <label for="f-btn-url">Link do botÃ£o</label>
               <input id="f-btn-url" type="text" placeholder="ex: eventos.html" />
             </div>
           </div>
 
-          <!-- Ícone -->
+          <!-- Ãcone -->
           <div class="kc-form-field">
-            <label for="f-icon">Ícone (classe Font Awesome)</label>
+            <label for="f-icon">Ãcone (classe Font Awesome)</label>
             <input id="f-icon" type="text" placeholder="ex: fas fa-calendar-alt" />
             <div class="kc-icon-suggestions" id="icon-suggestions"></div>
           </div>
@@ -549,7 +549,7 @@
 
           <!-- Ordem -->
           <div class="kc-form-field" style="max-width:160px;">
-            <label for="f-order">Posição (ordem)</label>
+            <label for="f-order">PosiÃ§Ã£o (ordem)</label>
             <input id="f-order" type="number" min="0" step="1" value="0" />
           </div>
         </div>
@@ -562,22 +562,24 @@
     </div>
   </div>
 
-  <!-- ── Toast ── -->
+  <!-- â”€â”€ Toast â”€â”€ -->
   <div id="kc-banners-toast" role="status" aria-live="polite"></div>
 
-  <!-- ── Scripts ── -->
-  <script src="../assets/js/kc-constants.js"></script>
-  <script src="../assets/js/kc-utils.js"></script>
-  <script src="../assets/js/kc-env.js"></script>
+  <!-- â”€â”€ Scripts â”€â”€ -->
+  <script src="../assets/js/kc-constants.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-utils.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-env.js?v=8.3.4.11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../assets/js/kc-supabase.client.js"></script>
-<script src="../assets/js/kc-api.client.js"></script>
-  <script src="../assets/js/adapters/local.adapter.js"></script>
-  <script src="../assets/js/adapters/supabase.adapter.js"></script>
-  <script src="../assets/js/kc-profiles.client.js"></script>
-  <script src="../assets/js/kc-auth.ui.js"></script>
-  <script src="../assets/js/kc-theme.js"></script>
-  <script src="../assets/js/admin-shell.js?v=8.3.4.3"></script>
-  <script src="../assets/js/controllers/admin-banners.controller.js?v=8.3.4.3"></script>
+  <script src="../assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
+<script src="../assets/js/kc-api.client.js?v=8.3.4.11"></script>
+  <script src="../assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
+  <script src="../assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-theme.js?v=8.3.4.11"></script>
+  <script src="../assets/js/admin-shell.js?v=8.3.4.11"></script>
+  <script src="../assets/js/controllers/admin-banners.controller.js?v=8.3.4.11"></script>
 </body>
 </html>
+
+

@@ -820,7 +820,7 @@ body.kc-auth-callback-route .kc-callback-card {
 
 @media (max-width: 540px) {
   body.kc-shell-page .kc-logo-text {
-    display: none;
+    display: flex;
   }
 
   body.kc-shell-page .kc-header-user__name {

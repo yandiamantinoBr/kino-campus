@@ -6,6 +6,7 @@
   const shared = window.KCAccountProfileUtils || {};
   const OWNER_FIELDS = shared.OWNER_PROFILE_SELECT_FIELDS || [
     'id',
+    'legacy_id',
     'display_name',
     'full_name',
     'avatar_url',
@@ -28,6 +29,7 @@
   ].join(', ');
   const PUBLIC_FIELDS = shared.PUBLIC_PROFILE_SELECT_FIELDS || [
     'id',
+    'legacy_id',
     'display_name',
     'full_name',
     'avatar_url',
@@ -106,6 +108,8 @@
 
     const normalized = {
       id: source.id || base.id || null,
+      legacy_id: source.legacy_id || base.legacy_id || null,
+      legacyId: source.legacyId || source.legacy_id || base.legacyId || base.legacy_id || null,
       full_name: String(source.full_name || base.full_name || '').trim(),
       display_name: String(source.display_name || base.display_name || source.full_name || base.full_name || '').trim(),
       avatar_url: String(source.avatar_url || base.avatar_url || '').trim(),

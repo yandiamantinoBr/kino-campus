@@ -1,14 +1,14 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR" class="kc-loading">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
-  <script src="../assets/js/kc-theme-boot.js"></script>
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.3.4.11">
+  <script src="../assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
   <title>KinoCampus - Pedidos de ajuda</title>
-  <link rel="stylesheet" href="../assets/css/styles.css" />
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.5" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.3.4.11" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.11" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     .kc-admin-page .kc-main-content { padding-top: 24px; }
@@ -69,10 +69,10 @@
           </span>
         </a>
       </div>
-      <nav class="kc-admin-nav" aria-label="Navegação admin">
+      <nav class="kc-admin-nav" aria-label="NavegaÃ§Ã£o admin">
         <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
-        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> ModeraÃ§Ã£o</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> DenÃºncias</a>
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
         <a href="help-requests.html" class="kc-admin-nav__link active"><i class="fas fa-life-ring"></i> Pedidos de ajuda</a>
       </nav>
@@ -96,7 +96,7 @@
         <div class="kc-admin-header-bar">
           <div>
             <h1><i class="fas fa-life-ring" style="color:var(--kc-primary-brand);margin-right:8px;"></i>Pedidos de ajuda</h1>
-            <p>Triagem centralizada de dúvidas, reclamações, elogios, denúncias e problemas de conta enviados pela central de ajuda.</p>
+            <p>Triagem centralizada de dÃºvidas, reclamaÃ§Ãµes, elogios, denÃºncias e problemas de conta enviados pela central de ajuda.</p>
           </div>
           <div class="kc-admin-toolbar">
             <select id="helpStatusFilter" title="Filtrar por status">
@@ -110,14 +110,14 @@
             <select id="helpTypeFilter" title="Filtrar por categoria">
               <option value="all">Todas as categorias</option>
             </select>
-            <select id="helpPriorityFilter" title="Filtrar por urgência">
-              <option value="all">Todas as urgências</option>
+            <select id="helpPriorityFilter" title="Filtrar por urgÃªncia">
+              <option value="all">Todas as urgÃªncias</option>
               <option value="low">Baixa</option>
               <option value="normal">Normal</option>
               <option value="high">Alta</option>
               <option value="urgent">Urgente</option>
             </select>
-            <input id="helpQueryFilter" type="search" placeholder="Buscar por assunto, e-mail ou página" />
+            <input id="helpQueryFilter" type="search" placeholder="Buscar por assunto, e-mail ou pÃ¡gina" />
             <button id="helpRefreshButton" type="button"><i class="fas fa-rotate"></i> Atualizar</button>
           </div>
         </div>
@@ -130,25 +130,27 @@
 
   <nav class="kc-mobile-nav">
     <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
-    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>ModeraÃ§Ã£o</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>DenÃºncias</span></a>
     <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
     <a class="active" href="help-requests.html"><i class="fas fa-life-ring"></i><span>Ajuda</span></a>
   </nav>
 
-  <script src="../assets/js/kc-constants.js"></script>
-  <script src="../assets/js/kc-utils.js"></script>
-  <script src="../assets/js/kc-env.js"></script>
+  <script src="../assets/js/kc-constants.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-utils.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-env.js?v=8.3.4.11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../assets/js/kc-supabase.client.js"></script>
-  <script src="../assets/js/kc-api.client.js"></script>
-  <script src="../assets/js/adapters/local.adapter.js"></script>
-  <script src="../assets/js/adapters/supabase.adapter.js"></script>
-  <script src="../assets/js/help.shared.js"></script>
-  <script src="../assets/js/kc-profiles.client.js"></script>
-  <script src="../assets/js/kc-auth.ui.js"></script>
-  <script src="../assets/js/kc-theme.js"></script>
-  <script src="../assets/js/admin-shell.js?v=8.3.4.5"></script>
-  <script src="../assets/js/controllers/admin-help-requests.controller.js"></script>
+  <script src="../assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-api.client.js?v=8.3.4.11"></script>
+  <script src="../assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
+  <script src="../assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
+  <script src="../assets/js/help.shared.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-theme.js?v=8.3.4.11"></script>
+  <script src="../assets/js/admin-shell.js?v=8.3.4.11"></script>
+  <script src="../assets/js/controllers/admin-help-requests.controller.js?v=8.3.4.11"></script>
 </body>
 </html>
+
+

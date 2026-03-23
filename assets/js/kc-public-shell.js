@@ -96,8 +96,8 @@
       '  <div class="kc-mobile-menu-content">',
       '    <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">',
       '      <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">',
-      '        <span class="kc-mobile-menu-user-avatar-wrap"><i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i></span>',
-      '        <span id="mobileMenuUserName">Login / Cadastro</span>',
+      '        <span class="kc-mobile-menu-user-avatar-wrap"><span class="kc-mobile-menu-user-avatar kc-mobile-menu-user-avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span></span>',
+      '        <span id="mobileMenuUserName" class="kc-mobile-menu-user-text"><span class="kc-mobile-menu-user-display">Login / Cadastro</span><span class="kc-mobile-menu-user-handle">@minha-conta</span></span>',
       '      </a>',
       '    </div>',
       '    <div id="mobileMenuAccountSection" class="kc-mobile-menu-account-section"></div>',
@@ -212,7 +212,7 @@
     if (avatarWrap) avatarWrap.innerHTML = buildMobileAvatarMarkup(avatarUrl, display);
     if (mobileUserName) {
       const handle = snapshot.user && snapshot.user.email ? `@${String(snapshot.user.email).split('@')[0]}` : '@minha-conta';
-      mobileUserName.innerHTML = `${escapeHtml(display)}<br><small style="color:var(--kc-text-dark-secondary);font-size:.8em;">${escapeHtml(handle)}</small>`;
+      mobileUserName.innerHTML = `<span class="kc-mobile-menu-user-display">${escapeHtml(display)}</span><span class="kc-mobile-menu-user-handle">${escapeHtml(handle)}</span>`;
     }
   }
 

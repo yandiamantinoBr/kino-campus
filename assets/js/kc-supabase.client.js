@@ -484,8 +484,8 @@
 
   function buildPostsSelect(includeVerified, mediaRel, includeComments, includeVotos = true) {
     const profileFields = includeVerified
-      ? 'id, full_name, avatar_url, verified'
-      : 'id, full_name, avatar_url';
+      ? 'id, legacy_id, full_name, avatar_url, verified'
+      : 'id, legacy_id, full_name, avatar_url';
 
     // mediaRel: post_media (padrão do schema) | post_images (compat)
     // includeComments: false quando tabela comments ainda não existe no schema (compat)
@@ -498,8 +498,8 @@
 
   function buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments) {
     const profileFields = includeVerified
-      ? "id, full_name, avatar_url, verified"
-      : "id, full_name, avatar_url";
+      ? "id, legacy_id, full_name, avatar_url, verified"
+      : "id, legacy_id, full_name, avatar_url";
 
     const mediaFields = includeSortOrder
       ? "id, url, is_cover, sort_order"

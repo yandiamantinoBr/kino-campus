@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 
 <html lang="pt-BR">
 <head>
@@ -6,12 +6,12 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 
 
-<link rel="stylesheet" href="assets/css/kc-theme-boot.css">
-<script src="assets/js/kc-theme-boot.js"></script>
+<link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.3.4.11">
+<script src="assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
 
 
 <title>Caronas - KinoCampus</title>
-<link href="assets/css/styles.css" rel="stylesheet"/>
+<link href="assets/css/styles.css?v=8.3.4.11" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
 <body data-kc-filters="tab-search">
@@ -86,7 +86,7 @@
 </a>
 <a href="#ofereco">
 <i class="fas fa-car-side"></i>
-<span>Ofereço Carona</span>
+<span>OfereÃ§o Carona</span>
 </a>
 <a href="#procuro">
 <i class="fas fa-hand-paper"></i>
@@ -121,7 +121,7 @@
 <div class="kc-filter-group">
 <label>
 <input checked="" type="checkbox"/>
-<span>Ofereço Carona</span>
+<span>OfereÃ§o Carona</span>
 </label>
 <label>
 <input checked="" type="checkbox"/>
@@ -169,7 +169,7 @@
 <div class="kc-popular-item">
 <i class="fas fa-map-marker-alt"></i>
 <div class="kc-popular-content">
-<strong>Jardim Goiás</strong>
+<strong>Jardim GoiÃ¡s</strong>
 <span>43 caronas</span>
 </div>
 </div>
@@ -189,11 +189,11 @@
                     Dicas para Caroneiros
                 </h3>
 <ul class="kc-tips-list">
-<li><i class="fas fa-check"></i> Combine horários com antecedência</li>
+<li><i class="fas fa-check"></i> Combine horÃ¡rios com antecedÃªncia</li>
 <li><i class="fas fa-check"></i> Seja pontual e respeite o motorista</li>
-<li><i class="fas fa-check"></i> Ajude com combustível</li>
+<li><i class="fas fa-check"></i> Ajude com combustÃ­vel</li>
 <li><i class="fas fa-check"></i> Mantenha o carro limpo</li>
-<li><i class="fas fa-check"></i> Avalie sua experiência</li>
+<li><i class="fas fa-check"></i> Avalie sua experiÃªncia</li>
 </ul>
 </div>
 </aside>
@@ -202,7 +202,7 @@
 <nav class="kc-mobile-nav">
 <a href="index.html">
 <i class="fas fa-home"></i>
-<span>Início</span>
+<span>InÃ­cio</span>
 </a>
 <a href="eventos.html">
 <i class="fas fa-calendar"></i>
@@ -229,21 +229,16 @@
 </button>
 </div>
 <div class="kc-mobile-menu-content">
-<!-- Seção de usuário (atualizada pelo kc-auth.ui.js) -->
+<!-- SeÃ§Ã£o de usuÃ¡rio (atualizada pelo kc-auth.ui.js) -->
 <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
   <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
     <span class="kc-mobile-menu-user-avatar-wrap">
-      <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
+      <span class="kc-mobile-menu-user-avatar kc-mobile-menu-user-avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>
     </span>
-    <span id="mobileMenuUserName">Login / Cadastro</span>
+    <span id="mobileMenuUserName" class="kc-mobile-menu-user-text"><span class="kc-mobile-menu-user-display">Login / Cadastro</span><span class="kc-mobile-menu-user-handle">@minha-conta</span></span>
   </a>
 </div>
-<hr data-kc-divider="top" class="kc-mobile-menu-divider"/>
-<!-- Links de perfil (visíveis quando autenticado) -->
-<a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
-<!-- Link de Admin (visível apenas para is_admin=true) -->
-<a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
-<hr data-kc-divider="profile" class="kc-mobile-menu-divider"/>
+<div id="mobileMenuAccountSection" class="kc-mobile-menu-account-section"></div>
 <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
 <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
 <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
@@ -253,32 +248,34 @@
 </div>
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
-<script src="assets/js/kc-constants.js"></script>
-<script src="assets/js/kc-utils.js"></script>
-<script src="assets/js/kc-env.js"></script>
+<script src="assets/js/kc-constants.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-utils.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-env.js?v=8.3.4.11"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="assets/js/kc-supabase.client.js"></script>
-<script src="assets/js/kc-api.client.js"></script>
-<script src="assets/js/adapters/local.adapter.js"></script>
-<script src="assets/js/adapters/supabase.adapter.js"></script>
-<script src="assets/js/kc-profiles.client.js"></script>
-<script src="assets/js/components/toast.js"></script>
-<script src="assets/js/components/carousel.js"></script>
-<script src="assets/js/components/voting.js"></script>
-<script src="assets/js/kc-core.js"></script>
-<script src="assets/js/kc-create-post.js"></script>
+<script src="assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-api.client.js?v=8.3.4.11"></script>
+<script src="assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
+<script src="assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
+<script src="assets/js/components/toast.js?v=8.3.4.11"></script>
+<script src="assets/js/components/carousel.js?v=8.3.4.11"></script>
+<script src="assets/js/components/voting.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-core.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-create-post.js?v=8.3.4.11"></script>
 
-<script src="assets/js/kc-auth.ui.js"></script>
-<script src="assets/js/kc-pull-to-refresh.js"></script>
-<script src="assets/js/controllers/kc-feed.controller.js"></script>
-<script src="assets/js/controllers/caronas-feed.controller.js"></script>
-<script src="assets/js/kc-theme.js"></script>
-<script src="assets/js/kc-filters.js"></script>
-<script src="assets/js/search-analytics.shared.js"></script>
-<script src="assets/js/home-categories.shared.js"></script>
-<script src="assets/js/kc-home-categories.js"></script>
-<script src="assets/js/kc-search.js"></script>
-<script src="assets/js/kc-search-modal.js"></script>
+<script src="assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-pull-to-refresh.js?v=8.3.4.11"></script>
+<script src="assets/js/controllers/kc-feed.controller.js?v=8.3.4.11"></script>
+<script src="assets/js/controllers/caronas-feed.controller.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-theme.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-filters.js?v=8.3.4.11"></script>
+<script src="assets/js/search-analytics.shared.js?v=8.3.4.11"></script>
+<script src="assets/js/home-categories.shared.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-home-categories.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-search.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-search-modal.js?v=8.3.4.11"></script>
 </body>
 </html>
+
+

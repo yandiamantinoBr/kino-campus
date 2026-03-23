@@ -9,6 +9,7 @@
 
   const OWNER_PROFILE_SELECT_FIELDS = [
     'id',
+    'legacy_id',
     'display_name',
     'full_name',
     'avatar_url',
@@ -32,6 +33,7 @@
 
   const PUBLIC_PROFILE_SELECT_FIELDS = [
     'id',
+    'legacy_id',
     'display_name',
     'full_name',
     'avatar_url',

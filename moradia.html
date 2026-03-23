@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!-- KinoCampus Moradia (V8.6.0.0) -->
 
 <html lang="pt-BR">
@@ -6,8 +6,8 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 
-<link rel="stylesheet" href="assets/css/kc-theme-boot.css">
-<script src="assets/js/kc-theme-boot.js"></script>
+<link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.3.4.11">
+<script src="assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
 <style>
   html.kc-theme-preload,
   html.kc-theme-preload * {
@@ -15,7 +15,7 @@
   }
 </style>
 <title>Moradia - KinoCampus</title>
-<link href="assets/css/styles.css" rel="stylesheet"/>
+<link href="assets/css/styles.css?v=8.3.4.11" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
 <body data-kc-filters="tab-search">
@@ -86,7 +86,7 @@
 </a>
 <a href="#republicas">
 <i class="fas fa-users"></i>
-<span>Repúblicas</span>
+<span>RepÃºblicas</span>
 </a>
 <a href="#quartos">
 <i class="fas fa-bed"></i>
@@ -105,10 +105,10 @@
 <span>Procurando</span>
 </a>
 </div>
-<div class="kc-housing-mobile-rail" data-kc-housing-mobile-rail="true" aria-label="Seções rápidas de moradia">
+<div class="kc-housing-mobile-rail" data-kc-housing-mobile-rail="true" aria-label="SeÃ§Ãµes rÃ¡pidas de moradia">
 <button class="kc-housing-mobile-rail__button is-loading" type="button" disabled>
 <i class="fas fa-spinner fa-spin"></i>
-<span>Carregando seções...</span>
+<span>Carregando seÃ§Ãµes...</span>
 </button>
 </div>
 <div class="kc-feed-list">
@@ -122,9 +122,9 @@
 <div class="kc-sidebar-section" data-kc-housing-section="filters">
 <h3>
 <i class="fas fa-tags"></i>
-                    Características do Ambiente
+                    CaracterÃ­sticas do Ambiente
                 </h3>
-<p class="kc-sidebar-help">Combine características para refinar o perfil da moradia.</p>
+<p class="kc-sidebar-help">Combine caracterÃ­sticas para refinar o perfil da moradia.</p>
 <div class="kc-housing-filter-list" data-kc-housing-feature-list="true">
 <label class="kc-sidebar-check">
 <input data-kc-housing-filter-kind="feature" type="checkbox" value="aceita-pets"/>
@@ -136,13 +136,13 @@
 <div class="kc-sidebar-section" data-kc-housing-section="regions">
 <h3>
 <i class="fas fa-map-marked-alt"></i>
-                    Regiões Populares
+                    RegiÃµes Populares
                 </h3>
-<p class="kc-sidebar-help">Escolha uma região e veja quantos anúncios ativos existem por perto.</p>
+<p class="kc-sidebar-help">Escolha uma regiÃ£o e veja quantos anÃºncios ativos existem por perto.</p>
 <div class="kc-category-list" data-kc-housing-region-list="true">
 <button class="kc-category-item" disabled type="button">
 <i class="fas fa-map-pin"></i>
-<span>Carregando regiões...</span>
+<span>Carregando regiÃµes...</span>
 <span class="kc-category-count">0</span>
 </button>
 </div>
@@ -153,10 +153,10 @@
                     Dicas de Moradia
                 </h3>
 <div style="line-height: 1.6; font-size: 0.9em; color: var(--kc-text-dark-secondary);">
-<p><strong>✓ Visite pessoalmente</strong> o local antes de fechar negócio</p>
-<p><strong>✓ Confirme custos extras</strong> como contas, caução e internet</p>
-<p><strong>✓ Leia o contrato</strong> com atenção e alinhe as regras da casa</p>
-<p><strong>✓ Priorize trajetos seguros</strong> e compatibilidade com sua rotina</p>
+<p><strong>âœ“ Visite pessoalmente</strong> o local antes de fechar negÃ³cio</p>
+<p><strong>âœ“ Confirme custos extras</strong> como contas, cauÃ§Ã£o e internet</p>
+<p><strong>âœ“ Leia o contrato</strong> com atenÃ§Ã£o e alinhe as regras da casa</p>
+<p><strong>âœ“ Priorize trajetos seguros</strong> e compatibilidade com sua rotina</p>
 </div>
 </div>
 </aside>
@@ -164,7 +164,7 @@
 <nav class="kc-mobile-nav">
 <a href="index.html">
 <i class="fas fa-home"></i>
-<span>Início</span>
+<span>InÃ­cio</span>
 </a>
 <a href="eventos.html">
 <i class="fas fa-calendar"></i>
@@ -193,15 +193,12 @@
 <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
   <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
     <span class="kc-mobile-menu-user-avatar-wrap">
-      <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
+      <span class="kc-mobile-menu-user-avatar kc-mobile-menu-user-avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>
     </span>
-    <span id="mobileMenuUserName">Login / Cadastro</span>
+    <span id="mobileMenuUserName" class="kc-mobile-menu-user-text"><span class="kc-mobile-menu-user-display">Login / Cadastro</span><span class="kc-mobile-menu-user-handle">@minha-conta</span></span>
   </a>
 </div>
-<hr data-kc-divider="top" class="kc-mobile-menu-divider"/>
-<a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
-<a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
-<hr data-kc-divider="profile" class="kc-mobile-menu-divider"/>
+<div id="mobileMenuAccountSection" class="kc-mobile-menu-account-section"></div>
 <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
 <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
 <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
@@ -211,32 +208,34 @@
 </div>
 </div>
 <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
-<script src="assets/js/kc-constants.js"></script>
-<script src="assets/js/kc-utils.js"></script>
-<script src="assets/js/kc-env.js"></script>
+<script src="assets/js/kc-constants.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-utils.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-env.js?v=8.3.4.11"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="assets/js/kc-supabase.client.js"></script>
-<script src="assets/js/kc-api.client.js"></script>
-<script src="assets/js/adapters/local.adapter.js"></script>
-<script src="assets/js/adapters/supabase.adapter.js"></script>
-<script src="assets/js/kc-profiles.client.js"></script>
-<script src="assets/js/components/toast.js"></script>
-<script src="assets/js/components/carousel.js"></script>
-<script src="assets/js/components/voting.js"></script>
-<script src="assets/js/kc-core.js"></script>
-<script src="assets/js/kc-create-post.js"></script>
+<script src="assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-api.client.js?v=8.3.4.11"></script>
+<script src="assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
+<script src="assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
+<script src="assets/js/components/toast.js?v=8.3.4.11"></script>
+<script src="assets/js/components/carousel.js?v=8.3.4.11"></script>
+<script src="assets/js/components/voting.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-core.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-create-post.js?v=8.3.4.11"></script>
 
-<script src="assets/js/kc-auth.ui.js"></script>
-<script src="assets/js/kc-theme.js"></script>
-<script src="assets/js/kc-filters.js"></script>
-<script src="assets/js/search-analytics.shared.js"></script>
-<script src="assets/js/home-categories.shared.js"></script>
-<script src="assets/js/kc-home-categories.js"></script>
-<script src="assets/js/kc-search.js"></script>
-<script src="assets/js/kc-pull-to-refresh.js"></script>
-<script src="assets/js/controllers/kc-feed.controller.js"></script>
-<script src="assets/js/controllers/moradia.controller.js"></script>
-<script src="assets/js/kc-search-modal.js"></script>
+<script src="assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-theme.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-filters.js?v=8.3.4.11"></script>
+<script src="assets/js/search-analytics.shared.js?v=8.3.4.11"></script>
+<script src="assets/js/home-categories.shared.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-home-categories.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-search.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-pull-to-refresh.js?v=8.3.4.11"></script>
+<script src="assets/js/controllers/kc-feed.controller.js?v=8.3.4.11"></script>
+<script src="assets/js/controllers/moradia.controller.js?v=8.3.4.11"></script>
+<script src="assets/js/kc-search-modal.js?v=8.3.4.11"></script>
 </body>
 </html>
+
+

@@ -1274,4 +1274,9 @@
     isBackendEnabled,
   });
 
+  window.getLastCreatePostError = getLastCreatePostError;
+  window.setLastCreatePostError = setLastCreatePostError;
+  window.clearLastCreatePostError = clearLastCreatePostError;
+  window.summarizeCreatePayloadForDiagnostics = summarizeCreatePayloadForDiagnostics;
+
 })();

@@ -666,15 +666,14 @@
     el.innerHTML = badges.join(' ');
   }
 
-  function isLegacyExampleEntity(entity) {
-    if (!entity || typeof entity !== 'object') return false;
-    const authorProfile = (entity.authorProfile && typeof entity.authorProfile === 'object') ? entity.authorProfile : null;
-    return !!String(
-      entity.legacyId
-      || entity.legacy_id
-      || (authorProfile && (authorProfile.legacyId || authorProfile.legacy_id))
-      || ''
-    ).trim();
+  function isLegacyExamplePost(post) {
+    if (!post || typeof post !== 'object') return false;
+    return !!String(post.legacyId || post.legacy_id || '').trim();
+  }
+
+  function isLegacyExampleProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    return !!String(profile.legacyId || profile.legacy_id || '').trim();
   }
 
   function buildLegacyExampleBadgeHtml(label, extraClass) {
@@ -698,7 +697,7 @@
     const galleryMain = document.querySelector('.kc-gallery-main');
 
     const images = Array.isArray(post.imagens) ? post.imagens : (Array.isArray(post.images) ? post.images : []);
-    const isLegacyExample = isLegacyExampleEntity(post);
+    const isLegacyExample = isLegacyExamplePost(post);
     syncLegacyExampleMarker(galleryMain, isLegacyExample, 'Exemplo', 'kc-product-example-ribbon--gallery');
     const emoji = post.emoji || '✨';
 
@@ -968,7 +967,7 @@
       || (window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function'
         ? window.KCUtils.buildPublicHandle(normalizedName)
         : '');
-    const isLegacyExample = isLegacyExampleEntity(post);
+    const isLegacyExample = isLegacyExampleProfile(post && post.authorProfile);
 
     const author = normalizedName || 'Autor';
     const avatarUrl = normalizedAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
@@ -990,6 +989,10 @@
 
     const items = [];
     const authorProfile = post && post.authorProfile && typeof post.authorProfile === 'object' ? post.authorProfile : null;
+
+    if (isLegacyExample) {
+      items.push('<span><i class="fas fa-flask"></i> Perfil de exemplo</span>');
+    }
 
     if (authorProfile && authorProfile.affiliation && shared && typeof shared.formatProfileValue === 'function') {
       const affiliationLabel = shared.formatProfileValue('affiliation', authorProfile.affiliation);
@@ -1440,7 +1443,7 @@
   function getRelatedImageHtml(post) {
     var images = Array.isArray(post && post.imagens) ? post.imagens : (Array.isArray(post && post.images) ? post.images : []);
     var title = String(post && (post.titulo || post.title) || 'Imagem da publicação').trim() || 'Imagem da publicação';
-    var exampleBadge = isLegacyExampleEntity(post) ? buildLegacyExampleBadgeHtml('Exemplo', 'kc-product-example-ribbon--related') : '';
+    var exampleBadge = isLegacyExamplePost(post) ? buildLegacyExampleBadgeHtml('Exemplo', 'kc-product-example-ribbon--related') : '';
     if (images.length) {
       return '<div class="kc-related-card__media">' + exampleBadge + '<img src="' + esc(String(images[0])) + '" alt="' + esc(title) + '" loading="lazy" decoding="async" /></div>';
     }

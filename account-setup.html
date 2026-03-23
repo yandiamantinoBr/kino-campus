@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KinoCampus - Completar conta</title>
-  <link rel="stylesheet" href="assets/css/kc-theme-boot.css" />
-  <script src="assets/js/kc-theme-boot.js"></script>
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.3.4.11" />
+  <script src="assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
-  <link rel="stylesheet" href="assets/css/kc-public-shell.css" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=8.3.4.11" />
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.3.4.11" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     body.kc-account-setup-page {
@@ -415,7 +415,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="assets/css/kc-public-shell.css" />
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.3.4.11" />
 </head>
 <body class="kc-account-setup-page kc-shell-page">
   <header class="kc-header">
@@ -449,15 +449,15 @@
             <span class="kc-account-eyebrow">Onboarding KinoCampus</span>
             <h1 class="kc-account-title">Complete sua conta para publicar, conversar e aparecer do seu jeito.</h1>
             <p class="kc-account-copy">
-              O mínimo obrigatório para seguir é bem simples: seu nome de exibição, seu vínculo com a UFG e o contato principal.
-              O resto é opcional e pode ser ajustado de novo mais tarde.
+              O mÃ­nimo obrigatÃ³rio para seguir Ã© bem simples: seu nome de exibiÃ§Ã£o, seu vÃ­nculo com a UFG e o contato principal.
+              O resto Ã© opcional e pode ser ajustado de novo mais tarde.
             </p>
           </div>
 
           <div class="kc-account-stepper" aria-label="Etapas do onboarding">
             <button class="kc-account-step is-active" type="button" data-step-chip>
               <small>Etapa 1</small>
-              <strong>Apresentação</strong>
+              <strong>ApresentaÃ§Ã£o</strong>
             </button>
             <button class="kc-account-step" type="button" data-step-chip>
               <small>Etapa 2</small>
@@ -491,7 +491,7 @@
                       <span>Salvar foto agora</span>
                     </button>
                   </div>
-                  <p class="kc-avatar-note">Os avatares sugeridos são aleatórios e seguem o mesmo estilo visual.</p>
+                  <p class="kc-avatar-note">Os avatares sugeridos sÃ£o aleatÃ³rios e seguem o mesmo estilo visual.</p>
                 </div>
                 <div class="kc-avatar-suggestions" id="accountSetupAvatarSuggestions"></div>
                 <div class="kc-avatar-emoji-builder">
@@ -500,23 +500,23 @@
                   <div id="accountSetupEmojiGrid" class="kc-avatar-emoji-grid"></div>
                   <div id="accountSetupEmojiColors" class="kc-avatar-color-grid"></div>
                 </div>
-                <p class="kc-account-mini-note">Se preferir, você pode ficar com uma sugestão, montar um avatar com emoji ou trocar depois nas configurações.</p>
+                <p class="kc-account-mini-note">Se preferir, vocÃª pode ficar com uma sugestÃ£o, montar um avatar com emoji ou trocar depois nas configuraÃ§Ãµes.</p>
               </div>
             </div>
 
             <div class="kc-account-form-grid">
               <div class="kc-account-field">
-                <label for="accountSetupDisplayName">Nome de exibição</label>
-                <input id="accountSetupDisplayName" maxlength="80" placeholder="Como você quer aparecer no KinoCampus" />
+                <label for="accountSetupDisplayName">Nome de exibiÃ§Ã£o</label>
+                <input id="accountSetupDisplayName" maxlength="80" placeholder="Como vocÃª quer aparecer no KinoCampus" />
               </div>
               <div class="kc-account-field">
-                <label for="accountSetupAffiliation">Vínculo com a UFG</label>
+                <label for="accountSetupAffiliation">VÃ­nculo com a UFG</label>
                 <select id="accountSetupAffiliation"></select>
               </div>
               <div class="kc-account-field-wide">
-                <label for="accountSetupBio">Breve descrição</label>
-                <span class="kc-field-hint">Opcional. Ajuda a contextualizar seu perfil quando alguém abrir sua página.</span>
-                <textarea id="accountSetupBio" maxlength="200" placeholder="Curso, área de interesse, projetos ou o que você costuma compartilhar por aqui."></textarea>
+                <label for="accountSetupBio">Breve descriÃ§Ã£o</label>
+                <span class="kc-field-hint">Opcional. Ajuda a contextualizar seu perfil quando alguÃ©m abrir sua pÃ¡gina.</span>
+                <textarea id="accountSetupBio" maxlength="200" placeholder="Curso, Ã¡rea de interesse, projetos ou o que vocÃª costuma compartilhar por aqui."></textarea>
               </div>
             </div>
           </section>
@@ -524,17 +524,17 @@
           <section class="kc-account-form-step" data-step-panel="identity" style="display:none;">
             <div class="kc-account-form-grid">
               <div class="kc-account-field">
-                <label for="accountSetupGenderIdentity">Gênero</label>
-                <span class="kc-field-hint">Opcional. O objetivo é deixar o perfil mais fiel a como você quer se apresentar.</span>
+                <label for="accountSetupGenderIdentity">GÃªnero</label>
+                <span class="kc-field-hint">Opcional. O objetivo Ã© deixar o perfil mais fiel a como vocÃª quer se apresentar.</span>
                 <select id="accountSetupGenderIdentity"></select>
               </div>
               <div class="kc-account-field">
-                <label for="accountSetupRaceColor">Cor ou raça</label>
+                <label for="accountSetupRaceColor">Cor ou raÃ§a</label>
                 <span class="kc-field-hint">Opcional. Segue a nomenclatura utilizada pelo IBGE.</span>
                 <select id="accountSetupRaceColor"></select>
               </div>
               <div class="kc-account-field-wide" id="accountSetupGenderIdentityCustomWrap" style="display:none;">
-                <label for="accountSetupGenderIdentityCustom">Como você prefere se autodescrever?</label>
+                <label for="accountSetupGenderIdentityCustom">Como vocÃª prefere se autodescrever?</label>
                 <input id="accountSetupGenderIdentityCustom" maxlength="80" placeholder="Escreva do seu jeito" />
               </div>
             </div>
@@ -544,27 +544,27 @@
             <div class="kc-account-form-grid">
               <div class="kc-account-field">
                 <label for="accountSetupPrimaryMethod">Contato principal</label>
-                <span class="kc-field-hint">Esse é o canal usado nos anúncios quando outra pessoa estiver logada e clicar em contato.</span>
+                <span class="kc-field-hint">Esse Ã© o canal usado nos anÃºncios quando outra pessoa estiver logada e clicar em contato.</span>
                 <select id="accountSetupPrimaryMethod"></select>
               </div>
               <div class="kc-account-field">
                 <label class="kc-account-social-toggle" for="accountSetupCtaEnabled">
                   <input id="accountSetupCtaEnabled" type="checkbox" checked />
-                  <span>Permitir contato público nos anúncios</span>
+                  <span>Permitir contato pÃºblico nos anÃºncios</span>
                 </label>
               </div>
               <div class="kc-account-field-wide">
                 <label>WhatsApp</label>
                 <div class="kc-account-inline-grid">
                   <input id="accountSetupCountryCode" list="accountSetupCountryCodes" placeholder="+55" />
-                  <input id="accountSetupWhatsappNumber" placeholder="Número com DDD ou número local" inputmode="tel" />
+                  <input id="accountSetupWhatsappNumber" placeholder="NÃºmero com DDD ou nÃºmero local" inputmode="tel" />
                 </div>
                 <datalist id="accountSetupCountryCodes"></datalist>
                 <label class="kc-account-social-toggle" for="accountSetupWhatsappVisible" style="margin-top:8px;">
                   <input id="accountSetupWhatsappVisible" type="checkbox" data-social-visible="whatsapp" />
                   <span>Exibir WhatsApp no perfil</span>
                 </label>
-                <p id="accountSetupContactPreview" class="kc-account-mini-note">O contato principal aparecerá aqui depois de preenchido.</p>
+                <p id="accountSetupContactPreview" class="kc-account-mini-note">O contato principal aparecerÃ¡ aqui depois de preenchido.</p>
               </div>
             </div>
 
@@ -593,7 +593,7 @@
 
               <div class="kc-account-social-item">
                 <div class="kc-account-field">
-                  <label for="accountSetupEmailPublic"><strong><i class="fas fa-envelope"></i> E-mail público</strong></label>
+                  <label for="accountSetupEmailPublic"><strong><i class="fas fa-envelope"></i> E-mail pÃºblico</strong></label>
                   <input id="accountSetupEmailPublic" data-social-input="email_public" type="email" placeholder="voce@dominio.com" />
                 </div>
                 <label class="kc-account-social-toggle" for="accountSetupEmailPublicVisible">
@@ -604,7 +604,7 @@
 
               <div class="kc-account-social-item">
                 <div class="kc-account-field">
-                  <label for="accountSetupLattes"><strong><i class="fas fa-graduation-cap"></i> Currículo Lattes</strong></label>
+                  <label for="accountSetupLattes"><strong><i class="fas fa-graduation-cap"></i> CurrÃ­culo Lattes</strong></label>
                   <input id="accountSetupLattes" data-social-input="lattes" placeholder="URL ou identificador do Lattes" />
                 </div>
                 <label class="kc-account-social-toggle" for="accountSetupLattesVisible">
@@ -666,15 +666,15 @@
               <img id="accountSetupAvatarPreviewMirror" src="" alt="" style="display:none;" />
               <div>
                 <h2>Como seu perfil vai ficar</h2>
-                <p>Esse onboarding já prepara o que depois vai aparecer no hero do perfil e no contato dos anúncios.</p>
+                <p>Esse onboarding jÃ¡ prepara o que depois vai aparecer no hero do perfil e no contato dos anÃºncios.</p>
               </div>
             </div>
-            <p class="kc-account-mini-note">Os links sociais só aparecem publicamente se você marcar a visibilidade da rede correspondente.</p>
+            <p class="kc-account-mini-note">Os links sociais sÃ³ aparecem publicamente se vocÃª marcar a visibilidade da rede correspondente.</p>
           </div>
 
           <div class="kc-preview-card">
-            <span class="kc-preview-pill"><i class="fas fa-paper-plane"></i> Contato inteligente por anúncio</span>
-            <p>Quando alguém clicar em <strong>Entrar em contato</strong> na publicação, o KinoCampus vai usar o contato principal que você definir agora.</p>
+            <span class="kc-preview-pill"><i class="fas fa-paper-plane"></i> Contato inteligente por anÃºncio</span>
+            <p>Quando alguÃ©m clicar em <strong>Entrar em contato</strong> na publicaÃ§Ã£o, o KinoCampus vai usar o contato principal que vocÃª definir agora.</p>
           </div>
 
           <div class="kc-preview-card">
@@ -689,20 +689,22 @@
     </div>
   </main>
 
-  <script src="assets/js/kc-constants.js"></script>
-  <script src="assets/js/kc-utils.js"></script>
-  <script src="assets/js/kc-env.js"></script>
+  <script src="assets/js/kc-constants.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-utils.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-env.js?v=8.3.4.11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/kc-supabase.client.js"></script>
-  <script src="assets/js/kc-api.client.js"></script>
-  <script src="assets/js/adapters/local.adapter.js"></script>
-  <script src="assets/js/adapters/supabase.adapter.js"></script>
-  <script src="assets/js/account-profile.shared.js"></script>
-  <script src="assets/js/kc-profiles.client.js"></script>
-  <script src="assets/js/kc-public-shell.js"></script>
-  <script src="assets/js/kc-auth.ui.js"></script>
-  <script src="assets/js/kc-theme.js"></script>
-  <script src="assets/js/controllers/account-setup.controller.js"></script>
+  <script src="assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-api.client.js?v=8.3.4.11"></script>
+  <script src="assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
+  <script src="assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
+  <script src="assets/js/account-profile.shared.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-public-shell.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-theme.js?v=8.3.4.11"></script>
+  <script src="assets/js/controllers/account-setup.controller.js?v=8.3.4.11"></script>
 </body>
 </html>
+
+
 

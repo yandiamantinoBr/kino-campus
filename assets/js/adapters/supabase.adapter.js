@@ -3,7 +3,7 @@
   'use strict';
 const { ENV, normalizePost } = window.KCAPI;
   const profileShared = window.KCAccountProfileUtils || {};
-  const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, profile_public, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
+  const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, legacy_id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, profile_public, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
   const createPostDiagnostics = Object.freeze({
     clear() {
       try {
@@ -46,6 +46,10 @@ const { ENV, normalizePost } = window.KCAPI;
       descriptionLength: String(payload.description || '').length,
       imagesCount: Array.isArray(payload.images) ? payload.images.length : 0,
     };
+  }
+
+  function summarizeCreatePayloadForDiagnostics(parsed) {
+    return summarizeCreatePayloadForCreateDiagnostics(parsed);
   }
 
   function normalizeProfilePatchForAdapter(patch) {
@@ -736,6 +740,13 @@ const { ENV, normalizePost } = window.KCAPI;
     // - snake_case e camelCase para campos novos
     // - campos PT-BR usados pelo UI (titulo, descricao, preco, modulo, categoria, timestamp)
     const authorVerified = !!(author && author.verified);
+    const normalizedAuthorProfile = (author && typeof author === 'object')
+      ? {
+          ...author,
+          legacy_id: author.legacy_id || null,
+          legacyId: author.legacyId || author.legacy_id || null,
+        }
+      : null;
 
     const legacyId = (row.legacy_id == null) ? null : String(row.legacy_id).trim();
     const normalizedAuthorName = resolveNormalizedAuthorName(author, metadata, row.author_name || row.autor || row.author || '');
@@ -809,6 +820,7 @@ const { ENV, normalizePost } = window.KCAPI;
 
       authorName: normalizedAuthorName,
       authorAvatar: normalizedAuthorAvatar,
+      authorProfile: normalizedAuthorProfile,
     };
 
     // Aliases legados (alguns trechos usam author/authorAvatar)
@@ -842,8 +854,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildSupabasePostSelect(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, display_name, full_name, avatar_url, verified'
-      : 'id, display_name, full_name, avatar_url';
+      ? 'id, legacy_id, display_name, full_name, avatar_url, verified'
+      : 'id, legacy_id, display_name, full_name, avatar_url';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
@@ -962,8 +974,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, display_name, full_name, avatar_url, verified'
-      : 'id, display_name, full_name, avatar_url';
+      ? 'id, legacy_id, display_name, full_name, avatar_url, verified'
+      : 'id, legacy_id, display_name, full_name, avatar_url';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')

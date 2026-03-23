@@ -530,7 +530,7 @@
       const avatar = getUserAvatarUrl(profile, { fromSnapshot: opts.fromSnapshot });
       const avatarWrap = mobileUserLink.querySelector('.kc-mobile-menu-user-avatar-wrap');
       if (avatarWrap) avatarWrap.innerHTML = buildMobileAvatarMarkup(avatar, display);
-      if (mobileUserName) mobileUserName.innerHTML = `${escapeHtml(display)}<br><small style="color:var(--kc-text-dark-secondary);font-size:.8em;">@${escapeHtml(String(user.email).split('@')[0])}</small>`;
+        if (mobileUserName) mobileUserName.innerHTML = `<span class="kc-mobile-menu-user-display">${escapeHtml(display)}</span><span class="kc-mobile-menu-user-handle">@${escapeHtml(String(user.email).split('@')[0])}</span>`;
       mobileUserLink.href = '#login';
       if (profileLink) { profileLink.style.display = 'flex'; profileLink.href = buildProfileHref(user.id); }
       if (settingsLink) { settingsLink.style.display = 'flex'; settingsLink.href = buildSettingsHref(buildCurrentPath()); }
@@ -540,7 +540,7 @@
     } else {
       const avatarWrap = mobileUserLink.querySelector('.kc-mobile-menu-user-avatar-wrap');
       if (avatarWrap) avatarWrap.innerHTML = buildMobileAvatarMarkup('', 'Conta KinoCampus');
-      if (mobileUserName) mobileUserName.textContent = 'Login / Cadastro';
+        if (mobileUserName) mobileUserName.innerHTML = '<span class="kc-mobile-menu-user-display">Login / Cadastro</span><span class="kc-mobile-menu-user-handle">@minha-conta</span>';
       if (profileLink) profileLink.style.display = 'none';
       if (settingsLink) { settingsLink.style.display = 'flex'; settingsLink.href = buildSettingsHref(buildCurrentPath()); }
       if (adminLink) adminLink.style.display = 'none';
@@ -812,6 +812,7 @@
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
         const drawer = document.querySelector('.kc-mobile-menu-drawer, .kc-mobile-menu');
         if (isMobile && drawer && typeof window.openMobileMenu === 'function' && typeof window.closeMobileMenu === 'function') {
+          closeProfileDropdown();
           if (drawer.classList.contains('active')) window.closeMobileMenu();
           else window.openMobileMenu();
           return;

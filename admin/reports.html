@@ -1,18 +1,18 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css">
-  <script src="../assets/js/kc-theme-boot.js"></script>
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.3.4.11">
+  <script src="../assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
   <style>
     html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
   </style>
 
-  <title>KinoCampus - Denúncias Admin</title>
-  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <title>KinoCampus - DenÃºncias Admin</title>
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.3.4.11" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <style>
@@ -112,7 +112,7 @@
       .kc-admin-report-table td:nth-child(5)::before { content: 'Status'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
     }
   </style>
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.3" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.3.4.11" />
 </head>
 <body class="kc-admin-page kc-admin-page--reports">
 
@@ -127,10 +127,10 @@
           </span>
         </a>
       </div>
-      <nav class="kc-admin-nav" aria-label="Navegação admin">
+      <nav class="kc-admin-nav" aria-label="NavegaÃ§Ã£o admin">
         <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
-        <a href="reports.html" class="kc-admin-nav__link active"><i class="fas fa-flag"></i> Denúncias</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> ModeraÃ§Ã£o</a>
+        <a href="reports.html" class="kc-admin-nav__link active"><i class="fas fa-flag"></i> DenÃºncias</a>
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
       </nav>
       <div class="kc-user-actions">
@@ -144,16 +144,16 @@
     <div class="kc-admin-wrapper">
       <div id="admin-loading">
         <i class="fas fa-spinner fa-spin" style="font-size:1.6em;"></i>
-        <span>Verificando acesso…</span>
+        <span>Verificando acessoâ€¦</span>
       </div>
 
       <div id="admin-error" role="alert"></div>
 
       <div id="admin-content">
         <div class="kc-admin-header-bar">
-          <h1><i class="fas fa-flag"></i>Triagem de Denúncias</h1>
+          <h1><i class="fas fa-flag"></i>Triagem de DenÃºncias</h1>
           <div class="kc-admin-filters">
-            <select id="reports-status-filter" title="Filtrar por status da denúncia">
+            <select id="reports-status-filter" title="Filtrar por status da denÃºncia">
               <option value="open">Em aberto</option>
               <option value="all">Todas</option>
               <option value="closed">Fechadas</option>
@@ -163,7 +163,7 @@
               <option value="spam">Spam</option>
               <option value="scam">Golpe/Fraude</option>
               <option value="inappropriate">Inapropriado</option>
-              <option value="hate">Discurso de ódio</option>
+              <option value="hate">Discurso de Ã³dio</option>
               <option value="illegal">Ilegal</option>
               <option value="duplicate">Duplicado</option>
               <option value="other">Outro</option>
@@ -175,9 +175,9 @@
         </div>
 
         <p style="color:var(--kc-text-dark-secondary);font-size:.9em;margin-bottom:18px;">
-          Posts agrupados por número de denúncias. Filtros aplicados em tempo real.
-          Ações disponíveis: fechar denúncias, ocultar post (remove do feed) ou deletar permanentemente.
-          A UI só atualiza após confirmação de persistência no Supabase.
+          Posts agrupados por nÃºmero de denÃºncias. Filtros aplicados em tempo real.
+          AÃ§Ãµes disponÃ­veis: fechar denÃºncias, ocultar post (remove do feed) ou deletar permanentemente.
+          A UI sÃ³ atualiza apÃ³s confirmaÃ§Ã£o de persistÃªncia no Supabase.
         </p>
 
         <div id="reports-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 16px 0;"></div>
@@ -189,24 +189,26 @@
   <!-- Mobile Navigation (admin) -->
   <nav class="kc-mobile-nav">
     <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
-    <a class="active" href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>ModeraÃ§Ã£o</span></a>
+    <a class="active" href="reports.html"><i class="fas fa-flag"></i><span>DenÃºncias</span></a>
     <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
     <a href="../index.html"><i class="fas fa-home"></i><span>Site</span></a>
   </nav>
 
-  <script src="../assets/js/kc-constants.js"></script>
-  <script src="../assets/js/kc-utils.js"></script>
-  <script src="../assets/js/kc-env.js"></script>
+  <script src="../assets/js/kc-constants.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-utils.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-env.js?v=8.3.4.11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../assets/js/kc-supabase.client.js"></script>
-<script src="../assets/js/kc-api.client.js"></script>
-  <script src="../assets/js/adapters/local.adapter.js"></script>
-  <script src="../assets/js/adapters/supabase.adapter.js"></script>
-  <script src="../assets/js/kc-profiles.client.js"></script>
-  <script src="../assets/js/kc-auth.ui.js"></script>
-  <script src="../assets/js/kc-theme.js"></script>
-  <script src="../assets/js/admin-shell.js?v=8.3.4.3"></script>
-  <script src="../assets/js/controllers/admin-reports.controller.js"></script>
+  <script src="../assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
+<script src="../assets/js/kc-api.client.js?v=8.3.4.11"></script>
+  <script src="../assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
+  <script src="../assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
+  <script src="../assets/js/kc-theme.js?v=8.3.4.11"></script>
+  <script src="../assets/js/admin-shell.js?v=8.3.4.11"></script>
+  <script src="../assets/js/controllers/admin-reports.controller.js?v=8.3.4.11"></script>
 </body>
 </html>
+
+

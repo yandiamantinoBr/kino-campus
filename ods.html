@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <link href="assets/css/kc-theme-boot.css" rel="stylesheet" />
-  <script src="assets/js/kc-theme-boot.js"></script>
+  <link href="assets/css/kc-theme-boot.css?v=8.3.4.11" rel="stylesheet" />
+  <script src="assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
   <title>ODS | KinoCampus</title>
-  <link href="assets/css/styles.css" rel="stylesheet" />
+  <link href="assets/css/styles.css?v=8.3.4.11" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
 <body>
@@ -59,7 +59,7 @@
           <p class="kc-ods-hero__lead" data-kc-ods-lead></p>
           <div class="kc-ods-hero__actions">
             <a class="kc-btn-primary" href="index.html">Voltar para a home</a>
-            <a class="kc-btn-secondary" href="eventos.html?filter=sustentabilidade">Ver ações da comunidade</a>
+            <a class="kc-btn-secondary" href="eventos.html?filter=sustentabilidade">Ver aÃ§Ãµes da comunidade</a>
           </div>
         </div>
         <div class="kc-ods-hero__art">
@@ -80,7 +80,7 @@
 
         <article class="kc-ods-panel">
           <div class="kc-section-heading">
-            <span>Referências oficiais</span>
+            <span>ReferÃªncias oficiais</span>
             <h2>Fatos e sinais do objetivo</h2>
           </div>
           <div class="kc-ods-stats" data-kc-ods-stats></div>
@@ -89,8 +89,8 @@
 
       <section class="kc-ods-panel">
         <div class="kc-section-heading">
-          <span>Relação com a plataforma</span>
-          <h2>Onde o objetivo aparece na prática</h2>
+          <span>RelaÃ§Ã£o com a plataforma</span>
+          <h2>Onde o objetivo aparece na prÃ¡tica</h2>
         </div>
         <div class="kc-ods-module-tabs" data-kc-ods-module-tabs></div>
         <div class="kc-ods-module-panels" data-kc-ods-module-panels></div>
@@ -99,7 +99,7 @@
       <section class="kc-ods-grid">
         <article class="kc-ods-panel">
           <div class="kc-section-heading">
-            <span>Leituras rápidas</span>
+            <span>Leituras rÃ¡pidas</span>
             <h2>O que observar</h2>
           </div>
           <div class="kc-ods-highlights" data-kc-ods-highlights></div>
@@ -119,7 +119,7 @@
   <nav class="kc-mobile-nav">
     <a href="index.html">
       <i class="fas fa-home"></i>
-      <span>Início</span>
+      <span>InÃ­cio</span>
     </a>
     <a href="eventos.html">
       <i class="fas fa-calendar"></i>
@@ -147,17 +147,14 @@
     </div>
     <div class="kc-mobile-menu-content">
       <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection">
-        <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
-          <span class="kc-mobile-menu-user-avatar-wrap">
-            <i class="fas fa-user-circle" style="font-size:2rem;color:var(--kc-text-dark-secondary);"></i>
-          </span>
-          <span id="mobileMenuUserName">Login / Cadastro</span>
-        </a>
-      </div>
-      <hr data-kc-divider="top" class="kc-mobile-menu-divider"/>
-      <a href="profile.html" id="mobileMenuProfileLink" style="display:none;"><i class="fas fa-id-badge"></i> Meu Perfil</a>
-      <a href="admin/index.html" id="mobileMenuAdminLink" style="display:none;"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i> Administração</a>
-      <hr data-kc-divider="profile" class="kc-mobile-menu-divider"/>
+  <a href="#login" id="mobileMenuUserLink" class="kc-mobile-menu-user-link" data-kc-login="true">
+    <span class="kc-mobile-menu-user-avatar-wrap">
+      <span class="kc-mobile-menu-user-avatar kc-mobile-menu-user-avatar--placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>
+    </span>
+    <span id="mobileMenuUserName" class="kc-mobile-menu-user-text"><span class="kc-mobile-menu-user-display">Login / Cadastro</span><span class="kc-mobile-menu-user-handle">@minha-conta</span></span>
+  </a>
+</div>
+<div id="mobileMenuAccountSection" class="kc-mobile-menu-account-section"></div>
       <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
       <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
       <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
@@ -168,28 +165,30 @@
   </div>
   <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
 
-  <script src="assets/js/kc-constants.js"></script>
-  <script src="assets/js/kc-utils.js"></script>
-  <script src="assets/js/kc-env.js"></script>
+  <script src="assets/js/kc-constants.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-utils.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-env.js?v=8.3.4.11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/kc-supabase.client.js"></script>
-  <script src="assets/js/kc-api.client.js"></script>
-  <script src="assets/js/adapters/local.adapter.js"></script>
-  <script src="assets/js/adapters/supabase.adapter.js"></script>
-  <script src="assets/js/kc-profiles.client.js"></script>
-  <script src="assets/js/components/toast.js"></script>
-  <script src="assets/js/components/carousel.js"></script>
-  <script src="assets/js/components/voting.js"></script>
-  <script src="assets/js/kc-core.js"></script>
-  <script src="assets/js/kc-create-post.js"></script>
-  <script src="assets/js/kc-auth.ui.js"></script>
-  <script src="assets/js/kc-theme.js"></script>
-  <script src="assets/js/search-analytics.shared.js"></script>
-  <script src="assets/js/home-categories.shared.js"></script>
-  <script src="assets/js/kc-home-categories.js"></script>
-  <script src="assets/js/kc-search.js"></script>
-  <script src="assets/js/kc-search-modal.js"></script>
-  <script src="assets/js/ods.shared.js"></script>
-  <script src="assets/js/controllers/ods.controller.js"></script>
+  <script src="assets/js/kc-supabase.client.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-api.client.js?v=8.3.4.11"></script>
+  <script src="assets/js/adapters/local.adapter.js?v=8.3.4.11"></script>
+  <script src="assets/js/adapters/supabase.adapter.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-profiles.client.js?v=8.3.4.11"></script>
+  <script src="assets/js/components/toast.js?v=8.3.4.11"></script>
+  <script src="assets/js/components/carousel.js?v=8.3.4.11"></script>
+  <script src="assets/js/components/voting.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-core.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-create-post.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-auth.ui.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-theme.js?v=8.3.4.11"></script>
+  <script src="assets/js/search-analytics.shared.js?v=8.3.4.11"></script>
+  <script src="assets/js/home-categories.shared.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-home-categories.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-search.js?v=8.3.4.11"></script>
+  <script src="assets/js/kc-search-modal.js?v=8.3.4.11"></script>
+  <script src="assets/js/ods.shared.js?v=8.3.4.11"></script>
+  <script src="assets/js/controllers/ods.controller.js?v=8.3.4.11"></script>
 </body>
 </html>
+
+
