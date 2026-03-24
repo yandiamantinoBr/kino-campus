@@ -114,7 +114,7 @@
         tempLabel = 'Quente · Alta relevância';
       } else if (row.rankingScore >= 7) {
         tempClass = 'kc-temp-warm';
-        iconClass = 'fas fa-fire';
+        iconClass = 'fas fa-tint';
         tempLabel = 'Morno · Subindo em relevância';
       }
       

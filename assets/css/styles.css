@@ -4480,6 +4480,10 @@ header,
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .kc-card__image-wrapper.kc-image-fallback {
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -8340,5 +8344,28 @@ body.kc-scroll-locked .kc-header {
   font-size: 0.95rem;
   max-width: 400px;
   margin: 0 auto;
+}
+
+/* ====== Temperature UI ====== */
+.kc-temp-hot {
+  color: #f97316 !important; /* Orange */
+}
+.kc-temp-warm {
+  color: #b45309 !important; /* Golden/Dark Yellow for good contrast on light theme */
+}
+[data-theme="dark"] .kc-temp-warm {
+  color: #facc15 !important; /* Bright yellow for dark theme */
+}
+.kc-temp-cold {
+  color: #3b82f6 !important; /* Blue */
+}
+
+/* ====== Light Theme Fixes ====== */
+/* Fallback background already handled natively above */
+
+/* ====== Sidebar Sections ====== */
+.kc-sidebar-section .kc-home-load-more {
+  display: flex !important;
+  margin: 15px auto 0 !important;
 }
 
