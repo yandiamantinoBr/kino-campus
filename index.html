@@ -130,11 +130,19 @@
         <div class="kc-ranking-users"></div>
       </div>
 
-      <div class="kc-feed-tabs">
-        <a class="active" href="#">
+      <div class="kc-feed-tabs" id="kc-home-feed-tabs">
+        <!-- Abas de visualização do feed principal -->
+        <button class="active" type="button" data-feed-tab="destaques" aria-selected="true" aria-controls="kc-feed-destaques">
           <i class="fas fa-fire"></i>
-          <span>Destaque</span>
-        </a>
+          <span>Destaques</span>
+        </button>
+        <button type="button" data-feed-tab="recentes" aria-selected="false" aria-controls="kc-feed-recentes">
+          <i class="fas fa-clock"></i>
+          <span>Recentes</span>
+        </button>
+        <!-- Divisor visual -->
+        <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
+        <!-- Links de navegação para outras seções -->
         <a href="compra-venda-feed.html">
           <i class="fas fa-shopping-bag"></i>
           <span>Compra e Venda</span>
@@ -169,7 +177,10 @@
         </a>
       </div>
 
-      <div class="kc-feed-list" id="kc-main-feed"></div>
+      <!-- Feed Destaques: posts ordenados por votos (mais relevantes) -->
+      <div class="kc-feed-list kc-feed-panel kc-feed-panel--active" id="kc-feed-destaques" role="tabpanel" aria-labelledby="tab-destaques"></div>
+      <!-- Feed Recentes: posts ordenados por data (mais novos) -->
+      <div class="kc-feed-list kc-feed-panel" id="kc-feed-recentes" role="tabpanel" aria-labelledby="tab-recentes" hidden></div>
     </section>
 
     <aside class="kc-sidebar">

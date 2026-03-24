@@ -314,8 +314,41 @@
     });
   }
 
-  function injectHomeFeed() {
-    if (!(window.KCControllers && typeof window.KCControllers.injectFeed === 'function')) return;
+  let destaquePager = null;
+  let recentesPager = null;
+  let activeFeedTab = 'destaques';
+
+  function switchFeedTab(tabKey) {
+    if (activeFeedTab === tabKey) return;
+    activeFeedTab = tabKey;
+
+    const tabs = document.querySelectorAll('[data-feed-tab]');
+    tabs.forEach((btn) => {
+      const isActive = btn.dataset.feedTab === tabKey;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    const panels = document.querySelectorAll('.kc-feed-panel');
+    panels.forEach((panel) => {
+      const isActive = panel.id === `kc-feed-${tabKey}`;
+      panel.classList.toggle('kc-feed-panel--active', isActive);
+      panel.hidden = !isActive;
+    });
+
+    // Inicializa o pager do Recentes apenas quando o usuário abre a aba pela primeira vez
+    if (tabKey === 'recentes' && !recentesPager) {
+      recentesPager = injectFeedPane('recentes');
+    }
+
+    // Re-aplica estados de voto ao trocar de aba
+    if (typeof kcInitVoteStates === 'function') {
+      setTimeout(() => { try { kcInitVoteStates(); } catch (_) {} }, 80);
+    }
+  }
+
+  function injectFeedPane(feedTab) {
+    if (!(window.KCControllers && typeof window.KCControllers.injectFeed === 'function')) return null;
     let urlQ = '';
     let urlTag = '';
     try {
@@ -324,14 +357,33 @@
       urlTag = search.get('tag') || '';
     } catch (_) {}
 
-    window.KCControllers.injectFeed({
+    const containerId = feedTab === 'recentes' ? 'kc-feed-recentes' : 'kc-feed-destaques';
+    return window.KCControllers.injectFeed({
+      containerSelector: `#${containerId}`,
       module: null,
       pageModule: '',
       q: urlQ,
       tag: urlTag,
+      sortBy: feedTab === 'recentes' ? 'recentes' : 'votos',
+      keepExisting: true,
       onAfterAppend: function () {
         if (typeof kcInitVoteStates === 'function') kcInitVoteStates();
       }
+    });
+  }
+
+  function injectHomeFeed() {
+    // Inicia apenas o feed Destaques (ativo por padrão)
+    // O feed Recentes é inicializado sob demanda ao clicar na aba
+    destaquePager = injectFeedPane('destaques');
+  }
+
+  function bindFeedTabInteractions() {
+    document.addEventListener('click', function (event) {
+      const tabBtn = event.target.closest('[data-feed-tab]');
+      if (!tabBtn) return;
+      const tabKey = tabBtn.dataset.feedTab;
+      if (tabKey) switchFeedTab(tabKey);
     });
   }
 
@@ -347,6 +399,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     bindIndexInteractions();
+    bindFeedTabInteractions();
     syncStaticSidebarCopy();
     bootstrapHome().catch(() => {});
   });
