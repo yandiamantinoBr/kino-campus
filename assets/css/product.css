@@ -1,11 +1,19 @@
     /* Ajustes pontuais de layout para a página de detalhes (mantém o design existente do projeto) */
     .kc-product-page .kc-main-content {
       padding-top: 30px;
+      padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     }
 
     .kc-product-section {
-      max-width: 1200px;
+      max-width: 1180px;
       margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    @media (min-width: 900px) {
+      .kc-product-section {
+        padding: 0 24px;
+      }
     }
 
     .kc-post-breadcrumb {
@@ -321,13 +329,6 @@
       justify-content: start;
     }
 
-    @media (max-width: 480px) {
-      .kc-product-page .kc-product-actions,
-      .kc-product-actions {
-        grid-template-columns: 1fr;
-      }
-    }
-
     .kc-save-wrap { position: relative; }
 
     .kc-product-actions > * {
@@ -346,8 +347,7 @@
       width: 100%;
     }
 
-    .kc-product-actions > #primaryCta,
-    .kc-product-actions > a[href="create-post.html"] {
+    .kc-product-actions > #primaryCta {
       grid-column: 1 / -1;
     }
 
@@ -1319,14 +1319,21 @@
         font-size: 1.8em;
       }
 
+      .kc-product-page .kc-product-actions,
       .kc-product-actions {
         width: 100%;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
       }
 
+      .kc-product-page .kc-product-actions > #primaryCta,
       .kc-product-actions > #primaryCta {
         grid-column: 1 / -1;
+      }
+
+      /* Hide "Criar publicação" on mobile — mobile nav already has create button */
+      .kc-product-actions > a[href="create-post.html"] {
+        display: none;
       }
 
       .kc-product-actions > .kc-save-wrap,

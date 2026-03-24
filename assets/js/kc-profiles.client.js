@@ -174,15 +174,21 @@
     if (hadState) dispatchProfileChange(null);
   }
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
   async function selectProfileById(id, fields) {
     const client = getClient();
     if (!client) return null;
+
+    const key = String(id || '').trim();
+    // profiles.id is UUID — skip Supabase query for legacy IDs (e.g. "USER_29")
+    if (!key || !UUID_RE.test(key)) return null;
 
     try {
       const query = client
         .from('profiles')
         .select(fields)
-        .eq('id', String(id || '').trim());
+        .eq('id', key);
 
       const result = (typeof query.maybeSingle === 'function')
         ? await query.maybeSingle()
