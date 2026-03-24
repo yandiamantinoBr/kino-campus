@@ -436,6 +436,13 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     createHelpRequest: localCreateHelpRequest,
     listAdminHelpRequests: localListAdminHelpRequests,
     updateAdminHelpRequest: localUpdateAdminHelpRequest,
+    // Stubs: funcionalidades disponíveis apenas no driver Supabase
+    togglePostStatus: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
+    renewPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
+    bumpPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
+    trackCouponClick: async function () { return { ok: false }; },
+    trackShare: async function () { return { ok: false }; },
+    checkDuplicatePost: async function () { return { ok: false, candidates: [] }; },
   });
 
 

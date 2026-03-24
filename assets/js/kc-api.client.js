@@ -968,6 +968,40 @@
     return driver.togglePostStatus(postId);
   }
 
+  async function renewPost(postId) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.renewPost !== 'function') {
+      return { ok: false, code: 'UNAVAILABLE', message: 'Renovação indisponível neste driver.' };
+    }
+    return driver.renewPost(postId);
+  }
+
+  async function bumpPost(postId) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.bumpPost !== 'function') {
+      return { ok: false, code: 'UNAVAILABLE', message: 'Impulsionamento indisponível neste driver.' };
+    }
+    return driver.bumpPost(postId);
+  }
+
+  async function trackCouponClick(postId) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.trackCouponClick !== 'function') return { ok: false };
+    return driver.trackCouponClick(postId);
+  }
+
+  async function trackShare(postId) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.trackShare !== 'function') return { ok: false };
+    return driver.trackShare(postId);
+  }
+
+  async function checkDuplicatePost(userId, module, title) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.checkDuplicatePost !== 'function') return { ok: false, candidates: [] };
+    return driver.checkDuplicatePost(userId, module, title);
+  }
+
 
   // Auth facade (sem quebrar modo local)
   // - signIn/signUp retornam { user, error }
@@ -1218,6 +1252,11 @@
     deletePost,
     reportPost,
     togglePostStatus,
+    renewPost,
+    bumpPost,
+    trackCouponClick,
+    trackShare,
+    checkDuplicatePost,
 
     // Comments (Supabase) — V8.1.7.2
     getComments,

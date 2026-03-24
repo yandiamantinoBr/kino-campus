@@ -2035,9 +2035,38 @@ async function kcHandleCreateSubmit() {
         return;
       }
 
+      // ── Verificação de publicação duplicada ──────────────────────────────
+      try {
+        if (KCAPI && typeof KCAPI.checkDuplicatePost === 'function') {
+          const dupCheck = await KCAPI.checkDuplicatePost(
+            user.id,
+            payload.modulo || null,
+            payload.titulo || ''
+          );
+          if (dupCheck && dupCheck.candidates && dupCheck.candidates.length > 0) {
+            const top = dupCheck.candidates[0];
+            const topTitle = top.title || top.titulo || 'Sem título';
+            const statusLabel = top.status === 'hidden' ? 'desabilitado' : (top.status === 'expired' ? 'expirado' : 'ativo');
+            const confirmed = window.confirm(
+              'Atenção: você já tem um anúncio muito parecido com este!\n\n' +
+              '"' + topTitle + '" (' + statusLabel + ')\n\n' +
+              'Publicar de novo pode levar à desativação do anúncio pela moderação.\n' +
+              'Deseja continuar mesmo assim?'
+            );
+            if (!confirmed) return;
+          }
+        }
+      } catch (_) { /* verificação de duplicata não bloqueia o envio */ }
+
       showToast('Publicando...', 'info', 1600);
       try {
         post = await apiCreateFn(payload);
+        // Verificação explícita de POST_LIMIT_REACHED antes de qualquer outra coisa
+        if (post && post._kcError) {
+          const limitMsg = post.message || 'Não foi possível publicar. Limite de publicações ativas atingido.';
+          showToast(limitMsg, 'error', 5000);
+          return;
+        }
         if (post && post.ok === false && post.error) {
           createError = post.error;
           post = null;
@@ -2083,6 +2112,11 @@ async function kcHandleCreateSubmit() {
           post = await apiCreateFn(payload);
         } else {
           post = kcCreateUserPost(payload);
+        }
+        if (post && post._kcError) {
+          const limitMsg = post.message || 'Não foi possível publicar. Limite de publicações ativas atingido.';
+          showToast(limitMsg, 'error', 5000);
+          return;
         }
         if (post && post.ok === false && post.error) {
           createError = post.error;

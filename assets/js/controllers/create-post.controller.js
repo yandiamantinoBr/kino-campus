@@ -107,7 +107,7 @@
 
     try {
       const result = await originalCreatePost(payload);
-      const hasSuccess = !!(result && result.ok !== false);
+      const hasSuccess = !!(result && result.ok !== false && !result._kcError);
       if (hasSuccess) {
         if (isSupabase) {
           console.log(LOG_TAG + ' Publicacao concluida com sucesso.', summary);
