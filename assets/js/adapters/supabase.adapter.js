@@ -2051,6 +2051,8 @@ const { ENV, normalizePost } = window.KCAPI;
     const client = getSupabaseClient();
     const author = String(authorId || '').trim();
     if (!client || !author) return [];
+    // Supabase author_id is UUID — skip query for legacy IDs (e.g. "USER_29")
+    if (!UUID_RE.test(author)) return [];
 
     const page = Math.max(1, Number(params.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
@@ -2155,6 +2157,8 @@ const { ENV, normalizePost } = window.KCAPI;
     const currentModule = String(currentPost.modulo || currentPost.module || '').trim();
 
     try {
+      // Only call RPC when currentUuid is a valid UUID — legacy numeric IDs cause 22P02
+      if (!UUID_RE.test(currentUuid)) throw new Error('legacy-id-skip');
       const rpc = await client.rpc('kc_related_posts', {
         p_post_id: currentUuid,
         p_limit: limit,
