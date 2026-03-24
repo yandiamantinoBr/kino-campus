@@ -7477,6 +7477,19 @@ body.kc-scroll-locked .kc-header {
   background: var(--kc-background-dark);
 }
 
+a.kc-home-metric-card {
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+a.kc-home-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  border-color: var(--kc-primary-brand);
+}
+
 .kc-home-metric-card strong {
   font-size: 0.92rem;
 }
@@ -7657,6 +7670,12 @@ body.kc-scroll-locked .kc-header {
   text-align: center;
   border-radius: 14px;
   box-sizing: border-box;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kc-ods-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
 .kc-ods-badge strong {
@@ -8372,3 +8391,41 @@ body.kc-scroll-locked .kc-header {
   margin: 15px auto 0 !important;
 }
 
+.kc-ods-badge {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kc-ods-badge:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* ====== Mobile FAB ====== */
+.kc-fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background-color: var(--kc-primary-brand);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 12px rgba(255, 110, 30, 0.4);
+  z-index: 900;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  text-decoration: none;
+}
+.kc-fab:hover {
+  transform: scale(1.05);
+  background-color: var(--kc-primary-color, #e05e15);
+  color: #fff;
+}
+@media (min-width: 768px) {
+  .kc-fab {
+    display: none;
+  }
+}

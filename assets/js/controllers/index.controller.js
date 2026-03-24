@@ -16,13 +16,17 @@
     return new Intl.NumberFormat('pt-BR').format(Number(value) || 0);
   }
 
-  function buildMetricCard(title, value, detail, variant) {
+  function buildMetricCard(title, value, detail, options) {
+    const variantStr = typeof options === 'string' ? options : (options && options.variant) || '';
+    const href = options && typeof options === 'object' ? options.href : null;
+    const tag = href ? 'a' : 'article';
+    const hrefAttr = href ? `href="${href}"` : '';
     return `
-      <article class="kc-home-metric-card${variant ? ` ${variant}` : ''}">
+      <${tag} ${hrefAttr} class="kc-home-metric-card${variantStr ? ` ${variantStr}` : ''}">
         <strong>${title}</strong>
         <span class="kc-home-metric-card__value">${value}</span>
         <span>${detail}</span>
-      </article>
+      </${tag}>
     `;
   }
 
@@ -188,9 +192,9 @@
 
     if (!user || !user.id) {
       target.innerHTML = [
-        buildMetricCard('Perfil de uso', 'Visitante', 'Entre para guardar afinidade entre sessões, favoritos e destaques.', 'is-honest'),
-        buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observação'}` : 'Navegue, busque e interaja para personalizar a ordem.', 'is-honest'),
-        buildMetricCard('Histórico pessoal', formatNumber(affinityRows.length), 'Categorias tocadas nesta sessão.', 'is-honest')
+        buildMetricCard('Perfil de uso', 'Visitante', 'Entre para guardar afinidade entre sessões, favoritos e destaques.', { variant: 'is-honest', href: '#login' }),
+        buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observação'}` : 'Navegue, busque e interaja para personalizar a ordem.', { variant: 'is-honest', href: topCategory ? topCategory.href : null }),
+        buildMetricCard('Histórico pessoal', formatNumber(affinityRows.length), 'Categorias tocadas nesta sessão.', { variant: 'is-honest' })
       ].join('');
       return;
     }
@@ -210,9 +214,9 @@
     }
 
     target.innerHTML = [
-      buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observação'}` : 'Continue interagindo para personalizar a home.'),
-      buildMetricCard('Itens salvos', formatNumber(favoriteCount + laterCount), `${formatNumber(favoriteCount)} favoritos · ${formatNumber(laterCount)} para ver depois`),
-      buildMetricCard('Destaques pessoais', formatNumber(highlightCount), `${formatNumber(affinityRows.length)} categorias já têm afinidade registrada`)
+      buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observação'}` : 'Continue interagindo para personalizar a home.', { href: topCategory ? topCategory.href : null }),
+      buildMetricCard('Itens salvos', formatNumber(favoriteCount + laterCount), `${formatNumber(favoriteCount)} favoritos · ${formatNumber(laterCount)} para ver depois`, { href: 'profile.html' }),
+      buildMetricCard('Destaques pessoais', formatNumber(highlightCount), `${formatNumber(affinityRows.length)} categorias já têm afinidade registrada`, { href: 'profile.html' })
     ].join('');
   }
 
@@ -231,9 +235,9 @@
     const topCategory = topResult && Array.isArray(topResult.rows) ? topResult.rows[0] : null;
 
     target.innerHTML = [
-      buildMetricCard('Publicações ativas', formatNumber(totalPosts), 'Total de anúncios e avisos visíveis agora.'),
+      buildMetricCard('Publicações ativas', formatNumber(totalPosts), 'Total de anúncios e avisos visíveis agora.', { href: 'search-results.html' }),
       buildMetricCard('Temas em movimento', formatNumber(liveCategories.length), 'Categorias com pelo menos uma publicação ativa neste momento.'),
-      buildMetricCard('Tema com mais anúncios', topCategory ? topCategory.label : 'Sem destaque', topCategory ? `${formatNumber(topCategory.count)} publicações ativas agora` : 'Volte em instantes para conferir o movimento da comunidade.', 'is-honest')
+      buildMetricCard('Tema com mais anúncios', topCategory ? topCategory.label : 'Sem destaque', topCategory ? `${formatNumber(topCategory.count)} publicações ativas agora` : 'Volte em instantes para conferir o movimento da comunidade.', { variant: 'is-honest', href: topCategory ? topCategory.href : null })
     ].join('');
   }
 
