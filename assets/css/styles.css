@@ -2023,11 +2023,10 @@ main {
 }
 
 .kc-mobile-menu-account-section {
-    display: grid;
-    gap: 8px;
-    padding: 12px 20px 12px;
-    align-content: start;
-    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--kc-border-dark);
     min-width: 0;
     box-sizing: border-box;
 }
@@ -2038,14 +2037,52 @@ main {
     box-sizing: border-box;
 }
 
+/* Account links harmonious with module links */
 .kc-mobile-menu-account-link,
 .kc-mobile-menu-account-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 20px;
+    color: var(--kc-text-dark-primary);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-size: 1em;
     width: 100%;
-    justify-content: flex-start;
-    border-radius: 16px;
-    min-height: 52px;
-    padding: 12px 16px;
+    border: none;
+    border-radius: 0;
+    min-height: unset;
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
     box-sizing: border-box;
+}
+
+.kc-mobile-menu-account-link:hover,
+.kc-mobile-menu-account-btn:hover {
+    background-color: var(--kc-background-dark);
+    color: var(--kc-primary-brand);
+}
+
+.kc-mobile-menu-account-link i,
+.kc-mobile-menu-account-btn i {
+    width: 24px;
+    text-align: center;
+    color: var(--kc-primary-brand);
+    flex-shrink: 0;
+}
+
+/* Logout button — subtle danger styling */
+.kc-mobile-menu-logout-btn {
+    color: var(--kc-error, #e05c5c) !important;
+}
+.kc-mobile-menu-logout-btn i {
+    color: var(--kc-error, #e05c5c) !important;
+}
+.kc-mobile-menu-logout-btn:hover {
+    color: var(--kc-error, #e05c5c) !important;
+    background-color: rgba(224, 92, 92, 0.08) !important;
 }
 
 .kc-mobile-menu-divider {
@@ -5990,34 +6027,26 @@ textarea::placeholder {
   color: #ff5c5c !important;
 }
 
-/* ── Botão "Sair" destacado no drawer mobile ── */
+/* ── Botão "Sair" no drawer mobile — harmonioso com links de módulo ── */
 .kc-mobile-menu-logout-btn {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 15px;
   width: 100%;
   margin: 0;
-  padding: 12px 16px;
-  background: rgba(255, 82, 82, 0.12);
-  color: #ff7b7b;
-  font-weight: 700;
+  padding: 15px 20px;
+  background: transparent;
+  color: var(--kc-error, #e05c5c);
+  font-weight: normal;
   font-size: 1em;
-  border: 1px solid rgba(255, 82, 82, 0.24);
-  border-radius: 16px;
+  border: none;
+  border-radius: 0;
   cursor: pointer;
   font-family: inherit;
   justify-content: flex-start;
   box-sizing: border-box;
   max-width: 100%;
-  transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease, transform 0.12s ease;
-}
-
-.kc-hero-carousel {
-  touch-action: pan-y;
-}
-
-.kc-hero-carousel {
-  touch-action: pan-y;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .kc-hero-carousel {
@@ -6026,18 +6055,17 @@ textarea::placeholder {
 
 .kc-mobile-menu-content .kc-mobile-menu-logout-btn,
 .kc-mobile-menu-content button.kc-mobile-menu-logout-btn {
-  background: rgba(255, 82, 82, 0.14) !important;
-  border: 1px solid rgba(255, 82, 82, 0.28) !important;
-  color: #ff7b7b !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: var(--kc-error, #e05c5c) !important;
   width: 100% !important;
   margin: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  align-self: stretch !important;
-  justify-self: stretch !important;
-  padding: 13px 16px !important;
-  gap: 12px !important;
+  padding: 15px 20px !important;
+  gap: 15px !important;
   box-shadow: none !important;
   text-align: left !important;
   max-width: 100% !important;

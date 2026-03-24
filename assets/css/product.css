@@ -2,6 +2,9 @@
     .kc-product-page .kc-main-content {
       padding-top: 30px;
       padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+      /* kc-product-section gerencia seu próprio padding — anular o gutter global */
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
 
     .kc-product-section {
@@ -972,7 +975,6 @@
 
     /* Hardening mobile layout: evita estouro horizontal em posts com foto */
     .kc-product-page .kc-main-content,
-    .kc-product-section,
     .kc-product-container,
     .kc-product-container > *,
     .kc-product-gallery,
@@ -983,6 +985,13 @@
       min-width: 0;
       box-sizing: border-box;
       max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    /* kc-product-section tem max-width: 1180px — não aplicar max-width: 100% aqui */
+    .kc-product-section {
+      min-width: 0;
+      box-sizing: border-box;
       overflow-x: hidden;
     }
 
