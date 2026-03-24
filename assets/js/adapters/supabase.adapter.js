@@ -2975,6 +2975,93 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
+  // ── Renovar post expirado/oculto ──────────────────────────────────────────
+  async function supabaseRenewPost(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false, error: { message: 'ID de publicação inválido.' } };
+    try {
+      const { data, error } = await client.rpc('kc_renew_post', { p_post_id: uuid });
+      if (error) return { ok: false, error };
+      if (!data || data.ok === false) {
+        return {
+          ok: false,
+          _kcError: data && data.code === 'LIMIT_REACHED' ? 'POST_LIMIT_REACHED' : undefined,
+          code: (data && data.code) || 'UNKNOWN',
+          message: (data && data.message) || 'Não foi possível renovar a publicação.',
+          limit: data && data.limit,
+          count: data && data.count,
+        };
+      }
+      return { ok: true, new_status: data.new_status, expires_at: data.expires_at, message: data.message };
+    } catch (e) { return { ok: false, error: e }; }
+  }
+
+  // ── Impulsionar post (bump) ────────────────────────────────────────────────
+  async function supabaseBumpPost(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false, error: { message: 'ID de publicação inválido.' } };
+    try {
+      const { data, error } = await client.rpc('kc_bump_post', { p_post_id: uuid });
+      if (error) return { ok: false, error };
+      if (!data || data.ok === false) {
+        return {
+          ok: false,
+          code: (data && data.code) || 'UNKNOWN',
+          message: (data && data.message) || 'Não foi possível impulsionar a publicação.',
+          next_bump_at: data && data.next_bump_at,
+        };
+      }
+      return { ok: true, bumped_at: data.bumped_at, next_bump_at: data.next_bump_at, message: data.message };
+    } catch (e) { return { ok: false, error: e }; }
+  }
+
+  // ── Rastrear clique em cupom ───────────────────────────────────────────────
+  async function supabaseTrackCouponClick(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false };
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false };
+    try {
+      const { data, error } = await client.rpc('kc_track_coupon_click', { p_post_id: uuid });
+      if (error) return { ok: false, error };
+      return data || { ok: false };
+    } catch (_) { return { ok: false }; }
+  }
+
+  // ── Rastrear compartilhamento ──────────────────────────────────────────────
+  async function supabaseTrackShare(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false };
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false };
+    try {
+      const { data, error } = await client.rpc('kc_track_share', { p_post_id: uuid });
+      if (error) return { ok: false, error };
+      return data || { ok: false };
+    } catch (_) { return { ok: false }; }
+  }
+
+  // ── Verificar publicações duplicadas ──────────────────────────────────────
+  async function supabaseCheckDuplicatePost(userId, module, title) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, candidates: [] };
+    try {
+      const { data, error } = await client.rpc('kc_check_duplicate_post', {
+        p_user_id: userId,
+        p_module: module || null,
+        p_title: title || '',
+        p_threshold: 0.45,
+      });
+      if (error) return { ok: false, candidates: [] };
+      const candidates = (data && data.candidates) ? data.candidates : [];
+      return { ok: true, candidates };
+    } catch (_) { return { ok: false, candidates: [] }; }
+  }
+
   // Driver Supabase (V8.1.7.2+)
   const driverSupabase = Object.freeze({
     name: 'supabase',
@@ -2999,6 +3086,11 @@ const { ENV, normalizePost } = window.KCAPI;
     setSavedPostState: supabaseSetSavedPostStateMulti,
     clearSavedPostState: supabaseClearSavedPostStateMulti,
     togglePostStatus: supabaseTogglePostStatus,
+    renewPost: supabaseRenewPost,
+    bumpPost: supabaseBumpPost,
+    trackCouponClick: supabaseTrackCouponClick,
+    trackShare: supabaseTrackShare,
+    checkDuplicatePost: supabaseCheckDuplicatePost,
     getMySavedPosts: supabaseGetMySavedPostsMulti,
     getMySavedPostsCount: supabaseGetMySavedPostsCount,
     getProfileHighlights: supabaseGetProfileHighlightsMulti,

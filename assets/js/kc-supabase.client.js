@@ -496,7 +496,7 @@
     // includeComments: false quando tabela comments ainda não existe no schema (compat)
     const commentsStr = (includeComments !== false) ? ', comments(count)' : '';
     const votosStr = (includeVotos !== false) ? ', votos' : '';
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at${votosStr}, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsStr}`;
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, status, expires_at, bumped_at, highlight_score${votosStr}, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsStr}`;
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -512,7 +512,7 @@
 
     // includeComments: false quando tabela comments ainda não existe no schema (compat)
     const commentsStr = (includeComments !== false) ? ', comments(count)' : '';
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, votos, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsStr}`;
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, status, expires_at, bumped_at, highlight_score, votos, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsStr}`;
   }
 
   function isMaybeSingleMissing(err) {
@@ -652,9 +652,11 @@
 
       // Ordenação: destaques = mais votados (votos DESC), recentes = mais novos (created_at DESC)
       if (f.sortBy === 'votos') {
-        q = q.order('votos', { ascending: false }).order('created_at', { ascending: false });
+        // Feed Destaques: algoritmo composto (highlight_score) com votos como tiebreaker
+        q = q.order('highlight_score', { ascending: false }).order('votos', { ascending: false }).order('created_at', { ascending: false });
       } else {
-        q = q.order('created_at', { ascending: false });
+        // Feed Recentes: bumped_at (impulso) tem prioridade, depois created_at
+        q = q.order('bumped_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
       }
 
       if (moduleEqValue) q = q.eq('module', moduleEqValue);
