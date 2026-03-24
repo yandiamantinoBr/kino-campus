@@ -103,16 +103,32 @@
     if (!append) refs.list.innerHTML = '';
 
     const sourceRows = Array.isArray(rows) ? rows : [];
-    const markup = sourceRows.map((row) => `
-      <a class="kc-category-item kc-category-item--home" href="${row.href}" data-kc-home-category-id="${row.id}">
-        <i class="${row.icon}"></i>
-        <span class="kc-category-item__body">
-          <strong>${row.label}</strong>
-          <small>${row.relevanceLabel || 'Em observação'} · ${row.relevanceDetail || `${getModuleLabel(row.moduleKey)} combina interesse pessoal com anúncios ativos.`}</small>
-        </span>
-        <span class="kc-category-count">${formatNumber(row.count)}</span>
-      </a>
-    `).join('');
+    const markup = sourceRows.map((row) => {
+      let tempClass = 'kc-temp-cold';
+      let iconClass = 'fas fa-snowflake';
+      let tempLabel = 'Frio · Pouca relevância ou nova';
+
+      if (row.rankingScore >= 14) {
+        tempClass = 'kc-temp-hot';
+        iconClass = 'fas fa-fire';
+        tempLabel = 'Quente · Alta relevância';
+      } else if (row.rankingScore >= 7) {
+        tempClass = 'kc-temp-warm';
+        iconClass = 'fas fa-fire';
+        tempLabel = 'Morno · Subindo em relevância';
+      }
+      
+      return `
+        <a class="kc-category-item kc-category-item--home" href="${row.href}" data-kc-home-category-id="${row.id}">
+          <i class="${row.icon}"></i>
+          <span class="kc-category-item__body">
+            <strong>${row.label}</strong>
+            <small class="kc-temp-display ${tempClass}"><i class="${iconClass}"></i> ${tempLabel}</small>
+          </span>
+          <span class="kc-category-count">${formatNumber(row.count)}</span>
+        </a>
+      `;
+    }).join('');
 
     refs.list.insertAdjacentHTML(append ? 'beforeend' : 'afterbegin', markup);
   }

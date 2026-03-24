@@ -8319,3 +8319,26 @@ body.kc-scroll-locked .kc-header {
     align-items: flex-start;
   }
 }
+
+/* Enhanced Empty State Styling */
+.kc-no-results {
+  background: var(--kc-surface-dark);
+  border: 1px dashed var(--kc-border-dark);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  margin: 30px 0;
+  color: var(--kc-text-dark-secondary);
+  transition: all var(--transition-speed) ease;
+}
+.kc-no-results h3 {
+  color: var(--kc-text-dark-primary);
+  margin-bottom: 10px;
+  font-size: 1.25rem;
+}
+.kc-no-results p {
+  font-size: 0.95rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
