@@ -280,7 +280,7 @@ BEGIN
     PERFORM cron.schedule(
       'kc-refresh-highlight-scores',
       '0 */6 * * *',
-      $$SELECT public.kc_refresh_highlight_scores()$$
+      'SELECT public.kc_refresh_highlight_scores()'
     );
   END IF;
 EXCEPTION WHEN OTHERS THEN NULL;

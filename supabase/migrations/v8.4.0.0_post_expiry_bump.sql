@@ -412,7 +412,7 @@ BEGIN
     PERFORM cron.schedule(
       'kc-expire-old-posts',
       '0 3 * * *',
-      $$SELECT public.kc_expire_old_posts()$$
+      'SELECT public.kc_expire_old_posts()'
     );
   END IF;
 EXCEPTION WHEN OTHERS THEN NULL;
