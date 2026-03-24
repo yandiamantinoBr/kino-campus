@@ -3,9 +3,40 @@
 let kcVotesRealtimeChannel = null;
 let kcVotesRealtimeRetryTimer = null;
 let kcVotesPollingTimer = null;
+let kcInitVoteStatesTimer = null;
 
 const KC_VOTE_IN_FLIGHT = new Set();
 const KC_VOTE_PENDING_STATE = new Map();
+
+// Cache de sessão para direção de voto do usuário atual
+// Evita re-fetch do RPC a cada append de posts — aplica instantaneamente do cache
+const KC_MY_VOTES_CACHE = new Map(); // postId → direction ('hot' | 'cold' | null)
+let KC_MY_VOTES_CACHE_TS = 0;
+const KC_MY_VOTES_CACHE_TTL = 30000; // 30s
+
+function kcMyVotesCacheGet(postId) {
+  return KC_MY_VOTES_CACHE.has(postId) ? KC_MY_VOTES_CACHE.get(postId) : undefined;
+}
+
+function kcMyVotesCacheSet(postId, direction) {
+  KC_MY_VOTES_CACHE.set(postId, direction);
+}
+
+function kcMyVotesCacheIsFresh() {
+  return KC_MY_VOTES_CACHE.size > 0 && (Date.now() - KC_MY_VOTES_CACHE_TS) < KC_MY_VOTES_CACHE_TTL;
+}
+
+function kcApplyMyVotesCacheToDOM() {
+  if (!KC_MY_VOTES_CACHE.size) return;
+  KC_MY_VOTES_CACHE.forEach((direction, postId) => {
+    if (kcHasPendingVote(postId)) return;
+    const boxes = kcGetVoteBoxesForPost(postId);
+    boxes.forEach((voteBox) => {
+      const current = kcReadVoteState(voteBox);
+      kcApplyVoteStateToBox(voteBox, { score: current.score, direction, pending: false }, { force: true });
+    });
+  });
+}
 
 function kcIsUuid(value) {
   return KC_UUID_RE.test(String(value || '').trim());
@@ -287,6 +318,10 @@ function vote(button, type) {
       pending: false
     }, { animate: true, force: true });
 
+    // Atualiza o cache com a direção confirmada pelo servidor
+    kcMyVotesCacheSet(lockKey, finalDirection);
+    KC_MY_VOTES_CACHE_TS = Date.now();
+
     if (finalDirection && window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
       window.KCHomeCategories.trackEvent('vote', { post: kcBuildTrackingPost(voteBox) });
     }
@@ -306,15 +341,25 @@ function vote(button, type) {
 async function kcInitVoteStates() {
   if (!isSupabaseRuntime()) return;
 
+  // 1. Aplica do cache imediatamente (sem esperar DB)
+  kcApplyMyVotesCacheToDOM();
+
+  // 2. Coleta IDs visíveis ainda não cacheados (ou cache expirado)
   const postIds = [];
   const idSet = new Set();
+  const needsFetch = !kcMyVotesCacheIsFresh();
+
   document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]').forEach((btn) => {
     const id = kcGetVotePostIdFromButton(btn);
     if (id && kcIsUuid(id) && !idSet.has(id)) {
       idSet.add(id);
-      postIds.push(id);
+      // Só precisa buscar IDs não cacheados ou quando cache expirou
+      if (needsFetch || kcMyVotesCacheGet(id) === undefined) {
+        postIds.push(id);
+      }
     }
   });
+
   if (!postIds.length) return;
 
   try {
@@ -328,6 +373,13 @@ async function kcInitVoteStates() {
     data.forEach((row) => {
       if (row && row.post_id) voteMap[row.post_id] = kcNormalizeDirection(row.direction);
     });
+
+    // Atualiza cache e aplica ao DOM
+    postIds.forEach((postId) => {
+      const direction = voteMap[postId] || null;
+      kcMyVotesCacheSet(postId, direction);
+    });
+    KC_MY_VOTES_CACHE_TS = Date.now();
 
     idSet.forEach((postId) => {
       if (kcHasPendingVote(postId)) return;

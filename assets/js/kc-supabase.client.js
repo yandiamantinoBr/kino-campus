@@ -388,6 +388,10 @@
       }
     };
 
+    // sortBy: 'recentes' (default, created_at DESC) | 'votos' (votos DESC + created_at)
+    const sortByRaw = String(p.sortBy || p.sort_by || 'recentes').trim().toLowerCase();
+    const sortBy = sortByRaw === 'votos' ? 'votos' : 'recentes';
+
     return {
       module: norm(module),
       category: norm(category),
@@ -396,6 +400,7 @@
       q,
       page,
       limit,
+      sortBy,
     };
   }
 
@@ -643,8 +648,14 @@
     const run = async (selectStr, moduleEqValue) => {
       let q = client
         .from('posts')
-        .select(selectStr)
-        .order('created_at', { ascending: false });
+        .select(selectStr);
+
+      // Ordenação: destaques = mais votados (votos DESC), recentes = mais novos (created_at DESC)
+      if (f.sortBy === 'votos') {
+        q = q.order('votos', { ascending: false }).order('created_at', { ascending: false });
+      } else {
+        q = q.order('created_at', { ascending: false });
+      }
 
       if (moduleEqValue) q = q.eq('module', moduleEqValue);
       if (f.category) q = q.eq('category', f.category);

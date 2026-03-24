@@ -844,13 +844,16 @@ main {
     overflow-x: auto;
     padding-bottom: 10px;
     scrollbar-width: none;
+    align-items: center;
 }
 
 .kc-feed-tabs::-webkit-scrollbar {
     display: none;
 }
 
-.kc-feed-tabs a {
+/* Botões de aba (view-switcher) e links de navegação — estilo base compartilhado */
+.kc-feed-tabs a,
+.kc-feed-tabs button[data-feed-tab] {
     white-space: nowrap;
     padding: 8px 12px;
     text-decoration: none;
@@ -859,34 +862,73 @@ main {
     font-weight: bold;
     background-color: var(--kc-surface-dark);
     font-size: 0.9em;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 5px;
     transition: all var(--transition-speed) ease;
     border: 1px solid var(--kc-border-dark);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
 }
 
-.kc-feed-tabs a.active {
+.kc-feed-tabs a.active,
+.kc-feed-tabs button[data-feed-tab].active {
     background-color: var(--kc-primary-brand);
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(255, 107, 0, 0.2);
+    border-color: var(--kc-primary-brand);
 }
 
-.kc-feed-tabs a:hover {
+.kc-feed-tabs a:hover,
+.kc-feed-tabs button[data-feed-tab]:hover {
     background-color: var(--kc-surface-dark-hover);
     text-decoration: none;
     transform: translateY(-2px);
 }
 
-.kc-feed-tabs a.active:hover {
+.kc-feed-tabs a.active:hover,
+.kc-feed-tabs button[data-feed-tab].active:hover {
     background-color: var(--kc-primary-brand);
+}
+
+/* Divisor visual entre abas de feed e links de navegação */
+.kc-feed-tabs__divider {
+    display: inline-block;
+    width: 1px;
+    height: 24px;
+    background-color: var(--kc-border-dark);
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0 4px;
+}
+
+/* Feed Panels — switching de visibilidade */
+/* Um painel com [hidden] fica invisível; o ativo mostra como grid */
+.kc-feed-panel[hidden] {
+    display: none !important;
+}
+
+.kc-feed-panel.kc-feed-panel--active:not([hidden]) {
+    display: grid;
+    gap: 15px;
 }
 
 /* Feed List */
 .kc-feed-list {
     display: grid;
     gap: 15px;
+}
+
+/* Animação de entrada suave ao trocar de aba */
+@keyframes kc-feed-panel-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.kc-feed-panel.kc-feed-panel--active:not([hidden]) {
+    animation: kc-feed-panel-in 0.22s ease;
 }
 
 /* Card */
@@ -5091,6 +5133,79 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
 
 @media (max-width: 320px) {
   .kc-feed-tabs a { min-height: 38px; }
+}
+
+/* ============================================================
+   kc-feed-tabs button[data-feed-tab] — extensão dos overrides
+   Garante que os botões de alternância (Destaques/Recentes)
+   recebam os mesmos tratamentos que os links de navegação.
+   ============================================================ */
+
+/* Scroll snap + altura mínima (espelho do bloco ~4195) */
+.kc-feed-tabs button[data-feed-tab] {
+  scroll-snap-align: start;
+  min-height: 40px;
+}
+
+.kc-feed-tabs button[data-feed-tab] i {
+  opacity: 0.9;
+  color: currentColor;
+}
+
+.kc-feed-tabs button[data-feed-tab]:hover {
+  color: var(--kc-primary-brand);
+  border-color: rgba(255, 107, 0, 0.35);
+}
+
+.kc-feed-tabs button[data-feed-tab]:hover i {
+  color: var(--kc-primary-brand);
+}
+
+.kc-feed-tabs button[data-feed-tab].active {
+  border-color: transparent;
+}
+
+/* Hover não sobrescreve o active em touch (espelho ~4760) */
+.kc-feed-tabs button[data-feed-tab]:not(.active):hover {
+  color: var(--kc-primary-brand);
+  border-color: rgba(255, 107, 0, 0.35);
+}
+
+.kc-feed-tabs button[data-feed-tab].active,
+.kc-feed-tabs button[data-feed-tab].active:hover,
+.kc-feed-tabs button[data-feed-tab].active:focus,
+.kc-feed-tabs button[data-feed-tab].active:focus-visible {
+  color: #ffffff !important;
+}
+
+.kc-feed-tabs button[data-feed-tab].active i,
+.kc-feed-tabs button[data-feed-tab].active span {
+  color: currentColor !important;
+}
+
+/* Responsivo (espelho do bloco ~5112) */
+@media (max-width: 640px) {
+  .kc-feed-tabs button[data-feed-tab] {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
+    padding: var(--kc-chip-py, 7px) var(--kc-chip-px, 12px) !important;
+    border-radius: 999px;
+    font-size: clamp(0.82rem, 3.2vw, 0.92rem) !important;
+    line-height: 1;
+    min-height: 40px;
+  }
+
+  .kc-feed-tabs button[data-feed-tab].active,
+  .kc-feed-tabs button[data-feed-tab].active:hover,
+  .kc-feed-tabs button[data-feed-tab].active:focus,
+  .kc-feed-tabs button[data-feed-tab].active:focus-visible {
+    color: #fff !important;
+  }
+}
+
+@media (max-width: 320px) {
+  .kc-feed-tabs button[data-feed-tab] { min-height: 38px; }
 }
 
 /* ============

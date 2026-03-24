@@ -36,7 +36,7 @@
       : null;
   }
 
-  function buildFeedCacheIdentity(moduleKeys, page, q, tag, limit, pathname) {
+  function buildFeedCacheIdentity(moduleKeys, page, q, tag, limit, pathname, sortBy) {
     const modules = Array.isArray(moduleKeys) ? moduleKeys.slice().sort().join(',') : String(moduleKeys || '');
     return JSON.stringify({
       pathname: String(pathname || window.location.pathname || '').trim() || '/',
@@ -45,16 +45,18 @@
       q: String(q || '').trim().toLowerCase(),
       tag: String(tag || '').trim().toLowerCase(),
       limit: Number(limit) || POSTS_LIMIT,
+      sortBy: String(sortBy || 'recentes'),
     });
   }
 
-  function buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname) {
+  function buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname, sortBy) {
     return JSON.stringify({
       pathname: String(pathname || window.location.pathname || '').trim() || '/',
       modules: Array.isArray(moduleKeys) ? moduleKeys.slice().sort() : [],
       q: String(q || '').trim().toLowerCase(),
       tag: String(tag || '').trim().toLowerCase(),
       limit: Number(limit) || POSTS_LIMIT,
+      sortBy: String(sortBy || 'recentes'),
     });
   }
 
@@ -212,12 +214,12 @@
   const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
   const postCache = {};
 
-  function getCacheKey(moduleKeys, page, q, tag, limit, pathname) {
-    return buildFeedCacheIdentity(moduleKeys, page, q, tag, limit, pathname);
+  function getCacheKey(moduleKeys, page, q, tag, limit, pathname, sortBy) {
+    return buildFeedCacheIdentity(moduleKeys, page, q, tag, limit, pathname, sortBy);
   }
 
-  function getCachedPosts(moduleKeys, page, q, tag, limit, pathname) {
-    const key = getCacheKey(moduleKeys, page, q, tag, limit, pathname);
+  function getCachedPosts(moduleKeys, page, q, tag, limit, pathname, sortBy) {
+    const key = getCacheKey(moduleKeys, page, q, tag, limit, pathname, sortBy);
     const cached = postCache[key];
     if (!cached) return null;
     const now = Date.now();
@@ -233,15 +235,15 @@
     };
   }
 
-  function setCachedPosts(moduleKeys, page, posts, q, tag, limit, pathname) {
-    const key = getCacheKey(moduleKeys, page, q, tag, limit, pathname);
+  function setCachedPosts(moduleKeys, page, posts, q, tag, limit, pathname, sortBy) {
+    const key = getCacheKey(moduleKeys, page, q, tag, limit, pathname, sortBy);
     postCache[key] = {
       posts: posts,
       timestamp: Date.now(),
     };
   }
 
-  function invalidateCache(moduleKeys, q, tag, limit, pathname) {
+  function invalidateCache(moduleKeys, q, tag, limit, pathname, sortBy) {
     const targetPath = String(pathname || window.location.pathname || '').trim() || '/';
     Object.keys(postCache).forEach((key) => {
       try {
@@ -252,7 +254,8 @@
           JSON.stringify((parsed.modules || '').split(',').filter(Boolean).sort()) === JSON.stringify((Array.isArray(moduleKeys) ? moduleKeys.slice().sort() : [])) &&
           String(parsed.q || '') === String(q || '').trim().toLowerCase() &&
           String(parsed.tag || '') === String(tag || '').trim().toLowerCase() &&
-          Number(parsed.limit || POSTS_LIMIT) === (Number(limit) || POSTS_LIMIT)
+          Number(parsed.limit || POSTS_LIMIT) === (Number(limit) || POSTS_LIMIT) &&
+          String(parsed.sortBy || 'recentes') === String(sortBy || 'recentes')
         ) {
           delete postCache[key];
         }
@@ -261,7 +264,7 @@
 
     const store = getSessionStore();
     if (store && typeof store.remove === 'function') {
-      store.remove('feeds', buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname));
+      store.remove('feeds', buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname, sortBy));
     }
   }
 
@@ -269,14 +272,16 @@
     if (!window.KCAPI || typeof window.KCAPI.getPosts !== 'function') return [];
     const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
     const pathname = String(opts.pathname || window.location.pathname || '').trim() || '/';
+    const sortBy = String(opts.sortBy || 'recentes');
     const extra = {
       ...((q && String(q).trim()) ? { q: String(q).trim() } : {}),
       ...((tag && String(tag).trim()) ? { tag: String(tag).trim() } : {}),
+      sortBy,
     };
 
     // Only use cache if no search query or tag filter
     if (!q && !tag && opts.forceNetwork !== true) {
-      const cached = getCachedPosts(moduleKeys, page, q, tag, limit, pathname);
+      const cached = getCachedPosts(moduleKeys, page, q, tag, limit, pathname, sortBy);
       if (cached) return cached;
     }
 
@@ -298,7 +303,7 @@
 
     // Cache successful fetch if no filters
     if (!q && !tag && posts.length > 0) {
-      setCachedPosts(moduleKeys, page, posts, q, tag, limit, pathname);
+      setCachedPosts(moduleKeys, page, posts, q, tag, limit, pathname, sortBy);
     }
 
     return {
@@ -346,8 +351,10 @@
     const useRealtime = opt.realtime !== false;
     const searchQuery = (opt.q && String(opt.q).trim()) ? String(opt.q).trim() : '';
     const tagFilter = (opt.tag && String(opt.tag).trim()) ? String(opt.tag).trim() : '';
+    const sortBy = String(opt.sortBy || 'recentes');
 
-    if (activePager && typeof activePager.destroy === 'function') {
+    // keepExisting: true permite múltiplos pagers na mesma página (ex: abas Destaques/Recentes)
+    if (!opt.keepExisting && activePager && typeof activePager.destroy === 'function') {
       try { activePager.destroy(); } catch (_) { }
       activePager = null;
     }
@@ -383,7 +390,7 @@
       revalidateTimer: null,
     };
     const pagePath = String(window.location.pathname || '').trim() || '/';
-    const snapshotKey = buildFeedSnapshotKey(moduleKeys, searchQuery, tagFilter, limit, pagePath);
+    const snapshotKey = buildFeedSnapshotKey(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy);
 
     function persistSnapshot() {
       const store = getSessionStore();
@@ -445,7 +452,11 @@
       }
 
       if (typeof kcInitVoteStates === 'function') {
-        setTimeout(() => { try { kcInitVoteStates(); } catch (_) { } }, 0);
+        // Debounce: evita múltiplas chamadas ao RPC quando vários posts são appendados rapidamente
+        if (typeof window._kcVoteInitTimer !== 'undefined') clearTimeout(window._kcVoteInitTimer);
+        window._kcVoteInitTimer = setTimeout(() => {
+          try { kcInitVoteStates(); } catch (_) { }
+        }, 50);
       }
 
       persistSnapshot();
@@ -542,6 +553,7 @@
         const response = await fetchPostsByModule(moduleKeys, 1, limit, searchQuery, tagFilter, {
           forceNetwork: true,
           pathname: pagePath,
+          sortBy,
         });
         const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
 
@@ -632,6 +644,7 @@
       try {
         const response = await fetchPostsByModule(moduleKeys, apiPage, limit, searchQuery, tagFilter, {
           pathname: pagePath,
+          sortBy,
         });
         const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
 
@@ -756,7 +769,7 @@
           container: document.body,
           onRefresh: () => {
             // Invalidate cache and reload first page
-            invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath);
+            invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy);
             state.page = DEFAULT_PAGE;
             state.done = false;
             state.renderedPosts = [];
