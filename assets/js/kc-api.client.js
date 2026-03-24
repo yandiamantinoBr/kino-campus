@@ -960,6 +960,14 @@
     return getActiveDriver().reportPost(postId, payload);
   }
 
+  async function togglePostStatus(postId) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.togglePostStatus !== 'function') {
+      return { ok: false, code: 'UNAVAILABLE', message: 'Toggle de status indisponível neste driver.' };
+    }
+    return driver.togglePostStatus(postId);
+  }
+
 
   // Auth facade (sem quebrar modo local)
   // - signIn/signUp retornam { user, error }
@@ -1209,6 +1217,7 @@
     updatePost,
     deletePost,
     reportPost,
+    togglePostStatus,
 
     // Comments (Supabase) — V8.1.7.2
     getComments,

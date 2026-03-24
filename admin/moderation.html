@@ -201,6 +201,76 @@
           <ul id="moderation-session-actions" style="margin:0;padding-left:18px;color:var(--kc-text-dark-secondary);"></ul>
         </div>
 
+        <!-- ── Painel de Limites de Publicações ─────────────────────── -->
+        <div class="kc-admin-panel" id="post-limits-panel">
+          <h3 style="margin:0 0 4px;font-size:1em;"><i class="fas fa-layer-group" style="color:var(--kc-primary-brand);margin-right:6px;"></i>Limite de Publicações Ativas</h3>
+          <p style="margin:0 0 14px;color:var(--kc-text-dark-secondary);font-size:.88em;">Controle quantas publicações ativas cada usuário pode ter por módulo. O padrão é 5 se nenhum limite for definido.</p>
+
+          <div id="post-limits-feedback" role="status" style="display:none;margin-bottom:10px;border-radius:8px;padding:9px 13px;font-size:.88em;"></div>
+
+          <!-- Limite Global -->
+          <div style="border:1px solid var(--kc-border-dark);border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+            <h4 style="margin:0 0 10px;font-size:.92em;font-weight:600;">Limite global (todos os usuários)</h4>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <select id="limit-global-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
+                <option value="">Todos os módulos</option>
+                <option value="alugueis">Aluguéis</option>
+                <option value="vendas">Vendas</option>
+                <option value="servicos">Serviços</option>
+                <option value="vagas">Vagas</option>
+                <option value="achados">Achados e Perdidos</option>
+              </select>
+              <input id="limit-global-value" type="number" min="1" max="999" value="5" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" placeholder="Máx." />
+              <button id="limit-global-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Salvar limite global</button>
+              <button id="limit-global-delete" style="padding:7px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.88em;cursor:pointer;" title="Remover override global (volta ao padrão de 5)"><i class="fas fa-trash"></i> Remover</button>
+            </div>
+          </div>
+
+          <!-- Limite por Usuário -->
+          <div style="border:1px solid var(--kc-border-dark);border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+            <h4 style="margin:0 0 10px;font-size:.92em;font-weight:600;">Limite por usuário específico</h4>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+              <div style="flex:1;min-width:200px;position:relative;">
+                <input id="limit-user-search" type="search" placeholder="Buscar usuário por nome, e-mail ou nickname…" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+                <div id="limit-user-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:8px;z-index:50;max-height:180px;overflow-y:auto;"></div>
+              </div>
+              <select id="limit-user-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
+                <option value="">Todos os módulos</option>
+                <option value="alugueis">Aluguéis</option>
+                <option value="vendas">Vendas</option>
+                <option value="servicos">Serviços</option>
+                <option value="vagas">Vagas</option>
+                <option value="achados">Achados e Perdidos</option>
+              </select>
+              <input id="limit-user-value" type="number" min="0" max="999" placeholder="Máx." style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+              <button id="limit-user-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Salvar</button>
+            </div>
+            <div id="limit-user-selected" style="display:none;margin-top:8px;padding:6px 10px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid var(--kc-border-dark);font-size:.85em;color:var(--kc-text-dark-secondary);">
+              Nenhum usuário selecionado
+            </div>
+          </div>
+
+          <!-- Tabela de overrides existentes -->
+          <h4 style="margin:0 0 8px;font-size:.92em;font-weight:600;">Configurações salvas</h4>
+          <button id="post-limits-refresh" style="margin-bottom:8px;padding:5px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.83em;cursor:pointer;"><i class="fas fa-sync-alt"></i> Atualizar</button>
+          <div class="kc-admin-posts-table-wrap">
+            <table class="kc-admin-posts-table" style="min-width:620px;">
+              <thead>
+                <tr>
+                  <th>Usuário</th>
+                  <th>Módulo</th>
+                  <th>Máx. Ativas</th>
+                  <th>Criado em</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="post-limits-body">
+                <tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="kc-admin-panel">
           <h3 style="margin:0 0 8px 0;font-size:1em;">Audit Log</h3>
           <p style="margin:0;color:var(--kc-text-dark-secondary);font-size:.9em;">Últimos 50 eventos de moderação/compliance.</p>
