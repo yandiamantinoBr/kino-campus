@@ -388,9 +388,9 @@
       }
     };
 
-    // sortBy: 'recentes' (default, created_at DESC) | 'votos' (votos DESC + created_at)
+    // sortBy: 'recentes' (default) | 'votos' (highlight score) | 'comentados' (last comment)
     const sortByRaw = String(p.sortBy || p.sort_by || 'recentes').trim().toLowerCase();
-    const sortBy = sortByRaw === 'votos' ? 'votos' : 'recentes';
+    const sortBy = sortByRaw === 'votos' ? 'votos' : sortByRaw === 'comentados' ? 'comentados' : 'recentes';
 
     return {
       module: norm(module),
@@ -650,10 +650,15 @@
         .from('posts')
         .select(selectStr);
 
-      // Ordenação: destaques = mais votados (votos DESC), recentes = mais novos (created_at DESC)
+      // Ordenação por tipo de feed
       if (f.sortBy === 'votos') {
-        // Feed Destaques: algoritmo composto (highlight_score) com votos como tiebreaker
+        // Feed Destaques: highlight_score composto, votos e data como tiebreaker
         q = q.order('highlight_score', { ascending: false }).order('votos', { ascending: false }).order('created_at', { ascending: false });
+      } else if (f.sortBy === 'comentados') {
+        // Feed Comentados: posts com comentários ordenados pela data do último comentário
+        q = q.not('last_comment_at', 'is', null)
+             .order('last_comment_at', { ascending: false, nullsFirst: false })
+             .order('created_at', { ascending: false });
       } else {
         // Feed Recentes: bumped_at (impulso) tem prioridade, depois created_at
         q = q.order('bumped_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
