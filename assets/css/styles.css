@@ -8351,13 +8351,16 @@ body.kc-scroll-locked .kc-header {
   color: #f97316 !important; /* Orange */
 }
 .kc-temp-warm {
-  color: #b45309 !important; /* Golden/Dark Yellow for good contrast on light theme */
+  color: #eab308 !important; /* Yellow for light theme */
 }
 [data-theme="dark"] .kc-temp-warm {
   color: #facc15 !important; /* Bright yellow for dark theme */
 }
 .kc-temp-cold {
   color: #3b82f6 !important; /* Blue */
+}
+.kc-temp-display i {
+  margin-right: 4px;
 }
 
 /* ====== Light Theme Fixes ====== */

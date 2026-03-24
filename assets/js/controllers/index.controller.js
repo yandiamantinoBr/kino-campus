@@ -123,7 +123,7 @@
           <i class="${row.icon}"></i>
           <span class="kc-category-item__body">
             <strong>${row.label}</strong>
-            <small class="kc-temp-display ${tempClass}"><i class="${iconClass}"></i> ${tempLabel}</small>
+            <small class="text-muted d-block text-truncate kc-temp-display"><i class="${iconClass} ${tempClass}"></i> ${tempLabel}</small>
           </span>
           <span class="kc-category-count">${formatNumber(row.count)}</span>
         </a>
