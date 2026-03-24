@@ -316,12 +316,14 @@
 
   let destaquePager = null;
   let recentesPager = null;
+  let comentadosPager = null;
   let activeFeedTab = 'destaques';
 
   function switchFeedTab(tabKey) {
     if (activeFeedTab === tabKey) return;
     activeFeedTab = tabKey;
 
+    // Atualiza botões de aba
     const tabs = document.querySelectorAll('[data-feed-tab]');
     tabs.forEach((btn) => {
       const isActive = btn.dataset.feedTab === tabKey;
@@ -329,16 +331,26 @@
       btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
 
-    const panels = document.querySelectorAll('.kc-feed-panel');
-    panels.forEach((panel) => {
-      const isActive = panel.id === `kc-feed-${tabKey}`;
-      panel.classList.toggle('kc-feed-panel--active', isActive);
-      panel.hidden = !isActive;
+    // Esconde/mostra wrappers (cada wrapper contém o panel + pager + realtime-banner)
+    const wraps = document.querySelectorAll('[data-feed-wrap]');
+    wraps.forEach((wrap) => {
+      const isActive = wrap.dataset.feedWrap === tabKey;
+      wrap.hidden = !isActive;
+      wrap.classList.toggle('kc-feed-tab-wrap--active', isActive);
     });
 
-    // Inicializa o pager do Recentes apenas quando o usuário abre a aba pela primeira vez
+    // Mantém classe --active no panel interno para animação CSS
+    const panels = document.querySelectorAll('.kc-feed-panel');
+    panels.forEach((panel) => {
+      panel.classList.toggle('kc-feed-panel--active', panel.id === `kc-feed-${tabKey}`);
+    });
+
+    // Inicializa pager do tab selecionado apenas na primeira visita
     if (tabKey === 'recentes' && !recentesPager) {
       recentesPager = injectFeedPane('recentes');
+    }
+    if (tabKey === 'comentados' && !comentadosPager) {
+      comentadosPager = injectFeedPane('comentados');
     }
 
     // Re-aplica estados de voto ao trocar de aba
@@ -357,14 +369,15 @@
       urlTag = search.get('tag') || '';
     } catch (_) {}
 
-    const containerId = feedTab === 'recentes' ? 'kc-feed-recentes' : 'kc-feed-destaques';
+    const tabToSortBy = { destaques: 'votos', recentes: 'recentes', comentados: 'comentados' };
+    const containerId = `kc-feed-${feedTab}`;
     return window.KCControllers.injectFeed({
       containerSelector: `#${containerId}`,
       module: null,
       pageModule: '',
       q: urlQ,
       tag: urlTag,
-      sortBy: feedTab === 'recentes' ? 'recentes' : 'votos',
+      sortBy: tabToSortBy[feedTab] || 'recentes',
       keepExisting: true,
       onAfterAppend: function () {
         if (typeof kcInitVoteStates === 'function') kcInitVoteStates();

@@ -904,8 +904,17 @@ main {
     margin: 0 4px;
 }
 
+/* Feed Tab Wrappers — isolam pager e realtime-banner de cada aba */
+/* O wrapper esconde tudo dentro (panel + pager + banner) ao trocar de aba */
+.kc-feed-tab-wrap[hidden] {
+    display: none !important;
+}
+.kc-feed-tab-wrap {
+    display: block;
+}
+
 /* Feed Panels — switching de visibilidade */
-/* Um painel com [hidden] fica invisível; o ativo mostra como grid */
+/* Painel com [hidden] nunca deve ser exibido diretamente */
 .kc-feed-panel[hidden] {
     display: none !important;
 }
@@ -3555,6 +3564,11 @@ body.kc-scroll-locked {
     border: 1px solid var(--kc-border-dark);
     background: var(--kc-surface-dark-hover);
     margin-bottom: 24px; /* V8.2.4.3: respiro visual abaixo de cada bloco de campos */
+}
+
+/* Visibilidade: garante espaço adequado acima, independente do elemento anterior */
+.kc-create-group--visibility {
+    margin-top: 8px;
 }
 
 .kc-create-group__head {
