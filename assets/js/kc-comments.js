@@ -160,6 +160,7 @@ function normalizeCommentForRender(c) {
 
   return {
     id: c.id,
+    authorId: String(c.user_id || c.author_id || (profile && profile.id) || '').trim() || null,
     author: normalizedAuthor || 'Anônimo',
     avatar: resolvedAvatar,
     text: c.body || c.text || '',
@@ -261,9 +262,11 @@ function _renderCommentList(id, containerId, comments) {
     return `
     <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <img src="${_esc(c.avatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(c.author)))}" alt="${_esc(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark);">
+        ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="display: contents;">` : ''}
+          <img src="${_esc(c.avatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(c.author)))}" alt="${_esc(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark); cursor: ${c.authorId ? 'pointer' : 'default'};">
+        ${c.authorId ? `</a>` : ''}
         <div style="flex: 1;">
-          <div style="font-weight: bold;">${_esc(c.author)}</div>
+          ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="font-weight: bold; text-decoration: none; color: inherit;" class="kc-comment-author-link">${_esc(c.author)}</a>` : `<div style="font-weight: bold;">${_esc(c.author)}</div>`}
           <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${_esc(c.timestamp)}</div>
         </div>
       </div>
