@@ -1596,13 +1596,38 @@
     editBtn.id = 'editPostButton';
     editBtn.innerHTML = '<i class="fas fa-pen"></i> Editar';
 
+    // Botão Desabilitar/Reativar — visível apenas para o autor
+    const postStatus = String((post && (post.status || post.estado)) || 'published').toLowerCase();
+    const isHidden = postStatus === 'hidden';
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'kc-btn-secondary';
+    toggleBtn.id = 'togglePostStatusButton';
+    toggleBtn.setAttribute('data-post-status', postStatus);
+    toggleBtn.innerHTML = isHidden
+      ? '<i class="fas fa-eye"></i> Reativar anúncio'
+      : '<i class="fas fa-eye-slash"></i> Desabilitar anúncio';
+
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
     deleteBtn.className = 'kc-btn-secondary';
     deleteBtn.id = 'deletePostButton';
     deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Excluir';
 
+    // Badge de status para o próprio dono (visível quando desabilitado)
+    const ownerStatusBadge = document.getElementById('ownerStatusBadge');
+    if (ownerStatusBadge) ownerStatusBadge.remove();
+    if (isHidden) {
+      const badge = document.createElement('div');
+      badge.id = 'ownerStatusBadge';
+      badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
+      badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este anúncio está <strong>desabilitado</strong> e não aparece nos feeds. Apenas você consegue ver esta página.</span>';
+      const details = document.querySelector('.kc-product-details');
+      if (details) details.insertAdjacentElement('afterbegin', badge);
+    }
+
     wrap.appendChild(editBtn);
+    wrap.appendChild(toggleBtn);
     wrap.appendChild(deleteBtn);
 
     const reportBtn = document.getElementById('reportButton');
@@ -1658,6 +1683,68 @@
 
       const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível excluir a publicação.';
       try { showToast(msg, 'error', 2800); } catch (_) { }
+    });
+
+    toggleBtn.addEventListener('click', async () => {
+      if (toggleBtn.disabled) return;
+      toggleBtn.disabled = true;
+      const prevHTML = toggleBtn.innerHTML;
+      toggleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde…';
+
+      let res = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.togglePostStatus === 'function') {
+          res = await window.KCAPI.togglePostStatus(getPostIdForMutation(post));
+        }
+      } catch (_) { }
+
+      toggleBtn.disabled = false;
+
+      if (res && res._kcError === 'POST_LIMIT_REACHED') {
+        toggleBtn.innerHTML = prevHTML;
+        const limitMsg = res.message || 'Você atingiu o limite de publicações ativas. Desabilite outra publicação antes de reativar esta.';
+        try { showToast(limitMsg, 'error', 4000); } catch (_) { }
+        return;
+      }
+
+      if (res && (res.ok || res.data)) {
+        const result = res.data || res;
+        const newStatus = String(result.new_status || result.status || '').toLowerCase();
+        const nowHidden = newStatus === 'hidden' || newStatus === 'desabilitado';
+
+        // Update button
+        toggleBtn.setAttribute('data-post-status', nowHidden ? 'hidden' : 'published');
+        toggleBtn.innerHTML = nowHidden
+          ? '<i class="fas fa-eye"></i> Reativar anúncio'
+          : '<i class="fas fa-eye-slash"></i> Desabilitar anúncio';
+
+        // Update in-memory post status
+        if (currentPost) {
+          currentPost.status = nowHidden ? 'hidden' : 'published';
+          currentPost.estado = currentPost.status;
+        }
+
+        // Update owner badge
+        const existingBadge = document.getElementById('ownerStatusBadge');
+        if (existingBadge) existingBadge.remove();
+        if (nowHidden) {
+          const badge = document.createElement('div');
+          badge.id = 'ownerStatusBadge';
+          badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
+          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este anúncio está <strong>desabilitado</strong> e não aparece nos feeds. Apenas você consegue ver esta página.</span>';
+          const details = document.querySelector('.kc-product-details');
+          if (details) details.insertAdjacentElement('afterbegin', badge);
+        }
+
+        const toastMsg = nowHidden ? 'Anúncio desabilitado com sucesso.' : 'Anúncio reativado com sucesso.';
+        try { showToast(toastMsg, 'success', 2500); } catch (_) { }
+        return;
+      }
+
+      // Generic error
+      toggleBtn.innerHTML = prevHTML;
+      const errMsg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível alterar o status do anúncio.';
+      try { showToast(errMsg, 'error', 2800); } catch (_) { }
     });
   }
 

@@ -1203,6 +1203,31 @@ const { ENV, normalizePost } = window.KCAPI;
       return null;
     }
 
+    // ── Verificação de limite de publicações ativas ─────────
+    try {
+      const moduleForLimit = (parsed && parsed.moduleDB) ? String(parsed.moduleDB).trim() : null;
+      const limitCheck = await client.rpc('kc_check_post_limit', {
+        p_user_id: user.id,
+        p_module: moduleForLimit || null,
+      });
+      if (limitCheck && !limitCheck.error && limitCheck.data) {
+        const check = limitCheck.data;
+        if (check && check.ok === false) {
+          const limitMsg = `Você atingiu o limite de ${check.limit} publicações ativas${moduleForLimit ? ' neste módulo' : ''}. Desabilite ou exclua uma publicação antes de criar uma nova.`;
+          createPostDiagnostics.set('POST_LIMIT', {
+            message: limitMsg,
+            code: 'POST_LIMIT_REACHED',
+            limit: check.limit,
+            count: check.count,
+          }, { module: moduleForLimit });
+          return { _kcError: 'POST_LIMIT_REACHED', message: limitMsg, limit: check.limit, count: check.count };
+        }
+      }
+    } catch (_limitErr) {
+      // Falha na checagem de limite não bloqueia a criação (graceful degradation)
+      console.warn('[KCAPI][Supabase] kc_check_post_limit falhou (criação permitida):', _limitErr);
+    }
+
     let postId = null;
     let uploaded = [];
 
@@ -2916,6 +2941,40 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
+  // ── kc_toggle_post_status ────────────────────────────────────
+  // Permite ao autor alternar o próprio anúncio entre published ↔ hidden.
+  // Bloqueia reativação quando o usuário está no limite de publicações ativas.
+  async function supabaseTogglePostStatus(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false, error: { message: 'ID de publicação inválido.' } };
+
+    try {
+      const { data, error } = await client.rpc('kc_toggle_post_status', { p_post_id: uuid });
+      if (error) {
+        return { ok: false, error };
+      }
+      if (!data || data.ok === false) {
+        return {
+          ok: false,
+          code: (data && data.code) || 'UNKNOWN',
+          message: (data && data.message) || 'Não foi possível alterar o status da publicação.',
+          limit: data && data.limit,
+          count: data && data.count,
+        };
+      }
+      return {
+        ok: true,
+        new_status: data.new_status,
+        message: data.message,
+      };
+    } catch (e) {
+      return { ok: false, error: e };
+    }
+  }
+
   // Driver Supabase (V8.1.7.2+)
   const driverSupabase = Object.freeze({
     name: 'supabase',
@@ -2939,6 +2998,7 @@ const { ENV, normalizePost } = window.KCAPI;
     getSavedPostState: supabaseGetSavedPostStateMulti,
     setSavedPostState: supabaseSetSavedPostStateMulti,
     clearSavedPostState: supabaseClearSavedPostStateMulti,
+    togglePostStatus: supabaseTogglePostStatus,
     getMySavedPosts: supabaseGetMySavedPostsMulti,
     getMySavedPostsCount: supabaseGetMySavedPostsCount,
     getProfileHighlights: supabaseGetProfileHighlightsMulti,

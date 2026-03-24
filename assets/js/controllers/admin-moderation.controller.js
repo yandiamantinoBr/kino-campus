@@ -640,6 +640,209 @@
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Post Limits Panel
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const limitsState = {
+    selectedUser: null, // { id, name }
+    limits: [],
+  };
+
+  function showLimitsFeedback(msg, isError) {
+    const el = $('#post-limits-feedback');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.cssText = `display:block;margin-bottom:10px;border-radius:8px;padding:9px 13px;font-size:.88em;${
+      isError
+        ? 'background:rgba(244,67,54,.12);border:1px solid rgba(244,67,54,.35);color:#ef9a9a;'
+        : 'background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.35);color:#a5d6a7;'
+    }`;
+    setTimeout(() => { if (el.textContent === msg) el.style.display = 'none'; }, 3500);
+  }
+
+  async function fetchPostLimits() {
+    const client = getClient();
+    if (!client) return;
+    const tbody = $('#post-limits-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>';
+    const { data, error } = await client.rpc('kc_admin_get_post_limits');
+    if (error) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">Erro: ${escape(String(error.message || 'Falha ao carregar limites'))}</td></tr>`;
+      return;
+    }
+    const limits = (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
+    limitsState.limits = limits;
+    renderPostLimits(limits);
+  }
+
+  function renderPostLimits(limits) {
+    const tbody = $('#post-limits-body');
+    if (!tbody) return;
+    if (!limits || !limits.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Nenhum override configurado. O padrão é 5 para todos.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = limits.map((row) => {
+      const userName = row.user_name ? escape(row.user_name) : '<em style="color:var(--kc-text-dark-secondary)">Global (todos)</em>';
+      const moduleName = row.module ? escape(row.module) : '<em style="color:var(--kc-text-dark-secondary)">Todos os módulos</em>';
+      const createdAt = row.created_at ? new Date(row.created_at).toLocaleDateString('pt-BR') : '—';
+      return `<tr>
+        <td data-label="Usuário">${userName}</td>
+        <td data-label="Módulo">${moduleName}</td>
+        <td data-label="Máx. Ativas"><strong>${escape(String(row.max_active))}</strong></td>
+        <td data-label="Criado em">${createdAt}</td>
+        <td data-label="Ações">
+          <button class="kc-admin-actions" data-limit-delete="${escape(String(row.id))}" style="padding:5px 10px;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:.8em;background:#c0392b;">
+            <i class="fas fa-trash"></i> Remover
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function saveGlobalLimit() {
+    const client = getClient();
+    if (!client) return;
+    const moduleEl = $('#limit-global-module');
+    const valueEl = $('#limit-global-value');
+    const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
+    const val = valueEl ? parseInt(valueEl.value, 10) : NaN;
+    if (!val || val < 1) { showLimitsFeedback('Informe um valor válido (mínimo 1).', true); return; }
+    const btn = $('#limit-global-save');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…'; }
+    const { error } = await client.rpc('kc_admin_set_post_limit', { p_user_id: null, p_module: mod || null, p_max_active: val });
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Salvar limite global'; }
+    if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
+    showLimitsFeedback('Limite global salvo com sucesso!', false);
+    await fetchPostLimits();
+  }
+
+  async function deleteGlobalLimit() {
+    const client = getClient();
+    if (!client) return;
+    const moduleEl = $('#limit-global-module');
+    const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
+    // Find matching global limit in loaded list
+    const match = limitsState.limits.find((r) => !r.user_id && (mod ? r.module === mod : !r.module));
+    if (!match) { showLimitsFeedback('Nenhum override global encontrado para remover.', true); return; }
+    const { error } = await client.rpc('kc_admin_delete_post_limit', { p_limit_id: match.id });
+    if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
+    showLimitsFeedback('Override global removido.', false);
+    await fetchPostLimits();
+  }
+
+  async function saveUserLimit() {
+    const client = getClient();
+    if (!client) return;
+    if (!limitsState.selectedUser) { showLimitsFeedback('Selecione um usuário antes de salvar.', true); return; }
+    const moduleEl = $('#limit-user-module');
+    const valueEl = $('#limit-user-value');
+    const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
+    const val = valueEl ? parseInt(valueEl.value, 10) : NaN;
+    if (isNaN(val) || val < 0) { showLimitsFeedback('Informe um valor válido (0 = bloqueado, mínimo 1 para ativo).', true); return; }
+    const btn = $('#limit-user-save');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…'; }
+    const { error } = await client.rpc('kc_admin_set_post_limit', { p_user_id: limitsState.selectedUser.id, p_module: mod || null, p_max_active: val });
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Salvar'; }
+    if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
+    showLimitsFeedback(`Limite de ${val} salvo para ${limitsState.selectedUser.name}.`, false);
+    await fetchPostLimits();
+  }
+
+  async function deleteLimitById(limitId) {
+    const client = getClient();
+    if (!client) return;
+    const { error } = await client.rpc('kc_admin_delete_post_limit', { p_limit_id: limitId });
+    if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
+    showLimitsFeedback('Override removido com sucesso.', false);
+    await fetchPostLimits();
+  }
+
+  async function searchUsersForLimit(query) {
+    const client = getClient();
+    if (!client || !query || query.length < 2) return [];
+    const { data } = await client
+      .from('profiles')
+      .select('id, full_name, display_name, email')
+      .or(`full_name.ilike.%${query}%,display_name.ilike.%${query}%,email.ilike.%${query}%`)
+      .limit(8);
+    return data || [];
+  }
+
+  function bindPostLimitsEvents() {
+    const globalSave = $('#limit-global-save');
+    if (globalSave) globalSave.addEventListener('click', saveGlobalLimit);
+
+    const globalDelete = $('#limit-global-delete');
+    if (globalDelete) globalDelete.addEventListener('click', deleteGlobalLimit);
+
+    const userSave = $('#limit-user-save');
+    if (userSave) userSave.addEventListener('click', saveUserLimit);
+
+    const limitsRefresh = $('#post-limits-refresh');
+    if (limitsRefresh) limitsRefresh.addEventListener('click', fetchPostLimits);
+
+    const limitsBody = $('#post-limits-body');
+    if (limitsBody) {
+      limitsBody.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('[data-limit-delete]');
+        if (!btn) return;
+        const lid = btn.getAttribute('data-limit-delete');
+        if (!lid) return;
+        if (!window.confirm('Remover este override de limite?')) return;
+        await deleteLimitById(lid);
+      });
+    }
+
+    // User search autocomplete
+    const userSearch = $('#limit-user-search');
+    const userResults = $('#limit-user-results');
+    const userSelectedEl = $('#limit-user-selected');
+
+    let searchTimer = null;
+    if (userSearch && userResults) {
+      userSearch.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        const q = userSearch.value.trim();
+        if (q.length < 2) { userResults.style.display = 'none'; return; }
+        searchTimer = setTimeout(async () => {
+          const users = await searchUsersForLimit(q);
+          if (!users.length) { userResults.style.display = 'none'; return; }
+          userResults.innerHTML = users.map((u) => {
+            const label = escape(u.display_name || u.full_name || u.email || u.id);
+            const sub = escape(u.email || u.id || '');
+            return `<div data-user-id="${escape(u.id)}" data-user-name="${label}" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--kc-border-dark);font-size:.88em;">
+              <strong>${label}</strong>${sub ? `<br><span style="color:var(--kc-text-dark-secondary);font-size:.83em;">${sub}</span>` : ''}
+            </div>`;
+          }).join('');
+          userResults.style.display = 'block';
+        }, 300);
+      });
+
+      userResults.addEventListener('click', (ev) => {
+        const item = ev.target.closest('[data-user-id]');
+        if (!item) return;
+        const uid = item.getAttribute('data-user-id');
+        const uname = item.getAttribute('data-user-name');
+        limitsState.selectedUser = { id: uid, name: uname };
+        userSearch.value = uname;
+        userResults.style.display = 'none';
+        if (userSelectedEl) {
+          userSelectedEl.style.display = 'block';
+          userSelectedEl.innerHTML = `<i class="fas fa-user" style="margin-right:6px;color:var(--kc-primary-brand);"></i>Usuário selecionado: <strong>${escape(uname)}</strong> <span style="color:var(--kc-text-dark-secondary);font-size:.82em;">(${escape(uid)})</span>`;
+        }
+      });
+
+      document.addEventListener('click', (ev) => {
+        if (!userResults.contains(ev.target) && ev.target !== userSearch) {
+          userResults.style.display = 'none';
+        }
+      });
+    }
+  }
+
   async function boot() {
     setLoading(true);
     initStatusFilter();
@@ -652,8 +855,9 @@
 
     $('#admin-content').style.display = 'block';
     bindEvents();
+    bindPostLimitsEvents();
     renderSessionActions();
-    await Promise.all([fetchPosts(true), fetchAuditLogs()]);
+    await Promise.all([fetchPosts(true), fetchAuditLogs(), fetchPostLimits()]);
   }
 
   document.addEventListener('DOMContentLoaded', boot);
