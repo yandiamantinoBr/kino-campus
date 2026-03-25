@@ -325,12 +325,12 @@
     .kc-product-page .kc-product-actions,
     .kc-product-actions {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      /* Mobile-first: 2 colunas para botões secundários */
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
       margin-top: 18px;
       align-items: stretch;
       width: 100%;
-      justify-content: start;
     }
 
     .kc-save-wrap { position: relative; }
@@ -353,6 +353,12 @@
 
     .kc-product-actions > #primaryCta {
       grid-column: 1 / -1;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      padding: 14px 20px;
+      min-height: 52px;
+      border-radius: 12px;
     }
 
     .kc-product-actions > button,
@@ -360,11 +366,27 @@
     .kc-product-actions > .kc-save-wrap > button,
     .kc-product-actions > .kc-share-wrap > button {
       width: 100%;
-      min-height: 54px;
+      min-height: 48px;
       justify-content: center;
-      white-space: normal;
+      white-space: nowrap;
       text-align: center;
       box-sizing: border-box;
+      font-size: 0.88rem;
+      padding: 10px 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Em mobile, botões com texto longo podem precisar de 2 linhas */
+    @media (max-width: 400px) {
+      .kc-product-actions > button,
+      .kc-product-actions > a,
+      .kc-product-actions > .kc-save-wrap > button,
+      .kc-product-actions > .kc-share-wrap > button {
+        white-space: normal;
+        min-height: 44px;
+        font-size: 0.82rem;
+      }
     }
 
     .kc-product-actions > .kc-share-popover-backdrop,
@@ -402,12 +424,16 @@
     .kc-save-popover-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, .42);
-      backdrop-filter: blur(6px);
+      /* Mesmo padrão do kc-report-popover: escurecimento sem blur */
+      background: rgba(0, 0, 0, .45);
       z-index: 8898;
       display: none;
     }
     .kc-save-popover-backdrop.active { display: block; }
+    /* No desktop o popover é ancorado — não precisa de backdrop */
+    @media (min-width: 641px) {
+      .kc-save-popover-backdrop { display: none !important; }
+    }
     .kc-save-popover {
       background: var(--kc-surface-dark, #1e1e2e);
       border: 1px solid var(--kc-border-dark, #2a2a3c);

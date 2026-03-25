@@ -117,6 +117,7 @@
     if (!tabsContainer || !tabsContainer.classList.contains('kc-feed-tabs')) return;
 
     if (!window.KCHomeCategories || typeof window.KCHomeCategories.getSidebarRows !== 'function') return;
+    if (typeof window.KCHomeCategories.inferModuleFromHref !== 'function') return;
 
     // Detect the current module from href
     let moduleKey = window.KCHomeCategories.inferModuleFromHref(window.location.href);
@@ -215,7 +216,7 @@
     let urlTag = '';
     try { urlTag = new URLSearchParams(window.location.search).get('tag') || ''; } catch (_) {}
 
-    const tabCats = Array.from(tabs).map(t => {
+    const tabCats = Array.from(originalTabs).map(t => {
       const hrefCat = (t.getAttribute('href') || '').replace('#', '');
       const dataCat = t.getAttribute('data-category') || '';
       return dataCat || hrefCat || '';

@@ -388,6 +388,10 @@
       }
     };
 
+    // sortBy: 'recentes' (default) | 'votos' (highlight score) | 'comentados' (last comment)
+    const sortByRaw = String(p.sortBy || p.sort_by || 'recentes').trim().toLowerCase();
+    const sortBy = sortByRaw === 'votos' ? 'votos' : sortByRaw === 'comentados' ? 'comentados' : 'recentes';
+
     return {
       module: norm(module),
       category: norm(category),
@@ -396,6 +400,7 @@
       q,
       page,
       limit,
+      sortBy,
     };
   }
 
@@ -491,7 +496,7 @@
     // includeComments: false quando tabela comments ainda não existe no schema (compat)
     const commentsStr = (includeComments !== false) ? ', comments(count)' : '';
     const votosStr = (includeVotos !== false) ? ', votos' : '';
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at${votosStr}, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsStr}`;
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, status, expires_at, bumped_at, highlight_score${votosStr}, profiles:author_id (${profileFields}), ${mediaRel} (id, url, is_cover)${commentsStr}`;
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -507,7 +512,7 @@
 
     // includeComments: false quando tabela comments ainda não existe no schema (compat)
     const commentsStr = (includeComments !== false) ? ', comments(count)' : '';
-    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, votos, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsStr}`;
+    return `id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, status, expires_at, bumped_at, highlight_score, votos, profiles:author_id (${profileFields}), ${mediaRel} (${mediaFields})${commentsStr}`;
   }
 
   function isMaybeSingleMissing(err) {
@@ -643,8 +648,21 @@
     const run = async (selectStr, moduleEqValue) => {
       let q = client
         .from('posts')
-        .select(selectStr)
-        .order('created_at', { ascending: false });
+        .select(selectStr);
+
+      // Ordenação por tipo de feed
+      if (f.sortBy === 'votos') {
+        // Feed Destaques: highlight_score composto, votos e data como tiebreaker
+        q = q.order('highlight_score', { ascending: false }).order('votos', { ascending: false }).order('created_at', { ascending: false });
+      } else if (f.sortBy === 'comentados') {
+        // Feed Comentados: posts com comentários ordenados pela data do último comentário
+        q = q.not('last_comment_at', 'is', null)
+             .order('last_comment_at', { ascending: false, nullsFirst: false })
+             .order('created_at', { ascending: false });
+      } else {
+        // Feed Recentes: bumped_at (impulso) tem prioridade, depois created_at
+        q = q.order('bumped_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
+      }
 
       if (moduleEqValue) q = q.eq('module', moduleEqValue);
       if (f.category) q = q.eq('category', f.category);

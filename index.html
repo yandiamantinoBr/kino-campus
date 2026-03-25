@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <link href="assets/css/kc-theme-boot.css?v=8.3.4.11" rel="stylesheet" />
-  <script src="assets/js/kc-theme-boot.js?v=8.3.4.11"></script>
+  <link href="assets/css/kc-theme-boot.css?v=8.4.2" rel="stylesheet" />
+  <script src="assets/js/kc-theme-boot.js?v=8.4.2"></script>
   <title>KinoCampus - Comunidade UFG</title>
-  <link href="assets/css/styles.css?v=8.3.4.11" rel="stylesheet" />
+  <link href="assets/css/styles.css?v=8.4.2" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
 <body>
@@ -130,11 +130,23 @@
         <div class="kc-ranking-users"></div>
       </div>
 
-      <div class="kc-feed-tabs">
-        <a class="active" href="#">
+      <div class="kc-feed-tabs" id="kc-home-feed-tabs">
+        <!-- Abas de visualização do feed principal -->
+        <button class="active" type="button" data-feed-tab="destaques" aria-selected="true" aria-controls="kc-feed-destaques">
           <i class="fas fa-fire"></i>
-          <span>Destaque</span>
-        </a>
+          <span>Destaques</span>
+        </button>
+        <button type="button" data-feed-tab="recentes" aria-selected="false" aria-controls="kc-feed-recentes">
+          <i class="fas fa-clock"></i>
+          <span>Recentes</span>
+        </button>
+        <button type="button" data-feed-tab="comentados" aria-selected="false" aria-controls="kc-feed-comentados">
+          <i class="fas fa-comments"></i>
+          <span>Comentados</span>
+        </button>
+        <!-- Divisor visual -->
+        <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
+        <!-- Links de navegação para outras seções -->
         <a href="compra-venda-feed.html">
           <i class="fas fa-shopping-bag"></i>
           <span>Compra e Venda</span>
@@ -169,7 +181,18 @@
         </a>
       </div>
 
-      <div class="kc-feed-list" id="kc-main-feed"></div>
+      <!-- Feed Destaques: wrapper isola pager/banner deste tab -->
+      <div class="kc-feed-tab-wrap kc-feed-tab-wrap--active" data-feed-wrap="destaques">
+        <div class="kc-feed-list kc-feed-panel kc-feed-panel--active" id="kc-feed-destaques" role="tabpanel" aria-labelledby="tab-destaques"></div>
+      </div>
+      <!-- Feed Recentes: posts ordenados por data (mais novos) -->
+      <div class="kc-feed-tab-wrap" data-feed-wrap="recentes" hidden>
+        <div class="kc-feed-list kc-feed-panel" id="kc-feed-recentes" role="tabpanel" aria-labelledby="tab-recentes"></div>
+      </div>
+      <!-- Feed Comentados: posts com comentário mais recente primeiro -->
+      <div class="kc-feed-tab-wrap" data-feed-wrap="comentados" hidden>
+        <div class="kc-feed-list kc-feed-panel" id="kc-feed-comentados" role="tabpanel" aria-labelledby="tab-comentados"></div>
+      </div>
     </section>
 
     <aside class="kc-sidebar">

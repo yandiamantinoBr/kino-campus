@@ -59,6 +59,13 @@
         const url   = window.location.href;
         const text  = title + '\n' + url;
         window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
+        // Tracking de compartilhamento (fire-and-forget)
+        try {
+          const pid = currentPost && (currentPost.uuid || currentPost.id);
+          if (pid && window.KCAPI && typeof window.KCAPI.trackShare === 'function') {
+            window.KCAPI.trackShare(pid).catch(() => {});
+          }
+        } catch (_) {}
       });
     }
     if (copyBtn) {
@@ -423,6 +430,13 @@
           const liveAction = getPostContactAction(currentPost || post || {});
           if (executeContactAction(liveAction, currentPost || post || {})) {
             event.preventDefault();
+            // Tracking de clique no CTA/cupom (fire-and-forget)
+            try {
+              const pid = (currentPost && (currentPost.uuid || currentPost.id)) || (post && (post.uuid || post.id));
+              if (pid && window.KCAPI && typeof window.KCAPI.trackCouponClick === 'function') {
+                window.KCAPI.trackCouponClick(pid).catch(() => {});
+              }
+            } catch (_) {}
             return;
           }
 
@@ -967,7 +981,7 @@
       || (window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function'
         ? window.KCUtils.buildPublicHandle(normalizedName)
         : '');
-    const isLegacyExample = isLegacyExampleProfile(post && post.authorProfile);
+    const isLegacyExample = isLegacyExamplePost(post) || isLegacyExampleProfile(post && post.authorProfile);
 
     const author = normalizedName || 'Autor';
     const avatarUrl = normalizedAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
@@ -1596,13 +1610,97 @@
     editBtn.id = 'editPostButton';
     editBtn.innerHTML = '<i class="fas fa-pen"></i> Editar';
 
+    // Status atual do post
+    const postStatus = String((post && (post.status || post.estado)) || 'published').toLowerCase();
+    const isHidden  = postStatus === 'hidden';
+    const isExpired = postStatus === 'expired';
+    const isPublished = postStatus === 'published';
+
+    // ── Botão Desabilitar / Reativar (apenas para published/hidden) ────────
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'kc-btn-secondary';
+    toggleBtn.id = 'togglePostStatusButton';
+    toggleBtn.setAttribute('data-post-status', postStatus);
+    if (isExpired) {
+      toggleBtn.style.display = 'none'; // oculto; Renovar é o CTA principal para expirados
+    } else {
+      toggleBtn.innerHTML = isHidden
+        ? '<i class="fas fa-eye"></i> Reativar anúncio'
+        : '<i class="fas fa-eye-slash"></i> Desabilitar anúncio';
+    }
+
+    // ── Botão Renovar Publicação (expirado OU hidden) ──────────────────────
+    const renewBtn = document.createElement('button');
+    renewBtn.type = 'button';
+    renewBtn.className = 'kc-btn-secondary';
+    renewBtn.id = 'renewPostButton';
+    renewBtn.innerHTML = '<i class="fas fa-rotate-right"></i> Renovar publicação';
+    renewBtn.style.display = (isExpired || isHidden) ? '' : 'none';
+
+    // ── Botão Impulsionar Hoje (apenas published) ──────────────────────────
+    const bumpBtn = document.createElement('button');
+    bumpBtn.type = 'button';
+    bumpBtn.className = 'kc-btn-secondary';
+    bumpBtn.id = 'bumpPostButton';
+    const bumpedAt = post && (post.bumped_at || post.bumpedAt);
+    const bumpCooldownMs = 7 * 24 * 60 * 60 * 1000;
+    const bumpReady = !bumpedAt || (Date.now() - new Date(bumpedAt).getTime() >= bumpCooldownMs);
+    bumpBtn.style.display = isPublished ? '' : 'none';
+    if (bumpReady) {
+      bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionar hoje';
+    } else {
+      const nextBump = new Date(new Date(bumpedAt).getTime() + bumpCooldownMs);
+      bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionar hoje';
+      bumpBtn.title = 'Próximo impulso disponível em ' + nextBump.toLocaleDateString('pt-BR');
+      bumpBtn.disabled = true;
+      bumpBtn.style.opacity = '0.55';
+    }
+
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
     deleteBtn.className = 'kc-btn-secondary';
     deleteBtn.id = 'deletePostButton';
     deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Excluir';
 
+    // ── Badge de status para o dono ────────────────────────────────────────
+    const ownerStatusBadge = document.getElementById('ownerStatusBadge');
+    if (ownerStatusBadge) ownerStatusBadge.remove();
+
+    if (isHidden || isExpired) {
+      const badge = document.createElement('div');
+      badge.id = 'ownerStatusBadge';
+      if (isExpired) {
+        badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(244,67,54,.10);border:1px solid rgba(244,67,54,.30);color:#ef9a9a;font-size:.9em;margin-bottom:12px;';
+        const expiresAt = post && (post.expires_at || post.expiresAt);
+        const expiryStr = expiresAt ? ' em ' + new Date(expiresAt).toLocaleDateString('pt-BR') : '';
+        badge.innerHTML = '<i class="fas fa-calendar-xmark"></i><span>Este anúncio <strong>expirou</strong>' + expiryStr + ' e não aparece nos feeds. Renove-o para voltar a aparecer.</span>';
+      } else {
+        badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
+        badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este anúncio está <strong>desabilitado</strong> e não aparece nos feeds. Apenas você consegue ver esta página.</span>';
+      }
+      const details = document.querySelector('.kc-product-details');
+      if (details) details.insertAdjacentElement('afterbegin', badge);
+    } else if (isPublished) {
+      // Badge de validade quando expira em menos de 5 dias
+      const expiresAt = post && (post.expires_at || post.expiresAt);
+      if (expiresAt) {
+        const daysLeft = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000);
+        if (daysLeft <= 5 && daysLeft >= 0) {
+          const badge = document.createElement('div');
+          badge.id = 'ownerStatusBadge';
+          badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.35);color:#ffc107;font-size:.9em;margin-bottom:12px;';
+          badge.innerHTML = '<i class="fas fa-clock"></i><span>Seu anúncio <strong>expira em ' + daysLeft + (daysLeft === 1 ? ' dia' : ' dias') + '</strong>. Renove-o para continuar aparecendo nos feeds.</span>';
+          const details = document.querySelector('.kc-product-details');
+          if (details) details.insertAdjacentElement('afterbegin', badge);
+        }
+      }
+    }
+
     wrap.appendChild(editBtn);
+    wrap.appendChild(bumpBtn);
+    wrap.appendChild(renewBtn);
+    wrap.appendChild(toggleBtn);
     wrap.appendChild(deleteBtn);
 
     const reportBtn = document.getElementById('reportButton');
@@ -1659,6 +1757,138 @@
       const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível excluir a publicação.';
       try { showToast(msg, 'error', 2800); } catch (_) { }
     });
+
+    toggleBtn.addEventListener('click', async () => {
+      if (toggleBtn.disabled) return;
+      toggleBtn.disabled = true;
+      const prevHTML = toggleBtn.innerHTML;
+      toggleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde…';
+
+      let res = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.togglePostStatus === 'function') {
+          res = await window.KCAPI.togglePostStatus(getPostIdForMutation(post));
+        }
+      } catch (_) { }
+
+      toggleBtn.disabled = false;
+
+      if (res && res._kcError === 'POST_LIMIT_REACHED') {
+        toggleBtn.innerHTML = prevHTML;
+        const limitMsg = res.message || 'Você atingiu o limite de publicações ativas. Desabilite outra publicação antes de reativar esta.';
+        try { showToast(limitMsg, 'error', 4000); } catch (_) { }
+        return;
+      }
+
+      if (res && (res.ok || res.data)) {
+        const result = res.data || res;
+        const newStatus = String(result.new_status || result.status || '').toLowerCase();
+        const nowHidden = newStatus === 'hidden' || newStatus === 'desabilitado';
+
+        // Update button
+        toggleBtn.setAttribute('data-post-status', nowHidden ? 'hidden' : 'published');
+        toggleBtn.innerHTML = nowHidden
+          ? '<i class="fas fa-eye"></i> Reativar anúncio'
+          : '<i class="fas fa-eye-slash"></i> Desabilitar anúncio';
+
+        // Update in-memory post status
+        if (currentPost) {
+          currentPost.status = nowHidden ? 'hidden' : 'published';
+          currentPost.estado = currentPost.status;
+        }
+
+        // Update owner badge
+        const existingBadge = document.getElementById('ownerStatusBadge');
+        if (existingBadge) existingBadge.remove();
+        if (nowHidden) {
+          const badge = document.createElement('div');
+          badge.id = 'ownerStatusBadge';
+          badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
+          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este anúncio está <strong>desabilitado</strong> e não aparece nos feeds. Apenas você consegue ver esta página.</span>';
+          const details = document.querySelector('.kc-product-details');
+          if (details) details.insertAdjacentElement('afterbegin', badge);
+        }
+
+        const toastMsg = nowHidden ? 'Anúncio desabilitado com sucesso.' : 'Anúncio reativado com sucesso.';
+        try { showToast(toastMsg, 'success', 2500); } catch (_) { }
+        return;
+      }
+
+      // Generic error
+      toggleBtn.innerHTML = prevHTML;
+      const errMsg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível alterar o status do anúncio.';
+      try { showToast(errMsg, 'error', 2800); } catch (_) { }
+    });
+
+    renewBtn.addEventListener('click', async () => {
+      if (renewBtn.disabled) return;
+      renewBtn.disabled = true;
+      const prevHTML = renewBtn.innerHTML;
+      renewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renovando…';
+
+      let res = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.renewPost === 'function') {
+          res = await window.KCAPI.renewPost(getPostIdForMutation(post));
+        }
+      } catch (_) { }
+
+      renewBtn.disabled = false;
+
+      if (res && (res._kcError === 'POST_LIMIT_REACHED' || res.code === 'LIMIT_REACHED')) {
+        renewBtn.innerHTML = prevHTML;
+        try { showToast(res.message || 'Limite de publicações ativas atingido.', 'error', 4500); } catch (_) { }
+        return;
+      }
+
+      if (res && res.ok) {
+        if (currentPost) { currentPost.status = 'published'; currentPost.estado = 'published'; }
+        // Oculta Renovar, mostra Desabilitar e Impulsionar
+        renewBtn.style.display = 'none';
+        toggleBtn.style.display = '';
+        toggleBtn.setAttribute('data-post-status', 'published');
+        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Desabilitar anúncio';
+        bumpBtn.style.display = '';
+        // Remove badge de expirado/oculto
+        const existingBadge = document.getElementById('ownerStatusBadge');
+        if (existingBadge) existingBadge.remove();
+        try { showToast(res.message || 'Publicação renovada! Disponível por mais 30 dias.', 'success', 3000); } catch (_) { }
+        return;
+      }
+
+      renewBtn.innerHTML = prevHTML;
+      const msg = (res && res.message) || (res && res.error && res.error.message) || 'Não foi possível renovar a publicação.';
+      try { showToast(msg, 'error', 2800); } catch (_) { }
+    });
+
+    bumpBtn.addEventListener('click', async () => {
+      if (bumpBtn.disabled) return;
+      bumpBtn.disabled = true;
+      const prevHTML = bumpBtn.innerHTML;
+      bumpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Impulsionando…';
+
+      let res = null;
+      try {
+        if (window.KCAPI && typeof window.KCAPI.bumpPost === 'function') {
+          res = await window.KCAPI.bumpPost(getPostIdForMutation(post));
+        }
+      } catch (_) { }
+
+      if (res && res.ok) {
+        bumpBtn.disabled = true;
+        bumpBtn.style.opacity = '0.55';
+        bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionado!';
+        if (currentPost) { currentPost.bumped_at = new Date().toISOString(); }
+        try { showToast(res.message || 'Anúncio impulsionado com sucesso!', 'success', 3000); } catch (_) { }
+        return;
+      }
+
+      bumpBtn.disabled = false;
+      bumpBtn.style.opacity = '';
+      bumpBtn.innerHTML = prevHTML;
+      const msg = (res && res.message) || (res && res.error && res.error.message) || 'Não foi possível impulsionar agora.';
+      try { showToast(msg, res && res.code === 'COOLDOWN_ACTIVE' ? 'warn' : 'error', 3500); } catch (_) { }
+    });
   }
 
   function renderPost(post) {
@@ -1670,7 +1900,9 @@
     document.body.setAttribute('data-post-tags', Array.isArray(post && post.tagKeys) ? post.tagKeys.join(' ') : (Array.isArray(post && post.tags) ? post.tags.join(' ') : ''));
     trackHomeCategoryInteraction('post_open', post);
     hide('notFound');
-    setText('postTitle', post.titulo || 'Detalhes');
+    const postTitleText = post.titulo || post.title || 'Detalhes';
+    setText('postTitle', postTitleText);
+    document.title = postTitleText + ' — KinoCampus';
     setBreadcrumb(post);
     setBadges(post);
     setGallery(post);
