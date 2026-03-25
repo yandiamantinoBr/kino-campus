@@ -57,19 +57,110 @@
     }
   }
 
-  /* ── Mobile rail (filtro de categoria) ───────────────── */
+  /* ── Mobile rail — seções do sidebar como modal ───────── */
+  var EVENTOS_SECTIONS = [
+    { key: 'calendario', title: 'Calendário',   icon: 'fas fa-calendar-alt' },
+    { key: 'categorias', title: 'Categorias',   icon: 'fas fa-th-large'     },
+    { key: 'dicas',      title: 'Dicas',        icon: 'fas fa-lightbulb'    },
+  ];
+  var EVENTOS_MODAL_ID = 'kcEventosSectionOverlay';
+  var railState = { activeKey: '', activeNode: null, activePlaceholder: null, lastTrigger: null };
+
+  function ensureEventosModal() {
+    var overlay = document.getElementById(EVENTOS_MODAL_ID);
+    if (overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.id = EVENTOS_MODAL_ID;
+    overlay.className = 'kc-modal-overlay kc-eventos-section-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = [
+      '<div class="kc-create-modal kc-eventos-section-modal" role="dialog" aria-modal="true" aria-labelledby="kcEventosSectionTitle">',
+      '  <div class="kc-create-modal__header">',
+      '    <h2 id="kcEventosSectionTitle"><i class="fas fa-calendar-alt"></i><span>Seção</span></h2>',
+      '    <button type="button" class="kc-create-modal__close" aria-label="Fechar" data-kc-eventos-close-section="true"><i class="fas fa-times"></i></button>',
+      '  </div>',
+      '  <div class="kc-create-modal__body">',
+      '    <div class="kc-eventos-section-modal__content" data-kc-eventos-section-slot="true"></div>',
+      '  </div>',
+      '</div>',
+    ].join('');
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay || e.target.closest('[data-kc-eventos-close-section="true"]')) closeEventosSection();
+    });
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function openEventosSection(key, trigger) {
+    var secDef = EVENTOS_SECTIONS.filter(function (s) { return s.key === key; })[0];
+    if (!secDef) return;
+    var node = $('[data-kc-eventos-section="' + key + '"]');
+    if (!node) return;
+
+    var overlay = ensureEventosModal();
+    closeEventosSection();
+
+    var slot = overlay.querySelector('[data-kc-eventos-section-slot="true"]');
+    var titleSpan = overlay.querySelector('#kcEventosSectionTitle span');
+    var titleIcon = overlay.querySelector('#kcEventosSectionTitle i');
+
+    var placeholder = document.createElement('div');
+    placeholder.hidden = true;
+    placeholder.setAttribute('data-kc-eventos-section-placeholder', key);
+    node.parentNode.insertBefore(placeholder, node);
+    slot.innerHTML = '';
+    slot.appendChild(node);
+
+    railState.activeKey = key;
+    railState.activeNode = node;
+    railState.activePlaceholder = placeholder;
+    railState.lastTrigger = trigger || null;
+
+    if (titleSpan) titleSpan.textContent = secDef.title;
+    if (titleIcon) titleIcon.className = secDef.icon;
+
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('kc-modal-open');
+
+    var closeBtn = overlay.querySelector('[data-kc-eventos-close-section="true"]');
+    if (closeBtn) closeBtn.focus();
+  }
+
+  function closeEventosSection() {
+    var overlay = document.getElementById(EVENTOS_MODAL_ID);
+    var slot = overlay ? overlay.querySelector('[data-kc-eventos-section-slot="true"]') : null;
+    var wasActive = !!(overlay && overlay.classList.contains('active'));
+
+    if (railState.activeNode && railState.activePlaceholder && railState.activePlaceholder.parentNode) {
+      railState.activePlaceholder.parentNode.replaceChild(railState.activeNode, railState.activePlaceholder);
+    }
+
+    var returnFocus = railState.lastTrigger;
+    railState.activeKey = '';
+    railState.activeNode = null;
+    railState.activePlaceholder = null;
+    railState.lastTrigger = null;
+
+    if (slot) slot.innerHTML = '';
+    if (overlay) {
+      overlay.classList.remove('active');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    if (wasActive) document.body.classList.remove('kc-modal-open');
+    if (returnFocus && typeof returnFocus.focus === 'function') {
+      try { returnFocus.focus(); } catch (_) {}
+    }
+  }
+
   function bindRail() {
-    $all('[data-kc-evento-cat]').forEach(function (btn) {
+    $all('[data-kc-eventos-open-section]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var cat = (btn.dataset.kcEventoCat || '').trim() || null;
-        activeCat = cat;
-        $all('[data-kc-evento-cat]').forEach(function (b) {
-          var match = (b.dataset.kcEventoCat || '') === (cat || '');
-          b.classList.toggle('is-active', match);
-          b.setAttribute('aria-pressed', match ? 'true' : 'false');
-        });
-        injectFeed(currentSortBy);
+        openEventosSection(btn.dataset.kcEventosOpenSection, btn);
       });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && railState.activeKey) closeEventosSection();
     });
   }
 

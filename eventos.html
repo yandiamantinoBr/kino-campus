@@ -107,28 +107,16 @@
         <a href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
         <a href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
       </div>
-      <!-- Rail de categorias rápidas (mobile) — filtros funcionais -->
-      <div class="kc-eventos-mobile-rail" aria-label="Filtrar por categoria">
-        <button class="kc-eventos-mobile-rail__button is-active" type="button" data-kc-evento-cat="" aria-pressed="true">
-          <i class="fas fa-th"></i><span>Todas</span>
+      <!-- Rail mobile — abre seções do painel lateral como modal -->
+      <div class="kc-eventos-mobile-rail" data-kc-eventos-mobile-rail="true" aria-label="Seções do painel lateral">
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-eventos-open-section="calendario">
+          <i class="fas fa-calendar-alt"></i><span>Calendário</span>
         </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="sustentabilidade" aria-pressed="false">
-          <i class="fas fa-leaf"></i><span>Sustentabilidade</span>
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-eventos-open-section="categorias">
+          <i class="fas fa-th-large"></i><span>Categorias</span>
         </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="academicos" aria-pressed="false">
-          <i class="fas fa-graduation-cap"></i><span>Acadêmicos</span>
-        </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="culturais" aria-pressed="false">
-          <i class="fas fa-theater-masks"></i><span>Culturais</span>
-        </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="esportivos" aria-pressed="false">
-          <i class="fas fa-running"></i><span>Esportivos</span>
-        </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="workshops" aria-pressed="false">
-          <i class="fas fa-chalkboard-teacher"></i><span>Workshops</span>
-        </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="festas" aria-pressed="false">
-          <i class="fas fa-music"></i><span>Festas</span>
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-eventos-open-section="dicas">
+          <i class="fas fa-lightbulb"></i><span>Dicas</span>
         </button>
       </div>
       <!-- Feed List -->
@@ -150,7 +138,7 @@
     <aside class="kc-sidebar kc-sidebar--eventos">
 
       <!-- Calendário -->
-      <div class="kc-sidebar-section kc-sidebar-section--cal">
+      <div class="kc-sidebar-section kc-sidebar-section--cal" data-kc-eventos-section="calendario">
         <div class="kc-sidebar-section-head">
           <h3><i class="fas fa-calendar-alt"></i> Calendário</h3>
           <button class="kc-cal-expand-btn" type="button" data-kc-cal-expand aria-label="Expandir calendário">
@@ -202,7 +190,7 @@
       </div>
 
       <!-- Categorias -->
-      <div class="kc-sidebar-section">
+      <div class="kc-sidebar-section" data-kc-eventos-section="categorias">
         <h3><i class="fas fa-th-large"></i> Categorias</h3>
         <p class="kc-sidebar-help">Filtre eventos por tipo.</p>
         <div class="kc-category-list">
@@ -216,7 +204,7 @@
       </div>
 
       <!-- Dicas -->
-      <div class="kc-sidebar-section">
+      <div class="kc-sidebar-section" data-kc-eventos-section="dicas">
         <h3><i class="fas fa-lightbulb"></i> Dicas para Participar</h3>
         <div class="kc-tips-list">
           <div class="kc-tip-item"><i class="fas fa-check"></i><span>Confirme presença com antecedência</span></div>
