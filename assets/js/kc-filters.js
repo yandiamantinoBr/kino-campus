@@ -215,7 +215,7 @@
     let urlTag = '';
     try { urlTag = new URLSearchParams(window.location.search).get('tag') || ''; } catch (_) {}
 
-    const tabCats = Array.from(tabs).map(t => {
+    const tabCats = Array.from(originalTabs).map(t => {
       const hrefCat = (t.getAttribute('href') || '').replace('#', '');
       const dataCat = t.getAttribute('data-category') || '';
       return dataCat || hrefCat || '';
