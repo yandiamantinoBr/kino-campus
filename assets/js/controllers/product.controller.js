@@ -981,7 +981,7 @@
       || (window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function'
         ? window.KCUtils.buildPublicHandle(normalizedName)
         : '');
-    const isLegacyExample = isLegacyExampleProfile(post && post.authorProfile);
+    const isLegacyExample = isLegacyExamplePost(post) || isLegacyExampleProfile(post && post.authorProfile);
 
     const author = normalizedName || 'Autor';
     const avatarUrl = normalizedAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
@@ -1900,7 +1900,9 @@
     document.body.setAttribute('data-post-tags', Array.isArray(post && post.tagKeys) ? post.tagKeys.join(' ') : (Array.isArray(post && post.tags) ? post.tags.join(' ') : ''));
     trackHomeCategoryInteraction('post_open', post);
     hide('notFound');
-    setText('postTitle', post.titulo || 'Detalhes');
+    const postTitleText = post.titulo || post.title || 'Detalhes';
+    setText('postTitle', postTitleText);
+    document.title = postTitleText + ' — KinoCampus';
     setBreadcrumb(post);
     setBadges(post);
     setGallery(post);

@@ -2059,6 +2059,7 @@ const { ENV, normalizePost } = window.KCAPI;
       return (Array.isArray(data) ? data : []).map((row) => ({
         id: row.legacy_id || row.id,
         uuid: row.id,
+        legacy_id: row.legacy_id || null,
         title: row.title || 'Sem título',
         created_at: row.created_at || null,
         status: row.status || 'published',
@@ -2101,6 +2102,7 @@ const { ENV, normalizePost } = window.KCAPI;
       return (Array.isArray(data) ? data : []).map((row) => ({
         id: row.legacy_id || row.id,
         uuid: row.id,
+        legacy_id: row.legacy_id || null,
         title: row.title || 'Sem título',
         created_at: row.created_at || null,
         status: row.status || 'published',

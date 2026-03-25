@@ -1064,6 +1064,12 @@ main {
     opacity: 0.9;
 }
 
+.kc-badge--example {
+    background-color: rgba(255, 107, 0, 0.10);
+    border-color: rgba(255, 107, 0, 0.30);
+    color: var(--kc-primary-brand);
+}
+
 /* WhatsApp Share Button (kc-card) — V8.1.2.4.8 */
 .kc-share-whatsapp {
     -webkit-appearance: none;
@@ -3355,12 +3361,7 @@ html.kc-scroll-locked body {
 }
 
 body.kc-scroll-locked {
-    position: fixed;
-    left: 0;
-    right: 0;
-    width: 100%;
     overflow: hidden;
-    box-sizing: border-box;
 }
 
 .kc-modal-overlay {
@@ -6255,14 +6256,6 @@ textarea::placeholder {
   color: #ffd166;
 }
 
-body.kc-scroll-locked .kc-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  z-index: 210;
-}
 
 @media (max-width: 768px) {
   .kc-header:not(.kc-header--admin) .kc-header-container {

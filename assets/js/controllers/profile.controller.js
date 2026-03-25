@@ -344,6 +344,7 @@
 
     const nameEl = $('#profile-display-name');
     if (nameEl) nameEl.textContent = name;
+    document.title = name + ' — Perfil KinoCampus';
 
     const handleEl = $('#profile-handle');
     if (handleEl) {
@@ -525,7 +526,8 @@
 
     items.forEach((post) => {
       const link = document.createElement('a');
-      link.className = 'kc-profile-post-card';
+      const isLegacy = !!String(post.legacy_id || post.legacyId || '').trim();
+      link.className = 'kc-profile-post-card' + (isLegacy ? ' kc-profile-post-card--example' : '');
       link.href = 'product.html?id=' + encodeURIComponent(post.uuid || post.id || '');
       const meta = [];
       meta.push(statusBadge(post.status || 'published'));
@@ -533,6 +535,7 @@
       if (post.module) meta.push(`<span><i class="fas fa-layer-group"></i> ${esc(post.module)}</span>`);
       if (post.category) meta.push(`<span>${esc(post.category)}</span>`);
       if (post.created_at) meta.push(`<span><i class="fas fa-clock"></i> ${esc(fmtRelative(post.created_at))}</span>`);
+      if (isLegacy) meta.push(`<span class="kc-badge kc-badge--example"><i class="fas fa-flask"></i> Exemplo</span>`);
 
       link.innerHTML = [
         `<div class="kc-profile-post-card__title">${esc(post.title || 'Sem título')}</div>`,
