@@ -105,6 +105,27 @@
 <span>Bairros</span>
 </a>
 </div>
+<!-- Rail de rotas rápidas (mobile) -->
+<div class="kc-caronas-mobile-rail" data-kc-caronas-mobile-rail="true" aria-label="Rotas rápidas">
+  <button class="kc-caronas-mobile-rail__button is-active" type="button" data-kc-carona-rail-campus="">
+    <i class="fas fa-route"></i><span>Todas as rotas</span>
+  </button>
+  <button class="kc-caronas-mobile-rail__button" type="button" data-kc-carona-rail-campus="samambaia">
+    <i class="fas fa-university"></i><span>Samambaia</span>
+  </button>
+  <button class="kc-caronas-mobile-rail__button" type="button" data-kc-carona-rail-campus="campus-ii">
+    <i class="fas fa-university"></i><span>Campus II</span>
+  </button>
+  <button class="kc-caronas-mobile-rail__button" type="button" data-kc-carona-rail-campus="colemar">
+    <i class="fas fa-university"></i><span>Colemar Natal</span>
+  </button>
+  <button class="kc-caronas-mobile-rail__button" type="button" data-kc-carona-rail-type="ofereco">
+    <i class="fas fa-car-side"></i><span>Ofereço</span>
+  </button>
+  <button class="kc-caronas-mobile-rail__button" type="button" data-kc-carona-rail-type="procuro">
+    <i class="fas fa-hand-paper"></i><span>Procuro</span>
+  </button>
+</div>
 <!-- Feed List -->
 <div class="kc-feed-list">
 <!-- Cards injetados via JS -->
@@ -116,91 +137,96 @@
 </div>
 </section>
 <!-- Sidebar -->
-<aside class="kc-sidebar">
-<!-- Filters Widget -->
-<div class="kc-sidebar-widget">
-<h3>
-<i class="fas fa-filter"></i>
-                    Filtros
-                </h3>
-<div class="kc-filter-group" id="kc-caronas-filters">
-<label>
-<input checked="" type="checkbox" data-kc-carona-type="ofereco"/>
-<span>Ofereço Carona</span>
-</label>
-<label>
-<input checked="" type="checkbox" data-kc-carona-type="procuro"/>
-<span>Procuro Carona</span>
-</label>
-<label>
-<input type="checkbox" data-kc-carona-campus="samambaia"/>
-<span>Campus Samambaia</span>
-</label>
-<label>
-<input type="checkbox" data-kc-carona-campus="campus-ii"/>
-<span>Campus II</span>
-</label>
-<label>
-<input type="checkbox" data-kc-carona-campus="colemar"/>
-<span>Campus Colemar Natal</span>
-</label>
-<label>
-<input type="checkbox" data-kc-carona-verified="true"/>
-<span>Somente verificados</span>
-</label>
-</div>
-</div>
-<!-- Popular Routes Widget -->
-<div class="kc-sidebar-widget">
-<h3>
-<i class="fas fa-route"></i>
-                    Rotas Populares
-                </h3>
-<div class="kc-popular-list">
-<div class="kc-popular-item">
-<i class="fas fa-map-marker-alt"></i>
-<div class="kc-popular-content">
-<strong>Campus Samambaia</strong>
-<span>87 caronas</span>
-</div>
-</div>
-<div class="kc-popular-item">
-<i class="fas fa-map-marker-alt"></i>
-<div class="kc-popular-content">
-<strong>Setor Bueno</strong>
-<span>52 caronas</span>
-</div>
-</div>
-<div class="kc-popular-item">
-<i class="fas fa-map-marker-alt"></i>
-<div class="kc-popular-content">
-<strong>Jardim Goiás</strong>
-<span>43 caronas</span>
-</div>
-</div>
-<div class="kc-popular-item">
-<i class="fas fa-map-marker-alt"></i>
-<div class="kc-popular-content">
-<strong>Setor Sul</strong>
-<span>38 caronas</span>
-</div>
-</div>
-</div>
-</div>
-<!-- Tips Widget -->
-<div class="kc-sidebar-widget">
-<h3>
-<i class="fas fa-lightbulb"></i>
-                    Dicas para Caroneiros
-                </h3>
-<ul class="kc-tips-list">
-<li><i class="fas fa-check"></i> Combine horários com antecedência</li>
-<li><i class="fas fa-check"></i> Seja pontual e respeite o motorista</li>
-<li><i class="fas fa-check"></i> Ajude com combustível</li>
-<li><i class="fas fa-check"></i> Mantenha o carro limpo</li>
-<li><i class="fas fa-check"></i> Avalie sua experiência</li>
-</ul>
-</div>
+<aside class="kc-sidebar kc-sidebar--caronas" data-kc-caronas-sidebar="true">
+
+  <!-- Filtros -->
+  <div class="kc-sidebar-section" data-kc-caronas-section="filters">
+    <h3><i class="fas fa-filter"></i> Filtros</h3>
+    <p class="kc-sidebar-help">Escolha o tipo de carona e o campus de interesse.</p>
+    <div class="kc-marketplace-filter-list">
+      <div class="kc-marketplace-filter-group">
+        <p class="kc-marketplace-filter-group__title">Tipo</p>
+        <div class="kc-marketplace-filter-group__options" id="kc-caronas-filters">
+          <label class="kc-sidebar-check">
+            <input checked type="checkbox" data-kc-carona-type="ofereco" />
+            <span>Ofereço Carona</span>
+          </label>
+          <label class="kc-sidebar-check">
+            <input checked type="checkbox" data-kc-carona-type="procuro" />
+            <span>Procuro Carona</span>
+          </label>
+        </div>
+      </div>
+      <div class="kc-marketplace-filter-group">
+        <p class="kc-marketplace-filter-group__title">Campus</p>
+        <div class="kc-marketplace-filter-group__options">
+          <label class="kc-sidebar-check">
+            <input type="checkbox" data-kc-carona-campus="samambaia" />
+            <span>Campus Samambaia</span>
+          </label>
+          <label class="kc-sidebar-check">
+            <input type="checkbox" data-kc-carona-campus="campus-ii" />
+            <span>Campus II</span>
+          </label>
+          <label class="kc-sidebar-check">
+            <input type="checkbox" data-kc-carona-campus="colemar" />
+            <span>Campus Colemar Natal</span>
+          </label>
+        </div>
+      </div>
+      <div class="kc-marketplace-filter-group">
+        <p class="kc-marketplace-filter-group__title">Confiança</p>
+        <div class="kc-marketplace-filter-group__options">
+          <label class="kc-sidebar-check">
+            <input type="checkbox" data-kc-carona-verified="true" />
+            <span>Somente verificados</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <button class="kc-opportunity-clear" data-kc-caronas-clear-filters="true" type="button">Limpar filtros</button>
+  </div>
+
+  <!-- Rotas Populares -->
+  <div class="kc-sidebar-section" data-kc-caronas-section="routes">
+    <h3><i class="fas fa-route"></i> Rotas Populares</h3>
+    <p class="kc-sidebar-help">Selecione uma rota para filtrar rapidamente as caronas por campus.</p>
+    <div class="kc-category-list" data-kc-caronas-route-list="true">
+      <button class="kc-category-item is-active" type="button" data-kc-carona-route-campus="">
+        <i class="fas fa-route"></i>
+        <span>Todas as rotas</span>
+        <span class="kc-category-count">—</span>
+      </button>
+      <button class="kc-category-item" type="button" data-kc-carona-route-campus="samambaia">
+        <i class="fas fa-university"></i>
+        <span>Campus Samambaia</span>
+        <span class="kc-category-count">—</span>
+      </button>
+      <button class="kc-category-item" type="button" data-kc-carona-route-campus="campus-ii">
+        <i class="fas fa-university"></i>
+        <span>Campus II</span>
+        <span class="kc-category-count">—</span>
+      </button>
+      <button class="kc-category-item" type="button" data-kc-carona-route-campus="colemar">
+        <i class="fas fa-university"></i>
+        <span>Colemar Natal</span>
+        <span class="kc-category-count">—</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Dicas -->
+  <div class="kc-sidebar-section" data-kc-caronas-section="tips">
+    <h3><i class="fas fa-lightbulb"></i> Dicas para Caroneiros</h3>
+    <div class="kc-tips-list">
+      <div class="kc-tip-item"><i class="fas fa-check"></i><span>Combine horários com antecedência</span></div>
+      <div class="kc-tip-item"><i class="fas fa-check"></i><span>Seja pontual e respeite o motorista</span></div>
+      <div class="kc-tip-item"><i class="fas fa-check"></i><span>Ajude dividindo o combustível</span></div>
+      <div class="kc-tip-item"><i class="fas fa-check"></i><span>Prefira caronas com usuários verificados</span></div>
+      <div class="kc-tip-item"><i class="fas fa-check"></i><span>Avalie sua experiência ao final</span></div>
+    </div>
+  </div>
+
 </aside>
 </main>
 <!-- Mobile Navigation -->

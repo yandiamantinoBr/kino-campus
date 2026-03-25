@@ -121,6 +121,24 @@
           <span>Workshops</span>
         </a>
       </div>
+      <!-- Rail de categorias rápidas (mobile) -->
+      <div class="kc-eventos-mobile-rail" aria-label="Categorias rápidas">
+        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='sustentabilidade'">
+          <i class="fas fa-leaf"></i><span>Sustentabilidade</span>
+        </button>
+        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='academicos'">
+          <i class="fas fa-graduation-cap"></i><span>Acadêmicos</span>
+        </button>
+        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='culturais'">
+          <i class="fas fa-theater-masks"></i><span>Culturais</span>
+        </button>
+        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='esportivos'">
+          <i class="fas fa-running"></i><span>Esportivos</span>
+        </button>
+        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='workshops'">
+          <i class="fas fa-chalkboard-teacher"></i><span>Workshops</span>
+        </button>
+      </div>
       <!-- Feed List -->
       <div class="kc-feed-list">
         <!-- Posts dinâmicos serão injetados aqui via JS -->
@@ -137,82 +155,60 @@
       </div>
     </section>
     <!-- Sidebar -->
-    <aside class="kc-sidebar">
+    <aside class="kc-sidebar kc-sidebar--eventos">
+
+      <!-- Calendário -->
       <div class="kc-sidebar-section">
-        <h3>
-          <i class="fas fa-calendar-alt"></i>
-          Calendário de Eventos
-        </h3>
-        <div class="kc-events-calendar" data-kc-events-calendar
-          style="background-color: var(--kc-background-dark); padding: 15px; border-radius: 8px; text-align: center; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-          <button type="button" class="kc-cal-nav" data-kc-cal-prev aria-label="Mês anterior"
-            style="background: transparent; border: 0; color: var(--kc-text-dark-secondary); font-size: 1.1em; padding: 6px; cursor: pointer;">
+        <h3><i class="fas fa-calendar-alt"></i> Calendário</h3>
+        <div class="kc-events-calendar" data-kc-events-calendar>
+          <button type="button" class="kc-cal-nav" data-kc-cal-prev aria-label="Mês anterior">
             <i class="fas fa-chevron-left"></i>
           </button>
-
-          <p style="margin: 0; color: var(--kc-text-dark-secondary); flex: 1;">
-            <i class="fas fa-calendar"></i><br />
-            <span data-kc-cal-month>Fevereiro 2026</span><br />
-            <strong data-kc-cal-day style="font-size: 2em; color: var(--kc-primary-brand);">07</strong>
-          </p>
-
-          <button type="button" class="kc-cal-nav" data-kc-cal-next aria-label="Próximo mês"
-            style="background: transparent; border: 0; color: var(--kc-text-dark-secondary); font-size: 1.1em; padding: 6px; cursor: pointer;">
+          <div class="kc-cal-display">
+            <i class="fas fa-calendar kc-cal-icon"></i>
+            <span class="kc-cal-month" data-kc-cal-month>Carregando…</span>
+          </div>
+          <button type="button" class="kc-cal-nav" data-kc-cal-next aria-label="Próximo mês">
             <i class="fas fa-chevron-right"></i>
           </button>
         </div>
       </div>
+
+      <!-- Categorias -->
       <div class="kc-sidebar-section">
-        <h3>
-          <i class="fas fa-fire"></i>
-          Eventos em Destaque
-        </h3>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <a href="#"
-            style="padding: 10px; background-color: var(--kc-background-dark); border-radius: 8px; display: block;">
-            <strong>Semana de Sustentabilidade</strong><br />
-            <small style="color: var(--kc-text-dark-secondary);">10-15 de Maio</small>
-          </a>
-          <a href="#"
-            style="padding: 10px; background-color: var(--kc-background-dark); border-radius: 8px; display: block;">
-            <strong>Festival Cultural UFG</strong><br />
-            <small style="color: var(--kc-text-dark-secondary);">20-22 de Maio</small>
-          </a>
-          <a href="#"
-            style="padding: 10px; background-color: var(--kc-background-dark); border-radius: 8px; display: block;">
-            <strong>Hackathon UFG 2025</strong><br />
-            <small style="color: var(--kc-text-dark-secondary);">3-5 de Junho</small>
-          </a>
-        </div>
-      </div>
-      <div class="kc-sidebar-section">
-        <h3>
-          <i class="fas fa-th-large"></i>
-          Categorias
-        </h3>
+        <h3><i class="fas fa-th-large"></i> Categorias</h3>
+        <p class="kc-sidebar-help">Navegue pelos tipos de evento disponíveis na plataforma.</p>
         <div class="kc-category-list">
           <a class="kc-category-item" href="#sustentabilidade">
-            <i class="fas fa-leaf"></i>
-            <span>Sustentabilidade</span>
-            <span class="kc-category-count">12</span>
+            <i class="fas fa-leaf"></i><span>Sustentabilidade</span>
           </a>
           <a class="kc-category-item" href="#academicos">
-            <i class="fas fa-graduation-cap"></i>
-            <span>Acadêmicos</span>
-            <span class="kc-category-count">28</span>
+            <i class="fas fa-graduation-cap"></i><span>Acadêmicos</span>
           </a>
           <a class="kc-category-item" href="#culturais">
-            <i class="fas fa-theater-masks"></i>
-            <span>Culturais</span>
-            <span class="kc-category-count">15</span>
+            <i class="fas fa-theater-masks"></i><span>Culturais</span>
           </a>
           <a class="kc-category-item" href="#esportivos">
-            <i class="fas fa-running"></i>
-            <span>Esportivos</span>
-            <span class="kc-category-count">9</span>
+            <i class="fas fa-running"></i><span>Esportivos</span>
+          </a>
+          <a class="kc-category-item" href="#workshops">
+            <i class="fas fa-chalkboard-teacher"></i><span>Workshops</span>
           </a>
         </div>
       </div>
+
+      <!-- Dicas -->
+      <div class="kc-sidebar-section">
+        <h3><i class="fas fa-lightbulb"></i> Dicas para Participar</h3>
+        <div class="kc-tips-list">
+          <div class="kc-tip-item"><i class="fas fa-check"></i><span>Confirme presença com antecedência</span></div>
+          <div class="kc-tip-item"><i class="fas fa-check"></i><span>Verifique local e horário no dia do evento</span></div>
+          <div class="kc-tip-item"><i class="fas fa-check"></i><span>Leve documento para eventos que exigem inscrição</span></div>
+          <div class="kc-tip-item"><i class="fas fa-check"></i><span>Compartilhe com colegas para ampliar a participação</span></div>
+          <div class="kc-tip-item"><i class="fas fa-check"></i><span>Avalie o evento para ajudar futuros participantes</span></div>
+        </div>
+      </div>
+
     </aside>
   </main>
   <!-- Mobile Navigation -->

@@ -296,6 +296,29 @@
 
   window.KCOverlayLock = overlayLock;
 
+  const AUTH_ERROR_MAP = [
+    [/invalid login credentials/i,                           'E-mail ou senha incorretos.'],
+    [/email not confirmed/i,                                  'E-mail ainda não confirmado. Verifique sua caixa de entrada.'],
+    [/user already registered/i,                              'Este e-mail já está cadastrado.'],
+    [/password should be at least/i,                          'A senha deve ter pelo menos 6 caracteres.'],
+    [/email rate limit exceeded/i,                            'Muitas tentativas. Aguarde alguns minutos.'],
+    [/for security purposes.*only request this once every/i,  'Aguarde antes de solicitar um novo e-mail.'],
+    [/over_email_send_rate_limit/i,                           'Aguarde antes de solicitar um novo e-mail.'],
+    [/token has expired or is invalid/i,                      'Link expirado ou inválido. Solicite um novo.'],
+    [/unable to validate email address/i,                     'E-mail inválido ou não aceito.'],
+    [/signup.*disabled/i,                                     'Cadastro desabilitado no momento.'],
+    [/too many requests/i,                                    'Muitas tentativas. Tente novamente em breve.'],
+    [/network.*error|failed to fetch/i,                       'Sem conexão. Verifique sua internet.'],
+  ];
+
+  function translateAuthError(msg) {
+    if (!msg) return msg;
+    for (const [re, pt] of AUTH_ERROR_MAP) {
+      if (re.test(msg)) return pt;
+    }
+    return msg;
+  }
+
   function setStatus(message, tone) {
     const el = $('#kcAuthStatus');
     if (!el) return;
@@ -630,7 +653,7 @@
     if (!email || !password) { setStatus('Preencha e-mail e senha.', 'warn'); return; }
     setStatus('Entrando...', 'info');
     const result = await window.KCAPI.signIn(email, password);
-    if (!result || result.error) { setStatus((result && result.error && result.error.message) || 'Não foi possível entrar.', 'error'); return; }
+    if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível entrar.'), 'error'); return; }
     setStatus('Login realizado com sucesso.', 'success');
     await handlePostAuthSuccess(modalState.nextPath);
   }
@@ -654,7 +677,7 @@
       emailRedirectTo: buildCallbackUrl(modalState.nextPath),
       data: { display_name: email.split('@')[0] }
     });
-    if (!result || result.error) { setStatus((result && result.error && result.error.message) || 'Não foi possível criar sua conta.', 'error'); return; }
+    if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível criar sua conta.'), 'error'); return; }
     if (result.session) {
       setStatus('Conta criada e autenticada. Vamos completar seu perfil.', 'success');
       await handlePostAuthSuccess(modalState.nextPath);
@@ -671,7 +694,7 @@
     if (!email) { setStatus('Informe o e-mail da sua conta.', 'warn'); return; }
     setStatus('Enviando link de redefinição...', 'info');
     const result = await window.KCAPI.requestPasswordReset(email, { redirectTo: buildCallbackUrl(modalState.nextPath) });
-    if (!result || result.error || result.ok === false) { setStatus((result && result.error && result.error.message) || 'Não foi possível enviar o link.', 'error'); return; }
+    if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível enviar o link.'), 'error'); return; }
     setStatus('Pronto. Enviamos um e-mail com o link para redefinir sua senha.', 'success');
   }
 
@@ -682,7 +705,7 @@
     if (!isAllowedDomain(email, env.allowedDomains)) { setStatus('Use o mesmo e-mail institucional aceito na plataforma.', 'warn'); return; }
     setStatus('Reenviando confirmação...', 'info');
     const result = await window.KCAPI.resendConfirmation(email, { emailRedirectTo: buildCallbackUrl(modalState.nextPath) });
-    if (!result || result.error || result.ok === false) { setStatus((result && result.error && result.error.message) || 'Não foi possível reenviar a confirmação.', 'error'); return; }
+    if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível reenviar a confirmação.'), 'error'); return; }
     setStatus('Novo e-mail enviado. Abra o link recebido para concluir o cadastro.', 'success');
   }
 
