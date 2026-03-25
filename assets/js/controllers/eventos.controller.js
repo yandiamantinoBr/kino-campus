@@ -7,13 +7,15 @@
     window.KCControllers.injectFeed({ module: 'eventos', pageModule: 'eventos' });
   }
 
-// Calendário clamp (Jan/26..Dez/26) + default Fev/26 (persistido)
-  const MIN_Y = 2026;
-  const MIN_M = 0;  // Jan
-  const MAX_Y = 2026;
-  const MAX_M = 11; // Dez
-  const DEFAULT_Y = 2026;
-  const DEFAULT_M = 1; // Fev
+// Calendário dinâmico: inicia no mês atual, permite navegar 18 meses à frente
+  const _now = new Date();
+  const MIN_Y = _now.getFullYear();
+  const MIN_M = _now.getMonth();
+  const _maxDate = new Date(_now.getFullYear(), _now.getMonth() + 18, 1);
+  const MAX_Y = _maxDate.getFullYear();
+  const MAX_M = _maxDate.getMonth();
+  const DEFAULT_Y = _now.getFullYear();
+  const DEFAULT_M = _now.getMonth();
   const STORAGE_KEY = 'kc_events_calendar_month';
 
   const MONTHS_PT = [
