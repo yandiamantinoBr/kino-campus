@@ -1900,7 +1900,9 @@
     document.body.setAttribute('data-post-tags', Array.isArray(post && post.tagKeys) ? post.tagKeys.join(' ') : (Array.isArray(post && post.tags) ? post.tags.join(' ') : ''));
     trackHomeCategoryInteraction('post_open', post);
     hide('notFound');
-    setText('postTitle', post.titulo || 'Detalhes');
+    const postTitleText = post.titulo || post.title || 'Detalhes';
+    setText('postTitle', postTitleText);
+    document.title = postTitleText + ' — KinoCampus';
     setBreadcrumb(post);
     setBadges(post);
     setGallery(post);

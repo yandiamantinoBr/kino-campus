@@ -344,6 +344,7 @@
 
     const nameEl = $('#profile-display-name');
     if (nameEl) nameEl.textContent = name;
+    document.title = name + ' — Perfil KinoCampus';
 
     const handleEl = $('#profile-handle');
     if (handleEl) {
