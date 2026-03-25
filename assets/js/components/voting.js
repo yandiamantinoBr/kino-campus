@@ -263,6 +263,21 @@ function vote(button, type) {
     return;
   }
 
+  // Se Supabase está ativo e não há usuário logado, abre o modal de login
+  if (isSupabaseRuntime()) {
+    const currentUser = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+      ? window.KCSupabase.getUser()
+      : null;
+    if (!currentUser) {
+      if (typeof window.kcOpenAuthModal === 'function') {
+        window.kcOpenAuthModal({ tab: 'login' });
+      } else {
+        showToast('Faça login para votar.', 'info');
+      }
+      return;
+    }
+  }
+
   if (!isSupabaseRuntime()) {
     const localState = kcReadVoteState(voteBox);
     const nextDirection = localState.direction === type ? null : type;

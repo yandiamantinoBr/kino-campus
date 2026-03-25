@@ -384,6 +384,18 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
 
   // Driver Supabase: persiste via KCAPI (async)
   if (KCAPI && KCAPI.ENV && KCAPI.ENV.driver === 'supabase') {
+    // Verifica autenticação antes de enviar — abre modal de login se necessário
+    const currentUser = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+      ? window.KCSupabase.getUser()
+      : null;
+    if (!currentUser) {
+      if (typeof window.kcOpenAuthModal === 'function') {
+        window.kcOpenAuthModal({ tab: 'login' });
+      } else {
+        showToast('Faça login para comentar.', 'info');
+      }
+      return;
+    }
     KCAPI.addComment(id, text).then(function (res) {
       if (res && res.ok) {
         textarea.value = '';
