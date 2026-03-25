@@ -391,13 +391,30 @@
     destaquePager = injectFeedPane('destaques');
   }
 
+  const VALID_TABS = new Set(['destaques', 'recentes', 'comentados']);
+
   function bindFeedTabInteractions() {
     document.addEventListener('click', function (event) {
       const tabBtn = event.target.closest('[data-feed-tab]');
       if (!tabBtn) return;
       const tabKey = tabBtn.dataset.feedTab;
-      if (tabKey) switchFeedTab(tabKey);
+      if (tabKey) {
+        switchFeedTab(tabKey);
+        // Atualiza hash da URL sem adicionar ao histórico (permite compartilhar tab)
+        try {
+          const hash = tabKey === 'destaques' ? '' : '#' + tabKey;
+          history.replaceState(null, '', hash || window.location.pathname + window.location.search);
+        } catch (_) {}
+      }
     });
+
+    // Ativa tab conforme hash da URL ao carregar (links compartilhados)
+    try {
+      const hash = (window.location.hash || '').replace('#', '').toLowerCase();
+      if (hash && VALID_TABS.has(hash) && hash !== 'destaques') {
+        switchFeedTab(hash);
+      }
+    } catch (_) {}
   }
 
   async function bootstrapHome() {
