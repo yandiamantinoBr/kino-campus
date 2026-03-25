@@ -3360,8 +3360,13 @@ html.kc-scroll-locked body {
     overscroll-behavior: none;
 }
 
+/* Scroll lock: position:fixed preserva a posição visual sem quebrar
+   position:sticky no header e nas feed-tabs. O body.style.top é setado
+   para -scrollY antes de adicionar a classe (mesmo frame → sem jump). */
 body.kc-scroll-locked {
-    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    overflow-y: scroll; /* evita layout shift da scrollbar no desktop */
 }
 
 .kc-modal-overlay {
