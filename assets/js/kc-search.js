@@ -366,7 +366,8 @@
   function navigateToResults(query, meta = {}) {
     const q = String(query || '').trim();
     if (!q) return;
-    trackSearch(q, { ...meta, navigate: true });
+    // trackSearch() is called on search-results.html load to avoid the async
+    // insert being aborted by page navigation before the request completes.
     window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
   }
 
