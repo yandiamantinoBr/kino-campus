@@ -907,6 +907,21 @@
       + '</div>';
   }
 
+  function setLegacyBanner(post) {
+    const el = document.getElementById('legacyNotice');
+    if (!el) return;
+    if (isLegacyExamplePost(post)) {
+      el.innerHTML = `<div class="kc-legacy-banner">
+        <span class="kc-legacy-banner__icon"><i class="fas fa-flask"></i></span>
+        <div><strong>Publicação de exemplo</strong>Este é um post fictício criado para demonstração da plataforma. Não representa um anúncio real.</div>
+      </div>`;
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+      el.innerHTML = '';
+    }
+  }
+
   function setDescription(post) {
     const desc = esc(post.descricao || post.description || '');
     let html = '';
@@ -1907,6 +1922,7 @@
     setBadges(post);
     setGallery(post);
     setPrice(post);
+    setLegacyBanner(post);
     setDescription(post);
     setSpecs(post);
     setSeller(post);

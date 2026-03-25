@@ -690,6 +690,9 @@
       authorName: normalizedAuthorName,
       _legacyAuthorName: legacyAuthorName || null,
       _legacyAuthorAvatar: legacyAuthorAvatar || null,
+      // V8.4: legacy_id identifica posts de exemplo/fictícios
+      legacyId: r.legacyId || r.legacy_id || null,
+      legacy_id: r.legacy_id || r.legacyId || null,
     };
 
     // V8.1.3.1: garante consistência de chaves usadas nos filtros (tabs/checkboxes/JSONB)

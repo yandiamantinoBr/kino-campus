@@ -129,9 +129,10 @@ function openMobileMenu() {
 
   menu.classList.add('active');
   overlay.classList.add('active');
-  if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
-    window.KCOverlayLock.lock('mobile-menu');
-  }
+  // Não usa KCOverlayLock: position:fixed no body quebra position:sticky
+  // no kc-header e kc-feed-tabs — o overlay com touch-action:none já
+  // impede scroll de fundo no iOS sem remover o sticky do header.
+  document.documentElement.classList.add('kc-menu-open');
 
   menu.setAttribute('aria-hidden', 'false');
   overlay.setAttribute('aria-hidden', 'false');
@@ -146,9 +147,7 @@ function closeMobileMenu() {
 
   menu.classList.remove('active');
   overlay.classList.remove('active');
-  if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
-    window.KCOverlayLock.unlock('mobile-menu');
-  }
+  document.documentElement.classList.remove('kc-menu-open');
 
   menu.setAttribute('aria-hidden', 'true');
   overlay.setAttribute('aria-hidden', 'true');
