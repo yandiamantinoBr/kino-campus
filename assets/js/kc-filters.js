@@ -117,6 +117,7 @@
     if (!tabsContainer || !tabsContainer.classList.contains('kc-feed-tabs')) return;
 
     if (!window.KCHomeCategories || typeof window.KCHomeCategories.getSidebarRows !== 'function') return;
+    if (typeof window.KCHomeCategories.inferModuleFromHref !== 'function') return;
 
     // Detect the current module from href
     let moduleKey = window.KCHomeCategories.inferModuleFromHref(window.location.href);
