@@ -2060,7 +2060,7 @@
 
     // Atributos para filtros/compatibilidade
     const attrs = [];
-    attrs.push(`class="kc-card${badgeHtml ? " kc-card--has-corner-badge" : ""}"`);
+    attrs.push(`class="kc-card${badgeHtml ? " kc-card--has-corner-badge" : ""}${isLegacyExample ? " kc-card--example" : ""}"`);
     if (id) attrs.push(`data-post-id="${escapeHtml(id)}"`);
     attrs.push(`data-verified="${escapeHtml(String(!!p.verificado))}"`);
     if (moduleKey) attrs.push(`data-module="${escapeHtml(String(moduleKey))}"`);

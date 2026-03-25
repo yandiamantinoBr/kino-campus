@@ -2172,6 +2172,7 @@ main {
     opacity: 1;
     visibility: visible;
     pointer-events: auto; /* P2-B fix: habilita cliques somente quando o overlay está visível */
+    touch-action: none; /* impede scroll de fundo no iOS sem body position:fixed */
 }
 
 /* Melhorias Responsivas Adicionais */
@@ -6261,6 +6262,44 @@ textarea::placeholder {
 
 .kc-card__example-ribbon i {
   color: #ffd166;
+}
+
+/* Card com conteúdo de exemplo (legacy_id) */
+.kc-card--example {
+  outline: 2px dashed rgba(255, 209, 102, 0.45);
+  outline-offset: -2px;
+}
+
+/* Banner de aviso na página de produto/perfil para posts de exemplo */
+.kc-legacy-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255, 209, 102, 0.10);
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  color: var(--kc-text-secondary, #94a3b8);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.kc-legacy-banner__icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: #ffd166;
+  margin-top: 1px;
+}
+
+.kc-legacy-banner strong {
+  display: block;
+  font-weight: 700;
+  color: #ffd166;
+  margin-bottom: 2px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 
