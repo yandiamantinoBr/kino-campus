@@ -3365,6 +3365,8 @@ html.kc-scroll-locked body {
    para -scrollY antes de adicionar a classe (mesmo frame → sem jump). */
 body.kc-scroll-locked {
     position: fixed;
+    left: 0;
+    right: 0;
     width: 100%;
     overflow-y: scroll; /* evita layout shift da scrollbar no desktop */
 }
