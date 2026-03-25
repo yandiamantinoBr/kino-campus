@@ -117,7 +117,7 @@ const KC_CREATE_SCHEMA = {
     ]
   },
   'eventos': {
-    label: 'Eventos na UFG',
+    label: 'Eventos',
     icon: 'fas fa-calendar',
     emoji: '📅',
     categoryGroupId: 'topico',
@@ -134,6 +134,7 @@ const KC_CREATE_SCHEMA = {
           { key: 'culturais', label: 'Culturais' },
           { key: 'esportivos', label: 'Esportivos' },
           { key: 'workshops', label: 'Workshops' },
+          { key: 'festas', label: 'Festas' },
         ]
       }
     ]
@@ -1983,6 +1984,9 @@ async function kcHandleCreateSubmit() {
         modalidadeTrabalho: kcCreateState.values.modalidadeTrabalho ? String(kcCreateState.values.modalidadeTrabalho) : '',
         recompensa: kcCreateState.values.recompensa ? String(kcCreateState.values.recompensa) : '',
         entrega: kcCreateState.values.entrega ? String(kcCreateState.values.entrega) : '',
+        // eventos: data e hora do evento (para o calendário)
+        data_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.data) ? String(kcCreateState.values.data) : '',
+        hora_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.hora) ? String(kcCreateState.values.hora) : '',
         visibility: kcNormalizePostVisibilityValue(kcCreateState.values.visibility, kcCreateState.editMode ? 'public' : 'community'),
       },
     };

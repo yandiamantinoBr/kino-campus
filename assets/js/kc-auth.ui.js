@@ -297,22 +297,28 @@
   window.KCOverlayLock = overlayLock;
 
   const AUTH_ERROR_MAP = [
-    [/invalid login credentials/i,                           'E-mail ou senha incorretos.'],
-    [/email not confirmed/i,                                  'E-mail ainda não confirmado. Verifique sua caixa de entrada.'],
-    [/user already registered/i,                              'Este e-mail já está cadastrado.'],
-    [/password should be at least/i,                          'A senha deve ter pelo menos 6 caracteres.'],
-    [/email rate limit exceeded/i,                            'Muitas tentativas. Aguarde alguns minutos.'],
-    [/for security purposes.*only request this once every/i,  'Aguarde antes de solicitar um novo e-mail.'],
-    [/over_email_send_rate_limit/i,                           'Aguarde antes de solicitar um novo e-mail.'],
-    [/token has expired or is invalid/i,                      'Link expirado ou inválido. Solicite um novo.'],
-    [/unable to validate email address/i,                     'E-mail inválido ou não aceito.'],
-    [/signup.*disabled/i,                                     'Cadastro desabilitado no momento.'],
-    [/too many requests/i,                                    'Muitas tentativas. Tente novamente em breve.'],
-    [/network.*error|failed to fetch/i,                       'Sem conexão. Verifique sua internet.'],
+    [/invalid login credentials/i,                            'E-mail ou senha incorretos.'],
+    [/email not confirmed/i,                                   'E-mail ainda não confirmado. Verifique sua caixa de entrada.'],
+    [/user already registered/i,                               'Este e-mail já está cadastrado.'],
+    [/password should contain at least one character of each/i,'A senha deve conter letras maiúsculas, minúsculas, números e um símbolo (ex: !@#$).'],
+    [/password should be at least/i,                           'A senha deve ter pelo menos 6 caracteres.'],
+    [/email rate limit exceeded/i,                             'Muitas tentativas. Aguarde alguns minutos.'],
+    [/over_email_send_rate_limit/i,                            'Aguarde antes de solicitar um novo e-mail.'],
+    [/token has expired or is invalid/i,                       'Link expirado ou inválido. Solicite um novo.'],
+    [/unable to validate email address/i,                      'E-mail inválido ou não aceito.'],
+    [/signup.*disabled/i,                                      'Cadastro desabilitado no momento.'],
+    [/too many requests/i,                                     'Muitas tentativas. Tente novamente em breve.'],
+    [/network.*error|failed to fetch/i,                        'Sem conexão. Verifique sua internet.'],
   ];
 
   function translateAuthError(msg) {
     if (!msg) return msg;
+    // Rate limit com contador: "For security purposes, you can only request this after X seconds."
+    const rateLimitMatch = String(msg).match(/for security purposes.*?(\d+)\s*seconds?/i);
+    if (rateLimitMatch) {
+      const secs = parseInt(rateLimitMatch[1], 10);
+      return `Por segurança, aguarde ${secs} segundo${secs === 1 ? '' : 's'} antes de tentar novamente.`;
+    }
     for (const [re, pt] of AUTH_ERROR_MAP) {
       if (re.test(msg)) return pt;
     }

@@ -83,7 +83,7 @@
     <section class="kc-feed-section">
       <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-calendar"></i>
-        Eventos na UFG
+        Eventos
       </h2>
       <!-- Feed Tabs -->
       <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed">
@@ -100,43 +100,35 @@
           <span>Comentados</span>
         </button>
         <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
-        <a href="#sustentabilidade">
-          <i class="fas fa-leaf"></i>
-          <span>Sustentabilidade</span>
-        </a>
-        <a href="#academicos">
-          <i class="fas fa-graduation-cap"></i>
-          <span>Acadêmicos</span>
-        </a>
-        <a href="#culturais">
-          <i class="fas fa-theater-masks"></i>
-          <span>Culturais</span>
-        </a>
-        <a href="#esportivos">
-          <i class="fas fa-running"></i>
-          <span>Esportivos</span>
-        </a>
-        <a href="#workshops">
-          <i class="fas fa-chalkboard-teacher"></i>
-          <span>Workshops</span>
-        </a>
+        <a href="#sustentabilidade"><i class="fas fa-leaf"></i><span>Sustentabilidade</span></a>
+        <a href="#academicos"><i class="fas fa-graduation-cap"></i><span>Acadêmicos</span></a>
+        <a href="#culturais"><i class="fas fa-theater-masks"></i><span>Culturais</span></a>
+        <a href="#esportivos"><i class="fas fa-running"></i><span>Esportivos</span></a>
+        <a href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
+        <a href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
       </div>
-      <!-- Rail de categorias rápidas (mobile) -->
-      <div class="kc-eventos-mobile-rail" aria-label="Categorias rápidas">
-        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='sustentabilidade'">
+      <!-- Rail de categorias rápidas (mobile) — filtros funcionais -->
+      <div class="kc-eventos-mobile-rail" aria-label="Filtrar por categoria">
+        <button class="kc-eventos-mobile-rail__button is-active" type="button" data-kc-evento-cat="" aria-pressed="true">
+          <i class="fas fa-th"></i><span>Todas</span>
+        </button>
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="sustentabilidade" aria-pressed="false">
           <i class="fas fa-leaf"></i><span>Sustentabilidade</span>
         </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='academicos'">
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="academicos" aria-pressed="false">
           <i class="fas fa-graduation-cap"></i><span>Acadêmicos</span>
         </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='culturais'">
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="culturais" aria-pressed="false">
           <i class="fas fa-theater-masks"></i><span>Culturais</span>
         </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='esportivos'">
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="esportivos" aria-pressed="false">
           <i class="fas fa-running"></i><span>Esportivos</span>
         </button>
-        <button class="kc-eventos-mobile-rail__button" type="button" onclick="location.hash='workshops'">
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="workshops" aria-pressed="false">
           <i class="fas fa-chalkboard-teacher"></i><span>Workshops</span>
+        </button>
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-evento-cat="festas" aria-pressed="false">
+          <i class="fas fa-music"></i><span>Festas</span>
         </button>
       </div>
       <!-- Feed List -->
@@ -158,42 +150,68 @@
     <aside class="kc-sidebar kc-sidebar--eventos">
 
       <!-- Calendário -->
-      <div class="kc-sidebar-section">
-        <h3><i class="fas fa-calendar-alt"></i> Calendário</h3>
+      <div class="kc-sidebar-section kc-sidebar-section--cal">
+        <div class="kc-sidebar-section-head">
+          <h3><i class="fas fa-calendar-alt"></i> Calendário</h3>
+          <button class="kc-cal-expand-btn" type="button" data-kc-cal-expand aria-label="Expandir calendário">
+            <i class="fas fa-expand-alt"></i> Expandir
+          </button>
+        </div>
+
+        <!-- Seletor de visualização -->
+        <div class="kc-cal-view-tabs" role="tablist" aria-label="Modo de visualização do calendário">
+          <button class="active" type="button" role="tab" data-kc-cal-view="month" aria-selected="true">Mensal</button>
+          <button type="button" role="tab" data-kc-cal-view="week" aria-selected="false">Semanal</button>
+          <button type="button" role="tab" data-kc-cal-view="day" aria-selected="false">Diário</button>
+        </div>
+
+        <!-- Navegação de período -->
         <div class="kc-events-calendar" data-kc-events-calendar>
-          <button type="button" class="kc-cal-nav" data-kc-cal-prev aria-label="Mês anterior">
+          <button type="button" class="kc-cal-nav" data-kc-cal-prev aria-label="Período anterior">
             <i class="fas fa-chevron-left"></i>
           </button>
           <div class="kc-cal-display">
             <i class="fas fa-calendar kc-cal-icon"></i>
             <span class="kc-cal-month" data-kc-cal-month>Carregando…</span>
           </div>
-          <button type="button" class="kc-cal-nav" data-kc-cal-next aria-label="Próximo mês">
+          <button type="button" class="kc-cal-nav" data-kc-cal-next aria-label="Próximo período">
             <i class="fas fa-chevron-right"></i>
           </button>
+        </div>
+
+        <!-- Grid do calendário -->
+        <div class="kc-cal-grid" data-kc-cal-grid aria-live="polite">
+          <div class="kc-cal-loading"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+
+        <!-- Detalhe do dia selecionado -->
+        <div class="kc-cal-day-detail" data-kc-cal-day-detail style="display:none;">
+          <div class="kc-cal-day-detail-title" data-kc-cal-day-detail-title></div>
+          <div class="kc-cal-day-detail-events" data-kc-cal-day-detail-events></div>
+        </div>
+
+        <!-- Legenda de categorias -->
+        <div class="kc-cal-legend">
+          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#4caf50"></span><span>Sustentabilidade</span></div>
+          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#2196f3"></span><span>Acadêmicos</span></div>
+          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#9c27b0"></span><span>Culturais</span></div>
+          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#ff9800"></span><span>Esportivos</span></div>
+          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#00bcd4"></span><span>Workshops</span></div>
+          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#e91e63"></span><span>Festas</span></div>
         </div>
       </div>
 
       <!-- Categorias -->
       <div class="kc-sidebar-section">
         <h3><i class="fas fa-th-large"></i> Categorias</h3>
-        <p class="kc-sidebar-help">Navegue pelos tipos de evento disponíveis na plataforma.</p>
+        <p class="kc-sidebar-help">Filtre eventos por tipo.</p>
         <div class="kc-category-list">
-          <a class="kc-category-item" href="#sustentabilidade">
-            <i class="fas fa-leaf"></i><span>Sustentabilidade</span>
-          </a>
-          <a class="kc-category-item" href="#academicos">
-            <i class="fas fa-graduation-cap"></i><span>Acadêmicos</span>
-          </a>
-          <a class="kc-category-item" href="#culturais">
-            <i class="fas fa-theater-masks"></i><span>Culturais</span>
-          </a>
-          <a class="kc-category-item" href="#esportivos">
-            <i class="fas fa-running"></i><span>Esportivos</span>
-          </a>
-          <a class="kc-category-item" href="#workshops">
-            <i class="fas fa-chalkboard-teacher"></i><span>Workshops</span>
-          </a>
+          <a class="kc-category-item" href="#sustentabilidade"><i class="fas fa-leaf"></i><span>Sustentabilidade</span></a>
+          <a class="kc-category-item" href="#academicos"><i class="fas fa-graduation-cap"></i><span>Acadêmicos</span></a>
+          <a class="kc-category-item" href="#culturais"><i class="fas fa-theater-masks"></i><span>Culturais</span></a>
+          <a class="kc-category-item" href="#esportivos"><i class="fas fa-running"></i><span>Esportivos</span></a>
+          <a class="kc-category-item" href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
+          <a class="kc-category-item" href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
         </div>
       </div>
 
@@ -261,6 +279,44 @@
 </div>
   </div>
   <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
+
+  <!-- Calendário expandido (modal) -->
+  <div id="kcCalModal" class="kc-cal-modal" role="dialog" aria-modal="true" aria-label="Calendário de Eventos" aria-hidden="true">
+    <div class="kc-cal-modal-card">
+      <div class="kc-cal-modal-header">
+        <h2><i class="fas fa-calendar-alt"></i> Calendário de Eventos</h2>
+        <button class="kc-cal-modal-close" type="button" data-kc-cal-modal-close aria-label="Fechar"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="kc-cal-modal-controls">
+        <div class="kc-cal-view-tabs" role="tablist" data-kc-cal-modal-viewtabs>
+          <button type="button" role="tab" data-kc-cal-modal-view="month">Mensal</button>
+          <button type="button" role="tab" data-kc-cal-modal-view="week">Semanal</button>
+          <button type="button" role="tab" data-kc-cal-modal-view="day">Diário</button>
+        </div>
+        <div class="kc-events-calendar kc-events-calendar--modal">
+          <button type="button" class="kc-cal-nav" data-kc-cal-modal-prev aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+          <div class="kc-cal-display"><i class="fas fa-calendar kc-cal-icon"></i><span class="kc-cal-month" data-kc-cal-month-modal>—</span></div>
+          <button type="button" class="kc-cal-nav" data-kc-cal-modal-next aria-label="Próximo"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+      <div class="kc-cal-modal-body">
+        <div class="kc-cal-grid kc-cal-grid--modal" data-kc-cal-grid-modal></div>
+        <div class="kc-cal-day-detail kc-cal-day-detail--modal" data-kc-cal-day-detail-modal style="display:none;">
+          <div class="kc-cal-day-detail-title" data-kc-cal-day-detail-title-modal></div>
+          <div class="kc-cal-day-detail-events" data-kc-cal-day-detail-events-modal></div>
+        </div>
+      </div>
+      <div class="kc-cal-modal-legend">
+        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#4caf50"></span><span>Sustentabilidade</span></div>
+        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#2196f3"></span><span>Acadêmicos</span></div>
+        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#9c27b0"></span><span>Culturais</span></div>
+        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#ff9800"></span><span>Esportivos</span></div>
+        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#00bcd4"></span><span>Workshops</span></div>
+        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#e91e63"></span><span>Festas</span></div>
+      </div>
+    </div>
+  </div>
+
   <script src="assets/js/kc-constants.js"></script>
   <script src="assets/js/kc-utils.js"></script>
   <script src="assets/js/kc-env.js"></script>
