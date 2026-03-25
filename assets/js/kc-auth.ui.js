@@ -258,9 +258,9 @@
     function apply() {
       if (document.documentElement.classList.contains('kc-scroll-locked')) return;
       state.scrollTop = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+      document.body.style.top = `-${state.scrollTop}px`;
       document.documentElement.classList.add('kc-scroll-locked');
       document.body.classList.add('kc-scroll-locked');
-      document.body.style.top = `-${state.scrollTop}px`;
     }
 
     function release() {
