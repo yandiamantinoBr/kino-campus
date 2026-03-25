@@ -907,6 +907,26 @@
       + '</div>';
   }
 
+  function setOpenGraphTags(post) {
+    const title = (post.titulo || post.title || 'KinoCampus') + ' — KinoCampus';
+    const desc = String(post.descricao || post.description || 'Anúncios, eventos e oportunidades da comunidade universitária UFG.').trim().substring(0, 200);
+    const images = post.images || post.image_urls || [];
+    const img = images.length ? String(images[0]) : '';
+    const url = window.location.href;
+
+    function setMeta(selector, attr, value) {
+      const el = document.querySelector(selector);
+      if (el && value) el.setAttribute(attr, value);
+    }
+    setMeta('meta[property="og:title"]', 'content', title);
+    setMeta('meta[property="og:description"]', 'content', desc);
+    setMeta('meta[property="og:image"]', 'content', img);
+    setMeta('meta[property="og:url"]', 'content', url);
+    setMeta('meta[name="twitter:title"]', 'content', title);
+    setMeta('meta[name="twitter:description"]', 'content', desc);
+    setMeta('meta[name="twitter:image"]', 'content', img);
+  }
+
   function setLegacyBanner(post) {
     const el = document.getElementById('legacyNotice');
     if (!el) return;
@@ -1918,6 +1938,7 @@
     const postTitleText = post.titulo || post.title || 'Detalhes';
     setText('postTitle', postTitleText);
     document.title = postTitleText + ' — KinoCampus';
+    setOpenGraphTags(post);
     setBreadcrumb(post);
     setBadges(post);
     setGallery(post);

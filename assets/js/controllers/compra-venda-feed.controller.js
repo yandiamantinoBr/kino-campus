@@ -566,12 +566,13 @@
     queue();
   }
 
-  function initFeed() {
+  function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
     window.KCControllers.injectFeed({
       module: ['compra-venda', 'livros'],
       pageModule: 'compra-venda',
       containerSelector: '.kc-feed-list',
+      sortBy: sortBy || 'votos',
       onAfterAppend: function (payload) {
         decorate(payload);
         queue();
@@ -593,7 +594,11 @@
     bind();
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') window.kcFilters.setExtraPredicate(function (card) { return matchCard(card); });
     restoreCachedPosts();
-    initFeed();
+    if (window.KCCore && typeof window.KCCore.bindModuleSortTabs === 'function') {
+      window.KCCore.bindModuleSortTabs({ initFeedFn: initFeed });
+    } else {
+      initFeed();
+    }
     fetchAll();
     queue();
   });

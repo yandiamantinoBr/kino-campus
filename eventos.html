@@ -4,6 +4,7 @@
 
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
 
   <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.4.2">
@@ -85,11 +86,20 @@
         Eventos na UFG
       </h2>
       <!-- Feed Tabs -->
-      <div class="kc-feed-tabs">
-        <a class="active" href="#">
+      <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed">
+        <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true">
           <i class="fas fa-fire"></i>
-          <span>Todos</span>
-        </a>
+          <span>Destaques</span>
+        </button>
+        <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false">
+          <i class="fas fa-clock"></i>
+          <span>Recentes</span>
+        </button>
+        <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false">
+          <i class="fas fa-comments"></i>
+          <span>Comentados</span>
+        </button>
+        <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
         <a href="#sustentabilidade">
           <i class="fas fa-leaf"></i>
           <span>Sustentabilidade</span>

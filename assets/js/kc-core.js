@@ -1048,4 +1048,78 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 })();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// KCCore.bindModuleSortTabs — tabs de ordenação (Destaques/Recentes/Comentados)
+// para páginas de módulo (eventos, moradia, caronas, etc.).
+//
+// Uso:
+//   window.KCCore.bindModuleSortTabs({ initFeedFn: function(sortBy) { ... } });
+//
+// O initFeedFn recebe 'votos' | 'recentes' | 'comentados' e deve chamar
+// KCControllers.injectFeed com o sortBy correspondente.
+// ─────────────────────────────────────────────────────────────────────────────
+(function () {
+  'use strict';
+
+  var SORT_MAP = { destaques: 'votos', recentes: 'recentes', comentados: 'comentados' };
+  var VALID_TABS = new Set(Object.keys(SORT_MAP));
+
+  function bindModuleSortTabs(opts) {
+    if (!opts || typeof opts.initFeedFn !== 'function') return;
+
+    var currentSortBy = 'votos';
+    var initialized = false;
+
+    function getSortButtons() {
+      return Array.from(document.querySelectorAll('[data-feed-tab]'))
+        .filter(function (btn) { return VALID_TABS.has(btn.dataset.feedTab); });
+    }
+
+    function setActiveTab(key) {
+      getSortButtons().forEach(function (btn) {
+        var active = btn.dataset.feedTab === key;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      var hash = key === 'destaques' ? '' : '#' + key;
+      try { history.replaceState(null, '', hash || window.location.pathname + window.location.search); } catch (_) {}
+    }
+
+    function loadFeed(sortBy) {
+      if (initialized) {
+        var feedList = document.querySelector('.kc-feed-list');
+        if (feedList) feedList.innerHTML = '';
+      }
+      opts.initFeedFn(sortBy);
+      initialized = true;
+    }
+
+    // Lê hash para tab inicial
+    var initHash = (window.location.hash || '').replace('#', '').toLowerCase();
+    if (initHash && VALID_TABS.has(initHash)) {
+      currentSortBy = SORT_MAP[initHash];
+      setActiveTab(initHash);
+    } else {
+      setActiveTab('destaques');
+    }
+
+    // Carrega feed inicial
+    loadFeed(currentSortBy);
+
+    // Bind nos botões de tab
+    getSortButtons().forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.dataset.feedTab;
+        var sortBy = SORT_MAP[key];
+        if (!sortBy || sortBy === currentSortBy) return;
+        currentSortBy = sortBy;
+        setActiveTab(key);
+        loadFeed(sortBy);
+      });
+    });
+  }
+
+  window.KCCore = window.KCCore || {};
+  window.KCCore.bindModuleSortTabs = bindModuleSortTabs;
+})();
 

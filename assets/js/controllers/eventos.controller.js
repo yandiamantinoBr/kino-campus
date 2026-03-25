@@ -2,9 +2,9 @@
 (function () {
   'use strict';
 
-  function injectFeed() {
+  function injectFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({ module: 'eventos', pageModule: 'eventos' });
+    window.KCControllers.injectFeed({ module: 'eventos', pageModule: 'eventos', sortBy: sortBy || 'votos' });
   }
 
 // Calendário dinâmico: inicia no mês atual, permite navegar 18 meses à frente
@@ -98,6 +98,10 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     initCalendarClamp();
-    injectFeed();
+    if (window.KCCore && typeof window.KCCore.bindModuleSortTabs === 'function') {
+      window.KCCore.bindModuleSortTabs({ initFeedFn: injectFeed });
+    } else {
+      injectFeed();
+    }
   });
 })();

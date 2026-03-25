@@ -772,11 +772,12 @@
     queue();
   }
 
-  function initFeed() {
+  function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
     window.KCControllers.injectFeed({
       module: 'achados-perdidos',
       pageModule: 'achados-perdidos',
+      sortBy: sortBy || 'votos',
       onAfterAppend: function (payload) {
         decorate(payload);
         queue();
@@ -793,7 +794,11 @@
       window.kcFilters.setExtraPredicate(function (card) { return matchCard(card); });
     }
     restoreCachedPosts();
-    initFeed();
+    if (window.KCCore && typeof window.KCCore.bindModuleSortTabs === 'function') {
+      window.KCCore.bindModuleSortTabs({ initFeedFn: initFeed });
+    } else {
+      initFeed();
+    }
     fetchAll();
     queue();
   });

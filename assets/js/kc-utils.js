@@ -1980,16 +1980,15 @@
     const imgSrc = images.length ? String(images[0]) : '';
     const productHref = id ? `product.html?id=${encodeURIComponent(id)}` : '#';
     const isLegacyExample = !!String(p.legacyId || p.legacy_id || '').trim();
+    // Ribbon fora do image-wrapper para não ser cortado pelo overflow:hidden
     const legacyExampleBadgeHtml = isLegacyExample
       ? `<span class="kc-card__example-ribbon" aria-label="Exemplo de uso"><i class="fas fa-flask"></i><span>Exemplo</span></span>`
       : '';
     const imageWrapperHtml = imgSrc
       ? `<a class="kc-card__image-wrapper" href="${productHref}" aria-label="Abrir anúncio ${escapeHtml(String(p.titulo || ''))}">
-           ${legacyExampleBadgeHtml}
            <img alt="${escapeHtml(String(p.titulo || 'Imagem'))}" src="${escapeHtml(imgSrc)}" width="400" height="300" loading="lazy" decoding="async"/>
          </a>`
       : `<a class="kc-card__image-wrapper kc-image-fallback" href="${productHref}" aria-label="Abrir anúncio ${escapeHtml(String(p.titulo || ''))}" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
-           ${legacyExampleBadgeHtml}
            <span class="kc-card__emoji">${escapeHtml(String(emoji))}</span>
          </a>`;
 
@@ -2101,6 +2100,7 @@
 
     return `
       <article ${attrs.join(' ')}>
+        ${legacyExampleBadgeHtml}
         <div class="kc-card__main">
           ${badgeHtml}
           ${imageWrapperHtml}

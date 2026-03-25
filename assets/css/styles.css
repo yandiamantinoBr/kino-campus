@@ -1980,8 +1980,8 @@ main {
     -webkit-overflow-scrolling: touch; /* scroll suave no iOS */
     overscroll-behavior: contain;
     touch-action: pan-y;
-    /* Garante espaço extra na base para safe-area (notch/home indicator) */
-    padding-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+    /* Espaço para kc-mobile-nav (≈60px) + safe-area do dispositivo */
+    padding-bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 72px));
 }
 
 .kc-mobile-menu-content a,
@@ -6376,6 +6376,17 @@ textarea::placeholder {
 
   .kc-header:not(.kc-header--admin) .kc-header-user {
     gap: 4px;
+  }
+}
+
+/* Em viewports muito estreitas (<= 360px) esconde o texto do logo para
+   evitar que o kc-search-mobile-btn invada a área do kc-logo-name */
+@media (max-width: 360px) {
+  .kc-header:not(.kc-header--admin) .kc-logo-text {
+    display: none;
+  }
+  .kc-header:not(.kc-header--admin) .kc-logo a {
+    gap: 0;
   }
 }
 

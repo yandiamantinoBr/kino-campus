@@ -346,6 +346,12 @@
     if (nameEl) nameEl.textContent = name;
     document.title = name + ' — Perfil KinoCampus';
 
+    const legacyBadge = $('#profile-legacy-badge');
+    if (legacyBadge) {
+      const isLegacy = !!(profile && String(profile.legacy_id || profile.legacyId || '').trim());
+      legacyBadge.style.display = isLegacy ? '' : 'none';
+    }
+
     const handleEl = $('#profile-handle');
     if (handleEl) {
       if (handle) {
@@ -1038,7 +1044,7 @@
       try {
         const extra = await client
           .from('profiles')
-          .select('created_at, bio, avatar_url, display_name, full_name, verified')
+          .select('created_at, bio, avatar_url, display_name, full_name, verified, legacy_id')
           .eq('id', state.profileId)
           .maybeSingle();
         if (extra && extra.data) state.profile = Object.assign({}, state.profile, extra.data);

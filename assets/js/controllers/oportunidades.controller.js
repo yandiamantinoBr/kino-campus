@@ -984,11 +984,12 @@
     });
   }
 
-  function initFeed() {
+  function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
     window.KCControllers.injectFeed({
       module: 'oportunidades',
       pageModule: 'oportunidades',
+      sortBy: sortBy || 'votos',
       onAfterAppend: function (payload) {
         decorateFreshCards(payload);
         queueRefresh();
@@ -1004,7 +1005,11 @@
     bindSidebarEvents();
     setupExtraPredicate();
     restoreCachedPosts();
-    initFeed();
+    if (window.KCCore && typeof window.KCCore.bindModuleSortTabs === 'function') {
+      window.KCCore.bindModuleSortTabs({ initFeedFn: initFeed });
+    } else {
+      initFeed();
+    }
     fetchAllPosts();
     queueRefresh();
   });

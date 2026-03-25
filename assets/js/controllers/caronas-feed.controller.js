@@ -88,17 +88,27 @@
     container.addEventListener('change', syncFiltersFromInputs);
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function injectFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-
     window.KCControllers.injectFeed({
       module: 'caronas',
       pageModule: 'caronas',
+      sortBy: sortBy || 'votos',
       onReady: function () {
         bindFilters();
         syncFiltersFromInputs();
       },
     });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
+
+    if (window.KCCore && typeof window.KCCore.bindModuleSortTabs === 'function') {
+      window.KCCore.bindModuleSortTabs({ initFeedFn: injectFeed });
+    } else {
+      injectFeed();
+    }
 
     // Fallback: bind filtros após kc-filters inicializar
     const waitFilters = setInterval(() => {
