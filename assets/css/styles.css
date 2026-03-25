@@ -1064,6 +1064,12 @@ main {
     opacity: 0.9;
 }
 
+.kc-badge--example {
+    background-color: rgba(255, 107, 0, 0.10);
+    border-color: rgba(255, 107, 0, 0.30);
+    color: var(--kc-primary-brand);
+}
+
 /* WhatsApp Share Button (kc-card) — V8.1.2.4.8 */
 .kc-share-whatsapp {
     -webkit-appearance: none;

@@ -981,7 +981,7 @@
       || (window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function'
         ? window.KCUtils.buildPublicHandle(normalizedName)
         : '');
-    const isLegacyExample = isLegacyExampleProfile(post && post.authorProfile);
+    const isLegacyExample = isLegacyExamplePost(post) || isLegacyExampleProfile(post && post.authorProfile);
 
     const author = normalizedName || 'Autor';
     const avatarUrl = normalizedAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
