@@ -120,6 +120,11 @@
           <p>Carregando postagens...</p>
         </div>
       </div>
+      <div class="kc-no-results" id="noResults" style="display: none; text-align: center; padding: 40px; color: var(--kc-text-dark-secondary);">
+        <i class="fas fa-search" style="font-size: 3em; margin-bottom: 15px; opacity: 0.5;"></i>
+        <h3>Nenhum resultado encontrado</h3>
+        <p>Tente ajustar os filtros ou buscar por outros termos.</p>
+      </div>
     </section>
     <!-- Sidebar -->
     <aside class="kc-sidebar">
@@ -206,11 +211,11 @@
       <i class="fas fa-home"></i>
       <span>Início</span>
     </a>
-    <a href="eventos.html">
+    <a class="active" href="eventos.html">
       <i class="fas fa-calendar"></i>
       <span>Eventos</span>
     </a>
-    <a class="kc-create-btn" href="create-post.html">
+    <a class="kc-create-btn" href="create-post.html" aria-label="Criar publicação">
       <i class="fas fa-plus"></i>
     </a>
     <a href="compra-venda-feed.html">

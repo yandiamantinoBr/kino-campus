@@ -130,17 +130,17 @@
         <div class="kc-ranking-users"></div>
       </div>
 
-      <div class="kc-feed-tabs" id="kc-home-feed-tabs">
+      <div class="kc-feed-tabs" id="kc-home-feed-tabs" role="tablist" aria-label="Visualização do feed">
         <!-- Abas de visualização do feed principal -->
-        <button class="active" type="button" data-feed-tab="destaques" aria-selected="true" aria-controls="kc-feed-destaques">
+        <button id="tab-destaques" class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true" aria-controls="kc-feed-destaques">
           <i class="fas fa-fire"></i>
           <span>Destaques</span>
         </button>
-        <button type="button" data-feed-tab="recentes" aria-selected="false" aria-controls="kc-feed-recentes">
+        <button id="tab-recentes" type="button" role="tab" data-feed-tab="recentes" aria-selected="false" aria-controls="kc-feed-recentes">
           <i class="fas fa-clock"></i>
           <span>Recentes</span>
         </button>
-        <button type="button" data-feed-tab="comentados" aria-selected="false" aria-controls="kc-feed-comentados">
+        <button id="tab-comentados" type="button" role="tab" data-feed-tab="comentados" aria-selected="false" aria-controls="kc-feed-comentados">
           <i class="fas fa-comments"></i>
           <span>Comentados</span>
         </button>
@@ -298,7 +298,7 @@
       <i class="fas fa-calendar"></i>
       <span>Eventos</span>
     </a>
-    <a class="kc-create-btn" href="create-post.html">
+    <a class="kc-create-btn" href="create-post.html" aria-label="Criar publicação">
       <i class="fas fa-plus"></i>
     </a>
     <a href="compra-venda-feed.html">

@@ -257,15 +257,24 @@
 
     function apply() {
       if (document.documentElement.classList.contains('kc-scroll-locked')) return;
+      // Salva scrollY e posiciona o body ANTES de adicionar a classe que aplica
+      // position:fixed — tudo no mesmo frame → sem jump visual.
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      state.scrollTop = scrollY;
+      document.body.style.top = `-${scrollY}px`;
       document.documentElement.classList.add('kc-scroll-locked');
       document.body.classList.add('kc-scroll-locked');
     }
 
     function release() {
       if (state.keys.size) return;
+      const savedScroll = state.scrollTop;
       document.documentElement.classList.remove('kc-scroll-locked');
       document.body.classList.remove('kc-scroll-locked');
       document.body.style.top = '';
+      state.scrollTop = 0;
+      // Restaura a posição de scroll que estava antes do lock.
+      if (savedScroll) window.scrollTo(0, savedScroll);
     }
 
     function lock(key) {

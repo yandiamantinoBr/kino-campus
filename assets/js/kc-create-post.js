@@ -1420,6 +1420,21 @@ function kcRenderCreateModal() {
 }
 
 function kcOpenCreatePostModal(prefModuleKey) {
+  // Abre modal de login se usuário não autenticado (evita preencher o form em vão)
+  if (isSupabaseRuntime && typeof isSupabaseRuntime === 'function' && isSupabaseRuntime()) {
+    const currentUser = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+      ? window.KCSupabase.getUser()
+      : null;
+    if (!currentUser) {
+      if (typeof window.kcOpenAuthModal === 'function') {
+        window.kcOpenAuthModal({ tab: 'login' });
+      } else {
+        showToast('Faça login para publicar.', 'info');
+      }
+      return false;
+    }
+  }
+
   try {
     kcEnsureCreateModal();
   } catch (err) {

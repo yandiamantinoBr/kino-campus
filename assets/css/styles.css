@@ -3360,13 +3360,15 @@ html.kc-scroll-locked body {
     overscroll-behavior: none;
 }
 
+/* Scroll lock: position:fixed preserva a posição visual sem quebrar
+   position:sticky no header e nas feed-tabs. O body.style.top é setado
+   para -scrollY antes de adicionar a classe (mesmo frame → sem jump). */
 body.kc-scroll-locked {
     position: fixed;
     left: 0;
     right: 0;
     width: 100%;
-    overflow: hidden;
-    box-sizing: border-box;
+    overflow-y: scroll; /* evita layout shift da scrollbar no desktop */
 }
 
 .kc-modal-overlay {
@@ -6261,14 +6263,6 @@ textarea::placeholder {
   color: #ffd166;
 }
 
-body.kc-scroll-locked .kc-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  z-index: 210;
-}
 
 @media (max-width: 768px) {
   .kc-header:not(.kc-header--admin) .kc-header-container {
