@@ -447,6 +447,7 @@
       handle ? `<span class="kc-profile-dropdown__handle">${escapeHtml(handle)}</span>` : '',
       '</div></div><hr class="kc-profile-dropdown__divider" /><nav class="kc-profile-dropdown__menu">',
       `<a href="${escapeHtml(buildProfileHref(user && user.id))}" class="kc-profile-dropdown__item"><i class="fas fa-id-badge"></i><span>Meu perfil</span></a>`,
+      `<a href="my-posts.html" class="kc-profile-dropdown__item"><i class="fas fa-layer-group"></i><span>Minhas publicações</span></a>`,
       `<a href="${escapeHtml(buildSettingsHref(buildCurrentPath()))}" class="kc-profile-dropdown__item"><i class="fas fa-sliders"></i><span>Configurações</span></a>`,
       onboardingPending ? `<a href="${escapeHtml(buildAccountSetupHref(buildCurrentPath()))}" class="kc-profile-dropdown__item"><i class="fas fa-list-check"></i><span>Completar cadastro</span></a>` : '',
       isAdmin ? `<a href="${escapeHtml(buildAdminHref())}" class="kc-profile-dropdown__item"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i><span>Administração</span></a>` : '',
@@ -520,6 +521,7 @@
     }
 
     ensureAccountNode('mobileMenuProfileLink', 'a', '<i class="fas fa-id-badge"></i><span>Meu perfil</span>', 'kc-mobile-menu-account-link');
+    ensureAccountNode('mobileMenuMyPostsLink', 'a', '<i class="fas fa-layer-group"></i><span>Minhas publicações</span>', 'kc-mobile-menu-account-link');
     ensureAccountNode('mobileMenuSettingsLink', 'a', '<i class="fas fa-sliders"></i><span>Configurações</span>', 'kc-mobile-menu-account-link');
     ensureAccountNode('mobileMenuAccountSetupLink', 'a', '<i class="fas fa-list-check"></i><span>Completar cadastro</span>', 'kc-mobile-menu-account-link');
     ensureAccountNode('mobileMenuAdminLink', 'a', '<i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i><span>Administração</span>', 'kc-mobile-menu-account-link');
@@ -548,6 +550,7 @@
     const mobileUserLink = $('#mobileMenuUserLink');
     const mobileUserName = $('#mobileMenuUserName');
     const profileLink = $('#mobileMenuProfileLink');
+    const myPostsLink = $('#mobileMenuMyPostsLink');
     const settingsLink = $('#mobileMenuSettingsLink');
     const adminLink = $('#mobileMenuAdminLink');
     const setupLink = $('#mobileMenuAccountSetupLink');
@@ -566,6 +569,7 @@
         if (mobileUserName) mobileUserName.innerHTML = `<span class="kc-mobile-menu-user-display">${escapeHtml(display)}</span><span class="kc-mobile-menu-user-handle">@${escapeHtml(String(user.email).split('@')[0])}</span>`;
       mobileUserLink.href = '#login';
       if (profileLink) { profileLink.style.display = 'flex'; profileLink.href = buildProfileHref(user.id); }
+      if (myPostsLink) { myPostsLink.style.display = 'flex'; myPostsLink.href = 'my-posts.html'; }
       if (settingsLink) { settingsLink.style.display = 'flex'; settingsLink.href = buildSettingsHref(buildCurrentPath()); }
       if (adminLink) { adminLink.style.display = profile && profile.is_admin === true ? 'flex' : 'none'; adminLink.href = buildAdminHref(); }
       if (setupLink) { setupLink.style.display = isOnboardingComplete(profile) ? 'none' : 'flex'; setupLink.href = buildAccountSetupHref(buildCurrentPath()); }
@@ -575,6 +579,7 @@
       if (avatarWrap) avatarWrap.innerHTML = buildMobileAvatarMarkup('', 'Conta KinoCampus');
         if (mobileUserName) mobileUserName.innerHTML = '<span class="kc-mobile-menu-user-display">Login / Cadastro</span><span class="kc-mobile-menu-user-handle">@minha-conta</span>';
       if (profileLink) profileLink.style.display = 'none';
+      if (myPostsLink) myPostsLink.style.display = 'none';
       if (settingsLink) { settingsLink.style.display = 'flex'; settingsLink.href = buildSettingsHref(buildCurrentPath()); }
       if (adminLink) adminLink.style.display = 'none';
       if (setupLink) setupLink.style.display = 'none';
