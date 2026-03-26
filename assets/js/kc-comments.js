@@ -53,6 +53,7 @@ function addComment(postId, commentText, authorName = 'Anônimo') {
     author: authorName || 'Anônimo',
     text: commentText,
     timestamp: new Date().toLocaleString('pt-BR'),
+    created_at: new Date().toISOString(),
     likes: 0,
   };
 
@@ -240,7 +241,7 @@ async function likeComment(postId, commentId, containerId = 'commentsContainer')
   renderComments(id, containerId);
 }
 
-function _renderCommentList(id, containerId, comments) {
+function _renderCommentList(id, containerId, comments, currentUserId, isAdmin) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -254,13 +255,23 @@ function _renderCommentList(id, containerId, comments) {
     return;
   }
 
+  const nowMs = Date.now();
+
   container.innerHTML = comments.map(function (raw) {
     const c = normalizeCommentForRender(raw);
     const likeDisabled = !!c.likedByMe || !c.canLike;
     const likeStateColor = likeDisabled ? 'var(--kc-accent, #3b82f6)' : 'var(--kc-text-dark-secondary)';
     const likeStateWeight = likeDisabled ? '600' : '400';
+
+    // Ações de comentário
+    const isCommentAuthor = !!(currentUserId && c.authorId && c.authorId === currentUserId);
+    const createdMs = raw.created_at ? new Date(raw.created_at).getTime() : 0;
+    const canEdit   = !!(isCommentAuthor && createdMs > 0 && (nowMs - createdMs) < 60000);
+    const canDelete = !!(isCommentAuthor || isAdmin);
+    const canReport = !!(!isCommentAuthor && currentUserId);
+
     return `
-    <div class="kc-comment" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
+    <div class="kc-comment" data-kc-comment-id="${_esc(String(c.id))}" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="display: contents;">` : ''}
           <img src="${_esc(c.avatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(c.author)))}" alt="${_esc(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark); cursor: ${c.authorId ? 'pointer' : 'default'};">
@@ -270,11 +281,14 @@ function _renderCommentList(id, containerId, comments) {
           <div style="font-size: 0.85em; color: var(--kc-text-dark-secondary);">${_esc(c.timestamp)}</div>
         </div>
       </div>
-      <div style="margin-left: 50px; margin-bottom: 10px; white-space: normal; line-height: 1.6;">${renderCommentMarkdownInline(c.text)}</div>
-      <div style="margin-left: 50px; display: flex; gap: 15px; font-size: 0.9em;">
-        <button data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" class="kc-like-comment-btn ${likeDisabled ? 'is-liked' : ''}" ${likeDisabled ? 'disabled aria-disabled="true"' : ''} style="background: none; border: none; cursor: ${likeDisabled ? 'not-allowed' : 'pointer'}; color: ${likeStateColor}; font-weight: ${likeStateWeight}; opacity: ${likeDisabled ? '0.95' : '1'};">
+      <div class="kc-comment-body-text" data-raw-text="${_esc(c.text)}" style="margin-left: 50px; margin-bottom: 10px; white-space: normal; line-height: 1.6;">${renderCommentMarkdownInline(c.text)}</div>
+      <div class="kc-comment-actions-row" style="margin-left: 50px; display: flex; gap: 12px; font-size: 0.88em; flex-wrap: wrap; align-items: center;">
+        <button data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" class="kc-like-comment-btn ${likeDisabled ? 'is-liked' : ''}" ${likeDisabled ? 'disabled aria-disabled="true"' : ''} style="background: none; border: none; cursor: ${likeDisabled ? 'not-allowed' : 'pointer'}; color: ${likeStateColor}; font-weight: ${likeStateWeight}; opacity: ${likeDisabled ? '0.95' : '1'}; padding: 0;">
           <i class="fas fa-thumbs-up"></i> ${c.likes || 0}${c.likedByMe ? ' • Curtido' : (c.canLike ? '' : ' • Entrar para curtir')}
         </button>
+        ${canEdit ? `<button data-kc-comment-action="edit" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);padding:0;font-size:inherit;" title="Editar comentário (disponível por 1 minuto)"><i class="fas fa-pen"></i> Editar</button>` : ''}
+        ${canDelete ? `<button data-kc-comment-action="delete" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:#ef9a9a;padding:0;font-size:inherit;" title="Excluir comentário"><i class="fas fa-trash"></i> Excluir</button>` : ''}
+        ${canReport ? `<button data-kc-comment-action="report" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);padding:0;font-size:inherit;" title="Denunciar comentário"><i class="fas fa-flag"></i> Denunciar</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -288,6 +302,224 @@ function _renderCommentList(id, containerId, comments) {
       likeComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.container);
     });
   }
+
+  if (!container._kcCommentActionsListenerAttached) {
+    container._kcCommentActionsListenerAttached = true;
+    container.addEventListener('click', function (e) {
+      const actionBtn = e.target.closest('[data-kc-comment-action]');
+      if (actionBtn) {
+        const action = actionBtn.dataset.kcCommentAction;
+        const pid = actionBtn.dataset.postId;
+        const cid = actionBtn.dataset.commentId;
+        const ctr = actionBtn.dataset.container || 'commentsContainer';
+        if (action === 'edit') _openCommentEditInline(pid, cid, ctr);
+        else if (action === 'delete') _confirmDeleteComment(pid, cid, ctr);
+        else if (action === 'report') _openCommentReportModal(pid, cid, ctr);
+        return;
+      }
+      const saveBtn = e.target.closest('[data-kc-comment-edit-save]');
+      if (saveBtn) {
+        const wrap = saveBtn.closest('.kc-comment-edit-wrap');
+        const textarea = wrap ? wrap.querySelector('textarea') : null;
+        const text = textarea ? textarea.value.trim() : '';
+        const cid2 = saveBtn.dataset.kcCommentEditSave;
+        const pid2 = saveBtn.dataset.postId;
+        const ctr2 = saveBtn.dataset.container || 'commentsContainer';
+        editComment(pid2, cid2, text, ctr2);
+        return;
+      }
+      const cancelBtn = e.target.closest('[data-kc-comment-edit-cancel]');
+      if (cancelBtn) {
+        const pid3 = cancelBtn.dataset.postId;
+        const ctr3 = cancelBtn.dataset.container || 'commentsContainer';
+        renderComments(pid3, ctr3);
+      }
+    });
+  }
+}
+
+// ---- Ações de comentário ----
+
+function _openCommentEditInline(pid, cid, ctr) {
+  const commentEl = document.querySelector(`[data-kc-comment-id="${_cssEsc(String(cid))}"]`);
+  if (!commentEl) return;
+  const textDiv = commentEl.querySelector('.kc-comment-body-text');
+  const actionsRow = commentEl.querySelector('.kc-comment-actions-row');
+  if (!textDiv) return;
+  if (commentEl.querySelector('.kc-comment-edit-wrap')) return; // já aberto
+
+  const rawText = textDiv.dataset.rawText || '';
+  const editWrap = document.createElement('div');
+  editWrap.className = 'kc-comment-edit-wrap';
+  editWrap.style.cssText = 'margin-left:50px;margin-bottom:10px;';
+  editWrap.innerHTML = `
+    <textarea style="width:100%;min-height:72px;padding:8px 10px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:inherit;resize:vertical;font-size:0.95em;font-family:inherit;box-sizing:border-box;">${_esc(rawText)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button type="button" data-kc-comment-edit-save="${_esc(String(cid))}" data-post-id="${_esc(String(pid))}" data-container="${_esc(String(ctr))}" class="kc-btn-primary" style="padding:5px 14px;font-size:0.82em;"><i class="fas fa-check"></i> Salvar</button>
+      <button type="button" data-kc-comment-edit-cancel="1" data-post-id="${_esc(String(pid))}" data-container="${_esc(String(ctr))}" class="kc-btn-secondary" style="padding:5px 14px;font-size:0.82em;"><i class="fas fa-times"></i> Cancelar</button>
+    </div>`;
+  textDiv.style.display = 'none';
+  if (actionsRow) actionsRow.style.display = 'none';
+  textDiv.parentNode.insertBefore(editWrap, textDiv.nextSibling);
+  editWrap.querySelector('textarea').focus();
+}
+
+async function editComment(pid, cid, newText, ctr) {
+  if (!newText) { showToast('O comentário não pode ficar vazio.', 'error'); return; }
+  const id = String(pid);
+
+  if (isSupabaseRuntime()) {
+    try {
+      const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+        ? window.KCSupabase.getClient() : null;
+      if (!kcClient) { showToast('Não foi possível editar.', 'error'); return; }
+      const user = await KCAPI.getCurrentUser();
+      if (!user) { showToast('Faça login para editar.', 'info'); return; }
+      const { error } = await kcClient.from('comments').update({ body: newText }).eq('id', cid).eq('author_id', user.id);
+      if (error) { showToast(error.message || 'Erro ao editar comentário.', 'error'); return; }
+      showToast('Comentário editado!', 'info', 1800);
+      renderComments(id, ctr);
+    } catch (_) { showToast('Erro ao editar comentário.', 'error'); }
+    return;
+  }
+
+  const comments = loadComments(id);
+  const comment = comments.find(function (c) { return String(c.id) === String(cid); });
+  if (!comment) { showToast('Comentário não encontrado.', 'error'); return; }
+  comment.text = newText;
+  saveComments(id, comments);
+  showToast('Comentário editado!', 'info', 1800);
+  renderComments(id, ctr);
+}
+
+function _confirmDeleteComment(pid, cid, ctr) {
+  const commentEl = document.querySelector(`[data-kc-comment-id="${_cssEsc(String(cid))}"]`);
+  if (!commentEl) return;
+  const actionsRow = commentEl.querySelector('.kc-comment-actions-row');
+  if (!actionsRow) return;
+  if (actionsRow.querySelector('.kc-comment-delete-confirm')) return;
+
+  const originalHTML = actionsRow.innerHTML;
+  actionsRow.innerHTML = `
+    <span style="color:var(--kc-text-dark-secondary);font-size:0.88em;">Excluir este comentário?</span>
+    <button class="kc-comment-delete-confirm kc-btn-primary" type="button" style="padding:3px 12px;font-size:0.8em;background:#ef5350;border-color:#ef5350;"><i class="fas fa-trash"></i> Sim, excluir</button>
+    <button class="kc-comment-delete-cancel kc-btn-secondary" type="button" style="padding:3px 12px;font-size:0.8em;">Não</button>`;
+
+  actionsRow.querySelector('.kc-comment-delete-confirm').addEventListener('click', function () {
+    deleteComment(pid, cid, ctr);
+  });
+  actionsRow.querySelector('.kc-comment-delete-cancel').addEventListener('click', function () {
+    actionsRow.innerHTML = originalHTML;
+  });
+}
+
+async function deleteComment(pid, cid, ctr) {
+  const id = String(pid);
+
+  if (isSupabaseRuntime()) {
+    try {
+      const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+        ? window.KCSupabase.getClient() : null;
+      if (!kcClient) { showToast('Não foi possível excluir.', 'error'); return; }
+      const user = await KCAPI.getCurrentUser();
+      let query = kcClient.from('comments').delete().eq('id', cid);
+      const profile = window.KCAPI && typeof window.KCAPI.getMyProfile === 'function'
+        ? await window.KCAPI.getMyProfile().catch(() => null) : null;
+      const isAdm = !!(profile && profile.is_admin);
+      if (!isAdm && user) query = query.eq('author_id', user.id);
+      const { error } = await query;
+      if (error) { showToast(error.message || 'Erro ao excluir comentário.', 'error'); return; }
+      showToast('Comentário excluído.', 'info', 1800);
+      renderComments(id, ctr);
+    } catch (_) { showToast('Erro ao excluir comentário.', 'error'); }
+    return;
+  }
+
+  const comments = loadComments(id).filter(function (c) { return String(c.id) !== String(cid); });
+  saveComments(id, comments);
+  showToast('Comentário excluído.', 'info', 1800);
+  renderComments(id, ctr);
+}
+
+var _kcCommentReportReasons = [
+  { value: 'spam',        label: 'Spam ou conteúdo irrelevante',          icon: 'fas fa-ban' },
+  { value: 'harassment',  label: 'Assédio ou comportamento abusivo',      icon: 'fas fa-user-slash' },
+  { value: 'offensive',   label: 'Linguagem ofensiva ou discriminatória', icon: 'fas fa-face-angry' },
+  { value: 'misleading',  label: 'Conteúdo falso ou enganoso',            icon: 'fas fa-triangle-exclamation' },
+  { value: 'privacy',     label: 'Violação de privacidade',               icon: 'fas fa-eye-slash' },
+  { value: 'other',       label: 'Outros',                                icon: 'fas fa-comment-dots' },
+];
+
+function _openCommentReportModal(pid, cid, ctr) {
+  const existing = document.getElementById('kcCommentReportModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'kcCommentReportModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  const reasonsHTML = _kcCommentReportReasons.map(function (r) {
+    return `<button type="button" class="kc-comment-report-reason" data-reason="${_esc(r.value)}" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:1px solid var(--kc-border-dark);border-radius:8px;cursor:pointer;color:inherit;text-align:left;font-size:0.9em;transition:background .15s;">
+      <i class="${_esc(r.icon)}" style="width:18px;text-align:center;color:var(--kc-text-dark-secondary);"></i>
+      <span>${_esc(r.label)}</span>
+    </button>`;
+  }).join('');
+
+  overlay.innerHTML = `
+    <div class="kc-card" style="max-width:400px;width:100%;padding:0;overflow:hidden;border-radius:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--kc-border-dark);">
+        <h3 style="margin:0;font-size:1em;display:flex;align-items:center;gap:8px;"><i class="fas fa-flag" style="color:var(--kc-primary-brand);"></i> Denunciar comentário</h3>
+        <button type="button" id="kcCommentReportClose" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);font-size:1.1em;" aria-label="Fechar"><i class="fas fa-times"></i></button>
+      </div>
+      <div style="padding:14px 18px;">
+        <p style="color:var(--kc-text-dark-secondary);font-size:0.88em;margin:0 0 12px;">Selecione o motivo da denúncia:</p>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="kcCommentReportReasons">${reasonsHTML}</div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#kcCommentReportClose').addEventListener('click', function () { overlay.remove(); });
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+
+  overlay.querySelectorAll('.kc-comment-report-reason').forEach(function (btn) {
+    btn.addEventListener('mouseenter', function () { btn.style.background = 'var(--kc-background-dark)'; });
+    btn.addEventListener('mouseleave', function () { btn.style.background = 'none'; });
+    btn.addEventListener('click', function () {
+      const reason = btn.dataset.reason;
+      overlay.remove();
+      _submitCommentReport(pid, cid, reason, ctr);
+    });
+  });
+}
+
+async function _submitCommentReport(pid, cid, reason, ctr) {
+  if (isSupabaseRuntime()) {
+    try {
+      const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+        ? window.KCSupabase.getClient() : null;
+      let reporterId = null;
+      try {
+        const u = await KCAPI.getCurrentUser();
+        if (u) reporterId = u.id;
+      } catch (_) { }
+      if (kcClient && reporterId) {
+        // entity_type/entity_id adicionados pela migration v8.4.2.0_comment_reports
+        await kcClient.from('reports').insert({
+          entity_type: 'comment',
+          entity_id: String(cid),
+          reporter_id: reporterId,
+          reason: reason,
+        }).then(function () { }).catch(function (err) {
+          console.warn('[KC Comments] Report insert silenced:', err);
+        });
+      }
+    } catch (_) { }
+    showToast('Denúncia enviada! Obrigado por contribuir.', 'info', 2800);
+    return;
+  }
+  // Local: apenas UX feedback
+  showToast('Denúncia registrada! Revisaremos em breve.', 'info', 2800);
 }
 
 function renderComments(postId, containerId = 'commentsContainer') {
@@ -299,14 +531,18 @@ function renderComments(postId, containerId = 'commentsContainer') {
     Promise.all([
       KCAPI.getComments(id),
       (KCAPI && typeof KCAPI.getCurrentUser === 'function') ? KCAPI.getCurrentUser() : Promise.resolve(null),
+      (KCAPI && typeof KCAPI.getMyProfile === 'function') ? KCAPI.getMyProfile().catch(function () { return null; }) : Promise.resolve(null),
     ]).then(function (results) {
       const comments = Array.isArray(results[0]) ? results[0] : [];
       const user = results[1] || null;
+      const profile = results[2] || null;
       const canLike = !!(user && user.id);
+      const currentUserId = user && user.id ? String(user.id) : null;
+      const isAdmin = !!(profile && profile.is_admin);
       const enriched = comments.map(function (comment) { return { ...comment, _kcCanLike: canLike }; });
-      _renderCommentList(id, containerId, enriched);
+      _renderCommentList(id, containerId, enriched, currentUserId, isAdmin);
     }).catch(function () {
-      _renderCommentList(id, containerId, []);
+      _renderCommentList(id, containerId, [], null, false);
     }).finally(function () {
       updateCommentPreview(id);
     });
@@ -314,16 +550,22 @@ function renderComments(postId, containerId = 'commentsContainer') {
   }
 
   // Driver local/dev: localStorage + chave de like por usuário
-  Promise.resolve(resolveCurrentLikeUserId()).then(function (userId) {
+  Promise.all([
+    Promise.resolve(resolveCurrentLikeUserId()),
+    (KCAPI && typeof KCAPI.getCurrentUser === 'function') ? KCAPI.getCurrentUser().catch(function () { return null; }) : Promise.resolve(null),
+  ]).then(function (results) {
+    const userId = results[0];
+    const localUser = results[1];
+    const currentUserId = localUser && localUser.id ? String(localUser.id) : (userId && !userId.startsWith('guest_') ? userId : null);
     const comments = (loadComments(id) || []).map(function (comment) {
       const likeKey = getLocalLikeKey(id, comment && comment.id, userId);
       let likedByMe = false;
       try { likedByMe = !!localStorage.getItem(likeKey); } catch (_) { }
       return { ...comment, likedByMe };
     });
-    _renderCommentList(id, containerId, comments);
+    _renderCommentList(id, containerId, comments, currentUserId, false);
   }).catch(function () {
-    _renderCommentList(id, containerId, loadComments(id));
+    _renderCommentList(id, containerId, loadComments(id), null, false);
   }).finally(function () {
     updateCommentPreview(id);
   });
