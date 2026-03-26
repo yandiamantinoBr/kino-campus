@@ -82,6 +82,7 @@
       '  <div class="kc-create-modal__body">',
       '    <div class="kc-eventos-section-modal__content" data-kc-eventos-section-slot="true"></div>',
       '  </div>',
+      '  <div class="kc-eventos-section-modal__actions" data-kc-eventos-section-actions="true"></div>',
       '</div>',
     ].join('');
     overlay.addEventListener('click', function (e) {
@@ -122,14 +123,30 @@
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('kc-modal-open');
+    renderEventosActions();
 
     var closeBtn = overlay.querySelector('[data-kc-eventos-close-section="true"]');
     if (closeBtn) closeBtn.focus();
   }
 
+  function renderEventosActions() {
+    var overlay = document.getElementById(EVENTOS_MODAL_ID);
+    var actions = overlay ? overlay.querySelector('[data-kc-eventos-section-actions="true"]') : null;
+    if (!actions) return;
+    if (!railState.activeKey) { actions.innerHTML = ''; return; }
+
+    var label = railState.activeKey === 'dicas' ? 'Entendido!' : 'Fechar';
+    actions.innerHTML = '<div class="kc-housing-section-modal__action-group">' +
+      '<button class="kc-opportunity-apply" type="button" data-kc-eventos-modal-action-close>' + label + '</button>' +
+      '</div>';
+    var btn = actions.querySelector('[data-kc-eventos-modal-action-close]');
+    if (btn) btn.addEventListener('click', closeEventosSection);
+  }
+
   function closeEventosSection() {
     var overlay = document.getElementById(EVENTOS_MODAL_ID);
     var slot = overlay ? overlay.querySelector('[data-kc-eventos-section-slot="true"]') : null;
+    var actions = overlay ? overlay.querySelector('[data-kc-eventos-section-actions="true"]') : null;
     var wasActive = !!(overlay && overlay.classList.contains('active'));
 
     if (railState.activeNode && railState.activePlaceholder && railState.activePlaceholder.parentNode) {
@@ -143,6 +160,7 @@
     railState.lastTrigger = null;
 
     if (slot) slot.innerHTML = '';
+    if (actions) actions.innerHTML = '';
     if (overlay) {
       overlay.classList.remove('active');
       overlay.setAttribute('aria-hidden', 'true');

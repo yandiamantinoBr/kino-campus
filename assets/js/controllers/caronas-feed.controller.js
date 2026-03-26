@@ -1,4 +1,7 @@
-/* KinoCampus - Caronas Feed Controller (V8.5.0.0) */
+/* KinoCampus - Caronas Feed Controller (V8.6.0.0)
+   Filtros: tipo, câmpus, período, origem/destino, características.
+   Rail mobile: abre seções do sidebar como modal (padrão housing).
+*/
 (function () {
   'use strict';
 
@@ -7,38 +10,114 @@
     return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 
-  const state = {
+  /* ── Constantes de câmpus e features ─────────────────── */
+  var CAMPUS_OPTIONS = [
+    { key: 'colemar',          label: 'Câmpus Colemar Natal e Silva',     icon: 'fas fa-university' },
+    { key: 'samambaia',        label: 'Câmpus Samambaia',                 icon: 'fas fa-university' },
+    { key: 'aparecida-fct',    label: 'Câmpus Aparecida de Goiânia (FCT)', icon: 'fas fa-university' },
+    { key: 'goias',            label: 'Câmpus Goiás (Cidade de Goiás)',   icon: 'fas fa-university' },
+    { key: 'cidade-ocidental', label: 'Câmpus Cidade Ocidental',          icon: 'fas fa-university' },
+    { key: 'centro',           label: 'Centro',                            icon: 'fas fa-city'       },
+    { key: 'terminal',         label: 'Terminal Rodoviário',               icon: 'fas fa-bus'        },
+    { key: 'praca-univ',       label: 'Praça Universitária',               icon: 'fas fa-map-pin'    },
+  ];
+
+  var FEATURE_OPTIONS = [
+    { key: 'ar-condicionado',  label: 'Ar condicionado',  emoji: '❄️' },
+    { key: 'aceita-pets',      label: 'Aceita pets',      emoji: '🐾' },
+    { key: 'som-musica',       label: 'Som/Música',       emoji: '🎵' },
+    { key: 'sem-fumar',        label: 'Sem fumar',        emoji: '🚭' },
+    { key: 'somente-mulheres', label: 'Somente mulheres', emoji: '👩' },
+    { key: '4-mais-lugares',   label: '4+ lugares',       emoji: '💺' },
+    { key: 'ida-e-volta',      label: 'Ida e volta',      emoji: '🔄' },
+    { key: 'pontualidade',     label: 'Pontualidade',     emoji: '⏰' },
+    { key: 'preco-fixo',       label: 'Preço fixo',       emoji: '🏷️' },
+  ];
+
+  /* ── Estado dos filtros ─────────────────────────────── */
+  var state = {
     tipos: new Set(['ofereco', 'procuro']),
     campi: new Set(),
     verified: false,
+    periods: new Set(),
+    features: new Set(),
+    origemFilter: '',
+    destinoFilter: '',
   };
 
+  /* ── Helpers ────────────────────────────────────────── */
   function cardTags(card) {
-    const tags = card.getAttribute('data-kc-tags') || '';
-    const cat  = card.getAttribute('data-category') || '';
+    var tags = card.getAttribute('data-kc-tags') || '';
+    var cat  = card.getAttribute('data-category') || '';
     return norm(tags + ' ' + cat);
   }
 
   function campusMatchesText(campus, text) {
     if (campus === 'samambaia') return text.includes('samambaia');
-    if (campus === 'campus-ii') return text.includes('campus ii') || text.includes('colemar ii');
     if (campus === 'colemar') return text.includes('colemar');
+    if (campus === 'aparecida-fct') return text.includes('aparecida') || text.includes('fct');
+    if (campus === 'goias') return text.includes('goias') || text.includes('cidade de goias');
+    if (campus === 'cidade-ocidental') return text.includes('cidade ocidental') || text.includes('ocidental');
+    // Legacy fallback
+    if (campus === 'campus-ii') return text.includes('campus ii') || text.includes('samambaia');
     return text.includes(campus);
   }
 
+  function classifyPeriod(timeStr) {
+    var match = String(timeStr || '').match(/(\d{1,2})[h:.]?(\d{2})?/);
+    if (!match) return null;
+    var hour = parseInt(match[1], 10);
+    if (hour >= 5 && hour < 12) return 'matutino';
+    if (hour >= 12 && hour < 18) return 'vespertino';
+    return 'noturno';
+  }
+
+  /* ── Predicado de filtro ────────────────────────────── */
   function buildExtraPredicate() {
     return function (card) {
-      const text = cardTags(card);
-      const tiposAtivos = Array.from(state.tipos);
+      var text = cardTags(card);
+      // Tipo
+      var tiposAtivos = Array.from(state.tipos);
       if (tiposAtivos.length > 0 && tiposAtivos.length < 2) {
         if (tiposAtivos.includes('ofereco') && !text.includes('ofereco')) return false;
         if (tiposAtivos.includes('procuro') && !text.includes('procuro')) return false;
       }
+      // Câmpus
       if (state.campi.size > 0) {
-        const matches = Array.from(state.campi).some((c) => campusMatchesText(c, text));
+        var matches = Array.from(state.campi).some(function (c) { return campusMatchesText(c, text); });
         if (!matches) return false;
       }
+      // Verificados
       if (state.verified && card.getAttribute('data-verified') !== 'true') return false;
+      // Período
+      if (state.periods.size > 0) {
+        var horario = card.getAttribute('data-kc-carona-horario') || '';
+        var period = classifyPeriod(horario);
+        if (!period || !state.periods.has(period)) return false;
+      }
+      // Origem
+      if (state.origemFilter) {
+        var cardOrigem = norm(card.getAttribute('data-kc-carona-origem') || '');
+        var origemMatch = cardOrigem && cardOrigem.includes(norm(state.origemFilter));
+        if (!origemMatch) {
+          // Fallback: busca no texto completo (tags + título)
+          if (!text.includes(norm(state.origemFilter))) return false;
+        }
+      }
+      // Destino
+      if (state.destinoFilter) {
+        var cardDestino = norm(card.getAttribute('data-kc-carona-destino') || '');
+        var destinoMatch = cardDestino && cardDestino.includes(norm(state.destinoFilter));
+        if (!destinoMatch) {
+          if (!text.includes(norm(state.destinoFilter))) return false;
+        }
+      }
+      // Características
+      if (state.features.size > 0) {
+        var cardFeatures = (card.getAttribute('data-kc-carona-features') || '').split(' ').filter(Boolean);
+        var allMatch = Array.from(state.features).every(function (f) { return cardFeatures.indexOf(f) !== -1; });
+        if (!allMatch) return false;
+      }
       return true;
     };
   }
@@ -49,94 +128,116 @@
     }
   }
 
+  /* ── Sync filtros dos inputs ────────────────────────── */
   function syncFiltersFromInputs() {
-    // Tipos — lê dentro da sidebar (novo markup usa kc-marketplace-filter-group__options)
     state.tipos.clear();
-    document.querySelectorAll('[data-kc-carona-type]').forEach((input) => {
+    document.querySelectorAll('[data-kc-carona-type]').forEach(function (input) {
       if (input.checked) state.tipos.add(input.getAttribute('data-kc-carona-type'));
     });
-    // Campi
     state.campi.clear();
-    document.querySelectorAll('[data-kc-carona-campus]').forEach((input) => {
+    document.querySelectorAll('[data-kc-carona-campus]').forEach(function (input) {
       if (input.checked) state.campi.add(input.getAttribute('data-kc-carona-campus'));
     });
-    // Verificados
-    const verifiedInput = document.querySelector('[data-kc-carona-verified]');
+    var verifiedInput = document.querySelector('[data-kc-carona-verified]');
     state.verified = verifiedInput ? verifiedInput.checked : false;
+    // Períodos
+    state.periods.clear();
+    document.querySelectorAll('[data-kc-carona-period]').forEach(function (input) {
+      if (input.checked) state.periods.add(input.getAttribute('data-kc-carona-period'));
+    });
+    // Características
+    state.features.clear();
+    document.querySelectorAll('[data-kc-carona-feature]').forEach(function (input) {
+      if (input.checked) state.features.add(input.getAttribute('data-kc-carona-feature'));
+    });
+    // Origem/Destino
+    var origemInput = document.querySelector('[data-kc-caronas-filter-origem]');
+    state.origemFilter = origemInput ? origemInput.value.trim() : '';
+    var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
+    state.destinoFilter = destinoInput ? destinoInput.value.trim() : '';
     applyFilters();
   }
 
-  // Atualiza contadores de cards visíveis por campus na sidebar
-  function updateRouteCounts() {
-    const cards = Array.from(document.querySelectorAll('.kc-feed-list .kc-card'));
-    const routeBtns = document.querySelectorAll('[data-kc-carona-route-campus]');
-    routeBtns.forEach(function (btn) {
-      const campus = btn.getAttribute('data-kc-carona-route-campus');
-      const countEl = btn.querySelector('.kc-category-count');
-      if (!countEl) return;
-      if (!campus) {
-        countEl.textContent = cards.length;
-      } else {
-        const n = cards.filter(function (c) { return campusMatchesText(campus, cardTags(c)); }).length;
-        countEl.textContent = n;
-      }
-    });
-  }
-
-  // Bind do botão "Limpar filtros"
+  /* ── Limpar filtros ─────────────────────────────────── */
   function bindClearFilters() {
-    const btn = document.querySelector('[data-kc-caronas-clear-filters]');
+    var btn = document.querySelector('[data-kc-caronas-clear-filters]');
     if (!btn) return;
     btn.addEventListener('click', function () {
-      document.querySelectorAll('[data-kc-carona-type]').forEach((i) => { i.checked = true; });
-      document.querySelectorAll('[data-kc-carona-campus]').forEach((i) => { i.checked = false; });
-      const v = document.querySelector('[data-kc-carona-verified]');
+      document.querySelectorAll('[data-kc-carona-type]').forEach(function (i) { i.checked = true; });
+      document.querySelectorAll('[data-kc-carona-campus]').forEach(function (i) { i.checked = false; });
+      document.querySelectorAll('[data-kc-carona-period]').forEach(function (i) { i.checked = false; });
+      document.querySelectorAll('[data-kc-carona-feature]').forEach(function (i) { i.checked = false; });
+      var v = document.querySelector('[data-kc-carona-verified]');
       if (v) v.checked = false;
       state.tipos = new Set(['ofereco', 'procuro']);
       state.campi.clear();
+      state.periods.clear();
+      state.features.clear();
       state.verified = false;
       applyFilters();
-      setActiveRoute('');
     });
   }
 
-  function setActiveRoute(campus) {
-    document.querySelectorAll('[data-kc-carona-route-campus]').forEach(function (btn) {
-      btn.classList.toggle('is-active', btn.getAttribute('data-kc-carona-route-campus') === campus);
-    });
-  }
-
-  function applyRouteFilter(campus) {
-    setActiveRoute(campus);
-    state.campi.clear();
-    if (campus) state.campi.add(campus);
-    // sync checkboxes na sidebar
-    document.querySelectorAll('[data-kc-carona-campus]').forEach(function (input) {
-      input.checked = (campus === input.getAttribute('data-kc-carona-campus'));
-    });
-    applyFilters();
-  }
-
-
+  /* ── Bind filtros ───────────────────────────────────── */
   function bindFilters() {
-    // Sidebar checkboxes
-    document.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified]').forEach(function (input) {
+    document.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified], [data-kc-carona-period], [data-kc-carona-feature]').forEach(function (input) {
       input.addEventListener('change', syncFiltersFromInputs);
     });
-    // Sidebar route buttons
-    document.querySelectorAll('[data-kc-carona-route-campus]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        applyRouteFilter(btn.getAttribute('data-kc-carona-route-campus'));
+    // Origem/Destino inputs
+    var origemInput = document.querySelector('[data-kc-caronas-filter-origem]');
+    if (origemInput) origemInput.addEventListener('input', syncFiltersFromInputs);
+    var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
+    if (destinoInput) destinoInput.addEventListener('input', syncFiltersFromInputs);
+    bindClearFilters();
+  }
+
+  /* ── Render pills no sidebar (Origem/Destino + Features) ── */
+  function renderRoutePills() {
+    var html = CAMPUS_OPTIONS.map(function (opt) {
+      return '<button type="button" class="kc-field-pill" data-kc-caronas-route-pill="' + opt.key + '"><i class="' + opt.icon + '"></i><span>' + opt.label + '</span></button>';
+    }).join('');
+    var datalistHtml = CAMPUS_OPTIONS.map(function (opt) {
+      return '<option value="' + opt.label + '"></option>';
+    }).join('');
+
+    var origemPills = document.querySelector('[data-kc-caronas-origem-pills]');
+    if (origemPills) origemPills.innerHTML = html;
+    var destinoPills = document.querySelector('[data-kc-caronas-destino-pills]');
+    if (destinoPills) destinoPills.innerHTML = html;
+    var origemList = document.getElementById('kcCaronasOrigemList');
+    if (origemList) origemList.innerHTML = datalistHtml;
+    var destinoList = document.getElementById('kcCaronasDestinoList');
+    if (destinoList) destinoList.innerHTML = datalistHtml;
+
+    // Bind pill clicks
+    document.querySelectorAll('[data-kc-caronas-origem-pills] [data-kc-caronas-route-pill]').forEach(function (pill) {
+      pill.addEventListener('click', function () {
+        var input = document.querySelector('[data-kc-caronas-filter-origem]');
+        if (input) { input.value = pill.querySelector('span').textContent; syncFiltersFromInputs(); }
       });
     });
-    bindClearFilters();
+    document.querySelectorAll('[data-kc-caronas-destino-pills] [data-kc-caronas-route-pill]').forEach(function (pill) {
+      pill.addEventListener('click', function () {
+        var input = document.querySelector('[data-kc-caronas-filter-destino]');
+        if (input) { input.value = pill.querySelector('span').textContent; syncFiltersFromInputs(); }
+      });
+    });
+  }
+
+  function renderFeatureCheckboxes() {
+    var container = document.querySelector('[data-kc-caronas-feature-filters]');
+    if (!container) return;
+    container.innerHTML = FEATURE_OPTIONS.map(function (feat) {
+      return '<label class="kc-sidebar-check"><input type="checkbox" data-kc-carona-feature="' + feat.key + '" /><span>' + feat.emoji + ' ' + feat.label + '</span></label>';
+    }).join('');
   }
 
   /* ── Mobile rail — seções do sidebar como modal ───────── */
   var CARONAS_SECTIONS = [
-    { key: 'filters', title: 'Filtros',             icon: 'fas fa-filter'    },
-    { key: 'routes',  title: 'Rotas Populares',     icon: 'fas fa-route'     },
-    { key: 'tips',    title: 'Dicas para Caroneiros', icon: 'fas fa-lightbulb' },
+    { key: 'filters',  title: 'Filtros',               icon: 'fas fa-filter'    },
+    { key: 'routes',   title: 'Rotas',                 icon: 'fas fa-route'     },
+    { key: 'features', title: 'Características',       icon: 'fas fa-tags'      },
+    { key: 'tips',     title: 'Dicas para Caroneiros', icon: 'fas fa-lightbulb' },
   ];
   var CARONAS_MODAL_ID = 'kcCaronasSectionOverlay';
   var caronasRailState = { activeKey: '', activeNode: null, activePlaceholder: null, lastTrigger: null };
@@ -171,26 +272,41 @@
     var overlay = document.getElementById(CARONAS_MODAL_ID);
     var actions = overlay ? overlay.querySelector('[data-kc-caronas-section-actions="true"]') : null;
     if (!actions) return;
+    if (!caronasRailState.activeKey) { actions.innerHTML = ''; return; }
+
     if (caronasRailState.activeKey === 'filters') {
       actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><button class="kc-opportunity-clear" type="button" data-kc-caronas-modal-clear>Limpar filtros</button><button class="kc-opportunity-apply" type="button" data-kc-caronas-modal-apply>Aplicar e fechar</button></div>';
       var clearBtn = actions.querySelector('[data-kc-caronas-modal-clear]');
       if (clearBtn) clearBtn.addEventListener('click', function () {
         document.querySelectorAll('[data-kc-carona-type]').forEach(function (i) { i.checked = true; });
         document.querySelectorAll('[data-kc-carona-campus]').forEach(function (i) { i.checked = false; });
+        document.querySelectorAll('[data-kc-carona-period]').forEach(function (i) { i.checked = false; });
         var v = document.querySelector('[data-kc-carona-verified]');
         if (v) v.checked = false;
         state.tipos = new Set(['ofereco', 'procuro']);
         state.campi.clear();
+        state.periods.clear();
         state.verified = false;
         applyFilters();
       });
       var applyBtn = actions.querySelector('[data-kc-caronas-modal-apply]');
       if (applyBtn) applyBtn.addEventListener('click', function () { syncFiltersFromInputs(); closeCaronasSection(); });
     } else if (caronasRailState.activeKey === 'routes') {
-      actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><button class="kc-opportunity-apply" type="button" data-kc-caronas-modal-routes-close>Fechar</button></div>';
-      var routeClose = actions.querySelector('[data-kc-caronas-modal-routes-close]');
-      if (routeClose) routeClose.addEventListener('click', closeCaronasSection);
+      actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><button class="kc-opportunity-apply" type="button" data-kc-caronas-modal-action-close>Aplicar e fechar</button></div>';
+      var routeClose = actions.querySelector('[data-kc-caronas-modal-action-close]');
+      if (routeClose) routeClose.addEventListener('click', function () { syncFiltersFromInputs(); closeCaronasSection(); });
+    } else if (caronasRailState.activeKey === 'features') {
+      actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><button class="kc-opportunity-clear" type="button" data-kc-caronas-modal-feat-clear>Limpar</button><button class="kc-opportunity-apply" type="button" data-kc-caronas-modal-feat-apply>Aplicar e fechar</button></div>';
+      var featClear = actions.querySelector('[data-kc-caronas-modal-feat-clear]');
+      if (featClear) featClear.addEventListener('click', function () {
+        document.querySelectorAll('[data-kc-carona-feature]').forEach(function (i) { i.checked = false; });
+        state.features.clear();
+        applyFilters();
+      });
+      var featApply = actions.querySelector('[data-kc-caronas-modal-feat-apply]');
+      if (featApply) featApply.addEventListener('click', function () { syncFiltersFromInputs(); closeCaronasSection(); });
     } else {
+      // tips
       actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><button class="kc-opportunity-apply" type="button" data-kc-caronas-modal-tips-close>Entendido!</button></div>';
       var tipsClose = actions.querySelector('[data-kc-caronas-modal-tips-close]');
       if (tipsClose) tipsClose.addEventListener('click', closeCaronasSection);
@@ -230,15 +346,15 @@
     document.body.classList.add('kc-modal-open');
     renderCaronasActions();
 
-    // Re-bind filters inside modal
-    node.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified]').forEach(function (input) {
+    // Re-bind filters inside modal (events don't persist after DOM transplant in some browsers)
+    node.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified], [data-kc-carona-period], [data-kc-carona-feature]').forEach(function (input) {
       input.addEventListener('change', syncFiltersFromInputs);
     });
-    node.querySelectorAll('[data-kc-carona-route-campus]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        applyRouteFilter(btn.getAttribute('data-kc-carona-route-campus'));
-      });
-    });
+    // Origem/Destino inputs inside modal
+    var origemInput = node.querySelector('[data-kc-caronas-filter-origem]');
+    if (origemInput) origemInput.addEventListener('input', syncFiltersFromInputs);
+    var destinoInput = node.querySelector('[data-kc-caronas-filter-destino]');
+    if (destinoInput) destinoInput.addEventListener('input', syncFiltersFromInputs);
 
     var closeBtn = overlay.querySelector('[data-kc-caronas-close-section="true"]');
     if (closeBtn) closeBtn.focus();
@@ -247,6 +363,7 @@
   function closeCaronasSection() {
     var overlay = document.getElementById(CARONAS_MODAL_ID);
     var slot = overlay ? overlay.querySelector('[data-kc-caronas-section-slot="true"]') : null;
+    var actions = overlay ? overlay.querySelector('[data-kc-caronas-section-actions="true"]') : null;
     var wasActive = !!(overlay && overlay.classList.contains('active'));
 
     if (caronasRailState.activeNode && caronasRailState.activePlaceholder && caronasRailState.activePlaceholder.parentNode) {
@@ -260,6 +377,7 @@
     caronasRailState.lastTrigger = null;
 
     if (slot) slot.innerHTML = '';
+    if (actions) actions.innerHTML = '';
     if (overlay) {
       overlay.classList.remove('active');
       overlay.setAttribute('aria-hidden', 'true');
@@ -281,6 +399,7 @@
     });
   }
 
+  /* ── Feed injection ─────────────────────────────────── */
   function injectFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
     window.KCControllers.injectFeed({
@@ -290,15 +409,15 @@
       onReady: function () {
         bindFilters();
         syncFiltersFromInputs();
-        updateRouteCounts();
       },
-      onAfterAppend: function () {
-        updateRouteCounts();
-      },
+      onAfterAppend: function () {},
     });
   }
 
+  /* ── Init ───────────────────────────────────────────── */
   document.addEventListener('DOMContentLoaded', function () {
+    renderRoutePills();
+    renderFeatureCheckboxes();
     bindCaronasRail();
 
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;

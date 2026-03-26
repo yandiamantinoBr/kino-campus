@@ -7259,6 +7259,47 @@ textarea::placeholder {
   color: #fff;
 }
 
+/* ── Modais de seção — Eventos e Caronas (mesmo padrão housing) ── */
+.kc-caronas-section-modal,
+.kc-eventos-section-modal {
+  width: min(520px, 100%);
+}
+
+.kc-caronas-section-modal .kc-sidebar-section > h3,
+.kc-eventos-section-modal .kc-sidebar-section > h3 {
+  display: none;
+}
+
+.kc-caronas-section-modal .kc-sidebar-section,
+.kc-eventos-section-modal .kc-sidebar-section {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.kc-caronas-section-modal__actions,
+.kc-eventos-section-modal__actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+  background: var(--kc-surface-dark);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.kc-eventos-section-modal .kc-cal-expand-btn {
+  display: none;
+}
+
+.kc-caronas-section-modal .kc-sidebar-help,
+.kc-eventos-section-modal .kc-sidebar-help {
+  margin-top: 0;
+}
+
 .kc-sidebar--lostfound .kc-category-list {
   display: grid;
   grid-template-columns: 1fr;

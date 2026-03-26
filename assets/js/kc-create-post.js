@@ -80,17 +80,6 @@ const KC_CREATE_SCHEMA = {
           { key: 'ofereco', label: 'Ofereço carona' },
           { key: 'procuro', label: 'Procuro carona' },
         ]
-      },
-      {
-        id: 'regiao',
-        label: 'Região',
-        required: false,
-        multi: false,
-        options: [
-          { key: 'campus', label: 'Campus' },
-          { key: 'centro', label: 'Centro' },
-          { key: 'bairros', label: 'Bairros' },
-        ]
       }
     ]
   },
@@ -313,10 +302,14 @@ function kcEnsureCreateModal() {
     const housingRegionSuggestion = e.target.closest('[data-kc-housing-region-suggestion]');
     if (housingRegionSuggestion) {
       const value = housingRegionSuggestion.getAttribute('data-kc-housing-region-suggestion') || '';
-      kcCreateState.values.regiao = value;
-      const regionInput = overlay.querySelector('input[name="regiao"]');
+      const fieldContainer = housingRegionSuggestion.closest('.kc-field--housing-region');
+      const regionInput = fieldContainer
+        ? fieldContainer.querySelector('[data-kc-housing-region-input]')
+        : overlay.querySelector('input[name="regiao"]');
       if (regionInput) {
         regionInput.value = value;
+        const fieldName = regionInput.getAttribute('name') || 'regiao';
+        kcCreateState.values[fieldName] = value;
         kcSyncHousingRegionInput(regionInput);
       }
       return;
@@ -667,6 +660,33 @@ function kcGetHousingFeatureOptions() {
     { key: 'mobiliado', label: 'Mobiliado', emoji: '🛋️' },
     { key: 'contas-inclusas', label: 'Contas inclusas', emoji: '💡' },
     { key: 'proximo-ao-campus', label: 'Próximo ao campus' },
+  ];
+}
+
+function kcGetCaronasCampusOptions() {
+  return [
+    { key: 'colemar', label: 'Câmpus Colemar Natal e Silva', icon: 'fas fa-university' },
+    { key: 'samambaia', label: 'Câmpus Samambaia', icon: 'fas fa-university' },
+    { key: 'aparecida-fct', label: 'Câmpus Aparecida de Goiânia (FCT)', icon: 'fas fa-university' },
+    { key: 'goias', label: 'Câmpus Goiás (Cidade de Goiás)', icon: 'fas fa-university' },
+    { key: 'cidade-ocidental', label: 'Câmpus Cidade Ocidental', icon: 'fas fa-university' },
+    { key: 'centro', label: 'Centro', icon: 'fas fa-city' },
+    { key: 'terminal-rodoviario', label: 'Terminal Rodoviário', icon: 'fas fa-bus' },
+    { key: 'praca-universitaria', label: 'Praça Universitária', icon: 'fas fa-map-pin' },
+  ];
+}
+
+function kcGetCaronasFeatureOptions() {
+  return [
+    { key: 'ar-condicionado', label: 'Ar condicionado', emoji: '🚗' },
+    { key: 'aceita-pets', label: 'Aceita pets', emoji: '🐾' },
+    { key: 'som-musica', label: 'Som/Música', emoji: '🎵' },
+    { key: 'sem-fumar', label: 'Sem fumar', emoji: '🚭' },
+    { key: 'somente-mulheres', label: 'Somente mulheres', emoji: '👩' },
+    { key: 'quatro-mais-lugares', label: '4+ lugares', emoji: '💺' },
+    { key: 'ida-e-volta', label: 'Ida e volta', emoji: '🔄' },
+    { key: 'pontualidade', label: 'Pontualidade', emoji: '⏰' },
+    { key: 'preco-fixo', label: 'Preço fixo', emoji: '🏷️' },
   ];
 }
 
@@ -1066,13 +1086,33 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
   }
 
   if (moduleKey === 'caronas') {
-    fields.push({ type: 'text', name: 'origem', label: 'Origem', placeholder: 'Ex: Campus Samambaia', required: true });
-    fields.push({ type: 'text', name: 'destino', label: 'Destino', placeholder: 'Ex: Centro', required: true });
-    fields.push({ type: 'text', name: 'horario', label: 'Horário', placeholder: 'Ex: 18h30', required: false });
+    fields.push({
+      type: 'housing-region', name: 'origem', label: 'Origem',
+      placeholder: 'Ex: Câmpus Samambaia', required: true,
+      options: kcGetCaronasCampusOptions(),
+      hint: 'Escolha uma sugestão ou digite outro local.',
+    });
+    fields.push({
+      type: 'housing-region', name: 'destino', label: 'Destino',
+      placeholder: 'Ex: Centro', required: true,
+      options: kcGetCaronasCampusOptions(),
+      hint: 'Escolha uma sugestão ou digite outro local.',
+    });
+    fields.push({
+      type: 'time', name: 'horario', label: 'Horário de saída',
+      required: false,
+      hint: 'Matutino (05h–12h) · Vespertino (12h–18h) · Noturno (18h–05h)',
+    });
     fields.push({ ...moneyFieldMeta, name: 'contribuicao', label: 'Contribuição (opcional)', placeholder: 'Ex: 5,00', required: false });
     if (selections.tipo === 'ofereco') {
       fields.push({ type: 'number', name: 'vagas', label: 'Vagas', placeholder: '2', required: false, min: 1, max: 8 });
     }
+    fields.push({
+      type: 'housing-features', name: 'marcadoresCarona',
+      label: 'Características da carona', placeholder: 'Ex: Ar condicionado',
+      required: false, options: kcGetCaronasFeatureOptions(),
+      hint: 'Escolha sugestões ou adicione outras características da carona.',
+    });
   }
 
   if (moduleKey === 'moradia') {
@@ -1297,7 +1337,7 @@ function kcRenderCreateModal() {
           <input id="${id}" name="${_esc(f.name)}" type="text" placeholder="${_esc(f.placeholder || '')}" value="${_esc(val || '')}" list="${listId}" data-kc-housing-region-input="true" ${required} />
           <datalist id="${listId}">${listItems}</datalist>
           <div class="kc-field-pill-row">${suggestions}</div>
-          <small class="kc-field-hint">Escolha uma sugestão ou digite outra região.</small>
+          <small class="kc-field-hint">${f.hint ? _esc(f.hint) : 'Escolha uma sugestão ou digite outra região.'}</small>
         </div>
       `);
     } else if (f.type === 'achados-location') {
@@ -1354,7 +1394,7 @@ function kcRenderCreateModal() {
           </div>
           <datalist id="${listId}">${listItems}</datalist>
           <div class="kc-field-pill-row">${suggestions}</div>
-          <small class="kc-field-hint">Escolha sugestões ou adicione outros marcadores para o ambiente.</small>
+          <small class="kc-field-hint">${f.hint ? _esc(f.hint) : 'Escolha sugestões ou adicione outros marcadores para o ambiente.'}</small>
         </div>
       `);
     } else if (f.type === 'select') {
@@ -1389,10 +1429,12 @@ function kcRenderCreateModal() {
       const step = (f.step != null) ? `step="${_esc(f.step)}"` : '';
       const inputmode = f.inputmode ? `inputmode="${_esc(f.inputmode)}"` : '';
       const pattern = f.pattern ? `pattern="${_esc(f.pattern)}"` : '';
+      const hintHtml = f.hint ? `<small class="kc-field-hint">${_esc(f.hint)}</small>` : '';
       parts.push(`
         <div class="kc-field">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
           <input id="${id}" name="${_esc(f.name)}" type="${type}" placeholder="${placeholder}" ${valueAttr} ${required} ${min} ${max} ${maxlength} ${step} ${inputmode} ${pattern} />
+          ${hintHtml}
         </div>
       `);
     }
@@ -1692,6 +1734,7 @@ async function kcHandleCreateSubmit() {
     const isOpportunity = kcCreateState.moduleKey === 'oportunidades';
     const isMoradia = kcCreateState.moduleKey === 'moradia';
     const isAchados = kcCreateState.moduleKey === 'achados-perdidos';
+    const isCaronas = kcCreateState.moduleKey === 'caronas';
     const catKey = isOpportunity
       ? kcNormalizeOpportunityTypeKey(rawCatKey)
       : (isMoradia ? kcNormalizeHousingTypeKey(rawCatKey) : rawCatKey);
@@ -1800,6 +1843,16 @@ async function kcHandleCreateSubmit() {
       }
     }
 
+    // Caronas: origem, destino, features
+    const caronasOrigem = isCaronas ? String(kcCreateState.values.origem || '').trim() : '';
+    const caronasDestino = isCaronas ? String(kcCreateState.values.destino || '').trim() : '';
+    const caronasHorario = isCaronas ? String(kcCreateState.values.horario || '').trim() : '';
+    const caronasContribuicao = isCaronas ? String(kcCreateState.values.contribuicao || '').trim() : '';
+    const caronasVagas = isCaronas ? String(kcCreateState.values.vagas || '').trim() : '';
+    const caronasFeatures = isCaronas
+      ? kcResolveHousingFeatureValues(kcCreateState.values.marcadoresCarona || [])
+      : [];
+
     const tagMap = new Map();
     Object.entries(kcCreateState.selections).forEach(([gid, key]) => {
       if (!key) return;
@@ -1881,6 +1934,17 @@ async function kcHandleCreateSubmit() {
     if (isAchados && lostFoundLocation.key) {
       if (!tagMap.has(lostFoundLocation.key)) tagMap.set(lostFoundLocation.key, lostFoundLocation.label || lostFoundLocation.key);
     }
+    if (isCaronas) {
+      if (caronasOrigem && !tagMap.has(caronasOrigem.toLowerCase().replace(/\s+/g, '-'))) {
+        tagMap.set(caronasOrigem.toLowerCase().replace(/\s+/g, '-'), caronasOrigem);
+      }
+      if (caronasDestino && !tagMap.has(caronasDestino.toLowerCase().replace(/\s+/g, '-'))) {
+        tagMap.set(caronasDestino.toLowerCase().replace(/\s+/g, '-'), caronasDestino);
+      }
+      caronasFeatures.forEach((feature) => {
+        if (feature && feature.key && !tagMap.has(feature.key)) tagMap.set(feature.key, feature.label || feature.key);
+      });
+    }
 
     const tagKeys = Array.from(tagMap.keys()).filter(Boolean);
     const tagLabels = Array.from(tagMap.values()).filter(Boolean);
@@ -1927,6 +1991,13 @@ async function kcHandleCreateSubmit() {
       regimeContratacao: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.label || '') : '',
       housingFeatureLabels: isMoradia ? housingFeatures.map((feature) => feature.label) : [],
       housingFeatureKeys: isMoradia ? housingFeatures.map((feature) => feature.key) : [],
+      origem: isCaronas ? caronasOrigem : '',
+      destino: isCaronas ? caronasDestino : '',
+      horario: isCaronas ? caronasHorario : '',
+      contribuicao: isCaronas ? caronasContribuicao : '',
+      vagas: isCaronas ? caronasVagas : '',
+      caronasFeatureLabels: isCaronas ? caronasFeatures.map((f) => f.label) : [],
+      caronasFeatureKeys: isCaronas ? caronasFeatures.map((f) => f.key) : [],
       contato: kcCreateState.values.contato ? String(kcCreateState.values.contato) : '',
       remuneracao: kcCreateState.values.remuneracao ? String(kcCreateState.values.remuneracao) : '',
       visibility: kcNormalizePostVisibilityValue(kcCreateState.values.visibility, kcCreateState.editMode ? 'public' : 'community'),
@@ -1987,6 +2058,15 @@ async function kcHandleCreateSubmit() {
         // eventos: data e hora do evento (para o calendário)
         data_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.data) ? String(kcCreateState.values.data) : '',
         hora_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.hora) ? String(kcCreateState.values.hora) : '',
+        // caronas
+        origem: isCaronas ? caronasOrigem : '',
+        destino: isCaronas ? caronasDestino : '',
+        horario: isCaronas ? caronasHorario : '',
+        contribuicao: isCaronas ? caronasContribuicao : '',
+        vagas: isCaronas ? caronasVagas : '',
+        caronasFeatureKeys: isCaronas ? caronasFeatures.map((f) => f.key) : [],
+        caronasFeatureLabels: isCaronas ? caronasFeatures.map((f) => f.label) : [],
+        marcadoresCarona: isCaronas ? caronasFeatures.map((f) => f.label) : [],
         visibility: kcNormalizePostVisibilityValue(kcCreateState.values.visibility, kcCreateState.editMode ? 'public' : 'community'),
       },
     };

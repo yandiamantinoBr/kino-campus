@@ -113,6 +113,9 @@
   <button class="kc-caronas-mobile-rail__button" type="button" data-kc-caronas-open-section="routes">
     <i class="fas fa-route"></i><span>Rotas</span>
   </button>
+  <button class="kc-caronas-mobile-rail__button" type="button" data-kc-caronas-open-section="features">
+    <i class="fas fa-tags"></i><span>Características</span>
+  </button>
   <button class="kc-caronas-mobile-rail__button" type="button" data-kc-caronas-open-section="tips">
     <i class="fas fa-lightbulb"></i><span>Dicas</span>
   </button>
@@ -149,20 +152,41 @@
         </div>
       </div>
       <div class="kc-marketplace-filter-group">
-        <p class="kc-marketplace-filter-group__title">Campus</p>
+        <p class="kc-marketplace-filter-group__title">Câmpus — Regional Goiânia</p>
         <div class="kc-marketplace-filter-group__options">
           <label class="kc-sidebar-check">
-            <input type="checkbox" data-kc-carona-campus="samambaia" />
-            <span>Campus Samambaia</span>
-          </label>
-          <label class="kc-sidebar-check">
-            <input type="checkbox" data-kc-carona-campus="campus-ii" />
-            <span>Campus II</span>
-          </label>
-          <label class="kc-sidebar-check">
             <input type="checkbox" data-kc-carona-campus="colemar" />
-            <span>Campus Colemar Natal</span>
+            <span>Câmpus Colemar Natal e Silva</span>
           </label>
+          <label class="kc-sidebar-check">
+            <input type="checkbox" data-kc-carona-campus="samambaia" />
+            <span>Câmpus Samambaia</span>
+          </label>
+          <label class="kc-sidebar-check">
+            <input type="checkbox" data-kc-carona-campus="aparecida-fct" />
+            <span>Câmpus Aparecida de Goiânia (FCT)</span>
+          </label>
+        </div>
+      </div>
+      <div class="kc-marketplace-filter-group">
+        <p class="kc-marketplace-filter-group__title">Câmpus — Outros</p>
+        <div class="kc-marketplace-filter-group__options">
+          <label class="kc-sidebar-check">
+            <input type="checkbox" data-kc-carona-campus="goias" />
+            <span>Câmpus Goiás (Cidade de Goiás)</span>
+          </label>
+          <label class="kc-sidebar-check">
+            <input type="checkbox" data-kc-carona-campus="cidade-ocidental" />
+            <span>Câmpus Cidade Ocidental</span>
+          </label>
+        </div>
+      </div>
+      <div class="kc-marketplace-filter-group">
+        <p class="kc-marketplace-filter-group__title">Período</p>
+        <div class="kc-marketplace-filter-group__options">
+          <label class="kc-sidebar-check"><input type="checkbox" data-kc-carona-period="matutino" /><span>Matutino (05h–12h)</span></label>
+          <label class="kc-sidebar-check"><input type="checkbox" data-kc-carona-period="vespertino" /><span>Vespertino (12h–18h)</span></label>
+          <label class="kc-sidebar-check"><input type="checkbox" data-kc-carona-period="noturno" /><span>Noturno (18h–05h)</span></label>
         </div>
       </div>
       <div class="kc-marketplace-filter-group">
@@ -178,31 +202,34 @@
     <button class="kc-opportunity-clear" data-kc-caronas-clear-filters="true" type="button">Limpar filtros</button>
   </div>
 
-  <!-- Rotas Populares -->
+  <!-- Rotas (Origem / Destino) -->
   <div class="kc-sidebar-section" data-kc-caronas-section="routes">
-    <h3><i class="fas fa-route"></i> Rotas Populares</h3>
-    <p class="kc-sidebar-help">Selecione uma rota para filtrar rapidamente as caronas por campus.</p>
-    <div class="kc-category-list" data-kc-caronas-route-list="true">
-      <button class="kc-category-item is-active" type="button" data-kc-carona-route-campus="">
-        <i class="fas fa-route"></i>
-        <span>Todas as rotas</span>
-        <span class="kc-category-count">—</span>
-      </button>
-      <button class="kc-category-item" type="button" data-kc-carona-route-campus="samambaia">
-        <i class="fas fa-university"></i>
-        <span>Campus Samambaia</span>
-        <span class="kc-category-count">—</span>
-      </button>
-      <button class="kc-category-item" type="button" data-kc-carona-route-campus="campus-ii">
-        <i class="fas fa-university"></i>
-        <span>Campus II</span>
-        <span class="kc-category-count">—</span>
-      </button>
-      <button class="kc-category-item" type="button" data-kc-carona-route-campus="colemar">
-        <i class="fas fa-university"></i>
-        <span>Colemar Natal</span>
-        <span class="kc-category-count">—</span>
-      </button>
+    <h3><i class="fas fa-route"></i> Rotas</h3>
+    <p class="kc-sidebar-help">Filtre por origem e destino da carona.</p>
+    <div class="kc-marketplace-filter-group">
+      <p class="kc-marketplace-filter-group__title">Origem</p>
+      <div class="kc-field kc-field--housing-region">
+        <input type="text" placeholder="Qualquer origem..." list="kcCaronasOrigemList" data-kc-caronas-filter-origem="true" />
+        <datalist id="kcCaronasOrigemList"></datalist>
+        <div class="kc-field-pill-row" data-kc-caronas-origem-pills="true"></div>
+      </div>
+    </div>
+    <div class="kc-marketplace-filter-group">
+      <p class="kc-marketplace-filter-group__title">Destino</p>
+      <div class="kc-field kc-field--housing-region">
+        <input type="text" placeholder="Qualquer destino..." list="kcCaronasDestinoList" data-kc-caronas-filter-destino="true" />
+        <datalist id="kcCaronasDestinoList"></datalist>
+        <div class="kc-field-pill-row" data-kc-caronas-destino-pills="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Características -->
+  <div class="kc-sidebar-section" data-kc-caronas-section="features">
+    <h3><i class="fas fa-tags"></i> Características</h3>
+    <p class="kc-sidebar-help">Filtre por características da carona.</p>
+    <div class="kc-marketplace-filter-group__options" data-kc-caronas-feature-filters="true">
+      <!-- checkboxes gerados via JS -->
     </div>
   </div>
 

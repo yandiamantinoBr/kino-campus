@@ -2094,6 +2094,20 @@
       attrs.push(`data-kc-housing-features="${escapeHtml(housingInfo.features.map((feature) => String(feature && feature.key || '')).filter(Boolean).join(' '))}"`);
     }
 
+    // Caronas: expor origem, destino, horário e características como data attributes para filtros
+    if (moduleKey === 'caronas') {
+      var cOrigem = String(meta.origem || p.origem || '').trim();
+      var cDestino = String(meta.destino || p.destino || '').trim();
+      var cHorario = String(meta.horario || p.horario || '').trim();
+      if (cOrigem) attrs.push('data-kc-carona-origem="' + escapeHtml(cOrigem) + '"');
+      if (cDestino) attrs.push('data-kc-carona-destino="' + escapeHtml(cDestino) + '"');
+      if (cHorario) attrs.push('data-kc-carona-horario="' + escapeHtml(cHorario) + '"');
+      var cFeatureKeys = Array.isArray(meta.caronasFeatureKeys) ? meta.caronasFeatureKeys : [];
+      if (cFeatureKeys.length) {
+        attrs.push('data-kc-carona-features="' + escapeHtml(cFeatureKeys.filter(Boolean).join(' ')) + '"');
+      }
+    }
+
     const votePostId = String(id);
     const votePostUuid = (p && p.uuid) ? String(p.uuid) : '';
     const voteUuidAttr = votePostUuid ? ` data-post-uuid="${encodeURIComponent(votePostUuid)}"` : '';
