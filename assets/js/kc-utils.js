@@ -994,6 +994,98 @@
     return { key: '', label: '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isKnown: false, source: 'empty' };
   }
 
+  /* ── resolveCaronasLocation ─────────────────────────────────────
+     Multi-stage matching for caronas origin/destination locations.
+     Stages: 1) exact alias  2) abbreviation  3) partial substring
+             4) context scoring  5) fuzzy  6) custom fallback
+     Returns { key, label, icon, zoneKey, zoneLabel, isCampus, isKnown, source }
+  ────────────────────────────────────────────────────────────── */
+  function resolveCaronasLocation(rawInput) {
+    var DEFS = (typeof KC_CONSTANTS !== 'undefined' && Array.isArray(KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS))
+      ? KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS : [];
+    var input = normalizeText(String(rawInput || ''));
+    var emptyResult = { key: '', label: '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isCampus: false, isKnown: false, source: 'empty' };
+    if (!input) return emptyResult;
+
+    function makeResult(entry, src) {
+      return {
+        key: entry.key,
+        label: entry.label,
+        icon: entry.icon || 'fas fa-map-pin',
+        zoneKey: entry.zoneKey || '',
+        zoneLabel: entry.zoneLabel || '',
+        isCampus: !!entry.isCampus,
+        isKnown: true,
+        source: src,
+      };
+    }
+
+    // 1) Exact alias match
+    var aliasMap = buildDefinitionAliasMap(DEFS);
+    if (aliasMap.has(input)) return makeResult(aliasMap.get(input), 'alias-exact');
+
+    // 2) Abbreviation match (case-insensitive)
+    var inputUpper = String(rawInput || '').trim().toUpperCase();
+    for (var ai = 0; ai < DEFS.length; ai++) {
+      var abbrevs = Array.isArray(DEFS[ai].abbreviations) ? DEFS[ai].abbreviations : [];
+      for (var aj = 0; aj < abbrevs.length; aj++) {
+        if (String(abbrevs[aj]).toUpperCase() === inputUpper) return makeResult(DEFS[ai], 'abbreviation');
+      }
+    }
+
+    // 3) Partial substring match (≥4 chars)
+    if (input.length >= 4) {
+      for (var pi = 0; pi < DEFS.length; pi++) {
+        var pEntry = DEFS[pi];
+        var pAliases = [normalizeText(pEntry.label), normalizeText(pEntry.key)].concat(
+          (Array.isArray(pEntry.aliases) ? pEntry.aliases : []).map(function(a) { return normalizeText(a); })
+        ).filter(Boolean);
+        for (var pj = 0; pj < pAliases.length; pj++) {
+          if (pAliases[pj].includes(input) || input.includes(pAliases[pj])) {
+            return makeResult(pEntry, 'partial');
+          }
+        }
+      }
+    }
+
+    // 4) Context scoring — score all definitions against the input
+    var ranked = [];
+    for (var ci = 0; ci < DEFS.length; ci++) {
+      var cEntry = DEFS[ci];
+      var cAll = [normalizeText(cEntry.label), normalizeText(cEntry.key)].concat(
+        (Array.isArray(cEntry.aliases) ? cEntry.aliases : []).map(function(a) { return normalizeText(a); })
+      ).filter(Boolean);
+      var score = 0;
+      for (var cj = 0; cj < cAll.length; cj++) {
+        if (input.includes(cAll[cj])) score += (cAll[cj].indexOf(' ') >= 0 ? 3 : 2);
+      }
+      if (score > 0) ranked.push({ entry: cEntry, score: score });
+    }
+    ranked.sort(function(a, b) { return b.score - a.score; });
+    if (ranked.length) return makeResult(ranked[0].entry, 'context');
+
+    // 5) Fuzzy match
+    var bestFuzzy = findBestFuzzyHousingEntry(String(rawInput || '').trim(), DEFS);
+    if (bestFuzzy) return makeResult(bestFuzzy, 'fuzzy');
+
+    // 6) Custom fallback
+    var fallbackKey = slugifyText(String(rawInput || '').trim());
+    if (fallbackKey) {
+      return {
+        key: fallbackKey,
+        label: formatHousingLabel(String(rawInput || '').trim()) || beautifyKey(fallbackKey) || String(rawInput || '').trim(),
+        icon: 'fas fa-map-pin',
+        zoneKey: '',
+        zoneLabel: '',
+        isCampus: false,
+        isKnown: false,
+        source: 'custom',
+      };
+    }
+
+    return emptyResult;
+  }
+
   function extractHousingFeatureHistoryEntries(history) {
     const list = Array.isArray(history) ? history : [];
     const entries = [];
@@ -2096,13 +2188,14 @@
 
     // Caronas: expor origem, destino, horário e características como data attributes para filtros
     if (moduleKey === 'caronas') {
-      var cOrigem = String(meta.origem || p.origem || '').trim();
-      var cDestino = String(meta.destino || p.destino || '').trim();
-      var cHorario = String(meta.horario || p.horario || '').trim();
+      var cardMeta = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
+      var cOrigem = String(cardMeta.origem || p.origem || '').trim();
+      var cDestino = String(cardMeta.destino || p.destino || '').trim();
+      var cHorario = String(cardMeta.horario || p.horario || '').trim();
       if (cOrigem) attrs.push('data-kc-carona-origem="' + escapeHtml(cOrigem) + '"');
       if (cDestino) attrs.push('data-kc-carona-destino="' + escapeHtml(cDestino) + '"');
       if (cHorario) attrs.push('data-kc-carona-horario="' + escapeHtml(cHorario) + '"');
-      var cFeatureKeys = Array.isArray(meta.caronasFeatureKeys) ? meta.caronasFeatureKeys : [];
+      var cFeatureKeys = Array.isArray(cardMeta.caronasFeatureKeys) ? cardMeta.caronasFeatureKeys : [];
       if (cFeatureKeys.length) {
         attrs.push('data-kc-carona-features="' + escapeHtml(cFeatureKeys.filter(Boolean).join(' ')) + '"');
       }
@@ -2202,6 +2295,7 @@ window.KCUtils = Object.freeze({
     getDisplayMarkerTags,
     resolveOpportunityArea,
     resolveHousingRegion,
+    resolveCaronasLocation,
     resolveLostFoundLocation,
     resolveHousingFeatures,
     resolveHousingTypeKey,

@@ -664,16 +664,9 @@ function kcGetHousingFeatureOptions() {
 }
 
 function kcGetCaronasCampusOptions() {
-  return [
-    { key: 'colemar', label: 'Câmpus Colemar Natal e Silva', icon: 'fas fa-university' },
-    { key: 'samambaia', label: 'Câmpus Samambaia', icon: 'fas fa-university' },
-    { key: 'aparecida-fct', label: 'Câmpus Aparecida de Goiânia (FCT)', icon: 'fas fa-university' },
-    { key: 'goias', label: 'Câmpus Goiás (Cidade de Goiás)', icon: 'fas fa-university' },
-    { key: 'cidade-ocidental', label: 'Câmpus Cidade Ocidental', icon: 'fas fa-university' },
-    { key: 'centro', label: 'Centro', icon: 'fas fa-city' },
-    { key: 'terminal-rodoviario', label: 'Terminal Rodoviário', icon: 'fas fa-bus' },
-    { key: 'praca-universitaria', label: 'Praça Universitária', icon: 'fas fa-map-pin' },
-  ];
+  var defs = (typeof KC_CONSTANTS !== 'undefined' && Array.isArray(KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS))
+    ? KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS : [];
+  return defs.map(function(d) { return { key: d.key, label: d.label, icon: d.icon || 'fas fa-map-pin' }; });
 }
 
 function kcGetCaronasFeatureOptions() {
@@ -690,12 +683,26 @@ function kcGetCaronasFeatureOptions() {
   ];
 }
 
+function kcResolveCaronasLocationValue(value) {
+  if (KCUtils && typeof KCUtils.resolveCaronasLocation === 'function') {
+    return KCUtils.resolveCaronasLocation(value || '');
+  }
+  return { key: '', label: value || '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isCampus: false, isKnown: false, source: 'fallback' };
+}
+
 function kcSyncHousingRegionInput(input) {
   if (!input) return null;
-  const resolved = kcResolveHousingRegionValue(input.value || '');
+  var fieldName = input.getAttribute('name') || '';
+  var isCaronasField = (fieldName === 'origem' || fieldName === 'destino');
+  var resolved;
+  if (isCaronasField) {
+    resolved = kcResolveCaronasLocationValue(input.value || '');
+  } else {
+    resolved = kcResolveHousingRegionValue(input.value || '');
+  }
   if (resolved && resolved.label) {
     input.value = resolved.label;
-    kcCreateState.values[input.name] = resolved.label;
+    kcCreateState.values[fieldName || input.name] = resolved.label;
   }
   return resolved;
 }
@@ -2267,6 +2274,17 @@ async function kcHandleCreateSubmit() {
           entity_id: postId,
           actor_id: actorId,
         }).then(() => { }).catch(() => { });
+      }
+      // Incrementar uso de localizações de caronas
+      if (isCaronas && kcClient) {
+        var resolvedOrigem = kcResolveCaronasLocationValue(caronasOrigem);
+        var resolvedDestino = kcResolveCaronasLocationValue(caronasDestino);
+        if (resolvedOrigem && resolvedOrigem.isKnown && resolvedOrigem.key) {
+          kcClient.rpc('kc_increment_location_usage', { p_key: resolvedOrigem.key }).then(function(){}).catch(function(){});
+        }
+        if (resolvedDestino && resolvedDestino.isKnown && resolvedDestino.key) {
+          kcClient.rpc('kc_increment_location_usage', { p_key: resolvedDestino.key }).then(function(){}).catch(function(){});
+        }
       }
     } catch (_) { }
 

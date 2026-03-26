@@ -7266,7 +7266,9 @@ textarea::placeholder {
 }
 
 .kc-caronas-section-modal .kc-sidebar-section > h3,
-.kc-eventos-section-modal .kc-sidebar-section > h3 {
+.kc-eventos-section-modal .kc-sidebar-section > h3,
+.kc-caronas-section-modal .kc-sidebar-section-head,
+.kc-eventos-section-modal .kc-sidebar-section-head {
   display: none;
 }
 

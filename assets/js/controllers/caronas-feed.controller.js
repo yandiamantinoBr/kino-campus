@@ -10,17 +10,60 @@
     return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 
-  /* ── Constantes de câmpus e features ─────────────────── */
-  var CAMPUS_OPTIONS = [
-    { key: 'colemar',          label: 'Câmpus Colemar Natal e Silva',     icon: 'fas fa-university' },
-    { key: 'samambaia',        label: 'Câmpus Samambaia',                 icon: 'fas fa-university' },
-    { key: 'aparecida-fct',    label: 'Câmpus Aparecida de Goiânia (FCT)', icon: 'fas fa-university' },
-    { key: 'goias',            label: 'Câmpus Goiás (Cidade de Goiás)',   icon: 'fas fa-university' },
-    { key: 'cidade-ocidental', label: 'Câmpus Cidade Ocidental',          icon: 'fas fa-university' },
-    { key: 'centro',           label: 'Centro',                            icon: 'fas fa-city'       },
-    { key: 'terminal',         label: 'Terminal Rodoviário',               icon: 'fas fa-bus'        },
-    { key: 'praca-univ',       label: 'Praça Universitária',               icon: 'fas fa-map-pin'    },
-  ];
+  /* ── Localizações (do KC_CONSTANTS, com fallback) ───── */
+  function getLocationDefs() {
+    return (typeof KC_CONSTANTS !== 'undefined' && Array.isArray(KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS))
+      ? KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS : [];
+  }
+
+  /* Cache de localizações populares do Supabase */
+  var _locationsCache = null;
+  var _locationsCacheTs = 0;
+  var LOCATIONS_TTL = 10 * 60 * 1000; // 10 min
+
+  function fetchPopularLocations(callback) {
+    var now = Date.now();
+    if (_locationsCache && (now - _locationsCacheTs) < LOCATIONS_TTL) {
+      callback(_locationsCache);
+      return;
+    }
+    // Tentar sessionStorage
+    try {
+      var cached = sessionStorage.getItem('kc-caronas-locations');
+      if (cached) {
+        var parsed = JSON.parse(cached);
+        if (parsed && parsed.ts && (now - parsed.ts) < LOCATIONS_TTL && Array.isArray(parsed.data)) {
+          _locationsCache = parsed.data;
+          _locationsCacheTs = parsed.ts;
+          callback(_locationsCache);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Fetch do Supabase
+    var client = (typeof KCSupabase !== 'undefined' && typeof KCSupabase.getClient === 'function') ? KCSupabase.getClient() : null;
+    if (!client) {
+      callback(getLocationDefs());
+      return;
+    }
+    client.from('caronas_locations')
+      .select('key,label,icon,zone_key,zone_label,aliases,abbreviations,is_campus,usage_count')
+      .order('usage_count', { ascending: false })
+      .then(function (res) {
+        if (res && res.data && res.data.length > 0) {
+          _locationsCache = res.data;
+          _locationsCacheTs = Date.now();
+          try { sessionStorage.setItem('kc-caronas-locations', JSON.stringify({ ts: _locationsCacheTs, data: _locationsCache })); } catch (_) {}
+          callback(_locationsCache);
+        } else {
+          callback(getLocationDefs());
+        }
+      })
+      .catch(function () {
+        callback(getLocationDefs());
+      });
+  }
 
   var FEATURE_OPTIONS = [
     { key: 'ar-condicionado',  label: 'Ar condicionado',  emoji: '❄️' },
@@ -53,14 +96,22 @@
   }
 
   function campusMatchesText(campus, text) {
-    if (campus === 'samambaia') return text.includes('samambaia');
-    if (campus === 'colemar') return text.includes('colemar');
-    if (campus === 'aparecida-fct') return text.includes('aparecida') || text.includes('fct');
-    if (campus === 'goias') return text.includes('goias') || text.includes('cidade de goias');
-    if (campus === 'cidade-ocidental') return text.includes('cidade ocidental') || text.includes('ocidental');
+    // Find definition by key
+    var defs = getLocationDefs();
+    for (var i = 0; i < defs.length; i++) {
+      if (defs[i].key === campus) {
+        var aliases = [norm(defs[i].label), norm(defs[i].key)].concat(
+          (Array.isArray(defs[i].aliases) ? defs[i].aliases : []).map(function(a) { return norm(a); })
+        );
+        for (var j = 0; j < aliases.length; j++) {
+          if (aliases[j] && text.includes(aliases[j])) return true;
+        }
+        return false;
+      }
+    }
     // Legacy fallback
     if (campus === 'campus-ii') return text.includes('campus ii') || text.includes('samambaia');
-    return text.includes(campus);
+    return text.includes(norm(campus));
   }
 
   function classifyPeriod(timeStr) {
@@ -193,33 +244,38 @@
 
   /* ── Render pills no sidebar (Origem/Destino + Features) ── */
   function renderRoutePills() {
-    var html = CAMPUS_OPTIONS.map(function (opt) {
-      return '<button type="button" class="kc-field-pill" data-kc-caronas-route-pill="' + opt.key + '"><i class="' + opt.icon + '"></i><span>' + opt.label + '</span></button>';
-    }).join('');
-    var datalistHtml = CAMPUS_OPTIONS.map(function (opt) {
-      return '<option value="' + opt.label + '"></option>';
-    }).join('');
+    fetchPopularLocations(function (locations) {
+      // Top 8 populares + datalist com todos
+      var top = locations.slice(0, 8);
+      var html = top.map(function (opt) {
+        var icon = opt.icon || 'fas fa-map-pin';
+        return '<button type="button" class="kc-field-pill" data-kc-caronas-route-pill="' + (opt.key || '') + '"><i class="' + icon + '"></i><span>' + (opt.label || '') + '</span></button>';
+      }).join('');
+      var datalistHtml = locations.map(function (opt) {
+        return '<option value="' + (opt.label || '') + '"></option>';
+      }).join('');
 
-    var origemPills = document.querySelector('[data-kc-caronas-origem-pills]');
-    if (origemPills) origemPills.innerHTML = html;
-    var destinoPills = document.querySelector('[data-kc-caronas-destino-pills]');
-    if (destinoPills) destinoPills.innerHTML = html;
-    var origemList = document.getElementById('kcCaronasOrigemList');
-    if (origemList) origemList.innerHTML = datalistHtml;
-    var destinoList = document.getElementById('kcCaronasDestinoList');
-    if (destinoList) destinoList.innerHTML = datalistHtml;
+      var origemPills = document.querySelector('[data-kc-caronas-origem-pills]');
+      if (origemPills) origemPills.innerHTML = html;
+      var destinoPills = document.querySelector('[data-kc-caronas-destino-pills]');
+      if (destinoPills) destinoPills.innerHTML = html;
+      var origemList = document.getElementById('kcCaronasOrigemList');
+      if (origemList) origemList.innerHTML = datalistHtml;
+      var destinoList = document.getElementById('kcCaronasDestinoList');
+      if (destinoList) destinoList.innerHTML = datalistHtml;
 
-    // Bind pill clicks
-    document.querySelectorAll('[data-kc-caronas-origem-pills] [data-kc-caronas-route-pill]').forEach(function (pill) {
-      pill.addEventListener('click', function () {
-        var input = document.querySelector('[data-kc-caronas-filter-origem]');
-        if (input) { input.value = pill.querySelector('span').textContent; syncFiltersFromInputs(); }
+      // Bind pill clicks
+      document.querySelectorAll('[data-kc-caronas-origem-pills] [data-kc-caronas-route-pill]').forEach(function (pill) {
+        pill.addEventListener('click', function () {
+          var input = document.querySelector('[data-kc-caronas-filter-origem]');
+          if (input) { input.value = pill.querySelector('span').textContent; syncFiltersFromInputs(); }
+        });
       });
-    });
-    document.querySelectorAll('[data-kc-caronas-destino-pills] [data-kc-caronas-route-pill]').forEach(function (pill) {
-      pill.addEventListener('click', function () {
-        var input = document.querySelector('[data-kc-caronas-filter-destino]');
-        if (input) { input.value = pill.querySelector('span').textContent; syncFiltersFromInputs(); }
+      document.querySelectorAll('[data-kc-caronas-destino-pills] [data-kc-caronas-route-pill]').forEach(function (pill) {
+        pill.addEventListener('click', function () {
+          var input = document.querySelector('[data-kc-caronas-filter-destino]');
+          if (input) { input.value = pill.querySelector('span').textContent; syncFiltersFromInputs(); }
+        });
       });
     });
   }
