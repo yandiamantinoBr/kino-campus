@@ -377,6 +377,20 @@
       text-overflow: ellipsis;
     }
 
+    /* Botões de ações do dono (sub-grid dentro de .kc-product-actions) */
+    #ownerActionsWrap > button {
+      width: 100%;
+      min-height: 48px;
+      justify-content: center;
+      white-space: nowrap;
+      text-align: center;
+      box-sizing: border-box;
+      font-size: 0.88rem;
+      padding: 10px 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     /* Em mobile, botões com texto longo podem precisar de 2 linhas */
     @media (max-width: 400px) {
       .kc-product-actions > button,

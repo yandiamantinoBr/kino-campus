@@ -6529,6 +6529,27 @@ textarea::placeholder {
   margin-top: 10px;
 }
 
+.kc-field-show-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--kc-text-dark-secondary);
+  font: inherit;
+  font-size: 0.84em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.kc-field-show-more:hover {
+  color: var(--kc-primary);
+  border-color: var(--kc-primary);
+}
+
 .kc-field-pill {
   display: inline-flex;
   align-items: center;
@@ -6564,6 +6585,26 @@ textarea::placeholder {
   margin-top: 8px;
   color: var(--kc-text-dark-secondary);
   line-height: 1.45;
+}
+
+.kc-field-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid rgba(255, 193, 7, 0.25);
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.87em;
+  line-height: 1.45;
+}
+
+.kc-field-notice i {
+  color: #ffc107;
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
 .kc-opportunity-mobile-rail {

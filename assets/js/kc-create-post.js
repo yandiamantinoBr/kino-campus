@@ -315,6 +315,24 @@ function kcEnsureCreateModal() {
       return;
     }
 
+    const showMorePills = e.target.closest('[data-kc-show-more-pills]');
+    if (showMorePills) {
+      const field = showMorePills.closest('.kc-field--housing-region');
+      if (field) {
+        const extra = field.querySelector('.kc-field-pill-row--extra');
+        const lessBtn = field.querySelector('[data-kc-show-more-pills][style*="display:none"], [data-kc-show-more-pills]:not([style*="display:none"]) ~ [data-kc-show-more-pills]');
+        const allShowMore = field.querySelectorAll('[data-kc-show-more-pills]');
+        if (extra && extra.style.display === 'none') {
+          extra.style.display = '';
+          if (allShowMore[0]) { allShowMore[0].innerHTML = 'Ver menos <i class="fas fa-chevron-up"></i>'; }
+        } else if (extra) {
+          extra.style.display = 'none';
+          if (allShowMore[0]) { allShowMore[0].innerHTML = 'Ver mais <i class="fas fa-chevron-down"></i>'; }
+        }
+      }
+      return;
+    }
+
     const lostFoundLocationSuggestion = e.target.closest('[data-kc-lostfound-location-suggestion]');
     if (lostFoundLocationSuggestion) {
       const value = lostFoundLocationSuggestion.getAttribute('data-kc-lostfound-location-suggestion') || '';
@@ -1120,6 +1138,10 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
       required: false, options: kcGetCaronasFeatureOptions(),
       hint: 'Escolha sugestões ou adicione outras características da carona.',
     });
+    fields.push({
+      type: 'notice', icon: 'fas fa-clock',
+      text: 'Publicações de caronas ficam visíveis por <strong>7 dias</strong> e depois são desabilitadas automaticamente. Você pode renovar depois.',
+    });
   }
 
   if (moduleKey === 'moradia') {
@@ -1329,21 +1351,22 @@ function kcRenderCreateModal() {
       `);
     } else if (f.type === 'housing-region') {
       const listId = id + 'Options';
-      const suggestions = (Array.isArray(f.options) ? f.options : []).map((opt) => `
-        <button type="button" class="kc-field-pill" data-kc-housing-region-suggestion="${_esc(opt.label)}">
-          <i class="${_esc(opt.icon || 'fas fa-map-pin')}"></i>
-          <span>${_esc(opt.label)}</span>
-        </button>
-      `).join('');
-      const listItems = (Array.isArray(f.options) ? f.options : []).map((opt) => `
-        <option value="${_esc(opt.label)}"></option>
-      `).join('');
+      const allOpts = Array.isArray(f.options) ? f.options : [];
+      const PILL_LIMIT = 10;
+      const visibleOpts = allOpts.slice(0, PILL_LIMIT);
+      const hiddenOpts = allOpts.slice(PILL_LIMIT);
+      const makePill = (opt) => `<button type="button" class="kc-field-pill" data-kc-housing-region-suggestion="${_esc(opt.label)}"><i class="${_esc(opt.icon || 'fas fa-map-pin')}"></i><span>${_esc(opt.label)}</span></button>`;
+      const visiblePills = visibleOpts.map(makePill).join('');
+      const hiddenPills = hiddenOpts.length ? `<div class="kc-field-pill-row kc-field-pill-row--extra" style="display:none">${hiddenOpts.map(makePill).join('')}</div><button type="button" class="kc-field-show-more" data-kc-show-more-pills="true" style="display:none">Ver menos <i class="fas fa-chevron-up"></i></button>` : '';
+      const showMoreBtn = hiddenOpts.length ? `<button type="button" class="kc-field-show-more" data-kc-show-more-pills="true">Ver mais <i class="fas fa-chevron-down"></i></button>` : '';
+      const listItems = allOpts.map((opt) => `<option value="${_esc(opt.label)}"></option>`).join('');
       parts.push(`
         <div class="kc-field kc-field--housing-region">
           <label for="${id}">${label}${f.required ? ' *' : ''}</label>
           <input id="${id}" name="${_esc(f.name)}" type="text" placeholder="${_esc(f.placeholder || '')}" value="${_esc(val || '')}" list="${listId}" data-kc-housing-region-input="true" ${required} />
           <datalist id="${listId}">${listItems}</datalist>
-          <div class="kc-field-pill-row">${suggestions}</div>
+          <div class="kc-field-pill-row">${visiblePills}</div>
+          ${showMoreBtn}${hiddenPills}
           <small class="kc-field-hint">${f.hint ? _esc(f.hint) : 'Escolha uma sugestão ou digite outra região.'}</small>
         </div>
       `);
@@ -1426,6 +1449,9 @@ function kcRenderCreateModal() {
           <span>${label}</span>
         </label>
       `);
+    } else if (f.type === 'notice') {
+      const icon = f.icon ? `<i class="${_esc(f.icon)}"></i> ` : '';
+      parts.push(`<div class="kc-field-notice">${icon}${f.text || ''}</div>`);
     } else {
       const type = _esc(f.type);
       const placeholder = _esc(f.placeholder || '');
@@ -2275,15 +2301,25 @@ async function kcHandleCreateSubmit() {
           actor_id: actorId,
         }).then(() => { }).catch(() => { });
       }
-      // Incrementar uso de localizações de caronas
+      // Incrementar uso de localizações de caronas (conhecidas) ou upsert de locais custom
       if (isCaronas && kcClient) {
         var resolvedOrigem = kcResolveCaronasLocationValue(caronasOrigem);
         var resolvedDestino = kcResolveCaronasLocationValue(caronasDestino);
-        if (resolvedOrigem && resolvedOrigem.isKnown && resolvedOrigem.key) {
-          kcClient.rpc('kc_increment_location_usage', { p_key: resolvedOrigem.key }).then(function(){}).catch(function(){});
+        if (resolvedOrigem) {
+          if (resolvedOrigem.isKnown && resolvedOrigem.key) {
+            kcClient.rpc('kc_increment_location_usage', { p_key: resolvedOrigem.key }).then(function(){}).catch(function(){});
+          } else if (caronasOrigem) {
+            var customKey = 'custom-' + caronasOrigem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            kcClient.rpc('kc_upsert_custom_location', { p_key: customKey, p_label: caronasOrigem }).then(function(){}).catch(function(){});
+          }
         }
-        if (resolvedDestino && resolvedDestino.isKnown && resolvedDestino.key) {
-          kcClient.rpc('kc_increment_location_usage', { p_key: resolvedDestino.key }).then(function(){}).catch(function(){});
+        if (resolvedDestino) {
+          if (resolvedDestino.isKnown && resolvedDestino.key) {
+            kcClient.rpc('kc_increment_location_usage', { p_key: resolvedDestino.key }).then(function(){}).catch(function(){});
+          } else if (caronasDestino) {
+            var customKey2 = 'custom-' + caronasDestino.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            kcClient.rpc('kc_upsert_custom_location', { p_key: customKey2, p_label: caronasDestino }).then(function(){}).catch(function(){});
+          }
         }
       }
     } catch (_) { }

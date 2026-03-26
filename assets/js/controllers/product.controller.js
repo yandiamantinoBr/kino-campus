@@ -1637,7 +1637,7 @@
 
     const wrap = document.createElement('div');
     wrap.id = 'ownerActionsWrap';
-    wrap.style.display = 'contents';
+    wrap.style.cssText = 'grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;';
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
@@ -1679,7 +1679,7 @@
     bumpBtn.className = 'kc-btn-secondary';
     bumpBtn.id = 'bumpPostButton';
     const bumpedAt = post && (post.bumped_at || post.bumpedAt);
-    const bumpCooldownMs = 7 * 24 * 60 * 60 * 1000;
+    const bumpCooldownMs = 1 * 24 * 60 * 60 * 1000;
     const bumpReady = !bumpedAt || (Date.now() - new Date(bumpedAt).getTime() >= bumpCooldownMs);
     bumpBtn.style.display = isPublished ? '' : 'none';
     if (bumpReady) {

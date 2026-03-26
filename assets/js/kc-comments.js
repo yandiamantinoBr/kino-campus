@@ -382,6 +382,14 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
 
   const text = textarea.value.trim();
 
+  // Guard contra duplo-clique / duplo-envio
+  const submitBtn = document.getElementById('submitCommentButton');
+  if (submitBtn && submitBtn._kcSubmitting) return;
+  if (submitBtn) { submitBtn._kcSubmitting = true; submitBtn.disabled = true; submitBtn.style.opacity = '0.6'; }
+  function _releaseSubmitBtn() {
+    if (submitBtn) { submitBtn._kcSubmitting = false; submitBtn.disabled = false; submitBtn.style.opacity = ''; }
+  }
+
   // Driver Supabase: persiste via KCAPI (async)
   if (KCAPI && KCAPI.ENV && KCAPI.ENV.driver === 'supabase') {
     // Verifica autenticação antes de enviar — abre modal de login se necessário
@@ -389,6 +397,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
       ? window.KCSupabase.getUser()
       : null;
     if (!currentUser) {
+      _releaseSubmitBtn();
       if (typeof window.kcOpenAuthModal === 'function') {
         window.kcOpenAuthModal({ tab: 'login' });
       } else {
@@ -397,6 +406,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
       return;
     }
     KCAPI.addComment(id, text).then(function (res) {
+      _releaseSubmitBtn();
       if (res && res.ok) {
         textarea.value = '';
         updateCommentPreview(id);
@@ -434,9 +444,11 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
         } catch (_) { }
       } else {
         const msg = (res && res.error && res.error.message) || 'Não foi possível comentar.';
+        _releaseSubmitBtn();
         showToast(msg, 'error');
       }
     }).catch(function () {
+      _releaseSubmitBtn();
       showToast('Erro ao enviar comentário.', 'error');
     });
     return;
@@ -480,6 +492,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
     ? (sessionAuthorName || 'Conta autenticada')
     : (sessionAuthorName || authorInput?.value?.trim() || 'Anônimo');
   addComment(id, text, authorName);
+  _releaseSubmitBtn();
   textarea.value = '';
   updateCommentPreview(id);
   renderComments(id, containerId);
