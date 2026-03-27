@@ -1029,6 +1029,32 @@
                 <a href="../index.html"><i class="fas fa-home"></i> Ir ao site</a>
               </div>
             </section>
+
+            <!-- Top Contribuidores — ranking de engajamento -->
+            <section class="kc-admin-section">
+              <div class="kc-admin-section__eyebrow">Engajamento</div>
+              <h3><i class="fas fa-trophy" style="color:var(--kc-yellow-badge);"></i> Top Contribuidores</h3>
+              <p class="kc-admin-section__intro">Ranking de usuários por engajamento na plataforma, sincronizado com o período selecionado.</p>
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+                <select id="admin-ranking-module-filter" class="kc-admin-period-filter" title="Filtrar por módulo" style="flex:1;min-width:0;">
+                  <option value="">Todos os módulos</option>
+                  <option value="compra-venda">Compra e Venda</option>
+                  <option value="eventos">Eventos</option>
+                  <option value="moradia">Moradia</option>
+                  <option value="caronas">Caronas</option>
+                  <option value="oportunidades">Oportunidades</option>
+                  <option value="achados-perdidos">Achados/Perdidos</option>
+                </select>
+                <button type="button" class="kc-ranking-info-btn" title="Como funciona o ranking?" id="admin-ranking-info-btn"><i class="fas fa-circle-info"></i></button>
+              </div>
+              <div id="admin-ranking-table">
+                <div class="kc-admin-empty">Carregando ranking...</div>
+              </div>
+              <button id="admin-ranking-show-all" class="kc-admin-btn-outline" style="width:100%;margin-top:8px;display:none;">
+                <i class="fas fa-chevron-down"></i> Mostrar todos
+              </button>
+            </section>
+
           </aside>
         </div>
       </section>
@@ -1077,6 +1103,7 @@
   <script src="../assets/js/kc-theme.js"></script>
   <script src="../assets/js/admin-shell.js?v=8.4.2"></script>
   <script src="../assets/js/controllers/admin-dashboard.shared.js"></script>
+  <script src="../assets/js/kc-ranking.js"></script>
   <script src="../assets/js/controllers/admin-dashboard.controller.js?v=8.4.2"></script>
 </body>
 </html>

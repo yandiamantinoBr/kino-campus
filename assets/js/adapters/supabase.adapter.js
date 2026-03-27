@@ -3021,6 +3021,19 @@ const { ENV, normalizePost } = window.KCAPI;
     } catch (e) { return { ok: false, error: e }; }
   }
 
+  // ── Top Contribuidores (ranking de engajamento) ────────────────────────────
+  async function supabaseGetTopContributors(period, module, limit) {
+    const client = getSupabaseClient();
+    if (!client) return [];
+    try {
+      const params = { p_period: period || 'month', p_limit: limit || 10 };
+      if (module) params.p_module = module;
+      const { data, error } = await client.rpc('kc_get_top_contributors', params);
+      if (error) { console.error('[KCAPI] Top contributors error:', error); return []; }
+      return Array.isArray(data) ? data : [];
+    } catch (_) { return []; }
+  }
+
   // ── Rastrear clique em cupom ───────────────────────────────────────────────
   async function supabaseTrackCouponClick(postId) {
     const client = getSupabaseClient();
@@ -3090,6 +3103,7 @@ const { ENV, normalizePost } = window.KCAPI;
     togglePostStatus: supabaseTogglePostStatus,
     renewPost: supabaseRenewPost,
     bumpPost: supabaseBumpPost,
+    getTopContributors: supabaseGetTopContributors,
     trackCouponClick: supabaseTrackCouponClick,
     trackShare: supabaseTrackShare,
     checkDuplicatePost: supabaseCheckDuplicatePost,

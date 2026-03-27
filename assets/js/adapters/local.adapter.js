@@ -440,6 +440,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     togglePostStatus: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
     renewPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
     bumpPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
+    getTopContributors: async function () { return []; },
     trackCouponClick: async function () { return { ok: false }; },
     trackShare: async function () { return { ok: false }; },
     checkDuplicatePost: async function () { return { ok: false, candidates: [] }; },
