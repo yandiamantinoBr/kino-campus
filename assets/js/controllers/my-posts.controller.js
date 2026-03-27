@@ -162,27 +162,18 @@
     });
     moduleCounts['all'] = state.posts.length;
 
-    var inner = tabRow.querySelector('div');
-    if (!inner) return;
-
-    inner.innerHTML = MY_POSTS_MODULES.filter(function (m) {
+    tabRow.innerHTML = MY_POSTS_MODULES.filter(function (m) {
       return m.key === 'all' || moduleCounts[m.key] > 0;
     }).map(function (m) {
       var count = moduleCounts[m.key] || 0;
       var isActive = m.key === state.activeModule;
-      return '<button type="button" class="kc-my-posts-tab" data-module="' + esc(m.key) + '" style="' +
-        'display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:none;border-radius:22px;cursor:pointer;' +
-        'font-size:0.85em;font-weight:' + (isActive ? '700' : '500') + ';white-space:nowrap;transition:all .15s;' +
-        'background:' + (isActive ? 'var(--kc-primary-brand)' : 'var(--kc-surface-dark)') + ';' +
-        'color:' + (isActive ? '#fff' : 'var(--kc-text-dark-secondary)') + ';' +
-        'border:1px solid ' + (isActive ? 'var(--kc-primary-brand)' : 'var(--kc-border-dark)') + ';' +
-        '">' +
+      return '<button type="button" class="kc-my-posts-tab' + (isActive ? ' active' : '') + '" data-module="' + esc(m.key) + '" aria-selected="' + (isActive ? 'true' : 'false') + '">' +
         '<i class="' + esc(m.icon) + '"></i> ' + esc(m.label) +
-        (count > 0 ? ' <span style="background:' + (isActive ? 'rgba(255,255,255,.25)' : 'var(--kc-background-dark)') + ';border-radius:10px;padding:1px 7px;font-size:0.85em;">' + count + '</span>' : '') +
+        (count > 0 ? ' <span class="kc-tab-badge">' + count + '</span>' : '') +
         '</button>';
     }).join('');
 
-    // Listener de tabs
+    // Listener de tabs (uma vez)
     if (!tabRow._kcTabsListenerAttached) {
       tabRow._kcTabsListenerAttached = true;
       tabRow.addEventListener('click', function (e) {
@@ -194,7 +185,7 @@
       });
     }
 
-    tabRow.style.display = 'block';
+    tabRow.style.display = 'flex';
   }
 
   // ─── Renderização de Posts ───────────────────────────────────────────────────
@@ -239,12 +230,57 @@
         if (action === 'edit') handleEdit(uuid);
         else if (action === 'toggle') handleToggle(uuid, btn);
         else if (action === 'boost') handleBoost();
+        else if (action === 'renew') handleRenew(uuid);
         else if (action === 'save') handleSave(uuid, btn);
         else if (action === 'clone') { e.preventDefault(); handleClone(uuid); }
         else if (action === 'delete') handleDelete(uuid);
         else if (action === 'view') window.location.href = 'product.html?id=' + encodeURIComponent(uuid);
       });
     }
+  }
+
+  function buildPostActions(uuid, status) {
+    var viewBtn = '<a href="product.html?id=' + esc(uuid) + '" class="kc-btn-secondary kc-my-posts-action--full" style="text-decoration:none;">' +
+      '<i class="fas fa-eye"></i> Ver publicação</a>';
+
+    var editBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="edit" data-post-uuid="' + esc(uuid) + '">' +
+      '<i class="fas fa-pen"></i> Editar</button>';
+
+    var saveBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="save" data-post-uuid="' + esc(uuid) + '">' +
+      '<i class="fas fa-bookmark"></i> Salvar</button>';
+
+    var cloneBtn = '<a href="create-post.html" class="kc-btn-secondary" data-my-post-action="clone" data-post-uuid="' + esc(uuid) + '" style="text-decoration:none;">' +
+      '<i class="fas fa-copy"></i> Criar Parecido</a>';
+
+    var deleteBtn = '<button type="button" class="kc-btn-secondary kc-my-posts-action--danger" data-my-post-action="delete" data-post-uuid="' + esc(uuid) + '">' +
+      '<i class="fas fa-trash"></i> Excluir</button>';
+
+    if (status === 'expired') {
+      var renewBtn = '<button type="button" class="kc-btn-primary kc-my-posts-action--full" data-my-post-action="renew" data-post-uuid="' + esc(uuid) + '">' +
+        '<i class="fas fa-rotate-right"></i> Renovar publicação</button>';
+      return '<div class="kc-my-posts-actions">' +
+        renewBtn + viewBtn + editBtn + saveBtn + cloneBtn + deleteBtn +
+        '</div>';
+    }
+
+    if (status === 'deleted' || status === 'pending') {
+      return '<div class="kc-my-posts-actions">' +
+        viewBtn + editBtn + saveBtn + cloneBtn + deleteBtn +
+        '</div>';
+    }
+
+    // published ou hidden
+    var toggleLabel = status === 'hidden' ? 'Reativar' : 'Desabilitar';
+    var toggleIcon  = status === 'hidden' ? 'fas fa-eye' : 'fas fa-eye-slash';
+    var toggleBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="toggle" data-post-uuid="' + esc(uuid) + '">' +
+      '<i class="' + esc(toggleIcon) + '"></i> ' + esc(toggleLabel) + '</button>';
+
+    var boostBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="boost" data-post-uuid="' + esc(uuid) + '">' +
+      '<i class="fas fa-rocket"></i> Impulsionar</button>';
+
+    return '<div class="kc-my-posts-actions">' +
+      viewBtn + editBtn + toggleBtn + boostBtn + saveBtn + cloneBtn + deleteBtn +
+      '</div>';
   }
 
   function renderPostCard(post) {
@@ -255,14 +291,20 @@
     var modInfo = getModuleInfo(moduleKey);
     var statusInfo = getStatusInfo(status);
     var createdAt = post.created_at || post.createdAt || '';
+    var expiresAt = post.expires_at || post.expiresAt || '';
     var coverUrl = post.cover_url || (post.images && post.images[0]) || '';
 
     var thumbHtml = coverUrl
       ? '<img src="' + esc(coverUrl) + '" alt="' + esc(title) + '" style="width:64px;height:64px;object-fit:cover;border-radius:10px;flex-shrink:0;">'
       : '<div style="width:64px;height:64px;border-radius:10px;background:var(--kc-background-dark);display:flex;align-items:center;justify-content:center;font-size:1.8em;flex-shrink:0;">' + modInfo.emoji + '</div>';
 
-    var toggleLabel = status === 'hidden' ? 'Reativar' : 'Desabilitar';
-    var toggleIcon  = status === 'hidden' ? 'fas fa-eye' : 'fas fa-eye-slash';
+    var metaHtml = '';
+    if (createdAt) metaHtml += '<span><i class="fas fa-clock"></i> ' + formatDate(createdAt) + '</span>';
+    if (expiresAt && status !== 'deleted') {
+      var expiryColor = status === 'expired' ? '#ef9a9a' : 'inherit';
+      metaHtml += '<span style="color:' + expiryColor + ';"><i class="fas fa-hourglass-end"></i> ' +
+        (status === 'expired' ? 'Expirou' : 'Expira') + ' ' + formatDate(expiresAt) + '</span>';
+    }
 
     return '<div class="kc-card" style="padding:14px 16px; margin-bottom:12px;">' +
       '<div style="display:flex;gap:12px;align-items:flex-start;">' +
@@ -274,23 +316,10 @@
             '<span style="background:' + statusInfo.bg + ';color:' + statusInfo.color + ';border:1px solid ' + statusInfo.borderColor + ';padding:2px 9px;border-radius:20px;font-size:0.72em;font-weight:600;">' + esc(statusInfo.label) + '</span>' +
           '</div>' +
           '<a href="product.html?id=' + esc(uuid) + '" style="font-weight:700;text-decoration:none;color:inherit;font-size:0.97em;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(title) + '">' + esc(title) + '</a>' +
-          (createdAt ? '<div style="font-size:0.78em;color:var(--kc-text-dark-secondary);margin-top:2px;"><i class="fas fa-clock"></i> ' + formatDate(createdAt) + '</div>' : '') +
+          (metaHtml ? '<div style="font-size:0.78em;color:var(--kc-text-dark-secondary);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;">' + metaHtml + '</div>' : '') +
         '</div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--kc-border-dark);align-items:center;">' +
-        '<button type="button" class="kc-btn-secondary" data-my-post-action="edit" data-post-uuid="' + esc(uuid) + '" style="padding:5px 12px;font-size:0.8em;">' +
-          '<i class="fas fa-pen"></i> Editar</button>' +
-        '<button type="button" class="kc-btn-secondary" data-my-post-action="toggle" data-post-uuid="' + esc(uuid) + '" style="padding:5px 12px;font-size:0.8em;">' +
-          '<i class="' + esc(toggleIcon) + '"></i> ' + esc(toggleLabel) + '</button>' +
-        '<button type="button" class="kc-btn-secondary" data-my-post-action="boost" data-post-uuid="' + esc(uuid) + '" style="padding:5px 12px;font-size:0.8em;">' +
-          '<i class="fas fa-rocket"></i> Impulsionar</button>' +
-        '<button type="button" class="kc-btn-secondary" data-my-post-action="save" data-post-uuid="' + esc(uuid) + '" style="padding:5px 12px;font-size:0.8em;">' +
-          '<i class="fas fa-bookmark"></i> Salvar</button>' +
-        '<a href="create-post.html" class="kc-btn-secondary" data-my-post-action="clone" data-post-uuid="' + esc(uuid) + '" style="padding:5px 12px;font-size:0.8em;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">' +
-          '<i class="fas fa-plus"></i> Criar Parecido</a>' +
-        '<a href="product.html?id=' + esc(uuid) + '" class="kc-btn-secondary" style="padding:5px 12px;font-size:0.8em;text-decoration:none;display:inline-flex;align-items:center;gap:5px;margin-left:auto;">' +
-          '<i class="fas fa-eye"></i> Ver</a>' +
-      '</div>' +
+      buildPostActions(uuid, status) +
     '</div>';
   }
 
@@ -354,6 +383,38 @@
         showToastMsg(msg, 'error');
       }
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    });
+  }
+
+  function handleRenew(uuid) {
+    var kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+      ? window.KCSupabase.getClient() : null;
+    if (!kcClient) { showToastMsg('Serviço não disponível.', 'error'); return; }
+
+    var postIdx = state.posts.findIndex(function (p) { return (p.uuid || p.id) === uuid; });
+    if (postIdx < 0) return;
+
+    showToastMsg('Renovando publicação…', 'info', 1500);
+
+    kcClient.rpc('kc_renew_post', { p_post_id: uuid }).then(function (res) {
+      var data = res && res.data;
+      if (res && res.error) {
+        showToastMsg(res.error.message || 'Não foi possível renovar.', 'error');
+        return;
+      }
+      if (data && data.ok === false) {
+        showToastMsg(data.message || 'Não foi possível renovar.', 'error');
+        return;
+      }
+      state.posts[postIdx] = Object.assign({}, state.posts[postIdx], {
+        status: 'published',
+        expires_at: (data && data.expires_at) || null,
+      });
+      showToastMsg((data && data.message) || 'Publicação renovada com sucesso!', 'info', 2500);
+      renderTabs();
+      renderPostsList(state.activeModule);
+    }).catch(function () {
+      showToastMsg('Não foi possível renovar a publicação.', 'error');
     });
   }
 

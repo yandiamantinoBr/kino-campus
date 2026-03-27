@@ -904,6 +904,86 @@ main {
     margin: 0 4px;
 }
 
+/* Tabs de módulo (Minhas Publicações) — mesmo estilo visual dos feed-tabs */
+.kc-feed-tabs button[data-module] {
+    white-space: nowrap;
+    padding: 8px 12px;
+    color: var(--kc-text-dark-secondary);
+    border-radius: 20px;
+    font-weight: bold;
+    background-color: var(--kc-surface-dark);
+    font-size: 0.9em;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all var(--transition-speed) ease;
+    border: 1px solid var(--kc-border-dark);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+}
+.kc-feed-tabs button[data-module] .kc-tab-badge {
+    background: var(--kc-background-dark);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 0.82em;
+    font-weight: 500;
+}
+.kc-feed-tabs button[data-module].active {
+    background-color: var(--kc-primary-brand);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 107, 0, 0.2);
+    border-color: var(--kc-primary-brand);
+}
+.kc-feed-tabs button[data-module].active .kc-tab-badge {
+    background: rgba(255, 255, 255, 0.2);
+}
+.kc-feed-tabs button[data-module]:hover {
+    background-color: var(--kc-surface-dark-hover);
+    transform: translateY(-2px);
+}
+.kc-feed-tabs button[data-module].active:hover {
+    background-color: var(--kc-primary-brand);
+}
+
+/* Ações de post em Minhas Publicações — grade responsiva */
+.kc-my-posts-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--kc-border-dark);
+    align-items: stretch;
+}
+.kc-my-posts-actions > a,
+.kc-my-posts-actions > button {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 0.83rem;
+    padding: 8px 10px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    box-sizing: border-box;
+}
+.kc-my-posts-action--full {
+    grid-column: 1 / -1;
+}
+.kc-my-posts-action--danger.kc-btn-secondary {
+    color: #ef5350;
+    border-color: rgba(239, 83, 80, 0.35);
+}
+.kc-my-posts-action--danger.kc-btn-secondary:hover {
+    background-color: rgba(239, 83, 80, 0.1);
+    border-color: rgba(239, 83, 80, 0.6);
+}
+
 /* Feed Tab Wrappers — isolam pager e realtime-banner de cada aba */
 /* O wrapper esconde tudo dentro (panel + pager + banner) ao trocar de aba */
 .kc-feed-tab-wrap[hidden] {
