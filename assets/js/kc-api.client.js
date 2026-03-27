@@ -987,6 +987,12 @@
     return driver.bumpPost(postId);
   }
 
+  async function getTopContributors(period, module, limit) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.getTopContributors !== 'function') return [];
+    return driver.getTopContributors(period, module, limit);
+  }
+
   async function trackCouponClick(postId) {
     const driver = getActiveDriver();
     if (!driver || typeof driver.trackCouponClick !== 'function') return { ok: false };
@@ -1257,6 +1263,7 @@
     togglePostStatus,
     renewPost,
     bumpPost,
+    getTopContributors,
     trackCouponClick,
     trackShare,
     checkDuplicatePost,

@@ -126,9 +126,44 @@
       <div class="kc-ranking-banner">
         <div class="kc-ranking-title">
           <i class="fas fa-trophy"></i>
-          <span>Top Contribuidores da UFG</span>
+          <span>Top Contribuidores</span>
+          <div class="kc-ranking-filters">
+            <button class="kc-ranking-filter" data-kc-ranking-period="day" type="button">Hoje</button>
+            <button class="kc-ranking-filter" data-kc-ranking-period="week" type="button">Semana</button>
+            <button class="kc-ranking-filter active" data-kc-ranking-period="month" type="button">Mês</button>
+            <button class="kc-ranking-info-btn" type="button" title="Como funciona o ranking?" data-kc-ranking-info><i class="fas fa-circle-info"></i></button>
+          </div>
         </div>
-        <div class="kc-ranking-users"></div>
+        <div class="kc-ranking-users" data-kc-ranking-container></div>
+      </div>
+
+      <!-- Modal: como funciona o ranking -->
+      <div id="kcRankingInfoModal" class="kc-ranking-modal" aria-hidden="true">
+        <div class="kc-ranking-modal__backdrop" data-kc-ranking-modal-close></div>
+        <div class="kc-ranking-modal__content">
+          <div class="kc-ranking-modal__header">
+            <h3><i class="fas fa-trophy" style="color:var(--kc-primary-brand);"></i> Como funciona o ranking?</h3>
+            <button type="button" data-kc-ranking-modal-close aria-label="Fechar"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="kc-ranking-modal__body">
+            <p>O ranking pontua os usuários mais engajados da plataforma com base nas seguintes ações:</p>
+            <table class="kc-ranking-score-table">
+              <thead><tr><th>Ação</th><th>Pontos</th></tr></thead>
+              <tbody>
+                <tr><td><i class="fas fa-file-alt"></i> Publicação criada</td><td class="kc-ranking-pts">+15</td></tr>
+                <tr><td><i class="fas fa-thumbs-up"></i> Voto positivo recebido</td><td class="kc-ranking-pts">+10</td></tr>
+                <tr><td><i class="fas fa-comment"></i> Comentário escrito</td><td class="kc-ranking-pts">+5</td></tr>
+                <tr><td><i class="fas fa-ticket"></i> Clique em cupom</td><td class="kc-ranking-pts">+4</td></tr>
+                <tr><td><i class="fas fa-share-nodes"></i> Compartilhamento</td><td class="kc-ranking-pts">+3</td></tr>
+                <tr><td><i class="fas fa-flag"></i> Denúncia confirmada (penalidade)</td><td class="kc-ranking-pts kc-ranking-pts--neg">-50</td></tr>
+              </tbody>
+            </table>
+            <p style="font-size:0.85em; color:var(--kc-text-dark-secondary); margin-top:10px;">O ranking é filtrado por período (hoje, semana ou mês) e pode ser específico por módulo nas páginas de cada categoria.</p>
+          </div>
+          <div class="kc-ranking-modal__footer">
+            <button type="button" class="kc-btn-primary" data-kc-ranking-modal-close><i class="fas fa-check"></i> Entendido</button>
+          </div>
+        </div>
       </div>
 
       <div class="kc-feed-tabs" id="kc-home-feed-tabs" role="tablist" aria-label="Visualização do feed">

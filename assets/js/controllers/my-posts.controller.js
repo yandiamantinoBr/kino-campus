@@ -229,7 +229,7 @@
         var uuid = btn.dataset.postUuid;
         if (action === 'edit') handleEdit(uuid);
         else if (action === 'toggle') handleToggle(uuid, btn);
-        else if (action === 'boost') handleBoost();
+        else if (action === 'boost') handleBoost(uuid, btn);
         else if (action === 'renew') handleRenew(uuid);
         else if (action === 'save') handleSave(uuid, btn);
         else if (action === 'clone') { e.preventDefault(); handleClone(uuid); }
@@ -343,45 +343,26 @@
   function handleToggle(uuid, btn) {
     var postIdx = state.posts.findIndex(function (p) { return (p.uuid || p.id) === uuid; });
     if (postIdx < 0) return;
-    var post = state.posts[postIdx];
-    var currentStatus = post.status || 'published';
-    var newStatus = currentStatus === 'hidden' ? 'published' : 'hidden';
     var api = window.KCAPI;
+    if (!api || typeof api.togglePostStatus !== 'function') {
+      showToastMsg('Serviço indisponível.', 'error'); return;
+    }
 
     if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
 
-    var updateFn = (api && typeof api.updatePost === 'function')
-      ? api.updatePost(uuid, { status: newStatus })
-      : Promise.reject(new Error('API updatePost não disponível'));
-
-    updateFn.then(function (res) {
+    api.togglePostStatus(uuid).then(function (res) {
       if (res && res.ok === false) {
-        showToastMsg((res.error && res.error.message) || 'Não foi possível alterar o status.', 'error');
+        showToastMsg(res.message || 'Não foi possível alterar o status.', 'error');
       } else {
-        state.posts[postIdx] = Object.assign({}, post, { status: newStatus });
-        showToastMsg(newStatus === 'hidden' ? 'Publicação desabilitada.' : 'Publicação reativada!', 'info', 2000);
+        var newStatus = res.new_status || (state.posts[postIdx].status === 'hidden' ? 'published' : 'hidden');
+        state.posts[postIdx] = Object.assign({}, state.posts[postIdx], { status: newStatus });
+        showToastMsg(res.message || (newStatus === 'hidden' ? 'Publicação desabilitada.' : 'Publicação reativada!'), 'info', 2000);
         renderTabs();
         renderPostsList(state.activeModule);
       }
-    }).catch(function (err) {
-      var msg = (err && err.message) || 'Não foi possível alterar o status.';
-      // Fallback: tentar via Supabase diretamente
-      var kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
-        ? window.KCSupabase.getClient() : null;
-      if (kcClient) {
-        kcClient.from('posts').update({ status: newStatus }).eq('id', uuid).then(function (r) {
-          if (r.error) {
-            showToastMsg(r.error.message || msg, 'error');
-          } else {
-            state.posts[postIdx] = Object.assign({}, post, { status: newStatus });
-            showToastMsg(newStatus === 'hidden' ? 'Publicação desabilitada.' : 'Publicação reativada!', 'info', 2000);
-            renderTabs();
-            renderPostsList(state.activeModule);
-          }
-        }).catch(function () { showToastMsg(msg, 'error'); });
-      } else {
-        showToastMsg(msg, 'error');
-      }
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    }).catch(function () {
+      showToastMsg('Erro ao alterar status.', 'error');
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     });
   }
@@ -418,19 +399,31 @@
     });
   }
 
-  function handleBoost() {
-    var overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-    overlay.innerHTML =
-      '<div class="kc-card" style="max-width:360px;width:100%;padding:28px 24px;text-align:center;border-radius:16px;">' +
-        '<i class="fas fa-rocket" style="font-size:2.5em;color:var(--kc-primary-brand);display:block;margin-bottom:14px;"></i>' +
-        '<h3 style="margin:0 0 8px;font-size:1.1em;">Impulsionar — Em breve</h3>' +
-        '<p style="color:var(--kc-text-dark-secondary);margin:0 0 20px;font-size:0.9em;">O recurso de impulsionamento premium estará disponível em breve para destacar suas publicações na plataforma.</p>' +
-        '<button type="button" class="kc-btn-primary" style="width:100%;"><i class="fas fa-check"></i> Entendido</button>' +
-      '</div>';
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', function (e) {
-      if (e.target === overlay || e.target.tagName === 'BUTTON') overlay.remove();
+  function handleBoost(uuid, btn) {
+    var api = window.KCAPI;
+    if (!api || typeof api.bumpPost !== 'function') {
+      showToastMsg('Serviço indisponível.', 'error'); return;
+    }
+
+    var prevHTML = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Impulsionando…'; }
+
+    api.bumpPost(uuid).then(function (res) {
+      if (res && res.ok) {
+        var postIdx = state.posts.findIndex(function (p) { return (p.uuid || p.id) === uuid; });
+        if (postIdx >= 0) state.posts[postIdx].bumped_at = new Date().toISOString();
+        showToastMsg(res.message || 'Publicação impulsionada!', 'info', 3000);
+        if (btn) { btn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionado!'; }
+        // Restaurar botão após 3s
+        setTimeout(function () { if (btn) { btn.disabled = false; btn.innerHTML = prevHTML; } }, 3000);
+      } else {
+        if (btn) { btn.disabled = false; btn.innerHTML = prevHTML; }
+        var msgType = (res && res.code === 'COOLDOWN_ACTIVE') ? 'info' : 'error';
+        showToastMsg((res && res.message) || 'Não foi possível impulsionar.', msgType, 3500);
+      }
+    }).catch(function () {
+      if (btn) { btn.disabled = false; btn.innerHTML = prevHTML; }
+      showToastMsg('Erro ao impulsionar publicação.', 'error');
     });
   }
 
@@ -443,21 +436,25 @@
     // Resetar estado visual dos botões
     popover.querySelectorAll('.kc-my-posts-save-action').forEach(function (b) {
       b.setAttribute('aria-pressed', 'false');
+      b.classList.remove('is-active');
     });
 
-    // Posicionar popover perto do botão
-    if (triggerBtn) {
+    // Desktop: posicionar popover perto do botão
+    if (window.innerWidth > 640 && triggerBtn) {
       var rect = triggerBtn.getBoundingClientRect();
-      var top = rect.bottom + 6;
-      var left = Math.min(rect.left, window.innerWidth - 280);
-      if (left < 8) left = 8;
-      popover.style.top = top + 'px';
-      popover.style.left = left + 'px';
+      popover.style.position = 'fixed';
+      popover.style.top = (rect.bottom + 6) + 'px';
+      popover.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 340)) + 'px';
+    } else {
+      // Mobile: bottom sheet (CSS handles position)
+      popover.style.position = '';
+      popover.style.top = '';
+      popover.style.left = '';
     }
 
-    popover.style.display = 'block';
+    popover.classList.add('active');
     popover.setAttribute('aria-hidden', 'false');
-    if (backdrop) backdrop.style.display = 'block';
+    if (backdrop) backdrop.classList.add('active');
 
     // Carregar estado salvo atual
     var api = window.KCAPI;
@@ -467,7 +464,7 @@
           : (Array.isArray(result) ? result : []);
         kinds.forEach(function (kind) {
           var btn = popover.querySelector('[data-kc-save-kind="' + kind + '"]');
-          if (btn) btn.setAttribute('aria-pressed', 'true');
+          if (btn) { btn.setAttribute('aria-pressed', 'true'); btn.classList.add('is-active'); }
         });
       }).catch(function () {});
     }
@@ -476,8 +473,8 @@
   function closeSavePopover() {
     var popover = $('myPostsSavePopover');
     var backdrop = $('myPostsSaveBackdrop');
-    if (popover) { popover.style.display = 'none'; popover.setAttribute('aria-hidden', 'true'); }
-    if (backdrop) backdrop.style.display = 'none';
+    if (popover) { popover.classList.remove('active'); popover.setAttribute('aria-hidden', 'true'); }
+    if (backdrop) backdrop.classList.remove('active');
     state.saveTargetUuid = null;
   }
 
@@ -499,6 +496,7 @@
           var api = window.KCAPI;
 
           btn.setAttribute('aria-pressed', isPressed ? 'false' : 'true');
+          btn.classList.toggle('is-active', !isPressed);
 
           if (api && typeof api.setSavedPostState === 'function') {
             api.setSavedPostState(uuid, kind, !isPressed).then(function () {
@@ -506,6 +504,7 @@
             }).catch(function () {
               showToastMsg('Não foi possível salvar.', 'error');
               btn.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
+              btn.classList.toggle('is-active', isPressed);
             });
           } else {
             showToastMsg(isPressed ? 'Removido dos salvos.' : 'Publicação salva!', 'info', 1800);

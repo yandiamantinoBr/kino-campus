@@ -53,18 +53,16 @@
   </header>
 
   <main class="kc-main-content">
-    <section class="kc-feed-section" style="padding-top:20px; max-width:860px; margin:0 auto;">
+    <section class="kc-feed-section" style="padding-top:20px; max-width:860px; margin:0 auto; overflow-x:hidden; box-sizing:border-box;">
 
       <!-- Cabeçalho da página -->
-      <div class="kc-card" style="padding:20px 22px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div class="kc-card kc-my-posts-header">
         <div>
-          <h2 style="margin:0 0 4px; display:flex; align-items:center; gap:10px; font-size:1.2em;">
+          <h2>
             <i class="fas fa-layer-group" style="color:var(--kc-primary-brand);"></i>
             Minhas Publicações
           </h2>
-          <p style="margin:0; color:var(--kc-text-dark-secondary); font-size:0.9em;">
-            Gerencie todos os seus anúncios publicados na plataforma.
-          </p>
+          <p>Gerencie todos os seus anúncios publicados na plataforma.</p>
         </div>
         <a class="kc-btn-primary" href="create-post.html" style="text-decoration:none; white-space:nowrap;">
           <i class="fas fa-plus"></i> Nova publicação
@@ -72,7 +70,7 @@
       </div>
 
       <!-- Aviso: não autenticado -->
-      <div id="myPostsAuthNotice" style="display:none;" class="kc-card" style="padding:32px; text-align:center;">
+      <div id="myPostsAuthNotice" class="kc-card" style="display:none; padding:32px; text-align:center;">
         <i class="fas fa-lock" style="font-size:2.5em; opacity:0.4; display:block; margin-bottom:12px;"></i>
         <h3 style="margin:0 0 8px;">Faça login para ver suas publicações</h3>
         <p style="color:var(--kc-text-dark-secondary); margin:0 0 16px;">Você precisa estar autenticado para gerenciar seus anúncios.</p>
@@ -82,7 +80,7 @@
       </div>
 
       <!-- Aviso: modo local (sem Supabase) -->
-      <div id="myPostsLocalNotice" style="display:none;" class="kc-card" style="padding:28px; text-align:center;">
+      <div id="myPostsLocalNotice" class="kc-card" style="display:none; padding:28px; text-align:center;">
         <i class="fas fa-database" style="font-size:2.5em; opacity:0.4; display:block; margin-bottom:12px;"></i>
         <h3 style="margin:0 0 8px;">Gerenciamento disponível em produção</h3>
         <p style="color:var(--kc-text-dark-secondary); margin:0;">
@@ -119,7 +117,7 @@
   </main>
 
   <!-- Save Popover (compartilhado, movido dinamicamente) -->
-  <div id="myPostsSavePopover" class="kc-save-popover" role="menu" aria-hidden="true" style="position:fixed; z-index:2000; display:none;">
+  <div id="myPostsSavePopover" class="kc-save-popover" role="menu" aria-hidden="true">
     <div class="kc-save-popover__header">
       <h3 class="kc-save-popover__title"><i class="fas fa-bookmark"></i> Salvar publicação</h3>
       <button class="kc-save-popover__close" id="myPostsSavePopoverClose" type="button" aria-label="Fechar">
@@ -153,7 +151,7 @@
       </button>
     </div>
   </div>
-  <div id="myPostsSaveBackdrop" style="display:none; position:fixed; inset:0; z-index:1999;"></div>
+  <div id="myPostsSaveBackdrop" class="kc-save-popover-backdrop"></div>
 
   <!-- Mobile Nav -->
   <nav class="kc-mobile-nav">

@@ -1814,6 +1814,7 @@
     }
     try {
       await loadMetrics();
+      loadAdminRanking();
     } catch (error) {
       console.error('[Admin dashboard] refreshDashboard:', error);
       showError('Não foi possível atualizar o dashboard no momento.');
@@ -1905,6 +1906,8 @@
     var periodFilter = $('#admin-period-filter');
     if (periodFilter) periodFilter.addEventListener('change', refreshDashboard);
 
+    bindAdminRanking();
+
     if (window.KCPullToRefresh && document.body.dataset.kcAdminPtrReady !== '1') {
       document.body.dataset.kcAdminPtrReady = '1';
       window.KCPullToRefresh.init({
@@ -1914,6 +1917,117 @@
     }
 
     await refreshDashboard();
+  }
+
+  // ── Admin Ranking — Top Contribuidores ──────────────────────────────────────
+
+  var _adminRankingExpanded = false;
+
+  function mapPeriodToRanking(days) {
+    if (days <= 1) return 'day';
+    if (days <= 7) return 'week';
+    return 'month';
+  }
+
+  function loadAdminRanking() {
+    var tableEl = $('#admin-ranking-table');
+    if (!tableEl) return;
+
+    var api = window.KCAPI;
+    if (!api || typeof api.getTopContributors !== 'function') {
+      tableEl.innerHTML = '<div class="kc-admin-empty">API indisponível.</div>';
+      return;
+    }
+
+    var periodDays = getSelectedPeriodDays();
+    var period = mapPeriodToRanking(periodDays);
+    var moduleFilter = $('#admin-ranking-module-filter');
+    var module = moduleFilter ? (moduleFilter.value || null) : null;
+    var limit = _adminRankingExpanded ? 100 : 10;
+
+    tableEl.innerHTML = '<div class="kc-admin-empty"><i class="fas fa-spinner fa-spin"></i> Carregando ranking...</div>';
+
+    api.getTopContributors(period, module, limit).then(function (users) {
+      var showAllBtn = $('#admin-ranking-show-all');
+      if (!users || users.length === 0) {
+        tableEl.innerHTML = '<div class="kc-admin-empty">Nenhum contribuidor encontrado no período.</div>';
+        if (showAllBtn) showAllBtn.style.display = 'none';
+        return;
+      }
+
+      var html = '<table class="kc-ranking-score-table" style="font-size:0.85em;">' +
+        '<thead><tr>' +
+          '<th>#</th><th>Usuário</th><th>Score</th><th title="Publicações"><i class="fas fa-file-alt"></i></th>' +
+          '<th title="Votos"><i class="fas fa-thumbs-up"></i></th><th title="Comentários"><i class="fas fa-comment"></i></th>' +
+          '<th title="Cupons"><i class="fas fa-ticket"></i></th><th title="Shares"><i class="fas fa-share-nodes"></i></th>' +
+          '<th title="Penalidades"><i class="fas fa-flag"></i></th>' +
+        '</tr></thead><tbody>';
+
+      users.forEach(function (u) {
+        var name = u.display_name || 'Usuário';
+        var avatarSrc = u.avatar_url || '';
+        var avatarHtml = avatarSrc
+          ? '<img src="' + avatarSrc + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;" loading="lazy">'
+          : '<i class="fas fa-user" style="font-size:0.8em;"></i>';
+        html += '<tr>' +
+          '<td style="font-weight:700;color:var(--kc-primary-brand);">' + u.rank + '</td>' +
+          '<td style="display:flex;align-items:center;gap:6px;min-width:0;">' + avatarHtml +
+            '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + name + '</span></td>' +
+          '<td style="font-weight:700;">' + u.score + '</td>' +
+          '<td>' + u.posts_count + '</td>' +
+          '<td>' + u.votes_received + '</td>' +
+          '<td>' + u.comments_count + '</td>' +
+          '<td>' + u.coupon_clicks + '</td>' +
+          '<td>' + u.share_count + '</td>' +
+          '<td style="color:' + (u.penalties > 0 ? '#ef5350' : 'inherit') + ';">' + u.penalties + '</td>' +
+        '</tr>';
+      });
+      html += '</tbody></table>';
+      tableEl.innerHTML = html;
+
+      if (showAllBtn) {
+        if (!_adminRankingExpanded && users.length >= 10) {
+          showAllBtn.style.display = 'block';
+          showAllBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Mostrar todos';
+        } else if (_adminRankingExpanded) {
+          showAllBtn.style.display = 'block';
+          showAllBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Mostrar top 10';
+        } else {
+          showAllBtn.style.display = 'none';
+        }
+      }
+    }).catch(function () {
+      tableEl.innerHTML = '<div class="kc-admin-empty">Erro ao carregar ranking.</div>';
+    });
+  }
+
+  function bindAdminRanking() {
+    var moduleFilter = $('#admin-ranking-module-filter');
+    if (moduleFilter) moduleFilter.addEventListener('change', function () {
+      _adminRankingExpanded = false;
+      loadAdminRanking();
+    });
+
+    var showAllBtn = $('#admin-ranking-show-all');
+    if (showAllBtn) showAllBtn.addEventListener('click', function () {
+      _adminRankingExpanded = !_adminRankingExpanded;
+      loadAdminRanking();
+    });
+
+    var infoBtn = $('#admin-ranking-info-btn');
+    if (infoBtn) {
+      infoBtn.addEventListener('click', function () {
+        // Use kc-ranking.js ensureInfoModal if available, or create inline
+        var modal = document.getElementById('kcRankingInfoModal');
+        if (!modal && window.KCRanking) {
+          // kc-ranking.js will auto-create on DOMContentLoaded if sidebar exists
+          // Fallback: create simple alert
+        }
+        if (modal) {
+          modal.setAttribute('aria-hidden', 'false');
+        }
+      });
+    }
   }
 
   window.KCAdminDashboardRefresh = refreshDashboard;

@@ -420,11 +420,78 @@
   async function bootstrapHome() {
     injectHomeFeed();
     renderCashbackPanel();
+    initRanking();
     await Promise.all([
       renderSidebarCategories({ force: true }),
       renderPersonalPanel(),
       renderCommunityPanel()
     ]);
+  }
+
+  // ─── Top Contribuidores (ranking de engajamento) ──────────────────────────
+
+  function initRanking() {
+    var container = document.querySelector('[data-kc-ranking-container]');
+    if (!container) return;
+
+    var currentPeriod = 'month';
+
+    // Filtros de período
+    document.querySelectorAll('.kc-ranking-filter[data-kc-ranking-period]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.kc-ranking-filter[data-kc-ranking-period]').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        currentPeriod = btn.dataset.kcRankingPeriod;
+        loadRanking(currentPeriod, null, container);
+      });
+    });
+
+    // Modal info
+    document.querySelectorAll('[data-kc-ranking-info]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var modal = document.getElementById('kcRankingInfoModal');
+        if (modal) modal.setAttribute('aria-hidden', 'false');
+      });
+    });
+    document.querySelectorAll('[data-kc-ranking-modal-close]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var modal = el.closest('.kc-ranking-modal');
+        if (modal) modal.setAttribute('aria-hidden', 'true');
+      });
+    });
+
+    // Carga inicial
+    loadRanking(currentPeriod, null, container);
+  }
+
+  function loadRanking(period, module, container) {
+    var api = window.KCAPI;
+    if (!api || typeof api.getTopContributors !== 'function') return;
+
+    container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+
+    api.getTopContributors(period, module, 10).then(function (users) {
+      if (!users || users.length === 0) {
+        container.innerHTML = '<span class="kc-ranking-empty">Nenhum contribuidor no período.</span>';
+        return;
+      }
+      container.innerHTML = users.map(function (u, i) {
+        var name = u.display_name || 'Usuário';
+        var avatarSrc = u.avatar_url || '';
+        var avatarHtml = avatarSrc
+          ? '<img src="' + avatarSrc + '" alt="' + name + '" loading="lazy">'
+          : '<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);"></i>';
+        return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-user" title="' + name + ' — ' + u.score + ' pts">' +
+          '<div class="kc-ranking-user-avatar">' + avatarHtml +
+            '<span class="kc-ranking-user-position">' + (i + 1) + '</span>' +
+          '</div>' +
+          '<span class="kc-ranking-user-name">' + name + '</span>' +
+          '<span class="kc-ranking-user-score">' + u.score + ' pts</span>' +
+        '</a>';
+      }).join('');
+    }).catch(function () {
+      container.innerHTML = '<span class="kc-ranking-empty">Erro ao carregar ranking.</span>';
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
