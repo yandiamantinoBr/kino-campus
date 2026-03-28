@@ -1106,20 +1106,27 @@ main {
 .kc-card__author .kc-rank-badge {
     margin-left: 4px;
 }
-/* Profile ranking badges container */
+/* Profile ranking badges container — placed between avatar and profile-info */
 .kc-profile-rank-badges {
-    position: absolute;
-    bottom: -6px;
-    left: -4px;
     display: flex;
+    flex-direction: column;
     gap: 3px;
-    z-index: 3;
+    align-self: center;
+    flex-shrink: 0;
 }
 .kc-profile-rank-badges .kc-rank-badge {
-    font-size: 0.68em;
+    font-size: 0.62em;
     padding: 2px 5px;
-    border: 2px solid var(--kc-surface-dark);
-    border-radius: 10px;
+    border: 1.5px solid var(--kc-surface-dark);
+    border-radius: 8px;
+}
+@media (max-width: 600px) {
+    .kc-profile-rank-badges {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-self: flex-start;
+        margin-top: 2px;
+    }
 }
 
 /* Feed Tabs */
@@ -1233,14 +1240,12 @@ main {
     background-color: var(--kc-primary-brand);
 }
 
-/* Ações de post em Minhas Publicações — grade responsiva */
+/* Ações de post em Minhas Publicações — estilo product.html */
 .kc-my-posts-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid var(--kc-border-dark);
+    margin-top: 18px;
     align-items: stretch;
 }
 .kc-my-posts-actions > a,
@@ -1250,24 +1255,35 @@ main {
     justify-content: center;
     white-space: nowrap;
     text-align: center;
-    font-size: 0.83rem;
-    padding: 8px 10px;
+    font-size: 0.88rem;
+    padding: 10px 12px;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
     box-sizing: border-box;
+    background-color: var(--kc-background-dark);
+    color: var(--kc-text-dark-primary);
+    border: 1px solid var(--kc-border-dark);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.kc-my-posts-actions > a:hover,
+.kc-my-posts-actions > button:hover {
+    border-color: var(--kc-primary-brand);
+    background-color: rgba(255, 124, 0, 0.06);
 }
 .kc-my-posts-action--full {
     grid-column: 1 / -1;
 }
-.kc-my-posts-action--danger.kc-btn-secondary {
-    color: #ef5350;
-    border-color: rgba(239, 83, 80, 0.35);
+.kc-my-posts-action--danger {
+    color: #ef5350 !important;
+    border-color: rgba(239, 83, 80, 0.35) !important;
 }
-.kc-my-posts-action--danger.kc-btn-secondary:hover {
-    background-color: rgba(239, 83, 80, 0.1);
-    border-color: rgba(239, 83, 80, 0.6);
+.kc-my-posts-action--danger:hover {
+    background-color: rgba(239, 83, 80, 0.1) !important;
+    border-color: rgba(239, 83, 80, 0.6) !important;
 }
 
 /* ── My-Posts: single-column feed layout ────────────────── */
@@ -1326,6 +1342,11 @@ main {
     margin: 0;
     color: var(--kc-text-dark-secondary);
     font-size: 0.9em;
+}
+.kc-my-posts-header .kc-btn-primary {
+    background-color: var(--kc-primary-brand);
+    color: #fff;
+    border: none;
 }
 @media (max-width: 600px) {
     .kc-my-posts-header {
