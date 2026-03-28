@@ -294,6 +294,7 @@
     { key: 'routes',   title: 'Rotas',                 icon: 'fas fa-route'     },
     { key: 'features', title: 'Características',       icon: 'fas fa-tags'      },
     { key: 'tips',     title: 'Dicas para Caroneiros', icon: 'fas fa-lightbulb' },
+    { key: 'ranking',  title: 'Top Contribuidores',    icon: 'fas fa-trophy'    },
   ];
   var CARONAS_MODAL_ID = 'kcCaronasSectionOverlay';
   var caronasRailState = { activeKey: '', activeNode: null, activePlaceholder: null, lastTrigger: null };

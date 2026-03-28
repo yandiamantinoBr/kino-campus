@@ -897,7 +897,7 @@
         }
       }
 
-      const areaButton = event.target.closest('[data-kc-opp-area]');
+      const areaButton = event.target.closest('button[data-kc-opp-area]');
       if (areaButton) {
         const selectedArea = String(areaButton.getAttribute('data-kc-opp-area') || '').trim();
         if (state.modalDraft && state.activeSectionKey === 'areas' && isMobileViewport()) {

@@ -6,7 +6,7 @@
   'use strict';
 
   var MODULE_ICONS = {
-    'compra-venda':     'fas fa-layer-group',
+    'compra-venda':     'fas fa-shopping-bag',
     'moradia':          'fas fa-home',
     'caronas':          'fas fa-car',
     'eventos':          'fas fa-calendar-alt',
@@ -198,11 +198,20 @@
     if (profileWrap) {
       var profileId = profileWrap.dataset.userId;
       if (profileId && rankMap[profileId]) {
-        var container = profileWrap.querySelector('.kc-profile-rank-badges');
+        // Place badges container as a sibling after avatar-wrap, inside hero-top
+        var heroTop = profileWrap.closest('.kc-profile-hero-top');
+        var container = heroTop
+          ? heroTop.querySelector('.kc-profile-rank-badges')
+          : profileWrap.querySelector('.kc-profile-rank-badges');
         if (!container) {
           container = document.createElement('div');
           container.className = 'kc-profile-rank-badges';
-          profileWrap.appendChild(container);
+          if (heroTop) {
+            // Insert after avatar-wrap, before profile-info
+            profileWrap.insertAdjacentElement('afterend', container);
+          } else {
+            profileWrap.appendChild(container);
+          }
         }
         // Check if badge for this module already exists
         var modKey = module || 'general';

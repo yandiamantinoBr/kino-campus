@@ -59,9 +59,10 @@
 
   /* ── Mobile rail — seções do sidebar como modal ───────── */
   var EVENTOS_SECTIONS = [
-    { key: 'calendario', title: 'Calendário',   icon: 'fas fa-calendar-alt' },
-    { key: 'categorias', title: 'Categorias',   icon: 'fas fa-th-large'     },
-    { key: 'dicas',      title: 'Dicas',        icon: 'fas fa-lightbulb'    },
+    { key: 'calendario', title: 'Calendário',          icon: 'fas fa-calendar-alt' },
+    { key: 'categorias', title: 'Categorias',          icon: 'fas fa-th-large'     },
+    { key: 'dicas',      title: 'Dicas',               icon: 'fas fa-lightbulb'    },
+    { key: 'ranking',    title: 'Top Contribuidores',  icon: 'fas fa-trophy'       },
   ];
   var EVENTOS_MODAL_ID = 'kcEventosSectionOverlay';
   var railState = { activeKey: '', activeNode: null, activePlaceholder: null, lastTrigger: null };
