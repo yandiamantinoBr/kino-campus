@@ -110,17 +110,19 @@
 
   // Aguarda o DOM e o cliente Supabase
   document.addEventListener('DOMContentLoaded', function () {
-    const tryLoad = () => loadBanners();
+    let loaded = false;
+    const tryLoad = () => { if (loaded) return; loaded = true; loadBanners(); };
 
-    if (window.KCSupabase && typeof window.KCSupabase.getClient === 'function') {
+    if (window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+        && window.KCSupabase.getClient()) {
       tryLoad();
     } else {
       document.addEventListener('kc:authchange', function onFirst() {
         document.removeEventListener('kc:authchange', onFirst);
         tryLoad();
       });
-      // Tenta após 1s caso o evento não dispare
-      setTimeout(tryLoad, 1000);
+      // Fallback rápido caso o evento não dispare
+      setTimeout(tryLoad, 300);
     }
   });
 })();

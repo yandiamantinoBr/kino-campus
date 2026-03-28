@@ -508,7 +508,7 @@
     'USER_42': { id: 'USER_42', displayName: 'Maria Souza', avatarUrl: 'https://i.pravatar.cc/150?img=16' }, // USER_42: Maria Souza (img=16)
 
     // Perfil do próprio usuário (posts criados via modal / localStorage)
-    'USER_SELF': { id: 'USER_SELF', displayName: 'Você', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=voce' },
+    'USER_SELF': { id: 'USER_SELF', displayName: 'Você', avatarUrl: '' },
   });
 
   const MOCK_USERS_LIST = Object.freeze(Object.values(MOCK_USERS));
@@ -618,7 +618,7 @@
     const normalizedAuthorAvatar = pickFirstNonEmpty([
       r.authorAvatar,
       legacyAuthorAvatar,
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(normalizedAuthorName || 'kc'),
+      (window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || '',
     ]);
 
     const createdAt = r.createdAt || r.created_at || null;

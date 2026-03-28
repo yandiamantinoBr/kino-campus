@@ -530,7 +530,7 @@
         composerAvatar.src = resolvedAvatar;
       } else {
         const seed = String((resolvedIdentity || (user && (user.email || user.id)) || 'commenter')).toLowerCase();
-        composerAvatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(seed);
+        composerAvatar.src = (window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || '';
       }
     }
   }
@@ -1019,7 +1019,7 @@
     const isLegacyExample = isLegacyExamplePost(post) || isLegacyExampleProfile(post && post.authorProfile);
 
     const author = normalizedName || 'Autor';
-    const avatarUrl = normalizedAvatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(author));
+    const avatarUrl = normalizedAvatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || '');
 
     avatar.src = avatarUrl;
     name.innerHTML = esc(author)
@@ -1123,7 +1123,7 @@
     const mergedName = profileName || fallbackName || 'Autor';
     const mergedAvatar = profileAvatar
       || fallbackAvatar
-      || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(mergedName));
+      || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || '');
 
     return {
       ...post,

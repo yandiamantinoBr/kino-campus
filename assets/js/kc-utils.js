@@ -2134,7 +2134,7 @@
 
     const authorAvatar = (author && (author.avatar || author.avatarUrl))
       ? (author.avatar || author.avatarUrl)
-      : (p._legacyAuthorAvatar || p.autorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=kc');
+      : (p._legacyAuthorAvatar || p.autorAvatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || ''));
 
     const rating = (p.rating != null && p.rating !== '') ? Number(p.rating) : null;
     const ratingHtml = Number.isFinite(rating)
