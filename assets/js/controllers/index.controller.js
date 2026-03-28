@@ -475,6 +475,7 @@
         container.innerHTML = '<span class="kc-ranking-empty">Nenhum contribuidor no período.</span>';
         return;
       }
+      var iconClass = (window.KCRanking && window.KCRanking.getModuleIcon) ? window.KCRanking.getModuleIcon(module) : 'fas fa-campground';
       container.innerHTML = users.map(function (u, i) {
         var name = u.display_name || 'Usuário';
         var avatarSrc = u.avatar_url || '';
@@ -483,7 +484,7 @@
           : '<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);"></i>';
         return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-user" title="' + name + ' — ' + u.score + ' pts">' +
           '<div class="kc-ranking-user-avatar">' + avatarHtml +
-            '<span class="kc-ranking-user-position">' + (i + 1) + '</span>' +
+            '<span class="kc-ranking-user-position"><i class="' + iconClass + '"></i>' + (i + 1) + '</span>' +
           '</div>' +
           '<span class="kc-ranking-user-name">' + name + '</span>' +
           '<span class="kc-ranking-user-score">' + u.score + ' pts</span>' +
