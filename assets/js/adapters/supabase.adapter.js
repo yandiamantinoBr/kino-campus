@@ -100,6 +100,9 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
+  // Eager init: resolve o client imediatamente para evitar lazy-init na primeira chamada
+  try { getSupabaseClient(); } catch (_) {}
+
   // ---------- Supabase Auth & Storage (V8.1.3.1) ----------
   async function supabaseGetCurrentUser() {
     try {
