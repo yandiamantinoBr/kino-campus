@@ -327,6 +327,12 @@
       avatar.alt = `Avatar de ${name}`;
     }
 
+    // Set user ID on avatar wrap for ranking badge decoration
+    const avatarWrap = $('#profileAvatarWrap');
+    if (avatarWrap && state.profileId) {
+      avatarWrap.dataset.userId = state.profileId;
+    }
+
     const verifiedIcon = $('#profile-verified-icon');
     if (verifiedIcon) verifiedIcon.style.display = profile && profile.verified === true ? 'flex' : 'none';
 
@@ -1226,6 +1232,20 @@
     renderHeader();
     switchTab('activities');
     initPullToRefresh();
+
+    // Load ranking badges for this profile user
+    if (state.profileId && window.KCAPI && typeof window.KCAPI.getTopContributors === 'function') {
+      var pid = state.profileId;
+      // Load general ranking + all module rankings to decorate profile avatar
+      var modules = [null, 'compra-venda', 'moradia', 'caronas', 'eventos', 'oportunidades', 'achados-perdidos'];
+      modules.forEach(function (mod) {
+        window.KCAPI.getTopContributors('month', mod, 10).then(function (users) {
+          if (users && users.length && window.KCRanking) {
+            window.KCRanking.decorateAuthorAvatars(users, mod);
+          }
+        }).catch(function () {});
+      });
+    }
   }
 
   window.KCProfileRefresh = refreshProfilePage;

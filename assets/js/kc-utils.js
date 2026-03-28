@@ -2226,7 +2226,7 @@
             <div class="kc-card__description-preview">
               ${escapeHtml(preview)}
             </div>
-            <div class="kc-card__author">
+            <div class="kc-card__author"${authorId ? ' data-author-id="' + escapeHtml(String(authorId)) + '"' : ''}>
               <img alt="${escapeHtml(String(authorName).split(' ')[0] || 'Autor')}" src="${escapeHtml(authorAvatar)}"/>
               <span>${escapeHtml(authorPrefix)} <strong>${escapeHtml(String(authorName))}</strong></span>
               ${ratingHtml}

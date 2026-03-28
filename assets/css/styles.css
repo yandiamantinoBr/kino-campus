@@ -802,29 +802,42 @@ main {
     background-color: var(--kc-background-dark);
     margin-bottom: 5px;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+}
+.kc-ranking-user-avatar img {
+    border-radius: 50%;
 }
 
-.kc-ranking-user-avatar img {
+.kc-ranking-user-avatar > img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 50%;
 }
 
 .kc-ranking-user-position {
     position: absolute;
-    bottom: -5px;
-    right: -5px;
-    width: 18px;
+    bottom: -4px;
+    right: -6px;
+    min-width: 18px;
     height: 18px;
-    background-color: var(--kc-yellow-badge);
+    background-color: #ffd700;
     color: #000;
-    border-radius: 50%;
-    display: flex;
+    border-radius: 10px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7em;
+    font-size: 0.65em;
     font-weight: bold;
+    gap: 2px;
+    padding: 0 4px;
+    z-index: 2;
+    border: 2px solid var(--kc-surface-dark);
+    box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    white-space: nowrap;
+}
+.kc-ranking-user-position i {
+    font-size: 0.85em;
 }
 
 .kc-ranking-user-name {
@@ -856,21 +869,22 @@ main {
 
 /* Ranking filters */
 .kc-ranking-title {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 .kc-ranking-filters {
     display: flex;
-    gap: 5px;
+    gap: 4px;
     align-items: center;
     margin-left: auto;
+    flex-shrink: 0;
 }
 .kc-ranking-filter {
-    padding: 3px 10px;
+    padding: 2px 8px;
     border-radius: 20px;
     border: 1px solid var(--kc-border-dark);
     background: transparent;
     color: var(--kc-text-dark-secondary);
-    font-size: 0.75em;
+    font-size: 0.7em;
     cursor: pointer;
     transition: all 0.16s ease;
     white-space: nowrap;
@@ -1067,6 +1081,47 @@ main {
     white-space: nowrap;
 }
 
+/* Ranking badge on card author and profile avatars */
+.kc-rank-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: #ffd700;
+    color: #1a1a1a;
+    border-radius: 8px;
+    padding: 1px 5px;
+    font-size: 0.72em;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    border: 1.5px solid rgba(0,0,0,.08);
+    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+.kc-rank-badge i {
+    font-size: 0.8em;
+}
+.kc-card__author {
+    position: relative;
+}
+.kc-card__author .kc-rank-badge {
+    margin-left: 4px;
+}
+/* Profile ranking badges container */
+.kc-profile-rank-badges {
+    position: absolute;
+    bottom: -6px;
+    left: -4px;
+    display: flex;
+    gap: 3px;
+    z-index: 3;
+}
+.kc-profile-rank-badges .kc-rank-badge {
+    font-size: 0.68em;
+    padding: 2px 5px;
+    border: 2px solid var(--kc-surface-dark);
+    border-radius: 10px;
+}
+
 /* Feed Tabs */
 .kc-feed-tabs {
     display: flex;
@@ -1215,6 +1270,41 @@ main {
     border-color: rgba(239, 83, 80, 0.6);
 }
 
+/* ── My-Posts: single-column feed layout ────────────────── */
+.kc-feed-section--single {
+    padding-top: 20px;
+    max-width: 860px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    width: 100%;
+}
+@media (max-width: 768px) {
+    .kc-feed-section--single {
+        padding: 12px 10px 0;
+        max-width: 100%;
+    }
+    .kc-feed-section--single .kc-card {
+        overflow: hidden;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .kc-feed-section--single .kc-my-posts-actions {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    .kc-feed-section--single .kc-my-posts-actions > a,
+    .kc-feed-section--single .kc-my-posts-actions > button {
+        font-size: 0.78rem;
+        padding: 6px 6px;
+        min-height: 42px;
+    }
+}
+@media (max-width: 420px) {
+    .kc-feed-section--single .kc-my-posts-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ── My-Posts: header card ─────────────────────────────── */
 .kc-my-posts-header {
     padding: 20px 22px;
@@ -1237,7 +1327,7 @@ main {
     color: var(--kc-text-dark-secondary);
     font-size: 0.9em;
 }
-@media (max-width: 520px) {
+@media (max-width: 600px) {
     .kc-my-posts-header {
         flex-direction: column;
         align-items: stretch;
