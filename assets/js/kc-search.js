@@ -153,7 +153,7 @@
       comentarios: base.comentarios ?? 0,
       timestamp: base.timestamp || 'Agora',
       autor: base.autor || 'Voce',
-      autorAvatar: base.autorAvatar || (base.autor ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(base.autor)}` : '')
+      autorAvatar: base.autorAvatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || '')
     };
     fixed._kcUserPost = true;
     return normalizeAnyPost(fixed);

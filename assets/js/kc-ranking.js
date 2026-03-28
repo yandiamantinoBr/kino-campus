@@ -123,9 +123,15 @@
     });
   }
 
-  function loadSidebarRanking(container, period, module) {
+  function loadSidebarRanking(container, period, module, _retries) {
     var api = window.KCAPI;
     if (!api || typeof api.getTopContributors !== 'function') {
+      var attempt = _retries || 0;
+      if (attempt < 3) {
+        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+        setTimeout(function () { loadSidebarRanking(container, period, module, attempt + 1); }, 350);
+        return;
+      }
       container.innerHTML = '<span class="kc-ranking-empty">Indisponível.</span>';
       return;
     }

@@ -274,7 +274,7 @@ function _renderCommentList(id, containerId, comments, currentUserId, isAdmin) {
     <div class="kc-comment" data-kc-comment-id="${_esc(String(c.id))}" style="padding: 15px; border-bottom: 1px solid var(--kc-border-dark); margin-bottom: 10px;">
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="display: contents;">` : ''}
-          <img src="${_esc(c.avatar || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(c.author)))}" alt="${_esc(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark); cursor: ${c.authorId ? 'pointer' : 'default'};">
+          <img src="${_esc(c.avatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || ''))}" alt="${_esc(c.author)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: var(--kc-surface-dark); cursor: ${c.authorId ? 'pointer' : 'default'};">
         ${c.authorId ? `</a>` : ''}
         <div style="flex: 1;">
           ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="font-weight: bold; text-decoration: none; color: inherit;" class="kc-comment-author-link">${_esc(c.author)}</a>` : `<div style="font-weight: bold;">${_esc(c.author)}</div>`}

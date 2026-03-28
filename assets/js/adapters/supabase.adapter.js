@@ -669,8 +669,7 @@ const { ENV, normalizePost } = window.KCAPI;
       legacyAvatar,
     ]);
     if (direct) return direct;
-    const seed = encodeURIComponent(String(authorName || 'kc').trim() || 'kc');
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+    return (window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2750%27 fill=%27%23ff6b00%27/%3E%3Ccircle cx=%2750%27 cy=%2738%27 r=%2714%27 fill=%27white%27/%3E%3Cellipse cx=%2750%27 cy=%2772%27 rx=%2722%27 ry=%2716%27 fill=%27white%27/%3E%3C/svg%3E';
   }
 
   function logAuthorDiagnosticsDev(payload) {

@@ -415,6 +415,9 @@
     Object.freeze({ key: 'garavelo', label: 'Garavelo', icon: 'fas fa-map-pin', zoneKey: 'aparecida-goiania', zoneLabel: 'Aparecida de Goiânia', isCampus: false, aliases: Object.freeze(['garavelo','garavelo park']), abbreviations: Object.freeze([]) }),
   ]);
 
+// Avatar padrão: círculo laranja com ícone de usuário branco (mesmo visual do header)
+const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ff7c00'/%3E%3Cstop offset='1' stop-color='%23ff6b00'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='50' fill='url(%23g)'/%3E%3Ccircle cx='50' cy='38' r='14' fill='white' opacity='0.92'/%3E%3Cellipse cx='50' cy='72' rx='22' ry='16' fill='white' opacity='0.92'/%3E%3C/svg%3E";
+
 window.KC_CONSTANTS = Object.freeze({
   MODULE_LABEL_MAP,
   MODULE_ICON_MAP,
@@ -424,7 +427,8 @@ window.KC_CONSTANTS = Object.freeze({
   HOUSING_REGION_DEFINITIONS,
   HOUSING_FEATURE_DEFINITIONS,
   LOST_FOUND_LOCATION_DEFINITIONS,
-  CARONAS_LOCATION_DEFINITIONS
+  CARONAS_LOCATION_DEFINITIONS,
+  DEFAULT_AVATAR_SVG
 });
 
 })();

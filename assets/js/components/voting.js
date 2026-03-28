@@ -189,7 +189,7 @@ function kcInitVotesRealtime() {
       kcVotesRealtimeRetryTimer = window.setTimeout(() => {
         kcVotesRealtimeRetryTimer = null;
         kcInitVotesRealtime();
-      }, 1200);
+      }, 400);
     }
     return;
   }
