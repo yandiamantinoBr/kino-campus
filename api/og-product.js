@@ -91,6 +91,18 @@ function stripHtml(str) {
   return String(str).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }
 
+function stripMarkdown(str) {
+  return String(str)
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/~~([^~]+)~~/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[(.+?)\]\(https?:\/\/[^\s)]+\)/g, '$1')
+    .replace(/^>\s?/gm, '')
+    .replace(/^-\s+/gm, '• ');
+}
+
 function formatPrice(price) {
   if (!price && price !== 0) return '';
   const num = Number(price);
@@ -152,7 +164,7 @@ module.exports = async (req, res) => {
     const categoryLabel = getCategoryLabel(post.module);
     const ogTitle = rawTitle + ' — KinoCampus';
 
-    let ogDesc = stripHtml(post.description || '');
+    let ogDesc = stripMarkdown(stripHtml(post.description || ''));
     // Prepend category and price for richer preview
     const priceFmt = formatPrice(post.price);
     const prefix = [categoryLabel, priceFmt].filter(Boolean).join(' | ');

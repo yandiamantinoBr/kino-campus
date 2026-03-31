@@ -801,7 +801,11 @@
   }
 
   function setDescription(post) {
-    const desc = esc(post.descricao || post.description || '');
+    const rawDesc = post.descricao || post.description || '';
+    const renderMd = (window.KCUtils && typeof window.KCUtils.renderMarkdownInline === 'function')
+      ? window.KCUtils.renderMarkdownInline
+      : esc;
+    const descHtml = renderMd(rawDesc);
     const tags = Array.isArray(post.tags) ? post.tags.slice(0, 10) : [];
     const markerTags = (window.KCUtils && typeof window.KCUtils.getDisplayMarkerTags === 'function')
       ? window.KCUtils.getDisplayMarkerTags(post, { limit: 10 })
@@ -815,8 +819,8 @@
       .map((tag) => ({ label: tag, emoji: '🏷️' }));
 
     let html = '';
-    if (desc) {
-      html += `<h3><i class="fas fa-align-left"></i> Descrição</h3><p>${desc}</p>`;
+    if (descHtml) {
+      html += `<h3><i class="fas fa-align-left"></i> Descrição</h3><div class="kc-description-content">${descHtml}</div>`;
     }
     if (markerTags.length && window.KCUtils && typeof window.KCUtils.renderMarkerTags === 'function') {
       html += window.KCUtils.renderMarkerTags(markerTags, {
@@ -943,10 +947,14 @@
   }
 
   function setDescription(post) {
-    const desc = esc(post.descricao || post.description || '');
+    const rawDesc = post.descricao || post.description || '';
+    const renderMd = (window.KCUtils && typeof window.KCUtils.renderMarkdownInline === 'function')
+      ? window.KCUtils.renderMarkdownInline
+      : esc;
+    const descHtml = renderMd(rawDesc);
     let html = '';
-    if (desc) {
-      html += `<h3><i class="fas fa-align-left"></i> Descrição</h3><p>${desc}</p>`;
+    if (descHtml) {
+      html += `<h3><i class="fas fa-align-left"></i> Descrição</h3><div class="kc-description-content">${descHtml}</div>`;
     }
     setHTML('postDescription', html);
   }

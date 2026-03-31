@@ -4429,6 +4429,103 @@ body.kc-scroll-locked {
     box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.18);
 }
 
+/* Description formatting toolbar (create-post modal) */
+.kc-desc-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    border: 1px solid var(--kc-border-dark, #333);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background-color: var(--kc-background-dark, #1a1a2e);
+    flex-wrap: wrap;
+}
+
+.kc-field--with-toolbar textarea {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.kc-desc-toolbar button {
+    padding: 6px 10px;
+    border: 1px solid var(--kc-border-dark, #333);
+    border-radius: 5px;
+    background-color: transparent;
+    color: var(--kc-text-dark, #ccc);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.15s, color 0.15s;
+    line-height: 1;
+}
+
+.kc-desc-toolbar button:hover {
+    background-color: rgba(255, 107, 0, 0.15);
+    color: #ff6b00;
+}
+
+.kc-desc-preview {
+    padding: 10px 12px;
+    border: 1px solid var(--kc-border-dark, #333);
+    border-top: 1px dashed var(--kc-border-dark, #333);
+    border-radius: 0 0 8px 8px;
+    background-color: var(--kc-background-dark, #1a1a2e);
+    color: var(--kc-text-dark, #ccc);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 40px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Markdown rendered content (product detail + create-post preview) */
+.kc-description-content,
+.kc-desc-preview {
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.kc-description-content strong,
+.kc-desc-preview strong { font-weight: 700; }
+
+.kc-description-content em,
+.kc-desc-preview em { font-style: italic; }
+
+.kc-description-content u,
+.kc-desc-preview u { text-decoration: underline; }
+
+.kc-description-content s,
+.kc-desc-preview s { text-decoration: line-through; opacity: 0.7; }
+
+.kc-description-content code,
+.kc-desc-preview code {
+    background: rgba(255, 107, 0, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.kc-description-content blockquote,
+.kc-desc-preview blockquote {
+    border-left: 3px solid #ff6b00;
+    padding-left: 12px;
+    margin: 8px 0;
+    opacity: 0.85;
+    font-style: italic;
+}
+
+.kc-description-content ul,
+.kc-desc-preview ul {
+    padding-left: 20px;
+    margin: 6px 0;
+}
+
+.kc-description-content a,
+.kc-desc-preview a {
+    color: #ff6b00;
+    text-decoration: underline;
+}
+
 .kc-check {
     display: flex;
     gap: 10px;

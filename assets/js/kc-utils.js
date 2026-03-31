@@ -2267,8 +2267,48 @@
     `.trim();
   }
 
+  /**
+   * renderMarkdownInline — converte texto markdown inline para HTML seguro.
+   * Suporta: **bold**, *italic*, __underline__, ~~strike~~, `code`,
+   *          [link](url), > blockquote, - list items, e \n → <br>.
+   * Escapa HTML primeiro para prevenir XSS.
+   */
+  function renderMarkdownInline(raw) {
+    const source = String(raw || '');
+    let html = escapeHtml(source);
+
+    // Links [label](url) — extrair antes para não interferir com outros patterns
+    const links = [];
+    html = html.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, function (_, label, url) {
+      const safeUrl = String(url || '').trim();
+      const safeLabel = String(label || '').trim() || safeUrl;
+      const token = `__KC_LINK_${links.length}__`;
+      links.push(`<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`);
+      return token;
+    });
+
+    html = html
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_]+)__/g, '<u>$1</u>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/~~([^~]+)~~/g, '<s>$1</s>');
+
+    html = html.replace(/^&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>');
+    html = html.replace(/(?:^|\n)-\s+(.+)(?=\n|$)/g, '<li>$1</li>');
+    html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+    html = html.replace(/\n/g, '<br>');
+
+    links.forEach((tag, idx) => {
+      html = html.replace(`__KC_LINK_${idx}__`, tag);
+    });
+
+    return html;
+  }
+
 window.KCUtils = Object.freeze({
     escapeHtml,
+    renderMarkdownInline,
     normalizeText,
     normalizeEmail,
     getEmailDomain,
