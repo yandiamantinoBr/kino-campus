@@ -2,6 +2,7 @@
   "buildCommand": "node scripts/inject-env.js",
   "outputDirectory": ".",
   "rewrites": [
+    { "source": "/product.html", "destination": "/api/og-product" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/auth/callback", "destination": "/auth-callback.html" }
   ],
