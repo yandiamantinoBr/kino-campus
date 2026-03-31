@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
-const canonicalVersion = '8.2.6.2';
+const canonicalVersion = '8.6.0';
 const errors = [];
 const warnings = [];
 
@@ -78,8 +78,8 @@ function runVersionChecks() {
   }
 
   const changelog = read('CHANGELOG.md');
-  if (!new RegExp(`^## \\[${escapeRegExp(canonicalVersion)}\\] - 2026-03-19$`, 'm').test(changelog)) {
-    errors.push('CHANGELOG.md is missing the top entry for 8.2.6.2');
+  if (!new RegExp(`^## \\[${escapeRegExp(canonicalVersion)}\\] - 2026-03-30$`, 'm').test(changelog)) {
+    errors.push(`CHANGELOG.md is missing the top entry for ${canonicalVersion}`);
   }
 }
 

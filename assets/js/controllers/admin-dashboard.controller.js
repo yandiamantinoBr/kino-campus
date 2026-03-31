@@ -1646,11 +1646,7 @@
   }
 
   function escHtmlAdmin(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return window.KCUtils.escapeHtml(String(str == null ? '' : str));
   }
 
   async function loadMetrics() {

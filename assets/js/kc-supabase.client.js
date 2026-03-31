@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Supabase Client + Auth Session (V8.2.6.2)
+  KinoCampus - Supabase Client + Auth Session (V8.6.0)
 
   Regras:
   - Encapsula TODA a lógica de Auth/Sessão aqui (Facade para o resto do app)
@@ -16,7 +16,7 @@
   'use strict';
 
 
-  const VERSION = '8.2.6.2';
+  const VERSION = '8.6.0';
 
   const state = {
     inited: false,
