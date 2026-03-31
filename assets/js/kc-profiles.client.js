@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.3.4.4';
+  const VERSION = '8.6.0';
 
   const shared = window.KCAccountProfileUtils || {};
   const OWNER_FIELDS = shared.OWNER_PROFILE_SELECT_FIELDS || [

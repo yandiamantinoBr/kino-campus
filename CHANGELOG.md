@@ -1,5 +1,25 @@
 # Changelog
 
+## [8.6.0] - 2026-03-30
+
+### Objetivo
+- Saneamento de segurança, unificação de versão e hardening de infraestrutura baseado no Relatório Completo de Diagnóstico v8.5.4.
+
+### Security
+- `admin-dashboard.controller.js`: corrigido `escHtmlAdmin()` — agora delega para `window.KCUtils.escapeHtml()` com escape completo de 5 caracteres (incluindo aspas simples).
+- `vercel.json`: adicionado header `Strict-Transport-Security` (HSTS, max-age 2 anos, preload).
+- `vercel.json`: adicionado header `Permissions-Policy` (bloqueia camera, microphone, geolocation, interest-cohort).
+
+### Changed
+- Bump coordenado da versão canônica para `8.6.0` em `kc-env.js`, `kc-api.client.js`, `kc-supabase.client.js`, `kc-auth.ui.js`, `kc-profiles.client.js` e `hygiene-check.js`.
+- Cache busters atualizados de `?v=8.4.2` para `?v=8.6.0` em todos os 21 HTMLs.
+
+### Infrastructure
+- Habilitado `pg_cron` no Supabase com job `kc-expire-old-posts` (diário às 03:00 UTC).
+- Verificado configuração SMTP e Leaked Password Protection no Supabase Auth.
+
+---
+
 ## [8.2.6.2] - 2026-03-19
 
 ### Objetivo

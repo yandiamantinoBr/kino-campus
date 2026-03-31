@@ -1,4 +1,4 @@
-# Kino Campus — Protótipo WEB (V8.2.6.2) — Guardrails Vercel/Supabase
+# Kino Campus — Protótipo WEB (V8.6.0) — Segurança e Saneamento
 
 Este repositorio e o **prototipo web offline-first** do **Kino Campus** (plataforma universitaria por modulos), agora com **integracao Supabase-first** (Postgres + Auth + Storage) na linha **V8.2.x**.
 
@@ -7,10 +7,7 @@ A release **V8.2.2.0** consolidou os **LOTEs 1, 2 e 3** do cleanroom RC, sem fea
 - **LOTE 2**: diagnóstico por etapa no create-post (`[KC][CREATE_POST]`) e fluxo admin sem falso positivo de persistência.
 - **LOTE 3**: fechamento mobile/FOUC e kit QA final (`docs/qa/rls-smoke.sql` + relatórios de release).
 
-A **V8.2.6.2** abre um patch técnico pós-release focado em contrato operacional entre frontend, Vercel e Supabase:
-- limpeza do contrato de `profiles` para não persistir `email` como parte do perfil público sincronizado;
-- guardrails estáticos para deploy/env/runtime;
-- documentação operacional enxuta e harness mínima de regressão.
+A **V8.6.0** consolida correções de segurança (XSS, HSTS, Permissions-Policy), unificação de versão e automação de infraestrutura (pg_cron para expiração de posts).
 
 O runtime oficial permanece **front estático + Supabase** (sem backend Node ativo no deploy). Em **produção**, `KC_ENV.driver = "supabase"` é obrigatório e não existe fallback silencioso para `local`; o modo `local` é permitido somente em desenvolvimento.
 
@@ -23,15 +20,15 @@ O runtime oficial permanece **front estático + Supabase** (sem backend Node ati
 
 ## 🧭 Mapa de versao do front (arquivo → versao)
 
-Versão-alvo única atual: **`8.2.6.2`**
+Versão-alvo única atual: **`8.6.0`**
 
-- `assets/js/kc-env.js` → `8.2.6.2`
-- `assets/js/kc-api.client.js` → `8.2.6.2`
-- `assets/js/kc-supabase.client.js` → `8.2.6.2`
-- `assets/js/kc-auth.ui.js` → `8.2.6.2`
-- `assets/js/kc-profiles.client.js` → `8.2.6.2`
+- `assets/js/kc-env.js` → `8.6.0`
+- `assets/js/kc-api.client.js` → `8.6.0`
+- `assets/js/kc-supabase.client.js` → `8.6.0`
+- `assets/js/kc-auth.ui.js` → `8.6.0`
+- `assets/js/kc-profiles.client.js` → `8.6.0`
 
-> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.2.6.2` (derivado de `assets/js/kc-auth.ui.js`).
+> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.6.0` (derivado de `assets/js/kc-auth.ui.js`).
 
 ## 📦 Regra de release (anti-drift)
 
