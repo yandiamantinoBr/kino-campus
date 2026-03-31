@@ -16,7 +16,7 @@ let cachedHtml = null;
 
 function getProductHtml() {
   if (!cachedHtml) {
-    cachedHtml = fs.readFileSync(path.join(process.cwd(), 'product.html'), 'utf8');
+    cachedHtml = fs.readFileSync(path.join(process.cwd(), '_product.html'), 'utf8');
   }
   return cachedHtml;
 }
@@ -31,7 +31,10 @@ function getSupabaseConfig() {
 
 async function fetchPost(id) {
   const { url, key } = getSupabaseConfig();
-  if (!url || !key) return null;
+  if (!url || !key) {
+    console.error('[og-product] Supabase config missing — url:', url ? 'OK' : 'EMPTY', '| key:', key ? 'OK' : 'EMPTY');
+    return null;
+  }
 
   const select = 'id,legacy_id,title,description,price,module,category,location,metadata,post_media(url,is_cover)';
   const headers = {
@@ -60,7 +63,8 @@ async function fetchPost(id) {
       return (rows2 && rows2.length > 0) ? rows2[0] : null;
     }
     return null;
-  } catch (_) {
+  } catch (err) {
+    console.error('[og-product] fetchPost error:', err.message || err);
     return null;
   }
 }
@@ -120,6 +124,7 @@ function replaceTitleTag(html, newTitle) {
 }
 
 module.exports = async (req, res) => {
+  console.log('[og-product] Handler invoked — id:', req.query.id || '(none)');
   const html = getProductHtml();
   const id = req.query.id;
 
@@ -131,6 +136,7 @@ module.exports = async (req, res) => {
 
   try {
     const post = await fetchPost(id);
+    console.log('[og-product] Post fetched:', post ? post.title : 'NOT FOUND');
 
     // Post not found — return original (client-side JS handles 404 UI)
     if (!post) {
@@ -154,7 +160,7 @@ module.exports = async (req, res) => {
     if (ogDesc.length > 200) ogDesc = ogDesc.substring(0, 197) + '...';
     if (!ogDesc) ogDesc = 'Anuncio na comunidade universitaria da UFG.';
 
-    const ogImage = getPostImage(post) || `${baseUrl}/assets/og-default.svg`;
+    const ogImage = getPostImage(post) || `${baseUrl}/assets/og-default.png`;
     const ogUrl = `${baseUrl}/product.html?id=${post.id}`;
 
     // Replace OG meta tags
@@ -190,7 +196,8 @@ module.exports = async (req, res) => {
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(modified);
-  } catch (_) {
+  } catch (err) {
+    console.error('[og-product] Handler error:', err.message || err);
     // Graceful fallback: return unmodified HTML
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(html);
