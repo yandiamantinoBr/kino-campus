@@ -86,6 +86,11 @@ function resolveCurrentUserDisplayName(user, profile) {
 }
 
 function renderCommentMarkdownInline(raw) {
+  // Delega para o utilitário compartilhado em KCUtils quando disponível
+  if (window.KCUtils && typeof window.KCUtils.renderMarkdownInline === 'function') {
+    return window.KCUtils.renderMarkdownInline(raw);
+  }
+  // Fallback inline (caso KCUtils não tenha carregado ainda)
   const source = String(raw || '');
   let html = _esc(source);
 

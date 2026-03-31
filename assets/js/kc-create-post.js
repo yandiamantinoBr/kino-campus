@@ -12,6 +12,82 @@ function isProductionRuntime() {
 // Helper local
 function _esc(str) { return KCUtils.escapeHtml(str); }
 
+/**
+ * Aplica formatação markdown no textarea de descrição.
+ * Reutiliza a mesma lógica do toolbar de comentários.
+ */
+function _kcFormatDescriptionField(textarea, format) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selectedText = textarea.value.substring(start, end);
+  const hasSelection = !!selectedText;
+
+  const wrapSelection = function (before, after, fallbackText) {
+    const baseText = hasSelection ? selectedText : (fallbackText || 'texto');
+    const formatted = `${before}${baseText}${after}`;
+    textarea.value = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
+    textarea.focus();
+    const cursorEnd = start + formatted.length;
+    textarea.selectionStart = cursorEnd;
+    textarea.selectionEnd = cursorEnd;
+  };
+
+  const insertBlock = function (blockText) {
+    const prefix = (start > 0 && textarea.value[start - 1] !== '\n') ? '\n' : '';
+    const suffix = (end < textarea.value.length && textarea.value[end] !== '\n') ? '\n' : '';
+    const formatted = `${prefix}${blockText}${suffix}`;
+    textarea.value = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
+    textarea.focus();
+    const cursorEnd = start + formatted.length;
+    textarea.selectionStart = cursorEnd;
+    textarea.selectionEnd = cursorEnd;
+  };
+
+  switch (format) {
+    case 'bold':         wrapSelection('**', '**', 'negrito'); break;
+    case 'italic':       wrapSelection('*', '*', 'itálico'); break;
+    case 'underline':    wrapSelection('__', '__', 'sublinhado'); break;
+    case 'strikethrough': wrapSelection('~~', '~~', 'tachado'); break;
+    case 'inlinecode':   wrapSelection('`', '`', 'código'); break;
+    case 'quote':        insertBlock(`> ${hasSelection ? selectedText : 'citação'}`); break;
+    case 'bullet':       insertBlock(`- ${hasSelection ? selectedText : 'item da lista'}`); break;
+    case 'link': {
+      const label = hasSelection ? selectedText : 'texto do link';
+      const formatted = `[${label}](https://)`;
+      textarea.value = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
+      const cursorStart = start + formatted.length - 1;
+      textarea.focus();
+      textarea.selectionStart = cursorStart;
+      textarea.selectionEnd = cursorStart;
+      break;
+    }
+    default: return;
+  }
+
+  _kcUpdateDescPreview(textarea);
+  // Trigger input event so value is captured
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/**
+ * Atualiza a pré-visualização da descrição com markdown renderizado.
+ */
+function _kcUpdateDescPreview(textarea) {
+  const preview = document.getElementById('kcDescPreview');
+  if (!preview) return;
+  const value = String(textarea.value || '').trim();
+  if (!value) {
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+    return;
+  }
+  const renderMd = (window.KCUtils && typeof window.KCUtils.renderMarkdownInline === 'function')
+    ? window.KCUtils.renderMarkdownInline
+    : _esc;
+  preview.style.display = 'block';
+  preview.innerHTML = renderMd(value);
+}
+
 // -----------------------------
 // Create Post Modal (Design React + Form dinâmico por módulo)
 // -----------------------------
@@ -417,6 +493,24 @@ function kcEnsureCreateModal() {
       kcHandleCreateSubmit();
     });
   }
+
+  // Description formatting toolbar delegation
+  overlay.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-kc-desc-format]');
+    if (!btn) return;
+    e.preventDefault();
+    const format = btn.getAttribute('data-kc-desc-format');
+    const textarea = overlay.querySelector('#kcField_descricao');
+    if (!textarea || !format) return;
+    _kcFormatDescriptionField(textarea, format);
+  });
+
+  // Description preview on input
+  overlay.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'kcField_descricao') {
+      _kcUpdateDescPreview(e.target);
+    }
+  });
 
   // Imagens: input/drag&drop
   overlay.addEventListener('change', async (e) => {
@@ -1324,10 +1418,24 @@ function kcRenderCreateModal() {
     const id = 'kcField_' + f.name;
     if (f.type === 'textarea') {
       const maxlength = (f.maxLength != null) ? `maxlength="${_esc(f.maxLength)}"` : '';
+      const isDesc = f.name === 'descricao';
+      const toolbar = isDesc ? `
+          <div class="kc-editor-toolbar kc-desc-toolbar">
+            <button type="button" data-kc-desc-format="bold" title="Negrito"><i class="fas fa-bold"></i></button>
+            <button type="button" data-kc-desc-format="italic" title="Itálico"><i class="fas fa-italic"></i></button>
+            <button type="button" data-kc-desc-format="underline" title="Sublinhado"><i class="fas fa-underline"></i></button>
+            <button type="button" data-kc-desc-format="strikethrough" title="Tachado"><i class="fas fa-strikethrough"></i></button>
+            <button type="button" data-kc-desc-format="inlinecode" title="Código"><i class="fas fa-code"></i></button>
+            <button type="button" data-kc-desc-format="quote" title="Citação"><i class="fas fa-quote-right"></i></button>
+            <button type="button" data-kc-desc-format="bullet" title="Lista"><i class="fas fa-list-ul"></i></button>
+            <button type="button" data-kc-desc-format="link" title="Link"><i class="fas fa-link"></i></button>
+          </div>
+          <div class="kc-desc-preview" id="kcDescPreview" style="display:none;"></div>` : '';
       parts.push(`
-        <div class="kc-field">
-          <label for="${id}">${label}${f.required ? ' *' : ''}</label>
+        <div class="kc-field${isDesc ? ' kc-field--with-toolbar' : ''}">
+          <label for="${id}">${label}${f.required ? ' *' : ''}</label>${toolbar}
           <textarea id="${id}" name="${_esc(f.name)}" rows="${f.rows || 4}" placeholder="${_esc(f.placeholder || '')}" ${required} ${maxlength}>${_esc(val || '')}</textarea>
+          ${isDesc ? '<small class="kc-field-hint">Use **negrito**, *itálico*, ~~tachado~~, `código`, > citação, - lista</small>' : ''}
         </div>
       `);
     } else if (f.type === 'opportunity-area') {
