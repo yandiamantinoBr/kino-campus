@@ -1,18 +1,20 @@
 /**
  * KinoCampus — Dynamic OG Image Generator (v8.6.3)
  *
- * Vercel Node.js Serverless Function that generates branded Open Graph
+ * Vercel Edge Function (api/og-image.js) that generates branded Open Graph
  * images (1200×630 PNG) for all platform pages using @vercel/og + Satori.
  *
- * Uses CommonJS + Node.js handler (req, res) so Vercel deploys it
- * correctly in a non-framework project with "type": "commonjs".
+ * Uses ESM with Edge runtime. The api/package.json sets "type": "module"
+ * so Vercel recognises this as native ESM and deploys it as an Edge Function.
  *
  * Usage: /api/og-image?type=eventos
  * Types: home | compra-venda | eventos | moradia | caronas |
  *        oportunidades | achados-perdidos | ajuda | product
  */
 
-// @vercel/og is ESM-only — use dynamic import() inside the handler
+import { ImageResponse } from '@vercel/og';
+
+export const config = { runtime: 'edge' };
 
 // ---------------------------------------------------------------------------
 // Module configuration
@@ -139,12 +141,22 @@ async function loadFont() {
 }
 
 // ---------------------------------------------------------------------------
-// Build the OG image element tree
+// Handler — Edge Function
 // ---------------------------------------------------------------------------
-function buildElement(m, ff) {
+export default async function handler(req) {
+  var url = new URL(req.url);
+  var type = url.searchParams.get('type') || 'home';
+  var m = MODULES[type] || MODULES['home'];
+
+  var fontData = await loadFont();
+  var fonts = fontData
+    ? [{ name: 'DM Sans', data: fontData, weight: 700, style: 'normal' }]
+    : [];
+  var ff = fontData ? "'DM Sans', system-ui, sans-serif" : 'system-ui, -apple-system, sans-serif';
+
   var titleSize = m.title.length > 16 ? '52px' : m.title.length > 12 ? '62px' : '72px';
 
-  return h('div', {
+  var element = h('div', {
     style: {
       width: '1200px',
       height: '630px',
@@ -341,41 +353,13 @@ function buildElement(m, ff) {
       }, 'KinoCampus')
     )
   );
+
+  return new ImageResponse(element, {
+    width: 1200,
+    height: 630,
+    fonts: fonts,
+    headers: {
+      'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
+    },
+  });
 }
-
-// ---------------------------------------------------------------------------
-// Handler — Node.js Serverless Function (req, res)
-// ---------------------------------------------------------------------------
-module.exports = async function handler(req, res) {
-  try {
-    var { ImageResponse } = await import('@vercel/og');
-
-    var parsedUrl = new URL(req.url, 'https://' + (req.headers.host || 'www.kinocampus.com.br'));
-    var type = parsedUrl.searchParams.get('type') || 'home';
-    var m = MODULES[type] || MODULES['home'];
-
-    var fontData = await loadFont();
-    var fonts = fontData
-      ? [{ name: 'DM Sans', data: fontData, weight: 700, style: 'normal' }]
-      : [];
-    var ff = fontData ? "'DM Sans', system-ui, sans-serif" : 'system-ui, -apple-system, sans-serif';
-
-    var element = buildElement(m, ff);
-
-    var imageResponse = new ImageResponse(element, {
-      width: 1200,
-      height: 630,
-      fonts: fonts,
-    });
-
-    var arrayBuffer = await imageResponse.arrayBuffer();
-    var buffer = Buffer.from(arrayBuffer);
-
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800');
-    res.status(200).send(buffer);
-  } catch (err) {
-    console.error('[og-image] Error generating image:', err);
-    res.status(500).send('Failed to generate OG image');
-  }
-};
