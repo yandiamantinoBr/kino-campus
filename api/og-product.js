@@ -172,7 +172,8 @@ module.exports = async (req, res) => {
     if (ogDesc.length > 200) ogDesc = ogDesc.substring(0, 197) + '...';
     if (!ogDesc) ogDesc = 'Anuncio na comunidade universitaria da UFG.';
 
-    const ogImage = getPostImage(post) || `${baseUrl}/assets/og-default.png`;
+    const ogImageFallback = `${baseUrl}/api/og-image?type=${post.module || 'product'}`;
+    const ogImage = getPostImage(post) || ogImageFallback;
     const ogUrl = `${baseUrl}/product.html?id=${post.id}`;
 
     // Replace OG meta tags
