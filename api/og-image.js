@@ -14,8 +14,6 @@
 
 import { ImageResponse } from '@vercel/og';
 
-export const config = { runtime: 'edge' };
-
 // ---------------------------------------------------------------------------
 // Module configuration
 // ---------------------------------------------------------------------------
@@ -141,11 +139,12 @@ async function loadFont() {
 }
 
 // ---------------------------------------------------------------------------
-// Handler — Edge Function
+// Handler — Node.js Serverless Function (ESM via api/package.json)
 // ---------------------------------------------------------------------------
-export default async function handler(req) {
-  var url = new URL(req.url);
-  var type = url.searchParams.get('type') || 'home';
+export default async function handler(req, res) {
+  try {
+  var parsedUrl = new URL(req.url, 'https://' + (req.headers.host || 'www.kinocampus.com.br'));
+  var type = parsedUrl.searchParams.get('type') || 'home';
   var m = MODULES[type] || MODULES['home'];
 
   var fontData = await loadFont();
@@ -354,12 +353,19 @@ export default async function handler(req) {
     )
   );
 
-  return new ImageResponse(element, {
+  var imageResponse = new ImageResponse(element, {
     width: 1200,
     height: 630,
     fonts: fonts,
-    headers: {
-      'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
-    },
   });
+
+  var buffer = Buffer.from(await imageResponse.arrayBuffer());
+
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800');
+  res.status(200).send(buffer);
+  } catch (err) {
+    console.error('[og-image] Error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ error: String(err && err.message ? err.message : err) });
+  }
 }
