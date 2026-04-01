@@ -2117,9 +2117,10 @@
       itemClass: 'kc-card__tag',
     });
 
-    // Descrição (preview)
+    // Descrição (preview com markdown)
     const rawDesc = String(p.descricao || '').trim();
-    const preview = rawDesc.length > 140 ? (rawDesc.slice(0, 140).trim() + '...') : rawDesc;
+    const previewRaw = rawDesc.length > 140 ? (rawDesc.slice(0, 140).trim() + '...') : rawDesc;
+    const preview = renderMarkdownInline(previewRaw);
 
     // Autor (via authorId)
     const authorId = p.authorId || null;
@@ -2224,7 +2225,7 @@
             ${priceHtml ? priceHtml : ''}
             ${markerTagsHtml}
             <div class="kc-card__description-preview">
-              ${escapeHtml(preview)}
+              ${preview}
             </div>
             <div class="kc-card__author"${authorId ? ' data-author-id="' + escapeHtml(String(authorId)) + '"' : ''}>
               <img alt="${escapeHtml(String(authorName).split(' ')[0] || 'Autor')}" src="${escapeHtml(authorAvatar)}"/>
