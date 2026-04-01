@@ -148,10 +148,11 @@ export default async function handler(req, res) {
   var m = MODULES[type] || MODULES['home'];
 
   var fontData = await loadFont();
-  var fonts = fontData
+  var hasDMSans = !!fontData;
+  var fonts = hasDMSans
     ? [{ name: 'DM Sans', data: fontData, weight: 700, style: 'normal' }]
-    : [];
-  var ff = fontData ? "'DM Sans', system-ui, sans-serif" : 'system-ui, -apple-system, sans-serif';
+    : undefined; // undefined → @vercel/og uses its built-in default font
+  var ff = hasDMSans ? "'DM Sans', system-ui, sans-serif" : 'system-ui, -apple-system, sans-serif';
 
   var titleSize = m.title.length > 16 ? '52px' : m.title.length > 12 ? '62px' : '72px';
 
@@ -353,11 +354,9 @@ export default async function handler(req, res) {
     )
   );
 
-  var imageResponse = new ImageResponse(element, {
-    width: 1200,
-    height: 630,
-    fonts: fonts,
-  });
+  var options = { width: 1200, height: 630 };
+  if (fonts) options.fonts = fonts;
+  var imageResponse = new ImageResponse(element, options);
 
   var buffer = Buffer.from(await imageResponse.arrayBuffer());
 
