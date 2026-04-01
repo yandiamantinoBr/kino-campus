@@ -12,7 +12,7 @@
  *        oportunidades | achados-perdidos | ajuda | product
  */
 
-const { ImageResponse } = require('@vercel/og');
+// @vercel/og is ESM-only — use dynamic import() inside the handler
 
 // ---------------------------------------------------------------------------
 // Module configuration
@@ -348,6 +348,8 @@ function buildElement(m, ff) {
 // ---------------------------------------------------------------------------
 module.exports = async function handler(req, res) {
   try {
+    var { ImageResponse } = await import('@vercel/og');
+
     var parsedUrl = new URL(req.url, 'https://' + (req.headers.host || 'www.kinocampus.com.br'));
     var type = parsedUrl.searchParams.get('type') || 'home';
     var m = MODULES[type] || MODULES['home'];
