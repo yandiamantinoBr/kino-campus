@@ -189,7 +189,8 @@
       border-radius: 12px;
       padding: 25px;
       border: 1px solid var(--kc-border-dark);
-      overflow: hidden;
+      /* overflow: hidden removido — causava kc-save-popover ser cortado no desktop */
+      overflow: visible;
       width: 100%;
       max-width: 100%;
     }

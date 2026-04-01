@@ -1951,7 +1951,7 @@
         return;
       }
 
-      var html = '<table class="kc-ranking-score-table" style="font-size:0.85em;">' +
+      var html = '<div class="kc-ranking-table-wrapper"><table class="kc-ranking-score-table">' +
         '<thead><tr>' +
           '<th>#</th><th>Usuário</th><th>Score</th><th title="Publicações"><i class="fas fa-file-alt"></i></th>' +
           '<th title="Votos"><i class="fas fa-thumbs-up"></i></th><th title="Comentários"><i class="fas fa-comment"></i></th>' +
@@ -1978,7 +1978,7 @@
           '<td style="color:' + (u.penalties > 0 ? '#ef5350' : 'inherit') + ';">' + u.penalties + '</td>' +
         '</tr>';
       });
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
       tableEl.innerHTML = html;
 
       if (showAllBtn) {
