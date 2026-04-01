@@ -1437,6 +1437,7 @@ const { ENV, normalizePost } = window.KCAPI;
         visibility: parsed.visibility,
         metadata: parsed.metadata,
       },
+      images: parsed.images,
     };
   }
 
@@ -1469,6 +1470,7 @@ const { ENV, normalizePost } = window.KCAPI;
     if (!postUuid) return kcApiError('Post inválido para edição.');
 
     try {
+      // 1) Ownership check
       const own = await client.from('posts').select('id, author_id').eq('id', postUuid).maybeSingle();
       if (own && own.error) {
         console.error('[KCAPI][Supabase] updatePost ownership check erro:', own.error);
@@ -1477,6 +1479,7 @@ const { ENV, normalizePost } = window.KCAPI;
       if (!own || !own.data) return kcApiError('Publicação não encontrada.');
       if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('Você não pode editar este post.');
 
+      // 2) Update post fields (text, metadata, etc.)
       const upd = await client
         .from('posts')
         .update(parsed.data)
@@ -1490,6 +1493,16 @@ const { ENV, normalizePost } = window.KCAPI;
         return kcApiError('Não foi possível salvar alterações.');
       }
 
+      // 3) Handle image updates (upload new, delete removed, sync post_media)
+      // Always sync — even if empty (user might have removed all images)
+      const newImages = Array.isArray(parsed.images) ? parsed.images : [];
+      try {
+        await syncPostMediaForUpdate(client, postUuid, user.id, newImages);
+      } catch (imgErr) {
+        console.error('[KCAPI][Supabase] updatePost syncPostMedia erro:', imgErr);
+        // Non-blocking: text fields were saved, image sync failed partially
+      }
+
       const updated = await supabaseGetPostById(postUuid);
       if (!updated) return kcApiError('Post atualizado, mas não foi possível recarregar.');
 
@@ -1497,6 +1510,112 @@ const { ENV, normalizePost } = window.KCAPI;
     } catch (e) {
       console.error('[KCAPI][Supabase] updatePost exceção:', e);
       return kcApiError('Não foi possível salvar alterações.');
+    }
+  }
+
+  /**
+   * Sync post_media entries for an update operation.
+   * Handles: keep existing URLs, upload new data URLs, delete removed images.
+   */
+  async function syncPostMediaForUpdate(client, postUuid, userId, newImages) {
+    // 1) Fetch current post_media entries for this post
+    const currentMedia = await client
+      .from('post_media')
+      .select('id, url, is_cover, sort_order')
+      .eq('post_id', postUuid);
+
+    const currentRows = (currentMedia && !currentMedia.error && Array.isArray(currentMedia.data))
+      ? currentMedia.data
+      : [];
+
+    const currentUrlSet = new Set(currentRows.map(r => String(r.url || '')).filter(Boolean));
+
+    // 2) Classify new images: existing URLs to keep vs new data URLs to upload
+    const keepUrls = new Set();
+    const toUpload = []; // { index, dataUrl }
+    const orderedFinal = []; // { url, sort_order, is_cover }
+
+    for (let i = 0; i < newImages.length; i++) {
+      const item = newImages[i];
+      if (typeof item === 'string' && /^https?:\/\//i.test(item)) {
+        // Existing URL — keep it
+        keepUrls.add(item);
+        orderedFinal.push({ url: item, sort_order: i, is_cover: i === 0 });
+      } else if (typeof item === 'string' && item.startsWith('data:')) {
+        // New data URL — needs upload
+        toUpload.push({ index: i, dataUrl: item });
+        orderedFinal.push({ url: null, uploadIdx: toUpload.length - 1, sort_order: i, is_cover: i === 0 });
+      }
+    }
+
+    // 3) Upload new images to Storage
+    if (toUpload.length > 0) {
+      const dataUrls = toUpload.map(t => t.dataUrl);
+      const uploadResult = await uploadImagesToSupabaseStorage(client, dataUrls, { userId, postId: postUuid });
+      if (uploadResult && uploadResult.ok && Array.isArray(uploadResult.uploaded)) {
+        // Map uploaded URLs back into orderedFinal
+        for (let u = 0; u < uploadResult.uploaded.length; u++) {
+          const uploadedItem = uploadResult.uploaded[u];
+          const finalEntry = orderedFinal.find(f => f.uploadIdx === u);
+          if (finalEntry && uploadedItem && uploadedItem.url) {
+            finalEntry.url = uploadedItem.url;
+          }
+        }
+      } else {
+        console.error('[KCAPI][Supabase] syncPostMedia upload falhou:', uploadResult);
+      }
+    }
+
+    // Filter out entries that failed to upload
+    const validFinal = orderedFinal.filter(f => f.url);
+
+    // 4) Delete removed images from Storage
+    const removedUrls = [];
+    currentRows.forEach(row => {
+      if (row.url && !keepUrls.has(String(row.url))) {
+        removedUrls.push(row);
+      }
+    });
+
+    if (removedUrls.length > 0) {
+      try {
+        await cleanupManagedPostMediaStorage(client, removedUrls, { userId, postId: postUuid });
+      } catch (cleanupErr) {
+        console.warn('[KCAPI][Supabase] syncPostMedia cleanup de imagens removidas falhou:', cleanupErr);
+      }
+    }
+
+    // 5) Delete ALL current post_media rows for this post
+    if (currentRows.length > 0) {
+      const delMedia = await client.from('post_media').delete().eq('post_id', postUuid);
+      if (delMedia && delMedia.error) {
+        console.error('[KCAPI][Supabase] syncPostMedia delete post_media falhou:', delMedia.error);
+      }
+    }
+
+    // 6) Insert new post_media rows in the correct order
+    if (validFinal.length > 0) {
+      const mediaRows = validFinal.map((f, idx) => ({
+        post_id: postUuid,
+        url: String(f.url),
+        is_cover: idx === 0,
+        sort_order: idx,
+      }));
+
+      let mr = await client.from('post_media').insert(mediaRows);
+      if (mr && mr.error) {
+        const msg = String(mr.error.message || '').toLowerCase();
+        if (msg.includes('sort_order')) {
+          const mediaRowsCompat = mediaRows.map(function (r) {
+            var copy = { post_id: r.post_id, url: r.url, is_cover: r.is_cover };
+            return copy;
+          });
+          mr = await client.from('post_media').insert(mediaRowsCompat);
+        }
+      }
+      if (mr && mr.error) {
+        console.error('[KCAPI][Supabase] syncPostMedia insert post_media falhou:', mr.error);
+      }
     }
   }
 
