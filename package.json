@@ -21,6 +21,9 @@
     "url": "https://github.com/yandiamantinoBr/kino-campus/issues"
   },
   "homepage": "https://github.com/yandiamantinoBr/kino-campus#readme",
+  "dependencies": {
+    "@vercel/og": "^0.6.0"
+  },
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.2",
