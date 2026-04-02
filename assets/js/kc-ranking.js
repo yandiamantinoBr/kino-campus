@@ -51,6 +51,7 @@
         '</div>' +
         '<div class="kc-ranking-modal__body">' +
           '<p>O ranking pontua os usuários mais engajados da plataforma com base nas seguintes ações:</p>' +
+          '<div class="kc-ranking-table-wrapper">' +
           '<table class="kc-ranking-score-table">' +
             '<thead><tr><th>Ação</th><th>Pontos</th></tr></thead>' +
             '<tbody>' +
@@ -62,6 +63,7 @@
               '<tr><td><i class="fas fa-flag"></i> Denúncia confirmada</td><td class="kc-ranking-pts kc-ranking-pts--neg">-50</td></tr>' +
             '</tbody>' +
           '</table>' +
+          '</div>' +
           '<p style="font-size:0.85em;color:var(--kc-text-dark-secondary);margin-top:10px;">Filtrável por período (hoje, semana, mês) e específico por módulo.</p>' +
         '</div>' +
         '<div class="kc-ranking-modal__footer">' +
