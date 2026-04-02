@@ -335,20 +335,23 @@
     }
 
     .kc-save-wrap { position: relative; }
+    .kc-calendar-wrap { position: relative; }
 
     .kc-product-actions > * {
       min-width: 0;
     }
 
     .kc-product-actions > .kc-save-wrap,
-    .kc-product-actions > .kc-share-wrap {
+    .kc-product-actions > .kc-share-wrap,
+    .kc-product-actions > .kc-calendar-wrap {
       display: flex;
       min-width: 0;
       width: 100%;
     }
 
     .kc-product-actions > .kc-save-wrap > button,
-    .kc-product-actions > .kc-share-wrap > button {
+    .kc-product-actions > .kc-share-wrap > button,
+    .kc-product-actions > .kc-calendar-wrap > button {
       width: 100%;
     }
 
@@ -1389,6 +1392,7 @@
 
       .kc-product-actions > .kc-save-wrap,
       .kc-product-actions > .kc-share-wrap,
+      .kc-product-actions > .kc-calendar-wrap,
       .kc-product-actions .kc-btn-primary,
       .kc-product-actions .kc-btn-secondary {
         justify-content: center;
