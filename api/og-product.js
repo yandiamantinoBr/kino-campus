@@ -6,8 +6,8 @@
   meta tags so social media crawlers (WhatsApp, Facebook, Twitter)
   show rich link previews with image, title and description.
 */
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -135,7 +135,7 @@ function replaceTitleTag(html, newTitle) {
   return html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(newTitle)}</title>`);
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   console.log('[og-product] Handler invoked — id:', req.query.id || '(none)');
   const html = getProductHtml();
   const id = req.query.id;
@@ -215,4 +215,4 @@ module.exports = async (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(html);
   }
-};
+}

@@ -1740,8 +1740,8 @@ function kcOpenEditPostModal(post, callback) {
     destino: md.destino || '',
     horario: md.horario || '',
     vagas: md.vagas || '',
-    data: md.data || '',
-    hora: md.hora || '',
+    data: md.data_evento || md.data || '',
+    hora: md.hora_evento || md.hora || '',
     link: md.link || '',
     link_as_cta: !!(md.link_as_cta),
     gratuito: md.gratuito || false,
@@ -2200,7 +2200,7 @@ async function kcHandleCreateSubmit() {
         modalidadeTrabalho: kcCreateState.values.modalidadeTrabalho ? String(kcCreateState.values.modalidadeTrabalho) : '',
         recompensa: kcCreateState.values.recompensa ? String(kcCreateState.values.recompensa) : '',
         entrega: kcCreateState.values.entrega ? String(kcCreateState.values.entrega) : '',
-        // eventos: data e hora do evento (para o calendário)
+        // eventos: data, hora, link e gratuito
         data_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.data) ? String(kcCreateState.values.data) : '',
         hora_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.hora) ? String(kcCreateState.values.hora) : '',
         link: (kcCreateState.moduleKey === 'eventos' || kcCreateState.moduleKey === 'oportunidades') ? String(kcCreateState.values.link || '') : '',
