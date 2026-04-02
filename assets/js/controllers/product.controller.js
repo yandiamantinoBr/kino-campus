@@ -719,6 +719,36 @@
     }
   }
 
+  // Mapa módulo → groupId da categoria principal (espelha KC_CREATE_SCHEMA.categoryGroupId)
+  const CATEGORY_GROUP_MAP = {
+    'compra-venda': 'categoria',
+    'moradia': 'tipo',
+    'eventos': 'topico',
+    'achados-perdidos': 'status',
+    'oportunidades': 'tipo',
+    'caronas': 'tipo',
+  };
+
+  function wireCreateSimilarBtn() {
+    const btn = document.getElementById('createSimilarBtn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const post = currentPost;
+      if (!post) return;
+      const moduleKey = String(post.modulo || post.module || '').trim().toLowerCase();
+      if (!moduleKey) return;
+      const groupId = CATEGORY_GROUP_MAP[moduleKey];
+      const catKey = String(post.categoriaKey || post.categoria || '').trim().toLowerCase();
+      const selections = {};
+      if (groupId && catKey) selections[groupId] = catKey;
+      if (typeof window.kcOpenCreatePostModalPrefilled === 'function') {
+        window.kcOpenCreatePostModalPrefilled(moduleKey, selections);
+      } else if (typeof window.kcOpenCreatePostModal === 'function') {
+        window.kcOpenCreatePostModal(moduleKey);
+      }
+    });
+  }
+
   function bindStaticInteractions() {
     if (staticInteractionsBound) return;
     staticInteractionsBound = true;
@@ -2696,6 +2726,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     wireSharePopover();
     wireSavePopover();
+    wireCreateSimilarBtn();
     bindStaticInteractions();
     document.addEventListener('kc:authchange', () => { refreshViewerState().catch(() => { }); });
     document.addEventListener('kc:profilechange', () => {
