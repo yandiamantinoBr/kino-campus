@@ -2505,6 +2505,26 @@ document.addEventListener('DOMContentLoaded', function () {
   kcInitCreatePostTriggers();
 });
 
+/**
+ * Abre o modal de criação com módulo e seleções (tipo/categoria/subtópico) pré-definidos.
+ * Usado pelo botão "Criar parecido" na página de produto.
+ * @param {string} moduleKey - Chave do módulo (ex: 'eventos', 'moradia')
+ * @param {Object} selections - Mapa groupId → chipKey (ex: { topico: 'culturais' })
+ */
+function kcOpenCreatePostModalPrefilled(moduleKey, selections) {
+  if (moduleKey && KC_CREATE_SCHEMA[moduleKey]) {
+    kcCreateState.moduleKey = moduleKey;
+    kcCreateState.selections = (selections && typeof selections === 'object') ? Object.assign({}, selections) : {};
+    kcCreateState.values = {};
+    kcCreateState.images = [];
+    kcCreateState.coverImageId = null;
+    kcCreateState.editMode = false;
+    kcCreateState.editPostId = null;
+  }
+  return kcOpenCreatePostModal(moduleKey);
+}
+
 window.kcOpenCreatePostModal = kcOpenCreatePostModal;
 window.kcCloseCreatePostModal = kcCloseCreatePostModal;
 window.kcOpenEditPostModal = kcOpenEditPostModal;
+window.kcOpenCreatePostModalPrefilled = kcOpenCreatePostModalPrefilled;

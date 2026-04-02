@@ -50,7 +50,7 @@
           '<button type="button" data-kc-ranking-modal-close aria-label="Fechar"><i class="fas fa-times"></i></button>' +
         '</div>' +
         '<div class="kc-ranking-modal__body">' +
-          '<p>O ranking pontua os usuários mais engajados da plataforma com base nas seguintes ações:</p>' +
+          '<p>O ranking pontua os usuários mais ativos e úteis da comunidade. Cada ação é contabilizada <strong>uma única vez por publicação</strong> — ações repetidas no mesmo post não somam pontos extras.</p>' +
           '<div class="kc-ranking-table-wrapper">' +
           '<table class="kc-ranking-score-table">' +
             '<thead><tr><th>Ação</th><th>Pontos</th></tr></thead>' +
@@ -58,13 +58,13 @@
               '<tr><td><i class="fas fa-file-alt"></i> Publicação criada</td><td class="kc-ranking-pts">+15</td></tr>' +
               '<tr><td><i class="fas fa-thumbs-up"></i> Voto positivo recebido</td><td class="kc-ranking-pts">+10</td></tr>' +
               '<tr><td><i class="fas fa-comment"></i> Comentário escrito</td><td class="kc-ranking-pts">+5</td></tr>' +
-              '<tr><td><i class="fas fa-ticket"></i> Clique em cupom</td><td class="kc-ranking-pts">+4</td></tr>' +
-              '<tr><td><i class="fas fa-share-nodes"></i> Compartilhamento</td><td class="kc-ranking-pts">+3</td></tr>' +
-              '<tr><td><i class="fas fa-flag"></i> Denúncia confirmada</td><td class="kc-ranking-pts kc-ranking-pts--neg">-50</td></tr>' +
+              '<tr><td><i class="fas fa-hand-pointer"></i> Anúncio acessado por alguém</td><td class="kc-ranking-pts">+4</td></tr>' +
+              '<tr><td><i class="fas fa-share-alt"></i> Publicação compartilhada</td><td class="kc-ranking-pts">+3</td></tr>' +
+              '<tr><td><i class="fas fa-flag"></i> Denúncia confirmada (penalidade)</td><td class="kc-ranking-pts kc-ranking-pts--neg">-50</td></tr>' +
             '</tbody>' +
           '</table>' +
           '</div>' +
-          '<p style="font-size:0.85em;color:var(--kc-text-dark-secondary);margin-top:10px;">Filtrável por período (hoje, semana, mês) e específico por módulo.</p>' +
+          '<p style="font-size:0.85em;color:var(--kc-text-dark-secondary);margin-top:10px;">Filtrável por período (hoje, semana ou mês) e por módulo nas páginas de cada categoria.</p>' +
         '</div>' +
         '<div class="kc-ranking-modal__footer">' +
           '<button type="button" class="kc-btn-primary" data-kc-ranking-modal-close><i class="fas fa-check"></i> Entendido</button>' +
