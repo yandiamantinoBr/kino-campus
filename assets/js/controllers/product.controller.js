@@ -472,6 +472,70 @@
     }
   }
 
+  function setEventCalendar(post) {
+    const moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
+    if (moduleKey !== 'eventos') return;
+
+    const prev = document.getElementById('kcEventCalendarBtn');
+    if (prev) prev.remove();
+
+    const meta = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
+    const dataEvento = String(meta.data_evento || '').trim();
+    const horaEvento = String(meta.hora_evento || '').trim();
+    const localizacao = String(meta.localizacao || '').trim();
+    const titulo = String(post.titulo || post.title || '').trim();
+    const descricao = String(post.descricao || post.description || '').trim().substring(0, 500);
+
+    if (!dataEvento) return;
+
+    const dateParts = dataEvento.split('-');
+    if (dateParts.length !== 3) return;
+
+    let startStr, endStr;
+    const timeParts = horaEvento ? horaEvento.split(':') : null;
+    const hasTime = timeParts && timeParts.length >= 2;
+
+    if (hasTime) {
+      const hh = String(timeParts[0]).padStart(2, '0');
+      const mm = String(timeParts[1]).padStart(2, '0');
+      startStr = `${dateParts[0]}${dateParts[1]}${dateParts[2]}T${hh}${mm}00`;
+      let endHour = parseInt(hh, 10) + 1;
+      let endYear = dateParts[0], endMonth = dateParts[1], endDay = dateParts[2];
+      if (endHour >= 24) {
+        endHour -= 24;
+        const d = new Date(`${dateParts[0]}-${dateParts[1]}-${dateParts[2]}`);
+        d.setDate(d.getDate() + 1);
+        endYear = String(d.getFullYear());
+        endMonth = String(d.getMonth() + 1).padStart(2, '0');
+        endDay = String(d.getDate()).padStart(2, '0');
+      }
+      endStr = `${endYear}${endMonth}${endDay}T${String(endHour).padStart(2, '0')}${mm}00`;
+    } else {
+      startStr = `${dateParts[0]}${dateParts[1]}${dateParts[2]}`;
+      const d = new Date(`${dateParts[0]}-${dateParts[1]}-${dateParts[2]}`);
+      d.setDate(d.getDate() + 1);
+      endStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    const params = new URLSearchParams({ action: 'TEMPLATE', text: titulo, dates: `${startStr}/${endStr}` });
+    if (localizacao) params.set('location', localizacao);
+    if (descricao) params.set('details', descricao);
+
+    const btn = document.createElement('a');
+    btn.id = 'kcEventCalendarBtn';
+    btn.className = 'kc-btn-secondary';
+    btn.href = `https://calendar.google.com/calendar/render?${params.toString()}`;
+    btn.target = '_blank';
+    btn.rel = 'noopener noreferrer';
+    btn.style.textDecoration = 'none';
+    btn.innerHTML = '<i class="fas fa-calendar-plus"></i> Adicionar ao Google Agenda';
+
+    const primaryCta = document.getElementById('primaryCta');
+    if (primaryCta && primaryCta.parentNode) {
+      primaryCta.parentNode.insertBefore(btn, primaryCta.nextSibling);
+    }
+  }
+
   function maybeResumeQueuedContact(post) {
     if (!post || !isViewerAuthenticated() || typeof window.kcConsumeAuthIntent !== 'function') return;
 
@@ -1973,6 +2037,7 @@
     setSpecs(post);
     setSeller(post);
     setCTA(post);
+    setEventCalendar(post);
     setRelated(post);
     upsertOwnerActions(post, currentUser);
     bindSavedActions(post);

@@ -332,13 +332,23 @@ function kcEnsureCreateModal() {
   `;
   document.body.appendChild(overlay);
 
-  // Click fora fecha
+  // Click fora fecha — com confirmação se houver dados preenchidos
+  function kcMaybeCloseCreatePostModal() {
+    const hasTitulo = String(kcCreateState.values && kcCreateState.values.titulo || '').trim().length > 0;
+    const hasDescricao = String(kcCreateState.values && kcCreateState.values.descricao || '').trim().length > 0;
+    const hasImages = !!(kcCreateState.images && kcCreateState.images.length > 0);
+    if (kcCreateState.moduleKey && (hasTitulo || hasDescricao || hasImages)) {
+      if (!window.confirm('Descartar publicação? As informações preenchidas serão perdidas.')) return;
+    }
+    kcCloseCreatePostModal();
+  }
+
   overlay.addEventListener('mousedown', (e) => {
-    if (e.target === overlay) kcCloseCreatePostModal();
+    if (e.target === overlay) kcMaybeCloseCreatePostModal();
   });
 
   const closeBtn = overlay.querySelector('.kc-create-modal__close');
-  if (closeBtn) closeBtn.addEventListener('click', kcCloseCreatePostModal);
+  if (closeBtn) closeBtn.addEventListener('click', kcMaybeCloseCreatePostModal);
 
   // Delegation: módulo / tags
   overlay.addEventListener('click', (e) => {
