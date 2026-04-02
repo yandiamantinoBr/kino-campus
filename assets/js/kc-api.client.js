@@ -352,7 +352,7 @@
   };
 
   const cfg = { ...DEFAULTS };
-  const SESSION_STORE_VERSION = '8.3.4.5';
+  const SESSION_STORE_VERSION = '9.0.0';
   const SESSION_STORE_PREFIX = `kc:${SESSION_STORE_VERSION}`;
 
   // Boot inicial (lê KC_ENV e aplica debug)

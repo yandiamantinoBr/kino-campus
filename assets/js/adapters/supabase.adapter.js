@@ -305,7 +305,6 @@ const { ENV, normalizePost } = window.KCAPI;
     if (m.includes('png')) return 'png';
     if (m.includes('webp')) return 'webp';
     if (m.includes('gif')) return 'gif';
-    if (m.includes('svg')) return 'svg';
     return 'bin';
   }
 
@@ -317,6 +316,27 @@ const { ENV, normalizePost } = window.KCAPI;
       .replace(/[^a-zA-Z0-9._-]/g, '')
       .replace(/-+/g, '-')
       .slice(0, 80) || 'image';
+  }
+
+  // Valida magic bytes para confirmar que o conteúdo bate com o MIME declarado.
+  // Defesa contra arquivos maliciosos renomeados como imagens (ex: script.svg → image.png).
+  async function checkImageMagicBytes(blob) {
+    try {
+      const buf = await blob.slice(0, 12).arrayBuffer();
+      const b = new Uint8Array(buf);
+      // JPEG: FF D8 FF
+      if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) return 'image/jpeg';
+      // PNG: 89 50 4E 47 0D 0A 1A 0A
+      if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) return 'image/png';
+      // GIF: 47 49 46 38
+      if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif';
+      // WEBP: RIFF????WEBP (bytes 0-3 = RIFF, bytes 8-11 = WEBP)
+      if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+          b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+      return null; // tipo desconhecido ou não-imagem
+    } catch (_) {
+      return null;
+    }
   }
 
   function getPostMediaStorageBucket() {
@@ -478,7 +498,7 @@ const { ENV, normalizePost } = window.KCAPI;
       ? Number(ENV.supabase.maxImageBytes)
       : (5 * 1024 * 1024); // 5MB
 
-    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']);
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
     const opts = (options && typeof options === 'object') ? options : {};
     const userId = (opts.userId != null) ? String(opts.userId) : '';
@@ -508,7 +528,7 @@ const { ENV, normalizePost } = window.KCAPI;
         continue;
       }
 
-      // Valida tipo/tamanho
+      // Valida tipo MIME declarado
       const mime = String(blob.type || '').toLowerCase();
       if (!allowedTypes.has(mime)) {
         console.warn('[KCAPI][Supabase] Tipo de imagem não permitido:', mime);
@@ -516,6 +536,12 @@ const { ENV, normalizePost } = window.KCAPI;
       }
       if (blob.size > maxBytes) {
         console.warn('[KCAPI][Supabase] Imagem excede tamanho máximo (bytes):', blob.size, '>', maxBytes);
+        continue;
+      }
+      // Valida magic bytes (defesa contra arquivos maliciosos com MIME falsificado)
+      const actualMime = await checkImageMagicBytes(blob);
+      if (!actualMime || !allowedTypes.has(actualMime)) {
+        console.warn('[KCAPI][Supabase] Magic bytes não correspondem a imagem válida:', mime);
         continue;
       }
 
@@ -574,7 +600,7 @@ const { ENV, normalizePost } = window.KCAPI;
     const maxBytes = (ENV && ENV.supabase && Number.isFinite(ENV.supabase.maxImageBytes))
       ? Number(ENV.supabase.maxImageBytes)
       : (5 * 1024 * 1024);
-    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']);
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
     let blob = null;
     let directUrl = '';
@@ -599,10 +625,15 @@ const { ENV, normalizePost } = window.KCAPI;
 
     const mime = String(blob.type || '').toLowerCase();
     if (!allowedTypes.has(mime)) {
-      return { ok: false, error: { message: 'Use uma imagem JPG, PNG, WEBP ou SVG.' } };
+      return { ok: false, error: { message: 'Use uma imagem JPG, PNG ou WEBP para o avatar.' } };
     }
     if (blob.size > maxBytes) {
       return { ok: false, error: { message: 'A imagem do avatar excede o limite permitido.' } };
+    }
+    // Valida magic bytes (defesa contra arquivos maliciosos com MIME falsificado)
+    const actualMime = await checkImageMagicBytes(blob);
+    if (!actualMime || !allowedTypes.has(actualMime)) {
+      return { ok: false, error: { message: 'O arquivo não é uma imagem válida.' } };
     }
 
     const ext = extFromMime(mime);
