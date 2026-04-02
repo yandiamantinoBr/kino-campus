@@ -508,6 +508,12 @@
       });
 
       clearPendingRealtime();
+
+      // Scroll para o topo do feed para que os novos posts sejam visíveis
+      try {
+        const scrollTarget = inserted.length ? inserted[0] : container;
+        scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (_) { }
     }
 
     function restoreFromSnapshot() {
