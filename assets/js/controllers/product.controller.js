@@ -22,6 +22,7 @@
     const backdrop = document.getElementById('shareBackdrop');
     if (!popover) return;
     closeSavePopover();
+    closeCalendarPopover();
     popover.classList.add('active');
     if (backdrop) backdrop.classList.add('active');
     if (btn) btn.setAttribute('aria-expanded', 'true');
@@ -92,6 +93,7 @@
     const backdrop = document.getElementById('saveBackdrop');
     if (!popover) return;
     closeSharePopover();
+    closeCalendarPopover();
     popover.classList.add('active');
     popover.setAttribute('aria-hidden', 'false');
     if (backdrop) backdrop.classList.add('active');
@@ -472,12 +474,52 @@
     }
   }
 
+  function openCalendarPopover(btn) {
+    const popover = document.getElementById('calendarPopover');
+    const backdrop = document.getElementById('calendarBackdrop');
+    if (!popover) return;
+    closeSavePopover();
+    closeSharePopover();
+    popover.classList.add('active');
+    popover.setAttribute('aria-hidden', 'false');
+    if (backdrop) backdrop.classList.add('active');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeCalendarPopover() {
+    const popover = document.getElementById('calendarPopover');
+    const backdrop = document.getElementById('calendarBackdrop');
+    const btn = document.getElementById('calendarButton');
+    if (popover) { popover.classList.remove('active'); popover.setAttribute('aria-hidden', 'true'); }
+    if (backdrop) backdrop.classList.remove('active');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+
+  function wireCalendarPopover() {
+    const calBtn = document.getElementById('calendarButton');
+    const backdrop = document.getElementById('calendarBackdrop');
+    const closeBtn = document.getElementById('calendarPopoverClose');
+    if (!calBtn) return;
+    calBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const popover = document.getElementById('calendarPopover');
+      if (popover && popover.classList.contains('active')) closeCalendarPopover();
+      else openCalendarPopover(calBtn);
+    });
+    if (backdrop) backdrop.addEventListener('click', closeCalendarPopover);
+    if (closeBtn) closeBtn.addEventListener('click', closeCalendarPopover);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeCalendarPopover();
+    }, { passive: true });
+  }
+
   function setEventCalendar(post) {
     const moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
-    if (moduleKey !== 'eventos') return;
 
-    const prev = document.getElementById('kcEventCalendarBtn');
+    const prev = document.getElementById('kcEventCalendarWrap');
     if (prev) prev.remove();
+
+    if (moduleKey !== 'eventos') return;
 
     const meta = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
     const dataEvento = String(meta.data_evento || '').trim();
@@ -491,7 +533,7 @@
     const dateParts = dataEvento.split('-');
     if (dateParts.length !== 3) return;
 
-    let startStr, endStr;
+    let startStr, endStr, startIso, endIso;
     const timeParts = horaEvento ? horaEvento.split(':') : null;
     const hasTime = timeParts && timeParts.length >= 2;
 
@@ -499,6 +541,7 @@
       const hh = String(timeParts[0]).padStart(2, '0');
       const mm = String(timeParts[1]).padStart(2, '0');
       startStr = `${dateParts[0]}${dateParts[1]}${dateParts[2]}T${hh}${mm}00`;
+      startIso = `${dateParts[0]}-${dateParts[1]}-${dateParts[2]}T${hh}:${mm}:00`;
       let endHour = parseInt(hh, 10) + 1;
       let endYear = dateParts[0], endMonth = dateParts[1], endDay = dateParts[2];
       if (endHour >= 24) {
@@ -509,30 +552,90 @@
         endMonth = String(d.getMonth() + 1).padStart(2, '0');
         endDay = String(d.getDate()).padStart(2, '0');
       }
-      endStr = `${endYear}${endMonth}${endDay}T${String(endHour).padStart(2, '0')}${mm}00`;
+      const endHH = String(endHour).padStart(2, '0');
+      endStr = `${endYear}${endMonth}${endDay}T${endHH}${mm}00`;
+      endIso = `${endYear}-${endMonth}-${endDay}T${endHH}:${mm}:00`;
     } else {
       startStr = `${dateParts[0]}${dateParts[1]}${dateParts[2]}`;
+      startIso = `${dateParts[0]}-${dateParts[1]}-${dateParts[2]}`;
       const d = new Date(`${dateParts[0]}-${dateParts[1]}-${dateParts[2]}`);
       d.setDate(d.getDate() + 1);
       endStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      endIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    const params = new URLSearchParams({ action: 'TEMPLATE', text: titulo, dates: `${startStr}/${endStr}` });
-    if (localizacao) params.set('location', localizacao);
-    if (descricao) params.set('details', descricao);
+    // Google Calendar
+    const gParams = new URLSearchParams({ action: 'TEMPLATE', text: titulo, dates: `${startStr}/${endStr}` });
+    if (localizacao) gParams.set('location', localizacao);
+    if (descricao) gParams.set('details', descricao);
+    const googleUrl = `https://calendar.google.com/calendar/render?${gParams.toString()}`;
 
-    const btn = document.createElement('a');
-    btn.id = 'kcEventCalendarBtn';
-    btn.className = 'kc-btn-secondary';
-    btn.href = `https://calendar.google.com/calendar/render?${params.toString()}`;
-    btn.target = '_blank';
-    btn.rel = 'noopener noreferrer';
-    btn.style.textDecoration = 'none';
-    btn.innerHTML = '<i class="fas fa-calendar-plus"></i> Adicionar ao Google Agenda';
+    // Outlook Web
+    const oParams = new URLSearchParams({ subject: titulo, startdt: startIso, enddt: endIso, path: '/calendar/action/compose', rru: 'addevent' });
+    if (localizacao) oParams.set('location', localizacao);
+    if (descricao) oParams.set('body', descricao);
+    const outlookUrl = `https://outlook.live.com/calendar/0/deeplink/compose?${oParams.toString()}`;
+
+    // Apple / iCal — .ics data URI
+    const safeStr = (s) => String(s || '').replace(/\r\n|\r|\n/g, ' ').replace(/[,;\\]/g, (c) => '\\' + c);
+    const icsLines = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//KinoCampus//PT',
+      'BEGIN:VEVENT',
+      `SUMMARY:${safeStr(titulo)}`,
+      `DTSTART:${startStr}`, `DTEND:${endStr}`,
+    ];
+    if (localizacao) icsLines.push(`LOCATION:${safeStr(localizacao)}`);
+    if (descricao) icsLines.push(`DESCRIPTION:${safeStr(descricao)}`);
+    icsLines.push('END:VEVENT', 'END:VCALENDAR');
+    const icsHref = 'data:text/calendar;charset=utf8,' + encodeURIComponent(icsLines.join('\r\n'));
+    const icsFilename = (titulo.replace(/[^\w\u00C0-\u017E ]/g, '').trim().replace(/\s+/g, '-').substring(0, 50) || 'evento') + '.ics';
+
+    const wrap = document.createElement('div');
+    wrap.id = 'kcEventCalendarWrap';
+    wrap.className = 'kc-calendar-wrap';
+    wrap.innerHTML = `
+      <button class="kc-btn-secondary" id="calendarButton" type="button" aria-haspopup="true" aria-expanded="false">
+        <i class="fas fa-calendar-plus"></i> Marcar na Agenda
+      </button>
+      <div class="kc-save-popover" id="calendarPopover" role="menu" aria-hidden="true">
+        <div class="kc-save-popover__header">
+          <h3 class="kc-save-popover__title"><i class="fas fa-calendar-plus"></i> Adicionar ao calendário</h3>
+          <button class="kc-save-popover__close" id="calendarPopoverClose" type="button" aria-label="Fechar"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="kc-save-popover__body">
+          <a class="kc-save-option" href="${esc(googleUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
+            <i class="kc-save-option__icon fab fa-google" style="color:#4285F4;"></i>
+            <span class="kc-save-option__body">
+              <span class="kc-save-option__title">Google Agenda</span>
+              <span class="kc-save-option__hint">Abre no Google Calendar no navegador.</span>
+            </span>
+            <i class="fas fa-external-link-alt" style="font-size:.75rem;opacity:.5;"></i>
+          </a>
+          <a class="kc-save-option" href="${esc(icsHref)}" download="${esc(icsFilename)}" style="text-decoration:none;">
+            <i class="kc-save-option__icon fab fa-apple" style="color:#a2a2a7;"></i>
+            <span class="kc-save-option__body">
+              <span class="kc-save-option__title">Apple Calendário</span>
+              <span class="kc-save-option__hint">Baixa o arquivo .ics (iPhone, Mac).</span>
+            </span>
+            <i class="fas fa-download" style="font-size:.75rem;opacity:.5;"></i>
+          </a>
+          <a class="kc-save-option" href="${esc(outlookUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
+            <i class="kc-save-option__icon fab fa-microsoft" style="color:#0078d4;"></i>
+            <span class="kc-save-option__body">
+              <span class="kc-save-option__title">Outlook</span>
+              <span class="kc-save-option__hint">Abre no Outlook Web no navegador.</span>
+            </span>
+            <i class="fas fa-external-link-alt" style="font-size:.75rem;opacity:.5;"></i>
+          </a>
+        </div>
+      </div>
+      <div class="kc-save-popover-backdrop" id="calendarBackdrop"></div>
+    `;
 
     const primaryCta = document.getElementById('primaryCta');
     if (primaryCta && primaryCta.parentNode) {
-      primaryCta.parentNode.insertBefore(btn, primaryCta.nextSibling);
+      primaryCta.parentNode.insertBefore(wrap, primaryCta.nextSibling);
+      wireCalendarPopover();
     }
   }
 
