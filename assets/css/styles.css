@@ -4478,7 +4478,7 @@ body.kc-scroll-locked {
     border: 1px solid var(--kc-border-dark, #333);
     border-radius: 5px;
     background-color: transparent;
-    color: var(--kc-text-dark, #ccc);
+    color: var(--kc-text-dark-primary, #e0e0e0);
     cursor: pointer;
     font-size: 13px;
     transition: background-color 0.15s, color 0.15s;

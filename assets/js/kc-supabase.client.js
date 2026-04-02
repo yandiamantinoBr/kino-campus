@@ -648,7 +648,8 @@
     const run = async (selectStr, moduleEqValue) => {
       let q = client
         .from('posts')
-        .select(selectStr);
+        .select(selectStr)
+        .is('legacy_id', null);  // exclui posts de exemplo/demo do feed
 
       // Ordenação por tipo de feed
       if (f.sortBy === 'votos') {

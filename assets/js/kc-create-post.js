@@ -1286,6 +1286,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     fields.push({ type: 'date', name: 'data', label: 'Data (opcional)', required: false });
     fields.push({ type: 'time', name: 'hora', label: 'Horário (opcional)', required: false });
     fields.push({ type: 'url', name: 'link', label: 'Link/Inscrição (opcional)', placeholder: 'https://…', required: false });
+    fields.push({ type: 'checkbox', name: 'link_as_cta', label: 'Usar link como botão principal do anúncio', required: false });
     fields.push({ type: 'checkbox', name: 'gratuito', label: 'Evento gratuito', required: false });
     if (!values.gratuito) {
       fields.push({ ...moneyFieldMeta, name: 'preco', label: 'Valor (opcional)', placeholder: '0,00', required: false });
@@ -1336,6 +1337,8 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
     fields.push({ type: 'text', name: 'localizacao', label: 'Cidade/Campus (opcional)', placeholder: 'Ex: Goiânia / Campus Samambaia', required: false });
     fields.push({ ...moneyFieldMeta, name: 'remuneracao', label: 'Remuneração (opcional)', placeholder: 'Ex: 1200,00', required: false });
     fields.push({ type: 'text', name: 'contato', label: 'Contato', placeholder: 'Ex: email@ufg.br', required: true });
+    fields.push({ type: 'url', name: 'link', label: 'Link/Inscrição (opcional)', placeholder: 'https://…', required: false });
+    fields.push({ type: 'checkbox', name: 'link_as_cta', label: 'Usar link como botão principal do anúncio', required: false });
   }
 
   return fields;
@@ -1740,6 +1743,7 @@ function kcOpenEditPostModal(post, callback) {
     data: md.data_evento || md.data || '',
     hora: md.hora_evento || md.hora || '',
     link: md.link || '',
+    link_as_cta: !!(md.link_as_cta),
     gratuito: md.gratuito || false,
     contato: md.contato || '',
     remuneracao: md.remuneracao || '',
@@ -2199,7 +2203,8 @@ async function kcHandleCreateSubmit() {
         // eventos: data, hora, link e gratuito
         data_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.data) ? String(kcCreateState.values.data) : '',
         hora_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.hora) ? String(kcCreateState.values.hora) : '',
-        link: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.link) ? String(kcCreateState.values.link) : '',
+        link: (kcCreateState.moduleKey === 'eventos' || kcCreateState.moduleKey === 'oportunidades') ? String(kcCreateState.values.link || '') : '',
+        link_as_cta: !!(kcCreateState.values.link_as_cta),
         gratuito: (kcCreateState.moduleKey === 'eventos') ? !!kcCreateState.values.gratuito : false,
         // caronas
         origem: isCaronas ? caronasOrigem : '',

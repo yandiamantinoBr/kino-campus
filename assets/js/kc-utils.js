@@ -2291,7 +2291,6 @@
     html = html
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/__([^_]+)__/g, '<u>$1</u>')
       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
       .replace(/~~([^~]+)~~/g, '<s>$1</s>');
 
@@ -2300,9 +2299,13 @@
     html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
     html = html.replace(/\n/g, '<br>');
 
+    // Restore links before applying underline (__ delimiters would corrupt tokens)
     links.forEach((tag, idx) => {
       html = html.replace(`__KC_LINK_${idx}__`, tag);
     });
+
+    // Apply underline after link restoration (no token conflict)
+    html = html.replace(/__([^_]+)__/g, '<u>$1</u>');
 
     return html;
   }

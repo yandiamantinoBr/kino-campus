@@ -327,6 +327,23 @@
     const viewProfileHref = buildProfileHref(authorId);
     const authorProfile = post && post.authorProfile && typeof post.authorProfile === 'object' ? post.authorProfile : null;
 
+    // link_as_cta: o criador do post marcou o link para ser a ação principal
+    if (meta.link_as_cta) {
+      const ctaUrl = String(meta.link || post.link || post.externalUrl || '').trim();
+      if (/^https?:\/\//i.test(ctaUrl)) {
+        if (!isViewerAuthenticated()) {
+          return { type: 'login_required', label: 'Entrar para acessar' };
+        }
+        return {
+          type: 'external_link',
+          label: 'Acessar link',
+          href: ctaUrl,
+          target: '_blank',
+          rel: 'noopener noreferrer'
+        };
+      }
+    }
+
     if (authorProfile && shared && typeof shared.buildContactAction === 'function') {
       const profileAction = shared.buildContactAction({
         profile: authorProfile,
