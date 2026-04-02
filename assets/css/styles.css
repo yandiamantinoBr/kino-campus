@@ -4248,25 +4248,15 @@ body.kc-scroll-locked {
     gap: 8px;
 }
 
-@media (max-width: 640px) {
-    .kc-chip-row {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        padding-bottom: 2px;
-    }
-    .kc-chip-row::-webkit-scrollbar { display: none; }
-}
-
 .kc-chip {
     border: 1px solid var(--kc-border-dark);
     background: var(--kc-surface-dark);
     color: var(--kc-text-dark-secondary);
     border-radius: 999px;
-    padding: 8px 12px;
-    font-weight: 800;
-    font-size: 0.85rem;
+    padding: 8px 14px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    white-space: nowrap;
     cursor: pointer;
     transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
