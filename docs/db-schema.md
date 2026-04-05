@@ -1,6 +1,6 @@
 # KinoCampus — Schema do Banco de Dados
 
-**Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 58 (até v8.5.0.0)
+**Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 60 (até v9.0.4.1)
 
 ## Tabelas Principais
 
@@ -40,7 +40,7 @@
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | `id` | UUID PK | |
-| `legacy_id` | TEXT UNIQUE | ID legado (importação v6/v7) — deprecar em v9 |
+| `legacy_id` | TEXT UNIQUE | **[DEPRECATED v9.0.4]** ID legado (importação v6/v7). Verificar `kc_admin_legacy_id_stats()` antes de remover. |
 | `author_id` | UUID FK | Referencia `profiles.id` |
 | `title` | TEXT | Título do post |
 | `description` | TEXT | Descrição completa |
@@ -211,7 +211,8 @@
 | `created_at` | TIMESTAMPTZ | |
 
 **RLS:** INSERT qualquer um; SELECT somente admin.
-**Retenção:** Purgar entradas com `created_at < now() - interval '6 months'` (v9.0.4).
+**Retenção:** `kc_prune_old_analytics()` remove entradas com `created_at < now() - interval '6 months'` — pg_cron mensal (v9.0.4).
+**Índice:** `idx_search_queries_created_at` — para DELETE eficiente na retenção.
 
 ---
 
@@ -228,7 +229,8 @@
 | `created_at` | TIMESTAMPTZ | |
 
 **RLS:** INSERT via sistema; SELECT somente admin.
-**Retenção:** Purgar entradas com `created_at < now() - interval '1 year'` (v9.0.4).
+**Retenção:** `kc_prune_old_analytics()` remove entradas com `created_at < now() - interval '1 year'` — pg_cron mensal (v9.0.4).
+**Índice:** `idx_audit_log_created_at` — para DELETE eficiente na retenção.
 
 ---
 
@@ -269,8 +271,10 @@ idx_comments_author_created  ON comments(author_id, created_at)
 idx_post_votes_user_post     ON post_votes(user_id, post_id)
 idx_saved_posts_user         ON saved_posts(user_id)
 idx_reports_post_status      ON reports(post_id, status)
-idx_search_queries_term      ON search_queries(term)
-posts_metadata_gin_idx       ON posts USING GIN(metadata)
+idx_search_queries_term        ON search_queries(term)
+idx_search_queries_created_at  ON search_queries(created_at)      -- v9.0.4
+idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
+posts_metadata_gin_idx         ON posts USING GIN(metadata)
 ```
 
 ## Storage Buckets
@@ -290,6 +294,7 @@ posts_metadata_gin_idx       ON posts USING GIN(metadata)
 -- Expira posts diariamente às 03:00
 SELECT cron.schedule('kc-expire-old-posts', '0 3 * * *', 'SELECT public.kc_expire_old_posts()');
 
--- (v9.0.4) Purga analytics mensalmente às 04:00
+-- (v9.0.4) Purga analytics mensalmente às 04:00 (dia 1 de cada mês)
 SELECT cron.schedule('kc-prune-analytics', '0 4 1 * *', 'SELECT public.kc_prune_old_analytics()');
+-- search_queries: remove > 6 meses | audit_log: remove > 1 ano
 ```
