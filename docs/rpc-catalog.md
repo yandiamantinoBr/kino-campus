@@ -170,6 +170,83 @@ Retorna métricas de uso da coluna `posts.legacy_id` (deprecated) para embasar d
 
 ---
 
+### `kc_get_notifications(p_limit int, p_offset int) → JSONB` *(v9.1.0)*
+
+Lista paginada de notificações do usuário autenticado.
+
+**Chamado em:** `KCAPI.getNotifications()`
+
+**Retorno:**
+```json
+{ "ok": true, "notifications": [...], "total": 42, "unread": 5 }
+```
+
+---
+
+### `kc_mark_notifications_read(p_ids uuid[]) → JSONB` *(v9.1.0)*
+
+Marca notificações específicas como lidas.
+
+**Chamado em:** `KCAPI.markNotificationsRead()`
+
+**Retorno:** `{ "ok": true, "updated": 3 }`
+
+---
+
+### `kc_mark_all_notifications_read() → JSONB` *(v9.1.0)*
+
+Marca todas as notificações do usuário como lidas.
+
+**Chamado em:** `KCAPI.markAllNotificationsRead()`
+
+**Retorno:** `{ "ok": true, "updated": 5 }`
+
+---
+
+### `kc_unread_notification_count() → BIGINT` *(v9.1.0)*
+
+Retorna contagem de notificações não-lidas.
+
+**Chamado em:** `KCAPI.getUnreadNotificationCount()`
+
+---
+
+### `kc_prune_old_notifications() → JSONB` *(v9.1.0)*
+
+Remove notificações lidas com mais de 90 dias.
+
+**Chamado em:** pg_cron mensal (dia 1, 05:00 UTC).
+
+**Permissão:** Somente service_role (pg_cron).
+
+---
+
+## Triggers de Notificação *(v9.1.0)*
+
+### `kc_notify_on_comment()` [Trigger em comments]
+
+**Evento:** `AFTER INSERT ON comments`
+
+**O que faz:** Insere notificação `comment_on_post` para o autor do post. Ignora auto-comentários.
+
+---
+
+### `kc_notify_on_vote()` [Trigger em post_votes]
+
+**Evento:** `AFTER INSERT ON post_votes`
+
+**O que faz:** Insere notificação `vote_on_post` para o autor do post quando recebe voto positivo. Ignora self-votes e downvotes.
+
+---
+
+### `kc_notify_on_post_expire(p_post_id, p_author_id, p_title, p_module)` [Função helper]
+
+**Chamado por:** `kc_expire_old_posts()` quando expira um post.
+
+**O que faz:** Insere notificação `post_expired` para o autor.
+
+---
+
 ## Funções de Suporte / Helpers
 
 ### `kc_is_admin(p_user_id uuid) → boolean` [STABLE]
