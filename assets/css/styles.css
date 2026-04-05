@@ -7282,6 +7282,21 @@ textarea::placeholder {
     flex: none;
   }
 
+  .kc-header:not(.kc-header--admin) .kc-user-actions button:not(.btn-login),
+  .kc-header:not(.kc-header--admin) .kc-user-actions a.icon-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    margin: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex: none;
+  }
+
   .kc-header:not(.kc-header--admin) .kc-user-actions .theme-toggle {
     width: 36px;
     height: 36px;
@@ -7292,6 +7307,16 @@ textarea::placeholder {
     align-items: center;
     justify-content: center;
     flex: none;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions .kc-notif-bell {
+    font-size: 1.05em;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions .kc-notif-bell > i,
+  .kc-header:not(.kc-header--admin) .kc-search-mobile-btn > i,
+  .kc-header:not(.kc-header--admin) .kc-user-actions .theme-toggle > i {
+    line-height: 1;
   }
 
   .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login,

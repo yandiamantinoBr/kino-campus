@@ -11,6 +11,25 @@
 
 ## RPCs Públicas (chamadas via API)
 
+### `kc_get_feed_cursor(p_module text, p_modules text[], p_category text, p_subcategory text, p_tag text, p_q text, p_sort_by text, p_limit int, p_cursor text) → JSONB` *(v9.2.2)*
+
+Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de cada rail.
+
+**Chamado em:** `KCAPI.getFeedCursor()`
+
+**Retorno:** `{ "ok": true, "posts": [...], "next_cursor": "opaque-token-or-null", "has_more": true }`
+
+**Ordenação por `p_sort_by`:**
+- `recentes` → `bumped_at DESC NULLS LAST`, depois `created_at DESC`, `id DESC`
+- `comentados` → `last_comment_at DESC`, depois `created_at DESC`, `id DESC`
+- `votos` → `highlight_score DESC`, `votos DESC`, `created_at DESC`, `id DESC`
+
+**Observações:**
+- `p_module` cobre feed de módulo único; `p_modules` cobre feeds híbridos como `['compra-venda', 'livros']`.
+- O cursor é token opaco em base64 com os campos mínimos de desempate; callers não montam esse valor manualmente.
+
+---
+
 ### `kc_bump_post(p_post_id uuid) → JSONB`
 
 Sobe o post para o topo do feed. Cooldown de 1 dia.

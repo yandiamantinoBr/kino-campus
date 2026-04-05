@@ -37,6 +37,100 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     };
   }
 
+  function normalizeLocalFeedCursorParams(params) {
+    const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
+    const limitRaw = (p.limit != null) ? parseInt(String(p.limit), 10) : 20;
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 20;
+    const cursor = p.cursor != null ? String(p.cursor).trim() : '';
+    return {
+      ...p,
+      limit,
+      cursor: cursor || null,
+    };
+  }
+
+  function encodeBase64Utf8(value) {
+    const input = String(value == null ? '' : value);
+    try {
+      if (typeof Buffer !== 'undefined') return Buffer.from(input, 'utf8').toString('base64');
+    } catch (_) { }
+
+    if (typeof TextEncoder !== 'undefined' && typeof btoa === 'function') {
+      const bytes = new TextEncoder().encode(input);
+      let binary = '';
+      bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+      return btoa(binary);
+    }
+
+    if (typeof btoa === 'function') return btoa(input);
+    return input;
+  }
+
+  function decodeBase64Utf8(value) {
+    const input = String(value == null ? '' : value);
+    try {
+      if (typeof Buffer !== 'undefined') return Buffer.from(input, 'base64').toString('utf8');
+    } catch (_) { }
+
+    if (typeof TextDecoder !== 'undefined' && typeof atob === 'function') {
+      const binary = atob(input);
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    }
+
+    if (typeof atob === 'function') return atob(input);
+    return input;
+  }
+
+  function encodeLocalFeedCursor(offset) {
+    return encodeBase64Utf8(JSON.stringify({ offset: Math.max(0, Number(offset) || 0) }));
+  }
+
+  function decodeLocalFeedCursor(cursor) {
+    if (!cursor) return 0;
+    try {
+      const decoded = JSON.parse(decodeBase64Utf8(cursor));
+      const offset = parseInt(String(decoded && decoded.offset != null ? decoded.offset : 0), 10);
+      return Number.isFinite(offset) && offset > 0 ? offset : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  async function localGetFeedCursor(params = {}) {
+    const p = normalizeLocalFeedCursorParams(params);
+
+    if (!cfg.baseURL) {
+      const db = await getDatabaseNormalized();
+      const filtered = typeof filterLocalPosts === 'function' ? filterLocalPosts(db.posts, p) : (db.posts || []);
+      const rows = Array.isArray(filtered) ? filtered : [];
+      const offset = decodeLocalFeedCursor(p.cursor);
+      const nextOffset = Math.max(0, offset);
+      const posts = rows.slice(nextOffset, nextOffset + p.limit);
+      const hasMore = (nextOffset + posts.length) < rows.length;
+
+      try { console.debug(`[KCAPI:local] Serving cursor slice from ${nextOffset} (${posts.length} items) [limit=${p.limit}]`); } catch (_) { }
+
+      return {
+        posts,
+        nextCursor: hasMore ? encodeLocalFeedCursor(nextOffset + posts.length) : null,
+        hasMore,
+      };
+    }
+
+    const q = new URLSearchParams();
+    Object.entries(p || {}).forEach(([k, v]) => {
+      if (v == null || v === '') return;
+      if (Array.isArray(v)) {
+        if (!v.length) return;
+        q.set(k, JSON.stringify(v));
+        return;
+      }
+      q.set(k, String(v));
+    });
+    return fetchJSON(apiURL('feed-cursor?' + q.toString()));
+  }
+
   // ---------- Endpoints sugeridos (futuro backend) ----------
   // GET /api/v1/posts?module=...&q=...
   async function localGetPosts(params = {}) {
@@ -420,6 +514,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
   const driverLocal = Object.freeze({
     name: 'local',
     getPosts: localGetPosts,
+    getFeedCursor: localGetFeedCursor,
     getPostById: localGetPostById,
     getRelatedPosts: localGetRelatedPosts,
     createPost: localCreatePost,

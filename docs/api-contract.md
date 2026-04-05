@@ -46,21 +46,56 @@ Todo post normalizado via `KCPostModel.from()` tem a seguinte forma:
 ## Métodos de Post
 
 ### `KCAPI.getPosts(params)`
-Busca lista de posts com filtros.
+Busca lista de posts com filtros. Mantido por compatibilidade para busca, telas auxiliares e consumo legado.
 
 **Params:**
 ```javascript
 {
-  module: string,       // Filtrar por módulo (opcional)
-  category: string,     // Filtrar por categoria (opcional)
-  query: string,        // Busca textual (opcional)
-  sort: 'recent' | 'top' | 'discussed',  // Ordenação (default: 'recent')
-  limit: number,        // Quantidade (default: 20)
-  offset: number,       // Paginação offset (deprecated — usar cursor em v9.2.2)
+  module: string | string[],
+  category: string,
+  subcategory: string,
+  q: string,
+  tag: string,
+  sortBy: 'recentes' | 'votos' | 'comentados',
+  limit: number,
 }
 ```
 
 **Retorno:** `Promise<KCPostModel[]>`
+
+**Compatibilidade v9.2.2:** feeds incrementais migraram para `KCAPI.getFeedCursor()`. `getPosts()` continua estável para listagens legadas e fluxos auxiliares.
+
+---
+
+### `KCAPI.getFeedCursor(params)`
+Busca lotes incrementais do feed via cursor opaco. É o contrato usado pelos pagers a partir de `v9.2.2`.
+
+**Params:**
+```javascript
+{
+  module: string | string[],
+  category: string,
+  subcategory: string,
+  q: string,
+  tag: string,
+  sortBy: 'recentes' | 'votos' | 'comentados',
+  limit: number,
+  cursor: string | null,
+}
+```
+
+**Retorno:**
+```javascript
+Promise<{
+  posts: KCPostModel[],
+  nextCursor: string | null,
+  hasMore: boolean,
+}>
+```
+
+**Notas:**
+- `cursor` é opaco e pode ter representações diferentes entre `local` e `supabase`.
+- Feeds híbridos podem passar `module` como array, por exemplo `['compra-venda', 'livros']`.
 
 ---
 

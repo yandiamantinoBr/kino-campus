@@ -55,6 +55,7 @@ describe('Local Adapter - Registro do driver', () => {
     const driverObj = window.KCAPI.registerAdapter.mock.calls[0][1];
     const requiredMethods = [
       'getPosts',
+      'getFeedCursor',
       'getPostById',
       'getRelatedPosts',
       'createPost',
@@ -105,5 +106,63 @@ describe('Local Adapter - Stubs retornam valores seguros', () => {
     const result = await driver.getTopContributors();
     expect(Array.isArray(result)).toBe(true);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('Local Adapter - getFeedCursor', () => {
+  let driver;
+
+  beforeAll(() => {
+    driver = window.KCAPI.registerAdapter.mock.calls[0][1];
+  });
+
+  beforeEach(() => {
+    window.KCAPI.config.fallbackDatabaseURLs = ['/fake-db.json'];
+    window.KCAPI.DEFAULTS.fallbackDatabaseURLs = ['/fake-db.json'];
+    window.KCAPI.fetchJSON.mockResolvedValue({
+      anuncios: [
+        { id: '1', title: 'A', description: 'alpha', module: 'eventos', category: 'academicos', created_at: '2026-04-05T10:00:00Z' },
+        { id: '2', title: 'B', description: 'beta', module: 'eventos', category: 'academicos', created_at: '2026-04-05T09:00:00Z' },
+        { id: '3', title: 'C', description: 'gamma', module: 'eventos', category: 'academicos', created_at: '2026-04-05T08:00:00Z' },
+      ]
+    });
+    window.KCAPI.filterPosts.mockImplementation((posts, params) => {
+      const moduleFilter = Array.isArray(params && params.module)
+        ? params.module.map((value) => String(value).toLowerCase())
+        : [String((params && params.module) || '').toLowerCase()].filter(Boolean);
+      return (posts || []).filter((post) => {
+        if (!moduleFilter.length) return true;
+        return moduleFilter.includes(String(post.module || post.modulo || '').toLowerCase());
+      });
+    });
+  });
+
+  test('retorna envelope com posts, nextCursor e hasMore', async () => {
+    const first = await driver.getFeedCursor({ module: 'eventos', limit: 2 });
+
+    expect(first.posts).toHaveLength(2);
+    expect(first.hasMore).toBe(true);
+    expect(typeof first.nextCursor).toBe('string');
+
+    const second = await driver.getFeedCursor({ module: 'eventos', limit: 2, cursor: first.nextCursor });
+
+    expect(second.posts).toHaveLength(1);
+    expect(second.hasMore).toBe(false);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('aceita filtro com múltiplos módulos via array', async () => {
+    window.KCAPI.fetchJSON.mockResolvedValue({
+      anuncios: [
+        { id: '1', title: 'A', description: 'alpha', module: 'compra-venda' },
+        { id: '2', title: 'B', description: 'beta', module: 'livros' },
+        { id: '3', title: 'C', description: 'gamma', module: 'eventos' },
+      ]
+    });
+
+    const result = await driver.getFeedCursor({ module: ['compra-venda', 'livros'], limit: 10 });
+
+    expect(result.posts.map((post) => post.id)).toEqual(['1', '2']);
+    expect(result.hasMore).toBe(false);
   });
 });

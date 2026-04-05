@@ -731,7 +731,10 @@
   function filterPosts(posts, params = {}) {
     const p = params || {};
 
-    const moduleFilter = (p.module || p.modulo || '').toString().trim().toLowerCase() || null;
+    const rawModuleFilter = (p.module != null ? p.module : (p.modulo != null ? p.modulo : p.modules));
+    const moduleFilters = Array.isArray(rawModuleFilter)
+      ? rawModuleFilter.map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
+      : [String(rawModuleFilter || '').trim().toLowerCase()].filter(Boolean);
     const categoryFilter = (p.category || p.categoria || '').toString().trim().toLowerCase() || null;
     const subcategoryFilter = (p.subcategory || p.subcategoria || '').toString().trim().toLowerCase() || null;
     const q = (p.q || p.query || '').toString().trim().toLowerCase();
@@ -768,7 +771,7 @@
       const cat = String(post.categoria ?? post.category ?? '').toLowerCase();
       const sub = String(post.subcategoria ?? post.subcategory ?? post.subcategoriaKey ?? post.subcategoryKey ?? '').toLowerCase() || getMetaSub(post);
 
-      if (moduleFilter && mod !== moduleFilter) return false;
+      if (moduleFilters.length && !moduleFilters.includes(mod)) return false;
       if (categoryFilter && cat !== categoryFilter) return false;
       if (subcategoryFilter && sub !== subcategoryFilter) return false;
 
@@ -941,6 +944,18 @@
 
   // Facade pública (mantém a API estável)
   async function getPosts(params = {}) { return getActiveDriver().getPosts(params); }
+  async function getFeedCursor(params = {}) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.getFeedCursor !== 'function') {
+      const posts = await driver.getPosts(params);
+      return {
+        posts: Array.isArray(posts) ? posts : [],
+        nextCursor: null,
+        hasMore: false,
+      };
+    }
+    return driver.getFeedCursor(params);
+  }
   async function getPostById(id) { return getActiveDriver().getPostById(id); }
   async function createPost(body) {
     const policyError = enforceSupabaseOnProduction('createPost');
@@ -1299,6 +1314,7 @@
     getDatabaseRaw,
     getDatabaseNormalized,
     getPosts,
+    getFeedCursor,
     getPostById,
     createPost,
     updatePost,

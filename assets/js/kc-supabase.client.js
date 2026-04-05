@@ -404,6 +404,27 @@
     };
   }
 
+  function normalizeGetFeedCursorParams(params) {
+    const base = normalizeGetPostsParams(params);
+    const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
+    const rawModules = Array.isArray(p.modules)
+      ? p.modules
+      : (Array.isArray(p.module) ? p.module : (Array.isArray(p.modulo) ? p.modulo : []));
+    const modules = rawModules
+      .map((value) => {
+        if (value == null) return '';
+        const s = String(value).trim().toLowerCase();
+        return s || '';
+      })
+      .filter(Boolean);
+    const cursor = p.cursor != null ? String(p.cursor).trim() : '';
+    return {
+      ...base,
+      modules,
+      cursor: cursor || null,
+    };
+  }
+
   function normalizeModuleKey(v) {
     const raw = String(v || '').trim().toLowerCase();
     if (!raw) return '';
@@ -767,6 +788,51 @@
     return rows;
   }
 
+  async function getFeedCursor(params = {}) {
+    const { driver } = readEnv();
+    if (driver !== 'supabase') return { posts: [], nextCursor: null, hasMore: false };
+
+    const client = getClient();
+    if (!client) return { posts: [], nextCursor: null, hasMore: false };
+
+    const f = normalizeGetFeedCursorParams(params);
+    const moduleList = Array.isArray(f.modules) ? f.modules.filter(Boolean) : [];
+    const moduleParam = moduleList.length === 1
+      ? moduleList[0]
+      : (moduleList.length === 0 ? f.module : null);
+
+    const rpc = await client.rpc('kc_get_feed_cursor', {
+      p_module: moduleParam || null,
+      p_modules: moduleList.length > 1 ? moduleList : null,
+      p_category: f.category || null,
+      p_subcategory: f.subcategory || null,
+      p_tag: f.tag || null,
+      p_q: f.q || null,
+      p_sort_by: f.sortBy || 'recentes',
+      p_limit: f.limit,
+      p_cursor: f.cursor || null,
+    });
+
+    if (rpc && rpc.error) {
+      try { console.error('[KCSupabase] getFeedCursor erro:', rpc.error); } catch (_) { }
+      throw rpc.error;
+    }
+
+    const payload = (rpc && rpc.data && typeof rpc.data === 'object' && !Array.isArray(rpc.data)) ? rpc.data : {};
+    if (payload && payload.ok === false) {
+      const err = new Error(String(payload.error || 'KC_GET_FEED_CURSOR_FAILED'));
+      err.code = String(payload.error || 'KC_GET_FEED_CURSOR_FAILED');
+      throw err;
+    }
+    const rows = Array.isArray(payload.posts) ? payload.posts : [];
+
+    return {
+      posts: rows,
+      nextCursor: payload.nextCursor || payload.next_cursor || null,
+      hasMore: payload.hasMore === true || payload.has_more === true,
+    };
+  }
+
   function noopSubscription() {
     return { unsubscribe: function () { } };
   }
@@ -920,6 +986,7 @@
     init,
     getClient,
     getPosts,
+    getFeedCursor,
     getPostById,
     refreshSession,
     getSession: () => state.session,

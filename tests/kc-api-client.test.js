@@ -271,4 +271,46 @@ describe('KCAPI - API Client', () => {
       expect(result.subcategoryDB).toBe('exatas');
     });
   });
+
+  describe('getFeedCursor', () => {
+    let originalDriver;
+
+    beforeEach(() => {
+      originalDriver = window.KC_ENV.driver;
+    });
+
+    afterEach(() => {
+      window.KC_ENV.driver = originalDriver;
+    });
+
+    test('delega para o driver ativo quando getFeedCursor existe', async () => {
+      const payload = { posts: [{ id: '1' }], nextCursor: 'abc', hasMore: true };
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([]),
+        getFeedCursor: jest.fn().mockResolvedValue(payload),
+      });
+
+      window.KC_ENV.driver = 'local';
+      const result = await api.getFeedCursor({ limit: 12 });
+
+      expect(result).toEqual(payload);
+    });
+
+    test('faz fallback para getPosts quando o driver nao expõe getFeedCursor', async () => {
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([{ id: 'fallback-post' }]),
+      });
+
+      window.KC_ENV.driver = 'local';
+      const result = await api.getFeedCursor({ limit: 12 });
+
+      expect(result).toEqual({
+        posts: [{ id: 'fallback-post' }],
+        nextCursor: null,
+        hasMore: false,
+      });
+    });
+  });
 });

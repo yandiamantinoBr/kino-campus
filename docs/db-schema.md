@@ -55,6 +55,7 @@
 | `visibility` | TEXT | `'public'` / `'private'` |
 | `expires_at` | TIMESTAMPTZ | Data de expiração (7d caronas, 30d outros) |
 | `bumped_at` | TIMESTAMPTZ | Última vez que foi bumped (cooldown 1d) |
+| `last_comment_at` | TIMESTAMPTZ | Data do comentário mais recente (feed `comentados`) |
 | `votos` | INTEGER | Contagem de votos positivos líquidos |
 | `coupon_clicks` | INTEGER | Cliques no CTA (contador de engajamento) |
 | `share_count` | INTEGER | Compartilhamentos |
@@ -291,6 +292,9 @@
 idx_posts_author_created     ON posts(author_id, created_at)
 idx_posts_module_created     ON posts(module, created_at)
 idx_posts_category_created   ON posts(category, created_at)
+posts_bumped_at_idx          ON posts(bumped_at DESC NULLS LAST)        -- feed recentes
+posts_last_comment_at_idx    ON posts(last_comment_at DESC NULLS LAST)  -- feed comentados
+posts_highlight_score_idx    ON posts(highlight_score DESC)             -- feed votos
 idx_comments_author_created  ON comments(author_id, created_at)
 idx_post_votes_user_post     ON post_votes(user_id, post_id)
 idx_saved_posts_user         ON saved_posts(user_id)
@@ -302,6 +306,8 @@ idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9
 idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)
 ```
+
+**Paginação v9.2.2:** o feed incremental usa a RPC `kc_get_feed_cursor()` com cursor opaco. A ordenação preserva `bumped_at`, `last_comment_at` ou `highlight_score` conforme o tipo de feed.
 
 ## Storage Buckets
 

@@ -1080,6 +1080,39 @@ const { ENV, normalizePost } = window.KCAPI;
     return [];
   }
 
+  async function supabaseGetFeedCursor(filters = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getFeedCursor === 'function') {
+        const payload = await window.KCSupabase.getFeedCursor(filters);
+        const rows = Array.isArray(payload && payload.posts) ? payload.posts : [];
+        const out = rows.map(normalizeSupabasePost).filter(Boolean);
+        const nextCursor = payload && payload.nextCursor ? String(payload.nextCursor) : null;
+        const hasMore = !!(payload && payload.hasMore === true);
+
+        try {
+          const limitRaw = (filters && filters.limit != null) ? parseInt(String(filters.limit), 10) : (out.length || 0);
+          const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : (out.length || 0);
+          console.debug(`[KCAPI:supabase] Loaded cursor batch (${out.length} items) [limit=${limit}] hasMore=${hasMore}`);
+        } catch (_) { }
+
+        return {
+          posts: out,
+          nextCursor,
+          hasMore,
+        };
+      }
+    } catch (e) {
+      console.error('[KCAPI][Supabase] getFeedCursor falhou:', e);
+      throw e;
+    }
+
+    console.warn('[KCAPI][Supabase] KCSupabase.getFeedCursor indisponÃ­vel; retornando lote vazio.');
+    return {
+      posts: [],
+      nextCursor: null,
+      hasMore: false,
+    };
+  }
 
 
   // ---------- Supabase Write Path (V8.1.3.1) ----------
@@ -3330,6 +3363,7 @@ const { ENV, normalizePost } = window.KCAPI;
   const driverSupabase = Object.freeze({
     name: 'supabase',
     getPosts: supabaseGetPosts,
+    getFeedCursor: supabaseGetFeedCursor,
     getPostById: supabaseGetPostById,
     createPost: supabaseCreatePost,
     updatePost: supabaseUpdatePost,
