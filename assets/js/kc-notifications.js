@@ -248,67 +248,85 @@
 
   // ── Init ─────────────────────────────────────────────────────
 
+  function activate(bell, user) {
+    if (_initialized) return;
+    _initialized = true;
+
+    bell.style.display = '';
+    fetchUnreadCount();
+
+    // Subscribe to realtime
+    if (user && user.id) {
+      _channel = window.KCAPI.subscribeNotifications(user.id, onNewNotification);
+    }
+
+    // Bell click
+    bell.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleDropdown();
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function (e) {
+      if (!_dropdownOpen) return;
+      var dropdown = $('#kcNotifDropdown');
+      if (bell.contains(e.target)) return;
+      if (dropdown && dropdown.contains(e.target)) return;
+      closeDropdown();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && _dropdownOpen) closeDropdown();
+    });
+  }
+
   function init() {
     if (_initialized) return;
-
-    // Wait for auth to be ready
     var bell = $('#kcNotifBell');
     if (!bell) return;
 
-    // Check if user is logged in (kc-auth.ui.js sets btn-login.is-auth)
-    function tryInit() {
-      var authBtn = document.querySelector('a.btn-login.is-auth');
-      if (!authBtn) {
-        // Not logged in — hide bell
-        bell.style.display = 'none';
+    var attempts = 0;
+    var maxAttempts = 20; // 20 × 500ms = 10s max wait
+
+    function checkAuth() {
+      if (_initialized) return;
+      attempts++;
+
+      // Strategy 1: check via KCAPI.getCurrentUser (canonical)
+      if (typeof window.KCAPI !== 'undefined' && typeof window.KCAPI.getCurrentUser === 'function') {
+        try {
+          Promise.resolve(window.KCAPI.getCurrentUser()).then(function (user) {
+            if (user && user.id) {
+              activate(bell, user);
+            } else if (attempts < maxAttempts) {
+              setTimeout(checkAuth, 500);
+            }
+          }).catch(function () {
+            if (attempts < maxAttempts) setTimeout(checkAuth, 500);
+          });
+        } catch (e) {
+          if (attempts < maxAttempts) setTimeout(checkAuth, 500);
+        }
         return;
       }
 
-      // Show bell
-      bell.style.display = '';
-      _initialized = true;
-
-      // Fetch initial count
-      fetchUnreadCount();
-
-      // Subscribe to realtime
-      var user = null;
-      if (typeof window.KCAPI.getCurrentUser === 'function') {
-        Promise.resolve(window.KCAPI.getCurrentUser()).then(function (u) {
-          if (u && u.id) {
-            _channel = window.KCAPI.subscribeNotifications(u.id, onNewNotification);
-          }
-        }).catch(function () {});
+      // Strategy 2: fallback — check DOM class (kc-auth.ui.js hydrates)
+      var authBtn = document.querySelector('a.btn-login.is-auth');
+      if (authBtn) {
+        activate(bell, null);
+        return;
       }
 
-      // Bell click
-      bell.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleDropdown();
-      });
-
-      // Close on outside click
-      document.addEventListener('click', function (e) {
-        if (!_dropdownOpen) return;
-        var dropdown = $('#kcNotifDropdown');
-        if (bell.contains(e.target)) return;
-        if (dropdown && dropdown.contains(e.target)) return;
-        closeDropdown();
-      });
-
-      // Close on Escape
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && _dropdownOpen) closeDropdown();
-      });
+      // Retry
+      if (attempts < maxAttempts) {
+        setTimeout(checkAuth, 500);
+      }
     }
 
-    // Wait a bit for auth to initialize (auth UI runs on DOMContentLoaded too)
-    setTimeout(tryInit, 500);
-    // Retry after auth might have resolved
-    setTimeout(function () {
-      if (!_initialized) tryInit();
-    }, 2000);
+    // Start checking after scripts have loaded
+    setTimeout(checkAuth, 600);
   }
 
   function destroy() {
