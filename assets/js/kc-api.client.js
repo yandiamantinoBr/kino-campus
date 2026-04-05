@@ -1241,6 +1241,50 @@
     return driver.updateAdminHelpRequest(id, patch);
   }
 
+  // Notifications (v9.1.0)
+
+  async function getNotifications(limit, offset) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.getNotifications !== 'function') {
+      return { ok: false, notifications: [], unread: 0, total: 0 };
+    }
+    return driver.getNotifications(limit, offset);
+  }
+
+  async function markNotificationsRead(ids) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.markNotificationsRead !== 'function') {
+      return { ok: false, error: 'UNAVAILABLE' };
+    }
+    return driver.markNotificationsRead(ids);
+  }
+
+  async function markAllNotificationsRead() {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.markAllNotificationsRead !== 'function') {
+      return { ok: false, error: 'UNAVAILABLE' };
+    }
+    return driver.markAllNotificationsRead();
+  }
+
+  async function getUnreadNotificationCount() {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.getUnreadNotificationCount !== 'function') return 0;
+    return driver.getUnreadNotificationCount();
+  }
+
+  function subscribeNotifications(userId, callback) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.subscribeNotifications !== 'function') return null;
+    return driver.subscribeNotifications(userId, callback);
+  }
+
+  function unsubscribeNotifications(channel) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.unsubscribeNotifications !== 'function') return;
+    driver.unsubscribeNotifications(channel);
+  }
+
   window.KCAPI = Object.freeze({
     VERSION,
     ENV,
@@ -1292,6 +1336,14 @@
     createHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
+
+    // Notifications (v9.1.0)
+    getNotifications,
+    markNotificationsRead,
+    markAllNotificationsRead,
+    getUnreadNotificationCount,
+    subscribeNotifications,
+    unsubscribeNotifications,
 
     // Auth (Supabase)
     getCurrentUser,

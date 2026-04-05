@@ -1,6 +1,6 @@
 # KinoCampus — Schema do Banco de Dados
 
-**Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 60 (até v9.0.4.1)
+**Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 63 (até v9.1.0.2)
 
 ## Tabelas Principais
 
@@ -261,6 +261,26 @@
 
 ---
 
+### `notifications` — Notificações In-App (v9.1.0)
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `user_id` | UUID FK | Referencia `profiles.id` (CASCADE DELETE) |
+| `type` | TEXT | `'comment_on_post'` / `'vote_on_post'` / `'post_expired'` / `'post_reported'` / `'comment_reply'` / `'system'` |
+| `title` | TEXT | Título da notificação |
+| `body` | TEXT | Corpo/preview |
+| `data` | JSONB | Dados extras (post_id, actor_id, module, etc.) |
+| `read` | BOOLEAN | Lida pelo usuário |
+| `created_at` | TIMESTAMPTZ | |
+
+**RLS:** SELECT/UPDATE/DELETE somente próprio user_id. INSERT via triggers (SECURITY DEFINER).
+**Realtime:** Habilitado para push em tempo real (`supabase_realtime` publication).
+**Retenção:** `kc_prune_old_notifications()` remove lidas > 90 dias — pg_cron mensal.
+**Triggers:** `kc_notify_on_comment`, `kc_notify_on_vote`, `kc_notify_on_post_expire`.
+
+---
+
 ## Indexes
 
 ```sql
@@ -274,6 +294,8 @@ idx_reports_post_status      ON reports(post_id, status)
 idx_search_queries_term        ON search_queries(term)
 idx_search_queries_created_at  ON search_queries(created_at)      -- v9.0.4
 idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
+idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9.1.0
+idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)
 ```
 
@@ -297,4 +319,8 @@ SELECT cron.schedule('kc-expire-old-posts', '0 3 * * *', 'SELECT public.kc_expir
 -- (v9.0.4) Purga analytics mensalmente às 04:00 (dia 1 de cada mês)
 SELECT cron.schedule('kc-prune-analytics', '0 4 1 * *', 'SELECT public.kc_prune_old_analytics()');
 -- search_queries: remove > 6 meses | audit_log: remove > 1 ano
+
+-- (v9.1.0) Purga notificações lidas mensalmente às 05:00 (dia 1 de cada mês)
+SELECT cron.schedule('kc-prune-notifications', '0 5 1 * *', 'SELECT public.kc_prune_old_notifications()');
+-- Remove notificações lidas > 90 dias
 ```

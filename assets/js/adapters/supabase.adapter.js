@@ -3229,6 +3229,72 @@ const { ENV, normalizePost } = window.KCAPI;
     } catch (_) { return { ok: false, candidates: [] }; }
   }
 
+  // ── Notifications (v9.1.0) ──────────────────────────────────
+
+  async function supabaseGetNotifications(limit, offset) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: 'NO_CLIENT' };
+    const { data, error } = await client.rpc('kc_get_notifications', {
+      p_limit: limit || 20,
+      p_offset: offset || 0,
+    });
+    if (error) return { ok: false, error: error.message };
+    return data;
+  }
+
+  async function supabaseMarkNotificationsRead(ids) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: 'NO_CLIENT' };
+    const { data, error } = await client.rpc('kc_mark_notifications_read', {
+      p_ids: ids,
+    });
+    if (error) return { ok: false, error: error.message };
+    return data;
+  }
+
+  async function supabaseMarkAllNotificationsRead() {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: 'NO_CLIENT' };
+    const { data, error } = await client.rpc('kc_mark_all_notifications_read');
+    if (error) return { ok: false, error: error.message };
+    return data;
+  }
+
+  async function supabaseGetUnreadNotificationCount() {
+    const client = getSupabaseClient();
+    if (!client) return 0;
+    const { data, error } = await client.rpc('kc_unread_notification_count');
+    if (error) return 0;
+    return data || 0;
+  }
+
+  function supabaseSubscribeNotifications(userId, callback) {
+    const client = getSupabaseClient();
+    if (!client || !userId) return null;
+    const channel = client
+      .channel('notifications:' + userId)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: 'user_id=eq.' + userId,
+        },
+        function (payload) {
+          if (typeof callback === 'function') callback(payload.new);
+        }
+      )
+      .subscribe();
+    return channel;
+  }
+
+  function supabaseUnsubscribeNotifications(channel) {
+    const client = getSupabaseClient();
+    if (!client || !channel) return;
+    client.removeChannel(channel);
+  }
+
   // Driver Supabase (V8.1.7.2+)
   const driverSupabase = Object.freeze({
     name: 'supabase',
@@ -3266,6 +3332,13 @@ const { ENV, normalizePost } = window.KCAPI;
     createHelpRequest: supabaseCreateHelpRequest,
     listAdminHelpRequests: supabaseListAdminHelpRequests,
     updateAdminHelpRequest: supabaseUpdateAdminHelpRequest,
+    // Notifications (v9.1.0)
+    getNotifications: supabaseGetNotifications,
+    markNotificationsRead: supabaseMarkNotificationsRead,
+    markAllNotificationsRead: supabaseMarkAllNotificationsRead,
+    getUnreadNotificationCount: supabaseGetUnreadNotificationCount,
+    subscribeNotifications: supabaseSubscribeNotifications,
+    unsubscribeNotifications: supabaseUnsubscribeNotifications,
   });
 
 
