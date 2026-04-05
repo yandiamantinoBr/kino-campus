@@ -6931,7 +6931,7 @@ textarea::placeholder {
   font-size: 1.3em;
   padding: 5px;
   transition: all var(--transition-speed) ease;
-  display: none;
+  /* display controlado via inline style no HTML (display:none inicial, JS remove) */
 }
 
 .kc-notif-bell:hover {

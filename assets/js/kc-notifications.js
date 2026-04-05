@@ -252,7 +252,7 @@
     if (_initialized) return;
     _initialized = true;
 
-    bell.style.display = '';
+    bell.style.display = 'inline-flex';
     fetchUnreadCount();
 
     // Subscribe to realtime
