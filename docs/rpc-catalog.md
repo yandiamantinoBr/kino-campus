@@ -124,7 +124,7 @@ Registra busca para analytics.
 
 ---
 
-### `kc_prune_old_analytics() → void` *(v9.0.4)*
+### `kc_prune_old_analytics() → JSONB` *(v9.0.4)*
 
 Remove analytics antigos para evitar crescimento ilimitado.
 
@@ -133,7 +133,40 @@ DELETE FROM search_queries WHERE created_at < now() - interval '6 months';
 DELETE FROM audit_log WHERE created_at < now() - interval '1 year';
 ```
 
-**Chamado em:** pg_cron job mensal.
+**Chamado em:** pg_cron job mensal (dia 1 de cada mês, 04:00 UTC).
+
+**Permissão:** Somente service_role (pg_cron). Não disponível para authenticated.
+
+**Retorno:** `{ "ok": true, "search_queries_deleted": N, "audit_log_deleted": N }`
+
+**Audit:** Registra a operação de limpeza no próprio audit_log após execução.
+
+---
+
+### `kc_admin_legacy_id_stats() → JSONB` *(v9.0.4)*
+
+Retorna métricas de uso da coluna `posts.legacy_id` (deprecated) para embasar decisão de remoção futura.
+
+**Chamado em:** Admin dashboard (manual).
+
+**Permissão:** Somente admin (`kc_is_admin(auth.uid())`).
+
+**Retorno:**
+```json
+{
+  "ok": true,
+  "total_posts": 150,
+  "with_legacy_id": 42,
+  "without_legacy_id": 108,
+  "pct_legacy": 28.0,
+  "oldest_legacy_post": "2024-...",
+  "newest_legacy_post": "2025-...",
+  "by_module": { "compra-venda": 20, "caronas": 12, ... },
+  "safe_to_remove": false
+}
+```
+
+**Quando `safe_to_remove = true`:** Nenhum post tem `legacy_id`. A coluna pode ser removida com segurança.
 
 ---
 
