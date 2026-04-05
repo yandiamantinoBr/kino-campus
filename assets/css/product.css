@@ -882,6 +882,62 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
+    .kc-comment-thread {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .kc-comment-replies {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .kc-comment--reply {
+      border-left: 3px solid var(--kc-primary-brand);
+      border-radius: 0 12px 12px 0;
+      background: rgba(255, 107, 0, .06);
+    }
+
+    .kc-comment-reply-composer {
+      margin: 0 0 12px 18px;
+      padding: 12px 14px;
+      border-left: 3px solid var(--kc-primary-brand);
+      border-radius: 0 12px 12px 0;
+      background: rgba(255, 107, 0, .05);
+      border: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .kc-comment-reply-composer__label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: .88em;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-comment-reply-composer textarea {
+      width: 100%;
+      min-height: 88px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark);
+      font-family: inherit;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .kc-comment-reply-composer__actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
     .kc-related-section {
       background-color: var(--kc-surface-dark);
       border-radius: 12px;
@@ -1071,6 +1127,11 @@
     .kc-comment-composer,
     .kc-comment-composer-main {
       min-width: 0;
+    }
+
+    .kc-comment--reply,
+    .kc-comment-reply-composer {
+      margin-left: 10px;
     }
 
     /* ─── Report Popover ─────────────────────────────────────── */

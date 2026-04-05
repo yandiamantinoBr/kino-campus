@@ -2,6 +2,8 @@
 
 **Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 63 (até v9.1.0.2)
 
+> Atualização local de 05/04/2026: o repositório já contém 64 migrations até `v9.1.1.0_comment_threading.sql`.
+
 ## Tabelas Principais
 
 ### `profiles` — Perfis de Usuário
@@ -101,6 +103,8 @@
 **RLS:** SELECT público; INSERT author_id = auth.uid(); UPDATE/DELETE próprio autor ou admin.
 
 ---
+
+> **Nota v9.1.1:** a tabela `comments` no repositório usa os campos `author_name`, `body`, `likes` e `parent_id`. A migration `v9.1.1.0_comment_threading.sql` adiciona `parent_id` e o trigger `kc_check_comment_depth` para limitar o threading a 1 nível.
 
 ### `post_votes` — Votos
 

@@ -44,6 +44,94 @@ function saveComments(postId, comments) {
   localStorage.setItem(commentsStorageKey(postId), JSON.stringify(comments));
 }
 
+function resolveCommentOptionParentId(options) {
+  const raw = (options && typeof options === 'object' && !Array.isArray(options))
+    ? (options.parentId || options.parent_id || null)
+    : options;
+  return String(raw || '').trim() || null;
+}
+
+function getCommentParentId(comment) {
+  if (window.KCCommentsShared && typeof window.KCCommentsShared.getCommentParentId === 'function') {
+    return window.KCCommentsShared.getCommentParentId(comment);
+  }
+  if (!comment || typeof comment !== 'object') return null;
+  return String(comment.parent_id || comment.parentId || '').trim() || null;
+}
+
+function resolveReplyTarget(comments, parentId) {
+  if (window.KCCommentsShared && typeof window.KCCommentsShared.resolveReplyTarget === 'function') {
+    return window.KCCommentsShared.resolveReplyTarget(comments, parentId);
+  }
+
+  const id = String(parentId || '').trim();
+  if (!id || !Array.isArray(comments)) return null;
+
+  for (let i = 0; i < comments.length; i += 1) {
+    const comment = comments[i];
+    if (!comment || String(comment.id || '').trim() !== id) continue;
+    return getCommentParentId(comment) ? null : comment;
+  }
+
+  return null;
+}
+
+function buildCommentThreads(comments) {
+  if (window.KCCommentsShared && typeof window.KCCommentsShared.buildCommentThreads === 'function') {
+    return window.KCCommentsShared.buildCommentThreads(comments);
+  }
+
+  const items = Array.isArray(comments) ? comments.filter(Boolean) : [];
+  const roots = [];
+  const repliesByParent = Object.create(null);
+
+  items.forEach(function (comment) {
+    const parentId = getCommentParentId(comment);
+    const parent = parentId ? resolveReplyTarget(items, parentId) : null;
+    if (parent && parent.id != null) {
+      const bucketKey = String(parent.id);
+      if (!Array.isArray(repliesByParent[bucketKey])) repliesByParent[bucketKey] = [];
+      repliesByParent[bucketKey].push(comment);
+      return;
+    }
+    roots.push(comment);
+  });
+
+  return roots.map(function (root) {
+    const rootId = String((root && root.id) || '').trim();
+    return {
+      root: root,
+      replies: rootId && Array.isArray(repliesByParent[rootId]) ? repliesByParent[rootId].slice() : [],
+    };
+  });
+}
+
+const _kcActiveReplyState = {
+  postId: null,
+  parentId: null,
+  containerId: 'commentsContainer',
+};
+
+function setActiveReplyState(postId, parentId, containerId = 'commentsContainer') {
+  _kcActiveReplyState.postId = String(postId || '').trim() || null;
+  _kcActiveReplyState.parentId = String(parentId || '').trim() || null;
+  _kcActiveReplyState.containerId = String(containerId || 'commentsContainer');
+}
+
+function clearActiveReplyState() {
+  _kcActiveReplyState.postId = null;
+  _kcActiveReplyState.parentId = null;
+  _kcActiveReplyState.containerId = 'commentsContainer';
+}
+
+function isActiveReplyTarget(postId, parentId, containerId = 'commentsContainer') {
+  return (
+    String(_kcActiveReplyState.postId || '') === String(postId || '')
+    && String(_kcActiveReplyState.parentId || '') === String(parentId || '')
+    && String(_kcActiveReplyState.containerId || 'commentsContainer') === String(containerId || 'commentsContainer')
+  );
+}
+
 function addComment(postId, commentText, authorName = 'Anônimo') {
   const id = String(postId);
   const comments = loadComments(id);
@@ -52,6 +140,27 @@ function addComment(postId, commentText, authorName = 'Anônimo') {
     id: (comments.reduce((max, c) => Math.max(max, Number(c.id) || 0), 0) + 1),
     author: authorName || 'Anônimo',
     text: commentText,
+    timestamp: new Date().toLocaleString('pt-BR'),
+    created_at: new Date().toISOString(),
+    likes: 0,
+  };
+
+  comments.push(newComment);
+  saveComments(id, comments);
+  return newComment;
+}
+
+function addComment(postId, commentText, authorName = 'Anonimo', options = {}) {
+  const id = String(postId);
+  const comments = loadComments(id);
+  const parentId = resolveCommentOptionParentId(options);
+  if (parentId && !resolveReplyTarget(comments, parentId)) return null;
+
+  const newComment = {
+    id: (comments.reduce((max, comment) => Math.max(max, Number(comment.id) || 0), 0) + 1),
+    author: authorName || 'Anonimo',
+    text: commentText,
+    parent_id: parentId,
     timestamp: new Date().toLocaleString('pt-BR'),
     created_at: new Date().toISOString(),
     likes: 0,
@@ -181,6 +290,43 @@ function normalizeCommentForRender(c) {
 
 function getLocalLikeKey(postId, commentId, userId) {
   return `kc_comment_likes_${postId}_${commentId}_${userId}`;
+}
+
+function normalizeCommentForRender(c) {
+  if (window.KCCommentsShared && typeof window.KCCommentsShared.normalizeCommentForRender === 'function') {
+    return window.KCCommentsShared.normalizeCommentForRender(c || {});
+  }
+
+  const profile = c && (c.author_profile || c.profiles) ? (c.author_profile || c.profiles) : null;
+  const resolvedAuthor = (
+    (profile && (profile.display_name || profile.full_name))
+    || (c && c.display_name)
+    || (c && c.full_name)
+    || (c && c.author_name)
+    || (c && c.author)
+  );
+  const normalizedAuthor = String(resolvedAuthor || '').trim();
+  const resolvedAvatar = String(
+    (profile && profile.avatar_url)
+    || (c && c.author_avatar)
+    || (c && c.avatar_url)
+    || ''
+  ).trim();
+
+  return {
+    id: c && c.id,
+    authorId: String((c && (c.user_id || c.author_id)) || (profile && profile.id) || '').trim() || null,
+    author: normalizedAuthor || 'Anonimo',
+    avatar: resolvedAvatar,
+    text: (c && (c.body || c.text)) || '',
+    parentId: getCommentParentId(c),
+    timestamp: c && c.created_at
+      ? new Date(c.created_at).toLocaleString('pt-BR')
+      : ((c && c.timestamp) || ''),
+    likes: (c && c.likes) || 0,
+    likedByMe: !!(c && (c.liked_by_me || c.likedByMe)),
+    canLike: !(c && c._kcCanLike === false),
+  };
 }
 
 async function resolveCurrentLikeUserId() {
@@ -345,6 +491,167 @@ function _renderCommentList(id, containerId, comments, currentUserId, isAdmin) {
 
 // ---- Ações de comentário ----
 
+function renderCommentCardHTML(id, containerId, raw, currentUserId, isAdmin, depth = 0) {
+  const c = normalizeCommentForRender(raw);
+  const likeDisabled = !!c.likedByMe || !c.canLike;
+  const likeStateColor = likeDisabled ? 'var(--kc-accent, #3b82f6)' : 'var(--kc-text-dark-secondary)';
+  const likeStateWeight = likeDisabled ? '600' : '400';
+  const isCommentAuthor = !!(currentUserId && c.authorId && c.authorId === currentUserId);
+  const createdMs = raw && raw.created_at ? new Date(raw.created_at).getTime() : 0;
+  const canEdit = !!(isCommentAuthor && createdMs > 0 && (Date.now() - createdMs) < 60000);
+  const canDelete = !!(isCommentAuthor || isAdmin);
+  const canReport = !!(!isCommentAuthor && currentUserId);
+  const canReply = !c.parentId && !!(currentUserId || !isSupabaseRuntime());
+  const avatarSize = depth > 0 ? 36 : 40;
+  const contentOffset = depth > 0 ? 46 : 50;
+  const wrapperClass = depth > 0 ? 'kc-comment kc-comment--reply' : 'kc-comment';
+  const wrapperStyle = depth > 0
+    ? 'padding:12px 14px 12px 12px;margin:0 0 10px 18px;'
+    : 'padding:15px;border-bottom:1px solid var(--kc-border-dark);margin-bottom:10px;';
+
+  return `
+    <div class="${wrapperClass}" data-kc-comment-id="${_esc(String(c.id))}" data-kc-comment-depth="${_esc(String(depth))}" style="${wrapperStyle}">
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="display: contents;">` : ''}
+          <img src="${_esc(c.avatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || ''))}" alt="${_esc(c.author)}" style="width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;object-fit:cover;background-color:var(--kc-surface-dark);cursor:${c.authorId ? 'pointer' : 'default'};">
+        ${c.authorId ? '</a>' : ''}
+        <div style="flex:1;">
+          ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="font-weight:bold;text-decoration:none;color:inherit;" class="kc-comment-author-link">${_esc(c.author)}</a>` : `<div style="font-weight:bold;">${_esc(c.author)}</div>`}
+          <div style="font-size:0.85em;color:var(--kc-text-dark-secondary);">${_esc(c.timestamp)}</div>
+        </div>
+      </div>
+      <div class="kc-comment-body-text kc-comment__body" data-raw-text="${_esc(c.text)}" style="margin-left:${contentOffset}px;margin-bottom:10px;white-space:normal;line-height:1.6;">${renderCommentMarkdownInline(c.text)}</div>
+      <div class="kc-comment-actions-row kc-comment__actions" style="margin-left:${contentOffset}px;display:flex;gap:12px;font-size:0.88em;flex-wrap:wrap;align-items:center;">
+        <button data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" class="kc-like-comment-btn ${likeDisabled ? 'is-liked' : ''}" ${likeDisabled ? 'disabled aria-disabled="true"' : ''} style="background:none;border:none;cursor:${likeDisabled ? 'not-allowed' : 'pointer'};color:${likeStateColor};font-weight:${likeStateWeight};opacity:${likeDisabled ? '0.95' : '1'};padding:0;">
+          <i class="fas fa-thumbs-up"></i> ${c.likes || 0}${c.likedByMe ? ' - Curtido' : (c.canLike ? '' : ' - Entrar para curtir')}
+        </button>
+        ${canReply ? `<button data-kc-comment-action="reply" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-primary-brand);padding:0;font-size:inherit;" title="Responder comentario"><i class="fas fa-reply"></i> Responder</button>` : ''}
+        ${canEdit ? `<button data-kc-comment-action="edit" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);padding:0;font-size:inherit;" title="Editar comentario (disponivel por 1 minuto)"><i class="fas fa-pen"></i> Editar</button>` : ''}
+        ${canDelete ? `<button data-kc-comment-action="delete" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:#ef9a9a;padding:0;font-size:inherit;" title="Excluir comentario"><i class="fas fa-trash"></i> Excluir</button>` : ''}
+        ${canReport ? `<button data-kc-comment-action="report" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);padding:0;font-size:inherit;" title="Denunciar comentario"><i class="fas fa-flag"></i> Denunciar</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function buildReplyComposerHTML(id, containerId, parentComment) {
+  const parent = normalizeCommentForRender(parentComment);
+  return `
+    <div class="kc-comment-reply-composer" data-kc-reply-form-parent-id="${_esc(String(parent.id))}">
+      <div class="kc-comment-reply-composer__label"><i class="fas fa-reply"></i> Respondendo a <strong>${_esc(parent.author)}</strong></div>
+      <textarea data-kc-reply-input="${_esc(String(parent.id))}" data-post-id="${_esc(String(id))}" placeholder="Escreva sua resposta" aria-label="Escreva sua resposta"></textarea>
+      <div class="kc-comment-reply-composer__actions">
+        <button type="button" data-kc-comment-action="reply-submit" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(parent.id))}" data-container="${_esc(String(containerId))}" class="kc-btn-primary" style="padding:6px 14px;font-size:0.82em;"><i class="fas fa-paper-plane"></i> Responder</button>
+        <button type="button" data-kc-comment-action="reply-cancel" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(parent.id))}" data-container="${_esc(String(containerId))}" class="kc-btn-secondary" style="padding:6px 14px;font-size:0.82em;"><i class="fas fa-times"></i> Cancelar</button>
+      </div>
+    </div>`;
+}
+
+function _openCommentReplyInline(pid, cid, ctr) {
+  setActiveReplyState(pid, cid, ctr);
+  renderComments(pid, ctr);
+}
+
+function _closeCommentReplyInline(pid, cid, ctr) {
+  if (isActiveReplyTarget(pid, cid, ctr)) clearActiveReplyState();
+  renderComments(pid, ctr);
+}
+
+function _renderCommentList(id, containerId, comments, currentUserId, isAdmin) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  if (!Array.isArray(comments) || comments.length === 0) {
+    clearActiveReplyState();
+    container.innerHTML = `
+      <div style="padding:20px;text-align:center;color:var(--kc-text-dark-secondary);">
+        <i class="fas fa-comments" style="font-size:2em;margin-bottom:10px;opacity:0.5;"></i>
+        <p>Seja o primeiro a comentar!</p>
+      </div>
+    `;
+    return;
+  }
+
+  const threads = buildCommentThreads(comments);
+  container.innerHTML = threads.map(function (thread) {
+    const rootId = String(thread && thread.root && thread.root.id || '').trim();
+    const replyComposer = rootId && isActiveReplyTarget(id, rootId, containerId)
+      ? buildReplyComposerHTML(id, containerId, thread.root)
+      : '';
+    const repliesHTML = Array.isArray(thread && thread.replies) && thread.replies.length > 0
+      ? `<div class="kc-comment-replies">${thread.replies.map(function (reply) {
+          return renderCommentCardHTML(id, containerId, reply, currentUserId, isAdmin, 1);
+        }).join('')}</div>`
+      : '';
+
+    return `
+      <div class="kc-comment-thread" data-kc-thread-root-id="${_esc(rootId)}">
+        ${renderCommentCardHTML(id, containerId, thread.root, currentUserId, isAdmin, 0)}
+        ${replyComposer}
+        ${repliesHTML}
+      </div>
+    `;
+  }).join('');
+
+  if (!container._kcLikeListenerAttached) {
+    container._kcLikeListenerAttached = true;
+    container.addEventListener('click', function (event) {
+      const btn = event.target.closest('.kc-like-comment-btn');
+      if (!btn) return;
+      likeComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.container);
+    });
+  }
+
+  if (!container._kcCommentActionsListenerAttached) {
+    container._kcCommentActionsListenerAttached = true;
+    container.addEventListener('click', function (event) {
+      const actionBtn = event.target.closest('[data-kc-comment-action]');
+      if (actionBtn) {
+        const action = actionBtn.dataset.kcCommentAction;
+        const pid = actionBtn.dataset.postId;
+        const cid = actionBtn.dataset.commentId;
+        const ctr = actionBtn.dataset.container || 'commentsContainer';
+        if (action === 'reply') {
+          _openCommentReplyInline(pid, cid, ctr);
+          return;
+        }
+        if (action === 'reply-submit') {
+          const wrap = actionBtn.closest('.kc-comment-reply-composer');
+          const textarea = wrap ? wrap.querySelector('textarea') : null;
+          submitComment(pid, ctr, { parentId: cid, textarea: textarea, submitButton: actionBtn });
+          return;
+        }
+        if (action === 'reply-cancel') {
+          _closeCommentReplyInline(pid, cid, ctr);
+          return;
+        }
+        if (action === 'edit') _openCommentEditInline(pid, cid, ctr);
+        else if (action === 'delete') _confirmDeleteComment(pid, cid, ctr);
+        else if (action === 'report') _openCommentReportModal(pid, cid, ctr);
+        return;
+      }
+
+      const saveBtn = event.target.closest('[data-kc-comment-edit-save]');
+      if (saveBtn) {
+        const wrap = saveBtn.closest('.kc-comment-edit-wrap');
+        const textarea = wrap ? wrap.querySelector('textarea') : null;
+        const text = textarea ? textarea.value.trim() : '';
+        const cid2 = saveBtn.dataset.kcCommentEditSave;
+        const pid2 = saveBtn.dataset.postId;
+        const ctr2 = saveBtn.dataset.container || 'commentsContainer';
+        editComment(pid2, cid2, text, ctr2);
+        return;
+      }
+
+      const cancelBtn = event.target.closest('[data-kc-comment-edit-cancel]');
+      if (cancelBtn) {
+        const pid3 = cancelBtn.dataset.postId;
+        const ctr3 = cancelBtn.dataset.container || 'commentsContainer';
+        renderComments(pid3, ctr3);
+      }
+    });
+  }
+}
+
 function _openCommentEditInline(pid, cid, ctr) {
   const commentEl = document.querySelector(`[data-kc-comment-id="${_cssEsc(String(cid))}"]`);
   if (!commentEl) return;
@@ -443,6 +750,47 @@ async function deleteComment(pid, cid, ctr) {
   const comments = loadComments(id).filter(function (c) { return String(c.id) !== String(cid); });
   saveComments(id, comments);
   showToast('Comentário excluído.', 'info', 1800);
+  renderComments(id, ctr);
+}
+
+async function deleteComment(pid, cid, ctr) {
+  const id = String(pid);
+
+  if (isSupabaseRuntime()) {
+    try {
+      const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+        ? window.KCSupabase.getClient() : null;
+      if (!kcClient) { showToast('Nao foi possivel excluir.', 'error'); return; }
+      const user = await KCAPI.getCurrentUser();
+      let query = kcClient.from('comments').delete().eq('id', cid);
+      const profile = window.KCAPI && typeof window.KCAPI.getMyProfile === 'function'
+        ? await window.KCAPI.getMyProfile().catch(() => null) : null;
+      const isAdm = !!(profile && profile.is_admin);
+      if (!isAdm && user) query = query.eq('author_id', user.id);
+      const { error } = await query;
+      if (error) { showToast(error.message || 'Erro ao excluir comentario.', 'error'); return; }
+      if (String(_kcActiveReplyState.parentId || '') === String(cid || '')) clearActiveReplyState();
+      showToast('Comentario excluido.', 'info', 1800);
+      renderComments(id, ctr);
+    } catch (_) { showToast('Erro ao excluir comentario.', 'error'); }
+    return;
+  }
+
+  const loadedComments = loadComments(id);
+  const idsToDelete = new Set([String(cid)]);
+  loadedComments.forEach(function (comment) {
+    if (String(getCommentParentId(comment) || '') === String(cid || '')) {
+      idsToDelete.add(String(comment.id));
+    }
+  });
+
+  const comments = loadedComments.filter(function (comment) {
+    return !idsToDelete.has(String(comment && comment.id));
+  });
+
+  if (String(_kcActiveReplyState.parentId || '') === String(cid || '')) clearActiveReplyState();
+  saveComments(id, comments);
+  showToast('Comentario excluido.', 'info', 1800);
   renderComments(id, ctr);
 }
 
@@ -744,6 +1092,168 @@ async function submitComment(postId = null, containerId = 'commentsContainer') {
   updateCommentPreview(id);
   renderComments(id, containerId);
   showToast('Comentário enviado!', 'info', 1800);
+  try {
+    if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
+      window.KCHomeCategories.trackEvent('comment', {
+        post: resolveCommentTrackingPost(id)
+      });
+    }
+  } catch (_) { }
+}
+
+function resolveCommentSubmitTextarea(id, options = {}) {
+  if (options && options.textarea && typeof options.textarea === 'object') return options.textarea;
+  const parentId = resolveCommentOptionParentId(options);
+  if (parentId) {
+    return document.querySelector(`[data-kc-reply-input="${_cssEsc(String(parentId))}"]`);
+  }
+  return document.querySelector(`textarea[data-post-id="${_cssEsc(id)}"]`) || document.getElementById('commentText');
+}
+
+function resolveCommentSubmitButton(options = {}) {
+  if (options && options.submitButton && typeof options.submitButton === 'object') return options.submitButton;
+  return document.getElementById('submitCommentButton');
+}
+
+function releaseCommentSubmitButton(button) {
+  if (!button) return;
+  button._kcSubmitting = false;
+  button.disabled = false;
+  button.style.opacity = '';
+}
+
+function recordCommentAudit(commentId) {
+  try {
+    const kcClient = KCSupabase && typeof KCSupabase.getClient === 'function'
+      ? KCSupabase.getClient() : null;
+    if (!kcClient) return;
+
+    if (KCAPI && typeof KCAPI.getCurrentUser === 'function') {
+      KCAPI.getCurrentUser().then(function (user) {
+        kcClient.from('audit_log').insert({
+          action: 'comment_created',
+          entity_type: 'comments',
+          entity_id: commentId,
+          actor_id: user && user.id ? user.id : null,
+        }).then(function () { }).catch(function () { });
+      }).catch(function () { });
+    }
+  } catch (_) { }
+}
+
+async function submitComment(postId = null, containerId = 'commentsContainer', options = {}) {
+  const resolved = postId != null ? String(postId) : getCurrentPostId();
+  if (!resolved) {
+    showToast('Nao foi possivel identificar esta publicacao', 'error');
+    return;
+  }
+
+  const id = String(resolved);
+  const parentId = resolveCommentOptionParentId(options);
+  const textarea = resolveCommentSubmitTextarea(id, options);
+  if (!textarea || !String(textarea.value || '').trim()) {
+    showToast(parentId ? 'Por favor, escreva uma resposta' : 'Por favor, escreva um comentario', 'error');
+    return;
+  }
+
+  const text = String(textarea.value || '').trim();
+  const submitBtn = resolveCommentSubmitButton(options);
+  if (submitBtn && submitBtn._kcSubmitting) return;
+  if (submitBtn) { submitBtn._kcSubmitting = true; submitBtn.disabled = true; submitBtn.style.opacity = '0.6'; }
+
+  if (KCAPI && KCAPI.ENV && KCAPI.ENV.driver === 'supabase') {
+    const currentUser = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
+      ? window.KCSupabase.getUser()
+      : null;
+    if (!currentUser) {
+      releaseCommentSubmitButton(submitBtn);
+      if (typeof window.kcOpenAuthModal === 'function') {
+        window.kcOpenAuthModal({ tab: 'login' });
+      } else {
+        showToast('Faca login para comentar.', 'info');
+      }
+      return;
+    }
+
+    KCAPI.addComment(id, text, parentId ? { parentId: parentId } : {}).then(function (res) {
+      releaseCommentSubmitButton(submitBtn);
+      if (!(res && res.ok)) {
+        const msg = (res && res.error && res.error.message) || 'Nao foi possivel comentar.';
+        showToast(msg, 'error');
+        return;
+      }
+
+      textarea.value = '';
+      if (parentId) clearActiveReplyState();
+      updateCommentPreview(id);
+      renderComments(id, containerId);
+      showToast(parentId ? 'Resposta enviada!' : 'Comentario enviado!', 'info', 1800);
+
+      try {
+        if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
+          window.KCHomeCategories.trackEvent('comment', {
+            post: resolveCommentTrackingPost(id)
+          });
+        }
+      } catch (_) { }
+
+      recordCommentAudit((res.data && res.data.id) ? String(res.data.id) : id);
+    }).catch(function () {
+      releaseCommentSubmitButton(submitBtn);
+      showToast(parentId ? 'Erro ao enviar resposta.' : 'Erro ao enviar comentario.', 'error');
+    });
+    return;
+  }
+
+  if (isProductionRuntime()) {
+    releaseCommentSubmitButton(submitBtn);
+    showToast('Comentario bloqueado: em producao, use Supabase.', 'error');
+    return;
+  }
+
+  const authorInput = document.querySelector(`input[data-post-id="${_cssEsc(id)}"][name="author"]`);
+  let sessionUser = null;
+  let sessionProfile = null;
+  try {
+    if (KCAPI && typeof KCAPI.getCurrentUser === 'function') {
+      sessionUser = await KCAPI.getCurrentUser();
+    }
+  } catch (_) { }
+
+  if (sessionUser) {
+    try {
+      if (KCAPI && typeof KCAPI.getMyProfile === 'function') {
+        sessionProfile = await KCAPI.getMyProfile();
+      }
+    } catch (_) { }
+
+    if (!sessionProfile) {
+      try {
+        if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+          sessionProfile = window.KCProfiles.getCurrentProfile();
+        }
+      } catch (_) { }
+    }
+  }
+
+  const sessionAuthorName = resolveCurrentUserDisplayName(sessionUser, sessionProfile);
+  const hasSession = !!(sessionUser && sessionUser.id);
+  const authorName = hasSession
+    ? (sessionAuthorName || 'Conta autenticada')
+    : (sessionAuthorName || authorInput?.value?.trim() || 'Anonimo');
+  const inserted = addComment(id, text, authorName, parentId ? { parentId: parentId } : {});
+  releaseCommentSubmitButton(submitBtn);
+
+  if (!inserted) {
+    showToast('Nao foi possivel responder este comentario.', 'error');
+    return;
+  }
+
+  textarea.value = '';
+  if (parentId) clearActiveReplyState();
+  updateCommentPreview(id);
+  renderComments(id, containerId);
+  showToast(parentId ? 'Resposta enviada!' : 'Comentario enviado!', 'info', 1800);
   try {
     if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
       window.KCHomeCategories.trackEvent('comment', {

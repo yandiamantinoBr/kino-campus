@@ -1121,11 +1121,11 @@
     return getActiveDriver().getComments(postId);
   }
 
-  async function addComment(postId, body) {
+  async function addComment(postId, body, options = {}) {
     const policyError = enforceSupabaseOnProduction('addComment');
     if (policyError) return policyError;
     if (ENV.driver !== 'supabase' || !getActiveDriver().addComment) return null;
-    return getActiveDriver().addComment(postId, body);
+    return getActiveDriver().addComment(postId, body, options);
   }
 
   async function likeComment(commentId) {

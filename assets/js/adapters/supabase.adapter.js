@@ -1802,14 +1802,14 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       let result = await client
         .from('comments')
-        .select('id, created_at, author_id, author_name, body, likes, author_profile:profiles!comments_author_id_fkey(display_name, full_name, avatar_url)')
+        .select('id, created_at, parent_id, author_id, author_name, body, likes, author_profile:profiles!comments_author_id_fkey(display_name, full_name, avatar_url)')
         .eq('post_id', uuid)
         .order('created_at', { ascending: true });
 
       if (result && result.error) {
         result = await client
           .from('comments')
-          .select('id, created_at, author_id, author_name, body, likes')
+          .select('id, created_at, parent_id, author_id, author_name, body, likes')
           .eq('post_id', uuid)
           .order('created_at', { ascending: true });
       }
@@ -1872,6 +1872,7 @@ const { ENV, normalizePost } = window.KCAPI;
           ...row,
           author_name: resolvedName,
           author_avatar: String((prof && prof.avatar_url) || row.author_avatar || '').trim(),
+          parent_id: String(row && row.parent_id || '').trim() || null,
           liked_by_me: likedByMe.has(row && row.id),
         };
       });
@@ -1882,7 +1883,32 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   // Insere um novo comentário (author_id e author_name do usuário logado)
-  async function supabaseAddComment(postId, body) {
+  function resolveCommentParentIdFromOptions(options) {
+    const raw = (options && typeof options === 'object' && !Array.isArray(options))
+      ? (options.parentId || options.parent_id || null)
+      : options;
+    return String(raw || '').trim() || null;
+  }
+
+  function resolveCommentMutationErrorMessage(error, fallbackMessage) {
+    const fallback = String(fallbackMessage || 'Nao foi possivel comentar.');
+    const message = String(error && error.message || '').trim();
+    if (!message) return fallback;
+
+    const normalized = message.toLowerCase();
+    if (
+      (normalized.includes('coment') && normalized.includes('pai'))
+      || normalized.includes('apenas 1 n')
+      || normalized.includes('resposta deve pertencer')
+      || normalized.includes('ja possui respostas')
+    ) {
+      return message;
+    }
+
+    return fallback;
+  }
+
+  async function supabaseAddComment(postId, body, options = {}) {
     const client = getSupabaseClient();
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
     const user = await supabaseGetCurrentUser();
@@ -1890,6 +1916,11 @@ const { ENV, normalizePost } = window.KCAPI;
     const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
     if (!uuid) return { ok: false, error: { message: 'Post inválido.' } };
     const text = String(body || '').trim().slice(0, 2000);
+    const parentId = resolveCommentParentIdFromOptions(options);
+    if (parentId && !UUID_RE.test(parentId)) return { ok: false, error: { message: 'Comentario pai invalido.' } };
+    if (false && parentId && !UUID_RE.test(parentId)) {
+      return { ok: false, error: { message: 'ComentÃ¡rio pai invÃ¡lido.' } };
+    }
     if (!text) return { ok: false, error: { message: 'Comentário não pode ser vazio.' } };
 
     // Busca nome de exibição do profile
@@ -1918,8 +1949,8 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       const { data, error } = await client
         .from('comments')
-        .insert({ post_id: uuid, author_id: user.id, author_name: authorName, body: text })
-        .select('id, created_at, author_id, author_name, body, likes')
+        .insert({ post_id: uuid, parent_id: parentId, author_id: user.id, author_name: authorName, body: text })
+        .select('id, created_at, parent_id, author_id, author_name, body, likes')
         .maybeSingle();
       if (error) {
         console.error('[KCAPI][comments] addComment:', error);

@@ -315,7 +315,7 @@ idx_posts_category_created ON posts(category, created_at DESC)
 
 -- Comments
 idx_comments_post_created  ON comments(post_id, created_at)
-idx_comments_parent        ON comments(parent_id)  -- v9.1.1
+idx_comments_parent_id     ON comments(parent_id)  -- v9.1.1
 
 -- Voting
 idx_post_votes_user_post   ON post_votes(user_id, post_id)

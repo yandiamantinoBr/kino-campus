@@ -209,24 +209,27 @@ Busca comentários de um post.
 {
   id: string,
   post_id: string,
+  parent_id: string | null,
   author_id: string,
-  author: object,  // { display_name, avatar_url }
-  content: string,
+  author_name: string,
+  author_avatar: string,
+  body: string,
   created_at: string,
   likes: number,
-  likedByMe: boolean,
-  parent_id: string | null,  // (v9.1.1+)
+  liked_by_me: boolean,
 }
 ```
 
 ---
 
-### `KCAPI.addComment(postId, body)`
+### `KCAPI.addComment(postId, body, options?)`
 Adiciona comentário. **Requer autenticação.**
 
-**Body:** `{ content: string, parent_id?: string }`
+**Body:** `string`
 
-**Retorno:** `Promise<{ ok: boolean, comment: Comment, error?: object }>`
+**Options:** `{ parentId?: string }`
+
+**Retorno:** `Promise<{ ok: boolean, data?: Comment, error?: object }>`
 
 ---
 
