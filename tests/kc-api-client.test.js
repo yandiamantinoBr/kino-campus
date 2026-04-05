@@ -313,4 +313,41 @@ describe('KCAPI - API Client', () => {
       });
     });
   });
+
+  describe('searchPosts', () => {
+    let originalDriver;
+
+    beforeEach(() => {
+      originalDriver = window.KC_ENV.driver;
+    });
+
+    afterEach(() => {
+      window.KC_ENV.driver = originalDriver;
+    });
+
+    test('delega para o driver ativo quando searchPosts existe', async () => {
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([]),
+        searchPosts: jest.fn().mockResolvedValue([{ id: 'search-post' }]),
+      });
+
+      window.KC_ENV.driver = 'local';
+      const result = await api.searchPosts({ q: 'notebook', limit: 8 });
+
+      expect(result).toEqual([{ id: 'search-post' }]);
+    });
+
+    test('faz fallback para getPosts quando o driver nao expoe searchPosts', async () => {
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([{ id: 'legacy-search' }]),
+      });
+
+      window.KC_ENV.driver = 'local';
+      const result = await api.searchPosts({ q: 'notebook', limit: 8 });
+
+      expect(result).toEqual([{ id: 'legacy-search' }]);
+    });
+  });
 });

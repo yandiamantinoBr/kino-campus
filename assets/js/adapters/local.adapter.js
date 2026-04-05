@@ -37,6 +37,29 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     };
   }
 
+  function getSearchShared() {
+    const shared = (typeof window !== 'undefined' && window.KCSearchShared) ? window.KCSearchShared : null;
+    if (shared && typeof shared.searchCollection === 'function') return shared;
+    return null;
+  }
+
+  function readLocalUserPosts() {
+    try {
+      const raw = localStorage.getItem('kc_user_posts');
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list.map(normalizePost) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function getLocalSearchCollection() {
+    const db = await getDatabaseNormalized();
+    const posts = Array.isArray(db && db.posts) ? db.posts : [];
+    const userPosts = readLocalUserPosts();
+    return userPosts.concat(posts);
+  }
+
   function normalizeLocalFeedCursorParams(params) {
     const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
     const limitRaw = (p.limit != null) ? parseInt(String(p.limit), 10) : 20;
@@ -162,6 +185,25 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
       q.set(k, String(v));
     });
     return fetchJSON(apiURL('posts?' + q.toString()));
+  }
+
+  async function localSearchPosts(params = {}) {
+    if (!cfg.baseURL) {
+      const searchShared = getSearchShared();
+      if (!searchShared) {
+        return localGetPosts(params);
+      }
+
+      const collection = await getLocalSearchCollection();
+      return searchShared.searchCollection(collection, params);
+    }
+
+    const q = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v == null || v === '') return;
+      q.set(k, String(v));
+    });
+    return fetchJSON(apiURL('search?' + q.toString()));
   }
 
   // GET /api/v1/posts/:id (ou driver local)
@@ -514,6 +556,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
   const driverLocal = Object.freeze({
     name: 'local',
     getPosts: localGetPosts,
+    searchPosts: localSearchPosts,
     getFeedCursor: localGetFeedCursor,
     getPostById: localGetPostById,
     getRelatedPosts: localGetRelatedPosts,

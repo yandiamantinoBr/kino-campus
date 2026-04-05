@@ -2,7 +2,7 @@
 
 **Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 63 (até v9.1.0.2)
 
-> Atualização local de 05/04/2026: o repositório já contém 64 migrations até `v9.1.1.0_comment_threading.sql`.
+> Atualização local de 05/04/2026: o repositório já contém 66 migrations até `v9.2.0.0_search_posts_fts.sql`.
 
 ## Tabelas Principais
 
@@ -304,10 +304,13 @@ idx_search_queries_created_at  ON search_queries(created_at)      -- v9.0.4
 idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
 idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9.1.0
 idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
+idx_posts_fts                  ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL  -- v9.2.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)
 ```
 
 **Paginação v9.2.2:** o feed incremental usa a RPC `kc_get_feed_cursor()` com cursor opaco. A ordenação preserva `bumped_at`, `last_comment_at` ou `highlight_score` conforme o tipo de feed.
+
+**Busca v9.2.0:** a busca server-side usa `kc_search_posts_fts()` com `unaccent + portuguese`, expansão de sinônimos no client e documento ponderado por `title`, `tags`, `description`, `category` e `subcategory`.
 
 ## Storage Buckets
 

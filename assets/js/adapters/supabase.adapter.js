@@ -1080,6 +1080,21 @@ const { ENV, normalizePost } = window.KCAPI;
     return [];
   }
 
+  async function supabaseSearchPosts(filters = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.searchPosts === 'function') {
+        const rows = await window.KCSupabase.searchPosts(filters);
+        return (Array.isArray(rows) ? rows : []).map(normalizeSupabasePost).filter(Boolean);
+      }
+    } catch (e) {
+      console.error('[KCAPI][Supabase] searchPosts falhou:', e);
+      return [];
+    }
+
+    console.warn('[KCAPI][Supabase] KCSupabase.searchPosts indisponivel; retornando lista vazia.');
+    return [];
+  }
+
   async function supabaseGetFeedCursor(filters = {}) {
     try {
       if (window.KCSupabase && typeof window.KCSupabase.getFeedCursor === 'function') {
@@ -3363,6 +3378,7 @@ const { ENV, normalizePost } = window.KCAPI;
   const driverSupabase = Object.freeze({
     name: 'supabase',
     getPosts: supabaseGetPosts,
+    searchPosts: supabaseSearchPosts,
     getFeedCursor: supabaseGetFeedCursor,
     getPostById: supabaseGetPostById,
     createPost: supabaseCreatePost,

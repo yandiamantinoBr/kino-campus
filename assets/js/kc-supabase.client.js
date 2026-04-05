@@ -425,6 +425,42 @@
     };
   }
 
+  function getSearchShared() {
+    const shared = (typeof window !== 'undefined' && window.KCSearchShared) ? window.KCSearchShared : null;
+    if (shared && typeof shared.expandQueryTerms === 'function') return shared;
+    return null;
+  }
+
+  function buildExpandedSearchTerms(query) {
+    const q = String(query || '').trim();
+    if (!q) return [];
+
+    const shared = getSearchShared();
+    if (shared) return shared.expandQueryTerms(q);
+
+    const normalized = q
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+    if (!normalized) return [];
+    return Array.from(new Set(normalized.split(/\s+/).filter((term) => term.length > 1)));
+  }
+
+  function normalizeSearchPostsParams(params) {
+    const base = normalizeGetPostsParams(params);
+    const limitRaw = (params && params.limit != null) ? parseInt(String(params.limit), 10) : base.limit;
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 50) : 50;
+    return {
+      module: base.module,
+      category: base.category,
+      subcategory: base.subcategory,
+      q: base.q,
+      limit,
+      terms: buildExpandedSearchTerms(base.q),
+    };
+  }
+
   function normalizeModuleKey(v) {
     const raw = String(v || '').trim().toLowerCase();
     if (!raw) return '';
@@ -788,6 +824,33 @@
     return rows;
   }
 
+  async function searchPosts(params = {}) {
+    const { driver } = readEnv();
+    if (driver !== 'supabase') return [];
+
+    const client = getClient();
+    if (!client) return [];
+
+    const f = normalizeSearchPostsParams(params);
+    if (!f.q || !f.terms.length) return [];
+
+    const rpc = await client.rpc('kc_search_posts_fts', {
+      p_q: f.q,
+      p_terms: f.terms,
+      p_module: f.module || null,
+      p_category: f.category || null,
+      p_subcategory: f.subcategory || null,
+      p_limit: f.limit,
+    });
+
+    if (rpc && rpc.error) {
+      try { console.error('[KCSupabase] searchPosts erro:', rpc.error); } catch (_) { }
+      return [];
+    }
+
+    return Array.isArray(rpc && rpc.data) ? rpc.data : [];
+  }
+
   async function getFeedCursor(params = {}) {
     const { driver } = readEnv();
     if (driver !== 'supabase') return { posts: [], nextCursor: null, hasMore: false };
@@ -986,6 +1049,7 @@
     init,
     getClient,
     getPosts,
+    searchPosts,
     getFeedCursor,
     getPostById,
     refreshSession,

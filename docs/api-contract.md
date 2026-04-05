@@ -46,7 +46,7 @@ Todo post normalizado via `KCPostModel.from()` tem a seguinte forma:
 ## Métodos de Post
 
 ### `KCAPI.getPosts(params)`
-Busca lista de posts com filtros. Mantido por compatibilidade para busca, telas auxiliares e consumo legado.
+Busca lista de posts com filtros. Mantido por compatibilidade para telas auxiliares e consumo legado.
 
 **Params:**
 ```javascript
@@ -64,6 +64,29 @@ Busca lista de posts com filtros. Mantido por compatibilidade para busca, telas 
 **Retorno:** `Promise<KCPostModel[]>`
 
 **Compatibilidade v9.2.2:** feeds incrementais migraram para `KCAPI.getFeedCursor()`. `getPosts()` continua estável para listagens legadas e fluxos auxiliares.
+
+---
+
+### `KCAPI.searchPosts(params)`
+Busca server-side dedicada para a UI de busca (`search-results.html` e dropdown global do header).
+
+**Params:**
+```javascript
+{
+  q: string,
+  module: string,
+  category: string,
+  subcategory: string,
+  limit: number,
+}
+```
+
+**Retorno:** `Promise<KCPostModel[]>`
+
+**Notas v9.2.0:**
+- `KCAPI.getPosts()` continua legado/estável e não foi reinterpretado como FTS.
+- Sinônimos continuam expandidos no client antes do RPC.
+- A superfície de busca cobre `title`, `description`, `tags`, `category` e `subcategory`.
 
 ---
 

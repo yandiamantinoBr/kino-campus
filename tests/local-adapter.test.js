@@ -16,6 +16,7 @@ beforeAll(() => {
   window.KC_ENV = { driver: 'local', environment: 'development' };
   require('../assets/js/kc-constants.js');
   require('../assets/js/kc-utils.js');
+  window.KCSearchShared = require('../assets/js/kc-search.shared.js');
 
   // Mock KCAPI com interface minima antes de carregar o adapter
   window.KCAPI = window.KCAPI || {};
@@ -55,6 +56,7 @@ describe('Local Adapter - Registro do driver', () => {
     const driverObj = window.KCAPI.registerAdapter.mock.calls[0][1];
     const requiredMethods = [
       'getPosts',
+      'searchPosts',
       'getFeedCursor',
       'getPostById',
       'getRelatedPosts',
@@ -117,6 +119,7 @@ describe('Local Adapter - getFeedCursor', () => {
   });
 
   beforeEach(() => {
+    global.localStorage.clear();
     window.KCAPI.config.fallbackDatabaseURLs = ['/fake-db.json'];
     window.KCAPI.DEFAULTS.fallbackDatabaseURLs = ['/fake-db.json'];
     window.KCAPI.fetchJSON.mockResolvedValue({
@@ -164,5 +167,74 @@ describe('Local Adapter - getFeedCursor', () => {
 
     expect(result.posts.map((post) => post.id)).toEqual(['1', '2']);
     expect(result.hasMore).toBe(false);
+  });
+});
+
+describe('Local Adapter - searchPosts', () => {
+  let driver;
+
+  beforeAll(() => {
+    driver = window.KCAPI.registerAdapter.mock.calls[0][1];
+  });
+
+  beforeEach(() => {
+    global.localStorage.clear();
+    window.KCAPI.fetchJSON.mockResolvedValue({
+      anuncios: [
+        {
+          id: '1',
+          title: 'Notebook Dell Inspiron',
+          description: 'Usado em otimo estado',
+          module: 'compra-venda',
+          category: 'eletronicos',
+          metadata: { subcategoria: 'informatica', tags: ['notebook', 'dell'] },
+          created_at: '2026-04-05T10:00:00Z',
+        },
+        {
+          id: '2',
+          title: 'Mochila executiva',
+          description: 'Cabe notebook e carregador',
+          module: 'compra-venda',
+          category: 'acessorios',
+          metadata: { subcategoria: 'transporte', tags: ['mochila'] },
+          created_at: '2026-04-05T09:00:00Z',
+        },
+        {
+          id: '3',
+          title: 'Grupo de estudos',
+          description: 'Aulas de Matematica aplicada',
+          module: 'oportunidades',
+          category: 'estudos',
+          metadata: { subcategoria: 'Matematica', tags: ['calculo'] },
+          created_at: '2026-04-05T08:00:00Z',
+        },
+      ]
+    });
+    window.KCAPI.filterPosts.mockImplementation((posts) => posts);
+  });
+
+  test('prioriza match no titulo sobre match apenas na descricao', async () => {
+    const result = await driver.searchPosts({ q: 'notebook', limit: 10 });
+
+    expect(result.map((post) => post.id)).toEqual(['1', '2']);
+  });
+
+  test('encontra resultado por sinonimo expandido', async () => {
+    const result = await driver.searchPosts({ q: 'laptop', limit: 10 });
+
+    expect(result.map((post) => post.id)).toContain('1');
+  });
+
+  test('encontra resultado por categoria ou subcategoria sem acento', async () => {
+    const result = await driver.searchPosts({ q: 'matematica', limit: 10 });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('3');
+  });
+
+  test('aplica filtro de modulo no caminho compartilhado', async () => {
+    const result = await driver.searchPosts({ q: 'matematica', module: 'compra-venda', limit: 10 });
+
+    expect(result).toEqual([]);
   });
 });

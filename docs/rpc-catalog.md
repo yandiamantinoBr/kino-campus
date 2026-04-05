@@ -30,6 +30,28 @@ Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de 
 
 ---
 
+### `kc_search_posts_fts(p_q text, p_terms text[], p_module text, p_category text, p_subcategory text, p_limit int) → SETOF JSONB` *(v9.2.0)*
+
+Busca server-side dedicada para a página `search-results.html` e o dropdown global do header.
+
+**Chamado em:** `KCAPI.searchPosts()`
+
+**Cobertura de busca:**
+- `title`
+- `description`
+- `category`
+- `metadata->>'subcategoria'` / `metadata->>'subcategory'`
+- `metadata->'tags'` (com compatibilidade para `tagKeys`)
+
+**Ordenação:** `ts_rank_cd(...) DESC`, depois `created_at DESC`, `id DESC`
+
+**Observações:**
+- `p_terms` já chega expandido pelo client com sinônimos deduplicados.
+- A função roda com `SET search_path = public` e respeita RLS por manter semântica de `SECURITY INVOKER`.
+- O retorno já inclui `profiles`, `post_media` e `comments(count)` para compatibilidade com `normalizeSupabasePost`.
+
+---
+
 ### `kc_bump_post(p_post_id uuid) → JSONB`
 
 Sobe o post para o topo do feed. Cooldown de 1 dia.
@@ -294,6 +316,24 @@ Extrai URL do avatar dos metadados do usuário ao criar conta.
 
 ---
 
+### `kc_unaccent(input_text text) → text` [IMMUTABLE]
+
+Wrapper imutável para `unaccent`, usado na expressão indexada do FTS.
+
+---
+
+### `kc_posts_search_document(p_title text, p_description text, p_category text, p_metadata jsonb) → tsvector` [IMMUTABLE]
+
+Documento ponderado do FTS:
+- peso `A` → `title`
+- peso `B` → `tags`
+- peso `C` → `description`
+- peso `D` → `category` e `subcategory`
+
+**Chamado em:** índice `idx_posts_fts` e RPC `kc_search_posts_fts`.
+
+---
+
 ## Triggers
 
 ### `kc_handle_new_user()` [Trigger em auth.users]
@@ -347,7 +387,7 @@ idx_search_queries_user    ON search_queries(user_id, created_at)  -- v9.0.4
 idx_notifications_user_unread ON notifications(user_id, read) WHERE read = false
 
 -- Full-text search (v9.2.0)
-idx_posts_fts ON posts USING GIN(to_tsvector('portuguese', title || ' ' || description))
+idx_posts_fts ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL
 
 -- GIN em metadata (já existe)
 posts_metadata_gin_idx ON posts USING GIN(metadata)

@@ -1,0 +1,94 @@
+describe('KCSupabase.searchPosts', () => {
+  let rpcMock;
+  let authMock;
+
+  beforeEach(() => {
+    jest.resetModules();
+
+    global.window = global.window || global;
+    global.document = {
+      addEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    };
+    global.CustomEvent = function CustomEvent(type, init) {
+      return { type, detail: init && init.detail ? init.detail : null };
+    };
+
+    window.KC_ENV = {
+      driver: 'supabase',
+      DATA_DRIVER: 'supabase',
+      environment: 'development',
+      APP_ENV: 'development',
+      debug: false,
+      SUPABASE_URL: 'https://test.supabase.co',
+      SUPABASE_ANON_KEY: 'test-key',
+      supabase: {
+        url: 'https://test.supabase.co',
+        anonKey: 'test-key',
+        storageBucket: 'kino-media',
+      },
+    };
+
+    window.KCSearchShared = require('../assets/js/kc-search.shared.js');
+
+    rpcMock = jest.fn();
+    authMock = {
+      getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
+      onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
+      signInWithPassword: jest.fn(),
+      signUp: jest.fn(),
+      resend: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
+      updateUser: jest.fn(),
+      signOut: jest.fn(),
+    };
+
+    window.supabase = {
+      createClient: jest.fn(() => ({
+        auth: authMock,
+        rpc: rpcMock,
+        channel: jest.fn(() => ({
+          on: jest.fn().mockReturnThis(),
+          subscribe: jest.fn(),
+          unsubscribe: jest.fn(),
+        })),
+        removeChannel: jest.fn(),
+      })),
+    };
+
+    require('../assets/js/kc-supabase.client.js');
+  });
+
+  test('expands synonyms on the client and forwards normalized params to the RPC', async () => {
+    rpcMock.mockResolvedValue({ data: [], error: null });
+
+    await window.KCSupabase.searchPosts({
+      q: 'laptop',
+      module: 'compra-venda',
+      category: 'eletronicos',
+      subcategory: 'informatica',
+      limit: 8,
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('kc_search_posts_fts', expect.objectContaining({
+      p_q: 'laptop',
+      p_module: 'compra-venda',
+      p_category: 'eletronicos',
+      p_subcategory: 'informatica',
+      p_limit: 8,
+    }));
+
+    const params = rpcMock.mock.calls[0][1];
+    expect(params.p_terms).toEqual(expect.arrayContaining(['laptop', 'notebook']));
+    expect(new Set(params.p_terms).size).toBe(params.p_terms.length);
+  });
+
+  test('returns an empty array when the RPC fails', async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+    const result = await window.KCSupabase.searchPosts({ q: 'notebook', limit: 8 });
+
+    expect(result).toEqual([]);
+  });
+});

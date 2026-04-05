@@ -5,6 +5,7 @@ beforeAll(() => {
   global.KCSupabase = {
     getClient: jest.fn(() => ({})),
     getFeedCursor: jest.fn(),
+    searchPosts: jest.fn(),
   };
   window.KCSupabase = global.KCSupabase;
   window.KCAPI = {
@@ -37,6 +38,7 @@ describe('Supabase Adapter - getFeedCursor', () => {
 
   beforeEach(() => {
     window.KCSupabase.getFeedCursor.mockReset();
+    window.KCSupabase.searchPosts.mockReset();
     window.KCAPI.normalizePost.mockImplementation((post) => post);
   });
 
@@ -86,5 +88,42 @@ describe('Supabase Adapter - getFeedCursor', () => {
     expect(result.posts).toHaveLength(1);
     expect(result.posts[0].title).toBe('Evento de teste');
     expect(result.posts[0].comentarios).toBe(3);
+  });
+
+  test('normaliza rows retornadas por searchPosts', async () => {
+    window.KCSupabase.searchPosts.mockResolvedValue([
+      {
+        id: '9a7d0a6c-6351-4dd6-b104-b0f2b5df51d0',
+        legacy_id: null,
+        author_id: '58e99f2f-3ca2-4893-b879-4d1f456d9bf8',
+        title: 'Notebook Dell',
+        description: 'Seminovo',
+        price: 2500,
+        location: 'UFG',
+        module: 'compra-venda',
+        category: 'eletronicos',
+        status: 'published',
+        visibility: 'public',
+        metadata: { subcategoria: 'informatica', tags: ['notebook'] },
+        created_at: '2026-04-05T10:00:00Z',
+        votos: 4,
+        profiles: {
+          id: '58e99f2f-3ca2-4893-b879-4d1f456d9bf8',
+          display_name: 'Ana',
+          full_name: 'Ana Teste',
+          avatar_url: 'https://example.com/avatar.png',
+          verified: true,
+        },
+        post_media: [],
+        comments: [{ count: 1 }],
+      },
+    ]);
+
+    const result = await driver.searchPosts({ q: 'notebook', limit: 8 });
+
+    expect(window.KCSupabase.searchPosts).toHaveBeenCalledWith({ q: 'notebook', limit: 8 });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe('Notebook Dell');
+    expect(result[0].comentarios).toBe(1);
   });
 });

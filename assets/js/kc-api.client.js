@@ -944,6 +944,15 @@
 
   // Facade pública (mantém a API estável)
   async function getPosts(params = {}) { return getActiveDriver().getPosts(params); }
+  async function searchPosts(params = {}) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.searchPosts !== 'function') {
+      const posts = await driver.getPosts(params);
+      return Array.isArray(posts) ? posts : [];
+    }
+    const posts = await driver.searchPosts(params);
+    return Array.isArray(posts) ? posts : [];
+  }
   async function getFeedCursor(params = {}) {
     const driver = getActiveDriver();
     if (!driver || typeof driver.getFeedCursor !== 'function') {
@@ -1314,6 +1323,7 @@
     getDatabaseRaw,
     getDatabaseNormalized,
     getPosts,
+    searchPosts,
     getFeedCursor,
     getPostById,
     createPost,

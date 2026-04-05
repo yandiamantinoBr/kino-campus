@@ -32,22 +32,11 @@
     };
   })();
 
-  const SYNONYMS = {
-    notebook: ['laptop', 'computador portatil', 'note', 'computador', 'pc'],
-    celular: ['smartphone', 'telefone', 'iphone', 'android', 'mobile', 'fone'],
-    livro: ['livros', 'apostila', 'material didatico', 'book'],
-    roupa: ['roupas', 'vestuario', 'vestimenta', 'blusa', 'camisa', 'calca'],
-    cama: ['colchao', 'box', 'movel quarto', 'cama box'],
-    fone: ['headphone', 'fone de ouvido', 'earphone', 'airpod', 'fones', 'audio'],
-    bicicleta: ['bike', 'bici', 'mountain bike'],
-    carona: ['transporte', 'viagem', 'ida', 'volta', 'caronas'],
-    estagio: ['trainee', 'jovem aprendiz'],
-    emprego: ['vaga', 'trabalho', 'job', 'oportunidade'],
-    calculo: ['matematica', 'exatas'],
-    iphone: ['apple', 'ios', 'celular apple'],
-    dell: ['notebook dell', 'laptop dell'],
-    jbl: ['fone jbl', 'headphone jbl', 'audio jbl']
-  };
+  function getSearchShared() {
+    const shared = (typeof window !== 'undefined' && window.KCSearchShared) ? window.KCSearchShared : null;
+    if (shared && typeof shared.searchCollection === 'function') return shared;
+    return null;
+  }
 
   function normalizeText(text) {
     if (KCUtils && typeof KCUtils.normalizeText === 'function') return KCUtils.normalizeText(text);
@@ -190,73 +179,45 @@
   }
 
   function expandSearchTerm(term) {
+    const shared = getSearchShared();
+    if (shared && typeof shared.expandSynonyms === 'function') {
+      return shared.expandSynonyms(term);
+    }
+
     const normalized = normalizeText(term);
-    const expanded = [normalized];
-
-    Object.entries(SYNONYMS).forEach(([key, values]) => {
-      const normalizedKey = normalizeText(key);
-      const normalizedValues = values.map((item) => normalizeText(item));
-      if (normalizedKey === normalized || normalizedValues.includes(normalized)) {
-        expanded.push(normalizedKey);
-        expanded.push(...normalizedValues);
-      }
-    });
-
-    return [...new Set(expanded)].filter(Boolean);
+    return normalized ? [normalized] : [];
   }
 
   async function searchPosts(query, options = {}) {
     const q = String(query || '').trim();
     if (!q) return [];
 
-    const {
-      modulo = null,
-      categoria = null,
-      limit = 50,
-      minScore = 0.3
-    } = options;
-
     const all = await getAllPosts();
-    const normalizedQuery = normalizeText(q);
-    const queryTerms = normalizedQuery.split(/\s+/).filter((item) => item.length > 1);
-    const expandedTerms = queryTerms.flatMap((item) => expandSearchTerm(item));
-
-    const results = [];
-
-    for (const anuncio of all) {
-      if (modulo && anuncio.modulo !== modulo) continue;
-      if (categoria && anuncio.categoria !== categoria) continue;
-
-      let score = 0;
-      const title = normalizeText(anuncio.titulo);
-      const description = normalizeText(anuncio.descricao);
-      const tags = (Array.isArray(anuncio.tags) ? anuncio.tags : []).map((item) => normalizeText(item));
-      const category = normalizeText(anuncio.categoria || anuncio.categoriaLabel || '');
-      const subcategory = normalizeText(anuncio.subcategoria || anuncio.subcategoriaLabel || '');
-
-      expandedTerms.forEach((term) => {
-        if (!term) return;
-        if (title.includes(term)) score += 0.5;
-        if (description.includes(term)) score += 0.2;
-        if (tags.some((tag) => tag.includes(term) || term.includes(tag))) score += 0.3;
+    const searchShared = getSearchShared();
+    if (searchShared) {
+      return searchShared.searchCollection(all, {
+        q,
+        module: options.module || options.modulo || null,
+        category: options.category || options.categoria || null,
+        subcategory: options.subcategory || options.subcategoria || null,
+        limit: options.limit != null ? options.limit : 50,
+        minScore: options.minScore != null ? options.minScore : 0.3
       });
-
-      if (category.includes(normalizedQuery) || subcategory.includes(normalizedQuery)) score += 0.2;
-
-      if (score >= minScore) {
-        results.push({ ...anuncio, relevanceScore: score });
-      }
     }
 
-    results.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
-    return results.slice(0, limit);
+    return [];
   }
 
   function filterCurrentPageCards(query) {
     const cards = document.querySelectorAll('.kc-card');
     const q = String(query || '').trim();
     const normalizedQuery = normalizeText(q);
-    const expandedTerms = q ? expandSearchTerm(normalizedQuery) : [];
+    const searchShared = getSearchShared();
+    const expandedTerms = q
+      ? ((searchShared && typeof searchShared.expandQueryTerms === 'function')
+        ? searchShared.expandQueryTerms(normalizedQuery)
+        : expandSearchTerm(normalizedQuery))
+      : [];
 
     let visibleCount = 0;
 
@@ -445,12 +406,12 @@
 
     let results = [];
     try {
-      if (KCAPI && typeof KCAPI.getPosts === 'function') {
-        const params = { q, limit: 50, page: 1 };
+      if (KCAPI && typeof KCAPI.searchPosts === 'function') {
+        const params = { q, limit: 50 };
         if (moduleParam) params.module = moduleParam;
         if (categoryParam) params.category = categoryParam;
         if (subcategoryParam) params.subcategory = subcategoryParam;
-        results = await KCAPI.getPosts(params);
+        results = await KCAPI.searchPosts(params);
       } else {
         results = await searchPosts(q, { limit: 50, minScore: 0.2 });
       }
@@ -519,7 +480,7 @@
       return;
     }
 
-    const shown = results.slice(0, 6);
+    const shown = results.slice(0, 8);
 
     shown.forEach((post) => {
       const item = document.createElement('a');
@@ -591,8 +552,8 @@
 
     try {
       let results = [];
-      if (KCAPI && typeof KCAPI.getPosts === 'function') {
-        results = await KCAPI.getPosts({ q, limit: 8, page: 1 });
+      if (KCAPI && typeof KCAPI.searchPosts === 'function') {
+        results = await KCAPI.searchPosts({ q, limit: 8 });
       } else {
         results = await searchPosts(q, { limit: 8, minScore: 0.2 });
       }
