@@ -36,7 +36,41 @@
       : null;
   }
 
-  function buildFeedCacheIdentity(moduleKeys, cursor, q, tag, limit, pathname, sortBy) {
+  function normalizeRequestParamValue(value) {
+    if (Array.isArray(value)) {
+      return Array.from(new Set(value
+        .map((item) => normalizeRequestParamValue(item))
+        .filter((item) => item !== null && item !== '')));
+    }
+    if (value == null) return null;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    const text = String(value).trim();
+    return text || null;
+  }
+
+  function sanitizeRequestParams(params) {
+    const source = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
+    const reserved = new Set(['module', 'modules', 'cursor', 'limit', 'q', 'tag', 'sortBy', 'sort_by']);
+    const next = {};
+
+    Object.keys(source).sort().forEach((key) => {
+      if (reserved.has(key)) return;
+      const normalized = normalizeRequestParamValue(source[key]);
+      if (normalized == null) return;
+      if (Array.isArray(normalized) && !normalized.length) return;
+      next[key] = normalized;
+    });
+
+    return next;
+  }
+
+  function getRequestParamsKey(params) {
+    const normalized = sanitizeRequestParams(params);
+    return Object.keys(normalized).length ? JSON.stringify(normalized) : '';
+  }
+
+  function buildFeedCacheIdentity(moduleKeys, cursor, q, tag, limit, pathname, sortBy, requestParams) {
     const modules = Array.isArray(moduleKeys) ? moduleKeys.slice().sort().join(',') : String(moduleKeys || '');
     return JSON.stringify({
       pathname: String(pathname || window.location.pathname || '').trim() || '/',
@@ -46,10 +80,11 @@
       tag: String(tag || '').trim().toLowerCase(),
       limit: Number(limit) || POSTS_LIMIT,
       sortBy: String(sortBy || 'recentes'),
+      request: getRequestParamsKey(requestParams),
     });
   }
 
-  function buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname, sortBy) {
+  function buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname, sortBy, requestParams) {
     return JSON.stringify({
       pathname: String(pathname || window.location.pathname || '').trim() || '/',
       modules: Array.isArray(moduleKeys) ? moduleKeys.slice().sort() : [],
@@ -57,6 +92,7 @@
       tag: String(tag || '').trim().toLowerCase(),
       limit: Number(limit) || POSTS_LIMIT,
       sortBy: String(sortBy || 'recentes'),
+      request: getRequestParamsKey(requestParams),
     });
   }
 
@@ -214,12 +250,12 @@
   const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
   const postCache = {};
 
-  function getCacheKey(moduleKeys, cursor, q, tag, limit, pathname, sortBy) {
-    return buildFeedCacheIdentity(moduleKeys, cursor, q, tag, limit, pathname, sortBy);
+  function getCacheKey(moduleKeys, cursor, q, tag, limit, pathname, sortBy, requestParams) {
+    return buildFeedCacheIdentity(moduleKeys, cursor, q, tag, limit, pathname, sortBy, requestParams);
   }
 
-  function getCachedPosts(moduleKeys, cursor, q, tag, limit, pathname, sortBy) {
-    const key = getCacheKey(moduleKeys, cursor, q, tag, limit, pathname, sortBy);
+  function getCachedPosts(moduleKeys, cursor, q, tag, limit, pathname, sortBy, requestParams) {
+    const key = getCacheKey(moduleKeys, cursor, q, tag, limit, pathname, sortBy, requestParams);
     const cached = postCache[key];
     if (!cached) return null;
     const now = Date.now();
@@ -237,8 +273,8 @@
     };
   }
 
-  function setCachedPosts(moduleKeys, cursor, payload, q, tag, limit, pathname, sortBy) {
-    const key = getCacheKey(moduleKeys, cursor, q, tag, limit, pathname, sortBy);
+  function setCachedPosts(moduleKeys, cursor, payload, q, tag, limit, pathname, sortBy, requestParams) {
+    const key = getCacheKey(moduleKeys, cursor, q, tag, limit, pathname, sortBy, requestParams);
     postCache[key] = {
       posts: Array.isArray(payload && payload.posts) ? payload.posts : [],
       nextCursor: payload && payload.nextCursor ? String(payload.nextCursor) : null,
@@ -247,8 +283,9 @@
     };
   }
 
-  function invalidateCache(moduleKeys, q, tag, limit, pathname, sortBy) {
+  function invalidateCache(moduleKeys, q, tag, limit, pathname, sortBy, requestParams) {
     const targetPath = String(pathname || window.location.pathname || '').trim() || '/';
+    const targetRequest = getRequestParamsKey(requestParams);
     Object.keys(postCache).forEach((key) => {
       try {
         const parsed = JSON.parse(key);
@@ -259,7 +296,8 @@
           String(parsed.q || '') === String(q || '').trim().toLowerCase() &&
           String(parsed.tag || '') === String(tag || '').trim().toLowerCase() &&
           Number(parsed.limit || POSTS_LIMIT) === (Number(limit) || POSTS_LIMIT) &&
-          String(parsed.sortBy || 'recentes') === String(sortBy || 'recentes')
+          String(parsed.sortBy || 'recentes') === String(sortBy || 'recentes') &&
+          String(parsed.request || '') === targetRequest
         ) {
           delete postCache[key];
         }
@@ -268,7 +306,7 @@
 
     const store = getSessionStore();
     if (store && typeof store.remove === 'function') {
-      store.remove('feeds', buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname, sortBy));
+      store.remove('feeds', buildFeedSnapshotKey(moduleKeys, q, tag, limit, pathname, sortBy, requestParams));
     }
   }
 
@@ -286,7 +324,9 @@
     const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
     const pathname = String(opts.pathname || window.location.pathname || '').trim() || '/';
     const sortBy = String(opts.sortBy || 'recentes');
+    const requestParams = sanitizeRequestParams(opts.requestParams);
     const extra = {
+      ...requestParams,
       ...((q && String(q).trim()) ? { q: String(q).trim() } : {}),
       ...((tag && String(tag).trim()) ? { tag: String(tag).trim() } : {}),
       sortBy,
@@ -298,7 +338,7 @@
 
     // Only use cache if no search query or tag filter
     if (!q && !tag && opts.forceNetwork !== true) {
-      const cached = getCachedPosts(moduleKeys, cursor, q, tag, limit, pathname, sortBy);
+      const cached = getCachedPosts(moduleKeys, cursor, q, tag, limit, pathname, sortBy, requestParams);
       if (cached) return cached;
     }
 
@@ -309,7 +349,7 @@
 
     // Cache successful fetch if no filters
     if (!q && !tag && (posts.length > 0 || hasMore)) {
-      setCachedPosts(moduleKeys, cursor, { posts, nextCursor, hasMore }, q, tag, limit, pathname, sortBy);
+      setCachedPosts(moduleKeys, cursor, { posts, nextCursor, hasMore }, q, tag, limit, pathname, sortBy, requestParams);
     }
 
     return {
@@ -360,6 +400,9 @@
     const searchQuery = (opt.q && String(opt.q).trim()) ? String(opt.q).trim() : '';
     const tagFilter = (opt.tag && String(opt.tag).trim()) ? String(opt.tag).trim() : '';
     const sortBy = String(opt.sortBy || 'recentes');
+    const initialRequestParams = sanitizeRequestParams(
+      typeof opt.getRequestParams === 'function' ? opt.getRequestParams() : opt.requestParams
+    );
 
     // keepExisting: true permite múltiplos pagers na mesma página (ex: abas Destaques/Recentes)
     if (!opt.keepExisting && activePager && typeof activePager.destroy === 'function') {
@@ -398,14 +441,18 @@
       snapshotAge: 0,
       lastSnapshotAt: 0,
       revalidateTimer: null,
+      requestParams: initialRequestParams,
     };
     const pagePath = String(window.location.pathname || '').trim() || '/';
-    const snapshotKey = buildFeedSnapshotKey(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy);
+
+    function getSnapshotKey() {
+      return buildFeedSnapshotKey(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
+    }
 
     function persistSnapshot() {
       const store = getSessionStore();
       if (!store || typeof store.set !== 'function' || !state.renderedPosts.length) return;
-      store.set('feeds', snapshotKey, {
+      store.set('feeds', getSnapshotKey(), {
         version: FEED_SNAPSHOT_VERSION,
         cursor: state.cursor,
         nextCursor: state.nextCursor,
@@ -418,7 +465,7 @@
     function clearSnapshot() {
       const store = getSessionStore();
       if (!store || typeof store.remove !== 'function') return;
-      store.remove('feeds', snapshotKey);
+      store.remove('feeds', getSnapshotKey());
     }
 
     function setStatus(next, message) {
@@ -534,7 +581,7 @@
       const store = getSessionStore();
       if (!store || typeof store.get !== 'function') return false;
 
-      const cached = store.get('feeds', snapshotKey, { maxAge: FEED_CACHE_MAX_AGE_MS });
+      const cached = store.get('feeds', getSnapshotKey(), { maxAge: FEED_CACHE_MAX_AGE_MS });
       const snapshot = cached && cached.value && typeof cached.value === 'object' ? cached.value : null;
       const isCursorSnapshot = !!(snapshot && Number(snapshot.version) === FEED_SNAPSHOT_VERSION && typeof snapshot.hasMore === 'boolean');
       if (snapshot && !isCursorSnapshot) {
@@ -581,6 +628,7 @@
           forceNetwork: true,
           pathname: pagePath,
           sortBy,
+          requestParams: state.requestParams,
         });
         const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
 
@@ -672,6 +720,7 @@
         const response = await fetchPostsByModule(moduleKeys, requestCursor, limit, searchQuery, tagFilter, {
           pathname: pagePath,
           sortBy,
+          requestParams: state.requestParams,
         });
         const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
         const nextCursor = response && response.nextCursor ? String(response.nextCursor) : null;
@@ -788,7 +837,7 @@
           container: document.body,
           onRefresh: () => {
             // Invalidate cache and reload first page
-            invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy);
+            invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
             state.cursor = null;
             state.nextCursor = null;
             state.hasMore = true;
@@ -817,7 +866,33 @@
     api = {
       loadNextPage,
       retry: loadNextPage,
-      getState: () => ({ ...state }),
+      refresh: function (nextOptions) {
+        const cfg = (nextOptions && typeof nextOptions === 'object' && !Array.isArray(nextOptions)) ? nextOptions : {};
+        const previousKey = getSnapshotKey();
+        invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
+        if (Object.prototype.hasOwnProperty.call(cfg, 'requestParams')) {
+          state.requestParams = sanitizeRequestParams(cfg.requestParams);
+        }
+        state.cursor = null;
+        state.nextCursor = null;
+        state.hasMore = true;
+        state.done = false;
+        state.loading = false;
+        state.lastError = null;
+        state.renderedPosts = [];
+        state.seenIds.clear();
+        state.pendingIds.clear();
+        container.innerHTML = '';
+        const store = getSessionStore();
+        if (store && typeof store.remove === 'function') {
+          store.remove('feeds', previousKey);
+        }
+        clearSnapshot();
+        clearPendingRealtime();
+        setStatus('idle', '');
+        loadNextPage();
+      },
+      getState: () => ({ ...state, requestParams: { ...state.requestParams } }),
       destroy,
     };
     activePager = api;

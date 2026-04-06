@@ -77,6 +77,10 @@
       : null;
   }
 
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
   function restoreCachedPosts() {
     const store = getSessionStore();
     if (!store) return false;
@@ -396,6 +400,37 @@
 
     document.querySelectorAll('[data-kc-opp-filter-kind="mode"]').forEach((input) => {
       input.checked = modes.has(String(input.value || '').trim());
+    });
+  }
+
+  function restoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    const params = utils.getSearchParams();
+    const hasTypes = !!(params && typeof params.has === 'function' && params.has('oppType'));
+    const hasModes = !!(params && typeof params.has === 'function' && params.has('oppMode'));
+    const hasArea = !!(params && typeof params.has === 'function' && params.has('oppArea'));
+    if (!hasTypes && !hasModes && !hasArea) return false;
+
+    if (hasTypes) {
+      state.selectedTypeFilters = new Set(utils.readListParam(params, 'oppType').map((value) => String(value || '').trim()).filter(Boolean));
+    }
+    if (hasModes) {
+      state.selectedModeFilters = new Set(utils.readListParam(params, 'oppMode').map((value) => String(value || '').trim()).filter(Boolean));
+    }
+    if (hasArea) {
+      state.selectedArea = utils.readTextParam(params, 'oppArea');
+    }
+    return true;
+  }
+
+  function syncUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      utils.writeListParam(params, 'oppType', Array.from(state.selectedTypeFilters));
+      utils.writeListParam(params, 'oppMode', Array.from(state.selectedModeFilters));
+      utils.writeTextParam(params, 'oppArea', state.selectedArea || '');
     });
   }
 
@@ -830,6 +865,7 @@
   }
 
   function applyCurrentFilters() {
+    syncUrlState();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') {
       window.kcFilters.apply();
       return;
@@ -1002,6 +1038,8 @@
     ensureMobileSectionModal();
     wrapFilterApply();
     syncStateFromInputs();
+    restoreUrlState();
+    syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters);
     bindSidebarEvents();
     setupExtraPredicate();
     restoreCachedPosts();

@@ -25,6 +25,19 @@
     opts: { ...DEFAULTS },
   };
 
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
+  function syncCoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.writeCoreState !== 'function') return;
+    utils.writeCoreState({
+      query: state.query,
+      category: state.category,
+    });
+  }
+
   function normalizeText(str) {
     if (KCUtils && typeof KCUtils.normalizeText === 'function') return KCUtils.normalizeText(str);
     return (str || "")
@@ -172,6 +185,7 @@
           const dataCat = tab.getAttribute("data-category") || "";
           state.category = dataCat || hrefCat || "todas";
           setActiveTab(state.category);
+          syncCoreUrlState();
           apply();
         });
       });
@@ -200,6 +214,7 @@
         const dataCat = tab.getAttribute("data-category") || "";
         state.category = dataCat || hrefCat || "todas";
         setActiveTab(state.category);
+        syncCoreUrlState();
         apply();
       });
     });
@@ -208,19 +223,33 @@
     if (searchInput) {
       searchInput.addEventListener("input", (e) => {
         state.query = e.target.value || "";
+        syncCoreUrlState();
         apply();
       });
     }
 
     // Categoria inicial (?tag > hash > tab ativa > "todas")
     let urlTag = '';
-    try { urlTag = new URLSearchParams(window.location.search).get('tag') || ''; } catch (_) {}
+    let urlQuery = '';
+    const feedFilterUtils = getFeedFilterUtils();
+    if (feedFilterUtils && typeof feedFilterUtils.readCoreState === 'function') {
+      const coreState = feedFilterUtils.readCoreState();
+      urlTag = coreState && coreState.category ? coreState.category : '';
+      urlQuery = coreState && coreState.query ? coreState.query : '';
+    } else {
+      try { urlTag = new URLSearchParams(window.location.search).get('tag') || ''; } catch (_) {}
+    }
 
     const tabCats = Array.from(originalTabs).map(t => {
       const hrefCat = (t.getAttribute('href') || '').replace('#', '');
       const dataCat = t.getAttribute('data-category') || '';
       return dataCat || hrefCat || '';
     }).filter(Boolean);
+
+    if (urlQuery) {
+      state.query = urlQuery;
+      if (searchInput) searchInput.value = urlQuery;
+    }
 
     if (urlTag) {
       const match = tabCats.find(c => canonicalCategory(c) === canonicalCategory(urlTag));
@@ -269,6 +298,7 @@
     setCategory: function (categoryKey) {
       state.category = categoryKey || 'todas';
       setActiveTab(state.category);
+      syncCoreUrlState();
       apply();
     },
 
@@ -276,6 +306,7 @@
       state.query = q || '';
       const input = document.getElementById(state.opts.searchInputId);
       if (input && input.value !== (q || '')) input.value = q || '';
+      syncCoreUrlState();
       apply();
     },
 
@@ -294,6 +325,7 @@
       const input = document.getElementById(state.opts.searchInputId);
       if (input) state.query = input.value || "";
     }
+    syncCoreUrlState();
     apply();
   };
 

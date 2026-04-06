@@ -3,6 +3,7 @@ beforeAll(() => {
   // kc-filters.js usa window.KCUtils se disponivel, mas tem fallback interno
   require('../assets/js/kc-constants.js');
   require('../assets/js/kc-utils.js');
+  require('../assets/js/kc-feed-filters.js');
   // jsdom fornece document para o DOMContentLoaded
   require('../assets/js/kc-filters.js');
 });

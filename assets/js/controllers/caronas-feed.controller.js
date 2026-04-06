@@ -10,6 +10,10 @@
     return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
   /* ── Localizações (do KC_CONSTANTS, com fallback) ───── */
   function getLocationDefs() {
     return (typeof KC_CONSTANTS !== 'undefined' && Array.isArray(KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS))
@@ -179,6 +183,80 @@
     }
   }
 
+  function restoreUrlState() {
+    var utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    var params = utils.getSearchParams();
+    var hasState = false;
+
+    if (params && typeof params.has === 'function' && params.has('rideType')) {
+      hasState = true;
+      var typeSet = new Set(utils.readListParam(params, 'rideType').map(function (value) { return String(value || '').trim(); }).filter(Boolean));
+      document.querySelectorAll('[data-kc-carona-type]').forEach(function (input) {
+        input.checked = typeSet.size ? typeSet.has(input.getAttribute('data-kc-carona-type')) : true;
+      });
+    }
+
+    if (params && typeof params.has === 'function' && params.has('rideCampus')) {
+      hasState = true;
+      var campusSet = new Set(utils.readListParam(params, 'rideCampus').map(function (value) { return String(value || '').trim(); }).filter(Boolean));
+      document.querySelectorAll('[data-kc-carona-campus]').forEach(function (input) {
+        input.checked = campusSet.has(input.getAttribute('data-kc-carona-campus'));
+      });
+    }
+
+    if (params && typeof params.has === 'function' && params.has('ridePeriod')) {
+      hasState = true;
+      var periodSet = new Set(utils.readListParam(params, 'ridePeriod').map(function (value) { return String(value || '').trim(); }).filter(Boolean));
+      document.querySelectorAll('[data-kc-carona-period]').forEach(function (input) {
+        input.checked = periodSet.has(input.getAttribute('data-kc-carona-period'));
+      });
+    }
+
+    if (params && typeof params.has === 'function' && params.has('rideFeatures')) {
+      hasState = true;
+      var featureSet = new Set(utils.readListParam(params, 'rideFeatures').map(function (value) { return String(value || '').trim(); }).filter(Boolean));
+      document.querySelectorAll('[data-kc-carona-feature]').forEach(function (input) {
+        input.checked = featureSet.has(input.getAttribute('data-kc-carona-feature'));
+      });
+    }
+
+    if (params && typeof params.has === 'function' && params.has('rideVerified')) {
+      hasState = true;
+      var verifiedInput = document.querySelector('[data-kc-carona-verified]');
+      if (verifiedInput) verifiedInput.checked = utils.readBooleanParam(params, 'rideVerified');
+    }
+
+    if (params && typeof params.has === 'function' && params.has('rideOrigin')) {
+      hasState = true;
+      var origemInput = document.querySelector('[data-kc-caronas-filter-origem]');
+      if (origemInput) origemInput.value = utils.readTextParam(params, 'rideOrigin');
+    }
+
+    if (params && typeof params.has === 'function' && params.has('rideDestination')) {
+      hasState = true;
+      var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
+      if (destinoInput) destinoInput.value = utils.readTextParam(params, 'rideDestination');
+    }
+
+    return hasState;
+  }
+
+  function syncUrlState() {
+    var utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      var rideTypes = state.tipos.size === 2 ? [] : Array.from(state.tipos);
+      utils.writeListParam(params, 'rideType', rideTypes);
+      utils.writeListParam(params, 'rideCampus', Array.from(state.campi));
+      utils.writeListParam(params, 'ridePeriod', Array.from(state.periods));
+      utils.writeListParam(params, 'rideFeatures', Array.from(state.features));
+      utils.writeBooleanParam(params, 'rideVerified', state.verified);
+      utils.writeTextParam(params, 'rideOrigin', state.origemFilter || '');
+      utils.writeTextParam(params, 'rideDestination', state.destinoFilter || '');
+    });
+  }
+
   /* ── Sync filtros dos inputs ────────────────────────── */
   function syncFiltersFromInputs() {
     state.tipos.clear();
@@ -206,6 +284,7 @@
     state.origemFilter = origemInput ? origemInput.value.trim() : '';
     var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
     state.destinoFilter = destinoInput ? destinoInput.value.trim() : '';
+    syncUrlState();
     applyFilters();
   }
 
@@ -220,11 +299,18 @@
       document.querySelectorAll('[data-kc-carona-feature]').forEach(function (i) { i.checked = false; });
       var v = document.querySelector('[data-kc-carona-verified]');
       if (v) v.checked = false;
+      var origemInput = document.querySelector('[data-kc-caronas-filter-origem]');
+      if (origemInput) origemInput.value = '';
+      var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
+      if (destinoInput) destinoInput.value = '';
       state.tipos = new Set(['ofereco', 'procuro']);
       state.campi.clear();
       state.periods.clear();
       state.features.clear();
       state.verified = false;
+      state.origemFilter = '';
+      state.destinoFilter = '';
+      syncUrlState();
       applyFilters();
     });
   }
@@ -344,6 +430,9 @@
         state.campi.clear();
         state.periods.clear();
         state.verified = false;
+        state.origemFilter = '';
+        state.destinoFilter = '';
+        syncUrlState();
         applyFilters();
       });
       var applyBtn = actions.querySelector('[data-kc-caronas-modal-apply]');
@@ -358,6 +447,7 @@
       if (featClear) featClear.addEventListener('click', function () {
         document.querySelectorAll('[data-kc-carona-feature]').forEach(function (i) { i.checked = false; });
         state.features.clear();
+        syncUrlState();
         applyFilters();
       });
       var featApply = actions.querySelector('[data-kc-caronas-modal-feat-apply]');
@@ -475,6 +565,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     renderRoutePills();
     renderFeatureCheckboxes();
+    restoreUrlState();
     bindCaronasRail();
 
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;

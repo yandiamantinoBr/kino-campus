@@ -49,6 +49,10 @@
       : null;
   }
 
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
   function restoreCachedPosts() {
     const store = getSessionStore();
     if (!store) return false;
@@ -111,6 +115,42 @@
     document.querySelectorAll('[data-kc-market-filter-kind="condition"]').forEach((input) => { input.checked = conds.has(normCond(input.value)); });
     const checked = verifiedInput();
     if (checked) checked.checked = !!verified;
+  }
+
+  function restoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    const params = utils.getSearchParams();
+    const hasCats = !!(params && typeof params.has === 'function' && params.has('marketCats'));
+    const hasConds = !!(params && typeof params.has === 'function' && params.has('marketConds'));
+    const hasVerified = !!(params && typeof params.has === 'function' && params.has('marketVerified'));
+    if (!hasCats && !hasConds && !hasVerified) return false;
+
+    if (hasCats) {
+      const nextCats = utils.readListParam(params, 'marketCats').map(normCat).filter(Boolean);
+      state.cats = new Set(nextCats.length ? nextCats : CAT_KEYS);
+    }
+    if (hasConds) {
+      state.conds = new Set(utils.readListParam(params, 'marketConds').map(normCond).filter(Boolean));
+    }
+    if (hasVerified) {
+      state.verified = utils.readBooleanParam(params, 'marketVerified');
+    }
+
+    syncInputs(state.cats, state.conds, state.verified);
+    setTabFromCats(state.cats);
+    return true;
+  }
+
+  function syncUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      const activeCats = state.cats.size === CAT_KEYS.length ? [] : Array.from(state.cats);
+      utils.writeListParam(params, 'marketCats', activeCats);
+      utils.writeListParam(params, 'marketConds', Array.from(state.conds));
+      utils.writeBooleanParam(params, 'marketVerified', state.verified);
+    });
   }
 
   function readInputs() {
@@ -404,6 +444,7 @@
   }
 
   function apply() {
+    syncUrlState();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
@@ -458,6 +499,7 @@
     document.querySelectorAll('.kc-feed-tabs a').forEach((tab) => tab.addEventListener('click', function () {
       state.cats = catsFromQuick(tab.getAttribute('data-category') || tab.getAttribute('href') || '');
       syncInputs(state.cats, state.conds, state.verified);
+      syncUrlState();
       queue();
     }));
     document.addEventListener('click', function (event) {
@@ -585,8 +627,9 @@
     ensureModal();
     wrapApply();
     readInputs();
+    const restoredFromUrl = restoreUrlState();
     const preset = normCat(getParam('filter') || '');
-    if (preset && CAT_KEYS.includes(preset)) {
+    if (!restoredFromUrl && preset && CAT_KEYS.includes(preset)) {
       state.cats = new Set([preset]);
       syncInputs(state.cats, state.conds, state.verified);
       if (window.kcFilters && typeof window.kcFilters.setCategory === 'function') window.kcFilters.setCategory(preset);

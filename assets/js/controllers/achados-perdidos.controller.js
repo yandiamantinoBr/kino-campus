@@ -51,6 +51,10 @@
       : null;
   }
 
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
   function restoreCachedPosts() {
     const store = getSessionStore();
     if (!store) return false;
@@ -253,6 +257,39 @@
     if (!state.draft) return;
     state.draft.statuses = new Set(readSelected('status').map((value) => normStatus(value)).filter(Boolean));
     state.draft.types = new Set(readSelected('type').map((value) => normType(value)).filter(Boolean));
+  }
+
+  function restoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    const params = utils.getSearchParams();
+    const hasStatuses = !!(params && typeof params.has === 'function' && params.has('lfStatus'));
+    const hasTypes = !!(params && typeof params.has === 'function' && params.has('lfType'));
+    const hasLocation = !!(params && typeof params.has === 'function' && params.has('lfLocation'));
+    if (!hasStatuses && !hasTypes && !hasLocation) return false;
+
+    if (hasStatuses) {
+      state.statuses = new Set(utils.readListParam(params, 'lfStatus').map((value) => normStatus(value)).filter(Boolean));
+    }
+    if (hasTypes) {
+      state.types = new Set(utils.readListParam(params, 'lfType').map((value) => normType(value)).filter(Boolean));
+    }
+    if (hasLocation) {
+      state.location = utils.readTextParam(params, 'lfLocation');
+    }
+    renderFilterInputs();
+    syncTabPresetFromAppliedState();
+    return true;
+  }
+
+  function syncUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      utils.writeListParam(params, 'lfStatus', Array.from(state.statuses));
+      utils.writeListParam(params, 'lfType', Array.from(state.types));
+      utils.writeTextParam(params, 'lfLocation', state.location || '');
+    });
   }
 
   function matchesLocation(summary, locationKey) {
@@ -565,6 +602,7 @@
   }
 
   function apply() {
+    syncUrlState();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
@@ -642,6 +680,7 @@
           state.types = new Set();
         }
         renderFilterInputs();
+        syncUrlState();
         queue();
       });
     });
@@ -789,6 +828,7 @@
     collectSections();
     ensureModal();
     wrapApply();
+    restoreUrlState();
     bind();
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
       window.kcFilters.setExtraPredicate(function (card) { return matchCard(card); });

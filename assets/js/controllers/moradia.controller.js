@@ -66,6 +66,10 @@
       : null;
   }
 
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
   function restoreCachedPosts() {
     const store = getSessionStore();
     if (!store) return false;
@@ -255,6 +259,32 @@
   function readDraftInputs() {
     if (!state.draft) return;
     state.draft.features = new Set(readSelectedFeatureInputs());
+  }
+
+  function restoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    const params = utils.getSearchParams();
+    const hasFeatures = !!(params && typeof params.has === 'function' && params.has('housingFeatures'));
+    const hasRegion = !!(params && typeof params.has === 'function' && params.has('housingRegion'));
+    if (!hasFeatures && !hasRegion) return false;
+
+    if (hasFeatures) {
+      state.features = new Set(utils.readListParam(params, 'housingFeatures').map((value) => String(value || '').trim()).filter(Boolean));
+    }
+    if (hasRegion) {
+      state.region = utils.readTextParam(params, 'housingRegion');
+    }
+    return true;
+  }
+
+  function syncUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      utils.writeListParam(params, 'housingFeatures', Array.from(state.features));
+      utils.writeTextParam(params, 'housingRegion', state.region || '');
+    });
   }
 
   function matchesRegion(summary, regionKey) {
@@ -620,6 +650,7 @@
   }
 
   function apply() {
+    syncUrlState();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
@@ -819,6 +850,7 @@
     collectSections();
     ensureModal();
     wrapApply();
+    restoreUrlState();
     bind();
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
       window.kcFilters.setExtraPredicate(function (card) { return matchCard(card); });
