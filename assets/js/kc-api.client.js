@@ -654,6 +654,31 @@
     return Array.from(new Set(raw.map(slugifyFilterKey).filter(Boolean)));
   }
 
+  function toNumericFilterValue(value) {
+    if (value == null || value === '') return null;
+    const numeric = Number(String(value).replace(',', '.'));
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  function getPostPriceValue(post) {
+    const meta = getPostMeta(post);
+    const candidates = [
+      post && (post.preco != null ? post.preco : post.price),
+      meta.preco,
+      meta.price,
+      meta.remuneracao,
+      meta.contribuicao,
+      meta.precoTexto,
+    ];
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const numeric = toNumericFilterValue(candidates[index]);
+      if (numeric != null) return numeric;
+    }
+
+    return null;
+  }
+
   function matchesAdvancedRequestParams(post, params) {
     const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
     const moduleKey = normalizeFilterText(post && (post.modulo || post.module));
@@ -753,6 +778,20 @@
       if (lfStatuses.size && !lfStatuses.has(summary.statusKey)) return false;
       if (lfTypes.size && !lfTypes.has(summary.typeKey)) return false;
       if (lfLocation && normalizeFilterText(summary.locationKey) !== lfLocation) return false;
+    }
+
+    let priceMin = toNumericFilterValue(p.priceMin);
+    let priceMax = toNumericFilterValue(p.priceMax);
+    if (priceMin != null || priceMax != null) {
+      if (priceMin != null && priceMax != null && priceMax < priceMin) {
+        const nextMin = priceMax;
+        priceMax = priceMin;
+        priceMin = nextMin;
+      }
+      const priceValue = getPostPriceValue(post);
+      if (priceValue == null) return false;
+      if (priceMin != null && priceValue < priceMin) return false;
+      if (priceMax != null && priceValue > priceMax) return false;
     }
 
     return true;

@@ -34,6 +34,24 @@ describe('KCFeedFilters', () => {
     expect(params.get('tab')).toBe('academicos');
   });
 
+  test('readNumberParam e writeNumberParam tratam valores numéricos na URL', () => {
+    window.history.replaceState({}, '', '/eventos.html?priceMin=12.5&priceMax=99');
+    require('../assets/js/kc-feed-filters.js');
+
+    const params = window.KCFeedFilters.getSearchParams();
+    expect(window.KCFeedFilters.readNumberParam(params, 'priceMin')).toBe(12.5);
+    expect(window.KCFeedFilters.readNumberParam(params, 'priceMax')).toBe(99);
+
+    window.KCFeedFilters.updateSearchParams((nextParams) => {
+      window.KCFeedFilters.writeNumberParam(nextParams, 'priceMin', 45);
+      window.KCFeedFilters.writeNumberParam(nextParams, 'priceMax', null);
+    });
+
+    const updated = new URLSearchParams(window.location.search);
+    expect(updated.get('priceMin')).toBe('45');
+    expect(updated.has('priceMax')).toBe(false);
+  });
+
   test('bindDesktopAccordion cria toggle e recolhe a secao no desktop', () => {
     document.body.setAttribute('data-kc-filters', 'tab-search');
     document.body.innerHTML = `

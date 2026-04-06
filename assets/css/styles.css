@@ -7734,6 +7734,28 @@ textarea::placeholder {
   gap: 10px;
 }
 
+.kc-sidebar-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kc-sidebar-range__field {
+  display: grid;
+  gap: 6px;
+}
+
+.kc-sidebar-range__field span {
+  font-size: 0.84em;
+  font-weight: 600;
+  color: var(--kc-text-dark-secondary);
+}
+
+.kc-sidebar-range__field .kc-input {
+  width: 100%;
+  min-width: 0;
+}
+
 .kc-marketplace-mobile-rail {
   display: none;
 }

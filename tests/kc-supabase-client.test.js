@@ -172,6 +172,8 @@ describe('KCSupabase.getFeedCursor', () => {
       limit: 12,
       oppArea: 'tecnologia',
       oppMode: ['remoto'],
+      priceMin: 500,
+      priceMax: 2500,
       requestParams: {
         oppType: ['emprego-clt'],
       },
@@ -185,6 +187,8 @@ describe('KCSupabase.getFeedCursor', () => {
         oppType: ['emprego-clt'],
         oppArea: 'tecnologia',
         oppMode: ['remoto'],
+        priceMin: 500,
+        priceMax: 2500,
       },
     }));
 

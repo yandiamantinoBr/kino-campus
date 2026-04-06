@@ -18,6 +18,8 @@
     selectedTypeFilters: new Set(),
     selectedModeFilters: new Set(),
     selectedArea: '',
+    priceMin: null,
+    priceMax: null,
     feedPager: null,
     posts: new Map(),
     sections: [],
@@ -65,6 +67,23 @@
 
   function cloneSet(set) {
     return new Set(Array.from(set || []));
+  }
+
+  function sanitizePriceValue(value) {
+    if (value == null || value === '') return null;
+    const numeric = Number(String(value).replace(',', '.'));
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  }
+
+  function normalizePriceRange(minPrice, maxPrice) {
+    let nextMin = sanitizePriceValue(minPrice);
+    let nextMax = sanitizePriceValue(maxPrice);
+    if (nextMin != null && nextMax != null && nextMax < nextMin) {
+      const swap = nextMin;
+      nextMin = nextMax;
+      nextMax = swap;
+    }
+    return { min: nextMin, max: nextMax };
   }
 
   function isMobileViewport() {
@@ -329,6 +348,7 @@
       workModeKey: workMode.key || '',
       isRemote: !!workMode.remote,
       isPresential: !!workMode.presencial,
+      priceValue: sanitizePriceValue(post && (post.preco != null ? post.preco : post.price)),
       searchText: normalizeText(aggregateText),
     };
   }
@@ -361,6 +381,7 @@
     card.setAttribute('data-kc-opp-work-mode', summary.workModeKey || '');
     card.setAttribute('data-kc-opp-remote', String(!!summary.isRemote));
     card.setAttribute('data-kc-opp-presencial', String(!!summary.isPresential));
+    if (summary.priceValue != null) card.setAttribute('data-kc-price', String(summary.priceValue));
   }
 
   function decorateFreshCards(payload) {
@@ -389,9 +410,15 @@
   function syncStateFromInputs() {
     state.selectedTypeFilters = new Set(getSelectedInputs('type'));
     state.selectedModeFilters = new Set(getSelectedInputs('mode'));
+    const range = normalizePriceRange(
+      document.querySelector('[data-kc-opp-price-min]') && document.querySelector('[data-kc-opp-price-min]').value,
+      document.querySelector('[data-kc-opp-price-max]') && document.querySelector('[data-kc-opp-price-max]').value
+    );
+    state.priceMin = range.min;
+    state.priceMax = range.max;
   }
 
-  function syncFilterInputs(typeFilters, modeFilters) {
+  function syncFilterInputs(typeFilters, modeFilters, priceMin, priceMax) {
     const types = typeFilters || new Set();
     const modes = modeFilters || new Set();
 
@@ -402,6 +429,11 @@
     document.querySelectorAll('[data-kc-opp-filter-kind="mode"]').forEach((input) => {
       input.checked = modes.has(String(input.value || '').trim());
     });
+
+    const minInput = document.querySelector('[data-kc-opp-price-min]');
+    const maxInput = document.querySelector('[data-kc-opp-price-max]');
+    if (minInput) minInput.value = priceMin != null ? String(priceMin) : '';
+    if (maxInput) maxInput.value = priceMax != null ? String(priceMax) : '';
   }
 
   function restoreUrlState() {
@@ -411,7 +443,9 @@
     const hasTypes = !!(params && typeof params.has === 'function' && params.has('oppType'));
     const hasModes = !!(params && typeof params.has === 'function' && params.has('oppMode'));
     const hasArea = !!(params && typeof params.has === 'function' && params.has('oppArea'));
-    if (!hasTypes && !hasModes && !hasArea) return false;
+    const hasPriceMin = !!(params && typeof params.has === 'function' && params.has('priceMin'));
+    const hasPriceMax = !!(params && typeof params.has === 'function' && params.has('priceMax'));
+    if (!hasTypes && !hasModes && !hasArea && !hasPriceMin && !hasPriceMax) return false;
 
     if (hasTypes) {
       state.selectedTypeFilters = new Set(utils.readListParam(params, 'oppType').map((value) => String(value || '').trim()).filter(Boolean));
@@ -421,6 +455,14 @@
     }
     if (hasArea) {
       state.selectedArea = utils.readTextParam(params, 'oppArea');
+    }
+    if (hasPriceMin || hasPriceMax) {
+      const range = normalizePriceRange(
+        hasPriceMin ? utils.readNumberParam(params, 'priceMin') : state.priceMin,
+        hasPriceMax ? utils.readNumberParam(params, 'priceMax') : state.priceMax
+      );
+      state.priceMin = range.min;
+      state.priceMax = range.max;
     }
     return true;
   }
@@ -432,6 +474,8 @@
       utils.writeListParam(params, 'oppType', Array.from(state.selectedTypeFilters));
       utils.writeListParam(params, 'oppMode', Array.from(state.selectedModeFilters));
       utils.writeTextParam(params, 'oppArea', state.selectedArea || '');
+      utils.writeNumberParam(params, 'priceMin', state.priceMin);
+      utils.writeNumberParam(params, 'priceMax', state.priceMax);
     });
   }
 
@@ -460,6 +504,7 @@
     const workModeKey = String(card.getAttribute('data-kc-opp-work-mode') || '');
     const isRemote = String(card.getAttribute('data-kc-opp-remote') || '').toLowerCase() === 'true';
     const isPresential = String(card.getAttribute('data-kc-opp-presencial') || '').toLowerCase() === 'true';
+    const priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
 
     if (state.selectedTypeFilters.size) {
       let typeMatches = false;
@@ -478,6 +523,8 @@
     }
 
     if (state.selectedArea && area !== state.selectedArea) return false;
+    if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
+    if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
     return true;
   }
 
@@ -519,6 +566,11 @@
     }
 
     if (state.selectedArea && !cfg.ignoreArea && summary.areaKey !== state.selectedArea) return false;
+    if (!cfg.ignorePrice) {
+      if ((state.priceMin != null || state.priceMax != null) && summary.priceValue == null) return false;
+      if (state.priceMin != null && summary.priceValue < state.priceMin) return false;
+      if (state.priceMax != null && summary.priceValue > state.priceMax) return false;
+    }
     return true;
   }
 
@@ -616,7 +668,10 @@
   function syncClearButtonState() {
     const clearButton = document.querySelector('[data-kc-opp-clear-filters="true"]');
     if (!clearButton) return;
-    const hasFilters = hasTypeModeSelection(state.selectedTypeFilters, state.selectedModeFilters);
+    const hasFilters = hasTypeModeSelection(state.selectedTypeFilters, state.selectedModeFilters)
+      || !!state.selectedArea
+      || state.priceMin != null
+      || state.priceMax != null;
     clearButton.disabled = !hasFilters;
   }
 
@@ -712,8 +767,12 @@
       const draft = state.modalDraft || {
         typeFilters: cloneSet(state.selectedTypeFilters),
         modeFilters: cloneSet(state.selectedModeFilters),
+        priceMin: state.priceMin,
+        priceMax: state.priceMax,
       };
-      const canClear = hasTypeModeSelection(draft.typeFilters, draft.modeFilters);
+      const canClear = hasTypeModeSelection(draft.typeFilters, draft.modeFilters)
+        || draft.priceMin != null
+        || draft.priceMax != null;
       actions.innerHTML = [
         '<div class="kc-opportunity-section-modal__action-group">',
         '  <button class="kc-opportunity-clear" type="button" data-kc-opp-modal-clear-filters="true"' + (canClear ? '' : ' disabled') + '>Limpar filtros</button>',
@@ -768,11 +827,13 @@
       typeFilters: cloneSet(state.selectedTypeFilters),
       modeFilters: cloneSet(state.selectedModeFilters),
       area: state.selectedArea || '',
+      priceMin: state.priceMin,
+      priceMax: state.priceMax,
     };
 
     title.textContent = sectionMeta.title;
     titleIcon.className = sectionMeta.icon || 'fas fa-layer-group';
-    syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters);
+    syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters, state.modalDraft.priceMin, state.modalDraft.priceMax);
     renderAreaButtons();
     renderSectionActions();
     overlay.classList.add('active');
@@ -817,7 +878,7 @@
     }
 
     if (!cfg.commit) {
-      syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters);
+      syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax);
     }
 
     if (state.activeSectionNode && state.activeSectionPlaceholder && state.activeSectionPlaceholder.parentNode) {
@@ -870,6 +931,8 @@
     if (state.selectedTypeFilters.size) params.oppType = Array.from(state.selectedTypeFilters);
     if (state.selectedModeFilters.size) params.oppMode = Array.from(state.selectedModeFilters);
     if (state.selectedArea) params.oppArea = state.selectedArea;
+    if (state.priceMin != null) params.priceMin = state.priceMin;
+    if (state.priceMax != null) params.priceMax = state.priceMax;
     return params;
   }
 
@@ -892,6 +955,12 @@
     if (state.modalDraft && state.activeSectionKey === 'filters' && isMobileViewport()) {
       state.modalDraft.typeFilters = new Set(getSelectedInputs('type'));
       state.modalDraft.modeFilters = new Set(getSelectedInputs('mode'));
+      const range = normalizePriceRange(
+        document.querySelector('[data-kc-opp-price-min]') && document.querySelector('[data-kc-opp-price-min]').value,
+        document.querySelector('[data-kc-opp-price-max]') && document.querySelector('[data-kc-opp-price-max]').value
+      );
+      state.modalDraft.priceMin = range.min;
+      state.modalDraft.priceMax = range.max;
       renderSectionActions();
       return;
     }
@@ -901,7 +970,7 @@
   }
 
   function bindSidebarEvents() {
-    document.querySelectorAll('[data-kc-opp-filter-kind]').forEach((input) => {
+    document.querySelectorAll('[data-kc-opp-filter-kind], [data-kc-opp-price-min], [data-kc-opp-price-max]').forEach((input) => {
       input.addEventListener('change', applySidebarFilters);
     });
 
@@ -911,6 +980,11 @@
         document.querySelectorAll('[data-kc-opp-filter-kind]').forEach((input) => {
           input.checked = false;
         });
+        state.selectedArea = '';
+        const minInput = document.querySelector('[data-kc-opp-price-min]');
+        const maxInput = document.querySelector('[data-kc-opp-price-max]');
+        if (minInput) minInput.value = '';
+        if (maxInput) maxInput.value = '';
         applySidebarFilters();
       });
     }
@@ -920,7 +994,9 @@
       if (clearDraftButton && state.modalDraft) {
         state.modalDraft.typeFilters = new Set();
         state.modalDraft.modeFilters = new Set();
-        syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters);
+        state.modalDraft.priceMin = null;
+        state.modalDraft.priceMax = null;
+        syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters, state.modalDraft.priceMin, state.modalDraft.priceMax);
         renderSectionActions();
         return;
       }
@@ -931,7 +1007,9 @@
         if (action === 'filters' && state.modalDraft) {
           state.selectedTypeFilters = cloneSet(state.modalDraft.typeFilters);
           state.selectedModeFilters = cloneSet(state.modalDraft.modeFilters);
-          syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters);
+          state.priceMin = state.modalDraft.priceMin != null ? state.modalDraft.priceMin : null;
+          state.priceMax = state.modalDraft.priceMax != null ? state.modalDraft.priceMax : null;
+          syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax);
           closeMobileSectionModal({ commit: true });
           applyCurrentFilters();
           return;
@@ -1061,7 +1139,7 @@
     wrapFilterApply();
     syncStateFromInputs();
     restoreUrlState();
-    syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters);
+    syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax);
     bindSidebarEvents();
     setupExtraPredicate();
     restoreCachedPosts();

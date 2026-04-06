@@ -60,6 +60,27 @@
     else params.delete(key);
   }
 
+  function readNumberParam(params, key) {
+    const raw = readTextParam(params, key).replace(',', '.');
+    if (!raw) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  function writeNumberParam(params, key, value) {
+    if (!params || !key) return;
+    if (value == null || value === '') {
+      params.delete(key);
+      return;
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      params.delete(key);
+      return;
+    }
+    params.set(key, String(numeric));
+  }
+
   function readBooleanParam(params, key) {
     const raw = normalizeText(readTextParam(params, key));
     return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'sim';
@@ -312,7 +333,9 @@
     getSearchParams,
     updateSearchParams,
     readTextParam,
+    readNumberParam,
     writeTextParam,
+    writeNumberParam,
     readBooleanParam,
     writeBooleanParam,
     readListParam,

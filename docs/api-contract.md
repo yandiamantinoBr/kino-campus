@@ -108,6 +108,8 @@ Busca lotes incrementais do feed via cursor opaco. É o contrato usado pelos pag
     marketCats?: string[],
     marketConds?: string[],
     marketVerified?: boolean,
+    priceMin?: number,
+    priceMax?: number,
     rideType?: string[],
     rideCampus?: string[],
     ridePeriod?: string[],
@@ -140,7 +142,8 @@ Promise<{
 - `cursor` é opaco e pode ter representações diferentes entre `local` e `supabase`.
 - Feeds híbridos podem passar `module` como array, por exemplo `['compra-venda', 'livros']`.
 - `requestParams` carrega o envelope dos filtros avançados já existentes nos módulos (`compra-venda`, `caronas`, `moradia`, `oportunidades` e `achados-perdidos`) para o caminho incremental cursor-based.
-- `KCAPI.getPosts()` permanece estável para consumo legado; a aplicação cursor-based dos filtros avançados foi adicionada em `v9.2.1.1` sem reinterpretar o contrato antigo.
+- `priceMin` e `priceMax` foram adicionados ao contrato cursor-based em `v9.2.1.2`; hoje eles alimentam as faixas de preço/remuneração de `compra-venda`, `caronas`, `moradia` e `oportunidades`.
+- `KCAPI.getPosts()` permanece estável para consumo legado; a aplicação cursor-based dos filtros avançados foi adicionada em `v9.2.1.1` e expandida em `v9.2.1.2` sem reinterpretar o contrato antigo.
 
 ---
 

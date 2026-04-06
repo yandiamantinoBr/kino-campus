@@ -18,6 +18,8 @@
     cats: new Set(CAT_KEYS),
     conds: new Set(),
     verified: false,
+    priceMin: null,
+    priceMax: null,
     feedPager: null,
     posts: new Map(),
     sections: [],
@@ -44,6 +46,21 @@
   function cloneSet(set) { return new Set(Array.from(set || [])); }
   function isMobile() { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }
   function getParam(name) { try { return new URL(window.location.href).searchParams.get(name); } catch (_) { return null; } }
+  function sanitizePriceValue(value) {
+    if (value == null || value === '') return null;
+    const numeric = Number(String(value).replace(',', '.'));
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  }
+  function normalizePriceRange(minPrice, maxPrice) {
+    let nextMin = sanitizePriceValue(minPrice);
+    let nextMax = sanitizePriceValue(maxPrice);
+    if (nextMin != null && nextMax != null && nextMax < nextMin) {
+      const swap = nextMin;
+      nextMin = nextMax;
+      nextMax = swap;
+    }
+    return { min: nextMin, max: nextMax };
+  }
   function getSessionStore() {
     return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
       ? window.KCSessionStore
@@ -111,11 +128,15 @@
 
   function verifiedInput() { return document.querySelector('[data-kc-market-filter-kind="verified"]'); }
 
-  function syncInputs(cats, conds, verified) {
+  function syncInputs(cats, conds, verified, priceMin, priceMax) {
     document.querySelectorAll('[data-kc-market-filter-kind="category"]').forEach((input) => { input.checked = cats.has(normCat(input.value)); });
     document.querySelectorAll('[data-kc-market-filter-kind="condition"]').forEach((input) => { input.checked = conds.has(normCond(input.value)); });
     const checked = verifiedInput();
     if (checked) checked.checked = !!verified;
+    const minInput = document.querySelector('[data-kc-market-price-min]');
+    const maxInput = document.querySelector('[data-kc-market-price-max]');
+    if (minInput) minInput.value = priceMin != null ? String(priceMin) : '';
+    if (maxInput) maxInput.value = priceMax != null ? String(priceMax) : '';
   }
 
   function getFeedRequestParams() {
@@ -123,6 +144,8 @@
     if (state.cats.size && state.cats.size !== CAT_KEYS.length) params.marketCats = Array.from(state.cats);
     if (state.conds.size) params.marketConds = Array.from(state.conds);
     if (state.verified) params.marketVerified = true;
+    if (state.priceMin != null) params.priceMin = state.priceMin;
+    if (state.priceMax != null) params.priceMax = state.priceMax;
     return params;
   }
 
@@ -138,7 +161,9 @@
     const hasCats = !!(params && typeof params.has === 'function' && params.has('marketCats'));
     const hasConds = !!(params && typeof params.has === 'function' && params.has('marketConds'));
     const hasVerified = !!(params && typeof params.has === 'function' && params.has('marketVerified'));
-    if (!hasCats && !hasConds && !hasVerified) return false;
+    const hasPriceMin = !!(params && typeof params.has === 'function' && params.has('priceMin'));
+    const hasPriceMax = !!(params && typeof params.has === 'function' && params.has('priceMax'));
+    if (!hasCats && !hasConds && !hasVerified && !hasPriceMin && !hasPriceMax) return false;
 
     if (hasCats) {
       const nextCats = utils.readListParam(params, 'marketCats').map(normCat).filter(Boolean);
@@ -150,8 +175,16 @@
     if (hasVerified) {
       state.verified = utils.readBooleanParam(params, 'marketVerified');
     }
+    if (hasPriceMin || hasPriceMax) {
+      const range = normalizePriceRange(
+        hasPriceMin ? utils.readNumberParam(params, 'priceMin') : state.priceMin,
+        hasPriceMax ? utils.readNumberParam(params, 'priceMax') : state.priceMax
+      );
+      state.priceMin = range.min;
+      state.priceMax = range.max;
+    }
 
-    syncInputs(state.cats, state.conds, state.verified);
+    syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
     setTabFromCats(state.cats);
     return true;
   }
@@ -164,6 +197,8 @@
       utils.writeListParam(params, 'marketCats', activeCats);
       utils.writeListParam(params, 'marketConds', Array.from(state.conds));
       utils.writeBooleanParam(params, 'marketVerified', state.verified);
+      utils.writeNumberParam(params, 'priceMin', state.priceMin);
+      utils.writeNumberParam(params, 'priceMax', state.priceMax);
     });
   }
 
@@ -171,6 +206,12 @@
     state.cats = new Set(selected('category').map(normCat).filter(Boolean));
     state.conds = new Set(selected('condition').map(normCond).filter(Boolean));
     state.verified = !!(verifiedInput() && verifiedInput().checked);
+    const range = normalizePriceRange(
+      document.querySelector('[data-kc-market-price-min]') && document.querySelector('[data-kc-market-price-min]').value,
+      document.querySelector('[data-kc-market-price-max]') && document.querySelector('[data-kc-market-price-max]').value
+    );
+    state.priceMin = range.min;
+    state.priceMax = range.max;
   }
 
   function quickCat(set) {
@@ -181,7 +222,14 @@
   }
 
   function modalDraft() {
-    return { cats: cloneSet(state.cats), conds: cloneSet(state.conds), verified: state.verified, quick: quickCat(state.cats) };
+    return {
+      cats: cloneSet(state.cats),
+      conds: cloneSet(state.conds),
+      verified: state.verified,
+      priceMin: state.priceMin,
+      priceMax: state.priceMax,
+      quick: quickCat(state.cats)
+    };
   }
 
   function readDraftInputs() {
@@ -189,11 +237,17 @@
     state.draft.cats = new Set(selected('category').map(normCat).filter(Boolean));
     state.draft.conds = new Set(selected('condition').map(normCond).filter(Boolean));
     state.draft.verified = !!(verifiedInput() && verifiedInput().checked);
+    const range = normalizePriceRange(
+      document.querySelector('[data-kc-market-price-min]') && document.querySelector('[data-kc-market-price-min]').value,
+      document.querySelector('[data-kc-market-price-max]') && document.querySelector('[data-kc-market-price-max]').value
+    );
+    state.draft.priceMin = range.min;
+    state.draft.priceMax = range.max;
     state.draft.quick = quickCat(state.draft.cats);
   }
 
-  function isDefault(cats, conds, verified) {
-    return cats && conds && cats.size === CAT_KEYS.length && conds.size === 0 && !verified;
+  function isDefault(cats, conds, verified, priceMin, priceMax) {
+    return cats && conds && cats.size === CAT_KEYS.length && conds.size === 0 && !verified && priceMin == null && priceMax == null;
   }
 
   function setTabFromCats(cats) {
@@ -236,6 +290,7 @@
       categoryIcon: definition.icon,
       conditionKey,
       verified: !!(post && (post.authorVerified === true || post.verificado === true || meta.verificado === true)),
+      priceValue: sanitizePriceValue(post && (post.preco != null ? post.preco : post.price)),
       searchText: norm([post && post.titulo, post && post.descricao, post && post.categoriaLabel, post && post.subcategoriaLabel, definition.label, conditionKey].filter(Boolean).join(' '))
     };
   }
@@ -259,6 +314,7 @@
       if (!card.getAttribute('data-category')) card.setAttribute('data-category', summary.categoryKey);
       if (!card.getAttribute('data-condition') && summary.conditionKey) card.setAttribute('data-condition', summary.conditionKey);
       if (!card.getAttribute('data-verified')) card.setAttribute('data-verified', String(!!summary.verified));
+      if (!card.getAttribute('data-kc-price') && summary.priceValue != null) card.setAttribute('data-kc-price', String(summary.priceValue));
     });
   }
 
@@ -273,6 +329,11 @@
     }
     if (state.conds.size && !config.ignoreConditions && !state.conds.has(summary.conditionKey)) return false;
     if (state.verified && !config.ignoreVerified && !summary.verified) return false;
+    if (!config.ignorePrice) {
+      if ((state.priceMin != null || state.priceMax != null) && summary.priceValue == null) return false;
+      if (state.priceMin != null && summary.priceValue < state.priceMin) return false;
+      if (state.priceMax != null && summary.priceValue > state.priceMax) return false;
+    }
     return true;
   }
 
@@ -348,7 +409,7 @@
     modal.setAttribute('data-kc-market-section-view', state.activeKey);
     if (state.activeKey === 'filters') {
       const draft = state.draft || modalDraft();
-      const canClear = !isDefault(draft.cats, draft.conds, draft.verified);
+      const canClear = !isDefault(draft.cats, draft.conds, draft.verified, draft.priceMin, draft.priceMax);
       actions.innerHTML = '<div class="kc-marketplace-section-modal__action-group"><button class="kc-opportunity-clear" type="button" data-kc-market-modal-clear="true"' + (canClear ? '' : ' disabled') + '>Limpar filtros</button><button class="kc-opportunity-apply" type="button" data-kc-market-modal-apply="filters">Aplicar filtros</button></div>';
       return;
     }
@@ -382,7 +443,7 @@
     state.draft = modalDraft();
     title.textContent = section.title;
     titleIcon.className = section.icon || 'fas fa-layer-group';
-    syncInputs(state.draft.cats, state.draft.conds, state.draft.verified);
+    syncInputs(state.draft.cats, state.draft.conds, state.draft.verified, state.draft.priceMin, state.draft.priceMax);
     renderCategories();
     renderActions();
     overlay.classList.add('active');
@@ -419,7 +480,7 @@
         } catch (_) { }
       }
     }
-    if (!config.commit) syncInputs(state.cats, state.conds, state.verified);
+    if (!config.commit) syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
     if (state.activeNode && state.activePlaceholder && state.activePlaceholder.parentNode) state.activePlaceholder.parentNode.replaceChild(state.activeNode, state.activePlaceholder);
     state.activeKey = '';
     state.activeNode = null;
@@ -466,14 +527,16 @@
 
   function syncClear() {
     const button = document.querySelector('[data-kc-market-clear-sidebar="true"]');
-    if (button) button.disabled = isDefault(state.cats, state.conds, state.verified);
+    if (button) button.disabled = isDefault(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
   }
 
   function resetApplied(clearSearch) {
     state.cats = new Set(CAT_KEYS);
     state.conds = new Set();
     state.verified = false;
-    syncInputs(state.cats, state.conds, state.verified);
+    state.priceMin = null;
+    state.priceMax = null;
+    syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
     setTabFromCats(state.cats);
     if (clearSearch && window.kcFilters && typeof window.kcFilters.setQuery === 'function') window.kcFilters.setQuery('');
     else if (clearSearch) {
@@ -487,10 +550,13 @@
     const categoryKey = normCat(card.getAttribute('data-category') || '');
     const conditionKey = normCond(card.getAttribute('data-condition') || '');
     const verified = String(card.getAttribute('data-verified') || '').toLowerCase() === 'true';
+    const priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
     if (state.cats.size === 0) return false;
     if (state.cats.size !== CAT_KEYS.length && !state.cats.has(categoryKey)) return false;
     if (state.conds.size && !state.conds.has(conditionKey)) return false;
     if (state.verified && !verified) return false;
+    if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
+    if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
     return true;
   }
 
@@ -506,14 +572,14 @@
   }
 
   function bind() {
-    document.querySelectorAll('[data-kc-market-filter-kind]').forEach((input) => input.addEventListener('change', handleInputChange));
+    document.querySelectorAll('[data-kc-market-filter-kind], [data-kc-market-price-min], [data-kc-market-price-max]').forEach((input) => input.addEventListener('change', handleInputChange));
     const clear = document.querySelector('[data-kc-market-clear-sidebar="true"]');
     if (clear) clear.addEventListener('click', function () { resetApplied(false); });
     const emptyClear = document.querySelector('#noResults .kc-btn-primary');
     if (emptyClear) emptyClear.addEventListener('click', function (event) { event.preventDefault(); resetApplied(true); });
     document.querySelectorAll('.kc-feed-tabs a').forEach((tab) => tab.addEventListener('click', function () {
       state.cats = catsFromQuick(tab.getAttribute('data-category') || tab.getAttribute('href') || '');
-      syncInputs(state.cats, state.conds, state.verified);
+      syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
       syncUrlState();
       refreshFeed();
       queue();
@@ -524,8 +590,10 @@
         state.draft.cats = new Set(CAT_KEYS);
         state.draft.conds = new Set();
         state.draft.verified = false;
+        state.draft.priceMin = null;
+        state.draft.priceMax = null;
         state.draft.quick = '';
-        syncInputs(state.draft.cats, state.draft.conds, state.draft.verified);
+        syncInputs(state.draft.cats, state.draft.conds, state.draft.verified, state.draft.priceMin, state.draft.priceMax);
         renderActions();
         return;
       }
@@ -536,7 +604,9 @@
           state.cats = cloneSet(state.draft.cats);
           state.conds = cloneSet(state.draft.conds);
           state.verified = !!state.draft.verified;
-          syncInputs(state.cats, state.conds, state.verified);
+          state.priceMin = state.draft.priceMin != null ? state.draft.priceMin : null;
+          state.priceMax = state.draft.priceMax != null ? state.draft.priceMax : null;
+          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
           setTabFromCats(state.cats);
           closeModal({ commit: true });
           apply();
@@ -545,7 +615,7 @@
         if (action === 'categories' && state.draft) {
           if (state.draft.quick !== null) {
             state.cats = catsFromQuick(state.draft.quick);
-            syncInputs(state.cats, state.conds, state.verified);
+            syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
             setTabFromCats(state.cats);
           }
           closeModal({ commit: true });
@@ -566,7 +636,7 @@
           renderActions();
         } else {
           state.cats = catsFromQuick(selectedKey);
-          syncInputs(state.cats, state.conds, state.verified);
+          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
           setTabFromCats(state.cats);
           apply();
         }
@@ -654,7 +724,7 @@
     const preset = normCat(getParam('filter') || '');
     if (!restoredFromUrl && preset && CAT_KEYS.includes(preset)) {
       state.cats = new Set([preset]);
-      syncInputs(state.cats, state.conds, state.verified);
+      syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
       if (window.kcFilters && typeof window.kcFilters.setCategory === 'function') window.kcFilters.setCategory(preset);
     }
     bind();

@@ -312,6 +312,8 @@ posts_metadata_gin_idx         ON posts USING GIN(metadata)
 
 **Filtros v9.2.1.1:** a RPC `kc_get_feed_cursor(..., p_request_params jsonb)` passou a aplicar server-side os filtros avançados já existentes de `compra-venda`, `caronas`, `moradia`, `oportunidades` e `achados-perdidos`, sem alterar a semântica pública do cursor.
 
+**Faixas numéricas v9.2.1.2:** `kc_get_feed_cursor()` passou a aceitar `priceMin` e `priceMax` dentro de `p_request_params`, aplicando o intervalo diretamente sobre `posts.price` e normalizando limites invertidos no banco.
+
 **Busca v9.2.0:** a busca server-side usa `kc_search_posts_fts()` com `unaccent + portuguese`, expansão de sinônimos no client e documento ponderado por `title`, `tags`, `description`, `category` e `subcategory`.
 
 ## Storage Buckets

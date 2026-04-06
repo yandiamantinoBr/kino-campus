@@ -11,7 +11,7 @@
 
 ## RPCs Públicas (chamadas via API)
 
-### `kc_get_feed_cursor(p_module text, p_modules text[], p_category text, p_subcategory text, p_tag text, p_q text, p_sort_by text, p_limit int, p_cursor text, p_request_params jsonb default null) → JSONB` *(v9.2.2, estendido em v9.2.1.1)*
+### `kc_get_feed_cursor(p_module text, p_modules text[], p_category text, p_subcategory text, p_tag text, p_q text, p_sort_by text, p_limit int, p_cursor text, p_request_params jsonb default null) → JSONB` *(v9.2.2, estendido em v9.2.1.1 e v9.2.1.2)*
 
 Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de cada rail.
 
@@ -29,6 +29,7 @@ Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de 
 - O cursor é token opaco em base64 com os campos mínimos de desempate; callers não montam esse valor manualmente.
 - `p_request_params` aplica no banco os filtros avançados já existentes dos módulos de marketplace, caronas, moradia, oportunidades e achados-perdidos.
 - A extensão de `v9.2.1.1` preserva a semântica de ordenação e cursor de `v9.2.2`; apenas amplia o envelope de filtros aceito pelo RPC.
+- `v9.2.1.2` adiciona `priceMin` / `priceMax` no envelope cursor-based, filtrando por `posts.price` no banco e normalizando faixas invertidas antes da consulta.
 
 ---
 

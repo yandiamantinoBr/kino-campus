@@ -2156,6 +2156,8 @@
     if (id) attrs.push(`data-post-id="${escapeHtml(id)}"`);
     attrs.push(`data-verified="${escapeHtml(String(!!p.verificado))}"`);
     if (moduleKey) attrs.push(`data-module="${escapeHtml(String(moduleKey))}"`);
+    const numericPrice = Number(p.preco != null ? p.preco : p.price);
+    if (Number.isFinite(numericPrice)) attrs.push(`data-kc-price="${escapeHtml(String(numericPrice))}"`);
 
     // Marcação de post do usuário (evita duplicação de injeção pelo kc-core.js)
     if (p._kcUserPost === true) attrs.push('data-kc-user-post="true"');

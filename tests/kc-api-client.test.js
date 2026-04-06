@@ -387,6 +387,22 @@ describe('KCAPI - API Client', () => {
       expect(result.map((post) => post.id)).toEqual(['market-ok']);
     });
 
+    test('filtra posts por faixa de preco generica no caminho incremental', () => {
+      const posts = [
+        { id: 'cheap', module: 'compra-venda', price: 80 },
+        { id: 'mid', module: 'compra-venda', price: 250 },
+        { id: 'expensive', module: 'compra-venda', price: 1200 },
+      ];
+
+      const result = window.KCAPI.filterPosts(posts, {
+        module: 'compra-venda',
+        priceMin: 100,
+        priceMax: 500,
+      });
+
+      expect(result.map((post) => post.id)).toEqual(['mid']);
+    });
+
     test('filtra caronas por periodo, campus, origem, destino, feature e verificado', () => {
       const posts = [
         {

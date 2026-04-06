@@ -90,6 +90,8 @@
     features: new Set(),
     origemFilter: '',
     destinoFilter: '',
+    priceMin: null,
+    priceMax: null,
     feedPager: null,
   };
 
@@ -126,6 +128,23 @@
     if (hour >= 5 && hour < 12) return 'matutino';
     if (hour >= 12 && hour < 18) return 'vespertino';
     return 'noturno';
+  }
+
+  function sanitizePriceValue(value) {
+    if (value == null || value === '') return null;
+    var numeric = Number(String(value).replace(',', '.'));
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  }
+
+  function normalizePriceRange(minPrice, maxPrice) {
+    var nextMin = sanitizePriceValue(minPrice);
+    var nextMax = sanitizePriceValue(maxPrice);
+    if (nextMin != null && nextMax != null && nextMax < nextMin) {
+      var swap = nextMin;
+      nextMin = nextMax;
+      nextMax = swap;
+    }
+    return { min: nextMin, max: nextMax };
   }
 
   /* ── Predicado de filtro ────────────────────────────── */
@@ -174,6 +193,9 @@
         var allMatch = Array.from(state.features).every(function (f) { return cardFeatures.indexOf(f) !== -1; });
         if (!allMatch) return false;
       }
+      var priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
+      if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
+      if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
       return true;
     };
   }
@@ -187,6 +209,8 @@
     if (state.verified) params.rideVerified = true;
     if (state.origemFilter) params.rideOrigin = state.origemFilter;
     if (state.destinoFilter) params.rideDestination = state.destinoFilter;
+    if (state.priceMin != null) params.priceMin = state.priceMin;
+    if (state.priceMax != null) params.priceMax = state.priceMax;
     return params;
   }
 
@@ -258,6 +282,20 @@
       if (destinoInput) destinoInput.value = utils.readTextParam(params, 'rideDestination');
     }
 
+    if (params && typeof params.has === 'function' && (params.has('priceMin') || params.has('priceMax'))) {
+      hasState = true;
+      var range = normalizePriceRange(
+        params.has('priceMin') ? utils.readNumberParam(params, 'priceMin') : state.priceMin,
+        params.has('priceMax') ? utils.readNumberParam(params, 'priceMax') : state.priceMax
+      );
+      state.priceMin = range.min;
+      state.priceMax = range.max;
+      var minInput = document.querySelector('[data-kc-caronas-price-min]');
+      var maxInput = document.querySelector('[data-kc-caronas-price-max]');
+      if (minInput) minInput.value = state.priceMin != null ? String(state.priceMin) : '';
+      if (maxInput) maxInput.value = state.priceMax != null ? String(state.priceMax) : '';
+    }
+
     return hasState;
   }
 
@@ -273,6 +311,8 @@
       utils.writeBooleanParam(params, 'rideVerified', state.verified);
       utils.writeTextParam(params, 'rideOrigin', state.origemFilter || '');
       utils.writeTextParam(params, 'rideDestination', state.destinoFilter || '');
+      utils.writeNumberParam(params, 'priceMin', state.priceMin);
+      utils.writeNumberParam(params, 'priceMax', state.priceMax);
     });
   }
 
@@ -303,6 +343,12 @@
     state.origemFilter = origemInput ? origemInput.value.trim() : '';
     var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
     state.destinoFilter = destinoInput ? destinoInput.value.trim() : '';
+    var priceRange = normalizePriceRange(
+      document.querySelector('[data-kc-caronas-price-min]') && document.querySelector('[data-kc-caronas-price-min]').value,
+      document.querySelector('[data-kc-caronas-price-max]') && document.querySelector('[data-kc-caronas-price-max]').value
+    );
+    state.priceMin = priceRange.min;
+    state.priceMax = priceRange.max;
     syncUrlState();
     applyFilters();
   }
@@ -322,6 +368,10 @@
       if (origemInput) origemInput.value = '';
       var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
       if (destinoInput) destinoInput.value = '';
+      var minInput = document.querySelector('[data-kc-caronas-price-min]');
+      if (minInput) minInput.value = '';
+      var maxInput = document.querySelector('[data-kc-caronas-price-max]');
+      if (maxInput) maxInput.value = '';
       state.tipos = new Set(['ofereco', 'procuro']);
       state.campi.clear();
       state.periods.clear();
@@ -329,6 +379,8 @@
       state.verified = false;
       state.origemFilter = '';
       state.destinoFilter = '';
+      state.priceMin = null;
+      state.priceMax = null;
       syncUrlState();
       applyFilters();
     });
@@ -336,7 +388,7 @@
 
   /* ── Bind filtros ───────────────────────────────────── */
   function bindFilters() {
-    document.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified], [data-kc-carona-period], [data-kc-carona-feature]').forEach(function (input) {
+    document.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified], [data-kc-carona-period], [data-kc-carona-feature], [data-kc-caronas-price-min], [data-kc-caronas-price-max]').forEach(function (input) {
       input.addEventListener('change', syncFiltersFromInputs);
     });
     // Origem/Destino inputs
