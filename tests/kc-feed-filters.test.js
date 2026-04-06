@@ -52,6 +52,79 @@ describe('KCFeedFilters', () => {
     expect(updated.has('priceMax')).toBe(false);
   });
 
+  test('readPresetParam e writePresetParam sincronizam datePreset com allowlist por modulo', () => {
+    window.history.replaceState({}, '', '/eventos.html?datePreset=next7d');
+    require('../assets/js/kc-feed-filters.js');
+
+    const utils = window.KCFeedFilters;
+    const params = utils.getSearchParams();
+    const allowed = utils.getAllowedDatePresets('eventos');
+
+    expect(allowed).toEqual(['today', 'next7d', 'thisMonth', 'past']);
+    expect(utils.readPresetParam(params, 'datePreset', allowed)).toBe('next7d');
+
+    utils.updateSearchParams((nextParams) => {
+      utils.writePresetParam(nextParams, 'datePreset', 'past', allowed);
+    });
+    expect(new URLSearchParams(window.location.search).get('datePreset')).toBe('past');
+
+    utils.updateSearchParams((nextParams) => {
+      utils.writePresetParam(nextParams, 'datePreset', 'invalid', allowed);
+    });
+    expect(new URLSearchParams(window.location.search).has('datePreset')).toBe(false);
+  });
+
+  test('matchesDatePreset respeita recencia generica e datas de eventos com fallback', () => {
+    require('../assets/js/kc-feed-filters.js');
+
+    const utils = window.KCFeedFilters;
+    const now = new Date('2026-04-06T12:00:00-03:00');
+
+    expect(utils.matchesDatePreset({
+      moduleKey: 'caronas',
+      preset: 'last7d',
+      createdAt: '2026-04-05T10:00:00-03:00',
+      now,
+    })).toBe(true);
+
+    expect(utils.matchesDatePreset({
+      moduleKey: 'caronas',
+      preset: 'last7d',
+      createdAt: '2026-03-28T10:00:00-03:00',
+      now,
+    })).toBe(false);
+
+    expect(utils.matchesDatePreset({
+      moduleKey: 'eventos',
+      preset: 'next7d',
+      post: {
+        metadata: { data_evento: '2026-04-10' },
+        created_at: '2026-04-01T10:00:00Z',
+      },
+      now,
+    })).toBe(true);
+
+    expect(utils.matchesDatePreset({
+      moduleKey: 'eventos',
+      preset: 'today',
+      post: {
+        metadata: {},
+        created_at: '2026-04-06T08:00:00-03:00',
+      },
+      now,
+    })).toBe(true);
+
+    expect(utils.matchesDatePreset({
+      moduleKey: 'eventos',
+      preset: 'past',
+      post: {
+        metadata: { data: '2026-04-02' },
+        created_at: '2026-04-01T10:00:00Z',
+      },
+      now,
+    })).toBe(true);
+  });
+
   test('bindDesktopAccordion cria toggle e recolhe a secao no desktop', () => {
     document.body.setAttribute('data-kc-filters', 'tab-search');
     document.body.innerHTML = `

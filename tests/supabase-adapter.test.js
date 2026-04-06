@@ -101,6 +101,7 @@ describe('Supabase Adapter - getFeedCursor', () => {
       module: 'oportunidades',
       oppArea: 'tecnologia',
       oppMode: ['remoto'],
+      datePreset: 'last7d',
       limit: 12,
     });
 
@@ -108,6 +109,7 @@ describe('Supabase Adapter - getFeedCursor', () => {
       module: 'oportunidades',
       oppArea: 'tecnologia',
       oppMode: ['remoto'],
+      datePreset: 'last7d',
       limit: 12,
     }));
   });

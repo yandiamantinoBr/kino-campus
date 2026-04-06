@@ -403,6 +403,70 @@ describe('KCAPI - API Client', () => {
       expect(result.map((post) => post.id)).toEqual(['mid']);
     });
 
+    test('filtra modulos de recencia por datePreset usando created_at em America/Sao_Paulo', () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
+
+      try {
+        const posts = [
+          { id: 'recent', module: 'moradia', created_at: '2026-04-06T09:00:00-03:00' },
+          { id: 'week-old', module: 'moradia', created_at: '2026-04-01T09:00:00-03:00' },
+          { id: 'old', module: 'moradia', created_at: '2026-03-01T09:00:00-03:00' },
+        ];
+
+        const result = window.KCAPI.filterPosts(posts, {
+          module: 'moradia',
+          datePreset: 'last7d',
+        });
+
+        expect(result.map((post) => post.id)).toEqual(['recent', 'week-old']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    test('filtra eventos por data_evento e usa created_at como fallback quando metadata esta vazia', () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
+
+      try {
+        const posts = [
+          {
+            id: 'event-next',
+            module: 'eventos',
+            metadata: { data_evento: '2026-04-10' },
+            created_at: '2026-04-01T09:00:00-03:00',
+          },
+          {
+            id: 'event-fallback-today',
+            module: 'eventos',
+            metadata: {},
+            created_at: '2026-04-06T08:30:00-03:00',
+          },
+          {
+            id: 'event-past',
+            module: 'eventos',
+            metadata: { data: '2026-04-02' },
+            created_at: '2026-04-02T08:30:00-03:00',
+          },
+        ];
+
+        const next7d = window.KCAPI.filterPosts(posts, {
+          module: 'eventos',
+          datePreset: 'next7d',
+        });
+        const today = window.KCAPI.filterPosts(posts, {
+          module: 'eventos',
+          datePreset: 'today',
+        });
+
+        expect(next7d.map((post) => post.id)).toEqual(['event-next', 'event-fallback-today']);
+        expect(today.map((post) => post.id)).toEqual(['event-fallback-today']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     test('filtra caronas por periodo, campus, origem, destino, feature e verificado', () => {
       const posts = [
         {

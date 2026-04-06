@@ -115,6 +115,163 @@
     params.set(key, list.join(','));
   }
 
+  const FEED_DATE_TIMEZONE = 'America/Sao_Paulo';
+  const FEED_DATE_PRESETS = Object.freeze({
+    'compra-venda': Object.freeze(['today', 'last7d', 'last30d']),
+    livros: Object.freeze(['today', 'last7d', 'last30d']),
+    moradia: Object.freeze(['today', 'last7d', 'last30d']),
+    oportunidades: Object.freeze(['today', 'last7d', 'last30d']),
+    'achados-perdidos': Object.freeze(['today', 'last7d', 'last30d']),
+    caronas: Object.freeze(['today', 'last3d', 'last7d']),
+    eventos: Object.freeze(['today', 'next7d', 'thisMonth', 'past']),
+  });
+
+  function padNumber(value) {
+    return String(Math.max(0, parseInt(String(value || '0'), 10) || 0)).padStart(2, '0');
+  }
+
+  function formatDateKeyParts(year, month, day) {
+    const y = parseInt(String(year || '0'), 10);
+    const m = parseInt(String(month || '0'), 10);
+    const d = parseInt(String(day || '0'), 10);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) || y <= 0 || m <= 0 || d <= 0) return '';
+    return `${String(y).padStart(4, '0')}-${padNumber(m)}-${padNumber(d)}`;
+  }
+
+  function parseDateKey(dateKey) {
+    const match = String(dateKey || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    return {
+      year: parseInt(match[1], 10),
+      month: parseInt(match[2], 10),
+      day: parseInt(match[3], 10),
+    };
+  }
+
+  function shiftDateKey(dateKey, deltaDays) {
+    const parsed = parseDateKey(dateKey);
+    if (!parsed) return '';
+    const base = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day));
+    base.setUTCDate(base.getUTCDate() + (parseInt(String(deltaDays || '0'), 10) || 0));
+    return formatDateKeyParts(base.getUTCFullYear(), base.getUTCMonth() + 1, base.getUTCDate());
+  }
+
+  function getDateFormatter() {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: FEED_DATE_TIMEZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function getDateKeyInZone(input) {
+    if (!input) return '';
+    const date = input instanceof Date ? input : new Date(input);
+    if (!date || Number.isNaN(date.getTime())) return '';
+    const formatter = getDateFormatter();
+    if (formatter && typeof formatter.formatToParts === 'function') {
+      const parts = formatter.formatToParts(date);
+      const bag = {};
+      parts.forEach((part) => {
+        if (part && part.type) bag[part.type] = part.value;
+      });
+      return formatDateKeyParts(bag.year, bag.month, bag.day);
+    }
+    return formatDateKeyParts(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  }
+
+  function getCurrentDateKey(nowValue) {
+    return getDateKeyInZone(nowValue || new Date());
+  }
+
+  function getCurrentMonthKey(nowValue) {
+    return String(getCurrentDateKey(nowValue) || '').slice(0, 7);
+  }
+
+  function getAllowedDatePresets(moduleKey) {
+    const key = normalizeText(moduleKey);
+    if (!key) return [];
+    return FEED_DATE_PRESETS[key] ? FEED_DATE_PRESETS[key].slice() : [];
+  }
+
+  function normalizeDatePreset(moduleKey, value) {
+    const allowed = getAllowedDatePresets(moduleKey);
+    const normalized = normalizeText(value);
+    if (!normalized || !allowed.length) return '';
+    return allowed.includes(normalized) ? normalized : '';
+  }
+
+  function readPresetParam(params, key, allowedValues) {
+    const raw = readTextParam(params, key);
+    if (!raw) return '';
+    const normalized = normalizeText(raw);
+    const allowed = Array.isArray(allowedValues)
+      ? allowedValues.map((entry) => normalizeText(entry)).filter(Boolean)
+      : [];
+    if (!allowed.length) return normalized;
+    return allowed.includes(normalized) ? normalized : '';
+  }
+
+  function writePresetParam(params, key, value, allowedValues) {
+    if (!params || !key) return;
+    const normalized = normalizeText(value);
+    const allowed = Array.isArray(allowedValues)
+      ? allowedValues.map((entry) => normalizeText(entry)).filter(Boolean)
+      : [];
+    if (!normalized || (allowed.length && !allowed.includes(normalized))) {
+      params.delete(key);
+      return;
+    }
+    params.set(key, normalized);
+  }
+
+  function getEventDateKey(post) {
+    const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
+    const meta = (source.metadata && typeof source.metadata === 'object' && !Array.isArray(source.metadata))
+      ? source.metadata
+      : {};
+    const raw = [
+      meta.data_evento,
+      meta.dataEvento,
+      meta.data,
+      source.data_evento,
+      source.dataEvento,
+      source.data,
+    ].find((entry) => String(entry || '').trim());
+    const text = String(raw || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+    return getDateKeyInZone(source.created_at || source.createdAt || source.timestamp || null);
+  }
+
+  function matchesDatePreset(options) {
+    const opt = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const moduleKey = normalizeText(opt.moduleKey || opt.module || opt.pageModule);
+    const preset = normalizeDatePreset(moduleKey, opt.preset);
+    if (!preset) return true;
+
+    const todayKey = getCurrentDateKey(opt.now || new Date());
+    if (!todayKey) return true;
+
+    const createdKey = opt.createdKey || getDateKeyInZone(opt.createdAt || opt.created_at || null);
+    const eventKey = opt.eventKey || getEventDateKey(opt.post || opt);
+    const candidateKey = moduleKey === 'eventos' ? eventKey : createdKey;
+    if (!candidateKey) return false;
+
+    if (preset === 'today') return candidateKey === todayKey;
+    if (preset === 'last3d') return candidateKey >= shiftDateKey(todayKey, -2) && candidateKey <= todayKey;
+    if (preset === 'last7d') return candidateKey >= shiftDateKey(todayKey, -6) && candidateKey <= todayKey;
+    if (preset === 'last30d') return candidateKey >= shiftDateKey(todayKey, -29) && candidateKey <= todayKey;
+    if (preset === 'next7d') return candidateKey >= todayKey && candidateKey <= shiftDateKey(todayKey, 6);
+    if (preset === 'thisMonth') return String(candidateKey).slice(0, 7) === getCurrentMonthKey(opt.now || new Date());
+    if (preset === 'past') return candidateKey < todayKey;
+    return true;
+  }
+
   function readCoreState() {
     const params = getSearchParams();
     return {
@@ -340,6 +497,14 @@
     writeBooleanParam,
     readListParam,
     writeListParam,
+    readPresetParam,
+    writePresetParam,
+    getAllowedDatePresets,
+    normalizeDatePreset,
+    getDateKeyInZone,
+    getEventDateKey,
+    getCurrentDateKey,
+    matchesDatePreset,
     readCoreState,
     writeCoreState,
     bindDesktopAccordion,

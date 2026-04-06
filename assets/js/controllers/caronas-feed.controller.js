@@ -14,6 +14,35 @@
     return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
   }
 
+  function getAllowedDatePresets() {
+    var utils = getFeedFilterUtils();
+    return utils && typeof utils.getAllowedDatePresets === 'function'
+      ? utils.getAllowedDatePresets('caronas')
+      : ['today', 'last3d', 'last7d'];
+  }
+
+  function normalizeDatePreset(value) {
+    var utils = getFeedFilterUtils();
+    if (utils && typeof utils.normalizeDatePreset === 'function') {
+      return utils.normalizeDatePreset('caronas', value);
+    }
+    var normalized = norm(value);
+    var allowed = getAllowedDatePresets();
+    return allowed.indexOf(normalized) !== -1 ? normalized : '';
+  }
+
+  function readSelectedDatePreset() {
+    var selected = document.querySelector('[data-kc-caronas-date-preset]:checked');
+    return normalizeDatePreset(selected ? selected.value : '');
+  }
+
+  function renderDateInputs() {
+    var selected = normalizeDatePreset(state.datePreset);
+    document.querySelectorAll('[data-kc-caronas-date-preset]').forEach(function (input) {
+      input.checked = normalizeDatePreset(input.value) === selected;
+    });
+  }
+
   /* ── Localizações (do KC_CONSTANTS, com fallback) ───── */
   function getLocationDefs() {
     return (typeof KC_CONSTANTS !== 'undefined' && Array.isArray(KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS))
@@ -90,6 +119,7 @@
     features: new Set(),
     origemFilter: '',
     destinoFilter: '',
+    datePreset: '',
     priceMin: null,
     priceMax: null,
     feedPager: null,
@@ -194,6 +224,11 @@
         if (!allMatch) return false;
       }
       var priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
+      if (state.datePreset) {
+        var utils = getFeedFilterUtils();
+        var createdAt = card.getAttribute('data-kc-created-at') || '';
+        if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'caronas', preset: state.datePreset, createdAt: createdAt })) return false;
+      }
       if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
       if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
       return true;
@@ -209,6 +244,7 @@
     if (state.verified) params.rideVerified = true;
     if (state.origemFilter) params.rideOrigin = state.origemFilter;
     if (state.destinoFilter) params.rideDestination = state.destinoFilter;
+    if (state.datePreset) params.datePreset = state.datePreset;
     if (state.priceMin != null) params.priceMin = state.priceMin;
     if (state.priceMax != null) params.priceMax = state.priceMax;
     return params;
@@ -282,6 +318,14 @@
       if (destinoInput) destinoInput.value = utils.readTextParam(params, 'rideDestination');
     }
 
+    if (params && typeof params.has === 'function' && params.has('datePreset')) {
+      hasState = true;
+      state.datePreset = typeof utils.readPresetParam === 'function'
+        ? utils.readPresetParam(params, 'datePreset', getAllowedDatePresets())
+        : normalizeDatePreset(utils.readTextParam(params, 'datePreset'));
+      renderDateInputs();
+    }
+
     if (params && typeof params.has === 'function' && (params.has('priceMin') || params.has('priceMax'))) {
       hasState = true;
       var range = normalizePriceRange(
@@ -311,6 +355,8 @@
       utils.writeBooleanParam(params, 'rideVerified', state.verified);
       utils.writeTextParam(params, 'rideOrigin', state.origemFilter || '');
       utils.writeTextParam(params, 'rideDestination', state.destinoFilter || '');
+      if (typeof utils.writePresetParam === 'function') utils.writePresetParam(params, 'datePreset', state.datePreset, getAllowedDatePresets());
+      else utils.writeTextParam(params, 'datePreset', state.datePreset || '');
       utils.writeNumberParam(params, 'priceMin', state.priceMin);
       utils.writeNumberParam(params, 'priceMax', state.priceMax);
     });
@@ -343,6 +389,7 @@
     state.origemFilter = origemInput ? origemInput.value.trim() : '';
     var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
     state.destinoFilter = destinoInput ? destinoInput.value.trim() : '';
+    state.datePreset = readSelectedDatePreset();
     var priceRange = normalizePriceRange(
       document.querySelector('[data-kc-caronas-price-min]') && document.querySelector('[data-kc-caronas-price-min]').value,
       document.querySelector('[data-kc-caronas-price-max]') && document.querySelector('[data-kc-caronas-price-max]').value
@@ -368,6 +415,7 @@
       if (origemInput) origemInput.value = '';
       var destinoInput = document.querySelector('[data-kc-caronas-filter-destino]');
       if (destinoInput) destinoInput.value = '';
+      document.querySelectorAll('[data-kc-caronas-date-preset]').forEach(function (i) { i.checked = normalizeDatePreset(i.value) === ''; });
       var minInput = document.querySelector('[data-kc-caronas-price-min]');
       if (minInput) minInput.value = '';
       var maxInput = document.querySelector('[data-kc-caronas-price-max]');
@@ -379,6 +427,7 @@
       state.verified = false;
       state.origemFilter = '';
       state.destinoFilter = '';
+      state.datePreset = '';
       state.priceMin = null;
       state.priceMax = null;
       syncUrlState();
@@ -388,7 +437,7 @@
 
   /* ── Bind filtros ───────────────────────────────────── */
   function bindFilters() {
-    document.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified], [data-kc-carona-period], [data-kc-carona-feature], [data-kc-caronas-price-min], [data-kc-caronas-price-max]').forEach(function (input) {
+    document.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified], [data-kc-carona-period], [data-kc-carona-feature], [data-kc-caronas-date-preset], [data-kc-caronas-price-min], [data-kc-caronas-price-max]').forEach(function (input) {
       input.addEventListener('change', syncFiltersFromInputs);
     });
     // Origem/Destino inputs
@@ -448,6 +497,7 @@
   /* ── Mobile rail — seções do sidebar como modal ───────── */
   var CARONAS_SECTIONS = [
     { key: 'filters',  title: 'Filtros',               icon: 'fas fa-filter'    },
+    { key: 'dates',    title: 'Data',                  icon: 'fas fa-calendar-day' },
     { key: 'routes',   title: 'Rotas',                 icon: 'fas fa-route'     },
     { key: 'features', title: 'Características',       icon: 'fas fa-tags'      },
     { key: 'tips',     title: 'Dicas para Caroneiros', icon: 'fas fa-lightbulb' },
@@ -497,17 +547,27 @@
         document.querySelectorAll('[data-kc-carona-period]').forEach(function (i) { i.checked = false; });
         var v = document.querySelector('[data-kc-carona-verified]');
         if (v) v.checked = false;
+        var minInput = document.querySelector('[data-kc-caronas-price-min]');
+        var maxInput = document.querySelector('[data-kc-caronas-price-max]');
+        if (minInput) minInput.value = '';
+        if (maxInput) maxInput.value = '';
         state.tipos = new Set(['ofereco', 'procuro']);
         state.campi.clear();
         state.periods.clear();
         state.verified = false;
         state.origemFilter = '';
         state.destinoFilter = '';
+        state.priceMin = null;
+        state.priceMax = null;
         syncUrlState();
         applyFilters();
       });
       var applyBtn = actions.querySelector('[data-kc-caronas-modal-apply]');
       if (applyBtn) applyBtn.addEventListener('click', function () { syncFiltersFromInputs(); closeCaronasSection(); });
+    } else if (caronasRailState.activeKey === 'dates') {
+      actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><button class="kc-opportunity-apply" type="button" data-kc-caronas-modal-date-apply>Aplicar e fechar</button></div>';
+      var dateApply = actions.querySelector('[data-kc-caronas-modal-date-apply]');
+      if (dateApply) dateApply.addEventListener('click', function () { syncFiltersFromInputs(); closeCaronasSection(); });
     } else if (caronasRailState.activeKey === 'routes') {
       actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><button class="kc-opportunity-apply" type="button" data-kc-caronas-modal-action-close>Aplicar e fechar</button></div>';
       var routeClose = actions.querySelector('[data-kc-caronas-modal-action-close]');
@@ -565,7 +625,7 @@
     renderCaronasActions();
 
     // Re-bind filters inside modal (events don't persist after DOM transplant in some browsers)
-    node.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified], [data-kc-carona-period], [data-kc-carona-feature]').forEach(function (input) {
+    node.querySelectorAll('[data-kc-carona-type], [data-kc-carona-campus], [data-kc-carona-verified], [data-kc-carona-period], [data-kc-carona-feature], [data-kc-caronas-date-preset]').forEach(function (input) {
       input.addEventListener('change', syncFiltersFromInputs);
     });
     // Origem/Destino inputs inside modal
@@ -627,9 +687,22 @@
       getRequestParams: getFeedRequestParams,
       onReady: function () {
         bindFilters();
+        renderDateInputs();
         syncFiltersFromInputs();
       },
-      onAfterAppend: function () {},
+      onAfterAppend: function (payload) {
+        var container = payload && payload.container;
+        var posts = payload && Array.isArray(payload.posts) ? payload.posts : [];
+        if (!container || !posts.length) return;
+        var cards = Array.from(container.querySelectorAll('.kc-card')).slice(-posts.length);
+        cards.forEach(function (card, index) {
+          var post = posts[index] || {};
+          var createdAt = post.created_at || post.createdAt || post.timestamp || '';
+          if (createdAt && !card.getAttribute('data-kc-created-at')) {
+            card.setAttribute('data-kc-created-at', String(createdAt));
+          }
+        });
+      },
     });
     Promise.resolve(pending).then(function (pager) {
       state.feedPager = pager || null;

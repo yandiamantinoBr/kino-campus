@@ -38,34 +38,141 @@
   var MAX_Y = _max.getFullYear(),  MAX_M = _max.getMonth();
 
   /* ── Estado do feed ───────────────────────────────────── */
-  var activeCat     = null;   // null = todas
   var currentSortBy = 'votos';
+  var feedPager = null;
+  var feedState = { datePreset: '' };
+
+  function isMobile() {
+    return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
+  function getAllowedDatePresets() {
+    var utils = getFeedFilterUtils();
+    return utils && typeof utils.getAllowedDatePresets === 'function'
+      ? utils.getAllowedDatePresets('eventos')
+      : ['today', 'next7d', 'thisMonth', 'past'];
+  }
+
+  function normalizeDatePreset(value) {
+    var utils = getFeedFilterUtils();
+    if (utils && typeof utils.normalizeDatePreset === 'function') {
+      return utils.normalizeDatePreset('eventos', value);
+    }
+    var normalized = String(value || '').trim().toLowerCase();
+    var allowed = getAllowedDatePresets();
+    return allowed.indexOf(normalized) !== -1 ? normalized : '';
+  }
+
+  function readSelectedDatePreset() {
+    var selected = document.querySelector('[data-kc-eventos-date-preset]:checked');
+    return normalizeDatePreset(selected ? selected.value : '');
+  }
+
+  function syncDateInputs(value) {
+    var selected = normalizeDatePreset(value);
+    $all('[data-kc-eventos-date-preset]').forEach(function (input) {
+      input.checked = normalizeDatePreset(input.value) === selected;
+    });
+  }
+
+  function getFeedRequestParams() {
+    var params = {};
+    if (feedState.datePreset) params.datePreset = feedState.datePreset;
+    return params;
+  }
+
+  function buildFeedExtraPredicate() {
+    var utils = getFeedFilterUtils();
+    if (!feedState.datePreset || !utils || typeof utils.matchesDatePreset !== 'function') return null;
+    return function (card) {
+      return utils.matchesDatePreset({
+        moduleKey: 'eventos',
+        preset: feedState.datePreset,
+        eventKey: card.getAttribute('data-kc-event-date') || '',
+        createdAt: card.getAttribute('data-kc-created-at') || ''
+      });
+    };
+  }
+
+  function syncUrlState() {
+    var utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      if (typeof utils.writePresetParam === 'function') utils.writePresetParam(params, 'datePreset', feedState.datePreset, getAllowedDatePresets());
+      else utils.writeTextParam(params, 'datePreset', feedState.datePreset || '');
+    });
+  }
+
+  function restoreUrlState() {
+    var utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    var params = utils.getSearchParams();
+    if (!params || typeof params.has !== 'function' || !params.has('datePreset')) return false;
+    feedState.datePreset = typeof utils.readPresetParam === 'function'
+      ? utils.readPresetParam(params, 'datePreset', getAllowedDatePresets())
+      : normalizeDatePreset(utils.readTextParam(params, 'datePreset'));
+    syncDateInputs(feedState.datePreset);
+    return true;
+  }
+
+  function applyFeedFilters() {
+    syncUrlState();
+    if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
+      window.kcFilters.setExtraPredicate(buildFeedExtraPredicate());
+    }
+    if (feedPager && typeof feedPager.refresh === 'function') {
+      feedPager.refresh({ requestParams: getFeedRequestParams() });
+    }
+    if (window.kcFilters && typeof window.kcFilters.apply === 'function') {
+      window.kcFilters.apply();
+    }
+  }
 
   function injectFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({ module: 'eventos', pageModule: 'eventos', sortBy: sortBy || 'votos' });
-    // Aplica filtro de categoria via KCFilters após injeção
-    if (window.KCFilters && typeof window.KCFilters.setExtraPredicate === 'function') {
-      if (activeCat) {
-        window.KCFilters.setExtraPredicate(function (card) {
-          var cat = (card.dataset.category || card.dataset.subcategory || '').toLowerCase();
-          return cat === activeCat;
+    var pending = window.KCControllers.injectFeed({
+      module: 'eventos',
+      pageModule: 'eventos',
+      sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
+      onAfterAppend: function (payload) {
+        var container = payload && payload.container;
+        var posts = payload && Array.isArray(payload.posts) ? payload.posts : [];
+        if (!container || !posts.length) return;
+        var cards = Array.from(container.querySelectorAll('.kc-card')).slice(-posts.length);
+        cards.forEach(function (card, index) {
+          var post = posts[index] || {};
+          var eventDate = getEventDate(post);
+          var createdAt = post.created_at || post.createdAt || post.timestamp || '';
+          if (eventDate && !card.getAttribute('data-kc-event-date')) card.setAttribute('data-kc-event-date', eventDate);
+          if (createdAt && !card.getAttribute('data-kc-created-at')) card.setAttribute('data-kc-created-at', String(createdAt));
         });
-      } else {
-        window.KCFilters.setExtraPredicate(null);
       }
+    });
+    Promise.resolve(pending).then(function (pager) {
+      feedPager = pager || null;
+    }).catch(function () {
+      feedPager = null;
+    });
+    if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
+      window.kcFilters.setExtraPredicate(buildFeedExtraPredicate());
     }
   }
 
   /* ── Mobile rail — seções do sidebar como modal ───────── */
   var EVENTOS_SECTIONS = [
+    { key: 'dates',      title: 'Data',                icon: 'fas fa-calendar-day' },
     { key: 'calendario', title: 'Calendário',          icon: 'fas fa-calendar-alt' },
     { key: 'categorias', title: 'Categorias',          icon: 'fas fa-th-large'     },
     { key: 'dicas',      title: 'Dicas',               icon: 'fas fa-lightbulb'    },
     { key: 'ranking',    title: 'Top Contribuidores',  icon: 'fas fa-trophy'       },
   ];
   var EVENTOS_MODAL_ID = 'kcEventosSectionOverlay';
-  var railState = { activeKey: '', activeNode: null, activePlaceholder: null, lastTrigger: null };
+  var railState = { activeKey: '', activeNode: null, activePlaceholder: null, lastTrigger: null, dateDraft: '' };
 
   function ensureEventosModal() {
     var overlay = document.getElementById(EVENTOS_MODAL_ID);
@@ -117,9 +224,11 @@
     railState.activeNode = node;
     railState.activePlaceholder = placeholder;
     railState.lastTrigger = trigger || null;
+    railState.dateDraft = feedState.datePreset;
 
     if (titleSpan) titleSpan.textContent = secDef.title;
     if (titleIcon) titleIcon.className = secDef.icon;
+    if (key === 'dates') syncDateInputs(railState.dateDraft);
 
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
@@ -135,6 +244,20 @@
     var actions = overlay ? overlay.querySelector('[data-kc-eventos-section-actions="true"]') : null;
     if (!actions) return;
     if (!railState.activeKey) { actions.innerHTML = ''; return; }
+
+    if (railState.activeKey === 'dates') {
+      var labels = { '': 'Todas as datas', today: 'Hoje', next7d: 'Próximos 7 dias', thisMonth: 'Este mês', past: 'Passados' };
+      var selectedLabel = labels[railState.dateDraft || ''] || 'Todas as datas';
+      actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><p class="kc-housing-section-modal__caption">Data selecionada: <strong>' + esc(selectedLabel) + '</strong></p><button class="kc-opportunity-apply" type="button" data-kc-eventos-modal-apply-date>Ver eventos</button></div>';
+      var applyBtn = actions.querySelector('[data-kc-eventos-modal-apply-date]');
+      if (applyBtn) applyBtn.addEventListener('click', function () {
+        feedState.datePreset = normalizeDatePreset(railState.dateDraft);
+        syncDateInputs(feedState.datePreset);
+        closeEventosSection();
+        applyFeedFilters();
+      });
+      return;
+    }
 
     var label = railState.activeKey === 'dicas' ? 'Entendido!' : 'Fechar';
     actions.innerHTML = '<div class="kc-housing-section-modal__action-group">' +
@@ -159,6 +282,7 @@
     railState.activeNode = null;
     railState.activePlaceholder = null;
     railState.lastTrigger = null;
+    railState.dateDraft = '';
 
     if (slot) slot.innerHTML = '';
     if (actions) actions.innerHTML = '';
@@ -177,6 +301,19 @@
       btn.addEventListener('click', function () {
         openEventosSection(btn.dataset.kcEventosOpenSection, btn);
       });
+    });
+    document.addEventListener('change', function (e) {
+      var target = e.target;
+      if (!target || !target.matches || !target.matches('[data-kc-eventos-date-preset]')) return;
+      var nextPreset = readSelectedDatePreset();
+      if (railState.activeKey === 'dates' && isMobile()) {
+        railState.dateDraft = nextPreset;
+        renderEventosActions();
+        return;
+      }
+      feedState.datePreset = nextPreset;
+      syncDateInputs(feedState.datePreset);
+      applyFeedFilters();
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && railState.activeKey) closeEventosSection();
@@ -598,6 +735,8 @@
 
   /* ── DOMContentLoaded ─────────────────────────────────── */
   document.addEventListener('DOMContentLoaded', function () {
+    restoreUrlState();
+    syncDateInputs(feedState.datePreset);
     bindRail();
     initCalendar();
 

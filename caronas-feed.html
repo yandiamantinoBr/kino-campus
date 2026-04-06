@@ -125,6 +125,9 @@
   <button class="kc-caronas-mobile-rail__button" type="button" data-kc-caronas-open-section="filters">
     <i class="fas fa-filter"></i><span>Filtros</span>
   </button>
+  <button class="kc-caronas-mobile-rail__button" type="button" data-kc-caronas-open-section="dates">
+    <i class="fas fa-calendar-day"></i><span>Data</span>
+  </button>
   <button class="kc-caronas-mobile-rail__button" type="button" data-kc-caronas-open-section="routes">
     <i class="fas fa-route"></i><span>Rotas</span>
   </button>
@@ -231,6 +234,19 @@
       </div>
     </div>
     <button class="kc-opportunity-clear" data-kc-caronas-clear-filters="true" type="button">Limpar filtros</button>
+  </div>
+
+  <div class="kc-sidebar-section" data-kc-caronas-section="dates">
+    <h3><i class="fas fa-calendar-day"></i> Data</h3>
+    <p class="kc-sidebar-help">Filtre caronas pela recência da publicação.</p>
+    <div class="kc-marketplace-filter-group">
+      <div class="kc-marketplace-filter-group__options">
+        <label class="kc-sidebar-check"><input checked type="radio" name="kcCaronasDatePreset" data-kc-caronas-date-preset="true" value="" /><span>Todas as datas</span></label>
+        <label class="kc-sidebar-check"><input type="radio" name="kcCaronasDatePreset" data-kc-caronas-date-preset="true" value="today" /><span>Hoje</span></label>
+        <label class="kc-sidebar-check"><input type="radio" name="kcCaronasDatePreset" data-kc-caronas-date-preset="true" value="last3d" /><span>Últimos 3 dias</span></label>
+        <label class="kc-sidebar-check"><input type="radio" name="kcCaronasDatePreset" data-kc-caronas-date-preset="true" value="last7d" /><span>Últimos 7 dias</span></label>
+      </div>
+    </div>
   </div>
 
   <!-- Rotas (Origem / Destino) -->

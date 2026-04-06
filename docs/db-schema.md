@@ -2,7 +2,7 @@
 
 **Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 63 (até v9.1.0.2)
 
-> Atualizacao local de 06/04/2026: o repositorio ja contem 67 migrations ate `v9.2.3.0_function_search_path_hardening.sql`.
+> Atualizacao local de 06/04/2026: o repositorio ja contem 70 migrations ate `v9.2.1.3_feed_date_presets.sql`.
 
 ## Tabelas Principais
 
@@ -314,9 +314,11 @@ posts_metadata_gin_idx         ON posts USING GIN(metadata)
 
 **Faixas numéricas v9.2.1.2:** `kc_get_feed_cursor()` passou a aceitar `priceMin` e `priceMax` dentro de `p_request_params`, aplicando o intervalo diretamente sobre `posts.price` e normalizando limites invertidos no banco.
 
+**Presets de data v9.2.1.3:** `kc_get_feed_cursor()` passou a aceitar `datePreset` dentro de `p_request_params`, aplicando server-side a mesma semântica do client em `America/Sao_Paulo`. `eventos` usa `metadata.data_evento` / `metadata.data` com fallback para `created_at`; os demais módulos usam recência por `created_at`.
+
 **Busca v9.2.0:** a busca server-side usa `kc_search_posts_fts()` com `unaccent + portuguese`, expansão de sinônimos no client e documento ponderado por `title`, `tags`, `description`, `category` e `subcategory`.
 
-**Hardening v9.2.3:** os helpers de feed e busca sinalizados pelo Security Advisor agora fixam `SET search_path = ''` e usam referencias qualificadas, removendo os warnings `function_search_path_mutable` sem alterar contratos publicos. Permanecem pendentes e separados desta iteracao: `extension_in_public` para `unaccent` e `auth_leaked_password_protection`.
+**Hardening v9.2.3:** os helpers de feed e busca sinalizados pelo Security Advisor agora fixam `SET search_path = ''` e usam referencias qualificadas, removendo os warnings `function_search_path_mutable` sem alterar contratos publicos. A extensao de `v9.2.1.3` manteve esse mesmo padrao para `kc_get_feed_cursor()` e os novos helpers de data. Permanecem pendentes e separados desta iteracao: `extension_in_public` para `unaccent` e `auth_leaked_password_protection`.
 
 ## Storage Buckets
 

@@ -13,7 +13,7 @@
 
 ## RPCs Públicas (chamadas via API)
 
-### `kc_get_feed_cursor(p_module text, p_modules text[], p_category text, p_subcategory text, p_tag text, p_q text, p_sort_by text, p_limit int, p_cursor text, p_request_params jsonb default null) → JSONB` *(v9.2.2, estendido em v9.2.1.1 e v9.2.1.2)*
+### `kc_get_feed_cursor(p_module text, p_modules text[], p_category text, p_subcategory text, p_tag text, p_q text, p_sort_by text, p_limit int, p_cursor text, p_request_params jsonb default null) → JSONB` *(v9.2.2, estendido em v9.2.1.1, v9.2.1.2 e v9.2.1.3)*
 
 Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de cada rail.
 
@@ -32,6 +32,16 @@ Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de 
 - `p_request_params` aplica no banco os filtros avançados já existentes dos módulos de marketplace, caronas, moradia, oportunidades e achados-perdidos.
 - A extensão de `v9.2.1.1` preserva a semântica de ordenação e cursor de `v9.2.2`; apenas amplia o envelope de filtros aceito pelo RPC.
 - `v9.2.1.2` adiciona `priceMin` / `priceMax` no envelope cursor-based, filtrando por `posts.price` no banco e normalizando faixas invertidas antes da consulta.
+- `v9.2.1.3` adiciona `datePreset` no mesmo envelope, com interpretação fixa em `America/Sao_Paulo` e semântica por módulo:
+  - feeds de recência (`compra-venda`, `livros`, `moradia`, `oportunidades`, `achados-perdidos`) usam `created_at`
+  - `caronas` usa `created_at` com janelas curtas (`today`, `last3d`, `last7d`)
+  - `eventos` usa `metadata.data_evento` / `metadata.data` com fallback para `created_at`
+- A versão atual da RPC também fixa `SET search_path = ''`, mantendo referências qualificadas aos objetos do app.
+
+**Helpers relacionados (v9.2.1.3):**
+- `kc_feed_local_date(p_value timestamptz) → date`
+- `kc_feed_event_local_date(p_metadata jsonb, p_created_at timestamptz) → date`
+- `kc_feed_matches_date_preset(p_module text, p_created_at timestamptz, p_metadata jsonb, p_preset text, p_now timestamptz default now()) → boolean`
 
 ---
 
