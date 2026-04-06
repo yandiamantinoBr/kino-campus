@@ -36,6 +36,7 @@
   const state = {
     features: new Set(),
     region: '',
+    feedPager: null,
     posts: new Map(),
     sections: [],
     queued: false,
@@ -259,6 +260,18 @@
   function readDraftInputs() {
     if (!state.draft) return;
     state.draft.features = new Set(readSelectedFeatureInputs());
+  }
+
+  function getFeedRequestParams() {
+    const params = {};
+    if (state.features.size) params.housingFeatures = Array.from(state.features);
+    if (state.region) params.housingRegion = state.region;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
   }
 
   function restoreUrlState() {
@@ -651,6 +664,7 @@
 
   function apply() {
     syncUrlState();
+    refreshFeed();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
@@ -835,15 +849,22 @@
 
   function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    const pending = window.KCControllers.injectFeed({
       module: 'moradia',
       pageModule: 'moradia',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onAfterAppend: function (payload) {
         decorate(payload);
         queue();
       }
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   document.addEventListener('DOMContentLoaded', function () {

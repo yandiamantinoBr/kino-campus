@@ -21,6 +21,7 @@
     statuses: new Set(),
     types: new Set(),
     location: '',
+    feedPager: null,
     posts: new Map(),
     sections: [],
     queued: false,
@@ -257,6 +258,19 @@
     if (!state.draft) return;
     state.draft.statuses = new Set(readSelected('status').map((value) => normStatus(value)).filter(Boolean));
     state.draft.types = new Set(readSelected('type').map((value) => normType(value)).filter(Boolean));
+  }
+
+  function getFeedRequestParams() {
+    const params = {};
+    if (state.statuses.size) params.lfStatus = Array.from(state.statuses);
+    if (state.types.size) params.lfType = Array.from(state.types);
+    if (state.location) params.lfLocation = state.location;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
   }
 
   function restoreUrlState() {
@@ -603,6 +617,7 @@
 
   function apply() {
     syncUrlState();
+    refreshFeed();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
@@ -681,6 +696,7 @@
         }
         renderFilterInputs();
         syncUrlState();
+        refreshFeed();
         queue();
       });
     });
@@ -813,15 +829,22 @@
 
   function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    const pending = window.KCControllers.injectFeed({
       module: 'achados-perdidos',
       pageModule: 'achados-perdidos',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onAfterAppend: function (payload) {
         decorate(payload);
         queue();
       }
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   document.addEventListener('DOMContentLoaded', function () {

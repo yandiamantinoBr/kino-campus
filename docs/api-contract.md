@@ -104,6 +104,26 @@ Busca lotes incrementais do feed via cursor opaco. É o contrato usado pelos pag
   sortBy: 'recentes' | 'votos' | 'comentados',
   limit: number,
   cursor: string | null,
+  requestParams?: {
+    marketCats?: string[],
+    marketConds?: string[],
+    marketVerified?: boolean,
+    rideType?: string[],
+    rideCampus?: string[],
+    ridePeriod?: string[],
+    rideFeatures?: string[],
+    rideVerified?: boolean,
+    rideOrigin?: string,
+    rideDestination?: string,
+    housingFeatures?: string[],
+    housingRegion?: string,
+    oppType?: string[],
+    oppMode?: string[],
+    oppArea?: string,
+    lfStatus?: string[],
+    lfType?: string[],
+    lfLocation?: string,
+  },
 }
 ```
 
@@ -119,6 +139,8 @@ Promise<{
 **Notas:**
 - `cursor` é opaco e pode ter representações diferentes entre `local` e `supabase`.
 - Feeds híbridos podem passar `module` como array, por exemplo `['compra-venda', 'livros']`.
+- `requestParams` carrega o envelope dos filtros avançados já existentes nos módulos (`compra-venda`, `caronas`, `moradia`, `oportunidades` e `achados-perdidos`) para o caminho incremental cursor-based.
+- `KCAPI.getPosts()` permanece estável para consumo legado; a aplicação cursor-based dos filtros avançados foi adicionada em `v9.2.1.1` sem reinterpretar o contrato antigo.
 
 ---
 

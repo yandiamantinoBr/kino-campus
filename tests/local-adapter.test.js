@@ -168,6 +168,30 @@ describe('Local Adapter - getFeedCursor', () => {
     expect(result.posts.map((post) => post.id)).toEqual(['1', '2']);
     expect(result.hasMore).toBe(false);
   });
+
+  test('encaminha filtros avancados para o filtro local compartilhado', async () => {
+    window.KCAPI.fetchJSON.mockResolvedValue({
+      anuncios: [
+        { id: '1', title: 'Vaga remota', description: 'Tecnologia', module: 'oportunidades' },
+      ]
+    });
+
+    await driver.getFeedCursor({
+      module: 'oportunidades',
+      oppArea: 'tecnologia',
+      oppMode: ['remoto'],
+      limit: 12,
+    });
+
+    expect(window.KCAPI.filterPosts).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        module: 'oportunidades',
+        oppArea: 'tecnologia',
+        oppMode: ['remoto'],
+      })
+    );
+  });
 });
 
 describe('Local Adapter - searchPosts', () => {

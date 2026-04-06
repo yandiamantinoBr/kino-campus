@@ -18,6 +18,7 @@
     selectedTypeFilters: new Set(),
     selectedModeFilters: new Set(),
     selectedArea: '',
+    feedPager: null,
     posts: new Map(),
     sections: [],
     refreshQueued: false,
@@ -864,8 +865,22 @@
     });
   }
 
+  function getFeedRequestParams() {
+    const params = {};
+    if (state.selectedTypeFilters.size) params.oppType = Array.from(state.selectedTypeFilters);
+    if (state.selectedModeFilters.size) params.oppMode = Array.from(state.selectedModeFilters);
+    if (state.selectedArea) params.oppArea = state.selectedArea;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
+  }
+
   function applyCurrentFilters() {
     syncUrlState();
+    refreshFeed();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') {
       window.kcFilters.apply();
       return;
@@ -1022,15 +1037,22 @@
 
   function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    const pending = window.KCControllers.injectFeed({
       module: 'oportunidades',
       pageModule: 'oportunidades',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onAfterAppend: function (payload) {
         decorateFreshCards(payload);
         queueRefresh();
       }
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   document.addEventListener('DOMContentLoaded', function () {

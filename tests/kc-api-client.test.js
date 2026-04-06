@@ -350,4 +350,229 @@ describe('KCAPI - API Client', () => {
       expect(result).toEqual([{ id: 'legacy-search' }]);
     });
   });
+
+  describe('filterPosts - requestParams avancados', () => {
+    test('filtra marketplace por categoria, condicao e selo verificado', () => {
+      const posts = [
+        {
+          id: 'market-ok',
+          module: 'compra-venda',
+          category: 'eletronicos',
+          metadata: { condicao: 'Semi-novo' },
+          authorVerified: true,
+        },
+        {
+          id: 'market-used',
+          module: 'compra-venda',
+          category: 'eletronicos',
+          metadata: { condicao: 'Usado' },
+          authorVerified: true,
+        },
+        {
+          id: 'market-unverified',
+          module: 'compra-venda',
+          category: 'eletronicos',
+          metadata: { condicao: 'Semi-novo' },
+          authorVerified: false,
+        },
+      ];
+
+      const result = api.filterPosts(posts, {
+        module: 'compra-venda',
+        marketCats: ['eletronicos'],
+        marketConds: ['seminovo'],
+        marketVerified: true,
+      });
+
+      expect(result.map((post) => post.id)).toEqual(['market-ok']);
+    });
+
+    test('filtra caronas por periodo, campus, origem, destino, feature e verificado', () => {
+      const posts = [
+        {
+          id: 'ride-ok',
+          module: 'caronas',
+          category: 'ofereco',
+          title: 'Ofereço carona saindo do Campus Samambaia',
+          metadata: {
+            origem: 'Campus Samambaia',
+            destino: 'Centro',
+            horario: '07:30',
+            caronasFeatureKeys: ['ar-condicionado', 'som'],
+          },
+          authorVerified: true,
+        },
+        {
+          id: 'ride-late',
+          module: 'caronas',
+          category: 'ofereco',
+          title: 'Ofereço carona saindo do Campus Samambaia',
+          metadata: {
+            origem: 'Campus Samambaia',
+            destino: 'Centro',
+            horario: '19:30',
+            caronasFeatureKeys: ['ar-condicionado'],
+          },
+          authorVerified: true,
+        },
+      ];
+
+      const result = api.filterPosts(posts, {
+        module: 'caronas',
+        rideType: ['ofereco'],
+        rideCampus: ['campus-samambaia'],
+        ridePeriod: ['matutino'],
+        rideFeatures: ['ar-condicionado'],
+        rideVerified: true,
+        rideOrigin: 'samambaia',
+        rideDestination: 'centro',
+      });
+
+      expect(result.map((post) => post.id)).toEqual(['ride-ok']);
+    });
+
+    test('filtra moradia por regiao ou zona e exige todas as features selecionadas', () => {
+      const originalKCUtils = window.KCUtils;
+      window.KCUtils = {
+        ...originalKCUtils,
+        resolveHousingRegion: jest.fn((post) => ({
+          key: post.regionKey || (post.metadata && post.metadata.regionKey) || '',
+          zoneKey: post.regionZoneKey || (post.metadata && post.metadata.regionZoneKey) || '',
+        })),
+        resolveHousingFeatures: jest.fn((post) => {
+          const keys = []
+            .concat(Array.isArray(post.housingFeatureKeys) ? post.housingFeatureKeys : [])
+            .concat(Array.isArray(post.metadata && post.metadata.housingFeatureKeys) ? post.metadata.housingFeatureKeys : []);
+          return Array.from(new Set(keys)).map((key) => ({ key, label: key }));
+        }),
+      };
+      try {
+        const posts = [
+          {
+            id: 'housing-ok',
+            module: 'moradia',
+            regionKey: 'praca-universitaria',
+            regionLabel: 'Praça Universitária',
+            regionZoneKey: 'leste',
+            housingFeatureKeys: ['aceita-pets', 'wifi'],
+            housingFeatureLabels: ['Aceita pets', 'Wi-Fi'],
+            metadata: {
+              regionKey: 'praca-universitaria',
+              regionLabel: 'Praça Universitária',
+              regionZoneKey: 'leste',
+              housingFeatureKeys: ['aceita-pets', 'wifi'],
+              housingFeatureLabels: ['Aceita pets', 'Wi-Fi'],
+            },
+          },
+          {
+            id: 'housing-missing-feature',
+            module: 'moradia',
+            regionKey: 'praca-universitaria',
+            regionLabel: 'Praça Universitária',
+            regionZoneKey: 'leste',
+            housingFeatureKeys: ['wifi'],
+            housingFeatureLabels: ['Wi-Fi'],
+            metadata: {
+              regionKey: 'praca-universitaria',
+              regionLabel: 'Praça Universitária',
+              regionZoneKey: 'leste',
+              housingFeatureKeys: ['wifi'],
+              housingFeatureLabels: ['Wi-Fi'],
+            },
+          },
+        ];
+
+        const result = api.filterPosts(posts, {
+          module: 'moradia',
+          housingFeatures: ['aceita-pets'],
+          housingRegion: 'praca-universitaria',
+        });
+
+        expect(result.map((post) => post.id)).toEqual(['housing-ok']);
+      } finally {
+        window.KCUtils = originalKCUtils;
+      }
+    });
+
+    test('filtra oportunidades por tipo, modo e area', () => {
+      const posts = [
+        {
+          id: 'opp-ok',
+          module: 'oportunidades',
+          category: 'emprego',
+          title: 'Vaga remota CLT para desenvolvimento web',
+          metadata: {
+            areaKey: 'tecnologia',
+            workMode: 'remoto',
+            employmentType: 'clt',
+          },
+        },
+        {
+          id: 'opp-hybrid',
+          module: 'oportunidades',
+          category: 'emprego',
+          title: 'Vaga híbrida CLT para design',
+          metadata: {
+            areaKey: 'design',
+            workMode: 'hibrido',
+            employmentType: 'clt',
+          },
+        },
+      ];
+
+      const result = api.filterPosts(posts, {
+        module: 'oportunidades',
+        oppType: ['emprego-clt'],
+        oppMode: ['remoto'],
+        oppArea: 'tecnologia',
+      });
+
+      expect(result.map((post) => post.id)).toEqual(['opp-ok']);
+    });
+
+    test('filtra achados e perdidos por status, tipo e localizacao', () => {
+      const originalKCUtils = window.KCUtils;
+      window.KCUtils = {
+        ...originalKCUtils,
+        resolveLostFoundLocation: jest.fn((post) => ({
+          key: post.lostFoundLocationKey || (post.metadata && post.metadata.lostFoundLocationKey) || '',
+        })),
+      };
+      try {
+        const posts = [
+          {
+            id: 'lf-ok',
+            module: 'achados-perdidos',
+            categoria: 'perdido',
+            subcategoria: 'documento',
+            lostFoundLocationKey: 'biblioteca',
+            metadata: {
+              lostFoundLocationKey: 'biblioteca',
+            },
+          },
+          {
+            id: 'lf-other',
+            module: 'achados-perdidos',
+            categoria: 'encontrado',
+            subcategoria: 'eletronico',
+            lostFoundLocationKey: 'ru',
+            metadata: {
+              lostFoundLocationKey: 'ru',
+            },
+          },
+        ];
+
+        const result = api.filterPosts(posts, {
+          module: 'achados-perdidos',
+          lfStatus: ['perdido'],
+          lfType: ['documento'],
+          lfLocation: 'biblioteca',
+        });
+
+        expect(result.map((post) => post.id)).toEqual(['lf-ok']);
+      } finally {
+        window.KCUtils = originalKCUtils;
+      }
+    });
+  });
 });

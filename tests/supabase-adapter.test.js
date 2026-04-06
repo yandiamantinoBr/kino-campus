@@ -90,6 +90,28 @@ describe('Supabase Adapter - getFeedCursor', () => {
     expect(result.posts[0].comentarios).toBe(3);
   });
 
+  test('repassa filtros avancados para o client Supabase', async () => {
+    window.KCSupabase.getFeedCursor.mockResolvedValue({
+      posts: [],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    await driver.getFeedCursor({
+      module: 'oportunidades',
+      oppArea: 'tecnologia',
+      oppMode: ['remoto'],
+      limit: 12,
+    });
+
+    expect(window.KCSupabase.getFeedCursor).toHaveBeenCalledWith(expect.objectContaining({
+      module: 'oportunidades',
+      oppArea: 'tecnologia',
+      oppMode: ['remoto'],
+      limit: 12,
+    }));
+  });
+
   test('normaliza rows retornadas por searchPosts', async () => {
     window.KCSupabase.searchPosts.mockResolvedValue([
       {

@@ -404,6 +404,80 @@
     };
   }
 
+  const FEED_CURSOR_RESERVED_KEYS = new Set([
+    'module',
+    'modules',
+    'modulo',
+    'modulos',
+    'category',
+    'categoria',
+    'subcategory',
+    'subcategoria',
+    'tag',
+    'tagKey',
+    'tag_key',
+    'q',
+    'query',
+    'search',
+    'page',
+    'limit',
+    'sortBy',
+    'sort_by',
+    'cursor',
+    'requestParams',
+    'request_params',
+  ]);
+
+  function normalizeCursorRequestParamValue(value) {
+    if (value == null) return undefined;
+    if (Array.isArray(value)) {
+      const list = Array.from(new Set(value
+        .map((entry) => {
+          if (entry == null) return '';
+          if (typeof entry === 'string') return entry.trim();
+          if (typeof entry === 'number' && Number.isFinite(entry)) return String(entry);
+          if (typeof entry === 'boolean') return entry ? 'true' : 'false';
+          return '';
+        })
+        .filter(Boolean)));
+      return list.length ? list : undefined;
+    }
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+    if (typeof value === 'string') {
+      const text = value.trim();
+      return text ? text : undefined;
+    }
+    return undefined;
+  }
+
+  function normalizeCursorRequestParams(params) {
+    const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
+    const nested = (p.requestParams && typeof p.requestParams === 'object' && !Array.isArray(p.requestParams))
+      ? p.requestParams
+      : {};
+    const out = {};
+
+    const assignValue = (key, value) => {
+      const cleanKey = String(key || '').trim();
+      if (!cleanKey) return;
+      const normalized = normalizeCursorRequestParamValue(value);
+      if (normalized === undefined) return;
+      out[cleanKey] = normalized;
+    };
+
+    Object.keys(nested).forEach((key) => {
+      assignValue(key, nested[key]);
+    });
+
+    Object.keys(p).forEach((key) => {
+      if (FEED_CURSOR_RESERVED_KEYS.has(key)) return;
+      assignValue(key, p[key]);
+    });
+
+    return out;
+  }
+
   function normalizeGetFeedCursorParams(params) {
     const base = normalizeGetPostsParams(params);
     const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
@@ -422,6 +496,7 @@
       ...base,
       modules,
       cursor: cursor || null,
+      requestParams: normalizeCursorRequestParams(p),
     };
   }
 
@@ -874,6 +949,7 @@
       p_sort_by: f.sortBy || 'recentes',
       p_limit: f.limit,
       p_cursor: f.cursor || null,
+      p_request_params: f.requestParams && Object.keys(f.requestParams).length ? f.requestParams : null,
     });
 
     if (rpc && rpc.error) {

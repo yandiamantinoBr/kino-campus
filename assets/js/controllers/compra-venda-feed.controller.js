@@ -18,6 +18,7 @@
     cats: new Set(CAT_KEYS),
     conds: new Set(),
     verified: false,
+    feedPager: null,
     posts: new Map(),
     sections: [],
     queued: false,
@@ -115,6 +116,19 @@
     document.querySelectorAll('[data-kc-market-filter-kind="condition"]').forEach((input) => { input.checked = conds.has(normCond(input.value)); });
     const checked = verifiedInput();
     if (checked) checked.checked = !!verified;
+  }
+
+  function getFeedRequestParams() {
+    const params = {};
+    if (state.cats.size && state.cats.size !== CAT_KEYS.length) params.marketCats = Array.from(state.cats);
+    if (state.conds.size) params.marketConds = Array.from(state.conds);
+    if (state.verified) params.marketVerified = true;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
   }
 
   function restoreUrlState() {
@@ -445,6 +459,7 @@
 
   function apply() {
     syncUrlState();
+    refreshFeed();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
@@ -500,6 +515,7 @@
       state.cats = catsFromQuick(tab.getAttribute('data-category') || tab.getAttribute('href') || '');
       syncInputs(state.cats, state.conds, state.verified);
       syncUrlState();
+      refreshFeed();
       queue();
     }));
     document.addEventListener('click', function (event) {
@@ -610,16 +626,23 @@
 
   function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    const pending = window.KCControllers.injectFeed({
       module: ['compra-venda', 'livros'],
       pageModule: 'compra-venda',
       containerSelector: '.kc-feed-list',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onAfterAppend: function (payload) {
         decorate(payload);
         queue();
       }
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   document.addEventListener('DOMContentLoaded', function () {

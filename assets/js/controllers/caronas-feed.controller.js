@@ -90,6 +90,7 @@
     features: new Set(),
     origemFilter: '',
     destinoFilter: '',
+    feedPager: null,
   };
 
   /* ── Helpers ────────────────────────────────────────── */
@@ -177,10 +178,28 @@
     };
   }
 
+  function getFeedRequestParams() {
+    var params = {};
+    if (state.tipos.size > 0 && state.tipos.size < 2) params.rideType = Array.from(state.tipos);
+    if (state.campi.size > 0) params.rideCampus = Array.from(state.campi);
+    if (state.periods.size > 0) params.ridePeriod = Array.from(state.periods);
+    if (state.features.size > 0) params.rideFeatures = Array.from(state.features);
+    if (state.verified) params.rideVerified = true;
+    if (state.origemFilter) params.rideOrigin = state.origemFilter;
+    if (state.destinoFilter) params.rideDestination = state.destinoFilter;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
+  }
+
   function applyFilters() {
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
       window.kcFilters.setExtraPredicate(buildExtraPredicate());
     }
+    refreshFeed();
   }
 
   function restoreUrlState() {
@@ -549,16 +568,23 @@
   /* ── Feed injection ─────────────────────────────────── */
   function injectFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    var pending = window.KCControllers.injectFeed({
       module: 'caronas',
       pageModule: 'caronas',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onReady: function () {
         bindFilters();
         syncFiltersFromInputs();
       },
       onAfterAppend: function () {},
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   /* ── Init ───────────────────────────────────────────── */
