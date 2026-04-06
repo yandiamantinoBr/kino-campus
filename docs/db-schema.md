@@ -2,7 +2,7 @@
 
 **Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 63 (até v9.1.0.2)
 
-> Atualizacao local de 06/04/2026: o repositorio ja contem 70 migrations ate `v9.2.1.3_feed_date_presets.sql`.
+> Atualizacao local de 06/04/2026: o repositorio ja contem 71 migrations ate `v9.1.2.0_user_ratings_foundation.sql`.
 
 ## Tabelas Principais
 
@@ -27,6 +27,8 @@
 | `gender_identity` | TEXT | Identidade de gênero |
 | `gender_identity_custom` | TEXT | Personalizado se `gender_identity = 'outro'` |
 | `race_color` | TEXT | Raça/cor autodeclarada |
+| `rating_avg` | NUMERIC(3,2) | Média agregada das avaliações recebidas |
+| `rating_count` | INTEGER | Quantidade agregada de avaliações recebidas |
 | `onboarding_completed_at` | TIMESTAMPTZ | Quando completou onboarding |
 | `created_at` | TIMESTAMPTZ | |
 | `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
@@ -149,6 +151,41 @@
 **UNIQUE:** `(post_id, user_id, kind)` — 1 salvo por tipo por usuário.
 
 **RLS:** SELECT/INSERT/DELETE somente próprio user_id.
+
+---
+
+### `user_ratings` — Avaliações entre Usuários *(v9.1.2.0)*
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `target_user_id` | UUID FK | Usuário avaliado (`profiles.id`) |
+| `rater_user_id` | UUID FK | Usuário que avaliou (`profiles.id`) |
+| `context_post_id` | UUID FK NULL | Post do alvo que contextualiza a avaliação |
+| `rating` | SMALLINT | Nota entre `1` e `5` |
+| `comment` | TEXT | Comentário opcional (máx. 280 chars) |
+| `created_at` | TIMESTAMPTZ | |
+| `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
+
+**UNIQUE:** `(rater_user_id, target_user_id)` — uma avaliação por relação avaliador → avaliado.
+
+**Checks:**
+- `rating between 1 and 5`
+- `char_length(comment) <= 280`
+- `target_user_id <> rater_user_id`
+
+**RLS:** SELECT/INSERT/UPDATE apenas para o próprio avaliador e/ou alvo autenticado; leitura pública agregada acontece via RPCs.
+
+**Triggers / helpers:**
+- `kc_user_ratings_set_updated_at()` — atualiza `updated_at`
+- `kc_sync_profile_rating_aggregates(uuid)` — recalcula `profiles.rating_avg` / `profiles.rating_count`
+- `kc_user_ratings_sync_target()` — sincroniza agregados após `INSERT/UPDATE/DELETE`
+
+**RPCs públicas relacionadas:**
+- `kc_get_user_rating_summary()`
+- `kc_get_user_rating_state()`
+- `kc_list_user_ratings()`
+- `kc_upsert_user_rating()`
 
 ---
 
@@ -299,6 +336,9 @@ idx_comments_author_created  ON comments(author_id, created_at)
 idx_post_votes_user_post     ON post_votes(user_id, post_id)
 idx_saved_posts_user         ON saved_posts(user_id)
 idx_reports_post_status      ON reports(post_id, status)
+user_ratings_target_created_idx ON user_ratings(target_user_id, created_at DESC, id DESC)
+user_ratings_rater_idx       ON user_ratings(rater_user_id)
+user_ratings_context_post_idx ON user_ratings(context_post_id)
 idx_search_queries_term        ON search_queries(term)
 idx_search_queries_created_at  ON search_queries(created_at)      -- v9.0.4
 idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
@@ -319,6 +359,8 @@ posts_metadata_gin_idx         ON posts USING GIN(metadata)
 **Busca v9.2.0:** a busca server-side usa `kc_search_posts_fts()` com `unaccent + portuguese`, expansão de sinônimos no client e documento ponderado por `title`, `tags`, `description`, `category` e `subcategory`.
 
 **Hardening v9.2.3:** os helpers de feed e busca sinalizados pelo Security Advisor agora fixam `SET search_path = ''` e usam referencias qualificadas, removendo os warnings `function_search_path_mutable` sem alterar contratos publicos. A extensao de `v9.2.1.3` manteve esse mesmo padrao para `kc_get_feed_cursor()` e os novos helpers de data. Permanecem pendentes e separados desta iteracao: `extension_in_public` para `unaccent` e `auth_leaked_password_protection`.
+
+**Reputacao v9.1.2.0:** a fundacao de `user_ratings` adiciona agregados em `profiles`, triggers de sincronizacao e RPCs dedicadas com `SET search_path = ''`. A elegibilidade usa apenas interacoes persistidas (`comments`, `post_votes`, `saved_posts`) e a identidade do avaliador pode ser anonimizada nas listagens publicas.
 
 ## Storage Buckets
 

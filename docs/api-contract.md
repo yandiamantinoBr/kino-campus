@@ -362,12 +362,152 @@ Retorna perfil público de um usuário.
 
 **Retorno:** `Promise<Profile | null>`
 
+**Notas v9.1.2:**
+- O payload público de perfil agora pode incluir `ratingAvg` / `ratingCount` (aliases camelCase de `rating_avg` / `rating_count`).
+
 ---
 
 ### `KCAPI.getPostsByAuthorId(authorId, params)`
 Retorna posts de um autor específico.
 
 **Retorno:** `Promise<KCPostModel[]>`
+
+---
+
+## Métodos de Avaliações de Usuários
+
+### `KCAPI.getUserRatingSummary(userId)`
+Retorna o resumo público de reputação de um usuário.
+
+**Retorno:**
+```javascript
+Promise<{
+  userId: string,
+  average: number | null,
+  count: number,
+}>
+```
+
+---
+
+### `KCAPI.getUserRatingState({ targetUserId, contextPostId })`
+Retorna o estado do avaliador autenticado em relação ao usuário alvo. **Requer autenticação** para respostas úteis.
+
+**Params:**
+```javascript
+{
+  targetUserId: string,
+  contextPostId?: string | null,
+}
+```
+
+**Retorno:**
+```javascript
+Promise<{
+  targetUserId: string,
+  contextPostId: string | null,
+  canRate: boolean,
+  reason: 'OK' | 'AUTH_REQUIRED' | 'SELF' | 'NO_INTERACTION' | 'INVALID_CONTEXT' | 'TARGET_NOT_FOUND',
+  myRating: {
+    id: string,
+    targetUserId: string,
+    raterUserId: string,
+    contextPostId: string | null,
+    rating: number,
+    comment: string | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+}>
+```
+
+**Notas v9.1.2:**
+- A elegibilidade é liberada apenas quando o viewer já interagiu com posts do alvo via `comments`, `post_votes` ou `saved_posts`.
+- Autoavaliação é sempre bloqueada.
+
+---
+
+### `KCAPI.listUserRatings(userId, options?)`
+Lista as avaliações públicas de um usuário com paginação simples.
+
+**Params:**
+```javascript
+{
+  page?: number,
+  limit?: number,
+}
+```
+
+**Retorno:**
+```javascript
+Promise<{
+  items: Array<{
+    id: string,
+    targetUserId: string,
+    raterUserId: string | null,
+    contextPostId: string | null,
+    rating: number,
+    comment: string | null,
+    createdAt: string,
+    updatedAt: string,
+    reviewer: {
+      id: string | null,
+      displayName: string,
+      avatarUrl: string | null,
+      public: boolean,
+    },
+  }>,
+  page: number,
+  limit: number,
+  total: number,
+  hasMore: boolean,
+}>
+```
+
+**Notas v9.1.2:**
+- A identidade do avaliador é anonimizada quando o perfil dele não é público.
+
+---
+
+### `KCAPI.upsertUserRating(payload)`
+Cria ou atualiza a avaliação do usuário autenticado para um alvo. **Requer autenticação.**
+
+**Payload:**
+```javascript
+{
+  targetUserId: string,
+  contextPostId?: string | null,
+  rating: 1 | 2 | 3 | 4 | 5,
+  comment?: string | null,
+}
+```
+
+**Retorno:**
+```javascript
+Promise<{
+  ok: boolean,
+  rating: {
+    id: string,
+    targetUserId: string,
+    raterUserId: string,
+    contextPostId: string | null,
+    rating: number,
+    comment: string | null,
+    createdAt: string,
+    updatedAt: string,
+  },
+  summary: {
+    userId: string,
+    average: number | null,
+    count: number,
+  },
+}>
+```
+
+**Validações v9.1.2:**
+- `rating` aceita apenas `1..5`.
+- `comment` é opcional e limitado a `280` caracteres.
+- O par `raterUserId -> targetUserId` é único; regravação usa `upsert`.
 
 ---
 

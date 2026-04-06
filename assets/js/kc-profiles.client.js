@@ -115,6 +115,13 @@
       bio: String(source.bio || base.bio || '').trim(),
       verified: source.verified === true,
       is_admin: source.is_admin === true || base.is_admin === true,
+      rating_avg: source.rating_avg != null
+        ? Number(source.rating_avg)
+        : (base.rating_avg != null ? Number(base.rating_avg) : null),
+      rating_count: Math.max(
+        0,
+        parseInt(String(source.rating_count != null ? source.rating_count : (base.rating_count != null ? base.rating_count : 0)), 10) || 0
+      ),
       created_at: source.created_at || base.created_at || null,
       updated_at: source.updated_at || base.updated_at || null,
       onboarding_completed_at: source.onboarding_completed_at || base.onboarding_completed_at || null,
@@ -132,6 +139,9 @@
         ? shared.normalizeSocialVisibility(source.social_visibility || base.social_visibility || {})
         : (source.social_visibility || base.social_visibility || {}),
     };
+
+    normalized.ratingAvg = normalized.rating_avg;
+    normalized.ratingCount = normalized.rating_count;
 
     return Object.freeze(normalized);
   }

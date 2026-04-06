@@ -203,12 +203,17 @@
           <div class="kc-seller-info">
             <div class="kc-seller-name" id="sellerName"></div>
             <div class="kc-seller-handle" id="sellerHandle" style="display:none;"></div>
+            <div class="kc-seller-rating-summary" id="sellerRatingSummary" style="display:none;"></div>
             <div class="kc-seller-stats" id="sellerStats"></div>
           </div>
         </div>
-        <button class="kc-btn-secondary kc-btn-full" type="button" data-kc-view-profile="1">
-          <i class="fas fa-id-badge"></i> Ver perfil
-        </button>
+        <p class="kc-seller-rating-hint" id="sellerRatingHint" style="display:none;"></p>
+        <div class="kc-seller-actions">
+          <button class="kc-btn-secondary kc-btn-full" type="button" id="sellerRateButton" style="display:none;"></button>
+          <button class="kc-btn-secondary kc-btn-full" type="button" data-kc-view-profile="1">
+            <i class="fas fa-id-badge"></i> Ver perfil
+          </button>
+        </div>
       </div>
 
       <!-- Comments -->

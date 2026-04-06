@@ -2138,8 +2138,9 @@
       : (p._legacyAuthorAvatar || p.autorAvatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || ''));
 
     const rating = (p.rating != null && p.rating !== '') ? Number(p.rating) : null;
-    const ratingHtml = Number.isFinite(rating)
-      ? `<i class="fas fa-star"></i> ${escapeHtml(rating.toFixed(1))}`
+    const ratingCount = Math.max(0, parseInt(String(p.ratingCount != null ? p.ratingCount : (p.rating_count != null ? p.rating_count : 0)), 10) || 0);
+    const ratingHtml = (Number.isFinite(rating) && ratingCount > 0)
+      ? `<span class="kc-card__rating" title="${escapeHtml(`Avaliação média ${rating.toFixed(1)} em ${ratingCount} avaliações`)}"><i class="fas fa-star"></i> ${escapeHtml(rating.toFixed(1))}<span class="kc-card__rating-count">(${escapeHtml(String(ratingCount))})</span></span>`
       : '';
 
     // Interações

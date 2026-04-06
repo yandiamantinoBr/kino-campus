@@ -201,3 +201,155 @@ describe('KCSupabase.getFeedCursor', () => {
     });
   });
 });
+
+describe('KCSupabase user ratings', () => {
+  let rpcMock;
+  let authMock;
+
+  beforeEach(() => {
+    jest.resetModules();
+
+    global.window = global.window || global;
+    global.document = {
+      addEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    };
+    global.CustomEvent = function CustomEvent(type, init) {
+      return { type, detail: init && init.detail ? init.detail : null };
+    };
+
+    window.KC_ENV = {
+      driver: 'supabase',
+      DATA_DRIVER: 'supabase',
+      environment: 'development',
+      APP_ENV: 'development',
+      debug: false,
+      SUPABASE_URL: 'https://test.supabase.co',
+      SUPABASE_ANON_KEY: 'test-key',
+      supabase: {
+        url: 'https://test.supabase.co',
+        anonKey: 'test-key',
+        storageBucket: 'kino-media',
+      },
+    };
+
+    window.KCSearchShared = require('../assets/js/kc-search.shared.js');
+
+    rpcMock = jest.fn();
+    authMock = {
+      getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
+      onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
+      signInWithPassword: jest.fn(),
+      signUp: jest.fn(),
+      resend: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
+      updateUser: jest.fn(),
+      signOut: jest.fn(),
+    };
+
+    window.supabase = {
+      createClient: jest.fn(() => ({
+        auth: authMock,
+        rpc: rpcMock,
+        channel: jest.fn(() => ({
+          on: jest.fn().mockReturnThis(),
+          subscribe: jest.fn(),
+          unsubscribe: jest.fn(),
+        })),
+        removeChannel: jest.fn(),
+      })),
+    };
+
+    require('../assets/js/kc-supabase.client.js');
+  });
+
+  test('normaliza resumo público de reputação vindo do RPC', async () => {
+    rpcMock.mockResolvedValue({ data: { user_id: 'USER_01', rating_avg: 4.5, rating_count: 6 }, error: null });
+
+    const result = await window.KCSupabase.getUserRatingSummary('USER_01');
+
+    expect(rpcMock).toHaveBeenCalledWith('kc_get_user_rating_summary', { p_target_user_id: 'USER_01' });
+    expect(result).toEqual({
+      userId: 'USER_01',
+      average: 4.5,
+      count: 6,
+    });
+  });
+
+  test('normaliza estado, listagem e upsert das avaliações', async () => {
+    rpcMock
+      .mockResolvedValueOnce({
+        data: {
+          target_user_id: 'USER_01',
+          context_post_id: 'post-1',
+          can_rate: true,
+          reason: 'OK',
+          my_rating: {
+            id: 'rating-1',
+            target_user_id: 'USER_01',
+            rater_user_id: 'USER_SELF',
+            context_post_id: 'post-1',
+            rating: 5,
+            comment: 'Ótima experiência',
+          },
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              id: 'rating-1',
+              target_user_id: 'USER_01',
+              rater_user_id: 'USER_SELF',
+              rating: 5,
+              comment: 'Ótima experiência',
+            },
+          ],
+          page: 1,
+          limit: 10,
+          total: 1,
+          has_more: false,
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          rating: {
+            id: 'rating-1',
+            target_user_id: 'USER_01',
+            rater_user_id: 'USER_SELF',
+            rating: 4,
+            comment: 'Confiável',
+          },
+          summary: {
+            user_id: 'USER_01',
+            rating_avg: 4.0,
+            rating_count: 1,
+          },
+        },
+        error: null,
+      });
+
+    const state = await window.KCSupabase.getUserRatingState({ targetUserId: 'USER_01', contextPostId: 'post-1' });
+    const list = await window.KCSupabase.listUserRatings('USER_01', { page: 1, limit: 10 });
+    const upsert = await window.KCSupabase.upsertUserRating({ targetUserId: 'USER_01', contextPostId: 'post-1', rating: 4, comment: 'Confiável' });
+
+    expect(state).toEqual(expect.objectContaining({
+      targetUserId: 'USER_01',
+      contextPostId: 'post-1',
+      canRate: true,
+      myRating: expect.objectContaining({ rating: 5 }),
+    }));
+    expect(list.total).toBe(1);
+    expect(list.items[0]).toEqual(expect.objectContaining({ rating: 5 }));
+    expect(upsert.ok).toBe(true);
+    expect(upsert.summary).toEqual({
+      userId: 'USER_01',
+      average: 4,
+      count: 1,
+    });
+  });
+});

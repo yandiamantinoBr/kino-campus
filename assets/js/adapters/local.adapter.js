@@ -43,6 +43,116 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return null;
   }
 
+  const LOCAL_RATINGS_KEY = 'kc_user_ratings';
+  const LOCAL_RATING_INTERACTIONS_KEY = 'kc_user_rating_interactions';
+  const LOCAL_RATING_VIEWER_ID = 'USER_SELF';
+
+  function normalizeLocalRatingEntry(raw) {
+    const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+    const reviewer = (source.reviewer && typeof source.reviewer === 'object' && !Array.isArray(source.reviewer))
+      ? source.reviewer
+      : {};
+    const rating = parseInt(String(source.rating != null ? source.rating : 0), 10);
+    const entry = {
+      id: String(source.id || '').trim() || null,
+      targetUserId: String(source.targetUserId || source.target_user_id || '').trim() || null,
+      raterUserId: String(source.raterUserId || source.rater_user_id || LOCAL_RATING_VIEWER_ID).trim() || LOCAL_RATING_VIEWER_ID,
+      contextPostId: String(source.contextPostId || source.context_post_id || '').trim() || null,
+      rating: Number.isFinite(rating) ? Math.max(1, Math.min(5, rating)) : 0,
+      comment: String(source.comment || '').trim(),
+      createdAt: source.createdAt || source.created_at || null,
+      updatedAt: source.updatedAt || source.updated_at || null,
+      reviewer: {
+        id: String(reviewer.id || source.raterUserId || source.rater_user_id || LOCAL_RATING_VIEWER_ID).trim() || LOCAL_RATING_VIEWER_ID,
+        displayName: String(reviewer.displayName || reviewer.display_name || source.reviewerName || 'Você').trim() || 'Você',
+        avatarUrl: String(reviewer.avatarUrl || reviewer.avatar_url || source.reviewerAvatar || '').trim() || null,
+        public: reviewer.public !== false,
+      },
+    };
+
+    if (!entry.createdAt) entry.createdAt = new Date().toISOString();
+    if (!entry.updatedAt) entry.updatedAt = entry.createdAt;
+    if (!entry.id && entry.targetUserId) entry.id = 'local-rating-' + entry.raterUserId + '-' + entry.targetUserId;
+    return entry;
+  }
+
+  function loadLocalRatings() {
+    try {
+      const raw = localStorage.getItem(LOCAL_RATINGS_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list.map(normalizeLocalRatingEntry).filter((item) => item.targetUserId && item.raterUserId) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveLocalRatings(list) {
+    try {
+      const items = Array.isArray(list) ? list.map(normalizeLocalRatingEntry) : [];
+      localStorage.setItem(LOCAL_RATINGS_KEY, JSON.stringify(items));
+    } catch (_) { }
+  }
+
+  function loadLocalRatingInteractions() {
+    try {
+      const raw = localStorage.getItem(LOCAL_RATING_INTERACTIONS_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function buildLocalRatingSummary(userId, ratings) {
+    const key = String(userId || '').trim();
+    const items = Array.isArray(ratings) ? ratings : loadLocalRatings();
+    const matches = items.filter((item) => item && item.targetUserId === key);
+    if (!matches.length) {
+      return { userId: key || null, average: null, count: 0 };
+    }
+
+    const total = matches.reduce((sum, item) => sum + (Number(item && item.rating) || 0), 0);
+    const average = matches.length ? total / matches.length : null;
+    return {
+      userId: key || null,
+      average: Number.isFinite(average) ? Number(average.toFixed(2)) : null,
+      count: matches.length,
+    };
+  }
+
+  function enrichLocalPostWithRatings(post, ratings) {
+    const normalized = normalizePost(post);
+    const authorId = String((normalized && (normalized.authorId || normalized.autorId || normalized.author_id)) || '').trim();
+    if (!authorId) return normalized;
+
+    const summary = buildLocalRatingSummary(authorId, ratings);
+    const authorProfile = (normalized && normalized.authorProfile && typeof normalized.authorProfile === 'object')
+      ? { ...normalized.authorProfile }
+      : null;
+
+    if (authorProfile) {
+      authorProfile.rating_avg = summary.average;
+      authorProfile.rating_count = summary.count;
+      authorProfile.ratingAvg = summary.average;
+      authorProfile.ratingCount = summary.count;
+    }
+
+    return normalizePost({
+      ...normalized,
+      rating: summary.count > 0 ? summary.average : null,
+      ratingCount: summary.count,
+      rating_count: summary.count,
+      authorProfile,
+    });
+  }
+
+  function enrichLocalPostsWithRatings(posts) {
+    const items = Array.isArray(posts) ? posts : [];
+    if (!items.length) return [];
+    const ratings = loadLocalRatings();
+    return items.map((item) => enrichLocalPostWithRatings(item, ratings));
+  }
+
   function readLocalUserPosts() {
     try {
       const raw = localStorage.getItem('kc_user_posts');
@@ -57,7 +167,80 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     const db = await getDatabaseNormalized();
     const posts = Array.isArray(db && db.posts) ? db.posts : [];
     const userPosts = readLocalUserPosts();
-    return userPosts.concat(posts);
+    return enrichLocalPostsWithRatings(userPosts.concat(posts));
+  }
+
+  async function getLocalRatingsTargetPosts(targetUserId) {
+    const key = String(targetUserId || '').trim();
+    if (!key) return [];
+    const collection = await getLocalSearchCollection();
+    return (Array.isArray(collection) ? collection : []).filter((post) => {
+      const authorId = String((post && (post.authorId || post.autorId || post.author_id)) || '').trim();
+      return authorId === key;
+    });
+  }
+
+  function hasLocalCommentInteractionForPost(post) {
+    const keys = new Set([
+      String(post && post.id || '').trim(),
+      String(post && post.uuid || '').trim(),
+      String(post && (post.legacyId || post.legacy_id) || '').trim(),
+    ].filter(Boolean));
+
+    if (!keys.size) return false;
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem('kc_comments_' + key);
+        const items = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(items) && items.length) return true;
+      } catch (_) { }
+    }
+
+    return false;
+  }
+
+  async function resolveLocalRatingEligibility(targetUserId, contextPostId) {
+    const targetId = String(targetUserId || '').trim();
+    const contextId = String(contextPostId || '').trim() || null;
+    if (!targetId) return { canRate: false, reason: 'TARGET_NOT_FOUND' };
+    if (targetId === LOCAL_RATING_VIEWER_ID) return { canRate: false, reason: 'SELF' };
+
+    const targetPosts = await getLocalRatingsTargetPosts(targetId);
+    if (!targetPosts.length && !MOCK_USERS_BY_ID[targetId]) {
+      return { canRate: false, reason: 'TARGET_NOT_FOUND' };
+    }
+
+    const scopedPosts = contextId
+      ? targetPosts.filter((post) => {
+          const keys = new Set([
+            String(post && post.id || '').trim(),
+            String(post && post.uuid || '').trim(),
+            String(post && (post.legacyId || post.legacy_id) || '').trim(),
+          ].filter(Boolean));
+          return keys.has(contextId);
+        })
+      : targetPosts;
+
+    if (contextId && !scopedPosts.length) {
+      return { canRate: false, reason: 'INVALID_CONTEXT' };
+    }
+
+    if (scopedPosts.some(hasLocalCommentInteractionForPost)) {
+      return { canRate: true, reason: 'OK' };
+    }
+
+    const hinted = loadLocalRatingInteractions().some((entry) => {
+      if (!entry || typeof entry !== 'object') return false;
+      const targetMatch = String(entry.targetUserId || entry.target_user_id || '').trim() === targetId;
+      if (!targetMatch) return false;
+      if (!contextId) return true;
+      return String(entry.contextPostId || entry.context_post_id || '').trim() === contextId;
+    });
+
+    return hinted
+      ? { canRate: true, reason: 'OK' }
+      : { canRate: false, reason: 'NO_INTERACTION' };
   }
 
   function normalizeLocalFeedCursorParams(params) {
@@ -129,7 +312,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
       const rows = Array.isArray(filtered) ? filtered : [];
       const offset = decodeLocalFeedCursor(p.cursor);
       const nextOffset = Math.max(0, offset);
-      const posts = rows.slice(nextOffset, nextOffset + p.limit);
+      const posts = enrichLocalPostsWithRatings(rows.slice(nextOffset, nextOffset + p.limit));
       const hasMore = (nextOffset + posts.length) < rows.length;
 
       try { console.debug(`[KCAPI:local] Serving cursor slice from ${nextOffset} (${posts.length} items) [limit=${p.limit}]`); } catch (_) { }
@@ -171,7 +354,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
       const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 20;
       const start = (page - 1) * limit;
       const end = start + limit;
-      const slice = Array.isArray(filtered) ? filtered.slice(start, end) : [];
+      const slice = Array.isArray(filtered) ? enrichLocalPostsWithRatings(filtered.slice(start, end)) : [];
 
       try { console.debug(`[KCAPI:local] Serving page ${page} (${slice.length} items) [limit=${limit}]`); } catch (_) { }
 
@@ -239,7 +422,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
           const pid = (p && (p.id ?? p._id ?? p.legacy_id ?? p.legacyId ?? p.uuid)) ?? null;
           return pid != null && String(pid) === key;
         });
-        if (found) return found;
+        if (found) return enrichLocalPostWithRatings(found);
       }
     } catch (_) { }
 
@@ -255,7 +438,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
         if (legacy != null && String(legacy) === key) return true;
         return false;
       });
-      if (found) return found;
+      if (found) return enrichLocalPostWithRatings(found);
     } catch (_) { }
 
     return null;
@@ -313,7 +496,116 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
       return Number(right._kcRelatedScore || 0) - Number(left._kcRelatedScore || 0);
     });
 
-    return prioritized.slice(0, limit);
+    return enrichLocalPostsWithRatings(prioritized.slice(0, limit));
+  }
+
+  async function localGetUserRatingSummary(userId) {
+    return buildLocalRatingSummary(userId, loadLocalRatings());
+  }
+
+  async function localGetUserRatingState(params = {}) {
+    const targetUserId = String((params && (params.targetUserId || params.target_user_id)) || '').trim();
+    const contextPostId = String((params && (params.contextPostId || params.context_post_id)) || '').trim() || null;
+    const ratings = loadLocalRatings();
+    const myRating = ratings.find((item) => item && item.targetUserId === targetUserId && item.raterUserId === LOCAL_RATING_VIEWER_ID) || null;
+
+    if (myRating) {
+      return {
+        targetUserId: targetUserId || null,
+        contextPostId,
+        canRate: true,
+        reason: 'OK',
+        myRating,
+      };
+    }
+
+    const eligibility = await resolveLocalRatingEligibility(targetUserId, contextPostId);
+    return {
+      targetUserId: targetUserId || null,
+      contextPostId,
+      canRate: eligibility.canRate === true,
+      reason: eligibility.reason || 'UNKNOWN',
+      myRating: null,
+    };
+  }
+
+  async function localListUserRatings(userId, options = {}) {
+    const page = Math.max(1, parseInt(String(options && options.page != null ? options.page : 1), 10) || 1);
+    const limit = Math.max(1, parseInt(String(options && options.limit != null ? options.limit : 10), 10) || 10);
+    const offset = (page - 1) * limit;
+    const items = loadLocalRatings()
+      .filter((item) => item && item.targetUserId === String(userId || '').trim())
+      .sort((left, right) => {
+        const leftTime = new Date(left && left.createdAt || 0).getTime();
+        const rightTime = new Date(right && right.createdAt || 0).getTime();
+        return rightTime - leftTime;
+      });
+
+    return {
+      items: items.slice(offset, offset + limit),
+      page,
+      limit,
+      total: items.length,
+      hasMore: (offset + limit) < items.length,
+    };
+  }
+
+  async function localUpsertUserRating(payload = {}) {
+    const targetUserId = String((payload && (payload.targetUserId || payload.target_user_id)) || '').trim();
+    const contextPostId = String((payload && (payload.contextPostId || payload.context_post_id)) || '').trim() || null;
+    const rating = parseInt(String(payload && payload.rating != null ? payload.rating : 0), 10);
+    const comment = String(payload && payload.comment || '').trim();
+
+    if (!targetUserId) {
+      return { ok: false, error: { message: 'Usuário alvo inválido.' } };
+    }
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      return { ok: false, error: { message: 'A nota deve estar entre 1 e 5 estrelas.' } };
+    }
+    if (comment.length > 280) {
+      return { ok: false, error: { message: 'O comentário aceita no máximo 280 caracteres.' } };
+    }
+
+    const state = await localGetUserRatingState({ targetUserId, contextPostId });
+    if (!state.canRate) {
+      const message = state.reason === 'SELF'
+        ? 'Você não pode avaliar o próprio perfil.'
+        : (state.reason === 'NO_INTERACTION'
+          ? 'Interaja com um post deste usuário antes de avaliá-lo.'
+          : 'Não foi possível registrar esta avaliação.');
+      return { ok: false, error: { message }, reason: state.reason };
+    }
+
+    const items = loadLocalRatings();
+    const index = items.findIndex((item) => item && item.targetUserId === targetUserId && item.raterUserId === LOCAL_RATING_VIEWER_ID);
+    const viewer = MOCK_USERS_BY_ID[LOCAL_RATING_VIEWER_ID] || {};
+    const next = normalizeLocalRatingEntry({
+      id: index >= 0 ? items[index].id : null,
+      targetUserId,
+      raterUserId: LOCAL_RATING_VIEWER_ID,
+      contextPostId,
+      rating,
+      comment,
+      createdAt: index >= 0 ? items[index].createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      reviewer: {
+        id: LOCAL_RATING_VIEWER_ID,
+        displayName: String(viewer.displayName || viewer.name || 'Você').trim() || 'Você',
+        avatarUrl: String(viewer.avatarUrl || viewer.avatar || '').trim() || null,
+        public: true,
+      },
+    });
+
+    if (index >= 0) items[index] = next;
+    else items.push(next);
+    saveLocalRatings(items);
+
+    return {
+      ok: true,
+      rating: next,
+      summary: buildLocalRatingSummary(targetUserId, items),
+      error: null,
+    };
   }
 
   // POST /api/v1/posts
@@ -558,6 +850,10 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     getPosts: localGetPosts,
     searchPosts: localSearchPosts,
     getFeedCursor: localGetFeedCursor,
+    getUserRatingSummary: localGetUserRatingSummary,
+    getUserRatingState: localGetUserRatingState,
+    listUserRatings: localListUserRatings,
+    upsertUserRating: localUpsertUserRating,
     getPostById: localGetPostById,
     getRelatedPosts: localGetRelatedPosts,
     createPost: localCreatePost,

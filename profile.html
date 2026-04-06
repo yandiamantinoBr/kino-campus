@@ -449,6 +449,97 @@
     }
     .kc-profile-comment-card__post-link:hover { text-decoration: underline; }
 
+    .kc-profile-ratings-list { display: flex; flex-direction: column; gap: 12px; }
+    .kc-profile-rating-card {
+      background: var(--kc-surface-dark);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .kc-profile-rating-card__top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .kc-profile-rating-card__reviewer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .kc-profile-rating-card__avatar,
+    .kc-profile-rating-card__avatar-placeholder {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .kc-profile-rating-card__avatar {
+      object-fit: cover;
+      border: 2px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+    }
+    .kc-profile-rating-card__avatar-placeholder {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,110,30,.12);
+      color: var(--kc-primary-brand);
+      border: 2px solid rgba(255,110,30,.18);
+      font-size: 1rem;
+    }
+    .kc-profile-rating-card__reviewer-copy {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+    .kc-profile-rating-card__reviewer-name {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--kc-text-dark-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .kc-profile-rating-card__reviewer-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: .78rem;
+      color: var(--kc-text-dark-secondary);
+    }
+    .kc-profile-rating-card__stars {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      color: rgba(255, 179, 0, .34);
+      font-size: .92rem;
+      flex-shrink: 0;
+    }
+    .kc-profile-rating-card__stars i.is-active {
+      color: #ffb300;
+    }
+    .kc-profile-rating-card__score {
+      margin-left: 6px;
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-profile-rating-card__comment {
+      font-size: .9rem;
+      line-height: 1.6;
+      color: var(--kc-text-dark-primary);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .kc-profile-rating-card__comment.is-empty {
+      color: var(--kc-text-dark-secondary);
+      font-style: italic;
+    }
+
     /* â”€â”€ Feed de atividades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .kc-profile-activity-list { display: flex; flex-direction: column; gap: 10px; }
     .kc-profile-activity-item {
@@ -650,6 +741,10 @@
               <span class="kc-profile-stat__value" id="stat-votes">–</span>
               <span class="kc-profile-stat__label">Votos recebidos</span>
             </div>
+            <div class="kc-profile-stat">
+              <span class="kc-profile-stat__value" id="stat-rating">–</span>
+              <span class="kc-profile-stat__label" id="stat-rating-label">Reputação</span>
+            </div>
           </div>
           <p id="profile-feedback" class="kc-profile-feedback" role="alert" style="display:none;"></p>
         </section>
@@ -674,6 +769,11 @@
                   aria-controls="tab-saved" id="btn-tab-saved" data-kc-tab="saved">
             <i class="fas fa-star"></i> <span id="saved-tab-label">Salvos</span>
             <span class="kc-profile-tab-badge" id="badge-saved">0</span>
+          </button>
+          <button class="kc-profile-tab" role="tab" aria-selected="false"
+                  aria-controls="tab-ratings" id="btn-tab-ratings" data-kc-tab="ratings">
+            <i class="fas fa-star-half-stroke"></i> <span>Avaliações</span>
+            <span class="kc-profile-tab-badge" id="badge-ratings">0</span>
           </button>
         </div>
 
@@ -761,6 +861,24 @@
             Nenhuma publicação salva ainda.
           </div>
           <button id="saved-load-more" class="kc-profile-load-more" style="display:none;">
+            <i class="fas fa-chevron-down"></i> Carregar mais
+          </button>
+        </div>
+
+        <div class="kc-profile-tab-panel" role="tabpanel"
+             aria-labelledby="btn-tab-ratings" id="tab-ratings">
+          <div class="kc-profile-toolbar">
+            <span class="kc-profile-toolbar-title">Avaliações</span>
+          </div>
+          <div id="ratings-loading" class="kc-profile-loading" style="display:none;">
+            <i class="fas fa-spinner fa-spin"></i> Carregando...
+          </div>
+          <div id="ratings-list" class="kc-profile-ratings-list"></div>
+          <div id="ratings-empty" class="kc-profile-empty" style="display:none;">
+            <i class="fas fa-star-half-stroke"></i>
+            Nenhuma avaliação encontrada.
+          </div>
+          <button id="ratings-load-more" class="kc-profile-load-more" style="display:none;">
             <i class="fas fa-chevron-down"></i> Carregar mais
           </button>
         </div>
