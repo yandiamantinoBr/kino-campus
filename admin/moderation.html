@@ -67,6 +67,26 @@
     }
     #audit-log-empty { margin:10px 0 0;color:var(--kc-text-dark-secondary);font-size:.9em; }
 
+    /* ── Painel de Convites ──────────────────────────────────────────────── */
+    #invite-panel { margin-top:16px; }
+    #invite-panel h3 { margin:0 0 4px;font-size:1em; }
+    #invite-panel p  { margin:0 0 14px;color:var(--kc-text-dark-secondary);font-size:.88em; }
+    .kc-admin-invite-fields { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px; }
+    .kc-admin-invite-fields input { flex:1;min-width:180px;padding:9px 12px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.9em; }
+    .kc-admin-invite-fields input:focus { outline:2px solid var(--kc-primary-brand);border-color:transparent; }
+    .kc-admin-invite-fields button { padding:9px 16px;border-radius:8px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.9em;cursor:pointer;white-space:nowrap; }
+    .kc-admin-invite-fields button:disabled { opacity:.6;cursor:not-allowed; }
+    .kc-admin-invite-feedback { display:none;padding:10px 14px;border-radius:8px;font-size:.88em;margin-bottom:12px; }
+    .kc-admin-invite-feedback--success { background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#a5d6a7; }
+    .kc-admin-invite-feedback--error   { background:rgba(244,67,54,.12);border:1px solid rgba(244,67,54,.35);color:#ef9a9a; }
+    .kc-admin-invite-feedback--info    { background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);color:#90caf9; }
+    #invite-list-empty { color:var(--kc-text-dark-secondary);font-size:.88em;margin:8px 0 0; }
+    #invite-table { display:none; }
+    @media (max-width:640px) {
+      .kc-admin-invite-fields { flex-direction:column; }
+      .kc-admin-invite-fields input,.kc-admin-invite-fields button { width:100%;box-sizing:border-box; }
+    }
+
     /* ── Mobile responsivo ─────────────────────────── */
     @media (max-width: 640px) {
       .kc-admin-wrapper { padding: 0 12px 80px; }
@@ -314,6 +334,56 @@
 
           <p id="audit-log-empty" style="display:none;">Nenhum log encontrado para os filtros selecionados.</p>
         </div>
+
+        <!-- ── Painel de Convites de Usuários Externos ───────────────────── -->
+        <div class="kc-admin-panel" id="invite-panel">
+          <h3><i class="fas fa-user-plus" style="color:var(--kc-primary-brand);margin-right:6px;"></i>Convidar Usuário Externo</h3>
+          <p>Envie um convite para usuários com e-mail não-institucional (ex: @gmail.com). O convidado receberá um link de acesso válido por 7 dias que o leva diretamente ao onboarding.</p>
+
+          <div id="invite-feedback" class="kc-admin-invite-feedback" role="status"></div>
+
+          <form id="invite-form" autocomplete="off">
+            <div class="kc-admin-invite-fields">
+              <input
+                id="invite-email"
+                type="email"
+                placeholder="E-mail do convidado (ex: usuario@gmail.com)"
+                required
+                autocomplete="off"
+              />
+              <input
+                id="invite-note"
+                type="text"
+                placeholder="Motivo do convite (opcional)"
+                maxlength="120"
+              />
+              <button type="submit" id="invite-btn">
+                <i class="fas fa-paper-plane"></i> Enviar Convite
+              </button>
+            </div>
+          </form>
+
+          <div style="margin-top:16px;">
+            <h4 style="margin:0 0 10px;font-size:.92em;font-weight:600;">Convites Enviados</h4>
+            <p id="invite-list-empty">Nenhum convite enviado ainda.</p>
+            <div class="kc-admin-posts-table-wrap" style="display:none;" id="invite-table-wrap">
+              <table class="kc-admin-posts-table" id="invite-table" style="min-width:680px;">
+                <thead>
+                  <tr>
+                    <th>E-mail</th>
+                    <th>Enviado em</th>
+                    <th>Expira em</th>
+                    <th>Status</th>
+                    <th>Nota</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="invite-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>
@@ -341,5 +411,6 @@
   <script defer src="../assets/js/kc-theme.js"></script>
   <script defer src="../assets/js/admin-shell.js?v=8.6.0"></script>
   <script defer src="../assets/js/controllers/admin-moderation.controller.js"></script>
+  <script defer src="../assets/js/controllers/admin-invite.controller.js"></script>
 </body>
 </html>

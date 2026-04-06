@@ -713,7 +713,7 @@
     const env = readEnv();
     const email = normalizeEmail(form.email.value);
     if (!email) { setStatus('Informe o e-mail usado no cadastro.', 'warn'); return; }
-    if (!isAllowedDomain(email, env.allowedDomains)) { setStatus('Use o mesmo e-mail institucional aceito na plataforma.', 'warn'); return; }
+    // Não bloquear e-mails convidados: o Supabase retorna erro se o e-mail não existe ou já foi confirmado
     setStatus('Reenviando confirmação...', 'info');
     const result = await window.KCAPI.resendConfirmation(email, { emailRedirectTo: buildCallbackUrl(modalState.nextPath) });
     if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível reenviar a confirmação.'), 'error'); return; }

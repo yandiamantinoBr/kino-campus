@@ -3295,6 +3295,51 @@ const { ENV, normalizePost } = window.KCAPI;
     client.removeChannel(channel);
   }
 
+  // ── Convites de usuários externos (v9.1.0.3) ─────────────────────────────
+
+  async function supabaseInviteExternalUser(email, note) {
+    const client = getClient();
+    if (!client) return { ok: false, error: 'SUPABASE_NOT_READY' };
+    var em = String(email || '').trim().toLowerCase();
+    var nt = String(note || '').trim() || null;
+    if (!em || !em.includes('@')) return { ok: false, error: 'EMAIL_INVALIDO' };
+    try {
+      var result = await client.functions.invoke('kc-invite-user', {
+        body: { email: em, note: nt },
+      });
+      if (result.error) return { ok: false, error: result.error.message || String(result.error) };
+      var data = result.data;
+      if (data && data.error) return { ok: false, error: data.error };
+      return { ok: true, data: data };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
+    }
+  }
+
+  async function supabaseGetInvites() {
+    const client = getClient();
+    if (!client) return { data: null, error: 'SUPABASE_NOT_READY' };
+    try {
+      var r = await client.rpc('kc_admin_get_invites');
+      if (r.error) return { data: null, error: r.error.message || String(r.error) };
+      return { data: r.data || [], error: null };
+    } catch (e) {
+      return { data: null, error: e && e.message ? e.message : String(e) };
+    }
+  }
+
+  async function supabaseRevokeInvite(email) {
+    const client = getClient();
+    if (!client) return { ok: false, error: 'SUPABASE_NOT_READY' };
+    try {
+      var r = await client.rpc('kc_admin_revoke_invite', { p_email: String(email || '').trim().toLowerCase() });
+      if (r.error) return { ok: false, error: r.error.message || String(r.error) };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
+    }
+  }
+
   // Driver Supabase (V8.1.7.2+)
   const driverSupabase = Object.freeze({
     name: 'supabase',
@@ -3339,6 +3384,10 @@ const { ENV, normalizePost } = window.KCAPI;
     getUnreadNotificationCount: supabaseGetUnreadNotificationCount,
     subscribeNotifications: supabaseSubscribeNotifications,
     unsubscribeNotifications: supabaseUnsubscribeNotifications,
+    // Convites de usuários externos (v9.1.0.3)
+    inviteExternalUser: supabaseInviteExternalUser,
+    getInvites: supabaseGetInvites,
+    revokeInvite: supabaseRevokeInvite,
   });
 
 
