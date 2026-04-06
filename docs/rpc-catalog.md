@@ -2,6 +2,8 @@
 
 ## Convenções
 
+- Funcoes e RPCs fixam explicitamente o `search_path`; RPCs legadas costumam usar `public`, enquanto helpers endurecidos em `v9.2.3` usam `''` com referencias qualificadas
+
 - Funções com prefixo `kc_` são funções públicas do KinoCampus
 - `SECURITY DEFINER` + `SET search_path = public` — executa com permissões do owner, sem injeção de schema
 - Triggers são prefixados com `kc_handle_` ou `kc_set_`
@@ -10,6 +12,129 @@
 ---
 
 ## RPCs Públicas (chamadas via API)
+
+### `kc_get_feed_cursor(p_module text, p_modules text[], p_category text, p_subcategory text, p_tag text, p_q text, p_sort_by text, p_limit int, p_cursor text, p_request_params jsonb default null) → JSONB` *(v9.2.2, estendido em v9.2.1.1, v9.2.1.2 e v9.2.1.3)*
+
+Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de cada rail.
+
+**Chamado em:** `KCAPI.getFeedCursor()`
+
+**Retorno:** `{ "ok": true, "posts": [...], "next_cursor": "opaque-token-or-null", "has_more": true }`
+
+**Ordenação por `p_sort_by`:**
+- `recentes` → `bumped_at DESC NULLS LAST`, depois `created_at DESC`, `id DESC`
+- `comentados` → `last_comment_at DESC`, depois `created_at DESC`, `id DESC`
+- `votos` → `highlight_score DESC`, `votos DESC`, `created_at DESC`, `id DESC`
+
+**Observações:**
+- `p_module` cobre feed de módulo único; `p_modules` cobre feeds híbridos como `['compra-venda', 'livros']`.
+- O cursor é token opaco em base64 com os campos mínimos de desempate; callers não montam esse valor manualmente.
+- `p_request_params` aplica no banco os filtros avançados já existentes dos módulos de marketplace, caronas, moradia, oportunidades e achados-perdidos.
+- A extensão de `v9.2.1.1` preserva a semântica de ordenação e cursor de `v9.2.2`; apenas amplia o envelope de filtros aceito pelo RPC.
+- `v9.2.1.2` adiciona `priceMin` / `priceMax` no envelope cursor-based, filtrando por `posts.price` no banco e normalizando faixas invertidas antes da consulta.
+- `v9.2.1.3` adiciona `datePreset` no mesmo envelope, com interpretação fixa em `America/Sao_Paulo` e semântica por módulo:
+  - feeds de recência (`compra-venda`, `livros`, `moradia`, `oportunidades`, `achados-perdidos`) usam `created_at`
+  - `caronas` usa `created_at` com janelas curtas (`today`, `last3d`, `last7d`)
+  - `eventos` usa `metadata.data_evento` / `metadata.data` com fallback para `created_at`
+- A versão atual da RPC também fixa `SET search_path = ''`, mantendo referências qualificadas aos objetos do app.
+
+**Helpers relacionados (v9.2.1.3):**
+- `kc_feed_local_date(p_value timestamptz) → date`
+- `kc_feed_event_local_date(p_metadata jsonb, p_created_at timestamptz) → date`
+- `kc_feed_matches_date_preset(p_module text, p_created_at timestamptz, p_metadata jsonb, p_preset text, p_now timestamptz default now()) → boolean`
+
+---
+
+### `kc_search_posts_fts(p_q text, p_terms text[], p_module text, p_category text, p_subcategory text, p_limit int) → SETOF JSONB` *(v9.2.0)*
+
+Busca server-side dedicada para a página `search-results.html` e o dropdown global do header.
+
+**Chamado em:** `KCAPI.searchPosts()`
+
+**Cobertura de busca:**
+- `title`
+- `description`
+- `category`
+- `metadata->>'subcategoria'` / `metadata->>'subcategory'`
+- `metadata->'tags'` (com compatibilidade para `tagKeys`)
+
+**Ordenação:** `ts_rank_cd(...) DESC`, depois `created_at DESC`, `id DESC`
+
+**Observações:**
+- `p_terms` já chega expandido pelo client com sinônimos deduplicados.
+- A função roda com `SET search_path = public` e respeita RLS por manter semântica de `SECURITY INVOKER`.
+- O retorno já inclui `profiles`, `post_media` e `comments(count)` para compatibilidade com `normalizeSupabasePost`.
+
+---
+
+### `kc_get_user_rating_summary(p_target_user_id uuid) → JSONB` *(v9.1.2.0)*
+
+Resumo público da reputação de um usuário.
+
+**Chamado em:** `KCAPI.getUserRatingSummary()`
+
+**Retorno:** `{ "userId": "uuid", "average": 4.5, "count": 12 }`
+
+**Observações:**
+- A função lê os agregados persistidos em `profiles.rating_avg` e `profiles.rating_count`.
+- A função fixa `SET search_path = ''`.
+
+---
+
+### `kc_get_user_rating_state(p_target_user_id uuid, p_context_post_id uuid default null) → JSONB` *(v9.1.2.0)*
+
+Resolve o estado do viewer autenticado para avaliar um usuário alvo.
+
+**Chamado em:** `KCAPI.getUserRatingState()`
+
+**Retorno:** `{ "targetUserId": "uuid", "contextPostId": "uuid-or-null", "canRate": true, "reason": "OK", "myRating": {...} }`
+
+**Regras de elegibilidade:**
+- Bloqueia autoavaliação (`SELF`).
+- Exige autenticação (`AUTH_REQUIRED`).
+- Exige contexto válido quando `p_context_post_id` é enviado (`INVALID_CONTEXT`).
+- Libera avaliação apenas quando já existe interação persistida com posts do alvo via `comments`, `post_votes` ou `saved_posts`; do contrário retorna `NO_INTERACTION`.
+- Se já existir avaliação do mesmo viewer para o alvo, o estado retorna `canRate = true` com `myRating` preenchido para permitir edição.
+
+**Observações:**
+- Implementada com `SECURITY DEFINER` e `SET search_path = ''`.
+
+---
+
+### `kc_list_user_ratings(p_target_user_id uuid, p_page integer default 1, p_limit integer default 10) → JSONB` *(v9.1.2.0)*
+
+Lista textual paginada das avaliações públicas de um usuário.
+
+**Chamado em:** `KCAPI.listUserRatings()`
+
+**Retorno:** `{ "items": [...], "page": 1, "limit": 10, "total": 3, "hasMore": false }`
+
+**Observações:**
+- Quando o perfil alvo não é público e o caller não é o próprio alvo, a função retorna lista vazia.
+- A identidade do avaliador é anonimizada como `Membro da comunidade` quando `profiles.profile_public = false`.
+- Implementada com `SET search_path = ''`.
+
+---
+
+### `kc_upsert_user_rating(p_target_user_id uuid, p_context_post_id uuid default null, p_rating integer default null, p_comment text default null) → JSONB` *(v9.1.2.0)*
+
+Cria ou atualiza a avaliação do viewer autenticado para um usuário alvo.
+
+**Chamado em:** `KCAPI.upsertUserRating()`
+
+**Retorno:** `{ "ok": true, "rating": {...}, "summary": {...} }`
+
+**Validações:**
+- `p_rating` deve estar entre `1` e `5`.
+- `p_comment` é opcional e limitado a `280` caracteres.
+- O par `(rater_user_id, target_user_id)` é único e o write usa `INSERT ... ON CONFLICT DO UPDATE`.
+- A função reaproveita `kc_get_user_rating_state()` para aplicar as mesmas regras de elegibilidade.
+
+**Observações:**
+- Implementada com `SECURITY DEFINER` e `SET search_path = ''`.
+- A atualização dos agregados do alvo é automática via trigger `kc_trigger_user_ratings_sync_target`.
+
+---
 
 ### `kc_bump_post(p_post_id uuid) → JSONB`
 
@@ -275,6 +400,24 @@ Extrai URL do avatar dos metadados do usuário ao criar conta.
 
 ---
 
+### `kc_unaccent(input_text text) → text` [IMMUTABLE]
+
+Wrapper imutável para `unaccent`, usado na expressão indexada do FTS.
+
+---
+
+### `kc_posts_search_document(p_title text, p_description text, p_category text, p_metadata jsonb) → tsvector` [IMMUTABLE]
+
+Documento ponderado do FTS:
+- peso `A` → `title`
+- peso `B` → `tags`
+- peso `C` → `description`
+- peso `D` → `category` e `subcategory`
+
+**Chamado em:** índice `idx_posts_fts` e RPC `kc_search_posts_fts`.
+
+---
+
 ## Triggers
 
 ### `kc_handle_new_user()` [Trigger em auth.users]
@@ -315,7 +458,7 @@ idx_posts_category_created ON posts(category, created_at DESC)
 
 -- Comments
 idx_comments_post_created  ON comments(post_id, created_at)
-idx_comments_parent        ON comments(parent_id)  -- v9.1.1
+idx_comments_parent_id     ON comments(parent_id)  -- v9.1.1
 
 -- Voting
 idx_post_votes_user_post   ON post_votes(user_id, post_id)
@@ -328,7 +471,7 @@ idx_search_queries_user    ON search_queries(user_id, created_at)  -- v9.0.4
 idx_notifications_user_unread ON notifications(user_id, read) WHERE read = false
 
 -- Full-text search (v9.2.0)
-idx_posts_fts ON posts USING GIN(to_tsvector('portuguese', title || ' ' || description))
+idx_posts_fts ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL
 
 -- GIN em metadata (já existe)
 posts_metadata_gin_idx ON posts USING GIN(metadata)

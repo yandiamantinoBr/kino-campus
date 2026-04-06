@@ -2,6 +2,8 @@
 
 **Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 63 (até v9.1.0.2)
 
+> Atualizacao local de 06/04/2026: o repositorio ja contem 71 migrations ate `v9.1.2.0_user_ratings_foundation.sql`.
+
 ## Tabelas Principais
 
 ### `profiles` — Perfis de Usuário
@@ -25,6 +27,8 @@
 | `gender_identity` | TEXT | Identidade de gênero |
 | `gender_identity_custom` | TEXT | Personalizado se `gender_identity = 'outro'` |
 | `race_color` | TEXT | Raça/cor autodeclarada |
+| `rating_avg` | NUMERIC(3,2) | Média agregada das avaliações recebidas |
+| `rating_count` | INTEGER | Quantidade agregada de avaliações recebidas |
 | `onboarding_completed_at` | TIMESTAMPTZ | Quando completou onboarding |
 | `created_at` | TIMESTAMPTZ | |
 | `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
@@ -53,6 +57,7 @@
 | `visibility` | TEXT | `'public'` / `'private'` |
 | `expires_at` | TIMESTAMPTZ | Data de expiração (7d caronas, 30d outros) |
 | `bumped_at` | TIMESTAMPTZ | Última vez que foi bumped (cooldown 1d) |
+| `last_comment_at` | TIMESTAMPTZ | Data do comentário mais recente (feed `comentados`) |
 | `votos` | INTEGER | Contagem de votos positivos líquidos |
 | `coupon_clicks` | INTEGER | Cliques no CTA (contador de engajamento) |
 | `share_count` | INTEGER | Compartilhamentos |
@@ -102,6 +107,8 @@
 
 ---
 
+> **Nota v9.1.1:** a tabela `comments` no repositório usa os campos `author_name`, `body`, `likes` e `parent_id`. A migration `v9.1.1.0_comment_threading.sql` adiciona `parent_id` e o trigger `kc_check_comment_depth` para limitar o threading a 1 nível.
+
 ### `post_votes` — Votos
 
 | Coluna | Tipo | Descrição |
@@ -144,6 +151,41 @@
 **UNIQUE:** `(post_id, user_id, kind)` — 1 salvo por tipo por usuário.
 
 **RLS:** SELECT/INSERT/DELETE somente próprio user_id.
+
+---
+
+### `user_ratings` — Avaliações entre Usuários *(v9.1.2.0)*
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `target_user_id` | UUID FK | Usuário avaliado (`profiles.id`) |
+| `rater_user_id` | UUID FK | Usuário que avaliou (`profiles.id`) |
+| `context_post_id` | UUID FK NULL | Post do alvo que contextualiza a avaliação |
+| `rating` | SMALLINT | Nota entre `1` e `5` |
+| `comment` | TEXT | Comentário opcional (máx. 280 chars) |
+| `created_at` | TIMESTAMPTZ | |
+| `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
+
+**UNIQUE:** `(rater_user_id, target_user_id)` — uma avaliação por relação avaliador → avaliado.
+
+**Checks:**
+- `rating between 1 and 5`
+- `char_length(comment) <= 280`
+- `target_user_id <> rater_user_id`
+
+**RLS:** SELECT/INSERT/UPDATE apenas para o próprio avaliador e/ou alvo autenticado; leitura pública agregada acontece via RPCs.
+
+**Triggers / helpers:**
+- `kc_user_ratings_set_updated_at()` — atualiza `updated_at`
+- `kc_sync_profile_rating_aggregates(uuid)` — recalcula `profiles.rating_avg` / `profiles.rating_count`
+- `kc_user_ratings_sync_target()` — sincroniza agregados após `INSERT/UPDATE/DELETE`
+
+**RPCs públicas relacionadas:**
+- `kc_get_user_rating_summary()`
+- `kc_get_user_rating_state()`
+- `kc_list_user_ratings()`
+- `kc_upsert_user_rating()`
 
 ---
 
@@ -287,17 +329,38 @@
 idx_posts_author_created     ON posts(author_id, created_at)
 idx_posts_module_created     ON posts(module, created_at)
 idx_posts_category_created   ON posts(category, created_at)
+posts_bumped_at_idx          ON posts(bumped_at DESC NULLS LAST)        -- feed recentes
+posts_last_comment_at_idx    ON posts(last_comment_at DESC NULLS LAST)  -- feed comentados
+posts_highlight_score_idx    ON posts(highlight_score DESC)             -- feed votos
 idx_comments_author_created  ON comments(author_id, created_at)
 idx_post_votes_user_post     ON post_votes(user_id, post_id)
 idx_saved_posts_user         ON saved_posts(user_id)
 idx_reports_post_status      ON reports(post_id, status)
+user_ratings_target_created_idx ON user_ratings(target_user_id, created_at DESC, id DESC)
+user_ratings_rater_idx       ON user_ratings(rater_user_id)
+user_ratings_context_post_idx ON user_ratings(context_post_id)
 idx_search_queries_term        ON search_queries(term)
 idx_search_queries_created_at  ON search_queries(created_at)      -- v9.0.4
 idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
 idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9.1.0
 idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
+idx_posts_fts                  ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL  -- v9.2.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)
 ```
+
+**Paginação v9.2.2:** o feed incremental usa a RPC `kc_get_feed_cursor()` com cursor opaco. A ordenação preserva `bumped_at`, `last_comment_at` ou `highlight_score` conforme o tipo de feed.
+
+**Filtros v9.2.1.1:** a RPC `kc_get_feed_cursor(..., p_request_params jsonb)` passou a aplicar server-side os filtros avançados já existentes de `compra-venda`, `caronas`, `moradia`, `oportunidades` e `achados-perdidos`, sem alterar a semântica pública do cursor.
+
+**Faixas numéricas v9.2.1.2:** `kc_get_feed_cursor()` passou a aceitar `priceMin` e `priceMax` dentro de `p_request_params`, aplicando o intervalo diretamente sobre `posts.price` e normalizando limites invertidos no banco.
+
+**Presets de data v9.2.1.3:** `kc_get_feed_cursor()` passou a aceitar `datePreset` dentro de `p_request_params`, aplicando server-side a mesma semântica do client em `America/Sao_Paulo`. `eventos` usa `metadata.data_evento` / `metadata.data` com fallback para `created_at`; os demais módulos usam recência por `created_at`.
+
+**Busca v9.2.0:** a busca server-side usa `kc_search_posts_fts()` com `unaccent + portuguese`, expansão de sinônimos no client e documento ponderado por `title`, `tags`, `description`, `category` e `subcategory`.
+
+**Hardening v9.2.3:** os helpers de feed e busca sinalizados pelo Security Advisor agora fixam `SET search_path = ''` e usam referencias qualificadas, removendo os warnings `function_search_path_mutable` sem alterar contratos publicos. A extensao de `v9.2.1.3` manteve esse mesmo padrao para `kc_get_feed_cursor()` e os novos helpers de data. Permanecem pendentes e separados desta iteracao: `extension_in_public` para `unaccent` e `auth_leaked_password_protection`.
+
+**Reputacao v9.1.2.0:** a fundacao de `user_ratings` adiciona agregados em `profiles`, triggers de sincronizacao e RPCs dedicadas com `SET search_path = ''`. A elegibilidade usa apenas interacoes persistidas (`comments`, `post_votes`, `saved_posts`) e a identidade do avaliador pode ser anonimizada nas listagens publicas.
 
 ## Storage Buckets
 

@@ -719,6 +719,237 @@
       gap: 5px;
     }
 
+    .kc-seller-rating-summary {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 177, 66, .18);
+      background: linear-gradient(135deg, rgba(255, 153, 0, .12), rgba(255, 110, 30, .06));
+    }
+
+    .kc-seller-rating-summary__top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .kc-seller-rating-summary__value {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--kc-text-dark-primary);
+    }
+
+    .kc-seller-rating-summary__value i {
+      color: #ffb300;
+    }
+
+    .kc-seller-rating-summary__count {
+      font-size: .82rem;
+      color: var(--kc-text-dark-secondary);
+      font-weight: 600;
+    }
+
+    .kc-seller-rating-summary__empty {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--kc-text-dark-secondary);
+      font-size: .84rem;
+      font-weight: 600;
+    }
+
+    .kc-seller-rating-summary__empty i {
+      color: rgba(255, 179, 0, .86);
+    }
+
+    .kc-seller-rating-summary__caption {
+      font-size: .76rem;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.45;
+    }
+
+    .kc-seller-rating-hint {
+      margin: 0 0 12px;
+      font-size: .8rem;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.5;
+    }
+
+    .kc-seller-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .kc-seller-actions button[disabled] {
+      opacity: .62;
+      cursor: not-allowed;
+    }
+
+    .kc-user-rating-modal {
+      width: min(520px, 100%);
+      max-height: calc(90vh - 24px);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      border: 1px solid var(--kc-border-dark);
+      border-radius: 24px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+      transform: translateY(6px) scale(0.985);
+      transition: transform 180ms ease;
+    }
+
+    .kc-modal-overlay.active .kc-user-rating-modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .kc-user-rating-modal__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--kc-border-dark);
+    }
+
+    .kc-user-rating-modal__title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .kc-user-rating-modal__subtitle {
+      margin: 4px 0 0;
+      font-size: .86rem;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.45;
+    }
+
+    .kc-user-rating-modal__close {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .kc-user-rating-modal__body {
+      padding: 18px 20px 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .kc-user-rating-modal__section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .kc-user-rating-modal__label {
+      font-size: .84rem;
+      font-weight: 700;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-user-rating-stars {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .kc-user-rating-star {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: rgba(255, 179, 0, .46);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.18rem;
+      transition: border-color .16s ease, background-color .16s ease, color .16s ease, transform .16s ease;
+    }
+
+    .kc-user-rating-star:hover,
+    .kc-user-rating-star:focus-visible {
+      border-color: rgba(255, 179, 0, .42);
+      color: #ffb300;
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .kc-user-rating-star.is-active {
+      border-color: rgba(255, 179, 0, .46);
+      background: rgba(255, 179, 0, .12);
+      color: #ffb300;
+    }
+
+    .kc-user-rating-modal textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      border-radius: 14px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark-primary);
+      padding: 14px 15px;
+      font: inherit;
+      line-height: 1.55;
+    }
+
+    .kc-user-rating-modal textarea:focus,
+    .kc-user-rating-star:focus {
+      outline: none;
+    }
+
+    .kc-user-rating-modal__meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: .8rem;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-user-rating-modal__status {
+      min-height: 20px;
+      font-size: .84rem;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-user-rating-modal__status.is-error {
+      color: #ff8a80;
+    }
+
+    .kc-user-rating-modal__status.is-success {
+      color: #7fe38a;
+    }
+
+    .kc-user-rating-modal__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .kc-user-rating-modal__actions button[disabled] {
+      opacity: .72;
+      cursor: not-allowed;
+    }
+
     .kc-comments-section {
       background-color: var(--kc-surface-dark);
       border-radius: 12px;
@@ -880,6 +1111,62 @@
       padding: 1px 4px;
       color: var(--kc-text-dark);
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .kc-comment-thread {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .kc-comment-replies {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .kc-comment--reply {
+      border-left: 3px solid var(--kc-primary-brand);
+      border-radius: 0 12px 12px 0;
+      background: rgba(255, 107, 0, .06);
+    }
+
+    .kc-comment-reply-composer {
+      margin: 0 0 12px 18px;
+      padding: 12px 14px;
+      border-left: 3px solid var(--kc-primary-brand);
+      border-radius: 0 12px 12px 0;
+      background: rgba(255, 107, 0, .05);
+      border: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .kc-comment-reply-composer__label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: .88em;
+      color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-comment-reply-composer textarea {
+      width: 100%;
+      min-height: 88px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark);
+      font-family: inherit;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .kc-comment-reply-composer__actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
     }
 
     .kc-related-section {
@@ -1071,6 +1358,11 @@
     .kc-comment-composer,
     .kc-comment-composer-main {
       min-width: 0;
+    }
+
+    .kc-comment--reply,
+    .kc-comment-reply-composer {
+      margin-left: 10px;
     }
 
     /* ─── Report Popover ─────────────────────────────────────── */
@@ -1404,6 +1696,30 @@
 
       .kc-seller-profile {
         gap: 12px;
+      }
+
+      .kc-user-rating-modal {
+        border-radius: 20px;
+      }
+
+      .kc-user-rating-modal__header,
+      .kc-user-rating-modal__body {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .kc-user-rating-stars {
+        gap: 6px;
+      }
+
+      .kc-user-rating-star {
+        width: 40px;
+        height: 40px;
+      }
+
+      .kc-user-rating-modal__actions button {
+        flex: 1;
+        justify-content: center;
       }
 
       .kc-product-example-ribbon--gallery {

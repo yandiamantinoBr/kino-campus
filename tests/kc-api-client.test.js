@@ -271,4 +271,494 @@ describe('KCAPI - API Client', () => {
       expect(result.subcategoryDB).toBe('exatas');
     });
   });
+
+  describe('getFeedCursor', () => {
+    let originalDriver;
+
+    beforeEach(() => {
+      originalDriver = window.KC_ENV.driver;
+    });
+
+    afterEach(() => {
+      window.KC_ENV.driver = originalDriver;
+    });
+
+    test('delega para o driver ativo quando getFeedCursor existe', async () => {
+      const payload = { posts: [{ id: '1' }], nextCursor: 'abc', hasMore: true };
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([]),
+        getFeedCursor: jest.fn().mockResolvedValue(payload),
+      });
+
+      window.KC_ENV.driver = 'local';
+      const result = await api.getFeedCursor({ limit: 12 });
+
+      expect(result).toEqual(payload);
+    });
+
+    test('faz fallback para getPosts quando o driver nao expõe getFeedCursor', async () => {
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([{ id: 'fallback-post' }]),
+      });
+
+      window.KC_ENV.driver = 'local';
+      const result = await api.getFeedCursor({ limit: 12 });
+
+      expect(result).toEqual({
+        posts: [{ id: 'fallback-post' }],
+        nextCursor: null,
+        hasMore: false,
+      });
+    });
+  });
+
+  describe('searchPosts', () => {
+    let originalDriver;
+
+    beforeEach(() => {
+      originalDriver = window.KC_ENV.driver;
+    });
+
+    afterEach(() => {
+      window.KC_ENV.driver = originalDriver;
+    });
+
+    test('delega para o driver ativo quando searchPosts existe', async () => {
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([]),
+        searchPosts: jest.fn().mockResolvedValue([{ id: 'search-post' }]),
+      });
+
+      window.KC_ENV.driver = 'local';
+      const result = await api.searchPosts({ q: 'notebook', limit: 8 });
+
+      expect(result).toEqual([{ id: 'search-post' }]);
+    });
+
+    test('faz fallback para getPosts quando o driver nao expoe searchPosts', async () => {
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([{ id: 'legacy-search' }]),
+      });
+
+      window.KC_ENV.driver = 'local';
+      const result = await api.searchPosts({ q: 'notebook', limit: 8 });
+
+      expect(result).toEqual([{ id: 'legacy-search' }]);
+    });
+  });
+
+  describe('filterPosts - requestParams avancados', () => {
+    test('filtra marketplace por categoria, condicao e selo verificado', () => {
+      const posts = [
+        {
+          id: 'market-ok',
+          module: 'compra-venda',
+          category: 'eletronicos',
+          metadata: { condicao: 'Semi-novo' },
+          authorVerified: true,
+        },
+        {
+          id: 'market-used',
+          module: 'compra-venda',
+          category: 'eletronicos',
+          metadata: { condicao: 'Usado' },
+          authorVerified: true,
+        },
+        {
+          id: 'market-unverified',
+          module: 'compra-venda',
+          category: 'eletronicos',
+          metadata: { condicao: 'Semi-novo' },
+          authorVerified: false,
+        },
+      ];
+
+      const result = api.filterPosts(posts, {
+        module: 'compra-venda',
+        marketCats: ['eletronicos'],
+        marketConds: ['seminovo'],
+        marketVerified: true,
+      });
+
+      expect(result.map((post) => post.id)).toEqual(['market-ok']);
+    });
+
+    test('filtra posts por faixa de preco generica no caminho incremental', () => {
+      const posts = [
+        { id: 'cheap', module: 'compra-venda', price: 80 },
+        { id: 'mid', module: 'compra-venda', price: 250 },
+        { id: 'expensive', module: 'compra-venda', price: 1200 },
+      ];
+
+      const result = window.KCAPI.filterPosts(posts, {
+        module: 'compra-venda',
+        priceMin: 100,
+        priceMax: 500,
+      });
+
+      expect(result.map((post) => post.id)).toEqual(['mid']);
+    });
+
+    test('filtra modulos de recencia por datePreset usando created_at em America/Sao_Paulo', () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
+
+      try {
+        const posts = [
+          { id: 'recent', module: 'moradia', created_at: '2026-04-06T09:00:00-03:00' },
+          { id: 'week-old', module: 'moradia', created_at: '2026-04-01T09:00:00-03:00' },
+          { id: 'old', module: 'moradia', created_at: '2026-03-01T09:00:00-03:00' },
+        ];
+
+        const result = window.KCAPI.filterPosts(posts, {
+          module: 'moradia',
+          datePreset: 'last7d',
+        });
+
+        expect(result.map((post) => post.id)).toEqual(['recent', 'week-old']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    test('filtra eventos por data_evento e usa created_at como fallback quando metadata esta vazia', () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
+
+      try {
+        const posts = [
+          {
+            id: 'event-next',
+            module: 'eventos',
+            metadata: { data_evento: '2026-04-10' },
+            created_at: '2026-04-01T09:00:00-03:00',
+          },
+          {
+            id: 'event-fallback-today',
+            module: 'eventos',
+            metadata: {},
+            created_at: '2026-04-06T08:30:00-03:00',
+          },
+          {
+            id: 'event-past',
+            module: 'eventos',
+            metadata: { data: '2026-04-02' },
+            created_at: '2026-04-02T08:30:00-03:00',
+          },
+        ];
+
+        const next7d = window.KCAPI.filterPosts(posts, {
+          module: 'eventos',
+          datePreset: 'next7d',
+        });
+        const today = window.KCAPI.filterPosts(posts, {
+          module: 'eventos',
+          datePreset: 'today',
+        });
+
+        expect(next7d.map((post) => post.id)).toEqual(['event-next', 'event-fallback-today']);
+        expect(today.map((post) => post.id)).toEqual(['event-fallback-today']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    test('filtra caronas por periodo, campus, origem, destino, feature e verificado', () => {
+      const posts = [
+        {
+          id: 'ride-ok',
+          module: 'caronas',
+          category: 'ofereco',
+          title: 'Ofereço carona saindo do Campus Samambaia',
+          metadata: {
+            origem: 'Campus Samambaia',
+            destino: 'Centro',
+            horario: '07:30',
+            caronasFeatureKeys: ['ar-condicionado', 'som'],
+          },
+          authorVerified: true,
+        },
+        {
+          id: 'ride-late',
+          module: 'caronas',
+          category: 'ofereco',
+          title: 'Ofereço carona saindo do Campus Samambaia',
+          metadata: {
+            origem: 'Campus Samambaia',
+            destino: 'Centro',
+            horario: '19:30',
+            caronasFeatureKeys: ['ar-condicionado'],
+          },
+          authorVerified: true,
+        },
+      ];
+
+      const result = api.filterPosts(posts, {
+        module: 'caronas',
+        rideType: ['ofereco'],
+        rideCampus: ['campus-samambaia'],
+        ridePeriod: ['matutino'],
+        rideFeatures: ['ar-condicionado'],
+        rideVerified: true,
+        rideOrigin: 'samambaia',
+        rideDestination: 'centro',
+      });
+
+      expect(result.map((post) => post.id)).toEqual(['ride-ok']);
+    });
+
+    test('filtra moradia por regiao ou zona e exige todas as features selecionadas', () => {
+      const originalKCUtils = window.KCUtils;
+      window.KCUtils = {
+        ...originalKCUtils,
+        resolveHousingRegion: jest.fn((post) => ({
+          key: post.regionKey || (post.metadata && post.metadata.regionKey) || '',
+          zoneKey: post.regionZoneKey || (post.metadata && post.metadata.regionZoneKey) || '',
+        })),
+        resolveHousingFeatures: jest.fn((post) => {
+          const keys = []
+            .concat(Array.isArray(post.housingFeatureKeys) ? post.housingFeatureKeys : [])
+            .concat(Array.isArray(post.metadata && post.metadata.housingFeatureKeys) ? post.metadata.housingFeatureKeys : []);
+          return Array.from(new Set(keys)).map((key) => ({ key, label: key }));
+        }),
+      };
+      try {
+        const posts = [
+          {
+            id: 'housing-ok',
+            module: 'moradia',
+            regionKey: 'praca-universitaria',
+            regionLabel: 'Praça Universitária',
+            regionZoneKey: 'leste',
+            housingFeatureKeys: ['aceita-pets', 'wifi'],
+            housingFeatureLabels: ['Aceita pets', 'Wi-Fi'],
+            metadata: {
+              regionKey: 'praca-universitaria',
+              regionLabel: 'Praça Universitária',
+              regionZoneKey: 'leste',
+              housingFeatureKeys: ['aceita-pets', 'wifi'],
+              housingFeatureLabels: ['Aceita pets', 'Wi-Fi'],
+            },
+          },
+          {
+            id: 'housing-missing-feature',
+            module: 'moradia',
+            regionKey: 'praca-universitaria',
+            regionLabel: 'Praça Universitária',
+            regionZoneKey: 'leste',
+            housingFeatureKeys: ['wifi'],
+            housingFeatureLabels: ['Wi-Fi'],
+            metadata: {
+              regionKey: 'praca-universitaria',
+              regionLabel: 'Praça Universitária',
+              regionZoneKey: 'leste',
+              housingFeatureKeys: ['wifi'],
+              housingFeatureLabels: ['Wi-Fi'],
+            },
+          },
+        ];
+
+        const result = api.filterPosts(posts, {
+          module: 'moradia',
+          housingFeatures: ['aceita-pets'],
+          housingRegion: 'praca-universitaria',
+        });
+
+        expect(result.map((post) => post.id)).toEqual(['housing-ok']);
+      } finally {
+        window.KCUtils = originalKCUtils;
+      }
+    });
+
+    test('filtra oportunidades por tipo, modo e area', () => {
+      const posts = [
+        {
+          id: 'opp-ok',
+          module: 'oportunidades',
+          category: 'emprego',
+          title: 'Vaga remota CLT para desenvolvimento web',
+          metadata: {
+            areaKey: 'tecnologia',
+            workMode: 'remoto',
+            employmentType: 'clt',
+          },
+        },
+        {
+          id: 'opp-hybrid',
+          module: 'oportunidades',
+          category: 'emprego',
+          title: 'Vaga híbrida CLT para design',
+          metadata: {
+            areaKey: 'design',
+            workMode: 'hibrido',
+            employmentType: 'clt',
+          },
+        },
+      ];
+
+      const result = api.filterPosts(posts, {
+        module: 'oportunidades',
+        oppType: ['emprego-clt'],
+        oppMode: ['remoto'],
+        oppArea: 'tecnologia',
+      });
+
+      expect(result.map((post) => post.id)).toEqual(['opp-ok']);
+    });
+
+    test('filtra achados e perdidos por status, tipo e localizacao', () => {
+      const originalKCUtils = window.KCUtils;
+      window.KCUtils = {
+        ...originalKCUtils,
+        resolveLostFoundLocation: jest.fn((post) => ({
+          key: post.lostFoundLocationKey || (post.metadata && post.metadata.lostFoundLocationKey) || '',
+        })),
+      };
+      try {
+        const posts = [
+          {
+            id: 'lf-ok',
+            module: 'achados-perdidos',
+            categoria: 'perdido',
+            subcategoria: 'documento',
+            lostFoundLocationKey: 'biblioteca',
+            metadata: {
+              lostFoundLocationKey: 'biblioteca',
+            },
+          },
+          {
+            id: 'lf-other',
+            module: 'achados-perdidos',
+            categoria: 'encontrado',
+            subcategoria: 'eletronico',
+            lostFoundLocationKey: 'ru',
+            metadata: {
+              lostFoundLocationKey: 'ru',
+            },
+          },
+        ];
+
+        const result = api.filterPosts(posts, {
+          module: 'achados-perdidos',
+          lfStatus: ['perdido'],
+          lfType: ['documento'],
+          lfLocation: 'biblioteca',
+        });
+
+        expect(result.map((post) => post.id)).toEqual(['lf-ok']);
+      } finally {
+        window.KCUtils = originalKCUtils;
+      }
+    });
+  });
+});
+
+describe('KCAPI - user ratings', () => {
+  let api;
+
+  beforeEach(() => {
+    api = window.KCAPI;
+    api.registerAdapter('local', {
+      name: 'local',
+      getUserRatingSummary: jest.fn().mockResolvedValue({ user_id: 'USER_01', rating_avg: 4.75, rating_count: 8 }),
+      getUserRatingState: jest.fn().mockResolvedValue({
+        target_user_id: 'USER_01',
+        context_post_id: 'post-1',
+        can_rate: true,
+        reason: 'OK',
+        myRating: {
+          id: 'rating-1',
+          target_user_id: 'USER_01',
+          rater_user_id: 'USER_SELF',
+          context_post_id: 'post-1',
+          rating: 5,
+          comment: 'Ótima experiência',
+        },
+      }),
+      listUserRatings: jest.fn().mockResolvedValue({
+        items: [
+          {
+            id: 'rating-1',
+            target_user_id: 'USER_01',
+            rater_user_id: 'USER_SELF',
+            rating: 5,
+            comment: 'Ótima experiência',
+          },
+        ],
+        page: 1,
+        limit: 10,
+        total: 1,
+        has_more: false,
+      }),
+      upsertUserRating: jest.fn().mockResolvedValue({
+        ok: true,
+        rating: {
+          id: 'rating-1',
+          target_user_id: 'USER_01',
+          rater_user_id: 'USER_SELF',
+          rating: 4,
+          comment: 'Confiável',
+        },
+        summary: {
+          user_id: 'USER_01',
+          rating_avg: 4.0,
+          rating_count: 1,
+        },
+      }),
+    });
+  });
+
+  test('normaliza resumo recebido do driver', async () => {
+    await expect(api.getUserRatingSummary('USER_01')).resolves.toEqual({
+      userId: 'USER_01',
+      average: 4.75,
+      count: 8,
+    });
+  });
+
+  test('normaliza estado e avaliação do viewer', async () => {
+    const result = await api.getUserRatingState({ targetUserId: 'USER_01', contextPostId: 'post-1' });
+
+    expect(result.canRate).toBe(true);
+    expect(result.reason).toBe('OK');
+    expect(result.myRating).toEqual(expect.objectContaining({
+      targetUserId: 'USER_01',
+      contextPostId: 'post-1',
+      rating: 5,
+    }));
+  });
+
+  test('normaliza listagem paginada de avaliações', async () => {
+    const result = await api.listUserRatings('USER_01', { page: 1, limit: 10 });
+
+    expect(result.total).toBe(1);
+    expect(result.hasMore).toBe(false);
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      targetUserId: 'USER_01',
+      rating: 5,
+    }));
+  });
+
+  test('normaliza retorno de upsert', async () => {
+    const result = await api.upsertUserRating({
+      targetUserId: 'USER_01',
+      rating: 4,
+      comment: 'Confiável',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.rating).toEqual(expect.objectContaining({
+      targetUserId: 'USER_01',
+      rating: 4,
+    }));
+    expect(result.summary).toEqual({
+      userId: 'USER_01',
+      average: 4,
+      count: 1,
+    });
+  });
 });

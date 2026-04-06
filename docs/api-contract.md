@@ -46,21 +46,106 @@ Todo post normalizado via `KCPostModel.from()` tem a seguinte forma:
 ## Métodos de Post
 
 ### `KCAPI.getPosts(params)`
-Busca lista de posts com filtros.
+Busca lista de posts com filtros. Mantido por compatibilidade para telas auxiliares e consumo legado.
 
 **Params:**
 ```javascript
 {
-  module: string,       // Filtrar por módulo (opcional)
-  category: string,     // Filtrar por categoria (opcional)
-  query: string,        // Busca textual (opcional)
-  sort: 'recent' | 'top' | 'discussed',  // Ordenação (default: 'recent')
-  limit: number,        // Quantidade (default: 20)
-  offset: number,       // Paginação offset (deprecated — usar cursor em v9.2.2)
+  module: string | string[],
+  category: string,
+  subcategory: string,
+  q: string,
+  tag: string,
+  sortBy: 'recentes' | 'votos' | 'comentados',
+  limit: number,
 }
 ```
 
 **Retorno:** `Promise<KCPostModel[]>`
+
+**Compatibilidade v9.2.2:** feeds incrementais migraram para `KCAPI.getFeedCursor()`. `getPosts()` continua estável para listagens legadas e fluxos auxiliares.
+
+---
+
+### `KCAPI.searchPosts(params)`
+Busca server-side dedicada para a UI de busca (`search-results.html` e dropdown global do header).
+
+**Params:**
+```javascript
+{
+  q: string,
+  module: string,
+  category: string,
+  subcategory: string,
+  limit: number,
+}
+```
+
+**Retorno:** `Promise<KCPostModel[]>`
+
+**Notas v9.2.0:**
+- `KCAPI.getPosts()` continua legado/estável e não foi reinterpretado como FTS.
+- Sinônimos continuam expandidos no client antes do RPC.
+- A superfície de busca cobre `title`, `description`, `tags`, `category` e `subcategory`.
+
+---
+
+### `KCAPI.getFeedCursor(params)`
+Busca lotes incrementais do feed via cursor opaco. É o contrato usado pelos pagers a partir de `v9.2.2`.
+
+**Params:**
+```javascript
+{
+  module: string | string[],
+  category: string,
+  subcategory: string,
+  q: string,
+  tag: string,
+  sortBy: 'recentes' | 'votos' | 'comentados',
+  limit: number,
+  cursor: string | null,
+  requestParams?: {
+    marketCats?: string[],
+    marketConds?: string[],
+    marketVerified?: boolean,
+    datePreset?: string,
+    priceMin?: number,
+    priceMax?: number,
+    rideType?: string[],
+    rideCampus?: string[],
+    ridePeriod?: string[],
+    rideFeatures?: string[],
+    rideVerified?: boolean,
+    rideOrigin?: string,
+    rideDestination?: string,
+    housingFeatures?: string[],
+    housingRegion?: string,
+    oppType?: string[],
+    oppMode?: string[],
+    oppArea?: string,
+    lfStatus?: string[],
+    lfType?: string[],
+    lfLocation?: string,
+  },
+}
+```
+
+**Retorno:**
+```javascript
+Promise<{
+  posts: KCPostModel[],
+  nextCursor: string | null,
+  hasMore: boolean,
+}>
+```
+
+**Notas:**
+- `cursor` é opaco e pode ter representações diferentes entre `local` e `supabase`.
+- Feeds híbridos podem passar `module` como array, por exemplo `['compra-venda', 'livros']`.
+- `requestParams` carrega o envelope dos filtros avançados já existentes nos módulos (`compra-venda`, `caronas`, `moradia`, `oportunidades` e `achados-perdidos`) para o caminho incremental cursor-based.
+- `datePreset` foi fechado em `v9.2.1.3` e hoje cobre os 6 módulos do feed incremental. Semântica: `today/last7d/last30d` para `compra-venda`, `livros`, `moradia`, `oportunidades` e `achados-perdidos`; `today/last3d/last7d` para `caronas`; `today/next7d/thisMonth/past` para `eventos`, usando `metadata.data_evento`/`metadata.data` com fallback para `created_at`.
+- `priceMin` e `priceMax` foram adicionados ao contrato cursor-based em `v9.2.1.2`; hoje eles alimentam as faixas de preço/remuneração de `compra-venda`, `caronas`, `moradia` e `oportunidades`.
+- `KCAPI.getPosts()` permanece estável para consumo legado; a aplicação cursor-based dos filtros avançados foi adicionada em `v9.2.1.1`, expandida em `v9.2.1.2` e concluída em `v9.2.1.3` sem reinterpretar o contrato antigo.
 
 ---
 
@@ -209,24 +294,27 @@ Busca comentários de um post.
 {
   id: string,
   post_id: string,
+  parent_id: string | null,
   author_id: string,
-  author: object,  // { display_name, avatar_url }
-  content: string,
+  author_name: string,
+  author_avatar: string,
+  body: string,
   created_at: string,
   likes: number,
-  likedByMe: boolean,
-  parent_id: string | null,  // (v9.1.1+)
+  liked_by_me: boolean,
 }
 ```
 
 ---
 
-### `KCAPI.addComment(postId, body)`
+### `KCAPI.addComment(postId, body, options?)`
 Adiciona comentário. **Requer autenticação.**
 
-**Body:** `{ content: string, parent_id?: string }`
+**Body:** `string`
 
-**Retorno:** `Promise<{ ok: boolean, comment: Comment, error?: object }>`
+**Options:** `{ parentId?: string }`
+
+**Retorno:** `Promise<{ ok: boolean, data?: Comment, error?: object }>`
 
 ---
 
@@ -274,12 +362,152 @@ Retorna perfil público de um usuário.
 
 **Retorno:** `Promise<Profile | null>`
 
+**Notas v9.1.2:**
+- O payload público de perfil agora pode incluir `ratingAvg` / `ratingCount` (aliases camelCase de `rating_avg` / `rating_count`).
+
 ---
 
 ### `KCAPI.getPostsByAuthorId(authorId, params)`
 Retorna posts de um autor específico.
 
 **Retorno:** `Promise<KCPostModel[]>`
+
+---
+
+## Métodos de Avaliações de Usuários
+
+### `KCAPI.getUserRatingSummary(userId)`
+Retorna o resumo público de reputação de um usuário.
+
+**Retorno:**
+```javascript
+Promise<{
+  userId: string,
+  average: number | null,
+  count: number,
+}>
+```
+
+---
+
+### `KCAPI.getUserRatingState({ targetUserId, contextPostId })`
+Retorna o estado do avaliador autenticado em relação ao usuário alvo. **Requer autenticação** para respostas úteis.
+
+**Params:**
+```javascript
+{
+  targetUserId: string,
+  contextPostId?: string | null,
+}
+```
+
+**Retorno:**
+```javascript
+Promise<{
+  targetUserId: string,
+  contextPostId: string | null,
+  canRate: boolean,
+  reason: 'OK' | 'AUTH_REQUIRED' | 'SELF' | 'NO_INTERACTION' | 'INVALID_CONTEXT' | 'TARGET_NOT_FOUND',
+  myRating: {
+    id: string,
+    targetUserId: string,
+    raterUserId: string,
+    contextPostId: string | null,
+    rating: number,
+    comment: string | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+}>
+```
+
+**Notas v9.1.2:**
+- A elegibilidade é liberada apenas quando o viewer já interagiu com posts do alvo via `comments`, `post_votes` ou `saved_posts`.
+- Autoavaliação é sempre bloqueada.
+
+---
+
+### `KCAPI.listUserRatings(userId, options?)`
+Lista as avaliações públicas de um usuário com paginação simples.
+
+**Params:**
+```javascript
+{
+  page?: number,
+  limit?: number,
+}
+```
+
+**Retorno:**
+```javascript
+Promise<{
+  items: Array<{
+    id: string,
+    targetUserId: string,
+    raterUserId: string | null,
+    contextPostId: string | null,
+    rating: number,
+    comment: string | null,
+    createdAt: string,
+    updatedAt: string,
+    reviewer: {
+      id: string | null,
+      displayName: string,
+      avatarUrl: string | null,
+      public: boolean,
+    },
+  }>,
+  page: number,
+  limit: number,
+  total: number,
+  hasMore: boolean,
+}>
+```
+
+**Notas v9.1.2:**
+- A identidade do avaliador é anonimizada quando o perfil dele não é público.
+
+---
+
+### `KCAPI.upsertUserRating(payload)`
+Cria ou atualiza a avaliação do usuário autenticado para um alvo. **Requer autenticação.**
+
+**Payload:**
+```javascript
+{
+  targetUserId: string,
+  contextPostId?: string | null,
+  rating: 1 | 2 | 3 | 4 | 5,
+  comment?: string | null,
+}
+```
+
+**Retorno:**
+```javascript
+Promise<{
+  ok: boolean,
+  rating: {
+    id: string,
+    targetUserId: string,
+    raterUserId: string,
+    contextPostId: string | null,
+    rating: number,
+    comment: string | null,
+    createdAt: string,
+    updatedAt: string,
+  },
+  summary: {
+    userId: string,
+    average: number | null,
+    count: number,
+  },
+}>
+```
+
+**Validações v9.1.2:**
+- `rating` aceita apenas `1..5`.
+- `comment` é opcional e limitado a `280` caracteres.
+- O par `raterUserId -> targetUserId` é único; regravação usa `upsert`.
 
 ---
 

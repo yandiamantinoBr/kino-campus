@@ -36,6 +36,10 @@
   const state = {
     features: new Set(),
     region: '',
+    datePreset: '',
+    priceMin: null,
+    priceMax: null,
+    feedPager: null,
     posts: new Map(),
     sections: [],
     queued: false,
@@ -60,10 +64,60 @@
 
   function cloneSet(set) { return new Set(Array.from(set || [])); }
   function isMobile() { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }
+  function sanitizePriceValue(value) {
+    if (value == null || value === '') return null;
+    const numeric = Number(String(value).replace(',', '.'));
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  }
+  function normalizePriceRange(minPrice, maxPrice) {
+    let nextMin = sanitizePriceValue(minPrice);
+    let nextMax = sanitizePriceValue(maxPrice);
+    if (nextMin != null && nextMax != null && nextMax < nextMin) {
+      const swap = nextMin;
+      nextMin = nextMax;
+      nextMax = swap;
+    }
+    return { min: nextMin, max: nextMax };
+  }
   function getSessionStore() {
     return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
       ? window.KCSessionStore
       : null;
+  }
+
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
+  function getAllowedDatePresets() {
+    const utils = getFeedFilterUtils();
+    return utils && typeof utils.getAllowedDatePresets === 'function'
+      ? utils.getAllowedDatePresets('moradia')
+      : ['today', 'last7d', 'last30d'];
+  }
+
+  function normalizeDatePreset(value) {
+    const utils = getFeedFilterUtils();
+    if (utils && typeof utils.normalizeDatePreset === 'function') {
+      return utils.normalizeDatePreset('moradia', value);
+    }
+    const normalized = norm(value);
+    const allowed = getAllowedDatePresets();
+    return allowed.includes(normalized) ? normalized : '';
+  }
+
+  function readSelectedDatePreset() {
+    const selected = document.querySelector('[data-kc-housing-date-preset]:checked');
+    return normalizeDatePreset(selected ? selected.value : '');
+  }
+
+  function renderDateInputs() {
+    const selected = (state.draft && state.activeKey === 'dates')
+      ? normalizeDatePreset(state.draft.datePreset)
+      : normalizeDatePreset(state.datePreset);
+    document.querySelectorAll('[data-kc-housing-date-preset]').forEach((input) => {
+      input.checked = normalizeDatePreset(input.value) === selected;
+    });
   }
 
   function restoreCachedPosts() {
@@ -179,6 +233,8 @@
         emoji: String(entry && entry.emoji || '').trim(),
         isKnown: !!(entry && entry.isKnown),
       })).filter((entry) => entry.key && entry.label),
+      createdAt: post && (post.created_at || post.createdAt || post.timestamp || null),
+      priceValue: sanitizePriceValue(post && (post.preco != null ? post.preco : post.price)),
       searchText: norm([
         post && post.titulo,
         post && post.descricao,
@@ -238,6 +294,8 @@
       if (!card.getAttribute('data-kc-housing-region') && summary.regionKey) card.setAttribute('data-kc-housing-region', summary.regionKey);
       if (!card.getAttribute('data-kc-housing-zone') && summary.zoneKey) card.setAttribute('data-kc-housing-zone', summary.zoneKey);
       if (!card.getAttribute('data-kc-housing-features') && summary.featureKeys.length) card.setAttribute('data-kc-housing-features', summary.featureKeys.join(' '));
+      if (!card.getAttribute('data-kc-created-at') && summary.createdAt) card.setAttribute('data-kc-created-at', String(summary.createdAt));
+      if (!card.getAttribute('data-kc-price') && summary.priceValue != null) card.setAttribute('data-kc-price', String(summary.priceValue));
     });
   }
 
@@ -250,11 +308,91 @@
 
   function readInputs() {
     state.features = new Set(readSelectedFeatureInputs());
+    state.datePreset = readSelectedDatePreset();
+    const range = normalizePriceRange(
+      document.querySelector('[data-kc-housing-price-min]') && document.querySelector('[data-kc-housing-price-min]').value,
+      document.querySelector('[data-kc-housing-price-max]') && document.querySelector('[data-kc-housing-price-max]').value
+    );
+    state.priceMin = range.min;
+    state.priceMax = range.max;
   }
 
   function readDraftInputs() {
     if (!state.draft) return;
     state.draft.features = new Set(readSelectedFeatureInputs());
+    state.draft.datePreset = readSelectedDatePreset();
+    const range = normalizePriceRange(
+      document.querySelector('[data-kc-housing-price-min]') && document.querySelector('[data-kc-housing-price-min]').value,
+      document.querySelector('[data-kc-housing-price-max]') && document.querySelector('[data-kc-housing-price-max]').value
+    );
+    state.draft.priceMin = range.min;
+    state.draft.priceMax = range.max;
+  }
+
+  function getFeedRequestParams() {
+    const params = {};
+    if (state.features.size) params.housingFeatures = Array.from(state.features);
+    if (state.region) params.housingRegion = state.region;
+    if (state.datePreset) params.datePreset = state.datePreset;
+    if (state.priceMin != null) params.priceMin = state.priceMin;
+    if (state.priceMax != null) params.priceMax = state.priceMax;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
+  }
+
+  function restoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    const params = utils.getSearchParams();
+    const hasFeatures = !!(params && typeof params.has === 'function' && params.has('housingFeatures'));
+    const hasRegion = !!(params && typeof params.has === 'function' && params.has('housingRegion'));
+    const hasDatePreset = !!(params && typeof params.has === 'function' && params.has('datePreset'));
+    const hasPriceMin = !!(params && typeof params.has === 'function' && params.has('priceMin'));
+    const hasPriceMax = !!(params && typeof params.has === 'function' && params.has('priceMax'));
+    if (!hasFeatures && !hasRegion && !hasDatePreset && !hasPriceMin && !hasPriceMax) return false;
+
+    if (hasFeatures) {
+      state.features = new Set(utils.readListParam(params, 'housingFeatures').map((value) => String(value || '').trim()).filter(Boolean));
+    }
+    if (hasRegion) {
+      state.region = utils.readTextParam(params, 'housingRegion');
+    }
+    if (hasDatePreset) {
+      state.datePreset = typeof utils.readPresetParam === 'function'
+        ? utils.readPresetParam(params, 'datePreset', getAllowedDatePresets())
+        : normalizeDatePreset(utils.readTextParam(params, 'datePreset'));
+    }
+    if (hasPriceMin || hasPriceMax) {
+      const range = normalizePriceRange(
+        hasPriceMin ? utils.readNumberParam(params, 'priceMin') : state.priceMin,
+        hasPriceMax ? utils.readNumberParam(params, 'priceMax') : state.priceMax
+      );
+      state.priceMin = range.min;
+      state.priceMax = range.max;
+    }
+    const minInput = document.querySelector('[data-kc-housing-price-min]');
+    const maxInput = document.querySelector('[data-kc-housing-price-max]');
+    if (minInput) minInput.value = state.priceMin != null ? String(state.priceMin) : '';
+    if (maxInput) maxInput.value = state.priceMax != null ? String(state.priceMax) : '';
+    renderDateInputs();
+    return true;
+  }
+
+  function syncUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      utils.writeListParam(params, 'housingFeatures', Array.from(state.features));
+      utils.writeTextParam(params, 'housingRegion', state.region || '');
+      if (typeof utils.writePresetParam === 'function') utils.writePresetParam(params, 'datePreset', state.datePreset, getAllowedDatePresets());
+      else utils.writeTextParam(params, 'datePreset', state.datePreset || '');
+      utils.writeNumberParam(params, 'priceMin', state.priceMin);
+      utils.writeNumberParam(params, 'priceMax', state.priceMax);
+    });
   }
 
   function matchesRegion(summary, regionKey) {
@@ -274,6 +412,17 @@
       const featureSet = new Set(summary.featureKeys || []);
       const hasAll = Array.from(state.features).every((key) => featureSet.has(key));
       if (!hasAll) return false;
+    }
+
+    if (!cfg.ignoreDate && state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'moradia', preset: state.datePreset, createdAt: summary.createdAt })) return false;
+    }
+
+    if (!cfg.ignorePrice) {
+      if ((state.priceMin != null || state.priceMax != null) && summary.priceValue == null) return false;
+      if (state.priceMin != null && summary.priceValue < state.priceMin) return false;
+      if (state.priceMax != null && summary.priceValue > state.priceMax) return false;
     }
 
     if (!cfg.ignoreRegion && !matchesRegion(summary, state.region)) return false;
@@ -490,9 +639,16 @@
     modal.setAttribute('data-kc-housing-section-view', state.activeKey);
 
     if (state.activeKey === 'filters') {
-      const draft = state.draft || { features: cloneSet(state.features), region: state.region || '' };
-      const canClear = draft.features.size > 0;
+      const draft = state.draft || { features: cloneSet(state.features), region: state.region || '', datePreset: state.datePreset, priceMin: state.priceMin, priceMax: state.priceMax };
+      const canClear = draft.features.size > 0 || draft.priceMin != null || draft.priceMax != null || !!normalizeDatePreset(draft.datePreset);
       actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><button class="kc-opportunity-clear" type="button" data-kc-housing-modal-clear="true"' + (canClear ? '' : ' disabled') + '>Limpar filtros</button><button class="kc-opportunity-apply" type="button" data-kc-housing-modal-apply="filters">Aplicar filtros</button></div>';
+      return;
+    }
+
+    if (state.activeKey === 'dates') {
+      const labels = { '': 'Todas as datas', today: 'Hoje', last7d: 'Últimos 7 dias', last30d: 'Últimos 30 dias' };
+      const selectedLabel = labels[(state.draft && typeof state.draft.datePreset === 'string') ? state.draft.datePreset : state.datePreset] || 'Todas as datas';
+      actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><p class="kc-housing-section-modal__caption">Data selecionada: <strong>' + esc(selectedLabel) + '</strong></p><button class="kc-opportunity-apply" type="button" data-kc-housing-modal-apply="dates">Ver moradias</button></div>';
       return;
     }
 
@@ -529,11 +685,19 @@
     state.draft = {
       features: cloneSet(state.features),
       region: state.region || '',
+      datePreset: state.datePreset,
+      priceMin: state.priceMin,
+      priceMax: state.priceMax,
     };
 
     title.textContent = section.title;
     titleIcon.className = section.icon || 'fas fa-home';
+    const minInput = document.querySelector('[data-kc-housing-price-min]');
+    const maxInput = document.querySelector('[data-kc-housing-price-max]');
+    if (minInput) minInput.value = state.draft.priceMin != null ? String(state.draft.priceMin) : '';
+    if (maxInput) maxInput.value = state.draft.priceMax != null ? String(state.draft.priceMax) : '';
     renderFeatures();
+    renderDateInputs();
     renderRegions();
     renderActions();
     overlay.classList.add('active');
@@ -595,7 +759,13 @@
       }
     }
 
+    const minInput = document.querySelector('[data-kc-housing-price-min]');
+    const maxInput = document.querySelector('[data-kc-housing-price-max]');
+    if (minInput) minInput.value = state.priceMin != null ? String(state.priceMin) : '';
+    if (maxInput) maxInput.value = state.priceMax != null ? String(state.priceMax) : '';
+
     renderFeatures();
+    renderDateInputs();
     renderRegions();
     renderRail();
     syncClear();
@@ -612,6 +782,7 @@
     (window.requestAnimationFrame || function (cb) { return window.setTimeout(cb, 16); })(function () {
       state.queued = false;
       renderFeatures();
+      renderDateInputs();
       renderRegions();
       renderRail();
       renderActions();
@@ -620,20 +791,30 @@
   }
 
   function apply() {
+    syncUrlState();
+    refreshFeed();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
 
   function syncClear() {
     const button = document.querySelector('[data-kc-housing-clear-filters="true"]');
-    if (button) button.disabled = state.features.size === 0;
+    if (button) button.disabled = state.features.size === 0 && !state.region && !state.datePreset && state.priceMin == null && state.priceMax == null;
   }
 
   function resetApplied(clearSearch) {
     state.features = new Set();
     state.region = '';
+    state.datePreset = '';
+    state.priceMin = null;
+    state.priceMax = null;
     renderFeatures();
+    renderDateInputs();
     renderRegions();
+    const minInput = document.querySelector('[data-kc-housing-price-min]');
+    const maxInput = document.querySelector('[data-kc-housing-price-max]');
+    if (minInput) minInput.value = '';
+    if (maxInput) maxInput.value = '';
     if (clearSearch && window.kcFilters && typeof window.kcFilters.setQuery === 'function') {
       window.kcFilters.setQuery('');
     } else if (clearSearch) {
@@ -650,12 +831,20 @@
     const regionKey = String(card.getAttribute('data-kc-housing-region') || '').trim();
     const zoneKey = String(card.getAttribute('data-kc-housing-zone') || '').trim();
     const featureKeys = String(card.getAttribute('data-kc-housing-features') || '').split(/\s+/).map((value) => value.trim()).filter(Boolean);
+    const createdAt = card.getAttribute('data-kc-created-at') || '';
+    const priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
 
     if (state.features.size) {
       const featureSet = new Set(featureKeys);
       const hasAll = Array.from(state.features).every((key) => featureSet.has(key));
       if (!hasAll) return false;
     }
+    if (state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'moradia', preset: state.datePreset, createdAt: createdAt })) return false;
+    }
+    if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
+    if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
     if (state.region && !(regionKey === state.region || zoneKey === state.region)) return false;
     return true;
   }
@@ -665,11 +854,27 @@
     if (clear) clear.addEventListener('click', function () {
       if (state.draft && state.activeKey === 'filters' && isMobile()) {
         state.draft.features = new Set();
+        state.draft.datePreset = '';
+        state.draft.priceMin = null;
+        state.draft.priceMax = null;
+        const minInput = document.querySelector('[data-kc-housing-price-min]');
+        const maxInput = document.querySelector('[data-kc-housing-price-max]');
+        if (minInput) minInput.value = '';
+        if (maxInput) maxInput.value = '';
         renderFeatures();
+        renderDateInputs();
         renderActions();
         return;
       }
       state.features = new Set();
+      state.datePreset = '';
+      state.priceMin = null;
+      state.priceMax = null;
+      const minInput = document.querySelector('[data-kc-housing-price-min]');
+      const maxInput = document.querySelector('[data-kc-housing-price-max]');
+      if (minInput) minInput.value = '';
+      if (maxInput) maxInput.value = '';
+      renderDateInputs();
       apply();
     });
 
@@ -689,9 +894,15 @@
 
     document.addEventListener('change', function (event) {
       const target = event.target;
-      if (!target || !target.matches || !target.matches('[data-kc-housing-filter-kind="feature"]')) return;
+      if (!target || !target.matches) return;
+      if (!target.matches('[data-kc-housing-filter-kind="feature"], [data-kc-housing-price-min], [data-kc-housing-price-max], [data-kc-housing-date-preset]')) return;
       if (state.draft && state.activeKey === 'filters' && isMobile()) {
         readDraftInputs();
+        renderActions();
+        return;
+      }
+      if (state.draft && state.activeKey === 'dates' && isMobile()) {
+        state.draft.datePreset = readSelectedDatePreset();
         renderActions();
         return;
       }
@@ -705,7 +916,22 @@
         const action = String(applyButton.getAttribute('data-kc-housing-modal-apply') || '').trim();
         if (action === 'filters' && state.draft) {
           state.features = cloneSet(state.draft.features);
+          state.datePreset = normalizeDatePreset(state.draft.datePreset);
+          state.priceMin = state.draft.priceMin != null ? state.draft.priceMin : null;
+          state.priceMax = state.draft.priceMax != null ? state.draft.priceMax : null;
+          const minInput = document.querySelector('[data-kc-housing-price-min]');
+          const maxInput = document.querySelector('[data-kc-housing-price-max]');
+          if (minInput) minInput.value = state.priceMin != null ? String(state.priceMin) : '';
+          if (maxInput) maxInput.value = state.priceMax != null ? String(state.priceMax) : '';
           renderFeatures();
+          renderDateInputs();
+          closeModal();
+          apply();
+          return;
+        }
+        if (action === 'dates' && state.draft) {
+          state.datePreset = normalizeDatePreset(state.draft.datePreset);
+          renderDateInputs();
           closeModal();
           apply();
           return;
@@ -725,7 +951,15 @@
       const clearDraft = event.target.closest('[data-kc-housing-modal-clear="true"]');
       if (clearDraft && state.draft) {
         state.draft.features = new Set();
+        state.draft.datePreset = '';
+        state.draft.priceMin = null;
+        state.draft.priceMax = null;
+        const minInput = document.querySelector('[data-kc-housing-price-min]');
+        const maxInput = document.querySelector('[data-kc-housing-price-max]');
+        if (minInput) minInput.value = '';
+        if (maxInput) maxInput.value = '';
         renderFeatures();
+        renderDateInputs();
         renderActions();
         return;
       }
@@ -804,21 +1038,29 @@
 
   function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    const pending = window.KCControllers.injectFeed({
       module: 'moradia',
       pageModule: 'moradia',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onAfterAppend: function (payload) {
         decorate(payload);
         queue();
       }
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     collectSections();
     ensureModal();
     wrapApply();
+    restoreUrlState();
     bind();
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
       window.kcFilters.setExtraPredicate(function (card) { return matchCard(card); });

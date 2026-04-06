@@ -153,7 +153,47 @@
 <span>Aceita pets</span>
 </label>
 </div>
+<div class="kc-marketplace-filter-group">
+<p class="kc-marketplace-filter-group__title">Faixa de aluguel</p>
+<div class="kc-sidebar-range">
+<label class="kc-sidebar-range__field">
+<span>Mínimo</span>
+<input class="kc-input" data-kc-housing-price-min="true" inputmode="decimal" min="0" placeholder="R$ 0" step="0.01" type="number"/>
+</label>
+<label class="kc-sidebar-range__field">
+<span>Máximo</span>
+<input class="kc-input" data-kc-housing-price-max="true" inputmode="decimal" min="0" placeholder="R$ 3000" step="0.01" type="number"/>
+</label>
+</div>
+</div>
 <button class="kc-opportunity-clear" data-kc-housing-clear-filters="true" type="button">Limpar filtros</button>
+</div>
+<div class="kc-sidebar-section" data-kc-housing-section="dates">
+<h3>
+<i class="fas fa-calendar-day"></i>
+                    Data
+                </h3>
+<p class="kc-sidebar-help">Mostre anúncios publicados hoje ou recentemente.</p>
+<div class="kc-marketplace-filter-group">
+<div class="kc-marketplace-filter-group__options">
+<label class="kc-sidebar-check">
+<input checked="" data-kc-housing-date-preset="true" name="kcHousingDatePreset" type="radio" value=""/>
+<span>Todas as datas</span>
+</label>
+<label class="kc-sidebar-check">
+<input data-kc-housing-date-preset="true" name="kcHousingDatePreset" type="radio" value="today"/>
+<span>Hoje</span>
+</label>
+<label class="kc-sidebar-check">
+<input data-kc-housing-date-preset="true" name="kcHousingDatePreset" type="radio" value="last7d"/>
+<span>Últimos 7 dias</span>
+</label>
+<label class="kc-sidebar-check">
+<input data-kc-housing-date-preset="true" name="kcHousingDatePreset" type="radio" value="last30d"/>
+<span>Últimos 30 dias</span>
+</label>
+</div>
+</div>
 </div>
 <div class="kc-sidebar-section" data-kc-housing-section="regions">
 <h3>
@@ -261,11 +301,13 @@
 
 <script defer src="assets/js/kc-auth.ui.js"></script>
   <script defer src="assets/js/kc-notifications.js"></script>
-<script defer src="assets/js/kc-theme.js"></script>
-<script defer src="assets/js/kc-filters.js"></script>
-<script defer src="assets/js/search-analytics.shared.js"></script>
+    <script defer src="assets/js/kc-theme.js"></script>
+    <script defer src="assets/js/kc-filters.js"></script>
+    <script defer src="assets/js/kc-feed-filters.js"></script>
+    <script defer src="assets/js/search-analytics.shared.js"></script>
 <script defer src="assets/js/home-categories.shared.js"></script>
 <script defer src="assets/js/kc-home-categories.js"></script>
+<script defer src="assets/js/kc-search.shared.js"></script>
 <script defer src="assets/js/kc-search.js"></script>
 <script defer src="assets/js/kc-pull-to-refresh.js"></script>
 <script defer src="assets/js/controllers/kc-feed.controller.js"></script>

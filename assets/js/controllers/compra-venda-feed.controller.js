@@ -18,6 +18,10 @@
     cats: new Set(CAT_KEYS),
     conds: new Set(),
     verified: false,
+    datePreset: '',
+    priceMin: null,
+    priceMax: null,
+    feedPager: null,
     posts: new Map(),
     sections: [],
     queued: false,
@@ -43,10 +47,51 @@
   function cloneSet(set) { return new Set(Array.from(set || [])); }
   function isMobile() { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }
   function getParam(name) { try { return new URL(window.location.href).searchParams.get(name); } catch (_) { return null; } }
+  function sanitizePriceValue(value) {
+    if (value == null || value === '') return null;
+    const numeric = Number(String(value).replace(',', '.'));
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  }
+  function normalizePriceRange(minPrice, maxPrice) {
+    let nextMin = sanitizePriceValue(minPrice);
+    let nextMax = sanitizePriceValue(maxPrice);
+    if (nextMin != null && nextMax != null && nextMax < nextMin) {
+      const swap = nextMin;
+      nextMin = nextMax;
+      nextMax = swap;
+    }
+    return { min: nextMin, max: nextMax };
+  }
   function getSessionStore() {
     return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
       ? window.KCSessionStore
       : null;
+  }
+
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
+  function getAllowedDatePresets() {
+    const utils = getFeedFilterUtils();
+    return utils && typeof utils.getAllowedDatePresets === 'function'
+      ? utils.getAllowedDatePresets('compra-venda')
+      : ['today', 'last7d', 'last30d'];
+  }
+
+  function normalizeDatePreset(value) {
+    const utils = getFeedFilterUtils();
+    if (utils && typeof utils.normalizeDatePreset === 'function') {
+      return utils.normalizeDatePreset('compra-venda', value);
+    }
+    const normalized = norm(value);
+    const allowed = getAllowedDatePresets();
+    return allowed.includes(normalized) ? normalized : '';
+  }
+
+  function readSelectedDatePreset() {
+    const selected = document.querySelector('[data-kc-market-date-preset]:checked');
+    return normalizeDatePreset(selected ? selected.value : '');
   }
 
   function restoreCachedPosts() {
@@ -106,17 +151,104 @@
 
   function verifiedInput() { return document.querySelector('[data-kc-market-filter-kind="verified"]'); }
 
-  function syncInputs(cats, conds, verified) {
+  function syncInputs(cats, conds, verified, priceMin, priceMax, datePreset) {
     document.querySelectorAll('[data-kc-market-filter-kind="category"]').forEach((input) => { input.checked = cats.has(normCat(input.value)); });
     document.querySelectorAll('[data-kc-market-filter-kind="condition"]').forEach((input) => { input.checked = conds.has(normCond(input.value)); });
     const checked = verifiedInput();
     if (checked) checked.checked = !!verified;
+    const minInput = document.querySelector('[data-kc-market-price-min]');
+    const maxInput = document.querySelector('[data-kc-market-price-max]');
+    if (minInput) minInput.value = priceMin != null ? String(priceMin) : '';
+    if (maxInput) maxInput.value = priceMax != null ? String(priceMax) : '';
+    const normalizedPreset = normalizeDatePreset(datePreset);
+    document.querySelectorAll('[data-kc-market-date-preset]').forEach((input) => {
+      input.checked = normalizeDatePreset(input.value) === normalizedPreset;
+    });
+  }
+
+  function getFeedRequestParams() {
+    const params = {};
+    if (state.cats.size && state.cats.size !== CAT_KEYS.length) params.marketCats = Array.from(state.cats);
+    if (state.conds.size) params.marketConds = Array.from(state.conds);
+    if (state.verified) params.marketVerified = true;
+    if (state.datePreset) params.datePreset = state.datePreset;
+    if (state.priceMin != null) params.priceMin = state.priceMin;
+    if (state.priceMax != null) params.priceMax = state.priceMax;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
+  }
+
+  function restoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    const params = utils.getSearchParams();
+    const hasCats = !!(params && typeof params.has === 'function' && params.has('marketCats'));
+    const hasConds = !!(params && typeof params.has === 'function' && params.has('marketConds'));
+    const hasVerified = !!(params && typeof params.has === 'function' && params.has('marketVerified'));
+    const hasDatePreset = !!(params && typeof params.has === 'function' && params.has('datePreset'));
+    const hasPriceMin = !!(params && typeof params.has === 'function' && params.has('priceMin'));
+    const hasPriceMax = !!(params && typeof params.has === 'function' && params.has('priceMax'));
+    if (!hasCats && !hasConds && !hasVerified && !hasDatePreset && !hasPriceMin && !hasPriceMax) return false;
+
+    if (hasCats) {
+      const nextCats = utils.readListParam(params, 'marketCats').map(normCat).filter(Boolean);
+      state.cats = new Set(nextCats.length ? nextCats : CAT_KEYS);
+    }
+    if (hasConds) {
+      state.conds = new Set(utils.readListParam(params, 'marketConds').map(normCond).filter(Boolean));
+    }
+    if (hasVerified) {
+      state.verified = utils.readBooleanParam(params, 'marketVerified');
+    }
+    if (hasDatePreset) {
+      state.datePreset = typeof utils.readPresetParam === 'function'
+        ? utils.readPresetParam(params, 'datePreset', getAllowedDatePresets())
+        : normalizeDatePreset(utils.readTextParam(params, 'datePreset'));
+    }
+    if (hasPriceMin || hasPriceMax) {
+      const range = normalizePriceRange(
+        hasPriceMin ? utils.readNumberParam(params, 'priceMin') : state.priceMin,
+        hasPriceMax ? utils.readNumberParam(params, 'priceMax') : state.priceMax
+      );
+      state.priceMin = range.min;
+      state.priceMax = range.max;
+    }
+
+    syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
+    setTabFromCats(state.cats);
+    return true;
+  }
+
+  function syncUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      const activeCats = state.cats.size === CAT_KEYS.length ? [] : Array.from(state.cats);
+      utils.writeListParam(params, 'marketCats', activeCats);
+      utils.writeListParam(params, 'marketConds', Array.from(state.conds));
+      utils.writeBooleanParam(params, 'marketVerified', state.verified);
+      if (typeof utils.writePresetParam === 'function') utils.writePresetParam(params, 'datePreset', state.datePreset, getAllowedDatePresets());
+      else utils.writeTextParam(params, 'datePreset', state.datePreset || '');
+      utils.writeNumberParam(params, 'priceMin', state.priceMin);
+      utils.writeNumberParam(params, 'priceMax', state.priceMax);
+    });
   }
 
   function readInputs() {
     state.cats = new Set(selected('category').map(normCat).filter(Boolean));
     state.conds = new Set(selected('condition').map(normCond).filter(Boolean));
     state.verified = !!(verifiedInput() && verifiedInput().checked);
+    state.datePreset = readSelectedDatePreset();
+    const range = normalizePriceRange(
+      document.querySelector('[data-kc-market-price-min]') && document.querySelector('[data-kc-market-price-min]').value,
+      document.querySelector('[data-kc-market-price-max]') && document.querySelector('[data-kc-market-price-max]').value
+    );
+    state.priceMin = range.min;
+    state.priceMax = range.max;
   }
 
   function quickCat(set) {
@@ -127,7 +259,15 @@
   }
 
   function modalDraft() {
-    return { cats: cloneSet(state.cats), conds: cloneSet(state.conds), verified: state.verified, quick: quickCat(state.cats) };
+    return {
+      cats: cloneSet(state.cats),
+      conds: cloneSet(state.conds),
+      verified: state.verified,
+      datePreset: state.datePreset,
+      priceMin: state.priceMin,
+      priceMax: state.priceMax,
+      quick: quickCat(state.cats)
+    };
   }
 
   function readDraftInputs() {
@@ -135,11 +275,18 @@
     state.draft.cats = new Set(selected('category').map(normCat).filter(Boolean));
     state.draft.conds = new Set(selected('condition').map(normCond).filter(Boolean));
     state.draft.verified = !!(verifiedInput() && verifiedInput().checked);
+    state.draft.datePreset = readSelectedDatePreset();
+    const range = normalizePriceRange(
+      document.querySelector('[data-kc-market-price-min]') && document.querySelector('[data-kc-market-price-min]').value,
+      document.querySelector('[data-kc-market-price-max]') && document.querySelector('[data-kc-market-price-max]').value
+    );
+    state.draft.priceMin = range.min;
+    state.draft.priceMax = range.max;
     state.draft.quick = quickCat(state.draft.cats);
   }
 
-  function isDefault(cats, conds, verified) {
-    return cats && conds && cats.size === CAT_KEYS.length && conds.size === 0 && !verified;
+  function isDefault(cats, conds, verified, priceMin, priceMax, datePreset) {
+    return cats && conds && cats.size === CAT_KEYS.length && conds.size === 0 && !verified && priceMin == null && priceMax == null && !normalizeDatePreset(datePreset);
   }
 
   function setTabFromCats(cats) {
@@ -182,6 +329,8 @@
       categoryIcon: definition.icon,
       conditionKey,
       verified: !!(post && (post.authorVerified === true || post.verificado === true || meta.verificado === true)),
+      createdAt: post && (post.created_at || post.createdAt || post.timestamp || null),
+      priceValue: sanitizePriceValue(post && (post.preco != null ? post.preco : post.price)),
       searchText: norm([post && post.titulo, post && post.descricao, post && post.categoriaLabel, post && post.subcategoriaLabel, definition.label, conditionKey].filter(Boolean).join(' '))
     };
   }
@@ -205,6 +354,8 @@
       if (!card.getAttribute('data-category')) card.setAttribute('data-category', summary.categoryKey);
       if (!card.getAttribute('data-condition') && summary.conditionKey) card.setAttribute('data-condition', summary.conditionKey);
       if (!card.getAttribute('data-verified')) card.setAttribute('data-verified', String(!!summary.verified));
+      if (!card.getAttribute('data-kc-created-at') && summary.createdAt) card.setAttribute('data-kc-created-at', String(summary.createdAt));
+      if (!card.getAttribute('data-kc-price') && summary.priceValue != null) card.setAttribute('data-kc-price', String(summary.priceValue));
     });
   }
 
@@ -219,6 +370,15 @@
     }
     if (state.conds.size && !config.ignoreConditions && !state.conds.has(summary.conditionKey)) return false;
     if (state.verified && !config.ignoreVerified && !summary.verified) return false;
+    if (!config.ignoreDate && state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'compra-venda', preset: state.datePreset, createdAt: summary.createdAt })) return false;
+    }
+    if (!config.ignorePrice) {
+      if ((state.priceMin != null || state.priceMax != null) && summary.priceValue == null) return false;
+      if (state.priceMin != null && summary.priceValue < state.priceMin) return false;
+      if (state.priceMax != null && summary.priceValue > state.priceMax) return false;
+    }
     return true;
   }
 
@@ -294,8 +454,14 @@
     modal.setAttribute('data-kc-market-section-view', state.activeKey);
     if (state.activeKey === 'filters') {
       const draft = state.draft || modalDraft();
-      const canClear = !isDefault(draft.cats, draft.conds, draft.verified);
+      const canClear = !isDefault(draft.cats, draft.conds, draft.verified, draft.priceMin, draft.priceMax, draft.datePreset);
       actions.innerHTML = '<div class="kc-marketplace-section-modal__action-group"><button class="kc-opportunity-clear" type="button" data-kc-market-modal-clear="true"' + (canClear ? '' : ' disabled') + '>Limpar filtros</button><button class="kc-opportunity-apply" type="button" data-kc-market-modal-apply="filters">Aplicar filtros</button></div>';
+      return;
+    }
+    if (state.activeKey === 'dates') {
+      const labels = { '': 'Todas as datas', today: 'Hoje', last7d: 'Últimos 7 dias', last30d: 'Últimos 30 dias' };
+      const selectedLabel = labels[(state.draft && typeof state.draft.datePreset === 'string') ? state.draft.datePreset : state.datePreset] || 'Todas as datas';
+      actions.innerHTML = '<div class="kc-marketplace-section-modal__action-group"><p class="kc-marketplace-section-modal__caption">Data selecionada: <strong>' + esc(selectedLabel) + '</strong></p><button class="kc-opportunity-apply" type="button" data-kc-market-modal-apply="dates">Ver anúncios</button></div>';
       return;
     }
     if (state.activeKey === 'categories') {
@@ -328,7 +494,7 @@
     state.draft = modalDraft();
     title.textContent = section.title;
     titleIcon.className = section.icon || 'fas fa-layer-group';
-    syncInputs(state.draft.cats, state.draft.conds, state.draft.verified);
+    syncInputs(state.draft.cats, state.draft.conds, state.draft.verified, state.draft.priceMin, state.draft.priceMax, state.draft.datePreset);
     renderCategories();
     renderActions();
     overlay.classList.add('active');
@@ -365,7 +531,7 @@
         } catch (_) { }
       }
     }
-    if (!config.commit) syncInputs(state.cats, state.conds, state.verified);
+    if (!config.commit) syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
     if (state.activeNode && state.activePlaceholder && state.activePlaceholder.parentNode) state.activePlaceholder.parentNode.replaceChild(state.activeNode, state.activePlaceholder);
     state.activeKey = '';
     state.activeNode = null;
@@ -404,20 +570,25 @@
   }
 
   function apply() {
+    syncUrlState();
+    refreshFeed();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
 
   function syncClear() {
     const button = document.querySelector('[data-kc-market-clear-sidebar="true"]');
-    if (button) button.disabled = isDefault(state.cats, state.conds, state.verified);
+    if (button) button.disabled = isDefault(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
   }
 
   function resetApplied(clearSearch) {
     state.cats = new Set(CAT_KEYS);
     state.conds = new Set();
     state.verified = false;
-    syncInputs(state.cats, state.conds, state.verified);
+    state.datePreset = '';
+    state.priceMin = null;
+    state.priceMax = null;
+    syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
     setTabFromCats(state.cats);
     if (clearSearch && window.kcFilters && typeof window.kcFilters.setQuery === 'function') window.kcFilters.setQuery('');
     else if (clearSearch) {
@@ -431,10 +602,18 @@
     const categoryKey = normCat(card.getAttribute('data-category') || '');
     const conditionKey = normCond(card.getAttribute('data-condition') || '');
     const verified = String(card.getAttribute('data-verified') || '').toLowerCase() === 'true';
+    const createdAt = card.getAttribute('data-kc-created-at') || '';
+    const priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
     if (state.cats.size === 0) return false;
     if (state.cats.size !== CAT_KEYS.length && !state.cats.has(categoryKey)) return false;
     if (state.conds.size && !state.conds.has(conditionKey)) return false;
     if (state.verified && !verified) return false;
+    if (state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'compra-venda', preset: state.datePreset, createdAt: createdAt })) return false;
+    }
+    if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
+    if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
     return true;
   }
 
@@ -444,20 +623,27 @@
       renderActions();
       return;
     }
+    if (state.draft && state.activeKey === 'dates' && isMobile()) {
+      state.draft.datePreset = readSelectedDatePreset();
+      renderActions();
+      return;
+    }
     readInputs();
     setTabFromCats(state.cats);
     apply();
   }
 
   function bind() {
-    document.querySelectorAll('[data-kc-market-filter-kind]').forEach((input) => input.addEventListener('change', handleInputChange));
+    document.querySelectorAll('[data-kc-market-filter-kind], [data-kc-market-price-min], [data-kc-market-price-max], [data-kc-market-date-preset]').forEach((input) => input.addEventListener('change', handleInputChange));
     const clear = document.querySelector('[data-kc-market-clear-sidebar="true"]');
     if (clear) clear.addEventListener('click', function () { resetApplied(false); });
     const emptyClear = document.querySelector('#noResults .kc-btn-primary');
     if (emptyClear) emptyClear.addEventListener('click', function (event) { event.preventDefault(); resetApplied(true); });
     document.querySelectorAll('.kc-feed-tabs a').forEach((tab) => tab.addEventListener('click', function () {
       state.cats = catsFromQuick(tab.getAttribute('data-category') || tab.getAttribute('href') || '');
-      syncInputs(state.cats, state.conds, state.verified);
+      syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
+      syncUrlState();
+      refreshFeed();
       queue();
     }));
     document.addEventListener('click', function (event) {
@@ -466,8 +652,11 @@
         state.draft.cats = new Set(CAT_KEYS);
         state.draft.conds = new Set();
         state.draft.verified = false;
+        state.draft.datePreset = '';
+        state.draft.priceMin = null;
+        state.draft.priceMax = null;
         state.draft.quick = '';
-        syncInputs(state.draft.cats, state.draft.conds, state.draft.verified);
+        syncInputs(state.draft.cats, state.draft.conds, state.draft.verified, state.draft.priceMin, state.draft.priceMax, state.draft.datePreset);
         renderActions();
         return;
       }
@@ -478,8 +667,18 @@
           state.cats = cloneSet(state.draft.cats);
           state.conds = cloneSet(state.draft.conds);
           state.verified = !!state.draft.verified;
-          syncInputs(state.cats, state.conds, state.verified);
+          state.datePreset = normalizeDatePreset(state.draft.datePreset);
+          state.priceMin = state.draft.priceMin != null ? state.draft.priceMin : null;
+          state.priceMax = state.draft.priceMax != null ? state.draft.priceMax : null;
+          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
           setTabFromCats(state.cats);
+          closeModal({ commit: true });
+          apply();
+          return;
+        }
+        if (action === 'dates' && state.draft) {
+          state.datePreset = normalizeDatePreset(state.draft.datePreset);
+          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
           closeModal({ commit: true });
           apply();
           return;
@@ -487,7 +686,7 @@
         if (action === 'categories' && state.draft) {
           if (state.draft.quick !== null) {
             state.cats = catsFromQuick(state.draft.quick);
-            syncInputs(state.cats, state.conds, state.verified);
+            syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
             setTabFromCats(state.cats);
           }
           closeModal({ commit: true });
@@ -508,7 +707,7 @@
           renderActions();
         } else {
           state.cats = catsFromQuick(selectedKey);
-          syncInputs(state.cats, state.conds, state.verified);
+          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
           setTabFromCats(state.cats);
           apply();
         }
@@ -568,16 +767,23 @@
 
   function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    const pending = window.KCControllers.injectFeed({
       module: ['compra-venda', 'livros'],
       pageModule: 'compra-venda',
       containerSelector: '.kc-feed-list',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onAfterAppend: function (payload) {
         decorate(payload);
         queue();
       }
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -585,10 +791,11 @@
     ensureModal();
     wrapApply();
     readInputs();
+    const restoredFromUrl = restoreUrlState();
     const preset = normCat(getParam('filter') || '');
-    if (preset && CAT_KEYS.includes(preset)) {
+    if (!restoredFromUrl && preset && CAT_KEYS.includes(preset)) {
       state.cats = new Set([preset]);
-      syncInputs(state.cats, state.conds, state.verified);
+      syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
       if (window.kcFilters && typeof window.kcFilters.setCategory === 'function') window.kcFilters.setCategory(preset);
     }
     bind();

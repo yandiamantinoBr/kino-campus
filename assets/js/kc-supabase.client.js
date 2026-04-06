@@ -404,6 +404,138 @@
     };
   }
 
+  const FEED_CURSOR_RESERVED_KEYS = new Set([
+    'module',
+    'modules',
+    'modulo',
+    'modulos',
+    'category',
+    'categoria',
+    'subcategory',
+    'subcategoria',
+    'tag',
+    'tagKey',
+    'tag_key',
+    'q',
+    'query',
+    'search',
+    'page',
+    'limit',
+    'sortBy',
+    'sort_by',
+    'cursor',
+    'requestParams',
+    'request_params',
+  ]);
+
+  function normalizeCursorRequestParamValue(value) {
+    if (value == null) return undefined;
+    if (Array.isArray(value)) {
+      const list = Array.from(new Set(value
+        .map((entry) => {
+          if (entry == null) return '';
+          if (typeof entry === 'string') return entry.trim();
+          if (typeof entry === 'number' && Number.isFinite(entry)) return String(entry);
+          if (typeof entry === 'boolean') return entry ? 'true' : 'false';
+          return '';
+        })
+        .filter(Boolean)));
+      return list.length ? list : undefined;
+    }
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+    if (typeof value === 'string') {
+      const text = value.trim();
+      return text ? text : undefined;
+    }
+    return undefined;
+  }
+
+  function normalizeCursorRequestParams(params) {
+    const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
+    const nested = (p.requestParams && typeof p.requestParams === 'object' && !Array.isArray(p.requestParams))
+      ? p.requestParams
+      : {};
+    const out = {};
+
+    const assignValue = (key, value) => {
+      const cleanKey = String(key || '').trim();
+      if (!cleanKey) return;
+      const normalized = normalizeCursorRequestParamValue(value);
+      if (normalized === undefined) return;
+      out[cleanKey] = normalized;
+    };
+
+    Object.keys(nested).forEach((key) => {
+      assignValue(key, nested[key]);
+    });
+
+    Object.keys(p).forEach((key) => {
+      if (FEED_CURSOR_RESERVED_KEYS.has(key)) return;
+      assignValue(key, p[key]);
+    });
+
+    return out;
+  }
+
+  function normalizeGetFeedCursorParams(params) {
+    const base = normalizeGetPostsParams(params);
+    const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
+    const rawModules = Array.isArray(p.modules)
+      ? p.modules
+      : (Array.isArray(p.module) ? p.module : (Array.isArray(p.modulo) ? p.modulo : []));
+    const modules = rawModules
+      .map((value) => {
+        if (value == null) return '';
+        const s = String(value).trim().toLowerCase();
+        return s || '';
+      })
+      .filter(Boolean);
+    const cursor = p.cursor != null ? String(p.cursor).trim() : '';
+    return {
+      ...base,
+      modules,
+      cursor: cursor || null,
+      requestParams: normalizeCursorRequestParams(p),
+    };
+  }
+
+  function getSearchShared() {
+    const shared = (typeof window !== 'undefined' && window.KCSearchShared) ? window.KCSearchShared : null;
+    if (shared && typeof shared.expandQueryTerms === 'function') return shared;
+    return null;
+  }
+
+  function buildExpandedSearchTerms(query) {
+    const q = String(query || '').trim();
+    if (!q) return [];
+
+    const shared = getSearchShared();
+    if (shared) return shared.expandQueryTerms(q);
+
+    const normalized = q
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+    if (!normalized) return [];
+    return Array.from(new Set(normalized.split(/\s+/).filter((term) => term.length > 1)));
+  }
+
+  function normalizeSearchPostsParams(params) {
+    const base = normalizeGetPostsParams(params);
+    const limitRaw = (params && params.limit != null) ? parseInt(String(params.limit), 10) : base.limit;
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 50) : 50;
+    return {
+      module: base.module,
+      category: base.category,
+      subcategory: base.subcategory,
+      q: base.q,
+      limit,
+      terms: buildExpandedSearchTerms(base.q),
+    };
+  }
+
   function normalizeModuleKey(v) {
     const raw = String(v || '').trim().toLowerCase();
     if (!raw) return '';
@@ -489,8 +621,8 @@
 
   function buildPostsSelect(includeVerified, mediaRel, includeComments, includeVotos = true) {
     const profileFields = includeVerified
-      ? 'id, display_name, full_name, avatar_url, verified'
-      : 'id, display_name, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified, rating_avg, rating_count'
+      : 'id, display_name, full_name, avatar_url, rating_avg, rating_count';
 
     // mediaRel: post_media (padrão do schema) | post_images (compat)
     // includeComments: false quando tabela comments ainda não existe no schema (compat)
@@ -503,8 +635,8 @@
 
   function buildPostDetailSelect(includeVerified, mediaRel, includeSortOrder, includeComments) {
     const profileFields = includeVerified
-      ? "id, display_name, full_name, avatar_url, verified"
-      : "id, display_name, full_name, avatar_url";
+      ? "id, display_name, full_name, avatar_url, verified, rating_avg, rating_count"
+      : "id, display_name, full_name, avatar_url, rating_avg, rating_count";
 
     const mediaFields = includeSortOrder
       ? "id, url, is_cover, sort_order"
@@ -767,6 +899,274 @@
     return rows;
   }
 
+  function normalizeUserRatingSummaryPayload(payload, fallbackUserId) {
+    const source = (payload && typeof payload === 'object' && !Array.isArray(payload)) ? payload : {};
+    const averageRaw = source.average != null ? source.average : source.rating_avg;
+    const average = (averageRaw != null && averageRaw !== '')
+      ? Number(averageRaw)
+      : null;
+    const countRaw = source.count != null ? source.count : source.rating_count;
+    const count = Math.max(0, parseInt(String(countRaw != null ? countRaw : 0), 10) || 0);
+    return {
+      userId: String(source.userId || source.user_id || fallbackUserId || '').trim() || null,
+      average: Number.isFinite(average) ? average : null,
+      count,
+    };
+  }
+
+  function normalizeUserRatingEntryPayload(payload) {
+    const source = (payload && typeof payload === 'object' && !Array.isArray(payload)) ? payload : {};
+    const reviewer = (source.reviewer && typeof source.reviewer === 'object' && !Array.isArray(source.reviewer))
+      ? source.reviewer
+      : {};
+    const rating = parseInt(String(source.rating != null ? source.rating : 0), 10);
+    return {
+      id: String(source.id || '').trim() || null,
+      targetUserId: String(source.targetUserId || source.target_user_id || '').trim() || null,
+      raterUserId: String(source.raterUserId || source.rater_user_id || '').trim() || null,
+      contextPostId: String(source.contextPostId || source.context_post_id || '').trim() || null,
+      rating: Number.isFinite(rating) ? rating : 0,
+      comment: String(source.comment || '').trim(),
+      createdAt: source.createdAt || source.created_at || null,
+      updatedAt: source.updatedAt || source.updated_at || null,
+      reviewer: {
+        id: String(reviewer.id || '').trim() || null,
+        displayName: String(reviewer.displayName || reviewer.display_name || '').trim() || 'Membro da comunidade',
+        avatarUrl: String(reviewer.avatarUrl || reviewer.avatar_url || '').trim() || null,
+        public: reviewer.public === true,
+      },
+    };
+  }
+
+  function normalizeUserRatingStatePayload(payload, targetUserId, contextPostId) {
+    const source = (payload && typeof payload === 'object' && !Array.isArray(payload)) ? payload : {};
+    return {
+      targetUserId: String(source.targetUserId || source.target_user_id || targetUserId || '').trim() || null,
+      contextPostId: String(source.contextPostId || source.context_post_id || contextPostId || '').trim() || null,
+      canRate: source.canRate === true || source.can_rate === true,
+      reason: String(source.reason || 'UNKNOWN').trim() || 'UNKNOWN',
+      myRating: (source.myRating || source.my_rating) ? normalizeUserRatingEntryPayload(source.myRating || source.my_rating) : null,
+    };
+  }
+
+  function normalizeUserRatingListPayload(payload, fallbackPage, fallbackLimit) {
+    const source = (payload && typeof payload === 'object' && !Array.isArray(payload)) ? payload : {};
+    const items = Array.isArray(source.items) ? source.items.map(normalizeUserRatingEntryPayload).filter(Boolean) : [];
+    const page = Math.max(1, parseInt(String(source.page != null ? source.page : fallbackPage), 10) || 1);
+    const limit = Math.max(1, parseInt(String(source.limit != null ? source.limit : fallbackLimit), 10) || 10);
+    const total = Math.max(0, parseInt(String(source.total != null ? source.total : items.length), 10) || 0);
+    return {
+      items,
+      page,
+      limit,
+      total,
+      hasMore: source.hasMore === true || source.has_more === true,
+    };
+  }
+
+  function normalizeUserRatingListParams(userId, options) {
+    const input = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const page = Math.max(1, parseInt(String(input.page != null ? input.page : 1), 10) || 1);
+    const limit = Math.max(1, parseInt(String(input.limit != null ? input.limit : 10), 10) || 10);
+    return {
+      userId: String(userId || '').trim(),
+      page,
+      limit,
+    };
+  }
+
+  function normalizeUserRatingStateParams(params) {
+    const input = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
+    return {
+      targetUserId: String(input.targetUserId || input.target_user_id || '').trim(),
+      contextPostId: String(input.contextPostId || input.context_post_id || '').trim() || null,
+    };
+  }
+
+  function normalizeUpsertUserRatingPayload(payload) {
+    const input = (payload && typeof payload === 'object' && !Array.isArray(payload)) ? payload : {};
+    const rating = parseInt(String(input.rating != null ? input.rating : 0), 10);
+    const comment = String(input.comment || '').trim();
+    return {
+      targetUserId: String(input.targetUserId || input.target_user_id || '').trim(),
+      contextPostId: String(input.contextPostId || input.context_post_id || '').trim() || null,
+      rating: Number.isFinite(rating) ? rating : 0,
+      comment: comment || null,
+    };
+  }
+
+  async function searchPosts(params = {}) {
+    const { driver } = readEnv();
+    if (driver !== 'supabase') return [];
+
+    const client = getClient();
+    if (!client) return [];
+
+    const f = normalizeSearchPostsParams(params);
+    if (!f.q || !f.terms.length) return [];
+
+    const rpc = await client.rpc('kc_search_posts_fts', {
+      p_q: f.q,
+      p_terms: f.terms,
+      p_module: f.module || null,
+      p_category: f.category || null,
+      p_subcategory: f.subcategory || null,
+      p_limit: f.limit,
+    });
+
+    if (rpc && rpc.error) {
+      try { console.error('[KCSupabase] searchPosts erro:', rpc.error); } catch (_) { }
+      return [];
+    }
+
+    return Array.isArray(rpc && rpc.data) ? rpc.data : [];
+  }
+
+  async function getFeedCursor(params = {}) {
+    const { driver } = readEnv();
+    if (driver !== 'supabase') return { posts: [], nextCursor: null, hasMore: false };
+
+    const client = getClient();
+    if (!client) return { posts: [], nextCursor: null, hasMore: false };
+
+    const f = normalizeGetFeedCursorParams(params);
+    const moduleList = Array.isArray(f.modules) ? f.modules.filter(Boolean) : [];
+    const moduleParam = moduleList.length === 1
+      ? moduleList[0]
+      : (moduleList.length === 0 ? f.module : null);
+
+    const rpc = await client.rpc('kc_get_feed_cursor', {
+      p_module: moduleParam || null,
+      p_modules: moduleList.length > 1 ? moduleList : null,
+      p_category: f.category || null,
+      p_subcategory: f.subcategory || null,
+      p_tag: f.tag || null,
+      p_q: f.q || null,
+      p_sort_by: f.sortBy || 'recentes',
+      p_limit: f.limit,
+      p_cursor: f.cursor || null,
+      p_request_params: f.requestParams && Object.keys(f.requestParams).length ? f.requestParams : null,
+    });
+
+    if (rpc && rpc.error) {
+      try { console.error('[KCSupabase] getFeedCursor erro:', rpc.error); } catch (_) { }
+      throw rpc.error;
+    }
+
+    const payload = (rpc && rpc.data && typeof rpc.data === 'object' && !Array.isArray(rpc.data)) ? rpc.data : {};
+    if (payload && payload.ok === false) {
+      const err = new Error(String(payload.error || 'KC_GET_FEED_CURSOR_FAILED'));
+      err.code = String(payload.error || 'KC_GET_FEED_CURSOR_FAILED');
+      throw err;
+    }
+    const rows = Array.isArray(payload.posts) ? payload.posts : [];
+
+    return {
+      posts: rows,
+      nextCursor: payload.nextCursor || payload.next_cursor || null,
+      hasMore: payload.hasMore === true || payload.has_more === true,
+    };
+  }
+
+  async function getUserRatingSummary(userId) {
+    const { driver } = readEnv();
+    if (driver !== 'supabase') return normalizeUserRatingSummaryPayload(null, userId);
+
+    const client = getClient();
+    if (!client) return normalizeUserRatingSummaryPayload(null, userId);
+
+    const key = String(userId || '').trim();
+    if (!key) return normalizeUserRatingSummaryPayload(null, null);
+
+    const rpc = await client.rpc('kc_get_user_rating_summary', {
+      p_target_user_id: key,
+    });
+
+    if (rpc && rpc.error) {
+      try { console.error('[KCSupabase] getUserRatingSummary erro:', rpc.error); } catch (_) { }
+      return normalizeUserRatingSummaryPayload(null, key);
+    }
+
+    return normalizeUserRatingSummaryPayload(rpc && rpc.data, key);
+  }
+
+  async function getUserRatingState(params = {}) {
+    const { driver } = readEnv();
+    const input = normalizeUserRatingStateParams(params);
+    if (driver !== 'supabase') return normalizeUserRatingStatePayload(null, input.targetUserId, input.contextPostId);
+
+    const client = getClient();
+    if (!client || !input.targetUserId) {
+      return normalizeUserRatingStatePayload(null, input.targetUserId, input.contextPostId);
+    }
+
+    const rpc = await client.rpc('kc_get_user_rating_state', {
+      p_target_user_id: input.targetUserId,
+      p_context_post_id: input.contextPostId,
+    });
+
+    if (rpc && rpc.error) {
+      try { console.error('[KCSupabase] getUserRatingState erro:', rpc.error); } catch (_) { }
+      return normalizeUserRatingStatePayload(null, input.targetUserId, input.contextPostId);
+    }
+
+    return normalizeUserRatingStatePayload(rpc && rpc.data, input.targetUserId, input.contextPostId);
+  }
+
+  async function listUserRatings(userId, options = {}) {
+    const { driver } = readEnv();
+    const input = normalizeUserRatingListParams(userId, options);
+    if (driver !== 'supabase') return normalizeUserRatingListPayload(null, input.page, input.limit);
+
+    const client = getClient();
+    if (!client || !input.userId) return normalizeUserRatingListPayload(null, input.page, input.limit);
+
+    const rpc = await client.rpc('kc_list_user_ratings', {
+      p_target_user_id: input.userId,
+      p_page: input.page,
+      p_limit: input.limit,
+    });
+
+    if (rpc && rpc.error) {
+      try { console.error('[KCSupabase] listUserRatings erro:', rpc.error); } catch (_) { }
+      return normalizeUserRatingListPayload(null, input.page, input.limit);
+    }
+
+    return normalizeUserRatingListPayload(rpc && rpc.data, input.page, input.limit);
+  }
+
+  async function upsertUserRating(payload = {}) {
+    const { driver } = readEnv();
+    const input = normalizeUpsertUserRatingPayload(payload);
+    if (driver !== 'supabase') {
+      return { ok: false, error: { message: 'Avaliações indisponíveis neste driver.' } };
+    }
+
+    const client = getClient();
+    if (!client) return { ok: false, error: { message: 'Supabase indisponível.' } };
+    if (!input.targetUserId) return { ok: false, error: { message: 'Usuário alvo inválido.' } };
+
+    const rpc = await client.rpc('kc_upsert_user_rating', {
+      p_target_user_id: input.targetUserId,
+      p_context_post_id: input.contextPostId,
+      p_rating: input.rating,
+      p_comment: input.comment,
+    });
+
+    if (rpc && rpc.error) {
+      try { console.error('[KCSupabase] upsertUserRating erro:', rpc.error); } catch (_) { }
+      return { ok: false, error: rpc.error };
+    }
+
+    const data = (rpc && rpc.data && typeof rpc.data === 'object' && !Array.isArray(rpc.data)) ? rpc.data : {};
+    return {
+      ok: data.ok === true,
+      rating: data.rating ? normalizeUserRatingEntryPayload(data.rating) : null,
+      summary: normalizeUserRatingSummaryPayload(data.summary, input.targetUserId),
+      error: null,
+    };
+  }
+
   function noopSubscription() {
     return { unsubscribe: function () { } };
   }
@@ -920,6 +1320,12 @@
     init,
     getClient,
     getPosts,
+    searchPosts,
+    getFeedCursor,
+    getUserRatingSummary,
+    getUserRatingState,
+    listUserRatings,
+    upsertUserRating,
     getPostById,
     refreshSession,
     getSession: () => state.session,

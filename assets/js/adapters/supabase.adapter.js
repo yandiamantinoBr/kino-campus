@@ -780,6 +780,10 @@ const { ENV, normalizePost } = window.KCAPI;
     const legacyId = (row.legacy_id == null) ? null : String(row.legacy_id).trim();
     const normalizedAuthorName = resolveNormalizedAuthorName(author, metadata, row.author_name || row.autor || row.author || '');
     const normalizedAuthorAvatar = resolveNormalizedAuthorAvatar(author, metadata, normalizedAuthorName, row.author_avatar || row.autorAvatar || row.authorAvatar || '');
+    const ratingAverage = (author && author.rating_avg != null && author.rating_avg !== '')
+      ? Number(author.rating_avg)
+      : null;
+    const ratingCount = Math.max(0, parseInt(String(author && author.rating_count != null ? author.rating_count : 0), 10) || 0);
 
     if (authorId) {
       const hasProfileName = !!pickFirstNonEmpty([author && author.display_name, author && author.full_name]);
@@ -844,6 +848,9 @@ const { ENV, normalizePost } = window.KCAPI;
       images: imageUrls,
 
       comentarios: (Array.isArray(row.comments) && row.comments[0] && row.comments[0].count != null) ? row.comments[0].count : 0,
+      rating: Number.isFinite(ratingAverage) && ratingCount > 0 ? ratingAverage : null,
+      ratingCount,
+      rating_count: ratingCount,
 
       metadata,
 
@@ -883,8 +890,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildSupabasePostSelect(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, display_name, full_name, avatar_url, verified'
-      : 'id, display_name, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified, rating_avg, rating_count'
+      : 'id, display_name, full_name, avatar_url, rating_avg, rating_count';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
@@ -1003,8 +1010,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, display_name, full_name, avatar_url, verified'
-      : 'id, display_name, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified, rating_avg, rating_count'
+      : 'id, display_name, full_name, avatar_url, rating_avg, rating_count';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
@@ -1080,6 +1087,130 @@ const { ENV, normalizePost } = window.KCAPI;
     return [];
   }
 
+  async function supabaseSearchPosts(filters = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.searchPosts === 'function') {
+        const rows = await window.KCSupabase.searchPosts(filters);
+        return (Array.isArray(rows) ? rows : []).map(normalizeSupabasePost).filter(Boolean);
+      }
+    } catch (e) {
+      console.error('[KCAPI][Supabase] searchPosts falhou:', e);
+      return [];
+    }
+
+    console.warn('[KCAPI][Supabase] KCSupabase.searchPosts indisponivel; retornando lista vazia.');
+    return [];
+  }
+
+  async function supabaseGetFeedCursor(filters = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getFeedCursor === 'function') {
+        const payload = await window.KCSupabase.getFeedCursor(filters);
+        const rows = Array.isArray(payload && payload.posts) ? payload.posts : [];
+        const out = rows.map(normalizeSupabasePost).filter(Boolean);
+        const nextCursor = payload && payload.nextCursor ? String(payload.nextCursor) : null;
+        const hasMore = !!(payload && payload.hasMore === true);
+
+        try {
+          const limitRaw = (filters && filters.limit != null) ? parseInt(String(filters.limit), 10) : (out.length || 0);
+          const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : (out.length || 0);
+          console.debug(`[KCAPI:supabase] Loaded cursor batch (${out.length} items) [limit=${limit}] hasMore=${hasMore}`);
+        } catch (_) { }
+
+        return {
+          posts: out,
+          nextCursor,
+          hasMore,
+        };
+      }
+    } catch (e) {
+      console.error('[KCAPI][Supabase] getFeedCursor falhou:', e);
+      throw e;
+    }
+
+    console.warn('[KCAPI][Supabase] KCSupabase.getFeedCursor indisponivel; retornando lote vazio.');
+    return {
+      posts: [],
+      nextCursor: null,
+      hasMore: false,
+    };
+  }
+
+  async function supabaseGetUserRatingSummary(userId) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getUserRatingSummary === 'function') {
+        return await window.KCSupabase.getUserRatingSummary(userId);
+      }
+    } catch (error) {
+      console.error('[KCAPI][Supabase] getUserRatingSummary falhou:', error);
+    }
+    return { userId: String(userId || '').trim() || null, average: null, count: 0 };
+  }
+
+  async function supabaseGetUserRatingState(params = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getUserRatingState === 'function') {
+        return await window.KCSupabase.getUserRatingState(params);
+      }
+    } catch (error) {
+      console.error('[KCAPI][Supabase] getUserRatingState falhou:', error);
+    }
+
+    return {
+      targetUserId: String((params && (params.targetUserId || params.target_user_id)) || '').trim() || null,
+      contextPostId: String((params && (params.contextPostId || params.context_post_id)) || '').trim() || null,
+      canRate: false,
+      reason: 'UNKNOWN',
+      myRating: null,
+    };
+  }
+
+  async function supabaseListUserRatings(userId, options = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.listUserRatings === 'function') {
+        return await window.KCSupabase.listUserRatings(userId, options);
+      }
+    } catch (error) {
+      console.error('[KCAPI][Supabase] listUserRatings falhou:', error);
+    }
+
+    const page = Math.max(1, parseInt(String(options && options.page != null ? options.page : 1), 10) || 1);
+    const limit = Math.max(1, parseInt(String(options && options.limit != null ? options.limit : 10), 10) || 10);
+    return {
+      items: [],
+      page,
+      limit,
+      total: 0,
+      hasMore: false,
+    };
+  }
+
+  async function supabaseUpsertUserRating(payload = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.upsertUserRating === 'function') {
+        return await window.KCSupabase.upsertUserRating(payload);
+      }
+    } catch (error) {
+      console.error('[KCAPI][Supabase] upsertUserRating falhou:', error);
+      return { ok: false, error };
+    }
+
+    return { ok: false, error: { message: 'Avaliações indisponíveis no cliente Supabase.' } };
+  }
+  /*
+    } catch (e) {
+      console.error('[KCAPI][Supabase] getFeedCursor falhou:', e);
+      throw e;
+    }
+
+    console.warn('[KCAPI][Supabase] KCSupabase.getFeedCursor indisponÃ­vel; retornando lote vazio.');
+    return {
+      posts: [],
+      nextCursor: null,
+      hasMore: false,
+    };
+  }
+  */
 
 
   // ---------- Supabase Write Path (V8.1.3.1) ----------
@@ -1802,14 +1933,14 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       let result = await client
         .from('comments')
-        .select('id, created_at, author_id, author_name, body, likes, author_profile:profiles!comments_author_id_fkey(display_name, full_name, avatar_url)')
+        .select('id, created_at, parent_id, author_id, author_name, body, likes, author_profile:profiles!comments_author_id_fkey(display_name, full_name, avatar_url)')
         .eq('post_id', uuid)
         .order('created_at', { ascending: true });
 
       if (result && result.error) {
         result = await client
           .from('comments')
-          .select('id, created_at, author_id, author_name, body, likes')
+          .select('id, created_at, parent_id, author_id, author_name, body, likes')
           .eq('post_id', uuid)
           .order('created_at', { ascending: true });
       }
@@ -1872,6 +2003,7 @@ const { ENV, normalizePost } = window.KCAPI;
           ...row,
           author_name: resolvedName,
           author_avatar: String((prof && prof.avatar_url) || row.author_avatar || '').trim(),
+          parent_id: String(row && row.parent_id || '').trim() || null,
           liked_by_me: likedByMe.has(row && row.id),
         };
       });
@@ -1882,7 +2014,32 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   // Insere um novo comentário (author_id e author_name do usuário logado)
-  async function supabaseAddComment(postId, body) {
+  function resolveCommentParentIdFromOptions(options) {
+    const raw = (options && typeof options === 'object' && !Array.isArray(options))
+      ? (options.parentId || options.parent_id || null)
+      : options;
+    return String(raw || '').trim() || null;
+  }
+
+  function resolveCommentMutationErrorMessage(error, fallbackMessage) {
+    const fallback = String(fallbackMessage || 'Nao foi possivel comentar.');
+    const message = String(error && error.message || '').trim();
+    if (!message) return fallback;
+
+    const normalized = message.toLowerCase();
+    if (
+      (normalized.includes('coment') && normalized.includes('pai'))
+      || normalized.includes('apenas 1 n')
+      || normalized.includes('resposta deve pertencer')
+      || normalized.includes('ja possui respostas')
+    ) {
+      return message;
+    }
+
+    return fallback;
+  }
+
+  async function supabaseAddComment(postId, body, options = {}) {
     const client = getSupabaseClient();
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
     const user = await supabaseGetCurrentUser();
@@ -1890,6 +2047,11 @@ const { ENV, normalizePost } = window.KCAPI;
     const uuid = (typeof postId === 'string' && UUID_RE.test(postId)) ? postId : null;
     if (!uuid) return { ok: false, error: { message: 'Post inválido.' } };
     const text = String(body || '').trim().slice(0, 2000);
+    const parentId = resolveCommentParentIdFromOptions(options);
+    if (parentId && !UUID_RE.test(parentId)) return { ok: false, error: { message: 'Comentario pai invalido.' } };
+    if (false && parentId && !UUID_RE.test(parentId)) {
+      return { ok: false, error: { message: 'ComentÃ¡rio pai invÃ¡lido.' } };
+    }
     if (!text) return { ok: false, error: { message: 'Comentário não pode ser vazio.' } };
 
     // Busca nome de exibição do profile
@@ -1918,8 +2080,8 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       const { data, error } = await client
         .from('comments')
-        .insert({ post_id: uuid, author_id: user.id, author_name: authorName, body: text })
-        .select('id, created_at, author_id, author_name, body, likes')
+        .insert({ post_id: uuid, parent_id: parentId, author_id: user.id, author_name: authorName, body: text })
+        .select('id, created_at, parent_id, author_id, author_name, body, likes')
         .maybeSingle();
       if (error) {
         console.error('[KCAPI][comments] addComment:', error);
@@ -3344,6 +3506,12 @@ const { ENV, normalizePost } = window.KCAPI;
   const driverSupabase = Object.freeze({
     name: 'supabase',
     getPosts: supabaseGetPosts,
+    searchPosts: supabaseSearchPosts,
+    getFeedCursor: supabaseGetFeedCursor,
+    getUserRatingSummary: supabaseGetUserRatingSummary,
+    getUserRatingState: supabaseGetUserRatingState,
+    listUserRatings: supabaseListUserRatings,
+    upsertUserRating: supabaseUpsertUserRating,
     getPostById: supabaseGetPostById,
     createPost: supabaseCreatePost,
     updatePost: supabaseUpdatePost,

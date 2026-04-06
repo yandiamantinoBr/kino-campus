@@ -21,6 +21,8 @@
     statuses: new Set(),
     types: new Set(),
     location: '',
+    datePreset: '',
+    feedPager: null,
     posts: new Map(),
     sections: [],
     queued: false,
@@ -49,6 +51,41 @@
     return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
       ? window.KCSessionStore
       : null;
+  }
+
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
+  function getAllowedDatePresets() {
+    const utils = getFeedFilterUtils();
+    return utils && typeof utils.getAllowedDatePresets === 'function'
+      ? utils.getAllowedDatePresets('achados-perdidos')
+      : ['today', 'last7d', 'last30d'];
+  }
+
+  function normalizeDatePreset(value) {
+    const utils = getFeedFilterUtils();
+    if (utils && typeof utils.normalizeDatePreset === 'function') {
+      return utils.normalizeDatePreset('achados-perdidos', value);
+    }
+    const normalized = norm(value);
+    const allowed = getAllowedDatePresets();
+    return allowed.includes(normalized) ? normalized : '';
+  }
+
+  function readSelectedDatePreset() {
+    const selected = document.querySelector('[data-kc-achados-date-preset]:checked');
+    return normalizeDatePreset(selected ? selected.value : '');
+  }
+
+  function renderDateInputs() {
+    const selected = (state.draft && state.activeKey === 'dates')
+      ? normalizeDatePreset(state.draft.datePreset)
+      : normalizeDatePreset(state.datePreset);
+    document.querySelectorAll('[data-kc-achados-date-preset]').forEach((input) => {
+      input.checked = normalizeDatePreset(input.value) === selected;
+    });
   }
 
   function restoreCachedPosts() {
@@ -185,6 +222,7 @@
       statusLabel: statusLabel(statusKey),
       typeKey,
       typeLabel: typeLabel(typeKey),
+      createdAt: post && (post.created_at || post.createdAt || post.timestamp || null),
       locationKey: String(location.key || post.lostFoundLocationKey || meta.lostFoundLocationKey || '').trim(),
       locationLabel: String(location.label || post.lostFoundLocationLabel || meta.lostFoundLocationLabel || '').trim(),
       locationIcon: String(location.icon || post.lostFoundLocationIcon || meta.lostFoundLocationIcon || 'fas fa-map-marker-alt').trim(),
@@ -233,6 +271,7 @@
       card.setAttribute('data-category', summary.categoryData || '');
       if (summary.statusKey) card.setAttribute('data-kc-lostfound-status', summary.statusKey);
       if (summary.typeKey) card.setAttribute('data-kc-lostfound-type', summary.typeKey);
+      if (summary.createdAt) card.setAttribute('data-kc-created-at', String(summary.createdAt));
       if (summary.locationKey) card.setAttribute('data-kc-lostfound-location', summary.locationKey);
     });
   }
@@ -247,12 +286,70 @@
   function readInputs() {
     state.statuses = new Set(readSelected('status').map((value) => normStatus(value)).filter(Boolean));
     state.types = new Set(readSelected('type').map((value) => normType(value)).filter(Boolean));
+    state.datePreset = readSelectedDatePreset();
   }
 
   function readDraftInputs() {
     if (!state.draft) return;
     state.draft.statuses = new Set(readSelected('status').map((value) => normStatus(value)).filter(Boolean));
     state.draft.types = new Set(readSelected('type').map((value) => normType(value)).filter(Boolean));
+    state.draft.datePreset = readSelectedDatePreset();
+  }
+
+  function getFeedRequestParams() {
+    const params = {};
+    if (state.statuses.size) params.lfStatus = Array.from(state.statuses);
+    if (state.types.size) params.lfType = Array.from(state.types);
+    if (state.location) params.lfLocation = state.location;
+    if (state.datePreset) params.datePreset = state.datePreset;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
+  }
+
+  function restoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    const params = utils.getSearchParams();
+    const hasStatuses = !!(params && typeof params.has === 'function' && params.has('lfStatus'));
+    const hasTypes = !!(params && typeof params.has === 'function' && params.has('lfType'));
+    const hasLocation = !!(params && typeof params.has === 'function' && params.has('lfLocation'));
+    const hasDatePreset = !!(params && typeof params.has === 'function' && params.has('datePreset'));
+    if (!hasStatuses && !hasTypes && !hasLocation && !hasDatePreset) return false;
+
+    if (hasStatuses) {
+      state.statuses = new Set(utils.readListParam(params, 'lfStatus').map((value) => normStatus(value)).filter(Boolean));
+    }
+    if (hasTypes) {
+      state.types = new Set(utils.readListParam(params, 'lfType').map((value) => normType(value)).filter(Boolean));
+    }
+    if (hasLocation) {
+      state.location = utils.readTextParam(params, 'lfLocation');
+    }
+    if (hasDatePreset) {
+      state.datePreset = typeof utils.readPresetParam === 'function'
+        ? utils.readPresetParam(params, 'datePreset', getAllowedDatePresets())
+        : normalizeDatePreset(utils.readTextParam(params, 'datePreset'));
+    }
+    renderFilterInputs();
+    renderDateInputs();
+    syncTabPresetFromAppliedState();
+    return true;
+  }
+
+  function syncUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      utils.writeListParam(params, 'lfStatus', Array.from(state.statuses));
+      utils.writeListParam(params, 'lfType', Array.from(state.types));
+      utils.writeTextParam(params, 'lfLocation', state.location || '');
+      if (typeof utils.writePresetParam === 'function') utils.writePresetParam(params, 'datePreset', state.datePreset, getAllowedDatePresets());
+      else utils.writeTextParam(params, 'datePreset', state.datePreset || '');
+    });
   }
 
   function matchesLocation(summary, locationKey) {
@@ -270,6 +367,10 @@
 
     if (!cfg.ignoreStatuses && state.statuses.size && !state.statuses.has(summary.statusKey)) return false;
     if (!cfg.ignoreTypes && state.types.size && !state.types.has(summary.typeKey)) return false;
+    if (!cfg.ignoreDate && state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'achados-perdidos', preset: state.datePreset, createdAt: summary.createdAt })) return false;
+    }
     if (!cfg.ignoreLocation && !matchesLocation(summary, state.location)) return false;
     return true;
   }
@@ -296,6 +397,7 @@
     document.querySelectorAll('[data-kc-achados-filter-kind="type"]').forEach((input) => {
       input.checked = selectedTypes.has(normType(input.value));
     });
+    renderDateInputs();
   }
 
   function getLocationCatalog(countMap) {
@@ -434,9 +536,16 @@
     modal.setAttribute('data-kc-achados-section-view', state.activeKey);
 
     if (state.activeKey === 'filters') {
-      const draft = state.draft || { statuses: cloneSet(state.statuses), types: cloneSet(state.types), location: state.location || '' };
-      const canClear = draft.statuses.size > 0 || draft.types.size > 0;
+      const draft = state.draft || { statuses: cloneSet(state.statuses), types: cloneSet(state.types), location: state.location || '', datePreset: state.datePreset };
+      const canClear = draft.statuses.size > 0 || draft.types.size > 0 || !!normalizeDatePreset(draft.datePreset);
       actions.innerHTML = '<div class="kc-lostfound-section-modal__action-group"><button class="kc-opportunity-clear" type="button" data-kc-achados-modal-clear="true"' + (canClear ? '' : ' disabled') + '>Limpar filtros</button><button class="kc-opportunity-apply" type="button" data-kc-achados-modal-apply="filters">Aplicar filtros</button></div>';
+      return;
+    }
+
+    if (state.activeKey === 'dates') {
+      const labels = { '': 'Todas as datas', today: 'Hoje', last7d: 'Últimos 7 dias', last30d: 'Últimos 30 dias' };
+      const selectedLabel = labels[(state.draft && typeof state.draft.datePreset === 'string') ? state.draft.datePreset : state.datePreset] || 'Todas as datas';
+      actions.innerHTML = '<div class="kc-lostfound-section-modal__action-group"><p class="kc-lostfound-section-modal__caption">Data selecionada: <strong>' + esc(selectedLabel) + '</strong></p><button class="kc-opportunity-apply" type="button" data-kc-achados-modal-apply="dates">Ver publicações</button></div>';
       return;
     }
 
@@ -474,6 +583,7 @@
       statuses: cloneSet(state.statuses),
       types: cloneSet(state.types),
       location: state.location || '',
+      datePreset: state.datePreset,
     };
 
     title.textContent = section.title;
@@ -565,13 +675,15 @@
   }
 
   function apply() {
+    syncUrlState();
+    refreshFeed();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') window.kcFilters.apply();
     else queue();
   }
 
   function syncClear() {
     const button = document.querySelector('[data-kc-achados-clear-filters="true"]');
-    if (button) button.disabled = state.statuses.size === 0 && state.types.size === 0;
+    if (button) button.disabled = state.statuses.size === 0 && state.types.size === 0 && !state.datePreset;
   }
 
   function syncTabPresetFromAppliedState() {
@@ -586,6 +698,7 @@
     state.statuses = new Set();
     state.types = new Set();
     state.location = '';
+    state.datePreset = '';
     renderFilterInputs();
     renderLocations();
     if (clearSearch && window.kcFilters && typeof window.kcFilters.setQuery === 'function') {
@@ -602,9 +715,14 @@
     const statusKey = normStatus(card.getAttribute('data-kc-lostfound-status') || '');
     const typeKey = normType(card.getAttribute('data-kc-lostfound-type') || '');
     const locationKey = String(card.getAttribute('data-kc-lostfound-location') || '').trim();
+    const createdAt = card.getAttribute('data-kc-created-at') || '';
 
     if (state.statuses.size && !state.statuses.has(statusKey)) return false;
     if (state.types.size && !state.types.has(typeKey)) return false;
+    if (state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'achados-perdidos', preset: state.datePreset, createdAt: createdAt })) return false;
+    }
     if (state.location && locationKey !== state.location) return false;
     return true;
   }
@@ -615,12 +733,14 @@
       if (state.draft && state.activeKey === 'filters' && isMobile()) {
         state.draft.statuses = new Set();
         state.draft.types = new Set();
+        state.draft.datePreset = '';
         renderFilterInputs();
         renderActions();
         return;
       }
       state.statuses = new Set();
       state.types = new Set();
+      state.datePreset = '';
       syncTabPresetFromAppliedState();
       apply();
     });
@@ -642,6 +762,8 @@
           state.types = new Set();
         }
         renderFilterInputs();
+        syncUrlState();
+        refreshFeed();
         queue();
       });
     });
@@ -656,9 +778,14 @@
 
     document.addEventListener('change', function (event) {
       const target = event.target;
-      if (!target || !target.matches || !target.matches('[data-kc-achados-filter-kind]')) return;
+      if (!target || !target.matches || !target.matches('[data-kc-achados-filter-kind], [data-kc-achados-date-preset]')) return;
       if (state.draft && state.activeKey === 'filters' && isMobile()) {
         readDraftInputs();
+        renderActions();
+        return;
+      }
+      if (state.draft && state.activeKey === 'dates' && isMobile()) {
+        state.draft.datePreset = readSelectedDatePreset();
         renderActions();
         return;
       }
@@ -674,8 +801,16 @@
         if (action === 'filters' && state.draft) {
           state.statuses = cloneSet(state.draft.statuses);
           state.types = cloneSet(state.draft.types);
+          state.datePreset = normalizeDatePreset(state.draft.datePreset);
           closeModal();
           syncTabPresetFromAppliedState();
+          apply();
+          return;
+        }
+        if (action === 'dates' && state.draft) {
+          state.datePreset = normalizeDatePreset(state.draft.datePreset);
+          renderDateInputs();
+          closeModal();
           apply();
           return;
         }
@@ -695,6 +830,7 @@
       if (clearDraft && state.draft) {
         state.draft.statuses = new Set();
         state.draft.types = new Set();
+        state.draft.datePreset = '';
         renderFilterInputs();
         renderActions();
         return;
@@ -774,21 +910,29 @@
 
   function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    const pending = window.KCControllers.injectFeed({
       module: 'achados-perdidos',
       pageModule: 'achados-perdidos',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onAfterAppend: function (payload) {
         decorate(payload);
         queue();
       }
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     collectSections();
     ensureModal();
     wrapApply();
+    restoreUrlState();
     bind();
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
       window.kcFilters.setExtraPredicate(function (card) { return matchCard(card); });

@@ -101,7 +101,7 @@ function refreshHeroCarousel() {
     // (e não no botão), então usamos zonas laterais para prev/next.
     if (carousel) {
       carousel.addEventListener('click', (e) => {
-        if (e.target.closest('.kc-carousel-prev, .kc-carousel-next, .kc-dot, .kc-btn-primary')) return;
+        if (e.target.closest('.kc-carousel-prev, .kc-carousel-next, .kc-dot, a, button, input, textarea, select, [role="button"]')) return;
         const r = carousel.getBoundingClientRect();
         const x = e.clientX;
         const edge = Math.max(56, Math.min(88, r.width * 0.12));

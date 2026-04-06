@@ -569,16 +569,25 @@ function kcInitHorizontalDragAreas() {
 function kcInitHeroSwipe() {
   const carousel = document.querySelector(".kc-hero-carousel");
   if (!carousel) return;
+  const isInteractiveTarget = (target) => !!(
+    target && target.closest('a, button, input, textarea, select, label, .kc-dot, .kc-carousel-btn, [role="button"]')
+  );
 
   let startX = 0;
   let startY = 0;
   let pointerId = null;
+  let swipeStartedOnInteractive = false;
   let touchStartX = 0;
   let touchStartY = 0;
   const SWIPE_THRESHOLD = 45;
   const AXIS_LOCK_RATIO = 1.5; // horizontal deve ser 1.5x mais que vertical
 
   carousel.addEventListener("pointerdown", (e) => {
+    swipeStartedOnInteractive = isInteractiveTarget(e.target);
+    if (swipeStartedOnInteractive) {
+      pointerId = null;
+      return;
+    }
     // Permite iniciar swipe em qualquer área do carrossel,
     // incluindo nas proximidades dos botões prev/next.
     // A distinção tap vs. swipe é feita pelo threshold de movimento.
@@ -589,6 +598,11 @@ function kcInitHeroSwipe() {
   }, { passive: true });
 
   carousel.addEventListener("pointerup", (e) => {
+    if (swipeStartedOnInteractive) {
+      swipeStartedOnInteractive = false;
+      pointerId = null;
+      return;
+    }
     if (pointerId == null) return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
@@ -600,9 +614,18 @@ function kcInitHeroSwipe() {
     }
   }, { passive: true });
 
-  carousel.addEventListener("pointercancel", () => { pointerId = null; }, { passive: true });
+  carousel.addEventListener("pointercancel", () => {
+    pointerId = null;
+    swipeStartedOnInteractive = false;
+  }, { passive: true });
 
   carousel.addEventListener('touchstart', (e) => {
+    swipeStartedOnInteractive = isInteractiveTarget(e.target);
+    if (swipeStartedOnInteractive) {
+      touchStartX = 0;
+      touchStartY = 0;
+      return;
+    }
     const t = e.changedTouches && e.changedTouches[0];
     if (!t) return;
     touchStartX = t.clientX;
@@ -610,6 +633,10 @@ function kcInitHeroSwipe() {
   }, { passive: true });
 
   carousel.addEventListener('touchend', (e) => {
+    if (swipeStartedOnInteractive) {
+      swipeStartedOnInteractive = false;
+      return;
+    }
     const t = e.changedTouches && e.changedTouches[0];
     if (!t) return;
     const dx = t.clientX - touchStartX;

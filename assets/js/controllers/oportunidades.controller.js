@@ -18,6 +18,10 @@
     selectedTypeFilters: new Set(),
     selectedModeFilters: new Set(),
     selectedArea: '',
+    datePreset: '',
+    priceMin: null,
+    priceMax: null,
+    feedPager: null,
     posts: new Map(),
     sections: [],
     refreshQueued: false,
@@ -66,6 +70,23 @@
     return new Set(Array.from(set || []));
   }
 
+  function sanitizePriceValue(value) {
+    if (value == null || value === '') return null;
+    const numeric = Number(String(value).replace(',', '.'));
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  }
+
+  function normalizePriceRange(minPrice, maxPrice) {
+    let nextMin = sanitizePriceValue(minPrice);
+    let nextMax = sanitizePriceValue(maxPrice);
+    if (nextMin != null && nextMax != null && nextMax < nextMin) {
+      const swap = nextMin;
+      nextMin = nextMax;
+      nextMax = swap;
+    }
+    return { min: nextMin, max: nextMax };
+  }
+
   function isMobileViewport() {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
     return window.matchMedia('(max-width: 768px)').matches;
@@ -75,6 +96,32 @@
     return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
       ? window.KCSessionStore
       : null;
+  }
+
+  function getFeedFilterUtils() {
+    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
+  function getAllowedDatePresets() {
+    const utils = getFeedFilterUtils();
+    return utils && typeof utils.getAllowedDatePresets === 'function'
+      ? utils.getAllowedDatePresets('oportunidades')
+      : ['today', 'last7d', 'last30d'];
+  }
+
+  function normalizeDatePreset(value) {
+    const utils = getFeedFilterUtils();
+    if (utils && typeof utils.normalizeDatePreset === 'function') {
+      return utils.normalizeDatePreset('oportunidades', value);
+    }
+    const normalized = normalizeText(value);
+    const allowed = getAllowedDatePresets();
+    return allowed.includes(normalized) ? normalized : '';
+  }
+
+  function readSelectedDatePreset() {
+    const selected = document.querySelector('[data-kc-opp-date-preset]:checked');
+    return normalizeDatePreset(selected ? selected.value : '');
   }
 
   function restoreCachedPosts() {
@@ -324,6 +371,8 @@
       workModeKey: workMode.key || '',
       isRemote: !!workMode.remote,
       isPresential: !!workMode.presencial,
+      createdAt: post && (post.created_at || post.createdAt || post.timestamp || null),
+      priceValue: sanitizePriceValue(post && (post.preco != null ? post.preco : post.price)),
       searchText: normalizeText(aggregateText),
     };
   }
@@ -356,6 +405,8 @@
     card.setAttribute('data-kc-opp-work-mode', summary.workModeKey || '');
     card.setAttribute('data-kc-opp-remote', String(!!summary.isRemote));
     card.setAttribute('data-kc-opp-presencial', String(!!summary.isPresential));
+    if (summary.createdAt) card.setAttribute('data-kc-created-at', String(summary.createdAt));
+    if (summary.priceValue != null) card.setAttribute('data-kc-price', String(summary.priceValue));
   }
 
   function decorateFreshCards(payload) {
@@ -384,9 +435,16 @@
   function syncStateFromInputs() {
     state.selectedTypeFilters = new Set(getSelectedInputs('type'));
     state.selectedModeFilters = new Set(getSelectedInputs('mode'));
+    state.datePreset = readSelectedDatePreset();
+    const range = normalizePriceRange(
+      document.querySelector('[data-kc-opp-price-min]') && document.querySelector('[data-kc-opp-price-min]').value,
+      document.querySelector('[data-kc-opp-price-max]') && document.querySelector('[data-kc-opp-price-max]').value
+    );
+    state.priceMin = range.min;
+    state.priceMax = range.max;
   }
 
-  function syncFilterInputs(typeFilters, modeFilters) {
+  function syncFilterInputs(typeFilters, modeFilters, priceMin, priceMax, datePreset) {
     const types = typeFilters || new Set();
     const modes = modeFilters || new Set();
 
@@ -396,6 +454,67 @@
 
     document.querySelectorAll('[data-kc-opp-filter-kind="mode"]').forEach((input) => {
       input.checked = modes.has(String(input.value || '').trim());
+    });
+
+    const minInput = document.querySelector('[data-kc-opp-price-min]');
+    const maxInput = document.querySelector('[data-kc-opp-price-max]');
+    if (minInput) minInput.value = priceMin != null ? String(priceMin) : '';
+    if (maxInput) maxInput.value = priceMax != null ? String(priceMax) : '';
+    const selectedPreset = normalizeDatePreset(datePreset);
+    document.querySelectorAll('[data-kc-opp-date-preset]').forEach((input) => {
+      input.checked = normalizeDatePreset(input.value) === selectedPreset;
+    });
+  }
+
+  function restoreUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.getSearchParams !== 'function') return false;
+    const params = utils.getSearchParams();
+    const hasTypes = !!(params && typeof params.has === 'function' && params.has('oppType'));
+    const hasModes = !!(params && typeof params.has === 'function' && params.has('oppMode'));
+    const hasArea = !!(params && typeof params.has === 'function' && params.has('oppArea'));
+    const hasDatePreset = !!(params && typeof params.has === 'function' && params.has('datePreset'));
+    const hasPriceMin = !!(params && typeof params.has === 'function' && params.has('priceMin'));
+    const hasPriceMax = !!(params && typeof params.has === 'function' && params.has('priceMax'));
+    if (!hasTypes && !hasModes && !hasArea && !hasDatePreset && !hasPriceMin && !hasPriceMax) return false;
+
+    if (hasTypes) {
+      state.selectedTypeFilters = new Set(utils.readListParam(params, 'oppType').map((value) => String(value || '').trim()).filter(Boolean));
+    }
+    if (hasModes) {
+      state.selectedModeFilters = new Set(utils.readListParam(params, 'oppMode').map((value) => String(value || '').trim()).filter(Boolean));
+    }
+    if (hasArea) {
+      state.selectedArea = utils.readTextParam(params, 'oppArea');
+    }
+    if (hasDatePreset) {
+      state.datePreset = typeof utils.readPresetParam === 'function'
+        ? utils.readPresetParam(params, 'datePreset', getAllowedDatePresets())
+        : normalizeDatePreset(utils.readTextParam(params, 'datePreset'));
+    }
+    if (hasPriceMin || hasPriceMax) {
+      const range = normalizePriceRange(
+        hasPriceMin ? utils.readNumberParam(params, 'priceMin') : state.priceMin,
+        hasPriceMax ? utils.readNumberParam(params, 'priceMax') : state.priceMax
+      );
+      state.priceMin = range.min;
+      state.priceMax = range.max;
+    }
+    syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
+    return true;
+  }
+
+  function syncUrlState() {
+    const utils = getFeedFilterUtils();
+    if (!utils || typeof utils.updateSearchParams !== 'function') return;
+    utils.updateSearchParams(function (params) {
+      utils.writeListParam(params, 'oppType', Array.from(state.selectedTypeFilters));
+      utils.writeListParam(params, 'oppMode', Array.from(state.selectedModeFilters));
+      utils.writeTextParam(params, 'oppArea', state.selectedArea || '');
+      if (typeof utils.writePresetParam === 'function') utils.writePresetParam(params, 'datePreset', state.datePreset, getAllowedDatePresets());
+      else utils.writeTextParam(params, 'datePreset', state.datePreset || '');
+      utils.writeNumberParam(params, 'priceMin', state.priceMin);
+      utils.writeNumberParam(params, 'priceMax', state.priceMax);
     });
   }
 
@@ -424,6 +543,8 @@
     const workModeKey = String(card.getAttribute('data-kc-opp-work-mode') || '');
     const isRemote = String(card.getAttribute('data-kc-opp-remote') || '').toLowerCase() === 'true';
     const isPresential = String(card.getAttribute('data-kc-opp-presencial') || '').toLowerCase() === 'true';
+    const createdAt = card.getAttribute('data-kc-created-at') || '';
+    const priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
 
     if (state.selectedTypeFilters.size) {
       let typeMatches = false;
@@ -442,6 +563,12 @@
     }
 
     if (state.selectedArea && area !== state.selectedArea) return false;
+    if (state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'oportunidades', preset: state.datePreset, createdAt: createdAt })) return false;
+    }
+    if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
+    if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
     return true;
   }
 
@@ -483,6 +610,15 @@
     }
 
     if (state.selectedArea && !cfg.ignoreArea && summary.areaKey !== state.selectedArea) return false;
+    if (!cfg.ignoreDate && state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'oportunidades', preset: state.datePreset, createdAt: summary.createdAt })) return false;
+    }
+    if (!cfg.ignorePrice) {
+      if ((state.priceMin != null || state.priceMax != null) && summary.priceValue == null) return false;
+      if (state.priceMin != null && summary.priceValue < state.priceMin) return false;
+      if (state.priceMax != null && summary.priceValue > state.priceMax) return false;
+    }
     return true;
   }
 
@@ -580,7 +716,11 @@
   function syncClearButtonState() {
     const clearButton = document.querySelector('[data-kc-opp-clear-filters="true"]');
     if (!clearButton) return;
-    const hasFilters = hasTypeModeSelection(state.selectedTypeFilters, state.selectedModeFilters);
+    const hasFilters = hasTypeModeSelection(state.selectedTypeFilters, state.selectedModeFilters)
+      || !!state.selectedArea
+      || !!state.datePreset
+      || state.priceMin != null
+      || state.priceMax != null;
     clearButton.disabled = !hasFilters;
   }
 
@@ -676,12 +816,30 @@
       const draft = state.modalDraft || {
         typeFilters: cloneSet(state.selectedTypeFilters),
         modeFilters: cloneSet(state.selectedModeFilters),
+        datePreset: state.datePreset,
+        priceMin: state.priceMin,
+        priceMax: state.priceMax,
       };
-      const canClear = hasTypeModeSelection(draft.typeFilters, draft.modeFilters);
+      const canClear = hasTypeModeSelection(draft.typeFilters, draft.modeFilters)
+        || !!normalizeDatePreset(draft.datePreset)
+        || draft.priceMin != null
+        || draft.priceMax != null;
       actions.innerHTML = [
         '<div class="kc-opportunity-section-modal__action-group">',
         '  <button class="kc-opportunity-clear" type="button" data-kc-opp-modal-clear-filters="true"' + (canClear ? '' : ' disabled') + '>Limpar filtros</button>',
         '  <button class="kc-opportunity-apply" type="button" data-kc-opp-modal-apply="filters">Aplicar filtros</button>',
+        '</div>'
+      ].join('');
+      return;
+    }
+
+    if (state.activeSectionKey === 'dates') {
+      const labels = { '': 'Todas as datas', today: 'Hoje', last7d: 'Últimos 7 dias', last30d: 'Últimos 30 dias' };
+      const selectedLabel = labels[(state.modalDraft && typeof state.modalDraft.datePreset === 'string') ? state.modalDraft.datePreset : state.datePreset] || 'Todas as datas';
+      actions.innerHTML = [
+        '<div class="kc-opportunity-section-modal__action-group">',
+        '  <p class="kc-opportunity-section-modal__caption">Data selecionada: <strong>' + escapeHtml(selectedLabel) + '</strong></p>',
+        '  <button class="kc-opportunity-apply" type="button" data-kc-opp-modal-apply="dates">Ver oportunidades</button>',
         '</div>'
       ].join('');
       return;
@@ -732,11 +890,14 @@
       typeFilters: cloneSet(state.selectedTypeFilters),
       modeFilters: cloneSet(state.selectedModeFilters),
       area: state.selectedArea || '',
+      datePreset: state.datePreset,
+      priceMin: state.priceMin,
+      priceMax: state.priceMax,
     };
 
     title.textContent = sectionMeta.title;
     titleIcon.className = sectionMeta.icon || 'fas fa-layer-group';
-    syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters);
+    syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters, state.modalDraft.priceMin, state.modalDraft.priceMax, state.modalDraft.datePreset);
     renderAreaButtons();
     renderSectionActions();
     overlay.classList.add('active');
@@ -781,7 +942,7 @@
     }
 
     if (!cfg.commit) {
-      syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters);
+      syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
     }
 
     if (state.activeSectionNode && state.activeSectionPlaceholder && state.activeSectionPlaceholder.parentNode) {
@@ -822,6 +983,7 @@
     const schedule = window.requestAnimationFrame || function (cb) { return window.setTimeout(cb, 16); };
     schedule(function () {
       state.refreshQueued = false;
+      syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
       renderAreaButtons();
       renderMobileRail();
       renderSectionActions();
@@ -829,7 +991,25 @@
     });
   }
 
+  function getFeedRequestParams() {
+    const params = {};
+    if (state.selectedTypeFilters.size) params.oppType = Array.from(state.selectedTypeFilters);
+    if (state.selectedModeFilters.size) params.oppMode = Array.from(state.selectedModeFilters);
+    if (state.selectedArea) params.oppArea = state.selectedArea;
+    if (state.datePreset) params.datePreset = state.datePreset;
+    if (state.priceMin != null) params.priceMin = state.priceMin;
+    if (state.priceMax != null) params.priceMax = state.priceMax;
+    return params;
+  }
+
+  function refreshFeed() {
+    if (!state.feedPager || typeof state.feedPager.refresh !== 'function') return;
+    state.feedPager.refresh({ requestParams: getFeedRequestParams() });
+  }
+
   function applyCurrentFilters() {
+    syncUrlState();
+    refreshFeed();
     if (window.kcFilters && typeof window.kcFilters.apply === 'function') {
       window.kcFilters.apply();
       return;
@@ -841,6 +1021,19 @@
     if (state.modalDraft && state.activeSectionKey === 'filters' && isMobileViewport()) {
       state.modalDraft.typeFilters = new Set(getSelectedInputs('type'));
       state.modalDraft.modeFilters = new Set(getSelectedInputs('mode'));
+      state.modalDraft.datePreset = readSelectedDatePreset();
+      const range = normalizePriceRange(
+        document.querySelector('[data-kc-opp-price-min]') && document.querySelector('[data-kc-opp-price-min]').value,
+        document.querySelector('[data-kc-opp-price-max]') && document.querySelector('[data-kc-opp-price-max]').value
+      );
+      state.modalDraft.priceMin = range.min;
+      state.modalDraft.priceMax = range.max;
+      renderSectionActions();
+      return;
+    }
+
+    if (state.modalDraft && state.activeSectionKey === 'dates' && isMobileViewport()) {
+      state.modalDraft.datePreset = readSelectedDatePreset();
       renderSectionActions();
       return;
     }
@@ -850,7 +1043,7 @@
   }
 
   function bindSidebarEvents() {
-    document.querySelectorAll('[data-kc-opp-filter-kind]').forEach((input) => {
+    document.querySelectorAll('[data-kc-opp-filter-kind], [data-kc-opp-price-min], [data-kc-opp-price-max], [data-kc-opp-date-preset]').forEach((input) => {
       input.addEventListener('change', applySidebarFilters);
     });
 
@@ -860,6 +1053,13 @@
         document.querySelectorAll('[data-kc-opp-filter-kind]').forEach((input) => {
           input.checked = false;
         });
+        state.selectedArea = '';
+        state.datePreset = '';
+        const minInput = document.querySelector('[data-kc-opp-price-min]');
+        const maxInput = document.querySelector('[data-kc-opp-price-max]');
+        if (minInput) minInput.value = '';
+        if (maxInput) maxInput.value = '';
+        syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
         applySidebarFilters();
       });
     }
@@ -869,7 +1069,10 @@
       if (clearDraftButton && state.modalDraft) {
         state.modalDraft.typeFilters = new Set();
         state.modalDraft.modeFilters = new Set();
-        syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters);
+        state.modalDraft.datePreset = '';
+        state.modalDraft.priceMin = null;
+        state.modalDraft.priceMax = null;
+        syncFilterInputs(state.modalDraft.typeFilters, state.modalDraft.modeFilters, state.modalDraft.priceMin, state.modalDraft.priceMax, state.modalDraft.datePreset);
         renderSectionActions();
         return;
       }
@@ -880,7 +1083,17 @@
         if (action === 'filters' && state.modalDraft) {
           state.selectedTypeFilters = cloneSet(state.modalDraft.typeFilters);
           state.selectedModeFilters = cloneSet(state.modalDraft.modeFilters);
-          syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters);
+          state.datePreset = normalizeDatePreset(state.modalDraft.datePreset);
+          state.priceMin = state.modalDraft.priceMin != null ? state.modalDraft.priceMin : null;
+          state.priceMax = state.modalDraft.priceMax != null ? state.modalDraft.priceMax : null;
+          syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
+          closeMobileSectionModal({ commit: true });
+          applyCurrentFilters();
+          return;
+        }
+        if (action === 'dates' && state.modalDraft) {
+          state.datePreset = normalizeDatePreset(state.modalDraft.datePreset);
+          syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
           closeMobileSectionModal({ commit: true });
           applyCurrentFilters();
           return;
@@ -986,15 +1199,22 @@
 
   function initFeed(sortBy) {
     if (!window.KCControllers || typeof window.KCControllers.injectFeed !== 'function') return;
-    window.KCControllers.injectFeed({
+    const pending = window.KCControllers.injectFeed({
       module: 'oportunidades',
       pageModule: 'oportunidades',
       sortBy: sortBy || 'votos',
+      getRequestParams: getFeedRequestParams,
       onAfterAppend: function (payload) {
         decorateFreshCards(payload);
         queueRefresh();
       }
     });
+    Promise.resolve(pending).then(function (pager) {
+      state.feedPager = pager || null;
+    }).catch(function () {
+      state.feedPager = null;
+    });
+    return pending;
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -1002,6 +1222,8 @@
     ensureMobileSectionModal();
     wrapFilterApply();
     syncStateFromInputs();
+    restoreUrlState();
+    syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
     bindSidebarEvents();
     setupExtraPredicate();
     restoreCachedPosts();

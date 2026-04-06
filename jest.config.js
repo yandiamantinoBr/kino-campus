@@ -2,6 +2,13 @@ module.exports = {
   testEnvironment: 'jsdom',
   verbose: true,
   testMatch: ['**/tests/**/*.test.js'],
+  testPathIgnorePatterns: [
+    '<rootDir>/\\.claude/',
+  ],
+  modulePathIgnorePatterns: [
+    '<rootDir>/\\.claude/',
+    '<rootDir>/docs/legacy/backend-placeholder/',
+  ],
   collectCoverage: true,
   coverageDirectory: 'output/coverage',
   coverageReporters: ['text', 'text-summary'],

@@ -2138,8 +2138,9 @@
       : (p._legacyAuthorAvatar || p.autorAvatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || ''));
 
     const rating = (p.rating != null && p.rating !== '') ? Number(p.rating) : null;
-    const ratingHtml = Number.isFinite(rating)
-      ? `<i class="fas fa-star"></i> ${escapeHtml(rating.toFixed(1))}`
+    const ratingCount = Math.max(0, parseInt(String(p.ratingCount != null ? p.ratingCount : (p.rating_count != null ? p.rating_count : 0)), 10) || 0);
+    const ratingHtml = (Number.isFinite(rating) && ratingCount > 0)
+      ? `<span class="kc-card__rating" title="${escapeHtml(`Avaliação média ${rating.toFixed(1)} em ${ratingCount} avaliações`)}"><i class="fas fa-star"></i> ${escapeHtml(rating.toFixed(1))}<span class="kc-card__rating-count">(${escapeHtml(String(ratingCount))})</span></span>`
       : '';
 
     // Interações
@@ -2156,6 +2157,8 @@
     if (id) attrs.push(`data-post-id="${escapeHtml(id)}"`);
     attrs.push(`data-verified="${escapeHtml(String(!!p.verificado))}"`);
     if (moduleKey) attrs.push(`data-module="${escapeHtml(String(moduleKey))}"`);
+    const numericPrice = Number(p.preco != null ? p.preco : p.price);
+    if (Number.isFinite(numericPrice)) attrs.push(`data-kc-price="${escapeHtml(String(numericPrice))}"`);
 
     // Marcação de post do usuário (evita duplicação de injeção pelo kc-core.js)
     if (p._kcUserPost === true) attrs.push('data-kc-user-post="true"');
