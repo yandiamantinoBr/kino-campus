@@ -2053,6 +2053,26 @@
     driver.unsubscribeNotifications(channel);
   }
 
+  // ── Convites de usuários externos (v9.1.0.3) ─────────────────────────────
+
+  async function inviteExternalUser(email, note) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.inviteExternalUser !== 'function') return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
+    return driver.inviteExternalUser(email, note);
+  }
+
+  async function getInvites() {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.getInvites !== 'function') return { data: [], error: null };
+    return driver.getInvites();
+  }
+
+  async function revokeInvite(email) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.revokeInvite !== 'function') return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
+    return driver.revokeInvite(email);
+  }
+
   window.KCAPI = Object.freeze({
     VERSION,
     ENV,
@@ -2118,6 +2138,11 @@
     getUnreadNotificationCount,
     subscribeNotifications,
     unsubscribeNotifications,
+
+    // Convites externos (v9.1.0.3)
+    inviteExternalUser,
+    getInvites,
+    revokeInvite,
 
     // Auth (Supabase)
     getCurrentUser,
