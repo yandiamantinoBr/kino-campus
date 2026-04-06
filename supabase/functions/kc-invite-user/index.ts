@@ -1,13 +1,14 @@
-// KinoCampus — Edge Function: kc-invite-user
+// KinoCampus — Edge Function: kc-invite-user (v2)
 //
-// Envia um convite para um usuário com e-mail não-institucional.
+// Gera um link de convite para usuário com e-mail não-institucional.
+// O admin recebe o link e envia pelo próprio canal (ex: contato@kinocampus.com.br).
 // Requer: caller autenticado com is_admin = true.
 //
 // POST /functions/v1/kc-invite-user
 // Body: { email: string, note?: string }
 // Headers: Authorization: Bearer <access_token>
 //
-// Env vars necessárias (já disponíveis nas Edge Functions do Supabase):
+// Env vars (disponíveis automaticamente nas Edge Functions do Supabase):
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 //
 // Env var adicional (configurar em Supabase → Edge Functions → Secrets):
@@ -15,11 +16,11 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const SUPABASE_URL           = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY      = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SERVICE_ROLE_KEY       = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SITE_URL               = (Deno.env.get("KC_APP_BASE_URL") || "https://www.kinocampus.com.br").replace(/\/$/, "");
-const INVITE_REDIRECT_URL    = `${SITE_URL}/auth-callback.html`;
+const SUPABASE_URL        = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY   = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SERVICE_ROLE_KEY    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SITE_URL            = (Deno.env.get("KC_APP_BASE_URL") || "https://www.kinocampus.com.br").replace(/\/$/, "");
+const INVITE_REDIRECT_URL = `${SITE_URL}/auth-callback.html`;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin":  "*",
@@ -50,7 +51,6 @@ Deno.serve(async (req) => {
     return json(401, { error: "Token de autenticação ausente." });
   }
 
-  // Cliente com o JWT do usuário chamador (para verificar permissões)
   const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false },
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
   // ── 2. Verificar se é admin ───────────────────────────────────────────────
   const { data: profile, error: profileError } = await userClient
     .from("profiles")
-    .select("is_admin")
+    .select("is_admin, display_name")
     .eq("id", user.id)
     .single();
 
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     return json(400, { error: "E-mail inválido." });
   }
 
-  // Não permitir convidar e-mails institucionais (eles já podem se cadastrar normalmente)
+  // E-mails institucionais não precisam de convite
   const isInstitutional = email.endsWith("@ufg.br") ||
                           email.endsWith("@discente.ufg.br") ||
                           email.endsWith("@egresso.ufg.br");
@@ -117,26 +117,35 @@ Deno.serve(async (req) => {
     return json(500, { error: "Falha ao registrar convite. Tente novamente." });
   }
 
-  // ── 6. Enviar convite via Supabase Auth Admin API ─────────────────────────
-  const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
+  // ── 6. Gerar link de convite via generateLink ─────────────────────────────
+  // Usando generateLink (NÃO inviteUserByEmail) para:
+  //   a) Obter o link de convite diretamente, sem envio automático de email
+  //   b) Evitar conflito de tokens (dual-token problem: inviteByEmail invalidaria o token gerado)
+  //   c) Permitir que o admin personalize e envie o email pelo próprio canal
+  const adminName: string = (profile as any)?.display_name || "Admin KinoCampus";
+
+  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    type: "invite",
     email,
-    {
+    options: {
       redirectTo: INVITE_REDIRECT_URL,
       data: {
-        invited_by_admin: user.id,
+        invited_by_name: adminName,
+        invite_note: note,
         is_invited_external: true,
       },
-    }
-  );
+    },
+  });
 
-  if (inviteError) {
-    // Se o usuário já existe e está confirmado, apenas re-registrar na whitelist é suficiente
-    const alreadyExists =
-      inviteError.message?.includes("already been registered") ||
-      inviteError.message?.includes("already registered") ||
-      inviteError.message?.includes("User already registered");
+  if (linkError) {
+    // Usuário já confirmado: whitelist foi atualizada, login normal é suficiente
+    const alreadyConfirmed =
+      linkError.message?.includes("already been registered") ||
+      linkError.message?.includes("already registered") ||
+      linkError.message?.includes("User already registered") ||
+      linkError.message?.includes("email_exists");
 
-    if (alreadyExists) {
+    if (alreadyConfirmed) {
       return json(200, {
         ok: true,
         email,
@@ -145,17 +154,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.error("[kc-invite-user] invite error:", inviteError);
+    console.error("[kc-invite-user] generateLink error:", linkError);
     return json(500, {
-      error: `Falha ao enviar convite: ${inviteError.message}`,
+      error: `Falha ao gerar link de convite: ${linkError.message}`,
     });
+  }
+
+  const inviteLink: string = (linkData as any)?.properties?.action_link ?? "";
+
+  if (!inviteLink) {
+    console.error("[kc-invite-user] action_link vazio. linkData:", JSON.stringify(linkData));
+    return json(500, { error: "Falha ao gerar link de convite: link não retornado pelo servidor." });
   }
 
   return json(200, {
     ok: true,
     email,
-    user_id: inviteData?.user?.id ?? null,
-    message: `Convite enviado para ${email}. O link expira em 7 dias.`,
-    redirect_url: INVITE_REDIRECT_URL,
+    invite_link: inviteLink,
+    expires_at: expiresAt,
+    message: `Link de convite gerado para ${email}. Válido por 7 dias.`,
   });
 });

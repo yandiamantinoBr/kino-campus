@@ -342,6 +342,22 @@
 
           <div id="invite-feedback" class="kc-admin-invite-feedback" role="status"></div>
 
+          <!-- Link de convite gerado (exibido após sucesso) -->
+          <div id="invite-link-area" style="display:none;margin-bottom:12px;padding:10px 14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;">
+            <p style="margin:0 0 8px;font-size:.84em;color:var(--kc-text-dark-secondary);">
+              <i class="fas fa-link" style="margin-right:4px;"></i>
+              Copie o link abaixo e envie para o convidado pelo seu e-mail (ex: contato@kinocampus.com.br):
+            </p>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input id="invite-link-input" type="text" readonly
+                style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);font-size:.8em;font-family:monospace;min-width:0;" />
+              <button id="invite-link-copy" type="button"
+                style="padding:7px 14px;border-radius:6px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.82em;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+                <i class="fas fa-copy"></i> Copiar
+              </button>
+            </div>
+          </div>
+
           <form id="invite-form" autocomplete="off">
             <div class="kc-admin-invite-fields">
               <input
@@ -358,7 +374,7 @@
                 maxlength="120"
               />
               <button type="submit" id="invite-btn">
-                <i class="fas fa-paper-plane"></i> Enviar Convite
+                <i class="fas fa-paper-plane"></i> Gerar Link de Convite
               </button>
             </div>
           </form>
