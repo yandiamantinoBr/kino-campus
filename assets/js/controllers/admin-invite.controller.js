@@ -42,8 +42,51 @@
     if (!btn) return;
     btn.disabled = !!loading;
     btn.innerHTML = loading
-      ? '<i class="fas fa-spinner fa-spin"></i> Enviando…'
-      : '<i class="fas fa-paper-plane"></i> Enviar Convite';
+      ? '<i class="fas fa-spinner fa-spin"></i> Gerando link…'
+      : '<i class="fas fa-paper-plane"></i> Gerar Link de Convite';
+  }
+
+  function hideLinkArea() {
+    var area = $('invite-link-area');
+    if (area) area.style.display = 'none';
+    var input = $('invite-link-input');
+    if (input) input.value = '';
+  }
+
+  function showLinkArea(link) {
+    var area = $('invite-link-area');
+    var input = $('invite-link-input');
+    if (!area || !input) return;
+    input.value = link;
+    area.style.display = 'block';
+    input.focus();
+    input.select();
+  }
+
+  function handleCopyLink() {
+    var input = $('invite-link-input');
+    if (!input || !input.value) return;
+    var btn = $('invite-link-copy');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(input.value).then(function () {
+        if (btn) {
+          var orig = btn.innerHTML;
+          btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+          setTimeout(function () { btn.innerHTML = orig; }, 2000);
+        }
+      }).catch(function () {
+        input.select();
+        document.execCommand('copy');
+      });
+    } else {
+      input.select();
+      document.execCommand('copy');
+      if (btn) {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+        setTimeout(function () { btn.innerHTML = orig; }, 2000);
+      }
+    }
   }
 
   function renderInviteRow(invite) {
@@ -75,16 +118,22 @@
   async function loadInvites() {
     var tbody = $('invite-table-body');
     var empty = $('invite-list-empty');
-    var table = $('invite-table');
+    var wrap  = $('invite-table-wrap');
     if (!tbody) return;
 
     if (!window.KCAPI || typeof window.KCAPI.getInvites !== 'function') return;
 
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--kc-text-dark-secondary);">Carregando…</td></tr>';
-    if (table) table.style.display = 'table';
+    if (wrap) wrap.style.display = '';
     if (empty) empty.style.display = 'none';
 
-    var result = await window.KCAPI.getInvites();
+    var result;
+    try {
+      result = await window.KCAPI.getInvites();
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:14px;color:#ef9a9a;">Erro ao carregar convites.</td></tr>';
+      return;
+    }
 
     if (result.error) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:14px;color:#ef9a9a;">Erro ao carregar convites.</td></tr>';
@@ -93,12 +142,12 @@
 
     var invites = result.data || [];
     if (!invites.length) {
-      if (table) table.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
       if (empty) { empty.style.display = 'block'; empty.textContent = 'Nenhum convite enviado ainda.'; }
       return;
     }
 
-    if (table) table.style.display = 'table';
+    if (wrap) wrap.style.display = '';
     if (empty) empty.style.display = 'none';
     tbody.innerHTML = invites.map(renderInviteRow).join('');
   }
@@ -123,22 +172,34 @@
     }
 
     setFeedback('', '');
+    hideLinkArea();
     setBtnLoading(true);
 
-    var result = await window.KCAPI.inviteExternalUser(email, note || null);
+    var result;
+    try {
+      result = await window.KCAPI.inviteExternalUser(email, note || null);
+    } catch (err) {
+      setBtnLoading(false);
+      setFeedback('Erro inesperado: ' + (err && err.message ? err.message : String(err)), 'error');
+      return;
+    }
 
     setBtnLoading(false);
 
     if (!result.ok) {
-      setFeedback('Erro: ' + (result.error || 'Não foi possível enviar o convite.'), 'error');
+      setFeedback('Erro: ' + (result.error || 'Não foi possível gerar o convite.'), 'error');
       return;
     }
 
-    var msg = result.data && result.data.already_registered
-      ? 'Usuário ' + email + ' já estava cadastrado. Whitelist atualizada.'
-      : 'Convite enviado para ' + email + '. O link expira em 7 dias.';
+    if (result.data && result.data.already_registered) {
+      setFeedback('Usuário ' + email + ' já estava cadastrado. Whitelist atualizada — pode fazer login normalmente.', 'success');
+    } else {
+      setFeedback('Link gerado para ' + email + '. Copie abaixo e envie pelo seu e-mail:', 'success');
+      if (result.data && result.data.invite_link) {
+        showLinkArea(result.data.invite_link);
+      }
+    }
 
-    setFeedback(msg, 'success');
     emailInput.value = '';
     if (noteInput) noteInput.value = '';
     loadInvites();
@@ -157,7 +218,15 @@
 
     if (!window.KCAPI || typeof window.KCAPI.revokeInvite !== 'function') return;
 
-    var result = await window.KCAPI.revokeInvite(email);
+    var result;
+    try {
+      result = await window.KCAPI.revokeInvite(email);
+    } catch (err) {
+      btn.disabled = false;
+      setFeedback('Erro ao revogar: ' + (err && err.message ? err.message : String(err)), 'error');
+      return;
+    }
+
     if (result.ok) {
       setFeedback('Convite de ' + email + ' revogado.', 'success');
       loadInvites();
@@ -177,11 +246,13 @@
     var tbody = $('invite-table-body');
     if (tbody) tbody.addEventListener('click', handleRevokeClick);
 
+    var copyBtn = $('invite-link-copy');
+    if (copyBtn) copyBtn.addEventListener('click', handleCopyLink);
+
     // Aguardar o admin-shell liberar o conteúdo admin antes de carregar
     var attempts = 0;
     function tryLoad() {
       if (window.KCAPI && typeof window.KCAPI.getInvites === 'function') {
-        // Verificar se o admin-content já está visível
         var content = document.getElementById('admin-content');
         if (content && content.style.display !== 'none') {
           loadInvites();
