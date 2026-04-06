@@ -1,18 +1,15 @@
-// KinoCampus — Edge Function: kc-invite-user (v2)
+// KinoCampus — Edge Function: kc-invite-user (v4)
 //
 // Gera um link de convite para usuário com e-mail não-institucional.
 // O admin recebe o link e envia pelo próprio canal (ex: contato@kinocampus.com.br).
 // Requer: caller autenticado com is_admin = true.
 //
+// NOTA: verify_jwt desabilitado no gateway para evitar CORS block.
+// A função valida JWT internamente (passos 1-2).
+//
 // POST /functions/v1/kc-invite-user
 // Body: { email: string, note?: string }
 // Headers: Authorization: Bearer <access_token>
-//
-// Env vars (disponíveis automaticamente nas Edge Functions do Supabase):
-//   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
-//
-// Env var adicional (configurar em Supabase → Edge Functions → Secrets):
-//   KC_APP_BASE_URL (ex: https://www.kinocampus.com.br)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -24,7 +21,7 @@ const INVITE_REDIRECT_URL = `${SITE_URL}/auth-callback.html`;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin":  "*",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
