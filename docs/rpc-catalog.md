@@ -67,6 +67,75 @@ Busca server-side dedicada para a página `search-results.html` e o dropdown glo
 
 ---
 
+### `kc_get_user_rating_summary(p_target_user_id uuid) → JSONB` *(v9.1.2.0)*
+
+Resumo público da reputação de um usuário.
+
+**Chamado em:** `KCAPI.getUserRatingSummary()`
+
+**Retorno:** `{ "userId": "uuid", "average": 4.5, "count": 12 }`
+
+**Observações:**
+- A função lê os agregados persistidos em `profiles.rating_avg` e `profiles.rating_count`.
+- A função fixa `SET search_path = ''`.
+
+---
+
+### `kc_get_user_rating_state(p_target_user_id uuid, p_context_post_id uuid default null) → JSONB` *(v9.1.2.0)*
+
+Resolve o estado do viewer autenticado para avaliar um usuário alvo.
+
+**Chamado em:** `KCAPI.getUserRatingState()`
+
+**Retorno:** `{ "targetUserId": "uuid", "contextPostId": "uuid-or-null", "canRate": true, "reason": "OK", "myRating": {...} }`
+
+**Regras de elegibilidade:**
+- Bloqueia autoavaliação (`SELF`).
+- Exige autenticação (`AUTH_REQUIRED`).
+- Exige contexto válido quando `p_context_post_id` é enviado (`INVALID_CONTEXT`).
+- Libera avaliação apenas quando já existe interação persistida com posts do alvo via `comments`, `post_votes` ou `saved_posts`; do contrário retorna `NO_INTERACTION`.
+- Se já existir avaliação do mesmo viewer para o alvo, o estado retorna `canRate = true` com `myRating` preenchido para permitir edição.
+
+**Observações:**
+- Implementada com `SECURITY DEFINER` e `SET search_path = ''`.
+
+---
+
+### `kc_list_user_ratings(p_target_user_id uuid, p_page integer default 1, p_limit integer default 10) → JSONB` *(v9.1.2.0)*
+
+Lista textual paginada das avaliações públicas de um usuário.
+
+**Chamado em:** `KCAPI.listUserRatings()`
+
+**Retorno:** `{ "items": [...], "page": 1, "limit": 10, "total": 3, "hasMore": false }`
+
+**Observações:**
+- Quando o perfil alvo não é público e o caller não é o próprio alvo, a função retorna lista vazia.
+- A identidade do avaliador é anonimizada como `Membro da comunidade` quando `profiles.profile_public = false`.
+- Implementada com `SET search_path = ''`.
+
+---
+
+### `kc_upsert_user_rating(p_target_user_id uuid, p_context_post_id uuid default null, p_rating integer default null, p_comment text default null) → JSONB` *(v9.1.2.0)*
+
+Cria ou atualiza a avaliação do viewer autenticado para um usuário alvo.
+
+**Chamado em:** `KCAPI.upsertUserRating()`
+
+**Retorno:** `{ "ok": true, "rating": {...}, "summary": {...} }`
+
+**Validações:**
+- `p_rating` deve estar entre `1` e `5`.
+- `p_comment` é opcional e limitado a `280` caracteres.
+- O par `(rater_user_id, target_user_id)` é único e o write usa `INSERT ... ON CONFLICT DO UPDATE`.
+- A função reaproveita `kc_get_user_rating_state()` para aplicar as mesmas regras de elegibilidade.
+
+**Observações:**
+- Implementada com `SECURITY DEFINER` e `SET search_path = ''`.
+- A atualização dos agregados do alvo é automática via trigger `kc_trigger_user_ratings_sync_target`.
+
+---
+
 ### `kc_bump_post(p_post_id uuid) → JSONB`
 
 Sobe o post para o topo do feed. Cooldown de 1 dia.

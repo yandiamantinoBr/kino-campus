@@ -27,6 +27,10 @@
     comments: [],
     commentPage: 1,
     commentHasMore: false,
+    ratings: [],
+    ratingPage: 1,
+    ratingHasMore: false,
+    ratingSummary: { average: null, count: 0 },
     savedItems: [],
     savedPage: 1,
     savedKind: '',
@@ -245,6 +249,47 @@
     badge.textContent = value > 99 ? '99+' : String(value);
   }
 
+  function normalizeRatingSummary(raw, fallbackUserId) {
+    const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+    const averageRaw = source.average != null ? source.average : source.rating_avg;
+    const average = (averageRaw != null && averageRaw !== '') ? Number(averageRaw) : null;
+    const countRaw = source.count != null ? source.count : source.rating_count;
+    const count = Math.max(0, parseInt(String(countRaw != null ? countRaw : 0), 10) || 0);
+    return {
+      userId: String(source.userId || source.user_id || fallbackUserId || '').trim() || null,
+      average: Number.isFinite(average) ? Number(average.toFixed(2)) : null,
+      count,
+    };
+  }
+
+  function getProfileRatingSummaryFromProfile(profile) {
+    return normalizeRatingSummary({
+      userId: profile && profile.id,
+      average: profile && (profile.ratingAvg != null ? profile.ratingAvg : profile.rating_avg),
+      count: profile && (profile.ratingCount != null ? profile.ratingCount : profile.rating_count),
+    }, profile && profile.id);
+  }
+
+  function renderProfileRatingSummary() {
+    const summary = normalizeRatingSummary(state.ratingSummary, state.profileId || (state.profile && state.profile.id));
+    const statValue = $('#stat-rating');
+    const statLabel = $('#stat-rating-label');
+    if (statValue) statValue.textContent = (summary.count > 0 && Number.isFinite(summary.average)) ? summary.average.toFixed(1) : '–';
+    if (statLabel) statLabel.textContent = summary.count > 0
+      ? `Reputação (${summary.count})`
+      : 'Reputação';
+    setBadgeCount('#badge-ratings', summary.count);
+  }
+
+  function buildRatingStars(score) {
+    const value = Math.max(0, Math.min(5, parseInt(String(score != null ? score : 0), 10) || 0));
+    const output = [];
+    for (let index = 1; index <= 5; index += 1) {
+      output.push(`<i class="fas fa-star${index <= value ? ' is-active' : ''}"></i>`);
+    }
+    return output.join('');
+  }
+
   function isOwnerView() {
     return !state.isPublicView;
   }
@@ -461,48 +506,62 @@
 
     const savedEmpty = $('#saved-empty');
     if (savedEmpty) savedEmpty.innerHTML = `<i class="fas fa-star"></i> ${esc(savedEmptyText)}`;
+
+    state.ratingSummary = normalizeRatingSummary(state.ratingSummary && state.ratingSummary.count
+      ? state.ratingSummary
+      : getProfileRatingSummaryFromProfile(profile), state.profileId || profile.id);
+    renderProfileRatingSummary();
   }
 
   async function loadStats(authorId) {
     const client = getClient();
-    if (!client || !authorId) return;
+    if (!authorId) return;
 
     try {
-      let postQuery = client
-        .from('posts')
-        .select('id', { count: 'exact', head: true })
-        .eq('author_id', authorId);
-      if (state.isPublicView) postQuery = postQuery.eq('status', 'published').eq('visibility', 'public');
-      const postResult = await postQuery;
+      if (client) {
+        let postQuery = client
+          .from('posts')
+          .select('id', { count: 'exact', head: true })
+          .eq('author_id', authorId);
+        if (state.isPublicView) postQuery = postQuery.eq('status', 'published').eq('visibility', 'public');
+        const postResult = await postQuery;
 
-      if (typeof postResult.count === 'number') {
-        const statPosts = $('#stat-posts');
-        if (statPosts) statPosts.textContent = String(postResult.count);
-        setBadgeCount('#badge-posts', postResult.count);
+        if (typeof postResult.count === 'number') {
+          const statPosts = $('#stat-posts');
+          if (statPosts) statPosts.textContent = String(postResult.count);
+          setBadgeCount('#badge-posts', postResult.count);
+        }
+
+        const commentResult = await client
+          .from('comments')
+          .select('id', { count: 'exact', head: true })
+          .eq('author_id', authorId);
+        if (typeof commentResult.count === 'number') {
+          const statComments = $('#stat-comments');
+          if (statComments) statComments.textContent = String(commentResult.count);
+          setBadgeCount('#badge-comments', commentResult.count);
+        }
+
+        let voteQuery = client
+          .from('posts')
+          .select('votos')
+          .eq('author_id', authorId)
+          .eq('status', 'published');
+        if (state.isPublicView) voteQuery = voteQuery.eq('visibility', 'public');
+        const voteResult = await voteQuery;
+        if (Array.isArray(voteResult.data)) {
+          const totalVotes = voteResult.data.reduce((sum, item) => sum + (Number(item && item.votos) || 0), 0);
+          const statVotes = $('#stat-votes');
+          if (statVotes) statVotes.textContent = String(totalVotes);
+        }
       }
 
-      const commentResult = await client
-        .from('comments')
-        .select('id', { count: 'exact', head: true })
-        .eq('author_id', authorId);
-      if (typeof commentResult.count === 'number') {
-        const statComments = $('#stat-comments');
-        if (statComments) statComments.textContent = String(commentResult.count);
-        setBadgeCount('#badge-comments', commentResult.count);
+      if (window.KCAPI && typeof window.KCAPI.getUserRatingSummary === 'function') {
+        state.ratingSummary = normalizeRatingSummary(await window.KCAPI.getUserRatingSummary(authorId), authorId);
+      } else {
+        state.ratingSummary = getProfileRatingSummaryFromProfile(state.profile || {});
       }
-
-      let voteQuery = client
-        .from('posts')
-        .select('votos')
-        .eq('author_id', authorId)
-        .eq('status', 'published');
-      if (state.isPublicView) voteQuery = voteQuery.eq('visibility', 'public');
-      const voteResult = await voteQuery;
-      if (Array.isArray(voteResult.data)) {
-        const totalVotes = voteResult.data.reduce((sum, item) => sum + (Number(item && item.votos) || 0), 0);
-        const statVotes = $('#stat-votes');
-        if (statVotes) statVotes.textContent = String(totalVotes);
-      }
+      renderProfileRatingSummary();
     } catch (error) {
       console.warn('[Profile] loadStats:', error);
     }
@@ -743,6 +802,101 @@
     }
   }
 
+  function renderRatings(items, append) {
+    const list = $('#ratings-list');
+    const empty = $('#ratings-empty');
+    const loadMore = $('#ratings-load-more');
+    if (!list) return;
+
+    if (!append) list.innerHTML = '';
+
+    if (!Array.isArray(items) || !items.length) {
+      if (!append && empty) empty.style.display = 'block';
+      if (loadMore) loadMore.style.display = 'none';
+      return;
+    }
+
+    if (empty) empty.style.display = 'none';
+
+    items.forEach((entry) => {
+      const card = document.createElement('article');
+      const reviewer = (entry && entry.reviewer && typeof entry.reviewer === 'object') ? entry.reviewer : {};
+      const isPublicReviewer = reviewer.public === true;
+      const reviewerName = isPublicReviewer
+        ? (reviewer.displayName || reviewer.display_name || 'Membro da comunidade')
+        : 'Membro da comunidade';
+      const avatarHtml = (isPublicReviewer && reviewer.avatarUrl)
+        ? `<img class="kc-profile-rating-card__avatar" src="${esc(reviewer.avatarUrl)}" alt="Avatar de ${esc(reviewerName)}" />`
+        : '<span class="kc-profile-rating-card__avatar-placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>';
+      const comment = String(entry && entry.comment || '').trim();
+      const commentHtml = comment
+        ? `<div class="kc-profile-rating-card__comment">${renderInlineRichText(comment)}</div>`
+        : '<div class="kc-profile-rating-card__comment is-empty">O avaliador não deixou comentário.</div>';
+
+      card.className = 'kc-profile-rating-card';
+      card.innerHTML = [
+        '<div class="kc-profile-rating-card__top">',
+        '<div class="kc-profile-rating-card__reviewer">',
+        avatarHtml,
+        '<div class="kc-profile-rating-card__reviewer-copy">',
+        `<div class="kc-profile-rating-card__reviewer-name">${esc(reviewerName)}</div>`,
+        '<div class="kc-profile-rating-card__reviewer-meta">',
+        `<span><i class="fas fa-clock"></i> ${esc(fmtRelative(entry && entry.createdAt))}</span>`,
+        (entry && entry.contextPostId) ? '<span><i class="fas fa-link"></i> Interação registrada</span>' : '',
+        '</div>',
+        '</div>',
+        '</div>',
+        `<div class="kc-profile-rating-card__stars" aria-label="${esc(String(entry && entry.rating || 0))} estrelas">${buildRatingStars(entry && entry.rating)}<span class="kc-profile-rating-card__score">${esc(String(entry && entry.rating || 0))}/5</span></div>`,
+        '</div>',
+        commentHtml,
+      ].join('');
+      list.appendChild(card);
+    });
+
+    if (loadMore) loadMore.style.display = state.ratingHasMore ? 'block' : 'none';
+  }
+
+  async function loadRatings(reset) {
+    const loading = $('#ratings-loading');
+    const empty = $('#ratings-empty');
+    const loadMore = $('#ratings-load-more');
+
+    if (reset) {
+      state.ratingPage = 1;
+      state.ratings = [];
+      const list = $('#ratings-list');
+      if (list) list.innerHTML = '';
+    }
+
+    if (loading) loading.style.display = 'block';
+    if (empty) empty.style.display = 'none';
+    if (loadMore) loadMore.style.display = 'none';
+
+    try {
+      const payload = await window.KCAPI.listUserRatings(state.profileId, {
+        page: state.ratingPage,
+        limit: 10,
+      });
+      const items = Array.isArray(payload && payload.items) ? payload.items : [];
+      state.ratings = reset ? items : state.ratings.concat(items);
+      state.ratingHasMore = !!(payload && payload.hasMore === true);
+      if (payload && typeof payload.total === 'number') {
+        const currentSummary = normalizeRatingSummary(state.ratingSummary, state.profileId);
+        state.ratingSummary = normalizeRatingSummary({
+          userId: state.profileId,
+          average: currentSummary.average,
+          count: payload.total,
+        }, state.profileId);
+        renderProfileRatingSummary();
+      }
+      renderRatings(reset ? state.ratings : items, !reset);
+    } catch (error) {
+      console.warn('[Profile] loadRatings:', error);
+    } finally {
+      if (loading) loading.style.display = 'none';
+    }
+  }
+
   function renderSaved(items, append) {
     const list = $('#saved-list');
     const empty = $('#saved-empty');
@@ -918,6 +1072,7 @@
     if (state.activeTab === 'posts' && !state.posts.length) loadPosts(true);
     if (state.activeTab === 'comments' && !state.comments.length) loadComments(true);
     if (state.activeTab === 'saved' && !state.savedItems.length) loadSaved(true);
+    if (state.activeTab === 'ratings' && !state.ratings.length) loadRatings(true);
   }
 
   function setProfilePending(pending) {
@@ -1117,6 +1272,9 @@
 
     const savedMore = $('#saved-load-more');
     if (savedMore) savedMore.addEventListener('click', () => { state.savedPage += 1; loadSaved(false); });
+
+    const ratingsMore = $('#ratings-load-more');
+    if (ratingsMore) ratingsMore.addEventListener('click', () => { state.ratingPage += 1; loadRatings(false); });
   }
 
   function bindProfileSyncListener() {
@@ -1154,6 +1312,7 @@
       if (state.activeTab === 'posts' || state.posts.length) tasks.push(loadPosts(true));
       if (state.activeTab === 'comments' || state.comments.length) tasks.push(loadComments(true));
       if (state.activeTab === 'saved' || state.savedItems.length) tasks.push(loadSaved(true));
+      if (state.activeTab === 'ratings' || state.ratings.length) tasks.push(loadRatings(true));
 
       await Promise.allSettled(tasks);
       renderHeader();

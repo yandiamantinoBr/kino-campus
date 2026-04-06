@@ -780,6 +780,10 @@ const { ENV, normalizePost } = window.KCAPI;
     const legacyId = (row.legacy_id == null) ? null : String(row.legacy_id).trim();
     const normalizedAuthorName = resolveNormalizedAuthorName(author, metadata, row.author_name || row.autor || row.author || '');
     const normalizedAuthorAvatar = resolveNormalizedAuthorAvatar(author, metadata, normalizedAuthorName, row.author_avatar || row.autorAvatar || row.authorAvatar || '');
+    const ratingAverage = (author && author.rating_avg != null && author.rating_avg !== '')
+      ? Number(author.rating_avg)
+      : null;
+    const ratingCount = Math.max(0, parseInt(String(author && author.rating_count != null ? author.rating_count : 0), 10) || 0);
 
     if (authorId) {
       const hasProfileName = !!pickFirstNonEmpty([author && author.display_name, author && author.full_name]);
@@ -844,6 +848,9 @@ const { ENV, normalizePost } = window.KCAPI;
       images: imageUrls,
 
       comentarios: (Array.isArray(row.comments) && row.comments[0] && row.comments[0].count != null) ? row.comments[0].count : 0,
+      rating: Number.isFinite(ratingAverage) && ratingCount > 0 ? ratingAverage : null,
+      ratingCount,
+      rating_count: ratingCount,
 
       metadata,
 
@@ -883,8 +890,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildSupabasePostSelect(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, display_name, full_name, avatar_url, verified'
-      : 'id, display_name, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified, rating_avg, rating_count'
+      : 'id, display_name, full_name, avatar_url, rating_avg, rating_count';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
@@ -1003,8 +1010,8 @@ const { ENV, normalizePost } = window.KCAPI;
 
   function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true) {
     const profileFields = includeVerified
-      ? 'id, display_name, full_name, avatar_url, verified'
-      : 'id, display_name, full_name, avatar_url';
+      ? 'id, display_name, full_name, avatar_url, verified, rating_avg, rating_count'
+      : 'id, display_name, full_name, avatar_url, rating_avg, rating_count';
     const commentsField = includeComments ? ', comments(count)' : '';
     return client
       .from('posts')
@@ -1121,6 +1128,81 @@ const { ENV, normalizePost } = window.KCAPI;
       throw e;
     }
 
+    console.warn('[KCAPI][Supabase] KCSupabase.getFeedCursor indisponivel; retornando lote vazio.');
+    return {
+      posts: [],
+      nextCursor: null,
+      hasMore: false,
+    };
+  }
+
+  async function supabaseGetUserRatingSummary(userId) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getUserRatingSummary === 'function') {
+        return await window.KCSupabase.getUserRatingSummary(userId);
+      }
+    } catch (error) {
+      console.error('[KCAPI][Supabase] getUserRatingSummary falhou:', error);
+    }
+    return { userId: String(userId || '').trim() || null, average: null, count: 0 };
+  }
+
+  async function supabaseGetUserRatingState(params = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getUserRatingState === 'function') {
+        return await window.KCSupabase.getUserRatingState(params);
+      }
+    } catch (error) {
+      console.error('[KCAPI][Supabase] getUserRatingState falhou:', error);
+    }
+
+    return {
+      targetUserId: String((params && (params.targetUserId || params.target_user_id)) || '').trim() || null,
+      contextPostId: String((params && (params.contextPostId || params.context_post_id)) || '').trim() || null,
+      canRate: false,
+      reason: 'UNKNOWN',
+      myRating: null,
+    };
+  }
+
+  async function supabaseListUserRatings(userId, options = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.listUserRatings === 'function') {
+        return await window.KCSupabase.listUserRatings(userId, options);
+      }
+    } catch (error) {
+      console.error('[KCAPI][Supabase] listUserRatings falhou:', error);
+    }
+
+    const page = Math.max(1, parseInt(String(options && options.page != null ? options.page : 1), 10) || 1);
+    const limit = Math.max(1, parseInt(String(options && options.limit != null ? options.limit : 10), 10) || 10);
+    return {
+      items: [],
+      page,
+      limit,
+      total: 0,
+      hasMore: false,
+    };
+  }
+
+  async function supabaseUpsertUserRating(payload = {}) {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.upsertUserRating === 'function') {
+        return await window.KCSupabase.upsertUserRating(payload);
+      }
+    } catch (error) {
+      console.error('[KCAPI][Supabase] upsertUserRating falhou:', error);
+      return { ok: false, error };
+    }
+
+    return { ok: false, error: { message: 'Avaliações indisponíveis no cliente Supabase.' } };
+  }
+  /*
+    } catch (e) {
+      console.error('[KCAPI][Supabase] getFeedCursor falhou:', e);
+      throw e;
+    }
+
     console.warn('[KCAPI][Supabase] KCSupabase.getFeedCursor indisponÃ­vel; retornando lote vazio.');
     return {
       posts: [],
@@ -1128,6 +1210,7 @@ const { ENV, normalizePost } = window.KCAPI;
       hasMore: false,
     };
   }
+  */
 
 
   // ---------- Supabase Write Path (V8.1.3.1) ----------
@@ -3380,6 +3463,10 @@ const { ENV, normalizePost } = window.KCAPI;
     getPosts: supabaseGetPosts,
     searchPosts: supabaseSearchPosts,
     getFeedCursor: supabaseGetFeedCursor,
+    getUserRatingSummary: supabaseGetUserRatingSummary,
+    getUserRatingState: supabaseGetUserRatingState,
+    listUserRatings: supabaseListUserRatings,
+    upsertUserRating: supabaseUpsertUserRating,
     getPostById: supabaseGetPostById,
     createPost: supabaseCreatePost,
     updatePost: supabaseUpdatePost,

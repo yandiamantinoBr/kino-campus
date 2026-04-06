@@ -10,11 +10,13 @@
 
   let currentPost = null;
   let currentUser = null;
+  let currentProfile = null;
   let editUI = null;
   let staticInteractionsBound = false;
   let savedPostState = { kinds: [], loaded: false, pending: false };
   const shared = window.KCAccountProfileUtils || {};
   let sellerStatsRequestToken = 0;
+  let sellerRatingModal = null;
 
   // ── Share popover ────────────────────────────────────────
   function openSharePopover(btn) {
@@ -1224,6 +1226,352 @@
     block.style.display = 'block';
   }
 
+  function normalizeSellerRatingSummary(raw) {
+    const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+    const averageRaw = source.average != null ? source.average : (source.rating_avg != null ? source.rating_avg : source.rating);
+    const average = (averageRaw != null && averageRaw !== '') ? Number(averageRaw) : null;
+    const countRaw = source.count != null ? source.count : source.rating_count;
+    const count = Math.max(0, parseInt(String(countRaw != null ? countRaw : 0), 10) || 0);
+    return {
+      userId: String(source.userId || source.user_id || '').trim() || null,
+      average: Number.isFinite(average) ? Number(average.toFixed(2)) : null,
+      count,
+    };
+  }
+
+  function getSellerRatingSummaryFromPost(post) {
+    const authorProfile = (post && post.authorProfile && typeof post.authorProfile === 'object') ? post.authorProfile : {};
+    return normalizeSellerRatingSummary({
+      userId: getPostAuthorId(post),
+      average: authorProfile.ratingAvg != null ? authorProfile.ratingAvg : (authorProfile.rating_avg != null ? authorProfile.rating_avg : (post && post.rating)),
+      count: authorProfile.ratingCount != null ? authorProfile.ratingCount : (authorProfile.rating_count != null ? authorProfile.rating_count : (post && (post.ratingCount != null ? post.ratingCount : post.rating_count))),
+    });
+  }
+
+  function applySellerRatingSummaryToPost(post, summary) {
+    if (!post || typeof post !== 'object') return post;
+    const normalizedSummary = normalizeSellerRatingSummary(summary);
+    const nextAuthorProfile = (post.authorProfile && typeof post.authorProfile === 'object')
+      ? { ...post.authorProfile }
+      : {};
+
+    nextAuthorProfile.rating_avg = normalizedSummary.average;
+    nextAuthorProfile.rating_count = normalizedSummary.count;
+    nextAuthorProfile.ratingAvg = normalizedSummary.average;
+    nextAuthorProfile.ratingCount = normalizedSummary.count;
+
+    post.authorProfile = nextAuthorProfile;
+    post.rating = normalizedSummary.count > 0 ? normalizedSummary.average : null;
+    post.ratingCount = normalizedSummary.count;
+    post.rating_count = normalizedSummary.count;
+    return post;
+  }
+
+  function buildSellerRatingSummaryHtml(summary) {
+    const normalizedSummary = normalizeSellerRatingSummary(summary);
+    if (!normalizedSummary.count || !Number.isFinite(normalizedSummary.average)) {
+      return [
+        '<div class="kc-seller-rating-summary__empty">',
+        '<i class="fas fa-star-half-stroke"></i>',
+        '<span>Ainda sem avaliações públicas.</span>',
+        '</div>',
+      ].join('');
+    }
+
+    const averageText = normalizedSummary.average.toFixed(1);
+    const countLabel = normalizedSummary.count === 1 ? '1 avaliação' : normalizedSummary.count + ' avaliações';
+    return [
+      '<div class="kc-seller-rating-summary__top">',
+      '<span class="kc-seller-rating-summary__value"><i class="fas fa-star"></i> ' + esc(averageText) + '</span>',
+      '<span class="kc-seller-rating-summary__count">' + esc(countLabel) + '</span>',
+      '</div>',
+      '<div class="kc-seller-rating-summary__caption">Baseada nas interações confirmadas da comunidade.</div>',
+    ].join('');
+  }
+
+  function getUserRatingReasonMessage(reason) {
+    const key = String(reason || '').trim().toUpperCase();
+    if (key === 'SELF') return 'Você não pode avaliar o próprio perfil.';
+    if (key === 'NO_INTERACTION') return 'Interaja com um post deste usuário antes de avaliá-lo.';
+    if (key === 'AUTH_REQUIRED') return 'Faça login para avaliar membros da comunidade.';
+    return 'A avaliação não está disponível neste contexto.';
+  }
+
+  function openAuthForUserRating() {
+    if (typeof window.kcOpenAuthModal === 'function') {
+      window.kcOpenAuthModal({ tab: 'login', nextPath: buildCurrentPagePath() });
+      return;
+    }
+    window.location.href = 'index.html#login';
+  }
+
+  function ensureSellerRatingModal() {
+    if (sellerRatingModal) return sellerRatingModal;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'kc-modal-overlay';
+    overlay.style.display = 'none';
+
+    const modal = document.createElement('div');
+    modal.className = 'kc-user-rating-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'kcSellerRatingModalTitle');
+    modal.innerHTML = [
+      '<div class="kc-user-rating-modal__header">',
+      '<div>',
+      '<h2 class="kc-user-rating-modal__title" id="kcSellerRatingModalTitle">Avaliar usuário</h2>',
+      '<p class="kc-user-rating-modal__subtitle" id="kcSellerRatingModalSubtitle">Compartilhe como foi sua interação com este membro.</p>',
+      '</div>',
+      '<button type="button" class="kc-user-rating-modal__close" aria-label="Fechar modal de avaliação"><i class="fas fa-times"></i></button>',
+      '</div>',
+      '<div class="kc-user-rating-modal__body">',
+      '<div class="kc-user-rating-modal__section">',
+      '<span class="kc-user-rating-modal__label">Sua nota</span>',
+      '<div class="kc-user-rating-stars" role="radiogroup" aria-label="Selecione uma nota de 1 a 5 estrelas">',
+      '<button type="button" class="kc-user-rating-star" data-kc-rating-value="1" aria-label="1 estrela"><i class="fas fa-star"></i></button>',
+      '<button type="button" class="kc-user-rating-star" data-kc-rating-value="2" aria-label="2 estrelas"><i class="fas fa-star"></i></button>',
+      '<button type="button" class="kc-user-rating-star" data-kc-rating-value="3" aria-label="3 estrelas"><i class="fas fa-star"></i></button>',
+      '<button type="button" class="kc-user-rating-star" data-kc-rating-value="4" aria-label="4 estrelas"><i class="fas fa-star"></i></button>',
+      '<button type="button" class="kc-user-rating-star" data-kc-rating-value="5" aria-label="5 estrelas"><i class="fas fa-star"></i></button>',
+      '</div>',
+      '</div>',
+      '<div class="kc-user-rating-modal__section">',
+      '<label class="kc-user-rating-modal__label" for="kcSellerRatingComment">Comentário opcional</label>',
+      '<textarea id="kcSellerRatingComment" maxlength="280" placeholder="Conte, em poucas linhas, como foi sua experiência com este usuário."></textarea>',
+      '<div class="kc-user-rating-modal__meta">',
+      '<span>Seu comentário será exibido na lista pública de avaliações.</span>',
+      '<span id="kcSellerRatingCounter">0/280</span>',
+      '</div>',
+      '</div>',
+      '<div class="kc-user-rating-modal__status" id="kcSellerRatingStatus" aria-live="polite"></div>',
+      '<div class="kc-user-rating-modal__actions">',
+      '<button type="button" class="kc-btn-secondary" data-action="cancel">Cancelar</button>',
+      '<button type="button" class="kc-btn-primary" data-action="submit"><i class="fas fa-star"></i> Salvar avaliação</button>',
+      '</div>',
+      '</div>',
+    ].join('');
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const closeBtn = modal.querySelector('.kc-user-rating-modal__close');
+    const cancelBtn = modal.querySelector('[data-action="cancel"]');
+    const submitBtn = modal.querySelector('[data-action="submit"]');
+    const subtitle = modal.querySelector('#kcSellerRatingModalSubtitle');
+    const status = modal.querySelector('#kcSellerRatingStatus');
+    const textarea = modal.querySelector('#kcSellerRatingComment');
+    const counter = modal.querySelector('#kcSellerRatingCounter');
+    const stars = Array.from(modal.querySelectorAll('.kc-user-rating-star'));
+
+    let submitHandler = null;
+    let selectedRating = 0;
+
+    function setStatus(message, tone) {
+      if (!status) return;
+      status.textContent = String(message || '').trim();
+      status.className = 'kc-user-rating-modal__status' + (tone ? ' is-' + tone : '');
+    }
+
+    function updateCounter() {
+      if (!counter || !textarea) return;
+      counter.textContent = String(Math.min(280, String(textarea.value || '').length)) + '/280';
+    }
+
+    function updateStars() {
+      stars.forEach((button) => {
+        const value = parseInt(String(button.getAttribute('data-kc-rating-value') || '0'), 10) || 0;
+        const active = value <= selectedRating;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-checked', active ? 'true' : 'false');
+      });
+    }
+
+    function close() {
+      overlay.classList.remove('active');
+      window.setTimeout(() => {
+        overlay.style.display = 'none';
+      }, 180);
+      document.body.classList.remove('kc-modal-open');
+      setStatus('', '');
+    }
+
+    function open(payload) {
+      const current = (payload && typeof payload === 'object') ? payload : {};
+      submitHandler = typeof current.onSubmit === 'function' ? current.onSubmit : null;
+      selectedRating = Math.max(0, Math.min(5, parseInt(String(current.rating != null ? current.rating : 0), 10) || 0));
+      if (textarea) textarea.value = String(current.comment || '').trim().slice(0, 280);
+      if (subtitle) {
+        const targetName = String(current.targetName || 'este usuário').trim() || 'este usuário';
+        subtitle.textContent = 'Compartilhe como foi sua interação com ' + targetName + '.';
+      }
+      updateCounter();
+      updateStars();
+      setStatus('', '');
+      submitBtn.disabled = false;
+      overlay.style.display = 'flex';
+      document.body.classList.add('kc-modal-open');
+      window.requestAnimationFrame(() => overlay.classList.add('active'));
+    }
+
+    stars.forEach((button) => {
+      button.addEventListener('click', () => {
+        selectedRating = Math.max(1, Math.min(5, parseInt(String(button.getAttribute('data-kc-rating-value') || '0'), 10) || 1));
+        updateStars();
+        setStatus('', '');
+      });
+    });
+
+    if (textarea) textarea.addEventListener('input', updateCounter);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && overlay.style.display !== 'none') close();
+    });
+    submitBtn.addEventListener('click', async () => {
+      if (selectedRating < 1) {
+        setStatus('Selecione de 1 a 5 estrelas para continuar.', 'error');
+        return;
+      }
+      if (!submitHandler) {
+        setStatus('A ação de avaliação não está disponível agora.', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setStatus('Salvando avaliação...', '');
+      try {
+        const result = await submitHandler({
+          rating: selectedRating,
+          comment: String(textarea && textarea.value || '').trim().slice(0, 280),
+        });
+        if (result && result.ok) {
+          setStatus('Avaliação salva com sucesso.', 'success');
+          close();
+          return;
+        }
+        setStatus((result && result.error && result.error.message) || 'Não foi possível salvar sua avaliação.', 'error');
+      } catch (error) {
+        setStatus((error && error.message) || 'Não foi possível salvar sua avaliação.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    sellerRatingModal = { open, close };
+    return sellerRatingModal;
+  }
+
+  function refreshSellerRatingUI(post, summary, ratingState) {
+    const summaryEl = document.getElementById('sellerRatingSummary');
+    const hintEl = document.getElementById('sellerRatingHint');
+    const button = document.getElementById('sellerRateButton');
+    const authorId = getPostAuthorId(post);
+    const postId = getPostIdForMutation(post);
+    const isLegacyExample = isLegacyExamplePost(post) || isLegacyExampleProfile(post && post.authorProfile);
+    const normalizedSummary = normalizeSellerRatingSummary(summary && typeof summary === 'object' ? summary : getSellerRatingSummaryFromPost(post));
+
+    applySellerRatingSummaryToPost(post, normalizedSummary);
+
+    if (summaryEl) {
+      summaryEl.innerHTML = buildSellerRatingSummaryHtml(normalizedSummary);
+      summaryEl.style.display = 'grid';
+    }
+
+    if (!button) return;
+
+    const viewerId = String((currentUser && currentUser.id) || '').trim();
+    const isSelf = !!(viewerId && authorId && viewerId === authorId);
+    const statePayload = (ratingState && typeof ratingState === 'object' && !Array.isArray(ratingState)) ? ratingState : null;
+    const existingRating = statePayload && statePayload.myRating ? statePayload.myRating : null;
+    const canRate = !!(statePayload && statePayload.canRate === true);
+
+    button.style.display = 'none';
+    button.disabled = false;
+    button.className = 'kc-btn-secondary kc-btn-full';
+    button.innerHTML = '';
+    button.onclick = null;
+
+    if (hintEl) {
+      hintEl.textContent = '';
+      hintEl.style.display = 'none';
+    }
+
+    if (!authorId || isLegacyExample || isSelf) {
+      return;
+    }
+
+    if (!currentUser || !currentUser.id) {
+      button.style.display = 'inline-flex';
+      button.innerHTML = '<i class="fas fa-right-to-bracket"></i> Entrar para avaliar';
+      button.onclick = () => openAuthForUserRating();
+      if (hintEl) {
+        hintEl.textContent = getUserRatingReasonMessage('AUTH_REQUIRED');
+        hintEl.style.display = 'block';
+      }
+      return;
+    }
+
+    function openRatingModal(initialRating, initialComment, nextLabel) {
+      ensureSellerRatingModal().open({
+        targetName: post.authorName || post.autor || post.author || 'este usuário',
+        rating: initialRating,
+        comment: initialComment,
+        onSubmit: async (payload) => {
+          const result = await window.KCAPI.upsertUserRating({
+            targetUserId: authorId,
+            contextPostId: postId,
+            rating: payload.rating,
+            comment: payload.comment,
+          });
+          if (result && result.ok) {
+            applySellerRatingSummaryToPost(currentPost || post, result.summary);
+            refreshSellerRatingUI(currentPost || post, result.summary, {
+              targetUserId: authorId,
+              contextPostId: postId,
+              canRate: true,
+              reason: 'OK',
+              myRating: result.rating,
+            });
+            toast(nextLabel, 'success', 1800);
+          }
+          return result;
+        },
+      });
+    }
+
+    if (existingRating) {
+      button.style.display = 'inline-flex';
+      button.className = 'kc-btn-primary kc-btn-full';
+      button.innerHTML = '<i class="fas fa-pen"></i> Editar avaliação';
+      if (hintEl) {
+        hintEl.textContent = 'Sua nota atual: ' + String(existingRating.rating || 0) + ' estrela' + (Number(existingRating.rating) === 1 ? '' : 's') + '.';
+        hintEl.style.display = 'block';
+      }
+      button.onclick = () => openRatingModal(existingRating.rating || 0, existingRating.comment || '', 'Avaliação atualizada.');
+      return;
+    }
+
+    if (canRate) {
+      button.style.display = 'inline-flex';
+      button.className = 'kc-btn-primary kc-btn-full';
+      button.innerHTML = '<i class="fas fa-star"></i> Avaliar usuário';
+      button.onclick = () => openRatingModal(0, '', 'Avaliação enviada.');
+      return;
+    }
+
+    button.style.display = 'inline-flex';
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-lock"></i> Avaliação indisponível';
+    if (hintEl) {
+      hintEl.textContent = getUserRatingReasonMessage(statePayload && statePayload.reason);
+      hintEl.style.display = 'block';
+    }
+  }
+
   function setSeller(post) {
     const card = document.getElementById('sellerCard');
     const avatar = document.getElementById('sellerAvatar');
@@ -1292,18 +1640,38 @@
     }
 
     stats.innerHTML = items.join('');
+    refreshSellerRatingUI(post, getSellerRatingSummaryFromPost(post), null);
     card.style.display = 'block';
     loadSellerAuthorStats(post, stats, items.slice()).catch(() => {});
   }
 
   async function loadSellerAuthorStats(post, statsContainer, baseItems) {
     const authorId = getPostAuthorId(post);
-    if (!authorId || !statsContainer || !window.KCAPI || typeof window.KCAPI.getPostsByAuthorId !== 'function') return;
+    if (!authorId || !statsContainer || !window.KCAPI) return;
 
     const requestToken = ++sellerStatsRequestToken;
 
     try {
-      const items = await window.KCAPI.getPostsByAuthorId(authorId, { page: 1, limit: 24 });
+      const postsPromise = typeof window.KCAPI.getPostsByAuthorId === 'function'
+        ? window.KCAPI.getPostsByAuthorId(authorId, { page: 1, limit: 24 })
+        : Promise.resolve([]);
+      const summaryPromise = typeof window.KCAPI.getUserRatingSummary === 'function'
+        ? window.KCAPI.getUserRatingSummary(authorId)
+        : Promise.resolve(getSellerRatingSummaryFromPost(post));
+      const ratingStatePromise = (currentUser && currentUser.id && typeof window.KCAPI.getUserRatingState === 'function')
+        ? window.KCAPI.getUserRatingState({
+          targetUserId: authorId,
+          contextPostId: getPostIdForMutation(post),
+        })
+        : Promise.resolve({
+          targetUserId: authorId,
+          contextPostId: getPostIdForMutation(post),
+          canRate: false,
+          reason: 'AUTH_REQUIRED',
+          myRating: null,
+        });
+
+      const [items, summary, ratingState] = await Promise.all([postsPromise, summaryPromise, ratingStatePromise]);
       if (requestToken !== sellerStatsRequestToken) return;
 
       const currentPostId = String(getPostIdForMutation(post) || '').trim();
@@ -1313,11 +1681,12 @@
         return !currentPostId || itemId !== currentPostId;
       }).length;
 
-      if (!authorPostCount) return;
-
       const rows = Array.isArray(baseItems) ? baseItems.slice() : [];
-      rows.push('<span><i class="fas fa-layer-group"></i> ' + authorPostCount + ' publicaç' + (authorPostCount === 1 ? 'ão' : 'ões') + '</span>');
+      if (authorPostCount > 0) {
+        rows.push('<span><i class="fas fa-layer-group"></i> ' + authorPostCount + ' publicaç' + (authorPostCount === 1 ? 'ão' : 'ões') + '</span>');
+      }
       statsContainer.innerHTML = rows.join('');
+      refreshSellerRatingUI(post, summary, ratingState);
     } catch (_) { }
   }
 
@@ -1598,9 +1967,11 @@
       }
     }
 
-    applyCommentComposerSessionState(currentUser, profile);
+    currentProfile = profile || null;
+    applyCommentComposerSessionState(currentUser, currentProfile);
     if (currentPost) {
       setCTA(currentPost);
+      setSeller(currentPost);
       maybeResumeQueuedContact(currentPost);
     }
   }

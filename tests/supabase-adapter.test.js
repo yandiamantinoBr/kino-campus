@@ -6,6 +6,10 @@ beforeAll(() => {
     getClient: jest.fn(() => ({})),
     getFeedCursor: jest.fn(),
     searchPosts: jest.fn(),
+    getUserRatingSummary: jest.fn(),
+    getUserRatingState: jest.fn(),
+    listUserRatings: jest.fn(),
+    upsertUserRating: jest.fn(),
   };
   window.KCSupabase = global.KCSupabase;
   window.KCAPI = {
@@ -39,6 +43,10 @@ describe('Supabase Adapter - getFeedCursor', () => {
   beforeEach(() => {
     window.KCSupabase.getFeedCursor.mockReset();
     window.KCSupabase.searchPosts.mockReset();
+    window.KCSupabase.getUserRatingSummary.mockReset();
+    window.KCSupabase.getUserRatingState.mockReset();
+    window.KCSupabase.listUserRatings.mockReset();
+    window.KCSupabase.upsertUserRating.mockReset();
     window.KCAPI.normalizePost.mockImplementation((post) => post);
   });
 
@@ -149,5 +157,17 @@ describe('Supabase Adapter - getFeedCursor', () => {
     expect(result).toHaveLength(1);
     expect(result[0].title).toBe('Notebook Dell');
     expect(result[0].comentarios).toBe(1);
+  });
+
+  test('delegates user rating calls to KCSupabase', async () => {
+    window.KCSupabase.getUserRatingSummary.mockResolvedValue({ userId: 'USER_01', average: 4.5, count: 6 });
+    window.KCSupabase.getUserRatingState.mockResolvedValue({ targetUserId: 'USER_01', canRate: true, reason: 'OK', myRating: null });
+    window.KCSupabase.listUserRatings.mockResolvedValue({ items: [], page: 1, limit: 10, total: 0, hasMore: false });
+    window.KCSupabase.upsertUserRating.mockResolvedValue({ ok: true, rating: null, summary: { userId: 'USER_01', average: 5, count: 1 }, error: null });
+
+    await expect(driver.getUserRatingSummary('USER_01')).resolves.toEqual({ userId: 'USER_01', average: 4.5, count: 6 });
+    await expect(driver.getUserRatingState({ targetUserId: 'USER_01' })).resolves.toEqual(expect.objectContaining({ canRate: true }));
+    await expect(driver.listUserRatings('USER_01', { page: 1, limit: 10 })).resolves.toEqual(expect.objectContaining({ total: 0 }));
+    await expect(driver.upsertUserRating({ targetUserId: 'USER_01', rating: 5 })).resolves.toEqual(expect.objectContaining({ ok: true }));
   });
 });

@@ -656,3 +656,109 @@ describe('KCAPI - API Client', () => {
     });
   });
 });
+
+describe('KCAPI - user ratings', () => {
+  let api;
+
+  beforeEach(() => {
+    api = window.KCAPI;
+    api.registerAdapter('local', {
+      name: 'local',
+      getUserRatingSummary: jest.fn().mockResolvedValue({ user_id: 'USER_01', rating_avg: 4.75, rating_count: 8 }),
+      getUserRatingState: jest.fn().mockResolvedValue({
+        target_user_id: 'USER_01',
+        context_post_id: 'post-1',
+        can_rate: true,
+        reason: 'OK',
+        myRating: {
+          id: 'rating-1',
+          target_user_id: 'USER_01',
+          rater_user_id: 'USER_SELF',
+          context_post_id: 'post-1',
+          rating: 5,
+          comment: 'Ótima experiência',
+        },
+      }),
+      listUserRatings: jest.fn().mockResolvedValue({
+        items: [
+          {
+            id: 'rating-1',
+            target_user_id: 'USER_01',
+            rater_user_id: 'USER_SELF',
+            rating: 5,
+            comment: 'Ótima experiência',
+          },
+        ],
+        page: 1,
+        limit: 10,
+        total: 1,
+        has_more: false,
+      }),
+      upsertUserRating: jest.fn().mockResolvedValue({
+        ok: true,
+        rating: {
+          id: 'rating-1',
+          target_user_id: 'USER_01',
+          rater_user_id: 'USER_SELF',
+          rating: 4,
+          comment: 'Confiável',
+        },
+        summary: {
+          user_id: 'USER_01',
+          rating_avg: 4.0,
+          rating_count: 1,
+        },
+      }),
+    });
+  });
+
+  test('normaliza resumo recebido do driver', async () => {
+    await expect(api.getUserRatingSummary('USER_01')).resolves.toEqual({
+      userId: 'USER_01',
+      average: 4.75,
+      count: 8,
+    });
+  });
+
+  test('normaliza estado e avaliação do viewer', async () => {
+    const result = await api.getUserRatingState({ targetUserId: 'USER_01', contextPostId: 'post-1' });
+
+    expect(result.canRate).toBe(true);
+    expect(result.reason).toBe('OK');
+    expect(result.myRating).toEqual(expect.objectContaining({
+      targetUserId: 'USER_01',
+      contextPostId: 'post-1',
+      rating: 5,
+    }));
+  });
+
+  test('normaliza listagem paginada de avaliações', async () => {
+    const result = await api.listUserRatings('USER_01', { page: 1, limit: 10 });
+
+    expect(result.total).toBe(1);
+    expect(result.hasMore).toBe(false);
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      targetUserId: 'USER_01',
+      rating: 5,
+    }));
+  });
+
+  test('normaliza retorno de upsert', async () => {
+    const result = await api.upsertUserRating({
+      targetUserId: 'USER_01',
+      rating: 4,
+      comment: 'Confiável',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.rating).toEqual(expect.objectContaining({
+      targetUserId: 'USER_01',
+      rating: 4,
+    }));
+    expect(result.summary).toEqual({
+      userId: 'USER_01',
+      average: 4,
+      count: 1,
+    });
+  });
+});

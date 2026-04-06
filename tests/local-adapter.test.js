@@ -58,6 +58,10 @@ describe('Local Adapter - Registro do driver', () => {
       'getPosts',
       'searchPosts',
       'getFeedCursor',
+      'getUserRatingSummary',
+      'getUserRatingState',
+      'listUserRatings',
+      'upsertUserRating',
       'getPostById',
       'getRelatedPosts',
       'createPost',
@@ -262,5 +266,74 @@ describe('Local Adapter - searchPosts', () => {
     const result = await driver.searchPosts({ q: 'matematica', module: 'compra-venda', limit: 10 });
 
     expect(result).toEqual([]);
+  });
+});
+
+describe('Local Adapter - user ratings', () => {
+  let driver;
+
+  beforeAll(() => {
+    driver = window.KCAPI.registerAdapter.mock.calls[0][1];
+  });
+
+  beforeEach(() => {
+    global.localStorage.clear();
+    window.KCAPI.fetchJSON.mockResolvedValue({
+      anuncios: [
+        {
+          id: 'post-1',
+          uuid: 'post-1',
+          title: 'Notebook do João',
+          module: 'compra-venda',
+          authorId: 'USER_01',
+          author_id: 'USER_01',
+          created_at: '2026-04-05T10:00:00Z',
+        },
+      ],
+    });
+  });
+
+  test('retorna resumo vazio quando não há avaliações salvas', async () => {
+    await expect(driver.getUserRatingSummary('USER_01')).resolves.toEqual({
+      userId: 'USER_01',
+      average: null,
+      count: 0,
+    });
+  });
+
+  test('permite upsert após interação persistida e atualiza resumo', async () => {
+    global.localStorage.setItem('kc_user_rating_interactions', JSON.stringify([
+      { targetUserId: 'USER_01', contextPostId: 'post-1', type: 'comment' },
+    ]));
+
+    const result = await driver.upsertUserRating({
+      targetUserId: 'USER_01',
+      contextPostId: 'post-1',
+      rating: 5,
+      comment: 'Ótima interação',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.summary).toEqual({
+      userId: 'USER_01',
+      average: 5,
+      count: 1,
+    });
+
+    const list = await driver.listUserRatings('USER_01', { page: 1, limit: 10 });
+    expect(list.items).toHaveLength(1);
+    expect(list.items[0].comment).toBe('Ótima interação');
+  });
+
+  test('bloqueia avaliação sem interação persistida', async () => {
+    const result = await driver.upsertUserRating({
+      targetUserId: 'USER_01',
+      contextPostId: 'post-1',
+      rating: 4,
+      comment: 'Sem interação',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('NO_INTERACTION');
   });
 });
