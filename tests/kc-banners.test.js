@@ -55,4 +55,17 @@ describe('KCBanners', () => {
     expect(mobileIllustration).not.toBeNull();
     expect(mobileIllustration.getAttribute('data-kc-hero-mobile')).toBe('launch');
   });
+
+  test('bindHeroCTAInteractions marks hero CTAs as bound for gesture isolation', () => {
+    document.body.innerHTML = [
+      '<div class="kc-hero-carousel">',
+      '<a class="kc-btn-primary" href="eventos.html">Participar</a>',
+      '</div>',
+    ].join('');
+
+    Banners.bindHeroCTAInteractions(document);
+
+    const cta = document.querySelector('.kc-btn-primary');
+    expect(cta.dataset.kcHeroCtaBound).toBe('true');
+  });
 });

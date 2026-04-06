@@ -688,6 +688,8 @@ main {
     transition: all var(--transition-speed) ease;
     font-size: 1rem;
     text-decoration: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .kc-btn-primary:hover {
@@ -5785,19 +5787,14 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
   }
 
   .kc-hero-illustration-mobile {
-    position: absolute;
-    right: 12px;
-    bottom: 18px;
-    display: flex;
-    width: clamp(96px, 28vw, 128px);
-    pointer-events: none;
+    display: none !important;
   }
 
   .kc-hero-content {
     max-width: 100% !important;
     position: relative;
     z-index: 1;
-    padding-right: clamp(28px, 10vw, 64px);
+    padding-right: 0;
   }
 
   .kc-hero-content h1 {

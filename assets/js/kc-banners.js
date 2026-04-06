@@ -153,6 +153,26 @@
     });
   }
 
+  function bindHeroCTAInteractions(doc) {
+    const targetDoc = doc || (typeof document !== 'undefined' ? document : null);
+    if (!targetDoc) return;
+
+    targetDoc.querySelectorAll('.kc-hero-carousel .kc-btn-primary').forEach((cta) => {
+      if (cta.dataset.kcHeroCtaBound === 'true') return;
+      cta.dataset.kcHeroCtaBound = 'true';
+
+      const stopHeroGesture = function (event) {
+        event.stopPropagation();
+      };
+
+      cta.addEventListener('pointerdown', stopHeroGesture, { passive: true });
+      cta.addEventListener('pointerup', stopHeroGesture, { passive: true });
+      cta.addEventListener('touchstart', stopHeroGesture, { passive: true });
+      cta.addEventListener('touchend', stopHeroGesture, { passive: true });
+      cta.addEventListener('click', stopHeroGesture);
+    });
+  }
+
   function getCarouselEl(doc) {
     const targetDoc = doc || (typeof document !== 'undefined' ? document : null);
     return targetDoc ? targetDoc.querySelector('.kc-hero-carousel') : null;
@@ -168,6 +188,7 @@
     const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
     if (driver !== 'supabase') {
       hydrateExistingBanners();
+      bindHeroCTAInteractions();
       removeSkeletonClass();
       return;
     }
@@ -206,6 +227,7 @@
 
       slidesEl.innerHTML = data.map((banner, index) => buildBannerHTML(banner, index === 0)).join('');
       dotsEl.innerHTML = buildDotsHTML(data.length);
+      bindHeroCTAInteractions(document);
 
       if (typeof root.kcRefreshHeroCarousel === 'function') {
         root.kcRefreshHeroCarousel();
@@ -224,6 +246,7 @@
   if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', function () {
       hydrateExistingBanners();
+      bindHeroCTAInteractions(document);
 
       let loaded = false;
       const tryLoad = () => {
@@ -251,5 +274,6 @@
     buildMobileIllustration,
     buildBannerHTML,
     hydrateExistingBanners,
+    bindHeroCTAInteractions,
   };
 }));
