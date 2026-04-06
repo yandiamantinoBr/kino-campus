@@ -3460,7 +3460,7 @@ const { ENV, normalizePost } = window.KCAPI;
   // ── Convites de usuários externos (v9.1.0.3) ─────────────────────────────
 
   async function supabaseInviteExternalUser(email, note) {
-    const client = getClient();
+    const client = getSupabaseClient();
     if (!client) return { ok: false, error: 'SUPABASE_NOT_READY' };
     var em = String(email || '').trim().toLowerCase();
     var nt = String(note || '').trim() || null;
@@ -3479,7 +3479,7 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   async function supabaseGetInvites() {
-    const client = getClient();
+    const client = getSupabaseClient();
     if (!client) return { data: null, error: 'SUPABASE_NOT_READY' };
     try {
       var r = await client.rpc('kc_admin_get_invites');
@@ -3491,7 +3491,7 @@ const { ENV, normalizePost } = window.KCAPI;
   }
 
   async function supabaseRevokeInvite(email) {
-    const client = getClient();
+    const client = getSupabaseClient();
     if (!client) return { ok: false, error: 'SUPABASE_NOT_READY' };
     try {
       var r = await client.rpc('kc_admin_revoke_invite', { p_email: String(email || '').trim().toLowerCase() });

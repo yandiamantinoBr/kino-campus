@@ -167,6 +167,17 @@ Deno.serve(async (req) => {
     return json(500, { error: "Falha ao gerar link de convite: link não retornado pelo servidor." });
   }
 
+  // ── 8. Registrar no audit_log ─────────────────────────────────────────────
+  await adminClient.from("audit_log").insert({
+    action: "invite_sent",
+    entity_type: "invites",
+    entity_id: email,
+    actor_id: user.id,
+    payload: { email, note, expires_at: expiresAt },
+  }).then(({ error: auditErr }) => {
+    if (auditErr) console.error("[kc-invite-user] audit_log insert error:", auditErr);
+  });
+
   return json(200, {
     ok: true,
     email,

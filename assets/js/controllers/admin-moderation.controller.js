@@ -6,7 +6,6 @@
   'use strict';
 
   const PAGE_SIZE = 25;
-  const AUDIT_LIMIT = 50;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const state = {
     statusFilter: 'all',
@@ -21,6 +20,9 @@
       actorQuery: '',
       rows: [],
       actorsById: {},
+      pageSize: 25,
+      offset: 0,
+      hasMore: false,
     },
   };
 
@@ -260,6 +262,28 @@
     }
   }
 
+  function renderAuditPagination() {
+    const wrap = $('#audit-pagination');
+    const prevBtn = $('#audit-prev');
+    const nextBtn = $('#audit-next');
+    const info = $('#audit-page-info');
+    if (!wrap) return;
+
+    const page = Math.floor(state.audit.offset / state.audit.pageSize) + 1;
+    const hasRows = state.audit.rows.length > 0;
+
+    wrap.style.display = (hasRows || state.audit.offset > 0) ? 'flex' : 'none';
+    if (prevBtn) prevBtn.disabled = state.audit.offset === 0;
+    if (nextBtn) nextBtn.disabled = !state.audit.hasMore;
+    if (info) {
+      const from = hasRows ? state.audit.offset + 1 : 0;
+      const to = state.audit.offset + state.audit.rows.length;
+      info.textContent = hasRows
+        ? `Mostrando ${from}–${to} (página ${page})`
+        : 'Nenhum resultado';
+    }
+  }
+
   function renderAuditLogs() {
     const body = $('#audit-log-body');
     if (!body) return;
@@ -269,6 +293,7 @@
     if (!rows.length) {
       body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:20px;">Nenhum log encontrado para os filtros selecionados.</td></tr>';
       if (empty) empty.style.display = 'block';
+      renderAuditPagination();
       return;
     }
 
@@ -306,6 +331,8 @@
         </td>
       </tr>`;
     }).join('');
+
+    renderAuditPagination();
   }
 
   async function fetchAuditLogs() {
@@ -321,59 +348,77 @@
     const actorQuery = String(state.audit.actorQuery || '').trim();
     const actorQueryLower = actorQuery.toLowerCase();
     const actorQueryIsUuid = actorQuery && UUID_RE.test(actorQuery);
+    const limit = state.audit.pageSize;
+    const offset = state.audit.offset;
 
-    let query = client
-      .from('audit_log')
-      .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
-      .order('created_at', { ascending: false })
-      .limit(actorQuery ? Math.max(AUDIT_LIMIT, 200) : AUDIT_LIMIT);
+    // Usar RPC paginada — buscar limit+1 para detectar hasMore
+    let rows = [];
+    let fetchOk = false;
 
-    if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
-    if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
-    if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
+    try {
+      const rpc = await client.rpc('kc_admin_list_audit_logs', {
+        p_entity_type: state.audit.entityType,
+        p_action: state.audit.action,
+        p_actor_query: actorQueryIsUuid ? actorQuery : (actorQuery || null),
+        p_limit: limit + 1,
+        p_offset: offset,
+      });
 
-    const { data, error } = await query;
-    let rows = data || [];
+      if (rpc && !rpc.error && Array.isArray(rpc.data)) {
+        rows = rpc.data;
+        fetchOk = true;
+      } else if (rpc && rpc.error) {
+        console.error('[Admin moderation] fetchAuditLogs rpc:', rpc.error);
+      }
+    } catch (rpcErr) {
+      console.error('[Admin moderation] fetchAuditLogs rpc exceção:', rpcErr);
+    }
 
-    if (error) {
-      console.error('[Admin moderation] fetchAuditLogs:', error);
+    // Fallback: query direta (sem offset — apenas primeira página)
+    if (!fetchOk) {
+      try {
+        let query = client
+          .from('audit_log')
+          .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
+          .order('created_at', { ascending: false })
+          .limit(limit + 1);
 
-      if (isPermissionError(error)) {
-        try {
-          const rpc = await client.rpc('kc_admin_list_audit_logs', {
-            p_entity_type: state.audit.entityType,
-            p_action: state.audit.action,
-            p_actor_query: actorQuery || null,
-            p_limit: actorQuery ? Math.max(AUDIT_LIMIT, 200) : AUDIT_LIMIT,
-          });
+        if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
+        if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
+        if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
 
-          if (rpc && !rpc.error && Array.isArray(rpc.data)) {
-            rows = rpc.data;
-          } else {
-            if (rpc && rpc.error) console.error('[Admin moderation] fetchAuditLogs rpc:', rpc.error);
-            state.audit.rows = [];
-            renderAuditLogs();
-            setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
-            return;
-          }
-        } catch (rpcError) {
-          console.error('[Admin moderation] fetchAuditLogs rpc exceção:', rpcError);
+        const { data, error } = await query;
+        if (error) {
+          console.error('[Admin moderation] fetchAuditLogs direct:', error);
           state.audit.rows = [];
+          state.audit.hasMore = false;
           renderAuditLogs();
           setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
           return;
         }
-      } else {
+        rows = data || [];
+      } catch (directErr) {
+        console.error('[Admin moderation] fetchAuditLogs direct exceção:', directErr);
         state.audit.rows = [];
+        state.audit.hasMore = false;
         renderAuditLogs();
-        setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
+        setAuditError('Não foi possível carregar o audit log.');
         return;
       }
+    }
+
+    // Detectar hasMore
+    if (rows.length > limit) {
+      state.audit.hasMore = true;
+      rows = rows.slice(0, limit);
+    } else {
+      state.audit.hasMore = false;
     }
 
     const actorIds = rows.map((row) => row.actor_id).filter(Boolean);
     state.audit.actorsById = await loadActorsById(actorIds);
 
+    // Filtro client-side por nome do ator (quando não é UUID)
     if (actorQuery && !actorQueryIsUuid) {
       state.audit.rows = rows.filter((row) => {
         const actorId = String(row.actor_id || '').toLowerCase();
@@ -590,6 +635,7 @@
     if (auditEntity) {
       auditEntity.addEventListener('change', async () => {
         state.audit.entityType = auditEntity.value || 'all';
+        state.audit.offset = 0;
         await fetchAuditLogs();
       });
     }
@@ -598,6 +644,7 @@
     if (auditAction) {
       auditAction.addEventListener('change', async () => {
         state.audit.action = auditAction.value || 'all';
+        state.audit.offset = 0;
         await fetchAuditLogs();
       });
     }
@@ -606,12 +653,23 @@
     if (auditActor) {
       auditActor.addEventListener('change', async () => {
         state.audit.actorQuery = String(auditActor.value || '').trim();
+        state.audit.offset = 0;
         await fetchAuditLogs();
       });
       auditActor.addEventListener('keydown', async (ev) => {
         if (ev.key !== 'Enter') return;
         ev.preventDefault();
         state.audit.actorQuery = String(auditActor.value || '').trim();
+        state.audit.offset = 0;
+        await fetchAuditLogs();
+      });
+    }
+
+    const auditPageSize = $('#audit-page-size');
+    if (auditPageSize) {
+      auditPageSize.addEventListener('change', async () => {
+        state.audit.pageSize = parseInt(auditPageSize.value, 10) || 25;
+        state.audit.offset = 0;
         await fetchAuditLogs();
       });
     }
@@ -620,7 +678,26 @@
     if (auditRefresh) {
       auditRefresh.addEventListener('click', async () => {
         if (auditActor) state.audit.actorQuery = String(auditActor.value || '').trim();
+        state.audit.offset = 0;
         await fetchAuditLogs();
+      });
+    }
+
+    const auditPrev = $('#audit-prev');
+    if (auditPrev) {
+      auditPrev.addEventListener('click', async () => {
+        state.audit.offset = Math.max(0, state.audit.offset - state.audit.pageSize);
+        await fetchAuditLogs();
+      });
+    }
+
+    const auditNext = $('#audit-next');
+    if (auditNext) {
+      auditNext.addEventListener('click', async () => {
+        if (state.audit.hasMore) {
+          state.audit.offset += state.audit.pageSize;
+          await fetchAuditLogs();
+        }
       });
     }
 

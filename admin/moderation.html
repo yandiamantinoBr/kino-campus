@@ -294,22 +294,31 @@
 
         <div class="kc-admin-panel">
           <h3 style="margin:0 0 8px 0;font-size:1em;">Audit Log</h3>
-          <p style="margin:0;color:var(--kc-text-dark-secondary);font-size:.9em;">Últimos 50 eventos de moderação/compliance.</p>
+          <p style="margin:0;color:var(--kc-text-dark-secondary);font-size:.9em;">Eventos de moderação/compliance.</p>
 
           <div class="kc-audit-filters">
             <select id="audit-entity-type-filter" aria-label="Filtrar por entidade">
               <option value="all">Todas entidades</option>
               <option value="posts">posts</option>
               <option value="reports">reports</option>
+              <option value="invites">invites</option>
             </select>
             <select id="audit-action-filter" aria-label="Filtrar por ação">
               <option value="all">Todas ações</option>
               <option value="post_status_changed">post_status_changed</option>
               <option value="report_closed">report_closed</option>
               <option value="post_deleted">post_deleted</option>
+              <option value="invite_sent">invite_sent</option>
+              <option value="invite_revoked">invite_revoked</option>
             </select>
             <input id="audit-actor-id-filter" type="search" placeholder="Filtrar por actor_id, nome ou nickname" />
-            <button id="audit-refresh"><i class="fas fa-sync-alt"></i> Atualizar logs</button>
+            <select id="audit-page-size" aria-label="Registros por página" style="min-width:70px;">
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+            <button id="audit-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
           </div>
 
           <div id="audit-log-error" role="alert"></div>
@@ -333,6 +342,18 @@
           </div>
 
           <p id="audit-log-empty" style="display:none;">Nenhum log encontrado para os filtros selecionados.</p>
+
+          <div id="audit-pagination" style="display:none;margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <span id="audit-page-info" style="font-size:.84em;color:var(--kc-text-dark-secondary);"></span>
+            <div style="display:flex;gap:6px;">
+              <button id="audit-prev" disabled style="padding:6px 14px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.84em;cursor:pointer;">
+                <i class="fas fa-chevron-left"></i> Anterior
+              </button>
+              <button id="audit-next" disabled style="padding:6px 14px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.84em;cursor:pointer;">
+                Próxima <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- ── Painel de Convites de Usuários Externos ───────────────────── -->
