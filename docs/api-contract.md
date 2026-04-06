@@ -108,6 +108,7 @@ Busca lotes incrementais do feed via cursor opaco. É o contrato usado pelos pag
     marketCats?: string[],
     marketConds?: string[],
     marketVerified?: boolean,
+    datePreset?: string,
     priceMin?: number,
     priceMax?: number,
     rideType?: string[],
@@ -142,8 +143,9 @@ Promise<{
 - `cursor` é opaco e pode ter representações diferentes entre `local` e `supabase`.
 - Feeds híbridos podem passar `module` como array, por exemplo `['compra-venda', 'livros']`.
 - `requestParams` carrega o envelope dos filtros avançados já existentes nos módulos (`compra-venda`, `caronas`, `moradia`, `oportunidades` e `achados-perdidos`) para o caminho incremental cursor-based.
+- `datePreset` foi fechado em `v9.2.1.3` e hoje cobre os 6 módulos do feed incremental. Semântica: `today/last7d/last30d` para `compra-venda`, `livros`, `moradia`, `oportunidades` e `achados-perdidos`; `today/last3d/last7d` para `caronas`; `today/next7d/thisMonth/past` para `eventos`, usando `metadata.data_evento`/`metadata.data` com fallback para `created_at`.
 - `priceMin` e `priceMax` foram adicionados ao contrato cursor-based em `v9.2.1.2`; hoje eles alimentam as faixas de preço/remuneração de `compra-venda`, `caronas`, `moradia` e `oportunidades`.
-- `KCAPI.getPosts()` permanece estável para consumo legado; a aplicação cursor-based dos filtros avançados foi adicionada em `v9.2.1.1` e expandida em `v9.2.1.2` sem reinterpretar o contrato antigo.
+- `KCAPI.getPosts()` permanece estável para consumo legado; a aplicação cursor-based dos filtros avançados foi adicionada em `v9.2.1.1`, expandida em `v9.2.1.2` e concluída em `v9.2.1.3` sem reinterpretar o contrato antigo.
 
 ---
 

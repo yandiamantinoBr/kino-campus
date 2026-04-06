@@ -679,10 +679,165 @@
     return null;
   }
 
+  const FEED_DATE_TIMEZONE = 'America/Sao_Paulo';
+  const FEED_DATE_PRESETS = Object.freeze({
+    'compra-venda': Object.freeze(['today', 'last7d', 'last30d']),
+    livros: Object.freeze(['today', 'last7d', 'last30d']),
+    moradia: Object.freeze(['today', 'last7d', 'last30d']),
+    oportunidades: Object.freeze(['today', 'last7d', 'last30d']),
+    'achados-perdidos': Object.freeze(['today', 'last7d', 'last30d']),
+    caronas: Object.freeze(['today', 'last3d', 'last7d']),
+    eventos: Object.freeze(['today', 'next7d', 'thisMonth', 'past']),
+  });
+
+  function getFeedFilterDateUtils() {
+    const utils = (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+    if (utils && typeof utils.matchesDatePreset === 'function') return utils;
+    return null;
+  }
+
+  function formatDateKeyParts(year, month, day) {
+    const y = parseInt(String(year || '0'), 10);
+    const m = parseInt(String(month || '0'), 10);
+    const d = parseInt(String(day || '0'), 10);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) || y <= 0 || m <= 0 || d <= 0) return '';
+    return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  function parseDateKey(dateKey) {
+    const match = String(dateKey || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    return {
+      year: parseInt(match[1], 10),
+      month: parseInt(match[2], 10),
+      day: parseInt(match[3], 10),
+    };
+  }
+
+  function shiftDateKey(dateKey, deltaDays) {
+    const parsed = parseDateKey(dateKey);
+    if (!parsed) return '';
+    const base = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day));
+    base.setUTCDate(base.getUTCDate() + (parseInt(String(deltaDays || '0'), 10) || 0));
+    return formatDateKeyParts(base.getUTCFullYear(), base.getUTCMonth() + 1, base.getUTCDate());
+  }
+
+  function getDateKeyFormatter() {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: FEED_DATE_TIMEZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function getDateKeyInZone(input) {
+    const shared = getFeedFilterDateUtils();
+    if (shared && typeof shared.getDateKeyInZone === 'function') return shared.getDateKeyInZone(input);
+
+    if (!input) return '';
+    const date = input instanceof Date ? input : new Date(input);
+    if (!date || Number.isNaN(date.getTime())) return '';
+
+    const formatter = getDateKeyFormatter();
+    if (formatter && typeof formatter.formatToParts === 'function') {
+      const parts = formatter.formatToParts(date);
+      const bag = {};
+      parts.forEach((part) => {
+        if (part && part.type) bag[part.type] = part.value;
+      });
+      return formatDateKeyParts(bag.year, bag.month, bag.day);
+    }
+
+    return formatDateKeyParts(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  }
+
+  function getCurrentDateKey(nowValue) {
+    const shared = getFeedFilterDateUtils();
+    if (shared && typeof shared.getCurrentDateKey === 'function') return shared.getCurrentDateKey(nowValue);
+    return getDateKeyInZone(nowValue || new Date());
+  }
+
+  function normalizeDatePreset(moduleKey, value) {
+    const shared = getFeedFilterDateUtils();
+    if (shared && typeof shared.normalizeDatePreset === 'function') return shared.normalizeDatePreset(moduleKey, value);
+
+    const key = normalizeFilterText(moduleKey);
+    const allowed = FEED_DATE_PRESETS[key] ? FEED_DATE_PRESETS[key].slice() : [];
+    const normalized = normalizeFilterText(value);
+    if (!normalized || !allowed.length) return '';
+    return allowed.includes(normalized) ? normalized : '';
+  }
+
+  function getEventDateKey(post) {
+    const shared = getFeedFilterDateUtils();
+    if (shared && typeof shared.getEventDateKey === 'function') return shared.getEventDateKey(post);
+
+    const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
+    const meta = getPostMeta(source);
+    const raw = [
+      meta.data_evento,
+      meta.dataEvento,
+      meta.data,
+      source.data_evento,
+      source.dataEvento,
+      source.data,
+    ].find((entry) => String(entry || '').trim());
+    const text = String(raw || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+    return getDateKeyInZone(source.created_at || source.createdAt || source.timestamp || null);
+  }
+
+  function matchesDatePresetFilter(options) {
+    const shared = getFeedFilterDateUtils();
+    if (shared && typeof shared.matchesDatePreset === 'function') return shared.matchesDatePreset(options);
+
+    const opt = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const moduleKey = normalizeFilterText(opt.moduleKey || opt.module || opt.pageModule);
+    const preset = normalizeDatePreset(moduleKey, opt.preset);
+    if (!preset) return true;
+
+    const todayKey = getCurrentDateKey(opt.now || new Date());
+    if (!todayKey) return true;
+
+    const createdKey = opt.createdKey || getDateKeyInZone(opt.createdAt || opt.created_at || null);
+    const eventKey = opt.eventKey || getEventDateKey(opt.post || opt);
+    const candidateKey = moduleKey === 'eventos' ? eventKey : createdKey;
+    if (!candidateKey) return false;
+
+    if (preset === 'today') return candidateKey === todayKey;
+    if (preset === 'last3d') return candidateKey >= shiftDateKey(todayKey, -2) && candidateKey <= todayKey;
+    if (preset === 'last7d') return candidateKey >= shiftDateKey(todayKey, -6) && candidateKey <= todayKey;
+    if (preset === 'last30d') return candidateKey >= shiftDateKey(todayKey, -29) && candidateKey <= todayKey;
+    if (preset === 'next7d') return candidateKey >= todayKey && candidateKey <= shiftDateKey(todayKey, 6);
+    if (preset === 'thisMonth') return String(candidateKey).slice(0, 7) === String(todayKey).slice(0, 7);
+    if (preset === 'past') return candidateKey < todayKey;
+    return true;
+  }
+
   function matchesAdvancedRequestParams(post, params) {
     const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
     const moduleKey = normalizeFilterText(post && (post.modulo || post.module));
     const meta = getPostMeta(post);
+    const datePreset = normalizeDatePreset(moduleKey, p.datePreset);
+
+    if (datePreset) {
+      const createdAt = post && (post.created_at || post.createdAt || post.timestamp || null);
+      const eventDate = getEventDateKey(post);
+      if (!matchesDatePresetFilter({
+        moduleKey,
+        preset: datePreset,
+        createdAt,
+        eventKey: eventDate,
+        post,
+      })) {
+        return false;
+      }
+    }
 
     const marketCats = toNormalizedFilterSet(p.marketCats, normalizeMarketCategoryKey);
     const marketConds = toNormalizedFilterSet(p.marketConds, normalizeMarketConditionKey);

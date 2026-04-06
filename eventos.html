@@ -127,6 +127,9 @@
         <button class="kc-eventos-mobile-rail__button" type="button" data-kc-eventos-open-section="calendario">
           <i class="fas fa-calendar-alt"></i><span>Calendário</span>
         </button>
+        <button class="kc-eventos-mobile-rail__button" type="button" data-kc-eventos-open-section="dates">
+          <i class="fas fa-calendar-day"></i><span>Data</span>
+        </button>
         <button class="kc-eventos-mobile-rail__button" type="button" data-kc-eventos-open-section="categorias">
           <i class="fas fa-th-large"></i><span>Categorias</span>
         </button>
@@ -204,6 +207,20 @@
           <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#ff9800"></span><span>Esportivos</span></div>
           <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#00bcd4"></span><span>Workshops</span></div>
           <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#e91e63"></span><span>Festas</span></div>
+        </div>
+      </div>
+
+      <div class="kc-sidebar-section" data-kc-eventos-section="dates">
+        <h3><i class="fas fa-calendar-day"></i> Data</h3>
+        <p class="kc-sidebar-help">Filtre o feed por data do evento sem alterar o calendário lateral.</p>
+        <div class="kc-marketplace-filter-group">
+          <div class="kc-marketplace-filter-group__options">
+            <label class="kc-sidebar-check"><input checked="" data-kc-eventos-date-preset="true" name="kcEventosDatePreset" type="radio" value="" /><span>Todas as datas</span></label>
+            <label class="kc-sidebar-check"><input data-kc-eventos-date-preset="true" name="kcEventosDatePreset" type="radio" value="today" /><span>Hoje</span></label>
+            <label class="kc-sidebar-check"><input data-kc-eventos-date-preset="true" name="kcEventosDatePreset" type="radio" value="next7d" /><span>Próximos 7 dias</span></label>
+            <label class="kc-sidebar-check"><input data-kc-eventos-date-preset="true" name="kcEventosDatePreset" type="radio" value="thisMonth" /><span>Este mês</span></label>
+            <label class="kc-sidebar-check"><input data-kc-eventos-date-preset="true" name="kcEventosDatePreset" type="radio" value="past" /><span>Passados</span></label>
+          </div>
         </div>
       </div>
 

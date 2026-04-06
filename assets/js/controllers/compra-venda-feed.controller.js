@@ -18,6 +18,7 @@
     cats: new Set(CAT_KEYS),
     conds: new Set(),
     verified: false,
+    datePreset: '',
     priceMin: null,
     priceMax: null,
     feedPager: null,
@@ -69,6 +70,28 @@
 
   function getFeedFilterUtils() {
     return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
+  }
+
+  function getAllowedDatePresets() {
+    const utils = getFeedFilterUtils();
+    return utils && typeof utils.getAllowedDatePresets === 'function'
+      ? utils.getAllowedDatePresets('compra-venda')
+      : ['today', 'last7d', 'last30d'];
+  }
+
+  function normalizeDatePreset(value) {
+    const utils = getFeedFilterUtils();
+    if (utils && typeof utils.normalizeDatePreset === 'function') {
+      return utils.normalizeDatePreset('compra-venda', value);
+    }
+    const normalized = norm(value);
+    const allowed = getAllowedDatePresets();
+    return allowed.includes(normalized) ? normalized : '';
+  }
+
+  function readSelectedDatePreset() {
+    const selected = document.querySelector('[data-kc-market-date-preset]:checked');
+    return normalizeDatePreset(selected ? selected.value : '');
   }
 
   function restoreCachedPosts() {
@@ -128,7 +151,7 @@
 
   function verifiedInput() { return document.querySelector('[data-kc-market-filter-kind="verified"]'); }
 
-  function syncInputs(cats, conds, verified, priceMin, priceMax) {
+  function syncInputs(cats, conds, verified, priceMin, priceMax, datePreset) {
     document.querySelectorAll('[data-kc-market-filter-kind="category"]').forEach((input) => { input.checked = cats.has(normCat(input.value)); });
     document.querySelectorAll('[data-kc-market-filter-kind="condition"]').forEach((input) => { input.checked = conds.has(normCond(input.value)); });
     const checked = verifiedInput();
@@ -137,6 +160,10 @@
     const maxInput = document.querySelector('[data-kc-market-price-max]');
     if (minInput) minInput.value = priceMin != null ? String(priceMin) : '';
     if (maxInput) maxInput.value = priceMax != null ? String(priceMax) : '';
+    const normalizedPreset = normalizeDatePreset(datePreset);
+    document.querySelectorAll('[data-kc-market-date-preset]').forEach((input) => {
+      input.checked = normalizeDatePreset(input.value) === normalizedPreset;
+    });
   }
 
   function getFeedRequestParams() {
@@ -144,6 +171,7 @@
     if (state.cats.size && state.cats.size !== CAT_KEYS.length) params.marketCats = Array.from(state.cats);
     if (state.conds.size) params.marketConds = Array.from(state.conds);
     if (state.verified) params.marketVerified = true;
+    if (state.datePreset) params.datePreset = state.datePreset;
     if (state.priceMin != null) params.priceMin = state.priceMin;
     if (state.priceMax != null) params.priceMax = state.priceMax;
     return params;
@@ -161,9 +189,10 @@
     const hasCats = !!(params && typeof params.has === 'function' && params.has('marketCats'));
     const hasConds = !!(params && typeof params.has === 'function' && params.has('marketConds'));
     const hasVerified = !!(params && typeof params.has === 'function' && params.has('marketVerified'));
+    const hasDatePreset = !!(params && typeof params.has === 'function' && params.has('datePreset'));
     const hasPriceMin = !!(params && typeof params.has === 'function' && params.has('priceMin'));
     const hasPriceMax = !!(params && typeof params.has === 'function' && params.has('priceMax'));
-    if (!hasCats && !hasConds && !hasVerified && !hasPriceMin && !hasPriceMax) return false;
+    if (!hasCats && !hasConds && !hasVerified && !hasDatePreset && !hasPriceMin && !hasPriceMax) return false;
 
     if (hasCats) {
       const nextCats = utils.readListParam(params, 'marketCats').map(normCat).filter(Boolean);
@@ -175,6 +204,11 @@
     if (hasVerified) {
       state.verified = utils.readBooleanParam(params, 'marketVerified');
     }
+    if (hasDatePreset) {
+      state.datePreset = typeof utils.readPresetParam === 'function'
+        ? utils.readPresetParam(params, 'datePreset', getAllowedDatePresets())
+        : normalizeDatePreset(utils.readTextParam(params, 'datePreset'));
+    }
     if (hasPriceMin || hasPriceMax) {
       const range = normalizePriceRange(
         hasPriceMin ? utils.readNumberParam(params, 'priceMin') : state.priceMin,
@@ -184,7 +218,7 @@
       state.priceMax = range.max;
     }
 
-    syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+    syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
     setTabFromCats(state.cats);
     return true;
   }
@@ -197,6 +231,8 @@
       utils.writeListParam(params, 'marketCats', activeCats);
       utils.writeListParam(params, 'marketConds', Array.from(state.conds));
       utils.writeBooleanParam(params, 'marketVerified', state.verified);
+      if (typeof utils.writePresetParam === 'function') utils.writePresetParam(params, 'datePreset', state.datePreset, getAllowedDatePresets());
+      else utils.writeTextParam(params, 'datePreset', state.datePreset || '');
       utils.writeNumberParam(params, 'priceMin', state.priceMin);
       utils.writeNumberParam(params, 'priceMax', state.priceMax);
     });
@@ -206,6 +242,7 @@
     state.cats = new Set(selected('category').map(normCat).filter(Boolean));
     state.conds = new Set(selected('condition').map(normCond).filter(Boolean));
     state.verified = !!(verifiedInput() && verifiedInput().checked);
+    state.datePreset = readSelectedDatePreset();
     const range = normalizePriceRange(
       document.querySelector('[data-kc-market-price-min]') && document.querySelector('[data-kc-market-price-min]').value,
       document.querySelector('[data-kc-market-price-max]') && document.querySelector('[data-kc-market-price-max]').value
@@ -226,6 +263,7 @@
       cats: cloneSet(state.cats),
       conds: cloneSet(state.conds),
       verified: state.verified,
+      datePreset: state.datePreset,
       priceMin: state.priceMin,
       priceMax: state.priceMax,
       quick: quickCat(state.cats)
@@ -237,6 +275,7 @@
     state.draft.cats = new Set(selected('category').map(normCat).filter(Boolean));
     state.draft.conds = new Set(selected('condition').map(normCond).filter(Boolean));
     state.draft.verified = !!(verifiedInput() && verifiedInput().checked);
+    state.draft.datePreset = readSelectedDatePreset();
     const range = normalizePriceRange(
       document.querySelector('[data-kc-market-price-min]') && document.querySelector('[data-kc-market-price-min]').value,
       document.querySelector('[data-kc-market-price-max]') && document.querySelector('[data-kc-market-price-max]').value
@@ -246,8 +285,8 @@
     state.draft.quick = quickCat(state.draft.cats);
   }
 
-  function isDefault(cats, conds, verified, priceMin, priceMax) {
-    return cats && conds && cats.size === CAT_KEYS.length && conds.size === 0 && !verified && priceMin == null && priceMax == null;
+  function isDefault(cats, conds, verified, priceMin, priceMax, datePreset) {
+    return cats && conds && cats.size === CAT_KEYS.length && conds.size === 0 && !verified && priceMin == null && priceMax == null && !normalizeDatePreset(datePreset);
   }
 
   function setTabFromCats(cats) {
@@ -290,6 +329,7 @@
       categoryIcon: definition.icon,
       conditionKey,
       verified: !!(post && (post.authorVerified === true || post.verificado === true || meta.verificado === true)),
+      createdAt: post && (post.created_at || post.createdAt || post.timestamp || null),
       priceValue: sanitizePriceValue(post && (post.preco != null ? post.preco : post.price)),
       searchText: norm([post && post.titulo, post && post.descricao, post && post.categoriaLabel, post && post.subcategoriaLabel, definition.label, conditionKey].filter(Boolean).join(' '))
     };
@@ -314,6 +354,7 @@
       if (!card.getAttribute('data-category')) card.setAttribute('data-category', summary.categoryKey);
       if (!card.getAttribute('data-condition') && summary.conditionKey) card.setAttribute('data-condition', summary.conditionKey);
       if (!card.getAttribute('data-verified')) card.setAttribute('data-verified', String(!!summary.verified));
+      if (!card.getAttribute('data-kc-created-at') && summary.createdAt) card.setAttribute('data-kc-created-at', String(summary.createdAt));
       if (!card.getAttribute('data-kc-price') && summary.priceValue != null) card.setAttribute('data-kc-price', String(summary.priceValue));
     });
   }
@@ -329,6 +370,10 @@
     }
     if (state.conds.size && !config.ignoreConditions && !state.conds.has(summary.conditionKey)) return false;
     if (state.verified && !config.ignoreVerified && !summary.verified) return false;
+    if (!config.ignoreDate && state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'compra-venda', preset: state.datePreset, createdAt: summary.createdAt })) return false;
+    }
     if (!config.ignorePrice) {
       if ((state.priceMin != null || state.priceMax != null) && summary.priceValue == null) return false;
       if (state.priceMin != null && summary.priceValue < state.priceMin) return false;
@@ -409,8 +454,14 @@
     modal.setAttribute('data-kc-market-section-view', state.activeKey);
     if (state.activeKey === 'filters') {
       const draft = state.draft || modalDraft();
-      const canClear = !isDefault(draft.cats, draft.conds, draft.verified, draft.priceMin, draft.priceMax);
+      const canClear = !isDefault(draft.cats, draft.conds, draft.verified, draft.priceMin, draft.priceMax, draft.datePreset);
       actions.innerHTML = '<div class="kc-marketplace-section-modal__action-group"><button class="kc-opportunity-clear" type="button" data-kc-market-modal-clear="true"' + (canClear ? '' : ' disabled') + '>Limpar filtros</button><button class="kc-opportunity-apply" type="button" data-kc-market-modal-apply="filters">Aplicar filtros</button></div>';
+      return;
+    }
+    if (state.activeKey === 'dates') {
+      const labels = { '': 'Todas as datas', today: 'Hoje', last7d: 'Últimos 7 dias', last30d: 'Últimos 30 dias' };
+      const selectedLabel = labels[(state.draft && typeof state.draft.datePreset === 'string') ? state.draft.datePreset : state.datePreset] || 'Todas as datas';
+      actions.innerHTML = '<div class="kc-marketplace-section-modal__action-group"><p class="kc-marketplace-section-modal__caption">Data selecionada: <strong>' + esc(selectedLabel) + '</strong></p><button class="kc-opportunity-apply" type="button" data-kc-market-modal-apply="dates">Ver anúncios</button></div>';
       return;
     }
     if (state.activeKey === 'categories') {
@@ -443,7 +494,7 @@
     state.draft = modalDraft();
     title.textContent = section.title;
     titleIcon.className = section.icon || 'fas fa-layer-group';
-    syncInputs(state.draft.cats, state.draft.conds, state.draft.verified, state.draft.priceMin, state.draft.priceMax);
+    syncInputs(state.draft.cats, state.draft.conds, state.draft.verified, state.draft.priceMin, state.draft.priceMax, state.draft.datePreset);
     renderCategories();
     renderActions();
     overlay.classList.add('active');
@@ -480,7 +531,7 @@
         } catch (_) { }
       }
     }
-    if (!config.commit) syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+    if (!config.commit) syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
     if (state.activeNode && state.activePlaceholder && state.activePlaceholder.parentNode) state.activePlaceholder.parentNode.replaceChild(state.activeNode, state.activePlaceholder);
     state.activeKey = '';
     state.activeNode = null;
@@ -527,16 +578,17 @@
 
   function syncClear() {
     const button = document.querySelector('[data-kc-market-clear-sidebar="true"]');
-    if (button) button.disabled = isDefault(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+    if (button) button.disabled = isDefault(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
   }
 
   function resetApplied(clearSearch) {
     state.cats = new Set(CAT_KEYS);
     state.conds = new Set();
     state.verified = false;
+    state.datePreset = '';
     state.priceMin = null;
     state.priceMax = null;
-    syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+    syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
     setTabFromCats(state.cats);
     if (clearSearch && window.kcFilters && typeof window.kcFilters.setQuery === 'function') window.kcFilters.setQuery('');
     else if (clearSearch) {
@@ -550,11 +602,16 @@
     const categoryKey = normCat(card.getAttribute('data-category') || '');
     const conditionKey = normCond(card.getAttribute('data-condition') || '');
     const verified = String(card.getAttribute('data-verified') || '').toLowerCase() === 'true';
+    const createdAt = card.getAttribute('data-kc-created-at') || '';
     const priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
     if (state.cats.size === 0) return false;
     if (state.cats.size !== CAT_KEYS.length && !state.cats.has(categoryKey)) return false;
     if (state.conds.size && !state.conds.has(conditionKey)) return false;
     if (state.verified && !verified) return false;
+    if (state.datePreset) {
+      const utils = getFeedFilterUtils();
+      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'compra-venda', preset: state.datePreset, createdAt: createdAt })) return false;
+    }
     if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
     if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
     return true;
@@ -566,20 +623,25 @@
       renderActions();
       return;
     }
+    if (state.draft && state.activeKey === 'dates' && isMobile()) {
+      state.draft.datePreset = readSelectedDatePreset();
+      renderActions();
+      return;
+    }
     readInputs();
     setTabFromCats(state.cats);
     apply();
   }
 
   function bind() {
-    document.querySelectorAll('[data-kc-market-filter-kind], [data-kc-market-price-min], [data-kc-market-price-max]').forEach((input) => input.addEventListener('change', handleInputChange));
+    document.querySelectorAll('[data-kc-market-filter-kind], [data-kc-market-price-min], [data-kc-market-price-max], [data-kc-market-date-preset]').forEach((input) => input.addEventListener('change', handleInputChange));
     const clear = document.querySelector('[data-kc-market-clear-sidebar="true"]');
     if (clear) clear.addEventListener('click', function () { resetApplied(false); });
     const emptyClear = document.querySelector('#noResults .kc-btn-primary');
     if (emptyClear) emptyClear.addEventListener('click', function (event) { event.preventDefault(); resetApplied(true); });
     document.querySelectorAll('.kc-feed-tabs a').forEach((tab) => tab.addEventListener('click', function () {
       state.cats = catsFromQuick(tab.getAttribute('data-category') || tab.getAttribute('href') || '');
-      syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+      syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
       syncUrlState();
       refreshFeed();
       queue();
@@ -590,10 +652,11 @@
         state.draft.cats = new Set(CAT_KEYS);
         state.draft.conds = new Set();
         state.draft.verified = false;
+        state.draft.datePreset = '';
         state.draft.priceMin = null;
         state.draft.priceMax = null;
         state.draft.quick = '';
-        syncInputs(state.draft.cats, state.draft.conds, state.draft.verified, state.draft.priceMin, state.draft.priceMax);
+        syncInputs(state.draft.cats, state.draft.conds, state.draft.verified, state.draft.priceMin, state.draft.priceMax, state.draft.datePreset);
         renderActions();
         return;
       }
@@ -604,10 +667,18 @@
           state.cats = cloneSet(state.draft.cats);
           state.conds = cloneSet(state.draft.conds);
           state.verified = !!state.draft.verified;
+          state.datePreset = normalizeDatePreset(state.draft.datePreset);
           state.priceMin = state.draft.priceMin != null ? state.draft.priceMin : null;
           state.priceMax = state.draft.priceMax != null ? state.draft.priceMax : null;
-          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
           setTabFromCats(state.cats);
+          closeModal({ commit: true });
+          apply();
+          return;
+        }
+        if (action === 'dates' && state.draft) {
+          state.datePreset = normalizeDatePreset(state.draft.datePreset);
+          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
           closeModal({ commit: true });
           apply();
           return;
@@ -615,7 +686,7 @@
         if (action === 'categories' && state.draft) {
           if (state.draft.quick !== null) {
             state.cats = catsFromQuick(state.draft.quick);
-            syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+            syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
             setTabFromCats(state.cats);
           }
           closeModal({ commit: true });
@@ -636,7 +707,7 @@
           renderActions();
         } else {
           state.cats = catsFromQuick(selectedKey);
-          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+          syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
           setTabFromCats(state.cats);
           apply();
         }
@@ -724,7 +795,7 @@
     const preset = normCat(getParam('filter') || '');
     if (!restoredFromUrl && preset && CAT_KEYS.includes(preset)) {
       state.cats = new Set([preset]);
-      syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax);
+      syncInputs(state.cats, state.conds, state.verified, state.priceMin, state.priceMax, state.datePreset);
       if (window.kcFilters && typeof window.kcFilters.setCategory === 'function') window.kcFilters.setCategory(preset);
     }
     bind();
