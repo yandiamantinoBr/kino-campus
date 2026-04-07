@@ -176,7 +176,21 @@ Cria novo post. **Requer autenticação.**
 }
 ```
 
-**Retorno:** `Promise<{ ok: boolean, post: KCPostModel, error?: object }>`
+**Retorno normal:** `Promise<KCPostModel>` com os dados do post criado.
+
+**Retornos especiais:**
+```javascript
+// Limite de posts ativos atingido:
+{ _kcError: 'POST_LIMIT_REACHED', message: string, limit: number, count: number }
+
+// Flood control (max 3 posts/hora) — v9.3.2:
+{ _kcError: 'FLOOD_LIMIT', message: string }
+
+// Post criado mas em análise pela moderação — v9.3.2:
+// (post com status='pending' retornado pelo trigger)
+KCPostModel & { _kcPending: true, _kcPendingReason: string }
+```
+O caller (`kc-create-post.js`) verifica `_kcError` ANTES de qualquer outro campo. Se `_kcPending=true`, mostra toast de aviso e continua o redirect (autor pode ver o post).
 
 ---
 

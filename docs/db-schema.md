@@ -62,6 +62,7 @@
 | `coupon_clicks` | INTEGER | Cliques no CTA (contador de engajamento) |
 | `share_count` | INTEGER | Compartilhamentos |
 | `highlight_score` | NUMERIC | Score calculado para "destaques" |
+| `moderation_reason` | TEXT | **[v9.3.2]** Razão da auto-moderação: `flood_control`, `link_spam`, `new_user_scrutiny`. NULL = sem moderação automática. |
 | `created_at` | TIMESTAMPTZ | |
 | `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
 
@@ -71,7 +72,9 @@
 - UPDATE: próprio autor ou admin
 - DELETE: próprio autor (apenas status published/pending) ou admin (qualquer)
 
-**Trigger:** `kc_set_post_expires_at` — define `expires_at` ao criar post.
+**Triggers:**
+- `kc_set_post_expires_at` — define `expires_at` ao criar post
+- `trg_anti_spam_gate` — **[v9.3.2]** BEFORE INSERT: flood control (max 3/h), link spam (>3 URLs→pending), new user trust (<7d + 0 posts→pending)
 
 ---
 
@@ -338,7 +341,7 @@
 ## Indexes
 
 ```sql
-idx_posts_author_created     ON posts(author_id, created_at)
+idx_posts_author_created_desc  ON posts(author_id, created_at DESC)  -- v9.3.2: flood control
 idx_posts_module_created     ON posts(module, created_at)
 idx_posts_category_created   ON posts(category, created_at)
 posts_bumped_at_idx          ON posts(bumped_at DESC NULLS LAST)        -- feed recentes

@@ -2318,11 +2318,16 @@ async function kcHandleCreateSubmit() {
       showToast('Publicando...', 'info', 1600);
       try {
         post = await apiCreateFn(payload);
-        // Verificação explícita de POST_LIMIT_REACHED antes de qualquer outra coisa
+        // Verificação explícita de _kcError antes de qualquer outra coisa
         if (post && post._kcError) {
           const limitMsg = post.message || 'Não foi possível publicar. Limite de publicações ativas atingido.';
           showToast(limitMsg, 'error', 5000);
           return;
+        }
+        // v9.3.2: post criado mas em análise pela moderação automática
+        if (post && post._kcPending) {
+          showToast(post._kcPendingReason || 'Publicação enviada para análise da moderação.', 'warn', 6000);
+          // continua normalmente — post existe, autor pode ver, redirecionamento ocorre abaixo
         }
         if (post && post.ok === false && post.error) {
           createError = post.error;
