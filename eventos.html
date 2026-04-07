@@ -382,7 +382,8 @@
   <script defer src="assets/js/controllers/kc-feed.controller.js"></script>
   <script defer src="assets/js/controllers/eventos.controller.js"></script>
   <script defer src="assets/js/kc-search-modal.js"></script>
-  <script defer src="assets/js/kc-ranking.js"></script>
+  <script defer src="assets/js/kc-lazy-loader.js"></script>
 </body>
+<script>document.addEventListener('DOMContentLoaded',function(){KCLazyLoader.onVisible('[data-kc-ranking-sidebar]','assets/js/kc-ranking.js');});</script>
 
 </html>
