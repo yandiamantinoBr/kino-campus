@@ -648,6 +648,7 @@
       renderPosts(reset ? state.posts : items, !reset);
     } catch (error) {
       console.warn('[Profile] loadPosts:', error);
+      if (empty) empty.style.display = 'block';
     } finally {
       if (loading) loading.style.display = 'none';
     }
@@ -797,6 +798,7 @@
       renderComments(reset ? state.comments : payload, !reset);
     } catch (error) {
       console.warn('[Profile] loadComments:', error);
+      if (empty) empty.style.display = 'block';
     } finally {
       if (loading) loading.style.display = 'none';
     }
@@ -892,6 +894,7 @@
       renderRatings(reset ? state.ratings : items, !reset);
     } catch (error) {
       console.warn('[Profile] loadRatings:', error);
+      if (empty) empty.style.display = 'block';
     } finally {
       if (loading) loading.style.display = 'none';
     }
@@ -968,6 +971,7 @@
       renderSaved(reset ? state.savedItems : items, !reset);
     } catch (error) {
       console.warn('[Profile] loadSaved:', error);
+      if (empty) empty.style.display = 'block';
     } finally {
       if (loading) loading.style.display = 'none';
     }

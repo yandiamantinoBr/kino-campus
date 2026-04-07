@@ -1337,3 +1337,4 @@ function formatText(format, postId = null) {
 }
 
 window.renderCommentMarkdownInline = renderCommentMarkdownInline;
+window.renderComments = renderComments;
