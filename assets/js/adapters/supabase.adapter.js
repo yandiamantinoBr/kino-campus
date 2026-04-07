@@ -2358,7 +2358,7 @@ const { ENV, normalizePost } = window.KCAPI;
     try {
       let query = client
         .from('posts')
-        .select('id, legacy_id, title, created_at, status, visibility, module, category')
+        .select('id, legacy_id, title, created_at, status, visibility, module, category, votos, view_count, share_count, coupon_clicks, expires_at')
         .eq('author_id', user.id)
         .order('created_at', { ascending: false })
         .range(from, to);
@@ -2380,6 +2380,11 @@ const { ENV, normalizePost } = window.KCAPI;
         visibility: row.visibility || 'public',
         module: row.module || '',
         category: row.category || '',
+        votos: row.votos || 0,
+        view_count: row.view_count || 0,
+        share_count: row.share_count || 0,
+        coupon_clicks: row.coupon_clicks || 0,
+        expires_at: row.expires_at || null,
       }));
     } catch (e) {
       console.error('[KCAPI][profile] getMyPosts exceção:', e);
@@ -3374,6 +3379,32 @@ const { ENV, normalizePost } = window.KCAPI;
     } catch (_) { return { ok: false }; }
   }
 
+  // ── Rastrear visualização (v9.3.1) ──────────────────────────────────────────
+  async function supabaseTrackView(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false };
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false };
+    try {
+      const { data, error } = await client.rpc('kc_track_view', { p_post_id: uuid });
+      if (error) return { ok: false, error };
+      return data || { ok: false };
+    } catch (_) { return { ok: false }; }
+  }
+
+  // ── Analytics de post para autores (v9.3.1) ───────────────────────────────
+  async function supabaseGetPostAnalytics(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false };
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false };
+    try {
+      const { data, error } = await client.rpc('kc_get_post_analytics', { p_post_id: uuid });
+      if (error) return { ok: false, error };
+      return data || { ok: false };
+    } catch (_) { return { ok: false }; }
+  }
+
   // ── Verificar publicações duplicadas ──────────────────────────────────────
   async function supabaseCheckDuplicatePost(userId, module, title) {
     const client = getSupabaseClient();
@@ -3537,6 +3568,8 @@ const { ENV, normalizePost } = window.KCAPI;
     getTopContributors: supabaseGetTopContributors,
     trackCouponClick: supabaseTrackCouponClick,
     trackShare: supabaseTrackShare,
+    trackView: supabaseTrackView,
+    getPostAnalytics: supabaseGetPostAnalytics,
     checkDuplicatePost: supabaseCheckDuplicatePost,
     getMySavedPosts: supabaseGetMySavedPostsMulti,
     getMySavedPostsCount: supabaseGetMySavedPostsCount,
