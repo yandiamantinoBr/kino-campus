@@ -944,6 +944,8 @@
           const img = document.createElement('img');
           img.src = src;
           img.alt = 'Miniatura ' + (idx + 1);
+          img.loading = 'lazy';
+          img.decoding = 'async';
           img.className = 'kc-thumbnail' + (idx === 0 ? ' active' : '');
           img.setAttribute('data-full-src', src);
           img.addEventListener('click', () => {
