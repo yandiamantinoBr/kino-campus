@@ -271,5 +271,10 @@
     getUserRanks: getUserRanks,
   };
 
-  document.addEventListener('DOMContentLoaded', initSidebarRanking);
+  // Suporta carregamento via defer (DOMContentLoaded pendente) e lazy (DOM já pronto)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebarRanking);
+  } else {
+    initSidebarRanking();
+  }
 }());

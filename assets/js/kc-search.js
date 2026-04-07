@@ -685,7 +685,11 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', initSearch);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSearch);
+  } else {
+    initSearch();
+  }
 
   window.kcSearch = {
     search: (q, opts) => searchPosts(q, opts),

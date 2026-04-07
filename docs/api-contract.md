@@ -617,3 +617,18 @@ KCAPI.someMethod(args)
     showErrorToast(err.message || 'Erro desconhecido');
   });
 ```
+
+---
+
+## KCLazyLoader (v9.4.0)
+
+Utilitário de lazy loading para módulos JS não-críticos. Exposto em `window.KCLazyLoader` (frozen).
+
+### `KCLazyLoader.load(src, callback?)`
+Injeta `<script src>` dinamicamente. Idempotente — não recarrega se `src` já foi carregado.
+
+### `KCLazyLoader.onVisible(selector, src, callback?)`
+Carrega `src` quando o elemento CSS `selector` entra no viewport (IntersectionObserver com `rootMargin: 200px`). Fallback imediato se IntersectionObserver não estiver disponível.
+
+### `KCLazyLoader.onInteraction(selector, events[], src, callback?)`
+Carrega `src` na primeira ocorrência de qualquer `events[i]` no elemento `selector`.
