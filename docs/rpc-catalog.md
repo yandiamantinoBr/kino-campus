@@ -466,6 +466,24 @@ Documento ponderado do FTS:
 
 ---
 
+### `kc_anti_spam_gate()` [Trigger em posts] *(v9.3.2)*
+
+**Evento:** `BEFORE INSERT ON posts`
+
+**O que faz:** Aplica 3 verificações anti-spam em cascata antes de criar um post:
+
+1. **Flood control** — se o autor já tem 3+ posts na última hora: `RAISE EXCEPTION 'flood_limit_exceeded'` (hard block). Frontend mapeia para `{ _kcError: 'FLOOD_LIMIT' }`.
+2. **Link spam** — se title+description têm >3 URLs externas (regex `https?://`): muta `NEW.status = 'pending'` e `moderation_reason = 'link_spam'`.
+3. **New user trust** — se conta foi criada há <7 dias E 0 posts com status `published`: muta `NEW.status = 'pending'` e `moderation_reason = 'new_user_scrutiny'` (só se link_spam não definiu razão).
+
+Posts auto-moderados (status=`pending`) ficam invisíveis nos feeds para não-autores (via RLS). O autor vê seu próprio post com badge informativo. Admin pode aprovar via `kc_admin_set_post_status`.
+
+**Segurança:** `SECURITY DEFINER` + `SET search_path = ''`. REVOKE de `anon` e `authenticated` (chamada apenas pelo trigger).
+
+**Coluna nova:** `posts.moderation_reason TEXT` — registra a razão, NULL para posts normais.
+
+---
+
 ## Índices Relevantes para Performance
 
 ```sql

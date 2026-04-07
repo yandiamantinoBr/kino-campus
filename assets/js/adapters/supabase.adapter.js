@@ -1445,6 +1445,14 @@ const { ENV, normalizePost } = window.KCAPI;
         .maybeSingle();
 
       if (ins && ins.error) {
+        // v9.3.2: detectar flood control (trigger kc_anti_spam_gate)
+        var insErrMsg = String((ins.error && ins.error.message) || '');
+        if (insErrMsg.includes('flood_limit_exceeded')) {
+          return {
+            _kcError: 'FLOOD_LIMIT',
+            message: 'Limite de 3 publicações por hora atingido. Aguarde antes de publicar novamente.',
+          };
+        }
         createPostDiagnostics.set('POST_INSERT', ins.error, {
           userId: user.id,
           payload: payloadSummary,
@@ -1541,7 +1549,13 @@ const { ENV, normalizePost } = window.KCAPI;
       if (parsed.raw && parsed.raw.subcategoria && !raw.subcategoria) raw.subcategoria = parsed.raw.subcategoria;
 
       createPostDiagnostics.clear();
-      return normalizePost(raw);
+      var normalizedPost = normalizePost(raw);
+      // v9.3.2: sinalizar post auto-moderado para o caller mostrar feedback
+      if (normalizedPost && normalizedPost.status === 'pending') {
+        normalizedPost._kcPending = true;
+        normalizedPost._kcPendingReason = 'Sua publicação foi enviada para análise da moderação antes de aparecer nos feeds.';
+      }
+      return normalizedPost;
     } catch (e) {
       let cleanupContext = buildPostMediaCleanupContext(null);
       if (postId && Array.isArray(uploaded) && uploaded.length) {

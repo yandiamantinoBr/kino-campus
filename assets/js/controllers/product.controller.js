@@ -2243,6 +2243,7 @@
     const isHidden  = postStatus === 'hidden';
     const isExpired = postStatus === 'expired';
     const isPublished = postStatus === 'published';
+    const isPending = postStatus === 'pending'; // v9.3.2: auto-moderação
 
     // ── Botão Desabilitar / Reativar (apenas para published/hidden) ────────
     const toggleBtn = document.createElement('button');
@@ -2250,8 +2251,8 @@
     toggleBtn.className = 'kc-btn-secondary';
     toggleBtn.id = 'togglePostStatusButton';
     toggleBtn.setAttribute('data-post-status', postStatus);
-    if (isExpired) {
-      toggleBtn.style.display = 'none'; // oculto; Renovar é o CTA principal para expirados
+    if (isExpired || isPending) {
+      toggleBtn.style.display = 'none'; // oculto para expirados e pendentes
     } else {
       toggleBtn.innerHTML = isHidden
         ? '<i class="fas fa-eye"></i> Reativar anúncio'
@@ -2295,7 +2296,15 @@
     const ownerStatusBadge = document.getElementById('ownerStatusBadge');
     if (ownerStatusBadge) ownerStatusBadge.remove();
 
-    if (isHidden || isExpired) {
+    if (isPending) {
+      // v9.3.2: badge de moderação automática
+      const badge = document.createElement('div');
+      badge.id = 'ownerStatusBadge';
+      badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.3);color:#93c5fd;font-size:.9em;margin-bottom:12px;';
+      badge.innerHTML = '<i class="fas fa-clock"></i><span>Esta publicação está <strong>em análise</strong> pela moderação e não aparece nos feeds ainda. Você será notificado quando for aprovada.</span>';
+      const details = document.querySelector('.kc-product-details');
+      if (details) details.insertAdjacentElement('afterbegin', badge);
+    } else if (isHidden || isExpired) {
       const badge = document.createElement('div');
       badge.id = 'ownerStatusBadge';
       if (isExpired) {
