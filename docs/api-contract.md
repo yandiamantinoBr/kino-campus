@@ -632,3 +632,33 @@ Carrega `src` quando o elemento CSS `selector` entra no viewport (IntersectionOb
 
 ### `KCLazyLoader.onInteraction(selector, events[], src, callback?)`
 Carrega `src` na primeira ocorrência de qualquer `events[i]` no elemento `selector`.
+
+---
+
+## KCCompressImage (v9.4.1)
+
+Utilitário de compressão client-side de imagens antes do upload. Exposto em `window.KCCompressImage`.
+
+### `KCCompressImage(blob, maxWidth?, maxHeight?, quality?) → Promise<Blob>`
+
+Comprime uma imagem via Canvas API antes de enviá-la ao Supabase Storage.
+
+| Parâmetro  | Padrão | Descrição |
+|------------|--------|-----------|
+| `blob`     | —      | Blob da imagem original |
+| `maxWidth` | `1200` | Largura máxima em px |
+| `maxHeight`| `900`  | Altura máxima em px |
+| `quality`  | `0.85` | Qualidade JPEG (0–1) |
+
+**Comportamento:**
+- GIF: pass-through (retorna blob original sem modificar — preserva animações)
+- JPEG, PNG, WebP: redimensionado para `maxWidth × maxHeight` mantendo aspect ratio, exportado como `image/jpeg`
+- Fallback: retorna blob original se Canvas falhar (toBlob = null ou erro de Image)
+- `blob = null`: retorna `null`
+
+**Uso pelo adapter:** Chamado automaticamente em `uploadPostImages` (max 1200×900) e `uploadProfileAvatar` (max 400×400) após a validação de magic bytes.
+
+```javascript
+// Uso direto (opcional — o adapter já chama internamente)
+const compressed = await KCCompressImage(file, 800, 600, 0.80);
+```

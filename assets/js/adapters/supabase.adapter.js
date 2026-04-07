@@ -339,6 +339,42 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
+  // Comprime imagem via Canvas antes do upload (v9.4.1)
+  // GIF: pass-through (pode ser animado). Demais formatos → JPEG 85%, max 1200×900.
+  function compressImage(blob, maxWidth, maxHeight, quality) {
+    if (!blob || blob.type === 'image/gif') return Promise.resolve(blob);
+    var mw = (maxWidth != null) ? maxWidth : 1200;
+    var mh = (maxHeight != null) ? maxHeight : 900;
+    var q  = (quality  != null) ? quality  : 0.85;
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth;
+        var h = img.naturalHeight;
+        if (w > mw || h > mh) {
+          var ratio = Math.min(mw / w, mh / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width  = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function (compressed) {
+          resolve(compressed || blob);
+        }, 'image/jpeg', q);
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        resolve(blob); // fallback: envia original
+      };
+      img.src = url;
+    });
+  }
+
   function getPostMediaStorageBucket() {
     return (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
       ? String(ENV.STORAGE_BUCKET_POST_MEDIA || ENV.supabase.storageBucket)
@@ -545,7 +581,10 @@ const { ENV, normalizePost } = window.KCAPI;
         continue;
       }
 
-      const ext = extFromMime(mime);
+      // Comprime imagem antes do upload (v9.4.1) — GIF é pass-through
+      const compressed = await compressImage(blob, 1200, 900, 0.85);
+      const uploadMime = compressed.type || mime;
+      const ext = extFromMime(uploadMime);
       const filename = sanitizeFilename(`image-${i + 1}.${ext}`);
 
       const path = hasStrongPath
@@ -556,7 +595,7 @@ const { ENV, normalizePost } = window.KCAPI;
         console.warn('[KCAPI][Supabase] Upload com path fraco (sem userId/postId). Considere hardening via post-media/{userId}/{postId}.');
       }
 
-      const up = await storage.upload(path, blob, { contentType: mime || 'application/octet-stream', upsert: false });
+      const up = await storage.upload(path, compressed, { contentType: uploadMime || 'application/octet-stream', upsert: false });
       if (up && up.error) {
         const cleanup = await cleanupManagedPostMediaStorage(client, uploaded, { userId, postId });
         return {
@@ -636,12 +675,15 @@ const { ENV, normalizePost } = window.KCAPI;
       return { ok: false, error: { message: 'O arquivo não é uma imagem válida.' } };
     }
 
-    const ext = extFromMime(mime);
+    // Comprime avatar antes do upload (v9.4.1) — max 400×400px
+    const compressedAvatar = await compressImage(blob, 400, 400, 0.85);
+    const avatarMime = compressedAvatar.type || mime;
+    const ext = extFromMime(avatarMime);
     const filename = sanitizeFilename(`avatar.${ext}`);
     const path = `profile-avatars/${userId}/${Date.now()}-${filename}`;
     const storage = client.storage.from(bucket);
 
-    const up = await storage.upload(path, blob, { contentType: mime || 'application/octet-stream', upsert: false });
+    const up = await storage.upload(path, compressedAvatar, { contentType: avatarMime || 'application/octet-stream', upsert: false });
     if (up && up.error) {
       return {
         ok: false,
@@ -3607,6 +3649,9 @@ const { ENV, normalizePost } = window.KCAPI;
 
 
 window.KCAPI.registerAdapter('supabase', driverSupabase);
+
+// Expõe compressImage para uso externo (v9.4.1)
+window.KCCompressImage = compressImage;
 
 })();
 
