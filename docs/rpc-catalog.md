@@ -249,18 +249,36 @@ Registra busca para analytics.
 
 ---
 
-### `kc_prune_old_analytics() → JSONB` *(v9.0.4)*
+### `kc_prune_old_analytics() → JSONB` *(v9.0.4 + v9.3.1)*
 
 Remove analytics antigos para evitar crescimento ilimitado.
 
 ```sql
 DELETE FROM search_queries WHERE created_at < now() - interval '6 months';
 DELETE FROM audit_log WHERE created_at < now() - interval '1 year';
+DELETE FROM post_view_events WHERE created_at < now() - interval '6 months';  -- v9.3.1
 ```
 
 **Chamado em:** pg_cron job mensal (dia 1 de cada mês, 04:00 UTC).
 
 **Permissão:** Somente service_role (pg_cron). Não disponível para authenticated.
+
+---
+
+### `kc_track_view(p_post_id UUID) → JSONB` *(v9.3.1)*
+
+Registra visualizacao de post com anti-spam (1 view/usuario/post/hora). Self-views nao contam. SECURITY DEFINER com `SET search_path = ''`.
+
+**Retorno:** `{ ok, counted, code?, view_count? }`
+- `SELF_VIEW`: autor vendo proprio post (nao conta)
+- `COOLDOWN`: usuario ja visualizou na ultima hora (nao conta)
+- `counted: true`: view registrada com sucesso
+
+### `kc_get_post_analytics(p_post_id UUID) → JSONB` *(v9.3.1)*
+
+Retorna metricas completas de um post. Apenas autor ou admin. SECURITY DEFINER STABLE com `SET search_path = ''`.
+
+**Retorno:** `{ ok, post_id, status, views, votos, comments, shares, coupon_clicks, saves, highlight_score, created_at }`
 
 **Retorno:** `{ "ok": true, "search_queries_deleted": N, "audit_log_deleted": N }`
 

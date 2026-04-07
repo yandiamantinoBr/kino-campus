@@ -1775,6 +1775,19 @@
     return driver.checkDuplicatePost(userId, module, title);
   }
 
+  // ── Analytics de post (v9.3.1) ──────────────────────────────
+  async function trackView(postId) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.trackView !== 'function') return { ok: false };
+    return driver.trackView(postId);
+  }
+
+  async function getPostAnalytics(postId) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.getPostAnalytics !== 'function') return { ok: false };
+    return driver.getPostAnalytics(postId);
+  }
+
 
   // Auth facade (sem quebrar modo local)
   // - signIn/signUp retornam { user, error }
@@ -2104,6 +2117,8 @@
     getTopContributors,
     trackCouponClick,
     trackShare,
+    trackView,
+    getPostAnalytics,
     checkDuplicatePost,
 
     // Comments (Supabase) — V8.1.7.2

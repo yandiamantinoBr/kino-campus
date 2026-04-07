@@ -317,6 +317,11 @@
           '</div>' +
           '<a href="product.html?id=' + esc(uuid) + '" style="font-weight:700;text-decoration:none;color:inherit;font-size:0.97em;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(title) + '">' + esc(title) + '</a>' +
           (metaHtml ? '<div style="font-size:0.78em;color:var(--kc-text-dark-secondary);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;">' + metaHtml + '</div>' : '') +
+          '<div style="font-size:0.76em;color:var(--kc-text-dark-secondary);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap;">' +
+            '<span title="Visualizacoes"><i class="fas fa-eye"></i> ' + (Number(post.view_count) || 0) + '</span>' +
+            '<span title="Votos"><i class="fas fa-arrow-up"></i> ' + (Number(post.votos) || 0) + '</span>' +
+            '<span title="Compartilhamentos"><i class="fas fa-share-nodes"></i> ' + (Number(post.share_count) || 0) + '</span>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       buildPostActions(uuid, status) +

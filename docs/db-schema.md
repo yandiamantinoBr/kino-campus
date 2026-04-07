@@ -303,6 +303,18 @@
 
 ---
 
+### `post_view_events` — Eventos de Visualizacao (v9.3.1)
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| id | UUID PK | gen_random_uuid() |
+| post_id | UUID FK posts(id) ON DELETE CASCADE | Post visualizado |
+| user_id | UUID FK auth.users(id) ON DELETE SET NULL | Usuario que visualizou (nullable) |
+| session_id | TEXT | Sessao (futuro: views anonimas) |
+| created_at | TIMESTAMPTZ | Momento da visualizacao |
+
+**RLS:** INSERT para authenticated (user_id = auth.uid()); SELECT para autor do post + admin.
+
 ### `notifications` — Notificações In-App (v9.1.0)
 
 | Coluna | Tipo | Descrição |
@@ -346,6 +358,10 @@ idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9
 idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
 idx_posts_fts                  ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL  -- v9.2.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)
+idx_post_view_events_dedup     ON post_view_events(post_id, user_id, created_at DESC) WHERE user_id IS NOT NULL  -- v9.3.1
+idx_post_view_events_post_id   ON post_view_events(post_id)                          -- v9.3.1
+idx_post_view_events_created_at ON post_view_events(created_at)                      -- v9.3.1
+idx_posts_view_count           ON posts(view_count DESC) WHERE status = 'published'  -- v9.3.1
 ```
 
 **Paginação v9.2.2:** o feed incremental usa a RPC `kc_get_feed_cursor()` com cursor opaco. A ordenação preserva `bumped_at`, `last_comment_at` ou `highlight_score` conforme o tipo de feed.
@@ -359,6 +375,8 @@ posts_metadata_gin_idx         ON posts USING GIN(metadata)
 **Busca v9.2.0:** a busca server-side usa `kc_search_posts_fts()` com `unaccent + portuguese`, expansão de sinônimos no client e documento ponderado por `title`, `tags`, `description`, `category` e `subcategory`.
 
 **Hardening v9.2.3:** os helpers de feed e busca sinalizados pelo Security Advisor agora fixam `SET search_path = ''` e usam referencias qualificadas, removendo os warnings `function_search_path_mutable` sem alterar contratos publicos. A extensao de `v9.2.1.3` manteve esse mesmo padrao para `kc_get_feed_cursor()` e os novos helpers de data. Permanecem pendentes e separados desta iteracao: `extension_in_public` para `unaccent` e `auth_leaked_password_protection`.
+
+**Analytics de post v9.3.1:** `posts.view_count` armazena contagem denormalizada de visualizacoes. `post_view_events` registra eventos granulares com anti-spam (1 view/usuario/post/hora). Self-views (autor vendo proprio post) nao contam. Retencao: 6 meses via `kc_prune_old_analytics()`. RPCs: `kc_track_view(p_post_id)` para registrar, `kc_get_post_analytics(p_post_id)` para metricas (autor-only).
 
 **Reputacao v9.1.2.0:** a fundacao de `user_ratings` adiciona agregados em `profiles`, triggers de sincronizacao e RPCs dedicadas com `SET search_path = ''`. A elegibilidade usa apenas interacoes persistidas (`comments`, `post_votes`, `saved_posts`) e a identidade do avaliador pode ser anonimizada nas listagens publicas.
 
@@ -379,9 +397,9 @@ posts_metadata_gin_idx         ON posts USING GIN(metadata)
 -- Expira posts diariamente às 03:00
 SELECT cron.schedule('kc-expire-old-posts', '0 3 * * *', 'SELECT public.kc_expire_old_posts()');
 
--- (v9.0.4) Purga analytics mensalmente às 04:00 (dia 1 de cada mês)
+-- (v9.0.4 + v9.3.1) Purga analytics mensalmente às 04:00 (dia 1 de cada mês)
 SELECT cron.schedule('kc-prune-analytics', '0 4 1 * *', 'SELECT public.kc_prune_old_analytics()');
--- search_queries: remove > 6 meses | audit_log: remove > 1 ano
+-- search_queries: remove > 6 meses | audit_log: remove > 1 ano | post_view_events: remove > 6 meses
 
 -- (v9.1.0) Purga notificações lidas mensalmente às 05:00 (dia 1 de cada mês)
 SELECT cron.schedule('kc-prune-notifications', '0 5 1 * *', 'SELECT public.kc_prune_old_notifications()');

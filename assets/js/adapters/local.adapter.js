@@ -877,6 +877,8 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     getTopContributors: async function () { return []; },
     trackCouponClick: async function () { return { ok: false }; },
     trackShare: async function () { return { ok: false }; },
+    trackView: async function () { return { ok: false }; },
+    getPostAnalytics: async function () { return { ok: false }; },
     checkDuplicatePost: async function () { return { ok: false, candidates: [] }; },
   });
 

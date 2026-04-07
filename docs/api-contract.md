@@ -263,6 +263,20 @@ Registra compartilhamento (contribui para ranking).
 
 ---
 
+### `KCAPI.trackView(postId)` *(v9.3.1)*
+Registra visualizacao de post. Anti-spam: 1 view/usuario/post/hora. Self-views nao contam.
+
+**Retorno:** `Promise<{ ok: boolean, counted: boolean, code?: string, view_count?: number }>`
+
+---
+
+### `KCAPI.getPostAnalytics(postId)` *(v9.3.1)*
+Retorna metricas completas de um post. Apenas autor ou admin.
+
+**Retorno:** `Promise<{ ok: boolean, views: number, votos: number, comments: number, shares: number, coupon_clicks: number, saves: number, highlight_score: number, created_at: string }>`
+
+---
+
 ### `KCAPI.getTopContributors(period, module, limit)`
 Retorna ranking de top contribuidores.
 

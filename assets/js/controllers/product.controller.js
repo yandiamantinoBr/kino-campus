@@ -2544,10 +2544,55 @@
     setEventCalendar(post);
     setRelated(post);
     upsertOwnerActions(post, currentUser);
+    renderAuthorAnalytics(post, currentUser);
     bindSavedActions(post);
     refreshSavedState(post).catch(() => { });
     maybeResumeQueuedContact(post);
     wireReportButton({ postId: (post && post.uuid) ? post.uuid : post.id, postTitle: post.titulo || post.title || 'Publicação' });
+  }
+
+  // ── v9.3.1: Painel de analytics do autor ────────────────────────
+  function renderAuthorAnalytics(post, user) {
+    if (!isAuthor(post, user)) return;
+    var details = document.querySelector('.kc-product-details');
+    if (!details) return;
+
+    var existing = document.getElementById('kcAuthorAnalytics');
+    if (existing) existing.remove();
+
+    var panel = document.createElement('div');
+    panel.id = 'kcAuthorAnalytics';
+    panel.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:10px;background:var(--kc-surface-dark, #1a1a22);margin-bottom:12px;font-size:.85em;align-items:center;';
+    panel.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--kc-text-dark-secondary, #888);"></i> <span style="color:var(--kc-text-dark-secondary, #888);">Carregando analytics...</span>';
+
+    var actions = document.querySelector('.kc-product-actions');
+    if (actions) actions.insertAdjacentElement('afterend', panel);
+    else details.insertAdjacentElement('afterbegin', panel);
+
+    var pid = getPostIdForMutation(post);
+    if (!pid || !window.KCAPI || typeof window.KCAPI.getPostAnalytics !== 'function') {
+      panel.style.display = 'none';
+      return;
+    }
+
+    window.KCAPI.getPostAnalytics(pid).then(function (res) {
+      if (!res || !res.ok) { panel.style.display = 'none'; return; }
+      panel.innerHTML =
+        _statBadge('fas fa-eye', res.views, 'Views') +
+        _statBadge('fas fa-arrow-up', res.votos, 'Votos') +
+        _statBadge('fas fa-comment', res.comments, 'Coment.') +
+        _statBadge('fas fa-share-nodes', res.shares, 'Compartilh.') +
+        _statBadge('fas fa-bookmark', res.saves, 'Salvos') +
+        _statBadge('fas fa-hand-pointer', res.coupon_clicks, 'Cliques CTA');
+    }).catch(function () { panel.style.display = 'none'; });
+  }
+
+  function _statBadge(icon, value, label) {
+    var v = Number(value) || 0;
+    return '<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;background:var(--kc-background-dark, #0f0f13);white-space:nowrap;">' +
+      '<i class="' + esc(icon) + '" style="color:var(--kc-primary-brand, #ff6b00);font-size:.9em;"></i> ' +
+      '<strong>' + v + '</strong> <span style="color:var(--kc-text-dark-secondary, #888);">' + esc(label) + '</span>' +
+      '</div>';
   }
 
   async function loadPost() {
@@ -2591,6 +2636,14 @@
     if (postUuid) document.body.setAttribute('data-post-uuid', postUuid);
 
     renderPost(post);
+
+    // v9.3.1: track view (fire-and-forget, anti-spam server-side)
+    try {
+      var viewPostId = (post && post.uuid) ? post.uuid : (post && post.id);
+      if (viewPostId && window.KCAPI && typeof window.KCAPI.trackView === 'function') {
+        window.KCAPI.trackView(viewPostId).catch(function () {});
+      }
+    } catch (_trackErr) { /* silenciar */ }
 
     // V8.1.6.2: wire botão Denunciar (gated por driver + auth)
     // Comments
