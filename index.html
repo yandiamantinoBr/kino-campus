@@ -26,6 +26,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
 <body>
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -64,7 +65,7 @@
         </a>
       </nav>
       <div class="kc-search-bar" id="kcSearchBar">
-        <input id="searchInput" placeholder="Busque por itens, eventos, vagas na UFG..." type="search" />
+        <input id="searchInput" aria-label="Pesquisar" placeholder="Busque por itens, eventos, vagas na UFG..." type="search" />
         <button aria-label="Buscar" type="button">
           <i class="fas fa-search"></i>
         </button>
@@ -74,7 +75,7 @@
       </button>
       <div class="kc-user-actions">
         <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" title="Alternar tema">
+        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
           <i class="fas fa-sun"></i>
         </button>
         <a class="btn-login" href="#login">Login/Cadastro</a>
@@ -82,7 +83,7 @@
     </div>
   </header>
 
-  <main class="kc-main-content">
+  <main class="kc-main-content" id="kc-main">
     <section class="kc-feed-section">
       <div class="kc-hero-carousel kc-hero-loading" id="kc-hero-carousel">
         <div class="kc-hero-slides" id="kc-hero-slides">
@@ -156,11 +157,11 @@
             </div>
           </div>
         </div>
-        <button class="kc-carousel-btn kc-carousel-prev" data-kc-slide="prev">
-          <i class="fas fa-chevron-left"></i>
+        <button class="kc-carousel-btn kc-carousel-prev" data-kc-slide="prev" aria-label="Slide anterior">
+          <i class="fas fa-chevron-left" aria-hidden="true"></i>
         </button>
-        <button class="kc-carousel-btn kc-carousel-next" data-kc-slide="next">
-          <i class="fas fa-chevron-right"></i>
+        <button class="kc-carousel-btn kc-carousel-next" data-kc-slide="next" aria-label="Próximo slide">
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </button>
         <div class="kc-carousel-dots" id="kc-carousel-dots">
           <span class="kc-dot active" data-kc-slide="0"></span>

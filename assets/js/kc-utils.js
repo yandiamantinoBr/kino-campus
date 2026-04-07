@@ -2240,12 +2240,12 @@
         <div class="kc-card__footer">
           <div class="kc-card__interactions">
             <div class="kc-vote-box" data-kc-vote-box="true">
-              <button class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr}>
-                <i class="fas fa-fire"></i>
+              <button class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr} aria-label="Voto positivo">
+                <i class="fas fa-fire" aria-hidden="true"></i>
               </button>
               <span class="kc-vote-score" data-kc-vote-score="true" aria-live="polite">${escapeHtml(String(Number.isFinite(votos) ? votos : 0))}</span>
-              <button class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr}>
-                <i class="fas fa-snowflake"></i>
+              <button class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr} aria-label="Voto negativo">
+                <i class="fas fa-snowflake" aria-hidden="true"></i>
               </button>
             </div>
             <a class="kc-comment-link" href="product.html?id=${encodeURIComponent(id)}#comments"${commentsAria}>

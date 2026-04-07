@@ -62,7 +62,7 @@
       </nav>
 
       <div class="kc-search-bar" id="kcSearchBar">
-        <input id="searchInput" type="search" placeholder="Busque por itens, eventos, vagas na UFG..." />
+        <input id="searchInput" aria-label="Pesquisar" type="search" placeholder="Busque por itens, eventos, vagas na UFG..." />
         <button type="submit" aria-label="Buscar"><i class="fas fa-search"></i></button>
       </div>
       <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar">
@@ -71,7 +71,7 @@
 
       <div class="kc-user-actions">
         <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" title="Alternar tema">
+        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
           <i class="fas fa-sun"></i>
         </button>
         <a href="#login" class="btn-login">Login/Cadastro</a>
@@ -166,12 +166,12 @@
                 aria-haspopup="true" aria-expanded="false">
                 <i class="fas fa-share-alt"></i> Compartilhar
               </button>
-              <div class="kc-share-popover" id="sharePopover" role="menu">
-                <button class="kc-share-option whatsapp" id="shareWhatsApp" type="button">
-                  <i class="fab fa-whatsapp"></i> WhatsApp
+              <div class="kc-share-popover" id="sharePopover" role="menu" aria-hidden="true">
+                <button class="kc-share-option whatsapp" id="shareWhatsApp" type="button" aria-label="Compartilhar no WhatsApp">
+                  <i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp
                 </button>
-                <button class="kc-share-option copy" id="shareCopyLink" type="button">
-                  <i class="fas fa-link"></i> Copiar link
+                <button class="kc-share-option copy" id="shareCopyLink" type="button" aria-label="Copiar link da publicação">
+                  <i class="fas fa-link" aria-hidden="true"></i> Copiar link
                 </button>
               </div>
             </div>
@@ -226,7 +226,7 @@
           <!-- Coluna 2: nome do autor -->
           <div class="kc-comment-composer-main">
             <div class="kc-comment-author-wrap">
-              <input id="commentAuthor" class="kc-comment-author-inline" type="text" name="author" placeholder="" autocomplete="off" />
+              <input id="commentAuthor" class="kc-comment-author-inline" type="text" name="author" placeholder="" autocomplete="off" aria-label="Seu nome no comentário" />
               <small id="commentAuthorHint" class="kc-comment-author-hint"></small>
             </div>
           </div>
@@ -235,14 +235,14 @@
             <div class="kc-comment-editor">
               <textarea id="commentText" placeholder="Deixe o seu comentário" aria-label="Escreva seu comentário"></textarea>
               <div class="kc-editor-toolbar">
-                <button type="button" data-kc-format="bold" title="Negrito"><i class="fas fa-bold"></i></button>
-                <button type="button" data-kc-format="italic" title="Itálico"><i class="fas fa-italic"></i></button>
-                <button type="button" data-kc-format="underline" title="Sublinhado"><i class="fas fa-underline"></i></button>
-                <button type="button" data-kc-format="strikethrough" title="Tachado"><i class="fas fa-strikethrough"></i></button>
-                <button type="button" data-kc-format="inlinecode" title="Código inline"><i class="fas fa-code"></i></button>
-                <button type="button" data-kc-format="quote" title="Citação"><i class="fas fa-quote-right"></i></button>
-                <button type="button" data-kc-format="bullet" title="Lista"><i class="fas fa-list-ul"></i></button>
-                <button type="button" data-kc-format="link" title="Link"><i class="fas fa-link"></i></button>
+                <button type="button" data-kc-format="bold" title="Negrito" aria-label="Negrito"><i class="fas fa-bold" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="italic" title="Itálico" aria-label="Itálico"><i class="fas fa-italic" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="underline" title="Sublinhado" aria-label="Sublinhado"><i class="fas fa-underline" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="strikethrough" title="Tachado" aria-label="Tachado"><i class="fas fa-strikethrough" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="inlinecode" title="Código inline" aria-label="Código inline"><i class="fas fa-code" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="quote" title="Citação" aria-label="Citação"><i class="fas fa-quote-right" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="bullet" title="Lista" aria-label="Lista com marcadores"><i class="fas fa-list-ul" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="link" title="Link" aria-label="Inserir link"><i class="fas fa-link" aria-hidden="true"></i></button>
                 <div style="flex: 1;"></div>
                 <button id="submitCommentButton" type="button" data-kc-submit-comment="1" data-action="submit-comment"
                   style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">

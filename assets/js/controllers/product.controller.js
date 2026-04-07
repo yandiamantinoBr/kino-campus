@@ -26,6 +26,7 @@
     closeSavePopover();
     closeCalendarPopover();
     popover.classList.add('active');
+    popover.setAttribute('aria-hidden', 'false');
     if (backdrop) backdrop.classList.add('active');
     if (btn) btn.setAttribute('aria-expanded', 'true');
   }
@@ -33,7 +34,7 @@
     const popover  = document.getElementById('sharePopover');
     const backdrop = document.getElementById('shareBackdrop');
     const btn      = document.getElementById('shareButton');
-    if (popover)  popover.classList.remove('active');
+    if (popover)  { popover.classList.remove('active'); popover.setAttribute('aria-hidden', 'true'); }
     if (backdrop) backdrop.classList.remove('active');
     if (btn)      btn.setAttribute('aria-expanded', 'false');
   }
