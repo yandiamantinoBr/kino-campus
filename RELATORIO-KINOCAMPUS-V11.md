@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V10.0-foundations` |
-| Estado desta fase | execução iniciada; iteração `v11.1.0` concluída com baseline documental e sem mudanças funcionais |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0` e `v11.2.1` concluídas, com baseline documental, consistência do shell público e desbloqueio operacional do Vercel MCP no Codex |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -523,11 +523,34 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/kc-core.js`, `node --check assets/js/kc-public-shell.js`, `git diff --check` e smoke local com Playwright em `create-post.html`, `moradia.html` e `ajuda.html` nos cenários desktop/mobile.
 - validação em navegador:
-  local concluída; faltará complementar a checagem do deploy publicado após merge da PR desta iteração.
+  local concluída na própria iteração; a checagem do deploy publicado foi concluída em `08 de abril de 2026` na iteração operacional `v11.2.1`, após a reativação do Vercel MCP no Codex.
 - PR / commit / deploy:
-  PR `#229`, commit `71f893b` na branch `codex/v11-2-0-public-shell-consistency`. A validação pós-merge em deploy publicado será registrada no fechamento.
+  PR `#229`, commit `71f893b` na branch `codex/v11-2-0-public-shell-consistency`. O merge resultou no commit base `8cf0d61`, validado depois no deployment de produção `dpl_By9t4cmxbp9HrxFkhLm4W84Wsw1t`.
 - riscos residuais:
   ainda existe dependência de cache de assets compartilhados em alguns navegadores, então a validação pós-merge deve conferir explicitamente a versão publicada do shell público.
+
+---
+
+### Iteração `v11.2.1`
+
+- objetivo:
+  reativar a autenticação OAuth do Vercel MCP no Codex e homologar o acesso real às superfícies operacionais necessárias para as próximas iterações da v11.
+- arquivos alterados:
+  `README.md`, `RELATORIO-KINOCAMPUS-V11.md`.
+- equivalentes revisados:
+  configuração MCP global do Codex, vínculo local do projeto em `.vercel/project.json`, escopo do time `team_yST6VYLYCQ2yHakmU0DsLsz3` e o projeto `kino-campus` no Vercel.
+- contratos preservados:
+  nenhum contrato funcional de frontend, banco, RPC, `KCAPI`, rotas públicas, Supabase ou CSS foi alterado; a iteração foi exclusivamente operacional e documental.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `codex mcp list`, `codex mcp get vercel`, `codex mcp login vercel`, `vercel whoami`, `vercel teams ls` e chamadas do Vercel MCP para `list_teams`, `get_project`, `list_deployments`, `get_deployment`, `get_deployment_build_logs`, `get_runtime_logs`, `web_fetch_vercel_url`, `list_toolbar_threads` e `search_vercel_documentation`.
+- validação em navegador:
+  a validação remota do deploy foi concluída via `web_fetch_vercel_url` em preview e produção, confirmando o HTML publicado de `create-post.html` e `moradia.html` já com os ajustes da `v11.2.0`. O Playwright MCP local falhou nesta máquina com `EPERM` ao tentar criar `C:\Windows\System32\.playwright-mcp`, então a checagem visual interativa permaneceu substituída pela validação remota do Vercel nesta iteração.
+- PR / commit / deploy:
+  a iteração não gerou deploy novo; ela confirmou operacionalmente, em `08 de abril de 2026`, o deployment de produção `dpl_By9t4cmxbp9HrxFkhLm4W84Wsw1t` do commit `8cf0d61` e o preview `dpl_47yerenHoDdQyeoJAGUEXyihqMhR`.
+- riscos residuais:
+  o Vercel MCP passou a responder normalmente, mas o Playwright MCP local ainda precisa de correção de diretório/permissão neste ambiente para retomar a checagem visual interativa sem fallback.
 
 ---
 

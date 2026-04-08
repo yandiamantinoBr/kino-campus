@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V10.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0` e `v11.2.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0` e `v11.2.1`.
 
 ---
 
@@ -55,9 +55,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.2.0`
-- objetivo da iteração: alinhar shell público, navegação móvel, estados ativos e busca mobile da `create-post.html`
-- natureza da iteração: frontend compartilhado e HTMLs equivalentes, sem mudança de banco
+- iteração ativa consolidada: `v11.2.1`
+- objetivo da iteração: reativar o OAuth do Vercel MCP no Codex e homologar leitura de time, projeto, deployments, build logs, runtime logs e fetch de URLs protegidas da plataforma
+- natureza da iteração: operação e observabilidade de deploy, sem mudança de banco ou código funcional da aplicação
+- status operacional do Vercel MCP em `08 de abril de 2026`: autenticado com sucesso via `codex mcp login vercel`, com acesso confirmado ao projeto `kino-campus` e ao deployment de produção do commit `8cf0d61`
 
 ---
 
