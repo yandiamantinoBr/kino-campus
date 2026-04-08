@@ -6,12 +6,16 @@
   'use strict';
 
   const PAGE_SIZE = 25;
+  const SEARCH_DEBOUNCE_MS = 350;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let _isBusy = false;
+  let _searchDebounceTimer = null;
   const state = {
     statusFilter: 'all',
     search: '',
     offset: 0,
     hasMore: false,
+    totalCount: 0,
     posts: [],
     sessionActions: [],
     audit: {
@@ -33,6 +37,57 @@
   function getClient() {
     if (window.KCSupabase && typeof window.KCSupabase.getClient === 'function') return window.KCSupabase.getClient();
     return null;
+  }
+
+  function isFunctionMissing(error) {
+    if (!error) return false;
+    const code = String(error.code || '');
+    const message = String(error.message || error.details || error.hint || '').toLowerCase();
+    return code === '42883' || (message.includes('function') && message.includes('does not exist'));
+  }
+
+  function sanitizeSearchTerm(term) {
+    return String(term || '')
+      .replace(/[,%()]/g, ' ')
+      .trim();
+  }
+
+  function debounceSearchRefresh(fn) {
+    return function () {
+      if (_searchDebounceTimer) clearTimeout(_searchDebounceTimer);
+      _searchDebounceTimer = setTimeout(() => {
+        _searchDebounceTimer = null;
+        fn();
+      }, SEARCH_DEBOUNCE_MS);
+    };
+  }
+
+  function ensurePostsSummary() {
+    let el = document.getElementById('moderation-results-summary');
+    if (el) return el;
+    const headerBar = document.querySelector('#admin-content .kc-admin-header-bar');
+    if (!headerBar || !headerBar.parentNode) return null;
+    el = document.createElement('div');
+    el.id = 'moderation-results-summary';
+    el.style.margin = '10px 0 14px';
+    el.style.color = 'var(--kc-text-dark-secondary)';
+    el.style.fontSize = '.88em';
+    headerBar.parentNode.insertBefore(el, headerBar.nextSibling);
+    return el;
+  }
+
+  function renderPostsSummary() {
+    const el = ensurePostsSummary();
+    if (!el) return;
+    const loaded = Array.isArray(state.posts) ? state.posts.length : 0;
+    const total = Number.isFinite(Number(state.totalCount)) ? Number(state.totalCount) : loaded;
+    if (!loaded && !total) {
+      el.textContent = state.search
+        ? 'Nenhum post encontrado para a busca atual.'
+        : 'Nenhum post encontrado para os filtros selecionados.';
+      return;
+    }
+    el.textContent = `Exibindo ${loaded} de ${total} posts${state.search ? ' encontrados' : ''}.`;
   }
 
   function showError(msg, allowBack) {
@@ -176,6 +231,41 @@
     return true;
   }
 
+  async function searchAuthorIds(client, searchTerm) {
+    const term = sanitizeSearchTerm(searchTerm);
+    if (!client || !term) return [];
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select('id')
+        .or(`display_name.ilike.%${term}%,full_name.ilike.%${term}%`)
+        .limit(50);
+      if (error || !Array.isArray(data)) return [];
+      return data.map((row) => row.id).filter(Boolean);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function mapRpcPost(row) {
+    return {
+      id: row.id,
+      legacy_id: row.legacy_id || '',
+      title: row.title || '',
+      content: row.content || '',
+      module: row.module || '',
+      category: row.category || '',
+      status: row.status || 'pending',
+      created_at: row.created_at || null,
+      updated_at: row.updated_at || row.created_at || null,
+      author_id: row.author_id || null,
+      author: {
+        display_name: row.author_name || '',
+        full_name: row.author_name || '',
+      },
+    };
+  }
+
   async function fetchPosts(reset) {
     const client = getClient();
     if (!client) return;
@@ -183,41 +273,74 @@
     if (reset) {
       state.offset = 0;
       state.posts = [];
+      state.totalCount = 0;
     }
 
-    let query = client
-      .from('posts')
-      .select('id, legacy_id, title, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)')
-      .order('created_at', { ascending: false })
-      .range(state.offset, state.offset + PAGE_SIZE - 1);
+    const normalizedSearch = sanitizeSearchTerm(state.search);
+    const statusFilter = state.statusFilter !== 'all' ? state.statusFilter : null;
+    let list = [];
+    let totalCount = 0;
+    let resolved = false;
 
-    if (state.statusFilter !== 'all') query = query.eq('status', state.statusFilter);
-
-    const { data, error } = await query;
-    if (error) {
-      console.error('[Admin moderation] fetchPosts:', error);
-      showError('Erro ao listar posts. Verifique policies/admin no Supabase.', false);
-      return;
-    }
-
-    const list = data || [];
-    state.hasMore = list.length === PAGE_SIZE;
-
-    if (state.search) {
-      const s = state.search.toLowerCase();
-      const filtered = list.filter((p) => {
-        const authorName = String((p.author && (p.author.display_name || p.author.full_name)) || '').toLowerCase();
-        return String(p.title || '').toLowerCase().includes(s)
-          || String(p.legacy_id || '').toLowerCase().includes(s)
-          || String(p.id || '').toLowerCase().includes(s)
-          || authorName.includes(s);
+    try {
+      const rpc = await client.rpc('kc_admin_search_posts_full', {
+        p_query: normalizedSearch || null,
+        p_status: statusFilter,
+        p_limit: PAGE_SIZE,
+        p_offset: state.offset,
       });
-      state.posts = reset ? filtered : state.posts.concat(filtered);
-    } else {
-      state.posts = reset ? list : state.posts.concat(list);
+
+      if (rpc && !rpc.error && Array.isArray(rpc.data)) {
+        list = rpc.data.map(mapRpcPost);
+        totalCount = rpc.data.length ? Number(rpc.data[0].total_count || 0) : 0;
+        resolved = true;
+      } else if (rpc && rpc.error && !isFunctionMissing(rpc.error)) {
+        console.error('[Admin moderation] fetchPosts rpc:', rpc.error);
+      }
+    } catch (rpcError) {
+      console.error('[Admin moderation] fetchPosts rpc exception:', rpcError);
     }
 
-    state.offset += PAGE_SIZE;
+    if (!resolved) {
+      let query = client
+        .from('posts')
+        .select('id, legacy_id, title, content, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(state.offset, state.offset + PAGE_SIZE - 1);
+
+      if (statusFilter) query = query.eq('status', statusFilter);
+
+      if (normalizedSearch) {
+        const authorIds = await searchAuthorIds(client, normalizedSearch);
+        const clauses = [
+          `title.ilike.%${normalizedSearch}%`,
+          `content.ilike.%${normalizedSearch}%`,
+          `legacy_id.ilike.%${normalizedSearch}%`,
+        ];
+        if (UUID_RE.test(normalizedSearch)) {
+          clauses.push(`id.eq.${normalizedSearch}`);
+        }
+        if (authorIds.length) {
+          clauses.push(`author_id.in.(${authorIds.join(',')})`);
+        }
+        query = query.or(clauses.join(','));
+      }
+
+      const { data, error, count } = await query;
+      if (error) {
+        console.error('[Admin moderation] fetchPosts:', error);
+        showError('Erro ao listar posts. Verifique policies/admin no Supabase.', false);
+        return;
+      }
+
+      list = data || [];
+      totalCount = Number.isFinite(Number(count)) ? Number(count) : list.length;
+    }
+
+    state.totalCount = totalCount;
+    state.hasMore = (state.offset + list.length) < totalCount;
+    state.posts = reset ? list : state.posts.concat(list);
+    state.offset += list.length;
     renderPosts();
   }
 
@@ -482,8 +605,12 @@
       }).join('');
     }
 
+    renderPostsSummary();
     const loadMore = $('#moderation-load-more');
-    if (loadMore) loadMore.style.display = state.hasMore ? 'inline-block' : 'none';
+    if (loadMore) {
+      loadMore.style.display = state.hasMore ? 'inline-block' : 'none';
+      loadMore.disabled = !state.hasMore;
+    }
   }
 
   function renderSessionActions() {
@@ -498,90 +625,99 @@
   }
 
   async function updatePostStatus(postId, status) {
-    if (status === 'deleted' && !window.confirm('Tem certeza que deseja deletar este post?')) {
+    const post = state.posts.find((item) => item.id === postId);
+    const postRef = (post && post.title) ? post.title : postId;
+    if (status === 'deleted' && !window.confirm(`Deletar post "${postRef}"? Ação não pode ser desfeita.`)) {
       return { ok: false, cancelled: true };
     }
-
-    const client = getClient();
-    if (!client) {
-      // FIX v8.2.9.3: falha silenciosa — exibir toast em vez de retornar silenciosamente.
-      // Causa raiz: variável de ambiente ausente no Vercel (SUPABASE_URL / KC_SUPABASE_URL).
-      showToastSafe(
-        'Supabase client não inicializado. Verifique se SUPABASE_URL e SUPABASE_ANON_KEY estão configurados no Vercel.',
-        'error',
-        5000
-      );
-      return { ok: false, error: { message: 'Supabase client não disponível.' } };
+    if (_isBusy) {
+      showToastSafe('Aguarde a conclusão da ação anterior.', 'info', 2200);
+      return { ok: false, busy: true };
     }
+    _isBusy = true;
 
-    let error = null;
-    let data = null;
     try {
-      const rpc = await client.rpc('kc_admin_set_post_status', {
-        p_post_id: postId,
-        p_status: status,
-        p_close_reports: false,
-      });
-
-      if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
-        if (rpc.data.ok && Number(rpc.data.updated_posts || 0) > 0) {
-          data = [{ id: postId }];
-        } else {
-          const fallbackMsg = (rpc.data && rpc.data.code === 'UPDATE_NOT_APPLIED')
-            ? 'A ação foi aceita, mas o banco não aplicou a alteração (RLS/role). Rode a migration v8.2.9.3 no projeto Supabase em produção.'
-            : 'Não foi possível moderar o post.';
-          error = { message: rpc.data.message || fallbackMsg };
-        }
-      } else {
-        const res = await client
-          .from('posts')
-          .update({ status })
-          .eq('id', postId)
-          .select('id');
-        error = res ? res.error : null;
-        data = res ? res.data : null;
+      const client = getClient();
+      if (!client) {
+        showToastSafe(
+          'Supabase client não inicializado. Verifique se SUPABASE_URL e SUPABASE_ANON_KEY estão configurados no Vercel.',
+          'error',
+          5000
+        );
+        return { ok: false, error: { message: 'Supabase client não disponível.' } };
       }
-    } catch (e) {
-      error = e;
-    }
 
-    if (error) {
-      console.error('[Admin moderation] updatePostStatus:', {
-        postId,
-        status,
-        error,
-      });
-      showError(`Falha ao atualizar post ${postId}.`, false);
-      showToastSafe(getErrorMessage(error, 'Não foi possível atualizar o status do post.'), 'error', 3200);
-      return { ok: false, error };
-    }
+      let error = null;
+      let data = null;
 
-    if (!Array.isArray(data) || data.length === 0) {
-      const noRowsError = { message: 'Nenhum post foi atualizado. Verifique permissões RLS/admin ou se o post existe.' };
-      console.error('[Admin moderation] updatePostStatus sem linhas afetadas:', {
-        postId,
-        status,
-      });
-      showError(`Falha ao atualizar post ${postId}.`, false);
-      showToastSafe(noRowsError.message, 'error', 3200);
-      return { ok: false, error: noRowsError };
-    }
+      try {
+        const rpc = await client.rpc('kc_admin_set_post_status', {
+          p_post_id: postId,
+          p_status: status,
+          p_close_reports: false,
+        });
 
-    const post = state.posts.find((i) => i.id === postId);
-    if (post) {
-      post.status = status;
-      post.updated_at = new Date().toISOString();
-    }
+        if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
+          if (rpc.data.ok && Number(rpc.data.updated_posts || 0) > 0) {
+            data = [{ id: postId }];
+          } else {
+            const fallbackMsg = (rpc.data && rpc.data.code === 'UPDATE_NOT_APPLIED')
+              ? 'A ação foi aceita, mas o banco não aplicou a alteração (RLS/role). Rode a migration v8.2.9.3 no projeto Supabase em produção.'
+              : 'Não foi possível moderar o post.';
+            error = { message: rpc.data.message || fallbackMsg };
+          }
+        } else {
+          const res = await client
+            .from('posts')
+            .update({ status })
+            .eq('id', postId)
+            .select('id');
+          error = res ? res.error : null;
+          data = res ? res.data : null;
+        }
+      } catch (e) {
+        error = e;
+      }
 
-    state.sessionActions.unshift({ postId, action: status, timestamp: new Date().toISOString() });
-    renderPosts();
-    renderSessionActions();
-    showFeedback(status === 'hidden' ? 'Post ocultado.' : status === 'published' ? 'Post restaurado/publicado.' : 'Post marcado como deletado.');
-    showToastSafe('Ação concluída com sucesso.', 'success', 1800);
-    await fetchAuditLogs();
-    return { ok: true };
+      if (error) {
+        console.error('[Admin moderation] updatePostStatus:', {
+          postId,
+          status,
+          error,
+        });
+        showError(`Falha ao atualizar post ${postId}.`, false);
+        showToastSafe(getErrorMessage(error, 'Não foi possível atualizar o status do post.'), 'error', 3200);
+        return { ok: false, error };
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        const noRowsError = { message: 'Nenhum post foi atualizado. Verifique permissões RLS/admin ou se o post existe.' };
+        console.error('[Admin moderation] updatePostStatus sem linhas afetadas:', {
+          postId,
+          status,
+        });
+        showError(`Falha ao atualizar post ${postId}.`, false);
+        showToastSafe(noRowsError.message, 'error', 3200);
+        return { ok: false, error: noRowsError };
+      }
+
+      if (post) {
+        post.status = status;
+        post.updated_at = new Date().toISOString();
+      }
+
+      state.sessionActions.unshift({ postId, action: status, timestamp: new Date().toISOString() });
+      if (state.sessionActions.length > 30) state.sessionActions.pop();
+      renderPosts();
+      renderSessionActions();
+      showFeedback(status === 'hidden' ? 'Post ocultado.' : status === 'published' ? 'Post restaurado/publicado.' : 'Post marcado como deletado.');
+      showToastSafe('Ação concluída com sucesso.', 'success', 1800);
+      await fetchAuditLogs();
+      return { ok: true };
+    } finally {
+      _isBusy = false;
+    }
   }
-
   function initStatusFilter() {
     const select = $('#moderation-status-filter');
     if (!select) return;
@@ -612,21 +748,37 @@
     const filter = $('#moderation-status-filter');
     if (filter) {
       filter.addEventListener('change', async () => {
+        if (_searchDebounceTimer) {
+          clearTimeout(_searchDebounceTimer);
+          _searchDebounceTimer = null;
+        }
         state.statusFilter = filter.value || 'all';
+        const search = $('#moderation-search');
+        state.search = search ? search.value.trim() : '';
         await fetchPosts(true);
       });
     }
 
     const search = $('#moderation-search');
     if (search) {
-      search.addEventListener('input', async () => {
+      const runSearch = debounceSearchRefresh(async () => {
         state.search = search.value.trim();
         await fetchPosts(true);
       });
+      search.addEventListener('input', runSearch);
+      search.addEventListener('search', runSearch);
     }
 
     const refresh = $('#moderation-refresh');
-    if (refresh) refresh.addEventListener('click', () => fetchPosts(true));
+    if (refresh) refresh.addEventListener('click', async () => {
+      if (_searchDebounceTimer) {
+        clearTimeout(_searchDebounceTimer);
+        _searchDebounceTimer = null;
+      }
+      const search = $('#moderation-search');
+      state.search = search ? search.value.trim() : '';
+      await fetchPosts(true);
+    });
 
     const loadMore = $('#moderation-load-more');
     if (loadMore) loadMore.addEventListener('click', () => fetchPosts(false));
