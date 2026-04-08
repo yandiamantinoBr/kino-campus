@@ -7,6 +7,15 @@
   let _chartModalReturnFocus = null;
   var AUDIT_PAGE_SIZE = 20;
   var _exportBound = false;
+  var _periodRefreshTimer = null;
+  var _activeRefreshController = null;
+  var _refreshRequestSeq = 0;
+  var _rankingRequestSeq = 0;
+  var _statusToastTimer = null;
+  var _xlsxLoadPromise = null;
+  var _jspdfLoadPromise = null;
+  var PERIOD_CHANGE_DEBOUNCE_MS = 300;
+  var SCRIPT_LOAD_TIMEOUT_MS = 8000;
 
   /* ── Cache de atores (actor_id → display info) ── */
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -92,6 +101,111 @@
     if (!el) return;
     el.textContent = '';
     el.style.display = 'none';
+  }
+
+  function ensureStatusToast() {
+    var el = document.getElementById('admin-dashboard-toast');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'admin-dashboard-toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.style.position = 'fixed';
+    el.style.right = '16px';
+    el.style.bottom = '16px';
+    el.style.zIndex = '10020';
+    el.style.maxWidth = '320px';
+    el.style.padding = '12px 14px';
+    el.style.borderRadius = '12px';
+    el.style.background = 'rgba(17,24,39,.94)';
+    el.style.color = '#fff';
+    el.style.boxShadow = '0 18px 50px rgba(15,23,42,.28)';
+    el.style.fontSize = '.9rem';
+    el.style.lineHeight = '1.4';
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function hideStatusToast() {
+    if (_statusToastTimer) {
+      clearTimeout(_statusToastTimer);
+      _statusToastTimer = null;
+    }
+    var el = document.getElementById('admin-dashboard-toast');
+    if (!el) return;
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+
+  function showStatusToast(message, tone, opts) {
+    opts = opts || {};
+    var el = ensureStatusToast();
+    if (!el) return;
+    if (_statusToastTimer) {
+      clearTimeout(_statusToastTimer);
+      _statusToastTimer = null;
+    }
+    el.textContent = String(message || '');
+    el.style.display = 'block';
+    el.style.background = tone === 'error'
+      ? 'rgba(127,29,29,.96)'
+      : tone === 'success'
+        ? 'rgba(20,83,45,.96)'
+        : 'rgba(17,24,39,.94)';
+    if (!opts.sticky) {
+      _statusToastTimer = setTimeout(hideStatusToast, opts.duration || 3200);
+    }
+  }
+
+  function createAbortError() {
+    var error = new Error('Dashboard refresh aborted.');
+    error.name = 'AbortError';
+    return error;
+  }
+
+  function throwIfAborted(signal) {
+    if (signal && signal.aborted) throw createAbortError();
+  }
+
+  function setAuditLoadMoreState(options) {
+    options = options || {};
+    var btn = $('#admin-audit-load-more');
+    if (!btn) return;
+    if (!btn.dataset.defaultLabel) {
+      btn.dataset.defaultLabel = btn.textContent || 'Carregar mais';
+    }
+    if (typeof options.visible === 'boolean') {
+      btn.style.display = options.visible ? '' : 'none';
+    }
+    if (typeof options.disabled === 'boolean') {
+      btn.disabled = options.disabled;
+    }
+    if (options.label) {
+      btn.textContent = options.label;
+    } else if (!options.preserveLabel) {
+      btn.textContent = btn.dataset.defaultLabel;
+    }
+  }
+
+  function syncDailyActivityChartModal(series) {
+    var modalChart = $('#admin-chart-modal-content');
+    var modalLegend = $('#admin-chart-modal-legend');
+    var modalMeta = $('#admin-chart-modal-meta');
+    if (modalChart) {
+      renderChartInto(modalChart, series, { width: 1024, height: 420, padding: 28, fontSize: 12 });
+    }
+    if (modalLegend) {
+      modalLegend.innerHTML = Array.isArray(series) && series.length ? buildDailyActivityLegendMarkup(series) : '';
+    }
+    if (modalMeta) {
+      if (Array.isArray(series) && series.length) {
+        modalMeta.textContent = 'Período analisado: ' + getPeriodLabel((_data && _data.periodDays) || getSelectedPeriodDays()) +
+          ' • ' + series.length + ' dias consolidados.';
+      } else {
+        modalMeta.textContent = 'Visualização detalhada da atividade consolidada por período.';
+      }
+    }
   }
 
   function setLoading(isLoading) {
@@ -866,7 +980,7 @@
     return [];
   }
 
-  async function loadDailyMetrics(client, since) {
+  async function loadDailyMetrics(client, since, signal) {
     var until = new Date().toISOString();
     try {
       var rpc = await client.rpc('kc_admin_dashboard_daily_metrics', {
@@ -892,6 +1006,7 @@
       queryCreatedAtRows(client, 'post_votes', since, 1500),
       loadAuditEventRows(client, since)
     ]);
+    throwIfAborted(signal);
 
     if (DashboardUtils.buildDailyMetricsFromEventSets) {
       return DashboardUtils.buildDailyMetricsFromEventSets({
@@ -1024,6 +1139,7 @@
     var closeBtn = $('#admin-chart-modal-close');
     if (!modal || !closeBtn) return;
     _chartModalReturnFocus = document.activeElement;
+    syncDailyActivityChartModal(_data.dailyMetrics);
     modal.setAttribute('aria-hidden', 'false');
     if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
       window.KCAdminShell.setModalOpen(true);
@@ -1066,17 +1182,13 @@
   function renderDailyActivityChart(series) {
     var chart = $('#admin-daily-activity-chart');
     var legend = $('#admin-daily-activity-legend');
-    var modalChart = $('#admin-chart-modal-content');
-    var modalLegend = $('#admin-chart-modal-legend');
-    var modalMeta = $('#admin-chart-modal-meta');
     var expandBtn = $('#admin-chart-expand-btn');
     if (!chart || !legend) return;
 
     if (!Array.isArray(series) || !series.length) {
       chart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
       legend.innerHTML = '';
-      if (modalChart) modalChart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
-      if (modalLegend) modalLegend.innerHTML = '';
+      syncDailyActivityChartModal([]);
       if (expandBtn) expandBtn.disabled = true;
       closeDailyActivityChartModal();
       return;
@@ -1084,13 +1196,7 @@
 
     renderChartInto(chart, series, { width: 640, height: 260, padding: 24, fontSize: 10 });
     legend.innerHTML = buildDailyActivityLegendMarkup(series);
-
-    if (modalChart) renderChartInto(modalChart, series, { width: 1024, height: 420, padding: 28, fontSize: 12 });
-    if (modalLegend) modalLegend.innerHTML = buildDailyActivityLegendMarkup(series);
-    if (modalMeta) {
-      modalMeta.textContent = 'Período analisado: ' + getPeriodLabel((_data && _data.periodDays) || getSelectedPeriodDays()) +
-        ' • ' + series.length + ' dias consolidados.';
-    }
+    syncDailyActivityChartModal(series);
     if (expandBtn) expandBtn.disabled = false;
   }
 
@@ -1147,8 +1253,7 @@
     const auditBody = $('#admin-audit-body');
     if (!auditBody) return;
     if (append && (!rows || !rows.length)) {
-      var emptyMoreBtn = $('#admin-audit-load-more');
-      if (emptyMoreBtn) emptyMoreBtn.style.display = 'none';
+      setAuditLoadMoreState({ visible: true, disabled: true, label: 'Fim do histórico', preserveLabel: true });
       return;
     }
     var html = rows.length
@@ -1164,7 +1269,7 @@
             + '<td data-label="Autor" title="' + escHtmlAdmin(row.actor_id || '') + '">' + escHtmlAdmin(getActorDisplay(row.actor_id)) + '</td>'
             + '</tr>';
         }).join('')
-      : '<tr><td colspan="4" style="color:var(--kc-text-dark-secondary);padding:20px 8px;">Nenhum evento encontrado.</td></tr>';
+      : '<tr><td colspan="4" style="padding:20px 8px;"><p class="kc-empty" style="margin:0;color:var(--kc-text-dark-secondary);">Nenhum resultado.</p></td></tr>';
 
     if (append) {
       auditBody.insertAdjacentHTML('beforeend', html);
@@ -1172,11 +1277,11 @@
       auditBody.innerHTML = html;
     }
 
-    // Hide "load more" if fewer results than page size
-    var loadMoreBtn = $('#admin-audit-load-more');
-    if (loadMoreBtn) {
-      loadMoreBtn.style.display = rows.length < AUDIT_PAGE_SIZE ? 'none' : '';
-    }
+    setAuditLoadMoreState({
+      visible: true,
+      disabled: rows.length < AUDIT_PAGE_SIZE,
+      label: rows.length < AUDIT_PAGE_SIZE ? 'Fim do histórico' : null
+    });
   }
 
   // ── Carregamento sob demanda de bibliotecas (local + CDN fallback) ────────
@@ -1188,30 +1293,87 @@
   var JSPDF_URLS = [
     '../assets/vendor/jspdf.umd.min.js',
     'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
+    'https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js',
   ];
 
-  function loadScript(url) {
+  function loadScript(url, timeoutMs) {
     return new Promise(function (resolve, reject) {
       var s = document.createElement('script');
+      var timer = null;
+      var finished = false;
+      function cleanup() {
+        if (timer) clearTimeout(timer);
+        s.onload = null;
+        s.onerror = null;
+      }
+      function fail(error) {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        try {
+          if (s.parentNode) s.parentNode.removeChild(s);
+        } catch (_) {}
+        reject(error);
+      }
+      function succeed() {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        resolve();
+      }
       s.src = url;
       if (url.startsWith('http')) s.crossOrigin = 'anonymous';
-      s.onload  = resolve;
-      s.onerror = function () { reject(new Error('Falha ao carregar: ' + url)); };
+      s.onload = succeed;
+      s.onerror = function () { fail(new Error('Falha ao carregar: ' + url)); };
+      timer = setTimeout(function () {
+        fail(new Error('Timeout ao carregar: ' + url));
+      }, timeoutMs || SCRIPT_LOAD_TIMEOUT_MS);
       document.head.appendChild(s);
     });
   }
 
-  async function loadScriptWithFallback(urls) {
+  async function loadScriptWithFallback(urls, label) {
     var lastError;
-    for (var i = 0; i < urls.length; i++) {
-      try { await loadScript(urls[i]); return; }
-      catch (e) { lastError = e; console.warn('[CDN fallback] ' + e.message); }
+    showStatusToast('Carregando biblioteca de exportação...', 'info', { sticky: true });
+    try {
+      for (var i = 0; i < urls.length; i++) {
+        try {
+          await loadScript(urls[i], SCRIPT_LOAD_TIMEOUT_MS);
+          hideStatusToast();
+          return;
+        } catch (e) {
+          lastError = e;
+          console.warn('[CDN fallback] ' + e.message);
+        }
+      }
+    } finally {
+      if (!window.XLSX && !window.jspdf) {
+        hideStatusToast();
+      }
     }
+    showStatusToast('Falha ao carregar ' + (label || 'a biblioteca de exportação') + ' após ' + urls.length + ' tentativas.', 'error', { duration: 4800 });
     throw lastError || new Error('Todas as fontes falharam.');
   }
 
-  async function ensureXLSX() { if (!window.XLSX) await loadScriptWithFallback(XLSX_URLS); }
-  async function ensureJsPDF() { if (!window.jspdf) await loadScriptWithFallback(JSPDF_URLS); }
+  async function ensureXLSX() {
+    if (window.XLSX) return;
+    if (!_xlsxLoadPromise) {
+      _xlsxLoadPromise = loadScriptWithFallback(XLSX_URLS, 'a biblioteca XLSX').finally(function () {
+        if (!window.XLSX) _xlsxLoadPromise = null;
+      });
+    }
+    await _xlsxLoadPromise;
+  }
+
+  async function ensureJsPDF() {
+    if (window.jspdf) return;
+    if (!_jspdfLoadPromise) {
+      _jspdfLoadPromise = loadScriptWithFallback(JSPDF_URLS, 'a biblioteca jsPDF').finally(function () {
+        if (!window.jspdf) _jspdfLoadPromise = null;
+      });
+    }
+    await _jspdfLoadPromise;
+  }
 
   // ── Exportação XLSX ──────────────────────────────────────────────────────────
   function buildSummarySheetRows(data, periodLabel, generatedAt) {
@@ -1649,8 +1811,11 @@
     return window.KCUtils.escapeHtml(String(str == null ? '' : str));
   }
 
-  async function loadMetrics() {
+  async function loadMetrics(options) {
+    options = options || {};
+    var signal = options.signal || null;
     const client = getClient();
+    throwIfAborted(signal);
     if (!client) { showError('Supabase client não disponível.'); return; }
 
     var periodDays = getSelectedPeriodDays();
@@ -1714,13 +1879,15 @@
       loadSavedPostsCount(client, since),
       loadAuditLog(client, AUDIT_PAGE_SIZE, 0, 'all', since),
       loadSearchTrendsData(client, since),
-      loadDailyMetrics(client, since),
+      loadDailyMetrics(client, since, signal),
     ]);
+    throwIfAborted(signal);
 
     _auditOffset = auditRows.length;
 
     // ── Resolve nomes dos atores do audit log ──
     await loadActorsById(client, auditRows.map(r => r.actor_id));
+    throwIfAborted(signal);
 
     var moduleShareRows = DashboardUtils.buildModuleShareRows
       ? DashboardUtils.buildModuleShareRows(trends, window.KC_CONSTANTS || {})
@@ -1740,6 +1907,7 @@
       : [];
 
     // ── Renderiza métricas de moderação ──
+    throwIfAborted(signal);
     const metrics = $('#admin-metrics');
     if (metrics) {
       metrics.innerHTML = [
@@ -1782,6 +1950,7 @@
     renderDailyActivityChart(dailyMetrics);
     renderModuleShareTable(moduleShareRows);
     renderOperationalAlerts(alerts);
+    throwIfAborted(signal);
 
     _data = {
       reportMetrics, postStatusMetrics,
@@ -1799,6 +1968,16 @@
   }
 
   async function refreshDashboard() {
+    if (_periodRefreshTimer) {
+      clearTimeout(_periodRefreshTimer);
+      _periodRefreshTimer = null;
+    }
+    if (_activeRefreshController) {
+      _activeRefreshController.abort();
+    }
+    var controller = new AbortController();
+    var requestSeq = ++_refreshRequestSeq;
+    _activeRefreshController = controller;
     clearError();
     // Primeira carga: spinner principal; refreshes subsequentes: spinner no botão + opacidade nos grids
     var isFirstLoad = !_data;
@@ -1809,15 +1988,20 @@
       setGridsLoading(true);
     }
     try {
-      await loadMetrics();
-      loadAdminRanking();
+      await loadMetrics({ signal: controller.signal, requestSeq: requestSeq });
+      throwIfAborted(controller.signal);
+      await loadAdminRanking({ signal: controller.signal, requestSeq: requestSeq });
     } catch (error) {
+      if (error && error.name === 'AbortError') return;
       console.error('[Admin dashboard] refreshDashboard:', error);
       showError('Não foi possível atualizar o dashboard no momento.');
     } finally {
-      setLoading(false);
-      setRefreshLoading(false);
-      setGridsLoading(false);
+      if (_activeRefreshController === controller) {
+        _activeRefreshController = null;
+        setLoading(false);
+        setRefreshLoading(false);
+        setGridsLoading(false);
+      }
     }
   }
 
@@ -1830,7 +2014,7 @@
     var periodDays = getSelectedPeriodDays();
     var since = getPeriodRange(periodDays).since;
     var btn = $('#admin-audit-load-more');
-    if (btn) btn.disabled = true;
+    setAuditLoadMoreState({ visible: true, disabled: true, label: 'Carregando...', preserveLabel: true });
 
     try {
       var rows = await loadAuditLog(client, AUDIT_PAGE_SIZE, _auditOffset, actionFilter, since);
@@ -1838,14 +2022,20 @@
       await loadActorsById(client, rows.map(r => r.actor_id));
       _auditOffset += rows.length;
       renderAuditRows(rows, true);
+      if (rows.length < AUDIT_PAGE_SIZE) {
+        setAuditLoadMoreState({ visible: true, disabled: true, label: 'Fim do histórico', preserveLabel: true });
+      }
       // Append to _data for export
       if (_data && _data.auditRows) {
         _data.auditRows = _data.auditRows.concat(rows);
       }
     } catch (e) {
       console.error('[Admin audit] loadMore:', e);
+      setAuditLoadMoreState({ visible: true, disabled: false });
     } finally {
-      if (btn) btn.disabled = false;
+      if (btn && btn.textContent === 'Carregando...') {
+        setAuditLoadMoreState({ visible: true, disabled: false });
+      }
     }
   }
 
@@ -1865,6 +2055,9 @@
       await loadActorsById(client, rows.map(r => r.actor_id));
       _auditOffset = rows.length;
       renderAuditRows(rows, false);
+      if (!rows.length) {
+        setAuditLoadMoreState({ visible: true, disabled: true, label: 'Sem mais resultados', preserveLabel: true });
+      }
       if (_data) _data.auditRows = rows;
     } catch (e) {
       console.error('[Admin audit] filter:', e);
@@ -1900,7 +2093,26 @@
 
     // Period filter triggers full dashboard reload
     var periodFilter = $('#admin-period-filter');
-    if (periodFilter) periodFilter.addEventListener('change', refreshDashboard);
+    if (periodFilter) {
+      periodFilter.addEventListener('change', function () {
+        if (_periodRefreshTimer) clearTimeout(_periodRefreshTimer);
+        if (_activeRefreshController) {
+          var pendingController = _activeRefreshController;
+          _activeRefreshController = null;
+          pendingController.abort();
+        }
+        if (_data) {
+          setRefreshLoading(true);
+          setGridsLoading(true);
+        } else {
+          setLoading(true);
+        }
+        _periodRefreshTimer = window.setTimeout(function () {
+          _periodRefreshTimer = null;
+          refreshDashboard();
+        }, PERIOD_CHANGE_DEBOUNCE_MS);
+      });
+    }
 
     bindAdminRanking();
 
@@ -1925,7 +2137,9 @@
     return 'month';
   }
 
-  function loadAdminRanking() {
+  async function loadAdminRanking(options) {
+    options = options || {};
+    var signal = options.signal || null;
     var tableEl = $('#admin-ranking-table');
     if (!tableEl) return;
 
@@ -1940,10 +2154,13 @@
     var moduleFilter = $('#admin-ranking-module-filter');
     var module = moduleFilter ? (moduleFilter.value || null) : null;
     var limit = _adminRankingExpanded ? 100 : 10;
+    var requestSeq = ++_rankingRequestSeq;
 
     tableEl.innerHTML = '<div class="kc-admin-empty"><i class="fas fa-spinner fa-spin"></i> Carregando ranking...</div>';
 
-    api.getTopContributors(period, module, limit).then(function (users) {
+    try {
+      var users = await api.getTopContributors(period, module, limit);
+      if ((signal && signal.aborted) || requestSeq !== _rankingRequestSeq) return;
       var showAllBtn = $('#admin-ranking-show-all');
       if (!users || users.length === 0) {
         tableEl.innerHTML = '<div class="kc-admin-empty">Nenhum contribuidor encontrado no período.</div>';
@@ -1992,9 +2209,12 @@
           showAllBtn.style.display = 'none';
         }
       }
-    }).catch(function () {
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;
+      if ((signal && signal.aborted) || requestSeq !== _rankingRequestSeq) return;
       tableEl.innerHTML = '<div class="kc-admin-empty">Erro ao carregar ranking.</div>';
-    });
+      showStatusToast('Não foi possível atualizar o ranking agora.', 'error', { duration: 3600 });
+    }
   }
 
   function bindAdminRanking() {
