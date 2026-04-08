@@ -768,7 +768,7 @@
       });
     });
 
-    const emptyClear = document.querySelector('#noResults .kc-btn-primary');
+    const emptyClear = document.querySelector('[data-kc-achados-empty-clear="true"]');
     if (emptyClear) {
       emptyClear.addEventListener('click', function (event) {
         event.preventDefault();

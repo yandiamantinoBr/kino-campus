@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V10.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0` e `v11.2.1`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1` e `v11.3.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.3.0 | paridade do `Limpar filtros` no empty state dos 6 feeds públicos e clear explícito de data no módulo `eventos` | `#231` |
 | v11.2.1 | reativação do Vercel MCP no Codex, homologação de time/projeto/deployments/logs e fechamento da validação pós-merge da `v11.2.0` | `#230` |
 | v11.2.0 | consistência de shell público: estados ativos da navegação, menu móvel coerente em páginas secundárias e busca mobile adicionada na `create-post.html` | `#229` |
 | v11.1.0 | baseline documental da v11: sincronização de README, changelog e docs técnicas com o estado real da base | `#228` |
@@ -56,10 +57,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.2.1`
-- objetivo da iteração: reativar o OAuth do Vercel MCP no Codex e homologar leitura de time, projeto, deployments, build logs, runtime logs e fetch de URLs protegidas da plataforma
-- natureza da iteração: operação e observabilidade de deploy, sem mudança de banco ou código funcional da aplicação
-- status operacional do Vercel MCP em `08 de abril de 2026`: autenticado com sucesso via `codex mcp login vercel`, com acesso confirmado ao projeto `kino-campus` e ao deployment de produção do commit `8cf0d61`
+- iteração ativa consolidada: `v11.3.0`
+- objetivo da iteração: padronizar a ação de `Limpar filtros` no empty state dos 6 feeds públicos equivalentes e fechar a paridade do módulo `eventos`
+- natureza da iteração: frontend compartilhado de módulos equivalentes, sem mudança de banco
+- status operacional do Vercel MCP em `08 de abril de 2026`: autenticado com sucesso via `codex mcp login vercel`, com acesso confirmado ao projeto `kino-campus`; a iteração `v11.3.0` foi validada em preview pelo deployment `dpl_Ds1PfZ3D3sdaGeDa5wGa2NyUKf79` da PR `#231`
 
 ---
 

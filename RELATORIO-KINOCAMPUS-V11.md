@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V10.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0` e `v11.2.1` concluídas, com baseline documental, consistência do shell público e desbloqueio operacional do Vercel MCP no Codex |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1` e `v11.3.0` em andamento/conclusão na branch ativa, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex e normalização dos feeds equivalentes |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -551,6 +551,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#230`, commit `f5cd94f` na branch `codex/v11-2-1-vercel-mcp-auth`. A iteração não gerou deploy novo; ela confirmou operacionalmente, em `08 de abril de 2026`, o deployment de produção `dpl_By9t4cmxbp9HrxFkhLm4W84Wsw1t` do commit `8cf0d61` e o preview `dpl_47yerenHoDdQyeoJAGUEXyihqMhR`.
 - riscos residuais:
   o Vercel MCP passou a responder normalmente, mas o Playwright MCP local ainda precisa de correção de diretório/permissão neste ambiente para retomar a checagem visual interativa sem fallback.
+
+---
+
+### Iteração `v11.3.0`
+
+- objetivo:
+  padronizar a ação de `Limpar filtros` no empty state dos 6 feeds públicos equivalentes e corrigir a paridade do módulo `eventos`, que não expunha o clear equivalente fora da seleção manual de `Todas as datas`.
+- arquivos alterados:
+  `compra-venda-feed.html`, `caronas-feed.html`, `moradia.html`, `eventos.html`, `oportunidades.html`, `achados-perdidos.html`, `assets/js/controllers/compra-venda-feed.controller.js`, `assets/js/controllers/caronas-feed.controller.js`, `assets/js/controllers/moradia.controller.js`, `assets/js/controllers/eventos.controller.js`, `assets/js/controllers/oportunidades.controller.js`, `assets/js/controllers/achados-perdidos.controller.js`, `tests/feed-empty-clear-markup.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`.
+- equivalentes revisados:
+  os 6 feeds públicos modulares, seus blocos `#noResults`, os botões laterais de limpeza de filtros e os controllers responsáveis pelo binding do clear aplicado.
+- contratos preservados:
+  nenhuma rota, RPC, adapter, contrato de `KCAPI`, banco, Supabase ou payload de feed foi alterado; a mudança ficou restrita à UX e ao binding dos filtros já existentes.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/controllers/compra-venda-feed.controller.js`, `node --check assets/js/controllers/caronas-feed.controller.js`, `node --check assets/js/controllers/moradia.controller.js`, `node --check assets/js/controllers/eventos.controller.js`, `node --check assets/js/controllers/oportunidades.controller.js`, `node --check assets/js/controllers/achados-perdidos.controller.js`, `npx jest tests/feed-empty-clear-markup.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o Playwright MCP local continua falhando com `EPERM`, então a validação publicada desta iteração foi feita via Vercel MCP no preview `dpl_Ds1PfZ3D3sdaGeDa5wGa2NyUKf79`, confirmando o HTML publicado de `compra-venda-feed.html`, `caronas-feed.html`, `moradia.html`, `eventos.html` e `achados-perdidos.html` já com os novos marcadores de clear explícito. O caso de `oportunidades.html` permaneceu protegido por autenticação do preview nessa leitura remota, mas o seletor e o binding equivalentes ficaram cobertos pelo teste estático dedicado e pelo mesmo padrão de implementação aplicado aos demais feeds.
+- PR / commit / deploy:
+  PR `#231`, commit `bbac60f` na branch `codex/v11-3-0-feed-empty-clear-parity` e preview validado no deployment `dpl_Ds1PfZ3D3sdaGeDa5wGa2NyUKf79`, todos confirmados em `08 de abril de 2026`.
+- riscos residuais:
+  sem risco estrutural novo em banco, adapter ou contratos. O único ponto operacional remanescente antes do encerramento é a validação pós-merge do deployment resultante na base.
 
 ---
 

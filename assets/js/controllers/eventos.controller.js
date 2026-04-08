@@ -77,6 +77,14 @@
     $all('[data-kc-eventos-date-preset]').forEach(function (input) {
       input.checked = normalizeDatePreset(input.value) === selected;
     });
+    syncClearButtons();
+  }
+
+  function syncClearButtons() {
+    var hasPreset = !!normalizeDatePreset(feedState.datePreset);
+    $all('[data-kc-eventos-clear-filters="true"], [data-kc-eventos-empty-clear="true"]').forEach(function (btn) {
+      btn.disabled = !hasPreset;
+    });
   }
 
   function getFeedRequestParams() {
@@ -121,6 +129,7 @@
 
   function applyFeedFilters() {
     syncUrlState();
+    syncClearButtons();
     if (window.kcFilters && typeof window.kcFilters.setExtraPredicate === 'function') {
       window.kcFilters.setExtraPredicate(buildFeedExtraPredicate());
     }
@@ -248,7 +257,14 @@
     if (railState.activeKey === 'dates') {
       var labels = { '': 'Todas as datas', today: 'Hoje', next7d: 'Próximos 7 dias', thisMonth: 'Este mês', past: 'Passados' };
       var selectedLabel = labels[railState.dateDraft || ''] || 'Todas as datas';
-      actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><p class="kc-housing-section-modal__caption">Data selecionada: <strong>' + esc(selectedLabel) + '</strong></p><button class="kc-opportunity-apply" type="button" data-kc-eventos-modal-apply-date>Ver eventos</button></div>';
+      var canClear = !!normalizeDatePreset(railState.dateDraft);
+      actions.innerHTML = '<div class="kc-housing-section-modal__action-group"><p class="kc-housing-section-modal__caption">Data selecionada: <strong>' + esc(selectedLabel) + '</strong></p><button class="kc-opportunity-clear" type="button" data-kc-eventos-modal-clear-date' + (canClear ? '' : ' disabled') + '>Limpar filtros</button><button class="kc-opportunity-apply" type="button" data-kc-eventos-modal-apply-date>Ver eventos</button></div>';
+      var clearBtn = actions.querySelector('[data-kc-eventos-modal-clear-date]');
+      if (clearBtn) clearBtn.addEventListener('click', function () {
+        railState.dateDraft = '';
+        syncDateInputs('');
+        renderEventosActions();
+      });
       var applyBtn = actions.querySelector('[data-kc-eventos-modal-apply-date]');
       if (applyBtn) applyBtn.addEventListener('click', function () {
         feedState.datePreset = normalizeDatePreset(railState.dateDraft);
@@ -294,6 +310,20 @@
     if (returnFocus && typeof returnFocus.focus === 'function') {
       try { returnFocus.focus(); } catch (_) {}
     }
+  }
+
+  function clearAppliedFilters(event) {
+    if (event) event.preventDefault();
+    feedState.datePreset = '';
+    syncDateInputs(feedState.datePreset);
+    applyFeedFilters();
+  }
+
+  function bindClearButtons() {
+    $all('[data-kc-eventos-clear-filters="true"], [data-kc-eventos-empty-clear="true"]').forEach(function (btn) {
+      btn.addEventListener('click', clearAppliedFilters);
+    });
+    syncClearButtons();
   }
 
   function bindRail() {
@@ -738,6 +768,7 @@
     restoreUrlState();
     syncDateInputs(feedState.datePreset);
     bindRail();
+    bindClearButtons();
     initCalendar();
 
     if (window.KCCore && typeof window.KCCore.bindModuleSortTabs === 'function') {
