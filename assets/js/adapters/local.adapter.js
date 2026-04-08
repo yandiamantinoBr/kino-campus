@@ -805,7 +805,52 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return { ok: true, data: row };
   }
 
+  function attachLocalAdminHelpListMeta(rows, meta = {}) {
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    const totalCount = Number(meta.totalCount);
+    const limit = Number(meta.limit);
+    const offset = Number(meta.offset);
+    return Object.assign(list, {
+      totalCount: Number.isFinite(totalCount) ? totalCount : list.length,
+      limit: Number.isFinite(limit) ? limit : list.length,
+      offset: Number.isFinite(offset) ? offset : 0,
+      hasMore: Boolean(meta.hasMore),
+    });
+  }
+
   async function localListAdminHelpRequests(filters = {}) {
+    const current = readHelpRequests().slice().sort((a, b) => {
+      return new Date(b && b.created_at || 0).getTime() - new Date(a && a.created_at || 0).getTime();
+    });
+    const query = String(filters.query || '').trim().toLowerCase();
+    const limit = Math.max(1, Math.min(100, Number(filters.limit) || 25));
+    const offset = Math.max(0, Number(filters.offset) || 0);
+    const filtered = current.filter((item) => {
+      if (filters.status && filters.status !== 'all' && String(item.status || '') !== String(filters.status)) return false;
+      if (filters.type && filters.type !== 'all' && String(item.type || '') !== String(filters.type)) return false;
+      if (filters.priority && filters.priority !== 'all' && String(item.priority || '') !== String(filters.priority)) return false;
+      if (!query) return true;
+      const haystack = [
+        item.subject,
+        item.message,
+        item.contact_email,
+        item.page_path,
+        item.type,
+        item.topic,
+        item.subtopic,
+      ].join(' ').toLowerCase();
+      return haystack.indexOf(query) >= 0;
+    });
+    const rows = filtered.slice(offset, offset + limit);
+    return attachLocalAdminHelpListMeta(rows, {
+      totalCount: filtered.length,
+      limit,
+      offset,
+      hasMore: (offset + rows.length) < filtered.length,
+    });
+  }
+
+  async function localListAdminHelpRequestsLegacy(filters = {}) {
     const current = readHelpRequests();
     const query = String(filters.query || '').trim().toLowerCase();
     return current.filter((item) => {
