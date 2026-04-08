@@ -525,7 +525,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   local concluída; faltará complementar a checagem do deploy publicado após merge da PR desta iteração.
 - PR / commit / deploy:
-  branch dedicada aberta para a iteração; PR, merge e metadados finais serão registrados no fechamento.
+  PR `#229`, commit `71f893b` na branch `codex/v11-2-0-public-shell-consistency`. A validação pós-merge em deploy publicado será registrada no fechamento.
 - riscos residuais:
   ainda existe dependência de cache de assets compartilhados em alguns navegadores, então a validação pós-merge deve conferir explicitamente a versão publicada do shell público.
 
