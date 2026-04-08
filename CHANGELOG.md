@@ -1,5 +1,146 @@
 # Changelog
 
+---
+
+## [9.4.4] - 2026-04-07 — fix/v9.4.4 (PR #213)
+
+### Fixed
+- `product.controller.js`: os 3 pontos de chamada de `kc-comments.js` (`renderComments`, `submitComment`, `formatText`) agora usam `KCLazyLoader.load('assets/js/kc-comments.js', callback)` em vez de checar `typeof window.xxx === 'function'` diretamente. Garante que o script seja carregado antes de executar, independente de o usuário ter scrollado até a seção de comentários ou não.
+- `kc-comments.js`: removida a linha `window.renderComments = renderComments` adicionada erroneamente no v9.4.3 (redundante — scripts clássicos não-IIFE expõem funções em `window` automaticamente via hoisting).
+
+### Root Cause
+`kc-comments.js` é carregado via `IntersectionObserver` (v9.4.0). Se o usuário não rolar até `.kc-comments-section`, o script nunca é carregado e os 3 checks `typeof window.xxx === 'function'` sempre retornam `false` — comentários não aparecem, preview não funciona, submit e formatação não respondem.
+
+---
+
+## [9.4.3] - 2026-04-07 — fix/v9.4.3 (PR #212)
+
+### Fixed
+- `kc-comments.js`: adicionado `window.renderComments = renderComments` para garantir que o símbolo esteja acessível após lazy loading via `KCLazyLoader.onVisible` (correção parcial — root cause resolvido em v9.4.4).
+- `profile.controller.js`: adicionado `if (empty) empty.style.display = 'block'` nos blocos `catch` de `loadPosts`, `loadComments`, `loadRatings` e `loadSaved` — painel de tabs não ficava mais em branco quando a chamada de API falhava.
+
+---
+
+## [9.4.2] - 2026-04-07 — Acessibilidade A11y (PR #211)
+
+### Added
+- `index.html`: skip-link `<a href="#kc-main">Pular para o conteúdo principal</a>` + `id="kc-main"` no `<main>`; `aria-label` nos botões do carrossel; `aria-hidden` nos chevrons decorativos.
+- 17 arquivos HTML: `aria-label="Alternar tema claro/escuro"` no theme-toggle; `aria-label="Pesquisar"` no searchInput.
+- `_product.html`: `aria-hidden` no sharePopover (estado inicial); `aria-label` em 8 botões de formatação e no input de autor; `aria-label` nos botões de compartilhamento.
+- `kc-utils.js`: `aria-label` nos botões de voto; `aria-hidden` nos ícones decorativos; `aria-live="polite"` no score de votos.
+- `product.controller.js`: `openSharePopover` / `closeSharePopover` gerenciam `aria-hidden`.
+- `styles.css`: `.kc-skip-link` (visível no foco via Tab); `:focus:not(:focus-visible)` para dropdown e botão mobile.
+- `tests/a11y.test.js`: 17 novos testes de acessibilidade.
+
+---
+
+## [9.4.1] - 2026-04-07 — Otimização de Imagens (PR #210)
+
+### Added
+- `supabase.adapter.js`: `compressImage(blob, maxWidth, maxHeight, quality)` via Canvas API — JPEG/PNG/WebP comprimidos para 85%, max 1200×900 (posts) / 400×400 (avatares); GIF: pass-through; fallback para blob original se Canvas falhar. `window.KCCompressImage` exposta para testes.
+- `_product.html`: `fetchpriority="high"` na imagem principal (melhora LCP).
+- `product.controller.js`: thumbnails com `loading="lazy"` + `decoding="async"`.
+- `tests/image-compression.test.js`: 10 novos testes.
+
+---
+
+## [9.4.0] - 2026-04-07 — Lazy Loading JS (PR #209)
+
+### Added
+- `assets/js/kc-lazy-loader.js` (novo): `KCLazyLoader` com `load(src, cb)`, `onVisible(selector, src, cb)` (IntersectionObserver, `rootMargin: 200px`) e `onInteraction(selector, events, src, cb)`. Idempotente com cache interno.
+- `kc-ranking.js` + `kc-search.js`: init migrado para `readyState` check (suporta carregamento tardio).
+- 6 páginas de feed: `kc-ranking.js` substituído por `KCLazyLoader.onVisible('[data-kc-ranking-sidebar]', ...)`.
+- `_product.html`: `kc-comments.js` substituído por `KCLazyLoader.onVisible('.kc-comments-section', ...)`.
+- `tests/lazy-loader.test.js`: 14 novos testes.
+
+---
+
+## [9.3.2] - 2026-04-07 — Moderação Automática Anti-Spam (PR #208)
+
+### Added
+- Migration `v9.3.2.0_anti_spam_moderation.sql`: `kc_check_and_create_post_moderated()` com flood control (3 posts em 10 min → status `pending`), detecção de link spam (≥3 URLs no body → pending), new user trust (conta <24h + primeiro post → pending). Trigger `posts_auto_moderate_on_insert`. Audit log automático. Index `idx_posts_author_created_desc`.
+- `supabase.adapter.js`: detecção de `flood_limit_exceeded` → `{ _kcError: 'FLOOD_LIMIT' }`; flag `_kcPending`.
+- `kc-create-post.js`: toast de aviso para posts em análise.
+- `product.controller.js`: badge "Em análise" azul para posts `pending`; toggle/bump ocultos.
+- `tests/anti-spam.test.js`: 18 novos testes.
+
+---
+
+## [9.3.1] - 2026-04-06 — Analytics de Post para Autores (PR #207)
+
+### Added
+- Migration `v9.3.1.0_post_analytics.sql`: tabela `post_view_events`, `kc_track_view()`, `kc_get_post_analytics()`, pg_cron `kc_prune_old_analytics()` mensal.
+- `product.controller.js`: rastreia visualizações via `kc_track_view` (throttle 30 min por post/usuário); mini-stats de views para autores no modal de ações.
+- `kc-api.client.js`: `KCAPI.trackView()` + `KCAPI.getPostAnalytics()`.
+
+---
+
+## [9.1.0.3] - 2026-04-06 — Convites Externos (PRs #203–#206)
+
+### Added
+- Edge Function `kc-invite-user`: envia convite por e-mail via Supabase Auth `admin.inviteUserByEmail()`. Verificação HMAC, rate limiting, audit log.
+- Tabela `invited_users`: whitelist de e-mails convidados com status de aceite.
+- `admin/`: UI de gerenciamento de convites (lista, link copiável, revogar).
+- Fixes: CORS expandido, `verify_jwt: false`, audit log paginado.
+
+---
+
+## [9.1.2] - 2026-04-06 — Avaliações de Usuários (PR #202)
+
+### Added
+- Tabela `user_ratings`: avaliações 1–5 estrelas entre usuários com campos `category` e `comment`.
+- RPCs: `kc_rate_user()`, `kc_get_user_rating()`, `kc_get_user_rating_summary()`.
+- UI em `profile.html`: exibição de nota média + histórico de avaliações recebidas.
+
+---
+
+## [9.2.1] - 2026-04-06 — Filtros Avançados nos Feeds (PR #201)
+
+### Added
+- `datePreset` nos 6 módulos de feed incremental: `today`, `last7d`, `last30d` (feeds de marketplace); `today`, `next7d`, `thisMonth`, `past` (eventos); `today`, `last3d`, `last7d` (caronas).
+- Persistência em URL via `kc-feed-filters.js` (allowlist por módulo).
+- Migration `v9.2.1.3_feed_date_presets.sql`: `kc_feed_local_date()`, `kc_feed_event_local_date()`, `kc_feed_matches_date_preset()`, extensão de `kc_get_feed_cursor()` com filtro server-side por data em `America/Sao_Paulo`.
+
+---
+
+## [9.1.0] - 2026-04-04 — Notificações In-App (PRs #198–#200)
+
+### Added
+- Tabela `notifications` com Realtime habilitado; triggers automáticos para voto positivo, novo comentário, reply e avaliação recebida.
+- RPCs: `kc_get_notifications()`, `kc_mark_notifications_read()`, `kc_mark_all_notifications_read()`.
+- UI: sino no header com badge de contagem; dropdown de notificações com link direto ao post; polling + Realtime para atualização em tempo real.
+- Fixes: race condition na detecção de auth (#199); CSS `display:none` sobrescrevia JS (#200).
+
+---
+
+## [9.0.4] - 2026-04-04 — Dívida Técnica DB (PR #197)
+
+### Added
+- Migration `v9.0.4.0_analytics_retention.sql`: `kc_prune_old_analytics()` — purga `search_queries` > 6 meses e `audit_log` > 1 ano; pg_cron job mensal.
+- Migration `v9.0.4.1_legacy_id_soft_deprecate.sql`: `COMMENT ON COLUMN posts.legacy_id` deprecated; `kc_admin_legacy_id_stats()` com métricas de segurança para remoção futura.
+
+---
+
+## [9.0.2] - 2026-04-03 — Cobertura de Testes (PR #196)
+
+### Added
+- 12 arquivos de teste novos em `tests/`; `kc-comments.shared.js` e `kc-search.shared.js` (UMD dual-export para funções puras testáveis em Node).
+- Cobertura expandida de <5% para 45%+ de linhas (meta: 40%). Total: 333 testes iniciais, crescendo cumulativamente para 447 testes em 26 suites.
+
+---
+
+## [9.0.0] - 2026-04-02 — Fundações v9 (PR #194)
+
+### Added
+- 8 arquivos de documentação técnica em `docs/`: `architecture.md`, `api-contract.md`, `db-schema.md`, `rpc-catalog.md`, `module-schemas.md`, `env-vars.md`, `design-system.md`, `index.md`.
+
+### Security
+- Bloqueio de SVG em uploads (XSS via SVG inline): removido `image/svg+xml` dos tipos aceitos.
+- Validação de magic bytes: `checkImageMagicBytes(blob)` valida os primeiros 12 bytes do arquivo.
+- `SESSION_STORE_VERSION` atualizado para `'9.0.0'` (invalida caches de sessão de versões anteriores).
+
+---
+
 ## [8.6.0] - 2026-03-30
 
 ### Objetivo

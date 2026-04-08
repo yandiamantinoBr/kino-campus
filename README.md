@@ -1,45 +1,60 @@
-# Kino Campus — Protótipo WEB (V8.6.0) — Segurança e Saneamento
+# Kino Campus — v9.4.4
 
-Este repositorio e o **prototipo web offline-first** do **Kino Campus** (plataforma universitaria por modulos), agora com **integracao Supabase-first** (Postgres + Auth + Storage) na linha **V8.2.x**.
+> Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
-A release **V8.2.2.0** consolidou os **LOTEs 1, 2 e 3** do cleanroom RC, sem feature creep:
-- **LOTE 1**: saneamento de interação (CSP/handlers) e hardening de votos contra `409 (Conflict)`.
-- **LOTE 2**: diagnóstico por etapa no create-post (`[KC][CREATE_POST]`) e fluxo admin sem falso positivo de persistência.
-- **LOTE 3**: fechamento mobile/FOUC e kit QA final (`docs/qa/rls-smoke.sql` + relatórios de release).
+Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. Acesso restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
-A **V8.6.0** consolida correções de segurança (XSS, HSTS, Permissions-Policy), unificação de versão e automação de infraestrutura (pg_cron para expiração de posts).
-
-O runtime oficial permanece **front estático + Supabase** (sem backend Node ativo no deploy). Em **produção**, `KC_ENV.driver = "supabase"` é obrigatório e não existe fallback silencioso para `local`; o modo `local` é permitido somente em desenvolvimento.
-
-- **Leitura real**: `KCAPI.getPosts(filters)` e `KCAPI.getPostById(id)` com JOINs (`profiles` + `post_media`) e fallback para `legacy_id`.
-- **Escrita real**: `KCAPI.createPost(data)` com **upload no Storage** + **insert em `posts`/`post_media`**.
-- **Auth**: `KCAPI.login(email, password)`, `KCAPI.logout()` e `KCAPI.getCurrentUser()`.
+**Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)
+**Branch principal:** `kinocampus-V9.0-foundations`
 
 ---
 
+## Stack
 
-## 🧭 Mapa de versao do front (arquivo → versao)
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend | HTML5 + CSS3 + Vanilla JS (59 módulos IIFE, sem framework/bundler) |
+| Backend | Supabase (PostgreSQL 17 + Auth + Storage + Edge Functions + Realtime) |
+| Hosting | Vercel (static site + serverless OG images) |
+| Domínio | kinocampus.com.br (Hostinger, DNS para Vercel) |
+| Build | `node scripts/inject-env.js` (substitui placeholders) |
+| Testes | Jest: 26 suites, 447 testes, ~52% cobertura de linhas |
 
-Versão-alvo única atual: **`8.6.0`**
+---
 
-- `assets/js/kc-env.js` → `8.6.0`
-- `assets/js/kc-api.client.js` → `8.6.0`
-- `assets/js/kc-supabase.client.js` → `8.6.0`
-- `assets/js/kc-auth.ui.js` → `8.6.0`
-- `assets/js/kc-profiles.client.js` → `8.6.0`
+## Funcionalidades (v9)
 
-> Referência visual: o rodapé do modal de autenticação exibe `Auth UI v8.6.0` (derivado de `assets/js/kc-auth.ui.js`).
+| Fase | Feature | PR |
+|------|---------|-----|
+| v9.0 | Documentação técnica + hardening de segurança (SVG block, magic bytes, session) | #194 |
+| v9.0 | Cobertura de testes expandida (45%+, 18 suites) | #196 |
+| v9.0 | Dívida técnica DB: retenção de analytics, deprecação de legacy_id | #197 |
+| v9.1 | Notificações in-app com Realtime | #198–#200 |
+| v9.1 | Avaliações de usuários (1–5 estrelas + reputação) | #202 |
+| v9.1 | Sistema de convites externos (Edge Function + whitelist + UI admin) | #203–#206 |
+| v9.2 | Filtros avançados nos feeds (preço, data, tipo) | #201 |
+| v9.3 | Analytics de post para autores (view tracking + mini-stats) | #207 |
+| v9.3 | Moderação automática anti-spam (flood control + link spam + new user trust) | #208 |
+| v9.4 | Lazy loading de módulos grandes via `KCLazyLoader` | #209 |
+| v9.4 | Otimização de imagens (compressão client-side Canvas API + LCP hints) | #210 |
+| v9.4 | Acessibilidade A11y (skip-link, aria-labels, focus-visible — 17 HTMLs) | #211 |
+| fix | Hotfix comentários + empty state perfil | #212 |
+| fix | Root cause comentários lazy load: `KCLazyLoader.load()` em 3 pontos | #213 |
 
-## 📦 Regra de release (anti-drift)
+---
+
+## Regra de release (anti-drift)
 
 Sempre que houver release do front:
 
-1. Definir uma versão-alvo única (`major.minor.patch.build`) para todos os módulos de front.
-2. Atualizar em lote as constantes `VERSION` dos arquivos mapeados acima.
+1. Definir uma versão-alvo única para todos os módulos de front.
+2. Atualizar em lote as constantes `VERSION` dos arquivos mapeados.
 3. Validar referências visuais de versão na UI (ex.: rodapé do modal de auth).
-4. Registrar o mapa "arquivo → versao" no `README.md` e no `CHANGELOG.md`.
+4. Registrar no `README.md` e no `CHANGELOG.md`.
 
-## 🗃️ Fonte Única de Verdade (Banco)
+---
+
+## Fonte Única de Verdade (Banco)
 
 Para governança de banco no projeto, a **fonte única de verdade** é a esteira SQL oficial do Supabase.
 Não existe caminho operacional por `sql/` na raiz.
@@ -62,152 +77,109 @@ Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação a
 3. **Não usar operacionalmente** esse SQL em deploy/setup/update.
 4. **Não recriar** diretório `sql/` na raiz do projeto.
 
-## ✅ O que esta versão garante
-
-- **Hardening RLS / Colunas Sensíveis (Roadmap 8.1.6.1)**
-  - Bloqueia escrita direta no client em:
-    - `public.profiles.verified`
-    - `public.posts.author_id`
-  - Arquivo: `supabase/migrations/v8.1.6.1_rls_column_hardening.sql`
-
-- **Denunciar Post (Roadmap 8.1.6.2)**
-  - Em `driver = supabase` + usuário logado, é possível denunciar um post em `product.html`.
-  - Insere 1 linha em `public.reports` via `KCAPI.reportPost(postId, { reason, details })`.
-  - Anti-spam mínimo: impede duplicação por `unique (post_id, reporter_id)`.
-  - RLS: insert restrito ao dono (`reporter_id = auth.uid()`); SELECT negado por padrão.
-  - Arquivo: `supabase/migrations/v8.1.6.2_reports_privacy_hardening.sql`
-
-- **Privacidade: `profiles.email` (solidez)**
-  - Hardening preferido aplicado: `REVOKE SELECT(email)` para `anon` e `authenticated`.
-  - O front não seleciona mais `profiles.email` em JOINs (`posts → profiles`) e não persiste `email` no sync de `profiles`.
-  - Arquivo: `supabase/migrations/v8.1.6.2_reports_privacy_hardening.sql`
-
-- **Offline-first em desenvolvimento**
-  - Seed local: `data/database.json`
-  - Posts do usuário: `localStorage["kc_user_posts"]` (somente ambiente `development`)
-
-- **Migração assistida (Roadmap 8.1.5.4)**
-  - Em `driver = supabase` + usuário logado, se houver posts locais não migrados, aparece um CTA “Você tem X posts locais. Migrar?”
-  - Ao iniciar a migração:
-    - cria backup automático: `kc_user_posts_backup_<timestamp>`
-    - migra de forma idempotente (marca `metadata.migratedToSupabase` e `metadata.supabaseId`)
-    - mostra progresso e relatório final (sucessos/falhas)
-
-- **Driver Pattern (KC_ENV) com política de ambiente**
-  - Arquivo: `assets/js/kc-env.js`
-  - `environment / APP_ENV: "development" | "production"`
-  - `driver: "local" | "supabase"`
-  - Em `production`, `driver` obrigatório = `"supabase"` (sem *safe boot* silencioso para `local`).
-  - Em `development`, `driver = "local"` continua suportado para fluxo offline-first.
-
-- **Realtime opcional no feed (Roadmap 8.1.12.0)**
-  - `KCSupabase.subscribeNewPosts({ filter, onPost })` + façade `KCRealtime`.
-  - Buffer no feed com banner “Novo post disponível” e inserção no topo sem reload.
-  - Defesa adicional de visibilidade no client: apenas `status = 'published'`.
-
-- **Contrato único de Post (MVC-ready)**
-  - Normalização: `KCAPI.normalizePost()`
-  - Regras de apresentação: `KCUtils.applyPresentationRules()`
-  - Model: `KCPostModel.from(raw, { pageModule, view })`
-
-- **Ações críticas (produção x desenvolvimento)**
-  - `createPost`, `votePost` e `addComment` exigem Supabase em `production` (retornam erro explícito quando o driver não é `supabase`).
-  - Persistência em `localStorage` para criação de post/comentário permanece apenas em `development`.
-
 ---
 
-## ✅ Checklist (Roadmap 8.1.2)
-
-Validação rápida do que o Roadmap exige na seção **8.1.2 (Supabase-first)**:
-
-- **Schema SQL** (`supabase/schema-bootstrap-v8.1.2.3.sql`)
-  - Tabelas **`profiles`**, **`posts`** e **`post_media`** criadas.
-  - **RLS habilitado** e políticas (leitura pública / escrita do dono) declaradas.
-- **Storage**
-  - Bucket **`kino-media`** referenciado no SQL (criação/garantia do bucket) e usado pelo upload no driver.
-- **Compat `legacy_id`**
-  - `getPostById(id)` tenta UUID e faz fallback para `legacy_id` (mantém compatibilidade com o seed `database.json`).
-
----
-
-## 🚀 Como rodar (recomendado)
+## Como rodar (desenvolvimento)
 
 ### Opção A — VS Code Live Server
 1. Abra a pasta `kino-campus/` no VS Code
-2. Clique em **“Go Live”**
+2. Clique em **"Go Live"**
 3. Acesse `index.html`
 
 ### Opção B — Python
-Na pasta `kino-campus/`:
-
 ```bash
 python -m http.server 5500
 ```
-
-Abra:
-- `http://localhost:5500/index.html`
+Acesse `http://localhost:5500/index.html`
 
 ---
 
-## 🧩 Supabase (ativação manual)
+## Ativação Supabase (produção)
 
-### 1) Schema
-- SQL para copiar/colar no Supabase SQL Editor (na ordem):
-  1) `supabase/schema-bootstrap-v8.1.2.3.sql`
-  2) `supabase/schema-update-v8.1.3.2.sql` (coluna `profiles.verified`)
-  3) `supabase/migrations/v8.1.3.3_auto_verify.sql` (trigger server-side do `verified`)
-  4) `supabase/migrations/v8.1.5.1_write_path_hardening.sql` (Storage hardening + `post_media.sort_order`)
-  5) `supabase/migrations/v8.1.6.1_rls_column_hardening.sql` (REVOKE de colunas sensíveis)
-  6) `supabase/migrations/v8.1.6.2_reports_privacy_hardening.sql` (reports + privacidade do email)
-  7) `supabase/migrations/v8.1.7.5_auth_egresso_domain.sql` (inclui `@egresso.ufg.br` na regra institucional + backfill de `profiles.verified`)
-  8) `supabase/migrations/v8.1.9.1_admin_posts_select.sql` (SELECT de posts para admins)
-  9) `supabase/migrations/v8.1.10.0_profile_mvp_display_name.sql` (display_name em profiles)
-  10) `supabase/migrations/v8.1.11.0_audit_log.sql` (audit log de moderação/compliance)
-  11) `supabase/migrations/v8.1.11.1_admin_reports_threshold_notify.sql` (trigger -> Edge Function para alerta de denúncias)
+### 1) Migrations
 
-> Nota de deploy: o ajuste histórico de `docs/legacy/sql/13_fix_auth_egresso_domain.sql` já está consolidado na esteira oficial (`supabase/migrations/v8.1.7.5_auth_egresso_domain.sql`). Para comportamento crítico de autenticação, use apenas arquivos de `supabase/migrations/`.
+Aplique todas as migrations em `supabase/migrations/` em **ordem alfabética** (atualmente 71 arquivos, de `v8.1.3.3_*` a `v9.3.2.0_*`).
 
-### 2) Storage
-- Bucket esperado: `kino-media` (configurado em `KC_ENV.supabase.storageBucket`).
-- O driver de escrita usa caminhos (path controlado para hardening/policies):
-  - `post-media/{uid}/{postId}/{timestamp}-image-{n}.{ext}`
+> Para cada arquivo: copie o conteúdo e execute no **SQL Editor** do Supabase, ou use a CLI: `supabase db push`.
 
-> Para funcionar com `<img src="...">` no protótipo, o ideal é o bucket estar público (ou você adaptará para Signed URLs na próxima fase).
+### 2) Schema bootstrap (apenas novo projeto)
 
-### 3) Config (KC_ENV)
+Se estiver iniciando um projeto do zero, aplique antes:
+1. `supabase/schema-bootstrap-v8.1.2.3.sql`
+2. `supabase/schema-update-v8.1.3.2.sql`
+3. Depois todas as migrations em ordem
+
+### 3) Storage
+
+Bucket esperado: `kino-media` (configurado em `KC_ENV.supabase.storageBucket`).
+- Caminhos: `post-media/{uid}/{postId}/{timestamp}-image-{n}.{ext}` e `avatars/{uid}.{ext}`
+
+### 4) Configuração (KC_ENV)
+
 Edite `assets/js/kc-env.js`:
-- `environment: "production"` (ou `APP_ENV: "production"`)
-- `driver: "supabase"`
-- `supabase.url` e `supabase.anonKey`
+```javascript
+environment: "production",
+driver: "supabase",
+supabase: {
+  url: "https://SEU_PROJECT_ID.supabase.co",
+  anonKey: "SUA_ANON_KEY",
+  storageBucket: "kino-media"
+}
+```
 
-### 4) Edge Function (alerta admin por denúncias)
-1. Deploy da função:
-   - `supabase functions deploy notify-admin-reports-threshold`
-2. Configurar secrets da função:
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `KC_APP_BASE_URL` (ex.: `https://<seu-dominio>`)
-   - `ADMIN_REPORTS_WEBHOOK_URL`
-   - `KC_NOTIFY_HMAC_SECRET` (segredo forte compartilhado com o banco)
-   - `REPORTS_THRESHOLD` (opcional; default `3`)
-   - `REPORTS_NOTIFY_COOLDOWN_HOURS` (opcional; default `24`)
-3. Configurar settings no banco (fora do git):
-   - `app.settings.kc_notify_function_url` = URL completa da função
-   - `app.settings.kc_notify_function_auth_token` = JWT de autorização da função (ex.: service role)
-   - `app.settings.kc_notify_hmac_secret` = mesmo valor de `KC_NOTIFY_HMAC_SECRET`
+> Em `production`, `driver = "supabase"` é obrigatório. Modo `local` é apenas para desenvolvimento.
+
+### 5) Edge Functions
+
+**notify-admin-reports-threshold** (alerta admin por denúncias):
+```bash
+supabase functions deploy notify-admin-reports-threshold
+```
+Secrets necessários: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `KC_APP_BASE_URL`, `ADMIN_REPORTS_WEBHOOK_URL`, `KC_NOTIFY_HMAC_SECRET`, `REPORTS_THRESHOLD` (default: 3), `REPORTS_NOTIFY_COOLDOWN_HOURS` (default: 24).
+
+**kc-invite-user** (convites externos):
+```bash
+supabase functions deploy kc-invite-user
+```
+
+### 6) Settings de banco (fora do git)
+- `app.settings.kc_notify_function_url` = URL completa da Edge Function
+- `app.settings.kc_notify_function_auth_token` = JWT de autorização
+- `app.settings.kc_notify_hmac_secret` = mesmo valor de `KC_NOTIFY_HMAC_SECRET`
 
 ---
 
+## Testes
 
-## 🧪 QA (checklists e smoke tests)
+```bash
+npm test              # roda todos os 447 testes (26 suites)
+npm test -- --runInBand  # sequencial (mais estável em CI)
+node scripts/hygiene-check.js  # checagem de drift de versão e invariantes
+```
 
-Para validação manual e de segurança (RLS), consulte:
+Cobertura atual: ~52% de linhas. Meta evolutiva: 60%+.
 
-- `docs/qa/e2e-checklist.md`
-- `docs/qa/rls-smoke.sql`
-- `docs/qa/v8.1.11.1-admin-reports-threshold.md`
+---
 
-## 🔜 Próxima sprint sugerida (V8.1.6.3)
+## QA
 
-- **Aprimorar moderação (triagem mínima / status) — se houver schema previsto no Roadmap**
-- **Signed URLs no Storage** (se o bucket deixar de ser público)
+- `docs/qa/e2e-checklist.md` — checklist de validação manual completo
+- `docs/qa/rls-smoke.sql` — smoke tests de RLS no Supabase
+- `docs/qa/xss-payloads.md` — payloads para testes de segurança XSS
+- `docs/qa/v8.1.11.1-admin-reports-threshold.md` — guia operacional da Edge Function de alertas
+- `docs/ops/vercel-supabase-invariants.md` — invariantes de deploy Vercel + Supabase
+
+---
+
+## Documentação técnica
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `docs/architecture.md` | Mapa de dependências JS, padrão IIFE, driver pattern |
+| `docs/api-contract.md` | Contrato KCAPI: métodos, parâmetros, retornos |
+| `docs/db-schema.md` | 19 tabelas, RLS, triggers, Storage, pg_cron |
+| `docs/rpc-catalog.md` | 80+ RPCs com assinaturas e exemplos |
+| `docs/module-schemas.md` | KC_CREATE_SCHEMA dos 6 módulos |
+| `docs/env-vars.md` | Variáveis de ambiente Vercel + Supabase + KC_ENV |
+| `docs/design-system.md` | CSS custom properties, componentes, breakpoints |
+| `RELATORIO-KINOCAMPUS-V9.md` | Relatório técnico completo — diagnóstico, arquitetura, histórico de todas as fases v9 |
