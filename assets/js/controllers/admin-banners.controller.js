@@ -42,6 +42,10 @@
       .replace(/"/g,'&quot;');
   }
 
+  const PREVIEW_DEBOUNCE_MS = 200;
+  let previewTimer = null;
+  let dragBindingsReady = false;
+
   function fmtDate(iso) {
     if (!iso) return '—';
     try {
@@ -226,58 +230,89 @@
 
     empty.style.display = 'none';
     list.innerHTML = banners.map(renderBannerItem).join('');
-    bindDragDrop();
+    requestAnimationFrame(() => bindDragDrop());
   }
 
   // ─────────────────────────────────────────────────────────────
   // Drag and Drop — reordenação
   // ─────────────────────────────────────────────────────────────
   function bindDragDrop() {
-    const items = document.querySelectorAll('.kc-banner-item[draggable="true"]');
+    const list = document.getElementById('banners-list');
+    if (!list || dragBindingsReady) return;
 
-    items.forEach((el) => {
-      el.addEventListener('dragstart', (e) => {
-        dragSrcIdx = Number(el.dataset.idx);
-        el.classList.add('dragging');
+    const getItem = (target) => target && target.closest
+      ? target.closest('.kc-banner-item[draggable="true"]')
+      : null;
+
+    const clearDragState = () => {
+      dragSrcIdx = null;
+      list.querySelectorAll('.kc-banner-item').forEach((item) => {
+        item.classList.remove('dragging', 'drag-over');
+      });
+    };
+
+    list.addEventListener('dragstart', (e) => {
+      const item = getItem(e.target);
+      if (!item) return;
+      dragSrcIdx = Number(item.dataset.idx);
+      item.classList.add('dragging');
+      if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
-      });
-
-      el.addEventListener('dragend', () => {
-        el.classList.remove('dragging', 'drag-over');
-        document.querySelectorAll('.kc-banner-item').forEach(i => i.classList.remove('drag-over'));
-      });
-
-      el.addEventListener('dragover', (e) => {
-        e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        el.classList.add('drag-over');
-      });
-
-      el.addEventListener('dragleave', () => {
-        el.classList.remove('drag-over');
-      });
-
-      el.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        el.classList.remove('drag-over');
-        const targetIdx = Number(el.dataset.idx);
-        if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
-
-        // Reordena array local
-        const moved = banners.splice(dragSrcIdx, 1)[0];
-        banners.splice(targetIdx, 0, moved);
-        dragSrcIdx = null;
-
-        renderList();
-
-        try {
-          await reorderBanners(banners);
-          toast('Ordem salva com sucesso!', 'success');
-        } catch (err) {
-          toast('Erro ao salvar ordem: ' + (err.message || err), 'error');
-        }
-      });
+      }
     });
+
+    list.addEventListener('dragend', () => {
+      clearDragState();
+    });
+
+    list.addEventListener('dragover', (e) => {
+      const item = getItem(e.target);
+      if (!item) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      list.querySelectorAll('.kc-banner-item.drag-over').forEach((node) => {
+        if (node !== item) node.classList.remove('drag-over');
+      });
+      if (Number(item.dataset.idx) !== dragSrcIdx) {
+        item.classList.add('drag-over');
+      }
+    });
+
+    list.addEventListener('dragleave', (e) => {
+      const item = getItem(e.target);
+      if (!item) return;
+      const related = getItem(e.relatedTarget);
+      if (related !== item) item.classList.remove('drag-over');
+    });
+
+    list.addEventListener('drop', async (e) => {
+      const item = getItem(e.target);
+      if (!item) return;
+      e.preventDefault();
+
+      const targetIdx = Number(item.dataset.idx);
+      item.classList.remove('drag-over');
+      if (dragSrcIdx === null || Number.isNaN(targetIdx) || dragSrcIdx === targetIdx) {
+        clearDragState();
+        return;
+      }
+
+      const moved = banners.splice(dragSrcIdx, 1)[0];
+      banners.splice(targetIdx, 0, moved);
+      clearDragState();
+
+      renderList();
+
+      try {
+        await reorderBanners(banners);
+        toast('Ordem salva com sucesso!', 'success');
+      } catch (err) {
+        toast('Erro ao salvar ordem: ' + (err.message || err), 'error');
+      }
+    });
+
+    dragBindingsReady = true;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -327,6 +362,8 @@
 
   function closeModal() {
     const modal = document.getElementById('banner-modal');
+    clearTimeout(previewTimer);
+    previewTimer = null;
     if (modal) {
       modal.style.display = 'none';
       modal.setAttribute('aria-hidden', 'true');
@@ -365,11 +402,19 @@
     if (btnEl) btnEl.href = document.getElementById('f-btn-url').value || '#';
   }
 
+  function schedulePreviewUpdate() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => {
+      previewTimer = null;
+      updatePreview();
+    }, PREVIEW_DEBOUNCE_MS);
+  }
+
   function bindPreviewListeners() {
     ['f-pill','f-title','f-subtitle','f-btn-text','f-btn-url','f-icon','f-grad-from','f-grad-to']
       .forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener('input', updatePreview);
+        if (el) el.addEventListener('input', schedulePreviewUpdate);
       });
 
     // Color pickers → campos texto
@@ -377,11 +422,11 @@
     const toPicker   = document.getElementById('f-grad-to-picker');
     if (fromPicker) fromPicker.addEventListener('input', () => {
       document.getElementById('f-grad-from').value = fromPicker.value;
-      updatePreview();
+      schedulePreviewUpdate();
     });
     if (toPicker) toPicker.addEventListener('input', () => {
       document.getElementById('f-grad-to').value = toPicker.value;
-      updatePreview();
+      schedulePreviewUpdate();
     });
 
     // Campos texto → pickers
@@ -389,11 +434,11 @@
     const toText   = document.getElementById('f-grad-to');
     if (fromText) fromText.addEventListener('input', () => {
       if (/^#[0-9a-f]{6}$/i.test(fromText.value) && fromPicker) fromPicker.value = fromText.value;
-      updatePreview();
+      schedulePreviewUpdate();
     });
     if (toText) toText.addEventListener('input', () => {
       if (/^#[0-9a-f]{6}$/i.test(toText.value) && toPicker) toPicker.value = toText.value;
-      updatePreview();
+      schedulePreviewUpdate();
     });
 
     // Toggle ativo/inativo
@@ -552,6 +597,9 @@
       if (!btn) return;
       const action = btn.dataset.action;
       const id     = btn.dataset.id;
+      if (btn.closest('.kc-banner-actions')) {
+        e.stopPropagation();
+      }
 
       if (action === 'edit') {
         const b = banners.find(x => x.id === id);
@@ -594,19 +642,32 @@
     }
 
     // Botões globais
+    const modalBackdrop = document.getElementById('banner-modal');
+    const modalCard = modalBackdrop ? modalBackdrop.querySelector('.kc-modal') : null;
+    const modalClose = document.getElementById('modal-close');
+    const modalCancel = document.getElementById('modal-cancel');
+    const modalSave = document.getElementById('modal-save');
+
     document.getElementById('btn-add-banner').addEventListener('click', () => openModal(null));
     document.getElementById('btn-refresh').addEventListener('click', loadBanners);
-    document.getElementById('modal-close').addEventListener('click', closeModal);
-    document.getElementById('modal-cancel').addEventListener('click', closeModal);
-    document.getElementById('modal-save').addEventListener('click', onSave);
+    if (modalClose) modalClose.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); });
+    if (modalCancel) modalCancel.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); });
+    if (modalSave) modalSave.addEventListener('click', (e) => { e.stopPropagation(); onSave(); });
 
     // Fechar modal ao clicar no backdrop
-    document.getElementById('banner-modal').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('banner-modal')) closeModal();
-    });
+    if (modalCard) {
+      modalCard.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+    if (modalBackdrop) {
+      modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) closeModal();
+      });
+    }
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && document.getElementById('banner-modal').style.display !== 'none') {
+      if (e.key === 'Escape' && modalBackdrop && modalBackdrop.style.display !== 'none') {
         e.preventDefault();
         closeModal();
       }
