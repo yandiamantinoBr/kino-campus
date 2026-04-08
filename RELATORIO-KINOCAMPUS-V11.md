@@ -508,6 +508,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.2.0`
+
+- objetivo:
+  alinhar o shell público em páginas equivalentes, garantindo estados ativos coerentes na navegação, comportamento previsível do menu móvel e busca mobile disponível também na `create-post.html`.
+- arquivos alterados:
+  `assets/js/kc-core.js`, `assets/js/kc-public-shell.js`, `create-post.html`, `achados-perdidos.html`, `caronas-feed.html`, `moradia.html`, `oportunidades.html`, `my-posts.html`, `search-results.html`, `_product.html`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`.
+- equivalentes revisados:
+  módulos públicos com navegação móvel estática, páginas secundárias com menu móvel, shell injetado em `ajuda.html` e o entrypoint de criação de publicação.
+- contratos preservados:
+  nenhum contrato de dados, Supabase, RPC, `KCAPI` pública ou rota foi alterado; a mudança ficou restrita a shell/navegação/busca no frontend.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-core.js`, `node --check assets/js/kc-public-shell.js`, `git diff --check` e smoke local com Playwright em `create-post.html`, `moradia.html` e `ajuda.html` nos cenários desktop/mobile.
+- validação em navegador:
+  local concluída; faltará complementar a checagem do deploy publicado após merge da PR desta iteração.
+- PR / commit / deploy:
+  PR `#229`, commit `71f893b` na branch `codex/v11-2-0-public-shell-consistency`. A validação pós-merge em deploy publicado será registrada no fechamento.
+- riscos residuais:
+  ainda existe dependência de cache de assets compartilhados em alguns navegadores, então a validação pós-merge deve conferir explicitamente a versão publicada do shell público.
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:

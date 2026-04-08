@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V10.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 já iniciada pela iteração `v11.1.0` de baseline documental.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0` e `v11.2.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.2.0 | consistência de shell público: estados ativos da navegação, menu móvel coerente em páginas secundárias e busca mobile adicionada na `create-post.html` | `#229` |
 | v11.1.0 | baseline documental da v11: sincronização de README, changelog e docs técnicas com o estado real da base | `#228` |
 | docs | Sincronização do `README.md` com o estado real da v10 e nota operacional das migrations SQL da v10 | `#223` |
 | v10.0 | Admin Panel Overhaul: navegação unificada, hardening dos controllers admin, busca e paginação server-side no admin, responsividade consolidada e ajustes de UX | `#215` a `#222` |
@@ -54,9 +55,9 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.1.0`
-- objetivo da iteração: saneamento de drift documental entre `README.md`, `CHANGELOG.md`, docs técnicas, contratos e estado real do repositório
-- natureza da iteração: documental, sem alteração funcional de banco, frontend ou deploy
+- iteração ativa consolidada: `v11.2.0`
+- objetivo da iteração: alinhar shell público, navegação móvel, estados ativos e busca mobile da `create-post.html`
+- natureza da iteração: frontend compartilhado e HTMLs equivalentes, sem mudança de banco
 
 ---
 

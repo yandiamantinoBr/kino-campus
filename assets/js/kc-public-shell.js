@@ -14,6 +14,21 @@
   ];
   const SHELL_SNAPSHOT_KEY = 'auth-shell';
   const SHELL_SNAPSHOT_MAX_AGE = 1000 * 60 * 60 * 12;
+  const MENU_ROUTE_PAGES = new Set([
+    'achados-perdidos.html',
+    'caronas-feed.html',
+    'moradia.html',
+    'oportunidades.html',
+    'ajuda.html',
+    'search-results.html',
+    '_product.html',
+    'my-posts.html',
+    'profile.html',
+    'settings.html',
+    'account-setup.html',
+    'auth-callback.html',
+    'ods.html'
+  ]);
 
   function $(selector, root) {
     return (root || document).querySelector(selector);
@@ -71,13 +86,15 @@
   function buildMobileNav(activeKey) {
     const isEvents = activeKey === 'events';
     const isMarket = activeKey === 'market';
+    const isCreate = activeKey === 'create';
+    const isMenu = activeKey === 'menu';
     return [
       '<nav class="kc-mobile-nav" aria-label="Navegação principal móvel">',
       `<a href="index.html"${activeKey === 'home' ? ' class="active"' : ''}><i class="fas fa-home"></i><span>Início</span></a>`,
       `<a href="eventos.html"${isEvents ? ' class="active"' : ''}><i class="fas fa-calendar"></i><span>Eventos</span></a>`,
-      '<a class="kc-create-btn" href="create-post.html" aria-label="Criar publicação"><i class="fas fa-plus"></i></a>',
+      `<a class="kc-create-btn${isCreate ? ' active' : ''}" href="create-post.html" aria-label="Criar publicação"><i class="fas fa-plus"></i></a>`,
       `<a href="compra-venda-feed.html"${isMarket ? ' class="active"' : ''}><i class="fas fa-shopping-bag"></i><span class="kc-mobile-nav-label-long">Compra/Venda</span></a>`,
-      '<button class="kc-menu-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer" data-kc-mobile-menu="toggle"><i class="fas fa-bars"></i><span>Menu</span></button>',
+      `<button class="kc-menu-toggle${isMenu ? ' active' : ''}" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer" data-kc-mobile-menu="toggle" type="button"><i class="fas fa-bars"></i><span>Menu</span></button>`,
       '</nav>'
     ].join('');
   }
@@ -119,6 +136,7 @@
     if (!menu || !overlay) return;
     menu.classList.add('active');
     overlay.classList.add('active');
+    document.documentElement.classList.add('kc-menu-open');
     menu.setAttribute('aria-hidden', 'false');
     overlay.setAttribute('aria-hidden', 'false');
     const toggle = document.querySelector('[data-kc-mobile-menu="toggle"]');
@@ -133,6 +151,7 @@
     if (!menu || !overlay) return;
     menu.classList.remove('active');
     overlay.classList.remove('active');
+    document.documentElement.classList.remove('kc-menu-open');
     menu.setAttribute('aria-hidden', 'true');
     overlay.setAttribute('aria-hidden', 'true');
     const toggle = document.querySelector('[data-kc-mobile-menu="toggle"]');
@@ -188,6 +207,67 @@
 
     const header = document.querySelector('.kc-header');
     if (header) header.classList.add('kc-header--shell');
+  }
+
+  function setLinkActive(link, isActive) {
+    if (!link) return;
+    link.classList.toggle('active', !!isActive);
+    if (isActive) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+
+  function getCurrentPage() {
+    return String((window.location.pathname.split('/').pop() || 'index.html')).toLowerCase();
+  }
+
+  function resolveBottomNavKey(page) {
+    if (page === 'index.html') return 'home';
+    if (page === 'eventos.html') return 'events';
+    if (page === 'compra-venda-feed.html') return 'market';
+    if (page === 'create-post.html') return 'create';
+    if (MENU_ROUTE_PAGES.has(page)) return 'menu';
+    return '';
+  }
+
+  function normalizeControlButtons() {
+    document.querySelectorAll('.theme-toggle, [data-kc-theme-toggle], .kc-search-mobile-btn, .kc-search-bar button, [data-kc-mobile-menu], .kc-menu-toggle, .kc-close-menu').forEach(function (button) {
+      if (button && button.tagName === 'BUTTON' && !button.getAttribute('type')) {
+        button.setAttribute('type', 'button');
+      }
+    });
+  }
+
+  function applyActiveStates() {
+    const currentPage = getCurrentPage();
+    const bottomNavKey = resolveBottomNavKey(currentPage);
+
+    document.querySelectorAll('.kc-nav-links a[href]').forEach(function (link) {
+      const href = String(link.getAttribute('href') || '').split('?')[0].split('#')[0].toLowerCase();
+      setLinkActive(link, !!href && href === currentPage);
+    });
+
+    document.querySelectorAll('.kc-mobile-menu-content a[href]:not([href="#login"])').forEach(function (link) {
+      const href = String(link.getAttribute('href') || '').split('?')[0].split('#')[0].toLowerCase();
+      setLinkActive(link, !!href && href === currentPage);
+    });
+
+    document.querySelectorAll('.kc-mobile-nav a[href]').forEach(function (link) {
+      const href = String(link.getAttribute('href') || '').split('?')[0].split('#')[0].toLowerCase();
+      const key = href === 'index.html'
+        ? 'home'
+        : href === 'eventos.html'
+          ? 'events'
+          : href === 'compra-venda-feed.html'
+            ? 'market'
+            : href === 'create-post.html'
+              ? 'create'
+              : '';
+      setLinkActive(link, !!key && key === bottomNavKey);
+    });
+
+    document.querySelectorAll('.kc-mobile-nav [data-kc-mobile-menu="toggle"], .kc-mobile-nav .kc-menu-toggle').forEach(function (button) {
+      button.classList.toggle('active', bottomNavKey === 'menu');
+    });
   }
 
   function hydrateAuthShellFromSnapshot() {
@@ -246,6 +326,8 @@
     document.documentElement.dataset.kcPublicShellReady = '1';
     injectShellIfNeeded();
     bindMobileMenu();
+    normalizeControlButtons();
+    applyActiveStates();
     hydrateAuthShellFromSnapshot();
     syncHeaderHeight();
     forceHeaderVisibility();
