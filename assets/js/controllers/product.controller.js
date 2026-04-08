@@ -797,8 +797,14 @@
       if (formatBtn) {
         event.preventDefault();
         const fmt = String(formatBtn.dataset.kcFormat || '').trim();
-        if (fmt && typeof window.formatText === 'function') {
-          window.formatText(fmt);
+        if (fmt) {
+          if (window.KCLazyLoader && typeof window.KCLazyLoader.load === 'function') {
+            window.KCLazyLoader.load('assets/js/kc-comments.js', function() {
+              if (typeof window.formatText === 'function') window.formatText(fmt);
+            });
+          } else if (typeof window.formatText === 'function') {
+            window.formatText(fmt);
+          }
         }
         return;
       }
@@ -806,7 +812,11 @@
       const submitCommentBtn = event.target.closest('[data-kc-submit-comment]');
       if (submitCommentBtn) {
         event.preventDefault();
-        if (typeof window.submitComment === 'function') {
+        if (window.KCLazyLoader && typeof window.KCLazyLoader.load === 'function') {
+          window.KCLazyLoader.load('assets/js/kc-comments.js', function() {
+            if (typeof window.submitComment === 'function') window.submitComment();
+          });
+        } else if (typeof window.submitComment === 'function') {
           window.submitComment();
         }
         return;
@@ -2658,8 +2668,15 @@
     } catch (_trackErr) { /* silenciar */ }
 
     // V8.1.6.2: wire botão Denunciar (gated por driver + auth)
-    // Comments
-    if (typeof window.renderComments === 'function') {
+    // Comments — garante kc-comments.js carregado antes de inicializar
+    if (window.KCLazyLoader && typeof window.KCLazyLoader.load === 'function') {
+      var _commentPostId = id;
+      window.KCLazyLoader.load('assets/js/kc-comments.js', function() {
+        if (typeof window.renderComments === 'function') {
+          window.renderComments(_commentPostId, 'commentsContainer');
+        }
+      });
+    } else if (typeof window.renderComments === 'function') {
       window.renderComments(id, 'commentsContainer');
     }
   }
