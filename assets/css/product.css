@@ -588,6 +588,7 @@
       border-radius: 12px;
       box-shadow: 0 8px 24px rgba(0,0,0,.35);
       min-width: 200px;
+      max-width: calc(100vw - 24px);
       z-index: 9000;
       overflow: hidden;
       display: none;
@@ -1401,11 +1402,19 @@
     /* Desktop: popover ancorado ao botão */
     @media (min-width: 641px) {
       .kc-save-popover {
-        position: absolute;
-        top: calc(100% + 8px);
+        position: fixed;
+        top: 0;
         left: 0;
-        width: min(330px, calc(100vw - 32px));
+        width: min(330px, calc(100vw - 24px));
         border-radius: 16px;
+        animation: kc-pop-in .18s cubic-bezier(.22, 1, .36, 1);
+      }
+      .kc-share-popover {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: min(220px, calc(100vw - 24px));
+        border-radius: 14px;
         animation: kc-pop-in .18s cubic-bezier(.22, 1, .36, 1);
       }
       .kc-save-popover__close { display: none; }
@@ -1428,6 +1437,12 @@
         border-radius: 20px 20px 0 0;
         max-height: 84vh;
         animation: kc-sheet-up .22s cubic-bezier(.22, 1, .36, 1);
+      }
+      .kc-share-popover {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        width: min(220px, calc(100vw - 24px));
       }
       .kc-report-popover {
         bottom: 0;

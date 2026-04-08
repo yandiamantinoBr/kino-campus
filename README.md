@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V10.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com documentação sincronizada na PR `#223`; para ativação completa das buscas e paginações server-side do painel admin ainda faltam 2 migrations SQL no banco.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal e documentação sincronizada até os follow-ups de abril de 2026.
 
 ---
 
@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| docs | Sincronização do `README.md` com o estado real da v10 e nota operacional das migrations pendentes | `#223` |
+| docs | Sincronização do `README.md` com o estado real da v10 e nota operacional das migrations SQL da v10 | `#223` |
 | v10.0 | Admin Panel Overhaul: navegação unificada, hardening dos controllers admin, busca e paginação server-side no admin, responsividade consolidada e ajustes de UX | `#215` a `#222` |
 | v9.4.4 | Hotfix de comentários com `KCLazyLoader.load()` nos pontos críticos | `#213` |
 | v9.4.3 | Hotfix de comentários e empty state do perfil | `#212` |
@@ -58,16 +58,17 @@ O painel admin foi reorganizado e endurecido em 8 PRs sequenciais:
 
 ### Migrations novas da v10
 
-Estas migrations já estão no repositório, mas **não foram aplicadas automaticamente no Supabase**:
+Estas migrations já estão no repositório e **já foram aplicadas no banco principal atual**. Para ambientes novos, staging paralelo ou bancos recriados, aplique manualmente em ordem:
 
 | Arquivo | Função criada | Status |
 |---------|---------------|--------|
-| `supabase/migrations/v10.0.0.0_admin_search_posts_full.sql` | `public.kc_admin_search_posts_full(...)` | pendente de aplicação manual no banco |
-| `supabase/migrations/v10.0.1.0_admin_help_requests_pagination.sql` | `public.kc_admin_list_help_requests_paged(...)` | pendente de aplicação manual no banco |
+| `supabase/migrations/v10.0.0.0_admin_search_posts_full.sql` | `public.kc_admin_search_posts_full(...)` | aplicada no banco principal atual |
+| `supabase/migrations/v10.0.1.0_admin_help_requests_pagination.sql` | `public.kc_admin_list_help_requests_paged(...)` | aplicada no banco principal atual |
 
 ### Importante
 
-- A aplicação dessas migrations é feita **uma vez por banco/ambiente**.
+- No banco principal atual, essas migrations já estão ativas.
+- A aplicação continua sendo feita **uma vez por banco/ambiente**.
 - Se o seu banco de produção e o de staging forem diferentes, aplique em ambos.
 - Depois de aplicar o SQL, **não é necessário redeploy do frontend** apenas por isso; um reload da página basta.
 
@@ -134,6 +135,8 @@ Acesse `http://localhost:5500/index.html`.
 ### 1) Migrations
 
 Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **77 arquivos**, incluindo as 2 migrations da v10.
+
+No banco principal atual, as 2 migrations da v10 já foram aplicadas. Use a lista abaixo para ambientes novos, bancos recriados ou staging separado.
 
 Se estiver atualizando um ambiente que já estava em v9, garanta pelo menos a aplicação destas novas migrations:
 
