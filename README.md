@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V10.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal e documentação sincronizada até os follow-ups de abril de 2026.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 aberta em fase de planejamento documental.
 
 ---
 
@@ -38,6 +38,18 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | v9.3.1 | Analytics de post para autores | `#207` |
 | v9.1.x | Notificações in-app, convites externos e avaliações de usuários | `#198` a `#206` |
 | v9.0.x | Documentação técnica, segurança e expansão de testes | `#194` a `#197` |
+
+---
+
+## Planejamento v11
+
+O planejamento detalhado da próxima fase está em [RELATORIO-KINOCAMPUS-V11.md](./RELATORIO-KINOCAMPUS-V11.md).
+
+Regras desta fase:
+
+- nenhuma implementação da v11 começa antes de autorização explícita
+- toda iteração da v11 deve atualizar este `README.md` e o `RELATORIO-KINOCAMPUS-V11.md`
+- cada iteração aprovada deve seguir a esteira completa: branch própria, commit, push, PR, merge, delete branch, pull, validação no Supabase/Vercel e testes de regressão
 
 ---
 
