@@ -401,10 +401,7 @@
   }
 
   /* ── Limpar filtros ─────────────────────────────────── */
-  function bindClearFilters() {
-    var btn = document.querySelector('[data-kc-caronas-clear-filters]');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
+  function clearAppliedFilters() {
       document.querySelectorAll('[data-kc-carona-type]').forEach(function (i) { i.checked = true; });
       document.querySelectorAll('[data-kc-carona-campus]').forEach(function (i) { i.checked = false; });
       document.querySelectorAll('[data-kc-carona-period]').forEach(function (i) { i.checked = false; });
@@ -432,6 +429,14 @@
       state.priceMax = null;
       syncUrlState();
       applyFilters();
+  }
+
+  function bindClearFilters() {
+    document.querySelectorAll('[data-kc-caronas-clear-filters], [data-kc-caronas-empty-clear="true"]').forEach(function (btn) {
+      btn.addEventListener('click', function (event) {
+        if (event) event.preventDefault();
+        clearAppliedFilters();
+      });
     });
   }
 

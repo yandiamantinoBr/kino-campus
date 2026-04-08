@@ -637,7 +637,7 @@
     document.querySelectorAll('[data-kc-market-filter-kind], [data-kc-market-price-min], [data-kc-market-price-max], [data-kc-market-date-preset]').forEach((input) => input.addEventListener('change', handleInputChange));
     const clear = document.querySelector('[data-kc-market-clear-sidebar="true"]');
     if (clear) clear.addEventListener('click', function () { resetApplied(false); });
-    const emptyClear = document.querySelector('#noResults .kc-btn-primary');
+    const emptyClear = document.querySelector('[data-kc-market-empty-clear="true"]');
     if (emptyClear) emptyClear.addEventListener('click', function (event) { event.preventDefault(); resetApplied(true); });
     document.querySelectorAll('.kc-feed-tabs a').forEach((tab) => tab.addEventListener('click', function () {
       state.cats = catsFromQuick(tab.getAttribute('data-category') || tab.getAttribute('href') || '');

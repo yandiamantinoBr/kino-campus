@@ -1042,33 +1042,40 @@
     applyCurrentFilters();
   }
 
+  function clearAppliedFilters(event) {
+    if (event) event.preventDefault();
+    document.querySelectorAll('[data-kc-opp-filter-kind]').forEach((input) => {
+      input.checked = false;
+    });
+    state.selectedTypeFilters = new Set();
+    state.selectedModeFilters = new Set();
+    state.selectedArea = '';
+    state.datePreset = '';
+    state.priceMin = null;
+    state.priceMax = null;
+    const minInput = document.querySelector('[data-kc-opp-price-min]');
+    const maxInput = document.querySelector('[data-kc-opp-price-max]');
+    if (minInput) minInput.value = '';
+    if (maxInput) maxInput.value = '';
+    syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
+    applySidebarFilters();
+  }
+
   function bindSidebarEvents() {
     document.querySelectorAll('[data-kc-opp-filter-kind], [data-kc-opp-price-min], [data-kc-opp-price-max], [data-kc-opp-date-preset]').forEach((input) => {
       input.addEventListener('change', applySidebarFilters);
     });
 
-    const clearButton = document.querySelector('[data-kc-opp-clear-filters="true"]');
-    if (clearButton) {
-      clearButton.addEventListener('click', function () {
-        document.querySelectorAll('[data-kc-opp-filter-kind]').forEach((input) => {
-          input.checked = false;
-        });
-        state.selectedArea = '';
-        state.datePreset = '';
-        const minInput = document.querySelector('[data-kc-opp-price-min]');
-        const maxInput = document.querySelector('[data-kc-opp-price-max]');
-        if (minInput) minInput.value = '';
-        if (maxInput) maxInput.value = '';
-        syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
-        applySidebarFilters();
-      });
-    }
+    document.querySelectorAll('[data-kc-opp-clear-filters="true"], [data-kc-opp-empty-clear="true"]').forEach((button) => {
+      button.addEventListener('click', clearAppliedFilters);
+    });
 
     document.addEventListener('click', function (event) {
       const clearDraftButton = event.target.closest('[data-kc-opp-modal-clear-filters="true"]');
       if (clearDraftButton && state.modalDraft) {
         state.modalDraft.typeFilters = new Set();
         state.modalDraft.modeFilters = new Set();
+        state.modalDraft.area = '';
         state.modalDraft.datePreset = '';
         state.modalDraft.priceMin = null;
         state.modalDraft.priceMax = null;
@@ -1083,6 +1090,7 @@
         if (action === 'filters' && state.modalDraft) {
           state.selectedTypeFilters = cloneSet(state.modalDraft.typeFilters);
           state.selectedModeFilters = cloneSet(state.modalDraft.modeFilters);
+          state.selectedArea = state.modalDraft.area || '';
           state.datePreset = normalizeDatePreset(state.modalDraft.datePreset);
           state.priceMin = state.modalDraft.priceMin != null ? state.modalDraft.priceMin : null;
           state.priceMax = state.modalDraft.priceMax != null ? state.modalDraft.priceMax : null;
