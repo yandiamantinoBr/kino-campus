@@ -5,8 +5,8 @@
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V9.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base via PRs `#215` a `#222`; para ativação completa das buscas e paginações server-side do painel admin ainda faltam 2 migrations SQL no banco.
+**Branch principal:** `kinocampus-V10.0-foundations`  
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com documentação sincronizada na PR `#223`; para ativação completa das buscas e paginações server-side do painel admin ainda faltam 2 migrations SQL no banco.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| docs | Sincronização do `README.md` com o estado real da v10 e nota operacional das migrations pendentes | `#223` |
 | v10.0 | Admin Panel Overhaul: navegação unificada, hardening dos controllers admin, busca e paginação server-side no admin, responsividade consolidada e ajustes de UX | `#215` a `#222` |
 | v9.4.4 | Hotfix de comentários com `KCLazyLoader.load()` nos pontos críticos | `#213` |
 | v9.4.3 | Hotfix de comentários e empty state do perfil | `#212` |
