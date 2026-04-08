@@ -1,122 +1,165 @@
-# Kino Campus — v9.4.4
+﻿# Kino Campus - v10.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
-Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. Acesso restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
+Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
-**Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)
-**Branch principal:** `kinocampus-V9.0-foundations`
+**Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
+**Branch principal:** `kinocampus-V9.0-foundations`  
+**Status atual:** código da v10 admin mergeado na base via PRs `#215` a `#222`; para ativação completa das buscas e paginações server-side do painel admin ainda faltam 2 migrations SQL no banco.
 
 ---
 
 ## Stack
 
 | Camada | Tecnologia |
-|--------|-----------|
-| Frontend | HTML5 + CSS3 + Vanilla JS (59 módulos IIFE, sem framework/bundler) |
-| Backend | Supabase (PostgreSQL 17 + Auth + Storage + Edge Functions + Realtime) |
-| Hosting | Vercel (static site + serverless OG images) |
-| Domínio | kinocampus.com.br (Hostinger, DNS para Vercel) |
-| Build | `node scripts/inject-env.js` (substitui placeholders) |
-| Testes | Jest: 26 suites, 447 testes, ~52% cobertura de linhas |
+|--------|------------|
+| Frontend | HTML5 + CSS3 + Vanilla JS (IIFE, sem framework/bundler) |
+| Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime) |
+| Hosting | Vercel |
+| Domínio | `kinocampus.com.br` |
+| Build | `node scripts/inject-env.js` |
+| Testes | Jest: 26 suites, 447 testes |
 
 ---
 
-## Funcionalidades (v9)
+## Entregas Recentes
 
-| Fase | Feature | PR |
+| Fase | Entrega | PRs |
 |------|---------|-----|
-| v9.0 | Documentação técnica + hardening de segurança (SVG block, magic bytes, session) | #194 |
-| v9.0 | Cobertura de testes expandida (45%+, 18 suites) | #196 |
-| v9.0 | Dívida técnica DB: retenção de analytics, deprecação de legacy_id | #197 |
-| v9.1 | Notificações in-app com Realtime | #198–#200 |
-| v9.1 | Avaliações de usuários (1–5 estrelas + reputação) | #202 |
-| v9.1 | Sistema de convites externos (Edge Function + whitelist + UI admin) | #203–#206 |
-| v9.2 | Filtros avançados nos feeds (preço, data, tipo) | #201 |
-| v9.3 | Analytics de post para autores (view tracking + mini-stats) | #207 |
-| v9.3 | Moderação automática anti-spam (flood control + link spam + new user trust) | #208 |
-| v9.4 | Lazy loading de módulos grandes via `KCLazyLoader` | #209 |
-| v9.4 | Otimização de imagens (compressão client-side Canvas API + LCP hints) | #210 |
-| v9.4 | Acessibilidade A11y (skip-link, aria-labels, focus-visible — 17 HTMLs) | #211 |
-| fix | Hotfix comentários + empty state perfil | #212 |
-| fix | Root cause comentários lazy load: `KCLazyLoader.load()` em 3 pontos | #213 |
+| v10.0 | Admin Panel Overhaul: navegação unificada, hardening dos controllers admin, busca e paginação server-side no admin, responsividade consolidada e ajustes de UX | `#215` a `#222` |
+| v9.4.4 | Hotfix de comentários com `KCLazyLoader.load()` nos pontos críticos | `#213` |
+| v9.4.3 | Hotfix de comentários e empty state do perfil | `#212` |
+| v9.4.2 | Acessibilidade A11y em 17 HTMLs | `#211` |
+| v9.4.1 | Otimização de imagens e ajustes de LCP | `#210` |
+| v9.4.0 | Lazy loading de módulos grandes via `KCLazyLoader` | `#209` |
+| v9.3.2 | Moderação automática anti-spam | `#208` |
+| v9.3.1 | Analytics de post para autores | `#207` |
+| v9.1.x | Notificações in-app, convites externos e avaliações de usuários | `#198` a `#206` |
+| v9.0.x | Documentação técnica, segurança e expansão de testes | `#194` a `#197` |
 
 ---
 
-## Regra de release (anti-drift)
+## Admin v10
 
-Sempre que houver release do front:
+O painel admin foi reorganizado e endurecido em 8 PRs sequenciais:
 
-1. Definir uma versão-alvo única para todos os módulos de front.
+| PR | Branch | Resultado |
+|----|--------|-----------|
+| `#215` | `fix/admin-v10-shell-nav` | navegação admin unificada, `active-link` robusto, `resize debounce`, `aria-label` nos toggles |
+| `#216` | `fix/admin-v10-dashboard` | debounce/cancelamento do filtro de período, correções em audit log, export, ranking e modal |
+| `#217` | `fix/admin-v10-moderation` | busca server-side no admin, debounce de busca, lock de ações e confirmação destrutiva |
+| `#218` | `fix/admin-v10-reports` | paginação progressiva, contador, confirmação de exclusão e escaping consistente |
+| `#219` | `fix/admin-v10-banners` | drag and drop sem listeners duplicados, preview com debounce e modal endurecida |
+| `#220` | `fix/admin-v10-help-requests` | paginação server-side total-aware, guard de bind único, validação de enums e fallback seguro |
+| `#221` | `fix/admin-v10-invite` | clipboard centralizado, cleanup de polling e null checks defensivos |
+| `#222` | `fix/admin-v10-mobile-css` | breakpoints unificados, CSS compartilhado, `data-label` real e responsividade consolidada |
+
+### Migrations novas da v10
+
+Estas migrations já estão no repositório, mas **não foram aplicadas automaticamente no Supabase**:
+
+| Arquivo | Função criada | Status |
+|---------|---------------|--------|
+| `supabase/migrations/v10.0.0.0_admin_search_posts_full.sql` | `public.kc_admin_search_posts_full(...)` | pendente de aplicação manual no banco |
+| `supabase/migrations/v10.0.1.0_admin_help_requests_pagination.sql` | `public.kc_admin_list_help_requests_paged(...)` | pendente de aplicação manual no banco |
+
+### Importante
+
+- A aplicação dessas migrations é feita **uma vez por banco/ambiente**.
+- Se o seu banco de produção e o de staging forem diferentes, aplique em ambos.
+- Depois de aplicar o SQL, **não é necessário redeploy do frontend** apenas por isso; um reload da página basta.
+
+---
+
+## Regra de release
+
+Sempre que houver release de frontend:
+
+1. Definir uma versão-alvo única para todos os módulos de frontend.
 2. Atualizar em lote as constantes `VERSION` dos arquivos mapeados.
-3. Validar referências visuais de versão na UI (ex.: rodapé do modal de auth).
-4. Registrar no `README.md` e no `CHANGELOG.md`.
+3. Validar referências visuais de versão na UI.
+4. Registrar a mudança em `README.md` e `CHANGELOG.md`.
 
 ---
 
-## Fonte Única de Verdade (Banco)
+## Fonte única de verdade do banco
 
-Para governança de banco no projeto, a **fonte única de verdade** é a esteira SQL oficial do Supabase.
-Não existe caminho operacional por `sql/` na raiz.
-
-Para visão consolidada dos artefatos legados e critérios de remoção, consulte o **Legacy Map** em `docs/legacy/README.md`.
-
-### Regra explícita (mudanças críticas)
-
-Qualquer mudança crítica de banco (incluindo, mas não limitado a: **auth, `verified`, policies, triggers, RLS, storage policies, grants/revokes**) deve existir **somente** em:
+A fonte oficial de verdade para banco é a esteira SQL do Supabase:
 
 - `supabase/schema-*.sql`
 - `supabase/migrations/*.sql`
 
-### Procedimento obrigatório para SQL fora do fluxo oficial
+Não existe caminho operacional por `sql/` na raiz.
 
-Se surgir SQL fora da esteira oficial (script ad hoc, patch local, validação antiga, experimento):
+Para artefatos legados e critérios de remoção, consulte `docs/legacy/README.md`.
 
-1. **Mover** o arquivo para `docs/legacy/sql/`.
-2. **Documentar** no `docs/legacy/README.md` o motivo de legado (com referência ao arquivo oficial quando existir).
-3. **Não usar operacionalmente** esse SQL em deploy/setup/update.
-4. **Não recriar** diretório `sql/` na raiz do projeto.
+### Regra explícita para mudanças críticas
+
+Qualquer mudança crítica de banco, incluindo auth, `verified`, policies, triggers, RLS, storage policies e grants/revokes, deve existir somente em:
+
+- `supabase/schema-*.sql`
+- `supabase/migrations/*.sql`
+
+Se surgir SQL fora do fluxo oficial:
+
+1. Mover para `docs/legacy/sql/`.
+2. Documentar em `docs/legacy/README.md`.
+3. Não usar operacionalmente em deploy ou setup.
+4. Não recriar diretório `sql/` na raiz.
 
 ---
 
-## Como rodar (desenvolvimento)
+## Como rodar localmente
 
-### Opção A — VS Code Live Server
-1. Abra a pasta `kino-campus/` no VS Code
-2. Clique em **"Go Live"**
-3. Acesse `index.html`
+### Opção A - VS Code Live Server
 
-### Opção B — Python
+1. Abra a pasta `kino-campus/` no VS Code.
+2. Clique em `Go Live`.
+3. Acesse `index.html`.
+
+### Opção B - Python
+
 ```bash
 python -m http.server 5500
 ```
-Acesse `http://localhost:5500/index.html`
+
+Acesse `http://localhost:5500/index.html`.
 
 ---
 
-## Ativação Supabase (produção)
+## Ativação Supabase
 
 ### 1) Migrations
 
-Aplique todas as migrations em `supabase/migrations/` em **ordem alfabética** (atualmente 71 arquivos, de `v8.1.3.3_*` a `v9.3.2.0_*`).
+Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **77 arquivos**, incluindo as 2 migrations da v10.
 
-> Para cada arquivo: copie o conteúdo e execute no **SQL Editor** do Supabase, ou use a CLI: `supabase db push`.
+Se estiver atualizando um ambiente que já estava em v9, garanta pelo menos a aplicação destas novas migrations:
 
-### 2) Schema bootstrap (apenas novo projeto)
+1. `v10.0.0.0_admin_search_posts_full.sql`
+2. `v10.0.1.0_admin_help_requests_pagination.sql`
 
-Se estiver iniciando um projeto do zero, aplique antes:
+Você pode aplicar pelo SQL Editor do Supabase ou pela CLI.
+
+### 2) Schema bootstrap
+
+Para um projeto novo, aplique antes:
+
 1. `supabase/schema-bootstrap-v8.1.2.3.sql`
 2. `supabase/schema-update-v8.1.3.2.sql`
-3. Depois todas as migrations em ordem
+3. Depois as migrations em ordem
 
 ### 3) Storage
 
-Bucket esperado: `kino-media` (configurado em `KC_ENV.supabase.storageBucket`).
-- Caminhos: `post-media/{uid}/{postId}/{timestamp}-image-{n}.{ext}` e `avatars/{uid}.{ext}`
+Bucket esperado: `kino-media`.
 
-### 4) Configuração (KC_ENV)
+- `post-media/{uid}/{postId}/{timestamp}-image-{n}.{ext}`
+- `avatars/{uid}.{ext}`
+
+### 4) KC_ENV
 
 Edite `assets/js/kc-env.js`:
+
 ```javascript
 environment: "production",
 driver: "supabase",
@@ -127,47 +170,47 @@ supabase: {
 }
 ```
 
-> Em `production`, `driver = "supabase"` é obrigatório. Modo `local` é apenas para desenvolvimento.
+Em produção, `driver = "supabase"` é obrigatório. `local` é apenas para desenvolvimento.
 
 ### 5) Edge Functions
 
-**notify-admin-reports-threshold** (alerta admin por denúncias):
+**notify-admin-reports-threshold**
+
 ```bash
 supabase functions deploy notify-admin-reports-threshold
 ```
-Secrets necessários: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `KC_APP_BASE_URL`, `ADMIN_REPORTS_WEBHOOK_URL`, `KC_NOTIFY_HMAC_SECRET`, `REPORTS_THRESHOLD` (default: 3), `REPORTS_NOTIFY_COOLDOWN_HOURS` (default: 24).
 
-**kc-invite-user** (convites externos):
+**kc-invite-user**
+
 ```bash
 supabase functions deploy kc-invite-user
 ```
 
-### 6) Settings de banco (fora do git)
-- `app.settings.kc_notify_function_url` = URL completa da Edge Function
-- `app.settings.kc_notify_function_auth_token` = JWT de autorização
-- `app.settings.kc_notify_hmac_secret` = mesmo valor de `KC_NOTIFY_HMAC_SECRET`
+### 6) Settings de banco fora do git
+
+- `app.settings.kc_notify_function_url`
+- `app.settings.kc_notify_function_auth_token`
+- `app.settings.kc_notify_hmac_secret`
 
 ---
 
 ## Testes
 
 ```bash
-npm test              # roda todos os 447 testes (26 suites)
-npm test -- --runInBand  # sequencial (mais estável em CI)
-node scripts/hygiene-check.js  # checagem de drift de versão e invariantes
+npm test
+npm test -- --runInBand
+node scripts/hygiene-check.js
 ```
-
-Cobertura atual: ~52% de linhas. Meta evolutiva: 60%+.
 
 ---
 
 ## QA
 
-- `docs/qa/e2e-checklist.md` — checklist de validação manual completo
-- `docs/qa/rls-smoke.sql` — smoke tests de RLS no Supabase
-- `docs/qa/xss-payloads.md` — payloads para testes de segurança XSS
-- `docs/qa/v8.1.11.1-admin-reports-threshold.md` — guia operacional da Edge Function de alertas
-- `docs/ops/vercel-supabase-invariants.md` — invariantes de deploy Vercel + Supabase
+- `docs/qa/e2e-checklist.md`
+- `docs/qa/rls-smoke.sql`
+- `docs/qa/xss-payloads.md`
+- `docs/qa/v8.1.11.1-admin-reports-threshold.md`
+- `docs/ops/vercel-supabase-invariants.md`
 
 ---
 
@@ -175,11 +218,12 @@ Cobertura atual: ~52% de linhas. Meta evolutiva: 60%+.
 
 | Arquivo | Conteúdo |
 |---------|----------|
-| `docs/architecture.md` | Mapa de dependências JS, padrão IIFE, driver pattern |
-| `docs/api-contract.md` | Contrato KCAPI: métodos, parâmetros, retornos |
-| `docs/db-schema.md` | 19 tabelas, RLS, triggers, Storage, pg_cron |
-| `docs/rpc-catalog.md` | 80+ RPCs com assinaturas e exemplos |
-| `docs/module-schemas.md` | KC_CREATE_SCHEMA dos 6 módulos |
-| `docs/env-vars.md` | Variáveis de ambiente Vercel + Supabase + KC_ENV |
-| `docs/design-system.md` | CSS custom properties, componentes, breakpoints |
-| `RELATORIO-KINOCAMPUS-V9.md` | Relatório técnico completo — diagnóstico, arquitetura, histórico de todas as fases v9 |
+| `docs/architecture.md` | mapa de dependências JS e padrão IIFE |
+| `docs/api-contract.md` | contrato da `KCAPI` |
+| `docs/db-schema.md` | tabelas, RLS, triggers e storage |
+| `docs/rpc-catalog.md` | catálogo de RPCs |
+| `docs/module-schemas.md` | schemas dos 6 módulos |
+| `docs/env-vars.md` | variáveis de ambiente |
+| `docs/design-system.md` | design system e breakpoints |
+| `RELATORIO-KINOCAMPUS-V9.md` | relatório técnico consolidado da v9 |
+| `CHANGELOG.md` | histórico de releases e fixes |
