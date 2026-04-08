@@ -240,14 +240,72 @@ function initSmoothAnchors() {
 // -----------------------------
 function initMobileNavActive() {
   const currentPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
-  const links = document.querySelectorAll('.kc-mobile-nav a');
+  const menuPages = new Set([
+    'achados-perdidos.html',
+    'caronas-feed.html',
+    'moradia.html',
+    'oportunidades.html',
+    'ajuda.html',
+    'search-results.html',
+    '_product.html',
+    'my-posts.html',
+    'profile.html',
+    'settings.html',
+    'account-setup.html',
+    'auth-callback.html',
+    'ods.html'
+  ]);
 
-  links.forEach(link => {
+  function setLinkActive(link, isActive) {
+    if (!link) return;
+    link.classList.toggle('active', !!isActive);
+    if (isActive) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+
+  function resolveBottomNavKey(page) {
+    if (page === 'index.html') return 'home';
+    if (page === 'eventos.html') return 'events';
+    if (page === 'compra-venda-feed.html') return 'market';
+    if (page === 'create-post.html') return 'create';
+    if (menuPages.has(page)) return 'menu';
+    return '';
+  }
+
+  const bottomNavKey = resolveBottomNavKey(currentPage);
+
+  document.querySelectorAll('.kc-nav-links a[href]').forEach((link) => {
     const href = (link.getAttribute('href') || '').split('?')[0].split('#')[0].toLowerCase();
-    if (!href) return;
+    setLinkActive(link, !!href && href === currentPage);
+  });
 
-    if (href === currentPage) link.classList.add('active');
-    else link.classList.remove('active');
+  document.querySelectorAll('.kc-mobile-menu-content a[href]:not([href="#login"])').forEach((link) => {
+    const href = (link.getAttribute('href') || '').split('?')[0].split('#')[0].toLowerCase();
+    setLinkActive(link, !!href && href === currentPage);
+  });
+
+  document.querySelectorAll('.kc-mobile-nav a[href]').forEach((link) => {
+    const href = (link.getAttribute('href') || '').split('?')[0].split('#')[0].toLowerCase();
+    const key = href === 'index.html'
+      ? 'home'
+      : href === 'eventos.html'
+        ? 'events'
+        : href === 'compra-venda-feed.html'
+          ? 'market'
+          : href === 'create-post.html'
+            ? 'create'
+            : '';
+    setLinkActive(link, !!key && key === bottomNavKey);
+  });
+
+  document.querySelectorAll('.kc-mobile-nav [data-kc-mobile-menu="toggle"], .kc-mobile-nav .kc-menu-toggle').forEach((button) => {
+    button.classList.toggle('active', bottomNavKey === 'menu');
+  });
+
+  document.querySelectorAll('.theme-toggle, [data-kc-theme-toggle], .kc-search-mobile-btn, .kc-search-bar button, [data-kc-mobile-menu], .kc-menu-toggle, .kc-close-menu').forEach((button) => {
+    if (button && button.tagName === 'BUTTON' && !button.getAttribute('type')) {
+      button.setAttribute('type', 'button');
+    }
   });
 }
 
