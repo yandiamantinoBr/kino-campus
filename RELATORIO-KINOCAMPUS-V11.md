@@ -569,11 +569,11 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/controllers/compra-venda-feed.controller.js`, `node --check assets/js/controllers/caronas-feed.controller.js`, `node --check assets/js/controllers/moradia.controller.js`, `node --check assets/js/controllers/eventos.controller.js`, `node --check assets/js/controllers/oportunidades.controller.js`, `node --check assets/js/controllers/achados-perdidos.controller.js`, `npx jest tests/feed-empty-clear-markup.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  local ainda depende de fallback porque o Playwright MCP deste ambiente continua falhando com `EPERM`. A validação funcional publicada será fechada no preview/deploy via Vercel MCP na etapa de fechamento da PR desta iteração.
+  o Playwright MCP local continua falhando com `EPERM`, então a validação publicada desta iteração foi feita via Vercel MCP no preview `dpl_Ds1PfZ3D3sdaGeDa5wGa2NyUKf79`, confirmando o HTML publicado de `compra-venda-feed.html`, `caronas-feed.html`, `moradia.html`, `eventos.html` e `achados-perdidos.html` já com os novos marcadores de clear explícito. O caso de `oportunidades.html` permaneceu protegido por autenticação do preview nessa leitura remota, mas o seletor e o binding equivalentes ficaram cobertos pelo teste estático dedicado e pelo mesmo padrão de implementação aplicado aos demais feeds.
 - PR / commit / deploy:
-  branch ativa `codex/v11-3-0-feed-empty-clear-parity`; metadata final de PR, commit e deploy será registrada no fechamento da iteração.
+  PR `#231`, commit `bbac60f` na branch `codex/v11-3-0-feed-empty-clear-parity` e preview validado no deployment `dpl_Ds1PfZ3D3sdaGeDa5wGa2NyUKf79`, todos confirmados em `08 de abril de 2026`.
 - riscos residuais:
-  a consistência do markup e dos bindings já foi coberta, mas a confirmação final do comportamento publicado ainda depende da leitura do preview/deploy gerado pela PR desta iteração.
+  sem risco estrutural novo em banco, adapter ou contratos. O único ponto operacional remanescente antes do encerramento é a validação pós-merge do deployment resultante na base.
 
 ---
 
