@@ -816,14 +816,14 @@
         const reporterName = reporter.name || '—';
         return `
         <tr style="border-bottom:1px solid var(--kc-border-dark);">
-          <td style="padding:8px;font-size:.85em;white-space:nowrap;">${escHtmlAdmin(reasonLabel(row.reason))}</td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);max-width:220px;">${escHtmlAdmin(row.details || '—')}</td>
-          <td style="padding:8px;font-size:.8em;">
+          <td data-label="Motivo" style="padding:8px;font-size:.85em;white-space:nowrap;">${escHtmlAdmin(reasonLabel(row.reason))}</td>
+          <td data-label="Detalhes" style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);max-width:220px;">${escHtmlAdmin(row.details || '—')}</td>
+          <td data-label="Quem denunciou" style="padding:8px;font-size:.8em;">
             ${escHtmlAdmin(reporterName)}
             ${row.reporter_id ? `<br><small style="color:var(--kc-text-dark-secondary);font-size:.82em;font-family:monospace;">${escHtmlAdmin(String(row.reporter_id).substring(0, 8))}...</small>` : ''}
           </td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);white-space:nowrap;">${escHtmlAdmin(formatDate(row.created_at))}</td>
-          <td style="padding:8px;">
+          <td data-label="Data" style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);white-space:nowrap;">${escHtmlAdmin(formatDate(row.created_at))}</td>
+          <td data-label="Status" style="padding:8px;">
             <span style="padding:2px 8px;border-radius:4px;font-size:.78em;background:${row.status === 'open' ? '#ff5722' : '#9e9e9e'};color:#fff;">${escHtmlAdmin(row.status)}</span>
           </td>
         </tr>`;
@@ -961,14 +961,14 @@
         const reporterName = reporter.name || '—';
         return `
         <tr style="border-bottom:1px solid var(--kc-border-dark);">
-          <td style="padding:8px;font-size:.85em;white-space:nowrap;">${escape(reasonLabel(r.reason))}</td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);max-width:220px;">${escape(r.details || '—')}</td>
-          <td style="padding:8px;font-size:.8em;">
+          <td data-label="Motivo" style="padding:8px;font-size:.85em;white-space:nowrap;">${escape(reasonLabel(r.reason))}</td>
+          <td data-label="Detalhes" style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);max-width:220px;">${escape(r.details || '—')}</td>
+          <td data-label="Quem denunciou" style="padding:8px;font-size:.8em;">
             ${escape(reporterName)}
             ${r.reporter_id ? `<br><small style="color:var(--kc-text-dark-secondary);font-size:.82em;font-family:monospace;">${escape(r.reporter_id.substring(0,8))}…</small>` : ''}
           </td>
-          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);white-space:nowrap;">${escape(formatDate(r.created_at))}</td>
-          <td style="padding:8px;">
+          <td data-label="Data" style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);white-space:nowrap;">${escape(formatDate(r.created_at))}</td>
+          <td data-label="Status" style="padding:8px;">
             <span style="padding:2px 8px;border-radius:4px;font-size:.78em;background:${r.status === 'open' ? '#ff5722' : '#9e9e9e'};color:#fff;">${escape(r.status)}</span>
           </td>
         </tr>`;

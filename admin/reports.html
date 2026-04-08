@@ -79,38 +79,6 @@
     .kc-admin-report-group-head { align-items: flex-start; }
     .kc-admin-report-group-actions { justify-content: flex-end; }
 
-    @media (max-width: 860px) {
-      .kc-admin-wrapper { padding: 0 12px 74px; }
-      .kc-admin-header-bar h1 { font-size: 1.2rem; }
-      .kc-admin-filters { width: 100%; }
-      .kc-admin-filters select,
-      .kc-admin-filters button { width: 100%; box-sizing: border-box; }
-      #reports-summary { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-
-      .kc-admin-report-group { padding: 14px !important; }
-      .kc-admin-report-group-head { flex-direction: column; }
-      .kc-admin-report-group-actions { width: 100%; justify-content: stretch; }
-      .kc-admin-report-group-actions > a,
-      .kc-admin-report-group-actions > button { flex: 1 1 100%; justify-content: center; }
-
-      .kc-admin-report-table { min-width: unset !important; }
-      .kc-admin-report-table thead { display: none; }
-      .kc-admin-report-table,
-      .kc-admin-report-table tbody,
-      .kc-admin-report-table tr,
-      .kc-admin-report-table td { display: block; width: 100%; }
-      .kc-admin-report-table tr { border-bottom: 1px solid var(--kc-border-dark); padding: 8px 0; }
-      .kc-admin-report-table td {
-        border-bottom: none;
-        padding: 4px 0 !important;
-        white-space: normal !important;
-      }
-      .kc-admin-report-table td:nth-child(1)::before { content: 'Motivo'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
-      .kc-admin-report-table td:nth-child(2)::before { content: 'Detalhes'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
-      .kc-admin-report-table td:nth-child(3)::before { content: 'Quem denunciou'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
-      .kc-admin-report-table td:nth-child(4)::before { content: 'Data'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
-      .kc-admin-report-table td:nth-child(5)::before { content: 'Status'; display:block; font-size:.75em; color:var(--kc-text-dark-secondary); }
-    }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.0" />
 </head>
