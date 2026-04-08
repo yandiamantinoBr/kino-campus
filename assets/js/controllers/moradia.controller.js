@@ -549,7 +549,7 @@
 
     const active = getRenderedRegionSelection();
     const items = [
-      '<button class="kc-category-item ' + (!active ? 'is-active' : '') + '" type="button" data-kc-housing-region="" aria-pressed="' + (!active ? 'true' : 'false') + '">' +
+      '<button class="kc-category-item ' + (!active ? 'is-active' : '') + '" type="button" data-kc-housing-region-option="" aria-pressed="' + (!active ? 'true' : 'false') + '">' +
         '<i class="fas fa-layer-group"></i><span>Todas as regiões</span><span class="kc-category-count">' + base.length + '</span>' +
       '</button>'
     ];
@@ -559,7 +559,7 @@
       const isActive = active === entry.key;
       const isDisabled = !isActive && count === 0;
       items.push(
-        '<button class="kc-category-item ' + (isActive ? 'is-active ' : '') + (isDisabled ? 'is-disabled' : '') + '" type="button" data-kc-housing-region="' + esc(entry.key) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '"' + (isDisabled ? ' disabled' : '') + '>' +
+        '<button class="kc-category-item ' + (isActive ? 'is-active ' : '') + (isDisabled ? 'is-disabled' : '') + '" type="button" data-kc-housing-region-option="' + esc(entry.key) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '"' + (isDisabled ? ' disabled' : '') + '>' +
           '<i class="' + esc(entry.icon || 'fas fa-map-pin') + '"></i>' +
           '<span>' + esc(entry.label) + '</span>' +
           '<span class="kc-category-count">' + count + '</span>' +
@@ -964,9 +964,9 @@
         return;
       }
 
-      const regionButton = event.target.closest('[data-kc-housing-region]');
+      const regionButton = event.target.closest('[data-kc-housing-region-option]');
       if (regionButton) {
-        const selectedKey = String(regionButton.getAttribute('data-kc-housing-region') || '').trim();
+        const selectedKey = String(regionButton.getAttribute('data-kc-housing-region-option') || '').trim();
         if (state.draft && state.activeKey === 'regions' && isMobile()) {
           state.draft.region = selectedKey;
           renderRegions();

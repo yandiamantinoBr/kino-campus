@@ -888,6 +888,190 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return { ok: true, data: list[index] };
   }
 
+  function normalizeRankingModuleKey(value) {
+    return toSlug(String(value || '').trim());
+  }
+
+  function parseLocalRankingTimestamp(post) {
+    const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
+    const absolute = [source.createdAt, source.created_at, source.timestamp_iso].find((value) => value != null && String(value).trim());
+    if (absolute) {
+      const parsed = Date.parse(String(absolute));
+      if (Number.isFinite(parsed)) return parsed;
+    }
+
+    const relative = String(source.timestamp || '').trim();
+    if (!relative) return null;
+
+    const normalized = relative
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    const match = normalized.match(/^ha\s+(\d+)\s+(minuto|minutos|hora|horas|dia|dias|semana|semanas|mes|meses)$/);
+    if (!match) return null;
+
+    const amount = parseInt(match[1], 10);
+    const unit = match[2];
+    if (!Number.isFinite(amount) || amount < 0) return null;
+
+    const multipliers = {
+      minuto: 60 * 1000,
+      minutos: 60 * 1000,
+      hora: 60 * 60 * 1000,
+      horas: 60 * 60 * 1000,
+      dia: 24 * 60 * 60 * 1000,
+      dias: 24 * 60 * 60 * 1000,
+      semana: 7 * 24 * 60 * 60 * 1000,
+      semanas: 7 * 24 * 60 * 60 * 1000,
+      mes: 30 * 24 * 60 * 60 * 1000,
+      meses: 30 * 24 * 60 * 60 * 1000,
+    };
+
+    const delta = multipliers[unit];
+    if (!delta) return null;
+    return Date.now() - (amount * delta);
+  }
+
+  function isLocalRankingPostInPeriod(post, period) {
+    const parsed = parseLocalRankingTimestamp(post);
+    if (!Number.isFinite(parsed)) return true;
+
+    const normalizedPeriod = String(period || 'month').trim().toLowerCase();
+    const windows = {
+      day: 24 * 60 * 60 * 1000,
+      week: 7 * 24 * 60 * 60 * 1000,
+      month: 30 * 24 * 60 * 60 * 1000,
+    };
+    const maxAge = windows[normalizedPeriod] || windows.month;
+    return (Date.now() - parsed) <= maxAge;
+  }
+
+  function resolveLocalRankingUser(post, index) {
+    const normalized = normalizePost(post || {});
+    const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
+    const explicitAuthorId = String((normalized && normalized.authorId) || source.authorId || source.author_id || '').trim();
+    const displayName = String(
+      (normalized && (normalized.authorName || normalized.author || normalized.autor))
+      || source.authorName
+      || source.author
+      || source.autor
+      || 'Usuário'
+    ).trim() || 'Usuário';
+    const avatarUrl = String(
+      (normalized && (normalized.authorAvatar || normalized.autorAvatar))
+      || source.authorAvatar
+      || source.autorAvatar
+      || ''
+    ).trim();
+
+    let matchedUser = null;
+    if (explicitAuthorId && MOCK_USERS_BY_ID && MOCK_USERS_BY_ID[explicitAuthorId]) {
+      matchedUser = MOCK_USERS_BY_ID[explicitAuthorId];
+    }
+
+    if (!matchedUser && Array.isArray(MOCK_USERS_LIST) && MOCK_USERS_LIST.length) {
+      matchedUser = MOCK_USERS_LIST.find((entry) => {
+        if (!entry) return false;
+        const sameName = String(entry.displayName || '').trim() === displayName;
+        if (!sameName) return false;
+        if (!avatarUrl) return true;
+        return String(entry.avatarUrl || '').trim() === avatarUrl;
+      }) || null;
+    }
+
+    const fallbackKey = displayName && displayName !== 'Usuário'
+      ? displayName + '-' + avatarUrl
+      : 'user-' + String(index + 1);
+    const userId = explicitAuthorId || (matchedUser && matchedUser.id) || ('LOCAL_' + toSlug(fallbackKey));
+
+    return {
+      userId,
+      displayName: displayName || (matchedUser && matchedUser.displayName) || 'Usuário',
+      avatarUrl: avatarUrl || (matchedUser && matchedUser.avatarUrl) || '',
+    };
+  }
+
+  async function localGetTopContributors(period, module, limit) {
+    const list = await getLocalSearchCollection();
+    const entries = Array.isArray(list) ? list : [];
+    const normalizedModule = normalizeRankingModuleKey(module);
+    const parsedLimit = parseInt(String(limit != null ? limit : 10), 10);
+    const safeLimit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
+    const scoreMap = new Map();
+
+    entries.forEach((post, index) => {
+      const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
+      const postModule = normalizeRankingModuleKey(source.modulo || source.module || source.moduleKey || '');
+      if (normalizedModule && postModule !== normalizedModule) return;
+      if (!isLocalRankingPostInPeriod(source, period)) return;
+
+      const contributor = resolveLocalRankingUser(source, index);
+      if (!contributor.userId) return;
+
+      const current = scoreMap.get(contributor.userId) || {
+        user_id: contributor.userId,
+        display_name: contributor.displayName,
+        avatar_url: contributor.avatarUrl,
+        posts_count: 0,
+        votes_received: 0,
+        comments_count: 0,
+        coupon_clicks: 0,
+        share_count: 0,
+        penalties: 0,
+      };
+
+      current.posts_count += 1;
+      current.votes_received += Math.max(0, Number(source.votos != null ? source.votos : source.votes) || 0);
+      current.comments_count += Math.max(0, Number(
+        source.comentarios != null
+          ? source.comentarios
+          : (source.commentsCount != null ? source.commentsCount : source.comments_count)
+      ) || 0);
+      current.coupon_clicks += Math.max(0, Number(
+        source.couponClicks != null
+          ? source.couponClicks
+          : (source.coupon_clicks != null
+            ? source.coupon_clicks
+            : ((source.metadata && (source.metadata.couponClicks != null ? source.metadata.couponClicks : source.metadata.coupon_clicks)) || 0))
+      ) || 0);
+      current.share_count += Math.max(0, Number(
+        source.shareCount != null
+          ? source.shareCount
+          : (source.share_count != null
+            ? source.share_count
+            : ((source.metadata && (source.metadata.shareCount != null ? source.metadata.shareCount : source.metadata.share_count)) || 0))
+      ) || 0);
+
+      scoreMap.set(contributor.userId, current);
+    });
+
+    return Array.from(scoreMap.values())
+      .map((entry) => ({
+        ...entry,
+        score: Math.max(0,
+          (entry.posts_count * 15)
+          + (entry.votes_received * 10)
+          + (entry.comments_count * 5)
+          + (entry.coupon_clicks * 4)
+          + (entry.share_count * 3)
+          - (entry.penalties * 50)
+        ),
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => {
+        if (right.score !== left.score) return right.score - left.score;
+        if (right.posts_count !== left.posts_count) return right.posts_count - left.posts_count;
+        return String(left.display_name || '').localeCompare(String(right.display_name || ''), 'pt-BR');
+      })
+      .slice(0, safeLimit)
+      .map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+      }));
+  }
+
   // ---------- Driver Pattern (V8.1.3.1) ----------
   // Objetivo: permitir trocar a fonte de dados (local <-> supabase) alterando apenas KC_ENV.driver.
   const driverLocal = Object.freeze({
@@ -919,7 +1103,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     togglePostStatus: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
     renewPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
     bumpPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
-    getTopContributors: async function () { return []; },
+    getTopContributors: localGetTopContributors,
     trackCouponClick: async function () { return { ok: false }; },
     trackShare: async function () { return { ok: false }; },
     trackView: async function () { return { ok: false }; },
