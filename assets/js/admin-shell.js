@@ -1,6 +1,9 @@
 (function () {
   'use strict';
 
+  var RESIZE_DEBOUNCE_MS = 150;
+  var resizeTimer = null;
+
   function forceVisible(selector) {
     var node = document.querySelector(selector);
     if (!node) return;
@@ -24,19 +27,38 @@
     syncHeaderHeight();
   }
 
-  function ensureNavLink(nav, href, iconClass, label, isActive) {
+  function normalizeHref(href) {
+    return String(href || '')
+      .replace(/^\.\//, '')
+      .replace(/\/$/, '')
+      .toLowerCase();
+  }
+
+  function getCurrentPage() {
+    var parts = String(window.location.pathname || '').split('/');
+    return normalizeHref(parts.pop() || 'index.html');
+  }
+
+  function syncActiveLinks(nav) {
+    if (!nav) return;
+    var currentPage = getCurrentPage();
+    Array.from(nav.querySelectorAll('a[href]')).forEach(function (link) {
+      var rawHref = String(link.getAttribute('href') || '').trim();
+      var targetPage = rawHref;
+      try {
+        targetPage = new URL(link.href, window.location.href).pathname.split('/').pop() || rawHref;
+      } catch (_) { }
+      link.classList.toggle('active', normalizeHref(targetPage) === currentPage);
+    });
+  }
+
+  function ensureNavLink(nav, href, iconClass, label) {
     if (!nav) return;
     var exists = Array.from(nav.querySelectorAll('a')).some(function (link) {
-      var rawHref = String(link.getAttribute('href') || '').trim();
-      return rawHref === href || rawHref === ('./' + href);
+      return normalizeHref(link.getAttribute('href')) === normalizeHref(href);
     });
     if (exists) {
-      Array.from(nav.querySelectorAll('a')).forEach(function (link) {
-        var rawHref = String(link.getAttribute('href') || '').trim();
-        if (rawHref === href || rawHref === ('./' + href)) {
-          link.classList.toggle('active', !!isActive);
-        }
-      });
+      syncActiveLinks(nav);
       return;
     }
 
@@ -44,16 +66,16 @@
     link.href = href;
     link.innerHTML = '<i class="' + iconClass + '"></i><span>' + label + '</span>';
     link.className = nav.classList.contains('kc-admin-nav') ? 'kc-admin-nav__link' : '';
-    if (isActive) link.classList.add('active');
     nav.appendChild(link);
+    syncActiveLinks(nav);
   }
 
   function ensureHelpRequestsLinks() {
     if (!document.body || !document.body.classList.contains('kc-admin-page')) return;
-    var path = String(window.location.pathname || '').toLowerCase();
-    var isHelpPage = path.indexOf('/admin/help-requests.html') >= 0;
-    ensureNavLink(document.querySelector('.kc-admin-nav'), 'help-requests.html', 'fas fa-life-ring', 'Pedidos de ajuda', isHelpPage);
-    ensureNavLink(document.querySelector('.kc-mobile-nav'), 'help-requests.html', 'fas fa-life-ring', 'Ajuda', isHelpPage);
+    ensureNavLink(document.querySelector('.kc-admin-nav'), 'help-requests.html', 'fas fa-life-ring', 'Pedidos de ajuda');
+    ensureNavLink(document.querySelector('.kc-mobile-nav'), 'help-requests.html', 'fas fa-life-ring', 'Ajuda');
+    syncActiveLinks(document.querySelector('.kc-admin-nav'));
+    syncActiveLinks(document.querySelector('.kc-mobile-nav'));
   }
 
   function setModalOpen(isOpen) {
@@ -79,7 +101,10 @@
     ensureHelpRequestsLinks();
     syncHeaderState();
     observeHeaderAuth();
-    window.addEventListener('resize', syncHeaderHeight);
+    window.addEventListener('resize', function () {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(syncHeaderHeight, RESIZE_DEBOUNCE_MS);
+    });
     window.addEventListener('orientationchange', syncHeaderHeight);
     document.addEventListener('kc:authchange', function () {
       requestAnimationFrame(syncHeaderState);
