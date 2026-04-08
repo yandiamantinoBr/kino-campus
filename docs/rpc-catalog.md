@@ -67,6 +67,68 @@ Busca server-side dedicada para a página `search-results.html` e o dropdown glo
 
 ---
 
+### `kc_admin_search_posts_full(p_query text, p_status text, p_limit int, p_offset int) → TABLE` *(v10.0.0.0)*
+
+Busca administrativa de posts com cobertura além da página corrente do grid.
+
+**Chamado em:** `admin-moderation.controller.js`
+
+**Retorno:** linhas com:
+
+- `id`
+- `legacy_id`
+- `title`
+- `content`
+- `status`
+- `created_at`
+- `updated_at`
+- `author_id`
+- `author_name`
+- `module`
+- `category`
+- `total_count`
+
+**Observações:**
+- Implementada com `SECURITY DEFINER` e `SET search_path = ''`.
+- Faz referências qualificadas a `public.posts` e `public.profiles`.
+- Bloqueia caller não-admin com `FORBIDDEN`.
+- Permite paginação real por `limit/offset`, mantendo `count(*) over()` para total.
+
+---
+
+### `kc_admin_list_help_requests_paged(p_status text, p_type text, p_limit int, p_offset int) → TABLE` *(v10.0.1.0)*
+
+Pagina os tickets de ajuda do admin sobre a tabela canônica `public.help_requests`.
+
+**Chamado em:** `KCAPI.listAdminHelpRequests()` / `admin-help-requests.controller.js`
+
+**Retorno:** linhas com:
+
+- `id`
+- `user_id`
+- `type`
+- `topic`
+- `subtopic`
+- `subject`
+- `message`
+- `priority`
+- `status`
+- `page_path`
+- `contact_email`
+- `allow_contact`
+- `metadata`
+- `created_at`
+- `updated_at`
+- `author_name`
+- `total_count`
+
+**Observações:**
+- Implementada com `SECURITY DEFINER` e `SET search_path = ''`.
+- Bloqueia caller não-admin com `FORBIDDEN`.
+- O frontend usa esse caminho preferencial quando não há filtro textual ou por prioridade; nos demais casos, mantém fallback controlado.
+
+---
+
 ### `kc_get_user_rating_summary(p_target_user_id uuid) → JSONB` *(v9.1.2.0)*
 
 Resumo público da reputação de um usuário.

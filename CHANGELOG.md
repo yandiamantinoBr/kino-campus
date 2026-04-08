@@ -2,6 +2,33 @@
 
 ---
 
+## [Unreleased]
+
+### Docs
+- `v11.1.0`: baseline documental da v11 iniciada com sincronização entre `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md` e as docs técnicas estruturais (`docs/index.md`, `docs/architecture.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/api-contract.md`, `docs/design-system.md`, `docs/env-vars.md`).
+- Registrado explicitamente o drift entre a linha funcional/documental `v10/v11` e a versão canônica embutida `8.6.0` que ainda governa parte do frontend e o `scripts/hygiene-check.js`.
+
+---
+
+## [10.0.0] - 2026-04-08 - Admin Panel Overhaul (PRs #215-#222)
+
+### Changed
+- Shell administrativo unificado com navegação consistente, active-link mais robusto e responsividade consolidada em `assets/css/admin-shell.css`.
+- Controllers admin endurecidos com guardas de estado, paginação mais segura, UX defensiva e redução de listeners duplicados.
+- Fluxos administrativos de ajuda e moderação migrados para caminhos server-side mais consistentes, preservando a fachada pública da `KCAPI`.
+
+### Added
+- Migration `v10.0.0.0_admin_search_posts_full.sql` com a RPC `public.kc_admin_search_posts_full(...)`.
+- Migration `v10.0.1.0_admin_help_requests_pagination.sql` com a RPC `public.kc_admin_list_help_requests_paged(...)`.
+
+### Fixed
+- Dashboard admin com debounce/cancelamento mais previsíveis, correções em audit log, export, ranking e modal.
+- Reports admin com paginação progressiva, confirmação explícita para exclusão e fechamento consistente de modal.
+- Help requests admin paginadas sobre `public.help_requests`, com bind único, validação de enums e fallback seguro.
+- Invite admin com feedback de clipboard centralizado e cleanup de polling.
+
+---
+
 ## [9.4.4] - 2026-04-07 — fix/v9.4.4 (PR #213)
 
 ### Fixed

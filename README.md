@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V10.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 aberta em fase de planejamento documental.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 já iniciada pela iteração `v11.1.0` de baseline documental.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.1.0 | baseline documental da v11: sincronização de README, changelog e docs técnicas com o estado real da base | `#228` |
 | docs | Sincronização do `README.md` com o estado real da v10 e nota operacional das migrations SQL da v10 | `#223` |
 | v10.0 | Admin Panel Overhaul: navegação unificada, hardening dos controllers admin, busca e paginação server-side no admin, responsividade consolidada e ajustes de UX | `#215` a `#222` |
 | v9.4.4 | Hotfix de comentários com `KCLazyLoader.load()` nos pontos críticos | `#213` |
@@ -47,9 +48,34 @@ O planejamento detalhado da próxima fase está em [RELATORIO-KINOCAMPUS-V11.md]
 
 Regras desta fase:
 
-- nenhuma implementação da v11 começa antes de autorização explícita
+- nenhuma implementação da v11 deve começar sem autorização explícita
 - toda iteração da v11 deve atualizar este `README.md` e o `RELATORIO-KINOCAMPUS-V11.md`
 - cada iteração aprovada deve seguir a esteira completa: branch própria, commit, push, PR, merge, delete branch, pull, validação no Supabase/Vercel e testes de regressão
+
+### Progresso atual
+
+- iteração ativa consolidada: `v11.1.0`
+- objetivo da iteração: saneamento de drift documental entre `README.md`, `CHANGELOG.md`, docs técnicas, contratos e estado real do repositório
+- natureza da iteração: documental, sem alteração funcional de banco, frontend ou deploy
+
+---
+
+## Mapa de Versão Canônica do Frontend
+
+versão-alvo única atual: **`8.6.0`**
+
+Este mapa existe para manter coerência com o `scripts/hygiene-check.js`, que ainda valida a versão canônica embutida do frontend. Isso não substitui a linha funcional/documental `v10` nem a execução da `v11`; apenas registra o estado real dos arquivos versionados.
+
+| Arquivo | Referência atual |
+|---------|------------------|
+| `assets/js/kc-env.js` | `const VERSION = '8.6.0';` |
+| `assets/js/kc-api.client.js` | `const VERSION = '8.6.0';` |
+| `assets/js/kc-supabase.client.js` | `const VERSION = '8.6.0';` |
+| `assets/js/kc-auth.ui.js` | auth UI v8.6.0 |
+| `assets/js/kc-profiles.client.js` | `const VERSION = '8.6.0';` |
+| `scripts/hygiene-check.js` | `canonicalVersion = '8.6.0'` |
+
+O drift entre a linha funcional `v10` e a linha canônica embutida `8.6.0` foi oficialmente incorporado ao backlog da v11 para tratamento coordenado, nunca parcial.
 
 ---
 
