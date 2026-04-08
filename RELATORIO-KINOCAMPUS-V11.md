@@ -548,7 +548,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   a validação remota do deploy foi concluída via `web_fetch_vercel_url` em preview e produção, confirmando o HTML publicado de `create-post.html` e `moradia.html` já com os ajustes da `v11.2.0`. O Playwright MCP local falhou nesta máquina com `EPERM` ao tentar criar `C:\Windows\System32\.playwright-mcp`, então a checagem visual interativa permaneceu substituída pela validação remota do Vercel nesta iteração.
 - PR / commit / deploy:
-  a iteração não gerou deploy novo; ela confirmou operacionalmente, em `08 de abril de 2026`, o deployment de produção `dpl_By9t4cmxbp9HrxFkhLm4W84Wsw1t` do commit `8cf0d61` e o preview `dpl_47yerenHoDdQyeoJAGUEXyihqMhR`.
+  PR `#230`, commit `f5cd94f` na branch `codex/v11-2-1-vercel-mcp-auth`. A iteração não gerou deploy novo; ela confirmou operacionalmente, em `08 de abril de 2026`, o deployment de produção `dpl_By9t4cmxbp9HrxFkhLm4W84Wsw1t` do commit `8cf0d61` e o preview `dpl_47yerenHoDdQyeoJAGUEXyihqMhR`.
 - riscos residuais:
   o Vercel MCP passou a responder normalmente, mas o Playwright MCP local ainda precisa de correção de diretório/permissão neste ambiente para retomar a checagem visual interativa sem fallback.
 
