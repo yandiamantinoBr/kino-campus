@@ -592,9 +592,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/kc-feed-filters.js`, `node --check assets/js/controllers/compra-venda-feed.controller.js`, `node --check assets/js/kc-create-post.js`, `npx jest tests/kc-feed-filters.test.js tests/compra-venda-ingressos.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  em ambiente local com navegador real, o body da seção `Data` de `eventos` passou de `display:grid` para `display:none` após o clique no toggle, confirmando o colapso visual; o DOM renderizado de `eventos` voltou a marcar apenas `Todas as datas` por padrão; e o ranking continuou sendo injetado normalmente em `eventos`, `moradia`, `caronas`, `oportunidades` e `compra-venda`. A categoria `Ingressos` foi validada no markup do feed e no schema do modal de criação.
+  em ambiente local com navegador real, o body da seção `Data` de `eventos` passou de `display:grid` para `display:none` após o clique no toggle, confirmando o colapso visual; o DOM renderizado de `eventos` voltou a marcar apenas `Todas as datas` por padrão; e o ranking continuou sendo injetado normalmente em `eventos`, `moradia`, `caronas`, `oportunidades` e `compra-venda`. A categoria `Ingressos` foi validada no markup do feed e no schema do modal de criação. No preview do Vercel, os assets compartilhados publicados foram confirmados no deployment `dpl_J4RFMZqsg3Fu3V1pAhZfeugXrzn3`; as páginas HTML desse preview permaneceram protegidas por autenticação da Vercel no momento da checagem remota.
 - PR / commit / deploy:
-  em fechamento operacional nesta branch, com criação de PR, validação no Vercel MCP, merge, delete branch e pull ainda pendentes no momento deste registro.
+  PR `#232`, commit `82192e5` na branch `codex/v11-4-0-sidebar-ranking-ingressos` e preview validado no deployment `dpl_J4RFMZqsg3Fu3V1pAhZfeugXrzn3` em `08 de abril de 2026`. Merge, delete branch e pull ainda pendentes no momento deste registro.
 - riscos residuais:
   a correção do accordion depende de CSS compartilhado em `styles.css`, então a checagem pós-merge precisa confirmar a publicação dos assets novos no deploy final para evitar leitura de cache antigo no navegador do usuário.
 
