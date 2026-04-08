@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.1.0 | baseline documental da v11: sincronização de README, changelog e docs técnicas com o estado real da base | `#228` |
 | docs | Sincronização do `README.md` com o estado real da v10 e nota operacional das migrations SQL da v10 | `#223` |
 | v10.0 | Admin Panel Overhaul: navegação unificada, hardening dos controllers admin, busca e paginação server-side no admin, responsividade consolidada e ajustes de UX | `#215` a `#222` |
 | v9.4.4 | Hotfix de comentários com `KCLazyLoader.load()` nos pontos críticos | `#213` |

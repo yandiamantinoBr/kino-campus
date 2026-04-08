@@ -502,7 +502,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   não aplicável nesta iteração, porque não houve mudança funcional publicada nem necessidade de novo deploy.
 - PR / commit / deploy:
-  branch dedicada da iteração, commit, push, PR, merge, delete branch e pull seguem obrigatórios mesmo sem mudança funcional. Não houve deploy funcional nem ação de Supabase.
+  PR `#228`, commit `c2b564a` na branch `codex/v11-1-0-doc-baseline`. Não houve deploy funcional nem ação de Supabase nesta iteração.
 - riscos residuais:
   o drift de versão canônica `8.6.0` no frontend continua existente e agora está explicitamente rastreado; a próxima fase precisa tratá-lo de forma coordenada, nunca parcial.
 
