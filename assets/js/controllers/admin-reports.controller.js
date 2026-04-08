@@ -15,12 +15,39 @@
 
   let handlersBound = false;
   const LOG_TAG = '[KC][ADMIN_REPORTS]';
+  const REPORTS_PAGE_SIZE = 50;
+  const MAX_RPC_REPORTS = 500;
 
   // ---- Helpers ----
 
-  const escape = (str) => window.KCUtils.escapeHtml(str);
+  function escHtmlAdmin(value) {
+    const raw = String(value == null ? '' : value);
+    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
+      return window.KCUtils.escapeHtml(raw);
+    }
+    return raw
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  const escape = escHtmlAdmin;
 
   function $(sel, root) { return (root || document).querySelector(sel); }
+
+  function setShellModalOpen(isOpen) {
+    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
+      window.KCAdminShell.setModalOpen(!!isOpen);
+    }
+  }
+
+  function syncShellModalState() {
+    const hasVisibleModal = Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"]'))
+      .some((node) => !!node && node.getClientRects().length > 0 && window.getComputedStyle(node).visibility !== 'hidden');
+    setShellModalOpen(hasVisibleModal);
+  }
 
   function showError(msg) {
     const el = $('#admin-error');
@@ -150,12 +177,95 @@
 
   // Estado de filtros
   const _filters = { status: 'open', reason: 'all' };
+  const _reportsState = {
+    rows: [],
+    totalCount: 0,
+    totalCountKnown: false,
+    hasMore: false,
+    fallbackCapped: false,
+    requestSeq: 0,
+  };
+
+  function resetReportsState() {
+    _reportsState.rows = [];
+    _reportsState.totalCount = 0;
+    _reportsState.totalCountKnown = false;
+    _reportsState.hasMore = false;
+    _reportsState.fallbackCapped = false;
+  }
 
   function readFilters() {
     const statusEl = $('#reports-status-filter');
     const reasonEl = $('#reports-reason-filter');
     if (statusEl) _filters.status = statusEl.value || 'open';
     if (reasonEl) _filters.reason = reasonEl.value || 'all';
+  }
+
+  function buildReportsQuery(client, offset, limit) {
+    let query = client
+      .from('reports')
+      .select('id, created_at, reason, details, status, post_id, reporter_id', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (_filters.status === 'open') query = query.eq('status', 'open');
+    if (_filters.status === 'closed') query = query.eq('status', 'closed');
+    if (_filters.reason && _filters.reason !== 'all') query = query.eq('reason', _filters.reason);
+
+    return query;
+  }
+
+  async function loadReportsPage(offset, limit) {
+    const client = getClient();
+    if (!client) {
+      return { data: [], totalCount: 0, totalCountKnown: true, hasMore: false, fallbackCapped: false };
+    }
+
+    const { data, error, count } = await buildReportsQuery(client, offset, limit);
+    if (!error) {
+      const rows = Array.isArray(data) ? data : [];
+      const totalCount = Number.isFinite(Number(count)) ? Number(count) : rows.length;
+      return {
+        data: rows,
+        totalCount,
+        totalCountKnown: true,
+        hasMore: (offset + rows.length) < totalCount,
+        fallbackCapped: false,
+      };
+    }
+
+    console.error('[Admin] loadReports:', error);
+
+    if (!isPermissionError(error)) {
+      return { data: [], totalCount: 0, totalCountKnown: true, hasMore: false, fallbackCapped: false, error };
+    }
+
+    try {
+      const requestedLimit = Math.min(Math.max(offset + limit, limit), MAX_RPC_REPORTS);
+      const rpc = await client.rpc('kc_admin_list_reports', {
+        p_status: _filters.status,
+        p_reason: _filters.reason,
+        p_limit: requestedLimit,
+      });
+      if (rpc && !rpc.error && Array.isArray(rpc.data)) {
+        const allRows = rpc.data;
+        const pageRows = allRows.slice(offset, offset + limit);
+        const totalCountKnown = allRows.length < requestedLimit;
+        const fallbackCapped = !totalCountKnown && requestedLimit === MAX_RPC_REPORTS;
+        return {
+          data: pageRows,
+          totalCount: allRows.length,
+          totalCountKnown,
+          hasMore: !fallbackCapped && allRows.length === requestedLimit,
+          fallbackCapped,
+        };
+      }
+      if (rpc && rpc.error) console.error('[Admin] loadReports rpc fallback:', rpc.error);
+    } catch (rpcError) {
+      console.error('[Admin] loadReports rpc exceÃ§Ã£o:', rpcError);
+    }
+
+    return { data: [], totalCount: 0, totalCountKnown: true, hasMore: false, fallbackCapped: false, error };
   }
 
   async function loadReports() {
@@ -406,7 +516,7 @@
           const rpc = await client.rpc('kc_admin_list_reports', {
             p_status: 'open',
             p_reason: 'all',
-            p_limit: 200,
+            p_limit: MAX_RPC_REPORTS,
           });
           if (rpc && rpc.error) return { ok: false, error: rpc.error };
           const rows = Array.isArray(rpc && rpc.data) ? rpc.data : [];
@@ -472,11 +582,15 @@
 
   async function handleAction(action, dataset) {
     const postId = dataset.postId;
+    const postTitle = String(dataset.postTitle || '').trim();
     let result = { ok: true };
 
     switch (action) {
       case 'refresh':
         await render();
+        return { ok: true };
+      case 'loadMoreReports':
+        await render({ append: true });
         return { ok: true };
       case 'closeReports':
         if (!postId) return { ok: false, error: { message: 'post_id ausente para fechar denúncias.' } };
@@ -492,11 +606,16 @@
         break;
       case 'deletePost':
         if (!postId) return { ok: false, error: { message: 'post_id ausente para deletar post.' } };
+        if (!window.confirm(`Deletar este post permanentemente? "${postTitle || postId}". Esta acao nao pode ser desfeita pelo painel.`)) {
+          return { ok: false, cancelled: true };
+        }
         result = await setPostStatus(postId, 'deleted');
         break;
       default:
         return { ok: false, error: { message: `Ação desconhecida: ${action}` } };
     }
+
+    if (result.cancelled) return result;
 
     if (!result.ok) {
       logAdminError('ACTION_FAILED', result.error || { message: 'Operação retornou ok=false.' }, { action, postId });
@@ -542,8 +661,8 @@
 
     const card = (label, value, icon) => `
       <article style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:10px;padding:10px 12px;">
-        <div style="font-size:.8em;color:var(--kc-text-dark-secondary);"><i class="${icon}"></i> ${label}</div>
-        <strong style="font-size:1.2em;">${value}</strong>
+        <div style="font-size:.8em;color:var(--kc-text-dark-secondary);"><i class="${icon}"></i> ${escHtmlAdmin(label)}</div>
+        <strong style="font-size:1.2em;">${escHtmlAdmin(value)}</strong>
       </article>`;
 
     box.innerHTML = [
@@ -559,9 +678,223 @@
     try { return new Date(iso).toLocaleString('pt-BR'); } catch (_) { return iso; }
   }
 
-  async function render() {
+  function renderResultsMeta() {
+    const loaded = Array.isArray(_reportsState.rows) ? _reportsState.rows.length : 0;
+    if (!loaded && !_reportsState.totalCount) return '';
+
+    let counterText = `Exibindo ${loaded} denuncias filtradas.`;
+    if (_reportsState.totalCountKnown) {
+      counterText = `Exibindo ${loaded} de ${_reportsState.totalCount} denuncias filtradas.`;
+    } else if (_reportsState.fallbackCapped) {
+      counterText = `Exibindo ${loaded}+ denuncias filtradas. O fallback RPC atual para em 500 registros.`;
+    } else if (_reportsState.hasMore) {
+      counterText = `Exibindo ${loaded}+ denuncias filtradas.`;
+    }
+
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px 0;padding:12px 14px;border:1px solid var(--kc-border-dark);border-radius:10px;background:var(--kc-surface-dark);">
+        <strong style="font-size:.92em;">${escHtmlAdmin(counterText)}</strong>
+      </div>`;
+  }
+
+  function renderLoadMore() {
+    if (!_reportsState.hasMore && !_reportsState.fallbackCapped) return '';
+
+    const note = _reportsState.fallbackCapped
+      ? '<p style="margin:10px 0 0;color:var(--kc-text-dark-secondary);font-size:.84em;">O fallback administrativo atingiu o limite de 500 registros. Para contagem completa, a consulta direta precisa estar disponivel.</p>'
+      : '';
+
+    const button = _reportsState.hasMore
+      ? `
+        <button type="button" data-action="loadMoreReports"
+                style="padding:10px 18px;background:var(--kc-primary-brand);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9em;">
+          <i class="fas fa-plus"></i> Carregar mais
+        </button>`
+      : '';
+
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;margin:18px 0 0;">
+        ${button}
+        ${note}
+      </div>`;
+  }
+
+  async function render(options) {
     const container = $('#admin-reports-container');
     if (!container) return;
+    {
+
+    const append = !!(options && options.append);
+    if (!append) {
+      readFilters();
+      resetReportsState();
+    }
+
+    const requestSeq = ++_reportsState.requestSeq;
+    const offset = append ? _reportsState.rows.length : 0;
+
+    if (!append) setLoading(true);
+    const page = await loadReportsPage(offset, REPORTS_PAGE_SIZE);
+    if (requestSeq !== _reportsState.requestSeq) return;
+    if (!append) setLoading(false);
+
+    if (page.error) {
+      showToastSafe(getErrorMessage(page.error, 'Nao foi possivel carregar as denuncias.'), 'error', 3200);
+      if (!append && !_reportsState.rows.length) {
+        renderSummary([]);
+        container.innerHTML = `
+          <div style="text-align:center;padding:40px;color:var(--kc-text-dark-secondary);">
+            <i class="fas fa-exclamation-triangle" style="font-size:3em;color:#ff9800;margin-bottom:10px;display:block;"></i>
+            <p style="font-size:1.1em;">Nao foi possivel carregar as denuncias agora.</p>
+          </div>`;
+        syncShellModalState();
+      }
+      return;
+    }
+
+    _reportsState.rows = append ? _reportsState.rows.concat(page.data) : page.data.slice();
+    _reportsState.totalCount = page.totalCount;
+    _reportsState.totalCountKnown = page.totalCountKnown;
+    _reportsState.hasMore = page.hasMore;
+    _reportsState.fallbackCapped = page.fallbackCapped;
+
+    const reports = _reportsState.rows;
+    renderSummary(reports);
+
+    if (!reports.length) {
+      const statusLabel = _filters.status === 'open' ? 'em aberto' : _filters.status === 'closed' ? 'fechadas' : '';
+      container.innerHTML = `
+        <div style="text-align:center;padding:40px;color:var(--kc-text-dark-secondary);">
+          <i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;display:block;"></i>
+          <p style="font-size:1.1em;">Nenhuma denuncia ${statusLabel} encontrada${_filters.reason !== 'all' ? ' com este motivo' : ''}.</p>
+        </div>`;
+      syncShellModalState();
+      return;
+    }
+
+    const allReporterIds = [...new Set(reports.map((r) => r.reporter_id).filter(Boolean))];
+    const reporterMap = await loadReporterNames(allReporterIds);
+    const grouped = {};
+
+    reports.forEach((row) => {
+      if (!grouped[row.post_id]) grouped[row.post_id] = [];
+      grouped[row.post_id].push(row);
+    });
+
+    const postIds = Object.keys(grouped).sort((a, b) => {
+      const aOpen = grouped[a].filter((row) => row.status === 'open').length;
+      const bOpen = grouped[b].filter((row) => row.status === 'open').length;
+      return bOpen - aOpen;
+    });
+
+    const postMap = await loadPostTitles(postIds);
+    const html = postIds.map((pid) => {
+      const items = grouped[pid];
+      const open = items.filter((row) => row.status === 'open');
+      const closed = items.filter((row) => row.status !== 'open');
+      const post = postMap[pid] || {};
+      const postTitleRaw = post.title || post.titulo || 'Post sem titulo';
+      const postTitle = escHtmlAdmin(postTitleRaw);
+      const postStatus = String(post.status || 'indisponivel');
+      const authorId = post.author_id || '';
+
+      const reasonCounts = {};
+      items.forEach((row) => {
+        reasonCounts[row.reason] = (reasonCounts[row.reason] || 0) + 1;
+      });
+
+      const reasonSummary = Object.entries(reasonCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([reason, count]) => `<span class="kc-badge" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);padding:2px 8px;border-radius:4px;margin:2px;font-size:.78em;">${escHtmlAdmin(reasonLabel(reason))}: <strong>${count}</strong></span>`)
+        .join(' ');
+
+      const statusColor = { published: '#4caf50', hidden: '#ff9800', deleted: '#f44336', pending: '#9c27b0' }[postStatus] || '#757575';
+      const postStatusBadge = `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:.78em;background:${statusColor};color:#fff;margin-left:6px;">${escHtmlAdmin(postStatus)}</span>`;
+      const displayItems = _filters.status === 'open' ? open : _filters.status === 'closed' ? closed : items;
+      const rows = displayItems.map((row) => {
+        const reporter = reporterMap[row.reporter_id] || {};
+        const reporterName = reporter.name || '—';
+        return `
+        <tr style="border-bottom:1px solid var(--kc-border-dark);">
+          <td style="padding:8px;font-size:.85em;white-space:nowrap;">${escHtmlAdmin(reasonLabel(row.reason))}</td>
+          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);max-width:220px;">${escHtmlAdmin(row.details || '—')}</td>
+          <td style="padding:8px;font-size:.8em;">
+            ${escHtmlAdmin(reporterName)}
+            ${row.reporter_id ? `<br><small style="color:var(--kc-text-dark-secondary);font-size:.82em;font-family:monospace;">${escHtmlAdmin(String(row.reporter_id).substring(0, 8))}...</small>` : ''}
+          </td>
+          <td style="padding:8px;font-size:.8em;color:var(--kc-text-dark-secondary);white-space:nowrap;">${escHtmlAdmin(formatDate(row.created_at))}</td>
+          <td style="padding:8px;">
+            <span style="padding:2px 8px;border-radius:4px;font-size:.78em;background:${row.status === 'open' ? '#ff5722' : '#9e9e9e'};color:#fff;">${escHtmlAdmin(row.status)}</span>
+          </td>
+        </tr>`;
+      }).join('');
+
+      return `
+      <div class="kc-admin-report-group" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <div class="kc-admin-report-group-head" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:1.05em;margin-bottom:4px;">
+              <i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;"></i>
+              ${postTitle}${postStatusBadge}
+            </div>
+            <div style="font-size:.8em;color:var(--kc-text-dark-secondary);margin-bottom:6px;word-break:break-all;">
+              ID: <code style="font-size:.9em;">${escHtmlAdmin(pid)}</code>
+              &nbsp;·&nbsp; <strong style="color:var(--kc-text-dark);">${open.length}</strong> em aberto
+              &nbsp;·&nbsp; <strong>${items.length}</strong> total
+              ${authorId ? `&nbsp;·&nbsp; <a href="../profile.html?id=${encodeURIComponent(authorId)}" target="_blank" style="color:var(--kc-primary-brand);font-size:.95em;">Ver perfil do autor</a>` : ''}
+            </div>
+            <div style="flex-wrap:wrap;display:flex;gap:2px;">${reasonSummary}</div>
+          </div>
+          <div class="kc-admin-report-group-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+            <a href="../product.html?id=${encodeURIComponent(pid)}" target="_blank"
+               style="padding:7px 14px;background:var(--kc-background-dark);border:1px solid var(--kc-border-dark);border-radius:6px;text-decoration:none;font-size:.85em;color:var(--kc-text-dark);display:inline-flex;align-items:center;gap:5px;">
+               <i class="fas fa-eye"></i> Ver post
+            </a>
+            ${open.length > 0 ? `
+            <button type="button" data-action="closeReports" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
+                    style="padding:7px 14px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
+              <i class="fas fa-check"></i> Fechar denuncias
+            </button>` : ''}
+            ${postStatus === 'published' ? `
+            <button type="button" data-action="hidePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
+                    style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
+              <i class="fas fa-eye-slash"></i> Ocultar
+            </button>` : ''}
+            ${postStatus === 'hidden' ? `
+            <button type="button" data-action="restorePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
+                    style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
+              <i class="fas fa-eye"></i> Restaurar
+            </button>` : ''}
+            ${postStatus !== 'deleted' ? `
+            <button type="button" data-action="deletePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
+                    style="padding:7px 14px;background:#b71c1c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;"
+                    title="Esta acao nao pode ser desfeita pelo painel.">
+              <i class="fas fa-trash"></i> Deletar
+            </button>` : ''}
+          </div>
+        </div>
+        ${displayItems.length > 0 ? `
+        <div style="overflow-x:auto;margin-top:10px;">
+          <table class="kc-admin-report-table" style="width:100%;border-collapse:collapse;font-size:.9em;min-width:560px;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--kc-border-dark);">
+                <th style="padding:8px;text-align:left;font-weight:600;white-space:nowrap;">Motivo</th>
+                <th style="padding:8px;text-align:left;font-weight:600;">Detalhes</th>
+                <th style="padding:8px;text-align:left;font-weight:600;">Quem denunciou</th>
+                <th style="padding:8px;text-align:left;font-weight:600;white-space:nowrap;">Data</th>
+                <th style="padding:8px;text-align:left;font-weight:600;">Status</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>` : `<div style="color:var(--kc-text-dark-secondary);font-size:.9em;"><i class="fas fa-check" style="color:#4caf50;"></i> Todas as denuncias deste post foram fechadas.</div>`}
+      </div>`;
+    }).join('');
+
+    container.innerHTML = `${renderResultsMeta()}${html}${renderLoadMore()}`;
+    syncShellModalState();
+    }
+    return;
 
     readFilters();
 
@@ -725,6 +1058,13 @@
       } finally {
         actionEl.disabled = false;
         delete actionEl.dataset.kcBusy;
+        requestAnimationFrame(syncShellModalState);
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        requestAnimationFrame(syncShellModalState);
       }
     });
 
@@ -738,6 +1078,7 @@
   // ---- Boot ----
 
   async function boot() {
+    syncShellModalState();
     setLoading(true);
     const ok = await checkAdminAccess();
     setLoading(false);
