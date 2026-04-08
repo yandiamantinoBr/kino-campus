@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V10.0-foundations` |
-| Estado desta fase | planejamento detalhado concluído; execução bloqueada até autorização explícita |
+| Estado desta fase | execução iniciada; iteração `v11.1.0` concluída com baseline documental e sem mudanças funcionais |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -483,9 +483,34 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
-## 11. Backlog inicial candidato da v11
+## 11. Registro das iterações executadas
 
-Este backlog é inicial e poderá ser refinado na primeira iteração autorizada:
+### Iteração `v11.1.0`
+
+- objetivo:
+  alinhar a documentação-base ao estado real do repositório antes de iniciar correções funcionais da v11.
+- arquivos alterados:
+  `README.md`, `CHANGELOG.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/index.md`, `docs/architecture.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/api-contract.md`, `docs/design-system.md`, `docs/env-vars.md`.
+- equivalentes revisados:
+  documentação executiva, changelog, catálogo técnico, contratos públicos da `KCAPI`, schema/RPCs do banco e convenções visuais compartilhadas.
+- contratos preservados:
+  nenhum contrato funcional de frontend, banco, Supabase, Vercel ou rotas públicas foi alterado nesta iteração; o trabalho foi exclusivamente documental.
+- migrations criadas/aplicadas:
+  nenhuma. Foi apenas registrado que as migrations `v10.0.0.0_admin_search_posts_full.sql` e `v10.0.1.0_admin_help_requests_pagination.sql` já estão aplicadas no banco principal atual.
+- testes executados:
+  `node scripts/hygiene-check.js` e `git diff --check`.
+- validação em navegador:
+  não aplicável nesta iteração, porque não houve mudança funcional publicada nem necessidade de novo deploy.
+- PR / commit / deploy:
+  branch dedicada da iteração, commit, push, PR, merge, delete branch e pull seguem obrigatórios mesmo sem mudança funcional. Não houve deploy funcional nem ação de Supabase.
+- riscos residuais:
+  o drift de versão canônica `8.6.0` no frontend continua existente e agora está explicitamente rastreado; a próxima fase precisa tratá-lo de forma coordenada, nunca parcial.
+
+---
+
+## 12. Backlog inicial candidato da v11
+
+Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
 
 1. **Drift documental**
    - `CHANGELOG.md` sem consolidação formal da v10
@@ -512,9 +537,9 @@ Este backlog é inicial e poderá ser refinado na primeira iteração autorizada
 
 ---
 
-## 12. Limite desta entrega
+## 13. Limite desta entrega
 
-Este documento **não inicia a execução da v11**.
+Este documento não substitui a execução controlada da v11 em fatias pequenas.
 
 Ele apenas formaliza:
 
@@ -524,4 +549,4 @@ Ele apenas formaliza:
 - a ordem de ataque
 - os critérios de segurança de mudança
 
-A execução só começa após autorização explícita do usuário.
+A execução já foi iniciada pela iteração `v11.1.0`, restrita ao baseline documental.

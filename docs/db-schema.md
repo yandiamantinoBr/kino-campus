@@ -1,8 +1,8 @@
 # KinoCampus — Schema do Banco de Dados
 
-**Banco:** PostgreSQL (Supabase) | **Migrações aplicadas:** 63 (até v9.1.0.2)
+**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `77` migrations em `supabase/migrations/`
 
-> Atualizacao local de 06/04/2026: o repositorio ja contem 71 migrations ate `v9.1.2.0_user_ratings_foundation.sql`.
+> Atualização documental da v11.1.0 em 08/04/2026: o repositório já inclui as migrations da v10 admin, `v10.0.0.0_admin_search_posts_full.sql` e `v10.0.1.0_admin_help_requests_pagination.sql`. No banco principal atual, elas já foram aplicadas.
 
 ## Tabelas Principais
 
@@ -148,12 +148,19 @@
 | `id` | UUID PK | |
 | `post_id` | UUID FK | Referencia `posts.id` (CASCADE DELETE) |
 | `user_id` | UUID FK | Referencia `profiles.id` |
-| `kind` | TEXT | `'like'` / `'bookmark'` / custom |
+| `kind` | TEXT | `'favorite'` / `'later'` / `'highlight'` |
 | `created_at` | TIMESTAMPTZ | |
 
 **UNIQUE:** `(post_id, user_id, kind)` — 1 salvo por tipo por usuário.
 
-**RLS:** SELECT/INSERT/DELETE somente próprio user_id.
+**RLS:**
+- SELECT/INSERT/UPDATE/DELETE do próprio `user_id`
+- SELECT público apenas para linhas `kind = 'highlight'` ligadas a posts ainda publicados
+
+**Notas de contrato:**
+- `favorite`: favorito pessoal
+- `later`: lembrar depois
+- `highlight`: destaque público elegível para perfil/ranking
 
 ---
 
@@ -285,12 +292,26 @@
 |--------|------|-----------|
 | `id` | UUID PK | |
 | `user_id` | UUID FK | Quem abriu (pode ser NULL) |
+| `type` | TEXT | `'question'` / `'platform_issue'` / `'account_access'` / `'report'` / `'suggestion_praise'` |
+| `topic` | TEXT | Tópico principal normalizado do pedido |
+| `subtopic` | TEXT | Subtópico opcional |
 | `subject` | TEXT | Assunto |
 | `message` | TEXT | Mensagem |
-| `status` | TEXT | `'open'` / `'closed'` / `'in_progress'` |
+| `priority` | TEXT | `'low'` / `'normal'` / `'high'` / `'urgent'` |
+| `status` | TEXT | `'new'` / `'triaged'` / `'in_progress'` / `'resolved'` / `'archived'` |
+| `page_path` | TEXT | Caminho da página de origem, quando enviado |
+| `contact_email` | TEXT | E-mail alternativo de retorno |
+| `allow_contact` | BOOLEAN | Consentimento para contato |
+| `metadata` | JSONB | Dados auxiliares do formulário |
 | `created_at` | TIMESTAMPTZ | |
 | `updated_at` | TIMESTAMPTZ | |
-| `resolved_at` | TIMESTAMPTZ | |
+
+**RLS:**
+- INSERT por `anon` e `authenticated`
+- SELECT do próprio usuário autenticado ou admin
+- UPDATE apenas admin
+
+**Nota v10:** o admin usa esta tabela `public.help_requests` como fonte canônica. A paginação server-side passou a usar `public.kc_admin_list_help_requests_paged(...)`, sem criar tabela paralela.
 
 ---
 

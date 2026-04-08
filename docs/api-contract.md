@@ -544,16 +544,34 @@ Promise<{
 ### `KCAPI.getSavedPostState(postId)`
 Verifica estado de salvamento do post pelo usuário logado.
 
-**Retorno:** `Promise<{ like: boolean, bookmark: boolean, [customKind]: boolean }>`
+**Retorno:** `Promise<{ kinds: string[] }>`
+
+**Semântica atual:**
+- `favorite`: favorito pessoal
+- `later`: lembrar depois
+- `highlight`: destaque público
+
+Se o driver ativo não suportar o recurso, a fachada retorna `{ kinds: [] }`.
 
 ---
 
 ### `KCAPI.setSavedPostState(postId, kind, enabled)`
 Salva ou remove post dos salvos.
 
-**Kind:** `'like' | 'bookmark' | string`
+**Kind:** `'favorite' | 'later' | 'highlight'`
 
-**Retorno:** `Promise<{ ok: boolean }>`
+**Retorno:** `Promise<{ ok: boolean, error?: object | string }>`
+
+Se o driver ativo não suportar o recurso, a fachada retorna `{ ok: false, error: { message } }`.
+
+---
+
+### `KCAPI.clearSavedPostState(postId, kind)`
+Remove explicitamente um tipo de salvo de um post.
+
+**Kind:** `'favorite' | 'later' | 'highlight'`
+
+**Retorno:** `Promise<{ ok: boolean, error?: object | string }>`
 
 ---
 
@@ -569,9 +587,140 @@ Retorna posts salvos do usuário logado. **Requer autenticação.**
 ### `KCAPI.createHelpRequest(payload)`
 Cria ticket de suporte.
 
-**Payload:** `{ subject: string, message: string }`
+**Payload:**
+```javascript
+{
+  type: string,
+  topic: string,
+  subtopic?: string | null,
+  subject: string,
+  message: string,
+  priority?: 'low' | 'normal' | 'high' | 'urgent',
+  pagePath?: string | null,
+  contactEmail?: string | null,
+  allowContact?: boolean,
+  metadata?: object,
+}
+```
 
 **Retorno:** `Promise<{ ok: boolean, error?: object }>`
+
+---
+
+### `KCAPI.listAdminHelpRequests(filters)`
+Lista tickets de ajuda para o admin.
+
+**Filters:**
+```javascript
+{
+  status?: string,
+  type?: string,
+  priority?: string,
+  query?: string,
+  limit?: number,
+  offset?: number,
+}
+```
+
+**Retorno:** array de tickets com metadados anexados:
+
+```javascript
+Promise<Array<{
+  id: string,
+  user_id: string | null,
+  type: string,
+  topic: string,
+  subtopic?: string | null,
+  subject: string,
+  message: string,
+  priority: string,
+  status: string,
+  page_path?: string | null,
+  contact_email?: string | null,
+  allow_contact?: boolean,
+  metadata?: object,
+  created_at: string,
+  updated_at: string,
+}>> & {
+  totalCount: number,
+  limit: number,
+  offset: number,
+  hasMore: boolean,
+}
+```
+
+**Notas v10:**
+- o caminho preferencial usa a RPC `kc_admin_list_help_requests_paged(...)`
+- filtros por `priority` e busca textual ainda podem usar fallback controlado via query direta
+
+---
+
+### `KCAPI.updateAdminHelpRequest(id, patch)`
+Atualiza um ticket de ajuda no admin.
+
+**Patch aceito:**
+```javascript
+{
+  status?: string,
+  priority?: string,
+  metadata?: object,
+}
+```
+
+**Retorno:** `Promise<{ ok: boolean, error?: object }>`
+
+---
+
+## Métodos de Notificações
+
+### `KCAPI.getNotifications(limit?, offset?)`
+Lista notificações do usuário autenticado.
+
+**Retorno:** `Promise<{ ok: boolean, notifications: object[], unread: number, total: number, error?: string }>`
+
+### `KCAPI.markNotificationsRead(ids)`
+Marca um conjunto de notificações como lidas.
+
+**Retorno:** `Promise<{ ok: boolean, error?: string }>`
+
+### `KCAPI.markAllNotificationsRead()`
+Marca todas as notificações do usuário como lidas.
+
+**Retorno:** `Promise<{ ok: boolean, error?: string }>`
+
+### `KCAPI.getUnreadNotificationCount()`
+Retorna apenas a contagem de não lidas.
+
+**Retorno:** `Promise<number>`
+
+### `KCAPI.subscribeNotifications(userId, callback)`
+Assina atualizações em tempo real para notificações.
+
+**Retorno:** `RealtimeChannel | null`
+
+### `KCAPI.unsubscribeNotifications(channel)`
+Encerra uma assinatura de notificações.
+
+**Retorno:** `void`
+
+---
+
+## Métodos de Convites Externos
+
+### `KCAPI.inviteExternalUser(email, note?)`
+Dispara o convite externo via Edge Function administrativa.
+
+**Retorno:** `Promise<{ ok: boolean, data?: object, error?: string }>`
+
+### `KCAPI.getInvites()`
+Lista convites administrativos existentes.
+
+**Retorno:** `Promise<{ data: object[] | null, error: string | null }>`
+
+### `KCAPI.revokeInvite(email)`
+Revoga um convite externo.
+
+**Retorno:** `Promise<{ ok: boolean, error?: string }>`
 
 ---
 

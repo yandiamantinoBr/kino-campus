@@ -83,23 +83,28 @@ Definidas em `assets/css/styles.css` no seletor `html[data-theme="dark"]` (modo 
 /* Wrapper relativo + botão trigger */
 .kc-save-wrap { position: relative; }
 
-/* Popover desktop — âncora no botão */
+/* Desktop: o JS calcula posição final para evitar clipping dentro de cards */
 .kc-save-popover {
-  position: absolute; top: calc(100% + 8px); right: 0;
+  position: fixed;
   background: var(--kc-surface-dark-2);
   border: 1px solid var(--kc-border-dark-strong);
   border-radius: 12px; min-width: 180px;
   display: none;
+  z-index: 1200;
 }
-.kc-save-popover.kc-save-popover--active { display: block; }
+.kc-save-popover.active { display: block; }
 
 /* Mobile — bottom sheet */
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .kc-save-popover { position: fixed; bottom: 0; left: 0; right: 0; border-radius: 16px 16px 0 0; }
 }
 ```
 
-**Para criar novo popover:** usar as classes `.kc-save-wrap`, `.kc-save-popover`, `.kc-save-popover--active`. Exemplo: `.kc-calendar-wrap > .kc-save-popover`.
+**Regras atuais:**
+- no desktop, `Salvar`, `Compartilhar` e popovers equivalentes não devem depender de `overflow` do card pai
+- a classe de abertura usada hoje é `.active`
+- o posicionamento visual deve ser recalculado em `resize` e `scroll` quando o controller já fizer ancoragem programática
+- qualquer novo popover equivalente deve ser validado em desktop e mobile para evitar clipping e sobreposição indevida
 
 ### Chips (kc-chip-row)
 
@@ -159,16 +164,16 @@ Usado apenas no `kc-create-modal` para seleção de categorias/tipos:
 ## Breakpoints
 
 ```css
-/* Mobile pequeno */    @media (max-width: 400px)  { ... }
-/* Mobile */           @media (max-width: 480px)  { ... }
-/* Mobile médio */     @media (max-width: 600px)  { ... }
-/* Mobile/Tablet */    @media (max-width: 640px)  { ... }
-/* Tablet */           @media (max-width: 767px)  { ... }
-/* Tablet/Desktop */   @media (min-width: 768px)  { ... }
-/* Desktop */          @media (min-width: 1024px) { ... }
+/* Small mobile */ @media (max-width: 479px) { ... }
+/* Mobile */       @media (max-width: 767px) { ... }
+/* Tablet */       @media (min-width: 768px) and (max-width: 1023px) { ... }
+/* Desktop */      @media (min-width: 1024px) { ... }
 ```
 
-**Regra de ouro:** componentes novos devem funcionar em 375px (iPhone SE) sem scroll horizontal.
+**Regra atual da v10/v11:**
+- admin usa a convenção consolidada `desktop >= 1024`, `tablet 768-1023`, `mobile < 768`, `small mobile < 480`
+- componentes novos devem funcionar em `375px` sem scroll horizontal
+- quando houver tabela responsiva, preferir `data-label` real em vez de `nth-child`
 
 ---
 
