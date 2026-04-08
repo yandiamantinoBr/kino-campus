@@ -408,5 +408,5 @@
 <script defer src="assets/js/kc-search-modal.js"></script>
 <script defer src="assets/js/kc-lazy-loader.js"></script>
 </body>
-<script>document.addEventListener('DOMContentLoaded',function(){KCLazyLoader.onVisible('[data-kc-ranking-sidebar]','assets/js/kc-ranking.js');});</script>
+<script>document.addEventListener('DOMContentLoaded',function(){if(window.KCLazyLoader&&typeof window.KCLazyLoader.load==='function'){window.KCLazyLoader.load('assets/js/kc-ranking.js');}});</script>
 </html>

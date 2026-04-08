@@ -109,9 +109,72 @@ describe('Local Adapter - Stubs retornam valores seguros', () => {
   });
 
   test('getTopContributors retorna array vazio', async () => {
+    window.KCAPI.config.fallbackDatabaseURLs = ['/fake-db.json'];
+    window.KCAPI.DEFAULTS.fallbackDatabaseURLs = ['/fake-db.json'];
+    window.KCAPI.fetchJSON.mockResolvedValue({ anuncios: [] });
     const result = await driver.getTopContributors();
     expect(Array.isArray(result)).toBe(true);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('Local Adapter - getTopContributors', () => {
+  let driver;
+
+  beforeAll(() => {
+    driver = window.KCAPI.registerAdapter.mock.calls[0][1];
+  });
+
+  beforeEach(() => {
+    global.localStorage.clear();
+    window.KCAPI.config.fallbackDatabaseURLs = ['/fake-db.json'];
+    window.KCAPI.DEFAULTS.fallbackDatabaseURLs = ['/fake-db.json'];
+    window.KCAPI.fetchJSON.mockResolvedValue({
+      anuncios: [
+        {
+          id: 'm-1',
+          module: 'moradia',
+          author: 'Ana Moradia',
+          authorAvatar: 'https://example.com/ana.png',
+          votos: 2,
+          comentarios: 1,
+          created_at: '2026-04-07T10:00:00Z',
+        },
+        {
+          id: 'm-2',
+          module: 'moradia',
+          author: 'Ana Moradia',
+          authorAvatar: 'https://example.com/ana.png',
+          votos: 1,
+          comentarios: 0,
+          created_at: '2026-04-07T12:00:00Z',
+        },
+        {
+          id: 'e-1',
+          module: 'eventos',
+          author: 'Bruno Eventos',
+          authorAvatar: 'https://example.com/bruno.png',
+          votos: 5,
+          comentarios: 2,
+          created_at: '2026-04-07T09:00:00Z',
+        },
+      ]
+    });
+  });
+
+  test('ranqueia contribuidores e respeita o filtro de módulo', async () => {
+    const result = await driver.getTopContributors('month', 'moradia', 10);
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(expect.objectContaining({
+      display_name: 'Ana Moradia',
+      posts_count: 2,
+      votes_received: 3,
+      comments_count: 1,
+      score: 65,
+      rank: 1,
+    }));
   });
 });
 
