@@ -74,6 +74,19 @@ describe('KCFeedFilters', () => {
     expect(new URLSearchParams(window.location.search).has('datePreset')).toBe(false);
   });
 
+  test('normalizeDatePreset preserva o valor canonico thisMonth para eventos', () => {
+    require('../assets/js/kc-feed-filters.js');
+
+    const utils = window.KCFeedFilters;
+
+    expect(utils.normalizeDatePreset('eventos', 'thisMonth')).toBe('thisMonth');
+    expect(utils.normalizeDatePreset('eventos', 'thismonth')).toBe('thisMonth');
+
+    window.history.replaceState({}, '', '/eventos.html?datePreset=thismonth');
+    const params = utils.getSearchParams();
+    expect(utils.readPresetParam(params, 'datePreset', utils.getAllowedDatePresets('eventos'))).toBe('thisMonth');
+  });
+
   test('matchesDatePreset respeita recencia generica e datas de eventos com fallback', () => {
     require('../assets/js/kc-feed-filters.js');
 

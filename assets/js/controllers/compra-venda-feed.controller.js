@@ -5,6 +5,7 @@
   const CATS = [
     { key: 'eletronicos', label: 'Eletrônicos', icon: 'fas fa-laptop' },
     { key: 'livros', label: 'Livros', icon: 'fas fa-book' },
+    { key: 'ingressos', label: 'Ingressos', icon: 'fas fa-ticket-alt' },
     { key: 'moveis', label: 'Móveis', icon: 'fas fa-couch' },
     { key: 'vestuario', label: 'Vestuário', icon: 'fas fa-tshirt' },
     { key: 'outros', label: 'Outros', icon: 'fas fa-box' },
@@ -120,6 +121,7 @@
     if (!key.endsWith('s') && CAT_KEYS.includes(key + 's')) return key + 's';
     if (key.includes('eletron')) return 'eletronicos';
     if (key.includes('livr')) return 'livros';
+    if (key.includes('ingress')) return 'ingressos';
     if (key.includes('mov') || key.includes('mobil')) return 'moveis';
     if (key.includes('vest') || key.includes('roup')) return 'vestuario';
     if (key.includes('outro')) return 'outros';

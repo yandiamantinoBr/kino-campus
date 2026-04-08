@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V10.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1` e `v11.3.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0` e `v11.4.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.4.0 | correção transversal da sidebar desktop, restauração do preset canônico `Todas as datas` em `eventos` e inclusão funcional da categoria `Ingressos` em compra e venda | em fechamento |
 | v11.3.0 | paridade do `Limpar filtros` no empty state dos 6 feeds públicos e clear explícito de data no módulo `eventos` | `#231` |
 | v11.2.1 | reativação do Vercel MCP no Codex, homologação de time/projeto/deployments/logs e fechamento da validação pós-merge da `v11.2.0` | `#230` |
 | v11.2.0 | consistência de shell público: estados ativos da navegação, menu móvel coerente em páginas secundárias e busca mobile adicionada na `create-post.html` | `#229` |
@@ -57,10 +58,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.3.0`
-- objetivo da iteração: padronizar a ação de `Limpar filtros` no empty state dos 6 feeds públicos equivalentes e fechar a paridade do módulo `eventos`
+- iteração ativa consolidada: `v11.4.0`
+- objetivo da iteração: corrigir o colapso visual dos `kc-sidebar-section__toggle`, restaurar o preset canônico `Todas as datas` no módulo `eventos` e adicionar a categoria `Ingressos` no feed e no modal de criação de `compra-venda`
 - natureza da iteração: frontend compartilhado de módulos equivalentes, sem mudança de banco
-- status operacional do Vercel MCP em `08 de abril de 2026`: autenticado com sucesso via `codex mcp login vercel`, com acesso confirmado ao projeto `kino-campus`; a iteração `v11.3.0` foi validada em preview pelo deployment `dpl_Ds1PfZ3D3sdaGeDa5wGa2NyUKf79` da PR `#231`
+- status operacional do Vercel MCP em `08 de abril de 2026`: autenticado com sucesso via `codex mcp login vercel`, com acesso confirmado ao projeto `kino-campus`; a iteração `v11.4.0` está em fechamento operacional nesta branch, após validação local de browser para colapso da sidebar, preset de `eventos`, presença do ranking nos módulos e paridade funcional da nova categoria `Ingressos`
 
 ---
 

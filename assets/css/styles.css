@@ -8851,6 +8851,10 @@ textarea::placeholder {
   gap: 14px;
 }
 
+.kc-sidebar-section__body[hidden] {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
   .kc-sidebar-section__toggle {
     display: none;
