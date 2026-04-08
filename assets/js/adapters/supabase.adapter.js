@@ -2319,7 +2319,107 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
+  function attachAdminHelpListMeta(rows, meta = {}) {
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    const totalCount = Number(meta.totalCount);
+    const limit = Number(meta.limit);
+    const offset = Number(meta.offset);
+    return Object.assign(list, {
+      totalCount: Number.isFinite(totalCount) ? totalCount : list.length,
+      limit: Number.isFinite(limit) ? limit : list.length,
+      offset: Number.isFinite(offset) ? offset : 0,
+      hasMore: Boolean(meta.hasMore),
+    });
+  }
+
+  function buildAdminHelpSearchQuery(rawValue) {
+    const cleaned = String(rawValue || '')
+      .replace(/[,%()']/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleaned) return '';
+    return [
+      `subject.ilike.%${cleaned}%`,
+      `message.ilike.%${cleaned}%`,
+      `contact_email.ilike.%${cleaned}%`,
+      `page_path.ilike.%${cleaned}%`,
+      `type.ilike.%${cleaned}%`,
+      `topic.ilike.%${cleaned}%`,
+      `subtopic.ilike.%${cleaned}%`,
+    ].join(',');
+  }
+
   async function supabaseListAdminHelpRequests(filters = {}) {
+    const client = getSupabaseClient();
+    const limit = Math.max(1, Math.min(100, Number(filters.limit) || 25));
+    const offset = Math.max(0, Number(filters.offset) || 0);
+    if (!client) return attachAdminHelpListMeta([], { totalCount: 0, limit, offset, hasMore: false });
+
+    const status = filters.status && filters.status !== 'all' ? String(filters.status).trim() : '';
+    const type = filters.type && filters.type !== 'all' ? String(filters.type).trim() : '';
+    const priority = filters.priority && filters.priority !== 'all' ? String(filters.priority).trim() : '';
+    const searchQuery = buildAdminHelpSearchQuery(filters.query);
+
+    try {
+      if (!priority && !searchQuery) {
+        const rpcResult = await client.rpc('kc_admin_list_help_requests_paged', {
+          p_status: status || null,
+          p_type: type || null,
+          p_limit: limit,
+          p_offset: offset,
+        });
+
+        if (!rpcResult.error) {
+          const rows = Array.isArray(rpcResult.data) ? rpcResult.data : [];
+          const totalCount = rows.length ? Number(rows[0].total_count) || rows.length : 0;
+          const normalizedRows = rows.map((row) => {
+            const nextRow = { ...(row || {}) };
+            delete nextRow.total_count;
+            return nextRow;
+          });
+          return attachAdminHelpListMeta(normalizedRows, {
+            totalCount,
+            limit,
+            offset,
+            hasMore: (offset + normalizedRows.length) < totalCount,
+          });
+        }
+
+        console.warn('[KCAPI][help] kc_admin_list_help_requests_paged fallback:', rpcResult.error);
+      }
+
+      let query = client
+        .from('help_requests')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (status) query = query.eq('status', status);
+      if (type) query = query.eq('type', type);
+      if (priority) query = query.eq('priority', priority);
+      if (searchQuery) query = query.or(searchQuery);
+
+      const { data, error, count } = await query;
+      if (error) {
+        console.error('[KCAPI][help] listAdminHelpRequests:', error);
+        return attachAdminHelpListMeta([], { totalCount: 0, limit, offset, hasMore: false });
+      }
+
+      const rows = Array.isArray(data) ? data : [];
+      const totalCount = Number.isFinite(Number(count)) ? Number(count) : rows.length;
+      return attachAdminHelpListMeta(rows, {
+        totalCount,
+        limit,
+        offset,
+        hasMore: (offset + rows.length) < totalCount,
+      });
+    } catch (e) {
+      console.error('[KCAPI][help] listAdminHelpRequests excecao:', e);
+      return attachAdminHelpListMeta([], { totalCount: 0, limit, offset, hasMore: false });
+    }
+  }
+
+  async function supabaseListAdminHelpRequestsLegacy(filters = {}) {
     const client = getSupabaseClient();
     if (!client) return [];
 

@@ -2,6 +2,18 @@
   'use strict';
 
   const Help = window.KCHelpUtils || {};
+  const HELP_PAGE_SIZE = 25;
+  const QUERY_DEBOUNCE_MS = 250;
+  const FALLBACK_TYPE_OPTIONS = Object.freeze([
+    Object.freeze({ value: 'question', label: 'Duvida' }),
+    Object.freeze({ value: 'platform_issue', label: 'Problema na plataforma' }),
+    Object.freeze({ value: 'account_access', label: 'Conta e acesso' }),
+    Object.freeze({ value: 'report', label: 'Denuncia' }),
+    Object.freeze({ value: 'suggestion_praise', label: 'Sugestao ou elogio' }),
+  ]);
+  const FALLBACK_STATUS_VALUES = Object.freeze(['new', 'triaged', 'in_progress', 'resolved', 'archived']);
+  const FALLBACK_PRIORITY_VALUES = Object.freeze(['low', 'normal', 'high', 'urgent']);
+
   const state = {
     rows: [],
     filters: {
@@ -10,7 +22,16 @@
       priority: 'all',
       query: '',
     },
+    pagination: {
+      limit: HELP_PAGE_SIZE,
+      totalCount: 0,
+      hasMore: false,
+      isLoadingMore: false,
+    },
+    requestToken: 0,
   };
+
+  let eventsBound = false;
 
   function $(selector, root) {
     return (root || document).querySelector(selector);
@@ -23,10 +44,40 @@
     return String(value == null ? '' : value);
   }
 
+  function toFiniteNumber(value, fallback) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function getHelpTypeOptions() {
+    const shared = window.KCHelpUtils;
+    if (shared && Array.isArray(shared.HELP_TYPE_OPTIONS) && shared.HELP_TYPE_OPTIONS.length) {
+      return shared.HELP_TYPE_OPTIONS;
+    }
+    return FALLBACK_TYPE_OPTIONS;
+  }
+
+  function getValidValues(options, fallback) {
+    if (Array.isArray(options) && options.length) {
+      return options
+        .map((option) => String(option && option.value || '').trim())
+        .filter(Boolean);
+    }
+    return fallback.slice();
+  }
+
+  function getValidStatuses() {
+    return getValidValues(Help.HELP_STATUS_OPTIONS, FALLBACK_STATUS_VALUES);
+  }
+
+  function getValidPriorities() {
+    return getValidValues(Help.HELP_PRIORITY_OPTIONS, FALLBACK_PRIORITY_VALUES);
+  }
+
   function showError(message) {
     const error = $('#admin-error');
     if (!error) return;
-    error.textContent = String(message || 'Não foi possível carregar os pedidos de ajuda.');
+    error.textContent = String(message || 'Nao foi possivel carregar os pedidos de ajuda.');
     error.style.display = 'block';
   }
 
@@ -64,7 +115,7 @@
 
     const user = await window.KCAPI.getCurrentUser();
     if (!user) {
-      showError('Você precisa estar autenticado para acessar este painel.');
+      showError('Voce precisa estar autenticado para acessar este painel.');
       return false;
     }
 
@@ -72,7 +123,7 @@
       ? window.KCSupabase.getClient()
       : null;
     if (!client) {
-      showError('Supabase client não disponível.');
+      showError('Supabase client nao disponivel.');
       return false;
     }
 
@@ -83,7 +134,7 @@
       .maybeSingle();
 
     if (profileResult && profileResult.error) {
-      showError('Não foi possível validar seu acesso administrativo.');
+      showError('Nao foi possivel validar seu acesso administrativo.');
       return false;
     }
 
@@ -98,12 +149,15 @@
   function populateTypeFilter() {
     const select = $('#helpTypeFilter');
     if (!select) return;
+
+    const currentValue = String(select.value || state.filters.type || 'all').trim();
     const items = ['<option value="all">Todas as categorias</option>'];
-    (Help.HELP_TYPE_OPTIONS || []).forEach((option) => {
+    getHelpTypeOptions().forEach((option) => {
       if (!option || !option.value) return;
       items.push(`<option value="${esc(option.value)}">${esc(option.label || option.value)}</option>`);
     });
     select.innerHTML = items.join('');
+    select.value = currentValue || 'all';
   }
 
   function readFilters() {
@@ -133,10 +187,11 @@
     if (!target) return;
 
     const list = Array.isArray(rows) ? rows : [];
+    const totalCount = Math.max(list.length, toFiniteNumber(state.pagination.totalCount, list.length));
     const metrics = [
-      { label: 'Total', value: list.length },
-      { label: 'Novos', value: list.filter((row) => row && row.status === 'new').length },
-      { label: 'Urgentes', value: list.filter((row) => row && row.priority === 'urgent').length },
+      { label: 'Total filtrado', value: totalCount },
+      { label: 'Exibindo', value: list.length },
+      { label: 'Urgentes na tela', value: list.filter((row) => row && row.priority === 'urgent').length },
       { label: 'Em andamento', value: list.filter((row) => row && row.status === 'in_progress').length },
     ];
 
@@ -181,7 +236,7 @@
     const impactValue = String(metadata.impact_scope || '').trim();
     if (impactValue) {
       const impactLabels = {
-        only_me: 'Só comigo',
+        only_me: 'So comigo',
         some_people: 'Com outras pessoas',
         entire_platform: 'Plataforma toda',
       };
@@ -211,6 +266,39 @@
     return `<div class="kc-admin-help-meta">${lines.join('')}</div>`;
   }
 
+  function buildPaginationCard() {
+    const totalCount = Math.max(0, toFiniteNumber(state.pagination.totalCount, state.rows.length));
+    const loadedCount = Array.isArray(state.rows) ? state.rows.length : 0;
+    if (!totalCount && !loadedCount) return '';
+
+    const helperText = state.pagination.hasMore
+      ? 'Filtros aplicados no servidor. Carregue a proxima pagina para continuar.'
+      : 'Todos os resultados disponiveis para os filtros atuais ja foram carregados.';
+    const buttonHtml = state.pagination.hasMore
+      ? [
+        '<button',
+        ' type="button"',
+        ' data-help-load-more',
+        state.pagination.isLoadingMore ? ' disabled aria-busy="true"' : '',
+        ' style="padding:10px 14px;border-radius:12px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark-primary);font:inherit;cursor:pointer;"',
+        '>',
+        state.pagination.isLoadingMore
+          ? '<i class="fas fa-spinner fa-spin"></i> Carregando...'
+          : '<i class="fas fa-arrow-down"></i> Carregar mais',
+        '</button>',
+      ].join('')
+      : '';
+
+    return [
+      '<article class="kc-admin-help-card" data-help-pagination>',
+      '  <div class="kc-admin-help-card-top">',
+      `    <div><h2>${esc(`${loadedCount} de ${totalCount} pedidos exibidos`)}</h2><p>${esc(helperText)}</p></div>`,
+      `    <div class="kc-admin-help-chips">${buttonHtml}</div>`,
+      '  </div>',
+      '</article>',
+    ].join('');
+  }
+
   function renderRows(rows) {
     const list = $('#helpRequestsList');
     if (!list) return;
@@ -220,15 +308,15 @@
       return;
     }
 
-    list.innerHTML = rows.map((row) => {
+    const cards = rows.map((row) => {
       const typeLabel = buildLabel(Help.HELP_TYPE_LABELS, row.type, row.type);
       const topicLabel = buildLabel(Help.HELP_TOPIC_LABELS, row.topic, row.topic);
       const priorityLabel = buildLabel(Help.HELP_PRIORITY_LABELS, row.priority, row.priority);
       const statusLabel = buildLabel(Help.HELP_STATUS_LABELS, row.status, row.status);
       const subtopicLabel = buildSubtopicLabel(row);
-      const pagePath = String((row && row.page_path) || '').trim() || 'Não informado';
+      const pagePath = String((row && row.page_path) || '').trim() || 'Nao informado';
       const subject = String(row.subject || '').trim() || 'Sem assunto';
-      const message = String(row.message || '').trim() || 'Sem descrição';
+      const message = String(row.message || '').trim() || 'Sem descricao';
       const contactEmail = String(row.contact_email || '').trim() || 'Sem e-mail';
       const metadataChips = buildMetadataChips(row);
       const metadataSummary = buildMetadataSummary(row);
@@ -248,45 +336,127 @@
         `    <div><strong>Tema</strong><span>${esc(topicLabel)}</span></div>`,
         `    <div><strong>Subtipo</strong><span>${esc(subtopicLabel)}</span></div>`,
         `    <div><strong>E-mail</strong><span>${esc(contactEmail)}</span></div>`,
-        `    <div><strong>Página afetada</strong><span>${esc(pagePath)}</span></div>`,
+        `    <div><strong>Pagina afetada</strong><span>${esc(pagePath)}</span></div>`,
         `    <div><strong>Criado em</strong><span>${esc(formatDateTime(row.created_at))}</span></div>`,
-        `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Não' : 'Sim'}</span></div>`,
+        `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Nao' : 'Sim'}</span></div>`,
         '  </div>',
         metadataSummary,
         '  <div class="kc-admin-help-actions">',
         `    <label><span class="sr-only">Status</span><select data-help-status><option value="new"${row.status === 'new' ? ' selected' : ''}>Novo</option><option value="triaged"${row.status === 'triaged' ? ' selected' : ''}>Triado</option><option value="in_progress"${row.status === 'in_progress' ? ' selected' : ''}>Em andamento</option><option value="resolved"${row.status === 'resolved' ? ' selected' : ''}>Resolvido</option><option value="archived"${row.status === 'archived' ? ' selected' : ''}>Arquivado</option></select></label>`,
-        `    <label><span class="sr-only">Urgência</span><select data-help-priority><option value="low"${row.priority === 'low' ? ' selected' : ''}>Baixa</option><option value="normal"${row.priority === 'normal' ? ' selected' : ''}>Normal</option><option value="high"${row.priority === 'high' ? ' selected' : ''}>Alta</option><option value="urgent"${row.priority === 'urgent' ? ' selected' : ''}>Urgente</option></select></label>`,
+        `    <label><span class="sr-only">Urgencia</span><select data-help-priority><option value="low"${row.priority === 'low' ? ' selected' : ''}>Baixa</option><option value="normal"${row.priority === 'normal' ? ' selected' : ''}>Normal</option><option value="high"${row.priority === 'high' ? ' selected' : ''}>Alta</option><option value="urgent"${row.priority === 'urgent' ? ' selected' : ''}>Urgente</option></select></label>`,
         '    <button type="button" data-help-save><i class="fas fa-floppy-disk"></i> Salvar triagem</button>',
         '  </div>',
         '</article>',
       ].join('');
-    }).join('');
+    });
+
+    cards.push(buildPaginationCard());
+    list.innerHTML = cards.join('');
   }
 
-  async function loadRows() {
-    hideError();
-    showLoading(true);
-    readFilters();
+  function unwrapRowsResponse(result, requestedLimit, requestedOffset) {
+    const rawRows = Array.isArray(result)
+      ? result
+      : (result && Array.isArray(result.rows) ? result.rows : []);
+    const rows = rawRows
+      .filter((row) => row && typeof row === 'object')
+      .map((row) => row);
+
+    const totalCountSource = Array.isArray(result) ? result.totalCount : result && result.totalCount;
+    const limitSource = Array.isArray(result) ? result.limit : result && result.limit;
+    const offsetSource = Array.isArray(result) ? result.offset : result && result.offset;
+    const hasMoreSource = Array.isArray(result) ? result.hasMore : result && result.hasMore;
+    const totalCount = Math.max(rows.length, toFiniteNumber(totalCountSource, rows.length));
+    const limit = Math.max(1, toFiniteNumber(limitSource, requestedLimit));
+    const offset = Math.max(0, toFiniteNumber(offsetSource, requestedOffset));
+    const hasMore = typeof hasMoreSource === 'boolean'
+      ? hasMoreSource
+      : (offset + rows.length) < totalCount;
+
+    return { rows, totalCount, limit, offset, hasMore };
+  }
+
+  function mergeRows(currentRows, nextRows) {
+    const merged = Array.isArray(currentRows) ? currentRows.slice() : [];
+    const seen = new Set(merged.map((row) => String(row && row.id || '')).filter(Boolean));
+    (Array.isArray(nextRows) ? nextRows : []).forEach((row) => {
+      const key = String(row && row.id || '').trim();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      merged.push(row);
+    });
+    return merged;
+  }
+
+  async function loadRows(options = {}) {
+    const append = options.append === true;
+    const requestedLimit = Math.max(1, Math.min(100, toFiniteNumber(options.limit, state.pagination.limit || HELP_PAGE_SIZE)));
+    const requestedOffset = append ? state.rows.length : Math.max(0, toFiniteNumber(options.offset, 0));
+    const requestToken = state.requestToken + 1;
+    state.requestToken = requestToken;
+
+    if (!append) {
+      hideError();
+      showLoading(true);
+      readFilters();
+    } else {
+      state.pagination.isLoadingMore = true;
+      renderRows(state.rows);
+    }
 
     try {
-      const rows = await window.KCAPI.listAdminHelpRequests(state.filters);
-      state.rows = Array.isArray(rows) ? rows : [];
+      const result = await window.KCAPI.listAdminHelpRequests({
+        status: state.filters.status,
+        type: state.filters.type,
+        priority: state.filters.priority,
+        query: state.filters.query,
+        limit: requestedLimit,
+        offset: requestedOffset,
+      });
+
+      if (requestToken !== state.requestToken) return;
+
+      const payload = unwrapRowsResponse(result, requestedLimit, requestedOffset);
+      state.rows = append ? mergeRows(state.rows, payload.rows) : payload.rows;
+      state.pagination.limit = payload.limit;
+      state.pagination.totalCount = payload.totalCount;
+      state.pagination.hasMore = payload.hasMore && state.rows.length < payload.totalCount;
       renderSummary(state.rows);
       renderRows(state.rows);
     } catch (error) {
+      if (requestToken !== state.requestToken) return;
       console.error('[AdminHelp] load failed:', error);
-      showError('Não foi possível carregar os pedidos de ajuda.');
+      if (append) {
+        showToast('Nao foi possivel carregar mais pedidos de ajuda.', 'error');
+        renderRows(state.rows);
+      } else {
+        showError('Nao foi possivel carregar os pedidos de ajuda.');
+      }
     } finally {
-      showLoading(false);
+      if (requestToken !== state.requestToken) return;
+      state.pagination.isLoadingMore = false;
+      if (!append) showLoading(false);
+      renderRows(state.rows);
     }
   }
 
   async function saveRow(card) {
-    const id = String(card?.getAttribute('data-help-id') || '').trim();
+    const id = String(card && card.getAttribute('data-help-id') || '').trim();
     if (!id) return;
 
     const status = String(card.querySelector('[data-help-status]')?.value || '').trim();
     const priority = String(card.querySelector('[data-help-priority]')?.value || '').trim();
+    const validStatuses = getValidStatuses();
+    const validPriorities = getValidPriorities();
+    if (validStatuses.indexOf(status) < 0) {
+      showToast('Status invalido para triagem.', 'error');
+      return;
+    }
+    if (validPriorities.indexOf(priority) < 0) {
+      showToast('Urgencia invalida para triagem.', 'error');
+      return;
+    }
+
     const button = card.querySelector('[data-help-save]');
     if (button) {
       button.disabled = true;
@@ -296,14 +466,16 @@
     try {
       const result = await window.KCAPI.updateAdminHelpRequest(id, { status, priority });
       if (!result || result.ok === false) {
-        showToast((result && result.error && result.error.message) || 'Não foi possível salvar a triagem.', 'error');
+        showToast((result && result.error && result.error.message) || 'Nao foi possivel salvar a triagem.', 'error');
         return;
       }
       showToast('Triagem atualizada.', 'success');
-      await loadRows();
+      await loadRows({
+        limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE),
+      });
     } catch (error) {
       console.error('[AdminHelp] save failed:', error);
-      showToast('Não foi possível salvar a triagem.', 'error');
+      showToast('Nao foi possivel salvar a triagem.', 'error');
     } finally {
       if (button) {
         button.disabled = false;
@@ -313,26 +485,44 @@
   }
 
   function bindEvents() {
+    if (eventsBound) return;
+    eventsBound = true;
+
     ['#helpStatusFilter', '#helpTypeFilter', '#helpPriorityFilter'].forEach((selector) => {
       const field = $(selector);
-      if (field) field.addEventListener('change', loadRows);
+      if (field) field.addEventListener('change', function () { loadRows(); });
     });
 
     const queryField = $('#helpQueryFilter');
     if (queryField) {
       queryField.addEventListener('input', function () {
         window.clearTimeout(queryField._kcTimer);
-        queryField._kcTimer = window.setTimeout(loadRows, 220);
+        queryField._kcTimer = window.setTimeout(function () {
+          loadRows();
+        }, QUERY_DEBOUNCE_MS);
       });
     }
 
     const refreshButton = $('#helpRefreshButton');
-    if (refreshButton) refreshButton.addEventListener('click', loadRows);
+    if (refreshButton) {
+      refreshButton.addEventListener('click', function () {
+        loadRows({ limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE) });
+      });
+    }
 
     document.addEventListener('click', function (event) {
-      const action = event.target && event.target.closest ? event.target.closest('[data-help-save]') : null;
-      if (!action) return;
-      const card = action.closest('[data-help-id]');
+      const target = event.target && event.target.closest ? event.target.closest('[data-help-save],[data-help-load-more]') : null;
+      if (!target) return;
+
+      if (target.hasAttribute('data-help-load-more')) {
+        event.preventDefault();
+        if (!state.pagination.isLoadingMore && state.pagination.hasMore) {
+          loadRows({ append: true, limit: state.pagination.limit || HELP_PAGE_SIZE });
+        }
+        return;
+      }
+
+      const card = target.closest('[data-help-id]');
       if (card) saveRow(card);
     });
   }
