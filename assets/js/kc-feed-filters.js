@@ -199,35 +199,40 @@
     return FEED_DATE_PRESETS[key] ? FEED_DATE_PRESETS[key].slice() : [];
   }
 
+  function getCanonicalPresetValue(allowedValues, value) {
+    const normalized = normalizeText(value);
+    if (!normalized) return '';
+    const allowed = Array.isArray(allowedValues) ? allowedValues : [];
+    for (let index = 0; index < allowed.length; index += 1) {
+      const candidate = String(allowed[index] || '').trim();
+      if (candidate && normalizeText(candidate) === normalized) return candidate;
+    }
+    return '';
+  }
+
   function normalizeDatePreset(moduleKey, value) {
     const allowed = getAllowedDatePresets(moduleKey);
-    const normalized = normalizeText(value);
-    if (!normalized || !allowed.length) return '';
-    return allowed.includes(normalized) ? normalized : '';
+    if (!allowed.length) return '';
+    return getCanonicalPresetValue(allowed, value);
   }
 
   function readPresetParam(params, key, allowedValues) {
     const raw = readTextParam(params, key);
     if (!raw) return '';
-    const normalized = normalizeText(raw);
-    const allowed = Array.isArray(allowedValues)
-      ? allowedValues.map((entry) => normalizeText(entry)).filter(Boolean)
-      : [];
-    if (!allowed.length) return normalized;
-    return allowed.includes(normalized) ? normalized : '';
+    const allowed = Array.isArray(allowedValues) ? allowedValues : [];
+    if (!allowed.length) return normalizeText(raw);
+    return getCanonicalPresetValue(allowed, raw);
   }
 
   function writePresetParam(params, key, value, allowedValues) {
     if (!params || !key) return;
-    const normalized = normalizeText(value);
-    const allowed = Array.isArray(allowedValues)
-      ? allowedValues.map((entry) => normalizeText(entry)).filter(Boolean)
-      : [];
-    if (!normalized || (allowed.length && !allowed.includes(normalized))) {
+    const allowed = Array.isArray(allowedValues) ? allowedValues : [];
+    const canonical = allowed.length ? getCanonicalPresetValue(allowed, value) : normalizeText(value);
+    if (!canonical) {
       params.delete(key);
       return;
     }
-    params.set(key, normalized);
+    params.set(key, canonical);
   }
 
   function getEventDateKey(post) {

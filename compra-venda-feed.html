@@ -6,11 +6,11 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script" />
-<meta name="description" content="Compra e venda entre estudantes da UFG. Anuncie ou encontre eletrônicos, móveis, livros e mais no KinoCampus." />
+<meta name="description" content="Compra e venda entre estudantes da UFG. Anuncie ou encontre eletrônicos, ingressos, móveis, livros e mais no KinoCampus." />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="KinoCampus" />
 <meta property="og:title" content="Compra e Venda — KinoCampus" />
-<meta property="og:description" content="Compra e venda entre estudantes da UFG. Anuncie ou encontre eletrônicos, móveis, livros e mais." />
+<meta property="og:description" content="Compra e venda entre estudantes da UFG. Anuncie ou encontre eletrônicos, ingressos, móveis, livros e mais." />
 <meta property="og:url" content="https://www.kinocampus.com.br/compra-venda-feed.html" />
 <meta property="og:image" content="https://www.kinocampus.com.br/api/og-image?type=compra-venda" />
 <meta property="og:image:width" content="1200" />
@@ -18,7 +18,7 @@
 <meta property="og:image:alt" content="Compra e Venda — KinoCampus" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Compra e Venda — KinoCampus" />
-<meta name="twitter:description" content="Compra e venda entre estudantes da UFG. Anuncie ou encontre eletrônicos, móveis, livros e mais." />
+<meta name="twitter:description" content="Compra e venda entre estudantes da UFG. Anuncie ou encontre eletrônicos, ingressos, móveis, livros e mais." />
 <meta name="twitter:image" content="https://www.kinocampus.com.br/api/og-image?type=compra-venda" />
 <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.0">
 <script src="assets/js/kc-theme-boot.js?v=8.6.0"></script>
@@ -107,6 +107,10 @@
 <i class="fas fa-book"></i>
 <span>Livros</span>
 </a>
+<a data-category="ingressos" href="#ingressos">
+<i class="fas fa-ticket-alt"></i>
+<span>Ingressos</span>
+</a>
 <a data-category="moveis" href="#moveis">
 <i class="fas fa-couch"></i>
 <span>Móveis</span>
@@ -157,6 +161,10 @@
 <label class="kc-sidebar-check">
 <input checked="" data-kc-market-filter-kind="category" id="filterLivros" type="checkbox" value="livros"/>
 <span>Livros</span>
+</label>
+<label class="kc-sidebar-check">
+<input checked="" data-kc-market-filter-kind="category" id="filterIngressos" type="checkbox" value="ingressos"/>
+<span>Ingressos</span>
 </label>
 <label class="kc-sidebar-check">
 <input checked="" data-kc-market-filter-kind="category" id="filterMoveis" type="checkbox" value="moveis"/>

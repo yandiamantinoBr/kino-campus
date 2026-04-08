@@ -123,6 +123,7 @@ const KC_CREATE_SCHEMA = {
         options: [
           { key: 'eletronicos', label: 'Eletrônicos' },
           { key: 'livros', label: 'Livros' },
+          { key: 'ingressos', label: 'Ingressos' },
           { key: 'moveis', label: 'Móveis' },
           { key: 'vestuario', label: 'Vestuário' },
           { key: 'outros', label: 'Outros' },

@@ -577,6 +577,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.4.0`
+
+- objetivo:
+  corrigir a regressão transversal do colapso visual dos `kc-sidebar-section__toggle` no desktop, restaurar o preset canônico `Todas as datas` no módulo `eventos` e adicionar a categoria `Ingressos` como categoria funcional de primeira classe em `compra-venda`.
+- arquivos alterados:
+  `assets/js/kc-feed-filters.js`, `assets/css/styles.css`, `assets/js/controllers/compra-venda-feed.controller.js`, `assets/js/kc-create-post.js`, `compra-venda-feed.html`, `tests/kc-feed-filters.test.js`, `tests/compra-venda-ingressos.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`.
+- equivalentes revisados:
+  helper compartilhado de presets de data, sidebar desktop compartilhada dos módulos públicos, feed `compra-venda`, modal de criação compartilhado e os sidebars equivalentes de `eventos`, `moradia`, `caronas` e `oportunidades` em validação local de browser.
+- contratos preservados:
+  nenhuma rota, migration, RPC, `KCAPI`, adapter, schema de banco ou contrato público de payload foi alterado; a mudança ficou restrita à camada de frontend compartilhado e à taxonomia já usada pelo módulo `compra-venda`.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-feed-filters.js`, `node --check assets/js/controllers/compra-venda-feed.controller.js`, `node --check assets/js/kc-create-post.js`, `npx jest tests/kc-feed-filters.test.js tests/compra-venda-ingressos.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  em ambiente local com navegador real, o body da seção `Data` de `eventos` passou de `display:grid` para `display:none` após o clique no toggle, confirmando o colapso visual; o DOM renderizado de `eventos` voltou a marcar apenas `Todas as datas` por padrão; e o ranking continuou sendo injetado normalmente em `eventos`, `moradia`, `caronas`, `oportunidades` e `compra-venda`. A categoria `Ingressos` foi validada no markup do feed e no schema do modal de criação. No preview do Vercel, os assets compartilhados publicados foram confirmados no deployment `dpl_J4RFMZqsg3Fu3V1pAhZfeugXrzn3`; as páginas HTML desse preview permaneceram protegidas por autenticação da Vercel no momento da checagem remota.
+- PR / commit / deploy:
+  PR `#232`, commit `82192e5` na branch `codex/v11-4-0-sidebar-ranking-ingressos` e preview validado no deployment `dpl_J4RFMZqsg3Fu3V1pAhZfeugXrzn3` em `08 de abril de 2026`. Merge, delete branch e pull ainda pendentes no momento deste registro.
+- riscos residuais:
+  a correção do accordion depende de CSS compartilhado em `styles.css`, então a checagem pós-merge precisa confirmar a publicação dos assets novos no deploy final para evitar leitura de cache antigo no navegador do usuário.
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
