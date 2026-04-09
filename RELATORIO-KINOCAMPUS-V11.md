@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0` e `v11.5.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes e correção transversal do bootstrap de ranking dos módulos |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0` e `v11.6.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos e hardening específico para gestos/zoom do iOS Safari |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -623,6 +623,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.6.0`
+
+- objetivo:
+  corrigir a disputa de gestos em iOS Safari na home e nos módulos públicos equivalentes, impedindo que o `pull-to-refresh` sequestre swipes horizontais do hero/ranking/tabs/rails e removendo o auto-zoom/travamento de pinch nos fluxos de autenticação e `kc-create-modal`.
+- arquivos alterados:
+  `assets/js/kc-pull-to-refresh.js`, `assets/js/kc-core.js`, `assets/css/styles.css`, `tests/ios-gesture-hardening.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  `index.html`, `compra-venda-feed.html`, `caronas-feed.html`, `moradia.html`, `eventos.html`, `oportunidades.html`, `achados-perdidos.html`, o auth modal compartilhado, o `kc-create-modal` compartilhado, o `kc-ranking-users`, o `kc-feed-tabs`, todos os `kc-*-mobile-rail`, o helper global de drag horizontal em `kc-core.js` e o interceptador global de `pull-to-refresh`.
+- contratos preservados:
+  nenhuma rota pública, payload, RPC, adapter, contrato de `KCAPI`, migration, schema de banco ou comportamento Android específico foi alterado; a iteração ficou restrita ao hardening de gestos, CSS compartilhado e prevenção de auto-zoom no Safari/iOS.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-core.js`, `node --check assets/js/kc-pull-to-refresh.js`, `npx jest tests/ios-gesture-hardening.test.js tests/kc-ranking-markup.test.js tests/kc-feed-filters.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  em smoke local com Playwright CLI a `index.html` foi aberta em `390x844`, o auth modal passou a expor `touch-action: pinch-zoom` na casca, `touch-action: pan-y pinch-zoom` no corpo e `font-size: 16px` nos inputs. Na própria home, `kc-hero-carousel` passou a reportar `pan-y pinch-zoom`, enquanto `kc-ranking-users` passou a resolver para `manipulation` no browser. Em `compra-venda-feed.html`, o `kc-marketplace-mobile-rail` e o `kc-feed-tabs` também passaram a resolver `touch-action` compatível com scroll horizontal e pinch, e a abertura do modal de seção confirmou `kc-create-modal__body` com `pan-y pinch-zoom`. O gesto `TouchEvent` sintético do hero não pôde ser reproduzido integralmente no Chromium local porque `Touch`/`TouchEvent` não estavam disponíveis nesse contexto de CLI, então a checagem final dessa nuance permanece dependente da validação publicada em device iOS real.
+- PR / commit / deploy:
+  PR `#235`, commit `1817a30` na branch `codex/v11-6-0-ios-gesture-zoom-hardening` e preview Vercel `dpl_7W9YewxxyNVojvhpnnfB6G3DmvCw`, aliasado em `https://kino-campus-git-codex-v11-6-0-io-116512-yannakamurabrs-projects.vercel.app`. Durante esta iteração o Vercel MCP voltou a responder `Auth required`, então a confirmação do preview foi fechada pela CLI `vercel inspect` e pela homologação local de browser antes do merge.
+- riscos residuais:
+  como Safari/iOS tem diferenças de edge-swipe e pinch que não ficam totalmente cobertas pelo Chromium local, a conclusão desta iteração exige validação publicada em navegador real iOS antes de considerar o hardening encerrado.
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
@@ -649,6 +672,11 @@ Este backlog é inicial e poderá ser refinado nas próximas iterações aprovad
 
 5. **Contrato banco ↔ frontend ↔ docs**
    - revisar RPC catalog, schema docs, migrations recentes e callers do frontend
+
+6. **Hardening e QA real-device iOS/Safari**
+   - validar em iPhone real os gestos de swipe horizontal do hero, `kc-ranking-users`, `kc-feed-tabs` e `kc-*-mobile-rail`
+   - validar pinch-out após auto-zoom induzido por foco em input
+   - revisar qualquer superfície restante com `touch-action` agressivo em modais, overlays e drawers
 
 ---
 

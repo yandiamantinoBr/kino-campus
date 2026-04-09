@@ -4200,7 +4200,7 @@ body.kc-scroll-locked {
     max-height: calc(90vh - 80px);
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
 }
 
 .kc-create-step {
@@ -5075,7 +5075,8 @@ header,
 
 /* Hero: swipe + melhor proporção no mobile */
 .kc-hero-carousel {
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior-x: contain;
 }
 
 @media (max-width: 576px) {
@@ -5902,8 +5903,9 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   scroll-snap-type: x proximity;
-  scroll-padding-left: var(--kc-page-gutter);
-  touch-action: pan-x pan-y;
+  scroll-padding-inline: var(--kc-page-gutter);
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .kc-ranking-users::-webkit-scrollbar { display: none; }
@@ -5951,12 +5953,13 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
     margin: 0 0 14px 0 !important;
 
     scroll-snap-type: x proximity;
-    scroll-padding-left: var(--kc-page-gutter);
+    scroll-padding-inline: var(--kc-page-gutter);
 
     background: var(--kc-background-dark);
     border-bottom: 1px solid var(--kc-border-dark);
     box-shadow: none !important;
-    touch-action: pan-x pan-y;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   .kc-feed-tabs::-webkit-scrollbar { height: 0; display: none; }
@@ -6291,7 +6294,7 @@ textarea::placeholder {
   transform: translateY(8px);
   transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
   overscroll-behavior: contain;
-  touch-action: none;
+  touch-action: pinch-zoom;
 }
 
 .kc-auth-modal.active {
@@ -6350,7 +6353,7 @@ textarea::placeholder {
   background: var(--kc-surface-dark);
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 .kc-auth-tabs {
@@ -6398,6 +6401,7 @@ textarea::placeholder {
   background: var(--kc-background-dark);
   color: var(--kc-text-dark-primary);
   padding: 12px 14px;
+  font-size: 1rem;
   border-radius: 14px;
   outline: none;
 }
@@ -7195,7 +7199,8 @@ textarea::placeholder {
 }
 
 .kc-hero-carousel {
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior-x: contain;
 }
 
 .kc-mobile-menu-content .kc-mobile-menu-logout-btn,
@@ -8614,6 +8619,17 @@ textarea::placeholder {
     scroll-snap-type: x proximity;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .kc-opportunity-mobile-rail,
+  .kc-marketplace-mobile-rail,
+  .kc-housing-mobile-rail,
+  .kc-lostfound-mobile-rail,
+  .kc-caronas-mobile-rail,
+  .kc-eventos-mobile-rail {
+    scroll-padding-inline: var(--kc-page-gutter);
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   .kc-opportunity-mobile-rail::-webkit-scrollbar {
