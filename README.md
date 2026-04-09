@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0` e `v11.8.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0` e `v11.9.0`.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 26 suites, 448 testes |
+| Testes | Jest: 28 suites, 452 testes |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.9.0 | hidratação persistente e revalidação silenciosa para `Top Contribuidores` e `kc-vote-score`, reaproveitando `KCSessionStore` para evitar spinner/reprocessamento desnecessário em reload e troca de período | `#pending` |
 | v11.8.0 | remoção do bloco redundante de normalização em `localCreatePost`, centralizando a persistência local em `prepareLocalPostForPersistence` e adicionando regressão direta para criação local em `compra-venda` | `#237` |
 | v11.7.0 | paridade endurecida entre `local.adapter.js`, `kc-api.client.js` e o contrato moderno do driver local, cobrindo perfil, posts do usuário, salvos, highlights, notificações e convites sem alterar Supabase ou banco | `#236` |
 | v11.6.0 | hardening de iOS Safari: `pull-to-refresh` deixa de sequestrar gestos horizontais no topo, superfícies horizontais preservam `pinch-zoom` e o auth/modal deixa de induzir auto-zoom/travamento por `touch-action` e `font-size` inadequados | `#235` |
@@ -62,10 +63,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.8.0`
-- objetivo da iteração: remover a duplicação residual de normalização em `localCreatePost`, centralizando o fluxo local em `prepareLocalPostForPersistence` e cobrindo a criação local com regressão direta em `compra-venda`
-- natureza da iteração: frontend/data access local e testes de contrato, sem mudança de banco
-- status operacional do deploy em `09 de abril de 2026`: a branch `codex/v11-8-0-local-createpost-hardening` foi publicada na PR `#237` e teve preview Vercel validado via MCP no deployment `dpl_EPsu5gQgmcDwNNxCV4WNzDMBtbEL`. As checagens locais confirmaram `local.adapter.js` sintaticamente válido, `tests/local-adapter.test.js` verde e `git diff --check` limpo; no preview, `my-posts.html` respondeu `200` e o asset publicado `assets/js/adapters/local.adapter.js` já refletiu a remoção do bloco redundante no `localCreatePost`.
+- iteração ativa consolidada: `v11.9.0`
+- objetivo da iteração: aplicar snapshot de sessão e `stale-while-revalidate` em `Top Contribuidores` e `kc-vote-score`, reduzindo spinner, rerender integral e fetch redundante em reload/troca de período sem alterar contratos de API ou banco
+- natureza da iteração: frontend compartilhado, hidratação client-side e regressão direcionada, sem mudança de banco
+- status operacional do deploy em `09 de abril de 2026`: a branch `codex/v11-9-0-ranking-vote-session-hydration` está em fechamento documental local. As checagens já concluídas confirmaram `assets/js/kc-ranking.js`, `assets/js/controllers/index.controller.js` e `assets/js/components/voting.js` sintaticamente válidos, além das suites `tests/kc-ranking.test.js`, `tests/kc-ranking-session.test.js`, `tests/voting.test.js` e `tests/voting-session-hydration.test.js` verdes. O próximo passo operacional desta mesma iteração é publicar a PR, validar preview no Vercel e então promover o deploy final.
 
 ---
 
