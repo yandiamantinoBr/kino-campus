@@ -600,6 +600,48 @@ function kcCaptureCreateValues() {
   kcCreateState.values = values;
 }
 
+function kcGetActiveCreateFieldNames(moduleKey, selections, values) {
+  const names = new Set(['titulo', 'descricao', 'visibility', 'sustentavel']);
+  const fields = kcBuildFieldsForModule(moduleKey, selections || {}, values || {});
+  fields.forEach((field) => {
+    if (!field || !field.name) return;
+    names.add(String(field.name));
+  });
+  return names;
+}
+
+function kcReadActiveCreateValue(activeFieldNames, values, name, fallback) {
+  if (!name || !(activeFieldNames instanceof Set) || !activeFieldNames.has(name)) {
+    return fallback;
+  }
+  if (!values || !Object.prototype.hasOwnProperty.call(values, name)) {
+    return fallback;
+  }
+  const nextValue = values[name];
+  return nextValue == null ? fallback : nextValue;
+}
+
+function kcReadActiveCreateStringValue(activeFieldNames, values, name, fallback) {
+  const resolved = kcReadActiveCreateValue(activeFieldNames, values, name, fallback == null ? '' : fallback);
+  return String(resolved == null ? '' : resolved).trim();
+}
+
+function kcReadActiveCreateArrayValue(activeFieldNames, values, name) {
+  const resolved = kcReadActiveCreateValue(activeFieldNames, values, name, []);
+  if (Array.isArray(resolved)) return resolved;
+  if (typeof resolved === 'string') return kcParseStringArrayValue(resolved);
+  return [];
+}
+
+function kcReadActiveCreateBooleanValue(activeFieldNames, values, name, fallback) {
+  const resolved = kcReadActiveCreateValue(activeFieldNames, values, name, fallback === true);
+  if (typeof resolved === 'string') {
+    const normalized = resolved.trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'on';
+  }
+  return !!resolved;
+}
+
 function kcTagLabel(schema, groupId, key) {
   const group = (schema && Array.isArray(schema.tagGroups)) ? schema.tagGroups.find(g => g.id === groupId) : null;
   const opt = group && Array.isArray(group.options) ? group.options.find(o => o.key === key) : null;
@@ -1884,6 +1926,38 @@ async function kcHandleCreateSubmit() {
       showToast('Revise os campos destacados e tente novamente.', 'warn', 2600);
       return;
     }
+    const activeFieldNames = kcGetActiveCreateFieldNames(
+      kcCreateState.moduleKey,
+      kcCreateState.selections,
+      kcCreateState.values
+    );
+    const activeLocation = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'localizacao', '');
+    const activeAreaAtuacao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'areaAtuacao', '');
+    const activeRegiao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'regiao', '');
+    const activeMoradiaFeatures = kcReadActiveCreateArrayValue(activeFieldNames, kcCreateState.values, 'marcadoresMoradia');
+    const activeCaronasFeatures = kcReadActiveCreateArrayValue(activeFieldNames, kcCreateState.values, 'marcadoresCarona');
+    const activeOrigem = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'origem', '');
+    const activeDestino = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'destino', '');
+    const activeHorario = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'horario', '');
+    const activeContribuicao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'contribuicao', '');
+    const activeVagas = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'vagas', '');
+    const activePrecoInput = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'preco', '');
+    const activeOrcamento = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'orcamento', '');
+    const activeRecompensa = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'recompensa', '');
+    const activeRemuneracao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'remuneracao', '');
+    const activeContato = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'contato', '');
+    const activeDetalhes = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'detalhes', '');
+    const activeEntrega = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'entrega', '');
+    const activeCondicao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'condicao', '');
+    const activeDataEvento = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'data', '');
+    const activeHoraEvento = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'hora', '');
+    const activeLink = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'link', '');
+    const activeModalidadeTrabalho = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'modalidadeTrabalho', '');
+    const activeRegimeContratacao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'regimeContratacao', '');
+    const activeVisibility = kcReadActiveCreateValue(activeFieldNames, kcCreateState.values, 'visibility', kcCreateState.editMode ? 'public' : 'community');
+    const activeLinkAsCta = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'link_as_cta', false);
+    const activeGratuito = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'gratuito', false);
+    const activeSustentavel = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'sustentavel', false);
 
     const categoryGroupId = schema.categoryGroupId;
     const rawCatKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
@@ -1915,8 +1989,8 @@ async function kcHandleCreateSubmit() {
 
     const opportunityArea = isOpportunity
       ? kcResolveOpportunityAreaValue(
-        kcCreateState.values.areaAtuacao || subLabel || subKey || '',
-        `${title} ${desc} ${kcCreateState.values.localizacao || ''}`
+        activeAreaAtuacao || subLabel || subKey || '',
+        `${title} ${desc} ${activeLocation}`
       )
       : { key: '', label: '', icon: '' };
     if (isOpportunity) {
@@ -1940,17 +2014,17 @@ async function kcHandleCreateSubmit() {
 
     const housingRegion = isMoradia
       ? kcResolveHousingRegionValue(
-        kcCreateState.values.regiao || kcCreateState.values.localizacao || '',
-        `${title} ${desc} ${kcCreateState.values.localizacao || ''}`
+        activeRegiao || activeLocation || '',
+        `${title} ${desc} ${activeLocation}`
       )
       : { key: '', label: '', icon: '', zoneKey: '', zoneLabel: '' };
     const housingFeatures = isMoradia
-      ? kcResolveHousingFeatureValues(kcCreateState.values.marcadoresMoradia || [])
+      ? kcResolveHousingFeatureValues(activeMoradiaFeatures)
       : [];
     const lostFoundLocation = isAchados
       ? kcResolveLostFoundLocationValue(
-        kcCreateState.values.localizacao || '',
-        `${title} ${desc} ${kcCreateState.values.localizacao || ''}`
+        activeLocation || '',
+        `${title} ${desc} ${activeLocation}`
       )
       : { key: '', label: '', icon: '', emoji: '' };
     if (isMoradia) {
@@ -2000,13 +2074,13 @@ async function kcHandleCreateSubmit() {
     }
 
     // Caronas: origem, destino, features
-    const caronasOrigem = isCaronas ? String(kcCreateState.values.origem || '').trim() : '';
-    const caronasDestino = isCaronas ? String(kcCreateState.values.destino || '').trim() : '';
-    const caronasHorario = isCaronas ? String(kcCreateState.values.horario || '').trim() : '';
-    const caronasContribuicao = isCaronas ? String(kcCreateState.values.contribuicao || '').trim() : '';
-    const caronasVagas = isCaronas ? String(kcCreateState.values.vagas || '').trim() : '';
+    const caronasOrigem = isCaronas ? activeOrigem : '';
+    const caronasDestino = isCaronas ? activeDestino : '';
+    const caronasHorario = isCaronas ? activeHorario : '';
+    const caronasContribuicao = isCaronas ? activeContribuicao : '';
+    const caronasVagas = isCaronas ? activeVagas : '';
     const caronasFeatures = isCaronas
-      ? kcResolveHousingFeatureValues(kcCreateState.values.marcadoresCarona || [])
+      ? kcResolveHousingFeatureValues(activeCaronasFeatures)
       : [];
 
     const tagMap = new Map();
@@ -2022,39 +2096,39 @@ async function kcHandleCreateSubmit() {
     // preço (quando existe)
     let preco = null;
     let precoTexto = null;
-    if (kcCreateState.moduleKey === 'eventos' && (kcCreateState.values.gratuito === true || kcCreateState.values.gratuito === 'true')) {
+    if (kcCreateState.moduleKey === 'eventos' && activeGratuito) {
       preco = 0;
     } else {
-      const n = kcParseBRLNumber(kcCreateState.values.preco);
+      const n = kcParseBRLNumber(activePrecoInput);
       if (n != null) preco = n;
     }
 
     if (kcCreateState.moduleKey === 'achados-perdidos' && kcCreateState.selections.status === 'perdidos') {
-      const r = String(kcCreateState.values.recompensa || '').trim();
+      const r = activeRecompensa;
       if (r) precoTexto = 'Recompensa: R$ ' + r;
     }
 
     if (isMoradia && kcNormalizeHousingTypeKey(rawCatKey) === 'procurando') {
-      const budgetValue = kcParseBRLNumber(kcCreateState.values.orcamento);
+      const budgetValue = kcParseBRLNumber(activeOrcamento);
       if (budgetValue != null) preco = budgetValue;
-      const budgetText = String(kcCreateState.values.orcamento || '').trim();
+      const budgetText = activeOrcamento;
       if (budgetText) precoTexto = 'Até R$ ' + budgetText + '/mês';
     }
 
     const opportunityTypeKey = isOpportunity ? kcNormalizeOpportunityTypeKey(rawCatKey) : '';
     const opportunityUsesRegime = opportunityTypeKey === 'emprego';
     const opportunityWorkMode = isOpportunity
-      ? kcResolveOpportunityWorkMode(kcCreateState.values.modalidadeTrabalho || '')
+      ? kcResolveOpportunityWorkMode(activeModalidadeTrabalho || '')
       : { key: '', label: '' };
     const opportunityRegime = (isOpportunity && opportunityUsesRegime)
-      ? kcResolveOpportunityRegime(kcCreateState.values.regimeContratacao || '')
+      ? kcResolveOpportunityRegime(activeRegimeContratacao || '')
       : { key: '', label: '' };
 
     if (isOpportunity) {
-      const remunValue = kcParseBRLNumber(kcCreateState.values.remuneracao);
+      const remunValue = kcParseBRLNumber(activeRemuneracao);
       if (remunValue != null) preco = remunValue;
 
-      const remunText = String(kcCreateState.values.remuneracao || '').trim();
+      const remunText = activeRemuneracao;
       if (remunText) {
         const suffix = opportunityTypeKey === 'freelancer' ? '/projeto' : '/mês';
         precoTexto = 'R$ ' + remunText + suffix;
@@ -2133,8 +2207,8 @@ async function kcHandleCreateSubmit() {
       descricao: desc,
       preco,
       precoTexto,
-      condicao: kcCreateState.values.condicao ? String(kcCreateState.values.condicao) : '',
-      localizacao: isAchados ? (lostFoundLocation.label || String(kcCreateState.values.localizacao || '')) : (kcCreateState.values.localizacao ? String(kcCreateState.values.localizacao) : ''),
+      condicao: activeCondicao,
+      localizacao: isAchados ? (lostFoundLocation.label || activeLocation) : activeLocation,
       lostFoundLocationKey: isAchados ? (lostFoundLocation.key || '') : '',
       lostFoundLocationLabel: isAchados ? (lostFoundLocation.label || '') : '',
       lostFoundLocationIcon: isAchados ? (lostFoundLocation.icon || '') : '',
@@ -2154,15 +2228,15 @@ async function kcHandleCreateSubmit() {
       vagas: isCaronas ? caronasVagas : '',
       caronasFeatureLabels: isCaronas ? caronasFeatures.map((f) => f.label) : [],
       caronasFeatureKeys: isCaronas ? caronasFeatures.map((f) => f.key) : [],
-      contato: kcCreateState.values.contato ? String(kcCreateState.values.contato) : '',
-      remuneracao: kcCreateState.values.remuneracao ? String(kcCreateState.values.remuneracao) : '',
-      visibility: kcNormalizePostVisibilityValue(kcCreateState.values.visibility, kcCreateState.editMode ? 'public' : 'community'),
+      contato: activeContato,
+      remuneracao: activeRemuneracao,
+      visibility: kcNormalizePostVisibilityValue(activeVisibility, kcCreateState.editMode ? 'public' : 'community'),
 
       // flags
       verificado: false,
       emoji: schema.emoji,
       imagens,
-      sustentavel: !!kcCreateState.values.sustentavel,
+      sustentavel: activeSustentavel,
 
       // metadata (modo local e Supabase): usado para filtros JSONB
       metadata: {
@@ -2196,8 +2270,8 @@ async function kcHandleCreateSubmit() {
         lostFoundLocationLabel: isAchados ? (lostFoundLocation.label || '') : '',
         lostFoundLocationIcon: isAchados ? (lostFoundLocation.icon || '') : '',
         lostFoundLocationEmoji: isAchados ? (lostFoundLocation.emoji || '') : '',
-        detalhes: kcCreateState.values.detalhes ? String(kcCreateState.values.detalhes) : '',
-        orcamento: kcCreateState.values.orcamento ? String(kcCreateState.values.orcamento) : '',
+        detalhes: activeDetalhes,
+        orcamento: activeOrcamento,
         area: isOpportunity ? (opportunityArea.label || '') : '',
         areaLabel: isOpportunity ? (opportunityArea.label || '') : '',
         areaKey: isOpportunity ? (opportunityArea.key || '') : '',
@@ -2206,17 +2280,17 @@ async function kcHandleCreateSubmit() {
         employmentType: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.key || '') : '',
         employmentTypeLabel: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.label || '') : '',
         regimeContratacao: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.label || '') : '',
-        contato: kcCreateState.values.contato ? String(kcCreateState.values.contato) : '',
-        remuneracao: kcCreateState.values.remuneracao ? String(kcCreateState.values.remuneracao) : '',
-        modalidadeTrabalho: kcCreateState.values.modalidadeTrabalho ? String(kcCreateState.values.modalidadeTrabalho) : '',
-        recompensa: kcCreateState.values.recompensa ? String(kcCreateState.values.recompensa) : '',
-        entrega: kcCreateState.values.entrega ? String(kcCreateState.values.entrega) : '',
+        contato: activeContato,
+        remuneracao: activeRemuneracao,
+        modalidadeTrabalho: activeModalidadeTrabalho,
+        recompensa: activeRecompensa,
+        entrega: activeEntrega,
         // eventos: data, hora, link e gratuito
-        data_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.data) ? String(kcCreateState.values.data) : '',
-        hora_evento: (kcCreateState.moduleKey === 'eventos' && kcCreateState.values.hora) ? String(kcCreateState.values.hora) : '',
-        link: (kcCreateState.moduleKey === 'eventos' || kcCreateState.moduleKey === 'oportunidades') ? String(kcCreateState.values.link || '') : '',
-        link_as_cta: !!(kcCreateState.values.link_as_cta),
-        gratuito: (kcCreateState.moduleKey === 'eventos') ? !!kcCreateState.values.gratuito : false,
+        data_evento: (kcCreateState.moduleKey === 'eventos') ? activeDataEvento : '',
+        hora_evento: (kcCreateState.moduleKey === 'eventos') ? activeHoraEvento : '',
+        link: (kcCreateState.moduleKey === 'eventos' || kcCreateState.moduleKey === 'oportunidades') ? activeLink : '',
+        link_as_cta: activeLinkAsCta,
+        gratuito: (kcCreateState.moduleKey === 'eventos') ? activeGratuito : false,
         // caronas
         origem: isCaronas ? caronasOrigem : '',
         destino: isCaronas ? caronasDestino : '',
@@ -2226,7 +2300,7 @@ async function kcHandleCreateSubmit() {
         caronasFeatureKeys: isCaronas ? caronasFeatures.map((f) => f.key) : [],
         caronasFeatureLabels: isCaronas ? caronasFeatures.map((f) => f.label) : [],
         marcadoresCarona: isCaronas ? caronasFeatures.map((f) => f.label) : [],
-        visibility: kcNormalizePostVisibilityValue(kcCreateState.values.visibility, kcCreateState.editMode ? 'public' : 'community'),
+        visibility: kcNormalizePostVisibilityValue(activeVisibility, kcCreateState.editMode ? 'public' : 'community'),
       },
     };
 

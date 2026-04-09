@@ -1,192 +1,208 @@
-# KinoCampus — Schemas dos Módulos (KC_CREATE_SCHEMA)
+# KinoCampus - Schemas dos Modulos (`KC_CREATE_SCHEMA`)
 
 ## Como funciona
 
-Cada módulo tem um schema em `KC_CREATE_SCHEMA` dentro de `kc-create-post.js`. O schema define:
-- `categoryGroupId`: qual tagGroup define a categoria principal do post
-- `tagGroups`: chips de seleção obrigatórios/opcionais na criação
+Cada modulo tem um schema em `assets/js/kc-create-post.js`, dentro de `KC_CREATE_SCHEMA`.
 
-O schema é usado para:
-1. Renderizar os chips de seleção no modal de criação
-2. Validar se todos os campos obrigatórios foram preenchidos
-3. Mapear a seleção para o campo `category` e `metadata` do post no banco
+Esse schema define:
+- `categoryGroupId`: qual `tagGroup` representa a categoria principal do post
+- `tagGroups`: chips obrigatorios/opcionais mostrados no modal de criacao
+- regras condicionais de campos adicionais conforme modulo e selecao atual
 
-## Constante CATEGORY_GROUP_MAP
+O schema e usado para:
+1. renderizar os chips de selecao no modal de criacao
+2. validar grupos obrigatorios antes do submit
+3. mapear categoria/subcategoria/tags para o payload persistido
+4. decidir quais campos ficam ativos no payload final
 
-Mapeia `moduleKey → groupId` para a categoria principal. Usada em `product.controller.js` para pré-preencher o modal "Criar parecido".
+## `CATEGORY_GROUP_MAP`
 
-```javascript
-CATEGORY_GROUP_MAP = {
-  'compra-venda':     'categoria',
-  'moradia':          'tipo',
-  'eventos':          'topico',
+Esse mapa e usado em `product.controller.js` para pre-preencher o modal "Criar parecido".
+
+```js
+const CATEGORY_GROUP_MAP = {
+  'compra-venda': 'categoria',
+  'moradia': 'tipo',
+  'eventos': 'topico',
   'achados-perdidos': 'status',
-  'oportunidades':    'tipo',
-  'caronas':          'tipo',
-}
+  'oportunidades': 'tipo',
+  'caronas': 'tipo',
+};
 ```
 
 ---
 
-## Módulo: Compra e Venda (`compra-venda`)
+## Compra e Venda (`compra-venda`)
 
-**Ícone:** `fas fa-shopping-bag` | **Expiração:** 30 dias
-
-### TagGroups
-
-| GroupId | Label | Obrigatório | Múltipla seleção | Opções |
-|---------|-------|-------------|-----------------|--------|
-| `categoria` | Categoria | ✅ | ❌ | Eletrônicos, Livros, Móveis, Vestuário, Outros |
-| `acao` | Ação | ✅ | ❌ | Vendo, Compro |
-
-### Campos adicionais
-- `preco` (número em BRL)
-- Imagens (até 5, 1 capa)
-
-### Exemplo de post criado
-```javascript
-{
-  module: 'compra-venda',
-  category: 'Eletrônicos',       // label da opção selecionada em 'categoria'
-  metadata: {
-    acao: 'Vendo',                // seleção em 'acao'
-    categoriaKey: 'eletronicos',  // slug da categoria
-  },
-  price: 350.00,
-}
-```
-
----
-
-## Módulo: Caronas (`caronas`)
-
-**Ícone:** `fas fa-car` | **Expiração:** 7 dias
+**Icone:** `fas fa-shopping-bag`
+**Expiracao:** 30 dias
 
 ### TagGroups
 
-| GroupId | Label | Obrigatório | Múltipla seleção | Opções |
-|---------|-------|-------------|-----------------|--------|
-| `tipo` | Tipo | ✅ | ❌ | Ofereço carona, Procuro carona |
+| GroupId | Label | Obrigatorio | Multipla selecao | Opcoes |
+|---|---|---|---|---|
+| `categoria` | Categoria | Sim | Nao | Eletronicos, Livros, Ingressos, Moveis, Vestuario, Outros |
+| `acao` | Voce quer | Sim | Nao | Vendo, Compro |
 
 ### Campos adicionais
-- Origem e destino (campos texto em `metadata`)
-- Data/hora da carona
-- Imagens opcionais
+
+- `titulo`
+- `descricao`
+- `localizacao` (opcional)
+- `preco`
+- `condicao` somente quando `acao = vendo`
+- `visibility`
+- `sustentavel`
+- imagens (ate 5, com 1 capa)
+
+### Regras condicionais
+
+- quando `acao = vendo`, `preco` e `condicao` ficam ativos
+- quando `acao = compro`, `preco` continua ativo como orcamento opcional e `condicao` deixa de integrar o payload final
 
 ---
 
-## Módulo: Moradia (`moradia`)
+## Caronas (`caronas`)
 
-**Ícone:** `fas fa-home` | **Expiração:** 30 dias
+**Icone:** `fas fa-car`
+**Expiracao:** 7 dias
 
 ### TagGroups
 
-| GroupId | Label | Obrigatório | Múltipla seleção | Opções |
-|---------|-------|-------------|-----------------|--------|
-| `tipo` | Tipo | ✅ | ❌ | Repúblicas, Quartos, Apartamentos, Casas, Procurando |
+| GroupId | Label | Obrigatorio | Multipla selecao | Opcoes |
+|---|---|---|---|---|
+| `tipo` | Tipo | Sim | Nao | Ofereco carona, Procuro carona |
 
 ### Campos adicionais
-- `preco` (aluguel mensal em BRL)
-- Região (sugestões automáticas: setores de Goiânia)
-- Imagens (até 5, 1 capa)
+
+- `titulo`
+- `descricao`
+- `origem`
+- `destino`
+- `horario` (opcional)
+- `contribuicao` (opcional)
+- `vagas` somente quando `tipo = ofereco`
+- `marcadoresCarona` (opcional)
+- `visibility`
+- `sustentavel`
+- imagens (opcionais)
 
 ---
 
-## Módulo: Eventos (`eventos`)
+## Moradia (`moradia`)
 
-**Ícone:** `fas fa-calendar-alt` | **Expiração:** 30 dias
+**Icone:** `fas fa-home`
+**Expiracao:** 30 dias
 
 ### TagGroups
 
-| GroupId | Label | Obrigatório | Múltipla seleção | Opções |
-|---------|-------|-------------|-----------------|--------|
-| `topico` | Tópico | ✅ | ❌ | Sustentabilidade, Acadêmicos, Culturais, Esportivos, Workshops, Festas |
+| GroupId | Label | Obrigatorio | Multipla selecao | Opcoes |
+|---|---|---|---|---|
+| `tipo` | Tipo | Sim | Nao | Republicas, Quartos, Apartamentos, Casas, Procurando |
 
 ### Campos adicionais
-- Data e hora do evento (`metadata.dataEvento`, `metadata.horaEvento`)
-- Local do evento (`metadata.localEvento`)
-- Link externo (`metadata.linkEvento`)
-- Flag `sustentavel`: true automático quando tópico = Sustentabilidade
+
+- `titulo`
+- `descricao`
+- `regiao`
+- `marcadoresMoradia` (opcional)
+- `orcamento` somente quando `tipo = procurando`
+- `localizacao`, `preco` e `detalhes` quando `tipo != procurando`
+- `visibility`
+- `sustentavel`
+- imagens (ate 5, com 1 capa)
 
 ---
 
-## Módulo: Achados e Perdidos (`achados-perdidos`)
+## Eventos (`eventos`)
 
-**Ícone:** `fas fa-search` | **Expiração:** 30 dias
+**Icone:** `fas fa-calendar`
+**Expiracao:** 30 dias
 
 ### TagGroups
 
-| GroupId | Label | Obrigatório | Múltipla seleção | Opções |
-|---------|-------|-------------|-----------------|--------|
-| `status` | Status | ✅ | ❌ | Perdidos, Encontrados |
-| `tipo` | Tipo do Item | ✅ | ❌ | Documentos, Eletrônicos, Outros |
+| GroupId | Label | Obrigatorio | Multipla selecao | Opcoes |
+|---|---|---|---|---|
+| `topico` | Subtopico | Sim | Nao | Sustentabilidade, Academicos, Culturais, Esportivos, Workshops, Festas |
 
 ### Campos adicionais
-- Local onde perdeu/encontrou (`metadata.local`)
-- Data (`metadata.dataOcorrencia`)
-- Imagens opcionais
+
+- `titulo`
+- `descricao`
+- `localizacao`
+- `data` (opcional)
+- `hora` (opcional)
+- `link` (opcional)
+- `link_as_cta` (opcional)
+- `gratuito`
+- `preco` somente quando `gratuito` nao esta marcado
+- `visibility`
+- `sustentavel`
+- imagens (opcionais)
 
 ---
 
-## Módulo: Oportunidades (`oportunidades`)
+## Achados e Perdidos (`achados-perdidos`)
 
-**Ícone:** `fas fa-briefcase` | **Expiração:** 30 dias
+**Icone:** `fas fa-search`
+**Expiracao:** 30 dias
 
 ### TagGroups
 
-| GroupId | Label | Obrigatório | Múltipla seleção | Opções |
-|---------|-------|-------------|-----------------|--------|
-| `tipo` | Tipo | ✅ | ❌ | Estágio, Emprego, Freelancer, Monitoria, Voluntariado |
+| GroupId | Label | Obrigatorio | Multipla selecao | Opcoes |
+|---|---|---|---|---|
+| `status` | Status | Sim | Nao | Perdidos, Encontrados |
 
 ### Campos adicionais
-- Área de atuação (sugestões automáticas)
-- Remuneração (opcional, `metadata.remuneracao`)
-- Presencial/Remoto (`metadata.modalidade`)
-- Link de candidatura (`metadata.linkCandidatura`)
+
+- `titulo`
+- `descricao`
+- `localizacao`
+- `recompensa` somente quando `status = perdidos`
+- `entrega` somente quando `status = encontrados`
+- `visibility`
+- `sustentavel`
+- imagens (opcionais)
 
 ---
 
-## Como adicionar um novo módulo
+## Oportunidades (`oportunidades`)
 
-1. Adicionar em `MODULES` em `kc-constants.js`:
-   ```javascript
-   'novo-modulo': {
-     icon: 'fa-xxx',
-     label: 'Novo Módulo',
-     expires: 30,
-   }
-   ```
+**Icone:** `fas fa-briefcase`
+**Expiracao:** 30 dias
 
-2. Adicionar schema em `KC_CREATE_SCHEMA` em `kc-create-post.js`:
-   ```javascript
-   'novo-modulo': {
-     categoryGroupId: 'tipo',
-     tagGroups: [
-       {
-         id: 'tipo',
-         label: 'Tipo',
-         required: true,
-         multiple: false,
-         options: ['Opção A', 'Opção B'],
-       }
-     ],
-   }
-   ```
+### TagGroups
 
-3. Adicionar em `CATEGORY_GROUP_MAP` em `product.controller.js`:
-   ```javascript
-   'novo-modulo': 'tipo',
-   ```
+| GroupId | Label | Obrigatorio | Multipla selecao | Opcoes |
+|---|---|---|---|---|
+| `tipo` | Tipo | Sim | Nao | Estagio, Emprego, Freelancer, Monitoria, Voluntariado |
 
-4. Seguir o checklist em `docs/architecture.md` — seção "Criar novo módulo".
+### Campos adicionais
+
+- `titulo`
+- `descricao`
+- `areaAtuacao`
+- `modalidadeTrabalho`
+- `regimeContratacao` somente quando `tipo = emprego`
+- `localizacao` (opcional)
+- `remuneracao` (opcional)
+- `contato`
+- `link` (opcional)
+- `link_as_cta` (opcional)
+- `visibility`
+- `sustentavel`
+- imagens (opcionais)
 
 ---
 
-## Validação de Schema
+## Validacoes relevantes da `v11.12.0`
 
-O `kc-create-post.js` valida:
-- Todos os tagGroups com `required: true` têm pelo menos 1 opção selecionada
-- `titulo` não está vazio
-- Se `preco` está presente, é um número válido
+O submit do modal agora deriva explicitamente os campos ativos antes de montar o payload final.
 
-Retorna array de erros por campo: `[{ field: 'categoria', message: 'Selecione uma categoria' }]`
+Isso evita vazamento de valores condicionais antigos quando o usuario muda a configuracao do formulario, por exemplo:
+- `condicao` nao vaza de `vendo` para `compro`
+- `vagas` nao vaza de `ofereco` para `procuro`
+- `preco` nao vaza quando `gratuito` esta marcado em eventos
+- `recompensa`, `entrega`, `orcamento` e `regimeContratacao` so seguem para o payload quando o campo ainda esta ativo
+
+O rascunho continua preservado no estado do modal para permitir que o usuario volte atras sem perder o que digitou.

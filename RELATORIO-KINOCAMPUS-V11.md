@@ -439,9 +439,10 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação. A sequência remanescente passa a começar em `v11.13.0`.
+
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
-| `v11.12.0` | fechar o residual de criação de publicação | `kc-create-post.js`, schemas dinâmicos, upload, validações, modais de criação, HTMLs equivalentes | criação endurecida e paritária entre módulos |
 | `v11.13.0` | completar o residual de produto e interações sociais | `_product.html`, `product.controller.js`, `kc-banners.js`, notificações e popovers correlatos | superfícies sociais críticas sem drift interno residual |
 | `v11.14.0` | iniciar a rodada de perfil e `my-posts` | `profile.html`, `my-posts.html`, controllers correlatos, estados vazios e carregamento | estabilidade de perfil público/privado e listagens do usuário |
 | `v11.15.0` | fechar conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
@@ -800,6 +801,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#244`, commit `b0dd62c` na branch `codex/v11-11-1-roadmap-replan`, com fechamento documental e sem necessidade de deploy funcional novo.
 - riscos residuais:
   o roadmap reformulado reduz ambiguidade, mas não substitui a disciplina de revalidar escopo real a cada fase. O principal risco segue sendo misturar frentes demais numa mesma PR se a sequência abaixo não for respeitada.
+
+---
+
+### Iteração `v11.12.0`
+
+- objetivo:
+  endurecer o fluxo de criação em `assets/js/kc-create-post.js` para impedir que campos condicionais inativos continuem vazando no payload final quando o usuário altera a configuração do formulário, preservando ao mesmo tempo o rascunho do modal.
+- arquivos alterados:
+  `assets/js/kc-create-post.js`, `tests/kc-create-post-active-fields.test.js`, `docs/module-schemas.md`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  combinações condicionais de `compra-venda`, `caronas`, `moradia`, `eventos`, `achados-perdidos` e `oportunidades`, além da documentação do schema real de criação e a categoria `Ingressos` já ativa no módulo `compra-venda`.
+- contratos preservados:
+  nenhuma rota pública, migration, RPC, adapter, contrato de `KCAPI`, persistência Supabase/local ou estrutura de payload pública foi ampliada; a iteração ficou restrita ao endurecimento da seleção de campos ativos antes do submit.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-create-post.js`, `npx jest tests/kc-create-post-active-fields.test.js tests/compra-venda-ingressos.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  pendente de fechamento no ciclo desta iteração, após publicação da PR e homologação do preview/deploy.
+- PR / commit / deploy:
+  em andamento nesta iteração no branch funcional de `v11.12.0`; os metadados finais de PR, merge e deploy devem ser preenchidos ao fechar o ciclo.
+- riscos residuais:
+  a blindagem foi feita no payload final, não no estado interno do modal. Isso preserva o rascunho ao alternar seleções, mas ainda deixa `kc-create-post.js` como hotspot monolítico que deve continuar sendo tratado em fatias pequenas.
 
 ---
 
