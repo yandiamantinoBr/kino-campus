@@ -730,11 +730,11 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/kc-api.client.js`, `node --check assets/js/controllers/product.controller.js`, `node --check assets/js/kc-comments.js`, `npx jest tests/kc-api-client.test.js tests/kc-api-session-swr.test.js tests/kc-comments-session.test.js tests/voting.test.js tests/voting-session-hydration.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  o preview Vercel da PR `#240` ficou `READY` no deployment `dpl_FT1si5ByRtyzoQrNU1yEGqjHqYTJ`, com alias de branch `https://kino-campus-git-codex-v11-10-0-p-c2bd35-yannakamurabrs-projects.vercel.app`. A homologação remota foi fechada por `vercel inspect`, pelos build logs e pelos checks da própria PR, confirmando build do commit `81bcd4e` sem erro. O Vercel MCP voltou a responder `Auth required` e o fetch autenticado do preview ficou bloqueado pela proteção da plataforma neste ambiente, então a leitura publicada de HTML/assets protegidos permanece pendente para a checagem pós-merge em produção.
+  o preview Vercel da PR `#240` ficou `READY` no deployment `dpl_FT1si5ByRtyzoQrNU1yEGqjHqYTJ`, com alias de branch `https://kino-campus-git-codex-v11-10-0-p-c2bd35-yannakamurabrs-projects.vercel.app`. A homologação remota do preview foi fechada por `vercel inspect`, pelos build logs e pelos checks da própria PR, confirmando build sem erro. Após o merge, a produção foi publicada em `https://kino-campus-70d1s6o4x-yannakamurabrs-projects.vercel.app` e aliasada para [www.kinocampus.com.br](https://www.kinocampus.com.br); no domínio público, `_product.html?id=1`, `assets/js/kc-api.client.js` e `assets/js/kc-comments.js` já retornaram os marcadores esperados da iteração.
 - PR / commit / deploy:
-  PR `#240`, commits `4caf867` e `81bcd4e` na branch `codex/v11-10-0-product-session-swr`, preview Vercel `dpl_FT1si5ByRtyzoQrNU1yEGqjHqYTJ` validado em `09 de abril de 2026`.
+  PR `#240`, commits `4caf867`, `81bcd4e` e `18c50ba` na branch `codex/v11-10-0-product-session-swr`, merge squash `7f4c1ac` na base `kinocampus-V11.0-foundations`, preview Vercel `dpl_FT1si5ByRtyzoQrNU1yEGqjHqYTJ` e deploy manual de produção `https://kino-campus-70d1s6o4x-yannakamurabrs-projects.vercel.app`, todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
-  a invalidação ficou segura para criação, like, edição e exclusão de comentário, mas a confirmação final desta fatia ainda depende da validação publicada pós-merge no domínio público, já que a proteção do preview impediu leitura direta dos assets neste ambiente.
+  a fatia ficou contida à leitura client-side e à invalidação imediata pós-mutações. O principal residual agora é de expansão futura: comentários e analytics do produto já usam snapshot+SWR, mas qualquer extensão para outras superfícies contadoras ainda precisa continuar fatiada para não misturar TTLs e contratos de invalidação diferentes.
 
 ---
 
