@@ -932,38 +932,6 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
       // Obs.: kc-core.js ainda usa "kc_user_posts" (legado). Mantemos sem regressão.
       const existing = readLocalUserPostDrafts();
       const raw = prepareLocalPostForPersistence(body, null);
-      // Normaliza o payload para o contrato V7.x e garante autor local.
-      if (!raw.autor && !raw._legacyAuthorName) raw.autor = 'Você';
-      if (!raw.autorAvatar && !raw._legacyAuthorAvatar) raw.autorAvatar = (MOCK_USERS_BY_ID.USER_SELF && MOCK_USERS_BY_ID.USER_SELF.avatarUrl) || '';
-
-      // V8.1.3.1: garante persistência consistente de categoria/sub-módulo no modo local
-      // (mesma semântica do driver Supabase, para que os filters/tabs funcionem igual).
-      try {
-        const m = String(raw.modulo || raw.module || '').trim();
-        const catKey = toSlug(raw.categoriaKey || raw.categoryKey || raw.category || raw.categoria || '');
-        if (catKey) {
-          raw.categoriaKey = catKey;
-          if (!raw.categoria) raw.categoria = catKey;
-        }
-
-        let subKey = toSlug(raw.subcategoriaKey || raw.subcategoryKey || raw.subcategory || '');
-        const actionish = ['vendo', 'compro', 'troco', 'doacao', 'alugo', 'procuro'];
-        // compra-venda: tabs usam categoria (eletronicos...), não ação
-        if (m === 'compra-venda' && subKey && actionish.includes(subKey) && catKey) {
-          subKey = catKey;
-          raw.subcategoriaKey = catKey;
-        } else if (subKey) {
-          raw.subcategoriaKey = subKey;
-        }
-
-        if (!raw.metadata || typeof raw.metadata !== 'object') raw.metadata = {};
-        if (catKey) raw.metadata.categoriaKey = raw.metadata.categoriaKey || catKey;
-        if (subKey) {
-          raw.metadata.subcategory = raw.metadata.subcategory || subKey;
-          raw.metadata.subcategoryKey = raw.metadata.subcategoryKey || subKey;
-        }
-      } catch (_) { }
-
       const next = normalizePost(raw);
       existing.unshift(raw);
 

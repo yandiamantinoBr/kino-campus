@@ -179,6 +179,50 @@ describe('Local Adapter - Paridade moderna do driver local', () => {
     }));
   });
 
+  test('createPost persiste payload local com categoria e subcategoria normalizadas', async () => {
+    const created = await driver.createPost({
+      title: 'Ingresso Calourada',
+      description: 'Ingresso de teste',
+      modulo: 'compra-venda',
+      category: 'Ingressos',
+      subcategory: 'vendo',
+      price: '25',
+    });
+
+    expect(created).toEqual(expect.objectContaining({
+      title: 'Ingresso Calourada',
+      modulo: 'compra-venda',
+      categoria: 'ingressos',
+      categoriaKey: 'ingressos',
+      subcategoriaKey: 'ingressos',
+      authorId: 'USER_SELF',
+      metadata: expect.objectContaining({
+        categoriaKey: 'ingressos',
+        subcategory: 'ingressos',
+        subcategoryKey: 'ingressos',
+      }),
+    }));
+    expect(created.id).toBeTruthy();
+    expect(created.created_at || created.createdAt).toBeTruthy();
+    expect(created.autor).toBeTruthy();
+
+    const stored = JSON.parse(global.localStorage.getItem('kc_user_posts') || '[]');
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toEqual(expect.objectContaining({
+      title: 'Ingresso Calourada',
+      modulo: 'compra-venda',
+      categoria: 'ingressos',
+      categoriaKey: 'ingressos',
+      subcategoriaKey: 'ingressos',
+      authorId: 'USER_SELF',
+      metadata: expect.objectContaining({
+        categoriaKey: 'ingressos',
+        subcategory: 'ingressos',
+        subcategoryKey: 'ingressos',
+      }),
+    }));
+  });
+
   test('updatePost, getMyPosts e deletePost mantem consistencia em kc_user_posts', async () => {
     global.localStorage.setItem('kc_user_posts', JSON.stringify([
       {
