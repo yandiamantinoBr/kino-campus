@@ -61,6 +61,13 @@
     return url.toString();
   }
 
+  function buildPreviewPostUrl() {
+    const relativeHref = window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function'
+      ? window.KCUtils.buildProductDetailHref('demo')
+      : `_product.html?id=${encodeURIComponent('demo')}`;
+    return new URL(relativeHref, window.location.origin).toString();
+  }
+
   function normalizeSocialLinks(profile) {
     return shared && typeof shared.normalizeSocialLinks === 'function'
       ? shared.normalizeSocialLinks((profile && profile.social_links) || {})
@@ -271,7 +278,7 @@
           profile: buildPreviewProfile(),
           viewerAuthenticated: true,
           postTitle: 'Anúncio de teste',
-          postUrl: `${window.location.origin}/product.html?id=demo`,
+          postUrl: buildPreviewPostUrl(),
           viewProfileHref: buildProfileHref()
         })
       : null;
