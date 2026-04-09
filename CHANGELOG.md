@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.10.0`: `KCAPI` passou a expor snapshot de sessão, refresh silencioso e invalidação explícita para analytics de produto e comentários Supabase, reduzindo spinner e fetch redundante na página de detalhe sem mexer em contratos públicos.
+- `v11.10.0`: `product.controller.js` reaproveita analytics do autor a partir de cache de sessão e só rerenderiza o painel quando os números realmente mudam.
+- `v11.10.0`: `kc-comments.js` passou a hidratar a lista de comentários do produto a partir de snapshot local antes do refresh em segundo plano, com invalidação após criação, like, edição e exclusão.
 - `v11.9.0`: `Top Contribuidores` passou a reutilizar snapshot de sessão com revalidação silenciosa e deduplicação de request em `kc-ranking.js`, evitando spinner e rerender integral desnecessários na home e nas sidebars dos módulos ao recarregar a página ou alternar o período.
 - `v11.9.0`: `voting.js` passou a persistir score e direção de voto por sessão, reaplicando `kc-vote-score` e estado ativo imediatamente após reload e deixando o refresh visível condicionado à expiração ou ausência do snapshot local.
 - `v11.8.0`: removido o bloco redundante de normalização dentro de `localCreatePost`, deixando `prepareLocalPostForPersistence(...)` como fonte única de preparação do payload local, com teste direto de regressão para criação de post em `compra-venda`.

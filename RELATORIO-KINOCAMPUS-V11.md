@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0` e `v11.9.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost` e introdução de hidratação persistente com revalidação silenciosa em ranking e votos |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0` e `v11.10.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos e extensão controlada do mesmo padrão para analytics/comentários da página de produto |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -712,6 +712,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   após o merge, o domínio publicado retornou `200` para `index.html`, `assets/js/kc-ranking.js` e `assets/js/components/voting.js`, confirmando a presença do script compartilhado na home e dos bundles finais com snapshot de sessão, deduplicação de request e hidratação persistente de score/direção.
 - riscos residuais:
   o snapshot de sessão reduz spinner e trabalho repetido, mas esta iteração ainda não expande o mesmo padrão para outras superfícies contadoras da plataforma. Qualquer extensão futura para comentários, analytics ou painéis laterais deve ser fatiada separadamente para evitar misturar caching de naturezas diferentes.
+
+---
+
+### Iteração `v11.10.0`
+
+- objetivo:
+  estender o padrão de snapshot de sessão e revalidação silenciosa para superfícies leves da página de produto, cobrindo o painel de analytics do autor e a lista de comentários Supabase sem alterar schema, RPC ou comportamento de escrita já consolidado.
+- arquivos alterados:
+  `assets/js/kc-api.client.js`, `assets/js/controllers/product.controller.js`, `assets/js/kc-comments.js`, `tests/kc-api-session-swr.test.js`, `tests/kc-comments-session.test.js`.
+- equivalentes revisados:
+  fachada `KCAPI`, painel `kcAuthorAnalytics` em `_product.html`, renderização de comentários em `kc-comments.js`, mutações de comentário (`addComment`, `likeComment`, edição e exclusão), `trackView`, `trackShare`, `trackCouponClick`, votos e salvos que impactam o snapshot analítico do produto.
+- contratos preservados:
+  nenhuma rota pública, migration, RPC, payload Supabase, assinatura pública de leitura/escrita da `KCAPI` ou contrato de `comments`/`kc_get_post_analytics` foi alterado; a iteração ficou restrita ao reaproveitamento client-side de dados já lidos, deduplicação de request e invalidação segura após mutações.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-api.client.js`, `node --check assets/js/controllers/product.controller.js`, `node --check assets/js/kc-comments.js`, `npx jest tests/kc-api-client.test.js tests/kc-api-session-swr.test.js tests/kc-comments-session.test.js tests/voting.test.js tests/voting-session-hydration.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview Vercel da PR `#240` ficou `READY` no deployment `dpl_EreoHKifREUtqrGeisaWTHL4QWQw`, com alias de branch `https://kino-campus-git-codex-v11-10-0-p-c2bd35-yannakamurabrs-projects.vercel.app`. A homologação remota foi fechada por `vercel inspect`, pelos build logs e pelos checks da própria PR, confirmando build do commit `4caf867` sem erro. O Vercel MCP voltou a responder `Auth required` e o fetch autenticado do preview ficou bloqueado pela proteção da plataforma neste ambiente, então a leitura publicada de HTML/assets protegidos permanece pendente para a checagem pós-merge em produção.
+- PR / commit / deploy:
+  PR `#240`, commit funcional `4caf867` na branch `codex/v11-10-0-product-session-swr`, preview Vercel `dpl_EreoHKifREUtqrGeisaWTHL4QWQw` validado em `09 de abril de 2026`.
+- riscos residuais:
+  a invalidação ficou segura para criação, like, edição e exclusão de comentário, mas a confirmação final desta fatia ainda depende da validação publicada pós-merge no domínio público, já que a proteção do preview impediu leitura direta dos assets neste ambiente.
 
 ---
 
