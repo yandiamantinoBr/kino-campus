@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.11.0`: removidas as implementações sombreadas de `addComment`, `normalizeCommentForRender`, `_renderCommentList`, `deleteComment` e `submitComment` em `kc-comments.js`, reduzindo drift interno sem alterar contratos públicos de comentários, replies ou renderização.
+- `v11.11.0`: adicionadas regressões para reply local com `parentId`, exclusão local em cascata e prevenção de reintrodução de declarations duplicadas em `tests/kc-comments-shadow-cleanup.test.js`.
 - `v11.10.0`: `KCAPI` passou a expor snapshot de sessão, refresh silencioso e invalidação explícita para analytics de produto e comentários Supabase, reduzindo spinner e fetch redundante na página de detalhe sem mexer em contratos públicos.
 - `v11.10.0`: `product.controller.js` reaproveita analytics do autor a partir de cache de sessão e só rerenderiza o painel quando os números realmente mudam.
 - `v11.10.0`: `kc-comments.js` passou a hidratar a lista de comentários do produto a partir de snapshot local antes do refresh em segundo plano, com invalidação após criação, like, edição e exclusão.
