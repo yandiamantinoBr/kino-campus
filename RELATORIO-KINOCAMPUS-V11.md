@@ -439,7 +439,7 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação. A sequência remanescente passa a começar em `v11.13.0`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A sequência remanescente passa a começar em `v11.13.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -819,9 +819,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/kc-create-post.js`, `npx jest tests/kc-create-post-active-fields.test.js tests/compra-venda-ingressos.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  pendente de fechamento no ciclo desta iteração, após publicação da PR e homologação do preview/deploy.
+  a homologação do preview foi fechada via PR `#245` com checks `Vercel` e `Vercel Preview Comments` aprovados, além do `vercel inspect` confirmando o preview `dpl_DQPXZSXnr32LP4uGfjpq8Ua5b813` em estado `Ready`. Como o Vercel MCP voltou a exigir autenticação nesta máquina e o `vercel curl` encontrou a limitação local de `schannel` no Windows, a validação remota do bundle foi concluída pela combinação de checks da PR, inspeção do deployment e leitura do deploy público após publicação.
 - PR / commit / deploy:
-  em andamento nesta iteração no branch funcional de `v11.12.0`; os metadados finais de PR, merge e deploy devem ser preenchidos ao fechar o ciclo.
+  PR `#245`, commit funcional `9bf6d9a` na branch `codex/v11-12-0-create-post-hardening`, merge squash `d5ae225` na base `kinocampus-V11.0-foundations`, preview `dpl_DQPXZSXnr32LP4uGfjpq8Ua5b813` e deploy manual de produção `dpl_9chTNjui8ZaVkFsb6gGTogVXZPDg`, publicado em `https://kino-campus-l3admzizz-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a blindagem foi feita no payload final, não no estado interno do modal. Isso preserva o rascunho ao alternar seleções, mas ainda deixa `kc-create-post.js` como hotspot monolítico que deve continuar sendo tratado em fatias pequenas.
 
