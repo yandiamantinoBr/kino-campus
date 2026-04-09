@@ -439,11 +439,11 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A fase `v11.13.0` foi iniciada pelo endurecimento do dropdown de notificações; o residual remanescente dessa macrofase continua em `v11.13.1`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi aprofundada em duas fatias: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto. A próxima sequência obrigatória passa a ser `v11.14.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
-| `v11.13.1` | fechar o residual remanescente de produto e interações sociais | `_product.html`, `product.controller.js`, `kc-banners.js`, popovers e interações correlatas além do dropdown de notificações | superfícies sociais críticas sem drift interno residual |
+| `v11.13.1` | fechar o residual remanescente de produto e interações sociais | `_product.html`, `product.controller.js`, helper compartilhado de clipboard em `kc-utils.js` e popovers correlatos | superfícies sociais críticas sem drift interno residual |
 | `v11.14.0` | iniciar a rodada de perfil e `my-posts` | `profile.html`, `my-posts.html`, controllers correlatos, estados vazios e carregamento | estabilidade de perfil público/privado e listagens do usuário |
 | `v11.15.0` | fechar conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
 | `v11.16.0` | iniciar a consolidação do admin pós-v10 | `admin/*.html`, `admin-shell.js`, `admin-shell.css`, listas, modais e busca | simetria de shell e UX admin endurecida |
@@ -847,6 +847,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#247`, commit funcional `ca61584` na branch `codex/v11-13-0-product-social-hardening`, merge squash `3e14361` na base `kinocampus-V11.0-foundations`, preview `dpl_BgKEASBh3FW4R8WvoFed8BnNRaGT` e deploy manual de produção `dpl_ErxTok7qpY11wiUG2T5i6CsrDX42`, publicado em `https://kino-campus-kfiulmc01-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a macrofase de produto/interações sociais não foi exaurida nesta fatia. O residual de banners, popovers e endurecimento adicional em `_product.html`/`product.controller.js` segue aberto e foi movido explicitamente para `v11.13.1`.
+
+---
+
+### Iteração `v11.13.1`
+
+- objetivo:
+  fechar o residual imediato de popovers e compartilhamento na página de produto sem abrir refactor amplo em `_product.html`/`product.controller.js`.
+- arquivos alterados:
+  `assets/js/kc-utils.js`, `assets/js/controllers/product.controller.js`, `tests/kc-utils-expanded.test.js`, `tests/product-popover-hardening.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  compartilhamento por cópia no produto, tracking de share em interações sociais, popovers principais da área de ação (`Compartilhar`, `Salvar`, `Marcar na Agenda`) e o bloco `8.2` do roteiro contínuo da v11.
+- contratos preservados:
+  nenhuma rota pública, adapter, migration, RPC, contrato de `KCAPI` ou estrutura HTML dos popovers foi alterada; a fatia ficou restrita ao wiring interno do produto e à adição de um helper compartilhado compatível em `KCUtils`.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/controllers/product.controller.js`, `node --check assets/js/kc-utils.js`, `npx jest tests/kc-utils-expanded.test.js tests/product-popover-hardening.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview da PR ficou `Ready` no deployment `dpl_FNt2DW32NiVcTpyDED3bodfqp97D`, com alias `https://kino-campus-git-codex-v11-13-1-p-9521df-yannakamurabrs-projects.vercel.app`, confirmado por `vercel inspect`. O fetch direto do preview continuou protegido por Vercel Authentication nesta sessão, então a homologação remota desta etapa ficou ancorada em `vercel inspect` e na validação local dos arquivos alterados; a checagem do bundle publicado será concluída após o deploy de produção.
+- PR / commit / deploy:
+  PR `#249`, commit funcional `ce43e66` na branch `codex/v11-13-1-product-popover-hardening` e preview `dpl_FNt2DW32NiVcTpyDED3bodfqp97D`; merge squash e deploy de produção seguem em fechamento operacional na esteira desta iteração.
+- riscos residuais:
+  esta fatia fecha o residual pequeno e seguro dos popovers de ação do produto, mas a macrofase social ainda pode pedir revisão futura de banners ou outras superfícies apenas se um bug concreto justificar nova subfatia antes de `v11.14.0`.
 
 ---
 

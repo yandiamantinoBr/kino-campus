@@ -349,4 +349,68 @@ describe('KCUtils - Testes Expandidos', () => {
       expect(result).toEqual(['ufg.br', 'usp.br']);
     });
   });
+
+  describe('copyTextToClipboard', () => {
+    let originalClipboard;
+    let originalExecCommand;
+
+    beforeEach(() => {
+      originalClipboard = navigator.clipboard;
+      originalExecCommand = document.execCommand;
+    });
+
+    afterEach(() => {
+      if (typeof originalClipboard === 'undefined') {
+        delete navigator.clipboard;
+      } else {
+        navigator.clipboard = originalClipboard;
+      }
+
+      if (typeof originalExecCommand === 'undefined') {
+        delete document.execCommand;
+      } else {
+        document.execCommand = originalExecCommand;
+      }
+
+      document.body.innerHTML = '';
+    });
+
+    test('usa navigator.clipboard quando disponivel', async () => {
+      navigator.clipboard = {
+        writeText: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const copied = await utils.copyTextToClipboard('https://www.kinocampus.com.br');
+
+      expect(copied).toBe(true);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://www.kinocampus.com.br');
+    });
+
+    test('cai para execCommand quando a Clipboard API nao existe', async () => {
+      delete navigator.clipboard;
+      document.execCommand = jest.fn(() => true);
+
+      const copied = await utils.copyTextToClipboard('Link KinoCampus');
+
+      expect(copied).toBe(true);
+      expect(document.execCommand).toHaveBeenCalledWith('copy');
+      expect(document.querySelector('textarea')).toBeNull();
+    });
+
+    test('reaproveita o campo alvo no fallback quando a Clipboard API falha', async () => {
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+
+      navigator.clipboard = {
+        writeText: jest.fn().mockRejectedValue(new Error('denied')),
+      };
+      document.execCommand = jest.fn(() => true);
+
+      const copied = await utils.copyTextToClipboard('Texto copiado', { target: input });
+
+      expect(copied).toBe(true);
+      expect(input.value).toBe('Texto copiado');
+      expect(document.execCommand).toHaveBeenCalledWith('copy');
+    });
+  });
 });

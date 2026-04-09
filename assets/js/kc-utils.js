@@ -1540,6 +1540,86 @@
     };
   }
 
+  function canSelectInputLike(target) {
+    if (!target || target.nodeType !== 1) return false;
+    const tagName = String(target.tagName || '').toUpperCase();
+    return tagName === 'INPUT' || tagName === 'TEXTAREA';
+  }
+
+  function fallbackCopyText(text, options) {
+    const normalized = String(text || '');
+    const doc = (options && options.document) || (typeof document !== 'undefined' ? document : null);
+    if (!normalized || !doc || !doc.body || typeof doc.execCommand !== 'function') return false;
+
+    const target = options && canSelectInputLike(options.target) ? options.target : null;
+    const activeElement = doc.activeElement;
+    const selection = typeof doc.getSelection === 'function' ? doc.getSelection() : null;
+    const previousRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+
+    let tempField = null;
+    let field = target;
+    if (!field) {
+      tempField = doc.createElement('textarea');
+      tempField.value = normalized;
+      tempField.setAttribute('readonly', 'readonly');
+      tempField.setAttribute('aria-hidden', 'true');
+      tempField.style.position = 'fixed';
+      tempField.style.opacity = '0';
+      tempField.style.pointerEvents = 'none';
+      tempField.style.top = '0';
+      tempField.style.left = '0';
+      tempField.style.width = '1px';
+      tempField.style.height = '1px';
+      doc.body.appendChild(tempField);
+      field = tempField;
+    } else if (field.value !== normalized) {
+      field.value = normalized;
+    }
+
+    let copied = false;
+    try {
+      field.focus();
+      if (typeof field.select === 'function') field.select();
+      if (typeof field.setSelectionRange === 'function') {
+        field.setSelectionRange(0, normalized.length);
+      }
+      copied = doc.execCommand('copy') === true;
+    } catch (_) {
+      copied = false;
+    } finally {
+      if (tempField && tempField.parentNode) tempField.parentNode.removeChild(tempField);
+      if (selection && typeof selection.removeAllRanges === 'function') {
+        selection.removeAllRanges();
+        if (previousRange && typeof selection.addRange === 'function') {
+          selection.addRange(previousRange);
+        }
+      }
+      if (activeElement && typeof activeElement.focus === 'function' && activeElement !== field) {
+        try { activeElement.focus(); } catch (_) { }
+      }
+    }
+
+    return copied;
+  }
+
+  async function copyTextToClipboard(text, options) {
+    const normalized = String(text || '');
+    if (!normalized) return false;
+
+    if (typeof navigator !== 'undefined'
+      && navigator.clipboard
+      && typeof navigator.clipboard.writeText === 'function') {
+      try {
+        await navigator.clipboard.writeText(normalized);
+        return true;
+      } catch (_) {
+        // cai para fallback abaixo
+      }
+    }
+
+    return fallbackCopyText(normalized, options);
+  }
+
   function getConditionLabel(raw) {
     const r = normalizeText(raw);
     if (!r) return '';
@@ -2313,7 +2393,7 @@
     return html;
   }
 
-window.KCUtils = Object.freeze({
+  window.KCUtils = Object.freeze({
     escapeHtml,
     renderMarkdownInline,
     normalizeText,
@@ -2348,6 +2428,7 @@ window.KCUtils = Object.freeze({
     resolveHousingTypeKey,
     clamp,
     debounce,
+    copyTextToClipboard,
     splitPriceText,
     applyPresentationRules,
     renderPostCard,

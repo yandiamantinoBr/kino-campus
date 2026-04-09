@@ -18,6 +18,7 @@
   let sellerStatsRequestToken = 0;
   let sellerRatingModal = null;
   let productPopoverViewportBound = false;
+  let productGlobalKeydownBound = false;
   const PRODUCT_POPOVER_DESKTOP_BREAKPOINT = 640;
   const PRODUCT_POPOVER_VIEWPORT_MARGIN = 12;
   const PRODUCT_POPOVER_GAP = 8;
@@ -120,6 +121,34 @@
     window.addEventListener('scroll', scheduleSync, { passive: true, capture: true });
   }
 
+  function bindProductGlobalKeydown() {
+    if (productGlobalKeydownBound) return;
+    productGlobalKeydownBound = true;
+    document.addEventListener('keydown', handleProductGlobalKeydown, { passive: true });
+  }
+
+  function handleProductGlobalKeydown(event) {
+    if (!event || event.key !== 'Escape') return;
+    closeSharePopover();
+    closeSavePopover();
+    closeCalendarPopover();
+  }
+
+  function trackCurrentPostShare() {
+    try {
+      const postId = currentPost && (currentPost.uuid || currentPost.id);
+      if (postId && window.KCAPI && typeof window.KCAPI.trackShare === 'function') {
+        window.KCAPI.trackShare(postId).catch(() => { });
+      }
+    } catch (_) { }
+  }
+
+  async function copyCurrentPostLink(options) {
+    const utils = window.KCUtils;
+    if (!utils || typeof utils.copyTextToClipboard !== 'function') return false;
+    return utils.copyTextToClipboard(window.location.href, options);
+  }
+
   // ── Share popover ────────────────────────────────────────
   function openSharePopover(btn) {
     const popover  = document.getElementById('sharePopover');
@@ -171,32 +200,22 @@
         const url   = window.location.href;
         const text  = title + '\n' + url;
         window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
-        // Tracking de compartilhamento (fire-and-forget)
-        try {
-          const pid = currentPost && (currentPost.uuid || currentPost.id);
-          if (pid && window.KCAPI && typeof window.KCAPI.trackShare === 'function') {
-            window.KCAPI.trackShare(pid).catch(() => {});
-          }
-        } catch (_) {}
+        trackCurrentPostShare();
       });
     }
     if (copyBtn) {
       copyBtn.addEventListener('click', async () => {
         closeSharePopover();
         try {
-          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-            await navigator.clipboard.writeText(window.location.href);
-            toast('Link copiado!', 'info', 1800);
-          } else { throw new Error('no clipboard'); }
+          const copied = await copyCurrentPostLink();
+          if (!copied) throw new Error('copy_unavailable');
+          trackCurrentPostShare();
+          toast('Link copiado!', 'info', 1800);
         } catch (_) {
-          toast('Não foi possível copiar o link.', 'error', 2200);
+          toast('Nao foi possivel copiar automaticamente. Tente novamente ou copie o link pela barra do navegador.', 'error', 2600);
         }
       });
     }
-    // Fechar ao pressionar Escape
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeSharePopover();
-    }, { passive: true });
   }
 
   function openSavePopover(btn) {
@@ -241,10 +260,6 @@
 
     if (backdrop) backdrop.addEventListener('click', closeSavePopover);
     if (closeBtn) closeBtn.addEventListener('click', closeSavePopover);
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeSavePopover();
-    }, { passive: true });
   }
 
   // ── Badge "editado" ──────────────────────────────────────
@@ -628,9 +643,6 @@
     });
     if (backdrop) backdrop.addEventListener('click', closeCalendarPopover);
     if (closeBtn) closeBtn.addEventListener('click', closeCalendarPopover);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeCalendarPopover();
-    }, { passive: true });
   }
 
   function setEventCalendar(post) {
@@ -3334,6 +3346,7 @@
   // ─────────────────────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', () => {
+    bindProductGlobalKeydown();
     wireSharePopover();
     wireSavePopover();
     wireCreateSimilarBtn();

@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.13.1`: `product.controller.js` passou a reutilizar um helper compartilhado de cópia com fallback para `document.execCommand('copy')`, deixando o compartilhamento por cópia funcional mesmo em navegadores com restrição à Clipboard API.
+- `v11.13.1`: os popovers de `Compartilhar`, `Salvar` e `Marcar na Agenda` na página de produto passaram a depender de um único listener global de `Escape`, reduzindo wiring duplicado e drift interno entre as três ações.
+- `v11.13.1`: o fluxo de `Copiar link` passou a registrar tracking de compartilhamento também quando a cópia é concluída com sucesso, alinhando a ação de link ao caminho já existente do WhatsApp.
 - `v11.13.0`: `kc-notifications.js` passou a manter o dropdown operacional após rerenders internos, movendo as ações de `Marcar todas como lidas` e clique dos itens para delegação no root estável do componente.
 - `v11.13.0`: o dropdown agora reaplica o agendamento de leitura visível após rerenders e limpa timers pendentes no fechamento, evitando que a UI perca ações quando novas notificações chegam em realtime.
 - `v11.12.0`: `kc-create-post.js` passou a derivar um conjunto canônico de campos ativos antes de montar o payload final, impedindo que valores condicionais antigos como `condicao`, `orcamento`, `recompensa`, `entrega`, `vagas`, `regimeContratacao` e `preco` vazem entre combinações diferentes do formulário.
@@ -22,6 +25,7 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.13.1`: atualizado o `README.md` e o relatório v11 para registrar o hardening dos popovers da página de produto como continuidade da macrofase `v11.13.x`, deixando `v11.14.0` explícita como próxima iteração sugerida.
 - `v11.13.0`: atualizado o `README.md` e o relatório v11 para registrar esta fatia como início da macrofase de produto/interações sociais e abrir explicitamente a continuidade em `v11.13.1`.
 - `v11.12.0`: atualizado `docs/module-schemas.md` para refletir a categoria `Ingressos` em `compra-venda` e sincronizado o `README.md` com o novo estado da fase ativa da v11.
 - `v11.11.1`: reformulado o roadmap da v11 no relatório para uma sequência contínua e executável de fases `v11.12.0` a `v11.21.0`, deixando explícita a próxima iteração sugerida e o fechamento esperado da rodada.

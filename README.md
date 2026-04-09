@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0` e `v11.13.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0` e `v11.13.1`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.13.1 | hardening dos popovers de ação da página de produto, com fallback compartilhado para copiar link, tracking também no compartilhamento por cópia e centralização do fechamento por `Escape` entre compartilhar, salvar e calendário | `#249` |
 | v11.13.0 | hardening do dropdown de notificações para manter `Marcar todas como lidas` e o clique dos itens funcionais mesmo após rerenders por realtime/mark-read | `#247` |
 | v11.12.0 | endurecimento do fluxo de criação para ignorar no payload final campos condicionais que deixaram de estar ativos, preservando o rascunho no modal e alinhando `docs/module-schemas.md` ao estado real da categoria `Ingressos` | `#245` |
 | v11.11.1 | reformulação do roadmap da v11 em uma sequência contínua de fases `v11.12.0` a `v11.21.0`, preparando a continuidade controlada da rodada | `#244` |
@@ -68,10 +69,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.13.0`
-- objetivo da iteração: endurecer o dropdown de notificações para que ações e itens permaneçam operacionais mesmo após rerenders internos do próprio componente
-- natureza da iteração: hardening funcional de interação social, com regressão focada no dropdown e abertura explícita do residual remanescente de produto/social para `v11.13.1`
-- próxima iteração sugerida: `v11.13.1`, focada no residual de produto, banners, popovers e interações sociais correlatas ainda fora do dropdown de notificações
+- iteração ativa consolidada: `v11.13.1`
+- objetivo da iteração: endurecer os popovers principais da página de produto, removendo a dependência exclusiva da Clipboard API para copiar link e reduzindo wiring duplicado de `Escape`
+- natureza da iteração: hardening funcional de produto/interação social, com helper compartilhado em `KCUtils`, regressão focada e fechamento do residual imediato de popovers da macrofase `v11.13.x`
+- próxima iteração sugerida: `v11.14.0`, focada em perfil e `my-posts`
 
 ---
 
