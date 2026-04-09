@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0` e `v11.7.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari e paridade endurecida do driver local frente ao contrato moderno da `KCAPI` |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0` e `v11.8.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI` e fechamento da duplicação residual em `localCreatePost` |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -665,7 +665,28 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR / commit / deploy:
   PR `#236`, com commit funcional `e762bd9` e commits documentais de fechamento na branch `codex/v11-7-0-local-adapter-parity`, além de preview Vercel validado no ciclo da PR, todos confirmados em `08 de abril de 2026`.
 - riscos residuais:
-  o endurecimento ficou contido ao driver local, mas `localCreatePost` ainda preserva um bloco redundante de normalização legado que não quebra os testes atuais. Como a rota de preview autenticada de `my-posts.html` não ficou acessível pelo fetch remoto, a confirmação final após merge deve incluir checagem publicada mínima de bundle e rota autenticada quando possível.
+  o endurecimento ficou contido ao driver local e o residual específico de `localCreatePost` foi fechado na iteração `v11.8.0`. Como a rota de preview autenticada de `my-posts.html` não ficou acessível pelo fetch remoto naquela iteração, a confirmação final após merge permaneceu condicionada à checagem publicada mínima de bundle e rota autenticada quando possível.
+
+### Iteração `v11.8.0`
+
+- objetivo:
+  remover a duplicação residual de normalização dentro de `assets/js/adapters/local.adapter.js`, deixando `prepareLocalPostForPersistence(...)` como ponto canônico de preparação do payload local e cobrindo a criação local com uma regressão direta.
+- arquivos alterados:
+  `assets/js/adapters/local.adapter.js`, `tests/local-adapter.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  `localCreatePost`, `prepareLocalPostForPersistence`, persistência em `kc_user_posts`, semântica de `compra-venda` para categoria/subcategoria e a superfície consumida por fluxos locais como `my-posts` e criação de publicação.
+- contratos preservados:
+  nenhuma rota pública, schema, migration, RPC, payload Supabase, assinatura pública da `KCAPI` ou comportamento do driver remoto foi alterado; a iteração ficou restrita ao fallback local e à cobertura de regressão desse caminho.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/adapters/local.adapter.js`, `npx jest tests/local-adapter.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview Vercel da PR `#237` foi validado via MCP no deployment `dpl_EPsu5gQgmcDwNNxCV4WNzDMBtbEL`. `my-posts.html` respondeu `200` no preview e o asset publicado `assets/js/adapters/local.adapter.js` refletiu a simplificação de `localCreatePost`, sem o bloco redundante anteriormente duplicado. Os build logs do deployment confirmaram build concluído sem erro.
+- PR / commit / deploy:
+  PR `#237`, com commit funcional `25beea5` na branch `codex/v11-8-0-local-createpost-hardening`, preview Vercel `dpl_EPsu5gQgmcDwNNxCV4WNzDMBtbEL` validado em `09 de abril de 2026`.
+- riscos residuais:
+  o comportamento endurecido segue restrito ao driver local, então a principal garantia continua sendo a regressão direta recém-adicionada. A confirmação pós-merge ainda deve verificar a publicação final da base, mesmo sem mudança funcional no caminho Supabase de produção.
 
 ---
 
