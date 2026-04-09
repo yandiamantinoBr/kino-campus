@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0` e `v11.10.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos e extensão controlada do mesmo padrão para analytics/comentários da página de produto |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0` e `v11.11.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto e limpeza estrutural de `kc-comments.js` com regressão dedicada para helpers sombreados |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -80,7 +80,7 @@ Regras de precedência:
 - adapters em `assets/js/adapters`: `2`
 - componentes em `assets/js/components`: `3`
 - arquivos CSS em `assets/css`: `5`
-- arquivos de teste em `tests`: `26`
+- arquivos de teste em `tests`: `35`
 - migrations em `supabase/migrations`: `77`
 
 ### 3.2. Hotspots técnicos por tamanho e risco
@@ -735,6 +735,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#240`, commits `4caf867`, `81bcd4e` e `18c50ba` na branch `codex/v11-10-0-product-session-swr`, merge squash `7f4c1ac` na base `kinocampus-V11.0-foundations`, preview Vercel `dpl_FT1si5ByRtyzoQrNU1yEGqjHqYTJ` e deploy manual de produção `https://kino-campus-70d1s6o4x-yannakamurabrs-projects.vercel.app`, todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a fatia ficou contida à leitura client-side e à invalidação imediata pós-mutações. O principal residual agora é de expansão futura: comentários e analytics do produto já usam snapshot+SWR, mas qualquer extensão para outras superfícies contadoras ainda precisa continuar fatiada para não misturar TTLs e contratos de invalidação diferentes.
+
+---
+
+### Iteração `v11.11.0`
+
+- objetivo:
+  remover implementações sombreadas e duplicadas em `assets/js/kc-comments.js`, preservando apenas os fluxos efetivos de reply, renderização em threads, exclusão em cascata local e submit moderno com `parentId`.
+- arquivos alterados:
+  `assets/js/kc-comments.js`, `tests/kc-comments-shadow-cleanup.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  helpers de comentário em `_product.html`, o fluxo de replies inline, a exclusão local em cascata, a hidratação já consolidada em `tests/kc-comments-session.test.js` e a seção crítica de engajamento mapeada no eixo `7.6` deste relatório.
+- contratos preservados:
+  nenhuma rota pública, migration, RPC, payload Supabase, assinatura pública de `KCAPI`, contrato de comentários ou markup crítico de `_product.html` foi alterado; a iteração ficou restrita à remoção de sombra interna e à cobertura de regressão do frontend compartilhado.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-comments.js`, `npx jest tests/kc-comments-shadow-cleanup.test.js tests/kc-comments-session.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview Vercel da PR `#242` ficou `READY` no deployment `dpl_3bX1CErmfF41cmcDu6Y3siBDxAvH`, com alias de branch `https://kino-campus-git-codex-v11-11-0-c-92ab8d-yannakamurabrs-projects.vercel.app`. A proteção de autenticação do preview continuou impedindo fetch direto do bundle publicado, então a homologação pré-merge foi fechada por `vercel inspect`, build concluído e regressões locais. Após o merge, a produção foi publicada em `https://kino-campus-f8c7ym3id-yannakamurabrs-projects.vercel.app` e aliasada para [www.kinocampus.com.br](https://www.kinocampus.com.br); no domínio público, `assets/js/kc-comments.js` passou a retornar exatamente uma declaração de `addComment`, `normalizeCommentForRender`, `_renderCommentList`, `deleteComment` e `submitComment`, e `_product.html?id=1` continuou carregando `.kc-comments-section`, `commentsContainer` e o lazy-load de `assets/js/kc-comments.js`.
+- PR / commit / deploy:
+  PR funcional `#242`, commit `4179890` na branch `codex/v11-11-0-comments-shadow-cleanup`, merge squash `dc57f87` na base `kinocampus-V11.0-foundations`, preview Vercel `dpl_3bX1CErmfF41cmcDu6Y3siBDxAvH` e deploy manual de produção `dpl_EFKajf1xG3HCH5APKzkp6pLYJFX2`, todos confirmados em `09 de abril de 2026`.
+- riscos residuais:
+  o cleanup eliminou a sombra estrutural sem mexer no fluxo lazy da página de produto; o principal residual continua sendo o tamanho e a codificação legada de `kc-comments.js`, que ainda justificam novas fatias pequenas de endurecimento em vez de refactor amplo.
 
 ---
 
