@@ -65,15 +65,38 @@ describe('Local Adapter - Registro do driver', () => {
       'getPostById',
       'getRelatedPosts',
       'createPost',
+      'updatePost',
+      'deletePost',
       'reportPost',
       'getComments',
       'addComment',
       'likeComment',
       'votePost',
       'getMyVote',
+      'getMyProfile',
+      'updateMyProfile',
+      'uploadProfileAvatar',
+      'getMyPosts',
+      'getPostsByAuthorId',
+      'getSavedPostState',
+      'setSavedPostState',
+      'clearSavedPostState',
+      'getMySavedPosts',
+      'getMySavedPostsCount',
+      'getProfileHighlights',
+      'getProfileHighlightsCount',
       'createHelpRequest',
       'listAdminHelpRequests',
       'updateAdminHelpRequest',
+      'getNotifications',
+      'markNotificationsRead',
+      'markAllNotificationsRead',
+      'getUnreadNotificationCount',
+      'subscribeNotifications',
+      'unsubscribeNotifications',
+      'inviteExternalUser',
+      'getInvites',
+      'revokeInvite',
     ];
     requiredMethods.forEach((method) => {
       expect(typeof driverObj[method]).toBe('function');
@@ -115,6 +138,167 @@ describe('Local Adapter - Stubs retornam valores seguros', () => {
     const result = await driver.getTopContributors();
     expect(Array.isArray(result)).toBe(true);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('Local Adapter - Paridade moderna do driver local', () => {
+  let driver;
+
+  beforeAll(() => {
+    driver = window.KCAPI.registerAdapter.mock.calls[0][1];
+  });
+
+  beforeEach(() => {
+    global.localStorage.clear();
+    window.KCAPI.config.fallbackDatabaseURLs = ['/fake-db.json'];
+    window.KCAPI.DEFAULTS.fallbackDatabaseURLs = ['/fake-db.json'];
+    window.KCAPI.fetchJSON.mockResolvedValue({ anuncios: [] });
+  });
+
+  test('getMyProfile e updateMyProfile persistem perfil localmente', async () => {
+    const initial = await driver.getMyProfile();
+    expect(initial).toEqual(expect.objectContaining({ id: 'USER_SELF' }));
+
+    const result = await driver.updateMyProfile({
+      display_name: 'Perfil Teste',
+      bio: 'Bio local',
+      avatar_url: 'data:image/png;base64,abc123',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toEqual(expect.objectContaining({
+      id: 'USER_SELF',
+      display_name: 'Perfil Teste',
+      bio: 'Bio local',
+      avatar_url: 'data:image/png;base64,abc123',
+    }));
+
+    await expect(driver.getMyProfile()).resolves.toEqual(expect.objectContaining({
+      display_name: 'Perfil Teste',
+      bio: 'Bio local',
+    }));
+  });
+
+  test('updatePost, getMyPosts e deletePost mantem consistencia em kc_user_posts', async () => {
+    global.localStorage.setItem('kc_user_posts', JSON.stringify([
+      {
+        id: 'local-post-1',
+        title: 'Antes',
+        description: 'Descricao original',
+        module: 'moradia',
+        category: 'republica',
+        authorId: 'USER_SELF',
+        created_at: '2026-04-07T10:00:00Z',
+        status: 'published',
+      },
+    ]));
+
+    const updateResult = await driver.updatePost('local-post-1', {
+      title: 'Depois',
+      description: 'Descricao atualizada',
+    });
+
+    expect(updateResult).toEqual(expect.objectContaining({
+      ok: true,
+      data: expect.objectContaining({ title: 'Depois' }),
+    }));
+
+    const myPosts = await driver.getMyPosts({ page: 1, limit: 10 });
+    expect(myPosts).toHaveLength(1);
+    expect(myPosts[0]).toEqual(expect.objectContaining({
+      id: 'local-post-1',
+      title: 'Depois',
+      module: 'moradia',
+    }));
+
+    const deleteResult = await driver.deletePost('local-post-1');
+    expect(deleteResult).toEqual(expect.objectContaining({ ok: true }));
+    await expect(driver.getMyPosts({ page: 1, limit: 10 })).resolves.toEqual([]);
+  });
+
+  test('setSavedPostState agrega tipos por post e alimenta listas/counts locais', async () => {
+    global.localStorage.setItem('kc_user_posts', JSON.stringify([
+      {
+        id: 'saved-post-1',
+        title: 'Post salvo',
+        module: 'moradia',
+        category: 'quarto',
+        authorId: 'USER_SELF',
+        created_at: '2026-04-07T10:00:00Z',
+        status: 'published',
+      },
+    ]));
+
+    await expect(driver.setSavedPostState('saved-post-1', 'favorite', true)).resolves.toEqual(expect.objectContaining({ ok: true }));
+    await expect(driver.setSavedPostState('saved-post-1', 'highlight', true)).resolves.toEqual(expect.objectContaining({ ok: true }));
+
+    const state = await driver.getSavedPostState('saved-post-1');
+    expect(state.kinds.sort()).toEqual(['favorite', 'highlight']);
+
+    const saved = await driver.getMySavedPosts({ page: 1, limit: 10 });
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toEqual(expect.objectContaining({
+      id: 'saved-post-1',
+      save_kinds: expect.arrayContaining(['favorite', 'highlight']),
+    }));
+
+    await expect(driver.getMySavedPostsCount({})).resolves.toBe(1);
+    await expect(driver.getProfileHighlightsCount('USER_SELF')).resolves.toBe(1);
+
+    await expect(driver.clearSavedPostState('saved-post-1', 'favorite')).resolves.toEqual(expect.objectContaining({
+      ok: true,
+      cleared: 'favorite',
+    }));
+    await expect(driver.getSavedPostState('saved-post-1')).resolves.toEqual({ kinds: ['highlight'] });
+  });
+
+  test('getPostsByAuthorId reaproveita a colecao local sem depender do Supabase', async () => {
+    window.KCAPI.fetchJSON.mockResolvedValue({
+      anuncios: [
+        {
+          id: 'seed-1',
+          title: 'Seed publico',
+          module: 'eventos',
+          category: 'academicos',
+          authorId: 'USER_01',
+          status: 'published',
+          created_at: '2026-04-07T08:00:00Z',
+        },
+        {
+          id: 'seed-2',
+          title: 'Seed oculto',
+          module: 'eventos',
+          category: 'academicos',
+          authorId: 'USER_01',
+          status: 'hidden',
+          created_at: '2026-04-06T08:00:00Z',
+        },
+      ],
+    });
+
+    const posts = await driver.getPostsByAuthorId('USER_01', { page: 1, limit: 10 });
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toEqual(expect.objectContaining({
+      id: 'seed-1',
+      title: 'Seed publico',
+    }));
+  });
+
+  test('notificacoes e convites retornam shapes seguros no modo local', async () => {
+    await expect(driver.getNotifications()).resolves.toEqual({
+      ok: true,
+      notifications: [],
+      unread: 0,
+      total: 0,
+    });
+    await expect(driver.markNotificationsRead(['n-1'])).resolves.toEqual({ ok: true });
+    await expect(driver.markAllNotificationsRead()).resolves.toEqual({ ok: true });
+    await expect(driver.getUnreadNotificationCount()).resolves.toBe(0);
+    expect(driver.subscribeNotifications('USER_SELF', jest.fn())).toBeNull();
+    expect(() => driver.unsubscribeNotifications(null)).not.toThrow();
+    await expect(driver.getInvites()).resolves.toEqual({ data: [], error: null });
+    await expect(driver.inviteExternalUser('a@b.com')).resolves.toEqual({ ok: false, error: 'DRIVER_NAO_SUPORTA' });
+    await expect(driver.revokeInvite('a@b.com')).resolves.toEqual({ ok: false, error: 'DRIVER_NAO_SUPORTA' });
   });
 });
 
