@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
-| Linha-base | `kinocampus-V10.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1` e `v11.3.0` em andamento/conclusão na branch ativa, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex e normalização dos feeds equivalentes |
+| Linha-base | `kinocampus-V11.0-foundations` |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0` e `v11.5.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes e correção transversal do bootstrap de ranking dos módulos |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -143,7 +143,7 @@ Criar uma nova linha de qualidade da plataforma por meio de uma auditoria técni
 
 Em toda iteração aprovada da v11, deve ser seguido este fluxo:
 
-1. Sincronizar a base `kinocampus-V10.0-foundations`.
+1. Sincronizar a base `kinocampus-V11.0-foundations`.
 2. Abrir branch própria para a iteração.
 3. Atualizar este `RELATORIO-KINOCAMPUS-V11.md` e o `README.md` no início e no fechamento da iteração.
 4. Implementar apenas a fatia aprovada.
@@ -597,6 +597,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#232`, commit `82192e5` na branch `codex/v11-4-0-sidebar-ranking-ingressos` e preview validado no deployment `dpl_J4RFMZqsg3Fu3V1pAhZfeugXrzn3` em `08 de abril de 2026`. Merge, delete branch e pull ainda pendentes no momento deste registro.
 - riscos residuais:
   a correção do accordion depende de CSS compartilhado em `styles.css`, então a checagem pós-merge precisa confirmar a publicação dos assets novos no deploy final para evitar leitura de cache antigo no navegador do usuário.
+
+---
+
+### Iteração `v11.5.0`
+
+- objetivo:
+  restaurar a renderização do `Top Contribuidores` nos 6 módulos públicos, investigar a regressão em profundidade e eliminar a dependência de bootstrap inline bloqueado pela CSP em produção.
+- arquivos alterados:
+  `achados-perdidos.html`, `caronas-feed.html`, `compra-venda-feed.html`, `eventos.html`, `moradia.html`, `oportunidades.html`, `tests/kc-ranking-markup.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  os 6 módulos com sidebar de ranking, `assets/js/kc-ranking.js`, `assets/js/kc-api.client.js`, `assets/js/adapters/supabase.adapter.js`, `assets/js/adapters/local.adapter.js`, `assets/js/kc-lazy-loader.js`, a política CSP em `vercel.json` e o carregamento direto já existente em `profile.html` e `admin/index.html`.
+- contratos preservados:
+  nenhuma rota pública, RPC, adapter, contrato de `KCAPI`, schema de banco, payload de ranking ou semântica dos filtros foi alterado; a mudança ficou restrita ao bootstrap do script de ranking nos módulos equivalentes.
+- migrations criadas/aplicadas:
+  nenhuma. A função `public.kc_get_top_contributors('month', 'achados-perdidos', 10)` foi validada diretamente no Supabase e retornou dados, descartando regressão de banco nesta iteração.
+- testes executados:
+  `npx jest tests/kc-ranking-markup.test.js --runInBand`, `git diff --check`, validação headless local com Edge em `http://127.0.0.1:4173/achados-perdidos.html`, `http://127.0.0.1:4173/moradia.html` e `http://127.0.0.1:4173/compra-venda-feed.html`, além de consultas SQL no Supabase para `public.kc_get_top_contributors(...)`.
+- validação em navegador:
+  a investigação em produção mostrou os containers `.kc-ranking-sidebar-users` vazios mesmo com a RPC saudável; a comparação com o DOM local e a leitura do `vercel.json` confirmaram a causa raiz: o bootstrap inline `KCLazyLoader.load('assets/js/kc-ranking.js')` era bloqueado por `Content-Security-Policy` em produção. Após substituir o bootstrap inline pelo carregamento externo deferido de `assets/js/kc-ranking.js`, o DOM renderizado local voltou a conter `kc-ranking-sidebar-item` em `achados-perdidos`, `moradia` e `compra-venda`, cobrindo o padrão compartilhado usado pelos 6 módulos.
+- PR / commit / deploy:
+  PR `#233` na branch `codex/v11-5-0-module-ranking-csp-bootstrap`. Commit, preview Vercel, merge, delete branch e validação final de produção serão registrados ao fechamento desta iteração.
+- riscos residuais:
+  o fix remove a causa específica da regressão sob CSP sem mexer em `kc-ranking.js`; o principal risco remanescente é cache de asset antigo no navegador, que precisa ser descartado na validação pós-deploy.
 
 ---
 
