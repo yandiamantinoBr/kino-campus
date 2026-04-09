@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0` e `v11.9.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0` e `v11.10.0`.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 28 suites, 452 testes |
+| Testes | Jest: 30 suites, 456 testes |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.10.0 | extensão do snapshot+SWR para a página de produto, com hidratação de sessão para analytics do autor e comentários Supabase, invalidação segura após mutações e refresh silencioso sem spinner integral | `#240` |
 | v11.9.0 | hidratação persistente e revalidação silenciosa para `Top Contribuidores` e `kc-vote-score`, reaproveitando `KCSessionStore` para evitar spinner/reprocessamento desnecessário em reload e troca de período | `#238` |
 | v11.8.0 | remoção do bloco redundante de normalização em `localCreatePost`, centralizando a persistência local em `prepareLocalPostForPersistence` e adicionando regressão direta para criação local em `compra-venda` | `#237` |
 | v11.7.0 | paridade endurecida entre `local.adapter.js`, `kc-api.client.js` e o contrato moderno do driver local, cobrindo perfil, posts do usuário, salvos, highlights, notificações e convites sem alterar Supabase ou banco | `#236` |
@@ -63,10 +64,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.9.0`
-- objetivo da iteração: aplicar snapshot de sessão e `stale-while-revalidate` em `Top Contribuidores` e `kc-vote-score`, reduzindo spinner, rerender integral e fetch redundante em reload/troca de período sem alterar contratos de API ou banco
-- natureza da iteração: frontend compartilhado, hidratação client-side e regressão direcionada, sem mudança de banco
-- status operacional do deploy em `09 de abril de 2026`: a branch `codex/v11-9-0-ranking-vote-session-hydration` foi publicada na PR `#238`, teve preview Vercel validado no deployment `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x`, foi mergeada na base `kinocampus-V11.0-foundations` no commit `d5fc681` e recebeu deploy manual de produção via `vercel deploy --prod --yes`, publicado em `https://kino-campus-q4htlzvlh-yannakamurabrs-projects.vercel.app` e aliasado em [www.kinocampus.com.br](https://www.kinocampus.com.br). As checagens locais confirmaram `assets/js/kc-ranking.js`, `assets/js/controllers/index.controller.js` e `assets/js/components/voting.js` sintaticamente válidos, além das suites `tests/kc-ranking.test.js`, `tests/kc-ranking-session.test.js`, `tests/voting.test.js` e `tests/voting-session-hydration.test.js` verdes. No domínio publicado, `index.html`, `assets/js/kc-ranking.js` e `assets/js/components/voting.js` já refletem a hidratação persistente e a revalidação silenciosa esperadas.
+- iteração ativa consolidada: `v11.10.0`
+- objetivo da iteração: ampliar o padrão de snapshot de sessão + `stale-while-revalidate` para a página de produto, cobrindo analytics do autor e comentários Supabase sem alterar RPC, schema ou contratos públicos de leitura/escrita
+- natureza da iteração: frontend compartilhado e fachada `KCAPI`, com cache de sessão, deduplicação de request, invalidação segura pós-mutações e regressão direcionada
+- status operacional do deploy em `09 de abril de 2026`: a branch `codex/v11-10-0-product-session-swr` foi publicada na PR `#240`, com preview Vercel `READY` no deployment `dpl_FT1si5ByRtyzoQrNU1yEGqjHqYTJ` do commit `81bcd4e` e alias de branch `https://kino-campus-git-codex-v11-10-0-p-c2bd35-yannakamurabrs-projects.vercel.app`. As checagens locais confirmaram `assets/js/kc-api.client.js`, `assets/js/controllers/product.controller.js` e `assets/js/kc-comments.js` sintaticamente válidos, além das suites `tests/kc-api-client.test.js`, `tests/kc-api-session-swr.test.js`, `tests/kc-comments-session.test.js`, `tests/voting.test.js` e `tests/voting-session-hydration.test.js` verdes. A homologação remota do preview foi fechada por `vercel inspect`, pelos logs de build e pelos checks da própria PR porque o Vercel MCP voltou a responder `Auth required` e o fetch autenticado do preview ficou bloqueado pela proteção da plataforma neste ambiente.
 
 ---
 

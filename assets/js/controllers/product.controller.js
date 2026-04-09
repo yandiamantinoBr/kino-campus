@@ -2691,6 +2691,29 @@
   }
 
   // ── v9.3.1: Painel de analytics do autor ────────────────────────
+  function buildAuthorAnalyticsSignature(result) {
+    var source = (result && typeof result === 'object') ? result : {};
+    return [
+      Number(source.views) || 0,
+      Number(source.votos) || 0,
+      Number(source.comments) || 0,
+      Number(source.shares) || 0,
+      Number(source.saves) || 0,
+      Number(source.coupon_clicks) || 0,
+    ].join('|');
+  }
+
+  function setAuthorAnalyticsMarkup(panel, result) {
+    if (!panel) return;
+    panel.innerHTML =
+      _statBadge('fas fa-eye', result.views, 'Views') +
+      _statBadge('fas fa-arrow-up', result.votos, 'Votos') +
+      _statBadge('fas fa-comment', result.comments, 'Coment.') +
+      _statBadge('fas fa-share-nodes', result.shares, 'Compartilh.') +
+      _statBadge('fas fa-bookmark', result.saves, 'Salvos') +
+      _statBadge('fas fa-hand-pointer', result.coupon_clicks, 'Cliques CTA');
+  }
+
   function renderAuthorAnalytics(post, user) {
     if (!isAuthor(post, user)) return;
     var details = document.querySelector('.kc-product-details');
@@ -2714,16 +2737,33 @@
       return;
     }
 
-    window.KCAPI.getPostAnalytics(pid).then(function (res) {
-      if (!res || !res.ok) { panel.style.display = 'none'; return; }
-      panel.innerHTML =
-        _statBadge('fas fa-eye', res.views, 'Views') +
-        _statBadge('fas fa-arrow-up', res.votos, 'Votos') +
-        _statBadge('fas fa-comment', res.comments, 'Coment.') +
-        _statBadge('fas fa-share-nodes', res.shares, 'Compartilh.') +
-        _statBadge('fas fa-bookmark', res.saves, 'Salvos') +
-        _statBadge('fas fa-hand-pointer', res.coupon_clicks, 'Cliques CTA');
-    }).catch(function () { panel.style.display = 'none'; });
+    var cached = (typeof window.KCAPI.getCachedPostAnalytics === 'function')
+      ? window.KCAPI.getCachedPostAnalytics(pid, { allowStale: true })
+      : null;
+    var renderedSignature = '';
+
+    if (cached && cached.data && cached.data.ok) {
+      renderedSignature = buildAuthorAnalyticsSignature(cached.data);
+      setAuthorAnalyticsMarkup(panel, cached.data);
+    }
+
+    var request = (typeof window.KCAPI.refreshPostAnalytics === 'function')
+      ? window.KCAPI.refreshPostAnalytics(pid, { force: true, keepStaleOnError: true })
+      : window.KCAPI.getPostAnalytics(pid);
+
+    request.then(function (res) {
+      if (!res || !res.ok) {
+        if (!renderedSignature) panel.style.display = 'none';
+        return;
+      }
+      var nextSignature = buildAuthorAnalyticsSignature(res);
+      if (!renderedSignature || nextSignature !== renderedSignature) {
+        renderedSignature = nextSignature;
+        setAuthorAnalyticsMarkup(panel, res);
+      }
+    }).catch(function () {
+      if (!renderedSignature) panel.style.display = 'none';
+    });
   }
 
   function _statBadge(icon, value, label) {
