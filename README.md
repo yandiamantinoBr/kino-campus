@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0` e `v11.6.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0` e `v11.7.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.7.0 | paridade endurecida entre `local.adapter.js`, `kc-api.client.js` e o contrato moderno do driver local, cobrindo perfil, posts do usuário, salvos, highlights, notificações e convites sem alterar Supabase ou banco | `#236` |
 | v11.6.0 | hardening de iOS Safari: `pull-to-refresh` deixa de sequestrar gestos horizontais no topo, superfícies horizontais preservam `pinch-zoom` e o auth/modal deixa de induzir auto-zoom/travamento por `touch-action` e `font-size` inadequados | `#235` |
 | v11.5.0 | restauração transversal do `Top Contribuidores` nos 6 módulos, removendo o bootstrap inline bloqueado pela CSP e normalizando o carregamento externo de `kc-ranking.js` | `#233` |
 | v11.4.0 | correção transversal da sidebar desktop, restauração do preset canônico `Todas as datas` em `eventos` e inclusão funcional da categoria `Ingressos` em compra e venda | `#232` |
@@ -60,10 +61,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.6.0`
-- objetivo da iteração: endurecer a experiência mobile em iOS Safari, removendo a disputa entre `pull-to-refresh`, swipe horizontal, pinch-zoom e auto-zoom de inputs nos pontos críticos da home, dos módulos equivalentes e do auth/modal compartilhado
-- natureza da iteração: frontend compartilhado de shell/gestos, sem mudança de banco
-- status operacional do deploy em `08 de abril de 2026`: a branch `codex/v11-6-0-ios-gesture-zoom-hardening` foi publicada na PR `#235` e já recebeu o preview Vercel `dpl_7W9YewxxyNVojvhpnnfB6G3DmvCw` (`kino-campus-git-codex-v11-6-0-io-116512-yannakamurabrs-projects.vercel.app`). O smoke local confirmou `touch-action` compatível com pinch nas superfícies afetadas, `font-size: 16px` no input do auth modal e abertura do `kc-create-modal` com `touch-action: pan-y pinch-zoom`. O Vercel MCP voltou a responder `Auth required` nesta máquina durante esta checagem, então a inspeção remota do preview ficou fechada pela CLI do Vercel e pela homologação local antes do merge.
+- iteração ativa consolidada: `v11.7.0`
+- objetivo da iteração: endurecer a paridade entre `LocalAdapter`, `KCAPI` e o contrato moderno do driver local, cobrindo superfícies equivalentes já consolidadas no driver Supabase sem alterar banco, RPC ou payloads públicos
+- natureza da iteração: frontend/data access local e testes de contrato, sem mudança de banco
+- status operacional do deploy em `08 de abril de 2026`: a branch `codex/v11-7-0-local-adapter-parity` foi publicada na PR `#236` e recebeu o preview Vercel `dpl_9x4rGeRbHUcpknbbTo2XBSK6EkU4` (`kino-campus-cq673bcim-yannakamurabrs-projects.vercel.app`). As checagens locais confirmaram `local.adapter.js` e `kc-api.client.js` sintaticamente válidos, `tests/local-adapter.test.js` e `tests/kc-api-client.test.js` verdes, e o preview respondeu `200 OK` para `index.html` e `profile.html`. A rota `my-posts.html` permaneceu protegida pela autenticação do preview na leitura remota, sem indício de regressão de bundle.
 
 ---
 
