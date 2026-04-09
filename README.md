@@ -64,7 +64,7 @@ Regras desta fase:
 - iteração ativa consolidada: `v11.7.0`
 - objetivo da iteração: endurecer a paridade entre `LocalAdapter`, `KCAPI` e o contrato moderno do driver local, cobrindo superfícies equivalentes já consolidadas no driver Supabase sem alterar banco, RPC ou payloads públicos
 - natureza da iteração: frontend/data access local e testes de contrato, sem mudança de banco
-- status operacional do deploy em `08 de abril de 2026`: a branch `codex/v11-7-0-local-adapter-parity` foi publicada na PR `#236` e teve preview Vercel validado no ciclo da PR, incluindo resposta `200 OK` para `index.html` e `profile.html` no deployment `dpl_8EXrmXSf9CFbPDBNBe97oN95XpQn`. As checagens locais confirmaram `local.adapter.js` e `kc-api.client.js` sintaticamente válidos, `tests/local-adapter.test.js` e `tests/kc-api-client.test.js` verdes. A rota `my-posts.html` permaneceu protegida pela autenticação do preview na leitura remota, sem indício de regressão de bundle.
+- status operacional do deploy em `08 de abril de 2026`: a branch `codex/v11-7-0-local-adapter-parity` foi publicada na PR `#236` e teve preview Vercel validado via MCP ao longo do ciclo da PR, sem indício de regressão de bundle. As checagens locais confirmaram `local.adapter.js` e `kc-api.client.js` sintaticamente válidos, `tests/local-adapter.test.js` e `tests/kc-api-client.test.js` verdes. A proteção do preview variou entre rotas durante a leitura remota, então a homologação foi registrada como checagem de publicação/bundle e não como smoke autenticado completo.
 
 ---
 
