@@ -32,6 +32,7 @@
 
 ### Docs
 - `v11.15.1`: atualizado o `README.md` e o relatório v11 para registrar esta segunda fatia de `account-setup`/onboarding e abrir explicitamente a continuidade em `v11.15.2`.
+- `v11.15.1`: fechamento documental consolidado com a PR `#255`, preview `dpl_5cAB1wgjGki748PKLeYFqEAgp83J`, deploy de produção `dpl_4YBqUWRySXoXdeFVU5pjQk34qbfY` e validação publicada em `www.kinocampus.com.br`.
 - `v11.15.0`: atualizado o `README.md` e o relatório v11 para registrar esta primeira fatia de `settings`/conta e abrir explicitamente a continuidade em `v11.15.1`.
 - `v11.15.0`: fechamento documental consolidado com a PR `#253`, preview `dpl_7iH9AyEcMsviriav3hwCQUfuv1g6`, deploy de produção `dpl_4iiQjG2zjNUhYyo6Z3n9M6D3yhGp` e validação publicada em `www.kinocampus.com.br`.
 - `v11.14.0`: atualizado o `README.md` e o relatório v11 para registrar a rodada inicial de perfil/`my-posts`, deixando `v11.15.0` como próxima iteração sugerida da sequência.
