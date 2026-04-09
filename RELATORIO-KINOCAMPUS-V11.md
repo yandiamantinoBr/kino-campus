@@ -435,11 +435,12 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 | shell público, busca e navegação | `v11.2.0`, `v11.2.1` | consolidado |
 | feeds equivalentes e filtros | `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0` | amplamente coberto |
 | produto, comentários, ranking, votos e persistência incremental | `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.13.0`, `v11.13.1` | parcialmente coberto; o residual imediato de notificações e popovers foi fechado, restando apenas novas subfatias se surgir bug concreto |
+| perfil e listagens do usuário | `v11.14.0` | iniciado com normalização de rotas humanas de detalhe entre perfil e `my-posts` |
 | adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0` | parcialmente coberto; ainda falta simplificação mais profunda com `supabase.adapter.js` |
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi aberta no eixo de perfil/`my-posts` para alinhar as rotas humanas de detalhe ao caminho canônico `_product.html`. A próxima sequência obrigatória passa a ser `v11.15.0`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A próxima sequência obrigatória passa a ser `v11.15.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -886,9 +887,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/kc-utils.js`, `node --check assets/js/controllers/profile.controller.js`, `node --check assets/js/controllers/my-posts.controller.js`, `npx jest tests/kc-utils-expanded.test.js tests/profile-my-posts-detail-links.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  o preview da PR ficou `Ready` no deployment `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei`, com alias `https://kino-campus-git-codex-v11-14-0-p-547a36-yannakamurabrs-projects.vercel.app`, confirmado por `vercel inspect`. O fetch direto do preview continua protegido por Vercel Authentication nesta sessão, então a homologação remota desta etapa ficou ancorada em `vercel inspect`, no check `Vercel` da PR `#251` e nas regressões locais dos arquivos alterados; a checagem do bundle publicado será concluída após o deploy de produção.
+  o preview da PR ficou `Ready` no deployment `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei`, com alias `https://kino-campus-git-codex-v11-14-0-p-547a36-yannakamurabrs-projects.vercel.app`, confirmado por `vercel inspect`. O fetch direto do preview continuou protegido por Vercel Authentication nesta sessão, então a homologação remota dessa etapa ficou ancorada em `vercel inspect`, no check `Vercel` da PR `#251` e nas regressões locais dos arquivos alterados. Após o merge, a produção publicada em [www.kinocampus.com.br](https://www.kinocampus.com.br) passou a servir `assets/js/controllers/profile.controller.js` e `assets/js/controllers/my-posts.controller.js` com `buildPostDetailHref(...)` apontando para `_product.html`, além de `assets/js/kc-utils.js` com `buildProductDetailHref(...)`, todos confirmados por `curl.exe --ssl-no-revoke`.
 - PR / commit / deploy:
-  PR `#251`, commit funcional `736fd12` na branch `codex/v11-14-0-profile-detail-links` e preview `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei`; merge squash e deploy de produção seguem em fechamento operacional na esteira desta iteração.
+  PR `#251`, commits `736fd12` e `abf8f49` na branch `codex/v11-14-0-profile-detail-links`, merge squash `e574038` na base `kinocampus-V11.0-foundations`, preview `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei` e deploy manual de produção `dpl_8faNj9pCcmtXzk4eq6jS2Q5NyAHJ`, publicado em `https://kino-campus-iw6nrjedp-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a fatia fecha o drift imediato de detalhe em perfil e `my-posts`, mas ainda existe legado de `product.html` em outras superfícies fora do escopo desta rodada que só deve ser tratado em iteração própria ou quando um bug concreto justificar expansão controlada.
 
