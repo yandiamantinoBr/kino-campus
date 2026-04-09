@@ -661,9 +661,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/adapters/local.adapter.js`, `node --check assets/js/kc-api.client.js`, `npx jest tests/local-adapter.test.js tests/kc-api-client.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  o preview Vercel final `dpl_8EXrmXSf9CFbPDBNBe97oN95XpQn` da PR `#236` respondeu `200 OK` para `index.html` e `profile.html`, confirmando publicação do bundle sem quebra geral após o commit documental `51f3025`. A rota `my-posts.html` permaneceu protegida por autenticação do preview na leitura remota, então essa checagem ficou limitada ao contrato estático/testado e aos caminhos públicos acessíveis pelo Vercel MCP.
+  o preview Vercel validado no ciclo da PR `#236`, incluindo o deployment `dpl_8EXrmXSf9CFbPDBNBe97oN95XpQn`, respondeu `200 OK` para `index.html` e `profile.html`, confirmando publicação do bundle sem quebra geral. A rota `my-posts.html` permaneceu protegida por autenticação do preview na leitura remota, então essa checagem ficou limitada ao contrato estático/testado e aos caminhos públicos acessíveis pelo Vercel MCP.
 - PR / commit / deploy:
-  PR `#236`, commits `e762bd9` (fix funcional) e `51f3025` (fechamento documental) na branch `codex/v11-7-0-local-adapter-parity`, com preview final validado no deployment `dpl_8EXrmXSf9CFbPDBNBe97oN95XpQn`, todos confirmados em `08 de abril de 2026`.
+  PR `#236`, com commit funcional `e762bd9` e commits documentais de fechamento na branch `codex/v11-7-0-local-adapter-parity`, além de preview validado no deployment `dpl_8EXrmXSf9CFbPDBNBe97oN95XpQn`, todos confirmados em `08 de abril de 2026`.
 - riscos residuais:
   o endurecimento ficou contido ao driver local, mas `localCreatePost` ainda preserva um bloco redundante de normalização legado que não quebra os testes atuais. Como a rota de preview autenticada de `my-posts.html` não ficou acessível pelo fetch remoto, a confirmação final após merge deve incluir checagem publicada mínima de bundle e rota autenticada quando possível.
 
