@@ -157,6 +157,15 @@
     return fmtDate(iso);
   }
 
+  function buildPostDetailHref(postId) {
+    const normalized = String(postId || '').trim();
+    if (!normalized) return '';
+    if (window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function') {
+      return window.KCUtils.buildProductDetailHref(normalized);
+    }
+    return `_product.html?id=${encodeURIComponent(normalized)}`;
+  }
+
   function statusBadge(status) {
     const key = String(status || 'published').trim().toLowerCase();
     const labels = {
@@ -599,7 +608,7 @@
       const link = document.createElement('a');
       const isLegacy = !!String(post.legacy_id || post.legacyId || '').trim();
       link.className = 'kc-profile-post-card' + (isLegacy ? ' kc-profile-post-card--example' : '');
-      link.href = 'product.html?id=' + encodeURIComponent(post.uuid || post.id || '');
+      link.href = buildPostDetailHref(post.uuid || post.id || '');
       const meta = [];
       meta.push(statusBadge(post.status || 'published'));
       if (!state.isPublicView) meta.push(visibilityBadge(post.visibility || 'public'));
@@ -676,7 +685,7 @@
       const post = comment.post || {};
       const postTitle = post.title || post.titulo || 'Post';
       const postId = post.legacy_id || post.id || comment.post_id || '';
-      const postUrl = postId ? 'product.html?id=' + encodeURIComponent(postId) : '';
+      const postUrl = buildPostDetailHref(postId);
       card.innerHTML = [
         `<div class="kc-profile-comment-card__body">${renderInlineRichText(comment.body || '')}</div>`,
         '<div class="kc-profile-comment-card__meta">',
@@ -930,7 +939,7 @@
 
       const link = document.createElement('a');
       link.className = 'kc-profile-post-card';
-      link.href = 'product.html?id=' + encodeURIComponent(item.uuid || item.id || '');
+      link.href = buildPostDetailHref(item.uuid || item.id || '');
       link.innerHTML = [
         `<div class="kc-profile-post-card__title">${esc(item.title || 'Sem título')}</div>`,
         `<div class="kc-profile-post-card__meta">${meta.join('')}</div>`,
@@ -1030,7 +1039,7 @@
 
     if (list) {
       list.innerHTML = activities.slice(0, 20).map((item) => {
-        const postUrl = 'product.html?id=' + encodeURIComponent(item.postId || '');
+        const postUrl = buildPostDetailHref(item.postId || '');
         if (item.type === 'post') {
           return [
             '<div class="kc-profile-activity-item">',

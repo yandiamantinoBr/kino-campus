@@ -69,6 +69,15 @@
     return STATUS_MAP[status] || STATUS_MAP['published'];
   }
 
+  function buildPostDetailHref(postId) {
+    var normalized = String(postId || '').trim();
+    if (!normalized) return '';
+    if (window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function') {
+      return window.KCUtils.buildProductDetailHref(normalized);
+    }
+    return '_product.html?id=' + encodeURIComponent(normalized);
+  }
+
   // ─── Auth ────────────────────────────────────────────────────────────────────
 
   function waitForAuth(retries, delay) {
@@ -234,13 +243,13 @@
         else if (action === 'save') handleSave(uuid, btn);
         else if (action === 'clone') { e.preventDefault(); handleClone(uuid); }
         else if (action === 'delete') handleDelete(uuid);
-        else if (action === 'view') window.location.href = 'product.html?id=' + encodeURIComponent(uuid);
+        else if (action === 'view') window.location.href = buildPostDetailHref(uuid);
       });
     }
   }
 
   function buildPostActions(uuid, status) {
-    var viewBtn = '<a href="product.html?id=' + esc(uuid) + '" class="kc-btn-secondary kc-my-posts-action--full" style="text-decoration:none;">' +
+    var viewBtn = '<a href="' + esc(buildPostDetailHref(uuid)) + '" class="kc-btn-secondary kc-my-posts-action--full" style="text-decoration:none;">' +
       '<i class="fas fa-eye"></i> Ver publicação</a>';
 
     var editBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="edit" data-post-uuid="' + esc(uuid) + '">' +
@@ -315,7 +324,7 @@
               '<i class="' + esc(modInfo.icon) + '"></i> ' + esc(modInfo.label) + '</span>' +
             '<span style="background:' + statusInfo.bg + ';color:' + statusInfo.color + ';border:1px solid ' + statusInfo.borderColor + ';padding:2px 9px;border-radius:20px;font-size:0.72em;font-weight:600;">' + esc(statusInfo.label) + '</span>' +
           '</div>' +
-          '<a href="product.html?id=' + esc(uuid) + '" style="font-weight:700;text-decoration:none;color:inherit;font-size:0.97em;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(title) + '">' + esc(title) + '</a>' +
+          '<a href="' + esc(buildPostDetailHref(uuid)) + '" style="font-weight:700;text-decoration:none;color:inherit;font-size:0.97em;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(title) + '">' + esc(title) + '</a>' +
           (metaHtml ? '<div style="font-size:0.78em;color:var(--kc-text-dark-secondary);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;">' + metaHtml + '</div>' : '') +
           '<div style="font-size:0.76em;color:var(--kc-text-dark-secondary);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap;">' +
             '<span title="Visualizacoes"><i class="fas fa-eye"></i> ' + (Number(post.view_count) || 0) + '</span>' +

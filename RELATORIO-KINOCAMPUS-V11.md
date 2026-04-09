@@ -439,11 +439,10 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A próxima sequência obrigatória passa a ser `v11.14.0`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi aberta no eixo de perfil/`my-posts` para alinhar as rotas humanas de detalhe ao caminho canônico `_product.html`. A próxima sequência obrigatória passa a ser `v11.15.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
-| `v11.14.0` | iniciar a rodada de perfil e `my-posts` | `profile.html`, `my-posts.html`, controllers correlatos, estados vazios e carregamento | estabilidade de perfil público/privado e listagens do usuário |
 | `v11.15.0` | fechar conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
 | `v11.16.0` | iniciar a consolidação do admin pós-v10 | `admin/*.html`, `admin-shell.js`, `admin-shell.css`, listas, modais e busca | simetria de shell e UX admin endurecida |
 | `v11.17.0` | fechar o admin pós-v10 e reduzir fallback excessivo | controllers admin, fluxos de paginação, export, feedback e contratos internos | admin mais previsível e menos dependente de fallback implícito |
@@ -869,6 +868,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#249`, commits `ce43e66` e `2079ebb` na branch `codex/v11-13-1-product-popover-hardening`, merge squash `8a95e2e` na base `kinocampus-V11.0-foundations`, preview `dpl_FNt2DW32NiVcTpyDED3bodfqp97D` e deploy manual de produção `dpl_35oJC5Uyd5zHR49ZcRcGPa9EXBu8`, publicado em `https://kino-campus-bgvpivdd9-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   esta fatia fecha o residual pequeno e seguro dos popovers de ação do produto, mas a macrofase social ainda pode pedir revisão futura de banners ou outras superfícies apenas se um bug concreto justificar nova subfatia antes de `v11.14.0`.
+
+---
+
+### Iteração `v11.14.0`
+
+- objetivo:
+  iniciar a rodada de perfil e `my-posts` eliminando o drift de rota de detalhe nessas superfícies, para que a navegação humana use o caminho canônico `_product.html`.
+- arquivos alterados:
+  `assets/js/kc-utils.js`, `assets/js/controllers/profile.controller.js`, `assets/js/controllers/my-posts.controller.js`, `tests/kc-utils-expanded.test.js`, `tests/profile-my-posts-detail-links.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  cards de posts do perfil, comentários/atividades com link para publicação, destaques/salvos do perfil, ações de visualização em `my-posts` e os trechos do roteiro `8.2` referentes à sequência `v11.14.0` → `v11.15.0`.
+- contratos preservados:
+  nenhuma migration, RPC, adapter, payload de perfil ou estrutura HTML de `profile.html` / `my-posts.html` foi alterada; a iteração ficou restrita à navegação de detalhe e à adição de um helper compartilhado compatível em `KCUtils`.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-utils.js`, `node --check assets/js/controllers/profile.controller.js`, `node --check assets/js/controllers/my-posts.controller.js`, `npx jest tests/kc-utils-expanded.test.js tests/profile-my-posts-detail-links.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview da PR ficou `Ready` no deployment `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei`, com alias `https://kino-campus-git-codex-v11-14-0-p-547a36-yannakamurabrs-projects.vercel.app`, confirmado por `vercel inspect`. O fetch direto do preview continua protegido por Vercel Authentication nesta sessão, então a homologação remota desta etapa ficou ancorada em `vercel inspect`, no check `Vercel` da PR `#251` e nas regressões locais dos arquivos alterados; a checagem do bundle publicado será concluída após o deploy de produção.
+- PR / commit / deploy:
+  PR `#251`, commit funcional `736fd12` na branch `codex/v11-14-0-profile-detail-links` e preview `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei`; merge squash e deploy de produção seguem em fechamento operacional na esteira desta iteração.
+- riscos residuais:
+  a fatia fecha o drift imediato de detalhe em perfil e `my-posts`, mas ainda existe legado de `product.html` em outras superfícies fora do escopo desta rodada que só deve ser tratado em iteração própria ou quando um bug concreto justificar expansão controlada.
 
 ---
 

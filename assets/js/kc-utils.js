@@ -1540,6 +1540,12 @@
     };
   }
 
+  function buildProductDetailHref(postId) {
+    const normalized = String(postId || '').trim();
+    if (!normalized) return '';
+    return `_product.html?id=${encodeURIComponent(normalized)}`;
+  }
+
   function canSelectInputLike(target) {
     if (!target || target.nodeType !== 1) return false;
     const tagName = String(target.tagName || '').toUpperCase();
@@ -2428,6 +2434,7 @@
     resolveHousingTypeKey,
     clamp,
     debounce,
+    buildProductDetailHref,
     copyTextToClipboard,
     splitPriceText,
     applyPresentationRules,
