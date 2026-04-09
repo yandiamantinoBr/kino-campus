@@ -886,9 +886,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/kc-utils.js`, `node --check assets/js/controllers/profile.controller.js`, `node --check assets/js/controllers/my-posts.controller.js`, `npx jest tests/kc-utils-expanded.test.js tests/profile-my-posts-detail-links.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  em fechamento operacional após abertura da PR e publicação do deploy correspondente.
+  o preview da PR ficou `Ready` no deployment `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei`, com alias `https://kino-campus-git-codex-v11-14-0-p-547a36-yannakamurabrs-projects.vercel.app`, confirmado por `vercel inspect`. O fetch direto do preview continua protegido por Vercel Authentication nesta sessão, então a homologação remota desta etapa ficou ancorada em `vercel inspect`, no check `Vercel` da PR `#251` e nas regressões locais dos arquivos alterados; a checagem do bundle publicado será concluída após o deploy de produção.
 - PR / commit / deploy:
-  em fechamento operacional na esteira desta iteração.
+  PR `#251`, commit funcional `736fd12` na branch `codex/v11-14-0-profile-detail-links` e preview `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei`; merge squash e deploy de produção seguem em fechamento operacional na esteira desta iteração.
 - riscos residuais:
   a fatia fecha o drift imediato de detalhe em perfil e `my-posts`, mas ainda existe legado de `product.html` em outras superfícies fora do escopo desta rodada que só deve ser tratado em iteração própria ou quando um bug concreto justificar expansão controlada.
 
