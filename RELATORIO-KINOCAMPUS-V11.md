@@ -707,7 +707,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   o preview da PR `#238` foi validado via Vercel MCP no deployment `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x`. `index.html` publicado já passou a carregar `assets/js/kc-ranking.js` na home, e a leitura remota dos assets protegidos `assets/js/kc-ranking.js` e `assets/js/components/voting.js` por URL de compartilhamento confirmou a presença do snapshot de sessão, da deduplicação de request para ranking e da hidratação persistente de score/direção de voto antes da revalidação silenciosa.
 - PR / commit / deploy:
-  PR `#238`, commit funcional `3e3dc20` na branch `codex/v11-9-0-ranking-vote-session-hydration` e preview Vercel `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x`, todos confirmados em `09 de abril de 2026`. O deploy de produção seguirá após o merge da própria PR.
+  PR `#238`, commits `3e3dc20` e `8a61431` na branch `codex/v11-9-0-ranking-vote-session-hydration`, merge squash `d5fc681` na base `kinocampus-V11.0-foundations`, preview Vercel `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x` e deploy manual de produção via `vercel deploy --prod --yes`, publicado em `https://kino-campus-q4htlzvlh-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
+- validação pós-merge:
+  após o merge, o domínio publicado retornou `200` para `index.html`, `assets/js/kc-ranking.js` e `assets/js/components/voting.js`, confirmando a presença do script compartilhado na home e dos bundles finais com snapshot de sessão, deduplicação de request e hidratação persistente de score/direção.
 - riscos residuais:
   o snapshot de sessão reduz spinner e trabalho repetido, mas esta iteração ainda não expande o mesmo padrão para outras superfícies contadoras da plataforma. Qualquer extensão futura para comentários, analytics ou painéis laterais deve ser fatiada separadamente para evitar misturar caching de naturezas diferentes.
 
