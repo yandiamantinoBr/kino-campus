@@ -865,9 +865,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/controllers/product.controller.js`, `node --check assets/js/kc-utils.js`, `npx jest tests/kc-utils-expanded.test.js tests/product-popover-hardening.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  em fechamento operacional após abertura da PR e publicação do deploy correspondente.
+  o preview da PR ficou `Ready` no deployment `dpl_FNt2DW32NiVcTpyDED3bodfqp97D`, com alias `https://kino-campus-git-codex-v11-13-1-p-9521df-yannakamurabrs-projects.vercel.app`, confirmado por `vercel inspect`. O fetch direto do preview continuou protegido por Vercel Authentication nesta sessão, então a homologação remota desta etapa ficou ancorada em `vercel inspect` e na validação local dos arquivos alterados; a checagem do bundle publicado será concluída após o deploy de produção.
 - PR / commit / deploy:
-  em fechamento operacional na esteira da iteração.
+  PR `#249`, commit funcional `ce43e66` na branch `codex/v11-13-1-product-popover-hardening` e preview `dpl_FNt2DW32NiVcTpyDED3bodfqp97D`; merge squash e deploy de produção seguem em fechamento operacional na esteira desta iteração.
 - riscos residuais:
   esta fatia fecha o residual pequeno e seguro dos popovers de ação do produto, mas a macrofase social ainda pode pedir revisão futura de banners ou outras superfícies apenas se um bug concreto justificar nova subfatia antes de `v11.14.0`.
 
