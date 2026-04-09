@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
+
 ### Docs
 - `v11.1.0`: baseline documental da v11 iniciada com sincronização entre `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md` e as docs técnicas estruturais (`docs/index.md`, `docs/architecture.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/api-contract.md`, `docs/design-system.md`, `docs/env-vars.md`).
 - Registrado explicitamente o drift entre a linha funcional/documental `v10/v11` e a versão canônica embutida `8.6.0` que ainda governa parte do frontend e o `scripts/hygiene-check.js`.

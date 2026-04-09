@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0` e `v11.4.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0` e `v11.5.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.5.0 | restauração transversal do `Top Contribuidores` nos 6 módulos, removendo o bootstrap inline bloqueado pela CSP e normalizando o carregamento externo de `kc-ranking.js` | `#233` |
 | v11.4.0 | correção transversal da sidebar desktop, restauração do preset canônico `Todas as datas` em `eventos` e inclusão funcional da categoria `Ingressos` em compra e venda | `#232` |
 | v11.3.0 | paridade do `Limpar filtros` no empty state dos 6 feeds públicos e clear explícito de data no módulo `eventos` | `#231` |
 | v11.2.1 | reativação do Vercel MCP no Codex, homologação de time/projeto/deployments/logs e fechamento da validação pós-merge da `v11.2.0` | `#230` |
@@ -58,10 +59,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.4.0`
-- objetivo da iteração: corrigir o colapso visual dos `kc-sidebar-section__toggle`, restaurar o preset canônico `Todas as datas` no módulo `eventos` e adicionar a categoria `Ingressos` no feed e no modal de criação de `compra-venda`
+- iteração ativa consolidada: `v11.5.0`
+- objetivo da iteração: restaurar o `Top Contribuidores` dos 6 módulos públicos, identificando a regressão de bootstrap bloqueado por CSP e substituindo o carregamento inline por script externo deferido
 - natureza da iteração: frontend compartilhado de módulos equivalentes, sem mudança de banco
-- status operacional do Vercel MCP em `08 de abril de 2026`: autenticado com sucesso via `codex mcp login vercel`, com acesso confirmado ao projeto `kino-campus`; a iteração `v11.4.0` já está publicada no preview `dpl_J4RFMZqsg3Fu3V1pAhZfeugXrzn3` da PR `#232`, com assets compartilhados confirmados no Vercel e validação funcional local de browser para colapso da sidebar, preset de `eventos`, presença do ranking nos módulos e paridade funcional da nova categoria `Ingressos`
+- status operacional do Vercel MCP em `08 de abril de 2026`: autenticado com sucesso via `codex mcp login vercel`, com acesso confirmado ao projeto `kino-campus`; a `v11.5.0` usa esse fluxo para validar o preview publicado após o merge. Na investigação desta iteração, a RPC `public.kc_get_top_contributors(...)` foi confirmada saudável no Supabase, e a causa raiz ficou no frontend: os 6 módulos dependiam de um bootstrap inline de `kc-ranking.js`, bloqueado pela CSP de produção definida em `vercel.json`
 
 ---
 
