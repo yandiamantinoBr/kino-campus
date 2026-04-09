@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.9.0`: `Top Contribuidores` passou a reutilizar snapshot de sessão com revalidação silenciosa e deduplicação de request em `kc-ranking.js`, evitando spinner e rerender integral desnecessários na home e nas sidebars dos módulos ao recarregar a página ou alternar o período.
+- `v11.9.0`: `voting.js` passou a persistir score e direção de voto por sessão, reaplicando `kc-vote-score` e estado ativo imediatamente após reload e deixando o refresh visível condicionado à expiração ou ausência do snapshot local.
 - `v11.8.0`: removido o bloco redundante de normalização dentro de `localCreatePost`, deixando `prepareLocalPostForPersistence(...)` como fonte única de preparação do payload local, com teste direto de regressão para criação de post em `compra-venda`.
 - `v11.7.0`: endurecida a paridade entre `local.adapter.js` e `kc-api.client.js`, adicionando suporte local para perfil, mutações de post, posts do usuário, salvos, highlights, notificações e convites, com testes de contrato para evitar regressões entre `KCAPI`, `LocalAdapter` e `SupabaseAdapter`.
 - `v11.6.0`: endurecido o mobile em iOS Safari ao impedir que `kc-pull-to-refresh.js` sequestre gestos horizontais do hero, `kc-ranking-users`, `kc-feed-tabs` e `kc-*-mobile-rail`, além de liberar `pinch-zoom` no auth modal e no `kc-create-modal` e fixar `font-size: 16px` nos inputs do auth card para evitar auto-zoom.

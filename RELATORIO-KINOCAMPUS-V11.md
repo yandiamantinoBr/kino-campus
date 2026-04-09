@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0` e `v11.8.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI` e fechamento da duplicação residual em `localCreatePost` |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0` e `v11.9.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost` e introdução de hidratação persistente com revalidação silenciosa em ranking e votos |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -690,6 +690,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.9.0`
+
+- objetivo:
+  reduzir trabalho redundante percebido na home e nos módulos públicos ao reaproveitar snapshots de sessão para `Top Contribuidores` e `kc-vote-score`, revalidando em segundo plano apenas quando os dados locais estiverem ausentes ou vencidos.
+- arquivos alterados:
+  `assets/js/kc-ranking.js`, `assets/js/controllers/index.controller.js`, `assets/js/components/voting.js`, `index.html`, `tests/kc-ranking-session.test.js`, `tests/voting-session-hydration.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  ranking lateral dos 6 módulos, ranking geral da home, modal informativo do ranking, hidratação de votos em `index.controller.js`, feeds públicos via `kc-feed.controller.js`, integração com `KCSessionStore` em `kc-api.client.js` e o polling/realtime já existente de `voting.js`.
+- contratos preservados:
+  nenhuma rota pública, schema, migration, RPC, payload Supabase, assinatura pública da `KCAPI` ou comportamento do driver remoto/local foi alterado; a iteração ficou restrita à hidratação client-side, reutilização de cache de sessão e redução de rerender/fetch redundante.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-ranking.js`, `node --check assets/js/controllers/index.controller.js`, `node --check assets/js/components/voting.js`, `npx jest tests/kc-ranking.test.js tests/kc-ranking-session.test.js --runInBand`, `npx jest tests/voting.test.js tests/voting-session-hydration.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview da PR `#238` foi validado via Vercel MCP no deployment `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x`. `index.html` publicado já passou a carregar `assets/js/kc-ranking.js` na home, e a leitura remota dos assets protegidos `assets/js/kc-ranking.js` e `assets/js/components/voting.js` por URL de compartilhamento confirmou a presença do snapshot de sessão, da deduplicação de request para ranking e da hidratação persistente de score/direção de voto antes da revalidação silenciosa.
+- PR / commit / deploy:
+  PR `#238`, commit funcional `3e3dc20` na branch `codex/v11-9-0-ranking-vote-session-hydration` e preview Vercel `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x`, todos confirmados em `09 de abril de 2026`. O deploy de produção seguirá após o merge da própria PR.
+- riscos residuais:
+  o snapshot de sessão reduz spinner e trabalho repetido, mas esta iteração ainda não expande o mesmo padrão para outras superfícies contadoras da plataforma. Qualquer extensão futura para comentários, analytics ou painéis laterais deve ser fatiada separadamente para evitar misturar caching de naturezas diferentes.
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
@@ -721,6 +744,11 @@ Este backlog é inicial e poderá ser refinado nas próximas iterações aprovad
    - validar em iPhone real os gestos de swipe horizontal do hero, `kc-ranking-users`, `kc-feed-tabs` e `kc-*-mobile-rail`
    - validar pinch-out após auto-zoom induzido por foco em input
    - revisar qualquer superfície restante com `touch-action` agressivo em modais, overlays e drawers
+
+7. **Persistência incremental e revalidação silenciosa**
+   - avaliar extensão segura do padrão de snapshot+SWR para contadores de comentários, analytics leves e painéis laterais que hoje ainda fazem rerender completo
+   - definir TTL e chaves canônicas por superfície antes de ampliar o uso de `KCSessionStore`
+   - manter separação entre cache de leitura, estado otimista e invalidação por ação do usuário
 
 ---
 

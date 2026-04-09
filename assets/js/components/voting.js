@@ -13,27 +13,182 @@ const KC_VOTE_PENDING_STATE = new Map();
 const KC_MY_VOTES_CACHE = new Map(); // postId → direction ('hot' | 'cold' | null)
 let KC_MY_VOTES_CACHE_TS = 0;
 const KC_MY_VOTES_CACHE_TTL = 30000; // 30s
+const KC_VOTE_SCORE_CACHE = new Map(); // postId -> last visible score
+let KC_VOTE_SCORE_CACHE_TS = 0;
+const KC_VOTE_SCORE_CACHE_TTL = 15000; // 15s
+const KC_VOTE_SESSION_MAX_AGE_MS = 1000 * 60 * 5;
+const KC_VOTE_CACHE_MAX_ENTRIES = 250;
+let KC_VOTE_SESSION_HYDRATED_FOR = null;
+let KC_VOTE_SESSION_WRITE_TIMER = null;
 
 function kcMyVotesCacheGet(postId) {
   return KC_MY_VOTES_CACHE.has(postId) ? KC_MY_VOTES_CACHE.get(postId) : undefined;
 }
 
 function kcMyVotesCacheSet(postId, direction) {
-  KC_MY_VOTES_CACHE.set(postId, direction);
+  if (kcRememberMyVoteDirection(postId, direction)) kcScheduleVoteSessionPersist();
 }
 
 function kcMyVotesCacheIsFresh() {
   return KC_MY_VOTES_CACHE.size > 0 && (Date.now() - KC_MY_VOTES_CACHE_TS) < KC_MY_VOTES_CACHE_TTL;
 }
 
-function kcApplyMyVotesCacheToDOM() {
-  if (!KC_MY_VOTES_CACHE.size) return;
+function kcVoteScoreCacheGet(postId) {
+  return KC_VOTE_SCORE_CACHE.has(postId) ? KC_VOTE_SCORE_CACHE.get(postId) : undefined;
+}
+
+function kcVoteScoreCacheIsFresh(postIds) {
+  if (!KC_VOTE_SCORE_CACHE.size) return false;
+  if ((Date.now() - KC_VOTE_SCORE_CACHE_TS) >= KC_VOTE_SCORE_CACHE_TTL) return false;
+  if (Array.isArray(postIds) && postIds.some((postId) => !KC_VOTE_SCORE_CACHE.has(postId))) return false;
+  return true;
+}
+
+function kcGetVoteSessionStore() {
+  return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+    ? window.KCSessionStore
+    : null;
+}
+
+function kcTrimVoteCacheMap(cacheMap) {
+  while (cacheMap.size > KC_VOTE_CACHE_MAX_ENTRIES) {
+    const firstKey = cacheMap.keys().next().value;
+    if (typeof firstKey === 'undefined') break;
+    cacheMap.delete(firstKey);
+  }
+}
+
+function kcReadSessionCacheMap(key, maxAge) {
+  const store = kcGetVoteSessionStore();
+  if (!store) return null;
+  const cached = store.get('votes', key, { maxAge: maxAge || KC_VOTE_SESSION_MAX_AGE_MS });
+  const value = cached && cached.value && typeof cached.value === 'object' ? cached.value : null;
+  if (!value) return null;
+  return {
+    value,
+    timestamp: Number(cached.timestamp) || 0,
+  };
+}
+
+function kcGetVoteCacheIdentity() {
+  try {
+    if (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') {
+      const currentUser = window.KCSupabase.getUser();
+      if (currentUser && currentUser.id) return `supabase:${currentUser.id}`;
+    }
+  } catch (_) { }
+  return (typeof isSupabaseRuntime === 'function' && isSupabaseRuntime()) ? 'supabase:anon' : 'local';
+}
+
+function kcGetVoteDirectionsSessionKey() {
+  return `directions:${kcGetVoteCacheIdentity()}`;
+}
+
+function kcRememberMyVoteDirection(postId, direction, options = {}) {
+  const normalizedId = String(postId || '').trim();
+  if (!normalizedId) return;
+  const normalizedDirection = kcNormalizeDirection(direction);
+  const previous = KC_MY_VOTES_CACHE.has(normalizedId) ? KC_MY_VOTES_CACHE.get(normalizedId) : undefined;
+  if (previous === normalizedDirection) return false;
+  if (KC_MY_VOTES_CACHE.has(normalizedId)) KC_MY_VOTES_CACHE.delete(normalizedId);
+  KC_MY_VOTES_CACHE.set(normalizedId, normalizedDirection);
+  kcTrimVoteCacheMap(KC_MY_VOTES_CACHE);
+  if (options.touch !== false) KC_MY_VOTES_CACHE_TS = Date.now();
+  return true;
+}
+
+function kcRememberVoteScore(postId, score, options = {}) {
+  const normalizedId = String(postId || '').trim();
+  const nextScore = Number(score);
+  if (!normalizedId || !Number.isFinite(nextScore)) return false;
+  const previous = KC_VOTE_SCORE_CACHE.has(normalizedId) ? KC_VOTE_SCORE_CACHE.get(normalizedId) : undefined;
+  if (previous === nextScore) return false;
+  if (KC_VOTE_SCORE_CACHE.has(normalizedId)) KC_VOTE_SCORE_CACHE.delete(normalizedId);
+  KC_VOTE_SCORE_CACHE.set(normalizedId, nextScore);
+  kcTrimVoteCacheMap(KC_VOTE_SCORE_CACHE);
+  if (options.touch !== false) KC_VOTE_SCORE_CACHE_TS = Date.now();
+  return true;
+}
+
+function kcPersistVoteSessionNow() {
+  const store = kcGetVoteSessionStore();
+  if (!store) return;
+
+  const directions = {};
   KC_MY_VOTES_CACHE.forEach((direction, postId) => {
-    if (kcHasPendingVote(postId)) return;
+    directions[postId] = kcNormalizeDirection(direction);
+  });
+
+  const scores = {};
+  KC_VOTE_SCORE_CACHE.forEach((score, postId) => {
+    if (Number.isFinite(Number(score))) scores[postId] = Number(score);
+  });
+
+  if (Object.keys(directions).length) store.set('votes', kcGetVoteDirectionsSessionKey(), directions);
+  else if (typeof store.remove === 'function') store.remove('votes', kcGetVoteDirectionsSessionKey());
+
+  if (Object.keys(scores).length) store.set('votes', 'scores', scores);
+  else if (typeof store.remove === 'function') store.remove('votes', 'scores');
+}
+
+function kcScheduleVoteSessionPersist() {
+  if (KC_VOTE_SESSION_WRITE_TIMER) return;
+  KC_VOTE_SESSION_WRITE_TIMER = window.setTimeout(() => {
+    KC_VOTE_SESSION_WRITE_TIMER = null;
+    kcPersistVoteSessionNow();
+  }, 120);
+}
+
+function kcEnsureVoteSessionHydrated() {
+  const identity = kcGetVoteCacheIdentity();
+  if (KC_VOTE_SESSION_HYDRATED_FOR === identity) return;
+
+  KC_MY_VOTES_CACHE.clear();
+  KC_MY_VOTES_CACHE_TS = 0;
+  KC_VOTE_SCORE_CACHE.clear();
+  KC_VOTE_SCORE_CACHE_TS = 0;
+
+  const cachedDirections = kcReadSessionCacheMap(kcGetVoteDirectionsSessionKey(), KC_VOTE_SESSION_MAX_AGE_MS);
+  if (cachedDirections && cachedDirections.value) {
+    Object.keys(cachedDirections.value).forEach((postId) => {
+      kcRememberMyVoteDirection(postId, cachedDirections.value[postId], { touch: false });
+    });
+    KC_MY_VOTES_CACHE_TS = Number(cachedDirections.timestamp) || 0;
+  }
+
+  const cachedScores = kcReadSessionCacheMap('scores', KC_VOTE_SESSION_MAX_AGE_MS);
+  if (cachedScores && cachedScores.value) {
+    Object.keys(cachedScores.value).forEach((postId) => {
+      kcRememberVoteScore(postId, cachedScores.value[postId], { touch: false });
+    });
+    KC_VOTE_SCORE_CACHE_TS = Number(cachedScores.timestamp) || 0;
+  }
+
+  KC_VOTE_SESSION_HYDRATED_FOR = identity;
+}
+
+function kcApplyMyVotesCacheToDOM() {
+  kcEnsureVoteSessionHydrated();
+
+  const handledIds = new Set();
+  document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]').forEach((button) => {
+    const postId = kcGetVotePostIdFromButton(button);
+    if (!postId || handledIds.has(postId) || kcHasPendingVote(postId)) return;
+    handledIds.add(postId);
+
     const boxes = kcGetVoteBoxesForPost(postId);
+    if (!boxes.length) return;
+
+    const cachedDirection = kcMyVotesCacheGet(postId);
+    const cachedScore = kcVoteScoreCacheGet(postId);
+
     boxes.forEach((voteBox) => {
       const current = kcReadVoteState(voteBox);
-      kcApplyVoteStateToBox(voteBox, { score: current.score, direction, pending: false }, { force: true });
+      kcApplyVoteStateToBox(voteBox, {
+        score: Number.isFinite(Number(cachedScore)) ? Number(cachedScore) : current.score,
+        direction: cachedDirection !== undefined ? cachedDirection : current.direction,
+        pending: false
+      }, { force: true });
     });
   });
 }
@@ -154,6 +309,9 @@ function kcUpdateVoteScoreInDOM(postId, score, options = {}) {
   if (!targetId) return;
   if (kcHasPendingVote(targetId) && !options.force) return;
 
+  kcEnsureVoteSessionHydrated();
+  if (kcRememberVoteScore(targetId, score)) kcScheduleVoteSessionPersist();
+
   kcGetVoteBoxesForPost(targetId).forEach((voteBox) => {
     const current = kcReadVoteState(voteBox);
     kcApplyVoteStateToBox(voteBox, {
@@ -177,6 +335,50 @@ function kcBuildTrackingPost(voteBox) {
   };
 }
 
+function kcGetVisibleVotePostIds() {
+  kcEnsureVoteSessionHydrated();
+  return Array.from(new Set(
+    Array.from(document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]'))
+      .map((el) => kcGetVotePostIdFromButton(el))
+      .filter((id) => kcIsUuid(id) && !kcHasPendingVote(id))
+  ));
+}
+
+async function kcRefreshVisibleScores(options = {}) {
+  if (!isSupabaseRuntime()) return;
+
+  const ids = kcGetVisibleVotePostIds();
+  if (!ids.length) return;
+
+  if (!options.force && kcVoteScoreCacheIsFresh(ids)) {
+    ids.forEach((postId) => {
+      const cachedScore = kcVoteScoreCacheGet(postId);
+      if (Number.isFinite(Number(cachedScore))) {
+        kcUpdateVoteScoreInDOM(postId, Number(cachedScore), { force: true });
+      }
+    });
+    return;
+  }
+
+  try {
+    const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+      ? window.KCSupabase.getClient()
+      : null;
+    if (!client) return;
+
+    const { data, error } = await client
+      .from('posts')
+      .select('id, votos')
+      .in('id', ids);
+
+    if (error || !Array.isArray(data)) return;
+    data.forEach((row) => {
+      if (!row || !row.id || kcHasPendingVote(row.id)) return;
+      kcUpdateVoteScoreInDOM(row.id, row.votos);
+    });
+  } catch (_) { }
+}
+
 function kcInitVotesRealtime() {
   if (!isSupabaseRuntime()) return;
   if (kcVotesRealtimeChannel) return;
@@ -194,28 +396,6 @@ function kcInitVotesRealtime() {
     return;
   }
 
-  const refreshVisibleScores = async () => {
-    try {
-      const ids = Array.from(new Set(
-        Array.from(document.querySelectorAll('.kc-vote-box [data-post-id], .kc-vote-box [data-post-uuid]'))
-          .map((el) => kcGetVotePostIdFromButton(el))
-          .filter((id) => kcIsUuid(id) && !kcHasPendingVote(id))
-      ));
-      if (!ids.length) return;
-
-      const { data, error } = await client
-        .from('posts')
-        .select('id, votos')
-        .in('id', ids);
-
-      if (error || !Array.isArray(data)) return;
-      data.forEach((row) => {
-        if (!row || !row.id || kcHasPendingVote(row.id)) return;
-        kcUpdateVoteScoreInDOM(row.id, row.votos);
-      });
-    } catch (_) { }
-  };
-
   try {
     kcVotesRealtimeChannel = client
       .channel(`kc-votes-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
@@ -232,18 +412,18 @@ function kcInitVotesRealtime() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'post_votes' },
-        () => { refreshVisibleScores(); }
+        () => { kcRefreshVisibleScores({ force: true }); }
       )
       .subscribe();
 
     if (!kcVotesPollingTimer) {
       kcVotesPollingTimer = window.setInterval(() => {
         if (document.hidden) return;
-        refreshVisibleScores();
+        kcRefreshVisibleScores();
       }, 5000);
     }
 
-    refreshVisibleScores();
+    kcRefreshVisibleScores();
   } catch (_) {
     kcVotesRealtimeChannel = null;
   }
@@ -287,6 +467,9 @@ function vote(button, type) {
     if (nextDirection === 'hot') nextScore += 1;
     if (nextDirection === 'cold') nextScore -= 1;
     kcApplyVoteStateToPost(lockKey, { score: nextScore, direction: nextDirection, pending: false }, { animate: true });
+    const changedDirection = kcRememberMyVoteDirection(lockKey, nextDirection);
+    const changedScore = kcRememberVoteScore(lockKey, nextScore);
+    if (changedDirection || changedScore) kcScheduleVoteSessionPersist();
     return;
   }
 
@@ -334,8 +517,11 @@ function vote(button, type) {
     }, { animate: true, force: true });
 
     // Atualiza o cache com a direção confirmada pelo servidor
-    kcMyVotesCacheSet(lockKey, finalDirection);
+    const changedDirection = kcRememberMyVoteDirection(lockKey, finalDirection);
+    const changedScore = kcRememberVoteScore(lockKey, finalScore);
     KC_MY_VOTES_CACHE_TS = Date.now();
+    KC_VOTE_SCORE_CACHE_TS = Date.now();
+    if (changedDirection || changedScore) kcScheduleVoteSessionPersist();
 
     if (finalDirection && window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
       window.KCHomeCategories.trackEvent('vote', { post: kcBuildTrackingPost(voteBox) });
@@ -355,6 +541,7 @@ function vote(button, type) {
 
 async function kcInitVoteStates() {
   if (!isSupabaseRuntime()) return;
+  kcEnsureVoteSessionHydrated();
 
   // 1. Aplica do cache imediatamente (sem esperar DB)
   kcApplyMyVotesCacheToDOM();
@@ -390,11 +577,13 @@ async function kcInitVoteStates() {
     });
 
     // Atualiza cache e aplica ao DOM
+    let didChangeCache = false;
     postIds.forEach((postId) => {
       const direction = voteMap[postId] || null;
-      kcMyVotesCacheSet(postId, direction);
+      if (kcRememberMyVoteDirection(postId, direction)) didChangeCache = true;
     });
     KC_MY_VOTES_CACHE_TS = Date.now();
+    if (didChangeCache) kcScheduleVoteSessionPersist();
 
     idSet.forEach((postId) => {
       if (kcHasPendingVote(postId)) return;

@@ -465,6 +465,11 @@
   }
 
   function loadRanking(period, module, container) {
+    if (window.KCRanking && typeof window.KCRanking.loadHomeRanking === 'function') {
+      window.KCRanking.loadHomeRanking(container, period, module);
+      return;
+    }
+
     var api = window.KCAPI;
     if (!api || typeof api.getTopContributors !== 'function') return;
 
