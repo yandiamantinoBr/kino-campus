@@ -30,6 +30,7 @@
 
 ### Docs
 - `v11.15.0`: atualizado o `README.md` e o relatório v11 para registrar esta primeira fatia de `settings`/conta e abrir explicitamente a continuidade em `v11.15.1`.
+- `v11.15.0`: fechamento documental consolidado com a PR `#253`, preview `dpl_7iH9AyEcMsviriav3hwCQUfuv1g6`, deploy de produção `dpl_4iiQjG2zjNUhYyo6Z3n9M6D3yhGp` e validação publicada em `www.kinocampus.com.br`.
 - `v11.14.0`: atualizado o `README.md` e o relatório v11 para registrar a rodada inicial de perfil/`my-posts`, deixando `v11.15.0` como próxima iteração sugerida da sequência.
 - `v11.13.1`: atualizado o `README.md` e o relatório v11 para registrar o hardening dos popovers da página de produto como continuidade da macrofase `v11.13.x`, deixando `v11.14.0` explícita como próxima iteração sugerida.
 - `v11.13.0`: atualizado o `README.md` e o relatório v11 para registrar esta fatia como início da macrofase de produto/interações sociais e abrir explicitamente a continuidade em `v11.13.1`.

@@ -441,7 +441,7 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi iniciada com o alinhamento do preview de contato em `settings` ao mesmo helper canônico de detalhe. A próxima sequência obrigatória passa a ser `v11.15.1`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A próxima sequência obrigatória passa a ser `v11.15.1`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -894,6 +894,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#251`, commits `736fd12` e `abf8f49` na branch `codex/v11-14-0-profile-detail-links`, merge squash `e574038` na base `kinocampus-V11.0-foundations`, preview `dpl_AvvbfCZvKjWH2w2pdXhwq7ZY7nei` e deploy manual de produção `dpl_8faNj9pCcmtXzk4eq6jS2Q5NyAHJ`, publicado em `https://kino-campus-iw6nrjedp-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a fatia fecha o drift imediato de detalhe em perfil e `my-posts`, mas ainda existe legado de `product.html` em outras superfícies fora do escopo desta rodada que só deve ser tratado em iteração própria ou quando um bug concreto justificar expansão controlada.
+
+---
+
+### Iteração `v11.15.0`
+
+- objetivo:
+  iniciar a rodada de conta, onboarding e `settings` removendo o drift residual do preview de contato, para que o link de demonstração use o mesmo caminho canônico `_product.html` já adotado nas demais superfícies humanas.
+- arquivos alterados:
+  `assets/js/controllers/settings.controller.js`, `tests/account-profile.shared.test.js`, `tests/settings-contact-preview-links.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  preview de contato em `settings`, contrato shared de `buildContactAction`, consistência da rota canônica do detalhe de publicação e o trecho do roteiro `8.2` referente à sequência `v11.15.0` → `v11.15.1`.
+- contratos preservados:
+  nenhuma migration, RPC, adapter, payload de onboarding, estrutura HTML de `settings.html` ou contrato público de `KCAPI` foi alterado; a iteração ficou restrita ao wiring interno do preview, ao reaproveitamento do helper canônico de `KCUtils` e às regressões/documentação de suporte.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/controllers/settings.controller.js`, `npx jest tests/account-profile.shared.test.js tests/settings-contact-preview-links.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview da PR ficou `Ready` no deployment `dpl_7iH9AyEcMsviriav3hwCQUfuv1g6`, com alias `https://kino-campus-git-codex-v11-15-0-s-b41fb5-yannakamurabrs-projects.vercel.app`, confirmado por `gh pr checks` e `vercel inspect`. O fetch direto do preview continuou protegido por Vercel Authentication nesta sessão e o `vercel curl` local esbarrou na limitação de revogação TLS do Windows, então a homologação remota dessa etapa ficou ancorada em `vercel inspect`, no check `Vercel` da PR `#253` e nas regressões locais dos arquivos alterados. Após o merge, a produção publicada em [www.kinocampus.com.br](https://www.kinocampus.com.br) passou a servir `assets/js/controllers/settings.controller.js` com `buildPreviewPostUrl()` e `postUrl: buildPreviewPostUrl()`, além de responder `200` em `settings.html`, tudo confirmado por `curl.exe --ssl-no-revoke`.
+- PR / commit / deploy:
+  PR `#253`, commit funcional `9eb4ebc` na branch `codex/v11-15-0-settings-contact-preview-canonical`, merge squash `eb552e2` na base `kinocampus-V11.0-foundations`, preview `dpl_7iH9AyEcMsviriav3hwCQUfuv1g6` e deploy manual de produção `dpl_4iiQjG2zjNUhYyo6Z3n9M6D3yhGp`, publicado em `https://kino-campus-b2hq00xay-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
+- riscos residuais:
+  a macrofase de conta/onboarding/settings não foi esgotada nesta fatia. O próximo passo continua sendo `v11.15.1`, para ampliar a revisão de `settings.html`, `account-setup.html` e shareds de conta/perfil sem abrir refactor amplo em uma única rodada.
 
 ---
 
