@@ -441,7 +441,7 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi iniciada no eixo de onboarding para alinhar a prévia de contato de `account-setup` ao `buildContactAction`. A próxima sequência obrigatória passa a ser `v11.15.2`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A próxima sequência obrigatória passa a ser `v11.15.2`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -936,9 +936,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/controllers/account-setup.controller.js`, `npx jest tests/account-profile.shared.test.js tests/account-setup-contact-preview.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  pendente de fechamento da PR funcional.
+  o preview da PR ficou `Ready` no deployment `dpl_5cAB1wgjGki748PKLeYFqEAgp83J`, com alias `https://kino-campus-git-codex-v11-15-1-a-b5fc47-yannakamurabrs-projects.vercel.app`, confirmado por `gh pr checks` e `vercel inspect`. O fetch direto do preview continuou protegido por Vercel Authentication nesta sessão, então a homologação remota dessa etapa ficou ancorada em `vercel inspect`, no check `Vercel` da PR `#255` e nas regressões locais dos arquivos alterados. Após o merge, a produção publicada em [www.kinocampus.com.br](https://www.kinocampus.com.br) passou a servir `assets/js/controllers/account-setup.controller.js` com `buildPreviewPostUrl()`, `shared.buildContactAction(...)` e o listener de `#accountSetupCtaEnabled`, além de responder `200` em `account-setup.html`, tudo confirmado por `curl.exe --ssl-no-revoke`.
 - PR / commit / deploy:
-  pendente de fechamento da iteração.
+  PR `#255`, commit funcional `2a85925` na branch `codex/v11-15-1-account-setup-contact-preview`, merge squash `31d7f44` na base `kinocampus-V11.0-foundations`, preview `dpl_5cAB1wgjGki748PKLeYFqEAgp83J` e deploy manual de produção `dpl_4YBqUWRySXoXdeFVU5pjQk34qbfY`, publicado em `https://kino-campus-82misd6at-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a macrofase de conta/onboarding/settings continua aberta. O próximo passo após esta fatia permanece sendo `v11.15.2`, para continuar a revisão de `settings.html`, `account-setup.html` e shareds de conta/perfil sem abrir refactor amplo em uma única rodada.
 

@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.15.1 | segunda fatia de `account-setup`: a prévia de contato do onboarding passa a reutilizar `buildContactAction`, reage ao toggle de contato público e fica coerente com o CTA real exibido nos anúncios | `#pending` |
+| v11.15.1 | segunda fatia de `account-setup`: a prévia de contato do onboarding passa a reutilizar `buildContactAction`, reage ao toggle de contato público e fica coerente com o CTA real exibido nos anúncios | `#255` |
 | v11.15.0 | primeira fatia de `settings`/conta: preview de contato passa a gerar o link de anúncio de demonstração pela rota canônica `_product.html`, reaproveitando `KCUtils.buildProductDetailHref(...)` e travando a regressão em teste estático e shared | `#253` |
 | v11.14.0 | normalização da rota canônica do detalhe nas superfícies de perfil e `my-posts`, com helper compartilhado em `KCUtils` e remoção do drift `product.html?id=` nessas páginas | `#251` |
 | v11.13.1 | hardening dos popovers de ação da página de produto, com fallback compartilhado para copiar link, tracking também no compartilhamento por cópia e centralização do fechamento por `Escape` entre compartilhar, salvar e calendário | `#249` |
