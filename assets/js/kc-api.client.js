@@ -1928,25 +1928,34 @@
   }
 
   async function getMyProfile() {
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getMyProfile) return null;
-    return getActiveDriver().getMyProfile();
+    const activeDriver = getActiveDriver();
+    if (!activeDriver || typeof activeDriver.getMyProfile !== 'function') return null;
+    return activeDriver.getMyProfile();
   }
 
   async function updateMyProfile(patch = {}) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.updateMyProfile === 'function') return driver.updateMyProfile(patch);
     if (ENV.driver !== 'supabase' || !getActiveDriver().updateMyProfile) return { ok: false, error: { message: 'Perfil indisponível neste driver.' } };
-    return getActiveDriver().updateMyProfile(patch);
+    return driver.updateMyProfile(patch);
   }
 
   async function uploadProfileAvatar(fileOrDataUrl) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.uploadProfileAvatar === 'function') {
+      return driver.uploadProfileAvatar(fileOrDataUrl);
+    }
     if (ENV.driver !== 'supabase' || !getActiveDriver().uploadProfileAvatar) {
       return { ok: false, error: { message: 'Upload de avatar indisponível neste driver.' } };
     }
-    return getActiveDriver().uploadProfileAvatar(fileOrDataUrl);
+    return driver.uploadProfileAvatar(fileOrDataUrl);
   }
 
   async function getMyPosts(params = {}) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.getMyPosts === 'function') return driver.getMyPosts(params);
     if (ENV.driver !== 'supabase' || !getActiveDriver().getMyPosts) return [];
-    return getActiveDriver().getMyPosts(params);
+    return driver.getMyPosts(params);
   }
 
   async function getPostsByAuthorId(authorId, params = {}) {
@@ -1962,42 +1971,64 @@
   }
 
   async function getSavedPostState(postId) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.getSavedPostState === 'function') return driver.getSavedPostState(postId);
     if (ENV.driver !== 'supabase' || !getActiveDriver().getSavedPostState) return { kinds: [] };
-    return getActiveDriver().getSavedPostState(postId);
+    return driver.getSavedPostState(postId);
   }
 
   async function setSavedPostState(postId, kind, enabled) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.setSavedPostState === 'function') {
+      return driver.setSavedPostState(postId, kind, enabled);
+    }
     if (ENV.driver !== 'supabase' || !getActiveDriver().setSavedPostState) {
       return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
     }
-    return getActiveDriver().setSavedPostState(postId, kind, enabled);
+    return driver.setSavedPostState(postId, kind, enabled);
   }
 
   async function clearSavedPostState(postId, kind) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.clearSavedPostState === 'function') {
+      return driver.clearSavedPostState(postId, kind);
+    }
     if (ENV.driver !== 'supabase' || !getActiveDriver().clearSavedPostState) {
       return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
     }
-    return getActiveDriver().clearSavedPostState(postId, kind);
+    return driver.clearSavedPostState(postId, kind);
   }
 
   async function getMySavedPosts(params = {}) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.getMySavedPosts === 'function') return driver.getMySavedPosts(params);
     if (ENV.driver !== 'supabase' || !getActiveDriver().getMySavedPosts) return [];
-    return getActiveDriver().getMySavedPosts(params);
+    return driver.getMySavedPosts(params);
   }
 
   async function getMySavedPostsCount(params = {}) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.getMySavedPostsCount === 'function') return driver.getMySavedPostsCount(params);
     if (ENV.driver !== 'supabase' || !getActiveDriver().getMySavedPostsCount) return 0;
-    return getActiveDriver().getMySavedPostsCount(params);
+    return driver.getMySavedPostsCount(params);
   }
 
   async function getProfileHighlights(profileId, params = {}) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.getProfileHighlights === 'function') {
+      return driver.getProfileHighlights(profileId, params);
+    }
     if (ENV.driver !== 'supabase' || !getActiveDriver().getProfileHighlights) return [];
-    return getActiveDriver().getProfileHighlights(profileId, params);
+    return driver.getProfileHighlights(profileId, params);
   }
 
   async function getProfileHighlightsCount(profileId) {
+    const driver = getActiveDriver();
+    if (ENV.driver !== 'supabase' && driver && typeof driver.getProfileHighlightsCount === 'function') {
+      return driver.getProfileHighlightsCount(profileId);
+    }
     if (ENV.driver !== 'supabase' || !getActiveDriver().getProfileHighlightsCount) return 0;
-    return getActiveDriver().getProfileHighlightsCount(profileId);
+    return driver.getProfileHighlightsCount(profileId);
   }
 
   async function createHelpRequest(payload = {}) {

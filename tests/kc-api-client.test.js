@@ -351,6 +351,60 @@ describe('KCAPI - API Client', () => {
     });
   });
 
+  describe('capability dispatch beyond Supabase', () => {
+    let originalDriver;
+
+    beforeEach(() => {
+      originalDriver = window.KC_ENV.driver;
+      api.registerAdapter('local', {
+        name: 'local',
+        getPosts: jest.fn().mockResolvedValue([]),
+        getMyProfile: jest.fn().mockResolvedValue({ id: 'USER_SELF', display_name: 'Perfil Local' }),
+        updateMyProfile: jest.fn().mockResolvedValue({ ok: true, data: { id: 'USER_SELF', display_name: 'Novo Nome' } }),
+        uploadProfileAvatar: jest.fn().mockResolvedValue({ ok: true, data: { url: 'data:image/png;base64,abc' } }),
+        getMyPosts: jest.fn().mockResolvedValue([{ id: 'post-1' }]),
+        getSavedPostState: jest.fn().mockResolvedValue({ kinds: ['favorite'] }),
+        setSavedPostState: jest.fn().mockResolvedValue({ ok: true, enabled: true }),
+        clearSavedPostState: jest.fn().mockResolvedValue({ ok: true, cleared: 'favorite' }),
+        getMySavedPosts: jest.fn().mockResolvedValue([{ id: 'post-1', save_kinds: ['favorite'] }]),
+        getMySavedPostsCount: jest.fn().mockResolvedValue(1),
+        getProfileHighlights: jest.fn().mockResolvedValue([{ id: 'post-1', save_kinds: ['highlight'] }]),
+        getProfileHighlightsCount: jest.fn().mockResolvedValue(1),
+      });
+      window.KC_ENV.driver = 'local';
+    });
+
+    afterEach(() => {
+      window.KC_ENV.driver = originalDriver;
+    });
+
+    test('usa getMyProfile do driver local quando ele existe', async () => {
+      await expect(api.getMyProfile()).resolves.toEqual({ id: 'USER_SELF', display_name: 'Perfil Local' });
+    });
+
+    test('delegates saved posts and profile surfaces by capability, not by driver name', async () => {
+      await expect(api.getMyPosts({ page: 1 })).resolves.toEqual([{ id: 'post-1' }]);
+      await expect(api.getSavedPostState('post-1')).resolves.toEqual({ kinds: ['favorite'] });
+      await expect(api.setSavedPostState('post-1', 'favorite', true)).resolves.toEqual({ ok: true, enabled: true });
+      await expect(api.clearSavedPostState('post-1', 'favorite')).resolves.toEqual({ ok: true, cleared: 'favorite' });
+      await expect(api.getMySavedPosts({})).resolves.toEqual([{ id: 'post-1', save_kinds: ['favorite'] }]);
+      await expect(api.getMySavedPostsCount({})).resolves.toBe(1);
+      await expect(api.getProfileHighlights('USER_SELF', {})).resolves.toEqual([{ id: 'post-1', save_kinds: ['highlight'] }]);
+      await expect(api.getProfileHighlightsCount('USER_SELF')).resolves.toBe(1);
+    });
+
+    test('usa updateMyProfile e uploadProfileAvatar do driver local quando disponiveis', async () => {
+      await expect(api.updateMyProfile({ display_name: 'Novo Nome' })).resolves.toEqual({
+        ok: true,
+        data: { id: 'USER_SELF', display_name: 'Novo Nome' },
+      });
+      await expect(api.uploadProfileAvatar('data:image/png;base64,abc')).resolves.toEqual({
+        ok: true,
+        data: { url: 'data:image/png;base64,abc' },
+      });
+    });
+  });
+
   describe('filterPosts - requestParams avancados', () => {
     test('filtra marketplace por categoria, condicao e selo verificado', () => {
       const posts = [

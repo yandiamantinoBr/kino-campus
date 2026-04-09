@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0` e `v11.6.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos e hardening específico para gestos/zoom do iOS Safari |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0` e `v11.7.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari e paridade endurecida do driver local frente ao contrato moderno da `KCAPI` |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -643,6 +643,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#235`, commit `1817a30` na branch `codex/v11-6-0-ios-gesture-zoom-hardening` e preview Vercel `dpl_7W9YewxxyNVojvhpnnfB6G3DmvCw`, aliasado em `https://kino-campus-git-codex-v11-6-0-io-116512-yannakamurabrs-projects.vercel.app`. Durante esta iteração o Vercel MCP voltou a responder `Auth required`, então a confirmação do preview foi fechada pela CLI `vercel inspect` e pela homologação local de browser antes do merge.
 - riscos residuais:
   como Safari/iOS tem diferenças de edge-swipe e pinch que não ficam totalmente cobertas pelo Chromium local, a conclusão desta iteração exige validação publicada em navegador real iOS antes de considerar o hardening encerrado.
+
+---
+
+### Iteração `v11.7.0`
+
+- objetivo:
+  endurecer a paridade entre `assets/js/adapters/local.adapter.js`, `assets/js/kc-api.client.js` e o contrato moderno do driver ativo, cobrindo superfícies locais equivalentes às já consolidadas no caminho Supabase sem alterar banco, RPC ou produção autenticada.
+- arquivos alterados:
+  `assets/js/adapters/local.adapter.js`, `assets/js/kc-api.client.js`, `tests/local-adapter.test.js`, `tests/kc-api-client.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  `LocalAdapter`, `SupabaseAdapter`, fachada `KCAPI`, persistência local de perfil, posts do usuário, salvos, highlights, notificações, convites e os contratos esperados pelos consumers modernos do frontend.
+- contratos preservados:
+  nenhuma rota pública, schema, migration, RPC, payload Supabase, assinatura pública da `KCAPI` ou comportamento produtivo do driver remoto foi alterado; a iteração ficou restrita ao endurecimento do fallback local e à cobertura de contrato entre drivers.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/adapters/local.adapter.js`, `node --check assets/js/kc-api.client.js`, `npx jest tests/local-adapter.test.js tests/kc-api-client.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview Vercel da PR `#236` foi validado via MCP ao longo do ciclo da branch, confirmando publicação do bundle sem quebra geral. A proteção do preview variou entre rotas durante a leitura remota, então essa checagem ficou registrada como homologação de publicação/bundle e não como smoke autenticado completo de interface.
+- PR / commit / deploy:
+  PR `#236`, com commit funcional `e762bd9` e commits documentais de fechamento na branch `codex/v11-7-0-local-adapter-parity`, além de preview Vercel validado no ciclo da PR, todos confirmados em `08 de abril de 2026`.
+- riscos residuais:
+  o endurecimento ficou contido ao driver local, mas `localCreatePost` ainda preserva um bloco redundante de normalização legado que não quebra os testes atuais. Como a rota de preview autenticada de `my-posts.html` não ficou acessível pelo fetch remoto, a confirmação final após merge deve incluir checagem publicada mínima de bundle e rota autenticada quando possível.
 
 ---
 
