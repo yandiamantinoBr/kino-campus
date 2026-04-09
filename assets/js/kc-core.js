@@ -560,6 +560,7 @@ function kcEnableDragToScroll(el) {
   const DRAG_THRESHOLD = 10;
 
   const start = (e) => {
+    if (e.pointerType === 'touch') return;
     // Botão esquerdo apenas
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
@@ -641,6 +642,10 @@ function kcInitHeroSwipe() {
   const AXIS_LOCK_RATIO = 1.5; // horizontal deve ser 1.5x mais que vertical
 
   carousel.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === 'touch') {
+      pointerId = null;
+      return;
+    }
     swipeStartedOnInteractive = isInteractiveTarget(e.target);
     if (swipeStartedOnInteractive) {
       pointerId = null;
@@ -702,6 +707,12 @@ function kcInitHeroSwipe() {
     if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * AXIS_LOCK_RATIO) {
       changeSlide(dx < 0 ? 1 : -1);
     }
+  }, { passive: true });
+
+  carousel.addEventListener('touchcancel', () => {
+    swipeStartedOnInteractive = false;
+    touchStartX = 0;
+    touchStartY = 0;
   }, { passive: true });
 }
 
