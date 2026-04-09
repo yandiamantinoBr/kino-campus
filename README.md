@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0` e `v11.11.1`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1` e `v11.12.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.12.0 | endurecimento do fluxo de criação para ignorar no payload final campos condicionais que deixaram de estar ativos, preservando o rascunho no modal e alinhando `docs/module-schemas.md` ao estado real da categoria `Ingressos` | `em andamento nesta iteração` |
 | v11.11.1 | reformulação do roadmap da v11 em uma sequência contínua de fases `v11.12.0` a `v11.21.0`, preparando a continuidade controlada da rodada | `#244` |
 | v11.11.0 | limpeza estrutural de `kc-comments.js`, removendo helpers sombreados de comentário/resposta/renderização e adicionando regressões para reply local, exclusão em cascata local e prevenção de duplicidade de declarations | `#242` |
 | v11.10.0 | extensão do snapshot+SWR para a página de produto, com hidratação de sessão para analytics do autor e comentários Supabase, invalidação segura após mutações e refresh silencioso sem spinner integral | `#240` |
@@ -66,10 +67,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.11.1`
-- objetivo da iteração: reformular o roadmap remanescente da v11 em uma sequência contínua e executável de novas fases `v11.12.0` a `v11.21.0`
-- natureza da iteração: governança documental e replanejamento operacional, sem mudança funcional
-- próxima iteração sugerida: `v11.12.0`, focada em `kc-create-post.js`, validações, schemas dinâmicos, upload e paridade do fluxo de criação entre módulos
+- iteração ativa consolidada: `v11.12.0`
+- objetivo da iteração: endurecer `kc-create-post.js` para impedir vazamento de campos condicionais inativos no payload final, sem perder o rascunho ao alternar chips/opções do formulário
+- natureza da iteração: hardening funcional do fluxo de criação, com regressão focada e atualização documental do schema real do módulo `compra-venda`
+- próxima iteração sugerida: `v11.13.0`, focada no residual de produto, notificações, banners, popovers e interações sociais correlatas
 
 ---
 
