@@ -62,7 +62,7 @@ Regras desta fase:
 - iteração ativa consolidada: `v11.5.0`
 - objetivo da iteração: restaurar o `Top Contribuidores` dos 6 módulos públicos, identificando a regressão de bootstrap bloqueado por CSP e substituindo o carregamento inline por script externo deferido
 - natureza da iteração: frontend compartilhado de módulos equivalentes, sem mudança de banco
-- status operacional do Vercel MCP em `08 de abril de 2026`: autenticado com sucesso via `codex mcp login vercel`, com acesso confirmado ao projeto `kino-campus`; a `v11.5.0` usa esse fluxo para validar o preview publicado após o merge. Na investigação desta iteração, a RPC `public.kc_get_top_contributors(...)` foi confirmada saudável no Supabase, e a causa raiz ficou no frontend: os 6 módulos dependiam de um bootstrap inline de `kc-ranking.js`, bloqueado pela CSP de produção definida em `vercel.json`
+- status operacional do deploy em `08 de abril de 2026`: a `v11.5.0` foi publicada no preview `dpl_9j8hbAVf9ng3r21DMYdFCtCaTHjP` da PR `#233` e consolidada manualmente em produção no deployment `dpl_5onWMyzTZdttKSDhRyrQx1Pkeay4`, já servido em [www.kinocampus.com.br](https://www.kinocampus.com.br). Na investigação desta iteração, a RPC `public.kc_get_top_contributors(...)` foi confirmada saudável no Supabase, e a causa raiz ficou no frontend: os 6 módulos dependiam de um bootstrap inline de `kc-ranking.js`, bloqueado pela CSP de produção definida em `vercel.json`
 
 ---
 

@@ -617,7 +617,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   a investigação em produção mostrou os containers `.kc-ranking-sidebar-users` vazios mesmo com a RPC saudável; a comparação com o DOM local e a leitura do `vercel.json` confirmaram a causa raiz: o bootstrap inline `KCLazyLoader.load('assets/js/kc-ranking.js')` era bloqueado por `Content-Security-Policy` em produção. Após substituir o bootstrap inline pelo carregamento externo deferido de `assets/js/kc-ranking.js`, o DOM renderizado local voltou a conter `kc-ranking-sidebar-item` em `achados-perdidos`, `moradia` e `compra-venda`, cobrindo o padrão compartilhado usado pelos 6 módulos.
 - PR / commit / deploy:
-  PR `#233` na branch `codex/v11-5-0-module-ranking-csp-bootstrap`. Commit, preview Vercel, merge, delete branch e validação final de produção serão registrados ao fechamento desta iteração.
+  PR `#233`, commit `07b3c5b` na branch `codex/v11-5-0-module-ranking-csp-bootstrap`, merge commit `8277bed` na base `kinocampus-V11.0-foundations`, preview Vercel `dpl_9j8hbAVf9ng3r21DMYdFCtCaTHjP` e deploy manual de produção `dpl_5onWMyzTZdttKSDhRyrQx1Pkeay4`, já aliasado para `https://www.kinocampus.com.br`. Branch remota removida e base local sincronizada ao final da iteração.
 - riscos residuais:
   o fix remove a causa específica da regressão sob CSP sem mexer em `kc-ranking.js`; o principal risco remanescente é cache de asset antigo no navegador, que precisa ser descartado na validação pós-deploy.
 
