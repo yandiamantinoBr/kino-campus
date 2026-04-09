@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.11.1 | reformulação do roadmap da v11 em uma sequência contínua de fases `v11.12.0` a `v11.21.0`, preparando a continuidade controlada da rodada | em abertura |
+| v11.11.1 | reformulação do roadmap da v11 em uma sequência contínua de fases `v11.12.0` a `v11.21.0`, preparando a continuidade controlada da rodada | `#244` |
 | v11.11.0 | limpeza estrutural de `kc-comments.js`, removendo helpers sombreados de comentário/resposta/renderização e adicionando regressões para reply local, exclusão em cascata local e prevenção de duplicidade de declarations | `#242` |
 | v11.10.0 | extensão do snapshot+SWR para a página de produto, com hidratação de sessão para analytics do autor e comentários Supabase, invalidação segura após mutações e refresh silencioso sem spinner integral | `#240` |
 | v11.9.0 | hidratação persistente e revalidação silenciosa para `Top Contribuidores` e `kc-vote-score`, reaproveitando `KCSessionStore` para evitar spinner/reprocessamento desnecessário em reload e troca de período | `#238` |

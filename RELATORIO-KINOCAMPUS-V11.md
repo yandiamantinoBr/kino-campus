@@ -797,7 +797,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   não aplicável, porque não houve mudança funcional publicada nesta iteração.
 - PR / commit / deploy:
-  branch `codex/v11-11-1-roadmap-replan`, com fechamento documental e sem necessidade de deploy funcional novo.
+  PR `#244`, commit `b0dd62c` na branch `codex/v11-11-1-roadmap-replan`, com fechamento documental e sem necessidade de deploy funcional novo.
 - riscos residuais:
   o roadmap reformulado reduz ambiguidade, mas não substitui a disciplina de revalidar escopo real a cada fase. O principal risco segue sendo misturar frentes demais numa mesma PR se a sequência abaixo não for respeitada.
 
