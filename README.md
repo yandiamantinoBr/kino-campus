@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.13.0 | hardening do dropdown de notificações para manter `Marcar todas como lidas` e o clique dos itens funcionais mesmo após rerenders por realtime/mark-read | `em andamento nesta iteração` |
+| v11.13.0 | hardening do dropdown de notificações para manter `Marcar todas como lidas` e o clique dos itens funcionais mesmo após rerenders por realtime/mark-read | `#247` |
 | v11.12.0 | endurecimento do fluxo de criação para ignorar no payload final campos condicionais que deixaram de estar ativos, preservando o rascunho no modal e alinhando `docs/module-schemas.md` ao estado real da categoria `Ingressos` | `#245` |
 | v11.11.1 | reformulação do roadmap da v11 em uma sequência contínua de fases `v11.12.0` a `v11.21.0`, preparando a continuidade controlada da rodada | `#244` |
 | v11.11.0 | limpeza estrutural de `kc-comments.js`, removendo helpers sombreados de comentário/resposta/renderização e adicionando regressões para reply local, exclusão em cascata local e prevenção de duplicidade de declarations | `#242` |
