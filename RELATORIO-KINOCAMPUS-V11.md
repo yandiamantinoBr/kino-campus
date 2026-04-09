@@ -640,7 +640,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   em smoke local com Playwright CLI a `index.html` foi aberta em `390x844`, o auth modal passou a expor `touch-action: pinch-zoom` na casca, `touch-action: pan-y pinch-zoom` no corpo e `font-size: 16px` nos inputs. Na própria home, `kc-hero-carousel` passou a reportar `pan-y pinch-zoom`, enquanto `kc-ranking-users` passou a resolver para `manipulation` no browser. Em `compra-venda-feed.html`, o `kc-marketplace-mobile-rail` e o `kc-feed-tabs` também passaram a resolver `touch-action` compatível com scroll horizontal e pinch, e a abertura do modal de seção confirmou `kc-create-modal__body` com `pan-y pinch-zoom`. O gesto `TouchEvent` sintético do hero não pôde ser reproduzido integralmente no Chromium local porque `Touch`/`TouchEvent` não estavam disponíveis nesse contexto de CLI, então a checagem final dessa nuance permanece dependente da validação publicada em device iOS real.
 - PR / commit / deploy:
-  em andamento nesta iteração; branch ativa `codex/v11-6-0-ios-gesture-zoom-hardening`.
+  PR `#235`, commit `1817a30` na branch `codex/v11-6-0-ios-gesture-zoom-hardening` e preview Vercel `dpl_7W9YewxxyNVojvhpnnfB6G3DmvCw`, aliasado em `https://kino-campus-git-codex-v11-6-0-io-116512-yannakamurabrs-projects.vercel.app`. Durante esta iteração o Vercel MCP voltou a responder `Auth required`, então a confirmação do preview foi fechada pela CLI `vercel inspect` e pela homologação local de browser antes do merge.
 - riscos residuais:
   como Safari/iOS tem diferenças de edge-swipe e pinch que não ficam totalmente cobertas pelo Chromium local, a conclusão desta iteração exige validação publicada em navegador real iOS antes de considerar o hardening encerrado.
 
