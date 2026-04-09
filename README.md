@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0` e `v11.11.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0` e `v11.11.1`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.11.1 | reformulação do roadmap da v11 em uma sequência contínua de fases `v11.12.0` a `v11.21.0`, preparando a continuidade controlada da rodada | em abertura |
 | v11.11.0 | limpeza estrutural de `kc-comments.js`, removendo helpers sombreados de comentário/resposta/renderização e adicionando regressões para reply local, exclusão em cascata local e prevenção de duplicidade de declarations | `#242` |
 | v11.10.0 | extensão do snapshot+SWR para a página de produto, com hidratação de sessão para analytics do autor e comentários Supabase, invalidação segura após mutações e refresh silencioso sem spinner integral | `#240` |
 | v11.9.0 | hidratação persistente e revalidação silenciosa para `Top Contribuidores` e `kc-vote-score`, reaproveitando `KCSessionStore` para evitar spinner/reprocessamento desnecessário em reload e troca de período | `#238` |
@@ -65,10 +66,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.11.0`
-- objetivo da iteração: remover implementações sombreadas e duplicadas em `assets/js/kc-comments.js`, preservando apenas os fluxos efetivos de reply, renderização em threads, exclusão em cascata local e submit moderno com `parentId`
-- natureza da iteração: cleanup estrutural de frontend compartilhado com regressão direcionada, sem alterar contratos públicos de `KCAPI`, rotas, banco, RPCs ou payloads
-- status operacional do deploy em `09 de abril de 2026`: a branch `codex/v11-11-0-comments-shadow-cleanup` foi publicada na PR `#242`, recebeu preview Vercel `READY` no deployment `dpl_3bX1CErmfF41cmcDu6Y3siBDxAvH` e foi mergeada na base `kinocampus-V11.0-foundations` no commit `dc57f87`. Em seguida, a produção foi publicada manualmente via `vercel deploy --prod --yes` no deployment `dpl_EFKajf1xG3HCH5APKzkp6pLYJFX2`, em `https://kino-campus-f8c7ym3id-yannakamurabrs-projects.vercel.app`, já aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br). As checagens locais confirmaram `assets/js/kc-comments.js` sintaticamente válido, as suites `tests/kc-comments-shadow-cleanup.test.js` e `tests/kc-comments-session.test.js` verdes e o `git diff --check` limpo. No domínio publicado, `assets/js/kc-comments.js` já retorna apenas uma declaração de `addComment`, `normalizeCommentForRender`, `_renderCommentList`, `deleteComment` e `submitComment`, enquanto `_product.html?id=1` segue carregando a `.kc-comments-section` e o `commentsContainer` corretamente.
+- iteração ativa consolidada: `v11.11.1`
+- objetivo da iteração: reformular o roadmap remanescente da v11 em uma sequência contínua e executável de novas fases `v11.12.0` a `v11.21.0`
+- natureza da iteração: governança documental e replanejamento operacional, sem mudança funcional
+- próxima iteração sugerida: `v11.12.0`, focada em `kc-create-post.js`, validações, schemas dinâmicos, upload e paridade do fluxo de criação entre módulos
 
 ---
 

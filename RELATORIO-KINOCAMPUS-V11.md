@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0` e `v11.11.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto e limpeza estrutural de `kc-comments.js` com regressão dedicada para helpers sombreados |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0` e `v11.11.1` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto, limpeza estrutural de `kc-comments.js` com regressão dedicada para helpers sombreados e reformulação do roadmap remanescente da v11 em uma sequência executável contínua |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -425,22 +425,41 @@ Aplicação das correções aprovadas em fatias pequenas, sempre acompanhadas de
 
 ## 8. Estratégia de execução da v11 em fatias
 
-A execução proposta da v11 será sequencial e conservadora.
+A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada iteração fecha uma fatia pequena e já deixa a próxima explicitamente definida. O que já foi entregue permanece como base consolidada; o que ainda falta foi reorganizado abaixo em novas fases sequenciais dentro da própria linha `v11.x`.
 
-| Fase | Objetivo | Tipo |
+### 8.1. Estado consolidado das macrofases já iniciadas
+
+| Macrobloco | Cobertura atual | Situação |
 |---|---|---|
-| v11.0 | baseline documental, inventário e backlog auditável | documentação |
-| v11.1 | correção de drift entre docs, README, changelog, arquitetura e contratos | baixo risco |
-| v11.2 | consistência de shells públicos, navegação, tema e busca | baixo a médio risco |
-| v11.3 | normalização dos 6 módulos equivalentes de feed e filtros | médio risco |
-| v11.4 | hardening de produto, criação, comentários e interações | médio risco |
-| v11.5 | perfil, onboarding, settings e meus posts | médio risco |
-| v11.6 | admin pós-v10: consolidação e redução de fallback | médio risco |
-| v11.7 | adapters e fachada KCAPI: paridade, simplificação e contratos | médio a alto risco |
-| v11.8 | Supabase/RPC/RLS/Edge Functions: revisão operacional e correções | alto risco controlado |
-| v11.9 | testes, QA, changelog, fechamento e validação final da release | release gate |
+| documentação, inventário e governança | `v11.1.0`, `v11.11.1` | consolidado |
+| shell público, busca e navegação | `v11.2.0`, `v11.2.1` | consolidado |
+| feeds equivalentes e filtros | `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0` | amplamente coberto |
+| produto, comentários, ranking, votos e persistência incremental | `v11.9.0`, `v11.10.0`, `v11.11.0` | parcialmente coberto; ainda há residual em criação e superfícies sociais correlatas |
+| adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0` | parcialmente coberto; ainda falta simplificação mais profunda com `supabase.adapter.js` |
 
-### 8.1. Regra de fatiamento
+### 8.2. Sequência remanescente obrigatória da v11
+
+| Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
+|---|---|---|---|
+| `v11.12.0` | fechar o residual de criação de publicação | `kc-create-post.js`, schemas dinâmicos, upload, validações, modais de criação, HTMLs equivalentes | criação endurecida e paritária entre módulos |
+| `v11.13.0` | completar o residual de produto e interações sociais | `_product.html`, `product.controller.js`, `kc-banners.js`, notificações e popovers correlatos | superfícies sociais críticas sem drift interno residual |
+| `v11.14.0` | iniciar a rodada de perfil e `my-posts` | `profile.html`, `my-posts.html`, controllers correlatos, estados vazios e carregamento | estabilidade de perfil público/privado e listagens do usuário |
+| `v11.15.0` | fechar conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
+| `v11.16.0` | iniciar a consolidação do admin pós-v10 | `admin/*.html`, `admin-shell.js`, `admin-shell.css`, listas, modais e busca | simetria de shell e UX admin endurecida |
+| `v11.17.0` | fechar o admin pós-v10 e reduzir fallback excessivo | controllers admin, fluxos de paginação, export, feedback e contratos internos | admin mais previsível e menos dependente de fallback implícito |
+| `v11.18.0` | aprofundar a rodada de contratos entre `KCAPI` e adapters | `kc-api.client.js`, `supabase.adapter.js`, `local.adapter.js`, consumers críticos | paridade real entre contratos remoto/local e redução de drift |
+| `v11.19.0` | revisar Supabase operacional | migrations, RPCs, `search_path`, grants, RLS, docs de banco | camada Supabase auditada e alinhada à base atual |
+| `v11.20.0` | revisar Edge Functions, storage e invariantes de deploy | `supabase/functions/*`, templates, storage, envs, docs operacionais | trilha infra/app coerente entre código, deploy e banco |
+| `v11.21.0` | executar o release gate final da v11 | testes, QA, changelog final, documentação, drift de versão canônica `8.6.0` | fechamento da rodada da v11 com checklist final completo |
+
+### 8.3. Regra de progressão entre fases
+
+- a próxima iteração só começa quando a anterior tiver PR mergeada, branch removida, base puxada e deploy validado
+- cada iteração acima deve atualizar este relatório com o status da fase e redefinir explicitamente a próxima
+- se uma fase descobrir um escopo maior do que o previsto, ela deve ser repartida em `v11.x+0.1` documental ou em uma nova iteração imediatamente subsequente, nunca absorvida silenciosamente
+- a conclusão da v11 só ocorre após `v11.21.0` ou equivalente posterior que substitua formalmente essa fase final dentro deste relatório
+
+### 8.4. Regra de fatiamento
 
 Cada fase acima ainda pode se desdobrar em várias PRs pequenas. Nenhuma PR deve misturar:
 
@@ -758,6 +777,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR funcional `#242`, commit `4179890` na branch `codex/v11-11-0-comments-shadow-cleanup`, merge squash `dc57f87` na base `kinocampus-V11.0-foundations`, preview Vercel `dpl_3bX1CErmfF41cmcDu6Y3siBDxAvH` e deploy manual de produção `dpl_EFKajf1xG3HCH5APKzkp6pLYJFX2`, todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   o cleanup eliminou a sombra estrutural sem mexer no fluxo lazy da página de produto; o principal residual continua sendo o tamanho e a codificação legada de `kc-comments.js`, que ainda justificam novas fatias pequenas de endurecimento em vez de refactor amplo.
+
+---
+
+### Iteração `v11.11.1`
+
+- objetivo:
+  reformular o item `8. Estratégia de execução da v11 em fatias` para transformar as macrofases restantes da v11 em uma sequência contínua, executável e rastreável de novas fases `v11.x`.
+- arquivos alterados:
+  `RELATORIO-KINOCAMPUS-V11.md`, `README.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  o mapa estratégico da v11, o estado consolidado das iterações já executadas, a seção de progresso do `README.md` e a continuidade entre produto, perfil, admin, adapters, Supabase e release gate final.
+- contratos preservados:
+  nenhuma rota pública, migration, RPC, adapter, contrato de `KCAPI`, comportamento de deploy ou fluxo funcional foi alterado; esta iteração foi exclusivamente documental e de governança.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `git diff --check`.
+- validação em navegador:
+  não aplicável, porque não houve mudança funcional publicada nesta iteração.
+- PR / commit / deploy:
+  branch `codex/v11-11-1-roadmap-replan`, com fechamento documental e sem necessidade de deploy funcional novo.
+- riscos residuais:
+  o roadmap reformulado reduz ambiguidade, mas não substitui a disciplina de revalidar escopo real a cada fase. O principal risco segue sendo misturar frentes demais numa mesma PR se a sequência abaixo não for respeitada.
 
 ---
 
