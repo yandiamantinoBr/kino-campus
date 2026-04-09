@@ -61,6 +61,17 @@
     return normalizeNextPath(params.get('next'));
   }
 
+  function buildProfileHref() {
+    return state.user && state.user.id ? `/profile.html?id=${encodeURIComponent(state.user.id)}` : '/profile.html';
+  }
+
+  function buildPreviewPostUrl() {
+    const relativeHref = window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function'
+      ? window.KCUtils.buildProductDetailHref('demo')
+      : `_product.html?id=${encodeURIComponent('demo')}`;
+    return new URL(relativeHref, window.location.origin).toString();
+  }
+
   function readProfileName(profile, user) {
     const direct = String((profile && (profile.display_name || profile.full_name)) || '').trim();
     if (direct) return direct;
@@ -342,40 +353,47 @@
     const preview = $('#accountSetupContactPreview');
     if (!preview) return;
 
-    const countryCode = String($('#accountSetupCountryCode')?.value || '+55').replace(/[^\d+]/g, '');
-    const localNumber = String($('#accountSetupWhatsappNumber')?.value || '').trim();
-    const whatsappE164 = shared.buildWhatsAppE164
-      ? shared.buildWhatsAppE164(countryCode, localNumber)
-      : '';
-    const formatted = shared.formatWhatsAppDisplay ? shared.formatWhatsAppDisplay(whatsappE164) : whatsappE164;
     const primaryMethod = String($('#accountSetupPrimaryMethod')?.value || '').trim();
-    const socialLinks = collectSocialLinks();
-    const primaryValue = String(socialLinks[primaryMethod] || '').trim();
+    const action = shared && typeof shared.buildContactAction === 'function'
+      ? shared.buildContactAction({
+          profile: {
+            contact_primary_method: primaryMethod,
+            contact_cta_enabled: $('#accountSetupCtaEnabled')?.checked !== false,
+            social_links: collectSocialLinks(),
+            social_visibility: collectSocialVisibility(),
+          },
+          viewerAuthenticated: true,
+          postTitle: 'Anúncio de teste',
+          postUrl: buildPreviewPostUrl(),
+          viewProfileHref: buildProfileHref(),
+          defaultCountryCode: String($('#accountSetupCountryCode')?.value || '+55').trim(),
+        })
+      : null;
 
     if (!primaryMethod) {
-      preview.textContent = formatted ? `WhatsApp pronto para contato: ${formatted}` : 'O contato principal aparecerá aqui depois de preenchido.';
+      preview.textContent = 'Escolha o contato principal para definir como seus anúncios vão abrir contato.';
       return;
     }
 
-    const labels = {
-      whatsapp: formatted || '',
-      instagram: primaryValue,
-      linkedin: primaryValue,
-      facebook: primaryValue,
-      email_public: primaryValue
-    };
+    if (!action) {
+      preview.textContent = 'Não foi possível gerar a prévia do contato agora.';
+      return;
+    }
 
-    const labelMap = {
-      whatsapp: 'WhatsApp',
-      instagram: 'Instagram',
-      linkedin: 'LinkedIn',
-      facebook: 'Facebook',
-      email_public: 'E-mail'
-    };
+    const href = String(action.href || '').trim();
+    if (action.type === 'view_profile') {
+      preview.textContent = `Contato público desativado. Seus anúncios vão mostrar “${String(action.label || 'Ver perfil').trim() || 'Ver perfil'}” como alternativa segura.`;
+      return;
+    }
 
-    preview.textContent = labels[primaryMethod]
-      ? `Contato principal pronto: ${labelMap[primaryMethod] || primaryMethod} (${labels[primaryMethod]})`
-      : 'Preencha o valor do contato principal para ativar o contato nos anúncios.';
+    if (!href && action.type !== 'login_required') {
+      preview.textContent = 'Preencha o valor do contato principal para ativar o contato nos anúncios.';
+      return;
+    }
+
+    preview.textContent = `Contato principal pronto: ${String(action.label || 'Contato pronto').trim() || 'Contato pronto'}. Seus anúncios vão abrir o canal configurado quando alguém clicar em contato.`;
+    return;
+
   }
 
   function setSubmitting(active) {
@@ -691,6 +709,7 @@
     ['#accountSetupCountryCode', '#accountSetupWhatsappNumber'].forEach((selector) => {
       const field = $(selector);
       if (field) field.addEventListener('input', updateContactPreview);
+      if (field) field.addEventListener('change', updateContactPreview);
     });
 
     ['#accountSetupPrimaryMethod', '#accountSetupInstagram', '#accountSetupLinkedin', '#accountSetupFacebook', '#accountSetupEmailPublic'].forEach((selector) => {
@@ -698,6 +717,9 @@
       if (field) field.addEventListener('input', updateContactPreview);
       if (field) field.addEventListener('change', updateContactPreview);
     });
+
+    const ctaEnabled = $('#accountSetupCtaEnabled');
+    if (ctaEnabled) ctaEnabled.addEventListener('change', updateContactPreview);
 
     const backButton = $('#accountSetupBackButton');
     if (backButton) backButton.addEventListener('click', function () {

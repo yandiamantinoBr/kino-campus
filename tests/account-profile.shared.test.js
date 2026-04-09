@@ -68,6 +68,31 @@ describe('KCAccountProfileUtils', () => {
     });
   });
 
+  test('buildContactAction cai para ver perfil quando o contato publico esta desativado', () => {
+    const action = AccountProfile.buildContactAction({
+      profile: {
+        contact_primary_method: 'whatsapp',
+        contact_cta_enabled: false,
+        social_links: {
+          whatsapp: '+5562998765432'
+        },
+        social_visibility: {
+          whatsapp: true
+        }
+      },
+      viewerAuthenticated: true,
+      postTitle: 'Mesa para estudo',
+      postUrl: 'https://kinocampus.app/_product.html?id=123',
+      viewProfileHref: '/profile.html?id=abc'
+    });
+
+    expect(action).toMatchObject({
+      type: 'view_profile',
+      label: 'Ver perfil',
+      href: '/profile.html?id=abc'
+    });
+  });
+
   test('buildOnboardingProfilePatch normaliza campos e marca onboarding como completo', () => {
     const patch = AccountProfile.buildOnboardingProfilePatch({
       display_name: '  Kino Campus  ',
