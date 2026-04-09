@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.9.0 | hidratação persistente e revalidação silenciosa para `Top Contribuidores` e `kc-vote-score`, reaproveitando `KCSessionStore` para evitar spinner/reprocessamento desnecessário em reload e troca de período | `#pending` |
+| v11.9.0 | hidratação persistente e revalidação silenciosa para `Top Contribuidores` e `kc-vote-score`, reaproveitando `KCSessionStore` para evitar spinner/reprocessamento desnecessário em reload e troca de período | `#238` |
 | v11.8.0 | remoção do bloco redundante de normalização em `localCreatePost`, centralizando a persistência local em `prepareLocalPostForPersistence` e adicionando regressão direta para criação local em `compra-venda` | `#237` |
 | v11.7.0 | paridade endurecida entre `local.adapter.js`, `kc-api.client.js` e o contrato moderno do driver local, cobrindo perfil, posts do usuário, salvos, highlights, notificações e convites sem alterar Supabase ou banco | `#236` |
 | v11.6.0 | hardening de iOS Safari: `pull-to-refresh` deixa de sequestrar gestos horizontais no topo, superfícies horizontais preservam `pinch-zoom` e o auth/modal deixa de induzir auto-zoom/travamento por `touch-action` e `font-size` inadequados | `#235` |
@@ -66,7 +66,7 @@ Regras desta fase:
 - iteração ativa consolidada: `v11.9.0`
 - objetivo da iteração: aplicar snapshot de sessão e `stale-while-revalidate` em `Top Contribuidores` e `kc-vote-score`, reduzindo spinner, rerender integral e fetch redundante em reload/troca de período sem alterar contratos de API ou banco
 - natureza da iteração: frontend compartilhado, hidratação client-side e regressão direcionada, sem mudança de banco
-- status operacional do deploy em `09 de abril de 2026`: a branch `codex/v11-9-0-ranking-vote-session-hydration` está em fechamento documental local. As checagens já concluídas confirmaram `assets/js/kc-ranking.js`, `assets/js/controllers/index.controller.js` e `assets/js/components/voting.js` sintaticamente válidos, além das suites `tests/kc-ranking.test.js`, `tests/kc-ranking-session.test.js`, `tests/voting.test.js` e `tests/voting-session-hydration.test.js` verdes. O próximo passo operacional desta mesma iteração é publicar a PR, validar preview no Vercel e então promover o deploy final.
+- status operacional do deploy em `09 de abril de 2026`: a branch `codex/v11-9-0-ranking-vote-session-hydration` foi publicada na PR `#238` e teve preview Vercel validado no deployment `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x`. As checagens locais confirmaram `assets/js/kc-ranking.js`, `assets/js/controllers/index.controller.js` e `assets/js/components/voting.js` sintaticamente válidos, além das suites `tests/kc-ranking.test.js`, `tests/kc-ranking-session.test.js`, `tests/voting.test.js` e `tests/voting-session-hydration.test.js` verdes. No preview, `index.html` publicou o novo `kc-ranking.js` na home, e os assets protegidos `assets/js/kc-ranking.js` e `assets/js/components/voting.js` refletiram a hidratação persistente e a revalidação silenciosa esperadas.
 
 ---
 

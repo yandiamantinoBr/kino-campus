@@ -705,9 +705,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - testes executados:
   `node --check assets/js/kc-ranking.js`, `node --check assets/js/controllers/index.controller.js`, `node --check assets/js/components/voting.js`, `npx jest tests/kc-ranking.test.js tests/kc-ranking-session.test.js --runInBand`, `npx jest tests/voting.test.js tests/voting-session-hydration.test.js --runInBand` e `git diff --check`.
 - validação em navegador:
-  pendente na abertura desta seção; a iteração já ficou pronta para publicar preview no Vercel e validar o bundle novo da home e dos módulos antes do merge.
+  o preview da PR `#238` foi validado via Vercel MCP no deployment `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x`. `index.html` publicado já passou a carregar `assets/js/kc-ranking.js` na home, e a leitura remota dos assets protegidos `assets/js/kc-ranking.js` e `assets/js/components/voting.js` por URL de compartilhamento confirmou a presença do snapshot de sessão, da deduplicação de request para ranking e da hidratação persistente de score/direção de voto antes da revalidação silenciosa.
 - PR / commit / deploy:
-  em andamento na branch `codex/v11-9-0-ranking-vote-session-hydration` no momento desta atualização documental local. PR, preview Vercel e deploy final ainda serão preenchidos no fechamento da iteração.
+  PR `#238`, commit funcional `3e3dc20` na branch `codex/v11-9-0-ranking-vote-session-hydration` e preview Vercel `dpl_9ieVb3x48cSSdeHADyiFGYkzKk5x`, todos confirmados em `09 de abril de 2026`. O deploy de produção seguirá após o merge da própria PR.
 - riscos residuais:
   o snapshot de sessão reduz spinner e trabalho repetido, mas esta iteração ainda não expande o mesmo padrão para outras superfícies contadoras da plataforma. Qualquer extensão futura para comentários, analytics ou painéis laterais deve ser fatiada separadamente para evitar misturar caching de naturezas diferentes.
 
