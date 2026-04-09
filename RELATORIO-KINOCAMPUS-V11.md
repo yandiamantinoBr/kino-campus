@@ -436,15 +436,17 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 | feeds equivalentes e filtros | `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0` | amplamente coberto |
 | produto, comentários, ranking, votos e persistência incremental | `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.13.0`, `v11.13.1` | parcialmente coberto; o residual imediato de notificações e popovers foi fechado, restando apenas novas subfatias se surgir bug concreto |
 | perfil e listagens do usuário | `v11.14.0` | iniciado com normalização de rotas humanas de detalhe entre perfil e `my-posts` |
+| conta, onboarding e settings | `v11.15.0` | iniciado com alinhamento do preview de contato em `settings` ao helper canônico de detalhe |
 | adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0` | parcialmente coberto; ainda falta simplificação mais profunda com `supabase.adapter.js` |
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A próxima sequência obrigatória passa a ser `v11.15.0`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi iniciada com o alinhamento do preview de contato em `settings` ao mesmo helper canônico de detalhe. A próxima sequência obrigatória passa a ser `v11.15.1`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
-| `v11.15.0` | fechar conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
+| `v11.15.0` | iniciar o fechamento de conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | preview de contato e rota canônica inicial alinhados ao contrato atual |
+| `v11.15.1` | continuar a rodada de conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
 | `v11.16.0` | iniciar a consolidação do admin pós-v10 | `admin/*.html`, `admin-shell.js`, `admin-shell.css`, listas, modais e busca | simetria de shell e UX admin endurecida |
 | `v11.17.0` | fechar o admin pós-v10 e reduzir fallback excessivo | controllers admin, fluxos de paginação, export, feedback e contratos internos | admin mais previsível e menos dependente de fallback implícito |
 | `v11.18.0` | aprofundar a rodada de contratos entre `KCAPI` e adapters | `kc-api.client.js`, `supabase.adapter.js`, `local.adapter.js`, consumers críticos | paridade real entre contratos remoto/local e redução de drift |

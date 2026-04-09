@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1` e `v11.14.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0` e `v11.15.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.15.0 | primeira fatia de `settings`/conta: preview de contato passa a gerar o link de anúncio de demonstração pela rota canônica `_product.html`, reaproveitando `KCUtils.buildProductDetailHref(...)` e travando a regressão em teste estático e shared | `#pending` |
 | v11.14.0 | normalização da rota canônica do detalhe nas superfícies de perfil e `my-posts`, com helper compartilhado em `KCUtils` e remoção do drift `product.html?id=` nessas páginas | `#251` |
 | v11.13.1 | hardening dos popovers de ação da página de produto, com fallback compartilhado para copiar link, tracking também no compartilhamento por cópia e centralização do fechamento por `Escape` entre compartilhar, salvar e calendário | `#249` |
 | v11.13.0 | hardening do dropdown de notificações para manter `Marcar todas como lidas` e o clique dos itens funcionais mesmo após rerenders por realtime/mark-read | `#247` |
@@ -70,10 +71,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.14.0`
-- objetivo da iteração: alinhar `profile` e `my-posts` à rota canônica `_product.html`, removendo o drift residual de `product.html?id=` nessas superfícies
-- natureza da iteração: hardening funcional de perfil/listagens do usuário, com helper compartilhado em `KCUtils` e regressão estática sobre links de detalhe
-- próxima iteração sugerida: `v11.15.0`, focada em `settings`, `account-setup` e shareds de conta/perfil
+- iteração ativa consolidada: `v11.15.0`
+- objetivo da iteração: alinhar o preview de contato em `settings` ao helper canônico `_product.html`, removendo o drift residual de `product.html?id=demo` no bloco de conta/perfil
+- natureza da iteração: hardening funcional pequeno e seguro em `settings.controller.js`, com regressão estática dedicada e sincronização do teste shared de `buildContactAction`
+- próxima iteração sugerida: `v11.15.1`, para continuar `settings`, `account-setup` e shareds de conta/perfil sem abrir refactor amplo
 
 ---
 

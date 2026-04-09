@@ -47,7 +47,7 @@ describe('KCAccountProfileUtils', () => {
         }
       },
       postTitle: 'Mesa para estudo',
-      postUrl: 'https://kinocampus.app/product.html?id=123',
+      postUrl: 'https://kinocampus.app/_product.html?id=123',
       viewProfileHref: 'profile.html?id=abc'
     };
 
