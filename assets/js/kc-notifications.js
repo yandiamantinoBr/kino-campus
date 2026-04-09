@@ -8,6 +8,7 @@
   var _dropdownOpen = false;
   var _loading = false;
   var _initialized = false;
+  var _markVisibleTimer = null;
 
   // ── Helpers ──────────────────────────────────────────────────
 
@@ -71,12 +72,65 @@
   // ── Dropdown ─────────────────────────────────────────────────
 
   function ensureDropdown() {
-    if ($('#kcNotifDropdown')) return;
+    var existing = $('#kcNotifDropdown');
+    if (existing) return existing;
     var el = document.createElement('div');
     el.id = 'kcNotifDropdown';
     el.className = 'kc-notif-dropdown';
     el.setAttribute('aria-hidden', 'true');
+    el.addEventListener('click', function (e) {
+      var markAllBtn = e.target && e.target.closest ? e.target.closest('#kcNotifMarkAll') : null;
+      if (markAllBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        markAllRead();
+        return;
+      }
+
+      var notifItem = e.target && e.target.closest ? e.target.closest('.kc-notif-item[data-notif-id]') : null;
+      if (!notifItem) return;
+
+      var notifId = notifItem.getAttribute('data-notif-id');
+      if (!notifId) return;
+
+      if (!notifItem.classList.contains('kc-notif-item--read')) {
+        markRead([notifId]);
+      }
+      closeDropdown();
+    });
     document.body.appendChild(el);
+    return el;
+  }
+
+  function clearMarkVisibleTimer() {
+    if (_markVisibleTimer) {
+      clearTimeout(_markVisibleTimer);
+      _markVisibleTimer = null;
+    }
+  }
+
+  function scheduleVisibleMarkRead() {
+    clearMarkVisibleTimer();
+    if (!_dropdownOpen) return;
+
+    var unreadIds = [];
+    for (var i = 0; i < _notifications.length; i++) {
+      if (!_notifications[i].read) unreadIds.push(_notifications[i].id);
+    }
+    if (unreadIds.length === 0) return;
+
+    _markVisibleTimer = setTimeout(function () {
+      _markVisibleTimer = null;
+      if (_dropdownOpen) markRead(unreadIds);
+    }, 2000);
+  }
+
+  function renderDropdown() {
+    var dropdown = ensureDropdown();
+    if (!dropdown) return null;
+    dropdown.innerHTML = buildDropdownHTML();
+    if (_dropdownOpen) scheduleVisibleMarkRead();
+    return dropdown;
   }
 
   function buildDropdownHTML() {
@@ -123,12 +177,9 @@
   }
 
   function openDropdown() {
-    ensureDropdown();
-    var dropdown = $('#kcNotifDropdown');
+    var dropdown = renderDropdown();
     var bell = $('#kcNotifBell');
     if (!dropdown || !bell) return;
-
-    dropdown.innerHTML = buildDropdownHTML();
 
     // Position below bell
     var rect = bell.getBoundingClientRect();
@@ -141,31 +192,12 @@
     dropdown.classList.add('active');
     dropdown.setAttribute('aria-hidden', 'false');
     _dropdownOpen = true;
-
-    // Bind "Marcar todas como lidas"
-    var markAllBtn = $('#kcNotifMarkAll');
-    if (markAllBtn) {
-      markAllBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        markAllRead();
-      });
-    }
-
-    // Mark visible unread as read after 2s
-    var unreadIds = [];
-    for (var i = 0; i < _notifications.length; i++) {
-      if (!_notifications[i].read) unreadIds.push(_notifications[i].id);
-    }
-    if (unreadIds.length > 0) {
-      setTimeout(function () {
-        if (_dropdownOpen) markRead(unreadIds);
-      }, 2000);
-    }
+    scheduleVisibleMarkRead();
   }
 
   function closeDropdown() {
     var dropdown = $('#kcNotifDropdown');
+    clearMarkVisibleTimer();
     if (dropdown) {
       dropdown.classList.remove('active');
       dropdown.setAttribute('aria-hidden', 'true');
@@ -214,10 +246,7 @@
         }
       }
       fetchUnreadCount();
-      if (_dropdownOpen) {
-        var dropdown = $('#kcNotifDropdown');
-        if (dropdown) dropdown.innerHTML = buildDropdownHTML();
-      }
+      if (_dropdownOpen) renderDropdown();
     });
   }
 
@@ -227,10 +256,7 @@
         _notifications[i].read = true;
       }
       updateBadge(0);
-      if (_dropdownOpen) {
-        var dropdown = $('#kcNotifDropdown');
-        if (dropdown) dropdown.innerHTML = buildDropdownHTML();
-      }
+      if (_dropdownOpen) renderDropdown();
     });
   }
 
@@ -240,10 +266,7 @@
     _notifications.unshift(notif);
     if (_notifications.length > 20) _notifications.pop();
     updateBadge(_unreadCount + 1);
-    if (_dropdownOpen) {
-      var dropdown = $('#kcNotifDropdown');
-      if (dropdown) dropdown.innerHTML = buildDropdownHTML();
-    }
+    if (_dropdownOpen) renderDropdown();
   }
 
   // ── Init ─────────────────────────────────────────────────────

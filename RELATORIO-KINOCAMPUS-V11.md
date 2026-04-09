@@ -439,11 +439,11 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A sequência remanescente passa a começar em `v11.13.0`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A fase `v11.13.0` foi iniciada pelo endurecimento do dropdown de notificações; o residual remanescente dessa macrofase continua em `v11.13.1`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
-| `v11.13.0` | completar o residual de produto e interações sociais | `_product.html`, `product.controller.js`, `kc-banners.js`, notificações e popovers correlatos | superfícies sociais críticas sem drift interno residual |
+| `v11.13.1` | fechar o residual remanescente de produto e interações sociais | `_product.html`, `product.controller.js`, `kc-banners.js`, popovers e interações correlatas além do dropdown de notificações | superfícies sociais críticas sem drift interno residual |
 | `v11.14.0` | iniciar a rodada de perfil e `my-posts` | `profile.html`, `my-posts.html`, controllers correlatos, estados vazios e carregamento | estabilidade de perfil público/privado e listagens do usuário |
 | `v11.15.0` | fechar conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
 | `v11.16.0` | iniciar a consolidação do admin pós-v10 | `admin/*.html`, `admin-shell.js`, `admin-shell.css`, listas, modais e busca | simetria de shell e UX admin endurecida |
@@ -824,6 +824,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#245`, commit funcional `9bf6d9a` na branch `codex/v11-12-0-create-post-hardening`, merge squash `d5ae225` na base `kinocampus-V11.0-foundations`, preview `dpl_DQPXZSXnr32LP4uGfjpq8Ua5b813` e deploy manual de produção `dpl_9chTNjui8ZaVkFsb6gGTogVXZPDg`, publicado em `https://kino-campus-l3admzizz-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a blindagem foi feita no payload final, não no estado interno do modal. Isso preserva o rascunho ao alternar seleções, mas ainda deixa `kc-create-post.js` como hotspot monolítico que deve continuar sendo tratado em fatias pequenas.
+
+---
+
+### Iteração `v11.13.0`
+
+- objetivo:
+  endurecer o dropdown de notificações para que o componente continue funcional após rerenders internos por realtime, marcação de leitura e atualização do contador.
+- arquivos alterados:
+  `assets/js/kc-notifications.js`, `tests/kc-notifications-dropdown.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  dropdown do sino de notificações no shell público, atualização do badge, chegada realtime, marcação individual, marcação em lote e o trecho do roteiro `8.2` referente à macrofase de produto/interações sociais.
+- contratos preservados:
+  nenhuma rota pública, migration, RPC, adapter, contrato de `KCAPI`, payload de notificação ou integração Supabase foi alterado; a iteração ficou restrita ao comportamento do componente frontend compartilhado.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-notifications.js`, `npx jest tests/kc-notifications-dropdown.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  pendente de fechamento no ciclo desta iteração, após PR, preview e deploy publicados.
+- PR / commit / deploy:
+  em andamento nesta iteração no branch funcional de `v11.13.0`; os metadados finais devem ser preenchidos ao fechar o ciclo.
+- riscos residuais:
+  a macrofase de produto/interações sociais não foi exaurida nesta fatia. O residual de banners, popovers e endurecimento adicional em `_product.html`/`product.controller.js` segue aberto e foi movido explicitamente para `v11.13.1`.
 
 ---
 
