@@ -963,6 +963,12 @@
   const cfg = { ...DEFAULTS };
   const SESSION_STORE_VERSION = '9.0.0';
   const SESSION_STORE_PREFIX = `kc:${SESSION_STORE_VERSION}`;
+  const PRODUCT_ANALYTICS_CACHE_MAX_AGE_MS = 20000;
+  const PRODUCT_ANALYTICS_STALE_MAX_AGE_MS = 5 * 60 * 1000;
+  const PRODUCT_COMMENTS_CACHE_MAX_AGE_MS = 15000;
+  const PRODUCT_COMMENTS_STALE_MAX_AGE_MS = 2 * 60 * 1000;
+  const _pendingProductAnalyticsRequests = new Map();
+  const _pendingProductCommentsRequests = new Map();
 
   // Boot inicial (lê KC_ENV e aplica debug)
   (function bootstrapConfig() {
@@ -1066,6 +1072,98 @@
     remove: removeSessionCache,
     clearPrefix: clearSessionCachePrefix,
   });
+
+  function withPendingSessionRequest(bucket, key, factory) {
+    if (bucket.has(key)) return bucket.get(key);
+    const pending = Promise.resolve()
+      .then(factory)
+      .finally(() => {
+        bucket.delete(key);
+      });
+    bucket.set(key, pending);
+    return pending;
+  }
+
+  function getCachedSessionPayload(scope, key, maxAgeMs, staleMaxAgeMs, options = {}) {
+    const cached = getSessionCache(scope, key);
+    if (!cached || !cached.value || typeof cached.value !== 'object') return null;
+
+    const age = Number(cached.age) || 0;
+    const hardLimit = Number(staleMaxAgeMs) || 0;
+    if (hardLimit > 0 && age > hardLimit) {
+      removeSessionCache(scope, key);
+      return null;
+    }
+
+    const freshLimit = Number(maxAgeMs) || 0;
+    const allowStale = !!(options && options.allowStale);
+    const isFresh = freshLimit <= 0 ? true : age <= freshLimit;
+    if (!allowStale && !isFresh) return null;
+
+    return {
+      data: cached.value.data,
+      signature: String(cached.value.signature || ''),
+      timestamp: Number(cached.timestamp) || 0,
+      age,
+      isFresh,
+    };
+  }
+
+  function persistSessionPayload(scope, key, data, signature) {
+    setSessionCache(scope, key, {
+      data: data == null ? null : data,
+      signature: String(signature || ''),
+    });
+  }
+
+  function getCommentsCacheIdentity() {
+    if (ENV.driver !== 'supabase') return `driver:${ENV.driver}`;
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') {
+        const user = window.KCSupabase.getUser();
+        if (user && user.id) return `user:${String(user.id).trim()}`;
+      }
+    } catch (_) { }
+    return 'user:anon';
+  }
+
+  function getPostAnalyticsCacheKey(postId) {
+    return `post-analytics:${ENV.driver}:${String(postId || '').trim()}`;
+  }
+
+  function getCommentsCacheKey(postId) {
+    return `comments:${getCommentsCacheIdentity()}:${String(postId || '').trim()}`;
+  }
+
+  function buildPostAnalyticsSignature(result) {
+    const source = (result && typeof result === 'object') ? result : {};
+    return [
+      Number(source.views) || 0,
+      Number(source.votos) || 0,
+      Number(source.comments) || 0,
+      Number(source.shares) || 0,
+      Number(source.saves) || 0,
+      Number(source.coupon_clicks) || 0,
+    ].join('|');
+  }
+
+  function normalizeCommentsPayload(comments) {
+    return Array.isArray(comments)
+      ? comments.filter(Boolean).map((comment) => ((comment && typeof comment === 'object') ? { ...comment } : comment))
+      : [];
+  }
+
+  function buildCommentsSignature(comments) {
+    return normalizeCommentsPayload(comments).map((comment) => [
+      String(comment && (comment.id || '')).trim(),
+      String(comment && (comment.parent_id || comment.parentId || '')).trim(),
+      String(comment && (comment.created_at || '')).trim(),
+      String(comment && (comment.updated_at || '')).trim(),
+      Number(comment && comment.likes) || 0,
+      comment && (comment.liked_by_me || comment.likedByMe) ? 1 : 0,
+      String(comment && (comment.body || comment.text || '')).trim(),
+    ].join('~')).join('|');
+  }
 
   /**
    * MOCK_USERS (extraído do database.json da V6.1.0)
@@ -1760,13 +1858,17 @@
   async function trackCouponClick(postId) {
     const driver = getActiveDriver();
     if (!driver || typeof driver.trackCouponClick !== 'function') return { ok: false };
-    return driver.trackCouponClick(postId);
+    const result = await driver.trackCouponClick(postId);
+    if (result && result.ok) invalidatePostAnalyticsCache(postId);
+    return result;
   }
 
   async function trackShare(postId) {
     const driver = getActiveDriver();
     if (!driver || typeof driver.trackShare !== 'function') return { ok: false };
-    return driver.trackShare(postId);
+    const result = await driver.trackShare(postId);
+    if (result && result.ok) invalidatePostAnalyticsCache(postId);
+    return result;
   }
 
   async function checkDuplicatePost(userId, module, title) {
@@ -1779,13 +1881,52 @@
   async function trackView(postId) {
     const driver = getActiveDriver();
     if (!driver || typeof driver.trackView !== 'function') return { ok: false };
-    return driver.trackView(postId);
+    const result = await driver.trackView(postId);
+    if (result && result.ok) invalidatePostAnalyticsCache(postId);
+    return result;
   }
 
-  async function getPostAnalytics(postId) {
+  function getCachedPostAnalytics(postId, options = {}) {
+    const id = String(postId || '').trim();
+    if (!id) return null;
+    return getCachedSessionPayload('product', getPostAnalyticsCacheKey(id), PRODUCT_ANALYTICS_CACHE_MAX_AGE_MS, PRODUCT_ANALYTICS_STALE_MAX_AGE_MS, options);
+  }
+
+  function invalidatePostAnalyticsCache(postId) {
+    const id = String(postId || '').trim();
+    if (!id) return false;
+    return removeSessionCache('product', getPostAnalyticsCacheKey(id));
+  }
+
+  async function refreshPostAnalytics(postId, options = {}) {
     const driver = getActiveDriver();
     if (!driver || typeof driver.getPostAnalytics !== 'function') return { ok: false };
-    return driver.getPostAnalytics(postId);
+    const id = String(postId || '').trim();
+    if (!id) return { ok: false };
+
+    if (options.force !== true) {
+      const cached = getCachedPostAnalytics(id);
+      if (cached) return cached.data;
+    }
+
+    const requestKey = getPostAnalyticsCacheKey(id);
+    return withPendingSessionRequest(_pendingProductAnalyticsRequests, requestKey, async () => {
+      const result = await driver.getPostAnalytics(id);
+      if (result && result.ok) {
+        persistSessionPayload('product', requestKey, result, buildPostAnalyticsSignature(result));
+      } else if (options.keepStaleOnError !== true) {
+        removeSessionCache('product', requestKey);
+      }
+      return result;
+    });
+  }
+
+  async function getPostAnalytics(postId, options = {}) {
+    if (options.force !== true) {
+      const cached = getCachedPostAnalytics(postId);
+      if (cached) return cached.data;
+    }
+    return refreshPostAnalytics(postId, options);
   }
 
 
@@ -1897,21 +2038,69 @@
   // Comments facade (V8.1.7.2)
   // Em driver=supabase: usa tabela public.comments.
   // Em driver=local: retorna null; kc-core.js usa localStorage diretamente.
-  async function getComments(postId) {
+  function getCachedComments(postId, options = {}) {
+    const id = String(postId || '').trim();
+    if (!id) return null;
+    return getCachedSessionPayload('product', getCommentsCacheKey(id), PRODUCT_COMMENTS_CACHE_MAX_AGE_MS, PRODUCT_COMMENTS_STALE_MAX_AGE_MS, options);
+  }
+
+  function invalidateCommentsCache(postId) {
+    const id = String(postId || '').trim();
+    if (id) {
+      return removeSessionCache('product', getCommentsCacheKey(id));
+    }
+    return clearSessionCachePrefix('product', `comments:${getCommentsCacheIdentity()}:`) > 0;
+  }
+
+  async function refreshComments(postId, options = {}) {
     if (ENV.driver !== 'supabase' || !getActiveDriver().getComments) return null;
-    return getActiveDriver().getComments(postId);
+    const id = String(postId || '').trim();
+    if (!id) return [];
+
+    if (options.force !== true) {
+      const cached = getCachedComments(id);
+      if (cached) return cached.data;
+    }
+
+    const requestKey = getCommentsCacheKey(id);
+    return withPendingSessionRequest(_pendingProductCommentsRequests, requestKey, async () => {
+      const comments = await getActiveDriver().getComments(id);
+      const normalized = normalizeCommentsPayload(comments);
+      persistSessionPayload('product', requestKey, normalized, buildCommentsSignature(normalized));
+      return normalized;
+    });
+  }
+
+  async function getComments(postId, options = {}) {
+    if (ENV.driver !== 'supabase' || !getActiveDriver().getComments) return null;
+    if (options.force !== true) {
+      const cached = getCachedComments(postId);
+      if (cached) return cached.data;
+    }
+    return refreshComments(postId, options);
   }
 
   async function addComment(postId, body, options = {}) {
     const policyError = enforceSupabaseOnProduction('addComment');
     if (policyError) return policyError;
     if (ENV.driver !== 'supabase' || !getActiveDriver().addComment) return null;
-    return getActiveDriver().addComment(postId, body, options);
+    const result = await getActiveDriver().addComment(postId, body, options);
+    if (result && result.ok) {
+      invalidateCommentsCache(postId);
+      invalidatePostAnalyticsCache(postId);
+    }
+    return result;
   }
 
-  async function likeComment(commentId) {
+  async function likeComment(commentId, options = {}) {
     if (ENV.driver !== 'supabase' || !getActiveDriver().likeComment) return null;
-    return getActiveDriver().likeComment(commentId);
+    const result = await getActiveDriver().likeComment(commentId);
+    if (result && result.ok) {
+      const postId = options && typeof options === 'object' ? (options.postId || options.post_id || '') : '';
+      if (postId) invalidateCommentsCache(postId);
+      else invalidateCommentsCache();
+    }
+    return result;
   }
 
   // Votes facade (V8.1.7.3)
@@ -1919,7 +2108,9 @@
     const policyError = enforceSupabaseOnProduction('votePost');
     if (policyError) return policyError;
     if (ENV.driver !== 'supabase' || !getActiveDriver().votePost) return null;
-    return getActiveDriver().votePost(postId, direction, options);
+    const result = await getActiveDriver().votePost(postId, direction, options);
+    if (result && result.ok) invalidatePostAnalyticsCache(postId);
+    return result;
   }
 
   async function getMyVote(postId) {
@@ -1985,7 +2176,9 @@
     if (ENV.driver !== 'supabase' || !getActiveDriver().setSavedPostState) {
       return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
     }
-    return driver.setSavedPostState(postId, kind, enabled);
+    const result = await driver.setSavedPostState(postId, kind, enabled);
+    if (result && result.ok) invalidatePostAnalyticsCache(postId);
+    return result;
   }
 
   async function clearSavedPostState(postId, kind) {
@@ -1996,7 +2189,9 @@
     if (ENV.driver !== 'supabase' || !getActiveDriver().clearSavedPostState) {
       return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
     }
-    return driver.clearSavedPostState(postId, kind);
+    const result = await driver.clearSavedPostState(postId, kind);
+    if (result && result.ok) invalidatePostAnalyticsCache(postId);
+    return result;
   }
 
   async function getMySavedPosts(params = {}) {
@@ -2149,10 +2344,16 @@
     trackCouponClick,
     trackShare,
     trackView,
+    getCachedPostAnalytics,
+    refreshPostAnalytics,
+    invalidatePostAnalyticsCache,
     getPostAnalytics,
     checkDuplicatePost,
 
     // Comments (Supabase) — V8.1.7.2
+    getCachedComments,
+    refreshComments,
+    invalidateCommentsCache,
     getComments,
     addComment,
     likeComment,

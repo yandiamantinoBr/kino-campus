@@ -356,7 +356,7 @@ async function likeComment(postId, commentId, containerId = 'commentsContainer')
 
   // Driver Supabase: persiste via KCAPI (async, re-render ao resolver)
   if (isSupabaseRuntime()) {
-    KCAPI.likeComment(commentId).then(function (res) {
+    KCAPI.likeComment(commentId, { postId: id }).then(function (res) {
       renderComments(id, containerId);
       if (res && res.ok && res.alreadyLiked) {
         showToast('Você já curtiu este comentário.', 'info', 1800);
@@ -690,6 +690,7 @@ async function editComment(pid, cid, newText, ctr) {
       const { error } = await kcClient.from('comments').update({ body: newText }).eq('id', cid).eq('author_id', user.id);
       if (error) { showToast(error.message || 'Erro ao editar comentário.', 'error'); return; }
       showToast('Comentário editado!', 'info', 1800);
+      if (KCAPI && typeof KCAPI.invalidateCommentsCache === 'function') KCAPI.invalidateCommentsCache(id);
       renderComments(id, ctr);
     } catch (_) { showToast('Erro ao editar comentário.', 'error'); }
     return;
@@ -769,6 +770,8 @@ async function deleteComment(pid, cid, ctr) {
       if (!isAdm && user) query = query.eq('author_id', user.id);
       const { error } = await query;
       if (error) { showToast(error.message || 'Erro ao excluir comentario.', 'error'); return; }
+      if (KCAPI && typeof KCAPI.invalidateCommentsCache === 'function') KCAPI.invalidateCommentsCache(id);
+      if (KCAPI && typeof KCAPI.invalidatePostAnalyticsCache === 'function') KCAPI.invalidatePostAnalyticsCache(id);
       if (String(_kcActiveReplyState.parentId || '') === String(cid || '')) clearActiveReplyState();
       showToast('Comentario excluido.', 'info', 1800);
       renderComments(id, ctr);
@@ -881,21 +884,70 @@ function renderComments(postId, containerId = 'commentsContainer') {
 
   // Driver Supabase: carrega async, depois renderiza
   if (isSupabaseRuntime()) {
-    Promise.all([
-      KCAPI.getComments(id),
+    var cached = (KCAPI && typeof KCAPI.getCachedComments === 'function')
+      ? KCAPI.getCachedComments(id, { allowStale: true })
+      : null;
+    var renderedSignature = '';
+    var hasRendered = false;
+
+    var identityPromise = Promise.all([
       (KCAPI && typeof KCAPI.getCurrentUser === 'function') ? KCAPI.getCurrentUser() : Promise.resolve(null),
       (KCAPI && typeof KCAPI.getMyProfile === 'function') ? KCAPI.getMyProfile().catch(function () { return null; }) : Promise.resolve(null),
-    ]).then(function (results) {
-      const comments = Array.isArray(results[0]) ? results[0] : [];
-      const user = results[1] || null;
-      const profile = results[2] || null;
-      const canLike = !!(user && user.id);
-      const currentUserId = user && user.id ? String(user.id) : null;
-      const isAdmin = !!(profile && profile.is_admin);
-      const enriched = comments.map(function (comment) { return { ...comment, _kcCanLike: canLike }; });
+    ]);
+
+    function renderResolvedComments(comments, user, profile) {
+      const list = Array.isArray(comments) ? comments : [];
+      const currentUser = user || null;
+      const currentProfile = profile || null;
+      const canLike = !!(currentUser && currentUser.id);
+      const currentUserId = currentUser && currentUser.id ? String(currentUser.id) : null;
+      const isAdmin = !!(currentProfile && currentProfile.is_admin);
+      const enriched = list.map(function (comment) { return { ...comment, _kcCanLike: canLike }; });
       _renderCommentList(id, containerId, enriched, currentUserId, isAdmin);
+      renderedSignature = list.map(function (comment) {
+        return [
+          String(comment && (comment.id || '')).trim(),
+          String(comment && (comment.parent_id || comment.parentId || '')).trim(),
+          String(comment && (comment.updated_at || comment.created_at || '')).trim(),
+          Number(comment && comment.likes) || 0,
+          comment && (comment.liked_by_me || comment.likedByMe) ? 1 : 0,
+          String(comment && (comment.body || comment.text || '')).trim(),
+        ].join('~');
+      }).join('|');
+      hasRendered = true;
+    }
+
+    if (cached && Array.isArray(cached.data)) {
+      identityPromise.then(function (results) {
+        renderResolvedComments(cached.data, results[0], results[1]);
+      }).catch(function () {
+        renderResolvedComments(cached.data, null, null);
+      });
+    }
+
+    var commentsRequest = (KCAPI && typeof KCAPI.refreshComments === 'function')
+      ? KCAPI.refreshComments(id, { force: true })
+      : KCAPI.getComments(id);
+
+    Promise.all([commentsRequest, identityPromise]).then(function (results) {
+      const comments = Array.isArray(results[0]) ? results[0] : [];
+      const user = results[1][0] || null;
+      const profile = results[1][1] || null;
+      const nextSignature = comments.map(function (comment) {
+        return [
+          String(comment && (comment.id || '')).trim(),
+          String(comment && (comment.parent_id || comment.parentId || '')).trim(),
+          String(comment && (comment.updated_at || comment.created_at || '')).trim(),
+          Number(comment && comment.likes) || 0,
+          comment && (comment.liked_by_me || comment.likedByMe) ? 1 : 0,
+          String(comment && (comment.body || comment.text || '')).trim(),
+        ].join('~');
+      }).join('|');
+      if (!hasRendered || nextSignature !== renderedSignature) {
+        renderResolvedComments(comments, user, profile);
+      }
     }).catch(function () {
-      _renderCommentList(id, containerId, [], null, false);
+      if (!hasRendered) _renderCommentList(id, containerId, [], null, false);
     }).finally(function () {
       updateCommentPreview(id);
     });
