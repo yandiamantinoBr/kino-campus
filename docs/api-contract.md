@@ -688,6 +688,11 @@ Marca todas as notificações do usuário como lidas.
 
 **Retorno:** `Promise<{ ok: boolean, error?: string }>`
 
+### `KCAPI.clearNotifications()`
+Limpa as notificações do usuário autenticado no feed in-app.
+
+**Retorno:** `Promise<{ ok: boolean, deleted?: number, error?: string }>`
+
 ### `KCAPI.getUnreadNotificationCount()`
 Retorna apenas a contagem de não lidas.
 
@@ -695,6 +700,10 @@ Retorna apenas a contagem de não lidas.
 
 ### `KCAPI.subscribeNotifications(userId, callback)`
 Assina atualizações em tempo real para notificações.
+
+O callback recebe um envelope no formato:
+
+`{ eventType: 'INSERT' | 'UPDATE' | 'DELETE', new: object | null, old: object | null }`
 
 **Retorno:** `RealtimeChannel | null`
 

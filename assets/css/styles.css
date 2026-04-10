@@ -7003,33 +7003,60 @@ textarea::placeholder {
 .kc-notif-bell {
   position: relative;
   color: var(--kc-text-dark-secondary);
-  background: none;
+  background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 1.3em;
-  padding: 5px;
-  transition: all var(--transition-speed) ease;
+  font-size: 1.1em;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex: none;
+  transition: color var(--transition-speed) ease, background var(--transition-speed) ease, transform var(--transition-speed) ease;
   /* display controlado via inline style no HTML (display:none inicial, JS remove) */
 }
 
 .kc-notif-bell:hover {
   color: var(--kc-text-dark-primary);
-  transform: scale(1.1);
+  background: rgba(255, 107, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.kc-notif-bell:focus-visible {
+  outline: 2px solid rgba(255, 107, 0, 0.45);
+  outline-offset: 2px;
+}
+
+.kc-notif-bell--active {
+  color: var(--kc-text-dark-primary);
+  background: rgba(255, 107, 0, 0.12);
+}
+
+.kc-notif-bell > i {
+  line-height: 1;
+  pointer-events: none;
 }
 
 .kc-notif-badge {
   position: absolute;
-  top: -2px;
-  right: -4px;
-  min-width: 16px;
-  height: 16px;
+  top: 0;
+  right: 0;
+  transform: translate(28%, -28%);
+  min-width: 18px;
+  height: 18px;
   padding: 0 4px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--kc-primary-brand);
   color: #fff;
-  font-size: 0.6em;
+  font-size: 0.64em;
   font-weight: 700;
-  line-height: 16px;
+  line-height: 18px;
   text-align: center;
   pointer-events: none;
 }
@@ -7037,12 +7064,12 @@ textarea::placeholder {
 .kc-notif-dropdown {
   position: fixed;
   z-index: 310;
-  width: 340px;
+  width: 360px;
   max-height: 440px;
   background: var(--kc-surface-dark);
   border: 1px solid var(--kc-border-dark);
-  border-radius: 14px;
-  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.34);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-6px) scale(0.97);
@@ -7060,11 +7087,17 @@ textarea::placeholder {
 
 .kc-notif-dropdown__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--kc-border-dark);
   flex-shrink: 0;
+}
+
+.kc-notif-dropdown__heading {
+  min-width: 0;
+  flex: 1;
 }
 
 .kc-notif-dropdown__title {
@@ -7073,20 +7106,44 @@ textarea::placeholder {
   color: var(--kc-text-dark-primary);
 }
 
-.kc-notif-dropdown__mark-all {
+.kc-notif-dropdown__meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.74em;
+  color: var(--kc-text-dark-secondary);
+}
+
+.kc-notif-dropdown__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.kc-notif-dropdown__action {
   background: none;
   border: none;
   color: var(--kc-primary-brand);
   font-size: 0.78em;
   font-weight: 600;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 0.13s ease;
+  padding: 5px 9px;
+  border-radius: 999px;
+  transition: background 0.13s ease, opacity 0.13s ease;
 }
 
-.kc-notif-dropdown__mark-all:hover {
+.kc-notif-dropdown__action:hover:not(:disabled) {
   background: rgba(255, 107, 0, 0.1);
+}
+
+.kc-notif-dropdown__action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.kc-notif-dropdown__action--ghost {
+  color: var(--kc-text-dark-secondary);
 }
 
 .kc-notif-dropdown__list {
@@ -7103,6 +7160,7 @@ textarea::placeholder {
 
 .kc-notif-item {
   display: flex;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px 16px;
   text-decoration: none;
@@ -7121,7 +7179,7 @@ textarea::placeholder {
 }
 
 .kc-notif-item--read {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 
 .kc-notif-item__icon {
@@ -7173,6 +7231,15 @@ textarea::placeholder {
     width: calc(100vw - 16px);
     left: 8px !important;
     max-height: 60vh;
+  }
+
+  .kc-notif-dropdown__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kc-notif-dropdown__actions {
+    justify-content: flex-start;
   }
 }
 
@@ -7389,6 +7456,15 @@ textarea::placeholder {
   }
 
   .kc-header:not(.kc-header--admin) .kc-user-actions .kc-notif-bell {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
     font-size: 1.05em;
   }
 
