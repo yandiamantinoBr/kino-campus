@@ -3,6 +3,12 @@
 
   const shared = window.KCAccountProfileUtils || {};
   const STEP_IDS = ['basics', 'identity', 'contact'];
+  const SOCIAL_VISIBILITY_KEYS = Object.freeze(
+    Array.isArray(shared.SOCIAL_ORDER) && shared.SOCIAL_ORDER.length
+      ? shared.SOCIAL_ORDER.slice()
+      : ['whatsapp', 'instagram', 'linkedin', 'email_public', 'lattes', 'facebook', 'x', 'tiktok']
+  );
+  const SOCIAL_INPUT_KEYS = Object.freeze(SOCIAL_VISIBILITY_KEYS.filter((key) => key !== 'whatsapp'));
 
   const state = {
     user: null,
@@ -271,10 +277,23 @@
     return { dialCode: '55', localNumber: normalized };
   }
 
+  function hasSavedSocialVisibility(config) {
+    const source = (config && typeof config === 'object' && !Array.isArray(config)) ? config : {};
+    return SOCIAL_VISIBILITY_KEYS.some((key) => Object.prototype.hasOwnProperty.call(source, key));
+  }
+
   function populateForm() {
     const profile = state.profile || {};
-    const socialLinks = profile.social_links || {};
-    const socialVisibility = profile.social_visibility || {};
+    const rawSocialLinks = profile.social_links || {};
+    const rawSocialVisibility = profile.social_visibility || {};
+    const socialLinks = shared && typeof shared.normalizeSocialLinks === 'function'
+      ? shared.normalizeSocialLinks(rawSocialLinks, { defaultCountryCode: '55' })
+      : rawSocialLinks;
+    const socialVisibility = shared && typeof shared.normalizeSocialVisibility === 'function'
+      ? shared.normalizeSocialVisibility(rawSocialVisibility)
+      : rawSocialVisibility;
+    const shouldDefaultWhatsappVisible = !hasSavedSocialVisibility(rawSocialVisibility)
+      && String(profile.onboarding_completed_at || '').trim() === '';
     const whatsappSplit = splitWhatsappValue(socialLinks.whatsapp);
 
     const displayName = $('#accountSetupDisplayName');
@@ -299,20 +318,12 @@
     if (countryCode) countryCode.value = `+${whatsappSplit.dialCode || '55'}`;
     if (whatsappNumber) whatsappNumber.value = String(whatsappSplit.localNumber || '').trim();
 
-    [
-      'instagram',
-      'linkedin',
-      'facebook',
-      'x',
-      'tiktok',
-      'email_public',
-      'lattes'
-    ].forEach((key) => {
+    SOCIAL_INPUT_KEYS.forEach((key) => {
       const input = $(`[data-social-input="${key}"]`);
       if (input) input.value = String(socialLinks[key] || '').trim();
     });
 
-    Object.keys(socialVisibility || {}).forEach((key) => {
+    SOCIAL_VISIBILITY_KEYS.forEach((key) => {
       const checkbox = $(`[data-social-visible="${key}"]`);
       if (checkbox) checkbox.checked = socialVisibility[key] === true;
     });
@@ -322,13 +333,10 @@
       if (emailInput) emailInput.value = String(state.user.email || '').trim();
     }
 
-    const visibilityDefaults = ['whatsapp', 'instagram', 'linkedin', 'email_public', 'facebook', 'x', 'tiktok', 'lattes'];
-    visibilityDefaults.forEach((key) => {
-      const checkbox = $(`[data-social-visible="${key}"]`);
-      if (checkbox && String(profile.onboarding_completed_at || '').trim() === '' && key === 'whatsapp') {
-        checkbox.checked = true;
-      }
-    });
+    if (shouldDefaultWhatsappVisible) {
+      const whatsappVisible = $('[data-social-visible="whatsapp"]');
+      if (whatsappVisible) whatsappVisible.checked = true;
+    }
 
     state.avatarBatch = 0;
     state.selectedAvatarUrl = '';
@@ -449,30 +457,19 @@
     const countryCode = String($('#accountSetupCountryCode')?.value || '+55').trim();
     const localNumber = String($('#accountSetupWhatsappNumber')?.value || '').trim();
     const whatsapp = shared.buildWhatsAppE164 ? shared.buildWhatsAppE164(countryCode, localNumber) : '';
-
-    return {
-      whatsapp,
-      instagram: String($('#accountSetupInstagram')?.value || '').trim(),
-      linkedin: String($('#accountSetupLinkedin')?.value || '').trim(),
-      facebook: String($('#accountSetupFacebook')?.value || '').trim(),
-      x: String($('#accountSetupX')?.value || '').trim(),
-      tiktok: String($('#accountSetupTiktok')?.value || '').trim(),
-      email_public: String($('#accountSetupEmailPublic')?.value || '').trim(),
-      lattes: String($('#accountSetupLattes')?.value || '').trim(),
-    };
+    return SOCIAL_INPUT_KEYS.reduce((acc, key) => {
+      const input = $(`[data-social-input="${key}"]`);
+      acc[key] = String(input?.value || '').trim();
+      return acc;
+    }, { whatsapp });
   }
 
   function collectSocialVisibility() {
-    return {
-      whatsapp: $('#accountSetupWhatsappVisible')?.checked === true,
-      instagram: $('#accountSetupInstagramVisible')?.checked === true,
-      linkedin: $('#accountSetupLinkedinVisible')?.checked === true,
-      email_public: $('#accountSetupEmailPublicVisible')?.checked === true,
-      lattes: $('#accountSetupLattesVisible')?.checked === true,
-      facebook: $('#accountSetupFacebookVisible')?.checked === true,
-      x: $('#accountSetupXVisible')?.checked === true,
-      tiktok: $('#accountSetupTiktokVisible')?.checked === true,
-    };
+    return SOCIAL_VISIBILITY_KEYS.reduce((acc, key) => {
+      const checkbox = $(`[data-social-visible="${key}"]`);
+      acc[key] = checkbox?.checked === true;
+      return acc;
+    }, {});
   }
 
   async function resolveAvatarPatch() {
