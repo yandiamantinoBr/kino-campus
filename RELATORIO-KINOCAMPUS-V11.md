@@ -1119,7 +1119,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   não houve mudança funcional de frontend nesta rodada. A checagem visual foi inferida a partir do screenshot recebido, da geometria real dos estilos publicados e da confirmação de que o shell público usa `overflow: visible` na área relevante do header, descartando clipping estrutural como hipótese principal.
 - PR / commit / deploy:
-  planejamento documental desta iteração será registrado no fechamento da PR correspondente, com preview e deploy publicados após merge.
+  PR `#267`, commit documental `50f7905` na branch `codex/v11-19-1-notification-roadmap`, preview `dpl_EDqHDZZhsKasQwXuVmjUXVip5czB` (`kino-campus-8m69zbsur-yannakamurabrs-projects.vercel.app`) homologado em `10 de abril de 2026`. O deploy de produção desta rodada documental será publicado após o merge da própria PR.
 - riscos residuais:
   ainda não existe camada de preferências por evento/canal, nem trilha assíncrona de entrega externa. A expansão futura precisa separar notificação pública/in-app de endpoints privados de entrega, evitando reaproveitar automaticamente o WhatsApp de contato do perfil.
 
