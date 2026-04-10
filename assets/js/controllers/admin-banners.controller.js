@@ -78,6 +78,13 @@
     if (el) el.style.display = 'none';
   }
 
+  function setLoadedState(isLoaded) {
+    const loading = document.getElementById('banners-loading');
+    const content = document.getElementById('banners-content');
+    if (loading) loading.style.display = isLoaded ? 'none' : 'flex';
+    if (content) content.style.display = isLoaded ? 'block' : 'none';
+  }
+
   function getClient() {
     return window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
       ? window.KCSupabase.getClient()
@@ -87,14 +94,97 @@
   // ─────────────────────────────────────────────────────────────
   // Verificação de admin
   // ─────────────────────────────────────────────────────────────
-  function isAdmin() {
-    const user = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
-      ? window.KCSupabase.getUser()
-      : null;
-    if (!user) return false;
-    // Verifica perfil cacheado
-    if (window.__kcCurrentProfile) return !!window.__kcCurrentProfile.is_admin;
-    return false;
+  function getErrorMessage(error, fallback) {
+    if (!error) return fallback;
+    if (typeof error === 'string' && error.trim()) return error.trim();
+    if (error.message) return String(error.message);
+    return fallback;
+  }
+
+  async function resolveCurrentUser() {
+    if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+      try {
+        const user = await window.KCAPI.getCurrentUser();
+        if (user) return user;
+      } catch (_) { }
+    }
+
+    if (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') {
+      try {
+        const user = window.KCSupabase.getUser();
+        if (user) return user;
+      } catch (_) { }
+    }
+
+    return null;
+  }
+
+  async function waitForAuthenticatedUser(timeoutMs) {
+    const user = await resolveCurrentUser();
+    if (user) return user;
+
+    const timeout = Number.isFinite(timeoutMs) ? timeoutMs : 2200;
+    return new Promise((resolve) => {
+      let settled = false;
+
+      const cleanup = () => {
+        document.removeEventListener('kc:authchange', onAuthChange);
+        clearTimeout(timer);
+      };
+
+      const settle = async (nextUser) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(nextUser || await resolveCurrentUser());
+      };
+
+      const onAuthChange = (event) => {
+        const nextUser = event && event.detail ? event.detail.user : null;
+        settle(nextUser || null);
+      };
+
+      const timer = setTimeout(() => settle(null), timeout);
+      document.addEventListener('kc:authchange', onAuthChange, { once: true });
+    });
+  }
+
+  async function checkAdminAccess() {
+    const drv = window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver;
+    if (drv !== 'supabase') {
+      showError('Esta página requer driver=supabase. Verifique o kc-env.js e recarregue.');
+      return false;
+    }
+
+    const user = await waitForAuthenticatedUser();
+    if (!user) {
+      showError('Sessão expirada ou não autenticado. Faça login novamente.');
+      return false;
+    }
+
+    const client = getClient();
+    if (!client) {
+      showError('Supabase client não disponível.');
+      return false;
+    }
+
+    const { data: profile, error } = await client
+      .from('profiles')
+      .select('is_admin, display_name, full_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (error || !profile) {
+      showError(getErrorMessage(error, 'Não foi possível carregar seu perfil.'));
+      return false;
+    }
+
+    if (!profile.is_admin) {
+      showError('Acesso negado. Apenas administradores podem acessar este painel.');
+      return false;
+    }
+
+    return true;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -575,13 +665,10 @@
     try {
       banners = await fetchBanners();
       renderList();
-
-      document.getElementById('banners-loading').style.display = 'none';
-      document.getElementById('banners-content').style.display = 'block';
     } catch (err) {
-      document.getElementById('banners-loading').style.display = 'none';
-      document.getElementById('banners-content').style.display = 'block';
       showError('Não foi possível carregar os banners: ' + (err.message || String(err)));
+    } finally {
+      setLoadedState(true);
     }
   }
 
@@ -631,17 +718,20 @@
   // ─────────────────────────────────────────────────────────────
   // Init
   // ─────────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', function () {
-    // Verifica se há cliente Supabase
+  document.addEventListener('DOMContentLoaded', async function () {
     const env = window.KC_ENV || {};
     if (String(env.DATA_DRIVER || env.driver || 'local').toLowerCase() !== 'supabase') {
-      document.getElementById('banners-loading').style.display = 'none';
-      document.getElementById('banners-content').style.display = 'block';
+      setLoadedState(true);
       showError('Esta página requer o modo Supabase (DATA_DRIVER=supabase). Verifique o kc-env.js.');
       return;
     }
 
-    // Botões globais
+    const hasAccess = await checkAdminAccess();
+    if (!hasAccess) {
+      setLoadedState(true);
+      return;
+    }
+
     const modalBackdrop = document.getElementById('banner-modal');
     const modalCard = modalBackdrop ? modalBackdrop.querySelector('.kc-modal') : null;
     const modalClose = document.getElementById('modal-close');
@@ -673,39 +763,8 @@
       }
     }, true);
 
-    // Listeners do preview e do form
     bindPreviewListeners();
     bindListEvents();
-
-    // Aguarda auth para carregar (ou carrega diretamente se já autenticado)
-    const tryLoad = () => {
-      const user = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
-        ? window.KCSupabase.getUser()
-        : null;
-      if (user) {
-        loadBanners();
-      } else {
-        // Espera evento de auth
-        document.addEventListener('kc:authchange', function onAuth(e) {
-          if (e.detail && e.detail.user) {
-            document.removeEventListener('kc:authchange', onAuth);
-            loadBanners();
-          }
-        });
-        // Timeout de segurança: carrega mesmo sem login (RLS vai barrar dados se não for admin)
-        setTimeout(() => {
-          if (!banners.length) loadBanners();
-        }, 2000);
-      }
-    };
-
-    if (window.KCSupabase && window.KCSupabase.getUser) {
-      tryLoad();
-    } else {
-      document.addEventListener('kc:authchange', function onFirst() {
-        document.removeEventListener('kc:authchange', onFirst);
-        tryLoad();
-      });
-    }
+    await loadBanners();
   });
 })();
