@@ -8,6 +8,11 @@ body.kc-admin-page {
   --kc-admin-chart-modal-viewport-gap: 24px;
 }
 
+html.kc-theme-preload body.kc-admin-page,
+html.kc-theme-preload body.kc-admin-page * {
+  transition: none !important;
+}
+
 body.kc-admin-page--dashboard {
   --kc-admin-wrapper-padding-inline: 16px;
   --kc-admin-wrapper-padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
