@@ -62,3 +62,12 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - opcionalmente `REPORTS_THRESHOLD`
   - opcionalmente `REPORTS_NOTIFY_COOLDOWN_HOURS`
 - O contrato dessa função não deve ser alterado nesta fase; o foco aqui é apenas manter a rastreabilidade operacional.
+## 7. Residual Supabase advisor items
+
+- A rodada `v11.19.0` resolve, por migration versionada, os warnings acionaveis por codigo em RLS/performance para `notifications`, `post_view_events` e `kc_invited_emails`, alem da cobertura de FK por indice nessas trilhas.
+- Permanecem como residual operacional fora desta migration:
+  - `extension_in_public` para `unaccent`
+  - `auth_leaked_password_protection` desabilitado
+- Esses dois pontos nao devem ser corrigidos por SQL improvisado no meio da rodada:
+  - mover `unaccent` de schema exige planejamento para nao quebrar busca/FTS
+  - leaked password protection depende de configuracao do Supabase Auth no projeto, nao de patch frontend
