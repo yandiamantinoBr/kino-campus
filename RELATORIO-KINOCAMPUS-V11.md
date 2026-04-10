@@ -438,11 +438,11 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 | perfil e listagens do usuário | `v11.14.0` | iniciado com normalização de rotas humanas de detalhe entre perfil e `my-posts` |
 | conta, onboarding e settings | `v11.15.0`, `v11.15.1`, `v11.15.2` | coberto até o fechamento seguro do preview e da hidratação social do onboarding; próximos avanços só se surgir bug concreto ou novo objetivo de produto |
 | admin pós-v10 | `v11.16.0`, `v11.17.0` | coberto no shell e na primeira redução de fallback implícito, com `banners` alinhado ao contrato moderno de acesso admin |
-| adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0` | parcialmente coberto; ainda falta simplificação mais profunda com `supabase.adapter.js` |
+| adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0`, `v11.18.0` | coberto no endurecimento de paridade local/moderno e no ajuste contratual de counts; a próxima rodada sai do frontend e vai para a trilha operacional de Supabase |
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A próxima sequência obrigatória passa a ser `v11.18.0`.
+Atualização de status em `10 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A fase `v11.18.0` foi concluída na PR `#263`, alinhando a assinatura de `getProfileHighlightsCount(...)` entre `KCAPI`, `local.adapter.js` e `supabase.adapter.js` sem alterar a semântica highlight-only. A próxima sequência obrigatória passa a ser `v11.19.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -451,8 +451,8 @@ Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executad
 | `v11.15.2` | aprofundar a rodada de conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
 | `v11.16.0` | iniciar a consolidação do admin pós-v10 | `admin/*.html`, `admin-shell.js`, `admin-shell.css`, listas, modais e busca | simetria de shell e UX admin endurecida |
 | `v11.17.0` | fechar a primeira rodada do admin pós-v10 e reduzir fallback excessivo | controllers admin, fluxos de paginação, export, feedback e contratos internos | admin mais previsível e menos dependente de fallback implícito |
-| `v11.18.0` | aprofundar a rodada de contratos entre `KCAPI` e adapters | `kc-api.client.js`, `supabase.adapter.js`, `local.adapter.js`, consumers críticos | paridade real entre contratos remoto/local e redução de drift |
-| `v11.19.0` | revisar Supabase operacional | migrations, RPCs, `search_path`, grants, RLS, docs de banco | camada Supabase auditada e alinhada à base atual |
+| `v11.18.0` | aprofundar a rodada de contratos entre `KCAPI` e adapters | `kc-api.client.js`, `supabase.adapter.js`, `local.adapter.js`, consumers críticos | concluído na PR `#263`, com paridade de assinatura para `getProfileHighlightsCount(...)` e regressões focadas |
+| `v11.19.0` | revisar Supabase operacional | migrations, RPCs, `search_path`, grants, RLS, docs de banco | próxima fase obrigatória da rodada v11 |
 | `v11.20.0` | revisar Edge Functions, storage e invariantes de deploy | `supabase/functions/*`, templates, storage, envs, docs operacionais | trilha infra/app coerente entre código, deploy e banco |
 | `v11.21.0` | executar o release gate final da v11 | testes, QA, changelog final, documentação, drift de versão canônica `8.6.0` | fechamento da rodada da v11 com checklist final completo |
 
@@ -1011,6 +1011,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#261`, commit funcional `e07ec68` na branch `codex/v11-17-0-admin-banners-access-contract`, merge squash `6b471ac` na base `kinocampus-V11.0-foundations`, preview `dpl_EHA4UFZkbLASBPiQTFc45mfWJUnx` e deploy manual de produção `dpl_EAzPU5vMhD6wmyYyWPBYxgjRj44R`, publicado em `https://kino-campus-g2v4rizc9-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a primeira redução de fallback implícito do admin foi concluída, mas a rodada v11 ainda precisa avançar para `v11.18.0`, aprofundando contratos entre `KCAPI`, adapters e consumers críticos antes da revisão operacional de Supabase.
+
+---
+
+### Iteração `v11.18.0`
+
+- objetivo:
+  aprofundar a rodada de contratos entre `KCAPI` e adapters em um recorte pequeno e seguro, alinhando a assinatura de `getProfileHighlightsCount(...)` à superfície já usada por `getProfileHighlights(...)` e `getMySavedPostsCount(...)`.
+- arquivos alterados:
+  `assets/js/kc-api.client.js`, `assets/js/adapters/local.adapter.js`, `assets/js/adapters/supabase.adapter.js`, `tests/kc-api-client.test.js`, `tests/local-adapter.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  o contrato vizinho de salvos/destaques em `kc-api.client.js`, a implementação local em `listLocalSavedPostSummaries(...)`, o fallback de destaques no `supabase.adapter.js` e os consumers críticos que já trabalham com `params` nos counts/listagens equivalentes.
+- contratos preservados:
+  nenhuma migration, RPC, schema, payload público de destaques, semântica de highlight ou fluxo visual foi alterado; a iteração ficou restrita ao endurecimento de assinatura e encaminhamento de `params`, mantendo `getProfileHighlightsCount(...)` como superfície highlight-only.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/kc-api.client.js`, `node --check assets/js/adapters/local.adapter.js`, `node --check assets/js/adapters/supabase.adapter.js`, `npx jest tests/kc-api-client.test.js tests/local-adapter.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview da PR ficou `Ready` no deployment `dpl_3GNRcm9EzwCwgcWRFkZrN8j4kSpv`, com validação do asset publicado via `web_fetch_vercel_url` no Vercel MCP para `assets/js/kc-api.client.js` e `assets/js/adapters/local.adapter.js`, confirmando a assinatura `getProfileHighlightsCount(profileId, params = {})`. Após o merge, a base gerou o deployment `dpl_3LstWGN6dbR65McLd9hoEZiDQUdk`, também validado no Vercel MCP, com os mesmos assets publicados na branch principal.
+- PR / commit / deploy:
+  PR `#263`, commit funcional `a6ff493` na branch `codex/v11-18-0-highlights-count-contract`, merge squash `16f1c0d` na base `kinocampus-V11.0-foundations`, preview `dpl_3GNRcm9EzwCwgcWRFkZrN8j4kSpv` e deploy automático pós-merge `dpl_3LstWGN6dbR65McLd9hoEZiDQUdk`, todos confirmados em `10 de abril de 2026`.
+- riscos residuais:
+  a rodada de contratos entre fachada e adapters ficou mais consistente nessa superfície específica, mas a próxima fase precisa sair da assinatura JS e auditar a trilha operacional do Supabase em si, incluindo RPC catalog, grants, `search_path`, RLS e documentação técnica do banco em `v11.19.0`.
 
 ---
 

@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0` e `v11.17.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0` e `v11.18.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.18.0 | aprofundamento da rodada de contratos entre `KCAPI` e adapters: `getProfileHighlightsCount(...)` passou a aceitar `params` e a encaminhá-los com paridade entre `kc-api.client.js`, `local.adapter.js` e `supabase.adapter.js`, preservando a semântica highlight-only e adicionando regressões diretas de dispatch/paridade | `#263` |
 | v11.17.0 | primeira fatia de controller do admin pós-v10: `admin-banners.controller.js` passou a validar acesso via `KCAPI.getCurrentUser()` + `profiles.is_admin`, aguardando hidratação de auth e removendo o fallback que carregava a tela sem sessão/autorização validadas | `#261` |
 | v11.16.0 | primeira fatia do admin pós-v10: preload do shell administrativo foi centralizado em `admin-shell.js`, com `kc-loading` e `kc-theme-preload` padronizados nas 5 telas admin e regressão estática de marcação | `#259` |
 | v11.15.2 | terceira fatia de `account-setup`: hidratação de redes sociais e visibilidade passou a ser normalizada pelos helpers shared, com reset determinístico de todos os toggles e preservação do default de WhatsApp só quando não existe configuração salva | `#257` |
@@ -75,10 +76,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.17.0`
-- objetivo da iteração: continuar o admin pós-v10 pelo primeiro controller ainda desalinhado, tornando o acesso de `banners` coerente com o contrato moderno de auth/admin já usado nas outras telas administrativas
-- natureza da iteração: hardening funcional pequeno e seguro em `admin-banners.controller.js`, removendo fallback implícito de carregamento sem sessão validada e adicionando regressão estática de contrato
-- próxima iteração sugerida: `v11.18.0`, para aprofundar a rodada de contratos entre `KCAPI` e adapters, com foco em `supabase.adapter.js`, `kc-api.client.js` e consumers críticos
+- iteração ativa consolidada: `v11.18.0`
+- objetivo da iteração: aprofundar a rodada de contratos entre `KCAPI` e adapters em uma fatia pequena e segura, eliminando drift de assinatura entre os counts de salvos/destaques sem alterar a semântica já consolidada do produto
+- natureza da iteração: hardening funcional pequeno em `kc-api.client.js`, `local.adapter.js` e `supabase.adapter.js`, com regressões focadas de dispatch e paridade local
+- próxima iteração sugerida: `v11.19.0`, para revisar a trilha operacional de Supabase, incluindo RPCs, `search_path`, grants, RLS e documentação técnica do banco
 
 ---
 
