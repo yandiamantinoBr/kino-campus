@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.17.0`: `admin-banners.controller.js` passou a validar acesso administrativo via `KCAPI.getCurrentUser()` + consulta a `profiles.is_admin`, alinhando a tela de banners ao mesmo contrato moderno já usado nas outras superfícies admin.
+- `v11.17.0`: a tela admin de banners deixou de carregar a listagem após timeout sem sessão validada, substituindo o fallback implícito por uma espera controlada de hidratação de auth e por mensagens explícitas de erro/acesso negado.
 - `v11.16.0`: o preload do shell administrativo passou a ser liberado por `admin-shell.js`, removendo a duplicação de scripts inline que faziam `document.documentElement.classList.remove('kc-loading')` em cada uma das 5 páginas admin.
 - `v11.16.0`: as 5 telas administrativas passaram a compartilhar o mesmo bootstrap HTML com `kc-loading kc-theme-preload`, enquanto `admin-shell.css` assumiu a regra de congelar transições durante o preload em vez de depender de blocos inline divergentes.
 - `v11.15.2`: `account-setup.controller.js` passou a normalizar `social_links` e `social_visibility` durante `populateForm()`, reaproveitando os helpers shared e evitando que toggles de visibilidade antigos vazem entre hidratações parciais do onboarding.
@@ -35,6 +37,8 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.17.0`: atualizado o `README.md` e o relatório v11 para registrar a primeira fatia de controller do admin pós-v10 e abrir explicitamente a continuidade em `v11.18.0`.
+- `v11.17.0`: fechamento documental consolidado com a PR funcional `#261`, preview `dpl_EHA4UFZkbLASBPiQTFc45mfWJUnx`, deploy de produção `dpl_EAzPU5vMhD6wmyYyWPBYxgjRj44R` e validação publicada em `www.kinocampus.com.br`.
 - `v11.16.0`: atualizado o `README.md` e o relatório v11 para registrar o início da consolidação do admin pós-v10 e abrir explicitamente a continuidade em `v11.17.0`.
 - `v11.16.0`: fechamento documental consolidado com a PR `#259`, preview `dpl_Cxd3cRgJHpqfRNXC9wR1zdZ8rSch`, deploy de produção `dpl_JQL419g5PzKoNrr5uDi386YVwQzK` e validação publicada em `www.kinocampus.com.br`.
 - `v11.15.2`: atualizado o `README.md` e o relatório v11 para registrar a terceira fatia de `account-setup`, fechar a macrofase atual de conta/onboarding/settings e abrir explicitamente a continuidade em `v11.16.0`.
