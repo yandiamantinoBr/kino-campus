@@ -1197,6 +1197,10 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return { ok: true };
   }
 
+  async function localClearNotifications() {
+    return { ok: true, deleted: 0 };
+  }
+
   async function localGetUnreadNotificationCount() {
     return 0;
   }
@@ -1663,6 +1667,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     getNotifications: localGetNotifications,
     markNotificationsRead: localMarkNotificationsRead,
     markAllNotificationsRead: localMarkAllNotificationsRead,
+    clearNotifications: localClearNotifications,
     getUnreadNotificationCount: localGetUnreadNotificationCount,
     subscribeNotifications: localSubscribeNotifications,
     unsubscribeNotifications: localUnsubscribeNotifications,

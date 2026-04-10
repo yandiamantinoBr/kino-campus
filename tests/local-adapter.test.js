@@ -91,6 +91,7 @@ describe('Local Adapter - Registro do driver', () => {
       'getNotifications',
       'markNotificationsRead',
       'markAllNotificationsRead',
+      'clearNotifications',
       'getUnreadNotificationCount',
       'subscribeNotifications',
       'unsubscribeNotifications',
@@ -338,6 +339,7 @@ describe('Local Adapter - Paridade moderna do driver local', () => {
     });
     await expect(driver.markNotificationsRead(['n-1'])).resolves.toEqual({ ok: true });
     await expect(driver.markAllNotificationsRead()).resolves.toEqual({ ok: true });
+    await expect(driver.clearNotifications()).resolves.toEqual({ ok: true, deleted: 0 });
     await expect(driver.getUnreadNotificationCount()).resolves.toBe(0);
     expect(driver.subscribeNotifications('USER_SELF', jest.fn())).toBeNull();
     expect(() => driver.unsubscribeNotifications(null)).not.toThrow();

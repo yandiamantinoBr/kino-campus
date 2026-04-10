@@ -3609,6 +3609,27 @@ const { ENV, normalizePost } = window.KCAPI;
     return data;
   }
 
+  async function supabaseClearNotifications() {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: 'NO_CLIENT' };
+
+    const user = await supabaseGetCurrentUser();
+    if (!user || !user.id) return { ok: false, error: 'NOT_AUTHENTICATED' };
+
+    const { data, error } = await client
+      .from('notifications')
+      .delete()
+      .eq('user_id', user.id)
+      .select('id');
+
+    if (error) return { ok: false, error: error.message };
+
+    return {
+      ok: true,
+      deleted: Array.isArray(data) ? data.length : 0,
+    };
+  }
+
   async function supabaseGetUnreadNotificationCount() {
     const client = getSupabaseClient();
     if (!client) return 0;
@@ -3625,13 +3646,19 @@ const { ENV, normalizePost } = window.KCAPI;
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'notifications',
           filter: 'user_id=eq.' + userId,
         },
         function (payload) {
-          if (typeof callback === 'function') callback(payload.new);
+          if (typeof callback === 'function') {
+            callback({
+              eventType: String(payload && payload.eventType ? payload.eventType : 'INSERT').toUpperCase(),
+              new: payload && payload.new ? payload.new : null,
+              old: payload && payload.old ? payload.old : null,
+            });
+          }
         }
       )
       .subscribe();
@@ -3735,12 +3762,13 @@ const { ENV, normalizePost } = window.KCAPI;
     listAdminHelpRequests: supabaseListAdminHelpRequests,
     updateAdminHelpRequest: supabaseUpdateAdminHelpRequest,
     // Notifications (v9.1.0)
-    getNotifications: supabaseGetNotifications,
-    markNotificationsRead: supabaseMarkNotificationsRead,
-    markAllNotificationsRead: supabaseMarkAllNotificationsRead,
-    getUnreadNotificationCount: supabaseGetUnreadNotificationCount,
-    subscribeNotifications: supabaseSubscribeNotifications,
-    unsubscribeNotifications: supabaseUnsubscribeNotifications,
+     getNotifications: supabaseGetNotifications,
+     markNotificationsRead: supabaseMarkNotificationsRead,
+     markAllNotificationsRead: supabaseMarkAllNotificationsRead,
+     clearNotifications: supabaseClearNotifications,
+     getUnreadNotificationCount: supabaseGetUnreadNotificationCount,
+     subscribeNotifications: supabaseSubscribeNotifications,
+     unsubscribeNotifications: supabaseUnsubscribeNotifications,
     // Convites de usuários externos (v9.1.0.3)
     inviteExternalUser: supabaseInviteExternalUser,
     getInvites: supabaseGetInvites,

@@ -2274,6 +2274,14 @@
     return driver.markAllNotificationsRead();
   }
 
+  async function clearNotifications() {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.clearNotifications !== 'function') {
+      return { ok: false, error: 'UNAVAILABLE' };
+    }
+    return driver.clearNotifications();
+  }
+
   async function getUnreadNotificationCount() {
     const driver = getActiveDriver();
     if (!driver || typeof driver.getUnreadNotificationCount !== 'function') return 0;
@@ -2382,6 +2390,7 @@
     getNotifications,
     markNotificationsRead,
     markAllNotificationsRead,
+    clearNotifications,
     getUnreadNotificationCount,
     subscribeNotifications,
     unsubscribeNotifications,
