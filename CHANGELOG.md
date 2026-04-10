@@ -43,6 +43,7 @@
 ### Docs
 - `v11.19.0`: `docs/db-schema.md`, `docs/rpc-catalog.md` e `docs/ops/vercel-supabase-invariants.md` passaram a refletir a trilha real de convites externos, os novos índices de cobertura e os residuals operacionais do Supabase que seguem fora do escopo da migration.
 - `v11.19.0`: atualizado o `README.md` e o relatório v11 para registrar a auditoria operacional do Supabase como fase concluída da rodada e abrir explicitamente a continuidade em `v11.20.0`.
+- `v11.19.0`: fechamento documental consolidado com preview `dpl_YyTeTEZ3gnxYYCc2a2TL3FXVV4Ff`, deploy de produção `dpl_J8VA2ur4bwJn4uffHV8eNuVouh3G` e validação publicada em `www.kinocampus.com.br`.
 - `v11.18.0`: atualizado o `README.md` e o relatório v11 para registrar o fechamento da rodada contratual pequena entre `KCAPI` e adapters e abrir explicitamente a continuidade em `v11.19.0`.
 - `v11.18.0`: fechamento documental consolidado com a PR funcional `#263`, preview `dpl_3GNRcm9EzwCwgcWRFkZrN8j4kSpv` e deploy automático pós-merge `dpl_3LstWGN6dbR65McLd9hoEZiDQUdk`, todos homologados via Vercel MCP.
 - `v11.17.0`: atualizado o `README.md` e o relatório v11 para registrar a primeira fatia de controller do admin pós-v10 e abrir explicitamente a continuidade em `v11.18.0`.

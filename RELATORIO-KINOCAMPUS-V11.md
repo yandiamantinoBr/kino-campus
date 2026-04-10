@@ -1054,7 +1054,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validação em navegador:
   não houve mudança de frontend dependente desta migration; a validação publicada desta iteração concentra-se na consistência documental entregue pelo deploy estático e no estado real do banco no Supabase.
 - PR / commit / deploy:
-  PR `#265`, commit funcional `c55391b` na branch `codex/v11-19-0-supabase-rls-fk-audit`, preview `dpl_A7PF5ETbJB3KsoCMJyGEhvyjE8Pa` (`kino-campus-hya1vc39v-yannakamurabrs-projects.vercel.app`) homologado em `10 de abril de 2026`. O deploy de produção será registrado no closeout pós-merge desta mesma iteração.
+  PR `#265`, commit funcional `c55391b` na branch `codex/v11-19-0-supabase-rls-fk-audit`, preview final `dpl_YyTeTEZ3gnxYYCc2a2TL3FXVV4Ff` (`kino-campus-3jji0iglw-yannakamurabrs-projects.vercel.app`) homologado em `10 de abril de 2026` e deploy de produção `dpl_J8VA2ur4bwJn4uffHV8eNuVouh3G` (`kino-campus-9uf5f5ixc-yannakamurabrs-projects.vercel.app`, alias `www.kinocampus.com.br`) validado após o merge do commit squash `fd01000`.
 - riscos residuais:
   permanecem fora do escopo desta migration `extension_in_public` para `unaccent` e `auth_leaked_password_protection` desabilitado, ambos registrados como residual operacional no projeto. A próxima fase `v11.20.0` deve focar Edge Functions, storage e invariantes de deploy, sem misturar essas pendências com refactor de frontend.
 
