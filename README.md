@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0` e `v11.19.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0` e pela rodada documental de planejamento `v11.19.1`.
 
 ---
 
@@ -77,11 +77,12 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.19.0`
-- objetivo da iteração: revisar a trilha operacional de Supabase com um recorte pequeno e seguro, removendo warnings ativos do Advisor em RLS/performance e alinhando as docs técnicas do banco ao estado real do projeto
-- natureza da iteração: migration SQL versionada para `notifications`, `post_view_events` e `kc_invited_emails`, com validação por Advisor/queries no Supabase e sincronização documental do catálogo de banco
-- último deploy validado desta fase: preview `dpl_YyTeTEZ3gnxYYCc2a2TL3FXVV4Ff` e produção `dpl_J8VA2ur4bwJn4uffHV8eNuVouh3G`, publicados em `10 de abril de 2026`
-- próxima iteração sugerida: `v11.20.0`, para revisar Edge Functions, storage e invariantes de deploy
+- iteração ativa consolidada: `v11.19.1`
+- objetivo da iteração: auditar a trilha atual de notificações, confirmar se o sino está clipado ou apenas apertado visualmente e planejar a futura expansão para limpeza no dropdown, preferências por evento/canal e entregas por e-mail/WhatsApp
+- natureza da iteração: planejamento documental e arquitetural, sem mudança funcional nem SQL novo
+- último deploy validado desta fase: produção `dpl_3ZdK5GuxjSUBtKa5UZiQGjwbjXW3`, publicada em `10 de abril de 2026`
+- achado desta rodada: o sino não aparenta estar sendo cortado por `overflow`; o aperto visual vem da geometria do botão (`36x36`), `line-height: 1`, `padding: 0` no shell responsivo e da sobreposição muito agressiva do badge
+- próxima iteração sugerida: `v11.20.0`, para endurecer o shell in-app de notificações (`kcNotifBell` / `kcNotifDropdown`) e definir o contrato seguro de limpeza/exclusão antes dos canais externos
 
 ---
 
