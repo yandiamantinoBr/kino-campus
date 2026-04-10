@@ -288,6 +288,7 @@ describe('Local Adapter - Paridade moderna do driver local', () => {
 
     await expect(driver.getMySavedPostsCount({})).resolves.toBe(1);
     await expect(driver.getProfileHighlightsCount('USER_SELF')).resolves.toBe(1);
+    await expect(driver.getProfileHighlightsCount('USER_SELF', { page: 2, limit: 1, kind: 'favorite' })).resolves.toBe(1);
 
     await expect(driver.clearSavedPostState('saved-post-1', 'favorite')).resolves.toEqual(expect.objectContaining({
       ok: true,
