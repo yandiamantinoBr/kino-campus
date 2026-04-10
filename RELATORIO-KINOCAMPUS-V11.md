@@ -437,12 +437,12 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 | produto, comentários, ranking, votos e persistência incremental | `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.13.0`, `v11.13.1` | parcialmente coberto; o residual imediato de notificações e popovers foi fechado, restando apenas novas subfatias se surgir bug concreto |
 | perfil e listagens do usuário | `v11.14.0` | iniciado com normalização de rotas humanas de detalhe entre perfil e `my-posts` |
 | conta, onboarding e settings | `v11.15.0`, `v11.15.1`, `v11.15.2` | coberto até o fechamento seguro do preview e da hidratação social do onboarding; próximos avanços só se surgir bug concreto ou novo objetivo de produto |
-| admin pós-v10 | `v11.16.0` | iniciado com unificação do preload/boot visual do shell administrativo entre as 5 telas |
+| admin pós-v10 | `v11.16.0`, `v11.17.0` | coberto no shell e na primeira redução de fallback implícito, com `banners` alinhado ao contrato moderno de acesso admin |
 | adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0` | parcialmente coberto; ainda falta simplificação mais profunda com `supabase.adapter.js` |
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A próxima sequência obrigatória passa a ser `v11.17.0`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A próxima sequência obrigatória passa a ser `v11.18.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -450,7 +450,7 @@ Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executad
 | `v11.15.1` | continuar a rodada de conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | preview do onboarding alinhado ao CTA real e ao toggle de contato público |
 | `v11.15.2` | aprofundar a rodada de conta, onboarding e settings | `settings.html`, `account-setup.html`, shareds de conta/perfil | onboarding e preferências alinhados ao contrato atual |
 | `v11.16.0` | iniciar a consolidação do admin pós-v10 | `admin/*.html`, `admin-shell.js`, `admin-shell.css`, listas, modais e busca | simetria de shell e UX admin endurecida |
-| `v11.17.0` | fechar o admin pós-v10 e reduzir fallback excessivo | controllers admin, fluxos de paginação, export, feedback e contratos internos | admin mais previsível e menos dependente de fallback implícito |
+| `v11.17.0` | fechar a primeira rodada do admin pós-v10 e reduzir fallback excessivo | controllers admin, fluxos de paginação, export, feedback e contratos internos | admin mais previsível e menos dependente de fallback implícito |
 | `v11.18.0` | aprofundar a rodada de contratos entre `KCAPI` e adapters | `kc-api.client.js`, `supabase.adapter.js`, `local.adapter.js`, consumers críticos | paridade real entre contratos remoto/local e redução de drift |
 | `v11.19.0` | revisar Supabase operacional | migrations, RPCs, `search_path`, grants, RLS, docs de banco | camada Supabase auditada e alinhada à base atual |
 | `v11.20.0` | revisar Edge Functions, storage e invariantes de deploy | `supabase/functions/*`, templates, storage, envs, docs operacionais | trilha infra/app coerente entre código, deploy e banco |
@@ -988,6 +988,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#259`, commit funcional `cf3e104` na branch `codex/v11-16-0-admin-shell-preload`, merge squash `dfc57be` na base `kinocampus-V11.0-foundations`, preview `dpl_Cxd3cRgJHpqfRNXC9wR1zdZ8rSch` e deploy manual de produção `dpl_JQL419g5PzKoNrr5uDi386YVwQzK`, publicado em `https://kino-campus-fu8o1fioz-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a macrofase de admin pós-v10 foi iniciada, mas ainda faltam subfatias de controllers, paginação, feedback e redução de fallback implícito. O próximo passo da sequência remanescente passa a ser `v11.17.0`.
+
+---
+
+### Iteração `v11.17.0`
+
+- objetivo:
+  continuar a consolidação do admin pós-v10 pelo primeiro controller ainda desalinhado, para que `admin-banners.controller.js` valide auth/admin com o mesmo contrato moderno já adotado nas outras telas administrativas e deixe de carregar a tela sem sessão/autorização validadas.
+- arquivos alterados:
+  `assets/js/controllers/admin-banners.controller.js`, `tests/admin-banners-access-contract.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  o contrato de acesso admin já usado em `admin-moderation.controller.js`, `admin-reports.controller.js`, `admin-help-requests.controller.js` e `admin-dashboard.controller.js`, além do bootstrap visual previamente unificado na `v11.16.0`.
+- contratos preservados:
+  nenhuma migration, RPC, adapter, contrato público de `KCAPI`, estrutura HTML da página de banners, CRUD de banner, drag-and-drop, histórico de auditoria ou contrato Supabase de `kc_admin_list_banners` foi alterado; a iteração ficou restrita ao gate de acesso, à espera controlada de hidratação de auth e à regressão estática de suporte.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/controllers/admin-banners.controller.js`, `npx jest tests/admin-banners-access-contract.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview da PR ficou `Ready` no deployment `dpl_EHA4UFZkbLASBPiQTFc45mfWJUnx`, com alias `https://kino-campus-git-codex-v11-17-0-a-3260b7-yannakamurabrs-projects.vercel.app`, confirmado por `gh pr checks` e `list_deployments` do Vercel MCP. O `admin/banners.html` do preview ficou disponível com o shell publicado, enquanto o fetch direto do asset JS permaneceu protegido por Vercel Authentication nessa URL de preview. Após o merge, a produção publicada em [www.kinocampus.com.br](https://www.kinocampus.com.br) passou a servir `assets/js/controllers/admin-banners.controller.js` com `checkAdminAccess()`, `window.KCAPI.getCurrentUser`, consulta a `profiles.is_admin` e sem os legados `window.__kcCurrentProfile` / `if (!banners.length) loadBanners();`, tudo confirmado por `curl.exe --ssl-no-revoke` e `list_deployments` do Vercel MCP.
+- PR / commit / deploy:
+  PR `#261`, commit funcional `e07ec68` na branch `codex/v11-17-0-admin-banners-access-contract`, merge squash `6b471ac` na base `kinocampus-V11.0-foundations`, preview `dpl_EHA4UFZkbLASBPiQTFc45mfWJUnx` e deploy manual de produção `dpl_EAzPU5vMhD6wmyYyWPBYxgjRj44R`, publicado em `https://kino-campus-g2v4rizc9-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
+- riscos residuais:
+  a primeira redução de fallback implícito do admin foi concluída, mas a rodada v11 ainda precisa avançar para `v11.18.0`, aprofundando contratos entre `KCAPI`, adapters e consumers críticos antes da revisão operacional de Supabase.
 
 ---
 

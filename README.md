@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2` e `v11.16.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0` e `v11.17.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.17.0 | primeira fatia de controller do admin pós-v10: `admin-banners.controller.js` passou a validar acesso via `KCAPI.getCurrentUser()` + `profiles.is_admin`, aguardando hidratação de auth e removendo o fallback que carregava a tela sem sessão/autorização validadas | `#261` |
 | v11.16.0 | primeira fatia do admin pós-v10: preload do shell administrativo foi centralizado em `admin-shell.js`, com `kc-loading` e `kc-theme-preload` padronizados nas 5 telas admin e regressão estática de marcação | `#259` |
 | v11.15.2 | terceira fatia de `account-setup`: hidratação de redes sociais e visibilidade passou a ser normalizada pelos helpers shared, com reset determinístico de todos os toggles e preservação do default de WhatsApp só quando não existe configuração salva | `#257` |
 | v11.15.1 | segunda fatia de `account-setup`: a prévia de contato do onboarding passa a reutilizar `buildContactAction`, reage ao toggle de contato público e fica coerente com o CTA real exibido nos anúncios | `#255` |
@@ -74,10 +75,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.16.0`
-- objetivo da iteração: iniciar a consolidação do admin pós-v10 removendo drift de preload entre as 5 telas administrativas e deixando o bootstrap visual do shell sob uma única fonte de verdade
-- natureza da iteração: hardening funcional pequeno e seguro em `admin-shell.js`, `admin-shell.css` e nas 5 páginas admin, com regressão estática de marcação/preload
-- próxima iteração sugerida: `v11.17.0`, para continuar o admin pós-v10 e reduzir fallback implícito nos controllers/fluxos internos
+- iteração ativa consolidada: `v11.17.0`
+- objetivo da iteração: continuar o admin pós-v10 pelo primeiro controller ainda desalinhado, tornando o acesso de `banners` coerente com o contrato moderno de auth/admin já usado nas outras telas administrativas
+- natureza da iteração: hardening funcional pequeno e seguro em `admin-banners.controller.js`, removendo fallback implícito de carregamento sem sessão validada e adicionando regressão estática de contrato
+- próxima iteração sugerida: `v11.18.0`, para aprofundar a rodada de contratos entre `KCAPI` e adapters, com foco em `supabase.adapter.js`, `kc-api.client.js` e consumers críticos
 
 ---
 
