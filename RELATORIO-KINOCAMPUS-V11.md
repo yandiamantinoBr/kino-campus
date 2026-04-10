@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0` e `v11.11.1` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto, limpeza estrutural de `kc-comments.js`, reformulação do roadmap remanescente da v11 em uma sequência executável contínua e avanço da macrofase de conta/onboarding/settings até a hidratação social determinística de `account-setup` |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0` e `v11.19.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto, limpeza estrutural de `kc-comments.js`, reformulação do roadmap remanescente da v11 em uma sequência executável contínua, avanço da macrofase de conta/onboarding/settings até a hidratação social determinística de `account-setup` e a primeira rodada operacional dedicada ao Supabase Advisor com correção versionada de RLS/performance |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -81,7 +81,7 @@ Regras de precedência:
 - componentes em `assets/js/components`: `3`
 - arquivos CSS em `assets/css`: `5`
 - arquivos de teste em `tests`: `35`
-- migrations em `supabase/migrations`: `77`
+- migrations em `supabase/migrations`: `78`
 
 ### 3.2. Hotspots técnicos por tamanho e risco
 
@@ -438,11 +438,11 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 | perfil e listagens do usuário | `v11.14.0` | iniciado com normalização de rotas humanas de detalhe entre perfil e `my-posts` |
 | conta, onboarding e settings | `v11.15.0`, `v11.15.1`, `v11.15.2` | coberto até o fechamento seguro do preview e da hidratação social do onboarding; próximos avanços só se surgir bug concreto ou novo objetivo de produto |
 | admin pós-v10 | `v11.16.0`, `v11.17.0` | coberto no shell e na primeira redução de fallback implícito, com `banners` alinhado ao contrato moderno de acesso admin |
-| adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0`, `v11.18.0` | coberto no endurecimento de paridade local/moderno e no ajuste contratual de counts; a próxima rodada sai do frontend e vai para a trilha operacional de Supabase |
+| adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0`, `v11.18.0` | coberto no endurecimento de paridade local/moderno e no ajuste contratual de counts; a trilha seguinte passou para a camada operacional de Supabase em `v11.19.0` |
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `10 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A fase `v11.18.0` foi concluída na PR `#263`, alinhando a assinatura de `getProfileHighlightsCount(...)` entre `KCAPI`, `local.adapter.js` e `supabase.adapter.js` sem alterar a semântica highlight-only. A próxima sequência obrigatória passa a ser `v11.19.0`.
+Atualização de status em `10 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A fase `v11.18.0` foi concluída na PR `#263`, alinhando a assinatura de `getProfileHighlightsCount(...)` entre `KCAPI`, `local.adapter.js` e `supabase.adapter.js` sem alterar a semântica highlight-only. A fase `v11.19.0` foi concluída na rodada de auditoria operacional do Supabase, com migration versionada para eliminar warnings ativos do Advisor em `notifications`, `post_view_events` e `kc_invited_emails`, além de sincronização de `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais. A próxima sequência obrigatória passa a ser `v11.20.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -452,7 +452,7 @@ Atualização de status em `10 de abril de 2026`: a fase `v11.12.0` foi executad
 | `v11.16.0` | iniciar a consolidação do admin pós-v10 | `admin/*.html`, `admin-shell.js`, `admin-shell.css`, listas, modais e busca | simetria de shell e UX admin endurecida |
 | `v11.17.0` | fechar a primeira rodada do admin pós-v10 e reduzir fallback excessivo | controllers admin, fluxos de paginação, export, feedback e contratos internos | admin mais previsível e menos dependente de fallback implícito |
 | `v11.18.0` | aprofundar a rodada de contratos entre `KCAPI` e adapters | `kc-api.client.js`, `supabase.adapter.js`, `local.adapter.js`, consumers críticos | concluído na PR `#263`, com paridade de assinatura para `getProfileHighlightsCount(...)` e regressões focadas |
-| `v11.19.0` | revisar Supabase operacional | migrations, RPCs, `search_path`, grants, RLS, docs de banco | próxima fase obrigatória da rodada v11 |
+| `v11.19.0` | revisar Supabase operacional | migrations, RPCs, `search_path`, grants, RLS, docs de banco | concluído nesta rodada com migration de performance/RLS e alinhamento documental do banco |
 | `v11.20.0` | revisar Edge Functions, storage e invariantes de deploy | `supabase/functions/*`, templates, storage, envs, docs operacionais | trilha infra/app coerente entre código, deploy e banco |
 | `v11.21.0` | executar o release gate final da v11 | testes, QA, changelog final, documentação, drift de versão canônica `8.6.0` | fechamento da rodada da v11 com checklist final completo |
 
@@ -1034,6 +1034,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#263`, commit funcional `a6ff493` na branch `codex/v11-18-0-highlights-count-contract`, merge squash `16f1c0d` na base `kinocampus-V11.0-foundations`, preview `dpl_3GNRcm9EzwCwgcWRFkZrN8j4kSpv` e deploy automático pós-merge `dpl_3LstWGN6dbR65McLd9hoEZiDQUdk`, todos confirmados em `10 de abril de 2026`.
 - riscos residuais:
   a rodada de contratos entre fachada e adapters ficou mais consistente nessa superfície específica, mas a próxima fase precisa sair da assinatura JS e auditar a trilha operacional do Supabase em si, incluindo RPC catalog, grants, `search_path`, RLS e documentação técnica do banco em `v11.19.0`.
+
+---
+
+### Iteração `v11.19.0`
+
+- objetivo:
+  revisar a trilha operacional do Supabase em um recorte pequeno e seguro, eliminando warnings ativos do Advisor ligados a `auth_rls_initplan`, `multiple_permissive_policies` e `unindexed_foreign_keys` nas superfícies `notifications`, `post_view_events` e `kc_invited_emails`, enquanto a documentação técnica do banco é alinhada ao estado real do projeto.
+- arquivos alterados:
+  `supabase/migrations/v9.3.3.0_supabase_operational_rls_fk.sql`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/ops/vercel-supabase-invariants.md`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  policies reais em `pg_policies` para `public.notifications`, `public.post_view_events` e `public.kc_invited_emails`, índices existentes em `pg_indexes`, a migration-base `v9.1.0.0_notifications_table.sql`, a trilha de analytics em `v9.3.1.0_post_analytics.sql`, a trilha de convites em `v9.1.0.3_invited_users.sql` / `v9.1.0.4_invite_audit_log.sql`, o adapter Supabase para convites (`kc_admin_get_invites`, `kc_admin_revoke_invite`) e os advisors de segurança/performance do projeto.
+- contratos preservados:
+  nenhuma rota pública, assinatura de `KCAPI`, payload de notificações, analytics de post, fluxo de convite via Edge Function ou contrato visual do frontend foi alterado; a iteração ficou restrita a performance/operacional do banco, nomes de policies e documentação técnica correspondente.
+- migrations criadas/aplicadas:
+  `supabase/migrations/v9.3.3.0_supabase_operational_rls_fk.sql`, aplicada no projeto Supabase principal desta base durante a iteração `v11.19.0`.
+- testes executados:
+  `git diff --check`, reconsulta dos advisors `security` e `performance`, inspeção SQL de `pg_policies` e `pg_indexes` antes/depois da migration e validação documental direcionada.
+- validação em navegador:
+  não houve mudança de frontend dependente desta migration; a validação publicada desta iteração concentra-se na consistência documental entregue pelo deploy estático e no estado real do banco no Supabase.
+- PR / commit / deploy:
+  PR `#TBD`, branch `codex/v11-19-0-supabase-rls-fk-audit`, com deploy de preview e publicação final a preencher no fechamento da iteração.
+- riscos residuais:
+  permanecem fora do escopo desta migration `extension_in_public` para `unaccent` e `auth_leaked_password_protection` desabilitado, ambos registrados como residual operacional no projeto. A próxima fase `v11.20.0` deve focar Edge Functions, storage e invariantes de deploy, sem misturar essas pendências com refactor de frontend.
 
 ---
 

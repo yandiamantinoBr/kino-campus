@@ -380,11 +380,13 @@ idx_search_queries_created_at  ON search_queries(created_at)      -- v9.0.4
 idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
 idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9.1.0
 idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
+idx_kc_invited_emails_invited_by ON kc_invited_emails(invited_by)          -- v9.3.3
 idx_posts_fts                  ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL  -- v9.2.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)
 idx_post_view_events_dedup     ON post_view_events(post_id, user_id, created_at DESC) WHERE user_id IS NOT NULL  -- v9.3.1
 idx_post_view_events_post_id   ON post_view_events(post_id)                          -- v9.3.1
 idx_post_view_events_created_at ON post_view_events(created_at)                      -- v9.3.1
+idx_post_view_events_user_id   ON post_view_events(user_id)                          -- v9.3.3
 idx_posts_view_count           ON posts(view_count DESC) WHERE status = 'published'  -- v9.3.1
 ```
 
@@ -403,6 +405,22 @@ idx_posts_view_count           ON posts(view_count DESC) WHERE status = 'publish
 **Analytics de post v9.3.1:** `posts.view_count` armazena contagem denormalizada de visualizacoes. `post_view_events` registra eventos granulares com anti-spam (1 view/usuario/post/hora). Self-views (autor vendo proprio post) nao contam. Retencao: 6 meses via `kc_prune_old_analytics()`. RPCs: `kc_track_view(p_post_id)` para registrar, `kc_get_post_analytics(p_post_id)` para metricas (autor-only).
 
 **Reputacao v9.1.2.0:** a fundacao de `user_ratings` adiciona agregados em `profiles`, triggers de sincronizacao e RPCs dedicadas com `SET search_path = ''`. A elegibilidade usa apenas interacoes persistidas (`comments`, `post_votes`, `saved_posts`) e a identidade do avaliador pode ser anonimizada nas listagens publicas.
+
+### `kc_invited_emails` - Convites Externos Administrativos (v9.1.0.3)
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| `email` | TEXT PK | E-mail do convidado, normalizado em minusculas |
+| `invited_by` | UUID FK profiles(id) ON DELETE SET NULL | Admin responsavel pelo convite |
+| `note` | TEXT | Observacao interna opcional |
+| `invited_at` | TIMESTAMPTZ | Momento do convite |
+| `used_at` | TIMESTAMPTZ | Preenchido apos onboarding concluido |
+| `expires_at` | TIMESTAMPTZ | Expiracao padrao de 7 dias |
+
+**RLS:** SELECT para admin ou para o proprio e-mail autenticado; INSERT/UPDATE/DELETE admin-only.
+**Operacao associada:** usada pela Edge Function `kc-invite-user` e pelas RPCs administrativas de listagem/revogacao.
+
+**Operacional v9.3.3 / v11.19.0:** `notifications`, `post_view_events` e `kc_invited_emails` tiveram RLS otimizado para o Advisor do Supabase com `initplan` (`(select auth.uid())`), consolidacao das policies SELECT permissivas redundantes e cobertura de FK por indice em `kc_invited_emails.invited_by` e `post_view_events.user_id`. Permanecem fora desta migration e sob trilha operacional separada: `extension_in_public` para `unaccent` e `auth_leaked_password_protection`.
 
 ## Storage Buckets
 

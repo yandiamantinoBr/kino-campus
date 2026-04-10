@@ -426,6 +426,54 @@ Remove notificações lidas com mais de 90 dias.
 
 ---
 
+## Convites Externos / Admin *(v9.1.0.3+)*
+
+### `kc_is_invited_email(p_email text) -> boolean` *(v9.1.0.3)*
+
+Verifica se um e-mail externo possui convite ativo e nao expirado.
+
+**Chamado em:** fluxos de auth/invite no banco; atualmente nao ha caller JS direto catalogado.
+
+---
+
+### `kc_admin_add_invite(p_email text, p_note text) -> JSONB` *(v9.1.0.3)*
+
+Registra ou renova convite manualmente no banco, sem disparar envio de e-mail.
+
+**Chamado em:** uso administrativo via SQL/testes. O frontend atual prefere a Edge Function `kc-invite-user`.
+
+**Retorno:** `{ "ok": true, "email": "usuario@externo.com" }`
+
+---
+
+### `kc_admin_get_invites() -> TABLE(...)` *(v9.1.0.3)*
+
+Lista convites externos com status de expiracao para o painel admin.
+
+**Chamado em:** `KCAPI.getInvites()`
+
+**Retorno:** linhas com `email`, `invited_by`, `note`, `invited_at`, `used_at`, `expires_at`, `is_expired`.
+
+---
+
+### `kc_mark_invite_used() -> void` *(v9.1.0.3)*
+
+Marca como usado o convite do proprio e-mail autenticado apos onboarding.
+
+**Chamado em:** trilha de onboarding/convite no banco; atualmente nao ha caller JS direto catalogado.
+
+---
+
+### `kc_admin_revoke_invite(p_email text) -> JSONB` *(v9.1.0.3 / v9.1.0.4)*
+
+Revoga convite externo e registra `invite_revoked` no `audit_log`.
+
+**Chamado em:** `KCAPI.revokeInvite()`
+
+**Retorno:** `{ "ok": true, "email": "usuario@externo.com" }`
+
+---
+
 ## Triggers de Notificação *(v9.1.0)*
 
 ### `kc_notify_on_comment()` [Trigger em comments]
@@ -567,6 +615,8 @@ idx_search_queries_user    ON search_queries(user_id, created_at)  -- v9.0.4
 
 -- Notificações (v9.1.0)
 idx_notifications_user_unread ON notifications(user_id, read) WHERE read = false
+idx_kc_invited_emails_invited_by ON kc_invited_emails(invited_by)  -- v9.3.3
+idx_post_view_events_user_id ON post_view_events(user_id)          -- v9.3.3
 
 -- Full-text search (v9.2.0)
 idx_posts_fts ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL

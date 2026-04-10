@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0` e `v11.18.0`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0` e `v11.19.0`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.19.0 | auditoria operacional do Supabase com migration versionada para eliminar warnings ativos de RLS/performance em `notifications`, `post_view_events` e `kc_invited_emails`, cobrindo `initplan`, policies permissivas redundantes e índices de FK faltantes, além de sincronizar `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais | `#TBD` |
 | v11.18.0 | aprofundamento da rodada de contratos entre `KCAPI` e adapters: `getProfileHighlightsCount(...)` passou a aceitar `params` e a encaminhá-los com paridade entre `kc-api.client.js`, `local.adapter.js` e `supabase.adapter.js`, preservando a semântica highlight-only e adicionando regressões diretas de dispatch/paridade | `#263` |
 | v11.17.0 | primeira fatia de controller do admin pós-v10: `admin-banners.controller.js` passou a validar acesso via `KCAPI.getCurrentUser()` + `profiles.is_admin`, aguardando hidratação de auth e removendo o fallback que carregava a tela sem sessão/autorização validadas | `#261` |
 | v11.16.0 | primeira fatia do admin pós-v10: preload do shell administrativo foi centralizado em `admin-shell.js`, com `kc-loading` e `kc-theme-preload` padronizados nas 5 telas admin e regressão estática de marcação | `#259` |
@@ -76,10 +77,10 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.18.0`
-- objetivo da iteração: aprofundar a rodada de contratos entre `KCAPI` e adapters em uma fatia pequena e segura, eliminando drift de assinatura entre os counts de salvos/destaques sem alterar a semântica já consolidada do produto
-- natureza da iteração: hardening funcional pequeno em `kc-api.client.js`, `local.adapter.js` e `supabase.adapter.js`, com regressões focadas de dispatch e paridade local
-- próxima iteração sugerida: `v11.19.0`, para revisar a trilha operacional de Supabase, incluindo RPCs, `search_path`, grants, RLS e documentação técnica do banco
+- iteração ativa consolidada: `v11.19.0`
+- objetivo da iteração: revisar a trilha operacional de Supabase com um recorte pequeno e seguro, removendo warnings ativos do Advisor em RLS/performance e alinhando as docs técnicas do banco ao estado real do projeto
+- natureza da iteração: migration SQL versionada para `notifications`, `post_view_events` e `kc_invited_emails`, com validação por Advisor/queries no Supabase e sincronização documental do catálogo de banco
+- próxima iteração sugerida: `v11.20.0`, para revisar Edge Functions, storage e invariantes de deploy
 
 ---
 
@@ -195,7 +196,7 @@ Acesse `http://localhost:5500/index.html`.
 
 ### 1) Migrations
 
-Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **77 arquivos**, incluindo as 2 migrations da v10.
+Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **78 arquivos**, incluindo as 2 migrations da v10 e a migration operacional `v9.3.3.0_supabase_operational_rls_fk.sql`.
 
 No banco principal atual, as 2 migrations da v10 já foram aplicadas. Use a lista abaixo para ambientes novos, bancos recriados ou staging separado.
 
