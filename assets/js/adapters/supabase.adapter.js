@@ -3187,7 +3187,7 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
-  async function supabaseGetProfileHighlightsCount(profileId) {
+  async function supabaseGetProfileHighlightsCount(profileId, params = {}) {
     const client = getSupabaseClient();
     const author = String(profileId || '').trim();
     if (!client || !author) return 0;
@@ -3198,7 +3198,7 @@ const { ENV, normalizePost } = window.KCAPI;
     } catch (_) { }
 
     try {
-      const rows = await fetchSavedRowsFallback(client, author, { kind: 'highlight' });
+      const rows = await fetchSavedRowsFallback(client, author, { ...params, kind: 'highlight' });
       return aggregateSavedRows(rows, { includeStatus: false, onlyPublished: true }).length;
     } catch (e) {
       console.error('[KCAPI][saved_posts] getProfileHighlightsCount exceção:', e);

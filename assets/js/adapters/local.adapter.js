@@ -1177,11 +1177,11 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return paginateLocalItems(items, params).items;
   }
 
-  async function localGetProfileHighlightsCount(profileId) {
+  async function localGetProfileHighlightsCount(profileId, params = {}) {
     const current = readLocalProfile();
     const target = String(profileId || '').trim();
     if (!target || (target !== String(current.id || '').trim() && target !== LOCAL_RATING_VIEWER_ID)) return 0;
-    const items = await listLocalSavedPostSummaries({ kind: 'highlight' });
+    const items = await listLocalSavedPostSummaries({ ...params, kind: 'highlight' });
     return items.length;
   }
 

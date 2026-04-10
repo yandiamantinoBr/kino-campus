@@ -353,10 +353,11 @@ describe('KCAPI - API Client', () => {
 
   describe('capability dispatch beyond Supabase', () => {
     let originalDriver;
+    let localAdapter;
 
     beforeEach(() => {
       originalDriver = window.KC_ENV.driver;
-      api.registerAdapter('local', {
+      localAdapter = {
         name: 'local',
         getPosts: jest.fn().mockResolvedValue([]),
         getMyProfile: jest.fn().mockResolvedValue({ id: 'USER_SELF', display_name: 'Perfil Local' }),
@@ -370,7 +371,8 @@ describe('KCAPI - API Client', () => {
         getMySavedPostsCount: jest.fn().mockResolvedValue(1),
         getProfileHighlights: jest.fn().mockResolvedValue([{ id: 'post-1', save_kinds: ['highlight'] }]),
         getProfileHighlightsCount: jest.fn().mockResolvedValue(1),
-      });
+      };
+      api.registerAdapter('local', localAdapter);
       window.KC_ENV.driver = 'local';
     });
 
@@ -390,7 +392,9 @@ describe('KCAPI - API Client', () => {
       await expect(api.getMySavedPosts({})).resolves.toEqual([{ id: 'post-1', save_kinds: ['favorite'] }]);
       await expect(api.getMySavedPostsCount({})).resolves.toBe(1);
       await expect(api.getProfileHighlights('USER_SELF', {})).resolves.toEqual([{ id: 'post-1', save_kinds: ['highlight'] }]);
-      await expect(api.getProfileHighlightsCount('USER_SELF')).resolves.toBe(1);
+      await expect(api.getProfileHighlightsCount('USER_SELF', { page: 2, limit: 5 })).resolves.toBe(1);
+
+      expect(localAdapter.getProfileHighlightsCount).toHaveBeenCalledWith('USER_SELF', { page: 2, limit: 5 });
     });
 
     test('usa updateMyProfile e uploadProfileAvatar do driver local quando disponiveis', async () => {

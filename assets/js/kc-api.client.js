@@ -2217,13 +2217,13 @@
     return driver.getProfileHighlights(profileId, params);
   }
 
-  async function getProfileHighlightsCount(profileId) {
+  async function getProfileHighlightsCount(profileId, params = {}) {
     const driver = getActiveDriver();
     if (ENV.driver !== 'supabase' && driver && typeof driver.getProfileHighlightsCount === 'function') {
-      return driver.getProfileHighlightsCount(profileId);
+      return driver.getProfileHighlightsCount(profileId, params);
     }
     if (ENV.driver !== 'supabase' || !getActiveDriver().getProfileHighlightsCount) return 0;
-    return driver.getProfileHighlightsCount(profileId);
+    return driver.getProfileHighlightsCount(profileId, params);
   }
 
   async function createHelpRequest(payload = {}) {
