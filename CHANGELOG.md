@@ -43,6 +43,7 @@
 ### Docs
 - `v11.19.1`: registrado o diagnóstico de que o sino de notificações não está sendo cortado por `overflow`, mas visualmente apertado pela geometria atual do shell e pela sobreposição do badge.
 - `v11.19.1`: o relatório v11 e o README passaram a desdobrar a trilha futura de notificações em `v11.20.0` a `v11.23.0`, separando hardening in-app, preferências por canal, fundação assíncrona, e-mail, WhatsApp e release gate final.
+- `v11.19.1`: fechamento documental sincronizado com o merge da PR `#267` e o deploy de produção `dpl_DaSid6uAaMKpnLqGMnc88hhCZkeZ`, já publicado em `www.kinocampus.com.br`.
 - `v11.19.0`: `docs/db-schema.md`, `docs/rpc-catalog.md` e `docs/ops/vercel-supabase-invariants.md` passaram a refletir a trilha real de convites externos, os novos índices de cobertura e os residuals operacionais do Supabase que seguem fora do escopo da migration.
 - `v11.19.0`: atualizado o `README.md` e o relatório v11 para registrar a auditoria operacional do Supabase como fase concluída da rodada e abrir explicitamente a continuidade em `v11.20.0`.
 - `v11.19.0`: fechamento documental consolidado com preview `dpl_YyTeTEZ3gnxYYCc2a2TL3FXVV4Ff`, deploy de produção `dpl_J8VA2ur4bwJn4uffHV8eNuVouh3G` e validação publicada em `www.kinocampus.com.br`.

@@ -80,7 +80,7 @@ Regras desta fase:
 - iteração ativa consolidada: `v11.19.1`
 - objetivo da iteração: auditar a trilha atual de notificações, confirmar se o sino está clipado ou apenas apertado visualmente e planejar a futura expansão para limpeza no dropdown, preferências por evento/canal e entregas por e-mail/WhatsApp
 - natureza da iteração: planejamento documental e arquitetural, sem mudança funcional nem SQL novo
-- último deploy validado desta fase: preview `dpl_EDqHDZZhsKasQwXuVmjUXVip5czB` e produção vigente da base `dpl_3ZdK5GuxjSUBtKa5UZiQGjwbjXW3`, verificados em `10 de abril de 2026`
+- último deploy validado desta fase: preview `dpl_EDqHDZZhsKasQwXuVmjUXVip5czB` e produção final da rodada `dpl_DaSid6uAaMKpnLqGMnc88hhCZkeZ`, publicados em `10 de abril de 2026`
 - achado desta rodada: o sino não aparenta estar sendo cortado por `overflow`; o aperto visual vem da geometria do botão (`36x36`), `line-height: 1`, `padding: 0` no shell responsivo e da sobreposição muito agressiva do badge
 - próxima iteração sugerida: `v11.20.0`, para endurecer o shell in-app de notificações (`kcNotifBell` / `kcNotifDropdown`) e definir o contrato seguro de limpeza/exclusão antes dos canais externos
 
