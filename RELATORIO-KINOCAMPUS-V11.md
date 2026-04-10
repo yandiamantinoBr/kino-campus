@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0` e `v11.19.0` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto, limpeza estrutural de `kc-comments.js`, reformulação do roadmap remanescente da v11 em uma sequência executável contínua, avanço da macrofase de conta/onboarding/settings até a hidratação social determinística de `account-setup` e a primeira rodada operacional dedicada ao Supabase Advisor com correção versionada de RLS/performance |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0` e `v11.19.1` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto, limpeza estrutural de `kc-comments.js`, reformulação do roadmap remanescente da v11 em uma sequência executável contínua, avanço da macrofase de conta/onboarding/settings até a hidratação social determinística de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correção versionada de RLS/performance e o planejamento formal da futura trilha de notificações multicanal |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -442,7 +442,7 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `10 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A fase `v11.18.0` foi concluída na PR `#263`, alinhando a assinatura de `getProfileHighlightsCount(...)` entre `KCAPI`, `local.adapter.js` e `supabase.adapter.js` sem alterar a semântica highlight-only. A fase `v11.19.0` foi concluída na PR `#265`, com migration versionada para eliminar warnings ativos do Advisor em `notifications`, `post_view_events` e `kc_invited_emails`, além de sincronização de `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais. A próxima sequência obrigatória passa a ser `v11.20.0`.
+Atualização de status em `10 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A fase `v11.18.0` foi concluída na PR `#263`, alinhando a assinatura de `getProfileHighlightsCount(...)` entre `KCAPI`, `local.adapter.js` e `supabase.adapter.js` sem alterar a semântica highlight-only. A fase `v11.19.0` foi concluída na PR `#265`, com migration versionada para eliminar warnings ativos do Advisor em `notifications`, `post_view_events` e `kc_invited_emails`, além de sincronização de `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais. A rodada documental `v11.19.1` consolida agora o diagnóstico do sino/notificações e desdobra a trilha futura de notificações em novas fases `v11.20.x` e `v11.21.x`. A próxima sequência obrigatória passa a ser `v11.20.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -453,15 +453,20 @@ Atualização de status em `10 de abril de 2026`: a fase `v11.12.0` foi executad
 | `v11.17.0` | fechar a primeira rodada do admin pós-v10 e reduzir fallback excessivo | controllers admin, fluxos de paginação, export, feedback e contratos internos | admin mais previsível e menos dependente de fallback implícito |
 | `v11.18.0` | aprofundar a rodada de contratos entre `KCAPI` e adapters | `kc-api.client.js`, `supabase.adapter.js`, `local.adapter.js`, consumers críticos | concluído na PR `#263`, com paridade de assinatura para `getProfileHighlightsCount(...)` e regressões focadas |
 | `v11.19.0` | revisar Supabase operacional | migrations, RPCs, `search_path`, grants, RLS, docs de banco | concluído nesta rodada com migration de performance/RLS e alinhamento documental do banco |
-| `v11.20.0` | revisar Edge Functions, storage e invariantes de deploy | `supabase/functions/*`, templates, storage, envs, docs operacionais | trilha infra/app coerente entre código, deploy e banco |
-| `v11.21.0` | executar o release gate final da v11 | testes, QA, changelog final, documentação, drift de versão canônica `8.6.0` | fechamento da rodada da v11 com checklist final completo |
+| `v11.20.0` | endurecer o shell in-app de notificações | `kc-notifications.js`, header markup/CSS, `KCAPI`, adapters e contrato de dropdown | sino com geometria estável, `kcNotifDropdown` com modelo explícito de limpar/excluir e sem regressão de badge/realtime |
+| `v11.20.1` | persistir preferências de notificação por evento e canal | `settings.html`, `account-setup.html` ou painel dedicado, `KCAPI`, adapters, migration de preferências | usuário escolhe o que quer receber e por onde, sem misturar contato público com destino privado de notificação |
+| `v11.20.2` | criar a fundação assíncrona de entrega externa | `supabase/functions/*`, migrations de fila/log, envs, invariantes operacionais | base pronta para e-mail/WhatsApp sem acoplar providers aos triggers principais do app |
+| `v11.21.0` | implementar o canal e-mail | Edge Function de envio, template, logs de entrega, fallback e docs operacionais | notificações por e-mail com opt-in, observabilidade e sem quebrar a trilha in-app |
+| `v11.21.1` | implementar o canal WhatsApp | provider, opt-in, normalização E.164, rate-limit, logs e consentimento | notificações por WhatsApp entregáveis sem expor o WhatsApp público do perfil |
+| `v11.22.0` | revisar storage, Edge Functions e invariantes de deploy já com a trilha de notificações multicanal | storage, segredos, templates, retries, observabilidade, docs ops | trilha infra/app coerente entre código, deploy, banco e canais externos |
+| `v11.23.0` | executar o release gate final da v11 | testes, QA, changelog final, documentação, drift de versão canônica `8.6.0` | fechamento da rodada da v11 com checklist final completo |
 
 ### 8.3. Regra de progressão entre fases
 
 - a próxima iteração só começa quando a anterior tiver PR mergeada, branch removida, base puxada e deploy validado
 - cada iteração acima deve atualizar este relatório com o status da fase e redefinir explicitamente a próxima
 - se uma fase descobrir um escopo maior do que o previsto, ela deve ser repartida em `v11.x+0.1` documental ou em uma nova iteração imediatamente subsequente, nunca absorvida silenciosamente
-- a conclusão da v11 só ocorre após `v11.21.0` ou equivalente posterior que substitua formalmente essa fase final dentro deste relatório
+- a conclusão da v11 só ocorre após `v11.23.0` ou equivalente posterior que substitua formalmente essa fase final dentro deste relatório
 
 ### 8.4. Regra de fatiamento
 
@@ -470,6 +475,41 @@ Cada fase acima ainda pode se desdobrar em várias PRs pequenas. Nenhuma PR deve
 - mudança pública + mudança admin + mudança banco, se não forem inseparáveis
 - correção de bug com refactor estrutural amplo
 - atualização documental solta sem vínculo com o estado real da iteração
+
+### 8.5. Trilha futura de notificações multicanal
+
+**Diagnóstico atual**
+
+- o sino (`kc-notif-bell`) não aparenta estar sendo cortado por `overflow` do header: o shell público já usa `overflow: visible` em `body.kc-shell-page .kc-header` e `body.kc-shell-page .kc-header-container`
+- a sensação de sino "comido" vem principalmente da geometria apertada do shell responsivo: botão `36x36`, `padding: 0`, `line-height: 1` e badge (`top: -2px`, `right: -4px`) sobrepondo demais a área útil do ícone
+- o dropdown atual só suporta listar, marcar individualmente como lida e `Marcar todas como lidas`; não existe ainda ação explícita de limpar/excluir, apesar de a tabela já possuir policy de `DELETE`
+- a camada pública da API hoje expõe apenas `getNotifications`, `markNotificationsRead`, `markAllNotificationsRead`, `getUnreadNotificationCount`, `subscribeNotifications` e `unsubscribeNotifications`
+- não existe hoje modelo persistido de preferência por evento/canal; tampouco existe trilha de entrega externa, fila, logs ou retries para e-mail/WhatsApp
+- o WhatsApp disponível no produto/perfil hoje é uma superfície de contato público/social; ele **não deve** ser reaproveitado automaticamente como endpoint privado de notificações
+
+**Arquitetura-alvo segura**
+
+- manter `public.notifications` como feed canônico in-app e fonte única do dropdown/sino
+- introduzir uma camada separada de preferências de notificação, com opt-in explícito por evento e canal, em vez de acoplar isso a `profiles.social_links` ou `contact_primary_method`
+- introduzir uma fila/outbox de entrega externa e um log de entregas, para que e-mail/WhatsApp sejam assíncronos, observáveis e não executem provider call dentro dos triggers principais de comentário/voto/post
+- preservar o contrato atual de realtime e badge: a expansão multicanal não deve alterar o comportamento do sino, apenas complementar os destinos de entrega
+
+**Diretriz funcional para a UI**
+
+- no `kcNotifDropdown`, a ação futura deve separar claramente:
+  - `Marcar todas como lidas`
+  - `Limpar lidas`
+  - eventual exclusão total com confirmação, fora do caminho rápido do dropdown
+- as preferências futuras do usuário devem permitir decidir:
+  - quais tipos de notificação receber
+  - em quais canais receber (`in-app`, `email`, `whatsapp`)
+  - quais canais ficam desligados por padrão para evitar spam e regressão de privacidade
+
+**Diretriz de compatibilidade**
+
+- defaults da migração futura devem preservar o comportamento atual: tudo continua chegando in-app
+- canais externos entram inicialmente opt-in
+- preferências devem ser criadas de forma lazy/backfill-safe, sem exigir que usuários antigos revisitem onboarding para manter notificações in-app funcionando
 
 ---
 
@@ -1057,6 +1097,31 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#265`, commit funcional `c55391b` na branch `codex/v11-19-0-supabase-rls-fk-audit`, preview final `dpl_YyTeTEZ3gnxYYCc2a2TL3FXVV4Ff` (`kino-campus-3jji0iglw-yannakamurabrs-projects.vercel.app`) homologado em `10 de abril de 2026` e deploy de produção `dpl_J8VA2ur4bwJn4uffHV8eNuVouh3G` (`kino-campus-9uf5f5ixc-yannakamurabrs-projects.vercel.app`, alias `www.kinocampus.com.br`) validado após o merge do commit squash `fd01000`.
 - riscos residuais:
   permanecem fora do escopo desta migration `extension_in_public` para `unaccent` e `auth_leaked_password_protection` desabilitado, ambos registrados como residual operacional no projeto. A próxima fase `v11.20.0` deve focar Edge Functions, storage e invariantes de deploy, sem misturar essas pendências com refactor de frontend.
+
+---
+
+### Iteração `v11.19.1`
+
+- objetivo:
+  auditar a trilha atual de notificações e transformar o próximo bloco da v11 em um roadmap seguro para notificações multicanal, incluindo limpeza no dropdown, preferências por evento/canal e futuras entregas por e-mail e WhatsApp, sem implementar esses canais ainda.
+- arquivos alterados:
+  `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  `assets/js/kc-notifications.js`, `assets/js/kc-api.client.js`, `assets/js/adapters/supabase.adapter.js`, `assets/js/adapters/local.adapter.js`, `assets/css/styles.css`, `assets/css/kc-public-shell.css`, `index.html`, `settings.html`, `account-setup.html`, `_product.html`, migrations `v9.1.0.0_notifications_table.sql` / `v9.1.0.1_notification_triggers.sql`, docs de banco e o deploy público vigente.
+- achado principal:
+  o sino não aparenta estar sendo clipado por `overflow` do header; o problema é majoritariamente visual. O shell responsivo fixa a ação em `36x36`, zera o `padding`, força `line-height: 1` e deixa o badge muito agressivo no canto superior, o que dá a sensação de ícone "comido". O backlog correto é de hardening visual/geométrico, não de correção de `z-index` ou recorte por container.
+- contratos preservados:
+  nenhuma migration nova, RPC nova, Edge Function nova, mudança de adapter, alteração de `KCAPI` ou alteração funcional do dropdown foi aplicada nesta rodada; a iteração ficou restrita a diagnóstico técnico e replanejamento versionado da v11.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  inspeção dirigida de código/CSS/SQL da trilha de notificações, `node --check assets/js/kc-notifications.js` e `git diff --check`.
+- validação em navegador:
+  não houve mudança funcional de frontend nesta rodada. A checagem visual foi inferida a partir do screenshot recebido, da geometria real dos estilos publicados e da confirmação de que o shell público usa `overflow: visible` na área relevante do header, descartando clipping estrutural como hipótese principal.
+- PR / commit / deploy:
+  PR `#267`, commit documental `50f7905` na branch `codex/v11-19-1-notification-roadmap`, preview `dpl_EDqHDZZhsKasQwXuVmjUXVip5czB` (`kino-campus-8m69zbsur-yannakamurabrs-projects.vercel.app`) homologado em `10 de abril de 2026`. O deploy de produção desta rodada documental será publicado após o merge da própria PR.
+- riscos residuais:
+  ainda não existe camada de preferências por evento/canal, nem trilha assíncrona de entrega externa. A expansão futura precisa separar notificação pública/in-app de endpoints privados de entrega, evitando reaproveitar automaticamente o WhatsApp de contato do perfil.
 
 ---
 
