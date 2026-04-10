@@ -12,6 +12,14 @@
     node.style.pointerEvents = 'auto';
   }
 
+  function releaseBootState() {
+    if (!document.documentElement) return;
+    requestAnimationFrame(function () {
+      document.documentElement.classList.remove('kc-loading');
+      document.documentElement.classList.remove('kc-theme-preload');
+    });
+  }
+
   function syncHeaderHeight() {
     var header = document.querySelector('.kc-header--admin');
     if (!header) return;
@@ -98,6 +106,7 @@
 
   function init() {
     if (!document.body || !document.body.classList.contains('kc-admin-page')) return;
+    releaseBootState();
     ensureHelpRequestsLinks();
     syncHeaderState();
     observeHeaderAuth();

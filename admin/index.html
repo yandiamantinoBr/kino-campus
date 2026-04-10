@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="kc-loading kc-theme-preload">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,24 +7,10 @@
   <meta name="description" content="Painel administrativo do KinoCampus — comunidade universitária da UFG." />
   <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.0">
   <script src="../assets/js/kc-theme-boot.js?v=8.6.0"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      requestAnimationFrame(function () {
-        document.documentElement.classList.remove('kc-loading');
-      });
-    });
-  </script>
   <title>KinoCampus - Dashboard Admin</title>
   <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.0" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    html.kc-loading .kc-header--admin .kc-user-actions,
-    html.kc-loading .kc-header--admin .theme-toggle,
-    html.kc-loading .kc-header--admin .btn-login {
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-
     .kc-admin-page main.kc-main-content {
       display: grid;
       grid-template-columns: minmax(0, 1fr) !important;
