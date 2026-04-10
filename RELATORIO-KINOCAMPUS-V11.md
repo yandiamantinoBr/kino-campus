@@ -437,11 +437,12 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 | produto, comentários, ranking, votos e persistência incremental | `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.13.0`, `v11.13.1` | parcialmente coberto; o residual imediato de notificações e popovers foi fechado, restando apenas novas subfatias se surgir bug concreto |
 | perfil e listagens do usuário | `v11.14.0` | iniciado com normalização de rotas humanas de detalhe entre perfil e `my-posts` |
 | conta, onboarding e settings | `v11.15.0`, `v11.15.1`, `v11.15.2` | coberto até o fechamento seguro do preview e da hidratação social do onboarding; próximos avanços só se surgir bug concreto ou novo objetivo de produto |
+| admin pós-v10 | `v11.16.0` | iniciado com unificação do preload/boot visual do shell administrativo entre as 5 telas |
 | adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0` | parcialmente coberto; ainda falta simplificação mais profunda com `supabase.adapter.js` |
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A próxima sequência obrigatória passa a ser `v11.16.0`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A próxima sequência obrigatória passa a ser `v11.17.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -964,6 +965,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#257`, commit funcional `d6ffd51` na branch `codex/v11-15-2-account-setup-social-hydration`, merge squash `97f28a1` na base `kinocampus-V11.0-foundations`, preview `dpl_CPiGz5Y1hnGzSg58ean6GRimAj3d` e deploy manual de produção `dpl_9UDrj8vb3NkJzqDPPFZmeqAgUasq`, publicado em `https://kino-campus-nfniub6f8-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a macrofase de conta/onboarding/settings ficou suficientemente coberta para a rodada atual. O próximo passo da sequência remanescente passa a ser `v11.16.0`, iniciando a consolidação do admin pós-v10.
+
+---
+
+### Iteração `v11.16.0`
+
+- objetivo:
+  iniciar a consolidação do admin pós-v10 removendo drift do preload/boot visual entre as 5 telas administrativas, para que `kc-loading` e `kc-theme-preload` deixem de depender de scripts e estilos inline replicados.
+- arquivos alterados:
+  `admin/index.html`, `admin/moderation.html`, `admin/reports.html`, `admin/banners.html`, `admin/help-requests.html`, `assets/js/admin-shell.js`, `assets/css/admin-shell.css`, `tests/admin-shell-preload-markup.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  as 5 telas em `admin/*.html`, o shell compartilhado em `assets/js/admin-shell.js`, o CSS compartilhado em `assets/css/admin-shell.css` e a consistência do bootstrap `kc-loading`/`kc-theme-preload` entre dashboard, moderação, denúncias, banners e pedidos de ajuda.
+- contratos preservados:
+  nenhuma migration, RPC, adapter, controller de regra de negócio, contrato de `KCAPI`, estrutura dos painéis admin ou fluxo operacional de auth foi alterado; a iteração ficou restrita ao boot/preload do shell administrativo e à regressão estática de suporte.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/admin-shell.js`, `npx jest tests/admin-shell-preload-markup.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview da PR ficou `Ready` no deployment `dpl_Cxd3cRgJHpqfRNXC9wR1zdZ8rSch`, com alias `https://kino-campus-git-codex-v11-16-0-a-211d4a-yannakamurabrs-projects.vercel.app`, confirmado por `gh pr checks` e `vercel inspect`. Após o merge, a produção publicada em [www.kinocampus.com.br](https://www.kinocampus.com.br) passou a servir `assets/js/admin-shell.js` com `releaseBootState()` e `admin/index.html` com `<html lang="pt-BR" class="kc-loading kc-theme-preload">`, tudo confirmado por `curl.exe --ssl-no-revoke` e `vercel inspect`.
+- PR / commit / deploy:
+  PR `#259`, commit funcional `cf3e104` na branch `codex/v11-16-0-admin-shell-preload`, merge squash `dfc57be` na base `kinocampus-V11.0-foundations`, preview `dpl_Cxd3cRgJHpqfRNXC9wR1zdZ8rSch` e deploy manual de produção `dpl_JQL419g5PzKoNrr5uDi386YVwQzK`, publicado em `https://kino-campus-fu8o1fioz-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
+- riscos residuais:
+  a macrofase de admin pós-v10 foi iniciada, mas ainda faltam subfatias de controllers, paginação, feedback e redução de fallback implícito. O próximo passo da sequência remanescente passa a ser `v11.17.0`.
 
 ---
 
