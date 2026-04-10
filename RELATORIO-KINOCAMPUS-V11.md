@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0` e `v11.11.1` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto, limpeza estrutural de `kc-comments.js` com regressão dedicada para helpers sombreados e reformulação do roadmap remanescente da v11 em uma sequência executável contínua |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0` e `v11.11.1` já registradas, com baseline documental, consistência do shell público, desbloqueio operacional do Vercel MCP no Codex, normalização dos feeds equivalentes, correção transversal do bootstrap de ranking dos módulos, hardening específico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicação residual em `localCreatePost`, introdução de hidratação persistente com revalidação silenciosa em ranking e votos, extensão controlada do mesmo padrão para analytics/comentários da página de produto, limpeza estrutural de `kc-comments.js`, reformulação do roadmap remanescente da v11 em uma sequência executável contínua e avanço da macrofase de conta/onboarding/settings até a hidratação social determinística de `account-setup` |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -436,12 +436,12 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 | feeds equivalentes e filtros | `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0` | amplamente coberto |
 | produto, comentários, ranking, votos e persistência incremental | `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.13.0`, `v11.13.1` | parcialmente coberto; o residual imediato de notificações e popovers foi fechado, restando apenas novas subfatias se surgir bug concreto |
 | perfil e listagens do usuário | `v11.14.0` | iniciado com normalização de rotas humanas de detalhe entre perfil e `my-posts` |
-| conta, onboarding e settings | `v11.15.0`, `v11.15.1` | iniciado com alinhamento dos previews de contato em `settings` e `account-setup` ao comportamento canônico do CTA |
+| conta, onboarding e settings | `v11.15.0`, `v11.15.1`, `v11.15.2` | coberto até o fechamento seguro do preview e da hidratação social do onboarding; próximos avanços só se surgir bug concreto ou novo objetivo de produto |
 | adapters e fachada `KCAPI` | `v11.7.0`, `v11.8.0` | parcialmente coberto; ainda falta simplificação mais profunda com `supabase.adapter.js` |
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A próxima sequência obrigatória passa a ser `v11.15.2`.
+Atualização de status em `09 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A próxima sequência obrigatória passa a ser `v11.16.0`.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -941,6 +941,29 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#255`, commit funcional `2a85925` na branch `codex/v11-15-1-account-setup-contact-preview`, merge squash `31d7f44` na base `kinocampus-V11.0-foundations`, preview `dpl_5cAB1wgjGki748PKLeYFqEAgp83J` e deploy manual de produção `dpl_4YBqUWRySXoXdeFVU5pjQk34qbfY`, publicado em `https://kino-campus-82misd6at-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
 - riscos residuais:
   a macrofase de conta/onboarding/settings continua aberta. O próximo passo após esta fatia permanece sendo `v11.15.2`, para continuar a revisão de `settings.html`, `account-setup.html` e shareds de conta/perfil sem abrir refactor amplo em uma única rodada.
+
+---
+
+### Iteração `v11.15.2`
+
+- objetivo:
+  aprofundar a rodada de conta/onboarding tornando determinística a hidratação de `social_links` e `social_visibility` em `account-setup`, para que perfis sem configuração completa não herdem estado antigo de checkboxes ou campos sociais.
+- arquivos alterados:
+  `assets/js/controllers/account-setup.controller.js`, `tests/account-setup-social-hydration.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`.
+- equivalentes revisados:
+  `account-setup.html` nos blocos `data-social-input`/`data-social-visible`, helpers `normalizeSocialLinks`, `normalizeSocialVisibility` e `SOCIAL_ORDER` em `assets/js/account-profile.shared.js`, além da coerência com a prévia de contato endurecida na `v11.15.1`.
+- contratos preservados:
+  nenhuma migration, RPC, adapter, payload persistido, estrutura HTML de `account-setup.html` ou contrato público de `KCAPI` foi alterado; a iteração ficou restrita ao wiring interno de hidratação/coleta do onboarding, ao reaproveitamento dos helpers shared existentes e às regressões/documentação de suporte.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `node --check assets/js/controllers/account-setup.controller.js`, `npx jest tests/account-profile.shared.test.js tests/account-setup-contact-preview.test.js tests/account-setup-social-hydration.test.js --runInBand` e `git diff --check`.
+- validação em navegador:
+  o preview da PR ficou `Ready` no deployment `dpl_CPiGz5Y1hnGzSg58ean6GRimAj3d`, com alias `https://kino-campus-git-codex-v11-15-2-a-6c9ec7-yannakamurabrs-projects.vercel.app`, confirmado por `gh pr checks` e `vercel inspect`. O fetch direto do preview continuou protegido por Vercel Authentication nesta sessão, então a homologação remota dessa etapa ficou ancorada no check `Vercel` da PR `#257` e no `vercel inspect`. Após o merge, a produção publicada em [www.kinocampus.com.br](https://www.kinocampus.com.br) passou a servir `assets/js/controllers/account-setup.controller.js` com `SOCIAL_VISIBILITY_KEYS`, `shared.normalizeSocialVisibility(...)` e `hasSavedSocialVisibility(...)`, além de responder `200` em `account-setup.html`, tudo confirmado por `curl.exe --ssl-no-revoke`.
+- PR / commit / deploy:
+  PR `#257`, commit funcional `d6ffd51` na branch `codex/v11-15-2-account-setup-social-hydration`, merge squash `97f28a1` na base `kinocampus-V11.0-foundations`, preview `dpl_CPiGz5Y1hnGzSg58ean6GRimAj3d` e deploy manual de produção `dpl_9UDrj8vb3NkJzqDPPFZmeqAgUasq`, publicado em `https://kino-campus-nfniub6f8-yannakamurabrs-projects.vercel.app` e aliasado para [www.kinocampus.com.br](https://www.kinocampus.com.br), todos confirmados em `09 de abril de 2026`.
+- riscos residuais:
+  a macrofase de conta/onboarding/settings ficou suficientemente coberta para a rodada atual. O próximo passo da sequência remanescente passa a ser `v11.16.0`, iniciando a consolidação do admin pós-v10.
 
 ---
 

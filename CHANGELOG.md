@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.15.2`: `account-setup.controller.js` passou a normalizar `social_links` e `social_visibility` durante `populateForm()`, reaproveitando os helpers shared e evitando que toggles de visibilidade antigos vazem entre hidratações parciais do onboarding.
+- `v11.15.2`: a coleta e hidratação das redes sociais do onboarding agora dependem de listas canônicas de chaves derivadas de `SOCIAL_ORDER`, com reset determinístico de todos os checkboxes e preservação do default de WhatsApp apenas quando o perfil ainda não possui configuração salva de visibilidade.
 - `v11.15.1`: `account-setup.controller.js` passou a gerar a prévia de contato do onboarding via `buildContactAction`, alinhando o bloco de conta ao comportamento real do CTA público dos anúncios.
 - `v11.15.1`: a prévia do onboarding agora reage corretamente ao toggle `Permitir contato público nos anúncios`, exibindo a alternativa segura de `Ver perfil` quando o contato público está desligado.
 - `v11.15.0`: `settings.controller.js` passou a gerar o `postUrl` da prévia de contato a partir de `KCUtils.buildProductDetailHref('demo')`, alinhando o bloco de conta/perfil ao caminho canônico `_product.html?id=...` e removendo o drift residual com `product.html?id=demo`.
@@ -31,6 +33,8 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.15.2`: atualizado o `README.md` e o relatório v11 para registrar a terceira fatia de `account-setup`, fechar a macrofase atual de conta/onboarding/settings e abrir explicitamente a continuidade em `v11.16.0`.
+- `v11.15.2`: fechamento documental consolidado com a PR `#257`, preview `dpl_CPiGz5Y1hnGzSg58ean6GRimAj3d`, deploy de produção `dpl_9UDrj8vb3NkJzqDPPFZmeqAgUasq` e validação publicada em `www.kinocampus.com.br`.
 - `v11.15.1`: atualizado o `README.md` e o relatório v11 para registrar esta segunda fatia de `account-setup`/onboarding e abrir explicitamente a continuidade em `v11.15.2`.
 - `v11.15.1`: fechamento documental consolidado com a PR `#255`, preview `dpl_5cAB1wgjGki748PKLeYFqEAgp83J`, deploy de produção `dpl_4YBqUWRySXoXdeFVU5pjQk34qbfY` e validação publicada em `www.kinocampus.com.br`.
 - `v11.15.0`: atualizado o `README.md` e o relatório v11 para registrar esta primeira fatia de `settings`/conta e abrir explicitamente a continuidade em `v11.15.1`.
