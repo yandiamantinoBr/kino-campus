@@ -80,6 +80,7 @@ Regras desta fase:
 - iteração ativa consolidada: `v11.19.0`
 - objetivo da iteração: revisar a trilha operacional de Supabase com um recorte pequeno e seguro, removendo warnings ativos do Advisor em RLS/performance e alinhando as docs técnicas do banco ao estado real do projeto
 - natureza da iteração: migration SQL versionada para `notifications`, `post_view_events` e `kc_invited_emails`, com validação por Advisor/queries no Supabase e sincronização documental do catálogo de banco
+- último deploy validado desta fase: preview `dpl_YyTeTEZ3gnxYYCc2a2TL3FXVV4Ff` e produção `dpl_J8VA2ur4bwJn4uffHV8eNuVouh3G`, publicados em `10 de abril de 2026`
 - próxima iteração sugerida: `v11.20.0`, para revisar Edge Functions, storage e invariantes de deploy
 
 ---
