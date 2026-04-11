@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.20.0`: `kc-notifications.js` passou a manter um root estavel do dropdown com reposicionamento explicito, `aria-expanded`, fechamento consistente e delegacao unica de clique, evitando drift apos rerenders e deixando o sino visualmente menos apertado no shell publico.
+- `v11.20.0`: o dropdown passou a suportar a acao `Limpar` com confirmacao explicita, preservando `Marcar todas`, badge e a trilha in-app como fonte canonica em `public.notifications`.
+- `v11.20.0`: `KCAPI`, `local.adapter.js` e `supabase.adapter.js` passaram a expor `clearNotifications()`, enquanto o subscribe realtime do Supabase foi endurecido para tratar envelopes `INSERT`, `UPDATE` e `DELETE`.
 - `v11.19.0`: adicionada a migration `v9.3.3.0_supabase_operational_rls_fk.sql` para otimizar as policies de `notifications`, `post_view_events` e `kc_invited_emails` com `initplan` (`(select auth.uid())`) e eliminar overlap de policies SELECT permissivas nas trilhas de analytics e convites.
 - `v11.19.0`: adicionados os índices `idx_kc_invited_emails_invited_by` e `idx_post_view_events_user_id`, cobrindo os foreign keys ainda sinalizados pelo Advisor do Supabase.
 - `v11.18.0`: `KCAPI.getProfileHighlightsCount(...)` passou a aceitar `params` e a encaminhá-los corretamente para o driver ativo, eliminando o drift de assinatura em relação a `getProfileHighlights(...)` e `getMySavedPostsCount(...)`.
@@ -41,6 +44,8 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.20.0`: atualizado o `README.md` e o relatorio v11 para registrar o fechamento do shell in-app de notificacoes e deixar `v11.20.1` explicita como proxima fase da trilha multicanal.
+- `v11.20.0`: sincronizado `docs/api-contract.md` com o novo contrato de notificacoes, incluindo `KCAPI.clearNotifications()` e o envelope de realtime usado pelos consumers do dropdown.
 - `v11.19.1`: registrado o diagnóstico de que o sino de notificações não está sendo cortado por `overflow`, mas visualmente apertado pela geometria atual do shell e pela sobreposição do badge.
 - `v11.19.1`: o relatório v11 e o README passaram a desdobrar a trilha futura de notificações em `v11.20.0` a `v11.23.0`, separando hardening in-app, preferências por canal, fundação assíncrona, e-mail, WhatsApp e release gate final.
 - `v11.19.1`: fechamento documental sincronizado com o merge da PR `#267` e o deploy de produção `dpl_DaSid6uAaMKpnLqGMnc88hhCZkeZ`, já publicado em `www.kinocampus.com.br`.
