@@ -114,6 +114,25 @@
               <strong><i class="fas fa-bell"></i> Preferências por evento e canal</strong>
               <p class="kc-settings-help">O sino do KinoCampus já respeita estas escolhas para novas notificações in-app. E-mail e WhatsApp ficam salvos nesta fase para ativação futura, sem reaproveitar automaticamente o seu contato público.</p>
             </div>
+            <div class="kc-settings-preview-box kc-settings-preview-box--notification-target">
+              <strong><i class="fab fa-whatsapp"></i> WhatsApp privado para notificacoes</strong>
+              <p class="kc-settings-help">Este numero e separado do WhatsApp publico do seu perfil. Ele sera usado apenas para notificacoes privadas deste canal.</p>
+              <div class="kc-settings-notification-target-grid">
+                <label class="kc-settings-field">
+                  <span>Pais</span>
+                  <select id="settingsNotificationWhatsappCountry" class="kc-settings-select" autocomplete="tel-country-code"></select>
+                </label>
+                <label class="kc-settings-field kc-settings-field--wide">
+                  <span>Numero</span>
+                  <input id="settingsNotificationWhatsappNumber" class="kc-settings-input" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(62) 99876-5432" />
+                </label>
+              </div>
+              <label class="kc-settings-notification-consent" for="settingsNotificationWhatsappConsent">
+                <input id="settingsNotificationWhatsappConsent" type="checkbox" />
+                <span>Autorizo o KinoCampus a usar este numero somente para notificacoes privadas enviadas por WhatsApp.</span>
+              </label>
+              <p id="settingsNotificationWhatsappPreview" class="kc-settings-help">Nenhum numero privado configurado.</p>
+            </div>
             <div id="settingsNotificationPreferencesList" class="kc-settings-list kc-settings-list--notifications"></div>
             <div class="kc-settings-actions-row">
               <button id="settingsSaveNotifications" type="button" class="kc-settings-btn is-primary"><i class="fas fa-bell-slash"></i><span>Salvar notificações</span></button>

@@ -75,17 +75,33 @@ Configuradas no dashboard do Supabase quando exigidas pelas Edge Functions e aut
 | `KC_NOTIFY_HMAC_SECRET` | assinatura HMAC da Edge Function de reports |
 | `ADMIN_REPORTS_WEBHOOK_URL` | webhook de alertas administrativos |
 | `KC_APP_BASE_URL` | URL base usada em links gerados por funções |
+| `KC_NOTIFICATION_DISPATCH_SECRET` | autenticacao customizada da Edge Function de dispatch externo |
+| `KC_NOTIFICATION_EMAIL_PROVIDER` | provider do canal de e-mail (`resend`) |
+| `KC_NOTIFICATION_EMAIL_API_KEY` | credencial do provider de e-mail |
+| `KC_NOTIFICATION_EMAIL_FROM` | remetente transacional do canal de e-mail |
+| `KC_NOTIFICATION_EMAIL_REPLY_TO` | reply-to opcional do canal de e-mail |
+| `KC_NOTIFICATION_WHATSAPP_PROVIDER` | provider do canal privado de WhatsApp (`twilio`) |
+| `KC_NOTIFICATION_WHATSAPP_ACCOUNT_SID` | credencial principal da conta Twilio |
+| `KC_NOTIFICATION_WHATSAPP_AUTH_TOKEN` | token secreto da conta Twilio |
+| `KC_NOTIFICATION_WHATSAPP_FROM` | numero/remetente do canal WhatsApp em formato E.164 |
+| `KC_NOTIFICATION_WHATSAPP_CONTENT_SID` | template/content sid usado na API de mensagens |
+| `KC_NOTIFICATION_WHATSAPP_STATUS_CALLBACK` | callback opcional de status do provider |
+| `KC_NOTIFICATION_WHATSAPP_TEMPLATE_NAME` | nome humano opcional do template usado no dispatcher |
+| `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_WINDOW_MINUTES` | janela de rate limit do canal WhatsApp |
+| `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_MAX_PER_WINDOW` | maximo de envios por usuario na janela do canal WhatsApp |
 
 ### Edge Functions relevantes
 
 - `notify-admin-reports-threshold`
 - `kc-invite-user`
+- `kc-dispatch-notification-outbox`
 
 Para publicar:
 
 ```bash
 supabase functions deploy notify-admin-reports-threshold
 supabase functions deploy kc-invite-user
+supabase functions deploy kc-dispatch-notification-outbox
 ```
 
 ## Banco e storage
@@ -99,7 +115,7 @@ supabase functions deploy kc-invite-user
 
 ### Migrations
 
-- o diretório `supabase/migrations/` contém `77` arquivos na baseline atual
+- o diretorio `supabase/migrations/` contem `82` arquivos na baseline atual
 - as migrations da v10 admin já estão aplicadas no banco principal atual
 - em ambientes novos ou paralelos, a aplicação continua sendo uma vez por banco
 

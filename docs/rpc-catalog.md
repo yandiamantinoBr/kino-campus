@@ -331,7 +331,7 @@ DELETE FROM post_view_events WHERE created_at < now() - interval '6 months';  --
 
 Registra visualizacao de post com anti-spam (1 view/usuario/post/hora). Self-views nao contam. SECURITY DEFINER com `SET search_path = ''`.
 
-**Retorno:** `{ ok, counted, code?, view_count? }`
+**Retorno:** `{ ok, counted, code->, view_count-> }`
 - `SELF_VIEW`: autor vendo proprio post (nao conta)
 - `COOLDOWN`: usuario ja visualizou na ultima hora (nao conta)
 - `counted: true`: view registrada com sucesso
@@ -513,7 +513,7 @@ Revoga convite externo e registra `invite_revoked` no `audit_log`.
 
 **Comportamento atual:**
 - `email`: usa `auth.users.email`
-- `whatsapp`: permanece `blocked` com `private_destination_not_configured`
+- `whatsapp`: usa `notification_channel_targets.destination` quando existir numero privado valido e consentimento explicito; do contrario segue `blocked`
 
 ---
 
@@ -523,7 +523,7 @@ Revoga convite externo e registra `invite_revoked` no `audit_log`.
 
 **Observações:**
 - recupera locks stale de rows que ficaram em `processing`
-- hoje é usado pelo dispatcher do canal `email`
+- hoje e usado pelo dispatcher dos canais `email` e `whatsapp`
 - mantém o claim atômico fora da Edge Function para evitar corrida entre workers
 
 ---
@@ -538,6 +538,28 @@ Revoga convite externo e registra `invite_revoked` no `audit_log`.
 - incrementa `attempts_count`
 - limpa `locked_at` / `locked_by`
 - preenche `last_attempt_at`, `sent_at`, `error_code`, `error_message` e `next_attempt_at` conforme o desfecho
+
+---
+
+### `kc_count_recent_notification_deliveries(p_user_id uuid, p_channel text, p_since timestamptz default now() - interval '60 minutes') -> integer` [Helper operacional] *(v11.21.1)*
+
+**O que faz:** conta quantas entregas externas recentes ja foram marcadas como `sent` para um usuario e canal, servindo de base para o rate limit do dispatcher.
+
+**Uso atual:** Edge Function `kc-dispatch-notification-outbox` no canal `whatsapp`.
+
+---
+
+### `kc_resolve_notification_delivery_destination(p_user_id uuid, p_channel text) -> TABLE(destination text, destination_source text, is_ready boolean, block_reason text)` [Helper de destino privado] *(v11.20.2, ampliada em v11.21.1)*
+
+**O que faz:** resolve o destino privado do canal externo antes de alimentar a fila.
+
+**Comportamento atual:**
+- `email`: usa `auth.users.email`
+- `whatsapp`: usa `notification_channel_targets.destination` somente quando houver numero privado valido e `consent_granted=true`
+
+**Observa->->es:**
+- o helper nunca reaproveita automaticamente o WhatsApp publico do perfil/produto
+- a origem do destino para `whatsapp` passa a ser `private.notification_channel_targets.whatsapp`
 
 ---
 
@@ -632,7 +654,7 @@ Documento ponderado do FTS:
 **O que faz:** Aplica 3 verificações anti-spam em cascata antes de criar um post:
 
 1. **Flood control** — se o autor já tem 3+ posts na última hora: `RAISE EXCEPTION 'flood_limit_exceeded'` (hard block). Frontend mapeia para `{ _kcError: 'FLOOD_LIMIT' }`.
-2. **Link spam** — se title+description têm >3 URLs externas (regex `https?://`): muta `NEW.status = 'pending'` e `moderation_reason = 'link_spam'`.
+2. **Link spam** — se title+description têm >3 URLs externas (regex `https->://`): muta `NEW.status = 'pending'` e `moderation_reason = 'link_spam'`.
 3. **New user trust** — se conta foi criada há <7 dias E 0 posts com status `published`: muta `NEW.status = 'pending'` e `moderation_reason = 'new_user_scrutiny'` (só se link_spam não definiu razão).
 
 Posts auto-moderados (status=`pending`) ficam invisíveis nos feeds para não-autores (via RLS). O autor vê seu próprio post com badge informativo. Admin pode aprovar via `kc_admin_set_post_status`.

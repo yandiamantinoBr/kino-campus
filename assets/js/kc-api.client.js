@@ -2262,6 +2262,26 @@
     };
   }
 
+  function buildFallbackNotificationChannelTargets() {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === 'function') {
+      return window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets();
+    }
+    return {
+      whatsapp: {
+        channel: 'whatsapp',
+        destination: '',
+        country_code: '55',
+        local_number: '',
+        consent_granted: false,
+        consent_at: null,
+        configured: false,
+        ready: false,
+        display: '',
+        metadata: { country_code: '55' },
+      },
+    };
+  }
+
   async function getNotificationPreferences() {
     const driver = getActiveDriver();
     if (!driver || typeof driver.getNotificationPreferences !== 'function') {
@@ -2276,6 +2296,22 @@
       return { ok: false, error: { message: 'PreferÃªncias de notificaÃ§Ã£o indisponÃ­veis neste driver.' } };
     }
     return driver.updateNotificationPreferences(preferences);
+  }
+
+  async function getNotificationChannelTargets() {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.getNotificationChannelTargets !== 'function') {
+      return buildFallbackNotificationChannelTargets();
+    }
+    return driver.getNotificationChannelTargets();
+  }
+
+  async function updateNotificationChannelTargets(targets = {}) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.updateNotificationChannelTargets !== 'function') {
+      return { ok: false, error: { message: 'Destinos privados de notificacao indisponiveis neste driver.' } };
+    }
+    return driver.updateNotificationChannelTargets(targets);
   }
 
   // Notifications (v9.1.0)
@@ -2417,6 +2453,8 @@
     updateAdminHelpRequest,
     getNotificationPreferences,
     updateNotificationPreferences,
+    getNotificationChannelTargets,
+    updateNotificationChannelTargets,
 
     // Notifications (v9.1.0)
     getNotifications,

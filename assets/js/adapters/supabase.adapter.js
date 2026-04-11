@@ -3614,6 +3614,81 @@ const { ENV, normalizePost } = window.KCAPI;
     return normalized;
   }
 
+  function buildDefaultNotificationChannelTargetsForAdapter() {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === 'function') {
+      return window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets();
+    }
+    return {
+      whatsapp: {
+        channel: 'whatsapp',
+        destination: '',
+        country_code: '55',
+        local_number: '',
+        consent_granted: false,
+        consent_at: null,
+        configured: false,
+        ready: false,
+        display: '',
+        metadata: { country_code: '55' },
+      },
+    };
+  }
+
+  function normalizeNotificationChannelTargetDigits(value) {
+    return String(value || '').replace(/\D+/g, '');
+  }
+
+  function formatNotificationChannelTarget(value) {
+    const digits = normalizeNotificationChannelTargetDigits(value);
+    if (!digits) return '';
+    if (digits.indexOf('55') === 0 && digits.length >= 12) {
+      const ddd = digits.slice(2, 4);
+      const body = digits.slice(4);
+      if (body.length === 9) return `+55 (${ddd}) ${body.slice(0, 5)}-${body.slice(5)}`;
+      if (body.length === 8) return `+55 (${ddd}) ${body.slice(0, 4)}-${body.slice(4)}`;
+    }
+    return `+${digits}`;
+  }
+
+  function normalizeNotificationChannelTargetsForAdapter(value) {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.normalizeNotificationChannelTargets === 'function') {
+      return window.KCAccountProfileUtils.normalizeNotificationChannelTargets(value);
+    }
+    const defaults = buildDefaultNotificationChannelTargetsForAdapter();
+    const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+    const whatsapp = (source.whatsapp && typeof source.whatsapp === 'object' && !Array.isArray(source.whatsapp))
+      ? source.whatsapp
+      : {};
+    const metadata = (whatsapp.metadata && typeof whatsapp.metadata === 'object' && !Array.isArray(whatsapp.metadata))
+      ? whatsapp.metadata
+      : {};
+    const countryCode = normalizeNotificationChannelTargetDigits(whatsapp.country_code || whatsapp.countryCode || metadata.country_code || '55') || '55';
+    const explicitDestinationDigits = normalizeNotificationChannelTargetDigits(whatsapp.destination || whatsapp.destination_normalized || whatsapp.destinationNormalized || '');
+    const localNumberDigits = normalizeNotificationChannelTargetDigits(whatsapp.local_number || whatsapp.localNumber || '');
+    const destination = explicitDestinationDigits
+      ? `+${explicitDestinationDigits}`
+      : (localNumberDigits ? `+${countryCode}${localNumberDigits}` : '');
+    const normalizedLocalNumber = destination && destination.indexOf(`+${countryCode}`) === 0
+      ? normalizeNotificationChannelTargetDigits(destination.slice(countryCode.length + 1))
+      : localNumberDigits;
+    const consentGranted = whatsapp.consent_granted === true || whatsapp.consentGranted === true;
+
+    return {
+      whatsapp: {
+        channel: 'whatsapp',
+        destination,
+        country_code: countryCode,
+        local_number: normalizedLocalNumber,
+        consent_granted: consentGranted,
+        consent_at: whatsapp.consent_at || whatsapp.consentAt || null,
+        configured: !!destination,
+        ready: !!destination && consentGranted,
+        display: formatNotificationChannelTarget(destination),
+        metadata: { country_code: countryCode }
+      }
+    };
+  }
+
   async function supabaseGetNotificationPreferences() {
     const client = getSupabaseClient();
     if (!client) return buildDefaultNotificationPreferencesForAdapter();
@@ -3673,6 +3748,87 @@ const { ENV, normalizePost } = window.KCAPI;
     } catch (e) {
       console.error('[KCAPI][notifications] updateNotificationPreferences exceÃ§Ã£o:', e);
       return { ok: false, error: { message: 'NÃ£o foi possÃ­vel atualizar as preferÃªncias.' } };
+    }
+  }
+
+  async function supabaseGetNotificationChannelTargets() {
+    const client = getSupabaseClient();
+    if (!client) return buildDefaultNotificationChannelTargetsForAdapter();
+
+    const user = await supabaseGetCurrentUser();
+    if (!user || !user.id) return buildDefaultNotificationChannelTargetsForAdapter();
+
+    try {
+      const { data, error } = await client
+        .from('notification_channel_targets')
+        .select('channel, destination, consent_granted, consent_at, metadata')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[KCAPI][notifications] getNotificationChannelTargets:', error);
+        return buildDefaultNotificationChannelTargetsForAdapter();
+      }
+
+      const source = {};
+      (Array.isArray(data) ? data : []).forEach((row) => {
+        if (!row || !row.channel) return;
+        source[String(row.channel).trim()] = row;
+      });
+      return normalizeNotificationChannelTargetsForAdapter(source);
+    } catch (e) {
+      console.error('[KCAPI][notifications] getNotificationChannelTargets excecao:', e);
+      return buildDefaultNotificationChannelTargetsForAdapter();
+    }
+  }
+
+  async function supabaseUpdateNotificationChannelTargets(targets = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase nao inicializado.' } };
+
+    const user = await supabaseGetCurrentUser();
+    if (!user || !user.id) return { ok: false, error: { message: 'Faca login para editar os destinos privados.' } };
+
+    const normalized = normalizeNotificationChannelTargetsForAdapter(targets);
+    const whatsapp = normalized && normalized.whatsapp ? normalized.whatsapp : buildDefaultNotificationChannelTargetsForAdapter().whatsapp;
+
+    try {
+      if (whatsapp.destination) {
+        const { error: upsertError } = await client
+          .from('notification_channel_targets')
+          .upsert({
+            user_id: user.id,
+            channel: 'whatsapp',
+            destination: whatsapp.destination,
+            consent_granted: whatsapp.consent_granted === true,
+            metadata: whatsapp.metadata || { country_code: whatsapp.country_code || '55' },
+          }, { onConflict: 'user_id,channel' });
+
+        if (upsertError) {
+          console.error('[KCAPI][notifications] updateNotificationChannelTargets upsert:', upsertError);
+          return { ok: false, error: { message: upsertError.message || 'Nao foi possivel salvar o WhatsApp privado.' } };
+        }
+      } else {
+        const { error: deleteError } = await client
+          .from('notification_channel_targets')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('channel', 'whatsapp');
+
+        if (deleteError) {
+          console.error('[KCAPI][notifications] updateNotificationChannelTargets delete:', deleteError);
+          return { ok: false, error: { message: deleteError.message || 'Nao foi possivel limpar o WhatsApp privado.' } };
+        }
+      }
+
+      return {
+        ok: true,
+        data: {
+          targets: await supabaseGetNotificationChannelTargets(),
+        },
+      };
+    } catch (e) {
+      console.error('[KCAPI][notifications] updateNotificationChannelTargets excecao:', e);
+      return { ok: false, error: { message: 'Nao foi possivel atualizar os destinos privados.' } };
     }
   }
 
@@ -3859,6 +4015,8 @@ const { ENV, normalizePost } = window.KCAPI;
     updateAdminHelpRequest: supabaseUpdateAdminHelpRequest,
     getNotificationPreferences: supabaseGetNotificationPreferences,
     updateNotificationPreferences: supabaseUpdateNotificationPreferences,
+    getNotificationChannelTargets: supabaseGetNotificationChannelTargets,
+    updateNotificationChannelTargets: supabaseUpdateNotificationChannelTargets,
     // Notifications (v9.1.0)
      getNotifications: supabaseGetNotifications,
      markNotificationsRead: supabaseMarkNotificationsRead,

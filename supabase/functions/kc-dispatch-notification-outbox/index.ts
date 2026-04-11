@@ -33,6 +33,21 @@ type EmailProviderConfig = {
   appBaseUrl: string;
 };
 
+type WhatsAppProviderConfig = {
+  name: string | null;
+  ready: boolean;
+  missing: string[];
+  accountSid: string | null;
+  authToken: string | null;
+  from: string | null;
+  contentSid: string | null;
+  statusCallback: string | null;
+  templateName: string | null;
+  rateLimitWindowMinutes: number;
+  rateLimitMaxPerWindow: number;
+  appBaseUrl: string;
+};
+
 type EmailEnvelope = {
   subject: string;
   html: string;
@@ -43,6 +58,17 @@ type EmailEnvelope = {
   preview: string;
 };
 
+type WhatsAppEnvelope = {
+  text: string;
+  actionUrl: string;
+  preferencesUrl: string;
+  title: string;
+  preview: string;
+  contentSid: string | null;
+  contentVariables: JsonObject;
+  templateName: string | null;
+};
+
 type DispatchResult = {
   ok: boolean;
   provider: string;
@@ -50,11 +76,13 @@ type DispatchResult = {
   responseBody: JsonObject;
   errorCode: string | null;
   errorMessage: string | null;
-  envelope: EmailEnvelope;
+  envelope: EmailEnvelope | WhatsAppEnvelope;
+  nextAttemptAt?: string | null;
 };
 
 const DEFAULT_APP_BASE_URL = "https://www.kinocampus.com.br";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const TWILIO_MESSAGES_ENDPOINT = "https://api.twilio.com/2010-04-01/Accounts";
 const MODULE_PATHS: Record<string, string> = {
   "achados-perdidos": "/achados-perdidos.html",
   "caronas": "/caronas-feed.html",
@@ -145,6 +173,28 @@ function maskEmail(value: string | null) {
   return `${localPart.slice(0, 2)}***@${domainPart}`;
 }
 
+function normalizeDigits(value: string | null) {
+  return asText(value).replace(/\D+/g, "");
+}
+
+function isWhatsAppE164(value: string | null) {
+  return /^\+[1-9]\d{7,14}$/.test(asText(value));
+}
+
+function maskWhatsAppDestination(value: string | null) {
+  const digits = normalizeDigits(value);
+  if (!digits) return "";
+  if (digits.length <= 4) return `+${digits}`;
+  const visiblePrefix = digits.slice(0, Math.min(4, Math.max(1, digits.length - 4)));
+  return `+${visiblePrefix}${"*".repeat(Math.max(0, digits.length - visiblePrefix.length - 4))}${digits.slice(-4)}`;
+}
+
+function toWhatsAppChannelAddress(value: string | null) {
+  const destination = asText(value);
+  if (!destination) return "";
+  return destination.startsWith("whatsapp:") ? destination : `whatsapp:${destination}`;
+}
+
 function isEmailLike(value: string | null) {
   const email = asText(value);
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -192,6 +242,51 @@ function getEmailProviderConfig(appBaseUrl: string): EmailProviderConfig {
     apiKey,
     from,
     replyTo,
+    appBaseUrl,
+  };
+}
+
+function getWhatsAppProviderConfig(appBaseUrl: string): WhatsAppProviderConfig {
+  const name = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_PROVIDER")?.toLowerCase() || null;
+  const accountSid = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_ACCOUNT_SID");
+  const authToken = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_AUTH_TOKEN");
+  const from = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_FROM");
+  const contentSid = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_CONTENT_SID");
+  const statusCallback = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_STATUS_CALLBACK");
+  const templateName = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_TEMPLATE_NAME");
+  const rateLimitWindowMinutes = parsePositiveInt(
+    Deno.env.get("KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_WINDOW_MINUTES"),
+    60,
+    1440,
+  );
+  const rateLimitMaxPerWindow = parsePositiveInt(
+    Deno.env.get("KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_MAX_PER_WINDOW"),
+    6,
+    100,
+  );
+  const missing: string[] = [];
+
+  if (name === "twilio") {
+    if (!accountSid) missing.push("KC_NOTIFICATION_WHATSAPP_ACCOUNT_SID");
+    if (!authToken) missing.push("KC_NOTIFICATION_WHATSAPP_AUTH_TOKEN");
+    if (!from) missing.push("KC_NOTIFICATION_WHATSAPP_FROM");
+    if (!contentSid) missing.push("KC_NOTIFICATION_WHATSAPP_CONTENT_SID");
+  } else if (!name) {
+    missing.push("KC_NOTIFICATION_WHATSAPP_PROVIDER");
+  }
+
+  return {
+    name,
+    ready: name === "twilio" && missing.length === 0,
+    missing,
+    accountSid,
+    authToken,
+    from,
+    contentSid,
+    statusCallback,
+    templateName,
+    rateLimitWindowMinutes,
+    rateLimitMaxPerWindow,
     appBaseUrl,
   };
 }
@@ -296,6 +391,75 @@ function buildEmailEnvelope(row: OutboxRow, appBaseUrl: string): EmailEnvelope {
     preferencesUrl,
     title: title || eventLabel,
     preview,
+  };
+}
+
+function buildWhatsAppEnvelope(
+  row: OutboxRow,
+  providerConfig: WhatsAppProviderConfig,
+): WhatsAppEnvelope {
+  const payload = normalizeJsonObject(row.payload);
+  const eventType = asText(payload.event_type || row.event_type || "system").toLowerCase();
+  const eventLabel = buildEventLabel(eventType);
+  const title = truncate(asText(payload.title) || eventLabel, 120);
+  const body = truncate(asText(payload.body) || "Voce tem uma nova atualizacao na plataforma.", 500);
+  const actionUrl = buildNotificationUrl(row, providerConfig.appBaseUrl);
+  const preferencesUrl = `${providerConfig.appBaseUrl}/settings.html`;
+  const preview = truncate(body || title || eventLabel, 120);
+  const text = [
+    `KinoCampus: ${title || eventLabel}`,
+    body,
+    `Abrir: ${actionUrl}`,
+    `Preferencias: ${preferencesUrl}`,
+  ].filter(Boolean).join("\n");
+
+  return {
+    text,
+    actionUrl,
+    preferencesUrl,
+    title: title || eventLabel,
+    preview,
+    contentSid: providerConfig.contentSid,
+    templateName: providerConfig.templateName,
+    contentVariables: {
+      "1": title || eventLabel,
+      "2": body || "Voce tem uma nova atualizacao no KinoCampus.",
+      "3": actionUrl,
+    },
+  };
+}
+
+async function getRecentWhatsAppWindow(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  providerConfig: WhatsAppProviderConfig,
+) {
+  const sinceDate = new Date(Date.now() - providerConfig.rateLimitWindowMinutes * 60 * 1000);
+  const sinceIso = sinceDate.toISOString();
+  const { data, error } = await supabase
+    .from("notification_delivery_outbox")
+    .select("sent_at")
+    .eq("user_id", userId)
+    .eq("channel", "whatsapp")
+    .eq("status", "sent")
+    .gte("sent_at", sinceIso)
+    .order("sent_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`whatsapp_rate_limit_query_failed:${error.message}`);
+  }
+
+  const rows = Array.isArray(data)
+    ? data.filter((row) => asText((row as Record<string, unknown>).sent_at))
+    : [];
+  const oldest = rows.length ? asText((rows[0] as Record<string, unknown>).sent_at) : "";
+
+  return {
+    count: rows.length,
+    sinceIso,
+    nextAllowedAt: oldest
+      ? new Date(new Date(oldest).getTime() + providerConfig.rateLimitWindowMinutes * 60 * 1000).toISOString()
+      : null,
   };
 }
 
@@ -446,6 +610,217 @@ async function dispatchEmail(
   return sendEmailWithResend(row, providerConfig);
 }
 
+async function sendWhatsAppWithTwilio(
+  supabase: ReturnType<typeof createClient>,
+  row: OutboxRow,
+  providerConfig: WhatsAppProviderConfig,
+): Promise<DispatchResult> {
+  const destination = asText(row.destination);
+  const envelope = buildWhatsAppEnvelope(row, providerConfig);
+
+  if (!isWhatsAppE164(destination)) {
+    return {
+      ok: false,
+      provider: "twilio",
+      responseCode: "invalid_destination",
+      responseBody: { destination: destination || null },
+      errorCode: "invalid_destination",
+      errorMessage: "Destino de WhatsApp invalido ou ausente no item do outbox.",
+      envelope,
+    };
+  }
+
+  const recentWindow = await getRecentWhatsAppWindow(supabase, row.user_id, providerConfig);
+  if (recentWindow.count >= providerConfig.rateLimitMaxPerWindow) {
+    return {
+      ok: false,
+      provider: "twilio",
+      responseCode: "rate_limited",
+      responseBody: {
+        rate_limit_window_minutes: providerConfig.rateLimitWindowMinutes,
+        rate_limit_max_per_window: providerConfig.rateLimitMaxPerWindow,
+        recent_count: recentWindow.count,
+      },
+      errorCode: "rate_limited",
+      errorMessage: "Janela operacional de WhatsApp excedida para este usuario.",
+      envelope,
+      nextAttemptAt: recentWindow.nextAllowedAt,
+    };
+  }
+
+  const endpoint = `${TWILIO_MESSAGES_ENDPOINT}/${providerConfig.accountSid}/Messages.json`;
+  const body = new URLSearchParams();
+  body.set("To", toWhatsAppChannelAddress(destination));
+  body.set("From", toWhatsAppChannelAddress(providerConfig.from));
+  body.set("ContentSid", providerConfig.contentSid || "");
+  body.set("ContentVariables", JSON.stringify(envelope.contentVariables));
+  if (providerConfig.statusCallback) body.set("StatusCallback", providerConfig.statusCallback);
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${btoa(`${providerConfig.accountSid}:${providerConfig.authToken}`)}`,
+    },
+    body,
+  });
+
+  const raw = await res.text();
+  const responseBody = toProviderBody(raw);
+  if (!res.ok) {
+    const providerError =
+      asText(responseBody.message) ||
+      asText(responseBody.error_message) ||
+      safeSnippet(raw, 240) ||
+      `provider_http_${res.status}`;
+
+    return {
+      ok: false,
+      provider: "twilio",
+      responseCode: String(res.status),
+      responseBody,
+      errorCode: `provider_http_${res.status}`,
+      errorMessage: providerError,
+      envelope,
+    };
+  }
+
+  return {
+    ok: true,
+    provider: "twilio",
+    responseCode: String(res.status),
+    responseBody,
+    errorCode: null,
+    errorMessage: null,
+    envelope,
+  };
+}
+
+async function dispatchWhatsApp(
+  supabase: ReturnType<typeof createClient>,
+  row: OutboxRow,
+  providerConfig: WhatsAppProviderConfig,
+): Promise<DispatchResult> {
+  if (providerConfig.name !== "twilio") {
+    return {
+      ok: false,
+      provider: providerConfig.name || "unknown",
+      responseCode: "unsupported_provider",
+      responseBody: {},
+      errorCode: "unsupported_provider",
+      errorMessage: `Provider de WhatsApp nao suportado nesta fase: ${providerConfig.name || "none"}.`,
+      envelope: buildWhatsAppEnvelope(row, providerConfig),
+    };
+  }
+
+  return sendWhatsAppWithTwilio(supabase, row, providerConfig);
+}
+
+async function processDispatchChannel(
+  supabase: ReturnType<typeof createClient>,
+  channel: Channel,
+  batchLimit: number,
+  executionId: string,
+  emailProvider: EmailProviderConfig,
+  whatsappProvider: WhatsAppProviderConfig,
+) {
+  const workerId = [
+    `kc-dispatch-${channel}`,
+    executionId,
+  ].join(":");
+  const claimedRows = await claimDispatchBatch(supabase, channel, batchLimit, workerId);
+  const sentIds: string[] = [];
+  const failedIds: string[] = [];
+  const blockedIds: string[] = [];
+  const summaries: Record<string, unknown>[] = [];
+
+  let sentCount = 0;
+  let failedCount = 0;
+  let blockedCount = 0;
+
+  for (const row of claimedRows) {
+    let result: DispatchResult;
+    try {
+      result = channel === "email"
+        ? await dispatchEmail(row, emailProvider)
+        : await dispatchWhatsApp(supabase, row, whatsappProvider);
+    } catch (error) {
+      result = {
+        ok: false,
+        provider: channel === "email" ? emailProvider.name || "unknown" : whatsappProvider.name || "unknown",
+        responseCode: "runtime_exception",
+        responseBody: {},
+        errorCode: "runtime_exception",
+        errorMessage: safeSnippet((error as Error)?.message || String(error), 240),
+        envelope: channel === "email"
+          ? buildEmailEnvelope(row, emailProvider.appBaseUrl)
+          : buildWhatsAppEnvelope(row, whatsappProvider),
+      };
+    }
+
+    let finalStatus: "sent" | "failed" | "blocked" = "sent";
+    let nextAttemptAt: string | null = null;
+    if (!result.ok) {
+      finalStatus = result.errorCode === "invalid_destination" ? "blocked" : "failed";
+      if (finalStatus === "failed") {
+        nextAttemptAt = result.nextAttemptAt || computeNextAttemptAt(row.attempts_count);
+      }
+    }
+
+    await recordAttempt(
+      supabase,
+      row.id,
+      finalStatus,
+      result.provider,
+      result.responseCode,
+      result.responseBody,
+      result.errorCode,
+      result.errorMessage,
+      nextAttemptAt,
+    );
+
+    if (finalStatus === "sent") {
+      sentCount += 1;
+      sentIds.push(row.id);
+    } else if (finalStatus === "blocked") {
+      blockedCount += 1;
+      blockedIds.push(row.id);
+    } else {
+      failedCount += 1;
+      failedIds.push(row.id);
+    }
+
+    if (summaries.length < 10) {
+      summaries.push({
+        id: row.id,
+        status: finalStatus,
+        destination_masked: channel === "email" ? maskEmail(row.destination) : maskWhatsAppDestination(row.destination),
+        response_code: result.responseCode,
+        error_code: result.errorCode,
+        next_attempt_at: nextAttemptAt,
+        title: channel === "email"
+          ? (result.envelope as EmailEnvelope).subject
+          : (result.envelope as WhatsAppEnvelope).title,
+      });
+    }
+  }
+
+  return {
+    channel,
+    workerId,
+    claimedRows,
+    claimed_count: claimedRows.length,
+    processed_count: claimedRows.length,
+    sent_count: sentCount,
+    failed_count: failedCount,
+    blocked_count: blockedCount,
+    sent_ids: sentIds,
+    failed_ids: failedIds,
+    blocked_ids: blockedIds,
+    summaries,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return json(405, { ok: false, error: "method_not_allowed" });
@@ -484,14 +859,14 @@ Deno.serve(async (req) => {
   );
   const appBaseUrl = buildAppBaseUrl();
   const emailProvider = getEmailProviderConfig(appBaseUrl);
-  const whatsappProviderName = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_PROVIDER");
+  const whatsappProvider = getWhatsAppProviderConfig(appBaseUrl);
   const providerByChannel = {
     email: emailProvider.name,
-    whatsapp: whatsappProviderName,
+    whatsapp: whatsappProvider.name,
   } as const;
   const providerReady = {
     email: emailProvider.ready,
-    whatsapp: false,
+    whatsapp: whatsappProvider.ready,
   };
   const providerIssues = {
     email: emailProvider.ready
@@ -499,7 +874,11 @@ Deno.serve(async (req) => {
       : emailProvider.missing.length > 0
         ? emailProvider.missing
         : [`unsupported_provider:${emailProvider.name || "none"}`],
-    whatsapp: ["not_implemented"],
+    whatsapp: whatsappProvider.ready
+      ? []
+      : whatsappProvider.missing.length > 0
+        ? whatsappProvider.missing
+        : [`unsupported_provider:${whatsappProvider.name || "none"}`],
   };
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -539,12 +918,13 @@ Deno.serve(async (req) => {
     const dispatchablePreviewIds: string[] = [];
     const blockedPreviewIds: string[] = [];
     const emailPreviews: Record<string, unknown>[] = [];
+    const whatsappPreviews: Record<string, unknown>[] = [];
 
     for (const row of rows) {
       byChannel[row.channel] += 1;
       byStatus[row.status] = (byStatus[row.status] || 0) + 1;
 
-      if (row.status === "queued" && row.channel === "email" && providerReady.email && dispatchablePreviewIds.length < 10) {
+      if (row.status === "queued" && providerReady[row.channel] && dispatchablePreviewIds.length < 10) {
         dispatchablePreviewIds.push(row.id);
       }
 
@@ -566,13 +946,30 @@ Deno.serve(async (req) => {
           error_code: row.error_code,
         });
       }
+
+      if (row.channel === "whatsapp" && whatsappPreviews.length < 5) {
+        const envelope = buildWhatsAppEnvelope(row, whatsappProvider);
+        whatsappPreviews.push({
+          id: row.id,
+          status: row.status,
+          destination_masked: maskWhatsAppDestination(row.destination),
+          provider_ready: providerReady.whatsapp,
+          title: envelope.title,
+          preview: envelope.preview,
+          action_url: envelope.actionUrl,
+          content_sid: envelope.contentSid,
+          template_name: envelope.templateName,
+          attempts_count: row.attempts_count,
+          error_code: row.error_code,
+        });
+      }
     }
 
     if (dryRun) {
       return json(200, {
         ok: true,
         mode: "dry_run",
-        note: "Email dispatch is implemented in v11.21.0 and becomes active when dryRun=false with provider secrets configured. WhatsApp remains inspection-only.",
+        note: "Email e WhatsApp usam a mesma outbox. O envio real fica gated por segredos e provider validos.",
         provider_ready: providerReady,
         provider_names: providerByChannel,
         provider_issues: providerIssues,
@@ -585,138 +982,67 @@ Deno.serve(async (req) => {
         dispatchable_preview_ids: dispatchablePreviewIds,
         blocked_preview_ids: blockedPreviewIds,
         email_previews: emailPreviews,
+        whatsapp_previews: whatsappPreviews,
       });
     }
 
-    if (channelFilter && channelFilter !== "email") {
-      return json(501, {
-        ok: false,
-        error: "unsupported_channel_dispatch",
-        channel_filter: channelFilter,
-        note: "Only the email channel is implemented in v11.21.0.",
-        provider_ready: providerReady,
-      });
+    const requestedChannels = channelFilter
+      ? [channelFilter]
+      : (["email", "whatsapp"] as Channel[]);
+    const executionId = Deno.env.get("SB_EXECUTION_ID")?.trim() || crypto.randomUUID();
+    const channelResults: Record<string, unknown> = {};
+    const skippedChannels: string[] = [];
+
+    for (const channel of requestedChannels) {
+      if (!providerReady[channel]) {
+        skippedChannels.push(channel);
+        channelResults[channel] = {
+          channel,
+          skipped: true,
+          reason: "provider_not_configured",
+          provider_issues: providerIssues[channel],
+          claimed_count: 0,
+          processed_count: 0,
+          sent_count: 0,
+          failed_count: 0,
+          blocked_count: 0,
+          summaries: [],
+        };
+        continue;
+      }
+
+      channelResults[channel] = await processDispatchChannel(
+        supabase,
+        channel,
+        batchLimit,
+        executionId,
+        emailProvider,
+        whatsappProvider,
+      );
     }
 
-    if (!emailProvider.ready) {
-      return json(412, {
-        ok: false,
-        error: "email_provider_not_configured",
-        provider_ready: providerReady,
-        provider_names: providerByChannel,
-        provider_issues: providerIssues,
-      });
-    }
-
-    const workerId = [
-      "kc-dispatch-email",
-      Deno.env.get("SB_EXECUTION_ID")?.trim() || crypto.randomUUID(),
-    ].join(":");
-
-    const claimedRows = await claimDispatchBatch(supabase, "email", batchLimit, workerId);
-    if (!claimedRows.length) {
+    if (requestedChannels.length === 1) {
+      const channel = requestedChannels[0];
+      const singleResult = channelResults[channel] as Record<string, unknown>;
       return json(200, {
         ok: true,
         mode: "dispatch",
-        channel: "email",
-        claimed_count: 0,
-        processed_count: 0,
-        sent_count: 0,
-        failed_count: 0,
-        blocked_count: 0,
-        worker_id: workerId,
+        channel,
         provider_ready: providerReady,
+        provider_names: providerByChannel,
+        skipped_channels: skippedChannels,
+        ...singleResult,
       });
-    }
-
-    const sentIds: string[] = [];
-    const failedIds: string[] = [];
-    const blockedIds: string[] = [];
-    const summaries: Record<string, unknown>[] = [];
-
-    let sentCount = 0;
-    let failedCount = 0;
-    let blockedCount = 0;
-
-    for (const row of claimedRows) {
-      let result: DispatchResult;
-      try {
-        result = await dispatchEmail(row, emailProvider);
-      } catch (error) {
-        const fallbackEnvelope = buildEmailEnvelope(row, appBaseUrl);
-        result = {
-          ok: false,
-          provider: emailProvider.name || "unknown",
-          responseCode: "runtime_exception",
-          responseBody: {},
-          errorCode: "runtime_exception",
-          errorMessage: safeSnippet((error as Error)?.message || String(error), 240),
-          envelope: fallbackEnvelope,
-        };
-      }
-
-      let finalStatus: "sent" | "failed" | "blocked" = "sent";
-      let nextAttemptAt: string | null = null;
-
-      if (!result.ok) {
-        finalStatus = result.errorCode === "invalid_destination" ? "blocked" : "failed";
-        if (finalStatus === "failed") {
-          nextAttemptAt = computeNextAttemptAt(row.attempts_count);
-        }
-      }
-
-      await recordAttempt(
-        supabase,
-        row.id,
-        finalStatus,
-        result.provider,
-        result.responseCode,
-        result.responseBody,
-        result.errorCode,
-        result.errorMessage,
-        nextAttemptAt,
-      );
-
-      if (finalStatus === "sent") {
-        sentCount += 1;
-        sentIds.push(row.id);
-      } else if (finalStatus === "blocked") {
-        blockedCount += 1;
-        blockedIds.push(row.id);
-      } else {
-        failedCount += 1;
-        failedIds.push(row.id);
-      }
-
-      if (summaries.length < 10) {
-        summaries.push({
-          id: row.id,
-          status: finalStatus,
-          destination_masked: maskEmail(row.destination),
-          response_code: result.responseCode,
-          error_code: result.errorCode,
-          next_attempt_at: nextAttemptAt,
-          subject: result.envelope.subject,
-        });
-      }
     }
 
     return json(200, {
       ok: true,
       mode: "dispatch",
-      channel: "email",
-      worker_id: workerId,
-      claimed_count: claimedRows.length,
-      processed_count: claimedRows.length,
-      sent_count: sentCount,
-      failed_count: failedCount,
-      blocked_count: blockedCount,
-      sent_ids: sentIds,
-      failed_ids: failedIds,
-      blocked_ids: blockedIds,
-      summaries,
       provider_ready: providerReady,
       provider_names: providerByChannel,
+      provider_issues: providerIssues,
+      skipped_channels: skippedChannels,
+      channels: channelResults,
     });
   } catch (error) {
     console.error("[kc-dispatch-notification-outbox] execution failed", error);

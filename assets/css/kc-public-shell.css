@@ -722,6 +722,44 @@ body.kc-settings-page .kc-settings-input {
   accent-color: var(--kc-primary-brand);
 }
 
+.kc-settings-preview-box--notification-target {
+  margin-top: 14px;
+}
+
+.kc-settings-notification-target-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
+}
+
+.kc-settings-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kc-settings-field > span {
+  color: var(--kc-text-dark-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.kc-settings-notification-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--kc-text-dark-primary);
+  line-height: 1.6;
+}
+
+.kc-settings-notification-consent input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex: 0 0 auto;
+  accent-color: var(--kc-primary-brand);
+}
+
 .kc-help-list {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -856,6 +894,10 @@ body.kc-auth-callback-route .kc-callback-card {
 
   .kc-settings-notification-channels {
     justify-content: flex-start;
+  }
+
+  .kc-settings-notification-target-grid {
+    grid-template-columns: 1fr;
   }
 
   .kc-settings-actions-row {
