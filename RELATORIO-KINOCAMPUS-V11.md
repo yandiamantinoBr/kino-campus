@@ -1182,11 +1182,13 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - edge functions publicadas:
   `kc-dispatch-notification-outbox`, publicada no projeto Supabase principal com autenticação customizada por `x-kc-dispatch-secret` e comportamento intencional de dry-run/inspection nesta fase.
 - testes executados:
-  `npx jest tests/notification-delivery-foundation.test.js --runInBand` e `git diff --check`.
+  `npx jest tests/notification-delivery-foundation.test.js --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
 - validação operacional:
   a migration foi aplicada com sucesso no Supabase. A inspeção SQL confirmou a existência das tabelas `public.notification_delivery_outbox` e `public.notification_delivery_attempts`, dos índices de fila e attempts, das helpers novas e da correção real do trigger `kc_notify_on_vote()` para `new.voter_id` e voto positivo `hot`. O secret `KC_NOTIFICATION_DISPATCH_SECRET` foi criado via Management API do Supabase e a Edge Function respondeu com sucesso em dry-run, retornando `ok=true`, `mode='dry_run'` e a observação de que o dispatch por provider permanece desabilitado na `v11.20.2`.
 - validação em navegador:
-  não houve mudança de frontend dependente desta fase. A validação publicada desta iteração concentra-se no Supabase, na Edge Function e na consistência documental/operacional entregue com a nova trilha de outbox.
+  não houve mudança de frontend dependente desta fase. O preview da PR ficou `READY` no deployment `dpl_9oPGNvCSE1L6ug9fVXJofXpmRqJF`, com alias `https://kino-campus-git-codex-v11-20-2-n-76101d-yannakamurabrs-projects.vercel.app`, confirmado pelo check `Vercel`, por `get_deployment` no Vercel MCP e por fetch remoto do preview. Após o merge, [www.kinocampus.com.br](https://www.kinocampus.com.br) passou a responder `200` com a revisão publicada do deployment `dpl_4nc73MAaDN2frzDQo6auLjrsm3h3`.
+- PR / commit / deploy:
+  PR `#273`, commit funcional `c17cc50` na branch `codex/v11-20-2-notification-outbox-foundation`, merge squash `b99d9ea` na base `kinocampus-V11.0-foundations`, preview `dpl_9oPGNvCSE1L6ug9fVXJofXpmRqJF` (`kino-campus-luntrdyn4-yannakamurabrs-projects.vercel.app`, alias `kino-campus-git-codex-v11-20-2-n-76101d-yannakamurabrs-projects.vercel.app`) e deploy publicado após o merge `dpl_4nc73MAaDN2frzDQo6auLjrsm3h3` (`kino-campus-3mmclh1vu-yannakamurabrs-projects.vercel.app`, domínio [www.kinocampus.com.br](https://www.kinocampus.com.br)), todos confirmados em `11 de abril de 2026`.
 - riscos residuais:
   a fundação assíncrona foi entregue, mas ainda não existe canal real de e-mail ou WhatsApp. A próxima fase obrigatória passa a ser `v11.21.0`, para implementar o envio por e-mail sobre essa base sem alterar o contrato do sino/dropdown.
 
