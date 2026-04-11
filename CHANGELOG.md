@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.21.0`: adicionada a migration `v11.21.0.0_notification_email_channel.sql`, criando os helpers `kc_claim_notification_delivery_batch(...)` e `kc_record_notification_delivery_attempt(...)` para claim atomico da fila externa e registro consistente de tentativas.
+- `v11.21.0`: `kc-dispatch-notification-outbox` passou a gerar preview de envelope em `dry_run` e a despachar o canal `email` via `Resend` quando `dryRun=false` e os segredos `KC_NOTIFICATION_EMAIL_*` estiverem configurados.
+- `v11.21.0`: o dispatcher de email passou a registrar sucesso/falha em `notification_delivery_attempts`, manter backoff por `next_attempt_at` e devolver gating explicito (`email_provider_not_configured`) quando o provider ainda nao estiver operacional no projeto.
 - `v11.20.2`: criada a fundacao assincrona de entrega externa com as tabelas privadas `notification_delivery_outbox` e `notification_delivery_attempts`, separando fila e historico de tentativas da trilha canonica `public.notifications`.
 - `v11.20.2`: os triggers de comentario, reply, voto e expiracao passaram a emitir eventos via `kc_emit_notification_event(...)`, preservando a notificacao in-app quando `in_app` esta ligado e criando rows de outbox para canais externos sem acoplar provider aos triggers.
 - `v11.20.2`: `kc_notify_on_vote()` foi corrigida para o contrato real de `post_votes`, usando `new.voter_id` e voto positivo `direction = 'hot'` em vez da semantica antiga `user_id` / `up`.
@@ -50,6 +53,7 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.21.0`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/db-schema.md`, `docs/rpc-catalog.md` e `docs/ops/vercel-supabase-invariants.md` para registrar o canal de email, os helpers SQL novos, o dispatcher via `Resend` e o gating operacional por segredos de provider.
 - `v11.20.2`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/db-schema.md`, `docs/rpc-catalog.md` e `docs/ops/vercel-supabase-invariants.md` para registrar a nova fundacao de outbox, a Edge Function `kc-dispatch-notification-outbox`, a correcao do trigger de voto e a continuidade da v11 em `v11.21.0`.
 - `v11.20.1`: atualizado o `README.md` e o relatório v11 para registrar a conclusão da fase de preferências por evento/canal, a PR `#271`, o preview `dpl_HrWK6p9ugp8LZ9PSfKgLbJ4m8Q7U` e o deploy de produção `dpl_BGPST16nsxuGXP4gbgWzAPDbmTSz`.
 - `v11.20.1`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/api-contract.md` e `docs/db-schema.md` para refletir a nova trilha de preferências por evento/canal, a migration `v11.20.1.0_notification_preferences.sql` e a continuidade da v11 em `v11.20.2`.

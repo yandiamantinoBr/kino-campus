@@ -517,6 +517,30 @@ Revoga convite externo e registra `invite_revoked` no `audit_log`.
 
 ---
 
+### `kc_claim_notification_delivery_batch(p_channel text, p_limit int, p_worker text) → SETOF notification_delivery_outbox` [Helper de claim] *(v11.21.0)*
+
+**O que faz:** seleciona um lote elegível do outbox com `FOR UPDATE SKIP LOCKED`, troca o status para `processing` e registra `locked_at` / `locked_by`.
+
+**Observações:**
+- recupera locks stale de rows que ficaram em `processing`
+- hoje é usado pelo dispatcher do canal `email`
+- mantém o claim atômico fora da Edge Function para evitar corrida entre workers
+
+---
+
+### `kc_record_notification_delivery_attempt(...) → notification_delivery_outbox` [Helper de fechamento] *(v11.21.0)*
+
+**O que faz:** registra uma row imutável em `notification_delivery_attempts` e atualiza o item correspondente em `notification_delivery_outbox`.
+
+**Status aceitos:** `sent`, `failed`, `blocked`, `cancelled`, `skipped`
+
+**Observações:**
+- incrementa `attempts_count`
+- limpa `locked_at` / `locked_by`
+- preenche `last_attempt_at`, `sent_at`, `error_code`, `error_message` e `next_attempt_at` conforme o desfecho
+
+---
+
 ### `kc_notify_on_post_expire(p_post_id, p_author_id, p_title, p_module)` [Função helper]
 
 **Chamado por:** `kc_expire_old_posts()` quando expira um post.

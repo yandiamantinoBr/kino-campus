@@ -414,6 +414,8 @@
 - `notification_id` pode ser `NULL` quando o usuário desligou `in_app` mas manteve canal externo ligado.
 - o canal `whatsapp` fica bloqueado por default enquanto não existir um destino privado configurado; o WhatsApp público do perfil não é reutilizado automaticamente.
 - o helper canônico desta trilha é `kc_emit_notification_event(...)`, que mantém `public.notifications` como feed in-app e alimenta o outbox externo de forma desacoplada.
+- **Nota v11.21.0:** a fila passou a expor `kc_claim_notification_delivery_batch(...)` para claim atômico com recuperação de locks stale e `kc_record_notification_delivery_attempt(...)` para registrar tentativas e atualizar o outbox de forma consistente.
+- **Nota v11.21.0:** o canal `email` já tem dispatcher real na Edge Function `kc-dispatch-notification-outbox`, mas o envio permanece gated até existirem `KC_NOTIFICATION_EMAIL_PROVIDER`, `KC_NOTIFICATION_EMAIL_API_KEY` e `KC_NOTIFICATION_EMAIL_FROM` no projeto Supabase.
 
 ---
 
