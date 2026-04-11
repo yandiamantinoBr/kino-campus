@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, pela rodada documental de planejamento `v11.19.1`, pela fase funcional `v11.20.0` e agora pela fase funcional `v11.20.1`.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, pela rodada documental de planejamento `v11.19.1`, pelas fases funcionais `v11.20.0`, `v11.20.1` e agora `v11.20.2`, que adiciona a fundação assincrona de entrega externa com outbox, attempts e Edge Function de dispatcher em dry-run.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 45 suites de regressão e contrato |
+| Testes | Jest: 48 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.20.2 | fundação assincrona de entrega externa com `notification_delivery_outbox`, `notification_delivery_attempts`, helper canônico `kc_emit_notification_event(...)`, correção do trigger de voto para o contrato real `post_votes(voter_id, direction='hot'|'cold')` e Edge Function `kc-dispatch-notification-outbox` publicada em dry-run | em fechamento nesta iteração |
 | v11.20.1 | preferências de notificações persistidas por evento e canal, com camada privada separada em `notification_preferences`, UI de configuração em `settings`, novos métodos `KCAPI.getNotificationPreferences()`/`updateNotificationPreferences()` e triggers in-app passando a respeitar o canal `in_app` sem ainda ativar entrega externa | `#271` |
 | v11.20.0 | hardening do sino e do dropdown de notificações: geometria mais estável do `kcNotifBell`, ação explícita de `Limpar` no `kcNotifDropdown`, contrato `KCAPI.clearNotifications()` e realtime endurecido para `INSERT`/`UPDATE`/`DELETE`, sem alterar a fonte canônica in-app em `public.notifications` | `#269` |
 | v11.19.0 | auditoria operacional do Supabase com migration versionada para eliminar warnings ativos de RLS/performance em `notifications`, `post_view_events` e `kc_invited_emails`, cobrindo `initplan`, policies permissivas redundantes e índices de FK faltantes, além de sincronizar `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais | `#265` |
@@ -79,16 +80,15 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.20.1`
-- objetivo da iteração: persistir preferências de notificação por evento e por canal, sem misturar contato público com destino privado de entrega e sem quebrar a trilha canônica in-app
-- natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.20.1.0_notification_preferences.sql`) e sem ainda ativar envio externo por e-mail/WhatsApp
-- último preview validado desta fase: `dpl_HrWK6p9ugp8LZ9PSfKgLbJ4m8Q7U`, alias `https://kino-campus-git-codex-v11-20-1-n-957980-yannakamurabrs-projects.vercel.app`
-- deploy de produção validado desta fase: `dpl_BGPST16nsxuGXP4gbgWzAPDbmTSz`, publicado em [www.kinocampus.com.br](https://www.kinocampus.com.br)
+- iteração ativa consolidada: `v11.20.2`
+- objetivo da iteração: introduzir a fundação assincrona de entrega externa, separando a trilha in-app de uma fila privada de e-mail/WhatsApp sem acoplar provider aos triggers principais
+- natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.20.2.0_notification_delivery_outbox.sql`) e Edge Function `kc-dispatch-notification-outbox` publicada em modo dry-run
 - achados desta rodada:
-  - a nova camada privada `public.notification_preferences` mantém defaults backfill-safe: `in_app=true`, `email=false` e `whatsapp=false`
-  - o usuário agora configura em `settings` quais eventos quer receber e em quais canais, sem reaproveitar automaticamente o contato público do perfil
-  - os triggers atuais de comentário, reply, voto positivo e expiração de post passaram a respeitar `in_app`, enquanto `email` e `whatsapp` ficam apenas persistidos para a trilha futura
-- próxima iteração sugerida: `v11.20.2`, para criar a fundação assíncrona de entrega externa sem acoplar providers aos triggers principais do app
+  - `public.notifications` permanece como feed canônico do sino/dropdown, mas os eventos agora podem gerar outbox externo sem depender da notificação in-app existir
+  - a camada `notification_delivery_outbox` resolve destino privado por canal e bloqueia explicitamente o WhatsApp enquanto não existir configuração privada dedicada
+  - o trigger `kc_notify_on_vote()` foi alinhado ao contrato real do banco, usando `new.voter_id` e voto positivo `direction = 'hot'`
+  - a Edge Function `kc-dispatch-notification-outbox` já está publicada e validada em dry-run com `x-kc-dispatch-secret`, porém o envio por provider continua desabilitado nesta fase
+- próxima iteração sugerida: `v11.21.0`, para implementar o canal de e-mail sobre a fundação de outbox já entregue
 
 ---
 
@@ -204,7 +204,7 @@ Acesse `http://localhost:5500/index.html`.
 
 ### 1) Migrations
 
-Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **79 arquivos**, incluindo as 2 migrations da v10, a migration operacional `v9.3.3.0_supabase_operational_rls_fk.sql` e a nova trilha `v11.20.1.0_notification_preferences.sql`.
+Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **80 arquivos**, incluindo as 2 migrations da v10, a migration operacional `v9.3.3.0_supabase_operational_rls_fk.sql`, a trilha `v11.20.1.0_notification_preferences.sql` e a nova fundação `v11.20.2.0_notification_delivery_outbox.sql`.
 
 No banco principal atual, as 2 migrations da v10 já foram aplicadas. Use a lista abaixo para ambientes novos, bancos recriados ou staging separado.
 
@@ -213,6 +213,7 @@ Se estiver atualizando um ambiente que já estava em v9, garanta pelo menos a ap
 1. `v10.0.0.0_admin_search_posts_full.sql`
 2. `v10.0.1.0_admin_help_requests_pagination.sql`
 3. `v11.20.1.0_notification_preferences.sql`
+4. `v11.20.2.0_notification_delivery_outbox.sql`
 
 Você pode aplicar pelo SQL Editor do Supabase ou pela CLI.
 
@@ -260,6 +261,29 @@ supabase functions deploy notify-admin-reports-threshold
 ```bash
 supabase functions deploy kc-invite-user
 ```
+
+**kc-dispatch-notification-outbox**
+
+```bash
+supabase functions deploy kc-dispatch-notification-outbox
+```
+
+Segredos obrigatórios desta função:
+
+- `KC_NOTIFICATION_DISPATCH_SECRET`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Segredos/opções adicionais para as próximas fases:
+
+- `KC_NOTIFICATION_EMAIL_PROVIDER`
+- `KC_NOTIFICATION_WHATSAPP_PROVIDER`
+- `KC_NOTIFICATION_DISPATCH_BATCH_LIMIT`
+
+Observações:
+
+- a `v11.20.2` publica essa função em modo dry-run/inspection; ela ainda não envia para providers externos
+- a invocação exige o header `x-kc-dispatch-secret`
 
 ### 6) Settings de banco fora do git
 

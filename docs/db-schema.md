@@ -1,6 +1,6 @@
 # KinoCampus — Schema do Banco de Dados
 
-**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `79` migrations em `supabase/migrations/`
+**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `80` migrations em `supabase/migrations/`
 
 > Atualização documental da v11.1.0 em 08/04/2026: o repositório já inclui as migrations da v10 admin, `v10.0.0.0_admin_search_posts_full.sql` e `v10.0.1.0_admin_help_requests_pagination.sql`. No banco principal atual, elas já foram aplicadas.
 
@@ -117,14 +117,16 @@
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | `id` | UUID PK | |
-| `post_id` | UUID FK | Referencia `posts.id` (CASCADE DELETE) |
-| `user_id` | UUID FK | Referencia `profiles.id` |
-| `direction` | TEXT | `'up'` ou `'down'` |
 | `created_at` | TIMESTAMPTZ | |
+| `post_id` | UUID FK | Referencia `posts.id` (CASCADE DELETE) |
+| `voter_id` | UUID FK | Referencia `profiles.id` |
+| `direction` | TEXT | `'hot'` ou `'cold'` |
 
-**UNIQUE:** `(post_id, user_id)` — 1 voto por usuário por post.
+**UNIQUE:** `(post_id, voter_id)` — 1 voto por usuário por post.
 
-**RLS:** SELECT público; INSERT/DELETE próprio user_id.
+**RLS:** SELECT público; INSERT/DELETE próprio `voter_id`.
+
+**Nota v11.20.2:** a função `kc_notify_on_vote()` foi realinhada ao contrato atual desta tabela. A documentação antiga ainda descrevia `user_id` e `up/down`, mas o banco real vigente usa `voter_id` e `hot/cold`.
 
 ---
 
@@ -359,6 +361,8 @@
 
 **Nota v11.20.1:** os triggers atuais passaram a consultar `kc_notification_channel_enabled(...)` antes de inserir notificações in-app. O comportamento canônico segue sendo `in_app=true` por default para usuários sem preferências persistidas.
 
+**Nota v11.20.2:** os triggers de comentário, reply, voto e expiração passaram a delegar a emissão para `kc_emit_notification_event(...)`. Essa helper insere em `public.notifications` apenas quando `in_app` estiver habilitado e cria/atualiza items de `notification_delivery_outbox` para canais externos.
+
 ---
 
 ### `notification_preferences` — Preferências Privadas de Notificação (v11.20.1)
@@ -380,6 +384,57 @@
 
 ---
 
+### `notification_delivery_outbox` — Fila Privada de Entrega Externa (v11.20.2)
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `notification_id` | UUID FK NULL | Referencia opcional `notifications.id` (SET NULL em delete) |
+| `user_id` | UUID FK | Referencia `profiles.id` (CASCADE DELETE) |
+| `event_type` | TEXT | `comment_on_post`, `comment_reply`, `vote_on_post`, `post_expired`, `post_reported`, `system` |
+| `channel` | TEXT | `email` ou `whatsapp` |
+| `status` | TEXT | `queued`, `processing`, `sent`, `failed`, `blocked`, `cancelled`, `skipped` |
+| `destination` | TEXT | Destino privado resolvido para o canal |
+| `destination_source` | TEXT | Origem do destino privado (`auth.users.email`, `private.whatsapp`, etc.) |
+| `payload` | JSONB | Payload canônico para entrega externa |
+| `attempts_count` | INTEGER | Quantidade de tentativas já executadas |
+| `last_attempt_at` | TIMESTAMPTZ | |
+| `next_attempt_at` | TIMESTAMPTZ | |
+| `locked_at` | TIMESTAMPTZ | Lock de processamento |
+| `locked_by` | TEXT | Worker/função que segurou o item |
+| `sent_at` | TIMESTAMPTZ | |
+| `error_code` | TEXT | |
+| `error_message` | TEXT | |
+| `created_at` | TIMESTAMPTZ | |
+| `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
+
+**RLS:** nenhuma policy para `anon`/`authenticated`; uso reservado a `service_role`.
+
+**Observações operacionais:**
+- `notification_id` pode ser `NULL` quando o usuário desligou `in_app` mas manteve canal externo ligado.
+- o canal `whatsapp` fica bloqueado por default enquanto não existir um destino privado configurado; o WhatsApp público do perfil não é reutilizado automaticamente.
+- o helper canônico desta trilha é `kc_emit_notification_event(...)`, que mantém `public.notifications` como feed in-app e alimenta o outbox externo de forma desacoplada.
+
+---
+
+### `notification_delivery_attempts` — Histórico de Tentativas Externas (v11.20.2)
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `outbox_id` | UUID FK | Referencia `notification_delivery_outbox.id` (CASCADE DELETE) |
+| `channel` | TEXT | `email` ou `whatsapp` |
+| `status` | TEXT | `processing`, `sent`, `failed`, `blocked`, `cancelled`, `skipped` |
+| `provider` | TEXT | Nome do provider externo utilizado |
+| `response_code` | TEXT | Código/resumo de retorno do provider |
+| `response_body` | JSONB | Corpo resumido da tentativa |
+| `error_message` | TEXT | |
+| `attempted_at` | TIMESTAMPTZ | |
+
+**RLS:** nenhuma policy para `anon`/`authenticated`; uso reservado a `service_role`.
+
+---
+
 ## Indexes
 
 ```sql
@@ -390,7 +445,9 @@ posts_bumped_at_idx          ON posts(bumped_at DESC NULLS LAST)        -- feed 
 posts_last_comment_at_idx    ON posts(last_comment_at DESC NULLS LAST)  -- feed comentados
 posts_highlight_score_idx    ON posts(highlight_score DESC)             -- feed votos
 idx_comments_author_created  ON comments(author_id, created_at)
-idx_post_votes_user_post     ON post_votes(user_id, post_id)
+post_votes_post_id_idx       ON post_votes(post_id)
+post_votes_post_id_voter_id_key ON post_votes(post_id, voter_id)
+post_votes_voter_id_idx      ON post_votes(voter_id)
 idx_saved_posts_user         ON saved_posts(user_id)
 idx_reports_post_status      ON reports(post_id, status)
 user_ratings_target_created_idx ON user_ratings(target_user_id, created_at DESC, id DESC)
@@ -402,6 +459,12 @@ idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
 idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9.1.0
 idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
 notification_preferences_pkey  ON notification_preferences(user_id)         -- v11.20.1
+idx_notification_delivery_outbox_channel_status ON notification_delivery_outbox(channel, status, next_attempt_at)  -- v11.20.2
+idx_notification_delivery_outbox_status_next_attempt ON notification_delivery_outbox(status, next_attempt_at, created_at) WHERE status IN ('queued', 'failed', 'processing')  -- v11.20.2
+idx_notification_delivery_outbox_user_created ON notification_delivery_outbox(user_id, created_at DESC)  -- v11.20.2
+notification_delivery_outbox_notification_channel_uidx ON notification_delivery_outbox(notification_id, channel)  -- v11.20.2
+idx_notification_delivery_attempts_outbox_attempted ON notification_delivery_attempts(outbox_id, attempted_at DESC)  -- v11.20.2
+idx_notification_delivery_attempts_channel_status ON notification_delivery_attempts(channel, status, attempted_at DESC)  -- v11.20.2
 idx_kc_invited_emails_invited_by ON kc_invited_emails(invited_by)          -- v9.3.3
 idx_posts_fts                  ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL  -- v9.2.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)

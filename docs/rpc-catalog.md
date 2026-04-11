@@ -488,7 +488,32 @@ Revoga convite externo e registra `invite_revoked` no `audit_log`.
 
 **Evento:** `AFTER INSERT ON post_votes`
 
-**O que faz:** Insere notificação `vote_on_post` para o autor do post quando recebe voto positivo. Ignora self-votes e downvotes.
+**O que faz:** Emite o evento `vote_on_post` para o autor do post quando recebe voto positivo. Ignora self-votes e votos `cold`.
+
+**Nota v11.20.2:** o trigger foi realinhado ao contrato real de `post_votes`, usando `new.voter_id` e `direction = 'hot'`.
+
+---
+
+### `kc_emit_notification_event(p_user_id uuid, p_event_type text, p_title text, p_body text, p_data jsonb)` [Helper canônico de notificações] *(v11.20.2)*
+
+**O que faz:** Centraliza a emissão de notificações. Quando `in_app` está habilitado, insere em `public.notifications`; em seguida, avalia os canais externos e cria/atualiza items em `notification_delivery_outbox` para `email` e `whatsapp`.
+
+**Observações:**
+- preserva `public.notifications` como feed canônico do sino/dropdown
+- permite evento externo mesmo quando `in_app` estiver desligado
+- não chama provider diretamente; apenas alimenta a fila assíncrona
+
+---
+
+### `kc_enqueue_notification_delivery(...)` [Helper de outbox] *(v11.20.2)*
+
+**O que faz:** Resolve o destino privado do canal, monta o payload e cria/atualiza uma row em `notification_delivery_outbox`.
+
+**Canais atuais:** `email`, `whatsapp`
+
+**Comportamento atual:**
+- `email`: usa `auth.users.email`
+- `whatsapp`: permanece `blocked` com `private_destination_not_configured`
 
 ---
 
@@ -607,7 +632,9 @@ idx_comments_post_created  ON comments(post_id, created_at)
 idx_comments_parent_id     ON comments(parent_id)  -- v9.1.1
 
 -- Voting
-idx_post_votes_user_post   ON post_votes(user_id, post_id)
+post_votes_post_id_idx         ON post_votes(post_id)
+post_votes_post_id_voter_id_key ON post_votes(post_id, voter_id)
+post_votes_voter_id_idx        ON post_votes(voter_id)
 
 -- Analytics
 idx_search_queries_term    ON search_queries(term)

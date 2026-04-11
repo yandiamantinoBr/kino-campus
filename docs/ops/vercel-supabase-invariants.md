@@ -62,7 +62,28 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - opcionalmente `REPORTS_THRESHOLD`
   - opcionalmente `REPORTS_NOTIFY_COOLDOWN_HOURS`
 - O contrato dessa função não deve ser alterado nesta fase; o foco aqui é apenas manter a rastreabilidade operacional.
-## 7. Residual Supabase advisor items
+## 7. Edge Function de dispatch externo de notificações
+
+- A função `supabase/functions/kc-dispatch-notification-outbox/index.ts` depende de:
+  - `KC_NOTIFICATION_DISPATCH_SECRET`
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - opcionalmente `KC_NOTIFICATION_EMAIL_PROVIDER`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_PROVIDER`
+  - opcionalmente `KC_NOTIFICATION_DISPATCH_BATCH_LIMIT`
+- O contrato HTTP atual da função exige:
+  - `POST`
+  - header `x-kc-dispatch-secret`
+- A `v11.20.2` publica essa função em modo dry-run/inspection:
+  - consulta a fila `notification_delivery_outbox`
+  - resume itens por `channel`/`status`
+  - não envia para provider real nesta fase
+- A trilha externa deve continuar obedecendo:
+  - `public.notifications` e o sino/dropdown seguem sendo a fonte canônica in-app
+  - WhatsApp público do perfil/produto não pode ser reutilizado automaticamente como destino privado de notificação
+  - a resolução de destino privado atual usa `auth.users.email` para `email` e bloqueia `whatsapp` até existir configuração privada dedicada
+
+## 8. Residual Supabase advisor items
 
 - A rodada `v11.19.0` resolve, por migration versionada, os warnings acionaveis por codigo em RLS/performance para `notifications`, `post_view_events` e `kc_invited_emails`, alem da cobertura de FK por indice nessas trilhas.
 - Permanecem como residual operacional fora desta migration:
