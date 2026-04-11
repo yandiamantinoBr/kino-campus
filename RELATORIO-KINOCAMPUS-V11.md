@@ -1216,13 +1216,13 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - edge functions publicadas:
   `kc-dispatch-notification-outbox`, republicada como versão `3` no projeto Supabase principal. A função agora gera preview de envelopes em `dry_run`, envia por `Resend` quando `dryRun=false` e os segredos do provider estiverem configurados, e registra o resultado em `notification_delivery_attempts`.
 - testes executados:
-  `npx jest tests/notification-delivery-foundation.test.js tests/notification-email-channel.test.js --runInBand` e `git diff --check`.
+  `npx jest tests/notification-delivery-foundation.test.js tests/notification-email-channel.test.js --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
 - validação operacional:
   a migration foi aplicada com sucesso no Supabase e a inspeção SQL confirmou a existência das helpers `kc_claim_notification_delivery_batch` e `kc_record_notification_delivery_attempt`. A função `kc-dispatch-notification-outbox` foi publicada como versão `3` e o código remoto confirmado pelo próprio Supabase passou a conter `RESEND_ENDPOINT`, o envelope HTML/texto e o uso das helpers novas. A consulta de segredos do projeto confirmou que hoje só existe `KC_NOTIFICATION_DISPATCH_SECRET`; portanto, o canal de e-mail está implementado, mas continua operacionalmente gated até a criação de `KC_NOTIFICATION_EMAIL_PROVIDER`, `KC_NOTIFICATION_EMAIL_API_KEY` e `KC_NOTIFICATION_EMAIL_FROM`.
 - validação em navegador:
-  não houve mudança de frontend dependente desta fase; a homologação ficou concentrada em banco, Edge Function e deploy estático do repositório.
+  não houve mudança de frontend dependente desta fase; a homologação ficou concentrada em banco, Edge Function e deploy estático do repositório. O preview da PR ficou `READY` no deployment `dpl_8sNm4iyBp1i63ekFfmT3CJ2Pmigm`, com URL `https://kino-campus-a5eve1ig5-yannakamurabrs-projects.vercel.app` e alias `https://kino-campus-git-codex-v11-21-0-n-27e3b6-yannakamurabrs-projects.vercel.app`, confirmado pelo check `Vercel`, por `get_deployment` no Vercel MCP e por fetch remoto autenticado do preview. Após o merge, [www.kinocampus.com.br](https://www.kinocampus.com.br) passou a responder `200` com a revisão publicada do deployment `dpl_ES6C1Z3PbMd9HzWDZ5DaS3hLy3KU`.
 - PR / commit / deploy:
-  em fechamento nesta branch funcional; os metadados finais de PR, merge e deployments Vercel devem ser anexados no closeout da iteração.
+  PR `#275`, commit funcional `32f2190` na branch `codex/v11-21-0-notification-email-channel`, merge squash `c56a4b8` na base `kinocampus-V11.0-foundations`, preview `dpl_8sNm4iyBp1i63ekFfmT3CJ2Pmigm` (`kino-campus-a5eve1ig5-yannakamurabrs-projects.vercel.app`, alias `kino-campus-git-codex-v11-21-0-n-27e3b6-yannakamurabrs-projects.vercel.app`) e deploy publicado após o merge `dpl_ES6C1Z3PbMd9HzWDZ5DaS3hLy3KU` (`kino-campus-iu5hszo3a-yannakamurabrs-projects.vercel.app`), todos confirmados em `11 de abril de 2026`.
 - riscos residuais:
   o canal de e-mail já existe no código, mas ainda não pode enviar no projeto principal enquanto os segredos do provider não forem configurados no Supabase. A próxima fase obrigatória passa a ser `v11.21.1`, dedicada ao canal WhatsApp sem reaproveitar o WhatsApp público do perfil.
 

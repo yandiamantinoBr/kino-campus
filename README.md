@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.21.0 | canal de e-mail implementado sobre a outbox: helpers SQL `kc_claim_notification_delivery_batch(...)`/`kc_record_notification_delivery_attempt(...)`, template HTML/texto, envio por `Resend` na Edge Function `kc-dispatch-notification-outbox` e observabilidade de preview/dispatch mantendo `public.notifications` como trilha canonica | em fechamento |
+| v11.21.0 | canal de e-mail implementado sobre a outbox: helpers SQL `kc_claim_notification_delivery_batch(...)`/`kc_record_notification_delivery_attempt(...)`, template HTML/texto, envio por `Resend` na Edge Function `kc-dispatch-notification-outbox` e observabilidade de preview/dispatch mantendo `public.notifications` como trilha canonica | `#275` |
 | v11.20.2 | fundação assincrona de entrega externa com `notification_delivery_outbox`, `notification_delivery_attempts`, helper canônico `kc_emit_notification_event(...)`, correção do trigger de voto para o contrato real `post_votes(voter_id, direction='hot'|'cold')` e Edge Function `kc-dispatch-notification-outbox` publicada em dry-run | `#273` |
 | v11.20.1 | preferências de notificações persistidas por evento e canal, com camada privada separada em `notification_preferences`, UI de configuração em `settings`, novos métodos `KCAPI.getNotificationPreferences()`/`updateNotificationPreferences()` e triggers in-app passando a respeitar o canal `in_app` sem ainda ativar entrega externa | `#271` |
 | v11.20.0 | hardening do sino e do dropdown de notificações: geometria mais estável do `kcNotifBell`, ação explícita de `Limpar` no `kcNotifDropdown`, contrato `KCAPI.clearNotifications()` e realtime endurecido para `INSERT`/`UPDATE`/`DELETE`, sem alterar a fonte canônica in-app em `public.notifications` | `#269` |
@@ -84,8 +84,8 @@ Regras desta fase:
 - iteração ativa consolidada: `v11.21.0`
 - objetivo da iteração: promover a trilha externa de notificações do modo dry-run para o canal real de e-mail, sem quebrar o sino/dropdown, a fila privada nem a trilha in-app
 - natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.21.0.0_notification_email_channel.sql`) e Edge Function `kc-dispatch-notification-outbox` publicada com dispatcher de e-mail via `Resend`
-- último preview validado desta fase: em fechamento
-- deploy de produção validado desta fase: em fechamento
+- último preview validado desta fase: `dpl_8sNm4iyBp1i63ekFfmT3CJ2Pmigm` (`kino-campus-a5eve1ig5-yannakamurabrs-projects.vercel.app`, alias `kino-campus-git-codex-v11-21-0-n-27e3b6-yannakamurabrs-projects.vercel.app`)
+- deploy de produção validado desta fase: `dpl_ES6C1Z3PbMd9HzWDZ5DaS3hLy3KU` (`kino-campus-iu5hszo3a-yannakamurabrs-projects.vercel.app`), com [www.kinocampus.com.br](https://www.kinocampus.com.br) respondendo `200`
 - achados desta rodada:
   - `public.notifications` continua como feed canônico do sino/dropdown; o dispatcher de e-mail consome apenas a fila privada `notification_delivery_outbox`
   - a fila agora tem helpers atomicos de claim/attempt, reduzindo risco de corrida e mantendo `notification_delivery_attempts` coerente com o estado do outbox
