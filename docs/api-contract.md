@@ -693,6 +693,42 @@ Limpa as notificações do usuário autenticado no feed in-app.
 
 **Retorno:** `Promise<{ ok: boolean, deleted?: number, error?: string }>`
 
+### `KCAPI.getNotificationPreferences()`
+Retorna a matriz de preferências de notificação por evento e canal do usuário autenticado.
+
+**Retorno:**
+```javascript
+Promise<{
+  comment_on_post: { in_app: boolean, email: boolean, whatsapp: boolean },
+  comment_reply:   { in_app: boolean, email: boolean, whatsapp: boolean },
+  vote_on_post:    { in_app: boolean, email: boolean, whatsapp: boolean },
+  post_expired:    { in_app: boolean, email: boolean, whatsapp: boolean },
+  post_reported:   { in_app: boolean, email: boolean, whatsapp: boolean },
+  system:          { in_app: boolean, email: boolean, whatsapp: boolean },
+}>
+```
+
+**Notas v11.20.1:**
+- o contrato retorna defaults canônicos e backfill-safe quando o usuário ainda não possui row em `notification_preferences`
+- nesta fase, apenas o canal `in_app` é efetivamente consumido pelos triggers atuais; `email` e `whatsapp` ficam persistidos para as fases futuras da trilha multicanal
+
+### `KCAPI.updateNotificationPreferences(preferences)`
+Atualiza as preferências de notificação por evento e canal do usuário autenticado.
+
+**Body esperado:**
+```javascript
+{
+  comment_on_post?: { in_app?: boolean, email?: boolean, whatsapp?: boolean },
+  comment_reply?:   { in_app?: boolean, email?: boolean, whatsapp?: boolean },
+  vote_on_post?:    { in_app?: boolean, email?: boolean, whatsapp?: boolean },
+  post_expired?:    { in_app?: boolean, email?: boolean, whatsapp?: boolean },
+  post_reported?:   { in_app?: boolean, email?: boolean, whatsapp?: boolean },
+  system?:          { in_app?: boolean, email?: boolean, whatsapp?: boolean },
+}
+```
+
+**Retorno:** `Promise<{ ok: boolean, data?: { preferences: object }, error?: { message?: string } }>`
+
 ### `KCAPI.getUnreadNotificationCount()`
 Retorna apenas a contagem de não lidas.
 

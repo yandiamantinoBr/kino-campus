@@ -126,7 +126,43 @@ describe('KCAccountProfileUtils', () => {
     expect(typeof patch.onboarding_completed_at).toBe('string');
   });
 
-  test('getSuggestedAvatarUrls gera lotes estáveis e distintos', () => {
+  test('buildDefaultNotificationPreferences cria defaults canonicos por evento e canal', () => {
+    const preferences = AccountProfile.buildDefaultNotificationPreferences();
+
+    expect(preferences).toMatchObject({
+      comment_on_post: { in_app: true, email: false, whatsapp: false },
+      comment_reply: { in_app: true, email: false, whatsapp: false },
+      vote_on_post: { in_app: true, email: false, whatsapp: false },
+      post_expired: { in_app: true, email: false, whatsapp: false },
+      post_reported: { in_app: true, email: false, whatsapp: false },
+      system: { in_app: true, email: false, whatsapp: false }
+    });
+  });
+
+  test('normalizeNotificationPreferences preserva overrides e recompõe faltantes', () => {
+    const normalized = AccountProfile.normalizeNotificationPreferences({
+      comment_on_post: { in_app: false, email: true },
+      system: { whatsapp: true }
+    });
+
+    expect(normalized.comment_on_post).toEqual({
+      in_app: false,
+      email: true,
+      whatsapp: false
+    });
+    expect(normalized.system).toEqual({
+      in_app: true,
+      email: false,
+      whatsapp: true
+    });
+    expect(normalized.vote_on_post).toEqual({
+      in_app: true,
+      email: false,
+      whatsapp: false
+    });
+  });
+
+  test('getSuggestedAvatarUrls gera lotes estaveis e distintos', () => {
     const firstBatch = AccountProfile.getSuggestedAvatarUrls('yan', { batch: 0, size: 8 });
     const secondBatch = AccountProfile.getSuggestedAvatarUrls('yan', { batch: 1, size: 8 });
 
@@ -137,11 +173,11 @@ describe('KCAccountProfileUtils', () => {
   });
 
   test('buildEmojiAvatarDataUrl cria avatar serializado com emoji e cor', () => {
-    const dataUrl = AccountProfile.buildEmojiAvatarDataUrl('🎓', '#FF7C00');
+    const dataUrl = AccountProfile.buildEmojiAvatarDataUrl('\uD83C\uDF93', '#FF7C00');
 
     expect(dataUrl.startsWith('data:image/svg+xml;charset=UTF-8,')).toBe(true);
     const decoded = decodeURIComponent(dataUrl.replace('data:image/svg+xml;charset=UTF-8,', ''));
-    expect(decoded).toContain('🎓');
+    expect(decoded).toContain('\uD83C\uDF93');
     expect(decoded).toContain('#FF7C00');
   });
 });

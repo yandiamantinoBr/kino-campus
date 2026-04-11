@@ -3580,6 +3580,102 @@ const { ENV, normalizePost } = window.KCAPI;
 
   // ── Notifications (v9.1.0) ──────────────────────────────────
 
+  function buildDefaultNotificationPreferencesForAdapter() {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === 'function') {
+      return window.KCAccountProfileUtils.buildDefaultNotificationPreferences();
+    }
+    return {
+      comment_on_post: { in_app: true, email: false, whatsapp: false },
+      comment_reply: { in_app: true, email: false, whatsapp: false },
+      vote_on_post: { in_app: true, email: false, whatsapp: false },
+      post_expired: { in_app: true, email: false, whatsapp: false },
+      post_reported: { in_app: true, email: false, whatsapp: false },
+      system: { in_app: true, email: false, whatsapp: false },
+    };
+  }
+
+  function normalizeNotificationPreferencesForAdapter(value) {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.normalizeNotificationPreferences === 'function') {
+      return window.KCAccountProfileUtils.normalizeNotificationPreferences(value);
+    }
+    const defaults = buildDefaultNotificationPreferencesForAdapter();
+    const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+    const normalized = {};
+    Object.keys(defaults).forEach((eventKey) => {
+      const sourceEvent = (source[eventKey] && typeof source[eventKey] === 'object' && !Array.isArray(source[eventKey]))
+        ? source[eventKey]
+        : {};
+      normalized[eventKey] = {
+        in_app: sourceEvent.in_app !== false,
+        email: sourceEvent.email === true,
+        whatsapp: sourceEvent.whatsapp === true,
+      };
+    });
+    return normalized;
+  }
+
+  async function supabaseGetNotificationPreferences() {
+    const client = getSupabaseClient();
+    if (!client) return buildDefaultNotificationPreferencesForAdapter();
+
+    const user = await supabaseGetCurrentUser();
+    if (!user || !user.id) return buildDefaultNotificationPreferencesForAdapter();
+
+    try {
+      const { data, error } = await client
+        .from('notification_preferences')
+        .select('preferences')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[KCAPI][notifications] getNotificationPreferences:', error);
+        return buildDefaultNotificationPreferencesForAdapter();
+      }
+
+      return normalizeNotificationPreferencesForAdapter(data && data.preferences ? data.preferences : null);
+    } catch (e) {
+      console.error('[KCAPI][notifications] getNotificationPreferences exceÃ§Ã£o:', e);
+      return buildDefaultNotificationPreferencesForAdapter();
+    }
+  }
+
+  async function supabaseUpdateNotificationPreferences(preferences = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
+
+    const user = await supabaseGetCurrentUser();
+    if (!user || !user.id) return { ok: false, error: { message: 'FaÃ§a login para editar suas notificaÃ§Ãµes.' } };
+
+    const normalized = normalizeNotificationPreferencesForAdapter(preferences);
+
+    try {
+      const { data, error } = await client
+        .from('notification_preferences')
+        .upsert({
+          user_id: user.id,
+          preferences: normalized,
+        }, { onConflict: 'user_id' })
+        .select('preferences')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[KCAPI][notifications] updateNotificationPreferences:', error);
+        return { ok: false, error: { message: error.message || 'NÃ£o foi possÃ­vel atualizar as preferÃªncias.' } };
+      }
+
+      return {
+        ok: true,
+        data: {
+          preferences: normalizeNotificationPreferencesForAdapter(data && data.preferences ? data.preferences : normalized),
+        },
+      };
+    } catch (e) {
+      console.error('[KCAPI][notifications] updateNotificationPreferences exceÃ§Ã£o:', e);
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel atualizar as preferÃªncias.' } };
+    }
+  }
+
   async function supabaseGetNotifications(limit, offset) {
     const client = getSupabaseClient();
     if (!client) return { ok: false, error: 'NO_CLIENT' };
@@ -3761,6 +3857,8 @@ const { ENV, normalizePost } = window.KCAPI;
     createHelpRequest: supabaseCreateHelpRequest,
     listAdminHelpRequests: supabaseListAdminHelpRequests,
     updateAdminHelpRequest: supabaseUpdateAdminHelpRequest,
+    getNotificationPreferences: supabaseGetNotificationPreferences,
+    updateNotificationPreferences: supabaseUpdateNotificationPreferences,
     // Notifications (v9.1.0)
      getNotifications: supabaseGetNotifications,
      markNotificationsRead: supabaseMarkNotificationsRead,

@@ -10,6 +10,7 @@
   const state = {
     user: null,
     profile: null,
+    notificationPreferences: null,
     nextPath: '/index.html',
     saving: false,
     lastRealPrimaryMethod: '',
@@ -78,6 +79,25 @@
     return shared && typeof shared.normalizeSocialVisibility === 'function'
       ? shared.normalizeSocialVisibility((profile && profile.social_visibility) || {})
       : ((profile && profile.social_visibility) || {});
+  }
+
+  function getDefaultNotificationPreferences() {
+    return shared && typeof shared.buildDefaultNotificationPreferences === 'function'
+      ? shared.buildDefaultNotificationPreferences()
+      : {
+          comment_on_post: { in_app: true, email: false, whatsapp: false },
+          comment_reply: { in_app: true, email: false, whatsapp: false },
+          vote_on_post: { in_app: true, email: false, whatsapp: false },
+          post_expired: { in_app: true, email: false, whatsapp: false },
+          post_reported: { in_app: true, email: false, whatsapp: false },
+          system: { in_app: true, email: false, whatsapp: false },
+        };
+  }
+
+  function normalizeNotificationPreferences(value) {
+    return shared && typeof shared.normalizeNotificationPreferences === 'function'
+      ? shared.normalizeNotificationPreferences(value)
+      : getDefaultNotificationPreferences();
   }
 
   function setStatus(message, tone) {
@@ -225,6 +245,40 @@
     }).join('');
   }
 
+  function renderNotificationPreferences() {
+    const list = $('#settingsNotificationPreferencesList');
+    if (!list) return;
+
+    const eventOptions = Array.isArray(shared.NOTIFICATION_EVENT_OPTIONS) ? shared.NOTIFICATION_EVENT_OPTIONS : [];
+    const channelOptions = Array.isArray(shared.NOTIFICATION_CHANNEL_OPTIONS) ? shared.NOTIFICATION_CHANNEL_OPTIONS : [];
+    const preferences = normalizeNotificationPreferences(state.notificationPreferences);
+
+    list.innerHTML = eventOptions.map((eventOption) => {
+      const eventKey = String(eventOption.value || '').trim();
+      const eventPrefs = preferences[eventKey] || {};
+      const channels = channelOptions.map((channelOption) => {
+        const channelKey = String(channelOption.value || '').trim();
+        const checked = eventPrefs[channelKey] === true;
+        return [
+          `<label class="kc-settings-notification-option" for="settingsNotif_${esc(eventKey)}_${esc(channelKey)}">`,
+          `  <input id="settingsNotif_${esc(eventKey)}_${esc(channelKey)}" type="checkbox" data-notification-event="${esc(eventKey)}" data-notification-channel="${esc(channelKey)}"${checked ? ' checked' : ''} />`,
+          `  <span>${esc(channelOption.label || channelKey)}</span>`,
+          '</label>',
+        ].join('');
+      }).join('');
+
+      return [
+        '<div class="kc-settings-notification-row">',
+        '  <div class="kc-settings-notification-copy">',
+        `    <strong><i class="${esc(eventOption.iconClass || 'fas fa-bell')}"></i>${esc(eventOption.label || eventKey)}</strong>`,
+        `    <p>${esc(eventOption.description || '')}</p>`,
+        '  </div>',
+        `  <div class="kc-settings-notification-channels">${channels}</div>`,
+        '</div>',
+      ].join('');
+    }).join('');
+  }
+
   function updateOnboardingStatus() {
     const pill = $('#settingsOnboardingPill');
     const copy = $('#settingsOnboardingCopy');
@@ -340,10 +394,22 @@
 
     updateOnboardingStatus();
     buildNetworkRows();
+    renderNotificationPreferences();
     syncContactControls('populate');
     syncProfilePublicLabel();
     updateContactPreview();
     updateThemeButtons();
+  }
+
+  function collectNotificationPreferences() {
+    const next = normalizeNotificationPreferences(state.notificationPreferences);
+    document.querySelectorAll('[data-notification-event][data-notification-channel]').forEach((input) => {
+      const eventKey = String(input.getAttribute('data-notification-event') || '').trim();
+      const channelKey = String(input.getAttribute('data-notification-channel') || '').trim();
+      if (!eventKey || !channelKey || !next[eventKey]) return;
+      next[eventKey][channelKey] = input.checked === true;
+    });
+    return normalizeNotificationPreferences(next);
   }
 
   async function savePatch(patch, successMessage, buttonSelector, successButtonLabel) {
@@ -429,6 +495,43 @@
     );
   }
 
+  async function saveNotificationSettings() {
+    const button = $('#settingsSaveNotifications');
+    if (!window.KCAPI || typeof window.KCAPI.updateNotificationPreferences !== 'function') {
+      setStatus('PreferÃªncias de notificaÃ§Ã£o indisponÃ­veis neste ambiente.', 'error');
+      setActionButtonState(button, 'idle');
+      return;
+    }
+    if (state.saving) return;
+
+    const preferences = collectNotificationPreferences();
+    state.saving = true;
+    setActionButtonState(button, 'loading', 'Salvando...');
+    setStatus('Salvando suas preferÃªncias de notificaÃ§Ã£o...', 'info');
+
+    try {
+      const result = await window.KCAPI.updateNotificationPreferences(preferences);
+      if (!result || !result.ok) {
+        setActionButtonState(button, 'idle');
+        setStatus((result && result.error && result.error.message) || 'NÃ£o foi possÃ­vel salvar agora.', 'error');
+        return;
+      }
+
+      state.notificationPreferences = normalizeNotificationPreferences(
+        result && result.data && result.data.preferences ? result.data.preferences : preferences
+      );
+      renderNotificationPreferences();
+      setActionButtonState(button, 'success', 'NotificaÃ§Ãµes salvas');
+      setStatus('PreferÃªncias de notificaÃ§Ã£o atualizadas.', 'success');
+    } catch (error) {
+      console.error('[Settings] notification preferences save failed:', error);
+      setActionButtonState(button, 'idle');
+      setStatus('NÃ£o foi possÃ­vel salvar agora.', 'error');
+    } finally {
+      state.saving = false;
+    }
+  }
+
   async function resendConfirmation() {
     if (!state.user || !state.user.email || !window.KCAPI || typeof window.KCAPI.resendConfirmation !== 'function') return;
     setStatus('Reenviando a confirmação...', 'info');
@@ -467,6 +570,7 @@
     const saveContact = $('#settingsSaveContact');
     const saveVisibility = $('#settingsSaveVisibility');
     const saveProfilePublic = $('#settingsSaveProfilePublic');
+    const saveNotifications = $('#settingsSaveNotifications');
     const resend = $('#settingsResendConfirmation');
     const requestReset = $('#settingsRequestReset');
     const logout = $('#settingsLogout');
@@ -477,6 +581,7 @@
     if (saveContact) saveContact.addEventListener('click', saveContactSettings);
     if (saveVisibility) saveVisibility.addEventListener('click', saveVisibilitySettings);
     if (saveProfilePublic) saveProfilePublic.addEventListener('click', saveProfilePublicSettings);
+    if (saveNotifications) saveNotifications.addEventListener('click', saveNotificationSettings);
     if (resend) resend.addEventListener('click', resendConfirmation);
     if (requestReset) requestReset.addEventListener('click', requestResetLink);
     if (logout) logout.addEventListener('click', doLogout);
@@ -541,6 +646,18 @@
     }
   }
 
+  async function loadNotificationPreferences() {
+    state.notificationPreferences = getDefaultNotificationPreferences();
+    if (!state.user || !window.KCAPI || typeof window.KCAPI.getNotificationPreferences !== 'function') return;
+    try {
+      const preferences = await window.KCAPI.getNotificationPreferences();
+      state.notificationPreferences = normalizeNotificationPreferences(preferences);
+    } catch (error) {
+      console.error('[Settings] notification preferences load failed:', error);
+      state.notificationPreferences = getDefaultNotificationPreferences();
+    }
+  }
+
   async function refreshSettingsPage() {
     setStatus('Atualizando configurações...', 'info');
     try {
@@ -555,6 +672,7 @@
       }
       if (guest) guest.style.display = 'none';
       if (content) content.style.display = 'grid';
+      await loadNotificationPreferences();
       populate();
       setStatus('Configurações atualizadas.', 'success');
     } catch (error) {
@@ -590,6 +708,7 @@
     }
 
     $('#settingsContent').style.display = 'grid';
+    await loadNotificationPreferences();
     populate();
     initPullToRefresh();
   }

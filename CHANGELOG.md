@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.20.1`: criada a camada privada `notification_preferences` com defaults canônicos e backfill-safe, permitindo persistir preferências por evento/canal sem acoplar isso a `profiles.social_links`, `contact_primary_method` ou ao WhatsApp público do perfil.
+- `v11.20.1`: `settings.html` e `settings.controller.js` passaram a expor uma UI dedicada para configurar notificações por evento e por canal, com salvamento via `KCAPI.getNotificationPreferences()` e `KCAPI.updateNotificationPreferences()`.
+- `v11.20.1`: `supabase.adapter.js` e `local.adapter.js` passaram a suportar leitura/escrita das preferências de notificação, enquanto os triggers atuais de comentário, reply, voto positivo e expiração de post passaram a respeitar o canal `in_app`.
 - `v11.20.0`: `kc-notifications.js` passou a manter um root estavel do dropdown com reposicionamento explicito, `aria-expanded`, fechamento consistente e delegacao unica de clique, evitando drift apos rerenders e deixando o sino visualmente menos apertado no shell publico.
 - `v11.20.0`: o dropdown passou a suportar a acao `Limpar` com confirmacao explicita, preservando `Marcar todas`, badge e a trilha in-app como fonte canonica em `public.notifications`.
 - `v11.20.0`: `KCAPI`, `local.adapter.js` e `supabase.adapter.js` passaram a expor `clearNotifications()`, enquanto o subscribe realtime do Supabase foi endurecido para tratar envelopes `INSERT`, `UPDATE` e `DELETE`.
@@ -44,6 +47,7 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.20.1`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/api-contract.md` e `docs/db-schema.md` para refletir a nova trilha de preferências por evento/canal, a migration `v11.20.1.0_notification_preferences.sql` e a continuidade da v11 em `v11.20.2`.
 - `v11.20.0`: atualizado o `README.md` e o relatorio v11 para registrar o fechamento do shell in-app de notificacoes e deixar `v11.20.1` explicita como proxima fase da trilha multicanal.
 - `v11.20.0`: sincronizado `docs/api-contract.md` com o novo contrato de notificacoes, incluindo `KCAPI.clearNotifications()` e o envelope de realtime usado pelos consumers do dropdown.
 - `v11.19.1`: registrado o diagnóstico de que o sino de notificações não está sendo cortado por `overflow`, mas visualmente apertado pela geometria atual do shell e pela sobreposição do badge.
