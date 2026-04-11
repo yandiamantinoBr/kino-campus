@@ -90,6 +90,8 @@ describe('Local Adapter - Registro do driver', () => {
       'updateAdminHelpRequest',
       'getNotificationPreferences',
       'updateNotificationPreferences',
+      'getNotificationChannelTargets',
+      'updateNotificationChannelTargets',
       'getNotifications',
       'markNotificationsRead',
       'markAllNotificationsRead',
@@ -341,6 +343,20 @@ describe('Local Adapter - Paridade moderna do driver local', () => {
       post_reported: { in_app: true, email: false, whatsapp: false },
       system: { in_app: true, email: false, whatsapp: false },
     });
+    await expect(driver.getNotificationChannelTargets()).resolves.toEqual({
+      whatsapp: {
+        channel: 'whatsapp',
+        destination: '',
+        country_code: '55',
+        local_number: '',
+        consent_granted: false,
+        consent_at: null,
+        configured: false,
+        ready: false,
+        display: '',
+        metadata: { country_code: '55' },
+      },
+    });
     await expect(driver.updateNotificationPreferences({
       comment_on_post: { in_app: false, email: true },
       system: { whatsapp: true },
@@ -357,6 +373,31 @@ describe('Local Adapter - Paridade moderna do driver local', () => {
         },
       },
     });
+    await expect(driver.updateNotificationChannelTargets({
+      whatsapp: {
+        country_code: '55',
+        local_number: '(62) 99876-5432',
+        consent_granted: true,
+      },
+    })).resolves.toEqual({
+      ok: true,
+      data: {
+        targets: {
+          whatsapp: {
+            channel: 'whatsapp',
+            destination: '+5562998765432',
+            country_code: '55',
+            local_number: '62998765432',
+            consent_granted: true,
+            consent_at: null,
+            configured: true,
+            ready: true,
+            display: '+55 (62) 99876-5432',
+            metadata: { country_code: '55' },
+          },
+        },
+      },
+    });
     await expect(driver.getNotificationPreferences()).resolves.toEqual({
       comment_on_post: { in_app: false, email: true, whatsapp: false },
       comment_reply: { in_app: true, email: false, whatsapp: false },
@@ -364,6 +405,20 @@ describe('Local Adapter - Paridade moderna do driver local', () => {
       post_expired: { in_app: true, email: false, whatsapp: false },
       post_reported: { in_app: true, email: false, whatsapp: false },
       system: { in_app: true, email: false, whatsapp: true },
+    });
+    await expect(driver.getNotificationChannelTargets()).resolves.toEqual({
+      whatsapp: {
+        channel: 'whatsapp',
+        destination: '+5562998765432',
+        country_code: '55',
+        local_number: '62998765432',
+        consent_granted: true,
+        consent_at: null,
+        configured: true,
+        ready: true,
+        display: '+55 (62) 99876-5432',
+        metadata: { country_code: '55' },
+      },
     });
     await expect(driver.getNotifications()).resolves.toEqual({
       ok: true,

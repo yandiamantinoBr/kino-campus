@@ -710,7 +710,7 @@ Promise<{
 
 **Notas v11.20.1:**
 - o contrato retorna defaults canônicos e backfill-safe quando o usuário ainda não possui row em `notification_preferences`
-- nesta fase, apenas o canal `in_app` é efetivamente consumido pelos triggers atuais; `email` e `whatsapp` ficam persistidos para as fases futuras da trilha multicanal
+- a partir de `v11.21.1`, `email` e `whatsapp` ja fazem parte da trilha externa; a entrega real continua gated por segredos de provider e pelo destino privado configurado do usuario
 
 ### `KCAPI.updateNotificationPreferences(preferences)`
 Atualiza as preferências de notificação por evento e canal do usuário autenticado.
@@ -728,6 +728,49 @@ Atualiza as preferências de notificação por evento e canal do usuário autent
 ```
 
 **Retorno:** `Promise<{ ok: boolean, data?: { preferences: object }, error?: { message?: string } }>`
+
+### `KCAPI.getNotificationChannelTargets()`
+Retorna os destinos privados configurados para canais externos do usuario autenticado.
+
+**Retorno:**
+```javascript
+Promise<{
+  whatsapp: {
+    channel: 'whatsapp',
+    destination: string,
+    country_code: string,
+    local_number: string,
+    consent_granted: boolean,
+    consent_at: string | null,
+    configured: boolean,
+    ready: boolean,
+    display: string,
+    metadata: { country_code?: string }
+  }
+}>
+```
+
+**Notas v11.21.1:**
+- o destino privado de `whatsapp` fica separado do contato publico do perfil/produto
+- `destination` usa formato E.164 (`+5562998765432`)
+- `ready=true` so quando existir numero valido e consentimento explicito
+
+### `KCAPI.updateNotificationChannelTargets(targets)`
+Atualiza os destinos privados configurados para canais externos do usuario autenticado.
+
+**Body esperado:**
+```javascript
+{
+  whatsapp?: {
+    country_code?: string,
+    local_number?: string,
+    consent_granted?: boolean,
+    metadata?: { country_code?: string }
+  }
+}
+```
+
+**Retorno:** `Promise<{ ok: boolean, data?: { targets: object }, error?: { message?: string } }>`
 
 ### `KCAPI.getUnreadNotificationCount()`
 Retorna apenas a contagem de não lidas.

@@ -36,6 +36,23 @@ describe('KCAPI notification preferences contract', () => {
         ok: true,
         data: { preferences }
       })),
+      getNotificationChannelTargets: jest.fn(() => Promise.resolve({
+        whatsapp: {
+          channel: 'whatsapp',
+          destination: '+5562998765432',
+          country_code: '55',
+          local_number: '62998765432',
+          consent_granted: true,
+          configured: true,
+          ready: true,
+          display: '+55 (62) 99876-5432',
+          metadata: { country_code: '55' },
+        }
+      })),
+      updateNotificationChannelTargets: jest.fn((targets) => Promise.resolve({
+        ok: true,
+        data: { targets }
+      })),
     };
 
     window.KCAPI.registerAdapter('local', adapter);
@@ -95,5 +112,34 @@ describe('KCAPI notification preferences contract', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBeDefined();
     expect(String(result.error.message || '').toLowerCase()).toContain('driver');
+  });
+
+  test('delegates private notification targets to the active driver', async () => {
+    const targets = await window.KCAPI.getNotificationChannelTargets();
+
+    expect(adapter.getNotificationChannelTargets).toHaveBeenCalledTimes(1);
+    expect(targets.whatsapp).toMatchObject({
+      destination: '+5562998765432',
+      consent_granted: true,
+      ready: true,
+    });
+  });
+
+  test('updates private notification targets through the active driver', async () => {
+    const payload = {
+      whatsapp: {
+        country_code: '55',
+        local_number: '62998765432',
+        consent_granted: true,
+      }
+    };
+
+    const result = await window.KCAPI.updateNotificationChannelTargets(payload);
+
+    expect(adapter.updateNotificationChannelTargets).toHaveBeenCalledWith(payload);
+    expect(result).toEqual({
+      ok: true,
+      data: { targets: payload },
+    });
   });
 });

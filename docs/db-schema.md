@@ -1,6 +1,6 @@
 # KinoCampus — Schema do Banco de Dados
 
-**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `80` migrations em `supabase/migrations/`
+**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `82` migrations em `supabase/migrations/`
 
 > Atualização documental da v11.1.0 em 08/04/2026: o repositório já inclui as migrations da v10 admin, `v10.0.0.0_admin_search_posts_full.sql` e `v10.0.1.0_admin_help_requests_pagination.sql`. No banco principal atual, elas já foram aplicadas.
 
@@ -384,6 +384,32 @@
 
 ---
 
+### `notification_channel_targets` — Destinos Privados de Canais Externos (v11.21.1)
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `user_id` | UUID PK/FK | Referencia `profiles.id` (CASCADE DELETE) |
+| `channel` | TEXT PK | Nesta fase, apenas `whatsapp` |
+| `destination` | TEXT | Destino privado em E.164 (`+5562998765432`) |
+| `consent_granted` | BOOLEAN | Opt-in explicito para uso do canal |
+| `consent_at` | TIMESTAMPTZ | Momento em que o consentimento vigente foi concedido |
+| `metadata` | JSONB | Metadados complementares, incluindo `country_code` |
+| `created_at` | TIMESTAMPTZ | |
+| `updated_at` | TIMESTAMPTZ | |
+
+**RLS:** SELECT/INSERT/UPDATE/DELETE apenas do proprio `user_id` autenticado.
+
+**Checks:**
+- `channel = 'whatsapp'`
+- `destination` deve obedecer ao formato E.164
+
+**Helpers / triggers:**
+- `kc_touch_notification_channel_target_consent()` — recalcula `consent_at` quando o consentimento muda ou quando o numero privado e alterado
+- `kc_count_recent_notification_deliveries(uuid, text, timestamptz)` — conta envios recentes para rate limit operacional do dispatcher
+- `kc_resolve_notification_delivery_destination(uuid, text)` — passa a resolver `whatsapp` a partir desta tabela privada, sem reaproveitar o contato publico do perfil
+
+---
+
 ### `notification_delivery_outbox` — Fila Privada de Entrega Externa (v11.20.2)
 
 | Coluna | Tipo | Descrição |
@@ -412,10 +438,11 @@
 
 **Observações operacionais:**
 - `notification_id` pode ser `NULL` quando o usuário desligou `in_app` mas manteve canal externo ligado.
-- o canal `whatsapp` fica bloqueado por default enquanto não existir um destino privado configurado; o WhatsApp público do perfil não é reutilizado automaticamente.
+- o canal `whatsapp` depende de `notification_channel_targets`, com numero privado valido e `consent_granted=true`; o WhatsApp publico do perfil nao e reutilizado automaticamente.
 - o helper canônico desta trilha é `kc_emit_notification_event(...)`, que mantém `public.notifications` como feed in-app e alimenta o outbox externo de forma desacoplada.
 - **Nota v11.21.0:** a fila passou a expor `kc_claim_notification_delivery_batch(...)` para claim atômico com recuperação de locks stale e `kc_record_notification_delivery_attempt(...)` para registrar tentativas e atualizar o outbox de forma consistente.
 - **Nota v11.21.0:** o canal `email` já tem dispatcher real na Edge Function `kc-dispatch-notification-outbox`, mas o envio permanece gated até existirem `KC_NOTIFICATION_EMAIL_PROVIDER`, `KC_NOTIFICATION_EMAIL_API_KEY` e `KC_NOTIFICATION_EMAIL_FROM` no projeto Supabase.
+- **Nota v11.21.1:** o canal `whatsapp` agora tem dispatcher real via Twilio, mas o envio continua gated ate existirem `KC_NOTIFICATION_WHATSAPP_PROVIDER`, `KC_NOTIFICATION_WHATSAPP_ACCOUNT_SID`, `KC_NOTIFICATION_WHATSAPP_AUTH_TOKEN`, `KC_NOTIFICATION_WHATSAPP_FROM` e `KC_NOTIFICATION_WHATSAPP_CONTENT_SID`.
 
 ---
 
@@ -461,6 +488,7 @@ idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
 idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9.1.0
 idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
 notification_preferences_pkey  ON notification_preferences(user_id)         -- v11.20.1
+notification_channel_targets_pkey ON notification_channel_targets(user_id, channel)  -- v11.21.1
 idx_notification_delivery_outbox_channel_status ON notification_delivery_outbox(channel, status, next_attempt_at)  -- v11.20.2
 idx_notification_delivery_outbox_status_next_attempt ON notification_delivery_outbox(status, next_attempt_at, created_at) WHERE status IN ('queued', 'failed', 'processing')  -- v11.20.2
 idx_notification_delivery_outbox_user_created ON notification_delivery_outbox(user_id, created_at DESC)  -- v11.20.2

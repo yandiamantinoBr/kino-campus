@@ -11,6 +11,7 @@
     user: null,
     profile: null,
     notificationPreferences: null,
+    notificationChannelTargets: null,
     nextPath: '/index.html',
     saving: false,
     lastRealPrimaryMethod: '',
@@ -98,6 +99,31 @@
     return shared && typeof shared.normalizeNotificationPreferences === 'function'
       ? shared.normalizeNotificationPreferences(value)
       : getDefaultNotificationPreferences();
+  }
+
+  function getDefaultNotificationChannelTargets() {
+    return shared && typeof shared.buildDefaultNotificationChannelTargets === 'function'
+      ? shared.buildDefaultNotificationChannelTargets()
+      : {
+          whatsapp: {
+            channel: 'whatsapp',
+            destination: '',
+            country_code: '55',
+            local_number: '',
+            consent_granted: false,
+            consent_at: null,
+            configured: false,
+            ready: false,
+            display: '',
+            metadata: { country_code: '55' },
+          },
+        };
+  }
+
+  function normalizeNotificationChannelTargets(value) {
+    return shared && typeof shared.normalizeNotificationChannelTargets === 'function'
+      ? shared.normalizeNotificationChannelTargets(value)
+      : getDefaultNotificationChannelTargets();
   }
 
   function setStatus(message, tone) {
@@ -279,6 +305,79 @@
     }).join('');
   }
 
+  function countEnabledWhatsappEvents(preferences) {
+    const normalized = normalizeNotificationPreferences(preferences);
+    return Object.keys(normalized).reduce(function (count, eventKey) {
+      const eventPrefs = normalized[eventKey] || {};
+      return count + (eventPrefs.whatsapp === true ? 1 : 0);
+    }, 0);
+  }
+
+  function renderNotificationChannelTargets() {
+    const country = $('#settingsNotificationWhatsappCountry');
+    const number = $('#settingsNotificationWhatsappNumber');
+    const consent = $('#settingsNotificationWhatsappConsent');
+    const normalizedTargets = normalizeNotificationChannelTargets(state.notificationChannelTargets);
+    const whatsappTarget = normalizedTargets.whatsapp || getDefaultNotificationChannelTargets().whatsapp;
+    const countryOptions = Array.isArray(shared.COUNTRY_DIAL_OPTIONS) ? shared.COUNTRY_DIAL_OPTIONS : [];
+
+    if (country) {
+      country.innerHTML = countryOptions.map(function (option) {
+        const dialCode = String((option && option.dialCode) || '').trim();
+        const selected = dialCode === String(whatsappTarget.country_code || '55') ? ' selected' : '';
+        return `<option value="${esc(dialCode)}"${selected}>+${esc(dialCode)} - ${esc(option && option.name ? option.name : dialCode)}</option>`;
+      }).join('');
+      country.value = String(whatsappTarget.country_code || '55');
+    }
+
+    if (number) number.value = String(whatsappTarget.local_number || '');
+    if (consent) consent.checked = whatsappTarget.consent_granted === true;
+
+    updateNotificationWhatsappPreview();
+  }
+
+  function collectNotificationChannelTargets() {
+    const countryCode = String($('#settingsNotificationWhatsappCountry')?.value || '55').trim() || '55';
+    const localNumber = String($('#settingsNotificationWhatsappNumber')?.value || '').trim();
+    const consentGranted = $('#settingsNotificationWhatsappConsent')?.checked === true;
+
+    return normalizeNotificationChannelTargets({
+      whatsapp: {
+        country_code: countryCode,
+        local_number: localNumber,
+        consent_granted: consentGranted,
+        metadata: {
+          country_code: countryCode
+        }
+      }
+    });
+  }
+
+  function updateNotificationWhatsappPreview() {
+    const preview = $('#settingsNotificationWhatsappPreview');
+    if (!preview) return;
+
+    const normalizedTargets = collectNotificationChannelTargets();
+    const whatsappTarget = normalizedTargets.whatsapp || getDefaultNotificationChannelTargets().whatsapp;
+    const enabledWhatsappEvents = countEnabledWhatsappEvents(collectNotificationPreferences());
+
+    if (!whatsappTarget.destination) {
+      preview.textContent = enabledWhatsappEvents > 0
+        ? 'WhatsApp marcado em eventos, mas ainda sem numero privado configurado. O canal segue bloqueado ate salvar um destino valido.'
+        : 'Nenhum numero privado configurado. O KinoCampus nao reaproveita automaticamente o WhatsApp publico do seu perfil.';
+      return;
+    }
+
+    if (!whatsappTarget.consent_granted) {
+      preview.textContent = `Numero privado detectado (${whatsappTarget.display || whatsappTarget.destination}), mas o envio continua bloqueado ate voce autorizar o uso deste canal.`;
+      return;
+    }
+
+    preview.textContent = enabledWhatsappEvents > 0
+      ? `Canal privado pronto em ${whatsappTarget.display || whatsappTarget.destination}. Os eventos marcados para WhatsApp poderao ser enviados por este destino.`
+      : `Canal privado salvo em ${whatsappTarget.display || whatsappTarget.destination}. Voce ainda nao marcou eventos para WhatsApp.`;
+  }
+
   function updateOnboardingStatus() {
     const pill = $('#settingsOnboardingPill');
     const copy = $('#settingsOnboardingCopy');
@@ -395,6 +494,7 @@
     updateOnboardingStatus();
     buildNetworkRows();
     renderNotificationPreferences();
+    renderNotificationChannelTargets();
     syncContactControls('populate');
     syncProfilePublicLabel();
     updateContactPreview();
@@ -497,7 +597,9 @@
 
   async function saveNotificationSettings() {
     const button = $('#settingsSaveNotifications');
-    if (!window.KCAPI || typeof window.KCAPI.updateNotificationPreferences !== 'function') {
+    if (!window.KCAPI ||
+        typeof window.KCAPI.updateNotificationPreferences !== 'function' ||
+        typeof window.KCAPI.updateNotificationChannelTargets !== 'function') {
       setStatus('PreferÃªncias de notificaÃ§Ã£o indisponÃ­veis neste ambiente.', 'error');
       setActionButtonState(button, 'idle');
       return;
@@ -505,6 +607,7 @@
     if (state.saving) return;
 
     const preferences = collectNotificationPreferences();
+    const channelTargets = collectNotificationChannelTargets();
     state.saving = true;
     setActionButtonState(button, 'loading', 'Salvando...');
     setStatus('Salvando suas preferÃªncias de notificaÃ§Ã£o...', 'info');
@@ -517,10 +620,21 @@
         return;
       }
 
+      const targetsResult = await window.KCAPI.updateNotificationChannelTargets(channelTargets);
+      if (!targetsResult || !targetsResult.ok) {
+        setActionButtonState(button, 'idle');
+        setStatus((targetsResult && targetsResult.error && targetsResult.error.message) || 'Nao foi possivel salvar agora.', 'error');
+        return;
+      }
+
       state.notificationPreferences = normalizeNotificationPreferences(
         result && result.data && result.data.preferences ? result.data.preferences : preferences
       );
+      state.notificationChannelTargets = normalizeNotificationChannelTargets(
+        targetsResult && targetsResult.data && targetsResult.data.targets ? targetsResult.data.targets : channelTargets
+      );
       renderNotificationPreferences();
+      renderNotificationChannelTargets();
       setActionButtonState(button, 'success', 'NotificaÃ§Ãµes salvas');
       setStatus('PreferÃªncias de notificaÃ§Ã£o atualizadas.', 'success');
     } catch (error) {
@@ -577,6 +691,9 @@
     const primaryMethod = $('#settingsPrimaryMethod');
     const ctaEnabled = $('#settingsCtaEnabled');
     const profilePublic = $('#settingsProfilePublic');
+    const notificationWhatsappCountry = $('#settingsNotificationWhatsappCountry');
+    const notificationWhatsappNumber = $('#settingsNotificationWhatsappNumber');
+    const notificationWhatsappConsent = $('#settingsNotificationWhatsappConsent');
 
     if (saveContact) saveContact.addEventListener('click', saveContactSettings);
     if (saveVisibility) saveVisibility.addEventListener('click', saveVisibilitySettings);
@@ -604,6 +721,20 @@
     if (profilePublic) {
       profilePublic.addEventListener('change', syncProfilePublicLabel);
     }
+
+    if (notificationWhatsappCountry) notificationWhatsappCountry.addEventListener('change', updateNotificationWhatsappPreview);
+    if (notificationWhatsappNumber) {
+      notificationWhatsappNumber.addEventListener('input', updateNotificationWhatsappPreview);
+      notificationWhatsappNumber.addEventListener('change', updateNotificationWhatsappPreview);
+    }
+    if (notificationWhatsappConsent) notificationWhatsappConsent.addEventListener('change', updateNotificationWhatsappPreview);
+    document.addEventListener('change', function (event) {
+      const target = event && event.target;
+      if (!target || typeof target.getAttribute !== 'function') return;
+      if (target.hasAttribute('data-notification-event') && target.hasAttribute('data-notification-channel')) {
+        updateNotificationWhatsappPreview();
+      }
+    });
 
     $all('[data-theme-option]').forEach((button) => {
       button.addEventListener('click', function () {
@@ -658,6 +789,18 @@
     }
   }
 
+  async function loadNotificationChannelTargets() {
+    state.notificationChannelTargets = getDefaultNotificationChannelTargets();
+    if (!state.user || !window.KCAPI || typeof window.KCAPI.getNotificationChannelTargets !== 'function') return;
+    try {
+      const targets = await window.KCAPI.getNotificationChannelTargets();
+      state.notificationChannelTargets = normalizeNotificationChannelTargets(targets);
+    } catch (error) {
+      console.error('[Settings] notification channel targets load failed:', error);
+      state.notificationChannelTargets = getDefaultNotificationChannelTargets();
+    }
+  }
+
   async function refreshSettingsPage() {
     setStatus('Atualizando configurações...', 'info');
     try {
@@ -673,6 +816,7 @@
       if (guest) guest.style.display = 'none';
       if (content) content.style.display = 'grid';
       await loadNotificationPreferences();
+      await loadNotificationChannelTargets();
       populate();
       setStatus('Configurações atualizadas.', 'success');
     } catch (error) {
@@ -709,6 +853,7 @@
 
     $('#settingsContent').style.display = 'grid';
     await loadNotificationPreferences();
+    await loadNotificationChannelTargets();
     populate();
     initPullToRefresh();
   }

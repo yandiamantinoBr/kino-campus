@@ -49,6 +49,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
   const LOCAL_PROFILE_STORAGE_KEY = 'kc_local_profile';
   const LOCAL_SAVED_POSTS_STORAGE_KEY = 'kc_saved_posts';
   const LOCAL_NOTIFICATION_PREFERENCES_STORAGE_KEY = 'kc_notification_preferences';
+  const LOCAL_NOTIFICATION_CHANNEL_TARGETS_STORAGE_KEY = 'kc_notification_channel_targets';
 
   function buildDefaultLocalNotificationPreferences() {
     if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === 'function') {
@@ -84,6 +85,80 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return normalized;
   }
 
+  function buildDefaultLocalNotificationChannelTargets() {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === 'function') {
+      return window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets();
+    }
+    return {
+      whatsapp: {
+        channel: 'whatsapp',
+        destination: '',
+        country_code: '55',
+        local_number: '',
+        consent_granted: false,
+        consent_at: null,
+        configured: false,
+        ready: false,
+        display: '',
+        metadata: { country_code: '55' },
+      },
+    };
+  }
+
+  function normalizeLocalNotificationDigits(value) {
+    return String(value || '').replace(/\D+/g, '');
+  }
+
+  function formatLocalNotificationWhatsapp(value) {
+    const digits = normalizeLocalNotificationDigits(value);
+    if (!digits) return '';
+    if (digits.indexOf('55') === 0 && digits.length >= 12) {
+      const ddd = digits.slice(2, 4);
+      const body = digits.slice(4);
+      if (body.length === 9) return `+55 (${ddd}) ${body.slice(0, 5)}-${body.slice(5)}`;
+      if (body.length === 8) return `+55 (${ddd}) ${body.slice(0, 4)}-${body.slice(4)}`;
+    }
+    return `+${digits}`;
+  }
+
+  function normalizeLocalNotificationChannelTargets(value) {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.normalizeNotificationChannelTargets === 'function') {
+      return window.KCAccountProfileUtils.normalizeNotificationChannelTargets(value);
+    }
+    const defaults = buildDefaultLocalNotificationChannelTargets();
+    const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+    const whatsapp = (source.whatsapp && typeof source.whatsapp === 'object' && !Array.isArray(source.whatsapp))
+      ? source.whatsapp
+      : {};
+    const metadata = (whatsapp.metadata && typeof whatsapp.metadata === 'object' && !Array.isArray(whatsapp.metadata))
+      ? whatsapp.metadata
+      : {};
+    const countryCode = normalizeLocalNotificationDigits(whatsapp.country_code || whatsapp.countryCode || metadata.country_code || '55') || '55';
+    const explicitDestinationDigits = normalizeLocalNotificationDigits(whatsapp.destination || whatsapp.destination_normalized || whatsapp.destinationNormalized || '');
+    const localNumberDigits = normalizeLocalNotificationDigits(whatsapp.local_number || whatsapp.localNumber || '');
+    const destination = explicitDestinationDigits
+      ? `+${explicitDestinationDigits}`
+      : (localNumberDigits ? `+${countryCode}${localNumberDigits}` : '');
+    const normalizedLocalNumber = destination && destination.indexOf(`+${countryCode}`) === 0
+      ? normalizeLocalNotificationDigits(destination.slice(countryCode.length + 1))
+      : localNumberDigits;
+
+    return {
+      whatsapp: {
+        channel: 'whatsapp',
+        destination,
+        country_code: countryCode,
+        local_number: normalizedLocalNumber,
+        consent_granted: whatsapp.consent_granted === true || whatsapp.consentGranted === true,
+        consent_at: whatsapp.consent_at || whatsapp.consentAt || null,
+        configured: !!destination,
+        ready: !!destination && (whatsapp.consent_granted === true || whatsapp.consentGranted === true),
+        display: formatLocalNotificationWhatsapp(destination),
+        metadata: { country_code: countryCode }
+      }
+    };
+  }
+
   function readLocalNotificationPreferences() {
     const defaults = buildDefaultLocalNotificationPreferences();
     try {
@@ -99,6 +174,27 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     const normalized = normalizeLocalNotificationPreferences(preferences);
     try {
       localStorage.setItem(LOCAL_NOTIFICATION_PREFERENCES_STORAGE_KEY, JSON.stringify(normalized));
+      return normalized;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function readLocalNotificationChannelTargets() {
+    const defaults = buildDefaultLocalNotificationChannelTargets();
+    try {
+      const raw = localStorage.getItem(LOCAL_NOTIFICATION_CHANNEL_TARGETS_STORAGE_KEY);
+      if (!raw) return defaults;
+      return normalizeLocalNotificationChannelTargets(JSON.parse(raw));
+    } catch (_) {
+      return defaults;
+    }
+  }
+
+  function writeLocalNotificationChannelTargets(targets) {
+    const normalized = normalizeLocalNotificationChannelTargets(targets);
+    try {
+      localStorage.setItem(LOCAL_NOTIFICATION_CHANNEL_TARGETS_STORAGE_KEY, JSON.stringify(normalized));
       return normalized;
     } catch (_) {
       return null;
@@ -1253,6 +1349,18 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return { ok: true, data: { preferences: saved } };
   }
 
+  async function localGetNotificationChannelTargets() {
+    return readLocalNotificationChannelTargets();
+  }
+
+  async function localUpdateNotificationChannelTargets(targets = {}) {
+    const saved = writeLocalNotificationChannelTargets(targets);
+    if (!saved) {
+      return { ok: false, error: { message: 'Nao foi possivel salvar os destinos privados localmente.' } };
+    }
+    return { ok: true, data: { targets: saved } };
+  }
+
   async function localGetNotifications() {
     return { ok: true, notifications: [], unread: 0, total: 0 };
   }
@@ -1724,6 +1832,8 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     updateAdminHelpRequest: localUpdateAdminHelpRequest,
     getNotificationPreferences: localGetNotificationPreferences,
     updateNotificationPreferences: localUpdateNotificationPreferences,
+    getNotificationChannelTargets: localGetNotificationChannelTargets,
+    updateNotificationChannelTargets: localUpdateNotificationChannelTargets,
     // Stubs: funcionalidades disponíveis apenas no driver Supabase
     togglePostStatus: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
     renewPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },

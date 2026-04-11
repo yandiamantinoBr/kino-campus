@@ -162,6 +162,27 @@ describe('KCAccountProfileUtils', () => {
     });
   });
 
+  test('normalizeNotificationChannelTargets separa WhatsApp privado com E.164 e consentimento', () => {
+    const normalized = AccountProfile.normalizeNotificationChannelTargets({
+      whatsapp: {
+        country_code: '55',
+        local_number: '(62) 99876-5432',
+        consent_granted: true
+      }
+    });
+
+    expect(normalized.whatsapp).toMatchObject({
+      channel: 'whatsapp',
+      destination: '+5562998765432',
+      country_code: '55',
+      local_number: '62998765432',
+      consent_granted: true,
+      configured: true,
+      ready: true,
+      display: '+55 (62) 99876-5432'
+    });
+  });
+
   test('getSuggestedAvatarUrls gera lotes estaveis e distintos', () => {
     const firstBatch = AccountProfile.getSuggestedAvatarUrls('yan', { batch: 0, size: 8 });
     const secondBatch = AccountProfile.getSuggestedAvatarUrls('yan', { batch: 1, size: 8 });

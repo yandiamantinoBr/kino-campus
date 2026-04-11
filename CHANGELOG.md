@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.21.1`: criada a migration `v11.21.1.0_notification_whatsapp_channel.sql`, adicionando a tabela privada `notification_channel_targets`, o helper `kc_count_recent_notification_deliveries(...)` e a ampliacao de `kc_resolve_notification_delivery_destination(...)` para resolver destinos privados de WhatsApp com consentimento explicito.
+- `v11.21.1`: `settings.html`, `settings.controller.js`, `account-profile.shared.js`, `kc-api.client.js`, `supabase.adapter.js` e `local.adapter.js` passaram a expor configuracao privada de WhatsApp com normalizacao E.164, preview seguro e persistencia separada do WhatsApp publico do perfil.
+- `v11.21.1`: `kc-dispatch-notification-outbox` passou a despachar `whatsapp` via Twilio, com rate limit por usuario, masking do destino, previews em `dry_run` e gating operacional quando `KC_NOTIFICATION_WHATSAPP_*` ainda nao existirem no projeto.
 - `v11.21.0`: adicionada a migration `v11.21.0.0_notification_email_channel.sql`, criando os helpers `kc_claim_notification_delivery_batch(...)` e `kc_record_notification_delivery_attempt(...)` para claim atomico da fila externa e registro consistente de tentativas.
 - `v11.21.0`: `kc-dispatch-notification-outbox` passou a gerar preview de envelope em `dry_run` e a despachar o canal `email` via `Resend` quando `dryRun=false` e os segredos `KC_NOTIFICATION_EMAIL_*` estiverem configurados.
 - `v11.21.0`: o dispatcher de email passou a registrar sucesso/falha em `notification_delivery_attempts`, manter backoff por `next_attempt_at` e devolver gating explicito (`email_provider_not_configured`) quando o provider ainda nao estiver operacional no projeto.
@@ -53,6 +56,7 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.21.1`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/api-contract.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/env-vars.md` e `docs/ops/vercel-supabase-invariants.md` para registrar a trilha privada de WhatsApp, os novos metodos de `KCAPI`, a tabela `notification_channel_targets`, os segredos do provider e a continuidade da v11 em `v11.22.0`.
 - `v11.21.0`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/db-schema.md`, `docs/rpc-catalog.md` e `docs/ops/vercel-supabase-invariants.md` para registrar o canal de email, os helpers SQL novos, o dispatcher via `Resend` e o gating operacional por segredos de provider.
 - `v11.21.0`: fechamento documental consolidado com a PR `#275`, preview `dpl_8sNm4iyBp1i63ekFfmT3CJ2Pmigm`, deploy pós-merge `dpl_ES6C1Z3PbMd9HzWDZ5DaS3hLy3KU` e validação publicada em `www.kinocampus.com.br`.
 - `v11.20.2`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/db-schema.md`, `docs/rpc-catalog.md` e `docs/ops/vercel-supabase-invariants.md` para registrar a nova fundacao de outbox, a Edge Function `kc-dispatch-notification-outbox`, a correcao do trigger de voto e a continuidade da v11 em `v11.21.0`.

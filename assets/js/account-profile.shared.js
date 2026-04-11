@@ -207,6 +207,14 @@
     })
   ]);
 
+  const NOTIFICATION_PRIVATE_CHANNEL_OPTIONS = Object.freeze([
+    Object.freeze({
+      value: 'whatsapp',
+      label: 'WhatsApp privado',
+      description: 'Destino privado e separado do contato publico do perfil.'
+    })
+  ]);
+
   const OPTION_LABELS = Object.freeze({
     affiliation: buildLabelMap(AFFILIATION_OPTIONS),
     gender_identity: buildLabelMap(GENDER_IDENTITY_OPTIONS),
@@ -290,6 +298,12 @@
     return String(value || '').replace(/\D+/g, '');
   }
 
+  function normalizeCountryDialCode(value, fallback) {
+    const normalized = normalizeWhatsAppDigits(value);
+    if (normalized) return normalized;
+    return normalizeWhatsAppDigits(fallback || '55') || '55';
+  }
+
   function normalizeWhatsappE164(value, defaultCountryCode) {
     const digits = normalizeWhatsAppDigits(value);
     if (!digits) return '';
@@ -305,6 +319,35 @@
     const local = normalizeWhatsAppDigits(localNumber || '');
     if (!local) return '';
     return `+${cc}${local}`;
+  }
+
+  function splitWhatsAppE164(value, defaultCountryCode) {
+    const digits = normalizeWhatsAppDigits(value);
+    const fallbackCountryCode = normalizeCountryDialCode(defaultCountryCode || '55', '55');
+    if (!digits) {
+      return Object.freeze({
+        countryCode: fallbackCountryCode,
+        localNumber: ''
+      });
+    }
+
+    const dialCodes = COUNTRY_DIAL_OPTIONS
+      .map((option) => normalizeCountryDialCode(option && option.dialCode, ''))
+      .filter(Boolean)
+      .sort((left, right) => right.length - left.length);
+
+    const matchedCountryCode = dialCodes.find((dialCode) => {
+      return digits.startsWith(dialCode) && digits.length > (dialCode.length + 4);
+    }) || fallbackCountryCode;
+
+    const localNumber = digits.startsWith(matchedCountryCode)
+      ? digits.slice(matchedCountryCode.length)
+      : digits;
+
+    return Object.freeze({
+      countryCode: matchedCountryCode,
+      localNumber
+    });
   }
 
   function formatWhatsAppDisplay(e164Value) {
@@ -437,6 +480,75 @@
     });
 
     return normalized;
+  }
+
+  function buildDefaultNotificationChannelTargets() {
+    return {
+      whatsapp: {
+        channel: 'whatsapp',
+        destination: '',
+        country_code: '55',
+        local_number: '',
+        consent_granted: false,
+        consent_at: null,
+        configured: false,
+        ready: false,
+        display: '',
+        metadata: {
+          country_code: '55'
+        }
+      }
+    };
+  }
+
+  function normalizeNotificationChannelTargets(input) {
+    const defaults = buildDefaultNotificationChannelTargets();
+    const source = ensureObject(input);
+    const whatsappSource = ensureObject(source.whatsapp);
+    const whatsappMetadata = ensureObject(whatsappSource.metadata);
+    const rawCountryCode = whatsappSource.country_code ||
+      whatsappSource.countryCode ||
+      whatsappMetadata.country_code ||
+      defaults.whatsapp.country_code;
+    const rawLocalNumber = whatsappSource.local_number || whatsappSource.localNumber || '';
+    const explicitDestination = normalizeWhatsappE164(
+      whatsappSource.destination ||
+      whatsappSource.destination_normalized ||
+      whatsappSource.destinationNormalized,
+      rawCountryCode
+    );
+    const destination = explicitDestination || buildWhatsAppE164(rawCountryCode, rawLocalNumber);
+    const split = splitWhatsAppE164(destination, rawCountryCode);
+    const consentGranted = normalizeBoolean(
+      Object.prototype.hasOwnProperty.call(whatsappSource, 'consent_granted')
+        ? whatsappSource.consent_granted
+        : whatsappSource.consentGranted,
+      false
+    );
+    const normalizedCountryCode = split.countryCode || normalizeCountryDialCode(rawCountryCode, '55');
+    const normalizedLocalNumber = split.localNumber || normalizeWhatsAppDigits(rawLocalNumber || '');
+    const display = formatWhatsAppDisplay(destination);
+    const metadata = Object.assign({}, whatsappMetadata, {
+      country_code: normalizedCountryCode
+    });
+
+    return {
+      whatsapp: {
+        channel: 'whatsapp',
+        destination,
+        country_code: normalizedCountryCode,
+        local_number: normalizedLocalNumber,
+        consent_granted: consentGranted,
+        consent_at: trimText(
+          whatsappSource.consent_at || whatsappSource.consentAt || '',
+          40
+        ) || null,
+        configured: !!destination,
+        ready: !!destination && consentGranted,
+        display,
+        metadata
+      }
+    };
   }
 
   function normalizeProfilePatch(patch, options) {
@@ -817,16 +929,22 @@
     SOCIAL_ORDER,
     NOTIFICATION_CHANNEL_OPTIONS,
     NOTIFICATION_EVENT_OPTIONS,
+    NOTIFICATION_PRIVATE_CHANNEL_OPTIONS,
     normalizeKey,
     trimText,
     normalizeEmail,
+    normalizeWhatsAppDigits,
+    normalizeCountryDialCode,
     normalizeWhatsappE164,
     buildWhatsAppE164,
+    splitWhatsAppE164,
     formatWhatsAppDisplay,
     normalizeSocialLinks,
     normalizeSocialVisibility,
     buildDefaultNotificationPreferences,
     normalizeNotificationPreferences,
+    buildDefaultNotificationChannelTargets,
+    normalizeNotificationChannelTargets,
     normalizeProfilePatch,
     formatProfileValue,
     formatSocialLink,

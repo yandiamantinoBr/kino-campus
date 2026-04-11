@@ -74,6 +74,14 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - opcionalmente `KC_NOTIFICATION_EMAIL_REPLY_TO`
   - opcionalmente `KC_APP_BASE_URL`
   - opcionalmente `KC_NOTIFICATION_WHATSAPP_PROVIDER`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_ACCOUNT_SID`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_AUTH_TOKEN`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_FROM`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_CONTENT_SID`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_STATUS_CALLBACK`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_TEMPLATE_NAME`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_WINDOW_MINUTES`
+  - opcionalmente `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_MAX_PER_WINDOW`
   - opcionalmente `KC_NOTIFICATION_DISPATCH_BATCH_LIMIT`
 - O contrato HTTP atual da função exige:
   - `POST`
@@ -83,11 +91,17 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - `dryRun=false` só envia quando o provider de e-mail estiver completamente configurado
   - o envio real usa `Resend` e registra o resultado em `notification_delivery_attempts`
   - a fila é consumida pelos helpers SQL `kc_claim_notification_delivery_batch(...)` e `kc_record_notification_delivery_attempt(...)`
+- A `v11.21.1` promove a mesma funcao para o canal privado de WhatsApp:
+  - o destino deixa de ser bloqueado quando existir row valida em `notification_channel_targets`
+  - o envio real usa Twilio quando `dryRun=false` e `KC_NOTIFICATION_WHATSAPP_*` estiverem configurados
+  - a funcao aplica rate limit por usuario com base em `kc_count_recent_notification_deliveries(...)`
+  - o canal continua separado do WhatsApp publico do perfil/produto
 - A trilha externa deve continuar obedecendo:
   - `public.notifications` e o sino/dropdown seguem sendo a fonte canônica in-app
   - WhatsApp público do perfil/produto não pode ser reutilizado automaticamente como destino privado de notificação
-  - a resolução de destino privado atual usa `auth.users.email` para `email` e bloqueia `whatsapp` até existir configuração privada dedicada
-  - ausência de `KC_NOTIFICATION_EMAIL_*` no projeto deve resultar em gating explícito (`email_provider_not_configured`), nunca em quebra do feed in-app nem dos triggers
+  - a resolucao de destino privado atual usa `auth.users.email` para `email` e `notification_channel_targets` para `whatsapp`
+  - ausencia de `KC_NOTIFICATION_EMAIL_*` no projeto deve resultar em gating explicito (`email_provider_not_configured`), nunca em quebra do feed in-app nem dos triggers
+  - ausencia de `KC_NOTIFICATION_WHATSAPP_*` no projeto deve resultar em gating explicito do canal `whatsapp`, nunca em quebra do feed in-app, do canal `email` nem dos triggers
 
 ## 8. Residual Supabase advisor items
 
