@@ -1,6 +1,6 @@
 # KinoCampus — Schema do Banco de Dados
 
-**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `77` migrations em `supabase/migrations/`
+**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `79` migrations em `supabase/migrations/`
 
 > Atualização documental da v11.1.0 em 08/04/2026: o repositório já inclui as migrations da v10 admin, `v10.0.0.0_admin_search_posts_full.sql` e `v10.0.1.0_admin_help_requests_pagination.sql`. No banco principal atual, elas já foram aplicadas.
 
@@ -355,7 +355,28 @@
 **RLS:** SELECT/UPDATE/DELETE somente próprio user_id. INSERT via triggers (SECURITY DEFINER).
 **Realtime:** Habilitado para push em tempo real (`supabase_realtime` publication).
 **Retenção:** `kc_prune_old_notifications()` remove lidas > 90 dias — pg_cron mensal.
-**Triggers:** `kc_notify_on_comment`, `kc_notify_on_vote`, `kc_notify_on_post_expire`.
+**Triggers:** `kc_notify_on_comment`, `kc_notify_on_comment_reply`, `kc_notify_on_vote`, `kc_notify_on_post_expire`.
+
+**Nota v11.20.1:** os triggers atuais passaram a consultar `kc_notification_channel_enabled(...)` antes de inserir notificações in-app. O comportamento canônico segue sendo `in_app=true` por default para usuários sem preferências persistidas.
+
+---
+
+### `notification_preferences` — Preferências Privadas de Notificação (v11.20.1)
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `user_id` | UUID PK/FK | Referencia `profiles.id` (CASCADE DELETE) |
+| `preferences` | JSONB | Matriz `{ evento -> { in_app, email, whatsapp } }` |
+| `created_at` | TIMESTAMPTZ | |
+| `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
+
+**RLS:** SELECT/INSERT/UPDATE/DELETE apenas do próprio `user_id` autenticado.
+
+**Defaults canônicos:** gerados por `kc_default_notification_preferences()` com `in_app=true`, `email=false` e `whatsapp=false` para `comment_on_post`, `comment_reply`, `vote_on_post`, `post_expired`, `post_reported` e `system`.
+
+**Helpers:**
+- `kc_default_notification_preferences()` — devolve o JSONB canônico de defaults
+- `kc_notification_channel_enabled(uuid, text, text)` — consulta se um determinado canal está habilitado para um evento, com fallback backfill-safe quando o usuário ainda não possui row em `notification_preferences`
 
 ---
 
@@ -380,6 +401,7 @@ idx_search_queries_created_at  ON search_queries(created_at)      -- v9.0.4
 idx_audit_log_created_at       ON audit_log(created_at)           -- v9.0.4
 idx_notifications_user_created ON notifications(user_id, created_at DESC)  -- v9.1.0
 idx_notifications_user_unread  ON notifications(user_id) WHERE read=false  -- v9.1.0
+notification_preferences_pkey  ON notification_preferences(user_id)         -- v11.20.1
 idx_kc_invited_emails_invited_by ON kc_invited_emails(invited_by)          -- v9.3.3
 idx_posts_fts                  ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL  -- v9.2.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)

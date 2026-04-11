@@ -2248,6 +2248,36 @@
     return driver.updateAdminHelpRequest(id, patch);
   }
 
+  function buildFallbackNotificationPreferences() {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === 'function') {
+      return window.KCAccountProfileUtils.buildDefaultNotificationPreferences();
+    }
+    return {
+      comment_on_post: { in_app: true, email: false, whatsapp: false },
+      comment_reply: { in_app: true, email: false, whatsapp: false },
+      vote_on_post: { in_app: true, email: false, whatsapp: false },
+      post_expired: { in_app: true, email: false, whatsapp: false },
+      post_reported: { in_app: true, email: false, whatsapp: false },
+      system: { in_app: true, email: false, whatsapp: false },
+    };
+  }
+
+  async function getNotificationPreferences() {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.getNotificationPreferences !== 'function') {
+      return buildFallbackNotificationPreferences();
+    }
+    return driver.getNotificationPreferences();
+  }
+
+  async function updateNotificationPreferences(preferences = {}) {
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.updateNotificationPreferences !== 'function') {
+      return { ok: false, error: { message: 'PreferÃªncias de notificaÃ§Ã£o indisponÃ­veis neste driver.' } };
+    }
+    return driver.updateNotificationPreferences(preferences);
+  }
+
   // Notifications (v9.1.0)
 
   async function getNotifications(limit, offset) {
@@ -2385,6 +2415,8 @@
     createHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
+    getNotificationPreferences,
+    updateNotificationPreferences,
 
     // Notifications (v9.1.0)
     getNotifications,

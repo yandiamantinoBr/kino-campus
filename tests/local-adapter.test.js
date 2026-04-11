@@ -88,6 +88,8 @@ describe('Local Adapter - Registro do driver', () => {
       'createHelpRequest',
       'listAdminHelpRequests',
       'updateAdminHelpRequest',
+      'getNotificationPreferences',
+      'updateNotificationPreferences',
       'getNotifications',
       'markNotificationsRead',
       'markAllNotificationsRead',
@@ -331,6 +333,38 @@ describe('Local Adapter - Paridade moderna do driver local', () => {
   });
 
   test('notificacoes e convites retornam shapes seguros no modo local', async () => {
+    await expect(driver.getNotificationPreferences()).resolves.toEqual({
+      comment_on_post: { in_app: true, email: false, whatsapp: false },
+      comment_reply: { in_app: true, email: false, whatsapp: false },
+      vote_on_post: { in_app: true, email: false, whatsapp: false },
+      post_expired: { in_app: true, email: false, whatsapp: false },
+      post_reported: { in_app: true, email: false, whatsapp: false },
+      system: { in_app: true, email: false, whatsapp: false },
+    });
+    await expect(driver.updateNotificationPreferences({
+      comment_on_post: { in_app: false, email: true },
+      system: { whatsapp: true },
+    })).resolves.toEqual({
+      ok: true,
+      data: {
+        preferences: {
+          comment_on_post: { in_app: false, email: true, whatsapp: false },
+          comment_reply: { in_app: true, email: false, whatsapp: false },
+          vote_on_post: { in_app: true, email: false, whatsapp: false },
+          post_expired: { in_app: true, email: false, whatsapp: false },
+          post_reported: { in_app: true, email: false, whatsapp: false },
+          system: { in_app: true, email: false, whatsapp: true },
+        },
+      },
+    });
+    await expect(driver.getNotificationPreferences()).resolves.toEqual({
+      comment_on_post: { in_app: false, email: true, whatsapp: false },
+      comment_reply: { in_app: true, email: false, whatsapp: false },
+      vote_on_post: { in_app: true, email: false, whatsapp: false },
+      post_expired: { in_app: true, email: false, whatsapp: false },
+      post_reported: { in_app: true, email: false, whatsapp: false },
+      system: { in_app: true, email: false, whatsapp: true },
+    });
     await expect(driver.getNotifications()).resolves.toEqual({
       ok: true,
       notifications: [],

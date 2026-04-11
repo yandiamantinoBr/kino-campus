@@ -48,6 +48,62 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
   const LOCAL_RATING_VIEWER_ID = 'USER_SELF';
   const LOCAL_PROFILE_STORAGE_KEY = 'kc_local_profile';
   const LOCAL_SAVED_POSTS_STORAGE_KEY = 'kc_saved_posts';
+  const LOCAL_NOTIFICATION_PREFERENCES_STORAGE_KEY = 'kc_notification_preferences';
+
+  function buildDefaultLocalNotificationPreferences() {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === 'function') {
+      return window.KCAccountProfileUtils.buildDefaultNotificationPreferences();
+    }
+    return {
+      comment_on_post: { in_app: true, email: false, whatsapp: false },
+      comment_reply: { in_app: true, email: false, whatsapp: false },
+      vote_on_post: { in_app: true, email: false, whatsapp: false },
+      post_expired: { in_app: true, email: false, whatsapp: false },
+      post_reported: { in_app: true, email: false, whatsapp: false },
+      system: { in_app: true, email: false, whatsapp: false },
+    };
+  }
+
+  function normalizeLocalNotificationPreferences(value) {
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.normalizeNotificationPreferences === 'function') {
+      return window.KCAccountProfileUtils.normalizeNotificationPreferences(value);
+    }
+    const defaults = buildDefaultLocalNotificationPreferences();
+    const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+    const normalized = {};
+    Object.keys(defaults).forEach((eventKey) => {
+      const sourceEvent = (source[eventKey] && typeof source[eventKey] === 'object' && !Array.isArray(source[eventKey]))
+        ? source[eventKey]
+        : {};
+      normalized[eventKey] = {
+        in_app: sourceEvent.in_app !== false,
+        email: sourceEvent.email === true,
+        whatsapp: sourceEvent.whatsapp === true,
+      };
+    });
+    return normalized;
+  }
+
+  function readLocalNotificationPreferences() {
+    const defaults = buildDefaultLocalNotificationPreferences();
+    try {
+      const raw = localStorage.getItem(LOCAL_NOTIFICATION_PREFERENCES_STORAGE_KEY);
+      if (!raw) return defaults;
+      return normalizeLocalNotificationPreferences(JSON.parse(raw));
+    } catch (_) {
+      return defaults;
+    }
+  }
+
+  function writeLocalNotificationPreferences(preferences) {
+    const normalized = normalizeLocalNotificationPreferences(preferences);
+    try {
+      localStorage.setItem(LOCAL_NOTIFICATION_PREFERENCES_STORAGE_KEY, JSON.stringify(normalized));
+      return normalized;
+    } catch (_) {
+      return null;
+    }
+  }
 
   function normalizeLocalRatingEntry(raw) {
     const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
@@ -1185,6 +1241,18 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return items.length;
   }
 
+  async function localGetNotificationPreferences() {
+    return readLocalNotificationPreferences();
+  }
+
+  async function localUpdateNotificationPreferences(preferences = {}) {
+    const saved = writeLocalNotificationPreferences(preferences);
+    if (!saved) {
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel salvar as preferÃªncias de notificaÃ§Ã£o localmente.' } };
+    }
+    return { ok: true, data: { preferences: saved } };
+  }
+
   async function localGetNotifications() {
     return { ok: true, notifications: [], unread: 0, total: 0 };
   }
@@ -1654,6 +1722,8 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     createHelpRequest: localCreateHelpRequest,
     listAdminHelpRequests: localListAdminHelpRequests,
     updateAdminHelpRequest: localUpdateAdminHelpRequest,
+    getNotificationPreferences: localGetNotificationPreferences,
+    updateNotificationPreferences: localUpdateNotificationPreferences,
     // Stubs: funcionalidades disponíveis apenas no driver Supabase
     togglePostStatus: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
     renewPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },

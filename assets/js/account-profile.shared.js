@@ -162,6 +162,51 @@
     'tiktok'
   ]);
 
+  const NOTIFICATION_CHANNEL_OPTIONS = Object.freeze([
+    Object.freeze({ value: 'in_app', label: 'No sino', description: 'Aparece no dropdown do KinoCampus.' }),
+    Object.freeze({ value: 'email', label: 'E-mail', description: 'Preferência salva para a trilha externa futura.' }),
+    Object.freeze({ value: 'whatsapp', label: 'WhatsApp', description: 'Preferência salva para a trilha externa futura.' })
+  ]);
+
+  const NOTIFICATION_EVENT_OPTIONS = Object.freeze([
+    Object.freeze({
+      value: 'comment_on_post',
+      label: 'Comentários no seu post',
+      description: 'Quando alguém comenta em uma publicação sua.',
+      iconClass: 'fas fa-comment'
+    }),
+    Object.freeze({
+      value: 'comment_reply',
+      label: 'Respostas aos seus comentários',
+      description: 'Quando alguém responde um comentário que você fez.',
+      iconClass: 'fas fa-reply'
+    }),
+    Object.freeze({
+      value: 'vote_on_post',
+      label: 'Votos nas suas publicações',
+      description: 'Quando uma publicação sua recebe voto positivo.',
+      iconClass: 'fas fa-arrow-up'
+    }),
+    Object.freeze({
+      value: 'post_expired',
+      label: 'Expiração de publicação',
+      description: 'Quando um anúncio seu vence ou sai do ar por prazo.',
+      iconClass: 'fas fa-clock'
+    }),
+    Object.freeze({
+      value: 'post_reported',
+      label: 'Moderação e denúncias',
+      description: 'Quando uma publicação sua entra em trilha de moderação.',
+      iconClass: 'fas fa-flag'
+    }),
+    Object.freeze({
+      value: 'system',
+      label: 'Avisos da plataforma',
+      description: 'Comunicados importantes do KinoCampus.',
+      iconClass: 'fas fa-bell'
+    })
+  ]);
+
   const OPTION_LABELS = Object.freeze({
     affiliation: buildLabelMap(AFFILIATION_OPTIONS),
     gender_identity: buildLabelMap(GENDER_IDENTITY_OPTIONS),
@@ -357,6 +402,40 @@
     SOCIAL_ORDER.forEach((key) => {
       normalized[key] = normalizeBoolean(source[key], false);
     });
+    return normalized;
+  }
+
+  function buildDefaultNotificationPreferences() {
+    const defaults = {};
+    NOTIFICATION_EVENT_OPTIONS.forEach((eventOption) => {
+      const eventPrefs = {};
+      NOTIFICATION_CHANNEL_OPTIONS.forEach((channelOption) => {
+        eventPrefs[channelOption.value] = channelOption.value === 'in_app';
+      });
+      defaults[eventOption.value] = eventPrefs;
+    });
+    return defaults;
+  }
+
+  function normalizeNotificationPreferences(input) {
+    const source = ensureObject(input);
+    const defaults = buildDefaultNotificationPreferences();
+    const normalized = {};
+
+    NOTIFICATION_EVENT_OPTIONS.forEach((eventOption) => {
+      const eventKey = String(eventOption.value || '').trim();
+      const sourceEvent = ensureObject(source[eventKey]);
+      normalized[eventKey] = {};
+
+      NOTIFICATION_CHANNEL_OPTIONS.forEach((channelOption) => {
+        const channelKey = String(channelOption.value || '').trim();
+        const fallback = defaults[eventKey] && Object.prototype.hasOwnProperty.call(defaults[eventKey], channelKey)
+          ? defaults[eventKey][channelKey]
+          : false;
+        normalized[eventKey][channelKey] = normalizeBoolean(sourceEvent[channelKey], fallback);
+      });
+    });
+
     return normalized;
   }
 
@@ -736,6 +815,8 @@
     AVATAR_COLOR_OPTIONS,
     SOCIAL_NETWORKS,
     SOCIAL_ORDER,
+    NOTIFICATION_CHANNEL_OPTIONS,
+    NOTIFICATION_EVENT_OPTIONS,
     normalizeKey,
     trimText,
     normalizeEmail,
@@ -744,6 +825,8 @@
     formatWhatsAppDisplay,
     normalizeSocialLinks,
     normalizeSocialVisibility,
+    buildDefaultNotificationPreferences,
+    normalizeNotificationPreferences,
     normalizeProfilePatch,
     formatProfileValue,
     formatSocialLink,

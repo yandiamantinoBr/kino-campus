@@ -661,6 +661,67 @@ body.kc-settings-page .kc-settings-input {
   gap: 10px;
 }
 
+.kc-settings-list--notifications {
+  grid-template-columns: 1fr;
+}
+
+.kc-settings-notification-row {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--kc-border-dark);
+  background: color-mix(in srgb, var(--kc-surface-dark) 84%, var(--kc-background-dark));
+}
+
+.kc-settings-notification-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kc-settings-notification-copy strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-settings-notification-copy p {
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  line-height: 1.55;
+}
+
+.kc-settings-notification-channels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.kc-settings-notification-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.kc-settings-notification-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--kc-primary-brand);
+}
+
 .kc-help-list {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -783,13 +844,18 @@ body.kc-auth-callback-route .kc-callback-card {
   }
 
   .kc-settings-row,
-  .kc-settings-network {
+  .kc-settings-network,
+  .kc-settings-notification-row {
     grid-template-columns: 1fr;
     align-items: stretch;
   }
 
   .kc-settings-list--networks {
     grid-template-columns: 1fr;
+  }
+
+  .kc-settings-notification-channels {
+    justify-content: flex-start;
   }
 
   .kc-settings-actions-row {
