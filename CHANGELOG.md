@@ -59,6 +59,8 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.22.0`: consolidado o fechamento documental da fase com a PR `#278`, preview `dpl_DueeQMVYa9FVFeRvgYCH1D6Kg98c`, deploy de produção `dpl_HMTvL1ET8uLgW8NNwitLN5of3HyW` e validação publicada em `www.kinocampus.com.br`.
+- `v11.22.0`: o `RELATORIO-KINOCAMPUS-V11.md` passou a reservar a trilha futura `v11.24.x` para i18n, acessibilidade e UX Writing, exigindo um relatório inicial em `ETAPA 1`, `ETAPA 2` e `ETAPA 3` antes de qualquer implementação dessa frente.
 - `v11.21.1`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/api-contract.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/env-vars.md` e `docs/ops/vercel-supabase-invariants.md` para registrar a trilha privada de WhatsApp, os novos metodos de `KCAPI`, a tabela `notification_channel_targets`, os segredos do provider e a continuidade da v11 em `v11.22.0`.
 - `v11.21.0`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/db-schema.md`, `docs/rpc-catalog.md` e `docs/ops/vercel-supabase-invariants.md` para registrar o canal de email, os helpers SQL novos, o dispatcher via `Resend` e o gating operacional por segredos de provider.
 - `v11.21.0`: fechamento documental consolidado com a PR `#275`, preview `dpl_8sNm4iyBp1i63ekFfmT3CJ2Pmigm`, deploy pós-merge `dpl_ES6C1Z3PbMd9HzWDZ5DaS3hLy3KU` e validação publicada em `www.kinocampus.com.br`.

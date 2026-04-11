@@ -442,7 +442,7 @@ A execução da v11 passa a seguir uma trilha contínua e cumulativa: cada itera
 
 ### 8.2. Sequência remanescente obrigatória da v11
 
-Atualização de status em `11 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A fase `v11.18.0` foi concluída na PR `#263`, alinhando a assinatura de `getProfileHighlightsCount(...)` entre `KCAPI`, `local.adapter.js` e `supabase.adapter.js` sem alterar a semântica highlight-only. A fase `v11.19.0` foi concluída na PR `#265`, com migration versionada para eliminar warnings ativos do Advisor em `notifications`, `post_view_events` e `kc_invited_emails`, além de sincronização de `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais. A rodada documental `v11.19.1` consolidou o diagnóstico do sino/notificações e desdobrou a trilha futura de notificações em novas fases `v11.20.x` e `v11.21.x`. A fase `v11.20.0` foi concluída na PR `#269`, endurecendo o shell do sino, adicionando `Limpar` ao dropdown, explicitando `KCAPI.clearNotifications()` e ampliando o contrato de realtime para tratar `INSERT`, `UPDATE` e `DELETE` sem regressão de badge. A fase `v11.20.1` foi concluída na PR `#271`, introduzindo a camada privada `notification_preferences`, a UI de configuração em `settings`, a persistência por evento/canal em `KCAPI`/adapters e o respeito ao canal `in_app` nos triggers atuais. A fase `v11.20.2` entregou a fundação assíncrona de entrega externa com outbox, attempts, helper canônico `kc_emit_notification_event(...)`, Edge Function `kc-dispatch-notification-outbox` validada em dry-run e correção do trigger de voto para o contrato real de `post_votes`. A fase `v11.21.0` promoveu o canal de e-mail com template dedicado, claim/attempt atômicos no banco, dispatcher real via `Resend` e gating explícito por segredos operacionais, preservando a trilha canônica in-app. A fase `v11.21.1` foi consolidada nesta rodada com o canal privado de WhatsApp em `notification_channel_targets`, consentimento explícito, normalização E.164, rate limit por usuário e dispatcher via Twilio sem reaproveitar o WhatsApp público do perfil. A fase `v11.22.0` executa nesta mesma rodada o fechamento da primeira camada operacional da trilha multicanal, adicionando `notification_dispatch_runtime`, `notification_dispatch_runs`, o helper `kc_trigger_notification_dispatch(...)`, o job `pg_cron` `kc-dispatch-notification-outbox` e a persistência de `execution_id`/`source` na Edge Function. A próxima sequência obrigatória passa a ser `v11.23.0`.
+Atualização de status em `11 de abril de 2026`: a fase `v11.12.0` foi executada no eixo de criação de publicação e fechada na PR `#245`. A macrofase `v11.13.x` foi fechada em duas fatias complementares: `v11.13.0`, focada no dropdown de notificações, e `v11.13.1`, focada no residual remanescente de popovers/interações da página de produto, concluída na PR `#249`. A fase `v11.14.0` foi concluída na PR `#251`, alinhando `profile` e `my-posts` à rota canônica `_product.html` para navegação humana de detalhe. A fase `v11.15.0` foi concluída na PR `#253`, alinhando o preview de contato em `settings` ao mesmo helper canônico de detalhe. A fase `v11.15.1` foi concluída na PR `#255`, alinhando a prévia de contato de `account-setup` ao `buildContactAction` e ao toggle de contato público. A fase `v11.15.2` foi concluída na PR `#257`, tornando determinística a hidratação de redes sociais e visibilidade no onboarding. A fase `v11.16.0` foi concluída na PR `#259`, unificando o preload do shell administrativo entre as 5 telas admin. A fase `v11.17.0` foi concluída na PR `#261`, alinhando `admin-banners.controller.js` ao contrato moderno de acesso admin e removendo o fallback que carregava a tela sem sessão validada. A fase `v11.18.0` foi concluída na PR `#263`, alinhando a assinatura de `getProfileHighlightsCount(...)` entre `KCAPI`, `local.adapter.js` e `supabase.adapter.js` sem alterar a semântica highlight-only. A fase `v11.19.0` foi concluída na PR `#265`, com migration versionada para eliminar warnings ativos do Advisor em `notifications`, `post_view_events` e `kc_invited_emails`, além de sincronização de `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais. A rodada documental `v11.19.1` consolidou o diagnóstico do sino/notificações e desdobrou a trilha futura de notificações em novas fases `v11.20.x` e `v11.21.x`. A fase `v11.20.0` foi concluída na PR `#269`, endurecendo o shell do sino, adicionando `Limpar` ao dropdown, explicitando `KCAPI.clearNotifications()` e ampliando o contrato de realtime para tratar `INSERT`, `UPDATE` e `DELETE` sem regressão de badge. A fase `v11.20.1` foi concluída na PR `#271`, introduzindo a camada privada `notification_preferences`, a UI de configuração em `settings`, a persistência por evento/canal em `KCAPI`/adapters e o respeito ao canal `in_app` nos triggers atuais. A fase `v11.20.2` entregou a fundação assíncrona de entrega externa com outbox, attempts, helper canônico `kc_emit_notification_event(...)`, Edge Function `kc-dispatch-notification-outbox` validada em dry-run e correção do trigger de voto para o contrato real de `post_votes`. A fase `v11.21.0` promoveu o canal de e-mail com template dedicado, claim/attempt atômicos no banco, dispatcher real via `Resend` e gating explícito por segredos operacionais, preservando a trilha canônica in-app. A fase `v11.21.1` foi consolidada nesta rodada com o canal privado de WhatsApp em `notification_channel_targets`, consentimento explícito, normalização E.164, rate limit por usuário e dispatcher via Twilio sem reaproveitar o WhatsApp público do perfil. A fase `v11.22.0` foi concluída na PR `#278`, fechando a primeira camada operacional da trilha multicanal com `notification_dispatch_runtime`, `notification_dispatch_runs`, o helper `kc_trigger_notification_dispatch(...)`, o job `pg_cron` `kc-dispatch-notification-outbox`, a Edge Function `kc-dispatch-notification-outbox` republicada como versão `5` e a validação ponta a ponta do fluxo SQL -> HTTP -> log privado de runs. A próxima sequência obrigatória passa a ser `v11.23.0`; após esse release gate, a trilha futura reservada abre em `v11.24.0` para planejamento-only de i18n, acessibilidade e UX Writing.
 
 | Iteração-alvo | Objetivo principal | Superfícies foco | Saída esperada |
 |---|---|---|---|
@@ -460,13 +460,17 @@ Atualização de status em `11 de abril de 2026`: a fase `v11.12.0` foi executad
 | `v11.21.1` | implementar o canal WhatsApp | provider, opt-in, normalização E.164, rate-limit, logs e consentimento | concluído nesta rodada com destino privado em `notification_channel_targets`, novos métodos de `KCAPI`, consentimento explícito em `settings` e dispatcher multicanal via Twilio |
 | `v11.22.0` | revisar storage, Edge Functions e invariantes de deploy já com a trilha de notificações multicanal | storage, segredos, templates, retries, observabilidade, docs ops | concluído nesta rodada com scheduler versionado, runtime privado do dispatcher, log privado de runs e validação ponta a ponta helper SQL -> HTTP -> `notification_dispatch_runs` |
 | `v11.23.0` | executar o release gate final da v11 | testes, QA, changelog final, documentação, drift de versão canônica `8.6.0` | fechamento da rodada da v11 com checklist final completo |
+| `v11.24.0` | iniciar a trilha futura de i18n, acessibilidade e UX Writing sem escrever código | relatório v11, inventário textual, superfícies críticas de UI, SEO, testes e contratos | entrega obrigatória somente de planejamento, em relatório estruturado com `ETAPA 1`, `ETAPA 2` e `ETAPA 3`, aguardando aprovação explícita |
+| `v11.24.1` | implantar a infraestrutura base aprovada | chaves de tradução, helpers shared, dicionário base pt-BR, guardrails de teste e lint | fundação i18n/a11y pronta nas superfícies core sem regressão visual ou contratual |
+| `v11.24.2` | aplicar a trilha em componentes core e fluxos comuns | botões, modais, formulários, toasts, navegação, aria-labels e mensagens de erro | componentes centrais semanticamente corretos, internacionalizáveis e com copy padronizada |
+| `v11.24.3` | expandir para páginas complexas, metadata e SEO dinâmico | home, feeds, produto, perfil, settings, metadata e testes e2e | rollout controlado com QA de layout, testes resilientes a texto e mitigação explícita de SEO/hydration |
 
 ### 8.3. Regra de progressão entre fases
 
 - a próxima iteração só começa quando a anterior tiver PR mergeada, branch removida, base puxada e deploy validado
 - cada iteração acima deve atualizar este relatório com o status da fase e redefinir explicitamente a próxima
 - se uma fase descobrir um escopo maior do que o previsto, ela deve ser repartida em `v11.x+0.1` documental ou em uma nova iteração imediatamente subsequente, nunca absorvida silenciosamente
-- a conclusão da v11 só ocorre após `v11.23.0` ou equivalente posterior que substitua formalmente essa fase final dentro deste relatório
+- a conclusão da rodada principal da v11 só ocorre após `v11.23.0` ou equivalente posterior que substitua formalmente essa fase final dentro deste relatório; se a linha `v11.x` continuar com novas frentes estratégicas, elas devem abrir novas iterações formais a partir de `v11.24.0` e redefinir esse marco explicitamente neste documento
 
 ### 8.4. Regra de fatiamento
 
@@ -541,6 +545,76 @@ Cada fase acima ainda pode se desdobrar em várias PRs pequenas. Nenhuma PR deve
 - defaults da migração futura devem preservar o comportamento atual: tudo continua chegando in-app
 - canais externos entram inicialmente opt-in
 - preferências devem ser criadas de forma lazy/backfill-safe, sem exigir que usuários antigos revisitem onboarding para manter notificações in-app funcionando
+
+### 8.6. Trilha futura obrigatória de i18n, acessibilidade e UX Writing
+
+**Papel exigido para essa trilha**
+
+- atuar como Engenheiro de Software Sênior, Especialista em Acessibilidade (`W3C/WCAG`) e UX Writer
+
+**Contexto do projeto**
+
+- o `Kino Campus` continua sendo tratado como plataforma universitária orientada a produto, arquitetura limpa, QA rigoroso e evolução incremental
+- a nova frente deve habilitar internacionalização (`i18n`), acessibilidade (`a11y`) e revisão de UX Writing sem quebrar nenhum layout, fluxo, contrato de API, teste crítico ou comportamento consolidado
+
+**Regra de início obrigatória**
+
+- antes de qualquer linha de código final dessa trilha, a iteração `v11.24.0` deve entregar apenas um relatório estruturado neste repositório
+- nenhum arquivo funcional pode ser alterado para essa frente antes da aprovação explícita desse plano
+- esse relatório inicial deve usar tópicos e tabelas comparativas quando fizer sentido e deve aguardar aprovação antes de abrir a infraestrutura
+
+**ETAPA 1: Identificação e Relação Arquitetural**
+
+- mapear conceitualmente como `i18n`, semântica de acessibilidade e UX Writing se cruzam na base atual
+- explicitar como uma string traduzida afeta `aria-label`, `title`, mensagens de erro, placeholders, toasts, metadata e SEO
+- listar os tipos de componentes mais impactados:
+  - botões
+  - modais
+  - formulários
+  - toasts de erro e sucesso
+  - navegação
+  - dropdowns
+  - filtros
+  - tabelas/listagens
+  - cards de produto
+  - notificações
+
+**ETAPA 2: Análise de Risco e Pontos Fráteis**
+
+- abordar obrigatoriamente:
+  - risco de quebra de layout por expansão de texto entre idiomas
+  - risco de quebra de testes que hoje dependem de textos fixos
+  - risco de hydration mismatch se existir SSR ou rendering híbrido nas superfícies futuras
+  - impacto no SEO dinâmico e em metadata textual
+- incluir trade-offs claros entre abordagem incremental e migração ampla
+- registrar quais superfícies exigem rollout por feature flag, por página ou por grupo de componentes
+
+**ETAPA 3: Estratégia de Implementação Incremental (Roadmap)**
+
+- dividir a execução em fases pequenas e iterativas, por exemplo:
+  - infraestrutura
+  - componentes core
+  - páginas complexas
+- definir em cada fase:
+  - ferramentas recomendadas para a stack real do projeto
+  - critérios objetivos de aceite de QA
+  - critérios de não regressão visual, semântica e contratual
+- sugerir a criação de um dicionário base de UX Writing do `Kino Campus`, priorizando `pt-BR`, consistência de voz e redução de jargão
+- manter a linguagem voltada ao público universitário brasileiro: clara, engajadora, acessível e sem atrito desnecessário
+
+**Diretriz técnica dessa trilha**
+
+- toda substituição de texto hardcoded por chave de tradução deve revisar também:
+  - `aria-label`
+  - `aria-describedby`
+  - `aria-live`
+  - mensagens de validação
+  - placeholders
+  - metadata textual
+- nenhum teste novo deve depender de cópia literal quando existir seletor estável, `role`, `aria-*` ou `data-*`
+- qualquer mudança com risco de expansão textual deve passar por QA em mobile e desktop
+- a implementação futura deve privilegiar rollout incremental, nunca big-bang
+- se a solução escolhida introduzir risco relevante para layout, SEO ou hidratação, a fase deve ser interrompida e replanejada antes de continuar
 
 ---
 
@@ -1235,6 +1309,33 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.22.0`
+
+- objetivo:
+  fechar a primeira camada operacional da trilha multicanal, automatizando o consumo da outbox externa com scheduler versionado, runtime privado e observabilidade explícita de runs, sem alterar o contrato canônico de `public.notifications` nem quebrar os canais `email` e `whatsapp` já implantados.
+- arquivos alterados:
+  `supabase/migrations/v11.22.0.0_notification_dispatch_scheduler.sql`, `supabase/functions/kc-dispatch-notification-outbox/index.ts`, `tests/notification-dispatch-ops.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `CHANGELOG.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/env-vars.md`, `docs/ops/vercel-supabase-invariants.md`.
+- equivalentes revisados:
+  a trilha externa de notificações entre `notification_delivery_outbox`, `notification_delivery_attempts`, `notification_channel_targets`, `notification_preferences`, os helpers SQL de emissão/claim/attempt, a Edge Function `kc-dispatch-notification-outbox`, as invariantes operacionais do Supabase e a documentação pública do projeto.
+- contratos preservados:
+  `public.notifications` segue como feed canônico in-app; os triggers principais continuam sem chamar providers diretamente; o agendamento automático continua fail-closed quando faltar `function_url` ou secret válido; `app.settings.kc_notification_dispatch_*` ficou apenas como fallback operacional, sem substituir a camada privada nova.
+- migrations criadas/aplicadas:
+  `supabase/migrations/v11.22.0.0_notification_dispatch_scheduler.sql`, aplicada no projeto Supabase principal durante esta iteração. A migration criou `public.notification_dispatch_runtime`, `public.notification_dispatch_runs`, o helper `public.kc_trigger_notification_dispatch(...)` e o job `pg_cron` `kc-dispatch-notification-outbox`.
+- edge functions publicadas:
+  `kc-dispatch-notification-outbox`, republicada como versão `5` no projeto Supabase principal. A função agora aceita secret vindo do runtime privado, persiste `execution_id`/`source`, registra `dry_run` e `dispatch` em `notification_dispatch_runs` e mantém o gating explícito por provider.
+- testes executados:
+  `npx jest tests/notification-delivery-foundation.test.js tests/notification-email-channel.test.js tests/notification-whatsapp-channel.test.js tests/notification-dispatch-ops.test.js --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validação operacional:
+  a migration foi aplicada com sucesso no Supabase; `pg_cron`, `pg_net` e `pgcrypto` já estavam instalados; o job `kc-dispatch-notification-outbox` foi confirmado ativo com agenda `*/5 * * * *`; a linha `primary` de `notification_dispatch_runtime` foi configurada com a URL real da Edge Function e `batch_limit = 25`; o helper `kc_trigger_notification_dispatch(...)` foi validado por SQL em `dry_run` com persistência posterior em `notification_dispatch_runs`; a chamada HTTP direta à Edge Function também confirmou o novo contrato de resposta com `execution_id`, `source` e status operacional dos providers.
+- validação em navegador:
+  o preview da PR ficou `READY` no deployment `dpl_DueeQMVYa9FVFeRvgYCH1D6Kg98c`, com URL `https://kino-campus-7mx2mioxk-yannakamurabrs-projects.vercel.app`. Após o merge, o deployment da base `dpl_9LeptJtb79CGH9tdcYFMHVijg9MT` ficou `READY`, e a produção foi promovida manualmente no deployment `dpl_HMTvL1ET8uLgW8NNwitLN5of3HyW`, já aliasado em [www.kinocampus.com.br](https://www.kinocampus.com.br). A verificação remota confirmou `200` no domínio e o bundle publicado de `assets/js/kc-env.js`.
+- PR / commit / deploy:
+  PR `#278`, commit funcional `0b245c3` na branch `codex/v11-22-0-notification-dispatch-scheduler`, merge squash `4699d44` na base `kinocampus-V11.0-foundations`, preview `dpl_DueeQMVYa9FVFeRvgYCH1D6Kg98c`, deployment pós-merge `dpl_9LeptJtb79CGH9tdcYFMHVijg9MT` e promoção de produção `dpl_HMTvL1ET8uLgW8NNwitLN5of3HyW`, todos confirmados em `11 de abril de 2026`.
+- riscos residuais:
+  a automação operacional agora está fechada, mas os providers externos continuam dependentes dos segredos específicos de canal já mapeados nas fases anteriores. A próxima fase obrigatória passa a ser `v11.23.0`, dedicada ao release gate final da v11; a trilha futura de i18n, acessibilidade e UX Writing fica reservada para começar somente após isso, em `v11.24.0`, com planejamento-only.
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
@@ -1271,6 +1372,11 @@ Este backlog é inicial e poderá ser refinado nas próximas iterações aprovad
    - avaliar extensão segura do padrão de snapshot+SWR para contadores de comentários, analytics leves e painéis laterais que hoje ainda fazem rerender completo
    - definir TTL e chaves canônicas por superfície antes de ampliar o uso de `KCSessionStore`
    - manter separação entre cache de leitura, estado otimista e invalidação por ação do usuário
+
+8. **Trilha futura de i18n, acessibilidade e UX Writing**
+   - preparar a fase `v11.24.0` como planejamento-only, com `ETAPA 1`, `ETAPA 2` e `ETAPA 3` antes de qualquer código
+   - mapear textos hardcoded, atributos `aria-*`, metadata e superfícies críticas para expansão textual
+   - definir dicionário base de voz e tom em `pt-BR` antes da codificação das chaves de tradução
 
 ---
 
