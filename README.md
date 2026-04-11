@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, pela rodada documental de planejamento `v11.19.1`, pelas fases funcionais `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1` e agora `v11.22.0`, que versiona o scheduler do dispatcher externo, cria observabilidade privada de runs e fecha a primeira rodada de invariantes operacionais da trilha multicanal.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, pela rodada documental de planejamento `v11.19.1`, pelas fases funcionais `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1` e `v11.22.0`, já concluída com scheduler versionado do dispatcher externo, observabilidade privada de runs e a primeira rodada de invariantes operacionais da trilha multicanal fechada.
 
 ---
 
@@ -85,15 +85,18 @@ Regras desta fase:
 
 - iteração ativa consolidada: `v11.22.0`
 - objetivo da iteração: fechar a primeira rodada de invariantes operacionais da trilha multicanal, automatizando o consumo da outbox e adicionando observabilidade privada de runs sem quebrar `public.notifications`, o canal de e-mail, o canal de WhatsApp nem os triggers existentes
-- natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.22.0.0_notification_dispatch_scheduler.sql`) e Edge Function `kc-dispatch-notification-outbox` ampliada para persistir `execution_id`/`source` em `notification_dispatch_runs`
-- ultimo preview validado desta fase: em homologacao nesta rodada
-- deploy de producao validado desta fase: pendente do fechamento desta rodada
+- natureza da iteração: funcional concluída, com migration nova aplicada no Supabase (`v11.22.0.0_notification_dispatch_scheduler.sql`) e Edge Function `kc-dispatch-notification-outbox` ampliada para persistir `execution_id`/`source` em `notification_dispatch_runs`
+- ultimo preview validado desta fase: `dpl_DueeQMVYa9FVFeRvgYCH1D6Kg98c` (`kino-campus-7mx2mioxk-yannakamurabrs-projects.vercel.app`)
+- deploy de producao validado desta fase: `dpl_HMTvL1ET8uLgW8NNwitLN5of3HyW` (`www.kinocampus.com.br`)
 - achados desta rodada:
   - a fila `notification_delivery_outbox` deixa de depender apenas de acionamento manual: o banco agora agenda `kc-dispatch-notification-outbox` a cada 5 minutos via `pg_cron`
   - a Edge Function passou a persistir runs em `notification_dispatch_runs`, com `execution_id`, `source`, `provider_ready` e resumo operacional para dry-run/dispatch
   - o acionamento automatico continua fail-closed: sem `notification_dispatch_runtime.function_url` ou secret valido, o scheduler nao dispara HTTP externo
   - o scheduler passou a usar a camada privada `notification_dispatch_runtime`; `app.settings.kc_notification_dispatch_*` ficam como fallback operacional
-- próxima iteração sugerida: `v11.23.0`, para executar o release gate final da v11 e preparar a trilha futura de i18n/a11y/UX Writing
+  - a migration foi validada ponta a ponta: helper SQL `kc_trigger_notification_dispatch(...)`, chamada HTTP autenticada por secret privado e persistencia final em `notification_dispatch_runs`
+  - a Edge Function `kc-dispatch-notification-outbox` foi republicada como versao `5` no projeto principal antes da homologacao final desta fase
+- próxima iteração sugerida: `v11.23.0`, para executar o release gate final da v11
+- trilha futura já preparada no relatório: `v11.24.x`, reservada para i18n, acessibilidade e UX Writing, começando obrigatoriamente por um relatório de planejamento em 3 etapas e sem código até aprovação explícita
 
 ---
 
