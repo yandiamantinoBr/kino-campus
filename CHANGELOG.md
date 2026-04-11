@@ -47,6 +47,7 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.20.1`: atualizado o `README.md` e o relatório v11 para registrar a conclusão da fase de preferências por evento/canal, a PR `#271`, o preview `dpl_HrWK6p9ugp8LZ9PSfKgLbJ4m8Q7U` e o deploy de produção `dpl_BGPST16nsxuGXP4gbgWzAPDbmTSz`.
 - `v11.20.1`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/api-contract.md` e `docs/db-schema.md` para refletir a nova trilha de preferências por evento/canal, a migration `v11.20.1.0_notification_preferences.sql` e a continuidade da v11 em `v11.20.2`.
 - `v11.20.0`: atualizado o `README.md` e o relatorio v11 para registrar o fechamento do shell in-app de notificacoes e deixar `v11.20.1` explicita como proxima fase da trilha multicanal.
 - `v11.20.0`: sincronizado `docs/api-contract.md` com o novo contrato de notificacoes, incluindo `KCAPI.clearNotifications()` e o envelope de realtime usado pelos consumers do dropdown.

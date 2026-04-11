@@ -83,6 +83,7 @@ Regras desta fase:
 - objetivo da iteração: persistir preferências de notificação por evento e por canal, sem misturar contato público com destino privado de entrega e sem quebrar a trilha canônica in-app
 - natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.20.1.0_notification_preferences.sql`) e sem ainda ativar envio externo por e-mail/WhatsApp
 - último preview validado desta fase: `dpl_HrWK6p9ugp8LZ9PSfKgLbJ4m8Q7U`, alias `https://kino-campus-git-codex-v11-20-1-n-957980-yannakamurabrs-projects.vercel.app`
+- deploy de produção validado desta fase: `dpl_BGPST16nsxuGXP4gbgWzAPDbmTSz`, publicado em [www.kinocampus.com.br](https://www.kinocampus.com.br)
 - achados desta rodada:
   - a nova camada privada `public.notification_preferences` mantém defaults backfill-safe: `in_app=true`, `email=false` e `whatsapp=false`
   - o usuário agora configura em `settings` quais eventos quer receber e em quais canais, sem reaproveitar automaticamente o contato público do perfil
