@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, pela rodada documental de planejamento `v11.19.1`, pelas fases funcionais `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1` e `v11.22.0`, já concluída com scheduler versionado do dispatcher externo, observabilidade privada de runs e a primeira rodada de invariantes operacionais da trilha multicanal fechada.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 executada ate o release gate final `v11.23.0`, fechando a rodada principal com regressao verde, hygiene canonico em `8.6.0`, smoke remoto e residuals operacionais documentados. A trilha seguinte ja fica aberta em `v11.24.x`, reservada para planejamento de i18n, acessibilidade e UX Writing antes de qualquer novo codigo funcional.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.23.0 | release gate final da rodada principal da v11: endurecimento do teste de analytics frente ao cache/SWR atual, artefato formal `docs/qa/report-v11.23.0-run1.md`, hygiene `8.6.0`, smoke remoto em producao e residuals do Supabase consolidados sem abrir refactor novo | `#280` |
 | v11.22.0 | scheduler versionado do dispatcher externo: migration `v11.22.0.0_notification_dispatch_scheduler.sql`, tabela privada `notification_dispatch_runs`, helper `kc_trigger_notification_dispatch(...)`, job `pg_cron` `kc-dispatch-notification-outbox` e Edge Function endurecida com `execution_id`/`source` e persistencia de runs | `#278` |
 | v11.21.1 | canal privado de WhatsApp implementado sobre a trilha de outbox: tabela `notification_channel_targets`, preferencia/consentimento separados do perfil publico, novos metodos `KCAPI.getNotificationChannelTargets()`/`updateNotificationChannelTargets()` e dispatcher `kc-dispatch-notification-outbox` ampliado para Twilio com rate limit por usuario | `#277` |
 | v11.21.0 | canal de e-mail implementado sobre a outbox: helpers SQL `kc_claim_notification_delivery_batch(...)`/`kc_record_notification_delivery_attempt(...)`, template HTML/texto, envio por `Resend` na Edge Function `kc-dispatch-notification-outbox` e observabilidade de preview/dispatch mantendo `public.notifications` como trilha canonica | `#275` |
@@ -83,20 +84,20 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.22.0`
-- objetivo da iteração: fechar a primeira rodada de invariantes operacionais da trilha multicanal, automatizando o consumo da outbox e adicionando observabilidade privada de runs sem quebrar `public.notifications`, o canal de e-mail, o canal de WhatsApp nem os triggers existentes
-- natureza da iteração: funcional concluída, com migration nova aplicada no Supabase (`v11.22.0.0_notification_dispatch_scheduler.sql`) e Edge Function `kc-dispatch-notification-outbox` ampliada para persistir `execution_id`/`source` em `notification_dispatch_runs`
-- ultimo preview validado desta fase: `dpl_DueeQMVYa9FVFeRvgYCH1D6Kg98c` (`kino-campus-7mx2mioxk-yannakamurabrs-projects.vercel.app`)
-- deploy de producao validado desta fase: `dpl_HMTvL1ET8uLgW8NNwitLN5of3HyW` (`www.kinocampus.com.br`)
+- iteracao ativa consolidada: `v11.23.0`
+- objetivo da iteracao: executar o release gate final da rodada principal da v11, validando regressao, hygiene, smoke remoto e residuals conhecidos sem abrir refactor novo de frontend, banco ou infra
+- natureza da iteracao: concluida sem migration nova; o ajuste funcional ficou restrito ao endurecimento de `tests/post-analytics.test.js` para o contrato atual de cache/SWR e ao artefato formal de QA `docs/qa/report-v11.23.0-run1.md`
+- ultimo preview validado desta fase: `dpl_DucDMJtPmLg7TS78UnVQVX4LHWiU` (`kino-campus-git-codex-v11-23-0-r-29a5cf-yannakamurabrs-projects.vercel.app`)
+- deploy pos-merge da base validado desta fase: `dpl_EF3gzc3MLEbGkLpS2CRdopuHo2cb` (`kino-campus-git-kinocampus-v110-a67b39-yannakamurabrs-projects.vercel.app`)
+- deploy de producao validado desta fase: `dpl_HPMAUgYe6kcoHBDh9vjp54mYg4VA` (`www.kinocampus.com.br`)
 - achados desta rodada:
-  - a fila `notification_delivery_outbox` deixa de depender apenas de acionamento manual: o banco agora agenda `kc-dispatch-notification-outbox` a cada 5 minutos via `pg_cron`
-  - a Edge Function passou a persistir runs em `notification_dispatch_runs`, com `execution_id`, `source`, `provider_ready` e resumo operacional para dry-run/dispatch
-  - o acionamento automatico continua fail-closed: sem `notification_dispatch_runtime.function_url` ou secret valido, o scheduler nao dispara HTTP externo
-  - o scheduler passou a usar a camada privada `notification_dispatch_runtime`; `app.settings.kc_notification_dispatch_*` ficam como fallback operacional
-  - a migration foi validada ponta a ponta: helper SQL `kc_trigger_notification_dispatch(...)`, chamada HTTP autenticada por secret privado e persistencia final em `notification_dispatch_runs`
-  - a Edge Function `kc-dispatch-notification-outbox` foi republicada como versao `5` no projeto principal antes da homologacao final desta fase
-- próxima iteração sugerida: `v11.23.0`, para executar o release gate final da v11
-- trilha futura já preparada no relatório: `v11.24.x`, reservada para i18n, acessibilidade e UX Writing, começando obrigatoriamente por um relatório de planejamento em 3 etapas e sem código até aprovação explícita
+  - a regressao completa passou em `51/51` suites e `530/530` testes
+  - `scripts/hygiene-check.js` permaneceu verde no runtime canonico `8.6.0`
+  - o smoke HTTP em producao confirmou `200` no dominio e marcadores estaticos corretos em `compra-venda-feed.html`, `moradia.html` e `ajuda.html`
+  - os residuals do Supabase Advisor aceitos nesta fase ficaram documentados: `extension_in_public` para `unaccent`, `auth_leaked_password_protection`, `rls_enabled_no_policy` nas tabelas privadas da trilha de dispatch e o `duplicate_index` em `public.posts`, alem dos `unused_index` sem remocao destrutiva nesta rodada
+  - o Playwright MCP local continua bloqueado nesta maquina por `EPERM`, entao a evidencia de navegador desta fase ficou ancorada em checks do Vercel, fetch remoto autenticado ou protegido e smoke HTTP do dominio publicado
+- proxima iteracao sugerida: `v11.24.0`, para entregar somente o planejamento estruturado de i18n, acessibilidade e UX Writing antes de qualquer codigo funcional dessa nova trilha
+- trilha futura ja preparada no relatorio: `v11.24.x`, reservada para i18n, acessibilidade e UX Writing, com inicio obrigatorio por um relatorio em `ETAPA 1`, `ETAPA 2` e `ETAPA 3`
 
 ---
 

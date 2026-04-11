@@ -77,8 +77,17 @@ Justificativa:
 - a linha funcional e documental do projeto esta em `v11`, mas o runtime canonico do frontend continua explicitamente mapeado em `8.6.0`
 - esse estado foi preservado nesta fase para nao introduzir um version bump parcial de alto risco no fechamento da rodada
 
+## PR e deploys
+
+- PR funcional: `#280`
+- commit funcional: `441af25`
+- merge squash na base: `6bc3897`
+- preview validado: `dpl_DucDMJtPmLg7TS78UnVQVX4LHWiU` (`kino-campus-git-codex-v11-23-0-r-29a5cf-yannakamurabrs-projects.vercel.app`)
+- deployment pos-merge da base: `dpl_EF3gzc3MLEbGkLpS2CRdopuHo2cb` (`kino-campus-git-kinocampus-v110-a67b39-yannakamurabrs-projects.vercel.app`)
+- deploy de producao validado: `dpl_HPMAUgYe6kcoHBDh9vjp54mYg4VA` (`www.kinocampus.com.br`)
+
 ## Fechamento
 
-Esta rodada confirma que a base atual da v11 esta regressivamente verde para entrar no fechamento final da rodada principal.
+Esta rodada fecha o release gate final da rodada principal da v11 com a base regressivamente verde, metadata de QA atualizada e evidencias remotas registradas.
 
-Os metadados finais de PR, preview e producao desta iteracao devem ser registrados no closeout documental apos merge e deploy.
+A proxima iteracao formal passa a ser `v11.24.0`, em modo planejamento-only para i18n, acessibilidade e UX Writing.

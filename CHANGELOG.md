@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.23.0`: `tests/post-analytics.test.js` passou a invalidar o cache de analytics no `beforeEach` e a forcar o caminho do driver ativo com `force: true`, eliminando a fragilidade introduzida pela hidratacao de sessao e revalidacao silenciosa da trilha de analytics.
+- `v11.23.0`: `package.json` deixou de anunciar a linha antiga `V8.2.x`, alinhando a metadata do repositorio ao estado real da base funcional e documental atual.
+- `v11.23.0`: o release gate final da rodada principal da v11 foi consolidado com `51/51` suites, hygiene verde no runtime canonico `8.6.0`, smoke remoto no dominio publicado e residuals operacionais do Supabase documentados sem abrir refactor novo.
 - `v11.22.0`: criada a migration `v11.22.0.0_notification_dispatch_scheduler.sql`, adicionando a tabela privada `notification_dispatch_runs`, o helper `kc_trigger_notification_dispatch(...)` e o job `pg_cron` `kc-dispatch-notification-outbox` para consumo versionado da outbox externa.
 - `v11.22.0`: `kc-dispatch-notification-outbox` passou a persistir `execution_id`, `source`, `provider_ready`, `provider_issues` e resumos de `dry_run`/`dispatch` em `notification_dispatch_runs`, endurecendo a observabilidade operacional sem alterar o contrato de entrega por canal.
 - `v11.22.0`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/env-vars.md` e `docs/ops/vercel-supabase-invariants.md` para registrar o scheduler, os novos settings de banco e a próxima trilha obrigatória da v11.
@@ -59,6 +62,7 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.23.0`: adicionados `docs/qa/report-v11.23.0-run1.md` e o novo mapa limpo de `docs/qa/README.md`, registrando o release gate final da rodada principal da v11 e deixando `v11.24.0` como proxima fase obrigatoria em modo planejamento-only.
 - `v11.22.0`: consolidado o fechamento documental da fase com a PR `#278`, preview `dpl_DueeQMVYa9FVFeRvgYCH1D6Kg98c`, deploy de produção `dpl_HMTvL1ET8uLgW8NNwitLN5of3HyW` e validação publicada em `www.kinocampus.com.br`.
 - `v11.22.0`: o `RELATORIO-KINOCAMPUS-V11.md` passou a reservar a trilha futura `v11.24.x` para i18n, acessibilidade e UX Writing, exigindo um relatório inicial em `ETAPA 1`, `ETAPA 2` e `ETAPA 3` antes de qualquer implementação dessa frente.
 - `v11.21.1`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/api-contract.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/env-vars.md` e `docs/ops/vercel-supabase-invariants.md` para registrar a trilha privada de WhatsApp, os novos metodos de `KCAPI`, a tabela `notification_channel_targets`, os segredos do provider e a continuidade da v11 em `v11.22.0`.
