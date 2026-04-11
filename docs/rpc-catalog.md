@@ -549,6 +549,23 @@ Revoga convite externo e registra `invite_revoked` no `audit_log`.
 
 ---
 
+### `kc_trigger_notification_dispatch(p_channel text, p_limit int, p_dry_run boolean, p_source text) -> bigint` [Helper operacional de scheduler] *(v11.22.0)*
+
+**O que faz:** monta o body canônico do dispatcher externo e dispara um `net.http_post(...)` para a Edge Function `kc-dispatch-notification-outbox`.
+
+**Comportamento atual:**
+- lê `notification_dispatch_runtime.function_url`
+- lê `notification_dispatch_runtime.dispatch_secret`
+- lê `notification_dispatch_runtime.batch_limit`
+- mantém `app.settings.kc_notification_dispatch_*` apenas como fallback operacional
+- retorna `NULL` quando a configuração ainda não existe, preservando fail-closed
+
+**Uso atual:**
+- job `pg_cron` `kc-dispatch-notification-outbox`
+- invocações operacionais manuais por `service_role`
+
+---
+
 ### `kc_resolve_notification_delivery_destination(p_user_id uuid, p_channel text) -> TABLE(destination text, destination_source text, is_ready boolean, block_reason text)` [Helper de destino privado] *(v11.20.2, ampliada em v11.21.1)*
 
 **O que faz:** resolve o destino privado do canal externo antes de alimentar a fila.

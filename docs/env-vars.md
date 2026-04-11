@@ -89,6 +89,7 @@ Configuradas no dashboard do Supabase quando exigidas pelas Edge Functions e aut
 | `KC_NOTIFICATION_WHATSAPP_TEMPLATE_NAME` | nome humano opcional do template usado no dispatcher |
 | `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_WINDOW_MINUTES` | janela de rate limit do canal WhatsApp |
 | `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_MAX_PER_WINDOW` | maximo de envios por usuario na janela do canal WhatsApp |
+| `KC_NOTIFICATION_DISPATCH_BATCH_LIMIT` | limite padrao de rows por execucao do dispatcher |
 
 ### Edge Functions relevantes
 
@@ -103,6 +104,26 @@ supabase functions deploy notify-admin-reports-threshold
 supabase functions deploy kc-invite-user
 supabase functions deploy kc-dispatch-notification-outbox
 ```
+
+### Runtime de banco fora do git
+
+Usado pelo scheduler da `v11.22.0` para acionar a Edge Function automaticamente:
+
+| Superfície | Campo | Uso |
+|----------|-----|-----|
+| `public.notification_dispatch_runtime` | `function_url` | URL publica da Edge Function `kc-dispatch-notification-outbox` |
+| `public.notification_dispatch_runtime` | `dispatch_secret` | segredo privado usado pelo scheduler; gerado no insert da row `primary` |
+| `public.notification_dispatch_runtime` | `batch_limit` | batch padrao opcional usado pelo helper `kc_trigger_notification_dispatch(...)` |
+| `app.settings` | `kc_notification_dispatch_function_url` | fallback/override operacional opcional |
+| `app.settings` | `kc_notification_dispatch_secret` | fallback/override operacional opcional |
+| `app.settings` | `kc_notification_dispatch_batch_limit` | fallback/override operacional opcional |
+
+Observacoes:
+
+- o scheduler versionado usa `pg_cron` + `net.http_post`
+- `notification_dispatch_runtime` e a fonte preferencial da `v11.22.0`
+- sem URL funcional e secret valido, o helper retorna `NULL` e o fluxo externo permanece fail-closed
+- a Edge Function aceita o segredo de `notification_dispatch_runtime.dispatch_secret` e continua compativel com `KC_NOTIFICATION_DISPATCH_SECRET`
 
 ## Banco e storage
 

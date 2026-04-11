@@ -523,6 +523,81 @@ function computeNextAttemptAt(previousAttempts: number) {
   return new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
 }
 
+async function getDispatchRuntimeConfig(supabase: ReturnType<typeof createClient>) {
+  try {
+    const { data, error } = await supabase
+      .from("notification_dispatch_runtime")
+      .select("function_url, dispatch_secret, batch_limit")
+      .eq("slot", "primary")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[kc-dispatch-notification-outbox] failed to load runtime config", error);
+      return {
+        functionUrl: null,
+        dispatchSecret: null,
+        batchLimit: null,
+      };
+    }
+
+    return {
+      functionUrl: asText((data as Record<string, unknown> | null)?.function_url || null) || null,
+      dispatchSecret: asText((data as Record<string, unknown> | null)?.dispatch_secret || null) || null,
+      batchLimit: Number.isFinite(Number((data as Record<string, unknown> | null)?.batch_limit))
+        ? parsePositiveInt((data as Record<string, unknown> | null)?.batch_limit, 25)
+        : null,
+    };
+  } catch (error) {
+    console.error("[kc-dispatch-notification-outbox] failed to load runtime config", error);
+    return {
+      functionUrl: null,
+      dispatchSecret: null,
+      batchLimit: null,
+    };
+  }
+}
+
+async function persistDispatchRun(
+  supabase: ReturnType<typeof createClient>,
+  payload: {
+    executionId: string;
+    source: string;
+    mode: "dry_run" | "dispatch";
+    channelFilter: Channel | null;
+    status: "completed" | "error";
+    batchLimit: number;
+    providerReady: Record<string, boolean>;
+    providerIssues: Record<string, unknown>;
+    summary: JsonObject;
+    errorCode?: string | null;
+    errorMessage?: string | null;
+  },
+) {
+  try {
+    const { error } = await supabase
+      .from("notification_dispatch_runs")
+      .insert({
+        execution_id: payload.executionId,
+        source: payload.source,
+        mode: payload.mode,
+        channel_filter: payload.channelFilter,
+        status: payload.status,
+        batch_limit: payload.batchLimit,
+        provider_ready: payload.providerReady,
+        provider_issues: payload.providerIssues,
+        summary: payload.summary,
+        error_code: payload.errorCode || null,
+        error_message: payload.errorMessage || null,
+      });
+
+    if (error) {
+      console.error("[kc-dispatch-notification-outbox] failed to persist dispatch run", error);
+    }
+  } catch (error) {
+    console.error("[kc-dispatch-notification-outbox] failed to persist dispatch run", error);
+  }
+}
+
 async function sendEmailWithResend(
   row: OutboxRow,
   providerConfig: EmailProviderConfig,
@@ -828,19 +903,35 @@ Deno.serve(async (req) => {
 
   let supabaseUrl = "";
   let serviceRoleKey = "";
-  let dispatchSecret = "";
+  let dispatchSecret: string | null = null;
 
   try {
     supabaseUrl = getRequiredEnv("SUPABASE_URL");
     serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
-    dispatchSecret = getRequiredEnv("KC_NOTIFICATION_DISPATCH_SECRET");
+    dispatchSecret = getOptionalEnv("KC_NOTIFICATION_DISPATCH_SECRET");
   } catch (error) {
     console.error("[kc-dispatch-notification-outbox] missing configuration", error);
     return json(500, { ok: false, error: "missing_server_configuration" });
   }
 
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const runtimeConfig = await getDispatchRuntimeConfig(supabase);
+  const acceptedSecrets = [dispatchSecret, runtimeConfig.dispatchSecret]
+    .map((value) => asText(value))
+    .filter(Boolean);
+
+  if (acceptedSecrets.length === 0) {
+    console.error("[kc-dispatch-notification-outbox] missing runtime secret");
+    return json(500, { ok: false, error: "missing_server_configuration" });
+  }
+
   const providedSecret = req.headers.get("x-kc-dispatch-secret")?.trim() ?? "";
-  if (!providedSecret || !timingSafeEqual(providedSecret, dispatchSecret)) {
+  const hasValidSecret = providedSecret
+    ? acceptedSecrets.some((secret) => timingSafeEqual(providedSecret, secret))
+    : false;
+  if (!hasValidSecret) {
     return json(401, { ok: false, error: "unauthorized" });
   }
 
@@ -855,8 +946,10 @@ Deno.serve(async (req) => {
   const channelFilter = normalizeChannel(body.channel);
   const batchLimit = parsePositiveInt(
     body.limit,
-    parsePositiveInt(Deno.env.get("KC_NOTIFICATION_DISPATCH_BATCH_LIMIT"), 25),
+    runtimeConfig.batchLimit ?? parsePositiveInt(Deno.env.get("KC_NOTIFICATION_DISPATCH_BATCH_LIMIT"), 25),
   );
+  const requestSource = truncate(asText(body.source) || "manual", 48) || "manual";
+  const executionId = Deno.env.get("SB_EXECUTION_ID")?.trim() || crypto.randomUUID();
   const appBaseUrl = buildAppBaseUrl();
   const emailProvider = getEmailProviderConfig(appBaseUrl);
   const whatsappProvider = getWhatsAppProviderConfig(appBaseUrl);
@@ -880,10 +973,6 @@ Deno.serve(async (req) => {
         ? whatsappProvider.missing
         : [`unsupported_provider:${whatsappProvider.name || "none"}`],
   };
-
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
 
   try {
     let previewQuery = supabase
@@ -966,9 +1055,11 @@ Deno.serve(async (req) => {
     }
 
     if (dryRun) {
-      return json(200, {
+      const dryRunPayload = {
         ok: true,
         mode: "dry_run",
+        execution_id: executionId,
+        source: requestSource,
         note: "Email e WhatsApp usam a mesma outbox. O envio real fica gated por segredos e provider validos.",
         provider_ready: providerReady,
         provider_names: providerByChannel,
@@ -983,13 +1074,33 @@ Deno.serve(async (req) => {
         blocked_preview_ids: blockedPreviewIds,
         email_previews: emailPreviews,
         whatsapp_previews: whatsappPreviews,
+      } as const;
+
+      await persistDispatchRun(supabase, {
+        executionId,
+        source: requestSource,
+        mode: "dry_run",
+        channelFilter,
+        status: "completed",
+        batchLimit,
+        providerReady,
+        providerIssues,
+        summary: {
+          selected_count: rows.length,
+          total_matching_count: count ?? rows.length,
+          by_channel: byChannel,
+          by_status: byStatus,
+          dispatchable_preview_ids: dispatchablePreviewIds,
+          blocked_preview_ids: blockedPreviewIds,
+        },
       });
+
+      return json(200, dryRunPayload);
     }
 
     const requestedChannels = channelFilter
       ? [channelFilter]
       : (["email", "whatsapp"] as Channel[]);
-    const executionId = Deno.env.get("SB_EXECUTION_ID")?.trim() || crypto.randomUUID();
     const channelResults: Record<string, unknown> = {};
     const skippedChannels: string[] = [];
 
@@ -1024,28 +1135,102 @@ Deno.serve(async (req) => {
     if (requestedChannels.length === 1) {
       const channel = requestedChannels[0];
       const singleResult = channelResults[channel] as Record<string, unknown>;
-      return json(200, {
+      const singlePayload = {
         ok: true,
         mode: "dispatch",
+        execution_id: executionId,
+        source: requestSource,
         channel,
         provider_ready: providerReady,
         provider_names: providerByChannel,
+        provider_issues: providerIssues,
         skipped_channels: skippedChannels,
         ...singleResult,
+      } as const;
+
+      await persistDispatchRun(supabase, {
+        executionId,
+        source: requestSource,
+        mode: "dispatch",
+        channelFilter,
+        status: "completed",
+        batchLimit,
+        providerReady,
+        providerIssues,
+        summary: {
+          skipped_channels: skippedChannels,
+          channels: {
+            [channel]: {
+              claimed_count: singleResult.claimed_count,
+              processed_count: singleResult.processed_count,
+              sent_count: singleResult.sent_count,
+              failed_count: singleResult.failed_count,
+              blocked_count: singleResult.blocked_count,
+            },
+          },
+        },
       });
+
+      return json(200, singlePayload);
     }
 
-    return json(200, {
+    const dispatchPayload = {
       ok: true,
       mode: "dispatch",
+      execution_id: executionId,
+      source: requestSource,
       provider_ready: providerReady,
       provider_names: providerByChannel,
       provider_issues: providerIssues,
       skipped_channels: skippedChannels,
       channels: channelResults,
+    } as const;
+
+    const channelSummary = Object.fromEntries(
+      Object.entries(channelResults).map(([channel, value]) => {
+        const result = value as Record<string, unknown>;
+        return [channel, {
+          claimed_count: result.claimed_count,
+          processed_count: result.processed_count,
+          sent_count: result.sent_count,
+          failed_count: result.failed_count,
+          blocked_count: result.blocked_count,
+          skipped: result.skipped ?? false,
+        }];
+      }),
+    );
+
+    await persistDispatchRun(supabase, {
+      executionId,
+      source: requestSource,
+      mode: "dispatch",
+      channelFilter,
+      status: "completed",
+      batchLimit,
+      providerReady,
+      providerIssues,
+      summary: {
+        skipped_channels: skippedChannels,
+        channels: channelSummary,
+      },
     });
+
+    return json(200, dispatchPayload);
   } catch (error) {
     console.error("[kc-dispatch-notification-outbox] execution failed", error);
+    await persistDispatchRun(supabase, {
+      executionId,
+      source: requestSource,
+      mode: dryRun ? "dry_run" : "dispatch",
+      channelFilter,
+      status: "error",
+      batchLimit,
+      providerReady,
+      providerIssues,
+      summary: {},
+      errorCode: "internal_error",
+      errorMessage: safeSnippet((error as Error)?.message || String(error), 240),
+    });
     return json(500, { ok: false, error: "internal_error" });
   }
 });
