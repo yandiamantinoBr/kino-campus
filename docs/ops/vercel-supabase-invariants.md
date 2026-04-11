@@ -103,6 +103,17 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - ausencia de `KC_NOTIFICATION_EMAIL_*` no projeto deve resultar em gating explicito (`email_provider_not_configured`), nunca em quebra do feed in-app nem dos triggers
   - ausencia de `KC_NOTIFICATION_WHATSAPP_*` no projeto deve resultar em gating explicito do canal `whatsapp`, nunca em quebra do feed in-app, do canal `email` nem dos triggers
 
+- A `v11.22.0` fecha a primeira rodada operacional da trilha externa:
+  - a migration `v11.22.0.0_notification_dispatch_scheduler.sql` cria `notification_dispatch_runs` para log privado de dry-run/dispatch
+  - a mesma migration cria `notification_dispatch_runtime` como camada privada versionada de URL/segredo/batch do scheduler
+  - o helper `kc_trigger_notification_dispatch(...)` usa `net.http_post(...)` para chamar a Edge Function sem expor segredos no repositório
+  - o job `pg_cron` `kc-dispatch-notification-outbox` passa a consumir a outbox a cada 5 minutos
+  - a Edge Function agora devolve e persiste `execution_id` e `source` para rastreabilidade operacional
+- Invariante nova de segredo/URL:
+  - `notification_dispatch_runtime.dispatch_secret` e a fonte preferencial do scheduler; `app.settings.kc_notification_dispatch_secret` fica como fallback
+  - `notification_dispatch_runtime.function_url` deve apontar para a URL pública correta da função no projeto ativo
+  - `app.settings.kc_notification_dispatch_secret` e `app.settings.kc_notification_dispatch_function_url` ficam como fallback/override operacional, nao como trilha preferencial
+
 ## 8. Residual Supabase advisor items
 
 - A rodada `v11.19.0` resolve, por migration versionada, os warnings acionaveis por codigo em RLS/performance para `notifications`, `post_view_events` e `kc_invited_emails`, alem da cobertura de FK por indice nessas trilhas.

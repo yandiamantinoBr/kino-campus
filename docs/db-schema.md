@@ -443,6 +443,7 @@
 - **Nota v11.21.0:** a fila passou a expor `kc_claim_notification_delivery_batch(...)` para claim atômico com recuperação de locks stale e `kc_record_notification_delivery_attempt(...)` para registrar tentativas e atualizar o outbox de forma consistente.
 - **Nota v11.21.0:** o canal `email` já tem dispatcher real na Edge Function `kc-dispatch-notification-outbox`, mas o envio permanece gated até existirem `KC_NOTIFICATION_EMAIL_PROVIDER`, `KC_NOTIFICATION_EMAIL_API_KEY` e `KC_NOTIFICATION_EMAIL_FROM` no projeto Supabase.
 - **Nota v11.21.1:** o canal `whatsapp` agora tem dispatcher real via Twilio, mas o envio continua gated ate existirem `KC_NOTIFICATION_WHATSAPP_PROVIDER`, `KC_NOTIFICATION_WHATSAPP_ACCOUNT_SID`, `KC_NOTIFICATION_WHATSAPP_AUTH_TOKEN`, `KC_NOTIFICATION_WHATSAPP_FROM` e `KC_NOTIFICATION_WHATSAPP_CONTENT_SID`.
+- **Nota v11.22.0:** a fila passa a ter consumo automático versionado pelo helper `kc_trigger_notification_dispatch(...)` e pelo job `pg_cron` `kc-dispatch-notification-outbox`, mantendo fail-closed quando os settings de banco do dispatcher ainda não existirem.
 
 ---
 
@@ -461,6 +462,54 @@
 | `attempted_at` | TIMESTAMPTZ | |
 
 **RLS:** nenhuma policy para `anon`/`authenticated`; uso reservado a `service_role`.
+
+---
+
+### `notification_dispatch_runtime` — Runtime Privado do Scheduler (v11.22.0)
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `slot` | TEXT PK | Nesta fase, apenas `primary` |
+| `function_url` | TEXT NULL | URL publica da Edge Function `kc-dispatch-notification-outbox` |
+| `dispatch_secret` | TEXT | Segredo privado usado pelo scheduler |
+| `batch_limit` | INTEGER | Limite padrao de rows por execucao |
+| `created_at` | TIMESTAMPTZ | |
+| `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
+
+**RLS:** nenhuma policy para `anon`/`authenticated`; uso reservado a `service_role`.
+
+**Observações operacionais:**
+- a migration insere automaticamente a row `slot='primary'`
+- `dispatch_secret` e gerado no banco no primeiro insert
+- `function_url` deve apontar para `https://<project-ref>.functions.supabase.co/kc-dispatch-notification-outbox`
+- `app.settings.kc_notification_dispatch_*` permanecem apenas como fallback operacional
+
+---
+
+### `notification_dispatch_runs` — Log Privado de Execuções do Dispatcher (v11.22.0)
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `execution_id` | TEXT | Identificador lógico da execução |
+| `source` | TEXT | Origem da execução (`manual`, `pg_cron`, etc.) |
+| `mode` | TEXT | `dry_run` ou `dispatch` |
+| `channel_filter` | TEXT NULL | `email`, `whatsapp` ou `NULL` para multicanal |
+| `status` | TEXT | `completed` ou `error` |
+| `batch_limit` | INTEGER | Limite usado na execução |
+| `provider_ready` | JSONB | Estado de readiness dos providers por canal |
+| `provider_issues` | JSONB | Problemas de configuração por canal |
+| `summary` | JSONB | Resumo operacional da execução |
+| `error_code` | TEXT | Código resumido de falha quando aplicável |
+| `error_message` | TEXT | Mensagem resumida de falha quando aplicável |
+| `created_at` | TIMESTAMPTZ | |
+
+**RLS:** nenhuma policy para `anon`/`authenticated`; uso reservado a `service_role`.
+
+**Observações operacionais:**
+- alimentada pela Edge Function `kc-dispatch-notification-outbox`
+- registra tanto `dry_run` quanto `dispatch`
+- não substitui `notification_delivery_attempts`; complementa a observabilidade em nível de execução
 
 ---
 
@@ -495,6 +544,8 @@ idx_notification_delivery_outbox_user_created ON notification_delivery_outbox(us
 notification_delivery_outbox_notification_channel_uidx ON notification_delivery_outbox(notification_id, channel)  -- v11.20.2
 idx_notification_delivery_attempts_outbox_attempted ON notification_delivery_attempts(outbox_id, attempted_at DESC)  -- v11.20.2
 idx_notification_delivery_attempts_channel_status ON notification_delivery_attempts(channel, status, attempted_at DESC)  -- v11.20.2
+idx_notification_dispatch_runs_created ON notification_dispatch_runs(created_at DESC)  -- v11.22.0
+idx_notification_dispatch_runs_source_created ON notification_dispatch_runs(source, created_at DESC)  -- v11.22.0
 idx_kc_invited_emails_invited_by ON kc_invited_emails(invited_by)          -- v9.3.3
 idx_posts_fts                  ON posts USING GIN(kc_posts_search_document(title, description, category, metadata)) WHERE legacy_id IS NULL  -- v9.2.0
 posts_metadata_gin_idx         ON posts USING GIN(metadata)

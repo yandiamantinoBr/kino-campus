@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, pela rodada documental de planejamento `v11.19.1`, pelas fases funcionais `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0` e agora `v11.21.1`, que adiciona o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limiting operacional e dispatcher multicanal sem reaproveitar o WhatsApp publico do perfil.
+**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 em execução pelas iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, pela rodada documental de planejamento `v11.19.1`, pelas fases funcionais `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1` e agora `v11.22.0`, que versiona o scheduler do dispatcher externo, cria observabilidade privada de runs e fecha a primeira rodada de invariantes operacionais da trilha multicanal.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 50 suites de regressão e contrato |
+| Testes | Jest: 51 suites de regressão e contrato |
 
 ---
 
@@ -27,7 +27,8 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.21.1 | canal privado de WhatsApp implementado sobre a trilha de outbox: tabela `notification_channel_targets`, preferencia/consentimento separados do perfil publico, novos metodos `KCAPI.getNotificationChannelTargets()`/`updateNotificationChannelTargets()` e dispatcher `kc-dispatch-notification-outbox` ampliado para Twilio com rate limit por usuario | em fechamento nesta rodada |
+| v11.22.0 | scheduler versionado do dispatcher externo: migration `v11.22.0.0_notification_dispatch_scheduler.sql`, tabela privada `notification_dispatch_runs`, helper `kc_trigger_notification_dispatch(...)`, job `pg_cron` `kc-dispatch-notification-outbox` e Edge Function endurecida com `execution_id`/`source` e persistencia de runs | `#278` |
+| v11.21.1 | canal privado de WhatsApp implementado sobre a trilha de outbox: tabela `notification_channel_targets`, preferencia/consentimento separados do perfil publico, novos metodos `KCAPI.getNotificationChannelTargets()`/`updateNotificationChannelTargets()` e dispatcher `kc-dispatch-notification-outbox` ampliado para Twilio com rate limit por usuario | `#277` |
 | v11.21.0 | canal de e-mail implementado sobre a outbox: helpers SQL `kc_claim_notification_delivery_batch(...)`/`kc_record_notification_delivery_attempt(...)`, template HTML/texto, envio por `Resend` na Edge Function `kc-dispatch-notification-outbox` e observabilidade de preview/dispatch mantendo `public.notifications` como trilha canonica | `#275` |
 | v11.20.2 | fundação assincrona de entrega externa com `notification_delivery_outbox`, `notification_delivery_attempts`, helper canônico `kc_emit_notification_event(...)`, correção do trigger de voto para o contrato real `post_votes(voter_id, direction='hot'|'cold')` e Edge Function `kc-dispatch-notification-outbox` publicada em dry-run | `#273` |
 | v11.20.1 | preferências de notificações persistidas por evento e canal, com camada privada separada em `notification_preferences`, UI de configuração em `settings`, novos métodos `KCAPI.getNotificationPreferences()`/`updateNotificationPreferences()` e triggers in-app passando a respeitar o canal `in_app` sem ainda ativar entrega externa | `#271` |
@@ -82,17 +83,17 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteração ativa consolidada: `v11.21.1`
-- objetivo da iteração: promover a trilha externa de notificações para o canal privado de WhatsApp, sem quebrar o sino/dropdown, a fila privada, o canal de e-mail já entregue e a trilha in-app
-- natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.21.1.0_notification_whatsapp_channel.sql`), persistencia privada de destino em `notification_channel_targets` e Edge Function `kc-dispatch-notification-outbox` ampliada para Twilio e rate limiting por usuario
+- iteração ativa consolidada: `v11.22.0`
+- objetivo da iteração: fechar a primeira rodada de invariantes operacionais da trilha multicanal, automatizando o consumo da outbox e adicionando observabilidade privada de runs sem quebrar `public.notifications`, o canal de e-mail, o canal de WhatsApp nem os triggers existentes
+- natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.22.0.0_notification_dispatch_scheduler.sql`) e Edge Function `kc-dispatch-notification-outbox` ampliada para persistir `execution_id`/`source` em `notification_dispatch_runs`
 - ultimo preview validado desta fase: em homologacao nesta rodada
 - deploy de producao validado desta fase: pendente do fechamento desta rodada
 - achados desta rodada:
-  - `public.notifications` continua como feed canonico do sino/dropdown; o canal WhatsApp usa apenas a trilha privada `notification_channel_targets` + `notification_delivery_outbox`
-  - `settings` agora separa o destino privado de WhatsApp do contato publico do perfil, com consentimento explicito antes de qualquer envio externo
-  - a Edge Function passou a gerar previews e a despachar `whatsapp` via Twilio quando `dryRun=false` e os segredos `KC_NOTIFICATION_WHATSAPP_*` existirem
-  - o projeto Supabase principal ainda depende da configuracao operacional do provider de WhatsApp; sem esses segredos o runtime permanece gated, sem quebrar o feed in-app nem o canal de e-mail
-- próxima iteração sugerida: `v11.22.0`, para revisar storage, Edge Functions e invariantes de deploy com a trilha multicanal ja fechada em codigo
+  - a fila `notification_delivery_outbox` deixa de depender apenas de acionamento manual: o banco agora agenda `kc-dispatch-notification-outbox` a cada 5 minutos via `pg_cron`
+  - a Edge Function passou a persistir runs em `notification_dispatch_runs`, com `execution_id`, `source`, `provider_ready` e resumo operacional para dry-run/dispatch
+  - o acionamento automatico continua fail-closed: sem `notification_dispatch_runtime.function_url` ou secret valido, o scheduler nao dispara HTTP externo
+  - o scheduler passou a usar a camada privada `notification_dispatch_runtime`; `app.settings.kc_notification_dispatch_*` ficam como fallback operacional
+- próxima iteração sugerida: `v11.23.0`, para executar o release gate final da v11 e preparar a trilha futura de i18n/a11y/UX Writing
 
 ---
 
@@ -208,7 +209,7 @@ Acesse `http://localhost:5500/index.html`.
 
 ### 1) Migrations
 
-Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **82 arquivos**, incluindo as 2 migrations da v10, a migration operacional `v9.3.3.0_supabase_operational_rls_fk.sql`, a trilha `v11.20.1.0_notification_preferences.sql`, a fundação `v11.20.2.0_notification_delivery_outbox.sql`, a promoção do canal de e-mail `v11.21.0.0_notification_email_channel.sql` e a camada privada do canal WhatsApp `v11.21.1.0_notification_whatsapp_channel.sql`.
+Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **83 arquivos**, incluindo as 2 migrations da v10, a migration operacional `v9.3.3.0_supabase_operational_rls_fk.sql`, a trilha `v11.20.1.0_notification_preferences.sql`, a fundação `v11.20.2.0_notification_delivery_outbox.sql`, a promoção do canal de e-mail `v11.21.0.0_notification_email_channel.sql`, a camada privada do canal WhatsApp `v11.21.1.0_notification_whatsapp_channel.sql` e o scheduler `v11.22.0.0_notification_dispatch_scheduler.sql`.
 
 No banco principal atual, as 2 migrations da v10 já foram aplicadas. Use a lista abaixo para ambientes novos, bancos recriados ou staging separado.
 
@@ -220,6 +221,7 @@ Se estiver atualizando um ambiente que já estava em v9, garanta pelo menos a ap
 4. `v11.20.2.0_notification_delivery_outbox.sql`
 5. `v11.21.0.0_notification_email_channel.sql`
 6. `v11.21.1.0_notification_whatsapp_channel.sql`
+7. `v11.22.0.0_notification_dispatch_scheduler.sql`
 
 Você pode aplicar pelo SQL Editor do Supabase ou pela CLI.
 
@@ -306,12 +308,20 @@ Observações:
 - a `v11.21.0` publica essa função com envio real por e-mail via `Resend`, mas o projeto Supabase principal ainda precisa receber os segredos `KC_NOTIFICATION_EMAIL_*` para sair do gating operacional
 - a `v11.21.1` implementa o canal privado de WhatsApp sem reutilizar o contato publico do perfil; o envio real depende dos segredos `KC_NOTIFICATION_WHATSAPP_*`
 - a invocação exige o header `x-kc-dispatch-secret`
+- a `v11.22.0` adiciona um scheduler no banco para consumir a outbox automaticamente; a função continua segura porque o disparo depende da camada privada `notification_dispatch_runtime` e os providers continuam gated por canal
 
 ### 6) Settings de banco fora do git
 
+- `public.notification_dispatch_runtime.slot = 'primary'`
+- `public.notification_dispatch_runtime.function_url`
+- `public.notification_dispatch_runtime.dispatch_secret`
+- opcionalmente `public.notification_dispatch_runtime.batch_limit`
 - `app.settings.kc_notify_function_url`
 - `app.settings.kc_notify_function_auth_token`
 - `app.settings.kc_notify_hmac_secret`
+- opcionalmente `app.settings.kc_notification_dispatch_function_url` como fallback
+- opcionalmente `app.settings.kc_notification_dispatch_secret` como fallback
+- opcionalmente `app.settings.kc_notification_dispatch_batch_limit` como fallback
 
 ---
 

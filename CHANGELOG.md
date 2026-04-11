@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `v11.22.0`: criada a migration `v11.22.0.0_notification_dispatch_scheduler.sql`, adicionando a tabela privada `notification_dispatch_runs`, o helper `kc_trigger_notification_dispatch(...)` e o job `pg_cron` `kc-dispatch-notification-outbox` para consumo versionado da outbox externa.
+- `v11.22.0`: `kc-dispatch-notification-outbox` passou a persistir `execution_id`, `source`, `provider_ready`, `provider_issues` e resumos de `dry_run`/`dispatch` em `notification_dispatch_runs`, endurecendo a observabilidade operacional sem alterar o contrato de entrega por canal.
+- `v11.22.0`: atualizados `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/db-schema.md`, `docs/rpc-catalog.md`, `docs/env-vars.md` e `docs/ops/vercel-supabase-invariants.md` para registrar o scheduler, os novos settings de banco e a próxima trilha obrigatória da v11.
 - `v11.21.1`: criada a migration `v11.21.1.0_notification_whatsapp_channel.sql`, adicionando a tabela privada `notification_channel_targets`, o helper `kc_count_recent_notification_deliveries(...)` e a ampliacao de `kc_resolve_notification_delivery_destination(...)` para resolver destinos privados de WhatsApp com consentimento explicito.
 - `v11.21.1`: `settings.html`, `settings.controller.js`, `account-profile.shared.js`, `kc-api.client.js`, `supabase.adapter.js` e `local.adapter.js` passaram a expor configuracao privada de WhatsApp com normalizacao E.164, preview seguro e persistencia separada do WhatsApp publico do perfil.
 - `v11.21.1`: `kc-dispatch-notification-outbox` passou a despachar `whatsapp` via Twilio, com rate limit por usuario, masking do destino, previews em `dry_run` e gating operacional quando `KC_NOTIFICATION_WHATSAPP_*` ainda nao existirem no projeto.
