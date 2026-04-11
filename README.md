@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.20.2 | fundação assincrona de entrega externa com `notification_delivery_outbox`, `notification_delivery_attempts`, helper canônico `kc_emit_notification_event(...)`, correção do trigger de voto para o contrato real `post_votes(voter_id, direction='hot'|'cold')` e Edge Function `kc-dispatch-notification-outbox` publicada em dry-run | em fechamento nesta iteração |
+| v11.20.2 | fundação assincrona de entrega externa com `notification_delivery_outbox`, `notification_delivery_attempts`, helper canônico `kc_emit_notification_event(...)`, correção do trigger de voto para o contrato real `post_votes(voter_id, direction='hot'|'cold')` e Edge Function `kc-dispatch-notification-outbox` publicada em dry-run | `#273` |
 | v11.20.1 | preferências de notificações persistidas por evento e canal, com camada privada separada em `notification_preferences`, UI de configuração em `settings`, novos métodos `KCAPI.getNotificationPreferences()`/`updateNotificationPreferences()` e triggers in-app passando a respeitar o canal `in_app` sem ainda ativar entrega externa | `#271` |
 | v11.20.0 | hardening do sino e do dropdown de notificações: geometria mais estável do `kcNotifBell`, ação explícita de `Limpar` no `kcNotifDropdown`, contrato `KCAPI.clearNotifications()` e realtime endurecido para `INSERT`/`UPDATE`/`DELETE`, sem alterar a fonte canônica in-app em `public.notifications` | `#269` |
 | v11.19.0 | auditoria operacional do Supabase com migration versionada para eliminar warnings ativos de RLS/performance em `notifications`, `post_view_events` e `kc_invited_emails`, cobrindo `initplan`, policies permissivas redundantes e índices de FK faltantes, além de sincronizar `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais | `#265` |
@@ -83,6 +83,8 @@ Regras desta fase:
 - iteração ativa consolidada: `v11.20.2`
 - objetivo da iteração: introduzir a fundação assincrona de entrega externa, separando a trilha in-app de uma fila privada de e-mail/WhatsApp sem acoplar provider aos triggers principais
 - natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.20.2.0_notification_delivery_outbox.sql`) e Edge Function `kc-dispatch-notification-outbox` publicada em modo dry-run
+- último preview validado desta fase: `dpl_9oPGNvCSE1L6ug9fVXJofXpmRqJF`, alias `https://kino-campus-git-codex-v11-20-2-n-76101d-yannakamurabrs-projects.vercel.app`
+- deploy de produção validado desta fase: `dpl_4nc73MAaDN2frzDQo6auLjrsm3h3`, publicado em [www.kinocampus.com.br](https://www.kinocampus.com.br)
 - achados desta rodada:
   - `public.notifications` permanece como feed canônico do sino/dropdown, mas os eventos agora podem gerar outbox externo sem depender da notificação in-app existir
   - a camada `notification_delivery_outbox` resolve destino privado por canal e bloqueia explicitamente o WhatsApp enquanto não existir configuração privada dedicada
