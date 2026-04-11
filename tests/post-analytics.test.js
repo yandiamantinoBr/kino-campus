@@ -30,6 +30,10 @@ describe('Post Analytics (v9.3.1)', () => {
 
   beforeEach(() => {
     api = window.KCAPI;
+    if (api && typeof api.invalidatePostAnalyticsCache === 'function') {
+      api.invalidatePostAnalyticsCache('post-uuid-123');
+      api.invalidatePostAnalyticsCache('qualquer-id');
+    }
   });
 
   // ── KCAPI.trackView ──────────────────────────────────────────
@@ -89,7 +93,7 @@ describe('Post Analytics (v9.3.1)', () => {
       });
 
       window.KC_ENV.driver = 'local';
-      const result = await api.getPostAnalytics('post-uuid-123');
+      const result = await api.getPostAnalytics('post-uuid-123', { force: true });
 
       expect(result).toEqual(payload);
       expect(result.views).toBe(100);
@@ -105,7 +109,7 @@ describe('Post Analytics (v9.3.1)', () => {
       });
 
       window.KC_ENV.driver = 'local';
-      const result = await api.getPostAnalytics('post-uuid-123');
+      const result = await api.getPostAnalytics('post-uuid-123', { force: true });
 
       expect(result).toEqual({ ok: false });
     });
@@ -126,7 +130,7 @@ describe('Post Analytics (v9.3.1)', () => {
 
     test('getPostAnalytics retorna { ok: false } no adapter local', async () => {
       window.KC_ENV.driver = 'local';
-      const result = await api.getPostAnalytics('qualquer-id');
+      const result = await api.getPostAnalytics('qualquer-id', { force: true });
       expect(result).toEqual({ ok: false });
     });
   });
