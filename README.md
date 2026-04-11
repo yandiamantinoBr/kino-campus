@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.20.1 | preferências de notificações persistidas por evento e canal, com camada privada separada em `notification_preferences`, UI de configuração em `settings`, novos métodos `KCAPI.getNotificationPreferences()`/`updateNotificationPreferences()` e triggers in-app passando a respeitar o canal `in_app` sem ainda ativar entrega externa | em fechamento operacional |
+| v11.20.1 | preferências de notificações persistidas por evento e canal, com camada privada separada em `notification_preferences`, UI de configuração em `settings`, novos métodos `KCAPI.getNotificationPreferences()`/`updateNotificationPreferences()` e triggers in-app passando a respeitar o canal `in_app` sem ainda ativar entrega externa | `#271` |
 | v11.20.0 | hardening do sino e do dropdown de notificações: geometria mais estável do `kcNotifBell`, ação explícita de `Limpar` no `kcNotifDropdown`, contrato `KCAPI.clearNotifications()` e realtime endurecido para `INSERT`/`UPDATE`/`DELETE`, sem alterar a fonte canônica in-app em `public.notifications` | `#269` |
 | v11.19.0 | auditoria operacional do Supabase com migration versionada para eliminar warnings ativos de RLS/performance em `notifications`, `post_view_events` e `kc_invited_emails`, cobrindo `initplan`, policies permissivas redundantes e índices de FK faltantes, além de sincronizar `docs/db-schema.md`, `docs/rpc-catalog.md` e invariantes operacionais | `#265` |
 | v11.18.0 | aprofundamento da rodada de contratos entre `KCAPI` e adapters: `getProfileHighlightsCount(...)` passou a aceitar `params` e a encaminhá-los com paridade entre `kc-api.client.js`, `local.adapter.js` e `supabase.adapter.js`, preservando a semântica highlight-only e adicionando regressões diretas de dispatch/paridade | `#263` |
@@ -82,7 +82,7 @@ Regras desta fase:
 - iteração ativa consolidada: `v11.20.1`
 - objetivo da iteração: persistir preferências de notificação por evento e por canal, sem misturar contato público com destino privado de entrega e sem quebrar a trilha canônica in-app
 - natureza da iteração: funcional, com migration nova aplicada no Supabase (`v11.20.1.0_notification_preferences.sql`) e sem ainda ativar envio externo por e-mail/WhatsApp
-- último preview validado desta fase: em fechamento operacional desta mesma iteração
+- último preview validado desta fase: `dpl_HrWK6p9ugp8LZ9PSfKgLbJ4m8Q7U`, alias `https://kino-campus-git-codex-v11-20-1-n-957980-yannakamurabrs-projects.vercel.app`
 - achados desta rodada:
   - a nova camada privada `public.notification_preferences` mantém defaults backfill-safe: `in_app=true`, `email=false` e `whatsapp=false`
   - o usuário agora configura em `settings` quais eventos quer receber e em quais canais, sem reaproveitar automaticamente o contato público do perfil
