@@ -1,12 +1,67 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+type Channel = "email" | "whatsapp";
+type JsonObject = Record<string, unknown>;
+
 type OutboxRow = {
   id: string;
-  channel: "email" | "whatsapp";
+  notification_id: string | null;
+  user_id: string;
+  event_type: string;
+  channel: Channel;
   status: string;
+  destination: string | null;
+  destination_source: string | null;
+  payload: JsonObject;
+  attempts_count: number;
+  last_attempt_at: string | null;
   next_attempt_at: string;
+  locked_at: string | null;
+  locked_by: string | null;
   error_code: string | null;
+  error_message: string | null;
   created_at: string;
+};
+
+type EmailProviderConfig = {
+  name: string | null;
+  ready: boolean;
+  missing: string[];
+  apiKey: string | null;
+  from: string | null;
+  replyTo: string | null;
+  appBaseUrl: string;
+};
+
+type EmailEnvelope = {
+  subject: string;
+  html: string;
+  text: string;
+  actionUrl: string;
+  preferencesUrl: string;
+  title: string;
+  preview: string;
+};
+
+type DispatchResult = {
+  ok: boolean;
+  provider: string;
+  responseCode: string;
+  responseBody: JsonObject;
+  errorCode: string | null;
+  errorMessage: string | null;
+  envelope: EmailEnvelope;
+};
+
+const DEFAULT_APP_BASE_URL = "https://www.kinocampus.com.br";
+const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const MODULE_PATHS: Record<string, string> = {
+  "achados-perdidos": "/achados-perdidos.html",
+  "caronas": "/caronas-feed.html",
+  "compra-venda": "/compra-venda-feed.html",
+  "eventos": "/eventos.html",
+  "moradia": "/moradia.html",
+  "oportunidades": "/oportunidades.html",
 };
 
 function json(status: number, body: Record<string, unknown>) {
@@ -21,8 +76,8 @@ function json(status: number, body: Record<string, unknown>) {
 function timingSafeEqual(left: string, right: string) {
   if (left.length !== right.length) return false;
   let mismatch = 0;
-  for (let i = 0; i < left.length; i += 1) {
-    mismatch |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  for (let index = 0; index < left.length; index += 1) {
+    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index);
   }
   return mismatch === 0;
 }
@@ -33,16 +88,362 @@ function getRequiredEnv(name: string) {
   return value;
 }
 
+function getOptionalEnv(name: string) {
+  const value = Deno.env.get(name)?.trim();
+  return value || null;
+}
+
 function parsePositiveInt(raw: unknown, fallback: number, max = 200) {
   const parsed = Number.parseInt(String(raw ?? ""), 10);
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
   return Math.min(parsed, max);
 }
 
-function normalizeChannel(value: unknown) {
+function normalizeChannel(value: unknown): Channel | null {
   const channel = String(value ?? "").trim().toLowerCase();
   if (channel === "email" || channel === "whatsapp") return channel;
   return null;
+}
+
+function normalizeJsonObject(value: unknown): JsonObject {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as JsonObject;
+}
+
+function asText(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  if (value == null) return "";
+  return String(value).trim();
+}
+
+function truncate(text: string, maxLength: number) {
+  const normalized = asText(text);
+  if (!normalized) return "";
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function safeSnippet(value: unknown, maxLength = 280) {
+  return truncate(asText(value).replace(/[\u0000-\u001f\u007f]+/g, " "), maxLength);
+}
+
+function maskEmail(value: string | null) {
+  const email = asText(value);
+  if (!email.includes("@")) return "";
+  const [localPart, domainPart] = email.split("@");
+  if (!localPart || !domainPart) return "";
+  if (localPart.length <= 2) return `${localPart[0] ?? "*"}***@${domainPart}`;
+  return `${localPart.slice(0, 2)}***@${domainPart}`;
+}
+
+function isEmailLike(value: string | null) {
+  const email = asText(value);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function parseJsonBody(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+function toProviderBody(raw: string) {
+  const parsed = parseJsonBody(raw);
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    return parsed as JsonObject;
+  }
+  if (raw.trim()) return { raw: safeSnippet(raw, 1200) };
+  return {};
+}
+
+function buildAppBaseUrl() {
+  return (getOptionalEnv("KC_APP_BASE_URL") || DEFAULT_APP_BASE_URL).replace(/\/+$/, "");
+}
+
+function getEmailProviderConfig(appBaseUrl: string): EmailProviderConfig {
+  const name = getOptionalEnv("KC_NOTIFICATION_EMAIL_PROVIDER")?.toLowerCase() || null;
+  const apiKey = getOptionalEnv("KC_NOTIFICATION_EMAIL_API_KEY");
+  const from = getOptionalEnv("KC_NOTIFICATION_EMAIL_FROM");
+  const replyTo = getOptionalEnv("KC_NOTIFICATION_EMAIL_REPLY_TO");
+  const missing: string[] = [];
+
+  if (name === "resend") {
+    if (!apiKey) missing.push("KC_NOTIFICATION_EMAIL_API_KEY");
+    if (!from) missing.push("KC_NOTIFICATION_EMAIL_FROM");
+  } else if (!name) {
+    missing.push("KC_NOTIFICATION_EMAIL_PROVIDER");
+  }
+
+  return {
+    name,
+    ready: name === "resend" && missing.length === 0,
+    missing,
+    apiKey,
+    from,
+    replyTo,
+    appBaseUrl,
+  };
+}
+
+function buildNotificationUrl(row: OutboxRow, appBaseUrl: string) {
+  const payload = normalizeJsonObject(row.payload);
+  const data = normalizeJsonObject(payload.data);
+  const explicitUrl = asText(data.url || data.href || payload.url);
+  if (/^https?:\/\//i.test(explicitUrl)) return explicitUrl;
+
+  const postId = asText(data.post_id);
+  if (postId) {
+    return `${appBaseUrl}/_product.html?id=${encodeURIComponent(postId)}`;
+  }
+
+  const moduleName = asText(data.module);
+  if (moduleName && MODULE_PATHS[moduleName]) {
+    return `${appBaseUrl}${MODULE_PATHS[moduleName]}`;
+  }
+
+  return `${appBaseUrl}/settings.html`;
+}
+
+function buildEventLabel(eventType: string) {
+  switch (eventType) {
+    case "comment_on_post":
+      return "Novo comentario";
+    case "comment_reply":
+      return "Nova resposta";
+    case "vote_on_post":
+      return "Novo voto";
+    case "post_expired":
+      return "Post expirado";
+    case "post_reported":
+      return "Post denunciado";
+    default:
+      return "Notificacao";
+  }
+}
+
+function buildEmailEnvelope(row: OutboxRow, appBaseUrl: string): EmailEnvelope {
+  const payload = normalizeJsonObject(row.payload);
+  const eventType = asText(payload.event_type || row.event_type || "system").toLowerCase();
+  const eventLabel = buildEventLabel(eventType);
+  const title = truncate(asText(payload.title) || eventLabel, 120);
+  const body = truncate(asText(payload.body) || "Voce tem uma nova atualizacao na plataforma.", 500);
+  const actionUrl = buildNotificationUrl(row, appBaseUrl);
+  const preferencesUrl = `${appBaseUrl}/settings.html`;
+  const subject = `[KinoCampus] ${truncate(title || eventLabel, 120)}`;
+  const preview = truncate(body || title || eventLabel, 120);
+
+  const safeTitle = escapeHtml(title || eventLabel);
+  const safeBody = escapeHtml(body);
+  const safeActionUrl = escapeHtml(actionUrl);
+  const safePreferencesUrl = escapeHtml(preferencesUrl);
+  const safeEventLabel = escapeHtml(eventLabel);
+
+  const html = [
+    "<!doctype html>",
+    "<html lang=\"pt-BR\">",
+    "<head>",
+    "<meta charset=\"utf-8\" />",
+    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />",
+    `<title>${escapeHtml(subject)}</title>`,
+    "</head>",
+    "<body style=\"margin:0;padding:0;background:#f6f3ef;color:#1a1a1a;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;\">",
+    "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"background:#f6f3ef;padding:24px 12px;\">",
+    "<tr><td align=\"center\">",
+    "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:620px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #f0e7df;\">",
+    "<tr><td style=\"padding:24px 28px;background:linear-gradient(135deg,#ff7a18 0%,#ff9f4a 100%);color:#ffffff;\">",
+    "<div style=\"font-size:12px;letter-spacing:0.08em;text-transform:uppercase;opacity:0.88;\">KinoCampus</div>",
+    `<div style="margin-top:10px;font-size:28px;line-height:1.2;font-weight:700;">${safeTitle}</div>`,
+    `<div style="margin-top:10px;font-size:13px;line-height:1.4;opacity:0.92;">${safeEventLabel}</div>`,
+    "</td></tr>",
+    "<tr><td style=\"padding:28px;\">",
+    `<p style="margin:0 0 18px;font-size:16px;line-height:1.6;color:#2b2b2b;">${safeBody}</p>`,
+    `<p style="margin:0 0 22px;"><a href="${safeActionUrl}" style="display:inline-block;padding:13px 22px;border-radius:999px;background:#111111;color:#ffffff;text-decoration:none;font-weight:700;">Abrir no KinoCampus</a></p>`,
+    `<p style="margin:0;font-size:13px;line-height:1.6;color:#666666;">Voce esta recebendo este e-mail porque habilitou notificacoes por e-mail nas suas preferencias. Para ajustar os canais, acesse <a href="${safePreferencesUrl}" style="color:#ff7a18;">Configuracoes</a>.</p>`,
+    "</td></tr>",
+    "</table>",
+    "</td></tr>",
+    "</table>",
+    "</body>",
+    "</html>",
+  ].join("");
+
+  const text = [
+    "KinoCampus",
+    "",
+    title || eventLabel,
+    body,
+    "",
+    `Abrir no KinoCampus: ${actionUrl}`,
+    `Gerenciar notificacoes: ${preferencesUrl}`,
+  ].filter(Boolean).join("\n");
+
+  return {
+    subject,
+    html,
+    text,
+    actionUrl,
+    preferencesUrl,
+    title: title || eventLabel,
+    preview,
+  };
+}
+
+async function claimDispatchBatch(
+  supabase: ReturnType<typeof createClient>,
+  channel: Channel,
+  limit: number,
+  workerId: string,
+) {
+  const { data, error } = await supabase.rpc("kc_claim_notification_delivery_batch", {
+    p_channel: channel,
+    p_limit: limit,
+    p_worker: workerId,
+  });
+
+  if (error) {
+    throw new Error(`claim_batch_failed:${error.message}`);
+  }
+
+  return Array.isArray(data)
+    ? data.map((row) => ({
+      ...row,
+      payload: normalizeJsonObject((row as Record<string, unknown>).payload),
+    })) as OutboxRow[]
+    : [];
+}
+
+async function recordAttempt(
+  supabase: ReturnType<typeof createClient>,
+  outboxId: string,
+  status: "sent" | "failed" | "blocked" | "cancelled" | "skipped",
+  provider: string,
+  responseCode: string,
+  responseBody: JsonObject,
+  errorCode: string | null,
+  errorMessage: string | null,
+  nextAttemptAt: string | null,
+) {
+  const { data, error } = await supabase.rpc("kc_record_notification_delivery_attempt", {
+    p_outbox_id: outboxId,
+    p_status: status,
+    p_provider: provider,
+    p_response_code: responseCode,
+    p_response_body: responseBody,
+    p_error_code: errorCode,
+    p_error_message: errorMessage,
+    p_next_attempt_at: nextAttemptAt,
+  });
+
+  if (error) {
+    throw new Error(`record_attempt_failed:${error.message}`);
+  }
+
+  if (Array.isArray(data)) return (data[0] ?? null) as OutboxRow | null;
+  return data as OutboxRow | null;
+}
+
+function computeNextAttemptAt(previousAttempts: number) {
+  const attemptNumber = Math.max(1, previousAttempts + 1);
+  const delayMinutes = Math.min(12 * 60, 5 * (2 ** Math.min(attemptNumber - 1, 7)));
+  return new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+}
+
+async function sendEmailWithResend(
+  row: OutboxRow,
+  providerConfig: EmailProviderConfig,
+): Promise<DispatchResult> {
+  const destination = asText(row.destination);
+  const envelope = buildEmailEnvelope(row, providerConfig.appBaseUrl);
+
+  if (!isEmailLike(destination)) {
+    return {
+      ok: false,
+      provider: "resend",
+      responseCode: "invalid_destination",
+      responseBody: { destination: destination || null },
+      errorCode: "invalid_destination",
+      errorMessage: "Destino de e-mail invalido ou ausente no item do outbox.",
+      envelope,
+    };
+  }
+
+  const res = await fetch(RESEND_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${providerConfig.apiKey}`,
+    },
+    body: JSON.stringify({
+      from: providerConfig.from,
+      to: [destination],
+      subject: envelope.subject,
+      html: envelope.html,
+      text: envelope.text,
+      ...(providerConfig.replyTo ? { reply_to: providerConfig.replyTo } : {}),
+    }),
+  });
+
+  const raw = await res.text();
+  const responseBody = toProviderBody(raw);
+
+  if (!res.ok) {
+    const providerError =
+      asText(responseBody.error) ||
+      asText(responseBody.message) ||
+      asText((responseBody as JsonObject).name) ||
+      safeSnippet(raw, 240) ||
+      `provider_http_${res.status}`;
+
+    return {
+      ok: false,
+      provider: "resend",
+      responseCode: String(res.status),
+      responseBody,
+      errorCode: `provider_http_${res.status}`,
+      errorMessage: providerError,
+      envelope,
+    };
+  }
+
+  return {
+    ok: true,
+    provider: "resend",
+    responseCode: String(res.status),
+    responseBody,
+    errorCode: null,
+    errorMessage: null,
+    envelope,
+  };
+}
+
+async function dispatchEmail(
+  row: OutboxRow,
+  providerConfig: EmailProviderConfig,
+): Promise<DispatchResult> {
+  if (providerConfig.name !== "resend") {
+    return {
+      ok: false,
+      provider: providerConfig.name || "unknown",
+      responseCode: "unsupported_provider",
+      responseBody: {},
+      errorCode: "unsupported_provider",
+      errorMessage: `Provider de e-mail nao suportado nesta fase: ${providerConfig.name || "none"}.`,
+      envelope: buildEmailEnvelope(row, providerConfig.appBaseUrl),
+    };
+  }
+
+  return sendEmailWithResend(row, providerConfig);
 }
 
 Deno.serve(async (req) => {
@@ -81,77 +482,241 @@ Deno.serve(async (req) => {
     body.limit,
     parsePositiveInt(Deno.env.get("KC_NOTIFICATION_DISPATCH_BATCH_LIMIT"), 25),
   );
-
+  const appBaseUrl = buildAppBaseUrl();
+  const emailProvider = getEmailProviderConfig(appBaseUrl);
+  const whatsappProviderName = getOptionalEnv("KC_NOTIFICATION_WHATSAPP_PROVIDER");
   const providerByChannel = {
-    email: Deno.env.get("KC_NOTIFICATION_EMAIL_PROVIDER")?.trim() || null,
-    whatsapp: Deno.env.get("KC_NOTIFICATION_WHATSAPP_PROVIDER")?.trim() || null,
+    email: emailProvider.name,
+    whatsapp: whatsappProviderName,
   } as const;
+  const providerReady = {
+    email: emailProvider.ready,
+    whatsapp: false,
+  };
+  const providerIssues = {
+    email: emailProvider.ready
+      ? []
+      : emailProvider.missing.length > 0
+        ? emailProvider.missing
+        : [`unsupported_provider:${emailProvider.name || "none"}`],
+    whatsapp: ["not_implemented"],
+  };
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
   try {
-    let query = supabase
+    let previewQuery = supabase
       .from("notification_delivery_outbox")
-      .select("id, channel, status, next_attempt_at, error_code, created_at", { count: "exact" })
+      .select(
+        "id, notification_id, user_id, event_type, channel, status, destination, destination_source, payload, attempts_count, last_attempt_at, next_attempt_at, locked_at, locked_by, error_code, error_message, created_at",
+        { count: "exact" },
+      )
       .in("status", ["queued", "failed", "blocked"])
       .order("created_at", { ascending: true })
       .limit(batchLimit);
 
     if (channelFilter) {
-      query = query.eq("channel", channelFilter);
+      previewQuery = previewQuery.eq("channel", channelFilter);
     }
 
-    const { data, error, count } = await query;
+    const { data, error, count } = await previewQuery;
     if (error) {
       console.error("[kc-dispatch-notification-outbox] outbox query failed", error);
       return json(500, { ok: false, error: "outbox_query_failed" });
     }
 
-    const rows = Array.isArray(data) ? (data as OutboxRow[]) : [];
+    const rows = Array.isArray(data)
+      ? data.map((row) => ({
+        ...row,
+        payload: normalizeJsonObject((row as Record<string, unknown>).payload),
+      })) as OutboxRow[]
+      : [];
+
     const byChannel = { email: 0, whatsapp: 0 };
     const byStatus: Record<string, number> = {};
-    const dispatchablePreview: string[] = [];
-    const blockedPreview: string[] = [];
+    const dispatchablePreviewIds: string[] = [];
+    const blockedPreviewIds: string[] = [];
+    const emailPreviews: Record<string, unknown>[] = [];
 
     for (const row of rows) {
-      if (row.channel === "email" || row.channel === "whatsapp") {
-        byChannel[row.channel] += 1;
-      }
+      byChannel[row.channel] += 1;
       byStatus[row.status] = (byStatus[row.status] || 0) + 1;
 
-      const providerReady = Boolean(providerByChannel[row.channel]);
-      if (row.status === "queued" && providerReady && dispatchablePreview.length < 10) {
-        dispatchablePreview.push(row.id);
+      if (row.status === "queued" && row.channel === "email" && providerReady.email && dispatchablePreviewIds.length < 10) {
+        dispatchablePreviewIds.push(row.id);
       }
-      if (row.status === "blocked" && blockedPreview.length < 10) {
-        blockedPreview.push(row.id);
+
+      if (row.status === "blocked" && blockedPreviewIds.length < 10) {
+        blockedPreviewIds.push(row.id);
+      }
+
+      if (row.channel === "email" && emailPreviews.length < 5) {
+        const envelope = buildEmailEnvelope(row, appBaseUrl);
+        emailPreviews.push({
+          id: row.id,
+          status: row.status,
+          destination_masked: maskEmail(row.destination),
+          provider_ready: providerReady.email,
+          subject: envelope.subject,
+          preview: envelope.preview,
+          action_url: envelope.actionUrl,
+          attempts_count: row.attempts_count,
+          error_code: row.error_code,
+        });
       }
     }
 
-    const providerReady = {
-      email: Boolean(providerByChannel.email),
-      whatsapp: Boolean(providerByChannel.whatsapp),
-    };
+    if (dryRun) {
+      return json(200, {
+        ok: true,
+        mode: "dry_run",
+        note: "Email dispatch is implemented in v11.21.0 and becomes active when dryRun=false with provider secrets configured. WhatsApp remains inspection-only.",
+        provider_ready: providerReady,
+        provider_names: providerByChannel,
+        provider_issues: providerIssues,
+        batch_limit: batchLimit,
+        selected_count: rows.length,
+        total_matching_count: count ?? rows.length,
+        channel_filter: channelFilter,
+        by_channel: byChannel,
+        by_status: byStatus,
+        dispatchable_preview_ids: dispatchablePreviewIds,
+        blocked_preview_ids: blockedPreviewIds,
+        email_previews: emailPreviews,
+      });
+    }
+
+    if (channelFilter && channelFilter !== "email") {
+      return json(501, {
+        ok: false,
+        error: "unsupported_channel_dispatch",
+        channel_filter: channelFilter,
+        note: "Only the email channel is implemented in v11.21.0.",
+        provider_ready: providerReady,
+      });
+    }
+
+    if (!emailProvider.ready) {
+      return json(412, {
+        ok: false,
+        error: "email_provider_not_configured",
+        provider_ready: providerReady,
+        provider_names: providerByChannel,
+        provider_issues: providerIssues,
+      });
+    }
+
+    const workerId = [
+      "kc-dispatch-email",
+      Deno.env.get("SB_EXECUTION_ID")?.trim() || crypto.randomUUID(),
+    ].join(":");
+
+    const claimedRows = await claimDispatchBatch(supabase, "email", batchLimit, workerId);
+    if (!claimedRows.length) {
+      return json(200, {
+        ok: true,
+        mode: "dispatch",
+        channel: "email",
+        claimed_count: 0,
+        processed_count: 0,
+        sent_count: 0,
+        failed_count: 0,
+        blocked_count: 0,
+        worker_id: workerId,
+        provider_ready: providerReady,
+      });
+    }
+
+    const sentIds: string[] = [];
+    const failedIds: string[] = [];
+    const blockedIds: string[] = [];
+    const summaries: Record<string, unknown>[] = [];
+
+    let sentCount = 0;
+    let failedCount = 0;
+    let blockedCount = 0;
+
+    for (const row of claimedRows) {
+      let result: DispatchResult;
+      try {
+        result = await dispatchEmail(row, emailProvider);
+      } catch (error) {
+        const fallbackEnvelope = buildEmailEnvelope(row, appBaseUrl);
+        result = {
+          ok: false,
+          provider: emailProvider.name || "unknown",
+          responseCode: "runtime_exception",
+          responseBody: {},
+          errorCode: "runtime_exception",
+          errorMessage: safeSnippet((error as Error)?.message || String(error), 240),
+          envelope: fallbackEnvelope,
+        };
+      }
+
+      let finalStatus: "sent" | "failed" | "blocked" = "sent";
+      let nextAttemptAt: string | null = null;
+
+      if (!result.ok) {
+        finalStatus = result.errorCode === "invalid_destination" ? "blocked" : "failed";
+        if (finalStatus === "failed") {
+          nextAttemptAt = computeNextAttemptAt(row.attempts_count);
+        }
+      }
+
+      await recordAttempt(
+        supabase,
+        row.id,
+        finalStatus,
+        result.provider,
+        result.responseCode,
+        result.responseBody,
+        result.errorCode,
+        result.errorMessage,
+        nextAttemptAt,
+      );
+
+      if (finalStatus === "sent") {
+        sentCount += 1;
+        sentIds.push(row.id);
+      } else if (finalStatus === "blocked") {
+        blockedCount += 1;
+        blockedIds.push(row.id);
+      } else {
+        failedCount += 1;
+        failedIds.push(row.id);
+      }
+
+      if (summaries.length < 10) {
+        summaries.push({
+          id: row.id,
+          status: finalStatus,
+          destination_masked: maskEmail(row.destination),
+          response_code: result.responseCode,
+          error_code: result.errorCode,
+          next_attempt_at: nextAttemptAt,
+          subject: result.envelope.subject,
+        });
+      }
+    }
 
     return json(200, {
       ok: true,
-      mode: dryRun ? "dry_run" : "inspection_only",
-      note: "Foundation only in v11.20.2; provider dispatch remains disabled.",
+      mode: "dispatch",
+      channel: "email",
+      worker_id: workerId,
+      claimed_count: claimedRows.length,
+      processed_count: claimedRows.length,
+      sent_count: sentCount,
+      failed_count: failedCount,
+      blocked_count: blockedCount,
+      sent_ids: sentIds,
+      failed_ids: failedIds,
+      blocked_ids: blockedIds,
+      summaries,
       provider_ready: providerReady,
       provider_names: providerByChannel,
-      batch_limit: batchLimit,
-      selected_count: rows.length,
-      total_matching_count: count ?? rows.length,
-      channel_filter: channelFilter,
-      by_channel: byChannel,
-      by_status: byStatus,
-      dispatchable_preview_ids: dispatchablePreview,
-      blocked_preview_ids: blockedPreview,
-      provider_not_configured: Object.entries(providerReady)
-        .filter(([, ready]) => !ready)
-        .map(([channel]) => channel),
     });
   } catch (error) {
     console.error("[kc-dispatch-notification-outbox] execution failed", error);

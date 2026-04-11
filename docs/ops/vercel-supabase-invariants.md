@@ -68,20 +68,26 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - `KC_NOTIFICATION_DISPATCH_SECRET`
   - `SUPABASE_URL`
   - `SUPABASE_SERVICE_ROLE_KEY`
-  - opcionalmente `KC_NOTIFICATION_EMAIL_PROVIDER`
+  - `KC_NOTIFICATION_EMAIL_PROVIDER`
+  - `KC_NOTIFICATION_EMAIL_API_KEY`
+  - `KC_NOTIFICATION_EMAIL_FROM`
+  - opcionalmente `KC_NOTIFICATION_EMAIL_REPLY_TO`
+  - opcionalmente `KC_APP_BASE_URL`
   - opcionalmente `KC_NOTIFICATION_WHATSAPP_PROVIDER`
   - opcionalmente `KC_NOTIFICATION_DISPATCH_BATCH_LIMIT`
 - O contrato HTTP atual da função exige:
   - `POST`
   - header `x-kc-dispatch-secret`
-- A `v11.20.2` publica essa função em modo dry-run/inspection:
-  - consulta a fila `notification_delivery_outbox`
-  - resume itens por `channel`/`status`
-  - não envia para provider real nesta fase
+- A `v11.21.0` promove essa função para o canal de e-mail:
+  - `dryRun=true` continua como default seguro e devolve preview de envelopes
+  - `dryRun=false` só envia quando o provider de e-mail estiver completamente configurado
+  - o envio real usa `Resend` e registra o resultado em `notification_delivery_attempts`
+  - a fila é consumida pelos helpers SQL `kc_claim_notification_delivery_batch(...)` e `kc_record_notification_delivery_attempt(...)`
 - A trilha externa deve continuar obedecendo:
   - `public.notifications` e o sino/dropdown seguem sendo a fonte canônica in-app
   - WhatsApp público do perfil/produto não pode ser reutilizado automaticamente como destino privado de notificação
   - a resolução de destino privado atual usa `auth.users.email` para `email` e bloqueia `whatsapp` até existir configuração privada dedicada
+  - ausência de `KC_NOTIFICATION_EMAIL_*` no projeto deve resultar em gating explícito (`email_provider_not_configured`), nunca em quebra do feed in-app nem dos triggers
 
 ## 8. Residual Supabase advisor items
 

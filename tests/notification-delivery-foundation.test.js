@@ -19,15 +19,18 @@ describe('notification delivery foundation', () => {
     expect(sql).toContain('new.voter_id');
   });
 
-  test('edge function expõe o dispatcher protegido por segredo e envs reservados', () => {
+  test('edge function expoe o dispatcher protegido por segredo e pronto para provider externo', () => {
     const source = read('supabase/functions/kc-dispatch-notification-outbox/index.ts');
 
     expect(source).toContain('KC_NOTIFICATION_DISPATCH_SECRET');
     expect(source).toContain('KC_NOTIFICATION_EMAIL_PROVIDER');
+    expect(source).toContain('KC_NOTIFICATION_EMAIL_API_KEY');
+    expect(source).toContain('KC_NOTIFICATION_EMAIL_FROM');
     expect(source).toContain('KC_NOTIFICATION_WHATSAPP_PROVIDER');
     expect(source).toContain('KC_NOTIFICATION_DISPATCH_BATCH_LIMIT');
     expect(source).toContain('x-kc-dispatch-secret');
-    expect(source).toContain("from(\"notification_delivery_outbox\")");
-    expect(source).toContain('Foundation only in v11.20.2; provider dispatch remains disabled.');
+    expect(source).toContain('https://api.resend.com/emails');
+    expect(source).toContain('kc_claim_notification_delivery_batch');
+    expect(source).toContain('kc_record_notification_delivery_attempt');
   });
 });
