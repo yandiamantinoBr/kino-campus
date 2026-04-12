@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada ate `v11.26.0`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x` (infraestrutura, componentes core, templates dinamicos — 52/52 suites e 565/565 testes), planejamento formal do backlog `v11.25–v11.30` entregue em `v11.25.0`, consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` em `v11.25.1` e correcao de drift documental em `api-contract.md`, `db-schema.md` e `rpc-catalog.md` em `v11.25.2`.
+**Status atual:** v11 executada ate `v11.26.1`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x` (infraestrutura, componentes core, templates dinamicos — 52/52 suites e 565/565 testes), planejamento formal do backlog `v11.25–v11.30` entregue em `v11.25.0`, consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` em `v11.25.1` e correcao de drift documental em `api-contract.md`, `db-schema.md` e `rpc-catalog.md` em `v11.25.2`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.26.1 | suites de testes estaticas para `create-post.controller.js` (20 testes: wrapper KCActions, WRAP_FLAG, 4 stages de erro, idempotencia, fallback) e `kc-feed.controller.js` (24 testes: KCControllers API, constantes POSTS_LIMIT=12/UUID_RE/FEED_CACHE_MAX_AGE_MS, contratos KCAPI, KCSessionStore, banner realtime, anti-duplicacao seenIds) — baseline sobe para 54/54 suites e 609/609 testes | a preencher |
 | v11.26.0 | planejamento de cobertura de testes: auditoria dos 7 controllers sem cobertura direta; padroes transversais mapeados (KCAPI contracts, KCFeedFilters, session cache, modal/overlay, dataset attrs); estrategia detalhada para v11.26.1 (create-post + kc-feed) e v11.26.2 (5 modulos) — `docs/test-coverage-plan-v11.26.md` criado | `#296` |
 | v11.25.2 | correcao de drift documental: nota de estado `v11.25.x` adicionada em `api-contract.md`; contagem de migrations corrigida (82→83) e nota de estado adicionada em `db-schema.md`; convencao de `search_path` atualizada para indicar continuidade v11 em `rpc-catalog.md` | `#294` |
 | v11.25.1 | consolidacao do CHANGELOG: entradas `v11.24.0`–`v11.25.0` adicionadas; entrada formal `[11.0.0] - 2026-04-12` criada com resumo consolidado de todas as 25 iteracoes da trilha v11; `[Unreleased]` zerado | `#292` |

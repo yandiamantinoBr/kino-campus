@@ -1570,6 +1570,33 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.26.1` (testes create-post + kc-feed) → `v11.26.2` (testes 5 módulos) → `v11.27.x` (iOS/Safari).
 
+### Iteração `v11.26.1`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-26-1-tests-create-post-feed` |
+| Tipo | testes (sem alteração de produção) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  adicionar suites de teste estáticas para `create-post.controller.js` e `kc-feed.controller.js` — os dois controllers com maior impacto transversal sem cobertura direta. Nenhum arquivo de produção alterado.
+- arquivos alterados:
+  - `tests/create-post.controller.test.js` — 20 testes: instalação do wrapper `KCActions.createPost`, WRAP_FLAG, 4 stages de erro (POST_INSERT, STORAGE_UPLOAD, POST_MEDIA_INSERT, POST_FETCH), idempotência, fallback DOMContentLoaded, repassagem de resultado e exceção.
+  - `tests/kc-feed.controller.test.js` — 24 testes: API pública `KCControllers` congelado, constantes `POSTS_LIMIT=12` / `UUID_RE` / `FEED_CACHE_MAX_AGE_MS`, contratos KCAPI (getFeedCursor, getPostById, normalizePost), integração KCSessionStore (get/set), banner realtime com display:none e aria-live, padrão anti-duplicação (seenIds Set, aliases uuid/legacy/fallback).
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.26.1.
+- resultado dos testes:
+  `54/54` suites, `609/609` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  testes-only; zero alteração em arquivos de produção (`assets/`).
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  `v11.26.2` (testes 5 módulos: index, achados-perdidos, caronas, moradia, eventos) → `v11.27.x` (iOS/Safari).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
