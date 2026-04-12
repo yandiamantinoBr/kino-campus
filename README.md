@@ -88,8 +88,8 @@ Regras desta fase:
 - iteracao ativa consolidada: `v11.24.0`
 - objetivo da iteracao: entregar o planejamento estruturado de i18n, acessibilidade e UX Writing como documento de referencia antes de qualquer codigo funcional dessa trilha
 - natureza da iteracao: docs-only; nenhum arquivo funcional alterado. O deliverable e o relatorio `docs/i18n-a11y-uxwriting-plan.md` com ETAPA 1 (mapeamento arquitetural: ~250-300 strings, 30+ aria-labels, 22 titles, 18 meta descriptions), ETAPA 2 (riscos: 65+ nowrap, 12 testes frageis, impacto SEO) e ETAPA 3 (estrategia incremental em 3 subfases)
-- ultimo preview validado desta fase: [pendente]
-- deploy pos-merge da base validado desta fase: [pendente]
+- ultimo preview validado desta fase: `dpl_BCk9B1HNLmocHHkNXNA7WjtcJxKb` (`kino-campus-h29mm6hn6-yannakamurabrs-projects.vercel.app`)
+- deploy pos-merge da base validado desta fase: `dpl_CX1K3MSi53DhosaVDydQ2Zebm1mu` (`kino-campus-lfnosjkze-yannakamurabrs-projects.vercel.app`)
 - deploy de producao validado desta fase: `dpl_HPMAUgYe6kcoHBDh9vjp54mYg4VA` (`www.kinocampus.com.br`) — herdado da v11.23.0, sem mudanca funcional
 - achados desta rodada:
   - inventario textual identificou ~250-300 strings unicas a externalizar em futuras subfases
