@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** código da v10 admin mergeado na base atual via PRs `#215` a `#222`, com as 2 migrations SQL da v10 já aplicadas no banco principal, follow-ups de abril de 2026 consolidados e a v11 executada ate o release gate final `v11.23.0`, fechando a rodada principal com regressao verde, hygiene canonico em `8.6.0`, smoke remoto e residuals operacionais documentados. A trilha seguinte ja fica aberta em `v11.24.x`, reservada para planejamento de i18n, acessibilidade e UX Writing antes de qualquer novo codigo funcional.
+**Status atual:** v11 executada ate `v11.24.0`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados) e o planejamento de i18n, acessibilidade e UX Writing entregue em `v11.24.0` como documento de referencia com inventario textual (~250-300 strings), mapeamento de riscos de layout (65+ instancias de `white-space: nowrap`) e estrategia incremental em 3 subfases (v11.24.1 infra, v11.24.2 componentes core, v11.24.3 paginas complexas + SEO).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.24.0 | planejamento estruturado de i18n, acessibilidade e UX Writing: inventario textual de ~250-300 strings em 22 HTMLs e 61 JS, mapeamento de 65+ instancias `white-space: nowrap`, analise de fragilidade de testes (12 arquivos com strings literais) e estrategia incremental em 3 subfases (v11.24.1 infra, v11.24.2 componentes core, v11.24.3 paginas+SEO) | `#282` |
 | v11.23.0 | release gate final da rodada principal da v11: endurecimento do teste de analytics frente ao cache/SWR atual, artefato formal `docs/qa/report-v11.23.0-run1.md`, hygiene `8.6.0`, smoke remoto em producao e residuals do Supabase consolidados sem abrir refactor novo | `#280` |
 | v11.22.0 | scheduler versionado do dispatcher externo: migration `v11.22.0.0_notification_dispatch_scheduler.sql`, tabela privada `notification_dispatch_runs`, helper `kc_trigger_notification_dispatch(...)`, job `pg_cron` `kc-dispatch-notification-outbox` e Edge Function endurecida com `execution_id`/`source` e persistencia de runs | `#278` |
 | v11.21.1 | canal privado de WhatsApp implementado sobre a trilha de outbox: tabela `notification_channel_targets`, preferencia/consentimento separados do perfil publico, novos metodos `KCAPI.getNotificationChannelTargets()`/`updateNotificationChannelTargets()` e dispatcher `kc-dispatch-notification-outbox` ampliado para Twilio com rate limit por usuario | `#277` |
@@ -84,20 +85,20 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.23.0`
-- objetivo da iteracao: executar o release gate final da rodada principal da v11, validando regressao, hygiene, smoke remoto e residuals conhecidos sem abrir refactor novo de frontend, banco ou infra
-- natureza da iteracao: concluida sem migration nova; o ajuste funcional ficou restrito ao endurecimento de `tests/post-analytics.test.js` para o contrato atual de cache/SWR e ao artefato formal de QA `docs/qa/report-v11.23.0-run1.md`
-- ultimo preview validado desta fase: `dpl_DucDMJtPmLg7TS78UnVQVX4LHWiU` (`kino-campus-git-codex-v11-23-0-r-29a5cf-yannakamurabrs-projects.vercel.app`)
-- deploy pos-merge da base validado desta fase: `dpl_EF3gzc3MLEbGkLpS2CRdopuHo2cb` (`kino-campus-git-kinocampus-v110-a67b39-yannakamurabrs-projects.vercel.app`)
-- deploy de producao validado desta fase: `dpl_HPMAUgYe6kcoHBDh9vjp54mYg4VA` (`www.kinocampus.com.br`)
+- iteracao ativa consolidada: `v11.24.0`
+- objetivo da iteracao: entregar o planejamento estruturado de i18n, acessibilidade e UX Writing como documento de referencia antes de qualquer codigo funcional dessa trilha
+- natureza da iteracao: docs-only; nenhum arquivo funcional alterado. O deliverable e o relatorio `docs/i18n-a11y-uxwriting-plan.md` com ETAPA 1 (mapeamento arquitetural: ~250-300 strings, 30+ aria-labels, 22 titles, 18 meta descriptions), ETAPA 2 (riscos: 65+ nowrap, 12 testes frageis, impacto SEO) e ETAPA 3 (estrategia incremental em 3 subfases)
+- ultimo preview validado desta fase: [pendente]
+- deploy pos-merge da base validado desta fase: [pendente]
+- deploy de producao validado desta fase: `dpl_HPMAUgYe6kcoHBDh9vjp54mYg4VA` (`www.kinocampus.com.br`) — herdado da v11.23.0, sem mudanca funcional
 - achados desta rodada:
-  - a regressao completa passou em `51/51` suites e `530/530` testes
-  - `scripts/hygiene-check.js` permaneceu verde no runtime canonico `8.6.0`
-  - o smoke HTTP em producao confirmou `200` no dominio e marcadores estaticos corretos em `compra-venda-feed.html`, `moradia.html` e `ajuda.html`
-  - os residuals do Supabase Advisor aceitos nesta fase ficaram documentados: `extension_in_public` para `unaccent`, `auth_leaked_password_protection`, `rls_enabled_no_policy` nas tabelas privadas da trilha de dispatch e o `duplicate_index` em `public.posts`, alem dos `unused_index` sem remocao destrutiva nesta rodada
-  - o Playwright MCP local continua bloqueado nesta maquina por `EPERM`, entao a evidencia de navegador desta fase ficou ancorada em checks do Vercel, fetch remoto autenticado ou protegido e smoke HTTP do dominio publicado
-- proxima iteracao sugerida: `v11.24.0`, para entregar somente o planejamento estruturado de i18n, acessibilidade e UX Writing antes de qualquer codigo funcional dessa nova trilha
-- trilha futura ja preparada no relatorio: `v11.24.x`, reservada para i18n, acessibilidade e UX Writing, com inicio obrigatorio por um relatorio em `ETAPA 1`, `ETAPA 2` e `ETAPA 3`
+  - inventario textual identificou ~250-300 strings unicas a externalizar em futuras subfases
+  - 65+ instancias de `white-space: nowrap` em CSS sao pontos criticos de expansao textual
+  - 12 de 51 arquivos de teste (24%) usam strings literais pt-BR em assertions — devem migrar para seletores estaveis antes de externalizar strings
+  - base de a11y da v9.4.2 esta solida: `aria-label`, `role`, `aria-live` presentes e funcionais
+  - nenhuma infraestrutura de i18n existe ainda (sem `t()`, sem dicionarios, sem deteccao de locale)
+- proxima iteracao sugerida: `v11.24.1`, para criar a infraestrutura base de i18n (`kc-i18n.js`, dicionario pt-BR, helper `t()`) e migrar testes frageis
+- trilha futura: v11.24.2 (componentes core) e v11.24.3 (paginas complexas + SEO)
 
 ---
 

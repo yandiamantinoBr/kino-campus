@@ -1361,6 +1361,31 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.24.0`
+
+- objetivo:
+  entregar o planejamento estruturado de i18n, acessibilidade e UX Writing como documento de referencia antes de qualquer codigo funcional dessa trilha, mapeando o inventario textual da base, os riscos de expansao de layout, a fragilidade de testes com strings literais e a estrategia incremental em 3 subfases (v11.24.1 a v11.24.3).
+- arquivos alterados:
+  `docs/i18n-a11y-uxwriting-plan.md` (novo), `README.md`, `RELATORIO-KINOCAMPUS-V11.md`.
+- equivalentes revisados:
+  inventario textual dos 22 HTMLs e 61 arquivos JS, 30+ valores unicos de `aria-label`, 33 placeholders, 22 titles, 18 meta descriptions, 60+ labels de categoria em `kc-constants.js`, 65+ instancias de `white-space: nowrap` em CSS, 12 arquivos de teste com strings literais pt-BR e 40 arquivos com seletores estaveis.
+- contratos preservados:
+  nenhum arquivo funcional (*.js, *.css, *.html) foi alterado nesta fase. O runtime canonico `8.6.0` permanece intacto. O inventario e uma fotografia do estado atual, sem modificar comportamento.
+- migrations criadas/aplicadas:
+  nenhuma.
+- testes executados:
+  `npx jest --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validacao operacional:
+  a regressao completa permaneceu em `51/51` suites e `530/530` testes, confirmando que a iteracao docs-only nao introduziu efeito colateral.
+- validacao em navegador:
+  [pendente — sera preenchido apos merge e deploy]
+- PR / commit / deploy:
+  [pendente — sera preenchido apos merge e deploy]
+- riscos residuais:
+  o inventario textual e uma fotografia pontual; strings podem ser adicionadas ou removidas em iteracoes futuras entre v11.24.0 e v11.24.1. A estrategia incremental mitiga esse drift ao externalizar por camada. O roadmap de 3 subfases (v11.24.1-v11.24.3) depende de aprovacao explicita antes de cada inicio.
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
