@@ -1516,6 +1516,34 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.25.2` (docs drift: api-contract, db-schema, rpc-catalog) → `v11.26.x` (cobertura de testes) → `v11.27.x` (iOS/Safari).
 
+### Iteração `v11.25.2`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-25-2-docs-drift` |
+| Tipo | docs-only |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  corrigir o drift documental nos três documentos estruturais que ainda tratavam anotações v9 como estado ativo. Zero risco funcional — somente atualização de marcadores de versão e contagens.
+- arquivos alterados:
+  - `docs/api-contract.md` — nota de estado `v11.25.x` adicionada ao topo; esclarecimento de que anotações `v9.x.x` são marcadores históricos.
+  - `docs/db-schema.md` — contagem de migrations corrigida (`82` → `83`); nota de estado `v11.25.x` adicionada.
+  - `docs/rpc-catalog.md` — convenção de `search_path` atualizada para indicar que o padrão v9.2.3 continua em toda a trilha v11.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.25.2.
+- resultado dos testes:
+  `52/52` suites, `565/565` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  docs-only; nenhum comportamento de produção alterado.
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  `v11.26.x` (cobertura de testes: create-post, kc-feed, módulos públicos) → `v11.27.x` (iOS/Safari) → `v11.28.x` (paridade) → `v11.29.x` (SWR) → `v11.30.x` (hotspots).
+
 ---
 
 ## 12. Backlog inicial candidato da v11

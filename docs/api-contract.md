@@ -1,5 +1,7 @@
 # KinoCampus — Contrato da API (KCAPI)
 
+> **Estado:** v11.25.x (2026-04-12). As anotações de versão ao longo deste documento (`v9.x.x`, `v9.3.x`, etc.) são marcadores históricos que indicam quando cada contrato foi introduzido ou estendido — não indicam a versão atual. O estado ativo da API reflete todas as iterações da trilha v11 (v11.1.0–v11.25.x).
+
 ## Como usar
 
 ```javascript

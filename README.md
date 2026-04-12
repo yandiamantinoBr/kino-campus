@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada ate `v11.25.1`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x` (infraestrutura, componentes core, templates dinamicos — 52/52 suites e 565/565 testes), planejamento formal do backlog `v11.25–v11.30` entregue em `v11.25.0` e consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` em `v11.25.1`.
+**Status atual:** v11 executada ate `v11.25.2`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x` (infraestrutura, componentes core, templates dinamicos — 52/52 suites e 565/565 testes), planejamento formal do backlog `v11.25–v11.30` entregue em `v11.25.0`, consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` em `v11.25.1` e correcao de drift documental em `api-contract.md`, `db-schema.md` e `rpc-catalog.md` em `v11.25.2`.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.25.2 | correcao de drift documental: nota de estado `v11.25.x` adicionada em `api-contract.md`; contagem de migrations corrigida (82→83) e nota de estado adicionada em `db-schema.md`; convencao de `search_path` atualizada para indicar continuidade v11 em `rpc-catalog.md` | a preencher |
 | v11.25.1 | consolidacao do CHANGELOG: entradas `v11.24.0`–`v11.25.0` adicionadas; entrada formal `[11.0.0] - 2026-04-12` criada com resumo consolidado de todas as 25 iteracoes da trilha v11; `[Unreleased]` zerado | `#292` |
 | v11.25.0 | planejamento formal do backlog v11.25–v11.30: roadmap de 16 iteracoes cobrindo drift documental, cobertura de testes, hardening iOS/Safari, paridade entre equivalentes, extensao SWR e refactor de hotspots monoliticos — `docs/roadmap-v11.25-v11.30.md` criado | `#290` |
 | v11.24.3 | templates HTML dinamicos de `kc-auth.ui.js` migrados para `KCi18n.t()` via helper `_t(key, fallback)`: 30 chaves `auth.modal-*` e 5 chaves `auth.dropdown-*` adicionadas ao dicionario; painel forgot (5 strings), painel resend (6 strings), painel user (6 strings) e `buildDropdownContent()` (7 strings) migrados; regressao mantida em 52/52 suites e 565/565 testes | `#288` |
