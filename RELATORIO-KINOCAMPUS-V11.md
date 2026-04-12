@@ -1384,6 +1384,33 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - riscos residuais:
   o inventario textual e uma fotografia pontual; strings podem ser adicionadas ou removidas em iteracoes futuras entre v11.24.0 e v11.24.1. A estrategia incremental mitiga esse drift ao externalizar por camada. O roadmap de 3 subfases (v11.24.1-v11.24.3) depende de aprovacao explicita antes de cada inicio.
 
+### Iteração `v11.24.1`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-24-1-i18n-infra` |
+| Tipo | feature (arquivos funcionais) |
+| Escopo | infraestrutura base de i18n — módulo `kc-i18n.js` e suite de testes |
+
+- objetivo:
+  criar a fundação técnica da trilha i18n/a11y/UX Writing, aprovada na v11.24.0. Nenhum HTML, CSS ou módulo JS existente foi modificado. Apenas dois arquivos novos foram adicionados ao repositório, de forma estritamente aditiva.
+- arquivos criados:
+  - `assets/js/kc-i18n.js` — módulo IIFE que expõe `window.KCi18n` com dicionário pt-BR de 120+ entradas em dot-notation, helper `KCi18n.t(key, params)` com interpolação `{chave}` e fallback à chave crua, helper `KCi18n.n(value, opts)` usando `Intl.NumberFormat` para moeda BRL, percentual e compacto, e utilitário `KCi18n.keys()` para auditoria de cobertura.
+  - `tests/kc-i18n.test.js` — 35 testes cobrindo existência do módulo, todas as categorias do dicionário (`common`, `nav`, `form`, `error`, `feedback`, `time`, `empty`, `a11y`, `module`, `uxw`), interpolação de parâmetros, formatação numérica e auditoria estrutural do dicionário.
+- estrutura do dicionário:
+  10 categorias, 120+ entradas. Cada chave segue o padrão `categoria.nome` (ex.: `common.save` → `Salvar`, `a11y.close-modal` → `Fechar modal`, `module.compra-venda` → `Compra e Venda`). As entradas `module.*` estão alinhadas com `KC_CONSTANTS.MODULE_LABEL_MAP`.
+- resultado dos testes:
+  `52/52` suites, `565/565` testes (35 novos), hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  iteracao estritamente aditiva — zero alteracoes em arquivos preexistentes. Regressao completa mantida em `52/52` suites e `565/565` testes.
+- validacao em navegador:
+  a ser preenchida apos deploy (deployment IDs abaixo).
+- PR \ commit \ deploy:
+  a ser preenchido apos merge e deploy da PR desta iteracao.
+- riscos residuais:
+  o dicionario cobre as strings de UI mais frequentes mas nao e exaustivo. Strings especificas de cada pagina serao migradas em v11.24.2 e v11.24.3. O modulo e carregado de forma independente e nao afeta modulos existentes enquanto nao houver integracao explicita.
+
 ---
 
 ## 12. Backlog inicial candidato da v11

@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada ate `v11.24.0`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados) e o planejamento de i18n, acessibilidade e UX Writing entregue em `v11.24.0` como documento de referencia com inventario textual (~250-300 strings), mapeamento de riscos de layout (65+ instancias de `white-space: nowrap`) e estrategia incremental em 3 subfases (v11.24.1 infra, v11.24.2 componentes core, v11.24.3 paginas complexas + SEO).
+**Status atual:** v11 executada ate `v11.24.1`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), planejamento de i18n/a11y/UX Writing entregue em `v11.24.0` e infraestrutura base de i18n implantada em `v11.24.1` (`kc-i18n.js` com 120+ entradas pt-BR, `KCi18n.t()`, `KCi18n.n()` e 35 novos testes — regressao em 52/52 suites e 565/565 testes).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.24.1 | infraestrutura base de i18n: modulo `kc-i18n.js` (IIFE, `window.KCi18n`) com dicionario pt-BR de 120+ entradas em 10 categorias (`common`, `nav`, `form`, `error`, `feedback`, `time`, `empty`, `a11y`, `module`, `uxw`), helpers `KCi18n.t(key, params)` com interpolacao `{chave}` e `KCi18n.n(value, opts)` via `Intl.NumberFormat`; suite `tests/kc-i18n.test.js` com 35 testes; regressao mantida em 52/52 suites e 565/565 testes | a preencher |
 | v11.24.0 | planejamento estruturado de i18n, acessibilidade e UX Writing: inventario textual de ~250-300 strings em 22 HTMLs e 61 JS, mapeamento de 65+ instancias `white-space: nowrap`, analise de fragilidade de testes (12 arquivos com strings literais) e estrategia incremental em 3 subfases (v11.24.1 infra, v11.24.2 componentes core, v11.24.3 paginas+SEO) | `#282` |
 | v11.23.0 | release gate final da rodada principal da v11: endurecimento do teste de analytics frente ao cache/SWR atual, artefato formal `docs/qa/report-v11.23.0-run1.md`, hygiene `8.6.0`, smoke remoto em producao e residuals do Supabase consolidados sem abrir refactor novo | `#280` |
 | v11.22.0 | scheduler versionado do dispatcher externo: migration `v11.22.0.0_notification_dispatch_scheduler.sql`, tabela privada `notification_dispatch_runs`, helper `kc_trigger_notification_dispatch(...)`, job `pg_cron` `kc-dispatch-notification-outbox` e Edge Function endurecida com `execution_id`/`source` e persistencia de runs | `#278` |
@@ -85,20 +86,21 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.24.0`
-- objetivo da iteracao: entregar o planejamento estruturado de i18n, acessibilidade e UX Writing como documento de referencia antes de qualquer codigo funcional dessa trilha
-- natureza da iteracao: docs-only; nenhum arquivo funcional alterado. O deliverable e o relatorio `docs/i18n-a11y-uxwriting-plan.md` com ETAPA 1 (mapeamento arquitetural: ~250-300 strings, 30+ aria-labels, 22 titles, 18 meta descriptions), ETAPA 2 (riscos: 65+ nowrap, 12 testes frageis, impacto SEO) e ETAPA 3 (estrategia incremental em 3 subfases)
-- ultimo preview validado desta fase: `dpl_BCk9B1HNLmocHHkNXNA7WjtcJxKb` (`kino-campus-h29mm6hn6-yannakamurabrs-projects.vercel.app`)
-- deploy pos-merge da base validado desta fase: `dpl_CX1K3MSi53DhosaVDydQ2Zebm1mu` (`kino-campus-lfnosjkze-yannakamurabrs-projects.vercel.app`)
-- deploy de producao validado desta fase: `dpl_HPMAUgYe6kcoHBDh9vjp54mYg4VA` (`www.kinocampus.com.br`) — herdado da v11.23.0, sem mudanca funcional
+- iteracao ativa consolidada: `v11.24.1`
+- objetivo da iteracao: implantar a infraestrutura base de i18n aprovada em v11.24.0 — modulo `kc-i18n.js` e suite de testes, sem modificar nenhum arquivo existente
+- natureza da iteracao: feature estritamente aditiva (dois arquivos novos: `assets/js/kc-i18n.js` e `tests/kc-i18n.test.js`)
+- regressao: `52/52` suites, `565/565` testes (35 novos), hygiene `8.6.0`
+- ultimo preview validado desta fase: a preencher apos deploy
+- deploy pos-merge da base validado desta fase: a preencher apos merge
+- deploy de producao validado desta fase: a preencher apos promocao
 - achados desta rodada:
-  - inventario textual identificou ~250-300 strings unicas a externalizar em futuras subfases
-  - 65+ instancias de `white-space: nowrap` em CSS sao pontos criticos de expansao textual
-  - 12 de 51 arquivos de teste (24%) usam strings literais pt-BR em assertions — devem migrar para seletores estaveis antes de externalizar strings
-  - base de a11y da v9.4.2 esta solida: `aria-label`, `role`, `aria-live` presentes e funcionais
-  - nenhuma infraestrutura de i18n existe ainda (sem `t()`, sem dicionarios, sem deteccao de locale)
-- proxima iteracao sugerida: `v11.24.1`, para criar a infraestrutura base de i18n (`kc-i18n.js`, dicionario pt-BR, helper `t()`) e migrar testes frageis
-- trilha futura: v11.24.2 (componentes core) e v11.24.3 (paginas complexas + SEO)
+  - dicionario pt-BR com 120+ entradas em 10 categorias cobre as strings de UI mais frequentes
+  - `KCi18n.t(key, params)` com interpolacao `{chave}` e fallback gracioso a chave crua
+  - `KCi18n.n(value, opts)` via `Intl.NumberFormat` suporta moeda BRL, percentual e compacto
+  - `KCi18n.keys()` permite auditoria de cobertura sem inspecao manual do dicionario
+  - modulo carregado de forma independente — zero impacto em modulos existentes ate integracao explicita
+- proxima iteracao sugerida: `v11.24.2`, para aplicar `KCi18n.t()` em botoes, modais, toasts, navegacao e aria-labels dos componentes core
+- trilha futura: v11.24.3 (paginas complexas + SEO + metadata)
 
 ---
 
