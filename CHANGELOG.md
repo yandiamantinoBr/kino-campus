@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+---
+
+## [11.0.0] - 2026-04-12 — Trilha v11: Auditoria, Hardening e i18n (v11.1.0–v11.25.0)
+
+Consolidação de 25 iterações da trilha v11 (v11.1.0–v11.25.0), cobrindo: auditoria e hardening dos controllers, paridade de contratos KCAPI/adapters, persistência incremental SWR, notificações in-app e multicanal (email, WhatsApp), módulo de i18n e aplicação nos componentes core. Estado final: `52/52` suites, `565/565` testes, hygiene `8.6.0`, produção `dpl_9Pm65XqZSx26BWRNAkWu59zR8A1C` (`www.kinocampus.com.br`).
+
+### Added
+- `v11.24.1`: módulo `kc-i18n.js` com `window.KCi18n` — dicionário pt-BR de 120+ entradas em 10 categorias (`common`, `nav`, `form`, `error`, `feedback`, `time`, `empty`, `a11y`, `module`, `uxw`), `KCi18n.t(key, params)` com interpolação `{chave}` e fallback à chave crua, `KCi18n.n(value, opts)` via `Intl.NumberFormat` para moeda BRL/percentual/compacto, `KCi18n.keys()` para auditoria. Suite `kc-i18n.test.js` com 35 testes. Nenhum arquivo existente modificado.
+
+### Changed
+- `v11.24.2`: `kc-notifications.js` passou a usar `window.KCi18n.t()` com graceful degradation para 10 strings em `timeAgo`, `getDropdownCountLabel`, `buildDropdownHTML` e `clearAllNotifications`; `kc-auth.ui.js` passou a usar `window.KCi18n.t()` para 28 chamadas `setStatus()` + 1 `showToast()` + 2 `userMeta`; 22 HTMLs passaram a carregar `kc-i18n.js` após `kc-constants.js`. Dicionário expandido com 11 chaves `notif.*` e 26 chaves `auth.*`.
+- `v11.24.3`: templates HTML dinâmicos de `kc-auth.ui.js` (`ensureModal()`, `buildDropdownContent()`) passaram a usar helper `_t(key, fallback)` para 24 substituições em painéis forgot (5), resend (6), user (6) e dropdown (7); dicionário expandido com 30 chaves `auth.modal-*` e 5 chaves `auth.dropdown-*`.
+
 ### Fixed
 - `v11.23.0`: `tests/post-analytics.test.js` passou a invalidar o cache de analytics no `beforeEach` e a forcar o caminho do driver ativo com `force: true`, eliminando a fragilidade introduzida pela hidratacao de sessao e revalidacao silenciosa da trilha de analytics.
 - `v11.23.0`: `package.json` deixou de anunciar a linha antiga `V8.2.x`, alinhando a metadata do repositorio ao estado real da base funcional e documental atual.
@@ -62,6 +75,8 @@
 - `v11.5.0`: restaurado o `Top Contribuidores` dos 6 módulos públicos ao substituir o bootstrap inline de `kc-ranking.js` por carregamento externo deferido, compatível com a `Content-Security-Policy` de produção em `vercel.json`.
 
 ### Docs
+- `v11.25.0`: `docs/roadmap-v11.25-v11.30.md` criado com 16 iterações planejadas em ordem crescente de risco: drift documental (v11.25.x), cobertura de testes (v11.26.x), hardening iOS/Safari (v11.27.x), paridade entre equivalentes (v11.28.x), extensão SWR (v11.29.x) e refactor de hotspots monolíticos (v11.30.x).
+- `v11.24.0`: `docs/i18n-a11y-uxwriting-plan.md` criado com estratégia incremental de i18n em 3 fases (infraestrutura, componentes core, templates dinâmicos), análise de risco de expansão textual, impacto SEO e critérios QA por subfase.
 - `v11.23.0`: adicionados `docs/qa/report-v11.23.0-run1.md` e o novo mapa limpo de `docs/qa/README.md`, registrando o release gate final da rodada principal da v11 e deixando `v11.24.0` como proxima fase obrigatoria em modo planejamento-only.
 - `v11.22.0`: consolidado o fechamento documental da fase com a PR `#278`, preview `dpl_DueeQMVYa9FVFeRvgYCH1D6Kg98c`, deploy de produção `dpl_HMTvL1ET8uLgW8NNwitLN5of3HyW` e validação publicada em `www.kinocampus.com.br`.
 - `v11.22.0`: o `RELATORIO-KINOCAMPUS-V11.md` passou a reservar a trilha futura `v11.24.x` para i18n, acessibilidade e UX Writing, exigindo um relatório inicial em `ETAPA 1`, `ETAPA 2` e `ETAPA 3` antes de qualquer implementação dessa frente.
