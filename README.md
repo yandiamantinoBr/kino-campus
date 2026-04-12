@@ -91,7 +91,7 @@ Regras desta fase:
 - objetivo da iteracao: conectar o modulo `kc-i18n.js` (v11.24.1) aos componentes core de maior visibilidade (`kc-notifications.js`, `kc-auth.ui.js`) e registrar o script em todos os 22 HTMLs
 - natureza da iteracao: feature com modificacao de arquivos existentes + expansao do dicionario; fallbacks literais garantem graceful degradation
 - regressao: `52/52` suites, `565/565` testes, hygiene `8.6.0`
-- deploy de producao validado desta fase: aguardando merge e close-out
+- deploy de producao validado desta fase: `dpl_34fun91hnhtBivEMPVzMtNA2oL5v` (`www.kinocampus.com.br`) — promovido de `dpl_GtZuqNmtokkq34wsfs6kiHCjWjJL`
 - achados desta rodada:
   - padrao `window.KCi18n ? window.KCi18n.t('key') : 'fallback'` garante resiliencia se o modulo nao estiver disponivel
   - `notif.*` (11 chaves) e `auth.*` (26 chaves) estendem o dicionario para 12 categorias

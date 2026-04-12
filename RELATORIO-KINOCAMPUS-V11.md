@@ -1432,8 +1432,10 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   `52/52` suites, `565/565` testes, hygiene `8.6.0`, sem regressão.
 - validacao operacional:
   todos os fallbacks literais garantem graceful degradation — se `window.KCi18n` for undefined (modo teste isolado, carregamento fora de ordem), as strings originais são usadas sem erro. O padrão `window.KCi18n ? window.KCi18n.t('key') : 'fallback'` foi aplicado consistentemente em todos os pontos de uso.
+- validacao em navegador:
+  o preview da PR ficou `READY` no deployment `dpl_B8wGKVjdnH8e9fJZ24LzkKAd2MVw` (`kino-campus-2m7suwuoq-yannakamurabrs-projects.vercel.app`). O deployment pos-merge da base ficou `READY` em `dpl_GtZuqNmtokkq34wsfs6kiHCjWjJL` (`kino-campus-hk50hyr16-yannakamurabrs-projects.vercel.app`). A producao em [www.kinocampus.com.br](https://www.kinocampus.com.br) respondeu `200` com `kc-i18n.js` confirmado no HTML, versao canonica `8.6.0` intacta.
 - PR \ commit \ deploy:
-  aguardando merge e validação de deployment (registrado no close-out).
+  PR `#286`, commit funcional `903609e` na branch `codex/v11-24-2-i18n-core-components`, merge squash `5a1de4d` na base `kinocampus-V11.0-foundations`, preview `dpl_B8wGKVjdnH8e9fJZ24LzkKAd2MVw`, deployment pos-merge `dpl_GtZuqNmtokkq34wsfs6kiHCjWjJL`, producao `dpl_34fun91hnhtBivEMPVzMtNA2oL5v` (promote from `dpl_GtZuqNmtokkq34wsfs6kiHCjWjJL`), todos confirmados em `12 de abril de 2026`.
 - riscos residuais:
   os templates HTML de `kc-auth.ui.js` (linhas 403–407, `innerHTML`) e todas as strings de nível de página (títulos de página, metadata, OG tags, copies de feed) permanecem hardcoded — serão migrados em v11.24.3.
 
