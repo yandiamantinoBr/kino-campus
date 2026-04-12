@@ -2,7 +2,7 @@
 
 ## Convenções
 
-- Funcoes e RPCs fixam explicitamente o `search_path`; RPCs legadas costumam usar `public`, enquanto helpers endurecidos em `v9.2.3` usam `''` com referencias qualificadas
+- Funcoes e RPCs fixam explicitamente o `search_path`; RPCs legadas costumam usar `public`, enquanto helpers endurecidos a partir de `v9.2.3` usam `''` com referencias qualificadas — padrao que continua em toda a trilha v11
 
 - Funções com prefixo `kc_` são funções públicas do KinoCampus
 - `SECURITY DEFINER` + `SET search_path = public` — executa com permissões do owner, sem injeção de schema
