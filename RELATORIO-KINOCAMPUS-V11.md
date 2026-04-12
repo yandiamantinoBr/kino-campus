@@ -1551,7 +1551,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 12 de abril de 2026 |
 | Branch | `codex/v11-26-0-test-coverage-planning` |
 | Tipo | docs-only |
-| PR | a ser preenchido após merge |
+| PR | `#296` |
 
 - objetivo:
   auditar os 7 controllers sem cobertura direta e definir estratégia de testes estáticos para cada um. Identificar padrões transversais (KCAPI contracts, KCFeedFilters, session cache, modal/overlay, dataset attrs) e mapear quais verificações são testáveis estaticamente sem alterar código de produção.
@@ -1564,9 +1564,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   docs-only; nenhum comportamento de produção alterado.
 - validacao em navegador:
-  a ser preenchido após deploy.
+  `www.kinocampus.com.br` respondeu `200 OK` com `kc-i18n.js` confirmado no HTML em `dpl_391cYPkkkw7jXfFPitGDDsAK2WFd`, confirmado em `12 de abril de 2026`.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#296`, commit funcional `fcf6ea6` na branch `codex/v11-26-0-test-coverage-planning`, merge squash `fb40723` na base `kinocampus-V11.0-foundations`, preview `dpl_9HR43i2SQBhb9NNe7apfAafU8EDx`, deployment pós-merge `dpl_EV5gUXwkaVwovBeMFmzgzhABCQvj`, produção `dpl_391cYPkkkw7jXfFPitGDDsAK2WFd` (promote from `dpl_EV5gUXwkaVwovBeMFmzgzhABCQvj`), todos confirmados em `12 de abril de 2026`.
 - próximas fases:
   `v11.26.1` (testes create-post + kc-feed) → `v11.26.2` (testes 5 módulos) → `v11.27.x` (iOS/Safari).
 
