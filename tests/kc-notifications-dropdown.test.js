@@ -5,6 +5,11 @@ describe('KCNotifications dropdown hardening', () => {
   let apiNotifications;
   let unreadCount;
 
+  beforeAll(() => {
+    global.window = global.window || global;
+    require('../assets/js/kc-i18n.js');
+  });
+
   beforeEach(() => {
     document.body.innerHTML = [
       '<button class="kc-notif-bell" id="kcNotifBell" style="display:none;">',
