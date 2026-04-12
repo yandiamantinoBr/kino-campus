@@ -1458,9 +1458,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   o helper `_t(key, fallback)` retorna o fallback literal quando `window.KCi18n` for undefined, preservando o comportamento original. Chaves duplicadas entre painéis (e.g. `auth.modal-email-placeholder`, `auth.modal-back-to-login`) são reutilizadas sem redundância no dicionário.
 - validacao em navegador:
-  a ser preenchida após merge e promote.
+  o preview da PR ficou `READY` no deployment `dpl_FPNPca6MvTmSCzw5WbuWJMULsMm7` (`kino-campus-8lt9cew8f-yannakamurabrs-projects.vercel.app`). O deployment pós-merge da base ficou `READY` em `dpl_BJuKQep1xT6eEkqKGmgjWzHet4X9` (`kino-campus-con1i16ey-yannakamurabrs-projects.vercel.app`). A produção em [www.kinocampus.com.br](https://www.kinocampus.com.br) respondeu `200` com `kc-i18n.js` confirmado no HTML, versão canônica `8.6.0` intacta.
 - PR \ commit \ deploy:
-  a ser preenchido após merge e promote.
+  PR `#288`, commit funcional `532d25f` na branch `codex/v11-24-3-i18n-auth-templates`, merge squash `00009d9` na base `kinocampus-V11.0-foundations`, preview `dpl_FPNPca6MvTmSCzw5WbuWJMULsMm7`, deployment pós-merge `dpl_BJuKQep1xT6eEkqKGmgjWzHet4X9`, produção `dpl_4yqDchKPSAktdbqKbWPPyLPFFkB2` (promote from `dpl_BJuKQep1xT6eEkqKGmgjWzHet4X9`), todos confirmados em `12 de abril de 2026`.
 - riscos residuais:
   strings de nível de página (títulos de página, `<meta description>`, OG tags, copies de feed) permanecem hardcoded. Essas strings estão em HTML estático e afetam indexação por crawlers — migração requer estratégia separada de SEO.
 
