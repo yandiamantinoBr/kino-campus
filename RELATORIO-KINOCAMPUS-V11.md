@@ -1604,7 +1604,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 12 de abril de 2026 |
 | Branch | `codex/v11-26-2-tests-module-controllers` |
 | Tipo | testes (sem alteração de produção) |
-| PR | a ser preenchido após merge |
+| PR | `#300` |
 
 - objetivo:
   adicionar suites de teste estáticas para os 5 module controllers restantes sem cobertura direta. Nenhum arquivo de produção alterado.
@@ -1621,9 +1621,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   testes-only; zero alteração em arquivos de produção (`assets/`).
 - validacao em navegador:
-  a ser preenchido após deploy.
+  produção HTTP 200 confirmado via `www.kinocampus.com.br`.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#300` — squash merge `3ba7698` — preview `dpl_EZ5YoyF2JyQpamvM6bwxzET3kTq8` — pós-merge `dpl_2Tnq3fqo9312vMoFuUudQ2kS31Qi` — produção `dpl_Vb9rJj5z2BabToxvQUz6r9x492e7`.
 - próximas fases:
   `v11.27.x` (iOS/Safari hardening) → `v11.28.x` (paridade de controllers) → `v11.29.x` (SWR extensão) → `v11.30.x` (refactor monolítico).
 
