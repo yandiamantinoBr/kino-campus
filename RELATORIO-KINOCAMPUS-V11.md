@@ -1544,6 +1544,32 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.26.x` (cobertura de testes: create-post, kc-feed, módulos públicos) → `v11.27.x` (iOS/Safari) → `v11.28.x` (paridade) → `v11.29.x` (SWR) → `v11.30.x` (hotspots).
 
+### Iteração `v11.26.0`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-26-0-test-coverage-planning` |
+| Tipo | docs-only |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  auditar os 7 controllers sem cobertura direta e definir estratégia de testes estáticos para cada um. Identificar padrões transversais (KCAPI contracts, KCFeedFilters, session cache, modal/overlay, dataset attrs) e mapear quais verificações são testáveis estaticamente sem alterar código de produção.
+- arquivos alterados:
+  - `docs/test-coverage-plan-v11.26.md` — plano completo com auditoria por controller, padrões transversais e estratégia detalhada para v11.26.1 e v11.26.2.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.26.0.
+- resultado dos testes:
+  `52/52` suites, `565/565` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  docs-only; nenhum comportamento de produção alterado.
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  `v11.26.1` (testes create-post + kc-feed) → `v11.26.2` (testes 5 módulos) → `v11.27.x` (iOS/Safari).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
