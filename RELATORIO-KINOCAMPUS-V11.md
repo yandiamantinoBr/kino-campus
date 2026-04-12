@@ -1577,7 +1577,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 12 de abril de 2026 |
 | Branch | `codex/v11-26-1-tests-create-post-feed` |
 | Tipo | testes (sem alteração de produção) |
-| PR | a ser preenchido após merge |
+| PR | `#298` |
 
 - objetivo:
   adicionar suites de teste estáticas para `create-post.controller.js` e `kc-feed.controller.js` — os dois controllers com maior impacto transversal sem cobertura direta. Nenhum arquivo de produção alterado.
@@ -1591,9 +1591,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   testes-only; zero alteração em arquivos de produção (`assets/`).
 - validacao em navegador:
-  a ser preenchido após deploy.
+  produção HTTP 200 confirmado via `www.kinocampus.com.br`.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#298` — squash merge `9c150d2` — preview `dpl_3hgCZWGAc37zWvEcgyh6MXjzGDbz` — pós-merge `dpl_n2HYt2e7B17NFdvSpLKo9Qe7Dyoy` — produção `dpl_BmADqD3aS6NqRYrWTET3VMMX9FfQ`.
 - próximas fases:
   `v11.26.2` (testes 5 módulos: index, achados-perdidos, caronas, moradia, eventos) → `v11.27.x` (iOS/Safari).
 
