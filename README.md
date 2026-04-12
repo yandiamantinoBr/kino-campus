@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.24.1 | infraestrutura base de i18n: modulo `kc-i18n.js` (IIFE, `window.KCi18n`) com dicionario pt-BR de 120+ entradas em 10 categorias (`common`, `nav`, `form`, `error`, `feedback`, `time`, `empty`, `a11y`, `module`, `uxw`), helpers `KCi18n.t(key, params)` com interpolacao `{chave}` e `KCi18n.n(value, opts)` via `Intl.NumberFormat`; suite `tests/kc-i18n.test.js` com 35 testes; regressao mantida em 52/52 suites e 565/565 testes | a preencher |
+| v11.24.1 | infraestrutura base de i18n: modulo `kc-i18n.js` (IIFE, `window.KCi18n`) com dicionario pt-BR de 120+ entradas em 10 categorias (`common`, `nav`, `form`, `error`, `feedback`, `time`, `empty`, `a11y`, `module`, `uxw`), helpers `KCi18n.t(key, params)` com interpolacao `{chave}` e `KCi18n.n(value, opts)` via `Intl.NumberFormat`; suite `tests/kc-i18n.test.js` com 35 testes; regressao mantida em 52/52 suites e 565/565 testes | `#284` |
 | v11.24.0 | planejamento estruturado de i18n, acessibilidade e UX Writing: inventario textual de ~250-300 strings em 22 HTMLs e 61 JS, mapeamento de 65+ instancias `white-space: nowrap`, analise de fragilidade de testes (12 arquivos com strings literais) e estrategia incremental em 3 subfases (v11.24.1 infra, v11.24.2 componentes core, v11.24.3 paginas+SEO) | `#282` |
 | v11.23.0 | release gate final da rodada principal da v11: endurecimento do teste de analytics frente ao cache/SWR atual, artefato formal `docs/qa/report-v11.23.0-run1.md`, hygiene `8.6.0`, smoke remoto em producao e residuals do Supabase consolidados sem abrir refactor novo | `#280` |
 | v11.22.0 | scheduler versionado do dispatcher externo: migration `v11.22.0.0_notification_dispatch_scheduler.sql`, tabela privada `notification_dispatch_runs`, helper `kc_trigger_notification_dispatch(...)`, job `pg_cron` `kc-dispatch-notification-outbox` e Edge Function endurecida com `execution_id`/`source` e persistencia de runs | `#278` |
@@ -90,9 +90,9 @@ Regras desta fase:
 - objetivo da iteracao: implantar a infraestrutura base de i18n aprovada em v11.24.0 — modulo `kc-i18n.js` e suite de testes, sem modificar nenhum arquivo existente
 - natureza da iteracao: feature estritamente aditiva (dois arquivos novos: `assets/js/kc-i18n.js` e `tests/kc-i18n.test.js`)
 - regressao: `52/52` suites, `565/565` testes (35 novos), hygiene `8.6.0`
-- ultimo preview validado desta fase: a preencher apos deploy
-- deploy pos-merge da base validado desta fase: a preencher apos merge
-- deploy de producao validado desta fase: a preencher apos promocao
+- ultimo preview validado desta fase: `dpl_FYkK82zN59o4A9R3d4vkC5tn7FiS` (`kino-campus-fdtdjs90e-yannakamurabrs-projects.vercel.app`)
+- deploy pos-merge da base validado desta fase: `dpl_J3vaJRe5JYas7rdxARxLpTuXFG6g` (`kino-campus-e0j46mbor-yannakamurabrs-projects.vercel.app`)
+- deploy de producao validado desta fase: `dpl_EsAskg2fjzpsjJwcprHJRHxsB6Vq` (`www.kinocampus.com.br`) — promovido de `dpl_J3vaJRe5JYas7rdxARxLpTuXFG6g`
 - achados desta rodada:
   - dicionario pt-BR com 120+ entradas em 10 categorias cobre as strings de UI mais frequentes
   - `KCi18n.t(key, params)` com interpolacao `{chave}` e fallback gracioso a chave crua

@@ -1405,9 +1405,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   iteracao estritamente aditiva — zero alteracoes em arquivos preexistentes. Regressao completa mantida em `52/52` suites e `565/565` testes.
 - validacao em navegador:
-  a ser preenchida apos deploy (deployment IDs abaixo).
+  o preview da PR ficou `READY` no deployment `dpl_FYkK82zN59o4A9R3d4vkC5tn7FiS`, protegido por Vercel Authentication. O deployment pos-merge da base ficou `READY` em `dpl_J3vaJRe5JYas7rdxARxLpTuXFG6g`. A producao em [www.kinocampus.com.br](https://www.kinocampus.com.br) respondeu `200` com versao canonica `8.6.0` intacta, confirmando que a iteracao aditiva nao afetou nenhum runtime publicado.
 - PR \ commit \ deploy:
-  a ser preenchido apos merge e deploy da PR desta iteracao.
+  PR `#284`, commit funcional `b434b0c` na branch `codex/v11-24-1-i18n-infra`, merge squash `b11cd3a` na base `kinocampus-V11.0-foundations`, preview `dpl_FYkK82zN59o4A9R3d4vkC5tn7FiS`, deployment pos-merge `dpl_J3vaJRe5JYas7rdxARxLpTuXFG6g`, producao `dpl_EsAskg2fjzpsjJwcprHJRHxsB6Vq` (promote from `dpl_J3vaJRe5JYas7rdxARxLpTuXFG6g`), todos confirmados em `12 de abril de 2026`.
 - riscos residuais:
   o dicionario cobre as strings de UI mais frequentes mas nao e exaustivo. Strings especificas de cada pagina serao migradas em v11.24.2 e v11.24.3. O modulo e carregado de forma independente e nao afeta modulos existentes enquanto nao houver integracao explicita.
 
