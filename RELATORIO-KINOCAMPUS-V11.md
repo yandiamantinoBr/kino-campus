@@ -1464,6 +1464,32 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - riscos residuais:
   strings de nível de página (títulos de página, `<meta description>`, OG tags, copies de feed) permanecem hardcoded. Essas strings estão em HTML estático e afetam indexação por crawlers — migração requer estratégia separada de SEO.
 
+### Iteração `v11.25.0`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-25-0-backlog-planning` |
+| Tipo | docs-only |
+| Escopo | planejamento formal das fases v11.25–v11.30: roadmap completo de 16 iterações cobrindo drift documental, cobertura de testes, hardening iOS/Safari, paridade entre equivalentes, extensão SWR e refactor de hotspots monolíticos |
+
+- objetivo:
+  registrar a estratégia de execução do backlog remanescente da v11 em ordem crescente de risco, garantindo que cada fase entregue uma rede de segurança maior para a fase seguinte. Nenhum arquivo funcional alterado.
+- arquivos alterados:
+  - `docs/roadmap-v11.25-v11.30.md` — novo documento de roadmap com 16 iterações, tabela de risco, critérios QA por fase e regras de governança herdadas da v11.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.25.0.
+- resultado dos testes:
+  `52/52` suites, `565/565` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  docs-only; nenhum comportamento de produção alterado.
+- validacao em navegador:
+  a ser preenchida após merge e promote.
+- PR \ commit \ deploy:
+  a ser preenchido após merge e promote.
+- próximas fases:
+  `v11.25.1` (CHANGELOG consolidação) → `v11.25.2` (docs drift) → `v11.26.x` (cobertura de testes) → `v11.27.x` (iOS/Safari) → `v11.28.x` (paridade) → `v11.29.x` (SWR) → `v11.30.x` (hotspots).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
