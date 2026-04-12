@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0` e `v11.23.0` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11 |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2` e `v11.24.3` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11 |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -1438,6 +1438,31 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#286`, commit funcional `903609e` na branch `codex/v11-24-2-i18n-core-components`, merge squash `5a1de4d` na base `kinocampus-V11.0-foundations`, preview `dpl_B8wGKVjdnH8e9fJZ24LzkKAd2MVw`, deployment pos-merge `dpl_GtZuqNmtokkq34wsfs6kiHCjWjJL`, producao `dpl_34fun91hnhtBivEMPVzMtNA2oL5v` (promote from `dpl_GtZuqNmtokkq34wsfs6kiHCjWjJL`), todos confirmados em `12 de abril de 2026`.
 - riscos residuais:
   os templates HTML de `kc-auth.ui.js` (linhas 403–407, `innerHTML`) e todas as strings de nível de página (títulos de página, metadata, OG tags, copies de feed) permanecem hardcoded — serão migrados em v11.24.3.
+
+### Iteração `v11.24.3`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-24-3-i18n-auth-templates` |
+| Tipo | feature (arquivos funcionais) |
+| Escopo | aplicação do `KCi18n.t()` via helper `_t()` nos templates HTML gerados dinamicamente por `kc-auth.ui.js`: modal de autenticação (`ensureModal()`) e dropdown de perfil (`buildDropdownContent()`) |
+
+- objetivo:
+  completar a cobertura i18n de `kc-auth.ui.js` migrando as strings hardcoded nos templates `innerHTML` — a superfície que v11.24.2 deixou explicitamente como residual. O helper `_t(key, fallback)` (módulo-level) é introduzido para tornar o padrão de graceful degradation legível dentro de templates por concatenação de string.
+- arquivos alterados:
+  - `assets/js/kc-i18n.js` — dicionário expandido com 30 chaves `auth.modal-*` (modal de autenticação: title, subtitle, tabs login/signup, campos de e-mail/senha, botões de ação, links de navegação entre painéis, notas, e estado do painel de usuário autenticado) e 5 chaves `auth.dropdown-*` (menu dropdown de perfil: my-profile, my-posts, complete-signup, help-center, logout). Total: 35 novas chaves.
+  - `assets/js/kc-auth.ui.js` — helper `_t(key, fallback)` adicionado no topo do IIFE; 5 strings substituídas no painel `forgot` (`ensureModal()` linha 407); 6 strings substituídas no painel `resend` (linha 408); 6 strings substituídas no painel `user` (linha 409); 7 strings substituídas em `buildDropdownContent()` (linhas 450–456). Strings `nav.settings`, `nav.admin` e `common.logout` reutilizam chaves já presentes no dicionário.
+- resultado dos testes:
+  `52/52` suites, `565/565` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  o helper `_t(key, fallback)` retorna o fallback literal quando `window.KCi18n` for undefined, preservando o comportamento original. Chaves duplicadas entre painéis (e.g. `auth.modal-email-placeholder`, `auth.modal-back-to-login`) são reutilizadas sem redundância no dicionário.
+- validacao em navegador:
+  a ser preenchida após merge e promote.
+- PR \ commit \ deploy:
+  a ser preenchido após merge e promote.
+- riscos residuais:
+  strings de nível de página (títulos de página, `<meta description>`, OG tags, copies de feed) permanecem hardcoded. Essas strings estão em HTML estático e afetam indexação por crawlers — migração requer estratégia separada de SEO.
 
 ---
 

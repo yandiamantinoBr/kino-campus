@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada ate `v11.24.2`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), planejamento de i18n/a11y/UX Writing entregue em `v11.24.0`, infraestrutura base de i18n implantada em `v11.24.1` e componentes core integrados ao `KCi18n.t()` em `v11.24.2` (`kc-notifications.js`, `kc-auth.ui.js` e 22 HTMLs atualizados — regressao em 52/52 suites e 565/565 testes).
+**Status atual:** v11 executada ate `v11.24.3`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), planejamento de i18n/a11y/UX Writing entregue em `v11.24.0`, infraestrutura base de i18n implantada em `v11.24.1`, componentes core integrados ao `KCi18n.t()` em `v11.24.2` (`kc-notifications.js`, `kc-auth.ui.js` e 22 HTMLs) e templates HTML dinamicos de `kc-auth.ui.js` migrados em `v11.24.3` (modal de autenticacao + dropdown de perfil, 35 novas chaves — regressao em 52/52 suites e 565/565 testes).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.24.3 | templates HTML dinamicos de `kc-auth.ui.js` migrados para `KCi18n.t()` via helper `_t(key, fallback)`: 30 chaves `auth.modal-*` e 5 chaves `auth.dropdown-*` adicionadas ao dicionario; painel forgot (5 strings), painel resend (6 strings), painel user (6 strings) e `buildDropdownContent()` (7 strings) migrados; regressao mantida em 52/52 suites e 565/565 testes | `#288` |
 | v11.24.2 | componentes core integrados ao `KCi18n.t()`: dicionario expandido com 11 chaves `notif.*` e 26 chaves `auth.*`; 10 strings substituidas em `kc-notifications.js`; 28 `setStatus()` + 1 `showToast()` + 2 `userMeta` substituidos em `kc-auth.ui.js`; tag `<script defer src="assets/js/kc-i18n.js">` adicionada nos 22 HTMLs; `kc-notifications-dropdown.test.js` atualizado; regressao mantida em 52/52 suites e 565/565 testes | `#286` |
 | v11.24.1 | infraestrutura base de i18n: modulo `kc-i18n.js` (IIFE, `window.KCi18n`) com dicionario pt-BR de 120+ entradas em 10 categorias (`common`, `nav`, `form`, `error`, `feedback`, `time`, `empty`, `a11y`, `module`, `uxw`), helpers `KCi18n.t(key, params)` com interpolacao `{chave}` e `KCi18n.n(value, opts)` via `Intl.NumberFormat`; suite `tests/kc-i18n.test.js` com 35 testes; regressao mantida em 52/52 suites e 565/565 testes | `#284` |
 | v11.24.0 | planejamento estruturado de i18n, acessibilidade e UX Writing: inventario textual de ~250-300 strings em 22 HTMLs e 61 JS, mapeamento de 65+ instancias `white-space: nowrap`, analise de fragilidade de testes (12 arquivos com strings literais) e estrategia incremental em 3 subfases (v11.24.1 infra, v11.24.2 componentes core, v11.24.3 paginas+SEO) | `#282` |
