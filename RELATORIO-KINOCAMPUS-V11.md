@@ -1484,9 +1484,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   docs-only; nenhum comportamento de produção alterado.
 - validacao em navegador:
-  a ser preenchida após merge e promote.
+  `www.kinocampus.com.br` respondeu `200 OK` com `kc-i18n.js` confirmado no HTML em `dpl_9Pm65XqZSx26BWRNAkWu59zR8A1C`, todos confirmados em `12 de abril de 2026`.
 - PR \ commit \ deploy:
-  a ser preenchido após merge e promote.
+  PR `#290`, commit funcional `f2f9e11` na branch `codex/v11-25-0-backlog-planning`, merge squash `6844419` na base `kinocampus-V11.0-foundations`, preview `dpl_9XawyM4bWjQtWxntn65d4oXpN2e4`, deployment pós-merge `dpl_ChGJKPAQFNGRFJdZnQmz9hs144tx`, produção `dpl_9Pm65XqZSx26BWRNAkWu59zR8A1C` (promote from `dpl_ChGJKPAQFNGRFJdZnQmz9hs144tx`), todos confirmados em `12 de abril de 2026`.
 - próximas fases:
   `v11.25.1` (CHANGELOG consolidação) → `v11.25.2` (docs drift) → `v11.26.x` (cobertura de testes) → `v11.27.x` (iOS/Safari) → `v11.28.x` (paridade) → `v11.29.x` (SWR) → `v11.30.x` (hotspots).
 
