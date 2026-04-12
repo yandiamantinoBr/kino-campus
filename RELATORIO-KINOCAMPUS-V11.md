@@ -1411,6 +1411,32 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - riscos residuais:
   o dicionario cobre as strings de UI mais frequentes mas nao e exaustivo. Strings especificas de cada pagina serao migradas em v11.24.2 e v11.24.3. O modulo e carregado de forma independente e nao afeta modulos existentes enquanto nao houver integracao explicita.
 
+### Iteração `v11.24.2`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-24-2-i18n-core-components` |
+| Tipo | feature (arquivos funcionais) |
+| Escopo | aplicação do `KCi18n.t()` nos componentes core: notificações, autenticação e carregamento do módulo i18n nos 22 HTMLs |
+
+- objetivo:
+  conectar o módulo `kc-i18n.js` (v11.24.1) às duas primeiras superfícies de maior visibilidade — `kc-notifications.js` e `kc-auth.ui.js` — e registrar o script em todos os 22 HTMLs, garantindo disponibilidade de `window.KCi18n` em todas as páginas.
+- arquivos alterados:
+  - `assets/js/kc-i18n.js` — dicionário expandido com 11 chaves `notif.*` (dropdown de notificações: `notif.now`, `notif.minutes-ago`, `notif.hours-ago`, `notif.days-ago`, `notif.item-single`, `notif.item-plural`, `notif.marking`, `notif.mark-all`, `notif.clearing`, `notif.empty`, `notif.confirm-clear`) e 26 chaves `auth.*` (fluxos de login, cadastro, redefinição de senha, reenvio, logout e estado do perfil).
+  - `assets/js/kc-notifications.js` — 10 strings hardcoded substituídas por `window.KCi18n.t()` com fallback literal (graceful degradation): `timeAgo()` (4 strings de tempo), `getDropdownCountLabel()` (2 strings de contagem), `buildDropdownHTML()` (título, loading, empty, mark-all, marking, clear, clearing) e `clearAllNotifications()` (confirm dialog).
+  - `assets/js/kc-auth.ui.js` — 28 chamadas `setStatus()` e 1 `showToast()` + 2 strings de `userMeta` substituídas por `window.KCi18n.t()` com fallback literal, cobrindo todos os fluxos: login, cadastro, redefinição de senha, reenvio de confirmação, logout e estado do perfil no dropdown.
+  - `tests/kc-notifications-dropdown.test.js` — adicionado `beforeAll` que carrega `kc-i18n.js` antes da suite, garantindo disponibilidade de `window.KCi18n` durante avaliação do módulo.
+  - 22 arquivos HTML — adicionada tag `<script defer src="assets/js/kc-i18n.js"></script>` (ou `../assets/js/kc-i18n.js` para admin) imediatamente após `kc-constants.js` em todos os HTMLs da raiz e admin.
+- resultado dos testes:
+  `52/52` suites, `565/565` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  todos os fallbacks literais garantem graceful degradation — se `window.KCi18n` for undefined (modo teste isolado, carregamento fora de ordem), as strings originais são usadas sem erro. O padrão `window.KCi18n ? window.KCi18n.t('key') : 'fallback'` foi aplicado consistentemente em todos os pontos de uso.
+- PR \ commit \ deploy:
+  aguardando merge e validação de deployment (registrado no close-out).
+- riscos residuais:
+  os templates HTML de `kc-auth.ui.js` (linhas 403–407, `innerHTML`) e todas as strings de nível de página (títulos de página, metadata, OG tags, copies de feed) permanecem hardcoded — serão migrados em v11.24.3.
+
 ---
 
 ## 12. Backlog inicial candidato da v11

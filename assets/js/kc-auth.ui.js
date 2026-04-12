@@ -658,43 +658,43 @@
 
   async function doLogin(form) {
     const env = readEnv();
-    if (env.driver !== 'supabase') { setStatus('A autenticacao esta desativada no modo local.', 'warn'); return; }
+    if (env.driver !== 'supabase') { setStatus(window.KCi18n ? window.KCi18n.t('auth.login-disabled') : 'A autenticação está desativada no modo local.', 'warn'); return; }
     const email = normalizeEmail(form.email.value);
     const password = String(form.password.value || '');
-    if (!email || !password) { setStatus('Preencha e-mail e senha.', 'warn'); return; }
-    setStatus('Entrando...', 'info');
+    if (!email || !password) { setStatus(window.KCi18n ? window.KCi18n.t('auth.fill-email-password') : 'Preencha e-mail e senha.', 'warn'); return; }
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.logging-in') : 'Entrando...', 'info');
     const result = await window.KCAPI.signIn(email, password);
-    if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível entrar.'), 'error'); return; }
-    setStatus('Login realizado com sucesso.', 'success');
+    if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.login-failed') : 'Não foi possível entrar.')), 'error'); return; }
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.login-success') : 'Login realizado com sucesso.', 'success');
     await handlePostAuthSuccess(modalState.nextPath);
   }
 
   async function doSignup(form) {
     const env = readEnv();
-    if (env.driver !== 'supabase') { setStatus('O cadastro está desativado no modo local.', 'warn'); return; }
+    if (env.driver !== 'supabase') { setStatus(window.KCi18n ? window.KCi18n.t('auth.signup-disabled') : 'O cadastro está desativado no modo local.', 'warn'); return; }
     const email = normalizeEmail(form.email.value);
     const password = String(form.password.value || '');
     const confirm = String(form.confirm.value || '');
-    if (!email || !password || !confirm) { setStatus('Preencha todos os campos.', 'warn'); return; }
-    if (password.length < 6) { setStatus('Sua senha precisa ter pelo menos 6 caracteres.', 'warn'); return; }
-    if (password !== confirm) { setStatus('As senhas não conferem.', 'warn'); return; }
+    if (!email || !password || !confirm) { setStatus(window.KCi18n ? window.KCi18n.t('auth.fill-all-fields') : 'Preencha todos os campos.', 'warn'); return; }
+    if (password.length < 6) { setStatus(window.KCi18n ? window.KCi18n.t('auth.password-short') : 'Sua senha precisa ter pelo menos 6 caracteres.', 'warn'); return; }
+    if (password !== confirm) { setStatus(window.KCi18n ? window.KCi18n.t('auth.password-mismatch') : 'As senhas não conferem.', 'warn'); return; }
     if (!isAllowedDomain(email, env.allowedDomains)) {
       const hint = formatAllowedDomains(env.allowedDomains);
       setStatus(hint ? `Use um e-mail institucional de um domínio aceito (${hint}).` : 'Use um e-mail institucional válido.', 'warn');
       return;
     }
-    setStatus('Criando sua conta...', 'info');
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.creating-account') : 'Criando sua conta...', 'info');
     const result = await window.KCAPI.signUp(email, password, {
       emailRedirectTo: buildCallbackUrl(modalState.nextPath),
       data: { display_name: email.split('@')[0] }
     });
-    if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível criar sua conta.'), 'error'); return; }
+    if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.signup-failed') : 'Não foi possível criar sua conta.')), 'error'); return; }
     if (result.session) {
-      setStatus('Conta criada e autenticada. Vamos completar seu perfil.', 'success');
+      setStatus(window.KCi18n ? window.KCi18n.t('auth.account-created-verified') : 'Conta criada e autenticada. Vamos completar seu perfil.', 'success');
       await handlePostAuthSuccess(modalState.nextPath);
       return;
     }
-    setStatus('Conta criada. Abra o e-mail de confirmação para finalizar seu cadastro.', 'success');
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.account-created-email') : 'Conta criada. Abra o e-mail de confirmação para finalizar seu cadastro.', 'success');
     const resend = $('#kcAuthResendEmail');
     if (resend) resend.value = email;
     setPanel('resend');
@@ -702,26 +702,26 @@
 
   async function doForgotPassword(form) {
     const email = normalizeEmail(form.email.value);
-    if (!email) { setStatus('Informe o e-mail da sua conta.', 'warn'); return; }
-    setStatus('Enviando link de redefinição...', 'info');
+    if (!email) { setStatus(window.KCi18n ? window.KCi18n.t('auth.email-required') : 'Informe o e-mail da sua conta.', 'warn'); return; }
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.sending-reset') : 'Enviando link de redefinição...', 'info');
     const result = await window.KCAPI.requestPasswordReset(email, { redirectTo: buildCallbackUrl(modalState.nextPath) });
-    if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível enviar o link.'), 'error'); return; }
-    setStatus('Pronto. Enviamos um e-mail com o link para redefinir sua senha.', 'success');
+    if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.reset-failed') : 'Não foi possível enviar o link.')), 'error'); return; }
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.reset-sent') : 'Pronto. Enviamos um e-mail com o link para redefinir sua senha.', 'success');
   }
 
   async function doResendConfirmation(form) {
     const env = readEnv();
     const email = normalizeEmail(form.email.value);
-    if (!email) { setStatus('Informe o e-mail usado no cadastro.', 'warn'); return; }
+    if (!email) { setStatus(window.KCi18n ? window.KCi18n.t('auth.resend-email-required') : 'Informe o e-mail usado no cadastro.', 'warn'); return; }
     // Não bloquear e-mails convidados: o Supabase retorna erro se o e-mail não existe ou já foi confirmado
-    setStatus('Reenviando confirmação...', 'info');
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.resending') : 'Reenviando confirmação...', 'info');
     const result = await window.KCAPI.resendConfirmation(email, { emailRedirectTo: buildCallbackUrl(modalState.nextPath) });
-    if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || 'Não foi possível reenviar a confirmação.'), 'error'); return; }
-    setStatus('Novo e-mail enviado. Abra o link recebido para concluir o cadastro.', 'success');
+    if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.resend-failed') : 'Não foi possível reenviar a confirmação.')), 'error'); return; }
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.resend-sent') : 'Novo e-mail enviado. Abra o link recebido para concluir o cadastro.', 'success');
   }
 
   async function doLogout() {
-    setStatus('Saindo...', 'info');
+    setStatus(window.KCi18n ? window.KCi18n.t('auth.logging-out') : 'Saindo...', 'info');
     try {
       writeShellSnapshot(null, null);
       await window.KCAPI.logout();
@@ -730,7 +730,7 @@
       closeModal();
     } catch (error) {
       console.error('[KCAuthUI] logout failed:', error);
-      setStatus('Não foi possível sair agora.', 'error');
+      setStatus(window.KCi18n ? window.KCi18n.t('auth.logout-failed') : 'Não foi possível sair agora.', 'error');
     }
   }
 
@@ -769,7 +769,7 @@
         if (!trigger || getCurrentUser()) return;
         event.preventDefault();
         event.stopPropagation();
-        if (typeof window.showToast === 'function') window.showToast('Faca login para publicar.', 'warn', 2200);
+        if (typeof window.showToast === 'function') window.showToast(window.KCi18n ? window.KCi18n.t('auth.login-to-publish') : 'Faça login para publicar.', 'warn', 2200);
       }, true);
     }
     $all('a[href="create-post.html"], .kc-create-btn, .kc-create-post-btn').forEach((element) => {
@@ -806,7 +806,7 @@
       }
       if (helpLink) helpLink.href = buildHelpHref();
       if (userEmail) userEmail.textContent = user.email;
-      if (userMeta) userMeta.textContent = isOnboardingComplete(profile) ? 'Conta pronta para publicar e receber contatos' : 'Cadastro incompleto: finalize seu onboarding';
+      if (userMeta) userMeta.textContent = isOnboardingComplete(profile) ? (window.KCi18n ? window.KCi18n.t('auth.profile-ready') : 'Conta pronta para publicar e receber contatos') : (window.KCi18n ? window.KCi18n.t('auth.profile-incomplete') : 'Cadastro incompleto: finalize seu onboarding');
       if (modalState.panel === 'user' || $('#kcAuthModal')?.classList.contains('active')) setPanel('user');
     } else if (modalState.panel === 'user') {
       setPanel('login');

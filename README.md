@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada ate `v11.24.1`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), planejamento de i18n/a11y/UX Writing entregue em `v11.24.0` e infraestrutura base de i18n implantada em `v11.24.1` (`kc-i18n.js` com 120+ entradas pt-BR, `KCi18n.t()`, `KCi18n.n()` e 35 novos testes — regressao em 52/52 suites e 565/565 testes).
+**Status atual:** v11 executada ate `v11.24.2`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), planejamento de i18n/a11y/UX Writing entregue em `v11.24.0`, infraestrutura base de i18n implantada em `v11.24.1` e componentes core integrados ao `KCi18n.t()` em `v11.24.2` (`kc-notifications.js`, `kc-auth.ui.js` e 22 HTMLs atualizados — regressao em 52/52 suites e 565/565 testes).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.24.2 | componentes core integrados ao `KCi18n.t()`: dicionario expandido com 11 chaves `notif.*` e 26 chaves `auth.*`; 10 strings substituidas em `kc-notifications.js`; 28 `setStatus()` + 1 `showToast()` + 2 `userMeta` substituidos em `kc-auth.ui.js`; tag `<script defer src="assets/js/kc-i18n.js">` adicionada nos 22 HTMLs; `kc-notifications-dropdown.test.js` atualizado; regressao mantida em 52/52 suites e 565/565 testes | `#286` |
 | v11.24.1 | infraestrutura base de i18n: modulo `kc-i18n.js` (IIFE, `window.KCi18n`) com dicionario pt-BR de 120+ entradas em 10 categorias (`common`, `nav`, `form`, `error`, `feedback`, `time`, `empty`, `a11y`, `module`, `uxw`), helpers `KCi18n.t(key, params)` com interpolacao `{chave}` e `KCi18n.n(value, opts)` via `Intl.NumberFormat`; suite `tests/kc-i18n.test.js` com 35 testes; regressao mantida em 52/52 suites e 565/565 testes | `#284` |
 | v11.24.0 | planejamento estruturado de i18n, acessibilidade e UX Writing: inventario textual de ~250-300 strings em 22 HTMLs e 61 JS, mapeamento de 65+ instancias `white-space: nowrap`, analise de fragilidade de testes (12 arquivos com strings literais) e estrategia incremental em 3 subfases (v11.24.1 infra, v11.24.2 componentes core, v11.24.3 paginas+SEO) | `#282` |
 | v11.23.0 | release gate final da rodada principal da v11: endurecimento do teste de analytics frente ao cache/SWR atual, artefato formal `docs/qa/report-v11.23.0-run1.md`, hygiene `8.6.0`, smoke remoto em producao e residuals do Supabase consolidados sem abrir refactor novo | `#280` |
@@ -86,21 +87,18 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.24.1`
-- objetivo da iteracao: implantar a infraestrutura base de i18n aprovada em v11.24.0 — modulo `kc-i18n.js` e suite de testes, sem modificar nenhum arquivo existente
-- natureza da iteracao: feature estritamente aditiva (dois arquivos novos: `assets/js/kc-i18n.js` e `tests/kc-i18n.test.js`)
-- regressao: `52/52` suites, `565/565` testes (35 novos), hygiene `8.6.0`
-- ultimo preview validado desta fase: `dpl_FYkK82zN59o4A9R3d4vkC5tn7FiS` (`kino-campus-fdtdjs90e-yannakamurabrs-projects.vercel.app`)
-- deploy pos-merge da base validado desta fase: `dpl_J3vaJRe5JYas7rdxARxLpTuXFG6g` (`kino-campus-e0j46mbor-yannakamurabrs-projects.vercel.app`)
-- deploy de producao validado desta fase: `dpl_EsAskg2fjzpsjJwcprHJRHxsB6Vq` (`www.kinocampus.com.br`) — promovido de `dpl_J3vaJRe5JYas7rdxARxLpTuXFG6g`
+- iteracao ativa consolidada: `v11.24.2`
+- objetivo da iteracao: conectar o modulo `kc-i18n.js` (v11.24.1) aos componentes core de maior visibilidade (`kc-notifications.js`, `kc-auth.ui.js`) e registrar o script em todos os 22 HTMLs
+- natureza da iteracao: feature com modificacao de arquivos existentes + expansao do dicionario; fallbacks literais garantem graceful degradation
+- regressao: `52/52` suites, `565/565` testes, hygiene `8.6.0`
+- deploy de producao validado desta fase: aguardando merge e close-out
 - achados desta rodada:
-  - dicionario pt-BR com 120+ entradas em 10 categorias cobre as strings de UI mais frequentes
-  - `KCi18n.t(key, params)` com interpolacao `{chave}` e fallback gracioso a chave crua
-  - `KCi18n.n(value, opts)` via `Intl.NumberFormat` suporta moeda BRL, percentual e compacto
-  - `KCi18n.keys()` permite auditoria de cobertura sem inspecao manual do dicionario
-  - modulo carregado de forma independente — zero impacto em modulos existentes ate integracao explicita
-- proxima iteracao sugerida: `v11.24.2`, para aplicar `KCi18n.t()` em botoes, modais, toasts, navegacao e aria-labels dos componentes core
-- trilha futura: v11.24.3 (paginas complexas + SEO + metadata)
+  - padrao `window.KCi18n ? window.KCi18n.t('key') : 'fallback'` garante resiliencia se o modulo nao estiver disponivel
+  - `notif.*` (11 chaves) e `auth.*` (26 chaves) estendem o dicionario para 12 categorias
+  - templates HTML (`innerHTML`) em `kc-auth.ui.js` linhas 403–407 permanecem hardcoded — excluidos intencionalmente do escopo de v11.24.2
+  - `kc-notifications-dropdown.test.js` atualizado com `beforeAll` que carrega `kc-i18n.js`, garantindo isolamento de teste correto
+- proxima iteracao sugerida: `v11.24.3`, para templates HTML de auth, strings de nivel de pagina e metadata SEO
+- trilha futura: v11.24.3 (paginas complexas + templates HTML + SEO + metadata)
 
 ---
 

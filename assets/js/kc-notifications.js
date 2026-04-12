@@ -32,10 +32,11 @@
     var now = Date.now();
     var then = new Date(dateStr).getTime();
     var diff = Math.floor((now - then) / 1000);
-    if (diff < 60) return 'agora';
-    if (diff < 3600) return Math.floor(diff / 60) + 'min';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h';
-    if (diff < 604800) return Math.floor(diff / 86400) + 'd';
+    var i18n = window.KCi18n;
+    if (diff < 60) return i18n ? i18n.t('notif.now') : 'agora';
+    if (diff < 3600) return i18n ? i18n.t('notif.minutes-ago', { n: Math.floor(diff / 60) }) : Math.floor(diff / 60) + 'min';
+    if (diff < 86400) return i18n ? i18n.t('notif.hours-ago', { n: Math.floor(diff / 3600) }) : Math.floor(diff / 3600) + 'h';
+    if (diff < 604800) return i18n ? i18n.t('notif.days-ago', { n: Math.floor(diff / 86400) }) : Math.floor(diff / 86400) + 'd';
     return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   }
 
@@ -168,8 +169,9 @@
 
   function getDropdownCountLabel() {
     var count = _notifications.length;
-    if (count === 1) return '1 item';
-    return count + ' itens';
+    var i18n = window.KCi18n;
+    if (count === 1) return i18n ? i18n.t('notif.item-single') : '1 item';
+    return i18n ? i18n.t('notif.item-plural', { n: count }) : count + ' itens';
   }
 
   function buildDropdownHTML() {
@@ -178,7 +180,8 @@
 
     parts.push('<div class="kc-notif-dropdown__header">');
     parts.push('<div class="kc-notif-dropdown__heading">');
-    parts.push('<span class="kc-notif-dropdown__title">Notificações</span>');
+    var i18n = window.KCi18n;
+    parts.push('<span class="kc-notif-dropdown__title">' + (i18n ? i18n.t('nav.notifications') : 'Notificações') + '</span>');
     if (hasNotifications()) {
       parts.push('<span class="kc-notif-dropdown__meta">' + getDropdownCountLabel() + '</span>');
     }
@@ -188,23 +191,23 @@
       parts.push('<div class="kc-notif-dropdown__actions">');
       if (_unreadCount > 0) {
         parts.push('<button type="button" class="kc-notif-dropdown__action kc-notif-dropdown__action--primary" id="kcNotifMarkAll"' + disableAttr + '>');
-        parts.push(isBusy('mark-all') ? 'Marcando...' : 'Marcar todas');
+        parts.push(isBusy('mark-all') ? (i18n ? i18n.t('notif.marking') : 'Marcando...') : (i18n ? i18n.t('notif.mark-all') : 'Marcar todas'));
         parts.push('</button>');
       }
       parts.push('<button type="button" class="kc-notif-dropdown__action kc-notif-dropdown__action--ghost" id="kcNotifClearAll"' + disableAttr + '>');
-      parts.push(isBusy('clear') ? 'Limpando...' : 'Limpar');
+      parts.push(isBusy('clear') ? (i18n ? i18n.t('notif.clearing') : 'Limpando...') : (i18n ? i18n.t('common.clear') : 'Limpar'));
       parts.push('</button>');
       parts.push('</div>');
     }
     parts.push('</div>');
 
     if (_loading) {
-      parts.push('<div class="kc-notif-dropdown__empty">Carregando...</div>');
+      parts.push('<div class="kc-notif-dropdown__empty">' + (i18n ? i18n.t('common.loading') : 'Carregando...') + '</div>');
       return parts.join('');
     }
 
     if (!hasNotifications()) {
-      parts.push('<div class="kc-notif-dropdown__empty">Nenhuma notificação</div>');
+      parts.push('<div class="kc-notif-dropdown__empty">' + (i18n ? i18n.t('notif.empty') : 'Nenhuma notificação') + '</div>');
       return parts.join('');
     }
 
@@ -373,7 +376,8 @@
     if (_busyAction || !hasNotifications()) return Promise.resolve({ ok: false, error: 'BUSY' });
 
     if (typeof window.confirm === 'function') {
-      var approved = window.confirm('Limpar todas as notificações deste dropdown?');
+      var i18n = window.KCi18n;
+      var approved = window.confirm(i18n ? i18n.t('notif.confirm-clear') : 'Limpar todas as notificações deste dropdown?');
       if (!approved) return Promise.resolve({ ok: false, cancelled: true });
     }
 
