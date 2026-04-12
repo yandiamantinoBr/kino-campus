@@ -1597,6 +1597,36 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.26.2` (testes 5 módulos: index, achados-perdidos, caronas, moradia, eventos) → `v11.27.x` (iOS/Safari).
 
+### Iteração `v11.26.2`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-26-2-tests-module-controllers` |
+| Tipo | testes (sem alteração de produção) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  adicionar suites de teste estáticas para os 5 module controllers restantes sem cobertura direta. Nenhum arquivo de produção alterado.
+- arquivos alterados:
+  - `tests/index.controller.test.js` — 14 testes: contratos KCAPI (getCurrentUser, getMySavedPostsCount ×3, getTopContributors), modal refs (kcHomeCategoriesHelpModal, kcHomeCategoriesHelpBackdrop), KCOverlayLock.lock/unlock, dataset attrs (data-feed-tab, data-kc-ranking-period), tabs destaques/recentes/comentados.
+  - `tests/achados-perdidos.controller.test.js` — 19 testes: cache key `achados-perdidos:index`, SECTION_CACHE_MAX_AGE_MS, KCFeedFilters (getAllowedDatePresets, graceful fallback), date presets (today/last7d/last30d), dataset attrs, modal kcLostFoundSectionOverlay, padrão getSessionStore (store.get/store.set), KCAPI.normalizePost, KCOverlayLock.lock, filtros status/type.
+  - `tests/caronas-feed.controller.test.js` — 18 testes: KCFeedFilters (getAllowedDatePresets, graceful fallback), date presets (today/last3d/last7d), KCSupabase.getClient(), tabela caronas_locations, feature options (ar-condicionado/aceita-pets/sem-fumar/somente-mulheres), dataset attrs, modal kcCaronasSectionOverlay, LOCATIONS_TTL.
+  - `tests/moradia.controller.test.js` — 23 testes: cache key `moradia:index`, SECTION_CACHE_MAX_AGE_MS, KCFeedFilters (getAllowedDatePresets, graceful fallback), date presets (today/last7d/last30d), features (aceita-pets/lgbtqiapn/apenas-mulheres/apenas-homens/mobiliado/proximo-ao-campus), dataset attrs, modal kcHousingSectionOverlay, padrão getSessionStore, KCAPI.normalizePost, regiões (campus-samambaia/setor-universitario).
+  - `tests/eventos.controller.test.js` — 23 testes: KCFeedFilters (getAllowedDatePresets, graceful fallback), date presets (today/next7d/thisMonth/past), 6 categorias (sustentabilidade/academicos/culturais/esportivos/workshops/festas), dataset attrs (data-kc-eventos-date-preset/section/cal-grid/event-date), modal kcEventosSectionOverlay, KCSupabase.getClient(), tabela posts, STORAGE_KEY, meses pt-BR.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.26.2.
+- resultado dos testes:
+  `59/59` suites, `706/706` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  testes-only; zero alteração em arquivos de produção (`assets/`).
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  `v11.27.x` (iOS/Safari hardening) → `v11.28.x` (paridade de controllers) → `v11.29.x` (SWR extensão) → `v11.30.x` (refactor monolítico).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
