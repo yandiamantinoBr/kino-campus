@@ -1378,9 +1378,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   a regressao completa permaneceu em `51/51` suites e `530/530` testes, confirmando que a iteracao docs-only nao introduziu efeito colateral.
 - validacao em navegador:
-  [pendente — sera preenchido apos merge e deploy]
+  o preview da PR ficou `READY` no deployment `dpl_BCk9B1HNLmocHHkNXNA7WjtcJxKb`, protegido por Vercel Authentication. O deployment pos-merge da base ficou `READY` em `dpl_CX1K3MSi53DhosaVDydQ2Zebm1mu`. A producao em [www.kinocampus.com.br](https://www.kinocampus.com.br) respondeu `200` com versao canonica `8.6.0` intacta, confirmando que a iteracao docs-only nao afetou o runtime publicado.
 - PR / commit / deploy:
-  [pendente — sera preenchido apos merge e deploy]
+  PR `#282`, commit funcional `dde6f8c` na branch `codex/v11-24-0-i18n-a11y-planning`, merge squash `060fd40` na base `kinocampus-V11.0-foundations`, preview `dpl_BCk9B1HNLmocHHkNXNA7WjtcJxKb`, deployment pos-merge `dpl_CX1K3MSi53DhosaVDydQ2Zebm1mu`, producao herdada de `dpl_DFbqy2QResvANv1Pd7KsS1o3CVLe` (v11.23.0), todos confirmados em `11 de abril de 2026`.
 - riscos residuais:
   o inventario textual e uma fotografia pontual; strings podem ser adicionadas ou removidas em iteracoes futuras entre v11.24.0 e v11.24.1. A estrategia incremental mitiga esse drift ao externalizar por camada. O roadmap de 3 subfases (v11.24.1-v11.24.3) depende de aprovacao explicita antes de cada inicio.
 
