@@ -1850,7 +1850,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - resultado dos testes:
   `59/59` suites, `724/724` testes (docs-only, sem alterações funcionais), hygiene `8.6.0`.
 - PR \ commit \ deploy:
-  a ser preenchido após merge — docs-only, sem deploy dedicado.
+  PR `#315` — squash merge `ad0f8a6` — docs-only, sem deploy dedicado.
 - próximas fases:
   `v11.29.1` (SWR em `profile.controller.js` e `my-posts.controller.js`) → `v11.30.x` (refactor monolito: `supabase.adapter.js` + `product.controller.js`).
 
