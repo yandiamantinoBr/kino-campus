@@ -1687,7 +1687,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 15 de abril de 2026 |
 | Branch | `codex/v11-27-2-js-scroll-lock-eventos` |
 | Tipo | fix JS (sem alteração funcional de features) |
-| PR | a ser preenchido após merge |
+| PR | `#305` |
 
 - objetivo:
   corrigir issue A3 da auditoria v11.27.0 — scroll lock incompleto ao abrir o modal do calendário em `eventos.controller.js`. No iOS, `document.documentElement.classList.add('kc-scroll-locked')` sem `position:fixed` no body causava scroll pass-through e jump ao fechar.
@@ -1701,9 +1701,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   sem alteração de feature — somente troca de mecanismo de scroll lock.
 - validacao em navegador:
-  a ser preenchido após deploy.
+  smoke HTTP 200 em `www.kinocampus.com.br` confirmado pós-promoção.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#305` — squash merge `1a843ab` — pós-merge `dpl_9MLoeGqNVSANcMDETAQp9rfGD2M9` — produção `dpl_CC5ykt6JdFmMYUL8yKfYhebFDtUX`.
 - próximas fases:
   `v11.27.3` (CSS fix: B5 `max-height:100vh` → `100dvh` em modais admin + C6 `min-height:100vh` → `100dvh` no body raiz).
 
