@@ -34,4 +34,19 @@ describe('iOS gesture hardening', () => {
     expect(js).toMatch(/carousel\.addEventListener\("pointerdown", \(e\) => \{\s+if \(e\.pointerType === 'touch'\)/);
     expect(js).toContain("carousel.addEventListener('touchcancel'");
   });
+
+  test('kc-public-shell usa min-height: 100dvh no body raiz (C6 — iOS Safari dynamic viewport)', () => {
+    const css = fs.readFileSync(path.resolve(__dirname, '..', 'assets/css/kc-public-shell.css'), 'utf8');
+    expect(css).toContain('min-height: 100dvh');
+  });
+
+  test('admin-shell usa max-height: calc(100dvh ...) no .kc-modal (B5 — iOS Safari dynamic viewport)', () => {
+    const css = fs.readFileSync(path.resolve(__dirname, '..', 'assets/css/admin-shell.css'), 'utf8');
+    expect(css).toContain('max-height: calc(100dvh - var(--kc-admin-modal-viewport-gap)');
+  });
+
+  test('admin-shell usa max-height: calc(100dvh ...) no .kc-admin-chart-modal (B5 — iOS Safari dynamic viewport)', () => {
+    const css = fs.readFileSync(path.resolve(__dirname, '..', 'assets/css/admin-shell.css'), 'utf8');
+    expect(css).toContain('max-height: calc(100dvh - var(--kc-admin-chart-modal-viewport-gap)');
+  });
 });

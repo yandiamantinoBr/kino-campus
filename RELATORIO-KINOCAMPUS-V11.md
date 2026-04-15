@@ -1707,6 +1707,34 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.27.3` (CSS fix: B5 `max-height:100vh` → `100dvh` em modais admin + C6 `min-height:100vh` → `100dvh` no body raiz).
 
+### Iteração `v11.27.3`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-27-3-css-dvh-fallbacks` |
+| Tipo | fix CSS (sem alteração funcional de features) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  corrigir issues B5 e C6 da auditoria v11.27.0 — adicionar `100dvh` (dynamic viewport height) como fallback progressivo nos locais onde `100vh` é usado em contextos de altura crítica, para que barras do browser em iOS Safari não colapsin/expandam o layout de forma inesperada.
+- arquivos alterados:
+  - `assets/css/kc-public-shell.css` — `body.kc-shell-page`: adicionado `min-height: 100dvh` abaixo de `min-height: 100vh` (C6).
+  - `assets/css/admin-shell.css` — `body.kc-admin-page .kc-modal`: adicionado `max-height: calc(100dvh - ...)` abaixo de `max-height: calc(100vh - ...)` (B5); mesmo padrão em `body.kc-admin-page--dashboard .kc-admin-chart-modal` (B5).
+  - `tests/ios-gesture-hardening.test.js` — 3 testes novos: `min-height: 100dvh` em kc-public-shell, `max-height: calc(100dvh ...` em admin .kc-modal e .kc-admin-chart-modal.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.27.3.
+- resultado dos testes:
+  `59/59` suites, `711/711` testes (+3 vs baseline anterior), hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  sem alteração de feature — somente adição de linha de fallback dvh (progressive enhancement; browsers sem suporte a 100dvh usam o 100vh acima).
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  trilha iOS/Safari v11.27.x concluída (3 issues altos: A1+A2+B4 em v11.27.1; A3 em v11.27.2; B5+C6 em v11.27.3). Próxima: `v11.28.x` (paridade entre controllers equivalentes).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
