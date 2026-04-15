@@ -1735,6 +1735,35 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   trilha iOS/Safari v11.27.x concluída (3 issues altos: A1+A2+B4 em v11.27.1; A3 em v11.27.2; B5+C6 em v11.27.3). Próxima: `v11.28.x` (paridade entre controllers equivalentes).
 
+### Iteração `v11.28.0`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-28-0-controller-parity-audit` |
+| Tipo | audit/docs (sem alteração funcional) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  auditoria de paridade entre os 6 module controllers. Mapeamento de gaps entre implementações que já seguem todos os padrões arquiteturais (achados-perdidos, compra-venda, moradia, oportunidades) e as que ainda não seguem (caronas-feed, eventos).
+- resultado da auditoria:
+  4 gaps identificados:
+  - **M1** (alta): caronas-feed sem KCOverlayLock na seção modal (linha 629/668) — iOS scroll pass-through
+  - **M2** (média): caronas-feed sem SWR/KCSessionStore — feed recarrega a cada navegação
+  - **M3** (alta): eventos sem KCOverlayLock na seção modal (linha 244/309) — iOS scroll pass-through
+  - **M4** (média): eventos sem SWR/KCSessionStore — feed recarrega a cada navegação
+  - Admins: sem gaps críticos (padrão diferente, acesso majoritariamente desktop)
+- arquivos alterados:
+  - `docs/controller-parity-audit-v11.28.md` — relatório standalone com inventário completo, gaps e plano de correção v11.28.1–v11.28.2.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.28.0.
+- resultado dos testes:
+  `59/59` suites, `711/711` testes (docs-only, sem alterações funcionais), hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  a ser preenchido após merge — docs-only, sem deploy dedicado.
+- próximas fases:
+  `v11.28.1` (JS fix: M1+M3 — KCOverlayLock em caronas-feed e eventos section modals) → `v11.28.2` (JS feat: M2+M4 — SWR/KCSessionStore em caronas-feed e eventos).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
