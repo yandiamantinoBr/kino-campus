@@ -667,7 +667,11 @@
     if (!modal) return;
     modal.setAttribute('aria-hidden', 'false');
     modal.classList.add('is-open');
-    document.documentElement.classList.add('kc-scroll-locked');
+    // Usa KCOverlayLock para garantir scroll lock correto no iOS Safari:
+    // salva scrollY, aplica position:fixed no body, restaura ao fechar.
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+      window.KCOverlayLock.lock('eventos-cal-modal');
+    }
     syncModalViewTabs();
     renderCalendarAll();
   }
@@ -677,7 +681,9 @@
     if (!modal) return;
     modal.setAttribute('aria-hidden', 'true');
     modal.classList.remove('is-open');
-    document.documentElement.classList.remove('kc-scroll-locked');
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+      window.KCOverlayLock.unlock('eventos-cal-modal');
+    }
   }
 
   function syncViewTabs(view) {

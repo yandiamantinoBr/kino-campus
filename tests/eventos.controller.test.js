@@ -126,6 +126,14 @@ describe('eventos.controller — source contracts', () => {
     expect(source).toContain('Janeiro');
     expect(source).toContain('Dezembro');
   });
+
+  test('usa KCOverlayLock.lock para scroll lock no modal calendário (iOS)', () => {
+    expect(source).toContain("KCOverlayLock.lock('eventos-cal-modal')");
+  });
+
+  test('usa KCOverlayLock.unlock ao fechar modal calendário (iOS)', () => {
+    expect(source).toContain("KCOverlayLock.unlock('eventos-cal-modal')");
+  });
 });
 
 describe('eventos.controller — runtime: carregamento sem lançar', () => {
