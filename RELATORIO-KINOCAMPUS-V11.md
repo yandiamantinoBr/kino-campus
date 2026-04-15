@@ -1627,6 +1627,32 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.27.x` (iOS/Safari hardening) → `v11.28.x` (paridade de controllers) → `v11.29.x` (SWR extensão) → `v11.30.x` (refactor monolítico).
 
+### Iteração `v11.27.0`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-27-0-ios-safari-audit` |
+| Tipo | auditoria (somente docs) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  levantamento sistemático de todos os bugs e incompatibilidades iOS/Safari no codebase — CSS e JS. Nenhum arquivo de produção alterado.
+- arquivos alterados:
+  - `docs/ios-safari-audit-v11.27.md` — auditoria completa: 6 issues identificados (3 alta, 2 média, 1 baixa), plano de correção em 3 iterações (v11.27.1–v11.27.3), 4 padrões descartados por suporte moderno OK. Issues: A1 `backdrop-filter` sem webkit em `.kc-hero-pill` (`styles.css:656`); A2 `font-size:12px` em `.kc-search-bar input` (`styles.css:3519`, @media 420px); A3 scroll lock incompleto em `eventos.controller.js:670,680`; B4 `backdrop-filter:none` sem webkit (`kc-public-shell.css:126`); B5 `max-height:100vh` sem dvh em modais admin; C6 `min-height:100vh` sem dvh no body raiz.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.27.0.
+- resultado dos testes:
+  `59/59` suites, `706/706` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  docs-only; zero alteração em arquivos de produção (`assets/`).
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  `v11.27.1` (CSS fix: A1 prefixo webkit + A2 font-size + B4) → `v11.27.2` (JS fix: A3 scroll lock eventos) → `v11.27.3` (CSS fix: B5/C6 dvh fallbacks).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
