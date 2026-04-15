@@ -90,6 +90,7 @@ beforeAll(() => {
     rankRelatedPosts: jest.fn((_, c) => c),
   };
 
+  require('../assets/js/adapters/supabase.media.adapter.js');
   require('../assets/js/adapters/supabase.adapter.js');
 });
 
