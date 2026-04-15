@@ -1990,6 +1990,33 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.30.4` (votes: `getMyVote`, `votePost`) → `v11.30.5` (media + `window.KCCompressImage`) → `v11.30.6` (saved) → `v11.30.7` (posts-read) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último).
 
+### Iteração `v11.30.4`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-30-4-adapter-split-votes` |
+| Tipo | refactor (split de monolito, sem alteração de comportamento) |
+| PR | `#327` |
+
+- objetivo:
+  extrair o grupo votes do `supabase.adapter.js` (3157L → 3006L, −151L) para sub-adapter independente usando o namespace `window._KCSA`.
+- resultado:
+  - **NOVO** `assets/js/adapters/supabase.votes.adapter.js` — 2 funções de API (`getMyVote`, `votePost`) + 5 helpers de domínio (`logVoteError`, `isVoteConflict`, `voteFail`, `fetchPostScore`, `deleteVoteByPostAndVoter`, `resolveLegacyPostUuid`) + 2 helpers utilitários locais (`UUID_RE`, `normalizeErrorForDiagnostics`) registrados em `window._KCSA.votes`.
+  - **ALTERADO** `supabase.adapter.js`: bloco votes removido; `driverSupabase` aponta para `window._KCSA.votes.*`; fallback guard adicionado. `votePost` usa `resolveLegacyPostUuid` com referência lazy a `window._KCSA.posts.getPostById` (ativado quando posts for extraído em v11.30.7/8).
+  - **22 HTMLs** atualizados: nova tag `<script defer>` para `supabase.votes.adapter.js` inserida entre comments e notifications.
+- arquivos alterados:
+  - `assets/js/adapters/supabase.votes.adapter.js` — novo sub-adapter.
+  - `assets/js/adapters/supabase.adapter.js` — refatorado (−151L).
+  - 22 HTMLs públicos e admin — 1 script tag adicionada.
+  - `tests/supabase-votes-adapter.test.js` — 22 testes estáticos.
+- resultado dos testes:
+  `66/66` suites, `844/844` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#327` — squash merge `762e5cd` — promoção `dpl_FtTooFNE1keMiYMfhLPF52qYhu89`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.5` (media + `window.KCCompressImage`) → `v11.30.6` (saved) → `v11.30.7` (posts-read) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
