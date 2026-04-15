@@ -1680,6 +1680,33 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.27.2` (JS fix: A3 scroll lock incompleto em eventos.controller) → `v11.27.3` (CSS fix: B5/C6 dvh fallbacks).
 
+### Iteração `v11.27.2`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-27-2-js-scroll-lock-eventos` |
+| Tipo | fix JS (sem alteração funcional de features) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  corrigir issue A3 da auditoria v11.27.0 — scroll lock incompleto ao abrir o modal do calendário em `eventos.controller.js`. No iOS, `document.documentElement.classList.add('kc-scroll-locked')` sem `position:fixed` no body causava scroll pass-through e jump ao fechar.
+- arquivos alterados:
+  - `assets/js/controllers/eventos.controller.js` — `openCalModal()`: substituído `document.documentElement.classList.add('kc-scroll-locked')` por `window.KCOverlayLock.lock('eventos-cal-modal')` (com guard de existência); `closeCalModal()`: substituído `classList.remove` por `window.KCOverlayLock.unlock('eventos-cal-modal')`. O KCOverlayLock salva `scrollY`, aplica `body.style.top`, adiciona `kc-scroll-locked` em `<html>` e `<body>`, e restaura a posição ao desbloquear.
+  - `tests/eventos.controller.test.js` — 2 testes novos: `KCOverlayLock.lock('eventos-cal-modal')` e `KCOverlayLock.unlock('eventos-cal-modal')` presentes no source.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.27.2.
+- resultado dos testes:
+  `59/59` suites, `708/708` testes (+2 vs baseline anterior), hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  sem alteração de feature — somente troca de mecanismo de scroll lock.
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  `v11.27.3` (CSS fix: B5 `max-height:100vh` → `100dvh` em modais admin + C6 `min-height:100vh` → `100dvh` no body raiz).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
