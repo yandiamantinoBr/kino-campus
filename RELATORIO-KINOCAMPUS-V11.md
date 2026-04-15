@@ -1902,7 +1902,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - resultado dos testes:
   `61/61` suites, `739/739` testes (docs-only, sem alterações funcionais); hygiene `8.6.0`.
 - PR \ commit \ deploy:
-  a preencher após merge.
+  PR `#319` — squash merge `2362513` — docs-only, sem deploy dedicado.
 - próximas fases:
   `v11.30.1` (extração de notifications + analytics do `supabase.adapter.js` — menor acoplamento, máxima segurança) → `v11.30.2` (extração de seções do `product.controller.js`).
 
