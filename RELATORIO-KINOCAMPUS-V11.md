@@ -1771,7 +1771,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 15 de abril de 2026 |
 | Branch | `codex/v11-28-1-js-overlaylock-sections` |
 | Tipo | fix JS (sem alteração funcional de features) |
-| PR | a ser preenchido após merge |
+| PR | `#311` |
 
 - objetivo:
   corrigir gaps M1 e M3 da auditoria v11.28.0 — `caronas-feed.controller.js` e `eventos.controller.js` usavam apenas `document.body.classList.add('kc-modal-open')` ao abrir a seção modal. No iOS, `overflow:hidden` sem `position:fixed` no body não impede scroll pass-through. Alinhamento com o padrão de achados-perdidos, compra-venda, moradia e oportunidades.
@@ -1787,9 +1787,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   sem alteração de feature — somente adição do padrão KCOverlayLock (guard `window.KCOverlayLock && typeof ... === 'function'` garante fallback seguro se dependência ausente).
 - validacao em navegador:
-  a ser preenchido após deploy.
+  smoke HTTP 200 em `www.kinocampus.com.br` confirmado pós-promoção.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#311` — squash merge `4fc3691` — pós-merge `dpl_9qz4BRqzcovn4U7YpEdUF88w5Kf4` — produção `dpl_HV5sQXLd2ZL3PgL1X6FM7tRcnwgw`.
 - próximas fases:
   `v11.28.2` (JS feat: M2+M4 — SWR/KCSessionStore em caronas-feed e eventos).
 
