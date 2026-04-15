@@ -1634,7 +1634,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 12 de abril de 2026 |
 | Branch | `codex/v11-27-0-ios-safari-audit` |
 | Tipo | auditoria (somente docs) |
-| PR | a ser preenchido após merge |
+| PR | `#302` |
 
 - objetivo:
   levantamento sistemático de todos os bugs e incompatibilidades iOS/Safari no codebase — CSS e JS. Nenhum arquivo de produção alterado.
@@ -1647,9 +1647,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   docs-only; zero alteração em arquivos de produção (`assets/`).
 - validacao em navegador:
-  a ser preenchido após deploy.
+  docs-only; integrado ao smoke de v11.27.1.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#302` — squash merge `0f10e0d` — sem deploy dedicado (docs-only, integrado ao ciclo de v11.27.1).
 - próximas fases:
   `v11.27.1` (CSS fix: A1 prefixo webkit + A2 font-size + B4) → `v11.27.2` (JS fix: A3 scroll lock eventos) → `v11.27.3` (CSS fix: B5/C6 dvh fallbacks).
 
@@ -1660,7 +1660,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 12 de abril de 2026 |
 | Branch | `codex/v11-27-1-css-webkit-fontsize` |
 | Tipo | fix CSS (sem alteração funcional) |
-| PR | a ser preenchido após merge |
+| PR | `#303` |
 
 - objetivo:
   corrigir 3 issues CSS identificados na auditoria v11.27.0 — todos de impacto iOS/Safari visual.
@@ -1674,9 +1674,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   zero alteração funcional — somente prefixo webkit adicionado e font-size corrigido.
 - validacao em navegador:
-  a ser preenchido após deploy.
+  produção HTTP 200 confirmado via `www.kinocampus.com.br`.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#303` — squash merge `af3c834` — pós-merge `dpl_7ryVE4rmHKEv96GbQBXbgqdXPXzG` — produção `dpl_EkBos1VHpwRGmQcCAkgDyGrmcgdB`.
 - próximas fases:
   `v11.27.2` (JS fix: A3 scroll lock incompleto em eventos.controller) → `v11.27.3` (CSS fix: B5/C6 dvh fallbacks).
 
