@@ -1963,6 +1963,33 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.30.3` (próximo grupo: comments) → `v11.30.4` (votes) → `v11.30.5` (media + `window.KCCompressImage`) → `v11.30.6` (saved) → `v11.30.7` (posts-read) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último) → `v11.30.10+` (split de `product.controller.js`).
 
+### Iteração `v11.30.3`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-30-3-adapter-split-comments` |
+| Tipo | refactor (split de monolito, sem alteração de comportamento) |
+| PR | `#325` |
+
+- objetivo:
+  extrair o grupo comments do `supabase.adapter.js` (3382L → 3157L, −225L) para sub-adapter independente usando o namespace `window._KCSA`.
+- resultado:
+  - **NOVO** `assets/js/adapters/supabase.comments.adapter.js` — 3 funções de API (`getComments`, `addComment`, `likeComment`) + 3 helpers de domínio (`resolveCommentParentIdFromOptions`, `resolveCommentMutationErrorMessage`, `isCommentLikeAlreadyLiked`) + 3 helpers utilitários locais (`UUID_RE`, `isMissingTokenError`, `getUserDisplayNameForProfile`) registrados em `window._KCSA.comments`.
+  - **ALTERADO** `supabase.adapter.js`: 2 blocos de comments removidos (bloco principal + bloco `likeComment`/`isCommentLikeAlreadyLiked`); `driverSupabase` aponta para `window._KCSA.comments.*`; fallback guard `window._KCSA.comments = window._KCSA.comments || {}` adicionado.
+  - **22 HTMLs** atualizados: nova tag `<script defer>` para `supabase.comments.adapter.js` inserida na ordem correta (após admin, antes de notifications).
+- arquivos alterados:
+  - `assets/js/adapters/supabase.comments.adapter.js` — novo sub-adapter.
+  - `assets/js/adapters/supabase.adapter.js` — refatorado (−225L).
+  - 22 HTMLs públicos e admin — 1 script tag adicionada.
+  - `tests/supabase-comments-adapter.test.js` — 24 testes estáticos.
+- resultado dos testes:
+  `65/65` suites, `822/822` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#325` — squash merge `b11f71d` — promoção `dpl_9iiPPwVZ2Mmp1bBPatGCfUR1nTX2`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.4` (votes: `getMyVote`, `votePost`) → `v11.30.5` (media + `window.KCCompressImage`) → `v11.30.6` (saved) → `v11.30.7` (posts-read) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
