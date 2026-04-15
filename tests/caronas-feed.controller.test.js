@@ -120,6 +120,23 @@ describe('caronas-feed.controller — source contracts', () => {
   test('usa KCOverlayLock.unlock ao fechar modal de seção (iOS)', () => {
     expect(source).toContain("KCOverlayLock.unlock('caronas-section-modal')");
   });
+
+  test('define LOCATIONS_STORE_KEY para cache KCSessionStore', () => {
+    expect(source).toContain("LOCATIONS_STORE_KEY");
+    expect(source).toContain("'caronas:locations'");
+  });
+
+  test('usa getSessionStore para obter store de sessão', () => {
+    expect(source).toContain('getSessionStore');
+  });
+
+  test('usa store.get( para leitura do cache de localizações', () => {
+    expect(source).toContain('store.get(');
+  });
+
+  test('usa store.set( para persistência do cache de localizações', () => {
+    expect(source).toContain('persistStore.set(');
+  });
 });
 
 describe('caronas-feed.controller — runtime: carregamento sem lançar', () => {

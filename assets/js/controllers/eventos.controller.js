@@ -18,6 +18,16 @@
   var DAYS_SHORT  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   var STORAGE_KEY = 'kc_events_calendar_month';
 
+  /* ── Cache de sessão (SWR) ────────────────────────────── */
+  var SECTION_CACHE_KEY = 'eventos:calendar';
+  var SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10; // 10 min
+
+  function getSessionStore() {
+    return (window.KCSessionStore && typeof window.KCSessionStore.getStore === 'function')
+      ? window.KCSessionStore.getStore()
+      : null;
+  }
+
   /* ── Helpers ──────────────────────────────────────────── */
   function padZ(n) { return String(n).padStart(2, '0'); }
   function toYMD(y, m, d) { return y + '-' + padZ(m + 1) + '-' + padZ(d); }
@@ -386,6 +396,26 @@
   }
 
   /* ── Busca eventos do Supabase ────────────────────────── */
+  function restoreCachedEvents() {
+    var store = getSessionStore();
+    if (!store) return false;
+    var cached = store.get('feed-index', SECTION_CACHE_KEY, { maxAge: SECTION_CACHE_MAX_AGE_MS });
+    var events = cached && cached.value && Array.isArray(cached.value.events) ? cached.value.events : [];
+    if (!events.length) return false;
+    calState.events = events;
+    calState.loaded = true;
+    renderCalendarAll();
+    return true;
+  }
+
+  function persistCachedEvents(events) {
+    var store = getSessionStore();
+    if (!store || typeof store.set !== 'function') return;
+    store.set('feed-index', SECTION_CACHE_KEY, {
+      events: Array.isArray(events) ? events.slice(0, 600) : [],
+    });
+  }
+
   function fetchEvents() {
     if (calState.loading) return;
     calState.loading = true;
@@ -409,6 +439,7 @@
         if (!res.error && Array.isArray(res.data)) {
           calState.events = res.data;
           calState.loaded = true;
+          persistCachedEvents(calState.events);
         }
         calState.loading = false;
         renderCalendarAll();
@@ -772,8 +803,9 @@
     }
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeCalModal(); });
 
-    // Render inicial + fetch
+    // Render inicial + fetch (tenta cache primeiro para resposta imediata)
     renderCalendarAll();
+    restoreCachedEvents();
     fetchEvents();
   }
 

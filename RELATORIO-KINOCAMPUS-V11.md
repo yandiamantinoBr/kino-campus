@@ -1793,6 +1793,38 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.28.2` (JS feat: M2+M4 — SWR/KCSessionStore em caronas-feed e eventos).
 
+### Iteração `v11.28.2`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-28-2-js-swr-caronas-eventos` |
+| Tipo | feat JS (cache de sessão, sem alteração funcional visível) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  corrigir gaps M2 e M4 da auditoria v11.28.0 — adicionar `KCSessionStore` como mecanismo de cache para persistência entre navegações, alinhando caronas-feed e eventos com o padrão dos demais module controllers.
+- o que foi adicionado:
+  - **eventos.controller.js** — SWR para dados do calendário: `SECTION_CACHE_KEY = 'eventos:calendar'`, `SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10`, `getSessionStore()`, `restoreCachedEvents()` (lê cache antes de `fetchEvents()`), `persistCachedEvents()` (salva após fetch bem-sucedido). Em `initCalendar()`: chama `restoreCachedEvents()` antes de `fetchEvents()` para resposta imediata.
+  - **caronas-feed.controller.js** — SWR para cache de localizações: `LOCATIONS_STORE_KEY = 'caronas:locations'`, `getSessionStore()`. Em `fetchPopularLocations()`: tenta `store.get('caronas-feed', LOCATIONS_STORE_KEY, ...)` antes do `sessionStorage` legado; após fetch do Supabase: `persistStore.set('caronas-feed', LOCATIONS_STORE_KEY, ...)` antes de `sessionStorage.setItem` (mantém compatibilidade legada).
+- arquivos alterados:
+  - `assets/js/controllers/eventos.controller.js` — +25 linhas.
+  - `assets/js/controllers/caronas-feed.controller.js` — +20 linhas.
+  - `tests/eventos.controller.test.js` — 5 testes novos: `SECTION_CACHE_KEY`, `SECTION_CACHE_MAX_AGE_MS`, `getSessionStore`, `restoreCachedEvents`/`store.get`, `persistCachedEvents`/`store.set`.
+  - `tests/caronas-feed.controller.test.js` — 4 testes novos: `LOCATIONS_STORE_KEY`, `getSessionStore`, `store.get(`, `persistStore.set(`.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.28.2.
+- resultado dos testes:
+  `59/59` suites, `724/724` testes (+9 vs baseline anterior), hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  KCSessionStore é opcional — guards `if (store)` garantem que controllers continuam funcionando normalmente quando KCSessionStore não está disponível.
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  v11.28.x concluída — todos os 6 module controllers em paridade arquitetural completa (KCOverlayLock + SWR/KCSessionStore + KCFeedFilters). Próxima: `v11.29.x` (monolith refactor — `supabase.adapter.js` ~162KB, `product.controller.js` ~139KB).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
