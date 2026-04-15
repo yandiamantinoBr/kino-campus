@@ -1764,6 +1764,35 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.28.1` (JS fix: M1+M3 — KCOverlayLock em caronas-feed e eventos section modals) → `v11.28.2` (JS feat: M2+M4 — SWR/KCSessionStore em caronas-feed e eventos).
 
+### Iteração `v11.28.1`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-28-1-js-overlaylock-sections` |
+| Tipo | fix JS (sem alteração funcional de features) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  corrigir gaps M1 e M3 da auditoria v11.28.0 — `caronas-feed.controller.js` e `eventos.controller.js` usavam apenas `document.body.classList.add('kc-modal-open')` ao abrir a seção modal. No iOS, `overflow:hidden` sem `position:fixed` no body não impede scroll pass-through. Alinhamento com o padrão de achados-perdidos, compra-venda, moradia e oportunidades.
+- arquivos alterados:
+  - `assets/js/controllers/caronas-feed.controller.js` — `openCaronasSection()`: adiciona `KCOverlayLock.lock('caronas-section-modal')` após `kc-modal-open`; `closeCaronasSection()`: adiciona `KCOverlayLock.unlock('caronas-section-modal')` no branch `wasActive`.
+  - `assets/js/controllers/eventos.controller.js` — `openEventosSection()`: adiciona `KCOverlayLock.lock('eventos-section-modal')` após `kc-modal-open`; `closeEventosSection()`: adiciona `KCOverlayLock.unlock('eventos-section-modal')` no branch `wasActive`.
+  - `tests/caronas-feed.controller.test.js` — 2 testes novos: lock/unlock `'caronas-section-modal'`.
+  - `tests/eventos.controller.test.js` — 2 testes novos: lock/unlock `'eventos-section-modal'`.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.28.1.
+- resultado dos testes:
+  `59/59` suites, `715/715` testes (+4 vs baseline anterior), hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  sem alteração de feature — somente adição do padrão KCOverlayLock (guard `window.KCOverlayLock && typeof ... === 'function'` garante fallback seguro se dependência ausente).
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  `v11.28.2` (JS feat: M2+M4 — SWR/KCSessionStore em caronas-feed e eventos).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
