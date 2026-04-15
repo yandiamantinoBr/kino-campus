@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.30.1`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 63/63 suites e 778/778 testes em `v11.30.1`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), e primeiro split do monolito `supabase.adapter.js` concluído em `v11.30.1` (analytics + notifications extraídos para sub-adapters via `window._KCSA`).
+**Status atual:** v11 executada até `v11.30.2`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 64/64 suites e 798/798 testes em `v11.30.2`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), e split do monolito `supabase.adapter.js` em andamento — analytics, notifications e admin extraídos para sub-adapters via `window._KCSA` (3 de 9 grupos concluídos).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.30.2 | split `supabase.adapter.js` (3626L → 3382L, −244L): extração de admin/help-requests (3 funções + 3 helpers → `supabase.admin.adapter.js`) via `window._KCSA`; 22 HTMLs atualizados; 1 nova suite (20 testes) — baseline sobe para 64/64 suites e 798/798 testes | `#323` |
 | v11.30.1 | split `supabase.adapter.js` (4041L → 3626L, −415L): extração de analytics (6 funções → `supabase.analytics.adapter.js`) e notifications (11 funções + 6 helpers → `supabase.notifications.adapter.js`) via `window._KCSA`; 22 HTMLs atualizados; 2 novas suites (34 testes) — baseline sobe para 63/63 suites e 778/778 testes | `#321` |
 | v11.30.0 | auditoria dos dois monolitos: `supabase.adapter.js` (4041 linhas, 162KB — 20 seções, 11 grupos de domínio, 46 métodos públicos) e `product.controller.js` (3368 linhas, 143KB — 18 seções, 9 grupos); estratégia de split incremental com `window._KCSA` e `window._KCProduct`; sequência de 17 sub-entregas mapeada em `docs/monolith-audit-v11.30.md` | `#319` |
 | v11.29.1 | SWR/KCSessionStore em `my-posts.controller.js` (`SECTION_CACHE_KEY='my-posts:index'`, TTL 10 min, cap 200, `restoreCachedPosts`/`persistCachedPosts`, `forceRefresh` em `reloadPosts`) e `profile.controller.js` (`profileCacheKey()` separado por `isPublicView+profileId`, `restoreCachedProfile`/`persistCachedProfile`, `loadProfile()` retorna imediatamente do cache); 2 novas suites (15 testes) — baseline sobe para 61/61 suites e 739/739 testes | `#317` |

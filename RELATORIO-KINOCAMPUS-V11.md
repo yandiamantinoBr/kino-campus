@@ -1934,7 +1934,34 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#321` — squash merge `fd8ca92` — produção `dpl_9ynQ7M6bh1NnpPjKoPCKurkQ1a1A`, smoke HTTP 200.
 - próximas fases:
-  `v11.30.2` (próximo grupo do `supabase.adapter.js`: admin — menor dependência após analytics+notifications) → `v11.30.3+` (comments, votes, media, etc.) → `v11.30.3+` (split de `product.controller.js`).
+  `v11.30.2` (próximo grupo do `supabase.adapter.js`: admin — menor dependência após analytics+notifications) → `v11.30.3+` (comments, votes, media, etc.) → `v11.30.9` (profiles — maior acoplamento, último) → `v11.30.10+` (split de `product.controller.js`).
+
+### Iteração `v11.30.2`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-30-2-adapter-split-admin` |
+| Tipo | refactor (split de monolito, sem alteração de comportamento) |
+| PR | `#323` |
+
+- objetivo:
+  extrair o grupo admin/help-requests do `supabase.adapter.js` (3626L → 3382L, −244L) para sub-adapter independente usando o namespace `window._KCSA`.
+- resultado:
+  - **NOVO** `assets/js/adapters/supabase.admin.adapter.js` — 3 funções de admin (`createHelpRequest`, `listAdminHelpRequests`, `updateAdminHelpRequest`) + 3 helpers (`normalizeHelpPayload`, `attachAdminHelpListMeta`, `buildAdminHelpSearchQuery`) registrados em `window._KCSA.admin`.
+  - **ALTERADO** `supabase.adapter.js`: grupo admin/help-requests substituído por 1 comentário placeholder; `driverSupabase` aponta para `window._KCSA.admin.*`; fallback guard `window._KCSA.admin = window._KCSA.admin || {}` adicionado.
+  - **22 HTMLs** atualizados: nova tag `<script defer>` para `supabase.admin.adapter.js` inserida na ordem correta (após analytics, antes de notifications).
+- arquivos alterados:
+  - `assets/js/adapters/supabase.admin.adapter.js` — novo sub-adapter.
+  - `assets/js/adapters/supabase.adapter.js` — refatorado (−244L).
+  - 22 HTMLs públicos e admin — 1 script tag adicionada.
+  - `tests/supabase-admin-adapter.test.js` — 20 testes estáticos.
+- resultado dos testes:
+  `64/64` suites, `798/798` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#323` — squash merge `7274bef` — produção `dpl_9ynQ7M6bh1NnpPjKoPCKurkQ1a1A`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.3` (próximo grupo: comments) → `v11.30.4` (votes) → `v11.30.5` (media + `window.KCCompressImage`) → `v11.30.6` (saved) → `v11.30.7` (posts-read) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último) → `v11.30.10+` (split de `product.controller.js`).
 
 ---
 
