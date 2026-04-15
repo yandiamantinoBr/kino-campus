@@ -653,6 +653,7 @@ main {
     font-weight: 900;
     letter-spacing: 0.18em;
     text-transform: uppercase;
+    -webkit-backdrop-filter: blur(10px); /* iOS Safari < 15.4 */
     backdrop-filter: blur(10px);
     margin-bottom: 14px;
 }
@@ -3517,7 +3518,7 @@ select:focus-visible {
 
     .kc-search-bar input {
         padding: 6px 8px;
-        font-size: 12px;
+        font-size: 1rem; /* ≥16px: previne zoom automático no iOS Safari (era 12px) */
     }
 
     .kc-user-actions {

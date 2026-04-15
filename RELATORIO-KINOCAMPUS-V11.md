@@ -1653,6 +1653,33 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.27.1` (CSS fix: A1 prefixo webkit + A2 font-size + B4) → `v11.27.2` (JS fix: A3 scroll lock eventos) → `v11.27.3` (CSS fix: B5/C6 dvh fallbacks).
 
+### Iteração `v11.27.1`
+
+| Campo | Valor |
+|---|---|
+| Data | 12 de abril de 2026 |
+| Branch | `codex/v11-27-1-css-webkit-fontsize` |
+| Tipo | fix CSS (sem alteração funcional) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  corrigir 3 issues CSS identificados na auditoria v11.27.0 — todos de impacto iOS/Safari visual.
+- arquivos alterados:
+  - `assets/css/styles.css` — A1: adicionado `-webkit-backdrop-filter: blur(10px)` em `.kc-hero-pill` (linha 656, antes do `backdrop-filter` sem prefixo); A2: `font-size: 12px` → `font-size: 1rem` em `.kc-search-bar input` `@media (max-width: 420px)` — elimina zoom automático no iOS ao focar o campo de busca.
+  - `assets/css/kc-public-shell.css` — B4: adicionado `-webkit-backdrop-filter: none` no reset do painel account-setup.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.27.1.
+- resultado dos testes:
+  `59/59` suites, `706/706` testes, hygiene `8.6.0`, sem regressão.
+- validacao operacional:
+  zero alteração funcional — somente prefixo webkit adicionado e font-size corrigido.
+- validacao em navegador:
+  a ser preenchido após deploy.
+- PR \ commit \ deploy:
+  a ser preenchido após merge.
+- próximas fases:
+  `v11.27.2` (JS fix: A3 scroll lock incompleto em eventos.controller) → `v11.27.3` (CSS fix: B5/C6 dvh fallbacks).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
