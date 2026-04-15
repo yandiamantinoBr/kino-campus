@@ -1714,7 +1714,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 15 de abril de 2026 |
 | Branch | `codex/v11-27-3-css-dvh-fallbacks` |
 | Tipo | fix CSS (sem alteração funcional de features) |
-| PR | a ser preenchido após merge |
+| PR | `#307` |
 
 - objetivo:
   corrigir issues B5 e C6 da auditoria v11.27.0 — adicionar `100dvh` (dynamic viewport height) como fallback progressivo nos locais onde `100vh` é usado em contextos de altura crítica, para que barras do browser em iOS Safari não colapsin/expandam o layout de forma inesperada.
@@ -1729,9 +1729,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   sem alteração de feature — somente adição de linha de fallback dvh (progressive enhancement; browsers sem suporte a 100dvh usam o 100vh acima).
 - validacao em navegador:
-  a ser preenchido após deploy.
+  smoke HTTP 200 em `www.kinocampus.com.br` confirmado pós-promoção.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#307` — squash merge `1df99cf` — pós-merge `dpl_7zm41sNzrZwopXf4kRBc18aQ2zZR` — produção `dpl_F8Tf86cRnPSrg94Chj3Ck1THGBtM`.
 - próximas fases:
   trilha iOS/Safari v11.27.x concluída (3 issues altos: A1+A2+B4 em v11.27.1; A3 em v11.27.2; B5+C6 em v11.27.3). Próxima: `v11.28.x` (paridade entre controllers equivalentes).
 
