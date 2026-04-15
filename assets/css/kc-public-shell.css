@@ -123,6 +123,7 @@ body.kc-profile-route .kc-profile-inline-form__actions button {
 
 body.kc-account-setup-page .kc-account-panel,
 body.kc-account-setup-page .kc-account-preview {
+  -webkit-backdrop-filter: none; /* iOS Safari < 15.4 */
   backdrop-filter: none;
 }
 
