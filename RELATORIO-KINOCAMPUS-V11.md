@@ -1878,6 +1878,34 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   v11.29.x concluída. Próxima: `v11.30.x` (refactor monolito — `supabase.adapter.js` ~162KB + `product.controller.js` ~139KB).
 
+### Iteração `v11.30.0`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-30-0-monolith-audit` |
+| Tipo | audit/docs (sem alteração funcional) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  mapear estrutura interna de `supabase.adapter.js` (4041 linhas, 162KB) e `product.controller.js` (3368 linhas, 143KB), identificar grupos de domínio, dependências cruzadas e estratégia de split segura.
+- resultado da auditoria:
+  - **`supabase.adapter.js`**: 20 seções internas mapeadas, 46 métodos públicos, 11 grupos de domínio identificados. Estratégia: extração incremental via `window._KCSA` com thin orchestrator. Ordem de extração: notifications → analytics → admin → comments → votes → media → saved → posts-read → posts-write → profiles.
+  - **`product.controller.js`**: 18 seções internas mapeadas. Presente em apenas 1 HTML. Estratégia: namespace `window._KCProduct` com estado compartilhado. Ordem: report → related → calendar+save → ratings → edit → popovers+core.
+  - `window.KCCompressImage` deve seguir junto com `supabase.media.adapter.js` (exposto globalmente).
+  - `getSupabaseClient()` permanece no arquivo principal durante todo o split — extraído por último.
+  - `docs/monolith-audit-v11.30.md` criado com tabelas completas de seções, grupos, acoplamento e sequência de 17 sub-entregas.
+- arquivos alterados:
+  - `docs/monolith-audit-v11.30.md` — relatório standalone.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.30.0.
+- resultado dos testes:
+  `61/61` suites, `739/739` testes (docs-only, sem alterações funcionais); hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  a preencher após merge.
+- próximas fases:
+  `v11.30.1` (extração de notifications + analytics do `supabase.adapter.js` — menor acoplamento, máxima segurança) → `v11.30.2` (extração de seções do `product.controller.js`).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
