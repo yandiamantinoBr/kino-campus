@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada ate `v11.29.0`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x`, baseline de testes elevado para 59/59 suites e 724/724 testes em `v11.26.x`–`v11.28.2`, trilha iOS/Safari encerrada (6/6 issues) e trilha de paridade de controllers encerrada (v11.28.x — 6/6 module controllers em paridade arquitetural: KCOverlayLock + SWR + KCFeedFilters).
+**Status atual:** v11 executada ate `v11.29.1`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x`, baseline de testes elevado para 61/61 suites e 739/739 testes em `v11.26.x`–`v11.29.1`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x — 6/6 module controllers em paridade arquitetural: KCOverlayLock + SWR + KCFeedFilters) e trilha SWR residual concluida (`profile.controller.js` e `my-posts.controller.js` com KCSessionStore).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.29.1 | SWR/KCSessionStore em `my-posts.controller.js` (`SECTION_CACHE_KEY='my-posts:index'`, TTL 10 min, cap 200, `restoreCachedPosts`/`persistCachedPosts`, `forceRefresh` em `reloadPosts`) e `profile.controller.js` (`profileCacheKey()` separado por `isPublicView+profileId`, `restoreCachedProfile`/`persistCachedProfile`, `loadProfile()` retorna imediatamente do cache); 2 novas suites (15 testes) — baseline sobe para 61/61 suites e 739/739 testes | `#317` |
 | v11.29.0 | auditoria SWR residual: confirma completude de SWR em 6/6 module feed controllers; mapeia residuos — `profile.controller.js` (fetch:45) e `my-posts.controller.js` (fetch:15) como candidatos para v11.29.1; `product.controller.js` (fetch:61, ~139KB) adiado para pós v11.30.2 (split primeiro); admins e outros: SWR nao aplicavel — `docs/swr-audit-v11.29.md` | `#315` |
 | v11.28.2 | feat JS SWR M2+M4: `KCSessionStore` adicionado em `eventos.controller.js` (cache calendário: `SECTION_CACHE_KEY='eventos:calendar'`, `restoreCachedEvents`/`persistCachedEvents`) e `caronas-feed.controller.js` (cache localizações: `LOCATIONS_STORE_KEY='caronas:locations'`, upgrade de `sessionStorage` raw para `KCSessionStore`); 9 testes novos — baseline sobe para 59/59 suites e 724/724 testes; todos os 6 module controllers em paridade arquitetural | `#313` |
 | v11.28.1 | fix JS iOS/Safari M1+M3: KCOverlayLock adicionado em `caronas-feed.controller.js` (seção modal, linhas 629/668) e `eventos.controller.js` (seção modal filtros, linhas 244/309) — alinha com padrão de achados-perdidos/compra-venda/moradia/oportunidades; 4 testes novos — baseline sobe para 59/59 suites e 715/715 testes | `#311` |

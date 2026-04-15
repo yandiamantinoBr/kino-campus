@@ -1854,6 +1854,30 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.29.1` (SWR em `profile.controller.js` e `my-posts.controller.js`) → `v11.30.x` (refactor monolito: `supabase.adapter.js` + `product.controller.js`).
 
+### Iteração `v11.29.1`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-29-1-swr-profile-myposts` |
+| Tipo | feature JS (SWR em 2 controllers) |
+| PR | `#317` |
+
+- objetivo:
+  adicionar padrão SWR/KCSessionStore em `my-posts.controller.js` e `profile.controller.js`, eliminando latência de back-navigation para dados estáveis de sessão.
+- implementação:
+  - **my-posts.controller.js**: `SECTION_CACHE_KEY = 'my-posts:index'`, TTL 10 min, cap 200 posts. `restoreCachedPosts()` restaura estado imediatamente antes do fetch. `persistCachedPosts()` salva após fetch bem-sucedido. `loadAllMyPosts(forceRefresh)` — `reloadPosts()` chama com `forceRefresh=true` para bypass explícito.
+  - **profile.controller.js**: `PROFILE_CACHE_MAX_AGE_MS = 10 min`, `profileCacheKey()` separado por `isPublicView + profileId`. `restoreCachedProfile()` → `loadProfile()` retorna imediatamente do cache (sem API call) em back-navigation. `persistCachedProfile()` salva após fetch bem-sucedido.
+  - **Testes**: 2 novas suites — `my-posts-swr.test.js` (8 testes) e `profile-swr.test.js` (7 testes) — contratos estáticos de presença de padrões SWR.
+- resultado dos testes:
+  `61/61` suites, `739/739` testes (+2 suites, +15 testes); hygiene `8.6.0`.
+- validacao em navegador:
+  smoke HTTP 200 em `www.kinocampus.com.br` confirmado pós-promoção.
+- PR \ commit \ deploy:
+  PR `#317` — squash merge `66426f6` — pós-merge `dpl_4vrPK91mHsrFdVgQxRVrnWGq5CJt` — produção `dpl_6qxSiPF9qEsakL8ubR94vcwNPUP2`.
+- próximas fases:
+  v11.29.x concluída. Próxima: `v11.30.x` (refactor monolito — `supabase.adapter.js` ~162KB + `product.controller.js` ~139KB).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
