@@ -1,4 +1,4 @@
-
+﻿
 (function () {
   'use strict';
 const { ENV, normalizePost } = window.KCAPI;
@@ -142,6 +142,11 @@ const { ENV, normalizePost } = window.KCAPI;
 
     return null;
   }
+
+  // ── Namespace _KCSA: expõe getClient/getCurrentUser para sub-adapters (v11.30.1) ──
+  window._KCSA = window._KCSA || {};
+  window._KCSA.getClient = getSupabaseClient;
+  window._KCSA.getCurrentUser = supabaseGetCurrentUser;
 
   async function supabaseLogin(email, password) {
     const em = String(email || '').trim();
@@ -3496,432 +3501,9 @@ const { ENV, normalizePost } = window.KCAPI;
     } catch (e) { return { ok: false, error: e }; }
   }
 
-  // ── Top Contribuidores (ranking de engajamento) ────────────────────────────
-  async function supabaseGetTopContributors(period, module, limit) {
-    const client = getSupabaseClient();
-    if (!client) return [];
-    try {
-      const params = { p_period: period || 'month', p_limit: limit || 10 };
-      if (module) params.p_module = module;
-      const { data, error } = await client.rpc('kc_get_top_contributors', params);
-      if (error) { console.error('[KCAPI] Top contributors error:', error); return []; }
-      return Array.isArray(data) ? data : [];
-    } catch (_) { return []; }
-  }
+  // ── Analytics — extraídas para supabase.analytics.adapter.js (v11.30.1) ──
 
-  // ── Rastrear clique em cupom ───────────────────────────────────────────────
-  async function supabaseTrackCouponClick(postId) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false };
-    const uuid = String(postId || '').trim();
-    if (!uuid) return { ok: false };
-    try {
-      const { data, error } = await client.rpc('kc_track_coupon_click', { p_post_id: uuid });
-      if (error) return { ok: false, error };
-      return data || { ok: false };
-    } catch (_) { return { ok: false }; }
-  }
-
-  // ── Rastrear compartilhamento ──────────────────────────────────────────────
-  async function supabaseTrackShare(postId) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false };
-    const uuid = String(postId || '').trim();
-    if (!uuid) return { ok: false };
-    try {
-      const { data, error } = await client.rpc('kc_track_share', { p_post_id: uuid });
-      if (error) return { ok: false, error };
-      return data || { ok: false };
-    } catch (_) { return { ok: false }; }
-  }
-
-  // ── Rastrear visualização (v9.3.1) ──────────────────────────────────────────
-  async function supabaseTrackView(postId) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false };
-    const uuid = String(postId || '').trim();
-    if (!uuid) return { ok: false };
-    try {
-      const { data, error } = await client.rpc('kc_track_view', { p_post_id: uuid });
-      if (error) return { ok: false, error };
-      return data || { ok: false };
-    } catch (_) { return { ok: false }; }
-  }
-
-  // ── Analytics de post para autores (v9.3.1) ───────────────────────────────
-  async function supabaseGetPostAnalytics(postId) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false };
-    const uuid = String(postId || '').trim();
-    if (!uuid) return { ok: false };
-    try {
-      const { data, error } = await client.rpc('kc_get_post_analytics', { p_post_id: uuid });
-      if (error) return { ok: false, error };
-      return data || { ok: false };
-    } catch (_) { return { ok: false }; }
-  }
-
-  // ── Verificar publicações duplicadas ──────────────────────────────────────
-  async function supabaseCheckDuplicatePost(userId, module, title) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, candidates: [] };
-    try {
-      const { data, error } = await client.rpc('kc_check_duplicate_post', {
-        p_user_id: userId,
-        p_module: module || null,
-        p_title: title || '',
-        p_threshold: 0.45,
-      });
-      if (error) return { ok: false, candidates: [] };
-      const candidates = (data && data.candidates) ? data.candidates : [];
-      return { ok: true, candidates };
-    } catch (_) { return { ok: false, candidates: [] }; }
-  }
-
-  // ── Notifications (v9.1.0) ──────────────────────────────────
-
-  function buildDefaultNotificationPreferencesForAdapter() {
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === 'function') {
-      return window.KCAccountProfileUtils.buildDefaultNotificationPreferences();
-    }
-    return {
-      comment_on_post: { in_app: true, email: false, whatsapp: false },
-      comment_reply: { in_app: true, email: false, whatsapp: false },
-      vote_on_post: { in_app: true, email: false, whatsapp: false },
-      post_expired: { in_app: true, email: false, whatsapp: false },
-      post_reported: { in_app: true, email: false, whatsapp: false },
-      system: { in_app: true, email: false, whatsapp: false },
-    };
-  }
-
-  function normalizeNotificationPreferencesForAdapter(value) {
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.normalizeNotificationPreferences === 'function') {
-      return window.KCAccountProfileUtils.normalizeNotificationPreferences(value);
-    }
-    const defaults = buildDefaultNotificationPreferencesForAdapter();
-    const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
-    const normalized = {};
-    Object.keys(defaults).forEach((eventKey) => {
-      const sourceEvent = (source[eventKey] && typeof source[eventKey] === 'object' && !Array.isArray(source[eventKey]))
-        ? source[eventKey]
-        : {};
-      normalized[eventKey] = {
-        in_app: sourceEvent.in_app !== false,
-        email: sourceEvent.email === true,
-        whatsapp: sourceEvent.whatsapp === true,
-      };
-    });
-    return normalized;
-  }
-
-  function buildDefaultNotificationChannelTargetsForAdapter() {
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === 'function') {
-      return window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets();
-    }
-    return {
-      whatsapp: {
-        channel: 'whatsapp',
-        destination: '',
-        country_code: '55',
-        local_number: '',
-        consent_granted: false,
-        consent_at: null,
-        configured: false,
-        ready: false,
-        display: '',
-        metadata: { country_code: '55' },
-      },
-    };
-  }
-
-  function normalizeNotificationChannelTargetDigits(value) {
-    return String(value || '').replace(/\D+/g, '');
-  }
-
-  function formatNotificationChannelTarget(value) {
-    const digits = normalizeNotificationChannelTargetDigits(value);
-    if (!digits) return '';
-    if (digits.indexOf('55') === 0 && digits.length >= 12) {
-      const ddd = digits.slice(2, 4);
-      const body = digits.slice(4);
-      if (body.length === 9) return `+55 (${ddd}) ${body.slice(0, 5)}-${body.slice(5)}`;
-      if (body.length === 8) return `+55 (${ddd}) ${body.slice(0, 4)}-${body.slice(4)}`;
-    }
-    return `+${digits}`;
-  }
-
-  function normalizeNotificationChannelTargetsForAdapter(value) {
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.normalizeNotificationChannelTargets === 'function') {
-      return window.KCAccountProfileUtils.normalizeNotificationChannelTargets(value);
-    }
-    const defaults = buildDefaultNotificationChannelTargetsForAdapter();
-    const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
-    const whatsapp = (source.whatsapp && typeof source.whatsapp === 'object' && !Array.isArray(source.whatsapp))
-      ? source.whatsapp
-      : {};
-    const metadata = (whatsapp.metadata && typeof whatsapp.metadata === 'object' && !Array.isArray(whatsapp.metadata))
-      ? whatsapp.metadata
-      : {};
-    const countryCode = normalizeNotificationChannelTargetDigits(whatsapp.country_code || whatsapp.countryCode || metadata.country_code || '55') || '55';
-    const explicitDestinationDigits = normalizeNotificationChannelTargetDigits(whatsapp.destination || whatsapp.destination_normalized || whatsapp.destinationNormalized || '');
-    const localNumberDigits = normalizeNotificationChannelTargetDigits(whatsapp.local_number || whatsapp.localNumber || '');
-    const destination = explicitDestinationDigits
-      ? `+${explicitDestinationDigits}`
-      : (localNumberDigits ? `+${countryCode}${localNumberDigits}` : '');
-    const normalizedLocalNumber = destination && destination.indexOf(`+${countryCode}`) === 0
-      ? normalizeNotificationChannelTargetDigits(destination.slice(countryCode.length + 1))
-      : localNumberDigits;
-    const consentGranted = whatsapp.consent_granted === true || whatsapp.consentGranted === true;
-
-    return {
-      whatsapp: {
-        channel: 'whatsapp',
-        destination,
-        country_code: countryCode,
-        local_number: normalizedLocalNumber,
-        consent_granted: consentGranted,
-        consent_at: whatsapp.consent_at || whatsapp.consentAt || null,
-        configured: !!destination,
-        ready: !!destination && consentGranted,
-        display: formatNotificationChannelTarget(destination),
-        metadata: { country_code: countryCode }
-      }
-    };
-  }
-
-  async function supabaseGetNotificationPreferences() {
-    const client = getSupabaseClient();
-    if (!client) return buildDefaultNotificationPreferencesForAdapter();
-
-    const user = await supabaseGetCurrentUser();
-    if (!user || !user.id) return buildDefaultNotificationPreferencesForAdapter();
-
-    try {
-      const { data, error } = await client
-        .from('notification_preferences')
-        .select('preferences')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[KCAPI][notifications] getNotificationPreferences:', error);
-        return buildDefaultNotificationPreferencesForAdapter();
-      }
-
-      return normalizeNotificationPreferencesForAdapter(data && data.preferences ? data.preferences : null);
-    } catch (e) {
-      console.error('[KCAPI][notifications] getNotificationPreferences exceÃ§Ã£o:', e);
-      return buildDefaultNotificationPreferencesForAdapter();
-    }
-  }
-
-  async function supabaseUpdateNotificationPreferences(preferences = {}) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
-
-    const user = await supabaseGetCurrentUser();
-    if (!user || !user.id) return { ok: false, error: { message: 'FaÃ§a login para editar suas notificaÃ§Ãµes.' } };
-
-    const normalized = normalizeNotificationPreferencesForAdapter(preferences);
-
-    try {
-      const { data, error } = await client
-        .from('notification_preferences')
-        .upsert({
-          user_id: user.id,
-          preferences: normalized,
-        }, { onConflict: 'user_id' })
-        .select('preferences')
-        .maybeSingle();
-
-      if (error) {
-        console.error('[KCAPI][notifications] updateNotificationPreferences:', error);
-        return { ok: false, error: { message: error.message || 'NÃ£o foi possÃ­vel atualizar as preferÃªncias.' } };
-      }
-
-      return {
-        ok: true,
-        data: {
-          preferences: normalizeNotificationPreferencesForAdapter(data && data.preferences ? data.preferences : normalized),
-        },
-      };
-    } catch (e) {
-      console.error('[KCAPI][notifications] updateNotificationPreferences exceÃ§Ã£o:', e);
-      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel atualizar as preferÃªncias.' } };
-    }
-  }
-
-  async function supabaseGetNotificationChannelTargets() {
-    const client = getSupabaseClient();
-    if (!client) return buildDefaultNotificationChannelTargetsForAdapter();
-
-    const user = await supabaseGetCurrentUser();
-    if (!user || !user.id) return buildDefaultNotificationChannelTargetsForAdapter();
-
-    try {
-      const { data, error } = await client
-        .from('notification_channel_targets')
-        .select('channel, destination, consent_granted, consent_at, metadata')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('[KCAPI][notifications] getNotificationChannelTargets:', error);
-        return buildDefaultNotificationChannelTargetsForAdapter();
-      }
-
-      const source = {};
-      (Array.isArray(data) ? data : []).forEach((row) => {
-        if (!row || !row.channel) return;
-        source[String(row.channel).trim()] = row;
-      });
-      return normalizeNotificationChannelTargetsForAdapter(source);
-    } catch (e) {
-      console.error('[KCAPI][notifications] getNotificationChannelTargets excecao:', e);
-      return buildDefaultNotificationChannelTargetsForAdapter();
-    }
-  }
-
-  async function supabaseUpdateNotificationChannelTargets(targets = {}) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase nao inicializado.' } };
-
-    const user = await supabaseGetCurrentUser();
-    if (!user || !user.id) return { ok: false, error: { message: 'Faca login para editar os destinos privados.' } };
-
-    const normalized = normalizeNotificationChannelTargetsForAdapter(targets);
-    const whatsapp = normalized && normalized.whatsapp ? normalized.whatsapp : buildDefaultNotificationChannelTargetsForAdapter().whatsapp;
-
-    try {
-      if (whatsapp.destination) {
-        const { error: upsertError } = await client
-          .from('notification_channel_targets')
-          .upsert({
-            user_id: user.id,
-            channel: 'whatsapp',
-            destination: whatsapp.destination,
-            consent_granted: whatsapp.consent_granted === true,
-            metadata: whatsapp.metadata || { country_code: whatsapp.country_code || '55' },
-          }, { onConflict: 'user_id,channel' });
-
-        if (upsertError) {
-          console.error('[KCAPI][notifications] updateNotificationChannelTargets upsert:', upsertError);
-          return { ok: false, error: { message: upsertError.message || 'Nao foi possivel salvar o WhatsApp privado.' } };
-        }
-      } else {
-        const { error: deleteError } = await client
-          .from('notification_channel_targets')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('channel', 'whatsapp');
-
-        if (deleteError) {
-          console.error('[KCAPI][notifications] updateNotificationChannelTargets delete:', deleteError);
-          return { ok: false, error: { message: deleteError.message || 'Nao foi possivel limpar o WhatsApp privado.' } };
-        }
-      }
-
-      return {
-        ok: true,
-        data: {
-          targets: await supabaseGetNotificationChannelTargets(),
-        },
-      };
-    } catch (e) {
-      console.error('[KCAPI][notifications] updateNotificationChannelTargets excecao:', e);
-      return { ok: false, error: { message: 'Nao foi possivel atualizar os destinos privados.' } };
-    }
-  }
-
-  async function supabaseGetNotifications(limit, offset) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, error: 'NO_CLIENT' };
-    const { data, error } = await client.rpc('kc_get_notifications', {
-      p_limit: limit || 20,
-      p_offset: offset || 0,
-    });
-    if (error) return { ok: false, error: error.message };
-    return data;
-  }
-
-  async function supabaseMarkNotificationsRead(ids) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, error: 'NO_CLIENT' };
-    const { data, error } = await client.rpc('kc_mark_notifications_read', {
-      p_ids: ids,
-    });
-    if (error) return { ok: false, error: error.message };
-    return data;
-  }
-
-  async function supabaseMarkAllNotificationsRead() {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, error: 'NO_CLIENT' };
-    const { data, error } = await client.rpc('kc_mark_all_notifications_read');
-    if (error) return { ok: false, error: error.message };
-    return data;
-  }
-
-  async function supabaseClearNotifications() {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, error: 'NO_CLIENT' };
-
-    const user = await supabaseGetCurrentUser();
-    if (!user || !user.id) return { ok: false, error: 'NOT_AUTHENTICATED' };
-
-    const { data, error } = await client
-      .from('notifications')
-      .delete()
-      .eq('user_id', user.id)
-      .select('id');
-
-    if (error) return { ok: false, error: error.message };
-
-    return {
-      ok: true,
-      deleted: Array.isArray(data) ? data.length : 0,
-    };
-  }
-
-  async function supabaseGetUnreadNotificationCount() {
-    const client = getSupabaseClient();
-    if (!client) return 0;
-    const { data, error } = await client.rpc('kc_unread_notification_count');
-    if (error) return 0;
-    return data || 0;
-  }
-
-  function supabaseSubscribeNotifications(userId, callback) {
-    const client = getSupabaseClient();
-    if (!client || !userId) return null;
-    const channel = client
-      .channel('notifications:' + userId)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: 'user_id=eq.' + userId,
-        },
-        function (payload) {
-          if (typeof callback === 'function') {
-            callback({
-              eventType: String(payload && payload.eventType ? payload.eventType : 'INSERT').toUpperCase(),
-              new: payload && payload.new ? payload.new : null,
-              old: payload && payload.old ? payload.old : null,
-            });
-          }
-        }
-      )
-      .subscribe();
-    return channel;
-  }
-
-  function supabaseUnsubscribeNotifications(channel) {
-    const client = getSupabaseClient();
-    if (!client || !channel) return;
-    client.removeChannel(channel);
-  }
+  // ── Notifications (v9.1.0) — extraídas para supabase.notifications.adapter.js (v11.30.1) ──
 
   // ── Convites de usuários externos (v9.1.0.3) ─────────────────────────────
 
@@ -3968,6 +3550,10 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
+  // Garante namespaces _KCSA para degradação elegante quando sub-adapters não estão carregados (v11.30.1)
+  window._KCSA.analytics = window._KCSA.analytics || {};
+  window._KCSA.notifications = window._KCSA.notifications || {};
+
   // Driver Supabase (V8.1.7.2+)
   const driverSupabase = Object.freeze({
     name: 'supabase',
@@ -4000,12 +3586,12 @@ const { ENV, normalizePost } = window.KCAPI;
     togglePostStatus: supabaseTogglePostStatus,
     renewPost: supabaseRenewPost,
     bumpPost: supabaseBumpPost,
-    getTopContributors: supabaseGetTopContributors,
-    trackCouponClick: supabaseTrackCouponClick,
-    trackShare: supabaseTrackShare,
-    trackView: supabaseTrackView,
-    getPostAnalytics: supabaseGetPostAnalytics,
-    checkDuplicatePost: supabaseCheckDuplicatePost,
+    getTopContributors: window._KCSA.analytics.getTopContributors,
+    trackCouponClick: window._KCSA.analytics.trackCouponClick,
+    trackShare: window._KCSA.analytics.trackShare,
+    trackView: window._KCSA.analytics.trackView,
+    getPostAnalytics: window._KCSA.analytics.getPostAnalytics,
+    checkDuplicatePost: window._KCSA.analytics.checkDuplicatePost,
     getMySavedPosts: supabaseGetMySavedPostsMulti,
     getMySavedPostsCount: supabaseGetMySavedPostsCount,
     getProfileHighlights: supabaseGetProfileHighlightsMulti,
@@ -4013,18 +3599,18 @@ const { ENV, normalizePost } = window.KCAPI;
     createHelpRequest: supabaseCreateHelpRequest,
     listAdminHelpRequests: supabaseListAdminHelpRequests,
     updateAdminHelpRequest: supabaseUpdateAdminHelpRequest,
-    getNotificationPreferences: supabaseGetNotificationPreferences,
-    updateNotificationPreferences: supabaseUpdateNotificationPreferences,
-    getNotificationChannelTargets: supabaseGetNotificationChannelTargets,
-    updateNotificationChannelTargets: supabaseUpdateNotificationChannelTargets,
+    getNotificationPreferences: window._KCSA.notifications.getNotificationPreferences,
+    updateNotificationPreferences: window._KCSA.notifications.updateNotificationPreferences,
+    getNotificationChannelTargets: window._KCSA.notifications.getNotificationChannelTargets,
+    updateNotificationChannelTargets: window._KCSA.notifications.updateNotificationChannelTargets,
     // Notifications (v9.1.0)
-     getNotifications: supabaseGetNotifications,
-     markNotificationsRead: supabaseMarkNotificationsRead,
-     markAllNotificationsRead: supabaseMarkAllNotificationsRead,
-     clearNotifications: supabaseClearNotifications,
-     getUnreadNotificationCount: supabaseGetUnreadNotificationCount,
-     subscribeNotifications: supabaseSubscribeNotifications,
-     unsubscribeNotifications: supabaseUnsubscribeNotifications,
+    getNotifications: window._KCSA.notifications.getNotifications,
+    markNotificationsRead: window._KCSA.notifications.markNotificationsRead,
+    markAllNotificationsRead: window._KCSA.notifications.markAllNotificationsRead,
+    clearNotifications: window._KCSA.notifications.clearNotifications,
+    getUnreadNotificationCount: window._KCSA.notifications.getUnreadNotificationCount,
+    subscribeNotifications: window._KCSA.notifications.subscribeNotifications,
+    unsubscribeNotifications: window._KCSA.notifications.unsubscribeNotifications,
     // Convites de usuários externos (v9.1.0.3)
     inviteExternalUser: supabaseInviteExternalUser,
     getInvites: supabaseGetInvites,
