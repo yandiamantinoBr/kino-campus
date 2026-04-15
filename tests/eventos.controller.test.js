@@ -142,6 +142,29 @@ describe('eventos.controller — source contracts', () => {
   test('usa KCOverlayLock.unlock ao fechar modal de seção/filtros (iOS)', () => {
     expect(source).toContain("KCOverlayLock.unlock('eventos-section-modal')");
   });
+
+  test('define SECTION_CACHE_KEY para cache SWR do calendário', () => {
+    expect(source).toContain('SECTION_CACHE_KEY');
+    expect(source).toContain("'eventos:calendar'");
+  });
+
+  test('define SECTION_CACHE_MAX_AGE_MS para TTL do cache', () => {
+    expect(source).toContain('SECTION_CACHE_MAX_AGE_MS');
+  });
+
+  test('usa getSessionStore para obter store de sessão', () => {
+    expect(source).toContain('getSessionStore');
+  });
+
+  test('restaura eventos do cache via restoreCachedEvents', () => {
+    expect(source).toContain('restoreCachedEvents');
+    expect(source).toContain('store.get(');
+  });
+
+  test('persiste eventos no cache via persistCachedEvents', () => {
+    expect(source).toContain('persistCachedEvents');
+    expect(source).toContain('store.set(');
+  });
 });
 
 describe('eventos.controller — runtime: carregamento sem lançar', () => {

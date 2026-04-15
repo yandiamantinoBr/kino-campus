@@ -53,6 +53,13 @@
   var _locationsCache = null;
   var _locationsCacheTs = 0;
   var LOCATIONS_TTL = 10 * 60 * 1000; // 10 min
+  var LOCATIONS_STORE_KEY = 'caronas:locations';
+
+  function getSessionStore() {
+    return (window.KCSessionStore && typeof window.KCSessionStore.getStore === 'function')
+      ? window.KCSessionStore.getStore()
+      : null;
+  }
 
   function fetchPopularLocations(callback) {
     var now = Date.now();
@@ -60,11 +67,22 @@
       callback(_locationsCache);
       return;
     }
-    // Tentar sessionStorage
+    // Tentar KCSessionStore
+    var store = getSessionStore();
+    if (store) {
+      var cached = store.get('caronas-feed', LOCATIONS_STORE_KEY, { maxAge: LOCATIONS_TTL });
+      if (cached && cached.value && Array.isArray(cached.value.data) && cached.value.data.length > 0) {
+        _locationsCache = cached.value.data;
+        _locationsCacheTs = Date.now();
+        callback(_locationsCache);
+        return;
+      }
+    }
+    // Fallback: tentar sessionStorage legado
     try {
-      var cached = sessionStorage.getItem('kc-caronas-locations');
-      if (cached) {
-        var parsed = JSON.parse(cached);
+      var raw = sessionStorage.getItem('kc-caronas-locations');
+      if (raw) {
+        var parsed = JSON.parse(raw);
         if (parsed && parsed.ts && (now - parsed.ts) < LOCATIONS_TTL && Array.isArray(parsed.data)) {
           _locationsCache = parsed.data;
           _locationsCacheTs = parsed.ts;
@@ -87,6 +105,10 @@
         if (res && res.data && res.data.length > 0) {
           _locationsCache = res.data;
           _locationsCacheTs = Date.now();
+          var persistStore = getSessionStore();
+          if (persistStore && typeof persistStore.set === 'function') {
+            persistStore.set('caronas-feed', LOCATIONS_STORE_KEY, { data: _locationsCache });
+          }
           try { sessionStorage.setItem('kc-caronas-locations', JSON.stringify({ ts: _locationsCacheTs, data: _locationsCache })); } catch (_) {}
           callback(_locationsCache);
         } else {
