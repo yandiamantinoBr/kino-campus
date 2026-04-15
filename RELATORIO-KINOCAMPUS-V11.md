@@ -1742,7 +1742,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 15 de abril de 2026 |
 | Branch | `codex/v11-28-0-controller-parity-audit` |
 | Tipo | audit/docs (sem alteração funcional) |
-| PR | a ser preenchido após merge |
+| PR | `#309` |
 
 - objetivo:
   auditoria de paridade entre os 6 module controllers. Mapeamento de gaps entre implementações que já seguem todos os padrões arquiteturais (achados-perdidos, compra-venda, moradia, oportunidades) e as que ainda não seguem (caronas-feed, eventos).
@@ -1760,7 +1760,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - resultado dos testes:
   `59/59` suites, `711/711` testes (docs-only, sem alterações funcionais), hygiene `8.6.0`.
 - PR \ commit \ deploy:
-  a ser preenchido após merge — docs-only, sem deploy dedicado.
+  PR `#309` — squash merge `0066db7` — docs-only, sem deploy dedicado.
 - próximas fases:
   `v11.28.1` (JS fix: M1+M3 — KCOverlayLock em caronas-feed e eventos section modals) → `v11.28.2` (JS feat: M2+M4 — SWR/KCSessionStore em caronas-feed e eventos).
 
