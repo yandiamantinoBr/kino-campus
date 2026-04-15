@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada ate `v11.27.2`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x`, baseline de testes elevado para 59/59 suites e 708/708 testes em `v11.26.x`–`v11.27.2` e trilha iOS/Safari com 3 de 3 issues altos corrigidos (v11.27.1: webkit/font-size CSS; v11.27.2: scroll lock JS eventos).
+**Status atual:** v11 executada ate `v11.27.3`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x`, baseline de testes elevado para 59/59 suites e 711/711 testes em `v11.26.x`–`v11.27.3` e trilha iOS/Safari encerrada com 6 de 6 issues corrigidos (v11.27.1: webkit/font-size CSS; v11.27.2: scroll lock JS eventos; v11.27.3: dvh fallbacks CSS).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.27.3 | 2 fixes CSS iOS/Safari: B5 `max-height: 100dvh` adicionado abaixo de `100vh` em `.kc-modal` e `.kc-admin-chart-modal` (`admin-shell.css:231,334`); C6 `min-height: 100dvh` adicionado abaixo de `100vh` em `body.kc-shell-page` (`kc-public-shell.css:2`); 3 testes novos — baseline sobe para 59/59 suites e 711/711 testes; trilha iOS/Safari v11.27.x encerrada (6/6 issues) | a preencher |
 | v11.27.2 | fix JS iOS/Safari A3: scroll lock incompleto em `eventos.controller.js` — `openCalModal` e `closeCalModal` migrados de `classList.add/remove('kc-scroll-locked')` no documentElement para `KCOverlayLock.lock/unlock('eventos-cal-modal')`; 2 testes novos — baseline sobe para 59/59 suites e 708/708 testes | `#305` |
 | v11.27.1 | 3 fixes CSS iOS/Safari: A1 `-webkit-backdrop-filter: blur(10px)` adicionado em `.kc-hero-pill` (`styles.css:656`); A2 `font-size: 12px` → `1rem` em `.kc-search-bar input` @media 420px (elimina zoom automatico iOS); B4 `-webkit-backdrop-filter: none` adicionado em reset account-setup (`kc-public-shell.css:126`) | `#303` |
 | v11.27.0 | auditoria iOS/Safari: 6 issues identificados (3 alta: A1 backdrop-filter sem webkit em .kc-hero-pill, A2 font-size:12px no search input mobile @420px, A3 scroll lock incompleto em eventos.controller; 2 media: B4 backdrop-filter:none sem webkit, B5 100vh sem dvh em modais admin; 1 baixa: C6 min-height:100vh) + plano de correcao v11.27.1–v11.27.3 em `docs/ios-safari-audit-v11.27.md` | `#302` |

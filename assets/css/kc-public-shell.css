@@ -1,5 +1,6 @@
 body.kc-shell-page {
   min-height: 100vh;
+  min-height: 100dvh; /* dvh = dynamic viewport height: exclui barras do browser (iOS Safari fix) */
   background:
     radial-gradient(circle at top right, rgba(255, 124, 0, 0.14), transparent 28%),
     radial-gradient(circle at bottom left, rgba(65, 181, 211, 0.12), transparent 24%),

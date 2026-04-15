@@ -229,6 +229,7 @@ body.kc-admin-page #banner-modal.kc-modal-backdrop {
 body.kc-admin-page .kc-modal {
   width: min(100%, 760px);
   max-height: calc(100vh - var(--kc-admin-modal-viewport-gap) - env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - var(--kc-admin-modal-viewport-gap) - env(safe-area-inset-bottom, 0px)); /* dvh = dynamic viewport height: exclui barras do browser (iOS Safari fix) */
 }
 
 body.kc-admin-page--dashboard .kc-admin-sidebar {
@@ -332,6 +333,7 @@ body.kc-admin-page--dashboard .kc-admin-chart-modal-backdrop[aria-hidden="false"
 body.kc-admin-page--dashboard .kc-admin-chart-modal {
   width: min(100%, 1120px);
   max-height: calc(100vh - var(--kc-admin-chart-modal-viewport-gap) - env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - var(--kc-admin-chart-modal-viewport-gap) - env(safe-area-inset-bottom, 0px)); /* dvh = dynamic viewport height: exclui barras do browser (iOS Safari fix) */
   border-radius: 24px;
   border: 1px solid var(--kc-border-dark);
   background: var(--kc-surface-dark);
