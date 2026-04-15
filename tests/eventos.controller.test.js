@@ -134,6 +134,14 @@ describe('eventos.controller — source contracts', () => {
   test('usa KCOverlayLock.unlock ao fechar modal calendário (iOS)', () => {
     expect(source).toContain("KCOverlayLock.unlock('eventos-cal-modal')");
   });
+
+  test('usa KCOverlayLock.lock para scroll lock no modal de seção/filtros (iOS)', () => {
+    expect(source).toContain("KCOverlayLock.lock('eventos-section-modal')");
+  });
+
+  test('usa KCOverlayLock.unlock ao fechar modal de seção/filtros (iOS)', () => {
+    expect(source).toContain("KCOverlayLock.unlock('eventos-section-modal')");
+  });
 });
 
 describe('eventos.controller — runtime: carregamento sem lançar', () => {

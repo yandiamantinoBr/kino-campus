@@ -112,6 +112,14 @@ describe('caronas-feed.controller — source contracts', () => {
   test('define LOCATIONS_TTL', () => {
     expect(source).toContain('LOCATIONS_TTL');
   });
+
+  test('usa KCOverlayLock.lock para scroll lock no modal de seção (iOS)', () => {
+    expect(source).toContain("KCOverlayLock.lock('caronas-section-modal')");
+  });
+
+  test('usa KCOverlayLock.unlock ao fechar modal de seção (iOS)', () => {
+    expect(source).toContain("KCOverlayLock.unlock('caronas-section-modal')");
+  });
 });
 
 describe('caronas-feed.controller — runtime: carregamento sem lançar', () => {

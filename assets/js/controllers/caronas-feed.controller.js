@@ -627,6 +627,9 @@
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('kc-modal-open');
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+      window.KCOverlayLock.lock('caronas-section-modal');
+    }
     renderCaronasActions();
 
     // Re-bind filters inside modal (events don't persist after DOM transplant in some browsers)
@@ -665,7 +668,12 @@
       overlay.classList.remove('active');
       overlay.setAttribute('aria-hidden', 'true');
     }
-    if (wasActive) document.body.classList.remove('kc-modal-open');
+    if (wasActive) {
+      document.body.classList.remove('kc-modal-open');
+      if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+        window.KCOverlayLock.unlock('caronas-section-modal');
+      }
+    }
     if (returnFocus && typeof returnFocus.focus === 'function') {
       try { returnFocus.focus(); } catch (_) {}
     }

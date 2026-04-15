@@ -242,6 +242,9 @@
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('kc-modal-open');
+    if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
+      window.KCOverlayLock.lock('eventos-section-modal');
+    }
     renderEventosActions();
 
     var closeBtn = overlay.querySelector('[data-kc-eventos-close-section="true"]');
@@ -306,7 +309,12 @@
       overlay.classList.remove('active');
       overlay.setAttribute('aria-hidden', 'true');
     }
-    if (wasActive) document.body.classList.remove('kc-modal-open');
+    if (wasActive) {
+      document.body.classList.remove('kc-modal-open');
+      if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
+        window.KCOverlayLock.unlock('eventos-section-modal');
+      }
+    }
     if (returnFocus && typeof returnFocus.focus === 'function') {
       try { returnFocus.focus(); } catch (_) {}
     }
