@@ -1823,7 +1823,36 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#313` — squash merge `a938c1b` — pós-merge `dpl_GWmCHcPGkECkHKEQUyNqx8aQfW7W` — produção `dpl_BZxDLTtZgo3vyh6Z2bcumTTMqEVk`.
 - próximas fases:
-  v11.28.x concluída — todos os 6 module controllers em paridade arquitetural completa (KCOverlayLock + SWR/KCSessionStore + KCFeedFilters). Próxima: `v11.29.x` (monolith refactor — `supabase.adapter.js` ~162KB, `product.controller.js` ~139KB).
+  v11.28.x concluída — todos os 6 module controllers em paridade arquitetural completa (KCOverlayLock + SWR/KCSessionStore + KCFeedFilters). Próxima: `v11.29.x` (auditoria SWR residual — confirmar completude e planejar SWR para profile/my-posts).
+
+### Iteração `v11.29.0`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-29-0-swr-audit` |
+| Tipo | audit/docs (sem alteração funcional) |
+| PR | a ser preenchido após merge |
+
+- objetivo:
+  confirmar que o escopo original de v11.29.x (SWR para módulos de feed público) foi integralmente concluído em v11.28.2, mapear residuos e decidir o próximo escopo.
+- resultado da auditoria:
+  - **6/6 module feed controllers**: SWR completo ✅ (achados-perdidos, compra-venda, moradia, oportunidades, eventos — v11.28.2; caronas — v11.28.2).
+  - **kc-feed.controller.js**: SWR extenso já existente ✅.
+  - **Candidatos residuais** (não no escopo original de v11.29.x): `profile.controller.js` (fetch:45) e `my-posts.controller.js` (fetch:15) são candidatos de médio valor.
+  - **product.controller.js** (fetch:61, ~139KB): candidato de alto valor, mas deve aguardar split em v11.30.2 — adicionar SWR antes do refactor desperdiça esforço.
+  - **Admins e outros** (create-post, settings, account-setup): SWR não aplicável (dados sempre frescos obrigatórios ou padrão diferente).
+  - `docs/swr-audit-v11.29.md` criado com inventário completo, análise de necessidade por controller e sequência recomendada.
+- arquivos alterados:
+  - `docs/swr-audit-v11.29.md` — relatório standalone.
+  - `RELATORIO-KINOCAMPUS-V11.md` — esta seção.
+  - `README.md` — status atualizado para v11.29.0.
+- resultado dos testes:
+  `59/59` suites, `724/724` testes (docs-only, sem alterações funcionais), hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  a ser preenchido após merge — docs-only, sem deploy dedicado.
+- próximas fases:
+  `v11.29.1` (SWR em `profile.controller.js` e `my-posts.controller.js`) → `v11.30.x` (refactor monolito: `supabase.adapter.js` + `product.controller.js`).
 
 ---
 
