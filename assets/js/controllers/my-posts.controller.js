@@ -38,6 +38,37 @@
     saveTargetUuid: null,
   };
 
+  // ─── SWR / Cache ────────────────────────────────────────────────────────────
+
+  var SECTION_CACHE_KEY = 'my-posts:index';
+  var SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10; // 10 min
+
+  function getSessionStore() {
+    return (window.KCSessionStore && typeof window.KCSessionStore.getStore === 'function')
+      ? window.KCSessionStore.getStore() : null;
+  }
+
+  function restoreCachedPosts() {
+    var store = getSessionStore();
+    if (!store) return false;
+    var cached = store.get('my-posts', SECTION_CACHE_KEY, { maxAge: SECTION_CACHE_MAX_AGE_MS });
+    var posts = cached && cached.value && Array.isArray(cached.value.posts) ? cached.value.posts : [];
+    if (!posts.length) return false;
+    state.posts = posts;
+    setLoading(false);
+    renderTabs();
+    renderPostsList(state.activeModule);
+    return true;
+  }
+
+  function persistCachedPosts(posts) {
+    var store = getSessionStore();
+    if (!store || typeof store.set !== 'function') return;
+    store.set('my-posts', SECTION_CACHE_KEY, {
+      posts: Array.isArray(posts) ? posts.slice(0, 200) : [],
+    });
+  }
+
   // ─── Utilitários ─────────────────────────────────────────────────────────────
 
   function esc(str) {
@@ -139,11 +170,13 @@
 
   // ─── Carregamento de dados ───────────────────────────────────────────────────
 
-  function loadAllMyPosts() {
+  function loadAllMyPosts(forceRefresh) {
+    if (!forceRefresh && restoreCachedPosts()) return;
     setLoading(true);
     var api = window.KCAPI;
     api.getMyPosts({ limit: 100 }).then(function (posts) {
       state.posts = Array.isArray(posts) ? posts : [];
+      persistCachedPosts(state.posts);
       setLoading(false);
       renderTabs();
       renderPostsList(state.activeModule);
@@ -155,7 +188,7 @@
   }
 
   function reloadPosts() {
-    loadAllMyPosts();
+    loadAllMyPosts(true); // força refresh, ignora cache
   }
 
   // ─── Renderização de Tabs ────────────────────────────────────────────────────
