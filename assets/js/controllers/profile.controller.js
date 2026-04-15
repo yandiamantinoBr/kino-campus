@@ -37,6 +37,38 @@
     savedHasMore: false,
   };
 
+  // ─── SWR / Cache ────────────────────────────────────────────────────────────
+
+  const PROFILE_CACHE_MAX_AGE_MS = 1000 * 60 * 10; // 10 min
+
+  function getSessionStore() {
+    return (window.KCSessionStore && typeof window.KCSessionStore.getStore === 'function')
+      ? window.KCSessionStore.getStore() : null;
+  }
+
+  function profileCacheKey() {
+    const prefix = state.isPublicView ? 'profile:public:' : 'profile:own:';
+    return prefix + (state.profileId || 'unknown');
+  }
+
+  function restoreCachedProfile() {
+    const store = getSessionStore();
+    if (!store) return false;
+    const key = profileCacheKey();
+    const cached = store.get('profile', key, { maxAge: PROFILE_CACHE_MAX_AGE_MS });
+    const profile = cached && cached.value && cached.value.profile ? cached.value.profile : null;
+    if (!profile) return false;
+    state.profile = profile;
+    renderHeader();
+    return true;
+  }
+
+  function persistCachedProfile(profile) {
+    const store = getSessionStore();
+    if (!store || typeof store.set !== 'function') return;
+    store.set('profile', profileCacheKey(), { profile: profile });
+  }
+
   function esc(value) {
     const text = String(value == null ? '' : value);
     if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
@@ -1183,6 +1215,9 @@
   }
 
   async function loadProfile() {
+    // SWR: serve from cache for instant back-navigation
+    if (restoreCachedProfile()) return true;
+
     try {
       if (state.isPublicView) {
         state.profile = await window.KCAPI.getProfileById(state.profileId);
@@ -1225,6 +1260,7 @@
       } catch (_) { }
     }
 
+    persistCachedProfile(state.profile);
     renderHeader();
     return true;
   }
