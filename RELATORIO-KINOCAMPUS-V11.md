@@ -1800,7 +1800,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 | Data | 15 de abril de 2026 |
 | Branch | `codex/v11-28-2-js-swr-caronas-eventos` |
 | Tipo | feat JS (cache de sessão, sem alteração funcional visível) |
-| PR | a ser preenchido após merge |
+| PR | `#313` |
 
 - objetivo:
   corrigir gaps M2 e M4 da auditoria v11.28.0 — adicionar `KCSessionStore` como mecanismo de cache para persistência entre navegações, alinhando caronas-feed e eventos com o padrão dos demais module controllers.
@@ -1819,9 +1819,9 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - validacao operacional:
   KCSessionStore é opcional — guards `if (store)` garantem que controllers continuam funcionando normalmente quando KCSessionStore não está disponível.
 - validacao em navegador:
-  a ser preenchido após deploy.
+  smoke HTTP 200 em `www.kinocampus.com.br` confirmado pós-promoção.
 - PR \ commit \ deploy:
-  a ser preenchido após merge.
+  PR `#313` — squash merge `a938c1b` — pós-merge `dpl_GWmCHcPGkECkHKEQUyNqx8aQfW7W` — produção `dpl_BZxDLTtZgo3vyh6Z2bcumTTMqEVk`.
 - próximas fases:
   v11.28.x concluída — todos os 6 module controllers em paridade arquitetural completa (KCOverlayLock + SWR/KCSessionStore + KCFeedFilters). Próxima: `v11.29.x` (monolith refactor — `supabase.adapter.js` ~162KB, `product.controller.js` ~139KB).
 

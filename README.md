@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada ate `v11.28.2`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x`, baseline de testes elevado para 59/59 suites e 711/711 testes em `v11.26.x`–`v11.27.3`, trilha iOS/Safari encerrada com 6/6 issues corrigidos e v11.28.x em andamento (paridade controllers: 4 gaps mapeados em caronas-feed e eventos).
+**Status atual:** v11 executada ate `v11.28.2`, com a rodada principal encerrada no release gate `v11.23.0` (regressao verde, hygiene canonico `8.6.0`, smoke remoto e residuals documentados), trilha i18n concluida em `v11.24.x`, baseline de testes elevado para 59/59 suites e 724/724 testes em `v11.26.x`–`v11.28.2`, trilha iOS/Safari encerrada (6/6 issues) e trilha de paridade de controllers encerrada (v11.28.x — 6/6 module controllers em paridade arquitetural: KCOverlayLock + SWR + KCFeedFilters).
 
 ---
 
@@ -27,7 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v11.28.2 | feat JS SWR M2+M4: `KCSessionStore` adicionado em `eventos.controller.js` (cache calendário: `SECTION_CACHE_KEY='eventos:calendar'`, `restoreCachedEvents`/`persistCachedEvents`) e `caronas-feed.controller.js` (cache localizações: `LOCATIONS_STORE_KEY='caronas:locations'`, upgrade de `sessionStorage` raw para `KCSessionStore`); 9 testes novos — baseline sobe para 59/59 suites e 724/724 testes; todos os 6 module controllers em paridade arquitetural | a preencher |
+| v11.28.2 | feat JS SWR M2+M4: `KCSessionStore` adicionado em `eventos.controller.js` (cache calendário: `SECTION_CACHE_KEY='eventos:calendar'`, `restoreCachedEvents`/`persistCachedEvents`) e `caronas-feed.controller.js` (cache localizações: `LOCATIONS_STORE_KEY='caronas:locations'`, upgrade de `sessionStorage` raw para `KCSessionStore`); 9 testes novos — baseline sobe para 59/59 suites e 724/724 testes; todos os 6 module controllers em paridade arquitetural | `#313` |
 | v11.28.1 | fix JS iOS/Safari M1+M3: KCOverlayLock adicionado em `caronas-feed.controller.js` (seção modal, linhas 629/668) e `eventos.controller.js` (seção modal filtros, linhas 244/309) — alinha com padrão de achados-perdidos/compra-venda/moradia/oportunidades; 4 testes novos — baseline sobe para 59/59 suites e 715/715 testes | `#311` |
 | v11.28.0 | auditoria de paridade entre 6 module controllers: 4 gaps mapeados em caronas-feed (sem KCOverlayLock seção + sem SWR) e eventos (sem KCOverlayLock seção + sem SWR); admins sem gaps críticos; plano de correcao v11.28.1 (KCOverlayLock) + v11.28.2 (SWR) em `docs/controller-parity-audit-v11.28.md` | `#309` |
 | v11.27.3 | 2 fixes CSS iOS/Safari: B5 `max-height: 100dvh` adicionado abaixo de `100vh` em `.kc-modal` e `.kc-admin-chart-modal` (`admin-shell.css:231,334`); C6 `min-height: 100dvh` adicionado abaixo de `100vh` em `body.kc-shell-page` (`kc-public-shell.css:2`); 3 testes novos — baseline sobe para 59/59 suites e 711/711 testes; trilha iOS/Safari v11.27.x encerrada (6/6 issues) | `#307` |
