@@ -2203,132 +2203,6 @@
     });
   }
 
-  let relatedRequestToken = 0;
-
-  function getRelatedReasonLabel(candidate, currentPost) {
-    var explicitReason = String(candidate && candidate._kcRelatedReason || '').trim();
-    if (explicitReason) return explicitReason;
-
-    var currentAuthorId = getPostAuthorId(currentPost);
-    var candidateAuthorId = getPostAuthorId(candidate);
-    var currentModule = String(currentPost && (currentPost.modulo || currentPost.module) || '').trim().toLowerCase();
-    var candidateModule = String(candidate && (candidate.modulo || candidate.module) || '').trim().toLowerCase();
-
-    if (currentAuthorId && candidateAuthorId && currentAuthorId === candidateAuthorId && currentModule && currentModule === candidateModule) {
-      return 'Mesmo autor neste módulo';
-    }
-    if (currentAuthorId && candidateAuthorId && currentAuthorId === candidateAuthorId) {
-      return 'Outro anúncio do mesmo autor';
-    }
-    if (currentModule && candidateModule && currentModule === candidateModule) {
-      return 'Relacionado neste módulo';
-    }
-    return 'Publicação relacionada';
-  }
-
-  function getRelatedImageHtml(post) {
-    var images = Array.isArray(post && post.imagens) ? post.imagens : (Array.isArray(post && post.images) ? post.images : []);
-    var title = String(post && (post.titulo || post.title) || 'Imagem da publicação').trim() || 'Imagem da publicação';
-    var exampleBadge = isLegacyExamplePost(post) ? buildLegacyExampleBadgeHtml('Exemplo', 'kc-product-example-ribbon--related') : '';
-    if (images.length) {
-      return '<div class="kc-related-card__media">' + exampleBadge + '<img src="' + esc(String(images[0])) + '" alt="' + esc(title) + '" loading="lazy" decoding="async" /></div>';
-    }
-
-    var emoji = String(post && post.emoji || '✨').trim() || '✨';
-    return '<div class="kc-related-card__media kc-related-card__media--fallback">' + exampleBadge + '<span aria-hidden="true">' + esc(emoji) + '</span></div>';
-  }
-
-  function getRelatedPriceLabel(post) {
-    var price = post && (post.preco != null ? post.preco : post.price);
-    if (price == null || price === '') return '';
-    if (typeof price === 'number') return price === 0 ? 'Gratuito' : formatCurrency(price);
-    var normalized = String(price).trim();
-    return normalized || '';
-  }
-
-  function renderRelatedPosts(posts, currentPost) {
-    var section = document.getElementById('relatedSection');
-    var grid = document.getElementById('relatedGrid');
-    if (!section || !grid) return;
-
-    var list = Array.isArray(posts) ? posts.filter(Boolean) : [];
-    if (!list.length) {
-      grid.innerHTML = '';
-      section.style.display = 'none';
-      return;
-    }
-
-    grid.innerHTML = list.map(function (item) {
-      var postId = String((item && (item.uuid || item.id)) || '').trim();
-      if (!postId) return '';
-
-      var href = 'product.html?id=' + encodeURIComponent(postId);
-      var title = String(item && (item.titulo || item.title) || 'Publicação').trim() || 'Publicação';
-      var author = String(item && (item.authorName || item.autor || item.author) || 'Autor').trim() || 'Autor';
-      var reason = getRelatedReasonLabel(item, currentPost);
-      var priceLabel = getRelatedPriceLabel(item);
-      var moduleText = moduleLabel(item && (item.modulo || item.module) || '');
-      var categoryText = String(item && (item.categoriaLabel || item.categoria || item.categoryLabel || item.category) || '').trim();
-      var metaParts = [
-        moduleText ? '<span><i class="fas fa-layer-group"></i> ' + esc(moduleText) + '</span>' : '',
-        categoryText ? '<span><i class="fas fa-tag"></i> ' + esc(categoryText) + '</span>' : '',
-        priceLabel ? '<span><i class="fas fa-money-bill-wave"></i> ' + esc(priceLabel) + '</span>' : '',
-      ].filter(Boolean).join('');
-
-      return [
-        '<a class="kc-related-card" href="' + href + '">',
-        getRelatedImageHtml(item),
-        '<div class="kc-related-card__body">',
-        '<span class="kc-related-card__reason">' + esc(reason) + '</span>',
-        '<h4 class="kc-related-card__title">' + esc(title) + '</h4>',
-        '<div class="kc-related-card__author"><i class="fas fa-user"></i> ' + esc(author) + '</div>',
-        metaParts ? '<div class="kc-related-card__meta">' + metaParts + '</div>' : '',
-        '</div>',
-        '</a>',
-      ].join('');
-    }).filter(Boolean).join('');
-
-    section.style.display = 'block';
-  }
-
-  async function setRelated(post) {
-    var section = document.getElementById('relatedSection');
-    var grid = document.getElementById('relatedGrid');
-    if (!section || !grid || !post || !window.KCAPI || typeof window.KCAPI.getRelatedPosts !== 'function') {
-      if (section) section.style.display = 'none';
-      if (grid) grid.innerHTML = '';
-      return;
-    }
-
-    var currentPostId = getPostIdForMutation(post);
-    if (!currentPostId) {
-      section.style.display = 'none';
-      grid.innerHTML = '';
-      return;
-    }
-
-    var requestToken = ++relatedRequestToken;
-    grid.innerHTML = '<div class="kc-related-loading"><i class="fas fa-spinner fa-spin"></i> Carregando publicações relacionadas...</div>';
-    section.style.display = 'block';
-
-    try {
-      var items = await window.KCAPI.getRelatedPosts(currentPostId, {
-        limit: 8,
-        module: post.modulo || post.module || '',
-        authorId: getPostAuthorId(post),
-        currentPost: post,
-        viewerAuthenticated: isViewerAuthenticated(),
-      });
-      if (requestToken !== relatedRequestToken) return;
-      renderRelatedPosts(items, post);
-    } catch (error) {
-      if (requestToken !== relatedRequestToken) return;
-      console.warn('[KC Product] related posts:', error);
-      grid.innerHTML = '';
-      section.style.display = 'none';
-    }
-  }
-
   function isAuthor(post, user) {
     if (!post || !user || !user.id) return false;
     const postAuthorId = String(post.autorId || post.authorId || post.author_id || '').trim();
@@ -2695,7 +2569,9 @@
     setSeller(post);
     setCTA(post);
     setEventCalendar(post);
-    setRelated(post);
+    if (window._KCProduct.related && typeof window._KCProduct.related.setRelated === 'function') {
+      window._KCProduct.related.setRelated(post, !!(currentUser && currentUser.id));
+    }
     upsertOwnerActions(post, currentUser);
     renderAuthorAnalytics(post, currentUser);
     bindSavedActions(post);
@@ -2983,6 +2859,9 @@
   // ─── Reports UI extraído para product.report.js (v11.30.10) ──────────────
   // window._KCProduct.report.wireReportButton(ctx) — carregado após este arquivo.
   window._KCProduct.report = window._KCProduct.report || {};
+
+  // window._KCProduct.related.setRelated(post, viewerAuthenticated) — carregado após este arquivo.
+  window._KCProduct.related = window._KCProduct.related || {};
 
   document.addEventListener('DOMContentLoaded', () => {
     bindProductGlobalKeydown();
