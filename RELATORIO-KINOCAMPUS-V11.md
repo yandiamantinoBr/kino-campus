@@ -2133,6 +2133,36 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.30.9` (profiles — `supabaseGetMyProfile`, `supabaseUpdateMyProfile`, `supabaseUploadProfileAvatar`, `uploadProfileAvatarToSupabaseStorage`, `normalizeProfilePatchForAdapter` — maior acoplamento, último grupo do adapter) → `v11.30.10+` (split de `product.controller.js`, 9 grupos, apenas 1 HTML afetado).
 
+### Iteração `v11.30.9`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-9-adapter-split-profiles` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `supabase.adapter.js` (613L → 420L, −193L): grupo profiles extraído para `supabase.profiles.adapter.js` |
+
+- objetivo:
+  extrair o grupo profiles do `supabase.adapter.js` (613L → 420L, −193L; acumulado −3621L desde v11.30.1) para sub-adapter independente usando o namespace `window._KCSA.profiles`. Último grupo do split do adapter.
+- resultado:
+  - **NOVO** `assets/js/adapters/supabase.profiles.adapter.js` (252L) — 3 exports (`getMyProfile`, `updateMyProfile`, `uploadProfileAvatar`) registrados em `window._KCSA.profiles`. Helpers internos encapsulados no IIFE: `normalizeProfilePatchForAdapter`, `uploadProfileAvatarToSupabaseStorage`, `syncCurrentProfileCache`. Lazy accessors: `getSupabaseClient()`, `getCurrentUser()`, `getENV()`, `getProfileShared()` (lê `window.KCAccountProfileUtils`), `getOwnerProfileFields()` (lê `profileShared.OWNER_PROFILE_SELECT_FIELDS` com fallback hardcoded).
+  - **ALTERADO** `supabase.adapter.js`: bloco profiles removido; 3 entradas do `driverSupabase` atualizadas para `window._KCSA.profiles.*`; fallback guard `window._KCSA.profiles = window._KCSA.profiles || {}` adicionado.
+  - **ALTERADO** `tests/supabase-adapter.test.js`: `require` de `supabase.profiles.adapter.js` adicionado ao `beforeAll`.
+  - **22 HTMLs** atualizados: nova tag `<script defer>` para `supabase.profiles.adapter.js` inserida entre `supabase.posts-write.adapter.js` e `supabase.adapter.js`.
+- arquivos alterados:
+  - `assets/js/adapters/supabase.profiles.adapter.js` (NOVO, 252L)
+  - `assets/js/adapters/supabase.adapter.js` (ALTERADO, 613L → 420L)
+  - `tests/supabase-profiles.adapter.test.js` (NOVO, 61 testes estáticos)
+  - `tests/supabase-adapter.test.js` (ALTERADO, +1 linha)
+  - `scripts/add-profiles-script-tag.ps1` (NOVO)
+  - 22 HTMLs atualizados
+- resultado dos testes:
+  `71/71` suites, `1178/1178` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#337` — squash merge `6e5de2e` — promoção `dpl_ERZNGe6bRgUfoGowMu7yZVu3iPmW`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.10+` (split de `product.controller.js`, 9 grupos, apenas 1 HTML afetado).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
