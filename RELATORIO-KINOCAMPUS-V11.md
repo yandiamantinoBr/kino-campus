@@ -2046,6 +2046,33 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.30.6` (saved: `supabaseGetSavedPostStateMulti`, `supabaseSetSavedPostStateMulti`) → `v11.30.7` (posts-read) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último).
 
+### Iteração `v11.30.6`
+
+| Campo | Valor |
+|---|---|
+| Data | 16 de abril de 2026 |
+| Branch | `codex/v11-30-6-adapter-split-saved` |
+| Tipo | refactor (split de monolito, sem alteração de comportamento) |
+| PR | `#331` |
+
+- objetivo:
+  extrair o grupo saved do `supabase.adapter.js` (2619L → 2187L, −432L) para sub-adapter independente usando o namespace `window._KCSA`.
+- resultado:
+  - **NOVO** `assets/js/adapters/supabase.saved.adapter.js` — 7 exports (`getSavedPostState`, `setSavedPostState`, `clearSavedPostState`, `getMySavedPosts`, `getMySavedPostsCount`, `getProfileHighlights`, `getProfileHighlightsCount`) registrados em `window._KCSA.saved`. Acesso lazy a `window._KCSA.posts.getPostById` (disponível pós v11.30.7) em `resolvePostUuidForSavedPosts`. Funções legacy single-kind e helpers internos encapsulados no IIFE.
+  - **ALTERADO** `supabase.adapter.js`: 19 funções do bloco saved removidas; 4 entradas do `driverSupabase` atualizadas para `window._KCSA.saved.*`; fallback guard `window._KCSA.saved = window._KCSA.saved || {}` adicionado.
+  - **22 HTMLs** atualizados: nova tag `<script defer>` para `supabase.saved.adapter.js` inserida entre media e notifications.
+- arquivos alterados:
+  - `assets/js/adapters/supabase.saved.adapter.js` — novo sub-adapter.
+  - `assets/js/adapters/supabase.adapter.js` — refatorado (−432L; total acumulado: −1854L desde v11.30.0).
+  - 22 HTMLs públicos e admin — 1 script tag adicionada.
+  - `tests/supabase-saved-adapter.test.js` — 50 testes estáticos.
+- resultado dos testes:
+  `68/68` suites, `935/935` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#331` — squash merge `5a43688` — promoção `dpl_Y9eTyxtF3it5z9Ex6TN1i1k8a1Xf`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.7` (posts-read: `supabaseGetPostById`, `getRelatedPosts`, `getPostsByAuthorId`, `getMyPosts`, etc.) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último).
+
 ---
 
 ## 12. Backlog inicial candidato da v11

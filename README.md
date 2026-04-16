@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.30.5`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 67/67 suites e 885/885 testes em `v11.30.5`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), e split do monolito `supabase.adapter.js` em andamento — analytics, notifications, admin, comments, votes e media extraídos para sub-adapters via `window._KCSA` (6 de 9 grupos concluídos).
+**Status atual:** v11 executada até `v11.30.6`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 68/68 suites e 935/935 testes em `v11.30.6`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), e split do monolito `supabase.adapter.js` em andamento — analytics, notifications, admin, comments, votes, media e saved extraídos para sub-adapters via `window._KCSA` (7 de 9 grupos concluídos).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.30.6 | split `supabase.adapter.js` (2619L → 2187L, −432L): extração do grupo saved (19 funções → `supabase.saved.adapter.js`) via `window._KCSA`; acesso lazy a `posts.getPostById`; 22 HTMLs atualizados; 1 nova suite (50 testes) — baseline sobe para 68/68 suites e 935/935 testes | `#331` |
 | v11.30.5 | split `supabase.adapter.js` (3006L → 2619L, −387L): extração do grupo media (13 funções → `supabase.media.adapter.js`) via `window._KCSA`; `window.KCCompressImage` movido; 22 HTMLs atualizados; 1 nova suite (41 testes) — baseline sobe para 67/67 suites e 885/885 testes | `#329` |
 | v11.30.4 | split `supabase.adapter.js` (3157L → 3006L, −151L): extração de votes (2 funções + 6 helpers → `supabase.votes.adapter.js`) via `window._KCSA`; 22 HTMLs atualizados; 1 nova suite (22 testes) — baseline sobe para 66/66 suites e 844/844 testes | `#327` |
 | v11.30.3 | split `supabase.adapter.js` (3382L → 3157L, −225L): extração de comments (3 funções + 6 helpers → `supabase.comments.adapter.js`) via `window._KCSA`; 22 HTMLs atualizados; 1 nova suite (24 testes) — baseline sobe para 65/65 suites e 822/822 testes | `#325` |
