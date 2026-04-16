@@ -2103,6 +2103,36 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.30.8` (posts-write: `supabaseCreatePost`, `supabaseUpdatePost`, `supabaseDeletePost`, `resolvePostUuid` — alta cautela) → `v11.30.9` (profiles — maior acoplamento, último) → `v11.30.10+` (split de `product.controller.js`).
 
+### Iteração `v11.30.8`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-8-adapter-split-posts-write` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `supabase.adapter.js` (1517L → 613L, −904L): grupo posts-write extraído para `supabase.posts-write.adapter.js` |
+
+- objetivo:
+  extrair o grupo posts-write do `supabase.adapter.js` (1517L → 613L, −904L; acumulado −3428L desde v11.30.1) para sub-adapter independente usando o namespace `window._KCSA.postsWrite`.
+- resultado:
+  - **NOVO** `assets/js/adapters/supabase.posts-write.adapter.js` (966L) — 7 exports (`createPost`, `updatePost`, `deletePost`, `reportPost`, `togglePostStatus`, `renewPost`, `bumpPost`) registrados em `window._KCSA.postsWrite`. Helpers internos encapsulados no IIFE: `createPostDiagnostics` (Object.freeze), `summarizeCreatePayloadForCreateDiagnostics`, `getUserDisplayNameForProfile`, `getUserAvatarForProfile`, `ensureSupabaseProfileForCreate`, `parsePriceMaybe`, `toSlug`, `clampCreatedAtISO`, `normalizeCreatePayload`, `kcApiError`, `enforceSupabaseOnProduction`, `normalizeUpdatePayload`, `resolvePostUuid`, `syncPostMediaForUpdate`. Lazy accessors: `getSupabaseClient()`, `getCurrentUser()`, `getENV()` (substitui acesso direto a `ENV`), `doNormalizePost()` (substitui `normalizePost()` direta).
+  - **ALTERADO** `supabase.adapter.js`: bloco posts-write removido (L~600-1517); 7 entradas do `driverSupabase` atualizadas para `window._KCSA.postsWrite.*`; fallback guard `window._KCSA.postsWrite = window._KCSA.postsWrite || {}` adicionado.
+  - **ALTERADO** `tests/supabase-adapter.test.js`: `require` de `supabase.posts-write.adapter.js` adicionado ao `beforeAll` (mesmo padrão do fix v11.30.7).
+  - **22 HTMLs** atualizados: nova tag `<script defer>` para `supabase.posts-write.adapter.js` inserida entre `supabase.notifications.adapter.js` e `supabase.adapter.js`.
+- arquivos alterados:
+  - `assets/js/adapters/supabase.posts-write.adapter.js` (NOVO, 966L)
+  - `assets/js/adapters/supabase.adapter.js` (ALTERADO, 1517L → 613L)
+  - `tests/supabase-posts-write.adapter.test.js` (NOVO, 106 testes estáticos)
+  - `tests/supabase-adapter.test.js` (ALTERADO, +1 linha)
+  - `scripts/add-posts-write-script-tag.ps1` (NOVO)
+  - 22 HTMLs atualizados
+- resultado dos testes:
+  `70/70` suites, `1117/1117` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#335` — squash merge `1cfe304` — promoção `dpl_BAmz1okTrZQjTDQFCeZQjiLhNX1o`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.9` (profiles — `supabaseGetMyProfile`, `supabaseUpdateMyProfile`, `supabaseUploadProfileAvatar`, `uploadProfileAvatarToSupabaseStorage`, `normalizeProfilePatchForAdapter` — maior acoplamento, último grupo do adapter) → `v11.30.10+` (split de `product.controller.js`, 9 grupos, apenas 1 HTML afetado).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
