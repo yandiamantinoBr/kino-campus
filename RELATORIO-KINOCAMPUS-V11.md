@@ -2165,6 +2165,36 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.30.10`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-10-product-controller-split-report` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `product.controller.js` (3368L → 3007L, −361L): grupo report extraído para `product.report.js` |
+
+- objetivo:
+  extrair o grupo report do `product.controller.js` (3368L → 3007L, −361L) para sub-módulo independente usando o namespace `window._KCProduct.report`. Primeiro grupo do split do controller. Extraídos: `wireReportButton`, `buildReportPopover`, `REPORT_REASONS` (7 motivos), `_reportPopover`.
+- resultado:
+  - **NOVO** `assets/js/controllers/product.report.js` (289L) — 1 export (`wireReportButton`) registrado em `window._KCProduct.report`. Inclui: `REPORT_REASONS` (7 motivos: spam, scam, inappropriate, hate, illegal, duplicate, other), `buildReportPopover` (popover 2-step com desktop/mobile, backdrop, Escape, resize), `esc()` local delegando a `window.KCUtils.escapeHtml`.
+  - **ALTERADO** `product.controller.js`: bloco report removido; `renderPost` delega para `window._KCProduct.report.wireReportButton(ctx)`; fallback guard `window._KCProduct.report = window._KCProduct.report || {}` adicionado.
+  - **ALTERADO** `_product.html`: tag `<script defer src="assets/js/controllers/product.report.js">` inserida após `product.controller.js`.
+  - **NOVO** `tests/product.report.test.js` (28 testes estáticos) — cobre: IIFE, namespace, esc, REPORT_REASONS, wireReportButton, buildReportPopover, exports.
+- arquivos alterados:
+  - `assets/js/controllers/product.report.js` (NOVO, 289L)
+  - `assets/js/controllers/product.controller.js` (ALTERADO, 3368L → 3007L)
+  - `tests/product.report.test.js` (NOVO, 28 testes)
+  - `_product.html` (ALTERADO, +1 tag)
+- resultado dos testes:
+  `72/72` suites, `1207/1207` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#339` — squash merge `251e251` — promoção `dpl_CYhwYQsVKkFyY182uNZZbBMjKjZA`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.11` (extração do grupo related → `product.related.js` via `window._KCProduct.related`; ~130L, zero dependência entre sub-módulos).
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
