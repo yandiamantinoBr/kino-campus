@@ -2221,7 +2221,38 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#341` — squash merge `9b81d25` — preview `dpl_7Am1WaFzm6zvhW8fyhS2dmN6e8J6` — pós-merge `dpl_Ark5QeDYh72SZCF1a7pTCZV3F7JF` — produção `dpl_AEwHqReVKQkRSkL79MiAinDAvxAA` (promote from `dpl_Ark5QeDYh72SZCF1a7pTCZV3F7JF`), smoke HTTP 200 com `_product.html` servindo `product.related.js`.
 - próximas fases:
-  `v11.30.12` (calendar + save).
+  `v11.30.12` entregue com a extração do grupo calendar → `product.calendar.js` via `window._KCProduct.calendar`. Próxima: `v11.30.13` (save).
+
+---
+
+### Iteração `v11.30.12`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-12-product-controller-split-calendar` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `product.controller.js` (2886L → 2727L, −159L): grupo calendar extraído para `product.calendar.js` |
+
+- objetivo:
+  extrair o grupo calendar do `product.controller.js` (2886L → 2727L, −159L) para sub-módulo independente usando o namespace `window._KCProduct.calendar`. Terceiro grupo do split do controller. Extraídos: `openCalendarPopover`, `closeCalendarPopover`, `wireCalendarPopover` e `setEventCalendar(post)`.
+- resultado:
+  - **NOVO** `assets/js/controllers/product.calendar.js` (317L) — exports `closeCalendarPopover` e `setEventCalendar` registrados em `window._KCProduct.calendar`. Inclui `esc()` local, posicionamento próprio do popover de agenda e fechamento DOM-safe dos popovers de share/save antes da abertura do calendário.
+  - **ALTERADO** `product.controller.js`: bloco calendar removido; `renderPost` delega para `window._KCProduct.calendar.setEventCalendar(post)`; `Escape` global e `openSharePopover`/`openSavePopover` agora chamam `window._KCProduct.calendar.closeCalendarPopover()` com guard defensivo; guard `window._KCProduct.calendar = window._KCProduct.calendar || {}` adicionado.
+  - **ALTERADO** `_product.html`: tag `<script defer src="assets/js/controllers/product.calendar.js">` inserida após `product.related.js`, preservando a ordem `product.controller.js` → `product.report.js` → `product.related.js` → `product.calendar.js`.
+  - **NOVO** `tests/product.calendar.test.js` (14 testes estáticos) — cobre: IIFE, namespace, `esc`, posicionamento local do popover, close/open/wire do calendário, geração dos links Google/Outlook/ICS, markup renderizado e exports.
+  - **DECISÃO DE ESCOPO**: o grupo `save` foi explicitamente adiado para `v11.30.13`, porque continua acoplado a `savedPostState`, mutações de `KCAPI` e atualização de CTA/contadores. Extrair `calendar` sozinho nesta fase reduz risco e mantém o split incremental coerente.
+- arquivos alterados:
+  - `assets/js/controllers/product.calendar.js` (NOVO, 317L)
+  - `assets/js/controllers/product.controller.js` (ALTERADO, 2886L → 2727L)
+  - `tests/product.calendar.test.js` (NOVO, 14 testes)
+  - `_product.html` (ALTERADO, +1 tag)
+- resultado dos testes:
+  `74/74` suites, `1238/1238` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#343` — squash merge `c2e10ab` — preview `dpl_H13DDXyrne4wTxjSZqcyq6AavSiV` — pós-merge `dpl_sSKvrx88cEKwWU88Kf2KJAvpLHfz` — produção `dpl_SKELfPbqguuDeA5JyWJzffuMvWmM` (promote from `dpl_sSKvrx88cEKwWU88Kf2KJAvpLHfz`), smoke HTTP 200 com `_product.html` servindo `product.calendar.js`.
+- próximas fases:
+  `v11.30.13` (save).
 
 ---
 
