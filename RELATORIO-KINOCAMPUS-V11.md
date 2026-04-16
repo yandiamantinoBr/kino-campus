@@ -2191,7 +2191,37 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#339` — squash merge `251e251` — promoção `dpl_CYhwYQsVKkFyY182uNZZbBMjKjZA`, smoke HTTP 200.
 - próximas fases:
-  `v11.30.11` (extração do grupo related → `product.related.js` via `window._KCProduct.related`; ~130L, zero dependência entre sub-módulos).
+  `v11.30.11` entregue com a extração do grupo related → `product.related.js` via `window._KCProduct.related`. Próxima: `v11.30.12` (calendar + save).
+
+---
+
+### Iteração `v11.30.11`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-11-product-controller-split-related` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `product.controller.js` (3007L → 2886L, −121L): grupo related extraído para `product.related.js` |
+
+- objetivo:
+  extrair o grupo related do `product.controller.js` (3007L → 2886L, −121L) para sub-módulo independente usando o namespace `window._KCProduct.related`. Segundo grupo do split do controller. Extraídos: `relatedRequestToken`, `getRelatedReasonLabel`, `getRelatedImageHtml`, `getRelatedPriceLabel`, `renderRelatedPosts` e `setRelated(post, viewerAuthenticated)`.
+- resultado:
+  - **NOVO** `assets/js/controllers/product.related.js` (186L) — 1 export (`setRelated`) registrado em `window._KCProduct.related`. Inclui helpers locais duplicados do core (`esc`, `moduleLabel`, `formatCurrency`, `getPostAuthorId`, `isLegacyExamplePost`, `buildLegacyExampleBadgeHtml`, `getPostIdForMutation`) e preserva a lógica original de related com `viewerAuthenticated` recebido do core.
+  - **ALTERADO** `product.controller.js`: bloco related removido; `renderPost` delega para `window._KCProduct.related.setRelated(post, !!(currentUser && currentUser.id))`; fallback guard `window._KCProduct.related = window._KCProduct.related || {}` adicionado ao lado do guard de report.
+  - **ALTERADO** `_product.html`: tag `<script defer src="assets/js/controllers/product.related.js">` inserida após `product.report.js`, preservando a ordem `product.controller.js` → `product.report.js` → `product.related.js`.
+  - **NOVO** `tests/product.related.test.js` (17 testes estáticos) — cobre: IIFE, namespace, utilitários locais, `getRelatedReasonLabel`, `getRelatedImageHtml`, `getRelatedPriceLabel`, `renderRelatedPosts`, `setRelated`, exports.
+- arquivos alterados:
+  - `assets/js/controllers/product.related.js` (NOVO, 186L)
+  - `assets/js/controllers/product.controller.js` (ALTERADO, 3007L → 2886L)
+  - `tests/product.related.test.js` (NOVO, 17 testes)
+  - `_product.html` (ALTERADO, +1 tag)
+- resultado dos testes:
+  `73/73` suites, `1224/1224` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#341` — squash merge `9b81d25` — preview `dpl_7Am1WaFzm6zvhW8fyhS2dmN6e8J6` — pós-merge `dpl_Ark5QeDYh72SZCF1a7pTCZV3F7JF` — produção `dpl_AEwHqReVKQkRSkL79MiAinDAvxAA` (promote from `dpl_Ark5QeDYh72SZCF1a7pTCZV3F7JF`), smoke HTTP 200 com `_product.html` servindo `product.related.js`.
+- próximas fases:
+  `v11.30.12` (calendar + save).
 
 ---
 

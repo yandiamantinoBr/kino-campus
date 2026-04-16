@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.30.10`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 72/72 suites e 1207/1207 testes em `v11.30.10`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), e split de `product.controller.js` iniciado — 1/9 grupos extraídos para sub-módulos via `window._KCProduct`.
+**Status atual:** v11 executada até `v11.30.11`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 73/73 suites e 1224/1224 testes em `v11.30.11`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), e split de `product.controller.js` em andamento — 2/9 grupos extraídos para sub-módulos via `window._KCProduct`.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 72 suites de regressão e contrato |
+| Testes | Jest: 73 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.30.11 | split `product.controller.js` (3007L → 2886L, −121L): extração do grupo related (request token + `getRelatedReasonLabel` + `getRelatedImageHtml` + `getRelatedPriceLabel` + `renderRelatedPosts` + `setRelated` → `product.related.js`) via `window._KCProduct.related`; `renderPost` agora delega com guard defensivo e `viewerAuthenticated`; `_product.html` atualizado (+1 tag defer); 1 nova suite (17 testes) — baseline sobe para 73/73 suites e 1224/1224 testes; split `product.controller.js` avança para 2/9 grupos | `#341` |
 | v11.30.10 | split `product.controller.js` (3368L → 3007L, −361L): extração do grupo report (wireReportButton + buildReportPopover + REPORT_REASONS 7 motivos → `product.report.js`) via `window._KCProduct.report`; `_product.html` atualizado (+1 tag defer); 1 nova suite (28 testes) — baseline sobe para 72/72 suites e 1207/1207 testes; split product.controller.js iniciado (1/9 grupos) | `#339` |
 | v11.30.9 | split `supabase.adapter.js` (613L → 420L, −193L; acumulado −3621L): extração do grupo profiles (3 funções + helpers → `supabase.profiles.adapter.js`) via `window._KCSA.profiles`; lazy accessors `getProfileShared()` + `getOwnerProfileFields()`; 22 HTMLs atualizados; 1 nova suite (61 testes) — baseline sobe para 71/71 suites e 1178/1178 testes; split concluído (10/10 grupos) | `#337` |
 | v11.30.8 | split `supabase.adapter.js` (1517L → 613L, −904L; acumulado −3428L): extração do grupo posts-write (7 funções + helpers → `supabase.posts-write.adapter.js`) via `window._KCSA.postsWrite`; `getENV()` lazy; `doNormalizePost` lazy; 22 HTMLs atualizados; 1 nova suite (106 testes) — baseline sobe para 70/70 suites e 1117/1117 testes | `#335` |
