@@ -30,6 +30,7 @@ beforeAll(() => {
     rankRelatedPosts: jest.fn((currentPost, candidates) => candidates),
   };
 
+  require('../assets/js/adapters/supabase.posts-read.adapter.js');
   require('../assets/js/adapters/supabase.adapter.js');
 });
 
