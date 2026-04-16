@@ -2017,6 +2017,35 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.30.5` (media + `window.KCCompressImage`) → `v11.30.6` (saved) → `v11.30.7` (posts-read) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último).
 
+### Iteração `v11.30.5`
+
+| Campo | Valor |
+|---|---|
+| Data | 15 de abril de 2026 |
+| Branch | `codex/v11-30-5-adapter-split-media` |
+| Tipo | refactor (split de monolito, sem alteração de comportamento) |
+| PR | `#329` |
+
+- objetivo:
+  extrair o grupo media do `supabase.adapter.js` (3006L → 2619L, −387L) para sub-adapter independente usando o namespace `window._KCSA`.
+- resultado:
+  - **NOVO** `assets/js/adapters/supabase.media.adapter.js` — 10 exports (`compressImage`, `checkImageMagicBytes`, `dataUrlToBlob`, `extFromMime`, `sanitizeFilename`, `getStorageBucket`, `extractStoragePath`, `buildCleanupContext`, `cleanupStorage`, `uploadImages`) registrados em `window._KCSA.media`. ENV acessado lazily via `window.KCAPI.ENV`. `window.KCCompressImage = compressImage` movido do adapter principal para o sub-adapter.
+  - **ALTERADO** `supabase.adapter.js`: 13 funções do bloco media removidas; 4 callers atualizados para `window._KCSA.media.*` (`uploadProfileAvatarToSupabaseStorage`, `supabaseCreatePost`, `syncPostMediaForUpdate`, `supabaseDeletePost`); fallback guard adicionado.
+  - **22 HTMLs** atualizados: nova tag `<script defer>` para `supabase.media.adapter.js` inserida entre votes e notifications.
+  - **`tests/image-compression.test.js`** atualizado para carregar o sub-adapter antes do adapter principal.
+- arquivos alterados:
+  - `assets/js/adapters/supabase.media.adapter.js` — novo sub-adapter.
+  - `assets/js/adapters/supabase.adapter.js` — refatorado (−387L; total acumulado: −1422L desde v11.30.0).
+  - 22 HTMLs públicos e admin — 1 script tag adicionada.
+  - `tests/supabase-media-adapter.test.js` — 41 testes estáticos.
+  - `tests/image-compression.test.js` — 1 linha adicionada (require do sub-adapter).
+- resultado dos testes:
+  `67/67` suites, `885/885` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#329` — squash merge `08191de` — promoção `dpl_5Bkd4WYEmTiLgqppYhaH6XKhcWPk`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.6` (saved: `supabaseGetSavedPostStateMulti`, `supabaseSetSavedPostStateMulti`) → `v11.30.7` (posts-read) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
