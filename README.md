@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.30.7`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 69/69 suites e 1011/1011 testes em `v11.30.7`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), e split do monolito `supabase.adapter.js` em andamento — analytics, notifications, admin, comments, votes, media, saved e posts-read extraídos para sub-adapters via `window._KCSA` (8 de 9 grupos concluídos).
+**Status atual:** v11 executada até `v11.30.8`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 70/70 suites e 1117/1117 testes em `v11.30.8`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), e split do monolito `supabase.adapter.js` em andamento — analytics, notifications, admin, comments, votes, media, saved, posts-read e posts-write extraídos para sub-adapters via `window._KCSA` (9 de 10 grupos concluídos; restam apenas profiles).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 51 suites de regressão e contrato |
+| Testes | Jest: 70 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.30.8 | split `supabase.adapter.js` (1517L → 613L, −904L; acumulado −3428L): extração do grupo posts-write (7 funções + helpers → `supabase.posts-write.adapter.js`) via `window._KCSA.postsWrite`; `getENV()` lazy; `doNormalizePost` lazy; 22 HTMLs atualizados; 1 nova suite (106 testes) — baseline sobe para 70/70 suites e 1117/1117 testes | `#335` |
 | v11.30.7 | split `supabase.adapter.js` (2187L → 1517L, −670L): extração do grupo posts-read (7 funções + 14 helpers → `supabase.posts-read.adapter.js`) via `window._KCSA`; `doNormalizePost` lazy; 4 callers posts-write atualizados; 22 HTMLs atualizados; 1 nova suite (69 testes) — baseline sobe para 69/69 suites e 1011/1011 testes | `#333` |
 | v11.30.6 | split `supabase.adapter.js` (2619L → 2187L, −432L): extração do grupo saved (19 funções → `supabase.saved.adapter.js`) via `window._KCSA`; acesso lazy a `posts.getPostById`; 22 HTMLs atualizados; 1 nova suite (50 testes) — baseline sobe para 68/68 suites e 935/935 testes | `#331` |
 | v11.30.5 | split `supabase.adapter.js` (3006L → 2619L, −387L): extração do grupo media (13 funções → `supabase.media.adapter.js`) via `window._KCSA`; `window.KCCompressImage` movido; 22 HTMLs atualizados; 1 nova suite (41 testes) — baseline sobe para 67/67 suites e 885/885 testes | `#329` |
