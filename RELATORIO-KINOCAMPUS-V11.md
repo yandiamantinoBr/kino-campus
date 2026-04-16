@@ -2073,6 +2073,36 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.30.7` (posts-read: `supabaseGetPostById`, `getRelatedPosts`, `getPostsByAuthorId`, `getMyPosts`, etc.) → `v11.30.8` (posts-write + `resolvePostUuid`) → `v11.30.9` (profiles — maior acoplamento, último).
 
+### Iteração `v11.30.7`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-7-adapter-split-posts-read` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `supabase.adapter.js` (2187L → 1517L, −670L): grupo posts-read extraído para `supabase.posts-read.adapter.js` |
+
+- objetivo:
+  extrair o grupo posts-read do `supabase.adapter.js` (2187L → 1517L, −670L) para sub-adapter independente usando o namespace `window._KCSA`.
+- resultado:
+  - **NOVO** `assets/js/adapters/supabase.posts-read.adapter.js` (744L) — 7 exports (`getPostById`, `getPosts`, `searchPosts`, `getFeedCursor`, `getMyPosts`, `getPostsByAuthorId`, `getRelatedPosts`) registrados em `window._KCSA.posts`. Inclui 14 helpers internos: `mergeMetadataSafe`, `pickFirstNonEmpty`, `resolveNormalizedAuthorName`, `resolveNormalizedAuthorAvatar`, `logAuthorDiagnosticsDev` (acesso lazy a `window.KCAPI.ENV`), `mapSupabasePost`, `normalizeSupabasePost`, `buildSupabasePostSelect`, `buildSupabasePostSelectFallback`, `isMissingCommentsEmbedError`, `buildSupabasePostsQuery`, `buildSupabasePostsQueryFallback`, `isMissingVerifiedColumnError`, `normalizeSupabaseFilters`, `buildOrILike`, `fetchRelatedPostsByIds`. Helper `doNormalizePost` acessa `window.KCAPI.normalizePost` de forma lazy.
+  - **ALTERADO** `supabase.adapter.js`: dois blocos de posts-read removidos (L373–840 e L1747–1965); 4 callers internos de `supabaseGetPostById` em funções posts-write atualizados para referência lazy `window._KCSA.posts.getPostById`; 7 entradas do `driverSupabase` atualizadas para `window._KCSA.posts.*`; fallback guard `window._KCSA.posts = window._KCSA.posts || {}` adicionado.
+  - **ALTERADO** `tests/supabase-adapter.test.js`: `require` de `supabase.posts-read.adapter.js` adicionado ao `beforeAll` para carregar namespace antes do adapter principal.
+  - **22 HTMLs** atualizados: nova tag `<script defer>` para `supabase.posts-read.adapter.js` inserida entre media e saved.
+- arquivos alterados:
+  - `assets/js/adapters/supabase.posts-read.adapter.js` (NOVO, 744L)
+  - `assets/js/adapters/supabase.adapter.js` (ALTERADO, 2187L → 1517L)
+  - `tests/supabase-posts-read.adapter.test.js` (NOVO, 69 testes estáticos)
+  - `tests/supabase-adapter.test.js` (ALTERADO, +1 linha)
+  - `scripts/add-posts-read-script-tag.ps1` (NOVO)
+  - 22 HTMLs atualizados
+- resultado dos testes:
+  `69/69` suites, `1011/1011` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#333` — squash merge `f12b16f` — promoção `dpl_CALUFDXRt3Qn4sFQmB93971ynmLz`, smoke HTTP 200.
+- próximas fases:
+  `v11.30.8` (posts-write: `supabaseCreatePost`, `supabaseUpdatePost`, `supabaseDeletePost`, `resolvePostUuid` — alta cautela) → `v11.30.9` (profiles — maior acoplamento, último) → `v11.30.10+` (split de `product.controller.js`).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
