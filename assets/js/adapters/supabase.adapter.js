@@ -1,18 +1,10 @@
 ﻿
 (function () {
   'use strict';
-const { ENV, normalizePost } = window.KCAPI;
-  const profileShared = window.KCAccountProfileUtils || {};
-  const OWNER_PROFILE_FIELDS = profileShared.OWNER_PROFILE_SELECT_FIELDS || 'id, display_name, full_name, avatar_url, avatar_path, bio, verified, is_admin, created_at, updated_at, onboarding_completed_at, affiliation, gender_identity, gender_identity_custom, race_color, profile_public, contact_primary_method, contact_cta_enabled, social_links, social_visibility';
-  // ── createPostDiagnostics + summarizeCreatePayloadForCreateDiagnostics extraídos para supabase.posts-write.adapter.js (v11.30.8) ──
-
-  function normalizeProfilePatchForAdapter(patch) {
-    if (profileShared && typeof profileShared.normalizeProfilePatch === 'function') {
-      return profileShared.normalizeProfilePatch(patch);
-    }
-    return (patch && typeof patch === 'object' && !Array.isArray(patch)) ? { ...patch } : {};
-  }
-
+const { ENV } = window.KCAPI;
+  // ── normalizeProfilePatchForAdapter, uploadProfileAvatarToSupabaseStorage,
+  // supabaseGetMyProfile, syncCurrentProfileCache, supabaseUpdateMyProfile,
+  // supabaseUploadProfileAvatar extraídos para supabase.profiles.adapter.js (v11.30.9) ──
 
   // ---------- Supabase Client Bootstrap (V8.1.3.1) ----------
   // Cria o cliente apenas quando necessário (driver="supabase").
@@ -181,98 +173,7 @@ const { ENV, normalizePost } = window.KCAPI;
     }
   }
 
-  // ── getUserDisplayNameForProfile, getUserAvatarForProfile, ensureSupabaseProfileForCreate extraídos para supabase.posts-write.adapter.js (v11.30.8) ──
-
   // ── Grupo media extraído para supabase.media.adapter.js (v11.30.5) ──────────
-  // dataUrlToBlob, extFromMime, sanitizeFilename, checkImageMagicBytes,
-  // compressImage, getPostMediaStorageBucket, escapeRegExp, stripSearchAndHash,
-  // safeDecodeUriComponent, extractStoragePathFromPostMediaValue,
-  // buildPostMediaCleanupContext, cleanupManagedPostMediaStorage,
-  // uploadImagesToSupabaseStorage → window._KCSA.media.*
-
-  async function uploadProfileAvatarToSupabaseStorage(client, fileOrDataUrl, options) {
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
-
-    const bucket = (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
-      ? String(ENV.STORAGE_BUCKET_POST_MEDIA || ENV.supabase.storageBucket)
-      : 'kino-media';
-
-    const opts = (options && typeof options === 'object') ? options : {};
-    const userId = String(opts.userId || '').trim();
-    if (!userId) return { ok: false, error: { message: 'Usuário inválido para upload do avatar.' } };
-
-    const maxBytes = (ENV && ENV.supabase && Number.isFinite(ENV.supabase.maxImageBytes))
-      ? Number(ENV.supabase.maxImageBytes)
-      : (5 * 1024 * 1024);
-    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-
-    let blob = null;
-    let directUrl = '';
-
-    if (typeof fileOrDataUrl === 'string') {
-      const raw = String(fileOrDataUrl || '').trim();
-      if (!raw) return { ok: false, error: { message: 'Imagem inválida para avatar.' } };
-      if (/^https?:\/\//i.test(raw)) {
-        directUrl = raw;
-      } else {
-        blob = window._KCSA.media.dataUrlToBlob(raw);
-      }
-    } else if (typeof Blob !== 'undefined' && fileOrDataUrl instanceof Blob) {
-      blob = fileOrDataUrl;
-    }
-
-    if (directUrl) {
-      return { ok: true, data: { url: directUrl } };
-    }
-
-    if (!blob) return { ok: false, error: { message: 'Formato de imagem inválido para avatar.' } };
-
-    const mime = String(blob.type || '').toLowerCase();
-    if (!allowedTypes.has(mime)) {
-      return { ok: false, error: { message: 'Use uma imagem JPG, PNG ou WEBP para o avatar.' } };
-    }
-    if (blob.size > maxBytes) {
-      return { ok: false, error: { message: 'A imagem do avatar excede o limite permitido.' } };
-    }
-    // Valida magic bytes (defesa contra arquivos maliciosos com MIME falsificado)
-    const actualMime = await window._KCSA.media.checkImageMagicBytes(blob);
-    if (!actualMime || !allowedTypes.has(actualMime)) {
-      return { ok: false, error: { message: 'O arquivo não é uma imagem válida.' } };
-    }
-
-    // Comprime avatar antes do upload (v9.4.1) — max 400×400px
-    const compressedAvatar = await window._KCSA.media.compressImage(blob, 400, 400, 0.85);
-    const avatarMime = compressedAvatar.type || mime;
-    const ext = window._KCSA.media.extFromMime(avatarMime);
-    const filename = window._KCSA.media.sanitizeFilename(`avatar.${ext}`);
-    const path = `profile-avatars/${userId}/${Date.now()}-${filename}`;
-    const storage = client.storage.from(bucket);
-
-    const up = await storage.upload(path, compressedAvatar, { contentType: avatarMime || 'application/octet-stream', upsert: false });
-    if (up && up.error) {
-      return {
-        ok: false,
-        error: {
-          message: 'Falha no upload do avatar.',
-          code: (up.error.code != null && String(up.error.code).trim()) ? String(up.error.code).trim() : 'PROFILE_AVATAR_UPLOAD_FAILED',
-          details: up.error.details || null,
-          hint: up.error.hint || null,
-          bucket,
-          path,
-        },
-      };
-    }
-
-    const pub = storage.getPublicUrl(path);
-    const publicUrl = (pub && pub.data && pub.data.publicUrl) ? pub.data.publicUrl : '';
-    if (!publicUrl) {
-      return { ok: false, error: { message: 'Não foi possível obter a URL pública do avatar.' } };
-    }
-
-    return { ok: true, data: { url: publicUrl, path } };
-  }
-
-
 
   // ── Grupo posts-read extraído para supabase.posts-read.adapter.js (v11.30.7) ──
   // mergeMetadataSafe, pickFirstNonEmpty, resolveNormalizedAuthorName,
@@ -356,106 +257,11 @@ const { ENV, normalizePost } = window.KCAPI;
 
   // ── Comments (V8.1.7.2) — extraídas para supabase.comments.adapter.js (v11.30.3) ──
 
-  async function supabaseGetMyProfile() {
-    const client = getSupabaseClient();
-    if (!client) return null;
-    const user = await supabaseGetCurrentUser();
-    if (!user) return null;
-
-    try {
-      const res = await client
-        .from('profiles')
-        .select(OWNER_PROFILE_FIELDS)
-        .eq('id', user.id)
-        .maybeSingle();
-      if (res && res.error) {
-        console.error('[KCAPI][profile] getMyProfile:', res.error);
-        return null;
-      }
-      if (res && res.data) syncCurrentProfileCache(res.data);
-      return (res && res.data) ? res.data : null;
-    } catch (e) {
-      console.error('[KCAPI][profile] getMyProfile exceção:', e);
-      return null;
-    }
-  }
-
-  function syncCurrentProfileCache(profile) {
-    if (window.KCProfiles && typeof window.KCProfiles.commitProfile === 'function') {
-      try {
-        return window.KCProfiles.commitProfile(profile);
-      } catch (_) { }
-    }
-    try {
-      document.dispatchEvent(new CustomEvent('kc:profilechange', { detail: { profile: profile || null } }));
-    } catch (_) { }
-    return profile || null;
-  }
-
-  async function supabaseUpdateMyProfile(patch = {}) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
-    const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para editar seu perfil.' } };
-
-    const updates = normalizeProfilePatchForAdapter(patch);
-    const displayName = Object.prototype.hasOwnProperty.call(updates, 'display_name')
-      ? String(updates.display_name || '').trim()
-      : '__skip__';
-    if (Object.prototype.hasOwnProperty.call(updates, 'display_name') && !String(updates.display_name || '').trim()) {
-      return { ok: false, error: { message: 'Informe um nome valido.' } };
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, 'avatar_url')) {
-      const avatarUrl = String(updates.avatar_url || '').trim();
-      if (avatarUrl && !/^https?:\/\//i.test(avatarUrl)) {
-        return { ok: false, error: { message: 'URL de avatar inválida.' } };
-      }
-      updates.avatar_url = avatarUrl || null;
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, 'avatar_path')) {
-      updates.avatar_path = String(updates.avatar_path || '').trim() || null;
-    }
-    if (!Object.keys(updates).length) {
-      return { ok: false, error: { message: 'Nenhuma alteração informada.' } };
-    }
-    if (!displayName) return { ok: false, error: { message: 'Informe um nome válido.' } };
-
-    try {
-      const { data, error } = await client
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id)
-        .select(OWNER_PROFILE_FIELDS)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[KCAPI][profile] updateMyProfile:', error);
-        return { ok: false, error: { message: error.message || 'Não foi possível atualizar seu perfil.' } };
-      }
-      if (!data) {
-        return { ok: false, error: { message: 'No momento, não é possível alterar seu nome.' } };
-      }
-      syncCurrentProfileCache(data);
-      return { ok: true, data };
-    } catch (e) {
-      console.error('[KCAPI][profile] updateMyProfile exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível atualizar seu perfil.' } };
-    }
-  }
-
-  async function supabaseUploadProfileAvatar(fileOrDataUrl) {
-    const client = getSupabaseClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
-    const user = await supabaseGetCurrentUser();
-    if (!user) return { ok: false, error: { message: 'Faça login para atualizar seu avatar.' } };
-
-    try {
-      return await uploadProfileAvatarToSupabaseStorage(client, fileOrDataUrl, { userId: user.id });
-    } catch (e) {
-      console.error('[KCAPI][profile] uploadProfileAvatar exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível enviar o avatar.' } };
-    }
-  }
+  // ── Grupo profiles extraído para supabase.profiles.adapter.js (v11.30.9) ──
+  // normalizeProfilePatchForAdapter, uploadProfileAvatarToSupabaseStorage,
+  // syncCurrentProfileCache, supabaseGetMyProfile (getMyProfile),
+  // supabaseUpdateMyProfile (updateMyProfile), supabaseUploadProfileAvatar (uploadProfileAvatar)
+  // → window._KCSA.profiles.*
 
   // ── Admin / Help Requests — extraídas para supabase.admin.adapter.js (v11.30.2) ──
 
@@ -540,6 +346,7 @@ const { ENV, normalizePost } = window.KCAPI;
   window._KCSA.saved = window._KCSA.saved || {};
   window._KCSA.posts = window._KCSA.posts || {};
   window._KCSA.postsWrite = window._KCSA.postsWrite || {};
+  window._KCSA.profiles = window._KCSA.profiles || {};
 
   // Driver Supabase (V8.1.7.2+)
   const driverSupabase = Object.freeze({
@@ -561,9 +368,9 @@ const { ENV, normalizePost } = window.KCAPI;
     likeComment: window._KCSA.comments.likeComment,
     votePost: window._KCSA.votes.votePost,
     getMyVote: window._KCSA.votes.getMyVote,
-    getMyProfile: supabaseGetMyProfile,
-    updateMyProfile: supabaseUpdateMyProfile,
-    uploadProfileAvatar: supabaseUploadProfileAvatar,
+    getMyProfile: window._KCSA.profiles.getMyProfile,
+    updateMyProfile: window._KCSA.profiles.updateMyProfile,
+    uploadProfileAvatar: window._KCSA.profiles.uploadProfileAvatar,
     getMyPosts: window._KCSA.posts.getMyPosts,
     getPostsByAuthorId: window._KCSA.posts.getPostsByAuthorId,
     getRelatedPosts: window._KCSA.posts.getRelatedPosts,

@@ -32,6 +32,7 @@ beforeAll(() => {
 
   require('../assets/js/adapters/supabase.posts-read.adapter.js');
   require('../assets/js/adapters/supabase.posts-write.adapter.js');
+  require('../assets/js/adapters/supabase.profiles.adapter.js');
   require('../assets/js/adapters/supabase.adapter.js');
 });
 
