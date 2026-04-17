@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.31.2`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevada para 82/82 suites e 1335/1335 testes em `v11.31.2`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avançada para a primeira extração estrutural segura de `kc-create-post.js` com schema/constantes externalizados.
+**Status atual:** v11 executada até `v11.31.3`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevada para 83/83 suites e 1378/1378 testes em `v11.31.3`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avançada com a segunda extração estrutural de `kc-create-post.js`: mídia/imagens externalizadas para `kc-create-post.media.js` via `window._KCCreatePost.media`.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 82 suites de regressão e contrato |
+| Testes | Jest: 83 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.31.3 | segunda extração estrutural de `assets/js/kc-create-post.js`: grupo de mídia/imagens (leitura, compressão canvas, gerenciamento de capa, ordenação e HTML da seção) movido para o novo IIFE `assets/js/kc-create-post.media.js` via `window._KCCreatePost.media`; core expõe estado compartilhado em `window._KCCreatePost._state` (referência por objeto); stubs de delegação mantêm nomes de função originais intactos; nova suíte `tests/kc-create-post-media.test.js` (43 testes); `kc-create-post.js` reduzido de `2239L` para `~2095L` (−144L); `12` HTMLs carregam o novo asset após o core; baseline sobe para `83/83` suites e `1378/1378` testes | `#363` |
 | v11.31.2 | primeira extração estrutural de `assets/js/kc-create-post.js`: `KC_CREATE_MODAL_ID`, `KC_POST_VISIBILITY_OPTIONS` e `KC_CREATE_SCHEMA` movidos para o novo asset `assets/js/kc-create-post.schema.js`, carregado antes do runtime em `12` HTMLs; `kc-create-post.js` passa a consumir `window._KCCreatePost.schema` com fallback defensivo e guard de indisponibilidade; nova suíte `tests/kc-create-post-schema.test.js` (16 testes) e realinhamento do contrato do hotspot e da regressão de `Ingressos`; baseline sobe para `82/82` suites e `1335/1335` testes | `#361` |
 | v11.31.1 | suíte estática ampliada para `assets/js/kc-create-post.js`: novo arquivo `tests/kc-create-post-contract.test.js` com 17 testes cobrindo shape global atual, exports públicos, schema dos 6 módulos, modal bootstrap, render dinâmico, submit pipeline, side channels `window.__KC_*` e wiring de `DOMContentLoaded`; baseline sobe para `81/81` suites e `1320/1320` testes sem alterar runtime | `#359` |
 | v11.31.0 | auditoria formal do próximo hotspot monolítico: `assets/js/kc-create-post.js` mapeado em `2610L`, `~114KB`, `55` funções top-level, `12` HTMLs impactados e `4` exports públicos; estratégia de decomposição segura registrada em `docs/kc-create-post-audit-v11.31.md`, com sequência recomendada `v11.31.1`–`v11.31.7`; handoff externo ampliado para Claude Code em `docs/handoff-claude-code-v11.31.0.md`; baseline de testes mantido em `80/80` suites e `1303/1303` testes | `#357` |
@@ -125,18 +126,19 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.31.1`
-- objetivo da iteracao: blindar `kc-create-post.js` com uma suíte de contrato ampliada antes do primeiro split estrutural da trilha `v11.31.x`
-- natureza da iteracao: testes-only de arquitetura e contrato, sem alteração de runtime
-- regressao: `81/81` suites, `1320/1320` testes, hygiene `8.6.0`
-- deploy de producao validado desta fase: `dpl_ACgiQPzePCo3RrRsZATuxvYocu1o` (`www.kinocampus.com.br`) — promovido de `dpl_CRC3gdHL4gwwGCTenk1MpRcXPLeZ`
+- iteracao ativa consolidada: `v11.31.3`
+- objetivo da iteracao: extrair o grupo de mídia/imagens de `kc-create-post.js` para um IIFE dedicado `kc-create-post.media.js`, reduzindo o monolito sem quebrar contratos
+- natureza da iteracao: extração estrutural com delegação via namespace `window._KCCreatePost.media`
+- regressao: `83/83` suites, `1378/1378` testes, hygiene `8.6.0`
+- deploy de producao validado desta fase: `dpl_axjRM4cCv2ugQgzxmy1gaeVBHvY3` (`www.kinocampus.com.br`) — promovido de PR `#363`, smoke HTTP 200
 - achados desta rodada:
-  - a nova suíte `tests/kc-create-post-contract.test.js` trava 17 contratos do arquivo principal sem depender de `eval` nem de DOM real
-  - a blindagem cobre exports globais, schema base, bootstrap do modal, wiring de `DOMContentLoaded`, side channels `window.__KC_*` e os pontos críticos do submit com `KCAPI`, `KCActions`, `KCSupabase` e `KCOverlayLock`
-  - com o safety net agora explícito, a próxima fase segura deixa de ser “medir” o hotspot e passa a ser a primeira extração controlada, começando por schema/constantes
-- proxima iteracao sugerida: `v11.31.2`, para extrair schema/constantes do hotspot `kc-create-post.js`
-- artefato de handoff para continuidade externa: `docs/handoff-claude-code-v11.31.0.md`
-- trilha futura: `v11.31.x` (`v11.31.2` schema -> `v11.31.3` media -> `v11.31.4` domínio -> `v11.31.5` modal -> `v11.31.6` submit/edit -> `v11.31.7` core residual)
+  - a exposição do estado compartilhado via `window._KCCreatePost._state = kcCreateState` (referência por objeto) permite que o sub-módulo leia e escreva o mesmo objeto sem copiar ou serializar
+  - stubs de delegação mantêm os nomes de função originais intactos, preservando todos os call sites e os contratos de teste existentes
+  - a nova suíte `tests/kc-create-post-media.test.js` (43 testes) cobre IIFE, namespace, constantes, leitura/compressão, gerenciamento de imagens e HTML da seção
+  - `kc-create-post.js` reduzido de `2239L` (v11.31.2) para `~2095L` (−144L)
+- proxima iteracao sugerida: `v11.31.4`, para extrair resolvers de domínio de `kc-create-post.js`
+- artefato de handoff para continuidade externa: `docs/handoff-claude-code-v11.31.2.md`
+- trilha futura: `v11.31.x` (`v11.31.4` domínio -> `v11.31.5` modal -> `v11.31.6` submit/edit -> `v11.31.7` core residual)
 
 ---
 

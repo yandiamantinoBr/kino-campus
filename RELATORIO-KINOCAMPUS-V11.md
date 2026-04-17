@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2` e `v11.24.3` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11, a trilha de i18n v11.24.x com kc-i18n.js e integracao nos componentes core e templates dinamicos, o planejamento formal do backlog v11.25–v11.30 e a consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` (`v11.25.0` e `v11.25.1` concluidas) |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2` e `v11.24.3` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11, a trilha de i18n v11.24.x com kc-i18n.js e integracao nos componentes core e templates dinamicos, o planejamento formal do backlog v11.25–v11.30 e a consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` (`v11.25.0` e `v11.25.1` concluidas), split do monolito `supabase.adapter.js` concluido (10/10 grupos, acumulado −3621L), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avancada com a segunda extracao estrutural de `kc-create-post.js`: grupo de midia/imagens externalizado para `kc-create-post.media.js` via `window._KCCreatePost.media` (`v11.31.3` concluida, baseline `83/83` suites e `1378/1378` testes) |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -2581,6 +2581,56 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   PR `#361` — squash merge `1c61409` (commit da branch `6114b5a`) — preview `dpl_DjP2RrjNXaMLHARfYtcwLPbCFnLs` — pós-merge `dpl_7Pim3BYD1wr1331nMxmNUhAo3Chf` — produção `dpl_94g4rQUquggV8S8swhTxtYapDypt` (promote from `dpl_7Pim3BYD1wr1331nMxmNUhAo3Chf`), smoke HTTP 200 com `https://www.kinocampus.com.br/?ts=1776450353`.
 - próximas fases:
   `v11.31.3` (mídia/imagens) -> `v11.31.4` (resolvers de domínio) -> `v11.31.5` (modal/render) -> `v11.31.6` (submit/edit) -> `v11.31.7` (core residual e estabilização final).
+
+### Iteração `v11.31.3`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-31-3-kc-create-post-media-split` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | extração estrutural — grupo de mídia/imagens |
+| Escopo | `assets/js/kc-create-post.media.js` (NOVO), `assets/js/kc-create-post.js`, `12` HTMLs carregadores, `tests/kc-create-post-media.test.js` (NOVO), `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  extrair do hotspot `kc-create-post.js` todo o grupo de mídia/imagens (leitura de arquivo, compressão via canvas, gerenciamento de capa, adição/remoção, ordenação e HTML da seção de imagens), registrando a lógica em um IIFE dedicado `kc-create-post.media.js` via `window._KCCreatePost.media`, mantendo os nomes de função originais como stubs de delegação no core e expondo o estado compartilhado via referência por objeto em `window._KCCreatePost._state`.
+- resultado:
+  - **NOVO** `assets/js/kc-create-post.media.js` — IIFE `'use strict'` com `window._KCCreatePost.media`, contendo: `_esc()`, `_getState()`, `_rerender()`, `KC_CREATE_MAX_IMAGES = 5`, `kcReadFileAsDataUrl`, `kcReadAndCompressImage` (async, canvas + quality), `kcAddImagesFromFiles` (async, loop `var`), `kcRemoveCreateImageById`, `kcSetCreateCoverImageById`, `kcGetOrderedCreateImages`, `kcCreateImagesSectionHtml`; namespace exporta 7 membros: `MAX_IMAGES`, `readFile`, `compressImage`, `addFromFiles`, `removeById`, `setCoverById`, `getOrdered`, `sectionHtml`.
+  - **ALTERADO** `assets/js/kc-create-post.js` — adicionado `window._KCCreatePost._state = kcCreateState;` após declaração do estado; bloco de mídia substituído por 5 stubs de delegação via `_kcMediaModule()`; `kc-create-post.js` reduz de `2239L` para `~2095L` (−144L).
+  - **ALTERADOS** `12` HTMLs da base principal — agora carregam `assets/js/kc-create-post.media.js` com `defer` após `assets/js/kc-create-post.js`.
+  - **NOVO** `tests/kc-create-post-media.test.js` — suíte estática com `43` testes cobrindo: estrutura IIFE/namespace (6), `_esc` (1), acesso ao estado (2), constante `KC_CREATE_MAX_IMAGES` (2), leitura de arquivo (2), compressão (3), adicionar imagens (8), remover imagem (4), definir capa (4), obter imagens ordenadas (3), HTML da seção (8).
+- achados principais:
+  - `kcCreateState` é declarado como `const` no core e não aparece em `window`; a solução foi expor `window._KCCreatePost._state = kcCreateState` — objetos JS são passados por referência, portanto mutações do sub-módulo refletem no estado original sem cópia.
+  - `kcRenderCreateModal` é uma declaração `function` top-level em script global, portanto acessível via `window.kcRenderCreateModal` no navegador; o sub-módulo usa `_rerender()` com guard `typeof`.
+  - stubs de delegação mantêm os nomes originais intactos, preservando todos os call sites (delegação de evento, handlers de change/drop, render, submit) e os contratos de testes existentes (`kc-create-post-contract.test.js`, testes `eval`).
+  - `core.autocrlf=true` no Windows produz alertas de whitespace em `git diff --check` nos arquivos CRLF; pré-existente, não-bloqueante.
+- arquivos alterados:
+  - `assets/js/kc-create-post.media.js` (NOVO, `266L`)
+  - `assets/js/kc-create-post.js` (ALTERADO, `2239L -> ~2095L`, −144L)
+  - `_product.html` (ALTERADO)
+  - `achados-perdidos.html` (ALTERADO)
+  - `caronas-feed.html` (ALTERADO)
+  - `compra-venda-feed.html` (ALTERADO)
+  - `create-post.html` (ALTERADO)
+  - `eventos.html` (ALTERADO)
+  - `index.html` (ALTERADO)
+  - `moradia.html` (ALTERADO)
+  - `my-posts.html` (ALTERADO)
+  - `ods.html` (ALTERADO)
+  - `oportunidades.html` (ALTERADO)
+  - `search-results.html` (ALTERADO)
+  - `tests/kc-create-post-media.test.js` (NOVO, `255L`)
+  - `README.md` (ALTERADO)
+  - `RELATORIO-KINOCAMPUS-V11.md` (ALTERADO)
+- resultado dos testes:
+  baseline elevada para `83/83` suites e `1378/1378` testes; hygiene `8.6.0`.
+- validacao operacional:
+  `node --check assets/js/kc-create-post.js`, `node --check assets/js/kc-create-post.media.js`, `npx jest tests/kc-create-post-media.test.js tests/kc-create-post-contract.test.js --runInBand`, `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validacao em navegador:
+  deployment pós-merge `dpl_axjRM4cCv2ugQgzxmy1gaeVBHvY3` promovido para produção; `www.kinocampus.com.br` respondeu `200` com smoke `https://www.kinocampus.com.br/?ts=1745888400`.
+- PR \ commit \ deploy:
+  PR `#363` — squash merge `cec2b93` — produção `dpl_axjRM4cCv2ugQgzxmy1gaeVBHvY3` (promote via `npx vercel promote`), smoke HTTP 200.
+- próximas fases:
+  `v11.31.4` (resolvers de domínio) -> `v11.31.5` (modal/render) -> `v11.31.6` (submit/edit) -> `v11.31.7` (core residual e estabilização final).
 
 ---
 
