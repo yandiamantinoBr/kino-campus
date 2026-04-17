@@ -15,7 +15,6 @@
   let currentProfile = null;
   let editUI = null;
   let staticInteractionsBound = false;
-  let savedPostState = { kinds: [], loaded: false, pending: false };
   const shared = window.KCAccountProfileUtils || {};
   let sellerStatsRequestToken = 0;
   let sellerRatingModal = null;
@@ -29,8 +28,6 @@
     switch (String(popoverId || '')) {
       case 'sharePopover':
         return { anchorId: 'shareButton', desktopWidth: 220 };
-      case 'savePopover':
-        return { anchorId: 'saveButton', desktopWidth: 330 };
       default:
         return null;
     }
@@ -95,7 +92,7 @@
   }
 
   function syncActiveProductPopovers() {
-    ['sharePopover', 'savePopover'].forEach((popoverId) => {
+    ['sharePopover'].forEach((popoverId) => {
       const popover = document.getElementById(popoverId);
       if (!popover || !popover.classList.contains('active')) return;
       const config = getProductPopoverConfig(popoverId);
@@ -130,7 +127,9 @@
   function handleProductGlobalKeydown(event) {
     if (!event || event.key !== 'Escape') return;
     closeSharePopover();
-    closeSavePopover();
+    if (window._KCProduct.save && typeof window._KCProduct.save.closeSavePopover === 'function') {
+      window._KCProduct.save.closeSavePopover();
+    }
     if (window._KCProduct.calendar && typeof window._KCProduct.calendar.closeCalendarPopover === 'function') {
       window._KCProduct.calendar.closeCalendarPopover();
     }
@@ -156,7 +155,9 @@
     const popover  = document.getElementById('sharePopover');
     const backdrop = document.getElementById('shareBackdrop');
     if (!popover) return;
-    closeSavePopover();
+    if (window._KCProduct.save && typeof window._KCProduct.save.closeSavePopover === 'function') {
+      window._KCProduct.save.closeSavePopover();
+    }
     if (window._KCProduct.calendar && typeof window._KCProduct.calendar.closeCalendarPopover === 'function') {
       window._KCProduct.calendar.closeCalendarPopover();
     }
@@ -220,52 +221,6 @@
         }
       });
     }
-  }
-
-  function openSavePopover(btn) {
-    const popover = document.getElementById('savePopover');
-    const backdrop = document.getElementById('saveBackdrop');
-    if (!popover) return;
-    closeSharePopover();
-    if (window._KCProduct.calendar && typeof window._KCProduct.calendar.closeCalendarPopover === 'function') {
-      window._KCProduct.calendar.closeCalendarPopover();
-    }
-    popover.classList.add('active');
-    popover.setAttribute('aria-hidden', 'false');
-    scheduleProductPopoverPosition('savePopover', btn);
-    if (backdrop) backdrop.classList.add('active');
-    if (btn) btn.setAttribute('aria-expanded', 'true');
-  }
-
-  function closeSavePopover() {
-    const popover = document.getElementById('savePopover');
-    const backdrop = document.getElementById('saveBackdrop');
-    const btn = document.getElementById('saveButton');
-    if (popover) {
-      popover.classList.remove('active');
-      popover.setAttribute('aria-hidden', 'true');
-      clearProductPopoverPosition(popover);
-    }
-    if (backdrop) backdrop.classList.remove('active');
-    if (btn) btn.setAttribute('aria-expanded', 'false');
-  }
-
-  function wireSavePopover() {
-    const saveBtn = document.getElementById('saveButton');
-    const backdrop = document.getElementById('saveBackdrop');
-    const closeBtn = document.getElementById('savePopoverClose');
-    if (!saveBtn) return;
-    ensureProductPopoverViewportBinding();
-
-    saveBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const popover = document.getElementById('savePopover');
-      if (popover && popover.classList.contains('active')) closeSavePopover();
-      else openSavePopover(saveBtn);
-    });
-
-    if (backdrop) backdrop.addEventListener('click', closeSavePopover);
-    if (closeBtn) closeBtn.addEventListener('click', closeSavePopover);
   }
 
   // ── Badge "editado" ──────────────────────────────────────
@@ -1861,61 +1816,12 @@
    * Calcula pontuação de relevância entre um candidato e o post atual.
    * Pontuação mais alta = mais relevante.
    */
-  function getSavedButtons() {
-    return Array.from(document.querySelectorAll('[data-kc-save-kind]'));
-  }
-
-  function getSaveKindLabel(kind) {
-    if (kind === 'favorite') return 'Favorito';
-    if (kind === 'later') return 'Lembrar Depois';
-    if (kind === 'highlight') return 'Destaque';
-    return '';
-  }
-
-  function getSaveKinds() {
-    return Array.isArray(savedPostState && savedPostState.kinds)
-      ? savedPostState.kinds.slice()
-      : [];
-  }
-
   function trackHomeCategoryInteraction(eventType, post) {
     try {
       if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
         window.KCHomeCategories.trackEvent(eventType, { post });
       }
     } catch (_) { }
-  }
-
-  function updateSavedButtonsUI() {
-    const activeKinds = new Set(getSaveKinds());
-    const loading = !!(savedPostState && savedPostState.pending);
-    getSavedButtons().forEach((button) => {
-      const kind = String(button.getAttribute('data-kc-save-kind') || '').trim();
-      const active = !!kind && activeKinds.has(kind);
-      button.classList.toggle('is-active', active);
-      button.classList.toggle('is-loading', loading);
-      button.setAttribute('aria-pressed', active ? 'true' : 'false');
-      if (loading) button.setAttribute('aria-busy', 'true');
-      else button.removeAttribute('aria-busy');
-    });
-
-    const trigger = document.getElementById('saveButton');
-    const count = document.getElementById('saveButtonCount');
-    const totalActive = activeKinds.size;
-    if (trigger) {
-      trigger.classList.toggle('is-active', totalActive > 0);
-      trigger.classList.toggle('is-loading', loading);
-      trigger.setAttribute('aria-pressed', totalActive > 0 ? 'true' : 'false');
-    }
-    if (count) {
-      if (totalActive > 0) {
-        count.style.display = 'inline-flex';
-        count.textContent = String(totalActive);
-      } else {
-        count.style.display = 'none';
-        count.textContent = '0';
-      }
-    }
   }
 
   async function refreshViewerState() {
@@ -1954,89 +1860,6 @@
       setSeller(currentPost);
       maybeResumeQueuedContact(currentPost);
     }
-  }
-
-  async function refreshSavedState(post) {
-    const postId = getPostIdForMutation(post);
-    if (!postId || !window.KCAPI || typeof window.KCAPI.getSavedPostState !== 'function') {
-      savedPostState = { kinds: [], loaded: true, pending: false };
-      updateSavedButtonsUI();
-      return;
-    }
-
-    try {
-      const result = await window.KCAPI.getSavedPostState(postId);
-      savedPostState = {
-        kinds: Array.isArray(result && result.kinds)
-          ? result.kinds.slice()
-          : (result && result.kind ? [String(result.kind)] : []),
-        loaded: true,
-        pending: false,
-      };
-    } catch (_) {
-      savedPostState = { kinds: [], loaded: true, pending: false };
-    }
-    updateSavedButtonsUI();
-  }
-
-  function bindSavedActions(post) {
-    const postId = getPostIdForMutation(post);
-    getSavedButtons().forEach((button) => {
-      if (button.dataset.kcSaveBound === '1') return;
-      button.dataset.kcSaveBound = '1';
-      button.addEventListener('click', async () => {
-        if (!postId || !window.KCAPI) return;
-        if (!currentUser || !currentUser.id) {
-          toast('Faça login para salvar esta publicação.', 'warn', 2400);
-          return;
-        }
-        const kind = String(button.getAttribute('data-kc-save-kind') || '').trim();
-        if (!kind) return;
-
-        savedPostState = { ...savedPostState, pending: true };
-        updateSavedButtonsUI();
-
-        try {
-          if (getSaveKinds().includes(kind)) {
-            const result = (typeof window.KCAPI.clearSavedPostState === 'function')
-              ? await window.KCAPI.clearSavedPostState(postId, kind)
-              : { ok: false, error: { message: 'Recurso indisponível.' } };
-            if (!result || result.ok === false) {
-              const message = result && result.error && result.error.message ? String(result.error.message) : 'Não foi possível remover o item salvo.';
-              toast(message, 'error', 2600);
-            } else {
-              savedPostState = {
-                kinds: getSaveKinds().filter((item) => item !== kind),
-                loaded: true,
-                pending: false,
-              };
-              toast('Salvamento removido.', 'info', 2000);
-            }
-          } else {
-            const result = (typeof window.KCAPI.setSavedPostState === 'function')
-              ? await window.KCAPI.setSavedPostState(postId, kind, true)
-              : { ok: false, error: { message: 'Recurso indisponível.' } };
-            if (!result || result.ok === false) {
-              const message = result && result.error && result.error.message ? String(result.error.message) : 'Não foi possível salvar a publicação.';
-              toast(message, 'error', 2600);
-            } else {
-              savedPostState = {
-                kinds: Array.from(new Set(getSaveKinds().concat(kind))),
-                loaded: true,
-                pending: false,
-              };
-              toast(`${getSaveKindLabel(kind)} salvo com sucesso.`, 'success', 2200);
-              trackHomeCategoryInteraction(kind, post);
-            }
-          }
-        } catch (_) {
-          toast('Não foi possível atualizar este salvamento agora.', 'error', 2600);
-        } finally {
-          savedPostState = { ...savedPostState, pending: false };
-          updateSavedButtonsUI();
-        }
-      });
-    });
   }
 
   function isAuthor(post, user) {
@@ -2412,8 +2235,12 @@
     }
     upsertOwnerActions(post, currentUser);
     renderAuthorAnalytics(post, currentUser);
-    bindSavedActions(post);
-    refreshSavedState(post).catch(() => { });
+    if (window._KCProduct.save && typeof window._KCProduct.save.bindSavedActions === 'function') {
+      window._KCProduct.save.bindSavedActions(post, function () { return currentUser; });
+    }
+    if (window._KCProduct.save && typeof window._KCProduct.save.refreshSavedState === 'function') {
+      window._KCProduct.save.refreshSavedState(post).catch(() => { });
+    }
     maybeResumeQueuedContact(post);
     if (window._KCProduct.report && typeof window._KCProduct.report.wireReportButton === 'function') {
       window._KCProduct.report.wireReportButton({ postId: (post && post.uuid) ? post.uuid : post.id, postTitle: post.titulo || post.title || 'Publicação' });
@@ -2704,10 +2531,15 @@
   // window._KCProduct.calendar.setEventCalendar(post) / closeCalendarPopover() — carregado após este arquivo.
   window._KCProduct.calendar = window._KCProduct.calendar || {};
 
+  // window._KCProduct.save.closeSavePopover() / wireSavePopover() / bindSavedActions(post, getViewer) — carregado após este arquivo.
+  window._KCProduct.save = window._KCProduct.save || {};
+
   document.addEventListener('DOMContentLoaded', () => {
     bindProductGlobalKeydown();
     wireSharePopover();
-    wireSavePopover();
+    if (window._KCProduct.save && typeof window._KCProduct.save.wireSavePopover === 'function') {
+      window._KCProduct.save.wireSavePopover();
+    }
     wireCreateSimilarBtn();
     bindStaticInteractions();
     document.addEventListener('kc:authchange', () => { refreshViewerState().catch(() => { }); });
