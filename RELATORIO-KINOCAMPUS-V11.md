@@ -2348,7 +2348,39 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - riscos residuais:
   a fatia fecha o grupo de mutações do dono do post sem mexer nos contratos públicos nem no modal principal de edição já existente, mas o controller principal ainda concentra grupos residuais do split. O próximo passo correto é fechar essa decomposição antes de qualquer limpeza cosmética ou reorganização adicional.
 - próximas fases:
-  `v11.30.16` (fechamento do split residual do controller) -> `v11.30.17` (hardening final dos sub-módulos remanescentes, se necessário).
+  `v11.30.16` entregue com a extração do grupo de analytics do autor para `product.analytics.js`. Próxima: `v11.30.17` (popovers/core residual).
+
+---
+
+### Iteração `v11.30.16`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-16-product-controller-split-analytics` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `product.controller.js` (1540L → 1473L, −67L): grupo de analytics do autor extraído para `product.analytics.js` |
+
+- objetivo:
+  extrair o grupo de analytics do autor de `product.controller.js` (1540L → 1473L, −67L) para sub-módulo independente usando o namespace `window._KCProduct.analytics`. Sétimo grupo do split do controller. Extraídos: `buildAuthorAnalyticsSignature`, `_statBadge` adaptado como `statBadge`, `setAuthorAnalyticsMarkup(panel, result)` e `renderAuthorAnalytics(post, user)`.
+- resultado:
+  - **NOVO** `assets/js/controllers/product.analytics.js` (105L) — exporta `renderAuthorAnalytics` registrado em `window._KCProduct.analytics`. Inclui helpers locais duplicados do core, assinatura de snapshot para evitar rerender redundante, render das seis métricas (`views`, `votos`, `comments`, `shares`, `saves`, `coupon_clicks`) e o contrato de cache + refresh silencioso via `KCAPI.getCachedPostAnalytics(...)` / `refreshPostAnalytics(...)`.
+  - **ALTERADO** `product.controller.js`: bloco local de analytics removido; `renderPost(post)` passa a delegar `renderAuthorAnalytics(post, currentUser)` via `window._KCProduct.analytics`; guard `window._KCProduct.analytics = window._KCProduct.analytics || {}` adicionado.
+  - **ALTERADO** `_product.html`: tag `<script defer src="assets/js/controllers/product.analytics.js">` inserida após `product.edit.js`, preservando a sequência incremental do split.
+  - **NOVO** `tests/product.analytics.test.js` (8 testes estáticos) — cobre: IIFE, namespace, helpers locais, assinatura/badge privados, render das seis métricas, contrato de cache + refresh e export mínimo.
+- arquivos alterados:
+  - `assets/js/controllers/product.analytics.js` (NOVO, 105L)
+  - `assets/js/controllers/product.controller.js` (ALTERADO, 1540L → 1473L)
+  - `tests/product.analytics.test.js` (NOVO, 8 testes)
+  - `_product.html` (ALTERADO, +1 tag)
+- resultado dos testes:
+  `78/78` suites, `1287/1287` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#351` — squash merge `363f853` (commit funcional `3d85a99`) — preview `dpl_D7UX2A4gS1sNytXWEVGCt4YrvCey` — pós-merge `dpl_3KpQ24VPfk47e5UWYkwqg23VANvd` — produção `dpl_3b25cmNvNi17M1mbhwud91jXi6Rk` (promote from `dpl_3KpQ24VPfk47e5UWYkwqg23VANvd`), smoke HTTP 200 com `_product.html?ts=1776403701` servindo `product.analytics.js` e `assets/js/controllers/product.analytics.js?ts=1776403702` retornando `window._KCProduct.analytics = {`.
+- riscos residuais:
+  a fatia fecha mais um bloco de leitura/markup sem tocar em contratos de escrita, mas `product.controller.js` ainda concentra o núcleo de popovers/core, utilitários gerais e wiring base da página. O próximo passo correto é atacar esse residual em uma última fatia controlada, sem misturar com refactor cosmético.
+- próximas fases:
+  `v11.30.17` (popovers/core residual) -> `v11.30.18` (hardening final dos sub-módulos remanescentes, se necessário).
 
 ---
 
