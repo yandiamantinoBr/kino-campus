@@ -127,7 +127,7 @@ Regras desta fase:
 - objetivo da iteracao: auditar `kc-create-post.js` como próximo hotspot monolítico e definir uma sequência segura de `v11.31.x` antes de qualquer split estrutural
 - natureza da iteracao: docs-only de arquitetura, risco mínimo, sem alteração de runtime
 - regressao: `80/80` suites, `1303/1303` testes, hygiene `8.6.0`
-- deploy de producao validado desta fase: `TBD`
+- deploy de producao validado desta fase: `dpl_HcozbnnnhC3gkHhpjoenx8uJGdVf` (`www.kinocampus.com.br`) — promovido de `dpl_GUvbS9a7gzex1scW7NAY1WzuyNPc`
 - achados desta rodada:
   - `kc-create-post.js` foi medido em `2610L`, `~114KB`, `55` funções top-level, sem IIFE e sem `'use strict'`, o que o torna um hotspot fora do padrão dominante da base
   - o arquivo mistura schema, render do modal, imagens, create/edit, validação, duplicate check, audit log, redirect e bootstrap global, além de impactar `12` HTMLs principais

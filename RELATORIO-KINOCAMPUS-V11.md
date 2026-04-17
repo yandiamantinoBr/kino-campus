@@ -2477,6 +2477,12 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   - `RELATORIO-KINOCAMPUS-V11.md` (ALTERADO)
 - resultado dos testes:
   baseline preservada em `80/80` suites, `1303/1303` testes; hygiene `8.6.0`.
+- validacao operacional:
+  docs-only; zero alteracao em `assets/`, `supabase/` ou contratos publicados de runtime.
+- validacao em navegador:
+  o preview da branch ficou `READY` em `dpl_CSDenwYRfNM25NwbMkJEsBFRDawC`; o deployment pos-merge da base ficou `READY` em `dpl_GUvbS9a7gzex1scW7NAY1WzuyNPc`; a producao promovida em [www.kinocampus.com.br](https://www.kinocampus.com.br) respondeu `200` no deployment `dpl_HcozbnnnhC3gkHhpjoenx8uJGdVf`.
+- PR \ commit \ deploy:
+  PR `#357` — squash merge `04f172a` (commits da branch `24e9006` e `2c1d9ef`) — preview `dpl_CSDenwYRfNM25NwbMkJEsBFRDawC` — pós-merge `dpl_GUvbS9a7gzex1scW7NAY1WzuyNPc` — produção `dpl_HcozbnnnhC3gkHhpjoenx8uJGdVf` (promote from `dpl_GUvbS9a7gzex1scW7NAY1WzuyNPc`), smoke HTTP 200 com `https://www.kinocampus.com.br/?ts=1776428200`.
 - próximas fases:
   `v11.31.1` (suíte de contrato ampliada para `kc-create-post.js`) -> `v11.31.2` (schema/constantes) -> `v11.31.3` (mídia/imagens) -> `v11.31.4` (resolvers de domínio) -> `v11.31.5` (modal/render) -> `v11.31.6` (submit/edit) -> `v11.31.7` (core residual e estabilização final).
 
