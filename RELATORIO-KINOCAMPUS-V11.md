@@ -2316,7 +2316,39 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - riscos residuais:
   a fatia fecha o grupo ratings sem abrir refactor de `edit/owner actions`, mas o controller principal ainda concentra mutações do dono do post, CTA de edição e wiring acoplado ao estado principal. O próximo passo correto é isolar esse grupo antes de qualquer limpeza cosmética.
 - próximas fases:
-  `v11.30.15` (edit/owner actions) -> `v11.30.16` (fechamento do split residual do controller).
+  `v11.30.15` entregue com a extração do grupo `edit/owner actions` para `product.edit.js`. Próxima: `v11.30.16` (fechamento do split residual do controller).
+
+---
+
+### Iteração `v11.30.15`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-15-product-controller-split-edit` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `product.controller.js` (2233L → 1540L, −693L): grupo edit/owner actions extraído para `product.edit.js` |
+
+- objetivo:
+  extrair o grupo `edit/owner actions` de `product.controller.js` (2233L → 1540L, −693L) para sub-módulo independente usando o namespace `window._KCProduct.edit`. Sexto grupo do split do controller. Extraídos: `editUI`, `markPostAsEdited`, `buildEditPayload`, `resolveCurrentUser`, `buildEditUI(context)` e `upsertOwnerActions(post, user, context)`.
+- resultado:
+  - **NOVO** `assets/js/controllers/product.edit.js` (507L) — exports `upsertOwnerActions` registrado em `window._KCProduct.edit`. Inclui helpers locais duplicados do core, modal fallback de edição, audit log de edição, mutações de owner actions (`deletePost`, `togglePostStatus`, `renewPost`, `bumpPost`) e preserva o contrato atual de `window.kcOpenEditPostModal(...)` quando disponível.
+  - **ALTERADO** `product.controller.js`: bloco local de owner actions removido; `renderPost(post)` passa a delegar `upsertOwnerActions` via `window._KCProduct.edit`, repassando `currentUser` e callbacks de contexto (`renderPost`, `getCurrentUser`) por guard defensivo; guard `window._KCProduct.edit = window._KCProduct.edit || {}` adicionado.
+  - **ALTERADO** `_product.html`: tag `<script defer src="assets/js/controllers/product.edit.js">` inserida após `product.ratings.js`, preservando a sequência incremental do split.
+  - **NOVO** `tests/product.edit.test.js` (14 testes estáticos) — cobre: IIFE, namespace, estado local `editUI`, helpers duplicados, `buildEditPayload`, `upsertOwnerActions`, mutações via `KCAPI`, modal fallback de edição, feedback/redirect e export mínimo.
+- arquivos alterados:
+  - `assets/js/controllers/product.edit.js` (NOVO, 507L)
+  - `assets/js/controllers/product.controller.js` (ALTERADO, 2233L → 1540L)
+  - `tests/product.edit.test.js` (NOVO, 14 testes)
+  - `_product.html` (ALTERADO, +1 tag)
+- resultado dos testes:
+  `77/77` suites, `1279/1279` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#349` — squash merge `f8a2921` (commit funcional `802089b`) — preview `dpl_9Q1Qyf1N8xuKP5cFDGf9WzdtiVU4` — pós-merge `dpl_AgUY1mNrpNjL7DbaxtAw4qjGbmu9` — produção `dpl_BdwG5iTjnEr63dBt4pY52gYZjrQ8` (promote from `dpl_AgUY1mNrpNjL7DbaxtAw4qjGbmu9`), smoke HTTP 200 com `_product.html?ts=1776402001` servindo `product.edit.js` e `assets/js/controllers/product.edit.js?ts=1776402002` retornando `window._KCProduct.edit = {`.
+- riscos residuais:
+  a fatia fecha o grupo de mutações do dono do post sem mexer nos contratos públicos nem no modal principal de edição já existente, mas o controller principal ainda concentra grupos residuais do split. O próximo passo correto é fechar essa decomposição antes de qualquer limpeza cosmética ou reorganização adicional.
+- próximas fases:
+  `v11.30.16` (fechamento do split residual do controller) -> `v11.30.17` (hardening final dos sub-módulos remanescentes, se necessário).
 
 ---
 

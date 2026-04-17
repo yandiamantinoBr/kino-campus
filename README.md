@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.30.14`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 76/76 suites e 1265/1265 testes em `v11.30.14`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), e split de `product.controller.js` em andamento — 5/9 grupos extraídos para sub-módulos via `window._KCProduct`.
+**Status atual:** v11 executada até `v11.30.15`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 77/77 suites e 1279/1279 testes em `v11.30.15`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), e split de `product.controller.js` em andamento — 6/9 grupos extraídos para sub-módulos via `window._KCProduct`.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 76 suites de regressão e contrato |
+| Testes | Jest: 77 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.30.15 | split `product.controller.js` (2233L → 1540L, −693L): extração do grupo edit/owner actions (edit modal fallback + `markPostAsEdited` + `buildEditPayload` + `buildEditUI` + `upsertOwnerActions` → `product.edit.js`) via `window._KCProduct.edit`; `renderPost` agora delega owner actions com guard defensivo e contexto explícito (`renderPost`, `getCurrentUser`); `_product.html` atualizado (+1 tag defer); 1 nova suite (14 testes) — baseline sobe para 77/77 suites e 1279/1279 testes; split `product.controller.js` avança para 6/9 grupos, com fechamento residual do controller isolado para a próxima fase | `#349` |
 | v11.30.14 | split `product.controller.js` (2559L → 2233L, −326L): extração do grupo ratings (resumo de avaliações do vendedor + modal + auth gate + submit `upsertUserRating` → `product.ratings.js`) via `window._KCProduct.ratings`; `setSeller` e `loadSellerAuthorStats` agora delegam refresh/summary com guard defensivo e contexto explícito (`currentUser`, `currentPost`); `_product.html` atualizado (+1 tag defer); 1 nova suite (12 testes) — baseline sobe para 76/76 suites e 1265/1265 testes; split `product.controller.js` avança para 5/9 grupos, com `edit/owner actions` isolado para a próxima fase | `#347` |
 | v11.30.13 | split `product.controller.js` (2727L → 2559L, −168L): extração do grupo save (save popover + `savedPostState` + `updateSavedButtonsUI` + `refreshSavedState` + `bindSavedActions` → `product.save.js`) via `window._KCProduct.save`; `renderPost`, `Escape` global e `DOMContentLoaded` agora delegam wiring/refresh com guard defensivo; `_product.html` atualizado (+1 tag defer); 1 nova suite (15 testes) — baseline sobe para 75/75 suites e 1253/1253 testes; split `product.controller.js` avança para 4/9 grupos, com `ratings` isolado para a próxima fase | `#345` |
 | v11.30.12 | split `product.controller.js` (2886L → 2727L, −159L): extração do grupo calendar (open/close/wire popover + `setEventCalendar` → `product.calendar.js`) via `window._KCProduct.calendar`; `renderPost`, `Escape` global e interações share/save agora delegam o fechamento do calendário com guard defensivo; `_product.html` atualizado (+1 tag defer); 1 nova suite (14 testes) — baseline sobe para 74/74 suites e 1238/1238 testes; split `product.controller.js` avança para 3/9 grupos, com `save` isolado para a próxima fase | `#343` |
@@ -118,17 +119,17 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.30.14`
-- objetivo da iteracao: extrair o grupo `ratings` de `product.controller.js` para `product.ratings.js`, isolando resumo de avaliacoes, modal e fluxo de submit sem alterar o contrato funcional da pagina de produto
-- natureza da iteracao: refactor incremental de monolito, com contrato preservado e namespace `window._KCProduct.ratings`
-- regressao: `76/76` suites, `1265/1265` testes, hygiene `8.6.0`
-- deploy de producao validado desta fase: `dpl_Hsx6hwertfvWfyACdP4y95fKeH7J` (`www.kinocampus.com.br`) — promovido de `dpl_Gab4MesPHj22XVTysYgUoEGLeCcy`
+- iteracao ativa consolidada: `v11.30.15`
+- objetivo da iteracao: extrair o grupo `edit/owner actions` de `product.controller.js` para `product.edit.js`, isolando mutacoes do dono do post, edicao e fallback modal sem alterar o contrato funcional da pagina de produto
+- natureza da iteracao: refactor incremental de monolito, com contrato preservado e namespace `window._KCProduct.edit`
+- regressao: `77/77` suites, `1279/1279` testes, hygiene `8.6.0`
+- deploy de producao validado desta fase: `dpl_BdwG5iTjnEr63dBt4pY52gYZjrQ8` (`www.kinocampus.com.br`) — promovido de `dpl_AgUY1mNrpNjL7DbaxtAw4qjGbmu9`
 - achados desta rodada:
-  - `product.ratings.js` passou a concentrar normalizacao de summary, aplicacao no post, modal de avaliacao do vendedor e o fluxo `KCAPI.upsertUserRating(...)`
-  - o core agora so delega `refreshSellerRatingUI` e o fallback `getSellerRatingSummaryFromPost(post)` via guard defensivo, mantendo `setSeller` e `loadSellerAuthorStats` mais leves
-  - o preview funcional ficou `READY`, mas o fetch direto continuou protegido por Vercel Authentication; a homologacao remota foi fechada com share link do deployment e a validacao final saiu pelo dominio publico com `_product.html?ts=...` servindo `product.ratings.js`
-- proxima iteracao sugerida: `v11.30.15`, para extrair o grupo `edit/owner actions`
-- trilha futura: `v11.30.15` (edit/owner actions) -> `v11.30.16` (fechamento do split residual do controller)
+  - `product.edit.js` passou a concentrar `upsertOwnerActions`, `buildEditUI`, `buildEditPayload`, `markPostAsEdited` e o wiring completo de delete/toggle/renew/bump via `KCAPI`
+  - o core agora so delega owner actions por `window._KCProduct.edit.upsertOwnerActions(...)`, reduzindo acoplamento direto de mutacoes do dono do post no controller principal
+  - o preview funcional e o pos-merge ficaram `READY`, e a validacao final saiu pelo dominio publico com `_product.html?ts=1776402001` servindo `product.edit.js`
+- proxima iteracao sugerida: `v11.30.16`, para fechar o split residual de `product.controller.js`
+- trilha futura: `v11.30.16` (fechamento do split residual do controller) -> `v11.30.17` (hardening final dos sub-modulos restantes, se necessario)
 
 ---
 
