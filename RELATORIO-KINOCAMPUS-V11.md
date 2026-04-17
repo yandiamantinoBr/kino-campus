@@ -2380,7 +2380,41 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - riscos residuais:
   a fatia fecha mais um bloco de leitura/markup sem tocar em contratos de escrita, mas `product.controller.js` ainda concentra o núcleo de popovers/core, utilitários gerais e wiring base da página. O próximo passo correto é atacar esse residual em uma última fatia controlada, sem misturar com refactor cosmético.
 - próximas fases:
-  `v11.30.17` (popovers/core residual) -> `v11.30.18` (hardening final dos sub-módulos remanescentes, se necessário).
+  `v11.30.17` entregue com a extração do residual de share/popovers para `product.popovers.js`. Próxima: `v11.30.18` (hardening final do residual core/sub-módulos).
+
+---
+
+### Iteração `v11.30.17`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-17-product-controller-split-popovers` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `product.controller.js` (1473L → 1298L, −175L): residual de share/popovers extraído para `product.popovers.js` |
+
+- objetivo:
+  extrair o residual de share/popovers de `product.controller.js` (1473L → 1298L, −175L) para sub-módulo independente usando o namespace `window._KCProduct.popovers`. Oitavo grupo do split do controller. Extraídos: posicionamento desktop do `sharePopover`, sync de viewport, `bindProductGlobalKeydown`, `handleProductGlobalKeydown`, `trackCurrentPostShare`, `copyCurrentPostLink`, `openSharePopover`, `closeSharePopover` e `wireSharePopover(context)`.
+- resultado:
+  - **NOVO** `assets/js/controllers/product.popovers.js` (231L) — exports `bindProductGlobalKeydown`, `wireSharePopover` e `closeSharePopover` registrados em `window._KCProduct.popovers`. Inclui estado local dos popovers, posicionamento desktop, binding de `resize`/`scroll`, copy link via `window.KCUtils.copyTextToClipboard`, tracking via `window.KCAPI.trackShare(...)` e fechamento centralizado por `Escape`, coordenando `save` e `calendar`.
+  - **ALTERADO** `product.controller.js`: bloco local de share/popovers removido; `DOMContentLoaded` passa a delegar `bindProductGlobalKeydown()` e `wireSharePopover({ getCurrentPost })` via `window._KCProduct.popovers`; guard `window._KCProduct.popovers = window._KCProduct.popovers || {}` adicionado.
+  - **ALTERADO** `_product.html`: tag `<script defer src="assets/js/controllers/product.popovers.js">` inserida após `product.analytics.js`, preservando a sequência incremental do split.
+  - **NOVO** `tests/product.popovers.test.js` (9 testes estáticos) — cobre: IIFE, namespace, estado local, helpers de viewport/share, copy link, tracking, `Escape` global e exports.
+  - **ALTERADO** `tests/product-popover-hardening.test.js` — regressão legada alinhada para validar o contrato extraído em `product.popovers.js` e a delegação do core.
+- arquivos alterados:
+  - `assets/js/controllers/product.popovers.js` (NOVO, 231L)
+  - `assets/js/controllers/product.controller.js` (ALTERADO, 1473L → 1298L)
+  - `tests/product.popovers.test.js` (NOVO, 9 testes)
+  - `tests/product-popover-hardening.test.js` (ALTERADO, contrato atualizado)
+  - `_product.html` (ALTERADO, +1 tag)
+- resultado dos testes:
+  `79/79` suites, `1296/1296` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#353` — squash merge `c0ad783` (commit funcional `cddbbe6`) — preview `dpl_2tyV2VRLFAneuH9dp5wvoGY9uAWZ` — pós-merge `dpl_Bt6cnhFwmCRCUsNmsv5TjFRiKPah` — produção `dpl_G7EsJ1YrZRL9hW3HekaVwHsya1P1` (promote from `dpl_Bt6cnhFwmCRCUsNmsv5TjFRiKPah`), smoke HTTP 200 com `_product.html?ts=1776405001` servindo `product.popovers.js` e `assets/js/controllers/product.popovers.js?ts=1776405002` retornando `window._KCProduct.popovers = {`.
+- riscos residuais:
+  a fatia fecha o residual principal de share/popovers do topo do controller, mas ainda resta um hardening final do núcleo remanescente antes de considerar a trilha `v11.30.x` encerrada. Esse fechamento deve permanecer pequeno e sem reabrir refactor amplo.
+- próximas fases:
+  `v11.30.18` (hardening final do residual core/sub-módulos) -> fechamento da trilha `v11.30.x`.
 
 ---
 

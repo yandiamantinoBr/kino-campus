@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.30.16`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 78/78 suites e 1287/1287 testes em `v11.30.16`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), e split de `product.controller.js` em andamento — 7/9 grupos extraídos para sub-módulos via `window._KCProduct`.
+**Status atual:** v11 executada até `v11.30.17`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevado para 79/79 suites e 1296/1296 testes em `v11.30.17`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), e split de `product.controller.js` em andamento — 8/9 grupos extraídos para sub-módulos via `window._KCProduct`.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 78 suites de regressão e contrato |
+| Testes | Jest: 79 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.30.17 | split `product.controller.js` (1473L → 1298L, −175L): extração do residual de share/popovers (posicionamento desktop, viewport sync, `Escape` global, copy link e tracking de share → `product.popovers.js`) via `window._KCProduct.popovers`; `DOMContentLoaded` agora delega `bindProductGlobalKeydown()` e `wireSharePopover({ getCurrentPost })` com guard defensivo; `_product.html` atualizado (+1 tag defer); 1 nova suite (9 testes) e alinhamento da regressão legada `product-popover-hardening.test.js` — baseline sobe para 79/79 suites e 1296/1296 testes; split `product.controller.js` avança para 8/9 grupos, deixando apenas o hardening final residual para a próxima fase | `#353` |
 | v11.30.16 | split `product.controller.js` (1540L → 1473L, −67L): extração do grupo analytics do autor (`buildAuthorAnalyticsSignature` + `_statBadge`/`statBadge` + `setAuthorAnalyticsMarkup` + `renderAuthorAnalytics` → `product.analytics.js`) via `window._KCProduct.analytics`; `renderPost` agora delega o painel de analytics com guard defensivo; `_product.html` atualizado (+1 tag defer); 1 nova suite (8 testes) — baseline sobe para 78/78 suites e 1287/1287 testes; split `product.controller.js` avança para 7/9 grupos, com popovers/core residual isolado para a próxima fase | `#351` |
 | v11.30.15 | split `product.controller.js` (2233L → 1540L, −693L): extração do grupo edit/owner actions (edit modal fallback + `markPostAsEdited` + `buildEditPayload` + `buildEditUI` + `upsertOwnerActions` → `product.edit.js`) via `window._KCProduct.edit`; `renderPost` agora delega owner actions com guard defensivo e contexto explícito (`renderPost`, `getCurrentUser`); `_product.html` atualizado (+1 tag defer); 1 nova suite (14 testes) — baseline sobe para 77/77 suites e 1279/1279 testes; split `product.controller.js` avança para 6/9 grupos, com fechamento residual do controller isolado para a próxima fase | `#349` |
 | v11.30.14 | split `product.controller.js` (2559L → 2233L, −326L): extração do grupo ratings (resumo de avaliações do vendedor + modal + auth gate + submit `upsertUserRating` → `product.ratings.js`) via `window._KCProduct.ratings`; `setSeller` e `loadSellerAuthorStats` agora delegam refresh/summary com guard defensivo e contexto explícito (`currentUser`, `currentPost`); `_product.html` atualizado (+1 tag defer); 1 nova suite (12 testes) — baseline sobe para 76/76 suites e 1265/1265 testes; split `product.controller.js` avança para 5/9 grupos, com `edit/owner actions` isolado para a próxima fase | `#347` |
@@ -120,17 +121,17 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.30.16`
-- objetivo da iteracao: extrair o grupo de analytics do autor de `product.controller.js` para `product.analytics.js`, isolando o painel `kcAuthorAnalytics` e o fluxo de revalidacao silenciosa sem alterar o contrato funcional da pagina de produto
-- natureza da iteracao: refactor incremental de monolito, com contrato preservado e namespace `window._KCProduct.analytics`
-- regressao: `78/78` suites, `1287/1287` testes, hygiene `8.6.0`
-- deploy de producao validado desta fase: `dpl_3b25cmNvNi17M1mbhwud91jXi6Rk` (`www.kinocampus.com.br`) — promovido de `dpl_3KpQ24VPfk47e5UWYkwqg23VANvd`
+- iteracao ativa consolidada: `v11.30.17`
+- objetivo da iteracao: extrair o residual de share/popovers de `product.controller.js` para `product.popovers.js`, isolando o wiring do `Escape` global, o posicionamento do `sharePopover` e o fluxo de copiar/compartilhar sem alterar o contrato funcional da pagina de produto
+- natureza da iteracao: refactor incremental de monolito, com contrato preservado e namespace `window._KCProduct.popovers`
+- regressao: `79/79` suites, `1296/1296` testes, hygiene `8.6.0`
+- deploy de producao validado desta fase: `dpl_G7EsJ1YrZRL9hW3HekaVwHsya1P1` (`www.kinocampus.com.br`) — promovido de `dpl_Bt6cnhFwmCRCUsNmsv5TjFRiKPah`
 - achados desta rodada:
-  - `product.analytics.js` passou a concentrar o painel `kcAuthorAnalytics`, incluindo assinatura de snapshot, render das seis metricas e o contrato de cache + refresh silencioso em `KCAPI`
-  - o core agora so delega `renderAuthorAnalytics(post, currentUser)` por `window._KCProduct.analytics`, reduzindo mais um bloco de leitura/markup no controller principal
-  - o preview funcional, o pos-merge e a producao ficaram `READY`, e a validacao final saiu pelo dominio publico com `_product.html?ts=1776403701` servindo `product.analytics.js`
-- proxima iteracao sugerida: `v11.30.17`, para fechar o residual de popovers/core de `product.controller.js`
-- trilha futura: `v11.30.17` (popovers/core residual) -> `v11.30.18` (hardening final dos sub-modulos restantes, se necessario)
+  - `product.popovers.js` passou a concentrar o `sharePopover`, incluindo posicionamento desktop, sync de viewport, copy link, tracking de share e o fechamento centralizado via `Escape`
+  - o core agora so delega `bindProductGlobalKeydown()` e `wireSharePopover({ getCurrentPost })` por `window._KCProduct.popovers`, removendo o ultimo bloco grande de popovers do topo do controller
+  - o preview funcional, o pos-merge e a producao ficaram `READY`, e a validacao final saiu pelo dominio publico com `_product.html?ts=1776405001` servindo `product.popovers.js`
+- proxima iteracao sugerida: `v11.30.18`, para o hardening final do residual core/sub-modules de `product.controller.js`
+- trilha futura: `v11.30.18` (hardening final residual) -> fechamento da trilha `v11.30.x`
 
 ---
 
