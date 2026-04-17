@@ -23,6 +23,7 @@ beforeAll(() => {
 
   require('../assets/js/kc-constants.js');
   require('../assets/js/kc-utils.js');
+  require('../assets/js/kc-api.notifications.js');
   require('../assets/js/kc-api.client.js');
   require('../assets/js/adapters/local.adapter.js');
 });

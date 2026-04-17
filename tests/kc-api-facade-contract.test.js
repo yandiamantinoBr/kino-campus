@@ -30,9 +30,11 @@ describe('kc-api.client.js - source shape', () => {
     expect(source.trim().endsWith('})();')).toBe(true);
   });
 
-  test('mantem KCAPI como a unica fachada publica principal desta fase', () => {
+  test('mantem KCAPI como fachada publica principal e _KCAPI como namespace interno', () => {
     expect(source).toContain('- window.KCAPI');
-    expect(source).not.toContain('window._KCAPI = window._KCAPI || {};');
+    expect(source).toContain('window._KCAPI = window._KCAPI || {};');
+    expect(source).toContain('window._KCAPI.notifications = window._KCAPI.notifications || {};');
+    expect(facadeBlock).not.toContain('window._KCAPI.notifications');
   });
 });
 
@@ -183,10 +185,15 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
   });
 
   test('mantem fallback canonico para preferencias e destinos privados de notificacao', () => {
+    expect(source).toContain('function getNotificationsModule() {');
     expect(source).toContain('function buildFallbackNotificationPreferences() {');
     expect(source).toContain('function buildFallbackNotificationChannelTargets() {');
+    expect(source).toContain('return notificationsModule.getNotificationPreferences({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
+    expect(source).toContain('return notificationsModule.updateNotificationPreferences(preferences, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
+    expect(source).toContain('return notificationsModule.getNotificationChannelTargets({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
+    expect(source).toContain('return notificationsModule.updateNotificationChannelTargets(targets, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
     expect(source).toContain('window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === \'function\'');
-    expect(source).toContain("return { ok: false, error: { message: 'PreferÃªncias de notificaÃ§Ã£o indisponÃ­veis neste driver.' } };");
+    expect(source).toContain("return { ok: false, error: { message: 'Preferencias de notificacao indisponiveis neste driver.' } };");
     expect(source).toContain("return { ok: false, error: { message: 'Destinos privados de notificacao indisponiveis neste driver.' } };");
   });
 
