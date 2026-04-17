@@ -2414,7 +2414,38 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - riscos residuais:
   a fatia fecha o residual principal de share/popovers do topo do controller, mas ainda resta um hardening final do núcleo remanescente antes de considerar a trilha `v11.30.x` encerrada. Esse fechamento deve permanecer pequeno e sem reabrir refactor amplo.
 - próximas fases:
-  `v11.30.18` (hardening final do residual core/sub-módulos) -> fechamento da trilha `v11.30.x`.
+  `v11.30.18` entregue com o hardening final do core/sub-módulos e encerramento da trilha `v11.30.x`. Próxima recomendação: `v11.31.0` (auditoria do próximo hotspot monolítico, com ponto de partida sugerido em `kc-create-post.js`).
+
+---
+
+### Iteração `v11.30.18`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-18-product-controller-split-contracts` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Hardening final de arquitetura e contrato |
+| Escopo | fechamento da trilha `v11.30.x` com suíte estática para o split de `product.controller.js` e normalização do bloco de scripts em `_product.html` |
+
+- objetivo:
+  consolidar o split de `product.controller.js` sem abrir nova extração de runtime, travando em teste estático os contratos entre o core residual, os sub-módulos `window._KCProduct.*` e a ordem canônica de carregamento em `_product.html`.
+- resultado:
+  - **NOVO** `tests/product.controller-split-contract.test.js` (7 testes estáticos) — cobre: namespace base, guards dos 8 sub-módulos extraídos, delegação do `renderPost(post)`, wiring do `DOMContentLoaded`, preservação das interações core residuais, ausência das implementações já extraídas dentro do controller e ordem canônica dos scripts do detalhe.
+  - **ALTERADO** `_product.html` — bloco `<script defer>` do detalhe normalizado, mantendo a sequência incremental `product.controller.js -> report -> related -> calendar -> save -> ratings -> edit -> analytics -> popovers`.
+  - **NOVO** `docs/handoff-claude-code-v11.30.18.md` — prompt estruturado para continuidade da linha de desenvolvimento em Claude Code, com contexto do projeto, baseline, invariantes, workflow, estado real da trilha `v11.30.x` e próxima fase recomendada.
+  - **SEM NOVA EXTRAÇÃO** de runtime: `product.controller.js` permanece em `1298L`, agora com o contrato do split explicitamente travado em teste.
+- arquivos alterados:
+  - `tests/product.controller-split-contract.test.js` (NOVO, 7 testes)
+  - `_product.html` (ALTERADO, normalização do bloco de scripts)
+  - `docs/handoff-claude-code-v11.30.18.md` (NOVO, handoff externo)
+- resultado dos testes:
+  `80/80` suites, `1303/1303` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#355` — squash merge `ccc7d67` (commit funcional `10b6501`) — preview `dpl_FZ2Yp5b866bKmXQQQHWtfAhZVbBR` — pós-merge `dpl_bV1rp7p1jV1yQf8CvcwhRyHnvNHi` — produção `dpl_HA6fcxVWqjiJu7Gemww7JiKnwXAm` (promote from `dpl_bV1rp7p1jV1yQf8CvcwhRyHnvNHi`), smoke HTTP 200 com `https://www.kinocampus.com.br/_product.html?ts=1776416301` confirmando a sequência canônica do bloco de scripts.
+- riscos residuais:
+  a trilha `v11.30.x` fica encerrada com o split do detalhe estabilizado, mas o codebase ainda mantém outros hotspots monolíticos fora dessa trilha. O próximo passo correto não é continuar mexendo no detalhe, e sim reabrir auditoria controlada no próximo hotspot com maior retorno e menor risco.
+- próximas fases:
+  trilha `v11.30.x` concluída. Próxima recomendação: `v11.31.0` (auditoria do próximo hotspot monolítico, com ponto de partida sugerido em `kc-create-post.js`), usando `docs/handoff-claude-code-v11.30.18.md` como artefato de continuidade externa quando necessário.
 
 ---
 
