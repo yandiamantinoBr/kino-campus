@@ -1,17 +1,22 @@
 /**
  * @file kc-create-post-contract.test.js
  * @description Static contract tests for assets/js/kc-create-post.js (v11.31.1)
+ * Atualizado em v11.31.6: submit pipeline movido para kc-create-post.submit.js;
+ * testes de submit agora verificam submitSource.
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '..', 'assets', 'js', 'kc-create-post.js');
+const SRC        = path.resolve(__dirname, '..', 'assets', 'js', 'kc-create-post.js');
+const SUBMIT_SRC = path.resolve(__dirname, '..', 'assets', 'js', 'kc-create-post.submit.js');
 let source;
+let submitSource;
 
 beforeAll(() => {
-  source = fs.readFileSync(SRC, 'utf8');
+  source       = fs.readFileSync(SRC, 'utf8');
+  submitSource = fs.readFileSync(SUBMIT_SRC, 'utf8');
 });
 
 describe('kc-create-post — source shape', () => {
@@ -107,35 +112,39 @@ describe('kc-create-post — create/edit flow contracts', () => {
 });
 
 describe('kc-create-post — submit pipeline contracts', () => {
+  // v11.31.6: submit pipeline extraído para kc-create-post.submit.js → verificar submitSource
   test('defines kcHandleCreateSubmit as the central async submit entrypoint', () => {
-    expect(source).toContain('async function kcHandleCreateSubmit() {');
-    expect(source).toContain('const activeFieldNames = kcGetActiveCreateFieldNames(');
-    expect(source).toContain("const activeVisibility = kcReadActiveCreateValue(activeFieldNames, kcCreateState.values, 'visibility', kcCreateState.editMode ? 'public' : 'community');");
-    expect(source).toContain('const payload = {');
+    // stub no core mantém o nome; implementação está em submitSource
+    expect(source).toContain('async function kcHandleCreateSubmit()');
+    expect(submitSource).toContain('async function handleCreateSubmit()');
+    expect(submitSource).toContain('const activeFieldNames = kcGetActiveCreateFieldNames(');
+    expect(submitSource).toContain("const activeVisibility = kcReadActiveCreateValue(activeFieldNames, kcCreateState.values, 'visibility', kcCreateState.editMode ? 'public' : 'community');");
+    expect(submitSource).toContain('const payload = {');
   });
 
   test('keeps the critical runtime integrations used by create and edit', () => {
-    expect(source).toContain('if (KCAPI && typeof KCAPI.updatePost === \'function\') {');
-    expect(source).toContain('const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === \'function\') || (KCAPI && typeof KCAPI.createPost === \'function\'));');
-    expect(source).toContain('if (KCAPI && typeof KCAPI.checkDuplicatePost === \'function\') {');
-    expect(source).toContain('if (KCAPI && typeof KCAPI.getLastCreatePostError === \'function\') {');
-    expect(source).toContain('const kcClient = KCSupabase && typeof KCSupabase.getClient === \'function\'');
+    expect(submitSource).toContain('if (KCAPI && typeof KCAPI.updatePost === \'function\') {');
+    expect(submitSource).toContain('const hasApiCreatePost = !!((window.KCActions && typeof window.KCActions.createPost === \'function\') || (KCAPI && typeof KCAPI.createPost === \'function\'));');
+    expect(submitSource).toContain('if (KCAPI && typeof KCAPI.checkDuplicatePost === \'function\') {');
+    expect(submitSource).toContain('if (KCAPI && typeof KCAPI.getLastCreatePostError === \'function\') {');
+    expect(submitSource).toContain('const kcClient = KCSupabase && typeof KCSupabase.getClient === \'function\'');
   });
 
   test('keeps duplicate-check, audit-log and redirect contracts in the submit pipeline', () => {
-    expect(source).toContain("kcClient.from('audit_log').insert({");
-    expect(source).toContain("action: 'post_created'");
-    expect(source).toContain('window.location.href = targetUrl;');
-    expect(source).toContain("showToast('Publicado com sucesso!', 'success', 2200);");
+    expect(submitSource).toContain("kcClient.from('audit_log').insert({");
+    expect(submitSource).toContain("action: 'post_created'");
+    expect(submitSource).toContain('window.location.href = targetUrl;');
+    expect(submitSource).toContain("showToast('Publicado com sucesso!', 'success', 2200);");
   });
 });
 
 describe('kc-create-post — side channels and bootstrap', () => {
   test('keeps the known global history side channels explicit in the source', () => {
-    expect(source).toContain('window.__KC_OPPORTUNITY_AREA_HISTORY');
-    expect(source).toContain('window.__KC_HOUSING_REGION_HISTORY');
-    expect(source).toContain('window.__KC_HOUSING_FEATURE_HISTORY');
-    expect(source).toContain('window.__KC_LOST_FOUND_LOCATION_HISTORY');
+    // v11.31.6: side channels agora estão no submit module
+    expect(submitSource).toContain('window.__KC_OPPORTUNITY_AREA_HISTORY');
+    expect(submitSource).toContain('window.__KC_HOUSING_REGION_HISTORY');
+    expect(submitSource).toContain('window.__KC_HOUSING_FEATURE_HISTORY');
+    expect(submitSource).toContain('window.__KC_LOST_FOUND_LOCATION_HISTORY');
   });
 
   test('keeps the trigger bootstrap and DOMContentLoaded wiring intact', () => {
