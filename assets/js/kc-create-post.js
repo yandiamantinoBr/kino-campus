@@ -92,8 +92,11 @@ function _kcUpdateDescPreview(textarea) {
 // Create Post Modal (Design React + Form dinâmico por módulo)
 // -----------------------------
 
-const KC_CREATE_MODAL_ID = 'kcCreatePostModalOverlay';
-const KC_POST_VISIBILITY_OPTIONS = Object.freeze([
+window._KCCreatePost = window._KCCreatePost || {};
+window._KCCreatePost.schema = window._KCCreatePost.schema || {};
+
+const KC_CREATE_MODAL_ID = window._KCCreatePost.schema.modalId || 'kcCreatePostModalOverlay';
+const KC_POST_VISIBILITY_OPTIONS = window._KCCreatePost.schema.visibilityOptions || Object.freeze([
   Object.freeze({
     value: 'community',
     label: 'Apenas para comunidade',
@@ -105,159 +108,24 @@ const KC_POST_VISIBILITY_OPTIONS = Object.freeze([
     hint: 'Pode aparecer também para visitantes sem conta.'
   })
 ]);
+const KC_CREATE_SCHEMA = window._KCCreatePost.schema.modules || Object.freeze({});
 
-// Definições por módulo (tags/subtópicos + campos)
-const KC_CREATE_SCHEMA = {
-  'compra-venda': {
-    label: 'Compra e Venda',
-    icon: 'fas fa-shopping-bag',
-    emoji: '🛍️',
-    categoryGroupId: 'categoria',
-    redirect: 'compra-venda-feed.html',
-    tagGroups: [
-      {
-        id: 'categoria',
-        label: 'Categoria',
-        required: true,
-        multi: false,
-        options: [
-          { key: 'eletronicos', label: 'Eletrônicos' },
-          { key: 'livros', label: 'Livros' },
-          { key: 'ingressos', label: 'Ingressos' },
-          { key: 'moveis', label: 'Móveis' },
-          { key: 'vestuario', label: 'Vestuário' },
-          { key: 'outros', label: 'Outros' },
-        ]
-      },
-      {
-        id: 'acao',
-        label: 'Você quer',
-        required: true,
-        multi: false,
-        options: [
-          { key: 'vendo', label: 'Vendo' },
-          { key: 'compro', label: 'Compro' },
-        ]
-      }
-    ]
-  },
-  'caronas': {
-    label: 'Caronas',
-    icon: 'fas fa-car',
-    emoji: '🚗',
-    categoryGroupId: 'tipo',
-    redirect: 'caronas-feed.html',
-    tagGroups: [
-      {
-        id: 'tipo',
-        label: 'Tipo',
-        required: true,
-        multi: false,
-        options: [
-          { key: 'ofereco', label: 'Ofereço carona' },
-          { key: 'procuro', label: 'Procuro carona' },
-        ]
-      }
-    ]
-  },
-  'moradia': {
-    label: 'Moradia',
-    icon: 'fas fa-home',
-    emoji: '🏡',
-    categoryGroupId: 'tipo',
-    redirect: 'moradia.html',
-    tagGroups: [
-      {
-        id: 'tipo',
-        label: 'Tipo',
-        required: true,
-        multi: false,
-        options: [
-          { key: 'republicas', label: 'Repúblicas' },
-          { key: 'quartos', label: 'Quartos' },
-          { key: 'apartamentos', label: 'Apartamentos' },
-          { key: 'casas', label: 'Casas' },
-          { key: 'procurando', label: 'Procurando' },
-        ]
-      }
-    ]
-  },
-  'eventos': {
-    label: 'Eventos',
-    icon: 'fas fa-calendar',
-    emoji: '📅',
-    categoryGroupId: 'topico',
-    redirect: 'eventos.html',
-    tagGroups: [
-      {
-        id: 'topico',
-        label: 'Subtópico',
-        required: true,
-        multi: false,
-        options: [
-          { key: 'sustentabilidade', label: 'Sustentabilidade' },
-          { key: 'academicos', label: 'Acadêmicos' },
-          { key: 'culturais', label: 'Culturais' },
-          { key: 'esportivos', label: 'Esportivos' },
-          { key: 'workshops', label: 'Workshops' },
-          { key: 'festas', label: 'Festas' },
-        ]
-      }
-    ]
-  },
-  'achados-perdidos': {
-    label: 'Achados e Perdidos',
-    icon: 'fas fa-search',
-    emoji: '🔎',
-    categoryGroupId: 'status',
-    redirect: 'achados-perdidos.html',
-    tagGroups: [
-      {
-        id: 'status',
-        label: 'Status',
-        required: true,
-        multi: false,
-        options: [
-          { key: 'perdidos', label: 'Perdidos' },
-          { key: 'encontrados', label: 'Encontrados' },
-        ]
-      },
-      {
-        id: 'tipo',
-        label: 'Tipo do item',
-        required: true,
-        multi: false,
-        options: [
-          { key: 'documentos', label: 'Documentos' },
-          { key: 'eletronicos', label: 'Eletrônicos' },
-          { key: 'outros', label: 'Outros' },
-        ]
-      }
-    ]
-  },
-  'oportunidades': {
-    label: 'Oportunidades',
-    icon: 'fas fa-briefcase',
-    emoji: '💼',
-    categoryGroupId: 'tipo',
-    redirect: 'oportunidades.html',
-    tagGroups: [
-      {
-        id: 'tipo',
-        label: 'Tipo',
-        required: true,
-        multi: false,
-        options: [
-          { key: 'estagios', label: 'Estágio' },
-          { key: 'empregos', label: 'Emprego' },
-          { key: 'freelancer', label: 'Freelancer' },
-          { key: 'monitoria', label: 'Monitoria' },
-          { key: 'voluntariado', label: 'Voluntariado' },
-        ]
-      }
-    ]
+let kcCreateSchemaWarningShown = false;
+
+function kcHasCreateSchemaLoaded() {
+  return !!(KC_CREATE_SCHEMA && Object.keys(KC_CREATE_SCHEMA).length);
+}
+
+function kcNotifyCreateSchemaUnavailable() {
+  if (!kcCreateSchemaWarningShown) {
+    console.error('[KinoCampus] kc-create-post schema unavailable.');
+    kcCreateSchemaWarningShown = true;
   }
-};
+  if (typeof showToast === 'function') {
+    showToast('Não foi possível carregar o formulário agora. Recarregue a página.', 'error', 2600);
+  }
+  return false;
+}
 
 const kcCreateState = {
   open: false,
@@ -1400,6 +1268,7 @@ function kcBuildFieldsForModule(moduleKey, selections, values) {
 function kcRenderCreateModal() {
   const overlay = document.getElementById(KC_CREATE_MODAL_ID);
   if (!overlay) return;
+  if (!kcHasCreateSchemaLoaded()) return;
 
   const grid = overlay.querySelector('#kcCreateModuleGrid');
   const dynamic = overlay.querySelector('#kcCreateDynamic');
@@ -1675,6 +1544,8 @@ function kcOpenCreatePostModal(prefModuleKey) {
     }
   }
 
+  if (!kcHasCreateSchemaLoaded()) return kcNotifyCreateSchemaUnavailable();
+
   try {
     kcEnsureCreateModal();
   } catch (err) {
@@ -1744,11 +1615,16 @@ function kcCloseCreatePostModal() {
  */
 function kcOpenEditPostModal(post, callback) {
   if (!post) return;
+  if (!kcHasCreateSchemaLoaded()) return kcNotifyCreateSchemaUnavailable();
   kcEnsureCreateModal();
   kcLastFocus = document.activeElement;
 
   const moduleKey = post.modulo || post.module || '';
   const schema = KC_CREATE_SCHEMA[moduleKey];
+  if (!schema) {
+    showToast('Não foi possível abrir a edição dessa publicação.', 'error', 2600);
+    return false;
+  }
   const md = (post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
 
   // ── State ──
