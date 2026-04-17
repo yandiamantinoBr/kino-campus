@@ -78,11 +78,13 @@ describe('kc-create-post active field gating', () => {
   });
 
   test('submit path derives active field names before building the payload', () => {
-    const source = fs.readFileSync(filePath, 'utf8');
+    // v11.31.6: submit pipeline extraído para kc-create-post.submit.js
+    const submitPath = path.resolve(__dirname, '..', 'assets', 'js', 'kc-create-post.submit.js');
+    const submitSource = fs.readFileSync(submitPath, 'utf8');
 
-    expect(source).toContain('const activeFieldNames = kcGetActiveCreateFieldNames(');
-    expect(source).toContain("const activeCondicao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'condicao', '');");
-    expect(source).toContain("const activeOrcamento = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'orcamento', '');");
-    expect(source).toContain("const activeRegimeContratacao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'regimeContratacao', '');");
+    expect(submitSource).toContain('const activeFieldNames = kcGetActiveCreateFieldNames(');
+    expect(submitSource).toContain("const activeCondicao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'condicao', '');");
+    expect(submitSource).toContain("const activeOrcamento = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'orcamento', '');");
+    expect(submitSource).toContain("const activeRegimeContratacao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'regimeContratacao', '');");
   });
 });
