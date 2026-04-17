@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2` e `v11.24.3` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11, a trilha de i18n v11.24.x com kc-i18n.js e integracao nos componentes core e templates dinamicos, o planejamento formal do backlog v11.25–v11.30 e a consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` (`v11.25.0` e `v11.25.1` concluidas), split do monolito `supabase.adapter.js` concluido (10/10 grupos, acumulado −3621L), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avancada com a segunda extracao estrutural de `kc-create-post.js`: grupo de midia/imagens externalizado para `kc-create-post.media.js` via `window._KCCreatePost.media` (`v11.31.3` concluida), e a terceira extracao com 25 resolvers/normalizadores de dominio externalizados para `kc-create-post.resolvers.js` via `window._KCCreatePost.resolvers` (`v11.31.4` concluida, baseline `84/84` suites e `1459/1459` testes) |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2` e `v11.24.3` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11, a trilha de i18n v11.24.x com kc-i18n.js e integracao nos componentes core e templates dinamicos, o planejamento formal do backlog v11.25–v11.30 e a consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` (`v11.25.0` e `v11.25.1` concluidas), split do monolito `supabase.adapter.js` concluido (10/10 grupos, acumulado −3621L), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avancada com a segunda extracao estrutural de `kc-create-post.js`: grupo de midia/imagens externalizado para `kc-create-post.media.js` via `window._KCCreatePost.media` (`v11.31.3` concluida), a terceira extracao com 25 resolvers/normalizadores de dominio externalizados para `kc-create-post.resolvers.js` via `window._KCCreatePost.resolvers` (`v11.31.4` concluida), e a quarta extracao com `kcBuildFieldsForModule` externalizados para `kc-create-post.fields.js` via `window._KCCreatePost.fields` (`v11.31.5` concluida, baseline `85/85` suites e `1530/1530` testes) |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -2679,7 +2679,58 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#365` — squash merge `8dff2a1` — produção `dpl_HPWxVQNXF2c6yEdySMuEqsWsipw4` (promote via `npx vercel promote`), smoke HTTP 200.
 - próximas fases:
-  `v11.31.5` (modal/render) -> `v11.31.6` (submit/edit) -> `v11.31.7` (core residual e estabilização final).
+  `v11.31.5` (geração de campos) → `v11.31.6` (submit/edit) -> `v11.31.7` (core residual e estabilização final).
+
+### Iteração `v11.31.5`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-31-5-kc-create-post-fields-split` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | extração estrutural — geração de campos por módulo |
+| Escopo | `assets/js/kc-create-post.fields.js` (NOVO), `assets/js/kc-create-post.js`, `12` HTMLs carregadores, `tests/kc-create-post-fields.test.js` (NOVO), `tests/kc-create-post-active-fields.test.js` (ALTERADO), `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  extrair do hotspot `kc-create-post.js` a função `kcBuildFieldsForModule` — responsável pela geração dinâmica das definições de campos dos 6 módulos (compra-venda, caronas, moradia, eventos, achados-perdidos, oportunidades) — registrando-a em um IIFE dedicado `kc-create-post.fields.js` via `window._KCCreatePost.fields`, com stub de delegação no core e fallback seguro (`[]`).
+- resultado:
+  - **NOVO** `assets/js/kc-create-post.fields.js` — IIFE `'use strict'` com `window._KCCreatePost.fields`, contendo: `_getResolvers()` (acesso defensivo ao módulo de resolvers) e `kcBuildFieldsForModule(moduleKey, selections, values)` (163L extraídas); acesso defensivo a `window._KCCreatePost.resolvers` para opções de campos (campus, features, regiões, locais, áreas); fallback `[]` para cada opção quando o módulo não está disponível; namespace exporta `buildFieldsForModule`.
+  - **ALTERADO** `assets/js/kc-create-post.js` — bloco `kcBuildFieldsForModule` substituído por `_kcFieldsModule()` + stub de delegação lazy; core reduz de `2113L` para `1959L` (−154L).
+  - **ALTERADOS** `12` HTMLs da base principal — agora carregam `assets/js/kc-create-post.fields.js` com `defer` após `assets/js/kc-create-post.resolvers.js`. Ordem canônica: `schema → core → media → resolvers → fields`.
+  - **NOVO** `tests/kc-create-post-fields.test.js` — suíte estática com `71` testes cobrindo: estrutura IIFE/namespace (5), `_getResolvers()` (3), `kcBuildFieldsForModule` presença e assinatura (5), campos comuns (3), módulo compra-venda (5), módulo caronas (7), módulo moradia (6), módulo eventos (4), módulo achados-perdidos (4), módulo oportunidades (8), registro de namespace (2), delegação defensiva a resolvers (9), stubs no core (5).
+  - **ALTERADO** `tests/kc-create-post-active-fields.test.js` — `beforeAll` agora carrega `kc-create-post.fields.js` via eval após o core (necessário pois `kcBuildFieldsForModule` agora delega ao sub-módulo). `global.KC_CONSTANTS = {}` adicionado como stub mínimo para o runtime do sub-módulo.
+- achados principais:
+  - `kcBuildFieldsForModule` é a única função que acessa múltiplos resolvers (7 deles); ao ser extraída para o módulo `fields`, o acesso é feito via `_getResolvers()` lazy, evitando dependência direta do core no momento da execução.
+  - `tests/kc-create-post-active-fields.test.js` fazia `eval(kc-create-post.js)` e chamava `kcGetActiveCreateFieldNames` → `kcBuildFieldsForModule` (stub) → `window._KCCreatePost.fields.buildFieldsForModule` (não registrado). A correção foi adicionar um segundo `eval(kc-create-post.fields.js)` no `beforeAll`.
+  - 3 falhas de slice pequeno na primeira execução dos testes: `marcadoresCarona`, `selections.tipo === 'ofereco'` e `type: 'notice'` ficam além de 1200–1500 chars do início do bloco `caronas`; corrigido para 1600/1600/2000 chars respectivamente.
+- arquivos alterados:
+  - `assets/js/kc-create-post.fields.js` (NOVO, ~202L)
+  - `assets/js/kc-create-post.js` (ALTERADO, `2113L → 1959L`, −154L)
+  - `_product.html` (ALTERADO)
+  - `achados-perdidos.html` (ALTERADO)
+  - `caronas-feed.html` (ALTERADO)
+  - `compra-venda-feed.html` (ALTERADO)
+  - `create-post.html` (ALTERADO)
+  - `eventos.html` (ALTERADO)
+  - `index.html` (ALTERADO)
+  - `moradia.html` (ALTERADO)
+  - `my-posts.html` (ALTERADO)
+  - `ods.html` (ALTERADO)
+  - `oportunidades.html` (ALTERADO)
+  - `search-results.html` (ALTERADO)
+  - `tests/kc-create-post-fields.test.js` (NOVO, 465L, 71 testes)
+  - `tests/kc-create-post-active-fields.test.js` (ALTERADO, +9L)
+  - `README.md` (ALTERADO)
+  - `RELATORIO-KINOCAMPUS-V11.md` (ALTERADO)
+- resultado dos testes:
+  baseline elevada para `85/85` suites e `1530/1530` testes.
+- validacao operacional:
+  `node --check assets/js/kc-create-post.fields.js`, `node --check assets/js/kc-create-post.js`, `npx jest tests/kc-create-post-fields.test.js --no-coverage`, `npx jest --no-coverage` (85/85, 1530/1530).
+- validacao em navegador:
+  deployment `dpl_JE2y257KWE7gxviRKJpND9PwmekA` promovido para produção via `npx vercel promote`; `www.kinocampus.com.br` respondeu `200`.
+- PR \ commit \ deploy:
+  PR `#367` — fast-forward merge `cc388d0` — produção `dpl_JE2y257KWE7gxviRKJpND9PwmekA` (promote via `npx vercel promote`), smoke HTTP 200.
+- próximas fases:
+  `v11.31.6` (submit/edit pipeline) -> `v11.31.7` (core residual e estabilização final).
 
 ---
 

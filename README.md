@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.31.4`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevada para 84/84 suites e 1459/1459 testes em `v11.31.4`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avançada com a terceira extração estrutural de `kc-create-post.js`: 25 resolvers/normalizadores de domínio externalizados para `kc-create-post.resolvers.js` via `window._KCCreatePost.resolvers`.
+**Status atual:** v11 executada até `v11.31.5`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevada para 85/85 suites e 1530/1530 testes em `v11.31.5`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avançada com a quarta extração estrutural de `kc-create-post.js`: `kcBuildFieldsForModule` (geração de campos dos 6 módulos) externalizada para `kc-create-post.fields.js` via `window._KCCreatePost.fields`.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 84 suites de regressão e contrato |
+| Testes | Jest: 85 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.31.5 | quarta extração estrutural de `assets/js/kc-create-post.js`: `kcBuildFieldsForModule` (geração de campos dos 6 módulos — 163L) movida para o novo IIFE `assets/js/kc-create-post.fields.js` via `window._KCCreatePost.fields`; acesso defensivo a `window._KCCreatePost.resolvers` via `_getResolvers()` com fallbacks `[]`; stub `_kcFieldsModule()` + delegação lazy no core; `tests/kc-create-post-active-fields.test.js` atualizado para carregar o sub-módulo via eval; nova suíte `tests/kc-create-post-fields.test.js` (71 testes); `kc-create-post.js` reduzido de `2113L` para `1959L` (−154L); `12` HTMLs carregam o novo asset; baseline sobe para `85/85` suites e `1530/1530` testes | `#367` |
 | v11.31.4 | terceira extração estrutural de `assets/js/kc-create-post.js`: 25 resolvers e normalizadores de domínio (oportunidades, moradia, caronas, achados/perdidos) movidos para o novo IIFE `assets/js/kc-create-post.resolvers.js` via `window._KCCreatePost.resolvers`; 3 funções de sync DOM acessam estado via `_getState()`; stubs de delegação com fallbacks seguros mantêm nomes de função originais intactos; nova suíte `tests/kc-create-post-resolvers.test.js` (81 testes); `kc-create-post.js` reduzido de `2342L` para `2113L` (−229L); `12` HTMLs carregam o novo asset; baseline sobe para `84/84` suites e `1459/1459` testes | `#365` |
 | v11.31.3 | segunda extração estrutural de `assets/js/kc-create-post.js`: grupo de mídia/imagens (leitura, compressão canvas, gerenciamento de capa, ordenação e HTML da seção) movido para o novo IIFE `assets/js/kc-create-post.media.js` via `window._KCCreatePost.media`; core expõe estado compartilhado em `window._KCCreatePost._state` (referência por objeto); stubs de delegação mantêm nomes de função originais intactos; nova suíte `tests/kc-create-post-media.test.js` (43 testes); `kc-create-post.js` reduzido de `2239L` para `~2095L` (−144L); `12` HTMLs carregam o novo asset após o core; baseline sobe para `83/83` suites e `1378/1378` testes | `#363` |
 | v11.31.2 | primeira extração estrutural de `assets/js/kc-create-post.js`: `KC_CREATE_MODAL_ID`, `KC_POST_VISIBILITY_OPTIONS` e `KC_CREATE_SCHEMA` movidos para o novo asset `assets/js/kc-create-post.schema.js`, carregado antes do runtime em `12` HTMLs; `kc-create-post.js` passa a consumir `window._KCCreatePost.schema` com fallback defensivo e guard de indisponibilidade; nova suíte `tests/kc-create-post-schema.test.js` (16 testes) e realinhamento do contrato do hotspot e da regressão de `Ingressos`; baseline sobe para `82/82` suites e `1335/1335` testes | `#361` |
