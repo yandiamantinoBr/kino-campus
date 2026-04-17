@@ -16,211 +16,7 @@
   let staticInteractionsBound = false;
   const shared = window.KCAccountProfileUtils || {};
   let sellerStatsRequestToken = 0;
-  let productPopoverViewportBound = false;
-  let productGlobalKeydownBound = false;
-  const PRODUCT_POPOVER_DESKTOP_BREAKPOINT = 640;
-  const PRODUCT_POPOVER_VIEWPORT_MARGIN = 12;
-  const PRODUCT_POPOVER_GAP = 8;
-
-  function getProductPopoverConfig(popoverId) {
-    switch (String(popoverId || '')) {
-      case 'sharePopover':
-        return { anchorId: 'shareButton', desktopWidth: 220 };
-      default:
-        return null;
-    }
-  }
-
-  function clearProductPopoverPosition(popover) {
-    if (!popover) return;
-    popover.style.removeProperty('top');
-    popover.style.removeProperty('left');
-    popover.style.removeProperty('right');
-    popover.style.removeProperty('bottom');
-    popover.style.removeProperty('width');
-    popover.style.removeProperty('max-width');
-  }
-
-  function positionProductPopover(popoverId, anchorBtn) {
-    const popover = document.getElementById(popoverId);
-    const config = getProductPopoverConfig(popoverId);
-    const anchor = anchorBtn || (config ? document.getElementById(config.anchorId) : null);
-    if (!popover || !config || !anchor) return;
-
-    if (window.innerWidth <= PRODUCT_POPOVER_DESKTOP_BREAKPOINT) {
-      clearProductPopoverPosition(popover);
-      return;
-    }
-
-    const rect = anchor.getBoundingClientRect();
-    const viewportMargin = PRODUCT_POPOVER_VIEWPORT_MARGIN;
-    const maxWidth = Math.max(180, window.innerWidth - (viewportMargin * 2));
-    const preferredWidth = Math.min(config.desktopWidth, maxWidth);
-    const popoverHeight = Math.min(
-      popover.scrollHeight || popover.offsetHeight || 0,
-      Math.floor(window.innerHeight * 0.84)
-    );
-
-    let left = rect.left;
-    if ((left + preferredWidth) > (window.innerWidth - viewportMargin)) {
-      left = window.innerWidth - preferredWidth - viewportMargin;
-    }
-    if (left < viewportMargin) left = viewportMargin;
-
-    let top = rect.bottom + PRODUCT_POPOVER_GAP;
-    if ((top + popoverHeight) > (window.innerHeight - viewportMargin)) {
-      top = rect.top - popoverHeight - PRODUCT_POPOVER_GAP;
-      if (top < viewportMargin) top = viewportMargin;
-    }
-
-    popover.style.width = preferredWidth + 'px';
-    popover.style.maxWidth = maxWidth + 'px';
-    popover.style.top = Math.round(top) + 'px';
-    popover.style.left = Math.round(left) + 'px';
-    popover.style.right = 'auto';
-    popover.style.bottom = 'auto';
-  }
-
-  function scheduleProductPopoverPosition(popoverId, anchorBtn) {
-    window.requestAnimationFrame(() => {
-      const popover = document.getElementById(popoverId);
-      if (!popover || !popover.classList.contains('active')) return;
-      positionProductPopover(popoverId, anchorBtn);
-    });
-  }
-
-  function syncActiveProductPopovers() {
-    ['sharePopover'].forEach((popoverId) => {
-      const popover = document.getElementById(popoverId);
-      if (!popover || !popover.classList.contains('active')) return;
-      const config = getProductPopoverConfig(popoverId);
-      positionProductPopover(popoverId, config ? document.getElementById(config.anchorId) : null);
-    });
-  }
-
-  function ensureProductPopoverViewportBinding() {
-    if (productPopoverViewportBound) return;
-    productPopoverViewportBound = true;
-
-    let syncScheduled = false;
-    const scheduleSync = () => {
-      if (syncScheduled) return;
-      syncScheduled = true;
-      window.requestAnimationFrame(() => {
-        syncScheduled = false;
-        syncActiveProductPopovers();
-      });
-    };
-
-    window.addEventListener('resize', scheduleSync, { passive: true });
-    window.addEventListener('scroll', scheduleSync, { passive: true, capture: true });
-  }
-
-  function bindProductGlobalKeydown() {
-    if (productGlobalKeydownBound) return;
-    productGlobalKeydownBound = true;
-    document.addEventListener('keydown', handleProductGlobalKeydown, { passive: true });
-  }
-
-  function handleProductGlobalKeydown(event) {
-    if (!event || event.key !== 'Escape') return;
-    closeSharePopover();
-    if (window._KCProduct.save && typeof window._KCProduct.save.closeSavePopover === 'function') {
-      window._KCProduct.save.closeSavePopover();
-    }
-    if (window._KCProduct.calendar && typeof window._KCProduct.calendar.closeCalendarPopover === 'function') {
-      window._KCProduct.calendar.closeCalendarPopover();
-    }
-  }
-
-  function trackCurrentPostShare() {
-    try {
-      const postId = currentPost && (currentPost.uuid || currentPost.id);
-      if (postId && window.KCAPI && typeof window.KCAPI.trackShare === 'function') {
-        window.KCAPI.trackShare(postId).catch(() => { });
-      }
-    } catch (_) { }
-  }
-
-  async function copyCurrentPostLink(options) {
-    const utils = window.KCUtils;
-    if (!utils || typeof utils.copyTextToClipboard !== 'function') return false;
-    return utils.copyTextToClipboard(window.location.href, options);
-  }
-
   // ── Share popover ────────────────────────────────────────
-  function openSharePopover(btn) {
-    const popover  = document.getElementById('sharePopover');
-    const backdrop = document.getElementById('shareBackdrop');
-    if (!popover) return;
-    if (window._KCProduct.save && typeof window._KCProduct.save.closeSavePopover === 'function') {
-      window._KCProduct.save.closeSavePopover();
-    }
-    if (window._KCProduct.calendar && typeof window._KCProduct.calendar.closeCalendarPopover === 'function') {
-      window._KCProduct.calendar.closeCalendarPopover();
-    }
-    popover.classList.add('active');
-    popover.setAttribute('aria-hidden', 'false');
-    scheduleProductPopoverPosition('sharePopover', btn);
-    if (backdrop) backdrop.classList.add('active');
-    if (btn) btn.setAttribute('aria-expanded', 'true');
-  }
-  function closeSharePopover() {
-    const popover  = document.getElementById('sharePopover');
-    const backdrop = document.getElementById('shareBackdrop');
-    const btn      = document.getElementById('shareButton');
-    if (popover)  {
-      popover.classList.remove('active');
-      popover.setAttribute('aria-hidden', 'true');
-      clearProductPopoverPosition(popover);
-    }
-    if (backdrop) backdrop.classList.remove('active');
-    if (btn)      btn.setAttribute('aria-expanded', 'false');
-  }
-  function wireSharePopover() {
-    const shareBtn = document.getElementById('shareButton');
-    const backdrop = document.getElementById('shareBackdrop');
-    const waBtn    = document.getElementById('shareWhatsApp');
-    const copyBtn  = document.getElementById('shareCopyLink');
-    if (!shareBtn) return;
-    ensureProductPopoverViewportBinding();
-
-    shareBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const popover = document.getElementById('sharePopover');
-      if (popover && popover.classList.contains('active')) {
-        closeSharePopover();
-      } else {
-        openSharePopover(shareBtn);
-      }
-    });
-    if (backdrop) backdrop.addEventListener('click', closeSharePopover);
-
-    if (waBtn) {
-      waBtn.addEventListener('click', () => {
-        closeSharePopover();
-        const title = (currentPost && (currentPost.titulo || currentPost.title)) || document.title;
-        const url   = window.location.href;
-        const text  = title + '\n' + url;
-        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
-        trackCurrentPostShare();
-      });
-    }
-    if (copyBtn) {
-      copyBtn.addEventListener('click', async () => {
-        closeSharePopover();
-        try {
-          const copied = await copyCurrentPostLink();
-          if (!copied) throw new Error('copy_unavailable');
-          trackCurrentPostShare();
-          toast('Link copiado!', 'info', 1800);
-        } catch (_) {
-          toast('Nao foi possivel copiar automaticamente. Tente novamente ou copie o link pela barra do navegador.', 'error', 2600);
-        }
-      });
-    }
-  }
-
   // ── Badge "editado" ──────────────────────────────────────
   function getParam(name) {
     const params = new URLSearchParams(window.location.search || '');
@@ -1664,9 +1460,18 @@
   // window._KCProduct.analytics.renderAuthorAnalytics(post, user) - carregado apos este arquivo.
   window._KCProduct.analytics = window._KCProduct.analytics || {};
 
+  // window._KCProduct.popovers.bindProductGlobalKeydown() / wireSharePopover({ getCurrentPost }) / closeSharePopover() - carregado apos este arquivo.
+  window._KCProduct.popovers = window._KCProduct.popovers || {};
+
   document.addEventListener('DOMContentLoaded', () => {
-    bindProductGlobalKeydown();
-    wireSharePopover();
+    if (window._KCProduct.popovers && typeof window._KCProduct.popovers.bindProductGlobalKeydown === 'function') {
+      window._KCProduct.popovers.bindProductGlobalKeydown();
+    }
+    if (window._KCProduct.popovers && typeof window._KCProduct.popovers.wireSharePopover === 'function') {
+      window._KCProduct.popovers.wireSharePopover({
+        getCurrentPost: function () { return currentPost; }
+      });
+    }
     if (window._KCProduct.save && typeof window._KCProduct.save.wireSavePopover === 'function') {
       window._KCProduct.save.wireSavePopover();
     }
