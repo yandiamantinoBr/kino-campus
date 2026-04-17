@@ -2252,7 +2252,39 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#343` — squash merge `c2e10ab` — preview `dpl_H13DDXyrne4wTxjSZqcyq6AavSiV` — pós-merge `dpl_sSKvrx88cEKwWU88Kf2KJAvpLHfz` — produção `dpl_SKELfPbqguuDeA5JyWJzffuMvWmM` (promote from `dpl_sSKvrx88cEKwWU88Kf2KJAvpLHfz`), smoke HTTP 200 com `_product.html` servindo `product.calendar.js`.
 - próximas fases:
-  `v11.30.13` (save).
+  `v11.30.13` entregue com a extração do grupo save -> `product.save.js` via `window._KCProduct.save`. Próxima: `v11.30.14` (ratings).
+
+---
+
+### Iteração `v11.30.13`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-13-product-controller-split-save` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `product.controller.js` (2727L → 2559L, −168L): grupo save extraído para `product.save.js` |
+
+- objetivo:
+  extrair o grupo save de `product.controller.js` (2727L → 2559L, −168L) para sub-módulo independente usando o namespace `window._KCProduct.save`. Quarto grupo do split do controller. Extraídos: `savedPostState`, `openSavePopover`, `closeSavePopover`, `wireSavePopover`, `getSavedButtons`, `getSaveKindLabel`, `getSaveKinds`, `updateSavedButtonsUI`, `refreshSavedState(post)` e `bindSavedActions(post, getViewer)`.
+- resultado:
+  - **NOVO** `assets/js/controllers/product.save.js` (341L) — exports `closeSavePopover`, `wireSavePopover`, `bindSavedActions` e `refreshSavedState` registrados em `window._KCProduct.save`. Inclui estado local de salvamento, posicionamento próprio do popover, fechamento DOM-safe de share/calendar e mutações `KCAPI` preservadas.
+  - **ALTERADO** `product.controller.js`: bloco save removido; `renderPost` delega para `window._KCProduct.save.bindSavedActions(post, getViewer)` e `window._KCProduct.save.refreshSavedState(post)`; `Escape` global, `openSharePopover` e `DOMContentLoaded` passam a chamar `window._KCProduct.save.closeSavePopover()` / `wireSavePopover()` com guard defensivo; guard `window._KCProduct.save = window._KCProduct.save || {}` adicionado.
+  - **ALTERADO** `_product.html`: tag `<script defer src="assets/js/controllers/product.save.js">` inserida após `product.calendar.js`, preservando a sequência incremental do split.
+  - **NOVO** `tests/product.save.test.js` (15 testes estáticos) — cobre: IIFE, namespace, estado local, helpers de save state, posicionamento/open/close/wire do popover, `refreshSavedState`, `bindSavedActions`, UX essencial e exports.
+- arquivos alterados:
+  - `assets/js/controllers/product.save.js` (NOVO, 341L)
+  - `assets/js/controllers/product.controller.js` (ALTERADO, 2727L → 2559L)
+  - `tests/product.save.test.js` (NOVO, 15 testes)
+  - `_product.html` (ALTERADO, +1 tag)
+- resultado dos testes:
+  `75/75` suites, `1253/1253` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#345` — squash merge `2802e9c` — preview `dpl_GVQM8WRL3ECXemc5rogAabkBQ84m` — pós-merge `dpl_ARn1Dv4hmiemCCMyUXQzXXz9Y6TP` — produção `dpl_BGL8AftuvzZ3h3UtvGdWaq73j4kq` (promote from `dpl_ARn1Dv4hmiemCCMyUXQzXXz9Y6TP`), smoke HTTP 200 com `_product.html?ts=1776384700` servindo `product.save.js` e `assets/js/controllers/product.save.js?ts=1776384707` retornando `window._KCProduct.save = {`.
+- riscos residuais:
+  a fatia fecha o save sem abrir refactor de `ratings` ou `owner actions`, mas o controller principal continua grande. O próximo passo correto é isolar `ratings`, que ainda concentra modal, estado e acoplamento visual próprio.
+- próximas fases:
+  `v11.30.14` (ratings) -> `v11.30.15` (edit/owner actions).
 
 ---
 
