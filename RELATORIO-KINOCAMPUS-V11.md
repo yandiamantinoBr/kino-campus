@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2` e `v11.24.3` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11, a trilha de i18n v11.24.x com kc-i18n.js e integracao nos componentes core e templates dinamicos, o planejamento formal do backlog v11.25–v11.30 e a consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` (`v11.25.0` e `v11.25.1` concluidas), split do monolito `supabase.adapter.js` concluido (10/10 grupos, acumulado −3621L), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avancada com a segunda extracao estrutural de `kc-create-post.js`: grupo de midia/imagens externalizado para `kc-create-post.media.js` via `window._KCCreatePost.media` (`v11.31.3` concluida), a terceira extracao com 25 resolvers/normalizadores de dominio externalizados para `kc-create-post.resolvers.js` via `window._KCCreatePost.resolvers` (`v11.31.4` concluida), e a quarta extracao com `kcBuildFieldsForModule` externalizados para `kc-create-post.fields.js` via `window._KCCreatePost.fields` (`v11.31.5` concluida, baseline `85/85` suites e `1530/1530` testes) |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2` e `v11.24.3` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11, a trilha de i18n v11.24.x com kc-i18n.js e integracao nos componentes core e templates dinamicos, o planejamento formal do backlog v11.25–v11.30 e a consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` (`v11.25.0` e `v11.25.1` concluidas), split do monolito `supabase.adapter.js` concluido (10/10 grupos, acumulado −3621L), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avancada com a segunda extracao estrutural de `kc-create-post.js`: grupo de midia/imagens externalizado para `kc-create-post.media.js` via `window._KCCreatePost.media` (`v11.31.3` concluida), a terceira extracao com 25 resolvers/normalizadores de dominio externalizados para `kc-create-post.resolvers.js` via `window._KCCreatePost.resolvers` (`v11.31.4` concluida), a quarta extracao com `kcBuildFieldsForModule` externalizados para `kc-create-post.fields.js` via `window._KCCreatePost.fields` (`v11.31.5` concluida), e a quinta extracao com `kcHandleCreateSubmit` (pipeline de submit/edicao, 707L) externalizado para `kc-create-post.submit.js` via `window._KCCreatePost.submit` (`v11.31.6` concluida, baseline `86/86` suites e `1598/1598` testes) |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -2730,7 +2730,61 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#367` — fast-forward merge `cc388d0` — produção `dpl_JE2y257KWE7gxviRKJpND9PwmekA` (promote via `npx vercel promote`), smoke HTTP 200.
 - próximas fases:
-  `v11.31.6` (submit/edit pipeline) -> `v11.31.7` (core residual e estabilização final).
+  `v11.31.6` (submit/edit pipeline) → `v11.31.7` (core residual e estabilização final).
+
+### Iteração `v11.31.6`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-31-6-kc-create-post-submit-split` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | extração estrutural — pipeline de submit e edição |
+| Escopo | `assets/js/kc-create-post.submit.js` (NOVO), `assets/js/kc-create-post.js`, `12` HTMLs carregadores, `tests/kc-create-post-submit.test.js` (NOVO), `tests/kc-create-post-contract.test.js` (ALTERADO), `tests/kc-create-post-active-fields.test.js` (ALTERADO), `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  extrair do hotspot `kc-create-post.js` a função `kcHandleCreateSubmit` — o pipeline completo de submit e edição de publicações (validação de formulário, resolução de campos ativos, construção do payload, modo edição via `KCAPI.updatePost`, modo criação Supabase vs local, verificação de duplicatas, audit log, upsert de locais custom de caronas e redirect pós-publicação) — registrando-a em um IIFE dedicado `kc-create-post.submit.js` via `window._KCCreatePost.submit`, com stub de delegação async no core e fallback `undefined` seguro.
+- resultado:
+  - **NOVO** `assets/js/kc-create-post.submit.js` — IIFE `'use strict'` com `window._KCCreatePost.submit`, contendo: `_getState()` (acesso ao estado) e `handleCreateSubmit()` async (707L extraídas); acessa `kcCreateState` via `_getState()`; todos os demais globais (`KCAPI`, `showToast`, `kcModulePage`, `kcResolve*`, `kcNormalize*`, `kcGetActiveCreateFieldNames`, etc.) acessados diretamente do scope do browser — carregados antes em `kc-core.js` e `kc-create-post.js`; namespace exporta `handleCreateSubmit`.
+  - **ALTERADO** `assets/js/kc-create-post.js` — `kcHandleCreateSubmit` substituído por `_kcSubmitModule()` + stub de delegação lazy async; core reduz de `1959L` para `1260L` (−699L).
+  - **ALTERADOS** `12` HTMLs da base principal — agora carregam `assets/js/kc-create-post.submit.js` com `defer` após `assets/js/kc-create-post.fields.js`. Ordem canônica: `schema → core → media → resolvers → fields → submit`.
+  - **NOVO** `tests/kc-create-post-submit.test.js` — suíte estática com `68` testes cobrindo: estrutura IIFE/namespace (5), `_getState()` (3), `handleCreateSubmit` presença/assinatura (4), captura e validação (7), campos ativos e payload (10), resolvers de domínio (10), modo edição (4), modo criação supabase vs local (8), audit log e redirect (6), tratamento de erros/finally (3), namespace (2), stubs no core (5).
+  - **ALTERADO** `tests/kc-create-post-contract.test.js` — testes de submit pipeline migrados para verificar `submitSource` (v11.31.6); `submitSource` carregado em `beforeAll`.
+  - **ALTERADO** `tests/kc-create-post-active-fields.test.js` — teste 'submit path derives active field names' atualizado para ler `kc-create-post.submit.js`.
+- achados principais:
+  - `kcHandleCreateSubmit` é a função mais longa do arquivo (707L, ~33KB de fonte) — a extração sozinha reduziu o core em 36% da linha count atual.
+  - Todos os globals que `handleCreateSubmit` usa (`KCAPI`, `KCAPI.updatePost`, `showToast`, `kcModulePage`, etc.) são window globals já carregados antes do sub-módulo — sem necessidade de lazy accessors adicionais.
+  - `kcCreateState` é passado por referência via `_getState()` → `window._KCCreatePost._state`; mutações no sub-módulo (`kcCreateState.submitting = true`, `kcCreateState.values[name] = ...`) propagam corretamente ao estado compartilhado.
+  - 5 falhas nos testes existentes corrigidas: `kc-create-post-contract.test.js` (4 testes verificavam strings do submit no core; migrados para `submitSource`) e `kc-create-post-active-fields.test.js` (1 teste verificava `const activeFieldNames = kcGetActiveCreateFieldNames(` no core; atualizado para `submitSource`).
+- arquivos alterados:
+  - `assets/js/kc-create-post.submit.js` (NOVO, ~540L)
+  - `assets/js/kc-create-post.js` (ALTERADO, `1959L → 1260L`, −699L)
+  - `_product.html` (ALTERADO)
+  - `achados-perdidos.html` (ALTERADO)
+  - `caronas-feed.html` (ALTERADO)
+  - `compra-venda-feed.html` (ALTERADO)
+  - `create-post.html` (ALTERADO)
+  - `eventos.html` (ALTERADO)
+  - `index.html` (ALTERADO)
+  - `moradia.html` (ALTERADO)
+  - `my-posts.html` (ALTERADO)
+  - `ods.html` (ALTERADO)
+  - `oportunidades.html` (ALTERADO)
+  - `search-results.html` (ALTERADO)
+  - `tests/kc-create-post-submit.test.js` (NOVO, 374L, 68 testes)
+  - `tests/kc-create-post-contract.test.js` (ALTERADO, +10L)
+  - `tests/kc-create-post-active-fields.test.js` (ALTERADO, +4L)
+  - `README.md` (ALTERADO)
+  - `RELATORIO-KINOCAMPUS-V11.md` (ALTERADO)
+- resultado dos testes:
+  baseline elevada para `86/86` suites e `1598/1598` testes.
+- validacao operacional:
+  `node --check assets/js/kc-create-post.submit.js`, `node --check assets/js/kc-create-post.js`, `npx jest tests/kc-create-post-submit.test.js --no-coverage`, `npx jest --no-coverage` (86/86, 1598/1598).
+- validacao em navegador:
+  deployment `dpl_EDPrZXfYYJq4c6J3Qvga2oYHYnwd` promovido para produção via `npx vercel promote`; `www.kinocampus.com.br` respondeu `200`.
+- PR \ commit \ deploy:
+  PR `#368` — fast-forward merge `bba891e` — produção `dpl_EDPrZXfYYJq4c6J3Qvga2oYHYnwd` (promote via `npx vercel promote`), smoke HTTP 200.
+- próximas fases:
+  `v11.31.7` (core residual: render modal, funções de suporte, estabilização final) — `kc-create-post.js` de `1260L` → meta <700L.
 
 ---
 
