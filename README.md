@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.32.1`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes mantida em 88/88 suites e 1688/1688 testes, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, trilha `v11.31.x` encerrada com a sexta (e última) extração estrutural de `kc-create-post.js`, e a trilha `v11.32.x` avançada com a auditoria formal de `kc-api.client.js`, o gate operacional mínimo de smoke/publicação e agora o congelamento estático do contrato público de `window.KCAPI` antes do primeiro split por domínio.
+**Status atual:** v11 executada até `v11.32.2`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes mantida em 89/89 suites e 1694/1694 testes, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, trilha `v11.31.x` encerrada com a sexta (e última) extração estrutural de `kc-create-post.js`, e a trilha `v11.32.x` avançada da auditoria factual e do congelamento estático do contrato público de `window.KCAPI` para o primeiro split por domínio, com `notifications` extraído para `window._KCAPI.notifications` e `22` carregadores HTML já alinhados ao novo submódulo.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 87 suites de regressão e contrato |
+| Testes | Jest: 89 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.32.2 | primeiro split por domínio da trilha `KCAPI`: novo IIFE `assets/js/kc-api.notifications.js` registrado em `window._KCAPI.notifications`, centralizando preferencias, targets privados, leitura/mark-read/clear, contador unread e subscribe/unsubscribe; `assets/js/kc-api.client.js` passa a delegar todo o domínio `notifications` com guards defensivos e fallbacks preservados; `22` HTMLs carregam o novo asset antes do facade; nova suíte `tests/kc-api-notifications-module.test.js` (11 testes) e realinhamento do contrato em `tests/kc-api-facade-contract.test.js`; baseline sobe para `89/89` suites e `1694/1694` testes | `#374` |
 | v11.32.1 | congelamento do contrato público de `window.KCAPI` antes do primeiro split da trilha: nova suíte estática `tests/kc-api-facade-contract.test.js` (16 testes) travando shape IIFE/facade, registry de adapters, getter `activeDriver`, export dos domínios públicos, fallbacks de driver/indisponibilidade, hooks críticos de cache/SWR e globals de diagnóstico; `assets/js/kc-api.client.js` permanece sem mudança de runtime nesta fase; baseline sobe para `88/88` suites e `1688/1688` testes | `#372` |
 | v11.32.0 | abertura formal da nova trilha de hotspot em `assets/js/kc-api.client.js`: auditoria dedicada em `docs/kc-api-client-audit-v11.32.md` com footprint real (`2520L`, `105563` bytes, `100` membros exportados, `91` callable), mapa dos domínios internos, consumers críticos e sequência recomendada `v11.32.1`–`v11.32.7`; formalização do gate operacional mínimo em `docs/qa/operational-smoke-gate-v11.32.md` sem adicionar nova stack E2E ao repo; correção do drift documental do estado/progresso pós-`v11.31.7` e hardening pontual do teste estático `kc-create-post-render.test.js` para remover a fragilidade do `slice(...)` no bloco de namespace | `#370` |
 | v11.31.7 | sexta (e última) extração estrutural de `assets/js/kc-create-post.js`: 6 funções de render/modal (`_kcFormatDescriptionField`, `_kcUpdateDescPreview`, `kcCreateSustainSectionHtml`, `kcCreateVisibilitySectionHtml`, `kcEnsureCreateModal`, `kcRenderCreateModal`) movidas para o novo IIFE `assets/js/kc-create-post.render.js` via `window._KCCreatePost.render`; lazy accessors `_getModalId()`, `_getModules()`, `_getVisibilityOptions()` desacoplam render module das `const` locais do core; `_getState()` usado em cada handler de evento para acesso seguro ao estado compartilhado; stubs `_kcRenderModule()` no core; nova suíte `tests/kc-create-post-render.test.js` (87 testes); `kc-create-post.js` reduzido de `1260L` para `648L` (meta <700L ✓); `12` HTMLs carregam o novo asset; baseline sobe para `87/87` suites e `1672/1672` testes | `#369` |
@@ -132,22 +133,25 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.32.1`
-- objetivo da iteracao: congelar o contrato publico de `window.KCAPI` em uma suite estatica dedicada antes do primeiro split por dominio da trilha `v11.32.x`
-- natureza da iteracao: hardening de QA/contrato, sem mudanca de runtime
-- regressao: `88/88` suites, `1688/1688` testes, hygiene `8.6.0`
-- deploy de producao validado desta fase: `dpl_77TBebo7PaY6iVmzuvwekUxqW79e` (`www.kinocampus.com.br`) — promovido do preview pós-merge `dpl_Fpe97zRfS3kXaJrixXW2SPtSrqVQ`, smoke HTTP `200` em home, `compra-venda-feed.html`, `create-post.html` e `_product.html?id=1`
+- iteracao ativa consolidada: `v11.32.2`
+- objetivo da iteracao: executar o primeiro split seguro por dominio da trilha `v11.32.x`, movendo `notifications` para um submodulo proprio sem alterar a interface publica de `window.KCAPI`
+- natureza da iteracao: split estrutural + hardening de contrato/publicacao, sem mudanca de UI
+- regressao: `89/89` suites, `1694/1694` testes, hygiene `8.6.0`
+- deploy de producao validado desta fase: `dpl_A7RE828Wab7S2W6UG2vzpUyr8Ljo` (`www.kinocampus.com.br`) — promovido do preview pós-merge `dpl_Dqf1SeP5LDRsHrsmm7NKvT1u2cA5`, smoke HTTP `200` em home, `compra-venda-feed.html`, `create-post.html` e `_product.html?id=1`
 - artefatos centrais:
   - `docs/kc-api-client-audit-v11.32.md`
   - `docs/qa/operational-smoke-gate-v11.32.md`
   - `tests/kc-api-facade-contract.test.js`
+  - `assets/js/kc-api.notifications.js`
+  - `tests/kc-api-notifications-module.test.js`
 - achados desta rodada:
-  - a fachada publica `window.KCAPI` agora tem uma suite propria que trava registry de adapters, getter `activeDriver`, export dos dominios publicos, guards de indisponibilidade, fallbacks entre local/supabase e os pontos mais sensiveis de cache/SWR sem depender de execucao do runtime
-  - a baseline sobe de `87/87` para `88/88` suites, com `1688/1688` testes, sem tocar `assets/js/kc-api.client.js`
+  - `assets/js/kc-api.notifications.js` passou a concentrar o dominio de preferencias, targets privados, feed in-app, clear e subscription, registrado em `window._KCAPI.notifications` com IIFE propria e `use strict`
+  - `assets/js/kc-api.client.js` manteve a interface publica `window.KCAPI`, mas agora delega o dominio `notifications` via `getNotificationsModule()` com guard defensivo e fallbacks preservados
+  - `22` carregadores HTML foram alinhados para carregar `assets/js/kc-api.notifications.js` antes de `assets/js/kc-api.client.js`, sem alterar markup funcional nem fluxo de pagina
   - a malha minima desta trilha continua concentrada em `kc-comments.js`, `profile.controller.js`, `settings.controller.js`, `product.controller.js`, `account-setup.controller.js`, `kc-auth.ui.js`, `create-post.controller.js`, `kc-create-post.submit.js`, `kc-core.js`, `kc-search.js` e `kc-notifications.js`
   - o gate de publicacao da trilha `v11.32.x` permanece Jest + hygiene + `vercel inspect` + smoke HTTP `200`, com browser smoke quando o ambiente permitir
-- proxima iteracao sugerida: `v11.32.2`, para iniciar o primeiro split por dominio em `notifications` com o contrato do facade ja congelado
-- trilha futura: `v11.32.x` (`v11.32.2` notifications -> `v11.32.3` saved/highlights -> `v11.32.4` help/invites -> `v11.32.5` posts-read -> `v11.32.6` comments/votes + hardening -> `v11.32.7` release gate)
+- proxima iteracao sugerida: `v11.32.3`, para extrair `saved/highlights` da fachada `KCAPI` agora que `notifications` ja ficou isolado e publicado
+- trilha futura: `v11.32.x` (`v11.32.3` saved/highlights -> `v11.32.4` help/invites -> `v11.32.5` posts-read -> `v11.32.6` comments/votes + hardening -> `v11.32.7` release gate)
 
 ---
 
