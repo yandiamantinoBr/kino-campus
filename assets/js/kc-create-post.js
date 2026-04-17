@@ -144,6 +144,9 @@ const kcCreateState = {
   editCallback: null,
 };
 
+// Expõe referência ao estado para sub-módulos (v11.31.3)
+window._KCCreatePost._state = kcCreateState;
+
 let kcLastFocus = null;
 
 function kcNormalizePostVisibilityValue(value, fallback) {
@@ -885,183 +888,36 @@ function kcResolveOpportunityRegime(value) {
   };
 }
 
-const KC_CREATE_MAX_IMAGES = 5;
+// ─── Mídia / imagens: extraído para kc-create-post.media.js (v11.31.3) ──────
+// Stubs de delegação — lógica real em window._KCCreatePost.media
 
-function kcReadFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    try {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(reader.error || new Error('Falha ao ler imagem'));
-      reader.readAsDataURL(file);
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-async function kcReadAndCompressImage(file, opts = {}) {
-  const maxSide = (typeof opts.maxSide === 'number') ? opts.maxSide : 1200;
-  const quality = (typeof opts.quality === 'number') ? opts.quality : 0.82;
-
-  const original = await kcReadFileAsDataUrl(file);
-  if (!original) return '';
-
-  // Mantém GIF como está (para não quebrar animação)
-  if (String(file.type || '').toLowerCase() === 'image/gif') return original;
-
-  try {
-    const img = await new Promise((resolve) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => resolve(null);
-      i.src = original;
-    });
-
-    if (!img) return original;
-
-    const w = img.naturalWidth || img.width || 0;
-    const h = img.naturalHeight || img.height || 0;
-    if (!w || !h) return original;
-
-    const scale = Math.min(1, maxSide / Math.max(w, h));
-    const outW = Math.max(1, Math.round(w * scale));
-    const outH = Math.max(1, Math.round(h * scale));
-
-    const canvas = document.createElement('canvas');
-    canvas.width = outW;
-    canvas.height = outH;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return original;
-
-    ctx.drawImage(img, 0, 0, outW, outH);
-
-    // Converte para JPEG para reduzir tamanho
-    const out = canvas.toDataURL('image/jpeg', quality);
-    return out || original;
-  } catch {
-    return original;
-  }
+function _kcMediaModule() {
+  return window._KCCreatePost && window._KCCreatePost.media;
 }
 
 async function kcAddImagesFromFiles(fileList) {
-  const files = Array.from(fileList || []);
-  if (!files.length) return;
-
-  const remaining = KC_CREATE_MAX_IMAGES - kcCreateState.images.length;
-  if (remaining <= 0) {
-    showToast(`Máximo de ${KC_CREATE_MAX_IMAGES} imagens (1 capa + ${KC_CREATE_MAX_IMAGES - 1}).`, 'warn', 2600);
-    return;
-  }
-
-  const candidates = files
-    .filter(f => f && typeof f.type === 'string' && f.type.startsWith('image/'))
-    .slice(0, remaining);
-
-  if (!candidates.length) {
-    showToast('Selecione arquivos de imagem (JPG/PNG/WebP).', 'warn', 2400);
-    return;
-  }
-
-  for (const file of candidates) {
-    // Proteção simples: evita localStorage enorme
-    if (file.size > 8 * 1024 * 1024) {
-      showToast('Imagem muito grande (máx ~8MB). Use uma menor.', 'warn', 2600);
-      continue;
-    }
-    try {
-      const dataUrl = await kcReadAndCompressImage(file);
-      if (!dataUrl) continue;
-
-      const id = `img_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-      kcCreateState.images.push({ id, dataUrl, name: file.name || '', size: file.size || 0 });
-
-      if (!kcCreateState.coverImageId) kcCreateState.coverImageId = id;
-    } catch {
-      showToast('Não consegui carregar uma das imagens.', 'warn', 2400);
-    }
-  }
-
-  kcRenderCreateModal();
+  var m = _kcMediaModule();
+  if (m && typeof m.addFromFiles === 'function') return m.addFromFiles(fileList);
 }
 
 function kcRemoveCreateImageById(id) {
-  const before = kcCreateState.images.length;
-  kcCreateState.images = kcCreateState.images.filter(img => String(img.id) !== String(id));
-  if (kcCreateState.images.length !== before) {
-    if (kcCreateState.coverImageId && String(kcCreateState.coverImageId) === String(id)) {
-      kcCreateState.coverImageId = kcCreateState.images.length ? kcCreateState.images[0].id : null;
-    }
-    kcRenderCreateModal();
-  }
+  var m = _kcMediaModule();
+  if (m && typeof m.removeById === 'function') m.removeById(id);
 }
 
 function kcSetCreateCoverImageById(id) {
-  if (!id) return;
-  const exists = kcCreateState.images.some(img => String(img.id) === String(id));
-  if (!exists) return;
-  kcCreateState.coverImageId = id;
-  kcRenderCreateModal();
+  var m = _kcMediaModule();
+  if (m && typeof m.setCoverById === 'function') m.setCoverById(id);
 }
 
 function kcGetOrderedCreateImages() {
-  const imgs = Array.isArray(kcCreateState.images) ? kcCreateState.images : [];
-  if (!imgs.length) return [];
-
-  const coverId = kcCreateState.coverImageId;
-  const cover = coverId ? imgs.find(i => String(i.id) === String(coverId)) : null;
-
-  if (!cover) return imgs.map(i => i.dataUrl).filter(Boolean);
-
-  const others = imgs.filter(i => String(i.id) !== String(coverId)).map(i => i.dataUrl).filter(Boolean);
-  return [cover.dataUrl, ...others].filter(Boolean);
+  var m = _kcMediaModule();
+  return (m && typeof m.getOrdered === 'function') ? m.getOrdered() : [];
 }
 
 function kcCreateImagesSectionHtml() {
-  const count = kcCreateState.images.length;
-  const remaining = KC_CREATE_MAX_IMAGES - count;
-  const disabled = remaining <= 0;
-
-  const thumbs = kcCreateState.images.map((img) => {
-    const isCover = kcCreateState.coverImageId && String(kcCreateState.coverImageId) === String(img.id);
-    return `
-      <div class="kc-img-thumb${isCover ? ' is-cover' : ''}">
-        <img src="${_esc(img.dataUrl)}" alt="Imagem da publicação" loading="lazy" />
-        ${isCover ? `<div class="kc-img-badge"><i class="fas fa-star"></i> Capa</div>` : ''}
-        <div class="kc-img-actions">
-          <button type="button" class="kc-img-action" data-kc-img-action="cover" data-kc-img-id="${_esc(img.id)}" title="Definir como capa">
-            <i class="fas fa-star"></i>
-          </button>
-          <button type="button" class="kc-img-action" data-kc-img-action="remove" data-kc-img-id="${_esc(img.id)}" title="Remover">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="kc-create-group kc-create-images">
-      <div class="kc-create-group__head kc-create-group__head--row">
-        <span>Imagens</span>
-        <small>${count}/${KC_CREATE_MAX_IMAGES}</small>
-      </div>
-
-      <input id="kcImagesInput" type="file" accept="image/*" ${disabled ? 'disabled' : ''} multiple hidden />
-
-      <button type="button" class="kc-img-dropzone" data-kc-open-images="true" ${disabled ? 'disabled' : ''}>
-        <i class="fas fa-cloud-upload-alt"></i>
-        <div>
-          <div class="kc-img-dropzone__title">${disabled ? 'Limite de imagens atingido' : 'Clique para adicionar imagens'}</div>
-          <div class="kc-img-dropzone__sub">Máximo ${KC_CREATE_MAX_IMAGES} imagens (1 capa + ${KC_CREATE_MAX_IMAGES - 1}).</div>
-        </div>
-      </button>
-
-      ${count ? `<div class="kc-img-grid">${thumbs}</div>` : ''}
-      <div class="kc-img-hint">Dica: clique na estrela para escolher a <strong>capa</strong>.</div>
-    </div>
-  `;
+  var m = _kcMediaModule();
+  return (m && typeof m.sectionHtml === 'function') ? m.sectionHtml() : '';
 }
 
 function kcCreateSustainSectionHtml() {
