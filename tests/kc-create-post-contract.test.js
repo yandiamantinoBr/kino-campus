@@ -3,6 +3,8 @@
  * @description Static contract tests for assets/js/kc-create-post.js (v11.31.1)
  * Atualizado em v11.31.6: submit pipeline movido para kc-create-post.submit.js;
  * testes de submit agora verificam submitSource.
+ * Atualizado em v11.31.7: render/modal pipeline movido para kc-create-post.render.js;
+ * testes de modal/render agora verificam renderSource.
  */
 'use strict';
 
@@ -11,12 +13,15 @@ const path = require('path');
 
 const SRC        = path.resolve(__dirname, '..', 'assets', 'js', 'kc-create-post.js');
 const SUBMIT_SRC = path.resolve(__dirname, '..', 'assets', 'js', 'kc-create-post.submit.js');
+const RENDER_SRC = path.resolve(__dirname, '..', 'assets', 'js', 'kc-create-post.render.js');
 let source;
 let submitSource;
+let renderSource;
 
 beforeAll(() => {
   source       = fs.readFileSync(SRC, 'utf8');
   submitSource = fs.readFileSync(SUBMIT_SRC, 'utf8');
+  renderSource = fs.readFileSync(RENDER_SRC, 'utf8');
 });
 
 describe('kc-create-post — source shape', () => {
@@ -56,19 +61,24 @@ describe('kc-create-post — schema and constants', () => {
 });
 
 describe('kc-create-post — modal bootstrap contracts', () => {
-  test('defines kcEnsureCreateModal with dialog semantics and form shell', () => {
+  // v11.31.7: kcEnsureCreateModal extraída para kc-create-post.render.js → verificar renderSource
+  test('defines kcEnsureCreateModal stub in core and full impl in renderSource', () => {
+    // stub mantém o nome no core
     expect(source).toContain('function kcEnsureCreateModal() {');
-    expect(source).toContain("overlay.id = KC_CREATE_MODAL_ID;");
-    expect(source).toContain('role="dialog" aria-modal="true" aria-labelledby="kcCreateModalTitle"');
-    expect(source).toContain('<form id="kcCreatePostForm" class="kc-create-form" novalidate>');
-    expect(source).toContain('<button type="submit" class="kc-create-submit" disabled>Publicar Agora</button>');
+    // implementação real está no render module
+    expect(renderSource).toContain('overlay.id = _getModalId();');
+    expect(renderSource).toContain('role="dialog" aria-modal="true" aria-labelledby="kcCreateModalTitle"');
+    expect(renderSource).toContain('<form id="kcCreatePostForm" class="kc-create-form" novalidate>');
+    expect(renderSource).toContain('<button type="submit" class="kc-create-submit" disabled>Publicar Agora</button>');
   });
 
-  test('wires close confirmation, submit delegation and escape handling in the modal bootstrap', () => {
-    expect(source).toContain("window.confirm('Descartar publicação? As informações preenchidas serão perdidas.')");
-    expect(source).toContain("form.addEventListener('submit', (e) => {");
-    expect(source).toContain('kcHandleCreateSubmit();');
-    expect(source).toContain("if (e.key === 'Escape' && kcCreateState.open) kcCloseCreatePostModal();");
+  test('wires close confirmation, submit delegation and escape handling in renderSource', () => {
+    expect(renderSource).toContain("window.confirm('Descartar publicação? As informações preenchidas serão perdidas.')");
+    expect(renderSource).toContain("form.addEventListener('submit', (e) => {");
+    expect(renderSource).toContain('kcHandleCreateSubmit();');
+    // ESC usa _getState() em vez de kcCreateState global
+    expect(renderSource).toContain("e.key === 'Escape'");
+    expect(renderSource).toContain('kcCloseCreatePostModal()');
   });
 });
 
@@ -80,14 +90,16 @@ describe('kc-create-post — render and active-field pipeline', () => {
     expect(source).toContain('function kcReadActiveCreateValue(activeFieldNames, values, name, fallback) {');
   });
 
-  test('defines kcRenderCreateModal on top of schema, visibility and dynamic builders', () => {
+  test('defines kcRenderCreateModal stub in core and full impl in renderSource', () => {
+    // stub mantém o nome no core
     expect(source).toContain('function kcRenderCreateModal() {');
-    expect(source).toContain('if (!kcHasCreateSchemaLoaded()) return;');
-    expect(source).toContain('Object.keys(KC_CREATE_SCHEMA).forEach((key) => {');
-    expect(source).toContain('const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values);');
-    expect(source).toContain('parts.push(kcCreateVisibilitySectionHtml());');
-    expect(source).toContain('parts.push(kcCreateImagesSectionHtml());');
-    expect(source).toContain('parts.push(kcCreateSustainSectionHtml());');
+    // implementação real usa _getModules() e _getState()
+    expect(renderSource).toContain('const KC_CREATE_SCHEMA = _getModules();');
+    expect(renderSource).toContain('Object.keys(KC_CREATE_SCHEMA).forEach((key) => {');
+    expect(renderSource).toContain('const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values);');
+    expect(renderSource).toContain('parts.push(kcCreateVisibilitySectionHtml());');
+    expect(renderSource).toContain('parts.push(kcCreateImagesSectionHtml());');
+    expect(renderSource).toContain('parts.push(kcCreateSustainSectionHtml());');
   });
 });
 
