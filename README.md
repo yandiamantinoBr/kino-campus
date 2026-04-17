@@ -128,7 +128,7 @@ Regras desta fase:
 - objetivo da iteracao: blindar `kc-create-post.js` com uma suíte de contrato ampliada antes do primeiro split estrutural da trilha `v11.31.x`
 - natureza da iteracao: testes-only de arquitetura e contrato, sem alteração de runtime
 - regressao: `81/81` suites, `1320/1320` testes, hygiene `8.6.0`
-- deploy de producao validado desta fase: `TBD`
+- deploy de producao validado desta fase: `dpl_ACgiQPzePCo3RrRsZATuxvYocu1o` (`www.kinocampus.com.br`) — promovido de `dpl_CRC3gdHL4gwwGCTenk1MpRcXPLeZ`
 - achados desta rodada:
   - a nova suíte `tests/kc-create-post-contract.test.js` trava 17 contratos do arquivo principal sem depender de `eval` nem de DOM real
   - a blindagem cobre exports globais, schema base, bootstrap do modal, wiring de `DOMContentLoaded`, side channels `window.__KC_*` e os pontos críticos do submit com `KCAPI`, `KCActions`, `KCSupabase` e `KCOverlayLock`
