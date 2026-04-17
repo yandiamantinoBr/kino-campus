@@ -2524,6 +2524,66 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.31.2`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-31-2-kc-create-post-schema-split` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | extração estrutural de baixo risco — schema e constantes |
+| Escopo | `assets/js/kc-create-post.schema.js`, `assets/js/kc-create-post.js`, `12` HTMLs carregadores, `tests/kc-create-post-schema.test.js`, `tests/kc-create-post-contract.test.js`, `tests/compra-venda-ingressos.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md`, `docs/module-schemas.md`, `docs/handoff-claude-code-v11.31.2.md` |
+
+- objetivo:
+  executar a primeira extração estrutural segura do hotspot `kc-create-post.js`, removendo do arquivo principal apenas o bloco estático de schema/constantes e preservando intactos os 4 globals públicos, o bootstrap global e os fluxos de create/edit.
+- resultado:
+  - **NOVO** `assets/js/kc-create-post.schema.js` — IIFE com `window._KCCreatePost.schema`, contendo `modalId`, `visibilityOptions` e os schemas dos `6` módulos.
+  - **ALTERADO** `assets/js/kc-create-post.js` — passa a consumir `window._KCCreatePost.schema`, mantém fallback defensivo para `modalId` e visibilidade, usa `Object.freeze({})` como fallback de schema e adiciona guard de indisponibilidade para abertura/render/edição do modal.
+  - **ALTERADOS** `12` HTMLs da base principal — agora carregam `assets/js/kc-create-post.schema.js` antes de `assets/js/kc-create-post.js`.
+  - **NOVO** `tests/kc-create-post-schema.test.js` — suíte estática com `16` testes cobrindo estrutura do novo asset, preservação dos `6` módulos, categoria `Ingressos` e ordem de carregamento nos `12` HTMLs.
+  - **ALTERADO** `tests/kc-create-post-contract.test.js` — contrato realinhado para o consumo do namespace extraído e para o guard de indisponibilidade do schema.
+  - **ALTERADO** `tests/compra-venda-ingressos.test.js` — regressão passa a validar o schema extraído, em vez do bloco inline antigo.
+  - **ALTERADO** `docs/module-schemas.md` — caminho canônico do schema atualizado para o novo asset.
+  - **NOVO** `docs/handoff-claude-code-v11.31.2.md` — handoff operacional ampliado para a continuidade externa focada em `v11.31.3`.
+- achados principais:
+  - a extração reduziu `assets/js/kc-create-post.js` de `2610L` para `2239L` (`-371L`) sem abrir o próximo corte mais arriscado do arquivo.
+  - o schema extraído ficou em `assets/js/kc-create-post.schema.js` com `175L`.
+  - a safety net contratual instalada em `v11.31.1` permitiu o primeiro split sem tocar media, render volumoso ou submit.
+  - o fallback do core ficou deliberadamente conservador: ele preserva o comportamento consolidado quando o schema carrega corretamente e falha de forma explícita, com toast e `console.error`, se o asset novo estiver indisponível.
+- arquivos alterados:
+  - `assets/js/kc-create-post.schema.js` (NOVO, `175L`)
+  - `assets/js/kc-create-post.js` (ALTERADO, `2610L -> 2239L`, `-371L`)
+  - `_product.html` (ALTERADO)
+  - `achados-perdidos.html` (ALTERADO)
+  - `caronas-feed.html` (ALTERADO)
+  - `compra-venda-feed.html` (ALTERADO)
+  - `create-post.html` (ALTERADO)
+  - `eventos.html` (ALTERADO)
+  - `index.html` (ALTERADO)
+  - `moradia.html` (ALTERADO)
+  - `my-posts.html` (ALTERADO)
+  - `ods.html` (ALTERADO)
+  - `oportunidades.html` (ALTERADO)
+  - `search-results.html` (ALTERADO)
+  - `tests/kc-create-post-schema.test.js` (NOVO, `67L`)
+  - `tests/kc-create-post-contract.test.js` (ALTERADO)
+  - `tests/compra-venda-ingressos.test.js` (ALTERADO)
+  - `README.md` (ALTERADO)
+  - `RELATORIO-KINOCAMPUS-V11.md` (ALTERADO)
+  - `docs/module-schemas.md` (ALTERADO)
+  - `docs/handoff-claude-code-v11.31.2.md` (NOVO)
+- resultado dos testes:
+  baseline elevada para `82/82` suites e `1335/1335` testes; hygiene `8.6.0`.
+- validacao operacional:
+  `node --check assets/js/kc-create-post.js`, `node --check assets/js/kc-create-post.schema.js`, `npx jest tests/kc-create-post-contract.test.js tests/kc-create-post-schema.test.js tests/compra-venda-ingressos.test.js --runInBand`, `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validacao em navegador:
+  o preview da branch ficou `READY` em `dpl_DjP2RrjNXaMLHARfYtcwLPbCFnLs`; o deployment pós-merge da base ficou `READY` em `dpl_7Pim3BYD1wr1331nMxmNUhAo3Chf`; a produção promovida em [www.kinocampus.com.br](https://www.kinocampus.com.br) respondeu `200` no deployment `dpl_94g4rQUquggV8S8swhTxtYapDypt`, com `_product.html` servindo `assets/js/kc-create-post.schema.js` antes de `assets/js/kc-create-post.js` e o asset público novo retornando `200`.
+- PR \ commit \ deploy:
+  PR `#361` — squash merge `1c61409` (commit da branch `6114b5a`) — preview `dpl_DjP2RrjNXaMLHARfYtcwLPbCFnLs` — pós-merge `dpl_7Pim3BYD1wr1331nMxmNUhAo3Chf` — produção `dpl_94g4rQUquggV8S8swhTxtYapDypt` (promote from `dpl_7Pim3BYD1wr1331nMxmNUhAo3Chf`), smoke HTTP 200 com `https://www.kinocampus.com.br/?ts=1776450353`.
+- próximas fases:
+  `v11.31.3` (mídia/imagens) -> `v11.31.4` (resolvers de domínio) -> `v11.31.5` (modal/render) -> `v11.31.6` (submit/edit) -> `v11.31.7` (core residual e estabilização final).
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:

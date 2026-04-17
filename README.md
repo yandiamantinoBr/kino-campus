@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.31.1`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevada para 81/81 suites e 1320/1320 testes em `v11.31.1`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` iniciada com a blindagem contratual de `kc-create-post.js`.
+**Status atual:** v11 executada até `v11.31.2`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevada para 82/82 suites e 1335/1335 testes em `v11.31.2`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` avançada para a primeira extração estrutural segura de `kc-create-post.js` com schema/constantes externalizados.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 81 suites de regressão e contrato |
+| Testes | Jest: 82 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.31.2 | primeira extração estrutural de `assets/js/kc-create-post.js`: `KC_CREATE_MODAL_ID`, `KC_POST_VISIBILITY_OPTIONS` e `KC_CREATE_SCHEMA` movidos para o novo asset `assets/js/kc-create-post.schema.js`, carregado antes do runtime em `12` HTMLs; `kc-create-post.js` passa a consumir `window._KCCreatePost.schema` com fallback defensivo e guard de indisponibilidade; nova suíte `tests/kc-create-post-schema.test.js` (16 testes) e realinhamento do contrato do hotspot e da regressão de `Ingressos`; baseline sobe para `82/82` suites e `1335/1335` testes | `#361` |
 | v11.31.1 | suíte estática ampliada para `assets/js/kc-create-post.js`: novo arquivo `tests/kc-create-post-contract.test.js` com 17 testes cobrindo shape global atual, exports públicos, schema dos 6 módulos, modal bootstrap, render dinâmico, submit pipeline, side channels `window.__KC_*` e wiring de `DOMContentLoaded`; baseline sobe para `81/81` suites e `1320/1320` testes sem alterar runtime | `#359` |
 | v11.31.0 | auditoria formal do próximo hotspot monolítico: `assets/js/kc-create-post.js` mapeado em `2610L`, `~114KB`, `55` funções top-level, `12` HTMLs impactados e `4` exports públicos; estratégia de decomposição segura registrada em `docs/kc-create-post-audit-v11.31.md`, com sequência recomendada `v11.31.1`–`v11.31.7`; handoff externo ampliado para Claude Code em `docs/handoff-claude-code-v11.31.0.md`; baseline de testes mantido em `80/80` suites e `1303/1303` testes | `#357` |
 | v11.30.18 | hardening final do split de `product.controller.js`: nova suíte estática `product.controller-split-contract.test.js` (7 testes) trava guards de namespace, delegação do `renderPost`, wiring do `DOMContentLoaded`, ausência das implementações já extraídas no core e a ordem canônica dos scripts do detalhe em `_product.html`; bloco de scripts do `_product.html` normalizado; baseline sobe para 80/80 suites e 1303/1303 testes; trilha `v11.30.x` encerrada sem abrir nova extração de runtime | `#355` |

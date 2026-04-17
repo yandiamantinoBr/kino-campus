@@ -1,8 +1,10 @@
-# KinoCampus - Schemas dos Modulos (`KC_CREATE_SCHEMA`)
+# KinoCampus - Schemas dos Modulos (`window._KCCreatePost.schema.modules`)
 
 ## Como funciona
 
-Cada modulo tem um schema em `assets/js/kc-create-post.js`, dentro de `KC_CREATE_SCHEMA`.
+Cada modulo tem um schema em `assets/js/kc-create-post.schema.js`, dentro de `window._KCCreatePost.schema.modules`.
+
+O runtime principal `assets/js/kc-create-post.js` consome esse namespace e continua expondo o contrato local `KC_CREATE_SCHEMA` internamente.
 
 Esse schema define:
 - `categoryGroupId`: qual `tagGroup` representa a categoria principal do post
