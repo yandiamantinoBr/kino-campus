@@ -2252,7 +2252,7 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#343` — squash merge `c2e10ab` — preview `dpl_H13DDXyrne4wTxjSZqcyq6AavSiV` — pós-merge `dpl_sSKvrx88cEKwWU88Kf2KJAvpLHfz` — produção `dpl_SKELfPbqguuDeA5JyWJzffuMvWmM` (promote from `dpl_sSKvrx88cEKwWU88Kf2KJAvpLHfz`), smoke HTTP 200 com `_product.html` servindo `product.calendar.js`.
 - próximas fases:
-  `v11.30.13` entregue com a extração do grupo save -> `product.save.js` via `window._KCProduct.save`. Próxima: `v11.30.14` (ratings).
+  `v11.30.14` entregue com a extração do grupo ratings -> `product.ratings.js` via `window._KCProduct.ratings`. Próxima: `v11.30.15` (edit/owner actions).
 
 ---
 
@@ -2285,6 +2285,38 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   a fatia fecha o save sem abrir refactor de `ratings` ou `owner actions`, mas o controller principal continua grande. O próximo passo correto é isolar `ratings`, que ainda concentra modal, estado e acoplamento visual próprio.
 - próximas fases:
   `v11.30.14` (ratings) -> `v11.30.15` (edit/owner actions).
+
+---
+
+### Iteração `v11.30.14`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-30-14-product-controller-split-ratings` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | Refactor — split de monolito |
+| Escopo | `product.controller.js` (2559L → 2233L, −326L): grupo ratings extraído para `product.ratings.js` |
+
+- objetivo:
+  extrair o grupo ratings de `product.controller.js` (2559L → 2233L, −326L) para sub-módulo independente usando o namespace `window._KCProduct.ratings`. Quinto grupo do split do controller. Extraídos: `sellerRatingModal`, `normalizeSellerRatingSummary`, `getSellerRatingSummaryFromPost`, `applySellerRatingSummaryToPost`, `buildSellerRatingSummaryHtml`, `getUserRatingReasonMessage`, `openAuthForUserRating`, `ensureSellerRatingModal` e `refreshSellerRatingUI(post, fallbackSummary, ratingState, context)`.
+- resultado:
+  - **NOVO** `assets/js/controllers/product.ratings.js` (378L) — exports `normalizeSellerRatingSummary`, `getSellerRatingSummaryFromPost`, `applySellerRatingSummaryToPost` e `refreshSellerRatingUI` registrados em `window._KCProduct.ratings`. Inclui helpers locais duplicados do core, modal de avaliação do vendedor, auth gate, submit com `window.KCAPI.upsertUserRating(...)` e atualização do summary preservados.
+  - **ALTERADO** `product.controller.js`: bloco ratings removido; `setSeller(post)` e `loadSellerAuthorStats(...)` passam a delegar fallback e refresh para `window._KCProduct.ratings`, repassando `currentUser` e `currentPost` por contexto; guard `window._KCProduct.ratings = window._KCProduct.ratings || {}` adicionado.
+  - **ALTERADO** `_product.html`: tag `<script defer src="assets/js/controllers/product.ratings.js">` inserida após `product.save.js`, preservando a sequência incremental do split.
+  - **NOVO** `tests/product.ratings.test.js` (12 testes estáticos) — cobre: IIFE, namespace, helpers locais, summary helpers, auth flow, modal de avaliação, `refreshSellerRatingUI` e exports.
+- arquivos alterados:
+  - `assets/js/controllers/product.ratings.js` (NOVO, 378L)
+  - `assets/js/controllers/product.controller.js` (ALTERADO, 2559L → 2233L)
+  - `tests/product.ratings.test.js` (NOVO, 12 testes)
+  - `_product.html` (ALTERADO, +1 tag)
+- resultado dos testes:
+  `76/76` suites, `1265/1265` testes; hygiene `8.6.0`.
+- PR \ commit \ deploy:
+  PR `#347` — squash merge `3bf3519` — preview `dpl_2Fo7fcXZpuLyG83AAP3aZTQDNKbi` — pós-merge `dpl_Gab4MesPHj22XVTysYgUoEGLeCcy` — produção `dpl_Hsx6hwertfvWfyACdP4y95fKeH7J` (promote from `dpl_Gab4MesPHj22XVTysYgUoEGLeCcy`), smoke HTTP 200 com `_product.html?ts=1776390001` servindo `product.ratings.js` e `assets/js/controllers/product.ratings.js?ts=1776390002` retornando `window._KCProduct.ratings = {`.
+- riscos residuais:
+  a fatia fecha o grupo ratings sem abrir refactor de `edit/owner actions`, mas o controller principal ainda concentra mutações do dono do post, CTA de edição e wiring acoplado ao estado principal. O próximo passo correto é isolar esse grupo antes de qualquer limpeza cosmética.
+- próximas fases:
+  `v11.30.15` (edit/owner actions) -> `v11.30.16` (fechamento do split residual do controller).
 
 ---
 
