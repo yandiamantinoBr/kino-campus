@@ -2488,6 +2488,36 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.31.1`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-31-1-kc-create-post-contracts` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | testes-only — safety net contratual do hotspot |
+| Escopo | `assets/js/kc-create-post.js`, `tests/kc-create-post-contract.test.js`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  blindar `kc-create-post.js` com uma suíte estática de contrato mais ampla antes da primeira extração estrutural da trilha `v11.31.x`, reduzindo o risco de regressão em um arquivo global carregado por `12` HTMLs.
+- resultado:
+  - **NOVO** `tests/kc-create-post-contract.test.js` — suíte estática com `17` testes cobrindo: shape global atual do arquivo, 4 exports públicos, `KC_CREATE_SCHEMA`, `KC_POST_VISIBILITY_OPTIONS`, `kcEnsureCreateModal`, `kcRenderCreateModal`, `kcHandleCreateSubmit`, integrações com `KCAPI`, `KCActions`, `KCSupabase`, `KCOverlayLock`, side channels `window.__KC_*`, bootstrap `kcInitCreatePostTriggers` e `DOMContentLoaded`.
+  - **ALTERADO** `README.md` — baseline movida para `81/81` suites e `1320/1320` testes, `v11.31.1` registrada nas entregas recentes e progresso atual apontando a próxima extração segura em `v11.31.2`.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — registro completo desta iteração e avanço da trilha para a primeira extração controlada.
+- achados principais:
+  - a suíte nova confirma explicitamente que `kc-create-post.js` ainda opera como script global, preserva os 4 globals públicos e continua concentrando bootstrap, schema, modal, render e submit em um único ponto.
+  - a blindagem agora cobre os contratos mínimos que a auditoria `v11.31.0` havia identificado como frágeis, sem depender de `eval` do arquivo principal nem de DOM real além do padrão estático de source-contract.
+  - com o safety net contratual entregue, a próxima fase segura deixa de ser observacional e passa a ser a primeira extração de baixo risco: schema e constantes.
+- arquivos alterados:
+  - `tests/kc-create-post-contract.test.js` (NOVO, 17 testes)
+  - `README.md` (ALTERADO)
+  - `RELATORIO-KINOCAMPUS-V11.md` (ALTERADO)
+- resultado dos testes:
+  baseline elevada para `81/81` suites e `1320/1320` testes; hygiene `8.6.0`.
+- próximas fases:
+  `v11.31.2` (schema/constantes) -> `v11.31.3` (mídia/imagens) -> `v11.31.4` (resolvers de domínio) -> `v11.31.5` (modal/render) -> `v11.31.6` (submit/edit) -> `v11.31.7` (core residual e estabilização final).
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
