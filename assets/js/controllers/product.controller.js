@@ -13,7 +13,6 @@
   let currentPost = null;
   let currentUser = null;
   let currentProfile = null;
-  let editUI = null;
   let staticInteractionsBound = false;
   const shared = window.KCAccountProfileUtils || {};
   let sellerStatsRequestToken = 0;
@@ -223,19 +222,6 @@
   }
 
   // ── Badge "editado" ──────────────────────────────────────
-  function markPostAsEdited() {
-    // Adiciona indicador abaixo do título
-    const titleEl = document.getElementById('postTitle');
-    if (!titleEl) return;
-    const existing = document.getElementById('kcEditedBadge');
-    if (existing) return;
-    const badge = document.createElement('div');
-    badge.id = 'kcEditedBadge';
-    badge.className = 'kc-post-edited-badge';
-    badge.innerHTML = '<i class="fas fa-pen-to-square"></i> Editado';
-    titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
-  }
-
   function getParam(name) {
     const params = new URLSearchParams(window.location.search || '');
     return params.get(name);
@@ -1543,339 +1529,6 @@
     if (!post) return null;
     return post.uuid || post.id || null;
   }
-
-  function buildEditPayload(form, sourcePost) {
-    const tagsRaw = String(form.tags.value || '').trim();
-    const metadata = {
-      ...(sourcePost && sourcePost.metadata && typeof sourcePost.metadata === 'object' ? sourcePost.metadata : {}),
-      ...(form.subcategory.value ? { subcategory: String(form.subcategory.value).trim() } : {}),
-      ...(form.condition.value ? { condicao: String(form.condition.value).trim() } : {}),
-      ...(form.emoji.value ? { emoji: String(form.emoji.value).trim() } : {}),
-    };
-
-    if (tagsRaw) metadata.tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-    else delete metadata.tags;
-
-    return {
-      title: String(form.title.value || '').trim(),
-      description: String(form.description.value || '').trim(),
-      module: String(form.module.value || '').trim(),
-      category: String(form.category.value || '').trim(),
-      location: String(form.location.value || '').trim(),
-      price: String(form.price.value || '').trim(),
-      metadata,
-    };
-  }
-
-  function upsertOwnerActions(post, user) {
-    const actions = document.querySelector('.kc-product-actions');
-    if (!actions) return;
-
-    const canManage = isAuthor(post, user);
-    const existing = document.getElementById('ownerActionsWrap');
-    if (existing) existing.remove();
-    if (!canManage) return;
-
-    const wrap = document.createElement('div');
-    wrap.id = 'ownerActionsWrap';
-    wrap.style.cssText = 'grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;';
-
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.className = 'kc-btn-secondary';
-    editBtn.id = 'editPostButton';
-    editBtn.innerHTML = '<i class="fas fa-pen"></i> Editar';
-
-    // Status atual do post
-    const postStatus = String((post && (post.status || post.estado)) || 'published').toLowerCase();
-    const isHidden  = postStatus === 'hidden';
-    const isExpired = postStatus === 'expired';
-    const isPublished = postStatus === 'published';
-    const isPending = postStatus === 'pending'; // v9.3.2: auto-moderação
-
-    // ── Botão Desabilitar / Reativar (apenas para published/hidden) ────────
-    const toggleBtn = document.createElement('button');
-    toggleBtn.type = 'button';
-    toggleBtn.className = 'kc-btn-secondary';
-    toggleBtn.id = 'togglePostStatusButton';
-    toggleBtn.setAttribute('data-post-status', postStatus);
-    if (isExpired || isPending) {
-      toggleBtn.style.display = 'none'; // oculto para expirados e pendentes
-    } else {
-      toggleBtn.innerHTML = isHidden
-        ? '<i class="fas fa-eye"></i> Reativar anúncio'
-        : '<i class="fas fa-eye-slash"></i> Desabilitar anúncio';
-    }
-
-    // ── Botão Renovar Publicação (expirado OU hidden) ──────────────────────
-    const renewBtn = document.createElement('button');
-    renewBtn.type = 'button';
-    renewBtn.className = 'kc-btn-secondary';
-    renewBtn.id = 'renewPostButton';
-    renewBtn.innerHTML = '<i class="fas fa-rotate-right"></i> Renovar publicação';
-    renewBtn.style.display = (isExpired || isHidden) ? '' : 'none';
-
-    // ── Botão Impulsionar Hoje (apenas published) ──────────────────────────
-    const bumpBtn = document.createElement('button');
-    bumpBtn.type = 'button';
-    bumpBtn.className = 'kc-btn-secondary';
-    bumpBtn.id = 'bumpPostButton';
-    const bumpedAt = post && (post.bumped_at || post.bumpedAt);
-    const bumpCooldownMs = 1 * 24 * 60 * 60 * 1000;
-    const bumpReady = !bumpedAt || (Date.now() - new Date(bumpedAt).getTime() >= bumpCooldownMs);
-    bumpBtn.style.display = isPublished ? '' : 'none';
-    if (bumpReady) {
-      bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionar hoje';
-    } else {
-      const nextBump = new Date(new Date(bumpedAt).getTime() + bumpCooldownMs);
-      bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionar hoje';
-      bumpBtn.title = 'Próximo impulso disponível em ' + nextBump.toLocaleDateString('pt-BR');
-      bumpBtn.disabled = true;
-      bumpBtn.style.opacity = '0.55';
-    }
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'kc-btn-secondary';
-    deleteBtn.id = 'deletePostButton';
-    deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Excluir';
-
-    // ── Badge de status para o dono ────────────────────────────────────────
-    const ownerStatusBadge = document.getElementById('ownerStatusBadge');
-    if (ownerStatusBadge) ownerStatusBadge.remove();
-
-    if (isPending) {
-      // v9.3.2: badge de moderação automática
-      const badge = document.createElement('div');
-      badge.id = 'ownerStatusBadge';
-      badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.3);color:#93c5fd;font-size:.9em;margin-bottom:12px;';
-      badge.innerHTML = '<i class="fas fa-clock"></i><span>Esta publicação está <strong>em análise</strong> pela moderação e não aparece nos feeds ainda. Você será notificado quando for aprovada.</span>';
-      const details = document.querySelector('.kc-product-details');
-      if (details) details.insertAdjacentElement('afterbegin', badge);
-    } else if (isHidden || isExpired) {
-      const badge = document.createElement('div');
-      badge.id = 'ownerStatusBadge';
-      if (isExpired) {
-        badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(244,67,54,.10);border:1px solid rgba(244,67,54,.30);color:#ef9a9a;font-size:.9em;margin-bottom:12px;';
-        const expiresAt = post && (post.expires_at || post.expiresAt);
-        const expiryStr = expiresAt ? ' em ' + new Date(expiresAt).toLocaleDateString('pt-BR') : '';
-        badge.innerHTML = '<i class="fas fa-calendar-xmark"></i><span>Este anúncio <strong>expirou</strong>' + expiryStr + ' e não aparece nos feeds. Renove-o para voltar a aparecer.</span>';
-      } else {
-        badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
-        badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este anúncio está <strong>desabilitado</strong> e não aparece nos feeds. Apenas você consegue ver esta página.</span>';
-      }
-      const details = document.querySelector('.kc-product-details');
-      if (details) details.insertAdjacentElement('afterbegin', badge);
-    } else if (isPublished) {
-      // Badge de validade quando expira em menos de 5 dias
-      const expiresAt = post && (post.expires_at || post.expiresAt);
-      if (expiresAt) {
-        const daysLeft = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000);
-        if (daysLeft <= 5 && daysLeft >= 0) {
-          const badge = document.createElement('div');
-          badge.id = 'ownerStatusBadge';
-          badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.35);color:#ffc107;font-size:.9em;margin-bottom:12px;';
-          badge.innerHTML = '<i class="fas fa-clock"></i><span>Seu anúncio <strong>expira em ' + daysLeft + (daysLeft === 1 ? ' dia' : ' dias') + '</strong>. Renove-o para continuar aparecendo nos feeds.</span>';
-          const details = document.querySelector('.kc-product-details');
-          if (details) details.insertAdjacentElement('afterbegin', badge);
-        }
-      }
-    }
-
-    wrap.appendChild(editBtn);
-    wrap.appendChild(bumpBtn);
-    wrap.appendChild(renewBtn);
-    wrap.appendChild(toggleBtn);
-    wrap.appendChild(deleteBtn);
-
-    const reportBtn = document.getElementById('reportButton');
-    if (reportBtn && reportBtn.parentNode === actions) actions.insertBefore(wrap, reportBtn);
-    else actions.appendChild(wrap);
-
-    editBtn.addEventListener('click', () => {
-      // Usa o kc-create-modal completo em modo edição, se disponível
-      if (typeof window.kcOpenEditPostModal === 'function') {
-        window.kcOpenEditPostModal(post, async (updatedData) => {
-          const next = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
-            ? window.KCPostModel.from(updatedData, { pageModule: updatedData.modulo || '', view: 'product' })
-            : updatedData;
-          renderPost(next);
-          markPostAsEdited();
-          // Log edição no audit_log
-          try {
-            const client = window.KCSupabase && window.KCSupabase.getClient ? window.KCSupabase.getClient() : null;
-            const uid = currentUser && currentUser.id;
-            if (client && uid) {
-              await client.from('audit_log').insert({
-                action: 'post_edited',
-                entity_type: 'posts',
-                entity_id: String(post.uuid || post.id || ''),
-                actor_id: uid,
-              });
-            }
-          } catch (_) { /* silent */ }
-        });
-        return;
-      }
-      // Fallback para o modal antigo
-      if (!editUI) editUI = buildEditUI();
-      editUI.open(post);
-    });
-
-    deleteBtn.addEventListener('click', async () => {
-      const confirmed = window.confirm('Tem certeza que deseja excluir esta publicação?');
-      if (!confirmed) return;
-
-      let res = null;
-      try {
-        if (window.KCAPI && typeof window.KCAPI.deletePost === 'function') {
-          res = await window.KCAPI.deletePost(getPostIdForMutation(post));
-        }
-      } catch (_) { }
-
-      if (res && res.ok) {
-        try { showToast('Publicação excluída com sucesso.', 'success', 2000); } catch (_) { }
-        setTimeout(() => { window.location.href = 'index.html'; }, 300);
-        return;
-      }
-
-      const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível excluir a publicação.';
-      try { showToast(msg, 'error', 2800); } catch (_) { }
-    });
-
-    toggleBtn.addEventListener('click', async () => {
-      if (toggleBtn.disabled) return;
-      toggleBtn.disabled = true;
-      const prevHTML = toggleBtn.innerHTML;
-      toggleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde…';
-
-      let res = null;
-      try {
-        if (window.KCAPI && typeof window.KCAPI.togglePostStatus === 'function') {
-          res = await window.KCAPI.togglePostStatus(getPostIdForMutation(post));
-        }
-      } catch (_) { }
-
-      toggleBtn.disabled = false;
-
-      if (res && res._kcError === 'POST_LIMIT_REACHED') {
-        toggleBtn.innerHTML = prevHTML;
-        const limitMsg = res.message || 'Você atingiu o limite de publicações ativas. Desabilite outra publicação antes de reativar esta.';
-        try { showToast(limitMsg, 'error', 4000); } catch (_) { }
-        return;
-      }
-
-      if (res && (res.ok || res.data)) {
-        const result = res.data || res;
-        const newStatus = String(result.new_status || result.status || '').toLowerCase();
-        const nowHidden = newStatus === 'hidden' || newStatus === 'desabilitado';
-
-        // Update button
-        toggleBtn.setAttribute('data-post-status', nowHidden ? 'hidden' : 'published');
-        toggleBtn.innerHTML = nowHidden
-          ? '<i class="fas fa-eye"></i> Reativar anúncio'
-          : '<i class="fas fa-eye-slash"></i> Desabilitar anúncio';
-
-        // Update in-memory post status
-        if (currentPost) {
-          currentPost.status = nowHidden ? 'hidden' : 'published';
-          currentPost.estado = currentPost.status;
-        }
-
-        // Update owner badge
-        const existingBadge = document.getElementById('ownerStatusBadge');
-        if (existingBadge) existingBadge.remove();
-        if (nowHidden) {
-          const badge = document.createElement('div');
-          badge.id = 'ownerStatusBadge';
-          badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
-          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este anúncio está <strong>desabilitado</strong> e não aparece nos feeds. Apenas você consegue ver esta página.</span>';
-          const details = document.querySelector('.kc-product-details');
-          if (details) details.insertAdjacentElement('afterbegin', badge);
-        }
-
-        const toastMsg = nowHidden ? 'Anúncio desabilitado com sucesso.' : 'Anúncio reativado com sucesso.';
-        try { showToast(toastMsg, 'success', 2500); } catch (_) { }
-        return;
-      }
-
-      // Generic error
-      toggleBtn.innerHTML = prevHTML;
-      const errMsg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível alterar o status do anúncio.';
-      try { showToast(errMsg, 'error', 2800); } catch (_) { }
-    });
-
-    renewBtn.addEventListener('click', async () => {
-      if (renewBtn.disabled) return;
-      renewBtn.disabled = true;
-      const prevHTML = renewBtn.innerHTML;
-      renewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renovando…';
-
-      let res = null;
-      try {
-        if (window.KCAPI && typeof window.KCAPI.renewPost === 'function') {
-          res = await window.KCAPI.renewPost(getPostIdForMutation(post));
-        }
-      } catch (_) { }
-
-      renewBtn.disabled = false;
-
-      if (res && (res._kcError === 'POST_LIMIT_REACHED' || res.code === 'LIMIT_REACHED')) {
-        renewBtn.innerHTML = prevHTML;
-        try { showToast(res.message || 'Limite de publicações ativas atingido.', 'error', 4500); } catch (_) { }
-        return;
-      }
-
-      if (res && res.ok) {
-        if (currentPost) { currentPost.status = 'published'; currentPost.estado = 'published'; }
-        // Oculta Renovar, mostra Desabilitar e Impulsionar
-        renewBtn.style.display = 'none';
-        toggleBtn.style.display = '';
-        toggleBtn.setAttribute('data-post-status', 'published');
-        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Desabilitar anúncio';
-        bumpBtn.style.display = '';
-        // Remove badge de expirado/oculto
-        const existingBadge = document.getElementById('ownerStatusBadge');
-        if (existingBadge) existingBadge.remove();
-        try { showToast(res.message || 'Publicação renovada! Disponível por mais 30 dias.', 'success', 3000); } catch (_) { }
-        return;
-      }
-
-      renewBtn.innerHTML = prevHTML;
-      const msg = (res && res.message) || (res && res.error && res.error.message) || 'Não foi possível renovar a publicação.';
-      try { showToast(msg, 'error', 2800); } catch (_) { }
-    });
-
-    bumpBtn.addEventListener('click', async () => {
-      if (bumpBtn.disabled) return;
-      bumpBtn.disabled = true;
-      const prevHTML = bumpBtn.innerHTML;
-      bumpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Impulsionando…';
-
-      let res = null;
-      try {
-        if (window.KCAPI && typeof window.KCAPI.bumpPost === 'function') {
-          res = await window.KCAPI.bumpPost(getPostIdForMutation(post));
-        }
-      } catch (_) { }
-
-      if (res && res.ok) {
-        bumpBtn.disabled = true;
-        bumpBtn.style.opacity = '0.55';
-        bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionado!';
-        if (currentPost) { currentPost.bumped_at = new Date().toISOString(); }
-        try { showToast(res.message || 'Anúncio impulsionado com sucesso!', 'success', 3000); } catch (_) { }
-        return;
-      }
-
-      bumpBtn.disabled = false;
-      bumpBtn.style.opacity = '';
-      bumpBtn.innerHTML = prevHTML;
-      const msg = (res && res.message) || (res && res.error && res.error.message) || 'Não foi possível impulsionar agora.';
-      try { showToast(msg, res && res.code === 'COOLDOWN_ACTIVE' ? 'warn' : 'error', 3500); } catch (_) { }
-    });
-  }
-
   function renderPost(post) {
     currentPost = post;
     window.kcCurrentPostContext = post;
@@ -1904,7 +1557,12 @@
     if (window._KCProduct.related && typeof window._KCProduct.related.setRelated === 'function') {
       window._KCProduct.related.setRelated(post, !!(currentUser && currentUser.id));
     }
-    upsertOwnerActions(post, currentUser);
+    if (window._KCProduct.edit && typeof window._KCProduct.edit.upsertOwnerActions === 'function') {
+      window._KCProduct.edit.upsertOwnerActions(post, currentUser, {
+        renderPost: renderPost,
+        getCurrentUser: function () { return currentUser; }
+      });
+    }
     renderAuthorAnalytics(post, currentUser);
     if (window._KCProduct.save && typeof window._KCProduct.save.bindSavedActions === 'function') {
       window._KCProduct.save.bindSavedActions(post, function () { return currentUser; });
@@ -2065,135 +1723,8 @@
       window.renderComments(id, 'commentsContainer');
     }
   }
-
-  function buildEditUI() {
-    const overlay = document.createElement('div');
-    overlay.className = 'kc-modal-overlay';
-    overlay.style.display = 'none';
-
-    const modal = document.createElement('div');
-    modal.className = 'kc-create-modal';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-
-    modal.innerHTML = `
-      <div class="kc-create-modal-header">
-        <h2 class="kc-create-modal-title">Editar publicação</h2>
-        <button type="button" class="kc-modal-close" aria-label="Fechar">×</button>
-      </div>
-      <div class="kc-create-modal-body">
-        <div class="kc-form-group"><label>Título</label><input class="kc-input" name="title" /></div>
-        <div class="kc-form-group"><label>Descrição</label><textarea class="kc-input" name="description" rows="4"></textarea></div>
-        <div class="kc-form-group"><label>Preço</label><input class="kc-input" name="price" placeholder="Ex.: 99,90" /></div>
-        <div class="kc-form-group"><label>Localização</label><input class="kc-input" name="location" /></div>
-        <div class="kc-form-group"><label>Módulo</label><input class="kc-input" name="module" /></div>
-        <div class="kc-form-group"><label>Categoria</label><input class="kc-input" name="category" /></div>
-        <div class="kc-form-group"><label>Subcategoria</label><input class="kc-input" name="subcategory" /></div>
-        <div class="kc-form-group"><label>Condição</label><input class="kc-input" name="condition" /></div>
-        <div class="kc-form-group"><label>Emoji</label><input class="kc-input" name="emoji" maxlength="4" /></div>
-        <div class="kc-form-group"><label>Tags (vírgula)</label><input class="kc-input" name="tags" /></div>
-        <div class="kc-create-actions">
-          <button type="button" class="kc-btn-secondary" data-action="cancel">Cancelar</button>
-          <button type="button" class="kc-btn-primary" data-action="save">Salvar</button>
-        </div>
-        <div data-role="status" style="margin-top:8px;color:var(--text-muted, #64748b);"></div>
-      </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    const closeBtn = modal.querySelector('.kc-modal-close');
-    const cancelBtn = modal.querySelector('[data-action="cancel"]');
-    const saveBtn = modal.querySelector('[data-action="save"]');
-    const status = modal.querySelector('[data-role="status"]');
-
-    const form = {
-      title: modal.querySelector('[name="title"]'),
-      description: modal.querySelector('[name="description"]'),
-      price: modal.querySelector('[name="price"]'),
-      location: modal.querySelector('[name="location"]'),
-      module: modal.querySelector('[name="module"]'),
-      category: modal.querySelector('[name="category"]'),
-      subcategory: modal.querySelector('[name="subcategory"]'),
-      condition: modal.querySelector('[name="condition"]'),
-      emoji: modal.querySelector('[name="emoji"]'),
-      tags: modal.querySelector('[name="tags"]'),
-    };
-
-    let editingPost = null;
-
-    function close() {
-      overlay.style.display = 'none';
-      status.textContent = '';
-      saveBtn.disabled = false;
-      cancelBtn.disabled = false;
-    }
-
-    function open(post) {
-      editingPost = post;
-      const md = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
-      form.title.value = post.titulo || post.title || '';
-      form.description.value = post.descricao || post.description || '';
-      form.price.value = (post.preco != null) ? String(post.preco) : '';
-      form.location.value = post.location || '';
-      form.module.value = post.modulo || post.module || '';
-      form.category.value = post.category || post.categoria || '';
-      form.subcategory.value = post.subcategoria || md.subcategory || '';
-      form.condition.value = post.condicao || md.condicao || '';
-      form.emoji.value = post.emoji || md.emoji || '';
-      const tags = Array.isArray(post.tags) ? post.tags : (Array.isArray(md.tags) ? md.tags : []);
-      form.tags.value = tags.join(', ');
-
-      overlay.style.display = 'flex';
-      try { form.title.focus(); } catch (_) { }
-    }
-
-    async function save() {
-      if (!editingPost || !isAuthor(editingPost, currentUser)) {
-        status.textContent = 'Você não tem permissão para editar este post.';
-        return;
-      }
-
-      saveBtn.disabled = true;
-      cancelBtn.disabled = true;
-      status.textContent = 'Salvando...';
-
-      const payload = buildEditPayload(form, editingPost);
-      let res = null;
-      try {
-        if (window.KCAPI && typeof window.KCAPI.updatePost === 'function') {
-          res = await window.KCAPI.updatePost(getPostIdForMutation(editingPost), payload);
-        }
-      } catch (_) { }
-
-      if (res && res.ok && res.data) {
-        const next = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
-          ? window.KCPostModel.from(res.data, { pageModule: (res.data && res.data.modulo) || '', view: 'product' })
-          : res.data;
-        renderPost(next);
-        try { showToast('Publicação atualizada com sucesso.', 'success', 2000); } catch (_) { }
-        close();
-        return;
-      }
-
-      const msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Não foi possível atualizar a publicação.';
-      status.textContent = msg;
-      try { showToast(msg, 'error', 2400); } catch (_) { }
-      saveBtn.disabled = false;
-      cancelBtn.disabled = false;
-    }
-
-    closeBtn.addEventListener('click', close);
-    cancelBtn.addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-    saveBtn.addEventListener('click', save);
-
-    return { open, close };
-  }
-
-  // ─── Reports UI extraído para product.report.js (v11.30.10) ──────────────
-  // window._KCProduct.report.wireReportButton(ctx) — carregado após este arquivo.
+  // Reports UI extraido para product.report.js (v11.30.10)
+  // window._KCProduct.report.wireReportButton(ctx) - carregado apos este arquivo.
   window._KCProduct.report = window._KCProduct.report || {};
 
   // window._KCProduct.related.setRelated(post, viewerAuthenticated) — carregado após este arquivo.
@@ -2207,6 +1738,9 @@
 
   // window._KCProduct.ratings.refreshSellerRatingUI(...) / normalizeSellerRatingSummary(...) - carregado apos este arquivo.
   window._KCProduct.ratings = window._KCProduct.ratings || {};
+
+  // window._KCProduct.edit.upsertOwnerActions(post, user, context) - carregado apos este arquivo.
+  window._KCProduct.edit = window._KCProduct.edit || {};
 
   document.addEventListener('DOMContentLoaded', () => {
     bindProductGlobalKeydown();
