@@ -2852,6 +2852,10 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
   baseline mantida em `87/87` suites e `1672/1672` testes; hygiene alvo segue `8.6.0`.
 - validacao operacional:
   `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validacao em navegador:
+  preview pos-merge `dpl_EF6yro4E22Y8BqsTuWdKoVnUXBb6` ficou `READY` no alias de branch `kino-campus-git-kinocampus-v110-a67b39-yannakamurabrs-projects.vercel.app`; a base foi promovida para producao em `dpl_8Djt31VtwyKEfAfD9jGA5RuqgR7i`, e o smoke HTTP confirmou `200` em `https://www.kinocampus.com.br/?ts=1776464300`, `https://www.kinocampus.com.br/compra-venda-feed.html?ts=1776464301`, `https://www.kinocampus.com.br/create-post.html?ts=1776464302` e `https://www.kinocampus.com.br/_product.html?id=1&ts=1776464304`.
+- PR \ commit \ deploy:
+  PR `#370` — squash merge `41689a2` — preview pos-merge `dpl_EF6yro4E22Y8BqsTuWdKoVnUXBb6` — producao `dpl_8Djt31VtwyKEfAfD9jGA5RuqgR7i` (promote via `vercel promote`), smoke HTTP `200`.
 - próximas fases:
   `v11.32.1` (suite estatica do contrato publico de `window.KCAPI`) -> `v11.32.2` (split `notifications`) -> `v11.32.3` (split `saved/highlights`) -> `v11.32.4` (split `help/invites`) -> `v11.32.5` (split `posts-read`) -> `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
 
