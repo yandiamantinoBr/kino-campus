@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 08 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2` e `v11.24.3` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs e agora o release gate final da rodada principal da v11, a trilha de i18n v11.24.x com kc-i18n.js e integracao nos componentes core e templates dinamicos, o planejamento formal do backlog v11.25–v11.30 e a consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12` (`v11.25.0` e `v11.25.1` concluidas), split do monolito `supabase.adapter.js` concluido (10/10 grupos, acumulado −3621L), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` **encerrada** com 6 extrações estruturais de `kc-create-post.js`: media (`v11.31.3`), resolvers (`v11.31.4`), fields (`v11.31.5`), submit (`v11.31.6`), render/modal (`v11.31.7` — ultima, core reduzido a `648L`, meta <700L ✓); baseline `87/87` suites e `1672/1672` testes |
+| Estado desta fase | execução iniciada; iterações `v11.1.0`, `v11.2.0`, `v11.2.1`, `v11.3.0`, `v11.4.0`, `v11.5.0`, `v11.6.0`, `v11.7.0`, `v11.8.0`, `v11.9.0`, `v11.10.0`, `v11.11.0`, `v11.11.1`, `v11.12.0`, `v11.13.0`, `v11.13.1`, `v11.14.0`, `v11.15.0`, `v11.15.1`, `v11.15.2`, `v11.16.0`, `v11.17.0`, `v11.18.0`, `v11.19.0`, `v11.19.1`, `v11.20.0`, `v11.20.1`, `v11.20.2`, `v11.21.0`, `v11.21.1`, `v11.22.0`, `v11.23.0`, `v11.24.0`, `v11.24.1`, `v11.24.2`, `v11.24.3`, `v11.25.0`, `v11.25.1`, `v11.25.2`, `v11.26.0`, `v11.26.1`, `v11.26.2`, `v11.27.0`, `v11.27.1`, `v11.27.2`, `v11.27.3`, `v11.28.0`, `v11.28.1`, `v11.28.2`, `v11.29.0`, `v11.29.1`, `v11.30.0`, `v11.30.1`, `v11.30.2`, `v11.30.3`, `v11.30.4`, `v11.30.5`, `v11.30.6`, `v11.30.7`, `v11.30.8`, `v11.30.9`, `v11.30.10`, `v11.30.11`, `v11.30.12`, `v11.30.13`, `v11.30.14`, `v11.30.15`, `v11.30.16`, `v11.30.17`, `v11.30.18`, `v11.31.0`, `v11.31.1`, `v11.31.2`, `v11.31.3`, `v11.31.4`, `v11.31.5`, `v11.31.6`, `v11.31.7` e `v11.32.0` ja registradas, com baseline documental, consistencia do shell publico, desbloqueio operacional do Vercel MCP no Codex, normalizacao dos feeds equivalentes, correcao transversal do bootstrap de ranking dos modulos, hardening especifico para gestos/zoom do iOS Safari, paridade endurecida do driver local frente ao contrato moderno da `KCAPI`, fechamento da duplicacao residual em `localCreatePost`, introducao de hidratacao persistente com revalidacao silenciosa em ranking e votos, extensao controlada do mesmo padrao para analytics/comentarios da pagina de produto, limpeza estrutural de `kc-comments.js`, reformulacao do roadmap remanescente da v11 em uma sequencia executavel continua, avanco da macrofase de conta/onboarding/settings ate a hidratacao social deterministica de `account-setup`, a primeira rodada operacional dedicada ao Supabase Advisor com correcao versionada de RLS/performance, o planejamento formal da futura trilha de notificacoes multicanal, a primeira rodada funcional do shell in-app de notificacoes com limpeza explicita do dropdown, a persistencia segura de preferencias por evento/canal em camada privada separada, a fundacao assincrona de entrega externa com outbox/attempts, a promocao do canal de e-mail com dispatcher real, o canal privado de WhatsApp com destino dedicado, consentimento explicito, normalizacao E.164, rate limit operacional, o scheduler versionado do dispatcher com runtime privado, `pg_cron` e observabilidade de runs, o release gate final da rodada principal da v11, a trilha de i18n v11.24.x com kc-i18n.js e integracao nos componentes core e templates dinamicos, o planejamento formal do backlog v11.25-v11.30, a consolidacao do CHANGELOG com entrada formal `[11.0.0] - 2026-04-12`, o split do monolito `supabase.adapter.js` concluido (10/10 grupos, acumulado -3621L), a trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, a trilha `v11.31.x` encerrada com 6 extracoes estruturais de `kc-create-post.js` (core reduzido a `648L`, meta <700L ✓) e agora a nova trilha `v11.32.x` iniciada com a auditoria formal de `kc-api.client.js` e a formalizacao do gate operacional minimo de smoke/publicacao; baseline `87/87` suites e `1672/1672` testes |
 | Versão-alvo | v11 |
 | Escopo macro | auditoria técnica e correções seguras em frontend, backend Supabase, documentação, QA, deploy e governança |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v11 |
@@ -89,13 +89,13 @@ Arquivos que concentram muito comportamento e merecem prioridade alta na v11:
 
 | Área | Arquivo | Tamanho aprox. | Risco |
 |---|---|---:|---|
-| adapter dominante | `assets/js/adapters/supabase.adapter.js` | 147 KB | alto acoplamento com banco e contratos de API |
-| detalhe de publicação | `assets/js/controllers/product.controller.js` | 139 KB | UI crítica, comentários, ações, analytics, related posts |
-| criação de publicação | `assets/js/kc-create-post.js` | 108 KB | formulário central, schemas dinâmicos, upload e validação |
-| utilitários globais | `assets/js/kc-utils.js` | 96 KB | alto impacto transversal |
-| admin principal | `assets/js/controllers/admin-dashboard.controller.js` | 91 KB | KPIs, audit log, export, ranking |
-| fachada de API | `assets/js/kc-api.client.js` | 91 KB | compatibilidade entre local e Supabase |
-| design system global | `assets/css/styles.css` | 235 KB | alto risco de regressão visual transversal |
+| fachada de API | `assets/js/kc-api.client.js` | 105 KB | contrato publico transversal, fallback entre drivers, cache/SWR e alto numero de consumers |
+| utilitários globais | `assets/js/kc-utils.js` | 102 KB | blast radius transversal elevado em render, escaping, helpers de UI e resolvers |
+| admin principal | `assets/js/controllers/admin-dashboard.controller.js` | 94 KB | KPIs, audit log, ranking, export e acoplamento de tela unica |
+| adapter local | `assets/js/adapters/local.adapter.js` | 76 KB | paridade com `KCAPI`, fallback offline e mocks de comportamento |
+| perfil publico | `assets/js/controllers/profile.controller.js` | 56 KB | SWR, feed de perfil, trilha publica/autenticada e dados sensiveis |
+| auth UI | `assets/js/kc-auth.ui.js` | 52 KB | login, dropdown, modal, i18n e guards globais |
+| design system global | `assets/css/styles.css` | 235 KB | alto risco de regressao visual transversal |
 
 ### 3.3. Sinais iniciais já detectados
 
@@ -2822,7 +2822,38 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - PR \ commit \ deploy:
   PR `#369` — fast-forward merge — trilha `v11.31.x` encerrada.
 - próximas fases:
-  `kc-create-post.js` estável em `648L`. Trilha `v11.31.x` **encerrada**. Possíveis próximas trilhas: hardening adicional, novos módulos de funcionalidade, ou outra extração estrutural conforme roadmap.
+  `kc-create-post.js` estável em `648L`. Trilha `v11.31.x` **encerrada**. Próxima linha recomendada: auditoria do hotspot `kc-api.client.js`.
+
+### Iteração `v11.32.0`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-32-0-kc-api-audit-and-smoke-gate` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | auditoria tecnica + hardening documental/operacional |
+| Escopo | `docs/kc-api-client-audit-v11.32.md` (NOVO), `docs/qa/operational-smoke-gate-v11.32.md` (NOVO), `docs/qa/README.md`, `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  abrir formalmente a trilha `v11.32.x` sobre `assets/js/kc-api.client.js`, corrigindo o drift documental pos-`v11.31.7`, registrando um artefato de auditoria acionavel do facade `window.KCAPI` e definindo um gate operacional minimo de publicacao para as proximas iteracoes sem introduzir uma nova dependencia E2E no repositório.
+- resultado:
+  - **NOVO** `docs/kc-api-client-audit-v11.32.md` — auditoria factual do hotspot `assets/js/kc-api.client.js`, com footprint real (`2520L`, `105563` bytes), `22` HTMLs carregadores, `100` membros exportados no facade (`91` callable), mapa de dominios internos, consumers runtime mais sensiveis, invariantes da trilha e sequencia recomendada `v11.32.1`–`v11.32.7`.
+  - **NOVO** `docs/qa/operational-smoke-gate-v11.32.md` — gate operacional minimo da trilha, formalizando o uso combinado de Jest + hygiene + `vercel inspect` + smoke HTTP `200` e browser smoke quando o ambiente permitir.
+  - **ALTERADO** `docs/qa/README.md` — indice de QA atualizado para incluir o novo gate operacional.
+  - **ALTERADO** `tests/kc-create-post-render.test.js` — janela de `slice(...)` ampliada no bloco de export de namespace `window._KCCreatePost.render`, removendo uma falha estatica espuria da baseline sem alterar runtime.
+  - **ALTERADO** `README.md` — status da base, entregas recentes e progresso atual alinhados ao estado real pos-`v11.31.7`, com a nova trilha `v11.32.x` aberta oficialmente.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — estado macro, tabela de hotspots e backlog atualizados para refletir o encerramento da trilha `v11.31.x` e a abertura da nova rodada em `kc-api.client.js`.
+- achados principais:
+  - `assets/js/kc-api.client.js` passou a ser o principal hotspot compartilhado remanescente da plataforma, acima de `kc-utils.js` e `admin-dashboard.controller.js`.
+  - o facade `window.KCAPI` carrega contrato transversal de drivers, caches e consumidores; por isso, a ordem segura de split comeca por grupos folha (`notifications`, `saved/highlights`, `help/invites`) antes de `posts-read`, `comments/votes` e `profile/auth`.
+  - a malha minima de regressao da trilha `v11.32.x` passa por `kc-comments.js`, `profile.controller.js`, `settings.controller.js`, `product.controller.js`, `account-setup.controller.js`, `kc-auth.ui.js`, `create-post.controller.js`, `kc-create-post.submit.js`, `kc-core.js`, `kc-search.js` e `kc-notifications.js`.
+  - o gate operacional da trilha fica formalizado sem adicionar Playwright ao `package.json`; browser verification continua opcional por ambiente, mas `READY` no Vercel e smoke HTTP passam a ser obrigatorios no fechamento de cada fase.
+  - a baseline desta rodada nao estava integralmente verde: `tests/kc-create-post-render.test.js` falhava por truncar o export `ensureCreateModal` no `slice(...)`; a correção ficou restrita ao proprio teste, sem tocar interface nem runtime.
+- resultado dos testes:
+  baseline mantida em `87/87` suites e `1672/1672` testes; hygiene alvo segue `8.6.0`.
+- validacao operacional:
+  `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- próximas fases:
+  `v11.32.1` (suite estatica do contrato publico de `window.KCAPI`) -> `v11.32.2` (split `notifications`) -> `v11.32.3` (split `saved/highlights`) -> `v11.32.4` (split `help/invites`) -> `v11.32.5` (split `posts-read`) -> `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
 
 ---
 
@@ -2836,9 +2867,9 @@ Este backlog é inicial e poderá ser refinado nas próximas iterações aprovad
    - referências legadas tratadas como ativas
 
 2. **Hotspots monolíticos**
-   - `supabase.adapter.js`
-   - `product.controller.js`
-   - `kc-create-post.js`
+   - `kc-api.client.js`
+   - `kc-utils.js`
+   - `admin-dashboard.controller.js`
    - `styles.css`
 
 3. **Paridade entre equivalentes**
@@ -2847,8 +2878,8 @@ Este backlog é inicial e poderá ser refinado nas próximas iterações aprovad
    - diferenças entre local e Supabase
 
 4. **Cobertura de regressão**
-   - controllers críticos ainda dependem fortemente de smoke manual
-   - pouca cobertura direta sobre interações visuais e fluxos de página
+   - controllers críticos ainda dependem fortemente de smoke operacional publicado
+   - a trilha `v11.32.x` passa a usar `docs/qa/operational-smoke-gate-v11.32.md` como gate minimo
 
 5. **Contrato banco ↔ frontend ↔ docs**
    - revisar RPC catalog, schema docs, migrations recentes e callers do frontend

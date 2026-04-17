@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.31.7`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes elevada para 87/87 suites e 1672/1672 testes em `v11.31.7`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, e a trilha `v11.31.x` **encerrada** com a sexta (e última) extração estrutural de `kc-create-post.js`: render/modal (6 funções, ~638L) externalizado para `kc-create-post.render.js` via `window._KCCreatePost.render`; núcleo reduzido a 648L (meta <700L ✓).
+**Status atual:** v11 executada até `v11.32.0`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes mantida em 87/87 suites e 1672/1672 testes, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, trilha `v11.31.x` encerrada com a sexta (e última) extração estrutural de `kc-create-post.js`, e a nova trilha `v11.32.x` **iniciada** com a auditoria formal de `kc-api.client.js` e a formalização do gate operacional mínimo de smoke/publicação.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.32.0 | abertura formal da nova trilha de hotspot em `assets/js/kc-api.client.js`: auditoria dedicada em `docs/kc-api-client-audit-v11.32.md` com footprint real (`2520L`, `105563` bytes, `100` membros exportados, `91` callable), mapa dos domínios internos, consumers críticos e sequência recomendada `v11.32.1`–`v11.32.7`; formalização do gate operacional mínimo em `docs/qa/operational-smoke-gate-v11.32.md` sem adicionar nova stack E2E ao repo; correção do drift documental do estado/progresso pós-`v11.31.7` e hardening pontual do teste estático `kc-create-post-render.test.js` para remover a fragilidade do `slice(...)` no bloco de namespace | `a registrar no fechamento` |
 | v11.31.7 | sexta (e última) extração estrutural de `assets/js/kc-create-post.js`: 6 funções de render/modal (`_kcFormatDescriptionField`, `_kcUpdateDescPreview`, `kcCreateSustainSectionHtml`, `kcCreateVisibilitySectionHtml`, `kcEnsureCreateModal`, `kcRenderCreateModal`) movidas para o novo IIFE `assets/js/kc-create-post.render.js` via `window._KCCreatePost.render`; lazy accessors `_getModalId()`, `_getModules()`, `_getVisibilityOptions()` desacoplam render module das `const` locais do core; `_getState()` usado em cada handler de evento para acesso seguro ao estado compartilhado; stubs `_kcRenderModule()` no core; nova suíte `tests/kc-create-post-render.test.js` (87 testes); `kc-create-post.js` reduzido de `1260L` para `648L` (meta <700L ✓); `12` HTMLs carregam o novo asset; baseline sobe para `87/87` suites e `1672/1672` testes | `#369` |
 | v11.31.6 | quinta extração estrutural de `assets/js/kc-create-post.js`: `kcHandleCreateSubmit` (pipeline completo de submit/edição — 707L) movido para o novo IIFE `assets/js/kc-create-post.submit.js` via `window._KCCreatePost.submit`; acesso a `kcCreateState` via `_getState()`; todos os globals de API e resolvers acessados diretamente do scope do browser; stubs `_kcSubmitModule()` + delegação lazy async no core; `tests/kc-create-post-contract.test.js` e `tests/kc-create-post-active-fields.test.js` atualizados para verificar contratos no sub-módulo; nova suíte `tests/kc-create-post-submit.test.js` (68 testes); `kc-create-post.js` reduzido de `1959L` para `1260L` (−699L); `12` HTMLs carregam o novo asset; baseline sobe para `86/86` suites e `1598/1598` testes | `#368` |
 | v11.31.5 | quarta extração estrutural de `assets/js/kc-create-post.js`: `kcBuildFieldsForModule` (geração de campos dos 6 módulos — 163L) movida para o novo IIFE `assets/js/kc-create-post.fields.js` via `window._KCCreatePost.fields`; acesso defensivo a `window._KCCreatePost.resolvers` via `_getResolvers()` com fallbacks `[]`; stub `_kcFieldsModule()` + delegação lazy no core; `tests/kc-create-post-active-fields.test.js` atualizado para carregar o sub-módulo via eval; nova suíte `tests/kc-create-post-fields.test.js` (71 testes); `kc-create-post.js` reduzido de `2113L` para `1959L` (−154L); `12` HTMLs carregam o novo asset; baseline sobe para `85/85` suites e `1530/1530` testes | `#367` |
@@ -130,18 +131,21 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.31.4`
-- objetivo da iteracao: extrair os 25 resolvers/normalizadores de domínio de `kc-create-post.js` para um IIFE dedicado `kc-create-post.resolvers.js`, reduzindo o monolito sem quebrar contratos
-- natureza da iteracao: extração estrutural com delegação via namespace `window._KCCreatePost.resolvers`
-- regressao: `84/84` suites, `1459/1459` testes, hygiene `8.6.0`
-- deploy de producao validado desta fase: `dpl_HPWxVQNXF2c6yEdySMuEqsWsipw4` (`www.kinocampus.com.br`) — promovido de PR `#365`, smoke HTTP 200
+- iteracao ativa consolidada: `v11.32.0`
+- objetivo da iteracao: abrir a nova trilha de hotspot em `kc-api.client.js` com uma auditoria factual do facade `window.KCAPI`, corrigindo o drift documental pos-`v11.31.7` e formalizando um gate operacional minimo de publicacao
+- natureza da iteracao: auditoria tecnica + hardening documental/operacional, sem mudanca de runtime
+- regressao: `87/87` suites, `1672/1672` testes, hygiene `8.6.0`
+- artefatos centrais:
+  - `docs/kc-api-client-audit-v11.32.md`
+  - `docs/qa/operational-smoke-gate-v11.32.md`
 - achados desta rodada:
-  - as 3 funções de sync DOM (`kcSyncHousingRegionInput`, `kcSyncHousingFeatureField`, `kcSyncLostFoundLocationInput`) que escrevem em `kcCreateState.values` passam a usar `_getState()` → `window._KCCreatePost._state`, sem remover a funcionalidade
-  - 25 stubs de delegação com fallbacks seguros (arrays vazios, objetos neutros) garantem que o core não lança exceções quando o módulo não está carregado
-  - `kc-create-post.js` reduzido de `2342L` (v11.31.3 baseline efetivo) para `2113L` (−229L)
-- proxima iteracao sugerida: `v11.31.5`, para extrair geração de campos e render do modal de `kc-create-post.js`
-- artefato de handoff para continuidade externa: `docs/handoff-claude-code-v11.31.2.md`
-- trilha futura: `v11.31.x` (`v11.31.5` modal/render -> `v11.31.6` submit/edit -> `v11.31.7` core residual)
+  - `assets/js/kc-api.client.js` agora e o principal hotspot compartilhado remanescente da plataforma (`2520L`, `105563` bytes)
+  - a fachada `window.KCAPI` exporta `100` membros, dos quais `91` sao callable, e permanece carregada por `22` HTMLs da base principal
+  - a malha critica de consumers runtime desta trilha passa por `kc-comments.js`, `profile.controller.js`, `settings.controller.js`, `product.controller.js`, `account-setup.controller.js`, `kc-auth.ui.js`, `create-post.controller.js`, `kc-create-post.submit.js`, `kc-core.js`, `kc-search.js` e `kc-notifications.js`
+  - o gate de publicacao da trilha `v11.32.x` fica formalizado sem adicionar Playwright ao `package.json`: Jest + hygiene continuam como gate versionado, com `vercel inspect`/smoke HTTP e browser smoke quando o ambiente permitir
+  - a baseline real da base exigiu um hardening pequeno em `tests/kc-create-post-render.test.js`, ampliando a janela do `slice(...)` do bloco `window._KCCreatePost.render` para eliminar uma falha estatica espuria sem tocar runtime
+- proxima iteracao sugerida: `v11.32.1`, para congelar o contrato publico de `window.KCAPI` em uma suite estatica dedicada antes do primeiro split
+- trilha futura: `v11.32.x` (`v11.32.1` contrato -> `v11.32.2` notifications -> `v11.32.3` saved/highlights -> `v11.32.4` help/invites -> `v11.32.5` posts-read -> `v11.32.6` comments/votes + hardening -> `v11.32.7` release gate)
 
 ---
 

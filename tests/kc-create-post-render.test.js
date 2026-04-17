@@ -350,37 +350,37 @@ describe('kc-create-post.render.js — registro de namespace', () => {
 
   test('expõe formatDescriptionField', () => {
     const idx = source.indexOf('window._KCCreatePost.render =');
-    const slice = source.slice(idx, idx + 300);
+    const slice = source.slice(idx, idx + 500);
     expect(slice).toContain('formatDescriptionField: _kcFormatDescriptionField,');
   });
 
   test('expõe updateDescPreview', () => {
     const idx = source.indexOf('window._KCCreatePost.render =');
-    const slice = source.slice(idx, idx + 300);
+    const slice = source.slice(idx, idx + 500);
     expect(slice).toContain('updateDescPreview: _kcUpdateDescPreview,');
   });
 
   test('expõe createSustainSectionHtml', () => {
     const idx = source.indexOf('window._KCCreatePost.render =');
-    const slice = source.slice(idx, idx + 300);
+    const slice = source.slice(idx, idx + 500);
     expect(slice).toContain('createSustainSectionHtml: kcCreateSustainSectionHtml,');
   });
 
   test('expõe createVisibilitySectionHtml', () => {
     const idx = source.indexOf('window._KCCreatePost.render =');
-    const slice = source.slice(idx, idx + 300);
+    const slice = source.slice(idx, idx + 500);
     expect(slice).toContain('createVisibilitySectionHtml: kcCreateVisibilitySectionHtml,');
   });
 
   test('expõe ensureCreateModal', () => {
     const idx = source.indexOf('window._KCCreatePost.render =');
-    const slice = source.slice(idx, idx + 300);
+    const slice = source.slice(idx, idx + 500);
     expect(slice).toContain('ensureCreateModal: kcEnsureCreateModal,');
   });
 
   test('expõe renderCreateModal', () => {
     const idx = source.indexOf('window._KCCreatePost.render =');
-    const slice = source.slice(idx, idx + 400);
+    const slice = source.slice(idx, idx + 500);
     expect(slice).toContain('renderCreateModal: kcRenderCreateModal,');
   });
 });
