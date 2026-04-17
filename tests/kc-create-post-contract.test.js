@@ -32,27 +32,21 @@ describe('kc-create-post — source shape', () => {
 });
 
 describe('kc-create-post — schema and constants', () => {
-  test('defines the modal id and the visibility options contract', () => {
-    expect(source).toContain("const KC_CREATE_MODAL_ID = 'kcCreatePostModalOverlay';");
-    expect(source).toContain('const KC_POST_VISIBILITY_OPTIONS = Object.freeze([');
+  test('consumes the extracted schema namespace with a defensive fallback', () => {
+    expect(source).toContain('window._KCCreatePost = window._KCCreatePost || {};');
+    expect(source).toContain('window._KCCreatePost.schema = window._KCCreatePost.schema || {};');
+    expect(source).toContain("const KC_CREATE_MODAL_ID = window._KCCreatePost.schema.modalId || 'kcCreatePostModalOverlay';");
+    expect(source).toContain('const KC_POST_VISIBILITY_OPTIONS = window._KCCreatePost.schema.visibilityOptions || Object.freeze([');
+    expect(source).toContain('const KC_CREATE_SCHEMA = window._KCCreatePost.schema.modules || Object.freeze({});');
     expect(source).toContain("value: 'community'");
     expect(source).toContain("value: 'public'");
   });
 
-  test('keeps the 6 module schemas in KC_CREATE_SCHEMA', () => {
-    expect(source).toContain("const KC_CREATE_SCHEMA = {");
-    expect(source).toContain("'compra-venda': {");
-    expect(source).toContain("'caronas': {");
-    expect(source).toContain("'moradia': {");
-    expect(source).toContain("'eventos': {");
-    expect(source).toContain("'achados-perdidos': {");
-    expect(source).toContain("'oportunidades': {");
-  });
-
-  test('keeps the compra-venda category contract including ingressos', () => {
-    expect(source).toContain("categoryGroupId: 'categoria'");
-    expect(source).toContain("{ key: 'ingressos', label: 'Ingressos' }");
-    expect(source).toContain("redirect: 'compra-venda-feed.html'");
+  test('guards the runtime if the extracted schema asset is unavailable', () => {
+    expect(source).toContain('let kcCreateSchemaWarningShown = false;');
+    expect(source).toContain('function kcHasCreateSchemaLoaded() {');
+    expect(source).toContain("console.error('[KinoCampus] kc-create-post schema unavailable.');");
+    expect(source).toContain("showToast('Não foi possível carregar o formulário agora. Recarregue a página.', 'error', 2600);");
   });
 });
 
@@ -83,6 +77,7 @@ describe('kc-create-post — render and active-field pipeline', () => {
 
   test('defines kcRenderCreateModal on top of schema, visibility and dynamic builders', () => {
     expect(source).toContain('function kcRenderCreateModal() {');
+    expect(source).toContain('if (!kcHasCreateSchemaLoaded()) return;');
     expect(source).toContain('Object.keys(KC_CREATE_SCHEMA).forEach((key) => {');
     expect(source).toContain('const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values);');
     expect(source).toContain('parts.push(kcCreateVisibilitySectionHtml());');
@@ -98,6 +93,7 @@ describe('kc-create-post — create/edit flow contracts', () => {
     expect(source).toContain("if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {");
     expect(source).toContain("window.KCOverlayLock.lock('create-post-modal');");
     expect(source).toContain('function kcOpenEditPostModal(post, callback) {');
+    expect(source).toContain('if (!kcHasCreateSchemaLoaded()) return kcNotifyCreateSchemaUnavailable();');
     expect(source).toContain('kcCreateState.editMode = true;');
     expect(source).toContain("kcCreateState.editPostId = String(post.uuid || post.id || post.legacyId || '');");
   });

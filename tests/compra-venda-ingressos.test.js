@@ -12,10 +12,10 @@ describe('compra-venda ingressos category', () => {
 
   test('controller and create modal schema recognize ingressos as a first-class category', () => {
     const controller = fs.readFileSync(path.resolve(__dirname, '..', 'assets/js/controllers/compra-venda-feed.controller.js'), 'utf8');
-    const createModal = fs.readFileSync(path.resolve(__dirname, '..', 'assets/js/kc-create-post.js'), 'utf8');
+    const createSchema = fs.readFileSync(path.resolve(__dirname, '..', 'assets/js/kc-create-post.schema.js'), 'utf8');
 
     expect(controller).toContain("{ key: 'ingressos', label: 'Ingressos'");
     expect(controller).toContain("if (key.includes('ingress')) return 'ingressos';");
-    expect(createModal).toContain("{ key: 'ingressos', label: 'Ingressos' }");
+    expect(createSchema).toContain("{ key: 'ingressos', label: 'Ingressos' }");
   });
 });
