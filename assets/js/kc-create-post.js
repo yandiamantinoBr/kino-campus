@@ -519,373 +519,144 @@ function kcTagLabel(schema, groupId, key) {
   return opt ? opt.label : '';
 }
 
-function kcNormalizeOpportunityTypeKey(value) {
-  const canonical = KCUtils && typeof KCUtils.canonicalCategory === 'function'
-    ? KCUtils.canonicalCategory(value)
-    : String(value || '').trim().toLowerCase();
+// ─── Resolvers de domínio: extraído para kc-create-post.resolvers.js (v11.31.4) ──
+// Stubs de delegação — lógica real em window._KCCreatePost.resolvers
 
-  if (!canonical) return '';
-  if (canonical.includes('estagio')) return 'estagio';
-  if (canonical.includes('emprego')) return 'emprego';
-  if (canonical.includes('freelancer')) return 'freelancer';
-  if (canonical.includes('monitor')) return 'monitoria';
-  if (canonical.includes('volunt')) return 'voluntariado';
-  return canonical;
+function _kcResolversModule() {
+  return window._KCCreatePost && window._KCCreatePost.resolvers;
+}
+
+function kcNormalizeOpportunityTypeKey(value) {
+  var r = _kcResolversModule();
+  return (r && typeof r.normalizeOpportunityTypeKey === 'function') ? r.normalizeOpportunityTypeKey(value) : '';
 }
 
 function kcGetOpportunityTypeOptionKey(value) {
-  const normalized = kcNormalizeOpportunityTypeKey(value);
-  if (normalized === 'estagio') return 'estagios';
-  if (normalized === 'emprego') return 'empregos';
-  return normalized;
+  var r = _kcResolversModule();
+  return (r && typeof r.getOpportunityTypeOptionKey === 'function') ? r.getOpportunityTypeOptionKey(value) : '';
 }
 
 function kcResolveOpportunityAreaValue(value, fallbackSource) {
-  const history = [];
-  if (Array.isArray(window.__KC_OPPORTUNITY_AREA_HISTORY)) history.push(...window.__KC_OPPORTUNITY_AREA_HISTORY);
-  if (kcUserPosts && typeof kcUserPosts.list === 'function') {
-    try {
-      const userPosts = kcUserPosts.list();
-      if (Array.isArray(userPosts)) {
-        history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'oportunidades'));
-      }
-    } catch (_) { }
-  }
-
-  if (KCUtils && typeof KCUtils.resolveOpportunityArea === 'function') {
-    const options = { history };
-    if (fallbackSource) options.textParts = [fallbackSource];
-    return KCUtils.resolveOpportunityArea(value || fallbackSource || '', options);
-  }
-
-  const raw = String(value || '').trim();
-  const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  return { key, label: raw, icon: 'fas fa-briefcase', isKnown: false };
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveOpportunityAreaValue === 'function')
+    ? r.resolveOpportunityAreaValue(value, fallbackSource)
+    : { key: '', label: String(value || ''), icon: 'fas fa-briefcase', isKnown: false };
 }
 
 function kcGetOpportunityAreaOptions() {
-  if (KCUtils && typeof KCUtils.getOpportunityAreaDefinitions === 'function') {
-    return KCUtils.getOpportunityAreaDefinitions();
-  }
-
-  return [
-    { key: 'tecnologia', label: 'Tecnologia', icon: 'fas fa-laptop-code' },
-    { key: 'marketing', label: 'Marketing', icon: 'fas fa-bullhorn' },
-    { key: 'design', label: 'Design', icon: 'fas fa-palette' },
-    { key: 'educacao', label: 'Educa\u00e7\u00e3o', icon: 'fas fa-graduation-cap' },
-    { key: 'musica', label: 'M\u00fasica', icon: 'fas fa-music' },
-  ];
-}
-
-function kcNormalizeHousingTypeKey(value) {
-  const canonical = KCUtils && typeof KCUtils.resolveHousingTypeKey === 'function'
-    ? KCUtils.resolveHousingTypeKey(value)
-    : String(value || '').trim().toLowerCase();
-
-  if (!canonical) return '';
-  if (canonical.includes('republic')) return 'republica';
-  if (canonical.includes('quart') || canonical.includes('suite')) return 'quarto';
-  if (canonical.includes('apart') || canonical.includes('kitnet')) return 'apartamento';
-  if (canonical.includes('casa')) return 'casa';
-  if (canonical.includes('procur')) return 'procurando';
-  return canonical;
-}
-
-function kcGetHousingTypeOptionKey(value) {
-  const normalized = kcNormalizeHousingTypeKey(value);
-  if (normalized === 'republica') return 'republicas';
-  if (normalized === 'quarto') return 'quartos';
-  if (normalized === 'apartamento') return 'apartamentos';
-  if (normalized === 'casa') return 'casas';
-  return normalized;
-}
-
-function kcParseStringArrayValue(value) {
-  if (KCUtils && typeof KCUtils.toStringArray === 'function') {
-    return KCUtils.toStringArray(value);
-  }
-  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
-  const raw = String(value || '').trim();
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed.map((item) => String(item || '').trim()).filter(Boolean);
-  } catch (_) { }
-  return raw.split(/[|,]\s*/).map((item) => String(item || '').trim()).filter(Boolean);
-}
-
-function kcSerializeHousingFeatureValues(values) {
-  return JSON.stringify(kcParseStringArrayValue(values));
-}
-
-function kcResolveHousingRegionValue(value, fallbackSource) {
-  const history = [];
-  if (Array.isArray(window.__KC_HOUSING_REGION_HISTORY)) history.push(...window.__KC_HOUSING_REGION_HISTORY);
-  if (kcUserPosts && typeof kcUserPosts.list === 'function') {
-    try {
-      const userPosts = kcUserPosts.list();
-      if (Array.isArray(userPosts)) {
-        history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'moradia'));
-      }
-    } catch (_) { }
-  }
-
-  if (KCUtils && typeof KCUtils.resolveHousingRegion === 'function') {
-    const options = { history };
-    if (fallbackSource) options.textParts = [fallbackSource];
-    return KCUtils.resolveHousingRegion(value || fallbackSource || '', options);
-  }
-
-  const raw = String(value || '').trim();
-  const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  return { key, label: raw, icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isKnown: false };
-}
-
-function kcGetHousingRegionOptions() {
-  if (KCUtils && typeof KCUtils.getHousingRegionDefinitions === 'function') {
-    return KCUtils.getHousingRegionDefinitions();
-  }
-
-  return [
-    { key: 'campus-samambaia', label: 'Campus Samambaia', icon: 'fas fa-university' },
-    { key: 'vila-itatiaia', label: 'Vila Itatiaia', icon: 'fas fa-map-pin' },
-    { key: 'sao-judas-tadeu', label: 'São Judas Tadeu', icon: 'fas fa-map-pin' },
-    { key: 'setor-universitario', label: 'Setor Universitário', icon: 'fas fa-map-pin' },
-    { key: 'setor-leste-universitario', label: 'Setor Leste Universitário', icon: 'fas fa-map-pin' },
-    { key: 'centro', label: 'Centro', icon: 'fas fa-map-pin' },
-  ];
-}
-
-function kcResolveHousingFeatureValues(values, fallbackSource) {
-  const explicitValues = kcParseStringArrayValue(values);
-  const history = [];
-  if (Array.isArray(window.__KC_HOUSING_FEATURE_HISTORY)) history.push(...window.__KC_HOUSING_FEATURE_HISTORY);
-  if (kcUserPosts && typeof kcUserPosts.list === 'function') {
-    try {
-      const userPosts = kcUserPosts.list();
-      if (Array.isArray(userPosts)) {
-        history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'moradia'));
-      }
-    } catch (_) { }
-  }
-
-  if (KCUtils && typeof KCUtils.resolveHousingFeatures === 'function') {
-    const source = explicitValues.length ? explicitValues : (fallbackSource || '');
-    const options = { history };
-    if (fallbackSource) options.textParts = [fallbackSource];
-    return KCUtils.resolveHousingFeatures(source, options);
-  }
-
-  return explicitValues.map((value) => ({
-    key: String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
-    label: String(value || '').trim(),
-    emoji: '\u{1F3F7}\uFE0F',
-    isKnown: false,
-  })).filter((entry) => entry.key && entry.label);
-}
-
-function kcGetHousingFeatureOptions() {
-  if (KCUtils && typeof KCUtils.getHousingFeatureDefinitions === 'function') {
-    return KCUtils.getHousingFeatureDefinitions();
-  }
-
-  return [
-    { key: 'aceita-pets', label: 'Aceita pets', emoji: '🐾' },
-    { key: 'lgbtqiapn', label: 'LGBTQIAPN+', emoji: '🌈' },
-    { key: 'apenas-mulheres', label: 'Apenas mulheres', emoji: '👩' },
-    { key: 'mobiliado', label: 'Mobiliado', emoji: '🛋️' },
-    { key: 'contas-inclusas', label: 'Contas inclusas', emoji: '💡' },
-    { key: 'proximo-ao-campus', label: 'Próximo ao campus' },
-  ];
-}
-
-function kcGetCaronasCampusOptions() {
-  var defs = (typeof KC_CONSTANTS !== 'undefined' && Array.isArray(KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS))
-    ? KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS : [];
-  return defs.map(function(d) { return { key: d.key, label: d.label, icon: d.icon || 'fas fa-map-pin' }; });
-}
-
-function kcGetCaronasFeatureOptions() {
-  return [
-    { key: 'ar-condicionado', label: 'Ar condicionado', emoji: '🚗' },
-    { key: 'aceita-pets', label: 'Aceita pets', emoji: '🐾' },
-    { key: 'som-musica', label: 'Som/Música', emoji: '🎵' },
-    { key: 'sem-fumar', label: 'Sem fumar', emoji: '🚭' },
-    { key: 'somente-mulheres', label: 'Somente mulheres', emoji: '👩' },
-    { key: 'quatro-mais-lugares', label: '4+ lugares', emoji: '💺' },
-    { key: 'ida-e-volta', label: 'Ida e volta', emoji: '🔄' },
-    { key: 'pontualidade', label: 'Pontualidade', emoji: '⏰' },
-    { key: 'preco-fixo', label: 'Preço fixo', emoji: '🏷️' },
-  ];
-}
-
-function kcResolveCaronasLocationValue(value) {
-  if (KCUtils && typeof KCUtils.resolveCaronasLocation === 'function') {
-    return KCUtils.resolveCaronasLocation(value || '');
-  }
-  return { key: '', label: value || '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isCampus: false, isKnown: false, source: 'fallback' };
-}
-
-function kcSyncHousingRegionInput(input) {
-  if (!input) return null;
-  var fieldName = input.getAttribute('name') || '';
-  var isCaronasField = (fieldName === 'origem' || fieldName === 'destino');
-  var resolved;
-  if (isCaronasField) {
-    resolved = kcResolveCaronasLocationValue(input.value || '');
-  } else {
-    resolved = kcResolveHousingRegionValue(input.value || '');
-  }
-  if (resolved && resolved.label) {
-    input.value = resolved.label;
-    kcCreateState.values[fieldName || input.name] = resolved.label;
-  }
-  return resolved;
-}
-
-function kcGetHousingFeatureFieldContext(element) {
-  return element && element.closest ? element.closest('[data-kc-housing-features-field="true"]') : null;
-}
-
-function kcResolveHousingFeatureEntries(values) {
-  return kcResolveHousingFeatureValues(values).map((entry) => ({
-    key: String(entry && entry.key || '').trim(),
-    label: String(entry && entry.label || '').trim(),
-    emoji: String(entry && entry.emoji || '').trim(),
-    isKnown: !!(entry && entry.isKnown),
-  })).filter((entry) => entry.key && entry.label);
-}
-
-function kcSyncHousingFeatureField(fieldRoot, values) {
-  const root = fieldRoot || null;
-  if (!root) return [];
-
-  const hidden = root.querySelector('[data-kc-housing-features-value]');
-  const list = root.querySelector('[data-kc-housing-features-selected]');
-  const pills = Array.from(root.querySelectorAll('[data-kc-housing-feature-suggestion]'));
-  const entries = kcResolveHousingFeatureEntries(values);
-  const labels = entries.map((entry) => entry.label);
-  const keys = new Set(entries.map((entry) => entry.key));
-
-  if (hidden) {
-    hidden.value = kcSerializeHousingFeatureValues(labels);
-    if (hidden.name) kcCreateState.values[hidden.name] = labels.slice();
-  }
-
-  if (list) {
-    list.innerHTML = entries.length
-      ? entries.map((entry) => (
-        '<button class="kc-field-chip" type="button" data-kc-housing-feature-remove="' + _esc(entry.key) + '" aria-label="Remover ' + _esc(entry.label) + '">' +
-          (entry.emoji ? '<span class="kc-field-chip__emoji">' + _esc(entry.emoji) + '</span>' : '') +
-          '<span>' + _esc(entry.label) + '</span>' +
-          '<i class="fas fa-times"></i>' +
-        '</button>'
-      )).join('')
-      : '<span class="kc-field-chip__empty">Nenhum marcador selecionado.</span>';
-  }
-
-  pills.forEach((pill) => {
-    const key = String(pill.getAttribute('data-kc-housing-feature-key') || '').trim();
-    const active = key && keys.has(key);
-    pill.classList.toggle('is-active', active);
-    pill.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
-
-  return entries;
-}
-
-function kcAppendHousingFeatureFromInput(input) {
-  const field = kcGetHousingFeatureFieldContext(input);
-  if (!field || !input) return;
-  const current = kcParseStringArrayValue((field.querySelector('[data-kc-housing-features-value]') || {}).value);
-  const nextValue = String(input.value || '').trim();
-  if (!nextValue) return;
-  kcSyncHousingFeatureField(field, current.concat(nextValue));
-  input.value = '';
-}
-
-function kcResolveLostFoundLocationValue(value, fallbackSource) {
-  const history = [];
-  if (Array.isArray(window.__KC_LOST_FOUND_LOCATION_HISTORY)) history.push(...window.__KC_LOST_FOUND_LOCATION_HISTORY);
-  if (kcUserPosts && typeof kcUserPosts.list === 'function') {
-    try {
-      const userPosts = kcUserPosts.list();
-      if (Array.isArray(userPosts)) {
-        history.push(...userPosts.filter((post) => String(post && post.modulo || '').toLowerCase() === 'achados-perdidos'));
-      }
-    } catch (_) { }
-  }
-
-  if (KCUtils && typeof KCUtils.resolveLostFoundLocation === 'function') {
-    const options = { history };
-    if (fallbackSource) options.textParts = [fallbackSource];
-    return KCUtils.resolveLostFoundLocation(value || fallbackSource || '', options);
-  }
-
-  const raw = String(value || '').trim();
-  const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  return { key, label: raw, icon: 'fas fa-map-marker-alt', emoji: '📍', isKnown: false };
-}
-
-function kcGetLostFoundLocationOptions() {
-  if (KCUtils && typeof KCUtils.getLostFoundLocationDefinitions === 'function') {
-    return KCUtils.getLostFoundLocationDefinitions();
-  }
-
-  return [
-    { key: 'biblioteca-central', label: 'Biblioteca Central', icon: 'fas fa-book', emoji: '📚' },
-    { key: 'restaurante-universitario', label: 'Restaurante Universitário', icon: 'fas fa-utensils', emoji: '🍽️' },
-    { key: 'estacionamento', label: 'Estacionamento', icon: 'fas fa-parking', emoji: '🅿️' },
-    { key: 'salas-de-aula', label: 'Salas de Aula', icon: 'fas fa-door-open', emoji: '🚪' },
-    { key: 'blocos-e-laboratorios', label: 'Blocos e Laboratórios', icon: 'fas fa-flask', emoji: '🧪' },
-    { key: 'centro-de-aulas', label: 'Centro de Aulas', icon: 'fas fa-school', emoji: '🏫' },
-    { key: 'praca-universitaria', label: 'Praça Universitária', icon: 'fas fa-landmark', emoji: '🏛️' },
-    { key: 'campus-samambaia', label: 'Campus Samambaia', icon: 'fas fa-tree', emoji: '🌳' },
-    { key: 'campus-colemar', label: 'Campus Colemar', icon: 'fas fa-graduation-cap', emoji: '🎓' },
-  ];
-}
-
-function kcSyncLostFoundLocationInput(input) {
-  if (!input) return null;
-  const resolved = kcResolveLostFoundLocationValue(input.value || '');
-  if (resolved && resolved.label) {
-    input.value = resolved.label;
-    kcCreateState.values[input.name] = resolved.label;
-  }
-  return resolved;
+  var r = _kcResolversModule();
+  return (r && typeof r.getOpportunityAreaOptions === 'function') ? r.getOpportunityAreaOptions() : [];
 }
 
 function kcResolveOpportunityWorkMode(value) {
-  const raw = String(value || '').trim();
-  const normalized = (KCUtils && typeof KCUtils.normalizeText === 'function')
-    ? KCUtils.normalizeText(raw)
-    : raw.toLowerCase();
-
-  if (!normalized) return { key: '', label: '' };
-  if (normalized.includes('hibrid')) return { key: 'hibrido', label: 'H\u00edbrido' };
-  if (normalized.includes('remot') || normalized.includes('home office')) return { key: 'remoto', label: 'Remoto' };
-  if (normalized.includes('presencial') || normalized.includes('onsite') || normalized.includes('on-site')) {
-    return { key: 'presencial', label: 'Presencial' };
-  }
-  return { key: '', label: raw };
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveOpportunityWorkMode === 'function') ? r.resolveOpportunityWorkMode(value) : { key: '', label: '' };
 }
 
 function kcResolveOpportunityRegime(value) {
-  const raw = String(value || '').trim();
-  const normalized = (KCUtils && typeof KCUtils.normalizeText === 'function')
-    ? KCUtils.normalizeText(raw)
-    : raw.toLowerCase();
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveOpportunityRegime === 'function') ? r.resolveOpportunityRegime(value) : { key: '', label: '' };
+}
 
-  if (!normalized) return { key: '', label: '' };
-  if (normalized.includes('clt')) return { key: 'clt', label: 'CLT' };
-  if (normalized.includes('pj')) return { key: 'pj', label: 'PJ' };
-  if (normalized.includes('tempor')) return { key: 'temporario', label: 'Tempor\u00e1rio' };
-  if (normalized.includes('aprendiz')) return { key: 'aprendiz', label: 'Jovem Aprendiz' };
-  if (normalized.includes('bolsa')) return { key: 'bolsa', label: 'Bolsa' };
-  return {
-    key: normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
-    label: raw,
-  };
+function kcNormalizeHousingTypeKey(value) {
+  var r = _kcResolversModule();
+  return (r && typeof r.normalizeHousingTypeKey === 'function') ? r.normalizeHousingTypeKey(value) : '';
+}
+
+function kcGetHousingTypeOptionKey(value) {
+  var r = _kcResolversModule();
+  return (r && typeof r.getHousingTypeOptionKey === 'function') ? r.getHousingTypeOptionKey(value) : '';
+}
+
+function kcParseStringArrayValue(value) {
+  var r = _kcResolversModule();
+  return (r && typeof r.parseStringArray === 'function') ? r.parseStringArray(value) : [];
+}
+
+function kcSerializeHousingFeatureValues(values) {
+  var r = _kcResolversModule();
+  return (r && typeof r.serializeHousingFeatureValues === 'function') ? r.serializeHousingFeatureValues(values) : '[]';
+}
+
+function kcResolveHousingRegionValue(value, fallbackSource) {
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveHousingRegionValue === 'function')
+    ? r.resolveHousingRegionValue(value, fallbackSource)
+    : { key: '', label: String(value || ''), icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isKnown: false };
+}
+
+function kcGetHousingRegionOptions() {
+  var r = _kcResolversModule();
+  return (r && typeof r.getHousingRegionOptions === 'function') ? r.getHousingRegionOptions() : [];
+}
+
+function kcResolveHousingFeatureValues(values, fallbackSource) {
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveHousingFeatureValues === 'function') ? r.resolveHousingFeatureValues(values, fallbackSource) : [];
+}
+
+function kcGetHousingFeatureOptions() {
+  var r = _kcResolversModule();
+  return (r && typeof r.getHousingFeatureOptions === 'function') ? r.getHousingFeatureOptions() : [];
+}
+
+function kcGetHousingFeatureFieldContext(element) {
+  var r = _kcResolversModule();
+  return (r && typeof r.getHousingFeatureFieldContext === 'function') ? r.getHousingFeatureFieldContext(element) : null;
+}
+
+function kcResolveHousingFeatureEntries(values) {
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveHousingFeatureEntries === 'function') ? r.resolveHousingFeatureEntries(values) : [];
+}
+
+function kcSyncHousingFeatureField(fieldRoot, values) {
+  var r = _kcResolversModule();
+  return (r && typeof r.syncHousingFeatureField === 'function') ? r.syncHousingFeatureField(fieldRoot, values) : [];
+}
+
+function kcAppendHousingFeatureFromInput(input) {
+  var r = _kcResolversModule();
+  if (r && typeof r.appendHousingFeatureFromInput === 'function') r.appendHousingFeatureFromInput(input);
+}
+
+function kcResolveCaronasLocationValue(value) {
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveCaronasLocationValue === 'function')
+    ? r.resolveCaronasLocationValue(value)
+    : { key: '', label: String(value || ''), icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isCampus: false, isKnown: false, source: 'fallback' };
+}
+
+function kcGetCaronasCampusOptions() {
+  var r = _kcResolversModule();
+  return (r && typeof r.getCaronasCampusOptions === 'function') ? r.getCaronasCampusOptions() : [];
+}
+
+function kcGetCaronasFeatureOptions() {
+  var r = _kcResolversModule();
+  return (r && typeof r.getCaronasFeatureOptions === 'function') ? r.getCaronasFeatureOptions() : [];
+}
+
+function kcSyncHousingRegionInput(input) {
+  var r = _kcResolversModule();
+  return (r && typeof r.syncHousingRegionInput === 'function') ? r.syncHousingRegionInput(input) : null;
+}
+
+function kcResolveLostFoundLocationValue(value, fallbackSource) {
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveLostFoundLocationValue === 'function')
+    ? r.resolveLostFoundLocationValue(value, fallbackSource)
+    : { key: '', label: String(value || ''), icon: 'fas fa-map-marker-alt', emoji: '\uD83D\uDCCD', isKnown: false };
+}
+
+function kcGetLostFoundLocationOptions() {
+  var r = _kcResolversModule();
+  return (r && typeof r.getLostFoundLocationOptions === 'function') ? r.getLostFoundLocationOptions() : [];
+}
+
+function kcSyncLostFoundLocationInput(input) {
+  var r = _kcResolversModule();
+  return (r && typeof r.syncLostFoundLocationInput === 'function') ? r.syncLostFoundLocationInput(input) : null;
 }
 
 // ─── Mídia / imagens: extraído para kc-create-post.media.js (v11.31.3) ──────
