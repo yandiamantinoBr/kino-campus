@@ -187,7 +187,7 @@
       const normalized = normalizeRelatedToken(tag);
       if (normalized) tokens.add(normalized);
     });
-    rawText.split(/[^a-zA-Z0-9À-ÿ]+/).forEach((token) => {
+    rawText.split(/[^a-zA-Z0-9\u00C0-\u00FF]+/).forEach((token) => {
       const normalized = normalizeRelatedToken(token);
       if (normalized && normalized.length >= 3) tokens.add(normalized);
     });
@@ -2248,7 +2248,21 @@
     return driver.updateAdminHelpRequest(id, patch);
   }
 
+  // Notifications split (v11.32.2)
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.notifications = window._KCAPI.notifications || {};
+
+  function getNotificationsModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const notifications = window._KCAPI.notifications;
+    return (notifications && typeof notifications === 'object') ? notifications : null;
+  }
+
   function buildFallbackNotificationPreferences() {
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.buildFallbackNotificationPreferences === 'function') {
+      return notificationsModule.buildFallbackNotificationPreferences({ accountProfileUtils: window.KCAccountProfileUtils });
+    }
     if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === 'function') {
       return window.KCAccountProfileUtils.buildDefaultNotificationPreferences();
     }
@@ -2263,6 +2277,10 @@
   }
 
   function buildFallbackNotificationChannelTargets() {
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.buildFallbackNotificationChannelTargets === 'function') {
+      return notificationsModule.buildFallbackNotificationChannelTargets({ accountProfileUtils: window.KCAccountProfileUtils });
+    }
     if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === 'function') {
       return window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets();
     }
@@ -2283,89 +2301,92 @@
   }
 
   async function getNotificationPreferences() {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.getNotificationPreferences !== 'function') {
-      return buildFallbackNotificationPreferences();
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.getNotificationPreferences === 'function') {
+      return notificationsModule.getNotificationPreferences({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
     }
-    return driver.getNotificationPreferences();
+    return buildFallbackNotificationPreferences();
   }
 
   async function updateNotificationPreferences(preferences = {}) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.updateNotificationPreferences !== 'function') {
-      return { ok: false, error: { message: 'PreferÃªncias de notificaÃ§Ã£o indisponÃ­veis neste driver.' } };
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.updateNotificationPreferences === 'function') {
+      return notificationsModule.updateNotificationPreferences(preferences, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
     }
-    return driver.updateNotificationPreferences(preferences);
+    return { ok: false, error: { message: 'Preferencias de notificacao indisponiveis neste driver.' } };
   }
 
   async function getNotificationChannelTargets() {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.getNotificationChannelTargets !== 'function') {
-      return buildFallbackNotificationChannelTargets();
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.getNotificationChannelTargets === 'function') {
+      return notificationsModule.getNotificationChannelTargets({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
     }
-    return driver.getNotificationChannelTargets();
+    return buildFallbackNotificationChannelTargets();
   }
 
   async function updateNotificationChannelTargets(targets = {}) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.updateNotificationChannelTargets !== 'function') {
-      return { ok: false, error: { message: 'Destinos privados de notificacao indisponiveis neste driver.' } };
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.updateNotificationChannelTargets === 'function') {
+      return notificationsModule.updateNotificationChannelTargets(targets, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
     }
-    return driver.updateNotificationChannelTargets(targets);
+    return { ok: false, error: { message: 'Destinos privados de notificacao indisponiveis neste driver.' } };
   }
-
   // Notifications (v9.1.0)
 
   async function getNotifications(limit, offset) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.getNotifications !== 'function') {
-      return { ok: false, notifications: [], unread: 0, total: 0 };
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.getNotifications === 'function') {
+      return notificationsModule.getNotifications(limit, offset, { getActiveDriver });
     }
-    return driver.getNotifications(limit, offset);
+    return { ok: false, notifications: [], unread: 0, total: 0 };
   }
 
   async function markNotificationsRead(ids) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.markNotificationsRead !== 'function') {
-      return { ok: false, error: 'UNAVAILABLE' };
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.markNotificationsRead === 'function') {
+      return notificationsModule.markNotificationsRead(ids, { getActiveDriver });
     }
-    return driver.markNotificationsRead(ids);
+    return { ok: false, error: 'UNAVAILABLE' };
   }
 
   async function markAllNotificationsRead() {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.markAllNotificationsRead !== 'function') {
-      return { ok: false, error: 'UNAVAILABLE' };
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.markAllNotificationsRead === 'function') {
+      return notificationsModule.markAllNotificationsRead({ getActiveDriver });
     }
-    return driver.markAllNotificationsRead();
+    return { ok: false, error: 'UNAVAILABLE' };
   }
 
   async function clearNotifications() {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.clearNotifications !== 'function') {
-      return { ok: false, error: 'UNAVAILABLE' };
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.clearNotifications === 'function') {
+      return notificationsModule.clearNotifications({ getActiveDriver });
     }
-    return driver.clearNotifications();
+    return { ok: false, error: 'UNAVAILABLE' };
   }
 
   async function getUnreadNotificationCount() {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.getUnreadNotificationCount !== 'function') return 0;
-    return driver.getUnreadNotificationCount();
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.getUnreadNotificationCount === 'function') {
+      return notificationsModule.getUnreadNotificationCount({ getActiveDriver });
+    }
+    return 0;
   }
 
   function subscribeNotifications(userId, callback) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.subscribeNotifications !== 'function') return null;
-    return driver.subscribeNotifications(userId, callback);
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.subscribeNotifications === 'function') {
+      return notificationsModule.subscribeNotifications(userId, callback, { getActiveDriver });
+    }
+    return null;
   }
 
   function unsubscribeNotifications(channel) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.unsubscribeNotifications !== 'function') return;
-    driver.unsubscribeNotifications(channel);
+    const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.unsubscribeNotifications === 'function') {
+      return notificationsModule.unsubscribeNotifications(channel, { getActiveDriver });
+    }
   }
-
   // ── Convites de usuários externos (v9.1.0.3) ─────────────────────────────
 
   async function inviteExternalUser(email, note) {
