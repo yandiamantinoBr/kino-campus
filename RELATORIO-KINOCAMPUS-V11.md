@@ -2449,6 +2449,39 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 
 ---
 
+### Iteração `v11.31.0`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-31-0-kc-create-post-audit` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | docs-only — auditoria arquitetural do próximo hotspot |
+| Escopo | `assets/js/kc-create-post.js` e artefatos de continuidade da trilha `v11.31.x` |
+
+- objetivo:
+  auditar formalmente `kc-create-post.js` após o encerramento da trilha `v11.30.x`, medindo tamanho, footprint de carregamento, responsabilidades internas, acoplamentos globais, riscos de split e sequência segura para a próxima rodada de decomposição.
+- resultado:
+  - **NOVO** `docs/kc-create-post-audit-v11.31.md` — auditoria do hotspot `kc-create-post.js`, registrando: `2610L`, `~114KB`, `55` funções top-level, ausência de IIFE, ausência de `'use strict'`, presença em `12` HTMLs principais, mapa de seções, dependências globais, side channels, riscos e plano recomendado de `v11.31.1` a `v11.31.7`.
+  - **NOVO** `docs/handoff-claude-code-v11.31.0.md` — handoff ampliado para Claude Code, substituindo o foco anterior exclusivo de `v11.30.18` por um contexto mais operacional, com baseline, invariantes, workflow, caveats de Vercel e a trilha recomendada para `kc-create-post.js`.
+  - **ALTERADO** `README.md` — estado da base movido para `v11.31.0`, tabela de entregas recentes atualizada, progresso atual apontando para a auditoria do hotspot `kc-create-post.js` e handoff externo atualizado.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — registro completo da iteração e sequência segura da nova trilha `v11.31.x`.
+- achados principais da auditoria:
+  - `kc-create-post.js` é o próximo hotspot lógico: reúne schema, render, mídia, create/edit, duplicate check, audit log, redirect e bootstrap global em um único arquivo global.
+  - o arquivo foge do padrão arquitetural dominante da base por não ser IIFE e não declarar `'use strict'`, o que aumenta o risco de uma extração precipitada.
+  - a cobertura atual é insuficiente para abrir split imediato: existe cobertura de wrapper diagnóstico em `create-post.controller.js` e gating parcial em `kc-create-post-active-fields.test.js`, mas ainda falta uma suíte de contrato mais ampla do arquivo principal.
+  - a decisão técnica da auditoria é **não** converter o arquivo inteiro de uma vez; primeiro deve entrar uma trilha de contratos e só depois o split incremental via `window._KCCreatePost`.
+- arquivos alterados:
+  - `docs/kc-create-post-audit-v11.31.md` (NOVO)
+  - `docs/handoff-claude-code-v11.31.0.md` (NOVO)
+  - `README.md` (ALTERADO)
+  - `RELATORIO-KINOCAMPUS-V11.md` (ALTERADO)
+- resultado dos testes:
+  baseline preservada em `80/80` suites, `1303/1303` testes; hygiene `8.6.0`.
+- próximas fases:
+  `v11.31.1` (suíte de contrato ampliada para `kc-create-post.js`) -> `v11.31.2` (schema/constantes) -> `v11.31.3` (mídia/imagens) -> `v11.31.4` (resolvers de domínio) -> `v11.31.5` (modal/render) -> `v11.31.6` (submit/edit) -> `v11.31.7` (core residual e estabilização final).
+
+---
+
 ## 12. Backlog inicial candidato da v11
 
 Este backlog é inicial e poderá ser refinado nas próximas iterações aprovadas:
