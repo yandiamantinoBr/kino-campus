@@ -11,11 +11,20 @@ describe('kc-create-post active field gating', () => {
       escapeHtml: (value) => String(value == null ? '' : value),
       canonicalCategory: (value) => String(value || '').trim().toLowerCase(),
     };
+    global.KC_CONSTANTS = {};
     global.showToast = jest.fn();
 
+    // Carrega o core primeiro (registra window._KCCreatePost namespace e stubs)
     const code = fs.readFileSync(filePath, 'utf8');
     // eslint-disable-next-line no-eval
     (0, eval)(code);
+
+    // Carrega o sub-módulo fields (registra window._KCCreatePost.fields)
+    // necessário após v11.31.5 pois kcBuildFieldsForModule delega para esse módulo.
+    const fieldsPath = path.resolve(__dirname, '..', 'assets', 'js', 'kc-create-post.fields.js');
+    const fieldsCode = fs.readFileSync(fieldsPath, 'utf8');
+    // eslint-disable-next-line no-eval
+    (0, eval)(fieldsCode);
   });
 
   beforeEach(() => {
