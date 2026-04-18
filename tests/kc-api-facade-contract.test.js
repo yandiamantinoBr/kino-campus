@@ -34,7 +34,9 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('- window.KCAPI');
     expect(source).toContain('window._KCAPI = window._KCAPI || {};');
     expect(source).toContain('window._KCAPI.notifications = window._KCAPI.notifications || {};');
+    expect(source).toContain('window._KCAPI.saved = window._KCAPI.saved || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
+    expect(facadeBlock).not.toContain('window._KCAPI.saved');
   });
 });
 
@@ -197,13 +199,19 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
     expect(source).toContain("return { ok: false, error: { message: 'Destinos privados de notificacao indisponiveis neste driver.' } };");
   });
 
-  test('mantem fallback local/supabase nas leituras de saved e profile highlights', () => {
-    expect(source).toContain("if (ENV.driver !== 'supabase' && driver && typeof driver.getMySavedPosts === 'function') return driver.getMySavedPosts(params);");
-    expect(source).toContain("if (ENV.driver !== 'supabase' || !getActiveDriver().getMySavedPosts) return [];");
-    expect(source).toContain("if (ENV.driver !== 'supabase' && driver && typeof driver.getMySavedPostsCount === 'function') return driver.getMySavedPostsCount(params);");
-    expect(source).toContain("if (ENV.driver !== 'supabase' || !getActiveDriver().getMySavedPostsCount) return 0;");
-    expect(source).toContain("if (ENV.driver !== 'supabase' || !getActiveDriver().getProfileHighlights) return [];");
-    expect(source).toContain("if (ENV.driver !== 'supabase' || !getActiveDriver().getProfileHighlightsCount) return 0;");
+  test('mantem fachada delegando saved/highlights via getSavedModule com fallback canonico', () => {
+    expect(source).toContain('function getSavedModule() {');
+    expect(source).toContain('const savedModule = getSavedModule();');
+    expect(source).toContain('return savedModule.getSavedPostState(postId, { getActiveDriver, ENV, invalidatePostAnalyticsCache });');
+    expect(source).toContain('return savedModule.setSavedPostState(postId, kind, enabled, { getActiveDriver, ENV, invalidatePostAnalyticsCache });');
+    expect(source).toContain('return savedModule.clearSavedPostState(postId, kind, { getActiveDriver, ENV, invalidatePostAnalyticsCache });');
+    expect(source).toContain('return savedModule.getMySavedPosts(params, { getActiveDriver, ENV, invalidatePostAnalyticsCache });');
+    expect(source).toContain('return savedModule.getMySavedPostsCount(params, { getActiveDriver, ENV, invalidatePostAnalyticsCache });');
+    expect(source).toContain('return savedModule.getProfileHighlights(profileId, params, { getActiveDriver, ENV, invalidatePostAnalyticsCache });');
+    expect(source).toContain('return savedModule.getProfileHighlightsCount(profileId, params, { getActiveDriver, ENV, invalidatePostAnalyticsCache });');
+    // Fallbacks canonicos quando o submodulo nao esta carregado
+    expect(source).toContain('return { kinds: [] };');
+    expect(source).toContain("return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };");
   });
 
   test('mantem auth desabilitada de forma explicita no modo local', () => {
