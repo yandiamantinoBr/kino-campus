@@ -38,6 +38,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.help = window._KCAPI.help || {};');
     expect(source).toContain('window._KCAPI.postsRead = window._KCAPI.postsRead || {};');
     expect(source).toContain('window._KCAPI.commentsVotes = window._KCAPI.commentsVotes || {};');
+    expect(source).toContain('window._KCAPI.ratings = window._KCAPI.ratings || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -235,6 +236,15 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
 });
 
 describe('kc-api.client.js - caches, SWR and diagnostics', () => {
+  test('mantem delegacao para ratings via getRatingsModule e buildRatingsDeps', () => {
+    expect(source).toContain('function getRatingsModule()');
+    expect(source).toContain('function buildRatingsDeps()');
+    expect(source).toContain('return ratingsModule.getUserRatingSummary(userId, buildRatingsDeps());');
+    expect(source).toContain('return ratingsModule.getUserRatingState(params, buildRatingsDeps());');
+    expect(source).toContain('return ratingsModule.listUserRatings(userId, options, buildRatingsDeps());');
+    expect(source).toContain('return ratingsModule.upsertUserRating(payload, buildRatingsDeps());');
+  });
+
   test('mantem cache de sessao e deduplicacao para analytics do produto via getPostsReadModule', () => {
     expect(source).toContain('function getPostsReadModule()');
     expect(source).toContain('function buildPostsReadDeps()');

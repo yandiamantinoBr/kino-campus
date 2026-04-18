@@ -1708,50 +1708,59 @@
     }
     return driver.getFeedCursor(params);
   }
+  // Ratings split (v11.33.1)
+  // Implementacoes foram movidas para window._KCAPI.ratings (kc-api.ratings.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getRatingsModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.ratings = window._KCAPI.ratings || {};
+
+  function getRatingsModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const ratings = window._KCAPI.ratings;
+    return (ratings && typeof ratings === 'object') ? ratings : null;
+  }
+
+  function buildRatingsDeps() {
+    return {
+      getActiveDriver,
+      normalizeUserRatingSummary,
+      normalizeUserRatingEntry,
+      normalizeUserRatingState,
+      normalizeUserRatingList,
+    };
+  }
+
   async function getUserRatingSummary(userId) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.getUserRatingSummary !== 'function') {
-      return normalizeUserRatingSummary(null, userId);
+    const ratingsModule = getRatingsModule();
+    if (ratingsModule && typeof ratingsModule.getUserRatingSummary === 'function') {
+      return ratingsModule.getUserRatingSummary(userId, buildRatingsDeps());
     }
-    const summary = await driver.getUserRatingSummary(userId);
-    return normalizeUserRatingSummary(summary, userId);
+    return normalizeUserRatingSummary(null, userId);
   }
   async function getUserRatingState(params = {}) {
+    const ratingsModule = getRatingsModule();
+    if (ratingsModule && typeof ratingsModule.getUserRatingState === 'function') {
+      return ratingsModule.getUserRatingState(params, buildRatingsDeps());
+    }
     const input = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
     const fallbackTargetUserId = input.targetUserId || input.target_user_id || null;
     const fallbackContextPostId = input.contextPostId || input.context_post_id || null;
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.getUserRatingState !== 'function') {
-      return normalizeUserRatingState(null, fallbackTargetUserId, fallbackContextPostId);
-    }
-    const state = await driver.getUserRatingState(input);
-    return normalizeUserRatingState(state, fallbackTargetUserId, fallbackContextPostId);
+    return normalizeUserRatingState(null, fallbackTargetUserId, fallbackContextPostId);
   }
   async function listUserRatings(userId, options = {}) {
-    const input = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
-    const fallbackPage = input.page || 1;
-    const fallbackLimit = input.limit || 10;
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.listUserRatings !== 'function') {
-      return normalizeUserRatingList(null, fallbackPage, fallbackLimit);
+    const ratingsModule = getRatingsModule();
+    if (ratingsModule && typeof ratingsModule.listUserRatings === 'function') {
+      return ratingsModule.listUserRatings(userId, options, buildRatingsDeps());
     }
-    const payload = await driver.listUserRatings(userId, input);
-    return normalizeUserRatingList(payload, fallbackPage, fallbackLimit);
+    const input = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    return normalizeUserRatingList(null, input.page || 1, input.limit || 10);
   }
   async function upsertUserRating(payload = {}) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.upsertUserRating !== 'function') {
-      return { ok: false, error: { message: 'Avaliações indisponíveis neste driver.' } };
+    const ratingsModule = getRatingsModule();
+    if (ratingsModule && typeof ratingsModule.upsertUserRating === 'function') {
+      return ratingsModule.upsertUserRating(payload, buildRatingsDeps());
     }
-    const result = await driver.upsertUserRating(payload);
-    const summary = normalizeUserRatingSummary(result && result.summary, payload && (payload.targetUserId || payload.target_user_id));
-    return {
-      ok: !!(result && result.ok),
-      rating: result && result.rating ? normalizeUserRatingEntry(result.rating) : null,
-      summary,
-      error: result && result.error ? result.error : null,
-      reason: result && result.reason ? String(result.reason) : '',
-    };
+    return { ok: false, error: { message: 'Avaliações indisponíveis neste driver.' } };
   }
   async function getPostById(id) { return getActiveDriver().getPostById(id); }
   async function createPost(body) {
