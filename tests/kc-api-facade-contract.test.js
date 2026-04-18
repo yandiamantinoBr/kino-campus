@@ -36,9 +36,11 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.notifications = window._KCAPI.notifications || {};');
     expect(source).toContain('window._KCAPI.saved = window._KCAPI.saved || {};');
     expect(source).toContain('window._KCAPI.help = window._KCAPI.help || {};');
+    expect(source).toContain('window._KCAPI.postsRead = window._KCAPI.postsRead || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
+    expect(facadeBlock).not.toContain('window._KCAPI.postsRead');
   });
 });
 
@@ -232,12 +234,17 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
 });
 
 describe('kc-api.client.js - caches, SWR and diagnostics', () => {
-  test('mantem cache de sessao e deduplicacao para analytics do produto', () => {
-    expect(source).toContain('const _pendingProductAnalyticsRequests = new Map();');
-    expect(source).toContain('function getCachedPostAnalytics(');
-    expect(source).toContain("return getCachedSessionPayload('product', getPostAnalyticsCacheKey(id), PRODUCT_ANALYTICS_CACHE_MAX_AGE_MS, PRODUCT_ANALYTICS_STALE_MAX_AGE_MS, options);");
-    expect(source).toContain('return withPendingSessionRequest(_pendingProductAnalyticsRequests, requestKey, async () => {');
-    expect(source).toContain("persistSessionPayload('product', requestKey, result, buildPostAnalyticsSignature(result));");
+  test('mantem cache de sessao e deduplicacao para analytics do produto via getPostsReadModule', () => {
+    expect(source).toContain('function getPostsReadModule()');
+    expect(source).toContain('function buildPostsReadDeps()');
+    expect(source).toContain('const postsReadModule = getPostsReadModule();');
+    expect(source).toContain('return postsReadModule.getCachedPostAnalytics(postId, options, buildPostsReadDeps());');
+    expect(source).toContain('return postsReadModule.invalidatePostAnalyticsCache(postId, buildPostsReadDeps());');
+    expect(source).toContain('return postsReadModule.refreshPostAnalytics(postId, options, buildPostsReadDeps());');
+    expect(source).toContain('return postsReadModule.getPostAnalytics(postId, options, buildPostsReadDeps());');
+    expect(source).toContain('return postsReadModule.trackView(postId, buildPostsReadDeps());');
+    expect(source).toContain('return postsReadModule.trackShare(postId, buildPostsReadDeps());');
+    expect(source).toContain('return postsReadModule.trackCouponClick(postId, buildPostsReadDeps());');
   });
 
   test('mantem cache de sessao e deduplicacao para comments do produto', () => {
