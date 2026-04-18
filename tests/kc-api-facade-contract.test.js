@@ -37,6 +37,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.saved = window._KCAPI.saved || {};');
     expect(source).toContain('window._KCAPI.help = window._KCAPI.help || {};');
     expect(source).toContain('window._KCAPI.postsRead = window._KCAPI.postsRead || {};');
+    expect(source).toContain('window._KCAPI.commentsVotes = window._KCAPI.commentsVotes || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -176,8 +177,8 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
   });
 
   test('mantem guards de producao supabase para mutacoes criticas', () => {
+    // createPost guard permanece no facade; votePost/addComment movidos para kc-api.comments-votes.js
     expect(source).toContain("const policyError = enforceSupabaseOnProduction('createPost');");
-    expect(source).toContain("const policyError = enforceSupabaseOnProduction('votePost');");
     expect(source).toContain("code: 'PRODUCTION_REQUIRES_SUPABASE'");
   });
 
@@ -247,13 +248,18 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(source).toContain('return postsReadModule.trackCouponClick(postId, buildPostsReadDeps());');
   });
 
-  test('mantem cache de sessao e deduplicacao para comments do produto', () => {
-    expect(source).toContain('const _pendingProductCommentsRequests = new Map();');
-    expect(source).toContain('function getCommentsCacheKey(postId) {');
-    expect(source).toContain('return `comments:${getCommentsCacheIdentity()}:${String(postId || \'\').trim()}`;');
-    expect(source).toContain("return getCachedSessionPayload('product', getCommentsCacheKey(id), PRODUCT_COMMENTS_CACHE_MAX_AGE_MS, PRODUCT_COMMENTS_STALE_MAX_AGE_MS, options);");
-    expect(source).toContain('return withPendingSessionRequest(_pendingProductCommentsRequests, requestKey, async () => {');
-    expect(source).toContain("persistSessionPayload('product', requestKey, normalized, buildCommentsSignature(normalized));");
+  test('mantem cache de sessao e deduplicacao para comments/votes via getCommentsVotesModule', () => {
+    expect(source).toContain('function getCommentsVotesModule()');
+    expect(source).toContain('function buildCommentsVotesDeps()');
+    expect(source).toContain('const m = getCommentsVotesModule();');
+    expect(source).toContain('return m.getCachedComments(postId, options, buildCommentsVotesDeps());');
+    expect(source).toContain('return m.invalidateCommentsCache(postId, buildCommentsVotesDeps());');
+    expect(source).toContain('return m.refreshComments(postId, options, buildCommentsVotesDeps());');
+    expect(source).toContain('return m.getComments(postId, options, buildCommentsVotesDeps());');
+    expect(source).toContain('return m.addComment(postId, body, options, buildCommentsVotesDeps());');
+    expect(source).toContain('return m.likeComment(commentId, options, buildCommentsVotesDeps());');
+    expect(source).toContain('return m.votePost(postId, direction, options, buildCommentsVotesDeps());');
+    expect(source).toContain('return m.getMyVote(postId, buildCommentsVotesDeps());');
   });
 
   test('mantem os globals de diagnostico de create-post fora da fachada congelada', () => {

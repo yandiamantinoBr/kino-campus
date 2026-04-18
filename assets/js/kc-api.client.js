@@ -963,12 +963,7 @@
   const cfg = { ...DEFAULTS };
   const SESSION_STORE_VERSION = '9.0.0';
   const SESSION_STORE_PREFIX = `kc:${SESSION_STORE_VERSION}`;
-  const PRODUCT_ANALYTICS_CACHE_MAX_AGE_MS = 20000;
-  const PRODUCT_ANALYTICS_STALE_MAX_AGE_MS = 5 * 60 * 1000;
-  const PRODUCT_COMMENTS_CACHE_MAX_AGE_MS = 15000;
-  const PRODUCT_COMMENTS_STALE_MAX_AGE_MS = 2 * 60 * 1000;
-  const _pendingProductAnalyticsRequests = new Map();
-  const _pendingProductCommentsRequests = new Map();
+  // Constantes SWR de analytics e comments movidas para os sub-módulos v11.32.5/v11.32.6.
 
   // Boot inicial (lê KC_ENV e aplica debug)
   (function bootstrapConfig() {
@@ -1116,54 +1111,9 @@
     });
   }
 
-  function getCommentsCacheIdentity() {
-    if (ENV.driver !== 'supabase') return `driver:${ENV.driver}`;
-    try {
-      if (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') {
-        const user = window.KCSupabase.getUser();
-        if (user && user.id) return `user:${String(user.id).trim()}`;
-      }
-    } catch (_) { }
-    return 'user:anon';
-  }
-
-  function getPostAnalyticsCacheKey(postId) {
-    return `post-analytics:${ENV.driver}:${String(postId || '').trim()}`;
-  }
-
-  function getCommentsCacheKey(postId) {
-    return `comments:${getCommentsCacheIdentity()}:${String(postId || '').trim()}`;
-  }
-
-  function buildPostAnalyticsSignature(result) {
-    const source = (result && typeof result === 'object') ? result : {};
-    return [
-      Number(source.views) || 0,
-      Number(source.votos) || 0,
-      Number(source.comments) || 0,
-      Number(source.shares) || 0,
-      Number(source.saves) || 0,
-      Number(source.coupon_clicks) || 0,
-    ].join('|');
-  }
-
-  function normalizeCommentsPayload(comments) {
-    return Array.isArray(comments)
-      ? comments.filter(Boolean).map((comment) => ((comment && typeof comment === 'object') ? { ...comment } : comment))
-      : [];
-  }
-
-  function buildCommentsSignature(comments) {
-    return normalizeCommentsPayload(comments).map((comment) => [
-      String(comment && (comment.id || '')).trim(),
-      String(comment && (comment.parent_id || comment.parentId || '')).trim(),
-      String(comment && (comment.created_at || '')).trim(),
-      String(comment && (comment.updated_at || '')).trim(),
-      Number(comment && comment.likes) || 0,
-      comment && (comment.liked_by_me || comment.likedByMe) ? 1 : 0,
-      String(comment && (comment.body || comment.text || '')).trim(),
-    ].join('~')).join('|');
-  }
+  // getCommentsCacheIdentity, getPostAnalyticsCacheKey, getCommentsCacheKey,
+  // buildPostAnalyticsSignature, normalizeCommentsPayload, buildCommentsSignature
+  // movidos para os sub-módulos kc-api.posts-read.js e kc-api.comments-votes.js.
 
   /**
    * MOCK_USERS (extraído do database.json da V6.1.0)
@@ -2047,87 +1997,97 @@
 
   function isBackendEnabled() { return !!cfg.baseURL; }
 
-  // Comments facade (V8.1.7.2)
+  // Comments-Votes split (v11.32.6)
+  // Implementacoes foram movidas para window._KCAPI.commentsVotes (kc-api.comments-votes.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getCommentsVotesModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.commentsVotes = window._KCAPI.commentsVotes || {};
+
+  function getCommentsVotesModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const commentsVotes = window._KCAPI.commentsVotes;
+    return (commentsVotes && typeof commentsVotes === 'object') ? commentsVotes : null;
+  }
+
+  function buildCommentsVotesDeps() {
+    return {
+      getActiveDriver,
+      ENV,
+      invalidatePostAnalyticsCache,
+      getCachedSessionPayload,
+      persistSessionPayload,
+      removeSessionCache,
+      clearSessionCachePrefix,
+      withPendingSessionRequest,
+    };
+  }
+
+  // Comments facade (V8.1.7.2) — delegado via getCommentsVotesModule()
   // Em driver=supabase: usa tabela public.comments.
   // Em driver=local: retorna null; kc-core.js usa localStorage diretamente.
   function getCachedComments(postId, options = {}) {
-    const id = String(postId || '').trim();
-    if (!id) return null;
-    return getCachedSessionPayload('product', getCommentsCacheKey(id), PRODUCT_COMMENTS_CACHE_MAX_AGE_MS, PRODUCT_COMMENTS_STALE_MAX_AGE_MS, options);
+    const m = getCommentsVotesModule();
+    if (m && typeof m.getCachedComments === 'function') {
+      return m.getCachedComments(postId, options, buildCommentsVotesDeps());
+    }
+    return null;
   }
 
   function invalidateCommentsCache(postId) {
-    const id = String(postId || '').trim();
-    if (id) {
-      return removeSessionCache('product', getCommentsCacheKey(id));
+    const m = getCommentsVotesModule();
+    if (m && typeof m.invalidateCommentsCache === 'function') {
+      return m.invalidateCommentsCache(postId, buildCommentsVotesDeps());
     }
-    return clearSessionCachePrefix('product', `comments:${getCommentsCacheIdentity()}:`) > 0;
+    return false;
   }
 
   async function refreshComments(postId, options = {}) {
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getComments) return null;
-    const id = String(postId || '').trim();
-    if (!id) return [];
-
-    if (options.force !== true) {
-      const cached = getCachedComments(id);
-      if (cached) return cached.data;
+    const m = getCommentsVotesModule();
+    if (m && typeof m.refreshComments === 'function') {
+      return m.refreshComments(postId, options, buildCommentsVotesDeps());
     }
-
-    const requestKey = getCommentsCacheKey(id);
-    return withPendingSessionRequest(_pendingProductCommentsRequests, requestKey, async () => {
-      const comments = await getActiveDriver().getComments(id);
-      const normalized = normalizeCommentsPayload(comments);
-      persistSessionPayload('product', requestKey, normalized, buildCommentsSignature(normalized));
-      return normalized;
-    });
+    return null;
   }
 
   async function getComments(postId, options = {}) {
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getComments) return null;
-    if (options.force !== true) {
-      const cached = getCachedComments(postId);
-      if (cached) return cached.data;
+    const m = getCommentsVotesModule();
+    if (m && typeof m.getComments === 'function') {
+      return m.getComments(postId, options, buildCommentsVotesDeps());
     }
-    return refreshComments(postId, options);
+    return null;
   }
 
   async function addComment(postId, body, options = {}) {
-    const policyError = enforceSupabaseOnProduction('addComment');
-    if (policyError) return policyError;
-    if (ENV.driver !== 'supabase' || !getActiveDriver().addComment) return null;
-    const result = await getActiveDriver().addComment(postId, body, options);
-    if (result && result.ok) {
-      invalidateCommentsCache(postId);
-      invalidatePostAnalyticsCache(postId);
+    const m = getCommentsVotesModule();
+    if (m && typeof m.addComment === 'function') {
+      return m.addComment(postId, body, options, buildCommentsVotesDeps());
     }
-    return result;
+    return null;
   }
 
   async function likeComment(commentId, options = {}) {
-    if (ENV.driver !== 'supabase' || !getActiveDriver().likeComment) return null;
-    const result = await getActiveDriver().likeComment(commentId);
-    if (result && result.ok) {
-      const postId = options && typeof options === 'object' ? (options.postId || options.post_id || '') : '';
-      if (postId) invalidateCommentsCache(postId);
-      else invalidateCommentsCache();
+    const m = getCommentsVotesModule();
+    if (m && typeof m.likeComment === 'function') {
+      return m.likeComment(commentId, options, buildCommentsVotesDeps());
     }
-    return result;
+    return null;
   }
 
-  // Votes facade (V8.1.7.3)
+  // Votes facade (V8.1.7.3) — delegado via getCommentsVotesModule()
   async function votePost(postId, direction, options = {}) {
-    const policyError = enforceSupabaseOnProduction('votePost');
-    if (policyError) return policyError;
-    if (ENV.driver !== 'supabase' || !getActiveDriver().votePost) return null;
-    const result = await getActiveDriver().votePost(postId, direction, options);
-    if (result && result.ok) invalidatePostAnalyticsCache(postId);
-    return result;
+    const m = getCommentsVotesModule();
+    if (m && typeof m.votePost === 'function') {
+      return m.votePost(postId, direction, options, buildCommentsVotesDeps());
+    }
+    return null;
   }
 
   async function getMyVote(postId) {
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getMyVote) return null;
-    return getActiveDriver().getMyVote(postId);
+    const m = getCommentsVotesModule();
+    if (m && typeof m.getMyVote === 'function') {
+      return m.getMyVote(postId, buildCommentsVotesDeps());
+    }
+    return null;
   }
 
   async function getMyProfile() {
