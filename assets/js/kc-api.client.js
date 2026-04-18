@@ -2229,26 +2229,40 @@
     return 0;
   }
 
+  // Help/Invites split (v11.32.4)
+  // Implementacoes foram movidas para window._KCAPI.help (kc-api.help.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getHelpModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.help = window._KCAPI.help || {};
+
+  function getHelpModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const help = window._KCAPI.help;
+    return (help && typeof help === 'object') ? help : null;
+  }
+
   async function createHelpRequest(payload = {}) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.createHelpRequest !== 'function') {
-      return { ok: false, error: { message: 'Pedidos de ajuda indisponíveis neste driver.' } };
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.createHelpRequest === 'function') {
+      return helpModule.createHelpRequest(payload, { getActiveDriver });
     }
-    return driver.createHelpRequest(payload);
+    return { ok: false, error: { message: 'Pedidos de ajuda indisponíveis neste driver.' } };
   }
 
   async function listAdminHelpRequests(filters = {}) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.listAdminHelpRequests !== 'function') return [];
-    return driver.listAdminHelpRequests(filters);
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.listAdminHelpRequests === 'function') {
+      return helpModule.listAdminHelpRequests(filters, { getActiveDriver });
+    }
+    return [];
   }
 
   async function updateAdminHelpRequest(id, patch = {}) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.updateAdminHelpRequest !== 'function') {
-      return { ok: false, error: { message: 'Triagem de ajuda indisponível neste driver.' } };
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.updateAdminHelpRequest === 'function') {
+      return helpModule.updateAdminHelpRequest(id, patch, { getActiveDriver });
     }
-    return driver.updateAdminHelpRequest(id, patch);
+    return { ok: false, error: { message: 'Triagem de ajuda indisponível neste driver.' } };
   }
 
   // Notifications split (v11.32.2)
@@ -2390,24 +2404,30 @@
       return notificationsModule.unsubscribeNotifications(channel, { getActiveDriver });
     }
   }
-  // ── Convites de usuários externos (v9.1.0.3) ─────────────────────────────
+  // ── Convites de usuários externos (v9.1.0.3) — delegados via getHelpModule() ─
 
   async function inviteExternalUser(email, note) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.inviteExternalUser !== 'function') return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
-    return driver.inviteExternalUser(email, note);
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.inviteExternalUser === 'function') {
+      return helpModule.inviteExternalUser(email, note, { getActiveDriver });
+    }
+    return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
   }
 
   async function getInvites() {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.getInvites !== 'function') return { data: [], error: null };
-    return driver.getInvites();
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.getInvites === 'function') {
+      return helpModule.getInvites({ getActiveDriver });
+    }
+    return { data: [], error: null };
   }
 
   async function revokeInvite(email) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.revokeInvite !== 'function') return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
-    return driver.revokeInvite(email);
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.revokeInvite === 'function') {
+      return helpModule.revokeInvite(email, { getActiveDriver });
+    }
+    return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
   }
 
   window.KCAPI = Object.freeze({
