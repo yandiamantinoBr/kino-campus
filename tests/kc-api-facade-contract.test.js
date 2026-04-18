@@ -35,8 +35,10 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI = window._KCAPI || {};');
     expect(source).toContain('window._KCAPI.notifications = window._KCAPI.notifications || {};');
     expect(source).toContain('window._KCAPI.saved = window._KCAPI.saved || {};');
+    expect(source).toContain('window._KCAPI.help = window._KCAPI.help || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
+    expect(facadeBlock).not.toContain('window._KCAPI.help');
   });
 });
 
@@ -177,12 +179,19 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
     expect(source).toContain("code: 'PRODUCTION_REQUIRES_SUPABASE'");
   });
 
-  test('mantem contractos de indisponibilidade em notifications e convites', () => {
+  test('mantem contractos de indisponibilidade em notifications e delega help/invites via getHelpModule', () => {
     expect(source).toContain('async function clearNotifications() {');
     expect(source).toContain("return { ok: false, error: 'UNAVAILABLE' };");
-    expect(source).toContain('async function inviteExternalUser(email, note) {');
+    expect(source).toContain('function getHelpModule() {');
+    expect(source).toContain('const helpModule = getHelpModule();');
+    expect(source).toContain('return helpModule.createHelpRequest(payload, { getActiveDriver });');
+    expect(source).toContain('return helpModule.listAdminHelpRequests(filters, { getActiveDriver });');
+    expect(source).toContain('return helpModule.updateAdminHelpRequest(id, patch, { getActiveDriver });');
+    expect(source).toContain('return helpModule.inviteExternalUser(email, note, { getActiveDriver });');
+    expect(source).toContain('return helpModule.getInvites({ getActiveDriver });');
+    expect(source).toContain('return helpModule.revokeInvite(email, { getActiveDriver });');
+    // Fallbacks canonicos quando o submodulo nao esta carregado
     expect(source).toContain("return { ok: false, error: 'DRIVER_NAO_SUPORTA' };");
-    expect(source).toContain('async function getInvites() {');
     expect(source).toContain('return { data: [], error: null };');
   });
 
