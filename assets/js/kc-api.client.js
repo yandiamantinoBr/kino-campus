@@ -2161,69 +2161,72 @@
     return driver.getRelatedPosts(postId, options);
   }
 
+  // Saved/Highlights split (v11.32.3)
+  // Implementacoes foram movidas para window._KCAPI.saved (kc-api.saved.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getSavedModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.saved = window._KCAPI.saved || {};
+
+  function getSavedModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const saved = window._KCAPI.saved;
+    return (saved && typeof saved === 'object') ? saved : null;
+  }
+
   async function getSavedPostState(postId) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.getSavedPostState === 'function') return driver.getSavedPostState(postId);
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getSavedPostState) return { kinds: [] };
-    return driver.getSavedPostState(postId);
+    const savedModule = getSavedModule();
+    if (savedModule && typeof savedModule.getSavedPostState === 'function') {
+      return savedModule.getSavedPostState(postId, { getActiveDriver, ENV, invalidatePostAnalyticsCache });
+    }
+    return { kinds: [] };
   }
 
   async function setSavedPostState(postId, kind, enabled) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.setSavedPostState === 'function') {
-      return driver.setSavedPostState(postId, kind, enabled);
+    const savedModule = getSavedModule();
+    if (savedModule && typeof savedModule.setSavedPostState === 'function') {
+      return savedModule.setSavedPostState(postId, kind, enabled, { getActiveDriver, ENV, invalidatePostAnalyticsCache });
     }
-    if (ENV.driver !== 'supabase' || !getActiveDriver().setSavedPostState) {
-      return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
-    }
-    const result = await driver.setSavedPostState(postId, kind, enabled);
-    if (result && result.ok) invalidatePostAnalyticsCache(postId);
-    return result;
+    return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
   }
 
   async function clearSavedPostState(postId, kind) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.clearSavedPostState === 'function') {
-      return driver.clearSavedPostState(postId, kind);
+    const savedModule = getSavedModule();
+    if (savedModule && typeof savedModule.clearSavedPostState === 'function') {
+      return savedModule.clearSavedPostState(postId, kind, { getActiveDriver, ENV, invalidatePostAnalyticsCache });
     }
-    if (ENV.driver !== 'supabase' || !getActiveDriver().clearSavedPostState) {
-      return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
-    }
-    const result = await driver.clearSavedPostState(postId, kind);
-    if (result && result.ok) invalidatePostAnalyticsCache(postId);
-    return result;
+    return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };
   }
 
   async function getMySavedPosts(params = {}) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.getMySavedPosts === 'function') return driver.getMySavedPosts(params);
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getMySavedPosts) return [];
-    return driver.getMySavedPosts(params);
+    const savedModule = getSavedModule();
+    if (savedModule && typeof savedModule.getMySavedPosts === 'function') {
+      return savedModule.getMySavedPosts(params, { getActiveDriver, ENV, invalidatePostAnalyticsCache });
+    }
+    return [];
   }
 
   async function getMySavedPostsCount(params = {}) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.getMySavedPostsCount === 'function') return driver.getMySavedPostsCount(params);
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getMySavedPostsCount) return 0;
-    return driver.getMySavedPostsCount(params);
+    const savedModule = getSavedModule();
+    if (savedModule && typeof savedModule.getMySavedPostsCount === 'function') {
+      return savedModule.getMySavedPostsCount(params, { getActiveDriver, ENV, invalidatePostAnalyticsCache });
+    }
+    return 0;
   }
 
   async function getProfileHighlights(profileId, params = {}) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.getProfileHighlights === 'function') {
-      return driver.getProfileHighlights(profileId, params);
+    const savedModule = getSavedModule();
+    if (savedModule && typeof savedModule.getProfileHighlights === 'function') {
+      return savedModule.getProfileHighlights(profileId, params, { getActiveDriver, ENV, invalidatePostAnalyticsCache });
     }
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getProfileHighlights) return [];
-    return driver.getProfileHighlights(profileId, params);
+    return [];
   }
 
   async function getProfileHighlightsCount(profileId, params = {}) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.getProfileHighlightsCount === 'function') {
-      return driver.getProfileHighlightsCount(profileId, params);
+    const savedModule = getSavedModule();
+    if (savedModule && typeof savedModule.getProfileHighlightsCount === 'function') {
+      return savedModule.getProfileHighlightsCount(profileId, params, { getActiveDriver, ENV, invalidatePostAnalyticsCache });
     }
-    if (ENV.driver !== 'supabase' || !getActiveDriver().getProfileHighlightsCount) return 0;
-    return driver.getProfileHighlightsCount(profileId, params);
+    return 0;
   }
 
   async function createHelpRequest(payload = {}) {
