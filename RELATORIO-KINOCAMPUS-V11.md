@@ -3035,6 +3035,43 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
 
+### Iteração `v11.32.6`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-32-6-kcapi-comments-votes-split` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | split estrutural + hardening (remocao de dead code) + realinhamento de contrato/testes |
+| Escopo | `assets/js/kc-api.comments-votes.js` (NOVO), `assets/js/kc-api.client.js`, `tests/kc-api-comments-votes-module.test.js` (NOVO), `tests/kc-api-facade-contract.test.js`, `tests/anti-spam.test.js`, `tests/kc-api-client.test.js`, `tests/kc-api-notification-preferences-contract.test.js`, `tests/kc-api-notifications-contract.test.js`, `tests/kc-api-session-swr.test.js`, `tests/post-analytics.test.js`, `22` HTMLs carregadores, `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  executar o quinto split seguro por dominio da trilha `v11.32.x`, extraindo o grupo `comments/votes` (8 metodos) do facade `window.KCAPI` para um submodulo proprio com namespace interno `window._KCAPI.commentsVotes`, mantendo estado SWR auto-contido no submodulo, removendo dead code do facade (constantes e helpers de analytics/comments ja movidos para sub-modulos anteriores), sem alterar assinatura publica, fallbacks de indisponibilidade nem qualquer comportamento visivel da interface.
+- resultado:
+  - **NOVO** `assets/js/kc-api.comments-votes.js` — IIFE com `'use strict'`, namespace `window._KCAPI.commentsVotes` e `8` exports do dominio: `getCachedComments`, `invalidateCommentsCache`, `refreshComments`, `getComments`, `addComment`, `likeComment`, `votePost`, `getMyVote`. Estado SWR de comments (`_pendingProductCommentsRequests = new Map()`, `PRODUCT_COMMENTS_CACHE_MAX_AGE_MS = 15000`, `PRODUCT_COMMENTS_STALE_MAX_AGE_MS = 2 * 60 * 1000`) auto-contido no submodulo. `enforceSupabaseOnProduction` implementada localmente usando `deps.ENV.isProduction` e `deps.ENV.driver`. Cada metodo recebe `deps = { getActiveDriver, ENV, invalidatePostAnalyticsCache, getCachedSessionPayload, persistSessionPayload, removeSessionCache, clearSessionCachePrefix, withPendingSessionRequest }`.
+  - **ALTERADO** `assets/js/kc-api.client.js` — o facade publico `window.KCAPI` passou a delegar todo o dominio `comments/votes` via `getCommentsVotesModule()` + `buildCommentsVotesDeps()` (espelhando e estendendo o padrao dos splits anteriores). Dead code removido: `PRODUCT_ANALYTICS_CACHE_MAX_AGE_MS`, `PRODUCT_ANALYTICS_STALE_MAX_AGE_MS`, `_pendingProductAnalyticsRequests`, `getPostAnalyticsCacheKey`, `buildPostAnalyticsSignature` (movidos para `kc-api.posts-read.js` na v11.32.5) e `PRODUCT_COMMENTS_CACHE_MAX_AGE_MS`, `PRODUCT_COMMENTS_STALE_MAX_AGE_MS`, `_pendingProductCommentsRequests`, `getCommentsCacheIdentity`, `getCommentsCacheKey`, `normalizeCommentsPayload`, `buildCommentsSignature` (movidos para `kc-api.comments-votes.js` na v11.32.6).
+  - **NOVO** `tests/kc-api-comments-votes-module.test.js` — suite estatica dedicada ao novo submodulo (`20` testes em 4 grupos) cobrindo IIFE/namespace/exports, fallbacks canonicos sem driver, delegacao por driver ativo com deps injetados, e ordem de carregamento do asset em `22` HTMLs.
+  - **ALTERADO** `tests/kc-api-facade-contract.test.js` — contrato do facade atualizado para travar `window._KCAPI.commentsVotes`, `getCommentsVotesModule()`, `buildCommentsVotesDeps()` e a delegacao dos 8 metodos do dominio extraido; guard `enforceSupabaseOnProduction('votePost')` movido para o sub-modulo.
+  - **ALTERADO** `tests/anti-spam.test.js`, `tests/kc-api-client.test.js`, `tests/kc-api-notification-preferences-contract.test.js`, `tests/kc-api-notifications-contract.test.js`, `tests/kc-api-session-swr.test.js` e `tests/post-analytics.test.js` — bootstrap dos testes runtime atualizado para carregar `assets/js/kc-api.comments-votes.js` antes do facade.
+  - **ALTERADOS** `22` HTMLs — todos passam a carregar `assets/js/kc-api.comments-votes.js` entre `kc-api.posts-read.js` e `kc-api.client.js`.
+  - **ALTERADO** `README.md` — status da base movido para `v11.32.6`, baseline atualizada para `93/93` suites e `1754/1754` testes.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — estado macro da fase atualizado e registro completo desta iteracao adicionado.
+- achados principais:
+  - o quinto split da trilha `KCAPI` foi fechado sem quebrar a interface publica `window.KCAPI`; a separacao ficou totalmente interna via `window._KCAPI.commentsVotes`.
+  - o hardening de remocao de dead code foi incluido nesta iteracao: constantes e helpers de analytics (`PRODUCT_ANALYTICS_*`, `getPostAnalyticsCacheKey`, `buildPostAnalyticsSignature`) e de comments (`PRODUCT_COMMENTS_*`, `getCommentsCacheKey`, `getCommentsCacheIdentity`, `normalizeCommentsPayload`, `buildCommentsSignature`) foram removidos do facade, tornando `kc-api.client.js` mais enxuto.
+  - `enforceSupabaseOnProduction` permanece no facade para o gate de `createPost`; no sub-modulo de comments/votes, o guard foi reimplementado localmente usando `deps.ENV` (sem depender da funcao do facade).
+  - os cinco dominios extraidos (`notifications`, `saved`, `help`, `posts-read`, `comments-votes`) consolidam o padrao de delegacao via `get*Module()` + `build*Deps()`; o facade `kc-api.client.js` esta progressivamente mais enxuto.
+  - `local.adapter.js` e `supabase.adapter.js` permanecem como superficies equivalentes obrigatorias da `v11.32.x`.
+- resultado dos testes:
+  baseline elevada para `93/93` suites e `1754/1754` testes; hygiene alvo segue `8.6.0`.
+- validacao operacional:
+  `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validacao em navegador:
+  `kc-api.comments-votes.js` HTTP `200`, `kc-api.client.js` HTTP `200`, home HTTP `200`, admin HTTP `200`.
+- PR \ commit \ deploy:
+  PR `#382` — squash merge `7054114` — producao `dpl_Dxajob4FbnLs64iBN2he6vsVta1y`, smoke HTTP `200`.
+- próximas fases:
+  `v11.32.7` (release gate formal da trilha `v11.32.x`).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
