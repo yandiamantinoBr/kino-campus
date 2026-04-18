@@ -3101,6 +3101,37 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - trilha v11.32.x: **ENCERRADA**.
 - proxima trilha sugerida: `v11.33.x` — continuacao do split do facade `kc-api.client.js` pelos dominios residuais.
 
+### Iteração `v11.33.0` — Abertura da Trilha v11.33.x
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-33-0-kcapi-audit` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | auditoria (documentacao-only, nenhum runtime alterado) |
+| Escopo | `docs/kc-api-client-audit-v11.33.md` (NOVO), `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  mapear os dominios residuais da fachada `window.KCAPI` pos-trilha `v11.32.x`, registrar acoplamentos internos remanescentes e definir a sequencia segura para a trilha `v11.33.x`.
+- resultado:
+  - **NOVO** `docs/kc-api-client-audit-v11.33.md` — auditoria dos 6 dominios residuais com footprint por dominio (`ratings` 4 metodos, `posts-read-feed` 8, `posts-write` 7, `profiles` 6, `related` 2, `auth` 8), linhas estimadas, nivel de risco, acoplamentos inter-modulos conhecidos, itens que permanecem no core, e sequencia recomendada `v11.33.1`–`v11.33.7`.
+  - **ALTERADO** `README.md` — trilha `v11.33.x` marcada como ABERTA, status atualizado para `v11.33.0`, sequencia recomendada registrada.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — secao completa da abertura adicionada.
+- achados da auditoria:
+  - `kc-api.client.js` pos-v11.32.7 tem `2536L` e ainda concentra ~35 metodos publicos implementados diretamente (nao delegados).
+  - dominio mais autonomo: `ratings` (4 metodos + 4 normalizers co-locados, zero SWR, delegacao direta ao driver).
+  - dominio mais critico: `auth` (8 metodos publicos + 7 wrappers supabase internos, caminho critico de login/cadastro, extracoes adiadas para o final da trilha).
+  - `related` carrega o maior bloco de logica pura (~120 linhas de scoring sem driver), com extracao de baixo risco.
+  - infraestrutura SWR (`getCachedSessionPayload`, `persistSessionPayload`, etc.) permanece no core como dep injetada — nao e candidata a split.
+  - ordem de carregamento HTML ao final da trilha: `notifications.js → saved.js → help.js → posts-read.js → comments-votes.js → ratings.js → posts-feed.js → posts-write.js → profiles.js → related.js → auth.js → client.js`.
+- resultado dos testes:
+  baseline mantida em `93/93` suites e `1754/1754` testes (nenhum runtime alterado).
+- validacao operacional:
+  `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` — ambos verdes.
+- PR \ commit \ deploy:
+  PR `#385` — deploy de producao ativo `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (sem novo deploy necessario nesta iteracao).
+- trilha v11.33.x: **ABERTA**.
+- proxima iteracao: `v11.33.1` — split `ratings` (`assets/js/kc-api.ratings.js` → `window._KCAPI.ratings`).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
