@@ -2998,6 +2998,43 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.32.5` (split `posts-read`) -> `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
 
+### Iteração `v11.32.5`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-32-5-kcapi-posts-read-split` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | split estrutural + realinhamento de contrato/testes |
+| Escopo | `assets/js/kc-api.posts-read.js` (NOVO), `assets/js/kc-api.client.js`, `tests/kc-api-posts-read-module.test.js` (NOVO), `tests/kc-api-facade-contract.test.js`, `tests/anti-spam.test.js`, `tests/kc-api-client.test.js`, `tests/kc-api-notification-preferences-contract.test.js`, `tests/kc-api-notifications-contract.test.js`, `tests/kc-api-session-swr.test.js`, `tests/post-analytics.test.js`, `22` HTMLs carregadores, `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  executar o quarto split seguro por dominio da trilha `v11.32.x`, extraindo o grupo `posts-read/analytics` (7 metodos) do facade `window.KCAPI` para um submodulo proprio com namespace interno `window._KCAPI.postsRead`, mantendo o estado SWR auto-contido no submodulo e sem alterar assinatura publica, fallbacks de indisponibilidade por driver nem qualquer comportamento visivel da interface.
+- resultado:
+  - **NOVO** `assets/js/kc-api.posts-read.js` — IIFE com `'use strict'`, namespace `window._KCAPI.postsRead` e `7` exports do dominio: `trackCouponClick`, `trackShare`, `trackView`, `getCachedPostAnalytics`, `invalidatePostAnalyticsCache`, `refreshPostAnalytics`, `getPostAnalytics`. Estado SWR de analytics (`_pendingProductAnalyticsRequests = new Map()`, `PRODUCT_ANALYTICS_CACHE_MAX_AGE_MS = 20000`, `PRODUCT_ANALYTICS_STALE_MAX_AGE_MS = 5 * 60 * 1000`) auto-contido no submodulo. Cada metodo recebe `deps = { getActiveDriver, ENV, getCachedSessionPayload, persistSessionPayload, removeSessionCache, withPendingSessionRequest }` (deps injection via `buildPostsReadDeps()` no facade) e preserva fallbacks canonicos de indisponibilidade.
+  - **ALTERADO** `assets/js/kc-api.client.js` — o facade publico `window.KCAPI` passou a delegar todo o dominio `posts-read/analytics` via `getPostsReadModule()` + `buildPostsReadDeps()` (espelhando e estendendo o padrao `get*Module()` + deps injection dos dominios anteriores), com guards defensivos e fallback canonico quando o submodulo nao esta carregado.
+  - **NOVO** `tests/kc-api-posts-read-module.test.js` — suite estatica dedicada ao novo submodulo (`20` testes em 4 grupos) cobrindo IIFE/namespace/exports, fallbacks canonicos sem driver, delegacao por driver ativo com deps injetados, e ordem de carregamento do asset em `22` HTMLs.
+  - **ALTERADO** `tests/kc-api-facade-contract.test.js` — contrato do facade ampliado para travar `window._KCAPI.postsRead`, `getPostsReadModule()`, `buildPostsReadDeps()` e a delegacao dos 7 metodos do dominio extraido.
+  - **ALTERADO** `tests/anti-spam.test.js`, `tests/kc-api-client.test.js`, `tests/kc-api-notification-preferences-contract.test.js`, `tests/kc-api-notifications-contract.test.js`, `tests/kc-api-session-swr.test.js` e `tests/post-analytics.test.js` — bootstrap dos testes runtime atualizado para carregar `assets/js/kc-api.posts-read.js` antes do facade.
+  - **ALTERADOS** `22` HTMLs — todos passam a carregar `assets/js/kc-api.posts-read.js` entre `kc-api.help.js` e `kc-api.client.js`.
+  - **ALTERADO** `README.md` — status da base movido para `v11.32.5`, baseline atualizada para `92/92` suites e `1731/1731` testes.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — estado macro da fase atualizado e registro completo desta iteracao adicionado.
+- achados principais:
+  - o quarto split da trilha `KCAPI` foi fechado sem quebrar a interface publica `window.KCAPI`; a separacao ficou totalmente interna via `window._KCAPI.postsRead`.
+  - o dominio `posts-read/analytics` e o mais rico em dependencias SWR extraido ate agora — o submodulo incorpora o Map de deduplicacao e as constantes de TTL que antes viviam no facade monolitico; o facade apenas passa as funcoes SWR como deps injetadas.
+  - o padrao `buildPostsReadDeps()` (deps injection explicita) estende o padrao `get*Module()` anterior adicionando deps nomeadas para SWR, tornando o contrato de cada metodo testavel em isolamento puro sem precisar do facade completo.
+  - os quatro dominios extraidos (`notifications`, `saved`, `help`, `posts-read`) consolidam o padrao de delegacao via `get*Module()`; os proximos splits (comments/votes) seguirao o mesmo modelo.
+  - `local.adapter.js` e `supabase.adapter.js` permanecem como superficies equivalentes obrigatorias da `v11.32.x`.
+- resultado dos testes:
+  baseline elevada para `92/92` suites e `1731/1731` testes; hygiene alvo segue `8.6.0`.
+- validacao operacional:
+  `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validacao em navegador:
+  `kc-api.posts-read.js` HTTP `200`, `kc-api.client.js` HTTP `200`, home HTTP `200`, admin HTTP `200`.
+- PR \ commit \ deploy:
+  PR `#380` — squash merge `6066c1b` — producao `dpl_Bdno5W8PG3fW7gUMHbWkX82qgjDW`, smoke HTTP `200`.
+- próximas fases:
+  `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
