@@ -3072,6 +3072,35 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.32.7` (release gate formal da trilha `v11.32.x`).
 
+### Iteração `v11.32.7` — Release Gate da Trilha v11.32.x
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-32-7-release-gate` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | release gate (documentacao-only, nenhum runtime alterado) |
+| Escopo | `docs/qa/report-v11.32.7-run1.md` (NOVO), `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  fechar o release gate formal da trilha `v11.32.x` — confirmar a regressao verde, registrar o estado final dos artefatos, documentar os dominios candidatos a trilhas futuras e publicar o artefato QA.
+- resultado:
+  - **NOVO** `docs/qa/report-v11.32.7-run1.md` — artefato formal do release gate contendo: regressao `93/93`/`1754/1754`, hygiene `8.6.0`, smoke HTTP `200` em 6 endpoints, resumo das 8 iteracoes da trilha (v11.32.0 a v11.32.7), evolucao do baseline, tabela de sub-modulos criados, estado final de `kc-api.client.js` (`2536L`), lista de dominios residuais candidatos a trilhas futuras e drift conhecido.
+  - **ALTERADO** `README.md` — trilha `v11.32.x` marcada como ENCERRADA, status atualizado para `v11.32.7`, proxima trilha sugerida `v11.33.x`.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — secao completa do gate adicionada.
+- achados do gate:
+  - os 5 sub-modulos extraidos na trilha (`notifications`, `saved`, `help`, `posts-read`, `comments-votes`) estao todos em producao e respondendo HTTP `200`.
+  - `kc-api.client.js` reduziu dead code e agora delega 5 dominios via `get*Module()` + `build*Deps()`, mantendo a interface publica `window.KCAPI` intacta.
+  - a ordem de carregamento canonica consolidada em 22 HTMLs e: `notifications.js → saved.js → help.js → posts-read.js → comments-votes.js → client.js`.
+  - dominios residuais do facade ainda para extrair: `auth`, `profiles`, `posts-write`, `posts-read-feed`, `ratings`, `related` — candidatos a uma trilha `v11.33.x`.
+- resultado dos testes:
+  baseline confirmada em `93/93` suites e `1754/1754` testes; hygiene alvo `8.6.0`.
+- validacao operacional:
+  `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js`, smoke HTTP `200` em todos os endpoints criticos.
+- PR \ commit \ deploy:
+  PR `#384` — producao `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (deploy da v11.32.6, validado neste gate).
+- trilha v11.32.x: **ENCERRADA**.
+- proxima trilha sugerida: `v11.33.x` — continuacao do split do facade `kc-api.client.js` pelos dominios residuais.
+
 ---
 
 ## 12. Backlog inicial candidato da v11
