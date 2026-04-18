@@ -2962,6 +2962,42 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.32.4` (split `help/invites`) -> `v11.32.5` (split `posts-read`) -> `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
 
+### Iteração `v11.32.4`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-32-4-kcapi-help-invites-split` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | split estrutural + realinhamento de contrato/testes |
+| Escopo | `assets/js/kc-api.help.js` (NOVO), `assets/js/kc-api.client.js`, `tests/kc-api-help-module.test.js` (NOVO), `tests/kc-api-facade-contract.test.js`, `tests/anti-spam.test.js`, `tests/kc-api-client.test.js`, `tests/kc-api-notification-preferences-contract.test.js`, `tests/kc-api-notifications-contract.test.js`, `tests/kc-api-session-swr.test.js`, `tests/post-analytics.test.js`, `22` HTMLs carregadores, `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  executar o terceiro split seguro por dominio da trilha `v11.32.x`, extraindo o grupo `help-requests/invites` (6 metodos) do facade `window.KCAPI` para um submodulo proprio com namespace interno `window._KCAPI.help`, sem alterar assinatura publica, fallbacks de indisponibilidade por driver nem qualquer comportamento visivel da interface.
+- resultado:
+  - **NOVO** `assets/js/kc-api.help.js` — IIFE com `'use strict'`, namespace `window._KCAPI.help` e `6` exports do dominio: `createHelpRequest`, `listAdminHelpRequests`, `updateAdminHelpRequest`, `inviteExternalUser`, `getInvites`, `revokeInvite`. Cada metodo recebe `deps = { getActiveDriver }` (sem dependencia de `ENV` ou `invalidatePostAnalyticsCache` neste dominio) e preserva fallbacks canonicos de indisponibilidade.
+  - **ALTERADO** `assets/js/kc-api.client.js` — o facade publico `window.KCAPI` passou a delegar todo o dominio `help/invites` via `getHelpModule()` (espelhando `getNotificationsModule()` e `getSavedModule()`), com guards defensivos e fallback canonico quando o submodulo nao esta carregado.
+  - **NOVO** `tests/kc-api-help-module.test.js` — suite estatica dedicada ao novo submodulo (`8` testes) cobrindo IIFE/namespace, exports, helper de deps, fallbacks canonicos, delegacao por driver ativo e ordem de carregamento do asset em `22` HTMLs.
+  - **ALTERADO** `tests/kc-api-facade-contract.test.js` — contrato do facade ampliado para travar `window._KCAPI.help`, `getHelpModule()` e a delegacao dos 6 metodos do dominio extraido.
+  - **ALTERADO** `tests/anti-spam.test.js`, `tests/kc-api-client.test.js`, `tests/kc-api-notification-preferences-contract.test.js`, `tests/kc-api-notifications-contract.test.js`, `tests/kc-api-session-swr.test.js` e `tests/post-analytics.test.js` — bootstrap dos testes runtime atualizado para carregar `assets/js/kc-api.help.js` antes do facade.
+  - **ALTERADOS** `22` HTMLs — todos passam a carregar `assets/js/kc-api.help.js` entre `kc-api.saved.js` e `kc-api.client.js`.
+  - **ALTERADO** `README.md` — status da base movido para `v11.32.4`, baseline atualizada para `91/91` suites e `1711/1711` testes.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — estado macro da fase atualizado e registro completo desta iteracao adicionado.
+- achados principais:
+  - o terceiro split da trilha `KCAPI` foi fechado sem quebrar a interface publica `window.KCAPI`; a separacao ficou totalmente interna via `window._KCAPI.help`.
+  - o dominio `help/invites` e o mais simples extraido ate agora — sem dependencia de `ENV`, sem invalidacao de analytics — apenas `getActiveDriver` e os fallbacks de indisponibilidade.
+  - os tres primeiros dominios extraidos (`notifications`, `saved`, `help`) consolidam o padrao de delegacao via `get*Module()` no facade; os proximos splits (posts-read, comments/votes) seguirao o mesmo modelo.
+  - `local.adapter.js` e `supabase.adapter.js` permanecem como superficies equivalentes obrigatorias da `v11.32.x`.
+- resultado dos testes:
+  baseline elevada para `91/91` suites e `1711/1711` testes; hygiene alvo segue `8.6.0`.
+- validacao operacional:
+  `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validacao em navegador:
+  `kc-api.help.js` HTTP `200`, `kc-api.saved.js` HTTP `200`, home HTTP `200`, admin HTTP `200`.
+- PR \ commit \ deploy:
+  PR `#378` — squash merge `14007325` — producao `dpl_D6fHRgr2zyv3tv11mWQLWGUGr5td`, smoke HTTP `200`.
+- próximas fases:
+  `v11.32.5` (split `posts-read`) -> `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
