@@ -2925,6 +2925,43 @@ Toda iteração da v11 deverá preencher neste arquivo, no mínimo:
 - próximas fases:
   `v11.32.3` (split `saved/highlights`) -> `v11.32.4` (split `help/invites`) -> `v11.32.5` (split `posts-read`) -> `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
 
+### Iteração `v11.32.3`
+
+| Campo | Valor |
+|-------|-------|
+| Branch | `codex/v11-32-3-kcapi-saved-split` |
+| Base | `kinocampus-V11.0-foundations` |
+| Tipo | split estrutural + realinhamento de contrato/testes |
+| Escopo | `assets/js/kc-api.saved.js` (NOVO), `assets/js/kc-api.client.js`, `tests/kc-api-saved-module.test.js` (NOVO), `tests/kc-api-facade-contract.test.js`, `tests/anti-spam.test.js`, `tests/kc-api-client.test.js`, `tests/kc-api-notification-preferences-contract.test.js`, `tests/kc-api-notifications-contract.test.js`, `tests/kc-api-session-swr.test.js`, `tests/post-analytics.test.js`, `22` HTMLs carregadores, `README.md`, `RELATORIO-KINOCAMPUS-V11.md` |
+
+- objetivo:
+  executar o segundo split seguro por dominio da trilha `v11.32.x`, extraindo o grupo `saved/highlights` (7 metodos) do facade `window.KCAPI` para um submodulo proprio com namespace interno `window._KCAPI.saved`, sem alterar assinatura publica, fallback entre drivers (`ENV.driver !== 'supabase'`), invalidacao de analytics apos mutacoes nem qualquer comportamento visivel da interface.
+- resultado:
+  - **NOVO** `assets/js/kc-api.saved.js` — IIFE com `'use strict'`, namespace `window._KCAPI.saved` e `7` exports do dominio: `getSavedPostState`, `setSavedPostState`, `clearSavedPostState`, `getMySavedPosts`, `getMySavedPostsCount`, `getProfileHighlights`, `getProfileHighlightsCount`. Cada metodo recebe `deps = { getActiveDriver, ENV, invalidatePostAnalyticsCache }` e preserva a semantica canonica do local vs supabase, com invalidacao de analytics apos `setSavedPostState`/`clearSavedPostState` com sucesso.
+  - **ALTERADO** `assets/js/kc-api.client.js` — o facade publico `window.KCAPI` passou a delegar todo o dominio `saved/highlights` via `getSavedModule()` (espelhando `getNotificationsModule()`), com guards defensivos e fallback canonico (`{ kinds: [] }`, `[]`, `0`, `{ ok: false, error: { message: 'Salvos indisponíveis neste driver.' } }`) quando o submodulo nao esta carregado.
+  - **NOVO** `tests/kc-api-saved-module.test.js` — suite estatica dedicada ao novo submodulo (`9` testes) cobrindo IIFE/namespace, exports, helpers de deps (driver ativo, ENV e invalidacao de analytics), branches `ENV.driver !== 'supabase'`, fallbacks canonicos, invalidacao pos-mutacao e ordem de carregamento do asset em `22` HTMLs.
+  - **ALTERADO** `tests/kc-api-facade-contract.test.js` — contrato do facade ampliado para travar `window._KCAPI.saved`, `getSavedModule()` e a delegacao dos 7 metodos do dominio extraido.
+  - **ALTERADO** `tests/anti-spam.test.js`, `tests/kc-api-client.test.js`, `tests/kc-api-notification-preferences-contract.test.js`, `tests/kc-api-notifications-contract.test.js`, `tests/kc-api-session-swr.test.js` e `tests/post-analytics.test.js` — bootstrap dos testes runtime atualizado para carregar `assets/js/kc-api.saved.js` antes do facade.
+  - **ALTERADOS** `account-setup.html`, `achados-perdidos.html`, `ajuda.html`, `auth-callback.html`, `caronas-feed.html`, `compra-venda-feed.html`, `create-post.html`, `eventos.html`, `index.html`, `moradia.html`, `my-posts.html`, `ods.html`, `oportunidades.html`, `profile.html`, `search-results.html`, `settings.html`, `_product.html`, `admin/banners.html`, `admin/help-requests.html`, `admin/index.html`, `admin/moderation.html` e `admin/reports.html` — todos passam a carregar `assets/js/kc-api.saved.js` entre `assets/js/kc-api.notifications.js` e `assets/js/kc-api.client.js`.
+  - **ALTERADO** `README.md` — status da base movido para `v11.32.3`, baseline atualizada para `90/90` suites e `1703/1703` testes, nova entrega recente registrada e progresso atual apontando `help/invites` como proxima fatia.
+  - **ALTERADO** `RELATORIO-KINOCAMPUS-V11.md` — estado macro da fase atualizado e registro completo desta iteracao adicionado.
+- achados principais:
+  - o segundo split da trilha `KCAPI` foi fechado sem quebrar a interface publica `window.KCAPI`; a separacao ficou totalmente interna via `window._KCAPI.saved`.
+  - o dominio `saved/highlights` saiu com dependencia explicita de `ENV` e de `invalidatePostAnalyticsCache`, o que justificou a injecao via `deps` e exigiu manter o contrato de invalidacao de analytics no momento da delegacao — sem isso, mutacoes bem-sucedidas poderiam manter dados obsoletos em cache.
+  - `local.adapter.js` e `supabase.adapter.js` permanecem como superficies equivalentes obrigatorias da `v11.32.x`.
+  - o facade principal continua com footprint alto (`2544L` pos-split, +3L em relacao a `v11.32.2`) porque a delegacao defensiva espelhando o padrao `notifications` adiciona ligeiramente mais linhas do que removeu nesta primeira fase; os ganhos estruturais devem aparecer nas proximas extracoes em sequencia.
+  - o gate operacional da trilha permaneceu Jest + hygiene + `vercel inspect` + smoke HTTP `200`.
+- resultado dos testes:
+  baseline elevada para `90/90` suites e `1703/1703` testes; hygiene alvo segue `8.6.0`.
+- validacao operacional:
+  `npx jest --passWithNoTests --runInBand`, `node scripts/hygiene-check.js` e `git diff --check`.
+- validacao em navegador:
+  producao publicada em `dpl_CEWcQDpBH4Hwobuf4M6FzzBFgoqh` (`● Ready`, aliased em `https://www.kinocampus.com.br`); smoke HTTP confirmou `200` em `https://www.kinocampus.com.br/?ts=1776474256`, `https://www.kinocampus.com.br/compra-venda-feed.html?ts=1776474256`, `https://www.kinocampus.com.br/create-post.html?ts=1776474256` e `https://www.kinocampus.com.br/_product.html?id=1&ts=1776474256`. O asset `https://www.kinocampus.com.br/assets/js/kc-api.saved.js?ts=1776474256` tambem retornou `200`, e o HTML publico de `_product.html` confirmou a ordem canonica dos scripts (`kc-api.notifications.js` -> `kc-api.saved.js` -> `kc-api.client.js`).
+- PR \ commit \ deploy:
+  PR `#376` — squash merge `7f6be35` — producao `dpl_CEWcQDpBH4Hwobuf4M6FzzBFgoqh` (deploy direto via `vercel deploy --prod --yes`), smoke HTTP `200`.
+- próximas fases:
+  `v11.32.4` (split `help/invites`) -> `v11.32.5` (split `posts-read`) -> `v11.32.6` (comments/votes + hardening) -> `v11.32.7` (release gate).
+
 ---
 
 ## 12. Backlog inicial candidato da v11
