@@ -1855,20 +1855,43 @@
     return driver.getTopContributors(period, module, limit);
   }
 
+  // Posts-Read/Analytics split (v11.32.5)
+  // Implementacoes foram movidas para window._KCAPI.postsRead (kc-api.posts-read.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getPostsReadModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.postsRead = window._KCAPI.postsRead || {};
+
+  function getPostsReadModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const postsRead = window._KCAPI.postsRead;
+    return (postsRead && typeof postsRead === 'object') ? postsRead : null;
+  }
+
+  function buildPostsReadDeps() {
+    return {
+      getActiveDriver,
+      ENV,
+      getCachedSessionPayload,
+      persistSessionPayload,
+      removeSessionCache,
+      withPendingSessionRequest,
+    };
+  }
+
   async function trackCouponClick(postId) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.trackCouponClick !== 'function') return { ok: false };
-    const result = await driver.trackCouponClick(postId);
-    if (result && result.ok) invalidatePostAnalyticsCache(postId);
-    return result;
+    const postsReadModule = getPostsReadModule();
+    if (postsReadModule && typeof postsReadModule.trackCouponClick === 'function') {
+      return postsReadModule.trackCouponClick(postId, buildPostsReadDeps());
+    }
+    return { ok: false };
   }
 
   async function trackShare(postId) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.trackShare !== 'function') return { ok: false };
-    const result = await driver.trackShare(postId);
-    if (result && result.ok) invalidatePostAnalyticsCache(postId);
-    return result;
+    const postsReadModule = getPostsReadModule();
+    if (postsReadModule && typeof postsReadModule.trackShare === 'function') {
+      return postsReadModule.trackShare(postId, buildPostsReadDeps());
+    }
+    return { ok: false };
   }
 
   async function checkDuplicatePost(userId, module, title) {
@@ -1877,56 +1900,45 @@
     return driver.checkDuplicatePost(userId, module, title);
   }
 
-  // ── Analytics de post (v9.3.1) ──────────────────────────────
+  // ── Analytics de post (v9.3.1) — delegados via getPostsReadModule() ──
   async function trackView(postId) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.trackView !== 'function') return { ok: false };
-    const result = await driver.trackView(postId);
-    if (result && result.ok) invalidatePostAnalyticsCache(postId);
-    return result;
+    const postsReadModule = getPostsReadModule();
+    if (postsReadModule && typeof postsReadModule.trackView === 'function') {
+      return postsReadModule.trackView(postId, buildPostsReadDeps());
+    }
+    return { ok: false };
   }
 
   function getCachedPostAnalytics(postId, options = {}) {
-    const id = String(postId || '').trim();
-    if (!id) return null;
-    return getCachedSessionPayload('product', getPostAnalyticsCacheKey(id), PRODUCT_ANALYTICS_CACHE_MAX_AGE_MS, PRODUCT_ANALYTICS_STALE_MAX_AGE_MS, options);
+    const postsReadModule = getPostsReadModule();
+    if (postsReadModule && typeof postsReadModule.getCachedPostAnalytics === 'function') {
+      return postsReadModule.getCachedPostAnalytics(postId, options, buildPostsReadDeps());
+    }
+    return null;
   }
 
   function invalidatePostAnalyticsCache(postId) {
-    const id = String(postId || '').trim();
-    if (!id) return false;
-    return removeSessionCache('product', getPostAnalyticsCacheKey(id));
+    const postsReadModule = getPostsReadModule();
+    if (postsReadModule && typeof postsReadModule.invalidatePostAnalyticsCache === 'function') {
+      return postsReadModule.invalidatePostAnalyticsCache(postId, buildPostsReadDeps());
+    }
+    return false;
   }
 
   async function refreshPostAnalytics(postId, options = {}) {
-    const driver = getActiveDriver();
-    if (!driver || typeof driver.getPostAnalytics !== 'function') return { ok: false };
-    const id = String(postId || '').trim();
-    if (!id) return { ok: false };
-
-    if (options.force !== true) {
-      const cached = getCachedPostAnalytics(id);
-      if (cached) return cached.data;
+    const postsReadModule = getPostsReadModule();
+    if (postsReadModule && typeof postsReadModule.refreshPostAnalytics === 'function') {
+      return postsReadModule.refreshPostAnalytics(postId, options, buildPostsReadDeps());
     }
-
-    const requestKey = getPostAnalyticsCacheKey(id);
-    return withPendingSessionRequest(_pendingProductAnalyticsRequests, requestKey, async () => {
-      const result = await driver.getPostAnalytics(id);
-      if (result && result.ok) {
-        persistSessionPayload('product', requestKey, result, buildPostAnalyticsSignature(result));
-      } else if (options.keepStaleOnError !== true) {
-        removeSessionCache('product', requestKey);
-      }
-      return result;
-    });
+    return { ok: false };
   }
 
   async function getPostAnalytics(postId, options = {}) {
-    if (options.force !== true) {
-      const cached = getCachedPostAnalytics(postId);
-      if (cached) return cached.data;
+    const postsReadModule = getPostsReadModule();
+    if (postsReadModule && typeof postsReadModule.getPostAnalytics === 'function') {
+      return postsReadModule.getPostAnalytics(postId, options, buildPostsReadDeps());
     }
-    return refreshPostAnalytics(postId, options);
+    return { ok: false };
   }
 
 
