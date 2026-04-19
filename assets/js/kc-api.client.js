@@ -1686,8 +1686,34 @@
 
 
   // Facade pública (mantém a API estável)
-  async function getPosts(params = {}) { return getActiveDriver().getPosts(params); }
+  // Posts-Feed split (v11.33.2)
+  // Implementacoes foram movidas para window._KCAPI.postsFeed (kc-api.posts-feed.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getPostsFeedModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.postsFeed = window._KCAPI.postsFeed || {};
+
+  function getPostsFeedModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const postsFeed = window._KCAPI.postsFeed;
+    return (postsFeed && typeof postsFeed === 'object') ? postsFeed : null;
+  }
+
+  function buildPostsFeedDeps() {
+    return { getActiveDriver, ENV };
+  }
+
+  async function getPosts(params = {}) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.getPosts === 'function') {
+      return postsFeedModule.getPosts(params, buildPostsFeedDeps());
+    }
+    return getActiveDriver().getPosts(params);
+  }
   async function searchPosts(params = {}) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.searchPosts === 'function') {
+      return postsFeedModule.searchPosts(params, buildPostsFeedDeps());
+    }
     const driver = getActiveDriver();
     if (!driver || typeof driver.searchPosts !== 'function') {
       const posts = await driver.getPosts(params);
@@ -1697,14 +1723,14 @@
     return Array.isArray(posts) ? posts : [];
   }
   async function getFeedCursor(params = {}) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.getFeedCursor === 'function') {
+      return postsFeedModule.getFeedCursor(params, buildPostsFeedDeps());
+    }
     const driver = getActiveDriver();
     if (!driver || typeof driver.getFeedCursor !== 'function') {
       const posts = await driver.getPosts(params);
-      return {
-        posts: Array.isArray(posts) ? posts : [],
-        nextCursor: null,
-        hasMore: false,
-      };
+      return { posts: Array.isArray(posts) ? posts : [], nextCursor: null, hasMore: false };
     }
     return driver.getFeedCursor(params);
   }
@@ -1762,7 +1788,13 @@
     }
     return { ok: false, error: { message: 'Avaliações indisponíveis neste driver.' } };
   }
-  async function getPostById(id) { return getActiveDriver().getPostById(id); }
+  async function getPostById(id) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.getPostById === 'function') {
+      return postsFeedModule.getPostById(id, buildPostsFeedDeps());
+    }
+    return getActiveDriver().getPostById(id);
+  }
   async function createPost(body) {
     const policyError = enforceSupabaseOnProduction('createPost');
     if (policyError) return policyError;
@@ -1809,6 +1841,10 @@
   }
 
   async function getTopContributors(period, module, limit) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.getTopContributors === 'function') {
+      return postsFeedModule.getTopContributors(period, module, limit, buildPostsFeedDeps());
+    }
     const driver = getActiveDriver();
     if (!driver || typeof driver.getTopContributors !== 'function') return [];
     return driver.getTopContributors(period, module, limit);
@@ -1854,6 +1890,10 @@
   }
 
   async function checkDuplicatePost(userId, module, title) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.checkDuplicatePost === 'function') {
+      return postsFeedModule.checkDuplicatePost(userId, module, title, buildPostsFeedDeps());
+    }
     const driver = getActiveDriver();
     if (!driver || typeof driver.checkDuplicatePost !== 'function') return { ok: false, candidates: [] };
     return driver.checkDuplicatePost(userId, module, title);
@@ -2124,6 +2164,10 @@
   }
 
   async function getMyPosts(params = {}) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.getMyPosts === 'function') {
+      return postsFeedModule.getMyPosts(params, buildPostsFeedDeps());
+    }
     const driver = getActiveDriver();
     if (ENV.driver !== 'supabase' && driver && typeof driver.getMyPosts === 'function') return driver.getMyPosts(params);
     if (ENV.driver !== 'supabase' || !getActiveDriver().getMyPosts) return [];
@@ -2131,9 +2175,13 @@
   }
 
   async function getPostsByAuthorId(authorId, params = {}) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.getPostsByAuthorId === 'function') {
+      return postsFeedModule.getPostsByAuthorId(authorId, params, buildPostsFeedDeps());
+    }
     const driver = getActiveDriver();
     if (!driver || typeof driver.getPostsByAuthorId !== 'function') return [];
-    return getActiveDriver().getPostsByAuthorId(authorId, params);
+    return driver.getPostsByAuthorId(authorId, params);
   }
 
   async function getRelatedPosts(postId, options = {}) {
