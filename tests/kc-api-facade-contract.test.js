@@ -39,6 +39,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.postsRead = window._KCAPI.postsRead || {};');
     expect(source).toContain('window._KCAPI.commentsVotes = window._KCAPI.commentsVotes || {};');
     expect(source).toContain('window._KCAPI.ratings = window._KCAPI.ratings || {};');
+    expect(source).toContain('window._KCAPI.postsFeed = window._KCAPI.postsFeed || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -236,6 +237,19 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
 });
 
 describe('kc-api.client.js - caches, SWR and diagnostics', () => {
+  test('mantem delegacao para posts-feed via getPostsFeedModule e buildPostsFeedDeps', () => {
+    expect(source).toContain('function getPostsFeedModule()');
+    expect(source).toContain('function buildPostsFeedDeps()');
+    expect(source).toContain('return postsFeedModule.getPosts(params, buildPostsFeedDeps());');
+    expect(source).toContain('return postsFeedModule.searchPosts(params, buildPostsFeedDeps());');
+    expect(source).toContain('return postsFeedModule.getFeedCursor(params, buildPostsFeedDeps());');
+    expect(source).toContain('return postsFeedModule.getPostById(id, buildPostsFeedDeps());');
+    expect(source).toContain('return postsFeedModule.getTopContributors(period, module, limit, buildPostsFeedDeps());');
+    expect(source).toContain('return postsFeedModule.checkDuplicatePost(userId, module, title, buildPostsFeedDeps());');
+    expect(source).toContain('return postsFeedModule.getMyPosts(params, buildPostsFeedDeps());');
+    expect(source).toContain('return postsFeedModule.getPostsByAuthorId(authorId, params, buildPostsFeedDeps());');
+  });
+
   test('mantem delegacao para ratings via getRatingsModule e buildRatingsDeps', () => {
     expect(source).toContain('function getRatingsModule()');
     expect(source).toContain('function buildRatingsDeps()');
