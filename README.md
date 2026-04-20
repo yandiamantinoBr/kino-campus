@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.33.0`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes mantida em 93/93 suites e 1754/1754 testes, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, trilha `v11.31.x` encerrada com a sexta (e última) extração estrutural de `kc-create-post.js`, trilha `v11.32.x` encerrada com o split por domínio do facade `window.KCAPI`: 5 sub-módulos extraídos (`notifications`, `saved/highlights`, `help/invites`, `posts-read/analytics`, `comments/votes`) para `window._KCAPI.*`; dead code removido do facade; gate formal em `docs/qa/report-v11.32.7-run1.md`; e **trilha `v11.33.x` aberta** com auditoria dos domínios residuais do facade (`ratings`, `posts-read-feed`, `posts-write`, `profiles`, `related`, `auth`) em `docs/kc-api-client-audit-v11.33.md`.
+**Status atual:** v11 executada até `v11.33.7`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes mantida em 99/99 suites e 1874/1874 testes, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, trilha `v11.31.x` encerrada com a sexta (e última) extração estrutural de `kc-create-post.js`, trilha `v11.32.x` encerrada com o split por domínio do facade `window.KCAPI`: 5 sub-módulos extraídos (`notifications`, `saved/highlights`, `help/invites`, `posts-read/analytics`, `comments/votes`) para `window._KCAPI.*`; e **trilha `v11.33.x` encerrada** com 6 novos sub-módulos extraídos do facade residual (`ratings`, `posts-feed`, `posts-write`, `profiles`, `related`, `auth`) — `kc-api.client.js` reduzido de `2536L` para `2410L`, 11 sub-módulos `window._KCAPI.*` operacionais, gate formal em `v11.33.7`.
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 93 suites de regressão e contrato |
+| Testes | Jest: 99 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,13 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v11.33.7 | gate formal da trilha `v11.33.x`: todos os 6 domínios residuais extraídos do facade `window.KCAPI`; `kc-api.client.js` reduzido de `2536L` para `2410L`; 11 sub-módulos `window._KCAPI.*` operacionais (acumulando as trilhas `v11.32.x` + `v11.33.x`); baseline verde em `99/99` suites e `1874/1874` testes; hygiene `8.6.0` ✓ | `#392` |
+| v11.33.6 | sexto split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.auth.js` registrado em `window._KCAPI.auth`, concentrando 8 métodos do domínio auth (`getCurrentUser`, `signIn`, `signUp`, `resendConfirmation`, `requestPasswordReset`, `updatePassword`, `login`, `logout`); 7 wrappers `supabase*()` (~80L) + implementações públicas (~45L) removidos do facade; `window.KCSupabase` acessado diretamente como global (padrão `kc-api.profiles.js`); deps `{ ENV }`; facade delega via `getAuthModule()`/`buildAuthDeps()`; 22 HTMLs: `related.js → auth.js → client.js`; 20 novos testes; baseline `99/99` suites · `1874/1874` testes | `#391` |
+| v11.33.5 | quinto split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.related.js` registrado em `window._KCAPI.related`, concentrando `getRelatedPosts` e `rankRelatedPosts` com algoritmo de scoring puro (~190L de helpers movidos); `getNormalizedPostValue` internalizado no sub-módulo; `normalizePost` recebida via deps; ~200L removidas do facade; 22 HTMLs: `profiles.js → related.js → client.js`; 16 novos testes; baseline `98/98` suites · `1854/1854` testes | `#390` |
+| v11.33.4 | quarto split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.profiles.js` registrado em `window._KCAPI.profiles`, concentrando 6 métodos do domínio profiles (`getCurrentProfile`, `getProfileById`, `syncProfile`, `getMyProfile`, `updateMyProfile`, `uploadProfileAvatar`); `getProfileById` com fallback em dois níveis (Supabase → mock legado via `deps.getAuthorById`); guards `getEnvDriver !== 'supabase'`; deps `{ getActiveDriver, ENV, getAuthorById }`; 22 HTMLs: `posts-write.js → profiles.js → client.js`; 19 novos testes; baseline `97/97` suites · `1837/1837` testes | `#389` |
+| v11.33.3 | terceiro split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.posts-write.js` registrado em `window._KCAPI.postsWrite`, concentrando 7 métodos de escrita (`createPost`, `updatePost`, `deletePost`, `reportPost`, `togglePostStatus`, `renewPost`, `bumpPost`); `enforceSupabaseOnProduction` e `kcApiError` reimplementados localmente; globals de diagnóstico (`lastCreatePostError`, `setLastCreatePostError`, etc.) preservados no facade; deps `{ getActiveDriver, ENV }`; 22 HTMLs: `posts-feed.js → posts-write.js → client.js`; 22 novos testes; baseline `96/96` suites · `1818/1818` testes | `#388` |
+| v11.33.2 | segundo split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.posts-feed.js` registrado em `window._KCAPI.postsFeed`, concentrando 8 métodos de leitura de feed (`getPosts`, `searchPosts`, `getFeedCursor`, `getPostById`, `getTopContributors`, `checkDuplicatePost`, `getMyPosts`, `getPostsByAuthorId`); fallback `driver.getPosts` quando driver sem `searchPosts`; deps `{ getActiveDriver, ENV }`; 22 HTMLs: `ratings.js → posts-feed.js → client.js`; 23 novos testes; baseline `95/95` suites · `1796/1796` testes | `#387` |
+| v11.33.1 | primeiro split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.ratings.js` registrado em `window._KCAPI.ratings`, concentrando 4 métodos do domínio ratings (`getUserRatingSummary`, `getUserRatingState`, `listUserRatings`, `upsertUserRating`) e inline fallback dos 4 normalizers; deps `{ getActiveDriver, normalizeUserRatingSummary, normalizeUserRatingEntry, normalizeUserRatingState, normalizeUserRatingList }`; 22 HTMLs: `comments-votes.js → ratings.js → client.js`; 19 novos testes; baseline `94/94` suites · `1773/1773` testes | `#386` |
 | v11.33.0 | abertura formal da trilha `v11.33.x` — split dos domínios residuais do facade `window.KCAPI`: auditoria dedicada em `docs/kc-api-client-audit-v11.33.md` mapeando 6 domínios remanescentes (`ratings`, `posts-read-feed`, `posts-write`, `profiles`, `related`, `auth`), 35 métodos públicos + ~25 helpers/wrappers, ~650 linhas estimadas, tabela de risco por domínio e sequência recomendada `v11.33.1`–`v11.33.7`; baseline mantido em `93/93` suites e `1754/1754` testes | `#385` |
 | v11.32.7 | release gate formal da trilha `v11.32.x`: regressão verde (`93/93` suites · `1754/1754` testes), hygiene `8.6.0` ✓, smoke HTTP `200` em todos os sub-módulos e assets críticos, artefato `docs/qa/report-v11.32.7-run1.md` registrando o estado final de `kc-api.client.js` e os domínios candidatos a trilhas futuras | `#384` |
 | v11.32.6 | quinto split por domínio da trilha `KCAPI`: novo IIFE `assets/js/kc-api.comments-votes.js` registrado em `window._KCAPI.commentsVotes`, concentrando 8 métodos do grupo comments/votes (`getCachedComments`, `invalidateCommentsCache`, `refreshComments`, `getComments`, `addComment`, `likeComment`, `votePost`, `getMyVote`); estado SWR de comments (`_pendingProductCommentsRequests`, TTL constants) auto-contido no submódulo; `assets/js/kc-api.client.js` ganha `getCommentsVotesModule()` + `buildCommentsVotesDeps()` e delega os 8 métodos com fallback canônico; dead code removido do facade (constantes e helpers de analytics/comments já movidos para sub-módulos v11.32.5/v11.32.6); `22` HTMLs carregam o novo asset entre `kc-api.posts-read.js` e `kc-api.client.js`; nova suíte `tests/kc-api-comments-votes-module.test.js` (20 testes) e realinhamento do contrato em `tests/kc-api-facade-contract.test.js`; 6 test bootstraps atualizados; baseline sobe para `93/93` suites e `1754/1754` testes | `#382` |
@@ -139,14 +146,12 @@ Regras desta fase:
 
 ### Progresso atual
 
-- iteracao ativa consolidada: `v11.33.0` — **trilha `v11.33.x` ABERTA**
-- objetivo desta iteracao: auditoria dos dominios residuais do facade `window.KCAPI` pos-trilha `v11.32.x`
-- natureza da iteracao: documentacao-only, nenhum runtime alterado
-- regressao: `93/93` suites, `1754/1754` testes, hygiene `8.6.0`
+- iteracao encerrada: `v11.33.7` — **trilha `v11.33.x` CONCLUÍDA**
+- gate formal: todos os 6 domínios residuais extraídos do facade `window.KCAPI`
+- regressao: `99/99` suites, `1874/1874` testes, hygiene `8.6.0`
 - deploy de producao ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
-- artefato de auditoria: `docs/kc-api-client-audit-v11.33.md`
-- dominios mapeados: `ratings` (4), `posts-read-feed` (8), `posts-write` (7), `profiles` (6), `related` (2), `auth` (8)
-- sequencia recomendada: `v11.33.1` (ratings) → `v11.33.2` (posts-feed) → `v11.33.3` (posts-write) → `v11.33.4` (profiles) → `v11.33.5` (related) → `v11.33.6` (auth) → `v11.33.7` (gate)
+- sub-modulos window._KCAPI.*: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
+- kc-api.client.js: `2536L` (pre-v11.33) → `2410L` (pos-v11.33.7), −126L de implementacoes, +∼160L de delegation stubs
 
 ---
 
