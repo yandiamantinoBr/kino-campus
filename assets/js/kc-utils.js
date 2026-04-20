@@ -65,33 +65,24 @@
     return (window._KCU && window._KCU.string) ? window._KCU.string.normalizeText(str) : (str || '').toString().toLowerCase().trim();
   }
 
+  // Delegação → window._KCU.identity.normalizeEmail (kc-utils.identity.js)
   function normalizeEmail(email) {
-    return String(email || '').trim().toLowerCase();
+    return (window._KCU && window._KCU.identity) ? window._KCU.identity.normalizeEmail(email) : String(email || '').trim().toLowerCase();
   }
 
+  // Delegação → window._KCU.identity.getEmailDomain (kc-utils.identity.js)
   function getEmailDomain(email) {
-    const em = normalizeEmail(email);
-    const at = em.lastIndexOf('@');
-    if (at < 0) return '';
-    return em.slice(at + 1);
+    return (window._KCU && window._KCU.identity) ? window._KCU.identity.getEmailDomain(email) : '';
   }
 
+  // Delegação → window._KCU.identity.normalizeAllowedDomains (kc-utils.identity.js)
   function normalizeAllowedDomains(allowedDomains) {
-    if (!Array.isArray(allowedDomains)) return [];
-    return Array.from(new Set(
-      allowedDomains
-        .map((d) => String(d || '').trim().toLowerCase())
-        .filter(Boolean)
-    ));
+    return (window._KCU && window._KCU.identity) ? window._KCU.identity.normalizeAllowedDomains(allowedDomains) : [];
   }
 
+  // Delegação → window._KCU.identity.isInstitutionalEmailAllowed (kc-utils.identity.js)
   function isInstitutionalEmailAllowed(email, allowedDomains) {
-    const list = normalizeAllowedDomains(allowedDomains);
-    if (!list.length) return true; // sem restrição
-    const domain = getEmailDomain(email);
-    if (!domain) return false;
-    // Regra única: aceita apenas domínio explícito na allowlist.
-    return list.includes(domain);
+    return (window._KCU && window._KCU.identity) ? window._KCU.identity.isInstitutionalEmailAllowed(email, allowedDomains) : true;
   }
 
   // Delegação → window._KCU.string.canonicalCategory (kc-utils.string.js)
@@ -104,11 +95,9 @@
     return (window._KCU && window._KCU.string) ? window._KCU.string.slugifyText(str) : String(str || '');
   }
 
+  // Delegação → window._KCU.identity.buildPublicHandle (kc-utils.identity.js)
   function buildPublicHandle(value, options) {
-    const slug = slugifyText(value).slice(0, 32);
-    if (!slug) return '';
-    const prefix = options && options.prefix === false ? '' : '@';
-    return prefix + slug;
+    return (window._KCU && window._KCU.identity) ? window._KCU.identity.buildPublicHandle(value, options) : '';
   }
 
   // Delegação → window._KCU.string.levenshteinDistance (kc-utils.string.js)
