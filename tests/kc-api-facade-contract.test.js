@@ -40,6 +40,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.commentsVotes = window._KCAPI.commentsVotes || {};');
     expect(source).toContain('window._KCAPI.ratings = window._KCAPI.ratings || {};');
     expect(source).toContain('window._KCAPI.postsFeed = window._KCAPI.postsFeed || {};');
+    expect(source).toContain('window._KCAPI.postsWrite = window._KCAPI.postsWrite || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -179,7 +180,8 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
   });
 
   test('mantem guards de producao supabase para mutacoes criticas', () => {
-    // createPost guard permanece no facade; votePost/addComment movidos para kc-api.comments-votes.js
+    // createPost guard no facade como fallback (delegado para postsWrite via getPostsWriteModule)
+    // votePost/addComment movidos para kc-api.comments-votes.js
     expect(source).toContain("const policyError = enforceSupabaseOnProduction('createPost');");
     expect(source).toContain("code: 'PRODUCTION_REQUIRES_SUPABASE'");
   });
@@ -237,6 +239,18 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
 });
 
 describe('kc-api.client.js - caches, SWR and diagnostics', () => {
+  test('mantem delegacao para posts-write via getPostsWriteModule e buildPostsWriteDeps', () => {
+    expect(source).toContain('function getPostsWriteModule()');
+    expect(source).toContain('function buildPostsWriteDeps()');
+    expect(source).toContain('return postsWriteModule.createPost(body, buildPostsWriteDeps());');
+    expect(source).toContain('return postsWriteModule.updatePost(postId, payload, buildPostsWriteDeps());');
+    expect(source).toContain('return postsWriteModule.deletePost(postId, buildPostsWriteDeps());');
+    expect(source).toContain('return postsWriteModule.reportPost(postId, payload, buildPostsWriteDeps());');
+    expect(source).toContain('return postsWriteModule.togglePostStatus(postId, buildPostsWriteDeps());');
+    expect(source).toContain('return postsWriteModule.renewPost(postId, buildPostsWriteDeps());');
+    expect(source).toContain('return postsWriteModule.bumpPost(postId, buildPostsWriteDeps());');
+  });
+
   test('mantem delegacao para posts-feed via getPostsFeedModule e buildPostsFeedDeps', () => {
     expect(source).toContain('function getPostsFeedModule()');
     expect(source).toContain('function buildPostsFeedDeps()');
