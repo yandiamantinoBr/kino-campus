@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução iniciada; iteração `v12.0.0` em execução — abertura docs-only do ciclo v12 (RELATORIO-V12, README, CHANGELOG); nenhum arquivo JS, HTML ou teste alterado; baseline preservada em `99/99` suites e `1874/1874` testes pós-`v11.33.7` |
+| Estado desta fase | execução em andamento; iterações `v12.0.0` (abertura docs-only) e `v12.1.0` (auditoria doc-only de `kc-utils.js`) concluídas; próxima é `v12.2.0` — primeiro split (`window._KCU.string`); baseline preservada em `99/99` suites e `1874/1874` testes pós-`v11.33.7` |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -174,14 +174,16 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 
 | Iteração | Escopo | Entrega esperada | Status |
 |---|---|---|---|
-| **v12.0.0** | **Abertura docs-only do ciclo v12**: este RELATORIO, README atualizado, CHANGELOG com entrada `[12.0.0-planning]` | 1 doc novo, 2 docs editados; zero mudança JS/HTML/teste; baseline `99/1874` preservada | 🟡 em execução |
-| v12.1.0 | Auditoria formal `kc-utils.js` (doc-only): mapa por domínio, callsites, risco de regressão | `docs/kc-utils-audit-v12.1.md` | 📋 planejado |
-| v12.2.0 | Split `kc-utils.js` domínio **string/text** | `kc-utils.string.js` → `window._KCU.string`, ~250L movidas, ~12 testes | 📋 planejado |
-| v12.2.1 | Split `kc-utils.js` domínio **date/time** | `kc-utils.date.js` → `window._KCU.date`, ~150L, ~10 testes | 📋 planejado |
-| v12.2.2 | Split `kc-utils.js` domínio **dom/a11y** | `kc-utils.dom.js` → `window._KCU.dom`, ~200L, ~12 testes | 📋 planejado |
-| v12.2.3 | Split `kc-utils.js` domínio **opportunity/taxonomy** | `kc-utils.taxonomy.js` → `window._KCU.taxonomy`, ~400L, ~15 testes | 📋 planejado |
-| v12.2.4 | Split `kc-utils.js` domínio **profile/email/handle** | `kc-utils.identity.js` → `window._KCU.identity`, ~200L, ~12 testes | 📋 planejado |
-| v12.2.5 | Gate `kc-utils.js` <900L: README + RELATORIO atualizados, hygiene com regras para `_KCU.*` | gate formal | 📋 planejado |
+| **v12.0.0** | **Abertura docs-only do ciclo v12**: este RELATORIO, README atualizado, CHANGELOG com entrada `[12.0.0-planning]` | 1 doc novo, 2 docs editados; zero mudança JS/HTML/teste; baseline `99/1874` preservada | ✅ concluído (#393) |
+| **v12.1.0** | **Auditoria formal `kc-utils.js`** (doc-only): footprint real (2 445L / ~100 KB / ~95 funções / 42 públicas), mapa por 7 domínios, 30 consumers, 3 arquivos de teste existentes (1 106L), plano de decomposição expandido para 7 splits (`v12.2.0`–`v12.2.6`) + gate, matriz de risco por domínio | `docs/kc-utils-audit-v12.1.md` | ✅ concluído |
+| v12.2.0 | Split `kc-utils.js` domínio **string/text** | `kc-utils.string.js` → `window._KCU.string` (8 funções), ~180L movidas, ~12 testes | 📋 planejado |
+| v12.2.1 | Split `kc-utils.js` domínio **format** (date + money + url) | `kc-utils.format.js` → `window._KCU.format` (7 funções), ~120L movidas, ~12 testes | 📋 planejado |
+| v12.2.2 | Split `kc-utils.js` domínio **dom/async** (debounce + clipboard) | `kc-utils.dom.js` → `window._KCU.dom` (4 funções), ~100L movidas, ~10 testes | 📋 planejado |
+| v12.2.3 | Split `kc-utils.js` domínio **identity/email/handle** | `kc-utils.identity.js` → `window._KCU.identity` (6 funções), ~60L movidas, ~10 testes | 📋 planejado |
+| v12.2.4 | Split `kc-utils.js` domínio **taxonomy** (module labels + opportunity) | `kc-utils.taxonomy.js` → `window._KCU.taxonomy` (~22 funções), ~420L movidas, ~20 testes | 📋 planejado |
+| v12.2.5 | Split `kc-utils.js` domínio **location** (housing + caronas + lost-found + inferências) | `kc-utils.location.js` → `window._KCU.location` (~30 funções), ~1 050L movidas, ~30 testes | 📋 planejado |
+| v12.2.6 | Split `kc-utils.js` domínio **presentation** (`applyPresentationRules` + `renderPostCard` + markers) | `kc-utils.presentation.js` → `window._KCU.presentation` (4 funções), ~600L movidas, ~20 testes | 📋 planejado |
+| v12.2.7 | Gate `kc-utils.js` <900L: README + RELATORIO atualizados, hygiene com regras para `_KCU.*` | gate formal | 📋 planejado |
 | v12.3.0 | Auditoria `admin-dashboard.controller.js` (doc-only) | `docs/admin-dashboard-audit-v12.3.md` | 📋 planejado |
 | v12.3.1 | Split admin-dashboard **metrics/loaders** | `admin-dashboard.metrics.js` → `window._KCAD.metrics`, ~600L, ~15 testes | 📋 planejado |
 | v12.3.2 | Split admin-dashboard **audit log + export** | `admin-dashboard.audit.js` → `window._KCAD.audit`, ~400L, ~10 testes | 📋 planejado |
@@ -286,7 +288,7 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 
 ## 8. Seção de execução (preenchida iteração a iteração)
 
-### 8.0. v12.0.0 — abertura docs-only do ciclo v12 — 🟡 em execução
+### 8.0. v12.0.0 — abertura docs-only do ciclo v12 — ✅ concluído (PR #393)
 
 **Objetivo:** abrir formalmente o ciclo v12 como uma iteração docs-only, sem mudança funcional, sem mudança estética, sem testes novos.
 
@@ -317,7 +319,63 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 
 **Reversibilidade:** 100% — puramente documental.
 
-**Próxima iteração:** `v12.1.0` — auditoria doc-only de `kc-utils.js`.
+**Fechamento:** PR `#393` mergeada em `kinocampus-V11.0-foundations` em 20 de abril de 2026. `kinocampus-V11.0-foundations` avançou para `449021b`.
+
+---
+
+### 8.1. v12.1.0 — auditoria doc-only de `kc-utils.js` — ✅ concluído
+
+**Objetivo:** mapear o estado atual de `assets/js/kc-utils.js` antes dos splits incrementais, produzindo inventário funcional, análise de consumers, plano de decomposição e matriz de risco — sem tocar em código, HTML ou testes.
+
+**Escopo entregue:**
+
+- `docs/kc-utils-audit-v12.1.md` criado (~450L de documento). Seções: 1. Footprint real; 2. Estrutura interna (7 domínios lógicos mapeados com linhas exatas e visibilidade pública/privada); 3. Consumers (30 arquivos JS, 136+ callsites, 17 HTMLs, 3 arquivos de teste totalizando 1 106L); 4. Plano de decomposição recomendando **7 splits** (`v12.2.0`–`v12.2.6`) + gate `v12.2.7` em vez dos 5 splits previstos originalmente, com dependências de carga entre sub-módulos explicitadas; 5. Matriz de risco por domínio; 6. Definition of Done da própria iteração; 7. Detalhamento da próxima iteração (`v12.2.0`).
+- `RELATORIO-KINOCAMPUS-V12.md` (este arquivo) atualizado: `Estado desta fase` reflete conclusão de `v12.1.0`; §5.1 expandida de 5 para 7 splits refletindo o footprint real medido (`v12.2.0` string, `v12.2.1` format, `v12.2.2` dom, `v12.2.3` identity, `v12.2.4` taxonomy, `v12.2.5` location, `v12.2.6` presentation, `v12.2.7` gate); status de `v12.0.0` e `v12.1.0` marcado como concluído.
+- `README.md` atualizado: nova linha `v12.1.0` em `Entregas Recentes`; seção `Progresso atual` aponta `v12.1.0` concluída e `v12.2.0` como próxima.
+- `CHANGELOG.md` atualizado com entrada sob `## [Unreleased]` em `Docs`.
+
+**Achados principais da auditoria:**
+
+| Métrica | Valor medido |
+|---|---|
+| Linhas totais | 2 445L |
+| Tamanho no disco | ~100 KB |
+| Funções top-level | ~95 |
+| Métodos públicos em `window.KCUtils` | 42 (`Object.freeze({...})`) |
+| Dependências externas | apenas `window.KC_CONSTANTS` |
+| HTMLs consumidores | 17 páginas públicas |
+| Arquivos JS consumidores | 30 |
+| Callsites totais `KCUtils.*` | 136+ |
+| Testes Jest existentes | 3 arquivos (1 106L) |
+| Maior domínio | **location** (~1 050L: housing + caronas + lost-found + inferências) |
+| Maior risco | **presentation** (~600L: `applyPresentationRules` 313L + `renderPostCard` 279L) |
+
+**Decisões tomadas:**
+
+1. **7 splits em vez de 5** (ajuste sobre o roadmap original do §5.1):
+   - `location` é grande demais para coexistir com `taxonomy` num único split (fuzzy matching + histórico + inferências = 1 050L);
+   - `presentation` tem acoplamento crítico com todos os outros domínios e merece iteração dedicada com snapshots DOM;
+   - `date/time` (1 função, `timeAgo`) foi fundida ao domínio `format` (date + money + url) — mais coeso.
+2. **`levenshteinDistance`** (helper de fuzzy matching, privado) acompanha o domínio `string` por ser utilidade textual reutilizada por `taxonomy` e `location`.
+3. **`formatCurrencyBRL` e `parseBRLNumber`** permanecem **privadas** durante o split (não promover a públicas sem análise de consumer).
+4. **Ordem obrigatória no HTML** fica documentada: `constants → string → format → dom → identity → taxonomy → location → presentation → facade`.
+5. **Gate `v12.2.7` mantém meta `<900L`** (folga de ~6x vs. estimativa de 80–150L residuais no facade).
+
+**Escopo fora desta iteração (explícito):**
+
+- Nenhum arquivo JS em `assets/js/` é tocado
+- Nenhum teste Jest é criado, editado ou removido
+- Nenhum HTML recebe `<script>` novo
+- `scripts/hygiene-check.js` não muda
+
+**Validação:**
+
+- `npm test` → `99/99` suites, `1874/1874` testes verdes (baseline imutável)
+- `node scripts/hygiene-check.js` → 8.6.0 ✓
+
+**Reversibilidade:** 100% (puramente documental).
+
+**Próxima iteração:** `v12.2.0` — primeiro split real: `window._KCU.string` com 8 funções textuais (titleCase, beautifyKey, normalizeText, slugifyText, escapeHtml, cssEscape, renderMarkdownInline, levenshteinDistance).
 
 ---
 

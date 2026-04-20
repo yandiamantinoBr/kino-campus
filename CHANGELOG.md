@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+### Docs
+
+- `v12.1.0`: criado `docs/kc-utils-audit-v12.1.md` com auditoria doc-only formal de `assets/js/kc-utils.js` (2445L, ~100KB, ~95 funções das quais 42 públicas congeladas no facade `window.KCUtils`, 17 HTMLs consumidores diretos, 30 arquivos JS com dependência, 136+ callsites, 1106L de cobertura de testes distribuída em 3 suites). O documento mapeia 7 domínios internos com footprint por linha (`string` ~180L, `format` ~120L, `dom` ~100L, `identity` ~60L, `taxonomy` ~420L, `location` ~1050L, `presentation` ~600L), inventaria consumers com contagem de métodos, e expande o plano original de 5 splits para 7 iterações v12.2.0–v12.2.6 + gate v12.2.7 (justificado pelo tamanho real dos domínios `location` e `presentation`, antes subestimados). Entrega ainda matriz de risco por domínio, grafo de dependência entre sub-módulos `window._KCU.*`, ordem obrigatória de carregamento HTML (`constants → string → format → dom → identity → taxonomy → location → presentation → facade`), padrão de teste de contrato estático reutilizável e DoD explícito da iteração. Nenhum arquivo JS, HTML ou teste foi alterado — baseline Jest preservada em `99/99` suites · `1874/1874` testes, hygiene `8.6.0` ✓.
+- `v12.1.0`: `RELATORIO-KINOCAMPUS-V12.md` atualizado — cabeçalho "Estado desta fase" passou a refletir a conclusão de `v12.1.0` e a próxima iteração `v12.2.0`, tabela do roadmap `§5.1 Camada A` expandida de 5 para 7 linhas (mais gate) com entregáveis numéricos concretos por iteração (ex.: `v12.2.0 string — 8 funções, ~180L movidas, ~12 testes novos`), `§8.0` marcada como concluída com referência ao PR `#393`, nova seção `§8.1` adicionada com tabela de descobertas da auditoria, justificativa das decisões (7 vs 5 splits), escopo explícito e plano de validação.
+- `v12.1.0`: `README.md` atualizado — nova linha no topo da tabela "Entregas Recentes" descrevendo os achados da auditoria (2445L · 17 HTMLs · 30 consumers · 7 domínios · 7 splits planejados), linha `v12.0.0` anotada com o PR `#393` de merge, seção "Progresso atual" reescrita para apontar v12.1.0 concluída e v12.2.0 como próxima iteração com escopo definido.
+
 ---
 
 ## [12.0.0-planning] - 2026-04-20 — Abertura do ciclo v12 (*Consolidação & Qualidade Sistêmica*)
