@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0` (abertura docs-only), `v12.1.0` (auditoria kc-utils.js), `v12.2.0` (split `window._KCU.string`) e `v12.2.1` (split `window._KCU.format`) concluídas; próxima é `v12.2.2` — split `window._KCU.dom`; baseline expandida para `101/101` suites e `1954/1954` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.2` concluídas (abertura, auditoria, splits `string`, `format`, `dom`); próxima é `v12.2.3` — split `window._KCU.identity`; baseline expandida para `102/102` suites e `1977/1977` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -178,7 +178,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.1.0** | **Auditoria formal `kc-utils.js`** (doc-only): footprint real (2 445L / ~100 KB / ~95 funções / 42 públicas), mapa por 7 domínios, 30 consumers, 3 arquivos de teste existentes (1 106L), plano de decomposição expandido para 7 splits (`v12.2.0`–`v12.2.6`) + gate, matriz de risco por domínio | `docs/kc-utils-audit-v12.1.md` | ✅ concluído |
 | **v12.2.0** | Split `kc-utils.js` domínio **string/text** | `kc-utils.string.js` → `window._KCU.string` (8 funções), −65L em `kc-utils.js` (2445→2380L), +1 suite 29 testes, 22 HTMLs atualizados, 10 arquivos de teste existentes atualizados | ✅ concluído |
 | **v12.2.1** | Split `kc-utils.js` domínio **format** (date + money + url) | `kc-utils.format.js` → `window._KCU.format` (7 funções), −70L em `kc-utils.js` (2380→2310L), +1 suite 51 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
-| v12.2.2 | Split `kc-utils.js` domínio **dom/async** (debounce + clipboard) | `kc-utils.dom.js` → `window._KCU.dom` (4 funções), ~100L movidas, ~10 testes | 📋 planejado |
+| **v12.2.2** | Split `kc-utils.js` domínio **dom/async** (debounce + clipboard) | `kc-utils.dom.js` → `window._KCU.dom` (4 funções), −68L em `kc-utils.js` (2310→2242L), +1 suite 23 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
 | v12.2.3 | Split `kc-utils.js` domínio **identity/email/handle** | `kc-utils.identity.js` → `window._KCU.identity` (6 funções), ~60L movidas, ~10 testes | 📋 planejado |
 | v12.2.4 | Split `kc-utils.js` domínio **taxonomy** (module labels + opportunity) | `kc-utils.taxonomy.js` → `window._KCU.taxonomy` (~22 funções), ~420L movidas, ~20 testes | 📋 planejado |
 | v12.2.5 | Split `kc-utils.js` domínio **location** (housing + caronas + lost-found + inferências) | `kc-utils.location.js` → `window._KCU.location` (~30 funções), ~1 050L movidas, ~30 testes | 📋 planejado |
@@ -452,6 +452,40 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `_KCU.format` = Object.frozen, 7 funções, helpers privados não expostos
 
 **Próxima iteração:** `v12.2.2` — split domínio **dom/async** (`debounce`, `canSelectInputLike`, `fallbackCopyText`, `copyTextToClipboard`) → `kc-utils.dom.js` + `window._KCU.dom`.
+
+---
+
+### 8.4. v12.2.2 — split `kc-utils.js` domínio dom — `window._KCU.dom` — ✅ concluído
+
+**Objetivo:** extrair as 4 funções de interação com o DOM de `kc-utils.js` para um sub-módulo IIFE autossuficiente `assets/js/kc-utils.dom.js`, inicializando o namespace `window._KCU.dom`, sem quebrar nenhuma das 1954 testes existentes e sem alterar o contrato público `window.KCUtils`.
+
+**Escopo entregue:**
+
+- `assets/js/kc-utils.dom.js` criado (~110L): IIFE com as 4 funções do domínio dom, exportadas via `window._KCU.dom = Object.freeze({...})`. Autossuficiente — nenhuma dependência de outros sub-módulos. Dependências internas (`fallbackCopyText` chama `canSelectInputLike`; `copyTextToClipboard` chama `fallbackCopyText`) resolvidas no escopo do IIFE.
+- `assets/js/kc-utils.js` reduzido de 2310L → 2242L (−68L): 4 corpos de função substituídos por thin wrappers com comentário explícito de delegação. Facade `window.KCUtils = Object.freeze({...})` preservado intacto — zero breaking changes para consumidores.
+- 22 HTMLs atualizados: `<script defer src="kc-utils.dom.js">` inserido entre `kc-utils.format.js` e `kc-utils.js`. Ordem canônica: `string → format → dom → kc-utils.js`.
+- `tests/kc-utils-dom.test.js` criado (5 `describe` / 23 testes): §1 contrato estático (frozen, 4 chaves exatas); §2 `debounce` (agrupamento de chamadas, encaminhamento de args, delay); §3 `canSelectInputLike` (INPUT/TEXTAREA vs DIV, nodeType, case-insensitive); §4 `fallbackCopyText` (texto vazio, execCommand); §5 `copyTextToClipboard` (Clipboard API, fallback).
+- 12 arquivos de teste existentes atualizados com `require('../assets/js/kc-utils.dom.js')` na ordem correta.
+
+**Funções extraídas:**
+
+| Função | Visibilidade | Dependência interna |
+|---|---|---|
+| `debounce` | pública (`KCUtils.debounce`) | nenhuma |
+| `canSelectInputLike` | privada (não em `KCUtils`) | nenhuma |
+| `fallbackCopyText` | privada (não em `KCUtils`) | `canSelectInputLike` (mesmo escopo) |
+| `copyTextToClipboard` | pública async (`KCUtils.copyTextToClipboard`) | `fallbackCopyText` (mesmo escopo) |
+
+**Validação:**
+
+- `npm test` → **102/102 suites, 1977/1977 testes verdes** (+1 suite, +23 testes vs. baseline `v12.2.1`)
+- `node scripts/hygiene-check.js` → 8.6.0 ✓
+- Contrato `window.KCUtils` preservado (Object.freeze, mesmas 42 chaves)
+- `_KCU.dom` = Object.frozen, 4 funções, variáveis internas não expostas
+
+**Acumulado `kc-utils.js`:** 2445L → 2242L (−203L em 3 iterações; domínios restantes: identity, taxonomy, location, presentation).
+
+**Próxima iteração:** `v12.2.3` — split domínio **identity/email/handle** (`normalizeEmail`, `getEmailDomain`, `normalizeAllowedDomains`, `isInstitutionalEmailAllowed`, `buildPublicHandle`) → `kc-utils.identity.js` + `window._KCU.identity`.
 
 ---
 
