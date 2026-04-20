@@ -27,7 +27,8 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
-| v12.0.0 | **abertura docs-only do ciclo v12 — *Consolidação & Qualidade Sistêmica***: novo `RELATORIO-KINOCAMPUS-V12.md` mirrando a estrutura do V11 (tabela de cabeçalho, resumo executivo, fontes obrigatórias, inventário atual, premissas operacionais, roadmap em 3 camadas — A/continuação tática de splits IIFE, B/qualidade sistêmica com feature flags + E2E + Lighthouse + a11y + i18n, C/resiliência com Service Worker + telemetria); `README.md` atualizado com nova seção "Planejamento v12" e linha de status v12.0.0; `CHANGELOG.md` recebe entrada `[12.0.0-planning] - 2026-04-20`; zero mudança JS/HTML/teste; baseline preservada em `99/99` suites e `1874/1874` testes | — |
+| v12.1.0 | **auditoria doc-only de `kc-utils.js`**: novo `docs/kc-utils-audit-v12.1.md` (~450L) com footprint real medido (2 445L · ~100 KB · ~95 funções · 42 públicas via `window.KCUtils` frozen · dependência única de `window.KC_CONSTANTS`), mapa por 7 domínios lógicos (string, format, dom, identity, taxonomy, location, presentation) com linhas exatas e visibilidade pública/privada, análise de consumers (30 arquivos JS · 136+ callsites · 17 HTMLs · 3 arquivos de teste totalizando 1 106L), plano de decomposição expandido de 5 para **7 splits** (`v12.2.0`–`v12.2.6`) + gate `v12.2.7` refletindo o footprint real medido, grafo de dependências entre sub-módulos `_KCU.*` com ordem obrigatória no HTML, matriz de risco por domínio com destaque para `presentation` (~600L, `applyPresentationRules` 313L + `renderPostCard` 279L); `RELATORIO-KINOCAMPUS-V12.md` §5.1 expandida e §8.1 adicionada; `CHANGELOG.md` atualizado; zero mudança JS/HTML/teste; baseline preservada em `99/99` suites e `1874/1874` testes | — |
+| v12.0.0 | **abertura docs-only do ciclo v12 — *Consolidação & Qualidade Sistêmica***: novo `RELATORIO-KINOCAMPUS-V12.md` mirrando a estrutura do V11 (tabela de cabeçalho, resumo executivo, fontes obrigatórias, inventário atual, premissas operacionais, roadmap em 3 camadas — A/continuação tática de splits IIFE, B/qualidade sistêmica com feature flags + E2E + Lighthouse + a11y + i18n, C/resiliência com Service Worker + telemetria); `README.md` atualizado com nova seção "Planejamento v12" e linha de status v12.0.0; `CHANGELOG.md` recebe entrada `[12.0.0-planning] - 2026-04-20`; zero mudança JS/HTML/teste; baseline preservada em `99/99` suites e `1874/1874` testes | `#393` |
 | v11.33.7 | gate formal da trilha `v11.33.x`: todos os 6 domínios residuais extraídos do facade `window.KCAPI`; `kc-api.client.js` reduzido de `2536L` para `2410L`; 11 sub-módulos `window._KCAPI.*` operacionais (acumulando as trilhas `v11.32.x` + `v11.33.x`); baseline verde em `99/99` suites e `1874/1874` testes; hygiene `8.6.0` ✓ | `#392` |
 | v11.33.6 | sexto split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.auth.js` registrado em `window._KCAPI.auth`, concentrando 8 métodos do domínio auth (`getCurrentUser`, `signIn`, `signUp`, `resendConfirmation`, `requestPasswordReset`, `updatePassword`, `login`, `logout`); 7 wrappers `supabase*()` (~80L) + implementações públicas (~45L) removidos do facade; `window.KCSupabase` acessado diretamente como global (padrão `kc-api.profiles.js`); deps `{ ENV }`; facade delega via `getAuthModule()`/`buildAuthDeps()`; 22 HTMLs: `related.js → auth.js → client.js`; 20 novos testes; baseline `99/99` suites · `1874/1874` testes | `#391` |
 | v11.33.5 | quinto split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.related.js` registrado em `window._KCAPI.related`, concentrando `getRelatedPosts` e `rankRelatedPosts` com algoritmo de scoring puro (~190L de helpers movidos); `getNormalizedPostValue` internalizado no sub-módulo; `normalizePost` recebida via deps; ~200L removidas do facade; 22 HTMLs: `profiles.js → related.js → client.js`; 16 novos testes; baseline `98/98` suites · `1854/1854` testes | `#390` |
@@ -171,14 +172,16 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração em execução: `v12.0.0` — **abertura docs-only do ciclo v12**
+- iteração encerrada: `v12.1.0` — **auditoria doc-only de `kc-utils.js` concluída**
+- v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
 - regressão: `99/99` suites, `1874/1874` testes verdes, hygiene `8.6.0`
 - deploy de produção ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
 - sub-módulos `window._KCAPI.*` operacionais: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
 - sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
 - kc-api.client.js: `2536L` (pré-v11.33) → `2410L` (pós-v11.33.7), piso natural como registry/wiring
-- próxima iteração: `v12.1.0` — auditoria doc-only de `kc-utils.js`
+- próximo alvo da Camada A: `kc-utils.js` (2 445L / 7 domínios mapeados em `docs/kc-utils-audit-v12.1.md`)
+- próxima iteração: `v12.2.0` — primeiro split (`window._KCU.string` com 8 funções textuais)
 
 ---
 
