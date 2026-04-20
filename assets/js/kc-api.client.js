@@ -1420,84 +1420,7 @@
   }
 
   // ---------- Supabase Auth Delegates ----------
-  async function supabaseGetCurrentUser() {
-    try {
-      if (KCSupabase && typeof KCSupabase.getCurrentUser === 'function') {
-        return await KCSupabase.getCurrentUser();
-      }
-    } catch (err) { console.warn('[KCAPI] getCurrentUser falhou:', err && err.message || err); }
-    return null;
-  }
-
-  async function supabaseLogin(email, password) {
-    const em = String(email || '').trim();
-    const pw = String(password || '').trim();
-    if (!em || !pw) return { user: null, session: null, error: { message: 'E-mail e senha sao obrigatorios.' } };
-
-    try {
-      if (KCSupabase && typeof KCSupabase.signIn === 'function') {
-        return await KCSupabase.signIn(em, pw);
-      }
-    } catch (err) { console.warn('[KCAPI] login falhou:', err && err.message || err); }
-    return { user: null, session: null, error: { message: 'Nao foi possivel entrar.' } };
-  }
-
-  async function supabaseSignUp(email, password, options) {
-    const em = String(email || '').trim();
-    const pw = String(password || '').trim();
-    if (!em || !pw) return { user: null, session: null, error: { message: 'E-mail e senha são obrigatórios.' } };
-
-    if (KCSupabase && typeof KCSupabase.signUp === 'function') {
-      return KCSupabase.signUp(em, pw, options);
-    }
-    return { user: null, session: null, error: { message: 'Supabase não configurado.' } };
-  }
-
-  async function supabaseResendConfirmation(email, options) {
-    const em = String(email || '').trim();
-    if (!em) return { ok: false, error: { message: 'Informe um e-mail valido.' } };
-
-    try {
-      if (KCSupabase && typeof KCSupabase.resendSignUp === 'function') {
-        return await KCSupabase.resendSignUp(em, options);
-      }
-    } catch (err) { console.warn('[KCAPI] resend confirmation falhou:', err && err.message || err); }
-    return { ok: false, error: { message: 'Nao foi possivel reenviar a confirmacao.' } };
-  }
-
-  async function supabaseRequestPasswordReset(email, options) {
-    const em = String(email || '').trim();
-    if (!em) return { ok: false, error: { message: 'Informe um e-mail valido.' } };
-
-    try {
-      if (KCSupabase && typeof KCSupabase.requestPasswordReset === 'function') {
-        return await KCSupabase.requestPasswordReset(em, options);
-      }
-    } catch (err) { console.warn('[KCAPI] password reset falhou:', err && err.message || err); }
-    return { ok: false, error: { message: 'Nao foi possivel enviar o link de redefinicao.' } };
-  }
-
-  async function supabaseUpdatePassword(password) {
-    const pw = String(password || '').trim();
-    if (!pw) return { ok: false, error: { message: 'Informe uma senha valida.' } };
-
-    try {
-      if (KCSupabase && typeof KCSupabase.updatePassword === 'function') {
-        return await KCSupabase.updatePassword(pw);
-      }
-    } catch (err) { console.warn('[KCAPI] update password falhou:', err && err.message || err); }
-    return { ok: false, error: { message: 'Nao foi possivel atualizar a senha.' } };
-  }
-
-  async function supabaseLogout() {
-    try {
-      if (KCSupabase && typeof KCSupabase.signOut === 'function') {
-        const r = await KCSupabase.signOut();
-        return !!(r && r.ok);
-      }
-    } catch (err) { console.warn('[KCAPI] logout falhou:', err && err.message || err); }
-    return false;
-  }
+  // Auth split (v11.33.6): supabase wrappers movidos para kc-api.auth.js
 
   const _adapters = {};
   function registerAdapter(name, adapter) {
@@ -1807,50 +1730,85 @@
   }
 
 
-  // Auth facade (sem quebrar modo local)
-  // - signIn/signUp retornam { user, error }
+  // Auth split (v11.33.6)
+  // Implementacoes foram movidas para window._KCAPI.auth (kc-api.auth.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getAuthModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.auth = window._KCAPI.auth || {};
+
+  function getAuthModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const auth = window._KCAPI.auth;
+    return (auth && typeof auth === 'object') ? auth : null;
+  }
+
+  function buildAuthDeps() {
+    return { ENV };
+  }
+
   async function getCurrentUser() {
-    if (ENV.driver !== 'supabase') return null;
-    return supabaseGetCurrentUser();
+    const authModule = getAuthModule();
+    if (authModule && typeof authModule.getCurrentUser === 'function') {
+      return authModule.getCurrentUser(buildAuthDeps());
+    }
+    return null;
   }
 
   async function signIn(email, password) {
-    if (ENV.driver !== 'supabase') return { user: null, error: { message: 'Modo local (Auth desabilitado).' } };
-    const result = await supabaseLogin(email, password);
-    if (result && result.error) return result;
-    return result || { user: null, session: null, error: { message: 'Nao foi possivel entrar. Verifique seus dados.' } };
+    const authModule = getAuthModule();
+    if (authModule && typeof authModule.signIn === 'function') {
+      return authModule.signIn(email, password, buildAuthDeps());
+    }
+    return { user: null, error: { message: 'Modo local (Auth desabilitado).' } };
   }
 
   async function signUp(email, password, options) {
-    if (ENV.driver !== 'supabase') return { user: null, error: { message: 'Modo local (Auth desabilitado).' } };
-    const r = await supabaseSignUp(email, password, options);
-    return r || { user: null, error: { message: 'Não foi possível cadastrar.' } };
+    const authModule = getAuthModule();
+    if (authModule && typeof authModule.signUp === 'function') {
+      return authModule.signUp(email, password, options, buildAuthDeps());
+    }
+    return { user: null, error: { message: 'Modo local (Auth desabilitado).' } };
   }
 
   async function resendConfirmation(email, options) {
-    if (ENV.driver !== 'supabase') return { ok: false, error: { message: 'Modo local (Auth desabilitado).' } };
-    return supabaseResendConfirmation(email, options);
+    const authModule = getAuthModule();
+    if (authModule && typeof authModule.resendConfirmation === 'function') {
+      return authModule.resendConfirmation(email, options, buildAuthDeps());
+    }
+    return { ok: false, error: { message: 'Modo local (Auth desabilitado).' } };
   }
 
   async function requestPasswordReset(email, options) {
-    if (ENV.driver !== 'supabase') return { ok: false, error: { message: 'Modo local (Auth desabilitado).' } };
-    return supabaseRequestPasswordReset(email, options);
+    const authModule = getAuthModule();
+    if (authModule && typeof authModule.requestPasswordReset === 'function') {
+      return authModule.requestPasswordReset(email, options, buildAuthDeps());
+    }
+    return { ok: false, error: { message: 'Modo local (Auth desabilitado).' } };
   }
 
   async function updatePassword(password) {
-    if (ENV.driver !== 'supabase') return { ok: false, error: { message: 'Modo local (Auth desabilitado).' } };
-    return supabaseUpdatePassword(password);
+    const authModule = getAuthModule();
+    if (authModule && typeof authModule.updatePassword === 'function') {
+      return authModule.updatePassword(password, buildAuthDeps());
+    }
+    return { ok: false, error: { message: 'Modo local (Auth desabilitado).' } };
   }
 
   // Aliases (compat)
   async function login(email, password) {
-    const r = await signIn(email, password);
-    return r && r.user ? r.user : null;
+    const authModule = getAuthModule();
+    if (authModule && typeof authModule.login === 'function') {
+      return authModule.login(email, password, buildAuthDeps());
+    }
+    return null;
   }
 
   async function logout() {
-    if (ENV.driver !== 'supabase') return false;
-    return supabaseLogout();
+    const authModule = getAuthModule();
+    if (authModule && typeof authModule.logout === 'function') {
+      return authModule.logout(buildAuthDeps());
+    }
+    return false;
   }
 
 
