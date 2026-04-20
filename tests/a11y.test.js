@@ -16,6 +16,7 @@ beforeAll(() => {
   window.KCSupabase = window.KCSupabase || { getClient: jest.fn(() => ({})) };
 
   require('../assets/js/kc-constants.js');
+  require('../assets/js/kc-utils.string.js'); // deve preceder kc-utils.js (v12.2.0)
   require('../assets/js/kc-utils.js');
 
   renderPostCard = window.KCUtils && typeof window.KCUtils.renderPostCard === 'function'

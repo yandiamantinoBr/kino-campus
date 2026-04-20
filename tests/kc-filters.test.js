@@ -2,6 +2,7 @@ beforeAll(() => {
   global.window = global.window || global;
   // kc-filters.js usa window.KCUtils se disponivel, mas tem fallback interno
   require('../assets/js/kc-constants.js');
+  require('../assets/js/kc-utils.string.js'); // deve preceder kc-utils.js (v12.2.0)
   require('../assets/js/kc-utils.js');
   require('../assets/js/kc-feed-filters.js');
   // jsdom fornece document para o DOMContentLoaded

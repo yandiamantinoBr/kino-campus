@@ -15,6 +15,7 @@ beforeAll(() => {
   // Mock KC_ENV antes de carregar constants
   window.KC_ENV = { driver: 'local', environment: 'development' };
   require('../assets/js/kc-constants.js');
+  require('../assets/js/kc-utils.string.js'); // deve preceder kc-utils.js (v12.2.0)
   require('../assets/js/kc-utils.js');
   window.KCSearchShared = require('../assets/js/kc-search.shared.js');
 
