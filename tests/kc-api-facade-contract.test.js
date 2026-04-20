@@ -43,6 +43,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.postsWrite = window._KCAPI.postsWrite || {};');
     expect(source).toContain('window._KCAPI.profiles = window._KCAPI.profiles || {};');
     expect(source).toContain('window._KCAPI.related = window._KCAPI.related || {};');
+    expect(source).toContain('window._KCAPI.auth = window._KCAPI.auth || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -232,11 +233,17 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
     expect(source).toContain("return { ok: false, error: { message: 'Salvos indisponíveis neste driver.' } };");
   });
 
-  test('mantem auth desabilitada de forma explicita no modo local', () => {
-    expect(source).toContain('async function getCurrentUser() {');
-    expect(source).toContain("if (ENV.driver !== 'supabase') return null;");
-    expect(source).toContain("if (ENV.driver !== 'supabase') return { user: null, error: { message: 'Modo local (Auth desabilitado).' } };");
-    expect(source).toContain("if (ENV.driver !== 'supabase') return false;");
+  test('mantem delegacao para auth via getAuthModule e buildAuthDeps', () => {
+    expect(source).toContain('function getAuthModule()');
+    expect(source).toContain('function buildAuthDeps()');
+    expect(source).toContain('return authModule.getCurrentUser(buildAuthDeps());');
+    expect(source).toContain('return authModule.signIn(email, password, buildAuthDeps());');
+    expect(source).toContain('return authModule.signUp(email, password, options, buildAuthDeps());');
+    expect(source).toContain('return authModule.resendConfirmation(email, options, buildAuthDeps());');
+    expect(source).toContain('return authModule.requestPasswordReset(email, options, buildAuthDeps());');
+    expect(source).toContain('return authModule.updatePassword(password, buildAuthDeps());');
+    expect(source).toContain('return authModule.login(email, password, buildAuthDeps());');
+    expect(source).toContain('return authModule.logout(buildAuthDeps());');
   });
 });
 
