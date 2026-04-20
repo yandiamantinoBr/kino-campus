@@ -6,6 +6,18 @@
 
 ---
 
+## [12.0.0-planning] - 2026-04-20 — Abertura do ciclo v12 (*Consolidação & Qualidade Sistêmica*)
+
+Abertura formal da trilha v12 em modo docs-only, estabelecendo a continuidade controlada da plataforma pós-v11.33.7. Nenhum arquivo JS, HTML ou teste foi alterado nesta iteração. Baseline preservada em `99/99` suites e `1874/1874` testes.
+
+### Docs
+
+- `v12.0.0`: criado `RELATORIO-KINOCAMPUS-V12.md` espelhando a estrutura do `RELATORIO-KINOCAMPUS-V11.md`: cabeçalho com tabela de abertura (data `2026-04-20`, linha-base `kinocampus-V11.0-foundations`, versão-alvo `v12`, escopo macro declarado), resumo executivo com o tema "Consolidação & Qualidade Sistêmica" em três camadas paralelas (A/continuação tática de splits IIFE dos hotspots remanescentes, B/qualidade sistêmica com feature flags + Playwright E2E + Lighthouse CI + a11y + i18n runtime, C/resiliência com Service Worker e telemetria cliente), seção de fontes obrigatórias de verdade herdadas da v11, inventário atual dos namespaces congelados (`_KCAPI.*` com 11 módulos, `_KCSA.*` com 10 sub-adapters), tabela dos hotspots JS remanescentes (>1000L) com prioridade de split, tabela dos gaps estruturais (E2E, Lighthouse, Service Worker, feature flags, i18n), premissas operacionais (branch-per-iteração, gate Jest/hygiene obrigatório, comunicação pt-BR), roadmap completo com ~30 iterações mapeadas de `v12.0.0` a `v12.13.0`, análise de risco × mitigação por camada e Definition of Done com 4 blocos de critérios verdes exigidos para encerrar a v12.
+- `v12.0.0`: `README.md` atualizado — linha "Status atual" referencia a abertura da trilha `v12.0.0`, tabela "Entregas Recentes" recebe primeira linha da v12, seção "Progresso atual" reescrita para refletir o estado v12 (iteração corrente, v11 encerrada, baseline verde, sub-módulos operacionais, próxima iteração `v12.1.0`), nova seção "Planejamento v12" adicionada com as três camadas resumidas e link para o novo relatório, seção "Planejamento v11" preservada como histórico sob cabeçalho explícito.
+- `v12.0.0`: `CHANGELOG.md` recebe esta entrada de abertura `[12.0.0-planning]`, alinhando com o padrão usado em `[11.0.0]` (entrada formal consolidada no release gate final, `v12.13.0`).
+
+---
+
 ## [11.0.0] - 2026-04-12 — Trilha v11: Auditoria, Hardening e i18n (v11.1.0–v11.25.0)
 
 Consolidação de 25 iterações da trilha v11 (v11.1.0–v11.25.0), cobrindo: auditoria e hardening dos controllers, paridade de contratos KCAPI/adapters, persistência incremental SWR, notificações in-app e multicanal (email, WhatsApp), módulo de i18n e aplicação nos componentes core. Estado final: `52/52` suites, `565/565` testes, hygiene `8.6.0`, produção `dpl_9Pm65XqZSx26BWRNAkWu59zR8A1C` (`www.kinocampus.com.br`).

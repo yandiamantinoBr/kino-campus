@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 executada até `v11.33.7`, com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, baseline de testes mantida em 99/99 suites e 1874/1874 testes, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA`; `supabase.adapter.js` reduzido de 4041L para 420L (−3621L acumulado), trilha `v11.30.x` encerrada com o split de `product.controller.js` estabilizado, trilha `v11.31.x` encerrada com a sexta (e última) extração estrutural de `kc-create-post.js`, trilha `v11.32.x` encerrada com o split por domínio do facade `window.KCAPI`: 5 sub-módulos extraídos (`notifications`, `saved/highlights`, `help/invites`, `posts-read/analytics`, `comments/votes`) para `window._KCAPI.*`; e **trilha `v11.33.x` encerrada** com 6 novos sub-módulos extraídos do facade residual (`ratings`, `posts-feed`, `posts-write`, `profiles`, `related`, `auth`) — `kc-api.client.js` reduzido de `2536L` para `2410L`, 11 sub-módulos `window._KCAPI.*` operacionais, gate formal em `v11.33.7`.
+**Status atual:** v11 concluída (v11.1.0–v11.33.7) com a rodada principal encerrada no release gate `v11.23.0`, trilha i18n concluída em `v11.24.x`, trilha iOS/Safari encerrada (6/6 issues), trilha de paridade de controllers encerrada (v11.28.x), trilha SWR residual concluída (`profile` + `my-posts`), split do monolito `supabase.adapter.js` concluído — 10/10 grupos extraídos para sub-adapters via `window._KCSA` (reduzido de 4041L para 420L, −3621L acumulado), trilhas `v11.30.x`/`v11.31.x` encerradas com splits estabilizados de `product.controller.js` e `kc-create-post.js`, trilhas `v11.32.x`/`v11.33.x` encerradas com 11 sub-módulos `window._KCAPI.*` operacionais (`notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth`) e `kc-api.client.js` reduzido para `2410L`; baseline verde em `99/99` suites e `1874/1874` testes. **Trilha `v12.0.0` em execução — abertura docs-only do ciclo v12** (*Consolidação & Qualidade Sistêmica*), com `RELATORIO-KINOCAMPUS-V12.md` criado; nenhum arquivo JS/HTML/teste alterado nesta iteração.
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.0.0 | **abertura docs-only do ciclo v12 — *Consolidação & Qualidade Sistêmica***: novo `RELATORIO-KINOCAMPUS-V12.md` mirrando a estrutura do V11 (tabela de cabeçalho, resumo executivo, fontes obrigatórias, inventário atual, premissas operacionais, roadmap em 3 camadas — A/continuação tática de splits IIFE, B/qualidade sistêmica com feature flags + E2E + Lighthouse + a11y + i18n, C/resiliência com Service Worker + telemetria); `README.md` atualizado com nova seção "Planejamento v12" e linha de status v12.0.0; `CHANGELOG.md` recebe entrada `[12.0.0-planning] - 2026-04-20`; zero mudança JS/HTML/teste; baseline preservada em `99/99` suites e `1874/1874` testes | — |
 | v11.33.7 | gate formal da trilha `v11.33.x`: todos os 6 domínios residuais extraídos do facade `window.KCAPI`; `kc-api.client.js` reduzido de `2536L` para `2410L`; 11 sub-módulos `window._KCAPI.*` operacionais (acumulando as trilhas `v11.32.x` + `v11.33.x`); baseline verde em `99/99` suites e `1874/1874` testes; hygiene `8.6.0` ✓ | `#392` |
 | v11.33.6 | sexto split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.auth.js` registrado em `window._KCAPI.auth`, concentrando 8 métodos do domínio auth (`getCurrentUser`, `signIn`, `signUp`, `resendConfirmation`, `requestPasswordReset`, `updatePassword`, `login`, `logout`); 7 wrappers `supabase*()` (~80L) + implementações públicas (~45L) removidos do facade; `window.KCSupabase` acessado diretamente como global (padrão `kc-api.profiles.js`); deps `{ ENV }`; facade delega via `getAuthModule()`/`buildAuthDeps()`; 22 HTMLs: `related.js → auth.js → client.js`; 20 novos testes; baseline `99/99` suites · `1874/1874` testes | `#391` |
 | v11.33.5 | quinto split da trilha `v11.33.x`: novo IIFE `assets/js/kc-api.related.js` registrado em `window._KCAPI.related`, concentrando `getRelatedPosts` e `rankRelatedPosts` com algoritmo de scoring puro (~190L de helpers movidos); `getNormalizedPostValue` internalizado no sub-módulo; `normalizePost` recebida via deps; ~200L removidas do facade; 22 HTMLs: `profiles.js → related.js → client.js`; 16 novos testes; baseline `98/98` suites · `1854/1854` testes | `#390` |
@@ -134,24 +135,70 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 ---
 
-## Planejamento v11
+## Planejamento v12
 
-O planejamento detalhado da próxima fase está em [RELATORIO-KINOCAMPUS-V11.md](./RELATORIO-KINOCAMPUS-V11.md).
+O planejamento detalhado da próxima fase está em [RELATORIO-KINOCAMPUS-V12.md](./RELATORIO-KINOCAMPUS-V12.md).
 
-Regras desta fase:
+**Tema:** *Consolidação & Qualidade Sistêmica*. A v12 herda a linha-base `kinocampus-V11.0-foundations`, o rito operacional e os contratos públicos consolidados na v11, mas muda o eixo narrativo: de "quebrar monolitos isolados" para "consolidar o que foi fatiado + elevar a maturidade sistêmica da plataforma".
 
-- nenhuma implementação da v11 deve começar sem autorização explícita
-- toda iteração da v11 deve atualizar este `README.md` e o `RELATORIO-KINOCAMPUS-V11.md`
-- cada iteração aprovada deve seguir a esteira completa: branch própria, commit, push, PR, merge, delete branch, pull, validação no Supabase/Vercel e testes de regressão
+As iterações são organizadas em **três camadas paralelas**:
+
+- **Camada A — Continuação tática v11** (splits IIFE dos hotspots remanescentes):
+  - `v12.1.0`–`v12.2.5`: `kc-utils.js` (2445L → <900L) em 5 sub-módulos `window._KCU.*`
+  - `v12.3.0`–`v12.3.4`: `admin-dashboard.controller.js` (2251L → <900L) em `window._KCAD.*`
+  - `v12.4.0`–`v12.4.6`: `local.adapter.js` (1862L → <500L) em `window._KCLA.*`, restaurando paridade com `supabase.adapter.js` (420L)
+  - `v12.5.0`–`v12.5.4`: `profile.controller.js` (1463L → <600L)
+
+- **Camada B — Qualidade sistêmica** (gaps não cobertos na v11):
+  - `v12.6.0`: feature flags formais `window.KCFF`
+  - `v12.7.0`–`v12.7.3`: i18n runtime fase 1–3 + locale switcher pt-BR/en-US
+  - `v12.8.0`–`v12.8.1`: a11y audit estrutural + correções
+  - `v12.9.0`–`v12.9.2`: Playwright E2E (smoke → expansão admin)
+  - `v12.10.0`: Lighthouse CI
+
+- **Camada C — Resiliência & observabilidade**:
+  - `v12.11.0`: Service Worker atrás de flag `sw.enabled`
+  - `v12.12.0`: error boundary global + telemetria cliente (`kc-telemetry.js`)
+
+- **Gate final:**
+  - `v12.13.0`: release gate v12, CHANGELOG `## [12.0.0]`, smoke geral
+
+Regras desta fase (herdadas da v11, sem reinterpretação):
+
+- nenhuma implementação da v12 deve começar sem autorização explícita
+- toda iteração da v12 deve atualizar este `README.md` e o `RELATORIO-KINOCAMPUS-V12.md`
+- cada iteração aprovada segue a esteira completa: branch própria a partir de `kinocampus-V11.0-foundations`, commit, push, PR, merge squash, delete branch, pull, validação Supabase/Vercel (quando aplicável) e testes de regressão verdes
 
 ### Progresso atual
 
-- iteracao encerrada: `v11.33.7` — **trilha `v11.33.x` CONCLUÍDA**
+- iteração em execução: `v12.0.0` — **abertura docs-only do ciclo v12**
+- v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
+- regressão: `99/99` suites, `1874/1874` testes verdes, hygiene `8.6.0`
+- deploy de produção ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
+- sub-módulos `window._KCAPI.*` operacionais: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
+- sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
+- kc-api.client.js: `2536L` (pré-v11.33) → `2410L` (pós-v11.33.7), piso natural como registry/wiring
+- próxima iteração: `v12.1.0` — auditoria doc-only de `kc-utils.js`
+
+---
+
+## Planejamento v11 (histórico)
+
+O planejamento detalhado da trilha v11 (encerrada) está em [RELATORIO-KINOCAMPUS-V11.md](./RELATORIO-KINOCAMPUS-V11.md).
+
+Regras aplicadas na fase v11:
+
+- nenhuma implementação da v11 deveria começar sem autorização explícita
+- toda iteração da v11 atualizou `README.md` e `RELATORIO-KINOCAMPUS-V11.md`
+- cada iteração seguiu a esteira completa: branch própria, commit, push, PR, merge, delete branch, pull, validação no Supabase/Vercel e testes de regressão
+
+### Progresso final da v11
+
+- iteração encerrada: `v11.33.7` — **trilha `v11.33.x` CONCLUÍDA**
 - gate formal: todos os 6 domínios residuais extraídos do facade `window.KCAPI`
-- regressao: `99/99` suites, `1874/1874` testes, hygiene `8.6.0`
-- deploy de producao ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
-- sub-modulos window._KCAPI.*: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
-- kc-api.client.js: `2536L` (pre-v11.33) → `2410L` (pos-v11.33.7), −126L de implementacoes, +∼160L de delegation stubs
+- regressão: `99/99` suites, `1874/1874` testes, hygiene `8.6.0`
+- sub-módulos `window._KCAPI.*`: 11 operacionais (lista completa acima)
+- kc-api.client.js: `2536L` (pré-v11.33) → `2410L` (pós-v11.33.7), −126L de implementações, +∼160L de delegation stubs
 
 ---
 
