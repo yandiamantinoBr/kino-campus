@@ -42,6 +42,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.postsFeed = window._KCAPI.postsFeed || {};');
     expect(source).toContain('window._KCAPI.postsWrite = window._KCAPI.postsWrite || {};');
     expect(source).toContain('window._KCAPI.profiles = window._KCAPI.profiles || {};');
+    expect(source).toContain('window._KCAPI.related = window._KCAPI.related || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -310,6 +311,13 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(source).toContain('return m.likeComment(commentId, options, buildCommentsVotesDeps());');
     expect(source).toContain('return m.votePost(postId, direction, options, buildCommentsVotesDeps());');
     expect(source).toContain('return m.getMyVote(postId, buildCommentsVotesDeps());');
+  });
+
+  test('mantem delegacao para related via getRelatedModule e buildRelatedDeps', () => {
+    expect(source).toContain('function getRelatedModule()');
+    expect(source).toContain('function buildRelatedDeps()');
+    expect(source).toContain('return relatedModule.rankRelatedPosts(currentPost, candidates, options, buildRelatedDeps());');
+    expect(source).toContain('return relatedModule.getRelatedPosts(postId, options, buildRelatedDeps());');
   });
 
   test('mantem os globals de diagnostico de create-post fora da fachada congelada', () => {

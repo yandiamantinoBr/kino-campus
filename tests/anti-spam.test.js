@@ -32,6 +32,7 @@ beforeAll(() => {
   require('../assets/js/kc-api.posts-feed.js');
   require('../assets/js/kc-api.posts-write.js');
   require('../assets/js/kc-api.profiles.js');
+    require('../assets/js/kc-api.related.js');
   require('../assets/js/kc-api.client.js');
   require('../assets/js/adapters/local.adapter.js');
 });
