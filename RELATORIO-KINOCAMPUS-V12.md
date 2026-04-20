@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0` (abertura docs-only), `v12.1.0` (auditoria kc-utils.js) e `v12.2.0` (split `window._KCU.string`) concluídas; próxima é `v12.2.1` — split `window._KCU.format`; baseline expandida para `100/100` suites e `1903/1903` testes |
+| Estado desta fase | execução em andamento; `v12.0.0` (abertura docs-only), `v12.1.0` (auditoria kc-utils.js), `v12.2.0` (split `window._KCU.string`) e `v12.2.1` (split `window._KCU.format`) concluídas; próxima é `v12.2.2` — split `window._KCU.dom`; baseline expandida para `101/101` suites e `1954/1954` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -177,7 +177,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.0.0** | **Abertura docs-only do ciclo v12**: este RELATORIO, README atualizado, CHANGELOG com entrada `[12.0.0-planning]` | 1 doc novo, 2 docs editados; zero mudança JS/HTML/teste; baseline `99/1874` preservada | ✅ concluído (#393) |
 | **v12.1.0** | **Auditoria formal `kc-utils.js`** (doc-only): footprint real (2 445L / ~100 KB / ~95 funções / 42 públicas), mapa por 7 domínios, 30 consumers, 3 arquivos de teste existentes (1 106L), plano de decomposição expandido para 7 splits (`v12.2.0`–`v12.2.6`) + gate, matriz de risco por domínio | `docs/kc-utils-audit-v12.1.md` | ✅ concluído |
 | **v12.2.0** | Split `kc-utils.js` domínio **string/text** | `kc-utils.string.js` → `window._KCU.string` (8 funções), −65L em `kc-utils.js` (2445→2380L), +1 suite 29 testes, 22 HTMLs atualizados, 10 arquivos de teste existentes atualizados | ✅ concluído |
-| v12.2.1 | Split `kc-utils.js` domínio **format** (date + money + url) | `kc-utils.format.js` → `window._KCU.format` (7 funções), ~120L movidas, ~12 testes | 📋 planejado |
+| **v12.2.1** | Split `kc-utils.js` domínio **format** (date + money + url) | `kc-utils.format.js` → `window._KCU.format` (7 funções), −70L em `kc-utils.js` (2380→2310L), +1 suite 51 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
 | v12.2.2 | Split `kc-utils.js` domínio **dom/async** (debounce + clipboard) | `kc-utils.dom.js` → `window._KCU.dom` (4 funções), ~100L movidas, ~10 testes | 📋 planejado |
 | v12.2.3 | Split `kc-utils.js` domínio **identity/email/handle** | `kc-utils.identity.js` → `window._KCU.identity` (6 funções), ~60L movidas, ~10 testes | 📋 planejado |
 | v12.2.4 | Split `kc-utils.js` domínio **taxonomy** (module labels + opportunity) | `kc-utils.taxonomy.js` → `window._KCU.taxonomy` (~22 funções), ~420L movidas, ~20 testes | 📋 planejado |
@@ -417,6 +417,41 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - 2 expectativas no novo teste ajustadas: `canonicalCategory('Habitações')` retorna `'habitacoe'` (remove final `s` → correto comportamento do algoritmo); `escapeHtml(null)` retorna `''` (`null ?? ''` = `''` antes de `String()`).
 
 **Próxima iteração:** `v12.2.1` — split domínio **format** (`timeAgo`, `formatCurrencyBRL`, `parseBRLNumber`, `splitPriceText`, `buildProductDetailHref`, `copyTextToClipboard`, `clamp`) → `kc-utils.format.js` + `window._KCU.format`.
+
+---
+
+### 8.3. v12.2.1 — split `kc-utils.js` domínio format — `window._KCU.format` — ✅ concluído
+
+**Objetivo:** extrair as 7 funções de formatação de dados de `kc-utils.js` para um sub-módulo IIFE `assets/js/kc-utils.format.js`, inicializando o namespace `window._KCU.format`, sem quebrar nenhuma das 1903 testes existentes e sem alterar o contrato público `window.KCUtils`.
+
+**Escopo entregue:**
+
+- `assets/js/kc-utils.format.js` criado (151L): IIFE com as 7 funções do domínio format, exportadas via `window._KCU.format = Object.freeze({...})`. Dependência lazy a `window._KCU.string` (para `getConditionLabel`, que chama `normalizeText` e `beautifyKey`) resolvida via accessor `_str()` em runtime.
+- `assets/js/kc-utils.js` reduzido de 2380L → 2310L (−70L): 7 corpos de função substituídos por thin wrappers `(window._KCU && window._KCU.format) ? window._KCU.format.fn(args) : fallback` com comentário explícito de delegação. Facade `window.KCUtils = Object.freeze({...})` preservado intacto — zero breaking changes para consumidores.
+- 22 HTMLs atualizados: `<script defer src="kc-utils.format.js">` inserido entre `kc-utils.string.js` e `kc-utils.js` em todos (17 páginas raiz + 5 admin). Ordem canônica preservada: `string → format → kc-utils.js`.
+- `tests/kc-utils-format.test.js` criado (8 `describe` / 51 testes): §1 contrato estático (objeto frozen, 7 chaves exatas, helpers privados `_str`/`_normalizeText`/`_beautifyKey` não expostos); §2–8 comportamento por função (`timeAgo`, `formatCurrencyBRL`, `parseBRLNumber`, `clamp`, `buildProductDetailHref`, `getConditionLabel`, `splitPriceText`).
+- 12 arquivos de teste existentes atualizados para carregar `kc-utils.format.js` após `kc-utils.string.js` e antes de `kc-utils.js`: `kc-utils.test.js`, `kc-utils-expanded.test.js`, `kc-utils-resolvers.test.js`, `kc-filters.test.js`, `a11y.test.js`, `anti-spam.test.js`, `kc-api-client.test.js`, `kc-api-notification-preferences-contract.test.js`, `kc-api-notifications-contract.test.js`, `kc-api-session-swr.test.js`, `local-adapter.test.js`, `post-analytics.test.js`.
+
+**Funções extraídas:**
+
+| Função | Visibilidade | Dependência de outro sub-módulo |
+|---|---|---|
+| `timeAgo` | pública (`KCUtils.timeAgo`) | nenhuma |
+| `formatCurrencyBRL` | privada (não em `KCUtils`) | nenhuma |
+| `parseBRLNumber` | privada (não em `KCUtils`) | nenhuma |
+| `clamp` | pública (`KCUtils.clamp`) | nenhuma |
+| `buildProductDetailHref` | pública (`KCUtils.buildProductDetailHref`) | nenhuma |
+| `getConditionLabel` | pública (`KCUtils.getConditionLabel`) | `_KCU.string.normalizeText` + `_KCU.string.beautifyKey` (lazy via `_str()`) |
+| `splitPriceText` | pública (`KCUtils.splitPriceText`) | nenhuma |
+
+**Validação:**
+
+- `npm test` → **101/101 suites, 1954/1954 testes verdes** (+1 suite, +51 testes vs. baseline `v12.2.0`)
+- `node scripts/hygiene-check.js` → 8.6.0 ✓
+- Contrato `window.KCUtils` preservado (Object.freeze, mesmas 42 chaves)
+- `_KCU.format` = Object.frozen, 7 funções, helpers privados não expostos
+
+**Próxima iteração:** `v12.2.2` — split domínio **dom/async** (`debounce`, `canSelectInputLike`, `fallbackCopyText`, `copyTextToClipboard`) → `kc-utils.dom.js` + `window._KCU.dom`.
 
 ---
 
