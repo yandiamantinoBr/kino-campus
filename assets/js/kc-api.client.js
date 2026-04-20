@@ -1795,44 +1795,84 @@
     }
     return getActiveDriver().getPostById(id);
   }
+  // Posts-Write split (v11.33.3)
+  // Implementacoes foram movidas para window._KCAPI.postsWrite (kc-api.posts-write.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getPostsWriteModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.postsWrite = window._KCAPI.postsWrite || {};
+
+  function getPostsWriteModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const postsWrite = window._KCAPI.postsWrite;
+    return (postsWrite && typeof postsWrite === 'object') ? postsWrite : null;
+  }
+
+  function buildPostsWriteDeps() {
+    return { getActiveDriver, ENV };
+  }
+
   async function createPost(body) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.createPost === 'function') {
+      return postsWriteModule.createPost(body, buildPostsWriteDeps());
+    }
     const policyError = enforceSupabaseOnProduction('createPost');
     if (policyError) return policyError;
     return getActiveDriver().createPost(body);
   }
   async function updatePost(postId, payload) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.updatePost === 'function') {
+      return postsWriteModule.updatePost(postId, payload, buildPostsWriteDeps());
+    }
     if (!getActiveDriver().updatePost) return kcApiError('Edição indisponível neste driver.');
     return getActiveDriver().updatePost(postId, payload);
   }
   async function deletePost(postId) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.deletePost === 'function') {
+      return postsWriteModule.deletePost(postId, buildPostsWriteDeps());
+    }
     if (!getActiveDriver().deletePost) return kcApiError('Exclusão indisponível neste driver.');
     return getActiveDriver().deletePost(postId);
   }
-
   async function reportPost(postId, payload) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.reportPost === 'function') {
+      return postsWriteModule.reportPost(postId, payload, buildPostsWriteDeps());
+    }
     if (!getActiveDriver().reportPost) {
       return { ok: false, error: { message: 'Denúncias indisponíveis neste driver.' } };
     }
     return getActiveDriver().reportPost(postId, payload);
   }
-
   async function togglePostStatus(postId) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.togglePostStatus === 'function') {
+      return postsWriteModule.togglePostStatus(postId, buildPostsWriteDeps());
+    }
     const driver = getActiveDriver();
     if (!driver || typeof driver.togglePostStatus !== 'function') {
       return { ok: false, code: 'UNAVAILABLE', message: 'Toggle de status indisponível neste driver.' };
     }
     return driver.togglePostStatus(postId);
   }
-
   async function renewPost(postId) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.renewPost === 'function') {
+      return postsWriteModule.renewPost(postId, buildPostsWriteDeps());
+    }
     const driver = getActiveDriver();
     if (!driver || typeof driver.renewPost !== 'function') {
       return { ok: false, code: 'UNAVAILABLE', message: 'Renovação indisponível neste driver.' };
     }
     return driver.renewPost(postId);
   }
-
   async function bumpPost(postId) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.bumpPost === 'function') {
+      return postsWriteModule.bumpPost(postId, buildPostsWriteDeps());
+    }
     const driver = getActiveDriver();
     if (!driver || typeof driver.bumpPost !== 'function') {
       return { ok: false, code: 'UNAVAILABLE', message: 'Impulsionamento indisponível neste driver.' };
