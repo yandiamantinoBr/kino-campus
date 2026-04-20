@@ -13,6 +13,7 @@ beforeAll(() => {
   };
 
   require('../assets/js/kc-constants.js');
+  require('../assets/js/kc-utils.string.js'); // deve preceder kc-utils.js (v12.2.0)
   require('../assets/js/kc-utils.js');
   require('../assets/js/account-profile.shared.js');
   require('../assets/js/kc-api.notifications.js');
