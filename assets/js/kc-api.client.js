@@ -2028,58 +2028,47 @@
   }
 
 
-  // Profiles facade (V8.1.3.2)
-  // - Leitura pública (profiles_select_public)
-  // - Sincronização do usuário logado via UPSERT ao autenticar
+  // Profiles split (v11.33.4)
+  // Implementacoes foram movidas para window._KCAPI.profiles (kc-api.profiles.js).
+  // A fachada mantem os mesmos nomes/contratos e delega via getProfilesModule().
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.profiles = window._KCAPI.profiles || {};
+
+  function getProfilesModule() {
+    if (!window._KCAPI || typeof window._KCAPI !== 'object') return null;
+    const profiles = window._KCAPI.profiles;
+    return (profiles && typeof profiles === 'object') ? profiles : null;
+  }
+
+  function buildProfilesDeps() {
+    return { getActiveDriver, ENV, getAuthorById };
+  }
+
   function getCurrentProfile() {
-    if (ENV.driver !== 'supabase') return null;
-    if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
-      return window.KCProfiles.getCurrentProfile();
+    const profilesModule = getProfilesModule();
+    if (profilesModule && typeof profilesModule.getCurrentProfile === 'function') {
+      return profilesModule.getCurrentProfile(buildProfilesDeps());
     }
+    if (ENV.driver !== 'supabase') return null;
+    if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') return window.KCProfiles.getCurrentProfile();
     return null;
   }
 
   async function getProfileById(id) {
-    // 1. Supabase (caminho existente)
-    if (ENV.driver === 'supabase' &&
-        window.KCProfiles && typeof window.KCProfiles.getProfileById === 'function') {
-      const profile = await window.KCProfiles.getProfileById(id);
-      if (profile) return profile;
+    const profilesModule = getProfilesModule();
+    if (profilesModule && typeof profilesModule.getProfileById === 'function') {
+      return profilesModule.getProfileById(id, buildProfilesDeps());
     }
-
-    // 2. Fallback: mock user legado (USER_01..USER_42)
-    const mock = getAuthorById(id);
-    if (mock) {
-      return Object.freeze({
-        id:           mock.id,
-        display_name: mock.displayName || mock.name || '',
-        full_name:    mock.displayName || mock.name || '',
-        avatar_url:   mock.avatarUrl   || mock.avatar || '',
-        bio:          '',
-        verified:     false,
-        is_admin:     false,
-        rating_avg:   null,
-        rating_count: 0,
-        ratingAvg:    null,
-        ratingCount:  0,
-        profile_public: true,
-        contact_primary_method: null,
-        contact_cta_enabled: true,
-        social_links: {},
-        social_visibility: {},
-        created_at:   null,
-        updated_at:   null,
-      });
-    }
-
     return null;
   }
 
   async function syncProfile() {
-    if (ENV.driver !== 'supabase') return null;
-    if (window.KCProfiles && typeof window.KCProfiles.ensureSynced === 'function') {
-      return window.KCProfiles.ensureSynced();
+    const profilesModule = getProfilesModule();
+    if (profilesModule && typeof profilesModule.syncProfile === 'function') {
+      return profilesModule.syncProfile(buildProfilesDeps());
     }
+    if (ENV.driver !== 'supabase') return null;
+    if (window.KCProfiles && typeof window.KCProfiles.ensureSynced === 'function') return window.KCProfiles.ensureSynced();
     return null;
   }
 
@@ -2180,27 +2169,29 @@
   }
 
   async function getMyProfile() {
+    const profilesModule = getProfilesModule();
+    if (profilesModule && typeof profilesModule.getMyProfile === 'function') {
+      return profilesModule.getMyProfile(buildProfilesDeps());
+    }
     const activeDriver = getActiveDriver();
     if (!activeDriver || typeof activeDriver.getMyProfile !== 'function') return null;
     return activeDriver.getMyProfile();
   }
 
   async function updateMyProfile(patch = {}) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.updateMyProfile === 'function') return driver.updateMyProfile(patch);
-    if (ENV.driver !== 'supabase' || !getActiveDriver().updateMyProfile) return { ok: false, error: { message: 'Perfil indisponível neste driver.' } };
-    return driver.updateMyProfile(patch);
+    const profilesModule = getProfilesModule();
+    if (profilesModule && typeof profilesModule.updateMyProfile === 'function') {
+      return profilesModule.updateMyProfile(patch, buildProfilesDeps());
+    }
+    return { ok: false, error: { message: 'Perfil indisponível neste driver.' } };
   }
 
   async function uploadProfileAvatar(fileOrDataUrl) {
-    const driver = getActiveDriver();
-    if (ENV.driver !== 'supabase' && driver && typeof driver.uploadProfileAvatar === 'function') {
-      return driver.uploadProfileAvatar(fileOrDataUrl);
+    const profilesModule = getProfilesModule();
+    if (profilesModule && typeof profilesModule.uploadProfileAvatar === 'function') {
+      return profilesModule.uploadProfileAvatar(fileOrDataUrl, buildProfilesDeps());
     }
-    if (ENV.driver !== 'supabase' || !getActiveDriver().uploadProfileAvatar) {
-      return { ok: false, error: { message: 'Upload de avatar indisponível neste driver.' } };
-    }
-    return driver.uploadProfileAvatar(fileOrDataUrl);
+    return { ok: false, error: { message: 'Upload de avatar indisponível neste driver.' } };
   }
 
   async function getMyPosts(params = {}) {
