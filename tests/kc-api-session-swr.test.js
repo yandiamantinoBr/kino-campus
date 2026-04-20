@@ -34,6 +34,7 @@ describe('KCAPI product session SWR', () => {
   require('../assets/js/kc-api.ratings.js');
   require('../assets/js/kc-api.posts-feed.js');
   require('../assets/js/kc-api.posts-write.js');
+  require('../assets/js/kc-api.profiles.js');
     require('../assets/js/kc-api.client.js');
 
     api = window.KCAPI;

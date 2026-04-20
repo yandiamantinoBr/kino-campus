@@ -41,6 +41,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.ratings = window._KCAPI.ratings || {};');
     expect(source).toContain('window._KCAPI.postsFeed = window._KCAPI.postsFeed || {};');
     expect(source).toContain('window._KCAPI.postsWrite = window._KCAPI.postsWrite || {};');
+    expect(source).toContain('window._KCAPI.profiles = window._KCAPI.profiles || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -239,6 +240,17 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
 });
 
 describe('kc-api.client.js - caches, SWR and diagnostics', () => {
+  test('mantem delegacao para profiles via getProfilesModule e buildProfilesDeps', () => {
+    expect(source).toContain('function getProfilesModule()');
+    expect(source).toContain('function buildProfilesDeps()');
+    expect(source).toContain('return profilesModule.getCurrentProfile(buildProfilesDeps());');
+    expect(source).toContain('return profilesModule.getProfileById(id, buildProfilesDeps());');
+    expect(source).toContain('return profilesModule.syncProfile(buildProfilesDeps());');
+    expect(source).toContain('return profilesModule.getMyProfile(buildProfilesDeps());');
+    expect(source).toContain('return profilesModule.updateMyProfile(patch, buildProfilesDeps());');
+    expect(source).toContain('return profilesModule.uploadProfileAvatar(fileOrDataUrl, buildProfilesDeps());');
+  });
+
   test('mantem delegacao para posts-write via getPostsWriteModule e buildPostsWriteDeps', () => {
     expect(source).toContain('function getPostsWriteModule()');
     expect(source).toContain('function buildPostsWriteDeps()');
