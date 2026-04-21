@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.3` concluídas (abertura, auditoria, splits `string`, `format`, `dom`, `identity`); próxima é `v12.2.4` — split `window._KCU.taxonomy`; baseline expandida para `103/103` suites e `2006/2006` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.4` concluídas (abertura, auditoria, splits `string`, `format`, `dom`, `identity`, `taxonomy`); próxima é `v12.2.5` — split `window._KCU.location`; baseline expandida para `104/104` suites e `2084/2084` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -180,7 +180,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.2.1** | Split `kc-utils.js` domínio **format** (date + money + url) | `kc-utils.format.js` → `window._KCU.format` (7 funções), −70L em `kc-utils.js` (2380→2310L), +1 suite 51 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
 | **v12.2.2** | Split `kc-utils.js` domínio **dom/async** (debounce + clipboard) | `kc-utils.dom.js` → `window._KCU.dom` (4 funções), −68L em `kc-utils.js` (2310→2242L), +1 suite 23 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
 | **v12.2.3** | Split `kc-utils.js` domínio **identity/email/handle** | `kc-utils.identity.js` → `window._KCU.identity` (5 funções), −11L em `kc-utils.js` (2242→2231L), +1 suite 29 testes, 22 HTMLs atualizados | ✅ concluído |
-| v12.2.4 | Split `kc-utils.js` domínio **taxonomy** (module labels + opportunity) | `kc-utils.taxonomy.js` → `window._KCU.taxonomy` (~22 funções), ~420L movidas, ~20 testes | 📋 planejado |
+| **v12.2.4** | Split `kc-utils.js` domínio **taxonomy** (module labels + opportunity) | `kc-utils.taxonomy.js` → `window._KCU.taxonomy` (22 funções), −281L em `kc-utils.js` (2231→1950L), +1 suite 78 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
 | v12.2.5 | Split `kc-utils.js` domínio **location** (housing + caronas + lost-found + inferências) | `kc-utils.location.js` → `window._KCU.location` (~30 funções), ~1 050L movidas, ~30 testes | 📋 planejado |
 | v12.2.6 | Split `kc-utils.js` domínio **presentation** (`applyPresentationRules` + `renderPostCard` + markers) | `kc-utils.presentation.js` → `window._KCU.presentation` (4 funções), ~600L movidas, ~20 testes | 📋 planejado |
 | v12.2.7 | Gate `kc-utils.js` <900L: README + RELATORIO atualizados, hygiene com regras para `_KCU.*` | gate formal | 📋 planejado |
@@ -519,6 +519,35 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 **Acumulado `kc-utils.js`:** 2445L → 2231L (−214L em 4 iterações).
 
 **Próxima iteração:** `v12.2.4` — split domínio **taxonomy** (~420L, ~22 funções de labels + resolvers de oportunidade).
+
+---
+
+### 8.6. v12.2.4 — split `kc-utils.js` domínio taxonomy — `window._KCU.taxonomy` — ✅ concluído
+
+**Objetivo:** extrair as 22 funções do domínio taxonomy (rótulos de módulo/categoria/subcategoria e todo o pipeline de resolução de área de oportunidade) para `assets/js/kc-utils.taxonomy.js`, expondo `window._KCU.taxonomy`.
+
+**Funções migradas (22):**
+- Rótulos: `getModuleLabel`, `getModuleIconClass`, `getCategoryLabel`, `getSubcategoryLabel`
+- Utilitários puros: `firstNonEmptyValue`, `formatOpportunityAreaLabel`, `scoreOpportunityAreaLabel`, `pickPreferredOpportunityAreaLabel`, `getOpportunityAreaFuzzyThreshold`, `getOpportunityAreaSimilarityScore`, `isCloseOpportunityAreaAlias`, `getOpportunityAreaEmoji`
+- Definições: `getOpportunityAreaDefinitions`, `getOpportunityAreaInfoByKey`, `buildOfficialOpportunityAreaMaps`, `buildOpportunityTextParts`
+- Resolvers: `extractOpportunityAreaHistoryEntries`, `buildHistoryOpportunityAreaMaps`, `findBestOfficialOpportunityArea`, `findBestFuzzyOpportunityArea`, `findBestOfficialContextArea`, `resolveOpportunityArea`
+
+**Padrão aplicado:** acesso lazy a `_KCU.string` via `_str()` e a `KC_CONSTANTS` via `_const()` — evita captura prematura de referências no IIFE e permite mocking nos testes sem carregar o arquivo de constantes.
+
+**Entregas mensuráveis:**
+- `assets/js/kc-utils.taxonomy.js` criado (22 funções + `window._KCU.taxonomy = Object.freeze(...)`)
+- `kc-utils.js`: 22 corpos substituídos por delegation wrappers; destructuring de KC_CONSTANTS reduzido de 8 para 3 constantes locais (`HOUSING_*`, `LOST_FOUND_*`); **2231L → 1950L (−281L)**
+- `tests/kc-utils-taxonomy.test.js` criado — **1 suite, 78 testes**
+- 22 HTMLs: `<script defer src="assets/js/kc-utils.taxonomy.js"></script>` adicionado antes de `kc-utils.js`
+- 12 arquivos de teste existentes: `require('../assets/js/kc-utils.taxonomy.js')` adicionado na cadeia de carregamento
+- `scripts/patch-taxonomy-split.py` criado (script de substituição em lote — reutilizável como modelo para splits futuros)
+
+**Verificação:**
+- `npm test` → **104/104 suites, 2084/2084 testes verdes** (+1 suite, +78 testes vs. baseline `v12.2.3`)
+- `node scripts/hygiene-check.js` → 8.6.0 ✓
+- `kc-utils.js` passou de **2231L → 1950L** (redução acumulada desde 2445L: **−495L**)
+
+**Próxima iteração:** `v12.2.5` — split domínio **location** (~30 funções: `resolveHousingRegion`, `resolveCaronasLocation`, `resolveLostFoundLocation`, `resolveHousingFeatures`, `resolveHousingTypeKey`, housing/carona/lost-found definitions e inferências) → `kc-utils.location.js` + `window._KCU.location`.
 
 ---
 

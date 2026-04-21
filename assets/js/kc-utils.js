@@ -8,12 +8,8 @@
 (function () {
   'use strict';
 
+  // Constantes de taxonomia movidas para kc-utils.taxonomy.js (v12.2.4)
   const {
-    MODULE_LABEL_MAP,
-    MODULE_ICON_MAP,
-    CATEGORY_LABELS,
-    SUBCATEGORY_LABELS,
-    OPPORTUNITY_AREA_DEFINITIONS,
     HOUSING_REGION_DEFINITIONS,
     HOUSING_FEATURE_DEFINITIONS,
     LOST_FOUND_LOCATION_DEFINITIONS
@@ -34,30 +30,24 @@
     return (window._KCU && window._KCU.string) ? window._KCU.string.beautifyKey(key) : String(key || '');
   }
 
+  // Delegacao -> window._KCU.taxonomy.getModuleLabel (kc-utils.taxonomy.js)
   function getModuleLabel(moduleKey) {
-    const key = normalizeText(moduleKey);
-    return MODULE_LABEL_MAP[key] || beautifyKey(key) || String(moduleKey || '');
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getModuleLabel(moduleKey) : String(moduleKey || '');
   }
 
+  // Delegacao -> window._KCU.taxonomy.getModuleIconClass (kc-utils.taxonomy.js)
   function getModuleIconClass(moduleKey) {
-    const key = normalizeText(moduleKey);
-    return MODULE_ICON_MAP[key] || 'fas fa-layer-group';
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getModuleIconClass(moduleKey) : 'fas fa-layer-group';
   }
 
+  // Delegacao -> window._KCU.taxonomy.getCategoryLabel (kc-utils.taxonomy.js)
   function getCategoryLabel(moduleKey, catKey) {
-    const m = normalizeText(moduleKey);
-    const c = normalizeText(catKey);
-    const map = CATEGORY_LABELS[m];
-    if (map && map[c]) return map[c];
-    return beautifyKey(c) || String(catKey || '');
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getCategoryLabel(moduleKey, catKey) : String(catKey || '');
   }
 
+  // Delegacao -> window._KCU.taxonomy.getSubcategoryLabel (kc-utils.taxonomy.js)
   function getSubcategoryLabel(moduleKey, subKey) {
-    const m = normalizeText(moduleKey);
-    const s = normalizeText(subKey);
-    const map = SUBCATEGORY_LABELS[m];
-    if (map && map[s]) return map[s];
-    return beautifyKey(s) || String(subKey || '');
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getSubcategoryLabel(moduleKey, subKey) : String(subKey || '');
   }
 
   // Delegação → window._KCU.string.normalizeText (kc-utils.string.js)
@@ -105,358 +95,97 @@
     return (window._KCU && window._KCU.string) ? window._KCU.string.levenshteinDistance(a, b) : 0;
   }
 
+  // Delegacao -> window._KCU.taxonomy.getOpportunityAreaDefinitions (kc-utils.taxonomy.js)
   function getOpportunityAreaDefinitions() {
-    return OPPORTUNITY_AREA_DEFINITIONS.map((entry) => ({
-      ...entry,
-      emoji: entry.emoji || getOpportunityAreaEmoji(entry.key),
-    }));
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getOpportunityAreaDefinitions() : [];
   }
 
+  // Delegacao -> window._KCU.taxonomy.buildOpportunityTextParts (kc-utils.taxonomy.js)
   function buildOpportunityTextParts(source, fallbackTags) {
-    if (source && typeof source === 'object' && !Array.isArray(source)) {
-      const meta = (source.metadata && typeof source.metadata === 'object' && !Array.isArray(source.metadata)) ? source.metadata : {};
-      const tagValues = [];
-      if (Array.isArray(source.tags)) tagValues.push(...source.tags);
-      if (Array.isArray(source.tagKeys)) tagValues.push(...source.tagKeys);
-      if (Array.isArray(meta.tags)) tagValues.push(...meta.tags);
-      if (Array.isArray(meta.tagKeys)) tagValues.push(...meta.tagKeys);
-
-      return {
-        explicit: [
-          source.areaLabel, source.area, source.areaKey,
-          meta.areaLabel, meta.area, meta.areaKey,
-          source.subcategoriaLabel, source.subcategoria, source.subcategoriaKey,
-          source.subcategoryLabel, source.subcategory, source.subcategoryKey,
-          meta.subcategoria, meta.subcategoriaKey,
-          meta.subcategoryLabel, meta.subcategory, meta.subcategoryKey
-        ].filter(Boolean),
-        text: [
-          source.titulo, source.title,
-          source.descricao, source.description,
-          source.localizacao, source.location,
-          meta.localizacao, meta.location
-        ].filter(Boolean),
-        tags: tagValues.filter(Boolean),
-      };
-    }
-
-    return {
-      explicit: source ? [source] : [],
-      text: [],
-      tags: Array.isArray(fallbackTags) ? fallbackTags.filter(Boolean) : [],
-    };
+    return (window._KCU && window._KCU.taxonomy)
+      ? window._KCU.taxonomy.buildOpportunityTextParts(source, fallbackTags)
+      : { explicit: source ? [source] : [], text: [], tags: [] };
   }
 
+  // Delegacao -> window._KCU.taxonomy.getOpportunityAreaInfoByKey (kc-utils.taxonomy.js)
   function getOpportunityAreaInfoByKey(key) {
-    const wanted = slugifyText(key);
-    if (!wanted) return null;
-    const entry = OPPORTUNITY_AREA_DEFINITIONS.find((item) => item.key === wanted);
-    return entry ? { ...entry, emoji: entry.emoji || getOpportunityAreaEmoji(entry.key) } : null;
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getOpportunityAreaInfoByKey(key) : null;
   }
 
+  // Delegacao -> window._KCU.taxonomy.firstNonEmptyValue (kc-utils.taxonomy.js)
   function firstNonEmptyValue(values) {
-    if (!Array.isArray(values)) return '';
-    for (let i = 0; i < values.length; i += 1) {
-      const value = String(values[i] || '').trim();
-      if (value) return value;
-    }
-    return '';
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.firstNonEmptyValue(values) : '';
   }
 
+  // Delegacao -> window._KCU.taxonomy.formatOpportunityAreaLabel (kc-utils.taxonomy.js)
   function formatOpportunityAreaLabel(value) {
-    const raw = String(value || '').trim().replace(/\s+/g, ' ');
-    if (!raw) return '';
-    if (raw !== normalizeText(raw)) return raw;
-    return titleCase(raw);
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.formatOpportunityAreaLabel(value) : String(value || '');
   }
 
+  // Delegacao -> window._KCU.taxonomy.scoreOpportunityAreaLabel (kc-utils.taxonomy.js)
   function scoreOpportunityAreaLabel(value) {
-    const label = String(value || '').trim();
-    if (!label) return 0;
-    let score = Math.min(label.length, 32) / 32;
-    if (/[A-ZÀ-Ý]/.test(label)) score += 1.5;
-    if (label.normalize('NFD') !== label) score += 2;
-    if (label.includes(' ')) score += 0.5;
-    return score;
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.scoreOpportunityAreaLabel(value) : 0;
   }
 
+  // Delegacao -> window._KCU.taxonomy.pickPreferredOpportunityAreaLabel (kc-utils.taxonomy.js)
   function pickPreferredOpportunityAreaLabel(current, candidate) {
-    const currentLabel = String(current || '').trim();
-    const candidateLabel = String(candidate || '').trim();
-    if (!currentLabel) return candidateLabel;
-    if (!candidateLabel) return currentLabel;
-    return scoreOpportunityAreaLabel(candidateLabel) > scoreOpportunityAreaLabel(currentLabel)
-      ? candidateLabel
-      : currentLabel;
+    return (window._KCU && window._KCU.taxonomy)
+      ? window._KCU.taxonomy.pickPreferredOpportunityAreaLabel(current, candidate)
+      : String(current || candidate || '');
   }
 
+  // Delegacao -> window._KCU.taxonomy.buildOfficialOpportunityAreaMaps (kc-utils.taxonomy.js)
   function buildOfficialOpportunityAreaMaps() {
-    const aliasMap = new Map();
-    OPPORTUNITY_AREA_DEFINITIONS.forEach((entry) => {
-      const values = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])];
-      values.forEach((value) => {
-        const normalized = normalizeText(value);
-        if (normalized && !aliasMap.has(normalized)) aliasMap.set(normalized, entry);
-      });
-    });
-    return aliasMap;
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.buildOfficialOpportunityAreaMaps() : new Map();
   }
 
+  // Delegacao -> window._KCU.taxonomy.getOpportunityAreaFuzzyThreshold (kc-utils.taxonomy.js)
   function getOpportunityAreaFuzzyThreshold(source, target) {
-    const maxLength = Math.max(String(source || '').length, String(target || '').length);
-    if (maxLength <= 6) return 1;
-    if (maxLength <= 12) return 2;
-    return 3;
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getOpportunityAreaFuzzyThreshold(source, target) : 3;
   }
 
+  // Delegacao -> window._KCU.taxonomy.getOpportunityAreaSimilarityScore (kc-utils.taxonomy.js)
   function getOpportunityAreaSimilarityScore(source, target) {
-    const left = String(source || '');
-    const right = String(target || '');
-    const maxLength = Math.max(left.length, right.length);
-    if (!maxLength) return 0;
-    const distance = levenshteinDistance(left, right);
-    return 1 - (distance / maxLength);
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getOpportunityAreaSimilarityScore(source, target) : 0;
   }
 
+  // Delegacao -> window._KCU.taxonomy.isCloseOpportunityAreaAlias (kc-utils.taxonomy.js)
   function isCloseOpportunityAreaAlias(candidate, alias) {
-    const normalizedCandidate = normalizeText(candidate);
-    const normalizedAlias = normalizeText(alias);
-    if (!normalizedCandidate || !normalizedAlias) return false;
-    if (normalizedCandidate === normalizedAlias) return true;
-    if (normalizedCandidate.length < 5 || normalizedAlias.length < 5) return false;
-
-    const threshold = getOpportunityAreaFuzzyThreshold(normalizedCandidate, normalizedAlias);
-    if (Math.abs(normalizedCandidate.length - normalizedAlias.length) > threshold) return false;
-
-    const distance = levenshteinDistance(normalizedCandidate, normalizedAlias);
-    if (distance > threshold) return false;
-
-    const similarity = getOpportunityAreaSimilarityScore(normalizedCandidate, normalizedAlias);
-    const minSimilarity = Math.max(normalizedCandidate.length, normalizedAlias.length) >= 10 ? 0.72 : 0.78;
-    return similarity >= minSimilarity;
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.isCloseOpportunityAreaAlias(candidate, alias) : false;
   }
 
+  // Delegacao -> window._KCU.taxonomy.findBestOfficialOpportunityArea (kc-utils.taxonomy.js)
   function findBestOfficialOpportunityArea(candidate, officialAliasMap) {
-    const normalized = normalizeText(candidate);
-    if (!normalized) return null;
-
-    if (officialAliasMap && officialAliasMap.has(normalized)) {
-      return officialAliasMap.get(normalized);
-    }
-
-    if (normalized.length >= 5 && officialAliasMap) {
-      for (const [alias, entry] of officialAliasMap.entries()) {
-        if (normalized.includes(alias) || alias.includes(normalized)) return entry;
-      }
-    }
-
-    return findBestFuzzyOpportunityArea(candidate, OPPORTUNITY_AREA_DEFINITIONS);
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.findBestOfficialOpportunityArea(candidate, officialAliasMap) : null;
   }
 
+  // Delegacao -> window._KCU.taxonomy.extractOpportunityAreaHistoryEntries (kc-utils.taxonomy.js)
   function extractOpportunityAreaHistoryEntries(history) {
-    const list = Array.isArray(history) ? history : [];
-    const entries = [];
-
-    list.forEach((item) => {
-      if (!item) return;
-
-      if (typeof item === 'string') {
-        const label = formatOpportunityAreaLabel(item);
-        const key = slugifyText(item);
-        if (label || key) entries.push({ label, key, icon: 'fas fa-briefcase' });
-        return;
-      }
-
-      if (typeof item !== 'object' || Array.isArray(item)) return;
-
-      const meta = (item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata))
-        ? item.metadata
-        : {};
-      const label = formatOpportunityAreaLabel(firstNonEmptyValue([
-        item.label,
-        item.areaLabel, item.area,
-        meta.areaLabel, meta.area,
-        item.subcategoriaLabel, item.subcategoria,
-        item.subcategoryLabel, item.subcategory,
-        meta.subcategoryLabel, meta.subcategory
-      ]));
-      const key = slugifyText(firstNonEmptyValue([
-        item.key,
-        item.areaKey,
-        meta.areaKey,
-        item.subcategoriaKey,
-        item.subcategoryKey,
-        meta.subcategoryKey,
-        label
-      ]));
-      const icon = firstNonEmptyValue([
-        item.icon,
-        item.areaIcon,
-        meta.areaIcon
-      ]) || 'fas fa-briefcase';
-
-      if (label || key) entries.push({ label, key, icon });
-    });
-
-    return entries;
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.extractOpportunityAreaHistoryEntries(history) : [];
   }
 
+  // Delegacao -> window._KCU.taxonomy.buildHistoryOpportunityAreaMaps (kc-utils.taxonomy.js)
   function buildHistoryOpportunityAreaMaps(history, officialAliasMap) {
-    const catalog = new Map();
-    const aliasMap = new Map();
-    const entries = extractOpportunityAreaHistoryEntries(history);
-
-    entries.forEach((entry) => {
-      const normalizedLabel = normalizeText(entry.label);
-      const normalizedKey = normalizeText(entry.key);
-      if (!normalizedLabel && !normalizedKey) return;
-      if ((normalizedLabel && officialAliasMap.has(normalizedLabel)) || (normalizedKey && officialAliasMap.has(normalizedKey))) return;
-      if (findBestOfficialOpportunityArea(entry.label, officialAliasMap) || findBestOfficialOpportunityArea(entry.key, officialAliasMap)) return;
-
-      const finalKey = slugifyText(entry.key || entry.label);
-      if (!finalKey) return;
-
-      const existing = catalog.get(finalKey);
-      const finalLabel = pickPreferredOpportunityAreaLabel(existing && existing.label, entry.label || finalKey);
-      const item = {
-        key: finalKey,
-        label: finalLabel || formatOpportunityAreaLabel(finalKey),
-        icon: entry.icon || (existing && existing.icon) || 'fas fa-briefcase',
-        isKnown: false,
-      };
-
-      catalog.set(finalKey, item);
-      [normalizedLabel, normalizedKey].filter(Boolean).forEach((alias) => {
-        if (!aliasMap.has(alias)) aliasMap.set(alias, item);
-      });
-    });
-
-    return { catalog, aliasMap };
+    return (window._KCU && window._KCU.taxonomy)
+      ? window._KCU.taxonomy.buildHistoryOpportunityAreaMaps(history, officialAliasMap)
+      : { catalog: new Map(), aliasMap: new Map() };
   }
 
+  // Delegacao -> window._KCU.taxonomy.findBestOfficialContextArea (kc-utils.taxonomy.js)
   function findBestOfficialContextArea(combinedText) {
-    if (!combinedText) return null;
-
-    const ranked = OPPORTUNITY_AREA_DEFINITIONS
-      .map((entry) => {
-        const score = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
-          .map((value) => normalizeText(value))
-          .filter(Boolean)
-          .reduce((acc, alias) => {
-            if (!combinedText.includes(alias)) return acc;
-            return acc + (alias.includes(' ') ? 3 : 2);
-          }, 0);
-        return { entry, score };
-      })
-      .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score);
-
-    return ranked.length ? ranked[0].entry : null;
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.findBestOfficialContextArea(combinedText) : null;
   }
 
+  // Delegacao -> window._KCU.taxonomy.findBestFuzzyOpportunityArea (kc-utils.taxonomy.js)
   function findBestFuzzyOpportunityArea(candidate, collection) {
-    const normalized = normalizeText(candidate);
-    if (!normalized || normalized.length < 5) return null;
-
-    let best = null;
-    collection.forEach((entry) => {
-      const aliases = Array.isArray(entry.aliases) && entry.aliases.length
-        ? entry.aliases
-        : [entry.label, entry.key];
-
-      aliases.forEach((aliasValue) => {
-        const alias = normalizeText(aliasValue);
-        if (!alias) return;
-        const distance = levenshteinDistance(normalized, alias);
-        if (!isCloseOpportunityAreaAlias(normalized, alias)) return;
-        const similarity = getOpportunityAreaSimilarityScore(normalized, alias);
-
-        if (!best || distance < best.distance || (distance === best.distance && similarity > best.similarity)) {
-          best = { entry, distance, similarity };
-        }
-      });
-    });
-
-    return best ? best.entry : null;
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.findBestFuzzyOpportunityArea(candidate, collection) : null;
   }
 
-  function resolveOpportunityArea(source, options = {}) {
-    const built = buildOpportunityTextParts(source, options.tags);
-    const textParts = Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [];
-    const explicitCandidates = built.explicit.map((value) => String(value || '').trim()).filter(Boolean);
-    const combinedText = [
-      ...explicitCandidates,
-      ...built.tags,
-      ...built.text,
-      ...textParts
-    ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
-
-    const officialAliasMap = buildOfficialOpportunityAreaMaps();
-    const historySource = Array.isArray(options.history)
-      ? options.history
-      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_OPPORTUNITY_AREA_HISTORY)) ? window.__KC_OPPORTUNITY_AREA_HISTORY : []);
-    const historyMaps = buildHistoryOpportunityAreaMaps(historySource, officialAliasMap);
-    const historyEntries = Array.from(historyMaps.catalog.values()).map((entry) => ({
-      ...entry,
-      aliases: [entry.label, entry.key],
-    }));
-
-    for (const candidate of explicitCandidates) {
-      const normalized = normalizeText(candidate);
-      if (!normalized) continue;
-
-      if (officialAliasMap.has(normalized)) {
-        const match = officialAliasMap.get(normalized);
-        return { key: match.key, label: match.label, icon: match.icon, isKnown: true, source: 'official-exact' };
-      }
-
-      if (historyMaps.aliasMap.has(normalized)) {
-        const match = historyMaps.aliasMap.get(normalized);
-        return { key: match.key, label: match.label, icon: match.icon, isKnown: false, source: 'history-exact' };
-      }
-    }
-
-    for (const candidate of explicitCandidates) {
-      const normalized = normalizeText(candidate);
-      if (!normalized || normalized.length < 5) continue;
-
-      for (const [alias, entry] of officialAliasMap.entries()) {
-        if (normalized.includes(alias) || alias.includes(normalized)) {
-          return { key: entry.key, label: entry.label, icon: entry.icon, isKnown: true, source: 'official-partial' };
-        }
-      }
-    }
-
-    const contextMatch = findBestOfficialContextArea(combinedText);
-    if (contextMatch) {
-      return { key: contextMatch.key, label: contextMatch.label, icon: contextMatch.icon, isKnown: true, source: 'context' };
-    }
-
-    for (const candidate of explicitCandidates) {
-      const officialFuzzy = findBestFuzzyOpportunityArea(candidate, OPPORTUNITY_AREA_DEFINITIONS);
-      if (officialFuzzy) {
-        return { key: officialFuzzy.key, label: officialFuzzy.label, icon: officialFuzzy.icon, isKnown: true, source: 'official-fuzzy' };
-      }
-
-      const historyFuzzy = findBestFuzzyOpportunityArea(candidate, historyEntries);
-      if (historyFuzzy) {
-        return { key: historyFuzzy.key, label: historyFuzzy.label, icon: historyFuzzy.icon, isKnown: false, source: 'history-fuzzy' };
-      }
-    }
-
-    const fallbackRaw = explicitCandidates[0] || '';
-    const fallbackKey = slugifyText(fallbackRaw);
-    if (fallbackKey) {
-      return {
-        key: fallbackKey,
-        label: formatOpportunityAreaLabel(fallbackRaw) || beautifyKey(fallbackKey) || fallbackRaw,
-        icon: 'fas fa-briefcase',
-        isKnown: false,
-        source: 'custom',
-      };
-    }
-
-    return { key: '', label: '', icon: 'fas fa-briefcase', isKnown: false, source: 'empty' };
+  // Delegacao -> window._KCU.taxonomy.resolveOpportunityArea (kc-utils.taxonomy.js)
+  function resolveOpportunityArea(source, options) {
+    return (window._KCU && window._KCU.taxonomy)
+      ? window._KCU.taxonomy.resolveOpportunityArea(source, options)
+      : { key: '', label: '', icon: 'fas fa-briefcase', isKnown: false, source: 'empty' };
   }
 
   function getHousingRegionDefinitions() {
@@ -470,20 +199,9 @@
     }));
   }
 
+  // Delegacao -> window._KCU.taxonomy.getOpportunityAreaEmoji (kc-utils.taxonomy.js)
   function getOpportunityAreaEmoji(key) {
-    const wanted = slugifyText(key);
-    const map = {
-      tecnologia: '💻',
-      marketing: '📣',
-      design: '🎨',
-      educacao: '🎓',
-      musica: '🎵',
-      administrativo: '📋',
-      engenharia: '📐',
-      saude: '💚',
-      pesquisa: '🔬',
-    };
-    return map[wanted] || '🏷️';
+    return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getOpportunityAreaEmoji(key) : '🏷️';
   }
 
   function getHousingFeatureEmoji(key) {
