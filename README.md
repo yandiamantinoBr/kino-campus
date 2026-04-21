@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.2.7` concluída com gate formal de `kc-utils.js` `<900L` (`440L` reais) e endurecimento do `scripts/hygiene-check.js` para validar a cadeia `_KCU.*` nos 22 HTMLs canônicos; baseline preservada em **106/106 suites · 2212/2212 testes**; próxima iteração: `v12.3.0` (auditoria docs-only de `admin-dashboard.controller.js`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.3.0` concluída com auditoria docs-only de `assets/js/controllers/admin-dashboard.controller.js` (footprint real: `2034L`, `93 641` bytes, `104` funções top-level, `29` async, 1 HTML consumidor e 1 helper compartilhado já extraído); roadmap `v12.3.1`–`v12.3.4` recalibrado para `window._KCAD.*`; baseline preservada em **106/106 suites · 2212/2212 testes**; próxima iteração: `v12.3.1` (split admin-dashboard domínio metrics/loaders).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.3.0 | **auditoria docs-only de `admin-dashboard.controller.js`**: criado `docs/admin-dashboard-audit-v12.3.md` com footprint real do hotspot admin (`2034L`, `93 641` bytes, `104` funções top-level, `29` async), boundary já modularizado em `admin-dashboard.shared.js` (`382L`, 14 exports, 1 suite com 4 testes), mapa por 6 grupos naturais (core/access/refresh, loaders Supabase, trends/charts/renderers, audit log, exportação XLSX/PDF, ranking), inventário dos contratos externos (`KCSupabase`, `KCAPI`, `KCAdminShell`, `KCPullToRefresh`, `KCUtils.escapeHtml`, `KC_CONSTANTS`, `XLSX`, `jspdf`, `KCRanking`), lacuna de cobertura direta do controller e plano recomendado para `v12.3.1`–`v12.3.4` com `window._KCAD.metrics`, `window._KCAD.audit` e `window._KCAD.charts`; zero mudança funcional em runtime; baseline preservada em **106/106 suites · 2212/2212 testes** | — |
 | v12.2.7 | **gate formal `<900L` de `kc-utils.js` + hygiene `_KCU.*`**: `scripts/hygiene-check.js` passou a validar, nos 22 HTMLs canônicos (17 raiz + 5 admin), a ordem exata de `<script defer src="...kc-utils*.js"></script>`: `string → format → dom → identity → taxonomy → location → presentation → kc-utils.js`, com prefixos corretos por superfície; a checagem agora falha em caso de item faltando, duplicado, extra ou fora de ordem, mostrando `expected` vs `found` por arquivo; `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` atualizados para formalizar o marco estrutural já atingido (`kc-utils.js` em `440L`, abaixo do gate `<900L`); zero mudança funcional em runtime, zero HTML editado nesta rodada; baseline preservada em **106/106 suites · 2212/2212 testes** | — |
 | v12.2.6 | **split `window._KCU.presentation`**: novo `assets/js/kc-utils.presentation.js` com IIFE + 9 funções extraídas de `kc-utils.js` (`cssEscape`, `inferCaronasRoute`, `inferAchadosLocation`, `inferOportunidadesSubcategory`, `inferEventosCategory`, `applyPresentationRules`, `getDisplayMarkerTags`, `renderMarkerTags`, `renderPostCard`); dependências cross-domain resolvidas via lazy accessors para `_KCU.string`, `_KCU.format`, `_KCU.taxonomy` e `_KCU.location`; `kc-utils.js` reduzido de 1168L → 440L (−728L); acumulado 2445L → 440L (−2005L), com gate `<900L` já atingido; 22 HTMLs atualizados; 12 suites existentes atualizadas; nova suite `tests/kc-utils-presentation.test.js` (27 testes); baseline expandida para **106/106 suites · 2212/2212 testes** | — |
 | v12.2.5 | **split `window._KCU.location`**: novo `assets/js/kc-utils.location.js` com IIFE + 32 funções extraídas de `kc-utils.js` (moradia/região, moradia/features, caronas, achados-e-perdidos: `resolveHousingRegion`, `resolveCaronasLocation`, `resolveLostFoundLocation`, `resolveHousingFeatures`, `resolveHousingTypeKey`, `resolveHousingTypeFromCandidates` e 26 helpers); acesso lazy a `_KCU.string` via `_str()` e a `KC_CONSTANTS` via `_const()`; `firstNonEmptyValue` duplicado localmente para evitar dependência cruzada com `_KCU.taxonomy`; bloco `KC_CONSTANTS` removido de `kc-utils.js`; `kc-utils.js` reduzido de 1950L → 1168L (−782L); acumulado 2445L → 1168L (−1277L); 22 HTMLs atualizados; 12 suites existentes atualizadas; nova suite `tests/kc-utils-location.test.js` (101 testes); baseline expandida para **105/105 suites · 2185/2185 testes** | — |
@@ -154,7 +155,7 @@ As iterações são organizadas em **três camadas paralelas**:
 
 - **Camada A — Continuação tática v11** (splits IIFE dos hotspots remanescentes):
   - `v12.1.0`–`v12.2.7`: `kc-utils.js` (2445L → <900L) em 7 sub-módulos `window._KCU.*` + gate formal
-  - `v12.3.0`–`v12.3.4`: `admin-dashboard.controller.js` (2251L → <900L) em `window._KCAD.*`
+  - `v12.3.0`–`v12.3.4`: `admin-dashboard.controller.js` (2034L → <900L) em `window._KCAD.*`
   - `v12.4.0`–`v12.4.6`: `local.adapter.js` (1862L → <500L) em `window._KCLA.*`, restaurando paridade com `supabase.adapter.js` (420L)
   - `v12.5.0`–`v12.5.4`: `profile.controller.js` (1463L → <600L)
 
@@ -180,7 +181,7 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.2.7` — **gate formal `<900L` de `kc-utils.js` concluído** (`440L` reais, hygiene `_KCU.*` ativa em 22 HTMLs, zero mudança funcional)
+- iteração encerrada: `v12.3.0` — **auditoria docs-only de `admin-dashboard.controller.js` concluída** (`2034L`, `104` funções, `29` async, 1 HTML consumidor, 0 suites diretas)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
@@ -190,7 +191,8 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 - sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
 - kc-api.client.js: `2536L` (pré-v11.33) → `2410L` (pós-v11.33.7), piso natural como registry/wiring
 - `kc-utils.js`: 2445L → 440L (−2005L pós-v12.2.6); 7 sub-módulos `window._KCU.*` operacionais e gate `<900L` formalizado em `v12.2.7`
-- próxima iteração: `v12.3.0` — auditoria docs-only de `admin-dashboard.controller.js`
+- `admin-dashboard.controller.js`: footprint real auditado em `2034L` / `93 641` bytes; split recomendado em `window._KCAD.metrics`, `window._KCAD.audit` e `window._KCAD.charts`
+- próxima iteração: `v12.3.1` — split admin-dashboard domínio metrics/loaders
 
 ---
 
