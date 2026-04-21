@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.4` concluídas (abertura, auditoria, splits `string`, `format`, `dom`, `identity`, `taxonomy`); próxima é `v12.2.5` — split `window._KCU.location`; baseline expandida para `104/104` suites e `2084/2084` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.5` concluídas (abertura, auditoria, splits `string`, `format`, `dom`, `identity`, `taxonomy`, `location`); próxima é `v12.2.6` — split `window._KCU.presentation`; baseline expandida para `105/105` suites e `2185/2185` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -181,7 +181,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.2.2** | Split `kc-utils.js` domínio **dom/async** (debounce + clipboard) | `kc-utils.dom.js` → `window._KCU.dom` (4 funções), −68L em `kc-utils.js` (2310→2242L), +1 suite 23 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
 | **v12.2.3** | Split `kc-utils.js` domínio **identity/email/handle** | `kc-utils.identity.js` → `window._KCU.identity` (5 funções), −11L em `kc-utils.js` (2242→2231L), +1 suite 29 testes, 22 HTMLs atualizados | ✅ concluído |
 | **v12.2.4** | Split `kc-utils.js` domínio **taxonomy** (module labels + opportunity) | `kc-utils.taxonomy.js` → `window._KCU.taxonomy` (22 funções), −281L em `kc-utils.js` (2231→1950L), +1 suite 78 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
-| v12.2.5 | Split `kc-utils.js` domínio **location** (housing + caronas + lost-found + inferências) | `kc-utils.location.js` → `window._KCU.location` (~30 funções), ~1 050L movidas, ~30 testes | 📋 planejado |
+| **v12.2.5** | Split `kc-utils.js` domínio **location** (housing + caronas + lost-found + inferências) | `kc-utils.location.js` → `window._KCU.location` (32 funções), −781L em `kc-utils.js` (1950→1168L), +1 suite 101 testes, 22 HTMLs + 12 arquivos de teste atualizados | ✅ concluído |
 | v12.2.6 | Split `kc-utils.js` domínio **presentation** (`applyPresentationRules` + `renderPostCard` + markers) | `kc-utils.presentation.js` → `window._KCU.presentation` (4 funções), ~600L movidas, ~20 testes | 📋 planejado |
 | v12.2.7 | Gate `kc-utils.js` <900L: README + RELATORIO atualizados, hygiene com regras para `_KCU.*` | gate formal | 📋 planejado |
 | v12.3.0 | Auditoria `admin-dashboard.controller.js` (doc-only) | `docs/admin-dashboard-audit-v12.3.md` | 📋 planejado |
@@ -548,6 +548,42 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `kc-utils.js` passou de **2231L → 1950L** (redução acumulada desde 2445L: **−495L**)
 
 **Próxima iteração:** `v12.2.5` — split domínio **location** (~30 funções: `resolveHousingRegion`, `resolveCaronasLocation`, `resolveLostFoundLocation`, `resolveHousingFeatures`, `resolveHousingTypeKey`, housing/carona/lost-found definitions e inferências) → `kc-utils.location.js` + `window._KCU.location`.
+
+---
+
+### 8.7. v12.2.5 — split `kc-utils.js` domínio location — `window._KCU.location` — ✅ concluído
+
+**Objetivo:** extrair as 32 funções do domínio location (moradia/região, moradia/features, caronas e achados-e-perdidos) para `assets/js/kc-utils.location.js`, expondo `window._KCU.location`. Remover o bloco `const { HOUSING_REGION_DEFINITIONS, HOUSING_FEATURE_DEFINITIONS, LOST_FOUND_LOCATION_DEFINITIONS } = (window.KC_CONSTANTS || {})` de `kc-utils.js`, que se tornava letra morta após a extração.
+
+**Funções migradas (32):**
+
+| Grupo | Funções |
+|---|---|
+| Definições housing | `getHousingRegionDefinitions`, `getHousingRegionInfoByKey`, `getHousingFeatureDefinitions`, `getHousingFeatureInfoByKey` |
+| Helpers texto housing | `toStringArray`, `scoreHousingLabel`, `pickPreferredHousingLabel`, `formatHousingLabel`, `buildDefinitionAliasMap`, `buildHousingTextParts` |
+| Fuzzy housing | `getHousingFuzzyThreshold`, `getHousingSimilarityScore`, `isCloseHousingAlias`, `findBestFuzzyHousingEntry` |
+| Emojis | `getHousingFeatureEmoji`, `getLostFoundLocationEmoji` |
+| Resolvers housing | `extractHousingRegionHistoryEntries`, `buildHousingRegionHistoryMaps`, `resolveHousingRegion`, `extractHousingFeatureHistoryEntries`, `buildHousingFeatureHistoryMaps`, `resolveSingleHousingFeature`, `resolveHousingFeatures`, `resolveHousingTypeKey`, `resolveHousingTypeFromCandidates` |
+| Caronas | `resolveCaronasLocation` |
+| Achados e perdidos | `getLostFoundLocationDefinitions`, `getLostFoundLocationInfoByKey`, `buildLostFoundTextParts`, `extractLostFoundLocationHistoryEntries`, `buildLostFoundHistoryMaps`, `resolveLostFoundLocation` |
+
+**Padrão aplicado:** lazy accessors `_str()` → `_KCU.string` e `_const()` → `window.KC_CONSTANTS`; `firstNonEmptyValue` duplicado localmente (8 linhas) para eliminar dependência cruzada com `_KCU.taxonomy`. Script Python `scripts/patch-location-split.py` com brace-counting robusto (pula lista de parâmetros via contagem de parênteses antes de buscar a `{` do corpo) — soluciona o caso `options = {}` como valor default de parâmetro.
+
+**Entregas mensuráveis:**
+- `assets/js/kc-utils.location.js` criado (32 funções + `window._KCU.location = Object.freeze(...)`, ~953 linhas)
+- `kc-utils.js`: 32 corpos substituídos por delegation wrappers + bloco `KC_CONSTANTS` removido; **1950L → 1168L (−782L)**; redução acumulada desde 2445L: **−1277L**
+- `tests/kc-utils-location.test.js` criado — **1 suite, 101 testes** (33 describe blocks: 1 contrato estático + 32 por função)
+- 22 HTMLs: `<script defer src="assets/js/kc-utils.location.js"></script>` adicionado antes de `kc-utils.js`
+- 12 arquivos de teste existentes: `require('../assets/js/kc-utils.location.js')` adicionado na cadeia de carregamento
+- `scripts/patch-location-split.py` criado (brace-counting robusto — modelo reutilizável para splits futuros)
+
+**Verificação:**
+- `npm test` → **105/105 suites, 2185/2185 testes verdes** (+1 suite, +101 testes vs. baseline `v12.2.4`)
+- `node scripts/hygiene-check.js` → 8.6.0 ✓
+- `kc-utils.js` passou de **1950L → 1168L** (redução acumulada desde 2445L: **−1277L**)
+- Referências `window._KCU.location` em `kc-utils.js`: **96** (32 funções × 3 linhas no wrapper)
+
+**Próxima iteração:** `v12.2.6` — split domínio **presentation** (`cssEscape`, `applyPresentationRules`, `getDisplayMarkerTags`, `renderMarkerTags`, `renderPostCard` e funções infer* relacionadas) → `kc-utils.presentation.js` + `window._KCU.presentation`.
 
 ---
 
