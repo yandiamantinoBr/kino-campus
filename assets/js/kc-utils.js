@@ -8,12 +8,7 @@
 (function () {
   'use strict';
 
-  // Constantes de taxonomia movidas para kc-utils.taxonomy.js (v12.2.4)
-  const {
-    HOUSING_REGION_DEFINITIONS,
-    HOUSING_FEATURE_DEFINITIONS,
-    LOST_FOUND_LOCATION_DEFINITIONS
-  } = (window.KC_CONSTANTS || {});
+  // Constantes de localização movidas para kc-utils.location.js (v12.2.5)
 
   // Delegação → window._KCU.string.titleCase (kc-utils.string.js)
   function titleCase(str) {
@@ -188,15 +183,14 @@
       : { key: '', label: '', icon: 'fas fa-briefcase', isKnown: false, source: 'empty' };
   }
 
+  // Delegacao -> window._KCU.location.getHousingRegionDefinitions (kc-utils.location.js)
   function getHousingRegionDefinitions() {
-    return HOUSING_REGION_DEFINITIONS.slice();
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getHousingRegionDefinitions() : [];
   }
 
+  // Delegacao -> window._KCU.location.getHousingFeatureDefinitions (kc-utils.location.js)
   function getHousingFeatureDefinitions() {
-    return HOUSING_FEATURE_DEFINITIONS.map((entry) => ({
-      ...entry,
-      emoji: entry.emoji || getHousingFeatureEmoji(entry.key),
-    }));
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getHousingFeatureDefinitions() : [];
   }
 
   // Delegacao -> window._KCU.taxonomy.getOpportunityAreaEmoji (kc-utils.taxonomy.js)
@@ -204,946 +198,170 @@
     return (window._KCU && window._KCU.taxonomy) ? window._KCU.taxonomy.getOpportunityAreaEmoji(key) : '🏷️';
   }
 
+  // Delegacao -> window._KCU.location.getHousingFeatureEmoji (kc-utils.location.js)
   function getHousingFeatureEmoji(key) {
-    const wanted = slugifyText(key);
-    const map = {
-      'aceita-pets': '🐾',
-      lgbtqiapn: '🌈',
-      'apenas-mulheres': '👩',
-      'apenas-homens': '👨',
-      mobiliado: '🛋️',
-      'contas-inclusas': '💡',
-      'internet-inclusa': '📶',
-      'banheiro-privativo': '🚿',
-      'vaga-de-garagem': '🚗',
-      'ambiente-familiar': '🏡',
-      'nao-fumantes': '🚭',
-      'proximo-ao-campus': '📍',
-    };
-    return map[wanted] || '🏷️';
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getHousingFeatureEmoji(key) : '🏷️';
   }
 
+  // Delegacao -> window._KCU.location.getLostFoundLocationEmoji (kc-utils.location.js)
   function getLostFoundLocationEmoji(key) {
-    const wanted = slugifyText(key);
-    const map = {
-      'biblioteca-central': '📚',
-      'restaurante-universitario': '🍽️',
-      estacionamento: '🅿️',
-      'salas-de-aula': '🚪',
-      'blocos-e-laboratorios': '🧪',
-      'centro-de-aulas': '🏫',
-      'praca-universitaria': '🏛️',
-      'campus-samambaia': '🌳',
-      'campus-colemar': '🎓',
-    };
-    return map[wanted] || '📍';
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getLostFoundLocationEmoji(key) : '📍';
   }
 
+  // Delegacao -> window._KCU.location.toStringArray (kc-utils.location.js)
   function toStringArray(value) {
-    if (Array.isArray(value)) {
-      return value.map((item) => String(item || '').trim()).filter(Boolean);
-    }
-    if (value == null || value === false) return [];
-    if (typeof value === 'string') {
-      const raw = value.trim();
-      if (!raw) return [];
-      if ((raw.startsWith('[') && raw.endsWith(']')) || (raw.startsWith('"') && raw.endsWith('"'))) {
-        try {
-          const parsed = JSON.parse(raw);
-          return toStringArray(parsed);
-        } catch (_) { }
-      }
-      return raw.split(/[|,]\s*/).map((item) => String(item || '').trim()).filter(Boolean);
-    }
-    if (typeof value === 'object') {
-      if (Array.isArray(value.values)) return toStringArray(value.values);
-      if (Array.isArray(value.items)) return toStringArray(value.items);
-    }
-    return [String(value).trim()].filter(Boolean);
+    return (window._KCU && window._KCU.location) ? window._KCU.location.toStringArray(value) : [];
   }
 
+  // Delegacao -> window._KCU.location.scoreHousingLabel (kc-utils.location.js)
   function scoreHousingLabel(value) {
-    const label = String(value || '').trim();
-    if (!label) return 0;
-    let score = Math.min(label.length, 32) / 32;
-    if (/[A-ZÀ-Ý]/.test(label)) score += 1.4;
-    if (label.normalize('NFD') !== label) score += 1.9;
-    if (label.includes(' ')) score += 0.45;
-    if (/[+]/.test(label)) score += 0.25;
-    return score;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.scoreHousingLabel(value) : 0;
   }
 
+  // Delegacao -> window._KCU.location.pickPreferredHousingLabel (kc-utils.location.js)
   function pickPreferredHousingLabel(current, candidate) {
-    const currentLabel = String(current || '').trim();
-    const candidateLabel = String(candidate || '').trim();
-    if (!currentLabel) return candidateLabel;
-    if (!candidateLabel) return currentLabel;
-    return scoreHousingLabel(candidateLabel) > scoreHousingLabel(currentLabel)
-      ? candidateLabel
-      : currentLabel;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.pickPreferredHousingLabel(current, candidate) : String(current || candidate || '');
   }
 
+  // Delegacao -> window._KCU.location.formatHousingLabel (kc-utils.location.js)
   function formatHousingLabel(value) {
-    const raw = String(value || '').trim().replace(/\s+/g, ' ');
-    if (!raw) return '';
-    if (/[A-ZÀ-Ý]/.test(raw) || raw.normalize('NFD') !== raw || raw.includes('+')) return raw;
-    return titleCase(raw);
+    return (window._KCU && window._KCU.location) ? window._KCU.location.formatHousingLabel(value) : String(value || '');
   }
 
+  // Delegacao -> window._KCU.location.buildDefinitionAliasMap (kc-utils.location.js)
   function buildDefinitionAliasMap(definitions) {
-    const aliasMap = new Map();
-    (Array.isArray(definitions) ? definitions : []).forEach((entry) => {
-      [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
-        .map((value) => normalizeText(value))
-        .filter(Boolean)
-        .forEach((alias) => {
-          if (!aliasMap.has(alias)) aliasMap.set(alias, entry);
-        });
-    });
-    return aliasMap;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.buildDefinitionAliasMap(definitions) : new Map();
   }
 
+  // Delegacao -> window._KCU.location.getHousingFuzzyThreshold (kc-utils.location.js)
   function getHousingFuzzyThreshold(source, target) {
-    const maxLength = Math.max(String(source || '').length, String(target || '').length);
-    if (maxLength <= 6) return 1;
-    if (maxLength <= 12) return 2;
-    return 3;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getHousingFuzzyThreshold(source, target) : 3;
   }
 
+  // Delegacao -> window._KCU.location.getHousingSimilarityScore (kc-utils.location.js)
   function getHousingSimilarityScore(source, target) {
-    const left = String(source || '');
-    const right = String(target || '');
-    const maxLength = Math.max(left.length, right.length);
-    if (!maxLength) return 0;
-    const distance = levenshteinDistance(left, right);
-    return 1 - (distance / maxLength);
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getHousingSimilarityScore(source, target) : 0;
   }
 
+  // Delegacao -> window._KCU.location.isCloseHousingAlias (kc-utils.location.js)
   function isCloseHousingAlias(candidate, alias) {
-    const normalizedCandidate = normalizeText(candidate);
-    const normalizedAlias = normalizeText(alias);
-    if (!normalizedCandidate || !normalizedAlias) return false;
-    if (normalizedCandidate === normalizedAlias) return true;
-    if (normalizedCandidate.length < 5 || normalizedAlias.length < 5) return false;
-
-    const threshold = getHousingFuzzyThreshold(normalizedCandidate, normalizedAlias);
-    if (Math.abs(normalizedCandidate.length - normalizedAlias.length) > threshold) return false;
-
-    const distance = levenshteinDistance(normalizedCandidate, normalizedAlias);
-    if (distance > threshold) return false;
-
-    const similarity = getHousingSimilarityScore(normalizedCandidate, normalizedAlias);
-    const minSimilarity = Math.max(normalizedCandidate.length, normalizedAlias.length) >= 10 ? 0.72 : 0.79;
-    return similarity >= minSimilarity;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.isCloseHousingAlias(candidate, alias) : false;
   }
 
+  // Delegacao -> window._KCU.location.findBestFuzzyHousingEntry (kc-utils.location.js)
   function findBestFuzzyHousingEntry(candidate, collection) {
-    const normalized = normalizeText(candidate);
-    if (!normalized || normalized.length < 5) return null;
-
-    let best = null;
-    (Array.isArray(collection) ? collection : []).forEach((entry) => {
-      const aliases = Array.isArray(entry.aliases) && entry.aliases.length
-        ? entry.aliases
-        : [entry.label, entry.key];
-
-      aliases.forEach((aliasValue) => {
-        const alias = normalizeText(aliasValue);
-        if (!alias || !isCloseHousingAlias(normalized, alias)) return;
-        const distance = levenshteinDistance(normalized, alias);
-        const similarity = getHousingSimilarityScore(normalized, alias);
-        if (!best || distance < best.distance || (distance === best.distance && similarity > best.similarity)) {
-          best = { entry, distance, similarity };
-        }
-      });
-    });
-
-    return best ? best.entry : null;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.findBestFuzzyHousingEntry(candidate, collection) : null;
   }
 
+  // Delegacao -> window._KCU.location.buildHousingTextParts (kc-utils.location.js)
   function buildHousingTextParts(source, fallbackTags) {
-    if (Array.isArray(source)) {
-      return {
-        explicitRegions: [],
-        explicitFeatures: source.filter(Boolean),
-        text: [],
-        tags: Array.isArray(fallbackTags) ? fallbackTags.filter(Boolean) : [],
-      };
-    }
-
-    if (source && typeof source === 'object' && !Array.isArray(source)) {
-      const meta = (source.metadata && typeof source.metadata === 'object' && !Array.isArray(source.metadata)) ? source.metadata : {};
-      const tagValues = [];
-      if (Array.isArray(source.tags)) tagValues.push(...source.tags);
-      if (Array.isArray(source.tagKeys)) tagValues.push(...source.tagKeys);
-      if (Array.isArray(meta.tags)) tagValues.push(...meta.tags);
-      if (Array.isArray(meta.tagKeys)) tagValues.push(...meta.tagKeys);
-
-      return {
-        explicitRegions: [
-          source.regionLabel, source.region, source.regionKey,
-          meta.regionLabel, meta.regiao, meta.regiaoLabel, meta.region, meta.regionKey,
-          source.localizacao, source.location, meta.localizacao, meta.location
-        ].filter(Boolean),
-        explicitFeatures: [
-          ...toStringArray(source.housingFeatureLabels),
-          ...toStringArray(source.housingFeatureKeys),
-          ...toStringArray(source.marcadoresMoradia),
-          ...toStringArray(source.features),
-          ...toStringArray(meta.housingFeatureLabels),
-          ...toStringArray(meta.housingFeatureKeys),
-          ...toStringArray(meta.marcadoresMoradia),
-          ...toStringArray(meta.features),
-        ].filter(Boolean),
-        text: [
-          source.titulo, source.title,
-          source.descricao, source.description,
-          source.localizacao, source.location,
-          meta.localizacao, meta.location,
-          meta.detalhes
-        ].filter(Boolean),
-        tags: tagValues.filter(Boolean),
-      };
-    }
-
-    return {
-      explicitRegions: source ? [source] : [],
-      explicitFeatures: [],
-      text: [],
-      tags: Array.isArray(fallbackTags) ? fallbackTags.filter(Boolean) : [],
-    };
+    return (window._KCU && window._KCU.location)
+      ? window._KCU.location.buildHousingTextParts(source, fallbackTags)
+      : { explicitRegions: [], explicitFeatures: [], text: [], tags: [] };
   }
 
+  // Delegacao -> window._KCU.location.getHousingRegionInfoByKey (kc-utils.location.js)
   function getHousingRegionInfoByKey(key) {
-    const wanted = slugifyText(key);
-    if (!wanted) return null;
-    return HOUSING_REGION_DEFINITIONS.find((entry) => entry.key === wanted) || null;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getHousingRegionInfoByKey(key) : null;
   }
 
+  // Delegacao -> window._KCU.location.getHousingFeatureInfoByKey (kc-utils.location.js)
   function getHousingFeatureInfoByKey(key) {
-    const wanted = slugifyText(key);
-    if (!wanted) return null;
-    const entry = HOUSING_FEATURE_DEFINITIONS.find((item) => item.key === wanted);
-    return entry ? { ...entry, emoji: entry.emoji || getHousingFeatureEmoji(entry.key) } : null;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getHousingFeatureInfoByKey(key) : null;
   }
 
+  // Delegacao -> window._KCU.location.getLostFoundLocationDefinitions (kc-utils.location.js)
   function getLostFoundLocationDefinitions() {
-    return LOST_FOUND_LOCATION_DEFINITIONS.map((entry) => ({
-      ...entry,
-      emoji: entry.emoji || getLostFoundLocationEmoji(entry.key),
-    }));
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getLostFoundLocationDefinitions() : [];
   }
 
+  // Delegacao -> window._KCU.location.getLostFoundLocationInfoByKey (kc-utils.location.js)
   function getLostFoundLocationInfoByKey(key) {
-    const wanted = slugifyText(key);
-    if (!wanted) return null;
-    const entry = LOST_FOUND_LOCATION_DEFINITIONS.find((item) => item.key === wanted);
-    return entry ? { ...entry, emoji: entry.emoji || getLostFoundLocationEmoji(entry.key) } : null;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.getLostFoundLocationInfoByKey(key) : null;
   }
 
+  // Delegacao -> window._KCU.location.extractHousingRegionHistoryEntries (kc-utils.location.js)
   function extractHousingRegionHistoryEntries(history) {
-    const list = Array.isArray(history) ? history : [];
-    const entries = [];
-
-    list.forEach((item) => {
-      if (!item) return;
-      if (typeof item === 'string') {
-        const label = formatHousingLabel(item);
-        const key = slugifyText(item);
-        if (label || key) entries.push({ key, label, icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '' });
-        return;
-      }
-      if (typeof item !== 'object' || Array.isArray(item)) return;
-
-      const meta = (item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)) ? item.metadata : {};
-      const label = formatHousingLabel(firstNonEmptyValue([
-        item.regionLabel, item.region, item.regiao, item.label,
-        meta.regionLabel, meta.region, meta.regiao, meta.regiaoLabel,
-      ]));
-      const key = slugifyText(firstNonEmptyValue([
-        item.regionKey, meta.regionKey, item.key, label
-      ]));
-      const zoneKey = slugifyText(firstNonEmptyValue([
-        item.regionZoneKey, meta.regionZoneKey, item.zoneKey
-      ]));
-      const zoneLabel = formatHousingLabel(firstNonEmptyValue([
-        item.regionZoneLabel, meta.regionZoneLabel, item.zoneLabel
-      ]));
-      if (label || key) entries.push({
-        key,
-        label,
-        icon: firstNonEmptyValue([item.icon, meta.regionIcon]) || 'fas fa-map-pin',
-        zoneKey,
-        zoneLabel,
-      });
-    });
-
-    return entries;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.extractHousingRegionHistoryEntries(history) : [];
   }
 
+  // Delegacao -> window._KCU.location.buildHousingRegionHistoryMaps (kc-utils.location.js)
   function buildHousingRegionHistoryMaps(history, officialAliasMap) {
-    const catalog = new Map();
-    const aliasMap = new Map();
-    extractHousingRegionHistoryEntries(history).forEach((entry) => {
-      const normalizedLabel = normalizeText(entry.label);
-      const normalizedKey = normalizeText(entry.key);
-      if (!normalizedLabel && !normalizedKey) return;
-      if ((normalizedLabel && officialAliasMap.has(normalizedLabel)) || (normalizedKey && officialAliasMap.has(normalizedKey))) return;
-
-      const finalKey = slugifyText(entry.key || entry.label);
-      if (!finalKey) return;
-
-      const existing = catalog.get(finalKey);
-      const finalLabel = pickPreferredHousingLabel(existing && existing.label, entry.label || finalKey);
-      const item = {
-        key: finalKey,
-        label: finalLabel || formatHousingLabel(finalKey),
-        icon: entry.icon || (existing && existing.icon) || 'fas fa-map-pin',
-        zoneKey: entry.zoneKey || (existing && existing.zoneKey) || '',
-        zoneLabel: entry.zoneLabel || (existing && existing.zoneLabel) || '',
-        isKnown: false,
-      };
-      catalog.set(finalKey, item);
-      [normalizedLabel, normalizedKey].filter(Boolean).forEach((alias) => {
-        if (!aliasMap.has(alias)) aliasMap.set(alias, item);
-      });
-    });
-
-    return { catalog, aliasMap };
+    return (window._KCU && window._KCU.location)
+      ? window._KCU.location.buildHousingRegionHistoryMaps(history, officialAliasMap)
+      : { catalog: new Map(), aliasMap: new Map() };
   }
 
-  function resolveHousingRegion(source, options = {}) {
-    const built = buildHousingTextParts(source, options.tags);
-    const explicitCandidates = built.explicitRegions.map((value) => String(value || '').trim()).filter(Boolean);
-    const combinedText = [
-      ...explicitCandidates,
-      ...built.tags,
-      ...built.text,
-      ...(Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [])
-    ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
-
-    const officialAliasMap = buildDefinitionAliasMap(HOUSING_REGION_DEFINITIONS);
-    const historySource = Array.isArray(options.history)
-      ? options.history
-      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_HOUSING_REGION_HISTORY)) ? window.__KC_HOUSING_REGION_HISTORY : []);
-    const historyMaps = buildHousingRegionHistoryMaps(historySource, officialAliasMap);
-    const historyEntries = Array.from(historyMaps.catalog.values()).map((entry) => ({
-      ...entry,
-      aliases: [entry.label, entry.key],
-    }));
-
-    for (const candidate of explicitCandidates) {
-      const normalized = normalizeText(candidate);
-      if (!normalized) continue;
-      if (officialAliasMap.has(normalized)) {
-        const match = officialAliasMap.get(normalized);
-        return {
-          key: match.key,
-          label: match.label,
-          icon: match.icon || 'fas fa-map-pin',
-          zoneKey: match.zoneKey || match.key,
-          zoneLabel: match.zoneLabel || match.label,
-          isKnown: true,
-          source: 'official-exact',
-        };
-      }
-      if (historyMaps.aliasMap.has(normalized)) {
-        const match = historyMaps.aliasMap.get(normalized);
-        return {
-          key: match.key,
-          label: match.label,
-          icon: match.icon || 'fas fa-map-pin',
-          zoneKey: match.zoneKey || '',
-          zoneLabel: match.zoneLabel || '',
-          isKnown: false,
-          source: 'history-exact',
-        };
-      }
-    }
-
-    for (const candidate of explicitCandidates) {
-      const normalized = normalizeText(candidate);
-      if (!normalized || normalized.length < 5) continue;
-      for (const [alias, entry] of officialAliasMap.entries()) {
-        if (normalized.includes(alias) || alias.includes(normalized)) {
-          return {
-            key: entry.key,
-            label: entry.label,
-            icon: entry.icon || 'fas fa-map-pin',
-            zoneKey: entry.zoneKey || entry.key,
-            zoneLabel: entry.zoneLabel || entry.label,
-            isKnown: true,
-            source: 'official-partial',
-          };
-        }
-      }
-    }
-
-    if (combinedText) {
-      const ranked = HOUSING_REGION_DEFINITIONS
-        .map((entry) => {
-          const score = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
-            .map((value) => normalizeText(value))
-            .filter(Boolean)
-            .reduce((acc, alias) => combinedText.includes(alias) ? acc + (alias.includes(' ') ? 3 : 2) : acc, 0);
-          return { entry, score };
-        })
-        .filter((item) => item.score > 0)
-        .sort((left, right) => right.score - left.score);
-      if (ranked.length) {
-        const match = ranked[0].entry;
-        return {
-          key: match.key,
-          label: match.label,
-          icon: match.icon || 'fas fa-map-pin',
-          zoneKey: match.zoneKey || match.key,
-          zoneLabel: match.zoneLabel || match.label,
-          isKnown: true,
-          source: 'context',
-        };
-      }
-    }
-
-    for (const candidate of explicitCandidates) {
-      const officialFuzzy = findBestFuzzyHousingEntry(candidate, HOUSING_REGION_DEFINITIONS);
-      if (officialFuzzy) {
-        return {
-          key: officialFuzzy.key,
-          label: officialFuzzy.label,
-          icon: officialFuzzy.icon || 'fas fa-map-pin',
-          zoneKey: officialFuzzy.zoneKey || officialFuzzy.key,
-          zoneLabel: officialFuzzy.zoneLabel || officialFuzzy.label,
-          isKnown: true,
-          source: 'official-fuzzy',
-        };
-      }
-      const historyFuzzy = findBestFuzzyHousingEntry(candidate, historyEntries);
-      if (historyFuzzy) {
-        return {
-          key: historyFuzzy.key,
-          label: historyFuzzy.label,
-          icon: historyFuzzy.icon || 'fas fa-map-pin',
-          zoneKey: historyFuzzy.zoneKey || '',
-          zoneLabel: historyFuzzy.zoneLabel || '',
-          isKnown: false,
-          source: 'history-fuzzy',
-        };
-      }
-    }
-
-    const fallbackRaw = explicitCandidates[0] || '';
-    const fallbackKey = slugifyText(fallbackRaw);
-    if (fallbackKey) {
-      return {
-        key: fallbackKey,
-        label: formatHousingLabel(fallbackRaw) || beautifyKey(fallbackKey) || fallbackRaw,
-        icon: 'fas fa-map-pin',
-        zoneKey: '',
-        zoneLabel: '',
-        isKnown: false,
-        source: 'custom',
-      };
-    }
-
-    return { key: '', label: '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isKnown: false, source: 'empty' };
+  // Delegacao -> window._KCU.location.resolveHousingRegion (kc-utils.location.js)
+  function resolveHousingRegion(source, options) {
+    return (window._KCU && window._KCU.location)
+      ? window._KCU.location.resolveHousingRegion(source, options)
+      : { key: '', label: '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isKnown: false, source: 'empty' };
   }
 
-  /* ── resolveCaronasLocation ─────────────────────────────────────
-     Multi-stage matching for caronas origin/destination locations.
-     Stages: 1) exact alias  2) abbreviation  3) partial substring
-             4) context scoring  5) fuzzy  6) custom fallback
-     Returns { key, label, icon, zoneKey, zoneLabel, isCampus, isKnown, source }
-  ────────────────────────────────────────────────────────────── */
+  // Delegacao -> window._KCU.location.resolveCaronasLocation (kc-utils.location.js)
   function resolveCaronasLocation(rawInput) {
-    var DEFS = (typeof KC_CONSTANTS !== 'undefined' && Array.isArray(KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS))
-      ? KC_CONSTANTS.CARONAS_LOCATION_DEFINITIONS : [];
-    var input = normalizeText(String(rawInput || ''));
-    var emptyResult = { key: '', label: '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isCampus: false, isKnown: false, source: 'empty' };
-    if (!input) return emptyResult;
-
-    function makeResult(entry, src) {
-      return {
-        key: entry.key,
-        label: entry.label,
-        icon: entry.icon || 'fas fa-map-pin',
-        zoneKey: entry.zoneKey || '',
-        zoneLabel: entry.zoneLabel || '',
-        isCampus: !!entry.isCampus,
-        isKnown: true,
-        source: src,
-      };
-    }
-
-    // 1) Exact alias match
-    var aliasMap = buildDefinitionAliasMap(DEFS);
-    if (aliasMap.has(input)) return makeResult(aliasMap.get(input), 'alias-exact');
-
-    // 2) Abbreviation match (case-insensitive)
-    var inputUpper = String(rawInput || '').trim().toUpperCase();
-    for (var ai = 0; ai < DEFS.length; ai++) {
-      var abbrevs = Array.isArray(DEFS[ai].abbreviations) ? DEFS[ai].abbreviations : [];
-      for (var aj = 0; aj < abbrevs.length; aj++) {
-        if (String(abbrevs[aj]).toUpperCase() === inputUpper) return makeResult(DEFS[ai], 'abbreviation');
-      }
-    }
-
-    // 3) Partial substring match (≥4 chars)
-    if (input.length >= 4) {
-      for (var pi = 0; pi < DEFS.length; pi++) {
-        var pEntry = DEFS[pi];
-        var pAliases = [normalizeText(pEntry.label), normalizeText(pEntry.key)].concat(
-          (Array.isArray(pEntry.aliases) ? pEntry.aliases : []).map(function(a) { return normalizeText(a); })
-        ).filter(Boolean);
-        for (var pj = 0; pj < pAliases.length; pj++) {
-          if (pAliases[pj].includes(input) || input.includes(pAliases[pj])) {
-            return makeResult(pEntry, 'partial');
-          }
-        }
-      }
-    }
-
-    // 4) Context scoring — score all definitions against the input
-    var ranked = [];
-    for (var ci = 0; ci < DEFS.length; ci++) {
-      var cEntry = DEFS[ci];
-      var cAll = [normalizeText(cEntry.label), normalizeText(cEntry.key)].concat(
-        (Array.isArray(cEntry.aliases) ? cEntry.aliases : []).map(function(a) { return normalizeText(a); })
-      ).filter(Boolean);
-      var score = 0;
-      for (var cj = 0; cj < cAll.length; cj++) {
-        if (input.includes(cAll[cj])) score += (cAll[cj].indexOf(' ') >= 0 ? 3 : 2);
-      }
-      if (score > 0) ranked.push({ entry: cEntry, score: score });
-    }
-    ranked.sort(function(a, b) { return b.score - a.score; });
-    if (ranked.length) return makeResult(ranked[0].entry, 'context');
-
-    // 5) Fuzzy match
-    var bestFuzzy = findBestFuzzyHousingEntry(String(rawInput || '').trim(), DEFS);
-    if (bestFuzzy) return makeResult(bestFuzzy, 'fuzzy');
-
-    // 6) Custom fallback
-    var fallbackKey = slugifyText(String(rawInput || '').trim());
-    if (fallbackKey) {
-      return {
-        key: fallbackKey,
-        label: formatHousingLabel(String(rawInput || '').trim()) || beautifyKey(fallbackKey) || String(rawInput || '').trim(),
-        icon: 'fas fa-map-pin',
-        zoneKey: '',
-        zoneLabel: '',
-        isCampus: false,
-        isKnown: false,
-        source: 'custom',
-      };
-    }
-
-    return emptyResult;
+    return (window._KCU && window._KCU.location)
+      ? window._KCU.location.resolveCaronasLocation(rawInput)
+      : { key: '', label: '', icon: 'fas fa-map-pin', zoneKey: '', zoneLabel: '', isCampus: false, isKnown: false, source: 'empty' };
   }
 
+  // Delegacao -> window._KCU.location.extractHousingFeatureHistoryEntries (kc-utils.location.js)
   function extractHousingFeatureHistoryEntries(history) {
-    const list = Array.isArray(history) ? history : [];
-    const entries = [];
-
-    list.forEach((item) => {
-      if (!item) return;
-      if (typeof item === 'string') {
-        const label = formatHousingLabel(item);
-        const key = slugifyText(item);
-        if (label || key) entries.push({ key, label, emoji: '🏷️' });
-        return;
-      }
-      if (typeof item !== 'object' || Array.isArray(item)) return;
-
-      const meta = (item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)) ? item.metadata : {};
-      const labels = [
-        ...toStringArray(item.housingFeatureLabels),
-        ...toStringArray(item.marcadoresMoradia),
-        ...toStringArray(item.features),
-        ...toStringArray(meta.housingFeatureLabels),
-        ...toStringArray(meta.marcadoresMoradia),
-        ...toStringArray(meta.features),
-      ];
-      const keys = [
-        ...toStringArray(item.housingFeatureKeys),
-        ...toStringArray(meta.housingFeatureKeys),
-      ];
-
-      labels.forEach((label, index) => {
-        const normalizedLabel = formatHousingLabel(label);
-        const key = slugifyText(keys[index] || normalizedLabel);
-        if (normalizedLabel || key) entries.push({
-          key,
-          label: normalizedLabel || beautifyKey(key),
-          emoji: item.emoji || meta.featureEmoji || '🏷️',
-        });
-      });
-    });
-
-    return entries;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.extractHousingFeatureHistoryEntries(history) : [];
   }
 
+  // Delegacao -> window._KCU.location.buildHousingFeatureHistoryMaps (kc-utils.location.js)
   function buildHousingFeatureHistoryMaps(history, officialAliasMap) {
-    const catalog = new Map();
-    const aliasMap = new Map();
-    extractHousingFeatureHistoryEntries(history).forEach((entry) => {
-      const normalizedLabel = normalizeText(entry.label);
-      const normalizedKey = normalizeText(entry.key);
-      if (!normalizedLabel && !normalizedKey) return;
-      if ((normalizedLabel && officialAliasMap.has(normalizedLabel)) || (normalizedKey && officialAliasMap.has(normalizedKey))) return;
-
-      const finalKey = slugifyText(entry.key || entry.label);
-      if (!finalKey) return;
-
-      const existing = catalog.get(finalKey);
-      const item = {
-        key: finalKey,
-        label: pickPreferredHousingLabel(existing && existing.label, entry.label || finalKey) || formatHousingLabel(finalKey),
-        emoji: entry.emoji || (existing && existing.emoji) || '🏷️',
-        isKnown: false,
-      };
-      catalog.set(finalKey, item);
-      [normalizedLabel, normalizedKey].filter(Boolean).forEach((alias) => {
-        if (!aliasMap.has(alias)) aliasMap.set(alias, item);
-      });
-    });
-
-    return { catalog, aliasMap };
+    return (window._KCU && window._KCU.location)
+      ? window._KCU.location.buildHousingFeatureHistoryMaps(history, officialAliasMap)
+      : { catalog: new Map(), aliasMap: new Map() };
   }
 
-  function resolveSingleHousingFeature(value, options = {}) {
-    const raw = String(value || '').trim();
-    const normalized = normalizeText(raw);
-    if (!normalized) return null;
-
-    const officialAliasMap = options.officialAliasMap || buildDefinitionAliasMap(HOUSING_FEATURE_DEFINITIONS);
-    if (officialAliasMap.has(normalized)) {
-      const official = officialAliasMap.get(normalized);
-      return { key: official.key, label: official.label, emoji: official.emoji || getHousingFeatureEmoji(official.key), isKnown: true };
-    }
-    if (options.historyMaps && options.historyMaps.aliasMap.has(normalized)) {
-      const historyEntry = options.historyMaps.aliasMap.get(normalized);
-      return { key: historyEntry.key, label: historyEntry.label, emoji: historyEntry.emoji || '🏷️', isKnown: false };
-    }
-
-    for (const [alias, entry] of officialAliasMap.entries()) {
-      if (normalized.includes(alias) || alias.includes(normalized)) {
-        return { key: entry.key, label: entry.label, emoji: entry.emoji || getHousingFeatureEmoji(entry.key), isKnown: true };
-      }
-    }
-
-    const historyEntries = options.historyEntries || [];
-    const officialFuzzy = findBestFuzzyHousingEntry(raw, HOUSING_FEATURE_DEFINITIONS);
-    if (officialFuzzy) return { key: officialFuzzy.key, label: officialFuzzy.label, emoji: officialFuzzy.emoji || getHousingFeatureEmoji(officialFuzzy.key), isKnown: true };
-
-    const historyFuzzy = findBestFuzzyHousingEntry(raw, historyEntries);
-    if (historyFuzzy) {
-      return {
-        key: historyFuzzy.key,
-        label: historyFuzzy.label,
-        emoji: historyFuzzy.emoji || '🏷️',
-        isKnown: false,
-      };
-    }
-
-    const fallbackKey = slugifyText(raw);
-    if (!fallbackKey) return null;
-    return {
-      key: fallbackKey,
-      label: formatHousingLabel(raw) || beautifyKey(fallbackKey) || raw,
-      emoji: '🏷️',
-      isKnown: false,
-    };
+  // Delegacao -> window._KCU.location.resolveSingleHousingFeature (kc-utils.location.js)
+  function resolveSingleHousingFeature(value, options) {
+    return (window._KCU && window._KCU.location) ? window._KCU.location.resolveSingleHousingFeature(value, options) : null;
   }
 
-  function resolveHousingFeatures(source, options = {}) {
-    const built = buildHousingTextParts(source, options.tags);
-    const officialAliasMap = buildDefinitionAliasMap(HOUSING_FEATURE_DEFINITIONS);
-    const historySource = Array.isArray(options.history)
-      ? options.history
-      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_HOUSING_FEATURE_HISTORY)) ? window.__KC_HOUSING_FEATURE_HISTORY : []);
-    const historyMaps = buildHousingFeatureHistoryMaps(historySource, officialAliasMap);
-    const historyEntries = Array.from(historyMaps.catalog.values()).map((entry) => ({
-      ...entry,
-      aliases: [entry.label, entry.key],
-    }));
-
-    const resolved = [];
-    const seen = new Set();
-    const addFeature = (feature) => {
-      if (!feature || !feature.key || seen.has(feature.key)) return;
-      seen.add(feature.key);
-      resolved.push(feature);
-    };
-
-    built.explicitFeatures.forEach((candidate) => {
-      addFeature(resolveSingleHousingFeature(candidate, { officialAliasMap, historyMaps, historyEntries }));
-    });
-
-    const combinedText = [
-      ...built.tags,
-      ...built.text,
-      ...(Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [])
-    ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
-
-    if (combinedText) {
-      HOUSING_FEATURE_DEFINITIONS.forEach((entry) => {
-        const aliases = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])].map((value) => normalizeText(value)).filter(Boolean);
-        if (aliases.some((alias) => combinedText.includes(alias))) {
-          addFeature({ key: entry.key, label: entry.label, emoji: entry.emoji || getHousingFeatureEmoji(entry.key), isKnown: true });
-        }
-      });
-    }
-
-    return resolved;
+  // Delegacao -> window._KCU.location.resolveHousingFeatures (kc-utils.location.js)
+  function resolveHousingFeatures(source, options) {
+    return (window._KCU && window._KCU.location) ? window._KCU.location.resolveHousingFeatures(source, options) : [];
   }
 
+  // Delegacao -> window._KCU.location.resolveHousingTypeKey (kc-utils.location.js)
   function resolveHousingTypeKey(source) {
-    const normalized = normalizeText(source);
-    if (!normalized) return '';
-    if (normalized === 'moradia' || normalized === 'moradia estudantil') return '';
-    if (normalized.includes('procur')) return 'procurando';
-    if (normalized.includes('apart') || normalized.includes('kitnet') || normalized.includes('studio')) return 'apartamento';
-    if (normalized.includes('casa') || normalized.includes('sobrado')) return 'casa';
-    if (normalized.includes('republic')) return 'republica';
-    if (normalized.includes('quart') || normalized.includes('suite') || normalized.includes('suíte')) return 'quarto';
-    return canonicalCategory(normalized);
+    return (window._KCU && window._KCU.location) ? window._KCU.location.resolveHousingTypeKey(source) : '';
   }
 
+  // Delegacao -> window._KCU.location.buildLostFoundTextParts (kc-utils.location.js)
   function buildLostFoundTextParts(source, fallbackTags) {
-    if (source && typeof source === 'object' && !Array.isArray(source)) {
-      const meta = (source.metadata && typeof source.metadata === 'object' && !Array.isArray(source.metadata)) ? source.metadata : {};
-      const tagValues = [];
-      if (Array.isArray(source.tags)) tagValues.push(...source.tags);
-      if (Array.isArray(source.tagKeys)) tagValues.push(...source.tagKeys);
-      if (Array.isArray(meta.tags)) tagValues.push(...meta.tags);
-      if (Array.isArray(meta.tagKeys)) tagValues.push(...meta.tagKeys);
-
-      return {
-        explicit: [
-          source.lostFoundLocationLabel, source.lostFoundLocationKey, source.localizacao, source.location,
-          meta.lostFoundLocationLabel, meta.lostFoundLocationKey, meta.localizacao, meta.location
-        ].filter(Boolean),
-        text: [
-          source.titulo, source.title,
-          source.descricao, source.description,
-          source.localizacao, source.location,
-          meta.localizacao, meta.location,
-          meta.entrega
-        ].filter(Boolean),
-        tags: tagValues.filter(Boolean),
-      };
-    }
-
-    return {
-      explicit: source ? [source] : [],
-      text: [],
-      tags: Array.isArray(fallbackTags) ? fallbackTags.filter(Boolean) : [],
-    };
+    return (window._KCU && window._KCU.location)
+      ? window._KCU.location.buildLostFoundTextParts(source, fallbackTags)
+      : { explicit: [], text: [], tags: [] };
   }
 
+  // Delegacao -> window._KCU.location.extractLostFoundLocationHistoryEntries (kc-utils.location.js)
   function extractLostFoundLocationHistoryEntries(history) {
-    const list = Array.isArray(history) ? history : [];
-    const entries = [];
-
-    list.forEach((item) => {
-      if (!item) return;
-      if (typeof item === 'string') {
-        const label = formatHousingLabel(item);
-        const key = slugifyText(item);
-        if (label || key) entries.push({ key, label, icon: 'fas fa-map-marker-alt', emoji: '📍' });
-        return;
-      }
-      if (typeof item !== 'object' || Array.isArray(item)) return;
-
-      const meta = (item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)) ? item.metadata : {};
-      const label = formatHousingLabel(firstNonEmptyValue([
-        item.lostFoundLocationLabel, item.localizacao, item.location, item.label,
-        meta.lostFoundLocationLabel, meta.localizacao, meta.location
-      ]));
-      const key = slugifyText(firstNonEmptyValue([
-        item.lostFoundLocationKey, meta.lostFoundLocationKey, item.key, label
-      ]));
-      const icon = firstNonEmptyValue([item.lostFoundLocationIcon, meta.lostFoundLocationIcon, item.icon]) || 'fas fa-map-marker-alt';
-      const emoji = firstNonEmptyValue([item.lostFoundLocationEmoji, meta.lostFoundLocationEmoji, item.emoji]) || '📍';
-      if (label || key) entries.push({ key, label, icon, emoji });
-    });
-
-    return entries;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.extractLostFoundLocationHistoryEntries(history) : [];
   }
 
+  // Delegacao -> window._KCU.location.buildLostFoundHistoryMaps (kc-utils.location.js)
   function buildLostFoundHistoryMaps(history, officialAliasMap) {
-    const catalog = new Map();
-    const aliasMap = new Map();
-    extractLostFoundLocationHistoryEntries(history).forEach((entry) => {
-      const normalizedLabel = normalizeText(entry.label);
-      const normalizedKey = normalizeText(entry.key);
-      if (!normalizedLabel && !normalizedKey) return;
-      if ((normalizedLabel && officialAliasMap.has(normalizedLabel)) || (normalizedKey && officialAliasMap.has(normalizedKey))) return;
-
-      const finalKey = slugifyText(entry.key || entry.label);
-      if (!finalKey) return;
-
-      const existing = catalog.get(finalKey);
-      const item = {
-        key: finalKey,
-        label: pickPreferredHousingLabel(existing && existing.label, entry.label || finalKey) || formatHousingLabel(finalKey),
-        icon: entry.icon || (existing && existing.icon) || 'fas fa-map-marker-alt',
-        emoji: entry.emoji || (existing && existing.emoji) || '📍',
-        isKnown: false,
-      };
-      catalog.set(finalKey, item);
-      [normalizedLabel, normalizedKey].filter(Boolean).forEach((alias) => {
-        if (!aliasMap.has(alias)) aliasMap.set(alias, item);
-      });
-    });
-
-    return { catalog, aliasMap };
+    return (window._KCU && window._KCU.location)
+      ? window._KCU.location.buildLostFoundHistoryMaps(history, officialAliasMap)
+      : { catalog: new Map(), aliasMap: new Map() };
   }
 
-  function resolveLostFoundLocation(source, options = {}) {
-    const built = buildLostFoundTextParts(source, options.tags);
-    const explicitCandidates = built.explicit.map((value) => String(value || '').trim()).filter(Boolean);
-    const combinedText = [
-      ...explicitCandidates,
-      ...built.tags,
-      ...built.text,
-      ...(Array.isArray(options.textParts) ? options.textParts.filter(Boolean) : [])
-    ].map((value) => normalizeText(value)).filter(Boolean).join(' ');
-
-    const officialAliasMap = buildDefinitionAliasMap(LOST_FOUND_LOCATION_DEFINITIONS);
-    const historySource = Array.isArray(options.history)
-      ? options.history
-      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_LOST_FOUND_LOCATION_HISTORY)) ? window.__KC_LOST_FOUND_LOCATION_HISTORY : []);
-    const historyMaps = buildLostFoundHistoryMaps(historySource, officialAliasMap);
-    const historyEntries = Array.from(historyMaps.catalog.values()).map((entry) => ({
-      ...entry,
-      aliases: [entry.label, entry.key],
-    }));
-
-    for (const candidate of explicitCandidates) {
-      const normalized = normalizeText(candidate);
-      if (!normalized) continue;
-      if (officialAliasMap.has(normalized)) {
-        const match = officialAliasMap.get(normalized);
-        return {
-          key: match.key,
-          label: match.label,
-          icon: match.icon || 'fas fa-map-marker-alt',
-          emoji: match.emoji || getLostFoundLocationEmoji(match.key),
-          isKnown: true,
-          source: 'official-exact',
-        };
-      }
-      if (historyMaps.aliasMap.has(normalized)) {
-        const match = historyMaps.aliasMap.get(normalized);
-        return {
-          key: match.key,
-          label: match.label,
-          icon: match.icon || 'fas fa-map-marker-alt',
-          emoji: match.emoji || '📍',
-          isKnown: false,
-          source: 'history-exact',
-        };
-      }
-    }
-
-    for (const candidate of explicitCandidates) {
-      const normalized = normalizeText(candidate);
-      if (!normalized || normalized.length < 3) continue;
-      for (const [alias, entry] of officialAliasMap.entries()) {
-        if (normalized.includes(alias) || alias.includes(normalized)) {
-          return {
-            key: entry.key,
-            label: entry.label,
-            icon: entry.icon || 'fas fa-map-marker-alt',
-            emoji: entry.emoji || getLostFoundLocationEmoji(entry.key),
-            isKnown: true,
-            source: 'official-partial',
-          };
-        }
-      }
-    }
-
-    if (combinedText) {
-      const ranked = LOST_FOUND_LOCATION_DEFINITIONS
-        .map((entry) => {
-          const score = [entry.label, entry.key, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]
-            .map((value) => normalizeText(value))
-            .filter(Boolean)
-            .reduce((acc, alias) => combinedText.includes(alias) ? acc + (alias.length >= 8 ? 3 : 2) : acc, 0);
-          return { entry, score };
-        })
-        .filter((item) => item.score > 0)
-        .sort((left, right) => right.score - left.score);
-      if (ranked.length) {
-        const match = ranked[0].entry;
-        return {
-          key: match.key,
-          label: match.label,
-          icon: match.icon || 'fas fa-map-marker-alt',
-          emoji: match.emoji || getLostFoundLocationEmoji(match.key),
-          isKnown: true,
-          source: 'context',
-        };
-      }
-    }
-
-    for (const candidate of explicitCandidates) {
-      const officialFuzzy = findBestFuzzyHousingEntry(candidate, LOST_FOUND_LOCATION_DEFINITIONS);
-      if (officialFuzzy) {
-        return {
-          key: officialFuzzy.key,
-          label: officialFuzzy.label,
-          icon: officialFuzzy.icon || 'fas fa-map-marker-alt',
-          emoji: officialFuzzy.emoji || getLostFoundLocationEmoji(officialFuzzy.key),
-          isKnown: true,
-          source: 'official-fuzzy',
-        };
-      }
-      const historyFuzzy = findBestFuzzyHousingEntry(candidate, historyEntries);
-      if (historyFuzzy) {
-        return {
-          key: historyFuzzy.key,
-          label: historyFuzzy.label,
-          icon: historyFuzzy.icon || 'fas fa-map-marker-alt',
-          emoji: historyFuzzy.emoji || '📍',
-          isKnown: false,
-          source: 'history-fuzzy',
-        };
-      }
-    }
-
-    const fallbackRaw = explicitCandidates[0] || '';
-    const fallbackKey = slugifyText(fallbackRaw);
-    if (fallbackKey) {
-      return {
-        key: fallbackKey,
-        label: formatHousingLabel(fallbackRaw) || beautifyKey(fallbackKey) || fallbackRaw,
-        icon: 'fas fa-map-marker-alt',
-        emoji: '📍',
-        isKnown: false,
-        source: 'custom',
-      };
-    }
-
-    return { key: '', label: '', icon: 'fas fa-map-marker-alt', emoji: '📍', isKnown: false, source: 'empty' };
+  // Delegacao -> window._KCU.location.resolveLostFoundLocation (kc-utils.location.js)
+  function resolveLostFoundLocation(source, options) {
+    return (window._KCU && window._KCU.location)
+      ? window._KCU.location.resolveLostFoundLocation(source, options)
+      : { key: '', label: '', icon: 'fas fa-map-marker-alt', emoji: '📍', isKnown: false, source: 'empty' };
   }
 
+  // Delegacao -> window._KCU.location.resolveHousingTypeFromCandidates (kc-utils.location.js)
   function resolveHousingTypeFromCandidates(values) {
-    const list = Array.isArray(values) ? values : [values];
-    const generic = new Set(['moradia', 'moradia estudantil']);
-
-    for (const value of list) {
-      const key = resolveHousingTypeKey(value);
-      if (key && !generic.has(key)) return key;
-    }
-
-    const combined = list
-      .map((value) => String(value || '').trim())
-      .filter(Boolean)
-      .join(' ');
-    const combinedKey = resolveHousingTypeKey(combined);
-    return generic.has(combinedKey) ? '' : combinedKey;
+    return (window._KCU && window._KCU.location) ? window._KCU.location.resolveHousingTypeFromCandidates(values) : '';
   }
 
   // Delegação → window._KCU.string.escapeHtml (kc-utils.string.js)
