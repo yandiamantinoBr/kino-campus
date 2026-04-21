@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.5` concluídas (abertura, auditoria, splits `string`, `format`, `dom`, `identity`, `taxonomy`, `location`); próxima é `v12.2.6` — split `window._KCU.presentation`; baseline expandida para `105/105` suites e `2185/2185` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.6` concluídas (abertura, auditoria, splits `string`, `format`, `dom`, `identity`, `taxonomy`, `location`, `presentation`); próxima é `v12.2.7` — gate formal `<900L` + hygiene `_KCU.*`; baseline expandida para `106/106` suites e `2212/2212` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -127,7 +127,7 @@ Estes namespaces são **contratos públicos internos** — qualquer mudança de 
 | Arquivo | Linhas | Tamanho | Alvo iteração | Prioridade |
 |---|---|---|---|---|
 | `assets/js/kc-api.client.js` | `2410L` | `~100KB` | já reduzido ao piso natural (registry/wiring) | pausa |
-| `assets/js/kc-utils.js` | `2445L` | `~95KB` | `v12.1.0`–`v12.2.5` | 🥇 1º |
+| `assets/js/kc-utils.js` | `2445L` | `~95KB` | `v12.1.0`–`v12.2.6` | 🥇 1º |
 | `assets/js/admin-dashboard.controller.js` | `2251L` | `~88KB` | `v12.3.0`–`v12.3.4` | 🥈 2º |
 | `assets/js/local.adapter.js` | `1862L` | `~72KB` | `v12.4.0`–`v12.4.6` | 🥉 3º |
 | `assets/js/profile.controller.js` | `1463L` | `~56KB` | `v12.5.0`–`v12.5.4` | 4º |
@@ -182,7 +182,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.2.3** | Split `kc-utils.js` domínio **identity/email/handle** | `kc-utils.identity.js` → `window._KCU.identity` (5 funções), −11L em `kc-utils.js` (2242→2231L), +1 suite 29 testes, 22 HTMLs atualizados | ✅ concluído |
 | **v12.2.4** | Split `kc-utils.js` domínio **taxonomy** (module labels + opportunity) | `kc-utils.taxonomy.js` → `window._KCU.taxonomy` (22 funções), −281L em `kc-utils.js` (2231→1950L), +1 suite 78 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
 | **v12.2.5** | Split `kc-utils.js` domínio **location** (housing + caronas + lost-found + inferências) | `kc-utils.location.js` → `window._KCU.location` (32 funções), −781L em `kc-utils.js` (1950→1168L), +1 suite 101 testes, 22 HTMLs + 12 arquivos de teste atualizados | ✅ concluído |
-| v12.2.6 | Split `kc-utils.js` domínio **presentation** (`applyPresentationRules` + `renderPostCard` + markers) | `kc-utils.presentation.js` → `window._KCU.presentation` (4 funções), ~600L movidas, ~20 testes | 📋 planejado |
+| **v12.2.6** | Split `kc-utils.js` domínio **presentation** (`applyPresentationRules` + `renderPostCard` + markers) | `kc-utils.presentation.js` → `window._KCU.presentation` (9 funções), −637L em `kc-utils.js` (1168→531L), +1 suite 27 testes, 22 HTMLs + 12 arquivos de teste atualizados | ✅ concluído |
 | v12.2.7 | Gate `kc-utils.js` <900L: README + RELATORIO atualizados, hygiene com regras para `_KCU.*` | gate formal | 📋 planejado |
 | v12.3.0 | Auditoria `admin-dashboard.controller.js` (doc-only) | `docs/admin-dashboard-audit-v12.3.md` | 📋 planejado |
 | v12.3.1 | Split admin-dashboard **metrics/loaders** | `admin-dashboard.metrics.js` → `window._KCAD.metrics`, ~600L, ~15 testes | 📋 planejado |
@@ -584,6 +584,38 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - Referências `window._KCU.location` em `kc-utils.js`: **96** (32 funções × 3 linhas no wrapper)
 
 **Próxima iteração:** `v12.2.6` — split domínio **presentation** (`cssEscape`, `applyPresentationRules`, `getDisplayMarkerTags`, `renderMarkerTags`, `renderPostCard` e funções infer* relacionadas) → `kc-utils.presentation.js` + `window._KCU.presentation`.
+
+---
+
+### 8.8. v12.2.6 — split `kc-utils.js` domínio presentation — `window._KCU.presentation` — ✅ concluído
+
+**Objetivo:** extrair as 9 funções do domínio presentation de `kc-utils.js` para `assets/js/kc-utils.presentation.js`, expondo `window._KCU.presentation`, preservando o facade público `window.KCUtils` e a ordem obrigatória de carregamento `string → format → dom → identity → taxonomy → location → presentation → kc-utils.js`.
+
+**Funções migradas (9):**
+
+| Grupo | Funções |
+|---|---|
+| Helpers presentation | `cssEscape`, `inferCaronasRoute`, `inferAchadosLocation`, `inferOportunidadesSubcategory`, `inferEventosCategory` |
+| Regras visuais e markers | `applyPresentationRules`, `getDisplayMarkerTags`, `renderMarkerTags` |
+| Renderização | `renderPostCard` |
+
+**Padrão aplicado:** lazy accessors `_str()`, `_fmt()`, `_tax()` e `_loc()` resolvendo dependências cross-domain apenas no momento da chamada; funções `infer*` e `cssEscape` permanecem no mesmo escopo fechado do IIFE para consumo direto por `applyPresentationRules` e `renderPostCard`; `window._KCU.presentation = Object.freeze({...})` garante namespace imutável em runtime.
+
+**Entregas mensuráveis:**
+- `assets/js/kc-utils.presentation.js` criado (**858L**, 9 funções exportadas)
+- `assets/js/kc-utils.js` reduzido de **1168L → 531L (−637L)**; redução acumulada desde `2445L`: **−1914L**
+- 22 HTMLs atualizados com `<script defer src="assets/js/kc-utils.presentation.js"></script>` na ordem canônica
+- 12 suites existentes atualizadas para carregar `kc-utils.presentation.js` antes de `kc-utils.js`
+- `tests/kc-utils-presentation.test.js` criado — **1 suite, 27 testes** cobrindo contrato estático, inferências, rules, markers e renderização
+- Gate estrutural `<900L` de `kc-utils.js` atingido antecipadamente já nesta iteração (formalização documental fica para `v12.2.7`)
+
+**Verificação:**
+- `npm test` → **106/106 suites, 2212/2212 testes verdes** (+1 suite, +27 testes vs. baseline `v12.2.5`)
+- `node scripts/hygiene-check.js` → 8.6.0 ✓
+- `kc-utils.js` passou de **1168L → 531L**; `kc-utils.presentation.js` ficou com **858L**
+- Facade `window.KCUtils` preservado; wrappers de `applyPresentationRules`, `getDisplayMarkerTags` e `renderPostCard` seguem operacionais
+
+**Próxima iteração:** `v12.2.7` — gate formal do marco `<900L` + atualização do `scripts/hygiene-check.js` para validar a cadeia `_KCU.*` nos HTMLs.
 
 ---
 
