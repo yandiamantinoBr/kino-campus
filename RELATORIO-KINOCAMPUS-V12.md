@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.6` concluídas (abertura, auditoria, splits `string`, `format`, `dom`, `identity`, `taxonomy`, `location`, `presentation`); próxima é `v12.2.7` — gate formal `<900L` + hygiene `_KCU.*`; baseline expandida para `106/106` suites e `2212/2212` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.2.7` concluídas (abertura, auditoria, splits `string`, `format`, `dom`, `identity`, `taxonomy`, `location`, `presentation` e gate formal `<900L`); `kc-utils.js` consolidado em `440L` com hygiene `_KCU.*` ativa nos 22 HTMLs canônicos; próxima é `v12.3.0` — auditoria docs-only de `admin-dashboard.controller.js`; baseline preservada em `106/106` suites e `2212/2212` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -182,8 +182,8 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.2.3** | Split `kc-utils.js` domínio **identity/email/handle** | `kc-utils.identity.js` → `window._KCU.identity` (5 funções), −11L em `kc-utils.js` (2242→2231L), +1 suite 29 testes, 22 HTMLs atualizados | ✅ concluído |
 | **v12.2.4** | Split `kc-utils.js` domínio **taxonomy** (module labels + opportunity) | `kc-utils.taxonomy.js` → `window._KCU.taxonomy` (22 funções), −281L em `kc-utils.js` (2231→1950L), +1 suite 78 testes, 22 HTMLs atualizados, 12 arquivos de teste existentes atualizados | ✅ concluído |
 | **v12.2.5** | Split `kc-utils.js` domínio **location** (housing + caronas + lost-found + inferências) | `kc-utils.location.js` → `window._KCU.location` (32 funções), −781L em `kc-utils.js` (1950→1168L), +1 suite 101 testes, 22 HTMLs + 12 arquivos de teste atualizados | ✅ concluído |
-| **v12.2.6** | Split `kc-utils.js` domínio **presentation** (`applyPresentationRules` + `renderPostCard` + markers) | `kc-utils.presentation.js` → `window._KCU.presentation` (9 funções), −637L em `kc-utils.js` (1168→531L), +1 suite 27 testes, 22 HTMLs + 12 arquivos de teste atualizados | ✅ concluído |
-| v12.2.7 | Gate `kc-utils.js` <900L: README + RELATORIO atualizados, hygiene com regras para `_KCU.*` | gate formal | 📋 planejado |
+| **v12.2.6** | Split `kc-utils.js` domínio **presentation** (`applyPresentationRules` + `renderPostCard` + markers) | `kc-utils.presentation.js` → `window._KCU.presentation` (9 funções), −728L em `kc-utils.js` (1168→440L), +1 suite 27 testes, 22 HTMLs + 12 arquivos de teste atualizados | ✅ concluído |
+| **v12.2.7** | Gate `kc-utils.js` <900L: README + RELATORIO + CHANGELOG atualizados, `scripts/hygiene-check.js` validando a cadeia `_KCU.*` nos 22 HTMLs canônicos | `kc-utils.js` formalizado em `440L` (<900L), hygiene falha por item faltando/duplicado/extra/fora de ordem, baseline `106/106` suites · `2212/2212` testes preservada | ✅ concluído |
 | v12.3.0 | Auditoria `admin-dashboard.controller.js` (doc-only) | `docs/admin-dashboard-audit-v12.3.md` | 📋 planejado |
 | v12.3.1 | Split admin-dashboard **metrics/loaders** | `admin-dashboard.metrics.js` → `window._KCAD.metrics`, ~600L, ~15 testes | 📋 planejado |
 | v12.3.2 | Split admin-dashboard **audit log + export** | `admin-dashboard.audit.js` → `window._KCAD.audit`, ~400L, ~10 testes | 📋 planejado |
@@ -603,7 +603,7 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 
 **Entregas mensuráveis:**
 - `assets/js/kc-utils.presentation.js` criado (**858L**, 9 funções exportadas)
-- `assets/js/kc-utils.js` reduzido de **1168L → 531L (−637L)**; redução acumulada desde `2445L`: **−1914L**
+- `assets/js/kc-utils.js` reduzido de **1168L → 440L (−728L)**; redução acumulada desde `2445L`: **−2005L**
 - 22 HTMLs atualizados com `<script defer src="assets/js/kc-utils.presentation.js"></script>` na ordem canônica
 - 12 suites existentes atualizadas para carregar `kc-utils.presentation.js` antes de `kc-utils.js`
 - `tests/kc-utils-presentation.test.js` criado — **1 suite, 27 testes** cobrindo contrato estático, inferências, rules, markers e renderização
@@ -612,10 +612,41 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 **Verificação:**
 - `npm test` → **106/106 suites, 2212/2212 testes verdes** (+1 suite, +27 testes vs. baseline `v12.2.5`)
 - `node scripts/hygiene-check.js` → 8.6.0 ✓
-- `kc-utils.js` passou de **1168L → 531L**; `kc-utils.presentation.js` ficou com **858L**
+- `kc-utils.js` passou de **1168L → 440L**; `kc-utils.presentation.js` ficou com **858L**
 - Facade `window.KCUtils` preservado; wrappers de `applyPresentationRules`, `getDisplayMarkerTags` e `renderPostCard` seguem operacionais
 
 **Próxima iteração:** `v12.2.7` — gate formal do marco `<900L` + atualização do `scripts/hygiene-check.js` para validar a cadeia `_KCU.*` nos HTMLs.
+
+---
+
+### 8.9. v12.2.7 — gate formal `kc-utils.js` <900L + hygiene `_KCU.*` — ✅ concluído
+
+**Objetivo:** formalizar documentalmente o marco estrutural já atingido em `v12.2.6` (`assets/js/kc-utils.js` abaixo de `900L`) e endurecer o `scripts/hygiene-check.js` para validar a cadeia canônica dos sub-módulos `window._KCU.*` em todos os HTMLs públicos e admin cobertos por `htmlFiles`, sem criar novos assets de runtime e sem tocar no facade `window.KCUtils`.
+
+**Escopo entregue:**
+
+- `scripts/hygiene-check.js` atualizado com uma checagem dedicada da cadeia `_KCU.*`, executada junto das demais validações operacionais do script
+- a nova regra extrai apenas `<script defer src="...kc-utils*.js"></script>` e exige, por arquivo, a ordem canônica `string → format → dom → identity → taxonomy → location → presentation → kc-utils.js`
+- páginas raiz exigem prefixo `assets/js/`; páginas em `admin/` exigem `../assets/js/`
+- a validação falha se houver item faltando, duplicado, extra ou fora de ordem, exibindo `expected` vs `found` com o `relPath` do HTML afetado
+- `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` atualizados para registrar `v12.2.7` como concluída, formalizar o gate `<900L` com valor real `440L` e apontar `v12.3.0` como próxima iteração
+- nenhum dos 22 HTMLs canônicos foi alterado nesta rodada; o estado já correto passou a servir como fixture do gate
+
+**Entregas mensuráveis:**
+
+- gate estrutural de `kc-utils.js` formalizado com valor real de **440L** (`2445L → 440L`, redução acumulada de **−2005L**)
+- `scripts/hygiene-check.js` passa a validar a cadeia `_KCU.*` em **22 HTMLs** (17 páginas raiz + 5 páginas admin)
+- zero mudança funcional em runtime: nenhum arquivo de `assets/js/` de produto, nenhum HTML e nenhuma suite Jest novos nesta iteração
+- baseline preservada em **106/106 suites · 2212/2212 testes**
+
+**Verificação:**
+
+- `node scripts/hygiene-check.js` → **8.6.0 ✓**
+- `npm test` → **106/106 suites · 2212/2212 testes verdes**
+- `assets/js/kc-utils.js` permaneceu em **440L**, abaixo do gate `<900L`
+- amostragem manual do diff confirma: nenhum HTML do conjunto canônico foi editado para “fazer o teste passar”
+
+**Próxima iteração:** `v12.3.0` — auditoria docs-only de `admin-dashboard.controller.js`, mapeando footprint real, consumers e sequência recomendada de splits para `window._KCAD.*`.
 
 ---
 
