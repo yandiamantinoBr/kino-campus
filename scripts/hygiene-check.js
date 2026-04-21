@@ -23,6 +23,17 @@ const htmlFiles = [
   ...readHtmlFiles(path.join(rootDir, 'admin'), 'admin'),
 ];
 
+const kcuScriptChain = [
+  'kc-utils.string.js',
+  'kc-utils.format.js',
+  'kc-utils.dom.js',
+  'kc-utils.identity.js',
+  'kc-utils.taxonomy.js',
+  'kc-utils.location.js',
+  'kc-utils.presentation.js',
+  'kc-utils.js',
+];
+
 const inlineHandlers = new Set([
   'onabort', 'onauxclick', 'onbeforeinput', 'onbeforematch', 'onbeforetoggle',
   'onblur', 'oncancel', 'oncanplay', 'oncanplaythrough', 'onchange', 'onclick',
@@ -42,6 +53,7 @@ const inlineHandlers = new Set([
 
 runVersionChecks();
 runThemeBootChecks();
+runKcuScriptChainChecks();
 runInlineHandlerChecks();
 runProfileContractChecks();
 runDeployInvariantChecks();
@@ -90,6 +102,20 @@ function runThemeBootChecks() {
     const hasBootCss = /kc-theme-boot\.css/.test(content);
     if (hasBootJs && !hasBootCss) {
       errors.push(`${relPath} loads kc-theme-boot.js without kc-theme-boot.css`);
+    }
+  });
+}
+
+function runKcuScriptChainChecks() {
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const content = fs.readFileSync(absPath, 'utf8');
+    const expected = buildExpectedKcuScriptChain(relPath);
+    const found = extractKcuScriptChain(content);
+
+    if (!sameStringArray(found, expected)) {
+      errors.push(
+        `${relPath} has invalid _KCU.* script chain. expected: ${expected.join(' -> ')}; found: ${found.length ? found.join(' -> ') : '(none)'}`
+      );
     }
   });
 }
@@ -205,6 +231,28 @@ function readHtmlFiles(dir, prefix = '') {
     }));
 }
 
+function buildExpectedKcuScriptChain(relPath) {
+  const prefix = relPath.startsWith('admin/') ? '../assets/js' : 'assets/js';
+  return kcuScriptChain.map((file) => `${prefix}/${file}`);
+}
+
+function extractKcuScriptChain(content) {
+  const scriptTags = [...String(content).matchAll(/<script\b[^>]*>\s*<\/script>/gi)];
+
+  return scriptTags
+    .map((match) => String(match[0] || ''))
+    .filter((tag) => /\bdefer\b/i.test(tag))
+    .map((tag) => {
+      const srcMatch = tag.match(/\bsrc=(['"])([^'"]+)\1/i);
+      return srcMatch ? toPosix(srcMatch[2]) : '';
+    })
+    .filter((src) => isKcuScriptSrc(src));
+}
+
+function isKcuScriptSrc(src) {
+  return /(?:^|\/)kc-utils(?:\.[a-z-]+)?\.js$/i.test(String(src || ''));
+}
+
 function findCspHeader(vercelConfig) {
   const headers = Array.isArray(vercelConfig.headers) ? vercelConfig.headers : [];
   for (const block of headers) {
@@ -227,6 +275,14 @@ function normalize(value) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
+}
+
+function sameStringArray(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
 }
 
 function escapeRegExp(value) {
