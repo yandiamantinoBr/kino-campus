@@ -21,6 +21,7 @@ beforeAll(() => {
   require('../assets/js/kc-utils.identity.js'); // deve preceder kc-utils.js (v12.2.3)
   require('../assets/js/kc-utils.taxonomy.js'); // deve preceder kc-utils.js (v12.2.4)
   require('../assets/js/kc-utils.location.js'); // deve preceder kc-utils.js (v12.2.5)
+  require('../assets/js/kc-utils.presentation.js'); // deve preceder kc-utils.js (v12.2.6)
   require('../assets/js/kc-utils.js');
   window.KCSearchShared = require('../assets/js/kc-search.shared.js');
 

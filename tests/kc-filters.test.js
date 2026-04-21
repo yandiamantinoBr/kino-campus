@@ -8,6 +8,7 @@ beforeAll(() => {
   require('../assets/js/kc-utils.identity.js'); // deve preceder kc-utils.js (v12.2.3)
   require('../assets/js/kc-utils.taxonomy.js'); // deve preceder kc-utils.js (v12.2.4)
   require('../assets/js/kc-utils.location.js'); // deve preceder kc-utils.js (v12.2.5)
+  require('../assets/js/kc-utils.presentation.js'); // deve preceder kc-utils.js (v12.2.6)
   require('../assets/js/kc-utils.js');
   require('../assets/js/kc-feed-filters.js');
   // jsdom fornece document para o DOMContentLoaded
