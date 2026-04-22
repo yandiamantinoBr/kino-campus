@@ -18,11 +18,11 @@
   var SCRIPT_LOAD_TIMEOUT_MS = 8000;
 
   /* ── Cache de atores (actor_id → display info) ── */
-  var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var _actorsById = {};
   var DashboardUtils = window.KCAdminDashboardUtils || {};
   window._KCAD = window._KCAD || {};
   window._KCAD.metrics = window._KCAD.metrics || {};
+  window._KCAD.audit = window._KCAD.audit || {};
   var SERIES_META = [
     { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group' },
     { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment' },
@@ -57,6 +57,42 @@
   function getModuleIcon(moduleKey) {
     var icons = DashboardUtils.MODULE_ICONS || {};
     return icons[moduleKey] || 'fas fa-tag';
+  }
+
+  function buildAuditDeps() {
+    return {
+      $: $,
+      escHtmlAdmin: escHtmlAdmin,
+      showError: showError,
+      showStatusToast: showStatusToast,
+      hideStatusToast: hideStatusToast,
+      toNumber: toNumber,
+      formatDateBR: formatDateBR,
+      formatDateTimeBR: formatDateTimeBR,
+      getPeriodLabel: getPeriodLabel,
+      getPeriodRange: getPeriodRange,
+      getSelectedPeriodDays: getSelectedPeriodDays,
+      getModuleLabel: getModuleLabel,
+      classifyTermToModule: classifyTermToModule,
+      getSeriesKeys: getSeriesKeys,
+      getSeriesTotals: getSeriesTotals,
+      getSeriesMeta: function () { return SERIES_META.slice(); },
+      hexToRgb: hexToRgb,
+      getClient: getClient,
+      getAuditPageSize: function () { return AUDIT_PAGE_SIZE; },
+      getScriptLoadTimeoutMs: function () { return SCRIPT_LOAD_TIMEOUT_MS; },
+      getData: function () { return _data; },
+      setData: function (nextData) { _data = nextData; },
+      getAuditOffset: function () { return _auditOffset; },
+      setAuditOffset: function (nextOffset) { _auditOffset = Number(nextOffset) || 0; },
+      getExportBound: function () { return _exportBound; },
+      setExportBound: function (nextValue) { _exportBound = !!nextValue; },
+      getXlsxLoadPromise: function () { return _xlsxLoadPromise; },
+      setXlsxLoadPromise: function (promise) { _xlsxLoadPromise = promise || null; },
+      getJspdfLoadPromise: function () { return _jspdfLoadPromise; },
+      setJspdfLoadPromise: function (promise) { _jspdfLoadPromise = promise || null; },
+      getActorCache: function () { return _actorsById; }
+    };
   }
 
   function stabilizeHeaderActions() {
@@ -163,26 +199,6 @@
 
   function throwIfAborted(signal) {
     if (signal && signal.aborted) throw createAbortError();
-  }
-
-  function setAuditLoadMoreState(options) {
-    options = options || {};
-    var btn = $('#admin-audit-load-more');
-    if (!btn) return;
-    if (!btn.dataset.defaultLabel) {
-      btn.dataset.defaultLabel = btn.textContent || 'Carregar mais';
-    }
-    if (typeof options.visible === 'boolean') {
-      btn.style.display = options.visible ? '' : 'none';
-    }
-    if (typeof options.disabled === 'boolean') {
-      btn.disabled = options.disabled;
-    }
-    if (options.label) {
-      btn.textContent = options.label;
-    } else if (!options.preserveLabel) {
-      btn.textContent = btn.dataset.defaultLabel;
-    }
   }
 
   function syncDailyActivityChartModal(series) {
@@ -483,124 +499,22 @@
       : Promise.resolve([]);
   }
 
-  function isPermissionError(error) {
-    if (!error) return false;
-    var message = String(error.message || error.details || error.hint || '').toLowerCase();
-    return message.includes('permission') || message.includes('row-level security') || message.includes('rls');
-  }
-
-  function isFunctionMissing(error) {
-    if (!error) return false;
-    var code = String(error.code || '');
-    var message = String(error.message || error.details || error.hint || '').toLowerCase();
-    return code === '42883' || (message.includes('function') && message.includes('does not exist'));
-  }
-
-  function isFunctionAmbiguityError(error) {
-    if (!error) return false;
-    var code = String(error.code || '');
-    var message = String(error.message || error.hint || '').toLowerCase();
-    return code === '42725' || message.includes('is not unique') || message.includes('ambiguous');
-  }
-
   async function loadActorsById(client, actorIds) {
-    var ids = [];
-    (actorIds || []).forEach(function (id) {
-      var value = String(id || '');
-      if (UUID_RE.test(value) && !_actorsById[value]) ids.push(value);
-    });
-    if (!ids.length) return;
-    try {
-      var result = await client.from('profiles')
-        .select('id, display_name, full_name')
-        .in('id', ids);
-      if (!result.error && Array.isArray(result.data)) {
-        result.data.forEach(function (row) {
-          _actorsById[row.id] = {
-            display_name: row.display_name || '',
-            full_name: row.full_name || ''
-          };
-        });
-      }
-    } catch (_) { }
+    return (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.loadActorsById === 'function')
+      ? window._KCAD.audit.loadActorsById(client, actorIds, buildAuditDeps())
+      : Promise.resolve();
   }
 
   function getActorDisplay(actorId) {
-    if (!actorId) return 'system';
-    var actor = _actorsById[actorId];
-    if (actor) {
-      var name = actor.display_name || actor.full_name;
-      if (name) return name;
-    }
-    return String(actorId).slice(0, 8) + '...';
+    return (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.getActorDisplay === 'function')
+      ? window._KCAD.audit.getActorDisplay(actorId, buildAuditDeps())
+      : (!actorId ? 'system' : String(actorId).slice(0, 8) + '...');
   }
 
   async function loadAuditLog(client, limit, offset, actionFilter, since) {
-    limit = limit || AUDIT_PAGE_SIZE;
-    offset = offset || 0;
-
-    function filterRows(rows) {
-      var sinceMs = since ? new Date(since).getTime() : 0;
-      return (rows || []).filter(function (row) {
-        if (!row) return false;
-        if (actionFilter && actionFilter !== 'all' && row.action !== actionFilter) return false;
-        if (sinceMs && row.created_at && new Date(row.created_at).getTime() < sinceMs) return false;
-        return true;
-      });
-    }
-
-    try {
-      var query = client.from('audit_log')
-        .select('created_at, action, entity_type, actor_id')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-      if (actionFilter && actionFilter !== 'all') query = query.eq('action', actionFilter);
-      if (since) query = query.gte('created_at', since);
-
-      var result = await query;
-      if (!result.error) return Array.isArray(result.data) ? result.data : [];
-      if (!isPermissionError(result.error)) {
-        console.warn('[Admin audit] Direct query failed:', result.error.message || result.error);
-      }
-    } catch (error) {
-      console.warn('[Admin audit] Direct query exception:', error && error.message ? error.message : error);
-    }
-
-    try {
-      var rpc = await client.rpc('kc_admin_list_audit_logs', {
-        p_entity_type: 'all',
-        p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
-        p_actor_query: null,
-        p_limit: limit,
-        p_offset: offset,
-        p_since: since || null
-      });
-      if (!rpc.error && Array.isArray(rpc.data)) return rpc.data;
-      if (!(isFunctionMissing(rpc.error) || isFunctionAmbiguityError(rpc.error))) {
-        console.warn('[Admin audit] New RPC failed:', rpc.error && (rpc.error.message || rpc.error));
-      }
-    } catch (error2) {
-      console.warn('[Admin audit] New RPC exception:', error2 && error2.message ? error2.message : error2);
-    }
-
-    try {
-      var legacyRpc = await client.rpc('kc_admin_list_audit_logs', {
-        p_entity_type: 'all',
-        p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
-        p_actor_query: null,
-        p_limit: Math.max(limit + offset, 150)
-      });
-      if (!legacyRpc.error && Array.isArray(legacyRpc.data)) {
-        return filterRows(legacyRpc.data).slice(offset, offset + limit);
-      }
-      if (legacyRpc.error) {
-        console.warn('[Admin audit] Legacy RPC failed:', legacyRpc.error.message || legacyRpc.error);
-      }
-    } catch (error3) {
-      console.warn('[Admin audit] Legacy RPC exception:', error3 && error3.message ? error3.message : error3);
-    }
-
-    return [];
+    return (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.loadAuditLog === 'function')
+      ? window._KCAD.audit.loadAuditLog(client, limit, offset, actionFilter, since, buildAuditDeps())
+      : [];
   }
 
   function renderSearchTrends(trends, periodDays) {
@@ -844,573 +758,15 @@
     }).join('');
   }
 
-  function auditActionBadge(action) {
-    var a = String(action || '').toLowerCase();
-    var cls = 'kc-audit-badge--default';
-    var label = action || '-';
-    if (a.includes('delet')) { cls = 'kc-audit-badge--deleted'; label = 'Deletado'; }
-    else if (a.includes('hidden') || a.includes('oculto')) { cls = 'kc-audit-badge--hidden'; label = 'Ocultado'; }
-    else if (a.includes('restored') || a.includes('restaur')) { cls = 'kc-audit-badge--restored'; label = 'Restaurado'; }
-    else if (a.includes('report') || a.includes('closed')) { cls = 'kc-audit-badge--report'; label = 'Denúncia'; }
-    else if (a.includes('status')) { cls = 'kc-audit-badge--hidden'; label = 'Status'; }
-    return '<span class="kc-audit-badge ' + cls + '" title="' + escHtmlAdmin(action || '') + '">' + escHtmlAdmin(label) + '</span>';
-  }
-
   function renderAuditRows(rows, append) {
-    const auditBody = $('#admin-audit-body');
-    if (!auditBody) return;
-    if (append && (!rows || !rows.length)) {
-      setAuditLoadMoreState({ visible: true, disabled: true, label: 'Fim do histórico', preserveLabel: true });
-      return;
+    if (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.renderAuditRows === 'function') {
+      window._KCAD.audit.renderAuditRows(rows, append, buildAuditDeps());
     }
-    var html = rows.length
-      ? rows.map(function(row) {
-          var dateStr = row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '-';
-          var entity = String(row.entity_type || '-');
-          // Trunca entity longa
-          var entityDisplay = entity.length > 28 ? entity.slice(0, 25) + '...' : entity;
-          return '<tr>'
-            + '<td data-label="Data" style="white-space:nowrap;">' + escHtmlAdmin(dateStr) + '</td>'
-            + '<td data-label="Ação">' + auditActionBadge(row.action) + '</td>'
-            + '<td data-label="Entidade" title="' + escHtmlAdmin(entity) + '"><code>' + escHtmlAdmin(entityDisplay) + '</code></td>'
-            + '<td data-label="Autor" title="' + escHtmlAdmin(row.actor_id || '') + '">' + escHtmlAdmin(getActorDisplay(row.actor_id)) + '</td>'
-            + '</tr>';
-        }).join('')
-      : '<tr><td colspan="4" style="padding:20px 8px;"><p class="kc-empty" style="margin:0;color:var(--kc-text-dark-secondary);">Nenhum resultado.</p></td></tr>';
-
-    if (append) {
-      auditBody.insertAdjacentHTML('beforeend', html);
-    } else {
-      auditBody.innerHTML = html;
-    }
-
-    setAuditLoadMoreState({
-      visible: true,
-      disabled: rows.length < AUDIT_PAGE_SIZE,
-      label: rows.length < AUDIT_PAGE_SIZE ? 'Fim do histórico' : null
-    });
   }
 
-  // ── Carregamento sob demanda de bibliotecas (local + CDN fallback) ────────
-  var XLSX_URLS = [
-    '../assets/vendor/xlsx.full.min.js',
-    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
-  ];
-  var JSPDF_URLS = [
-    '../assets/vendor/jspdf.umd.min.js',
-    'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
-    'https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js',
-  ];
-
-  function loadScript(url, timeoutMs) {
-    return new Promise(function (resolve, reject) {
-      var s = document.createElement('script');
-      var timer = null;
-      var finished = false;
-      function cleanup() {
-        if (timer) clearTimeout(timer);
-        s.onload = null;
-        s.onerror = null;
-      }
-      function fail(error) {
-        if (finished) return;
-        finished = true;
-        cleanup();
-        try {
-          if (s.parentNode) s.parentNode.removeChild(s);
-        } catch (_) {}
-        reject(error);
-      }
-      function succeed() {
-        if (finished) return;
-        finished = true;
-        cleanup();
-        resolve();
-      }
-      s.src = url;
-      if (url.startsWith('http')) s.crossOrigin = 'anonymous';
-      s.onload = succeed;
-      s.onerror = function () { fail(new Error('Falha ao carregar: ' + url)); };
-      timer = setTimeout(function () {
-        fail(new Error('Timeout ao carregar: ' + url));
-      }, timeoutMs || SCRIPT_LOAD_TIMEOUT_MS);
-      document.head.appendChild(s);
-    });
-  }
-
-  async function loadScriptWithFallback(urls, label) {
-    var lastError;
-    showStatusToast('Carregando biblioteca de exportação...', 'info', { sticky: true });
-    try {
-      for (var i = 0; i < urls.length; i++) {
-        try {
-          await loadScript(urls[i], SCRIPT_LOAD_TIMEOUT_MS);
-          hideStatusToast();
-          return;
-        } catch (e) {
-          lastError = e;
-          console.warn('[CDN fallback] ' + e.message);
-        }
-      }
-    } finally {
-      if (!window.XLSX && !window.jspdf) {
-        hideStatusToast();
-      }
-    }
-    showStatusToast('Falha ao carregar ' + (label || 'a biblioteca de exportação') + ' após ' + urls.length + ' tentativas.', 'error', { duration: 4800 });
-    throw lastError || new Error('Todas as fontes falharam.');
-  }
-
-  async function ensureXLSX() {
-    if (window.XLSX) return;
-    if (!_xlsxLoadPromise) {
-      _xlsxLoadPromise = loadScriptWithFallback(XLSX_URLS, 'a biblioteca XLSX').finally(function () {
-        if (!window.XLSX) _xlsxLoadPromise = null;
-      });
-    }
-    await _xlsxLoadPromise;
-  }
-
-  async function ensureJsPDF() {
-    if (window.jspdf) return;
-    if (!_jspdfLoadPromise) {
-      _jspdfLoadPromise = loadScriptWithFallback(JSPDF_URLS, 'a biblioteca jsPDF').finally(function () {
-        if (!window.jspdf) _jspdfLoadPromise = null;
-      });
-    }
-    await _jspdfLoadPromise;
-  }
-
-  // ── Exportação XLSX ──────────────────────────────────────────────────────────
-  function buildSummarySheetRows(data, periodLabel, generatedAt) {
-    return [
-      ['KinoCampus - Dashboard Administrativo'],
-      ['Gerado em', generatedAt],
-      ['Período selecionado', periodLabel],
-      ['Data inicial', formatDateBR(data.periodStart)],
-      ['Data final', formatDateBR(data.periodEnd)],
-      [],
-      ['Seção', 'Métrica', 'Valor'],
-      ['Moderação', 'Denúncias abertas', toNumber(data.reportMetrics && data.reportMetrics.open)],
-      ['Moderação', 'Total de denúncias', toNumber(data.reportMetrics && data.reportMetrics.total)],
-      ['Moderação', 'Posts ocultados', toNumber(data.postStatusMetrics && data.postStatusMetrics.hidden)],
-      ['Moderação', 'Posts deletados', toNumber(data.postStatusMetrics && data.postStatusMetrics.deleted)],
-      ['Atividade', 'Total de posts', toNumber(data.postsTotal)],
-      ['Atividade', 'Posts publicados', toNumber(data.postsCreated)],
-      ['Atividade', 'Posts editados', toNumber(data.postsEdited)],
-      ['Atividade', 'Comentários', toNumber(data.commentsCount)],
-      ['Atividade', 'Buscas realizadas', toNumber(data.searchCount)],
-      ['Comunidade', 'Total de usuários', toNumber(data.usersTotal)],
-      ['Comunidade', 'Novos usuários', toNumber(data.usersNew)],
-      ['Comunidade', 'Votos', toNumber(data.votesCount)],
-      ['Comunidade', 'Posts salvos', toNumber(data.savedPostsCount)],
-      ['Pulso diário', 'Pico diário', toNumber(data.dailySummary && data.dailySummary.peakTotal)],
-      ['Pulso diário', 'Média diária', data.dailySummary ? (data.dailySummary.averageTotal || 0) : 0],
-      ['Pulso diário', 'Último dia', toNumber(data.dailySummary && data.dailySummary.lastDayTotal)],
-      ['Pulso diário', 'Total de buscas', toNumber(data.dailySummary && data.dailySummary.totals && data.dailySummary.totals.searches_count)]
-    ];
-  }
-
-  function buildTrendRows(data) {
-    return [
-      ['Posição', 'Termo', 'Buscas', 'Módulo'],
-      ...(data.trends || []).map(function (item, index) {
-        var moduleKey = classifyTermToModule(item && item.term);
-        return [
-          index + 1,
-          item && item.term ? item.term : '',
-          toNumber(item && item.count),
-          moduleKey ? getModuleLabel(moduleKey) : ''
-        ];
-      })
-    ];
-  }
-
-  function buildDailyRows(data) {
-    return [
-      ['Dia', 'Rótulo', 'Posts', 'Comentários', 'Buscas', 'Votos', 'Ações admin', 'Total'],
-      ...(data.dailyMetrics || []).map(function (row) {
-        return [
-          row.day || '',
-          row.label || '',
-          toNumber(row.posts_count),
-          toNumber(row.comments_count),
-          toNumber(row.searches_count),
-          toNumber(row.votes_count),
-          toNumber(row.admin_actions_count),
-          toNumber(row.total_count)
-        ];
-      })
-    ];
-  }
-
-  function buildSeriesTotalsRows(data) {
-    var totals = getSeriesTotals(data.dailyMetrics || []);
-    return [
-      ['Série', 'Total', 'Cor'],
-      ...SERIES_META.map(function (meta) {
-        return [meta.label, toNumber(totals[meta.key]), meta.color];
-      })
-    ];
-  }
-
-  function buildModuleRows(data) {
-    return [
-      ['Módulo', 'Share (%)', 'Volume', 'Top termos'],
-      ...(data.moduleShareRows || []).map(function (row) {
-        return [
-          row.label || row.module || '',
-          row.share || 0,
-          toNumber(row.count),
-          Array.isArray(row.topTerms) ? row.topTerms.join(', ') : ''
-        ];
-      })
-    ];
-  }
-
-  function buildAlertRows(data) {
-    return [
-      ['Tom', 'Título', 'Descrição'],
-      ...(data.alerts || []).map(function (alert) {
-        return [alert.tone || 'neutral', alert.title || '', alert.body || ''];
-      })
-    ];
-  }
-
-  function buildAuditRows(data) {
-    return [
-      ['Data', 'Ação', 'Entidade', 'Autor'],
-      ...(data.auditRows || []).map(function (row) {
-        return [
-          formatDateTimeBR(row && row.created_at),
-          row && row.action ? row.action : '-',
-          row && row.entity_type ? row.entity_type : '-',
-          getActorDisplay(row && row.actor_id)
-        ];
-      })
-    ];
-  }
-
-  async function exportXLSX(data) {
-    await ensureXLSX();
-    var XLSX = window.XLSX;
-    var workbook = XLSX.utils.book_new();
-    var generatedAt = formatDateTimeBR(new Date());
-    var periodLabel = data.periodLabel || getPeriodLabel(data.periodDays || 30);
-
-    var summarySheet = XLSX.utils.aoa_to_sheet(buildSummarySheetRows(data, periodLabel, generatedAt));
-    summarySheet['!cols'] = [{ wch: 20 }, { wch: 28 }, { wch: 16 }];
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resumo');
-
-    var trendsSheet = XLSX.utils.aoa_to_sheet(buildTrendRows(data));
-    trendsSheet['!cols'] = [{ wch: 8 }, { wch: 28 }, { wch: 10 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(workbook, trendsSheet, 'Tendências');
-
-    var dailySheet = XLSX.utils.aoa_to_sheet(buildDailyRows(data));
-    dailySheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }];
-    XLSX.utils.book_append_sheet(workbook, dailySheet, 'Pulso diário');
-
-    var seriesSheet = XLSX.utils.aoa_to_sheet(buildSeriesTotalsRows(data));
-    seriesSheet['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(workbook, seriesSheet, 'Séries');
-
-    var modulesSheet = XLSX.utils.aoa_to_sheet(buildModuleRows(data));
-    modulesSheet['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 42 }];
-    XLSX.utils.book_append_sheet(workbook, modulesSheet, 'Top módulos');
-
-    var alertsSheet = XLSX.utils.aoa_to_sheet(buildAlertRows(data));
-    alertsSheet['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 64 }];
-    XLSX.utils.book_append_sheet(workbook, alertsSheet, 'Alertas');
-
-    var auditSheet = XLSX.utils.aoa_to_sheet(buildAuditRows(data));
-    auditSheet['!cols'] = [{ wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 26 }];
-    XLSX.utils.book_append_sheet(workbook, auditSheet, 'Audit log');
-
-    XLSX.writeFile(workbook, buildExportFilename('xlsx', data.periodDays));
-  }
-
-  // ── Exportação PDF ───────────────────────────────────────────────────────────
-  async function exportPDF(data) {
-    await ensureJsPDF();
-    var jsPDF = window.jspdf.jsPDF;
-    var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    var generatedAt = formatDateTimeBR(new Date());
-    var periodLabel = data.periodLabel || getPeriodLabel(data.periodDays || 30);
-    var pageWidth = doc.internal.pageSize.getWidth();
-    var pageHeight = doc.internal.pageSize.getHeight();
-    var margin = 14;
-    var usableWidth = pageWidth - (margin * 2);
-    var y = 18;
-
-    function checkPage(requiredHeight) {
-      if (y + (requiredHeight || 0) <= pageHeight - 18) return;
-      doc.addPage();
-      y = 18;
-    }
-
-    function drawSectionHeader(title, subtitle) {
-      checkPage(subtitle ? 18 : 10);
-      doc.setFontSize(12);
-      doc.setTextColor(31, 41, 55);
-      doc.text(title, margin, y);
-      y += 5;
-      if (subtitle) {
-        var subtitleLines = doc.splitTextToSize(subtitle, usableWidth);
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(subtitleLines, margin, y);
-        y += subtitleLines.length * 4;
-      }
-      doc.setDrawColor(226, 232, 240);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 6;
-    }
-
-    function drawMetricCards(items) {
-      var cardWidth = (usableWidth - 6) / 2;
-      var cardHeight = 18;
-      for (var i = 0; i < items.length; i += 2) {
-        checkPage(cardHeight + 8);
-        var row = items.slice(i, i + 2);
-        row.forEach(function (item, index) {
-          var x = margin + (index * (cardWidth + 6));
-          doc.setFillColor(255, 255, 255);
-          doc.setDrawColor(226, 232, 240);
-          doc.roundedRect(x, y, cardWidth, cardHeight, 4, 4, 'FD');
-          doc.setFontSize(8);
-          doc.setTextColor(100, 116, 139);
-          doc.text(item.label, x + 4, y + 5);
-          doc.setFontSize(13);
-          doc.setTextColor(17, 24, 39);
-          doc.text(String(item.value), x + 4, y + 12);
-          if (item.detail) {
-            doc.setFontSize(7);
-            doc.setTextColor(100, 116, 139);
-            doc.text(item.detail, x + 4, y + 16);
-          }
-        });
-        y += cardHeight + 6;
-      }
-    }
-
-    function drawDailyChart(series) {
-      if (!Array.isArray(series) || !series.length) return;
-      var chartHeight = 58;
-      checkPage(chartHeight + 24);
-      var chartX = margin;
-      var chartY = y;
-      var chartWidth = usableWidth;
-      var paddingTop = 8;
-      var paddingBottom = 10;
-      var paddingHorizontal = 8;
-      var innerWidth = chartWidth - (paddingHorizontal * 2);
-      var innerHeight = chartHeight - paddingTop - paddingBottom;
-      var maxValue = 0;
-
-      series.forEach(function (row) {
-        getSeriesKeys().forEach(function (key) {
-          maxValue = Math.max(maxValue, toNumber(row[key]));
-        });
-      });
-      maxValue = Math.max(maxValue, 1);
-
-      doc.setFillColor(255, 255, 255);
-      doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(chartX, chartY, chartWidth, chartHeight, 5, 5, 'FD');
-
-      for (var gridIndex = 1; gridIndex <= 4; gridIndex += 1) {
-        var gridY = chartY + paddingTop + (innerHeight * (gridIndex / 4));
-        doc.setDrawColor(226, 232, 240);
-        doc.setLineWidth(0.15);
-        doc.line(chartX + paddingHorizontal, gridY, chartX + chartWidth - paddingHorizontal, gridY);
-      }
-
-      SERIES_META.forEach(function (meta) {
-        var rgb = hexToRgb(meta.color);
-        doc.setDrawColor(rgb.r, rgb.g, rgb.b);
-        doc.setLineWidth(0.55);
-        var prevPoint = null;
-        series.forEach(function (row, index) {
-          var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
-          var x = chartX + paddingHorizontal + (step * index);
-          var value = toNumber(row[meta.key]);
-          var yPoint = chartY + paddingTop + innerHeight - ((value / maxValue) * innerHeight);
-          if (prevPoint) {
-            doc.line(prevPoint.x, prevPoint.y, x, yPoint);
-          }
-          prevPoint = { x: x, y: yPoint };
-        });
-      });
-
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139);
-      series.forEach(function (row, index) {
-        if (series.length > 14 && index % 2 === 1 && index !== series.length - 1) return;
-        var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
-        var x = chartX + paddingHorizontal + (step * index);
-        doc.text(row.label || '', x, chartY + chartHeight - 2, { align: 'center' });
-      });
-
-      y += chartHeight + 8;
-
-      var totals = getSeriesTotals(series);
-      var legendWidth = (usableWidth - 6) / 2;
-      SERIES_META.forEach(function (meta, index) {
-        checkPage(8);
-        var rgb = hexToRgb(meta.color);
-        var rowIndex = Math.floor(index / 2);
-        var colIndex = index % 2;
-        var x = margin + (colIndex * (legendWidth + 6));
-        var itemY = y + (rowIndex * 6);
-        doc.setFillColor(rgb.r, rgb.g, rgb.b);
-        doc.circle(x + 2, itemY + 1.5, 1.3, 'F');
-        doc.setFontSize(8);
-        doc.setTextColor(31, 41, 55);
-        doc.text(meta.label + ': ' + toNumber(totals[meta.key]), x + 6, itemY + 2.4);
-      });
-      y += Math.ceil(SERIES_META.length / 2) * 6 + 4;
-    }
-
-    function drawWrappedList(title, items, emptyMessage) {
-      drawSectionHeader(title);
-      if (!items.length) {
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(emptyMessage, margin, y);
-        y += 6;
-        return;
-      }
-      items.forEach(function (item) {
-        var lines = doc.splitTextToSize(item, usableWidth);
-        checkPage((lines.length * 4) + 2);
-        doc.setFontSize(9);
-        doc.setTextColor(55, 65, 81);
-        doc.text(lines, margin, y);
-        y += (lines.length * 4) + 2;
-      });
-      y += 2;
-    }
-
-    doc.setFillColor(255, 107, 0);
-    doc.roundedRect(margin, y, usableWidth, 26, 6, 6, 'F');
-    doc.setFontSize(18);
-    doc.setTextColor(255, 255, 255);
-    doc.text('Dashboard Administrativo', margin + 6, y + 9);
-    doc.setFontSize(9);
-    doc.text('KinoCampus - relatório consolidado', margin + 6, y + 15);
-    doc.text('Gerado em ' + generatedAt + ' | Período: ' + periodLabel, margin + 6, y + 20);
-    y += 34;
-
-    drawSectionHeader('Resumo executivo', 'Janela analisada de ' + formatDateBR(data.periodStart) + ' até ' + formatDateBR(data.periodEnd) + '.');
-    drawMetricCards([
-      { label: 'Denúncias abertas', value: toNumber(data.reportMetrics && data.reportMetrics.open), detail: periodLabel },
-      { label: 'Total de denúncias', value: toNumber(data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
-      { label: 'Posts ocultados', value: toNumber(data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
-      { label: 'Posts deletados', value: toNumber(data.postStatusMetrics && data.postStatusMetrics.deleted), detail: periodLabel },
-      { label: 'Buscas registradas', value: toNumber(data.searchCount), detail: periodLabel },
-      { label: 'Votos', value: toNumber(data.votesCount), detail: periodLabel },
-      { label: 'Novos usuários', value: toNumber(data.usersNew), detail: periodLabel },
-      { label: 'Posts salvos', value: toNumber(data.savedPostsCount), detail: periodLabel }
-    ]);
-
-    drawSectionHeader('Pulso diário', 'Atividade consolidada por dia para posts, comentários, buscas, votos e ações administrativas.');
-    drawDailyChart(data.dailyMetrics || []);
-
-    drawWrappedList(
-      'Top módulos por demanda',
-      (data.moduleShareRows || []).map(function (row) {
-        var topTerms = Array.isArray(row.topTerms) && row.topTerms.length ? ' | Termos: ' + row.topTerms.join(', ') : '';
-        return (row.label || row.module || 'Módulo') + ' - ' + (row.share || 0) + '% - ' + toNumber(row.count) + ' buscas' + topTerms;
-      }),
-      'Sem dados suficientes para participação por módulo.'
-    );
-
-    drawWrappedList(
-      'Alertas operacionais',
-      (data.alerts || []).map(function (alert) {
-        return '[' + String((alert && alert.tone) || 'neutral').toUpperCase() + '] ' + (alert.title || 'Atualização') + ' - ' + (alert.body || '');
-      }),
-      'Nenhum alerta operacional no período selecionado.'
-    );
-
-    drawWrappedList(
-      'Tendências de busca',
-      (data.trends || []).slice(0, 12).map(function (item, index) {
-        var moduleKey = classifyTermToModule(item && item.term);
-        return (index + 1) + '. ' + String((item && item.term) || '') + ' - ' + toNumber(item && item.count) +
-          (moduleKey ? ' (' + getModuleLabel(moduleKey) + ')' : '');
-      }),
-      'Nenhuma busca registrada no período selecionado.'
-    );
-
-    drawSectionHeader('Audit log', 'Apêndice com os eventos administrativos carregados na tela para o período selecionado.');
-    var auditLines = (data.auditRows || []).map(function (row) {
-      return formatDateTimeBR(row && row.created_at) + ' | ' +
-        String((row && row.action) || '-') + ' | ' +
-        String((row && row.entity_type) || '-') + ' | ' +
-        getActorDisplay(row && row.actor_id);
-    });
-    if (!auditLines.length) {
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
-      doc.text('Nenhum evento encontrado.', margin, y);
-      y += 6;
-    } else {
-      auditLines.forEach(function (line) {
-        var lines = doc.splitTextToSize(line, usableWidth);
-        checkPage((lines.length * 3.6) + 1);
-        doc.setFontSize(8);
-        doc.setTextColor(71, 85, 105);
-        doc.text(lines, margin, y);
-        y += (lines.length * 3.6) + 1.5;
-      });
-    }
-
-    var totalPages = doc.internal.getNumberOfPages();
-    for (var pageIndex = 1; pageIndex <= totalPages; pageIndex += 1) {
-      doc.setPage(pageIndex);
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184);
-      doc.text('KinoCampus - Página ' + pageIndex + ' / ' + totalPages, pageWidth - margin, pageHeight - 8, { align: 'right' });
-    }
-
-    doc.save(buildExportFilename('pdf', data.periodDays));
-  }
-
-  // ── Habilita botões de exportação na toolbar ─────────────────────────────────
   function enableExport() {
-    const xlsxBtn = $('#admin-export-xlsx');
-    const pdfBtn  = $('#admin-export-pdf');
-    if (xlsxBtn) xlsxBtn.disabled = !_data;
-    if (pdfBtn) pdfBtn.disabled = !_data;
-    if (_exportBound) return;
-    _exportBound = true;
-
-    if (xlsxBtn) {
-      xlsxBtn.disabled = false;
-      xlsxBtn.addEventListener('click', async () => {
-        if (!_data) return;
-        xlsxBtn.disabled = true;
-        var origHtml = xlsxBtn.innerHTML;
-        xlsxBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
-        try { await exportXLSX(_data); }
-        catch (e) { console.error('[Admin export XLSX]', e); showError('Falha ao gerar XLSX. Verifique sua conexão e tente novamente.'); }
-        finally { xlsxBtn.innerHTML = origHtml; xlsxBtn.disabled = false; }
-      });
-    }
-
-    if (pdfBtn) {
-      pdfBtn.disabled = false;
-      pdfBtn.addEventListener('click', async () => {
-        if (!_data) return;
-        pdfBtn.disabled = true;
-        var origHtml = pdfBtn.innerHTML;
-        pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
-        try { await exportPDF(_data); }
-        catch (e) { console.error('[Admin export PDF]', e); showError('Falha ao gerar PDF. Verifique sua conexão e tente novamente.'); }
-        finally { pdfBtn.innerHTML = origHtml; pdfBtn.disabled = false; }
-      });
+    if (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.enableExport === 'function') {
+      window._KCAD.audit.enableExport(buildAuditDeps());
     }
   }
 
@@ -1614,61 +970,18 @@
 
   // ── Audit log: carregar mais ──────────────────────────────────────────────
   async function loadMoreAudit() {
-    var client = getClient();
-    if (!client) return;
-    var filterEl = $('#admin-audit-filter');
-    var actionFilter = filterEl ? filterEl.value : 'all';
-    var periodDays = getSelectedPeriodDays();
-    var since = getPeriodRange(periodDays).since;
-    var btn = $('#admin-audit-load-more');
-    setAuditLoadMoreState({ visible: true, disabled: true, label: 'Carregando...', preserveLabel: true });
-
-    try {
-      var rows = await loadAuditLog(client, AUDIT_PAGE_SIZE, _auditOffset, actionFilter, since);
-      // Resolve actor names before rendering
-      await loadActorsById(client, rows.map(r => r.actor_id));
-      _auditOffset += rows.length;
-      renderAuditRows(rows, true);
-      if (rows.length < AUDIT_PAGE_SIZE) {
-        setAuditLoadMoreState({ visible: true, disabled: true, label: 'Fim do histórico', preserveLabel: true });
-      }
-      // Append to _data for export
-      if (_data && _data.auditRows) {
-        _data.auditRows = _data.auditRows.concat(rows);
-      }
-    } catch (e) {
-      console.error('[Admin audit] loadMore:', e);
-      setAuditLoadMoreState({ visible: true, disabled: false });
-    } finally {
-      if (btn && btn.textContent === 'Carregando...') {
-        setAuditLoadMoreState({ visible: true, disabled: false });
-      }
+    if (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.loadMoreAudit === 'function') {
+      return window._KCAD.audit.loadMoreAudit(buildAuditDeps());
     }
+    return Promise.resolve();
   }
 
   // ── Audit log: filtrar por ação ───────────────────────────────────────────
   async function filterAudit() {
-    var client = getClient();
-    if (!client) return;
-    var filterEl = $('#admin-audit-filter');
-    var actionFilter = filterEl ? filterEl.value : 'all';
-    var periodDays = getSelectedPeriodDays();
-    var since = getPeriodRange(periodDays).since;
-    _auditOffset = 0;
-
-    try {
-      var rows = await loadAuditLog(client, AUDIT_PAGE_SIZE, 0, actionFilter, since);
-      // Resolve actor names before rendering
-      await loadActorsById(client, rows.map(r => r.actor_id));
-      _auditOffset = rows.length;
-      renderAuditRows(rows, false);
-      if (!rows.length) {
-        setAuditLoadMoreState({ visible: true, disabled: true, label: 'Sem mais resultados', preserveLabel: true });
-      }
-      if (_data) _data.auditRows = rows;
-    } catch (e) {
-      console.error('[Admin audit] filter:', e);
+    if (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.filterAudit === 'function') {
+      return window._KCAD.audit.filterAudit(buildAuditDeps());
     }
+    return Promise.resolve();
   }
 
   async function boot() {
