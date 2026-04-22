@@ -21,6 +21,8 @@
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var _actorsById = {};
   var DashboardUtils = window.KCAdminDashboardUtils || {};
+  window._KCAD = window._KCAD || {};
+  window._KCAD.metrics = window._KCAD.metrics || {};
   var SERIES_META = [
     { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group' },
     { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment' },
@@ -28,8 +30,6 @@
     { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up' },
     { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved' }
   ];
-  var SERIES_KEYS = SERIES_META.map(function (series) { return series.key; });
-
   function $(sel, root) { return (root || document).querySelector(sel); }
 
   function getClient() {
@@ -37,29 +37,26 @@
     return null;
   }
 
-  function isPermissionError(error) {
-    if (!error) return false;
-    const message = String(error.message || error.details || error.hint || '').toLowerCase();
-    return message.includes('permission') || message.includes('row-level security') || message.includes('rls');
-  }
-
-  function isFunctionMissing(error) {
-    if (!error) return false;
-    var code = String(error.code || '');
-    var message = String(error.message || error.details || error.hint || '').toLowerCase();
-    return code === '42883' || (message.includes('function') && message.includes('does not exist'));
-  }
-
-  function isFunctionAmbiguityError(error) {
-    if (!error) return false;
-    var code = String(error.code || '');
-    var msg = String(error.message || error.hint || '').toLowerCase();
-    return code === '42725' || msg.includes('is not unique') || msg.includes('ambiguous');
-  }
-
   function toNumber(value) {
     var parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function getSeriesKeys() {
+    if (Array.isArray(DashboardUtils.SERIES_KEYS) && DashboardUtils.SERIES_KEYS.length) {
+      return DashboardUtils.SERIES_KEYS;
+    }
+    return SERIES_META.map(function (series) { return series.key; });
+  }
+
+  function getModuleLabel(moduleKey) {
+    var labels = DashboardUtils.MODULE_LABELS || {};
+    return labels[moduleKey] || moduleKey || '';
+  }
+
+  function getModuleIcon(moduleKey) {
+    var icons = DashboardUtils.MODULE_ICONS || {};
+    return icons[moduleKey] || 'fas fa-tag';
   }
 
   function stabilizeHeaderActions() {
@@ -245,26 +242,11 @@
       + ' &nbsp;<span style="opacity:.6;font-size:.78rem;">- clique para atualizar</span>';
   }
 
-  async function checkAccess() {
-    const user = await window.KCAPI.getCurrentUser();
-    if (!user) return { ok: false, message: 'Faça login para acessar o dashboard administrativo.' };
-
-    const client = getClient();
-    if (!client) return { ok: false, message: 'Supabase client não disponível.' };
-
-    const { data: profile, error } = await client
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (error || !profile || !profile.is_admin) {
-      return { ok: false, message: 'Acesso restrito a moderadores/administradores.' };
-    }
-
-    return { ok: true };
+  function checkAccess() {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.checkAccess === 'function')
+      ? window._KCAD.metrics.checkAccess()
+      : Promise.resolve({ ok: false, message: 'Modulo de metrics do dashboard indisponivel.' });
   }
-
   function metricCard(icon, label, value, opts) {
     opts = opts || {};
     var href = opts.href || null;
@@ -374,138 +356,36 @@
 
   // ── Normalização e agrupamento de termos de busca ─────────────────────────
 
-  // Mapa de sinônimos: normaliza variações comuns para o termo canônico
-  var SYNONYMS = {
-    'celulares':    'celular',
-    'smartphones':  'smartphone',
-    'laptops':      'laptop',
-    'notebooks':    'notebook',
-    'quartos':      'quarto',
-    'vagas':        'vaga',
-    'livros':       'livro',
-    'caronas':      'carona',
-    'eventos':      'evento',
-    'perdidos':     'perdido',
-    'achados':      'achado',
-    'chaves':       'chave',
-    'iphones':      'iphone',
-    'bolsas':       'bolsa',
-    'casas':        'casa',
-    'moveis':       'movel',
-    'bicicletas':   'bicicleta',
-    'fones':        'fone',
-    'tablets':      'tablet',
-    'monitores':    'monitor',
-    'cadeiras':     'cadeira',
-    'apostilas':    'apostila',
-    'calculos':     'calculo',
-    'documentos':   'documento',
-    'oculos':       'oculos',
-    'mochilas':     'mochila',
-    'estagios':     'estagio',
-    'republicanas': 'republica',
-    'republicas':   'republica',
-    'kitnets':      'kitnet',
-    'apartamentos': 'apartamento',
-    'emprego':      'vaga',
-    'empregos':     'vaga',
-  };
-
-  function canonicalizeTerm(term) {
-    // 1. Lowercase + remove acentos
-    var norm = String(term || '').toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    if (!norm) return '';
-    // 2. Aplica mapa de sinônimos
-    if (SYNONYMS[norm]) return SYNONYMS[norm];
-    // 3. Stemming básico de plural: remove 's' final se palavra tem 5+ letras
-    if (norm.length >= 5 && norm.endsWith('s') && !norm.endsWith('ss')) {
-      var stem = norm.slice(0, -1);
-      if (SYNONYMS[stem]) return SYNONYMS[stem];
-      return stem;
-    }
-    return norm;
-  }
-
-  // ── Classificação de termos de busca por módulo ────────────────────────────
-  var MODULE_KEYWORDS = {
-    'compra-venda':     ['celular','smartphone','notebook','laptop','computador','roupa','movel','eletronico','venda','compro','iphone','tablet','monitor','cadeira','bicicleta','bike','fone','headphone','airpod','jbl','tv','geladeira','fogao','mesa','cama','colchao','camera','drone','video','game','calcado','tenis','maquina','impressora'],
-    'moradia':          ['casa','quarto','republica','kitnet','apartamento','aluguel','moradia','dividir','alugar','imovel','vaga','hospedagem','room','flat','pensao','villaggio','morar','condominio','studio','andar'],
-    'caronas':          ['carona','ida','volta','transporte','passagem','onibus','conducao','van','moto','buser','uber','99','indriver','carpool','boleia'],
-    'eventos':          ['evento','palestra','workshop','semana','feira','festival','show','apresentacao','cerimonia','congresso','simposio','seminario','aula','minicurso','encontro','reuniao','hackathon','exposicao','teatro'],
-    'oportunidades':    ['estagio','emprego','vaga','monitoria','bolsa','freelancer','trainee','trabalho','oportunidade','job','contratando','recrutamento','residencia','pesquisa','iniciacao','seletivo','curriculo','clf'],
-    'achados-perdidos': ['perdido','achado','encontrei','perdi','carteira','chave','oculos','mochila','documento','identidade','rg','cpf','passaporte','cartao','anel','relogio','airpod','fone','chaves','perda','achou','celular perdido'],
-    'livros':           ['livro','apostila','calculo','exatas','didatico','material','caderno','atlas','manual','engenharia','quimica','fisica','biologia','historia','matematica','literatura','pdf','estudo','prova','gabarito'],
-  };
-
-  // Pesos de correspondência: exata = 10, containment = 3, KC_CONSTANTS = 5
-  var MODULE_ICONS = {
-    'compra-venda':     'fas fa-layer-group',
-    'moradia':          'fas fa-home',
-    'caronas':          'fas fa-car',
-    'eventos':          'fas fa-calendar-alt',
-    'oportunidades':    'fas fa-briefcase',
-    'achados-perdidos': 'fas fa-search',
-    'livros':           'fas fa-book',
-  };
-
-  var MODULE_LABELS = {
-    'compra-venda':     'Compra e Venda',
-    'moradia':          'Moradia',
-    'caronas':          'Caronas',
-    'eventos':          'Eventos',
-    'oportunidades':    'Oportunidades',
-    'achados-perdidos': 'Achados/Perdidos',
-    'livros':           'Livros',
-  };
-
-  function normalizeForClassify(str) {
-    return String(str || '').toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-  }
-
+  // Delegação canônica para o submódulo de metrics/shared.
   function classifyTermToModule(term) {
-    var norm = normalizeForClassify(canonicalizeTerm(term));
-    if (!norm) return null;
-    var bestModule = null;
-    var bestScore = 0;
-    var modules = Object.keys(MODULE_KEYWORDS);
-    for (var i = 0; i < modules.length; i++) {
-      var mod = modules[i];
-      var keywords = MODULE_KEYWORDS[mod];
-      var score = 0;
-      for (var j = 0; j < keywords.length; j++) {
-        var kw = normalizeForClassify(keywords[j]);
-        if (norm === kw) { score += 10; break; }           // exact match — highest
-        if (norm.indexOf(kw) !== -1) { score += 3; }       // term contains keyword
-        else if (kw.indexOf(norm) !== -1) { score += 2; }  // keyword contains term
-      }
-      // Also check KC_CONSTANTS category labels if available
-      if (score === 0 && window.KC_CONSTANTS && window.KC_CONSTANTS.CATEGORY_LABELS) {
-        var cats = window.KC_CONSTANTS.CATEGORY_LABELS[mod];
-        if (cats) {
-          var catKeys = Object.keys(cats);
-          for (var k = 0; k < catKeys.length; k++) {
-            var ck = normalizeForClassify(catKeys[k]);
-            if (norm === ck || norm.indexOf(ck) !== -1 || ck.indexOf(norm) !== -1) { score += 5; break; }
-          }
-        }
-      }
-      if (score > bestScore) { bestScore = score; bestModule = mod; }
-    }
-    return bestScore > 0 ? bestModule : null;
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.classifyTermToModule === 'function')
+      ? window._KCAD.metrics.classifyTermToModule(term)
+      : (DashboardUtils.classifyTermToModule ? DashboardUtils.classifyTermToModule(term, window.KC_CONSTANTS || {}) : null);
   }
 
   function aggregateTrendsByModule(trends) {
+    if (DashboardUtils.aggregateTrendsByModule) {
+      return DashboardUtils.aggregateTrendsByModule(trends, window.KC_CONSTANTS || {});
+    }
+
     var byModule = {};
-    (trends || []).forEach(function(t) {
-      var mod = classifyTermToModule(t.term);
-      if (!mod) return;
-      if (!byModule[mod]) byModule[mod] = { module: mod, count: 0, terms: [] };
-      byModule[mod].count += Number(t.count) || 1;
-      byModule[mod].terms.push(t.term);
+    (trends || []).forEach(function (trend) {
+      var moduleKey = classifyTermToModule(trend && trend.term);
+      if (!moduleKey) return;
+      if (!byModule[moduleKey]) {
+        byModule[moduleKey] = {
+          module: moduleKey,
+          label: getModuleLabel(moduleKey),
+          icon: getModuleIcon(moduleKey),
+          count: 0,
+          terms: []
+        };
+      }
+      byModule[moduleKey].count += Number(trend && trend.count) || 1;
+      if (trend && trend.term) byModule[moduleKey].terms.push(trend.term);
     });
-    return Object.values(byModule).sort(function(a, b) { return b.count - a.count; });
+
+    return Object.values(byModule).sort(function (a, b) { return b.count - a.count; });
   }
 
   function renderSearchTrendsByModule(trends, periodDays) {
@@ -516,214 +396,133 @@
     container.style.display = 'flex';
     var periodLabel = getPeriodLabel(periodDays || 30);
     var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells"></i> Por módulo (' + escHtmlAdmin(periodLabel) + ')</div>';
-    container.innerHTML = titleHtml + moduleData.map(function(m) {
-      var icon = MODULE_ICONS[m.module] || 'fas fa-tag';
-      var label = MODULE_LABELS[m.module] || m.module;
-      var topTerms = m.terms.slice(0, 3).map(function(t) { return escHtmlAdmin(t); }).join(', ');
+    container.innerHTML = titleHtml + moduleData.map(function (moduleRow) {
+      var topTerms = moduleRow.terms.slice(0, 3).map(function (term) { return escHtmlAdmin(term); }).join(', ');
       return '<span class="kc-trend-module-badge" title="' + escHtmlAdmin(topTerms) + '">'
-        + '<i class="' + icon + '"></i> ' + escHtmlAdmin(label)
-        + '<span class="kc-badge-count">' + m.count + '</span>'
+        + '<i class="' + escHtmlAdmin(moduleRow.icon || getModuleIcon(moduleRow.module)) + '"></i> ' + escHtmlAdmin(moduleRow.label || getModuleLabel(moduleRow.module))
+        + '<span class="kc-badge-count">' + (Number(moduleRow.count) || 0) + '</span>'
         + '</span>';
     }).join('');
   }
 
-  // ── Moderação: Denúncias ────────────────────────────────────────────────────
-  async function loadReportMetrics(client, since) {
-    try {
-      const rpc = await client.rpc('kc_admin_list_reports', { p_status: 'all', p_reason: 'all', p_limit: 2000 });
-      if (!rpc.error && Array.isArray(rpc.data)) {
-        var rows = rpc.data;
-        // Filter by period
-        var sinceMs = since ? new Date(since).getTime() : 0;
-        if (sinceMs) {
-          rows = rows.filter(function(r) {
-            return r.created_at && new Date(r.created_at).getTime() >= sinceMs;
-          });
-        }
-        const total = rows.length;
-        const open  = rows.filter(r => String(r.status || '').toLowerCase() === 'open').length;
-        return { open, total };
-      }
-    } catch (_) {}
-
-    let open = 0, total = 0;
-    try {
-      var qOpen  = client.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'open');
-      var qTotal = client.from('reports').select('id', { count: 'exact', head: true });
-      if (since) {
-        qOpen  = qOpen.gte('created_at', since);
-        qTotal = qTotal.gte('created_at', since);
-      }
-      const [openRes, totalRes] = await Promise.all([qOpen, qTotal]);
-      open  = openRes.count  || 0;
-      total = totalRes.count || 0;
-    } catch (_) {}
-    return { open, total };
+  function loadReportMetrics(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadReportMetrics === 'function')
+      ? window._KCAD.metrics.loadReportMetrics(client, since)
+      : Promise.resolve({ open: 0, total: 0 });
   }
 
-  // ── Moderação: Posts ocultos/deletados ──────────────────────────────────────
-  async function loadPostStatusMetrics(client, since) {
-    let hidden = 0, deleted = 0;
-    try {
-      var qHidden  = client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'hidden');
-      var qDeleted = client.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'deleted');
-      // Filter by when the status was last updated (within period)
-      if (since) {
-        qHidden  = qHidden.gte('updated_at', since);
-        qDeleted = qDeleted.gte('updated_at', since);
-      }
-      const [hiddenRes, deletedRes] = await Promise.all([qHidden, qDeleted]);
-
-      if ((hiddenRes.error || deletedRes.error) &&
-          (isPermissionError(hiddenRes.error) || isPermissionError(deletedRes.error))) {
-        var fbQuery = client.from('posts').select('status, updated_at').in('status', ['hidden', 'deleted']).limit(2000);
-        if (since) fbQuery = fbQuery.gte('updated_at', since);
-        const fallback = await fbQuery;
-        if (!fallback.error && Array.isArray(fallback.data)) {
-          hidden  = fallback.data.filter(r => r.status === 'hidden').length;
-          deleted = fallback.data.filter(r => r.status === 'deleted').length;
-          return { hidden, deleted };
-        }
-      }
-
-      hidden  = hiddenRes.count  || 0;
-      deleted = deletedRes.count || 0;
-    } catch (_) {}
-    return { hidden, deleted };
+  function loadPostStatusMetrics(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadPostStatusMetrics === 'function')
+      ? window._KCAD.metrics.loadPostStatusMetrics(client, since)
+      : Promise.resolve({ hidden: 0, deleted: 0 });
   }
 
-  // ── Atividade: Posts publicados (criados no período) ───────────────────────
-  async function loadPostsCreated(client, since) {
-    try {
-      const res = await client.from('posts')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', since);
-      if (!res.error) return res.count || 0;
-      const fb = await client.from('posts').select('id').gte('created_at', since).limit(2000);
-      if (!fb.error && Array.isArray(fb.data)) return fb.data.length;
-    } catch (_) {}
-    return 0;
+  function loadPostsCreated(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadPostsCreated === 'function')
+      ? window._KCAD.metrics.loadPostsCreated(client, since)
+      : Promise.resolve(0);
   }
 
-  // ── Atividade: Posts editados no período ───────────────────────────────────
-  async function loadPostsEdited(client, since) {
-    try {
-      const res = await client.from('posts')
-        .select('id', { count: 'exact', head: true })
-        .gte('updated_at', since)
-        .lt('created_at', since);
-      if (!res.error) return res.count || 0;
-      const fb = await client.from('posts')
-        .select('id')
-        .gte('updated_at', since)
-        .lt('created_at', since)
-        .limit(2000);
-      if (!fb.error && Array.isArray(fb.data)) return fb.data.length;
-    } catch (_) {}
-    return 0;
+  function loadPostsEdited(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadPostsEdited === 'function')
+      ? window._KCAD.metrics.loadPostsEdited(client, since)
+      : Promise.resolve(0);
   }
 
-  // ── Atividade: Comentários no período ──────────────────────────────────────
-  async function loadCommentsCount(client, since) {
-    try {
-      const res = await client.from('comments')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', since);
-      if (!res.error) return res.count || 0;
-      const fb = await client.from('comments').select('id').gte('created_at', since).limit(5000);
-      if (!fb.error && Array.isArray(fb.data)) return fb.data.length;
-    } catch (_) {}
-    return 0;
+  function loadCommentsCount(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadCommentsCount === 'function')
+      ? window._KCAD.metrics.loadCommentsCount(client, since)
+      : Promise.resolve(0);
   }
 
-  // ── Atividade: Buscas no período ──────────────────────────────────────────
-  async function loadSearchCount(client, since) {
-    try {
-      const res = await client.from('search_queries')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', since);
-      if (!res.error) return res.count || 0;
-      // Fallback: fetch rows and count
-      const fb = await client.from('search_queries').select('created_at').gte('created_at', since).limit(5000);
-      if (!fb.error && Array.isArray(fb.data)) return fb.data.length;
-    } catch (_) {}
-    return 0;
+  function loadSearchCount(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadSearchCount === 'function')
+      ? window._KCAD.metrics.loadSearchCount(client, since)
+      : Promise.resolve(0);
   }
 
-  // ── Atividade: Total de posts ──────────────────────────────────────────────
-  async function loadPostsTotal(client) {
-    try {
-      const res = await client.from('posts')
-        .select('id', { count: 'exact', head: true });
-      if (!res.error) return res.count || 0;
-    } catch (_) {}
-    return 0;
+  function loadPostsTotal(client) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadPostsTotal === 'function')
+      ? window._KCAD.metrics.loadPostsTotal(client)
+      : Promise.resolve(0);
   }
 
-  // ── Comunidade: Total de usuários ──────────────────────────────────────────
-  async function loadUsersTotal(client) {
-    try {
-      const res = await client.from('profiles')
-        .select('id', { count: 'exact', head: true });
-      if (!res.error) return res.count || 0;
-    } catch (_) {}
-    return 0;
+  function loadUsersTotal(client) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadUsersTotal === 'function')
+      ? window._KCAD.metrics.loadUsersTotal(client)
+      : Promise.resolve(0);
   }
 
-  // ── Comunidade: Novos usuários no período ─────────────────────────────────
-  async function loadUsersNew(client, since) {
-    try {
-      const res = await client.from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', since);
-      if (!res.error) return res.count || 0;
-    } catch (_) {}
-    return 0;
+  function loadUsersNew(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadUsersNew === 'function')
+      ? window._KCAD.metrics.loadUsersNew(client, since)
+      : Promise.resolve(0);
   }
 
-  // ── Comunidade: Votos no período ──────────────────────────────────────────
-  async function loadVotesCount(client, since) {
-    try {
-      const res = await client.from('post_votes')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', since);
-      if (!res.error) return res.count || 0;
-    } catch (_) {}
-    return 0;
+  function loadVotesCount(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadVotesCount === 'function')
+      ? window._KCAD.metrics.loadVotesCount(client, since)
+      : Promise.resolve(0);
   }
 
-  // ── Comunidade: Posts salvos no período ───────────────────────────────────
-  async function loadSavedPostsCount(client, since) {
-    try {
-      var q = client.from('saved_posts').select('id', { count: 'exact', head: true });
-      if (since) q = q.gte('created_at', since);
-      const res = await q;
-      if (!res.error) return res.count || 0;
-    } catch (_) {}
-    return 0;
+  function loadSavedPostsCount(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadSavedPostsCount === 'function')
+      ? window._KCAD.metrics.loadSavedPostsCount(client, since)
+      : Promise.resolve(0);
   }
 
-  // ── Resolução de atores (actor_id → nome) ─────────────────────────────────
+  function loadSearchTrendsData(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadSearchTrendsData === 'function')
+      ? window._KCAD.metrics.loadSearchTrendsData(client, since)
+      : Promise.resolve([]);
+  }
+
+  function loadDailyMetrics(client, since, signal) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadDailyMetrics === 'function')
+      ? window._KCAD.metrics.loadDailyMetrics(client, since, signal)
+      : Promise.resolve([]);
+  }
+
+  function isPermissionError(error) {
+    if (!error) return false;
+    var message = String(error.message || error.details || error.hint || '').toLowerCase();
+    return message.includes('permission') || message.includes('row-level security') || message.includes('rls');
+  }
+
+  function isFunctionMissing(error) {
+    if (!error) return false;
+    var code = String(error.code || '');
+    var message = String(error.message || error.details || error.hint || '').toLowerCase();
+    return code === '42883' || (message.includes('function') && message.includes('does not exist'));
+  }
+
+  function isFunctionAmbiguityError(error) {
+    if (!error) return false;
+    var code = String(error.code || '');
+    var message = String(error.message || error.hint || '').toLowerCase();
+    return code === '42725' || message.includes('is not unique') || message.includes('ambiguous');
+  }
+
   async function loadActorsById(client, actorIds) {
     var ids = [];
-    (actorIds || []).forEach(function(id) {
-      var s = String(id || '');
-      if (UUID_RE.test(s) && !_actorsById[s]) ids.push(s);
+    (actorIds || []).forEach(function (id) {
+      var value = String(id || '');
+      if (UUID_RE.test(value) && !_actorsById[value]) ids.push(value);
     });
     if (!ids.length) return;
     try {
-      var res = await client.from('profiles')
+      var result = await client.from('profiles')
         .select('id, display_name, full_name')
         .in('id', ids);
-      if (!res.error && Array.isArray(res.data)) {
-        res.data.forEach(function(row) {
+      if (!result.error && Array.isArray(result.data)) {
+        result.data.forEach(function (row) {
           _actorsById[row.id] = {
             display_name: row.display_name || '',
-            full_name: row.full_name || '',
+            full_name: row.full_name || ''
           };
         });
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function getActorDisplay(actorId) {
@@ -733,11 +532,9 @@
       var name = actor.display_name || actor.full_name;
       if (name) return name;
     }
-    // Fallback: show truncated UUID
     return String(actorId).slice(0, 8) + '...';
   }
 
-  // ── Audit log ─────────────────────────────────────────────────────────────
   async function loadAuditLog(client, limit, offset, actionFilter, since) {
     limit = limit || AUDIT_PAGE_SIZE;
     offset = offset || 0;
@@ -757,14 +554,13 @@
         .select('created_at, action, entity_type, actor_id')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
-
       if (actionFilter && actionFilter !== 'all') query = query.eq('action', actionFilter);
       if (since) query = query.gte('created_at', since);
 
-      var res = await query;
-      if (!res.error) return Array.isArray(res.data) ? res.data : [];
-      if (!isPermissionError(res.error)) {
-        console.warn('[Admin audit] Direct query failed:', res.error.message || res.error);
+      var result = await query;
+      if (!result.error) return Array.isArray(result.data) ? result.data : [];
+      if (!isPermissionError(result.error)) {
+        console.warn('[Admin audit] Direct query failed:', result.error.message || result.error);
       }
     } catch (error) {
       console.warn('[Admin audit] Direct query exception:', error && error.message ? error.message : error);
@@ -807,139 +603,6 @@
     return [];
   }
 
-  // Detecta se o erro é ambiguidade de sobrecarga de função (42725)
-  async function loadAuditEventRows(client, since) {
-    try {
-      var query = client.from('audit_log')
-        .select('created_at')
-        .order('created_at', { ascending: false })
-        .limit(1500);
-      if (since) query = query.gte('created_at', since);
-      var res = await query;
-      if (!res.error && Array.isArray(res.data)) return res.data;
-    } catch (_) {}
-
-    try {
-      var rpc = await client.rpc('kc_admin_list_audit_logs', {
-        p_entity_type: 'all',
-        p_action: 'all',
-        p_actor_query: null,
-        p_limit: 1500,
-        p_offset: 0,
-        p_since: since || null
-      });
-      if (!rpc.error && Array.isArray(rpc.data)) {
-        return rpc.data.map(function (row) { return { created_at: row.created_at }; });
-      }
-    } catch (_) {}
-
-    try {
-      var legacy = await client.rpc('kc_admin_list_audit_logs', {
-        p_entity_type: 'all',
-        p_action: 'all',
-        p_actor_query: null,
-        p_limit: 1500
-      });
-      if (!legacy.error && Array.isArray(legacy.data)) {
-        var sinceMs = since ? new Date(since).getTime() : 0;
-        return legacy.data.filter(function (row) {
-          return !sinceMs || (row.created_at && new Date(row.created_at).getTime() >= sinceMs);
-        }).map(function (row) {
-          return { created_at: row.created_at };
-        });
-      }
-    } catch (_) {}
-
-    return [];
-  }
-
-  // ── Tendências de busca (com timeout, fallback robusto e filtro de período) ──
-  async function loadSearchTrendsData(client, since) {
-    let trends = [];
-    try {
-      // Tentativa 1: RPC dedicado com timeout de 8s e filtro de período
-      var rpcArgs = { p_limit: 20 };
-      if (since) rpcArgs.p_since = since;
-      var rpcPromise = client.rpc('kc_admin_search_trends', rpcArgs);
-      var timeoutPromise = new Promise(function(_, reject) {
-        setTimeout(function() { reject(new Error('timeout')); }, 8000);
-      });
-      var res;
-      try {
-        res = await Promise.race([rpcPromise, timeoutPromise]);
-      } catch (rpcErr) {
-        console.warn('[Admin trends] RPC falhou ou timeout:', rpcErr && rpcErr.message);
-        res = { error: rpcErr };
-      }
-
-      if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
-        // RPC retorna termos já agrupados — aplica canonicalização e re-agrupa
-        trends = canonicalizeTrendsList(res.data);
-      } else {
-        // Tentativa 2: query direta com filtro de período
-        if (res.error) {
-          var errMsg = res.error.message || String(res.error);
-          // Ambiguidade de sobrecarga (42725) — avisa para aplicar migration v8.3.0.3
-          if (isFunctionAmbiguityError(res.error)) {
-            console.warn('[Admin trends] Ambiguidade de função (42725) — aplique a migration v8.3.0.3 no Supabase. Usando fallback direto.');
-          } else {
-            console.warn('[Admin trends] RPC error:', errMsg);
-          }
-        }
-        var rawQuery = client.from('search_queries')
-          .select('term')
-          .order('created_at', { ascending: false })
-          .limit(1000);
-        if (since) rawQuery = rawQuery.gte('created_at', since);
-
-        var raw = await rawQuery;
-
-        if (!raw.error && Array.isArray(raw.data)) {
-          trends = buildTrendsFromRows(raw.data);
-        } else if (raw.error) {
-          // Tentativa 3: query sem ordenação nem filtro (caso RLS bloqueie)
-          console.warn('[Admin trends] Fallback direto falhou:', raw.error.message || raw.error);
-          var raw2 = await client.from('search_queries').select('term').limit(500);
-          if (!raw2.error && Array.isArray(raw2.data)) {
-            trends = buildTrendsFromRows(raw2.data);
-          } else if (raw2.error) {
-            console.warn('[Admin trends] Todas as tentativas falharam:', raw2.error.message || raw2.error);
-          }
-        }
-      }
-    } catch (e) {
-      console.error('[Admin trends] Erro inesperado:', e);
-      trends = [];
-    }
-    return trends;
-  }
-
-  // Agrupa lista de rows {term} em [{term, count}] com canonicalização
-  function buildTrendsFromRows(rows) {
-    var freq = {};
-    rows.forEach(function(r) {
-      var canonical = canonicalizeTerm(r.term);
-      if (canonical) freq[canonical] = (freq[canonical] || 0) + 1;
-    });
-    return Object.entries(freq)
-      .sort(function(a, b) { return b[1] - a[1]; })
-      .slice(0, 10)
-      .map(function(e) { return { term: e[0], count: e[1] }; });
-  }
-
-  // Re-agrupa lista de {term, count} do RPC após canonicalização (merge plurais etc.)
-  function canonicalizeTrendsList(list) {
-    var freq = {};
-    list.forEach(function(item) {
-      var canonical = canonicalizeTerm(item.term);
-      if (canonical) freq[canonical] = (freq[canonical] || 0) + (Number(item.count) || 1);
-    });
-    return Object.entries(freq)
-      .sort(function(a, b) { return b[1] - a[1]; })
-      .slice(0, 10)
-      .map(function(e) { return { term: e[0], count: e[1] }; });
-  }
-
   function renderSearchTrends(trends, periodDays) {
     const trendsList = $('#admin-trends-list');
     if (!trendsList) return;
@@ -949,78 +612,22 @@
       if (modContainer) modContainer.style.display = 'none';
       return;
     }
-    const max = Math.max.apply(null, trends.map(function(t) { return Number(t.count) || 1; }).concat([1]));
-    trendsList.innerHTML = trends.map(function(t, i) {
-      const pct = Math.round(((Number(t.count) || 0) / max) * 100);
-      var modKey = classifyTermToModule(t.term);
+    const max = Math.max.apply(null, trends.map(function (trend) { return Number(trend.count) || 1; }).concat([1]));
+    trendsList.innerHTML = trends.map(function (trend, index) {
+      const pct = Math.round(((Number(trend.count) || 0) / max) * 100);
+      var modKey = classifyTermToModule(trend.term);
       var modBadge = modKey
-        ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtmlAdmin(MODULE_LABELS[modKey] || modKey) + '"><i class="' + (MODULE_ICONS[modKey] || 'fas fa-tag') + '"></i></span>'
+        ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtmlAdmin(getModuleLabel(modKey)) + '"><i class="' + getModuleIcon(modKey) + '"></i></span>'
         : '';
       return '<li class="kc-trend-item">'
-        + '<span class="kc-trend-rank">' + (i + 1) + '</span>'
-        + '<span class="kc-trend-term">' + escHtmlAdmin(String(t.term || '')) + modBadge + '</span>'
+        + '<span class="kc-trend-rank">' + (index + 1) + '</span>'
+        + '<span class="kc-trend-term">' + escHtmlAdmin(String(trend.term || '')) + modBadge + '</span>'
         + '<div class="kc-trend-bar-wrap"><div class="kc-trend-bar" style="width:' + pct + '%"></div></div>'
-        + '<span class="kc-trend-count">' + (Number(t.count) || 0) + '</span>'
+        + '<span class="kc-trend-count">' + (Number(trend.count) || 0) + '</span>'
         + '</li>';
     }).join('');
-    // Renderiza classificação por módulo com período dinâmico
     renderSearchTrendsByModule(trends, periodDays);
   }
-
-  async function queryCreatedAtRows(client, tableName, since, limit) {
-    try {
-      var query = client.from(tableName)
-        .select('created_at')
-        .order('created_at', { ascending: false })
-        .limit(limit || 1500);
-      if (since) query = query.gte('created_at', since);
-      var res = await query;
-      if (!res.error && Array.isArray(res.data)) return res.data;
-    } catch (_) {}
-    return [];
-  }
-
-  async function loadDailyMetrics(client, since, signal) {
-    var until = new Date().toISOString();
-    try {
-      var rpc = await client.rpc('kc_admin_dashboard_daily_metrics', {
-        p_since: since || null
-      });
-      if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length) {
-        if (DashboardUtils.buildDailyMetricsSeries) {
-          return DashboardUtils.buildDailyMetricsSeries(rpc.data, since, until);
-        }
-        return rpc.data;
-      }
-      if (rpc.error && !(isFunctionMissing(rpc.error) || isFunctionAmbiguityError(rpc.error))) {
-        console.warn('[Admin daily metrics] RPC failed:', rpc.error.message || rpc.error);
-      }
-    } catch (error) {
-      console.warn('[Admin daily metrics] RPC exception:', error && error.message ? error.message : error);
-    }
-
-    var eventSets = await Promise.all([
-      queryCreatedAtRows(client, 'posts', since, 1500),
-      queryCreatedAtRows(client, 'comments', since, 1500),
-      queryCreatedAtRows(client, 'search_queries', since, 1500),
-      queryCreatedAtRows(client, 'post_votes', since, 1500),
-      loadAuditEventRows(client, since)
-    ]);
-    throwIfAborted(signal);
-
-    if (DashboardUtils.buildDailyMetricsFromEventSets) {
-      return DashboardUtils.buildDailyMetricsFromEventSets({
-        posts: eventSets[0],
-        comments: eventSets[1],
-        searches: eventSets[2],
-        votes: eventSets[3],
-        admin_actions: eventSets[4]
-      }, since, until);
-    }
-
-    return [];
-  }
-
   function renderDailyActivitySummary(summary) {
     var container = $('#admin-daily-activity-summary');
     if (!container) return;
@@ -1085,7 +692,7 @@
     var maxValue = 0;
 
     series.forEach(function (row) {
-      SERIES_KEYS.forEach(function (key) {
+      getSeriesKeys().forEach(function (key) {
         maxValue = Math.max(maxValue, toNumber(row[key]));
       });
     });
@@ -1414,7 +1021,7 @@
           index + 1,
           item && item.term ? item.term : '',
           toNumber(item && item.count),
-          moduleKey ? (MODULE_LABELS[moduleKey] || moduleKey) : ''
+          moduleKey ? getModuleLabel(moduleKey) : ''
         ];
       })
     ];
@@ -1602,7 +1209,7 @@
       var maxValue = 0;
 
       series.forEach(function (row) {
-        SERIES_KEYS.forEach(function (key) {
+        getSeriesKeys().forEach(function (key) {
           maxValue = Math.max(maxValue, toNumber(row[key]));
         });
       });
@@ -1732,7 +1339,7 @@
       (data.trends || []).slice(0, 12).map(function (item, index) {
         var moduleKey = classifyTermToModule(item && item.term);
         return (index + 1) + '. ' + String((item && item.term) || '') + ' - ' + toNumber(item && item.count) +
-          (moduleKey ? ' (' + (MODULE_LABELS[moduleKey] || moduleKey) + ')' : '');
+          (moduleKey ? ' (' + getModuleLabel(moduleKey) + ')' : '');
       }),
       'Nenhuma busca registrada no período selecionado.'
     );
