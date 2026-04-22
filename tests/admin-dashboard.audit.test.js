@@ -372,11 +372,12 @@ describe('admin-dashboard.controller.js - contrato do split audit', () => {
 });
 
 describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
-  test('carrega shared -> metrics -> audit -> kc-ranking -> controller', () => {
+  test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> controller', () => {
     const orderedScripts = [
       '<script defer src="../assets/js/controllers/admin-dashboard.shared.js"></script>',
       '<script defer src="../assets/js/controllers/admin-dashboard.metrics.js"></script>',
       '<script defer src="../assets/js/controllers/admin-dashboard.audit.js"></script>',
+      '<script defer src="../assets/js/controllers/admin-dashboard.charts.js"></script>',
       '<script defer src="../assets/js/kc-ranking.js"></script>',
       '<script defer src="../assets/js/controllers/admin-dashboard.controller.js?v=8.6.0"></script>'
     ];

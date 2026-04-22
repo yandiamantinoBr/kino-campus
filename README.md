@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.3.2` concluída com o segundo split funcional de `assets/js/controllers/admin-dashboard.controller.js`: novo `assets/js/controllers/admin-dashboard.audit.js` (`1045L`, `40 465` bytes, 9 exports em `window._KCAD.audit`) extraindo audit log, paginação/filtro e exportação XLSX/PDF; `admin-dashboard.controller.js` reduzido de `1859L` para `1172L` (`-687L`, `48 589` bytes); `admin/index.html` atualizado para a ordem `shared → metrics → audit → kc-ranking → controller`; nova suíte direta do dashboard criada em `tests/admin-dashboard.audit.test.js` (18 testes), e `tests/admin-dashboard.metrics.test.js` foi realinhado à nova cadeia; baseline expandida para **108/108 suites · 2248/2248 testes**; próxima iteração: `v12.3.3` (split admin-dashboard domínio charts/renderers).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.3.3` concluída com o terceiro split funcional de `assets/js/controllers/admin-dashboard.controller.js`: novo `assets/js/controllers/admin-dashboard.charts.js` (`552L`, `27 253` bytes, 10 exports em `window._KCAD.charts`) cobrindo tendências, resumo/pulso diário, modal expandido do gráfico, tabela de share por módulo, alertas operacionais e ranking admin; `admin-dashboard.controller.js` reduzido de `1172L` para `738L` (`-434L`, `32 706` bytes); `admin/index.html` atualizado para a ordem `shared → metrics → audit → charts → kc-ranking → controller`; nova suíte direta `tests/admin-dashboard.charts.test.js` (22 testes), com realinhamento das suítes `tests/admin-dashboard.metrics.test.js` e `tests/admin-dashboard.audit.test.js`; baseline expandida para **109/109 suites · 2270/2270 testes**; próxima iteração: `v12.3.4` (gate formal do dashboard admin <900L).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 108 suites de regressão e contrato |
+| Testes | Jest: 109 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.3.3 | **split `window._KCAD.charts`**: novo `assets/js/controllers/admin-dashboard.charts.js` com IIFE + 10 exports cobrindo tendências de busca, resumo diário, renderização SVG do pulso, modal expandido do gráfico, tabela de share por módulo, alertas operacionais e ranking admin (`aggregateTrendsByModule`, `renderSearchTrends`, `renderDailyActivitySummary`, `bindDailyActivityChartModal`, `renderDailyActivityChart`, `renderModuleShareTable`, `renderOperationalAlerts`, `mapPeriodToRanking`, `loadAdminRanking`, `bindAdminRanking`); `admin-dashboard.controller.js` reduzido de `1172L` → `738L` (−434L) com `buildChartsDeps()` e wrappers finos para `_KCAD.charts`; `admin/index.html` atualizado para a ordem `shared → metrics → audit → charts → kc-ranking → controller`; nova suíte direta `tests/admin-dashboard.charts.test.js` (22 testes: contrato estático, script order, wrappers, tendências, chart modal e ranking), além do ajuste das suítes `tests/admin-dashboard.metrics.test.js` e `tests/admin-dashboard.audit.test.js`; baseline expandida para **109/109 suites · 2270/2270 testes** | — |
 | v12.3.2 | **split `window._KCAD.audit`**: novo `assets/js/controllers/admin-dashboard.audit.js` com IIFE + 9 exports cobrindo audit log, cache/lookup de atores, paginação incremental, filtro por ação, carregamento sob demanda das libs de exportação e geração de XLSX/PDF (`loadActorsById`, `getActorDisplay`, `loadAuditLog`, `renderAuditRows`, `loadMoreAudit`, `filterAudit`, `enableExport`, `exportXLSX`, `exportPDF`); `admin-dashboard.controller.js` reduzido de `1859L` → `1172L` (−687L) com builders explícitos de dependência/estado e wrappers finos para `_KCAD.audit`; `admin/index.html` atualizado para a ordem `shared → metrics → audit → kc-ranking → controller`; nova suíte direta `tests/admin-dashboard.audit.test.js` (18 testes: contrato estático, script order, audit log, exportação XLSX/PDF e bindings), além do ajuste da suíte `tests/admin-dashboard.metrics.test.js`; baseline expandida para **108/108 suites · 2248/2248 testes** | — |
 | v12.3.1 | **split `window._KCAD.metrics`**: novo `assets/js/controllers/admin-dashboard.metrics.js` com IIFE + 17 exports cobrindo gate de acesso admin (`checkAccess`), classificação de tendências (`classifyTermToModule`) e 15 loaders/fetchers (`loadReportMetrics`, `loadPostStatusMetrics`, `loadPostsCreated`, `loadPostsEdited`, `loadCommentsCount`, `loadSearchCount`, `loadPostsTotal`, `loadUsersTotal`, `loadUsersNew`, `loadVotesCount`, `loadSavedPostsCount`, `loadAuditEventRows`, `loadSearchTrendsData`, `queryCreatedAtRows`, `loadDailyMetrics`); `admin-dashboard.controller.js` reduzido de `2251L` → `1859L` (−392L) com delegação fina para `_KCAD.metrics` e reaproveitamento de `KCAdminDashboardUtils` para eliminar o drift de `classifyTermToModule`/`SERIES_KEYS`; `admin/index.html` atualizado com o novo script na ordem `shared → metrics → kc-ranking → controller`; nova suíte direta `tests/admin-dashboard.metrics.test.js` (18 testes: contrato estático, script order e comportamento com mocks de KCAPI/Supabase); baseline expandida para **107/107 suites · 2230/2230 testes** | — |
 | v12.3.0 | **auditoria docs-only de `admin-dashboard.controller.js`**: criado `docs/admin-dashboard-audit-v12.3.md` com footprint real do hotspot admin (`2034L`, `93 641` bytes, `104` funções top-level, `29` async), boundary já modularizado em `admin-dashboard.shared.js` (`382L`, 14 exports, 1 suite com 4 testes), mapa por 6 grupos naturais (core/access/refresh, loaders Supabase, trends/charts/renderers, audit log, exportação XLSX/PDF, ranking), inventário dos contratos externos (`KCSupabase`, `KCAPI`, `KCAdminShell`, `KCPullToRefresh`, `KCUtils.escapeHtml`, `KC_CONSTANTS`, `XLSX`, `jspdf`, `KCRanking`), lacuna de cobertura direta do controller e plano recomendado para `v12.3.1`–`v12.3.4` com `window._KCAD.metrics`, `window._KCAD.audit` e `window._KCAD.charts`; zero mudança funcional em runtime; baseline preservada em **106/106 suites · 2212/2212 testes** | — |
@@ -183,18 +184,18 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.3.2` — **split `window._KCAD.audit` concluído** (`admin-dashboard.audit.js` com `1045L`/9 exports; `admin-dashboard.controller.js` em `1172L`; 1 nova suíte direta com 18 testes)
+- iteração encerrada: `v12.3.3` — **split `window._KCAD.charts` concluído** (`admin-dashboard.charts.js` com `552L`/10 exports; `admin-dashboard.controller.js` em `738L`; 1 nova suíte direta com 22 testes)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
-- regressão: `108/108` suites, `2248/2248` testes verdes, hygiene `8.6.0`
+- regressão: `109/109` suites, `2270/2270` testes verdes, hygiene `8.6.0`
 - deploy de produção ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
 - sub-módulos `window._KCAPI.*` operacionais: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
 - sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
 - kc-api.client.js: `2536L` (pré-v11.33) → `2410L` (pós-v11.33.7), piso natural como registry/wiring
 - `kc-utils.js`: 2445L → 440L (−2005L pós-v12.2.6); 7 sub-módulos `window._KCU.*` operacionais e gate `<900L` formalizado em `v12.2.7`
-- `admin-dashboard.controller.js`: após `v12.3.1` o core estava em `1859L`; após `v12.3.2`, caiu para `1172L` / `48 589` bytes, enquanto o novo `admin-dashboard.audit.js` entrou com `1045L` / `40 465` bytes
-- próxima iteração: `v12.3.3` — split admin-dashboard domínio charts/renderers
+- `admin-dashboard.controller.js`: após `v12.3.1` o core estava em `1859L`; após `v12.3.2`, caiu para `1172L` / `48 589` bytes; após `v12.3.3`, caiu para `738L` / `32 706` bytes, enquanto o novo `admin-dashboard.charts.js` entrou com `552L` / `27 253` bytes
+- próxima iteração: `v12.3.4` — gate formal do dashboard admin <900L
 
 ---
 
