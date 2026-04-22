@@ -42,6 +42,7 @@ beforeAll(() => {
   delete require.cache[require.resolve('../assets/js/adapters/local.adapter.js')];
 
   require('../assets/js/adapters/local.notifications.adapter.js');
+  require('../assets/js/adapters/local.ratings.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
 
   actualNotificationsModule = window._KCLA.notifications;

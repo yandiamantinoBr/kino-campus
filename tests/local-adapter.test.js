@@ -40,6 +40,7 @@ beforeAll(() => {
   window.KCAPI.DEFAULTS = { fallbackDatabaseURLs: [] };
 
   require('../assets/js/adapters/local.notifications.adapter.js');
+  require('../assets/js/adapters/local.ratings.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
 });
 
