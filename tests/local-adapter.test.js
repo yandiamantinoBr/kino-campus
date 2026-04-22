@@ -39,6 +39,7 @@ beforeAll(() => {
   window.KCAPI.VERSION = '9.0.0';
   window.KCAPI.DEFAULTS = { fallbackDatabaseURLs: [] };
 
+  require('../assets/js/adapters/local.notifications.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
 });
 

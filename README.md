@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.4.0` concluída com a auditoria docs-only de `assets/js/adapters/local.adapter.js`: criado `docs/local-adapter-audit-v12.4.md` com footprint real do hotspot local (`1862L`, `75 712` bytes, `100` funções top-level, `47` async, `57` chaves no driver registrado em `KCAPI`), `22` HTMLs consumidores diretos, `1` suíte direta + `5` indiretas (`114` testes mapeados) e recalibração do roadmap `_KCLA.*` de `v12.4.1`–`v12.4.6` para `v12.4.1`–`v12.4.8`, isolando `notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`, `profile`, `help` e gate final; zero mudança funcional em runtime; baseline preservada em **109/109 suites · 2270/2270 testes**; próxima iteração: `v12.4.1` (split `window._KCLA.notifications`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.4.1` concluída com o primeiro split funcional do adapter local: criado `assets/js/adapters/local.notifications.adapter.js` com namespace `window._KCLA.notifications` (**250L**, **14 exports**) para preferências, destinos privados e convites; `assets/js/adapters/local.adapter.js` caiu de `1862L` para **`1780L`** (`-82L`, `72 977` bytes) via wrappers de delegação; `22` HTMLs e `3` bootstraps de teste diretos atualizados; nova suíte `tests/local-notifications.adapter.test.js` (**22 testes**); baseline expandida para **110/110 suites · 2292/2292 testes**; próxima iteração: `v12.4.2` (split `window._KCLA.ratings`).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 109 suites de regressão e contrato |
+| Testes | Jest: 110 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.4.1 | **split `window._KCLA.notifications`**: novo `assets/js/adapters/local.notifications.adapter.js` com IIFE + `Object.freeze({...})` concentrando 14 exports do domínio notifications/private targets/invites (`getNotificationPreferences`, `updateNotificationPreferences`, `getNotificationChannelTargets`, `updateNotificationChannelTargets`, `getNotifications`, `markNotificationsRead`, `markAllNotificationsRead`, `clearNotifications`, `getUnreadNotificationCount`, `subscribeNotifications`, `unsubscribeNotifications`, `inviteExternalUser`, `getInvites`, `revokeInvite`); `assets/js/adapters/local.adapter.js` reduzido de `1862L` → `1780L` (`-82L`) com wrappers finos para `_KCLA.notifications`; `22` HTMLs + `3` suites diretas atualizados para a nova ordem de scripts; nova suíte `tests/local-notifications.adapter.test.js` (22 testes) e `jest.config.js` sincronizado para cobertura do submódulo; baseline expandida para **110/110 suites · 2292/2292 testes** | — |
 | v12.4.0 | **auditoria docs-only de `local.adapter.js`**: criado `docs/local-adapter-audit-v12.4.md` com footprint real do driver local (`1862L`, `75 712` bytes, `100` funções top-level, `47` async, `57` chaves no objeto `driverLocal`, `22` HTMLs consumidores diretos, `1` suíte direta + `5` indiretas / `114` testes mapeados), mapa por 7 grupos naturais (notifications/targets/invites, ratings, saved/highlights, posts read/feed/related + ranking, posts write/drafts, profile, help/admin), leitura do boundary residual (fallback/glue/registry) e sequência recomendada recalibrada para `v12.4.1`–`v12.4.8` com `window._KCLA.notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`, `profile`, `help` e gate final `<500L`; zero mudança funcional em runtime; baseline preservada em **109/109 suites · 2270/2270 testes** | — |
 | v12.3.4 | **gate formal do dashboard admin `<900L` + hygiene `_KCAD.*`**: `scripts/hygiene-check.js` passou a validar a cadeia exata de `<script defer src="...admin-dashboard*.js">` em `admin/index.html` na ordem `shared → metrics → audit → charts → kc-ranking → controller`, falhando por item faltando, duplicado, extra ou fora de ordem; `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` sincronizados para formalizar o marco estrutural já atingido, corrigindo o drift documental da `v12.3.3` e registrando os valores medidos de `admin-dashboard.controller.js` (**835L**, `32 802` bytes) e `admin-dashboard.charts.js` (**642L**, `27 895` bytes); zero mudança funcional em runtime, zero HTML editado nesta rodada; baseline preservada em **109/109 suites · 2270/2270 testes** | — |
 | v12.3.3 | **split `window._KCAD.charts`**: novo `assets/js/controllers/admin-dashboard.charts.js` com IIFE + 10 exports cobrindo tendências de busca, resumo diário, renderização SVG do pulso, modal expandido do gráfico, tabela de share por módulo, alertas operacionais e ranking admin (`aggregateTrendsByModule`, `renderSearchTrends`, `renderDailyActivitySummary`, `bindDailyActivityChartModal`, `renderDailyActivityChart`, `renderModuleShareTable`, `renderOperationalAlerts`, `mapPeriodToRanking`, `loadAdminRanking`, `bindAdminRanking`); `admin-dashboard.controller.js` reduzido de `1172L` → `835L` (−337L) com `buildChartsDeps()` e wrappers finos para `_KCAD.charts`; `admin/index.html` atualizado para a ordem `shared → metrics → audit → charts → kc-ranking → controller`; nova suíte direta `tests/admin-dashboard.charts.test.js` (22 testes: contrato estático, script order, wrappers, tendências, chart modal e ranking), além do ajuste das suítes `tests/admin-dashboard.metrics.test.js` e `tests/admin-dashboard.audit.test.js`; baseline expandida para **109/109 suites · 2270/2270 testes** | — |
@@ -186,19 +187,20 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.4.0` — **auditoria docs-only de `local.adapter.js` concluída** (`1862L`, `75 712` bytes, `100` funções top-level, `47` async, `57` chaves no driver local; roadmap `_KCLA.*` recalibrado até `v12.4.8`)
+- iteração encerrada: `v12.4.1` — **split `window._KCLA.notifications` concluído** (`local.notifications.adapter.js` com `250L`, `14` exports; `local.adapter.js` em `1780L` / `72 977` bytes; `22` HTMLs + `3` bootstraps diretos atualizados)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
-- regressão: `109/109` suites, `2270/2270` testes verdes, hygiene `8.6.0`
+- regressão: `110/110` suites, `2292/2292` testes verdes, hygiene `8.6.0`
 - deploy de produção ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
 - sub-módulos `window._KCAPI.*` operacionais: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
 - sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
+- sub-adapters `window._KCLA.*` operacionais: `notifications` (1 total)
 - kc-api.client.js: `2536L` (pré-v11.33) → `2410L` (pós-v11.33.7), piso natural como registry/wiring
 - `kc-utils.js`: 2445L → 440L (−2005L pós-v12.2.6); 7 sub-módulos `window._KCU.*` operacionais e gate `<900L` formalizado em `v12.2.7`
 - `admin-dashboard.controller.js`: após `v12.3.1` o core estava em `1859L`; após `v12.3.2`, caiu para `1172L` / `48 589` bytes; o gate formal `v12.3.4` consolidou o footprint real atual em `835L` / `32 802` bytes, enquanto `admin-dashboard.charts.js` ficou formalizado em `642L` / `27 895` bytes
-- `local.adapter.js`: auditoria `v12.4.0` congelou o hotspot em `1862L` / `75 712` bytes, com `100` funções top-level, `47` async, `57` chaves no driver registrado e `22` HTMLs consumidores diretos; o plano `_KCLA.*` foi expandido para `notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`, `profile`, `help` + gate `v12.4.8`
-- próxima iteração: `v12.4.1` — split `window._KCLA.notifications` (preferências, destinos privados e convites)
+- `local.adapter.js`: após `v12.4.1`, o core caiu de `1862L` / `75 712` bytes para `1780L` / `72 977` bytes e ganhou o primeiro boundary `_KCLA.*`; `assets/js/adapters/local.notifications.adapter.js` entrou com `250L`, `14` exports, `22` HTMLs consumidores e `3` bootstraps diretos de teste atualizados
+- próxima iteração: `v12.4.2` — split `window._KCLA.ratings`
 
 ---
 
