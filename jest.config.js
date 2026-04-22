@@ -22,6 +22,7 @@ module.exports = {
     'assets/js/kc-search.shared.js',
     'assets/js/*.shared.js',
     'assets/js/adapters/local.notifications.adapter.js',
+    'assets/js/adapters/local.ratings.adapter.js',
     'assets/js/adapters/local.adapter.js',
   ],
 };
