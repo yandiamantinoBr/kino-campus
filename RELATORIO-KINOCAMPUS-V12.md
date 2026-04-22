@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.3.1` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js` e primeiro split funcional do hotspot admin); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` reduzido de `2251L` para `1859L` com novo submódulo `window._KCAD.metrics` (`514L`, 17 exports), e a próxima iteração é `v12.3.2` — split admin-dashboard domínio audit log + export; baseline expandida para `107/107` suites e `2230/2230` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.3.2` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js` e dois splits funcionais do hotspot admin); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `1172L`, os submódulos `window._KCAD.metrics` (`514L`, 17 exports) e `window._KCAD.audit` (`1045L`, 9 exports) já estão operacionais, e a próxima iteração é `v12.3.3` — split admin-dashboard domínio charts/renderers; baseline expandida para `108/108` suites e `2248/2248` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -128,7 +128,7 @@ Estes namespaces são **contratos públicos internos** — qualquer mudança de 
 |---|---|---|---|---|
 | `assets/js/kc-api.client.js` | `2410L` | `~100KB` | já reduzido ao piso natural (registry/wiring) | pausa |
 | `assets/js/kc-utils.js` | `2445L` | `~95KB` | `v12.1.0`–`v12.2.6` | 🥇 1º |
-| `assets/js/controllers/admin-dashboard.controller.js` | `1859L` | `~74,7KB` | `v12.3.0`–`v12.3.4` | 🥈 2º |
+| `assets/js/controllers/admin-dashboard.controller.js` | `1172L` | `~47,5KB` | `v12.3.0`–`v12.3.4` | 🥈 2º |
 | `assets/js/local.adapter.js` | `1862L` | `~72KB` | `v12.4.0`–`v12.4.6` | 🥉 3º |
 | `assets/js/profile.controller.js` | `1463L` | `~56KB` | `v12.5.0`–`v12.5.4` | 4º |
 | `assets/js/kc-supabase.client.js` | `1364L` | `~53KB` | avaliação pós-`v12.5.4` | pausa |
@@ -186,7 +186,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.2.7** | Gate `kc-utils.js` <900L: README + RELATORIO + CHANGELOG atualizados, `scripts/hygiene-check.js` validando a cadeia `_KCU.*` nos 22 HTMLs canônicos | `kc-utils.js` formalizado em `440L` (<900L), hygiene falha por item faltando/duplicado/extra/fora de ordem, baseline `106/106` suites · `2212/2212` testes preservada | ✅ concluído |
 | **v12.3.0** | Auditoria `admin-dashboard.controller.js` (doc-only) | `docs/admin-dashboard-audit-v12.3.md`; footprint real `2034L`, `104` funções top-level, `29` async, boundary já extraído em `admin-dashboard.shared.js` (382L) e sequência recomendada para `window._KCAD.*` | ✅ concluído |
 | **v12.3.1** | Split admin-dashboard **metrics/loaders** | `admin-dashboard.metrics.js` → `window._KCAD.metrics` (`514L`, 17 exports), `admin-dashboard.controller.js` reduzido de `2251L` → `1859L`, `admin/index.html` atualizado e primeira suíte direta `tests/admin-dashboard.metrics.test.js` (18 testes); baseline expandida para `107/107` suites · `2230/2230` testes | ✅ concluído |
-| v12.3.2 | Split admin-dashboard **audit log + export** | `admin-dashboard.audit.js` → `window._KCAD.audit`, ~500–650L, ~10–15 testes | 📋 planejado |
+| **v12.3.2** | Split admin-dashboard **audit log + export** | `admin-dashboard.audit.js` → `window._KCAD.audit` (`1045L`, 9 exports), `admin-dashboard.controller.js` reduzido de `1859L` → `1172L`, `admin/index.html` atualizado para `shared → metrics → audit → kc-ranking → controller`, nova suíte `tests/admin-dashboard.audit.test.js` (18 testes) e ajuste da suíte `tests/admin-dashboard.metrics.test.js`; baseline expandida para `108/108` suites · `2248/2248` testes | ✅ concluído |
 | v12.3.3 | Split admin-dashboard **charts/renderers** | `admin-dashboard.charts.js` → `window._KCAD.charts`, ~300–450L, cobrindo charts + ranking | 📋 planejado |
 | v12.3.4 | Gate admin-dashboard <900L | gate formal | 📋 planejado |
 | v12.4.0 | Auditoria `local.adapter.js` (doc-only) | `docs/local-adapter-audit-v12.4.md` | 📋 planejado |
@@ -722,6 +722,43 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `admin-dashboard.controller.js` continua parseando corretamente após a extração do domínio metrics/loaders
 
 **Próxima iteração:** `v12.3.2` — split admin-dashboard domínio **audit log + export**, introduzindo `window._KCAD.audit` e continuando a redução do controller rumo ao gate `<900L`.
+
+---
+
+### 8.12. v12.3.2 — split admin-dashboard domínio `audit log + export` — ✅ concluído
+
+**Objetivo:** extrair do core do dashboard admin o bloco de audit log, resolução de atores, paginação/filtro e toda a trilha de exportação XLSX/PDF, preservando `_data`, offsets, bindings da toolbar e o contrato público `window.KCAdminDashboardRefresh`.
+
+**Escopo entregue:**
+
+- criado `assets/js/controllers/admin-dashboard.audit.js` com IIFE browser-safe registrado em `window._KCAD.audit`
+- extraídos **9 exports** do domínio: `loadActorsById`, `getActorDisplay`, `loadAuditLog`, `renderAuditRows`, `loadMoreAudit`, `filterAudit`, `enableExport`, `exportXLSX`, `exportPDF`
+- `assets/js/controllers/admin-dashboard.controller.js` passou a expor builders explícitos de dependência/estado (`buildAuditDeps()`) e wrappers finos para `_KCAD.audit`
+- `admin/index.html` atualizado para a ordem `shared → metrics → audit → kc-ranking → controller`
+- criada `tests/admin-dashboard.audit.test.js`, a segunda suíte direta do dashboard admin, cobrindo contrato estático, ordem de scripts, audit log, exportação e bindings; `tests/admin-dashboard.metrics.test.js` foi realinhado à nova cadeia de scripts
+
+**Entregas mensuráveis:**
+
+- `assets/js/controllers/admin-dashboard.audit.js` criado com **1045L** e **40 465 bytes**
+- `assets/js/controllers/admin-dashboard.controller.js` reduzido de **1859L** para **1172L** (`-687L`) e medido em **48 589 bytes**
+- `tests/admin-dashboard.audit.test.js` criado com **18 testes**
+- baseline expandida para **108/108 suites · 2248/2248 testes**
+
+**Achados principais do split:**
+
+- o recorte `audit + export` ficou **maior que a estimativa docs-only** (`1045L`, não `500–650L`), porque a exportação XLSX/PDF foi mantida íntegra no mesmo boundary para evitar drift de `_data`, nomes de ator e bindings da toolbar
+- apesar desse desvio, o controller sofreu o maior corte da trilha admin até aqui: `1859L → 1172L`, deixando o gate `<900L` ao alcance da próxima iteração
+- o padrão de injeção de dependências/estado (`buildAuditDeps()`) evitou mover o estado compartilhado do core para globals novos e preservou `window.KCAdminDashboardRefresh`
+- a cadeia do admin agora está formalizada em três blocos runtime: `shared`, `metrics` e `audit`, restando `charts/renderers + ranking` para `v12.3.3`
+
+**Verificação:**
+
+- `npx jest tests/admin-dashboard.metrics.test.js tests/admin-dashboard.audit.test.js --runInBand` → **36/36 testes verdes**
+- `node scripts/hygiene-check.js` → **8.6.0 ✓**
+- `npm test` → **108/108 suites · 2248/2248 testes verdes**
+- `admin-dashboard.controller.js` e `admin-dashboard.audit.js` continuam parseando corretamente após a extração
+
+**Próxima iteração:** `v12.3.3` — split admin-dashboard domínio **charts/renderers**, introduzindo `window._KCAD.charts` e buscando levar o core abaixo do gate `<900L`.
 
 ---
 
