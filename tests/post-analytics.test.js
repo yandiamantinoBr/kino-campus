@@ -137,7 +137,8 @@ describe('Post Analytics (v9.3.1)', () => {
 
   describe('local adapter stubs', () => {
     beforeAll(() => {
-      require('../assets/js/adapters/local.adapter.js');
+      require('../assets/js/adapters/local.notifications.adapter.js');
+  require('../assets/js/adapters/local.adapter.js');
     });
 
     test('trackView retorna { ok: false } no adapter local', async () => {

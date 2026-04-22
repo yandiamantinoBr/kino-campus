@@ -4,6 +4,8 @@
 
 
 const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = window.KCAPI;
+window._KCLA = window._KCLA || {};
+window._KCLA.notifications = window._KCLA.notifications || {};
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
@@ -43,18 +45,11 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     return null;
   }
 
-  const LOCAL_RATINGS_KEY = 'kc_user_ratings';
-  const LOCAL_RATING_INTERACTIONS_KEY = 'kc_user_rating_interactions';
-  const LOCAL_RATING_VIEWER_ID = 'USER_SELF';
-  const LOCAL_PROFILE_STORAGE_KEY = 'kc_local_profile';
-  const LOCAL_SAVED_POSTS_STORAGE_KEY = 'kc_saved_posts';
-  const LOCAL_NOTIFICATION_PREFERENCES_STORAGE_KEY = 'kc_notification_preferences';
-  const LOCAL_NOTIFICATION_CHANNEL_TARGETS_STORAGE_KEY = 'kc_notification_channel_targets';
+  function getLocalNotificationsModule() {
+    return (window._KCLA && window._KCLA.notifications) ? window._KCLA.notifications : null;
+  }
 
-  function buildDefaultLocalNotificationPreferences() {
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === 'function') {
-      return window.KCAccountProfileUtils.buildDefaultNotificationPreferences();
-    }
+  function buildDefaultLocalNotificationPreferencesFallback() {
     return {
       comment_on_post: { in_app: true, email: false, whatsapp: false },
       comment_reply: { in_app: true, email: false, whatsapp: false },
@@ -65,30 +60,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     };
   }
 
-  function normalizeLocalNotificationPreferences(value) {
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.normalizeNotificationPreferences === 'function') {
-      return window.KCAccountProfileUtils.normalizeNotificationPreferences(value);
-    }
-    const defaults = buildDefaultLocalNotificationPreferences();
-    const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
-    const normalized = {};
-    Object.keys(defaults).forEach((eventKey) => {
-      const sourceEvent = (source[eventKey] && typeof source[eventKey] === 'object' && !Array.isArray(source[eventKey]))
-        ? source[eventKey]
-        : {};
-      normalized[eventKey] = {
-        in_app: sourceEvent.in_app !== false,
-        email: sourceEvent.email === true,
-        whatsapp: sourceEvent.whatsapp === true,
-      };
-    });
-    return normalized;
-  }
-
-  function buildDefaultLocalNotificationChannelTargets() {
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === 'function') {
-      return window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets();
-    }
+  function buildDefaultLocalNotificationChannelTargetsFallback() {
     return {
       whatsapp: {
         channel: 'whatsapp',
@@ -105,101 +77,11 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
     };
   }
 
-  function normalizeLocalNotificationDigits(value) {
-    return String(value || '').replace(/\D+/g, '');
-  }
-
-  function formatLocalNotificationWhatsapp(value) {
-    const digits = normalizeLocalNotificationDigits(value);
-    if (!digits) return '';
-    if (digits.indexOf('55') === 0 && digits.length >= 12) {
-      const ddd = digits.slice(2, 4);
-      const body = digits.slice(4);
-      if (body.length === 9) return `+55 (${ddd}) ${body.slice(0, 5)}-${body.slice(5)}`;
-      if (body.length === 8) return `+55 (${ddd}) ${body.slice(0, 4)}-${body.slice(4)}`;
-    }
-    return `+${digits}`;
-  }
-
-  function normalizeLocalNotificationChannelTargets(value) {
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.normalizeNotificationChannelTargets === 'function') {
-      return window.KCAccountProfileUtils.normalizeNotificationChannelTargets(value);
-    }
-    const defaults = buildDefaultLocalNotificationChannelTargets();
-    const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
-    const whatsapp = (source.whatsapp && typeof source.whatsapp === 'object' && !Array.isArray(source.whatsapp))
-      ? source.whatsapp
-      : {};
-    const metadata = (whatsapp.metadata && typeof whatsapp.metadata === 'object' && !Array.isArray(whatsapp.metadata))
-      ? whatsapp.metadata
-      : {};
-    const countryCode = normalizeLocalNotificationDigits(whatsapp.country_code || whatsapp.countryCode || metadata.country_code || '55') || '55';
-    const explicitDestinationDigits = normalizeLocalNotificationDigits(whatsapp.destination || whatsapp.destination_normalized || whatsapp.destinationNormalized || '');
-    const localNumberDigits = normalizeLocalNotificationDigits(whatsapp.local_number || whatsapp.localNumber || '');
-    const destination = explicitDestinationDigits
-      ? `+${explicitDestinationDigits}`
-      : (localNumberDigits ? `+${countryCode}${localNumberDigits}` : '');
-    const normalizedLocalNumber = destination && destination.indexOf(`+${countryCode}`) === 0
-      ? normalizeLocalNotificationDigits(destination.slice(countryCode.length + 1))
-      : localNumberDigits;
-
-    return {
-      whatsapp: {
-        channel: 'whatsapp',
-        destination,
-        country_code: countryCode,
-        local_number: normalizedLocalNumber,
-        consent_granted: whatsapp.consent_granted === true || whatsapp.consentGranted === true,
-        consent_at: whatsapp.consent_at || whatsapp.consentAt || null,
-        configured: !!destination,
-        ready: !!destination && (whatsapp.consent_granted === true || whatsapp.consentGranted === true),
-        display: formatLocalNotificationWhatsapp(destination),
-        metadata: { country_code: countryCode }
-      }
-    };
-  }
-
-  function readLocalNotificationPreferences() {
-    const defaults = buildDefaultLocalNotificationPreferences();
-    try {
-      const raw = localStorage.getItem(LOCAL_NOTIFICATION_PREFERENCES_STORAGE_KEY);
-      if (!raw) return defaults;
-      return normalizeLocalNotificationPreferences(JSON.parse(raw));
-    } catch (_) {
-      return defaults;
-    }
-  }
-
-  function writeLocalNotificationPreferences(preferences) {
-    const normalized = normalizeLocalNotificationPreferences(preferences);
-    try {
-      localStorage.setItem(LOCAL_NOTIFICATION_PREFERENCES_STORAGE_KEY, JSON.stringify(normalized));
-      return normalized;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function readLocalNotificationChannelTargets() {
-    const defaults = buildDefaultLocalNotificationChannelTargets();
-    try {
-      const raw = localStorage.getItem(LOCAL_NOTIFICATION_CHANNEL_TARGETS_STORAGE_KEY);
-      if (!raw) return defaults;
-      return normalizeLocalNotificationChannelTargets(JSON.parse(raw));
-    } catch (_) {
-      return defaults;
-    }
-  }
-
-  function writeLocalNotificationChannelTargets(targets) {
-    const normalized = normalizeLocalNotificationChannelTargets(targets);
-    try {
-      localStorage.setItem(LOCAL_NOTIFICATION_CHANNEL_TARGETS_STORAGE_KEY, JSON.stringify(normalized));
-      return normalized;
-    } catch (_) {
-      return null;
-    }
-  }
+  const LOCAL_RATINGS_KEY = 'kc_user_ratings';
+  const LOCAL_RATING_INTERACTIONS_KEY = 'kc_user_rating_interactions';
+  const LOCAL_RATING_VIEWER_ID = 'USER_SELF';
+  const LOCAL_PROFILE_STORAGE_KEY = 'kc_local_profile';
+  const LOCAL_SAVED_POSTS_STORAGE_KEY = 'kc_saved_posts';
 
   function normalizeLocalRatingEntry(raw) {
     const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
@@ -1338,65 +1220,100 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
   }
 
   async function localGetNotificationPreferences() {
-    return readLocalNotificationPreferences();
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.getNotificationPreferences === 'function'
+      ? notificationsModule.getNotificationPreferences()
+      : buildDefaultLocalNotificationPreferencesFallback();
   }
 
   async function localUpdateNotificationPreferences(preferences = {}) {
-    const saved = writeLocalNotificationPreferences(preferences);
-    if (!saved) {
-      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel salvar as preferÃªncias de notificaÃ§Ã£o localmente.' } };
-    }
-    return { ok: true, data: { preferences: saved } };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.updateNotificationPreferences === 'function'
+      ? notificationsModule.updateNotificationPreferences(preferences)
+      : { ok: false, error: { message: 'Preferencias de notificacao locais indisponiveis.' } };
   }
 
   async function localGetNotificationChannelTargets() {
-    return readLocalNotificationChannelTargets();
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.getNotificationChannelTargets === 'function'
+      ? notificationsModule.getNotificationChannelTargets()
+      : buildDefaultLocalNotificationChannelTargetsFallback();
   }
 
   async function localUpdateNotificationChannelTargets(targets = {}) {
-    const saved = writeLocalNotificationChannelTargets(targets);
-    if (!saved) {
-      return { ok: false, error: { message: 'Nao foi possivel salvar os destinos privados localmente.' } };
-    }
-    return { ok: true, data: { targets: saved } };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.updateNotificationChannelTargets === 'function'
+      ? notificationsModule.updateNotificationChannelTargets(targets)
+      : { ok: false, error: { message: 'Destinos privados locais indisponiveis.' } };
   }
 
   async function localGetNotifications() {
-    return { ok: true, notifications: [], unread: 0, total: 0 };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.getNotifications === 'function'
+      ? notificationsModule.getNotifications()
+      : { ok: true, notifications: [], unread: 0, total: 0 };
   }
 
   async function localMarkNotificationsRead() {
-    return { ok: true };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.markNotificationsRead === 'function'
+      ? notificationsModule.markNotificationsRead.apply(notificationsModule, arguments)
+      : { ok: true };
   }
 
   async function localMarkAllNotificationsRead() {
-    return { ok: true };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.markAllNotificationsRead === 'function'
+      ? notificationsModule.markAllNotificationsRead()
+      : { ok: true };
   }
 
   async function localClearNotifications() {
-    return { ok: true, deleted: 0 };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.clearNotifications === 'function'
+      ? notificationsModule.clearNotifications()
+      : { ok: true, deleted: 0 };
   }
 
   async function localGetUnreadNotificationCount() {
-    return 0;
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.getUnreadNotificationCount === 'function'
+      ? notificationsModule.getUnreadNotificationCount()
+      : 0;
   }
 
   function localSubscribeNotifications() {
-    return null;
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.subscribeNotifications === 'function'
+      ? notificationsModule.subscribeNotifications.apply(notificationsModule, arguments)
+      : null;
   }
 
-  function localUnsubscribeNotifications() { }
+  function localUnsubscribeNotifications() {
+    const notificationsModule = getLocalNotificationsModule();
+    if (!notificationsModule || typeof notificationsModule.unsubscribeNotifications !== 'function') return;
+    notificationsModule.unsubscribeNotifications.apply(notificationsModule, arguments);
+  }
 
   async function localInviteExternalUser() {
-    return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.inviteExternalUser === 'function'
+      ? notificationsModule.inviteExternalUser.apply(notificationsModule, arguments)
+      : { ok: false, error: 'DRIVER_NAO_SUPORTA' };
   }
 
   async function localGetInvites() {
-    return { data: [], error: null };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.getInvites === 'function'
+      ? notificationsModule.getInvites()
+      : { data: [], error: null };
   }
 
   async function localRevokeInvite() {
-    return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
+    const notificationsModule = getLocalNotificationsModule();
+    return notificationsModule && typeof notificationsModule.revokeInvite === 'function'
+      ? notificationsModule.revokeInvite.apply(notificationsModule, arguments)
+      : { ok: false, error: 'DRIVER_NAO_SUPORTA' };
   }
 
   const HELP_REQUESTS_STORAGE_KEY = 'kc_help_requests';

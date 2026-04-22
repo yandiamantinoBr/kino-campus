@@ -21,6 +21,7 @@ module.exports = {
     'assets/js/kc-comments.shared.js',
     'assets/js/kc-search.shared.js',
     'assets/js/*.shared.js',
+    'assets/js/adapters/local.notifications.adapter.js',
     'assets/js/adapters/local.adapter.js',
   ],
 };
