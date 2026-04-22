@@ -34,6 +34,15 @@ const kcuScriptChain = [
   'kc-utils.js',
 ];
 
+const kcadAdminDashboardScriptChain = [
+  '../assets/js/controllers/admin-dashboard.shared.js',
+  '../assets/js/controllers/admin-dashboard.metrics.js',
+  '../assets/js/controllers/admin-dashboard.audit.js',
+  '../assets/js/controllers/admin-dashboard.charts.js',
+  '../assets/js/kc-ranking.js',
+  '../assets/js/controllers/admin-dashboard.controller.js',
+];
+
 const inlineHandlers = new Set([
   'onabort', 'onauxclick', 'onbeforeinput', 'onbeforematch', 'onbeforetoggle',
   'onblur', 'oncancel', 'oncanplay', 'oncanplaythrough', 'onchange', 'onclick',
@@ -54,6 +63,7 @@ const inlineHandlers = new Set([
 runVersionChecks();
 runThemeBootChecks();
 runKcuScriptChainChecks();
+runKcadScriptChainChecks();
 runInlineHandlerChecks();
 runProfileContractChecks();
 runDeployInvariantChecks();
@@ -118,6 +128,22 @@ function runKcuScriptChainChecks() {
       );
     }
   });
+}
+
+function runKcadScriptChainChecks() {
+  htmlFiles
+    .filter(({ relPath }) => relPath === 'admin/index.html')
+    .forEach(({ relPath, absPath }) => {
+      const content = fs.readFileSync(absPath, 'utf8');
+      const expected = kcadAdminDashboardScriptChain.slice();
+      const found = extractKcadScriptChain(content);
+
+      if (!sameStringArray(found, expected)) {
+        errors.push(
+          `${relPath} has invalid _KCAD.* admin dashboard chain. expected: ${expected.join(' -> ')}; found: ${found.length ? found.join(' -> ') : '(none)'}`
+        );
+      }
+    });
 }
 
 function runInlineHandlerChecks() {
@@ -237,6 +263,22 @@ function buildExpectedKcuScriptChain(relPath) {
 }
 
 function extractKcuScriptChain(content) {
+  return extractDeferredScriptSrcs(content).filter((src) => isKcuScriptSrc(src));
+}
+
+function isKcuScriptSrc(src) {
+  return /(?:^|\/)kc-utils(?:\.[a-z-]+)?\.js$/i.test(String(src || ''));
+}
+
+function extractKcadScriptChain(content) {
+  return extractDeferredScriptSrcs(content).filter((src) => isKcadScriptSrc(src));
+}
+
+function isKcadScriptSrc(src) {
+  return /(?:^|\/)(?:controllers\/admin-dashboard\.(?:shared|metrics|audit|charts|controller)\.js|kc-ranking\.js)$/i.test(String(src || ''));
+}
+
+function extractDeferredScriptSrcs(content) {
   const scriptTags = [...String(content).matchAll(/<script\b[^>]*>\s*<\/script>/gi)];
 
   return scriptTags
@@ -244,13 +286,9 @@ function extractKcuScriptChain(content) {
     .filter((tag) => /\bdefer\b/i.test(tag))
     .map((tag) => {
       const srcMatch = tag.match(/\bsrc=(['"])([^'"]+)\1/i);
-      return srcMatch ? toPosix(srcMatch[2]) : '';
+      return srcMatch ? stripQueryHash(toPosix(srcMatch[2])) : '';
     })
-    .filter((src) => isKcuScriptSrc(src));
-}
-
-function isKcuScriptSrc(src) {
-  return /(?:^|\/)kc-utils(?:\.[a-z-]+)?\.js$/i.test(String(src || ''));
+    .filter(Boolean);
 }
 
 function findCspHeader(vercelConfig) {
@@ -268,6 +306,10 @@ function findCspHeader(vercelConfig) {
 
 function toPosix(value) {
   return value.split(path.sep).join('/');
+}
+
+function stripQueryHash(value) {
+  return String(value || '').split(/[?#]/, 1)[0];
 }
 
 function normalize(value) {
