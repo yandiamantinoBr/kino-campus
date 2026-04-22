@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.3.0` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L` e auditoria docs-only de `admin-dashboard.controller.js`); `kc-utils.js` consolidado em `440L` e o hotspot admin mapeado em `2034L` com plano de split `window._KCAD.*`; próxima é `v12.3.1` — split admin-dashboard domínio metrics/loaders; baseline preservada em `106/106` suites e `2212/2212` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.3.1` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js` e primeiro split funcional do hotspot admin); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` reduzido de `2251L` para `1859L` com novo submódulo `window._KCAD.metrics` (`514L`, 17 exports), e a próxima iteração é `v12.3.2` — split admin-dashboard domínio audit log + export; baseline expandida para `107/107` suites e `2230/2230` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -128,7 +128,7 @@ Estes namespaces são **contratos públicos internos** — qualquer mudança de 
 |---|---|---|---|---|
 | `assets/js/kc-api.client.js` | `2410L` | `~100KB` | já reduzido ao piso natural (registry/wiring) | pausa |
 | `assets/js/kc-utils.js` | `2445L` | `~95KB` | `v12.1.0`–`v12.2.6` | 🥇 1º |
-| `assets/js/controllers/admin-dashboard.controller.js` | `2034L` | `~91,5KB` | `v12.3.0`–`v12.3.4` | 🥈 2º |
+| `assets/js/controllers/admin-dashboard.controller.js` | `1859L` | `~74,7KB` | `v12.3.0`–`v12.3.4` | 🥈 2º |
 | `assets/js/local.adapter.js` | `1862L` | `~72KB` | `v12.4.0`–`v12.4.6` | 🥉 3º |
 | `assets/js/profile.controller.js` | `1463L` | `~56KB` | `v12.5.0`–`v12.5.4` | 4º |
 | `assets/js/kc-supabase.client.js` | `1364L` | `~53KB` | avaliação pós-`v12.5.4` | pausa |
@@ -185,7 +185,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.2.6** | Split `kc-utils.js` domínio **presentation** (`applyPresentationRules` + `renderPostCard` + markers) | `kc-utils.presentation.js` → `window._KCU.presentation` (9 funções), −728L em `kc-utils.js` (1168→440L), +1 suite 27 testes, 22 HTMLs + 12 arquivos de teste atualizados | ✅ concluído |
 | **v12.2.7** | Gate `kc-utils.js` <900L: README + RELATORIO + CHANGELOG atualizados, `scripts/hygiene-check.js` validando a cadeia `_KCU.*` nos 22 HTMLs canônicos | `kc-utils.js` formalizado em `440L` (<900L), hygiene falha por item faltando/duplicado/extra/fora de ordem, baseline `106/106` suites · `2212/2212` testes preservada | ✅ concluído |
 | **v12.3.0** | Auditoria `admin-dashboard.controller.js` (doc-only) | `docs/admin-dashboard-audit-v12.3.md`; footprint real `2034L`, `104` funções top-level, `29` async, boundary já extraído em `admin-dashboard.shared.js` (382L) e sequência recomendada para `window._KCAD.*` | ✅ concluído |
-| v12.3.1 | Split admin-dashboard **metrics/loaders** | `admin-dashboard.metrics.js` → `window._KCAD.metrics`, ~750–900L, primeira suíte direta do dashboard | 📋 planejado |
+| **v12.3.1** | Split admin-dashboard **metrics/loaders** | `admin-dashboard.metrics.js` → `window._KCAD.metrics` (`514L`, 17 exports), `admin-dashboard.controller.js` reduzido de `2251L` → `1859L`, `admin/index.html` atualizado e primeira suíte direta `tests/admin-dashboard.metrics.test.js` (18 testes); baseline expandida para `107/107` suites · `2230/2230` testes | ✅ concluído |
 | v12.3.2 | Split admin-dashboard **audit log + export** | `admin-dashboard.audit.js` → `window._KCAD.audit`, ~500–650L, ~10–15 testes | 📋 planejado |
 | v12.3.3 | Split admin-dashboard **charts/renderers** | `admin-dashboard.charts.js` → `window._KCAD.charts`, ~300–450L, cobrindo charts + ranking | 📋 planejado |
 | v12.3.4 | Gate admin-dashboard <900L | gate formal | 📋 planejado |
@@ -256,7 +256,7 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 ### 7.1. Redução estrutural (Camada A)
 
 - [ ] `kc-utils.js` < 900L (baseline `2445L`)
-- [ ] `admin-dashboard.controller.js` < 900L (baseline `2034L`)
+- [ ] `admin-dashboard.controller.js` < 900L (baseline real do split `v12.3.1`: `2251L`; snapshot docs-only `v12.3.0`: `2034L`)
 - [ ] `local.adapter.js` < 500L (baseline `1862L`; meta ≈ `420L` paridade `supabase.adapter.js`)
 - [ ] `profile.controller.js` < 600L (baseline `1463L`)
 - [ ] Nenhum arquivo JS em `assets/js/` > 1100L
@@ -661,13 +661,13 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - mapeamento dos 6 grupos naturais do arquivo: core/access/refresh, loaders Supabase, trends/charts/renderers, audit log, exportação XLSX/PDF e ranking
 - levantamento dos contratos externos consumidos (`KCSupabase`, `KCAPI`, `KCAdminShell`, `KCPullToRefresh`, `KCUtils.escapeHtml`, `KC_CONSTANTS`, `XLSX`, `jspdf`, `KCRanking`)
 - identificação do gap de cobertura: zero suites diretas do controller; apenas 1 suite do helper compartilhado e verificações indiretas de markup admin
-- recalibração do roadmap `v12.3.1`–`v12.3.4` com estimativas baseadas no footprint real (`2034L`, não `2251L`)
+- recalibração do roadmap `v12.3.1`–`v12.3.4` com estimativas baseadas no snapshot documental então medido em `2034L`; o split funcional seguinte confirmaria drift posterior do runtime para `2251L`
 
 **Entregas mensuráveis:**
 
-- `docs/admin-dashboard-audit-v12.3.md` criado com footprint real de **2034L** e **93 641 bytes (~91,5 KB)**
+- `docs/admin-dashboard-audit-v12.3.md` criado com snapshot docs-only de **2034L** e **93 641 bytes (~91,5 KB)**
 - `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` atualizados para marcar `v12.3.0` como concluída e apontar `v12.3.1` como próxima iteração
-- linha do roadmap do admin atualizada para refletir o baseline real de **2034L**
+- linha do roadmap do admin atualizada para refletir o baseline documental de **2034L**
 - zero mudança funcional em JS/HTML/testes nesta rodada
 
 **Achados principais da auditoria:**
@@ -685,6 +685,43 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - nenhum arquivo de runtime foi alterado; a iteração permaneceu estritamente docs-only
 
 **Próxima iteração:** `v12.3.1` — split admin-dashboard domínio **metrics/loaders**, introduzindo `window._KCAD.metrics` e a primeira suíte direta do dashboard controller/submódulo.
+
+---
+
+### 8.11. v12.3.1 — split admin-dashboard domínio `metrics/loaders` — ✅ concluído
+
+**Objetivo:** iniciar a decomposição funcional de `assets/js/controllers/admin-dashboard.controller.js` extraindo o domínio de acesso admin, loaders Supabase, tendências e atividade diária para um submódulo `_KCAD`, preservando o contrato público do dashboard e abrindo a primeira suíte direta dessa superfície.
+
+**Escopo entregue:**
+
+- criado `assets/js/controllers/admin-dashboard.metrics.js` com IIFE browser-safe registrado em `window._KCAD.metrics`
+- extraídos **17 exports** do domínio metrics/loaders: `checkAccess`, `classifyTermToModule` e 15 loaders/fetchers de métricas, tendências, auditoria resumida e atividade diária
+- `assets/js/controllers/admin-dashboard.controller.js` passou a delegar esse domínio ao submódulo, mantendo `window.KCAdminDashboardRefresh` intacto
+- `admin/index.html` atualizado para carregar o novo asset na ordem `shared → metrics → kc-ranking → controller`
+- criada `tests/admin-dashboard.metrics.test.js`, a primeira suíte direta do dashboard admin, cobrindo contrato estático, ordem de scripts e comportamento com mocks de `KCAPI`/`KCSupabase`
+
+**Entregas mensuráveis:**
+
+- `assets/js/controllers/admin-dashboard.metrics.js` criado com **514L** e **17 164 bytes**
+- `assets/js/controllers/admin-dashboard.controller.js` reduzido de **2251L** para **1859L** (`-392L`) e medido em **76 473 bytes**
+- `tests/admin-dashboard.metrics.test.js` criado com **18 testes**
+- baseline expandida para **107/107 suites · 2230/2230 testes**
+
+**Achados principais do split:**
+
+- o boundary prévio em `admin-dashboard.shared.js` foi suficiente para centralizar a classificação canônica de tendências sem duplicar mapas locais
+- a auditoria docs-only `v12.3.0` congelou um snapshot de `2034L`, mas o runtime real no início do split funcional já havia crescido para `2251L`; a iteração documenta esse drift em vez de escondê-lo
+- `loadMetrics()` continuou sendo o orquestrador central do dashboard, agora alimentado por wrappers finos que isolam o domínio de acesso e fetch no submódulo
+- o controller ficou mais próximo do próximo corte natural: `audit log + export`, sem alterar contratos públicos do admin
+
+**Verificação:**
+
+- `npx jest tests/admin-dashboard.metrics.test.js --runInBand` → **18/18 testes verdes**
+- `node scripts/hygiene-check.js` → **8.6.0 ✓**
+- `npm test` → **107/107 suites · 2230/2230 testes verdes**
+- `admin-dashboard.controller.js` continua parseando corretamente após a extração do domínio metrics/loaders
+
+**Próxima iteração:** `v12.3.2` — split admin-dashboard domínio **audit log + export**, introduzindo `window._KCAD.audit` e continuando a redução do controller rumo ao gate `<900L`.
 
 ---
 
