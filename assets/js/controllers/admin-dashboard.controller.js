@@ -1,10 +1,11 @@
-(function () {
+﻿(function () {
   'use strict';
 
   /* Armazena os dados carregados para uso no export */
   let _data = null;
   let _auditOffset = 0;
   let _chartModalReturnFocus = null;
+  var _adminRankingExpanded = false;
   var AUDIT_PAGE_SIZE = 20;
   var _exportBound = false;
   var _periodRefreshTimer = null;
@@ -23,6 +24,7 @@
   window._KCAD = window._KCAD || {};
   window._KCAD.metrics = window._KCAD.metrics || {};
   window._KCAD.audit = window._KCAD.audit || {};
+  window._KCAD.charts = window._KCAD.charts || {};
   var SERIES_META = [
     { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group' },
     { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment' },
@@ -92,6 +94,30 @@
       getJspdfLoadPromise: function () { return _jspdfLoadPromise; },
       setJspdfLoadPromise: function (promise) { _jspdfLoadPromise = promise || null; },
       getActorCache: function () { return _actorsById; }
+    };
+  }
+
+  function buildChartsDeps() {
+    return {
+      $: $,
+      escHtmlAdmin: escHtmlAdmin,
+      toNumber: toNumber,
+      getData: function () { return _data; },
+      setData: function (nextData) { _data = nextData; },
+      getSelectedPeriodDays: getSelectedPeriodDays,
+      getPeriodLabel: getPeriodLabel,
+      getModuleLabel: getModuleLabel,
+      getModuleIcon: getModuleIcon,
+      classifyTermToModule: classifyTermToModule,
+      getSeriesKeys: getSeriesKeys,
+      getSeriesMeta: function () { return SERIES_META.slice(); },
+      getChartModalReturnFocus: function () { return _chartModalReturnFocus; },
+      setChartModalReturnFocus: function (nextValue) { _chartModalReturnFocus = nextValue || null; },
+      getRankingExpanded: function () { return _adminRankingExpanded; },
+      setRankingExpanded: function (nextValue) { _adminRankingExpanded = !!nextValue; },
+      getRankingRequestSeq: function () { return _rankingRequestSeq; },
+      setRankingRequestSeq: function (nextValue) { _rankingRequestSeq = Number(nextValue) || 0; },
+      showStatusToast: showStatusToast
     };
   }
 
@@ -199,26 +225,6 @@
 
   function throwIfAborted(signal) {
     if (signal && signal.aborted) throw createAbortError();
-  }
-
-  function syncDailyActivityChartModal(series) {
-    var modalChart = $('#admin-chart-modal-content');
-    var modalLegend = $('#admin-chart-modal-legend');
-    var modalMeta = $('#admin-chart-modal-meta');
-    if (modalChart) {
-      renderChartInto(modalChart, series, { width: 1024, height: 420, padding: 28, fontSize: 12 });
-    }
-    if (modalLegend) {
-      modalLegend.innerHTML = Array.isArray(series) && series.length ? buildDailyActivityLegendMarkup(series) : '';
-    }
-    if (modalMeta) {
-      if (Array.isArray(series) && series.length) {
-        modalMeta.textContent = 'Período analisado: ' + getPeriodLabel((_data && _data.periodDays) || getSelectedPeriodDays()) +
-          ' • ' + series.length + ' dias consolidados.';
-      } else {
-        modalMeta.textContent = 'Visualização detalhada da atividade consolidada por período.';
-      }
-    }
   }
 
   function setLoading(isLoading) {
@@ -379,48 +385,6 @@
       : (DashboardUtils.classifyTermToModule ? DashboardUtils.classifyTermToModule(term, window.KC_CONSTANTS || {}) : null);
   }
 
-  function aggregateTrendsByModule(trends) {
-    if (DashboardUtils.aggregateTrendsByModule) {
-      return DashboardUtils.aggregateTrendsByModule(trends, window.KC_CONSTANTS || {});
-    }
-
-    var byModule = {};
-    (trends || []).forEach(function (trend) {
-      var moduleKey = classifyTermToModule(trend && trend.term);
-      if (!moduleKey) return;
-      if (!byModule[moduleKey]) {
-        byModule[moduleKey] = {
-          module: moduleKey,
-          label: getModuleLabel(moduleKey),
-          icon: getModuleIcon(moduleKey),
-          count: 0,
-          terms: []
-        };
-      }
-      byModule[moduleKey].count += Number(trend && trend.count) || 1;
-      if (trend && trend.term) byModule[moduleKey].terms.push(trend.term);
-    });
-
-    return Object.values(byModule).sort(function (a, b) { return b.count - a.count; });
-  }
-
-  function renderSearchTrendsByModule(trends, periodDays) {
-    var container = $('#admin-trends-modules');
-    if (!container) return;
-    var moduleData = aggregateTrendsByModule(trends);
-    if (!moduleData.length) { container.style.display = 'none'; return; }
-    container.style.display = 'flex';
-    var periodLabel = getPeriodLabel(periodDays || 30);
-    var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells"></i> Por módulo (' + escHtmlAdmin(periodLabel) + ')</div>';
-    container.innerHTML = titleHtml + moduleData.map(function (moduleRow) {
-      var topTerms = moduleRow.terms.slice(0, 3).map(function (term) { return escHtmlAdmin(term); }).join(', ');
-      return '<span class="kc-trend-module-badge" title="' + escHtmlAdmin(topTerms) + '">'
-        + '<i class="' + escHtmlAdmin(moduleRow.icon || getModuleIcon(moduleRow.module)) + '"></i> ' + escHtmlAdmin(moduleRow.label || getModuleLabel(moduleRow.module))
-        + '<span class="kc-badge-count">' + (Number(moduleRow.count) || 0) + '</span>'
-        + '</span>';
-    }).join('');
-  }
-
   function loadReportMetrics(client, since) {
     return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadReportMetrics === 'function')
       ? window._KCAD.metrics.loadReportMetrics(client, since)
@@ -518,62 +482,15 @@
   }
 
   function renderSearchTrends(trends, periodDays) {
-    const trendsList = $('#admin-trends-list');
-    if (!trendsList) return;
-    if (!trends || !trends.length) {
-      trendsList.innerHTML = '<li class="kc-trend-empty">Nenhuma busca registrada ainda. As buscas feitas na plataforma aparecerão aqui.</li>';
-      var modContainer = $('#admin-trends-modules');
-      if (modContainer) modContainer.style.display = 'none';
-      return;
+    if (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.renderSearchTrends === 'function') {
+      window._KCAD.charts.renderSearchTrends(trends, periodDays, buildChartsDeps());
     }
-    const max = Math.max.apply(null, trends.map(function (trend) { return Number(trend.count) || 1; }).concat([1]));
-    trendsList.innerHTML = trends.map(function (trend, index) {
-      const pct = Math.round(((Number(trend.count) || 0) / max) * 100);
-      var modKey = classifyTermToModule(trend.term);
-      var modBadge = modKey
-        ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtmlAdmin(getModuleLabel(modKey)) + '"><i class="' + getModuleIcon(modKey) + '"></i></span>'
-        : '';
-      return '<li class="kc-trend-item">'
-        + '<span class="kc-trend-rank">' + (index + 1) + '</span>'
-        + '<span class="kc-trend-term">' + escHtmlAdmin(String(trend.term || '')) + modBadge + '</span>'
-        + '<div class="kc-trend-bar-wrap"><div class="kc-trend-bar" style="width:' + pct + '%"></div></div>'
-        + '<span class="kc-trend-count">' + (Number(trend.count) || 0) + '</span>'
-        + '</li>';
-    }).join('');
-    renderSearchTrendsByModule(trends, periodDays);
   }
+
   function renderDailyActivitySummary(summary) {
-    var container = $('#admin-daily-activity-summary');
-    if (!container) return;
-    if (!summary) {
-      container.innerHTML = '<div class="kc-admin-empty">Sem dados diários para resumir.</div>';
-      return;
+    if (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.renderDailyActivitySummary === 'function') {
+      window._KCAD.charts.renderDailyActivitySummary(summary, buildChartsDeps());
     }
-
-    var peakLabel = summary.peakDay && summary.peakDay.label ? summary.peakDay.label : '--';
-    container.innerHTML = [
-      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Pico diário</span><strong>' + toNumber(summary.peakTotal) + '</strong><small>' + escHtmlAdmin(peakLabel) + '</small></div>',
-      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Média diária</span><strong>' + escHtmlAdmin(String(summary.averageTotal || 0)) + '</strong><small>Eventos consolidados</small></div>',
-      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Último dia</span><strong>' + toNumber(summary.lastDayTotal) + '</strong><small>Volume mais recente</small></div>',
-      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Total de buscas</span><strong>' + toNumber(summary.totals && summary.totals.searches_count) + '</strong><small>Demanda registrada</small></div>'
-    ].join('');
-  }
-
-  function buildSeriesPath(series, key, maxValue, width, height, padding) {
-    var points = [];
-    var innerWidth = width - (padding * 2);
-    var innerHeight = height - (padding * 2);
-    var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
-    var safeMax = Math.max(maxValue || 0, 1);
-
-    series.forEach(function (row, index) {
-      var value = toNumber(row[key]);
-      var x = padding + (step * index);
-      var y = padding + innerHeight - ((value / safeMax) * innerHeight);
-      points.push((index === 0 ? 'M' : 'L') + x.toFixed(2) + ' ' + y.toFixed(2));
-    });
-
-    return points.join(' ');
   }
 
   function getSeriesTotals(series) {
@@ -586,176 +503,28 @@
     return totals;
   }
 
-  function buildDailyActivityLegendMarkup(series) {
-    var totals = getSeriesTotals(series);
-    return SERIES_META.map(function (meta) {
-      return '<span class="kc-admin-chart-legend__item">' +
-        '<span class="kc-admin-chart-legend__dot" style="background:' + meta.color + ';"></span>' +
-        '<span class="kc-admin-chart-legend__label"><i class="' + meta.icon + '"></i> ' + escHtmlAdmin(meta.label) + '</span>' +
-        '<span class="kc-admin-chart-legend__total">' + toNumber(totals[meta.key]) + '</span>' +
-        '</span>';
-    }).join('');
-  }
-
-  function buildDailyActivityChartSvg(series, options) {
-    options = options || {};
-    var width = options.width || 640;
-    var height = options.height || 240;
-    var padding = options.padding || 22;
-    var fontSize = options.fontSize || 10;
-    var maxValue = 0;
-
-    series.forEach(function (row) {
-      getSeriesKeys().forEach(function (key) {
-        maxValue = Math.max(maxValue, toNumber(row[key]));
-      });
-    });
-
-    var grid = [0.25, 0.5, 0.75, 1].map(function (ratio) {
-      var y = padding + ((height - (padding * 2)) * (1 - ratio));
-      return '<line x1="' + padding + '" y1="' + y.toFixed(2) + '" x2="' + (width - padding) + '" y2="' + y.toFixed(2) + '" stroke="rgba(148,163,184,.24)" stroke-dasharray="4 4"></line>';
-    }).join('');
-
-    var labels = series.map(function (row, index) {
-      if (series.length > 14 && index % 2 === 1 && index !== series.length - 1) return '';
-      var innerWidth = width - (padding * 2);
-      var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
-      var x = padding + (step * index);
-      return '<text x="' + x.toFixed(2) + '" y="' + (height - 6) + '" text-anchor="middle" fill="var(--kc-text-dark-secondary)" font-size="' + fontSize + '">' + escHtmlAdmin(row.label || '') + '</text>';
-    }).join('');
-
-    var lines = SERIES_META.map(function (meta) {
-      return '<path d="' + buildSeriesPath(series, meta.key, maxValue, width, height, padding) + '" fill="none" stroke="' + meta.color + '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>';
-    }).join('');
-
-    return '<svg class="kc-admin-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Gráfico diário de atividade">' +
-      grid + lines + labels + '</svg>';
-  }
-
-  function renderChartInto(container, series, options) {
-    if (!container) return;
-    if (!Array.isArray(series) || !series.length) {
-      container.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
-      return;
-    }
-    container.innerHTML = buildDailyActivityChartSvg(series, options);
-  }
-
-  function closeDailyActivityChartModal() {
-    var modal = $('#admin-chart-modal');
-    if (!modal) return;
-    modal.setAttribute('aria-hidden', 'true');
-    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
-      window.KCAdminShell.setModalOpen(false);
-    }
-    if (_chartModalReturnFocus && typeof _chartModalReturnFocus.focus === 'function') {
-      try { _chartModalReturnFocus.focus(); } catch (_) {}
-    }
-    _chartModalReturnFocus = null;
-  }
-
-  function openDailyActivityChartModal() {
-    if (!_data || !Array.isArray(_data.dailyMetrics) || !_data.dailyMetrics.length) return;
-    var modal = $('#admin-chart-modal');
-    var closeBtn = $('#admin-chart-modal-close');
-    if (!modal || !closeBtn) return;
-    _chartModalReturnFocus = document.activeElement;
-    syncDailyActivityChartModal(_data.dailyMetrics);
-    modal.setAttribute('aria-hidden', 'false');
-    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
-      window.KCAdminShell.setModalOpen(true);
-    }
-    window.setTimeout(function () {
-      try { closeBtn.focus(); } catch (_) {}
-    }, 40);
-  }
-
   function bindDailyActivityChartModal() {
-    var expandBtn = $('#admin-chart-expand-btn');
-    var closeBtn = $('#admin-chart-modal-close');
-    var modal = $('#admin-chart-modal');
-
-    if (expandBtn && !expandBtn.dataset.bound) {
-      expandBtn.dataset.bound = 'true';
-      expandBtn.addEventListener('click', openDailyActivityChartModal);
-    }
-
-    if (closeBtn && !closeBtn.dataset.bound) {
-      closeBtn.dataset.bound = 'true';
-      closeBtn.addEventListener('click', closeDailyActivityChartModal);
-    }
-
-    if (modal && !modal.dataset.bound) {
-      modal.dataset.bound = 'true';
-      modal.addEventListener('click', function (event) {
-        if (event.target === modal) closeDailyActivityChartModal();
-      });
-    }
-
-    if (!document.body.dataset.adminChartEscBound) {
-      document.body.dataset.adminChartEscBound = 'true';
-      document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') closeDailyActivityChartModal();
-      });
+    if (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.bindDailyActivityChartModal === 'function') {
+      window._KCAD.charts.bindDailyActivityChartModal(buildChartsDeps());
     }
   }
 
   function renderDailyActivityChart(series) {
-    var chart = $('#admin-daily-activity-chart');
-    var legend = $('#admin-daily-activity-legend');
-    var expandBtn = $('#admin-chart-expand-btn');
-    if (!chart || !legend) return;
-
-    if (!Array.isArray(series) || !series.length) {
-      chart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
-      legend.innerHTML = '';
-      syncDailyActivityChartModal([]);
-      if (expandBtn) expandBtn.disabled = true;
-      closeDailyActivityChartModal();
-      return;
+    if (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.renderDailyActivityChart === 'function') {
+      window._KCAD.charts.renderDailyActivityChart(series, buildChartsDeps());
     }
-
-    renderChartInto(chart, series, { width: 640, height: 260, padding: 24, fontSize: 10 });
-    legend.innerHTML = buildDailyActivityLegendMarkup(series);
-    syncDailyActivityChartModal(series);
-    if (expandBtn) expandBtn.disabled = false;
   }
 
   function renderModuleShareTable(rows) {
-    var container = $('#admin-module-share-table');
-    if (!container) return;
-    if (!Array.isArray(rows) || !rows.length) {
-      container.innerHTML = '<div class="kc-admin-empty">Sem buscas suficientes para calcular participação por módulo.</div>';
-      return;
+    if (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.renderModuleShareTable === 'function') {
+      window._KCAD.charts.renderModuleShareTable(rows, buildChartsDeps());
     }
-
-    container.innerHTML = '<table><thead><tr><th>Módulo</th><th>Share</th><th>Volume</th></tr></thead><tbody>' +
-      rows.map(function (row) {
-        var topTerms = Array.isArray(row.topTerms) && row.topTerms.length ? row.topTerms.join(', ') : 'Sem termos associados';
-        return '<tr>' +
-          '<td><span style="display:inline-flex;align-items:center;gap:8px;"><i class="' + escHtmlAdmin(row.icon || 'fas fa-tag') + '"></i> ' + escHtmlAdmin(row.label || row.module || 'Módulo') + '</span><div style="margin-top:4px;font-size:.76rem;color:var(--kc-text-dark-secondary);">' + escHtmlAdmin(topTerms) + '</div></td>' +
-          '<td>' + escHtmlAdmin(String(row.share || 0)) + '%</td>' +
-          '<td>' + toNumber(row.count) + '</td>' +
-          '</tr>';
-      }).join('') +
-      '</tbody></table>';
   }
 
   function renderOperationalAlerts(alerts) {
-    var container = $('#admin-operational-alerts');
-    if (!container) return;
-    if (!Array.isArray(alerts) || !alerts.length) {
-      container.innerHTML = '<li class="kc-admin-empty">Nenhum alerta operacional no momento.</li>';
-      return;
+    if (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.renderOperationalAlerts === 'function') {
+      window._KCAD.charts.renderOperationalAlerts(alerts, buildChartsDeps());
     }
-
-    container.innerHTML = alerts.map(function (alert) {
-      var toneClass = alert && alert.tone ? 'kc-admin-alert--' + alert.tone : 'kc-admin-alert--neutral';
-      return '<li class="kc-admin-alert ' + toneClass + '">' +
-        '<strong>' + escHtmlAdmin(alert.title || 'Atualização') + '</strong>' +
-        '<p>' + escHtmlAdmin(alert.body || '') + '</p>' +
-        '</li>';
-    }).join('');
   }
 
   function renderAuditRows(rows, append) {
@@ -1049,120 +818,15 @@
 
   // ── Admin Ranking — Top Contribuidores ──────────────────────────────────────
 
-  var _adminRankingExpanded = false;
-
-  function mapPeriodToRanking(days) {
-    if (days <= 1) return 'day';
-    if (days <= 7) return 'week';
-    return 'month';
-  }
-
   async function loadAdminRanking(options) {
-    options = options || {};
-    var signal = options.signal || null;
-    var tableEl = $('#admin-ranking-table');
-    if (!tableEl) return;
-
-    var api = window.KCAPI;
-    if (!api || typeof api.getTopContributors !== 'function') {
-      tableEl.innerHTML = '<div class="kc-admin-empty">API indisponível.</div>';
-      return;
-    }
-
-    var periodDays = getSelectedPeriodDays();
-    var period = mapPeriodToRanking(periodDays);
-    var moduleFilter = $('#admin-ranking-module-filter');
-    var module = moduleFilter ? (moduleFilter.value || null) : null;
-    var limit = _adminRankingExpanded ? 100 : 10;
-    var requestSeq = ++_rankingRequestSeq;
-
-    tableEl.innerHTML = '<div class="kc-admin-empty"><i class="fas fa-spinner fa-spin"></i> Carregando ranking...</div>';
-
-    try {
-      var users = await api.getTopContributors(period, module, limit);
-      if ((signal && signal.aborted) || requestSeq !== _rankingRequestSeq) return;
-      var showAllBtn = $('#admin-ranking-show-all');
-      if (!users || users.length === 0) {
-        tableEl.innerHTML = '<div class="kc-admin-empty">Nenhum contribuidor encontrado no período.</div>';
-        if (showAllBtn) showAllBtn.style.display = 'none';
-        return;
-      }
-
-      var html = '<div class="kc-ranking-table-wrapper"><table class="kc-ranking-score-table">' +
-        '<thead><tr>' +
-          '<th>#</th><th>Usuário</th><th>Score</th><th title="Publicações"><i class="fas fa-file-alt"></i></th>' +
-          '<th title="Votos"><i class="fas fa-thumbs-up"></i></th><th title="Comentários"><i class="fas fa-comment"></i></th>' +
-          '<th title="Cupons"><i class="fas fa-ticket"></i></th><th title="Shares"><i class="fas fa-share-nodes"></i></th>' +
-          '<th title="Penalidades"><i class="fas fa-flag"></i></th>' +
-        '</tr></thead><tbody>';
-
-      users.forEach(function (u) {
-        var name = u.display_name || 'Usuário';
-        var avatarSrc = u.avatar_url || '';
-        var avatarHtml = avatarSrc
-          ? '<img src="' + avatarSrc + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;" loading="lazy">'
-          : '<i class="fas fa-user" style="font-size:0.8em;"></i>';
-        html += '<tr>' +
-          '<td style="font-weight:700;color:var(--kc-primary-brand);">' + u.rank + '</td>' +
-          '<td style="display:flex;align-items:center;gap:6px;min-width:0;">' + avatarHtml +
-            '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + name + '</span></td>' +
-          '<td style="font-weight:700;">' + u.score + '</td>' +
-          '<td>' + u.posts_count + '</td>' +
-          '<td>' + u.votes_received + '</td>' +
-          '<td>' + u.comments_count + '</td>' +
-          '<td>' + u.coupon_clicks + '</td>' +
-          '<td>' + u.share_count + '</td>' +
-          '<td style="color:' + (u.penalties > 0 ? '#ef5350' : 'inherit') + ';">' + u.penalties + '</td>' +
-        '</tr>';
-      });
-      html += '</tbody></table></div>';
-      tableEl.innerHTML = html;
-
-      if (showAllBtn) {
-        if (!_adminRankingExpanded && users.length >= 10) {
-          showAllBtn.style.display = 'block';
-          showAllBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Mostrar todos';
-        } else if (_adminRankingExpanded) {
-          showAllBtn.style.display = 'block';
-          showAllBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Mostrar top 10';
-        } else {
-          showAllBtn.style.display = 'none';
-        }
-      }
-    } catch (error) {
-      if (error && error.name === 'AbortError') return;
-      if ((signal && signal.aborted) || requestSeq !== _rankingRequestSeq) return;
-      tableEl.innerHTML = '<div class="kc-admin-empty">Erro ao carregar ranking.</div>';
-      showStatusToast('Não foi possível atualizar o ranking agora.', 'error', { duration: 3600 });
-    }
+    return (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.loadAdminRanking === 'function')
+      ? window._KCAD.charts.loadAdminRanking(options, buildChartsDeps())
+      : Promise.resolve();
   }
 
   function bindAdminRanking() {
-    var moduleFilter = $('#admin-ranking-module-filter');
-    if (moduleFilter) moduleFilter.addEventListener('change', function () {
-      _adminRankingExpanded = false;
-      loadAdminRanking();
-    });
-
-    var showAllBtn = $('#admin-ranking-show-all');
-    if (showAllBtn) showAllBtn.addEventListener('click', function () {
-      _adminRankingExpanded = !_adminRankingExpanded;
-      loadAdminRanking();
-    });
-
-    var infoBtn = $('#admin-ranking-info-btn');
-    if (infoBtn) {
-      infoBtn.addEventListener('click', function () {
-        // Use kc-ranking.js ensureInfoModal if available, or create inline
-        var modal = document.getElementById('kcRankingInfoModal');
-        if (!modal && window.KCRanking) {
-          // kc-ranking.js will auto-create on DOMContentLoaded if sidebar exists
-          // Fallback: create simple alert
-        }
-        if (modal) {
-          modal.setAttribute('aria-hidden', 'false');
-        }
-      });
+    if (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.bindAdminRanking === 'function') {
+      window._KCAD.charts.bindAdminRanking(buildChartsDeps());
     }
   }
 
