@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.3.4` concluída com o gate formal do dashboard admin `<900L`: `scripts/hygiene-check.js` agora valida a cadeia exata `_KCAD.*` em `admin/index.html` (`shared → metrics → audit → charts → kc-ranking → controller`), sem mudança funcional em runtime; a rodada também corrigiu o drift documental de medição da `v12.3.3`, formalizando o footprint real de `assets/js/controllers/admin-dashboard.controller.js` em `835L` (`32 802` bytes) e de `assets/js/controllers/admin-dashboard.charts.js` em `642L` (`27 895` bytes); baseline preservada em **109/109 suites · 2270/2270 testes**; próxima iteração: `v12.4.0` (auditoria docs-only de `assets/js/local.adapter.js`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.4.0` concluída com a auditoria docs-only de `assets/js/adapters/local.adapter.js`: criado `docs/local-adapter-audit-v12.4.md` com footprint real do hotspot local (`1862L`, `75 712` bytes, `100` funções top-level, `47` async, `57` chaves no driver registrado em `KCAPI`), `22` HTMLs consumidores diretos, `1` suíte direta + `5` indiretas (`114` testes mapeados) e recalibração do roadmap `_KCLA.*` de `v12.4.1`–`v12.4.6` para `v12.4.1`–`v12.4.8`, isolando `notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`, `profile`, `help` e gate final; zero mudança funcional em runtime; baseline preservada em **109/109 suites · 2270/2270 testes**; próxima iteração: `v12.4.1` (split `window._KCLA.notifications`).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.4.0 | **auditoria docs-only de `local.adapter.js`**: criado `docs/local-adapter-audit-v12.4.md` com footprint real do driver local (`1862L`, `75 712` bytes, `100` funções top-level, `47` async, `57` chaves no objeto `driverLocal`, `22` HTMLs consumidores diretos, `1` suíte direta + `5` indiretas / `114` testes mapeados), mapa por 7 grupos naturais (notifications/targets/invites, ratings, saved/highlights, posts read/feed/related + ranking, posts write/drafts, profile, help/admin), leitura do boundary residual (fallback/glue/registry) e sequência recomendada recalibrada para `v12.4.1`–`v12.4.8` com `window._KCLA.notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`, `profile`, `help` e gate final `<500L`; zero mudança funcional em runtime; baseline preservada em **109/109 suites · 2270/2270 testes** | — |
 | v12.3.4 | **gate formal do dashboard admin `<900L` + hygiene `_KCAD.*`**: `scripts/hygiene-check.js` passou a validar a cadeia exata de `<script defer src="...admin-dashboard*.js">` em `admin/index.html` na ordem `shared → metrics → audit → charts → kc-ranking → controller`, falhando por item faltando, duplicado, extra ou fora de ordem; `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` sincronizados para formalizar o marco estrutural já atingido, corrigindo o drift documental da `v12.3.3` e registrando os valores medidos de `admin-dashboard.controller.js` (**835L**, `32 802` bytes) e `admin-dashboard.charts.js` (**642L**, `27 895` bytes); zero mudança funcional em runtime, zero HTML editado nesta rodada; baseline preservada em **109/109 suites · 2270/2270 testes** | — |
 | v12.3.3 | **split `window._KCAD.charts`**: novo `assets/js/controllers/admin-dashboard.charts.js` com IIFE + 10 exports cobrindo tendências de busca, resumo diário, renderização SVG do pulso, modal expandido do gráfico, tabela de share por módulo, alertas operacionais e ranking admin (`aggregateTrendsByModule`, `renderSearchTrends`, `renderDailyActivitySummary`, `bindDailyActivityChartModal`, `renderDailyActivityChart`, `renderModuleShareTable`, `renderOperationalAlerts`, `mapPeriodToRanking`, `loadAdminRanking`, `bindAdminRanking`); `admin-dashboard.controller.js` reduzido de `1172L` → `835L` (−337L) com `buildChartsDeps()` e wrappers finos para `_KCAD.charts`; `admin/index.html` atualizado para a ordem `shared → metrics → audit → charts → kc-ranking → controller`; nova suíte direta `tests/admin-dashboard.charts.test.js` (22 testes: contrato estático, script order, wrappers, tendências, chart modal e ranking), além do ajuste das suítes `tests/admin-dashboard.metrics.test.js` e `tests/admin-dashboard.audit.test.js`; baseline expandida para **109/109 suites · 2270/2270 testes** | — |
 | v12.3.2 | **split `window._KCAD.audit`**: novo `assets/js/controllers/admin-dashboard.audit.js` com IIFE + 9 exports cobrindo audit log, cache/lookup de atores, paginação incremental, filtro por ação, carregamento sob demanda das libs de exportação e geração de XLSX/PDF (`loadActorsById`, `getActorDisplay`, `loadAuditLog`, `renderAuditRows`, `loadMoreAudit`, `filterAudit`, `enableExport`, `exportXLSX`, `exportPDF`); `admin-dashboard.controller.js` reduzido de `1859L` → `1172L` (−687L) com builders explícitos de dependência/estado e wrappers finos para `_KCAD.audit`; `admin/index.html` atualizado para a ordem `shared → metrics → audit → kc-ranking → controller`; nova suíte direta `tests/admin-dashboard.audit.test.js` (18 testes: contrato estático, script order, audit log, exportação XLSX/PDF e bindings), além do ajuste da suíte `tests/admin-dashboard.metrics.test.js`; baseline expandida para **108/108 suites · 2248/2248 testes** | — |
@@ -160,7 +161,7 @@ As iterações são organizadas em **três camadas paralelas**:
 - **Camada A — Continuação tática v11** (splits IIFE dos hotspots remanescentes):
   - `v12.1.0`–`v12.2.7`: `kc-utils.js` (2445L → <900L) em 7 sub-módulos `window._KCU.*` + gate formal
   - `v12.3.0`–`v12.3.4`: `admin-dashboard.controller.js` (2034L → <900L) em `window._KCAD.*`
-  - `v12.4.0`–`v12.4.6`: `local.adapter.js` (1862L → <500L) em `window._KCLA.*`, restaurando paridade com `supabase.adapter.js` (420L)
+  - `v12.4.0`–`v12.4.8`: `local.adapter.js` (1862L → <500L) em `window._KCLA.*`, restaurando paridade com `supabase.adapter.js` (420L)
   - `v12.5.0`–`v12.5.4`: `profile.controller.js` (1463L → <600L)
 
 - **Camada B — Qualidade sistêmica** (gaps não cobertos na v11):
@@ -185,7 +186,7 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.3.4` — **gate formal do dashboard admin `<900L` concluído** (`admin-dashboard.controller.js` em `835L`; `admin-dashboard.charts.js` em `642L`; `scripts/hygiene-check.js` agora valida a cadeia `_KCAD.*` em `admin/index.html`)
+- iteração encerrada: `v12.4.0` — **auditoria docs-only de `local.adapter.js` concluída** (`1862L`, `75 712` bytes, `100` funções top-level, `47` async, `57` chaves no driver local; roadmap `_KCLA.*` recalibrado até `v12.4.8`)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
@@ -196,7 +197,8 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 - kc-api.client.js: `2536L` (pré-v11.33) → `2410L` (pós-v11.33.7), piso natural como registry/wiring
 - `kc-utils.js`: 2445L → 440L (−2005L pós-v12.2.6); 7 sub-módulos `window._KCU.*` operacionais e gate `<900L` formalizado em `v12.2.7`
 - `admin-dashboard.controller.js`: após `v12.3.1` o core estava em `1859L`; após `v12.3.2`, caiu para `1172L` / `48 589` bytes; o gate formal `v12.3.4` consolidou o footprint real atual em `835L` / `32 802` bytes, enquanto `admin-dashboard.charts.js` ficou formalizado em `642L` / `27 895` bytes
-- próxima iteração: `v12.4.0` — auditoria docs-only de `local.adapter.js`
+- `local.adapter.js`: auditoria `v12.4.0` congelou o hotspot em `1862L` / `75 712` bytes, com `100` funções top-level, `47` async, `57` chaves no driver registrado e `22` HTMLs consumidores diretos; o plano `_KCLA.*` foi expandido para `notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`, `profile`, `help` + gate `v12.4.8`
+- próxima iteração: `v12.4.1` — split `window._KCLA.notifications` (preferências, destinos privados e convites)
 
 ---
 
