@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.4.8` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local e gate formal `<500L` com hygiene `_KCLA.*`); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `473L` e os submódulos `window._KCLA.notifications` (`250L`, 14 exports), `window._KCLA.ratings` (`339L`, 6 exports), `window._KCLA.saved` (`252L`, 7 exports), `window._KCLA.postsRead` (`687L`, 8 exports), `window._KCLA.postsWrite` (`300L`, 7 exports), `window._KCLA.profile` (`157L`, 4 exports) e `window._KCLA.help` (`201L`, 3 exports) já estão operacionais, ao lado de `window._KCAD.metrics` (`514L`, 17 exports), `window._KCAD.audit` (`1045L`, 9 exports) e `window._KCAD.charts` (`642L`, 10 exports); a próxima iteração é `v12.5.0` — auditoria docs-only de `profile.controller.js`; baseline preservada em `116/116` suites e `2428/2428` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.5.0` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*` e auditoria docs-only de `profile.controller.js`); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `473L` e `assets/js/controllers/profile.controller.js` foi auditado em `1463L` / `56 497` bytes com boundary previo em `assets/js/account-profile.shared.js` (`962L`, `45` funcoes); os submodulos `window._KCLA.notifications` (`250L`, 14 exports), `window._KCLA.ratings` (`339L`, 6 exports), `window._KCLA.saved` (`252L`, 7 exports), `window._KCLA.postsRead` (`687L`, 8 exports), `window._KCLA.postsWrite` (`300L`, 7 exports), `window._KCLA.profile` (`157L`, 4 exports) e `window._KCLA.help` (`201L`, 3 exports) ja estao operacionais, ao lado de `window._KCAD.metrics` (`514L`, 17 exports), `window._KCAD.audit` (`1045L`, 9 exports) e `window._KCAD.charts` (`642L`, 10 exports); a proxima iteracao e `v12.5.1` — split `window._KCPR.presentation`; baseline preservada em `116/116` suites e `2428/2428` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -21,7 +21,7 @@ A v12 não é uma continuação ingênua da v11. Ela **herda** a linha-base, o r
 - a v12 é uma esteira de **consolidação do que foi fatiado + elevação de maturidade sistêmica**, operando em três camadas paralelas:
 
 > **Camada A — Continuação tática v11**
-> Aplicar o padrão IIFE + namespace já validado em `_KCAPI` e `_KCSA` aos hotspots remanescentes (`kc-utils.js`, `admin-dashboard.controller.js`, `local.adapter.js`, `profile.controller.js`), criando `window._KCU.*`, `window._KCAD.*`, `window._KCLA.*`.
+> Aplicar o padrão IIFE + namespace já validado em `_KCAPI` e `_KCSA` aos hotspots remanescentes (`kc-utils.js`, `admin-dashboard.controller.js`, `local.adapter.js`, `profile.controller.js`), criando `window._KCU.*`, `window._KCAD.*`, `window._KCLA.*` e `window._KCPR.*`.
 >
 > **Camada B — Qualidade sistêmica**
 > Introduzir gaps estruturais que a v11 deliberadamente não cobriu: feature flags formais (`window.KCFF`), Playwright E2E, Lighthouse CI, auditoria a11y estrutural, i18n em runtime (extensão do trabalho docs-only da v11.24.x).
@@ -136,15 +136,15 @@ Estes namespaces são **contratos públicos internos** — qualquer mudança de 
 | `assets/js/kc-utils.js` | `2445L` | `~95KB` | `v12.1.0`–`v12.2.6` | 🥇 1º |
 | `assets/js/controllers/admin-dashboard.controller.js` | `835L` | `~32,1KB` | `v12.3.0`–`v12.3.4` (gate concluido) | ✅ |
 | `assets/js/adapters/local.adapter.js` | `473L` | `~21,4KB` | `v12.4.0`–`v12.4.8` (gate concluido) | ✅ |
-| `assets/js/profile.controller.js` | `1463L` | `~56KB` | `v12.5.0`–`v12.5.4` | 4º |
-| `assets/js/kc-supabase.client.js` | `1364L` | `~53KB` | avaliação pós-`v12.5.4` | pausa |
-| `assets/js/oportunidades.controller.js` | `1246L` | `~51KB` | avaliação pós-`v12.5.4` | pausa |
-| `assets/js/kc-comments.js` | `1068L` | `~48KB` | avaliação pós-`v12.5.4` | pausa |
+| `assets/js/controllers/profile.controller.js` | `1463L` | `~55,2KB` | `v12.5.0`–`v12.5.5` | 4º |
+| `assets/js/kc-supabase.client.js` | `1364L` | `~53KB` | avaliação pós-`v12.5.5` | pausa |
+| `assets/js/oportunidades.controller.js` | `1246L` | `~51KB` | avaliação pós-`v12.5.5` | pausa |
+| `assets/js/kc-comments.js` | `1068L` | `~48KB` | avaliação pós-`v12.5.5` | pausa |
 | `assets/js/kc-auth.ui.js` | `909L` | `~52KB` | sem split programado | pausa |
 
 **Nota:** `kc-utils.js` (440L) e `admin-dashboard.controller.js` (835L) ja sairam da zona de risco de gate, mas permanecem listados aqui como hotspots historicos da Camada A por causa do impacto estrutural que tiveram no roadmap da v12.
 
-**Critério de parada de splits na v12:** quando o maior arquivo JS em `assets/js/` cair abaixo de **1000 linhas** (previsto após `v12.5.4`), os esforços migram integralmente para as camadas B e C. A v13 eventual retoma splits dos demais se justificável.
+**Critério de parada de splits na v12:** quando o maior arquivo JS em `assets/js/` cair abaixo de **1000 linhas** (previsto após `v12.5.5`), os esforços migram integralmente para as camadas B e C. A v13 eventual retoma splits dos demais se justificável.
 
 ### 3.4. Gaps estruturais identificados (alvos das Camadas B e C)
 
@@ -206,11 +206,12 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.4.6** | Split local.adapter **profile** | `local.profile.adapter.js` → `window._KCLA.profile` (`157L`, 4 exports), `local.adapter.js` reduzido de `1031L` → `850L`, `22` HTMLs + `8` bootstraps diretos atualizados, nova suíte `tests/local-profile.adapter.test.js` (25 testes); baseline expandida para `115/115` suites · `2408/2408` testes | ✅ concluído |
 | **v12.4.7** | Split local.adapter **help/admin** | `local.help.adapter.js` → `window._KCLA.help` (`201L`, 3 exports), `local.adapter.js` reduzido de `850L` → `697L`, `22` HTMLs + `9` arquivos de teste existentes atualizados, nova suíte `tests/local-help.adapter.test.js` (20 testes); baseline expandida para `116/116` suites · `2428/2428` testes | ✅ concluído |
 | **v12.4.8** | Gate local.adapter <500L (paridade c/ `supabase.adapter.js` de 420L pós-v11.30.9) | `local.adapter.js` reduzido de `697L` → `473L` (`21 898` bytes), `scripts/hygiene-check.js` validando a cadeia `_KCLA.*` nos `22` HTMLs e falhando se o core voltar a `>=500L`; baseline `116/116` suites · `2428/2428` testes preservada | ✅ concluído |
-| v12.5.0 | Auditoria `profile.controller.js` (doc-only) | `docs/profile-controller-audit-v12.5.md` | 📋 planejado |
-| v12.5.1 | Split profile **rendering/format** | `profile.render.js`, ~300L, ~10 testes | 📋 planejado |
-| v12.5.2 | Split profile **ratings summary** | `profile.ratings.js`, ~200L, ~8 testes | 📋 planejado |
-| v12.5.3 | Split profile **avatar/media** | `profile.avatar.js`, ~200L, ~8 testes | 📋 planejado |
-| v12.5.4 | Gate profile <600L | gate formal | 📋 planejado |
+| **v12.5.0** | Auditoria `profile.controller.js` (doc-only) | `docs/profile-controller-audit-v12.5.md`; footprint real `1463L`, `56 497` bytes, `67` funcoes top-level (`14` async), `1` HTML consumidor (`profile.html`), `1` export publico (`window.KCProfileRefresh`) e roadmap recalibrado para `_KCPR.presentation`, `_KCPR.collections`, `_KCPR.ratings`, `_KCPR.flow` + gate `v12.5.5` | ✅ concluído |
+| v12.5.1 | Split profile **presentation + header** | `profile.presentation.js` -> `window._KCPR.presentation` | 📋 planejado |
+| v12.5.2 | Split profile **collections + tabs** | `profile.collections.js` -> `window._KCPR.collections` | 📋 planejado |
+| v12.5.3 | Split profile **ratings** | `profile.ratings.js` -> `window._KCPR.ratings` | 📋 planejado |
+| v12.5.4 | Split profile **flow (editor + lifecycle)** | `profile.flow.js` -> `window._KCPR.flow` | 📋 planejado |
+| v12.5.5 | Gate profile <600L | gate formal + hygiene `_KCPR.*` em `profile.html` | 📋 planejado |
 
 ### 5.2. Camada B — Qualidade sistêmica
 
@@ -1146,6 +1147,36 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `npm test` -> **116/116 suites / 2428/2428 testes verdes**
 
 **Proxima iteracao:** `v12.5.0` - auditoria docs-only de `profile.controller.js`.
+
+---
+
+### 8.24. v12.5.0 - auditoria `profile.controller.js` - concluido
+
+**Objetivo:** mapear o estado real de `assets/js/controllers/profile.controller.js` antes da trilha `_KCPR.*`, travando footprint, contratos externos, boundaries ja compartilhados, grupos naturais de extracao e a sequencia recomendada para as iteracoes funcionais seguintes.
+
+**Escopo entregue:**
+
+- criado `docs/profile-controller-audit-v12.5.md` com a auditoria completa do hotspot de perfil
+- corrigido o drift documental do caminho do arquivo para `assets/js/controllers/profile.controller.js`
+- medido o footprint real do controller e do helper compartilhado `assets/js/account-profile.shared.js`
+- mapeados o contrato publico atual (`window.KCProfileRefresh`), o HTML consumidor direto (`profile.html`) e as suites de teste ja relacionadas ao dominio
+- recalibrado o roadmap `v12.5.x` para `window._KCPR.presentation`, `window._KCPR.collections`, `window._KCPR.ratings`, `window._KCPR.flow` e gate formal `<600L` em `v12.5.5`
+- `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` sincronizados com a baseline atual e a proxima iteracao
+
+**Entregas mensuraveis:**
+
+- `assets/js/controllers/profile.controller.js` travado em **1463L** / `56 497` bytes
+- `assets/js/account-profile.shared.js` identificado como boundary previo em **962L** / `36 222` bytes, com **45** funcoes top-level e **10** testes dedicados
+- contrato externo inventariado: **16** metodos `KCAPI` usados, **1** export publico direto e **1** HTML consumidor direto
+- cobertura mapeada em **25 testes** ja existentes (`9` diretos do controller + `16` relacionados/helper)
+- trilha do profile expandida de `v12.5.1`-`v12.5.4` para `v12.5.1`-`v12.5.5`
+
+**Verificacao:**
+
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test` -> **116/116 suites / 2428/2428 testes verdes**
+
+**Proxima iteracao:** `v12.5.1` - split `window._KCPR.presentation`.
 
 ---
 
