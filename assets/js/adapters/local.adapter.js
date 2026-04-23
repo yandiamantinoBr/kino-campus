@@ -10,6 +10,7 @@ window._KCLA.ratings = window._KCLA.ratings || {};
 window._KCLA.saved = window._KCLA.saved || {};
 window._KCLA.postsRead = window._KCLA.postsRead || {};
 window._KCLA.postsWrite = window._KCLA.postsWrite || {};
+window._KCLA.profile = window._KCLA.profile || {};
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
@@ -69,6 +70,10 @@ window._KCLA.postsWrite = window._KCLA.postsWrite || {};
     return (window._KCLA && window._KCLA.postsWrite) ? window._KCLA.postsWrite : null;
   }
 
+  function getLocalProfileModule() {
+    return (window._KCLA && window._KCLA.profile) ? window._KCLA.profile : null;
+  }
+
   function buildLocalRatingsDeps() {
     return {
       viewerId: LOCAL_RATING_VIEWER_ID,
@@ -86,7 +91,7 @@ window._KCLA.postsWrite = window._KCLA.postsWrite || {};
       getPostById: localGetPostById,
       mapPostSummary: mapLocalPostSummary,
       paginateItems: paginateLocalItems,
-      readProfile: readLocalProfile,
+      readProfile: readLocalProfileSnapshot,
     };
   }
 
@@ -131,6 +136,29 @@ window._KCLA.postsWrite = window._KCLA.postsWrite || {};
     };
   }
 
+  function buildLocalProfileDeps() {
+    return {
+      viewerId: LOCAL_RATING_VIEWER_ID,
+      mockUsersById: MOCK_USERS_BY_ID || {},
+      getNowIso,
+    };
+  }
+
+  function readLocalProfileSnapshot() {
+    const profileModule = getLocalProfileModule();
+    if (profileModule && typeof profileModule.readProfile === 'function') {
+      return profileModule.readProfile(buildLocalProfileDeps());
+    }
+    const viewer = (MOCK_USERS_BY_ID && MOCK_USERS_BY_ID[LOCAL_RATING_VIEWER_ID]) || {};
+    const displayName = String(viewer.displayName || viewer.name || 'Voce').trim() || 'Voce';
+    return {
+      id: String(viewer.id || LOCAL_RATING_VIEWER_ID).trim() || LOCAL_RATING_VIEWER_ID,
+      display_name: displayName,
+      social_links: {},
+      social_visibility: {},
+    };
+  }
+
   function buildDefaultLocalNotificationPreferencesFallback() {
     return {
       comment_on_post: { in_app: true, email: false, whatsapp: false },
@@ -160,7 +188,6 @@ window._KCLA.postsWrite = window._KCLA.postsWrite || {};
   }
 
   const LOCAL_RATING_VIEWER_ID = 'USER_SELF';
-  const LOCAL_PROFILE_STORAGE_KEY = 'kc_local_profile';
 
   function buildDefaultLocalRatingSummaryFallback(userId) {
     const key = String(userId || '').trim();
@@ -299,75 +326,6 @@ window._KCLA.postsWrite = window._KCLA.postsWrite || {};
       items: items.slice(offset, offset + limit),
     };
   }
-
-  function buildDefaultLocalProfile() {
-    const viewer = (MOCK_USERS_BY_ID && MOCK_USERS_BY_ID[LOCAL_RATING_VIEWER_ID]) || {};
-    const displayName = String(viewer.displayName || viewer.name || 'VocÃª').trim() || 'VocÃª';
-    const avatarUrl = String(viewer.avatarUrl || viewer.avatar || '').trim() || null;
-    return {
-      id: String(viewer.id || LOCAL_RATING_VIEWER_ID),
-      display_name: displayName,
-      avatar_url: avatarUrl,
-      avatar_path: null,
-      bio: '',
-      affiliation: '',
-      gender_identity: '',
-      gender_identity_custom: '',
-      race_color: '',
-      contact_primary_method: null,
-      contact_cta_enabled: true,
-      social_links: {},
-      social_visibility: {},
-      profile_public: true,
-      onboarding_completed: false,
-      verified: true,
-      email: String(viewer.email || '').trim() || null,
-    };
-  }
-
-  function readLocalProfile() {
-    const fallback = buildDefaultLocalProfile();
-    try {
-      const raw = localStorage.getItem(LOCAL_PROFILE_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return fallback;
-      return {
-        ...fallback,
-        ...parsed,
-        id: String(parsed.id || fallback.id || LOCAL_RATING_VIEWER_ID).trim() || LOCAL_RATING_VIEWER_ID,
-        display_name: String(parsed.display_name || fallback.display_name || 'VocÃª').trim() || 'VocÃª',
-        avatar_url: String(parsed.avatar_url || fallback.avatar_url || '').trim() || null,
-      };
-    } catch (_) {
-      return fallback;
-    }
-  }
-
-  function writeLocalProfile(profile) {
-    const next = {
-      ...buildDefaultLocalProfile(),
-      ...(profile && typeof profile === 'object' && !Array.isArray(profile) ? profile : {}),
-    };
-    try {
-      localStorage.setItem(LOCAL_PROFILE_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function syncLocalProfile(profile) {
-    if (window.KCProfiles && typeof window.KCProfiles.commitProfile === 'function') {
-      try {
-        return window.KCProfiles.commitProfile(profile);
-      } catch (_) { }
-    }
-    try {
-      document.dispatchEvent(new CustomEvent('kc:profilechange', { detail: { profile: profile || null } }));
-    } catch (_) { }
-    return profile || null;
-  }
-
 
   async function getLocalSearchCollection() {
     const db = await getDatabaseNormalized();
@@ -513,67 +471,24 @@ window._KCLA.postsWrite = window._KCLA.postsWrite || {};
       : { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
   }
   async function localGetMyProfile() {
-    return readLocalProfile();
+    const profileModule = getLocalProfileModule();
+    return profileModule && typeof profileModule.getMyProfile === 'function'
+      ? profileModule.getMyProfile(buildLocalProfileDeps())
+      : readLocalProfileSnapshot();
   }
 
   async function localUpdateMyProfile(patch = {}) {
-    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
-      return { ok: false, error: { message: 'Patch de perfil invÃ¡lido.' } };
-    }
-    if (!Object.keys(patch).length) {
-      return { ok: false, error: { message: 'Nenhuma alteraÃ§Ã£o informada.' } };
-    }
-
-    const current = readLocalProfile();
-    if (Object.prototype.hasOwnProperty.call(patch, 'display_name') && !String(patch.display_name || '').trim()) {
-      return { ok: false, error: { message: 'Informe um nome vÃ¡lido.' } };
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, 'avatar_url')) {
-      const avatarUrl = String(patch.avatar_url || '').trim();
-      if (avatarUrl && !/^(https?:\/\/|data:|blob:)/i.test(avatarUrl)) {
-        return { ok: false, error: { message: 'URL de avatar invÃ¡lida.' } };
-      }
-    }
-
-    const next = {
-      ...current,
-      ...patch,
-      id: current.id || LOCAL_RATING_VIEWER_ID,
-      updated_at: getNowIso(),
-    };
-    const saved = writeLocalProfile(next);
-    if (!saved) return { ok: false, error: { message: 'NÃ£o foi possÃ­vel salvar o perfil localmente.' } };
-    syncLocalProfile(saved);
-    return { ok: true, data: saved };
+    const profileModule = getLocalProfileModule();
+    return profileModule && typeof profileModule.updateMyProfile === 'function'
+      ? profileModule.updateMyProfile(patch, buildLocalProfileDeps())
+      : { ok: false, error: { message: 'Perfil local indisponivel.' } };
   }
 
   async function localUploadProfileAvatar(fileOrDataUrl) {
-    const value = String(fileOrDataUrl || '').trim();
-    if (value) {
-      if (/^(https?:\/\/|data:|blob:)/i.test(value)) {
-        return { ok: true, data: { url: value, path: null } };
-      }
-      return { ok: false, error: { message: 'Formato de avatar invÃ¡lido.' } };
-    }
-
-    if (typeof FileReader !== 'undefined' && fileOrDataUrl && typeof fileOrDataUrl === 'object') {
-      return new Promise((resolve) => {
-        try {
-          const reader = new FileReader();
-          reader.onload = function () {
-            resolve({ ok: true, data: { url: String(reader.result || ''), path: null } });
-          };
-          reader.onerror = function () {
-            resolve({ ok: false, error: { message: 'NÃ£o foi possÃ­vel ler o avatar selecionado.' } });
-          };
-          reader.readAsDataURL(fileOrDataUrl);
-        } catch (_) {
-          resolve({ ok: false, error: { message: 'NÃ£o foi possÃ­vel processar o avatar selecionado.' } });
-        }
-      });
-    }
-
-    return { ok: false, error: { message: 'Upload de avatar indisponÃ­vel no modo local.' } };
+    const profileModule = getLocalProfileModule();
+    return profileModule && typeof profileModule.uploadProfileAvatar === 'function'
+      ? profileModule.uploadProfileAvatar(fileOrDataUrl, buildLocalProfileDeps())
+      : { ok: false, error: { message: 'Upload de avatar indisponivel no modo local.' } };
   }
 
   async function localGetMyPosts(params = {}) {
