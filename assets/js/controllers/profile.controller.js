@@ -7,6 +7,8 @@
   const COMMENT_PAGE_SIZE = 15;
   const BIO_LIMIT = 200;
   const shared = window.KCAccountProfileUtils || {};
+  window._KCPR = window._KCPR || {};
+  window._KCPR.presentation = window._KCPR.presentation || {};
 
   const state = {
     user: null,
@@ -69,19 +71,6 @@
     store.set('profile', profileCacheKey(), { profile: profile });
   }
 
-  function esc(value) {
-    const text = String(value == null ? '' : value);
-    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
-      return window.KCUtils.escapeHtml(text);
-    }
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
   function readProfileIdFromQuery() {
     const raw = new URLSearchParams(window.location.search).get('id');
     return String(raw || '').trim();
@@ -92,165 +81,6 @@
       return window.KCSupabase.getClient();
     }
     return null;
-  }
-
-  function safeName(profile, user) {
-    const candidate = profile && (profile.display_name || profile.full_name);
-    if (candidate && String(candidate).trim()) return String(candidate).trim();
-    const email = user && user.email ? String(user.email) : '';
-    if (email.includes('@')) return email.split('@')[0];
-    return 'Usuário';
-  }
-
-  function buildPublicHandle(profile) {
-    const source = profile && (profile.display_name || profile.full_name);
-    if (window.KCUtils && typeof window.KCUtils.buildPublicHandle === 'function') {
-      return window.KCUtils.buildPublicHandle(source);
-    }
-    const normalized = String(source || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    return normalized ? ('@' + normalized.slice(0, 32)) : '';
-  }
-
-  function safeHandle(profile, user) {
-    const email = user && user.email ? String(user.email) : '';
-    if (!state.isPublicView && email.includes('@')) return '@' + email.split('@')[0];
-    return buildPublicHandle(profile);
-  }
-
-  function buildAccountSetupHref() {
-    const base = '/account-setup.html';
-    const next = `/profile.html${state.profileId ? `?id=${encodeURIComponent(state.profileId)}` : ''}`;
-    if (shared && typeof shared.normalizeNextPath === 'function') {
-      return `${base}?next=${encodeURIComponent(shared.normalizeNextPath(next, '/profile.html'))}`;
-    }
-    return `${base}?next=${encodeURIComponent(next)}`;
-  }
-
-  function buildSettingsHref() {
-    const base = '/settings.html';
-    const next = `/profile.html${state.profileId ? `?id=${encodeURIComponent(state.profileId)}` : ''}`;
-    if (shared && typeof shared.normalizeNextPath === 'function') {
-      return `${base}?next=${encodeURIComponent(shared.normalizeNextPath(next, '/profile.html'))}`;
-    }
-    return `${base}?next=${encodeURIComponent(next)}`;
-  }
-
-  function formatChoice(field, value) {
-    if (!value) return '';
-    if (shared && typeof shared.formatProfileValue === 'function') {
-      return shared.formatProfileValue(field, value);
-    }
-    return String(value || '').trim();
-  }
-
-  function getProfileVisibleSocialLinks(profile) {
-    if (shared && typeof shared.getVisibleSocialLinks === 'function') {
-      return shared.getVisibleSocialLinks(profile || {});
-    }
-    return [];
-  }
-
-  function currentAvatarUrl() {
-    if (state.avatarPreviewUrl) return state.avatarPreviewUrl;
-    const avatarUrl = state.profile && state.profile.avatar_url ? String(state.profile.avatar_url) : '';
-    if (avatarUrl) return avatarUrl;
-    if (shared && typeof shared.buildDefaultAvatarDataUrl === 'function') {
-      return shared.buildDefaultAvatarDataUrl(safeName(state.profile || {}, state.user || null));
-    }
-    return '';
-  }
-
-  function fmtDate(iso, options) {
-    if (!iso) return '-';
-    try {
-      return new Date(iso).toLocaleDateString('pt-BR', options || {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch (_) {
-      return '-';
-    }
-  }
-
-  function fmtRelative(iso) {
-    if (!iso) return '';
-    const target = new Date(iso).getTime();
-    if (!Number.isFinite(target)) return '';
-    const delta = Date.now() - target;
-    const seconds = Math.max(0, Math.floor(delta / 1000));
-    if (seconds < 60) return 'agora';
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `há ${minutes} min`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `há ${hours}h`;
-    const days = Math.floor(hours / 24);
-    if (days < 30) return `há ${days} dia${days > 1 ? 's' : ''}`;
-    return fmtDate(iso);
-  }
-
-  function buildPostDetailHref(postId) {
-    const normalized = String(postId || '').trim();
-    if (!normalized) return '';
-    if (window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function') {
-      return window.KCUtils.buildProductDetailHref(normalized);
-    }
-    return `_product.html?id=${encodeURIComponent(normalized)}`;
-  }
-
-  function statusBadge(status) {
-    const key = String(status || 'published').trim().toLowerCase();
-    const labels = {
-      published: 'Publicado',
-      pending: 'Pendente',
-      hidden: 'Oculto',
-      deleted: 'Excluído',
-    };
-    return `<span class="kc-status-badge kc-status-badge--${esc(key)}">${esc(labels[key] || key)}</span>`;
-  }
-
-  function visibilityBadge(visibility) {
-    const key = String(visibility || 'public').trim().toLowerCase();
-    const labels = {
-      public: 'Público',
-      community: 'Comunidade',
-    };
-    const icon = key === 'community' ? 'fas fa-user-group' : 'fas fa-globe';
-    return `<span class="kc-profile-save-badge kc-profile-save-badge--later"><i class="${esc(icon)}"></i> ${esc(labels[key] || 'Público')}</span>`;
-  }
-
-  function normalizeSaveKinds(value) {
-    const list = Array.isArray(value)
-      ? value
-      : (value ? [value] : []);
-    const allowed = new Set(['favorite', 'later', 'highlight']);
-    return list
-      .map((item) => String(item || '').trim().toLowerCase())
-      .filter((item, index, array) => item && allowed.has(item) && array.indexOf(item) === index);
-  }
-
-  function saveKindBadge(kind) {
-    const current = {
-      favorite: { icon: 'fas fa-heart', label: 'Favorito' },
-      later: { icon: 'fas fa-clock', label: 'Lembrar Depois' },
-      highlight: { icon: 'fas fa-star', label: 'Destaque' },
-    }[String(kind || '').trim().toLowerCase()];
-    if (!current) return '';
-    return `<span class="kc-profile-save-badge kc-profile-save-badge--${esc(kind)}"><i class="${esc(current.icon)}"></i> ${esc(current.label)}</span>`;
-  }
-
-  function buildSaveBadges(kinds) {
-    return normalizeSaveKinds(kinds).map(saveKindBadge).join('');
-  }
-
-  function linkifyBio(text) {
-    const source = String(text || '').trim();
-    if (!source) return '';
-    const escaped = esc(source).replace(/\r?\n/g, '<br>');
-    return escaped.replace(/((https?:\/\/|www\.)[^\s<]+)/gi, (match) => {
-      const href = /^https?:\/\//i.test(match) ? match : `https://${match}`;
-      return `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${match}</a>`;
-    });
   }
 
   function releaseAvatarPreview() {
@@ -267,68 +97,6 @@
     releaseAvatarPreview();
     const input = $('#profile-avatar-input');
     if (input) input.value = '';
-  }
-
-  function setStatus(message, tone) {
-    const feedback = $('#profile-feedback');
-    if (!feedback) return;
-    if (!message) {
-      feedback.style.display = 'none';
-      feedback.textContent = '';
-      feedback.className = 'kc-profile-feedback';
-      return;
-    }
-    feedback.style.display = 'block';
-    feedback.textContent = message;
-    feedback.className = `kc-profile-feedback is-${tone || 'info'}`;
-  }
-
-  function setBadgeCount(id, count) {
-    const badge = $(id);
-    if (!badge) return;
-    const value = Math.max(0, Number(count) || 0);
-    badge.textContent = value > 99 ? '99+' : String(value);
-  }
-
-  function normalizeRatingSummary(raw, fallbackUserId) {
-    const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
-    const averageRaw = source.average != null ? source.average : source.rating_avg;
-    const average = (averageRaw != null && averageRaw !== '') ? Number(averageRaw) : null;
-    const countRaw = source.count != null ? source.count : source.rating_count;
-    const count = Math.max(0, parseInt(String(countRaw != null ? countRaw : 0), 10) || 0);
-    return {
-      userId: String(source.userId || source.user_id || fallbackUserId || '').trim() || null,
-      average: Number.isFinite(average) ? Number(average.toFixed(2)) : null,
-      count,
-    };
-  }
-
-  function getProfileRatingSummaryFromProfile(profile) {
-    return normalizeRatingSummary({
-      userId: profile && profile.id,
-      average: profile && (profile.ratingAvg != null ? profile.ratingAvg : profile.rating_avg),
-      count: profile && (profile.ratingCount != null ? profile.ratingCount : profile.rating_count),
-    }, profile && profile.id);
-  }
-
-  function renderProfileRatingSummary() {
-    const summary = normalizeRatingSummary(state.ratingSummary, state.profileId || (state.profile && state.profile.id));
-    const statValue = $('#stat-rating');
-    const statLabel = $('#stat-rating-label');
-    if (statValue) statValue.textContent = (summary.count > 0 && Number.isFinite(summary.average)) ? summary.average.toFixed(1) : '–';
-    if (statLabel) statLabel.textContent = summary.count > 0
-      ? `Reputação (${summary.count})`
-      : 'Reputação';
-    setBadgeCount('#badge-ratings', summary.count);
-  }
-
-  function buildRatingStars(score) {
-    const value = Math.max(0, Math.min(5, parseInt(String(score != null ? score : 0), 10) || 0));
-    const output = [];
-    for (let index = 1; index <= 5; index += 1) {
-      output.push(`<i class="fas fa-star${index <= value ? ' is-active' : ''}"></i>`);
-    }
-    return output.join('');
   }
 
   function isOwnerView() {
@@ -349,208 +117,238 @@
     }
   }
 
+  function getProfilePresentationModule() {
+    return (window._KCPR && window._KCPR.presentation) ? window._KCPR.presentation : null;
+  }
+
+  function buildPresentationDeps() {
+    return {
+      $,
+      bioLimit: BIO_LIMIT,
+      clearAvatarDraft,
+      isOwnerView,
+      shared,
+      state,
+    };
+  }
+
+  function esc(value) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.esc === 'function') return presentation.esc(value);
+    const text = String(value == null ? '' : value);
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function safeName(profile, user) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.safeName === 'function') return presentation.safeName(profile, user);
+    const candidate = profile && (profile.display_name || profile.full_name);
+    if (candidate && String(candidate).trim()) return String(candidate).trim();
+    const email = user && user.email ? String(user.email) : '';
+    return email.includes('@') ? email.split('@')[0] : 'Usuário';
+  }
+
+  function buildPublicHandle(profile) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.buildPublicHandle === 'function') return presentation.buildPublicHandle(profile);
+    return '';
+  }
+
+  function safeHandle(profile, user) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.safeHandle === 'function') return presentation.safeHandle(profile, user, buildPresentationDeps());
+    return buildPublicHandle(profile);
+  }
+
+  function buildAccountSetupHref() {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.buildAccountSetupHref === 'function') return presentation.buildAccountSetupHref(buildPresentationDeps());
+    return '/account-setup.html';
+  }
+
+  function buildSettingsHref() {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.buildSettingsHref === 'function') return presentation.buildSettingsHref(buildPresentationDeps());
+    return '/settings.html';
+  }
+
+  function formatChoice(field, value) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.formatChoice === 'function') return presentation.formatChoice(field, value, buildPresentationDeps());
+    return String(value || '').trim();
+  }
+
+  function getProfileVisibleSocialLinks(profile) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.getProfileVisibleSocialLinks === 'function') return presentation.getProfileVisibleSocialLinks(profile, buildPresentationDeps());
+    return [];
+  }
+
+  function currentAvatarUrl() {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.currentAvatarUrl === 'function') return presentation.currentAvatarUrl(buildPresentationDeps());
+    return '';
+  }
+
+  function fmtDate(iso, options) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.fmtDate === 'function') return presentation.fmtDate(iso, options);
+    return iso ? String(iso) : '-';
+  }
+
+  function fmtRelative(iso) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.fmtRelative === 'function') return presentation.fmtRelative(iso);
+    return iso ? String(iso) : '';
+  }
+
+  function buildPostDetailHref(postId) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.buildPostDetailHref === 'function') return presentation.buildPostDetailHref(postId);
+    const normalized = String(postId || '').trim();
+    if (!normalized) return '';
+    if (window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function') {
+      return window.KCUtils.buildProductDetailHref(normalized);
+    }
+    return `_product.html?id=${encodeURIComponent(normalized)}`;
+  }
+
+  function statusBadge(status) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.statusBadge === 'function') return presentation.statusBadge(status);
+    return `<span class="kc-status-badge">${esc(status || 'published')}</span>`;
+  }
+
+  function visibilityBadge(visibility) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.visibilityBadge === 'function') return presentation.visibilityBadge(visibility);
+    return `<span class="kc-profile-save-badge">${esc(visibility || 'public')}</span>`;
+  }
+
+  function normalizeSaveKinds(value) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.normalizeSaveKinds === 'function') return presentation.normalizeSaveKinds(value);
+    const list = Array.isArray(value) ? value : (value ? [value] : []);
+    return list.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean);
+  }
+
+  function saveKindBadge(kind) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.saveKindBadge === 'function') return presentation.saveKindBadge(kind);
+    return kind ? `<span class="kc-profile-save-badge">${esc(kind)}</span>` : '';
+  }
+
+  function buildSaveBadges(kinds) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.buildSaveBadges === 'function') return presentation.buildSaveBadges(kinds);
+    return normalizeSaveKinds(kinds).map(saveKindBadge).join('');
+  }
+
+  function linkifyBio(text) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.linkifyBio === 'function') return presentation.linkifyBio(text);
+    return esc(String(text || '')).replace(/\r?\n/g, '<br>');
+  }
+
+  function setStatus(message, tone) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.setStatus === 'function') {
+      presentation.setStatus(message, tone, buildPresentationDeps());
+      return;
+    }
+    const feedback = $('#profile-feedback');
+    if (!feedback) return;
+    feedback.style.display = message ? 'block' : 'none';
+    feedback.textContent = message || '';
+    feedback.className = message ? `kc-profile-feedback is-${tone || 'info'}` : 'kc-profile-feedback';
+  }
+
+  function setBadgeCount(id, count) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.setBadgeCount === 'function') {
+      presentation.setBadgeCount(id, count, buildPresentationDeps());
+      return;
+    }
+    const badge = $(id);
+    if (!badge) return;
+    const value = Math.max(0, Number(count) || 0);
+    badge.textContent = value > 99 ? '99+' : String(value);
+  }
+
+  function normalizeRatingSummary(raw, fallbackUserId) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.normalizeRatingSummary === 'function') {
+      return presentation.normalizeRatingSummary(raw, fallbackUserId);
+    }
+    return {
+      userId: String((raw && (raw.userId || raw.user_id)) || fallbackUserId || '').trim() || null,
+      average: null,
+      count: Math.max(0, Number(raw && (raw.count != null ? raw.count : raw && raw.rating_count)) || 0),
+    };
+  }
+
+  function getProfileRatingSummaryFromProfile(profile) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.getProfileRatingSummaryFromProfile === 'function') {
+      return presentation.getProfileRatingSummaryFromProfile(profile);
+    }
+    return normalizeRatingSummary({}, profile && profile.id);
+  }
+
+  function renderProfileRatingSummary() {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.renderProfileRatingSummary === 'function') {
+      presentation.renderProfileRatingSummary(buildPresentationDeps());
+      return;
+    }
+    setBadgeCount('#badge-ratings', 0);
+  }
+
+  function buildRatingStars(score) {
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.buildRatingStars === 'function') return presentation.buildRatingStars(score);
+    return score ? '<i class="fas fa-star is-active"></i>' : '';
+  }
+
   function syncFormFromProfile() {
-    const nameInput = $('#display-name-input');
-    const bioInput = $('#profile-bio-input');
-    if (nameInput) nameInput.value = state.profile && (state.profile.display_name || state.profile.full_name) ? String(state.profile.display_name || state.profile.full_name) : '';
-    if (bioInput) bioInput.value = state.profile && state.profile.bio ? String(state.profile.bio) : '';
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.syncFormFromProfile === 'function') {
+      presentation.syncFormFromProfile(buildPresentationDeps());
+      return;
+    }
     updateBioCounter();
   }
 
   function updateBioCounter() {
-    const bioInput = $('#profile-bio-input');
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.updateBioCounter === 'function') {
+      presentation.updateBioCounter(buildPresentationDeps());
+      return;
+    }
     const counter = $('#profile-bio-counter');
-    if (!counter) return;
-    const length = Math.min(BIO_LIMIT, String((bioInput && bioInput.value) || '').length);
-    counter.textContent = `${length}/${BIO_LIMIT}`;
+    if (counter) counter.textContent = `0/${BIO_LIMIT}`;
   }
 
   function setEditing(active) {
-    if (!isOwnerView()) return;
-    state.isEditing = !!active;
-    const form = $('#profile-inline-form');
-    const bio = $('#profile-bio');
-    const editToggle = $('#profile-edit-toggle');
-
-    if (form) {
-      form.style.display = state.isEditing ? 'block' : 'none';
-      form.classList.toggle('is-active', state.isEditing);
-    }
-    if (editToggle) {
-      editToggle.innerHTML = state.isEditing
-        ? '<i class="fas fa-times"></i> Fechar edição'
-        : '<i class="fas fa-pen"></i> Editar perfil';
-    }
-
-    if (state.isEditing) {
-      syncFormFromProfile();
-      if (bio) bio.style.display = 'none';
-      setStatus('', 'info');
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.setEditing === 'function') {
+      presentation.setEditing(active, buildPresentationDeps());
       return;
     }
-
-    clearAvatarDraft();
-    renderHeader();
-    setStatus('', 'info');
+    state.isEditing = !!active;
   }
 
   function renderHeader() {
-    const profile = state.profile || {};
-    const user = state.user || null;
-    const ownerView = isOwnerView();
-    const name = safeName(profile, user);
-    const handle = safeHandle(profile, user);
-    const bioText = String(profile.bio || '').trim();
-    const savedLabel = state.isPublicView ? 'Destaques' : 'Salvos';
-    const savedTitle = state.isPublicView ? 'Destaques' : 'Salvos';
-    const savedEmptyText = state.isPublicView
-      ? 'Nenhum destaque público encontrado.'
-      : 'Nenhuma publicação salva ainda.';
-
-    const avatar = $('#profile-avatar');
-    if (avatar) {
-      avatar.src = currentAvatarUrl();
-      avatar.alt = `Avatar de ${name}`;
+    const presentation = getProfilePresentationModule();
+    if (presentation && typeof presentation.renderHeader === 'function') {
+      presentation.renderHeader(buildPresentationDeps());
+      return;
     }
-
-    // Set user ID on avatar wrap for ranking badge decoration
-    const avatarWrap = $('#profileAvatarWrap');
-    if (avatarWrap && state.profileId) {
-      avatarWrap.dataset.userId = state.profileId;
-    }
-
-    const verifiedIcon = $('#profile-verified-icon');
-    if (verifiedIcon) verifiedIcon.style.display = profile && profile.verified === true ? 'flex' : 'none';
-
-    const avatarEdit = $('#profile-avatar-edit');
-    if (avatarEdit) avatarEdit.style.display = ownerView ? 'inline-flex' : 'none';
-
-    const editToggle = $('#profile-edit-toggle');
-    if (editToggle) {
-      editToggle.style.display = ownerView ? 'inline-flex' : 'none';
-      const onboardingComplete = !(shared && typeof shared.isOnboardingComplete === 'function') || shared.isOnboardingComplete(profile);
-      editToggle.innerHTML = onboardingComplete
-        ? '<i class="fas fa-sliders"></i> Configurações'
-        : '<i class="fas fa-list-check"></i> Completar cadastro';
-    }
-
-    const nameEl = $('#profile-display-name');
-    if (nameEl) nameEl.textContent = name;
-    document.title = name + ' — Perfil KinoCampus';
-
-    const legacyBadge = $('#profile-legacy-badge');
-    if (legacyBadge) {
-      const isLegacy = !!(profile && String(profile.legacy_id || profile.legacyId || '').trim());
-      legacyBadge.style.display = isLegacy ? '' : 'none';
-    }
-
-    const handleEl = $('#profile-handle');
-    if (handleEl) {
-      if (handle) {
-        handleEl.textContent = handle;
-        handleEl.style.display = 'block';
-      } else {
-        handleEl.style.display = 'none';
-      }
-    }
-
-    const memberSince = $('#profile-member-since');
-    if (memberSince) {
-      const inner = memberSince.querySelector('span');
-      if (profile && profile.created_at && inner) {
-        inner.textContent = 'Desde ' + fmtDate(profile.created_at, { month: 'short', year: 'numeric' });
-        memberSince.style.display = 'inline-flex';
-      } else {
-        memberSince.style.display = 'none';
-      }
-    }
-
-    const bio = $('#profile-bio');
-    if (bio) {
-      if (bioText) {
-        bio.innerHTML = linkifyBio(bioText);
-        bio.classList.remove('is-empty');
-        bio.style.display = state.isEditing ? 'none' : 'block';
-      } else if (ownerView) {
-        bio.textContent = 'Adicione uma breve descrição para completar seu perfil.';
-        bio.classList.add('is-empty');
-        bio.style.display = state.isEditing ? 'none' : 'block';
-      } else {
-        bio.textContent = '';
-        bio.classList.remove('is-empty');
-        bio.style.display = 'none';
-      }
-    }
-
-    const meta = $('.kc-profile-meta');
-    if (meta) {
-      meta.innerHTML = '';
-      if (profile && profile.created_at) {
-        meta.insertAdjacentHTML('beforeend', `<span id="profile-member-since"><i class="fas fa-calendar-alt"></i> <span>Desde ${esc(fmtDate(profile.created_at, { month: 'short', year: 'numeric' }))}</span></span>`);
-      }
-      if (profile.affiliation) {
-        const affiliationLabel = formatChoice('affiliation', profile.affiliation);
-        if (affiliationLabel) meta.insertAdjacentHTML('beforeend', `<span><i class="fas fa-user-graduate"></i> ${esc(affiliationLabel)}</span>`);
-      }
-    }
-
-    const contextPills = $('#profile-context-pills');
-    if (contextPills) {
-      contextPills.innerHTML = '';
-      contextPills.style.display = 'none';
-    }
-
-    const socialLinksWrap = $('#profile-social-links');
-    const visibleLinks = getProfileVisibleSocialLinks(profile);
-    if (socialLinksWrap) {
-      socialLinksWrap.innerHTML = visibleLinks.map((entry) => {
-        const label = entry.display || entry.handle || entry.label;
-        const iconHtml = entry.key === 'x'
-          ? `<span class="kc-profile-social-glyph" aria-hidden="true">${esc(entry.emoji || '𝕏')}</span>`
-          : `<i class="${esc(entry.iconClass || 'fas fa-link')}" aria-hidden="true"></i>`;
-        return `<a class="kc-profile-social-link" href="${esc(entry.href)}" target="_blank" rel="noopener noreferrer">${iconHtml}<span>${esc(label)}</span></a>`;
-      }).join('');
-      socialLinksWrap.style.display = visibleLinks.length ? 'flex' : 'none';
-    }
-
-    const setupHint = $('#profile-setup-hint');
-    if (setupHint) {
-      const onboardingComplete = !shared.isOnboardingComplete || shared.isOnboardingComplete(profile);
-      if (ownerView && (!visibleLinks.length || !onboardingComplete)) {
-        setupHint.innerHTML = `Complete seus links e preferências de contato em <a href="${esc(buildAccountSetupHref())}">completar cadastro</a>.`;
-        setupHint.style.display = 'block';
-      } else if (ownerView) {
-        setupHint.innerHTML = `Você pode ajustar seus links públicos e o contato principal dos anúncios em <a href="${esc(buildSettingsHref())}">configurações</a>.`;
-        setupHint.style.display = 'block';
-      } else {
-        setupHint.textContent = '';
-        setupHint.style.display = 'none';
-      }
-    }
-
-    if (!state.isEditing) syncFormFromProfile();
-
-    const savedTabLabel = $('#saved-tab-label');
-    if (savedTabLabel) savedTabLabel.textContent = savedLabel;
-
-    const savedToolbarTitle = $('#saved-toolbar-title');
-    if (savedToolbarTitle) savedToolbarTitle.textContent = savedTitle;
-
-    const savedSelect = $('#profile-saved-kind');
-    if (savedSelect) {
-      savedSelect.style.display = state.isPublicView ? 'none' : '';
-      savedSelect.value = state.savedKind || '';
-    }
-
-    const postsStatus = $('#profile-posts-status');
-    if (postsStatus) postsStatus.style.display = state.isPublicView ? 'none' : '';
-
-    const savedEmpty = $('#saved-empty');
-    if (savedEmpty) savedEmpty.innerHTML = `<i class="fas fa-star"></i> ${esc(savedEmptyText)}`;
-
-    state.ratingSummary = normalizeRatingSummary(state.ratingSummary && state.ratingSummary.count
-      ? state.ratingSummary
-      : getProfileRatingSummaryFromProfile(profile), state.profileId || profile.id);
     renderProfileRatingSummary();
   }
 
