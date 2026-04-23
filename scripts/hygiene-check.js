@@ -43,6 +43,16 @@ const kcadAdminDashboardScriptChain = [
   '../assets/js/controllers/admin-dashboard.controller.js',
 ];
 
+const kclaScriptChain = [
+  'local.notifications.adapter.js',
+  'local.ratings.adapter.js',
+  'local.saved.adapter.js',
+  'local.posts-read.adapter.js',
+  'local.posts-write.adapter.js',
+  'local.profile.adapter.js',
+  'local.help.adapter.js',
+];
+
 const inlineHandlers = new Set([
   'onabort', 'onauxclick', 'onbeforeinput', 'onbeforematch', 'onbeforetoggle',
   'onblur', 'oncancel', 'oncanplay', 'oncanplaythrough', 'onchange', 'onclick',
@@ -64,6 +74,8 @@ runVersionChecks();
 runThemeBootChecks();
 runKcuScriptChainChecks();
 runKcadScriptChainChecks();
+runKclaScriptChainChecks();
+runLocalAdapterGateChecks();
 runInlineHandlerChecks();
 runProfileContractChecks();
 runDeployInvariantChecks();
@@ -144,6 +156,29 @@ function runKcadScriptChainChecks() {
         );
       }
     });
+}
+
+function runKclaScriptChainChecks() {
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const content = fs.readFileSync(absPath, 'utf8');
+    const expected = buildExpectedKclaScriptChain(relPath);
+    const found = extractKclaScriptChain(content);
+
+    if (!sameStringArray(found, expected)) {
+      errors.push(
+        `${relPath} has invalid _KCLA.* script chain. expected: ${expected.join(' -> ')}; found: ${found.length ? found.join(' -> ') : '(none)'}`
+      );
+    }
+  });
+}
+
+function runLocalAdapterGateChecks() {
+  const content = read('assets/js/adapters/local.adapter.js');
+  const lineCount = countLines(content);
+
+  if (lineCount >= 500) {
+    errors.push(`assets/js/adapters/local.adapter.js must stay below 500 lines for the v12.4.8 gate (found ${lineCount})`);
+  }
 }
 
 function runInlineHandlerChecks() {
@@ -262,6 +297,11 @@ function buildExpectedKcuScriptChain(relPath) {
   return kcuScriptChain.map((file) => `${prefix}/${file}`);
 }
 
+function buildExpectedKclaScriptChain(relPath) {
+  const prefix = relPath.startsWith('admin/') ? '../assets/js/adapters' : 'assets/js/adapters';
+  return kclaScriptChain.map((file) => `${prefix}/${file}`);
+}
+
 function extractKcuScriptChain(content) {
   return extractDeferredScriptSrcs(content).filter((src) => isKcuScriptSrc(src));
 }
@@ -276,6 +316,14 @@ function extractKcadScriptChain(content) {
 
 function isKcadScriptSrc(src) {
   return /(?:^|\/)(?:controllers\/admin-dashboard\.(?:shared|metrics|audit|charts|controller)\.js|kc-ranking\.js)$/i.test(String(src || ''));
+}
+
+function extractKclaScriptChain(content) {
+  return extractDeferredScriptSrcs(content).filter((src) => isKclaScriptSrc(src));
+}
+
+function isKclaScriptSrc(src) {
+  return /(?:^|\/)adapters\/local\.(?:notifications|ratings|saved|posts-read|posts-write|profile|help)\.adapter\.js$/i.test(String(src || ''));
 }
 
 function extractDeferredScriptSrcs(content) {
@@ -317,6 +365,11 @@ function normalize(value) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
+}
+
+function countLines(content) {
+  const lines = String(content).split(/\r?\n/);
+  return lines.length && lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
 }
 
 function sameStringArray(left, right) {
