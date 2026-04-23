@@ -7,6 +7,7 @@ const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MO
 window._KCLA = window._KCLA || {};
 window._KCLA.notifications = window._KCLA.notifications || {};
 window._KCLA.ratings = window._KCLA.ratings || {};
+window._KCLA.saved = window._KCLA.saved || {};
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
@@ -54,12 +55,28 @@ window._KCLA.ratings = window._KCLA.ratings || {};
     return (window._KCLA && window._KCLA.ratings) ? window._KCLA.ratings : null;
   }
 
+  function getLocalSavedModule() {
+    return (window._KCLA && window._KCLA.saved) ? window._KCLA.saved : null;
+  }
+
   function buildLocalRatingsDeps() {
     return {
       viewerId: LOCAL_RATING_VIEWER_ID,
       normalizePost,
       getSearchCollection: getLocalSearchCollection,
       mockUsersById: MOCK_USERS_BY_ID || {},
+    };
+  }
+
+  function buildLocalSavedDeps() {
+    return {
+      viewerId: LOCAL_RATING_VIEWER_ID,
+      getNowIso,
+      buildPostKeys: buildLocalPostKeys,
+      getPostById: localGetPostById,
+      mapPostSummary: mapLocalPostSummary,
+      paginateItems: paginateLocalItems,
+      readProfile: readLocalProfile,
     };
   }
 
@@ -93,7 +110,6 @@ window._KCLA.ratings = window._KCLA.ratings || {};
 
   const LOCAL_RATING_VIEWER_ID = 'USER_SELF';
   const LOCAL_PROFILE_STORAGE_KEY = 'kc_local_profile';
-  const LOCAL_SAVED_POSTS_STORAGE_KEY = 'kc_saved_posts';
 
   function buildDefaultLocalRatingSummaryFallback(userId) {
     const key = String(userId || '').trim();
@@ -318,82 +334,6 @@ window._KCLA.ratings = window._KCLA.ratings || {};
       document.dispatchEvent(new CustomEvent('kc:profilechange', { detail: { profile: profile || null } }));
     } catch (_) { }
     return profile || null;
-  }
-
-  function normalizeLocalSaveKind(kind) {
-    const value = String(kind || '').trim().toLowerCase();
-    return ['favorite', 'later', 'highlight'].includes(value) ? value : '';
-  }
-
-  function readLocalSavedPosts() {
-    try {
-      const raw = localStorage.getItem(LOCAL_SAVED_POSTS_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .map((entry) => {
-          const source = (entry && typeof entry === 'object' && !Array.isArray(entry)) ? entry : {};
-          const postId = String(source.post_id || source.postId || '').trim();
-          const saveKind = normalizeLocalSaveKind(source.kind);
-          if (!postId || !saveKind) return null;
-          const createdAt = String(source.created_at || source.createdAt || getNowIso()).trim() || getNowIso();
-          const updatedAt = String(source.updated_at || source.updatedAt || createdAt).trim() || createdAt;
-          return {
-            post_id: postId,
-            kind: saveKind,
-            created_at: createdAt,
-            updated_at: updatedAt,
-          };
-        })
-        .filter(Boolean);
-    } catch (_) {
-      return [];
-    }
-  }
-
-  function writeLocalSavedPosts(list) {
-    try {
-      localStorage.setItem(LOCAL_SAVED_POSTS_STORAGE_KEY, JSON.stringify(Array.isArray(list) ? list : []));
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  async function listLocalSavedPostSummaries(params = {}) {
-    const filteredKind = normalizeLocalSaveKind(params.kind);
-    const sorted = readLocalSavedPosts()
-      .filter((entry) => !filteredKind || entry.kind === filteredKind)
-      .sort((left, right) => new Date(right.updated_at || 0).getTime() - new Date(left.updated_at || 0).getTime());
-    const byPost = new Map();
-
-    for (let index = 0; index < sorted.length; index += 1) {
-      const entry = sorted[index];
-      const post = await localGetPostById(entry.post_id);
-      if (!post) continue;
-      const summary = mapLocalPostSummary(post);
-      const key = String(summary.uuid || summary.id || entry.post_id || '').trim();
-      if (!key) continue;
-      const current = byPost.get(key);
-      if (!current) {
-        byPost.set(key, {
-          ...summary,
-          save_kinds: [entry.kind],
-          saved_at: entry.updated_at || entry.created_at || null,
-        });
-        continue;
-      }
-      if (!current.save_kinds.includes(entry.kind)) current.save_kinds.push(entry.kind);
-      const currentSavedAt = current.saved_at ? new Date(current.saved_at).getTime() : 0;
-      const nextSavedAt = entry.updated_at ? new Date(entry.updated_at).getTime() : 0;
-      if (nextSavedAt > currentSavedAt) current.saved_at = entry.updated_at;
-    }
-
-    return Array.from(byPost.values()).sort((left, right) => {
-      const leftAt = left.saved_at ? new Date(left.saved_at).getTime() : 0;
-      const rightAt = right.saved_at ? new Date(right.saved_at).getTime() : 0;
-      return rightAt - leftAt;
-    });
   }
 
   function prepareLocalPostForPersistence(body, currentPost) {
@@ -830,8 +770,7 @@ window._KCLA.ratings = window._KCLA.ratings || {};
       return { ok: false, error: { message: 'Não foi possível excluir a publicação localmente.' } };
     }
 
-    const nextSaved = readLocalSavedPosts().filter((entry) => entry && String(entry.post_id || '').trim() !== key);
-    writeLocalSavedPosts(nextSaved);
+    try { await localClearSavedPostState(key); } catch (_) { }
     return { ok: true };
   }
 
@@ -932,85 +871,56 @@ window._KCLA.ratings = window._KCLA.ratings || {};
   }
 
   async function localGetSavedPostState(postId) {
-    const post = await localGetPostById(postId);
-    const keys = post ? buildLocalPostKeys(post) : [String(postId || '').trim()].filter(Boolean);
-    const kinds = Array.from(new Set(
-      readLocalSavedPosts()
-        .filter((entry) => keys.includes(String(entry.post_id || '').trim()))
-        .map((entry) => entry.kind)
-        .filter(Boolean)
-    ));
-    return { kinds };
+    const savedModule = getLocalSavedModule();
+    return savedModule && typeof savedModule.getSavedPostState === 'function'
+      ? savedModule.getSavedPostState(postId, buildLocalSavedDeps())
+      : { kinds: [] };
   }
 
   async function localClearSavedPostState(postId, kind) {
-    const saveKind = normalizeLocalSaveKind(kind);
-    const post = await localGetPostById(postId);
-    const keys = post ? buildLocalPostKeys(post) : [String(postId || '').trim()].filter(Boolean);
-    if (!keys.length) return { ok: false, error: { message: 'Publicação inválida.' } };
-
-    const next = readLocalSavedPosts().filter((entry) => {
-      const matchesPost = keys.includes(String(entry.post_id || '').trim());
-      if (!matchesPost) return true;
-      if (!saveKind) return false;
-      return entry.kind !== saveKind;
-    });
-    if (!writeLocalSavedPosts(next)) {
-      return { ok: false, error: { message: 'Não foi possível remover o item salvo.' } };
-    }
-    return { ok: true, cleared: saveKind || 'all' };
+    const savedModule = getLocalSavedModule();
+    return savedModule && typeof savedModule.clearSavedPostState === 'function'
+      ? savedModule.clearSavedPostState(postId, kind, buildLocalSavedDeps())
+      : { ok: false, error: { message: 'Salvos locais indisponiveis.' } };
   }
 
   async function localSetSavedPostState(postId, kind, enabled) {
-    const saveKind = normalizeLocalSaveKind(kind);
-    if (!saveKind) return { ok: false, error: { message: 'Tipo de salvamento inválido.' } };
-    if (enabled === false) return localClearSavedPostState(postId, saveKind);
-
-    const post = await localGetPostById(postId);
-    if (!post) return { ok: false, error: { message: 'Publicação inválida.' } };
-    const keys = buildLocalPostKeys(post);
-    const primaryKey = String((post && (post.uuid || post.id || post.legacy_id || post.legacyId)) || keys[0] || '').trim();
-    if (!primaryKey) return { ok: false, error: { message: 'Publicação inválida.' } };
-
-    const now = getNowIso();
-    const current = readLocalSavedPosts();
-    const index = current.findIndex((entry) => String(entry.post_id || '').trim() === primaryKey && entry.kind === saveKind);
-    if (index >= 0) current[index].updated_at = now;
-    else current.push({ post_id: primaryKey, kind: saveKind, created_at: now, updated_at: now });
-
-    if (!writeLocalSavedPosts(current)) {
-      return { ok: false, error: { message: 'Não foi possível salvar a publicação.' } };
-    }
-    return { ok: true, data: { kind: saveKind }, enabled: true };
+    const savedModule = getLocalSavedModule();
+    return savedModule && typeof savedModule.setSavedPostState === 'function'
+      ? savedModule.setSavedPostState(postId, kind, enabled, buildLocalSavedDeps())
+      : { ok: false, error: { message: 'Salvos locais indisponiveis.' } };
   }
 
   async function localGetMySavedPosts(params = {}) {
-    const items = await listLocalSavedPostSummaries(params);
-    return paginateLocalItems(items, params).items;
+    const savedModule = getLocalSavedModule();
+    return savedModule && typeof savedModule.getMySavedPosts === 'function'
+      ? savedModule.getMySavedPosts(params, buildLocalSavedDeps())
+      : [];
   }
 
   async function localGetMySavedPostsCount(params = {}) {
-    const items = await listLocalSavedPostSummaries(params);
-    return items.length;
+    const savedModule = getLocalSavedModule();
+    return savedModule && typeof savedModule.getMySavedPostsCount === 'function'
+      ? savedModule.getMySavedPostsCount(params, buildLocalSavedDeps())
+      : 0;
   }
 
   async function localGetProfileHighlights(profileId, params = {}) {
-    const current = readLocalProfile();
-    const target = String(profileId || '').trim();
-    if (!target || (target !== String(current.id || '').trim() && target !== LOCAL_RATING_VIEWER_ID)) return [];
-    const items = await listLocalSavedPostSummaries({ ...params, kind: 'highlight' });
-    return paginateLocalItems(items, params).items;
+    const savedModule = getLocalSavedModule();
+    return savedModule && typeof savedModule.getProfileHighlights === 'function'
+      ? savedModule.getProfileHighlights(profileId, params, buildLocalSavedDeps())
+      : [];
   }
 
   async function localGetProfileHighlightsCount(profileId, params = {}) {
-    const current = readLocalProfile();
-    const target = String(profileId || '').trim();
-    if (!target || (target !== String(current.id || '').trim() && target !== LOCAL_RATING_VIEWER_ID)) return 0;
-    const items = await listLocalSavedPostSummaries({ ...params, kind: 'highlight' });
-    return items.length;
+    const savedModule = getLocalSavedModule();
+    return savedModule && typeof savedModule.getProfileHighlightsCount === 'function'
+      ? savedModule.getProfileHighlightsCount(profileId, params, buildLocalSavedDeps())
+      : 0;
   }
 
   async function localGetNotificationPreferences() {
+
     const notificationsModule = getLocalNotificationsModule();
     return notificationsModule && typeof notificationsModule.getNotificationPreferences === 'function'
       ? notificationsModule.getNotificationPreferences()

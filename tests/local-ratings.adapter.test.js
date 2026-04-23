@@ -45,10 +45,12 @@ beforeAll(() => {
 
   delete require.cache[require.resolve('../assets/js/adapters/local.notifications.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.ratings.adapter.js')];
+  delete require.cache[require.resolve('../assets/js/adapters/local.saved.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.adapter.js')];
 
   require('../assets/js/adapters/local.notifications.adapter.js');
   require('../assets/js/adapters/local.ratings.adapter.js');
+  require('../assets/js/adapters/local.saved.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
 
   actualRatingsModule = window._KCLA.ratings;
