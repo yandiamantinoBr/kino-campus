@@ -49,6 +49,7 @@ beforeAll(() => {
   delete require.cache[require.resolve('../assets/js/adapters/local.posts-read.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.posts-write.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.profile.adapter.js')];
+  delete require.cache[require.resolve('../assets/js/adapters/local.help.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.adapter.js')];
 
 
@@ -58,6 +59,7 @@ beforeAll(() => {
   require('../assets/js/adapters/local.posts-read.adapter.js');
   require('../assets/js/adapters/local.posts-write.adapter.js');
   require('../assets/js/adapters/local.profile.adapter.js');
+  require('../assets/js/adapters/local.help.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
 
 
