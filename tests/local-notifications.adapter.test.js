@@ -39,10 +39,13 @@ beforeAll(() => {
 
   delete window.KCAccountProfileUtils;
   delete require.cache[require.resolve('../assets/js/adapters/local.notifications.adapter.js')];
+  delete require.cache[require.resolve('../assets/js/adapters/local.ratings.adapter.js')];
+  delete require.cache[require.resolve('../assets/js/adapters/local.saved.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.adapter.js')];
 
   require('../assets/js/adapters/local.notifications.adapter.js');
   require('../assets/js/adapters/local.ratings.adapter.js');
+  require('../assets/js/adapters/local.saved.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
 
   actualNotificationsModule = window._KCLA.notifications;
