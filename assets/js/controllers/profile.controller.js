@@ -9,6 +9,7 @@
   const shared = window.KCAccountProfileUtils || {};
   window._KCPR = window._KCPR || {};
   window._KCPR.presentation = window._KCPR.presentation || {};
+  window._KCPR.collections = window._KCPR.collections || {};
 
   const state = {
     user: null,
@@ -129,6 +130,32 @@
       isOwnerView,
       shared,
       state,
+    };
+  }
+
+  function getProfileCollectionsModule() {
+    return (window._KCPR && window._KCPR.collections) ? window._KCPR.collections : null;
+  }
+
+  function buildCollectionsDeps() {
+    return {
+      $,
+      $$,
+      buildPostDetailHref,
+      buildRatingStars,
+      buildSaveBadges,
+      commentPageSize: COMMENT_PAGE_SIZE,
+      esc,
+      fmtRelative,
+      getClient,
+      linkifyBio,
+      loadRatings,
+      normalizeSaveKinds,
+      pageSize: PAGE_SIZE,
+      setBadgeCount,
+      state,
+      statusBadge,
+      visibilityBadge,
     };
   }
 
@@ -407,129 +434,18 @@
   }
 
   async function loadSavedBadgeCount(authorId) {
-    if (!window.KCAPI || !authorId) return;
-    try {
-      const count = state.isPublicView
-        ? await window.KCAPI.getProfileHighlightsCount(authorId)
-        : await window.KCAPI.getMySavedPostsCount({});
-      setBadgeCount('#badge-saved', count);
-    } catch (error) {
-      console.warn('[Profile] loadSavedBadgeCount:', error);
+    const collections = getProfileCollectionsModule();
+    if (collections && typeof collections.loadSavedBadgeCount === 'function') {
+      return collections.loadSavedBadgeCount(authorId, buildCollectionsDeps());
     }
-  }
-
-  function renderPosts(items, append) {
-    const list = $('#posts-list');
-    const empty = $('#posts-empty');
-    const loadMore = $('#posts-load-more');
-    if (!list) return;
-
-    if (!append) list.innerHTML = '';
-
-    if (!Array.isArray(items) || !items.length) {
-      if (!append && empty) empty.style.display = 'block';
-      if (loadMore) loadMore.style.display = 'none';
-      return;
-    }
-
-    if (empty) empty.style.display = 'none';
-
-    items.forEach((post) => {
-      const link = document.createElement('a');
-      const isLegacy = !!String(post.legacy_id || post.legacyId || '').trim();
-      link.className = 'kc-profile-post-card' + (isLegacy ? ' kc-profile-post-card--example' : '');
-      link.href = buildPostDetailHref(post.uuid || post.id || '');
-      const meta = [];
-      meta.push(statusBadge(post.status || 'published'));
-      if (!state.isPublicView) meta.push(visibilityBadge(post.visibility || 'public'));
-      if (post.module) meta.push(`<span><i class="fas fa-layer-group"></i> ${esc(post.module)}</span>`);
-      if (post.category) meta.push(`<span>${esc(post.category)}</span>`);
-      if (post.created_at) meta.push(`<span><i class="fas fa-clock"></i> ${esc(fmtRelative(post.created_at))}</span>`);
-      if (isLegacy) meta.push(`<span class="kc-badge kc-badge--example"><i class="fas fa-flask"></i> Exemplo</span>`);
-
-      link.innerHTML = [
-        `<div class="kc-profile-post-card__title">${esc(post.title || 'Sem título')}</div>`,
-        `<div class="kc-profile-post-card__meta">${meta.join('')}</div>`,
-      ].join('');
-      list.appendChild(link);
-    });
-
-    if (loadMore) loadMore.style.display = state.postHasMore ? 'block' : 'none';
-  }
-
-  async function loadPosts(reset) {
-    const loading = $('#posts-loading');
-    const empty = $('#posts-empty');
-    const loadMore = $('#posts-load-more');
-
-    if (reset) {
-      state.postPage = 1;
-      state.posts = [];
-      const list = $('#posts-list');
-      if (list) list.innerHTML = '';
-    }
-
-    if (loading) loading.style.display = 'block';
-    if (empty) empty.style.display = 'none';
-    if (loadMore) loadMore.style.display = 'none';
-
-    try {
-      const params = { page: state.postPage, limit: PAGE_SIZE };
-      if (!state.isPublicView && state.postStatus) params.status = state.postStatus;
-
-      const batch = state.isPublicView
-        ? await window.KCAPI.getPostsByAuthorId(state.profileId, params)
-        : await window.KCAPI.getMyPosts(params);
-
-      const items = Array.isArray(batch) ? batch : [];
-      state.posts = reset ? items : state.posts.concat(items);
-      state.postHasMore = items.length >= PAGE_SIZE;
-      renderPosts(reset ? state.posts : items, !reset);
-    } catch (error) {
-      console.warn('[Profile] loadPosts:', error);
-      if (empty) empty.style.display = 'block';
-    } finally {
-      if (loading) loading.style.display = 'none';
-    }
-  }
-
-  function renderComments(items, append) {
-    const list = $('#comments-list');
-    const empty = $('#comments-empty');
-    const loadMore = $('#comments-load-more');
-    if (!list) return;
-
-    if (!append) list.innerHTML = '';
-
-    if (!Array.isArray(items) || !items.length) {
-      if (!append && empty) empty.style.display = 'block';
-      if (loadMore) loadMore.style.display = 'none';
-      return;
-    }
-
-    if (empty) empty.style.display = 'none';
-
-    items.forEach((comment) => {
-      const card = document.createElement('div');
-      card.className = 'kc-profile-comment-card';
-      const post = comment.post || {};
-      const postTitle = post.title || post.titulo || 'Post';
-      const postId = post.legacy_id || post.id || comment.post_id || '';
-      const postUrl = buildPostDetailHref(postId);
-      card.innerHTML = [
-        `<div class="kc-profile-comment-card__body">${renderInlineRichText(comment.body || '')}</div>`,
-        '<div class="kc-profile-comment-card__meta">',
-        `<span><i class="fas fa-clock"></i> ${esc(fmtRelative(comment.created_at))}</span>`,
-        postUrl ? `<span>em <a class="kc-profile-comment-card__post-link" href="${esc(postUrl)}">${esc(postTitle)}</a></span>` : '',
-        '</div>',
-      ].join('');
-      list.appendChild(card);
-    });
-
-    if (loadMore) loadMore.style.display = state.commentHasMore ? 'block' : 'none';
+    return Promise.resolve();
   }
 
   function renderInlineRichText(text) {
+    const collections = getProfileCollectionsModule();
+    if (collections && typeof collections.renderInlineRichText === 'function') {
+      return collections.renderInlineRichText(text, buildCollectionsDeps());
+    }
     const source = String(text || '').trim();
     if (!source) return '';
     if (typeof window.renderCommentMarkdownInline === 'function') {
@@ -538,109 +454,20 @@
     return linkifyBio(source);
   }
 
-  async function fetchPostsByIds(client, postIds) {
-    const ids = Array.from(new Set((Array.isArray(postIds) ? postIds : [])
-      .map((value) => String(value || '').trim())
-      .filter(Boolean)));
-
-    if (!client || !ids.length) return Object.create(null);
-
-    const postsById = Object.create(null);
-    const chunkSize = 50;
-
-    for (let index = 0; index < ids.length; index += chunkSize) {
-      const batch = ids.slice(index, index + chunkSize);
-      try {
-        const result = await client
-          .from('posts')
-          .select('id, legacy_id, title')
-          .in('id', batch);
-
-        if (result && result.error) {
-          console.warn('[Profile] fetchPostsByIds:', result.error);
-          continue;
-        }
-
-        (Array.isArray(result && result.data) ? result.data : []).forEach((post) => {
-          if (!post || !post.id) return;
-          postsById[String(post.id)] = Object.assign({}, post, {
-            titulo: post.title || '',
-          });
-        });
-      } catch (error) {
-        console.warn('[Profile] fetchPostsByIds:', error);
-      }
+  async function loadPosts(reset) {
+    const collections = getProfileCollectionsModule();
+    if (collections && typeof collections.loadPosts === 'function') {
+      return collections.loadPosts(reset, buildCollectionsDeps());
     }
-
-    return postsById;
-  }
-
-  async function loadProfileComments(client, authorId, options) {
-    if (!client || !authorId) return [];
-
-    let query = client
-      .from('comments')
-      .select('id, created_at, body, post_id')
-      .eq('author_id', authorId)
-      .order('created_at', { ascending: false });
-
-    if (options && Number.isInteger(options.from) && Number.isInteger(options.to)) {
-      query = query.range(options.from, options.to);
-    } else if (options && Number.isInteger(options.limit)) {
-      query = query.limit(options.limit);
-    }
-
-    const result = await query;
-    if (result && result.error) throw result.error;
-
-    const comments = Array.isArray(result && result.data) ? result.data : [];
-    const postsById = await fetchPostsByIds(client, comments.map((comment) => comment && comment.post_id));
-
-    return comments.map((comment) => {
-      const postId = String((comment && comment.post_id) || '').trim();
-      return Object.assign({}, comment, {
-        post: postsById[postId] || null,
-      });
-    });
+    return Promise.resolve();
   }
 
   async function loadComments(reset) {
-    const loading = $('#comments-loading');
-    const empty = $('#comments-empty');
-    const loadMore = $('#comments-load-more');
-
-    if (reset) {
-      state.commentPage = 1;
-      state.comments = [];
-      const list = $('#comments-list');
-      if (list) list.innerHTML = '';
+    const collections = getProfileCollectionsModule();
+    if (collections && typeof collections.loadComments === 'function') {
+      return collections.loadComments(reset, buildCollectionsDeps());
     }
-
-    if (loading) loading.style.display = 'block';
-    if (empty) empty.style.display = 'none';
-    if (loadMore) loadMore.style.display = 'none';
-
-    const client = getClient();
-    const authorId = state.profileId || (state.user && state.user.id);
-    if (!client || !authorId) {
-      if (loading) loading.style.display = 'none';
-      return;
-    }
-
-    try {
-      const from = (state.commentPage - 1) * COMMENT_PAGE_SIZE;
-      const to = from + COMMENT_PAGE_SIZE - 1;
-      const payload = await loadProfileComments(client, authorId, { from, to });
-
-      state.comments = reset ? payload : state.comments.concat(payload);
-      state.commentHasMore = payload.length >= COMMENT_PAGE_SIZE;
-      renderComments(reset ? state.comments : payload, !reset);
-    } catch (error) {
-      console.warn('[Profile] loadComments:', error);
-      if (empty) empty.style.display = 'block';
-    } finally {
-      if (loading) loading.style.display = 'none';
-    }
+    return Promise.resolve();
   }
 
   function renderRatings(items, append) {
@@ -739,183 +566,27 @@
     }
   }
 
-  function renderSaved(items, append) {
-    const list = $('#saved-list');
-    const empty = $('#saved-empty');
-    const loadMore = $('#saved-load-more');
-    if (!list) return;
-
-    if (!append) list.innerHTML = '';
-
-    if (!Array.isArray(items) || !items.length) {
-      if (!append && empty) empty.style.display = 'block';
-      if (loadMore) loadMore.style.display = 'none';
-      return;
-    }
-
-    if (empty) empty.style.display = 'none';
-
-    items.forEach((item) => {
-      const saveKinds = normalizeSaveKinds(item.save_kinds || item.save_kind || (state.isPublicView ? ['highlight'] : []));
-      const badges = buildSaveBadges(saveKinds);
-      const savedAt = item.saved_at || item.created_at || null;
-      const meta = [];
-      if (!state.isPublicView) meta.push(statusBadge(item.status || 'published'));
-      if (!state.isPublicView) meta.push(visibilityBadge(item.visibility || 'public'));
-      if (badges) meta.push(badges);
-      if (item.module) meta.push(`<span><i class="fas fa-layer-group"></i> ${esc(item.module)}</span>`);
-      if (item.category) meta.push(`<span>${esc(item.category)}</span>`);
-      if (savedAt) meta.push(`<span><i class="fas fa-clock"></i> ${esc(fmtRelative(savedAt))}</span>`);
-
-      const link = document.createElement('a');
-      link.className = 'kc-profile-post-card';
-      link.href = buildPostDetailHref(item.uuid || item.id || '');
-      link.innerHTML = [
-        `<div class="kc-profile-post-card__title">${esc(item.title || 'Sem título')}</div>`,
-        `<div class="kc-profile-post-card__meta">${meta.join('')}</div>`,
-      ].join('');
-      list.appendChild(link);
-    });
-
-    if (loadMore) loadMore.style.display = state.savedHasMore ? 'block' : 'none';
-  }
-
   async function loadSaved(reset) {
-    const loading = $('#saved-loading');
-    const empty = $('#saved-empty');
-    const loadMore = $('#saved-load-more');
-
-    if (reset) {
-      state.savedPage = 1;
-      state.savedItems = [];
-      const list = $('#saved-list');
-      if (list) list.innerHTML = '';
+    const collections = getProfileCollectionsModule();
+    if (collections && typeof collections.loadSaved === 'function') {
+      return collections.loadSaved(reset, buildCollectionsDeps());
     }
-
-    if (loading) loading.style.display = 'block';
-    if (empty) empty.style.display = 'none';
-    if (loadMore) loadMore.style.display = 'none';
-
-    try {
-      const params = { page: state.savedPage, limit: PAGE_SIZE };
-      if (!state.isPublicView && state.savedKind) params.kind = state.savedKind;
-
-      const batch = state.isPublicView
-        ? await window.KCAPI.getProfileHighlights(state.profileId, params)
-        : await window.KCAPI.getMySavedPosts(params);
-
-      const items = Array.isArray(batch) ? batch : [];
-      state.savedItems = reset ? items : state.savedItems.concat(items);
-      state.savedHasMore = items.length >= PAGE_SIZE;
-      renderSaved(reset ? state.savedItems : items, !reset);
-    } catch (error) {
-      console.warn('[Profile] loadSaved:', error);
-      if (empty) empty.style.display = 'block';
-    } finally {
-      if (loading) loading.style.display = 'none';
-    }
+    return Promise.resolve();
   }
 
   async function loadActivities() {
-    const loading = $('#activities-loading');
-    const list = $('#activities-list');
-    const empty = $('#activities-empty');
-    if (loading) loading.style.display = 'block';
-    if (list) list.innerHTML = '';
-    if (empty) empty.style.display = 'none';
-
-    const client = getClient();
-    const authorId = state.profileId || (state.user && state.user.id);
-    const activities = [];
-
-    try {
-      const recentPosts = state.isPublicView
-        ? await window.KCAPI.getPostsByAuthorId(authorId, { page: 1, limit: 8 })
-        : await window.KCAPI.getMyPosts({ page: 1, limit: 8 });
-      (Array.isArray(recentPosts) ? recentPosts : []).forEach((post) => {
-        activities.push({
-          type: 'post',
-          date: post.created_at,
-          title: post.title || 'Sem título',
-          postId: post.uuid || post.id || '',
-          status: post.status || 'published',
-        });
-      });
-    } catch (_) { }
-
-    if (client && authorId) {
-      try {
-        const commentPayload = await loadProfileComments(client, authorId, { limit: 8 });
-        commentPayload.forEach((comment) => {
-          const post = comment.post || {};
-          activities.push({
-            type: 'comment',
-            date: comment.created_at,
-            body: String(comment.body || '').slice(0, 120),
-            title: post.title || post.titulo || 'Post',
-            postId: post.legacy_id || post.id || comment.post_id || '',
-          });
-        });
-      } catch (_) { }
+    const collections = getProfileCollectionsModule();
+    if (collections && typeof collections.loadActivities === 'function') {
+      return collections.loadActivities(buildCollectionsDeps());
     }
-
-    activities.sort((left, right) => new Date(right.date) - new Date(left.date));
-    if (loading) loading.style.display = 'none';
-
-    if (!activities.length) {
-      if (empty) empty.style.display = 'block';
-      return;
-    }
-
-    if (list) {
-      list.innerHTML = activities.slice(0, 20).map((item) => {
-        const postUrl = buildPostDetailHref(item.postId || '');
-        if (item.type === 'post') {
-          return [
-            '<div class="kc-profile-activity-item">',
-            '<div class="kc-profile-activity-icon"><i class="fas fa-newspaper"></i></div>',
-            '<div class="kc-profile-activity-content">',
-            `<div class="kc-profile-activity-label">Publicou <a href="${esc(postUrl)}">${esc(item.title)}</a> ${statusBadge(item.status)}</div>`,
-            `<div class="kc-profile-activity-meta">${esc(fmtRelative(item.date))}</div>`,
-            '</div>',
-            '</div>',
-          ].join('');
-        }
-
-        const rawPreview = String(item.body || '').trim();
-        const bodyPreview = rawPreview.length > 120 ? `${rawPreview.slice(0, 120)}...` : rawPreview;
-        const preview = bodyPreview
-          ? `<div class="kc-profile-activity-meta kc-profile-activity-meta--excerpt">${renderInlineRichText(bodyPreview)}</div>`
-          : '';
-        return [
-          '<div class="kc-profile-activity-item">',
-          '<div class="kc-profile-activity-icon"><i class="fas fa-comment"></i></div>',
-          '<div class="kc-profile-activity-content">',
-          `<div class="kc-profile-activity-label">Comentou em <a href="${esc(postUrl)}">${esc(item.title)}</a></div>`,
-          preview,
-          `<div class="kc-profile-activity-meta" style="margin-top:4px;">${esc(fmtRelative(item.date))}</div>`,
-          '</div>',
-          '</div>',
-        ].join('');
-      }).join('');
-    }
+    return Promise.resolve();
   }
 
   function switchTab(tabId) {
-    state.activeTab = String(tabId || 'activities');
-    $$('.kc-profile-tab').forEach((button) => {
-      const active = button.getAttribute('data-kc-tab') === state.activeTab;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
-    $$('.kc-profile-tab-panel').forEach((panel) => {
-      panel.classList.toggle('active', panel.id === `tab-${state.activeTab}`);
-    });
-
-    if (state.activeTab === 'posts' && !state.posts.length) loadPosts(true);
-    if (state.activeTab === 'comments' && !state.comments.length) loadComments(true);
-    if (state.activeTab === 'saved' && !state.savedItems.length) loadSaved(true);
-    if (state.activeTab === 'ratings' && !state.ratings.length) loadRatings(true);
+    const collections = getProfileCollectionsModule();
+    if (collections && typeof collections.switchTab === 'function') {
+      collections.switchTab(tabId, buildCollectionsDeps());
+    }
   }
 
   function setProfilePending(pending) {
@@ -1091,37 +762,10 @@
   }
 
   function bindTabsAndLists() {
-    $$('[data-kc-tab]').forEach((button) => {
-      button.addEventListener('click', () => switchTab(button.getAttribute('data-kc-tab')));
-    });
-
-    const postsStatus = $('#profile-posts-status');
-    if (postsStatus) {
-      postsStatus.addEventListener('change', (event) => {
-        state.postStatus = String(event.target.value || '').trim().toLowerCase();
-        loadPosts(true);
-      });
+    const collections = getProfileCollectionsModule();
+    if (collections && typeof collections.bindTabsAndLists === 'function') {
+      collections.bindTabsAndLists(buildCollectionsDeps());
     }
-
-    const savedKind = $('#profile-saved-kind');
-    if (savedKind) {
-      savedKind.addEventListener('change', (event) => {
-        state.savedKind = String(event.target.value || '').trim().toLowerCase();
-        loadSaved(true);
-      });
-    }
-
-    const postsMore = $('#posts-load-more');
-    if (postsMore) postsMore.addEventListener('click', () => { state.postPage += 1; loadPosts(false); });
-
-    const commentsMore = $('#comments-load-more');
-    if (commentsMore) commentsMore.addEventListener('click', () => { state.commentPage += 1; loadComments(false); });
-
-    const savedMore = $('#saved-load-more');
-    if (savedMore) savedMore.addEventListener('click', () => { state.savedPage += 1; loadSaved(false); });
-
-    const ratingsMore = $('#ratings-load-more');
-    if (ratingsMore) ratingsMore.addEventListener('click', () => { state.ratingPage += 1; loadRatings(false); });
   }
 
   function bindProfileSyncListener() {
