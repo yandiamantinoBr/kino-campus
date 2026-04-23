@@ -8,6 +8,7 @@ window._KCLA = window._KCLA || {};
 window._KCLA.notifications = window._KCLA.notifications || {};
 window._KCLA.ratings = window._KCLA.ratings || {};
 window._KCLA.saved = window._KCLA.saved || {};
+window._KCLA.postsRead = window._KCLA.postsRead || {};
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
@@ -59,6 +60,10 @@ window._KCLA.saved = window._KCLA.saved || {};
     return (window._KCLA && window._KCLA.saved) ? window._KCLA.saved : null;
   }
 
+  function getLocalPostsReadModule() {
+    return (window._KCLA && window._KCLA.postsRead) ? window._KCLA.postsRead : null;
+  }
+
   function buildLocalRatingsDeps() {
     return {
       viewerId: LOCAL_RATING_VIEWER_ID,
@@ -77,6 +82,32 @@ window._KCLA.saved = window._KCLA.saved || {};
       mapPostSummary: mapLocalPostSummary,
       paginateItems: paginateLocalItems,
       readProfile: readLocalProfile,
+    };
+  }
+
+  function buildLocalPostsReadDeps() {
+    return {
+      config: cfg,
+      fetchJSON,
+      apiURL,
+      filterPosts: filterLocalPosts,
+      normalizePost,
+      getDatabaseRaw,
+      getDatabaseNormalized,
+      getSearchShared,
+      getSearchCollection: getLocalSearchCollection,
+      readLocalUserPosts,
+      enrichPostWithRatings: enrichLocalPostWithRatings,
+      enrichPostsWithRatings: enrichLocalPostsWithRatings,
+      parsePostTime: parseLocalPostTime,
+      mapPostSummary: mapLocalPostSummary,
+      paginateItems: paginateLocalItems,
+      rankRelatedPosts: (window.KCAPI && typeof window.KCAPI.rankRelatedPosts === 'function')
+        ? window.KCAPI.rankRelatedPosts
+        : null,
+      toSlug,
+      mockUsersList: MOCK_USERS_LIST,
+      mockUsersById: MOCK_USERS_BY_ID || {},
     };
   }
 
@@ -390,260 +421,54 @@ window._KCLA.saved = window._KCLA.saved || {};
     return enrichLocalPostsWithRatings(userPosts.concat(posts));
   }
 
-  function normalizeLocalFeedCursorParams(params) {
-    const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
-    const limitRaw = (p.limit != null) ? parseInt(String(p.limit), 10) : 20;
-    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 20;
-    const cursor = p.cursor != null ? String(p.cursor).trim() : '';
-    return {
-      ...p,
-      limit,
-      cursor: cursor || null,
-    };
-  }
+  
 
-  function encodeBase64Utf8(value) {
-    const input = String(value == null ? '' : value);
-    try {
-      if (typeof Buffer !== 'undefined') return Buffer.from(input, 'utf8').toString('base64');
-    } catch (_) { }
+  
 
-    if (typeof TextEncoder !== 'undefined' && typeof btoa === 'function') {
-      const bytes = new TextEncoder().encode(input);
-      let binary = '';
-      bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-      return btoa(binary);
-    }
+  
 
-    if (typeof btoa === 'function') return btoa(input);
-    return input;
-  }
+  
 
-  function decodeBase64Utf8(value) {
-    const input = String(value == null ? '' : value);
-    try {
-      if (typeof Buffer !== 'undefined') return Buffer.from(input, 'base64').toString('utf8');
-    } catch (_) { }
-
-    if (typeof TextDecoder !== 'undefined' && typeof atob === 'function') {
-      const binary = atob(input);
-      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-      return new TextDecoder().decode(bytes);
-    }
-
-    if (typeof atob === 'function') return atob(input);
-    return input;
-  }
-
-  function encodeLocalFeedCursor(offset) {
-    return encodeBase64Utf8(JSON.stringify({ offset: Math.max(0, Number(offset) || 0) }));
-  }
-
-  function decodeLocalFeedCursor(cursor) {
-    if (!cursor) return 0;
-    try {
-      const decoded = JSON.parse(decodeBase64Utf8(cursor));
-      const offset = parseInt(String(decoded && decoded.offset != null ? decoded.offset : 0), 10);
-      return Number.isFinite(offset) && offset > 0 ? offset : 0;
-    } catch (_) {
-      return 0;
-    }
-  }
+  
 
   async function localGetFeedCursor(params = {}) {
-    const p = normalizeLocalFeedCursorParams(params);
-
-    if (!cfg.baseURL) {
-      const db = await getDatabaseNormalized();
-      const filtered = typeof filterLocalPosts === 'function' ? filterLocalPosts(db.posts, p) : (db.posts || []);
-      const rows = Array.isArray(filtered) ? filtered : [];
-      const offset = decodeLocalFeedCursor(p.cursor);
-      const nextOffset = Math.max(0, offset);
-      const posts = enrichLocalPostsWithRatings(rows.slice(nextOffset, nextOffset + p.limit));
-      const hasMore = (nextOffset + posts.length) < rows.length;
-
-      try { console.debug(`[KCAPI:local] Serving cursor slice from ${nextOffset} (${posts.length} items) [limit=${p.limit}]`); } catch (_) { }
-
-      return {
-        posts,
-        nextCursor: hasMore ? encodeLocalFeedCursor(nextOffset + posts.length) : null,
-        hasMore,
-      };
-    }
-
-    const q = new URLSearchParams();
-    Object.entries(p || {}).forEach(([k, v]) => {
-      if (v == null || v === '') return;
-      if (Array.isArray(v)) {
-        if (!v.length) return;
-        q.set(k, JSON.stringify(v));
-        return;
-      }
-      q.set(k, String(v));
-    });
-    return fetchJSON(apiURL('feed-cursor?' + q.toString()));
+    const postsReadModule = getLocalPostsReadModule();
+    return postsReadModule && typeof postsReadModule.getFeedCursor === 'function'
+      ? postsReadModule.getFeedCursor(params, buildLocalPostsReadDeps())
+      : { posts: [], nextCursor: null, hasMore: false };
   }
 
   // ---------- Endpoints sugeridos (futuro backend) ----------
   // GET /api/v1/posts?module=...&q=...
   async function localGetPosts(params = {}) {
-    // Se você já tiver um backend rodando, basta configurar baseURL:
-    // KCAPI.setConfig({ baseURL: '/api/v1' })
-    if (!cfg.baseURL) {
-      const db = await getDatabaseNormalized();
-      const filtered = typeof filterLocalPosts === 'function' ? filterLocalPosts(db.posts, params) : (db.posts || []);
-
-      // V8.1.4.2: paginação no driver local (paridade com Supabase)
-      const p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
-      const pageRaw = (p.page != null) ? parseInt(String(p.page), 10) : 1;
-      const limitRaw = (p.limit != null) ? parseInt(String(p.limit), 10) : 20;
-      const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
-      const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 20;
-      const start = (page - 1) * limit;
-      const end = start + limit;
-      const slice = Array.isArray(filtered) ? enrichLocalPostsWithRatings(filtered.slice(start, end)) : [];
-
-      try { console.debug(`[KCAPI:local] Serving page ${page} (${slice.length} items) [limit=${limit}]`); } catch (_) { }
-
-      return slice;
-    }
-
-    // Backend: espera-se que o servidor já devolva o contrato padrão do Post
-    const q = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => {
-      if (v == null || v === '') return;
-      q.set(k, String(v));
-    });
-    return fetchJSON(apiURL('posts?' + q.toString()));
+    const postsReadModule = getLocalPostsReadModule();
+    return postsReadModule && typeof postsReadModule.getPosts === 'function'
+      ? postsReadModule.getPosts(params, buildLocalPostsReadDeps())
+      : [];
   }
 
   async function localSearchPosts(params = {}) {
-    if (!cfg.baseURL) {
-      const searchShared = getSearchShared();
-      if (!searchShared) {
-        return localGetPosts(params);
-      }
-
-      const collection = await getLocalSearchCollection();
-      return searchShared.searchCollection(collection, params);
-    }
-
-    const q = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => {
-      if (v == null || v === '') return;
-      q.set(k, String(v));
-    });
-    return fetchJSON(apiURL('search?' + q.toString()));
+    const postsReadModule = getLocalPostsReadModule();
+    return postsReadModule && typeof postsReadModule.searchPosts === 'function'
+      ? postsReadModule.searchPosts(params, buildLocalPostsReadDeps())
+      : [];
   }
 
   // GET /api/v1/posts/:id (ou driver local)
   // - Local-first: busca em localStorage (kc_user_posts) e no seed (data/database.json)
   // - Futuro: preparado para IDs UUID (string) e para backend habilitado
   async function localGetPostById(id) {
-    const key = String(id || '').trim();
-    if (!key) return null;
-
-    // Backend mode (quando baseURL estiver configurado)
-    if (cfg.baseURL) {
-      try {
-        return await fetchJSON(apiURL('posts/' + encodeURIComponent(key)));
-      } catch (_) {
-        // fallback: tenta resolver via listagem (caso rota /:id não exista ainda)
-        try {
-          const posts = await localGetPosts({});
-          return posts.find((p) => {
-            const pid = (p && (p.id ?? p._id ?? p.legacy_id ?? p.legacyId ?? p.uuid)) ?? null;
-            return pid != null && String(pid) === key;
-          }) || null;
-        } catch (_) { }
-        return null;
-      }
-    }
-
-    // 1) LocalStorage (posts do usuário)
-    try {
-      const raw = localStorage.getItem('kc_user_posts');
-      const list = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(list)) {
-        const found = list.find((p) => {
-          const pid = (p && (p.id ?? p._id ?? p.legacy_id ?? p.legacyId ?? p.uuid)) ?? null;
-          return pid != null && String(pid) === key;
-        });
-        if (found) return enrichLocalPostWithRatings(found);
-      }
-    } catch (_) { }
-
-    // 2) Seed JSON (data/database.json)
-    try {
-      const db = await getDatabaseRaw();
-      const items = Array.isArray(db.anuncios) ? db.anuncios : (Array.isArray(db.posts) ? db.posts : []);
-      const found = items.find((a) => {
-        const pid = (a && (a.id ?? a._id ?? a.legacy_id ?? a.legacyId ?? a.uuid)) ?? null;
-        if (pid != null && String(pid) === key) return true;
-        // compat: alguns seeds podem usar legacy_id numérico + id uuid
-        const legacy = (a && (a.legacy_id ?? a.legacyId)) ?? null;
-        if (legacy != null && String(legacy) === key) return true;
-        return false;
-      });
-      if (found) return enrichLocalPostWithRatings(found);
-    } catch (_) { }
-
-    return null;
+    const postsReadModule = getLocalPostsReadModule();
+    return postsReadModule && typeof postsReadModule.getPostById === 'function'
+      ? postsReadModule.getPostById(id, buildLocalPostsReadDeps())
+      : null;
   }
 
   async function localGetRelatedPosts(postId, options = {}) {
-    const current = await localGetPostById(postId);
-    if (!current) return [];
-
-    const limit = Math.min(12, Math.max(1, Number(options.limit) || 8));
-    const viewerAuthenticated = options.viewerAuthenticated !== false;
-    const currentAuthor = String(current.authorId || current.autorId || current.author_id || '').trim();
-    const currentModule = String(current.modulo || current.module || '').trim();
-
-    const db = await getDatabaseNormalized();
-    const dbItems = Array.isArray(db && db.posts) ? db.posts : [];
-    const localItems = (() => {
-      try {
-        const raw = JSON.parse(localStorage.getItem('kc_user_posts') || '[]');
-        return Array.isArray(raw) ? raw.map(normalizePost) : [];
-      } catch (_) {
-        return [];
-      }
-    })();
-
-    const candidates = dbItems.concat(localItems).filter((item) => {
-      if (!item) return false;
-      const candidateId = String(item.uuid || item.id || '').trim();
-      const currentId = String(current.uuid || current.id || '').trim();
-      if (candidateId && currentId && candidateId === currentId) return false;
-      if (String(item.status || 'published').trim().toLowerCase() !== 'published') return false;
-      const visibility = String(item.visibility || 'public').trim().toLowerCase();
-      if (!viewerAuthenticated && visibility !== 'public') return false;
-      return true;
-    });
-
-    const ranked = (window.KCAPI && typeof window.KCAPI.rankRelatedPosts === 'function')
-      ? window.KCAPI.rankRelatedPosts(current, candidates, { viewerAuthenticated })
-      : candidates;
-
-    const prioritized = ranked.sort((left, right) => {
-      const leftAuthor = String(left.authorId || left.autorId || left.author_id || '').trim();
-      const rightAuthor = String(right.authorId || right.autorId || right.author_id || '').trim();
-      const leftModule = String(left.modulo || left.module || '').trim();
-      const rightModule = String(right.modulo || right.module || '').trim();
-
-      const leftSameAuthor = leftAuthor && leftAuthor === currentAuthor;
-      const rightSameAuthor = rightAuthor && rightAuthor === currentAuthor;
-      if (leftSameAuthor !== rightSameAuthor) return leftSameAuthor ? -1 : 1;
-
-      const leftSameModule = leftModule && leftModule === currentModule;
-      const rightSameModule = rightModule && rightModule === currentModule;
-      if (leftSameModule !== rightSameModule) return leftSameModule ? -1 : 1;
-
-      return Number(right._kcRelatedScore || 0) - Number(left._kcRelatedScore || 0);
-    });
-
-    return enrichLocalPostsWithRatings(prioritized.slice(0, limit));
+    const postsReadModule = getLocalPostsReadModule();
+    return postsReadModule && typeof postsReadModule.getRelatedPosts === 'function'
+      ? postsReadModule.getRelatedPosts(postId, options, buildLocalPostsReadDeps())
+      : [];
   }
 
   async function localGetUserRatingSummary(userId) {
@@ -839,35 +664,17 @@ window._KCLA.saved = window._KCLA.saved || {};
   }
 
   async function localGetMyPosts(params = {}) {
-    const statusFilter = String(params.status || '').trim().toLowerCase();
-    const sorted = readLocalUserPosts()
-      .slice()
-      .sort((left, right) => parseLocalPostTime(right) - parseLocalPostTime(left))
-      .filter((post) => {
-        if (!statusFilter) return true;
-        return String((post && post.status) || 'published').trim().toLowerCase() === statusFilter;
-      })
-      .map((post) => mapLocalPostSummary(post));
-    return paginateLocalItems(sorted, params).items;
+    const postsReadModule = getLocalPostsReadModule();
+    return postsReadModule && typeof postsReadModule.getMyPosts === 'function'
+      ? postsReadModule.getMyPosts(params, buildLocalPostsReadDeps())
+      : [];
   }
 
   async function localGetPostsByAuthorId(authorId, params = {}) {
-    const author = String(authorId || '').trim();
-    if (!author) return [];
-
-    const statusFilter = String(params.status || 'published').trim().toLowerCase();
-    const collection = await getLocalSearchCollection();
-    const items = (Array.isArray(collection) ? collection : [])
-      .filter((post) => {
-        const normalized = normalizePost(post || {});
-        const currentAuthor = String((normalized && (normalized.authorId || normalized.author_id)) || '').trim();
-        if (currentAuthor !== author) return false;
-        if (!statusFilter) return true;
-        return String((normalized && normalized.status) || 'published').trim().toLowerCase() === statusFilter;
-      })
-      .sort((left, right) => parseLocalPostTime(right) - parseLocalPostTime(left))
-      .map((post) => mapLocalPostSummary(post));
-    return paginateLocalItems(items, params).items;
+    const postsReadModule = getLocalPostsReadModule();
+    return postsReadModule && typeof postsReadModule.getPostsByAuthorId === 'function'
+      ? postsReadModule.getPostsByAuthorId(authorId, params, buildLocalPostsReadDeps())
+      : [];
   }
 
   async function localGetSavedPostState(postId) {
@@ -1223,188 +1030,19 @@ window._KCLA.saved = window._KCLA.saved || {};
     return { ok: true, data: list[index] };
   }
 
-  function normalizeRankingModuleKey(value) {
-    return toSlug(String(value || '').trim());
-  }
+  
 
-  function parseLocalRankingTimestamp(post) {
-    const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
-    const absolute = [source.createdAt, source.created_at, source.timestamp_iso].find((value) => value != null && String(value).trim());
-    if (absolute) {
-      const parsed = Date.parse(String(absolute));
-      if (Number.isFinite(parsed)) return parsed;
-    }
+  
 
-    const relative = String(source.timestamp || '').trim();
-    if (!relative) return null;
+  
 
-    const normalized = relative
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-
-    const match = normalized.match(/^ha\s+(\d+)\s+(minuto|minutos|hora|horas|dia|dias|semana|semanas|mes|meses)$/);
-    if (!match) return null;
-
-    const amount = parseInt(match[1], 10);
-    const unit = match[2];
-    if (!Number.isFinite(amount) || amount < 0) return null;
-
-    const multipliers = {
-      minuto: 60 * 1000,
-      minutos: 60 * 1000,
-      hora: 60 * 60 * 1000,
-      horas: 60 * 60 * 1000,
-      dia: 24 * 60 * 60 * 1000,
-      dias: 24 * 60 * 60 * 1000,
-      semana: 7 * 24 * 60 * 60 * 1000,
-      semanas: 7 * 24 * 60 * 60 * 1000,
-      mes: 30 * 24 * 60 * 60 * 1000,
-      meses: 30 * 24 * 60 * 60 * 1000,
-    };
-
-    const delta = multipliers[unit];
-    if (!delta) return null;
-    return Date.now() - (amount * delta);
-  }
-
-  function isLocalRankingPostInPeriod(post, period) {
-    const parsed = parseLocalRankingTimestamp(post);
-    if (!Number.isFinite(parsed)) return true;
-
-    const normalizedPeriod = String(period || 'month').trim().toLowerCase();
-    const windows = {
-      day: 24 * 60 * 60 * 1000,
-      week: 7 * 24 * 60 * 60 * 1000,
-      month: 30 * 24 * 60 * 60 * 1000,
-    };
-    const maxAge = windows[normalizedPeriod] || windows.month;
-    return (Date.now() - parsed) <= maxAge;
-  }
-
-  function resolveLocalRankingUser(post, index) {
-    const normalized = normalizePost(post || {});
-    const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
-    const explicitAuthorId = String((normalized && normalized.authorId) || source.authorId || source.author_id || '').trim();
-    const displayName = String(
-      (normalized && (normalized.authorName || normalized.author || normalized.autor))
-      || source.authorName
-      || source.author
-      || source.autor
-      || 'Usuário'
-    ).trim() || 'Usuário';
-    const avatarUrl = String(
-      (normalized && (normalized.authorAvatar || normalized.autorAvatar))
-      || source.authorAvatar
-      || source.autorAvatar
-      || ''
-    ).trim();
-
-    let matchedUser = null;
-    if (explicitAuthorId && MOCK_USERS_BY_ID && MOCK_USERS_BY_ID[explicitAuthorId]) {
-      matchedUser = MOCK_USERS_BY_ID[explicitAuthorId];
-    }
-
-    if (!matchedUser && Array.isArray(MOCK_USERS_LIST) && MOCK_USERS_LIST.length) {
-      matchedUser = MOCK_USERS_LIST.find((entry) => {
-        if (!entry) return false;
-        const sameName = String(entry.displayName || '').trim() === displayName;
-        if (!sameName) return false;
-        if (!avatarUrl) return true;
-        return String(entry.avatarUrl || '').trim() === avatarUrl;
-      }) || null;
-    }
-
-    const fallbackKey = displayName && displayName !== 'Usuário'
-      ? displayName + '-' + avatarUrl
-      : 'user-' + String(index + 1);
-    const userId = explicitAuthorId || (matchedUser && matchedUser.id) || ('LOCAL_' + toSlug(fallbackKey));
-
-    return {
-      userId,
-      displayName: displayName || (matchedUser && matchedUser.displayName) || 'Usuário',
-      avatarUrl: avatarUrl || (matchedUser && matchedUser.avatarUrl) || '',
-    };
-  }
+  
 
   async function localGetTopContributors(period, module, limit) {
-    const list = await getLocalSearchCollection();
-    const entries = Array.isArray(list) ? list : [];
-    const normalizedModule = normalizeRankingModuleKey(module);
-    const parsedLimit = parseInt(String(limit != null ? limit : 10), 10);
-    const safeLimit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
-    const scoreMap = new Map();
-
-    entries.forEach((post, index) => {
-      const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
-      const postModule = normalizeRankingModuleKey(source.modulo || source.module || source.moduleKey || '');
-      if (normalizedModule && postModule !== normalizedModule) return;
-      if (!isLocalRankingPostInPeriod(source, period)) return;
-
-      const contributor = resolveLocalRankingUser(source, index);
-      if (!contributor.userId) return;
-
-      const current = scoreMap.get(contributor.userId) || {
-        user_id: contributor.userId,
-        display_name: contributor.displayName,
-        avatar_url: contributor.avatarUrl,
-        posts_count: 0,
-        votes_received: 0,
-        comments_count: 0,
-        coupon_clicks: 0,
-        share_count: 0,
-        penalties: 0,
-      };
-
-      current.posts_count += 1;
-      current.votes_received += Math.max(0, Number(source.votos != null ? source.votos : source.votes) || 0);
-      current.comments_count += Math.max(0, Number(
-        source.comentarios != null
-          ? source.comentarios
-          : (source.commentsCount != null ? source.commentsCount : source.comments_count)
-      ) || 0);
-      current.coupon_clicks += Math.max(0, Number(
-        source.couponClicks != null
-          ? source.couponClicks
-          : (source.coupon_clicks != null
-            ? source.coupon_clicks
-            : ((source.metadata && (source.metadata.couponClicks != null ? source.metadata.couponClicks : source.metadata.coupon_clicks)) || 0))
-      ) || 0);
-      current.share_count += Math.max(0, Number(
-        source.shareCount != null
-          ? source.shareCount
-          : (source.share_count != null
-            ? source.share_count
-            : ((source.metadata && (source.metadata.shareCount != null ? source.metadata.shareCount : source.metadata.share_count)) || 0))
-      ) || 0);
-
-      scoreMap.set(contributor.userId, current);
-    });
-
-    return Array.from(scoreMap.values())
-      .map((entry) => ({
-        ...entry,
-        score: Math.max(0,
-          (entry.posts_count * 15)
-          + (entry.votes_received * 10)
-          + (entry.comments_count * 5)
-          + (entry.coupon_clicks * 4)
-          + (entry.share_count * 3)
-          - (entry.penalties * 50)
-        ),
-      }))
-      .filter((entry) => entry.score > 0)
-      .sort((left, right) => {
-        if (right.score !== left.score) return right.score - left.score;
-        if (right.posts_count !== left.posts_count) return right.posts_count - left.posts_count;
-        return String(left.display_name || '').localeCompare(String(right.display_name || ''), 'pt-BR');
-      })
-      .slice(0, safeLimit)
-      .map((entry, index) => ({
-        ...entry,
-        rank: index + 1,
-      }));
+    const postsReadModule = getLocalPostsReadModule();
+    return postsReadModule && typeof postsReadModule.getTopContributors === 'function'
+      ? postsReadModule.getTopContributors(period, module, limit, buildLocalPostsReadDeps())
+      : [];
   }
 
   // ---------- Driver Pattern (V8.1.3.1) ----------

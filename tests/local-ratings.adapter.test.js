@@ -46,12 +46,16 @@ beforeAll(() => {
   delete require.cache[require.resolve('../assets/js/adapters/local.notifications.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.ratings.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.saved.adapter.js')];
+  delete require.cache[require.resolve('../assets/js/adapters/local.posts-read.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.adapter.js')];
+
 
   require('../assets/js/adapters/local.notifications.adapter.js');
   require('../assets/js/adapters/local.ratings.adapter.js');
   require('../assets/js/adapters/local.saved.adapter.js');
+  require('../assets/js/adapters/local.posts-read.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
+
 
   actualRatingsModule = window._KCLA.ratings;
   driver = window.KCAPI.registerAdapter.mock.calls[0][1];
@@ -441,3 +445,4 @@ describe('driver local - delegacao para window._KCLA.ratings', () => {
     });
   });
 });
+

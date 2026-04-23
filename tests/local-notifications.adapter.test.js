@@ -41,12 +41,16 @@ beforeAll(() => {
   delete require.cache[require.resolve('../assets/js/adapters/local.notifications.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.ratings.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.saved.adapter.js')];
+  delete require.cache[require.resolve('../assets/js/adapters/local.posts-read.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.adapter.js')];
+
 
   require('../assets/js/adapters/local.notifications.adapter.js');
   require('../assets/js/adapters/local.ratings.adapter.js');
   require('../assets/js/adapters/local.saved.adapter.js');
+  require('../assets/js/adapters/local.posts-read.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
+
 
   actualNotificationsModule = window._KCLA.notifications;
   driver = window.KCAPI.registerAdapter.mock.calls[0][1];
@@ -389,3 +393,4 @@ describe('driver local - delegacao para window._KCLA.notifications', () => {
     await expect(driver.revokeInvite('user@example.com')).resolves.toEqual({ ok: true });
   });
 });
+

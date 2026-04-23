@@ -45,7 +45,9 @@ beforeAll(() => {
   require('../assets/js/adapters/local.notifications.adapter.js');
   require('../assets/js/adapters/local.ratings.adapter.js');
   require('../assets/js/adapters/local.saved.adapter.js');
+  require('../assets/js/adapters/local.posts-read.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
+
 });
 
 describe('Anti-Spam Moderação (v9.3.2)', () => {
@@ -199,3 +201,4 @@ describe('Anti-Spam Moderação (v9.3.2)', () => {
     });
   });
 });
+
