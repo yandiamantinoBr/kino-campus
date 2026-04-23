@@ -1,20 +1,21 @@
-/* KinoCampus - Local Adapter */
+﻿/* KinoCampus - Local Adapter */
 (function () {
   'use strict';
 
 
-const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, ENV, DEFAULTS } = window.KCAPI;
+const { config: cfg, fetchJSON, filterPosts: filterLocalPosts, normalizePost, MOCK_USERS_LIST, MOCK_USERS_BY_ID, apiURL, VERSION, DEFAULTS } = window.KCAPI;
 window._KCLA = window._KCLA || {};
 window._KCLA.notifications = window._KCLA.notifications || {};
 window._KCLA.ratings = window._KCLA.ratings || {};
 window._KCLA.saved = window._KCLA.saved || {};
 window._KCLA.postsRead = window._KCLA.postsRead || {};
+window._KCLA.postsWrite = window._KCLA.postsWrite || {};
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
 
 
-  // ---------- Modo estático (fallback) ----------
+  // ---------- Modo estÃ¡tico (fallback) ----------
   async function getDatabaseRaw() {
     const urls = (Array.isArray(cfg.fallbackDatabaseURLs) && cfg.fallbackDatabaseURLs.length)
       ? cfg.fallbackDatabaseURLs
@@ -64,6 +65,10 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
     return (window._KCLA && window._KCLA.postsRead) ? window._KCLA.postsRead : null;
   }
 
+  function getLocalPostsWriteModule() {
+    return (window._KCLA && window._KCLA.postsWrite) ? window._KCLA.postsWrite : null;
+  }
+
   function buildLocalRatingsDeps() {
     return {
       viewerId: LOCAL_RATING_VIEWER_ID,
@@ -108,6 +113,21 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
       toSlug,
       mockUsersList: MOCK_USERS_LIST,
       mockUsersById: MOCK_USERS_BY_ID || {},
+    };
+  }
+
+  function buildLocalPostsWriteDeps() {
+    return {
+      config: cfg,
+      fetchJSON,
+      apiURL,
+      normalizePost,
+      getNowIso,
+      buildPostKeys: buildLocalPostKeys,
+      viewerId: LOCAL_RATING_VIEWER_ID,
+      mockUsersById: MOCK_USERS_BY_ID || {},
+      toSlug,
+      clearSavedPostState: localClearSavedPostState,
     };
   }
 
@@ -165,26 +185,13 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
       : (Array.isArray(posts) ? posts.map((item) => normalizePost(item)) : []);
   }
 
-  function readLocalUserPostDrafts() {
+  function readLocalUserPosts() {
     try {
       const raw = localStorage.getItem('kc_user_posts');
       const list = raw ? JSON.parse(raw) : [];
-      return Array.isArray(list) ? list : [];
+      return Array.isArray(list) ? list.map(normalizePost) : [];
     } catch (_) {
       return [];
-    }
-  }
-
-  function readLocalUserPosts() {
-    return readLocalUserPostDrafts().map(normalizePost);
-  }
-
-  function writeLocalUserPosts(list) {
-    try {
-      localStorage.setItem('kc_user_posts', JSON.stringify(Array.isArray(list) ? list : []));
-      return true;
-    } catch (_) {
-      return false;
     }
   }
 
@@ -207,12 +214,6 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
       source._id,
     ];
     return Array.from(new Set(keys.map((value) => String(value == null ? '' : value).trim()).filter(Boolean)));
-  }
-
-  function matchesLocalPostIdentity(post, postId) {
-    const key = String(postId || '').trim();
-    if (!key) return false;
-    return buildLocalPostKeys(post).includes(key);
   }
 
   function parseLocalPostTime(post) {
@@ -256,7 +257,7 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
       id: id != null ? id : (uuid || null),
       uuid: uuid || null,
       legacy_id: source.legacy_id != null ? source.legacy_id : (source.legacyId != null ? source.legacyId : null),
-      title: String((normalized && normalized.title) || source.title || source.titulo || 'Sem título').trim() || 'Sem título',
+      title: String((normalized && normalized.title) || source.title || source.titulo || 'Sem tÃ­tulo').trim() || 'Sem tÃ­tulo',
       created_at: String(
         (normalized && (normalized.created_at || normalized.createdAt))
         || source.created_at
@@ -301,7 +302,7 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
 
   function buildDefaultLocalProfile() {
     const viewer = (MOCK_USERS_BY_ID && MOCK_USERS_BY_ID[LOCAL_RATING_VIEWER_ID]) || {};
-    const displayName = String(viewer.displayName || viewer.name || 'Você').trim() || 'Você';
+    const displayName = String(viewer.displayName || viewer.name || 'VocÃª').trim() || 'VocÃª';
     const avatarUrl = String(viewer.avatarUrl || viewer.avatar || '').trim() || null;
     return {
       id: String(viewer.id || LOCAL_RATING_VIEWER_ID),
@@ -334,7 +335,7 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
         ...fallback,
         ...parsed,
         id: String(parsed.id || fallback.id || LOCAL_RATING_VIEWER_ID).trim() || LOCAL_RATING_VIEWER_ID,
-        display_name: String(parsed.display_name || fallback.display_name || 'Você').trim() || 'Você',
+        display_name: String(parsed.display_name || fallback.display_name || 'VocÃª').trim() || 'VocÃª',
         avatar_url: String(parsed.avatar_url || fallback.avatar_url || '').trim() || null,
       };
     } catch (_) {
@@ -367,52 +368,6 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
     return profile || null;
   }
 
-  function prepareLocalPostForPersistence(body, currentPost) {
-    const existing = (currentPost && typeof currentPost === 'object' && !Array.isArray(currentPost)) ? { ...currentPost } : {};
-    const raw = {
-      ...existing,
-      ...((body && typeof body === 'object' && !Array.isArray(body)) ? body : {}),
-    };
-    if (!raw.id) raw.id = existing.id || Date.now();
-    if (!raw.authorId) raw.authorId = existing.authorId || LOCAL_RATING_VIEWER_ID;
-    if (!raw.autor && !raw._legacyAuthorName) raw.autor = existing.autor || 'Você';
-    if (!raw.autorAvatar && !raw._legacyAuthorAvatar) raw.autorAvatar = existing.autorAvatar || ((MOCK_USERS_BY_ID.USER_SELF && MOCK_USERS_BY_ID.USER_SELF.avatarUrl) || '');
-    if (!raw.created_at && !raw.createdAt) {
-      const createdAt = existing.created_at || existing.createdAt || getNowIso();
-      raw.created_at = createdAt;
-      raw.createdAt = createdAt;
-    }
-    raw.updated_at = getNowIso();
-    raw.updatedAt = raw.updated_at;
-    if (!raw.timestamp && !existing.timestamp) raw.timestamp = 'Agora';
-
-    try {
-      const moduleKey = String(raw.modulo || raw.module || '').trim();
-      const categoryKey = toSlug(raw.categoriaKey || raw.categoryKey || raw.category || raw.categoria || '');
-      if (categoryKey) {
-        raw.categoriaKey = categoryKey;
-        if (!raw.categoria) raw.categoria = categoryKey;
-      }
-
-      let subKey = toSlug(raw.subcategoriaKey || raw.subcategoryKey || raw.subcategory || '');
-      const actionish = ['vendo', 'compro', 'troco', 'doacao', 'alugo', 'procuro'];
-      if (moduleKey === 'compra-venda' && subKey && actionish.includes(subKey) && categoryKey) {
-        subKey = categoryKey;
-        raw.subcategoriaKey = categoryKey;
-      } else if (subKey) {
-        raw.subcategoriaKey = subKey;
-      }
-
-      if (!raw.metadata || typeof raw.metadata !== 'object') raw.metadata = {};
-      if (categoryKey) raw.metadata.categoriaKey = raw.metadata.categoriaKey || categoryKey;
-      if (subKey) {
-        raw.metadata.subcategory = raw.metadata.subcategory || subKey;
-        raw.metadata.subcategoryKey = raw.metadata.subcategoryKey || subKey;
-      }
-    } catch (_) { }
-
-    return raw;
-  }
 
   async function getLocalSearchCollection() {
     const db = await getDatabaseNormalized();
@@ -514,111 +469,69 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
       ? ratingsModule.upsertUserRating(payload, buildLocalRatingsDeps())
       : { ok: false, error: { message: 'Avaliacoes locais indisponiveis.' } };
   }
-
   // POST /api/v1/posts
   async function localCreatePost(body) {
-    if (!cfg.baseURL) {
-      // fallback: simula persistência local (para protótipo)
-      // Obs.: kc-core.js ainda usa "kc_user_posts" (legado). Mantemos sem regressão.
-      const existing = readLocalUserPostDrafts();
-      const raw = prepareLocalPostForPersistence(body, null);
-      const next = normalizePost(raw);
-      existing.unshift(raw);
-
-      try {
-        if (!writeLocalUserPosts(existing)) throw new Error('LOCAL_WRITE_FAILED');
-      } catch (err) {
-        const message = (err && err.message) ? String(err.message) : 'Falha ao persistir publicação no localStorage.';
-        const errorPayload = {
-          code: 'LOCAL_STORAGE_SET_ITEM_FAILED',
-          message,
-        };
-        console.error('[KCAPI] localCreatePost persist error', {
-          driver: ENV.driver,
-          storageKey: 'kc_user_posts',
-          message,
-        });
-        return { ok: false, error: errorPayload };
-      }
-
-      return next;
-    }
-
-    return fetchJSON(apiURL('posts'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body || {}),
-    });
+    const postsWriteModule = getLocalPostsWriteModule();
+    return postsWriteModule && typeof postsWriteModule.createPost === 'function'
+      ? postsWriteModule.createPost(body, buildLocalPostsWriteDeps())
+      : null;
   }
-
   async function localUpdatePost(postId, payload) {
-    const key = String(postId || '').trim();
-    if (!key) return { ok: false, error: { message: 'Post inválido para edição.' } };
-
-    if (cfg.baseURL) {
-      return fetchJSON(apiURL('posts/' + encodeURIComponent(key)), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload || {}),
-      });
-    }
-
-    const drafts = readLocalUserPostDrafts();
-    const index = drafts.findIndex((item) => matchesLocalPostIdentity(item, key));
-    if (index < 0) return { ok: false, error: { message: 'Publicação não encontrada.' } };
-
-    const nextDraft = prepareLocalPostForPersistence(payload, drafts[index]);
-    drafts[index] = nextDraft;
-    if (!writeLocalUserPosts(drafts)) {
-      return { ok: false, error: { message: 'Não foi possível salvar alterações localmente.' } };
-    }
-
-    return { ok: true, data: normalizePost(nextDraft) };
+    const postsWriteModule = getLocalPostsWriteModule();
+    return postsWriteModule && typeof postsWriteModule.updatePost === 'function'
+      ? postsWriteModule.updatePost(postId, payload, buildLocalPostsWriteDeps())
+      : { ok: false, error: { message: 'Edicao local indisponivel.' } };
   }
-
   async function localDeletePost(postId) {
-    const key = String(postId || '').trim();
-    if (!key) return { ok: false, error: { message: 'Post inválido para exclusão.' } };
-
-    if (cfg.baseURL) {
-      return fetchJSON(apiURL('posts/' + encodeURIComponent(key)), {
-        method: 'DELETE',
-      });
-    }
-
-    const drafts = readLocalUserPostDrafts();
-    const nextDrafts = drafts.filter((item) => !matchesLocalPostIdentity(item, key));
-    if (nextDrafts.length === drafts.length) {
-      return { ok: false, error: { message: 'Publicação não encontrada.' } };
-    }
-    if (!writeLocalUserPosts(nextDrafts)) {
-      return { ok: false, error: { message: 'Não foi possível excluir a publicação localmente.' } };
-    }
-
-    try { await localClearSavedPostState(key); } catch (_) { }
-    return { ok: true };
+    const postsWriteModule = getLocalPostsWriteModule();
+    return postsWriteModule && typeof postsWriteModule.deletePost === 'function'
+      ? postsWriteModule.deletePost(postId, buildLocalPostsWriteDeps())
+      : { ok: false, error: { message: 'Exclusao local indisponivel.' } };
   }
-
+  async function localReportPost() {
+    const postsWriteModule = getLocalPostsWriteModule();
+    return postsWriteModule && typeof postsWriteModule.reportPost === 'function'
+      ? postsWriteModule.reportPost()
+      : { ok: false, error: { message: 'Denuncias disponiveis apenas no Supabase.' } };
+  }
+  async function localTogglePostStatus() {
+    const postsWriteModule = getLocalPostsWriteModule();
+    return postsWriteModule && typeof postsWriteModule.togglePostStatus === 'function'
+      ? postsWriteModule.togglePostStatus()
+      : { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+  }
+  async function localRenewPost() {
+    const postsWriteModule = getLocalPostsWriteModule();
+    return postsWriteModule && typeof postsWriteModule.renewPost === 'function'
+      ? postsWriteModule.renewPost()
+      : { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+  }
+  async function localBumpPost() {
+    const postsWriteModule = getLocalPostsWriteModule();
+    return postsWriteModule && typeof postsWriteModule.bumpPost === 'function'
+      ? postsWriteModule.bumpPost()
+      : { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+  }
   async function localGetMyProfile() {
     return readLocalProfile();
   }
 
   async function localUpdateMyProfile(patch = {}) {
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
-      return { ok: false, error: { message: 'Patch de perfil inválido.' } };
+      return { ok: false, error: { message: 'Patch de perfil invÃ¡lido.' } };
     }
     if (!Object.keys(patch).length) {
-      return { ok: false, error: { message: 'Nenhuma alteração informada.' } };
+      return { ok: false, error: { message: 'Nenhuma alteraÃ§Ã£o informada.' } };
     }
 
     const current = readLocalProfile();
     if (Object.prototype.hasOwnProperty.call(patch, 'display_name') && !String(patch.display_name || '').trim()) {
-      return { ok: false, error: { message: 'Informe um nome válido.' } };
+      return { ok: false, error: { message: 'Informe um nome vÃ¡lido.' } };
     }
     if (Object.prototype.hasOwnProperty.call(patch, 'avatar_url')) {
       const avatarUrl = String(patch.avatar_url || '').trim();
       if (avatarUrl && !/^(https?:\/\/|data:|blob:)/i.test(avatarUrl)) {
-        return { ok: false, error: { message: 'URL de avatar inválida.' } };
+        return { ok: false, error: { message: 'URL de avatar invÃ¡lida.' } };
       }
     }
 
@@ -629,7 +542,7 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
       updated_at: getNowIso(),
     };
     const saved = writeLocalProfile(next);
-    if (!saved) return { ok: false, error: { message: 'Não foi possível salvar o perfil localmente.' } };
+    if (!saved) return { ok: false, error: { message: 'NÃ£o foi possÃ­vel salvar o perfil localmente.' } };
     syncLocalProfile(saved);
     return { ok: true, data: saved };
   }
@@ -640,7 +553,7 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
       if (/^(https?:\/\/|data:|blob:)/i.test(value)) {
         return { ok: true, data: { url: value, path: null } };
       }
-      return { ok: false, error: { message: 'Formato de avatar inválido.' } };
+      return { ok: false, error: { message: 'Formato de avatar invÃ¡lido.' } };
     }
 
     if (typeof FileReader !== 'undefined' && fileOrDataUrl && typeof fileOrDataUrl === 'object') {
@@ -651,16 +564,16 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
             resolve({ ok: true, data: { url: String(reader.result || ''), path: null } });
           };
           reader.onerror = function () {
-            resolve({ ok: false, error: { message: 'Não foi possível ler o avatar selecionado.' } });
+            resolve({ ok: false, error: { message: 'NÃ£o foi possÃ­vel ler o avatar selecionado.' } });
           };
           reader.readAsDataURL(fileOrDataUrl);
         } catch (_) {
-          resolve({ ok: false, error: { message: 'Não foi possível processar o avatar selecionado.' } });
+          resolve({ ok: false, error: { message: 'NÃ£o foi possÃ­vel processar o avatar selecionado.' } });
         }
       });
     }
 
-    return { ok: false, error: { message: 'Upload de avatar indisponível no modo local.' } };
+    return { ok: false, error: { message: 'Upload de avatar indisponÃ­vel no modo local.' } };
   }
 
   async function localGetMyPosts(params = {}) {
@@ -930,7 +843,7 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
   async function localCreateHelpRequest(payload) {
     const normalized = normalizeHelpPayload(payload);
     if (!normalized.subject || !normalized.message || !normalized.contact_email) {
-      return { ok: false, error: { message: 'Preencha assunto, descrição e e-mail de retorno.' } };
+      return { ok: false, error: { message: 'Preencha assunto, descriÃ§Ã£o e e-mail de retorno.' } };
     }
     const list = readHelpRequests();
     const now = new Date().toISOString();
@@ -942,7 +855,7 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
     };
     list.unshift(row);
     if (!writeHelpRequests(list)) {
-      return { ok: false, error: { message: 'Não foi possível salvar o pedido de ajuda localmente.' } };
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel salvar o pedido de ajuda localmente.' } };
     }
     return { ok: true, data: row };
   }
@@ -1015,17 +928,17 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
 
   async function localUpdateAdminHelpRequest(id, patch) {
     const targetId = String(id || '').trim();
-    if (!targetId) return { ok: false, error: { message: 'Pedido inválido.' } };
+    if (!targetId) return { ok: false, error: { message: 'Pedido invÃ¡lido.' } };
     const list = readHelpRequests();
     const index = list.findIndex((item) => String(item && item.id || '') === targetId);
-    if (index < 0) return { ok: false, error: { message: 'Pedido não encontrado.' } };
+    if (index < 0) return { ok: false, error: { message: 'Pedido nÃ£o encontrado.' } };
     list[index] = {
       ...list[index],
       ...(patch && typeof patch === 'object' ? patch : {}),
       updated_at: new Date().toISOString(),
     };
     if (!writeHelpRequests(list)) {
-      return { ok: false, error: { message: 'Não foi possível atualizar o pedido localmente.' } };
+      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel atualizar o pedido localmente.' } };
     }
     return { ok: true, data: list[index] };
   }
@@ -1061,11 +974,9 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
     createPost: localCreatePost,
     updatePost: localUpdatePost,
     deletePost: localDeletePost,
-    reportPost: async function () {
-      return { ok: false, error: { message: 'Denúncias disponíveis apenas no Supabase.' } };
-    },
-    // Comentários e votos no driver local são geridos diretamente por kc-core.js (localStorage).
-    // As funções abaixo existem apenas para uniformidade da interface; kc-core.js não as usa.
+    reportPost: localReportPost,
+    // ComentÃ¡rios e votos no driver local sÃ£o geridos diretamente por kc-core.js (localStorage).
+    // As funÃ§Ãµes abaixo existem apenas para uniformidade da interface; kc-core.js nÃ£o as usa.
     getComments: async function () { return null; },
     addComment: async function () { return null; },
     likeComment: async function () { return null; },
@@ -1090,10 +1001,10 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
     updateNotificationPreferences: localUpdateNotificationPreferences,
     getNotificationChannelTargets: localGetNotificationChannelTargets,
     updateNotificationChannelTargets: localUpdateNotificationChannelTargets,
-    // Stubs: funcionalidades disponíveis apenas no driver Supabase
-    togglePostStatus: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
-    renewPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
-    bumpPost: async function () { return { ok: false, code: 'UNAVAILABLE', message: 'Indisponível no modo local.' }; },
+    // Stubs: funcionalidades disponÃ­veis apenas no driver Supabase
+    togglePostStatus: localTogglePostStatus,
+    renewPost: localRenewPost,
+    bumpPost: localBumpPost,
     getTopContributors: localGetTopContributors,
     trackCouponClick: async function () { return { ok: false }; },
     trackShare: async function () { return { ok: false }; },
@@ -1116,3 +1027,4 @@ window._KCLA.postsRead = window._KCLA.postsRead || {};
 window.KCAPI.registerAdapter('local', driverLocal);
 
 })();
+
