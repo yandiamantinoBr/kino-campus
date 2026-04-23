@@ -25,6 +25,7 @@ module.exports = {
     'assets/js/adapters/local.ratings.adapter.js',
     'assets/js/adapters/local.saved.adapter.js',
     'assets/js/adapters/local.posts-read.adapter.js',
+    'assets/js/adapters/local.posts-write.adapter.js',
     'assets/js/adapters/local.adapter.js',
   ],
 };

@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.4.4` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js` e quatro splits funcionais do driver local); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `1119L` e os submódulos `window._KCLA.notifications` (`250L`, 14 exports), `window._KCLA.ratings` (`339L`, 6 exports), `window._KCLA.saved` (`252L`, 7 exports) e `window._KCLA.postsRead` (`687L`, 8 exports) já estão operacionais, ao lado de `window._KCAD.metrics` (`514L`, 17 exports), `window._KCAD.audit` (`1045L`, 9 exports) e `window._KCAD.charts` (`642L`, 10 exports); a próxima iteração é `v12.4.5` — split `window._KCLA.postsWrite`; baseline expandida para `113/113` suites e `2359/2359` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.4.5` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js` e cinco splits funcionais do driver local); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `1031L` e os submódulos `window._KCLA.notifications` (`250L`, 14 exports), `window._KCLA.ratings` (`339L`, 6 exports), `window._KCLA.saved` (`252L`, 7 exports), `window._KCLA.postsRead` (`687L`, 8 exports) e `window._KCLA.postsWrite` (`300L`, 7 exports) já estão operacionais, ao lado de `window._KCAD.metrics` (`514L`, 17 exports), `window._KCAD.audit` (`1045L`, 9 exports) e `window._KCAD.charts` (`642L`, 10 exports); a próxima iteração é `v12.4.6` — split `window._KCLA.profile`; baseline expandida para `114/114` suites e `2383/2383` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -114,6 +114,12 @@ Novas fontes de verdade criadas durante a v12 (adicionadas à medida que as iter
 - **`window._KCCreatePost.*`** — sub-módulos do runtime de criação (split v11.31.x):
   - `schema`, `media`, `resolvers`, `fields`, `submit`, `render`
 - **`window.KCUtils`** — utilitários gerais
+- **`window._KCU.*`** — sub-módulos de utils (7 operacionais):
+  - `string`, `format`, `dom`, `identity`, `taxonomy`, `location`, `presentation`
+- **`window._KCAD.*`** — sub-módulos do dashboard admin (3 operacionais):
+  - `metrics`, `audit`, `charts`
+- **`window._KCLA.*`** — sub-adapters do driver local (5 operacionais):
+  - `notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`
 - **`window.KCi18n`** — módulo de i18n (pt-BR, 120+ chaves)
 - **`window.KCSessionStore`** — SWR / cache de sessão
 - **`window.KCOverlayLock`** — lock de scroll em modais
@@ -196,7 +202,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.4.2** | Split local.adapter **ratings** | `local.ratings.adapter.js` → `window._KCLA.ratings` (`339L`, 6 exports), `local.adapter.js` reduzido de `1780L` → `1570L`, `22` HTMLs + `4` bootstraps diretos atualizados, nova suíte `tests/local-ratings.adapter.test.js` (23 testes); baseline expandida para `111/111` suites · `2315/2315` testes | ✅ concluído |
 | **v12.4.3** | Split local.adapter **saved + highlights** | `local.saved.adapter.js` → `window._KCLA.saved` (`252L`, 7 exports), `local.adapter.js` reduzido de `1570L` → `1480L`, `22` HTMLs + `5` bootstraps diretos atualizados, nova suíte `tests/local-saved.adapter.test.js` (22 testes); baseline expandida para `112/112` suites · `2337/2337` testes | ✅ concluído |
 | **v12.4.4** | Split local.adapter **posts read/feed/related + ranking** | `local.posts-read.adapter.js` → `window._KCLA.postsRead` (`687L`, 8 exports), `local.adapter.js` reduzido de `1480L` → `1119L`, `22` HTMLs + `6` bootstraps diretos atualizados, nova suíte `tests/local-posts-read.adapter.test.js` (22 testes); baseline expandida para `113/113` suites · `2359/2359` testes | ✅ concluído |
-| v12.4.5 | Split local.adapter **posts write + drafts** | `local.posts-write.adapter.js` → `window._KCLA.postsWrite`, ~180L, ~10 testes | 📋 planejado |
+| **v12.4.5** | Split local.adapter **posts write + drafts** | `local.posts-write.adapter.js` → `window._KCLA.postsWrite` (`300L`, 7 exports), `local.adapter.js` reduzido de `1119L` → `1031L`, `22` HTMLs + `7` bootstraps diretos atualizados, nova suíte `tests/local-posts-write.adapter.test.js` (24 testes); baseline expandida para `114/114` suites · `2383/2383` testes | ✅ concluído |
 | v12.4.6 | Split local.adapter **profile** | `local.profile.adapter.js` → `window._KCLA.profile`, ~150L, ~8 testes | 📋 planejado |
 | v12.4.7 | Split local.adapter **help/admin** | `local.help.adapter.js` → `window._KCLA.help`, ~200L, ~8 testes | 📋 planejado |
 | v12.4.8 | Gate local.adapter <500L (paridade c/ `supabase.adapter.js` de 420L pós-v11.30.9) | gate formal | 📋 planejado |
@@ -1005,7 +1011,42 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `node scripts/hygiene-check.js` -> **8.6.0 OK**
 - `npm test` -> **113/113 suites / 2359/2359 testes verdes**
 
-**Proxima iteracao:** `v12.4.5` - split `window._KCLA.postsWrite`.
+**Proxima iteracao:** `v12.4.6` - split `window._KCLA.profile`.
+
+---
+
+### 8.20. v12.4.5 - split `window._KCLA.postsWrite` - concluido
+
+**Objetivo:** extrair do monolito `assets/js/adapters/local.adapter.js` o dominio de mutacoes de posts e drafts locais, cobrindo criacao, edicao, exclusao e stubs operacionais de `reportPost`/`togglePostStatus`/`renewPost`/`bumpPost`, sem quebrar o contrato publico do driver local registrado em `window.KCAPI`.
+
+**Escopo entregue:**
+
+- criado `assets/js/adapters/local.posts-write.adapter.js` com IIFE browser-safe e `window._KCLA.postsWrite = Object.freeze({...})`
+- migrados para o submodulo os sete metodos publicos do dominio: `createPost`, `updatePost`, `deletePost`, `reportPost`, `togglePostStatus`, `renewPost` e `bumpPost`
+- `assets/js/adapters/local.adapter.js` convertido para wrappers finos via `getLocalPostsWriteModule()` e `buildLocalPostsWriteDeps()`, preservando fallbacks seguros e o registro do `driverLocal`
+- `readLocalUserPosts()` permaneceu no core residual, mas passou a consumir diretamente `kc_user_posts` normalizado, enquanto a persistencia de drafts/mutacoes ficou concentrada no novo boundary
+- `22` HTMLs atualizados para carregar `local.posts-write.adapter.js` entre `local.posts-read.adapter.js` e `local.adapter.js`
+- `tests/anti-spam.test.js`, `tests/local-adapter.test.js`, `tests/local-notifications.adapter.test.js`, `tests/local-posts-read.adapter.test.js`, `tests/local-ratings.adapter.test.js`, `tests/local-saved.adapter.test.js` e `tests/post-analytics.test.js` atualizados para a nova ordem de `require(...)`
+- criada a nova suite `tests/local-posts-write.adapter.test.js` cobrindo contrato estatico, criacao local/remota, edicao, exclusao, stubs de mutacao avancada e delegacao do driver; `jest.config.js` foi sincronizado para cobertura do novo submodulo
+
+**Entregas mensuraveis:**
+
+- `assets/js/adapters/local.posts-write.adapter.js` criado com **300L**, **10 270 bytes** e **7 exports**
+- `assets/js/adapters/local.adapter.js` reduzido de **1119L** para **1031L** (`-88L`) e medido em **41 585 bytes**
+- quinto namespace `_KCLA.*` operacional em runtime: `window._KCLA.postsWrite`
+- `22` HTMLs consumidores diretos e **7** bootstraps diretos de teste sincronizados com a cadeia `local.notifications.adapter.js -> local.ratings.adapter.js -> local.saved.adapter.js -> local.posts-read.adapter.js -> local.posts-write.adapter.js -> local.adapter.js`
+- baseline expandida de **113/113 suites · 2359/2359 testes** para **114/114 suites · 2383/2383 testes**
+
+**Verificacao:**
+
+- `node --check assets/js/adapters/local.posts-write.adapter.js` -> OK
+- `node --check assets/js/adapters/local.adapter.js` -> OK
+- `npx jest tests/local-posts-write.adapter.test.js tests/local-adapter.test.js tests/local-notifications.adapter.test.js tests/local-posts-read.adapter.test.js tests/local-ratings.adapter.test.js tests/local-saved.adapter.test.js --runInBand` -> **139/139 testes verdes**
+- `npx jest tests/anti-spam.test.js tests/post-analytics.test.js --runInBand` -> **26/26 testes verdes**
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test` -> **114/114 suites / 2383/2383 testes verdes**
+
+**Proxima iteracao:** `v12.4.6` - split `window._KCLA.profile`.
 
 ---
 

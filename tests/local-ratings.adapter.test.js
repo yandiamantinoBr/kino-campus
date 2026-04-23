@@ -47,6 +47,7 @@ beforeAll(() => {
   delete require.cache[require.resolve('../assets/js/adapters/local.ratings.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.saved.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.posts-read.adapter.js')];
+  delete require.cache[require.resolve('../assets/js/adapters/local.posts-write.adapter.js')];
   delete require.cache[require.resolve('../assets/js/adapters/local.adapter.js')];
 
 
@@ -54,6 +55,7 @@ beforeAll(() => {
   require('../assets/js/adapters/local.ratings.adapter.js');
   require('../assets/js/adapters/local.saved.adapter.js');
   require('../assets/js/adapters/local.posts-read.adapter.js');
+  require('../assets/js/adapters/local.posts-write.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
 
 
