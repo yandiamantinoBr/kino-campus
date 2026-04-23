@@ -10,6 +10,7 @@
   window._KCPR = window._KCPR || {};
   window._KCPR.presentation = window._KCPR.presentation || {};
   window._KCPR.collections = window._KCPR.collections || {};
+  window._KCPR.ratings = window._KCPR.ratings || {};
 
   const state = {
     user: null,
@@ -142,7 +143,6 @@
       $,
       $$,
       buildPostDetailHref,
-      buildRatingStars,
       buildSaveBadges,
       commentPageSize: COMMENT_PAGE_SIZE,
       esc,
@@ -156,6 +156,24 @@
       state,
       statusBadge,
       visibilityBadge,
+    };
+  }
+
+  function getProfileRatingsModule() {
+    return (window._KCPR && window._KCPR.ratings) ? window._KCPR.ratings : null;
+  }
+
+  function buildRatingsDeps() {
+    return {
+      $,
+      buildRatingStars,
+      esc,
+      fmtRelative,
+      normalizeRatingSummary,
+      ratingsPageSize: 10,
+      renderInlineRichText,
+      renderProfileRatingSummary,
+      state,
     };
   }
 
@@ -471,99 +489,30 @@
   }
 
   function renderRatings(items, append) {
+    const ratings = getProfileRatingsModule();
+    if (ratings && typeof ratings.renderRatings === 'function') {
+      return ratings.renderRatings(items, append, buildRatingsDeps());
+    }
     const list = $('#ratings-list');
     const empty = $('#ratings-empty');
     const loadMore = $('#ratings-load-more');
     if (!list) return;
-
     if (!append) list.innerHTML = '';
-
     if (!Array.isArray(items) || !items.length) {
       if (!append && empty) empty.style.display = 'block';
       if (loadMore) loadMore.style.display = 'none';
       return;
     }
-
     if (empty) empty.style.display = 'none';
-
-    items.forEach((entry) => {
-      const card = document.createElement('article');
-      const reviewer = (entry && entry.reviewer && typeof entry.reviewer === 'object') ? entry.reviewer : {};
-      const isPublicReviewer = reviewer.public === true;
-      const reviewerName = isPublicReviewer
-        ? (reviewer.displayName || reviewer.display_name || 'Membro da comunidade')
-        : 'Membro da comunidade';
-      const avatarHtml = (isPublicReviewer && reviewer.avatarUrl)
-        ? `<img class="kc-profile-rating-card__avatar" src="${esc(reviewer.avatarUrl)}" alt="Avatar de ${esc(reviewerName)}" />`
-        : '<span class="kc-profile-rating-card__avatar-placeholder" aria-hidden="true"><i class="fas fa-user"></i></span>';
-      const comment = String(entry && entry.comment || '').trim();
-      const commentHtml = comment
-        ? `<div class="kc-profile-rating-card__comment">${renderInlineRichText(comment)}</div>`
-        : '<div class="kc-profile-rating-card__comment is-empty">O avaliador não deixou comentário.</div>';
-
-      card.className = 'kc-profile-rating-card';
-      card.innerHTML = [
-        '<div class="kc-profile-rating-card__top">',
-        '<div class="kc-profile-rating-card__reviewer">',
-        avatarHtml,
-        '<div class="kc-profile-rating-card__reviewer-copy">',
-        `<div class="kc-profile-rating-card__reviewer-name">${esc(reviewerName)}</div>`,
-        '<div class="kc-profile-rating-card__reviewer-meta">',
-        `<span><i class="fas fa-clock"></i> ${esc(fmtRelative(entry && entry.createdAt))}</span>`,
-        (entry && entry.contextPostId) ? '<span><i class="fas fa-link"></i> Interação registrada</span>' : '',
-        '</div>',
-        '</div>',
-        '</div>',
-        `<div class="kc-profile-rating-card__stars" aria-label="${esc(String(entry && entry.rating || 0))} estrelas">${buildRatingStars(entry && entry.rating)}<span class="kc-profile-rating-card__score">${esc(String(entry && entry.rating || 0))}/5</span></div>`,
-        '</div>',
-        commentHtml,
-      ].join('');
-      list.appendChild(card);
-    });
-
     if (loadMore) loadMore.style.display = state.ratingHasMore ? 'block' : 'none';
   }
 
   async function loadRatings(reset) {
-    const loading = $('#ratings-loading');
-    const empty = $('#ratings-empty');
-    const loadMore = $('#ratings-load-more');
-
-    if (reset) {
-      state.ratingPage = 1;
-      state.ratings = [];
-      const list = $('#ratings-list');
-      if (list) list.innerHTML = '';
+    const ratings = getProfileRatingsModule();
+    if (ratings && typeof ratings.loadRatings === 'function') {
+      return ratings.loadRatings(reset, buildRatingsDeps());
     }
-
-    if (loading) loading.style.display = 'block';
-    if (empty) empty.style.display = 'none';
-    if (loadMore) loadMore.style.display = 'none';
-
-    try {
-      const payload = await window.KCAPI.listUserRatings(state.profileId, {
-        page: state.ratingPage,
-        limit: 10,
-      });
-      const items = Array.isArray(payload && payload.items) ? payload.items : [];
-      state.ratings = reset ? items : state.ratings.concat(items);
-      state.ratingHasMore = !!(payload && payload.hasMore === true);
-      if (payload && typeof payload.total === 'number') {
-        const currentSummary = normalizeRatingSummary(state.ratingSummary, state.profileId);
-        state.ratingSummary = normalizeRatingSummary({
-          userId: state.profileId,
-          average: currentSummary.average,
-          count: payload.total,
-        }, state.profileId);
-        renderProfileRatingSummary();
-      }
-      renderRatings(reset ? state.ratings : items, !reset);
-    } catch (error) {
-      console.warn('[Profile] loadRatings:', error);
-      if (empty) empty.style.display = 'block';
-    } finally {
-      if (loading) loading.style.display = 'none';
-    }
+    return Promise.resolve();
   }
 
   async function loadSaved(reset) {
@@ -902,4 +851,3 @@
   window.addEventListener('beforeunload', releaseAvatarPreview);
   document.addEventListener('DOMContentLoaded', init);
 })();
-
