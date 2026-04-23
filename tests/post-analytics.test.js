@@ -142,6 +142,7 @@ require('../assets/js/adapters/local.ratings.adapter.js');
 require('../assets/js/adapters/local.saved.adapter.js');
 require('../assets/js/adapters/local.posts-read.adapter.js');
 require('../assets/js/adapters/local.posts-write.adapter.js');
+  require('../assets/js/adapters/local.profile.adapter.js');
 require('../assets/js/adapters/local.adapter.js');
 
     });
