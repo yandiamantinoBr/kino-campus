@@ -11,6 +11,7 @@ window._KCLA.saved = window._KCLA.saved || {};
 window._KCLA.postsRead = window._KCLA.postsRead || {};
 window._KCLA.postsWrite = window._KCLA.postsWrite || {};
 window._KCLA.profile = window._KCLA.profile || {};
+window._KCLA.help = window._KCLA.help || {};
   
   // Helper functions that might be missing
   function toSlug(str) { return String(str||'').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
@@ -72,6 +73,10 @@ window._KCLA.profile = window._KCLA.profile || {};
 
   function getLocalProfileModule() {
     return (window._KCLA && window._KCLA.profile) ? window._KCLA.profile : null;
+  }
+
+  function getLocalHelpModule() {
+    return (window._KCLA && window._KCLA.help) ? window._KCLA.help : null;
   }
 
   function buildLocalRatingsDeps() {
@@ -144,6 +149,15 @@ window._KCLA.profile = window._KCLA.profile || {};
     };
   }
 
+  function buildLocalHelpDeps() {
+    return {
+      getNowIso,
+      buildRequestId: function () {
+        return 'help_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      },
+    };
+  }
+
   function readLocalProfileSnapshot() {
     const profileModule = getLocalProfileModule();
     if (profileModule && typeof profileModule.readProfile === 'function') {
@@ -157,6 +171,17 @@ window._KCLA.profile = window._KCLA.profile || {};
       social_links: {},
       social_visibility: {},
     };
+  }
+
+  function buildDefaultLocalAdminHelpListFallback(filters = {}) {
+    const limit = Math.max(1, Math.min(100, Number(filters.limit) || 25));
+    const offset = Math.max(0, Number(filters.offset) || 0);
+    return Object.assign([], {
+      totalCount: 0,
+      limit,
+      offset,
+      hasMore: false,
+    });
   }
 
   function buildDefaultLocalNotificationPreferencesFallback() {
@@ -652,210 +677,25 @@ window._KCLA.profile = window._KCLA.profile || {};
       : { ok: false, error: 'DRIVER_NAO_SUPORTA' };
   }
 
-  const HELP_REQUESTS_STORAGE_KEY = 'kc_help_requests';
-
-  function migrateLegacyHelpPayload(payload) {
-    const input = (payload && typeof payload === 'object') ? payload : {};
-    const legacyType = String(input.type || '').trim().toLowerCase();
-    const legacyTopic = String(input.topic || '').trim().toLowerCase();
-
-    const nextType = (function resolveType() {
-      if (legacyType === 'complaint') return 'platform_issue';
-      if (legacyType === 'praise') return 'suggestion_praise';
-      if (legacyType === 'report') return 'report';
-      if (legacyType === 'account_access') return 'account_access';
-      if (legacyType === 'question') return 'question';
-      return legacyType || 'question';
-    }());
-
-    const nextTopic = (function resolveTopic() {
-      if (nextType === 'question') {
-        if (legacyTopic === 'profile' || legacyTopic === 'contact') return 'profile_contact';
-        if (legacyTopic === 'platform_use' || legacyTopic === 'posts') return 'publishing_navigation';
-        return 'modules_filters';
-      }
-      if (nextType === 'platform_issue') {
-        if (legacyTopic === 'posts') return 'create_edit_post';
-        if (legacyTopic === 'contact') return 'search_filters';
-        if (legacyTopic === 'security') return 'slow_performance';
-        return 'bugs_crashes';
-      }
-      if (nextType === 'account_access') {
-        if (legacyTopic === 'security') return 'password';
-        if (legacyTopic === 'profile' || legacyTopic === 'contact') return 'onboarding_settings';
-        return 'login_signup';
-      }
-      if (nextType === 'report') {
-        if (legacyTopic === 'profile') return 'profile_user';
-        if (legacyTopic === 'contact') return 'inappropriate_contact';
-        if (legacyTopic === 'security') return 'security';
-        return 'post';
-      }
-      if (nextType === 'suggestion_praise') {
-        if (legacyTopic === 'posts') return 'specific_module';
-        if (legacyTopic === 'payment_benefit') return 'community';
-        return 'general_experience';
-      }
-      return legacyTopic || '';
-    }());
-
-    return {
-      ...input,
-      type: nextType,
-      topic: nextTopic,
-    };
-  }
-
-  function readHelpRequests() {
-    try {
-      const raw = localStorage.getItem(HELP_REQUESTS_STORAGE_KEY);
-      const list = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(list)) return [];
-      return list.map((item) => {
-        const normalized = normalizeHelpPayload(item);
-        return {
-          ...(item && typeof item === 'object' ? item : {}),
-          ...normalized,
-        };
-      });
-    } catch (_) {
-      return [];
-    }
-  }
-
-  function writeHelpRequests(list) {
-    try {
-      localStorage.setItem(HELP_REQUESTS_STORAGE_KEY, JSON.stringify(Array.isArray(list) ? list : []));
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function normalizeHelpPayload(payload) {
-    const shared = window.KCHelpUtils || {};
-    const migrated = migrateLegacyHelpPayload(payload);
-    if (shared && typeof shared.normalizeHelpRequestInput === 'function') {
-      return shared.normalizeHelpRequestInput(migrated, {});
-    }
-    const input = (migrated && typeof migrated === 'object') ? migrated : {};
-    return {
-      user_id: input.user_id || null,
-      type: String(input.type || 'question').trim(),
-      topic: String(input.topic || 'publishing_navigation').trim(),
-      subtopic: input.subtopic ? String(input.subtopic).trim() : null,
-      subject: String(input.subject || '').trim().slice(0, 140),
-      message: String(input.message || '').trim().slice(0, 4000),
-      priority: String(input.priority || 'normal').trim(),
-      status: String(input.status || 'new').trim(),
-      page_path: input.page_path ? String(input.page_path).trim().slice(0, 255) : null,
-      contact_email: String(input.contact_email || '').trim().toLowerCase(),
-      allow_contact: input.allow_contact !== false,
-      metadata: input.metadata && typeof input.metadata === 'object' ? input.metadata : {},
-    };
-  }
-
-  async function localCreateHelpRequest(payload) {
-    const normalized = normalizeHelpPayload(payload);
-    if (!normalized.subject || !normalized.message || !normalized.contact_email) {
-      return { ok: false, error: { message: 'Preencha assunto, descriÃ§Ã£o e e-mail de retorno.' } };
-    }
-    const list = readHelpRequests();
-    const now = new Date().toISOString();
-    const row = {
-      id: `help_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      ...normalized,
-      created_at: now,
-      updated_at: now,
-    };
-    list.unshift(row);
-    if (!writeHelpRequests(list)) {
-      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel salvar o pedido de ajuda localmente.' } };
-    }
-    return { ok: true, data: row };
-  }
-
-  function attachLocalAdminHelpListMeta(rows, meta = {}) {
-    const list = Array.isArray(rows) ? rows.slice() : [];
-    const totalCount = Number(meta.totalCount);
-    const limit = Number(meta.limit);
-    const offset = Number(meta.offset);
-    return Object.assign(list, {
-      totalCount: Number.isFinite(totalCount) ? totalCount : list.length,
-      limit: Number.isFinite(limit) ? limit : list.length,
-      offset: Number.isFinite(offset) ? offset : 0,
-      hasMore: Boolean(meta.hasMore),
-    });
+  async function localCreateHelpRequest(payload = {}) {
+    const helpModule = getLocalHelpModule();
+    return helpModule && typeof helpModule.createHelpRequest === 'function'
+      ? helpModule.createHelpRequest(payload, buildLocalHelpDeps())
+      : { ok: false, error: { message: 'Pedidos de ajuda locais indisponiveis.' } };
   }
 
   async function localListAdminHelpRequests(filters = {}) {
-    const current = readHelpRequests().slice().sort((a, b) => {
-      return new Date(b && b.created_at || 0).getTime() - new Date(a && a.created_at || 0).getTime();
-    });
-    const query = String(filters.query || '').trim().toLowerCase();
-    const limit = Math.max(1, Math.min(100, Number(filters.limit) || 25));
-    const offset = Math.max(0, Number(filters.offset) || 0);
-    const filtered = current.filter((item) => {
-      if (filters.status && filters.status !== 'all' && String(item.status || '') !== String(filters.status)) return false;
-      if (filters.type && filters.type !== 'all' && String(item.type || '') !== String(filters.type)) return false;
-      if (filters.priority && filters.priority !== 'all' && String(item.priority || '') !== String(filters.priority)) return false;
-      if (!query) return true;
-      const haystack = [
-        item.subject,
-        item.message,
-        item.contact_email,
-        item.page_path,
-        item.type,
-        item.topic,
-        item.subtopic,
-      ].join(' ').toLowerCase();
-      return haystack.indexOf(query) >= 0;
-    });
-    const rows = filtered.slice(offset, offset + limit);
-    return attachLocalAdminHelpListMeta(rows, {
-      totalCount: filtered.length,
-      limit,
-      offset,
-      hasMore: (offset + rows.length) < filtered.length,
-    });
+    const helpModule = getLocalHelpModule();
+    return helpModule && typeof helpModule.listAdminHelpRequests === 'function'
+      ? helpModule.listAdminHelpRequests(filters, buildLocalHelpDeps())
+      : buildDefaultLocalAdminHelpListFallback(filters);
   }
 
-  async function localListAdminHelpRequestsLegacy(filters = {}) {
-    const current = readHelpRequests();
-    const query = String(filters.query || '').trim().toLowerCase();
-    return current.filter((item) => {
-      if (filters.status && filters.status !== 'all' && String(item.status || '') !== String(filters.status)) return false;
-      if (filters.type && filters.type !== 'all' && String(item.type || '') !== String(filters.type)) return false;
-      if (filters.priority && filters.priority !== 'all' && String(item.priority || '') !== String(filters.priority)) return false;
-      if (!query) return true;
-      const haystack = [
-        item.subject,
-        item.message,
-        item.contact_email,
-        item.page_path,
-        item.type,
-        item.topic,
-        item.subtopic,
-      ].join(' ').toLowerCase();
-      return haystack.indexOf(query) >= 0;
-    });
-  }
-
-  async function localUpdateAdminHelpRequest(id, patch) {
-    const targetId = String(id || '').trim();
-    if (!targetId) return { ok: false, error: { message: 'Pedido invÃ¡lido.' } };
-    const list = readHelpRequests();
-    const index = list.findIndex((item) => String(item && item.id || '') === targetId);
-    if (index < 0) return { ok: false, error: { message: 'Pedido nÃ£o encontrado.' } };
-    list[index] = {
-      ...list[index],
-      ...(patch && typeof patch === 'object' ? patch : {}),
-      updated_at: new Date().toISOString(),
-    };
-    if (!writeHelpRequests(list)) {
-      return { ok: false, error: { message: 'NÃ£o foi possÃ­vel atualizar o pedido localmente.' } };
-    }
-    return { ok: true, data: list[index] };
+  async function localUpdateAdminHelpRequest(id, patch = {}) {
+    const helpModule = getLocalHelpModule();
+    return helpModule && typeof helpModule.updateAdminHelpRequest === 'function'
+      ? helpModule.updateAdminHelpRequest(id, patch, buildLocalHelpDeps())
+      : { ok: false, error: { message: 'Gestao local de pedidos de ajuda indisponivel.' } };
   }
 
   
