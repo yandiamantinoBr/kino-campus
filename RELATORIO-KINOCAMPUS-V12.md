@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.4.7` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js` e sete splits funcionais do driver local); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `697L` e os submódulos `window._KCLA.notifications` (`250L`, 14 exports), `window._KCLA.ratings` (`339L`, 6 exports), `window._KCLA.saved` (`252L`, 7 exports), `window._KCLA.postsRead` (`687L`, 8 exports), `window._KCLA.postsWrite` (`300L`, 7 exports), `window._KCLA.profile` (`157L`, 4 exports) e `window._KCLA.help` (`201L`, 3 exports) já estão operacionais, ao lado de `window._KCAD.metrics` (`514L`, 17 exports), `window._KCAD.audit` (`1045L`, 9 exports) e `window._KCAD.charts` (`642L`, 10 exports); a próxima iteração é `v12.4.8` — gate formal de `local.adapter.js` `<500L`; baseline expandida para `116/116` suites e `2428/2428` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.4.8` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local e gate formal `<500L` com hygiene `_KCLA.*`); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `473L` e os submódulos `window._KCLA.notifications` (`250L`, 14 exports), `window._KCLA.ratings` (`339L`, 6 exports), `window._KCLA.saved` (`252L`, 7 exports), `window._KCLA.postsRead` (`687L`, 8 exports), `window._KCLA.postsWrite` (`300L`, 7 exports), `window._KCLA.profile` (`157L`, 4 exports) e `window._KCLA.help` (`201L`, 3 exports) já estão operacionais, ao lado de `window._KCAD.metrics` (`514L`, 17 exports), `window._KCAD.audit` (`1045L`, 9 exports) e `window._KCAD.charts` (`642L`, 10 exports); a próxima iteração é `v12.5.0` — auditoria docs-only de `profile.controller.js`; baseline preservada em `116/116` suites e `2428/2428` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -135,7 +135,7 @@ Estes namespaces são **contratos públicos internos** — qualquer mudança de 
 | `assets/js/kc-api.client.js` | `2410L` | `~100KB` | já reduzido ao piso natural (registry/wiring) | pausa |
 | `assets/js/kc-utils.js` | `2445L` | `~95KB` | `v12.1.0`–`v12.2.6` | 🥇 1º |
 | `assets/js/controllers/admin-dashboard.controller.js` | `835L` | `~32,1KB` | `v12.3.0`–`v12.3.4` (gate concluido) | ✅ |
-| `assets/js/adapters/local.adapter.js` | `697L` | `~31,1KB` | `v12.4.0`–`v12.4.8` | 🥉 3º |
+| `assets/js/adapters/local.adapter.js` | `473L` | `~21,4KB` | `v12.4.0`–`v12.4.8` (gate concluido) | ✅ |
 | `assets/js/profile.controller.js` | `1463L` | `~56KB` | `v12.5.0`–`v12.5.4` | 4º |
 | `assets/js/kc-supabase.client.js` | `1364L` | `~53KB` | avaliação pós-`v12.5.4` | pausa |
 | `assets/js/oportunidades.controller.js` | `1246L` | `~51KB` | avaliação pós-`v12.5.4` | pausa |
@@ -205,7 +205,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.4.5** | Split local.adapter **posts write + drafts** | `local.posts-write.adapter.js` → `window._KCLA.postsWrite` (`300L`, 7 exports), `local.adapter.js` reduzido de `1119L` → `1031L`, `22` HTMLs + `7` bootstraps diretos atualizados, nova suíte `tests/local-posts-write.adapter.test.js` (24 testes); baseline expandida para `114/114` suites · `2383/2383` testes | ✅ concluído |
 | **v12.4.6** | Split local.adapter **profile** | `local.profile.adapter.js` → `window._KCLA.profile` (`157L`, 4 exports), `local.adapter.js` reduzido de `1031L` → `850L`, `22` HTMLs + `8` bootstraps diretos atualizados, nova suíte `tests/local-profile.adapter.test.js` (25 testes); baseline expandida para `115/115` suites · `2408/2408` testes | ✅ concluído |
 | **v12.4.7** | Split local.adapter **help/admin** | `local.help.adapter.js` → `window._KCLA.help` (`201L`, 3 exports), `local.adapter.js` reduzido de `850L` → `697L`, `22` HTMLs + `9` arquivos de teste existentes atualizados, nova suíte `tests/local-help.adapter.test.js` (20 testes); baseline expandida para `116/116` suites · `2428/2428` testes | ✅ concluído |
-| v12.4.8 | Gate local.adapter <500L (paridade c/ `supabase.adapter.js` de 420L pós-v11.30.9) | gate formal | 📋 planejado |
+| **v12.4.8** | Gate local.adapter <500L (paridade c/ `supabase.adapter.js` de 420L pós-v11.30.9) | `local.adapter.js` reduzido de `697L` → `473L` (`21 898` bytes), `scripts/hygiene-check.js` validando a cadeia `_KCLA.*` nos `22` HTMLs e falhando se o core voltar a `>=500L`; baseline `116/116` suites · `2428/2428` testes preservada | ✅ concluído |
 | v12.5.0 | Auditoria `profile.controller.js` (doc-only) | `docs/profile-controller-audit-v12.5.md` | 📋 planejado |
 | v12.5.1 | Split profile **rendering/format** | `profile.render.js`, ~300L, ~10 testes | 📋 planejado |
 | v12.5.2 | Split profile **ratings summary** | `profile.ratings.js`, ~200L, ~8 testes | 📋 planejado |
@@ -267,10 +267,10 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 
 - [x] `kc-utils.js` < 900L (baseline `2445L`)
 - [x] `admin-dashboard.controller.js` < 900L (baseline real do split `v12.3.1`: `2251L`; snapshot docs-only `v12.3.0`: `2034L`)
-- [ ] `local.adapter.js` < 500L (baseline `1862L`; meta ≈ `420L` paridade `supabase.adapter.js`)
+- [x] `local.adapter.js` < 500L (baseline `1862L`; gate formalizado em `473L`)
 - [ ] `profile.controller.js` < 600L (baseline `1463L`)
 - [ ] Nenhum arquivo JS em `assets/js/` > 1100L
-- [ ] Namespaces `window._KCU.*`, `window._KCAD.*`, `window._KCLA.*` operacionais e documentados neste relatório (seção 3.2)
+- [x] Namespaces `window._KCU.*`, `window._KCAD.*`, `window._KCLA.*` operacionais e documentados neste relatório (seção 3.2)
 
 ### 7.2. Qualidade sistêmica (Camada B)
 
@@ -1115,6 +1115,37 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `npm test` -> **116/116 suites / 2428/2428 testes verdes**
 
 **Proxima iteracao:** `v12.4.8` - gate formal de `local.adapter.js` `<500L`.
+
+---
+
+### 8.23. v12.4.8 - gate formal de `local.adapter.js` `<500L` - concluido
+
+**Objetivo:** fechar de forma mensuravel a trilha `_KCLA.*`, reduzindo o residual de `assets/js/adapters/local.adapter.js` abaixo de `500L` sem alterar o contrato publico do driver local registrado em `window.KCAPI`, e endurecer o hygiene-check para a cadeia canonica de sub-adapters locais.
+
+**Escopo entregue:**
+
+- `assets/js/adapters/local.adapter.js` refatorado para concentrar apenas bootstrap residual, builders de dependencias, fallbacks canonicos e delegacao generica por namespace `_KCLA.*`
+- wrappers repetitivos do driver local substituidos por factories internas de delegacao, preservando assinaturas/fallbacks dos metodos publicos
+- `scripts/hygiene-check.js` atualizado para validar a cadeia `_KCLA.*` em todos os `22` HTMLs canonicos
+- `scripts/hygiene-check.js` atualizado para falhar explicitamente se `assets/js/adapters/local.adapter.js` voltar a `>=500L`
+- nenhum novo HTML, nenhum bootstrap de teste e nenhuma suite Jest foram alterados nesta rodada; o gate reutiliza a cobertura ja acumulada nas iteracoes `v12.4.1`-`v12.4.7`
+
+**Entregas mensuraveis:**
+
+- `assets/js/adapters/local.adapter.js` reduzido de **697L** / `31 802` bytes para **473L** / `21 898` bytes
+- gate estrutural da trilha local formalizado: `local.adapter.js` agora fica **abaixo de 500 linhas**
+- `scripts/hygiene-check.js` passa a exigir a cadeia `local.notifications.adapter.js -> local.ratings.adapter.js -> local.saved.adapter.js -> local.posts-read.adapter.js -> local.posts-write.adapter.js -> local.profile.adapter.js -> local.help.adapter.js` nos `22` HTMLs publicos/admin
+- baseline preservada em **116/116 suites · 2428/2428 testes**
+
+**Verificacao:**
+
+- `node --check assets/js/adapters/local.adapter.js` -> OK
+- `node --check scripts/hygiene-check.js` -> OK
+- `npx jest tests/local-adapter.test.js tests/local-notifications.adapter.test.js tests/local-ratings.adapter.test.js tests/local-saved.adapter.test.js tests/local-posts-read.adapter.test.js tests/local-posts-write.adapter.test.js tests/local-profile.adapter.test.js tests/local-help.adapter.test.js --runInBand` -> **184/184 testes verdes**
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test` -> **116/116 suites / 2428/2428 testes verdes**
+
+**Proxima iteracao:** `v12.5.0` - auditoria docs-only de `profile.controller.js`.
 
 ---
 
