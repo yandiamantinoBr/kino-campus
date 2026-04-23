@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.4.8` concluída com o gate formal do adapter local: `assets/js/adapters/local.adapter.js` caiu de `697L` para **`473L`** (`-224L`, `21 898` bytes) via refactor do residual de glue/wrappers, sem alterar o contrato público do driver; `scripts/hygiene-check.js` passou a validar a cadeia `_KCLA.*` nos `22` HTMLs canônicos e a falhar se `local.adapter.js` voltar a `>=500L`; nenhuma nova suíte Jest foi necessária e a baseline foi preservada em **116/116 suites · 2428/2428 testes**; próxima iteração: `v12.5.0` (auditoria docs-only de `profile.controller.js`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.5.0` concluída com a auditoria docs-only de `assets/js/controllers/profile.controller.js`: footprint real travado em **`1463L`** e **`56 497` bytes**, com `67` funcoes top-level (`14` async), `1` HTML consumidor direto (`profile.html`), `1` export publico (`window.KCProfileRefresh`) e boundary compartilhado previo em `assets/js/account-profile.shared.js` (`962L`, `45` funcoes); o roadmap foi recalibrado para `window._KCPR.presentation`, `window._KCPR.collections`, `window._KCPR.ratings`, `window._KCPR.flow` e gate `v12.5.5`; nenhuma mudanca funcional em runtime e baseline preservada em **116/116 suites · 2428/2428 testes**; proxima iteracao: `v12.5.1` (split `window._KCPR.presentation`).
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.5.0 | **auditoria docs-only de `assets/js/controllers/profile.controller.js`**: criado `docs/profile-controller-audit-v12.5.md` com footprint real do hotspot (`1463L`, `56 497` bytes, `67` funcoes top-level, `14` async, `1` HTML consumidor direto, `1` export publico `window.KCProfileRefresh`), boundary previo em `assets/js/account-profile.shared.js` (`962L`, `45` funcoes, `10` testes) e sequencia recomendada recalibrada para `v12.5.1`-`v12.5.5` com `window._KCPR.presentation`, `collections`, `ratings`, `flow` e gate `<600L`; zero mudanca funcional em runtime e baseline preservada em **116/116 suites · 2428/2428 testes** | — |
 | v12.4.8 | **gate formal de `local.adapter.js` `<500L` + hygiene `_KCLA.*`**: `assets/js/adapters/local.adapter.js` reduzido de `697L` → `473L` (`-224L`, `21 898` bytes) via refactor do residual de bootstrap/delegação, preservando o registro do `driverLocal` e os contratos do adapter; `scripts/hygiene-check.js` passou a validar a cadeia canônica `local.notifications -> local.ratings -> local.saved -> local.posts-read -> local.posts-write -> local.profile -> local.help` nos `22` HTMLs públicos/admin e a falhar se `local.adapter.js` voltar a `>=500L`; zero novos HTMLs ou suites editados nesta rodada e baseline preservada em **116/116 suites · 2428/2428 testes** | — |
 | v12.4.7 | **split `window._KCLA.help`**: novo `assets/js/adapters/local.help.adapter.js` com IIFE + `Object.freeze({...})` concentrando 3 exports do domínio help/admin (`createHelpRequest`, `listAdminHelpRequests`, `updateAdminHelpRequest`); `assets/js/adapters/local.adapter.js` reduzido de `850L` → `697L` (`-153L`) com wrappers finos, `getLocalHelpModule()`, `buildLocalHelpDeps()` e fallback paginado para admin; `22` HTMLs + `9` arquivos de teste existentes sincronizados com a cadeia local de sub-adapters; nova suíte `tests/local-help.adapter.test.js` (20 testes) e `jest.config.js` sincronizado para cobertura do submódulo; baseline expandida para **116/116 suites · 2428/2428 testes** | — |
 | v12.4.6 | **split `window._KCLA.profile`**: novo `assets/js/adapters/local.profile.adapter.js` com IIFE + `Object.freeze({...})` concentrando 4 exports do domínio profile/avatar (`readProfile`, `getMyProfile`, `updateMyProfile`, `uploadProfileAvatar`); `assets/js/adapters/local.adapter.js` reduzido de `1031L` → `850L` (`-181L`) com wrappers finos, `getLocalProfileModule()`, `buildLocalProfileDeps()` e `readLocalProfileSnapshot()`; `22` HTMLs + `8` suites diretas atualizados para a nova ordem de scripts; nova suíte `tests/local-profile.adapter.test.js` (25 testes) e `jest.config.js` sincronizado para cobertura do submódulo; baseline expandida para **115/115 suites · 2408/2408 testes** | — |
@@ -170,7 +171,7 @@ As iterações são organizadas em **três camadas paralelas**:
   - `v12.1.0`–`v12.2.7`: `kc-utils.js` (2445L → <900L) em 7 sub-módulos `window._KCU.*` + gate formal
   - `v12.3.0`–`v12.3.4`: `admin-dashboard.controller.js` (2034L → <900L) em `window._KCAD.*`
   - `v12.4.0`–`v12.4.8`: `local.adapter.js` (1862L → <500L) em `window._KCLA.*`, restaurando paridade com `supabase.adapter.js` (420L)
-  - `v12.5.0`–`v12.5.4`: `profile.controller.js` (1463L → <600L)
+  - `v12.5.0`–`v12.5.5`: `assets/js/controllers/profile.controller.js` (1463L → <600L) em `window._KCPR.*`
 
 - **Camada B — Qualidade sistêmica** (gaps não cobertos na v11):
   - `v12.6.0`: feature flags formais `window.KCFF`
@@ -194,7 +195,7 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.4.8` — **gate formal de `local.adapter.js` `<500L` concluído** (`local.adapter.js` em `473L` / `21 898` bytes; `scripts/hygiene-check.js` validando a cadeia `_KCLA.*` nos `22` HTMLs)
+- iteração encerrada: `v12.5.0` — **auditoria docs-only de `assets/js/controllers/profile.controller.js` concluida** (`1463L` / `56 497` bytes; `67` funcoes top-level; roadmap recalibrado para `_KCPR.*`)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
@@ -207,7 +208,8 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 - `kc-utils.js`: 2445L → 440L (−2005L pós-v12.2.6); 7 sub-módulos `window._KCU.*` operacionais e gate `<900L` formalizado em `v12.2.7`
 - `admin-dashboard.controller.js`: após `v12.3.1` o core estava em `1859L`; após `v12.3.2`, caiu para `1172L` / `48 589` bytes; o gate formal `v12.3.4` consolidou o footprint real atual em `835L` / `32 802` bytes, enquanto `admin-dashboard.charts.js` ficou formalizado em `642L` / `27 895` bytes
 - `local.adapter.js`: após `v12.4.8`, o core caiu de `1862L` / `75 712` bytes para `473L` / `21 898` bytes; `assets/js/adapters/local.notifications.adapter.js` segue com `250L`, `14` exports, `assets/js/adapters/local.ratings.adapter.js` com `339L`, `6` exports, `assets/js/adapters/local.saved.adapter.js` com `252L`, `7` exports, `assets/js/adapters/local.posts-read.adapter.js` com `687L`, `8` exports, `assets/js/adapters/local.posts-write.adapter.js` com `300L`, `7` exports, `assets/js/adapters/local.profile.adapter.js` com `157L`, `4` exports, e `assets/js/adapters/local.help.adapter.js` com `201L`, `3` exports; o gate `<500L` foi formalizado e o `scripts/hygiene-check.js` agora valida a cadeia local `notifications -> ratings -> saved -> posts-read -> posts-write -> profile -> help` nos `22` HTMLs canônicos
-- próxima iteração: `v12.5.0` — auditoria docs-only de `profile.controller.js`
+- `assets/js/controllers/profile.controller.js`: auditoria `v12.5.0` confirmou `1463L` / `56 497` bytes, `67` funcoes top-level (`14` async), `1` HTML consumidor direto (`profile.html`) e boundary previo em `assets/js/account-profile.shared.js` (`962L`, `45` funcoes); a trilha foi recalibrada para `window._KCPR.presentation`, `collections`, `ratings`, `flow` e gate `<600L`
+- próxima iteração: `v12.5.1` — split `window._KCPR.presentation`
 
 ---
 

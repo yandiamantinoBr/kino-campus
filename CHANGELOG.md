@@ -6,6 +6,8 @@
 
 ### Added
 
+- `v12.5.0`: criado `docs/profile-controller-audit-v12.5.md` com auditoria docs-only de `assets/js/controllers/profile.controller.js`, medindo o footprint real do hotspot de perfil em `1463L` e `56 497` bytes, inventariando `67` funcoes top-level (`14` async), `1` HTML consumidor (`profile.html`), `1` export publico (`window.KCProfileRefresh`) e o boundary previo `assets/js/account-profile.shared.js` (`962L`, `45` funcoes, `10` testes), alem de recalibrar a sequencia `v12.5.1`-`v12.5.5` para `window._KCPR.presentation`, `window._KCPR.collections`, `window._KCPR.ratings`, `window._KCPR.flow` e gate `<600L`.
+
 - `v12.4.7`: criado `assets/js/adapters/local.help.adapter.js` com IIFE browser-safe registrado em `window._KCLA.help`, concentrando **3 exports** do dominio help/admin do driver local: criacao de ticket (`createHelpRequest`), listagem administrativa paginada (`listAdminHelpRequests`) e atualizacao administrativa (`updateAdminHelpRequest`). O submodulo encapsula a storage key `kc_help_requests`, a migracao de payload legado, a normalizacao opcional via `KCHelpUtils`, a filtragem admin por `status`/`type`/`priority`/`query` e a injecao explicita de dependencias (`getNowIso`, `buildRequestId`).
 - `v12.4.7`: criado `tests/local-help.adapter.test.js` com **20 testes** cobrindo contrato estatico de `window._KCLA.help`, validacoes obrigatorias, migracao legada, normalizacao com facade opcional, filtros/listagem admin, paginação, update administrativo e delegacao do `driverLocal`. Baseline expandida de `115/115 suites / 2408/2408 testes` para **`116/116 suites / 2428/2428 testes`**.
 
@@ -55,6 +57,8 @@
 - `v12.2.0`: criado `tests/kc-utils-string.test.js` com 29 testes em 9 `describe` blocks: §1 contrato estático (`window._KCU.string` é frozen, tem exatamente 8 chaves, nenhuma função interna exposta); §2–9 comportamento de cada função (normalização de acentos, null/undefined sem erro, anti-XSS, renderização de markdown, cálculo de distância de Levenshtein, etc.). Baseline expandida de `99/99 suites · 1874/1874 testes` para **`100/100 suites · 1903/1903 testes`**.
 
 ### Changed
+
+- `v12.5.0`: `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` atualizados para marcar a auditoria do profile como concluida, corrigir o caminho documental para `assets/js/controllers/profile.controller.js`, formalizar a baseline `116/116 suites / 2428/2428 testes` e apontar `v12.5.1` como proxima iteracao da trilha `_KCPR.*`.
 
 - `v12.4.8`: `assets/js/adapters/local.adapter.js` reduzido de `697L` / `31 802` bytes para `473L` / `21 898` bytes, consolidando o residual do driver local em builders de dependencias, fallbacks canonicos e delegacao generica por namespace `_KCLA.*`, sem alterar o contrato publico registrado em `window.KCAPI`.
 - `v12.4.8`: `scripts/hygiene-check.js` passou a validar a cadeia canonica `_KCLA.*` nos `22` HTMLs publicos/admin (`local.notifications -> local.ratings -> local.saved -> local.posts-read -> local.posts-write -> local.profile -> local.help`) e a falhar explicitamente se `assets/js/adapters/local.adapter.js` voltar a `>=500L`.
