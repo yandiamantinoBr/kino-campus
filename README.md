@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.4.3` concluída com o terceiro split funcional do adapter local: criado `assets/js/adapters/local.saved.adapter.js` com namespace `window._KCLA.saved` (**252L**, **7 exports**) para salvos, highlights e state por post; `assets/js/adapters/local.adapter.js` caiu de `1570L` para **`1480L`** (`-90L`, `60 249` bytes) via wrappers finos e `buildLocalSavedDeps()`; `22` HTMLs e `5` bootstraps de teste diretos atualizados; nova suíte `tests/local-saved.adapter.test.js` (**22 testes**); baseline expandida para **112/112 suites · 2337/2337 testes**; próxima iteração: `v12.4.4` (split `window._KCLA.postsRead`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.4.4` concluída com o quarto split funcional do adapter local: criado `assets/js/adapters/local.posts-read.adapter.js` com namespace `window._KCLA.postsRead` (**687L**, **8 exports**) para feed/leitura/related/ranking; `assets/js/adapters/local.adapter.js` caiu de `1480L` para **`1119L`** (`-361L`, `44 908` bytes) via wrappers finos, `getLocalPostsReadModule()` e `buildLocalPostsReadDeps()`; `22` HTMLs e `6` bootstraps de teste diretos atualizados; nova suíte `tests/local-posts-read.adapter.test.js` (**22 testes**); baseline expandida para **113/113 suites · 2359/2359 testes**; próxima iteração: `v12.4.5` (split `window._KCLA.postsWrite`).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 112 suites de regressão e contrato |
+| Testes | Jest: 113 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.4.4 | **split `window._KCLA.postsRead`**: novo `assets/js/adapters/local.posts-read.adapter.js` com IIFE + `Object.freeze({...})` concentrando 8 exports do domínio posts read/feed/related + ranking (`getPosts`, `searchPosts`, `getFeedCursor`, `getPostById`, `getMyPosts`, `getPostsByAuthorId`, `getRelatedPosts`, `getTopContributors`); `assets/js/adapters/local.adapter.js` reduzido de `1480L` → `1119L` (`-361L`) com wrappers finos, `getLocalPostsReadModule()` e `buildLocalPostsReadDeps()`; `22` HTMLs + `6` suites diretas atualizados para a nova ordem de scripts; nova suíte `tests/local-posts-read.adapter.test.js` (22 testes) e `jest.config.js` sincronizado para cobertura do submódulo; baseline expandida para **113/113 suites · 2359/2359 testes** | — |
 | v12.4.3 | **split `window._KCLA.saved`**: novo `assets/js/adapters/local.saved.adapter.js` com IIFE + `Object.freeze({...})` concentrando 7 exports do domínio saved/highlights (`getSavedPostState`, `setSavedPostState`, `clearSavedPostState`, `getMySavedPosts`, `getMySavedPostsCount`, `getProfileHighlights`, `getProfileHighlightsCount`); `assets/js/adapters/local.adapter.js` reduzido de `1570L` → `1480L` (`-90L`) com wrappers finos e `buildLocalSavedDeps()`; `22` HTMLs + `5` suites diretas atualizados para a nova ordem de scripts; nova suíte `tests/local-saved.adapter.test.js` (22 testes) e `jest.config.js` sincronizado para cobertura do submódulo; baseline expandida para **112/112 suites · 2337/2337 testes** | — |
 | v12.4.2 | **split `window._KCLA.ratings`**: novo `assets/js/adapters/local.ratings.adapter.js` com IIFE + `Object.freeze({...})` concentrando 6 exports do domínio ratings (`enrichPostWithRatings`, `enrichPostsWithRatings`, `getUserRatingSummary`, `getUserRatingState`, `listUserRatings`, `upsertUserRating`); `assets/js/adapters/local.adapter.js` reduzido de `1780L` → `1570L` (`-210L`) com wrappers finos e `buildLocalRatingsDeps()`; `22` HTMLs + `4` suites diretas atualizados para a nova ordem de scripts; nova suíte `tests/local-ratings.adapter.test.js` (23 testes) e `jest.config.js` sincronizado para cobertura do submódulo; baseline expandida para **111/111 suites · 2315/2315 testes** | — |
 | v12.4.1 | **split `window._KCLA.notifications`**: novo `assets/js/adapters/local.notifications.adapter.js` com IIFE + `Object.freeze({...})` concentrando 14 exports do domínio notifications/private targets/invites (`getNotificationPreferences`, `updateNotificationPreferences`, `getNotificationChannelTargets`, `updateNotificationChannelTargets`, `getNotifications`, `markNotificationsRead`, `markAllNotificationsRead`, `clearNotifications`, `getUnreadNotificationCount`, `subscribeNotifications`, `unsubscribeNotifications`, `inviteExternalUser`, `getInvites`, `revokeInvite`); `assets/js/adapters/local.adapter.js` reduzido de `1862L` → `1780L` (`-82L`) com wrappers finos para `_KCLA.notifications`; `22` HTMLs + `3` suites diretas atualizados para a nova ordem de scripts; nova suíte `tests/local-notifications.adapter.test.js` (22 testes) e `jest.config.js` sincronizado para cobertura do submódulo; baseline expandida para **110/110 suites · 2292/2292 testes** | — |
@@ -189,20 +190,20 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.4.3` — **split `window._KCLA.saved` concluído** (`local.saved.adapter.js` com `252L`, `7` exports; `local.adapter.js` em `1480L` / `60 249` bytes; `22` HTMLs + `5` bootstraps diretos atualizados)
+- iteração encerrada: `v12.4.4` — **split `window._KCLA.postsRead` concluído** (`local.posts-read.adapter.js` com `687L`, `8` exports; `local.adapter.js` em `1119L` / `44 908` bytes; `22` HTMLs + `6` bootstraps diretos atualizados)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
-- regressão: `112/112` suites, `2337/2337` testes verdes, hygiene `8.6.0`
+- regressão: `113/113` suites, `2359/2359` testes verdes, hygiene `8.6.0`
 - deploy de produção ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
 - sub-módulos `window._KCAPI.*` operacionais: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
 - sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
-- sub-adapters `window._KCLA.*` operacionais: `notifications`, `ratings`, `saved` (3 total)
+- sub-adapters `window._KCLA.*` operacionais: `notifications`, `ratings`, `saved`, `postsRead` (4 total)
 - kc-api.client.js: `2536L` (pré-v11.33) → `2410L` (pós-v11.33.7), piso natural como registry/wiring
 - `kc-utils.js`: 2445L → 440L (−2005L pós-v12.2.6); 7 sub-módulos `window._KCU.*` operacionais e gate `<900L` formalizado em `v12.2.7`
 - `admin-dashboard.controller.js`: após `v12.3.1` o core estava em `1859L`; após `v12.3.2`, caiu para `1172L` / `48 589` bytes; o gate formal `v12.3.4` consolidou o footprint real atual em `835L` / `32 802` bytes, enquanto `admin-dashboard.charts.js` ficou formalizado em `642L` / `27 895` bytes
-- `local.adapter.js`: após `v12.4.3`, o core caiu de `1862L` / `75 712` bytes para `1480L` / `60 249` bytes; `assets/js/adapters/local.notifications.adapter.js` segue com `250L`, `14` exports, `assets/js/adapters/local.ratings.adapter.js` com `339L`, `6` exports, e `assets/js/adapters/local.saved.adapter.js` entrou com `252L`, `7` exports; os `22` HTMLs consumidores e `5` bootstraps diretos de teste já carregam a cadeia `notifications -> ratings -> saved -> local.adapter.js`
-- próxima iteração: `v12.4.4` — split `window._KCLA.postsRead`
+- `local.adapter.js`: após `v12.4.4`, o core caiu de `1862L` / `75 712` bytes para `1119L` / `44 908` bytes; `assets/js/adapters/local.notifications.adapter.js` segue com `250L`, `14` exports, `assets/js/adapters/local.ratings.adapter.js` com `339L`, `6` exports, `assets/js/adapters/local.saved.adapter.js` com `252L`, `7` exports, e `assets/js/adapters/local.posts-read.adapter.js` entrou com `687L`, `8` exports; os `22` HTMLs consumidores e `6` bootstraps diretos de teste já carregam a cadeia `notifications -> ratings -> saved -> posts-read -> local.adapter.js`
+- próxima iteração: `v12.4.5` — split `window._KCLA.postsWrite`
 
 ---
 

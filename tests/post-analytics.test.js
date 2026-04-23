@@ -137,10 +137,12 @@ describe('Post Analytics (v9.3.1)', () => {
 
   describe('local adapter stubs', () => {
     beforeAll(() => {
-      require('../assets/js/adapters/local.notifications.adapter.js');
+  require('../assets/js/adapters/local.notifications.adapter.js');
   require('../assets/js/adapters/local.ratings.adapter.js');
   require('../assets/js/adapters/local.saved.adapter.js');
+  require('../assets/js/adapters/local.posts-read.adapter.js');
   require('../assets/js/adapters/local.adapter.js');
+
     });
 
     test('trackView retorna { ok: false } no adapter local', async () => {
@@ -156,3 +158,4 @@ describe('Post Analytics (v9.3.1)', () => {
     });
   });
 });
+
