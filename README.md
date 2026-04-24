@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.5.5` concluída com o gate formal do profile: `scripts/hygiene-check.js` valida a cadeia `_KCPR.*` em `profile.html` (`profile.presentation.js -> profile.collections.js -> profile.ratings.js -> profile.flow.js -> profile.controller.js`) e falha se `assets/js/controllers/profile.controller.js` voltar a `>=700L`; footprint real travado em `profile.controller.js` (`613L`, `21 566` bytes) e `profile.flow.js` (`683L`, `25 540` bytes); baseline preservada em **120/120 suites · 2489/2489 testes**; proxima iteracao: `v12.6.0` (feature flags formais `window.KCFF`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.6.0` concluída com feature flags formais: novo `assets/js/kc-feature-flags.js` (`170L`, `4 444` bytes) expõe `window.KCFF = Object.freeze({ get, getAll, isEnabled })`, `assets/js/kc-env.js` passa a declarar `flags`/`featureFlags`, os `22` HTMLs canônicos carregam `kc-feature-flags.js` imediatamente após `kc-env.js` e `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`; baseline expandida para **121/121 suites · 2501/2501 testes**; próxima iteração: `v12.7.0` (i18n runtime fase 1: `<title>`, `meta`, `alt`).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 120 suites de regressão e contrato |
+| Testes | Jest: 121 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.6.0 | **feature flags formais `window.KCFF`**: novo `assets/js/kc-feature-flags.js` com IIFE browser-safe + `Object.freeze({ get, getAll, isEnabled })`, leitura de `KC_ENV.flags`/`KC_ENV.featureFlags`, derivados seguros `env.*`, snapshots defensivos e defaults `sw.enabled=false`/`telemetry.enabled=false`; `assets/js/kc-env.js` formaliza as fontes de flags; os `22` HTMLs canônicos passam a carregar `kc-feature-flags.js` imediatamente após `kc-env.js`; `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`; nova suíte `tests/kc-feature-flags.test.js` (12 testes); baseline expandida para **121/121 suites · 2501/2501 testes** | — |
 | v12.5.5 | **gate formal do `profile.controller.js` + hygiene `_KCPR.*`**: `scripts/hygiene-check.js` passa a validar a cadeia canônica `profile.presentation -> profile.collections -> profile.ratings -> profile.flow -> profile.controller` em `profile.html` e a falhar se `assets/js/controllers/profile.controller.js` voltar a `>=700L`; footprint real travado em `613L` / `21 566` bytes para o controller e `683L` / `25 540` bytes para `profile.flow.js`; zero mudança de runtime no perfil; baseline preservada em **120/120 suites · 2489/2489 testes** | — |
 | v12.5.4 | **split `window._KCPR.flow`**: novo `assets/js/controllers/profile.flow.js` com IIFE + `Object.freeze({...})` concentrando `10` exports do domínio flow/lifecycle do perfil (`loadStats`, `setProfilePending`, `handleProfileSubmit`, `handleAvatarChange`, `bindProfileEditing`, `loadProfile`, `bindProfileSyncListener`, `refreshProfilePage`, `initPullToRefresh`, `init`); `assets/js/controllers/profile.controller.js` reduzido de `854L` -> `613L` (`-241L`) com `getProfileFlowModule()`, `buildFlowDeps()` e wrappers finos; `profile.html` atualizado para carregar `profile.flow.js` entre `profile.ratings.js` e `profile.controller.js`; nova suíte `tests/profile.flow.test.js` (14 testes) e ajustes das suítes de profile/SWR; baseline expandida para **120/120 suites · 2489/2489 testes** | — |
 | v12.5.3 | **split `window._KCPR.ratings`**: novo `assets/js/controllers/profile.ratings.js` com IIFE + `Object.freeze({...})` concentrando `2` exports do dominio ratings do perfil (`renderRatings`, `loadRatings`); `assets/js/controllers/profile.controller.js` reduzido de `906L` -> `854L` (`-52L`) com `getProfileRatingsModule()`, `buildRatingsDeps()` e wrappers finos; `profile.html` atualizado para carregar `profile.ratings.js` entre `profile.collections.js` e `profile.controller.js`; nova suíte `tests/profile.ratings.test.js` (13 testes) e ajustes das suítes `tests/profile.presentation.test.js`/`tests/profile.collections.test.js`; baseline expandida para **119/119 suites · 2475/2475 testes** | — |
@@ -200,12 +201,12 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.5.5` — **gate formal do profile concluido** (`scripts/hygiene-check.js` valida a cadeia `_KCPR.*` em `profile.html` e `profile.controller.js <700L`; `profile.flow.js` com `683L`, `25 540` bytes e `10` exports; `profile.controller.js` travado em `613L` / `21 566` bytes)
+- iteração encerrada: `v12.6.0` — **feature flags formais `window.KCFF` concluídas** (`assets/js/kc-feature-flags.js` com `170L`, `4 444` bytes e `3` exports; `22` HTMLs carregam `kc-feature-flags.js` imediatamente após `kc-env.js`; `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
-- regressão: `120/120` suites, `2489/2489` testes verdes, hygiene `8.6.0`
-- deploy de produção ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
+- regressão: `121/121` suites, `2501/2501` testes verdes, hygiene `8.6.0`
+- deploy de produção ativo: `www.kinocampus.com.br`
 - sub-módulos `window._KCAPI.*` operacionais: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
 - sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
 - sub-adapters `window._KCLA.*` operacionais: `notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`, `profile`, `help` (7 total)
@@ -214,7 +215,8 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 - `admin-dashboard.controller.js`: após `v12.3.1` o core estava em `1859L`; após `v12.3.2`, caiu para `1172L` / `48 589` bytes; o gate formal `v12.3.4` consolidou o footprint real atual em `835L` / `32 802` bytes, enquanto `admin-dashboard.charts.js` ficou formalizado em `642L` / `27 895` bytes
 - `local.adapter.js`: após `v12.4.8`, o core caiu de `1862L` / `75 712` bytes para `473L` / `21 898` bytes; `assets/js/adapters/local.notifications.adapter.js` segue com `250L`, `14` exports, `assets/js/adapters/local.ratings.adapter.js` com `339L`, `6` exports, `assets/js/adapters/local.saved.adapter.js` com `252L`, `7` exports, `assets/js/adapters/local.posts-read.adapter.js` com `687L`, `8` exports, `assets/js/adapters/local.posts-write.adapter.js` com `300L`, `7` exports, `assets/js/adapters/local.profile.adapter.js` com `157L`, `4` exports, e `assets/js/adapters/local.help.adapter.js` com `201L`, `3` exports; o gate `<500L` foi formalizado e o `scripts/hygiene-check.js` agora valida a cadeia local `notifications -> ratings -> saved -> posts-read -> posts-write -> profile -> help` nos `22` HTMLs canônicos
 - `assets/js/controllers/profile.controller.js`: apos `v12.5.5`, o core caiu de `1463L` / `56 497` bytes para `613L` / `21 566` bytes; `assets/js/controllers/profile.presentation.js`, `assets/js/controllers/profile.collections.js`, `assets/js/controllers/profile.ratings.js` e `assets/js/controllers/profile.flow.js` permanecem carregados na ordem canônica `_KCPR.*`, com `profile.flow.js` em `683L` / `25 540` bytes e `10` exports, preservando `window.KCProfileRefresh`
-- próxima iteração: `v12.6.0` — feature flags formais `window.KCFF`
+- `window.KCFF`: apos `v12.6.0`, `assets/js/kc-feature-flags.js` formaliza `get`, `getAll` e `isEnabled` sobre `KC_ENV.flags`/`KC_ENV.featureFlags`; `assets/js/kc-env.js` inclui defaults `sw.enabled=false` e `telemetry.enabled=false`
+- próxima iteração: `v12.7.0` — i18n runtime fase 1 (`title`, `meta`, `alt`)
 
 ---
 

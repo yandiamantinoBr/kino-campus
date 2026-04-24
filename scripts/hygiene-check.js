@@ -81,6 +81,7 @@ const inlineHandlers = new Set([
 
 runVersionChecks();
 runThemeBootChecks();
+runKcffScriptChainChecks();
 runKcuScriptChainChecks();
 runKcadScriptChainChecks();
 runKclaScriptChainChecks();
@@ -135,6 +136,20 @@ function runThemeBootChecks() {
     const hasBootCss = /kc-theme-boot\.css/.test(content);
     if (hasBootJs && !hasBootCss) {
       errors.push(`${relPath} loads kc-theme-boot.js without kc-theme-boot.css`);
+    }
+  });
+}
+
+function runKcffScriptChainChecks() {
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const content = fs.readFileSync(absPath, 'utf8');
+    const expected = buildExpectedKcffScriptChain(relPath);
+    const found = extractKcffScriptChain(content);
+
+    if (!sameStringArray(found, expected)) {
+      errors.push(
+        `${relPath} has invalid KCFF script chain. expected: ${expected.join(' -> ')}; found: ${found.length ? found.join(' -> ') : '(none)'}`
+      );
     }
   });
 }
@@ -338,6 +353,22 @@ function buildExpectedKcuScriptChain(relPath) {
 function buildExpectedKclaScriptChain(relPath) {
   const prefix = relPath.startsWith('admin/') ? '../assets/js/adapters' : 'assets/js/adapters';
   return kclaScriptChain.map((file) => `${prefix}/${file}`);
+}
+
+function buildExpectedKcffScriptChain(relPath) {
+  const prefix = relPath.startsWith('admin/') ? '../assets/js' : 'assets/js';
+  return [
+    `${prefix}/kc-env.js`,
+    `${prefix}/kc-feature-flags.js`,
+  ];
+}
+
+function extractKcffScriptChain(content) {
+  return extractDeferredScriptSrcs(content).filter((src) => isKcffScriptSrc(src));
+}
+
+function isKcffScriptSrc(src) {
+  return /(?:^|\/)kc-(?:env|feature-flags)\.js$/i.test(String(src || ''));
 }
 
 function extractKcuScriptChain(content) {

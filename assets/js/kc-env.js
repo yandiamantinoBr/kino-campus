@@ -47,6 +47,15 @@
 
     debug: true,
 
+    // Feature flags formais (v12.6.0)
+    // - `flags` e a fonte canonica para window.KCFF
+    // - `featureFlags` e mantido como alias compat para overrides manuais
+    flags: {
+      'sw.enabled': false,
+      'telemetry.enabled': false,
+    },
+    featureFlags: {},
+
     // Supabase (aliases + bloco)
     SUPABASE_URL: '__KC_SUPABASE_URL__',
     SUPABASE_ANON_KEY: '__KC_SUPABASE_ANON_KEY__',
@@ -108,7 +117,14 @@
       ...DEFAULT_ENV.clamp,
       ...(((current || {}).clamp) || {}),
     },
+    flags: {
+      ...DEFAULT_ENV.flags,
+      ...(((current || {}).featureFlags) || {}),
+      ...(((current || {}).flags) || {}),
+    },
   };
+
+  merged.featureFlags = { ...merged.flags };
 
   const resolvedEnvironment = normalizeEnvironment(merged.APP_ENV || merged.environment) || detectRuntimeEnvironment();
   merged.environment = resolvedEnvironment;
