@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.5.4` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js` e quatro splits funcionais `_KCPR.*`); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `473L` e `assets/js/controllers/profile.controller.js` caiu de `1463L` / `56 497` bytes para `613L` / `21 447` bytes com os boundaries `assets/js/controllers/profile.presentation.js` (`518L`, `21 364` bytes, `28` exports), `assets/js/controllers/profile.collections.js` (`641L`, `25 882` bytes, `11` exports), `assets/js/controllers/profile.ratings.js` (`199L`, `8 332` bytes, `2` exports) e `assets/js/controllers/profile.flow.js` (`683L`, `24 857` bytes, `10` exports), mantendo `assets/js/account-profile.shared.js` (`962L`, `45` funcoes) como helper compartilhado previo; os submodulos `window._KCLA.notifications` (`250L`, 14 exports), `window._KCLA.ratings` (`339L`, 6 exports), `window._KCLA.saved` (`252L`, 7 exports), `window._KCLA.postsRead` (`687L`, 8 exports), `window._KCLA.postsWrite` (`300L`, 7 exports), `window._KCLA.profile` (`157L`, 4 exports) e `window._KCLA.help` (`201L`, 3 exports) ja estao operacionais, ao lado de `window._KCAD.metrics` (`514L`, 17 exports), `window._KCAD.audit` (`1045L`, 9 exports), `window._KCAD.charts` (`642L`, 10 exports), `window._KCPR.presentation` (`518L`, 28 exports), `window._KCPR.collections` (`641L`, 11 exports), `window._KCPR.ratings` (`199L`, 2 exports) e `window._KCPR.flow` (`683L`, 10 exports); a proxima iteracao e `v12.5.5` — gate formal `_KCPR.*`; baseline expandida para `120/120` suites e `2489/2489` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.5.5` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*` e gate formal do profile); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `473L` e `assets/js/controllers/profile.controller.js` caiu de `1463L` / `56 497` bytes para `613L` / `21 566` bytes; `scripts/hygiene-check.js` agora valida a cadeia `_KCPR.*` em `profile.html` (`profile.presentation -> profile.collections -> profile.ratings -> profile.flow -> profile.controller`) e falha se o controller voltar a `>=700L`; `assets/js/controllers/profile.flow.js` permanece em `683L` / `25 540` bytes e `10` exports; a proxima iteracao e `v12.6.0` — feature flags formais `window.KCFF`; baseline preservada em `120/120` suites e `2489/2489` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -213,7 +213,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | v12.5.2 | Split profile **collections + tabs** | `profile.collections.js` -> `window._KCPR.collections` (`642L`, `11` exports), `profile.controller.js` reduzido de `1261L` -> `906L`, `profile.html` atualizado e nova suite `tests/profile.collections.test.js` (19 testes); baseline expandida para `118/118` suites · `2462/2462` testes | ✅ concluído |
 | v12.5.3 | Split profile **ratings** | `profile.ratings.js` -> `window._KCPR.ratings` (`200L`, `2` exports), `profile.controller.js` reduzido de `906L` -> `854L`, `profile.html` atualizado e nova suite `tests/profile.ratings.test.js` (13 testes); baseline expandida para `119/119` suites · `2475/2475` testes | ✅ concluído |
 | v12.5.4 | Split profile **flow (editor + lifecycle)** | `profile.flow.js` -> `window._KCPR.flow` (`683L`, `10` exports), `profile.controller.js` reduzido de `854L` -> `613L`, `profile.html` atualizado e nova suite `tests/profile.flow.test.js` (14 testes); baseline expandida para `120/120` suites · `2489/2489` testes | ✅ concluído |
-| v12.5.5 | Gate profile <600L | gate formal + hygiene `_KCPR.*` em `profile.html` | 📋 planejado |
+| v12.5.5 | Gate profile <700L | `scripts/hygiene-check.js` valida cadeia `_KCPR.*` em `profile.html` e falha se `profile.controller.js >=700L`; `profile.controller.js` travado em `613L` / `21 566` bytes; baseline preservada em `120/120` suites · `2489/2489` testes | ✅ concluído |
 
 ### 5.2. Camada B — Qualidade sistêmica
 
@@ -271,7 +271,7 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - [x] `kc-utils.js` < 900L (baseline `2445L`)
 - [x] `admin-dashboard.controller.js` < 900L (baseline real do split `v12.3.1`: `2251L`; snapshot docs-only `v12.3.0`: `2034L`)
 - [x] `local.adapter.js` < 500L (baseline `1862L`; gate formalizado em `473L`)
-- [ ] `profile.controller.js` < 600L (baseline `1463L`)
+- [x] `profile.controller.js` < 700L (baseline `1463L`; gate formalizado em `613L`)
 - [ ] Nenhum arquivo JS em `assets/js/` > 1100L
 - [x] Namespaces `window._KCU.*`, `window._KCAD.*`, `window._KCLA.*` operacionais e documentados neste relatório (seção 3.2)
 
@@ -1162,7 +1162,7 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - corrigido o drift documental do caminho do arquivo para `assets/js/controllers/profile.controller.js`
 - medido o footprint real do controller e do helper compartilhado `assets/js/account-profile.shared.js`
 - mapeados o contrato publico atual (`window.KCProfileRefresh`), o HTML consumidor direto (`profile.html`) e as suites de teste ja relacionadas ao dominio
-- recalibrado o roadmap `v12.5.x` para `window._KCPR.presentation`, `window._KCPR.collections`, `window._KCPR.ratings`, `window._KCPR.flow` e gate formal `<600L` em `v12.5.5`
+- recalibrado o roadmap `v12.5.x` para `window._KCPR.presentation`, `window._KCPR.collections`, `window._KCPR.ratings`, `window._KCPR.flow` e gate formal `<700L` em `v12.5.5`
 - `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` sincronizados com a baseline atual e a proxima iteracao
 
 **Entregas mensuraveis:**
@@ -1309,7 +1309,34 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `node scripts/hygiene-check.js` -> **8.6.0 OK**
 - `npm test` -> **120/120 suites / 2489/2489 testes verdes**
 
-**Proxima iteracao:** `v12.5.5` - gate formal `_KCPR.*` e `profile.controller.js` `<600L`.
+**Proxima iteracao:** `v12.5.5` - gate formal `_KCPR.*` e `profile.controller.js` `<700L`.
+
+---
+
+### 8.29. v12.5.5 - gate formal do `profile.controller.js` - concluido
+
+**Objetivo:** fechar a trilha `_KCPR.*` com um gate automatizado no hygiene, impedindo regressao da ordem de scripts do perfil e retorno do controller residual ao formato de monolito.
+
+**Escopo entregue:**
+
+- `scripts/hygiene-check.js` passou a validar a cadeia `_KCPR.*` em `profile.html`: `profile.presentation -> profile.collections -> profile.ratings -> profile.flow -> profile.controller`
+- `scripts/hygiene-check.js` passou a falhar se `assets/js/controllers/profile.controller.js` voltar a `>=700L`
+- nenhuma logica de runtime do perfil foi alterada e nenhum novo submodulo JS foi criado
+- `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` sincronizados com o marco estrutural e a proxima etapa `v12.6.0`
+
+**Entregas mensuraveis:**
+
+- `assets/js/controllers/profile.controller.js` travado em **613L** / `21 566` bytes, abaixo do gate formal `<700L`
+- `assets/js/controllers/profile.flow.js` preservado em **683L** / `25 540` bytes e **10** exports congelados
+- baseline preservada em **120/120 suites / 2489/2489 testes**
+
+**Verificacao:**
+
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test -- tests/profile.presentation.test.js tests/profile.collections.test.js tests/profile.ratings.test.js tests/profile.flow.test.js tests/profile-swr.test.js` -> **67 testes verdes**
+- `npm test` -> **120/120 suites / 2489/2489 testes verdes**
+
+**Proxima iteracao:** `v12.6.0` - feature flags formais `window.KCFF`.
 
 ---
 
