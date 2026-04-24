@@ -295,6 +295,60 @@
     'auth.dropdown-complete-signup':   'Completar cadastro',
     'auth.dropdown-help-center':       'Central de ajuda',
     'auth.dropdown-logout':            'Sair da conta',
+
+    // ── Metadata runtime (title + meta description) ────────────────────────────
+    'meta-title.account-setup':        'KinoCampus - Completar conta',
+    'meta-title.achados-perdidos':     'Achados e Perdidos - KinoCampus',
+    'meta-title.ajuda':                'KinoCampus - Central de ajuda',
+    'meta-title.auth-callback':        'KinoCampus - Confirmando sua conta',
+    'meta-title.caronas-feed':         'Caronas - KinoCampus',
+    'meta-title.compra-venda-feed':    'Compra e Venda - KinoCampus',
+    'meta-title.create-post':          'KinoCampus - Nova Publicação',
+    'meta-title.eventos':              'Eventos - KinoCampus',
+    'meta-title.index':                'KinoCampus - Comunidade UFG',
+    'meta-title.moradia':              'Moradia - KinoCampus',
+    'meta-title.my-posts':             'KinoCampus — Minhas Publicações',
+    'meta-title.ods':                  'ODS | KinoCampus',
+    'meta-title.oportunidades':        'Oportunidades - KinoCampus',
+    'meta-title.profile':              'KinoCampus — Perfil',
+    'meta-title.search-results':       'Resultados de Busca - KinoCampus',
+    'meta-title.settings':             'KinoCampus - Configurações',
+    'meta-title.product':              'KinoCampus - Detalhes',
+    'meta-title.admin-banners':        'KinoCampus - Gerenciar Banners',
+    'meta-title.admin-help-requests':  'KinoCampus - Pedidos de ajuda',
+    'meta-title.admin-index':          'KinoCampus - Dashboard Admin',
+    'meta-title.admin-moderation':     'KinoCampus - Moderação Admin',
+    'meta-title.admin-reports':        'KinoCampus - Denúncias Admin',
+
+    'meta-description.account-setup':       'Complete sua conta no KinoCampus — comunidade universitária da UFG.',
+    'meta-description.achados-perdidos':    'Achados e Perdidos da UFG. Encontrou ou perdeu algo no campus? Publique no KinoCampus e ajude a comunidade.',
+    'meta-description.ajuda':               'Central de ajuda do KinoCampus. Tire dúvidas sobre a plataforma da comunidade universitária da UFG.',
+    'meta-description.auth-callback':       'Confirme sua conta no KinoCampus com segurança e finalize o acesso à comunidade universitária da UFG.',
+    'meta-description.caronas-feed':        'Caronas entre estudantes da UFG. Ofereça ou procure caronas para o campus, centro e região de Goiânia no KinoCampus.',
+    'meta-description.compra-venda-feed':   'Compra e venda entre estudantes da UFG. Anuncie ou encontre eletrônicos, ingressos, móveis, livros e mais no KinoCampus.',
+    'meta-description.create-post':         'Crie uma nova publicação no KinoCampus — comunidade universitária da UFG.',
+    'meta-description.eventos':             'Eventos universitários na UFG. Encontre palestras, workshops, feiras, eventos culturais e esportivos no KinoCampus.',
+    'meta-description.index':               'KinoCampus é a plataforma da comunidade universitária da UFG. Compra e venda, caronas, moradia, eventos, oportunidades e achados/perdidos entre estudantes.',
+    'meta-description.moradia':             'Moradia universitária em Goiânia. Encontre repúblicas, quartos e apartamentos perto da UFG no KinoCampus.',
+    'meta-description.my-posts':            'Gerencie suas publicações no KinoCampus. Veja, edite, renove e acompanhe o desempenho dos seus anúncios.',
+    'meta-description.ods':                 'Objetivos de Desenvolvimento Sustentável no KinoCampus — comunidade universitária da UFG.',
+    'meta-description.oportunidades':       'Oportunidades para estudantes da UFG. Estágios, empregos, freelancer, monitorias, bolsas e voluntariado no KinoCampus.',
+    'meta-description.profile':             'Perfil de usuário no KinoCampus — comunidade universitária da UFG.',
+    'meta-description.search-results':      'Busca no KinoCampus — encontre publicações, eventos, oportunidades e mais na comunidade da UFG.',
+    'meta-description.settings':            'Configurações da sua conta no KinoCampus — comunidade universitária da UFG.',
+    'meta-description.product':             'KinoCampus — plataforma da comunidade universitária da UFG. Compra e venda, caronas, moradia, eventos, oportunidades e achados/perdidos entre estudantes.',
+    'meta-description.admin-banners':       'Gerencie banners e comunicações administrativas do KinoCampus.',
+    'meta-description.admin-help-requests': 'Acompanhe e responda pedidos de ajuda enviados pela comunidade KinoCampus.',
+    'meta-description.admin-index':         'Painel administrativo do KinoCampus — comunidade universitária da UFG.',
+    'meta-description.admin-moderation':    'Modere publicações e conteúdos reportados no painel administrativo do KinoCampus.',
+    'meta-description.admin-reports':       'Analise denúncias recebidas no painel administrativo do KinoCampus.',
+
+    // ── Alt text estático ──────────────────────────────────────────────────────
+    'alt.avatar-preview':        'Preview do avatar',
+    'alt.profile-avatar':        'Avatar',
+    'alt.product-image':         'Imagem da publicação',
+    'alt.author-avatar':         'Avatar do autor',
+    'alt.comment-user-avatar':   'Seu avatar',
   };
 
   /**
@@ -360,11 +414,111 @@
     return Object.keys(_dict);
   }
 
+  function translateWithFallback(key, fallback) {
+    if (!key) return fallback || '';
+    var value = t(key);
+    return value === key ? (fallback || '') : value;
+  }
+
+  function getDocument(root) {
+    if (root && root.nodeType === 9) return root;
+    if (root && root.ownerDocument) return root.ownerDocument;
+    if (typeof document !== 'undefined') return document;
+    return null;
+  }
+
+  function getMetadataRoot(root, doc) {
+    if (root && root.nodeType === 1 && typeof root.getAttribute === 'function') return root;
+    return doc ? doc.documentElement : null;
+  }
+
+  function findOrCreateMetaDescription(doc) {
+    var meta = doc.querySelector('meta[name="description"]');
+    if (!meta && doc.head && typeof doc.createElement === 'function') {
+      meta = doc.createElement('meta');
+      meta.setAttribute('name', 'description');
+      doc.head.appendChild(meta);
+    }
+    return meta;
+  }
+
+  function applyDocumentMetadata(root) {
+    var doc = getDocument(root);
+    var source = getMetadataRoot(root, doc);
+    if (!doc || !source || typeof source.getAttribute !== 'function') {
+      return false;
+    }
+
+    var changed = false;
+    var titleKey = source.getAttribute('data-i18n-title');
+    var descriptionKey = source.getAttribute('data-i18n-description');
+
+    if (titleKey) {
+      var titleEl = doc.querySelector('title');
+      var currentTitle = titleEl ? titleEl.textContent : doc.title;
+      var nextTitle = translateWithFallback(titleKey, currentTitle);
+      if (nextTitle) {
+        doc.title = nextTitle;
+        if (titleEl) titleEl.textContent = nextTitle;
+        changed = true;
+      }
+    }
+
+    if (descriptionKey) {
+      var meta = findOrCreateMetaDescription(doc);
+      var currentDescription = meta ? meta.getAttribute('content') : '';
+      var nextDescription = translateWithFallback(descriptionKey, currentDescription);
+      if (meta && nextDescription) {
+        meta.setAttribute('content', nextDescription);
+        changed = true;
+      }
+    }
+
+    return changed;
+  }
+
+  function applyStaticAlts(root) {
+    var doc = getDocument(root);
+    var scope = root && typeof root.querySelectorAll === 'function' ? root : doc;
+    if (!scope || typeof scope.querySelectorAll !== 'function') {
+      return 0;
+    }
+
+    var count = 0;
+    var images = scope.querySelectorAll('img[data-i18n-alt]');
+    Array.prototype.forEach.call(images, function (img) {
+      var key = img.getAttribute('data-i18n-alt');
+      var fallback = img.getAttribute('alt') || '';
+      var value = translateWithFallback(key, fallback);
+      img.setAttribute('alt', value);
+      count += 1;
+    });
+    return count;
+  }
+
+  function applyRuntimeI18n() {
+    applyDocumentMetadata();
+    applyStaticAlts();
+  }
+
+  function onReady(callback) {
+    if (typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', callback, { once: true });
+      return;
+    }
+    callback();
+  }
+
   window.KCi18n = {
     locale: _locale,
     t: t,
     n: n,
     keys: keys,
+    applyDocumentMetadata: applyDocumentMetadata,
+    applyStaticAlts: applyStaticAlts,
   };
+
+  onReady(applyRuntimeI18n);
 
 }());

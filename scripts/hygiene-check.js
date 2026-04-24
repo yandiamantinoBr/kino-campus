@@ -81,6 +81,7 @@ const inlineHandlers = new Set([
 
 runVersionChecks();
 runThemeBootChecks();
+runI18nMetadataChecks();
 runKcffScriptChainChecks();
 runKcuScriptChainChecks();
 runKcadScriptChainChecks();
@@ -137,6 +138,29 @@ function runThemeBootChecks() {
     if (hasBootJs && !hasBootCss) {
       errors.push(`${relPath} loads kc-theme-boot.js without kc-theme-boot.css`);
     }
+  });
+}
+
+function runI18nMetadataChecks() {
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const content = fs.readFileSync(absPath, 'utf8');
+    const htmlTag = String(content).match(/<html\b[^>]*>/i);
+
+    if (!htmlTag || !/\sdata-i18n-title="meta-title\.[a-z0-9-]+"/i.test(htmlTag[0])) {
+      errors.push(`${relPath} is missing data-i18n-title metadata for the v12.7.0 i18n gate`);
+    }
+    if (!htmlTag || !/\sdata-i18n-description="meta-description\.[a-z0-9-]+"/i.test(htmlTag[0])) {
+      errors.push(`${relPath} is missing data-i18n-description metadata for the v12.7.0 i18n gate`);
+    }
+
+    const imageTags = [...String(content).matchAll(/<img\b[^>]*>/gi)].map((match) => String(match[0] || ''));
+    imageTags.forEach((tag) => {
+      const altMatch = tag.match(/\salt="([^"]*)"/i);
+      const alt = altMatch ? altMatch[1] : '';
+      if (alt && !/\sdata-i18n-alt="alt\.[a-z0-9-]+"/i.test(tag)) {
+        errors.push(`${relPath} has static img alt without data-i18n-alt: ${alt}`);
+      }
+    });
   });
 }
 

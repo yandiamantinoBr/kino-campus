@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.6.0` concluída com feature flags formais: novo `assets/js/kc-feature-flags.js` (`170L`, `4 444` bytes) expõe `window.KCFF = Object.freeze({ get, getAll, isEnabled })`, `assets/js/kc-env.js` passa a declarar `flags`/`featureFlags`, os `22` HTMLs canônicos carregam `kc-feature-flags.js` imediatamente após `kc-env.js` e `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`; baseline expandida para **121/121 suites · 2501/2501 testes**; próxima iteração: `v12.7.0` (i18n runtime fase 1: `<title>`, `meta`, `alt`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.7.0` concluída com i18n runtime fase 1: `assets/js/kc-i18n.js` (`524L`, `27 822` bytes) agora expõe `applyDocumentMetadata()` e `applyStaticAlts()`, o dicionário ganhou `49` chaves `meta-title.*`/`meta-description.*`/`alt.*`, os `22` HTMLs canônicos declaram metadata i18n no `<html>` e `5` imagens com alt textual declaram `data-i18n-alt`; `scripts/hygiene-check.js` valida o gate declarativo da fase 1; baseline expandida para **122/122 suites · 2510/2510 testes**; próxima iteração: `v12.7.1` (i18n runtime fase 2: `aria-label` e `placeholder`).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 121 suites de regressão e contrato |
+| Testes | Jest: 122 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.7.0 | **i18n runtime fase 1 (`title`, `meta`, `alt`)**: `assets/js/kc-i18n.js` adiciona `22` chaves `meta-title.*`, `22` chaves `meta-description.*`, `5` chaves `alt.*` e os helpers públicos `applyDocumentMetadata()`/`applyStaticAlts()` com autoaplicação no `DOMContentLoaded`; os `22` HTMLs canônicos passam a declarar `data-i18n-title`/`data-i18n-description` no `<html>` e os `5` `img` com `alt` textual estático passam a declarar `data-i18n-alt`; `scripts/hygiene-check.js` ganhou gate para impedir drift da marcação i18n; nova suíte `tests/i18n-metadata.test.js` (9 testes) e ajuste do contrato admin preload; baseline expandida para **122/122 suites · 2510/2510 testes** | — |
 | v12.6.0 | **feature flags formais `window.KCFF`**: novo `assets/js/kc-feature-flags.js` com IIFE browser-safe + `Object.freeze({ get, getAll, isEnabled })`, leitura de `KC_ENV.flags`/`KC_ENV.featureFlags`, derivados seguros `env.*`, snapshots defensivos e defaults `sw.enabled=false`/`telemetry.enabled=false`; `assets/js/kc-env.js` formaliza as fontes de flags; os `22` HTMLs canônicos passam a carregar `kc-feature-flags.js` imediatamente após `kc-env.js`; `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`; nova suíte `tests/kc-feature-flags.test.js` (12 testes); baseline expandida para **121/121 suites · 2501/2501 testes** | — |
 | v12.5.5 | **gate formal do `profile.controller.js` + hygiene `_KCPR.*`**: `scripts/hygiene-check.js` passa a validar a cadeia canônica `profile.presentation -> profile.collections -> profile.ratings -> profile.flow -> profile.controller` em `profile.html` e a falhar se `assets/js/controllers/profile.controller.js` voltar a `>=700L`; footprint real travado em `613L` / `21 566` bytes para o controller e `683L` / `25 540` bytes para `profile.flow.js`; zero mudança de runtime no perfil; baseline preservada em **120/120 suites · 2489/2489 testes** | — |
 | v12.5.4 | **split `window._KCPR.flow`**: novo `assets/js/controllers/profile.flow.js` com IIFE + `Object.freeze({...})` concentrando `10` exports do domínio flow/lifecycle do perfil (`loadStats`, `setProfilePending`, `handleProfileSubmit`, `handleAvatarChange`, `bindProfileEditing`, `loadProfile`, `bindProfileSyncListener`, `refreshProfilePage`, `initPullToRefresh`, `init`); `assets/js/controllers/profile.controller.js` reduzido de `854L` -> `613L` (`-241L`) com `getProfileFlowModule()`, `buildFlowDeps()` e wrappers finos; `profile.html` atualizado para carregar `profile.flow.js` entre `profile.ratings.js` e `profile.controller.js`; nova suíte `tests/profile.flow.test.js` (14 testes) e ajustes das suítes de profile/SWR; baseline expandida para **120/120 suites · 2489/2489 testes** | — |
@@ -201,11 +202,11 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.6.0` — **feature flags formais `window.KCFF` concluídas** (`assets/js/kc-feature-flags.js` com `170L`, `4 444` bytes e `3` exports; `22` HTMLs carregam `kc-feature-flags.js` imediatamente após `kc-env.js`; `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`)
+- iteração encerrada: `v12.7.0` — **i18n runtime fase 1 concluída** (`assets/js/kc-i18n.js` com `524L`, `27 822` bytes e `6` exports; `49` chaves novas para metadata/alt; `22` HTMLs marcados com `data-i18n-title`/`data-i18n-description`; `scripts/hygiene-check.js` valida o gate declarativo de metadata/alt)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
-- regressão: `121/121` suites, `2501/2501` testes verdes, hygiene `8.6.0`
+- regressão: `122/122` suites, `2510/2510` testes verdes, hygiene `8.6.0`
 - deploy de produção ativo: `www.kinocampus.com.br`
 - sub-módulos `window._KCAPI.*` operacionais: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
 - sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
@@ -216,7 +217,8 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 - `local.adapter.js`: após `v12.4.8`, o core caiu de `1862L` / `75 712` bytes para `473L` / `21 898` bytes; `assets/js/adapters/local.notifications.adapter.js` segue com `250L`, `14` exports, `assets/js/adapters/local.ratings.adapter.js` com `339L`, `6` exports, `assets/js/adapters/local.saved.adapter.js` com `252L`, `7` exports, `assets/js/adapters/local.posts-read.adapter.js` com `687L`, `8` exports, `assets/js/adapters/local.posts-write.adapter.js` com `300L`, `7` exports, `assets/js/adapters/local.profile.adapter.js` com `157L`, `4` exports, e `assets/js/adapters/local.help.adapter.js` com `201L`, `3` exports; o gate `<500L` foi formalizado e o `scripts/hygiene-check.js` agora valida a cadeia local `notifications -> ratings -> saved -> posts-read -> posts-write -> profile -> help` nos `22` HTMLs canônicos
 - `assets/js/controllers/profile.controller.js`: apos `v12.5.5`, o core caiu de `1463L` / `56 497` bytes para `613L` / `21 566` bytes; `assets/js/controllers/profile.presentation.js`, `assets/js/controllers/profile.collections.js`, `assets/js/controllers/profile.ratings.js` e `assets/js/controllers/profile.flow.js` permanecem carregados na ordem canônica `_KCPR.*`, com `profile.flow.js` em `683L` / `25 540` bytes e `10` exports, preservando `window.KCProfileRefresh`
 - `window.KCFF`: apos `v12.6.0`, `assets/js/kc-feature-flags.js` formaliza `get`, `getAll` e `isEnabled` sobre `KC_ENV.flags`/`KC_ENV.featureFlags`; `assets/js/kc-env.js` inclui defaults `sw.enabled=false` e `telemetry.enabled=false`
-- próxima iteração: `v12.7.0` — i18n runtime fase 1 (`title`, `meta`, `alt`)
+- `window.KCi18n`: apos `v12.7.0`, `assets/js/kc-i18n.js` soma `306` chaves pt-BR e aplica metadata/alt estaticos via `applyDocumentMetadata()` e `applyStaticAlts()`
+- próxima iteração: `v12.7.1` — i18n runtime fase 2 (`aria-label`, `placeholder`)
 
 ---
 
