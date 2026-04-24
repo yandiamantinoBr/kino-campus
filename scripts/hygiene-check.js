@@ -7,6 +7,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const canonicalVersion = '8.6.0';
+const profileControllerLineGate = 700;
 const errors = [];
 const warnings = [];
 
@@ -53,6 +54,14 @@ const kclaScriptChain = [
   'local.help.adapter.js',
 ];
 
+const kcprProfileScriptChain = [
+  'assets/js/controllers/profile.presentation.js',
+  'assets/js/controllers/profile.collections.js',
+  'assets/js/controllers/profile.ratings.js',
+  'assets/js/controllers/profile.flow.js',
+  'assets/js/controllers/profile.controller.js',
+];
+
 const inlineHandlers = new Set([
   'onabort', 'onauxclick', 'onbeforeinput', 'onbeforematch', 'onbeforetoggle',
   'onblur', 'oncancel', 'oncanplay', 'oncanplaythrough', 'onchange', 'onclick',
@@ -75,7 +84,9 @@ runThemeBootChecks();
 runKcuScriptChainChecks();
 runKcadScriptChainChecks();
 runKclaScriptChainChecks();
+runKcprProfileScriptChainChecks();
 runLocalAdapterGateChecks();
+runProfileControllerGateChecks();
 runInlineHandlerChecks();
 runProfileContractChecks();
 runDeployInvariantChecks();
@@ -172,12 +183,39 @@ function runKclaScriptChainChecks() {
   });
 }
 
+function runKcprProfileScriptChainChecks() {
+  htmlFiles
+    .filter(({ relPath }) => relPath === 'profile.html')
+    .forEach(({ relPath, absPath }) => {
+      const content = fs.readFileSync(absPath, 'utf8');
+      const expected = kcprProfileScriptChain.slice();
+      const found = extractKcprProfileScriptChain(content);
+
+      if (!sameStringArray(found, expected)) {
+        errors.push(
+          `${relPath} has invalid _KCPR.* profile script chain. expected: ${expected.join(' -> ')}; found: ${found.length ? found.join(' -> ') : '(none)'}`
+        );
+      }
+    });
+}
+
 function runLocalAdapterGateChecks() {
   const content = read('assets/js/adapters/local.adapter.js');
   const lineCount = countLines(content);
 
   if (lineCount >= 500) {
     errors.push(`assets/js/adapters/local.adapter.js must stay below 500 lines for the v12.4.8 gate (found ${lineCount})`);
+  }
+}
+
+function runProfileControllerGateChecks() {
+  const content = read('assets/js/controllers/profile.controller.js');
+  const lineCount = countLines(content);
+
+  if (lineCount >= profileControllerLineGate) {
+    errors.push(
+      `assets/js/controllers/profile.controller.js must stay below ${profileControllerLineGate} lines for the v12.5.5 gate (found ${lineCount})`
+    );
   }
 }
 
@@ -324,6 +362,14 @@ function extractKclaScriptChain(content) {
 
 function isKclaScriptSrc(src) {
   return /(?:^|\/)adapters\/local\.(?:notifications|ratings|saved|posts-read|posts-write|profile|help)\.adapter\.js$/i.test(String(src || ''));
+}
+
+function extractKcprProfileScriptChain(content) {
+  return extractDeferredScriptSrcs(content).filter((src) => isKcprProfileScriptSrc(src));
+}
+
+function isKcprProfileScriptSrc(src) {
+  return /(?:^|\/)controllers\/profile\.(?:presentation|collections|ratings|flow|controller)\.js$/i.test(String(src || ''));
 }
 
 function extractDeferredScriptSrcs(content) {
