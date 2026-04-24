@@ -17,7 +17,10 @@ describe('admin shell preload hardening', () => {
   test('admin pages share the same html preload classes and no longer inline boot cleanup', () => {
     adminPages.forEach((relativePath) => {
       const source = read(relativePath);
-      expect(source).toContain('<html lang="pt-BR" class="kc-loading kc-theme-preload">');
+      const htmlTag = source.match(/<html\b[^>]*>/i);
+      expect(htmlTag).not.toBeNull();
+      expect(htmlTag[0]).toContain('lang="pt-BR"');
+      expect(htmlTag[0]).toContain('class="kc-loading kc-theme-preload"');
       expect(source).not.toContain("document.documentElement.classList.remove('kc-loading')");
       expect(source).not.toContain('html.kc-theme-preload, html.kc-theme-preload *');
     });

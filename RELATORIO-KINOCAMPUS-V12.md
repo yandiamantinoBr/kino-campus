@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.6.0` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*`, gate formal do profile e feature flags formais); `window.KCFF` agora opera em `assets/js/kc-feature-flags.js` (`170L` / `4 444` bytes) com `Object.freeze({ get, getAll, isEnabled })`, `assets/js/kc-env.js` declara `flags`/`featureFlags`, os `22` HTMLs canônicos carregam `kc-feature-flags.js` imediatamente após `kc-env.js` e `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`; a próxima iteração é `v12.7.0` — i18n runtime fase 1 (`title`, `meta`, `alt`); baseline expandida em `121/121` suites e `2501/2501` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.7.0` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*`, gate formal do profile, feature flags formais e i18n runtime fase 1); `window.KCi18n` agora soma `306` chaves pt-BR, incluindo `22` `meta-title.*`, `22` `meta-description.*` e `5` `alt.*`, expõe `applyDocumentMetadata()`/`applyStaticAlts()` e os `22` HTMLs canônicos declaram metadata i18n no `<html>`; `scripts/hygiene-check.js` valida a marcação declarativa de metadata/alt; a próxima iteração é `v12.7.1` — i18n runtime fase 2 (`aria-label`, `placeholder`); baseline expandida em `122/122` suites e `2510/2510` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -124,7 +124,7 @@ Novas fontes de verdade criadas durante a v12 (adicionadas à medida que as iter
   - `presentation`, `collections`, `ratings`, `flow`
 - **`window.KCFF`** — feature flags formais:
   - `get`, `getAll`, `isEnabled`
-- **`window.KCi18n`** — módulo de i18n (pt-BR, 120+ chaves)
+- **`window.KCi18n`** — módulo de i18n (pt-BR, 306 chaves, helpers `t`, `n`, `keys`, `applyDocumentMetadata`, `applyStaticAlts`)
 - **`window.KCSessionStore`** — SWR / cache de sessão
 - **`window.KCOverlayLock`** — lock de scroll em modais
 - **`window.KCLazyLoader`** — lazy load de módulos grandes
@@ -156,7 +156,7 @@ Estes namespaces são **contratos públicos internos** — qualquer mudança de 
 - **Sem Lighthouse CI** em nenhum pipeline
 - **Sem Service Worker** — zero resiliência offline, zero cache-first
 - **Sistema formal de feature flags iniciado** — `window.KCFF` operacional desde `v12.6.0`; ainda restam migrações graduais de usos dispersos de `ENV.*` quando eles forem flags reais, sem trocar configuração sensível (`driver`, Supabase, auth) por flag booleana
-- **~250-300 strings hardcoded pt-BR** (aria-label, role, mensagens inline) em HTMLs e controllers; plano detalhado existe em `docs/i18n-a11y-uxwriting-plan.md` desde a v11.24.0 mas só parcialmente executado (componentes core em v11.24.2 e templates auth em v11.24.3)
+- **i18n runtime iniciado** — `v12.7.0` migrou metadata/alt estáticos para chaves `meta-title.*`, `meta-description.*` e `alt.*`; ainda restam `aria-label`, `placeholder`, headings, botões e mensagens inline em HTMLs/controllers conforme `docs/i18n-a11y-uxwriting-plan.md`
 - **Sem Storybook / catálogo de componentes** — fora do escopo explícito da v12 (arquivado para v13+)
 
 ---
@@ -222,7 +222,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | Iteração | Escopo | Entrega esperada | Status |
 |---|---|---|---|
 | **v12.6.0** | **Trilha B1 — Feature flags formal** (`window.KCFF`) | `kc-feature-flags.js` novo (`170L` / `4 444` bytes), `KC_ENV.flags`/`featureFlags`, 22 HTMLs com `kc-env.js -> kc-feature-flags.js`, hygiene KCFF e suite `tests/kc-feature-flags.test.js` (12 testes); baseline `121/121` suites · `2501/2501` testes | ✅ concluído |
-| v12.7.0 | **Trilha B2 — i18n runtime fase 1**: extração `<title>`, `meta`, `alt` | +dicionário; ~60 strings migradas; +~15 testes | 📋 planejado |
+| **v12.7.0** | **Trilha B2 — i18n runtime fase 1**: extração `<title>`, `meta`, `alt` | `kc-i18n.js` com `306` chaves totais e `49` chaves novas de metadata/alt; helpers `applyDocumentMetadata()`/`applyStaticAlts()`; 22 HTMLs marcados; hygiene i18n; suite `tests/i18n-metadata.test.js` (9 testes); baseline `122/122` suites · `2510/2510` testes | ✅ concluído |
 | v12.7.1 | i18n runtime fase 2: `aria-label`, `placeholder` | ~90 strings migradas; +~15 testes | 📋 planejado |
 | v12.7.2 | i18n runtime fase 3: botões e headings dinâmicos | ~50 strings migradas; +~10 testes | 📋 planejado |
 | v12.7.3 | Gate i18n: locale switcher funcional pt-BR + en-US scaffolding | gate formal | 📋 planejado |
@@ -256,7 +256,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | Split `admin-dashboard.controller.js` introduz regressão em RPCs/charts | A | Snapshot DOM nos testes Jest; E2E smoke do admin (v12.9.2) antes do gate `v12.3.4` |
 | Split `local.adapter.js` diverge de `supabase.adapter.js` | A | `tests/driver-contract-parity.test.js` (novo) rodando mesma suíte nos dois drivers |
 | Feature flags criam inconsistência entre `ENV.*` antigo e `KCFF.*` novo | B | Coexistência de 3 iterações com alias retrocompatível; hygiene-check avisa mixed usage |
-| i18n runtime introduz typos / regressão visual | B | `kc-i18n.js` com fallback pt-BR sempre; lint de chaves órfãs; Playwright (B4) **antes** de B2 |
+| i18n runtime introduz typos / regressão visual | B | `kc-i18n.js` com fallback pt-BR sempre; hygiene-check para metadata/alt; Playwright (B4) cobre regressão visual/fluxos antes do gate final de i18n |
 | Playwright eleva tempo de CI + introduz flakiness | B | Gate "soft" nos primeiros ciclos; retry automático 2x; rodar só em PR, nunca em push direto |
 | Lighthouse CI gera falsos negativos por network variance | B | Thresholds com `warn` nos primeiros ciclos, `error` só depois de baseline estabilizada |
 | Service Worker serve versão stale (bug clássico) | C | Atrás de `KCFF.isEnabled('sw.enabled')`; `skipWaiting` + `clientsClaim`; página `/sw-reset.html` documentada; telemetria (C2) antes de C1 para medir versões stale |
@@ -292,8 +292,8 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 
 ### 7.4. Baseline e governança
 
-- [x] `npm test` passa em **≥ 120 suites / ≥ 2150 testes** (baseline atual `121/121` suites / `2501/2501` testes; baseline v12.0.0: `99/1874`)
-- [x] `node scripts/hygiene-check.js` verde e **atualizado** com regras para `_KCU.*`, `_KCLA.*`, `_KCAD.*`, `_KCPR.*`, `KCFF.*`
+- [x] `npm test` passa em **≥ 120 suites / ≥ 2150 testes** (baseline atual `122/122` suites / `2510/2510` testes; baseline v12.0.0: `99/1874`)
+- [x] `node scripts/hygiene-check.js` verde e **atualizado** com regras para `_KCU.*`, `_KCLA.*`, `_KCAD.*`, `_KCPR.*`, `KCFF.*` e metadata/alt i18n
 - [ ] `RELATORIO-KINOCAMPUS-V12.md` atualizado em cada iteração; seção de fechamento preenchida
 - [ ] `CHANGELOG.md` com entrada formal `## [12.0.0] - YYYY-MM-DD`
 - [ ] `README.md` com "Status atual" apontando para v12 e tabela "Entregas Recentes" consolidada
@@ -1378,6 +1378,42 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `npm test` -> **121/121 suites / 2501/2501 testes verdes**
 
 **Proxima iteracao:** `v12.7.0` - i18n runtime fase 1 (`title`, `meta`, `alt`).
+
+---
+
+### 8.31. v12.7.0 - i18n runtime fase 1 (`title`, `meta`, `alt`) - concluido
+
+**Objetivo:** iniciar a camada B2 de i18n em runtime por uma superficie de baixo risco, migrando metadata de documento e textos `alt` estaticos para o dicionario pt-BR sem introduzir locale switcher e sem alterar strings visiveis.
+
+**Escopo entregue:**
+
+- `assets/js/kc-i18n.js` recebeu `22` chaves `meta-title.*`, `22` chaves `meta-description.*` e `5` chaves `alt.*`
+- `window.KCi18n` passou a expor os helpers publicos `applyDocumentMetadata()` e `applyStaticAlts()`, alem de manter `locale`, `t`, `n` e `keys`
+- os helpers aplicam metadata/alt no `DOMContentLoaded`, preservando fallback pt-BR quando a chave nao existe
+- os `22` HTMLs canonicos declaram `data-i18n-title` e `data-i18n-description` no elemento `<html>`
+- os `5` `img` com `alt` textual estatico declaram `data-i18n-alt`; imagens decorativas com `alt=""` continuam sem marcacao
+- `scripts/hygiene-check.js` passou a validar o gate declarativo de metadata/alt i18n nos HTMLs canonicos
+- criada `tests/i18n-metadata.test.js` com cobertura de contrato estatico, marcacao dos HTMLs e comportamento runtime dos helpers
+- `tests/kc-i18n.test.js` e `tests/admin-shell-preload-markup.test.js` foram sincronizados com o novo contrato sem relaxar os checks de preload admin
+- `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` sincronizados com o marco e a proxima etapa `v12.7.1`
+
+**Entregas mensuraveis:**
+
+- `assets/js/kc-i18n.js` ficou em **524L** / `27 822` bytes, com **306** chaves totais e **6** exports publicos
+- `tests/i18n-metadata.test.js` criado com **189L** / `6 818` bytes e **9** testes
+- `scripts/hygiene-check.js` ficou em **486L** / `16 798` bytes apos o gate i18n
+- baseline expandida de **121/121 suites / 2501/2501 testes** para **122/122 suites / 2510/2510 testes**
+
+**Verificacao:**
+
+- `node --check assets/js/kc-i18n.js` -> OK
+- `node --check scripts/hygiene-check.js` -> OK
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test -- tests/kc-i18n.test.js tests/i18n-metadata.test.js tests/kc-feature-flags.test.js` -> **3/3 suites / 56/56 testes verdes**
+- `npm test -- tests/admin-shell-preload-markup.test.js tests/kc-i18n.test.js tests/i18n-metadata.test.js` -> **3/3 suites / 46/46 testes verdes**
+- `npm test` -> **122/122 suites / 2510/2510 testes verdes**
+
+**Proxima iteracao:** `v12.7.1` - i18n runtime fase 2 (`aria-label`, `placeholder`).
 
 ---
 

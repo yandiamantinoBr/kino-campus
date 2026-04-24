@@ -6,6 +6,9 @@
 
 ### Added
 
+- `v12.7.0`: `assets/js/kc-i18n.js` recebeu a fase 1 de i18n runtime para metadata/alt, com `22` chaves `meta-title.*`, `22` chaves `meta-description.*`, `5` chaves `alt.*` e os helpers publicos `applyDocumentMetadata()`/`applyStaticAlts()` mantendo fallback pt-BR. O modulo ficou em **524L** / `27 822` bytes, com **306** chaves totais e **6** exports publicos.
+- `v12.7.0`: criado `tests/i18n-metadata.test.js` com **9 testes** cobrindo contrato estatico de `kc-i18n.js`, ausencia de `require/import`, marcacao declarativa nos `22` HTMLs, cobertura dos `5` alts estaticos e comportamento runtime de title/meta/alt. Baseline expandida de `121/121 suites / 2501/2501 testes` para **`122/122 suites / 2510/2510 testes`**.
+
 - `v12.6.0`: criado `assets/js/kc-feature-flags.js` com IIFE browser-safe registrado em `window.KCFF = Object.freeze({ get, getAll, isEnabled })`, lendo `KC_ENV.flags`/`KC_ENV.featureFlags`, expondo derivados seguros `env.*`, normalizando booleanos (`on/off`, `true/false`, `1/0`) e retornando snapshots defensivos. O footprint real do modulo ficou em **170L** / `4 444` bytes.
 - `v12.6.0`: criado `tests/kc-feature-flags.test.js` com **12 testes** cobrindo contrato estatico, ausência de `require/import`, exports exatos, leitura plana/aninhada, alias `featureFlags`, clones defensivos, derivados de ambiente e a ordem dos `22` HTMLs canônicos. Baseline expandida de `120/120 suites / 2489/2489 testes` para **`121/121 suites / 2501/2501 testes`**.
 
@@ -24,6 +27,9 @@
 - `v12.5.0`: criado `docs/profile-controller-audit-v12.5.md` com auditoria docs-only de `assets/js/controllers/profile.controller.js`, medindo o footprint real do hotspot de perfil em `1463L` e `56 497` bytes, inventariando `67` funcoes top-level (`14` async), `1` HTML consumidor (`profile.html`), `1` export publico (`window.KCProfileRefresh`) e o boundary previo `assets/js/account-profile.shared.js` (`962L`, `45` funcoes, `10` testes), alem de recalibrar a sequencia `v12.5.1`-`v12.5.5` para `window._KCPR.presentation`, `window._KCPR.collections`, `window._KCPR.ratings`, `window._KCPR.flow` e gate formalizado em `<700L`.
 
 ### Changed
+
+- `v12.7.0`: os `22` HTMLs canonicos passaram a declarar `data-i18n-title`/`data-i18n-description` no elemento `<html>` e os `5` `img` com `alt` textual estatico passaram a declarar `data-i18n-alt`; `scripts/hygiene-check.js` valida esse gate declarativo de metadata/alt i18n e fica em **486L** / `16 798` bytes. Hygiene **8.6.0 OK** e baseline final verde em **122/122 suites / 2510/2510 testes**.
+- `v12.7.0`: `tests/kc-i18n.test.js` foi sincronizado com os novos helpers publicos e `tests/admin-shell-preload-markup.test.js` passou a validar os atributos essenciais do `<html>` admin sem bloquear atributos declarativos adicionais.
 
 - `v12.6.0`: `assets/js/kc-env.js` passa a declarar `flags` e `featureFlags` como fonte formal para `window.KCFF`, com defaults `sw.enabled=false` e `telemetry.enabled=false`; os `22` HTMLs canônicos carregam `kc-feature-flags.js` imediatamente após `kc-env.js`; `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js` em todas as páginas públicas/admin. Hygiene **8.6.0 OK** e baseline final verde em **121/121 suites / 2501/2501 testes**.
 
