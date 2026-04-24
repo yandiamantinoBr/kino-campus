@@ -22,6 +22,8 @@ describe('KCi18n - Modulo de Internacionalizacao (pt-BR)', () => {
     expect(typeof i18n.keys).toBe('function');
     expect(typeof i18n.applyDocumentMetadata).toBe('function');
     expect(typeof i18n.applyStaticAlts).toBe('function');
+    expect(typeof i18n.applyAriaLabels).toBe('function');
+    expect(typeof i18n.applyPlaceholders).toBe('function');
     expect(typeof i18n.locale).toBe('string');
   });
 

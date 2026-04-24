@@ -21,7 +21,7 @@
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
-        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
           <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
           <span class="kc-logo-text">
             <span class="kc-logo-name">Kino<span>Campus</span></span>
@@ -40,16 +40,16 @@
       </nav>
 
       <div class="kc-search-bar" id="kcSearchBar">
-        <input id="searchInput" aria-label="Pesquisar" placeholder="Busque por itens, eventos, vagas na UFG..." type="search"/>
-        <button aria-label="Buscar" type="button"><i class="fas fa-search"></i></button>
+        <input id="searchInput" aria-label="Pesquisar" data-i18n-aria-label="aria-label.search-input" placeholder="Busque por itens, eventos, vagas na UFG..." data-i18n-placeholder="placeholder.search-main" type="search"/>
+        <button aria-label="Buscar" data-i18n-aria-label="aria-label.search-submit" type="button"><i class="fas fa-search"></i></button>
       </div>
-      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar" type="button">
+      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar" data-i18n-aria-label="aria-label.search-submit" type="button">
         <i class="fas fa-search"></i>
       </button>
 
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro"><i class="fas fa-sun"></i></button>
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle"><i class="fas fa-sun"></i></button>
         <a class="btn-login" href="#login">Login/Cadastro</a>
       </div>
     </div>
@@ -73,16 +73,16 @@
   <nav class="kc-mobile-nav">
     <a href="index.html"><i class="fas fa-home"></i><span>Início</span></a>
     <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
-    <a class="kc-create-btn active" href="create-post.html" aria-label="Criar publicação"><i class="fas fa-plus"></i></a>
+    <a class="kc-create-btn active" href="create-post.html" aria-label="Criar publicação" data-i18n-aria-label="aria-label.create-post"><i class="fas fa-plus"></i></a>
     <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i><span>Compra/Venda</span></a>
-    <button class="kc-menu-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer" data-kc-mobile-menu="toggle"><i class="fas fa-bars"></i><span>Menu</span></button>
+    <button class="kc-menu-toggle" aria-label="Abrir menu" data-i18n-aria-label="aria-label.menu-open" aria-expanded="false" aria-controls="mobileMenuDrawer" data-kc-mobile-menu="toggle"><i class="fas fa-bars"></i><span>Menu</span></button>
   </nav>
 
   <!-- Mobile Menu Drawer -->
   <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
     <div class="kc-mobile-menu-header">
       <h3>Menu</h3>
-      <button class="kc-close-menu" data-kc-mobile-menu="close" type="button" aria-label="Fechar menu"><i class="fas fa-times"></i></button>
+      <button class="kc-close-menu" data-kc-mobile-menu="close" type="button" aria-label="Fechar menu" data-i18n-aria-label="aria-label.menu-close"><i class="fas fa-times"></i></button>
     </div>
     <div class="kc-mobile-menu-content">
 <!-- Seção de usuário (atualizada pelo kc-auth.ui.js) -->

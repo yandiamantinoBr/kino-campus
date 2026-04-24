@@ -60,7 +60,9 @@ describe('kc-i18n.js - metadata runtime contract', () => {
     const i18n = resetAndLoad();
 
     expect(Object.keys(i18n).sort()).toEqual([
+      'applyAriaLabels',
       'applyDocumentMetadata',
+      'applyPlaceholders',
       'applyStaticAlts',
       'keys',
       'locale',
@@ -69,6 +71,8 @@ describe('kc-i18n.js - metadata runtime contract', () => {
     ].sort());
     expect(typeof i18n.applyDocumentMetadata).toBe('function');
     expect(typeof i18n.applyStaticAlts).toBe('function');
+    expect(typeof i18n.applyAriaLabels).toBe('function');
+    expect(typeof i18n.applyPlaceholders).toBe('function');
   });
 
   test('dicionario contem chaves de title, description e alt da v12.7.0', () => {

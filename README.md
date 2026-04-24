@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.7.0` concluída com i18n runtime fase 1: `assets/js/kc-i18n.js` (`524L`, `27 822` bytes) agora expõe `applyDocumentMetadata()` e `applyStaticAlts()`, o dicionário ganhou `49` chaves `meta-title.*`/`meta-description.*`/`alt.*`, os `22` HTMLs canônicos declaram metadata i18n no `<html>` e `5` imagens com alt textual declaram `data-i18n-alt`; `scripts/hygiene-check.js` valida o gate declarativo da fase 1; baseline expandida para **122/122 suites · 2510/2510 testes**; próxima iteração: `v12.7.1` (i18n runtime fase 2: `aria-label` e `placeholder`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.7.1` concluída com i18n runtime fase 2: `assets/js/kc-i18n.js` (`732L`, `38 336` bytes) agora expõe também `applyAriaLabels(root)` e `applyPlaceholders(root)`, o dicionário ganhou `59` chaves `aria-label.*` + `47` chaves `placeholder.*`, os `22` HTMLs canônicos declaram `189` marcações `data-i18n-aria-label` e `59` marcações `data-i18n-placeholder` preservando o fallback pt-BR estático, `scripts/hygiene-check.js` valida o gate declarativo da fase 2 (toda tag com `aria-label`/`placeholder` precisa do `data-i18n-*` correspondente); baseline expandida para **123/123 suites · 2528/2528 testes**; próxima iteração: `v12.7.2` (i18n runtime fase 3).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 122 suites de regressão e contrato |
+| Testes | Jest: 123 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.7.1 | **i18n runtime fase 2 (`aria-label`, `placeholder`)**: `assets/js/kc-i18n.js` cresce de `524L` → `732L` e adiciona `59` chaves `aria-label.*` + `47` chaves `placeholder.*` ao dicionário pt-BR, expondo no contrato público `applyAriaLabels(root)` e `applyPlaceholders(root)` (ambos idempotentes, escopáveis e com fallback preservado via `translateWithFallback`); os `22` HTMLs canônicos passam a declarar `189` marcações `data-i18n-aria-label="aria-label.<nome>"` e `59` marcações `data-i18n-placeholder="placeholder.<nome>"` mantendo o texto estático pt-BR como fallback; `applyRuntimeI18n()` executa os quatro helpers no `DOMContentLoaded` sem mudança visível; `scripts/hygiene-check.js` valida que toda tag com `aria-label`/`placeholder` nos 22 HTMLs tem o `data-i18n-*` correspondente; nova suíte `tests/i18n-aria-placeholder.test.js` (18 testes: contrato, tradução, fallback, idempotência, root escopado, cobertura de dicionário e marcação declarativa dos 22 HTMLs), ajustes em `tests/kc-i18n.test.js` e `tests/i18n-metadata.test.js` para refletir o novo contrato público; baseline expandida para **123/123 suites · 2528/2528 testes** | — |
 | v12.7.0 | **i18n runtime fase 1 (`title`, `meta`, `alt`)**: `assets/js/kc-i18n.js` adiciona `22` chaves `meta-title.*`, `22` chaves `meta-description.*`, `5` chaves `alt.*` e os helpers públicos `applyDocumentMetadata()`/`applyStaticAlts()` com autoaplicação no `DOMContentLoaded`; os `22` HTMLs canônicos passam a declarar `data-i18n-title`/`data-i18n-description` no `<html>` e os `5` `img` com `alt` textual estático passam a declarar `data-i18n-alt`; `scripts/hygiene-check.js` ganhou gate para impedir drift da marcação i18n; nova suíte `tests/i18n-metadata.test.js` (9 testes) e ajuste do contrato admin preload; baseline expandida para **122/122 suites · 2510/2510 testes** | — |
 | v12.6.0 | **feature flags formais `window.KCFF`**: novo `assets/js/kc-feature-flags.js` com IIFE browser-safe + `Object.freeze({ get, getAll, isEnabled })`, leitura de `KC_ENV.flags`/`KC_ENV.featureFlags`, derivados seguros `env.*`, snapshots defensivos e defaults `sw.enabled=false`/`telemetry.enabled=false`; `assets/js/kc-env.js` formaliza as fontes de flags; os `22` HTMLs canônicos passam a carregar `kc-feature-flags.js` imediatamente após `kc-env.js`; `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`; nova suíte `tests/kc-feature-flags.test.js` (12 testes); baseline expandida para **121/121 suites · 2501/2501 testes** | — |
 | v12.5.5 | **gate formal do `profile.controller.js` + hygiene `_KCPR.*`**: `scripts/hygiene-check.js` passa a validar a cadeia canônica `profile.presentation -> profile.collections -> profile.ratings -> profile.flow -> profile.controller` em `profile.html` e a falhar se `assets/js/controllers/profile.controller.js` voltar a `>=700L`; footprint real travado em `613L` / `21 566` bytes para o controller e `683L` / `25 540` bytes para `profile.flow.js`; zero mudança de runtime no perfil; baseline preservada em **120/120 suites · 2489/2489 testes** | — |

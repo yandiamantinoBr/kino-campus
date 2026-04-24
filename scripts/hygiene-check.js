@@ -82,6 +82,7 @@ const inlineHandlers = new Set([
 runVersionChecks();
 runThemeBootChecks();
 runI18nMetadataChecks();
+runI18nAriaPlaceholderChecks();
 runKcffScriptChainChecks();
 runKcuScriptChainChecks();
 runKcadScriptChainChecks();
@@ -159,6 +160,34 @@ function runI18nMetadataChecks() {
       const alt = altMatch ? altMatch[1] : '';
       if (alt && !/\sdata-i18n-alt="alt\.[a-z0-9-]+"/i.test(tag)) {
         errors.push(`${relPath} has static img alt without data-i18n-alt: ${alt}`);
+      }
+    });
+  });
+}
+
+// v12.7.1 — fase 2 i18n runtime: valida marcação declarativa de aria-label e placeholder
+function runI18nAriaPlaceholderChecks() {
+  const tagWithAriaLabelRe = /<[^>]*\saria-label="[^"]+"[^>]*>/gi;
+  const tagWithPlaceholderRe = /<[^>]*\splaceholder="[^"]+"[^>]*>/gi;
+
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const content = fs.readFileSync(absPath, 'utf8');
+
+    // Toda tag com aria-label precisa ter data-i18n-aria-label="aria-label.<key>"
+    const ariaTags = [...String(content).matchAll(tagWithAriaLabelRe)].map((match) => String(match[0] || ''));
+    ariaTags.forEach((tag) => {
+      if (!/\sdata-i18n-aria-label="aria-label\.[a-z0-9-]+"/i.test(tag)) {
+        const excerpt = tag.slice(0, 140).replace(/\s+/g, ' ');
+        errors.push(`${relPath} has static aria-label without data-i18n-aria-label: ${excerpt}`);
+      }
+    });
+
+    // Todo input/textarea com placeholder precisa ter data-i18n-placeholder="placeholder.<key>"
+    const placeholderTags = [...String(content).matchAll(tagWithPlaceholderRe)].map((match) => String(match[0] || ''));
+    placeholderTags.forEach((tag) => {
+      if (!/\sdata-i18n-placeholder="placeholder\.[a-z0-9-]+"/i.test(tag)) {
+        const excerpt = tag.slice(0, 140).replace(/\s+/g, ' ');
+        errors.push(`${relPath} has static placeholder without data-i18n-placeholder: ${excerpt}`);
       }
     });
   });

@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.7.0` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*`, gate formal do profile, feature flags formais e i18n runtime fase 1); `window.KCi18n` agora soma `306` chaves pt-BR, incluindo `22` `meta-title.*`, `22` `meta-description.*` e `5` `alt.*`, expõe `applyDocumentMetadata()`/`applyStaticAlts()` e os `22` HTMLs canônicos declaram metadata i18n no `<html>`; `scripts/hygiene-check.js` valida a marcação declarativa de metadata/alt; a próxima iteração é `v12.7.1` — i18n runtime fase 2 (`aria-label`, `placeholder`); baseline expandida em `122/122` suites e `2510/2510` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.7.1` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*`, gate formal do profile, feature flags formais, i18n runtime fase 1 e i18n runtime fase 2); `window.KCi18n` agora soma `412` chaves pt-BR (incluindo `59` `aria-label.*` e `47` `placeholder.*` novas) e expõe `8` métodos no contrato público (`locale`, `t`, `n`, `keys`, `applyDocumentMetadata`, `applyStaticAlts`, `applyAriaLabels`, `applyPlaceholders`); os `22` HTMLs canônicos declaram `189` marcações `data-i18n-aria-label` e `59` marcações `data-i18n-placeholder` preservando o fallback pt-BR estático; `scripts/hygiene-check.js` valida a marcação declarativa de metadata/alt e aria-label/placeholder; a próxima iteração é `v12.7.2` — i18n runtime fase 3; baseline expandida em `123/123` suites e `2528/2528` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -1414,6 +1414,41 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `npm test` -> **122/122 suites / 2510/2510 testes verdes**
 
 **Proxima iteracao:** `v12.7.1` - i18n runtime fase 2 (`aria-label`, `placeholder`).
+
+---
+
+### 8.32. v12.7.1 - i18n runtime fase 2 (`aria-label`, `placeholder`) - concluido
+
+**Objetivo:** dar continuidade a camada B2 cobrindo as duas proximas superficies declarativas de i18n em runtime - `aria-label` (acessibilidade) e `placeholder` (inputs/textareas) - preservando fallback pt-BR estatico e sem introduzir locale switcher, tradutor automatico ou qualquer impacto visual/UX.
+
+**Escopo entregue:**
+
+- `assets/js/kc-i18n.js` cresceu de `524L` -> `732L` (`+208L`, `38 336` bytes) e ganhou **59** chaves `aria-label.*` + **47** chaves `placeholder.*`, cobrindo header, mobile nav, save-popover, share-popover, comentarios, formatacao de post, formularios auth/settings/profile, painel admin e inputs de banners/help-requests/moderation
+- `window.KCi18n` passou a expor tambem `applyAriaLabels(root)` e `applyPlaceholders(root)` (ambos idempotentes, aceitam root opcional e preservam fallback via `translateWithFallback`); o contrato publico agora tem `8` metodos congelados (`locale`, `t`, `n`, `keys`, `applyDocumentMetadata`, `applyStaticAlts`, `applyAriaLabels`, `applyPlaceholders`)
+- `applyRuntimeI18n()` executa os quatro helpers no `DOMContentLoaded` sem alterar nenhuma string visivel (textos estaticos pt-BR continuam servindo como fallback)
+- os `22` HTMLs canonicos (17 raiz + 5 admin) passaram a declarar **189** marcacoes `data-i18n-aria-label="aria-label.<nome>"` e **59** marcacoes `data-i18n-placeholder="placeholder.<nome>"` em toda tag com `aria-label`/`placeholder` estatico nao-vazio
+- `scripts/hygiene-check.js` ganhou `runI18nAriaPlaceholderChecks()` que valida, nos 22 HTMLs, que toda tag com `aria-label="..."` ou `placeholder="..."` tem o `data-i18n-*` correspondente; falha em caso de drift
+- criada `tests/i18n-aria-placeholder.test.js` com **18 testes** distribuidos em 3 grupos: (1) contrato publico + comportamento dos helpers (traducao, preservacao de fallback, idempotencia, root escopado, retorno zero quando sem marcacao), (2) marcacao declarativa dos 22 HTMLs (toda tag com `aria-label`/`placeholder` tem data-attr correspondente; todas as chaves usadas existem no dicionario), (3) contrato de codigo da fonte `kc-i18n.js` (define e exporta os helpers, usa `translateWithFallback`)
+- `tests/kc-i18n.test.js` e `tests/i18n-metadata.test.js` sincronizados com o novo contrato publico (8 metodos exportados)
+- `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` sincronizados com o marco e a proxima etapa `v12.7.2`
+
+**Entregas mensuraveis:**
+
+- `assets/js/kc-i18n.js` ficou em **732L** / `38 336` bytes, com **59** chaves `aria-label.*` unicas + **47** chaves `placeholder.*` unicas e **8** exports publicos
+- `tests/i18n-aria-placeholder.test.js` criado com **18** testes (3 describe blocks)
+- `scripts/hygiene-check.js` cresceu para **515L** com o gate de marcacao aria/placeholder
+- os 22 HTMLs canonicos ficaram com **189** tags marcadas com `data-i18n-aria-label` + **59** tags marcadas com `data-i18n-placeholder`
+- baseline expandida de **122/122 suites / 2510/2510 testes** para **123/123 suites / 2528/2528 testes** (+1 suite, +18 testes)
+
+**Verificacao:**
+
+- `node --check assets/js/kc-i18n.js` -> OK
+- `node --check scripts/hygiene-check.js` -> OK
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npx jest tests/i18n-aria-placeholder.test.js` -> **1/1 suite / 18/18 testes verdes**
+- `npm test` -> **123/123 suites / 2528/2528 testes verdes**
+
+**Proxima iteracao:** `v12.7.2` - i18n runtime fase 3 (proxima fatia declarativa a definir: titles, textos curtos estaticos em componentes compartilhados, ou gate final de cobertura da trilha B2).
 
 ---
 

@@ -43,7 +43,7 @@
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
-        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
           <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
           <span class="kc-logo-text">
             <span class="kc-logo-name">Kino<span>Campus</span></span>
@@ -62,16 +62,16 @@
       </nav>
 
       <div class="kc-search-bar" id="kcSearchBar">
-        <input id="searchInput" aria-label="Pesquisar" type="search" placeholder="Busque por itens, eventos, vagas na UFG..." />
-        <button type="submit" aria-label="Buscar"><i class="fas fa-search"></i></button>
+        <input id="searchInput" aria-label="Pesquisar" data-i18n-aria-label="aria-label.search-input" type="search" placeholder="Busque por itens, eventos, vagas na UFG..." data-i18n-placeholder="placeholder.search-main" />
+        <button type="submit" aria-label="Buscar" data-i18n-aria-label="aria-label.search-submit"><i class="fas fa-search"></i></button>
       </div>
-      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar">
+      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar" data-i18n-aria-label="aria-label.search-submit">
         <i class="fas fa-search"></i>
       </button>
 
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle">
           <i class="fas fa-sun"></i>
         </button>
         <a href="#login" class="btn-login">Login/Cadastro</a>
@@ -81,7 +81,7 @@
 
   <main class="kc-main-content">
     <section class="kc-product-section">
-      <nav class="kc-breadcrumb" aria-label="Navegação de trilha">
+      <nav class="kc-breadcrumb" aria-label="Navegação de trilha" data-i18n-aria-label="aria-label.breadcrumb">
       <div class="kc-post-breadcrumb" id="breadcrumb">
         <a href="index.html"><i class="fas fa-home"></i> KinoCampus</a>
         <i class="fas fa-chevron-right"></i>
@@ -127,7 +127,7 @@
               <div class="kc-save-popover" id="savePopover" role="menu" aria-hidden="true">
                 <div class="kc-save-popover__header">
                   <h3 class="kc-save-popover__title"><i class="fas fa-bookmark"></i> Salvar publicação</h3>
-                  <button class="kc-save-popover__close" id="savePopoverClose" type="button" aria-label="Fechar opções de salvar">
+                  <button class="kc-save-popover__close" id="savePopoverClose" type="button" aria-label="Fechar opções de salvar" data-i18n-aria-label="aria-label.save-close">
                     <i class="fas fa-times"></i>
                   </button>
                 </div>
@@ -167,10 +167,10 @@
                 <i class="fas fa-share-alt"></i> Compartilhar
               </button>
               <div class="kc-share-popover" id="sharePopover" role="menu" aria-hidden="true">
-                <button class="kc-share-option whatsapp" id="shareWhatsApp" type="button" aria-label="Compartilhar no WhatsApp">
+                <button class="kc-share-option whatsapp" id="shareWhatsApp" type="button" aria-label="Compartilhar no WhatsApp" data-i18n-aria-label="aria-label.share-whatsapp">
                   <i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp
                 </button>
-                <button class="kc-share-option copy" id="shareCopyLink" type="button" aria-label="Copiar link da publicação">
+                <button class="kc-share-option copy" id="shareCopyLink" type="button" aria-label="Copiar link da publicação" data-i18n-aria-label="aria-label.share-copy">
                   <i class="fas fa-link" aria-hidden="true"></i> Copiar link
                 </button>
               </div>
@@ -198,7 +198,7 @@
       <!-- Seller -->
       <div class="kc-seller-card" id="sellerCard" style="display:none;">
         <h3><i class="fas fa-user"></i> Autor</h3>
-        <div class="kc-seller-profile" id="sellerAvatarWrap" data-kc-view-profile="1" style="cursor: pointer;" title="Ver perfil do autor" aria-label="Ver perfil do autor">
+        <div class="kc-seller-profile" id="sellerAvatarWrap" data-kc-view-profile="1" style="cursor: pointer;" title="Ver perfil do autor" aria-label="Ver perfil do autor" data-i18n-aria-label="aria-label.view-author">
           <img class="kc-seller-avatar" id="sellerAvatar" alt="Avatar do autor" data-i18n-alt="alt.author-avatar" />
           <div class="kc-seller-info">
             <div class="kc-seller-name" id="sellerName"></div>
@@ -226,23 +226,23 @@
           <!-- Coluna 2: nome do autor -->
           <div class="kc-comment-composer-main">
             <div class="kc-comment-author-wrap">
-              <input id="commentAuthor" class="kc-comment-author-inline" type="text" name="author" placeholder="" autocomplete="off" aria-label="Seu nome no comentário" />
+              <input id="commentAuthor" class="kc-comment-author-inline" type="text" name="author" placeholder="" autocomplete="off" aria-label="Seu nome no comentário" data-i18n-aria-label="aria-label.comment-author" />
               <small id="commentAuthorHint" class="kc-comment-author-hint"></small>
             </div>
           </div>
           <!-- Linha 2: editor ocupa colunas 1+2 (ver CSS grid-column: 1/-1) -->
           <div class="kc-comment-editor-wrap">
             <div class="kc-comment-editor">
-              <textarea id="commentText" placeholder="Deixe o seu comentário" aria-label="Escreva seu comentário"></textarea>
+              <textarea id="commentText" placeholder="Deixe o seu comentário" data-i18n-placeholder="placeholder.comment" aria-label="Escreva seu comentário" data-i18n-aria-label="aria-label.comment-text"></textarea>
               <div class="kc-editor-toolbar">
-                <button type="button" data-kc-format="bold" title="Negrito" aria-label="Negrito"><i class="fas fa-bold" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="italic" title="Itálico" aria-label="Itálico"><i class="fas fa-italic" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="underline" title="Sublinhado" aria-label="Sublinhado"><i class="fas fa-underline" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="strikethrough" title="Tachado" aria-label="Tachado"><i class="fas fa-strikethrough" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="inlinecode" title="Código inline" aria-label="Código inline"><i class="fas fa-code" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="quote" title="Citação" aria-label="Citação"><i class="fas fa-quote-right" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="bullet" title="Lista" aria-label="Lista com marcadores"><i class="fas fa-list-ul" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="link" title="Link" aria-label="Inserir link"><i class="fas fa-link" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="bold" title="Negrito" aria-label="Negrito" data-i18n-aria-label="aria-label.format-bold"><i class="fas fa-bold" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="italic" title="Itálico" aria-label="Itálico" data-i18n-aria-label="aria-label.format-italic"><i class="fas fa-italic" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="underline" title="Sublinhado" aria-label="Sublinhado" data-i18n-aria-label="aria-label.format-underline"><i class="fas fa-underline" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="strikethrough" title="Tachado" aria-label="Tachado" data-i18n-aria-label="aria-label.format-strike"><i class="fas fa-strikethrough" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="inlinecode" title="Código inline" aria-label="Código inline" data-i18n-aria-label="aria-label.format-code"><i class="fas fa-code" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="quote" title="Citação" aria-label="Citação" data-i18n-aria-label="aria-label.format-quote"><i class="fas fa-quote-right" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="bullet" title="Lista" aria-label="Lista com marcadores" data-i18n-aria-label="aria-label.format-bullet"><i class="fas fa-list-ul" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="link" title="Link" aria-label="Inserir link" data-i18n-aria-label="aria-label.format-link"><i class="fas fa-link" aria-hidden="true"></i></button>
                 <div style="flex: 1;"></div>
                 <button id="submitCommentButton" type="button" data-kc-submit-comment="1" data-action="submit-comment"
                   style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">
@@ -286,14 +286,14 @@
       <i class="fas fa-calendar"></i>
       <span>Eventos</span>
     </a>
-    <a href="create-post.html" class="kc-create-btn" aria-label="Criar publicação">
+    <a href="create-post.html" class="kc-create-btn" aria-label="Criar publicação" data-i18n-aria-label="aria-label.create-post">
       <i class="fas fa-plus"></i>
     </a>
     <a href="compra-venda-feed.html">
       <i class="fas fa-shopping-bag"></i>
       <span>Compra/Venda</span>
     </a>
-    <button data-kc-mobile-menu="toggle" class="kc-menu-toggle active" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer">
+    <button data-kc-mobile-menu="toggle" class="kc-menu-toggle active" aria-label="Abrir menu" data-i18n-aria-label="aria-label.menu-open" aria-expanded="false" aria-controls="mobileMenuDrawer">
       <i class="fas fa-bars"></i>
       <span>Menu</span>
     </button>
@@ -303,7 +303,7 @@
   <div class="kc-mobile-menu-drawer" id="mobileMenuDrawer" aria-hidden="true">
     <div class="kc-mobile-menu-header">
       <h3>Menu</h3>
-      <button data-kc-mobile-menu="close" class="kc-close-menu" aria-label="Fechar menu">
+      <button data-kc-mobile-menu="close" class="kc-close-menu" aria-label="Fechar menu" data-i18n-aria-label="aria-label.menu-close">
         <i class="fas fa-times"></i>
       </button>
     </div>

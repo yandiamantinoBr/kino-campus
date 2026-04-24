@@ -85,7 +85,7 @@
   <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
       <div class="kc-logo">
-        <a href="../index.html" aria-label="KinoCampus - Comunidade UFG">
+        <a href="../index.html" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
           <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
           <span class="kc-logo-text">
             <span class="kc-logo-name">Kino<span>Campus</span></span>
@@ -93,7 +93,7 @@
           </span>
         </a>
       </div>
-      <nav class="kc-admin-nav" aria-label="Navegação admin">
+      <nav class="kc-admin-nav" aria-label="Navegação admin" data-i18n-aria-label="aria-label.admin-nav">
         <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
         <a href="moderation.html" class="kc-admin-nav__link active"><i class="fas fa-shield-halved"></i> Moderação</a>
         <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
@@ -101,8 +101,8 @@
         <a href="help-requests.html" class="kc-admin-nav__link"><i class="fas fa-life-ring"></i> Pedidos de ajuda</a>
       </nav>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" aria-label="Alternar tema" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema"><i class="fas fa-sun"></i></button>
         <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
@@ -119,7 +119,7 @@
           <h1><i class="fas fa-shield-halved"></i>Moderação de Posts</h1>
           <div class="kc-admin-filters">
             <select id="moderation-status-filter"></select>
-            <input id="moderation-search" type="search" placeholder="Buscar por título, ID, nome ou nickname" />
+            <input id="moderation-search" type="search" placeholder="Buscar por título, ID, nome ou nickname" data-i18n-placeholder="placeholder.admin-mod-search" />
             <button id="moderation-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
           </div>
         </div>
@@ -168,7 +168,7 @@
                 <option value="vagas">Vagas</option>
                 <option value="achados">Achados e Perdidos</option>
               </select>
-              <input id="limit-global-value" type="number" min="1" max="999" value="5" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" placeholder="Máx." />
+              <input id="limit-global-value" type="number" min="1" max="999" value="5" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" />
               <button id="limit-global-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Salvar limite global</button>
               <button id="limit-global-delete" style="padding:7px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.88em;cursor:pointer;" title="Remover override global (volta ao padrão de 5)"><i class="fas fa-trash"></i> Remover</button>
             </div>
@@ -179,7 +179,7 @@
             <h4 style="margin:0 0 10px;font-size:.92em;font-weight:600;">Limite por usuário específico</h4>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
               <div style="flex:1;min-width:200px;position:relative;">
-                <input id="limit-user-search" type="search" placeholder="Buscar usuário por nome, e-mail ou nickname…" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+                <input id="limit-user-search" type="search" placeholder="Buscar usuário por nome, e-mail ou nickname…" data-i18n-placeholder="placeholder.admin-user-search" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
                 <div id="limit-user-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:8px;z-index:50;max-height:180px;overflow-y:auto;"></div>
               </div>
               <select id="limit-user-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
@@ -190,7 +190,7 @@
                 <option value="vagas">Vagas</option>
                 <option value="achados">Achados e Perdidos</option>
               </select>
-              <input id="limit-user-value" type="number" min="0" max="999" placeholder="Máx." style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+              <input id="limit-user-value" type="number" min="0" max="999" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
               <button id="limit-user-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Salvar</button>
             </div>
             <div id="limit-user-selected" style="display:none;margin-top:8px;padding:6px 10px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid var(--kc-border-dark);font-size:.85em;color:var(--kc-text-dark-secondary);">
@@ -224,13 +224,13 @@
           <p style="margin:0;color:var(--kc-text-dark-secondary);font-size:.9em;">Eventos de moderação/compliance.</p>
 
           <div class="kc-audit-filters">
-            <select id="audit-entity-type-filter" aria-label="Filtrar por entidade">
+            <select id="audit-entity-type-filter" aria-label="Filtrar por entidade" data-i18n-aria-label="aria-label.filter-entity">
               <option value="all">Todas entidades</option>
               <option value="posts">posts</option>
               <option value="reports">reports</option>
               <option value="invites">invites</option>
             </select>
-            <select id="audit-action-filter" aria-label="Filtrar por ação">
+            <select id="audit-action-filter" aria-label="Filtrar por ação" data-i18n-aria-label="aria-label.filter-action">
               <option value="all">Todas ações</option>
               <option value="post_status_changed">post_status_changed</option>
               <option value="report_closed">report_closed</option>
@@ -238,8 +238,8 @@
               <option value="invite_sent">invite_sent</option>
               <option value="invite_revoked">invite_revoked</option>
             </select>
-            <input id="audit-actor-id-filter" type="search" placeholder="Filtrar por actor_id, nome ou nickname" />
-            <select id="audit-page-size" aria-label="Registros por página" style="min-width:70px;">
+            <input id="audit-actor-id-filter" type="search" placeholder="Filtrar por actor_id, nome ou nickname" data-i18n-placeholder="placeholder.admin-actor-filter" />
+            <select id="audit-page-size" aria-label="Registros por página" data-i18n-aria-label="aria-label.records-per-page" style="min-width:70px;">
               <option value="25" selected>25</option>
               <option value="50">50</option>
               <option value="100">100</option>
@@ -311,14 +311,14 @@
               <input
                 id="invite-email"
                 type="email"
-                placeholder="E-mail do convidado (ex: usuario@gmail.com)"
+                placeholder="E-mail do convidado (ex: usuario@gmail.com)" data-i18n-placeholder="placeholder.admin-invite-email"
                 required
                 autocomplete="off"
               />
               <input
                 id="invite-note"
                 type="text"
-                placeholder="Motivo do convite (opcional)"
+                placeholder="Motivo do convite (opcional)" data-i18n-placeholder="placeholder.admin-invite-reason"
                 maxlength="120"
               />
               <button type="submit" id="invite-btn">
