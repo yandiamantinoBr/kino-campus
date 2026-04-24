@@ -30,7 +30,7 @@
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
-        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
           <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
           <span class="kc-logo-text">
             <span class="kc-logo-name">Kino<span>Campus</span></span>
@@ -65,17 +65,17 @@
         </a>
       </nav>
       <div class="kc-search-bar" id="kcSearchBar">
-        <input id="searchInput" aria-label="Pesquisar" placeholder="Busque por itens, eventos, vagas na UFG..." type="search" />
-        <button aria-label="Buscar" type="button">
+        <input id="searchInput" aria-label="Pesquisar" placeholder="Busque por itens, eventos, vagas na UFG..." type="search" data-i18n-aria-label="aria-label.search-input" data-i18n-placeholder="placeholder.search-main" />
+        <button aria-label="Buscar" type="button" data-i18n-aria-label="aria-label.search-submit">
           <i class="fas fa-search"></i>
         </button>
       </div>
-      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar">
+      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar" data-i18n-aria-label="aria-label.search-submit">
         <i class="fas fa-search"></i>
       </button>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle">
           <i class="fas fa-sun"></i>
         </button>
         <a class="btn-login" href="#login">Login/Cadastro</a>
@@ -157,10 +157,10 @@
             </div>
           </div>
         </div>
-        <button class="kc-carousel-btn kc-carousel-prev" data-kc-slide="prev" aria-label="Slide anterior">
+        <button class="kc-carousel-btn kc-carousel-prev" data-kc-slide="prev" aria-label="Slide anterior" data-i18n-aria-label="aria-label.carousel-prev">
           <i class="fas fa-chevron-left" aria-hidden="true"></i>
         </button>
-        <button class="kc-carousel-btn kc-carousel-next" data-kc-slide="next" aria-label="Próximo slide">
+        <button class="kc-carousel-btn kc-carousel-next" data-kc-slide="next" aria-label="Próximo slide" data-i18n-aria-label="aria-label.carousel-next">
           <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </button>
         <div class="kc-carousel-dots" id="kc-carousel-dots">
@@ -190,7 +190,7 @@
         <div class="kc-ranking-modal__content">
           <div class="kc-ranking-modal__header">
             <h3><i class="fas fa-trophy" style="color:var(--kc-primary-brand);"></i> Como funciona o ranking?</h3>
-            <button type="button" data-kc-ranking-modal-close aria-label="Fechar"><i class="fas fa-times"></i></button>
+            <button type="button" data-kc-ranking-modal-close aria-label="Fechar" data-i18n-aria-label="aria-label.ranking-close"><i class="fas fa-times"></i></button>
           </div>
           <div class="kc-ranking-modal__body">
             <p>O ranking pontua os usuários mais engajados da plataforma com base nas seguintes ações:</p>
@@ -213,7 +213,7 @@
         </div>
       </div>
 
-      <div class="kc-feed-tabs" id="kc-home-feed-tabs" role="tablist" aria-label="Visualização do feed">
+      <div class="kc-feed-tabs" id="kc-home-feed-tabs" role="tablist" aria-label="Visualização do feed" data-i18n-aria-label="aria-label.feed-view">
         <!-- Abas de visualização do feed principal -->
         <button id="tab-destaques" class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true" aria-controls="kc-feed-destaques">
           <i class="fas fa-fire"></i>
@@ -315,7 +315,7 @@
             <i class="fas fa-th-large"></i>
             Categorias para você
           </h3>
-          <button class="kc-home-info-btn" type="button" data-kc-home-categories-help="open" aria-label="Como a relevância funciona">
+          <button class="kc-home-info-btn" type="button" data-kc-home-categories-help="open" aria-label="Como a relevância funciona" data-i18n-aria-label="aria-label.categories-help">
             <i class="fas fa-circle-info"></i>
             <span>Relevância</span>
           </button>
@@ -381,14 +381,14 @@
       <i class="fas fa-calendar"></i>
       <span>Eventos</span>
     </a>
-    <a class="kc-create-btn" href="create-post.html" aria-label="Criar publicação">
+    <a class="kc-create-btn" href="create-post.html" aria-label="Criar publicação" data-i18n-aria-label="aria-label.create-post">
       <i class="fas fa-plus"></i>
     </a>
     <a href="compra-venda-feed.html">
       <i class="fas fa-shopping-bag"></i>
       <span>Compra/Venda</span>
     </a>
-    <button class="kc-menu-toggle" data-kc-mobile-menu="toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer">
+    <button class="kc-menu-toggle" data-kc-mobile-menu="toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer" data-i18n-aria-label="aria-label.menu-open">
       <i class="fas fa-bars"></i>
       <span>Menu</span>
     </button>
@@ -397,7 +397,7 @@
   <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
     <div class="kc-mobile-menu-header">
       <h3>Menu</h3>
-      <button class="kc-close-menu" data-kc-mobile-menu="close" aria-label="Fechar menu">
+      <button class="kc-close-menu" data-kc-mobile-menu="close" aria-label="Fechar menu" data-i18n-aria-label="aria-label.menu-close">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -429,7 +429,7 @@
           <strong id="kcHomeCategoriesHelpTitle">Como a relevância funciona</strong>
           <p>Ela sobe quando você interage e se ajusta com o tempo.</p>
         </div>
-        <button class="kc-home-modal__close" type="button" data-kc-home-categories-help="close" aria-label="Fechar explicação">
+        <button class="kc-home-modal__close" type="button" data-kc-home-categories-help="close" aria-label="Fechar explicação" data-i18n-aria-label="aria-label.close-explanation">
           <i class="fas fa-times"></i>
         </button>
       </div>

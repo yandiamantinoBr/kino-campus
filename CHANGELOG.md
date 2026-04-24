@@ -6,6 +6,9 @@
 
 ### Added
 
+- `v12.7.1`: `assets/js/kc-i18n.js` recebeu a fase 2 de i18n runtime para `aria-label` e `placeholder`, com **59** chaves `aria-label.*` novas e **47** chaves `placeholder.*` novas, alem dos helpers publicos `applyAriaLabels(root)` e `applyPlaceholders(root)` (idempotentes, escopaveis e mantendo fallback pt-BR via `translateWithFallback`). O modulo cresceu de **524L** -> **732L** / `38 336` bytes e o contrato publico `window.KCi18n` passou a expor **8** metodos congelados.
+- `v12.7.1`: criado `tests/i18n-aria-placeholder.test.js` com **18 testes** em 3 grupos (helpers runtime, marcacao declarativa nos `22` HTMLs, contrato de codigo da fonte), cobrindo traducao, fallback, idempotencia, root escopado, cobertura de dicionario e regex da marcacao. Baseline expandida de `122/122 suites / 2510/2510 testes` para **`123/123 suites / 2528/2528 testes`**.
+
 - `v12.7.0`: `assets/js/kc-i18n.js` recebeu a fase 1 de i18n runtime para metadata/alt, com `22` chaves `meta-title.*`, `22` chaves `meta-description.*`, `5` chaves `alt.*` e os helpers publicos `applyDocumentMetadata()`/`applyStaticAlts()` mantendo fallback pt-BR. O modulo ficou em **524L** / `27 822` bytes, com **306** chaves totais e **6** exports publicos.
 - `v12.7.0`: criado `tests/i18n-metadata.test.js` com **9 testes** cobrindo contrato estatico de `kc-i18n.js`, ausencia de `require/import`, marcacao declarativa nos `22` HTMLs, cobertura dos `5` alts estaticos e comportamento runtime de title/meta/alt. Baseline expandida de `121/121 suites / 2501/2501 testes` para **`122/122 suites / 2510/2510 testes`**.
 
@@ -27,6 +30,9 @@
 - `v12.5.0`: criado `docs/profile-controller-audit-v12.5.md` com auditoria docs-only de `assets/js/controllers/profile.controller.js`, medindo o footprint real do hotspot de perfil em `1463L` e `56 497` bytes, inventariando `67` funcoes top-level (`14` async), `1` HTML consumidor (`profile.html`), `1` export publico (`window.KCProfileRefresh`) e o boundary previo `assets/js/account-profile.shared.js` (`962L`, `45` funcoes, `10` testes), alem de recalibrar a sequencia `v12.5.1`-`v12.5.5` para `window._KCPR.presentation`, `window._KCPR.collections`, `window._KCPR.ratings`, `window._KCPR.flow` e gate formalizado em `<700L`.
 
 ### Changed
+
+- `v12.7.1`: os `22` HTMLs canonicos (17 raiz + 5 admin) passaram a declarar **189** marcacoes `data-i18n-aria-label="aria-label.<nome>"` e **59** marcacoes `data-i18n-placeholder="placeholder.<nome>"` em toda tag com `aria-label`/`placeholder` estatico nao-vazio, preservando o texto pt-BR original como fallback; `scripts/hygiene-check.js` ganhou `runI18nAriaPlaceholderChecks()` e cresceu para **515L**, falhando se alguma tag com `aria-label`/`placeholder` estatico perder o `data-i18n-*` correspondente. Hygiene **8.6.0 OK** e baseline final verde em **123/123 suites / 2528/2528 testes**.
+- `v12.7.1`: `tests/kc-i18n.test.js` e `tests/i18n-metadata.test.js` sincronizados com o novo contrato publico de **8** metodos (`locale`, `t`, `n`, `keys`, `applyDocumentMetadata`, `applyStaticAlts`, `applyAriaLabels`, `applyPlaceholders`); zero breakage nos testes existentes de `kc-i18n`.
 
 - `v12.7.0`: os `22` HTMLs canonicos passaram a declarar `data-i18n-title`/`data-i18n-description` no elemento `<html>` e os `5` `img` com `alt` textual estatico passaram a declarar `data-i18n-alt`; `scripts/hygiene-check.js` valida esse gate declarativo de metadata/alt i18n e fica em **486L** / `16 798` bytes. Hygiene **8.6.0 OK** e baseline final verde em **122/122 suites / 2510/2510 testes**.
 - `v12.7.0`: `tests/kc-i18n.test.js` foi sincronizado com os novos helpers publicos e `tests/admin-shell-preload-markup.test.js` passou a validar os atributos essenciais do `<html>` admin sem bloquear atributos declarativos adicionais.

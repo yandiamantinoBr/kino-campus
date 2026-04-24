@@ -1,7 +1,7 @@
 /*
   KinoCampus - Módulo de Internacionalização (i18n)
   Infraestrutura base: dicionário pt-BR, helpers KCi18n.t() e KCi18n.n()
-  v11.24.1 — sem dependências externas
+  v12.7.1 — runtime fase 2: aria-label + placeholder declarativos (sem dependências externas)
 */
 (function () {
   'use strict';
@@ -349,6 +349,152 @@
     'alt.product-image':         'Imagem da publicação',
     'alt.author-avatar':         'Avatar do autor',
     'alt.comment-user-avatar':   'Seu avatar',
+
+    // ── Aria-label estático (v12.7.1 — fase 2 i18n runtime) ───────────────────
+    // Header / navbar / ações comuns em todas as páginas
+    'aria-label.brand-home':            'KinoCampus - Comunidade UFG',
+    'aria-label.search-input':          'Pesquisar',
+    'aria-label.search-submit':         'Buscar',
+    'aria-label.notifications-bell':    'Notificações',
+    'aria-label.theme-toggle':          'Alternar tema claro/escuro',
+    'aria-label.theme-toggle-admin':    'Alternar tema',
+    'aria-label.menu-open':             'Abrir menu',
+    'aria-label.menu-close':            'Fechar menu',
+    'aria-label.create-post':           'Criar publicação',
+    'aria-label.close':                 'Fechar',
+
+    // Feed / module rails
+    'aria-label.feed-sort':             'Ordenação do feed',
+    'aria-label.feed-view':             'Visualização do feed',
+    'aria-label.categories-help':       'Como a relevância funciona',
+    'aria-label.close-explanation':     'Fechar explicação',
+    'aria-label.market-rail':           'Seções rápidas de compra e venda',
+    'aria-label.lostfound-rail':        'Seções rápidas de achados e perdidos',
+    'aria-label.housing-rail':          'Seções rápidas de moradia',
+    'aria-label.opportunity-rail':      'Seções rápidas de oportunidades',
+    'aria-label.caronas-rail':          'Seções do painel lateral',
+    'aria-label.eventos-rail':          'Seções do painel lateral',
+
+    // Home carousel e modais
+    'aria-label.carousel-prev':         'Slide anterior',
+    'aria-label.carousel-next':         'Próximo slide',
+    'aria-label.ranking-close':         'Fechar',
+
+    // Account setup e profile
+    'aria-label.onboarding-steps':      'Etapas do onboarding',
+    'aria-label.profile-configure':     'Configurar perfil',
+    'aria-label.profile-legacy-badge':  'Perfil de exemplo',
+    'aria-label.profile-tabs':          'Seções do perfil',
+
+    // Calendário de eventos
+    'aria-label.calendar-expand':       'Expandir calendário',
+    'aria-label.calendar-view':         'Modo de visualização do calendário',
+    'aria-label.calendar-prev':         'Período anterior',
+    'aria-label.calendar-next':         'Próximo período',
+    'aria-label.calendar-modal':        'Calendário de Eventos',
+    'aria-label.calendar-modal-close':  'Fechar',
+    'aria-label.calendar-modal-prev':   'Anterior',
+    'aria-label.calendar-modal-next':   'Próximo',
+
+    // Product / detalhe
+    'aria-label.breadcrumb':            'Navegação de trilha',
+    'aria-label.save-close':            'Fechar opções de salvar',
+    'aria-label.share-whatsapp':        'Compartilhar no WhatsApp',
+    'aria-label.share-copy':            'Copiar link da publicação',
+    'aria-label.view-author':           'Ver perfil do autor',
+
+    // Editor de comentário
+    'aria-label.comment-author':        'Seu nome no comentário',
+    'aria-label.comment-text':          'Escreva seu comentário',
+    'aria-label.format-bold':           'Negrito',
+    'aria-label.format-italic':         'Itálico',
+    'aria-label.format-underline':      'Sublinhado',
+    'aria-label.format-strike':         'Tachado',
+    'aria-label.format-code':           'Código inline',
+    'aria-label.format-quote':          'Citação',
+    'aria-label.format-bullet':         'Lista com marcadores',
+    'aria-label.format-link':           'Inserir link',
+
+    // Admin
+    'aria-label.admin-nav':             'Navegação admin',
+    'aria-label.admin-insights':        'Insights do dashboard',
+    'aria-label.audit-log':             'Audit log de ações administrativas',
+    'aria-label.chart-modal-close':     'Fechar gráfico ampliado',
+    'aria-label.filter-entity':         'Filtrar por entidade',
+    'aria-label.filter-action':         'Filtrar por ação',
+    'aria-label.records-per-page':      'Registros por página',
+    'aria-label.banner-modal-close':    'Fechar',
+
+    // My posts popover
+    'aria-label.my-posts-save-close':   'Fechar',
+
+    // ── Placeholder estático (v12.7.1 — fase 2 i18n runtime) ──────────────────
+    // Busca principal por módulo
+    'placeholder.search-main':          'Busque por itens, eventos, vagas na UFG...',
+    'placeholder.search-marketplace':   'Busque por produtos...',
+    'placeholder.search-caronas':       'Busque por caronas...',
+    'placeholder.search-moradia':       'Busque por moradia perto da UFG...',
+    'placeholder.search-opportunities': 'Busque por vagas e oportunidades...',
+    'placeholder.search-events':        'Busque por eventos na UFG...',
+    'placeholder.search-lostfound':     'Busque por itens perdidos ou encontrados...',
+
+    // Faixas de preço (varia por módulo)
+    'placeholder.price-min':            'R$ 0',
+    'placeholder.price-max-housing':    'R$ 3000',
+    'placeholder.price-max-market':     'R$ 5000',
+    'placeholder.price-max-caronas':    'R$ 30',
+    'placeholder.price-max-opportunities': 'R$ 10000',
+
+    // Caronas filters
+    'placeholder.any-origin':           'Qualquer origem...',
+    'placeholder.any-destination':      'Qualquer destino...',
+
+    // Perfil e onboarding
+    'placeholder.profile-display-name': 'Como você quer aparecer no KinoCampus',
+    'placeholder.profile-bio':          'Fale um pouco sobre você, seu curso ou o que procura por aqui.',
+    'placeholder.account-bio':          'Curso, área de interesse, projetos ou o que você costuma compartilhar por aqui.',
+    'placeholder.gender-custom':        'Escreva do seu jeito',
+
+    // Contato / social
+    'placeholder.country-code':         '+55',
+    'placeholder.phone-number':         'Número com DDD ou número local',
+    'placeholder.phone-brazil':         '(62) 99876-5432',
+    'placeholder.social-handle':        '@seuusuario ou URL do perfil',
+    'placeholder.linkedin-url':         'linkedin.com/in/seuperfil',
+    'placeholder.facebook-url':         'facebook.com/seuperfil',
+    'placeholder.email-generic':        'voce@dominio.com',
+    'placeholder.email-institutional':  'voce@ufg.br',
+    'placeholder.lattes-url':           'URL ou identificador do Lattes',
+
+    // Auth-callback (reset de senha)
+    'placeholder.password-min':         'Minimo de 6 caracteres',
+    'placeholder.password-repeat':      'Repita a senha',
+
+    // Ajuda
+    'placeholder.help-subject':         'Resumo curto do pedido',
+    'placeholder.help-message':         'Explique o contexto e os detalhes que ajudam a entender ou reproduzir a situação.',
+
+    // Comentário
+    'placeholder.comment':              'Deixe o seu comentário',
+
+    // Admin banners
+    'placeholder.banner-pill':          'ex: Destaque',
+    'placeholder.banner-title':         'ex: Semana de Sustentabilidade UFG',
+    'placeholder.banner-subtitle':      'ex: Troque materiais, ganhe cashback em dobro...',
+    'placeholder.banner-cta-text':      'ex: Ver Programação',
+    'placeholder.banner-cta-url':       'ex: eventos.html',
+    'placeholder.banner-icon':          'ex: fas fa-calendar-alt',
+    'placeholder.banner-grad-from':     '#4F46E5',
+    'placeholder.banner-grad-to':       '#7C3AED',
+
+    // Admin help-requests / moderation
+    'placeholder.admin-help-search':    'Buscar por assunto, e-mail ou página',
+    'placeholder.admin-mod-search':     'Buscar por título, ID, nome ou nickname',
+    'placeholder.admin-user-search':    'Buscar usuário por nome, e-mail ou nickname…',
+    'placeholder.admin-actor-filter':   'Filtrar por actor_id, nome ou nickname',
+    'placeholder.admin-invite-email':   'E-mail do convidado (ex: usuario@gmail.com)',
+    'placeholder.admin-invite-reason':  'Motivo do convite (opcional)',
+    'placeholder.admin-limit-max':      'Máx.',
   };
 
   /**
@@ -496,9 +642,69 @@
     return count;
   }
 
+  /**
+   * Aplica aria-label estático em qualquer elemento marcado com
+   * data-i18n-aria-label="aria-label.<nome>". Preserva fallback pt-BR
+   * quando a chave não existe no dicionário.
+   *
+   *   <button data-i18n-aria-label="aria-label.close" aria-label="Fechar">
+   */
+  function applyAriaLabels(root) {
+    var doc = getDocument(root);
+    var scope = root && typeof root.querySelectorAll === 'function' ? root : doc;
+    if (!scope || typeof scope.querySelectorAll !== 'function') {
+      return 0;
+    }
+
+    var count = 0;
+    var elements = scope.querySelectorAll('[data-i18n-aria-label]');
+    Array.prototype.forEach.call(elements, function (el) {
+      if (typeof el.getAttribute !== 'function' || typeof el.setAttribute !== 'function') return;
+      var key = el.getAttribute('data-i18n-aria-label');
+      var fallback = el.getAttribute('aria-label') || '';
+      var value = translateWithFallback(key, fallback);
+      if (value) {
+        el.setAttribute('aria-label', value);
+        count += 1;
+      }
+    });
+    return count;
+  }
+
+  /**
+   * Aplica placeholder estático em qualquer input/textarea marcado com
+   * data-i18n-placeholder="placeholder.<nome>". Preserva fallback pt-BR
+   * quando a chave não existe no dicionário.
+   *
+   *   <input data-i18n-placeholder="placeholder.search-main" placeholder="Busque...">
+   */
+  function applyPlaceholders(root) {
+    var doc = getDocument(root);
+    var scope = root && typeof root.querySelectorAll === 'function' ? root : doc;
+    if (!scope || typeof scope.querySelectorAll !== 'function') {
+      return 0;
+    }
+
+    var count = 0;
+    var elements = scope.querySelectorAll('[data-i18n-placeholder]');
+    Array.prototype.forEach.call(elements, function (el) {
+      if (typeof el.getAttribute !== 'function' || typeof el.setAttribute !== 'function') return;
+      var key = el.getAttribute('data-i18n-placeholder');
+      var fallback = el.getAttribute('placeholder') || '';
+      var value = translateWithFallback(key, fallback);
+      if (value) {
+        el.setAttribute('placeholder', value);
+        count += 1;
+      }
+    });
+    return count;
+  }
+
   function applyRuntimeI18n() {
     applyDocumentMetadata();
     applyStaticAlts();
+    applyAriaLabels();
+    applyPlaceholders();
   }
 
   function onReady(callback) {
@@ -517,6 +723,8 @@
     keys: keys,
     applyDocumentMetadata: applyDocumentMetadata,
     applyStaticAlts: applyStaticAlts,
+    applyAriaLabels: applyAriaLabels,
+    applyPlaceholders: applyPlaceholders,
   };
 
   onReady(applyRuntimeI18n);

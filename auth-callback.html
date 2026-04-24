@@ -173,7 +173,7 @@
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
-        <a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+        <a href="index.html" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
           <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
           <span class="kc-logo-text">
             <span class="kc-logo-name">Kino<span>Campus</span></span>
@@ -182,8 +182,8 @@
         </a>
       </div>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro"><i class="fas fa-sun"></i></button>
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle"><i class="fas fa-sun"></i></button>
         <a class="btn-login" href="#login">Login/Cadastro</a>
       </div>
     </div>
@@ -210,11 +210,11 @@
       <form id="cbResetForm" class="kc-callback-reset" autocomplete="on">
         <label for="cbResetPassword">
           Nova senha
-          <input id="cbResetPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Minimo de 6 caracteres" />
+          <input id="cbResetPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Minimo de 6 caracteres" data-i18n-placeholder="placeholder.password-min" />
         </label>
         <label for="cbResetConfirm">
           Confirmar nova senha
-          <input id="cbResetConfirm" type="password" minlength="6" autocomplete="new-password" placeholder="Repita a senha" />
+          <input id="cbResetConfirm" type="password" minlength="6" autocomplete="new-password" placeholder="Repita a senha" data-i18n-placeholder="placeholder.password-repeat" />
         </label>
         <button type="submit">
           <i class="fas fa-key"></i>

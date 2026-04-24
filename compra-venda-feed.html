@@ -33,7 +33,7 @@
 <header class="kc-header">
 <div class="kc-header-container">
 <div class="kc-logo">
-<a href="index.html" aria-label="KinoCampus - Comunidade UFG">
+<a href="index.html" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
 <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
 <span class="kc-logo-text">
 <span class="kc-logo-name">Kino<span>Campus</span></span>
@@ -68,17 +68,17 @@
 </a>
 </nav>
 <div class="kc-search-bar" id="kcSearchBar">
-<input id="searchInput" aria-label="Pesquisar" placeholder="Busque por produtos..." type="search"/>
-<button aria-label="Buscar" type="button">
+<input id="searchInput" aria-label="Pesquisar" placeholder="Busque por produtos..." type="search" data-i18n-aria-label="aria-label.search-input" data-i18n-placeholder="placeholder.search-marketplace"/>
+<button aria-label="Buscar" type="button" data-i18n-aria-label="aria-label.search-submit">
 <i class="fas fa-search"></i>
 </button>
 </div>
-<button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar">
+<button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar" data-i18n-aria-label="aria-label.search-submit">
 <i class="fas fa-search"></i>
 </button>
 <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-<button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+<button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle">
 <i class="fas fa-sun"></i>
 </button>
 <a class="btn-login" href="#login">Login/Cadastro</a>
@@ -94,7 +94,7 @@
                 Compra e Venda
             </h2>
 <!-- Feed Tabs -->
-<div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed">
+<div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
 <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true"><i class="fas fa-fire"></i><span>Destaques</span></button>
 <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false"><i class="fas fa-clock"></i><span>Recentes</span></button>
 <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false"><i class="fas fa-comments"></i><span>Comentados</span></button>
@@ -124,7 +124,7 @@
 <span>Outros</span>
 </a>
 </div>
-<div class="kc-marketplace-mobile-rail" data-kc-market-mobile-rail="true" aria-label="Seções rápidas de compra e venda">
+<div class="kc-marketplace-mobile-rail" data-kc-market-mobile-rail="true" aria-label="Seções rápidas de compra e venda" data-i18n-aria-label="aria-label.market-rail">
 <button class="kc-marketplace-mobile-rail__button is-loading" type="button" disabled>
 <i class="fas fa-spinner fa-spin"></i>
 <span>Carregando seções...</span>
@@ -211,11 +211,11 @@
 <div class="kc-sidebar-range">
 <label class="kc-sidebar-range__field">
 <span>Mínimo</span>
-<input class="kc-input" data-kc-market-price-min="true" inputmode="decimal" min="0" placeholder="R$ 0" step="0.01" type="number"/>
+<input class="kc-input" data-kc-market-price-min="true" inputmode="decimal" min="0" placeholder="R$ 0" step="0.01" type="number" data-i18n-placeholder="placeholder.price-min"/>
 </label>
 <label class="kc-sidebar-range__field">
 <span>Máximo</span>
-<input class="kc-input" data-kc-market-price-max="true" inputmode="decimal" min="0" placeholder="R$ 5000" step="0.01" type="number"/>
+<input class="kc-input" data-kc-market-price-max="true" inputmode="decimal" min="0" placeholder="R$ 5000" step="0.01" type="number" data-i18n-placeholder="placeholder.price-max-market"/>
 </label>
 </div>
 </div>
@@ -344,14 +344,14 @@
 <i class="fas fa-calendar"></i>
 <span>Eventos</span>
 </a>
-<a class="kc-create-btn" href="create-post.html" aria-label="Criar publicação">
+<a class="kc-create-btn" href="create-post.html" aria-label="Criar publicação" data-i18n-aria-label="aria-label.create-post">
 <i class="fas fa-plus"></i>
 </a>
 <a class="active" href="compra-venda-feed.html">
 <i class="fas fa-shopping-bag"></i>
 <span>Compra/Venda</span>
 </a>
-<button class="kc-menu-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer" data-kc-mobile-menu="toggle">
+<button class="kc-menu-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer" data-kc-mobile-menu="toggle" data-i18n-aria-label="aria-label.menu-open">
 <i class="fas fa-bars"></i>
 <span>Menu</span>
 </button>
