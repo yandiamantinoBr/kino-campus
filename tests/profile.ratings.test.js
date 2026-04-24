@@ -218,6 +218,7 @@ describe('profile.html - ordem canonica dos scripts do split ratings', () => {
       '<script defer src="assets/js/controllers/profile.presentation.js"></script>',
       '<script defer src="assets/js/controllers/profile.collections.js"></script>',
       '<script defer src="assets/js/controllers/profile.ratings.js"></script>',
+      '<script defer src="assets/js/controllers/profile.flow.js"></script>',
       '<script defer src="assets/js/controllers/profile.controller.js"></script>'
     ];
 

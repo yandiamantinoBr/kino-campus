@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.5.3` concluída com o split `window._KCPR.ratings`: criado `assets/js/controllers/profile.ratings.js` (`200L`, `8 133` bytes, `2` exports), `assets/js/controllers/profile.controller.js` reduzido de **`906L`** / `34 378` bytes para **`854L`** / `31 733` bytes com `getProfileRatingsModule()` + `buildRatingsDeps()` + wrappers finos para `renderRatings`/`loadRatings`, `profile.html` sincronizado com a cadeia `profile.presentation.js -> profile.collections.js -> profile.ratings.js -> profile.controller.js` e nova suíte `tests/profile.ratings.test.js` (13 testes); baseline expandida para **119/119 suites · 2475/2475 testes**; proxima iteracao: `v12.5.4` (split `window._KCPR.flow`).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.5.4` concluída com o split `window._KCPR.flow`: criado `assets/js/controllers/profile.flow.js` (`683L`, `24 857` bytes, `10` exports), `assets/js/controllers/profile.controller.js` reduzido de **`854L`** / `31 733` bytes para **`613L`** / `21 447` bytes com `getProfileFlowModule()` + `buildFlowDeps()` + wrappers finos para lifecycle/editor/refresh, `profile.html` sincronizado com a cadeia `profile.presentation.js -> profile.collections.js -> profile.ratings.js -> profile.flow.js -> profile.controller.js` e nova suíte `tests/profile.flow.test.js` (14 testes); baseline expandida para **120/120 suites · 2489/2489 testes**; proxima iteracao: `v12.5.5` (gate formal `_KCPR.*` / `profile.controller.js` <600L).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 119 suites de regressão e contrato |
+| Testes | Jest: 120 suites de regressão e contrato |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.5.4 | **split `window._KCPR.flow`**: novo `assets/js/controllers/profile.flow.js` com IIFE + `Object.freeze({...})` concentrando `10` exports do domínio flow/lifecycle do perfil (`loadStats`, `setProfilePending`, `handleProfileSubmit`, `handleAvatarChange`, `bindProfileEditing`, `loadProfile`, `bindProfileSyncListener`, `refreshProfilePage`, `initPullToRefresh`, `init`); `assets/js/controllers/profile.controller.js` reduzido de `854L` -> `613L` (`-241L`) com `getProfileFlowModule()`, `buildFlowDeps()` e wrappers finos; `profile.html` atualizado para carregar `profile.flow.js` entre `profile.ratings.js` e `profile.controller.js`; nova suíte `tests/profile.flow.test.js` (14 testes) e ajustes das suítes de profile/SWR; baseline expandida para **120/120 suites · 2489/2489 testes** | — |
 | v12.5.3 | **split `window._KCPR.ratings`**: novo `assets/js/controllers/profile.ratings.js` com IIFE + `Object.freeze({...})` concentrando `2` exports do dominio ratings do perfil (`renderRatings`, `loadRatings`); `assets/js/controllers/profile.controller.js` reduzido de `906L` -> `854L` (`-52L`) com `getProfileRatingsModule()`, `buildRatingsDeps()` e wrappers finos; `profile.html` atualizado para carregar `profile.ratings.js` entre `profile.collections.js` e `profile.controller.js`; nova suíte `tests/profile.ratings.test.js` (13 testes) e ajustes das suítes `tests/profile.presentation.test.js`/`tests/profile.collections.test.js`; baseline expandida para **119/119 suites · 2475/2475 testes** | — |
 | v12.5.2 | **split `window._KCPR.collections`**: novo `assets/js/controllers/profile.collections.js` com IIFE + `Object.freeze({...})` concentrando `11` exports do dominio collections/tabs do perfil (`renderInlineRichText`, `renderPosts`, `loadPosts`, `renderComments`, `loadComments`, `renderSaved`, `loadSaved`, `loadSavedBadgeCount`, `loadActivities`, `switchTab`, `bindTabsAndLists`); `assets/js/controllers/profile.controller.js` reduzido de `1261L` -> `906L` (`-355L`) com `getProfileCollectionsModule()`, `buildCollectionsDeps()` e wrappers finos; `profile.html` atualizado para carregar `profile.collections.js` entre `profile.presentation.js` e `profile.controller.js`; nova suíte `tests/profile.collections.test.js` (19 testes) e ajustes das suítes `tests/profile.presentation.test.js` e `tests/profile-my-posts-detail-links.test.js`; baseline expandida para **118/118 suites · 2462/2462 testes** | — |
 | v12.5.1 | **split `window._KCPR.presentation`**: novo `assets/js/controllers/profile.presentation.js` com IIFE + `Object.freeze({...})` concentrando `28` exports do dominio presentation/header do perfil (`esc`, `safeName`, `safeHandle`, `buildAccountSetupHref`, `buildSettingsHref`, `formatChoice`, `getProfileVisibleSocialLinks`, `currentAvatarUrl`, `fmtDate`, `fmtRelative`, `buildPostDetailHref`, badges, resumo de reputacao, `syncFormFromProfile`, `updateBioCounter`, `setEditing`, `renderHeader`); `assets/js/controllers/profile.controller.js` reduzido de `1463L` -> `1261L` (`-202L`) com `getProfilePresentationModule()`, `buildPresentationDeps()` e wrappers finos; `profile.html` atualizado para carregar `profile.presentation.js` antes do controller; nova suíte `tests/profile.presentation.test.js` (14 testes) e baseline expandida para **117/117 suites · 2442/2442 testes** | — |
@@ -198,11 +199,11 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 
 ### Progresso atual
 
-- iteração encerrada: `v12.5.3` — **split `window._KCPR.ratings` concluido** (`profile.ratings.js` com `200L`, `8 133` bytes e `2` exports; `profile.controller.js` reduzido para `854L` / `31 733` bytes)
+- iteração encerrada: `v12.5.4` — **split `window._KCPR.flow` concluido** (`profile.flow.js` com `683L`, `24 857` bytes e `10` exports; `profile.controller.js` reduzido para `613L` / `21 447` bytes)
 - v12.1.0 concluída: auditoria doc-only de `kc-utils.js` (PR #394)
 - v12.0.0 concluída: abertura docs-only do ciclo v12 (PR #393)
 - v11 encerrada: `v11.33.7` (trilha `v11.33.x` concluída)
-- regressão: `119/119` suites, `2475/2475` testes verdes, hygiene `8.6.0`
+- regressão: `120/120` suites, `2489/2489` testes verdes, hygiene `8.6.0`
 - deploy de produção ativo: `dpl_Dxajob4FbnLs64iBN2he6vsVta1y` (`www.kinocampus.com.br`)
 - sub-módulos `window._KCAPI.*` operacionais: `notifications`, `saved`, `help`, `postsRead`, `commentsVotes`, `ratings`, `postsFeed`, `postsWrite`, `profiles`, `related`, `auth` (11 total)
 - sub-adapters `window._KCSA.*` operacionais: `profiles`, `postsWrite`, `postsRead`, `saved`, `media`, `votes`, `comments`, `admin`, `analytics`, `notifications` (10 total)
@@ -211,8 +212,8 @@ Regras desta fase (herdadas da v11, sem reinterpretação):
 - `kc-utils.js`: 2445L → 440L (−2005L pós-v12.2.6); 7 sub-módulos `window._KCU.*` operacionais e gate `<900L` formalizado em `v12.2.7`
 - `admin-dashboard.controller.js`: após `v12.3.1` o core estava em `1859L`; após `v12.3.2`, caiu para `1172L` / `48 589` bytes; o gate formal `v12.3.4` consolidou o footprint real atual em `835L` / `32 802` bytes, enquanto `admin-dashboard.charts.js` ficou formalizado em `642L` / `27 895` bytes
 - `local.adapter.js`: após `v12.4.8`, o core caiu de `1862L` / `75 712` bytes para `473L` / `21 898` bytes; `assets/js/adapters/local.notifications.adapter.js` segue com `250L`, `14` exports, `assets/js/adapters/local.ratings.adapter.js` com `339L`, `6` exports, `assets/js/adapters/local.saved.adapter.js` com `252L`, `7` exports, `assets/js/adapters/local.posts-read.adapter.js` com `687L`, `8` exports, `assets/js/adapters/local.posts-write.adapter.js` com `300L`, `7` exports, `assets/js/adapters/local.profile.adapter.js` com `157L`, `4` exports, e `assets/js/adapters/local.help.adapter.js` com `201L`, `3` exports; o gate `<500L` foi formalizado e o `scripts/hygiene-check.js` agora valida a cadeia local `notifications -> ratings -> saved -> posts-read -> posts-write -> profile -> help` nos `22` HTMLs canônicos
-- `assets/js/controllers/profile.controller.js`: apos `v12.5.3`, o core caiu de `1463L` / `56 497` bytes para `854L` / `31 733` bytes; `assets/js/controllers/profile.presentation.js` concentra `28` exports em `519L` / `21 364` bytes, `assets/js/controllers/profile.collections.js` concentra `11` exports em `642L` / `25 882` bytes e `assets/js/controllers/profile.ratings.js` adiciona `2` exports em `200L` / `8 133` bytes, preservando `window.KCProfileRefresh`
-- próxima iteração: `v12.5.4` — split `window._KCPR.flow`
+- `assets/js/controllers/profile.controller.js`: apos `v12.5.4`, o core caiu de `1463L` / `56 497` bytes para `613L` / `21 447` bytes; `assets/js/controllers/profile.presentation.js` concentra `28` exports em `518L` / `21 364` bytes, `assets/js/controllers/profile.collections.js` concentra `11` exports em `641L` / `25 882` bytes, `assets/js/controllers/profile.ratings.js` adiciona `2` exports em `199L` / `8 332` bytes e `assets/js/controllers/profile.flow.js` concentra `10` exports em `683L` / `24 857` bytes, preservando `window.KCProfileRefresh`
+- próxima iteração: `v12.5.5` — gate formal `_KCPR.*` e `profile.controller.js` <600L
 
 ---
 

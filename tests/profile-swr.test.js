@@ -7,40 +7,42 @@ const fs = require('fs');
 const path = require('path');
 
 const CONTROLLER_PATH = path.resolve(__dirname, '..', 'assets', 'js', 'controllers', 'profile.controller.js');
+const FLOW_PATH = path.resolve(__dirname, '..', 'assets', 'js', 'controllers', 'profile.flow.js');
 
 describe('profile.controller — SWR / KCSessionStore contracts', () => {
-  const source = fs.readFileSync(CONTROLLER_PATH, 'utf8');
+  const controllerSource = fs.readFileSync(CONTROLLER_PATH, 'utf8');
+  const flowSource = fs.readFileSync(FLOW_PATH, 'utf8');
 
   test('define PROFILE_CACHE_MAX_AGE_MS para TTL do cache', () => {
-    expect(source).toContain('PROFILE_CACHE_MAX_AGE_MS');
+    expect(controllerSource).toContain('PROFILE_CACHE_MAX_AGE_MS');
   });
 
   test('usa getSessionStore para obter store de sessão', () => {
-    expect(source).toContain('getSessionStore');
-    expect(source).toContain('KCSessionStore.getStore');
+    expect(controllerSource).toContain('getSessionStore');
+    expect(controllerSource).toContain('KCSessionStore.getStore');
   });
 
   test('define profileCacheKey para chave de cache por perfil', () => {
-    expect(source).toContain('profileCacheKey');
-    expect(source).toContain("'profile:public:'");
-    expect(source).toContain("'profile:own:'");
+    expect(controllerSource).toContain('profileCacheKey');
+    expect(controllerSource).toContain("'profile:public:'");
+    expect(controllerSource).toContain("'profile:own:'");
   });
 
   test('restaura perfil do cache via restoreCachedProfile', () => {
-    expect(source).toContain('restoreCachedProfile');
-    expect(source).toContain('store.get(');
+    expect(controllerSource).toContain('restoreCachedProfile');
+    expect(controllerSource).toContain('store.get(');
   });
 
   test('persiste perfil no cache via persistCachedProfile', () => {
-    expect(source).toContain('persistCachedProfile');
-    expect(source).toContain('store.set(');
+    expect(controllerSource).toContain('persistCachedProfile');
+    expect(controllerSource).toContain('store.set(');
   });
 
   test('loadProfile verifica cache antes de chamar a API', () => {
-    expect(source).toContain('if (restoreCachedProfile()) return true;');
+    expect(flowSource).toContain('if (_restoreCachedProfile(deps)) return true;');
   });
 
   test('loadProfile persiste perfil após fetch bem-sucedido', () => {
-    expect(source).toContain('persistCachedProfile(state.profile)');
+    expect(flowSource).toContain('_persistCachedProfile(state.profile, deps)');
   });
 });

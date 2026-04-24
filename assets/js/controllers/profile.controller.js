@@ -11,6 +11,7 @@
   window._KCPR.presentation = window._KCPR.presentation || {};
   window._KCPR.collections = window._KCPR.collections || {};
   window._KCPR.ratings = window._KCPR.ratings || {};
+  window._KCPR.flow = window._KCPR.flow || {};
 
   const state = {
     user: null,
@@ -174,6 +175,45 @@
       renderInlineRichText,
       renderProfileRatingSummary,
       state,
+    };
+  }
+
+  function getProfileFlowModule() {
+    return (window._KCPR && window._KCPR.flow) ? window._KCPR.flow : null;
+  }
+
+  function buildFlowDeps() {
+    return {
+      $,
+      bioLimit: BIO_LIMIT,
+      bindTabsAndLists,
+      buildAccountSetupHref,
+      buildSettingsHref,
+      clearAvatarDraft,
+      esc,
+      getClient,
+      getProfileRatingSummaryFromProfile,
+      isOwnerView,
+      loadActivities,
+      loadComments,
+      loadPosts,
+      loadRatings,
+      loadSaved,
+      loadSavedBadgeCount,
+      normalizeRatingSummary,
+      persistCachedProfile,
+      probeRestrictedProfile,
+      readProfileIdFromQuery,
+      releaseAvatarPreview,
+      renderHeader,
+      renderProfileRatingSummary,
+      restoreCachedProfile,
+      setBadgeCount,
+      setEditing,
+      setStatus,
+      shared,
+      state,
+      switchTab,
     };
   }
 
@@ -398,57 +438,11 @@
   }
 
   async function loadStats(authorId) {
-    const client = getClient();
-    if (!authorId) return;
-
-    try {
-      if (client) {
-        let postQuery = client
-          .from('posts')
-          .select('id', { count: 'exact', head: true })
-          .eq('author_id', authorId);
-        if (state.isPublicView) postQuery = postQuery.eq('status', 'published').eq('visibility', 'public');
-        const postResult = await postQuery;
-
-        if (typeof postResult.count === 'number') {
-          const statPosts = $('#stat-posts');
-          if (statPosts) statPosts.textContent = String(postResult.count);
-          setBadgeCount('#badge-posts', postResult.count);
-        }
-
-        const commentResult = await client
-          .from('comments')
-          .select('id', { count: 'exact', head: true })
-          .eq('author_id', authorId);
-        if (typeof commentResult.count === 'number') {
-          const statComments = $('#stat-comments');
-          if (statComments) statComments.textContent = String(commentResult.count);
-          setBadgeCount('#badge-comments', commentResult.count);
-        }
-
-        let voteQuery = client
-          .from('posts')
-          .select('votos')
-          .eq('author_id', authorId)
-          .eq('status', 'published');
-        if (state.isPublicView) voteQuery = voteQuery.eq('visibility', 'public');
-        const voteResult = await voteQuery;
-        if (Array.isArray(voteResult.data)) {
-          const totalVotes = voteResult.data.reduce((sum, item) => sum + (Number(item && item.votos) || 0), 0);
-          const statVotes = $('#stat-votes');
-          if (statVotes) statVotes.textContent = String(totalVotes);
-        }
-      }
-
-      if (window.KCAPI && typeof window.KCAPI.getUserRatingSummary === 'function') {
-        state.ratingSummary = normalizeRatingSummary(await window.KCAPI.getUserRatingSummary(authorId), authorId);
-      } else {
-        state.ratingSummary = getProfileRatingSummaryFromProfile(state.profile || {});
-      }
-      renderProfileRatingSummary();
-    } catch (error) {
-      console.warn('[Profile] loadStats:', error);
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.loadStats === 'function') {
+      return flow.loadStats(authorId, buildFlowDeps());
     }
+    return Promise.resolve();
   }
 
   async function loadSavedBadgeCount(authorId) {
@@ -539,175 +533,41 @@
   }
 
   function setProfilePending(pending) {
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.setProfilePending === 'function') {
+      return flow.setProfilePending(pending, buildFlowDeps());
+    }
     state.profilePending = !!pending;
-    ['#profile-save-submit', '#profile-edit-cancel', '#profile-edit-toggle', '#profile-avatar-input'].forEach((selector) => {
-      const element = $(selector);
-      if (element) element.disabled = state.profilePending;
-    });
   }
 
   async function handleProfileSubmit(event) {
-    event.preventDefault();
-    if (!isOwnerView() || state.profilePending) return;
-
-    const nameInput = $('#display-name-input');
-    const bioInput = $('#profile-bio-input');
-    const displayName = String((nameInput && nameInput.value) || '').trim().slice(0, 80);
-    const bio = String((bioInput && bioInput.value) || '').trim().slice(0, BIO_LIMIT);
-
-    if (!displayName) {
-      setStatus('Informe um nome válido para o perfil.', 'warn');
-      return;
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.handleProfileSubmit === 'function') {
+      return flow.handleProfileSubmit(event, buildFlowDeps());
     }
-
-    setProfilePending(true);
-    setStatus('Salvando perfil...', 'info');
-
-    try {
-      const patch = { display_name: displayName, bio };
-      if (state.avatarFile) {
-        const upload = await window.KCAPI.uploadProfileAvatar(state.avatarFile);
-        if (!upload || !upload.ok || !upload.data || !upload.data.url) {
-          setStatus((upload && upload.error && upload.error.message) || 'Não foi possível enviar sua foto.', 'error');
-          return;
-        }
-        patch.avatar_url = upload.data.url;
-      }
-
-      const result = await window.KCAPI.updateMyProfile(patch);
-      if (!result || !result.ok) {
-        setStatus((result && result.error && result.error.message) || 'Não foi possível atualizar seu perfil.', 'error');
-        return;
-      }
-
-      state.profile = result.data || state.profile;
-      clearAvatarDraft();
-      state.isEditing = false;
-      renderHeader();
-      const form = $('#profile-inline-form');
-      if (form) form.classList.remove('is-active');
-      setStatus('Perfil atualizado com sucesso.', 'success');
-    } catch (error) {
-      console.error('[Profile] handleProfileSubmit:', error);
-      setStatus('Não foi possível atualizar seu perfil.', 'error');
-    } finally {
-      setProfilePending(false);
-    }
+    return Promise.resolve();
   }
 
   function handleAvatarChange(event) {
-    const file = event && event.target && event.target.files && event.target.files[0];
-    if (!file) return;
-
-    state.avatarFile = file;
-    releaseAvatarPreview();
-    try {
-      state.avatarPreviewUrl = URL.createObjectURL(file);
-    } catch (_) {
-      state.avatarPreviewUrl = '';
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.handleAvatarChange === 'function') {
+      return flow.handleAvatarChange(event, buildFlowDeps());
     }
-
-    if (!state.isEditing) setEditing(true);
-    renderHeader();
-    setStatus('Foto pronta para salvar.', 'info');
   }
 
   function bindProfileEditing() {
-    const editToggle = $('#profile-edit-toggle');
-    if (editToggle) {
-      editToggle.addEventListener('click', () => {
-        const profile = state.profile || {};
-        const target = shared && typeof shared.isOnboardingComplete === 'function' && !shared.isOnboardingComplete(profile)
-          ? buildAccountSetupHref()
-          : buildSettingsHref();
-        window.location.href = target;
-      });
-    }
-
-    const avatarEdit = $('#profile-avatar-edit');
-    if (avatarEdit) {
-      avatarEdit.addEventListener('click', () => {
-        window.location.href = buildAccountSetupHref();
-      });
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.bindProfileEditing === 'function') {
+      return flow.bindProfileEditing(buildFlowDeps());
     }
   }
 
   async function loadProfile() {
-    // SWR: serve from cache for instant back-navigation
-    if (restoreCachedProfile()) return true;
-
-    try {
-      if (state.isPublicView) {
-        state.profile = await window.KCAPI.getProfileById(state.profileId);
-      } else {
-        state.profile = typeof window.KCAPI.getCurrentProfile === 'function'
-          ? window.KCAPI.getCurrentProfile()
-          : null;
-        if (state.profile && state.user && String(state.profile.id || '') !== String(state.user.id || '')) {
-          state.profile = null;
-        }
-        if (!state.profile) {
-          state.profile = await window.KCAPI.getMyProfile();
-        }
-        if (!state.profile && typeof window.KCAPI.syncProfile === 'function') {
-          await window.KCAPI.syncProfile();
-          state.profile = typeof window.KCAPI.getCurrentProfile === 'function'
-            ? window.KCAPI.getCurrentProfile()
-            : null;
-          if (!state.profile) {
-            state.profile = await window.KCAPI.getMyProfile();
-          }
-        }
-      }
-    } catch (error) {
-      console.warn('[Profile] loadProfile:', error);
-      state.profile = null;
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.loadProfile === 'function') {
+      return flow.loadProfile(buildFlowDeps());
     }
-
-    if (!state.profile) return false;
-
-    const client = getClient();
-    if (client && !state.profile.created_at) {
-      try {
-        const extra = await client
-          .from('profiles')
-          .select('created_at, bio, avatar_url, display_name, full_name, verified, legacy_id')
-          .eq('id', state.profileId)
-          .maybeSingle();
-        if (extra && extra.data) state.profile = Object.assign({}, state.profile, extra.data);
-      } catch (_) { }
-    }
-
-    persistCachedProfile(state.profile);
-    renderHeader();
-    return true;
-  }
-
-  function showFatal(message) {
-    const loading = $('#profile-loading');
-    const content = $('#profile-content');
-    if (content) content.style.display = 'none';
-    if (loading) {
-      loading.style.display = 'flex';
-      loading.innerHTML = `<i class="fas fa-user-slash"></i> ${esc(message)}`;
-    }
-  }
-
-  function showRestrictedProfile() {
-    const loading = $('#profile-loading');
-    const content = $('#profile-content');
-    if (content) content.style.display = 'none';
-    if (loading) {
-      loading.style.display = 'flex';
-      loading.innerHTML = [
-        '<div style="display:grid;gap:12px;justify-items:center;max-width:420px;text-align:center;">',
-        '<i class="fas fa-user-lock" style="font-size:2rem;color:var(--kc-primary-brand);"></i>',
-        '<strong>Este perfil está visível apenas para quem faz parte da comunidade.</strong>',
-        '<span>Entre na plataforma para ver esta página e outros conteúdos restritos à comunidade KinoCampus.</span>',
-        '<a href="/index.html#login" data-kc-login="true" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:var(--kc-primary-brand);color:#fff;text-decoration:none;font-weight:700;"><i class="fas fa-right-to-bracket"></i>Entrar na comunidade</a>',
-        '</div>',
-      ].join('');
-    }
+    return Promise.resolve(false);
   }
 
   function bindTabsAndLists() {
@@ -718,133 +578,33 @@
   }
 
   function bindProfileSyncListener() {
-    document.addEventListener('kc:profilechange', (event) => {
-      const profile = event && event.detail ? event.detail.profile : null;
-      if (!profile || !state.profileId || String(profile.id || '') !== String(state.profileId)) return;
-      state.profile = Object.assign({}, state.profile || {}, profile);
-      renderHeader();
-    });
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.bindProfileSyncListener === 'function') {
+      return flow.bindProfileSyncListener(buildFlowDeps());
+    }
   }
 
   async function refreshProfilePage() {
-    setStatus('Atualizando perfil...', 'info');
-    try {
-      state.user = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
-        ? window.KCSupabase.getUser()
-        : state.user;
-      if (!state.user && window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-        state.user = await window.KCAPI.getCurrentUser();
-      }
-      state.viewerAuthenticated = !!state.user;
-
-      const loaded = await loadProfile();
-      if (!loaded) {
-        setStatus('Não foi possível atualizar este perfil agora.', 'error');
-        return;
-      }
-
-      const tasks = [
-        loadStats(state.profileId),
-        loadSavedBadgeCount(state.profileId),
-        loadActivities(),
-      ];
-
-      if (state.activeTab === 'posts' || state.posts.length) tasks.push(loadPosts(true));
-      if (state.activeTab === 'comments' || state.comments.length) tasks.push(loadComments(true));
-      if (state.activeTab === 'saved' || state.savedItems.length) tasks.push(loadSaved(true));
-      if (state.activeTab === 'ratings' || state.ratings.length) tasks.push(loadRatings(true));
-
-      await Promise.allSettled(tasks);
-      renderHeader();
-      setStatus('Perfil atualizado.', 'success');
-    } catch (error) {
-      console.error('[Profile] refresh failed:', error);
-      setStatus('Não foi possível atualizar este perfil agora.', 'error');
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.refreshProfilePage === 'function') {
+      return flow.refreshProfilePage(buildFlowDeps());
     }
+    return Promise.resolve();
   }
 
   function initPullToRefresh() {
-    if (!window.KCPullToRefresh || document.body.dataset.kcProfilePtrReady === '1') return;
-    document.body.dataset.kcProfilePtrReady = '1';
-    window.KCPullToRefresh.init({
-      container: document.body,
-      onRefresh: refreshProfilePage,
-    });
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.initPullToRefresh === 'function') {
+      return flow.initPullToRefresh(buildFlowDeps());
+    }
   }
 
   async function init() {
-    if (!window.KCAPI || typeof window.KCAPI.getCurrentUser !== 'function') return;
-
-    const queryId = readProfileIdFromQuery();
-    state.user = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
-      ? window.KCSupabase.getUser()
-      : null;
-    if (!state.user) {
-      state.user = await window.KCAPI.getCurrentUser();
+    const flow = getProfileFlowModule();
+    if (flow && typeof flow.init === 'function') {
+      return flow.init(buildFlowDeps());
     }
-    state.viewerAuthenticated = !!state.user;
-
-    if (queryId) {
-      if (state.user && String(state.user.id) === String(queryId)) {
-        state.isPublicView = false;
-        state.profileId = state.user.id;
-      } else {
-        state.isPublicView = true;
-        state.profileId = queryId;
-      }
-    } else {
-      if (!state.user) {
-        showFatal('Você precisa estar logado para ver seu perfil.');
-        setTimeout(() => { window.location.href = 'index.html#login'; }, 900);
-        return;
-      }
-      state.isPublicView = false;
-      state.profileId = state.user.id;
-    }
-
-    const loaded = await loadProfile();
-    if (!loaded) {
-      if (state.isPublicView && !state.viewerAuthenticated) {
-        const restricted = await probeRestrictedProfile(state.profileId);
-        if (restricted) {
-          state.restrictedProfile = true;
-          showRestrictedProfile();
-          return;
-        }
-      }
-      showFatal(state.isPublicView ? 'Perfil não encontrado.' : 'Não foi possível carregar seu perfil.');
-      return;
-    }
-
-    const loading = $('#profile-loading');
-    if (loading) loading.style.display = 'none';
-    const content = $('#profile-content');
-    if (content) content.style.display = 'block';
-
-    bindTabsAndLists();
-    bindProfileEditing();
-    bindProfileSyncListener();
-
-    loadStats(state.profileId).catch(() => {});
-    loadSavedBadgeCount(state.profileId).catch(() => {});
-    loadActivities().catch(() => {});
-    renderHeader();
-    switchTab('activities');
-    initPullToRefresh();
-
-    // Load ranking badges for this profile user
-    if (state.profileId && window.KCAPI && typeof window.KCAPI.getTopContributors === 'function') {
-      var pid = state.profileId;
-      // Load general ranking + all module rankings to decorate profile avatar
-      var modules = [null, 'compra-venda', 'moradia', 'caronas', 'eventos', 'oportunidades', 'achados-perdidos'];
-      modules.forEach(function (mod) {
-        window.KCAPI.getTopContributors('month', mod, 10).then(function (users) {
-          if (users && users.length && window.KCRanking) {
-            window.KCRanking.decorateAuthorAvatars(users, mod);
-          }
-        }).catch(function () {});
-      });
-    }
+    return Promise.resolve();
   }
 
   window.KCProfileRefresh = refreshProfilePage;
