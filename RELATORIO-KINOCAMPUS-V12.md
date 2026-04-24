@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.5.5` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*` e gate formal do profile); `kc-utils.js` consolidado em `440L`, `admin-dashboard.controller.js` caiu de `2251L` para `835L`, `local.adapter.js` caiu de `1862L` para `473L` e `assets/js/controllers/profile.controller.js` caiu de `1463L` / `56 497` bytes para `613L` / `21 566` bytes; `scripts/hygiene-check.js` agora valida a cadeia `_KCPR.*` em `profile.html` (`profile.presentation -> profile.collections -> profile.ratings -> profile.flow -> profile.controller`) e falha se o controller voltar a `>=700L`; `assets/js/controllers/profile.flow.js` permanece em `683L` / `25 540` bytes e `10` exports; a proxima iteracao e `v12.6.0` — feature flags formais `window.KCFF`; baseline preservada em `120/120` suites e `2489/2489` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.6.0` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*`, gate formal do profile e feature flags formais); `window.KCFF` agora opera em `assets/js/kc-feature-flags.js` (`170L` / `4 444` bytes) com `Object.freeze({ get, getAll, isEnabled })`, `assets/js/kc-env.js` declara `flags`/`featureFlags`, os `22` HTMLs canônicos carregam `kc-feature-flags.js` imediatamente após `kc-env.js` e `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js`; a próxima iteração é `v12.7.0` — i18n runtime fase 1 (`title`, `meta`, `alt`); baseline expandida em `121/121` suites e `2501/2501` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -120,8 +120,10 @@ Novas fontes de verdade criadas durante a v12 (adicionadas à medida que as iter
   - `metrics`, `audit`, `charts`
 - **`window._KCLA.*`** — sub-adapters do driver local (7 operacionais):
   - `notifications`, `ratings`, `saved`, `postsRead`, `postsWrite`, `profile`, `help`
-- **`window._KCPR.*`** — sub-módulos do controller de perfil (3 operacionais):
-  - `presentation`, `collections`, `ratings`
+- **`window._KCPR.*`** — sub-módulos do controller de perfil (4 operacionais):
+  - `presentation`, `collections`, `ratings`, `flow`
+- **`window.KCFF`** — feature flags formais:
+  - `get`, `getAll`, `isEnabled`
 - **`window.KCi18n`** — módulo de i18n (pt-BR, 120+ chaves)
 - **`window.KCSessionStore`** — SWR / cache de sessão
 - **`window.KCOverlayLock`** — lock de scroll em modais
@@ -153,7 +155,7 @@ Estes namespaces são **contratos públicos internos** — qualquer mudança de 
 - **Sem testes E2E** — só Jest estático + DOM; nenhum fluxo real coberto
 - **Sem Lighthouse CI** em nenhum pipeline
 - **Sem Service Worker** — zero resiliência offline, zero cache-first
-- **Sem sistema formal de feature flags** — flags existem dispersos como `ENV.*` (~62 usos mapeados em auditoria preliminar)
+- **Sistema formal de feature flags iniciado** — `window.KCFF` operacional desde `v12.6.0`; ainda restam migrações graduais de usos dispersos de `ENV.*` quando eles forem flags reais, sem trocar configuração sensível (`driver`, Supabase, auth) por flag booleana
 - **~250-300 strings hardcoded pt-BR** (aria-label, role, mensagens inline) em HTMLs e controllers; plano detalhado existe em `docs/i18n-a11y-uxwriting-plan.md` desde a v11.24.0 mas só parcialmente executado (componentes core em v11.24.2 e templates auth em v11.24.3)
 - **Sem Storybook / catálogo de componentes** — fora do escopo explícito da v12 (arquivado para v13+)
 
@@ -219,7 +221,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 
 | Iteração | Escopo | Entrega esperada | Status |
 |---|---|---|---|
-| **v12.6.0** | **Trilha B1 — Feature flags formal** (`window.KCFF`) | `kc-feature-flags.js` novo + consumidores migrados; consolida ~62 usos dispersos de `ENV.*`; +~20 testes | 📋 planejado |
+| **v12.6.0** | **Trilha B1 — Feature flags formal** (`window.KCFF`) | `kc-feature-flags.js` novo (`170L` / `4 444` bytes), `KC_ENV.flags`/`featureFlags`, 22 HTMLs com `kc-env.js -> kc-feature-flags.js`, hygiene KCFF e suite `tests/kc-feature-flags.test.js` (12 testes); baseline `121/121` suites · `2501/2501` testes | ✅ concluído |
 | v12.7.0 | **Trilha B2 — i18n runtime fase 1**: extração `<title>`, `meta`, `alt` | +dicionário; ~60 strings migradas; +~15 testes | 📋 planejado |
 | v12.7.1 | i18n runtime fase 2: `aria-label`, `placeholder` | ~90 strings migradas; +~15 testes | 📋 planejado |
 | v12.7.2 | i18n runtime fase 3: botões e headings dinâmicos | ~50 strings migradas; +~10 testes | 📋 planejado |
@@ -277,7 +279,7 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 
 ### 7.2. Qualidade sistêmica (Camada B)
 
-- [ ] `window.KCFF` operacional; zero uso direto de `ENV.*` em controllers (`kc-env.js` segue como fonte leitora interna de `KCFF`)
+- [x] `window.KCFF` operacional; migração de usos dispersos de `ENV.*` fica limitada a flags reais e não substitui configuração sensível (`driver`, Supabase, auth)
 - [ ] i18n runtime ≥ 90% das ~250-300 strings inventariadas migradas para `kc-i18n.js`; switcher pt-BR/en-US funcional (en-US pode estar incompleto, mas o esqueleto deve existir)
 - [ ] `tests/a11y.test.js` cobre os 22 HTMLs com mínimo de 5 asserts cada
 - [ ] Playwright CI verde em ≥ 8 cenários E2E
@@ -290,8 +292,8 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 
 ### 7.4. Baseline e governança
 
-- [ ] `npm test` passa em **≥ 120 suites / ≥ 2150 testes** (baseline v12.0.0: `99/1874`; projeção de acréscimo líquido: ~20 suites + ~300 testes)
-- [ ] `node scripts/hygiene-check.js` verde e **atualizado** com regras para `_KCU.*`, `_KCLA.*`, `_KCAD.*`, `KCFF.*`
+- [x] `npm test` passa em **≥ 120 suites / ≥ 2150 testes** (baseline atual `121/121` suites / `2501/2501` testes; baseline v12.0.0: `99/1874`)
+- [x] `node scripts/hygiene-check.js` verde e **atualizado** com regras para `_KCU.*`, `_KCLA.*`, `_KCAD.*`, `_KCPR.*`, `KCFF.*`
 - [ ] `RELATORIO-KINOCAMPUS-V12.md` atualizado em cada iteração; seção de fechamento preenchida
 - [ ] `CHANGELOG.md` com entrada formal `## [12.0.0] - YYYY-MM-DD`
 - [ ] `README.md` com "Status atual" apontando para v12 e tabela "Entregas Recentes" consolidada
@@ -1337,6 +1339,45 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `npm test` -> **120/120 suites / 2489/2489 testes verdes**
 
 **Proxima iteracao:** `v12.6.0` - feature flags formais `window.KCFF`.
+
+---
+
+### 8.30. v12.6.0 - feature flags formais `window.KCFF` - concluido
+
+**Objetivo:** criar a fundacao formal de feature flags do frontend em Vanilla JS IIFE, sem substituir contratos sensiveis de configuracao (`KC_ENV`, `KCAPI.ENV`, driver Supabase/local) e sem alterar comportamento funcional das telas.
+
+**Escopo entregue:**
+
+- criado `assets/js/kc-feature-flags.js` com IIFE browser-safe e namespace publico `window.KCFF = Object.freeze({ get, getAll, isEnabled })`
+- criado `docs/feature-flags-plan-v12.6.md` com o contrato publico, fontes de leitura, flags iniciais e limites de escopo da fundacao KCFF
+- `KCFF.get(name, fallback)` le flags planas/aninhadas de `KC_ENV.flags` e `KC_ENV.featureFlags`, com suporte a dot path e fallback defensivo
+- `KCFF.isEnabled(name, fallback)` normaliza booleanos, numeros e strings (`on/off`, `true/false`, `1/0`, `enabled/disabled`)
+- `KCFF.getAll()` retorna snapshot defensivo congelado, incluindo derivados seguros `env.driver`, `env.driver.supabase`, `env.isProduction`, `env.debug` e correlatos
+- `assets/js/kc-env.js` passa a declarar `flags` e `featureFlags`, com defaults formais `sw.enabled=false` e `telemetry.enabled=false`
+- os `22` HTMLs canonicos (17 raiz + 5 admin) passam a carregar `kc-feature-flags.js` imediatamente apos `kc-env.js`
+- `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js` em todos os HTMLs canonicos
+- criada `tests/kc-feature-flags.test.js` com cobertura de contrato estatico, runtime e ordem dos scripts
+- `README.md`, `RELATORIO-KINOCAMPUS-V12.md` e `CHANGELOG.md` sincronizados com o marco e a proxima etapa `v12.7.0`
+
+**Entregas mensuraveis:**
+
+- `assets/js/kc-feature-flags.js` criado com **170L** / `4 444` bytes e **3** exports congelados
+- `tests/kc-feature-flags.test.js` criado com **214L** / `6 334` bytes e **12** testes
+- `assets/js/kc-env.js` ficou em **244L** / `9 801` bytes apos formalizar `flags`/`featureFlags`
+- `scripts/hygiene-check.js` ficou em **462L** / `15 713` bytes apos o gate KCFF
+- baseline expandida de **120/120 suites / 2489/2489 testes** para **121/121 suites / 2501/2501 testes**
+
+**Verificacao:**
+
+- `node --check assets/js/kc-feature-flags.js` -> OK
+- `node --check assets/js/kc-env.js` -> OK
+- `node --check scripts/hygiene-check.js` -> OK
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test -- tests/kc-feature-flags.test.js` -> **12 testes verdes**
+- `npm test -- tests/kc-feature-flags.test.js tests/kc-api-client.test.js tests/admin-dashboard.metrics.test.js tests/profile.flow.test.js tests/local-adapter.test.js` -> **5/5 suites / 123/123 testes verdes**
+- `npm test` -> **121/121 suites / 2501/2501 testes verdes**
+
+**Proxima iteracao:** `v12.7.0` - i18n runtime fase 1 (`title`, `meta`, `alt`).
 
 ---
 

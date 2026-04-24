@@ -6,6 +6,9 @@
 
 ### Added
 
+- `v12.6.0`: criado `assets/js/kc-feature-flags.js` com IIFE browser-safe registrado em `window.KCFF = Object.freeze({ get, getAll, isEnabled })`, lendo `KC_ENV.flags`/`KC_ENV.featureFlags`, expondo derivados seguros `env.*`, normalizando booleanos (`on/off`, `true/false`, `1/0`) e retornando snapshots defensivos. O footprint real do modulo ficou em **170L** / `4 444` bytes.
+- `v12.6.0`: criado `tests/kc-feature-flags.test.js` com **12 testes** cobrindo contrato estatico, ausência de `require/import`, exports exatos, leitura plana/aninhada, alias `featureFlags`, clones defensivos, derivados de ambiente e a ordem dos `22` HTMLs canônicos. Baseline expandida de `120/120 suites / 2489/2489 testes` para **`121/121 suites / 2501/2501 testes`**.
+
 - `v12.5.4`: criado `assets/js/controllers/profile.flow.js` com IIFE browser-safe registrado em `window._KCPR.flow`, concentrando **10 exports** do dominio flow/lifecycle do perfil: `loadStats`, `setProfilePending`, `handleProfileSubmit`, `handleAvatarChange`, `bindProfileEditing`, `loadProfile`, `bindProfileSyncListener`, `refreshProfilePage`, `initPullToRefresh` e `init`. O submodulo consome estado, cache SWR, helpers de presentation/collections/ratings e APIs por injecao explicita de dependencias (`buildFlowDeps()`), sem alterar `window.KCProfileRefresh`.
 - `v12.5.4`: criado `tests/profile.flow.test.js` com **14 testes** cobrindo contrato estatico de `window._KCPR.flow`, orquestracao do split em `profile.controller.js`, ordem de scripts em `profile.html` e comportamento runtime de pending, avatar, navegacao de edicao, cache, refresh, pull-to-refresh e init. Baseline expandida de `119/119 suites / 2475/2475 testes` para **`120/120 suites / 2489/2489 testes`**.
 
@@ -21,6 +24,8 @@
 - `v12.5.0`: criado `docs/profile-controller-audit-v12.5.md` com auditoria docs-only de `assets/js/controllers/profile.controller.js`, medindo o footprint real do hotspot de perfil em `1463L` e `56 497` bytes, inventariando `67` funcoes top-level (`14` async), `1` HTML consumidor (`profile.html`), `1` export publico (`window.KCProfileRefresh`) e o boundary previo `assets/js/account-profile.shared.js` (`962L`, `45` funcoes, `10` testes), alem de recalibrar a sequencia `v12.5.1`-`v12.5.5` para `window._KCPR.presentation`, `window._KCPR.collections`, `window._KCPR.ratings`, `window._KCPR.flow` e gate formalizado em `<700L`.
 
 ### Changed
+
+- `v12.6.0`: `assets/js/kc-env.js` passa a declarar `flags` e `featureFlags` como fonte formal para `window.KCFF`, com defaults `sw.enabled=false` e `telemetry.enabled=false`; os `22` HTMLs canônicos carregam `kc-feature-flags.js` imediatamente após `kc-env.js`; `scripts/hygiene-check.js` valida a cadeia `kc-env.js -> kc-feature-flags.js` em todas as páginas públicas/admin. Hygiene **8.6.0 OK** e baseline final verde em **121/121 suites / 2501/2501 testes**.
 
 - `v12.5.5`: `scripts/hygiene-check.js` formaliza o gate do profile, validando a cadeia `_KCPR.*` em `profile.html` (`profile.presentation -> profile.collections -> profile.ratings -> profile.flow -> profile.controller`) e falhando se `assets/js/controllers/profile.controller.js` voltar a `>=700L`. O controller fica travado em **`613L`** / `21 566` bytes e `profile.flow.js` em **`683L`** / `25 540` bytes, com baseline preservada em **120/120 suites / 2489/2489 testes**.
 
