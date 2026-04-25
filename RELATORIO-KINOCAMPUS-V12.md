@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.7.2` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*`, gate formal do profile, feature flags formais, i18n runtime fase 1, fase 2 e fase 3); `window.KCi18n` agora soma `440` chaves pt-BR (acrescidas de `28` chaves `tooltip.*`) e expõe `9` métodos no contrato público (`locale`, `t`, `n`, `keys`, `applyDocumentMetadata`, `applyStaticAlts`, `applyAriaLabels`, `applyPlaceholders`, `applyTooltips`); os `22` HTMLs canônicos declaram `189` marcações `data-i18n-aria-label`, `59` marcações `data-i18n-placeholder` e `55` marcações `data-i18n-tooltip`, cobrindo todas as superfícies declarativas de atributos de elemento; `scripts/hygiene-check.js` valida as três camadas declarativas; a próxima iteração é `v12.7.3` — gate i18n B2 / locale switcher; baseline expandida em `124/124` suites e `2546/2546` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.7.3` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*`, gate formal do profile, feature flags formais, i18n runtime fase 1, fase 2 e fase 3, gate formal B2 — **trilha B2 i18n encerrada**); `window.KCi18n` expõe `9` métodos (`locale`, `t`, `n`, `keys`, `applyDocumentMetadata`, `applyStaticAlts`, `applyAriaLabels`, `applyPlaceholders`, `applyTooltips`) com `440` chaves pt-BR em `18` namespaces e `352` marcações declarativas nos `22` HTMLs; `scripts/hygiene-check.js` valida os pisos de regressão da trilha B2 via `runI18nB2GateChecks()`; a próxima iteração é `v12.8.x` — trilha B3 (a11y audit estrutural); baseline expandida em `125/125` suites e `2562/2562` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -223,9 +223,9 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 |---|---|---|---|
 | **v12.6.0** | **Trilha B1 — Feature flags formal** (`window.KCFF`) | `kc-feature-flags.js` novo (`170L` / `4 444` bytes), `KC_ENV.flags`/`featureFlags`, 22 HTMLs com `kc-env.js -> kc-feature-flags.js`, hygiene KCFF e suite `tests/kc-feature-flags.test.js` (12 testes); baseline `121/121` suites · `2501/2501` testes | ✅ concluído |
 | **v12.7.0** | **Trilha B2 — i18n runtime fase 1**: extração `<title>`, `meta`, `alt` | `kc-i18n.js` com `306` chaves totais e `49` chaves novas de metadata/alt; helpers `applyDocumentMetadata()`/`applyStaticAlts()`; 22 HTMLs marcados; hygiene i18n; suite `tests/i18n-metadata.test.js` (9 testes); baseline `122/122` suites · `2510/2510` testes | ✅ concluído |
-| v12.7.1 | i18n runtime fase 2: `aria-label`, `placeholder` | ~90 strings migradas; +~15 testes | 📋 planejado |
-| v12.7.2 | i18n runtime fase 3: botões e headings dinâmicos | ~50 strings migradas; +~10 testes | 📋 planejado |
-| v12.7.3 | Gate i18n: locale switcher funcional pt-BR + en-US scaffolding | gate formal | 📋 planejado |
+| **v12.7.1** | **i18n runtime fase 2** (`aria-label`, `placeholder`) | `kc-i18n.js` cresce `524L` → `732L`; `59` chaves `aria-label.*` + `47` chaves `placeholder.*`; helpers `applyAriaLabels`/`applyPlaceholders`; `189` marcações aria + `59` placeholder nos 22 HTMLs; `runI18nAriaPlaceholderChecks()` no hygiene; suite `tests/i18n-aria-placeholder.test.js` (18 testes); baseline `123/123` suites · `2528/2528` testes | ✅ concluído |
+| **v12.7.2** | **i18n runtime fase 3** (`title` / tooltips de elemento) | `kc-i18n.js` cresce `732L` → `803L`; `28` chaves `tooltip.*`; helper `applyTooltips`; `55` marcações `data-i18n-tooltip` nos 22 HTMLs; `runI18nTooltipChecks()` no hygiene; suite `tests/i18n-tooltip.test.js` (18 testes); baseline `124/124` suites · `2546/2546` testes | ✅ concluído |
+| **v12.7.3** | **Gate formal da trilha B2 i18n** | `runI18nB2GateChecks()` no hygiene (7 pisos); `tests/i18n-b2-gate.test.js` (16 testes); `docs/i18n-b2-coverage-v12.7.md`; trilha B2 **encerrada**; baseline `125/125` suites · `2562/2562` testes | ✅ concluído |
 | v12.8.0 | **Trilha B3 — a11y audit estrutural** (doc-only) | `docs/a11y-audit-v12.8.md` + baseline a11y expandida | 📋 planejado |
 | v12.8.1 | a11y correções: roles, `aria-live`, skip-links nos 22 HTMLs | +~20 testes a11y | 📋 planejado |
 | v12.9.0 | **Trilha B4 — Playwright E2E** scaffolding | `playwright.config.js` + `tests/e2e/smoke.spec.js`; 1 suite smoke (login + feed + detalhe); CI verde | 📋 planejado |
@@ -1482,7 +1482,39 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `npx jest tests/i18n-tooltip.test.js` -> **1/1 suite / 18/18 testes verdes**
 - `npm test` -> **124/124 suites / 2546/2546 testes verdes**
 
-**Proxima iteracao:** `v12.7.3` - gate i18n B2 / locale switcher (formalizar a cobertura total da trilha B2 e avaliar escopo do locale switcher pt-BR/en-US).
+**Proxima iteracao:** `v12.7.3` - gate i18n B2 (formalizar os pisos de regressao da trilha B2 e encerrar formalmente a cobertura declarativa do ciclo i18n runtime).
+
+---
+
+### 8.34. v12.7.3 - gate formal da trilha B2 i18n - concluido
+
+**Objetivo:** encerrar formalmente a trilha B2 i18n runtime estabelecendo pisos de regressao mensuráveis e automaticamente validados, impedindo que futuras iteracoes removam silenciosamente a cobertura declarativa conquistada nas fases 1-3. O gate nao adiciona nenhuma string nova ao dicionario — e um marco estrutural puro.
+
+**Escopo entregue:**
+
+- `scripts/hygiene-check.js` ganhou `runI18nB2GateChecks()` com constante `I18N_B2_GATE` declarada no topo do arquivo (fora da funcao, antes do ponto de chamada, para evitar TDZ); a funcao conta linhas de `kc-i18n.js`, conta chaves unicas via regex `/'[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*'\s*:/g` e soma markings declarativos nos 22 HTMLs, emitindo erro para cada piso nao atingido
+- pisos estabelecidos: `>= 440` chaves, `>= 800` linhas, `>= 189` aria markings, `>= 59` placeholder markings, `>= 55` tooltip markings, `>= 5` alt markings
+- criado `tests/i18n-b2-gate.test.js` com **16 testes** em 3 describe blocks:
+  - (1) integridade do modulo: linhas `>= 800`, chaves unicas `>= 440`, contrato de exatamente 9 metodos, `keys()` retornando `>= 440` sem duplicatas
+  - (2) totais de markings nos 22 HTMLs: lista de 22 arquivos + as 4 superficies de atributo
+  - (3) infraestrutura no codigo-fonte: `translateWithFallback`, `applyRuntimeI18n`, os 5 helpers, exports declarados e 6 namespaces de runtime
+- criada `docs/i18n-b2-coverage-v12.7.md` com auditoria completa da trilha B2: estado final do modulo, tabela dos 18 namespaces (440 chaves), descricao das 5 superficies com helpers e totais (352 marcacoes), tabela de thresholds de regressao e referencia as 5 suites de teste da trilha
+
+**Entregas mensuraveis:**
+
+- `scripts/hygiene-check.js` atualizado com `runI18nB2GateChecks()` e constante `I18N_B2_GATE` no topo
+- `tests/i18n-b2-gate.test.js` criado com **16** testes (3 describe blocks)
+- `docs/i18n-b2-coverage-v12.7.md` criado com auditoria completa
+- baseline expandida de **124/124 suites / 2546/2546 testes** para **125/125 suites / 2562/2562 testes** (+1 suite, +16 testes)
+
+**Verificacao:**
+
+- `node --check scripts/hygiene-check.js` -> OK
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npx jest tests/i18n-b2-gate.test.js` -> **1/1 suite / 16/16 testes verdes**
+- `npm test` -> **125/125 suites / 2562/2562 testes verdes**
+
+**Proxima iteracao:** `v12.8.x` - trilha B3 (a11y audit estrutural + correcoes).
 
 ---
 

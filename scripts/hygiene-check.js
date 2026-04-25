@@ -8,6 +8,18 @@ const path = require('path');
 const rootDir = path.resolve(__dirname, '..');
 const canonicalVersion = '8.6.0';
 const profileControllerLineGate = 700;
+
+// Pisos de regressao da trilha B2 — estabelecidos em v12.7.3.
+// Ajustar APENAS se houver adicao intencional documentada.
+const I18N_B2_GATE = {
+  minKeys: 440,         // chaves unicas no dicionario (grep por ':' para excluir referencias)
+  minLines: 800,        // linhas de kc-i18n.js (previne stripping)
+  minAriaMarkings: 189, // data-i18n-aria-label nos 22 HTMLs
+  minPlaceholderMarkings: 59,  // data-i18n-placeholder nos 22 HTMLs
+  minTooltipMarkings: 55,      // data-i18n-tooltip nos 22 HTMLs
+  minAltMarkings: 5,           // data-i18n-alt nos 22 HTMLs
+};
+
 const errors = [];
 const warnings = [];
 
@@ -84,6 +96,7 @@ runThemeBootChecks();
 runI18nMetadataChecks();
 runI18nAriaPlaceholderChecks();
 runI18nTooltipChecks();
+runI18nB2GateChecks();
 runKcffScriptChainChecks();
 runKcuScriptChainChecks();
 runKcadScriptChainChecks();
@@ -215,6 +228,50 @@ function runI18nTooltipChecks() {
       }
     });
   });
+}
+
+function runI18nB2GateChecks() {
+  const i18nContent = read('assets/js/kc-i18n.js');
+
+  // 1. Gate de linhas do modulo
+  const lineCount = countLines(i18nContent);
+  if (lineCount < I18N_B2_GATE.minLines) {
+    errors.push(
+      `assets/js/kc-i18n.js must stay above ${I18N_B2_GATE.minLines} lines for the v12.7.3 B2 gate (found ${lineCount})`
+    );
+  }
+
+  // 2. Gate de total de chaves no dicionario (conta entradas 'chave.*': no IIFE)
+  const keyMatches = [...i18nContent.matchAll(/'[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*'\s*:/g)];
+  const keyCount = new Set(keyMatches.map((m) => m[0].replace(/'\s*:$/, '').replace(/'/g, ''))).size;
+  if (keyCount < I18N_B2_GATE.minKeys) {
+    errors.push(
+      `assets/js/kc-i18n.js must have at least ${I18N_B2_GATE.minKeys} unique dictionary keys for the v12.7.3 B2 gate (found ${keyCount})`
+    );
+  }
+
+  // 3. Gate de totais de markings nos 22 HTMLs
+  const counts = { aria: 0, placeholder: 0, tooltip: 0, alt: 0 };
+  htmlFiles.forEach(({ absPath }) => {
+    const html = fs.readFileSync(absPath, 'utf8');
+    counts.aria += (html.match(/data-i18n-aria-label=/g) || []).length;
+    counts.placeholder += (html.match(/data-i18n-placeholder=/g) || []).length;
+    counts.tooltip += (html.match(/data-i18n-tooltip=/g) || []).length;
+    counts.alt += (html.match(/data-i18n-alt=/g) || []).length;
+  });
+
+  if (counts.aria < I18N_B2_GATE.minAriaMarkings) {
+    errors.push(`data-i18n-aria-label markings dropped below ${I18N_B2_GATE.minAriaMarkings} (found ${counts.aria})`);
+  }
+  if (counts.placeholder < I18N_B2_GATE.minPlaceholderMarkings) {
+    errors.push(`data-i18n-placeholder markings dropped below ${I18N_B2_GATE.minPlaceholderMarkings} (found ${counts.placeholder})`);
+  }
+  if (counts.tooltip < I18N_B2_GATE.minTooltipMarkings) {
+    errors.push(`data-i18n-tooltip markings dropped below ${I18N_B2_GATE.minTooltipMarkings} (found ${counts.tooltip})`);
+  }
+  if (counts.alt < I18N_B2_GATE.minAltMarkings) {
+    errors.push(`data-i18n-alt markings dropped below ${I18N_B2_GATE.minAltMarkings} (found ${counts.alt})`);
+  }
 }
 
 function runKcffScriptChainChecks() {
