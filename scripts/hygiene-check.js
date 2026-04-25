@@ -83,6 +83,7 @@ runVersionChecks();
 runThemeBootChecks();
 runI18nMetadataChecks();
 runI18nAriaPlaceholderChecks();
+runI18nTooltipChecks();
 runKcffScriptChainChecks();
 runKcuScriptChainChecks();
 runKcadScriptChainChecks();
@@ -188,6 +189,29 @@ function runI18nAriaPlaceholderChecks() {
       if (!/\sdata-i18n-placeholder="placeholder\.[a-z0-9-]+"/i.test(tag)) {
         const excerpt = tag.slice(0, 140).replace(/\s+/g, ' ');
         errors.push(`${relPath} has static placeholder without data-i18n-placeholder: ${excerpt}`);
+      }
+    });
+  });
+}
+
+function runI18nTooltipChecks() {
+  // Toda tag com title="..." (atributo de elemento, nao <title> nem data-i18n-title no <html>)
+  // precisa ter data-i18n-tooltip="tooltip.<key>" correspondente.
+  // A regex exclui a linha "<title>..." e o atributo "data-i18n-title" do <html>.
+  const tagWithTitleRe = /<(?!title\b)[^>]*\s+title="[^"]+"[^>]*>/gi;
+
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const content = fs.readFileSync(absPath, 'utf8');
+
+    const tags = [...String(content).matchAll(tagWithTitleRe)]
+      .map((match) => String(match[0] || ''))
+      // ignora o elemento <html> (que tem data-i18n-title para o page-title, nao tooltip)
+      .filter((tag) => !/^<html\b/i.test(tag.trim()));
+
+    tags.forEach((tag) => {
+      if (!/\sdata-i18n-tooltip="tooltip\.[a-z0-9-]+"/i.test(tag)) {
+        const excerpt = tag.slice(0, 140).replace(/\s+/g, ' ');
+        errors.push(`${relPath} has static title attribute without data-i18n-tooltip: ${excerpt}`);
       }
     });
   });

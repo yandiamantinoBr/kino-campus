@@ -707,7 +707,7 @@
       </nav>
       <div class="kc-user-actions">
         <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun"></i></button>
         <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
@@ -727,7 +727,7 @@
                 <p>Métricas consolidadas de denúncias, moderação, atividade, buscas e saúde operacional em tempo real.</p>
               </div>
               <div class="kc-admin-toolbar">
-                <select id="admin-period-filter" title="Período">
+                <select id="admin-period-filter" title="Período" data-i18n-tooltip="tooltip.period-filter">
                   <option value="1">Hoje</option>
                   <option value="7">Esta semana</option>
                   <option value="30" selected>Últimos 30 dias</option>
@@ -847,7 +847,7 @@
               <h3><i class="fas fa-trophy" style="color:var(--kc-yellow-badge);"></i> Top Contribuidores</h3>
               <p class="kc-admin-section__intro">Ranking de usuários por engajamento na plataforma, sincronizado com o período selecionado.</p>
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-                <select id="admin-ranking-module-filter" class="kc-admin-period-filter" title="Filtrar por módulo" style="flex:1;min-width:0;">
+                <select id="admin-ranking-module-filter" class="kc-admin-period-filter" title="Filtrar por módulo" data-i18n-tooltip="tooltip.filter-module" style="flex:1;min-width:0;">
                   <option value="">Todos os módulos</option>
                   <option value="compra-venda">Compra e Venda</option>
                   <option value="eventos">Eventos</option>
@@ -856,7 +856,7 @@
                   <option value="oportunidades">Oportunidades</option>
                   <option value="achados-perdidos">Achados/Perdidos</option>
                 </select>
-                <button type="button" class="kc-ranking-info-btn" title="Como funciona o ranking?" id="admin-ranking-info-btn"><i class="fas fa-circle-info"></i></button>
+                <button type="button" class="kc-ranking-info-btn" title="Como funciona o ranking?" data-i18n-tooltip="tooltip.how-ranking-works" id="admin-ranking-info-btn"><i class="fas fa-circle-info"></i></button>
               </div>
               <div id="admin-ranking-table">
                 <div class="kc-admin-empty">Carregando ranking...</div>

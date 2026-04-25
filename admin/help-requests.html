@@ -72,7 +72,7 @@
       </nav>
       <div class="kc-user-actions">
         <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun"></i></button>
         <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
@@ -94,7 +94,7 @@
             <p>Triagem centralizada de dúvidas, reclamações, elogios, denúncias e problemas de conta enviados pela central de ajuda.</p>
           </div>
           <div class="kc-admin-toolbar">
-            <select id="helpStatusFilter" title="Filtrar por status">
+            <select id="helpStatusFilter" title="Filtrar por status" data-i18n-tooltip="tooltip.filter-status">
               <option value="all">Todos os status</option>
               <option value="new">Novo</option>
               <option value="triaged">Triado</option>
@@ -102,10 +102,10 @@
               <option value="resolved">Resolvido</option>
               <option value="archived">Arquivado</option>
             </select>
-            <select id="helpTypeFilter" title="Filtrar por categoria">
+            <select id="helpTypeFilter" title="Filtrar por categoria" data-i18n-tooltip="tooltip.filter-category">
               <option value="all">Todas as categorias</option>
             </select>
-            <select id="helpPriorityFilter" title="Filtrar por urgência">
+            <select id="helpPriorityFilter" title="Filtrar por urgência" data-i18n-tooltip="tooltip.filter-urgency">
               <option value="all">Todas as urgências</option>
               <option value="low">Baixa</option>
               <option value="normal">Normal</option>
