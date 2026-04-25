@@ -6,6 +6,8 @@
 
 ### Added
 
+- `v12.13.0`: **Release gate final v12** (docs-only): `CHANGELOG.md` entrada formal `## [12.0.0] - 2026-04-25` com sumário completo de todas as 13 iterações + tabela de métricas finais; `RELATORIO-KINOCAMPUS-V12.md` seção 7 DoD totalmente preenchida (18/19 critérios verdes, 1 parcial — JS > 1100L transferido para v13) + §8.43 de encerramento + cabeçalho "v12 ENCERRADA"; `README.md` status atualizado para v12 encerrada; baseline inalterada Jest 127/127 · 2647/2647 · Playwright 51/51 · hygiene 8.6.0.
+
 - `v12.12.0`: **Trilha C2 — Error boundary + telemetria**: `assets/js/kc-telemetry.js` criado (IIFE; 2 guards: `typeof window.KCFF`, `KCFF.isEnabled('telemetry.enabled')` padrão `false`; namespace `window._KCT` — `errors[]` buffer circular MAX_ERRORS=50, `push(entry)` com shift automático, `getErrors()` retorna `.slice()`, `clear()`, `flush()` via `navigator.sendBeacon` para `KC_ENV.telemetryEndpoint`); handler `window.onerror` captura msg/source/lineno/colno/stack + preserva `_prevOnError`; listener `unhandledrejection` captura reason.message+stack; listener `beforeunload` chama `flush()`; `tests/telemetry.test.js` criado com `36` testes (14 integridade + 22 cadeia HTML); `22` HTMLs editados com tag `kc-telemetry.js` após `kc-sw-register.js`; Jest 127/127 · 2647/2647 · Playwright 51/51 preservados.
 
 - `v12.11.0`: **Trilha C1 — Service Worker**: `sw.js` criado na raiz (`CACHE_VERSION='kc-shell-v12.11.0'`; `SHELL_ASSETS` com 12 entradas — `/`, `styles.css`, `kc-public-shell.css`, 9 JS core; `PASSTHROUGH_PATTERNS` cobrindo Supabase, jsDelivr, Google Fonts ×2, FontAwesome ×2; `install` com `skipWaiting`, `activate` com `clients.claim`, `fetch` cache-first com update em background); `assets/js/kc-sw-register.js` criado (IIFE — 3 guards: `'serviceWorker' in navigator`, `typeof window.KCFF !== 'undefined'`, `KCFF.isEnabled('sw.enabled')` padrão `false` — registra `/sw.js` scope `/` no evento `load`); `tests/sw.test.js` criado com `39` testes (10 integridade `sw.js`, 7 contrato `kc-sw-register.js`, 22 cadeia HTML validando posição do script tag em cada página); `22` HTMLs editados — script `kc-sw-register.js` injetado após `kc-feature-flags.js` em 17 públicos + 5 admin; Jest 126/126 · 2611/2611 · Playwright 51/51 preservados.
@@ -215,6 +217,67 @@
 - `v12.1.0`: criado `docs/kc-utils-audit-v12.1.md` com auditoria doc-only formal de `assets/js/kc-utils.js` (2445L, ~100KB, ~95 funções das quais 42 públicas congeladas no facade `window.KCUtils`, 17 HTMLs consumidores diretos, 30 arquivos JS com dependência, 136+ callsites, 1106L de cobertura de testes distribuída em 3 suites). O documento mapeia 7 domínios internos com footprint por linha (`string` ~180L, `format` ~120L, `dom` ~100L, `identity` ~60L, `taxonomy` ~420L, `location` ~1050L, `presentation` ~600L), inventaria consumers com contagem de métodos, e expande o plano original de 5 splits para 7 iterações v12.2.0–v12.2.6 + gate v12.2.7 (justificado pelo tamanho real dos domínios `location` e `presentation`, antes subestimados). Entrega ainda matriz de risco por domínio, grafo de dependência entre sub-módulos `window._KCU.*`, ordem obrigatória de carregamento HTML (`constants → string → format → dom → identity → taxonomy → location → presentation → facade`), padrão de teste de contrato estático reutilizável e DoD explícito da iteração. Nenhum arquivo JS, HTML ou teste foi alterado — baseline Jest preservada em `99/99` suites · `1874/1874` testes, hygiene `8.6.0` ✓.
 - `v12.1.0`: `RELATORIO-KINOCAMPUS-V12.md` atualizado — cabeçalho "Estado desta fase" passou a refletir a conclusão de `v12.1.0` e a próxima iteração `v12.2.0`, tabela do roadmap `§5.1 Camada A` expandida de 5 para 7 linhas (mais gate) com entregáveis numéricos concretos por iteração (ex.: `v12.2.0 string — 8 funções, ~180L movidas, ~12 testes novos`), `§8.0` marcada como concluída com referência ao PR `#393`, nova seção `§8.1` adicionada com tabela de descobertas da auditoria, justificativa das decisões (7 vs 5 splits), escopo explícito e plano de validação.
 - `v12.1.0`: `README.md` atualizado — nova linha no topo da tabela "Entregas Recentes" descrevendo os achados da auditoria (2445L · 17 HTMLs · 30 consumers · 7 domínios · 7 splits planejados), linha `v12.0.0` anotada com o PR `#393` de merge, seção "Progresso atual" reescrita para apontar v12.1.0 concluída e v12.2.0 como próxima iteração com escopo definido.
+
+---
+
+## [12.0.0] - 2026-04-25 — Trilha v12: Consolidação & Qualidade Sistêmica (v12.0.0–v12.13.0)
+
+Ciclo v12 encerrado. Arco narrativo: consolidar os splits IIFE da v11 + elevar a maturidade sistêmica da plataforma. Zero quebras de contrato público. Baseline Jest cresceu de `99/1874` para `127/2647` (+28 suites, +773 testes). Playwright E2E: 51 testes. Vercel produção atualizado a cada merge.
+
+### Camada A — Redução estrutural de hotspots
+
+- `v12.1.0`: auditoria `kc-utils.js` (doc-only) — mapa por domínio em `docs/kc-utils-audit-v12.1.md`
+- `v12.2.0–v12.2.4`: splits `kc-utils.js` — 7 sub-módulos `window._KCU.*` criados (`kc-utils.string.js`, `kc-utils.format.js`, `kc-utils.dom.js`, `kc-utils.taxonomy.js`, `kc-utils.identity.js`, `kc-utils.location.js`, `kc-utils.presentation.js`); `kc-utils.js` reduzido de `2445L → 531L` (−78%)
+- `v12.2.5`: gate formal `kc-utils.js` < 900L ✅ (531L)
+- `v12.3.0`: auditoria `admin-dashboard.controller.js` (doc-only) — `docs/admin-dashboard-audit-v12.3.md`
+- `v12.3.1–v12.3.3`: splits admin-dashboard — `admin-dashboard.metrics.js` + `admin-dashboard.audit.js` + `admin-dashboard.charts.js`; controller principal reduzido para 835L
+- `v12.3.4`: gate formal `admin-dashboard.controller.js` < 900L ✅ (835L)
+- `v12.4.0`: auditoria `local.adapter.js` (doc-only) — `docs/local-adapter-audit-v12.4.md`
+- `v12.4.1–v12.4.5`: splits `local.adapter.js` — 7 sub-adapters `window._KCLA.*` (`local.notifications.adapter.js`, `local.ratings.adapter.js`, `local.saved.adapter.js`, `local.posts-read.adapter.js`, `local.posts-write.adapter.js`, `local.profile.adapter.js`, `local.help.adapter.js`); facade reduzido para 473L
+- `v12.4.6`: gate formal `local.adapter.js` < 500L ✅ (473L)
+- `v12.5.0–v12.5.3`: splits `profile.controller.js` — 5 sub-módulos `window._KCPR.*` (`profile.flow.js`, `profile.presentation.js`, `profile.ratings.js`, `profile.collections.js`); controller reduzido para 613L
+- `v12.5.4`: gate formal `profile.controller.js` < 600L ⚠️ (613L — 13L acima; aceito como gate soft)
+
+### Camada B — Qualidade sistêmica
+
+- `v12.6.0`: Feature flags `window.KCFF` — `kc-feature-flags.js` (170L); `isEnabled(flag)` com `toBoolean` + defaults; consolidação de flags dispersas; kill-switches `sw.enabled` e `telemetry.enabled` formalizados; +~20 testes
+- `v12.7.0–v12.7.2`: i18n runtime fase 1–3 — `kc-i18n.js` expandido; 433/446 chaves migradas (97%); switcher pt-BR/en-US; `data-i18n` em 22 HTMLs; +~40 testes
+- `v12.7.3`: gate formal trilha B2 i18n — `runI18nB2GateChecks()` no hygiene; `tests/i18n-b2-gate.test.js`; trilha B2 encerrada
+- `v12.8.0`: auditoria a11y estrutural (doc-only) — `docs/a11y-audit-v12.8.md`; 7 problemas WCAG 2.1 AA identificados (A1–A7)
+- `v12.8.1`: a11y correções estruturais — CSS `kc-sr-only`; `<h1>` em 9 páginas; skip link + `id="kc-main"` em 21 HTMLs; `aria-label` em todos os `<nav>`; 3 selects + 2 botões + 1 label corrigidos; 6 chaves i18n; `runA11yStructureChecks()` hygiene; +10 testes a11y; `tests/a11y.test.js` cobre 22 HTMLs (≥5 asserts cada)
+- `v12.9.0`: Playwright E2E scaffold — `playwright.config.js`; 3 suites (`smoke.spec.js`, `pages-load.spec.js`, `a11y-e2e.spec.js`); 18 testes; `http-server` devDep
+- `v12.9.1`: E2E expansão — `create-post.spec.js` (6t) + `product-detail.spec.js` (8t) + `admin-pages.spec.js` (5t); acumulado 37 E2E verdes
+- `v12.9.2`: E2E gate B4 — `admin-moderation.spec.js` (7t) + `remaining-pages.spec.js` (7t); **trilha B4 encerrada** com **51/51 E2E em 8 suites**; supera gate DoD ≥ 8 cenários
+- `v12.10.0`: Lighthouse CI — `.lighthouserc.js` (4 URLs; thresholds warn: perf ≥0.70, a11y ≥0.80, bp ≥0.60, seo ≥0.90); `.github/workflows/lighthouse-ci.yml` (Ubuntu, npm ci, lhci autorun em PRs); `@lhci/cli` devDep; baseline local: index (perf 74/a11y 86/bp 64/seo 100), feed (100/86/64/100)
+
+### Camada C — Resiliência & observabilidade
+
+- `v12.11.0`: Service Worker — `sw.js` (`CACHE_VERSION='kc-shell-v12.11.0'`; cache-first para 12 shell assets; passthrough Supabase/CDNs/Fonts; `skipWaiting` + `clients.claim`); `kc-sw-register.js` (IIFE; 3 guards; kill-switch `KCFF.isEnabled('sw.enabled')` padrão `false`); `tests/sw.test.js` (39 testes); 22 HTMLs injetados
+- `v12.12.0`: Error boundary + telemetria — `kc-telemetry.js` (namespace `window._KCT`; `errors[]` buffer circular; `push/getErrors/clear/flush` via `sendBeacon`; `window.onerror` + `unhandledrejection` + `beforeunload`; kill-switch `KCFF.isEnabled('telemetry.enabled')` padrão `false`); `tests/telemetry.test.js` (36 testes); 22 HTMLs injetados
+
+### Release gate v12.13.0
+
+- `v12.13.0`: gate final — CHANGELOG `[12.0.0]` formal + RELATORIO §8.43 DoD + README v12 encerrada; baseline 127/127 · 2647/2647 · Playwright 51/51; hygiene 8.6.0 ✅
+
+### Métricas finais v12
+
+| Métrica | v12.0.0 | v12.13.0 | Δ |
+|---|---|---|---|
+| Jest suites | 99 | 127 | +28 |
+| Jest testes | 1874 | 2647 | +773 |
+| Playwright E2E | 0 | 51 | +51 |
+| `kc-utils.js` | 2445L | 531L | −1914L |
+| Sub-módulos `_KCU.*` | 0 | 7 | +7 |
+| `admin-dashboard.controller.js` | 2251L | 835L | −1416L |
+| Sub-módulos `_KCAD.*` | 0 | 4 | +4 |
+| `local.adapter.js` | 1862L | 473L | −1389L |
+| Sub-adapters `_KCLA.*` | 0 | 7 | +7 |
+| `profile.controller.js` | 1463L | 613L | −850L |
+| Sub-módulos `_KCPR.*` | 0 | 5 | +5 |
+| Strings i18n migradas | ~200 | 433/446 (97%) | +233 |
+| HTMLs com WCAG fixes | 0 | 22 | +22 |
+| Service Worker | ✗ | `sw.js` + flag | ✓ |
+| Telemetria cliente | ✗ | `kc-telemetry.js` + flag | ✓ |
 
 ---
 
