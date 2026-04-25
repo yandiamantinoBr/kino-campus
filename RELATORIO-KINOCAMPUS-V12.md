@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.10.0` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada, trilha B3 a11y WCAG 2.1 AA encerrada, trilha B4 Playwright E2E encerrada com `51` testes em `8` suites, **trilha B5 Lighthouse CI configurada** com `.lighthouserc.js` + workflow `lighthouse-ci.yml`; baseline local documentada: `index.html` perf/a11y/bp/seo = 74/86/64/100, `compra-venda-feed.html` = 100/86/64/100); próxima iteração: `v12.11.0` — Trilha C1 Service Worker; baseline Jest preservada em `125/125` suites e `2572/2572` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.11.0` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada, trilha B3 a11y WCAG 2.1 AA encerrada, trilha B4 Playwright E2E encerrada com `51` testes em `8` suites, **trilha B5 Lighthouse CI configurada** com `.lighthouserc.js` + workflow `lighthouse-ci.yml`; baseline local documentada: `index.html` perf/a11y/bp/seo = 74/86/64/100, `compra-venda-feed.html` = 100/86/64/100; **trilha C1 Service Worker** — `sw.js` + `kc-sw-register.js` + `39` testes em `tests/sw.test.js` + `22` HTMLs com script tag; kill-switch `KCFF.isEnabled('sw.enabled')` padrão `false`); próxima iteração: `v12.12.0` — Trilha C2 Error boundary + telemetria; baseline Jest preservada em `126/126` suites e `2611/2611` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -237,7 +237,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 
 | Iteração | Escopo | Entrega esperada | Status |
 |---|---|---|---|
-| v12.11.0 | **Trilha C1 — Service Worker** (cache-first para shell estático, atrás de flag `KCFF.isEnabled('sw.enabled')`) | `sw.js` + `kc-sw-register.js`; +~15 testes; TTI medido | 📋 planejado |
+| **v12.11.0** | **Trilha C1 — Service Worker** (cache-first para shell estático, atrás de flag `KCFF.isEnabled('sw.enabled')`) | `sw.js` + `kc-sw-register.js`; `tests/sw.test.js` (`39` testes); `22` HTMLs com `kc-sw-register.js`; kill-switch padrão `false` | ✅ concluído |
 | v12.12.0 | **Trilha C2 — Error boundary global + client metrics** | `kc-telemetry.js`; `window.onerror` + `unhandledrejection` → backend; +~10 testes | 📋 planejado |
 
 ### 5.4. Gate de encerramento
@@ -1752,7 +1752,45 @@ Configuracao da trilha B5 — Lighthouse CI. Infraestrutura de auditoria de perf
 - `.lighthouserc.js` valido (`node -e "require('./.lighthouserc.js')"` -> OK)
 - `.github/workflows/lighthouse-ci.yml` criado (ativo em PRs futuros)
 
-**Proxima iteracao:** `v12.11.0` - Trilha C1 (Service Worker atrás de flag `KCFF`).
+**Proxima iteracao:** `v12.12.0` - Trilha C2 (Error boundary global + telemetria cliente).
+
+---
+
+### 8.41. v12.11.0 - Trilha C1 Service Worker - concluido
+
+**Data:** 25 de abril de 2026  
+**Branch:** `feature/v12.11.0-service-worker`  
+**PR:** merge squash em `kinocampus-V11.0-foundations`
+
+Implementação da Trilha C1 — Service Worker para resiliência offline, atrás de kill-switch `KCFF.isEnabled('sw.enabled')` (padrão `false`).
+
+**Arquivos criados:**
+
+- `sw.js` — Service Worker raiz (`CACHE_VERSION = 'kc-shell-v12.11.0'`); estratégia cache-first para `SHELL_ASSETS` (12 entradas: `/`, 2 CSS, 9 JS core); passthrough para 6 origens externas (Supabase, jsDelivr, Google Fonts ×2, FontAwesome ×2); `install` (pre-cache + `skipWaiting`); `activate` (limpa caches antigos + `clients.claim`); `fetch` (cache-first com atualização em background para recursos locais)
+- `assets/js/kc-sw-register.js` — IIFE registrador com 3 guards: `serviceWorker in navigator`, `typeof window.KCFF !== 'undefined'`, `KCFF.isEnabled('sw.enabled')`; registra `/sw.js` com scope `/` no evento `load`
+- `tests/sw.test.js` — 39 testes estáticos: 10 para `sw.js` (CACHE_VERSION, SHELL_ASSETS, PASSTHROUGH_PATTERNS, eventos); 7 para `kc-sw-register.js` (IIFE, guards, scope); 22 para cadeia HTML (17 páginas públicas + 5 admin — verificam que `kc-sw-register.js` aparece após `kc-feature-flags.js`)
+
+**Arquivos editados:**
+
+- `22 HTMLs` — script tag `kc-sw-register.js` injetado imediatamente após `kc-feature-flags.js` em todos os 17 HTMLs públicos (prefixo `assets/js/`) e 5 admin (prefixo `../assets/js/`)
+
+**Validacao:**
+
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test` -> **126/126 suites / 2611/2611 testes verdes** (Jest; +1 suite, +39 testes)
+- `npx playwright test` -> **51/51 testes E2E verdes** (Playwright, inalterado)
+- Todos os 22 HTMLs com cadeia SW validada por testes estáticos
+- Kill-switch padrão `false` — zero impacto em produção sem opt-in explícito
+
+**Decisoes de design:**
+
+- `defer` no `<script>` do registrador garante que KCFF está carregado antes; SW só ativa com `KCFF.isEnabled('sw.enabled') === true`
+- `skipWaiting` + `clients.claim` garante que nova versão ativa imediatamente após install
+- `PASSTHROUGH_PATTERNS` impede cache de chamadas Supabase (autenticação, dados dinâmicos)
+- Estratégia fetch: cache-match primeiro → network-fetch com `cache.put` em background — mínimo de latência percebida para shell
+- `CACHE_VERSION` versionado — ativação apaga automaticamente caches de releases anteriores
+
+**Proxima iteracao:** `v12.12.0` - Trilha C2 (Error boundary global + telemetria cliente).
 
 ---
 
