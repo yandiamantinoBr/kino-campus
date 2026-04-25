@@ -9,7 +9,8 @@
   "scripts": {
     "test": "jest",
     "test:e2e": "playwright test",
-    "test:e2e:report": "playwright show-report output/playwright-report"
+    "test:e2e:report": "playwright show-report output/playwright-report",
+    "lhci": "lhci autorun"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.2",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.59.1",
     "babel-jest": "^30.3.0",
     "http-server": "^14.1.1",
