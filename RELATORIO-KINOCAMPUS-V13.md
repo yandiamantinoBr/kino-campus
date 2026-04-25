@@ -108,7 +108,7 @@ A trilha **v12 foi encerrada** com todos os critérios da Definition of Done ate
 | v13.5.0 | Auditoria kc-supabase.client.js (doc-only) | ✅ Concluído | #445 | 132/2896 |
 | v13.5.1 | Split kc-supabase.client.js — posts + ratings | ✅ Concluído | #446 | 132/2896 |
 | v13.5.2 | Gate kc-supabase.client.js < 700L | ✅ Concluído | #447 | 132/2896 |
-| v13.6.0 | Auditoria kc-core.js (doc-only) | ⏳ Pendente | — | — |
+| v13.6.0 | Auditoria kc-core.js (doc-only) | ✅ Concluído | #448 | 132/2896 |
 | v13.6.1 | Split kc-core.js — PostModel + RenderCard | ⏳ Pendente | — | — |
 | v13.6.2 | Gate kc-core.js < 700L | ⏳ Pendente | — | — |
 | v13.7.0 | Auditoria oportunidades.controller.js (doc-only) | ⏳ Pendente | — | — |
