@@ -1,7 +1,7 @@
 /*
   KinoCampus - Módulo de Internacionalização (i18n)
   Infraestrutura base: dicionário pt-BR, helpers KCi18n.t() e KCi18n.n()
-  v12.7.1 — runtime fase 2: aria-label + placeholder declarativos (sem dependências externas)
+  v12.7.2 — runtime fase 3: title (tooltip) declarativo (sem dependências externas)
 */
 (function () {
   'use strict';
@@ -495,6 +495,43 @@
     'placeholder.admin-invite-email':   'E-mail do convidado (ex: usuario@gmail.com)',
     'placeholder.admin-invite-reason':  'Motivo do convite (opcional)',
     'placeholder.admin-limit-max':      'Máx.',
+
+    // ── Tooltips (atributo title em botões, selects e links) ──────────────
+    // Tema
+    'tooltip.theme-toggle':             'Alternar tema',
+    // Ranking / info
+    'tooltip.how-it-works':             'Como funciona?',
+    'tooltip.how-ranking-works':        'Como funciona o ranking?',
+    // Perfil
+    'tooltip.view-author':              'Ver perfil do autor',
+    'tooltip.verified-user':            'Usuário verificado',
+    // Editor de rich text
+    'tooltip.format-bold':              'Negrito',
+    'tooltip.format-italic':            'Itálico',
+    'tooltip.format-underline':         'Sublinhado',
+    'tooltip.format-strike':            'Tachado',
+    'tooltip.format-code':              'Código inline',
+    'tooltip.format-quote':             'Citação',
+    'tooltip.format-bullet':            'Lista',
+    'tooltip.format-link':              'Link',
+    // Filtros admin
+    'tooltip.filter-status':            'Filtrar por status',
+    'tooltip.filter-category':          'Filtrar por categoria',
+    'tooltip.filter-urgency':           'Filtrar por urgência',
+    'tooltip.filter-report-status':     'Filtrar por status da denúncia',
+    'tooltip.filter-reason':            'Filtrar por motivo',
+    'tooltip.filter-module':            'Filtrar por módulo',
+    'tooltip.period-filter':            'Período',
+    'tooltip.refresh':                  'Recarregar dados',
+    'tooltip.remove-global-limit':      'Remover override global (volta ao padrão de 5)',
+    // Admin banners
+    'tooltip.color-start':              'Escolher cor inicial',
+    'tooltip.color-end':                'Escolher cor final',
+    // ODS badges (index.html)
+    'tooltip.ods-04':                   'ODS 04: Educação de Qualidade',
+    'tooltip.ods-11':                   'ODS 11: Cidades e Comunidades Sustentáveis',
+    'tooltip.ods-12':                   'ODS 12: Consumo e Produção Responsáveis',
+    'tooltip.ods-13':                   'ODS 13: Ação Contra a Mudança Global do Clima',
   };
 
   /**
@@ -700,11 +737,44 @@
     return count;
   }
 
+  /**
+   * Aplica o atributo `title` (tooltip do browser) em qualquer elemento
+   * marcado com data-i18n-tooltip="tooltip.<nome>". Preserva o fallback
+   * pt-BR quando a chave não existe no dicionário.
+   *
+   *   <button data-i18n-tooltip="tooltip.theme-toggle" title="Alternar tema">
+   *
+   * Nota: data-i18n-tooltip NÃO conflita com data-i18n-title (usado apenas
+   * no elemento <html> para o metadata de page-title).
+   */
+  function applyTooltips(root) {
+    var doc = getDocument(root);
+    var scope = root && typeof root.querySelectorAll === 'function' ? root : doc;
+    if (!scope || typeof scope.querySelectorAll !== 'function') {
+      return 0;
+    }
+
+    var count = 0;
+    var elements = scope.querySelectorAll('[data-i18n-tooltip]');
+    Array.prototype.forEach.call(elements, function (el) {
+      if (typeof el.getAttribute !== 'function' || typeof el.setAttribute !== 'function') return;
+      var key = el.getAttribute('data-i18n-tooltip');
+      var fallback = el.getAttribute('title') || '';
+      var value = translateWithFallback(key, fallback);
+      if (value) {
+        el.setAttribute('title', value);
+        count += 1;
+      }
+    });
+    return count;
+  }
+
   function applyRuntimeI18n() {
     applyDocumentMetadata();
     applyStaticAlts();
     applyAriaLabels();
     applyPlaceholders();
+    applyTooltips();
   }
 
   function onReady(callback) {
@@ -725,6 +795,7 @@
     applyStaticAlts: applyStaticAlts,
     applyAriaLabels: applyAriaLabels,
     applyPlaceholders: applyPlaceholders,
+    applyTooltips: applyTooltips,
   };
 
   onReady(applyRuntimeI18n);

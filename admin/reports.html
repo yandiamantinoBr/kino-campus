@@ -100,7 +100,7 @@
       </nav>
       <div class="kc-user-actions">
         <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun"></i></button>
         <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
@@ -119,12 +119,12 @@
         <div class="kc-admin-header-bar">
           <h1><i class="fas fa-flag"></i>Triagem de Denúncias</h1>
           <div class="kc-admin-filters">
-            <select id="reports-status-filter" title="Filtrar por status da denúncia">
+            <select id="reports-status-filter" title="Filtrar por status da denúncia" data-i18n-tooltip="tooltip.filter-report-status">
               <option value="open">Em aberto</option>
               <option value="all">Todas</option>
               <option value="closed">Fechadas</option>
             </select>
-            <select id="reports-reason-filter" title="Filtrar por motivo">
+            <select id="reports-reason-filter" title="Filtrar por motivo" data-i18n-tooltip="tooltip.filter-reason">
               <option value="all">Todos os motivos</option>
               <option value="spam">Spam</option>
               <option value="scam">Golpe/Fraude</option>
@@ -134,7 +134,7 @@
               <option value="duplicate">Duplicado</option>
               <option value="other">Outro</option>
             </select>
-            <button type="button" data-action="refresh" title="Recarregar dados">
+            <button type="button" data-action="refresh" title="Recarregar dados" data-i18n-tooltip="tooltip.refresh">
               <i class="fas fa-sync-alt"></i> Atualizar
             </button>
           </div>

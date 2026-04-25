@@ -71,7 +71,7 @@
 
       <div class="kc-user-actions">
         <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle">
+        <button class="theme-toggle" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle">
           <i class="fas fa-sun"></i>
         </button>
         <a href="#login" class="btn-login">Login/Cadastro</a>
@@ -198,7 +198,7 @@
       <!-- Seller -->
       <div class="kc-seller-card" id="sellerCard" style="display:none;">
         <h3><i class="fas fa-user"></i> Autor</h3>
-        <div class="kc-seller-profile" id="sellerAvatarWrap" data-kc-view-profile="1" style="cursor: pointer;" title="Ver perfil do autor" aria-label="Ver perfil do autor" data-i18n-aria-label="aria-label.view-author">
+        <div class="kc-seller-profile" id="sellerAvatarWrap" data-kc-view-profile="1" style="cursor: pointer;" title="Ver perfil do autor" data-i18n-tooltip="tooltip.view-author" aria-label="Ver perfil do autor" data-i18n-aria-label="aria-label.view-author">
           <img class="kc-seller-avatar" id="sellerAvatar" alt="Avatar do autor" data-i18n-alt="alt.author-avatar" />
           <div class="kc-seller-info">
             <div class="kc-seller-name" id="sellerName"></div>
@@ -235,14 +235,14 @@
             <div class="kc-comment-editor">
               <textarea id="commentText" placeholder="Deixe o seu comentário" data-i18n-placeholder="placeholder.comment" aria-label="Escreva seu comentário" data-i18n-aria-label="aria-label.comment-text"></textarea>
               <div class="kc-editor-toolbar">
-                <button type="button" data-kc-format="bold" title="Negrito" aria-label="Negrito" data-i18n-aria-label="aria-label.format-bold"><i class="fas fa-bold" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="italic" title="Itálico" aria-label="Itálico" data-i18n-aria-label="aria-label.format-italic"><i class="fas fa-italic" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="underline" title="Sublinhado" aria-label="Sublinhado" data-i18n-aria-label="aria-label.format-underline"><i class="fas fa-underline" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="strikethrough" title="Tachado" aria-label="Tachado" data-i18n-aria-label="aria-label.format-strike"><i class="fas fa-strikethrough" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="inlinecode" title="Código inline" aria-label="Código inline" data-i18n-aria-label="aria-label.format-code"><i class="fas fa-code" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="quote" title="Citação" aria-label="Citação" data-i18n-aria-label="aria-label.format-quote"><i class="fas fa-quote-right" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="bullet" title="Lista" aria-label="Lista com marcadores" data-i18n-aria-label="aria-label.format-bullet"><i class="fas fa-list-ul" aria-hidden="true"></i></button>
-                <button type="button" data-kc-format="link" title="Link" aria-label="Inserir link" data-i18n-aria-label="aria-label.format-link"><i class="fas fa-link" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="bold" title="Negrito" data-i18n-tooltip="tooltip.format-bold" aria-label="Negrito" data-i18n-aria-label="aria-label.format-bold"><i class="fas fa-bold" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="italic" title="Itálico" data-i18n-tooltip="tooltip.format-italic" aria-label="Itálico" data-i18n-aria-label="aria-label.format-italic"><i class="fas fa-italic" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="underline" title="Sublinhado" data-i18n-tooltip="tooltip.format-underline" aria-label="Sublinhado" data-i18n-aria-label="aria-label.format-underline"><i class="fas fa-underline" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="strikethrough" title="Tachado" data-i18n-tooltip="tooltip.format-strike" aria-label="Tachado" data-i18n-aria-label="aria-label.format-strike"><i class="fas fa-strikethrough" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="inlinecode" title="Código inline" data-i18n-tooltip="tooltip.format-code" aria-label="Código inline" data-i18n-aria-label="aria-label.format-code"><i class="fas fa-code" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="quote" title="Citação" data-i18n-tooltip="tooltip.format-quote" aria-label="Citação" data-i18n-aria-label="aria-label.format-quote"><i class="fas fa-quote-right" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="bullet" title="Lista" data-i18n-tooltip="tooltip.format-bullet" aria-label="Lista com marcadores" data-i18n-aria-label="aria-label.format-bullet"><i class="fas fa-list-ul" aria-hidden="true"></i></button>
+                <button type="button" data-kc-format="link" title="Link" data-i18n-tooltip="tooltip.format-link" aria-label="Inserir link" data-i18n-aria-label="aria-label.format-link"><i class="fas fa-link" aria-hidden="true"></i></button>
                 <div style="flex: 1;"></div>
                 <button id="submitCommentButton" type="button" data-kc-submit-comment="1" data-action="submit-comment"
                   style="padding: 8px 18px; background-color: var(--kc-primary-brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap: 6px;">
