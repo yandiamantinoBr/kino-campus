@@ -92,19 +92,19 @@ A trilha **v12 foi encerrada** com todos os critérios da Definition of Done ate
 
 | Iter | Escopo | Status | PR | Testes |
 |---|---|---|---|---|
-| v13.0.0 | Abertura docs-only | 🔄 Em andamento | — | 127/2647 |
-| v13.1.0 | VERSION.json + validate-version-map.js | ⏳ Pendente | — | — |
-| v13.2.0 | 3 scripts de validação estrutural | ⏳ Pendente | — | — |
-| v13.2.1 | package.json check:* + hygiene integração | ⏳ Pendente | — | — |
-| v13.3.0 | docs/ reorganização | ⏳ Pendente | — | — |
+| v13.0.0 | Abertura docs-only | ✅ Concluído | #437 | 127/2647 |
+| v13.1.0 | VERSION.json + validate-version-map.js | ✅ Concluído | #438 | 128/2669 |
+| v13.2.0 | 3 scripts de validação estrutural | ✅ Concluído | #439 | 130/2735 |
+| v13.2.1 | package.json check:* + hygiene integração | ✅ Concluído | #440 | 131/2748 |
+| v13.3.0 | docs/ reorganização | ✅ Concluído | #441 | 131/2748 |
 
 ### 3.2 Track A — Hotspot splits
 
 | Iter | Escopo | Status | PR | Testes |
 |---|---|---|---|---|
-| v13.4.0 | Auditoria product.controller.js (doc-only) | ⏳ Pendente | — | — |
-| v13.4.1 | Split product.controller.js — load + ui | ⏳ Pendente | — | — |
-| v13.4.2 | Gate product.controller.js < 800L | ⏳ Pendente | — | — |
+| v13.4.0 | Auditoria product.controller.js (doc-only) | ✅ Concluído | #442 | 131/2748 |
+| v13.4.1 | Split product.controller.js — render + load | ✅ Concluído | #443 | 131/2802 |
+| v13.4.2 | Gate product.controller.js < 800L | ✅ Concluído | #444 | 131/2802 |
 | v13.5.0 | Auditoria kc-supabase.client.js (doc-only) | ⏳ Pendente | — | — |
 | v13.5.1 | Split kc-supabase.client.js — auth + session | ⏳ Pendente | — | — |
 | v13.5.2 | Gate kc-supabase.client.js < 700L | ⏳ Pendente | — | — |
