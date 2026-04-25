@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.11.0` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada, trilha B3 a11y WCAG 2.1 AA encerrada, trilha B4 Playwright E2E encerrada com `51` testes em `8` suites, **trilha B5 Lighthouse CI configurada** com `.lighthouserc.js` + workflow `lighthouse-ci.yml`; baseline local documentada: `index.html` perf/a11y/bp/seo = 74/86/64/100, `compra-venda-feed.html` = 100/86/64/100; **trilha C1 Service Worker** — `sw.js` + `kc-sw-register.js` + `39` testes em `tests/sw.test.js` + `22` HTMLs com script tag; kill-switch `KCFF.isEnabled('sw.enabled')` padrão `false`); próxima iteração: `v12.12.0` — Trilha C2 Error boundary + telemetria; baseline Jest preservada em `126/126` suites e `2611/2611` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.12.0` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada, trilha B3 a11y WCAG 2.1 AA encerrada, trilha B4 Playwright E2E encerrada com `51` testes em `8` suites, **trilha B5 Lighthouse CI configurada**; **trilha C1 Service Worker** — `sw.js` + `kc-sw-register.js` + `39` testes; **trilha C2 Error boundary + telemetria** — `kc-telemetry.js` + namespace `window._KCT` + `36` testes + `22` HTMLs; kill-switches `sw.enabled` e `telemetry.enabled` padrão `false`); próxima iteração: `v12.13.0` — Release gate final; baseline Jest preservada em `127/127` suites e `2647/2647` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -238,7 +238,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | Iteração | Escopo | Entrega esperada | Status |
 |---|---|---|---|
 | **v12.11.0** | **Trilha C1 — Service Worker** (cache-first para shell estático, atrás de flag `KCFF.isEnabled('sw.enabled')`) | `sw.js` + `kc-sw-register.js`; `tests/sw.test.js` (`39` testes); `22` HTMLs com `kc-sw-register.js`; kill-switch padrão `false` | ✅ concluído |
-| v12.12.0 | **Trilha C2 — Error boundary global + client metrics** | `kc-telemetry.js`; `window.onerror` + `unhandledrejection` → backend; +~10 testes | 📋 planejado |
+| **v12.12.0** | **Trilha C2 — Error boundary global + client metrics** | `kc-telemetry.js` (IIFE; namespace `window._KCT`; `onerror` + `unhandledrejection` + `beforeunload/flush`; `sendBeacon`; kill-switch `telemetry.enabled` padrão `false`); `tests/telemetry.test.js` (`36` testes); `22` HTMLs atualizados | ✅ concluído |
 
 ### 5.4. Gate de encerramento
 
@@ -1752,7 +1752,7 @@ Configuracao da trilha B5 — Lighthouse CI. Infraestrutura de auditoria de perf
 - `.lighthouserc.js` valido (`node -e "require('./.lighthouserc.js')"` -> OK)
 - `.github/workflows/lighthouse-ci.yml` criado (ativo em PRs futuros)
 
-**Proxima iteracao:** `v12.12.0` - Trilha C2 (Error boundary global + telemetria cliente).
+**Proxima iteracao:** `v12.13.0` - Release gate final da v12.
 
 ---
 
@@ -1791,6 +1791,42 @@ Implementação da Trilha C1 — Service Worker para resiliência offline, atrá
 - `CACHE_VERSION` versionado — ativação apaga automaticamente caches de releases anteriores
 
 **Proxima iteracao:** `v12.12.0` - Trilha C2 (Error boundary global + telemetria cliente).
+
+---
+
+### 8.42. v12.12.0 - Trilha C2 Error boundary + telemetria - concluido
+
+**Data:** 25 de abril de 2026  
+**Branch:** `feature/v12.12.0-telemetry-error-boundary`  
+**PR:** merge squash em `kinocampus-V11.0-foundations`
+
+Implementação da Trilha C2 — Error boundary global + telemetria cliente, atrás de kill-switch `KCFF.isEnabled('telemetry.enabled')` (padrão `false`).
+
+**Arquivos criados:**
+
+- `assets/js/kc-telemetry.js` — IIFE com 2 guards (`typeof window.KCFF` + `KCFF.isEnabled('telemetry.enabled')`); namespace `window._KCT` com: `errors[]` (buffer circular, máx 50 entradas), `push(entry)` (adiciona com shift quando cheio), `getErrors()` (cópia via `.slice()`), `clear()`, `flush()` (envia via `navigator.sendBeacon` ao endpoint `KC_ENV.telemetryEndpoint`); handler `window.onerror` (captura msg/source/lineno/colno/stack, preserva `_prevOnError`); listener `unhandledrejection` (captura reason.message + stack); listener `beforeunload` (chama `_KCT.flush()` para envio final)
+- `tests/telemetry.test.js` — **36 testes**: 14 integridade `kc-telemetry.js` (guards, namespace, push/getErrors/clear/flush, onerror, unhandledrejection, beforeunload, chain _prevOnError) + 22 cadeia HTML (17 públicos + 5 admin — verifica posição de `kc-telemetry.js` após `kc-sw-register.js`)
+
+**Arquivos editados:**
+
+- `22 HTMLs` — script tag `kc-telemetry.js` injetado imediatamente após `kc-sw-register.js` em todos os 17 HTMLs públicos + 5 admin
+
+**Validacao:**
+
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test` -> **127/127 suites / 2647/2647 testes verdes** (Jest; +1 suite, +36 testes)
+- `npx playwright test` -> **51/51 testes E2E verdes** (Playwright, inalterado)
+- Kill-switch padrão `false` — zero impacto em produção sem opt-in
+
+**Decisoes de design:**
+
+- `flush()` usa `sendBeacon` (fire-and-forget) — não bloqueia unload do navegador
+- `ENDPOINT` configurável via `KC_ENV.telemetryEndpoint` — sem Edge Function obrigatória no lançamento (graceful no-op se não configurado)
+- Buffer circular com `MAX_ERRORS = 50` — evita crescimento ilimitado de memória
+- `_prevOnError` preservado — permite coexistência com outros handlers
+- `beforeunload` chama `flush()` — melhor esforço de entrega antes de fechar a aba
+
+**Proxima iteracao:** `v12.13.0` - Release gate final da v12 (CHANGELOG `[12.0.0]` + smoke + DoD completo).
 
 ---
 
