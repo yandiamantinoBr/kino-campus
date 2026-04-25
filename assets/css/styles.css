@@ -35,6 +35,19 @@
 }
 
 /* Skip-link para navegação por teclado (v9.4.2) */
+/* Visually hidden — disponível para leitores de tela, invisível na tela */
+.kc-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .kc-skip-link {
     position: absolute;
     top: -100%;

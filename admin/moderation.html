@@ -82,6 +82,7 @@
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.0" />
 </head>
 <body class="kc-admin-page kc-admin-page--moderation">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
   <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -108,7 +109,7 @@
     </div>
   </header>
 
-  <main class="kc-main-content">
+  <main class="kc-main-content" id="kc-main">
     <div class="kc-admin-wrapper">
       <div id="admin-loading"><i class="fas fa-spinner fa-spin" style="font-size:1.6em;"></i><span>Verificando acesso…</span></div>
       <div id="admin-error" role="alert"></div>
@@ -118,7 +119,7 @@
         <div class="kc-admin-header-bar">
           <h1><i class="fas fa-shield-halved"></i>Moderação de Posts</h1>
           <div class="kc-admin-filters">
-            <select id="moderation-status-filter"></select>
+            <select id="moderation-status-filter" aria-label="Filtrar por status de moderação" data-i18n-aria-label="aria-label.filter-mod-status"></select>
             <input id="moderation-search" type="search" placeholder="Buscar por título, ID, nome ou nickname" data-i18n-placeholder="placeholder.admin-mod-search" />
             <button id="moderation-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
           </div>
@@ -160,7 +161,7 @@
           <div style="border:1px solid var(--kc-border-dark);border-radius:8px;padding:12px 14px;margin-bottom:12px;">
             <h4 style="margin:0 0 10px;font-size:.92em;font-weight:600;">Limite global (todos os usuários)</h4>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <select id="limit-global-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
+              <select id="limit-global-module" aria-label="Módulo — limite global" data-i18n-aria-label="aria-label.filter-mod-global-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
                 <option value="">Todos os módulos</option>
                 <option value="alugueis">Aluguéis</option>
                 <option value="vendas">Vendas</option>
@@ -182,7 +183,7 @@
                 <input id="limit-user-search" type="search" placeholder="Buscar usuário por nome, e-mail ou nickname…" data-i18n-placeholder="placeholder.admin-user-search" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
                 <div id="limit-user-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:8px;z-index:50;max-height:180px;overflow-y:auto;"></div>
               </div>
-              <select id="limit-user-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
+              <select id="limit-user-module" aria-label="Módulo — limite por usuário" data-i18n-aria-label="aria-label.filter-mod-user-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
                 <option value="">Todos os módulos</option>
                 <option value="alugueis">Aluguéis</option>
                 <option value="vendas">Vendas</option>
@@ -353,7 +354,7 @@
   </main>
 
   <!-- Mobile Navigation (admin) -->
-  <nav class="kc-mobile-nav">
+  <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
     <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
     <a class="active" href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
     <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>

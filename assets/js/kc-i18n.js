@@ -428,6 +428,18 @@
     // My posts popover
     'aria-label.my-posts-save-close':   'Fechar',
 
+    // Navegação (v12.8.1 — trilha B3 a11y)
+    'aria-label.nav-main':              'Navegação principal',
+    'aria-label.nav-mobile':            'Menu mobile',
+
+    // Ranking info (v12.8.1 — trilha B3 a11y)
+    'aria-label.how-ranking-works':     'Como funciona o ranking?',
+
+    // Admin moderation filters (v12.8.1 — trilha B3 a11y)
+    'aria-label.filter-mod-status':        'Filtrar por status de moderação',
+    'aria-label.filter-mod-global-module': 'Módulo — limite global',
+    'aria-label.filter-mod-user-module':   'Módulo — limite por usuário',
+
     // ── Placeholder estático (v12.7.1 — fase 2 i18n runtime) ──────────────────
     // Busca principal por módulo
     'placeholder.search-main':          'Busque por itens, eventos, vagas na UFG...',

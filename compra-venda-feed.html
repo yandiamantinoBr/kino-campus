@@ -29,6 +29,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
 <body data-kc-filters="tab-search">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
 <!-- Header -->
 <header class="kc-header">
 <div class="kc-header-container">
@@ -41,7 +42,7 @@
 </span>
 </a>
 </div>
-<nav class="kc-nav-links">
+<nav class="kc-nav-links" aria-label="Navegação principal" data-i18n-aria-label="aria-label.nav-main">
 <a href="achados-perdidos.html">
 <i class="fas fa-search"></i>
 <span>Achados/Perdidos</span>
@@ -86,7 +87,8 @@
 </div>
 </header>
 <!-- Main Content -->
-<main class="kc-main-content">
+<main class="kc-main-content" id="kc-main">
+    <h1 class="kc-sr-only">Compra e Venda</h1>
 <!-- Feed Section -->
 <section class="kc-feed-section">
 <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
@@ -335,7 +337,7 @@
 </aside>
 </main>
 <!-- Mobile Navigation -->
-<nav class="kc-mobile-nav">
+<nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
 <a href="index.html">
 <i class="fas fa-home"></i>
 <span>Início</span>

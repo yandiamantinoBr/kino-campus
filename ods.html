@@ -12,6 +12,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
 <body>
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -23,7 +24,7 @@
           </span>
         </a>
       </div>
-      <nav class="kc-nav-links">
+      <nav class="kc-nav-links" aria-label="Navegação principal" data-i18n-aria-label="aria-label.nav-main">
         <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
         <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
         <a href="moradia.html"><i class="fas fa-home"></i><span>Moradia</span></a>
@@ -50,7 +51,7 @@
     </div>
   </header>
 
-  <main class="kc-main-content kc-main-content--ods">
+  <main class="kc-main-content kc-main-content--ods" id="kc-main">
     <section class="kc-ods-page" data-kc-ods-root>
       <div class="kc-ods-goal-tabs" data-kc-ods-goal-tabs></div>
 
@@ -119,7 +120,7 @@
     </section>
   </main>
 
-  <nav class="kc-mobile-nav">
+  <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
     <a href="index.html">
       <i class="fas fa-home"></i>
       <span>Início</span>
