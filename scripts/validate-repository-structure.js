@@ -50,6 +50,13 @@ var REQUIRED_DIRS = [
   'tests',
   'tests/e2e',
   'docs',
+  'docs/audits',
+  'docs/audits/refactors',
+  'docs/audits/accessibility',
+  'docs/releases',
+  'docs/releases/v12',
+  'docs/qa',
+  'docs/qa/reports',
   'admin',
 ];
 
