@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); **v12 ENCERRADA** (*Consolidação & Qualidade Sistêmica* — v12.0.0–v12.13.0) — 13 iterações, 23 sub-módulos/adapters criados, −5600L acumuladas nos hotspots primários, 51 E2E Playwright, Lighthouse CI, Service Worker + telemetria cliente atrás de flags; Jest **127/127 · 2647/2647** · Playwright **51/51** · hygiene **8.6.0 ✓**; próxima fase: **v13** (JS > 1100L remanescentes + Lighthouse produção + KCFF opt-ins).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 ENCERRADA (v12.0.0–v12.13.0, 13 iterações, Jest 127/127 · 2647/2647 · Playwright 51/51 · hygiene 8.6.0 ✓); **v13 em execução** (*Governança Estrutural & Hotspots Secundários*) — Track G: VERSION.json + 4 validators estruturais + package.json check:* + docs reorganização; Track A: 4 hotspots JS > 1100L (product.controller 1494L, kc-supabase.client 1364L, oportunidades.controller 1246L, kc-core 1221L) → splits com novos namespaces `_KCProduct.*`, `KCPostModel`, `KCRenderCard`; meta: ≥ 140 suites / 2800 testes.
 
 ---
 
