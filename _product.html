@@ -39,6 +39,7 @@
 </head>
 
 <body class="kc-product-page">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
   <!-- Header -->
   <header class="kc-header">
     <div class="kc-header-container">
@@ -52,7 +53,7 @@
         </a>
       </div>
 
-      <nav class="kc-nav-links">
+      <nav class="kc-nav-links" aria-label="Navegação principal" data-i18n-aria-label="aria-label.nav-main">
         <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
         <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
         <a href="moradia.html"><i class="fas fa-home"></i><span>Moradia</span></a>
@@ -79,7 +80,7 @@
     </div>
   </header>
 
-  <main class="kc-main-content">
+  <main class="kc-main-content" id="kc-main">
     <section class="kc-product-section">
       <nav class="kc-breadcrumb" aria-label="Navegação de trilha" data-i18n-aria-label="aria-label.breadcrumb">
       <div class="kc-post-breadcrumb" id="breadcrumb">
@@ -277,7 +278,7 @@
   </main>
 
   <!-- Mobile Navigation -->
-  <nav class="kc-mobile-nav">
+  <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
     <a href="index.html">
       <i class="fas fa-home"></i>
       <span>Início</span>

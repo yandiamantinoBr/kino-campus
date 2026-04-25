@@ -56,6 +56,7 @@
 </head>
 
 <body>
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
     <!-- Header -->
     <header class="kc-header">
         <div class="kc-header-container">
@@ -69,7 +70,7 @@
                 </a>
             </div>
 
-            <nav class="kc-nav-links">
+            <nav class="kc-nav-links" aria-label="Navegação principal" data-i18n-aria-label="aria-label.nav-main">
                 <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
                 <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
                 <a href="moradia.html"><i class="fas fa-home"></i><span>Moradia</span></a>
@@ -94,7 +95,7 @@
         </div>
     </header>
 
-    <main class="kc-main-content" style="grid-template-columns: 1fr;">
+    <main class="kc-main-content" id="kc-main" style="grid-template-columns: 1fr;">
         <div class="kc-search-results-header">
             <div>
                 <h1>Mostrando resultados para: <span id="searchQueryText"></span></h1>
@@ -116,7 +117,7 @@
     </main>
 
     <!-- Mobile Navigation -->
-    <nav class="kc-mobile-nav">
+    <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
         <a href="index.html"><i class="fas fa-home"></i><span>Início</span></a>
         <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
         <a href="create-post.html" class="kc-create-btn" aria-label="Criar publicação" data-i18n-aria-label="aria-label.create-post"><i class="fas fa-plus"></i></a>

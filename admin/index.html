@@ -687,6 +687,7 @@
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.0" />
 </head>
 <body class="kc-admin-page kc-admin-page--dashboard">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
   <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -713,7 +714,7 @@
     </div>
   </header>
 
-  <main class="kc-main-content">
+  <main class="kc-main-content" id="kc-main">
     <div class="kc-admin-wrapper">
       <div id="admin-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando dashboard...</span></div>
       <div id="admin-error" role="alert"></div>
@@ -856,7 +857,7 @@
                   <option value="oportunidades">Oportunidades</option>
                   <option value="achados-perdidos">Achados/Perdidos</option>
                 </select>
-                <button type="button" class="kc-ranking-info-btn" title="Como funciona o ranking?" data-i18n-tooltip="tooltip.how-ranking-works" id="admin-ranking-info-btn"><i class="fas fa-circle-info"></i></button>
+                <button type="button" class="kc-ranking-info-btn" title="Como funciona o ranking?" aria-label="Como funciona o ranking?" data-i18n-aria-label="aria-label.how-ranking-works" data-i18n-tooltip="tooltip.how-ranking-works" id="admin-ranking-info-btn"><i class="fas fa-circle-info"></i></button>
               </div>
               <div id="admin-ranking-table">
                 <div class="kc-admin-empty">Carregando ranking...</div>
@@ -892,7 +893,7 @@
     </div>
   </div>
 
-  <nav class="kc-mobile-nav">
+  <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
     <a class="active" href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
     <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
     <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>

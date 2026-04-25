@@ -97,6 +97,7 @@ runI18nMetadataChecks();
 runI18nAriaPlaceholderChecks();
 runI18nTooltipChecks();
 runI18nB2GateChecks();
+runA11yStructureChecks();
 runKcffScriptChainChecks();
 runKcuScriptChainChecks();
 runKcadScriptChainChecks();
@@ -272,6 +273,38 @@ function runI18nB2GateChecks() {
   if (counts.alt < I18N_B2_GATE.minAltMarkings) {
     errors.push(`data-i18n-alt markings dropped below ${I18N_B2_GATE.minAltMarkings} (found ${counts.alt})`);
   }
+}
+
+function runA11yStructureChecks() {
+  // Gates estruturais da trilha B3 (v12.8.1) — WCAG 2.1 AA
+  htmlFiles.forEach(({ relPath, absPath }) => {
+    const html = fs.readFileSync(absPath, 'utf8');
+
+    // 1. Exatamente 1 h1 por pagina
+    const h1Count = (html.match(/<h1\b/gi) || []).length;
+    if (h1Count !== 1) {
+      errors.push(`${relPath}: esperado exatamente 1 <h1>, encontrado ${h1Count} (WCAG 1.3.1, 2.4.6)`);
+    }
+
+    // 2. Skip link presente
+    if (!html.includes('kc-skip-link') || !html.includes('href="#kc-main"')) {
+      errors.push(`${relPath}: skip link ausente — adicionar <a href="#kc-main" class="kc-skip-link"> (WCAG 2.4.1)`);
+    }
+
+    // 3. <main id="kc-main"> presente
+    if (!/<main\b[^>]*\bid="kc-main"/.test(html)) {
+      errors.push(`${relPath}: <main id="kc-main"> ausente — alvo do skip link (WCAG 2.4.1)`);
+    }
+
+    // 4. Todo <nav> tem aria-label ou aria-labelledby
+    const navTags = (html.match(/<nav\b[^>]*>/gi) || []);
+    navTags.forEach((tag) => {
+      const hasLabel = /\baria-label="[^"]+"/.test(tag) || /\baria-labelledby="[^"]+"/.test(tag);
+      if (!hasLabel) {
+        errors.push(`${relPath}: <nav> sem aria-label — "${tag.slice(0, 80)}" (WCAG 1.3.6)`);
+      }
+    });
+  });
 }
 
 function runKcffScriptChainChecks() {

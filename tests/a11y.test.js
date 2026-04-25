@@ -150,3 +150,98 @@ describe('Atributos ARIA em HTML estático (index.html)', () => {
     expect(indexHtml).toContain('aria-label="Pesquisar"');
   });
 });
+
+// ─── Suítes v12.8.1 — Trilha B3 a11y estrutural (22 HTMLs) ──────────────────
+
+const _fs = require('fs');
+const _path = require('path');
+const _ROOT = _path.resolve(__dirname, '..');
+
+const _htmlFiles = [
+  'account-setup.html', 'achados-perdidos.html', 'ajuda.html', 'auth-callback.html',
+  'caronas-feed.html', 'compra-venda-feed.html', 'create-post.html', 'eventos.html',
+  'index.html', 'moradia.html', 'my-posts.html', 'ods.html', 'oportunidades.html',
+  'profile.html', 'search-results.html', 'settings.html', '_product.html',
+  'admin/banners.html', 'admin/help-requests.html', 'admin/index.html',
+  'admin/moderation.html', 'admin/reports.html',
+];
+
+function _readHtml(relPath) {
+  return _fs.readFileSync(_path.join(_ROOT, relPath), 'utf8');
+}
+
+describe('v12.8.1 — a11y B3: estrutura de documento nos 22 HTMLs', () => {
+  test('os 22 HTMLs estao listados', () => {
+    expect(_htmlFiles).toHaveLength(22);
+  });
+
+  test('todos os 22 HTMLs tem exatamente um <h1> (A1 + A2)', () => {
+    _htmlFiles.forEach((relPath) => {
+      const html = _readHtml(relPath);
+      const h1Count = (html.match(/<h1\b/gi) || []).length;
+      expect(h1Count).toBe(1);
+    });
+  });
+
+  test('todos os 22 HTMLs tem skip link href="#kc-main" (A3)', () => {
+    _htmlFiles.forEach((relPath) => {
+      const html = _readHtml(relPath);
+      expect(html).toMatch(/href="#kc-main"/);
+      expect(html).toMatch(/kc-skip-link/);
+    });
+  });
+
+  test('todos os 22 HTMLs tem <main id="kc-main"> (A3)', () => {
+    _htmlFiles.forEach((relPath) => {
+      const html = _readHtml(relPath);
+      expect(html).toMatch(/id="kc-main"/);
+    });
+  });
+
+  test('todo <nav> tem aria-label ou aria-labelledby (A4)', () => {
+    _htmlFiles.forEach((relPath) => {
+      const html = _readHtml(relPath);
+      const navTags = (html.match(/<nav\b[^>]*>/gi) || []);
+      navTags.forEach((tag) => {
+        const hasLabel = /\baria-label="[^"]+"/.test(tag) || /\baria-labelledby="[^"]+"/.test(tag);
+        expect(hasLabel).toBe(true);
+      });
+    });
+  });
+});
+
+describe('v12.8.1 — a11y B3: controles de formulário e botões', () => {
+  test('admin/moderation: todos os selects tem aria-label (A5)', () => {
+    const html = _readHtml('admin/moderation.html');
+    const selectTags = (html.match(/<select\b[^>]*>/gi) || []);
+    selectTags.forEach((tag) => {
+      expect(tag).toMatch(/\baria-label="[^"]+"/);
+    });
+  });
+
+  test('index.html: kc-ranking-info-btn tem aria-label (A6)', () => {
+    const html = _readHtml('index.html');
+    const btn = html.match(/<button[^>]*kc-ranking-info-btn[^>]*>/i);
+    expect(btn).not.toBeNull();
+    expect(btn[0]).toMatch(/\baria-label="[^"]+"/);
+  });
+
+  test('admin/index.html: kc-ranking-info-btn tem aria-label (A6)', () => {
+    const html = _readHtml('admin/index.html');
+    const btn = html.match(/<button[^>]*kc-ranking-info-btn[^>]*>/i);
+    expect(btn).not.toBeNull();
+    expect(btn[0]).toMatch(/\baria-label="[^"]+"/);
+  });
+
+  test('admin/banners.html: label Status tem for="f-active-toggle" (A7)', () => {
+    const html = _readHtml('admin/banners.html');
+    expect(html).toMatch(/for="f-active-toggle"/);
+  });
+
+  test('CSS kc-sr-only declarado em styles.css com clip:rect e overflow:hidden', () => {
+    const css = _fs.readFileSync(_path.join(_ROOT, 'assets/css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.kc-sr-only\s*\{/);
+    expect(css).toMatch(/clip:\s*rect/);
+    expect(css).toMatch(/overflow:\s*hidden/);
+  });
+});

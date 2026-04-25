@@ -390,6 +390,7 @@
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.0" />
 </head>
 <body class="kc-admin-page kc-admin-page--banners">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
   <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
       <div class="kc-logo">
@@ -416,7 +417,7 @@
     </div>
   </header>
 
-  <main class="kc-main-content">
+  <main class="kc-main-content" id="kc-main">
     <div class="kc-admin-wrapper">
 
       <div id="banners-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando banners...</span></div>
@@ -447,7 +448,7 @@
   </main>
 
   <!-- Mobile Navigation (admin) -->
-  <nav class="kc-mobile-nav">
+  <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
     <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
     <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
     <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
@@ -485,7 +486,7 @@
               <input id="f-pill" type="text" placeholder="ex: Destaque" data-i18n-placeholder="placeholder.banner-pill" maxlength="30" />
             </div>
             <div class="kc-form-field">
-              <label>Status</label>
+              <label for="f-active-toggle">Status</label>
               <div class="kc-toggle-wrap">
                 <div class="kc-toggle on" id="f-active-toggle" role="switch" aria-checked="true" tabindex="0"></div>
                 <span id="f-active-label">Ativo</span>

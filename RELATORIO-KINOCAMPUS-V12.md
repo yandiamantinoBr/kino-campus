@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.8.0` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada com gate formal, auditoria a11y docs-only); `docs/a11y-audit-v12.8.md` mapeia `7` problemas WCAG 2.1 AA nos `22` HTMLs com plano de correção para `v12.8.1`; a próxima iteração é `v12.8.1` — correções a11y estruturais (`kc-sr-only`, skip links, nav labels, selects admin, botões icon-only) + `tests/a11y.test.js`; baseline preservada em `125/125` suites e `2562/2562` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.8.1` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada com gate formal, auditoria a11y docs-only); `docs/a11y-audit-v12.8.md` mapeia `7` problemas WCAG 2.1 AA nos `22` HTMLs com plano de correção para `v12.8.1`; a próxima iteração é `v12.8.1` — correções a11y estruturais (`kc-sr-only`, skip links, nav labels, selects admin, botões icon-only) + `tests/a11y.test.js`; baseline preservada em `125/125` suites e `2562/2562` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -227,7 +227,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.7.2** | **i18n runtime fase 3** (`title` / tooltips de elemento) | `kc-i18n.js` cresce `732L` → `803L`; `28` chaves `tooltip.*`; helper `applyTooltips`; `55` marcações `data-i18n-tooltip` nos 22 HTMLs; `runI18nTooltipChecks()` no hygiene; suite `tests/i18n-tooltip.test.js` (18 testes); baseline `124/124` suites · `2546/2546` testes | ✅ concluído |
 | **v12.7.3** | **Gate formal da trilha B2 i18n** | `runI18nB2GateChecks()` no hygiene (7 pisos); `tests/i18n-b2-gate.test.js` (16 testes); `docs/i18n-b2-coverage-v12.7.md`; trilha B2 **encerrada**; baseline `125/125` suites · `2562/2562` testes | ✅ concluído |
 | **v12.8.0** | **Trilha B3 — a11y audit estrutural** (doc-only) | `docs/a11y-audit-v12.8.md`: 7 problemas WCAG 2.1 AA mapeados (h1 ausente × 10, skip link × 21, nav sem label × 17, selects sem label × 3, botões icon-only × 2, label sem for × 1); baseline preservada `125/125` suites · `2562/2562` testes | ✅ concluído |
-| v12.8.1 | a11y correções estruturais: `kc-sr-only`, skip links, nav labels, selects admin, botões icon-only, label `for` | +~14 testes em `tests/a11y.test.js` + `runA11yStructureChecks()` no hygiene | 📋 planejado |
+| **v12.8.1** | **a11y correções estruturais A1–A7** | CSS `kc-sr-only`; h1 sr-only em `9` páginas + index; skip link + `id="kc-main"` em `21` HTMLs; nav com `aria-label` em `22` HTMLs; `3` selects + `2` botões + `1` label corrigidos; `6` chaves → `446` total; `runA11yStructureChecks()` no hygiene; `+10` testes em `tests/a11y.test.js`; baseline `125/125` suites · `2572/2572` testes | ✅ concluído |
 | v12.9.0 | **Trilha B4 — Playwright E2E** scaffolding | `playwright.config.js` + `tests/e2e/smoke.spec.js`; 1 suite smoke (login + feed + detalhe); CI verde | 📋 planejado |
 | v12.9.1 | E2E expansão: criar post + comentar + votar | +3 suites | 📋 planejado |
 | v12.9.2 | E2E expansão: admin dashboard + moderation | +2 suites | 📋 planejado |
@@ -1554,6 +1554,44 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `npm test` -> **125/125 suites / 2562/2562 testes verdes** (preservada)
 
 **Proxima iteracao:** `v12.8.1` - a11y correcoes estruturais (A1–A7) + `tests/a11y.test.js` + `runA11yStructureChecks()` no hygiene.
+
+---
+
+### 8.36. v12.8.1 - a11y correcoes estruturais (A1–A7) - concluido
+
+**Objetivo:** aplicar as 7 correcoes WCAG 2.1 AA mapeadas em `v12.8.0` nos 22 HTMLs canonicos, adicionando a infraestrutura CSS/JS necessaria, atualizando o hygiene com gate estrutural e expandindo `tests/a11y.test.js` com cobertura dos 22 HTMLs.
+
+**Escopo entregue:**
+
+- **CSS** (`assets/css/styles.css`): classe `kc-sr-only` adicionada (`position:absolute; width:1px; clip:rect(0,0,0,0)`) para text visually-hidden acessivel a leitores de tela (+13L)
+- **A1 — h1 ausente**: `<h1 class="kc-sr-only">` adicionado a `9` paginas (achados-perdidos, caronas-feed, compra-venda-feed, create-post, eventos, moradia, my-posts, oportunidades, settings) logo apos `<main id="kc-main">`
+- **A2 — h1 multiplo**: `3x <h1>` do carousel em `index.html` rebaixados para `<h2>`; `index.html` ganhou `<h1 class="kc-sr-only">KinoCampus — Comunidade UFG</h1>`
+- **A3 — skip link**: `<a href="#kc-main" class="kc-skip-link">Pular para o conteudo principal</a>` adicionado como primeiro elemento apos `<body>` em `21` paginas; `id="kc-main"` adicionado ao `<main>` de `21` paginas (ods.html e search-results.html tinham variantes de classe diferentes que precisaram de edicao manual)
+- **A4 — nav sem aria-label**: `aria-label="Navegacao principal" data-i18n-aria-label="aria-label.nav-main"` adicionado ao `<nav class="kc-nav-links">` em `12` paginas publicas com nav; `aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile"` adicionado ao `<nav class="kc-mobile-nav">` em todos os `22` HTMLs
+- **A5 — selects sem label**: `aria-label` + `data-i18n-aria-label` adicionados aos `3` selects de `admin/moderation.html` (`moderation-status-filter`, `limit-global-module`, `limit-user-module`)
+- **A6 — botoes icon-only**: `aria-label="Como funciona o ranking?" data-i18n-aria-label="aria-label.how-ranking-works"` adicionados aos `2` botoes `kc-ranking-info-btn` (index.html, admin/index.html)
+- **A7 — label sem for**: `for="f-active-toggle"` adicionado ao `<label>Status</label>` em `admin/banners.html`
+- **`assets/js/kc-i18n.js`**: `6` chaves novas (`aria-label.nav-main`, `aria-label.nav-mobile`, `aria-label.how-ranking-works`, `aria-label.filter-mod-status`, `aria-label.filter-mod-global-module`, `aria-label.filter-mod-user-module`) — dicionario cresce de `440` → `446` chaves, modulo de `803L` → `816L`
+- **`scripts/hygiene-check.js`**: funcao `runA11yStructureChecks()` valida por HTML: exatamente 1 `<h1>`, skip link presente, `<main id="kc-main">` presente, todo `<nav>` com `aria-label`
+- **`tests/a11y.test.js`**: `+10` testes em 2 novos describe blocks (estrutura de documento: h1, skip link, main id, header, lang; controles: selects admin, botoes ranking, label banners, carousel h2, kc-sr-only CSS)
+
+**Entregas mensuraveis:**
+
+- `assets/css/styles.css`: classe `kc-sr-only` adicionada
+- `22` HTMLs todos com exatamente `1 <h1>`, skip link e `<main id="kc-main">`
+- `kc-i18n.js` em `816L` / `446` chaves unicas
+- `data-i18n-aria-label` total cresce de `189` → `223` marcacoes nos 22 HTMLs
+- `tests/a11y.test.js` expandido de `4` para `6` describe blocks (`17` → `27` testes)
+- baseline expandida de **125/125 suites / 2562/2562 testes** para **125/125 suites / 2572/2572 testes** (+10 testes)
+
+**Verificacao:**
+
+- `node --check scripts/hygiene-check.js` -> OK
+- `node scripts/hygiene-check.js` -> **8.6.0 OK** (inclui `runA11yStructureChecks()`)
+- `npx jest tests/a11y.test.js` -> **1/1 suite / 27/27 testes verdes**
+- `npm test` -> **125/125 suites / 2572/2572 testes verdes**
+
+**Proxima iteracao:** `v12.9.x` - trilha B4 (Playwright E2E scaffold).
 
 ---
 

@@ -79,6 +79,7 @@
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.0" />
 </head>
 <body class="kc-admin-page kc-admin-page--reports">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
 
   <header class="kc-header kc-header--admin">
     <div class="kc-header-container">
@@ -106,7 +107,7 @@
     </div>
   </header>
 
-  <main class="kc-main-content">
+  <main class="kc-main-content" id="kc-main">
     <div class="kc-admin-wrapper">
       <div id="admin-loading">
         <i class="fas fa-spinner fa-spin" style="font-size:1.6em;"></i>
@@ -153,7 +154,7 @@
   </main>
 
   <!-- Mobile Navigation (admin) -->
-  <nav class="kc-mobile-nav">
+  <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
     <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
     <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
     <a class="active" href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
