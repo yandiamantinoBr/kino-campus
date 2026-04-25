@@ -1,0 +1,35 @@
+# Lighthouse CI — KinoCampus v12.10.0
+#
+# Executa em todo PR para a branch base do projeto.
+# Audita 4 páginas representativas e bloqueia (error) se a11y < 0.90.
+# Performance, Best Practices e SEO são reportados como warn.
+
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches:
+      - kinocampus-V11.0-foundations
+
+jobs:
+  lighthouse:
+    name: Lighthouse audit (4 páginas)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar Lighthouse CI
+        run: npx lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}

@@ -2,6 +2,9 @@
 .vercel/
 output/playwright/profile-*/
 
+# Lighthouse CI (v12.10.0)
+.lighthouseci/
+
 # Playwright E2E (v12.9.0)
 output/playwright-report/
 test-results/
