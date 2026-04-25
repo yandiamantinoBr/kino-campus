@@ -10,7 +10,13 @@
     "test": "jest",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report output/playwright-report",
-    "lhci": "lhci autorun"
+    "lhci": "lhci autorun",
+    "check:hygiene": "node scripts/hygiene-check.js",
+    "check:structure": "node scripts/validate-repository-structure.js",
+    "check:scripts": "node scripts/validate-script-chains.js",
+    "check:routes": "node scripts/validate-public-routes.js",
+    "check:version": "node scripts/validate-version-map.js",
+    "check:all": "npm run check:version && npm run check:structure && npm run check:scripts && npm run check:routes && npm run check:hygiene && npm test"
   },
   "repository": {
     "type": "git",
