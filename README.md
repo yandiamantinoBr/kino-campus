@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.9.1` concluída com expansão E2E (trilha B4): `+3` suites (`create-post`, `product-detail`, `admin-pages`), `+19` testes E2E — acumulado **6 suites / 37/37 testes E2E verdes** (smoke + pages-load + a11y-e2e + create-post + product-detail + admin-pages); Jest baseline preservada em **125/125 suites · 2572/2572 testes**; próxima iteração: `v12.9.2` (E2E expansão admin — dashboard + moderation flows).
+**Status atual:** v11 concluída (v11.1.0–v11.33.7); v12 em execução (*Consolidação & Qualidade Sistêmica*) — `v12.9.2` concluída: **trilha B4 Playwright E2E encerrada** com `8` suites e **51/51 testes E2E verdes** cobrindo todas as páginas públicas (17) + admin (5); Jest baseline preservada em **125/125 suites · 2572/2572 testes**; próxima iteração: `v12.10.0` (trilha B5 — Lighthouse CI).
 
 ---
 
@@ -19,7 +19,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 125 suites de regressão e contrato; Playwright: 6 suites E2E (37 testes) |
+| Testes | Jest: 125 suites de regressão e contrato; Playwright: 8 suites E2E (51 testes) |
 
 ---
 
@@ -27,6 +27,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Fase | Entrega | PRs |
 |------|---------|-----|
+| v12.9.2 | **E2E gate B4 — admin moderation + páginas restantes**: `tests/e2e/admin-moderation.spec.js` (`7` testes: 200 + estrutura, `3` selects A5 com `aria-label` individual, cobertura global de selects, nav com `aria-label`); `tests/e2e/remaining-pages.spec.js` (`7` testes: moradia, oportunidades, achados-perdidos, ods, my-posts, profile, settings — 200 + estrutura WCAG cada); `+14` E2E; **Trilha B4 encerrada** — acumulado **51/51 verdes em 8 suites** cobrindo `17` páginas públicas + `5` admin; Jest 125/125 · 2572/2572 preservado | — |
 | v12.9.1 | **E2E expansão — criar post + comentar + votar**: `tests/e2e/create-post.spec.js` (`6` testes: 200, h1/skip/main, lang, nav aria-label, search, theme-toggle); `tests/e2e/product-detail.spec.js` (`8` testes: 200, estrutura, editor rich text — Negrito/Itálico aria-label, input do autor, sharePopover aria-hidden, `renderPostCard` via `page.evaluate()` verificando `aria-label="Voto positivo/negativo"` + `aria-live`); `tests/e2e/admin-pages.spec.js` (`5` testes, 1 por admin page: Dashboard, Moderação, Banners, Denúncias, Ajuda — 200 + skip link + h1 + main); `+19` E2E; acumulado **37/37 verdes** em **6 suites**; Jest 125/125 · 2572/2572 preservado | — |
 | v12.9.0 | **Trilha B4 — Playwright E2E scaffold**: `playwright.config.js` configurado com `http-server` (porta 4000), Chromium, retries em CI e reporter HTML; `tests/e2e/smoke.spec.js` (`6` testes: carregamento 200, título, `<h1>` único, skip link, href `#kc-main`, `<main id="kc-main">`); `tests/e2e/pages-load.spec.js` (`5` testes, 1 por página pública — Home, Compra e Venda, Caronas, Eventos, Busca — verificando 200 + estrutura WCAG); `tests/e2e/a11y-e2e.spec.js` (`7` testes no DOM vivo: `lang="pt-BR"`, nav com aria-label, theme-toggle aria-label dinâmico, searchInput, skip link primeiro no Tab, carousel prev/next, `kc-ranking-info-btn`); scripts `test:e2e` e `test:e2e:report` em `package.json`; `18/18` E2E verdes; Jest baseline preservada em **125/125 suites · 2572/2572 testes** | — |
 | v12.8.1 | **a11y correções estruturais WCAG 2.1 AA**: CSS `kc-sr-only` (`+13L` em `styles.css`); `<h1 class="kc-sr-only">` visualmente oculto adicionado a `9` páginas sem heading (`achados-perdidos`, `caronas-feed`, `compra-venda-feed`, `create-post`, `eventos`, `moradia`, `my-posts`, `oportunidades`, `settings`); carousel `index.html` rebaixado de `3× <h1>` → `3× <h2>` + `<h1 class="kc-sr-only">` próprio; skip link `<a href="#kc-main" class="kc-skip-link">` + `id="kc-main"` adicionados às `21` páginas sem eles (CSS já existia); `aria-label` + `data-i18n-aria-label` nos `<nav class="kc-nav-links">` (`12` páginas públicas com nav) e `<nav class="kc-mobile-nav">` (`22` páginas); `3` selects em `admin/moderation.html` receberam `aria-label` + `data-i18n-aria-label` (`moderation-status-filter`, `limit-global-module`, `limit-user-module`); `2` botões `kc-ranking-info-btn` em `index.html` e `admin/index.html` receberam `aria-label`; `<label for="f-active-toggle">Status</label>` em `admin/banners.html`; `6` chaves novas em `kc-i18n.js` → dicionário sobe de `440` → `446` chaves; `runA11yStructureChecks()` no `hygiene-check.js` validando h1 único, skip link, main id e nav com aria-label por página; `+10` testes em `tests/a11y.test.js` (2 novos describe blocks: estrutura de documento + controles); baseline expandida para **125/125 suites · 2572/2572 testes** | — |
