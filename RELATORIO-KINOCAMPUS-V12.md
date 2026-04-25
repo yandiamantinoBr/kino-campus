@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.7.3` concluídas (abertura, auditoria de `kc-utils.js`, 7 splits `_KCU.*`, gate `<900L`, auditoria docs-only de `admin-dashboard.controller.js`, três splits funcionais do hotspot admin, gate formal `<900L`, auditoria docs-only de `local.adapter.js`, sete splits funcionais do driver local, gate formal `<500L` com hygiene `_KCLA.*`, auditoria docs-only de `profile.controller.js`, quatro splits funcionais `_KCPR.*`, gate formal do profile, feature flags formais, i18n runtime fase 1, fase 2 e fase 3, gate formal B2 — **trilha B2 i18n encerrada**); `window.KCi18n` expõe `9` métodos (`locale`, `t`, `n`, `keys`, `applyDocumentMetadata`, `applyStaticAlts`, `applyAriaLabels`, `applyPlaceholders`, `applyTooltips`) com `440` chaves pt-BR em `18` namespaces e `352` marcações declarativas nos `22` HTMLs; `scripts/hygiene-check.js` valida os pisos de regressão da trilha B2 via `runI18nB2GateChecks()`; a próxima iteração é `v12.8.x` — trilha B3 (a11y audit estrutural); baseline expandida em `125/125` suites e `2562/2562` testes |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.8.0` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada com gate formal, auditoria a11y docs-only); `docs/a11y-audit-v12.8.md` mapeia `7` problemas WCAG 2.1 AA nos `22` HTMLs com plano de correção para `v12.8.1`; a próxima iteração é `v12.8.1` — correções a11y estruturais (`kc-sr-only`, skip links, nav labels, selects admin, botões icon-only) + `tests/a11y.test.js`; baseline preservada em `125/125` suites e `2562/2562` testes |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -226,8 +226,8 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.7.1** | **i18n runtime fase 2** (`aria-label`, `placeholder`) | `kc-i18n.js` cresce `524L` → `732L`; `59` chaves `aria-label.*` + `47` chaves `placeholder.*`; helpers `applyAriaLabels`/`applyPlaceholders`; `189` marcações aria + `59` placeholder nos 22 HTMLs; `runI18nAriaPlaceholderChecks()` no hygiene; suite `tests/i18n-aria-placeholder.test.js` (18 testes); baseline `123/123` suites · `2528/2528` testes | ✅ concluído |
 | **v12.7.2** | **i18n runtime fase 3** (`title` / tooltips de elemento) | `kc-i18n.js` cresce `732L` → `803L`; `28` chaves `tooltip.*`; helper `applyTooltips`; `55` marcações `data-i18n-tooltip` nos 22 HTMLs; `runI18nTooltipChecks()` no hygiene; suite `tests/i18n-tooltip.test.js` (18 testes); baseline `124/124` suites · `2546/2546` testes | ✅ concluído |
 | **v12.7.3** | **Gate formal da trilha B2 i18n** | `runI18nB2GateChecks()` no hygiene (7 pisos); `tests/i18n-b2-gate.test.js` (16 testes); `docs/i18n-b2-coverage-v12.7.md`; trilha B2 **encerrada**; baseline `125/125` suites · `2562/2562` testes | ✅ concluído |
-| v12.8.0 | **Trilha B3 — a11y audit estrutural** (doc-only) | `docs/a11y-audit-v12.8.md` + baseline a11y expandida | 📋 planejado |
-| v12.8.1 | a11y correções: roles, `aria-live`, skip-links nos 22 HTMLs | +~20 testes a11y | 📋 planejado |
+| **v12.8.0** | **Trilha B3 — a11y audit estrutural** (doc-only) | `docs/a11y-audit-v12.8.md`: 7 problemas WCAG 2.1 AA mapeados (h1 ausente × 10, skip link × 21, nav sem label × 17, selects sem label × 3, botões icon-only × 2, label sem for × 1); baseline preservada `125/125` suites · `2562/2562` testes | ✅ concluído |
+| v12.8.1 | a11y correções estruturais: `kc-sr-only`, skip links, nav labels, selects admin, botões icon-only, label `for` | +~14 testes em `tests/a11y.test.js` + `runA11yStructureChecks()` no hygiene | 📋 planejado |
 | v12.9.0 | **Trilha B4 — Playwright E2E** scaffolding | `playwright.config.js` + `tests/e2e/smoke.spec.js`; 1 suite smoke (login + feed + detalhe); CI verde | 📋 planejado |
 | v12.9.1 | E2E expansão: criar post + comentar + votar | +3 suites | 📋 planejado |
 | v12.9.2 | E2E expansão: admin dashboard + moderation | +2 suites | 📋 planejado |
@@ -1515,6 +1515,45 @@ A v12 encerra e abre espaço para v13 somente quando **todos** os itens abaixo e
 - `npm test` -> **125/125 suites / 2562/2562 testes verdes**
 
 **Proxima iteracao:** `v12.8.x` - trilha B3 (a11y audit estrutural + correcoes).
+
+---
+
+### 8.35. v12.8.0 - a11y audit estrutural (docs-only) - concluido
+
+**Objetivo:** auditar os 22 HTMLs canonicos contra WCAG 2.1 AA para identificar problemas estruturais de acessibilidade antes de aplicar correcoes. Iteracao docs-only — zero mudanca funcional.
+
+**Metodologia:** analise estatica por grep/regex nos 22 HTMLs cobrindo hierarquia de headings, landmarks, skip links, associacoes de formulario e nomes acessiveis de controles interativos.
+
+**7 problemas identificados:**
+
+| ID | Problema | Paginas |
+|---|---|---|
+| A1 | h1 ausente — hierarquia inicia em h2 | 10 (feeds, settings, create-post, my-posts) |
+| A2 | h1 multiplo — carousel em index.html com 3x h1 | 1 |
+| A3 | Skip link ausente + `<main>` sem id | 21 (todos exceto index.html) |
+| A4 | `<nav>` sem aria-label | 17 paginas publicas |
+| A5 | 3 selects admin/moderation.html sem label | 1 (admin/moderation.html) |
+| A6 | 2 botoes icon-only sem aria-label (so title) | index.html, admin/index.html |
+| A7 | `<label>Status</label>` sem for em banners.html | 1 (admin/banners.html) |
+
+**Estado OK (nao requer correcao):**
+- `lang="pt-BR"`, `<main>`, `<header>` em todos 22 HTMLs
+- nav admin ja tem aria-label (5 paginas, nav principal)
+- role attributes (tablist/tab/tabpanel/dialog/alert/switch) corretos
+- focus-visible CSS existente (skip-link + principais interativos)
+- B2 completo: 189 aria-label, 59 placeholder, 55 tooltip, 5 alt
+
+**Entregas mensuraveis:**
+
+- `docs/a11y-audit-v12.8.md` criado com auditoria completa (7 problemas, plano de correcao, 6 chaves novas, gates propostos)
+- Baseline preservada em **125/125 suites / 2562/2562 testes** (zero mudanca de codigo)
+
+**Verificacao:**
+
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test` -> **125/125 suites / 2562/2562 testes verdes** (preservada)
+
+**Proxima iteracao:** `v12.8.1` - a11y correcoes estruturais (A1–A7) + `tests/a11y.test.js` + `runA11yStructureChecks()` no hygiene.
 
 ---
 
