@@ -6,7 +6,7 @@
 |---|---|
 | Data de abertura | 20 de abril de 2026 |
 | Linha-base | `kinocampus-V11.0-foundations` |
-| Estado desta fase | execução em andamento; `v12.0.0`–`v12.9.1` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada com gate formal, trilha B3 a11y com `7` correções WCAG 2.1 AA nos `22` HTMLs, trilha B4 Playwright E2E com `37` testes E2E em `6` suites — smoke, pages-load, a11y-e2e, create-post, product-detail, admin-pages); próxima iteração: `v12.9.2` — E2E expansão admin (dashboard + moderation flows); baseline Jest preservada em `125/125` suites e `2572/2572` testes; `37` E2E Playwright verdes em `6` suites |
+| Estado desta fase | execução em andamento; `v12.0.0`–`v12.9.2` concluídas (abertura, splits kc-utils, admin-dashboard, local.adapter e profile.controller, feature flags, trilha B2 i18n encerrada com gate formal, trilha B3 a11y com `7` correções WCAG 2.1 AA nos `22` HTMLs, **trilha B4 Playwright E2E encerrada** com `51` testes E2E em `8` suites cobrindo todas as páginas públicas + admin); próxima iteração: `v12.10.0` — Trilha B5 Lighthouse CI; baseline Jest preservada em `125/125` suites e `2572/2572` testes; `51` E2E Playwright verdes em `8` suites |
 | Versão-alvo | v12 |
 | Escopo macro | consolidação arquitetural dos hotspots remanescentes, elevação da maturidade sistêmica (feature flags, E2E, Lighthouse CI, a11y, i18n runtime) e resiliência operacional (Service Worker, telemetria cliente) — sem quebra de contratos públicos, sem regressão visual, sem quebra de testes |
 | Documento vivo | sim; deve ser atualizado a cada iteração da v12 |
@@ -230,7 +230,7 @@ Status de cada iteração: `📋 planejado` · `🟡 em execução` · `✅ conc
 | **v12.8.1** | **a11y correções estruturais A1–A7** | CSS `kc-sr-only`; h1 sr-only em `9` páginas + index; skip link + `id="kc-main"` em `21` HTMLs; nav com `aria-label` em `22` HTMLs; `3` selects + `2` botões + `1` label corrigidos; `6` chaves → `446` total; `runA11yStructureChecks()` no hygiene; `+10` testes em `tests/a11y.test.js`; baseline `125/125` suites · `2572/2572` testes | ✅ concluído |
 | **v12.9.0** | **Trilha B4 — Playwright E2E scaffold** | `playwright.config.js` + `http-server`; `3` suites E2E — smoke (`6` testes), pages-load (`5` testes), a11y-e2e (`7` testes); `18/18` verdes; scripts `test:e2e` + `test:e2e:report` em `package.json` | ✅ concluído |
 | **v12.9.1** | **E2E expansão — criar post + comentar + votar** | `tests/e2e/create-post.spec.js` (`6` testes estrutura), `tests/e2e/product-detail.spec.js` (`8` testes: editor rich text, vote buttons via `page.evaluate`, sharePopover), `tests/e2e/admin-pages.spec.js` (`5` testes — `5` páginas admin); total `+19` testes E2E; acumulado `37/37` verdes | ✅ concluído |
-| v12.9.2 | E2E expansão: admin dashboard + moderation | +2 suites | 📋 planejado |
+| **v12.9.2** | **E2E gate B4 — admin moderation + páginas restantes** | `tests/e2e/admin-moderation.spec.js` (`7` testes: `3` selects A5 + cobertura global de selects + nav); `tests/e2e/remaining-pages.spec.js` (`7` testes: moradia, oportunidades, achados-perdidos, ods, my-posts, profile, settings); `+14` testes; **trilha B4 encerrada** com `51/51` E2E em `8` suites — supera gate `≥ 8 cenários E2E` da DoD | ✅ concluído |
 | v12.10.0 | **Trilha B5 — Lighthouse CI** | `.lighthouserc.js` + workflow; baseline salva em 4 páginas | 📋 planejado |
 
 ### 5.3. Camada C — Resiliência & observabilidade
@@ -1656,6 +1656,51 @@ A tecnica de chamar `window.KCUtils.renderPostCard()` diretamente no contexto do
 - `npx playwright test` -> **37/37 testes E2E verdes** em `6` suites (Playwright)
 
 **Proxima iteracao:** `v12.9.2` - E2E expansao: admin dashboard + moderation flows.
+
+---
+
+### 8.39. v12.9.2 - E2E gate B4 — admin moderation + paginas restantes - concluido
+
+**Data:** 25 de abril de 2026  
+**Branch:** `feature/v12.9.2-e2e-gate-b4`  
+**PR:** #432 (merge squash em `kinocampus-V11.0-foundations`)
+
+**Escopo:**
+
+Iteracao final da trilha B4 Playwright. Adicionadas `2` suites cobrindo admin/moderation em profundidade e as `7` paginas publicas restantes. A trilha B4 esta **formalmente encerrada** com `51` testes E2E em `8` suites — superando o gate da Definition of Done (`>= 8 cenarios E2E`).
+
+**Entregaveis:**
+
+- **`tests/e2e/admin-moderation.spec.js`** — `7` testes:
+  - 200 + h1 + skip link + main#kc-main
+  - `#moderation-status-filter` tem `aria-label` (correcao A5 de v12.8.1)
+  - `#limit-global-module` tem `aria-label` (correcao A5 de v12.8.1)
+  - `#limit-user-module` tem `aria-label` (correcao A5 de v12.8.1)
+  - todos os `<select>` tem `aria-label` (cobertura global)
+  - todos os `<nav>` tem `aria-label` ou `aria-labelledby`
+
+- **`tests/e2e/remaining-pages.spec.js`** — `7` testes (1 por pagina):
+  - moradia, oportunidades, achados-perdidos, ods, my-posts, profile, settings
+  - cada um verifica: HTTP 200 + `.kc-skip-link` + `#kc-main` + exatamente `1 <h1>`
+
+**Gate formal Trilha B4:**
+
+| Criterio DoD | Meta | Atingido |
+|---|---|---|
+| Suites E2E Playwright | >= 5 | **8** ✅ |
+| Cenarios E2E verdes | >= 8 | **51** ✅ |
+| Browser | chromium | chromium ✅ |
+| Paginas publicas cobertas | principais | 17/17 paginas publicas ✅ |
+| Admin pages cobertas | principais | 5/5 admin ✅ |
+| Jest baseline preservada | inalterada | 125/125 * 2572/2572 ✅ |
+
+**Verificacao:**
+
+- `node scripts/hygiene-check.js` -> **8.6.0 OK**
+- `npm test` -> **125/125 suites / 2572/2572 testes verdes** (Jest)
+- `npx playwright test` -> **51/51 testes E2E verdes** em `8` suites (Playwright)
+
+**Proxima iteracao:** `v12.10.0` - Trilha B5 (Lighthouse CI).
 
 ---
 

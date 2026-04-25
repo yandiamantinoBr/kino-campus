@@ -6,6 +6,8 @@
 
 ### Added
 
+- `v12.9.2`: **E2E gate B4 — admin moderation + páginas restantes**: `tests/e2e/admin-moderation.spec.js` (`7` testes — 200 + estrutura WCAG, `3` selects A5 com `aria-label` individual, cobertura global de selects, nav com `aria-label`); `tests/e2e/remaining-pages.spec.js` (`7` testes — moradia, oportunidades, achados-perdidos, ods, my-posts, profile, settings com 200 + estrutura WCAG); `+14` E2E; **trilha B4 Playwright formalmente encerrada** com **51/51 testes verdes em 8 suites** cobrindo 17 páginas públicas + 5 admin — supera o gate DoD `>= 8 cenários E2E`; Jest 125/125 · 2572/2572 preservado.
+
 - `v12.9.1`: **E2E expansão — criar post + comentar + votar**: `3` novas suites Playwright — `tests/e2e/create-post.spec.js` (`6` testes: 200, h1/skip/main, lang, nav aria-label, search, theme-toggle), `tests/e2e/product-detail.spec.js` (`8` testes: 200, estrutura, editor Negrito/Itálico, autor input, sharePopover, `renderPostCard` via `page.evaluate()` verificando vote buttons aria-label + aria-live), `tests/e2e/admin-pages.spec.js` (`5` testes: `5` pages admin com 200 + estrutura WCAG); `+19` E2E; acumulado **37/37 verdes em 6 suites**; Jest 125/125 · 2572/2572 preservado.
 
 - `v12.9.0`: **Trilha B4 — Playwright E2E scaffold**: `playwright.config.js` + `@playwright/test` + `http-server` (devDependencies); `3` suites E2E em `tests/e2e/` — `smoke.spec.js` (`6` testes: carregamento, título, h1, skip link), `pages-load.spec.js` (`5` testes: 5 páginas públicas com 200 + estrutura WCAG), `a11y-e2e.spec.js` (`7` testes: lang, nav aria-label, theme-toggle, search, skip link Tab, carousel, ranking-btn); scripts `test:e2e` + `test:e2e:report` em `package.json`; **18/18 E2E verdes**; Jest baseline preservada em `125/125 suites / 2572/2572 testes`.
