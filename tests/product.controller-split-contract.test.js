@@ -8,14 +8,17 @@ const fs = require('fs');
 const path = require('path');
 
 const CONTROLLER_PATH = path.resolve(__dirname, '../assets/js/controllers/product.controller.js');
-const HTML_PATH = path.resolve(__dirname, '../_product.html');
+const LOAD_PATH       = path.resolve(__dirname, '../assets/js/controllers/product.load.js');
+const HTML_PATH       = path.resolve(__dirname, '../_product.html');
 
 let controllerSource;
+let loadSource;
 let htmlSource;
 
 beforeAll(() => {
   controllerSource = fs.readFileSync(CONTROLLER_PATH, 'utf8');
-  htmlSource = fs.readFileSync(HTML_PATH, 'utf8');
+  loadSource       = fs.readFileSync(LOAD_PATH, 'utf8');
+  htmlSource       = fs.readFileSync(HTML_PATH, 'utf8');
 });
 
 describe('product.controller.js - core namespace guards', () => {
@@ -32,16 +35,17 @@ describe('product.controller.js - core namespace guards', () => {
   });
 });
 
-describe('product.controller.js - renderPost delega para sub-modulos', () => {
+// v13.4.1: renderPost e delegações de sub-módulos movidos para product.load.js
+describe('product.load.js - renderPost delega para sub-modulos', () => {
   test('delegates related, calendar, edit, analytics, save e report a partir do core', () => {
-    expect(controllerSource).toContain('function renderPost(post) {');
-    expect(controllerSource).toContain('window._KCProduct.calendar.setEventCalendar(post);');
-    expect(controllerSource).toContain('window._KCProduct.related.setRelated(post, !!(currentUser && currentUser.id));');
-    expect(controllerSource).toContain('window._KCProduct.edit.upsertOwnerActions(post, currentUser, {');
-    expect(controllerSource).toContain('window._KCProduct.analytics.renderAuthorAnalytics(post, currentUser);');
-    expect(controllerSource).toContain('window._KCProduct.save.bindSavedActions(post, function () { return currentUser; });');
-    expect(controllerSource).toContain('window._KCProduct.save.refreshSavedState(post).catch(() => { });');
-    expect(controllerSource).toContain('window._KCProduct.report.wireReportButton({ postId: (post && post.uuid) ? post.uuid : post.id, postTitle: post.titulo || post.title || \'Publicação\' });');
+    expect(loadSource).toContain('function renderPost(post) {');
+    expect(loadSource).toContain('window._KCProduct.calendar.setEventCalendar(post);');
+    expect(loadSource).toContain('window._KCProduct.related.setRelated(post,');
+    expect(loadSource).toContain('window._KCProduct.edit.upsertOwnerActions(post,');
+    expect(loadSource).toContain('window._KCProduct.analytics.renderAuthorAnalytics(post,');
+    expect(loadSource).toContain('window._KCProduct.save.bindSavedActions(post,');
+    expect(loadSource).toContain('window._KCProduct.save.refreshSavedState(post)');
+    expect(loadSource).toContain('window._KCProduct.report.wireReportButton(');
   });
 });
 
@@ -57,7 +61,8 @@ describe('product.controller.js - bootstrap delega wiring para sub-modulos', () 
   test('mantem interacoes core residuais no bootstrap', () => {
     expect(controllerSource).toContain('wireCreateSimilarBtn();');
     expect(controllerSource).toContain('bindStaticInteractions();');
-    expect(controllerSource).toContain('loadPost();');
+    // v13.4.1: loadPost delegado para product.load.js
+    expect(controllerSource).toContain('window._KCProduct.load.loadPost()');
   });
 });
 
@@ -78,6 +83,8 @@ describe('product.controller.js - implementacoes extraidas nao permanecem inline
 describe('_product.html - ordem canonica dos scripts do split', () => {
   const orderedScripts = [
     'assets/js/controllers/product.controller.js',
+    'assets/js/controllers/product.render.js',
+    'assets/js/controllers/product.load.js',
     'assets/js/controllers/product.report.js',
     'assets/js/controllers/product.related.js',
     'assets/js/controllers/product.calendar.js',
