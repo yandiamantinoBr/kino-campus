@@ -91,6 +91,7 @@ const inlineHandlers = new Set([
   'onwheel',
 ]);
 
+runVersionJsonChecks();
 runVersionChecks();
 runThemeBootChecks();
 runI18nMetadataChecks();
@@ -121,6 +122,39 @@ if (errors.length) {
   process.exitCode = 1;
 } else {
   console.log(`Hygiene check passed for version ${canonicalVersion}.`);
+}
+
+// v13.1.0 — gate VERSION.json (fonte única de versão)
+function runVersionJsonChecks() {
+  const versionJsonPath = path.join(rootDir, 'VERSION.json');
+  if (!fs.existsSync(versionJsonPath)) {
+    errors.push('VERSION.json não encontrado na raiz do projeto');
+    return;
+  }
+  let versionData;
+  try {
+    versionData = JSON.parse(fs.readFileSync(versionJsonPath, 'utf8'));
+  } catch (e) {
+    errors.push('VERSION.json não é JSON válido: ' + e.message);
+    return;
+  }
+  const required = ['project', 'appVersion', 'frontendRuntimeVersion', 'branch', 'status', 'updatedAt'];
+  required.forEach((field) => {
+    if (typeof versionData[field] !== 'string' || versionData[field].trim() === '') {
+      errors.push('VERSION.json: campo "' + field + '" deve ser string não-vazia');
+    }
+  });
+  if (versionData.frontendRuntimeVersion && versionData.frontendRuntimeVersion !== canonicalVersion) {
+    errors.push(
+      'VERSION.json: frontendRuntimeVersion "' + versionData.frontendRuntimeVersion +
+      '" não bate com canonicalVersion "' + canonicalVersion + '"'
+    );
+  }
+  if (versionData.branch && versionData.branch !== 'kinocampus-V11.0-foundations') {
+    errors.push(
+      'VERSION.json: branch "' + versionData.branch + '" não bate com "kinocampus-V11.0-foundations"'
+    );
+  }
 }
 
 function runVersionChecks() {
