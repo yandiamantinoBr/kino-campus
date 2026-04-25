@@ -7,7 +7,9 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report output/playwright-report"
   },
   "repository": {
     "type": "git",
@@ -27,7 +29,9 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.2",
+    "@playwright/test": "^1.59.1",
     "babel-jest": "^30.3.0",
+    "http-server": "^14.1.1",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0"
   }

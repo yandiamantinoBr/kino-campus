@@ -2,6 +2,11 @@
 .vercel/
 output/playwright/profile-*/
 
+# Playwright E2E (v12.9.0)
+output/playwright-report/
+test-results/
+playwright/.cache/
+
 .vercel
 
 node_modules/
