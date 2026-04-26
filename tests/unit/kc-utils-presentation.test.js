@@ -44,13 +44,13 @@ beforeAll(() => {
       { key: 'tecnologia', label: 'Tecnologia', aliases: ['tech', 'ti'] },
     ],
   };
-  require('../../assets/js/kc-utils.string.js');
-  require('../../assets/js/kc-utils.format.js');
-  require('../../assets/js/kc-utils.dom.js');
-  require('../../assets/js/kc-utils.identity.js');
-  require('../../assets/js/kc-utils.taxonomy.js');
-  require('../../assets/js/kc-utils.location.js');
-  require('../../assets/js/kc-utils.presentation.js');
+  require('../../assets/js/utils/kc-utils.string.js');
+  require('../../assets/js/utils/kc-utils.format.js');
+  require('../../assets/js/utils/kc-utils.dom.js');
+  require('../../assets/js/utils/kc-utils.identity.js');
+  require('../../assets/js/utils/kc-utils.taxonomy.js');
+  require('../../assets/js/utils/kc-utils.location.js');
+  require('../../assets/js/utils/kc-utils.presentation.js');
 });
 
 beforeEach(() => {

@@ -29,8 +29,8 @@ beforeAll(() => {
       { key: 'setor-oeste', label: 'Setor Oeste', icon: 'fas fa-map-marker-alt', aliases: ['oeste'], isCampus: false },
     ],
   };
-  require('../../assets/js/kc-utils.string.js');
-  require('../../assets/js/kc-utils.location.js');
+  require('../../assets/js/utils/kc-utils.string.js');
+  require('../../assets/js/utils/kc-utils.location.js');
 });
 
 const loc = () => window._KCU.location;
