@@ -560,7 +560,7 @@ function buildExpectedKcffScriptChain(relPath) {
   const prefix = relPath.startsWith('admin/') ? '../assets/js' : 'assets/js';
   return [
     `${prefix}/kc-env.js`,
-    `${prefix}/kc-feature-flags.js`,
+    `${prefix}/boot/kc-feature-flags.js`,
   ];
 }
 

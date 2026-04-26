@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const MODULE_PATH = path.resolve(__dirname, '../../assets/js/kc-feature-flags.js');
+const MODULE_PATH = path.resolve(__dirname, '../../assets/js/boot/kc-feature-flags.js');
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const source = fs.readFileSync(MODULE_PATH, 'utf8');
 
@@ -203,7 +203,7 @@ describe('HTML - ordem canonica KCFF', () => {
       const srcs = extractDeferredScriptSrcs(content);
       const prefix = relPath.startsWith('admin/') ? '../assets/js' : 'assets/js';
       const envSrc = `${prefix}/kc-env.js`;
-      const flagsSrc = `${prefix}/kc-feature-flags.js`;
+      const flagsSrc = `${prefix}/boot/kc-feature-flags.js`;
       const envIndex = srcs.indexOf(envSrc);
 
       expect(envIndex).toBeGreaterThanOrEqual(0);

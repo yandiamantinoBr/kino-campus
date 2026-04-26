@@ -83,9 +83,9 @@ var REQUIRED_DIRS = [
 // ── Arquivos JS canônicos do runtime ──────────────────────────────────────────
 
 var CANONICAL_JS = [
-  'assets/js/kc-constants.js',
+  'assets/js/boot/kc-constants.js',
   'assets/js/kc-env.js',
-  'assets/js/kc-feature-flags.js',
+  'assets/js/boot/kc-feature-flags.js',
   'assets/js/boot/kc-sw-register.js',
   'assets/js/boot/kc-telemetry.js',
   'assets/js/kc-supabase.client.js',

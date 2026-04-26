@@ -39,9 +39,9 @@ describe('sw.js — integridade', function () {
   });
 
   test('SHELL_ASSETS inclui os JS core do shell', function () {
-    expect(SW).toContain('/assets/js/kc-constants.js');
+    expect(SW).toContain('/assets/js/boot/kc-constants.js');
     expect(SW).toContain('/assets/js/kc-env.js');
-    expect(SW).toContain('/assets/js/kc-feature-flags.js');
+    expect(SW).toContain('/assets/js/boot/kc-feature-flags.js');
     expect(SW).toContain('/assets/js/kc-core.js');
   });
 
@@ -130,7 +130,7 @@ describe('HTML chain — kc-sw-register injetado após kc-feature-flags', functi
   publicPages.forEach(function (page) {
     test('página pública "' + page + '" inclui kc-sw-register.js após kc-feature-flags.js', function () {
       var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
-      var idxFlags = html.indexOf('assets/js/kc-feature-flags.js');
+      var idxFlags = html.indexOf('assets/js/boot/kc-feature-flags.js');
       var idxSW    = html.indexOf('assets/js/boot/kc-sw-register.js');
       expect(idxFlags).toBeGreaterThan(-1);
       expect(idxSW).toBeGreaterThan(-1);
@@ -141,7 +141,7 @@ describe('HTML chain — kc-sw-register injetado após kc-feature-flags', functi
   adminPages.forEach(function (page) {
     test('página admin "' + page + '" inclui kc-sw-register.js após kc-feature-flags.js', function () {
       var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
-      var idxFlags = html.indexOf('../assets/js/kc-feature-flags.js');
+      var idxFlags = html.indexOf('../assets/js/boot/kc-feature-flags.js');
       var idxSW    = html.indexOf('../assets/js/boot/kc-sw-register.js');
       expect(idxFlags).toBeGreaterThan(-1);
       expect(idxSW).toBeGreaterThan(-1);
