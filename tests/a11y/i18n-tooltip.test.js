@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT_DIR = path.resolve(__dirname, '../..');
-const MODULE_PATH = path.join(ROOT_DIR, 'assets/js/kc-i18n.js');
+const MODULE_PATH = path.join(ROOT_DIR, 'assets/js/core/kc-i18n.js');
 const source = fs.readFileSync(MODULE_PATH, 'utf8');
 
 const htmlFiles = [

@@ -28,7 +28,7 @@ describe('iOS gesture hardening', () => {
   });
 
   test('touch pointers keep native hero and drag scrolling behavior', () => {
-    const js = fs.readFileSync(path.resolve(__dirname, '..', '..', 'assets/js/kc-core.js'), 'utf8');
+    const js = fs.readFileSync(path.resolve(__dirname, '..', '..', 'assets/js/core/kc-core.js'), 'utf8');
 
     expect(js).toMatch(/const start = \(e\) => \{\s+if \(e\.pointerType === 'touch'\) return;/);
     expect(js).toMatch(/carousel\.addEventListener\("pointerdown", \(e\) => \{\s+if \(e\.pointerType === 'touch'\)/);

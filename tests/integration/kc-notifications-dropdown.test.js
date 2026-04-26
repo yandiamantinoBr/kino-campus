@@ -7,7 +7,7 @@ describe('KCNotifications dropdown hardening', () => {
 
   beforeAll(() => {
     global.window = global.window || global;
-    require('../../assets/js/kc-i18n.js');
+    require('../../assets/js/core/kc-i18n.js');
   });
 
   beforeEach(() => {
