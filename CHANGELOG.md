@@ -2,6 +2,46 @@
 
 ---
 
+## [13.0.0] - 2026-04-26 — Trilha v13: Governança Estrutural & Hotspots Secundários (v13.0.0–v13.8.0)
+
+### Tema
+Governança Estrutural & Hotspots Secundários — eliminar os 4 maiores controllers JS (>1100L), estabelecer VERSION.json, 4 validators estruturais e reorganização de docs.
+
+### Track G — Governança (v13.1.0–v13.3.0)
+- `v13.1.0`: `VERSION.json` criado como fonte única de versão (appVersion=13.0.0, frontendRuntimeVersion=8.6.0); `scripts/validate-version-map.js` criado com validação de campos obrigatórios e consistência; `scripts/hygiene-check.js` atualizado para chamar o validator.
+- `v13.2.0`: 3 scripts de validação estrutural criados — `validate-repository-structure.js` (76 itens), `validate-script-chains.js` (cadeia de boot nos 22 HTMLs), `validate-public-routes.js` (22 rotas públicas); `+17` testes estruturais.
+- `v13.2.1`: `package.json` ganhou scripts `check:hygiene`, `check:structure`, `check:scripts`, `check:routes`, `check:version`, `check:all`; integração completa com `hygiene-check.js`.
+- `v13.3.0`: `docs/` reorganizado — subdiretórios `audits/refactors/`, `audits/accessibility/`, `releases/v12/`, `qa/reports/` criados; `RELATORIO-KINOCAMPUS-V12.md` movido para `docs/releases/v12/`.
+
+### Track A — Hotspot splits (v13.4.0–v13.7.2)
+- `v13.4.0`: Auditoria `product.controller.js` (1494L, doc-only) — `docs/audits/refactors/product-controller-audit-v13.4.md`.
+- `v13.4.1`: Split `product.controller.js` — `product.load.js` + `product.ui.js`; `+54` testes.
+- `v13.4.2`: Gate `product.controller.js` < 800L confirmado (762L).
+- `v13.5.0`: Auditoria `kc-supabase.client.js` (1364L, doc-only) — `docs/audits/refactors/supabase-client-audit-v13.5.md`.
+- `v13.5.1`: Split `kc-supabase.client.js` — `kc-supabase.posts.js` + `kc-supabase.ratings.js`; `window.KCSupabase._posts` + `window.KCSupabase._ratings`; `window._KCSupabaseInternal`; `+94` testes.
+- `v13.5.2`: Gate `kc-supabase.client.js` < 700L confirmado (554L).
+- `v13.6.0`: Auditoria `kc-core.js` (1221L, doc-only) — `docs/audits/refactors/kc-core-audit-v13.6.md`.
+- `v13.6.1`: Split `kc-core.js` — `kc-post-model.js` (`window.KCPostModel`) + `kc-user-posts.js` (`window.kcUserPosts`) + `kc-core-widgets.js` (`window.KCCore.initWhatsAppShare`, `window.KCCore.bindModuleSortTabs`); `+75` testes.
+- `v13.6.2`: Gate `kc-core.js` < 700L confirmado (647L).
+- `v13.7.0`: Auditoria `oportunidades.controller.js` (1246L, doc-only) — `docs/audits/refactors/oportunidades-audit-v13.7.md`.
+- `v13.7.1`: Split `oportunidades.controller.js` — `oportunidades.normalize.js` (37 funções puras + 7 funções stateRef) + residual 682L; `window._KCOpNormalize`; `+75` testes.
+- `v13.7.2`: Gate `oportunidades.controller.js` < 700L confirmado (682L).
+
+### Métricas finais v13
+
+| Métrica | Baseline V13 | Entrega V13 |
+|---|---|---|
+| Jest suites | 127 | 134 (+7) |
+| Jest testes | 2647 | 3046 (+399) |
+| check:all | Não existia | ✅ 5 validators verdes |
+| Hotspots > 1100L | 4 arquivos (5565L) | 0 arquivos |
+| VERSION.json | Não existia | ✅ appVersion=13.0.0 |
+| Validators (4) | Não existiam | ✅ todos passando |
+| docs/audits/refactors/ | Não existia | ✅ 4 auditorias |
+| docs/releases/v12/ | Não existia | ✅ RELATORIO-V12 movido |
+
+---
+
 ## [Unreleased]
 
 ### Added
