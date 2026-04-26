@@ -1,6 +1,6 @@
 beforeAll(() => {
   global.window = global.window || global;
-  require('../../assets/js/kc-i18n.js');
+  require('../../assets/js/core/kc-i18n.js');
 });
 
 describe('KCi18n - Modulo de Internacionalizacao (pt-BR)', () => {

@@ -21,10 +21,10 @@ const fs   = require('fs');
 const path = require('path');
 
 const ROOT       = path.resolve(__dirname, '../..');
-const CORE       = path.join(ROOT, 'assets/js/kc-core.js');
+const CORE       = path.join(ROOT, 'assets/js/core/kc-core.js');
 const POST_MODEL = path.join(ROOT, 'assets/js/core/kc-post-model.js');
-const USER_POSTS = path.join(ROOT, 'assets/js/kc-user-posts.js');
-const WIDGETS    = path.join(ROOT, 'assets/js/kc-core-widgets.js');
+const USER_POSTS = path.join(ROOT, 'assets/js/core/kc-user-posts.js');
+const WIDGETS    = path.join(ROOT, 'assets/js/core/kc-core-widgets.js');
 
 const HTML_FILES = [
   path.join(ROOT, 'index.html'),

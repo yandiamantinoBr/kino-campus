@@ -23,12 +23,12 @@ var SHELL_ASSETS = [
   '/assets/js/boot/kc-constants.js',
   '/assets/js/boot/kc-env.js',
   '/assets/js/boot/kc-feature-flags.js',
-  '/assets/js/kc-i18n.js',
+  '/assets/js/core/kc-i18n.js',
   '/assets/js/kc-utils.string.js',
   '/assets/js/kc-utils.format.js',
   '/assets/js/kc-utils.dom.js',
   '/assets/js/kc-utils.js',
-  '/assets/js/kc-core.js',
+  '/assets/js/core/kc-core.js',
 ];
 
 /** Padrões que nunca devem ser cacheados (Supabase, CDNs, Fonts). */

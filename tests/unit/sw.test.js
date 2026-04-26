@@ -42,7 +42,7 @@ describe('sw.js — integridade', function () {
     expect(SW).toContain('/assets/js/boot/kc-constants.js');
     expect(SW).toContain('/assets/js/boot/kc-env.js');
     expect(SW).toContain('/assets/js/boot/kc-feature-flags.js');
-    expect(SW).toContain('/assets/js/kc-core.js');
+    expect(SW).toContain('/assets/js/core/kc-core.js');
   });
 
   test('PASSTHROUGH_PATTERNS cobre Supabase', function () {

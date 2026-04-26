@@ -266,13 +266,13 @@ function runI18nTooltipChecks() {
 }
 
 function runI18nB2GateChecks() {
-  const i18nContent = read('assets/js/kc-i18n.js');
+  const i18nContent = read('assets/js/core/kc-i18n.js');
 
   // 1. Gate de linhas do modulo
   const lineCount = countLines(i18nContent);
   if (lineCount < I18N_B2_GATE.minLines) {
     errors.push(
-      `assets/js/kc-i18n.js must stay above ${I18N_B2_GATE.minLines} lines for the v12.7.3 B2 gate (found ${lineCount})`
+      `assets/js/core/kc-i18n.js must stay above ${I18N_B2_GATE.minLines} lines for the v12.7.3 B2 gate (found ${lineCount})`
     );
   }
 
@@ -281,7 +281,7 @@ function runI18nB2GateChecks() {
   const keyCount = new Set(keyMatches.map((m) => m[0].replace(/'\s*:$/, '').replace(/'/g, ''))).size;
   if (keyCount < I18N_B2_GATE.minKeys) {
     errors.push(
-      `assets/js/kc-i18n.js must have at least ${I18N_B2_GATE.minKeys} unique dictionary keys for the v12.7.3 B2 gate (found ${keyCount})`
+      `assets/js/core/kc-i18n.js must have at least ${I18N_B2_GATE.minKeys} unique dictionary keys for the v12.7.3 B2 gate (found ${keyCount})`
     );
   }
 
