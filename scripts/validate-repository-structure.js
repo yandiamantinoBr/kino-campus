@@ -45,6 +45,8 @@ var REQUIRED_DIRS = [
   'assets/js',
   'assets/js/controllers',
   'assets/js/adapters',
+  'assets/js/adapters/local',
+  'assets/js/adapters/supabase',
   'assets/js/boot',
   'assets/js/core',
   'assets/js/api',
