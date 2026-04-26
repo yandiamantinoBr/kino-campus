@@ -15,8 +15,8 @@ describe('module ranking markup', () => {
     const html = fs.readFileSync(path.resolve(__dirname, '..', '..', file), 'utf8');
 
     expect(html).toContain('data-kc-ranking-sidebar');
-    expect(html).toContain('<script defer src="assets/js/kc-ranking.js"></script>');
-    expect(html).not.toContain("KCLazyLoader.load('assets/js/kc-ranking.js')");
+    expect(html).toContain('<script defer src="assets/js/features/kc-ranking.js"></script>');
+    expect(html).not.toContain("KCLazyLoader.load('assets/js/features/kc-ranking.js')");
     expect(html).not.toContain("<script>document.addEventListener('DOMContentLoaded'");
   });
 });

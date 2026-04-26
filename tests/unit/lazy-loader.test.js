@@ -10,7 +10,7 @@
 
 beforeAll(() => {
   global.window = global.window || global;
-  require('../../assets/js/kc-lazy-loader.js');
+  require('../../assets/js/features/kc-lazy-loader.js');
 });
 
 describe('KCLazyLoader (v9.4.0)', () => {

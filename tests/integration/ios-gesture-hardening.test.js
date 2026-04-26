@@ -17,7 +17,7 @@ describe('iOS gesture hardening', () => {
   });
 
   test('pull-to-refresh ignores horizontal gesture surfaces', () => {
-    const js = fs.readFileSync(path.resolve(__dirname, '..', '..', 'assets/js/kc-pull-to-refresh.js'), 'utf8');
+    const js = fs.readFileSync(path.resolve(__dirname, '..', '..', 'assets/js/features/kc-pull-to-refresh.js'), 'utf8');
 
     expect(js).toContain('function isHorizontalGestureSurface');
     expect(js).toContain(".kc-hero-carousel");

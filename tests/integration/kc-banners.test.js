@@ -1,4 +1,4 @@
-const Banners = require('../../assets/js/kc-banners.js');
+const Banners = require('../../assets/js/features/kc-banners.js');
 
 describe('KCBanners', () => {
   beforeEach(() => {

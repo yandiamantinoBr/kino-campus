@@ -10,9 +10,9 @@ beforeAll(() => {
   require('../../assets/js/utils/kc-utils.location.js'); // deve preceder kc-utils.js (v12.2.5)
   require('../../assets/js/utils/kc-utils.presentation.js'); // deve preceder kc-utils.js (v12.2.6)
   require('../../assets/js/utils/kc-utils.js');
-  require('../../assets/js/kc-feed-filters.js');
+  require('../../assets/js/features/kc-feed-filters.js');
   // jsdom fornece document para o DOMContentLoaded
-  require('../../assets/js/kc-filters.js');
+  require('../../assets/js/features/kc-filters.js');
 });
 
 describe('kcFilters - Filtros unificados (tabs + busca)', () => {

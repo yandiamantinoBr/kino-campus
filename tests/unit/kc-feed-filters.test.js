@@ -17,7 +17,7 @@ describe('KCFeedFilters', () => {
 
   test('readCoreState e writeCoreState sincronizam q e tab na URL', () => {
     window.history.replaceState({}, '', '/eventos.html?q=feira&tab=culturais');
-    require('../../assets/js/kc-feed-filters.js');
+    require('../../assets/js/features/kc-feed-filters.js');
 
     expect(window.KCFeedFilters.readCoreState()).toEqual({
       query: 'feira',
@@ -36,7 +36,7 @@ describe('KCFeedFilters', () => {
 
   test('readNumberParam e writeNumberParam tratam valores numéricos na URL', () => {
     window.history.replaceState({}, '', '/eventos.html?priceMin=12.5&priceMax=99');
-    require('../../assets/js/kc-feed-filters.js');
+    require('../../assets/js/features/kc-feed-filters.js');
 
     const params = window.KCFeedFilters.getSearchParams();
     expect(window.KCFeedFilters.readNumberParam(params, 'priceMin')).toBe(12.5);
@@ -54,7 +54,7 @@ describe('KCFeedFilters', () => {
 
   test('readPresetParam e writePresetParam sincronizam datePreset com allowlist por modulo', () => {
     window.history.replaceState({}, '', '/eventos.html?datePreset=next7d');
-    require('../../assets/js/kc-feed-filters.js');
+    require('../../assets/js/features/kc-feed-filters.js');
 
     const utils = window.KCFeedFilters;
     const params = utils.getSearchParams();
@@ -75,7 +75,7 @@ describe('KCFeedFilters', () => {
   });
 
   test('normalizeDatePreset preserva o valor canonico thisMonth para eventos', () => {
-    require('../../assets/js/kc-feed-filters.js');
+    require('../../assets/js/features/kc-feed-filters.js');
 
     const utils = window.KCFeedFilters;
 
@@ -88,7 +88,7 @@ describe('KCFeedFilters', () => {
   });
 
   test('matchesDatePreset respeita recencia generica e datas de eventos com fallback', () => {
-    require('../../assets/js/kc-feed-filters.js');
+    require('../../assets/js/features/kc-feed-filters.js');
 
     const utils = window.KCFeedFilters;
     const now = new Date('2026-04-06T12:00:00-03:00');
@@ -149,7 +149,7 @@ describe('KCFeedFilters', () => {
       </aside>
     `;
 
-    require('../../assets/js/kc-feed-filters.js');
+    require('../../assets/js/features/kc-feed-filters.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     const toggle = document.querySelector('[data-kc-sidebar-toggle="true"]');
@@ -190,8 +190,8 @@ describe('kcFilters URL bootstrap', () => {
   });
 
   test('init restaura query e categoria a partir da URL', () => {
-    require('../../assets/js/kc-feed-filters.js');
-    require('../../assets/js/kc-filters.js');
+    require('../../assets/js/features/kc-feed-filters.js');
+    require('../../assets/js/features/kc-filters.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     expect(window.kcFilters.getState().query).toBe('feira');
