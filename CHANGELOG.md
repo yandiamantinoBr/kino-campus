@@ -46,6 +46,8 @@ Governança Estrutural & Hotspots Secundários — eliminar os 4 maiores control
 
 ### Added
 
+- `v14.0.0`: **Abertura do ciclo V14** (docs-only): `RELATORIO-KINOCAMPUS-V14.md` criado (inventário: 129 arquivos JS, 134 testes, 22 HTMLs; 12 iterações mapeadas; DoD com 15 critérios; estratégia de rollback para movimentações); `docs/audits/repository-reorg-plan.md` criado (inventário completo, mapa de scripts, mapa de dependências, mapa de rotas públicas, plano de migração em 4 fases); `README.md` status atualizado para "v14 em execução"; baseline inalterada Jest 134/134 · 3046/3046 · hygiene 8.6.0 ✓.
+
 - `v13.0.0`: **Abertura do ciclo V13** (docs-only): `RELATORIO-KINOCAMPUS-V13.md` criado (estrutura completa do ciclo — Track G: VERSION.json + 4 validators + package.json check:* + docs reorganização; Track A: 4 hotspots JS > 1100L → splits com namespaces `_KCProduct.*`, `KCPostModel`, `KCRenderCard`; DoD com 14 critérios; meta ≥ 140 suites / 2800 testes); `README.md` status atualizado para "v13 em execução"; baseline inalterada Jest 127/127 · 2647/2647 · Playwright 51/51 · hygiene 8.6.0 ✓.
 
 - `v12.13.0`: **Release gate final v12** (docs-only): `CHANGELOG.md` entrada formal `## [12.0.0] - 2026-04-25` com sumário completo de todas as 13 iterações + tabela de métricas finais; `RELATORIO-KINOCAMPUS-V12.md` seção 7 DoD totalmente preenchida (18/19 critérios verdes, 1 parcial — JS > 1100L transferido para v13) + §8.43 de encerramento + cabeçalho "v12 ENCERRADA"; `README.md` status atualizado para v12 encerrada; baseline inalterada Jest 127/127 · 2647/2647 · Playwright 51/51 · hygiene 8.6.0.
