@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída; v12 ENCERRADA (v12.0.0–v12.13.0, 13 iterações, Jest 127/127 · 2647/2647 · Playwright 51/51 · hygiene 8.6.0 ✓); **v13 ENCERRADA** (*Governança Estrutural & Hotspots Secundários*, v13.0.0–v13.8.0, 18 iterações, Jest 134/134 · 3046/3046 · check:all ✓ · hygiene 8.6.0 ✓ · 4 hotspots eliminados: product=762L, supabase=554L, core=647L, oportunidades=682L); **v14 aguardando** (*Reorganização de Repositório*).
+**Status atual:** v11 concluída; v12 ENCERRADA (Jest 127/127 · 2647/2647 · Playwright 51/51 ✓); v13 ENCERRADA (Jest 134/134 · 3046/3046 · check:all ✓ · 4 hotspots eliminados ✓); **v14 em execução** (*Repository Structure Foundation — Diretórios, Docs & Tests*) — 12 iterações: subdirs JS/adapters/controllers, reorganização docs + tests, movimentação utils/adapters/controllers.
 
 ---
 
