@@ -88,7 +88,7 @@ var CANONICAL_JS = [
   'assets/js/boot/kc-feature-flags.js',
   'assets/js/boot/kc-sw-register.js',
   'assets/js/boot/kc-telemetry.js',
-  'assets/js/kc-supabase.client.js',
+  'assets/js/api/kc-supabase.client.js',
   'assets/js/core/kc-auth.ui.js',
   'assets/js/core/kc-profiles.client.js',
   'assets/js/utils/kc-utils.string.js',

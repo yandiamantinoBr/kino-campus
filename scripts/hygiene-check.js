@@ -26,7 +26,7 @@ const warnings = [];
 const versionFiles = [
   'assets/js/kc-env.js',
   'assets/js/kc-api.client.js',
-  'assets/js/kc-supabase.client.js',
+  'assets/js/api/kc-supabase.client.js',
   'assets/js/core/kc-auth.ui.js',
   'assets/js/core/kc-profiles.client.js',
 ];

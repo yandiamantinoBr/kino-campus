@@ -20,9 +20,9 @@ const fs   = require('fs');
 const path = require('path');
 
 const ROOT    = path.resolve(__dirname, '../..');
-const CLIENT  = path.join(ROOT, 'assets/js/kc-supabase.client.js');
-const POSTS   = path.join(ROOT, 'assets/js/kc-supabase.posts.js');
-const RATINGS = path.join(ROOT, 'assets/js/kc-supabase.ratings.js');
+const CLIENT  = path.join(ROOT, 'assets/js/api/kc-supabase.client.js');
+const POSTS   = path.join(ROOT, 'assets/js/api/kc-supabase.posts.js');
+const RATINGS = path.join(ROOT, 'assets/js/api/kc-supabase.ratings.js');
 
 const HTML_FILES = [
   path.join(ROOT, 'index.html'),
