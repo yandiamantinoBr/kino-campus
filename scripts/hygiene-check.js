@@ -27,8 +27,8 @@ const versionFiles = [
   'assets/js/kc-env.js',
   'assets/js/kc-api.client.js',
   'assets/js/kc-supabase.client.js',
-  'assets/js/kc-auth.ui.js',
-  'assets/js/kc-profiles.client.js',
+  'assets/js/core/kc-auth.ui.js',
+  'assets/js/core/kc-profiles.client.js',
 ];
 
 const htmlFiles = [
@@ -170,7 +170,7 @@ function runVersionChecks() {
   if (!readme.includes(`versao-alvo unica atual: **\`${canonicalVersion}\`**`)) {
     errors.push('README.md is missing the canonical front version map header');
   }
-  if (!readme.includes(`assets/js/kc-profiles.client.js`) || !readme.includes(`auth ui v${canonicalVersion}`)) {
+  if (!readme.includes(`assets/js/core/kc-profiles.client.js`) || !readme.includes(`auth ui v${canonicalVersion}`)) {
     errors.push('README.md is missing the canonical version references for kc-profiles/auth UI');
   }
 
@@ -449,7 +449,7 @@ function runInlineHandlerChecks() {
 }
 
 function runProfileContractChecks() {
-  const profilesClient = read('assets/js/kc-profiles.client.js');
+  const profilesClient = read('assets/js/core/kc-profiles.client.js');
   const apiClient = read('assets/js/kc-api.client.js');
 
   const disallowedProfilesPatterns = [
@@ -462,7 +462,7 @@ function runProfileContractChecks() {
 
   disallowedProfilesPatterns.forEach((pattern) => {
     if (pattern.test(profilesClient)) {
-      errors.push(`assets/js/kc-profiles.client.js still exposes profile email contract: ${pattern}`);
+      errors.push(`assets/js/core/kc-profiles.client.js still exposes profile email contract: ${pattern}`);
     }
   });
 
