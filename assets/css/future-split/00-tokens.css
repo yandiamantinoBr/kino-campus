@@ -1,0 +1,23 @@
+/*
+ * KinoCampus — future-split/00-tokens.css
+ *
+ * STUB — não carregado em produção (V14).
+ * Este arquivo é um placeholder documentando o escopo planejado para V15+.
+ *
+ * Escopo: Design tokens globais
+ *   - :root { ... }  — variáveis CSS de cor, espaçamento, tipografia, sombras, z-index
+ *   - :root[data-theme="dark"] { ... }  — overrides para modo escuro
+ *   - :root[data-theme="light"] { ... }  — overrides para modo claro
+ *   - .theme-toggle { ... }  — controle de tema
+ *   - Keyframes de transição de tema
+ *
+ * Dependências: nenhuma
+ *
+ * Linhas estimadas (extraídas de styles.css): ~400L
+ * Blocos de origem em styles.css: L1–70, L5008–5255, L5764–5795, L6186–6213, L6506–6542
+ *
+ * ATENÇÃO: Não adicionar regras de componente aqui.
+ * Apenas variáveis CSS e seletores de escopo de tema.
+ *
+ * Planejado para V15.1.0.
+ */

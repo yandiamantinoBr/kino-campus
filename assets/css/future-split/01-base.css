@@ -1,0 +1,25 @@
+/*
+ * KinoCampus — future-split/01-base.css
+ *
+ * STUB — não carregado em produção (V14).
+ * Este arquivo é um placeholder documentando o escopo planejado para V15+.
+ *
+ * Escopo: Reset e base da aplicação
+ *   - html, body { ... }  — font, margin, padding, color-scheme, background
+ *   - *, *::before, *::after { box-sizing }  — reset global
+ *   - .skip-link { ... }  — navegação acessível por teclado
+ *   - .visually-hidden { ... }  — elemento oculto visualmente mas acessível
+ *   - body.kc-scroll-locked { ... }  — lock de scroll (modais)
+ *   - Anti-overflow patches (html/body overflow-x, clip)
+ *   - Variáveis de breakpoint e patch de dark-mode compat
+ *
+ * Dependências: 00-tokens.css (usa variáveis CSS)
+ *
+ * Linhas estimadas (extraídas de styles.css): ~600L
+ * Blocos de origem em styles.css: L37–90, L71–217, L3827–4090, L5748–5795, L5737–5756
+ *
+ * ATENÇÃO: Apenas reset, base e patches sem lógica de componente.
+ * Nenhuma referência a classes de componente (.kc-card, .feed-tab, etc.).
+ *
+ * Planejado para V15.2.0.
+ */

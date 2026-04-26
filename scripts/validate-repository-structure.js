@@ -53,6 +53,7 @@ var REQUIRED_DIRS = [
   'assets/js/utils',
   'assets/js/legacy-shims',
   'assets/css',
+  'assets/css/future-split',
   'scripts',
   'tests',
   'tests/e2e',
