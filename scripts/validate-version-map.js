@@ -111,7 +111,7 @@ if (
 
 // ── 8. kc-env.js tem a mesma versão canônica ─────────────────────────────────
 
-var kcEnvPath = path.join(ROOT, 'assets', 'js', 'kc-env.js');
+var kcEnvPath = path.join(ROOT, 'assets', 'js', 'boot', 'kc-env.js');
 if (fs.existsSync(kcEnvPath)) {
   var kcEnvContent = fs.readFileSync(kcEnvPath, 'utf8');
   var expected = "const VERSION = '" + CANONICAL_RUNTIME_VERSION + "';";
@@ -122,7 +122,7 @@ if (fs.existsSync(kcEnvPath)) {
     );
   }
 } else {
-  errors.push('assets/js/kc-env.js não encontrado — impossível validar consistência de versão');
+  errors.push('assets/js/boot/kc-env.js não encontrado — impossível validar consistência de versão');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

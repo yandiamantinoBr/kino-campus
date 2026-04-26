@@ -112,8 +112,9 @@ if (!hasLegacyJwtPrefix && !hasPublishablePrefix) {
 // ── Localização do kc-env.js ────────────────────────────────────────────────
 // Tenta vários caminhos possíveis dependendo da estrutura do repositório
 const POSSIBLE_PATHS = [
+  path.join(__dirname, '..', 'assets', 'js', 'boot', 'kc-env.js'), // v15.5.0 — boot/ subdir
   path.join(__dirname, '..', 'kc-env.js'),           // raiz do repo (padrão Kino Campus)
-  path.join(__dirname, '..', 'assets', 'js', 'kc-env.js'),
+  path.join(__dirname, '..', 'assets', 'js', 'kc-env.js'),         // fallback — raiz assets/js/
   path.join(__dirname, '..', 'js', 'kc-env.js'),
   path.join(__dirname, '..', 'src', 'kc-env.js'),
 ];

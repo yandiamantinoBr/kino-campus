@@ -31,7 +31,7 @@ var errors = [];
 
 var BOOT_CHAIN_PUBLIC = [
   'assets/js/boot/kc-constants.js',
-  'assets/js/kc-env.js',
+  'assets/js/boot/kc-env.js',
   'assets/js/boot/kc-feature-flags.js',
   'assets/js/boot/kc-sw-register.js',
   'assets/js/boot/kc-telemetry.js',
@@ -39,7 +39,7 @@ var BOOT_CHAIN_PUBLIC = [
 
 var BOOT_CHAIN_ADMIN = [
   '../assets/js/boot/kc-constants.js',
-  '../assets/js/kc-env.js',
+  '../assets/js/boot/kc-env.js',
   '../assets/js/boot/kc-feature-flags.js',
   '../assets/js/boot/kc-sw-register.js',
   '../assets/js/boot/kc-telemetry.js',

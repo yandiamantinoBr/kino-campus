@@ -76,7 +76,7 @@ describe('validate-script-chains.js — integridade', function () {
   test('define cadeia de boot pública (5 scripts)', function () {
     expect(CHAINS_SCRIPT).toContain('BOOT_CHAIN_PUBLIC');
     expect(CHAINS_SCRIPT).toContain('assets/js/boot/kc-constants.js');
-    expect(CHAINS_SCRIPT).toContain('assets/js/kc-env.js');
+    expect(CHAINS_SCRIPT).toContain('assets/js/boot/kc-env.js');
     expect(CHAINS_SCRIPT).toContain('assets/js/boot/kc-feature-flags.js');
     expect(CHAINS_SCRIPT).toContain('assets/js/boot/kc-sw-register.js');
     expect(CHAINS_SCRIPT).toContain('assets/js/boot/kc-telemetry.js');
@@ -85,6 +85,7 @@ describe('validate-script-chains.js — integridade', function () {
   test('define cadeia de boot admin (prefixo "../")', function () {
     expect(CHAINS_SCRIPT).toContain('BOOT_CHAIN_ADMIN');
     expect(CHAINS_SCRIPT).toContain('../assets/js/boot/kc-constants.js');
+    expect(CHAINS_SCRIPT).toContain('../assets/js/boot/kc-env.js');
     expect(CHAINS_SCRIPT).toContain('../assets/js/boot/kc-telemetry.js');
   });
 
@@ -114,7 +115,7 @@ describe('validate-script-chains.js — cadeia real nos 22 HTMLs', function () {
 
   var bootChain = [
     'boot/kc-constants.js',
-    'kc-env.js',
+    'boot/kc-env.js',
     'boot/kc-feature-flags.js',
     'boot/kc-sw-register.js',
     'boot/kc-telemetry.js',

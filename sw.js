@@ -21,7 +21,7 @@ var SHELL_ASSETS = [
   '/assets/css/styles.css',
   '/assets/css/kc-public-shell.css',
   '/assets/js/boot/kc-constants.js',
-  '/assets/js/kc-env.js',
+  '/assets/js/boot/kc-env.js',
   '/assets/js/boot/kc-feature-flags.js',
   '/assets/js/kc-i18n.js',
   '/assets/js/kc-utils.string.js',
