@@ -22,7 +22,7 @@ const path = require('path');
 
 const ROOT       = path.resolve(__dirname, '../..');
 const CORE       = path.join(ROOT, 'assets/js/kc-core.js');
-const POST_MODEL = path.join(ROOT, 'assets/js/kc-post-model.js');
+const POST_MODEL = path.join(ROOT, 'assets/js/core/kc-post-model.js');
 const USER_POSTS = path.join(ROOT, 'assets/js/kc-user-posts.js');
 const WIDGETS    = path.join(ROOT, 'assets/js/kc-core-widgets.js');
 

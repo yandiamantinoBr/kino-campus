@@ -78,7 +78,7 @@ describe('KCNotifications dropdown hardening', () => {
 
   test('keeps read, clear and realtime actions alive after rerender', async () => {
     const code = fs.readFileSync(
-      path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-notifications.js'),
+      path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),
       'utf8'
     );
     // eslint-disable-next-line no-eval
