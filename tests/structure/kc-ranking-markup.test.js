@@ -1,0 +1,22 @@
+const fs = require('fs');
+const path = require('path');
+
+const modulePages = [
+  'achados-perdidos.html',
+  'caronas-feed.html',
+  'compra-venda-feed.html',
+  'eventos.html',
+  'moradia.html',
+  'oportunidades.html',
+];
+
+describe('module ranking markup', () => {
+  test.each(modulePages)('%s carrega kc-ranking.js via script externo deferido', (file) => {
+    const html = fs.readFileSync(path.resolve(__dirname, '..', '..', file), 'utf8');
+
+    expect(html).toContain('data-kc-ranking-sidebar');
+    expect(html).toContain('<script defer src="assets/js/kc-ranking.js"></script>');
+    expect(html).not.toContain("KCLazyLoader.load('assets/js/kc-ranking.js')");
+    expect(html).not.toContain("<script>document.addEventListener('DOMContentLoaded'");
+  });
+});
