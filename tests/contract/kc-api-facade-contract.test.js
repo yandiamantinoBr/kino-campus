@@ -1,13 +1,13 @@
 /**
  * @file kc-api-facade-contract.test.js
- * @description Static contract tests for assets/js/kc-api.client.js facade (v11.32.1)
+ * @description Static contract tests for assets/js/api/kc-api.client.js facade (v11.32.1)
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '../../assets/js/kc-api.client.js');
+const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.client.js');
 let source;
 let facadeBlock;
 

@@ -22,7 +22,7 @@ module.exports = {
   collectCoverageFrom: [
     'assets/js/boot/kc-constants.js',
     'assets/js/utils/kc-utils.js',
-    'assets/js/kc-api.client.js',
+    'assets/js/api/kc-api.client.js',
     'assets/js/kc-filters.js',
     'assets/js/kc-ranking.js',
     'assets/js/kc-comments.shared.js',
