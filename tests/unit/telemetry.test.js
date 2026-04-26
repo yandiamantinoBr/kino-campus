@@ -15,7 +15,7 @@ var fs   = require('fs');
 var path = require('path');
 
 var ROOT = path.resolve(__dirname, '../..');
-var TEL  = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'kc-telemetry.js'), 'utf8');
+var TEL  = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'boot', 'kc-telemetry.js'), 'utf8');
 
 // ── 1. kc-telemetry.js — integridade ────────────────────────────────────────
 
@@ -107,8 +107,8 @@ describe('HTML chain — kc-telemetry injetado após kc-sw-register', function (
   publicPages.forEach(function (page) {
     test('pública "' + page + '" — kc-telemetry.js após kc-sw-register.js', function () {
       var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
-      var idxSW  = html.indexOf('assets/js/kc-sw-register.js');
-      var idxTEL = html.indexOf('assets/js/kc-telemetry.js');
+      var idxSW  = html.indexOf('assets/js/boot/kc-sw-register.js');
+      var idxTEL = html.indexOf('assets/js/boot/kc-telemetry.js');
       expect(idxSW).toBeGreaterThan(-1);
       expect(idxTEL).toBeGreaterThan(-1);
       expect(idxTEL).toBeGreaterThan(idxSW);
@@ -118,8 +118,8 @@ describe('HTML chain — kc-telemetry injetado após kc-sw-register', function (
   adminPages.forEach(function (page) {
     test('admin "' + page + '" — kc-telemetry.js após kc-sw-register.js', function () {
       var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
-      var idxSW  = html.indexOf('../assets/js/kc-sw-register.js');
-      var idxTEL = html.indexOf('../assets/js/kc-telemetry.js');
+      var idxSW  = html.indexOf('../assets/js/boot/kc-sw-register.js');
+      var idxTEL = html.indexOf('../assets/js/boot/kc-telemetry.js');
       expect(idxSW).toBeGreaterThan(-1);
       expect(idxTEL).toBeGreaterThan(-1);
       expect(idxTEL).toBeGreaterThan(idxSW);
