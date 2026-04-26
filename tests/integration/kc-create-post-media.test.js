@@ -1,6 +1,6 @@
 /**
  * @file kc-create-post-media.test.js
- * @description Static contract tests for assets/js/kc-create-post.media.js (v11.31.3)
+ * @description Static contract tests for assets/js/features/create-post/kc-create-post.media.js (v11.31.3)
  * Verifica estrutura IIFE, namespace, constantes, leitura/compressão, gerenciamento
  * de imagens e HTML da seção de imagens.
  */
@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '../../assets/js/kc-create-post.media.js');
+const SRC = path.resolve(__dirname, '../../assets/js/features/create-post/kc-create-post.media.js');
 let source;
 
 beforeAll(() => {

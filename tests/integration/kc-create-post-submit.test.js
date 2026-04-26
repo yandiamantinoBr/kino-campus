@@ -13,8 +13,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const SUBMIT_PATH = path.join(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.submit.js');
-const CORE_PATH   = path.join(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.js');
+const SUBMIT_PATH = path.join(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.submit.js');
+const CORE_PATH   = path.join(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.js');
 
 let source = '';
 let coreSource = '';

@@ -1,6 +1,6 @@
 /**
  * @file kc-create-post-resolvers.test.js
- * @description Static contract tests for assets/js/kc-create-post.resolvers.js (v11.31.4)
+ * @description Static contract tests for assets/js/features/create-post/kc-create-post.resolvers.js (v11.31.4)
  * Verifica estrutura IIFE, namespace, utilitários, resolvers de oportunidades,
  * moradia, caronas, achados/perdidos e funções de sync DOM.
  */
@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '../../assets/js/kc-create-post.resolvers.js');
+const SRC = path.resolve(__dirname, '../../assets/js/features/create-post/kc-create-post.resolvers.js');
 let source;
 
 beforeAll(() => {

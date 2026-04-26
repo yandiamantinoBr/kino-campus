@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 describe('kc-create-post active field gating', () => {
-  const filePath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.js');
+  const filePath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.js');
 
   beforeAll(() => {
     global.window = global.window || global;
@@ -21,7 +21,7 @@ describe('kc-create-post active field gating', () => {
 
     // Carrega o sub-módulo fields (registra window._KCCreatePost.fields)
     // necessário após v11.31.5 pois kcBuildFieldsForModule delega para esse módulo.
-    const fieldsPath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.fields.js');
+    const fieldsPath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.fields.js');
     const fieldsCode = fs.readFileSync(fieldsPath, 'utf8');
     // eslint-disable-next-line no-eval
     (0, eval)(fieldsCode);
@@ -79,7 +79,7 @@ describe('kc-create-post active field gating', () => {
 
   test('submit path derives active field names before building the payload', () => {
     // v11.31.6: submit pipeline extraído para kc-create-post.submit.js
-    const submitPath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.submit.js');
+    const submitPath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.submit.js');
     const submitSource = fs.readFileSync(submitPath, 'utf8');
 
     expect(submitSource).toContain('const activeFieldNames = kcGetActiveCreateFieldNames(');
