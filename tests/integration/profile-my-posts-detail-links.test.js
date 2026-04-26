@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('profile/my-posts detail link hardening', () => {
   test('profile controller preserva o helper canônico e o injeta no split de collections', () => {
-    const source = read('assets/js/controllers/profile.controller.js');
+    const source = read('assets/js/controllers/public/profile.controller.js');
 
     expect(source).toContain('window.KCUtils.buildProductDetailHref');
     expect(source).toContain('buildPostDetailHref,');
@@ -17,7 +17,7 @@ describe('profile/my-posts detail link hardening', () => {
   });
 
   test('profile collections module usa o helper canônico de detalhe de post', () => {
-    const source = read('assets/js/controllers/profile.collections.js');
+    const source = read('assets/js/controllers/public/profile.collections.js');
 
     expect(source).toContain("_buildPostDetailHref(post && (post.uuid || post.id || ''), deps)");
     expect(source).toContain("_buildPostDetailHref(item && (item.uuid || item.id || ''), deps)");
@@ -28,7 +28,7 @@ describe('profile/my-posts detail link hardening', () => {
   });
 
   test('my-posts controller uses the shared canonical post detail helper', () => {
-    const source = read('assets/js/controllers/my-posts.controller.js');
+    const source = read('assets/js/controllers/public/my-posts.controller.js');
 
     expect(source).toContain('window.KCUtils.buildProductDetailHref');
     expect(source).not.toContain("window.location.href = 'product.html?id='");

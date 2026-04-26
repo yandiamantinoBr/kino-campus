@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('account-setup contact preview hardening', () => {
   test('account-setup preview reuses the shared contact action and reacts to the public-contact toggle', () => {
-    const source = read('assets/js/controllers/account-setup.controller.js');
+    const source = read('assets/js/controllers/public/account-setup.controller.js');
 
     expect(source).toContain('shared.buildContactAction');
     expect(source).toContain("contact_cta_enabled: $('#accountSetupCtaEnabled')?.checked !== false");

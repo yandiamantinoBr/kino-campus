@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const MODULE_PATH = path.resolve(__dirname, '../../assets/js/controllers/profile.ratings.js');
-const CONTROLLER_PATH = path.resolve(__dirname, '../../assets/js/controllers/profile.controller.js');
+const MODULE_PATH = path.resolve(__dirname, '../../assets/js/controllers/public/profile.ratings.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '../../assets/js/controllers/public/profile.controller.js');
 const HTML_PATH = path.resolve(__dirname, '../../profile.html');
 
 let moduleSource;
@@ -215,11 +215,11 @@ describe('profile.html - ordem canonica dos scripts do split ratings', () => {
   test('carrega presentation -> collections -> ratings -> controller no final da pagina', () => {
     const orderedScripts = [
       '<script defer src="assets/js/kc-ranking.js"></script>',
-      '<script defer src="assets/js/controllers/profile.presentation.js"></script>',
-      '<script defer src="assets/js/controllers/profile.collections.js"></script>',
-      '<script defer src="assets/js/controllers/profile.ratings.js"></script>',
-      '<script defer src="assets/js/controllers/profile.flow.js"></script>',
-      '<script defer src="assets/js/controllers/profile.controller.js"></script>'
+      '<script defer src="assets/js/controllers/public/profile.presentation.js"></script>',
+      '<script defer src="assets/js/controllers/public/profile.collections.js"></script>',
+      '<script defer src="assets/js/controllers/public/profile.ratings.js"></script>',
+      '<script defer src="assets/js/controllers/public/profile.flow.js"></script>',
+      '<script defer src="assets/js/controllers/public/profile.controller.js"></script>'
     ];
 
     let lastIndex = -1;

@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'kc-feed.controller.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'public', 'kc-feed.controller.js');
 
 function buildMinimalKCAPI() {
   return {

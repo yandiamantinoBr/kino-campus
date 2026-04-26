@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '../../assets/js/controllers/product.save.js');
+const SRC = path.resolve(__dirname, '../../assets/js/controllers/public/product.save.js');
 let source;
 
 beforeAll(() => { source = fs.readFileSync(SRC, 'utf8'); });

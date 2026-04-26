@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '../../assets/js/controllers/product.analytics.js');
+const SRC = path.resolve(__dirname, '../../assets/js/controllers/public/product.analytics.js');
 let source;
 
 beforeAll(() => { source = fs.readFileSync(SRC, 'utf8'); });

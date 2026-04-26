@@ -3,9 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const SHARED_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin-dashboard.shared.js');
-const METRICS_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin-dashboard.metrics.js');
-const CONTROLLER_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin-dashboard.controller.js');
+const SHARED_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin/admin-dashboard.shared.js');
+const METRICS_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin/admin-dashboard.metrics.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin/admin-dashboard.controller.js');
 const HTML_PATH = path.resolve(__dirname, '../../admin/index.html');
 
 const REAL_SET_TIMEOUT = global.setTimeout;
@@ -183,12 +183,12 @@ describe('admin-dashboard.controller.js - contrato do split metrics', () => {
 describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> controller', () => {
     const orderedScripts = [
-      '<script defer src="../assets/js/controllers/admin-dashboard.shared.js"></script>',
-      '<script defer src="../assets/js/controllers/admin-dashboard.metrics.js"></script>',
-      '<script defer src="../assets/js/controllers/admin-dashboard.audit.js"></script>',
-      '<script defer src="../assets/js/controllers/admin-dashboard.charts.js"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js"></script>',
       '<script defer src="../assets/js/kc-ranking.js"></script>',
-      '<script defer src="../assets/js/controllers/admin-dashboard.controller.js?v=8.6.0"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.0"></script>'
     ];
 
     let lastIndex = -1;

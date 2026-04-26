@@ -48,12 +48,12 @@ const kcuScriptChain = [
 ];
 
 const kcadAdminDashboardScriptChain = [
-  '../assets/js/controllers/admin-dashboard.shared.js',
-  '../assets/js/controllers/admin-dashboard.metrics.js',
-  '../assets/js/controllers/admin-dashboard.audit.js',
-  '../assets/js/controllers/admin-dashboard.charts.js',
+  '../assets/js/controllers/admin/admin-dashboard.shared.js',
+  '../assets/js/controllers/admin/admin-dashboard.metrics.js',
+  '../assets/js/controllers/admin/admin-dashboard.audit.js',
+  '../assets/js/controllers/admin/admin-dashboard.charts.js',
   '../assets/js/kc-ranking.js',
-  '../assets/js/controllers/admin-dashboard.controller.js',
+  '../assets/js/controllers/admin/admin-dashboard.controller.js',
 ];
 
 const kclaScriptChain = [
@@ -67,11 +67,11 @@ const kclaScriptChain = [
 ];
 
 const kcprProfileScriptChain = [
-  'assets/js/controllers/profile.presentation.js',
-  'assets/js/controllers/profile.collections.js',
-  'assets/js/controllers/profile.ratings.js',
-  'assets/js/controllers/profile.flow.js',
-  'assets/js/controllers/profile.controller.js',
+  'assets/js/controllers/public/profile.presentation.js',
+  'assets/js/controllers/public/profile.collections.js',
+  'assets/js/controllers/public/profile.ratings.js',
+  'assets/js/controllers/public/profile.flow.js',
+  'assets/js/controllers/public/profile.controller.js',
 ];
 
 const inlineHandlers = new Set([
@@ -425,12 +425,12 @@ function runLocalAdapterGateChecks() {
 }
 
 function runProfileControllerGateChecks() {
-  const content = read('assets/js/controllers/profile.controller.js');
+  const content = read('assets/js/controllers/public/profile.controller.js');
   const lineCount = countLines(content);
 
   if (lineCount >= profileControllerLineGate) {
     errors.push(
-      `assets/js/controllers/profile.controller.js must stay below ${profileControllerLineGate} lines for the v12.5.5 gate (found ${lineCount})`
+      `assets/js/controllers/public/profile.controller.js must stay below ${profileControllerLineGate} lines for the v12.5.5 gate (found ${lineCount})`
     );
   }
 }
@@ -585,7 +585,7 @@ function extractKcadScriptChain(content) {
 }
 
 function isKcadScriptSrc(src) {
-  return /(?:^|\/)(?:controllers\/admin-dashboard\.(?:shared|metrics|audit|charts|controller)\.js|kc-ranking\.js)$/i.test(String(src || ''));
+  return /(?:^|\/)(?:controllers\/admin\/admin-dashboard\.(?:shared|metrics|audit|charts|controller)\.js|kc-ranking\.js)$/i.test(String(src || ''));
 }
 
 function extractKclaScriptChain(content) {
@@ -601,7 +601,7 @@ function extractKcprProfileScriptChain(content) {
 }
 
 function isKcprProfileScriptSrc(src) {
-  return /(?:^|\/)controllers\/profile\.(?:presentation|collections|ratings|flow|controller)\.js$/i.test(String(src || ''));
+  return /(?:^|\/)controllers\/public\/profile\.(?:presentation|collections|ratings|flow|controller)\.js$/i.test(String(src || ''));
 }
 
 function extractDeferredScriptSrcs(content) {

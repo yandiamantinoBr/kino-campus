@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const AUDIT_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin-dashboard.audit.js');
-const CONTROLLER_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin-dashboard.controller.js');
+const AUDIT_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin/admin-dashboard.audit.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '../../assets/js/controllers/admin/admin-dashboard.controller.js');
 const HTML_PATH = path.resolve(__dirname, '../../admin/index.html');
 
 function escapeHtml(value) {
@@ -374,12 +374,12 @@ describe('admin-dashboard.controller.js - contrato do split audit', () => {
 describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> controller', () => {
     const orderedScripts = [
-      '<script defer src="../assets/js/controllers/admin-dashboard.shared.js"></script>',
-      '<script defer src="../assets/js/controllers/admin-dashboard.metrics.js"></script>',
-      '<script defer src="../assets/js/controllers/admin-dashboard.audit.js"></script>',
-      '<script defer src="../assets/js/controllers/admin-dashboard.charts.js"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js"></script>',
       '<script defer src="../assets/js/kc-ranking.js"></script>',
-      '<script defer src="../assets/js/controllers/admin-dashboard.controller.js?v=8.6.0"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.0"></script>'
     ];
 
     let lastIndex = -1;

@@ -8,7 +8,7 @@ function read(relativePath) {
 describe('settings notification preferences hardening', () => {
   test('settings expõe a seção de preferências e o save handler correspondente', () => {
     const html = read('settings.html');
-    const controller = read('assets/js/controllers/settings.controller.js');
+    const controller = read('assets/js/controllers/public/settings.controller.js');
 
     expect(html).toContain('settingsNotificationPreferencesList');
     expect(html).toContain('settingsSaveNotifications');

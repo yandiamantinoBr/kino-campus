@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const REPORT_PATH = path.resolve(__dirname, '../../assets/js/controllers/product.report.js');
+const REPORT_PATH = path.resolve(__dirname, '../../assets/js/controllers/public/product.report.js');
 let source;
 
 beforeAll(() => {

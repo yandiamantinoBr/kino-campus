@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'create-post.controller.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'public', 'create-post.controller.js');
 const WRAP_FLAG = '__kcCreatePostDiagnosticsWrapped';
 
 function loadController() {
