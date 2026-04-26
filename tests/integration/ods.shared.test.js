@@ -1,4 +1,4 @@
-const ODSContent = require('../../assets/js/ods.shared.js');
+const ODSContent = require('../../assets/js/shared/ods.shared.js');
 
 describe('KCODSContent', () => {
   test('getGoal retorna configuracao editorial completa para ODS 12', () => {

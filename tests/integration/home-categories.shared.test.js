@@ -1,4 +1,4 @@
-const HomeCategories = require('../../assets/js/home-categories.shared.js');
+const HomeCategories = require('../../assets/js/shared/home-categories.shared.js');
 
 describe('KCHomeCategoryUtils', () => {
   test('findCategoriesBySearchTerm resolve termos para destinos reais dos modulos', () => {

@@ -21,7 +21,7 @@ beforeAll(() => {
   require('../../assets/js/utils/kc-utils.location.js'); // deve preceder kc-utils.js (v12.2.5)
   require('../../assets/js/utils/kc-utils.presentation.js'); // deve preceder kc-utils.js (v12.2.6)
   require('../../assets/js/utils/kc-utils.js');
-  require('../../assets/js/account-profile.shared.js');
+  require('../../assets/js/shared/account-profile.shared.js');
   require('../../assets/js/api/kc-api.notifications.js');
   require('../../assets/js/api/kc-api.saved.js');
   require('../../assets/js/api/kc-api.help.js');

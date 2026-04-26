@@ -1,4 +1,4 @@
-const CommentsShared = require('../../assets/js/kc-comments.shared.js');
+const CommentsShared = require('../../assets/js/shared/kc-comments.shared.js');
 
 describe('KCCommentsShared - pure comment helpers', () => {
   describe('resolveCurrentUserDisplayName', () => {
