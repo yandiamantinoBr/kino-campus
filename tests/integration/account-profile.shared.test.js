@@ -1,4 +1,4 @@
-const AccountProfile = require('../../assets/js/account-profile.shared.js');
+const AccountProfile = require('../../assets/js/shared/account-profile.shared.js');
 
 describe('KCAccountProfileUtils', () => {
   test('normalizeWhatsappE164 e formatWhatsAppDisplay padronizam numeros brasileiros', () => {

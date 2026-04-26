@@ -23,7 +23,7 @@ beforeAll(() => {
   require('../../assets/js/utils/kc-utils.location.js'); // deve preceder kc-utils.js (v12.2.5)
   require('../../assets/js/utils/kc-utils.presentation.js'); // deve preceder kc-utils.js (v12.2.6)
   require('../../assets/js/utils/kc-utils.js');
-  window.KCSearchShared = require('../../assets/js/kc-search.shared.js');
+  window.KCSearchShared = require('../../assets/js/shared/kc-search.shared.js');
 
   // Mock KCAPI com interface minima antes de carregar o adapter
   window.KCAPI = window.KCAPI || {};

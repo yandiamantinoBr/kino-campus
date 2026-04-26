@@ -1,4 +1,4 @@
-const Help = require('../../assets/js/help.shared.js');
+const Help = require('../../assets/js/shared/help.shared.js');
 
 describe('KCHelpUtils', () => {
   test('getHelpTopicOptions returns coherent topics for platform issues', () => {

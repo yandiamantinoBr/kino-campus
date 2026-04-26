@@ -29,7 +29,7 @@ describe('KCSupabase.searchPosts', () => {
       },
     };
 
-    window.KCSearchShared = require('../../assets/js/kc-search.shared.js');
+    window.KCSearchShared = require('../../assets/js/shared/kc-search.shared.js');
 
     rpcMock = jest.fn();
     authMock = {
@@ -126,7 +126,7 @@ describe('KCSupabase.getFeedCursor', () => {
       },
     };
 
-    window.KCSearchShared = require('../../assets/js/kc-search.shared.js');
+    window.KCSearchShared = require('../../assets/js/shared/kc-search.shared.js');
 
     rpcMock = jest.fn();
     authMock = {
@@ -237,7 +237,7 @@ describe('KCSupabase user ratings', () => {
       },
     };
 
-    window.KCSearchShared = require('../../assets/js/kc-search.shared.js');
+    window.KCSearchShared = require('../../assets/js/shared/kc-search.shared.js');
 
     rpcMock = jest.fn();
     authMock = {

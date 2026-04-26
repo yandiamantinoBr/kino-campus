@@ -56,6 +56,7 @@ var REQUIRED_DIRS = [
   'assets/js/legacy-shims',
   'assets/js/features',
   'assets/js/features/create-post',
+  'assets/js/shared',
   'assets/css',
   'assets/css/future-split',
   'scripts',

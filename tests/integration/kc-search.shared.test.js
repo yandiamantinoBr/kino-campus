@@ -1,4 +1,4 @@
-const SearchShared = require('../../assets/js/kc-search.shared.js');
+const SearchShared = require('../../assets/js/shared/kc-search.shared.js');
 
 describe('KCSearchShared', () => {
   describe('SYNONYMS', () => {

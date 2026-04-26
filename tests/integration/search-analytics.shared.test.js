@@ -1,4 +1,4 @@
-const SearchAnalytics = require('../../assets/js/search-analytics.shared.js');
+const SearchAnalytics = require('../../assets/js/shared/search-analytics.shared.js');
 
 function createStorage() {
   const bag = {};
