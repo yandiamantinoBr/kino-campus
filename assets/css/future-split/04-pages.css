@@ -1,0 +1,29 @@
+/*
+ * KinoCampus — future-split/04-pages.css
+ *
+ * STUB — não carregado em produção (V14).
+ * Este arquivo é um placeholder documentando o escopo planejado para V15+.
+ *
+ * Escopo: Estilos page-specific
+ *   - My Posts (single-column feed, header card, save popover portado)
+ *   - Compra e Venda (sidebar, filtros, price range)
+ *   - Caronas (mobile rail, filtros de rota)
+ *   - Eventos (calendar widget — grid mensal/semanal/diário, modal expandido, legenda)
+ *   - Moradia / Housing (seções modais, filtros de localidade)
+ *   - Oportunidades (temperatura UI, sidebar sections, mobile FAB)
+ *   - Auth (login, signup, account-setup, reenviar confirmação)
+ *   - Perfil (badges de ranking, profile-info, avatar)
+ *   - Card de conteúdo de exemplo / legacy_id (banner de aviso)
+ *   - Admin inline overrides (a consolidar em admin-shell.css)
+ *
+ * Dependências: 00-tokens.css, 01-base.css, 02-layout.css, 03-components.css
+ *
+ * Linhas estimadas (extraídas de styles.css): ~2.600L
+ * Blocos de origem em styles.css: L1321–1640, L3638–4070, L8231–9549, L9550–10582,
+ *   L7360–7510, L1187–1320
+ *
+ * NOTA: Cada página pode ser sub-dividida em V16 (ex: events.css, auth.css).
+ * Em V15 o objetivo é remover tudo de styles.css; a granularidade extra é opcional.
+ *
+ * Planejado para V15.5.0.
+ */

@@ -1,0 +1,30 @@
+/*
+ * KinoCampus — future-split/03-components.css
+ *
+ * STUB — não carregado em produção (V14).
+ * Este arquivo é um placeholder documentando o escopo planejado para V15+.
+ *
+ * Escopo: Componentes reutilizáveis
+ *   - Header (barra de pesquisa, search dropdown, search modal, identity)
+ *   - Ranking (banner, filtros, sidebar widget, badges de perfil)
+ *   - Feed Tabs (view-switcher, tab wrappers, feed panels, feed list)
+ *   - Cards (kc-card, badge pill, WhatsApp share, corner badge, cashback badge)
+ *   - Sidebar widgets (ODS, Cashback, Impacto Sustentável)
+ *   - Feed pager e realtime-banner
+ *   - Profile dropdown flutuante (desktop)
+ *   - Notifications bell & dropdown
+ *   - Vote box, comentários e ações de post
+ *   - Save popover (keyframes + desktop + mobile bottom sheet)
+ *   - Botão Criar Publicação (FAB)
+ *   - Link/botões desabilitados por ausência de sessão
+ *
+ * Dependências: 00-tokens.css, 01-base.css, 02-layout.css
+ *
+ * Linhas estimadas (extraídas de styles.css): ~4.500L
+ * Blocos de origem em styles.css: L91–566, L921–1640, L1641–2100, L2321–2620,
+ *   L6498–6875, L6875–7360, L7015–7260, L1578–1640
+ *
+ * Maior bloco individual — decompor em sub-stubs em V15 se ultrapassar 2.000L.
+ *
+ * Planejado para V15.4.0.
+ */

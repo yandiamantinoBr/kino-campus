@@ -1,0 +1,28 @@
+/*
+ * KinoCampus — future-split/02-layout.css
+ *
+ * STUB — não carregado em produção (V14).
+ * Este arquivo é um placeholder documentando o escopo planejado para V15+.
+ *
+ * Escopo: Layout estrutural da aplicação
+ *   - .main-content { ... }  — container principal
+ *   - .kc-sidebar { ... }  — sidebar desktop
+ *   - .kc-mobile-nav { ... }  — navegação inferior mobile
+ *   - .kc-desktop-layout { ... }  — grid de duas colunas (desktop)
+ *   - .kc-feed-layout { ... }  — layout de feed
+ *   - Pull-to-Refresh Indicator
+ *   - Hero Banner Carousel (wrapper e posicionamento)
+ *   - Mobile V5 layout overrides
+ *   - Breakpoints e media queries de layout
+ *   - Anti-jitter / scroll snap estrutural
+ *
+ * Dependências: 00-tokens.css, 01-base.css
+ *
+ * Linhas estimadas (extraídas de styles.css): ~2.500L
+ * Blocos de origem em styles.css: L597–920, L2100–2620, L2233–2308, L2619–3820
+ *
+ * ATENÇÃO: Apenas posicionamento e estrutura.
+ * Sem aparência de componente (cores, sombras específicas de card, etc.).
+ *
+ * Planejado para V15.3.0.
+ */
