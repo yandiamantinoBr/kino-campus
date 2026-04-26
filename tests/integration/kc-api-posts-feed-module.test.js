@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const POSTS_FEED_PATH = path.resolve(__dirname, '../../assets/js/kc-api.posts-feed.js');
+const POSTS_FEED_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.posts-feed.js');
 
 describe('kc-api.posts-feed.js — modulo IIFE e namespace', () => {
   test('arquivo existe', () => {
@@ -75,7 +75,7 @@ describe('kc-api.posts-feed.js — fallbacks sem driver', () => {
   beforeAll(() => {
     global.window = global.window || {};
     window._KCAPI = window._KCAPI || {};
-    require('../../assets/js/kc-api.posts-feed.js');
+    require('../../assets/js/api/kc-api.posts-feed.js');
     postsFeed = window._KCAPI.postsFeed;
   });
 

@@ -33,17 +33,17 @@ describe('KCAPI product session SWR', () => {
   require('../../assets/js/utils/kc-utils.location.js'); // deve preceder kc-utils.js (v12.2.5)
   require('../../assets/js/utils/kc-utils.presentation.js'); // deve preceder kc-utils.js (v12.2.6)
     require('../../assets/js/utils/kc-utils.js');
-    require('../../assets/js/kc-api.notifications.js');
-    require('../../assets/js/kc-api.saved.js');
-    require('../../assets/js/kc-api.help.js');
-    require('../../assets/js/kc-api.posts-read.js');
-  require('../../assets/js/kc-api.comments-votes.js');
-  require('../../assets/js/kc-api.ratings.js');
-  require('../../assets/js/kc-api.posts-feed.js');
-  require('../../assets/js/kc-api.posts-write.js');
-  require('../../assets/js/kc-api.profiles.js');
-    require('../../assets/js/kc-api.related.js');
-    require('../../assets/js/kc-api.auth.js');
+    require('../../assets/js/api/kc-api.notifications.js');
+    require('../../assets/js/api/kc-api.saved.js');
+    require('../../assets/js/api/kc-api.help.js');
+    require('../../assets/js/api/kc-api.posts-read.js');
+  require('../../assets/js/api/kc-api.comments-votes.js');
+  require('../../assets/js/api/kc-api.ratings.js');
+  require('../../assets/js/api/kc-api.posts-feed.js');
+  require('../../assets/js/api/kc-api.posts-write.js');
+  require('../../assets/js/api/kc-api.profiles.js');
+    require('../../assets/js/api/kc-api.related.js');
+    require('../../assets/js/api/kc-api.auth.js');
     require('../../assets/js/kc-api.client.js');
 
     api = window.KCAPI;

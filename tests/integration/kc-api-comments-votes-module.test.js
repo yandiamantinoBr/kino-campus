@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const COMMENTS_VOTES_PATH = path.resolve(__dirname, '../../assets/js/kc-api.comments-votes.js');
+const COMMENTS_VOTES_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.comments-votes.js');
 
 describe('kc-api.comments-votes.js — modulo IIFE e namespace', () => {
   test('arquivo existe', () => {
@@ -90,7 +90,7 @@ describe('kc-api.comments-votes.js — fallbacks sem driver', () => {
   beforeAll(() => {
     global.window = global.window || {};
     window._KCAPI = window._KCAPI || {};
-    require('../../assets/js/kc-api.comments-votes.js');
+    require('../../assets/js/api/kc-api.comments-votes.js');
     commentsVotes = window._KCAPI.commentsVotes;
   });
 
