@@ -1,0 +1,24 @@
+# assets/js/utils/
+
+Sub-módulos de utilitários, carregados em ordem determinística antes de `kc-utils.js`.
+
+## Arquivos (movidos em V14.7)
+
+| Arquivo | Namespace | Responsabilidade |
+|---|---|---|
+| `kc-utils.string.js` | `window._KCU.string` | Normalização de texto, escape HTML, slugify |
+| `kc-utils.format.js` | `window._KCU.format` | Formatação de datas, preços, números |
+| `kc-utils.dom.js` | `window._KCU.dom` | Debounce, clipboard, scroll helpers |
+| `kc-utils.identity.js` | `window._KCU.identity` | Geração de IDs, fingerprint |
+| `kc-utils.taxonomy.js` | `window._KCU.taxonomy` | Categorias, tags, módulos |
+| `kc-utils.location.js` | `window._KCU.location` | Geolocalização, endereços |
+| `kc-utils.presentation.js` | `window._KCU.presentation` | Renderização de cards, badges, avatares |
+| `kc-utils.js` | `window.KCUtils` | Facade — re-exporta todos os sub-módulos |
+
+## Regras de carregamento
+- Sub-módulos em ordem antes de `kc-utils.js`
+- `kc-utils.js` deve carregar APÓS todos os sub-módulos
+- Sem dependência circular entre sub-módulos
+
+## Status
+**Movimentação em V14.7.** Os arquivos serão movidos de `assets/js/` para este diretório com atualização automática de todos os `src=` nos 22 HTMLs.
