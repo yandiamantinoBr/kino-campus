@@ -2,11 +2,62 @@
 
 ---
 
-## [Unreleased] — v15 em execução
+## [15.0.0] - 2026-04-26 — Trilha v15: Reorganização JS Root Completa (v15.0.0–v15.17.0)
 
-### Added
+### Tema
 
-- `v15.0.0`: **Abertura do ciclo V15** + branch rename + README fix + jest bugfix: branch `kinocampus-V11.0-foundations` → `kinocampus-V15.0-foundations`; `README.md` título `v10.0.0` → `v15.0.0`; `VERSION.json` appVersion `14.0.0` → `15.0.0`; `jest.config.js` bug corrigido (`assets/js/kc-utils.js` → `assets/js/utils/kc-utils.js`); `.github/workflows/lighthouse-ci.yml` trigger atualizado; `RELATORIO-KINOCAMPUS-V15.md` criado; baseline inalterada Jest 134/134 · 3046/3046 · check:all ✓.
+Reorganização completa da raiz `assets/js/` — 59 arquivos JS movidos para 7 subdirs
+canônicos (`boot/`, `core/`, `api/`, `features/`, `features/create-post/`, `shared/`,
+`legacy-shims/`), raiz vazia confirmada e gate estrutural ativo.
+
+### Track 0 — Abertura & Governança (v15.0.0–v15.1.0)
+
+- `v15.0.0`: **Abertura do ciclo V15** — branch rename `kinocampus-V11.0-foundations` → `kinocampus-V15.0-foundations`; `README.md` título `v10.0.0` → `v15.0.0`; `VERSION.json` `14.0.0` → `15.0.0`; `jest.config.js` bugfix (`kc-utils.js` → `utils/kc-utils.js`); `.github/workflows/lighthouse-ci.yml` trigger atualizado.
+- `v15.1.0`: Auditoria completa dos 57 arquivos JS restantes em `assets/js/` — `docs/audits/js-root-migration-v15.md` criado (mapa HTML×scripts, risco por grupo, cronograma).
+
+### Track A — Boot Group (v15.2.0–v15.5.0)
+
+- `v15.2.0`: `kc-theme-boot.js` → `boot/` (1 arquivo, 20L).
+- `v15.3.0`: `kc-sw-register.js` + `kc-telemetry.js` → `boot/` (2 arquivos); `validate-script-chains.js` BOOT_CHAIN_PUBLIC/ADMIN atualizado.
+- `v15.4.0`: `kc-constants.js` + `kc-feature-flags.js` → `boot/` (2 arquivos); boot chain 4/5 completa.
+- `v15.5.0` **(CRÍTICO)**: `kc-env.js` → `boot/` (1 arquivo); `inject-env.js` POSSIBLE_PATHS atualizado com novo path em primeiro lugar; boot chain 5/5 completa.
+
+### Track B — Core Group (v15.6.0–v15.8.0)
+
+- `v15.6.0`: `kc-theme.js` + `kc-notifications.js` + `kc-post-model.js` → `core/` (3 arquivos).
+- `v15.7.0`: `kc-i18n.js` + `kc-core.js` + `kc-core-widgets.js` + `kc-user-posts.js` → `core/` (4 arquivos); `sw.js` SHELL_ASSETS atualizado.
+- `v15.8.0`: `kc-auth.ui.js` + `kc-profiles.client.js` + `kc-auth-callback.js` + `kc-public-shell.js` → `core/` (4 arquivos); contratos `window.KCAccountProfileUtils` preservados.
+
+### Track C — API Group (v15.9.0–v15.11.0)
+
+- `v15.9.0`: `kc-supabase.client.js` + `kc-supabase.posts.js` + `kc-supabase.ratings.js` → `api/` (3 arquivos); contrato `window.KCSupabase` preservado.
+- `v15.10.0`: 12 módulos `kc-api.*.js` + `admin-shell.js` → `api/` (13 arquivos; admin-shell confirmado por grep nos 5 HTMLs admin).
+- `v15.11.0` **(RISCO MÁXIMO)**: `kc-api.client.js` (2411L, facade central) → `api/` (1 arquivo); contrato `window.KCAPI` preservado.
+
+### Track D — Features & Shared (v15.12.0–v15.14.0)
+
+- `v15.12.0`: `features/` + `features/create-post/` criados; 7× `kc-create-post.*.js` → `features/create-post/`; `kc-comments.js` → `features/` (8 arquivos).
+- `v15.13.0`: 9 features restantes (search, ranking, filters, banners, lazy, pull-to-refresh…) → `features/`; `kc-migrate.myposts.js` → `legacy-shims/` (10 arquivos).
+- `v15.14.0`: `shared/` criado; 7 arquivos `*.shared.js` → `shared/`; `jest.config.js` glob `assets/js/*.shared.js` → 7 paths explícitos.
+
+### Track E — Cleanup & Release (v15.15.0–v15.17.0)
+
+- `v15.15.0`: `CANONICAL_JS` 20 → 69 entradas; gate `checkJsRootEmpty()` adicionado ao validador; **144 itens verificados + raiz assets/js/ limpa ✅**.
+- `v15.16.0`: `docs/audits/refactors/js-root-cleanup-v15.md` — retrospectiva completa.
+- `v15.17.0`: Release gate — `VERSION.json` status `"v15 encerrada"`; `CHANGELOG.md` entrada formal.
+
+### Métricas finais v15
+
+| Métrica | Baseline V15 | Entrega V15 |
+|---|---|---|
+| Arquivos JS em `assets/js/` raiz | 57 | **0** ✅ |
+| Subdirs com JS | 5 | **12** (incluindo 7 novos) |
+| CANONICAL_JS no validador | 20 entradas | **69 entradas** |
+| Itens em `validate-repository-structure.js` | 96 | **144** |
+| Jest suites | 134/134 | **134/134** ✅ |
+| Jest testes | 3046/3046 | **3046/3046** ✅ |
+| `check:all` | ✅ | ✅ |
+| PRs mergeados | — | **14 PRs (#465–#483)** |
 
 ---
 
