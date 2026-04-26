@@ -1,7 +1,7 @@
 # RELATÓRIO KINOCAMPUS — V14
 ## Reorganização de Repositório (Fase 1)
 
-**Status:** v14 em execução  
+**Status:** v14 em execução — v14.10.0 (Lighthouse thresholds produção)  
 **Abertura:** 2026-04-26  
 **Base:** `kinocampus-V11.0-foundations` (branch permanente)  
 **Antecessor:** v13.8.0 (PR #454) — v13 ENCERRADA  
@@ -118,17 +118,17 @@ docs/
 
 | Iter | Escopo | Status | PR | Testes |
 |---|---|---|---|---|
-| v14.0.0 | Abertura docs-only + repository-reorg-plan.md | ⏳ Pendente | — | — |
-| v14.1.0 | docs/architecture/repository-structure.md | ⏳ Pendente | — | — |
-| v14.2.0 | Criar subdirs JS com READMEs (5 dirs, sem mover JS) | ⏳ Pendente | — | — |
-| v14.3.0 | Criar subdirs adapters com READMEs | ⏳ Pendente | — | — |
-| v14.4.0 | CSS future-split: docs + assets/css/future-split/ stubs | ⏳ Pendente | — | — |
-| v14.5.0 | docs/ reorganização completa | ⏳ Pendente | — | — |
-| v14.6.0 | tests/ reorganização — subdirs + jest.config.js | ⏳ Pendente | — | — |
-| v14.7.0 | Mover kc-utils.*.js → assets/js/utils/ | ⏳ Pendente | — | — |
-| v14.8.0 | Mover adapters → adapters/local/ e adapters/supabase/ | ⏳ Pendente | — | — |
-| v14.9.0 | Mover controllers → controllers/public/ e controllers/admin/ | ⏳ Pendente | — | — |
-| v14.10.0 | Lighthouse thresholds produção | ⏳ Pendente | — | — |
+| v14.0.0 | Abertura docs-only + repository-reorg-plan.md | ✅ Concluída | #455 | 134/3046 |
+| v14.1.0 | docs/architecture/repository-structure.md | ✅ Concluída | #456 | 134/3046 |
+| v14.2.0 | Criar subdirs JS com READMEs (5 dirs, sem mover JS) | ✅ Concluída | #457 | 134/3046 |
+| v14.3.0 | Criar subdirs adapters com READMEs | ✅ Concluída | #458 | 134/3046 |
+| v14.4.0 | CSS future-split: docs + assets/css/future-split/ stubs | ✅ Concluída | #459 | 134/3046 |
+| v14.5.0 | docs/ reorganização completa | ✅ Concluída | #460 | 134/3046 |
+| v14.6.0 | tests/ reorganização — subdirs + jest.config.js | ✅ Concluída | #461 | 134/3046 |
+| v14.7.0 | Mover kc-utils.*.js → assets/js/utils/ | ✅ Concluída | #462 | 134/3046 |
+| v14.8.0 | Mover adapters → adapters/local/ e adapters/supabase/ | ✅ Concluída | #463 | 134/3046 |
+| v14.9.0 | Mover controllers → controllers/public/ e controllers/admin/ | ✅ Concluída | #464 | 134/3046 |
+| v14.10.0 | Lighthouse thresholds produção | 🔄 Em execução | — | 134/3046 |
 | v14.11.0 | Release gate v14 | ⏳ Pendente | — | — |
 
 ---
@@ -136,36 +136,36 @@ docs/
 ## 4. Definition of Done — V14
 
 ### Estrutura de diretórios
-- [ ] `assets/js/boot/` existe (com README)
-- [ ] `assets/js/core/` existe (com README)
-- [ ] `assets/js/api/` existe (com README)
-- [ ] `assets/js/utils/` existe e contém todos os `kc-utils.*.js` + `kc-utils.js`
-- [ ] `assets/js/legacy-shims/` existe (com README)
-- [ ] `assets/js/adapters/local/` existe e contém todos os `local.*.adapter.js`
-- [ ] `assets/js/adapters/supabase/` existe e contém todos os `supabase.*.adapter.js`
-- [ ] `assets/js/controllers/public/` existe com controllers de páginas públicas
-- [ ] `assets/js/controllers/admin/` existe com controllers admin
+- [x] `assets/js/boot/` existe (com README)
+- [x] `assets/js/core/` existe (com README)
+- [x] `assets/js/api/` existe (com README)
+- [x] `assets/js/utils/` existe e contém todos os `kc-utils.*.js` + `kc-utils.js`
+- [x] `assets/js/legacy-shims/` existe (com README)
+- [x] `assets/js/adapters/local/` existe e contém todos os `local.*.adapter.js`
+- [x] `assets/js/adapters/supabase/` existe e contém todos os `supabase.*.adapter.js`
+- [x] `assets/js/controllers/public/` existe com controllers de páginas públicas
+- [x] `assets/js/controllers/admin/` existe com controllers admin
 
 ### Documentação
-- [ ] `docs/audits/repository-reorg-plan.md` existe (inventário completo)
-- [ ] `docs/architecture/repository-structure.md` existe
-- [ ] `docs/audits/css-split-plan.md` existe
-- [ ] `assets/css/future-split/` existe com 5 stubs
+- [x] `docs/audits/repository-reorg-plan.md` existe (inventário completo)
+- [x] `docs/architecture/repository-structure.md` existe
+- [x] `docs/audits/css-split-plan.md` existe
+- [x] `assets/css/future-split/` existe com 5 stubs
 
 ### Tests
-- [ ] `tests/unit/` existe com testes de módulos puros
-- [ ] `tests/integration/` existe com testes de integração
-- [ ] `tests/contract/` existe com testes de contrato
-- [ ] `tests/structure/` existe com testes estruturais
-- [ ] `tests/a11y/` existe com testes de acessibilidade
-- [ ] `jest.config.js` atualizado com novos testMatch patterns
+- [x] `tests/unit/` existe com testes de módulos puros
+- [x] `tests/integration/` existe com testes de integração
+- [x] `tests/contract/` existe com testes de contrato
+- [x] `tests/structure/` existe com testes estruturais
+- [x] `tests/a11y/` existe com testes de acessibilidade
+- [x] `jest.config.js` atualizado com novos testMatch patterns
 
 ### Qualidade
-- [ ] `npm test` preservado ≥ baseline V13 (134/3046)
-- [ ] `check:all` verde (todos os validators)
-- [ ] Nenhum HTML com `<script src>` apontando para arquivo inexistente
-- [ ] `CHANGELOG.md` com entrada formal `## [14.0.0] - YYYY-MM-DD`
-- [ ] Zero quebra de contrato público `window.*`
+- [x] `npm test` preservado ≥ baseline V13 (134/3046)
+- [x] `check:all` verde (todos os validators)
+- [x] Nenhum HTML com `<script src>` apontando para arquivo inexistente
+- [ ] `CHANGELOG.md` com entrada formal `## [14.0.0] - YYYY-MM-DD` (v14.11.0)
+- [x] Zero quebra de contrato público `window.*`
 
 ---
 
