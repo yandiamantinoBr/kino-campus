@@ -112,8 +112,8 @@ A trilha **v12 foi encerrada** com todos os critérios da Definition of Done ate
 | v13.6.1 | Split kc-core.js — post-model + user-posts + core-widgets | ✅ Concluído | #449 | 133/2971 |
 | v13.6.2 | Gate kc-core.js < 700L | ✅ Concluído | #450 | 133/2971 |
 | v13.7.0 | Auditoria oportunidades.controller.js (doc-only) | ✅ Concluído | #451 | 133/2971 |
-| v13.7.1 | Split oportunidades.controller.js | ⏳ Pendente | — | — |
-| v13.7.2 | Gate oportunidades.controller.js < 700L | ⏳ Pendente | — | — |
+| v13.7.1 | Split oportunidades.controller.js | ✅ Concluído | #452 | 134/3046 |
+| v13.7.2 | Gate oportunidades.controller.js < 700L | ✅ Concluído | #453 | 134/3046 |
 
 ### 3.3 Gate final
 
@@ -127,10 +127,10 @@ A trilha **v12 foi encerrada** com todos os critérios da Definition of Done ate
 
 ### 4.1 Camada A — Hotspots secundários eliminados
 
-- [ ] `product.controller.js` < 800L
-- [ ] `kc-supabase.client.js` < 700L
-- [ ] `kc-core.js` < 700L
-- [ ] `oportunidades.controller.js` < 700L
+- [x] `product.controller.js` < 800L
+- [x] `kc-supabase.client.js` < 700L
+- [x] `kc-core.js` < 700L
+- [x] `oportunidades.controller.js` < 700L (682L)
 - [ ] Nenhum JS em `assets/js/` > 1100L (exceto `kc-api.client.js`)
 - [ ] Novos namespaces `_KCProduct.*`, `KCPostModel`, `KCRenderCard` documentados
 
