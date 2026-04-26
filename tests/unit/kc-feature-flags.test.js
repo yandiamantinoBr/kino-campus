@@ -202,7 +202,7 @@ describe('HTML - ordem canonica KCFF', () => {
       const content = fs.readFileSync(path.join(ROOT_DIR, relPath), 'utf8');
       const srcs = extractDeferredScriptSrcs(content);
       const prefix = relPath.startsWith('admin/') ? '../assets/js' : 'assets/js';
-      const envSrc = `${prefix}/kc-env.js`;
+      const envSrc = `${prefix}/boot/kc-env.js`;
       const flagsSrc = `${prefix}/boot/kc-feature-flags.js`;
       const envIndex = srcs.indexOf(envSrc);
 

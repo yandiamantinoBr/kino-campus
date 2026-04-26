@@ -66,7 +66,7 @@ describe('VERSION.json — integridade', function () {
   });
 
   test('frontendRuntimeVersion bate com kc-env.js VERSION', function () {
-    var kcEnv = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'kc-env.js'), 'utf8');
+    var kcEnv = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'boot', 'kc-env.js'), 'utf8');
     var expected = "const VERSION = '" + VERSION.frontendRuntimeVersion + "';";
     expect(kcEnv).toContain(expected);
   });

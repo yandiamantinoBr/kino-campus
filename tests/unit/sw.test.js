@@ -40,7 +40,7 @@ describe('sw.js — integridade', function () {
 
   test('SHELL_ASSETS inclui os JS core do shell', function () {
     expect(SW).toContain('/assets/js/boot/kc-constants.js');
-    expect(SW).toContain('/assets/js/kc-env.js');
+    expect(SW).toContain('/assets/js/boot/kc-env.js');
     expect(SW).toContain('/assets/js/boot/kc-feature-flags.js');
     expect(SW).toContain('/assets/js/kc-core.js');
   });

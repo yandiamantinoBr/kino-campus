@@ -84,7 +84,7 @@ var REQUIRED_DIRS = [
 
 var CANONICAL_JS = [
   'assets/js/boot/kc-constants.js',
-  'assets/js/kc-env.js',
+  'assets/js/boot/kc-env.js',
   'assets/js/boot/kc-feature-flags.js',
   'assets/js/boot/kc-sw-register.js',
   'assets/js/boot/kc-telemetry.js',
