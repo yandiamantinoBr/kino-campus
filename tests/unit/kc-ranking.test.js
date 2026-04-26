@@ -2,7 +2,7 @@ beforeAll(() => {
   global.window = global.window || global;
   // KCRanking precisa de KCAPI mockado
   window.KCAPI = { getTopContributors: jest.fn().mockResolvedValue([]) };
-  require('../../assets/js/kc-ranking.js');
+  require('../../assets/js/features/kc-ranking.js');
 });
 
 describe('KCRanking - Componente de ranking', () => {

@@ -104,7 +104,7 @@ var CANONICAL_JS = [
   'assets/js/core/kc-i18n.js',
   'assets/js/core/kc-core.js',
   'assets/js/api/kc-api.client.js',
-  'assets/js/kc-ranking.js',
+  'assets/js/features/kc-ranking.js',
 ];
 
 // ── Scripts de manutenção ─────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ describe('KCRanking session hydration', () => {
       remove: jest.fn(() => true),
     };
     delete window.KCRanking;
-    require('../../assets/js/kc-ranking.js');
+    require('../../assets/js/features/kc-ranking.js');
     ranking = window.KCRanking;
   });
 

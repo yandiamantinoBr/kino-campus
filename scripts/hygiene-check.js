@@ -52,7 +52,7 @@ const kcadAdminDashboardScriptChain = [
   '../assets/js/controllers/admin/admin-dashboard.metrics.js',
   '../assets/js/controllers/admin/admin-dashboard.audit.js',
   '../assets/js/controllers/admin/admin-dashboard.charts.js',
-  '../assets/js/kc-ranking.js',
+  '../assets/js/features/kc-ranking.js',
   '../assets/js/controllers/admin/admin-dashboard.controller.js',
 ];
 
