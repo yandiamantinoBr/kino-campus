@@ -78,14 +78,14 @@ describe('validate-script-chains.js — integridade', function () {
     expect(CHAINS_SCRIPT).toContain('assets/js/kc-constants.js');
     expect(CHAINS_SCRIPT).toContain('assets/js/kc-env.js');
     expect(CHAINS_SCRIPT).toContain('assets/js/kc-feature-flags.js');
-    expect(CHAINS_SCRIPT).toContain('assets/js/kc-sw-register.js');
-    expect(CHAINS_SCRIPT).toContain('assets/js/kc-telemetry.js');
+    expect(CHAINS_SCRIPT).toContain('assets/js/boot/kc-sw-register.js');
+    expect(CHAINS_SCRIPT).toContain('assets/js/boot/kc-telemetry.js');
   });
 
   test('define cadeia de boot admin (prefixo "../")', function () {
     expect(CHAINS_SCRIPT).toContain('BOOT_CHAIN_ADMIN');
     expect(CHAINS_SCRIPT).toContain('../assets/js/kc-constants.js');
-    expect(CHAINS_SCRIPT).toContain('../assets/js/kc-telemetry.js');
+    expect(CHAINS_SCRIPT).toContain('../assets/js/boot/kc-telemetry.js');
   });
 
   test('lista 17 páginas públicas e 5 admin', function () {
@@ -116,8 +116,8 @@ describe('validate-script-chains.js — cadeia real nos 22 HTMLs', function () {
     'kc-constants.js',
     'kc-env.js',
     'kc-feature-flags.js',
-    'kc-sw-register.js',
-    'kc-telemetry.js',
+    'boot/kc-sw-register.js',
+    'boot/kc-telemetry.js',
   ];
 
   var publicPages = [
