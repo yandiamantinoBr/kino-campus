@@ -90,8 +90,8 @@ beforeAll(() => {
     rankRelatedPosts: jest.fn((_, c) => c),
   };
 
-  require('../../assets/js/adapters/supabase.media.adapter.js');
-  require('../../assets/js/adapters/supabase.adapter.js');
+  require('../../assets/js/adapters/supabase/supabase.media.adapter.js');
+  require('../../assets/js/adapters/supabase/supabase.adapter.js');
 });
 
 describe('window.KCCompressImage (v9.4.1)', () => {
