@@ -57,9 +57,9 @@ describe('KCSupabase.searchPosts', () => {
       })),
     };
 
-    require('../../assets/js/kc-supabase.client.js');
-    require('../../assets/js/kc-supabase.posts.js');
-    require('../../assets/js/kc-supabase.ratings.js');
+    require('../../assets/js/api/kc-supabase.client.js');
+    require('../../assets/js/api/kc-supabase.posts.js');
+    require('../../assets/js/api/kc-supabase.ratings.js');
   });
 
   test('expands synonyms on the client and forwards normalized params to the RPC', async () => {
@@ -154,9 +154,9 @@ describe('KCSupabase.getFeedCursor', () => {
       })),
     };
 
-    require('../../assets/js/kc-supabase.client.js');
-    require('../../assets/js/kc-supabase.posts.js');
-    require('../../assets/js/kc-supabase.ratings.js');
+    require('../../assets/js/api/kc-supabase.client.js');
+    require('../../assets/js/api/kc-supabase.posts.js');
+    require('../../assets/js/api/kc-supabase.ratings.js');
   });
 
   test('mescla requestParams com filtros avancados top-level e envia p_request_params ao RPC', async () => {
@@ -265,9 +265,9 @@ describe('KCSupabase user ratings', () => {
       })),
     };
 
-    require('../../assets/js/kc-supabase.client.js');
-    require('../../assets/js/kc-supabase.posts.js');
-    require('../../assets/js/kc-supabase.ratings.js');
+    require('../../assets/js/api/kc-supabase.client.js');
+    require('../../assets/js/api/kc-supabase.posts.js');
+    require('../../assets/js/api/kc-supabase.ratings.js');
   });
 
   test('normaliza resumo público de reputação vindo do RPC', async () => {
