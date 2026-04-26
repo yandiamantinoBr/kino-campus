@@ -13,7 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const POSTS_WRITE_PATH = path.resolve(__dirname, '../../assets/js/kc-api.posts-write.js');
+const POSTS_WRITE_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.posts-write.js');
 
 describe('kc-api.posts-write.js — modulo IIFE e namespace', () => {
   test('arquivo existe', () => {
@@ -58,7 +58,7 @@ describe('kc-api.posts-write.js — fallbacks sem driver', () => {
   beforeAll(() => {
     global.window = global.window || {};
     window._KCAPI = window._KCAPI || {};
-    require('../../assets/js/kc-api.posts-write.js');
+    require('../../assets/js/api/kc-api.posts-write.js');
     postsWrite = window._KCAPI.postsWrite;
   });
 

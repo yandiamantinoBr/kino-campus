@@ -1,13 +1,13 @@
 /**
  * @file kc-api-help-module.test.js
- * @description Static contract tests for assets/js/kc-api.help.js (v11.32.4)
+ * @description Static contract tests for assets/js/api/kc-api.help.js (v11.32.4)
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '../../assets/js/kc-api.help.js');
+const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.help.js');
 const HTML_FILES = [
   'account-setup.html',
   'achados-perdidos.html',

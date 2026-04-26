@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const PROFILES_PATH = path.resolve(__dirname, '../../assets/js/kc-api.profiles.js');
+const PROFILES_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.profiles.js');
 
 describe('kc-api.profiles.js — modulo IIFE e namespace', () => {
   test('arquivo existe', () => {
@@ -59,7 +59,7 @@ describe('kc-api.profiles.js — fallbacks e modo local', () => {
   beforeAll(() => {
     global.window = global.window || {};
     window._KCAPI = window._KCAPI || {};
-    require('../../assets/js/kc-api.profiles.js');
+    require('../../assets/js/api/kc-api.profiles.js');
     profiles = window._KCAPI.profiles;
   });
 

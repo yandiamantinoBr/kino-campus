@@ -12,7 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const RELATED_PATH = path.resolve(__dirname, '../../assets/js/kc-api.related.js');
+const RELATED_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.related.js');
 
 describe('kc-api.related.js — modulo IIFE e namespace', () => {
   test('arquivo existe', () => {
@@ -54,7 +54,7 @@ describe('kc-api.related.js — fallbacks e scoring', () => {
   beforeAll(() => {
     global.window = global.window || {};
     window._KCAPI = window._KCAPI || {};
-    require('../../assets/js/kc-api.related.js');
+    require('../../assets/js/api/kc-api.related.js');
     related = window._KCAPI.related;
   });
 

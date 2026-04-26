@@ -27,7 +27,7 @@ describe('admin shell preload hardening', () => {
   });
 
   test('admin shell owns preload release and preload css', () => {
-    const shellSource = read('assets/js/admin-shell.js');
+    const shellSource = read('assets/js/api/admin-shell.js');
     const cssSource = read('assets/css/admin-shell.css');
 
     expect(shellSource).toContain('function releaseBootState()');

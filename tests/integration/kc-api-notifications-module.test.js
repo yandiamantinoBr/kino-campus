@@ -1,13 +1,13 @@
 /**
  * @file kc-api-notifications-module.test.js
- * @description Static contract tests for assets/js/kc-api.notifications.js (v11.32.2)
+ * @description Static contract tests for assets/js/api/kc-api.notifications.js (v11.32.2)
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '../../assets/js/kc-api.notifications.js');
+const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.notifications.js');
 const HTML_FILES = [
   'account-setup.html',
   'achados-perdidos.html',

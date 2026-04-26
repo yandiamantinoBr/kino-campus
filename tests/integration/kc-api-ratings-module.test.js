@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const RATINGS_PATH = path.resolve(__dirname, '../../assets/js/kc-api.ratings.js');
+const RATINGS_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.ratings.js');
 
 describe('kc-api.ratings.js — modulo IIFE e namespace', () => {
   test('arquivo existe', () => {
@@ -80,7 +80,7 @@ describe('kc-api.ratings.js — fallbacks sem driver', () => {
   beforeAll(() => {
     global.window = global.window || {};
     window._KCAPI = window._KCAPI || {};
-    require('../../assets/js/kc-api.ratings.js');
+    require('../../assets/js/api/kc-api.ratings.js');
     ratings = window._KCAPI.ratings;
   });
 

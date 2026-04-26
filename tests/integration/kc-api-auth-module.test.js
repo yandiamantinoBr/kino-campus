@@ -13,7 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const AUTH_PATH = path.resolve(__dirname, '../../assets/js/kc-api.auth.js');
+const AUTH_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.auth.js');
 
 describe('kc-api.auth.js — modulo IIFE e namespace', () => {
   test('arquivo existe', () => {
@@ -57,7 +57,7 @@ describe('kc-api.auth.js — fallbacks em modo local', () => {
   beforeAll(() => {
     global.window = global.window || {};
     window._KCAPI = window._KCAPI || {};
-    require('../../assets/js/kc-api.auth.js');
+    require('../../assets/js/api/kc-api.auth.js');
     auth = window._KCAPI.auth;
   });
 
