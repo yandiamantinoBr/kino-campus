@@ -12,8 +12,8 @@
 const fs   = require('fs');
 const path = require('path');
 
-const RENDER_PATH = path.join(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.render.js');
-const CORE_PATH   = path.join(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.js');
+const RENDER_PATH = path.join(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.render.js');
+const CORE_PATH   = path.join(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.js');
 
 let source     = '';
 let coreSource = '';

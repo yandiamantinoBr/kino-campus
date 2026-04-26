@@ -11,7 +11,7 @@ describe('kc-comments session hydration', () => {
     global.showToast = jest.fn();
     global.updateCommentPreview = jest.fn();
 
-    const filePath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-comments.js');
+    const filePath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'kc-comments.js');
     const code = fs.readFileSync(filePath, 'utf-8');
     // eslint-disable-next-line no-eval
     (0, eval)(code);

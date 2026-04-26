@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 describe('kc-comments shadow cleanup', () => {
-  const sourcePath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-comments.js');
+  const sourcePath = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'kc-comments.js');
 
   beforeAll(() => {
     global.window = global.window || global;

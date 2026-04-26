@@ -387,13 +387,13 @@
     <script defer src="assets/js/core/kc-user-posts.js"></script>
     <script defer src="assets/js/core/kc-core-widgets.js"></script>
     <script defer src="assets/js/core/kc-core.js"></script>
-<script defer src="assets/js/kc-create-post.schema.js"></script>
-<script defer src="assets/js/kc-create-post.js"></script>
-<script defer src="assets/js/kc-create-post.media.js"></script>
-<script defer src="assets/js/kc-create-post.resolvers.js"></script>
-<script defer src="assets/js/kc-create-post.fields.js"></script>
-<script defer src="assets/js/kc-create-post.submit.js"></script>
-        <script defer src="assets/js/kc-create-post.render.js"></script>
+<script defer src="assets/js/features/create-post/kc-create-post.schema.js"></script>
+<script defer src="assets/js/features/create-post/kc-create-post.js"></script>
+<script defer src="assets/js/features/create-post/kc-create-post.media.js"></script>
+<script defer src="assets/js/features/create-post/kc-create-post.resolvers.js"></script>
+<script defer src="assets/js/features/create-post/kc-create-post.fields.js"></script>
+<script defer src="assets/js/features/create-post/kc-create-post.submit.js"></script>
+        <script defer src="assets/js/features/create-post/kc-create-post.render.js"></script>
   <script defer src="assets/js/kc-lazy-loader.js"></script>
 
   <script defer src="assets/js/core/kc-auth.ui.js"></script>
@@ -418,7 +418,7 @@
   <script defer src="assets/js/kc-search-modal.js"></script>
 
 </body>
-<script>document.addEventListener('DOMContentLoaded',function(){KCLazyLoader.onVisible('.kc-comments-section','assets/js/kc-comments.js',function(){var id=window.kcCurrentPostId;if(id&&typeof window.renderComments==='function')window.renderComments(id,'commentsContainer');});});</script>
+<script>document.addEventListener('DOMContentLoaded',function(){KCLazyLoader.onVisible('.kc-comments-section','assets/js/features/kc-comments.js',function(){var id=window.kcCurrentPostId;if(id&&typeof window.renderComments==='function')window.renderComments(id,'commentsContainer');});});</script>
 
 </html>
 

@@ -1,6 +1,6 @@
 /**
  * @file kc-create-post-contract.test.js
- * @description Static contract tests for assets/js/kc-create-post.js (v11.31.1)
+ * @description Static contract tests for assets/js/features/create-post/kc-create-post.js (v11.31.1)
  * Atualizado em v11.31.6: submit pipeline movido para kc-create-post.submit.js;
  * testes de submit agora verificam submitSource.
  * Atualizado em v11.31.7: render/modal pipeline movido para kc-create-post.render.js;
@@ -11,9 +11,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const SRC        = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.js');
-const SUBMIT_SRC = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.submit.js');
-const RENDER_SRC = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.render.js');
+const SRC        = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.js');
+const SUBMIT_SRC = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.submit.js');
+const RENDER_SRC = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.render.js');
 let source;
 let submitSource;
 let renderSource;

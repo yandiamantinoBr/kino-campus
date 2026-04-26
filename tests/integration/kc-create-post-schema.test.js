@@ -1,13 +1,13 @@
 /**
  * @file kc-create-post-schema.test.js
- * @description Static contract tests for assets/js/kc-create-post.schema.js (v11.31.2)
+ * @description Static contract tests for assets/js/features/create-post/kc-create-post.schema.js (v11.31.2)
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.resolve(__dirname, '..', '..', 'assets', 'js', 'kc-create-post.schema.js');
+const SRC = path.resolve(__dirname, '..', '..', 'assets', 'js', 'features', 'create-post', 'kc-create-post.schema.js');
 const HTML_LOADERS = [
   '_product.html',
   'achados-perdidos.html',
@@ -67,8 +67,8 @@ describe('kc-create-post.schema — module contracts', () => {
 describe('kc-create-post.schema — loader order', () => {
   test.each(HTML_LOADERS)('%s loads kc-create-post.schema.js before kc-create-post.js', (htmlFile) => {
     const html = fs.readFileSync(path.resolve(__dirname, '..', '..', htmlFile), 'utf8');
-    const schemaIndex = html.indexOf('assets/js/kc-create-post.schema.js');
-    const runtimeIndex = html.indexOf('assets/js/kc-create-post.js');
+    const schemaIndex = html.indexOf('assets/js/features/create-post/kc-create-post.schema.js');
+    const runtimeIndex = html.indexOf('assets/js/features/create-post/kc-create-post.js');
 
     expect(schemaIndex).toBeGreaterThanOrEqual(0);
     expect(runtimeIndex).toBeGreaterThanOrEqual(0);
