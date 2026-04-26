@@ -32,8 +32,8 @@
 beforeAll(() => {
   global.window = global.window || global;
   require('../../assets/js/kc-constants.js');
-  require('../../assets/js/kc-utils.string.js');
-  require('../../assets/js/kc-utils.taxonomy.js');
+  require('../../assets/js/utils/kc-utils.string.js');
+  require('../../assets/js/utils/kc-utils.taxonomy.js');
 });
 
 // ─── 1. Contrato estático ────────────────────────────────────────────────────

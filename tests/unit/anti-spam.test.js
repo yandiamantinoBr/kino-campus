@@ -22,14 +22,14 @@ beforeAll(() => {
   };
 
   require('../../assets/js/kc-constants.js');
-  require('../../assets/js/kc-utils.string.js'); // deve preceder kc-utils.js (v12.2.0)
-  require('../../assets/js/kc-utils.format.js'); // deve preceder kc-utils.js (v12.2.1)
-  require('../../assets/js/kc-utils.dom.js'); // deve preceder kc-utils.js (v12.2.2)
-  require('../../assets/js/kc-utils.identity.js'); // deve preceder kc-utils.js (v12.2.3)
-  require('../../assets/js/kc-utils.taxonomy.js'); // deve preceder kc-utils.js (v12.2.4)
-  require('../../assets/js/kc-utils.location.js'); // deve preceder kc-utils.js (v12.2.5)
-  require('../../assets/js/kc-utils.presentation.js'); // deve preceder kc-utils.js (v12.2.6)
-  require('../../assets/js/kc-utils.js');
+  require('../../assets/js/utils/kc-utils.string.js'); // deve preceder kc-utils.js (v12.2.0)
+  require('../../assets/js/utils/kc-utils.format.js'); // deve preceder kc-utils.js (v12.2.1)
+  require('../../assets/js/utils/kc-utils.dom.js'); // deve preceder kc-utils.js (v12.2.2)
+  require('../../assets/js/utils/kc-utils.identity.js'); // deve preceder kc-utils.js (v12.2.3)
+  require('../../assets/js/utils/kc-utils.taxonomy.js'); // deve preceder kc-utils.js (v12.2.4)
+  require('../../assets/js/utils/kc-utils.location.js'); // deve preceder kc-utils.js (v12.2.5)
+  require('../../assets/js/utils/kc-utils.presentation.js'); // deve preceder kc-utils.js (v12.2.6)
+  require('../../assets/js/utils/kc-utils.js');
   require('../../assets/js/kc-api.notifications.js');
   require('../../assets/js/kc-api.saved.js');
   require('../../assets/js/kc-api.help.js');

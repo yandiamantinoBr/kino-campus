@@ -547,7 +547,7 @@ function readHtmlFiles(dir, prefix = '') {
 }
 
 function buildExpectedKcuScriptChain(relPath) {
-  const prefix = relPath.startsWith('admin/') ? '../assets/js' : 'assets/js';
+  const prefix = relPath.startsWith('admin/') ? '../assets/js/utils' : 'assets/js/utils';
   return kcuScriptChain.map((file) => `${prefix}/${file}`);
 }
 
