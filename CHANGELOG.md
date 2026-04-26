@@ -42,11 +42,52 @@ Governança Estrutural & Hotspots Secundários — eliminar os 4 maiores control
 
 ---
 
+## [14.0.0] - 2026-04-26 — Trilha v14: Repository Structure Foundation (v14.0.0–v14.11.0)
+
+### Tema
+Repository Structure Foundation — Fase 1: reorganização progressiva dos diretórios JS, docs, tests e controllers sem mudança de stack, sem quebra de rotas públicas e sem quebra de contratos `window.*`.
+
+### Fase 1 — Documentação + Planejamento (v14.0.0–v14.1.0)
+- `v14.0.0`: **Abertura do ciclo V14** (docs-only): `RELATORIO-KINOCAMPUS-V14.md` criado (inventário: 129 arquivos JS, 134 testes, 22 HTMLs; 12 iterações mapeadas; DoD com 15 critérios; estratégia de rollback para movimentações); `docs/audits/repository-reorg-plan.md` criado (inventário completo, mapa de scripts, mapa de dependências, mapa de rotas públicas, plano de migração em 4 fases); `README.md` status atualizado para "v14 em execução"; baseline inalterada Jest 134/134 · 3046/3046 · hygiene 8.6.0 ✓.
+- `v14.1.0`: **Arquitetura documentada**: `docs/architecture/repository-structure.md` criado — mapa completo da estrutura-alvo V14 vs. estado atual, regras de namespacing, convenções de carga (`<script defer>`), mapa de dependências entre módulos, roadmap de movimentação em 3 fases.
+
+### Fase 2 — Estrutura de diretórios (v14.2.0–v14.4.0)
+- `v14.2.0`: **5 subdirs JS criados** (sem mover runtime): `assets/js/boot/`, `assets/js/core/`, `assets/js/api/`, `assets/js/utils/`, `assets/js/legacy-shims/` — cada um com `README.md` documentando finalidade, regras de entrada e dependências permitidas; `validate-repository-structure.js` atualizado (+5 itens); Jest inalterado 134/134 · 3046/3046.
+- `v14.3.0`: **2 subdirs adapters criados** (sem mover runtime): `assets/js/adapters/local/` e `assets/js/adapters/supabase/` com READMEs; `validate-repository-structure.js` atualizado (+2 itens); Jest inalterado.
+- `v14.4.0`: **CSS future-split documentado**: `docs/audits/css-split-plan.md` (mapeia 10.582L de `styles.css` em 5 arquivos-alvo: tokens, base, layout, components, pages); `assets/css/future-split/` com 5 arquivos stub comentados — sem nenhum `<link>` nos HTMLs; `validate-repository-structure.js` atualizado (+6 itens); Jest inalterado.
+
+### Fase 3 — Reorganização docs e tests (v14.5.0–v14.6.0)
+- `v14.5.0`: **docs/ reorganizado**: `docs/releases/v11/` criado com README histórico; `docs/audits/security/` e `docs/audits/performance/` criados com READMEs de escopo; `validate-repository-structure.js` atualizado (+3 itens, 89 total); Jest inalterado 134/134 · 3046/3046.
+- `v14.6.0`: **tests/ reorganizado em 5 subdirs**: `tests/unit/` (53 testes), `tests/integration/` (38 testes), `tests/contract/` (14 testes), `tests/structure/` (12 testes), `tests/a11y/` (17 testes) — 134 arquivos movidos via `git mv`; 3 padrões de require corrigidos em 2 passes (require/path.resolve/path.join + require.resolve); `jest.config.js` atualizado com 6 testMatch patterns explícitos + collectCoverageFrom atualizado; `validate-repository-structure.js` (+6 itens, 95 total); Jest 134/134 · 3046/3046 ✓.
+
+### Fase 4 — Movimentação controlada de JS (v14.7.0–v14.9.0)
+- `v14.7.0`: **kc-utils.*.js → assets/js/utils/** (8 arquivos movidos via git mv): Node.js script atualiza atomicamente 22 HTMLs (`assets/js/kc-utils.` → `assets/js/utils/kc-utils.`); todos os testes e caminhos internos atualizados; `hygiene-check.js` atualizado (`buildExpectedKcuScriptChain` prefix → `assets/js/utils`); `validate-repository-structure.js` CANONICAL_JS atualizado; Jest 134/134 · 3046/3046 ✓ · check:all verde.
+- `v14.8.0`: **adapters → adapters/local/ e adapters/supabase/** (19 arquivos movidos via git mv): Node.js script atualiza 22 HTMLs; `hygiene-check.js` atualizado — `buildExpectedKclaScriptChain`, `isKclaScriptSrc`, `runLocalAdapterGateChecks`; `jest.config.js` collectCoverageFrom atualizado; 36 testes atualizados; Jest 134/134 · 3046/3046 ✓ · check:all verde.
+- `v14.9.0`: **controllers → controllers/public/ e controllers/admin/** (41 arquivos movidos via git mv — 31 public + 10 admin): Node.js script atualiza 22 HTMLs (19 alterados, 3 sem controllers inalterados); `hygiene-check.js` atualizado — 5 funções: `kcadAdminDashboardScriptChain`, `kcprProfileScriptChain`, `isKcadScriptSrc`, `isKcprProfileScriptSrc`, `runProfileControllerGateChecks`; 36 testes atualizados em 2 passes (string replace + multi-arg path.resolve fix); `validate-repository-structure.js` +2 itens (96 total); Jest 134/134 · 3046/3046 ✓ · check:all verde.
+
+### Fase 5 — Lighthouse produção (v14.10.0)
+- `v14.10.0`: **Lighthouse CI thresholds elevados para produção**: `.lighthouserc.js` — `performance` `warn/0.70` → `error/0.80`; `accessibility` `warn/0.80` → `error/0.90`; `best-practices` `warn/0.60` → `warn/0.80`; `seo` `warn/0.90` → `error/0.90`; justificativa documentada no header: Vercel CDN+HTTPS garante perf ≥ 0.80, WCAG 2.1 AA (V12) garante a11y ≥ 0.90.
+
+### Métricas finais v14
+
+| Métrica | Baseline V14 | Entrega V14 |
+|---|---|---|
+| Jest suites | 134 | 134 (inalterado — sem novos testes) |
+| Jest testes | 3046 | 3046 (inalterado) |
+| check:all | ✅ 5 validators | ✅ 5 validators (todos verdes) |
+| Arquivos JS movidos | 0 | 68 (8 utils + 19 adapters + 41 controllers) |
+| HTMLs atualizados | 0 | 22 (3 rodadas de script automático) |
+| Testes com paths corrigidos | 0 | 134 (3 passes de correção) |
+| validate-repository-structure | 89 itens | 96 itens (+7) |
+| Subdirs JS criados | 0 | 9 (boot, core, api, utils, legacy-shims, adapters/local, adapters/supabase, controllers/public, controllers/admin) |
+| Lighthouse thresholds | warn (perf 0.70, a11y 0.80) | error (perf 0.80, a11y 0.90) |
+| VERSION.json appVersion | 13.0.0 | 14.0.0 |
+
+---
+
 ## [Unreleased]
 
 ### Added
-
-- `v14.0.0`: **Abertura do ciclo V14** (docs-only): `RELATORIO-KINOCAMPUS-V14.md` criado (inventário: 129 arquivos JS, 134 testes, 22 HTMLs; 12 iterações mapeadas; DoD com 15 critérios; estratégia de rollback para movimentações); `docs/audits/repository-reorg-plan.md` criado (inventário completo, mapa de scripts, mapa de dependências, mapa de rotas públicas, plano de migração em 4 fases); `README.md` status atualizado para "v14 em execução"; baseline inalterada Jest 134/134 · 3046/3046 · hygiene 8.6.0 ✓.
 
 - `v13.0.0`: **Abertura do ciclo V13** (docs-only): `RELATORIO-KINOCAMPUS-V13.md` criado (estrutura completa do ciclo — Track G: VERSION.json + 4 validators + package.json check:* + docs reorganização; Track A: 4 hotspots JS > 1100L → splits com namespaces `_KCProduct.*`, `KCPostModel`, `KCRenderCard`; DoD com 14 critérios; meta ≥ 140 suites / 2800 testes); `README.md` status atualizado para "v13 em execução"; baseline inalterada Jest 127/127 · 2647/2647 · Playwright 51/51 · hygiene 8.6.0 ✓.
 

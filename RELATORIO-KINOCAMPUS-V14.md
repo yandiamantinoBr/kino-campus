@@ -1,7 +1,7 @@
 # RELATÓRIO KINOCAMPUS — V14
 ## Reorganização de Repositório (Fase 1)
 
-**Status:** v14 em execução — v14.10.0 (Lighthouse thresholds produção)  
+**Status:** ✅ v14 ENCERRADA  
 **Abertura:** 2026-04-26  
 **Base:** `kinocampus-V11.0-foundations` (branch permanente)  
 **Antecessor:** v13.8.0 (PR #454) — v13 ENCERRADA  
@@ -128,8 +128,8 @@ docs/
 | v14.7.0 | Mover kc-utils.*.js → assets/js/utils/ | ✅ Concluída | #462 | 134/3046 |
 | v14.8.0 | Mover adapters → adapters/local/ e adapters/supabase/ | ✅ Concluída | #463 | 134/3046 |
 | v14.9.0 | Mover controllers → controllers/public/ e controllers/admin/ | ✅ Concluída | #464 | 134/3046 |
-| v14.10.0 | Lighthouse thresholds produção | 🔄 Em execução | — | 134/3046 |
-| v14.11.0 | Release gate v14 | ⏳ Pendente | — | — |
+| v14.10.0 | Lighthouse thresholds produção | ✅ Concluída | #465 | 134/3046 |
+| v14.11.0 | Release gate v14 | ✅ Concluída | #466 | 134/3046 |
 
 ---
 
@@ -164,7 +164,7 @@ docs/
 - [x] `npm test` preservado ≥ baseline V13 (134/3046)
 - [x] `check:all` verde (todos os validators)
 - [x] Nenhum HTML com `<script src>` apontando para arquivo inexistente
-- [ ] `CHANGELOG.md` com entrada formal `## [14.0.0] - YYYY-MM-DD` (v14.11.0)
+- [x] `CHANGELOG.md` com entrada formal `## [14.0.0] - 2026-04-26`
 - [x] Zero quebra de contrato público `window.*`
 
 ---
@@ -189,4 +189,55 @@ git checkout .  # Reverte tudo — sem commit
 
 ---
 
-*Documento atualizado a cada iteração do ciclo V14.*
+---
+
+## 6. Gate v14 — Resultados Finais
+
+**Data encerramento:** 2026-04-26  
+**Aprovado por:** check:all ✅ · Jest 134/134 · 3046/3046 ✅ · hygiene-check 8.6.0 ✅
+
+### 6.1 Métricas de entrega
+
+| Métrica | Baseline V14 | Resultado |
+|---|---|---|
+| Jest suites | 134 | **134** (inalterado) |
+| Jest testes | 3046 | **3046** (inalterado) |
+| check:all | 5 validators verdes | **5 validators verdes** |
+| Arquivos JS movidos | 0 | **68** (8 utils + 19 adapters + 41 controllers) |
+| HTMLs atualizados | 0 | **22** (3 rodadas de script automático) |
+| Testes com paths corrigidos | 0 | **134** (3 passes de correção de require) |
+| validate-repository-structure | 89 itens | **96 itens** (+7) |
+| Subdirs JS criados | 0 | **9** novos diretórios |
+| Lighthouse thresholds | warn/0.70 perf, warn/0.80 a11y | **error/0.80 perf, error/0.90 a11y** |
+| VERSION.json appVersion | 13.0.0 | **14.0.0** |
+
+### 6.2 Definition of Done — resultado
+
+**Estrutura de diretórios:** ✅ 9/9 subdirs criados com conteúdo  
+**Documentação:** ✅ 4/4 documentos de arquitetura + plano CSS + READMEs  
+**Tests:** ✅ 5/5 subdirs + jest.config.js atualizado  
+**Qualidade:** ✅ 4/5 critérios verdes + CHANGELOG formal concluído (v14.11.0)
+
+### 6.3 Contratos públicos preservados (zero quebras)
+
+| Namespace | Arquivo de origem | Status |
+|---|---|---|
+| `window.KCAPI.*` | `assets/js/kc-api.client.js` | ✅ inalterado |
+| `window.KCSupabase.*` | `assets/js/kc-supabase.client.js` | ✅ inalterado |
+| `window.KCUtils.*` | `assets/js/utils/kc-utils.js` | ✅ movido, contrato preservado |
+| `window._KCU.*` | `assets/js/utils/kc-utils.*.js` | ✅ movidos, contratos preservados |
+| `window._KCLA.*` | `assets/js/adapters/local/local.*.adapter.js` | ✅ movidos, contratos preservados |
+| `window._KCSA.*` | `assets/js/adapters/supabase/supabase.*.adapter.js` | ✅ movidos, contratos preservados |
+| `window.KCFF.*` | `assets/js/kc-feature-flags.js` | ✅ inalterado |
+| `window.KC_ENV.*` | `assets/js/kc-env.js` | ✅ inalterado |
+
+### 6.4 O que V15 abrirá
+
+Com base no plano-mestre, V15 cobrirá:
+- Mover `assets/js/boot/`: `kc-env.js`, `kc-constants.js`, `kc-feature-flags.js`, `kc-sw-register.js`, `kc-telemetry.js` — requer atualizar `inject-env.js` POSSIBLE_PATHS + Vercel buildCommand
+- Mover `assets/js/api/`: `kc-api.client.js`, `kc-api.*.js`, `kc-supabase.client.js`, `kc-supabase.*.js`
+- Mover `assets/js/core/`: `kc-core.js`, `kc-post-model.js`, `kc-user-posts.js`, `kc-core-widgets.js`
+- Exploração de ES Modules sob feature flag `KCFF.isEnabled('esm.enabled')` — sem quebrar Vanilla JS existente
+- Lighthouse thresholds revisão pós-V15 moves
+
+*Documento encerrado em v14.11.0 — 2026-04-26*
