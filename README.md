@@ -262,11 +262,11 @@ Este mapa existe para manter coerência com o `scripts/hygiene-check.js`, que ai
 
 | Arquivo | Referência atual |
 |---------|------------------|
-| `assets/js/kc-env.js` | `const VERSION = '8.6.0';` |
+| `assets/js/boot/kc-env.js` | `const VERSION = '8.6.0';` |
 | `assets/js/kc-api.client.js` | `const VERSION = '8.6.0';` |
 | `assets/js/kc-supabase.client.js` | `const VERSION = '8.6.0';` |
-| `assets/js/kc-auth.ui.js` | auth UI v8.6.0 |
-| `assets/js/kc-profiles.client.js` | `const VERSION = '8.6.0';` |
+| `assets/js/core/kc-auth.ui.js` | auth UI v8.6.0 |
+| `assets/js/core/kc-profiles.client.js` | `const VERSION = '8.6.0';` |
 | `scripts/hygiene-check.js` | `canonicalVersion = '8.6.0'` |
 
 O drift entre a linha funcional `v10` e a linha canônica embutida `8.6.0` foi oficialmente incorporado ao backlog da v11 para tratamento coordenado, nunca parcial.
