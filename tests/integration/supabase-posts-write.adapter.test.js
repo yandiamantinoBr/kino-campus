@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ADAPTER_PATH = path.resolve(__dirname, '../../assets/js/adapters/supabase.posts-write.adapter.js');
+const ADAPTER_PATH = path.resolve(__dirname, '../../assets/js/adapters/supabase/supabase.posts-write.adapter.js');
 let source;
 
 beforeAll(() => {

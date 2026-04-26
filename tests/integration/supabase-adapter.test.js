@@ -30,10 +30,10 @@ beforeAll(() => {
     rankRelatedPosts: jest.fn((currentPost, candidates) => candidates),
   };
 
-  require('../../assets/js/adapters/supabase.posts-read.adapter.js');
-  require('../../assets/js/adapters/supabase.posts-write.adapter.js');
-  require('../../assets/js/adapters/supabase.profiles.adapter.js');
-  require('../../assets/js/adapters/supabase.adapter.js');
+  require('../../assets/js/adapters/supabase/supabase.posts-read.adapter.js');
+  require('../../assets/js/adapters/supabase/supabase.posts-write.adapter.js');
+  require('../../assets/js/adapters/supabase/supabase.profiles.adapter.js');
+  require('../../assets/js/adapters/supabase/supabase.adapter.js');
 });
 
 describe('Supabase Adapter - getFeedCursor', () => {

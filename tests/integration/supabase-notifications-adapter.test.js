@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ADAPTER_PATH = path.resolve(__dirname, '../../assets/js/adapters/supabase.notifications.adapter.js');
+const ADAPTER_PATH = path.resolve(__dirname, '../../assets/js/adapters/supabase/supabase.notifications.adapter.js');
 let source;
 
 beforeAll(() => {

@@ -416,11 +416,11 @@ function runKcprProfileScriptChainChecks() {
 }
 
 function runLocalAdapterGateChecks() {
-  const content = read('assets/js/adapters/local.adapter.js');
+  const content = read('assets/js/adapters/local/local.adapter.js');
   const lineCount = countLines(content);
 
   if (lineCount >= 500) {
-    errors.push(`assets/js/adapters/local.adapter.js must stay below 500 lines for the v12.4.8 gate (found ${lineCount})`);
+    errors.push(`assets/js/adapters/local/local.adapter.js must stay below 500 lines for the v12.4.8 gate (found ${lineCount})`);
   }
 }
 
@@ -552,7 +552,7 @@ function buildExpectedKcuScriptChain(relPath) {
 }
 
 function buildExpectedKclaScriptChain(relPath) {
-  const prefix = relPath.startsWith('admin/') ? '../assets/js/adapters' : 'assets/js/adapters';
+  const prefix = relPath.startsWith('admin/') ? '../assets/js/adapters/local' : 'assets/js/adapters/local';
   return kclaScriptChain.map((file) => `${prefix}/${file}`);
 }
 
@@ -593,7 +593,7 @@ function extractKclaScriptChain(content) {
 }
 
 function isKclaScriptSrc(src) {
-  return /(?:^|\/)adapters\/local\.(?:notifications|ratings|saved|posts-read|posts-write|profile|help)\.adapter\.js$/i.test(String(src || ''));
+  return /(?:^|\/)adapters\/local\/local\.(?:notifications|ratings|saved|posts-read|posts-write|profile|help)\.adapter\.js$/i.test(String(src || ''));
 }
 
 function extractKcprProfileScriptChain(content) {

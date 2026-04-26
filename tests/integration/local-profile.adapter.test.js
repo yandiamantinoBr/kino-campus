@@ -67,23 +67,23 @@ beforeAll(() => {
     rankRelatedPosts: jest.fn((currentPost, candidates) => (Array.isArray(candidates) ? candidates.slice() : [])),
   };
 
-  delete require.cache[require.resolve('../../assets/js/adapters/local.notifications.adapter.js')];
-  delete require.cache[require.resolve('../../assets/js/adapters/local.ratings.adapter.js')];
-  delete require.cache[require.resolve('../../assets/js/adapters/local.saved.adapter.js')];
-  delete require.cache[require.resolve('../../assets/js/adapters/local.posts-read.adapter.js')];
-  delete require.cache[require.resolve('../../assets/js/adapters/local.posts-write.adapter.js')];
-  delete require.cache[require.resolve('../../assets/js/adapters/local.profile.adapter.js')];
-  delete require.cache[require.resolve('../../assets/js/adapters/local.help.adapter.js')];
-  delete require.cache[require.resolve('../../assets/js/adapters/local.adapter.js')];
+  delete require.cache[require.resolve('../../assets/js/adapters/local/local.notifications.adapter.js')];
+  delete require.cache[require.resolve('../../assets/js/adapters/local/local.ratings.adapter.js')];
+  delete require.cache[require.resolve('../../assets/js/adapters/local/local.saved.adapter.js')];
+  delete require.cache[require.resolve('../../assets/js/adapters/local/local.posts-read.adapter.js')];
+  delete require.cache[require.resolve('../../assets/js/adapters/local/local.posts-write.adapter.js')];
+  delete require.cache[require.resolve('../../assets/js/adapters/local/local.profile.adapter.js')];
+  delete require.cache[require.resolve('../../assets/js/adapters/local/local.help.adapter.js')];
+  delete require.cache[require.resolve('../../assets/js/adapters/local/local.adapter.js')];
 
-  require('../../assets/js/adapters/local.notifications.adapter.js');
-  require('../../assets/js/adapters/local.ratings.adapter.js');
-  require('../../assets/js/adapters/local.saved.adapter.js');
-  require('../../assets/js/adapters/local.posts-read.adapter.js');
-  require('../../assets/js/adapters/local.posts-write.adapter.js');
-  require('../../assets/js/adapters/local.profile.adapter.js');
-  require('../../assets/js/adapters/local.help.adapter.js');
-  require('../../assets/js/adapters/local.adapter.js');
+  require('../../assets/js/adapters/local/local.notifications.adapter.js');
+  require('../../assets/js/adapters/local/local.ratings.adapter.js');
+  require('../../assets/js/adapters/local/local.saved.adapter.js');
+  require('../../assets/js/adapters/local/local.posts-read.adapter.js');
+  require('../../assets/js/adapters/local/local.posts-write.adapter.js');
+  require('../../assets/js/adapters/local/local.profile.adapter.js');
+  require('../../assets/js/adapters/local/local.help.adapter.js');
+  require('../../assets/js/adapters/local/local.adapter.js');
 
   actualProfileModule = window._KCLA.profile;
   driver = window.KCAPI.registerAdapter.mock.calls[0][1];

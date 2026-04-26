@@ -42,14 +42,14 @@ beforeAll(() => {
     require('../../assets/js/kc-api.related.js');
     require('../../assets/js/kc-api.auth.js');
   require('../../assets/js/kc-api.client.js');
-  require('../../assets/js/adapters/local.notifications.adapter.js');
-  require('../../assets/js/adapters/local.ratings.adapter.js');
-  require('../../assets/js/adapters/local.saved.adapter.js');
-  require('../../assets/js/adapters/local.posts-read.adapter.js');
-  require('../../assets/js/adapters/local.posts-write.adapter.js');
-  require('../../assets/js/adapters/local.profile.adapter.js');
-  require('../../assets/js/adapters/local.help.adapter.js');
-  require('../../assets/js/adapters/local.adapter.js');
+  require('../../assets/js/adapters/local/local.notifications.adapter.js');
+  require('../../assets/js/adapters/local/local.ratings.adapter.js');
+  require('../../assets/js/adapters/local/local.saved.adapter.js');
+  require('../../assets/js/adapters/local/local.posts-read.adapter.js');
+  require('../../assets/js/adapters/local/local.posts-write.adapter.js');
+  require('../../assets/js/adapters/local/local.profile.adapter.js');
+  require('../../assets/js/adapters/local/local.help.adapter.js');
+  require('../../assets/js/adapters/local/local.adapter.js');
 
 });
 
