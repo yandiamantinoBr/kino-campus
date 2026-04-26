@@ -2,14 +2,6 @@
 (function () {
   'use strict';
 
-  const DEFAULT_AREAS = [
-    { key: 'tecnologia', label: 'Tecnologia', icon: 'fas fa-laptop-code' },
-    { key: 'marketing', label: 'Marketing', icon: 'fas fa-bullhorn' },
-    { key: 'design', label: 'Design', icon: 'fas fa-palette' },
-    { key: 'educacao', label: 'Educação', icon: 'fas fa-graduation-cap' },
-    { key: 'musica', label: 'Música', icon: 'fas fa-music' },
-  ];
-
   const MOBILE_SECTION_MODAL_ID = 'kcOpportunitySectionOverlay';
   const SECTION_CACHE_KEY = 'oportunidades:index';
   const SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10;
@@ -34,349 +26,6 @@
     modalDraft: null,
   };
 
-  function normalizeText(value) {
-    if (window.KCUtils && typeof window.KCUtils.normalizeText === 'function') {
-      return window.KCUtils.normalizeText(value);
-    }
-    return String(value || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-  }
-
-  function canonicalCategory(value) {
-    if (window.kcFilters && typeof window.kcFilters.canonicalCategory === 'function') {
-      return window.kcFilters.canonicalCategory(value);
-    }
-    const normalized = normalizeText(value).replace(/^#/, '');
-    if (normalized.length > 3 && normalized.endsWith('s')) return normalized.slice(0, -1);
-    return normalized;
-  }
-
-  function escapeHtml(value) {
-    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
-      return window.KCUtils.escapeHtml(value);
-    }
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function cloneSet(set) {
-    return new Set(Array.from(set || []));
-  }
-
-  function sanitizePriceValue(value) {
-    if (value == null || value === '') return null;
-    const numeric = Number(String(value).replace(',', '.'));
-    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
-  }
-
-  function normalizePriceRange(minPrice, maxPrice) {
-    let nextMin = sanitizePriceValue(minPrice);
-    let nextMax = sanitizePriceValue(maxPrice);
-    if (nextMin != null && nextMax != null && nextMax < nextMin) {
-      const swap = nextMin;
-      nextMin = nextMax;
-      nextMax = swap;
-    }
-    return { min: nextMin, max: nextMax };
-  }
-
-  function isMobileViewport() {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-    return window.matchMedia('(max-width: 768px)').matches;
-  }
-
-  function getSessionStore() {
-    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
-      ? window.KCSessionStore
-      : null;
-  }
-
-  function getFeedFilterUtils() {
-    return (typeof window !== 'undefined' && window.KCFeedFilters) ? window.KCFeedFilters : null;
-  }
-
-  function getAllowedDatePresets() {
-    const utils = getFeedFilterUtils();
-    return utils && typeof utils.getAllowedDatePresets === 'function'
-      ? utils.getAllowedDatePresets('oportunidades')
-      : ['today', 'last7d', 'last30d'];
-  }
-
-  function normalizeDatePreset(value) {
-    const utils = getFeedFilterUtils();
-    if (utils && typeof utils.normalizeDatePreset === 'function') {
-      return utils.normalizeDatePreset('oportunidades', value);
-    }
-    const normalized = normalizeText(value);
-    const allowed = getAllowedDatePresets();
-    return allowed.includes(normalized) ? normalized : '';
-  }
-
-  function readSelectedDatePreset() {
-    const selected = document.querySelector('[data-kc-opp-date-preset]:checked');
-    return normalizeDatePreset(selected ? selected.value : '');
-  }
-
-  function restoreCachedPosts() {
-    const store = getSessionStore();
-    if (!store) return false;
-    const cached = store.get('feed-index', SECTION_CACHE_KEY, { maxAge: SECTION_CACHE_MAX_AGE_MS });
-    const posts = cached && cached.value && Array.isArray(cached.value.posts) ? cached.value.posts : [];
-    if (!posts.length) return false;
-    upsertPosts(posts);
-    queueRefresh();
-    return true;
-  }
-
-  function persistCachedPosts(posts) {
-    const store = getSessionStore();
-    if (!store || typeof store.set !== 'function') return;
-    store.set('feed-index', SECTION_CACHE_KEY, {
-      posts: Array.isArray(posts) ? posts.slice(0, 600) : [],
-    });
-  }
-
-  function getFilterState() {
-    if (window.kcFilters && typeof window.kcFilters.getState === 'function') {
-      const current = window.kcFilters.getState();
-      return {
-        category: current && current.category ? current.category : 'todas',
-        query: current && current.query ? current.query : '',
-      };
-    }
-
-    const activeTab = document.querySelector('.kc-feed-tabs a.active');
-    const input = document.getElementById('searchInput');
-    return {
-      category: activeTab ? ((activeTab.getAttribute('data-category') || activeTab.getAttribute('href') || '').replace('#', '') || 'todas') : 'todas',
-      query: input ? String(input.value || '') : '',
-    };
-  }
-
-  function getAreaDefinitions() {
-    if (window.KCUtils && typeof window.KCUtils.getOpportunityAreaDefinitions === 'function') {
-      return window.KCUtils.getOpportunityAreaDefinitions();
-    }
-    return DEFAULT_AREAS.slice();
-  }
-
-  function getPostIdentity(post) {
-    if (!post) return '';
-    const uuid = String(post.uuid || '').trim();
-    if (uuid) return 'uuid:' + uuid;
-    const id = String(post.id || post.legacy_id || post.legacyId || '').trim();
-    if (id) return 'id:' + id;
-    return [
-      String(post.modulo || post.module || '').trim(),
-      String(post.titulo || post.title || '').trim(),
-      String(post.timestamp || post.created_at || '').trim()
-    ].join('|');
-  }
-
-  function normalizeOpportunityType(value, sourceText) {
-    const direct = canonicalCategory(value);
-    if (direct.includes('estag')) return 'estagio';
-    if (direct.includes('empreg')) return 'emprego';
-    if (direct.includes('freela') || direct.includes('freelancer')) return 'freelancer';
-    if (direct.includes('monitor')) return 'monitoria';
-    if (direct.includes('volunt')) return 'voluntariado';
-
-    const haystack = normalizeText(sourceText);
-    if (haystack.includes('freelancer') || haystack.includes('freela')) return 'freelancer';
-    if (haystack.includes('monitoria') || haystack.includes('monitor ')) return 'monitoria';
-    if (haystack.includes('volunt')) return 'voluntariado';
-    if (haystack.includes('estagio') || haystack.includes('trainee')) return 'estagio';
-    if (haystack.includes('emprego') || haystack.includes('clt') || haystack.includes('vaga')) return 'emprego';
-    return direct || '';
-  }
-
-  function resolveWorkModeValue(value) {
-    const normalized = normalizeText(value);
-    if (!normalized) return null;
-    if (normalized.includes('hibrid') || normalized.includes('hybrid')) {
-      return { key: 'hibrido', label: 'Híbrido', remote: true, presencial: true };
-    }
-    if (normalized.includes('remot') || normalized.includes('home office') || normalized.includes('home-office')) {
-      return { key: 'remoto', label: 'Remoto', remote: true, presencial: false };
-    }
-    if (normalized.includes('presencial') || normalized.includes('onsite') || normalized.includes('on site') || normalized.includes('on-site')) {
-      return { key: 'presencial', label: 'Presencial', remote: false, presencial: true };
-    }
-    return null;
-  }
-
-  function resolveWorkMode(post) {
-    const meta = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
-    const explicitMatch = [
-      meta.workModeLabel,
-      meta.workMode,
-      meta.modalidadeTrabalho,
-      post && post.modalidadeTrabalho,
-      post && post.workMode,
-    ].map(resolveWorkModeValue).find(Boolean);
-    if (explicitMatch) return explicitMatch;
-
-    const textMatch = resolveWorkModeValue([
-      post && post.titulo,
-      post && post.descricao,
-      ...(Array.isArray(post && post.tags) ? post.tags : []),
-      ...(Array.isArray(post && post.tagKeys) ? post.tagKeys : []),
-      ...(Array.isArray(meta.tags) ? meta.tags : []),
-      ...(Array.isArray(meta.tagKeys) ? meta.tagKeys : []),
-    ].filter(Boolean).join(' '));
-    if (textMatch) return textMatch;
-
-    return { key: '', label: '', remote: false, presencial: false };
-    const text = normalizeText([
-      meta.workModeLabel,
-      meta.workMode,
-      meta.modalidadeTrabalho,
-      post && post.modalidadeTrabalho,
-      post && post.titulo,
-      post && post.descricao,
-      ...(Array.isArray(post && post.tags) ? post.tags : []),
-      ...(Array.isArray(post && post.tagKeys) ? post.tagKeys : []),
-      ...(Array.isArray(meta.tags) ? meta.tags : []),
-      ...(Array.isArray(meta.tagKeys) ? meta.tagKeys : []),
-    ].filter(Boolean).join(' '));
-
-    const isHybrid = text.includes('hibrido') || text.includes('hybrid');
-    const isRemote = isHybrid || text.includes('remoto') || text.includes('home office') || text.includes('home-office');
-    const isPresential = isHybrid || text.includes('presencial') || text.includes('onsite') || text.includes('on site');
-
-    if (isHybrid) return { key: 'hibrido', label: 'Híbrido', remote: true, presencial: true };
-    if (isRemote) return { key: 'remoto', label: 'Remoto', remote: true, presencial: false };
-    if (isPresential) return { key: 'presencial', label: 'Presencial', remote: false, presencial: true };
-    return { key: '', label: '', remote: false, presencial: false };
-  }
-
-  function resolveEmploymentTypeValue(value) {
-    const normalized = normalizeText(value);
-    if (!normalized) return null;
-    if (normalized.includes('jovem aprendiz') || normalized.includes('aprendiz')) {
-      return { key: 'jovem-aprendiz', label: 'Jovem Aprendiz' };
-    }
-    if (normalized.includes('temporario')) {
-      return { key: 'temporario', label: 'Temporário' };
-    }
-    if (normalized.includes('clt')) return { key: 'clt', label: 'CLT' };
-    if (normalized.includes('pj') || normalized.includes('pessoa juridica')) {
-      return { key: 'pj', label: 'PJ' };
-    }
-    return null;
-  }
-
-  function resolveEmploymentType(post) {
-    const meta = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
-    const explicitMatch = [
-      meta.employmentTypeLabel,
-      meta.employmentType,
-      meta.regimeContratacao,
-      post && post.regimeContratacao,
-      post && post.employmentType,
-    ].map(resolveEmploymentTypeValue).find(Boolean);
-    if (explicitMatch) return explicitMatch;
-
-    const textMatch = resolveEmploymentTypeValue([
-      post && post.titulo,
-      post && post.descricao,
-      ...(Array.isArray(post && post.tags) ? post.tags : []),
-      ...(Array.isArray(post && post.tagKeys) ? post.tagKeys : []),
-      ...(Array.isArray(meta.tags) ? meta.tags : []),
-      ...(Array.isArray(meta.tagKeys) ? meta.tagKeys : []),
-    ].filter(Boolean).join(' '));
-    if (textMatch) return textMatch;
-
-    return { key: '', label: '' };
-    const text = normalizeText([
-      meta.employmentTypeLabel,
-      meta.employmentType,
-      meta.regimeContratacao,
-      post && post.regimeContratacao,
-      post && post.titulo,
-      post && post.descricao,
-      ...(Array.isArray(post && post.tags) ? post.tags : []),
-      ...(Array.isArray(post && post.tagKeys) ? post.tagKeys : []),
-      ...(Array.isArray(meta.tags) ? meta.tags : []),
-      ...(Array.isArray(meta.tagKeys) ? meta.tagKeys : []),
-    ].filter(Boolean).join(' '));
-
-    if (text.includes('jovem aprendiz') || text.includes('aprendiz')) {
-      return { key: 'jovem-aprendiz', label: 'Jovem Aprendiz' };
-    }
-    if (text.includes('temporario')) {
-      return { key: 'temporario', label: 'Temporário' };
-    }
-    if (text.includes('clt')) return { key: 'clt', label: 'CLT' };
-    if (text.includes('pj') || text.includes('pessoa juridica')) return { key: 'pj', label: 'PJ' };
-    return { key: '', label: '' };
-  }
-
-  function resolveArea(post) {
-    if (window.KCUtils && typeof window.KCUtils.resolveOpportunityArea === 'function') {
-      const info = window.KCUtils.resolveOpportunityArea(post);
-      if (info) return info;
-    }
-    return { key: '', label: '', icon: 'fas fa-briefcase' };
-  }
-
-  function summarizePost(rawPost) {
-    if (!rawPost) return null;
-    const post = (window.KCAPI && typeof window.KCAPI.normalizePost === 'function')
-      ? window.KCAPI.normalizePost(rawPost)
-      : rawPost;
-    if (!post || normalizeText(post.modulo || post.module) !== 'oportunidades') return null;
-
-    const meta = (post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
-    const aggregateText = [
-      post.titulo,
-      post.descricao,
-      post.categoriaLabel,
-      post.categoria,
-      post.subcategoriaLabel,
-      post.subcategoria,
-      post.area,
-      meta.areaLabel,
-      meta.area,
-      meta.workModeLabel,
-      meta.workMode,
-      meta.regimeContratacao,
-      meta.employmentTypeLabel,
-      post.modalidadeTrabalho,
-      post.regimeContratacao,
-    ].filter(Boolean).join(' ');
-
-    const type = normalizeOpportunityType(post.categoriaKey || post.categoria || meta.categoryKey || meta.category, aggregateText);
-    const areaInfo = resolveArea(post);
-    const workMode = resolveWorkMode(post);
-    const regime = resolveEmploymentType(post);
-    const fallbackAreaKey = areaInfo && areaInfo.key ? areaInfo.key : 'outras-areas';
-    const fallbackAreaLabel = areaInfo && areaInfo.label ? areaInfo.label : 'Outras áreas';
-
-    return {
-      identity: getPostIdentity(post),
-      id: String(post.id || '').trim(),
-      type,
-      areaKey: fallbackAreaKey,
-      areaLabel: fallbackAreaLabel,
-      areaIcon: (areaInfo && areaInfo.icon) ? areaInfo.icon : 'fas fa-briefcase',
-      regimeKey: regime.key || '',
-      workModeKey: workMode.key || '',
-      isRemote: !!workMode.remote,
-      isPresential: !!workMode.presencial,
-      createdAt: post && (post.created_at || post.createdAt || post.timestamp || null),
-      priceValue: sanitizePriceValue(post && (post.preco != null ? post.preco : post.price)),
-      searchText: normalizeText(aggregateText),
-    };
-  }
-
   function syncAreaHistoryCache() {
     window.__KC_OPPORTUNITY_AREA_HISTORY = Array.from(state.posts.values())
       .filter((summary) => summary && summary.areaKey && summary.areaLabel)
@@ -397,16 +46,15 @@
     syncAreaHistoryCache();
   }
 
-  function applyCardDataset(card, summary) {
-    if (!card || !summary) return;
-    card.setAttribute('data-kc-opp-type', summary.type || '');
-    card.setAttribute('data-kc-opp-area', summary.areaKey || '');
-    card.setAttribute('data-kc-opp-regime', summary.regimeKey || '');
-    card.setAttribute('data-kc-opp-work-mode', summary.workModeKey || '');
-    card.setAttribute('data-kc-opp-remote', String(!!summary.isRemote));
-    card.setAttribute('data-kc-opp-presencial', String(!!summary.isPresential));
-    if (summary.createdAt) card.setAttribute('data-kc-created-at', String(summary.createdAt));
-    if (summary.priceValue != null) card.setAttribute('data-kc-price', String(summary.priceValue));
+  function restoreCachedPosts() {
+    const store = getSessionStore();
+    if (!store) return false;
+    const cached = store.get('feed-index', SECTION_CACHE_KEY, { maxAge: SECTION_CACHE_MAX_AGE_MS });
+    const posts = cached && cached.value && Array.isArray(cached.value.posts) ? cached.value.posts : [];
+    if (!posts.length) return false;
+    upsertPosts(posts);
+    queueRefresh();
+    return true;
   }
 
   function decorateFreshCards(payload) {
@@ -425,13 +73,6 @@
     });
   }
 
-  function getSelectedInputs(kind) {
-    return Array.from(document.querySelectorAll('[data-kc-opp-filter-kind="' + kind + '"]'))
-      .filter((input) => input && input.checked)
-      .map((input) => String(input.value || '').trim())
-      .filter(Boolean);
-  }
-
   function syncStateFromInputs() {
     state.selectedTypeFilters = new Set(getSelectedInputs('type'));
     state.selectedModeFilters = new Set(getSelectedInputs('mode'));
@@ -442,28 +83,6 @@
     );
     state.priceMin = range.min;
     state.priceMax = range.max;
-  }
-
-  function syncFilterInputs(typeFilters, modeFilters, priceMin, priceMax, datePreset) {
-    const types = typeFilters || new Set();
-    const modes = modeFilters || new Set();
-
-    document.querySelectorAll('[data-kc-opp-filter-kind="type"]').forEach((input) => {
-      input.checked = types.has(String(input.value || '').trim());
-    });
-
-    document.querySelectorAll('[data-kc-opp-filter-kind="mode"]').forEach((input) => {
-      input.checked = modes.has(String(input.value || '').trim());
-    });
-
-    const minInput = document.querySelector('[data-kc-opp-price-min]');
-    const maxInput = document.querySelector('[data-kc-opp-price-max]');
-    if (minInput) minInput.value = priceMin != null ? String(priceMin) : '';
-    if (maxInput) maxInput.value = priceMax != null ? String(priceMax) : '';
-    const selectedPreset = normalizeDatePreset(datePreset);
-    document.querySelectorAll('[data-kc-opp-date-preset]').forEach((input) => {
-      input.checked = normalizeDatePreset(input.value) === selectedPreset;
-    });
   }
 
   function restoreUrlState() {
@@ -518,175 +137,21 @@
     });
   }
 
-  function hasTypeModeSelection(typeFilters, modeFilters) {
-    return !!((typeFilters && typeFilters.size) || (modeFilters && modeFilters.size));
-  }
-
-  function isTypeMatch(filterKey, type, regimeKey) {
-    if (filterKey === 'emprego-clt') {
-      return type === 'emprego' && regimeKey === 'clt';
-    }
-    return type === filterKey;
-  }
-
-  function isModeMatch(filterKey, workModeKey, isRemote, isPresential) {
-    if (filterKey === 'hibrido') return workModeKey === 'hibrido';
-    if (filterKey === 'remoto') return isRemote;
-    if (filterKey === 'presencial') return isPresential;
-    return false;
-  }
-
-  function cardMatchesSidebarFilters(card) {
-    const type = String(card.getAttribute('data-kc-opp-type') || '');
-    const area = String(card.getAttribute('data-kc-opp-area') || '');
-    const regime = String(card.getAttribute('data-kc-opp-regime') || '');
-    const workModeKey = String(card.getAttribute('data-kc-opp-work-mode') || '');
-    const isRemote = String(card.getAttribute('data-kc-opp-remote') || '').toLowerCase() === 'true';
-    const isPresential = String(card.getAttribute('data-kc-opp-presencial') || '').toLowerCase() === 'true';
-    const createdAt = card.getAttribute('data-kc-created-at') || '';
-    const priceValue = sanitizePriceValue(card.getAttribute('data-kc-price'));
-
-    if (state.selectedTypeFilters.size) {
-      let typeMatches = false;
-      state.selectedTypeFilters.forEach((filterKey) => {
-        if (isTypeMatch(filterKey, type, regime)) typeMatches = true;
-      });
-      if (!typeMatches) return false;
-    }
-
-    if (state.selectedModeFilters.size) {
-      let modeMatches = false;
-      state.selectedModeFilters.forEach((filterKey) => {
-        if (isModeMatch(filterKey, workModeKey, isRemote, isPresential)) modeMatches = true;
-      });
-      if (!modeMatches) return false;
-    }
-
-    if (state.selectedArea && area !== state.selectedArea) return false;
-    if (state.datePreset) {
-      const utils = getFeedFilterUtils();
-      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'oportunidades', preset: state.datePreset, createdAt: createdAt })) return false;
-    }
-    if (state.priceMin != null && (priceValue == null || priceValue < state.priceMin)) return false;
-    if (state.priceMax != null && (priceValue == null || priceValue > state.priceMax)) return false;
-    return true;
-  }
-
-  function categoryMatches(summary, selectedCategory) {
-    const selected = canonicalCategory(selectedCategory);
-    if (!selected || selected === 'toda' || selected === 'todas') return true;
-    const item = canonicalCategory(summary.type);
-    if (!item) return false;
-    return item.includes(selected) || selected.includes(item);
-  }
-
-  function queryMatches(summary, query) {
-    const normalized = normalizeText(query);
-    if (!normalized) return true;
-    return String(summary.searchText || '').includes(normalized);
-  }
-
-  function matchesSummary(summary, options) {
-    const cfg = options || {};
-    const filterState = getFilterState();
-
-    if (!categoryMatches(summary, filterState.category)) return false;
-    if (!queryMatches(summary, filterState.query)) return false;
-
-    if (state.selectedTypeFilters.size && !cfg.ignoreType) {
-      let typeMatches = false;
-      state.selectedTypeFilters.forEach((filterKey) => {
-        if (isTypeMatch(filterKey, summary.type, summary.regimeKey)) typeMatches = true;
-      });
-      if (!typeMatches) return false;
-    }
-
-    if (state.selectedModeFilters.size && !cfg.ignoreMode) {
-      let modeMatches = false;
-      state.selectedModeFilters.forEach((filterKey) => {
-        if (isModeMatch(filterKey, summary.workModeKey, summary.isRemote, summary.isPresential)) modeMatches = true;
-      });
-      if (!modeMatches) return false;
-    }
-
-    if (state.selectedArea && !cfg.ignoreArea && summary.areaKey !== state.selectedArea) return false;
-    if (!cfg.ignoreDate && state.datePreset) {
-      const utils = getFeedFilterUtils();
-      if (!utils || typeof utils.matchesDatePreset !== 'function' || !utils.matchesDatePreset({ moduleKey: 'oportunidades', preset: state.datePreset, createdAt: summary.createdAt })) return false;
-    }
-    if (!cfg.ignorePrice) {
-      if ((state.priceMin != null || state.priceMax != null) && summary.priceValue == null) return false;
-      if (state.priceMin != null && summary.priceValue < state.priceMin) return false;
-      if (state.priceMax != null && summary.priceValue > state.priceMax) return false;
-    }
-    return true;
-  }
-
-  function getAreaCatalog(countMap) {
-    const definitions = getAreaDefinitions();
-    const catalog = new Map();
-
-    definitions.forEach((entry, index) => {
-      catalog.set(entry.key, {
-        key: entry.key,
-        label: entry.label,
-        icon: entry.icon || 'fas fa-briefcase',
-        order: index,
-        isKnown: true,
-      });
-    });
-
-    state.posts.forEach((summary) => {
-      if (!summary.areaKey) return;
-      if (!catalog.has(summary.areaKey)) {
-        catalog.set(summary.areaKey, {
-          key: summary.areaKey,
-          label: summary.areaLabel || summary.areaKey,
-          icon: summary.areaIcon || 'fas fa-briefcase',
-          order: definitions.length + catalog.size,
-          isKnown: false,
-        });
-      }
-    });
-
-    return Array.from(catalog.values()).sort((left, right) => {
-      const countDiff = (countMap.get(right.key) || 0) - (countMap.get(left.key) || 0);
-      if (countDiff !== 0) return countDiff;
-      if (left.isKnown !== right.isKnown) return left.isKnown ? -1 : 1;
-      return String(left.label || '').localeCompare(String(right.label || ''), 'pt-BR');
-    });
-  }
-
-  function getRenderedAreaSelection() {
-    if (state.modalDraft && state.activeSectionKey === 'areas') {
-      return state.modalDraft.area || '';
-    }
-    return state.selectedArea || '';
-  }
-
-  function getAreaLabel(areaKey) {
-    if (!areaKey) return 'Todas as áreas';
-    const known = getAreaDefinitions().find((entry) => entry.key === areaKey);
-    if (known && known.label) return known.label;
-    const summary = Array.from(state.posts.values()).find((entry) => entry.areaKey === areaKey);
-    return summary && summary.areaLabel ? summary.areaLabel : areaKey;
-  }
-
   function renderAreaButtons() {
     const list = document.querySelector('[data-kc-opp-area-list="true"]');
     if (!list) return;
 
     const allSummaries = Array.from(state.posts.values());
-    const baseSummaries = allSummaries.filter((summary) => matchesSummary(summary, { ignoreArea: true }));
+    const baseSummaries = allSummaries.filter((summary) => matchesSummary(summary, { ignoreArea: true }, state));
     const countMap = new Map();
     baseSummaries.forEach((summary) => {
       const current = countMap.get(summary.areaKey) || 0;
       countMap.set(summary.areaKey, current + 1);
     });
 
-    const areas = getAreaCatalog(countMap);
+    const areas = getAreaCatalog(countMap, state);
     const total = baseSummaries.length;
-    const renderedArea = getRenderedAreaSelection();
+    const renderedArea = getRenderedAreaSelection(state);
     const items = [];
 
     items.push(
@@ -713,17 +178,6 @@
     list.innerHTML = items.join('');
   }
 
-  function syncClearButtonState() {
-    const clearButton = document.querySelector('[data-kc-opp-clear-filters="true"]');
-    if (!clearButton) return;
-    const hasFilters = hasTypeModeSelection(state.selectedTypeFilters, state.selectedModeFilters)
-      || !!state.selectedArea
-      || !!state.datePreset
-      || state.priceMin != null
-      || state.priceMax != null;
-    clearButton.disabled = !hasFilters;
-  }
-
   function getSidebarSections() {
     return state.sections.slice();
   }
@@ -747,24 +201,6 @@
 
       return { key, title, icon, node: section };
     });
-  }
-
-  function renderMobileRail() {
-    const rail = document.querySelector('[data-kc-opp-mobile-rail="true"]');
-    if (!rail) return;
-
-    const sections = getSidebarSections();
-    if (!sections.length) return;
-
-    rail.innerHTML = sections.map((section) => {
-      const isActive = state.activeSectionKey === section.key;
-      return (
-        '<button class="kc-opportunity-mobile-rail__button ' + (isActive ? 'is-active' : '') + '" type="button" data-kc-opp-open-section="' + escapeHtml(section.key) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '">' +
-          '<i class="' + escapeHtml(section.icon || 'fas fa-layer-group') + '"></i>' +
-          '<span>' + escapeHtml(section.title) + '</span>' +
-        '</button>'
-      );
-    }).join('');
   }
 
   function ensureMobileSectionModal() {
@@ -848,7 +284,7 @@
     if (state.activeSectionKey === 'areas') {
       actions.innerHTML = [
         '<div class="kc-opportunity-section-modal__action-group">',
-        '  <p class="kc-opportunity-section-modal__caption">Área selecionada: <strong>' + escapeHtml(getAreaLabel((state.modalDraft && state.modalDraft.area) || '')) + '</strong></p>',
+        '  <p class="kc-opportunity-section-modal__caption">Área selecionada: <strong>' + escapeHtml(getAreaLabel((state.modalDraft && state.modalDraft.area) || '', state)) + '</strong></p>',
         '  <button class="kc-opportunity-apply" type="button" data-kc-opp-modal-apply="areas">Ver oportunidades</button>',
         '</div>'
       ].join('');
@@ -907,7 +343,7 @@
       window.KCOverlayLock.lock('opportunities-section-modal');
     }
 
-    renderMobileRail();
+    renderMobileRail(state);
 
     const closeBtn = overlay.querySelector('[data-kc-opp-close-section-modal="true"]');
     if (closeBtn) closeBtn.focus();
@@ -968,8 +404,8 @@
       }
     }
     renderAreaButtons();
-    renderMobileRail();
-    syncClearButtonState();
+    renderMobileRail(state);
+    syncClearButtonState(state);
 
     if (!focusHandled && focusTarget) {
       try { focusTarget.focus(); } catch (_) { }
@@ -985,9 +421,9 @@
       state.refreshQueued = false;
       syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
       renderAreaButtons();
-      renderMobileRail();
+      renderMobileRail(state);
       renderSectionActions();
-      syncClearButtonState();
+      syncClearButtonState(state);
     });
   }
 
@@ -1201,7 +637,7 @@
   function setupExtraPredicate() {
     if (!window.kcFilters || typeof window.kcFilters.setExtraPredicate !== 'function') return;
     window.kcFilters.setExtraPredicate(function (card) {
-      return cardMatchesSidebarFilters(card);
+      return cardMatchesSidebarFilters(card, state);
     });
   }
 
