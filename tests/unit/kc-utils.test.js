@@ -1,6 +1,6 @@
 beforeAll(() => {
   global.window = global.window || global;
-  require('../../assets/js/kc-constants.js');
+  require('../../assets/js/boot/kc-constants.js');
   require('../../assets/js/utils/kc-utils.string.js'); // deve preceder kc-utils.js (v12.2.0)
   require('../../assets/js/utils/kc-utils.format.js'); // deve preceder kc-utils.js (v12.2.1)
   require('../../assets/js/utils/kc-utils.dom.js'); // deve preceder kc-utils.js (v12.2.2)

@@ -31,7 +31,7 @@
 
 beforeAll(() => {
   global.window = global.window || global;
-  require('../../assets/js/kc-constants.js');
+  require('../../assets/js/boot/kc-constants.js');
   require('../../assets/js/utils/kc-utils.string.js');
   require('../../assets/js/utils/kc-utils.taxonomy.js');
 });

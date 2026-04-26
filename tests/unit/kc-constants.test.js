@@ -1,6 +1,6 @@
 beforeAll(() => {
   global.window = global.window || global;
-  require('../../assets/js/kc-constants.js');
+  require('../../assets/js/boot/kc-constants.js');
 });
 
 describe('KC_CONSTANTS - Constantes Globais', () => {

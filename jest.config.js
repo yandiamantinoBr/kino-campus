@@ -20,7 +20,7 @@ module.exports = {
   coverageDirectory: 'output/coverage',
   coverageReporters: ['text', 'text-summary'],
   collectCoverageFrom: [
-    'assets/js/kc-constants.js',
+    'assets/js/boot/kc-constants.js',
     'assets/js/utils/kc-utils.js',
     'assets/js/kc-api.client.js',
     'assets/js/kc-filters.js',
