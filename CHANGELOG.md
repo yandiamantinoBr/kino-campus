@@ -2,6 +2,14 @@
 
 ---
 
+## [Unreleased] — v15 em execução
+
+### Added
+
+- `v15.0.0`: **Abertura do ciclo V15** + branch rename + README fix + jest bugfix: branch `kinocampus-V11.0-foundations` → `kinocampus-V15.0-foundations`; `README.md` título `v10.0.0` → `v15.0.0`; `VERSION.json` appVersion `14.0.0` → `15.0.0`; `jest.config.js` bug corrigido (`assets/js/kc-utils.js` → `assets/js/utils/kc-utils.js`); `.github/workflows/lighthouse-ci.yml` trigger atualizado; `RELATORIO-KINOCAMPUS-V15.md` criado; baseline inalterada Jest 134/134 · 3046/3046 · check:all ✓.
+
+---
+
 ## [13.0.0] - 2026-04-26 — Trilha v13: Governança Estrutural & Hotspots Secundários (v13.0.0–v13.8.0)
 
 ### Tema

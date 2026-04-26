@@ -21,7 +21,7 @@ module.exports = {
   coverageReporters: ['text', 'text-summary'],
   collectCoverageFrom: [
     'assets/js/kc-constants.js',
-    'assets/js/kc-utils.js',
+    'assets/js/utils/kc-utils.js',
     'assets/js/kc-api.client.js',
     'assets/js/kc-filters.js',
     'assets/js/kc-ranking.js',
