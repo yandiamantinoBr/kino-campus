@@ -1,12 +1,12 @@
-﻿# Kino Campus - v10.0.0
+﻿# Kino Campus - v15.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V11.0-foundations`  
-**Status atual:** v11 concluída; v12 ENCERRADA (Jest 127/127 · 2647/2647 · Playwright 51/51 ✓); v13 ENCERRADA (Jest 134/134 · 3046/3046 · check:all ✓ · 4 hotspots eliminados ✓); **v14 ENCERRADA** (*Repository Structure Foundation*) — 68 arquivos JS movidos para subdirs (utils/, adapters/local/, adapters/supabase/, controllers/public/, controllers/admin/); 134 testes reorganizados em 5 subdirs; Lighthouse thresholds elevados para produção (perf error/0.80, a11y error/0.90); **v15 abrindo** (*Boot/Core/API moves — ES Modules exploração*)
+**Branch principal:** `kinocampus-V15.0-foundations`  
+**Status atual:** v11–v14 ENCERRADAS; **v15 em execução** (*JS Root Cleanup — mover 57 arquivos JS para boot/, core/, api/, features/, shared/; branch renomeada para kinocampus-V15.0-foundations*)
 
 ---
 
