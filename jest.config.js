@@ -1,7 +1,14 @@
 module.exports = {
   testEnvironment: 'jsdom',
   verbose: true,
-  testMatch: ['**/tests/**/*.test.js'],
+  testMatch: [
+    '**/tests/unit/**/*.test.js',
+    '**/tests/integration/**/*.test.js',
+    '**/tests/contract/**/*.test.js',
+    '**/tests/structure/**/*.test.js',
+    '**/tests/a11y/**/*.test.js',
+    '**/tests/e2e/**/*.test.js',
+  ],
   testPathIgnorePatterns: [
     '<rootDir>/\\.claude/',
   ],
