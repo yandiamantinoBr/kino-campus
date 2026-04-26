@@ -24,8 +24,8 @@ const errors = [];
 const warnings = [];
 
 const versionFiles = [
-  'assets/js/kc-env.js',
-  'assets/js/kc-api.client.js',
+  'assets/js/boot/kc-env.js',
+  'assets/js/api/kc-api.client.js',
   'assets/js/api/kc-supabase.client.js',
   'assets/js/core/kc-auth.ui.js',
   'assets/js/core/kc-profiles.client.js',
@@ -450,7 +450,7 @@ function runInlineHandlerChecks() {
 
 function runProfileContractChecks() {
   const profilesClient = read('assets/js/core/kc-profiles.client.js');
-  const apiClient = read('assets/js/kc-api.client.js');
+  const apiClient = read('assets/js/api/kc-api.client.js');
 
   const disallowedProfilesPatterns = [
     /\bemail\s*:\s*u\.email\b/,
@@ -467,7 +467,7 @@ function runProfileContractChecks() {
   });
 
   if (/\bemail\s*:\s*user\.email\b/.test(apiClient)) {
-    errors.push('assets/js/kc-api.client.js still persists email in the profile sync fallback');
+    errors.push('assets/js/api/kc-api.client.js still persists email in the profile sync fallback');
   }
 }
 
@@ -503,10 +503,10 @@ function runDeployInvariantChecks() {
     }
   }
 
-  const kcEnv = read('assets/js/kc-env.js');
+  const kcEnv = read('assets/js/boot/kc-env.js');
   ['__KC_SUPABASE_URL__', '__KC_SUPABASE_ANON_KEY__', '__KC_DRIVER__', '__KC_APP_ENV__'].forEach((token) => {
     if (!kcEnv.includes(token)) {
-      errors.push(`assets/js/kc-env.js is missing placeholder ${token}`);
+      errors.push(`assets/js/boot/kc-env.js is missing placeholder ${token}`);
     }
   });
 }

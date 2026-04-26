@@ -13,7 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const CLIENT_PATH = path.resolve(__dirname, '../../assets/js/kc-api.client.js');
+const CLIENT_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.client.js');
 const POSTS_READ_PATH = path.resolve(__dirname, '../../assets/js/api/kc-api.posts-read.js');
 
 describe('kc-api.posts-read.js — modulo IIFE e namespace', () => {
