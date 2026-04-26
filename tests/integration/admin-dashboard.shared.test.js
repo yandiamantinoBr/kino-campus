@@ -1,4 +1,4 @@
-const DashboardUtils = require('../../assets/js/controllers/admin-dashboard.shared.js');
+const DashboardUtils = require('../../assets/js/controllers/admin/admin-dashboard.shared.js');
 
 describe('KCAdminDashboardUtils', () => {
   test('canonicalizeTerm normaliza sinonimos e plural simples', () => {

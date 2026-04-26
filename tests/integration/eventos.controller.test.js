@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'eventos.controller.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'public', 'eventos.controller.js');
 
 function buildMinimalFeedFilters() {
   return {

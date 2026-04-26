@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'moradia.controller.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'public', 'moradia.controller.js');
 
 function buildMinimalKCAPI() {
   return {

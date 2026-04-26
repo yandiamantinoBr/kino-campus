@@ -6,8 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'profile.controller.js');
-const FLOW_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'profile.flow.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'public', 'profile.controller.js');
+const FLOW_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'public', 'profile.flow.js');
 
 describe('profile.controller — SWR / KCSessionStore contracts', () => {
   const controllerSource = fs.readFileSync(CONTROLLER_PATH, 'utf8');

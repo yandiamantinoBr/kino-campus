@@ -18,9 +18,9 @@ const fs   = require('fs');
 const path = require('path');
 
 const ROOT    = path.resolve(__dirname, '../..');
-const RENDER  = path.join(ROOT, 'assets/js/controllers/product.render.js');
-const LOAD    = path.join(ROOT, 'assets/js/controllers/product.load.js');
-const CTRL    = path.join(ROOT, 'assets/js/controllers/product.controller.js');
+const RENDER  = path.join(ROOT, 'assets/js/controllers/public/product.render.js');
+const LOAD    = path.join(ROOT, 'assets/js/controllers/public/product.load.js');
+const CTRL    = path.join(ROOT, 'assets/js/controllers/public/product.controller.js');
 const HTML    = path.join(ROOT, '_product.html');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

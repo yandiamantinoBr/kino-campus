@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('settings contact preview link hardening', () => {
   test('settings controller uses the shared canonical detail helper for contact preview', () => {
-    const source = read('assets/js/controllers/settings.controller.js');
+    const source = read('assets/js/controllers/public/settings.controller.js');
 
     expect(source).toContain('window.KCUtils.buildProductDetailHref');
     expect(source).toContain('function buildPreviewPostUrl()');

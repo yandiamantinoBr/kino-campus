@@ -3,11 +3,11 @@ const path = require('path');
 
 describe('product controller popover hardening', () => {
   const controllerSource = fs.readFileSync(
-    path.join(__dirname, '../../assets/js/controllers/product.controller.js'),
+    path.join(__dirname, '../../assets/js/controllers/public/product.controller.js'),
     'utf8'
   );
   const popoversSource = fs.readFileSync(
-    path.join(__dirname, '../../assets/js/controllers/product.popovers.js'),
+    path.join(__dirname, '../../assets/js/controllers/public/product.popovers.js'),
     'utf8'
   );
 

@@ -19,8 +19,8 @@ const fs   = require('fs');
 const path = require('path');
 
 const ROOT       = path.resolve(__dirname, '../..');
-const CONTROLLER = path.join(ROOT, 'assets/js/controllers/oportunidades.controller.js');
-const NORMALIZE  = path.join(ROOT, 'assets/js/controllers/oportunidades.normalize.js');
+const CONTROLLER = path.join(ROOT, 'assets/js/controllers/public/oportunidades.controller.js');
+const NORMALIZE  = path.join(ROOT, 'assets/js/controllers/public/oportunidades.normalize.js');
 const HTML_FILE  = path.join(ROOT, 'oportunidades.html');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

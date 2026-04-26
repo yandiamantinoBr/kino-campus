@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('admin banners access contract', () => {
   test('admin banners validates auth via KCAPI and profiles.is_admin without legacy cached profile fallbacks', () => {
-    const source = read('assets/js/controllers/admin-banners.controller.js');
+    const source = read('assets/js/controllers/admin/admin-banners.controller.js');
 
     expect(source).toContain('async function checkAdminAccess()');
     expect(source).toContain('window.KCAPI.getCurrentUser');

@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'my-posts.controller.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '..', '..', 'assets', 'js', 'controllers', 'public', 'my-posts.controller.js');
 
 describe('my-posts.controller — SWR / KCSessionStore contracts', () => {
   const source = fs.readFileSync(CONTROLLER_PATH, 'utf8');

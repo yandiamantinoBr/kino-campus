@@ -44,6 +44,8 @@ var REQUIRED_DIRS = [
   'assets',
   'assets/js',
   'assets/js/controllers',
+  'assets/js/controllers/public',
+  'assets/js/controllers/admin',
   'assets/js/adapters',
   'assets/js/adapters/local',
   'assets/js/adapters/supabase',

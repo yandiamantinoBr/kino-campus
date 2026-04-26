@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('account-setup social hydration hardening', () => {
   test('account-setup normalizes social state and hydrates visibility deterministically', () => {
-    const source = read('assets/js/controllers/account-setup.controller.js');
+    const source = read('assets/js/controllers/public/account-setup.controller.js');
 
     expect(source).toContain('const SOCIAL_VISIBILITY_KEYS = Object.freeze(');
     expect(source).toContain('const SOCIAL_INPUT_KEYS = Object.freeze(SOCIAL_VISIBILITY_KEYS.filter((key) => key !== \'whatsapp\'))');

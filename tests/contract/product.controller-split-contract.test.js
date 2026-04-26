@@ -7,8 +7,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONTROLLER_PATH = path.resolve(__dirname, '../../assets/js/controllers/product.controller.js');
-const LOAD_PATH       = path.resolve(__dirname, '../../assets/js/controllers/product.load.js');
+const CONTROLLER_PATH = path.resolve(__dirname, '../../assets/js/controllers/public/product.controller.js');
+const LOAD_PATH       = path.resolve(__dirname, '../../assets/js/controllers/public/product.load.js');
 const HTML_PATH       = path.resolve(__dirname, '../../_product.html');
 
 let controllerSource;
@@ -82,17 +82,17 @@ describe('product.controller.js - implementacoes extraidas nao permanecem inline
 
 describe('_product.html - ordem canonica dos scripts do split', () => {
   const orderedScripts = [
-    'assets/js/controllers/product.controller.js',
-    'assets/js/controllers/product.render.js',
-    'assets/js/controllers/product.load.js',
-    'assets/js/controllers/product.report.js',
-    'assets/js/controllers/product.related.js',
-    'assets/js/controllers/product.calendar.js',
-    'assets/js/controllers/product.save.js',
-    'assets/js/controllers/product.ratings.js',
-    'assets/js/controllers/product.edit.js',
-    'assets/js/controllers/product.analytics.js',
-    'assets/js/controllers/product.popovers.js',
+    'assets/js/controllers/public/product.controller.js',
+    'assets/js/controllers/public/product.render.js',
+    'assets/js/controllers/public/product.load.js',
+    'assets/js/controllers/public/product.report.js',
+    'assets/js/controllers/public/product.related.js',
+    'assets/js/controllers/public/product.calendar.js',
+    'assets/js/controllers/public/product.save.js',
+    'assets/js/controllers/public/product.ratings.js',
+    'assets/js/controllers/public/product.edit.js',
+    'assets/js/controllers/public/product.analytics.js',
+    'assets/js/controllers/public/product.popovers.js',
   ];
 
   test('carrega todos os sub-modulos com defer', () => {
