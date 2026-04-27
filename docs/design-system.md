@@ -1,5 +1,7 @@
 # KinoCampus — Design System
 
+**Versão:** v16.11.0 · **Atualizado em:** 2026-04-27 · *nota de versão adicionada; para arquitetura CSS completa ver `docs/architecture/css-architecture.md` (v16.10.0)*
+
 ## CSS Custom Properties
 
 Definidas em `assets/css/styles.css` no seletor `html[data-theme="dark"]` (modo escuro padrão):

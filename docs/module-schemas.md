@@ -1,5 +1,7 @@
 # KinoCampus - Schemas dos Modulos (`window._KCCreatePost.schema.modules`)
 
+**Versão:** v16.11.0 · **Atualizado em:** 2026-04-27 · *nota de versão adicionada; conteúdo sem alterações funcionais*
+
 ## Como funciona
 
 Cada modulo tem um schema em `assets/js/kc-create-post.schema.js`, dentro de `window._KCCreatePost.schema.modules`.

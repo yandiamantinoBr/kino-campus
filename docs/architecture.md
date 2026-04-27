@@ -6,18 +6,21 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
+> **Atualizado em v16.11.0** — contagens pós-V15 (reorganização completa de `assets/js/`).
+
 | Item | Quantidade atual |
 |------|------------------|
 | páginas HTML públicas na raiz | `17` |
 | páginas HTML administrativas | `5` |
 | total de páginas HTML | `22` |
-| arquivos JS em `assets/js` | `61` |
-| controllers em `assets/js/controllers` | `23` |
-| adapters em `assets/js/adapters` | `2` |
-| componentes em `assets/js/components` | `3` |
-| arquivos CSS em `assets/css` | `5` |
-| arquivos de teste em `tests` | `26` |
-| migrations em `supabase/migrations` | `77` |
+| módulos JS em `assets/js/` (13 grupos canônicos) | `~84` |
+| controllers em `assets/js/controllers/` (public + admin) | `41` |
+| adapters em `assets/js/adapters/` (local + supabase) | `19` |
+| componentes em `assets/js/components/` | `3` |
+| arquivos CSS em `assets/css/` (produção) | `5` |
+| suites de teste Jest em `tests/` | `134` |
+| testes Jest totais | `3046` |
+| suites E2E Playwright | `8` |
 
 ## Princípio estrutural
 
@@ -56,54 +59,37 @@ Em produção, o build `node scripts/inject-env.js` injeta os valores e força o
 
 ## Camadas do app
 
-### Camada 1 - bootstrap
+### Camada 1 - bootstrap (`assets/js/boot/`, 6 módulos)
 
-- `assets/js/kc-env.js`
+- `assets/js/boot/kc-constants.js`
+- `assets/js/boot/kc-env.js`
+- `assets/js/boot/kc-feature-flags.js`
+- `assets/js/boot/kc-sw-register.js`
+- `assets/js/boot/kc-telemetry.js`
+- `assets/js/boot/kc-theme-boot.js`
 - `assets/css/kc-theme-boot.css`
-- `assets/js/kc-theme-boot.js`
 
-### Camada 2 - core compartilhado
+### Camada 2 - utils e API (`assets/js/utils/` + `assets/js/api/`, 24 módulos)
 
-- `assets/js/kc-constants.js`
-- `assets/js/kc-utils.js`
-- `assets/js/kc-supabase.client.js`
-- `assets/js/kc-api.client.js`
-- `assets/js/kc-profiles.client.js`
+- `assets/js/utils/kc-utils.js` + sub-módulos `kc-utils.string.js`, `kc-utils.format.js`, `kc-utils.dom.js`, `kc-utils.identity.js`, `kc-utils.taxonomy.js`, `kc-utils.location.js`, `kc-utils.presentation.js`
+- `assets/js/api/kc-api.client.js` (fachada) + sub-módulos `kc-api.posts-feed.js`, `kc-api.posts-read.js`, `kc-api.posts-write.js`, `kc-api.auth.js`, `kc-api.profiles.js`, `kc-api.notifications.js`, `kc-api.comments-votes.js`, `kc-api.ratings.js`, `kc-api.related.js`, `kc-api.saved.js`, `kc-api.help.js`, `kc-supabase-facade.js`, `kc-i18n.js`
 
-### Camada 3 - features compartilhadas
+### Camada 3 - adapters (`assets/js/adapters/`, 19 módulos)
 
-- `assets/js/kc-auth.ui.js`
-- `assets/js/kc-create-post.js`
-- `assets/js/kc-comments.js`
-- `assets/js/kc-search.js`
-- `assets/js/kc-ranking.js`
-- `assets/js/kc-banners.js`
-- `assets/js/kc-lazy-loader.js`
-- `assets/js/kc-notifications.js`
-- `assets/js/admin-shell.js`
+- Local (8): `local.adapter.js`, `local.posts-read.adapter.js`, `local.posts-write.adapter.js`, `local.notifications.adapter.js`, `local.ratings.adapter.js`, `local.saved.adapter.js`, `local.profile.adapter.js`, `local.help.adapter.js`
+- Supabase (11): `supabase.adapter.js`, `supabase.posts-read.adapter.js`, `supabase.posts-write.adapter.js`, `supabase.profiles.adapter.js`, `supabase.notifications.adapter.js`, `supabase.comments.adapter.js`, `supabase.votes.adapter.js`, `supabase.saved.adapter.js`, `supabase.media.adapter.js`, `supabase.analytics.adapter.js`, `supabase.admin.adapter.js`
 
-### Camada 4 - controllers de página
+### Camada 4 - core e features compartilhadas (`assets/js/core/` + `assets/js/features/` + `assets/js/shared/`)
 
-Públicos:
+- Core (11): `kc-auth-callback.js`, `kc-auth.ui.js`, `kc-core.js`, `kc-core-widgets.js`, `kc-notifications.js`, `kc-post-model.js`, `kc-profiles.client.js`, `kc-public-shell.js`, `kc-theme.js`, `kc-user-posts.js`, `kc-supabase.client.js`
+- Features (17): `kc-create-post.js` + 6 sub-módulos; `kc-feed.controller.js`, `kc-search.shared.js`, `kc-lazy-loader.js`, outros
+- Shared (7): `kc-banners.js`, `kc-comments.shared.js`, `kc-ranking.js`, outros
 
-- `compra-venda-feed.controller.js`
-- `caronas-feed.controller.js`
-- `moradia.controller.js`
-- `eventos.controller.js`
-- `oportunidades.controller.js`
-- `achados-perdidos.controller.js`
-- `product.controller.js`
-- `profile.controller.js`
-- `my-posts.controller.js`
+### Camada 5 - controllers de página (`assets/js/controllers/`, 41 controllers)
 
-Admin:
+Públicos (31): um controller principal por página pública + auxiliares (`product.*.js` ×8, `profile.*.js` ×4)
 
-- `admin-dashboard.controller.js`
-- `admin-moderation.controller.js`
-- `admin-reports.controller.js`
-- `admin-banners.controller.js`
-- `admin-help-requests.controller.js`
-- `admin-invite.controller.js`
+Admin (10): `admin-dashboard.controller.js` + 3 auxiliares (`metrics`, `audit`, `charts`, `shared`) + `admin-moderation.controller.js`, `admin-reports.controller.js`, `admin-banners.controller.js`, `admin-help-requests.controller.js`, `admin-invite.controller.js`
 
 ## Fluxos principais
 
@@ -169,15 +155,17 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-| Área | Arquivo | Tamanho aprox. | Risco |
-|------|---------|----------------|-------|
-| adapter dominante | `assets/js/adapters/supabase.adapter.js` | `147.1 KB` | alto acoplamento com banco, RLS, RPCs e normalização |
-| detalhe de publicação | `assets/js/controllers/product.controller.js` | `138.7 KB` | UI crítica e muito estado compartilhado |
-| criação de publicação | `assets/js/kc-create-post.js` | `108.4 KB` | formulário central, schemas dinâmicos, upload, validação |
-| utilitários globais | `assets/js/kc-utils.js` | `96.2 KB` | impacto transversal amplo |
-| admin dashboard | `assets/js/controllers/admin-dashboard.controller.js` | `91.4 KB` | KPIs, ranking, audit log e export |
-| fachada de API | `assets/js/kc-api.client.js` | `90.8 KB` | compatibilidade entre drivers e contrato público |
-| design system global | `assets/css/styles.css` | `235.4 KB` | alto risco de regressão visual transversal |
+> **Atualizado em v16.11.0** — todos os monolitos abaixo foram decompostos entre v11 e v15.
+
+| Área | Arquivo principal | Status pós-V15 | Risco residual |
+|------|-----------------|----------------|---------------|
+| fachada de API | `assets/js/api/kc-api.client.js` (~2410L) | ✅ Decomposto em 11 sub-módulos `_KCAPI.*` | compatibilidade entre drivers e contrato público |
+| adapter Supabase | `assets/js/adapters/supabase/supabase.adapter.js` (~420L) | ✅ Decomposto em 11 sub-adapters `_KCSA.*` | acoplamento com banco, RLS, RPCs |
+| detalhe de publicação | `assets/js/controllers/public/product.controller.js` | ✅ Decomposto em 8 auxiliares `_KCProduct.*` | UI crítica e estado compartilhado |
+| criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
+| utilitários globais | `assets/js/utils/kc-utils.js` (~440L) | ✅ Decomposto em 7 sub-módulos `_KCU.*` | impacto transversal amplo |
+| admin dashboard | `assets/js/controllers/admin/admin-dashboard.controller.js` | ✅ Decomposto em 3 auxiliares `_KCAD.*` | KPIs, ranking, audit log e export |
+| design system global | `assets/css/styles.css` (~10.582L) | ⚠️ Monolito preservado (stubs em `future-split/`) | alto risco de regressão visual transversal |
 
 ## Arquitetura CSS
 
@@ -201,5 +189,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 
 ## Observações de baseline
 
-- O repositório já está funcionalmente na linha `v10`, mas ainda carrega artefatos de versionamento embutido em `8.6.0` dentro de parte do frontend.
-- A v11 começa pela correção de drift documental e pela explicitação desses pontos antes de qualquer refactor de alto risco.
+- **v16.11.0 (2026-04-27):** contagens e caminhos atualizados para refletir a estrutura pós-V15 (13 grupos canônicos, 41 controllers, 19 adapters, 134 suites). Monolitos técnicos decompostos entre v11–v15.
+- `frontendRuntimeVersion` permanece em `8.6.0` (constante canônica imutável).
+- Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.
