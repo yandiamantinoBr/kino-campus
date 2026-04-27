@@ -57,6 +57,7 @@ var REQUIRED_DIRS = [
   'assets/js/features',
   'assets/js/features/create-post',
   'assets/js/shared',
+  'assets/js/components',
   'assets/css',
   'assets/css/future-split',
   'scripts',
@@ -159,6 +160,10 @@ var CANONICAL_JS = [
   'assets/js/shared/search-analytics.shared.js',
   // legacy-shims/
   'assets/js/legacy-shims/kc-migrate.myposts.js',
+  // components/
+  'assets/js/components/carousel.js',
+  'assets/js/components/toast.js',
+  'assets/js/components/voting.js',
 ];
 
 // ── Scripts de manutenção ─────────────────────────────────────────────────────
