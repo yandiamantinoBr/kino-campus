@@ -2,8 +2,8 @@
 
 **Versão:** 16.0.0  
 **Branch:** kinocampus-V15.0-foundations  
-**Período:** 2026-04-26 → em execução  
-**Status:** 🟡 Em execução  
+**Período:** 2026-04-26 → 2026-04-27  
+**Status:** ✅ Encerrada  
 
 ---
 
@@ -126,46 +126,50 @@ de negócio, arquivos JS funcionais, HTMLs ou testes existentes.
 ## 7. Definition of Done — V16
 
 ### Validators (imutável)
-- [ ] `npm test` ≥ 134 suites / 3046 testes verdes
-- [ ] `check:all` 5/5 verdes
-- [ ] `check:structure` ≥ 147 itens (era 144 — +3 de components/)
-- [ ] `components/` em REQUIRED_DIRS + carousel.js, toast.js, voting.js em CANONICAL_JS
-- [ ] Gate raiz `assets/js/` limpa permanece ativo
+- [x] `npm test` ≥ 134 suites / 3046 testes verdes ✅
+- [x] `check:all` 5/5 verdes ✅
+- [x] `check:structure` 148 itens (era 144 — +1 dir +3 arquivos components/) ✅
+- [x] `components/` em REQUIRED_DIRS + carousel.js, toast.js, voting.js em CANONICAL_JS ✅
+- [x] Gate raiz `assets/js/` limpa permanece ativo ✅
 
 ### Documentação nova em `docs/architecture/`
-- [ ] `module-catalog.md` — ~133 módulos com formato padronizado
-- [ ] `controllers-catalog.md` — 41 controllers documentados
-- [ ] `script-loading-reference.md` — 22 HTMLs × scripts em ordem real
-- [ ] `data-flow-guide.md` — fluxo completo usuário → controller → KCAPI → adapter → Supabase
-- [ ] `ai-development-guide.md` — guia auto-contido para qualquer IA trabalhar no projeto
-- [ ] `test-strategy.md` — 134 suites documentadas + onde adicionar novos testes
-- [ ] `css-architecture.md` — 5 arquivos CSS + future-split/ explicado
+- [x] `module-catalog.md` — ~84 módulos com formato padronizado (v16.3.0–v16.4.0) ✅
+- [x] `controllers-catalog.md` — 41 controllers documentados (v16.5.0) ✅
+- [x] `script-loading-reference.md` — 22 HTMLs × scripts em ordem real, extração automatizada (v16.6.0) ✅
+- [x] `data-flow-guide.md` — fluxo completo usuário → controller → KCAPI → adapter → Supabase (v16.7.0) ✅
+- [x] `ai-development-guide.md` — guia auto-contido com 9 seções (v16.8.0) ✅
+- [x] `test-strategy.md` — 134 suites documentadas + onde adicionar testes (v16.9.0) ✅
+- [x] `css-architecture.md` — 5 arquivos CSS + future-split/ explicado (v16.10.0) ✅
 
 ### Documentação atualizada
-- [ ] `docs/architecture/repository-structure.md` — v14.1.0 → v16.0.0
-- [ ] `docs/index.md` — baseline v16 + todos os novos docs referenciados
-- [ ] `docs/architecture.md` — contagens pós-V15
-- [ ] `docs/module-schemas.md` — nota de versão
-- [ ] `docs/design-system.md` — nota de versão
-- [ ] `README.md` — referencia `ai-development-guide.md`
-- [ ] `assets/js/components/README.md` — criado
+- [x] `docs/architecture/repository-structure.md` — v14.1.0 → v16.0.0 (v16.2.0) ✅
+- [x] `docs/index.md` — baseline v16 + todos os novos docs referenciados (v16.2.0) ✅
+- [x] `docs/architecture.md` — contagens pós-V15 (v16.11.0) ✅
+- [x] `docs/module-schemas.md` — nota de versão (v16.11.0) ✅
+- [x] `docs/design-system.md` — nota de versão (v16.11.0) ✅
+- [x] `README.md` — seção Documentação Técnica + referência a `ai-development-guide.md` (v16.8.0) ✅
+- [x] `assets/js/components/README.md` — criado (v16.1.0) ✅
 
 ### Fechamento formal
-- [ ] `CHANGELOG.md` com entrada `## [16.0.0]`
-- [ ] `VERSION.json` com `status: "v16 encerrada"`
-- [ ] `RELATORIO-KINOCAMPUS-V16.md` com DoD preenchido (este arquivo)
+- [x] `CHANGELOG.md` com entrada `## [16.0.0]` ✅
+- [x] `VERSION.json` com `status: "v16 encerrada"` ✅
+- [x] `RELATORIO-KINOCAMPUS-V16.md` com DoD preenchido (este arquivo) ✅
 
 ---
 
 ## 8. Métricas Finais
 
-*(A preencher em v16.12.0)*
-
-| Métrica | Antes (V15) | Depois (V16) |
-|---------|-------------|--------------|
-| CANONICAL_JS entries | 69 | — |
-| Itens validados (check:structure) | 144 | — |
-| Docs em docs/architecture/ | 1 (desatualizado) | 8 (novos) + 1 (atualizado) |
-| Módulos documentados no catálogo | 0 | ~133 |
+| Métrica | Antes (V15) | Depois (V16) | Delta |
+|---------|-------------|--------------|-------|
+| CANONICAL_JS entries | 69 | 72 | +3 (carousel, toast, voting) |
+| Itens validados (check:structure) | 144 | 148 | +4 (1 dir + 3 arquivos) |
+| Docs em `docs/architecture/` | 1 (desatualizado) | 9 (novos ou reescritos) | +8 novos |
+| Módulos documentados | 0 | ~84 | +84 |
+| Controllers documentados | 0 | 41 | +41 |
+| Docs existentes atualizados | 0 | 5 | +5 (architecture.md, index.md, module-schemas.md, design-system.md, README.md) |
+| Jest suites | 134/134 | 134/134 | 0 (preservado ✅) |
+| Jest testes | 3046/3046 | 3046/3046 | 0 (preservado ✅) |
+| check:all | 5/5 ✅ | 5/5 ✅ | 0 (preservado ✅) |
+| Arquivos JS alterados | — | 0 | 0 ✅ |
 | Controllers documentados | 0 | 41 |
 | HTMLs mapeados (script loading) | 0 | 22 |

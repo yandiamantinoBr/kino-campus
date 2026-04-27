@@ -2,10 +2,42 @@
 
 ---
 
-## [Unreleased] — v16 em execução
+## [16.0.0] - 2026-04-27 — Trilha v16: Mapeamento Completo + Guia de IA (v16.0.0–v16.12.0)
 
-Mapeamento completo da plataforma + guia de comportamento para IA.
-13 iterações planejadas · 0 arquivos JS alterados · escopo: documentação + correção de validators.
+### Tema
+
+Documentação exaustiva da plataforma e guia de comportamento para IA. 13 iterações,
+zero arquivos JS alterados, zero testes quebrados.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v16.0.0 | Abertura: `RELATORIO-KINOCAMPUS-V16.md`, `VERSION.json 16.0.0`, `README.md` status v16 |
+| v16.1.0 | Fix validator: `components/` em `REQUIRED_DIRS` + `CANONICAL_JS`; `assets/js/components/README.md` |
+| v16.2.0 | `docs/architecture/repository-structure.md` reescrito de v14.1.0 para v16.0.0; `docs/index.md` baseline v16 |
+| v16.3.0 | `docs/architecture/module-catalog.md` Parte 1 — boot (6), core (11), api (16), utils (8) |
+| v16.4.0 | `docs/architecture/module-catalog.md` Parte 2 — features, shared, adapters, components; Apêndices A+B |
+| v16.5.0 | `docs/architecture/controllers-catalog.md` — 41 controllers (31 público + 10 admin) |
+| v16.6.0 | `docs/architecture/script-loading-reference.md` — 22 HTMLs × scripts em ordem real (extração automatizada) |
+| v16.7.0 | `docs/architecture/data-flow-guide.md` — fluxo completo usuário → controller → KCAPI → adapter → Supabase |
+| v16.8.0 | `docs/architecture/ai-development-guide.md` — guia auto-contido para IA (9 seções); `README.md` seção Docs Técnica |
+| v16.9.0 | `docs/architecture/test-strategy.md` — 134 suites documentadas, filosofia, onde adicionar testes |
+| v16.10.0 | `docs/architecture/css-architecture.md` — 5 arquivos CSS + `future-split/` explicado |
+| v16.11.0 | `docs/architecture.md` atualizado (41 controllers, 19 adapters, 134/3046 testes, caminhos pós-V15) |
+| v16.12.0 | Release gate: `CHANGELOG.md` formal, `VERSION.json` encerrada, `RELATORIO-KINOCAMPUS-V16.md` DoD preenchido |
+
+### Métricas
+
+| Métrica | Antes (V15) | Depois (V16) |
+|---------|-------------|--------------|
+| CANONICAL_JS entries | 69 | 72 |
+| Itens validados (check:structure) | 144 | 148 |
+| Docs em `docs/architecture/` | 1 (desatualizado) | 9 (novos ou reescritos) |
+| Módulos documentados | 0 | ~84 |
+| Controllers documentados | 0 | 41 |
+| Jest | 134/134 · 3046/3046 | 134/134 · 3046/3046 (preservado) |
+| check:all | 5/5 ✅ | 5/5 ✅ (preservado) |
 
 ---
 

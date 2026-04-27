@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V15.0-foundations`  
-**Status atual:** v11–v15 ENCERRADAS ✅ — *V16 em execução: Mapeamento completo + Guia de IA — 13 iterações · 0 arquivos JS alterados*
+**Status atual:** v11–v16 ENCERRADAS ✅ — *V16 encerrada: Mapeamento completo + Guia de IA — 13 iterações · 0 arquivos JS alterados · 9 docs novos em `docs/architecture/`*
 
 ---
 
