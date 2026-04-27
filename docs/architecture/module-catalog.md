@@ -1092,3 +1092,1228 @@ acesso que outros módulos devem usar.
 
 **Observações:** `window.KCUtils.escapeHtml()` é **obrigatório** antes de qualquer
 `el.innerHTML = userContent`. O check:hygiene valida usos inline de `innerHTML` sem escapeHtml.
+
+---
+
+## Grupo features/
+
+> **Features de interface.** Módulos que implementam funcionalidades específicas da UX:
+> busca, comentários, ranking, filtros, banners, etc. Carregados após boot, utils e KCAPI.
+
+---
+
+### `features/kc-comments.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCComments` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `_product.html` e páginas de feed com comentários habilitados |
+
+**Responsabilidade:** Sistema completo de comentários: renderiza a thread de comentários de um
+post, gerencia criação/deleção, paginação de comentários, e integração com o sistema de votos
+em comentários. Usa Realtime do Supabase para comentários ao vivo.
+
+**Exports públicos:**
+- `window.KCComments.init(postId, container)` — inicializa thread
+- `window.KCComments.refresh()` — recarrega comentários
+- `window.KCComments.destroy()` — limpa listeners e estado
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCUtils`, `window.KCAPI`,
+`window.KCSupabase`
+
+**Consumido por:** Controller de produto
+
+**Testes:** `tests/integration/kc-comments-session.test.js`,
+`tests/integration/kc-comments-shadow-cleanup.test.js`,
+`tests/integration/kc-comments.shared.test.js`
+
+---
+
+### `features/kc-search.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCSearch` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `search-results.html` |
+
+**Responsabilidade:** Feature de busca global: processa query de busca, exibe resultados
+paginados com highlight de termos, gerencia histórico de busca e analytics de busca.
+
+**Exports públicos:**
+- `window.KCSearch.init(query)` — inicializa com query da URL
+- `window.KCSearch.search(query)` — executa nova busca
+- `window.KCSearch.loadMore()` — paginação de resultados
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCUtils`, `window.KCAPI`,
+`window.KCSearchShared`
+
+**Consumido por:** Controller de search-results.html
+
+**Testes:** `tests/integration/kc-search.shared.test.js`
+
+---
+
+### `features/kc-search-modal.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCSearchModal` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Todas as páginas públicas (via kc-public-shell) |
+
+**Responsabilidade:** Modal de busca rápida acessível pelo header. Exibe sugestões em tempo
+real enquanto o usuário digita, histórico de buscas recentes, e navega para search-results.html
+ao submeter.
+
+**Exports públicos:**
+- `window.KCSearchModal.open()` — abre o modal
+- `window.KCSearchModal.close()` — fecha o modal
+- `window.KCSearchModal.getSuggestions(q)` — busca sugestões
+
+**Dependências em runtime:** `window.KCUtils`, `window.KCAPI`, `window.KCSearchShared`
+
+**Consumido por:** kc-public-shell (liga o botão de busca ao modal)
+
+**Testes:** `tests/integration/kc-search.shared.test.js`
+
+---
+
+### `features/kc-ranking.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCRanking` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas de feed (sidebar de ranking) |
+
+**Responsabilidade:** Widget de ranking de contribuidores: busca top contributors por período
+e módulo, renderiza a lista com avatars e contagens, e atualiza periodicamente.
+
+**Exports públicos:**
+- `window.KCRanking.init(container, module)` — inicializa widget
+- `window.KCRanking.refresh(period)` — atualiza dados (mês/semana/todo)
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCUtils`, `window.KCAPI`
+
+**Consumido por:** Controllers de feed
+
+**Testes:** `tests/unit/kc-ranking.test.js`, `tests/integration/kc-ranking-session.test.js`,
+`tests/structure/kc-ranking-markup.test.js`
+
+---
+
+### `features/kc-filters.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCFilters` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas de feed com filtros |
+
+**Responsabilidade:** Sistema de filtros genérico: gerencia estado de filtros ativos (módulo,
+localização, tipo, data), gera query params para URL, e dispara re-fetch do feed ao aplicar.
+
+**Exports públicos:**
+- `window.KCFilters.init(container)` — inicializa UI de filtros
+- `window.KCFilters.getActive()` — retorna filtros ativos
+- `window.KCFilters.reset()` — limpa todos os filtros
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCUtils`, `window._KCU_loc`
+
+**Consumido por:** kc-feed-filters, controllers de feed
+
+**Testes:** `tests/unit/kc-filters.test.js`
+
+---
+
+### `features/kc-feed-filters.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCFeedFilters` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `index.html`, páginas de feed temático |
+
+**Responsabilidade:** Filtros específicos de feeds: combinação de KCFilters com UI de chips de
+filtro e integração com o cursor de feed. Persiste filtros na URL (query params) e no
+sessionStorage.
+
+**Exports públicos:**
+- `window.KCFeedFilters.init(feedEl)` — inicializa
+- `window.KCFeedFilters.applyFilter(key, value)` — aplica filtro específico
+- `window.KCFeedFilters.getParams()` — retorna params para KCAPI.getFeedCursor
+
+**Dependências em runtime:** `window.KCFilters`, `window.KCUtils`, `window.KC_CONSTANTS`
+
+**Consumido por:** Controllers de feed
+
+**Testes:** `tests/unit/kc-feed-filters.test.js`
+
+---
+
+### `features/kc-banners.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCBanners` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `index.html`, páginas de feed temático |
+
+**Responsabilidade:** Busca e gerencia os dados dos banners promocionais do hero carousel.
+Fornece os banners ativos via KCAPI e os entrega ao `carousel.js` para exibição.
+
+**Exports públicos:**
+- `window.KCBanners.load(module)` — carrega banners do módulo
+- `window.KCBanners.getActive()` — retorna banners ativos
+- `window.KCBanners.refresh()` — atualiza banners
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCAPI`
+
+**Consumido por:** Controllers de feed (inicializa o carousel com os dados)
+
+**Testes:** `tests/integration/kc-banners.test.js`
+
+---
+
+### `features/kc-home-categories.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCHomeCategories` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `index.html` |
+
+**Responsabilidade:** Renderiza a grade de categorias (6 módulos temáticos) na home com
+contagem de posts ativos, ícones e links. Atualiza as contagens periodicamente.
+
+**Exports públicos:**
+- `window.KCHomeCategories.init(container)` — renderiza grade
+- `window.KCHomeCategories.refresh()` — atualiza contagens
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCUtils`, `window.KCAPI`,
+`window.KCHomeCategoriesShared`
+
+**Consumido por:** Controller de index.html
+
+**Testes:** `tests/integration/home-categories.shared.test.js`
+
+---
+
+### `features/kc-lazy-loader.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCLazyLoader` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Todas as páginas com imagens de feed |
+
+**Responsabilidade:** Carregamento lazy de imagens via Intersection Observer. Substitui `src`
+de `<img data-lazy-src="...">` ao entrar no viewport, com placeholder e skeleton loading.
+
+**Exports públicos:**
+- `window.KCLazyLoader.init(root)` — inicializa observer
+- `window.KCLazyLoader.observe(img)` — observa imagem específica
+- `window.KCLazyLoader.disconnect()` — para o observer
+
+**Dependências em runtime:** `window.KC_CONSTANTS`
+
+**Consumido por:** Controllers de feed (após renderizar cards)
+
+**Testes:** `tests/unit/lazy-loader.test.js`
+
+---
+
+### `features/kc-pull-to-refresh.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCPullToRefresh` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas de feed (mobile) |
+
+**Responsabilidade:** Gesto de pull-to-refresh para atualizar o feed em dispositivos móveis.
+Detecta o gesto de arrastar para baixo no topo da lista e dispara o reload do feed.
+
+**Exports públicos:**
+- `window.KCPullToRefresh.init(container, onRefresh)` — inicializa gesto
+- `window.KCPullToRefresh.destroy()` — remove listeners
+
+**Dependências em runtime:** `window.KC_CONSTANTS`
+
+**Consumido por:** Controllers de feed
+
+**Testes:** `tests/integration/ios-gesture-hardening.test.js`
+
+---
+
+## Grupo features/create-post/
+
+> **Feature isolada de criação de publicações.** 7 módulos colaborativos carregados exclusivamente
+> em `create-post.html`. O orchestrador é `kc-create-post.js`.
+
+---
+
+### `features/create-post/kc-create-post.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features/create-post |
+| Namespace | `window.KCCreatePost` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `create-post.html` (exclusivo) |
+
+**Responsabilidade:** Orchestrador do formulário de criação: inicializa os submódulos, gerencia
+o estado global do formulário (módulo selecionado, campos preenchidos, mídia), e coordena
+a submissão.
+
+**Exports públicos:**
+- `window.KCCreatePost.init()` — inicializa o formulário completo
+- `window.KCCreatePost.getState()` — retorna estado atual
+- `window.KCCreatePost.reset()` — reseta o formulário
+
+**Dependências em runtime:** Todos os submódulos KCCreatePost.*, `window.KCAPI`, `window.KCUtils`
+
+**Consumido por:** Controller de create-post.html
+
+**Testes:** `tests/integration/create-post.controller.test.js`,
+`tests/contract/kc-create-post-contract.test.js`
+
+---
+
+### `features/create-post/kc-create-post.schema.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features/create-post |
+| Namespace | `window.KCCreatePostSchema` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | `create-post.html` (exclusivo) |
+
+**Responsabilidade:** Schema de validação por módulo: define quais campos são obrigatórios,
+opcionais, seus tipos, limites de caracteres e regras de validação para cada um dos 6 módulos.
+
+**Exports públicos:**
+- `window.KCCreatePostSchema.get(module)` — retorna schema do módulo
+- `window.KCCreatePostSchema.validate(module, data)` — valida dados
+
+**Dependências em runtime:** `window.KC_CONSTANTS`
+
+**Consumido por:** `kc-create-post.js`, `kc-create-post.submit.js`
+
+**Testes:** `tests/integration/kc-create-post-schema.test.js`
+
+---
+
+### `features/create-post/kc-create-post.fields.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features/create-post |
+| Namespace | `window.KCCreatePostFields` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `create-post.html` (exclusivo) |
+
+**Responsabilidade:** Definição e gerenciamento dos campos do formulário por módulo: campo de
+título, descrição, preço, localização, categoria — cada módulo ativa campos diferentes.
+
+**Exports públicos:**
+- `window.KCCreatePostFields.getFields(module)` — lista de campos do módulo
+- `window.KCCreatePostFields.getValue(fieldName)` — lê valor de campo
+- `window.KCCreatePostFields.setValue(fieldName, value)` — define valor
+
+**Dependências em runtime:** `window.KCCreatePostSchema`, `window.KC_CONSTANTS`
+
+**Consumido por:** `kc-create-post.js`, `kc-create-post.render.js`
+
+**Testes:** `tests/integration/kc-create-post-fields.test.js`,
+`tests/integration/kc-create-post-active-fields.test.js`
+
+---
+
+### `features/create-post/kc-create-post.render.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features/create-post |
+| Namespace | `window.KCCreatePostRender` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `create-post.html` (exclusivo) |
+
+**Responsabilidade:** Renderização dinâmica do formulário: gera HTML dos campos com base no
+módulo selecionado, aplica validação visual em tempo real, e atualiza o preview do post.
+
+**Exports públicos:**
+- `window.KCCreatePostRender.renderForm(module, container)` — renderiza form
+- `window.KCCreatePostRender.renderPreview(data)` — atualiza preview
+- `window.KCCreatePostRender.showFieldError(field, msg)` — exibe erro
+
+**Dependências em runtime:** `window.KCCreatePostFields`, `window.KCUtils`
+
+**Consumido por:** `kc-create-post.js`
+
+**Testes:** `tests/integration/kc-create-post-render.test.js`
+
+---
+
+### `features/create-post/kc-create-post.media.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features/create-post |
+| Namespace | `window.KCCreatePostMedia` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `create-post.html` (exclusivo) |
+
+**Responsabilidade:** Upload e preview de mídia (imagens): seleção de arquivo, compressão
+client-side antes do upload, preview imediato, remoção de imagens e integração com o Storage
+do Supabase.
+
+**Exports públicos:**
+- `window.KCCreatePostMedia.init(container)` — inicializa área de upload
+- `window.KCCreatePostMedia.getFiles()` — retorna arquivos selecionados
+- `window.KCCreatePostMedia.uploadAll()` — faz upload de todas as imagens
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCUtils`, `window.KCAPI`
+
+**Consumido por:** `kc-create-post.js`, `kc-create-post.submit.js`
+
+**Testes:** `tests/integration/kc-create-post-media.test.js`,
+`tests/unit/image-compression.test.js`
+
+---
+
+### `features/create-post/kc-create-post.resolvers.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features/create-post |
+| Namespace | `window.KCCreatePostResolvers` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | `create-post.html` (exclusivo) |
+
+**Responsabilidade:** Resolvers de campos dinâmicos: lógica específica de cada módulo para
+campos especiais (ex: campo de rota de carona, número de vagas, tipo de oportunidade). Isola
+a lógica de negócio dos campos do renderer.
+
+**Exports públicos:**
+- `window.KCCreatePostResolvers.resolve(module, field, context)` — resolve campo
+- `window.KCCreatePostResolvers.getOptions(module, field)` — opções de select
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCCreatePostSchema`
+
+**Consumido por:** `kc-create-post.fields.js`
+
+**Testes:** `tests/integration/kc-create-post-resolvers.test.js`,
+`tests/unit/kc-utils-resolvers.test.js`
+
+---
+
+### `features/create-post/kc-create-post.submit.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features/create-post |
+| Namespace | `window.KCCreatePostSubmit` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `create-post.html` (exclusivo) |
+
+**Responsabilidade:** Submissão e validação final do formulário: coleta todos os campos, valida
+pelo schema, faz upload das mídias pendentes, chama `KCAPI.createPost()`, e redireciona para
+o post criado após sucesso.
+
+**Exports públicos:**
+- `window.KCCreatePostSubmit.submit()` — executa submissão completa
+- `window.KCCreatePostSubmit.validate()` — apenas valida sem submeter
+
+**Dependências em runtime:** `window.KCCreatePostSchema`, `window.KCCreatePostFields`,
+`window.KCCreatePostMedia`, `window.KCAPI`, `window.KCUtils`
+
+**Consumido por:** `kc-create-post.js`
+
+**Testes:** `tests/integration/kc-create-post-submit.test.js`,
+`tests/integration/compra-venda-ingressos.test.js`
+
+---
+
+## Grupo shared/
+
+> **Módulos compartilhados.** Estado e lógica compartilhados entre controllers de páginas
+> diferentes. Carregados nas páginas que precisam do estado compartilhado.
+
+---
+
+### `shared/account-profile.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | shared |
+| Namespace | `window.KCAccountProfile` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `profile.html`, `account-setup.html`, `settings.html` |
+
+**Responsabilidade:** Estado compartilhado de perfil de conta entre as páginas de perfil e
+configurações: dados do usuário logado, preferências, histórico de publicações e coleções.
+
+**Exports públicos:**
+- `window.KCAccountProfile.get()` — retorna dados do perfil atual
+- `window.KCAccountProfile.set(data)` — atualiza estado
+- `window.KCAccountProfile.clear()` — limpa estado
+
+**Dependências em runtime:** `window.KCAPI`, `window.KCUtils`
+
+**Consumido por:** Controllers de profile, account-setup, settings
+
+**Testes:** `tests/integration/account-profile.shared.test.js`
+
+---
+
+### `shared/help.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | shared |
+| Namespace | `window.KCHelpShared` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `ajuda.html`, páginas admin de help-requests |
+
+**Responsabilidade:** Dados e lógica compartilhados do módulo de ajuda: categorias de ajuda,
+estados possíveis de tickets, formatação de pedidos de ajuda.
+
+**Exports públicos:**
+- `window.KCHelpShared.getCategories()` — categorias de ajuda
+- `window.KCHelpShared.formatRequest(req)` — formata pedido para exibição
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCUtils`
+
+**Consumido por:** Controllers de ajuda.html e admin/help-requests.html
+
+**Testes:** `tests/integration/help.shared.test.js`
+
+---
+
+### `shared/home-categories.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | shared |
+| Namespace | `window.KCHomeCategoriesShared` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `index.html` |
+
+**Responsabilidade:** Dados compartilhados das categorias da home: configuração das 6 categorias
+(ícone, label, cor, rota) usada tanto pelo widget KCHomeCategories quanto pelo controller da home.
+
+**Exports públicos:**
+- `window.KCHomeCategoriesShared.getAll()` — todas as categorias com metadados
+
+**Dependências em runtime:** `window.KC_CONSTANTS`, `window._KCU_tax`
+
+**Consumido por:** `features/kc-home-categories.js`, controller de index.html
+
+**Testes:** `tests/integration/home-categories.shared.test.js`
+
+---
+
+### `shared/kc-comments.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | shared |
+| Namespace | `window.KCCommentsShared` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas que usam comentários |
+
+**Responsabilidade:** Estado e lógica compartilhados de comentários: cache de comentários já
+carregados, estado de edição em andamento, e helpers de formatação de comentários.
+
+**Exports públicos:**
+- `window.KCCommentsShared.cache` — cache de comentários por postId
+- `window.KCCommentsShared.formatComment(c)` — formata comentário
+
+**Dependências em runtime:** `window.KCUtils`
+
+**Consumido por:** `features/kc-comments.js`
+
+**Testes:** `tests/integration/kc-comments.shared.test.js`
+
+---
+
+### `shared/kc-search.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | shared |
+| Namespace | `window.KCSearchShared` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `search-results.html`, header (via kc-search-modal) |
+
+**Responsabilidade:** Estado compartilhado de busca: histórico de buscas recentes, query atual,
+filtros de busca ativos. Persiste histórico no localStorage.
+
+**Exports públicos:**
+- `window.KCSearchShared.getHistory()` — histórico de buscas
+- `window.KCSearchShared.addToHistory(q)` — adiciona ao histórico
+- `window.KCSearchShared.getCurrentQuery()` — query atual da URL
+
+**Dependências em runtime:** `window.KC_CONSTANTS`
+
+**Consumido por:** `features/kc-search.js`, `features/kc-search-modal.js`
+
+**Testes:** `tests/integration/kc-search.shared.test.js`
+
+---
+
+### `shared/ods.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | shared |
+| Namespace | `window.KCODSShared` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | `ods.html` |
+
+**Responsabilidade:** Dados compartilhados dos ODS (Objetivos de Desenvolvimento Sustentável):
+mapeamento dos 17 ODS com ícones, cores e descrições, e integração com os módulos temáticos.
+
+**Exports públicos:**
+- `window.KCODSShared.getAll()` — todos os 17 ODS
+- `window.KCODSShared.getByModule(module)` — ODS do módulo
+
+**Dependências em runtime:** `window.KC_CONSTANTS`
+
+**Consumido por:** Controller de ods.html
+
+**Testes:** `tests/integration/ods.shared.test.js`
+
+---
+
+### `shared/search-analytics.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | shared |
+| Namespace | `window.KCSearchAnalytics` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `search-results.html` |
+
+**Responsabilidade:** Analytics de busca: registra buscas realizadas, cliques em resultados,
+e CTR (click-through rate). Compartilhado entre kc-search.js e o controller de resultados.
+
+**Exports públicos:**
+- `window.KCSearchAnalytics.trackSearch(q, resultCount)` — registra busca
+- `window.KCSearchAnalytics.trackClick(postId, position)` — registra clique
+
+**Dependências em runtime:** `window.KCAPI`
+
+**Consumido por:** `features/kc-search.js`, controller de search-results.html
+
+**Testes:** `tests/integration/search-analytics.shared.test.js`
+
+---
+
+## Grupo legacy-shims/
+
+> **Shims de migração assistida.** Arquivos com caráter transitório. Removidos quando a
+> migração for concluída.
+
+---
+
+### `legacy-shims/kc-migrate.myposts.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | legacy-shims |
+| Namespace | *(sem namespace global)* |
+| Padrão | Script imperativo IIFE (766 linhas) |
+| Páginas | `my-posts.html` (durante migração) |
+
+**Responsabilidade:** Migração assistida do módulo "minhas publicações" de formato antigo
+(localStorage v1) para o novo formato (Supabase + formato v2). Executa uma vez por usuário
+e marca a migração como concluída.
+
+**Exports públicos:** Nenhum (efeito colateral puro)
+
+**Dependências em runtime:** `window.KC_ENV`, `window.KCAPI`, `window.KCUtils`
+
+**Consumido por:** *(carregado pelo HTML apenas enquanto necessário)*
+
+**Testes:** Coberto indiretamente por `tests/integration/local-adapter.test.js`
+
+**Observações:** Arquivo isolado em `legacy-shims/` para indicar caráter transitório.
+Removível quando toda a base de usuários tiver migrado.
+
+---
+
+## Grupo components/
+
+> **Componentes UI reutilizáveis.** Carregados via `<script defer>` após KCAPI e core.
+> Não expõem namespace `window.*` — usam funções/variáveis globais de módulo.
+
+---
+
+### `components/carousel.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | components |
+| Namespace | *(funções globais: `showSlide`, `changeSlide`, `goToSlide`, `refreshHeroCarousel`)* |
+| Padrão | Funções globais (sem IIFE explícita) |
+| Páginas | `index.html`, `_product.html`, e todas as páginas de feed temático |
+
+**Responsabilidade:** Hero carousel de banners promocionais: controla slides, auto-rotação
+temporizada, navegação por botões e swipe, e indicadores de posição.
+
+**Dependências em runtime:** `window.KC_ENV` (detecta driver)
+
+**Consumido por:** `features/kc-banners.js` (fornece dados), controllers de feed (inicializa)
+
+**Testes:** Coberto por `tests/integration/kc-banners.test.js`
+
+---
+
+### `components/toast.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | components |
+| Namespace | *(função global: `showToast(message, type, duration)`)* |
+| Padrão | Função global |
+| Páginas | Todas as páginas públicas e admin |
+
+**Responsabilidade:** Notificações toast (snackbar) temporárias para feedback de ações do
+usuário. Tipos: `'success'`, `'error'`, `'warning'`, `'info'`. Auto-desaparece após `duration` ms.
+
+**Dependências em runtime:** Nenhuma (CSS puro para animação)
+
+**Consumido por:** Todos os controllers (após ações de escrita ou erro)
+
+**Testes:** Coberto indiretamente por controllers tests
+
+---
+
+### `components/voting.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | components |
+| Namespace | *(variáveis de módulo: `kcVotesRealtimeChannel`, timers)* |
+| Padrão | Variáveis de módulo globais |
+| Páginas | `index.html`, `_product.html`, páginas de feed |
+
+**Responsabilidade:** Sistema de votos (upvote/downvote) em publicações com sincronização via
+Supabase Realtime ou polling de fallback. Persiste votos da sessão no `KCSessionStore`.
+
+**Dependências em runtime:** `window.KCSupabase`, `window.KCAPI`, `window.KCSessionStore`
+
+**Consumido por:** Controllers de feed e produto (renderizam os botões de voto)
+
+**Testes:** Coberto por `tests/integration/kc-api-comments-votes-module.test.js`
+
+---
+
+## Grupo adapters/local/
+
+> **Adapters de persistência local (localStorage).** Implementam a interface de dados
+> usando localStorage como backend. Usados quando `KC_ENV.driver === 'local'`.
+
+---
+
+### `adapters/local/local.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/local |
+| Namespace | `window.KCLocalAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Todas (quando driver = 'local') |
+
+**Responsabilidade:** Adapter base localStorage: CRUD genérico em localStorage com serialização
+JSON, TTL opcional, e namespacing por chave. Base para todos os adapters locais específicos.
+
+**Testes:** `tests/integration/local-adapter.test.js`
+
+---
+
+### `adapters/local/local.help.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/local |
+| Namespace | `window.KCLocalHelpAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `ajuda.html` (quando driver = 'local') |
+
+**Responsabilidade:** Persistência local de pedidos de ajuda: simula criação, listagem e
+atualização de tickets de ajuda em localStorage.
+
+**Testes:** `tests/integration/local-help.adapter.test.js`
+
+---
+
+### `adapters/local/local.notifications.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/local |
+| Namespace | `window.KCLocalNotificationsAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas autenticadas (quando driver = 'local') |
+
+**Responsabilidade:** Persistência local de notificações: armazena e retorna notificações de
+teste em localStorage para desenvolvimento offline.
+
+**Testes:** `tests/integration/local-notifications.adapter.test.js`
+
+---
+
+### `adapters/local/local.posts-read.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/local |
+| Namespace | `window.KCLocalPostsReadAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas de feed (quando driver = 'local') |
+
+**Responsabilidade:** Leitura de posts do localStorage: retorna dados de fixtures locais,
+simula paginação com cursor e filtros.
+
+**Testes:** `tests/integration/local-posts-read.adapter.test.js`
+
+---
+
+### `adapters/local/local.posts-write.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/local |
+| Namespace | `window.KCLocalPostsWriteAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `create-post.html`, `my-posts.html` (quando driver = 'local') |
+
+**Responsabilidade:** Escrita de posts no localStorage: cria, edita e deleta posts localmente,
+gerando IDs temporários.
+
+**Testes:** `tests/integration/local-posts-write.adapter.test.js`
+
+---
+
+### `adapters/local/local.profile.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/local |
+| Namespace | `window.KCLocalProfileAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas de perfil (quando driver = 'local') |
+
+**Responsabilidade:** Persistência local de perfil: armazena dados de perfil no localStorage
+para desenvolvimento offline.
+
+**Testes:** `tests/integration/local-profile.adapter.test.js`
+
+---
+
+### `adapters/local/local.ratings.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/local |
+| Namespace | `window.KCLocalRatingsAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `_product.html` (quando driver = 'local') |
+
+**Responsabilidade:** Persistência local de ratings: armazena e retorna ratings de posts
+do usuário no localStorage.
+
+**Testes:** `tests/integration/local-ratings.adapter.test.js`
+
+---
+
+### `adapters/local/local.saved.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/local |
+| Namespace | `window.KCLocalSavedAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `_product.html`, `my-posts.html` (quando driver = 'local') |
+
+**Responsabilidade:** Persistência local de posts salvos: armazena IDs de posts salvos pelo
+usuário no localStorage.
+
+**Testes:** `tests/integration/local-saved.adapter.test.js`
+
+---
+
+## Grupo adapters/supabase/
+
+> **Adapters de persistência Supabase.** Implementam a interface de dados usando Supabase
+> como backend. Usados quando `KC_ENV.driver === 'supabase'` (produção).
+
+---
+
+### `adapters/supabase/supabase.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Todas em produção |
+
+**Responsabilidade:** Adapter base Supabase: wrappers genéricos para queries PostgREST,
+chamadas RPC, e tratamento de erros Supabase. Base para todos os adapters supabase específicos.
+
+**Testes:** `tests/integration/supabase-adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.admin.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseAdminAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas admin |
+
+**Responsabilidade:** Operações admin via Supabase: moderar posts, gerenciar banners, dashboard
+de métricas, listagem de relatórios.
+
+**Testes:** `tests/integration/supabase-admin-adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.analytics.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseAnalyticsAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `search-results.html`, admin |
+
+**Responsabilidade:** Analytics via Supabase: registra eventos de busca, visualizações e CTR
+na tabela `analytics_events`.
+
+**Testes:** `tests/integration/supabase-analytics-adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.comments.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseCommentsAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `_product.html` e feeds com comentários |
+
+**Responsabilidade:** CRUD de comentários no Supabase: listar, criar, deletar, votar em
+comentários com RLS garantindo autorização por usuário.
+
+**Testes:** `tests/integration/supabase-comments-adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.media.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseMediaAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `create-post.html` |
+
+**Responsabilidade:** Upload de mídia para o Supabase Storage: faz upload de imagens
+comprimidas, retorna URLs públicas, e deleta mídia ao deletar posts.
+
+**Testes:** `tests/integration/supabase-media-adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.notifications.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseNotificationsAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Todas as páginas autenticadas |
+
+**Responsabilidade:** Notificações via Supabase: buscar não lidas, marcar como lidas,
+preferências de notificação, e subscrição Realtime para novos eventos.
+
+**Testes:** `tests/integration/supabase-notifications-adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.posts-read.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabasePostsReadAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas de feed e produto |
+
+**Responsabilidade:** Leitura de posts via Supabase: feed com cursor, busca fulltext, post por
+ID, posts do usuário, posts relacionados — todos via PostgREST + RPCs.
+
+**Testes:** `tests/integration/supabase-posts-read.adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.posts-write.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabasePostsWriteAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `create-post.html`, `my-posts.html` |
+
+**Responsabilidade:** Escrita de posts via Supabase: criar, editar, deletar posts com RLS,
+report de posts, e operações de moderação.
+
+**Testes:** `tests/integration/supabase-posts-write.adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.profiles.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseProfilesAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Páginas de perfil e account-setup |
+
+**Responsabilidade:** CRUD de perfis via Supabase: buscar perfil por ID, atualizar dados,
+upload de avatar, setup inicial de conta, e validação de e-mail @ufg.br.
+
+**Testes:** `tests/integration/supabase-profiles.adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.saved.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseSavedAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `_product.html`, `my-posts.html` |
+
+**Responsabilidade:** Posts salvos via Supabase: salvar/desalvar post, listar posts salvos do
+usuário com paginação.
+
+**Testes:** `tests/integration/supabase-saved-adapter.test.js`
+
+---
+
+### `adapters/supabase/supabase.votes.adapter.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | adapters/supabase |
+| Namespace | `window.KCSupabaseVotesAdapter` |
+| Padrão | IIFE + objeto literal |
+| Páginas | `index.html`, `_product.html`, feeds |
+
+**Responsabilidade:** Votos via Supabase: registrar voto (up/down), cancelar voto, buscar
+contagem de votos de um post e voto atual do usuário.
+
+**Testes:** `tests/integration/supabase-votes-adapter.test.js`
+
+---
+
+## Apêndice A — Tabela-índice Completa
+
+| Arquivo | Grupo | Namespace | Páginas | Testes |
+|---------|-------|-----------|---------|--------|
+| boot/kc-constants.js | boot | `window.KC_CONSTANTS` | todas 22 | unit/kc-constants.test.js |
+| boot/kc-env.js | boot | `window.KC_ENV` | todas 22 | contract/version-map |
+| boot/kc-feature-flags.js | boot | `window.KCFF` | todas 22 | unit/kc-feature-flags.test.js |
+| boot/kc-sw-register.js | boot | *(nenhum)* | todas 22 | unit/sw.test.js |
+| boot/kc-telemetry.js | boot | *(nenhum)* | todas 22 | unit/telemetry.test.js |
+| boot/kc-theme-boot.js | boot | *(nenhum)* | todas 22 | a11y/a11y.test.js |
+| core/kc-i18n.js | core | `window.KCi18n` | 17 públicas | unit/kc-i18n.test.js |
+| core/kc-auth.ui.js | core | `window.KCAccountProfileUtils` | autenticadas | integration/profile.* |
+| core/kc-profiles.client.js | core | `window.KCProfilesClient` | autenticadas | integration/profile.* |
+| core/kc-theme.js | core | *(nenhum)* | todas | a11y/a11y.test.js |
+| core/kc-notifications.js | core | `window.KCNotifications` | autenticadas | integration/kc-notifications-dropdown |
+| core/kc-auth-callback.js | core | *(nenhum)* | auth-callback.html | integration/kc-api-auth-module |
+| core/kc-core.js | core | `window.KCCore` | 17 públicas | structure/kc-core-split |
+| core/kc-post-model.js | core | `window.KCPostModel` | feed+produto | integration/kc-api-posts-write |
+| core/kc-user-posts.js | core | `window.kcUserPosts` | my-posts, profile | integration/kc-api-posts-read |
+| core/kc-core-widgets.js | core | `window.KCCore` (augmenta) | 17 públicas | structure/kc-core-split |
+| core/kc-public-shell.js | core | *(nenhum)* | 17 públicas | structure/admin-shell-preload |
+| api/kc-supabase.client.js | api | `window.KCSupabase` | autenticadas | integration/kc-supabase-client |
+| api/kc-supabase.posts.js | api | `window._KCSPosts` | feeds | structure/kc-supabase-split |
+| api/kc-supabase.ratings.js | api | `window._KCSRatings` | _product.html | structure/kc-supabase-split |
+| api/kc-api.auth.js | api | `window._KCAPI_auth` | autenticadas | integration/kc-api-auth-module |
+| api/kc-api.comments-votes.js | api | `window._KCAPI_cv` | feed+produto | integration/kc-api-comments-votes |
+| api/kc-api.help.js | api | `window._KCAPI_help` | ajuda+admin | integration/kc-api-help-module |
+| api/kc-api.notifications.js | api | `window._KCAPI_notif` | autenticadas | integration/kc-api-notifications-module |
+| api/kc-api.posts-feed.js | api | `window._KCAPI_feed` | feeds | integration/kc-api-posts-feed-module |
+| api/kc-api.posts-read.js | api | `window._KCAPI_read` | feed+produto | integration/kc-api-posts-read-module |
+| api/kc-api.posts-write.js | api | `window._KCAPI_write` | create+my-posts | integration/kc-api-posts-write-module |
+| api/kc-api.profiles.js | api | `window._KCAPI_prof` | profile+setup | integration/kc-api-profiles-module |
+| api/kc-api.ratings.js | api | `window._KCAPI_rat` | _product.html | integration/kc-api-ratings-module |
+| api/kc-api.related.js | api | `window._KCAPI_rel` | _product.html | integration/kc-api-related-module |
+| api/kc-api.saved.js | api | `window._KCAPI_saved` | produto+my-posts | integration/kc-api-saved-module |
+| api/kc-api.client.js | api | `window.KCAPI` | autenticadas | integration/kc-api-client |
+| api/admin-shell.js | api | *(nenhum)* | 5 admin | structure/admin-shell-preload |
+| utils/kc-utils.string.js | utils | `window._KCU_str` | todas | unit/kc-utils-expanded |
+| utils/kc-utils.format.js | utils | `window._KCU_fmt` | todas | unit/kc-utils-format |
+| utils/kc-utils.dom.js | utils | `window._KCU_dom` | todas | unit/kc-utils-dom |
+| utils/kc-utils.identity.js | utils | `window._KCU_id` | todas | unit/kc-utils-identity |
+| utils/kc-utils.taxonomy.js | utils | `window._KCU_tax` | todas | unit/kc-utils-taxonomy |
+| utils/kc-utils.location.js | utils | `window._KCU_loc` | feeds com geo | unit/kc-utils-location |
+| utils/kc-utils.presentation.js | utils | `window._KCU_pres` | feeds | unit/kc-utils-presentation |
+| utils/kc-utils.js | utils | `window.KCUtils` | todas | unit/kc-utils.test.js |
+| features/kc-comments.js | features | `window.KCComments` | produto+feeds | integration/kc-comments-session |
+| features/kc-search.js | features | `window.KCSearch` | search-results | integration/kc-search.shared |
+| features/kc-search-modal.js | features | `window.KCSearchModal` | todas públicas | integration/kc-search.shared |
+| features/kc-ranking.js | features | `window.KCRanking` | feeds | unit/kc-ranking, integration/kc-ranking-session |
+| features/kc-filters.js | features | `window.KCFilters` | feeds | unit/kc-filters |
+| features/kc-feed-filters.js | features | `window.KCFeedFilters` | feeds | unit/kc-feed-filters |
+| features/kc-banners.js | features | `window.KCBanners` | feeds | integration/kc-banners |
+| features/kc-home-categories.js | features | `window.KCHomeCategories` | index.html | integration/home-categories.shared |
+| features/kc-lazy-loader.js | features | `window.KCLazyLoader` | feeds | unit/lazy-loader |
+| features/kc-pull-to-refresh.js | features | `window.KCPullToRefresh` | feeds | integration/ios-gesture-hardening |
+| features/create-post/kc-create-post.js | create-post | `window.KCCreatePost` | create-post.html | integration/create-post.controller |
+| features/create-post/kc-create-post.schema.js | create-post | `window.KCCreatePostSchema` | create-post.html | integration/kc-create-post-schema |
+| features/create-post/kc-create-post.fields.js | create-post | `window.KCCreatePostFields` | create-post.html | integration/kc-create-post-fields |
+| features/create-post/kc-create-post.render.js | create-post | `window.KCCreatePostRender` | create-post.html | integration/kc-create-post-render |
+| features/create-post/kc-create-post.media.js | create-post | `window.KCCreatePostMedia` | create-post.html | integration/kc-create-post-media |
+| features/create-post/kc-create-post.resolvers.js | create-post | `window.KCCreatePostResolvers` | create-post.html | integration/kc-create-post-resolvers |
+| features/create-post/kc-create-post.submit.js | create-post | `window.KCCreatePostSubmit` | create-post.html | integration/kc-create-post-submit |
+| shared/account-profile.shared.js | shared | `window.KCAccountProfile` | profile+setup+settings | integration/account-profile.shared |
+| shared/help.shared.js | shared | `window.KCHelpShared` | ajuda+admin | integration/help.shared |
+| shared/home-categories.shared.js | shared | `window.KCHomeCategoriesShared` | index.html | integration/home-categories.shared |
+| shared/kc-comments.shared.js | shared | `window.KCCommentsShared` | produto+feeds | integration/kc-comments.shared |
+| shared/kc-search.shared.js | shared | `window.KCSearchShared` | search+modal | integration/kc-search.shared |
+| shared/ods.shared.js | shared | `window.KCODSShared` | ods.html | integration/ods.shared |
+| shared/search-analytics.shared.js | shared | `window.KCSearchAnalytics` | search-results | integration/search-analytics.shared |
+| legacy-shims/kc-migrate.myposts.js | legacy | *(nenhum)* | my-posts.html | integration/local-adapter |
+| components/carousel.js | components | *(funções globais)* | feeds | integration/kc-banners |
+| components/toast.js | components | `showToast()` | todas | controllers tests |
+| components/voting.js | components | *(var. módulo)* | feeds+produto | integration/kc-api-comments-votes |
+| adapters/local/local.adapter.js | local | `window.KCLocalAdapter` | todas (local) | integration/local-adapter |
+| adapters/local/local.help.adapter.js | local | `window.KCLocalHelpAdapter` | ajuda (local) | integration/local-help.adapter |
+| adapters/local/local.notifications.adapter.js | local | `window.KCLocalNotificationsAdapter` | auth (local) | integration/local-notifications.adapter |
+| adapters/local/local.posts-read.adapter.js | local | `window.KCLocalPostsReadAdapter` | feeds (local) | integration/local-posts-read.adapter |
+| adapters/local/local.posts-write.adapter.js | local | `window.KCLocalPostsWriteAdapter` | create (local) | integration/local-posts-write.adapter |
+| adapters/local/local.profile.adapter.js | local | `window.KCLocalProfileAdapter` | profile (local) | integration/local-profile.adapter |
+| adapters/local/local.ratings.adapter.js | local | `window.KCLocalRatingsAdapter` | produto (local) | integration/local-ratings.adapter |
+| adapters/local/local.saved.adapter.js | local | `window.KCLocalSavedAdapter` | produto (local) | integration/local-saved.adapter |
+| adapters/supabase/supabase.adapter.js | supabase | `window.KCSupabaseAdapter` | todas (prod) | integration/supabase-adapter |
+| adapters/supabase/supabase.admin.adapter.js | supabase | `window.KCSupabaseAdminAdapter` | admin | integration/supabase-admin-adapter |
+| adapters/supabase/supabase.analytics.adapter.js | supabase | `window.KCSupabaseAnalyticsAdapter` | search+admin | integration/supabase-analytics-adapter |
+| adapters/supabase/supabase.comments.adapter.js | supabase | `window.KCSupabaseCommentsAdapter` | produto+feeds | integration/supabase-comments-adapter |
+| adapters/supabase/supabase.media.adapter.js | supabase | `window.KCSupabaseMediaAdapter` | create-post | integration/supabase-media-adapter |
+| adapters/supabase/supabase.notifications.adapter.js | supabase | `window.KCSupabaseNotificationsAdapter` | autenticadas | integration/supabase-notifications-adapter |
+| adapters/supabase/supabase.posts-read.adapter.js | supabase | `window.KCSupabasePostsReadAdapter` | feeds | integration/supabase-posts-read.adapter |
+| adapters/supabase/supabase.posts-write.adapter.js | supabase | `window.KCSupabasePostsWriteAdapter` | create+my-posts | integration/supabase-posts-write.adapter |
+| adapters/supabase/supabase.profiles.adapter.js | supabase | `window.KCSupabaseProfilesAdapter` | profile+setup | integration/supabase-profiles.adapter |
+| adapters/supabase/supabase.saved.adapter.js | supabase | `window.KCSupabaseSavedAdapter` | produto+my-posts | integration/supabase-saved-adapter |
+| adapters/supabase/supabase.votes.adapter.js | supabase | `window.KCSupabaseVotesAdapter` | feeds+produto | integration/supabase-votes-adapter |
+
+**Total documentado: ~84 módulos** (boot + core + api + utils + features + create-post + shared + legacy + components + adapters)
+
+*Controllers (31 public + 10 admin = 41) documentados em `docs/architecture/controllers-catalog.md`*
+
+---
+
+## Apêndice B — Diagrama de Dependências
+
+```
+ORDEM DE CARREGAMENTO (boot → utils → api → core → adapters → features → components → controllers)
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ BOOT (obrigatório em todos os 22 HTMLs)                             │
+│  kc-constants → kc-env → kc-feature-flags → kc-sw-register         │
+│  → kc-telemetry → kc-theme-boot                                     │
+└─────────────────────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ UTILS (submódulos → facade)                                         │
+│  kc-utils.string + kc-utils.format + kc-utils.dom                  │
+│  + kc-utils.identity + kc-utils.taxonomy + kc-utils.location        │
+│  + kc-utils.presentation → kc-utils.js (facade)                    │
+└─────────────────────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ SUPABASE CLIENT                                                     │
+│  kc-supabase.client → kc-supabase.posts + kc-supabase.ratings       │
+└─────────────────────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ KCAPI (submódulos → facade)                                         │
+│  kc-api.auth + kc-api.comments-votes + kc-api.help                 │
+│  + kc-api.notifications + kc-api.posts-feed + kc-api.posts-read     │
+│  + kc-api.posts-write + kc-api.profiles + kc-api.ratings            │
+│  + kc-api.related + kc-api.saved → kc-api.client (facade)          │
+└─────────────────────────────────────────────────────────────────────┘
+         ↓
+┌──────────────────────────┐  ┌──────────────────────────────────────┐
+│ ADAPTERS LOCAL            │  │ ADAPTERS SUPABASE                    │
+│ (quando driver='local')  │  │ (quando driver='supabase' — prod)    │
+│ local.adapter.js          │  │ supabase.adapter.js                  │
+│ + local.*.adapter.js      │  │ + supabase.*.adapter.js              │
+└──────────────────────────┘  └──────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ CORE (módulos de runtime)                                           │
+│  kc-i18n + kc-auth.ui + kc-profiles.client + kc-theme              │
+│  + kc-notifications + kc-auth-callback + kc-core-widgets            │
+│  + kc-core + kc-post-model + kc-user-posts + kc-public-shell        │
+└─────────────────────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ SHARED (estado compartilhado entre controllers)                     │
+│  account-profile.shared + help.shared + home-categories.shared      │
+│  + kc-comments.shared + kc-search.shared + ods.shared               │
+│  + search-analytics.shared                                          │
+└─────────────────────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ FEATURES (funcionalidades de UX)                                    │
+│  kc-comments + kc-search + kc-search-modal + kc-ranking             │
+│  + kc-filters + kc-feed-filters + kc-banners + kc-home-categories   │
+│  + kc-lazy-loader + kc-pull-to-refresh                              │
+│  [create-post/]: kc-create-post.schema → .fields → .resolvers       │
+│                  → .render → .media → .submit → kc-create-post.js  │
+│  [legacy]: kc-migrate.myposts.js                                    │
+└─────────────────────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ COMPONENTS (UI reutilizável)                                        │
+│  carousel.js + toast.js + voting.js                                 │
+└─────────────────────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ CONTROLLERS (um por página)                                         │
+│  controllers/public/<pagina>.controller.js (31 arquivos)            │
+│  controllers/admin/<pagina>.controller.js  (10 arquivos)            │
+│  [documentados em controllers-catalog.md]                           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Regra de ouro:** Um módulo nunca deve depender de um módulo em camada superior neste diagrama.
+Controllers são folhas — nunca são importados por outros módulos.
