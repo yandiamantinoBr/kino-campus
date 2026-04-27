@@ -2,6 +2,13 @@
 
 ---
 
+## [Unreleased] — v16 em execução
+
+Mapeamento completo da plataforma + guia de comportamento para IA.
+13 iterações planejadas · 0 arquivos JS alterados · escopo: documentação + correção de validators.
+
+---
+
 ## [15.0.0] - 2026-04-26 — Trilha v15: Reorganização JS Root Completa (v15.0.0–v15.17.0)
 
 ### Tema
