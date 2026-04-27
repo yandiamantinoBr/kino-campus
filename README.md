@@ -19,7 +19,21 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 125 suites de regressão e contrato; Playwright: 8 suites E2E (51 testes) |
+| Testes | Jest: 134 suites · 3046 testes; Playwright: 8 suites E2E (51 testes) |
+
+## Documentação Técnica
+
+> **Para IAs e desenvolvedores novos:** leia o [Guia de Desenvolvimento para IA](docs/architecture/ai-development-guide.md) antes de qualquer modificação. Ele é auto-contido e cobre workflow, padrões de código, validators, testes e convenções do projeto.
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [docs/index.md](docs/index.md) | Índice completo de todos os documentos técnicos |
+| [docs/architecture/ai-development-guide.md](docs/architecture/ai-development-guide.md) | **Guia de comportamento para IA** — workflow, padrões JS, validators, testes, o que nunca fazer |
+| [docs/architecture/module-catalog.md](docs/architecture/module-catalog.md) | Catálogo de ~84 módulos JS com namespace, páginas, dependências e testes |
+| [docs/architecture/controllers-catalog.md](docs/architecture/controllers-catalog.md) | 41 controllers com responsabilidade e chamadas KCAPI |
+| [docs/architecture/data-flow-guide.md](docs/architecture/data-flow-guide.md) | Fluxo de dados ponta a ponta: controller → KCAPI → adapter → Supabase |
+| [docs/api-contract.md](docs/api-contract.md) | Contrato público da KCAPI |
+| [docs/db-schema.md](docs/db-schema.md) | Tabelas, políticas RLS, índices e Storage do Supabase |
 
 ---
 
