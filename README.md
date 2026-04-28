@@ -5,7 +5,7 @@
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V15.0-foundations`  
+**Branch principal:** `kinocampus-V17.0-foundations`  
 **Status atual:** v11–v16 ENCERRADAS ✅ — *V17 em execução: Reorganização documental + rename de branch*
 
 ---

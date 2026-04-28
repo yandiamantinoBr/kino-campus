@@ -41,13 +41,13 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Testes | Jest (134 suites) + Playwright (8 suites E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v16)
+### Estado atual (v17)
 
 | Campo | Valor |
 |-------|-------|
-| Branch principal | `kinocampus-V15.0-foundations` |
-| Branch de features | `feature/v16.X.Y-descricao-curta` |
-| appVersion | `16.0.0` (V16 em execução) |
+| Branch principal | `kinocampus-V17.0-foundations` |
+| Branch de features | `feature/v17.X.Y-descricao-curta` |
+| appVersion | `17.0.0` (V17 em execução) |
 | frontendRuntimeVersion | `8.6.0` (constante canônica — **nunca alterar**) |
 | Jest | 134 suites · 3046 testes |
 | check:all | 5/5 validators verdes |
@@ -94,18 +94,18 @@ kino-campus/
 ### Sequência exata — não pular etapas
 
 ```
-1. git checkout kinocampus-V15.0-foundations
+1. git checkout kinocampus-V17.0-foundations
 2. git pull
-3. git checkout -b feature/v16.X.Y-descricao-curta
+3. git checkout -b feature/v17.X.Y-descricao-curta
 4. [ implementar mudanças ]
 5. npm run check:all          ← DEVE ser 5/5 verdes
    npm test                   ← DEVE ser ≥134/134 suites, ≥3046/3046 testes
 6. git add <arquivos específicos>
 7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-8. git push -u origin feature/v16.X.Y-descricao-curta
+8. git push -u origin feature/v17.X.Y-descricao-curta
 9. gh pr create --title "..." --body "..."
 10. gh pr merge <número> --squash --delete-branch
-11. git checkout kinocampus-V15.0-foundations
+11. git checkout kinocampus-V17.0-foundations
 12. git pull
 ```
 
@@ -281,7 +281,7 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 **O que verifica:**
 - `VERSION.json` existe e tem todos os 6 campos obrigatórios: `project`, `appVersion`, `frontendRuntimeVersion`, `branch`, `status`, `updatedAt`
 - `frontendRuntimeVersion` é exatamente `"8.6.0"` (constante canônica imutável)
-- `branch` é exatamente `"kinocampus-V15.0-foundations"`
+- `branch` é exatamente `"kinocampus-V17.0-foundations"`
 - `appVersion` tem formato semântico `X.Y.Z`
 - `updatedAt` tem formato `YYYY-MM-DD`
 - A string `'8.6.0'` aparece literalmente em ~17 arquivos JS (todos devem bater)
@@ -292,11 +292,11 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 // VERSION.json — campos obrigatórios
 {
   "project": "KinoCampus",
-  "appVersion": "16.0.0",
+  "appVersion": "17.0.0",
   "frontendRuntimeVersion": "8.6.0",
-  "branch": "kinocampus-V15.0-foundations",
-  "status": "v16 em execução",
-  "updatedAt": "2026-04-27"
+  "branch": "kinocampus-V17.0-foundations",
+  "status": "v17 em execução",
+  "updatedAt": "2026-04-28"
 }
 ```
 
@@ -677,7 +677,7 @@ git add -A
 | `innerHTML` sem `escapeHtml()` em conteúdo de usuário | Vulnerabilidade XSS direta |
 | Instalar dependências de produção (`npm install --save`) | Stack vanilla — sem npm em prod |
 | Usar React, Vue, Angular, TypeScript, Babel, Webpack, Vite | Stack imutável |
-| Push direto para `kinocampus-V15.0-foundations` | Branch protegida — fluxo via PR |
+| Push direto para `kinocampus-V17.0-foundations` | Branch protegida — fluxo via PR |
 | `git push --force` em qualquer branch | Proibido sem aprovação explícita |
 | `git commit --amend` em commits já publicados | Reescreve histórico público |
 
