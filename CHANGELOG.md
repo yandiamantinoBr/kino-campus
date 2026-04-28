@@ -2,6 +2,14 @@
 
 ---
 
+## [Unreleased] — v17 em execução
+
+### Tema
+
+Reorganização documental completa + rename de branch para `kinocampus-V17.0-foundations`. 7 iterações, zero arquivos JS alterados, zero testes quebrados.
+
+---
+
 ## [16.0.0] - 2026-04-27 — Trilha v16: Mapeamento Completo + Guia de IA (v16.0.0–v16.12.0)
 
 ### Tema
