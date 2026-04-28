@@ -2,6 +2,40 @@
 
 ---
 
+## [27.0.0] - 2026-04-28 - Gate Visual/A11y Pre-CSS (v27.0.0)
+
+### Tema
+
+Definicao documental do gate visual e a11y minimo antes de qualquer split CSS, ajuste visual amplo
+ou refactor de layout. A V27 nao executa snapshots nem altera CSS; ela fixa rotas, viewports,
+criterios de console/layout/a11y/Lighthouse e bloqueios para proteger a estabilidade visual.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v27.0.0 | `RELATORIO-KINOCAMPUS-V27.md` e reancoragem de metadados para `kinocampus-V27.0-foundations` |
+| v27.0.0 | `docs/qa/v27-visual-a11y-regression-gate.md` criado |
+| v27.0.0 | Ledger V24 atualizado para refletir gate V27 e baseline visual ainda pendente |
+| v27.0.0 | `RELATORIO-KINOCAMPUS-V22.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V26) | Depois (V27) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 26.0.0 | 27.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V26.0-foundations` | `kinocampus-V27.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 11 | 12 | +V22 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Gate visual/a11y | inexistente como artefato ativo | definido em `docs/qa/` | pre-CSS documentado |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [26.0.0] - 2026-04-28 - Evidencias QA Real (v26.0.0)
 
 ### Tema

@@ -1,6 +1,6 @@
 # Guia de Desenvolvimento para IA — KinoCampus
 
-**Versão:** v26.0.0 · **Atualizado em:** 2026-04-28
+**Versão:** v27.0.0 · **Atualizado em:** 2026-04-28
 
 > **Leia este documento integralmente antes de qualquer modificação.**
 > Este guia é auto-contido: uma IA sem contexto anterior deve conseguir trabalhar
@@ -41,13 +41,13 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Testes | Jest (134 suites) + Playwright (8 suites E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v26)
+### Estado atual (v27)
 
 | Campo | Valor |
 |-------|-------|
-| Branch principal | `kinocampus-V26.0-foundations` |
-| Branch de features | `feature/v26.X.Y-descricao-curta` |
-| appVersion | `26.0.0` (V26 encerrada; templates de evidencia QA real preparados em `docs/qa/reports/`) |
+| Branch principal | `kinocampus-V27.0-foundations` |
+| Branch de features | `feature/v27.X.Y-descricao-curta` |
+| appVersion | `27.0.0` (V27 encerrada; gate visual/a11y pre-CSS documentado em `docs/qa/`) |
 | frontendRuntimeVersion | `8.6.0` (constante canônica — **nunca alterar**) |
 | Jest | 134 suites · 3046 testes |
 | check:all | 5/5 validators verdes |
@@ -94,34 +94,34 @@ kino-campus/
 ### Sequência exata — não pular etapas
 
 ```
-1. git checkout kinocampus-V26.0-foundations
+1. git checkout kinocampus-V27.0-foundations
 2. git pull
-3. git checkout -b feature/v26.X.Y-descricao-curta
+3. git checkout -b feature/v27.X.Y-descricao-curta
 4. [ implementar mudanças ]
 5. npm run check:all          ← DEVE ser 5/5 verdes
    npm test                   ← DEVE ser ≥134/134 suites, ≥3046/3046 testes
 6. git add <arquivos específicos>
 7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-8. git push -u origin feature/v26.X.Y-descricao-curta
+8. git push -u origin feature/v27.X.Y-descricao-curta
 9. gh pr create --title "..." --body "..."
 10. gh pr merge <número> --squash --delete-branch
-11. git checkout kinocampus-V26.0-foundations
+11. git checkout kinocampus-V27.0-foundations
 12. git pull
 ```
 
 ### Nomeação de branches
 
 ```
-feature/v26.X.Y-descricao-curta
+feature/v27.X.Y-descricao-curta
 
 Exemplos válidos:
-  feature/v26.1.0-qa-evidence-template
-  feature/v26.2.0-real-qa-execution
-  feature/v26.3.0-qa-gate-status
+  feature/v27.1.0-visual-a11y-gate
+  feature/v27.2.0-snapshot-baseline
+  feature/v27.3.0-css-readiness
 
 Proibido:
   main, master, develop, fix/..., hotfix/...
-  Qualquer nome sem o prefixo feature/v26.X.Y-
+  Qualquer nome sem o prefixo feature/v27.X.Y-
 ```
 
 ### Regras do PR
@@ -281,7 +281,7 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 **O que verifica:**
 - `VERSION.json` existe e tem todos os 6 campos obrigatórios: `project`, `appVersion`, `frontendRuntimeVersion`, `branch`, `status`, `updatedAt`
 - `frontendRuntimeVersion` é exatamente `"8.6.0"` (constante canônica imutável)
-- `branch` é exatamente `"kinocampus-V26.0-foundations"`
+- `branch` é exatamente `"kinocampus-V27.0-foundations"`
 - `appVersion` tem formato semântico `X.Y.Z`
 - `updatedAt` tem formato `YYYY-MM-DD`
 - A string `'8.6.0'` aparece literalmente em ~17 arquivos JS (todos devem bater)
@@ -292,10 +292,10 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 // VERSION.json — campos obrigatórios
 {
   "project": "KinoCampus",
-  "appVersion": "26.0.0",
+  "appVersion": "27.0.0",
   "frontendRuntimeVersion": "8.6.0",
-  "branch": "kinocampus-V26.0-foundations",
-  "status": "v26 encerrada",
+  "branch": "kinocampus-V27.0-foundations",
+  "status": "v27 encerrada",
   "updatedAt": "2026-04-28"
 }
 ```
@@ -616,7 +616,7 @@ git commit -m "$(cat <<'EOF'
 fix(validator): adiciona components/ ao CANONICAL_JS
 
 carousel.js, toast.js e voting.js estavam faltando da lista de
-arquivos canônicos. Validator agora verifica 156 itens (baseline V26).
+arquivos canônicos. Validator agora verifica 156 itens (baseline V27).
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 EOF
@@ -677,7 +677,7 @@ git add -A
 | `innerHTML` sem `escapeHtml()` em conteúdo de usuário | Vulnerabilidade XSS direta |
 | Instalar dependências de produção (`npm install --save`) | Stack vanilla — sem npm em prod |
 | Usar React, Vue, Angular, TypeScript, Babel, Webpack, Vite | Stack imutável |
-| Push direto para `kinocampus-V26.0-foundations` | Branch protegida — fluxo via PR |
+| Push direto para `kinocampus-V27.0-foundations` | Branch protegida — fluxo via PR |
 | `git push --force` em qualquer branch | Proibido sem aprovação explícita |
 | `git commit --amend` em commits já publicados | Reescreve histórico público |
 
@@ -719,7 +719,7 @@ git add -A
 | RPCs, triggers e funções PostgreSQL | `docs/rpc-catalog.md` |
 | Variáveis de ambiente, `KC_ENV`, Supabase, Vercel | `docs/env-vars.md` |
 | Tokens visuais, componentes CSS, popovers, responsividade | `docs/design-system.md` |
-| Estado atual da release V26, iterações, DoD | `RELATORIO-KINOCAMPUS-V26.md` |
+| Estado atual da release V27, iterações, DoD | `RELATORIO-KINOCAMPUS-V27.md` |
 | Histórico de releases e hotfixes | `CHANGELOG.md` |
 | Invariantes Vercel/Supabase de produção | `docs/ops/vercel-supabase-invariants.md` |
 | Índice de todos os documentos técnicos | `docs/index.md` |

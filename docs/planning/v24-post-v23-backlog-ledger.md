@@ -46,10 +46,10 @@ provider externo, dashboard ou decisao de gate.
 | SEC-001 | P0 | Leaked Password Protection e configuracao de Dashboard | Confirmar no dashboard e anexar evidencia operacional |
 | SEC-004 | P1 | Scheduler externo depende de `app.settings` e runtime config | Usar `docs/ops/v19-operational-runbook.md` em ambiente controlado |
 | QA-001 | P0 | Playwright E2E ainda nao e gate obrigatorio em todo PR | Definir gate por tipo de mudanca e registrar excecoes |
-| QA-002 | P0 | Falta visual regression automatizado para CSS/layout | Escolher processo antes de tocar `assets/css/future-split/` |
+| QA-002 | P0 | Falta visual regression automatizado para CSS/layout | Gate minimo definido em V27; baseline visual ainda precisa ser executado antes de CSS |
 | QA-003 | P1 | LHCI depende de ambiente compativel/CI Linux | Registrar baseline em CI e separar EPERM Windows de score real |
 | QA-004 | P1 | Plano i18n/a11y antigo precisa reconciliacao com gates atuais | Auditar entregas reais antes de novo backlog de texto/UX |
-| CSS-001 | P1 | Split CSS continua bloqueado por ausencia de visual regression | Manter stubs sem carregamento ate snapshots aprovados |
+| CSS-001 | P1 | Split CSS continua bloqueado por ausencia de baseline visual executado | Manter stubs sem carregamento ate report visual V27+ aprovado |
 
 ---
 
@@ -60,7 +60,7 @@ provider externo, dashboard ou decisao de gate.
 | 1 | QA autenticado real | Credenciais e ambiente definidos | Report `report-v26-auth-runN.md` com signup, callback, perfil e admin |
 | 2 | Supabase advisor/runbook | Acesso ao dashboard e ambiente isolado | Evidencia de `auth_leaked_password_protection`, avatar policies e `unaccent` |
 | 3 | Providers externos | Secrets/sandbox de email e WhatsApp | Dispatch real controlado com rollback documentado |
-| 4 | Visual/a11y regression | Ferramenta/processo escolhido | Baseline visual das 22 rotas antes de CSS |
+| 4 | Visual/a11y regression | Gate V27 aprovado e ambiente definido | Baseline visual das 22 rotas antes de CSS |
 | 5 | CSS/UX | Baseline visual aprovado | Split ou ajustes UX pequenos, reversiveis e testados |
 
 ---
