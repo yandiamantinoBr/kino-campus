@@ -22,7 +22,7 @@
 | DOC-002 | P1 | `docs/db-schema.md` ainda declara estado v11.25.x | Header do documento | Reancorar estado documental para a baseline atual sem apagar marcadores historicos de introducao |
 | DOC-003 | P1 | READMEs de `assets/js/` ainda dizem que movimentacoes V14/V15 estao planejadas | `assets/js/api/README.md`, `boot/`, `core/`, `utils/`, `adapters/*`, `legacy-shims/` | Reescrever status dos READMEs como pos-V15, refletindo arquivos reais e regras atuais |
 | DOC-004 | P1 | `docs/qa/` misturava material operacional ativo com historico V8/V11 | `docs/qa/README.md`, `docs/qa/reports/*` | Resolvido em V20: historico movido para `docs/archive/qa-legacy/` e checklist ativo recriado |
-| DOC-005 | P2 | `RELATORIO-KINOCAMPUS-V15.md` permanece na raiz com linguagem historica de execucao | Relatorio raiz preservado por V17 | Decidir se fica como raiz historica imutavel ou se recebe nota de status encerrado |
+| DOC-005 | P2 | `RELATORIO-KINOCAMPUS-V15.md` permanecia na raiz com linguagem historica de execucao | Relatorio raiz preservado por V17 | Resolvido em V22: V15-V17 arquivados em `docs/archive/relatorios/` |
 | DOC-006 | P2 | `.lighthouserc.js` tinha referencia antiga a auditoria de accessibility | Comentario de justificativa dos thresholds | Manter referencia pos-V17 para `docs/archive/audits-accessibility/` |
 | DOC-007 | P2 | `package.json` descrevia linha funcional v11 | Campo `description` | Manter descricao curta alinhada a V18 e ao runtime canonico 8.6.0 |
 
@@ -63,7 +63,7 @@
 | ID | Prioridade | Item | Evidencia | Acao / status |
 |---|---|---|---|---|
 | REP-001 | P1 | `.claude/worktrees/serene-germain` continha artefatos V9 rastreados | `git ls-files .claude` listava docx/pdf/scripts V9 | Resolvido em V21: artefatos movidos para `docs/archive/claude-worktree-v9/` e worktrees locais voltaram a ser ignoradas |
-| REP-002 | P2 | Relatorios raiz tendem a crescer a cada versao | V15, V16, V17, V18 na raiz | Definir politica: manter ultimas N versoes na raiz e arquivar anteriores |
+| REP-002 | P2 | Relatorios raiz tendem a crescer a cada versao | V15-V21 estavam na raiz antes da V22 | Resolvido em V22: manter maximo de 5 relatorios recentes na raiz e arquivar anteriores |
 | REP-003 | P2 | Busca textual e grep eram poluidos por docs historicos ativos | `docs/qa/` e `.claude/worktrees` | Resolvido em V20 para `docs/qa/` e em V21 para `.claude/worktrees` rastreado |
 
 ## 7. Itens Fora de Escopo da V18

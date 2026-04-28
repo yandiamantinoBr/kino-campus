@@ -2,6 +2,39 @@
 
 ---
 
+## [22.0.0] - 2026-04-28 — Política de Relatórios Raiz (v22.0.0)
+
+### Tema
+
+Higiene documental de raiz: definir janela operacional para relatórios recentes e arquivar
+relatórios V15–V17 em `docs/archive/relatorios/`. Zero mudanças funcionais, zero mudanças
+visuais, zero alterações em HTMLs, CSS de produção, JS de runtime ou migrations Supabase.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v22.0.0 | `RELATORIO-KINOCAMPUS-V22.md` e reancoragem de metadados para `kinocampus-V22.0-foundations` |
+| v22.0.0 | `RELATORIO-KINOCAMPUS-V15.md`, V16 e V17 movidos via `git mv` para `docs/archive/relatorios/` |
+| v22.0.0 | README, `docs/index.md`, `docs/archive/relatorios/_INDEX.md` e validator reancorados |
+| v22.0.0 | Politica de raiz: manter apenas as 5 versoes recentes na raiz; arquivar anteriores |
+
+### Métricas
+
+| Métrica | Antes (V21) | Depois (V22) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 21.0.0 | 22.0.0 | +1 versão documental |
+| Branch principal | `kinocampus-V21.0-foundations` | `kinocampus-V22.0-foundations` | alinhada |
+| RELATORIOs na raiz | 7 | 5 | -2 |
+| RELATORIOs em `docs/archive/relatorios/` | 4 | 7 | +3 |
+| Itens `check:structure` | 158 | 156 | -2 |
+| JS funcional alterado | 0 | 0 | preservado ✅ |
+| CSS de produção alterado | 0 | 0 | preservado ✅ |
+| HTML alterado | 0 | 0 | preservado ✅ |
+| Supabase migrations alteradas | 0 | 0 | preservado ✅ |
+
+---
+
 ## [21.0.0] - 2026-04-28 — Arquivamento de Worktree Claude Rastreada (v21.0.0)
 
 ### Tema

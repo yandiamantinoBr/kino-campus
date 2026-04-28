@@ -2,10 +2,10 @@
 
 ## Baseline atual
 
-- release documental consolidada: `v21.0.0`
-- linha de trabalho atual: `v21`
-- branch-base operacional: `kinocampus-V21.0-foundations`
-- documento de execução da v21: [../RELATORIO-KINOCAMPUS-V21.md](../RELATORIO-KINOCAMPUS-V21.md)
+- release documental consolidada: `v22.0.0`
+- linha de trabalho atual: `v22`
+- branch-base operacional: `kinocampus-V22.0-foundations`
+- documento de execução da v22: [../RELATORIO-KINOCAMPUS-V22.md](../RELATORIO-KINOCAMPUS-V22.md)
 
 ## Documentos canônicos
 
@@ -33,12 +33,12 @@
 |---------|---------------|
 | [../README.md](../README.md) | visão executiva do projeto, stack, setup, fluxo operacional e estado da release |
 | [../CHANGELOG.md](../CHANGELOG.md) | histórico consolidado de releases e hotfixes |
-| [../RELATORIO-KINOCAMPUS-V21.md](../RELATORIO-KINOCAMPUS-V21.md) | arquivamento de worktree Claude rastreada da v21 (atual) |
+| [../RELATORIO-KINOCAMPUS-V22.md](../RELATORIO-KINOCAMPUS-V22.md) | política de relatórios raiz da v22 (atual) |
+| [../RELATORIO-KINOCAMPUS-V21.md](../RELATORIO-KINOCAMPUS-V21.md) | arquivamento de worktree Claude rastreada da v21 (encerrada) |
 | [../RELATORIO-KINOCAMPUS-V20.md](../RELATORIO-KINOCAMPUS-V20.md) | separação de QA ativo e histórico da v20 (encerrada) |
 | [../RELATORIO-KINOCAMPUS-V19.md](../RELATORIO-KINOCAMPUS-V19.md) | correção de drift documental ativo e runbooks operacionais da v19 (encerrada) |
 | [../RELATORIO-KINOCAMPUS-V18.md](../RELATORIO-KINOCAMPUS-V18.md) | auditoria de pendências e planejamento V19 da v18 (encerrada) |
-| [../RELATORIO-KINOCAMPUS-V17.md](../RELATORIO-KINOCAMPUS-V17.md) | plano diretor e registro da v17 (encerrada) |
-| [../RELATORIO-KINOCAMPUS-V16.md](../RELATORIO-KINOCAMPUS-V16.md) | plano diretor e registro da v16 (encerrada) |
+| [archive/relatorios/_INDEX.md](./archive/relatorios/_INDEX.md) | relatórios históricos arquivados V9, V11, V13–V17 |
 | [planning/_INDEX.md](./planning/_INDEX.md) | índice dos planos ativos e inventários pendentes |
 | [archive/_INDEX.md](./archive/_INDEX.md) | índice geral do arquivo histórico com ~85 docs |
 | [archive/relatorios/_INDEX.md](./archive/relatorios/_INDEX.md) | índice de relatórios históricos arquivados (V9, V11, V13, V14) |
@@ -50,8 +50,8 @@
 1. Código e comportamento real prevalecem sobre documentação antiga.
 2. Banco de dados: Supabase Dashboard (tabelas, migrations, RPCs).
 3. Contratos de frontend: `assets/js/api/kc-api.client.js`, adapters, controllers e HTMLs.
-4. Estado da v21: `RELATORIO-KINOCAMPUS-V21.md`.
-5. Guia de IA: `docs/architecture/ai-development-guide.md` *(atualizado em v21.0.0)*.
+4. Estado da v22: `RELATORIO-KINOCAMPUS-V22.md`.
+5. Guia de IA: `docs/architecture/ai-development-guide.md` *(atualizado em v22.0.0)*.
 
 ## Quick reference
 
@@ -74,5 +74,5 @@ el.innerHTML = window.KCUtils.escapeHtml(userContent);
 
 ## Observações de baseline
 
-- Baseline reancorado para v21.0.0 em 2026-04-28. Estrutura documental consolidada em docs/archive/ em v17.5.0; pendências ativas mapeadas em docs/planning/ em v18, operacionalizadas em runbooks v19, separadas entre QA ativo/histórico em v20 e com worktrees locais fora do índice em v21.
+- Baseline reancorado para v22.0.0 em 2026-04-28. Estrutura documental consolidada em docs/archive/ em v17.5.0; pendências ativas mapeadas em docs/planning/ em v18, operacionalizadas em runbooks v19, separadas entre QA ativo/histórico em v20, com worktrees locais fora do índice em v21 e política de relatórios raiz em v22.
 - frontendRuntimeVersion permanece em `8.6.0` (constante canônica no runtime).
