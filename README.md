@@ -1,13 +1,13 @@
-# Kino Campus - v23.0.0
+# Kino Campus - v24.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V23.0-foundations`
+**Branch principal:** `kinocampus-V24.0-foundations`
 
-**Status atual:** v11–v23 ENCERRADAS ✅
+**Status atual:** v11–v24 ENCERRADAS ✅
 
 ---
 
@@ -44,12 +44,12 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 
 | Versão | Relatório | Tema |
 |--------|-----------|------|
+| V24 | [RELATORIO-KINOCAMPUS-V24.md](RELATORIO-KINOCAMPUS-V24.md) | Ledger pós-V23 de pendências |
 | V23 | [RELATORIO-KINOCAMPUS-V23.md](RELATORIO-KINOCAMPUS-V23.md) | Estrutura do repositório reancorada |
 | V22 | [RELATORIO-KINOCAMPUS-V22.md](RELATORIO-KINOCAMPUS-V22.md) | Política de relatórios raiz |
 | V21 | [RELATORIO-KINOCAMPUS-V21.md](RELATORIO-KINOCAMPUS-V21.md) | Arquivamento de worktree Claude rastreada |
 | V20 | [RELATORIO-KINOCAMPUS-V20.md](RELATORIO-KINOCAMPUS-V20.md) | Separação de QA ativo e histórico |
-| V19 | [RELATORIO-KINOCAMPUS-V19.md](RELATORIO-KINOCAMPUS-V19.md) | Correção de drift documental ativo + runbooks operacionais |
-| V15–V18 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado recente |
+| V15–V19 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado recente |
 | V9–V14 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado |
 
 ---

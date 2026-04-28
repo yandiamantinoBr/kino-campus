@@ -2,6 +2,41 @@
 
 ---
 
+## [24.0.0] - 2026-04-28 - Ledger Pos-V23 de Pendencias (v24.0.0)
+
+### Tema
+
+Higiene documental de planejamento: consolidar o backlog pos-V23, separar itens resolvidos por
+V19-V23 das pendencias que ainda dependem de ambiente real e manter a politica de no maximo 5
+relatorios recentes na raiz. Zero mudancas funcionais, zero mudancas visuais, zero alteracoes em
+HTMLs, CSS de producao, JS de runtime ou migrations Supabase.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v24.0.0 | `RELATORIO-KINOCAMPUS-V24.md` e reancoragem de metadados para `kinocampus-V24.0-foundations` |
+| v24.0.0 | `docs/planning/v24-post-v23-backlog-ledger.md` criado |
+| v24.0.0 | `RELATORIO-KINOCAMPUS-V19.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+| v24.0.0 | Inventario V18, roadmap V18->V19, README, docs index, archive e guia de IA alinhados a V24 |
+
+### Metricas
+
+| Metrica | Antes (V23) | Depois (V24) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 23.0.0 | 24.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V23.0-foundations` | `kinocampus-V24.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 8 | 9 | +V19 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Artefatos novos de planning | 0 | 1 | +ledger V24 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [23.0.0] - 2026-04-28 - Estrutura do Repositorio Reancorada (v23.0.0)
 
 ### Tema

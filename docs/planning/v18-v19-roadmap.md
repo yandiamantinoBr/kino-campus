@@ -6,6 +6,15 @@
 
 ---
 
+## Nota pos-V23
+
+Este roadmap permanece como historico de planejamento da V18. O estado operacional atual esta
+consolidado em `docs/planning/v24-post-v23-backlog-ledger.md`, que separa itens ja resolvidos em
+V19-V23 de pendencias que ainda dependem de ambiente real, provider externo, dashboard Supabase ou
+gate visual.
+
+---
+
 ## 1. Principio de Execucao V19
 
 A V19 deve executar somente intervencoes pequenas, verificaveis e reversiveis. Cada trilha precisa preservar:

@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v23.0.0
+**Versao:** v24.0.0
 **Data:** 2026-04-28
-**Atualizado em:** v23.0.0 - reancoragem pos-V22
+**Atualizado em:** v24.0.0 - ledger pos-V23 e janela raiz V20-V24
 
 ---
 
@@ -20,14 +20,14 @@ em ordem deterministica nos 22 HTMLs canonicos.
 | Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime) |
 | Hosting | Vercel (`vercel.json`) |
 | Runtime JS | `frontendRuntimeVersion=8.6.0` |
-| appVersion documental | `23.0.0` |
-| Branch principal | `kinocampus-V23.0-foundations` |
+| appVersion documental | `24.0.0` |
+| Branch principal | `kinocampus-V24.0-foundations` |
 | Testes | Jest 134 suites / 3046 testes + Playwright 8 suites E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
-V23 e uma versao documental. Este arquivo substitui o baseline antigo V16 e reflete a estrutura real
-apos as trilhas V17 a V22: archive consolidado, planning ativo, QA ativo separado do historico,
-worktree Claude arquivada e politica de no maximo 5 relatorios recentes na raiz.
+V24 e uma versao documental. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
+janela operacional atual: archive consolidado, planning ativo com ledger pos-V23, QA ativo separado do
+historico, worktree Claude arquivada e politica de no maximo 5 relatorios recentes na raiz.
 
 ---
 
@@ -95,11 +95,11 @@ kino-campus/
 |-- VERSION.json
 |-- CHANGELOG.md
 |-- README.md
-|-- RELATORIO-KINOCAMPUS-V19.md
 |-- RELATORIO-KINOCAMPUS-V20.md
 |-- RELATORIO-KINOCAMPUS-V21.md
 |-- RELATORIO-KINOCAMPUS-V22.md
-`-- RELATORIO-KINOCAMPUS-V23.md
+|-- RELATORIO-KINOCAMPUS-V23.md
+`-- RELATORIO-KINOCAMPUS-V24.md
 ```
 
 ---
@@ -168,7 +168,7 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/product.css` | Producao | Pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
-O split CSS segue pendente de execucao funcional. V23 apenas documenta o estado atual.
+O split CSS segue pendente de execucao funcional. V24 apenas documenta o estado atual.
 
 ---
 
@@ -194,7 +194,7 @@ O split CSS segue pendente de execucao funcional. V23 apenas documenta o estado 
 
 | Subdiretorio | Conteudo |
 |---|---|
-| `relatorios/` | Relatorios de encerramento V9, V11, V13-V18 |
+| `relatorios/` | Relatorios de encerramento V9, V11, V13-V19 |
 | `audits-v11/` | Auditorias e handoffs da trilha V11 |
 | `audits-v12-v13/` | Auditorias de refactor V12-V13 |
 | `audits-accessibility/` | Auditorias a11y/i18n V12 |
@@ -210,13 +210,13 @@ Nao recriar arvores historicas antigas fora de `docs/archive/`.
 
 ### 5.3 Relatorios raiz
 
-A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V23, a janela operacional e:
+A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V24, a janela operacional e:
 
-- `RELATORIO-KINOCAMPUS-V19.md`
 - `RELATORIO-KINOCAMPUS-V20.md`
 - `RELATORIO-KINOCAMPUS-V21.md`
 - `RELATORIO-KINOCAMPUS-V22.md`
 - `RELATORIO-KINOCAMPUS-V23.md`
+- `RELATORIO-KINOCAMPUS-V24.md`
 
 Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatorios/`.
 
@@ -252,7 +252,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 
 ---
 
-## 8. Delta V17 a V23
+## 8. Delta V17 a V24
 
 | Versao | Entrega estrutural |
 |---|---|
@@ -263,3 +263,4 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | V21 | Worktree Claude rastreada arquivada e `.claude/worktrees/*` ignorado |
 | V22 | Politica de relatorios raiz com janela maxima de 5 versoes recentes |
 | V23 | Este arquivo reancorado para a estrutura real pos-V22 |
+| V24 | Ledger pos-V23 criado e V19 arquivado conforme politica de raiz |

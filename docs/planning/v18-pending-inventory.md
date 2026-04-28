@@ -18,13 +18,13 @@
 
 | ID | Prioridade | Item | Evidencia | Acao / status |
 |---|---|---|---|---|
-| DOC-001 | P1 | `docs/env-vars.md` ainda descreve release funcional v10 e fase v11 | Baseline textual na secao `KC_ENV em runtime` | Atualizar baseline para V18/V19 e manter nota clara sobre `frontendRuntimeVersion=8.6.0` |
-| DOC-002 | P1 | `docs/db-schema.md` ainda declara estado v11.25.x | Header do documento | Reancorar estado documental para a baseline atual sem apagar marcadores historicos de introducao |
-| DOC-003 | P1 | READMEs de `assets/js/` ainda dizem que movimentacoes V14/V15 estao planejadas | `assets/js/api/README.md`, `boot/`, `core/`, `utils/`, `adapters/*`, `legacy-shims/` | Reescrever status dos READMEs como pos-V15, refletindo arquivos reais e regras atuais |
+| DOC-001 | P1 | `docs/env-vars.md` ainda descreve release funcional v10 e fase v11 | Baseline textual na secao `KC_ENV em runtime` | Resolvido em V19; baseline documental reancorado para V24 mantendo `frontendRuntimeVersion=8.6.0` |
+| DOC-002 | P1 | `docs/db-schema.md` ainda declara estado v11.25.x | Header do documento | Resolvido em V19; baseline documental reancorado para V24 sem apagar marcadores historicos |
+| DOC-003 | P1 | READMEs de `assets/js/` ainda dizem que movimentacoes V14/V15 estao planejadas | `assets/js/api/README.md`, `boot/`, `core/`, `utils/`, `adapters/*`, `legacy-shims/` | Resolvido em V19: READMEs indicam estado consolidado pos-V14/V15 |
 | DOC-004 | P1 | `docs/qa/` misturava material operacional ativo com historico V8/V11 | `docs/qa/README.md`, `docs/qa/reports/*` | Resolvido em V20: historico movido para `docs/archive/qa-legacy/` e checklist ativo recriado |
 | DOC-005 | P2 | `RELATORIO-KINOCAMPUS-V15.md` permanecia na raiz com linguagem historica de execucao | Relatorio raiz preservado por V17 | Resolvido em V22: V15-V17 arquivados em `docs/archive/relatorios/` |
 | DOC-006 | P2 | `.lighthouserc.js` tinha referencia antiga a auditoria de accessibility | Comentario de justificativa dos thresholds | Manter referencia pos-V17 para `docs/archive/audits-accessibility/` |
-| DOC-007 | P2 | `package.json` descrevia linha funcional v11 | Campo `description` | Manter descricao curta alinhada a V18 e ao runtime canonico 8.6.0 |
+| DOC-007 | P2 | `package.json` descrevia linha funcional v11 | Campo `description` | Resolvido em V19; descricao reancorada para V24 nesta versao |
 | DOC-008 | P1 | `docs/architecture/repository-structure.md` permanecia no baseline V16 | Header e arvore citavam estado anterior a V17-V22 | Resolvido em V23: documento reescrito para a estrutura atual pos-V22 |
 
 ## 3. Produto e Funcionalidades
