@@ -166,13 +166,9 @@ function runVersionChecks() {
     }
   });
 
-  const readme = normalize(read('README.md'));
-  if (!readme.includes(`versao-alvo unica atual: **\`${canonicalVersion}\`**`)) {
-    errors.push('README.md is missing the canonical front version map header');
-  }
-  if (!readme.includes(`assets/js/core/kc-profiles.client.js`) || !readme.includes(`auth ui v${canonicalVersion}`)) {
-    errors.push('README.md is missing the canonical version references for kc-profiles/auth UI');
-  }
+  // Nota v17.3.0: checks do README removidos — "Mapa de Versão Canônica" foi
+  // extraído do README para VERSION.json + ai-development-guide.md (drift resolvido).
+  // A versão canônica 8.6.0 continua validada pelo loop de versionFiles acima.
 
   const changelog = read('CHANGELOG.md');
   if (!new RegExp(`^## \\[${escapeRegExp(canonicalVersion)}\\] - 2026-03-30$`, 'm').test(changelog)) {
