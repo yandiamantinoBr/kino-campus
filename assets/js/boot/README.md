@@ -14,4 +14,4 @@ Módulos de inicialização e infraestrutura global. Carregados primeiro em todo
 - Todos devem funcionar com `window.KCFF` potencialmente undefined
 
 ## Status
-**Planejado para V15.** Em V14 os arquivos permanecem em `assets/js/`.
+**Consolidado desde V15.** Os arquivos ja residem em `assets/js/boot/`; `kc-theme-boot.js` tambem faz parte do grupo de boot e deve permanecer compatível com carregamento antecipado.

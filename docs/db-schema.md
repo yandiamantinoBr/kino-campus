@@ -2,9 +2,9 @@
 
 **Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `83` migrations em `supabase/migrations/`
 
-> **Estado:** v11.25.x (2026-04-12). As anotações de versão ao longo deste documento (`v9.x.x`, `v9.1.x`, etc.) são marcadores históricos que indicam quando cada tabela, coluna ou trigger foi introduzido — não indicam a versão atual. O estado ativo do banco reflete todas as iterações v11 (v11.1.0–v11.25.x).
+> **Estado documental:** v19.0.0 (2026-04-28). As anotações de versão ao longo deste documento (`v9.x.x`, `v9.1.x`, `v11.x.x`, etc.) são marcadores históricos que indicam quando cada tabela, coluna ou trigger foi introduzido — não indicam a versão atual do repositório. O estado ativo do banco reflete as 83 migrations versionadas em `supabase/migrations/`.
 
-> Atualização documental da v11.1.0 em 08/04/2026: o repositório já inclui as migrations da v10 admin, `v10.0.0.0_admin_search_posts_full.sql` e `v10.0.1.0_admin_help_requests_pagination.sql`. No banco principal atual, elas já foram aplicadas.
+> Atualização documental da v19.0.0 em 28/04/2026: o repositório mantém pendências operacionais separadas para `extension_in_public` (`unaccent`) e `auth_leaked_password_protection`. Não mover extensão nem alterar Auth Dashboard por migration improvisada; seguir `docs/ops/v19-operational-runbook.md`.
 
 ## Tabelas Principais
 

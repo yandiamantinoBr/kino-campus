@@ -2,7 +2,7 @@
 
 Sub-módulos de utilitários, carregados em ordem determinística antes de `kc-utils.js`.
 
-## Arquivos (movidos em V14.7)
+## Arquivos atuais
 
 | Arquivo | Namespace | Responsabilidade |
 |---|---|---|
@@ -21,4 +21,4 @@ Sub-módulos de utilitários, carregados em ordem determinística antes de `kc-u
 - Sem dependência circular entre sub-módulos
 
 ## Status
-**Movimentação em V14.7.** Os arquivos serão movidos de `assets/js/` para este diretório com atualização automática de todos os `src=` nos 22 HTMLs.
+**Consolidado desde V14.7/V15.** Os arquivos ja residem em `assets/js/utils/`, sao carregados em ordem deterministica nos 22 HTMLs e fazem parte do `CANONICAL_JS`.

@@ -172,7 +172,7 @@ Usado apenas no `kc-create-modal` para seleção de categorias/tipos:
 /* Desktop */      @media (min-width: 1024px) { ... }
 ```
 
-**Regra atual da v10/v11:**
+**Regra atual consolidada (V19):**
 - admin usa a convenção consolidada `desktop >= 1024`, `tablet 768-1023`, `mobile < 768`, `small mobile < 480`
 - componentes novos devem funcionar em `375px` sem scroll horizontal
 - quando houver tabela responsiva, preferir `data-label` real em vez de `nth-child`

@@ -1,11 +1,11 @@
 # assets/js/legacy-shims/
 
-Shims de compatibilidade para browsers antigos ou APIs deprecadas.
+Shims e compatibilidade retroativa para fluxos legados ainda suportados.
 
 ## Regras de entrada
-- Apenas polyfills e shims sem lógica de produto
-- Sem dependência de outros módulos KinoCampus
-- Carregados antes de qualquer módulo `boot/` ou `core/`
+- Entradas devem ser pequenas, isoladas e justificadas por compatibilidade.
+- Nao absorver logica nova de produto neste diretorio.
+- Qualquer shim carregado em HTML precisa de cobertura em `validate-script-chains` ou documentacao equivalente.
 
 ## Status
-**Vazio em V14.** Diretório criado como placeholder para futuras necessidades de shims (ex: polyfill de `structuredClone`, `IntersectionObserver`, etc.).
+**Consolidado desde V15.** O diretorio contem `kc-migrate.myposts.js`, mantido como compatibilidade para migracao de dados antigos de "Meus posts".

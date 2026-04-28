@@ -5,20 +5,19 @@ Este diretorio preserva o historico operacional de QA do projeto sem reescrever 
 ## Artefatos canonicos atuais
 
 - `e2e-checklist.md`: checklist operacional principal.
-- `operational-smoke-gate-v11.32.md`: gate operacional minimo para a trilha `v11.32.x`, combinando Jest, hygiene, smoke HTTP e browser smoke quando o ambiente permitir.
+- `v19-authenticated-qa-plan.md`: plano atual para QA autenticado real da trilha V19.
 - `rls-smoke.sql`: roteiro de validacao RLS.
-- `report-v8.2-final.md`: consolidado historico da release validada da linha 8.2.x.
-- `bugs-v8.2.md`: tracker consolidado de bugs e gates da linha 8.2.x.
-- `report-v11.23.0-run1.md`: release gate final da rodada principal da v11, com regressao completa, hygiene, smoke HTTP e residuals operacionais do Supabase.
+- `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
+- `reports/`: evidencias e reports manuais preservados.
 
 ## Historico preservado
 
-- Os arquivos `report-v8.2.*`, `report-phase*` e documentos correlatos continuam mantidos por rastreabilidade historica.
-- Esses arquivos nao devem ser apagados nem renomeados sem consolidacao documental explicita.
+- `bugs-v8.2.md`, `how-to-run-v8.2.0.7.md`, `navigation-map-v8.2.md`, `pages-matrix-v8.2.md`, `v8.1.11.1-admin-reports-threshold.md` e reports v11 continuam mantidos por rastreabilidade historica.
+- Esses arquivos nao devem ser apagados nem renomeados sem consolidacao documental explicita ou movimentacao planejada para `docs/archive/`.
 
 ## Ordem de leitura recomendada
 
-1. Leia `report-v11.23.0-run1.md` para o release gate atual da v11.
-2. Consulte `operational-smoke-gate-v11.32.md` para o gate operacional atual da trilha ativa.
-3. Consulte `e2e-checklist.md` e `rls-smoke.sql` para reproducao operacional.
-4. Use `report-v8.2-final.md` e `bugs-v8.2.md` apenas como referencia historica da linha 8.2.x.
+1. Leia `v19-authenticated-qa-plan.md` para a proxima execucao real autenticada.
+2. Consulte `e2e-checklist.md` e `rls-smoke.sql` para reproducao operacional.
+3. Consulte `reports/README.md` para localizar evidencias antigas.
+4. Use os documentos v8/v11 apenas como referencia historica.

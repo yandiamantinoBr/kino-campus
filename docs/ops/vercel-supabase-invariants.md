@@ -17,7 +17,7 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
 
 ## 2. scripts/inject-env.js
 
-- O script injeta placeholders em `assets/js/kc-env.js` antes do deploy.
+- O script injeta placeholders em `assets/js/boot/kc-env.js` antes do deploy.
 - Variáveis canônicas aceitas:
   - `KC_SUPABASE_URL`
   - `KC_SUPABASE_ANON_KEY`
@@ -26,7 +26,7 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
 - Variáveis alternativas compatíveis continuam aceitas (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_*`, `VITE_*`, `REACT_APP_*`).
 - O script deve continuar recusando configuração incompleta e execução local não autorizada sem `KC_ALLOW_LOCAL_INJECT=1`.
 
-## 3. assets/js/kc-env.js
+## 3. assets/js/boot/kc-env.js
 
 - Produção deve continuar fail-closed quando `driver != "supabase"`.
 - Os placeholders canônicos para injeção devem permanecer presentes no arquivo rastreado:

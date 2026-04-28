@@ -2,6 +2,39 @@
 
 ---
 
+## [19.0.0] - 2026-04-28 — Correção de Drift Documental Ativo + Runbooks Operacionais (v19.0.0)
+
+### Tema
+
+Execução segura da primeira trilha derivada do inventário V18: reancorar documentos ativos,
+atualizar metadados para `kinocampus-V19.0-foundations` e transformar pendências operacionais
+em runbooks verificáveis. Zero mudanças funcionais, zero mudanças visuais, zero alterações em
+HTMLs, CSS de produção, JS de runtime ou migrations Supabase.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v19.0.0 | `RELATORIO-KINOCAMPUS-V19.md`, `docs/planning/v19-execution-plan.md`, `docs/ops/v19-operational-runbook.md`, `docs/qa/v19-authenticated-qa-plan.md` |
+| v19.0.0 | Reancoragem de README, `docs/index.md`, guia de IA, validators, workflow Lighthouse e teste de contrato de versão para V19 |
+| v19.0.0 | Correção de drift em `docs/env-vars.md`, `docs/db-schema.md`, `docs/qa/` e READMEs de `assets/js/` |
+
+### Métricas
+
+| Métrica | Antes (V18) | Depois (V19) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 18.0.0 | 19.0.0 | +1 versão documental |
+| Branch principal | `kinocampus-V18.0-foundations` | `kinocampus-V19.0-foundations` | alinhada |
+| RELATORIOs na raiz | 4 | 5 | +1 |
+| Itens `check:structure` | 155 | 156 | +1 |
+| Artefatos novos V19 | 0 | 3 | +3 |
+| JS funcional alterado | 0 | 0 | preservado ✅ |
+| CSS de produção alterado | 0 | 0 | preservado ✅ |
+| HTML alterado | 0 | 0 | preservado ✅ |
+| Supabase migrations alteradas | 0 | 0 | preservado ✅ |
+
+---
+
 ## [18.0.0] - 2026-04-28 — Auditoria de Pendências e Planejamento V19 (v18.0.0–v18.6.0)
 
 ### Tema

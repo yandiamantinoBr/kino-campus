@@ -2,12 +2,13 @@
 
 Camada de API: facade principal, sub-módulos de domínio e cliente Supabase.
 
-## Arquivos planejados
+## Arquivos atuais
 
 | Arquivo | Namespace | Responsabilidade |
 |---|---|---|
 | `kc-api.client.js` | `window.KCAPI` | Registry/facade — delega para sub-módulos |
 | `kc-api.auth.js` | `window._KCAPI.auth` | Autenticação via KCAPI |
+| `kc-api.posts-feed.js` | `window._KCAPI.postsFeed` | Feed incremental e listagens |
 | `kc-api.posts-read.js` | `window._KCAPI.postsRead` | Leitura de posts |
 | `kc-api.posts-write.js` | `window._KCAPI.postsWrite` | Escrita/publicação de posts |
 | `kc-api.comments-votes.js` | `window._KCAPI.commentsVotes` | Comentários e votos |
@@ -20,7 +21,7 @@ Camada de API: facade principal, sub-módulos de domínio e cliente Supabase.
 | `kc-supabase.client.js` | `window.KCSupabase` | Cliente Supabase + facade |
 | `kc-supabase.posts.js` | `window.KCSupabase._posts` | Posts via Supabase |
 | `kc-supabase.ratings.js` | `window.KCSupabase._ratings` | Ratings via Supabase |
-| `kc-profiles.client.js` | `window.KCProfilesClient` | Perfis via Supabase |
+| `admin-shell.js` | `window.KCAdminShell` | Shell compartilhado das paginas admin |
 
 ## Regras
 - `kc-supabase.client.js` ANTES dos sub-módulos supabase
@@ -28,4 +29,4 @@ Camada de API: facade principal, sub-módulos de domínio e cliente Supabase.
 - `kc-api.client.js` não pode ser reduzido abaixo de 700L (é registry/facade)
 
 ## Status
-**Planejado para V15.** Em V14 os arquivos permanecem em `assets/js/`.
+**Consolidado desde V15.** Os arquivos ja residem em `assets/js/api/`, sao carregados via `<script defer>` e fazem parte do `CANONICAL_JS` quando aplicavel.

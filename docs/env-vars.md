@@ -14,8 +14,8 @@ O KinoCampus usa três camadas de configuração:
 
 | Variável | Uso |
 |----------|-----|
-| `SUPABASE_URL` | substitui `__KC_SUPABASE_URL__` em `assets/js/kc-env.js` |
-| `SUPABASE_ANON_KEY` | substitui `__KC_SUPABASE_ANON_KEY__` em `assets/js/kc-env.js` |
+| `SUPABASE_URL` | substitui `__KC_SUPABASE_URL__` em `assets/js/boot/kc-env.js` |
+| `SUPABASE_ANON_KEY` | substitui `__KC_SUPABASE_ANON_KEY__` em `assets/js/boot/kc-env.js` |
 | `KC_APP_ENV` | alimenta `__KC_APP_ENV__` e normaliza `production` ou `development` |
 | `KC_DRIVER` | alimenta `__KC_DRIVER__`; em produção deve resultar em `supabase` |
 
@@ -32,7 +32,7 @@ Aliases aceitos pelo `scripts/inject-env.js`:
 
 ## `KC_ENV` em runtime
 
-O objeto é exposto por `assets/js/kc-env.js`:
+O objeto é exposto por `assets/js/boot/kc-env.js`:
 
 ```javascript
 window.KC_ENV = {
@@ -60,9 +60,10 @@ window.KC_ENV = {
 
 ### Observação importante de baseline
 
-- A release funcional atual do produto está na linha `v10`, e a fase corrente de trabalho está na `v11`.
-- Mesmo assim, o bloco canônico embarcado em `kc-env.js`, `kc-api.client.js`, `kc-supabase.client.js`, `kc-auth.ui.js`, `kc-profiles.client.js` e `scripts/hygiene-check.js` ainda permanece em `8.6.0`.
-- Esse drift não deve ser mascarado na documentação; ele passou a ser item explícito da v11.
+- A baseline documental atual do repositorio esta em `v19.0.0`.
+- O runtime JavaScript canonico do frontend permanece em `8.6.0` por decisao de compatibilidade; isso e diferente de `appVersion`.
+- Arquivos como `kc-env.js`, `kc-api.client.js`, `kc-supabase.client.js`, `kc-auth.ui.js`, `kc-profiles.client.js` e `scripts/hygiene-check.js` continuam validando `8.6.0`.
+- Essa diferenca nao e drift pendente: e a separacao formal entre versao documental/app (`19.0.0`) e runtime frontend (`8.6.0`).
 
 ## Supabase
 
@@ -132,11 +133,11 @@ Observacoes:
 - bucket: `kino-media`
 - caminhos principais:
   - `post-media/{uid}/{postId}/...`
-  - `avatars/{uid}.{ext}`
+  - `profile-avatars/{userId}/{timestamp}-avatar.{ext}`
 
 ### Migrations
 
-- o diretorio `supabase/migrations/` contem `82` arquivos na baseline atual
+- o diretorio `supabase/migrations/` contem `83` arquivos na baseline atual
 - as migrations da v10 admin já estão aplicadas no banco principal atual
 - em ambientes novos ou paralelos, a aplicação continua sendo uma vez por banco
 
@@ -169,4 +170,4 @@ Depois, apontar `SUPABASE_URL` e a chave local para o projeto local.
 - ausência de inline handlers proibidos
 - invariantes de deploy e contrato de `profiles`
 
-Hoje, o checker continua orientado pela versão canônica `8.6.0`, o que é coerente com os arquivos versionados de frontend, mas não com a linha funcional/documental `v10`. Essa tensão foi formalmente registrada para tratamento controlado na v11.
+Hoje, o checker continua orientado pela versão canônica `8.6.0`, o que é coerente com os arquivos versionados de frontend. A versão documental/app atual é `19.0.0` e fica registrada em `VERSION.json`.

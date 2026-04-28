@@ -2,7 +2,7 @@
 
 Módulos do núcleo da aplicação: UI shell, modelo de dados, widgets reutilizáveis e autenticação.
 
-## Arquivos planejados
+## Arquivos atuais
 
 | Arquivo | Namespace | Responsabilidade |
 |---|---|---|
@@ -12,6 +12,11 @@ Módulos do núcleo da aplicação: UI shell, modelo de dados, widgets reutiliz�
 | `kc-user-posts.js` | `window.kcUserPosts` | Posts de usuário em localStorage |
 | `kc-auth.ui.js` | — | UI de autenticação (modais de login/signup) |
 | `kc-auth-callback.js` | — | Handler de callback OAuth |
+| `kc-i18n.js` | `window.KCi18n` | Dicionario e runtime i18n |
+| `kc-notifications.js` | `window.KCNotifications` | UI de notificacoes in-app |
+| `kc-profiles.client.js` | `window.KCProfilesClient` | Cliente de perfis via Supabase |
+| `kc-public-shell.js` | `window.KCPublicShell` | Shell publico compartilhado |
+| `kc-theme.js` | `window.KCTheme` | Tema e persistencia de preferencia visual |
 
 ## Regras
 - Carregado após `boot/` e antes de `api/`
@@ -19,4 +24,4 @@ Módulos do núcleo da aplicação: UI shell, modelo de dados, widgets reutiliz�
 - Sem referência direta a adapters
 
 ## Status
-**Planejado para V15.** Em V14 os arquivos permanecem em `assets/js/`.
+**Consolidado desde V15.** Os arquivos ja residem em `assets/js/core/` e fazem parte do `CANONICAL_JS`.

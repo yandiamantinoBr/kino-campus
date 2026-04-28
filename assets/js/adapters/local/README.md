@@ -2,7 +2,7 @@
 
 Driver "local" do padrão de adapter do KinoCampus — implementação baseada em `localStorage` e estado em memória.
 
-## Arquivos (a mover em V14.8)
+## Arquivos atuais
 
 | Arquivo | Namespace | Responsabilidade |
 |---|---|---|
@@ -29,4 +29,4 @@ Driver "local" do padrão de adapter do KinoCampus — implementação baseada e
 
 ## Status
 
-**Movimentação planejada para V14.8.** Em V14 os arquivos permanecem em `assets/js/adapters/`. Este diretório é um placeholder para receber os arquivos na iteração v14.8.0.
+**Consolidado desde V14.8/V15.** Os arquivos ja residem em `assets/js/adapters/local/` e fazem parte do `CANONICAL_JS`. Este README descreve o estado atual, nao um plano de movimentacao.

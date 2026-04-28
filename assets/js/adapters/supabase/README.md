@@ -2,7 +2,7 @@
 
 Driver "supabase" do padrão de adapter do KinoCampus — implementação baseada no cliente Supabase (`window.KCSupabase`).
 
-## Arquivos (a mover em V14.8)
+## Arquivos atuais
 
 | Arquivo | Namespace | Responsabilidade |
 |---|---|---|
@@ -32,4 +32,4 @@ Driver "supabase" do padrão de adapter do KinoCampus — implementação basead
 
 ## Status
 
-**Movimentação planejada para V14.8.** Em V14 os arquivos permanecem em `assets/js/adapters/`. Este diretório é um placeholder para receber os arquivos na iteração v14.8.0.
+**Consolidado desde V14.8/V15.** Os arquivos ja residem em `assets/js/adapters/supabase/` e fazem parte do `CANONICAL_JS`. Este README descreve o estado atual, nao um plano de movimentacao.
