@@ -2,10 +2,10 @@
 
 ## Baseline atual
 
-- release funcional consolidada: `v16.0.0`
-- linha de trabalho atual: `v16`
-- branch-base operacional: `kinocampus-V15.0-foundations`
-- documento de execução da v16: [../RELATORIO-KINOCAMPUS-V16.md](../RELATORIO-KINOCAMPUS-V16.md)
+- release funcional consolidada: `v17.0.0`
+- linha de trabalho atual: `v17`
+- branch-base operacional: `kinocampus-V17.0-foundations`
+- documento de execução da v17: [../RELATORIO-KINOCAMPUS-V17.md](../RELATORIO-KINOCAMPUS-V17.md)
 
 ## Documentos canônicos
 
