@@ -2,6 +2,41 @@
 
 ---
 
+## [20.0.0] - 2026-04-28 — Separação de QA Ativo e Histórico (v20.0.0)
+
+### Tema
+
+Higiene documental de QA: `docs/qa/` volta a conter apenas artefatos operacionais ativos,
+enquanto checklists, bugs, reports e evidências históricas V8/V11/V15 ficam em
+`docs/archive/qa-legacy/`. Zero mudanças funcionais, zero mudanças visuais, zero alterações
+em HTMLs, CSS de produção, JS de runtime ou migrations Supabase.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v20.0.0 | `RELATORIO-KINOCAMPUS-V20.md` e reancoragem de metadados para `kinocampus-V20.0-foundations` |
+| v20.0.0 | Arquivamento via `git mv` de QA legado V8/V11/V15 em `docs/archive/qa-legacy/` |
+| v20.0.0 | Novo `docs/qa/e2e-checklist.md` canônico V20 e template de report autenticado |
+| v20.0.0 | Mapas `docs/qa/README.md`, `docs/qa/reports/README.md` e `docs/archive/qa-legacy/_INDEX.md` atualizados |
+
+### Métricas
+
+| Métrica | Antes (V19) | Depois (V20) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 19.0.0 | 20.0.0 | +1 versão documental |
+| Branch principal | `kinocampus-V19.0-foundations` | `kinocampus-V20.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 6 | +1 |
+| Itens `check:structure` | 156 | 157 | +1 |
+| Arquivos históricos movidos de `docs/qa/` | 0 | 10 | +10 arquivados |
+| Artefatos ativos novos de QA | 0 | 2 | +2 |
+| JS funcional alterado | 0 | 0 | preservado ✅ |
+| CSS de produção alterado | 0 | 0 | preservado ✅ |
+| HTML alterado | 0 | 0 | preservado ✅ |
+| Supabase migrations alteradas | 0 | 0 | preservado ✅ |
+
+---
+
 ## [19.0.0] - 2026-04-28 — Correção de Drift Documental Ativo + Runbooks Operacionais (v19.0.0)
 
 ### Tema

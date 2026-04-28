@@ -12,5 +12,5 @@ Este diretório consolida documentos históricos da V6 à V15 que não fazem par
 | audits-misc/ | Planos gerais: CSS split, feature flags, repository reorg, security placeholder |
 | legacy-v6-v8/ | Documentos históricos V6-V8: backend placeholder, SQL legacy, patches |
 | reviews/ | Code reviews externos (Codex, Claude) do período V8 |
-| qa-legacy/ | Relatórios de QA V8.x (smoke, RLS, regressão) |
+| qa-legacy/ | Checklists, mapas, bugs, reports e evidências históricas de QA V8/V11/V15 |
 | patches/ | Patches de auth UI históricos |

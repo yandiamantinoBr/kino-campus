@@ -1,21 +1,20 @@
 # docs/qa/reports/
 
-Relatórios de smoke test e QA manuais por versão. Este diretório preserva evidências antigas; planos ativos ficam um nível acima em `docs/qa/`.
+Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram movidos para
+`docs/archive/qa-legacy/` em V20.
 
 ## Conteúdo
 
-| Arquivo | Versão | Tipo |
-|---|---|---|
-| `report-v11.23.0-run1.md` | v11.23.0 | Smoke manual |
-| `report-v11.32.7-run1.md` | v11.32.7 | Smoke manual |
-| `operational-smoke-gate-v11.32.md` | v11.32 | Gate operacional |
-| `repository-reorg-smoke.md` | v15 | Smoke documental histórico |
+| Arquivo | Uso |
+|---|---|
+| `_TEMPLATE-authenticated-run.md` | Template para rodada autenticada real |
 
 ## Padrão de entrada
 
-Novos relatórios seguem o padrão: `report-vX.Y.Z-runN.md`
+Novos relatórios seguem o padrão: `report-v20-auth-runN.md` ou `report-vX.Y.Z-runN.md`.
 
-## Estado V19
+## Estado V20
 
-- O plano ativo de QA autenticado está em `../v19-authenticated-qa-plan.md`.
-- Os reports v11 continuam úteis como evidência histórica, mas não são mais o gate atual da plataforma.
+- O checklist ativo está em `../e2e-checklist.md`.
+- O plano-fonte de QA autenticado está em `../v19-authenticated-qa-plan.md`.
+- Reports antigos continuam preservados em `../../archive/qa-legacy/`.

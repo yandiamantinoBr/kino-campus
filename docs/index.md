@@ -2,10 +2,10 @@
 
 ## Baseline atual
 
-- release documental consolidada: `v19.0.0`
-- linha de trabalho atual: `v19`
-- branch-base operacional: `kinocampus-V19.0-foundations`
-- documento de execução da v19: [../RELATORIO-KINOCAMPUS-V19.md](../RELATORIO-KINOCAMPUS-V19.md)
+- release documental consolidada: `v20.0.0`
+- linha de trabalho atual: `v20`
+- branch-base operacional: `kinocampus-V20.0-foundations`
+- documento de execução da v20: [../RELATORIO-KINOCAMPUS-V20.md](../RELATORIO-KINOCAMPUS-V20.md)
 
 ## Documentos canônicos
 
@@ -33,7 +33,8 @@
 |---------|---------------|
 | [../README.md](../README.md) | visão executiva do projeto, stack, setup, fluxo operacional e estado da release |
 | [../CHANGELOG.md](../CHANGELOG.md) | histórico consolidado de releases e hotfixes |
-| [../RELATORIO-KINOCAMPUS-V19.md](../RELATORIO-KINOCAMPUS-V19.md) | correção de drift documental ativo e runbooks operacionais da v19 (atual) |
+| [../RELATORIO-KINOCAMPUS-V20.md](../RELATORIO-KINOCAMPUS-V20.md) | separação de QA ativo e histórico da v20 (atual) |
+| [../RELATORIO-KINOCAMPUS-V19.md](../RELATORIO-KINOCAMPUS-V19.md) | correção de drift documental ativo e runbooks operacionais da v19 (encerrada) |
 | [../RELATORIO-KINOCAMPUS-V18.md](../RELATORIO-KINOCAMPUS-V18.md) | auditoria de pendências e planejamento V19 da v18 (encerrada) |
 | [../RELATORIO-KINOCAMPUS-V17.md](../RELATORIO-KINOCAMPUS-V17.md) | plano diretor e registro da v17 (encerrada) |
 | [../RELATORIO-KINOCAMPUS-V16.md](../RELATORIO-KINOCAMPUS-V16.md) | plano diretor e registro da v16 (encerrada) |
@@ -48,8 +49,8 @@
 1. Código e comportamento real prevalecem sobre documentação antiga.
 2. Banco de dados: Supabase Dashboard (tabelas, migrations, RPCs).
 3. Contratos de frontend: `assets/js/api/kc-api.client.js`, adapters, controllers e HTMLs.
-4. Estado da v19: `RELATORIO-KINOCAMPUS-V19.md`.
-5. Guia de IA: `docs/architecture/ai-development-guide.md` *(atualizado em v19.0.0)*.
+4. Estado da v20: `RELATORIO-KINOCAMPUS-V20.md`.
+5. Guia de IA: `docs/architecture/ai-development-guide.md` *(atualizado em v20.0.0)*.
 
 ## Quick reference
 
@@ -72,5 +73,5 @@ el.innerHTML = window.KCUtils.escapeHtml(userContent);
 
 ## Observações de baseline
 
-- Baseline reancorado para v19.0.0 em 2026-04-28. Estrutura documental consolidada em docs/archive/ em v17.5.0; pendências ativas mapeadas em docs/planning/ em v18 e operacionalizadas em runbooks v19.
+- Baseline reancorado para v20.0.0 em 2026-04-28. Estrutura documental consolidada em docs/archive/ em v17.5.0; pendências ativas mapeadas em docs/planning/ em v18, operacionalizadas em runbooks v19 e separadas entre QA ativo/histórico em v20.
 - frontendRuntimeVersion permanece em `8.6.0` (constante canônica no runtime).

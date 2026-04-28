@@ -1,12 +1,13 @@
-# Kino Campus - v19.0.0
+# Kino Campus - v20.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V19.0-foundations`
-**Status atual:** v11–v19 ENCERRADAS ✅
+**Branch principal:** `kinocampus-V20.0-foundations`
+
+**Status atual:** v11–v20 ENCERRADAS ✅
 
 ---
 
@@ -43,6 +44,7 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 
 | Versão | Relatório | Tema |
 |--------|-----------|------|
+| V20 | [RELATORIO-KINOCAMPUS-V20.md](RELATORIO-KINOCAMPUS-V20.md) | Separação de QA ativo e histórico |
 | V19 | [RELATORIO-KINOCAMPUS-V19.md](RELATORIO-KINOCAMPUS-V19.md) | Correção de drift documental ativo + runbooks operacionais |
 | V18 | [RELATORIO-KINOCAMPUS-V18.md](RELATORIO-KINOCAMPUS-V18.md) | Auditoria de pendências e planejamento seguro da V19 |
 | V17 | [RELATORIO-KINOCAMPUS-V17.md](RELATORIO-KINOCAMPUS-V17.md) | Reorganização documental completa + rename de branch |
