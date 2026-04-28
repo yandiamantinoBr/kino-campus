@@ -2,10 +2,10 @@
 
 ## Baseline atual
 
-- release funcional consolidada: `v17.0.0`
-- linha de trabalho atual: `v17`
-- branch-base operacional: `kinocampus-V17.0-foundations`
-- documento de execução da v17: [../RELATORIO-KINOCAMPUS-V17.md](../RELATORIO-KINOCAMPUS-V17.md)
+- release documental consolidada: `v18.0.0`
+- linha de trabalho atual: `v18`
+- branch-base operacional: `kinocampus-V18.0-foundations`
+- documento de execução da v18: [../RELATORIO-KINOCAMPUS-V18.md](../RELATORIO-KINOCAMPUS-V18.md)
 
 ## Documentos canônicos
 
@@ -33,8 +33,10 @@
 |---------|---------------|
 | [../README.md](../README.md) | visão executiva do projeto, stack, setup, fluxo operacional e estado da release |
 | [../CHANGELOG.md](../CHANGELOG.md) | histórico consolidado de releases e hotfixes |
-| [../RELATORIO-KINOCAMPUS-V17.md](../RELATORIO-KINOCAMPUS-V17.md) | plano diretor e registro vivo das iterações da v17 (atual) |
+| [../RELATORIO-KINOCAMPUS-V18.md](../RELATORIO-KINOCAMPUS-V18.md) | auditoria de pendências e planejamento V19 da v18 (atual) |
+| [../RELATORIO-KINOCAMPUS-V17.md](../RELATORIO-KINOCAMPUS-V17.md) | plano diretor e registro da v17 (encerrada) |
 | [../RELATORIO-KINOCAMPUS-V16.md](../RELATORIO-KINOCAMPUS-V16.md) | plano diretor e registro da v16 (encerrada) |
+| [planning/_INDEX.md](./planning/_INDEX.md) | índice dos planos ativos e inventários pendentes |
 | [archive/_INDEX.md](./archive/_INDEX.md) | índice geral do arquivo histórico com ~85 docs |
 | [archive/relatorios/_INDEX.md](./archive/relatorios/_INDEX.md) | índice de relatórios históricos arquivados (V9, V11, V13, V14) |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
@@ -45,7 +47,7 @@
 1. Código e comportamento real prevalecem sobre documentação antiga.
 2. Banco de dados: Supabase Dashboard (tabelas, migrations, RPCs).
 3. Contratos de frontend: `assets/js/api/kc-api.client.js`, adapters, controllers e HTMLs.
-4. Estado da v17: `RELATORIO-KINOCAMPUS-V17.md`.
+4. Estado da v18: `RELATORIO-KINOCAMPUS-V18.md`.
 5. Guia de IA: `docs/architecture/ai-development-guide.md` *(disponível em v16.8.0)*.
 
 ## Quick reference
@@ -69,5 +71,5 @@ el.innerHTML = window.KCUtils.escapeHtml(userContent);
 
 ## Observações de baseline
 
-- Baseline reancorado para v17.0.0 em 2026-04-28 (v17.2.0). Estrutura documental consolidada em docs/archive/ em v17.5.0.
+- Baseline reancorado para v18.0.0 em 2026-04-28 (v18.6.0). Estrutura documental consolidada em docs/archive/ em v17.5.0; pendências ativas mapeadas em docs/planning/ em v18.
 - frontendRuntimeVersion permanece em `8.6.0` (constante canônica no runtime).

@@ -21,7 +21,7 @@
  *   - Performance: feed local atinge 100; index local 74 (sem HTTPS/CDN); produção
  *     Vercel consistentemente ≥ 0.80 com static files + CDN edge caching.
  *   - Accessibility: ciclo V12 Camada B implementou WCAG 2.1 AA completo;
- *     scores de produção validados ≥ 0.90 após auditoria docs/audits/accessibility/.
+ *     scores de produção validados ≥ 0.90 após auditoria docs/archive/audits-accessibility/.
  *   - Best Practices: local perde ~20pts por falta de HTTPS; Vercel HTTPS = ~0.85.
  *   - SEO: estável em 100 localmente e produção; threshold de error mantido.
  *

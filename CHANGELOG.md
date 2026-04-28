@@ -2,6 +2,43 @@
 
 ---
 
+## [18.0.0] - 2026-04-28 — Auditoria de Pendências e Planejamento V19 (v18.0.0–v18.6.0)
+
+### Tema
+
+Auditoria documental/analítica para mapear pendências, incompletudes, riscos e dívidas
+ativas antes da V19. Zero mudanças funcionais, zero mudanças visuais, zero alterações em
+HTMLs, CSS de produção, JS de runtime ou migrations Supabase.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v18.0.0 | Abertura planning-only: `RELATORIO-KINOCAMPUS-V18.md` e `docs/planning/` |
+| v18.1.0 | Alinhamento de branch/metadados para `kinocampus-V18.0-foundations` |
+| v18.2.0 | Inventário de drift documental ativo/canônico |
+| v18.3.0 | Inventário funcional/produto sem alterar runtime |
+| v18.4.0 | Inventário segurança/operações Supabase, Vercel e providers |
+| v18.5.0 | Inventário QA/UX/CSS/a11y e lacunas de verificação |
+| v18.6.0 | Roadmap V19 priorizado e release gate V18 |
+
+### Métricas
+
+| Métrica | Antes (V17) | Depois (V18) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 17.0.0 | 18.0.0 | +1 versão documental |
+| Branch principal | `kinocampus-V17.0-foundations` | `kinocampus-V18.0-foundations` | alinhada |
+| Subdirs `docs/planning/` | 0 | 1 | +1 |
+| Artefatos de planejamento V18 | 0 | 3 | +3 |
+| RELATORIOs na raiz | 3 | 4 | +1 |
+| Itens `check:structure` | 153 | 155 | +2 |
+| JS funcional alterado | 0 | 0 | preservado ✅ |
+| CSS de produção alterado | 0 | 0 | preservado ✅ |
+| HTML alterado | 0 | 0 | preservado ✅ |
+| Supabase migrations alteradas | 0 | 0 | preservado ✅ |
+
+---
+
 ## [17.0.0] - 2026-04-28 — Reorganização Documental Completa + Rename de Branch (v17.0.0–v17.6.0)
 
 ### Tema

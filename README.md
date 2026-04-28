@@ -1,12 +1,12 @@
-# Kino Campus - v17.0.0
+# Kino Campus - v18.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V17.0-foundations`  
-**Status atual:** v11–v17 ENCERRADAS ✅
+**Branch principal:** `kinocampus-V18.0-foundations`  
+**Status atual:** v11–v18 ENCERRADAS ✅
 
 ---
 
@@ -43,7 +43,8 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 
 | Versão | Relatório | Tema |
 |--------|-----------|------|
-| V17 (em execução) | [RELATORIO-KINOCAMPUS-V17.md](RELATORIO-KINOCAMPUS-V17.md) | Reorganização documental completa + rename de branch |
+| V18 | [RELATORIO-KINOCAMPUS-V18.md](RELATORIO-KINOCAMPUS-V18.md) | Auditoria de pendências e planejamento seguro da V19 |
+| V17 | [RELATORIO-KINOCAMPUS-V17.md](RELATORIO-KINOCAMPUS-V17.md) | Reorganização documental completa + rename de branch |
 | V16 | [RELATORIO-KINOCAMPUS-V16.md](RELATORIO-KINOCAMPUS-V16.md) | Mapeamento completo + 9 docs canônicos em `docs/architecture/` |
 | V15 | [RELATORIO-KINOCAMPUS-V15.md](RELATORIO-KINOCAMPUS-V15.md) | Reorganização final de `assets/js/` em 13 grupos canônicos |
 | V9–V14 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado |

@@ -38,6 +38,7 @@ var ROOT_FILES = [
   'RELATORIO-KINOCAMPUS-V15.md',
   'RELATORIO-KINOCAMPUS-V16.md',
   'RELATORIO-KINOCAMPUS-V17.md',
+  'RELATORIO-KINOCAMPUS-V18.md',
 ];
 
 // ── Diretórios obrigatórios ───────────────────────────────────────────────────
@@ -72,6 +73,7 @@ var REQUIRED_DIRS = [
   'tests/a11y',
   'tests/fixtures',
   'docs',
+  'docs/planning',
   'docs/architecture',
   'docs/archive',
   'docs/archive/relatorios',
