@@ -15,13 +15,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V15.md](RELATORIO-KINOCAMPUS-V15.md) | V15 | - | Reorganizacao final de `assets/js/` em 13 grupos canonicos |
 | [RELATORIO-KINOCAMPUS-V16.md](RELATORIO-KINOCAMPUS-V16.md) | V16 | - | Mapeamento completo + docs canonicos em `docs/architecture/` |
 | [RELATORIO-KINOCAMPUS-V17.md](RELATORIO-KINOCAMPUS-V17.md) | V17 | - | Reorganizacao documental completa + rename de branch |
+| [RELATORIO-KINOCAMPUS-V18.md](RELATORIO-KINOCAMPUS-V18.md) | V18 | - | Auditoria de pendencias e planejamento V19 |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V18.md`](../../RELATORIO-KINOCAMPUS-V18.md) - V18: auditoria de pendencias e planejamento V19
 - [`RELATORIO-KINOCAMPUS-V19.md`](../../RELATORIO-KINOCAMPUS-V19.md) - V19: drift documental e runbooks operacionais
 - [`RELATORIO-KINOCAMPUS-V20.md`](../../RELATORIO-KINOCAMPUS-V20.md) - V20: QA ativo separado do historico
 - [`RELATORIO-KINOCAMPUS-V21.md`](../../RELATORIO-KINOCAMPUS-V21.md) - V21: worktree Claude rastreada arquivada
 - [`RELATORIO-KINOCAMPUS-V22.md`](../../RELATORIO-KINOCAMPUS-V22.md) - V22: politica de relatorios raiz
+- [`RELATORIO-KINOCAMPUS-V23.md`](../../RELATORIO-KINOCAMPUS-V23.md) - V23: estrutura do repositorio reancorada

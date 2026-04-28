@@ -2,6 +2,40 @@
 
 ---
 
+## [23.0.0] - 2026-04-28 - Estrutura do Repositorio Reancorada (v23.0.0)
+
+### Tema
+
+Higiene documental de arquitetura: reancorar `docs/architecture/repository-structure.md` para a
+estrutura real pos-V22 e manter a politica de no maximo 5 relatorios recentes na raiz. Zero mudancas
+funcionais, zero mudancas visuais, zero alteracoes em HTMLs, CSS de producao, JS de runtime ou
+migrations Supabase.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v23.0.0 | `RELATORIO-KINOCAMPUS-V23.md` e reancoragem de metadados para `kinocampus-V23.0-foundations` |
+| v23.0.0 | `docs/architecture/repository-structure.md` reescrito para baseline V23 |
+| v23.0.0 | `RELATORIO-KINOCAMPUS-V18.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+| v23.0.0 | README, `docs/index.md`, `docs/archive/`, guia de IA e validators alinhados a V23 |
+
+### Metricas
+
+| Metrica | Antes (V22) | Depois (V23) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 22.0.0 | 23.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V22.0-foundations` | `kinocampus-V23.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 7 | 8 | +V18 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [22.0.0] - 2026-04-28 — Política de Relatórios Raiz (v22.0.0)
 
 ### Tema

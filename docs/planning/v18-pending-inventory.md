@@ -25,6 +25,7 @@
 | DOC-005 | P2 | `RELATORIO-KINOCAMPUS-V15.md` permanecia na raiz com linguagem historica de execucao | Relatorio raiz preservado por V17 | Resolvido em V22: V15-V17 arquivados em `docs/archive/relatorios/` |
 | DOC-006 | P2 | `.lighthouserc.js` tinha referencia antiga a auditoria de accessibility | Comentario de justificativa dos thresholds | Manter referencia pos-V17 para `docs/archive/audits-accessibility/` |
 | DOC-007 | P2 | `package.json` descrevia linha funcional v11 | Campo `description` | Manter descricao curta alinhada a V18 e ao runtime canonico 8.6.0 |
+| DOC-008 | P1 | `docs/architecture/repository-structure.md` permanecia no baseline V16 | Header e arvore citavam estado anterior a V17-V22 | Resolvido em V23: documento reescrito para a estrutura atual pos-V22 |
 
 ## 3. Produto e Funcionalidades
 
