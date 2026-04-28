@@ -38,8 +38,8 @@ provider externo, dashboard ou decisao de gate.
 
 | ID | Prioridade | Motivo de permanencia | Proximo passo seguro |
 |---|---|---|---|
-| PROD-001 | P0 | Signup callback real exige conta nova e caixa de e-mail real | Executar run autenticado e registrar evidencia em `docs/qa/reports/` |
-| PROD-002 | P0 | Fluxos admin/autenticados exigem usuario comum, admin e massa real | Preparar credenciais temporarias e checklist de rollback |
+| PROD-001 | P0 | Signup callback real exige conta nova e caixa de e-mail real | Runbook criado em V25; execucao ainda deve registrar evidencia em `docs/qa/reports/` |
+| PROD-002 | P0 | Fluxos admin/autenticados exigem usuario comum, admin e massa real | Runbook V25 define credenciais temporarias, evidencias e limpeza pos-teste |
 | PROD-003 / SEC-003 | P1 | Avatar Storage policies dependem de estado real do bucket/policies | Validar no Supabase antes de transformar script manual em migration |
 | PROD-004 | P1 | Email/WhatsApp dependem de provider e secrets reais | Rodar sandbox por canal, mantendo fail-closed como default |
 | PROD-005 / SEC-002 | P0/P1 | `unaccent` fora de `public` pode quebrar FTS/RPCs | Fazer spike SQL em projeto isolado antes de qualquer migration |

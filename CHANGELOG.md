@@ -2,6 +2,41 @@
 
 ---
 
+## [25.0.0] - 2026-04-28 - Runbook de QA Real (v25.0.0)
+
+### Tema
+
+Preparacao documental de QA autenticado em ambiente real: criar roteiro verificavel para signup
+callback, login, perfil/avatar, posts, interacoes, admin/moderacao, RLS, notificacoes fail-closed e
+busca/feed. Zero mudancas funcionais, zero mudancas visuais, zero alteracoes em HTMLs, CSS de
+producao, JS de runtime ou migrations Supabase.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v25.0.0 | `RELATORIO-KINOCAMPUS-V25.md` e reancoragem de metadados para `kinocampus-V25.0-foundations` |
+| v25.0.0 | `docs/qa/v25-real-environment-qa-runbook.md` criado |
+| v25.0.0 | `RELATORIO-KINOCAMPUS-V20.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+| v25.0.0 | QA map, ledger V24, README, docs index, archive e guia de IA alinhados a V25 |
+
+### Metricas
+
+| Metrica | Antes (V24) | Depois (V25) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 24.0.0 | 25.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V24.0-foundations` | `kinocampus-V25.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 9 | 10 | +V20 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Artefatos novos de QA | 0 | 1 | +runbook V25 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [24.0.0] - 2026-04-28 - Ledger Pos-V23 de Pendencias (v24.0.0)
 
 ### Tema
