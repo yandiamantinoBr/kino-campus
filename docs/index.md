@@ -33,7 +33,9 @@
 |---------|---------------|
 | [../README.md](../README.md) | visão executiva do projeto, stack, setup, fluxo operacional e estado da release |
 | [../CHANGELOG.md](../CHANGELOG.md) | histórico consolidado de releases e hotfixes |
-| [../RELATORIO-KINOCAMPUS-V16.md](../RELATORIO-KINOCAMPUS-V16.md) | plano diretor e registro vivo das iterações da v16 |
+| [../RELATORIO-KINOCAMPUS-V17.md](../RELATORIO-KINOCAMPUS-V17.md) | plano diretor e registro vivo das iterações da v17 (atual) |
+| [../RELATORIO-KINOCAMPUS-V16.md](../RELATORIO-KINOCAMPUS-V16.md) | plano diretor e registro da v16 (encerrada) |
+| [archive/relatorios/_INDEX.md](./archive/relatorios/_INDEX.md) | índice de relatórios históricos arquivados (V9, V11, V13, V14) |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referência rápida de validação |
 
@@ -42,7 +44,7 @@
 1. Código e comportamento real prevalecem sobre documentação antiga.
 2. Banco de dados: Supabase Dashboard (tabelas, migrations, RPCs).
 3. Contratos de frontend: `assets/js/api/kc-api.client.js`, adapters, controllers e HTMLs.
-4. Estado da v16: `RELATORIO-KINOCAMPUS-V16.md`.
+4. Estado da v17: `RELATORIO-KINOCAMPUS-V17.md`.
 5. Guia de IA: `docs/architecture/ai-development-guide.md` *(disponível em v16.8.0)*.
 
 ## Quick reference
@@ -66,5 +68,5 @@ el.innerHTML = window.KCUtils.escapeHtml(userContent);
 
 ## Observações de baseline
 
-- Baseline reancorado para v16.0.0 em 2026-04-26 durante a iteração v16.2.0.
+- Baseline reancorado para v17.0.0 em 2026-04-28 durante a iteração v17.2.0.
 - frontendRuntimeVersion permanece em `8.6.0` (constante canônica no runtime).
