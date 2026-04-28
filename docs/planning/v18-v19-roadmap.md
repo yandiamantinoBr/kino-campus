@@ -38,13 +38,13 @@ Arquivos candidatos:
 - `docs/qa/README.md`
 - `docs/qa/reports/README.md`
 - READMEs em `assets/js/**/README.md`
-- `.claude/worktrees/serene-germain`
+- `.claude/worktrees/serene-germain` (resolvido em V21: artefatos preservados em `docs/archive/claude-worktree-v9/`)
 
 Entregas:
 
 - Atualizar baselines documentais para V18/V19.
 - Separar docs ativos de historicos em `docs/qa/`.
-- Definir politica para relatorios raiz e artefatos `.claude`.
+- Definir politica para relatorios raiz; artefatos `.claude` rastreados foram arquivados em V21.
 - Manter `docs/archive/` como destino de historico consolidado.
 
 ### V19.2 - QA operacional autenticado
@@ -112,6 +112,6 @@ Entregas:
 - Nao mover `unaccent` diretamente em producao.
 - Nao transformar provider real de notificacao em default sem sandbox.
 - Nao executar split CSS sem visual regression.
-- Nao remover `.claude/worktrees` sem decisao sobre preservacao historica.
+- Nao remover `.claude/worktrees` sem decisao sobre preservacao historica; a decisao V21 foi preservar artefatos rastreados em `docs/archive/claude-worktree-v9/`.
 - Nao arquivar `docs/qa/` inteiro: separar ativo de historico.
 - Nao alterar `frontendRuntimeVersion`.

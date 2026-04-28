@@ -17,5 +17,3 @@ coverage/
 
 # Local worktrees must never be versioned as gitlinks/submodules.
 .claude/worktrees/*
-!.claude/worktrees/serene-germain/
-!.claude/worktrees/serene-germain/**

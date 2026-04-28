@@ -2,6 +2,41 @@
 
 ---
 
+## [21.0.0] - 2026-04-28 — Arquivamento de Worktree Claude Rastreada (v21.0.0)
+
+### Tema
+
+Higiene de repositório: preservar os artefatos V9 rastreados em `.claude/worktrees/serene-germain`
+fora da área de worktrees locais, removendo o whitelist que permitia versionar essa pasta. Zero
+mudanças funcionais, zero mudanças visuais, zero alterações em HTMLs, CSS de produção, JS de
+runtime ou migrations Supabase.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v21.0.0 | `RELATORIO-KINOCAMPUS-V21.md` e reancoragem de metadados para `kinocampus-V21.0-foundations` |
+| v21.0.0 | 5 artefatos rastreados de `.claude/worktrees/serene-germain` movidos via `git mv` para `docs/archive/claude-worktree-v9/` |
+| v21.0.0 | `.gitignore` simplificado para manter `.claude/worktrees/*` sempre fora do índice |
+| v21.0.0 | Inventário V18 e índice de archive atualizados com REP-001 resolvido |
+
+### Métricas
+
+| Métrica | Antes (V20) | Depois (V21) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 20.0.0 | 21.0.0 | +1 versão documental |
+| Branch principal | `kinocampus-V20.0-foundations` | `kinocampus-V21.0-foundations` | alinhada |
+| RELATORIOs na raiz | 6 | 7 | +1 |
+| Itens `check:structure` | 157 | 158 | +1 |
+| Arquivos rastreados em `.claude/worktrees/` | 5 | 0 | -5 |
+| Artefatos V9 preservados em archive | 0 | 5 | +5 |
+| JS funcional alterado | 0 | 0 | preservado ✅ |
+| CSS de produção alterado | 0 | 0 | preservado ✅ |
+| HTML alterado | 0 | 0 | preservado ✅ |
+| Supabase migrations alteradas | 0 | 0 | preservado ✅ |
+
+---
+
 ## [20.0.0] - 2026-04-28 — Separação de QA Ativo e Histórico (v20.0.0)
 
 ### Tema

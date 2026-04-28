@@ -41,6 +41,7 @@ var ROOT_FILES = [
   'RELATORIO-KINOCAMPUS-V18.md',
   'RELATORIO-KINOCAMPUS-V19.md',
   'RELATORIO-KINOCAMPUS-V20.md',
+  'RELATORIO-KINOCAMPUS-V21.md',
 ];
 
 // ── Diretórios obrigatórios ───────────────────────────────────────────────────

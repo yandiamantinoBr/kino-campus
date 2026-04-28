@@ -62,9 +62,9 @@
 
 | ID | Prioridade | Item | Evidencia | Acao / status |
 |---|---|---|---|---|
-| REP-001 | P1 | `.claude/worktrees/serene-germain` contem artefatos V9 rastreados | `git ls-files .claude` lista docx/pdf/scripts V9 | Decidir arquivamento ou remocao controlada, preservando historico se necessario |
+| REP-001 | P1 | `.claude/worktrees/serene-germain` continha artefatos V9 rastreados | `git ls-files .claude` listava docx/pdf/scripts V9 | Resolvido em V21: artefatos movidos para `docs/archive/claude-worktree-v9/` e worktrees locais voltaram a ser ignoradas |
 | REP-002 | P2 | Relatorios raiz tendem a crescer a cada versao | V15, V16, V17, V18 na raiz | Definir politica: manter ultimas N versoes na raiz e arquivar anteriores |
-| REP-003 | P2 | Busca textual e grep eram poluidos por docs historicos ativos | `docs/qa/` e `.claude/worktrees` | Parcialmente resolvido em V20 para `docs/qa/`; `.claude/worktrees` segue pendente |
+| REP-003 | P2 | Busca textual e grep eram poluidos por docs historicos ativos | `docs/qa/` e `.claude/worktrees` | Resolvido em V20 para `docs/qa/` e em V21 para `.claude/worktrees` rastreado |
 
 ## 7. Itens Fora de Escopo da V18
 
