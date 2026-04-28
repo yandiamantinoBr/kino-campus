@@ -3,7 +3,7 @@
 
 **Status:** v15 em execução — v15.0.0 (abertura + branch rename)
 **Abertura:** 2026-04-26
-**Base:** `kinocampus-V15.0-foundations` (branch renomeada em v15.0.0)
+**Base:** branch V15 foundations (branch renomeada em v15.0.0)
 **Antecessor:** v14.11.0 (PR #466) — v14 ENCERRADA
 **Tema:** JS Root Cleanup — mover todos os 57 arquivos JS restantes da raiz `assets/js/` para subdirs organizados (boot/, core/, api/, features/, shared/)
 
@@ -30,7 +30,7 @@ A trilha **v14 foi encerrada** com todos os critérios da Definition of Done ate
 **Problemas identificados ao abrir V15:**
 
 1. **Branch name desatualizada**: `kinocampus-V11.0-foundations` (projeto está em v15)
-   → Renomear para `kinocampus-V15.0-foundations`
+   → Renomear para branch V15 foundations
 
 2. **README título desatualizado**: `# Kino Campus - v10.0.0`
    → Atualizar para `# Kino Campus - v15.0.0`
@@ -197,10 +197,10 @@ A trilha **v14 foi encerrada** com todos os critérios da Definition of Done ate
 - [ ] `assets/js/` raiz NÃO contém nenhum arquivo .js (apenas subdiretórios)
 
 ### Governança
-- [ ] Branch `kinocampus-V15.0-foundations` existe e é a branch principal
+- [ ] Branch V15 foundations existe e é a branch principal
 - [ ] `README.md` título: `# Kino Campus - v15.0.0`
-- [ ] `VERSION.json` appVersion: `15.0.0`, branch: `kinocampus-V15.0-foundations`
-- [ ] `.github/workflows/lighthouse-ci.yml` trigger: `kinocampus-V15.0-foundations`
+- [ ] `VERSION.json` appVersion: `15.0.0`, branch V15 foundations
+- [ ] `.github/workflows/lighthouse-ci.yml` trigger: branch V15 foundations
 - [ ] `jest.config.js` bugfix: `assets/js/utils/kc-utils.js`
 
 ### Qualidade

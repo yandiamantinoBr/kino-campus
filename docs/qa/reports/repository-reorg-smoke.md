@@ -1,7 +1,7 @@
 # QA Smoke Checklist — Reorganização de Repositório V15
 
 **Data:** 2026-04-26  
-**Branch:** `kinocampus-V15.0-foundations`  
+**Branch:** branch V15 foundations  
 **Responsável:** Yan Diamantino  
 **Objetivo:** Validar que nenhuma funcionalidade core foi quebrada após cada iteração de movimento de arquivos JS em V15.
 

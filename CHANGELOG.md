@@ -2,11 +2,38 @@
 
 ---
 
-## [Unreleased] — v17 em execução
+## [17.0.0] - 2026-04-28 — Reorganização Documental Completa + Rename de Branch (v17.0.0–v17.6.0)
 
 ### Tema
 
-Reorganização documental completa + rename de branch para `kinocampus-V17.0-foundations`. 7 iterações, zero arquivos JS alterados, zero testes quebrados.
+Reorganização documental completa + rename de branch para `kinocampus-V17.0-foundations`.
+7 iterações, zero arquivos JS funcionais alterados, zero testes quebrados, zero mudanças visuais.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v17.0.0 | Abertura: `RELATORIO-KINOCAMPUS-V17.md`, `VERSION.json 17.0.0`, README status V17 |
+| v17.1.0 | Rename de branch: branch V15 foundations anterior → `kinocampus-V17.0-foundations`; validators e CI atualizados |
+| v17.2.0 | RELATORIOs históricos V9/V11/V13/V14 arquivados em `docs/archive/relatorios/` |
+| v17.3.0 | README.md 534L → 159L: remoção de seções históricas + checks hygiene stale |
+| v17.4.0 | `docs/archive/` unificado com 10 subdirs; ~85 docs movidos via `git mv` |
+| v17.5.0 | Cross-references atualizadas em docs canônicos; diretórios históricos consolidados em `docs/archive/` |
+| v17.6.0 | Release gate: CHANGELOG formal, VERSION encerrada, RELATORIO DoD preenchido |
+
+### Métricas
+
+| Métrica | Antes (V16) | Depois (V17) | Delta |
+|---------|-------------|--------------|-------|
+| Linhas README.md | 534 | 159 | −375 (−70%) |
+| RELATORIOs na raiz | 6 | 3 (V15, V16, V17) | −3 |
+| Branch name | branch V15 foundations anterior | `kinocampus-V17.0-foundations` | renomeada |
+| Subdirs docs/archive/ | 1 (relatorios/) | 10 | +9 |
+| Docs organizados em archive | ~85 (inconsistentes) | ~85 (10 subdirs) | reorganizados |
+| Jest suites | 134/134 | 134/134 | 0 preservado ✅ |
+| Jest testes | 3046/3046 | 3046/3046 | 0 preservado ✅ |
+| check:all | 5/5 ✅ | 5/5 ✅ | 0 preservado ✅ |
+| Arquivos JS funcionais alterados | — | 0 | 0 ✅ |
 
 ---
 
@@ -59,7 +86,7 @@ canônicos (`boot/`, `core/`, `api/`, `features/`, `features/create-post/`, `sha
 
 ### Track 0 — Abertura & Governança (v15.0.0–v15.1.0)
 
-- `v15.0.0`: **Abertura do ciclo V15** — branch rename `kinocampus-V11.0-foundations` → `kinocampus-V15.0-foundations`; `README.md` título `v10.0.0` → `v15.0.0`; `VERSION.json` `14.0.0` → `15.0.0`; `jest.config.js` bugfix (`kc-utils.js` → `utils/kc-utils.js`); `.github/workflows/lighthouse-ci.yml` trigger atualizado.
+- `v15.0.0`: **Abertura do ciclo V15** — branch rename `kinocampus-V11.0-foundations` → branch V15 foundations; `README.md` título `v10.0.0` → `v15.0.0`; `VERSION.json` `14.0.0` → `15.0.0`; `jest.config.js` bugfix (`kc-utils.js` → `utils/kc-utils.js`); `.github/workflows/lighthouse-ci.yml` trigger atualizado.
 - `v15.1.0`: Auditoria completa dos 57 arquivos JS restantes em `assets/js/` — `docs/audits/js-root-migration-v15.md` criado (mapa HTML×scripts, risco por grupo, cronograma).
 
 ### Track A — Boot Group (v15.2.0–v15.5.0)

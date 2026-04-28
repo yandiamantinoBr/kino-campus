@@ -1,7 +1,7 @@
 # Relatório KinoCampus V16 — Mapeamento Completo + Guia de IA
 
 **Versão:** 16.0.0  
-**Branch:** kinocampus-V15.0-foundations  
+**Branch:** branch V15 foundations  
 **Período:** 2026-04-26 → 2026-04-27  
 **Status:** ✅ Encerrada  
 
@@ -81,12 +81,12 @@ de negócio, arquivos JS funcionais, HTMLs ou testes existentes.
 - Zero alterações em lógica de negócio, CSS produtivo, HTMLs funcionais ou testes
 
 ### Workflow por iteração
-1. Criar branch `feature/v16.X.Y-descricao` a partir de `kinocampus-V15.0-foundations`
+1. Criar branch `feature/v16.X.Y-descricao` a partir da branch V15 foundations
 2. Implementar entrega
 3. `npm run check:all` + `npm test`
 4. Commit com Co-Author tag
 5. `git push -u origin feature/v16.X.Y-descricao`
-6. PR → squash merge → delete branch → `git pull origin kinocampus-V15.0-foundations`
+6. PR → squash merge → delete branch → pull da branch V15 foundations
 
 ### Linguagem
 - Documentação em **pt-BR**
@@ -98,7 +98,7 @@ de negócio, arquivos JS funcionais, HTMLs ou testes existentes.
 
 | Métrica | Valor |
 |---------|-------|
-| Branch principal | `kinocampus-V15.0-foundations` |
+| Branch principal | branch V15 foundations |
 | appVersion (abertura V16) | `16.0.0` |
 | Jest suites | 134/134 |
 | Jest testes | 3046/3046 |
