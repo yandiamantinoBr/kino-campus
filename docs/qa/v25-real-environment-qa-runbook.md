@@ -33,7 +33,7 @@ Nenhuma credencial, token, URL assinada ou segredo deve ser commitado.
 
 ## 3. Evidencia Obrigatoria
 
-Registre tudo em `docs/qa/reports/` usando `_TEMPLATE-authenticated-run.md`.
+Registre tudo em `docs/qa/reports/` usando `_TEMPLATE-authenticated-run.md` (normalizado em V26).
 
 | Tipo | Conteudo minimo |
 |---|---|
@@ -83,4 +83,4 @@ Registre tudo em `docs/qa/reports/` usando `_TEMPLATE-authenticated-run.md`.
 - Revogar permissao admin temporaria.
 - Registrar IDs removidos apenas de forma redigida.
 - Confirmar que nenhum token, header sensivel ou link de callback ficou em report commitado.
-- Atualizar o ledger V24/V25 com o resultado real apenas depois da execucao.
+- Atualizar o ledger V24/V25/V26 com o resultado real apenas depois da execucao.

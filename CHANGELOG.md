@@ -2,6 +2,41 @@
 
 ---
 
+## [26.0.0] - 2026-04-28 - Evidencias QA Real (v26.0.0)
+
+### Tema
+
+Normalizacao documental de evidencias para a primeira execucao real do QA autenticado. A V26 prepara
+template, checklist e readiness para registrar signup callback, perfil/avatar, admin/moderacao, RLS,
+notificacoes fail-closed, busca/feed e Lighthouse sem expor secrets. Zero mudancas funcionais, zero
+mudancas visuais, zero alteracoes em HTMLs, CSS de producao, JS de runtime ou migrations Supabase.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v26.0.0 | `RELATORIO-KINOCAMPUS-V26.md` e reancoragem de metadados para `kinocampus-V26.0-foundations` |
+| v26.0.0 | `docs/qa/reports/_TEMPLATE-authenticated-run.md` normalizado para evidencias redigidas |
+| v26.0.0 | `docs/planning/v26-qa-evidence-readiness.md` criado |
+| v26.0.0 | `RELATORIO-KINOCAMPUS-V21.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V25) | Depois (V26) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 25.0.0 | 26.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V25.0-foundations` | `kinocampus-V26.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 10 | 11 | +V21 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Artefatos QA atualizados | 1 runbook | template + checklist + reports README + readiness | evidencia normalizada |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [25.0.0] - 2026-04-28 - Runbook de QA Real (v25.0.0)
 
 ### Tema

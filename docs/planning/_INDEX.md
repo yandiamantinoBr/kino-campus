@@ -8,6 +8,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v18-v19-roadmap.md` | Roadmap priorizado para detalhamento e execucao segura na V19 |
 | `v19-execution-plan.md` | Plano V19 de execucao controlada, gates e bloqueios deliberados |
 | `v24-post-v23-backlog-ledger.md` | Ledger atual pos-V23: itens resolvidos por V19-V23 e pendencias ainda dependentes de ambiente real |
+| `v26-qa-evidence-readiness.md` | Readiness V26 para evidencias de QA real sem secrets ou mudancas funcionais |
 
 ## Regras
 

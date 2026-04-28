@@ -38,8 +38,8 @@ provider externo, dashboard ou decisao de gate.
 
 | ID | Prioridade | Motivo de permanencia | Proximo passo seguro |
 |---|---|---|---|
-| PROD-001 | P0 | Signup callback real exige conta nova e caixa de e-mail real | Runbook criado em V25; execucao ainda deve registrar evidencia em `docs/qa/reports/` |
-| PROD-002 | P0 | Fluxos admin/autenticados exigem usuario comum, admin e massa real | Runbook V25 define credenciais temporarias, evidencias e limpeza pos-teste |
+| PROD-001 | P0 | Signup callback real exige conta nova e caixa de e-mail real | Runbook criado em V25; template V26 define evidencia redigida em `docs/qa/reports/` |
+| PROD-002 | P0 | Fluxos admin/autenticados exigem usuario comum, admin e massa real | Runbook V25 define credenciais temporarias; template V26 define limpeza e Go/No-Go |
 | PROD-003 / SEC-003 | P1 | Avatar Storage policies dependem de estado real do bucket/policies | Validar no Supabase antes de transformar script manual em migration |
 | PROD-004 | P1 | Email/WhatsApp dependem de provider e secrets reais | Rodar sandbox por canal, mantendo fail-closed como default |
 | PROD-005 / SEC-002 | P0/P1 | `unaccent` fora de `public` pode quebrar FTS/RPCs | Fazer spike SQL em projeto isolado antes de qualquer migration |
@@ -57,7 +57,7 @@ provider externo, dashboard ou decisao de gate.
 
 | Ordem | Trilha | Condicao de entrada | Saida esperada |
 |---:|---|---|---|
-| 1 | QA autenticado real | Credenciais e ambiente definidos | Report em `docs/qa/reports/` com signup, callback, perfil e admin |
+| 1 | QA autenticado real | Credenciais e ambiente definidos | Report `report-v26-auth-runN.md` com signup, callback, perfil e admin |
 | 2 | Supabase advisor/runbook | Acesso ao dashboard e ambiente isolado | Evidencia de `auth_leaked_password_protection`, avatar policies e `unaccent` |
 | 3 | Providers externos | Secrets/sandbox de email e WhatsApp | Dispatch real controlado com rollback documentado |
 | 4 | Visual/a11y regression | Ferramenta/processo escolhido | Baseline visual das 22 rotas antes de CSS |

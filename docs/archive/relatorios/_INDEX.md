@@ -18,13 +18,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V18.md](RELATORIO-KINOCAMPUS-V18.md) | V18 | - | Auditoria de pendencias e planejamento V19 |
 | [RELATORIO-KINOCAMPUS-V19.md](RELATORIO-KINOCAMPUS-V19.md) | V19 | - | Drift documental ativo e runbooks operacionais |
 | [RELATORIO-KINOCAMPUS-V20.md](RELATORIO-KINOCAMPUS-V20.md) | V20 | - | Separacao de QA ativo e historico |
+| [RELATORIO-KINOCAMPUS-V21.md](RELATORIO-KINOCAMPUS-V21.md) | V21 | - | Worktree Claude rastreada arquivada |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V21.md`](../../RELATORIO-KINOCAMPUS-V21.md) - V21: worktree Claude rastreada arquivada
 - [`RELATORIO-KINOCAMPUS-V22.md`](../../RELATORIO-KINOCAMPUS-V22.md) - V22: politica de relatorios raiz
 - [`RELATORIO-KINOCAMPUS-V23.md`](../../RELATORIO-KINOCAMPUS-V23.md) - V23: estrutura do repositorio reancorada
 - [`RELATORIO-KINOCAMPUS-V24.md`](../../RELATORIO-KINOCAMPUS-V24.md) - V24: ledger pos-V23 de pendencias
 - [`RELATORIO-KINOCAMPUS-V25.md`](../../RELATORIO-KINOCAMPUS-V25.md) - V25: runbook de QA real
+- [`RELATORIO-KINOCAMPUS-V26.md`](../../RELATORIO-KINOCAMPUS-V26.md) - V26: evidencias QA real

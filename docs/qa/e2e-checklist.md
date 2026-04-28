@@ -1,7 +1,8 @@
-# E2E Checklist - Kino Campus V20
+# E2E Checklist - Kino Campus V26
 
 **Objetivo:** validar fluxos reais de usuario sem depender de memoria de releases antigas.
-**Uso:** copiar os resultados para `docs/qa/reports/report-v20-auth-run1.md` ou para um report equivalente.
+**Uso:** copiar os resultados para `docs/qa/reports/report-v26-auth-run1.md` usando `_TEMPLATE-authenticated-run.md`.
+**Runbook principal:** `docs/qa/v25-real-environment-qa-runbook.md`.
 
 ---
 
@@ -17,12 +18,14 @@
 | Conta comum | |
 | Conta admin | |
 | Acesso Supabase | sim / nao |
+| Plano de limpeza | sim / nao |
 
 Regras:
 
 - Nao inventar URL de preview.
 - Nao registrar tokens, senhas, magic links completos ou secrets.
 - Redigir qualquer log que contenha identificador sensivel.
+- Registrar bloqueios como bloqueios, sem marcar como sucesso por ausencia de acesso.
 
 ## 2. Fluxos P0
 
