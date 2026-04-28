@@ -1,4 +1,4 @@
-﻿# Kino Campus - v16.0.0
+﻿# Kino Campus - v17.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
@@ -6,7 +6,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V15.0-foundations`  
-**Status atual:** v11–v16 ENCERRADAS ✅ — *V16 encerrada: Mapeamento completo + Guia de IA — 13 iterações · 0 arquivos JS alterados · 9 docs novos em `docs/architecture/`*
+**Status atual:** v11–v16 ENCERRADAS ✅ — *V17 em execução: Reorganização documental + rename de branch*
 
 ---
 
