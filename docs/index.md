@@ -35,6 +35,7 @@
 | [../CHANGELOG.md](../CHANGELOG.md) | histórico consolidado de releases e hotfixes |
 | [../RELATORIO-KINOCAMPUS-V17.md](../RELATORIO-KINOCAMPUS-V17.md) | plano diretor e registro vivo das iterações da v17 (atual) |
 | [../RELATORIO-KINOCAMPUS-V16.md](../RELATORIO-KINOCAMPUS-V16.md) | plano diretor e registro da v16 (encerrada) |
+| [archive/_INDEX.md](./archive/_INDEX.md) | índice geral do arquivo histórico com ~85 docs |
 | [archive/relatorios/_INDEX.md](./archive/relatorios/_INDEX.md) | índice de relatórios históricos arquivados (V9, V11, V13, V14) |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referência rápida de validação |
@@ -68,5 +69,5 @@ el.innerHTML = window.KCUtils.escapeHtml(userContent);
 
 ## Observações de baseline
 
-- Baseline reancorado para v17.0.0 em 2026-04-28 durante a iteração v17.2.0.
+- Baseline reancorado para v17.0.0 em 2026-04-28 (v17.2.0). Estrutura documental consolidada em docs/archive/ em v17.5.0.
 - frontendRuntimeVersion permanece em `8.6.0` (constante canônica no runtime).

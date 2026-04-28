@@ -344,7 +344,7 @@ falha imediatamente se esta regra for violada.
 `00-tokens.css`, `01-base.css`, `02-layout.css`, `03-components.css`, `04-pages.css`
 
 Stubs preparatórios para futura divisão do `styles.css` monolítico. **Não alterar e não carregar
-em produção** sem executar o plano de split CSS documentado em `docs/audits/performance/`.
+em produção** sem executar o plano de split CSS documentado em `docs/archive/audits-misc/`.
 
 ---
 
