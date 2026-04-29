@@ -38,8 +38,8 @@ provider externo, dashboard ou decisao de gate.
 
 | ID | Prioridade | Motivo de permanencia | Proximo passo seguro |
 |---|---|---|---|
-| PROD-001 | P0 | Signup callback real exige conta nova e caixa de e-mail real | Runbook criado em V25; template V26 define evidencia redigida em `docs/qa/reports/` |
-| PROD-002 | P0 | Fluxos admin/autenticados exigem usuario comum, admin e massa real | Runbook V25 define credenciais temporarias; template V26 define limpeza e Go/No-Go |
+| PROD-001 | P0 | Signup callback real exige conta nova e caixa de e-mail real | Matriz V31 prioriza AUTH-001/002/003 e report V26 define evidencia redigida em `docs/qa/reports/` |
+| PROD-002 | P0 | Fluxos admin/autenticados exigem usuario comum, admin e massa real | Matriz V31 separa perfil, posts, social, admin, RLS, busca e notificacoes com Go/No-Go por fluxo |
 | PROD-003 / SEC-003 | P1 | Avatar Storage policies dependem de estado real do bucket/policies | Checklist V29 define evidencias; validar no Supabase antes de transformar script manual em migration |
 | PROD-004 | P1 | Email/WhatsApp dependem de provider e secrets reais | Checklist V30 define sandbox por canal, Go/No-Go, evidencias redigidas e fail-closed como default |
 | PROD-005 / SEC-002 | P0/P1 | `unaccent` fora de `public` pode quebrar FTS/RPCs | Auditoria estatica criada em V28; proximo passo e spike SQL em projeto isolado antes de qualquer migration |
@@ -57,7 +57,7 @@ provider externo, dashboard ou decisao de gate.
 
 | Ordem | Trilha | Condicao de entrada | Saida esperada |
 |---:|---|---|---|
-| 1 | QA autenticado real | Credenciais e ambiente definidos | Report `report-v26-auth-runN.md` com signup, callback, perfil e admin |
+| 1 | QA autenticado real | Credenciais, ambiente e matriz V31 definidos | Report `report-v26-auth-runN.md` com signup, callback, perfil, admin e Go/No-Go por fluxo |
 | 2 | Supabase advisor/runbook | Acesso ao dashboard e ambiente isolado | Evidencia de `auth_leaked_password_protection`, avatar policies e `unaccent` |
 | 3 | Providers externos | Checklist V30 aprovado e sandbox de email/WhatsApp disponivel | Dispatch real controlado com rollback documentado |
 | 4 | Visual/a11y regression | Gate V27 aprovado e ambiente definido | Baseline visual das 22 rotas antes de CSS |

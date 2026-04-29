@@ -2,6 +2,41 @@
 
 ---
 
+## [31.0.0] - 2026-04-28 - Triagem de Fluxos Autenticados (v31.0.0)
+
+### Tema
+
+Matriz documental para priorizar fluxos autenticados que ainda dependem de ambiente real:
+signup/callback, perfil, avatar, posts, interacoes sociais, admin, RLS, busca e notificacoes.
+A V31 nao executa QA real, nao cria usuarios e nao altera runtime; ela define evidencia minima e
+Go/No-Go por fluxo.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v31.0.0 | `RELATORIO-KINOCAMPUS-V31.md` e reancoragem de metadados para `kinocampus-V31.0-foundations` |
+| v31.0.0 | `docs/qa/v31-authenticated-flow-triage-matrix.md` criado |
+| v31.0.0 | QA README e ledger V24 atualizados com referencia a matriz V31 |
+| v31.0.0 | `RELATORIO-KINOCAMPUS-V26.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V30) | Depois (V31) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 30.0.0 | 31.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V30.0-foundations` | `kinocampus-V31.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 15 | 16 | +V26 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Matrizes QA autenticadas | 0 | 1 | +V31 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [30.0.0] - 2026-04-28 - Sandbox de Providers de Notificacao (v30.0.0)
 
 ### Tema

@@ -23,13 +23,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V23.md](RELATORIO-KINOCAMPUS-V23.md) | V23 | - | Estrutura do repositorio reancorada |
 | [RELATORIO-KINOCAMPUS-V24.md](RELATORIO-KINOCAMPUS-V24.md) | V24 | - | Ledger pos-V23 de pendencias |
 | [RELATORIO-KINOCAMPUS-V25.md](RELATORIO-KINOCAMPUS-V25.md) | V25 | - | Runbook de QA real |
+| [RELATORIO-KINOCAMPUS-V26.md](RELATORIO-KINOCAMPUS-V26.md) | V26 | - | Evidencias QA real |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V26.md`](../../../RELATORIO-KINOCAMPUS-V26.md) - V26: evidencias QA real
 - [`RELATORIO-KINOCAMPUS-V27.md`](../../../RELATORIO-KINOCAMPUS-V27.md) - V27: gate visual/a11y pre-CSS
 - [`RELATORIO-KINOCAMPUS-V28.md`](../../../RELATORIO-KINOCAMPUS-V28.md) - V28: auditoria unaccent/FTS
 - [`RELATORIO-KINOCAMPUS-V29.md`](../../../RELATORIO-KINOCAMPUS-V29.md) - V29: evidencias Supabase Advisor
 - [`RELATORIO-KINOCAMPUS-V30.md`](../../../RELATORIO-KINOCAMPUS-V30.md) - V30: sandbox providers notificacao
+- [`RELATORIO-KINOCAMPUS-V31.md`](../../../RELATORIO-KINOCAMPUS-V31.md) - V31: triagem de fluxos autenticados

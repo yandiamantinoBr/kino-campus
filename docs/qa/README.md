@@ -9,6 +9,7 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 - `v19-authenticated-qa-plan.md`: plano-fonte da trilha autenticada criada na V19.
 - `v25-real-environment-qa-runbook.md`: roteiro atual para execucao real com credenciais e evidencias redigidas.
 - `v27-visual-a11y-regression-gate.md`: gate minimo antes de CSS, split visual ou refactor de layout.
+- `v31-authenticated-flow-triage-matrix.md`: matriz P0/P1 para triagem de signup, callback, perfil, admin, interacoes, RLS, busca e notificacoes.
 - `rls-smoke.sql`: roteiro de validacao RLS.
 - `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
 - `reports/`: reports ativos e template V26 de evidencia autenticada real.
@@ -21,9 +22,10 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 ## Ordem de leitura recomendada
 
 1. Use `v25-real-environment-qa-runbook.md` como roteiro principal da proxima execucao real autenticada.
-2. Use `e2e-checklist.md` como checklist operacional complementar.
-3. Consulte `v19-authenticated-qa-plan.md` para contexto e pre-requisitos.
-4. Antes de qualquer CSS, use `v27-visual-a11y-regression-gate.md`.
-5. Rode `rls-smoke.sql` apenas em ambiente autorizado.
-6. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
-7. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.
+2. Use `v31-authenticated-flow-triage-matrix.md` para priorizar e classificar Go/No-Go por fluxo.
+3. Use `e2e-checklist.md` como checklist operacional complementar.
+4. Consulte `v19-authenticated-qa-plan.md` para contexto e pre-requisitos.
+5. Antes de qualquer CSS, use `v27-visual-a11y-regression-gate.md`.
+6. Rode `rls-smoke.sql` apenas em ambiente autorizado.
+7. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
+8. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.
