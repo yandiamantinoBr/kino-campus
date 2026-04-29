@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v31.0.0
+**Versao:** v32.0.0
 **Data:** 2026-04-28
-**Atualizado em:** v31.0.0 - triagem de fluxos autenticados e janela raiz V27-V31
+**Atualizado em:** v32.0.0 - politica de gate E2E e janela raiz V28-V32
 
 ---
 
@@ -20,14 +20,14 @@ em ordem deterministica nos 22 HTMLs canonicos.
 | Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime) |
 | Hosting | Vercel (`vercel.json`) |
 | Runtime JS | `frontendRuntimeVersion=8.6.0` |
-| appVersion documental | `31.0.0` |
-| Branch principal | `kinocampus-V31.0-foundations` |
+| appVersion documental | `32.0.0` |
+| Branch principal | `kinocampus-V32.0-foundations` |
 | Testes | Jest 134 suites / 3046 testes + Playwright 8 suites E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
-V31 e uma versao documental. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
+V32 e uma versao documental. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
 janela operacional atual: archive consolidado, planning ativo com ledger pos-V23, QA ativo separado do
-historico, worktree Claude arquivada, runbook QA real V25, templates de evidencia V26, gate visual/a11y V27, auditoria unaccent/FTS V28, checklist Supabase Advisor V29, checklist de sandbox para providers V30 e matriz de triagem autenticada V31.
+historico, worktree Claude arquivada, runbook QA real V25, templates de evidencia V26, gate visual/a11y V27, auditoria unaccent/FTS V28, checklist Supabase Advisor V29, checklist de sandbox para providers V30, matriz de triagem autenticada V31 e politica E2E V32.
 
 ---
 
@@ -95,11 +95,11 @@ kino-campus/
 |-- VERSION.json
 |-- CHANGELOG.md
 |-- README.md
-|-- RELATORIO-KINOCAMPUS-V27.md
 |-- RELATORIO-KINOCAMPUS-V28.md
 |-- RELATORIO-KINOCAMPUS-V29.md
 |-- RELATORIO-KINOCAMPUS-V30.md
-`-- RELATORIO-KINOCAMPUS-V31.md
+|-- RELATORIO-KINOCAMPUS-V31.md
+`-- RELATORIO-KINOCAMPUS-V32.md
 ```
 
 ---
@@ -168,7 +168,7 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/product.css` | Producao | Pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
-O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V28 mapeia risco SQL de busca sem alterar migrations; V29 define evidencias operacionais para Supabase Advisor sem tocar dashboard; V30 define sandbox de providers de notificacao sem configurar secrets; V31 organiza triagem autenticada sem executar QA real.
+O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V28 mapeia risco SQL de busca sem alterar migrations; V29 define evidencias operacionais para Supabase Advisor sem tocar dashboard; V30 define sandbox de providers de notificacao sem configurar secrets; V31 organiza triagem autenticada sem executar QA real; V32 define quando Playwright E2E e evidencia obrigatoria.
 
 ---
 
@@ -186,7 +186,7 @@ O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y 
 | `docs/architecture/` | Guias canonicos de arquitetura, scripts, dados, testes, CSS e IA |
 | `docs/ops/` | Runbooks operacionais, invariantes Vercel/Supabase, auditoria unaccent/FTS, evidencias Advisor e sandbox de providers |
 | `docs/planning/` | Inventarios V18, plano V19, ledger V24 e readiness V26 |
-| `docs/qa/` | Artefatos ativos de QA manual, RLS, XSS, reports V26, gate visual/a11y V27 e matriz autenticada V31 |
+| `docs/qa/` | Artefatos ativos de QA manual, RLS, XSS, reports V26, gate visual/a11y V27, matriz autenticada V31 e politica E2E V32 |
 
 ### 5.2 Archive
 
@@ -194,7 +194,7 @@ O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y 
 
 | Subdiretorio | Conteudo |
 |---|---|
-| `relatorios/` | Relatorios de encerramento V9, V11, V13-V26 |
+| `relatorios/` | Relatorios de encerramento V9, V11, V13-V27 |
 | `audits-v11/` | Auditorias e handoffs da trilha V11 |
 | `audits-v12-v13/` | Auditorias de refactor V12-V13 |
 | `audits-accessibility/` | Auditorias a11y/i18n V12 |
@@ -210,13 +210,13 @@ Nao recriar arvores historicas antigas fora de `docs/archive/`.
 
 ### 5.3 Relatorios raiz
 
-A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V31, a janela operacional e:
+A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V32, a janela operacional e:
 
-- `RELATORIO-KINOCAMPUS-V27.md`
 - `RELATORIO-KINOCAMPUS-V28.md`
 - `RELATORIO-KINOCAMPUS-V29.md`
 - `RELATORIO-KINOCAMPUS-V30.md`
 - `RELATORIO-KINOCAMPUS-V31.md`
+- `RELATORIO-KINOCAMPUS-V32.md`
 
 Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatorios/`.
 
@@ -252,7 +252,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 
 ---
 
-## 8. Delta V17 a V31
+## 8. Delta V17 a V32
 
 | Versao | Entrega estrutural |
 |---|---|
@@ -271,3 +271,4 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | V29 | Checklist de evidencias Supabase Advisor criado e V24 arquivado conforme politica de raiz |
 | V30 | Checklist de sandbox para providers de notificacao criado e V25 arquivado conforme politica de raiz |
 | V31 | Matriz de triagem de fluxos autenticados criada e V26 arquivado conforme politica de raiz |
+| V32 | Politica de gate Playwright E2E criada e V27 arquivado conforme politica de raiz |

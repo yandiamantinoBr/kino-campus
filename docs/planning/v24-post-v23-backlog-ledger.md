@@ -45,7 +45,7 @@ provider externo, dashboard ou decisao de gate.
 | PROD-005 / SEC-002 | P0/P1 | `unaccent` fora de `public` pode quebrar FTS/RPCs | Auditoria estatica criada em V28; proximo passo e spike SQL em projeto isolado antes de qualquer migration |
 | SEC-001 | P0 | Leaked Password Protection e configuracao de Dashboard | Checklist V29 define evidencia; confirmar no dashboard antes de mudar estado |
 | SEC-004 | P1 | Scheduler externo depende de `app.settings` e runtime config | Checklist V29 complementa `docs/ops/v19-operational-runbook.md` em ambiente controlado |
-| QA-001 | P0 | Playwright E2E ainda nao e gate obrigatorio em todo PR | Definir gate por tipo de mudanca e registrar excecoes |
+| QA-001 | P0 | Playwright E2E ainda nao e gate obrigatorio em todo PR | Politica V32 define obrigatorio/recomendado/dispensavel por tipo de mudanca e excecoes aceitas |
 | QA-002 | P0 | Falta visual regression automatizado para CSS/layout | Gate minimo definido em V27; baseline visual ainda precisa ser executado antes de CSS |
 | QA-003 | P1 | LHCI depende de ambiente compativel/CI Linux | Registrar baseline em CI e separar EPERM Windows de score real |
 | QA-004 | P1 | Plano i18n/a11y antigo precisa reconciliacao com gates atuais | Auditar entregas reais antes de novo backlog de texto/UX |

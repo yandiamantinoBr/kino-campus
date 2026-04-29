@@ -2,6 +2,40 @@
 
 ---
 
+## [32.0.0] - 2026-04-28 - Politica de Gate Playwright E2E (v32.0.0)
+
+### Tema
+
+Politica documental para decidir quando `npm run test:e2e` deve ser evidencia obrigatoria,
+recomendada ou dispensavel. A V32 nao altera CI, scripts ou Playwright config; ela fecha a pendencia
+QA-001 com criterios por tipo de mudanca e excecoes aceitas.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v32.0.0 | `RELATORIO-KINOCAMPUS-V32.md` e reancoragem de metadados para `kinocampus-V32.0-foundations` |
+| v32.0.0 | `docs/qa/v32-e2e-gate-policy.md` criado |
+| v32.0.0 | QA README e ledger V24 atualizados com referencia a politica V32 |
+| v32.0.0 | `RELATORIO-KINOCAMPUS-V27.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V31) | Depois (V32) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 31.0.0 | 32.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V31.0-foundations` | `kinocampus-V32.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 16 | 17 | +V27 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Politicas E2E documentais | 0 | 1 | +V32 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [31.0.0] - 2026-04-28 - Triagem de Fluxos Autenticados (v31.0.0)
 
 ### Tema
