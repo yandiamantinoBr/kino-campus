@@ -55,6 +55,8 @@ provider externo, dashboard ou decisao de gate.
 
 ## 4. Ordem Recomendada para V25+
 
+O roadmap consolidado atualizado esta em `docs/planning/v36-implementation-readiness-roadmap.md`.
+
 | Ordem | Trilha | Condicao de entrada | Saida esperada |
 |---:|---|---|---|
 | 1 | QA autenticado real | Credenciais, ambiente e matriz V31 definidos | Report `report-v26-auth-runN.md` com signup, callback, perfil, admin e Go/No-Go por fluxo |

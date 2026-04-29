@@ -10,6 +10,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v24-post-v23-backlog-ledger.md` | Ledger atual pos-V23: itens resolvidos por V19-V23 e pendencias ainda dependentes de ambiente real |
 | `v26-qa-evidence-readiness.md` | Readiness V26 para evidencias de QA real sem secrets ou mudancas funcionais |
 | `v35-css-readiness-ledger.md` | Ledger V35 de pre-requisitos para split CSS, ajustes visuais e rollback |
+| `v36-implementation-readiness-roadmap.md` | Roadmap V36 de sequencia segura para futuras implementacoes |
 
 ## Regras
 

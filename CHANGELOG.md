@@ -2,6 +2,40 @@
 
 ---
 
+## [36.0.0] - 2026-04-28 - Roadmap de Readiness para Implementacao (v36.0.0)
+
+### Tema
+
+Roadmap documental consolidado para transformar artefatos V25-V35 em futuras implementacoes seguras.
+A V36 nao altera runtime, CSS, HTML, SQL, secrets, providers ou CI; ela define sequencia, entradas,
+saidas, Go/No-Go e bloqueios para proximas versoes funcionais.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v36.0.0 | `RELATORIO-KINOCAMPUS-V36.md` e reancoragem de metadados para `kinocampus-V36.0-foundations` |
+| v36.0.0 | `docs/planning/v36-implementation-readiness-roadmap.md` criado |
+| v36.0.0 | Planning index e ledger V24 atualizados com referencia ao roadmap V36 |
+| v36.0.0 | `RELATORIO-KINOCAMPUS-V31.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V35) | Depois (V36) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 35.0.0 | 36.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V35.0-foundations` | `kinocampus-V36.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 20 | 21 | +V31 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Roadmaps de readiness ativos | 0 | 1 | +V36 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [35.0.0] - 2026-04-28 - Readiness CSS (v35.0.0)
 
 ### Tema
