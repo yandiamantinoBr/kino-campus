@@ -1,7 +1,7 @@
 {
   "name": "kino-campus",
   "version": "1.0.0",
-  "description": "Este repositorio e o prototipo web offline-first do Kino Campus, em baseline documental V28 com auditoria unaccent/FTS pre-migration e runtime canonico de frontend preservado em 8.6.0.",
+  "description": "Este repositorio e o prototipo web offline-first do Kino Campus, em baseline documental V29 com checklist de evidencias Supabase Advisor e runtime canonico de frontend preservado em 8.6.0.",
   "main": "index.js",
   "directories": {
     "doc": "docs"

@@ -2,6 +2,40 @@
 
 ---
 
+## [29.0.0] - 2026-04-28 - Evidencias Supabase Advisor (v29.0.0)
+
+### Tema
+
+Checklist documental para evidencias do Supabase Advisor: leaked password protection, avatar storage
+policies e scheduler de notificacoes. A V29 nao altera dashboard, SQL, migrations ou secrets; ela
+define evidencia minima, redacao obrigatoria e report esperado antes de qualquer mudanca operacional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v29.0.0 | `RELATORIO-KINOCAMPUS-V29.md` e reancoragem de metadados para `kinocampus-V29.0-foundations` |
+| v29.0.0 | `docs/ops/v29-supabase-advisor-evidence-checklist.md` criado |
+| v29.0.0 | Runbook operacional V19 e ledger V24 atualizados com referencia ao checklist V29 |
+| v29.0.0 | `RELATORIO-KINOCAMPUS-V24.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V28) | Depois (V29) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 28.0.0 | 29.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V28.0-foundations` | `kinocampus-V29.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 13 | 14 | +V24 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Checklists ops Advisor | 0 | 1 | +V29 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [28.0.0] - 2026-04-28 - Auditoria `unaccent`/FTS Pre-Migration (v28.0.0)
 
 ### Tema

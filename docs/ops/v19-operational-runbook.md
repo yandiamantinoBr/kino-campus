@@ -18,7 +18,8 @@
 
 ### `auth_leaked_password_protection`
 
-Tipo: configuracao Supabase Dashboard.
+Tipo: configuracao Supabase Dashboard. Para padronizar evidencia, use tambem
+`docs/ops/v29-supabase-advisor-evidence-checklist.md`.
 
 Checklist:
 
@@ -49,7 +50,8 @@ Rollback: restaurar extensao/aliases para o estado anterior e reindexar se neces
 
 ## 3. Avatar Storage
 
-Fonte: `supabase/manual/v8.3.4.1_profile_avatar_storage_policies.sql`.
+Fonte: `supabase/manual/v8.3.4.1_profile_avatar_storage_policies.sql`. Para padronizar evidencia,
+use tambem `docs/ops/v29-supabase-advisor-evidence-checklist.md`.
 
 Checklist:
 
@@ -110,6 +112,8 @@ Superficies:
 - `app.settings.kc_notification_dispatch_function_url`
 - `app.settings.kc_notification_dispatch_secret`
 - `app.settings.kc_notification_dispatch_batch_limit`
+
+Para padronizar evidencia, use tambem `docs/ops/v29-supabase-advisor-evidence-checklist.md`.
 
 Checklist:
 
