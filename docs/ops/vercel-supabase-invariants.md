@@ -103,6 +103,9 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - ausencia de `KC_NOTIFICATION_EMAIL_*` no projeto deve resultar em gating explicito (`email_provider_not_configured`), nunca em quebra do feed in-app nem dos triggers
   - ausencia de `KC_NOTIFICATION_WHATSAPP_*` no projeto deve resultar em gating explicito do canal `whatsapp`, nunca em quebra do feed in-app, do canal `email` nem dos triggers
 
+- Qualquer validacao de provider real deve seguir `docs/ops/v30-notification-provider-sandbox-checklist.md`
+  antes de ativar scheduler recorrente ou enviar mensagens fora de destino controlado.
+
 - A `v11.22.0` fecha a primeira rodada operacional da trilha externa:
   - a migration `v11.22.0.0_notification_dispatch_scheduler.sql` cria `notification_dispatch_runs` para log privado de dry-run/dispatch
   - a mesma migration cria `notification_dispatch_runtime` como camada privada versionada de URL/segredo/batch do scheduler

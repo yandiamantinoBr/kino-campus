@@ -2,6 +2,40 @@
 
 ---
 
+## [30.0.0] - 2026-04-28 - Sandbox de Providers de Notificacao (v30.0.0)
+
+### Tema
+
+Checklist documental para validar providers reais de email e WhatsApp em sandbox antes de qualquer
+go-live operacional. A V30 nao configura secrets, nao executa dispatch real e nao altera edge
+functions; ela define sequencia segura, criterios de Go/No-Go, evidencias redigidas e rollback.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v30.0.0 | `RELATORIO-KINOCAMPUS-V30.md` e reancoragem de metadados para `kinocampus-V30.0-foundations` |
+| v30.0.0 | `docs/ops/v30-notification-provider-sandbox-checklist.md` criado |
+| v30.0.0 | Runbook operacional V19 e ledger V24 atualizados com referencia ao checklist V30 |
+| v30.0.0 | `RELATORIO-KINOCAMPUS-V25.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V29) | Depois (V30) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 29.0.0 | 30.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V29.0-foundations` | `kinocampus-V30.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 14 | 15 | +V25 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Checklists ops de providers | 0 | 1 | +V30 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [29.0.0] - 2026-04-28 - Evidencias Supabase Advisor (v29.0.0)
 
 ### Tema

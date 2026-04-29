@@ -65,6 +65,10 @@ Decisao futura: converter o passo manual em runbook bloqueante ou migration segu
 
 ## 4. Notificacoes Externas
 
+Para sandbox/go-live de providers reais, use tambem
+`docs/ops/v30-notification-provider-sandbox-checklist.md` antes de configurar secrets ou executar
+dispatch fora de ambiente controlado.
+
 ### Email
 
 Pre-requisitos:
@@ -76,7 +80,7 @@ Pre-requisitos:
 
 Go-live:
 
-1. Configurar provider em sandbox ou dominio transacional validado.
+1. Configurar provider em sandbox ou dominio transacional validado, seguindo o checklist V30.
 2. Rodar dispatch em `dry_run`.
 3. Rodar dispatch manual com batch pequeno.
 4. Validar `notification_delivery_attempts` e `notification_dispatch_runs`.
@@ -96,7 +100,7 @@ Pre-requisitos:
 
 Go-live:
 
-1. Validar template/content sid.
+1. Validar template/content sid, seguindo o checklist V30.
 2. Usar destino de teste com opt-in explicito em `notification_channel_targets`.
 3. Rodar batch pequeno.
 4. Validar rate limit por usuario.
