@@ -35,6 +35,7 @@ Rollback: retornar a configuracao anterior no dashboard e registrar motivo.
 Tipo: risco SQL/FTS.
 
 Nao executar diretamente em producao. A busca usa `unaccent` em migrations v9.2.x e helpers `kc_unaccent`.
+Ver tambem `docs/ops/v28-unaccent-fts-dependency-audit.md` antes de planejar qualquer migration.
 
 Spike obrigatorio:
 

@@ -2,6 +2,40 @@
 
 ---
 
+## [28.0.0] - 2026-04-28 - Auditoria `unaccent`/FTS Pre-Migration (v28.0.0)
+
+### Tema
+
+Auditoria operacional estatica das dependencias `unaccent`/FTS antes de qualquer migration para
+tratar o advisor `extension_in_public`. A V28 nao executa SQL, nao altera migrations e nao move a
+extensao; ela mapeia impacto em wrappers, indice GIN, RPC de busca e normalizacao do feed.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v28.0.0 | `RELATORIO-KINOCAMPUS-V28.md` e reancoragem de metadados para `kinocampus-V28.0-foundations` |
+| v28.0.0 | `docs/ops/v28-unaccent-fts-dependency-audit.md` criado |
+| v28.0.0 | Runbook operacional V19 e ledger V24 atualizados com referencia a auditoria V28 |
+| v28.0.0 | `RELATORIO-KINOCAMPUS-V23.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V27) | Depois (V28) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 27.0.0 | 28.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V27.0-foundations` | `kinocampus-V28.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 12 | 13 | +V23 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Auditorias ops ativas | V19 runbook | V19 runbook + V28 unaccent/FTS audit | +1 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [27.0.0] - 2026-04-28 - Gate Visual/A11y Pre-CSS (v27.0.0)
 
 ### Tema
