@@ -1,13 +1,13 @@
-# Kino Campus - v34.0.0
+# Kino Campus - v35.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V34.0-foundations`
+**Branch principal:** `kinocampus-V35.0-foundations`
 
-**Status atual:** v11–v34 ENCERRADAS ✅
+**Status atual:** v11–v35 ENCERRADAS ✅
 
 ---
 
@@ -44,12 +44,12 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 
 | Versão | Relatório | Tema |
 |--------|-----------|------|
+| V35 | [RELATORIO-KINOCAMPUS-V35.md](RELATORIO-KINOCAMPUS-V35.md) | Readiness CSS |
 | V34 | [RELATORIO-KINOCAMPUS-V34.md](RELATORIO-KINOCAMPUS-V34.md) | Reconciliacao a11y/i18n |
 | V33 | [RELATORIO-KINOCAMPUS-V33.md](RELATORIO-KINOCAMPUS-V33.md) | Politica LHCI |
 | V32 | [RELATORIO-KINOCAMPUS-V32.md](RELATORIO-KINOCAMPUS-V32.md) | Politica de gate E2E |
 | V31 | [RELATORIO-KINOCAMPUS-V31.md](RELATORIO-KINOCAMPUS-V31.md) | Triagem de fluxos autenticados |
-| V30 | [RELATORIO-KINOCAMPUS-V30.md](RELATORIO-KINOCAMPUS-V30.md) | Sandbox de providers de notificacao |
-| V15–V29 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado recente |
+| V15–V30 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado recente |
 | V9–V14 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado |
 
 ---

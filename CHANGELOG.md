@@ -2,6 +2,40 @@
 
 ---
 
+## [35.0.0] - 2026-04-28 - Readiness CSS (v35.0.0)
+
+### Tema
+
+Ledger documental de readiness para split CSS, ajustes visuais amplos ou refactor de layout. A V35
+nao altera CSS, HTML, JS ou assets; ela consolida gates V27/V32/V33/V34, bloqueios, escopos
+permitidos e rollback antes de qualquer mudanca visual futura.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v35.0.0 | `RELATORIO-KINOCAMPUS-V35.md` e reancoragem de metadados para `kinocampus-V35.0-foundations` |
+| v35.0.0 | `docs/planning/v35-css-readiness-ledger.md` criado |
+| v35.0.0 | Planning index e ledger V24 atualizados com referencia ao ledger V35 |
+| v35.0.0 | `RELATORIO-KINOCAMPUS-V30.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V34) | Depois (V35) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 34.0.0 | 35.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V34.0-foundations` | `kinocampus-V35.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 19 | 20 | +V30 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Ledgers CSS ativos | 0 | 1 | +V35 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [34.0.0] - 2026-04-28 - Reconciliacao A11y/i18n (v34.0.0)
 
 ### Tema
