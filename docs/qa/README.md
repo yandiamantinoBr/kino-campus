@@ -12,6 +12,7 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 - `v31-authenticated-flow-triage-matrix.md`: matriz P0/P1 para triagem de signup, callback, perfil, admin, interacoes, RLS, busca e notificacoes.
 - `v32-e2e-gate-policy.md`: politica de quando Playwright E2E e obrigatorio, recomendado ou dispensavel.
 - `v33-lhci-baseline-policy.md`: politica de evidencia Lighthouse/LHCI e classificacao de falhas de ambiente.
+- `v34-a11y-i18n-reconciliation-plan.md`: plano para reconciliar auditorias historicas de a11y/i18n com gaps atuais.
 - `rls-smoke.sql`: roteiro de validacao RLS.
 - `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
 - `reports/`: reports ativos e template V26 de evidencia autenticada real.
@@ -27,9 +28,10 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 2. Use `v31-authenticated-flow-triage-matrix.md` para priorizar e classificar Go/No-Go por fluxo.
 3. Use `v32-e2e-gate-policy.md` para decidir se Playwright E2E e obrigatorio, recomendado ou dispensavel.
 4. Use `v33-lhci-baseline-policy.md` para classificar evidencia Lighthouse/LHCI.
-5. Use `e2e-checklist.md` como checklist operacional complementar.
-6. Consulte `v19-authenticated-qa-plan.md` para contexto e pre-requisitos.
-7. Antes de qualquer CSS, use `v27-visual-a11y-regression-gate.md`.
-8. Rode `rls-smoke.sql` apenas em ambiente autorizado.
-9. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
-10. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.
+5. Use `v34-a11y-i18n-reconciliation-plan.md` antes de abrir backlog de copy, foco, ARIA, contraste ou i18n.
+6. Use `e2e-checklist.md` como checklist operacional complementar.
+7. Consulte `v19-authenticated-qa-plan.md` para contexto e pre-requisitos.
+8. Antes de qualquer CSS, use `v27-visual-a11y-regression-gate.md`.
+9. Rode `rls-smoke.sql` apenas em ambiente autorizado.
+10. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
+11. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.

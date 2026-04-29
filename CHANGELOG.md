@@ -2,6 +2,40 @@
 
 ---
 
+## [34.0.0] - 2026-04-28 - Reconciliacao A11y/i18n (v34.0.0)
+
+### Tema
+
+Plano documental para reconciliar auditorias historicas de acessibilidade/i18n com os gates atuais.
+A V34 nao altera copy, ARIA, HTML, CSS, JS ou testes; ela define fontes, rotas, dimensoes e criterios
+para abrir backlog funcional apenas com evidencia.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v34.0.0 | `RELATORIO-KINOCAMPUS-V34.md` e reancoragem de metadados para `kinocampus-V34.0-foundations` |
+| v34.0.0 | `docs/qa/v34-a11y-i18n-reconciliation-plan.md` criado |
+| v34.0.0 | QA README e ledger V24 atualizados com referencia ao plano V34 |
+| v34.0.0 | `RELATORIO-KINOCAMPUS-V29.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V33) | Depois (V34) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 33.0.0 | 34.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V33.0-foundations` | `kinocampus-V34.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 18 | 19 | +V29 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Planos a11y/i18n ativos | 0 | 1 | +V34 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [33.0.0] - 2026-04-28 - Politica Lighthouse/LHCI (v33.0.0)
 
 ### Tema

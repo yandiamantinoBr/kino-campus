@@ -1,7 +1,7 @@
 {
   "name": "kino-campus",
   "version": "1.0.0",
-  "description": "Este repositorio e o prototipo web offline-first do Kino Campus, em baseline documental V33 com politica de baseline Lighthouse/LHCI e runtime canonico de frontend preservado em 8.6.0.",
+  "description": "Este repositorio e o prototipo web offline-first do Kino Campus, em baseline documental V34 com plano de reconciliacao a11y/i18n e runtime canonico de frontend preservado em 8.6.0.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
