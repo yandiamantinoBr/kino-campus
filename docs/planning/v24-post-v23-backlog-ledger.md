@@ -47,7 +47,7 @@ provider externo, dashboard ou decisao de gate.
 | SEC-004 | P1 | Scheduler externo depende de `app.settings` e runtime config | Checklist V29 complementa `docs/ops/v19-operational-runbook.md` em ambiente controlado |
 | QA-001 | P0 | Playwright E2E ainda nao e gate obrigatorio em todo PR | Politica V32 define obrigatorio/recomendado/dispensavel por tipo de mudanca e excecoes aceitas |
 | QA-002 | P0 | Falta visual regression automatizado para CSS/layout | Gate minimo definido em V27; baseline visual ainda precisa ser executado antes de CSS |
-| QA-003 | P1 | LHCI depende de ambiente compativel/CI Linux | Registrar baseline em CI e separar EPERM Windows de score real |
+| QA-003 | P1 | LHCI depende de ambiente compativel/CI Linux | Politica V33 separa score real, ambiente Windows/EPERM, preview protegido e pendencia CI/Linux |
 | QA-004 | P1 | Plano i18n/a11y antigo precisa reconciliacao com gates atuais | Auditar entregas reais antes de novo backlog de texto/UX |
 | CSS-001 | P1 | Split CSS continua bloqueado por ausencia de baseline visual executado | Manter stubs sem carregamento ate report visual V27+ aprovado |
 

@@ -2,6 +2,40 @@
 
 ---
 
+## [33.0.0] - 2026-04-28 - Politica Lighthouse/LHCI (v33.0.0)
+
+### Tema
+
+Politica documental para evidencias Lighthouse/LHCI: separar regressao real de score de bloqueios
+de ambiente Windows, preview protegido, SSL/EPERM ou provider ausente. A V33 nao altera
+`.lighthouserc.js`, CI, thresholds ou runtime.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v33.0.0 | `RELATORIO-KINOCAMPUS-V33.md` e reancoragem de metadados para `kinocampus-V33.0-foundations` |
+| v33.0.0 | `docs/qa/v33-lhci-baseline-policy.md` criado |
+| v33.0.0 | QA README e ledger V24 atualizados com referencia a politica V33 |
+| v33.0.0 | `RELATORIO-KINOCAMPUS-V28.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V32) | Depois (V33) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 32.0.0 | 33.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V32.0-foundations` | `kinocampus-V33.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 17 | 18 | +V28 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Politicas LHCI documentais | 0 | 1 | +V33 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [32.0.0] - 2026-04-28 - Politica de Gate Playwright E2E (v32.0.0)
 
 ### Tema

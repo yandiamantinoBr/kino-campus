@@ -9,7 +9,7 @@ name: Lighthouse CI
 on:
   pull_request:
     branches:
-      - kinocampus-V32.0-foundations
+      - kinocampus-V33.0-foundations
 
 jobs:
   lighthouse:
