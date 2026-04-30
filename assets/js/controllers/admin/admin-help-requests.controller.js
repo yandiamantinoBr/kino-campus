@@ -283,8 +283,8 @@
         ' style="padding:10px 14px;border-radius:12px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark-primary);font:inherit;cursor:pointer;"',
         '>',
         state.pagination.isLoadingMore
-          ? '<i class="fas fa-spinner fa-spin"></i> Carregando...'
-          : '<i class="fas fa-arrow-down"></i> Carregar mais',
+          ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando...'
+          : '<i class="fas fa-arrow-down" aria-hidden="true"></i> Carregar mais',
         '</button>',
       ].join('')
       : '';

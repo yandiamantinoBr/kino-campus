@@ -338,3 +338,12 @@ describe('v62.0.0 - icones decorativos admin JS', () => {
     expect(moderation).toContain('<i class="fas fa-trash" aria-hidden="true"></i> Remover');
   });
 });
+
+describe('v63.0.0 - icones decorativos em paginacao admin', () => {
+  test('template admin de pedidos de ajuda esconde icones do carregar mais', () => {
+    const helpRequests = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-help-requests.controller.js'), 'utf8');
+
+    expect(helpRequests).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando...');
+    expect(helpRequests).toContain('<i class="fas fa-arrow-down" aria-hidden="true"></i> Carregar mais');
+  });
+});
