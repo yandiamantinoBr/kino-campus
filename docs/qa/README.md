@@ -15,7 +15,7 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 - `v34-a11y-i18n-reconciliation-plan.md`: plano para reconciliar auditorias historicas de a11y/i18n com gaps atuais.
 - `rls-smoke.sql`: roteiro de validacao RLS.
 - `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
-- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao e template V43 notification provider.
+- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider e template V44 search/FTS.
 
 ## Historico preservado
 
@@ -40,5 +40,6 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 14. Para o candidato `PROFILE-AV-01`, use `reports/_TEMPLATE-profile-avatar-evidence.md`.
 15. Para o candidato `ADMIN-MOD-01`, use `reports/_TEMPLATE-admin-moderation-evidence.md`.
 16. Para o candidato `NOTIF-SB-01`, use `reports/_TEMPLATE-notification-provider-evidence.md`.
-17. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
-18. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.
+17. Para o candidato `SEARCH-FTS-01`, use `reports/_TEMPLATE-search-fts-evidence.md`.
+18. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
+19. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.

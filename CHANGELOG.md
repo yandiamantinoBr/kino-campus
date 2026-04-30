@@ -2,6 +2,42 @@
 
 ---
 
+## [44.0.0] - 2026-04-29 - Dossie SEARCH-FTS-01 (v44.0.0)
+
+### Tema
+
+Dossie documental pre-implementacao para o candidato P1 `SEARCH-FTS-01`, focado em `unaccent`,
+FTS, banco isolado, comparativo antes/depois e rollback R3 antes de qualquer migration. A V44
+nao altera runtime, CSS, HTML, SQL, migrations, secrets, providers ou CI.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v44.0.0 | `RELATORIO-KINOCAMPUS-V44.md` e reancoragem de metadados para `kinocampus-V44.0-foundations` |
+| v44.0.0 | `docs/planning/v44-search-fts-preimplementation-dossier.md` criado |
+| v44.0.0 | `docs/qa/reports/_TEMPLATE-search-fts-evidence.md` criado |
+| v44.0.0 | Matriz V39, planning index e QA README atualizados com referencia ao dossie V44 |
+| v44.0.0 | `RELATORIO-KINOCAMPUS-V39.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V43) | Depois (V44) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 43.0.0 | 44.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V43.0-foundations` | `kinocampus-V44.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 28 | 29 | +V39 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Dossies pre-implementacao | 4 | 5 | +SEARCH-FTS-01 |
+| Templates search/FTS | 0 | 1 | +V44 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [43.0.0] - 2026-04-29 - Dossie NOTIF-SB-01 (v43.0.0)
 
 ### Tema

@@ -2,22 +2,22 @@
 
 ## Baseline atual
 
-- release documental consolidada: `v43.0.0`
-- linha de trabalho atual: `v43`
-- branch-base operacional: `kinocampus-V43.0-foundations`
-- documento de execucao da v43: [../RELATORIO-KINOCAMPUS-V43.md](../RELATORIO-KINOCAMPUS-V43.md)
+- release documental consolidada: `v44.0.0`
+- linha de trabalho atual: `v44`
+- branch-base operacional: `kinocampus-V44.0-foundations`
+- documento de execucao da v44: [../RELATORIO-KINOCAMPUS-V44.md](../RELATORIO-KINOCAMPUS-V44.md)
 
 ## Documentos canonicos
 
 | Arquivo | Uso principal |
 |---|---|
 | [architecture.md](./architecture.md) | arquitetura atual do frontend, camadas, hotspots, contagens e regras de equivalencia |
-| [architecture/repository-structure.md](./architecture/repository-structure.md) | estrutura atual do repositorio pos-V22 com janela raiz V39-V43 |
+| [architecture/repository-structure.md](./architecture/repository-structure.md) | estrutura atual do repositorio pos-V22 com janela raiz V40-V44 |
 | [architecture/module-catalog.md](./architecture/module-catalog.md) | catalogo de ~130 modulos JS com namespace, paginas e dependencias *(v16.3.0-v16.4.0)* |
 | [architecture/controllers-catalog.md](./architecture/controllers-catalog.md) | catalogo de 41 controllers com responsabilidade e KCAPI calls *(v16.5.0)* |
 | [architecture/script-loading-reference.md](./architecture/script-loading-reference.md) | ordem de carregamento de scripts em 22 HTMLs *(v16.6.0)* |
 | [architecture/data-flow-guide.md](./architecture/data-flow-guide.md) | fluxo de dados ponta a ponta: usuario -> controller -> KCAPI -> adapter -> Supabase *(v16.7.0)* |
-| [architecture/ai-development-guide.md](./architecture/ai-development-guide.md) | guia de comportamento para IA: leia antes de qualquer modificacao *(v16.8.0, reancorado em V43)* |
+| [architecture/ai-development-guide.md](./architecture/ai-development-guide.md) | guia de comportamento para IA: leia antes de qualquer modificacao *(v16.8.0, reancorado em V44)* |
 | [architecture/test-strategy.md](./architecture/test-strategy.md) | estrategia de 134 suites: onde adicionar testes, regras de manutencao *(v16.9.0)* |
 | [architecture/css-architecture.md](./architecture/css-architecture.md) | CSS em producao + `future-split/` explicado *(v16.10.0)* |
 | [api-contract.md](./api-contract.md) | contrato publico da `KCAPI`, metodos expostos e semantica de retorno |
@@ -33,12 +33,12 @@
 |---|---|
 | [../README.md](../README.md) | visao executiva do projeto, stack, setup, fluxo operacional e estado da release |
 | [../CHANGELOG.md](../CHANGELOG.md) | historico consolidado de releases e hotfixes |
-| [../RELATORIO-KINOCAMPUS-V43.md](../RELATORIO-KINOCAMPUS-V43.md) | dossie pre-implementacao NOTIF-SB-01 da v43 (atual) |
+| [../RELATORIO-KINOCAMPUS-V44.md](../RELATORIO-KINOCAMPUS-V44.md) | dossie pre-implementacao SEARCH-FTS-01 da v44 (atual) |
+| [../RELATORIO-KINOCAMPUS-V43.md](../RELATORIO-KINOCAMPUS-V43.md) | dossie pre-implementacao NOTIF-SB-01 da v43 |
 | [../RELATORIO-KINOCAMPUS-V42.md](../RELATORIO-KINOCAMPUS-V42.md) | dossie pre-implementacao ADMIN-MOD-01 da v42 |
 | [../RELATORIO-KINOCAMPUS-V41.md](../RELATORIO-KINOCAMPUS-V41.md) | dossie pre-implementacao PROFILE-AV-01 da v41 |
 | [../RELATORIO-KINOCAMPUS-V40.md](../RELATORIO-KINOCAMPUS-V40.md) | dossie pre-implementacao AUTH-CB-01 da v40 |
-| [../RELATORIO-KINOCAMPUS-V39.md](../RELATORIO-KINOCAMPUS-V39.md) | matriz de candidatos funcionais da v39 |
-| [archive/relatorios/_INDEX.md](./archive/relatorios/_INDEX.md) | relatorios historicos arquivados V9, V11, V13-V38 |
+| [archive/relatorios/_INDEX.md](./archive/relatorios/_INDEX.md) | relatorios historicos arquivados V9, V11, V13-V39 |
 | [planning/_INDEX.md](./planning/_INDEX.md) | indice dos planos ativos e inventarios pendentes |
 | [archive/_INDEX.md](./archive/_INDEX.md) | indice geral do arquivo historico com ~85 docs |
 | [planning/v35-css-readiness-ledger.md](./planning/v35-css-readiness-ledger.md) | pre-requisitos para split CSS, ajustes visuais e rollback |
@@ -50,6 +50,7 @@
 | [planning/v41-profile-avatar-preimplementation-dossier.md](./planning/v41-profile-avatar-preimplementation-dossier.md) | dossie pre-implementacao para avatar/profile storage |
 | [planning/v42-admin-moderation-preimplementation-dossier.md](./planning/v42-admin-moderation-preimplementation-dossier.md) | dossie pre-implementacao para admin/moderacao |
 | [planning/v43-notification-provider-preimplementation-dossier.md](./planning/v43-notification-provider-preimplementation-dossier.md) | dossie pre-implementacao para provider sandbox email/WhatsApp |
+| [planning/v44-search-fts-preimplementation-dossier.md](./planning/v44-search-fts-preimplementation-dossier.md) | dossie pre-implementacao para unaccent/FTS isolado |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
 | [ops/v28-unaccent-fts-dependency-audit.md](./ops/v28-unaccent-fts-dependency-audit.md) | auditoria estatica de dependencias `unaccent`/FTS antes de migration |
 | [ops/v29-supabase-advisor-evidence-checklist.md](./ops/v29-supabase-advisor-evidence-checklist.md) | checklist de evidencias Supabase Advisor sem secrets |
@@ -65,7 +66,7 @@
 1. Codigo e comportamento real prevalecem sobre documentacao antiga.
 2. Banco de dados: Supabase Dashboard, migrations e RPCs.
 3. Contratos de frontend: `assets/js/api/kc-api.client.js`, adapters, controllers e HTMLs.
-4. Estado da v43: `RELATORIO-KINOCAMPUS-V43.md`.
+4. Estado da v44: `RELATORIO-KINOCAMPUS-V44.md`.
 5. Guia de IA: `docs/architecture/ai-development-guide.md`.
 
 ## Quick reference
@@ -89,5 +90,5 @@ el.innerHTML = window.KCUtils.escapeHtml(userContent);
 
 ## Observacoes de baseline
 
-- Baseline reancorado para v43.0.0 em 2026-04-29. Estrutura documental consolidada em `docs/archive/` em v17.5.0; pendencias ativas mapeadas em `docs/planning/` em v18, operacionalizadas em runbooks v19, separadas entre QA ativo/historico em v20, com worktrees locais fora do indice em v21, politica de relatorios raiz em v22, `repository-structure.md` reancorado em v23, ledger pos-V23 criado em v24, runbook de QA real criado em v25, templates de evidencia QA real normalizados em v26, gate visual/a11y pre-CSS definido em v27, auditoria unaccent/FTS pre-migration criada em v28, checklist de evidencias Supabase Advisor criado em v29, checklist de sandbox para providers de notificacao criado em v30, matriz de triagem autenticada criada em v31, politica de gate E2E criada em v32, politica LHCI criada em v33, plano de reconciliacao a11y/i18n criado em v34, ledger de readiness CSS criado em v35, roadmap de readiness criado em v36, gate de entrada funcional criado em v37, gate de evidencia de rollback criado em v38, matriz de candidatos funcionais criada em v39, dossie AUTH-CB-01 criado em v40, dossie PROFILE-AV-01 criado em v41, dossie ADMIN-MOD-01 criado em v42 e dossie NOTIF-SB-01 criado em v43.
+- Baseline reancorado para v44.0.0 em 2026-04-29. Estrutura documental consolidada em `docs/archive/` em v17.5.0; pendencias ativas mapeadas em `docs/planning/` em v18, operacionalizadas em runbooks v19, separadas entre QA ativo/historico em v20, com worktrees locais fora do indice em v21, politica de relatorios raiz em v22, `repository-structure.md` reancorado em v23, ledger pos-V23 criado em v24, runbook de QA real criado em v25, templates de evidencia QA real normalizados em v26, gate visual/a11y pre-CSS definido em v27, auditoria unaccent/FTS pre-migration criada em v28, checklist de evidencias Supabase Advisor criado em v29, checklist de sandbox para providers de notificacao criado em v30, matriz de triagem autenticada criada em v31, politica de gate E2E criada em v32, politica LHCI criada em v33, plano de reconciliacao a11y/i18n criado em v34, ledger de readiness CSS criado em v35, roadmap de readiness criado em v36, gate de entrada funcional criado em v37, gate de evidencia de rollback criado em v38, matriz de candidatos funcionais criada em v39, dossie AUTH-CB-01 criado em v40, dossie PROFILE-AV-01 criado em v41, dossie ADMIN-MOD-01 criado em v42, dossie NOTIF-SB-01 criado em v43 e dossie SEARCH-FTS-01 criado em v44.
 - `frontendRuntimeVersion` permanece em `8.6.0` (constante canonica no runtime).
