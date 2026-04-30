@@ -22,6 +22,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v45-css-small-change-preimplementation-dossier.md` | Dossie V45 pre-implementacao para o candidato P2 CSS-SM-01 |
 | `v46-public-a11y-preimplementation-dossier.md` | Dossie V46 pre-implementacao para o candidato P2 PUBLIC-A11Y-01 |
 | `v47-functional-readiness-consolidation.md` | Consolidacao V47 dos dossies V40-V46 e gate de selecao funcional |
+| `v49-functional-scope-freeze.md` | Freeze V49 de escopo antes da primeira implementacao funcional |
 
 ## Regras
 

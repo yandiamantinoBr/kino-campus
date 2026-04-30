@@ -2,6 +2,42 @@
 
 ---
 
+## [49.0.0] - 2026-04-29 - Freeze de Escopo Funcional (v49.0.0)
+
+### Tema
+
+Gate documental de freeze de escopo antes da primeira implementacao funcional futura, amarrando
+candidato, filescope, rollback, gates e evidencia. A V49 nao altera runtime, CSS, HTML, testes
+funcionais, SQL, migrations, providers, secrets, CI ou comportamento visual.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v49.0.0 | `RELATORIO-KINOCAMPUS-V49.md` e reancoragem de metadados para `kinocampus-V49.0-foundations` |
+| v49.0.0 | `docs/planning/v49-functional-scope-freeze.md` criado |
+| v49.0.0 | `docs/qa/reports/_TEMPLATE-functional-scope-freeze.md` criado |
+| v49.0.0 | `docs/index.md`, `docs/planning/_INDEX.md`, `docs/qa/README.md` e `repository-structure.md` atualizados |
+| v49.0.0 | `RELATORIO-KINOCAMPUS-V44.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V48) | Depois (V49) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 48.0.0 | 49.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V48.0-foundations` | `kinocampus-V49.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 33 | 34 | +V44 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Gates de freeze funcional | 0 | 1 | +V49 |
+| Templates de freeze funcional | 0 | 1 | +V49 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [48.0.0] - 2026-04-29 - Evidencias Externas Sem Secrets (v48.0.0)
 
 ### Tema
