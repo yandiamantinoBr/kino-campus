@@ -347,3 +347,14 @@ describe('v63.0.0 - icones decorativos em paginacao admin', () => {
     expect(helpRequests).toContain('<i class="fas fa-arrow-down" aria-hidden="true"></i> Carregar mais');
   });
 });
+
+describe('v64.0.0 - icones decorativos em convites admin', () => {
+  test('template admin de convites esconde icones de feedback dinamico', () => {
+    const invite = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-invite.controller.js'), 'utf8');
+
+    expect(invite).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Gerando link...');
+    expect(invite).toContain('<i class="fas fa-paper-plane" aria-hidden="true"></i> Gerar Link de Convite');
+    expect(invite).toContain('<i class="fas fa-check" aria-hidden="true"></i> Copiado!');
+    expect(invite).toContain('<i class="fas fa-copy" aria-hidden="true"></i> Copie manualmente');
+  });
+});

@@ -2,6 +2,41 @@
 
 ---
 
+## [64.0.0] - 2026-04-30 - PUBLIC-A11Y Admin Invite Feedback Icons (v64.0.0)
+
+### Tema
+
+Patch funcional pequeno para marcar como decorativos os icones dinamicos de feedback/loading
+em convites admin. A V64 nao altera CSS, HTML estatico, SQL, migrations, providers, secrets
+ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v64.0.0 | icones `fa-spinner`, `fa-paper-plane`, `fa-check` e `fa-copy` recebem `aria-hidden="true"` |
+| v64.0.0 | `tests/a11y/a11y.test.js` cobre o template admin de convites |
+| v64.0.0 | `docs/qa/reports/report-v64-public-a11y-admin-invite-feedback-icons.md` criado |
+| v64.0.0 | `RELATORIO-KINOCAMPUS-V59.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V63) | Depois (V64) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 63.0.0 | 64.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V63.0-foundations` | `kinocampus-V64.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 48 | 49 | +V59 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 1 | patch pontual em convites admin |
+| Suites Jest | 135 | 135 | preservado |
+| Testes Jest | 3064 | 3065 | +1 teste a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [63.0.0] - 2026-04-30 - PUBLIC-A11Y Admin Help Load More Icons (v63.0.0)
 
 ### Tema

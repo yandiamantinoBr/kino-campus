@@ -59,8 +59,8 @@
     if (!btn) return;
     btn.disabled = !!loading;
     btn.innerHTML = loading
-      ? '<i class="fas fa-spinner fa-spin"></i> Gerando link...'
-      : '<i class="fas fa-paper-plane"></i> Gerar Link de Convite';
+      ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Gerando link...'
+      : '<i class="fas fa-paper-plane" aria-hidden="true"></i> Gerar Link de Convite';
   }
 
   function hideLinkArea() {
@@ -134,12 +134,12 @@
     var button = $('invite-link-copy');
     var copied = await copyTextToClipboard(input.value, input);
     if (copied) {
-      setTemporaryButtonLabel(button, '<i class="fas fa-check"></i> Copiado!');
+      setTemporaryButtonLabel(button, '<i class="fas fa-check" aria-hidden="true"></i> Copiado!');
       setFeedback('Link copiado para a area de transferencia.', 'success');
       return;
     }
 
-    setTemporaryButtonLabel(button, '<i class="fas fa-copy"></i> Copie manualmente');
+    setTemporaryButtonLabel(button, '<i class="fas fa-copy" aria-hidden="true"></i> Copie manualmente');
     setFeedback('Nao foi possivel copiar automaticamente. Copie manualmente o link exibido abaixo.', 'error');
   }
 
