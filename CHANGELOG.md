@@ -2,6 +2,42 @@
 
 ---
 
+## [50.0.0] - 2026-04-30 - Intake de Implementacao Funcional (v50.0.0)
+
+### Tema
+
+Intake documental antes da primeira branch funcional futura, exigindo gate, rollback, selecao,
+evidencia externa quando aplicavel, freeze de escopo e template especifico do candidato. A V50 nao
+altera runtime, CSS, HTML, testes funcionais, SQL, migrations, providers, secrets, CI ou comportamento visual.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v50.0.0 | `RELATORIO-KINOCAMPUS-V50.md` e reancoragem de metadados para `kinocampus-V50.0-foundations` |
+| v50.0.0 | `docs/planning/v50-functional-implementation-intake.md` criado |
+| v50.0.0 | `docs/qa/reports/_TEMPLATE-functional-implementation-intake.md` criado |
+| v50.0.0 | `docs/index.md`, `docs/planning/_INDEX.md`, `docs/qa/README.md` e `repository-structure.md` atualizados |
+| v50.0.0 | `RELATORIO-KINOCAMPUS-V45.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V49) | Depois (V50) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 49.0.0 | 50.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V49.0-foundations` | `kinocampus-V50.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 34 | 35 | +V45 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Intakes funcionais | 0 | 1 | +V50 |
+| Templates de intake funcional | 0 | 1 | +V50 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [49.0.0] - 2026-04-29 - Freeze de Escopo Funcional (v49.0.0)
 
 ### Tema
