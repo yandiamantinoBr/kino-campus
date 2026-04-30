@@ -26,6 +26,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v50-functional-implementation-intake.md` | Intake V50 para abrir a primeira branch funcional futura |
 | `v51-functional-no-go-register.md` | Registro V51 de No-Go para bloquear implementacao funcional sem gates/evidencias completos |
 | `v52-functional-gate-traceability.md` | Matriz V52 de rastreabilidade entre gates, evidencias e decisao Go/No-Go |
+| `v53-functional-patch-manifest.md` | Manifesto V53 de filescope, risco, teste e rollback antes do primeiro patch funcional |
 
 ## Regras
 

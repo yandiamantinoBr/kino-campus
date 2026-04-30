@@ -1,13 +1,13 @@
-# Kino Campus - v52.0.0
+# Kino Campus - v53.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V52.0-foundations`
+**Branch principal:** `kinocampus-V53.0-foundations`
 
-**Status atual:** v11-v52 ENCERRADAS OK
+**Status atual:** v11-v53 ENCERRADAS OK
 
 ---
 
@@ -44,12 +44,12 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 
 | Versão | Relatório | Tema |
 |--------|-----------|------|
+| V53 | [RELATORIO-KINOCAMPUS-V53.md](RELATORIO-KINOCAMPUS-V53.md) | Manifesto de patch funcional |
 | V52 | [RELATORIO-KINOCAMPUS-V52.md](RELATORIO-KINOCAMPUS-V52.md) | Rastreabilidade de gates funcionais |
 | V51 | [RELATORIO-KINOCAMPUS-V51.md](RELATORIO-KINOCAMPUS-V51.md) | Registro de No-Go funcional |
 | V50 | [RELATORIO-KINOCAMPUS-V50.md](RELATORIO-KINOCAMPUS-V50.md) | Intake de implementacao funcional |
 | V49 | [RELATORIO-KINOCAMPUS-V49.md](RELATORIO-KINOCAMPUS-V49.md) | Freeze de escopo funcional |
-| V48 | [RELATORIO-KINOCAMPUS-V48.md](RELATORIO-KINOCAMPUS-V48.md) | Evidencias externas sem secrets |
-| V15-V47 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Historico arquivado recente |
+| V15-V48 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Historico arquivado recente |
 | V9–V14 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado |
 
 ---

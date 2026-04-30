@@ -2,6 +2,42 @@
 
 ---
 
+## [53.0.0] - 2026-04-30 - Manifesto de Patch Funcional (v53.0.0)
+
+### Tema
+
+Manifesto documental para exigir filescope, nao escopo, risco, teste, rollback e evidencias antes
+do primeiro edit funcional futuro. A V53 nao altera runtime, CSS, HTML, testes funcionais, SQL,
+migrations, providers, secrets, CI ou comportamento visual.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v53.0.0 | `RELATORIO-KINOCAMPUS-V53.md` e reancoragem de metadados para `kinocampus-V53.0-foundations` |
+| v53.0.0 | `docs/planning/v53-functional-patch-manifest.md` criado |
+| v53.0.0 | `docs/qa/reports/_TEMPLATE-functional-patch-manifest.md` criado |
+| v53.0.0 | `docs/index.md`, `docs/planning/_INDEX.md`, `docs/qa/README.md` e `repository-structure.md` atualizados |
+| v53.0.0 | `RELATORIO-KINOCAMPUS-V48.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V52) | Depois (V53) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 52.0.0 | 53.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V52.0-foundations` | `kinocampus-V53.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 37 | 38 | +V48 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Manifestos de patch funcional | 0 | 1 | +V53 |
+| Templates de manifesto funcional | 0 | 1 | +V53 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [52.0.0] - 2026-04-30 - Rastreabilidade de Gates Funcionais (v52.0.0)
 
 ### Tema
