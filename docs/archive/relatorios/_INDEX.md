@@ -54,13 +54,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V54.md](RELATORIO-KINOCAMPUS-V54.md) | V54 | - | PUBLIC-A11Y post card comments |
 | [RELATORIO-KINOCAMPUS-V55.md](RELATORIO-KINOCAMPUS-V55.md) | V55 | - | PUBLIC-A11Y post card rating |
 | [RELATORIO-KINOCAMPUS-V56.md](RELATORIO-KINOCAMPUS-V56.md) | V56 | - | PUBLIC-A11Y post card decorative icons |
+| [RELATORIO-KINOCAMPUS-V57.md](RELATORIO-KINOCAMPUS-V57.md) | V57 | - | PUBLIC-A11Y post card author avatar alt |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V57.md`](../../../RELATORIO-KINOCAMPUS-V57.md) - V57: PUBLIC-A11Y post card author avatar alt
 - [`RELATORIO-KINOCAMPUS-V58.md`](../../../RELATORIO-KINOCAMPUS-V58.md) - V58: PUBLIC-A11Y mobile search modal controls
 - [`RELATORIO-KINOCAMPUS-V59.md`](../../../RELATORIO-KINOCAMPUS-V59.md) - V59: PUBLIC-A11Y mobile search modal input
 - [`RELATORIO-KINOCAMPUS-V60.md`](../../../RELATORIO-KINOCAMPUS-V60.md) - V60: PUBLIC-A11Y comment action buttons
 - [`RELATORIO-KINOCAMPUS-V61.md`](../../../RELATORIO-KINOCAMPUS-V61.md) - V61: PUBLIC-A11Y dynamic button types
+- [`RELATORIO-KINOCAMPUS-V62.md`](../../../RELATORIO-KINOCAMPUS-V62.md) - V62: PUBLIC-A11Y admin decorative icons

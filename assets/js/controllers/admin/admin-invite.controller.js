@@ -163,7 +163,7 @@
         '<button type="button" class="kc-admin-invite-revoke" data-email="' + escapeHtml(invite.email) + '" ' +
           'style="padding:4px 10px;border:none;border-radius:6px;background:#c62828;color:#fff;font-size:.8em;cursor:pointer;" ' +
           'title="Revogar convite">' +
-          '<i class="fas fa-times"></i>' +
+          '<i class="fas fa-times" aria-hidden="true"></i>' +
         '</button>' +
       '</td>' +
     '</tr>';

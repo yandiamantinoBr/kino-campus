@@ -924,7 +924,7 @@
         <td data-label="Criado em">${createdAt}</td>
         <td data-label="Ações">
           <button type="button" class="kc-admin-actions" data-limit-delete="${escape(String(row.id))}" style="padding:5px 10px;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:.8em;background:#c0392b;">
-            <i class="fas fa-trash"></i> Remover
+            <i class="fas fa-trash" aria-hidden="true"></i> Remover
           </button>
         </td>
       </tr>`;

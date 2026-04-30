@@ -328,3 +328,13 @@ describe('v61.0.0 - botoes dinamicos JS', () => {
     expect(moderation).toContain('<button type="button" class="kc-admin-actions" data-limit-delete=');
   });
 });
+
+describe('v62.0.0 - icones decorativos admin JS', () => {
+  test('templates admin de convite e moderacao escondem icones decorativos', () => {
+    const invite = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-invite.controller.js'), 'utf8');
+    const moderation = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-moderation.controller.js'), 'utf8');
+
+    expect(invite).toContain('<i class="fas fa-times" aria-hidden="true"></i>');
+    expect(moderation).toContain('<i class="fas fa-trash" aria-hidden="true"></i> Remover');
+  });
+});

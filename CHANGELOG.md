@@ -2,6 +2,42 @@
 
 ---
 
+## [62.0.0] - 2026-04-30 - PUBLIC-A11Y Admin Decorative Icons (v62.0.0)
+
+### Tema
+
+Patch funcional pequeno para marcar como decorativos os icones Font Awesome em botoes
+dinamicos admin de convites e moderacao. A V62 nao altera CSS, HTML estatico, SQL,
+migrations, providers, secrets ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v62.0.0 | icone `fa-times` do botao de revogar convite recebe `aria-hidden="true"` |
+| v62.0.0 | icone `fa-trash` do botao de remover limite recebe `aria-hidden="true"` |
+| v62.0.0 | `tests/a11y/a11y.test.js` cobre os icones decorativos admin |
+| v62.0.0 | `docs/qa/reports/report-v62-public-a11y-admin-decorative-icons.md` criado |
+| v62.0.0 | `RELATORIO-KINOCAMPUS-V57.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V61) | Depois (V62) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 61.0.0 | 62.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V61.0-foundations` | `kinocampus-V62.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 46 | 47 | +V57 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 3 | 2 | patch pontual em icones admin |
+| Suites Jest | 135 | 135 | preservado |
+| Testes Jest | 3062 | 3063 | +1 teste a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [61.0.0] - 2026-04-30 - PUBLIC-A11Y Dynamic Button Types (v61.0.0)
 
 ### Tema

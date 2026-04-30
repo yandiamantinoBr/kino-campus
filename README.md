@@ -1,13 +1,13 @@
-# Kino Campus - v61.0.0
+# Kino Campus - v62.0.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V61.0-foundations`
+**Branch principal:** `kinocampus-V62.0-foundations`
 
-**Status atual:** v11-v61 ENCERRADAS OK
+**Status atual:** v11-v62 ENCERRADAS OK
 
 ---
 
@@ -20,7 +20,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 135 suites · 3062 testes; Playwright: 8 suites E2E (51 testes) |
+| Testes | Jest: 135 suites · 3063 testes; Playwright: 8 suites E2E (51 testes) |
 
 ## Documentação Técnica
 
@@ -44,12 +44,12 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 
 | Versão | Relatório | Tema |
 |--------|-----------|------|
+| V62 | [RELATORIO-KINOCAMPUS-V62.md](RELATORIO-KINOCAMPUS-V62.md) | PUBLIC-A11Y admin decorative icons |
 | V61 | [RELATORIO-KINOCAMPUS-V61.md](RELATORIO-KINOCAMPUS-V61.md) | PUBLIC-A11Y dynamic button types |
 | V60 | [RELATORIO-KINOCAMPUS-V60.md](RELATORIO-KINOCAMPUS-V60.md) | PUBLIC-A11Y comment action buttons |
 | V59 | [RELATORIO-KINOCAMPUS-V59.md](RELATORIO-KINOCAMPUS-V59.md) | PUBLIC-A11Y mobile search modal input |
 | V58 | [RELATORIO-KINOCAMPUS-V58.md](RELATORIO-KINOCAMPUS-V58.md) | PUBLIC-A11Y mobile search modal controls |
-| V57 | [RELATORIO-KINOCAMPUS-V57.md](RELATORIO-KINOCAMPUS-V57.md) | PUBLIC-A11Y post card author avatar alt |
-| V15-V56 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Historico arquivado recente |
+| V15-V57 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Historico arquivado recente |
 | V9–V14 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado |
 
 ---
@@ -230,7 +230,7 @@ Se surgir SQL fora do fluxo oficial:
 
 ```bash
 npm run check:all          # 5 validators: version, structure, scripts, routes, hygiene
-npm test                   # Jest: 135 suites · 3062 testes
+npm test                   # Jest: 135 suites · 3063 testes
 npm test -- --runInBand    # sequencial (mais lento, mais estável em CI)
 ```
 
