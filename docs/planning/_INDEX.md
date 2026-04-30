@@ -17,6 +17,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v40-auth-callback-preimplementation-dossier.md` | Dossie V40 pre-implementacao para o candidato P0 AUTH-CB-01 |
 | `v41-profile-avatar-preimplementation-dossier.md` | Dossie V41 pre-implementacao para o candidato P0 PROFILE-AV-01 |
 | `v42-admin-moderation-preimplementation-dossier.md` | Dossie V42 pre-implementacao para o candidato P1 ADMIN-MOD-01 |
+| `v43-notification-provider-preimplementation-dossier.md` | Dossie V43 pre-implementacao para o candidato P1 NOTIF-SB-01 |
 
 ## Regras
 

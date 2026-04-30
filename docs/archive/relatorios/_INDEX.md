@@ -35,13 +35,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V35.md](RELATORIO-KINOCAMPUS-V35.md) | V35 | - | Readiness CSS |
 | [RELATORIO-KINOCAMPUS-V36.md](RELATORIO-KINOCAMPUS-V36.md) | V36 | - | Roadmap de readiness |
 | [RELATORIO-KINOCAMPUS-V37.md](RELATORIO-KINOCAMPUS-V37.md) | V37 | - | Gate de entrada funcional |
+| [RELATORIO-KINOCAMPUS-V38.md](RELATORIO-KINOCAMPUS-V38.md) | V38 | - | Gate de evidencia de rollback |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V38.md`](../../../RELATORIO-KINOCAMPUS-V38.md) - V38: gate de evidencia de rollback
 - [`RELATORIO-KINOCAMPUS-V39.md`](../../../RELATORIO-KINOCAMPUS-V39.md) - V39: matriz de candidatos funcionais
 - [`RELATORIO-KINOCAMPUS-V40.md`](../../../RELATORIO-KINOCAMPUS-V40.md) - V40: dossie AUTH-CB-01
 - [`RELATORIO-KINOCAMPUS-V41.md`](../../../RELATORIO-KINOCAMPUS-V41.md) - V41: dossie PROFILE-AV-01
 - [`RELATORIO-KINOCAMPUS-V42.md`](../../../RELATORIO-KINOCAMPUS-V42.md) - V42: dossie ADMIN-MOD-01
+- [`RELATORIO-KINOCAMPUS-V43.md`](../../../RELATORIO-KINOCAMPUS-V43.md) - V43: dossie NOTIF-SB-01

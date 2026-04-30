@@ -2,6 +2,43 @@
 
 ---
 
+## [43.0.0] - 2026-04-29 - Dossie NOTIF-SB-01 (v43.0.0)
+
+### Tema
+
+Dossie documental pre-implementacao para o candidato P1 `NOTIF-SB-01`, focado em sandbox de
+providers email/WhatsApp, destino controlado, opt-in, fail-closed e rollback antes de qualquer
+envio real. A V43 nao altera runtime, CSS, HTML, SQL, edge functions, secrets, providers ou CI.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v43.0.0 | `RELATORIO-KINOCAMPUS-V43.md` e reancoragem de metadados para `kinocampus-V43.0-foundations` |
+| v43.0.0 | `docs/planning/v43-notification-provider-preimplementation-dossier.md` criado |
+| v43.0.0 | `docs/qa/reports/_TEMPLATE-notification-provider-evidence.md` criado |
+| v43.0.0 | Matriz V39, planning index e QA README atualizados com referencia ao dossie V43 |
+| v43.0.0 | `RELATORIO-KINOCAMPUS-V38.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V42) | Depois (V43) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 42.0.0 | 43.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V42.0-foundations` | `kinocampus-V43.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 27 | 28 | +V38 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Dossies pre-implementacao | 3 | 4 | +NOTIF-SB-01 |
+| Templates provider/notificacao | 0 | 1 | +V43 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+| Edge functions alteradas | 0 | 0 | preservado |
+
+---
+
 ## [42.0.0] - 2026-04-29 - Dossie ADMIN-MOD-01 (v42.0.0)
 
 ### Tema

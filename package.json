@@ -1,7 +1,7 @@
 {
   "name": "kino-campus",
   "version": "1.0.0",
-  "description": "Este repositorio e o prototipo web offline-first do Kino Campus, em baseline documental V42 com dossie pre-implementacao ADMIN-MOD-01 e runtime canonico de frontend preservado em 8.6.0.",
+  "description": "Este repositorio e o prototipo web offline-first do Kino Campus, em baseline documental V43 com dossie pre-implementacao NOTIF-SB-01 e runtime canonico de frontend preservado em 8.6.0.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
