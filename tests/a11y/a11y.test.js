@@ -139,6 +139,12 @@ describe('renderPostCard — acessibilidade (v9.4.2)', () => {
     expect(html).toMatch(/fa-check-circle[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-check-circle/);
     expect(html).toMatch(/fa-flask[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-flask/);
   });
+
+  test('avatar do autor usa nome acessivel completo', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost({ autor: 'Maria Clara' }));
+    expect(html).toContain('alt="Avatar de Maria Clara"');
+  });
 });
 
 describe('Atributos ARIA em HTML estático (_product.html)', () => {

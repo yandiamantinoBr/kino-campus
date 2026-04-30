@@ -49,13 +49,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V49.md](RELATORIO-KINOCAMPUS-V49.md) | V49 | - | Freeze de escopo funcional |
 | [RELATORIO-KINOCAMPUS-V50.md](RELATORIO-KINOCAMPUS-V50.md) | V50 | - | Intake de implementacao funcional |
 | [RELATORIO-KINOCAMPUS-V51.md](RELATORIO-KINOCAMPUS-V51.md) | V51 | - | Registro de No-Go funcional |
+| [RELATORIO-KINOCAMPUS-V52.md](RELATORIO-KINOCAMPUS-V52.md) | V52 | - | Rastreabilidade de gates funcionais |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V52.md`](../../../RELATORIO-KINOCAMPUS-V52.md) - V52: rastreabilidade de gates funcionais
 - [`RELATORIO-KINOCAMPUS-V53.md`](../../../RELATORIO-KINOCAMPUS-V53.md) - V53: manifesto de patch funcional
 - [`RELATORIO-KINOCAMPUS-V54.md`](../../../RELATORIO-KINOCAMPUS-V54.md) - V54: PUBLIC-A11Y post card comments
 - [`RELATORIO-KINOCAMPUS-V55.md`](../../../RELATORIO-KINOCAMPUS-V55.md) - V55: PUBLIC-A11Y post card rating
 - [`RELATORIO-KINOCAMPUS-V56.md`](../../../RELATORIO-KINOCAMPUS-V56.md) - V56: PUBLIC-A11Y post card decorative icons
+- [`RELATORIO-KINOCAMPUS-V57.md`](../../../RELATORIO-KINOCAMPUS-V57.md) - V57: PUBLIC-A11Y post card author avatar alt

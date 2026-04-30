@@ -2,6 +2,43 @@
 
 ---
 
+## [57.0.0] - 2026-04-30 - PUBLIC-A11Y Post Card Author Avatar Alt (v57.0.0)
+
+### Tema
+
+Patch funcional pequeno em `KCUtils.renderPostCard` para substituir o `alt` truncado do
+avatar de autor por um texto alternativo completo e previsivel. A V57 nao altera CSS, HTML
+estatico, SQL, migrations, providers, secrets ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v57.0.0 | avatar de autor passa a usar `alt="Avatar de <nome completo>"` |
+| v57.0.0 | fallback sem nome fica `alt="Avatar do autor"` |
+| v57.0.0 | `tests/a11y/a11y.test.js` cobre o nome acessivel completo do avatar |
+| v57.0.0 | `tests/unit/kc-utils-presentation.test.js` protege autor vindo de `KCAPI` |
+| v57.0.0 | `docs/qa/reports/report-v57-public-a11y-post-card-author-avatar-alt.md` criado |
+| v57.0.0 | `RELATORIO-KINOCAMPUS-V52.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V56) | Depois (V57) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 56.0.0 | 57.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V56.0-foundations` | `kinocampus-V57.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 41 | 42 | +V52 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 1 | patch pontual no mesmo componente |
+| Suites Jest | 134 | 134 | preservado |
+| Testes Jest | 3053 | 3054 | +1 teste a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [56.0.0] - 2026-04-30 - PUBLIC-A11Y Post Card Decorative Icons (v56.0.0)
 
 ### Tema

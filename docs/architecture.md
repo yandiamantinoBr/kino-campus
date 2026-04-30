@@ -19,7 +19,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `5` |
 | suites de teste Jest em `tests/` | `134` |
-| testes Jest totais | `3053` |
+| testes Jest totais | `3054` |
 | suites E2E Playwright | `8` |
 
 ## Princípio estrutural

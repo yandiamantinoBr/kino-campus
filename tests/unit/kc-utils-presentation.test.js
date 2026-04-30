@@ -282,6 +282,7 @@ describe('renderPostCard', () => {
 
     expect(html).toContain('<article class="kc-card');
     expect(html).toContain('Maria Clara');
+    expect(html).toContain('alt="Avatar de Maria Clara"');
     expect(html).toContain('<strong>Perto</strong>');
     expect(html).toContain('data-module="moradia"');
     expect(html).toContain('data-kc-housing-region="setor-norte"');

@@ -705,6 +705,9 @@ function renderPostCard(post, options) {
   const authorAvatar = (author && (author.avatar || author.avatarUrl))
     ? (author.avatar || author.avatarUrl)
     : (p._legacyAuthorAvatar || p.autorAvatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || ''));
+  const authorAvatarAlt = String(authorName || '').trim()
+    ? `Avatar de ${String(authorName).trim()}`
+    : 'Avatar do autor';
 
   const rating = (p.rating != null && p.rating !== '') ? Number(p.rating) : null;
   const ratingCount = Math.max(0, parseInt(String(p.ratingCount != null ? p.ratingCount : (p.rating_count != null ? p.rating_count : 0)), 10) || 0);
@@ -810,7 +813,7 @@ function renderPostCard(post, options) {
             ${preview}
           </div>
           <div class="kc-card__author"${authorId ? ' data-author-id="' + _escapeHtml(String(authorId)) + '"' : ''}>
-            <img alt="${_escapeHtml(String(authorName).split(' ')[0] || 'Autor')}" src="${_escapeHtml(authorAvatar)}"/>
+            <img alt="${_escapeHtml(authorAvatarAlt)}" src="${_escapeHtml(authorAvatar)}"/>
             <span>${_escapeHtml(authorPrefix)} <strong>${_escapeHtml(String(authorName))}</strong></span>
             ${ratingHtml}
           </div>
