@@ -2,6 +2,42 @@
 
 ---
 
+## [47.0.0] - 2026-04-29 - Consolidacao de Readiness Funcional (v47.0.0)
+
+### Tema
+
+Consolidacao documental dos dossies pre-implementacao V40-V46 e criacao de um gate de selecao
+para a primeira implementacao funcional futura. A V47 nao altera runtime, CSS, HTML, testes, SQL,
+migrations, secrets, providers, CI ou comportamento visual.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v47.0.0 | `RELATORIO-KINOCAMPUS-V47.md` e reancoragem de metadados para `kinocampus-V47.0-foundations` |
+| v47.0.0 | `docs/planning/v47-functional-readiness-consolidation.md` criado |
+| v47.0.0 | `docs/qa/reports/_TEMPLATE-implementation-readiness-selection.md` criado |
+| v47.0.0 | Matriz V39, planning index e QA README atualizados com referencia ao gate V47 |
+| v47.0.0 | `RELATORIO-KINOCAMPUS-V42.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V46) | Depois (V47) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 46.0.0 | 47.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V46.0-foundations` | `kinocampus-V47.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 31 | 32 | +V42 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Dossies pre-implementacao consolidados | 7 | 7 | fila completa |
+| Templates de selecao funcional | 0 | 1 | +V47 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [46.0.0] - 2026-04-29 - Dossie PUBLIC-A11Y-01 (v46.0.0)
 
 ### Tema

@@ -10,7 +10,8 @@
 
 Definir uma fila inicial de candidatos para a primeira versao funcional futura. A V39 nao escolhe
 nem implementa o pacote; ela classifica opcoes com base nos gates V25-V38 para evitar misturar
-auth, SQL, provider, CSS e admin no mesmo ciclo.
+auth, SQL, provider, CSS e admin no mesmo ciclo. A consolidacao V47 fecha a primeira rodada de
+dossies V40-V46 e exige um registro explicito de selecao antes de qualquer branch funcional.
 
 ---
 
@@ -75,6 +76,8 @@ Antes de abrir qualquer branch funcional futura, preencher:
 - `docs/qa/reports/_TEMPLATE-functional-entry-gate.md`;
 - `docs/qa/reports/_TEMPLATE-rollback-evidence.md`;
 - `docs/qa/reports/_TEMPLATE-functional-candidate.md` quando houver mais de um candidato viavel.
+- `docs/qa/reports/_TEMPLATE-implementation-readiness-selection.md` conforme
+  `docs/planning/v47-functional-readiness-consolidation.md`.
 
 Para `AUTH-CB-01`, preencher tambem `docs/qa/reports/_TEMPLATE-auth-callback-evidence.md`
 conforme `docs/planning/v40-auth-callback-preimplementation-dossier.md`.
