@@ -145,6 +145,15 @@ describe('renderPostCard — acessibilidade (v9.4.2)', () => {
     const html = renderPostCard(makePost({ autor: 'Maria Clara' }));
     expect(html).toContain('alt="Avatar de Maria Clara"');
   });
+
+  test('botoes de voto do card sao type button', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost());
+    const hot = html.match(/<button[^>]*data-action="vote-hot"[^>]*>/);
+    const cold = html.match(/<button[^>]*data-action="vote-cold"[^>]*>/);
+    expect(hot && hot[0]).toContain('type="button"');
+    expect(cold && cold[0]).toContain('type="button"');
+  });
 });
 
 describe('Atributos ARIA em HTML estático (_product.html)', () => {
@@ -306,5 +315,16 @@ describe('v12.8.1 — a11y B3: controles de formulário e botões', () => {
     expect(css).toMatch(/\.kc-sr-only\s*\{/);
     expect(css).toMatch(/clip:\s*rect/);
     expect(css).toMatch(/overflow:\s*hidden/);
+  });
+});
+
+describe('v61.0.0 - botoes dinamicos JS', () => {
+  test('templates admin de convite e moderacao usam type button', () => {
+    const invite = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-invite.controller.js'), 'utf8');
+    const moderation = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-moderation.controller.js'), 'utf8');
+
+    expect(invite).toContain('<button type="button" class="kc-admin-invite-revoke"');
+    expect(moderation).toContain('<button type="button" data-action="${action}"');
+    expect(moderation).toContain('<button type="button" class="kc-admin-actions" data-limit-delete=');
   });
 });

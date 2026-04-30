@@ -55,16 +55,16 @@
 | `tests/structure/` | **10** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
 | `tests/e2e/` | **8** | Playwright (browser real, HTTP real) |
-| **Total** | **142** | (134 Jest + 8 Playwright) |
+| **Total** | **143** | (135 Jest + 8 Playwright) |
 
 ### Contagem canônica
 
 ```
-Jest: 135 suites · 3060 testes
+Jest: 135 suites · 3062 testes
 Playwright: 8 suites · 51 testes
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥135 passed, 135 total` e `≥3060 passed, 3060 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥135 passed, 135 total` e `≥3062 passed, 3062 total`.
 
 ---
 
@@ -456,7 +456,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥135 passed, 135 total
-  Tests:       ≥3060 passed, 3060 total
+  Tests:       ≥3062 passed, 3062 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

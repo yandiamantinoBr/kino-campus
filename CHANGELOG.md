@@ -2,6 +2,43 @@
 
 ---
 
+## [61.0.0] - 2026-04-30 - PUBLIC-A11Y Dynamic Button Types (v61.0.0)
+
+### Tema
+
+Patch funcional pequeno para explicitar `type="button"` em botoes dinamicos remanescentes
+de cards publicos, convites admin e moderacao admin. A V61 nao altera CSS, HTML estatico,
+SQL, migrations, providers, secrets ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v61.0.0 | botoes de voto `vote-hot` e `vote-cold` recebem `type="button"` |
+| v61.0.0 | botao `.kc-admin-invite-revoke` recebe `type="button"` |
+| v61.0.0 | botoes dinamicos de moderacao `data-action` e `data-limit-delete` recebem `type="button"` |
+| v61.0.0 | `tests/a11y/a11y.test.js` cobre renderizacao publica e templates admin |
+| v61.0.0 | `docs/qa/reports/report-v61-public-a11y-dynamic-button-types.md` criado |
+| v61.0.0 | `RELATORIO-KINOCAMPUS-V56.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V60) | Depois (V61) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 60.0.0 | 61.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V60.0-foundations` | `kinocampus-V61.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 45 | 46 | +V56 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 3 | patch pontual em botoes dinamicos |
+| Suites Jest | 135 | 135 | preservado |
+| Testes Jest | 3060 | 3062 | +2 testes a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [60.0.0] - 2026-04-30 - PUBLIC-A11Y Comment Action Buttons (v60.0.0)
 
 ### Tema

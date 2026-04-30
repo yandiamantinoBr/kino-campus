@@ -15,7 +15,7 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 - `v34-a11y-i18n-reconciliation-plan.md`: plano para reconciliar auditorias historicas de a11y/i18n com gaps atuais.
 - `rls-smoke.sql`: roteiro de validacao RLS.
 - `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
-- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider, template V44 search/FTS, template V45 CSS small change, template V46 public a11y, template V47 de selecao de readiness funcional, template V48 de redacao de evidencia externa, template V49 de freeze de escopo funcional, template V50 de intake funcional, template V51 de No-Go funcional, template V52 de rastreabilidade de gates, template V53 de manifesto de patch funcional e reports V56-V60 PUBLIC-A11Y.
+- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider, template V44 search/FTS, template V45 CSS small change, template V46 public a11y, template V47 de selecao de readiness funcional, template V48 de redacao de evidencia externa, template V49 de freeze de escopo funcional, template V50 de intake funcional, template V51 de No-Go funcional, template V52 de rastreabilidade de gates, template V53 de manifesto de patch funcional e reports V56-V61 PUBLIC-A11Y.
 
 ## Historico preservado
 
@@ -57,5 +57,6 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 31. Para a evidencia V58 de mobile search modal controls, consulte `reports/report-v58-public-a11y-mobile-search-modal-controls.md`.
 32. Para a evidencia V59 de mobile search modal input, consulte `reports/report-v59-public-a11y-mobile-search-modal-input.md`.
 33. Para a evidencia V60 de comment action buttons, consulte `reports/report-v60-public-a11y-comment-action-buttons.md`.
-34. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
-35. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.
+34. Para a evidencia V61 de dynamic button types, consulte `reports/report-v61-public-a11y-dynamic-button-types.md`.
+35. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
+36. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.

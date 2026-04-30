@@ -160,7 +160,7 @@
       '<td>' + statusHtml + '</td>' +
       '<td style="font-size:.85em;color:var(--kc-text-dark-secondary);">' + escapeHtml(invite.note || '') + '</td>' +
       '<td>' +
-        '<button class="kc-admin-invite-revoke" data-email="' + escapeHtml(invite.email) + '" ' +
+        '<button type="button" class="kc-admin-invite-revoke" data-email="' + escapeHtml(invite.email) + '" ' +
           'style="padding:4px 10px;border:none;border-radius:6px;background:#c62828;color:#fff;font-size:.8em;cursor:pointer;" ' +
           'title="Revogar convite">' +
           '<i class="fas fa-times"></i>' +

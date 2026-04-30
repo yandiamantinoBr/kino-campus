@@ -60,10 +60,10 @@ window.KC_ENV = {
 
 ### Observação importante de baseline
 
-- A baseline atual do repositorio esta em `v60.0.0`.
+- A baseline atual do repositorio esta em `v61.0.0`.
 - O runtime JavaScript canonico do frontend permanece em `8.6.0` por decisao de compatibilidade; isso e diferente de `appVersion`.
 - Arquivos como `kc-env.js`, `kc-api.client.js`, `kc-supabase.client.js`, `kc-auth.ui.js`, `kc-profiles.client.js` e `scripts/hygiene-check.js` continuam validando `8.6.0`.
-- Essa diferenca nao e drift pendente: e a separacao formal entre versao app (`60.0.0`) e runtime frontend (`8.6.0`).
+- Essa diferenca nao e drift pendente: e a separacao formal entre versao app (`61.0.0`) e runtime frontend (`8.6.0`).
 
 ## Supabase
 
@@ -170,4 +170,4 @@ Depois, apontar `SUPABASE_URL` e a chave local para o projeto local.
 - ausência de inline handlers proibidos
 - invariantes de deploy e contrato de `profiles`
 
-Hoje, o checker continua orientado pela versão canônica `8.6.0`, o que é coerente com os arquivos versionados de frontend. A versão app atual é `60.0.0` e fica registrada em `VERSION.json`.
+Hoje, o checker continua orientado pela versão canônica `8.6.0`, o que é coerente com os arquivos versionados de frontend. A versão app atual é `61.0.0` e fica registrada em `VERSION.json`.

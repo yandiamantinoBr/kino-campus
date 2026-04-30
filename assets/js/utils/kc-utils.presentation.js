@@ -822,11 +822,11 @@ function renderPostCard(post, options) {
       <div class="kc-card__footer">
         <div class="kc-card__interactions">
           <div class="kc-vote-box" data-kc-vote-box="true">
-            <button class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr} aria-label="Voto positivo">
+            <button type="button" class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr} aria-label="Voto positivo">
               <i class="fas fa-fire" aria-hidden="true"></i>
             </button>
             <span class="kc-vote-score" data-kc-vote-score="true" aria-live="polite">${_escapeHtml(String(Number.isFinite(votos) ? votos : 0))}</span>
-            <button class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr} aria-label="Voto negativo">
+            <button type="button" class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr} aria-label="Voto negativo">
               <i class="fas fa-snowflake" aria-hidden="true"></i>
             </button>
           </div>

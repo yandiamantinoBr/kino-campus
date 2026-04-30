@@ -570,7 +570,7 @@
   }
 
   function actionButton(label, action, color, disabled) {
-    return `<button data-action="${action}" style="background:${color};" ${disabled ? 'disabled' : ''}>${label}</button>`;
+    return `<button type="button" data-action="${action}" style="background:${color};" ${disabled ? 'disabled' : ''}>${label}</button>`;
   }
 
   function renderPosts() {
@@ -923,7 +923,7 @@
         <td data-label="Máx. Ativas"><strong>${escape(String(row.max_active))}</strong></td>
         <td data-label="Criado em">${createdAt}</td>
         <td data-label="Ações">
-          <button class="kc-admin-actions" data-limit-delete="${escape(String(row.id))}" style="padding:5px 10px;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:.8em;background:#c0392b;">
+          <button type="button" class="kc-admin-actions" data-limit-delete="${escape(String(row.id))}" style="padding:5px 10px;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:.8em;background:#c0392b;">
             <i class="fas fa-trash"></i> Remover
           </button>
         </td>
