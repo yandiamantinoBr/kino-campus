@@ -2,6 +2,44 @@
 
 ---
 
+## [54.0.0] - 2026-04-30 - PUBLIC-A11Y Post Card Comments (v54.0.0)
+
+### Tema
+
+Patch funcional pequeno em `KCUtils.renderPostCard` para corrigir a contagem exibida/rotulada do
+link de comentarios quando o post vem com `comments_count`, e para tornar o icone de comentario
+decorativo para tecnologias assistivas. A V54 nao altera CSS, HTML estatico, SQL, migrations,
+providers, secrets, CI ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v54.0.0 | `assets/js/utils/kc-utils.presentation.js` usa `comments_count`/`commentsCount` como fallback de `comentarios` |
+| v54.0.0 | `.kc-comment-link` recebe aria-label acionavel com contagem e titulo do anuncio |
+| v54.0.0 | `fa-comment` do link de comentarios recebe `aria-hidden="true"` |
+| v54.0.0 | `tests/a11y/a11y.test.js` cobre contagem, nome acessivel e icone decorativo |
+| v54.0.0 | `docs/qa/reports/report-v54-public-a11y-post-card-comments.md` criado |
+| v54.0.0 | `RELATORIO-KINOCAMPUS-V49.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V53) | Depois (V54) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 53.0.0 | 54.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V53.0-foundations` | `kinocampus-V54.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 38 | 39 | +V49 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 0 | 1 | patch pontual |
+| Suites Jest | 134 | 134 | preservado |
+| Testes Jest | 3046 | 3048 | +2 testes a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [53.0.0] - 2026-04-30 - Manifesto de Patch Funcional (v53.0.0)
 
 ### Tema

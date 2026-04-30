@@ -714,10 +714,17 @@ function renderPostCard(post, options) {
 
   // Interações
   const votos = (p.votos != null && p.votos !== '') ? Number(p.votos) : 0;
-  const comentarios = (p.comentarios != null && p.comentarios !== '') ? Number(p.comentarios) : 0;
-
-  const commentsFullLabel = `${Number.isFinite(comentarios) ? comentarios : 0} comentários`;
-  const commentsShown = String(Number.isFinite(comentarios) ? comentarios : 0);
+  const rawComments = (p.comentarios != null && p.comentarios !== '')
+    ? p.comentarios
+    : ((p.comments_count != null && p.comments_count !== '') ? p.comments_count : p.commentsCount);
+  const comentarios = (rawComments != null && rawComments !== '') ? Number(rawComments) : 0;
+  const commentsCount = Math.max(0, Number.isFinite(comentarios) ? comentarios : 0);
+  const commentsNoun = commentsCount === 1 ? 'comentario' : 'comentarios';
+  const commentsTitle = String(p.titulo || '').trim();
+  const commentsFullLabel = commentsTitle
+    ? `Ver ${commentsCount} ${commentsNoun} do anuncio ${commentsTitle}`
+    : `Ver ${commentsCount} ${commentsNoun} do anuncio`;
+  const commentsShown = String(commentsCount);
   const commentsAria = ` aria-label="${_escapeHtml(commentsFullLabel)}"`;
 
   // Atributos para filtros/compatibilidade
@@ -818,7 +825,7 @@ function renderPostCard(post, options) {
             </button>
           </div>
           <a class="kc-comment-link" href="product.html?id=${encodeURIComponent(id)}#comments"${commentsAria}>
-            <i class="fas fa-comment"></i>
+            <i class="fas fa-comment" aria-hidden="true"></i>
             <span>${_escapeHtml(String(commentsShown))}</span>
           </a>
         </div>

@@ -82,6 +82,19 @@ describe('renderPostCard — acessibilidade (v9.4.2)', () => {
     const html = renderPostCard(makePost());
     expect(html).toContain('aria-live="polite"');
   });
+
+  test('link de comentarios usa comments_count no texto e nome acessivel', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost({ comments_count: 2 }));
+    expect(html).toContain('aria-label="Ver 2 comentarios do anuncio Produto de teste"');
+    expect(html).toContain('<span>2</span>');
+  });
+
+  test('icone de comentario decorativo tem aria-hidden="true"', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost({ comments_count: 1 }));
+    expect(html).toMatch(/fa-comment[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-comment/);
+  });
 });
 
 describe('Atributos ARIA em HTML estático (_product.html)', () => {
