@@ -12,6 +12,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v35-css-readiness-ledger.md` | Ledger V35 de pre-requisitos para split CSS, ajustes visuais e rollback |
 | `v36-implementation-readiness-roadmap.md` | Roadmap V36 de sequencia segura para futuras implementacoes |
 | `v37-functional-entry-gate.md` | Gate V37 de entrada para qualquer implementacao funcional futura |
+| `v38-rollback-evidence-gate.md` | Gate V38 de evidencia de rollback antes de mudancas funcionais |
 
 ## Regras
 

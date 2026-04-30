@@ -2,6 +2,42 @@
 
 ---
 
+## [38.0.0] - 2026-04-29 - Gate de Evidencia de Rollback (v38.0.0)
+
+### Tema
+
+Gate documental para classificar e evidenciar rollback antes de futuras mudancas funcionais.
+A V38 nao altera runtime, CSS, HTML, SQL, secrets, providers ou CI; ela complementa o gate V37
+com classes R0-R4, validacao pos-rollback e criterios de No-Go.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v38.0.0 | `RELATORIO-KINOCAMPUS-V38.md` e reancoragem de metadados para `kinocampus-V38.0-foundations` |
+| v38.0.0 | `docs/planning/v38-rollback-evidence-gate.md` criado |
+| v38.0.0 | `docs/qa/reports/_TEMPLATE-rollback-evidence.md` criado |
+| v38.0.0 | Gate V37, planning index e QA README atualizados com referencia ao rollback V38 |
+| v38.0.0 | `RELATORIO-KINOCAMPUS-V33.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V37) | Depois (V38) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 37.0.0 | 38.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V37.0-foundations` | `kinocampus-V38.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 22 | 23 | +V33 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Gates de rollback | 0 | 1 | +V38 |
+| Templates de rollback | 0 | 1 | +V38 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [37.0.0] - 2026-04-29 - Gate de Entrada Funcional (v37.0.0)
 
 ### Tema

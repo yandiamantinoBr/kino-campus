@@ -91,3 +91,11 @@ evidencia, filescope, rollback, gates obrigatorios e criterio de Go/No-Go.
 - Nao alterar CSS sem baseline visual.
 - Nao reduzir testes ou suites para liberar implementacao.
 - Nao usar este gate como substituto de evidencia real.
+
+---
+
+## 6. Complemento V38
+
+Quando a mudanca futura tocar runtime, CSS, HTML, SQL, provider, config ou dados persistidos, o
+rollback declarado neste gate deve ser detalhado em `docs/qa/reports/_TEMPLATE-rollback-evidence.md`
+seguindo `docs/planning/v38-rollback-evidence-gate.md`.
