@@ -19,6 +19,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v42-admin-moderation-preimplementation-dossier.md` | Dossie V42 pre-implementacao para o candidato P1 ADMIN-MOD-01 |
 | `v43-notification-provider-preimplementation-dossier.md` | Dossie V43 pre-implementacao para o candidato P1 NOTIF-SB-01 |
 | `v44-search-fts-preimplementation-dossier.md` | Dossie V44 pre-implementacao para o candidato P1 SEARCH-FTS-01 |
+| `v45-css-small-change-preimplementation-dossier.md` | Dossie V45 pre-implementacao para o candidato P2 CSS-SM-01 |
 
 ## Regras
 

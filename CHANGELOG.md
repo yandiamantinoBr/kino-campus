@@ -2,6 +2,42 @@
 
 ---
 
+## [45.0.0] - 2026-04-29 - Dossie CSS-SM-01 (v45.0.0)
+
+### Tema
+
+Dossie documental pre-implementacao para o candidato P2 `CSS-SM-01`, focado em baseline visual/a11y,
+viewports, Playwright/LHCI aplicavel e rollback antes de qualquer ajuste CSS pequeno. A V45 nao
+altera runtime, CSS, HTML, assets visuais, SQL, migrations, secrets, providers ou CI.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v45.0.0 | `RELATORIO-KINOCAMPUS-V45.md` e reancoragem de metadados para `kinocampus-V45.0-foundations` |
+| v45.0.0 | `docs/planning/v45-css-small-change-preimplementation-dossier.md` criado |
+| v45.0.0 | `docs/qa/reports/_TEMPLATE-css-small-change-evidence.md` criado |
+| v45.0.0 | Matriz V39, planning index e QA README atualizados com referencia ao dossie V45 |
+| v45.0.0 | `RELATORIO-KINOCAMPUS-V40.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V44) | Depois (V45) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 44.0.0 | 45.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V44.0-foundations` | `kinocampus-V45.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 29 | 30 | +V40 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Dossies pre-implementacao | 5 | 6 | +CSS-SM-01 |
+| Templates CSS small change | 0 | 1 | +V45 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [44.0.0] - 2026-04-29 - Dossie SEARCH-FTS-01 (v44.0.0)
 
 ### Tema
