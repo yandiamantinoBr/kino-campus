@@ -2,6 +2,42 @@
 
 ---
 
+## [46.0.0] - 2026-04-29 - Dossie PUBLIC-A11Y-01 (v46.0.0)
+
+### Tema
+
+Dossie documental pre-implementacao para o candidato P2 `PUBLIC-A11Y-01`, focado em copy, a11y,
+i18n, foco, semantica e contraste pontuais por rota/componente antes de qualquer patch. A V46 nao
+altera runtime, CSS, HTML, copy/i18n, testes, SQL, migrations, secrets, providers ou CI.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v46.0.0 | `RELATORIO-KINOCAMPUS-V46.md` e reancoragem de metadados para `kinocampus-V46.0-foundations` |
+| v46.0.0 | `docs/planning/v46-public-a11y-preimplementation-dossier.md` criado |
+| v46.0.0 | `docs/qa/reports/_TEMPLATE-public-a11y-evidence.md` criado |
+| v46.0.0 | Matriz V39, planning index e QA README atualizados com referencia ao dossie V46 |
+| v46.0.0 | `RELATORIO-KINOCAMPUS-V41.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V45) | Depois (V46) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 45.0.0 | 46.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V45.0-foundations` | `kinocampus-V46.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 30 | 31 | +V41 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Dossies pre-implementacao | 6 | 7 | +PUBLIC-A11Y-01 |
+| Templates public a11y | 0 | 1 | +V46 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [45.0.0] - 2026-04-29 - Dossie CSS-SM-01 (v45.0.0)
 
 ### Tema

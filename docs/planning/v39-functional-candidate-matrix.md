@@ -24,7 +24,7 @@ auth, SQL, provider, CSS e admin no mesmo ciclo.
 | NOTIF-SB-01 | Provider sandbox email/WhatsApp | P1 | Checklist V30, secrets sandbox, rollback V38, dossie V43 | `check:all`, Jest, provider sandbox, fail-closed, batch 1 controlado | Bloqueado ate sandbox |
 | SEARCH-FTS-01 | Unaccent/FTS isolado | P1 | Auditoria V28, ambiente SQL isolado, dossie V44 | `check:all`, Jest, SQL smoke, rollback R3, comparativo antes/depois | Bloqueado ate banco isolado |
 | CSS-SM-01 | Ajuste visual pequeno | P2 | Gate V27, politicas V32/V33, ledger V35, dossie V45 | `check:all`, Jest, Playwright/LHCI aplicavel, baseline visual antes/depois | Bloqueado ate baseline |
-| PUBLIC-A11Y-01 | Copy/a11y/i18n pontual | P2 | Plano V34, rota/componente identificado | `check:all`, Jest, a11y/manual por rota | Aguardando escopo |
+| PUBLIC-A11Y-01 | Copy/a11y/i18n pontual | P2 | Plano V34, rota/componente identificado, dossie V46 | `check:all`, Jest, a11y/manual por rota, rollback R1/R2 | Bloqueado ate evidencia por rota |
 
 ---
 
@@ -93,3 +93,6 @@ conforme `docs/planning/v44-search-fts-preimplementation-dossier.md`.
 
 Para `CSS-SM-01`, preencher tambem `docs/qa/reports/_TEMPLATE-css-small-change-evidence.md`
 conforme `docs/planning/v45-css-small-change-preimplementation-dossier.md`.
+
+Para `PUBLIC-A11Y-01`, preencher tambem `docs/qa/reports/_TEMPLATE-public-a11y-evidence.md`
+conforme `docs/planning/v46-public-a11y-preimplementation-dossier.md`.

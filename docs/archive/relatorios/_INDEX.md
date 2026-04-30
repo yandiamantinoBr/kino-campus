@@ -38,13 +38,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V38.md](RELATORIO-KINOCAMPUS-V38.md) | V38 | - | Gate de evidencia de rollback |
 | [RELATORIO-KINOCAMPUS-V39.md](RELATORIO-KINOCAMPUS-V39.md) | V39 | - | Matriz de candidatos funcionais |
 | [RELATORIO-KINOCAMPUS-V40.md](RELATORIO-KINOCAMPUS-V40.md) | V40 | - | Dossie AUTH-CB-01 |
+| [RELATORIO-KINOCAMPUS-V41.md](RELATORIO-KINOCAMPUS-V41.md) | V41 | - | Dossie PROFILE-AV-01 |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V41.md`](../../../RELATORIO-KINOCAMPUS-V41.md) - V41: dossie PROFILE-AV-01
 - [`RELATORIO-KINOCAMPUS-V42.md`](../../../RELATORIO-KINOCAMPUS-V42.md) - V42: dossie ADMIN-MOD-01
 - [`RELATORIO-KINOCAMPUS-V43.md`](../../../RELATORIO-KINOCAMPUS-V43.md) - V43: dossie NOTIF-SB-01
 - [`RELATORIO-KINOCAMPUS-V44.md`](../../../RELATORIO-KINOCAMPUS-V44.md) - V44: dossie SEARCH-FTS-01
 - [`RELATORIO-KINOCAMPUS-V45.md`](../../../RELATORIO-KINOCAMPUS-V45.md) - V45: dossie CSS-SM-01
+- [`RELATORIO-KINOCAMPUS-V46.md`](../../../RELATORIO-KINOCAMPUS-V46.md) - V46: dossie PUBLIC-A11Y-01
