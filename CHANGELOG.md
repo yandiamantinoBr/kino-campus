@@ -2,6 +2,42 @@
 
 ---
 
+## [37.0.0] - 2026-04-29 - Gate de Entrada Funcional (v37.0.0)
+
+### Tema
+
+Gate documental para impedir implementacoes funcionais sem evidencia, filescope, rollback e gates
+proporcionais. A V37 nao altera runtime, CSS, HTML, SQL, secrets, providers ou CI; ela padroniza
+a entrada de futuras versoes funcionais com template em `docs/qa/reports/`.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v37.0.0 | `RELATORIO-KINOCAMPUS-V37.md` e reancoragem de metadados para `kinocampus-V37.0-foundations` |
+| v37.0.0 | `docs/planning/v37-functional-entry-gate.md` criado |
+| v37.0.0 | `docs/qa/reports/_TEMPLATE-functional-entry-gate.md` criado |
+| v37.0.0 | Planning/QA indexes e roadmap V36 atualizados com referencia ao gate V37 |
+| v37.0.0 | `RELATORIO-KINOCAMPUS-V32.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V36) | Depois (V37) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 36.0.0 | 37.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V36.0-foundations` | `kinocampus-V37.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 21 | 22 | +V32 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Gates de entrada funcional | 0 | 1 | +V37 |
+| Templates de entrada funcional | 0 | 1 | +V37 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [36.0.0] - 2026-04-28 - Roadmap de Readiness para Implementacao (v36.0.0)
 
 ### Tema

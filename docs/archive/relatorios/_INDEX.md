@@ -29,13 +29,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V29.md](RELATORIO-KINOCAMPUS-V29.md) | V29 | - | Evidencias Supabase Advisor |
 | [RELATORIO-KINOCAMPUS-V30.md](RELATORIO-KINOCAMPUS-V30.md) | V30 | - | Sandbox providers notificacao |
 | [RELATORIO-KINOCAMPUS-V31.md](RELATORIO-KINOCAMPUS-V31.md) | V31 | - | Triagem de fluxos autenticados |
+| [RELATORIO-KINOCAMPUS-V32.md](RELATORIO-KINOCAMPUS-V32.md) | V32 | - | Politica de gate Playwright E2E |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V32.md`](../../../RELATORIO-KINOCAMPUS-V32.md) - V32: politica de gate E2E
 - [`RELATORIO-KINOCAMPUS-V33.md`](../../../RELATORIO-KINOCAMPUS-V33.md) - V33: politica LHCI
 - [`RELATORIO-KINOCAMPUS-V34.md`](../../../RELATORIO-KINOCAMPUS-V34.md) - V34: reconciliacao a11y/i18n
 - [`RELATORIO-KINOCAMPUS-V35.md`](../../../RELATORIO-KINOCAMPUS-V35.md) - V35: readiness CSS
 - [`RELATORIO-KINOCAMPUS-V36.md`](../../../RELATORIO-KINOCAMPUS-V36.md) - V36: roadmap de readiness
+- [`RELATORIO-KINOCAMPUS-V37.md`](../../../RELATORIO-KINOCAMPUS-V37.md) - V37: gate de entrada funcional
