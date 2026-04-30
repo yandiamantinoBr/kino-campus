@@ -32,13 +32,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V32.md](RELATORIO-KINOCAMPUS-V32.md) | V32 | - | Politica de gate Playwright E2E |
 | [RELATORIO-KINOCAMPUS-V33.md](RELATORIO-KINOCAMPUS-V33.md) | V33 | - | Politica de baseline Lighthouse/LHCI |
 | [RELATORIO-KINOCAMPUS-V34.md](RELATORIO-KINOCAMPUS-V34.md) | V34 | - | Plano de reconciliacao a11y/i18n |
+| [RELATORIO-KINOCAMPUS-V35.md](RELATORIO-KINOCAMPUS-V35.md) | V35 | - | Readiness CSS |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V35.md`](../../../RELATORIO-KINOCAMPUS-V35.md) - V35: readiness CSS
 - [`RELATORIO-KINOCAMPUS-V36.md`](../../../RELATORIO-KINOCAMPUS-V36.md) - V36: roadmap de readiness
 - [`RELATORIO-KINOCAMPUS-V37.md`](../../../RELATORIO-KINOCAMPUS-V37.md) - V37: gate de entrada funcional
 - [`RELATORIO-KINOCAMPUS-V38.md`](../../../RELATORIO-KINOCAMPUS-V38.md) - V38: gate de evidencia de rollback
 - [`RELATORIO-KINOCAMPUS-V39.md`](../../../RELATORIO-KINOCAMPUS-V39.md) - V39: matriz de candidatos funcionais
+- [`RELATORIO-KINOCAMPUS-V40.md`](../../../RELATORIO-KINOCAMPUS-V40.md) - V40: dossie AUTH-CB-01

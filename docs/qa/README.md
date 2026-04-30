@@ -15,7 +15,7 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 - `v34-a11y-i18n-reconciliation-plan.md`: plano para reconciliar auditorias historicas de a11y/i18n com gaps atuais.
 - `rls-smoke.sql`: roteiro de validacao RLS.
 - `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
-- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback e template V39 de candidato funcional.
+- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional e template V40 auth callback.
 
 ## Historico preservado
 
@@ -36,5 +36,6 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 10. Antes de qualquer implementacao funcional, preencha `reports/_TEMPLATE-functional-entry-gate.md`.
 11. Antes de tocar runtime, CSS, HTML, SQL, provider ou config, preencha `reports/_TEMPLATE-rollback-evidence.md`.
 12. Quando houver mais de um pacote viavel, use `reports/_TEMPLATE-functional-candidate.md` para registrar a escolha.
-13. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
-14. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.
+13. Para o candidato `AUTH-CB-01`, use `reports/_TEMPLATE-auth-callback-evidence.md`.
+14. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
+15. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.

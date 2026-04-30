@@ -18,7 +18,7 @@ auth, SQL, provider, CSS e admin no mesmo ciclo.
 
 | ID | Trilha | Prioridade | Entrada obrigatoria | Gates obrigatorios | Estado |
 |---|---|---|---|---|---|
-| AUTH-CB-01 | Signup callback real | P0 | Runbook V25, matriz V31, gate V37, rollback V38 | `check:all`, Jest, Playwright V32, evidencia auth real | Bloqueado ate ambiente real |
+| AUTH-CB-01 | Signup callback real | P0 | Runbook V25, matriz V31, gate V37, rollback V38, dossie V40 | `check:all`, Jest, Playwright V32, evidencia auth real | Bloqueado ate ambiente real |
 | PROFILE-AV-01 | Avatar/profile storage | P0 | Runbook V25, Supabase Advisor V29, matriz V31 | `check:all`, Jest, RLS/storage smoke, rollback R3 | Bloqueado ate policies reais |
 | ADMIN-MOD-01 | Admin/moderacao | P1 | Matriz V31, runbook V25 | `check:all`, Jest, Playwright admin, smoke manual | Bloqueado ate usuario admin real |
 | NOTIF-SB-01 | Provider sandbox email/WhatsApp | P1 | Checklist V30, secrets sandbox, rollback V38 | `check:all`, Jest, provider sandbox, fail-closed | Bloqueado ate sandbox |
@@ -75,3 +75,6 @@ Antes de abrir qualquer branch funcional futura, preencher:
 - `docs/qa/reports/_TEMPLATE-functional-entry-gate.md`;
 - `docs/qa/reports/_TEMPLATE-rollback-evidence.md`;
 - `docs/qa/reports/_TEMPLATE-functional-candidate.md` quando houver mais de um candidato viavel.
+
+Para `AUTH-CB-01`, preencher tambem `docs/qa/reports/_TEMPLATE-auth-callback-evidence.md`
+conforme `docs/planning/v40-auth-callback-preimplementation-dossier.md`.

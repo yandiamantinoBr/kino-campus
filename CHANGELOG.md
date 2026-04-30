@@ -2,6 +2,42 @@
 
 ---
 
+## [40.0.0] - 2026-04-29 - Dossie AUTH-CB-01 (v40.0.0)
+
+### Tema
+
+Dossie documental pre-implementacao para o candidato P0 `AUTH-CB-01`, focado em signup,
+email institucional, callback/magic link e sessao autenticada real. A V40 nao altera runtime,
+CSS, HTML, SQL, secrets, providers ou CI.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v40.0.0 | `RELATORIO-KINOCAMPUS-V40.md` e reancoragem de metadados para `kinocampus-V40.0-foundations` |
+| v40.0.0 | `docs/planning/v40-auth-callback-preimplementation-dossier.md` criado |
+| v40.0.0 | `docs/qa/reports/_TEMPLATE-auth-callback-evidence.md` criado |
+| v40.0.0 | Matriz V39, planning index e QA README atualizados com referencia ao dossie V40 |
+| v40.0.0 | `RELATORIO-KINOCAMPUS-V35.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V39) | Depois (V40) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 39.0.0 | 40.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V39.0-foundations` | `kinocampus-V40.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 24 | 25 | +V35 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Dossies pre-implementacao P0 | 0 | 1 | +AUTH-CB-01 |
+| Templates auth callback | 0 | 1 | +V40 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [39.0.0] - 2026-04-29 - Matriz de Candidatos Funcionais (v39.0.0)
 
 ### Tema
