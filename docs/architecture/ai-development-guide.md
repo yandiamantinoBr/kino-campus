@@ -1,6 +1,6 @@
 # Guia de Desenvolvimento para IA — KinoCampus
 
-**Versão:** v57.0.0 · **Atualizado em:** 2026-04-30
+**Versão:** v58.0.0 · **Atualizado em:** 2026-04-30
 
 > **Leia este documento integralmente antes de qualquer modificação.**
 > Este guia é auto-contido: uma IA sem contexto anterior deve conseguir trabalhar
@@ -38,18 +38,18 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Backend | Supabase (PostgreSQL + Auth + Storage + Edge Functions + Realtime) | — |
 | Hosting | Vercel | `vercel.json` é imutável sem aprovação explícita |
 | Build | `node scripts/inject-env.js` | Substitui placeholders `__KC_*__` nas variáveis |
-| Testes | Jest (134 suites) + Playwright (8 suites E2E) | Nunca reduzir contagem |
+| Testes | Jest (135 suites) + Playwright (8 suites E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v57)
+### Estado atual (v58)
 
 | Campo | Valor |
 |-------|-------|
-| Branch principal | `kinocampus-V57.0-foundations` |
-| Branch de features | `feature/v57.X.Y-descricao-curta` |
-| appVersion | `57.0.0` (v57 encerrada; patch PUBLIC-A11Y pontual documentado em `docs/qa/reports/`) |
+| Branch principal | `kinocampus-V58.0-foundations` |
+| Branch de features | `feature/v58.X.Y-descricao-curta` |
+| appVersion | `58.0.0` (v58 encerrada; patch PUBLIC-A11Y pontual documentado em `docs/qa/reports/`) |
 | frontendRuntimeVersion | `8.6.0` (constante canônica — **nunca alterar**) |
-| Jest | 134 suites · 3054 testes |
+| Jest | 135 suites · 3056 testes |
 | check:all | 5/5 validators verdes |
 | Itens validados (check:structure) | 156 |
 
@@ -77,7 +77,7 @@ kino-campus/
 ├── data/database.json          ← fixture para driver local
 ├── docs/                       ← Toda documentação técnica
 ├── scripts/                    ← 5 validators + inject-env.js
-├── tests/                      ← 134 suites Jest
+├── tests/                      ← 135 suites Jest
 │   ├── unit/         (22)
 │   ├── integration/  (90)
 │   ├── contract/      (7)
@@ -94,34 +94,34 @@ kino-campus/
 ### Sequência exata — não pular etapas
 
 ```
-1. git checkout kinocampus-V57.0-foundations
+1. git checkout kinocampus-V58.0-foundations
 2. git pull
-3. git checkout -b feature/v57.X.Y-descricao-curta
+3. git checkout -b feature/v58.X.Y-descricao-curta
 4. [ implementar mudanças ]
 5. npm run check:all          ← DEVE ser 5/5 verdes
-   npm test                   ← DEVE ser ≥134/134 suites, ≥3054/3054 testes
+   npm test                   ← DEVE ser ≥135/135 suites, ≥3056/3056 testes
 6. git add <arquivos específicos>
 7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-8. git push -u origin feature/v57.X.Y-descricao-curta
+8. git push -u origin feature/v58.X.Y-descricao-curta
 9. gh pr create --title "..." --body "..."
 10. gh pr merge <número> --squash --delete-branch
-11. git checkout kinocampus-V57.0-foundations
+11. git checkout kinocampus-V58.0-foundations
 12. git pull
 ```
 
 ### Nomeação de branches
 
 ```
-feature/v57.X.Y-descricao-curta
+feature/v58.X.Y-descricao-curta
 
 Exemplos válidos:
-  feature/v57.1.0-public-a11y-post-card-comments
-  feature/v57.2.0-public-a11y-card-labels
-  feature/v57.3.0-public-a11y-rendered-content
+  feature/v58.1.0-public-a11y-post-card-comments
+  feature/v58.2.0-public-a11y-card-labels
+  feature/v58.3.0-public-a11y-rendered-content
 
 Proibido:
   main, master, develop, fix/..., hotfix/...
-  Qualquer nome sem o prefixo feature/v57.X.Y-
+  Qualquer nome sem o prefixo feature/v58.X.Y-
 ```
 
 ### Regras do PR
@@ -136,7 +136,7 @@ Proibido:
 
 ```bash
 npm run check:all    # OBRIGATÓRIO — deve exibir 5 "OK" em sequência
-npm test             # OBRIGATÓRIO — deve exibir "134 passed, 134 total"
+npm test             # OBRIGATÓRIO — deve exibir "135 passed, 135 total"
 ```
 
 Se qualquer check falhar → corrigir antes de commitar. Nunca commitar com falha.
@@ -281,7 +281,7 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 **O que verifica:**
 - `VERSION.json` existe e tem todos os 6 campos obrigatórios: `project`, `appVersion`, `frontendRuntimeVersion`, `branch`, `status`, `updatedAt`
 - `frontendRuntimeVersion` é exatamente `"8.6.0"` (constante canônica imutável)
-- `branch` é exatamente `"kinocampus-V57.0-foundations"`
+- `branch` é exatamente `"kinocampus-V58.0-foundations"`
 - `appVersion` tem formato semântico `X.Y.Z`
 - `updatedAt` tem formato `YYYY-MM-DD`
 - A string `'8.6.0'` aparece literalmente em ~17 arquivos JS (todos devem bater)
@@ -292,10 +292,10 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 // VERSION.json — campos obrigatórios
 {
   "project": "KinoCampus",
-  "appVersion": "57.0.0",
+  "appVersion": "58.0.0",
   "frontendRuntimeVersion": "8.6.0",
-  "branch": "kinocampus-V57.0-foundations",
-  "status": "v57 encerrada",
+  "branch": "kinocampus-V58.0-foundations",
+  "status": "v58 encerrada",
   "updatedAt": "2026-04-30"
 }
 ```
@@ -509,7 +509,7 @@ describe('MeuModulo', () => {
 
 **Nunca reduzir o número de suites ou de testes.**
 
-- Antes de commitar: `npm test` deve mostrar `≥134 passed, 134 total` e `≥3054 passed, 3054 total`
+- Antes de commitar: `npm test` deve mostrar `≥135 passed, 135 total` e `≥3056 passed, 3056 total`
 - Se uma nova suite é criada, a contagem sobe — o gate da suite nova deve ser documentado no commit
 - Nunca deletar suites existentes
 - Nunca comentar ou pular testes (`it.skip`, `describe.skip`) sem aprovação explícita
@@ -616,7 +616,7 @@ git commit -m "$(cat <<'EOF'
 fix(validator): adiciona components/ ao CANONICAL_JS
 
 carousel.js, toast.js e voting.js estavam faltando da lista de
-arquivos canônicos. Validator agora verifica 156 itens (baseline v57).
+arquivos canônicos. Validator agora verifica 156 itens (baseline v58).
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 EOF
@@ -677,7 +677,7 @@ git add -A
 | `innerHTML` sem `escapeHtml()` em conteúdo de usuário | Vulnerabilidade XSS direta |
 | Instalar dependências de produção (`npm install --save`) | Stack vanilla — sem npm em prod |
 | Usar React, Vue, Angular, TypeScript, Babel, Webpack, Vite | Stack imutável |
-| Push direto para `kinocampus-V57.0-foundations` | Branch protegida — fluxo via PR |
+| Push direto para `kinocampus-V58.0-foundations` | Branch protegida — fluxo via PR |
 | `git push --force` em qualquer branch | Proibido sem aprovação explícita |
 | `git commit --amend` em commits já publicados | Reescreve histórico público |
 
@@ -687,7 +687,7 @@ git add -A
 |----------|--------|
 | Deletar suites existentes | Reduz cobertura; vide regra de ouro |
 | `it.skip` ou `describe.skip` sem aprovação | Mascara falhas |
-| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 134/3054 |
+| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 135/3056 |
 | Commitar com `npm test` com falhas | Proibido terminantemente |
 
 ### Validators
@@ -711,7 +711,7 @@ git add -A
 | Quais scripts cada HTML carrega e em que ordem | `docs/architecture/script-loading-reference.md` |
 | Como os dados fluem de controller → KCAPI → adapter → banco | `docs/architecture/data-flow-guide.md` |
 | Estrutura do repositório, grupos JS, namespaces, delta de versões | `docs/architecture/repository-structure.md` |
-| Onde adicionar novos testes, estrutura das 134 suites | `docs/architecture/test-strategy.md` |
+| Onde adicionar novos testes, estrutura das 135 suites | `docs/architecture/test-strategy.md` |
 | CSS em produção, `future-split/`, convenções | `docs/architecture/css-architecture.md` |
 | Arquitetura geral, camadas, hotspots | `docs/architecture.md` |
 | Métodos públicos de KCAPI, contratos de retorno | `docs/api-contract.md` |
@@ -719,7 +719,7 @@ git add -A
 | RPCs, triggers e funções PostgreSQL | `docs/rpc-catalog.md` |
 | Variáveis de ambiente, `KC_ENV`, Supabase, Vercel | `docs/env-vars.md` |
 | Tokens visuais, componentes CSS, popovers, responsividade | `docs/design-system.md` |
-| Estado atual da release v57, iterações, DoD | `RELATORIO-KINOCAMPUS-v57.md` |
+| Estado atual da release v58, iterações, DoD | `RELATORIO-KINOCAMPUS-V58.md` |
 | Histórico de releases e hotfixes | `CHANGELOG.md` |
 | Invariantes Vercel/Supabase de produção | `docs/ops/vercel-supabase-invariants.md` |
 | Índice de todos os documentos técnicos | `docs/index.md` |
@@ -773,6 +773,6 @@ npm run check:routes     # 22 rotas + CSS
 npm run check:hygiene    # 8.6.0, i18n B2, inline handlers, cadeias
 
 # Testes
-npm test                 # 134 suites · 3054 testes
+npm test                 # 135 suites · 3056 testes
 npm run test:e2e         # 8 suites Playwright · 51 testes
 ```

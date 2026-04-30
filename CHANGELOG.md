@@ -2,6 +2,43 @@
 
 ---
 
+## [58.0.0] - 2026-04-30 - PUBLIC-A11Y Mobile Search Modal Controls (v58.0.0)
+
+### Tema
+
+Patch funcional pequeno em `KCSearchModal` para explicitar `type="button"` nos controles
+internos do modal de busca mobile e marcar os icones desses controles como decorativos. A V58
+nao altera CSS, HTML estatico, SQL, migrations, providers, secrets ou comportamento visual
+intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v58.0.0 | botoes de fechar e limpar do modal de busca mobile recebem `type="button"` |
+| v58.0.0 | icones internos dos controles recebem `aria-hidden="true"` |
+| v58.0.0 | `tests/unit/kc-search-modal.test.js` valida o DOM gerado por `KCSearchModal.open()` |
+| v58.0.0 | `docs/qa/reports/report-v58-public-a11y-mobile-search-modal-controls.md` criado |
+| v58.0.0 | `RELATORIO-KINOCAMPUS-V53.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V57) | Depois (V58) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 57.0.0 | 58.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V57.0-foundations` | `kinocampus-V58.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 42 | 43 | +V53 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 0 | 1 | patch pontual em componente de busca mobile |
+| Suites Jest | 134 | 135 | +1 suite unit direcionada |
+| Testes Jest | 3054 | 3056 | +2 testes unit |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [57.0.0] - 2026-04-30 - PUBLIC-A11Y Post Card Author Avatar Alt (v57.0.0)
 
 ### Tema

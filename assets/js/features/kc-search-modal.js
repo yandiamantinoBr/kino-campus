@@ -39,8 +39,8 @@
 
     card.innerHTML = `
       <div class="kc-search-modal-card__header">
-        <button class="kc-search-modal-card__close" aria-label="Fechar busca">
-          <i class="fas fa-arrow-left"></i>
+        <button class="kc-search-modal-card__close" type="button" aria-label="Fechar busca">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
         </button>
         <div class="kc-search-modal-card__bar">
           <i class="fas fa-search kc-search-modal-card__icon"></i>
@@ -53,8 +53,8 @@
             autocorrect="off"
             spellcheck="false"
           />
-          <button class="kc-search-modal-card__clear" aria-label="Limpar busca" style="display:none">
-            <i class="fas fa-times"></i>
+          <button class="kc-search-modal-card__clear" type="button" aria-label="Limpar busca" style="display:none">
+            <i class="fas fa-times" aria-hidden="true"></i>
           </button>
         </div>
       </div>
