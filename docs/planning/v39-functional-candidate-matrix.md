@@ -20,7 +20,7 @@ auth, SQL, provider, CSS e admin no mesmo ciclo.
 |---|---|---|---|---|---|
 | AUTH-CB-01 | Signup callback real | P0 | Runbook V25, matriz V31, gate V37, rollback V38, dossie V40 | `check:all`, Jest, Playwright V32, evidencia auth real | Bloqueado ate ambiente real |
 | PROFILE-AV-01 | Avatar/profile storage | P0 | Runbook V25, Supabase Advisor V29, matriz V31, dossie V41 | `check:all`, Jest, RLS/storage smoke, rollback R3 | Bloqueado ate policies reais |
-| ADMIN-MOD-01 | Admin/moderacao | P1 | Matriz V31, runbook V25 | `check:all`, Jest, Playwright admin, smoke manual | Bloqueado ate usuario admin real |
+| ADMIN-MOD-01 | Admin/moderacao | P1 | Matriz V31, runbook V25, dossie V42 | `check:all`, Jest, Playwright admin, smoke manual, controle negativo nao-admin | Bloqueado ate usuario admin real |
 | NOTIF-SB-01 | Provider sandbox email/WhatsApp | P1 | Checklist V30, secrets sandbox, rollback V38 | `check:all`, Jest, provider sandbox, fail-closed | Bloqueado ate sandbox |
 | SEARCH-FTS-01 | Unaccent/FTS isolado | P1 | Auditoria V28, ambiente SQL isolado | `check:all`, Jest, SQL smoke, rollback R3 | Bloqueado ate banco isolado |
 | CSS-SM-01 | Ajuste visual pequeno | P2 | Gate V27, politicas V32/V33, ledger V35 | `check:all`, Jest, Playwright/LHCI aplicavel, baseline visual | Bloqueado ate baseline |
@@ -81,3 +81,6 @@ conforme `docs/planning/v40-auth-callback-preimplementation-dossier.md`.
 
 Para `PROFILE-AV-01`, preencher tambem `docs/qa/reports/_TEMPLATE-profile-avatar-evidence.md`
 conforme `docs/planning/v41-profile-avatar-preimplementation-dossier.md`.
+
+Para `ADMIN-MOD-01`, preencher tambem `docs/qa/reports/_TEMPLATE-admin-moderation-evidence.md`
+conforme `docs/planning/v42-admin-moderation-preimplementation-dossier.md`.

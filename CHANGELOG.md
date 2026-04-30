@@ -2,6 +2,42 @@
 
 ---
 
+## [42.0.0] - 2026-04-29 - Dossie ADMIN-MOD-01 (v42.0.0)
+
+### Tema
+
+Dossie documental pre-implementacao para o candidato P1 `ADMIN-MOD-01`, focado em admin,
+moderacao, usuario admin real, controle negativo nao-admin e evidencia redigida. A V42 nao
+altera runtime, CSS, HTML, SQL, secrets, providers ou CI.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v42.0.0 | `RELATORIO-KINOCAMPUS-V42.md` e reancoragem de metadados para `kinocampus-V42.0-foundations` |
+| v42.0.0 | `docs/planning/v42-admin-moderation-preimplementation-dossier.md` criado |
+| v42.0.0 | `docs/qa/reports/_TEMPLATE-admin-moderation-evidence.md` criado |
+| v42.0.0 | Matriz V39, planning index e QA README atualizados com referencia ao dossie V42 |
+| v42.0.0 | `RELATORIO-KINOCAMPUS-V37.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V41) | Depois (V42) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 41.0.0 | 42.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V41.0-foundations` | `kinocampus-V42.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 26 | 27 | +V37 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Dossies pre-implementacao | 2 | 3 | +ADMIN-MOD-01 |
+| Templates admin/moderacao | 0 | 1 | +V42 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [41.0.0] - 2026-04-29 - Dossie PROFILE-AV-01 (v41.0.0)
 
 ### Tema
