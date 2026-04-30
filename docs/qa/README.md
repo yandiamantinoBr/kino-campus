@@ -15,7 +15,7 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 - `v34-a11y-i18n-reconciliation-plan.md`: plano para reconciliar auditorias historicas de a11y/i18n com gaps atuais.
 - `rls-smoke.sql`: roteiro de validacao RLS.
 - `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
-- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider, template V44 search/FTS, template V45 CSS small change, template V46 public a11y e template V47 de selecao de readiness funcional.
+- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider, template V44 search/FTS, template V45 CSS small change, template V46 public a11y, template V47 de selecao de readiness funcional e template V48 de redacao de evidencia externa.
 
 ## Historico preservado
 
@@ -36,13 +36,14 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 10. Antes de qualquer implementacao funcional, preencha `reports/_TEMPLATE-functional-entry-gate.md`.
 11. Antes de tocar runtime, CSS, HTML, SQL, provider ou config, preencha `reports/_TEMPLATE-rollback-evidence.md`.
 12. Antes de selecionar a primeira implementacao funcional, use `reports/_TEMPLATE-implementation-readiness-selection.md`.
-13. Quando houver mais de um pacote viavel, use `reports/_TEMPLATE-functional-candidate.md` para registrar a escolha.
-14. Para o candidato `AUTH-CB-01`, use `reports/_TEMPLATE-auth-callback-evidence.md`.
-15. Para o candidato `PROFILE-AV-01`, use `reports/_TEMPLATE-profile-avatar-evidence.md`.
-16. Para o candidato `ADMIN-MOD-01`, use `reports/_TEMPLATE-admin-moderation-evidence.md`.
-17. Para o candidato `NOTIF-SB-01`, use `reports/_TEMPLATE-notification-provider-evidence.md`.
-18. Para o candidato `SEARCH-FTS-01`, use `reports/_TEMPLATE-search-fts-evidence.md`.
-19. Para o candidato `CSS-SM-01`, use `reports/_TEMPLATE-css-small-change-evidence.md`.
-20. Para o candidato `PUBLIC-A11Y-01`, use `reports/_TEMPLATE-public-a11y-evidence.md`.
-21. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
-22. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.
+13. Para qualquer evidencia externa, redija primeiro com `reports/_TEMPLATE-external-evidence-redaction.md`.
+14. Quando houver mais de um pacote viavel, use `reports/_TEMPLATE-functional-candidate.md` para registrar a escolha.
+15. Para o candidato `AUTH-CB-01`, use `reports/_TEMPLATE-auth-callback-evidence.md`.
+16. Para o candidato `PROFILE-AV-01`, use `reports/_TEMPLATE-profile-avatar-evidence.md`.
+17. Para o candidato `ADMIN-MOD-01`, use `reports/_TEMPLATE-admin-moderation-evidence.md`.
+18. Para o candidato `NOTIF-SB-01`, use `reports/_TEMPLATE-notification-provider-evidence.md`.
+19. Para o candidato `SEARCH-FTS-01`, use `reports/_TEMPLATE-search-fts-evidence.md`.
+20. Para o candidato `CSS-SM-01`, use `reports/_TEMPLATE-css-small-change-evidence.md`.
+21. Para o candidato `PUBLIC-A11Y-01`, use `reports/_TEMPLATE-public-a11y-evidence.md`.
+22. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
+23. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.

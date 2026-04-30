@@ -150,9 +150,9 @@ function runVersionJsonChecks() {
       '" não bate com canonicalVersion "' + canonicalVersion + '"'
     );
   }
-  if (versionData.branch && versionData.branch !== 'kinocampus-V47.0-foundations') {
+  if (versionData.branch && versionData.branch !== 'kinocampus-V48.0-foundations') {
     errors.push(
-      'VERSION.json: branch "' + versionData.branch + '" não bate com "kinocampus-V47.0-foundations"'
+      'VERSION.json: branch "' + versionData.branch + '" não bate com "kinocampus-V48.0-foundations"'
     );
   }
 }
