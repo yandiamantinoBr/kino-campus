@@ -2,6 +2,42 @@
 
 ---
 
+## [52.0.0] - 2026-04-30 - Rastreabilidade de Gates Funcionais (v52.0.0)
+
+### Tema
+
+Matriz documental de rastreabilidade para consolidar gates, evidencias, templates e decisao Go/No-Go
+antes de qualquer branch funcional futura. A V52 nao altera runtime, CSS, HTML, testes funcionais,
+SQL, migrations, providers, secrets, CI ou comportamento visual.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v52.0.0 | `RELATORIO-KINOCAMPUS-V52.md` e reancoragem de metadados para `kinocampus-V52.0-foundations` |
+| v52.0.0 | `docs/planning/v52-functional-gate-traceability.md` criado |
+| v52.0.0 | `docs/qa/reports/_TEMPLATE-functional-gate-traceability.md` criado |
+| v52.0.0 | `docs/index.md`, `docs/planning/_INDEX.md`, `docs/qa/README.md` e `repository-structure.md` atualizados |
+| v52.0.0 | `RELATORIO-KINOCAMPUS-V47.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V51) | Depois (V52) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 51.0.0 | 52.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V51.0-foundations` | `kinocampus-V52.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 36 | 37 | +V47 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Matrizes de rastreabilidade funcional | 0 | 1 | +V52 |
+| Templates de rastreabilidade funcional | 0 | 1 | +V52 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [51.0.0] - 2026-04-30 - Registro de No-Go Funcional (v51.0.0)
 
 ### Tema
