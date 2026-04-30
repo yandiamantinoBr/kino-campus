@@ -35,11 +35,11 @@ var ROOT_FILES = [
   'index.html',
   'CHANGELOG.md',
   'README.md',
-  'RELATORIO-KINOCAMPUS-V36.md',
   'RELATORIO-KINOCAMPUS-V37.md',
   'RELATORIO-KINOCAMPUS-V38.md',
   'RELATORIO-KINOCAMPUS-V39.md',
   'RELATORIO-KINOCAMPUS-V40.md',
+  'RELATORIO-KINOCAMPUS-V41.md',
 ];
 
 // ── Diretórios obrigatórios ───────────────────────────────────────────────────

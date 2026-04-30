@@ -19,7 +19,7 @@ auth, SQL, provider, CSS e admin no mesmo ciclo.
 | ID | Trilha | Prioridade | Entrada obrigatoria | Gates obrigatorios | Estado |
 |---|---|---|---|---|---|
 | AUTH-CB-01 | Signup callback real | P0 | Runbook V25, matriz V31, gate V37, rollback V38, dossie V40 | `check:all`, Jest, Playwright V32, evidencia auth real | Bloqueado ate ambiente real |
-| PROFILE-AV-01 | Avatar/profile storage | P0 | Runbook V25, Supabase Advisor V29, matriz V31 | `check:all`, Jest, RLS/storage smoke, rollback R3 | Bloqueado ate policies reais |
+| PROFILE-AV-01 | Avatar/profile storage | P0 | Runbook V25, Supabase Advisor V29, matriz V31, dossie V41 | `check:all`, Jest, RLS/storage smoke, rollback R3 | Bloqueado ate policies reais |
 | ADMIN-MOD-01 | Admin/moderacao | P1 | Matriz V31, runbook V25 | `check:all`, Jest, Playwright admin, smoke manual | Bloqueado ate usuario admin real |
 | NOTIF-SB-01 | Provider sandbox email/WhatsApp | P1 | Checklist V30, secrets sandbox, rollback V38 | `check:all`, Jest, provider sandbox, fail-closed | Bloqueado ate sandbox |
 | SEARCH-FTS-01 | Unaccent/FTS isolado | P1 | Auditoria V28, ambiente SQL isolado | `check:all`, Jest, SQL smoke, rollback R3 | Bloqueado ate banco isolado |
@@ -78,3 +78,6 @@ Antes de abrir qualquer branch funcional futura, preencher:
 
 Para `AUTH-CB-01`, preencher tambem `docs/qa/reports/_TEMPLATE-auth-callback-evidence.md`
 conforme `docs/planning/v40-auth-callback-preimplementation-dossier.md`.
+
+Para `PROFILE-AV-01`, preencher tambem `docs/qa/reports/_TEMPLATE-profile-avatar-evidence.md`
+conforme `docs/planning/v41-profile-avatar-preimplementation-dossier.md`.

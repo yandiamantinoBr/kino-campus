@@ -15,6 +15,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v38-rollback-evidence-gate.md` | Gate V38 de evidencia de rollback antes de mudancas funcionais |
 | `v39-functional-candidate-matrix.md` | Matriz V39 de candidatos funcionais para primeira implementacao futura |
 | `v40-auth-callback-preimplementation-dossier.md` | Dossie V40 pre-implementacao para o candidato P0 AUTH-CB-01 |
+| `v41-profile-avatar-preimplementation-dossier.md` | Dossie V41 pre-implementacao para o candidato P0 PROFILE-AV-01 |
 
 ## Regras
 

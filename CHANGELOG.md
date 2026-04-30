@@ -2,6 +2,42 @@
 
 ---
 
+## [41.0.0] - 2026-04-29 - Dossie PROFILE-AV-01 (v41.0.0)
+
+### Tema
+
+Dossie documental pre-implementacao para o candidato P0 `PROFILE-AV-01`, focado em avatar,
+profile storage, Supabase Storage policies e evidencia autenticada. A V41 nao altera runtime,
+CSS, HTML, SQL, secrets, providers ou CI.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v41.0.0 | `RELATORIO-KINOCAMPUS-V41.md` e reancoragem de metadados para `kinocampus-V41.0-foundations` |
+| v41.0.0 | `docs/planning/v41-profile-avatar-preimplementation-dossier.md` criado |
+| v41.0.0 | `docs/qa/reports/_TEMPLATE-profile-avatar-evidence.md` criado |
+| v41.0.0 | Matriz V39, planning index e QA README atualizados com referencia ao dossie V41 |
+| v41.0.0 | `RELATORIO-KINOCAMPUS-V36.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V40) | Depois (V41) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 40.0.0 | 41.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V40.0-foundations` | `kinocampus-V41.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 25 | 26 | +V36 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Dossies pre-implementacao P0 | 1 | 2 | +PROFILE-AV-01 |
+| Templates profile/avatar | 0 | 1 | +V41 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [40.0.0] - 2026-04-29 - Dossie AUTH-CB-01 (v40.0.0)
 
 ### Tema
