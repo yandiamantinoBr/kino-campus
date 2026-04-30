@@ -380,7 +380,7 @@ function applyPresentationRules(post, context = {}) {
       p._kcBadgeText = statusLost ? 'Perdido' : 'Encontrado';
       p._kcBadgeStyle = statusLost ? 'background-color: var(--kc-red-alert);' : '';
       // Badge de contexto (product + cards): pill com ícone
-      p._kcStatusBadgeHtml = `<span class="kc-badge"><i class="fas fa-tag"></i> ${_kcStatusLabel}</span>`;
+      p._kcStatusBadgeHtml = `<span class="kc-badge"><i class="fas fa-tag" aria-hidden="true"></i> ${_kcStatusLabel}</span>`;
     }
 
     // Promoção em compra-venda
@@ -596,7 +596,7 @@ function renderPostCard(post, options) {
   // Badge (opcional)
   const badgeHtml = (p._kcBadgeText)
     ? `<span class="kc-cashback-badge"${p._kcBadgeStyle ? ` style="${_escapeHtml(String(p._kcBadgeStyle))}"` : ''}>
-        <i class="${_escapeHtml(String(p._kcBadgeIconClass || 'fas fa-tag'))}"></i>
+        <i class="${_escapeHtml(String(p._kcBadgeIconClass || 'fas fa-tag'))}" aria-hidden="true"></i>
         ${_escapeHtml(String(p._kcBadgeText))}
       </span>`
     : '';
@@ -608,7 +608,7 @@ function renderPostCard(post, options) {
   if (p.modulo) {
     const modLabel = _getModuleLabel(p.modulo);
     const modIcon = _getModuleIconClass(p.modulo);
-    badges.push(`<span class="kc-badge"><i class="${_escapeHtml(modIcon)}"></i> ${_escapeHtml(modLabel)}</span>`);
+    badges.push(`<span class="kc-badge"><i class="${_escapeHtml(modIcon)}" aria-hidden="true"></i> ${_escapeHtml(modLabel)}</span>`);
   }
 
   // Status (Achados/Perdidos)
@@ -616,13 +616,13 @@ function renderPostCard(post, options) {
 
   // Condição (Compra e Venda)
   if (p.condicao) {
-    badges.push(`<span class="kc-badge"><i class="fas fa-star"></i> ${_escapeHtml(String(p.condicao))}</span>`);
+    badges.push(`<span class="kc-badge"><i class="fas fa-star" aria-hidden="true"></i> ${_escapeHtml(String(p.condicao))}</span>`);
   }
 
   // Tempo relativo (único lugar no card)
   const relTime = p._kcRelativeTime || p.timestamp;
   if (relTime) {
-    badges.push(`<span class="kc-badge"><i class="fas fa-clock"></i> ${_escapeHtml(String(relTime))}</span>`);
+    badges.push(`<span class="kc-badge"><i class="fas fa-clock" aria-hidden="true"></i> ${_escapeHtml(String(relTime))}</span>`);
   }
 
   const topBadgesHtml = badges.length
@@ -633,7 +633,7 @@ function renderPostCard(post, options) {
   const segments = Array.isArray(p._kcCategorySegments) ? p._kcCategorySegments : [];
   let categoryLineHtml = segments.map(s => _escapeHtml(String(s))).join(' • ');
   if (p._kcVerifiedTag) {
-    categoryLineHtml = `${categoryLineHtml}${categoryLineHtml ? ' • ' : ''}<a href="#">${_escapeHtml(String(p._kcVerifiedTag))}</a> <i class="fas fa-check-circle"></i>`;
+    categoryLineHtml = `${categoryLineHtml}${categoryLineHtml ? ' • ' : ''}<a href="#">${_escapeHtml(String(p._kcVerifiedTag))}</a> <i class="fas fa-check-circle" aria-hidden="true"></i>`;
   }
 
   // Imagem (quando existir), senão emoji (mantém Offline First)
@@ -643,7 +643,7 @@ function renderPostCard(post, options) {
   const isLegacyExample = !!String(p.legacyId || p.legacy_id || '').trim();
   // Ribbon fora do image-wrapper para não ser cortado pelo overflow:hidden
   const legacyExampleBadgeHtml = isLegacyExample
-    ? `<span class="kc-card__example-ribbon" aria-label="Exemplo de uso"><i class="fas fa-flask"></i><span>Exemplo</span></span>`
+    ? `<span class="kc-card__example-ribbon" aria-label="Exemplo de uso"><i class="fas fa-flask" aria-hidden="true"></i><span>Exemplo</span></span>`
     : '';
   const imageWrapperHtml = imgSrc
     ? `<a class="kc-card__image-wrapper" href="${productHref}" aria-label="Abrir anúncio ${_escapeHtml(String(p.titulo || ''))}">
@@ -671,7 +671,7 @@ function renderPostCard(post, options) {
   if (shouldShowPrice) {
     priceHtml = `
       <div class="kc-card__price"${styleAttr}>
-        <i class="${_escapeHtml(priceIconClass)}"></i>
+        <i class="${_escapeHtml(priceIconClass)}" aria-hidden="true"></i>
         ${_escapeHtml(mainPriceText)}
         ${smallPriceText ? `<small>${_escapeHtml(smallPriceText)}</small>` : ''}
       </div>

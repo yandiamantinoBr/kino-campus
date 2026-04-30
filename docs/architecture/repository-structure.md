@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v55.0.0
+**Versao:** v56.0.0
 **Data:** 2026-04-30
-**Atualizado em:** v55.0.0 - patch PUBLIC-A11Y post card rating e janela raiz V51-V55
+**Atualizado em:** v56.0.0 - patch PUBLIC-A11Y post card decorative icons e janela raiz V52-V56
 
 ---
 
@@ -20,12 +20,12 @@ em ordem deterministica nos 22 HTMLs canonicos.
 | Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime) |
 | Hosting | Vercel (`vercel.json`) |
 | Runtime JS | `frontendRuntimeVersion=8.6.0` |
-| appVersion | `55.0.0` |
-| Branch principal | `kinocampus-V55.0-foundations` |
-| Testes | Jest 134 suites / 3050 testes + Playwright 8 suites E2E |
+| appVersion | `56.0.0` |
+| Branch principal | `kinocampus-V56.0-foundations` |
+| Testes | Jest 134 suites / 3053 testes + Playwright 8 suites E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
-V55 e uma versao funcional pequena. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
+V56 e uma versao funcional pequena. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
 janela operacional atual: archive consolidado, planning ativo com ledger pos-V23, QA ativo separado do
 historico, worktree Claude arquivada, runbook QA real V25, templates de evidencia V26, gate visual/a11y V27,
 auditoria unaccent/FTS V28, checklist Supabase Advisor V29, checklist de sandbox para providers V30, matriz
@@ -35,7 +35,8 @@ funcionais V39, dossie AUTH-CB-01 V40, dossie PROFILE-AV-01 V41, dossie ADMIN-MO
 dossie SEARCH-FTS-01 V44, dossie CSS-SM-01 V45, dossie PUBLIC-A11Y-01 V46, consolidacao de readiness funcional V47,
 pacote de evidencias externas sem secrets V48, freeze de escopo funcional V49, intake de implementacao funcional V50,
 registro de No-Go funcional V51, rastreabilidade de gates funcionais V52, manifesto de patch funcional V53,
-patch PUBLIC-A11Y no link de comentarios dos cards V54 e patch PUBLIC-A11Y no badge de avaliacao V55.
+patch PUBLIC-A11Y no link de comentarios dos cards V54, patch PUBLIC-A11Y no badge de avaliacao V55
+e patch PUBLIC-A11Y de icones decorativos V56.
 
 ---
 
@@ -103,11 +104,11 @@ kino-campus/
 |-- VERSION.json
 |-- CHANGELOG.md
 |-- README.md
-|-- RELATORIO-KINOCAMPUS-V51.md
 |-- RELATORIO-KINOCAMPUS-V52.md
 |-- RELATORIO-KINOCAMPUS-V53.md
 |-- RELATORIO-KINOCAMPUS-V54.md
-`-- RELATORIO-KINOCAMPUS-V55.md
+|-- RELATORIO-KINOCAMPUS-V55.md
+`-- RELATORIO-KINOCAMPUS-V56.md
 ```
 
 ---
@@ -176,7 +177,7 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/product.css` | Producao | Pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
-O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V28 mapeia risco SQL de busca sem alterar migrations; V29 define evidencias operacionais para Supabase Advisor sem tocar dashboard; V30 define sandbox de providers de notificacao sem configurar secrets; V31 organiza triagem autenticada sem executar QA real; V32 define quando Playwright E2E e evidencia obrigatoria; V33 separa falha LHCI de ambiente de regressao real; V34 reconcilia a11y/i18n antes de backlog funcional; V35 define readiness e rollback antes de qualquer CSS; V36 consolida a sequencia segura para implementacoes futuras; V37 exige gate de entrada com filescope, evidencia e rollback antes de qualquer patch funcional; V38 detalha evidencia e classificacao de rollback antes de runtime, CSS, HTML, SQL, provider ou config; V39 classifica candidatos funcionais antes da primeira implementacao futura; V40 detalha o candidato P0 de signup/callback real; V41 detalha o candidato P0 de avatar/profile storage; V42 detalha o candidato P1 de admin/moderacao; V43 detalha o candidato P1 de provider sandbox email/WhatsApp; V44 detalha o candidato P1 de unaccent/FTS isolado; V45 detalha o candidato P2 de ajuste CSS pequeno; V46 detalha o candidato P2 de copy/a11y/i18n pontual; V47 consolida a fila para selecao da primeira implementacao funcional; V48 define coleta/redacao de evidencias externas sem secrets; V49 congela escopo antes de qualquer branch funcional; V50 define o intake final antes da primeira branch funcional; V51 registra No-Go quando gates/evidencias ainda bloqueiam implementacao; V52 consolida rastreabilidade Go/No-Go antes da branch funcional; V53 define manifesto de filescope/teste/rollback antes do primeiro patch funcional; V54 executa um patch PUBLIC-A11Y pequeno no HTML gerado por `renderPostCard`; V55 complementa o mesmo componente com nome acessivel no badge de avaliacao.
+O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V28 mapeia risco SQL de busca sem alterar migrations; V29 define evidencias operacionais para Supabase Advisor sem tocar dashboard; V30 define sandbox de providers de notificacao sem configurar secrets; V31 organiza triagem autenticada sem executar QA real; V32 define quando Playwright E2E e evidencia obrigatoria; V33 separa falha LHCI de ambiente de regressao real; V34 reconcilia a11y/i18n antes de backlog funcional; V35 define readiness e rollback antes de qualquer CSS; V36 consolida a sequencia segura para implementacoes futuras; V37 exige gate de entrada com filescope, evidencia e rollback antes de qualquer patch funcional; V38 detalha evidencia e classificacao de rollback antes de runtime, CSS, HTML, SQL, provider ou config; V39 classifica candidatos funcionais antes da primeira implementacao futura; V40 detalha o candidato P0 de signup/callback real; V41 detalha o candidato P0 de avatar/profile storage; V42 detalha o candidato P1 de admin/moderacao; V43 detalha o candidato P1 de provider sandbox email/WhatsApp; V44 detalha o candidato P1 de unaccent/FTS isolado; V45 detalha o candidato P2 de ajuste CSS pequeno; V46 detalha o candidato P2 de copy/a11y/i18n pontual; V47 consolida a fila para selecao da primeira implementacao funcional; V48 define coleta/redacao de evidencias externas sem secrets; V49 congela escopo antes de qualquer branch funcional; V50 define o intake final antes da primeira branch funcional; V51 registra No-Go quando gates/evidencias ainda bloqueiam implementacao; V52 consolida rastreabilidade Go/No-Go antes da branch funcional; V53 define manifesto de filescope/teste/rollback antes do primeiro patch funcional; V54 executa um patch PUBLIC-A11Y pequeno no HTML gerado por `renderPostCard`; V55 complementa o mesmo componente com nome acessivel no badge de avaliacao; V56 marca icones decorativos de badges/preco/exemplo/verificacao.
 
 ---
 
@@ -194,7 +195,7 @@ O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y 
 | `docs/architecture/` | Guias canonicos de arquitetura, scripts, dados, testes, CSS e IA |
 | `docs/ops/` | Runbooks operacionais, invariantes Vercel/Supabase, auditoria unaccent/FTS, evidencias Advisor, sandbox de providers e pacote V48 de evidencias externas |
 | `docs/planning/` | Inventarios V18, plano V19, ledger V24, readiness V26, readiness CSS V35, roadmap V36, gate funcional V37, rollback V38, matriz V39, dossies V40-V46, consolidacao V47, freeze V49, intake V50, No-Go V51, rastreabilidade V52 e manifesto V53 |
-| `docs/qa/` | Artefatos ativos de QA manual, RLS, XSS, reports V26, templates de gate funcional V37, rollback V38, candidato V39, auth callback V40, profile/avatar V41, admin/moderacao V42, notification provider V43, search/FTS V44, CSS small change V45, public a11y V46, selecao funcional V47, redacao de evidencia externa V48, freeze funcional V49, intake funcional V50, No-Go funcional V51, rastreabilidade funcional V52, manifesto funcional V53 e reports PUBLIC-A11Y V54-V55, gate visual/a11y V27, matriz autenticada V31, politica E2E V32, politica LHCI V33 e plano a11y/i18n V34 |
+| `docs/qa/` | Artefatos ativos de QA manual, RLS, XSS, reports V26, templates de gate funcional V37, rollback V38, candidato V39, auth callback V40, profile/avatar V41, admin/moderacao V42, notification provider V43, search/FTS V44, CSS small change V45, public a11y V46, selecao funcional V47, redacao de evidencia externa V48, freeze funcional V49, intake funcional V50, No-Go funcional V51, rastreabilidade funcional V52, manifesto funcional V53 e reports PUBLIC-A11Y V54-V56, gate visual/a11y V27, matriz autenticada V31, politica E2E V32, politica LHCI V33 e plano a11y/i18n V34 |
 
 ### 5.2 Archive
 
@@ -202,7 +203,7 @@ O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y 
 
 | Subdiretorio | Conteudo |
 |---|---|
-| `relatorios/` | Relatorios de encerramento V9, V11, V13-V50 |
+| `relatorios/` | Relatorios de encerramento V9, V11, V13-V51 |
 | `audits-v11/` | Auditorias e handoffs da trilha V11 |
 | `audits-v12-v13/` | Auditorias de refactor V12-V13 |
 | `audits-accessibility/` | Auditorias a11y/i18n V12 |
@@ -218,13 +219,13 @@ Nao recriar arvores historicas antigas fora de `docs/archive/`.
 
 ### 5.3 Relatorios raiz
 
-A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V55, a janela operacional e:
+A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V56, a janela operacional e:
 
-- `RELATORIO-KINOCAMPUS-V51.md`
 - `RELATORIO-KINOCAMPUS-V52.md`
 - `RELATORIO-KINOCAMPUS-V53.md`
 - `RELATORIO-KINOCAMPUS-V54.md`
 - `RELATORIO-KINOCAMPUS-V55.md`
+- `RELATORIO-KINOCAMPUS-V56.md`
 
 Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatorios/`.
 
@@ -240,7 +241,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:routes` | Valida 17 rotas publicas + 5 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantem 134/134 suites e 3050/3050 testes Jest |
+| `npm test` | Mantem 134/134 suites e 3053/3053 testes Jest |
 | `npm run test:e2e` | Evidencia Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 
@@ -260,7 +261,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 
 ---
 
-## 8. Delta V17 a V55
+## 8. Delta V17 a V56
 
 | Versao | Entrega estrutural |
 |---|---|
@@ -303,3 +304,4 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | V53 | Manifesto de patch funcional criado e V48 arquivado conforme politica de raiz |
 | V54 | Patch PUBLIC-A11Y de comentarios do card criado e V49 arquivado conforme politica de raiz |
 | V55 | Patch PUBLIC-A11Y do badge de avaliacao do card criado e V50 arquivado conforme politica de raiz |
+| V56 | Patch PUBLIC-A11Y de icones decorativos do card criado e V51 arquivado conforme politica de raiz |

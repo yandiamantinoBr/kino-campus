@@ -109,6 +109,36 @@ describe('renderPostCard — acessibilidade (v9.4.2)', () => {
     expect(html).toMatch(/fa-star[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-star/);
     expect(html).toContain('aria-label="Avaliacao media 4.0 em 1 avaliacao"');
   });
+
+  test('icones de badges de modulo condicao e tempo sao decorativos', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost({ condicao: 'Novo', _kcRelativeTime: 'agora' }));
+    expect(html).toMatch(/kc-badge[^<]*<i[^>]*aria-hidden="true"/);
+    expect(html).toMatch(/fa-star[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-star/);
+    expect(html).toMatch(/fa-clock[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-clock/);
+  });
+
+  test('icones de preco e badge promocional sao decorativos', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost({
+      _kcPriceTextMain: 'R$ 10',
+      _kcBadgeText: 'Promocao',
+      _kcBadgeIconClass: 'fas fa-tag',
+    }));
+    expect(html).toMatch(/kc-card__price[\s\S]*<i[^>]*aria-hidden="true"/);
+    expect(html).toMatch(/kc-cashback-badge[\s\S]*<i[^>]*aria-hidden="true"/);
+  });
+
+  test('icones de verificacao e exemplo legado sao decorativos', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost({
+      legacyId: 'legacy-1',
+      _kcVerifiedTag: 'UFG verificado',
+      _kcCategorySegments: ['Categoria'],
+    }));
+    expect(html).toMatch(/fa-check-circle[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-check-circle/);
+    expect(html).toMatch(/fa-flask[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-flask/);
+  });
 });
 
 describe('Atributos ARIA em HTML estático (_product.html)', () => {
