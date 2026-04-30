@@ -39,4 +39,24 @@ describe('KCSearchModal', () => {
     expect(document.querySelector('.kc-search-modal-card__close i').getAttribute('aria-hidden')).toBe('true');
     expect(document.querySelector('.kc-search-modal-card__clear i').getAttribute('aria-hidden')).toBe('true');
   });
+
+  test('input de busca do modal tem nome acessivel explicito', () => {
+    require('../../assets/js/features/kc-search-modal.js');
+
+    window.KCSearchModal.open();
+
+    const input = document.getElementById('kcSearchModalInput');
+
+    expect(input).not.toBeNull();
+    expect(input.getAttribute('type')).toBe('search');
+    expect(input.getAttribute('aria-label')).toBe('Pesquisar');
+  });
+
+  test('icone de busca do modal e decorativo', () => {
+    require('../../assets/js/features/kc-search-modal.js');
+
+    window.KCSearchModal.open();
+
+    expect(document.querySelector('.kc-search-modal-card__icon').getAttribute('aria-hidden')).toBe('true');
+  });
 });

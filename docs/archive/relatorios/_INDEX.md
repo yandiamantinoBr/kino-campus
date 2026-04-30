@@ -51,13 +51,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V51.md](RELATORIO-KINOCAMPUS-V51.md) | V51 | - | Registro de No-Go funcional |
 | [RELATORIO-KINOCAMPUS-V52.md](RELATORIO-KINOCAMPUS-V52.md) | V52 | - | Rastreabilidade de gates funcionais |
 | [RELATORIO-KINOCAMPUS-V53.md](RELATORIO-KINOCAMPUS-V53.md) | V53 | - | Manifesto de patch funcional |
+| [RELATORIO-KINOCAMPUS-V54.md](RELATORIO-KINOCAMPUS-V54.md) | V54 | - | PUBLIC-A11Y post card comments |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V54.md`](../../../RELATORIO-KINOCAMPUS-V54.md) - V54: PUBLIC-A11Y post card comments
 - [`RELATORIO-KINOCAMPUS-V55.md`](../../../RELATORIO-KINOCAMPUS-V55.md) - V55: PUBLIC-A11Y post card rating
 - [`RELATORIO-KINOCAMPUS-V56.md`](../../../RELATORIO-KINOCAMPUS-V56.md) - V56: PUBLIC-A11Y post card decorative icons
 - [`RELATORIO-KINOCAMPUS-V57.md`](../../../RELATORIO-KINOCAMPUS-V57.md) - V57: PUBLIC-A11Y post card author avatar alt
 - [`RELATORIO-KINOCAMPUS-V58.md`](../../../RELATORIO-KINOCAMPUS-V58.md) - V58: PUBLIC-A11Y mobile search modal controls
+- [`RELATORIO-KINOCAMPUS-V59.md`](../../../RELATORIO-KINOCAMPUS-V59.md) - V59: PUBLIC-A11Y mobile search modal input

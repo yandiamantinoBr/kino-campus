@@ -2,6 +2,42 @@
 
 ---
 
+## [59.0.0] - 2026-04-30 - PUBLIC-A11Y Mobile Search Modal Input (v59.0.0)
+
+### Tema
+
+Patch funcional pequeno em `KCSearchModal` para dar nome acessivel explicito ao input de
+busca do modal mobile e marcar o icone visual de busca como decorativo. A V59 nao altera CSS,
+HTML estatico, SQL, migrations, providers, secrets ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v59.0.0 | input `#kcSearchModalInput` recebe `aria-label="Pesquisar"` |
+| v59.0.0 | icone de busca do modal recebe `aria-hidden="true"` |
+| v59.0.0 | `tests/unit/kc-search-modal.test.js` cobre input e icone de busca |
+| v59.0.0 | `docs/qa/reports/report-v59-public-a11y-mobile-search-modal-input.md` criado |
+| v59.0.0 | `RELATORIO-KINOCAMPUS-V54.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V58) | Depois (V59) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 58.0.0 | 59.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V58.0-foundations` | `kinocampus-V59.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 43 | 44 | +V54 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 1 | patch pontual no mesmo componente |
+| Suites Jest | 135 | 135 | preservado |
+| Testes Jest | 3056 | 3058 | +2 testes unit |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [58.0.0] - 2026-04-30 - PUBLIC-A11Y Mobile Search Modal Controls (v58.0.0)
 
 ### Tema

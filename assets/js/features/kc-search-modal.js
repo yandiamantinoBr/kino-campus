@@ -43,11 +43,12 @@
           <i class="fas fa-arrow-left" aria-hidden="true"></i>
         </button>
         <div class="kc-search-modal-card__bar">
-          <i class="fas fa-search kc-search-modal-card__icon"></i>
+          <i class="fas fa-search kc-search-modal-card__icon" aria-hidden="true"></i>
           <input
             type="search"
             id="kcSearchModalInput"
             class="kc-search-modal-card__input"
+            aria-label="Pesquisar"
             placeholder=""
             autocomplete="off"
             autocorrect="off"
