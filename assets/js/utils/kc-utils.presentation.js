@@ -708,8 +708,11 @@ function renderPostCard(post, options) {
 
   const rating = (p.rating != null && p.rating !== '') ? Number(p.rating) : null;
   const ratingCount = Math.max(0, parseInt(String(p.ratingCount != null ? p.ratingCount : (p.rating_count != null ? p.rating_count : 0)), 10) || 0);
+  const ratingShown = Number.isFinite(rating) ? rating.toFixed(1) : '';
+  const ratingNoun = ratingCount === 1 ? 'avaliacao' : 'avaliacoes';
+  const ratingLabel = `Avaliacao media ${ratingShown} em ${ratingCount} ${ratingNoun}`;
   const ratingHtml = (Number.isFinite(rating) && ratingCount > 0)
-    ? `<span class="kc-card__rating" title="${_escapeHtml(`Avaliação média ${rating.toFixed(1)} em ${ratingCount} avaliações`)}"><i class="fas fa-star"></i> ${_escapeHtml(rating.toFixed(1))}<span class="kc-card__rating-count">(${_escapeHtml(String(ratingCount))})</span></span>`
+    ? `<span class="kc-card__rating" title="${_escapeHtml(ratingLabel)}" aria-label="${_escapeHtml(ratingLabel)}"><i class="fas fa-star" aria-hidden="true"></i> ${_escapeHtml(ratingShown)}<span class="kc-card__rating-count">(${_escapeHtml(String(ratingCount))})</span></span>`
     : '';
 
   // Interações

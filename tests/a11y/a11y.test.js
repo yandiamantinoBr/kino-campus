@@ -95,6 +95,20 @@ describe('renderPostCard — acessibilidade (v9.4.2)', () => {
     const html = renderPostCard(makePost({ comments_count: 1 }));
     expect(html).toMatch(/fa-comment[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-comment/);
   });
+
+  test('avaliacao do card tem nome acessivel com media e total', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost({ rating: 4.5, ratingCount: 2 }));
+    expect(html).toContain('aria-label="Avaliacao media 4.5 em 2 avaliacoes"');
+    expect(html).toContain('title="Avaliacao media 4.5 em 2 avaliacoes"');
+  });
+
+  test('icone de estrela da avaliacao e decorativo', () => {
+    if (!renderPostCard) return;
+    const html = renderPostCard(makePost({ rating: 4, rating_count: 1 }));
+    expect(html).toMatch(/fa-star[^>]*aria-hidden="true"|aria-hidden="true"[^>]*fa-star/);
+    expect(html).toContain('aria-label="Avaliacao media 4.0 em 1 avaliacao"');
+  });
 });
 
 describe('Atributos ARIA em HTML estático (_product.html)', () => {

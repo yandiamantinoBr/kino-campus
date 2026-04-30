@@ -2,6 +2,43 @@
 
 ---
 
+## [55.0.0] - 2026-04-30 - PUBLIC-A11Y Post Card Rating (v55.0.0)
+
+### Tema
+
+Patch funcional pequeno em `KCUtils.renderPostCard` para dar nome acessivel ao badge de
+avaliacao e marcar o icone de estrela como decorativo. A V55 nao altera CSS, HTML estatico,
+SQL, migrations, providers, secrets ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v55.0.0 | `.kc-card__rating` recebe `aria-label` com media e total de avaliacoes |
+| v55.0.0 | `title` do badge de avaliacao fica alinhado ao nome acessivel sem depender de acento corrompido |
+| v55.0.0 | `fa-star` do badge de avaliacao recebe `aria-hidden="true"` |
+| v55.0.0 | `tests/a11y/a11y.test.js` cobre nome acessivel e icone decorativo |
+| v55.0.0 | `docs/qa/reports/report-v55-public-a11y-post-card-rating.md` criado |
+| v55.0.0 | `RELATORIO-KINOCAMPUS-V50.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V54) | Depois (V55) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 54.0.0 | 55.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V54.0-foundations` | `kinocampus-V55.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 39 | 40 | +V50 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 1 | patch pontual no mesmo componente |
+| Suites Jest | 134 | 134 | preservado |
+| Testes Jest | 3048 | 3050 | +2 testes a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [54.0.0] - 2026-04-30 - PUBLIC-A11Y Post Card Comments (v54.0.0)
 
 ### Tema
