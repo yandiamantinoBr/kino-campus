@@ -44,6 +44,33 @@ describe('kc-comments shadow cleanup', () => {
     });
   });
 
+  test('comment action buttons declare type button', () => {
+    const source = fs.readFileSync(sourcePath, 'utf-8');
+    [
+      'class="kc-like-comment-btn',
+      'data-kc-comment-action="reply"',
+      'data-kc-comment-action="edit"',
+      'data-kc-comment-action="delete"',
+      'data-kc-comment-action="report"',
+    ].forEach((marker) => {
+      const index = source.indexOf(marker);
+      expect(index).toBeGreaterThan(-1);
+      const buttonStart = source.lastIndexOf('<button', index);
+      const buttonOpen = source.slice(buttonStart, source.indexOf('>', index) + 1);
+      expect(buttonOpen).toContain('type="button"');
+    });
+  });
+
+  test('comment action icons are decorative', () => {
+    const source = fs.readFileSync(sourcePath, 'utf-8');
+    ['fa-thumbs-up', 'fa-reply', 'fa-pen', 'fa-trash', 'fa-flag'].forEach((iconClass) => {
+      const index = source.indexOf(iconClass);
+      expect(index).toBeGreaterThan(-1);
+      const iconOpen = source.slice(source.lastIndexOf('<i', index), source.indexOf('>', index) + 1);
+      expect(iconOpen).toContain('aria-hidden="true"');
+    });
+  });
+
   test('submitComment persists replies with parentId in local mode', async () => {
     document.body.innerHTML = `
       <div id="commentsContainer"></div>
