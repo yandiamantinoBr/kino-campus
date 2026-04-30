@@ -24,7 +24,7 @@ entrada, saidas esperadas e bloqueios de Go/No-Go.
 | 4 | Providers externos | Checklist V30, sandbox/secrets aprovados | Dispatch controlado por canal com rollback |
 | 5 | Visual/a11y/i18n | Gate V27, politicas V32/V33, plano V34 | Baseline visual/a11y e backlog validado |
 | 6 | CSS/layout | Ledger V35 e baseline aprovado | Mudanca pequena, reversivel e testada |
-| 7 | Implementacao funcional | Evidencias das trilhas 1-6 + gates V37/V38 | Patch funcional com gates proporcionais |
+| 7 | Implementacao funcional | Evidencias das trilhas 1-6 + gates V37/V38 + matriz V39 | Patch funcional com gates proporcionais |
 
 ---
 
@@ -48,7 +48,7 @@ entrada, saidas esperadas e bloqueios de Go/No-Go.
 | QA real | `docs/qa/v25-real-environment-qa-runbook.md`, `docs/planning/v26-qa-evidence-readiness.md`, `docs/qa/v31-authenticated-flow-triage-matrix.md` |
 | Operacoes Supabase | `docs/ops/v19-operational-runbook.md`, `docs/ops/v29-supabase-advisor-evidence-checklist.md`, `docs/ops/v28-unaccent-fts-dependency-audit.md` |
 | Providers | `docs/ops/v30-notification-provider-sandbox-checklist.md`, `docs/ops/vercel-supabase-invariants.md` |
-| QA gates | `docs/qa/v27-visual-a11y-regression-gate.md`, `docs/qa/v32-e2e-gate-policy.md`, `docs/qa/v33-lhci-baseline-policy.md`, `docs/qa/reports/_TEMPLATE-functional-entry-gate.md`, `docs/qa/reports/_TEMPLATE-rollback-evidence.md` |
+| QA gates | `docs/qa/v27-visual-a11y-regression-gate.md`, `docs/qa/v32-e2e-gate-policy.md`, `docs/qa/v33-lhci-baseline-policy.md`, `docs/qa/reports/_TEMPLATE-functional-entry-gate.md`, `docs/qa/reports/_TEMPLATE-rollback-evidence.md`, `docs/qa/reports/_TEMPLATE-functional-candidate.md` |
 | UX/CSS | `docs/qa/v34-a11y-i18n-reconciliation-plan.md`, `docs/planning/v35-css-readiness-ledger.md`, `docs/architecture/css-architecture.md` |
 
 ---
@@ -80,6 +80,7 @@ report equivalente em `docs/ops/` com:
 - rollback;
 - gates que serao obrigatorios;
 - filescope previsto.
+- candidato escolhido quando houver mais de uma trilha viavel.
 
 ---
 

@@ -62,3 +62,7 @@ ou anexar report equivalente com:
 - dados/secrets envolvidos;
 - validacao pos-rollback;
 - decisao Go/No-Go.
+
+Se houver mais de um candidato funcional possivel, registrar a escolha com
+`docs/qa/reports/_TEMPLATE-functional-candidate.md` conforme
+`docs/planning/v39-functional-candidate-matrix.md`.

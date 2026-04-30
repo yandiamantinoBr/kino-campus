@@ -2,6 +2,42 @@
 
 ---
 
+## [39.0.0] - 2026-04-29 - Matriz de Candidatos Funcionais (v39.0.0)
+
+### Tema
+
+Matriz documental para escolher o primeiro pacote funcional futuro sem misturar trilhas. A V39
+nao altera runtime, CSS, HTML, SQL, secrets, providers ou CI; ela classifica candidatos P0/P1/P2,
+entradas obrigatorias, filescope inicial, gates e bloqueios.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v39.0.0 | `RELATORIO-KINOCAMPUS-V39.md` e reancoragem de metadados para `kinocampus-V39.0-foundations` |
+| v39.0.0 | `docs/planning/v39-functional-candidate-matrix.md` criado |
+| v39.0.0 | `docs/qa/reports/_TEMPLATE-functional-candidate.md` criado |
+| v39.0.0 | Roadmap V36, gate V37, rollback V38, planning index e QA README atualizados |
+| v39.0.0 | `RELATORIO-KINOCAMPUS-V34.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V38) | Depois (V39) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 38.0.0 | 39.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V38.0-foundations` | `kinocampus-V39.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 23 | 24 | +V34 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Matrizes de candidato funcional | 0 | 1 | +V39 |
+| Templates de candidato funcional | 0 | 1 | +V39 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [38.0.0] - 2026-04-29 - Gate de Evidencia de Rollback (v38.0.0)
 
 ### Tema

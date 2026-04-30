@@ -99,3 +99,6 @@ evidencia, filescope, rollback, gates obrigatorios e criterio de Go/No-Go.
 Quando a mudanca futura tocar runtime, CSS, HTML, SQL, provider, config ou dados persistidos, o
 rollback declarado neste gate deve ser detalhado em `docs/qa/reports/_TEMPLATE-rollback-evidence.md`
 seguindo `docs/planning/v38-rollback-evidence-gate.md`.
+
+Quando houver mais de um pacote funcional viavel, usar `docs/planning/v39-functional-candidate-matrix.md`
+e `docs/qa/reports/_TEMPLATE-functional-candidate.md` antes de abrir a branch funcional.
