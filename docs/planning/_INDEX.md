@@ -24,6 +24,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v47-functional-readiness-consolidation.md` | Consolidacao V47 dos dossies V40-V46 e gate de selecao funcional |
 | `v49-functional-scope-freeze.md` | Freeze V49 de escopo antes da primeira implementacao funcional |
 | `v50-functional-implementation-intake.md` | Intake V50 para abrir a primeira branch funcional futura |
+| `v51-functional-no-go-register.md` | Registro V51 de No-Go para bloquear implementacao funcional sem gates/evidencias completos |
 
 ## Regras
 

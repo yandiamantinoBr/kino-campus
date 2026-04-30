@@ -2,6 +2,42 @@
 
 ---
 
+## [51.0.0] - 2026-04-30 - Registro de No-Go Funcional (v51.0.0)
+
+### Tema
+
+Registro documental de No-Go para impedir que implementacoes funcionais avancem sem gates,
+evidencias, rollback, escopo, ambiente ou owner de validacao completos. A V51 nao altera runtime,
+CSS, HTML, testes funcionais, SQL, migrations, providers, secrets, CI ou comportamento visual.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v51.0.0 | `RELATORIO-KINOCAMPUS-V51.md` e reancoragem de metadados para `kinocampus-V51.0-foundations` |
+| v51.0.0 | `docs/planning/v51-functional-no-go-register.md` criado |
+| v51.0.0 | `docs/qa/reports/_TEMPLATE-functional-no-go-register.md` criado |
+| v51.0.0 | `docs/index.md`, `docs/planning/_INDEX.md`, `docs/qa/README.md` e `repository-structure.md` atualizados |
+| v51.0.0 | `RELATORIO-KINOCAMPUS-V46.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V50) | Depois (V51) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 50.0.0 | 51.0.0 | +1 versao documental |
+| Branch principal | `kinocampus-V50.0-foundations` | `kinocampus-V51.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 35 | 36 | +V46 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Registros No-Go funcionais | 0 | 1 | +V51 |
+| Templates No-Go funcionais | 0 | 1 | +V51 |
+| JS funcional alterado | 0 | 0 | preservado |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [50.0.0] - 2026-04-30 - Intake de Implementacao Funcional (v50.0.0)
 
 ### Tema

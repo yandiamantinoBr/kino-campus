@@ -43,13 +43,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V43.md](RELATORIO-KINOCAMPUS-V43.md) | V43 | - | Dossie NOTIF-SB-01 |
 | [RELATORIO-KINOCAMPUS-V44.md](RELATORIO-KINOCAMPUS-V44.md) | V44 | - | Dossie SEARCH-FTS-01 |
 | [RELATORIO-KINOCAMPUS-V45.md](RELATORIO-KINOCAMPUS-V45.md) | V45 | - | Dossie CSS-SM-01 |
+| [RELATORIO-KINOCAMPUS-V46.md](RELATORIO-KINOCAMPUS-V46.md) | V46 | - | Dossie PUBLIC-A11Y-01 |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V46.md`](../../../RELATORIO-KINOCAMPUS-V46.md) - V46: dossie PUBLIC-A11Y-01
 - [`RELATORIO-KINOCAMPUS-V47.md`](../../../RELATORIO-KINOCAMPUS-V47.md) - V47: consolidacao de readiness funcional
 - [`RELATORIO-KINOCAMPUS-V48.md`](../../../RELATORIO-KINOCAMPUS-V48.md) - V48: evidencias externas sem secrets
 - [`RELATORIO-KINOCAMPUS-V49.md`](../../../RELATORIO-KINOCAMPUS-V49.md) - V49: freeze de escopo funcional
 - [`RELATORIO-KINOCAMPUS-V50.md`](../../../RELATORIO-KINOCAMPUS-V50.md) - V50: intake de implementacao funcional
+- [`RELATORIO-KINOCAMPUS-V51.md`](../../../RELATORIO-KINOCAMPUS-V51.md) - V51: registro de No-Go funcional
