@@ -358,3 +358,17 @@ describe('v64.0.0 - icones decorativos em convites admin', () => {
     expect(invite).toContain('<i class="fas fa-copy" aria-hidden="true"></i> Copie manualmente');
   });
 });
+
+describe('v65.0.0 - icones decorativos em pedidos de ajuda admin', () => {
+  test('template admin de pedidos de ajuda esconde icones em chips, botoes e feedback', () => {
+    const helpRequests = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-help-requests.controller.js'), 'utf8');
+
+    expect(helpRequests).toContain('<i class="fas fa-layer-group" aria-hidden="true"></i>');
+    expect(helpRequests).toContain('<i class="fas fa-signal" aria-hidden="true"></i>');
+    expect(helpRequests).toContain('<i class="fas fa-file-code" aria-hidden="true"></i>');
+    expect(helpRequests).toContain('<i class="fas fa-circle" aria-hidden="true"></i>');
+    expect(helpRequests).toContain('<i class="fas fa-bolt" aria-hidden="true"></i>');
+    expect(helpRequests).toContain('<i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar triagem');
+    expect(helpRequests).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando...');
+  });
+});

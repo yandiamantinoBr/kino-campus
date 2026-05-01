@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v64.0.0
-**Data:** 2026-04-30
-**Atualizado em:** v64.0.0 - patch PUBLIC-A11Y admin invite feedback icons e janela raiz V60-V64
+**Versao:** v65.0.0
+**Data:** 2026-05-01
+**Atualizado em:** v65.0.0 - patch PUBLIC-A11Y admin help request decorative icons e janela raiz V61-V65
 
 ---
 
@@ -20,12 +20,12 @@ em ordem deterministica nos 22 HTMLs canonicos.
 | Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime) |
 | Hosting | Vercel (`vercel.json`) |
 | Runtime JS | `frontendRuntimeVersion=8.6.0` |
-| appVersion | `64.0.0` |
-| Branch principal | `kinocampus-V64.0-foundations` |
-| Testes | Jest 135 suites / 3065 testes + Playwright 8 suites E2E |
+| appVersion | `65.0.0` |
+| Branch principal | `kinocampus-V65.0-foundations` |
+| Testes | Jest 135 suites / 3066 testes + Playwright 8 suites E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
-V64 e uma versao funcional pequena. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
+V65 e uma versao funcional pequena. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
 janela operacional atual: archive consolidado, planning ativo com ledger pos-V23, QA ativo separado do
 historico, worktree Claude arquivada, runbook QA real V25, templates de evidencia V26, gate visual/a11y V27,
 auditoria unaccent/FTS V28, checklist Supabase Advisor V29, checklist de sandbox para providers V30, matriz
@@ -40,8 +40,9 @@ patch PUBLIC-A11Y de icones decorativos V56, patch PUBLIC-A11Y no alt do avatar 
 patch PUBLIC-A11Y nos controles do modal de busca mobile V58, patch PUBLIC-A11Y no input do modal
 de busca mobile V59, patch PUBLIC-A11Y nos botoes dinamicos de comentarios V60, patch PUBLIC-A11Y
 de botoes dinamicos publicos/admin V61, patch PUBLIC-A11Y de icones decorativos admin V62,
-patch PUBLIC-A11Y dos icones do carregar mais em pedidos admin V63 e patch PUBLIC-A11Y dos icones
-de feedback/loading em convites admin V64.
+patch PUBLIC-A11Y dos icones do carregar mais em pedidos admin V63, patch PUBLIC-A11Y dos icones
+de feedback/loading em convites admin V64 e patch PUBLIC-A11Y dos icones decorativos em pedidos
+de ajuda admin V65.
 
 ---
 
@@ -109,11 +110,11 @@ kino-campus/
 |-- VERSION.json
 |-- CHANGELOG.md
 |-- README.md
-|-- RELATORIO-KINOCAMPUS-V60.md
 |-- RELATORIO-KINOCAMPUS-V61.md
 |-- RELATORIO-KINOCAMPUS-V62.md
 |-- RELATORIO-KINOCAMPUS-V63.md
-`-- RELATORIO-KINOCAMPUS-V64.md
+|-- RELATORIO-KINOCAMPUS-V64.md
+`-- RELATORIO-KINOCAMPUS-V65.md
 ```
 
 ---
@@ -200,7 +201,7 @@ O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y 
 | `docs/architecture/` | Guias canonicos de arquitetura, scripts, dados, testes, CSS e IA |
 | `docs/ops/` | Runbooks operacionais, invariantes Vercel/Supabase, auditoria unaccent/FTS, evidencias Advisor, sandbox de providers e pacote V48 de evidencias externas |
 | `docs/planning/` | Inventarios V18, plano V19, ledger V24, readiness V26, readiness CSS V35, roadmap V36, gate funcional V37, rollback V38, matriz V39, dossies V40-V46, consolidacao V47, freeze V49, intake V50, No-Go V51, rastreabilidade V52 e manifesto V53 |
-| `docs/qa/` | Artefatos ativos de QA manual, RLS, XSS, reports V26, templates de gate funcional V37, rollback V38, candidato V39, auth callback V40, profile/avatar V41, admin/moderacao V42, notification provider V43, search/FTS V44, CSS small change V45, public a11y V46, selecao funcional V47, redacao de evidencia externa V48, freeze funcional V49, intake funcional V50, No-Go funcional V51, rastreabilidade funcional V52, manifesto funcional V53 e reports PUBLIC-A11Y V59-V64, gate visual/a11y V27, matriz autenticada V31, politica E2E V32, politica LHCI V33 e plano a11y/i18n V34 |
+| `docs/qa/` | Artefatos ativos de QA manual, RLS, XSS, reports V26, templates de gate funcional V37, rollback V38, candidato V39, auth callback V40, profile/avatar V41, admin/moderacao V42, notification provider V43, search/FTS V44, CSS small change V45, public a11y V46, selecao funcional V47, redacao de evidencia externa V48, freeze funcional V49, intake funcional V50, No-Go funcional V51, rastreabilidade funcional V52, manifesto funcional V53 e reports PUBLIC-A11Y V59-V65, gate visual/a11y V27, matriz autenticada V31, politica E2E V32, politica LHCI V33 e plano a11y/i18n V34 |
 
 ### 5.2 Archive
 
@@ -208,7 +209,7 @@ O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y 
 
 | Subdiretorio | Conteudo |
 |---|---|
-| `relatorios/` | Relatorios de encerramento V9, V11, V13-V59 |
+| `relatorios/` | Relatorios de encerramento V9, V11, V13-V60 |
 | `audits-v11/` | Auditorias e handoffs da trilha V11 |
 | `audits-v12-v13/` | Auditorias de refactor V12-V13 |
 | `audits-accessibility/` | Auditorias a11y/i18n V12 |
@@ -224,13 +225,13 @@ Nao recriar arvores historicas antigas fora de `docs/archive/`.
 
 ### 5.3 Relatorios raiz
 
-A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V64, a janela operacional e:
+A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V65, a janela operacional e:
 
-- `RELATORIO-KINOCAMPUS-V60.md`
 - `RELATORIO-KINOCAMPUS-V61.md`
 - `RELATORIO-KINOCAMPUS-V62.md`
 - `RELATORIO-KINOCAMPUS-V63.md`
 - `RELATORIO-KINOCAMPUS-V64.md`
+- `RELATORIO-KINOCAMPUS-V65.md`
 
 Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatorios/`.
 
@@ -246,7 +247,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:routes` | Valida 17 rotas publicas + 5 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantem 135/135 suites e 3065/3065 testes Jest |
+| `npm test` | Mantem 135/135 suites e 3066/3066 testes Jest |
 | `npm run test:e2e` | Evidencia Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 
@@ -266,7 +267,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 
 ---
 
-## 8. Delta V17 a V64
+## 8. Delta V17 a V65
 
 | Versao | Entrega estrutural |
 |---|---|
@@ -318,3 +319,4 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | V62 | Patch PUBLIC-A11Y de icones decorativos admin criado e V57 arquivado conforme politica de raiz |
 | V63 | Patch PUBLIC-A11Y dos icones do carregar mais em pedidos admin criado e V58 arquivado conforme politica de raiz |
 | V64 | Patch PUBLIC-A11Y dos icones de feedback/loading em convites admin criado e V59 arquivado conforme politica de raiz |
+| V65 | Patch PUBLIC-A11Y dos icones decorativos em pedidos de ajuda admin criado e V60 arquivado conforme politica de raiz |

@@ -15,7 +15,7 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 - `v34-a11y-i18n-reconciliation-plan.md`: plano para reconciliar auditorias historicas de a11y/i18n com gaps atuais.
 - `rls-smoke.sql`: roteiro de validacao RLS.
 - `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
-- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider, template V44 search/FTS, template V45 CSS small change, template V46 public a11y, template V47 de selecao de readiness funcional, template V48 de redacao de evidencia externa, template V49 de freeze de escopo funcional, template V50 de intake funcional, template V51 de No-Go funcional, template V52 de rastreabilidade de gates, template V53 de manifesto de patch funcional e reports V56-V64 PUBLIC-A11Y.
+- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider, template V44 search/FTS, template V45 CSS small change, template V46 public a11y, template V47 de selecao de readiness funcional, template V48 de redacao de evidencia externa, template V49 de freeze de escopo funcional, template V50 de intake funcional, template V51 de No-Go funcional, template V52 de rastreabilidade de gates, template V53 de manifesto de patch funcional e reports V56-V65 PUBLIC-A11Y.
 
 ## Historico preservado
 
@@ -61,5 +61,6 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 35. Para a evidencia V62 de admin decorative icons, consulte `reports/report-v62-public-a11y-admin-decorative-icons.md`.
 36. Para a evidencia V63 de admin help load more icons, consulte `reports/report-v63-public-a11y-admin-help-load-more-icons.md`.
 37. Para a evidencia V64 de admin invite feedback icons, consulte `reports/report-v64-public-a11y-admin-invite-feedback-icons.md`.
-38. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
-39. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.
+38. Para a evidencia V65 de admin help request decorative icons, consulte `reports/report-v65-public-a11y-admin-help-request-icons.md`.
+39. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
+40. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.

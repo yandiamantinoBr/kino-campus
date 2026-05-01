@@ -230,7 +230,7 @@
 
     const moduleValue = String(metadata.affected_module || '').trim();
     if (moduleValue) {
-      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-layer-group"></i>${esc(buildLabel(Help.HELP_MODULE_LABELS, moduleValue, moduleValue))}</span>`);
+      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-layer-group" aria-hidden="true"></i>${esc(buildLabel(Help.HELP_MODULE_LABELS, moduleValue, moduleValue))}</span>`);
     }
 
     const impactValue = String(metadata.impact_scope || '').trim();
@@ -240,12 +240,12 @@
         some_people: 'Com outras pessoas',
         entire_platform: 'Plataforma toda',
       };
-      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-signal"></i>${esc(impactLabels[impactValue] || impactValue)}</span>`);
+      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-signal" aria-hidden="true"></i>${esc(impactLabels[impactValue] || impactValue)}</span>`);
     }
 
     const pagePath = String((row && row.page_path) || metadata.page_path || '').trim();
     if (pagePath) {
-      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-file-code"></i>${esc(pagePath)}</span>`);
+      chips.push(`<span class="kc-admin-help-chip"><i class="fas fa-file-code" aria-hidden="true"></i>${esc(pagePath)}</span>`);
     }
 
     return chips.join('');
@@ -326,9 +326,9 @@
         '  <div class="kc-admin-help-card-top">',
         `    <div><h2>${esc(subject)}</h2><p>${esc(message)}</p></div>`,
         '    <div class="kc-admin-help-chips">',
-        `      <span class="kc-admin-help-chip kc-admin-help-chip--status-${esc(row.status)}"><i class="fas fa-circle"></i>${esc(statusLabel)}</span>`,
-        `      <span class="kc-admin-help-chip kc-admin-help-chip--priority-${esc(row.priority)}"><i class="fas fa-bolt"></i>${esc(priorityLabel)}</span>`,
-        `      <span class="kc-admin-help-chip"><i class="fas fa-layer-group"></i>${esc(typeLabel)}</span>`,
+        `      <span class="kc-admin-help-chip kc-admin-help-chip--status-${esc(row.status)}"><i class="fas fa-circle" aria-hidden="true"></i>${esc(statusLabel)}</span>`,
+        `      <span class="kc-admin-help-chip kc-admin-help-chip--priority-${esc(row.priority)}"><i class="fas fa-bolt" aria-hidden="true"></i>${esc(priorityLabel)}</span>`,
+        `      <span class="kc-admin-help-chip"><i class="fas fa-layer-group" aria-hidden="true"></i>${esc(typeLabel)}</span>`,
         metadataChips,
         '    </div>',
         '  </div>',
@@ -344,7 +344,7 @@
         '  <div class="kc-admin-help-actions">',
         `    <label><span class="sr-only">Status</span><select data-help-status><option value="new"${row.status === 'new' ? ' selected' : ''}>Novo</option><option value="triaged"${row.status === 'triaged' ? ' selected' : ''}>Triado</option><option value="in_progress"${row.status === 'in_progress' ? ' selected' : ''}>Em andamento</option><option value="resolved"${row.status === 'resolved' ? ' selected' : ''}>Resolvido</option><option value="archived"${row.status === 'archived' ? ' selected' : ''}>Arquivado</option></select></label>`,
         `    <label><span class="sr-only">Urgencia</span><select data-help-priority><option value="low"${row.priority === 'low' ? ' selected' : ''}>Baixa</option><option value="normal"${row.priority === 'normal' ? ' selected' : ''}>Normal</option><option value="high"${row.priority === 'high' ? ' selected' : ''}>Alta</option><option value="urgent"${row.priority === 'urgent' ? ' selected' : ''}>Urgente</option></select></label>`,
-        '    <button type="button" data-help-save><i class="fas fa-floppy-disk"></i> Salvar triagem</button>',
+        '    <button type="button" data-help-save><i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar triagem</button>',
         '  </div>',
         '</article>',
       ].join('');
@@ -460,7 +460,7 @@
     const button = card.querySelector('[data-help-save]');
     if (button) {
       button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+      button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando...';
     }
 
     try {
@@ -479,7 +479,7 @@
     } finally {
       if (button) {
         button.disabled = false;
-        button.innerHTML = '<i class="fas fa-floppy-disk"></i> Salvar triagem';
+        button.innerHTML = '<i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar triagem';
       }
     }
   }
