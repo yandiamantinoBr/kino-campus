@@ -90,7 +90,7 @@
       opacity: 0;
       transition: opacity 0.2s ease;
     `;
-    ind.innerHTML = '<i class="fas fa-arrow-down" style="font-size: 1.2em; color: var(--kc-primary-brand);"></i>';
+    ind.innerHTML = '<i class="fas fa-arrow-down" style="font-size: 1.2em; color: var(--kc-primary-brand);" aria-hidden="true"></i>';
     document.body.appendChild(ind);
     return ind;
   }
@@ -100,9 +100,9 @@
     const opacity = Math.min(progress / THRESHOLD, 1);
     indicator.style.opacity = opacity;
     if (progress >= THRESHOLD) {
-      indicator.innerHTML = '<i class="fas fa-check" style="font-size: 1.2em; color: var(--kc-primary-brand);"></i>';
+      indicator.innerHTML = '<i class="fas fa-check" style="font-size: 1.2em; color: var(--kc-primary-brand);" aria-hidden="true"></i>';
     } else {
-      indicator.innerHTML = '<i class="fas fa-arrow-down" style="font-size: 1.2em; color: var(--kc-primary-brand);"></i>';
+      indicator.innerHTML = '<i class="fas fa-arrow-down" style="font-size: 1.2em; color: var(--kc-primary-brand);" aria-hidden="true"></i>';
     }
   }
 

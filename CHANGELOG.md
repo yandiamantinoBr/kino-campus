@@ -2,6 +2,44 @@
 
 ---
 
+## [69.0.0] - 2026-05-05 - PUBLIC-A11Y Pull-to-Refresh Decorative Icons (v69.0.0)
+
+### Tema
+
+Patch funcional pequeno para marcar como decorativos os 3 icones do indicador de
+pull-to-refresh (`fa-arrow-down` em dois estados e `fa-check` ao atingir threshold).
+Primeira versao da serie PUBLIC-A11Y a tocar uma feature publica (fora do escopo admin
+dominante de V60-V68). A V69 nao altera CSS, HTML estatico, SQL, migrations, providers,
+secrets ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v69.0.0 | icones `fa-arrow-down` (2x) e `fa-check` recebem `aria-hidden="true"` no indicador de pull-to-refresh |
+| v69.0.0 | `tests/a11y/a11y.test.js` cobre o indicador de pull-to-refresh |
+| v69.0.0 | `docs/qa/reports/report-v69-public-a11y-pull-to-refresh-icons.md` criado |
+| v69.0.0 | `kinocampus-V68.0-foundations` criada e definida como default no GitHub; `kinocampus-V69.0-foundations` derivada |
+| v69.0.0 | `RELATORIO-KINOCAMPUS-V64.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V68) | Depois (V69) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 68.0.0 | 69.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V68.0-foundations` | `kinocampus-V69.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 53 | 54 | +V64 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 1 | patch pontual em pull-to-refresh |
+| Suites Jest | 135 | 135 | preservado |
+| Testes Jest | 3069 | 3070 | +1 teste a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [68.0.0] - 2026-05-04 - PUBLIC-A11Y Admin Dashboard Audit Decorative Icons (v68.0.0)
 
 ### Tema
