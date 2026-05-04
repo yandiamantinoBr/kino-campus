@@ -2,6 +2,43 @@
 
 ---
 
+## [66.0.0] - 2026-05-02 - PUBLIC-A11Y Admin Banners Decorative Icons (v66.0.0)
+
+### Tema
+
+Patch funcional pequeno para marcar como decorativos os icones dinamicos em banners admin
+(drag handle, botoes de editar, ativar/desativar, excluir, titulo do historico de alteracoes,
+spinner do estado `Salvando...` e icone do botao `Salvar`). A V66 nao altera CSS, HTML estatico,
+SQL, migrations, providers, secrets ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v66.0.0 | icones `fa-grip-vertical`, `fa-pen`, `fa-eye`/`fa-eye-slash`, `fa-trash`, `fa-clock-rotate-left`, `fa-spinner` e `fa-floppy-disk` recebem `aria-hidden="true"` |
+| v66.0.0 | `tests/a11y/a11y.test.js` cobre o template admin de banners |
+| v66.0.0 | `docs/qa/reports/report-v66-public-a11y-admin-banner-icons.md` criado |
+| v66.0.0 | `kinocampus-V65.0-foundations` criada e definida como default no GitHub; `kinocampus-V66.0-foundations` derivada |
+| v66.0.0 | `RELATORIO-KINOCAMPUS-V61.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V65) | Depois (V66) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 65.0.0 | 66.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V65.0-foundations` | `kinocampus-V66.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 50 | 51 | +V61 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 1 | patch pontual em banners admin |
+| Suites Jest | 135 | 135 | preservado |
+| Testes Jest | 3066 | 3067 | +1 teste a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [65.0.0] - 2026-05-01 - PUBLIC-A11Y Admin Help Request Decorative Icons (v65.0.0)
 
 ### Tema
