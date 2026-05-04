@@ -256,7 +256,7 @@
          draggable="true">
       <div class="kc-banner-item-header" data-action="toggle-audit">
         <span class="kc-banner-drag-handle" title="Arraste para reordenar">
-          <i class="fas fa-grip-vertical"></i>
+          <i class="fas fa-grip-vertical" aria-hidden="true"></i>
         </span>
         <div class="kc-banner-preview-mini" style="${gradStyle}" aria-hidden="true">
           <i class="${esc(banner.icon_class)}"></i>
@@ -268,19 +268,19 @@
         <span class="kc-banner-status ${statusCls}">${statusTxt}</span>
         <div class="kc-banner-actions">
           <button type="button" data-action="edit"   data-id="${esc(banner.id)}" title="Editar">
-            <i class="fas fa-pen"></i>
+            <i class="fas fa-pen" aria-hidden="true"></i>
           </button>
           <button type="button" data-action="toggle" data-id="${esc(banner.id)}"
                   title="${banner.is_active ? 'Desativar' : 'Ativar'}">
-            <i class="fas fa-${banner.is_active ? 'eye-slash' : 'eye'}"></i>
+            <i class="fas fa-${banner.is_active ? 'eye-slash' : 'eye'}" aria-hidden="true"></i>
           </button>
           <button type="button" class="btn-delete" data-action="delete" data-id="${esc(banner.id)}" title="Excluir">
-            <i class="fas fa-trash"></i>
+            <i class="fas fa-trash" aria-hidden="true"></i>
           </button>
         </div>
       </div>
       <div class="kc-banner-audit" id="audit-${esc(banner.id)}">
-        <h4><i class="fas fa-clock-rotate-left"></i> Histórico de alterações</h4>
+        <h4><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Histórico de alterações</h4>
         <div class="kc-audit-rows" id="audit-rows-${esc(banner.id)}">
           <span style="color:var(--kc-text-dark-secondary);font-size:.85rem;">Carregando…</span>
         </div>
@@ -577,7 +577,7 @@
     if (!title) { toast('O título é obrigatório.', 'error'); return; }
 
     const saveBtn = document.getElementById('modal-save');
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…'; }
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando…'; }
 
     const payload = {
       id:            document.getElementById('f-id').value     || null,
@@ -602,7 +602,7 @@
     } catch (err) {
       toast('Erro ao salvar: ' + (err.message || String(err)), 'error');
     } finally {
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> Salvar'; }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar'; }
     }
   }
 

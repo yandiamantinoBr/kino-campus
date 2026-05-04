@@ -1,0 +1,80 @@
+# Report V66 - PUBLIC-A11Y-01 Admin Banners Decorative Icons
+
+**Candidato:** `PUBLIC-A11Y-01`
+**Versao:** `v66.0.0`
+**Data:** `2026-05-02`
+**Ambiente:** local
+**Rota/componente:** admin banners (drag handle, acoes, historico, salvar)
+
+---
+
+## 1. Pre-Requisitos
+
+| Item | Estado |
+|---|---|
+| Plano V34 revisado | Sim |
+| Rota/componente unico definido | Sim - banners admin |
+| Dimensao afetada classificada | Sim |
+| Impacto para usuario descrito | Sim |
+| Rollback V38 preparado | Sim - R1 por arquivo |
+| Manifesto V53 aplicavel | Sim |
+| Patches V54-V65 preservados | Sim |
+
+---
+
+## 2. Classificacao
+
+| Campo | Valor |
+|---|---|
+| Dimensao | semantica / icones decorativos |
+| Severidade | P3 |
+| Usuario afetado | administradores usando leitores de tela |
+| Ferramenta/evidencia | Jest a11y + gates locais |
+| Gate visual necessario | Nao |
+
+---
+
+## 3. Manifesto de Patch
+
+| Arquivo | Tipo de mudanca | Motivo | Risco | Teste/smoke | Rollback |
+|---|---|---|---|---|---|
+| `assets/js/controllers/admin/admin-banners.controller.js` | funcional pontual | icones de drag handle, acoes (editar, ativar/desativar, excluir), historico e botao salvar eram redundantes com `title` e textos adjacentes | baixo; atributo sem alteracao visual | `tests/a11y/a11y.test.js` | remover `aria-hidden="true"` adicionados |
+| `tests/a11y/a11y.test.js` | cobertura a11y/source guard | proteger regressao dos icones decorativos do template admin de banners | baixo; suite existente | suite a11y direcionada | remover caso novo |
+
+Nao escopo: CSS, HTML estatico, SQL, migrations, providers, secrets, auth, profile/avatar, notificacoes, busca, storage e RLS.
+
+---
+
+## 4. Fluxo Testado
+
+| Passo | Resultado | Evidencia |
+|---|---|---|
+| Template admin de banners inspecionado | Passou | icones `fa-grip-vertical`, `fa-pen`, `fa-eye`/`fa-eye-slash`, `fa-trash`, `fa-clock-rotate-left`, `fa-spinner` e `fa-floppy-disk` declaram `aria-hidden="true"` |
+| Contraste/layout validado | Dispensado | sem CSS/HTML visual |
+
+---
+
+## 5. Gates
+
+| Gate | Estado |
+|---|---|
+| `npm test -- tests/a11y/a11y.test.js` | executado; 1/1 suite, 42/42 testes |
+| `npm run check:all` | executado; 5/5 validators verdes, 135/135 suites, 3067/3067 testes |
+| `npm test` | executado; 135/135 suites, 3067/3067 testes |
+| Playwright a11y | dispensado; sem fluxo visual novo e DOM/source coberto por Jest |
+| Baseline visual V27/V45 | dispensado; sem alteracao visual/CSS |
+| Rollback V38 | R1 por arquivo |
+
+---
+
+## 6. Decisao
+
+| Decisao | Motivo |
+|---|---|
+| Go | Patch tem filescope pequeno, rollback simples, teste direcionado e nao depende de ambiente externo |
+
+---
+
+## 7. Redacao
+
+Sem dados pessoais, screenshots, secrets, tokens, cookies ou URLs externas.
