@@ -158,7 +158,7 @@
       // Ensure "todas" is always the first tab and keep layout format
       const tabsHTML = [
         `<a data-category="todas" href="#todas" class="${state.category === 'todas' || !state.category ? 'active' : ''}">
-          <i class="fas fa-fire"></i>
+          <i class="fas fa-fire" aria-hidden="true"></i>
           <span>Todas</span>
         </a>`
       ];

@@ -1,8 +1,8 @@
 {
   "project": "Kino Campus",
-  "appVersion": "69.0.0",
+  "appVersion": "70.0.0",
   "frontendRuntimeVersion": "8.6.0",
-  "branch": "kinocampus-V69.0-foundations",
-  "status": "v69 encerrada",
-  "updatedAt": "2026-05-05"
+  "branch": "kinocampus-V70.0-foundations",
+  "status": "v70 encerrada",
+  "updatedAt": "2026-05-06"
 }
