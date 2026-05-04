@@ -386,3 +386,14 @@ describe('v66.0.0 - icones decorativos em banners admin', () => {
     expect(banners).toContain('<i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar');
   });
 });
+
+describe('v67.0.0 - icones decorativos em moderacao admin', () => {
+  test('template admin de moderacao esconde icones em feedback de salvar e selecao de usuario', () => {
+    const moderation = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-moderation.controller.js'), 'utf8');
+
+    expect(moderation).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando…');
+    expect(moderation).toContain('<i class="fas fa-save" aria-hidden="true"></i> Salvar limite global');
+    expect(moderation).toContain('<i class="fas fa-save" aria-hidden="true"></i> Salvar');
+    expect(moderation).toContain('<i class="fas fa-user" style="margin-right:6px;color:var(--kc-primary-brand);" aria-hidden="true"></i>Usuário selecionado:');
+  });
+});
