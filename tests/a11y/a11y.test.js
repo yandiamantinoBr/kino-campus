@@ -397,3 +397,11 @@ describe('v67.0.0 - icones decorativos em moderacao admin', () => {
     expect(moderation).toContain('<i class="fas fa-user" style="margin-right:6px;color:var(--kc-primary-brand);" aria-hidden="true"></i>Usuário selecionado:');
   });
 });
+
+describe('v68.0.0 - icones decorativos em admin dashboard audit', () => {
+  test('botoes XLSX/PDF do shard audit escondem icone de spinner durante exportacao', () => {
+    const audit = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-dashboard.audit.js'), 'utf8');
+
+    expect(audit).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...');
+  });
+});

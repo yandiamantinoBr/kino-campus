@@ -934,7 +934,7 @@
         if (!data) return;
         xlsxBtn.disabled = true;
         var originalHtml = xlsxBtn.innerHTML;
-        xlsxBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
+        xlsxBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...';
         try {
           await exportXLSX(data, deps);
         } catch (error) {
@@ -954,7 +954,7 @@
         if (!data) return;
         pdfBtn.disabled = true;
         var originalHtml = pdfBtn.innerHTML;
-        pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
+        pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...';
         try {
           await exportPDF(data, deps);
         } catch (error) {

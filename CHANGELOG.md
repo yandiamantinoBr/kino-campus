@@ -2,6 +2,43 @@
 
 ---
 
+## [68.0.0] - 2026-05-04 - PUBLIC-A11Y Admin Dashboard Audit Decorative Icons (v68.0.0)
+
+### Tema
+
+Patch funcional pequeno para marcar como decorativos os 2 icones de spinner em
+admin-dashboard.audit.js usados durante a exportacao de XLSX e PDF dos logs de auditoria.
+A V68 nao altera CSS, HTML estatico, SQL, migrations, providers, secrets ou comportamento
+visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v68.0.0 | icones `fa-spinner fa-spin` (Exportando...) recebem `aria-hidden="true"` |
+| v68.0.0 | `tests/a11y/a11y.test.js` cobre o shard audit do dashboard admin |
+| v68.0.0 | `docs/qa/reports/report-v68-public-a11y-admin-dashboard-audit-icons.md` criado |
+| v68.0.0 | `kinocampus-V67.0-foundations` criada e definida como default no GitHub; `kinocampus-V68.0-foundations` derivada |
+| v68.0.0 | `RELATORIO-KINOCAMPUS-V63.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V67) | Depois (V68) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 67.0.0 | 68.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V67.0-foundations` | `kinocampus-V68.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 52 | 53 | +V63 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 1 | patch pontual em admin dashboard audit |
+| Suites Jest | 135 | 135 | preservado |
+| Testes Jest | 3068 | 3069 | +1 teste a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [67.0.0] - 2026-05-03 - PUBLIC-A11Y Admin Moderation Decorative Icons (v67.0.0)
 
 ### Tema
