@@ -940,9 +940,9 @@
     const val = valueEl ? parseInt(valueEl.value, 10) : NaN;
     if (!val || val < 1) { showLimitsFeedback('Informe um valor válido (mínimo 1).', true); return; }
     const btn = $('#limit-global-save');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando…'; }
     const { error } = await client.rpc('kc_admin_set_post_limit', { p_user_id: null, p_module: mod || null, p_max_active: val });
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Salvar limite global'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" aria-hidden="true"></i> Salvar limite global'; }
     if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
     showLimitsFeedback('Limite global salvo com sucesso!', false);
     await fetchPostLimits();
@@ -972,9 +972,9 @@
     const val = valueEl ? parseInt(valueEl.value, 10) : NaN;
     if (isNaN(val) || val < 0) { showLimitsFeedback('Informe um valor válido (0 = bloqueado, mínimo 1 para ativo).', true); return; }
     const btn = $('#limit-user-save');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando…'; }
     const { error } = await client.rpc('kc_admin_set_post_limit', { p_user_id: limitsState.selectedUser.id, p_module: mod || null, p_max_active: val });
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Salvar'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" aria-hidden="true"></i> Salvar'; }
     if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
     showLimitsFeedback(`Limite de ${val} salvo para ${limitsState.selectedUser.name}.`, false);
     await fetchPostLimits();
@@ -1060,7 +1060,7 @@
         userResults.style.display = 'none';
         if (userSelectedEl) {
           userSelectedEl.style.display = 'block';
-          userSelectedEl.innerHTML = `<i class="fas fa-user" style="margin-right:6px;color:var(--kc-primary-brand);"></i>Usuário selecionado: <strong>${escape(uname)}</strong> <span style="color:var(--kc-text-dark-secondary);font-size:.82em;">(${escape(uid)})</span>`;
+          userSelectedEl.innerHTML = `<i class="fas fa-user" style="margin-right:6px;color:var(--kc-primary-brand);" aria-hidden="true"></i>Usuário selecionado: <strong>${escape(uname)}</strong> <span style="color:var(--kc-text-dark-secondary);font-size:.82em;">(${escape(uid)})</span>`;
         }
       });
 

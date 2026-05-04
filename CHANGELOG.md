@@ -2,6 +2,44 @@
 
 ---
 
+## [67.0.0] - 2026-05-03 - PUBLIC-A11Y Admin Moderation Decorative Icons (v67.0.0)
+
+### Tema
+
+Patch funcional pequeno para marcar como decorativos os icones dinamicos residuais em
+moderacao admin (spinner do estado `Salvando...`, botoes `Salvar limite global` e
+`Salvar`, e icone de usuario selecionado), complementando o trabalho da V62 sobre o
+mesmo controller. A V67 nao altera CSS, HTML estatico, SQL, migrations, providers,
+secrets ou comportamento visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v67.0.0 | icones `fa-spinner` (Salvando...), `fa-save` (Salvar limite global / Salvar) e `fa-user` (selecao de usuario) recebem `aria-hidden="true"` |
+| v67.0.0 | `tests/a11y/a11y.test.js` cobre o template admin de moderacao (feedback de salvar e selecao de usuario) |
+| v67.0.0 | `docs/qa/reports/report-v67-public-a11y-admin-moderation-icons.md` criado |
+| v67.0.0 | `kinocampus-V66.0-foundations` criada e definida como default no GitHub; `kinocampus-V67.0-foundations` derivada |
+| v67.0.0 | `RELATORIO-KINOCAMPUS-V62.md` arquivado em `docs/archive/relatorios/` via `git mv` |
+
+### Metricas
+
+| Metrica | Antes (V66) | Depois (V67) | Delta |
+|---------|-------------|--------------|-------|
+| appVersion | 66.0.0 | 67.0.0 | +1 versao funcional pequena |
+| Branch principal | `kinocampus-V66.0-foundations` | `kinocampus-V67.0-foundations` | alinhada |
+| RELATORIOs na raiz | 5 | 5 | politica preservada |
+| RELATORIOs em `docs/archive/relatorios/` | 51 | 52 | +V62 |
+| Itens `check:structure` | 156 | 156 | preservado |
+| Arquivos JS funcionais alterados | 1 | 1 | patch pontual em moderacao admin |
+| Suites Jest | 135 | 135 | preservado |
+| Testes Jest | 3067 | 3068 | +1 teste a11y |
+| CSS de producao alterado | 0 | 0 | preservado |
+| HTML alterado | 0 | 0 | preservado |
+| Supabase migrations alteradas | 0 | 0 | preservado |
+
+---
+
 ## [66.0.0] - 2026-05-02 - PUBLIC-A11Y Admin Banners Decorative Icons (v66.0.0)
 
 ### Tema
