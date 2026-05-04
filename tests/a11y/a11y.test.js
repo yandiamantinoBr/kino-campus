@@ -414,3 +414,11 @@ describe('v69.0.0 - icones decorativos no indicador de pull-to-refresh', () => {
     expect(ptr).toContain('<i class="fas fa-check" style="font-size: 1.2em; color: var(--kc-primary-brand);" aria-hidden="true"></i>');
   });
 });
+
+describe('v70.0.0 - icone decorativo na aba Todas dos filtros', () => {
+  test('aba Todas dos filtros esconde icone fa-fire decorativo (label `Todas` ja presente)', () => {
+    const filters = _fs.readFileSync(_path.join(_ROOT, 'assets/js/features/kc-filters.js'), 'utf8');
+
+    expect(filters).toContain('<i class="fas fa-fire" aria-hidden="true"></i>');
+  });
+});
