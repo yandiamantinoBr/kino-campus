@@ -405,3 +405,12 @@ describe('v68.0.0 - icones decorativos em admin dashboard audit', () => {
     expect(audit).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...');
   });
 });
+
+describe('v69.0.0 - icones decorativos no indicador de pull-to-refresh', () => {
+  test('indicador de pull-to-refresh esconde icones de seta e check para tecnologias assistivas', () => {
+    const ptr = _fs.readFileSync(_path.join(_ROOT, 'assets/js/features/kc-pull-to-refresh.js'), 'utf8');
+
+    expect(ptr).toContain('<i class="fas fa-arrow-down" style="font-size: 1.2em; color: var(--kc-primary-brand);" aria-hidden="true"></i>');
+    expect(ptr).toContain('<i class="fas fa-check" style="font-size: 1.2em; color: var(--kc-primary-brand);" aria-hidden="true"></i>');
+  });
+});
