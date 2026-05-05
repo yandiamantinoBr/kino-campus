@@ -488,3 +488,21 @@ describe('v74.0.0 - icones decorativos em admin-reports.controller.js', () => {
     expect(reports).toContain('<i class="fas fa-check" style="color:#4caf50;" aria-hidden="true"></i> Todas as');
   });
 });
+
+describe('v75.0.0 - icones decorativos em kc-ranking.js', () => {
+  test('18 icones decorativos de avatares, acoes e estados do modulo de ranking ocultam-se para tecnologias assistivas', () => {
+    const ranking = _fs.readFileSync(_path.join(_ROOT, 'assets/js/features/kc-ranking.js'), 'utf8');
+    expect(ranking).toContain('<i class="fas fa-user" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-trophy" style="color:var(--kc-primary-brand);" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-times" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-file-alt" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-thumbs-up" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-comment" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-hand-pointer" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-share-alt" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-flag" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-check" aria-hidden="true"></i>');
+    expect(ranking).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>');
+  });
+});
