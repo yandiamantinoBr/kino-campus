@@ -174,7 +174,7 @@
       var avatarSrc = u.avatar_url || '';
       var avatarHtml = avatarSrc
         ? '<img src="' + avatarSrc + '" alt="' + name + '" loading="lazy">'
-        : '<i class="fas fa-user"></i>';
+        : '<i class="fas fa-user" aria-hidden="true"></i>';
       return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-sidebar-item">' +
         '<span class="kc-ranking-sidebar-item__pos"><i class="' + iconClass + '" style="font-size:0.85em;margin-right:2px;"></i>' + (i + 1) + '</span>' +
         '<span class="kc-ranking-sidebar-item__avatar">' + avatarHtml + '</span>' +
@@ -203,7 +203,7 @@
       var avatarSrc = u.avatar_url || '';
       var avatarHtml = avatarSrc
         ? '<img src="' + avatarSrc + '" alt="' + name + '" loading="lazy">'
-        : '<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);"></i>';
+        : '<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);" aria-hidden="true"></i>';
       return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-user" title="' + name + ' - ' + u.score + ' pts">' +
         '<div class="kc-ranking-user-avatar">' + avatarHtml +
           '<span class="kc-ranking-user-position"><i class="' + iconClass + '"></i>' + (i + 1) + '</span>' +
@@ -235,8 +235,8 @@
       '<div class="kc-ranking-modal__backdrop" data-kc-ranking-modal-close></div>' +
       '<div class="kc-ranking-modal__content">' +
         '<div class="kc-ranking-modal__header">' +
-          '<h3><i class="fas fa-trophy" style="color:var(--kc-primary-brand);"></i> Como funciona o ranking?</h3>' +
-          '<button type="button" data-kc-ranking-modal-close aria-label="Fechar"><i class="fas fa-times"></i></button>' +
+          '<h3><i class="fas fa-trophy" style="color:var(--kc-primary-brand);" aria-hidden="true"></i> Como funciona o ranking?</h3>' +
+          '<button type="button" data-kc-ranking-modal-close aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>' +
         '</div>' +
         '<div class="kc-ranking-modal__body">' +
           '<p>O ranking pontua os usuários mais ativos e úteis da comunidade. Cada ação é contabilizada <strong>uma única vez por publicação</strong> — ações repetidas no mesmo post não somam pontos extras.</p>' +
@@ -244,19 +244,19 @@
           '<table class="kc-ranking-score-table">' +
             '<thead><tr><th>Ação</th><th>Pontos</th></tr></thead>' +
             '<tbody>' +
-              '<tr><td><i class="fas fa-file-alt"></i> Publicação criada</td><td class="kc-ranking-pts">+15</td></tr>' +
-              '<tr><td><i class="fas fa-thumbs-up"></i> Voto positivo recebido</td><td class="kc-ranking-pts">+10</td></tr>' +
-              '<tr><td><i class="fas fa-comment"></i> Comentário escrito</td><td class="kc-ranking-pts">+5</td></tr>' +
-              '<tr><td><i class="fas fa-hand-pointer"></i> Anúncio acessado por alguém</td><td class="kc-ranking-pts">+4</td></tr>' +
-              '<tr><td><i class="fas fa-share-alt"></i> Publicação compartilhada</td><td class="kc-ranking-pts">+3</td></tr>' +
-              '<tr><td><i class="fas fa-flag"></i> Denúncia confirmada (penalidade)</td><td class="kc-ranking-pts kc-ranking-pts--neg">-50</td></tr>' +
+              '<tr><td><i class="fas fa-file-alt" aria-hidden="true"></i> Publicação criada</td><td class="kc-ranking-pts">+15</td></tr>' +
+              '<tr><td><i class="fas fa-thumbs-up" aria-hidden="true"></i> Voto positivo recebido</td><td class="kc-ranking-pts">+10</td></tr>' +
+              '<tr><td><i class="fas fa-comment" aria-hidden="true"></i> Comentário escrito</td><td class="kc-ranking-pts">+5</td></tr>' +
+              '<tr><td><i class="fas fa-hand-pointer" aria-hidden="true"></i> Anúncio acessado por alguém</td><td class="kc-ranking-pts">+4</td></tr>' +
+              '<tr><td><i class="fas fa-share-alt" aria-hidden="true"></i> Publicação compartilhada</td><td class="kc-ranking-pts">+3</td></tr>' +
+              '<tr><td><i class="fas fa-flag" aria-hidden="true"></i> Denúncia confirmada (penalidade)</td><td class="kc-ranking-pts kc-ranking-pts--neg">-50</td></tr>' +
             '</tbody>' +
           '</table>' +
           '</div>' +
           '<p style="font-size:0.85em;color:var(--kc-text-dark-secondary);margin-top:10px;">Filtrável por período (hoje, semana ou mês) e por módulo nas páginas de cada categoria.</p>' +
         '</div>' +
         '<div class="kc-ranking-modal__footer">' +
-          '<button type="button" class="kc-btn-primary" data-kc-ranking-modal-close><i class="fas fa-check"></i> Entendido</button>' +
+          '<button type="button" class="kc-btn-primary" data-kc-ranking-modal-close><i class="fas fa-check" aria-hidden="true"></i> Entendido</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(modal);
@@ -319,7 +319,7 @@
     if (!api || typeof api.getTopContributors !== 'function') {
       var attempt = _retries || 0;
       if (attempt < 3) {
-        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
         setTimeout(function () { loadSidebarRanking(container, period, module, attempt + 1); }, 350);
         return;
       }
@@ -327,7 +327,7 @@
       return;
     }
 
-    container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+    container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
     var iconClass = getModuleIcon(module);
 
     api.getTopContributors(period, module, 10).then(function (users) {
@@ -346,7 +346,7 @@
         var avatarSrc = u.avatar_url || '';
         var avatarHtml = avatarSrc
           ? '<img src="' + avatarSrc + '" alt="' + name + '" loading="lazy">'
-          : '<i class="fas fa-user"></i>';
+          : '<i class="fas fa-user" aria-hidden="true"></i>';
         return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-sidebar-item">' +
           '<span class="kc-ranking-sidebar-item__pos"><i class="' + iconClass + '" style="font-size:0.85em;margin-right:2px;"></i>' + (i + 1) + '</span>' +
           '<span class="kc-ranking-sidebar-item__avatar">' + avatarHtml + '</span>' +
@@ -375,7 +375,7 @@
         return Promise.resolve(cached.users);
       }
       if (attempt < 3) {
-        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
         setTimeout(function () { loadSidebarRanking(container, period, module, attempt + 1); }, 350);
         return;
       }
@@ -384,7 +384,7 @@
     }
 
     if (hadCached) renderSidebarRanking(container, cached.users, module);
-    else container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+    else container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
 
     if (hadCached && !shouldRevalidateRanking(cached)) {
       decorateAuthorAvatars(cached.users, module);
@@ -418,7 +418,7 @@
         return Promise.resolve(cached.users);
       }
       if (attempt < 3) {
-        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
         setTimeout(function () { loadHomeRanking(container, period, module, attempt + 1); }, 350);
         return;
       }
@@ -427,7 +427,7 @@
     }
 
     if (hadCached) renderHomeRanking(container, cached.users, module);
-    else container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+    else container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
 
     if (hadCached && !shouldRevalidateRanking(cached)) {
       return Promise.resolve(cached.users);

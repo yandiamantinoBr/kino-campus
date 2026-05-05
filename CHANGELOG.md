@@ -2,6 +2,29 @@
 
 ---
 
+## [75.0.0] - 2026-05-05 - PUBLIC-A11Y kc-ranking Decorative Icons (v75.0.0)
+
+### Tema
+
+Patch funcional (18 linhas) para marcar como decorativos os 18 icones FontAwesome em
+kc-ranking.js: fa-user nos placeholders de avatar (2 ocorrencias simples + 1 com estilo
+inline), fa-trophy e fa-times no modal de explicacao do ranking, fa-file-alt, fa-thumbs-up,
+fa-comment, fa-hand-pointer, fa-share-alt e fa-flag na tabela de pontuacao, fa-check no
+botao Entendido, e fa-spinner fa-spin nos 6 estados de carregamento do modulo. Todos ja
+possuem texto adjacente ou aria-label no elemento pai.
+A V75 nao altera CSS, HTML estatico, SQL, migrations, providers, secrets ou comportamento
+visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v75.0.0 | 18 icones decorativos em kc-ranking.js recebem `aria-hidden="true"` |
+| v75.0.0 | `tests/a11y/a11y.test.js` cobre os icones de avatares, acoes e estados do modulo de ranking |
+| v75.0.0 | `docs/qa/reports/report-v75-public-a11y-kc-ranking-icons.md` criado |
+
+---
+
 ## [74.0.0] - 2026-05-05 - PUBLIC-A11Y admin-reports Decorative Icons (v74.0.0)
 
 ### Tema

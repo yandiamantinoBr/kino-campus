@@ -67,13 +67,14 @@ Versoes recentes permanecem na raiz do repositorio conforme a politica V22: mant
 | [RELATORIO-KINOCAMPUS-V67.md](RELATORIO-KINOCAMPUS-V67.md) | V67 | - | PUBLIC-A11Y admin moderation residual decorative icons |
 | [RELATORIO-KINOCAMPUS-V68.md](RELATORIO-KINOCAMPUS-V68.md) | V68 | - | PUBLIC-A11Y admin dashboard audit decorative icons |
 | [RELATORIO-KINOCAMPUS-V69.md](RELATORIO-KINOCAMPUS-V69.md) | V69 | - | PUBLIC-A11Y pull-to-refresh decorative icons |
+| [RELATORIO-KINOCAMPUS-V70.md](RELATORIO-KINOCAMPUS-V70.md) | V70 | - | PUBLIC-A11Y filters tab decorative icon |
 
 ## Relatorios na raiz (janela recente)
 
 Os seguintes relatorios permanecem na raiz por relevancia operacional recente:
 
-- [`RELATORIO-KINOCAMPUS-V70.md`](../../../RELATORIO-KINOCAMPUS-V70.md) - V70: PUBLIC-A11Y filters tab decorative icon
 - [`RELATORIO-KINOCAMPUS-V71.md`](../../../RELATORIO-KINOCAMPUS-V71.md) - V71: PUBLIC-A11Y admin dashboard charts decorative icons
 - [`RELATORIO-KINOCAMPUS-V72.md`](../../../RELATORIO-KINOCAMPUS-V72.md) - V72: PUBLIC-A11Y admin dashboard controller decorative icons
 - [`RELATORIO-KINOCAMPUS-V73.md`](../../../RELATORIO-KINOCAMPUS-V73.md) - V73: PUBLIC-A11Y kc-comments decorative icons
 - [`RELATORIO-KINOCAMPUS-V74.md`](../../../RELATORIO-KINOCAMPUS-V74.md) - V74: PUBLIC-A11Y admin-reports decorative icons
+- [`RELATORIO-KINOCAMPUS-V75.md`](../../../RELATORIO-KINOCAMPUS-V75.md) - V75: PUBLIC-A11Y kc-ranking decorative icons
