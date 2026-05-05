@@ -197,7 +197,7 @@
 
     container.style.display = 'flex';
     var periodLabel = getPeriodLabelValue(deps, periodDays || 30);
-    var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells"></i> Por módulo (' + escHtml(deps, periodLabel) + ')</div>';
+    var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells" aria-hidden="true"></i> Por módulo (' + escHtml(deps, periodLabel) + ')</div>';
 
     container.innerHTML = titleHtml + moduleData.map(function (moduleRow) {
       var topTerms = moduleRow.terms.slice(0, 3).map(function (term) {
@@ -530,7 +530,7 @@
     var limit = getRankingExpanded(deps) ? 100 : 10;
     var requestSeq = bumpRankingRequestSeq(deps);
 
-    tableEl.innerHTML = '<div class="kc-admin-empty"><i class="fas fa-spinner fa-spin"></i> Carregando ranking...</div>';
+    tableEl.innerHTML = '<div class="kc-admin-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando ranking...</div>';
 
     try {
       var users = await api.getTopContributors(period, module, limit);
@@ -545,10 +545,10 @@
 
       var html = '<div class="kc-ranking-table-wrapper"><table class="kc-ranking-score-table">'
         + '<thead><tr>'
-        + '<th>#</th><th>Usuário</th><th>Score</th><th title="Publicações"><i class="fas fa-file-alt"></i></th>'
-        + '<th title="Votos"><i class="fas fa-thumbs-up"></i></th><th title="Comentários"><i class="fas fa-comment"></i></th>'
-        + '<th title="Cupons"><i class="fas fa-ticket"></i></th><th title="Shares"><i class="fas fa-share-nodes"></i></th>'
-        + '<th title="Penalidades"><i class="fas fa-flag"></i></th>'
+        + '<th>#</th><th>Usuário</th><th>Score</th><th title="Publicações"><i class="fas fa-file-alt" aria-hidden="true"></i></th>'
+        + '<th title="Votos"><i class="fas fa-thumbs-up" aria-hidden="true"></i></th><th title="Comentários"><i class="fas fa-comment" aria-hidden="true"></i></th>'
+        + '<th title="Cupons"><i class="fas fa-ticket" aria-hidden="true"></i></th><th title="Shares"><i class="fas fa-share-nodes" aria-hidden="true"></i></th>'
+        + '<th title="Penalidades"><i class="fas fa-flag" aria-hidden="true"></i></th>'
         + '</tr></thead><tbody>';
 
       users.forEach(function (user) {
@@ -556,7 +556,7 @@
         var avatarSrc = user && user.avatar_url ? user.avatar_url : '';
         var avatarHtml = avatarSrc
           ? '<img src="' + escHtml(deps, avatarSrc) + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;" loading="lazy">'
-          : '<i class="fas fa-user" style="font-size:0.8em;"></i>';
+          : '<i class="fas fa-user" style="font-size:0.8em;" aria-hidden="true"></i>';
 
         html += '<tr>'
           + '<td style="font-weight:700;color:var(--kc-primary-brand);">' + toNumberValue(deps, user && user.rank) + '</td>'
@@ -577,10 +577,10 @@
       if (showAllBtn) {
         if (!getRankingExpanded(deps) && users.length >= 10) {
           showAllBtn.style.display = 'block';
-          showAllBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Mostrar todos';
+          showAllBtn.innerHTML = '<i class="fas fa-chevron-down" aria-hidden="true"></i> Mostrar todos';
         } else if (getRankingExpanded(deps)) {
           showAllBtn.style.display = 'block';
-          showAllBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Mostrar top 10';
+          showAllBtn.innerHTML = '<i class="fas fa-chevron-up" aria-hidden="true"></i> Mostrar top 10';
         } else {
           showAllBtn.style.display = 'none';
         }

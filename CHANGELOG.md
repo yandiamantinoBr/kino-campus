@@ -2,6 +2,28 @@
 
 ---
 
+## [71.0.0] - 2026-05-05 - PUBLIC-A11Y Admin Dashboard Charts Decorative Icons (v71.0.0)
+
+### Tema
+
+Patch funcional (11 linhas) para marcar como decorativos os 11 icones FontAwesome em
+admin-dashboard.charts.js: titulo de modulo, spinner de carregamento, cabecalhos de
+tabela do ranking (Publicacoes, Votos, Comentarios, Cupons, Shares, Penalidades), avatar
+fallback de usuario e botoes de expandir/colapsar. Todos ja possuem title ou texto
+adjacente para tecnologias assistivas.
+A V71 nao altera CSS, HTML estatico, SQL, migrations, providers, secrets ou comportamento
+visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v71.0.0 | 11 icones decorativos em admin-dashboard.charts.js recebem `aria-hidden="true"` |
+| v71.0.0 | `tests/a11y/a11y.test.js` cobre o template de ranking e modulos do dashboard admin |
+| v71.0.0 | `docs/qa/reports/report-v71-public-a11y-admin-dashboard-charts-icons.md` criado |
+
+---
+
 ## [70.0.0] - 2026-05-06 - PUBLIC-A11Y Filters Tab Decorative Icon (v70.0.0)
 
 ### Tema

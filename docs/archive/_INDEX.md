@@ -6,7 +6,7 @@ Documentos de trabalho atuais devem permanecer em `docs/`, `docs/architecture/`,
 
 | Subdiretorio | Conteudo |
 |---|---|
-| relatorios/ | Relatorios de encerramento V9, V11, V13-V65 |
+| relatorios/ | Relatorios de encerramento V9, V11, V13-V66 |
 | audits-v11/ | Auditorias e handoffs da trilha V11 (monolitos, SWR, API, create-post) |
 | audits-v12-v13/ | Auditorias de refactor V12-V13 (kc-utils, adapters, controllers, profile) |
 | audits-accessibility/ | Auditorias de a11y e i18n V12 |
