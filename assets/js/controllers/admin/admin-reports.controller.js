@@ -708,7 +708,7 @@
       ? `
         <button type="button" data-action="loadMoreReports"
                 style="padding:10px 18px;background:var(--kc-primary-brand);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9em;">
-          <i class="fas fa-plus"></i> Carregar mais
+          <i class="fas fa-plus" aria-hidden="true"></i> Carregar mais
         </button>`
       : '';
 
@@ -744,7 +744,7 @@
         renderSummary([]);
         container.innerHTML = `
           <div style="text-align:center;padding:40px;color:var(--kc-text-dark-secondary);">
-            <i class="fas fa-exclamation-triangle" style="font-size:3em;color:#ff9800;margin-bottom:10px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:3em;color:#ff9800;margin-bottom:10px;display:block;" aria-hidden="true"></i>
             <p style="font-size:1.1em;">Nao foi possivel carregar as denuncias agora.</p>
           </div>`;
         syncShellModalState();
@@ -765,7 +765,7 @@
       const statusLabel = _filters.status === 'open' ? 'em aberto' : _filters.status === 'closed' ? 'fechadas' : '';
       container.innerHTML = `
         <div style="text-align:center;padding:40px;color:var(--kc-text-dark-secondary);">
-          <i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;display:block;"></i>
+          <i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;display:block;" aria-hidden="true"></i>
           <p style="font-size:1.1em;">Nenhuma denuncia ${statusLabel} encontrada${_filters.reason !== 'all' ? ' com este motivo' : ''}.</p>
         </div>`;
       syncShellModalState();
@@ -834,7 +834,7 @@
         <div class="kc-admin-report-group-head" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
           <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:1.05em;margin-bottom:4px;">
-              <i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;"></i>
+              <i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;" aria-hidden="true"></i>
               ${postTitle}${postStatusBadge}
             </div>
             <div style="font-size:.8em;color:var(--kc-text-dark-secondary);margin-bottom:6px;word-break:break-all;">
@@ -848,28 +848,28 @@
           <div class="kc-admin-report-group-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
             <a href="../product.html?id=${encodeURIComponent(pid)}" target="_blank"
                style="padding:7px 14px;background:var(--kc-background-dark);border:1px solid var(--kc-border-dark);border-radius:6px;text-decoration:none;font-size:.85em;color:var(--kc-text-dark);display:inline-flex;align-items:center;gap:5px;">
-               <i class="fas fa-eye"></i> Ver post
+               <i class="fas fa-eye" aria-hidden="true"></i> Ver post
             </a>
             ${open.length > 0 ? `
             <button type="button" data-action="closeReports" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-check"></i> Fechar denuncias
+              <i class="fas fa-check" aria-hidden="true"></i> Fechar denuncias
             </button>` : ''}
             ${postStatus === 'published' ? `
             <button type="button" data-action="hidePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-eye-slash"></i> Ocultar
+              <i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar
             </button>` : ''}
             ${postStatus === 'hidden' ? `
             <button type="button" data-action="restorePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-eye"></i> Restaurar
+              <i class="fas fa-eye" aria-hidden="true"></i> Restaurar
             </button>` : ''}
             ${postStatus !== 'deleted' ? `
             <button type="button" data-action="deletePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#b71c1c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;"
                     title="Esta acao nao pode ser desfeita pelo painel.">
-              <i class="fas fa-trash"></i> Deletar
+              <i class="fas fa-trash" aria-hidden="true"></i> Deletar
             </button>` : ''}
           </div>
         </div>
@@ -887,7 +887,7 @@
             </thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>` : `<div style="color:var(--kc-text-dark-secondary);font-size:.9em;"><i class="fas fa-check" style="color:#4caf50;"></i> Todas as denuncias deste post foram fechadas.</div>`}
+        </div>` : `<div style="color:var(--kc-text-dark-secondary);font-size:.9em;"><i class="fas fa-check" style="color:#4caf50;" aria-hidden="true"></i> Todas as denuncias deste post foram fechadas.</div>`}
       </div>`;
     }).join('');
 
@@ -908,7 +908,7 @@
       const statusLabel = _filters.status === 'open' ? 'em aberto' : _filters.status === 'closed' ? 'fechadas' : '';
       container.innerHTML = `
         <div style="text-align:center;padding:40px;color:var(--kc-text-dark-secondary);">
-          <i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;display:block;"></i>
+          <i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;display:block;" aria-hidden="true"></i>
           <p style="font-size:1.1em;">Nenhuma denúncia ${statusLabel} encontrada${_filters.reason !== 'all' ? ' com este motivo' : ''}.</p>
         </div>`;
       return;
@@ -979,7 +979,7 @@
         <div class="kc-admin-report-group-head" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
           <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:1.05em;margin-bottom:4px;">
-              <i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;"></i>
+              <i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;" aria-hidden="true"></i>
               ${postTitle}${postStatusBadge}
             </div>
             <div style="font-size:.8em;color:var(--kc-text-dark-secondary);margin-bottom:6px;word-break:break-all;">
@@ -993,28 +993,28 @@
           <div class="kc-admin-report-group-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
             <a href="../product.html?id=${encodeURIComponent(pid)}" target="_blank"
                style="padding:7px 14px;background:var(--kc-background-dark);border:1px solid var(--kc-border-dark);border-radius:6px;text-decoration:none;font-size:.85em;color:var(--kc-text-dark);display:inline-flex;align-items:center;gap:5px;">
-               <i class="fas fa-eye"></i> Ver post
+               <i class="fas fa-eye" aria-hidden="true"></i> Ver post
             </a>
             ${open.length > 0 ? `
             <button type="button" data-action="closeReports" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-check"></i> Fechar denúncias
+              <i class="fas fa-check" aria-hidden="true"></i> Fechar denúncias
             </button>` : ''}
             ${postStatus === 'published' ? `
             <button type="button" data-action="hidePost" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-eye-slash"></i> Ocultar
+              <i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar
             </button>` : ''}
             ${postStatus === 'hidden' ? `
             <button type="button" data-action="restorePost" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-eye"></i> Restaurar
+              <i class="fas fa-eye" aria-hidden="true"></i> Restaurar
             </button>` : ''}
             ${postStatus !== 'deleted' ? `
             <button type="button" data-action="deletePost" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#b71c1c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;"
                     title="Esta ação não pode ser desfeita pelo painel.">
-              <i class="fas fa-trash"></i> Deletar
+              <i class="fas fa-trash" aria-hidden="true"></i> Deletar
             </button>` : ''}
           </div>
         </div>
@@ -1032,7 +1032,7 @@
             </thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>` : `<div style="color:var(--kc-text-dark-secondary);font-size:.9em;"><i class="fas fa-check" style="color:#4caf50;"></i> Todas as denúncias deste post foram fechadas.</div>`}
+        </div>` : `<div style="color:var(--kc-text-dark-secondary);font-size:.9em;"><i class="fas fa-check" style="color:#4caf50;" aria-hidden="true"></i> Todas as denúncias deste post foram fechadas.</div>`}
       </div>`;
     }).join('');
 

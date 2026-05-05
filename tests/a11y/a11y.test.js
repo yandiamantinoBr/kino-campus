@@ -471,3 +471,20 @@ describe('v73.0.0 - icones decorativos em kc-comments.js', () => {
     expect(comments).toContain('aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>');
   });
 });
+
+describe('v74.0.0 - icones decorativos em admin-reports.controller.js', () => {
+  test('18 icones decorativos de acoes e estados do modulo de denuncias admin ocultam-se para tecnologias assistivas', () => {
+    const reports = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-reports.controller.js'), 'utf8');
+
+    expect(reports).toContain('<i class="fas fa-plus" aria-hidden="true"></i>');
+    expect(reports).toContain('<i class="fas fa-exclamation-triangle" style="font-size:3em;color:#ff9800;margin-bottom:10px;display:block;" aria-hidden="true"></i>');
+    expect(reports).toContain('<i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;display:block;" aria-hidden="true"></i>');
+    expect(reports).toContain('<i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;" aria-hidden="true"></i>');
+    expect(reports).toContain('<i class="fas fa-eye" aria-hidden="true"></i> Ver post');
+    expect(reports).toContain('<i class="fas fa-check" aria-hidden="true"></i> Fechar denu');
+    expect(reports).toContain('<i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar');
+    expect(reports).toContain('<i class="fas fa-eye" aria-hidden="true"></i> Restaurar');
+    expect(reports).toContain('<i class="fas fa-trash" aria-hidden="true"></i> Deletar');
+    expect(reports).toContain('<i class="fas fa-check" style="color:#4caf50;" aria-hidden="true"></i> Todas as');
+  });
+});

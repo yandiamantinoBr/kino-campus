@@ -2,6 +2,30 @@
 
 ---
 
+## [74.0.0] - 2026-05-05 - PUBLIC-A11Y admin-reports Decorative Icons (v74.0.0)
+
+### Tema
+
+Patch funcional (18 linhas) para marcar como decorativos os 18 icones FontAwesome em
+admin-reports.controller.js: fa-plus no carregar mais, fa-exclamation-triangle no estado
+de erro, fa-check-circle no estado vazio, fa-file-alt no titulo dos grupos de denuncia,
+e os 5 icones de acao (fa-eye Ver post, fa-check Fechar denuncias, fa-eye-slash Ocultar,
+fa-eye Restaurar, fa-trash Deletar) mais fa-check para "Todas as denuncias fechadas" —
+todos presentes em dois templates distintos no controller. Todos ja possuem texto
+adjacente para tecnologias assistivas.
+A V74 nao altera CSS, HTML estatico, SQL, migrations, providers, secrets ou comportamento
+visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v74.0.0 | 18 icones decorativos em admin-reports.controller.js recebem `aria-hidden="true"` |
+| v74.0.0 | `tests/a11y/a11y.test.js` cobre os icones de acoes e estados do modulo de denuncias |
+| v74.0.0 | `docs/qa/reports/report-v74-public-a11y-admin-reports-icons.md` criado |
+
+---
+
 ## [73.0.0] - 2026-05-05 - PUBLIC-A11Y kc-comments Decorative Icons (v73.0.0)
 
 ### Tema
