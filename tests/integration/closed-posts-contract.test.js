@@ -8,9 +8,11 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'u
 
 describe('closed posts - contratos de dados e feed efetivo', () => {
   let migration;
+  let grantsMigration;
 
   beforeAll(() => {
     migration = read('supabase/migrations/v9.3.4.0_closed_posts_effective_feed.sql');
+    grantsMigration = read('supabase/migrations/v9.3.4.1_closed_posts_rpc_grants.sql');
   });
 
   test('posts aceita closed como status historico publico', () => {
@@ -32,6 +34,8 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
     expect(migration).toContain('create or replace function public.kc_admin_set_post_status');
     expect(migration).toContain("v_status not in ('published', 'pending', 'hidden', 'deleted', 'expired', 'closed')");
     expect(migration).toContain('p_close_reports');
+    expect(grantsMigration).toContain('revoke execute on function public.kc_close_post(uuid, text) from public, anon');
+    expect(grantsMigration).toContain('revoke execute on function public.kc_admin_set_post_status(uuid, text, boolean) from public, anon');
   });
 
   test('kc_get_feed_cursor inclui closed e ordena recentes por effective_at', () => {
@@ -41,6 +45,13 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
     expect(migration).toContain("case when v_sort = 'recentes' then effective_at end desc nulls last");
     expect(migration).toContain("'effective_at', kept.effective_at");
     expect(migration).toContain("'bumped_at', cursor_row.bumped_at");
+    expect(grantsMigration).toContain('alter function public.kc_can_read_post(uuid, text, text) security invoker');
+    expect(grantsMigration).toContain('grant execute on function public.kc_can_read_post(uuid, text, text) to anon, authenticated, service_role');
+  });
+
+  test('RPC de denuncia de encerramento nao e executavel por anon', () => {
+    expect(grantsMigration).toContain('revoke execute on function public.kc_report_post(uuid, text, text) from public, anon');
+    expect(grantsMigration).toContain('grant execute on function public.kc_report_post(uuid, text, text) to authenticated, service_role');
   });
 });
 
