@@ -422,3 +422,21 @@ describe('v70.0.0 - icone decorativo na aba Todas dos filtros', () => {
     expect(filters).toContain('<i class="fas fa-fire" aria-hidden="true"></i>');
   });
 });
+
+describe('v71.0.0 - icones decorativos em admin-dashboard.charts.js', () => {
+  test('11 icones decorativos do ranking e modulos do dashboard admin ocultam-se para tecnologias assistivas', () => {
+    const charts = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-dashboard.charts.js'), 'utf8');
+
+    expect(charts).toContain('<i class="fas fa-table-cells" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-file-alt" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-thumbs-up" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-comment" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-ticket" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-share-nodes" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-flag" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-user" style="font-size:0.8em;" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-chevron-down" aria-hidden="true"></i>');
+    expect(charts).toContain('<i class="fas fa-chevron-up" aria-hidden="true"></i>');
+  });
+});
