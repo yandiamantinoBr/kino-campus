@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 135 suites · 3073 testes
+Jest: 135 suites · 3074 testes
 Playwright: 8 suites · 51 testes
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥135 passed, 135 total` e `≥3073 passed, 3073 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥135 passed, 135 total` e `≥3074 passed, 3074 total`.
 
 ---
 
@@ -456,7 +456,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥135 passed, 135 total
-  Tests:       ≥3073 passed, 3073 total
+  Tests:       ≥3074 passed, 3074 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

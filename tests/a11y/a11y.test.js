@@ -456,3 +456,18 @@ describe('v72.0.0 - icones decorativos em admin-dashboard.controller.js', () => 
     expect(ctrl).toContain('<i class="fas fa-table-cells" aria-hidden="true"></i> Top módulos (');
   });
 });
+
+describe('v73.0.0 - icones decorativos em kc-comments.js', () => {
+  test('9 icones decorativos de acoes e estados do modulo de comentarios ocultam-se para tecnologias assistivas', () => {
+    const comments = _fs.readFileSync(_path.join(_ROOT, 'assets/js/features/kc-comments.js'), 'utf8');
+
+    expect(comments).toContain('<i class="fas fa-reply" aria-hidden="true"></i> Respondendo a');
+    expect(comments).toContain('<i class="fas fa-paper-plane" aria-hidden="true"></i> Responder');
+    expect(comments).toContain('<i class="fas fa-times" aria-hidden="true"></i> Cancelar');
+    expect(comments).toContain('<i class="fas fa-comments" style="font-size:2em;margin-bottom:10px;opacity:0.5;" aria-hidden="true"></i>');
+    expect(comments).toContain('<i class="fas fa-check" aria-hidden="true"></i> Salvar');
+    expect(comments).toContain('<i class="fas fa-trash" aria-hidden="true"></i> Sim, excluir');
+    expect(comments).toContain('<i class="fas fa-flag" style="color:var(--kc-primary-brand);" aria-hidden="true"></i>');
+    expect(comments).toContain('aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>');
+  });
+});

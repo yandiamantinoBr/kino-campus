@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v72.0.0
+**Versao:** v73.0.0
 **Data:** 2026-05-05
-**Atualizado em:** v72.0.0 - patch PUBLIC-A11Y admin dashboard controller decorative icons e janela raiz V68-V72
+**Atualizado em:** v73.0.0 - patch PUBLIC-A11Y kc-comments decorative icons e janela raiz V69-V73
 
 ---
 
@@ -20,12 +20,12 @@ em ordem deterministica nos 22 HTMLs canonicos.
 | Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime) |
 | Hosting | Vercel (`vercel.json`) |
 | Runtime JS | `frontendRuntimeVersion=8.6.0` |
-| appVersion | `72.0.0` |
-| Branch principal | `kinocampus-V72.0-foundations` |
-| Testes | Jest 135 suites / 3073 testes + Playwright 8 suites E2E |
+| appVersion | `73.0.0` |
+| Branch principal | `kinocampus-V73.0-foundations` |
+| Testes | Jest 135 suites / 3074 testes + Playwright 8 suites E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
-V72 e uma versao funcional pequena. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
+V73 e uma versao funcional pequena. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
 janela operacional atual: archive consolidado, planning ativo com ledger pos-V23, QA ativo separado do
 historico, worktree Claude arquivada, runbook QA real V25, templates de evidencia V26, gate visual/a11y V27,
 auditoria unaccent/FTS V28, checklist Supabase Advisor V29, checklist de sandbox para providers V30, matriz
@@ -46,8 +46,9 @@ de ajuda admin V65, patch PUBLIC-A11Y dos icones decorativos em banners admin V6
 dos icones residuais em moderacao admin V67, patch PUBLIC-A11Y dos icones de spinner do shard audit
 do dashboard admin V68, patch PUBLIC-A11Y dos icones decorativos do indicador de pull-to-refresh V69,
 patch PUBLIC-A11Y do icone decorativo da aba `Todas` dos filtros publicos V70,
-patch PUBLIC-A11Y dos 11 icones decorativos do ranking e modulos em admin-dashboard.charts.js V71 e
-patch PUBLIC-A11Y dos 14 icones decorativos de titulos de secao e feedback em admin-dashboard.controller.js V72.
+patch PUBLIC-A11Y dos 11 icones decorativos do ranking e modulos em admin-dashboard.charts.js V71,
+patch PUBLIC-A11Y dos 14 icones decorativos de titulos de secao e feedback em admin-dashboard.controller.js V72 e
+patch PUBLIC-A11Y dos 9 icones decorativos de acoes e estados em kc-comments.js V73.
 
 ---
 
@@ -115,11 +116,11 @@ kino-campus/
 |-- VERSION.json
 |-- CHANGELOG.md
 |-- README.md
-|-- RELATORIO-KINOCAMPUS-V68.md
 |-- RELATORIO-KINOCAMPUS-V69.md
 |-- RELATORIO-KINOCAMPUS-V70.md
 |-- RELATORIO-KINOCAMPUS-V71.md
-`-- RELATORIO-KINOCAMPUS-V72.md
+|-- RELATORIO-KINOCAMPUS-V72.md
+`-- RELATORIO-KINOCAMPUS-V73.md
 ```
 
 ---
@@ -206,7 +207,7 @@ O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y 
 | `docs/architecture/` | Guias canonicos de arquitetura, scripts, dados, testes, CSS e IA |
 | `docs/ops/` | Runbooks operacionais, invariantes Vercel/Supabase, auditoria unaccent/FTS, evidencias Advisor, sandbox de providers e pacote V48 de evidencias externas |
 | `docs/planning/` | Inventarios V18, plano V19, ledger V24, readiness V26, readiness CSS V35, roadmap V36, gate funcional V37, rollback V38, matriz V39, dossies V40-V46, consolidacao V47, freeze V49, intake V50, No-Go V51, rastreabilidade V52 e manifesto V53 |
-| `docs/qa/` | Artefatos ativos de QA manual, RLS, XSS, reports V26, templates de gate funcional V37, rollback V38, candidato V39, auth callback V40, profile/avatar V41, admin/moderacao V42, notification provider V43, search/FTS V44, CSS small change V45, public a11y V46, selecao funcional V47, redacao de evidencia externa V48, freeze funcional V49, intake funcional V50, No-Go funcional V51, rastreabilidade funcional V52, manifesto funcional V53 e reports PUBLIC-A11Y V59-V72, gate visual/a11y V27, matriz autenticada V31, politica E2E V32, politica LHCI V33 e plano a11y/i18n V34 |
+| `docs/qa/` | Artefatos ativos de QA manual, RLS, XSS, reports V26, templates de gate funcional V37, rollback V38, candidato V39, auth callback V40, profile/avatar V41, admin/moderacao V42, notification provider V43, search/FTS V44, CSS small change V45, public a11y V46, selecao funcional V47, redacao de evidencia externa V48, freeze funcional V49, intake funcional V50, No-Go funcional V51, rastreabilidade funcional V52, manifesto funcional V53 e reports PUBLIC-A11Y V59-V73, gate visual/a11y V27, matriz autenticada V31, politica E2E V32, politica LHCI V33 e plano a11y/i18n V34 |
 
 ### 5.2 Archive
 
@@ -230,13 +231,13 @@ Nao recriar arvores historicas antigas fora de `docs/archive/`.
 
 ### 5.3 Relatorios raiz
 
-A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V72, a janela operacional e:
+A politica V22 limita a raiz a no maximo 5 relatorios recentes. Em V73, a janela operacional e:
 
-- `RELATORIO-KINOCAMPUS-V68.md`
 - `RELATORIO-KINOCAMPUS-V69.md`
 - `RELATORIO-KINOCAMPUS-V70.md`
 - `RELATORIO-KINOCAMPUS-V71.md`
 - `RELATORIO-KINOCAMPUS-V72.md`
+- `RELATORIO-KINOCAMPUS-V73.md`
 
 Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatorios/`.
 
@@ -252,7 +253,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:routes` | Valida 17 rotas publicas + 5 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantem 135/135 suites e 3073/3073 testes Jest |
+| `npm test` | Mantem 135/135 suites e 3074/3074 testes Jest |
 | `npm run test:e2e` | Evidencia Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 
@@ -272,7 +273,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 
 ---
 
-## 8. Delta V17 a V72
+## 8. Delta V17 a V73
 
 | Versao | Entrega estrutural |
 |---|---|
@@ -332,3 +333,4 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | V70 | Patch PUBLIC-A11Y do icone decorativo da aba `Todas` dos filtros publicos criado e V65 arquivado conforme politica de raiz |
 | V71 | Patch PUBLIC-A11Y dos 11 icones decorativos do ranking e modulos em admin-dashboard.charts.js criado e V66 arquivado conforme politica de raiz |
 | V72 | Patch PUBLIC-A11Y dos 14 icones decorativos de titulos de secao e feedback em admin-dashboard.controller.js criado e V67 arquivado conforme politica de raiz |
+| V73 | Patch PUBLIC-A11Y dos 9 icones decorativos de acoes e estados em kc-comments.js criado e V68 arquivado conforme politica de raiz |

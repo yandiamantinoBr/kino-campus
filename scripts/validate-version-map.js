@@ -28,7 +28,7 @@ var REQUIRED_FIELDS = [
 ];
 
 var CANONICAL_RUNTIME_VERSION = '8.6.0';
-var CANONICAL_BRANCH          = 'kinocampus-V72.0-foundations';
+var CANONICAL_BRANCH          = 'kinocampus-V73.0-foundations';
 
 var errors = [];
 

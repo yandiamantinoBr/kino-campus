@@ -2,6 +2,29 @@
 
 ---
 
+## [73.0.0] - 2026-05-05 - PUBLIC-A11Y kc-comments Decorative Icons (v73.0.0)
+
+### Tema
+
+Patch funcional (9 linhas) para marcar como decorativos os 9 icones FontAwesome residuais em
+kc-comments.js: fa-reply no label "Respondendo a", fa-paper-plane no botao Responder,
+fa-times nos botoes Cancelar (reply e edit) e no botao fechar do modal de denuncia,
+fa-comments no estado vazio da lista, fa-check no botao Salvar edicao,
+fa-trash no botao confirmar exclusao, e fa-flag no cabecalho do modal de denuncia.
+Todos ja possuem texto adjacente ou aria-label no elemento pai para tecnologias assistivas.
+A V73 nao altera CSS, HTML estatico, SQL, migrations, providers, secrets ou comportamento
+visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v73.0.0 | 9 icones decorativos em kc-comments.js recebem `aria-hidden="true"` |
+| v73.0.0 | `tests/a11y/a11y.test.js` cobre os icones de acoes e estados do modulo de comentarios |
+| v73.0.0 | `docs/qa/reports/report-v73-public-a11y-kc-comments-icons.md` criado |
+
+---
+
 ## [72.0.0] - 2026-05-05 - PUBLIC-A11Y Admin Dashboard Controller Decorative Icons (v72.0.0)
 
 ### Tema

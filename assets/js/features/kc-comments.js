@@ -382,11 +382,11 @@ function buildReplyComposerHTML(id, containerId, parentComment) {
   const parent = normalizeCommentForRender(parentComment);
   return `
     <div class="kc-comment-reply-composer" data-kc-reply-form-parent-id="${_esc(String(parent.id))}">
-      <div class="kc-comment-reply-composer__label"><i class="fas fa-reply"></i> Respondendo a <strong>${_esc(parent.author)}</strong></div>
+      <div class="kc-comment-reply-composer__label"><i class="fas fa-reply" aria-hidden="true"></i> Respondendo a <strong>${_esc(parent.author)}</strong></div>
       <textarea data-kc-reply-input="${_esc(String(parent.id))}" data-post-id="${_esc(String(id))}" placeholder="Escreva sua resposta" aria-label="Escreva sua resposta"></textarea>
       <div class="kc-comment-reply-composer__actions">
-        <button type="button" data-kc-comment-action="reply-submit" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(parent.id))}" data-container="${_esc(String(containerId))}" class="kc-btn-primary" style="padding:6px 14px;font-size:0.82em;"><i class="fas fa-paper-plane"></i> Responder</button>
-        <button type="button" data-kc-comment-action="reply-cancel" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(parent.id))}" data-container="${_esc(String(containerId))}" class="kc-btn-secondary" style="padding:6px 14px;font-size:0.82em;"><i class="fas fa-times"></i> Cancelar</button>
+        <button type="button" data-kc-comment-action="reply-submit" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(parent.id))}" data-container="${_esc(String(containerId))}" class="kc-btn-primary" style="padding:6px 14px;font-size:0.82em;"><i class="fas fa-paper-plane" aria-hidden="true"></i> Responder</button>
+        <button type="button" data-kc-comment-action="reply-cancel" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(parent.id))}" data-container="${_esc(String(containerId))}" class="kc-btn-secondary" style="padding:6px 14px;font-size:0.82em;"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
       </div>
     </div>`;
 }
@@ -409,7 +409,7 @@ function _renderCommentList(id, containerId, comments, currentUserId, isAdmin) {
     clearActiveReplyState();
     container.innerHTML = `
       <div style="padding:20px;text-align:center;color:var(--kc-text-dark-secondary);">
-        <i class="fas fa-comments" style="font-size:2em;margin-bottom:10px;opacity:0.5;"></i>
+        <i class="fas fa-comments" style="font-size:2em;margin-bottom:10px;opacity:0.5;" aria-hidden="true"></i>
         <p>Seja o primeiro a comentar!</p>
       </div>
     `;
@@ -512,8 +512,8 @@ function _openCommentEditInline(pid, cid, ctr) {
   editWrap.innerHTML = `
     <textarea style="width:100%;min-height:72px;padding:8px 10px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:inherit;resize:vertical;font-size:0.95em;font-family:inherit;box-sizing:border-box;">${_esc(rawText)}</textarea>
     <div style="display:flex;gap:8px;margin-top:6px;">
-      <button type="button" data-kc-comment-edit-save="${_esc(String(cid))}" data-post-id="${_esc(String(pid))}" data-container="${_esc(String(ctr))}" class="kc-btn-primary" style="padding:5px 14px;font-size:0.82em;"><i class="fas fa-check"></i> Salvar</button>
-      <button type="button" data-kc-comment-edit-cancel="1" data-post-id="${_esc(String(pid))}" data-container="${_esc(String(ctr))}" class="kc-btn-secondary" style="padding:5px 14px;font-size:0.82em;"><i class="fas fa-times"></i> Cancelar</button>
+      <button type="button" data-kc-comment-edit-save="${_esc(String(cid))}" data-post-id="${_esc(String(pid))}" data-container="${_esc(String(ctr))}" class="kc-btn-primary" style="padding:5px 14px;font-size:0.82em;"><i class="fas fa-check" aria-hidden="true"></i> Salvar</button>
+      <button type="button" data-kc-comment-edit-cancel="1" data-post-id="${_esc(String(pid))}" data-container="${_esc(String(ctr))}" class="kc-btn-secondary" style="padding:5px 14px;font-size:0.82em;"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
     </div>`;
   textDiv.style.display = 'none';
   if (actionsRow) actionsRow.style.display = 'none';
@@ -560,7 +560,7 @@ function _confirmDeleteComment(pid, cid, ctr) {
   const originalHTML = actionsRow.innerHTML;
   actionsRow.innerHTML = `
     <span style="color:var(--kc-text-dark-secondary);font-size:0.88em;">Excluir este comentário?</span>
-    <button class="kc-comment-delete-confirm kc-btn-primary" type="button" style="padding:3px 12px;font-size:0.8em;background:#ef5350;border-color:#ef5350;"><i class="fas fa-trash"></i> Sim, excluir</button>
+    <button class="kc-comment-delete-confirm kc-btn-primary" type="button" style="padding:3px 12px;font-size:0.8em;background:#ef5350;border-color:#ef5350;"><i class="fas fa-trash" aria-hidden="true"></i> Sim, excluir</button>
     <button class="kc-comment-delete-cancel kc-btn-secondary" type="button" style="padding:3px 12px;font-size:0.8em;">Não</button>`;
 
   actionsRow.querySelector('.kc-comment-delete-confirm').addEventListener('click', function () {
@@ -641,8 +641,8 @@ function _openCommentReportModal(pid, cid, ctr) {
   overlay.innerHTML = `
     <div class="kc-card" style="max-width:400px;width:100%;padding:0;overflow:hidden;border-radius:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--kc-border-dark);">
-        <h3 style="margin:0;font-size:1em;display:flex;align-items:center;gap:8px;"><i class="fas fa-flag" style="color:var(--kc-primary-brand);"></i> Denunciar comentário</h3>
-        <button type="button" id="kcCommentReportClose" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);font-size:1.1em;" aria-label="Fechar"><i class="fas fa-times"></i></button>
+        <h3 style="margin:0;font-size:1em;display:flex;align-items:center;gap:8px;"><i class="fas fa-flag" style="color:var(--kc-primary-brand);" aria-hidden="true"></i> Denunciar comentário</h3>
+        <button type="button" id="kcCommentReportClose" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);font-size:1.1em;" aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>
       </div>
       <div style="padding:14px 18px;">
         <p style="color:var(--kc-text-dark-secondary);font-size:0.88em;margin:0 0 12px;">Selecione o motivo da denúncia:</p>
