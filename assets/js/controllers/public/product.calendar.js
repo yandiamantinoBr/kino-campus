@@ -169,11 +169,12 @@
 
   function setEventCalendar(post) {
     var moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
+    var status = String(post && (post.status || post.estado) || '').trim().toLowerCase();
 
     var prev = document.getElementById('kcEventCalendarWrap');
     if (prev) prev.remove();
 
-    if (moduleKey !== 'eventos') return;
+    if (moduleKey !== 'eventos' || status === 'closed' || post.isClosed === true) return;
 
     var meta = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
     var dataEvento = String(meta.data_evento || '').trim();

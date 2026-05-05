@@ -1777,6 +1777,43 @@ main {
     color: var(--kc-primary-brand);
 }
 
+.kc-badge--closed {
+    background-color: rgba(148, 163, 184, 0.16);
+    border-color: rgba(148, 163, 184, 0.35);
+    color: #cbd5e1;
+}
+
+.kc-card--closed {
+    border-color: rgba(148, 163, 184, 0.28);
+    background-color: color-mix(in srgb, var(--kc-surface-dark) 86%, #94a3b8 14%);
+    filter: grayscale(0.55);
+}
+
+.kc-card--closed:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.kc-card--closed .kc-card__image-wrapper img,
+.kc-card--closed .kc-card__emoji {
+    opacity: 0.62;
+}
+
+.kc-card--closed .kc-card__title,
+.kc-card--closed .kc-card__description-preview,
+.kc-card--closed .kc-card__author {
+    color: #cbd5e1;
+}
+
+.kc-card--closed .kc-vote-box button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.kc-card--closed .kc-vote-box button[disabled]:hover {
+    transform: none;
+}
+
 /* WhatsApp Share Button (kc-card) — V8.1.2.4.8 */
 .kc-share-whatsapp {
     -webkit-appearance: none;

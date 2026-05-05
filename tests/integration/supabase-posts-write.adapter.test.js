@@ -438,6 +438,7 @@ describe('supabase.posts-write.adapter.js — reportPost', () => {
     expect(source).toContain("'spam'");
     expect(source).toContain("'scam'");
     expect(source).toContain("'inappropriate'");
+    expect(source).toContain("'post_closed'");
   });
 
   test('tenta RPC kc_report_post primeiro', () => {
@@ -543,5 +544,27 @@ describe('supabase.posts-write.adapter.js — exports window._KCSA.postsWrite', 
 
   test('exporta bumpPost', () => {
     expect(source).toContain('bumpPost,');
+  });
+
+  test('exporta closePost', () => {
+    expect(source).toContain('closePost,');
+  });
+});
+
+describe('supabase.posts-write.adapter.js - closePost', () => {
+  test('define closePost async', () => {
+    expect(source).toContain('async function closePost(');
+  });
+
+  test('usa RPC kc_close_post com post e motivo', () => {
+    expect(source).toContain("'kc_close_post'");
+    expect(source).toContain('p_post_id: uuid');
+    expect(source).toContain('p_reason: reason');
+  });
+
+  test('normaliza retorno fechado para os contratos publicos', () => {
+    expect(source).toContain("new_status: data.new_status || data.status || 'closed'");
+    expect(source).toContain("status: data.status || data.new_status || 'closed'");
+    expect(source).toContain('closed_at: data.closed_at || null');
   });
 });

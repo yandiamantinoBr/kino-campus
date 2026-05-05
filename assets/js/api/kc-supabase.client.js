@@ -396,7 +396,7 @@
 
             // Defesa em profundidade: feed só de published
             const status = String(row.status || '').trim().toLowerCase();
-            if (status !== 'published') return;
+            if (status !== 'published' && status !== 'closed') return;
 
             if (moduleSet.size) {
               const mk = String(row.module || row.modulo || '').trim().toLowerCase();

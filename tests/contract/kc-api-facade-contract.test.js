@@ -90,6 +90,7 @@ describe('kc-api.client.js - public domains frozen in the facade', () => {
       'togglePostStatus,',
       'renewPost,',
       'bumpPost,',
+      'closePost,',
       'getTopContributors,',
       'trackCouponClick,',
       'trackShare,',

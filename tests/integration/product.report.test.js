@@ -59,6 +59,7 @@ describe('product.report.js — REPORT_REASONS', () => {
     expect(source).toContain("value: 'illegal'");
     expect(source).toContain("value: 'duplicate'");
     expect(source).toContain("value: 'other'");
+    expect(source).toContain("value: 'post_closed'");
   });
 
   test('motivos têm label e icon', () => {
@@ -82,6 +83,13 @@ describe('product.report.js — wireReportButton', () => {
   test('armazena postId e postTitle no dataset do botão', () => {
     expect(source).toContain('btn.dataset.kcReportPostId');
     expect(source).toContain('btn.dataset.kcReportPostTitle');
+  });
+
+  test('cria botao direto para relatar publicacao encerrada', () => {
+    expect(source).toContain('closedReportButton');
+    expect(source).toContain('Relatar encerrado');
+    expect(source).toContain("reason: 'post_closed'");
+    expect(source).toContain("status === 'closed'");
   });
 
   test('verifica driver supabase antes de abrir o popover', () => {

@@ -52,6 +52,27 @@
     return String(key || '');
   }
 
+  function closedLabel(post) {
+    var moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
+    if (moduleKey === 'eventos') return 'Evento encerrado';
+    if (moduleKey === 'caronas') return 'Carona encerrada';
+    if (moduleKey === 'compra-venda') return 'Anuncio encerrado';
+    return 'Publicacao encerrada';
+  }
+
+  function syncClosedStatusNote(post, isClosed) {
+    var current = document.getElementById('kcClosedStatusNote');
+    if (current) current.remove();
+    if (!isClosed) return;
+    var details = document.querySelector('.kc-product-details');
+    if (!details) return;
+    var note = document.createElement('div');
+    note.id = 'kcClosedStatusNote';
+    note.className = 'kc-product-status-note kc-product-status-note--closed';
+    note.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span><strong>' + esc(closedLabel(post)) + '.</strong> Esta publicacao fica visivel como historico, mas nao esta mais ativa.</span>';
+    details.insertAdjacentElement('afterbegin', note);
+  }
+
   function formatCurrency(n) {
     if (window.KCUtils && typeof window.KCUtils.formatCurrencyBRL === 'function') return window.KCUtils.formatCurrencyBRL(n);
     try { return Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); } catch (_) { return String(n); }
@@ -132,12 +153,15 @@
     var el = document.getElementById('badges');
     if (!el) return;
     var badges = [];
+    var isClosed = String(post && (post.status || post.estado) || '').trim().toLowerCase() === 'closed' || post.isClosed === true;
+    syncClosedStatusNote(post, isClosed);
     if (post.modulo) {
       var icon = (window.KCUtils && typeof window.KCUtils.getModuleIconClass === 'function')
         ? window.KCUtils.getModuleIconClass(post.modulo)
         : 'fas fa-layer-group';
       badges.push('<span class="kc-badge"><i class="' + esc(icon) + '"></i> ' + esc(moduleLabel(post.modulo)) + '</span>');
     }
+    if (isClosed) badges.push('<span class="kc-badge kc-badge--closed"><i class="fas fa-lock" aria-hidden="true"></i> Encerrado</span>');
     if (post._kcStatusBadgeHtml) badges.push(post._kcStatusBadgeHtml);
     if (post.verificado) badges.push(post._kcVerifiedTag || '<span class="kc-badge kc-badge--verified"><i class="fas fa-check-circle"></i> Verificado</span>');
     if (post.condicao) badges.push('<span class="kc-badge"><i class="fas fa-star"></i> ' + esc(post.condicao) + '</span>');

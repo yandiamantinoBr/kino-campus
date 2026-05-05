@@ -109,7 +109,7 @@
 
   function getUserAvatarUrl(profile, options) {
     const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
-    if (opts.fromSnapshot) return '';
+    void opts;
     return String((profile && profile.avatar_url) || '').trim();
   }
 
@@ -814,6 +814,20 @@
     }
   }
 
+  function handleAuthChange(event) {
+    const detail = event && event.detail ? event.detail : {};
+    const user = detail.user || null;
+    const snapshot = readShellSnapshot();
+
+    if (!user || !user.id) {
+      writeShellSnapshot(null, null);
+    } else if (snapshot && snapshot.user && snapshot.user.id && String(snapshot.user.id) !== String(user.id)) {
+      writeShellSnapshot(null, null);
+    }
+
+    refreshUIFromUser(true);
+  }
+
   function bindModalEvents() {
     const overlay = $('#kcAuthOverlay');
     const modal = $('#kcAuthModal');
@@ -872,7 +886,7 @@
     bindModalEvents();
     wireTriggers();
     refreshUIFromUser(true);
-    document.addEventListener('kc:authchange', refreshUIFromUser);
+    document.addEventListener('kc:authchange', handleAuthChange);
     document.addEventListener('kc:profilechange', refreshUIFromUser);
   }
 

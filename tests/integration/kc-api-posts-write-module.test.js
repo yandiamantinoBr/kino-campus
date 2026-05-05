@@ -3,7 +3,7 @@
  *
  * Cobre:
  * - IIFE registra window._KCAPI.postsWrite corretamente
- * - 7 metodos exportados existem
+ * - 8 metodos exportados existem
  * - enforceSupabaseOnProduction bloqueia createPost em producao sem supabase
  * - Fallbacks corretos quando driver nao disponivel
  * - Delegacao ao driver quando disponivel
@@ -33,9 +33,9 @@ describe('kc-api.posts-write.js — modulo IIFE e namespace', () => {
     expect(src).toContain('window._KCAPI.postsWrite = {');
   });
 
-  test('exporta os 7 metodos obrigatorios', () => {
+  test('exporta os 8 metodos obrigatorios', () => {
     const src = fs.readFileSync(POSTS_WRITE_PATH, 'utf8');
-    ['createPost', 'updatePost', 'deletePost', 'reportPost', 'togglePostStatus', 'renewPost', 'bumpPost']
+    ['createPost', 'updatePost', 'deletePost', 'reportPost', 'togglePostStatus', 'renewPost', 'bumpPost', 'closePost']
       .forEach((m) => expect(src).toContain(m));
   });
 
@@ -115,6 +115,13 @@ describe('kc-api.posts-write.js — fallbacks sem driver', () => {
     expect(result.ok).toBe(false);
     expect(result.code).toBe('UNAVAILABLE');
   });
+
+  test('closePost retorna UNAVAILABLE sem driver', async () => {
+    const deps = { getActiveDriver: () => null, ENV: {} };
+    const result = await postsWrite.closePost('p1', {}, deps);
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('UNAVAILABLE');
+  });
 });
 
 describe('kc-api.posts-write.js — delegacao ao driver', () => {
@@ -161,6 +168,14 @@ describe('kc-api.posts-write.js — delegacao ao driver', () => {
     const deps = { getActiveDriver: () => mockDriver, ENV: { isProduction: true, driver: 'supabase' } };
     const result = await postsWrite.createPost({ titulo: 'Prod Post' }, deps);
     expect(mockDriver.createPost).toHaveBeenCalledWith({ titulo: 'Prod Post' });
+    expect(result.ok).toBe(true);
+  });
+
+  test('closePost delega ao driver com payload', async () => {
+    const mockDriver = { closePost: jest.fn().mockResolvedValue({ ok: true, status: 'closed' }) };
+    const deps = { getActiveDriver: () => mockDriver, ENV: {} };
+    const result = await postsWrite.closePost('p1', { reason: 'owner_closed' }, deps);
+    expect(mockDriver.closePost).toHaveBeenCalledWith('p1', { reason: 'owner_closed' });
     expect(result.ok).toBe(true);
   });
 });

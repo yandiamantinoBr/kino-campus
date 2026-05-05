@@ -125,9 +125,10 @@ describe('local.posts-write.adapter.js - contrato estatico', () => {
     expect(Object.isFrozen(postsWrite())).toBe(true);
   });
 
-  test('expoe exatamente 7 chaves publicas', () => {
+  test('expoe exatamente 8 chaves publicas', () => {
     expect(Object.keys(postsWrite()).sort()).toEqual([
       'bumpPost',
+      'closePost',
       'createPost',
       'deletePost',
       'renewPost',
@@ -326,6 +327,11 @@ describe('local.posts-write.adapter.js - stubs de mutacao avancada', () => {
     const result = await postsWrite().bumpPost();
     expect(result.code).toBe('UNAVAILABLE');
   });
+
+  test('closePost retorna UNAVAILABLE', async () => {
+    const result = await postsWrite().closePost();
+    expect(result.code).toBe('UNAVAILABLE');
+  });
 });
 
 describe('local.posts-write.adapter.js - integracao com driver local', () => {
@@ -379,6 +385,19 @@ describe('local.posts-write.adapter.js - integracao com driver local', () => {
 
     expect(result.code).toBe('UNAVAILABLE');
     expect(stub.togglePostStatus).toHaveBeenCalled();
+  });
+
+  test('driver delega closePost para o submodulo', async () => {
+    const stub = {
+      ...actualPostsWriteModule,
+      closePost: jest.fn().mockResolvedValue({ ok: false, code: 'UNAVAILABLE' }),
+    };
+    window._KCLA.postsWrite = stub;
+
+    const result = await driver.closePost('draft-1', { reason: 'owner_closed' });
+
+    expect(result.code).toBe('UNAVAILABLE');
+    expect(stub.closePost).toHaveBeenCalled();
   });
 
   test('driver retorna null quando createPost nao esta disponivel no submodulo', async () => {

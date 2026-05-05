@@ -10,6 +10,8 @@
   var _markVisibleTimer = null;
   var _busyAction = '';
   var _activeBell = null;
+  var _activeUserId = '';
+  var _authListenerBound = false;
 
   var _handleBellClick = null;
   var _handleDocumentClick = null;
@@ -63,6 +65,70 @@
 
   function normalizeNotificationId(value) {
     return String(value || '').trim();
+  }
+
+  function getSessionStore() {
+    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+      ? window.KCSessionStore
+      : null;
+  }
+
+  function notificationSnapshotKey(userId) {
+    return 'user:' + normalizeNotificationId(userId);
+  }
+
+  function readShellSnapshotUser() {
+    var store = getSessionStore();
+    if (!store) return null;
+    try {
+      var entry = store.get('shell', 'auth-shell', { maxAge: 1000 * 60 * 60 * 12 });
+      var value = entry && entry.value && typeof entry.value === 'object' ? entry.value : null;
+      return value && value.user && value.user.id ? value.user : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function readNotificationSnapshot(userId) {
+    var store = getSessionStore();
+    var key = notificationSnapshotKey(userId);
+    if (!store || !key) return null;
+    try {
+      var entry = store.get('notifications', key, { maxAge: 1000 * 60 * 10 });
+      var value = entry && entry.value && typeof entry.value === 'object' ? entry.value : null;
+      if (!value || String(value.userId || '') !== String(userId || '')) return null;
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeNotificationSnapshot() {
+    var store = getSessionStore();
+    if (!store || !_activeUserId) return;
+    try {
+      store.set('notifications', notificationSnapshotKey(_activeUserId), {
+        userId: _activeUserId,
+        unread: _unreadCount,
+        notifications: _notifications.slice(0, 20),
+      });
+    } catch (_) { }
+  }
+
+  function clearNotificationSnapshot(userId) {
+    var store = getSessionStore();
+    var key = notificationSnapshotKey(userId);
+    if (!store || !key || typeof store.remove !== 'function') return;
+    try { store.remove('notifications', key); } catch (_) { }
+  }
+
+  function hydrateNotificationSnapshot(userId) {
+    var snapshot = readNotificationSnapshot(userId);
+    if (!snapshot) return false;
+    _notifications = Array.isArray(snapshot.notifications) ? snapshot.notifications.slice(0, 20) : [];
+    updateBadge(snapshot.unread || 0);
+    if (_dropdownOpen) renderDropdown();
+    return true;
   }
 
   function hasNotifications() {
@@ -301,12 +367,12 @@
       return;
     }
 
-    fetchNotifications().then(function () {
-      openDropdown();
-    });
+    openDropdown();
+    fetchNotifications();
   }
 
   function fetchNotifications() {
+    if (!window.KCAPI || typeof window.KCAPI.getNotifications !== 'function') return Promise.resolve({ ok: false });
     _loading = true;
     if (_dropdownOpen) renderDropdown();
 
@@ -315,6 +381,7 @@
       if (result && result.ok) {
         _notifications = Array.isArray(result.notifications) ? result.notifications.slice(0, 20) : [];
         updateBadge(result.unread || 0);
+        writeNotificationSnapshot();
       }
       if (_dropdownOpen) renderDropdown();
       return result;
@@ -326,8 +393,10 @@
   }
 
   function fetchUnreadCount() {
+    if (!window.KCAPI || typeof window.KCAPI.getUnreadNotificationCount !== 'function') return Promise.resolve();
     return window.KCAPI.getUnreadNotificationCount().then(function (count) {
       updateBadge(count || 0);
+      writeNotificationSnapshot();
       if (_dropdownOpen) renderDropdown();
     }).catch(function () {});
   }
@@ -342,6 +411,8 @@
             _notifications[i].read = true;
           }
         }
+        updateBadge(Math.max(0, _unreadCount - ids.length));
+        writeNotificationSnapshot();
         fetchUnreadCount();
         if (_dropdownOpen) renderDropdown();
       }
@@ -360,6 +431,7 @@
           _notifications[i].read = true;
         }
         updateBadge(0);
+        writeNotificationSnapshot();
       }
       return result;
     }).catch(function () {
@@ -387,6 +459,7 @@
       if (result && result.ok) {
         _notifications = [];
         updateBadge(0);
+        writeNotificationSnapshot();
       }
       return result;
     }).catch(function () {
@@ -468,6 +541,7 @@
     if (event.eventType === 'DELETE') {
       removeNotificationById(event.previous && event.previous.id);
       if (_dropdownOpen) renderDropdown();
+      writeNotificationSnapshot();
       fetchUnreadCount();
       return;
     }
@@ -477,6 +551,7 @@
 
     upsertNotification(notif, event.eventType === 'INSERT');
     if (_dropdownOpen) renderDropdown();
+    writeNotificationSnapshot();
     fetchUnreadCount();
   }
 
@@ -484,14 +559,16 @@
     if (_initialized) return;
     _initialized = true;
     _activeBell = bell;
+    _activeUserId = normalizeNotificationId(user && user.id);
 
     bell.style.display = 'inline-flex';
     bell.setAttribute('aria-haspopup', 'dialog');
     bell.setAttribute('aria-expanded', 'false');
 
+    hydrateNotificationSnapshot(_activeUserId);
     fetchUnreadCount();
 
-    if (user && user.id) {
+    if (user && user.id && window.KCAPI && typeof window.KCAPI.subscribeNotifications === 'function') {
       _channel = window.KCAPI.subscribeNotifications(user.id, onRealtimeNotification);
     }
 
@@ -528,53 +605,82 @@
     document.addEventListener('scroll', _handleDocumentScroll, true);
   }
 
-  function init() {
-    if (_initialized) return;
+  function activateForUser(bell, user) {
+    if (!bell || !user || !user.id) return false;
+    var nextUserId = normalizeNotificationId(user.id);
+    if (_initialized && _activeUserId === nextUserId) return true;
+    if (_initialized) destroy();
+    activate(bell, user);
+    return true;
+  }
 
+  function deactivateForUser(userId) {
+    if (userId) clearNotificationSnapshot(userId);
+    destroy();
+    var bell = $('#kcNotifBell');
+    if (bell) bell.style.display = 'none';
+  }
+
+  function bindAuthListener(bell) {
+    if (_authListenerBound) return;
+    _authListenerBound = true;
+    document.addEventListener('kc:authchange', function (event) {
+      var detail = event && event.detail ? event.detail : {};
+      var user = detail.user || null;
+      var previousUserId = _activeUserId;
+      var targetBell = bell || $('#kcNotifBell');
+
+      if (!user || !user.id) {
+        deactivateForUser(previousUserId);
+        return;
+      }
+
+      if (previousUserId && previousUserId !== normalizeNotificationId(user.id)) {
+        clearNotificationSnapshot(previousUserId);
+      }
+      activateForUser(targetBell, user);
+      fetchUnreadCount();
+    });
+  }
+
+  function init() {
     var bell = $('#kcNotifBell');
     if (!bell) return;
 
-    var attempts = 0;
-    var maxAttempts = 20;
+    bindAuthListener(bell);
 
-    function checkAuth() {
-      if (_initialized) return;
-      attempts++;
-
-      if (typeof window.KCAPI !== 'undefined' && typeof window.KCAPI.getCurrentUser === 'function') {
-        try {
-          Promise.resolve(window.KCAPI.getCurrentUser()).then(function (user) {
-            if (user && user.id) {
-              activate(bell, user);
-            } else if (attempts < maxAttempts) {
-              setTimeout(checkAuth, 500);
-            }
-          }).catch(function () {
-            if (attempts < maxAttempts) setTimeout(checkAuth, 500);
-          });
-        } catch (_) {
-          if (attempts < maxAttempts) setTimeout(checkAuth, 500);
-        }
-        return;
-      }
-
-      var authBtn = document.querySelector('a.btn-login.is-auth');
-      if (authBtn) {
-        activate(bell, null);
-        return;
-      }
-
-      if (attempts < maxAttempts) {
-        setTimeout(checkAuth, 500);
-      }
+    var snapshotUser = readShellSnapshotUser();
+    if (snapshotUser && snapshotUser.id) {
+      activateForUser(bell, snapshotUser);
     }
 
-    setTimeout(checkAuth, 600);
+    if (typeof window.KCAPI !== 'undefined' && typeof window.KCAPI.getCurrentUser === 'function') {
+      try {
+        Promise.resolve(window.KCAPI.getCurrentUser()).then(function (user) {
+          if (user && user.id) {
+            if (_activeUserId && _activeUserId !== normalizeNotificationId(user.id)) {
+              clearNotificationSnapshot(_activeUserId);
+            }
+            activateForUser(bell, user);
+            fetchUnreadCount();
+          } else if (_activeUserId) {
+            deactivateForUser(_activeUserId);
+          }
+        }).catch(function () {});
+      } catch (_) { }
+      return;
+    }
+
+    if (!snapshotUser || !snapshotUser.id) {
+      bell.style.display = 'none';
+    }
   }
 
   function destroy() {
     if (_channel) {
-      window.KCAPI.unsubscribeNotifications(_channel);
+      if (window.KCAPI && typeof window.KCAPI.unsubscribeNotifications === 'function') {
+        window.KCAPI.unsubscribeNotifications(_channel);
+      }
       _channel = null;
     }
 
@@ -597,6 +703,7 @@
     _busyAction = '';
     _initialized = false;
     _activeBell = null;
+    _activeUserId = '';
     _handleBellClick = null;
     _handleDocumentClick = null;
     _handleDocumentKeydown = null;

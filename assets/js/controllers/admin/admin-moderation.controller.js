@@ -560,7 +560,7 @@
   }
 
   function statusBadge(status) {
-    const map = { published: '#4caf50', pending: '#757575', hidden: '#ef6c00', deleted: '#c62828' };
+    const map = { published: '#4caf50', pending: '#757575', hidden: '#ef6c00', closed: '#64748b', deleted: '#c62828' };
     return `<span class="kc-badge" style="background:${map[status] || '#546e7a'};">${escape(status || 'unknown')}</span>`;
   }
 
@@ -598,6 +598,7 @@
             <div class="kc-admin-actions">
               ${actionButton('Ocultar', 'hidden', '#ef6c00', p.status === 'hidden')}
               ${actionButton('Restaurar', 'published', '#2e7d32', p.status === 'published')}
+              ${actionButton('Encerrar', 'closed', '#64748b', p.status === 'closed')}
               ${actionButton('Deletar', 'deleted', '#b71c1c', p.status === 'deleted')}
             </div>
           </td>
@@ -710,7 +711,7 @@
       if (state.sessionActions.length > 30) state.sessionActions.pop();
       renderPosts();
       renderSessionActions();
-      showFeedback(status === 'hidden' ? 'Post ocultado.' : status === 'published' ? 'Post restaurado/publicado.' : 'Post marcado como deletado.');
+      showFeedback(status === 'hidden' ? 'Post ocultado.' : status === 'published' ? 'Post restaurado/publicado.' : status === 'closed' ? 'Post encerrado.' : 'Post marcado como deletado.');
       showToastSafe('Ação concluída com sucesso.', 'success', 1800);
       await fetchAuditLogs();
       return { ok: true };
@@ -721,7 +722,7 @@
   function initStatusFilter() {
     const select = $('#moderation-status-filter');
     if (!select) return;
-    const statuses = ['all', 'published', 'pending', 'hidden', 'deleted'];
+    const statuses = ['all', 'published', 'pending', 'hidden', 'closed', 'deleted'];
     select.innerHTML = statuses.map((s) => `<option value="${s}">${s === 'all' ? 'Todos status' : s}</option>`).join('');
   }
 

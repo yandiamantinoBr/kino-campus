@@ -642,6 +642,30 @@
       gap: 8px;
     }
 
+    .kc-product-cta--closed,
+    .kc-product-cta--closed:hover {
+      background: rgba(148, 163, 184, .18);
+      border-color: rgba(148, 163, 184, .34);
+      color: #cbd5e1;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .kc-product-status-note--closed {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border: 1px solid rgba(148, 163, 184, .35);
+      border-radius: 10px;
+      font-size: .9em;
+      margin-bottom: 12px;
+      background: rgba(148, 163, 184, .14);
+      border-color: rgba(148, 163, 184, .35);
+      color: #cbd5e1;
+    }
+
     .kc-save-action.is-loading {
       opacity: .72;
       pointer-events: none;

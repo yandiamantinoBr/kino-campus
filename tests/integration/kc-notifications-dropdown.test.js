@@ -76,6 +76,22 @@ describe('KCNotifications dropdown hardening', () => {
     document.body.innerHTML = '';
   });
 
+  test('opens dropdown immediately while getNotifications revalidates in background', () => {
+    const code = fs.readFileSync(
+      path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),
+      'utf8'
+    );
+    window.KCAPI.getNotifications = jest.fn(() => new Promise(() => {}));
+    // eslint-disable-next-line no-eval
+    (0, eval)(code);
+
+    window.KCNotifications.init();
+    window.KCNotifications.toggleDropdown();
+
+    expect(document.getElementById('kcNotifDropdown')).not.toBeNull();
+    expect(window.KCAPI.getNotifications).toHaveBeenCalledTimes(1);
+  });
+
   test('keeps read, clear and realtime actions alive after rerender', async () => {
     const code = fs.readFileSync(
       path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),

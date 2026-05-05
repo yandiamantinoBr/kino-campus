@@ -116,6 +116,11 @@
   function executeContactAction(action, post) {
     if (!action) return false;
 
+    if (action.type === 'closed') {
+      toast('Esta publicacao foi encerrada.', 'info', 2200);
+      return true;
+    }
+
     if (action.type === 'login_required') {
       if (typeof window.kcQueueAuthIntent === 'function') {
         window.kcQueueAuthIntent(buildPostContactIntent(post));
@@ -149,9 +154,21 @@
     const meta = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
     const moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
     const categoryKey = String(post && (post.categoria || post.category) || '').trim().toLowerCase();
+    const status = String(post && (post.status || post.estado) || '').trim().toLowerCase();
     const authorId = (window._KCProduct.render && window._KCProduct.render.getPostAuthorId ? window._KCProduct.render.getPostAuthorId(post) : null);
     const viewProfileHref = buildProfileHref(authorId);
     const authorProfile = post && post.authorProfile && typeof post.authorProfile === 'object' ? post.authorProfile : null;
+
+    if (status === 'closed' || post.isClosed === true) {
+      return {
+        type: 'closed',
+        label: 'Encerrado',
+        iconClass: 'fas fa-lock',
+        handler: function () {
+          toast('Esta publicacao foi encerrada.', 'info', 2200);
+        },
+      };
+    }
 
     // link_as_cta: o criador do post marcou o link para ser a ação principal
     if (meta.link_as_cta) {
@@ -257,6 +274,12 @@
     btn.dataset.kcCtaTarget = String(action && action.target || '');
     btn.dataset.kcCtaRel = String(action && action.rel || '');
     btn.dataset.kcCtaActionType = String(action && action.type || 'safe_fallback');
+    btn.classList.toggle('kc-product-cta--closed', !!(action && action.type === 'closed'));
+    if (action && action.type === 'closed') {
+      btn.setAttribute('aria-disabled', 'true');
+    } else {
+      btn.removeAttribute('aria-disabled');
+    }
 
     if (btn.tagName === 'A') {
       btn.setAttribute('href', action && action.href ? action.href : '#');
@@ -273,6 +296,7 @@
           const liveAction = getPostContactAction(currentPost || post || {});
           if (executeContactAction(liveAction, currentPost || post || {})) {
             event.preventDefault();
+            if (liveAction && liveAction.type === 'closed') return;
             // Tracking de clique no CTA/cupom (fire-and-forget)
             try {
               const pid = (currentPost && (currentPost.uuid || currentPost.id)) || (post && (post.uuid || post.id));

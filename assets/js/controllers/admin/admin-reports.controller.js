@@ -464,7 +464,7 @@
     }
   }
 
-  async function setPostStatus(postId, status) {
+  async function setPostStatus(postId, status, closeReports) {
     const client = getClient();
     if (!client) return { ok: false, error: { message: 'Supabase client não disponível.' } };
 
@@ -472,7 +472,7 @@
       const rpc = await client.rpc('kc_admin_set_post_status', {
         p_post_id: postId,
         p_status: status,
-        p_close_reports: false,
+        p_close_reports: !!closeReports,
       });
 
       if (rpc && !rpc.error && rpc.data && typeof rpc.data === 'object') {
@@ -569,6 +569,8 @@
     switch (action) {
       case 'closeReports':
         return verifyReportsClosed(postId);
+      case 'closePost':
+        return verifyPostStatus(postId, 'closed');
       case 'hidePost':
         return verifyPostStatus(postId, 'hidden');
       case 'restorePost':
@@ -599,6 +601,13 @@
       case 'hidePost':
         if (!postId) return { ok: false, error: { message: 'post_id ausente para ocultar post.' } };
         result = await setPostStatus(postId, 'hidden');
+        break;
+      case 'closePost':
+        if (!postId) return { ok: false, error: { message: 'post_id ausente para encerrar post.' } };
+        if (!window.confirm(`Encerrar este post e fechar denuncias abertas? "${postTitle || postId}".`)) {
+          return { ok: false, cancelled: true };
+        }
+        result = await setPostStatus(postId, 'closed', true);
         break;
       case 'restorePost':
         if (!postId) return { ok: false, error: { message: 'post_id ausente para restaurar post.' } };
@@ -644,6 +653,7 @@
     hate: 'Discurso de ódio',
     illegal: 'Conteúdo ilegal',
     duplicate: 'Duplicado',
+    post_closed: 'Encerramento',
     other: 'Outro',
   };
 
@@ -808,7 +818,7 @@
         .map(([reason, count]) => `<span class="kc-badge" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);padding:2px 8px;border-radius:4px;margin:2px;font-size:.78em;">${escHtmlAdmin(reasonLabel(reason))}: <strong>${count}</strong></span>`)
         .join(' ');
 
-      const statusColor = { published: '#4caf50', hidden: '#ff9800', deleted: '#f44336', pending: '#9c27b0' }[postStatus] || '#757575';
+      const statusColor = { published: '#4caf50', hidden: '#ff9800', closed: '#64748b', deleted: '#f44336', pending: '#9c27b0' }[postStatus] || '#757575';
       const postStatusBadge = `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:.78em;background:${statusColor};color:#fff;margin-left:6px;">${escHtmlAdmin(postStatus)}</span>`;
       const displayItems = _filters.status === 'open' ? open : _filters.status === 'closed' ? closed : items;
       const rows = displayItems.map((row) => {
@@ -864,6 +874,11 @@
             <button type="button" data-action="restorePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
               <i class="fas fa-eye" aria-hidden="true"></i> Restaurar
+            </button>` : ''}
+            ${postStatus !== 'closed' && postStatus !== 'deleted' ? `
+            <button type="button" data-action="closePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
+                    style="padding:7px 14px;background:#64748b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
+              <i class="fas fa-lock" aria-hidden="true"></i> Encerrar post
             </button>` : ''}
             ${postStatus !== 'deleted' ? `
             <button type="button" data-action="deletePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
@@ -939,7 +954,8 @@
       const open = items.filter(r => r.status === 'open');
       const closed = items.filter(r => r.status !== 'open');
       const post = postMap[pid] || {};
-      const postTitle = escape(post.title || post.titulo || 'Post sem título');
+      const postTitleRaw = post.title || post.titulo || 'Post sem título';
+      const postTitle = escape(postTitleRaw);
       const postStatus = String(post.status || 'indisponível');
       const authorId = post.author_id || '';
 
@@ -1009,6 +1025,11 @@
             <button type="button" data-action="restorePost" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
               <i class="fas fa-eye" aria-hidden="true"></i> Restaurar
+            </button>` : ''}
+            ${postStatus !== 'closed' && postStatus !== 'deleted' ? `
+            <button type="button" data-action="closePost" data-post-id="${escape(pid)}" data-post-title="${escape(postTitleRaw)}"
+                    style="padding:7px 14px;background:#64748b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
+              <i class="fas fa-lock" aria-hidden="true"></i> Encerrar post
             </button>` : ''}
             ${postStatus !== 'deleted' ? `
             <button type="button" data-action="deletePost" data-post-id="${escape(pid)}"

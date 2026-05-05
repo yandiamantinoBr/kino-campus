@@ -807,7 +807,7 @@
     if (!postUuid) return { ok: false, error: { message: 'Post inválido para denúncia.' } };
 
     const reason = String(payload.reason || '').trim().toLowerCase();
-    const allowed = new Set(['spam', 'scam', 'inappropriate', 'hate', 'illegal', 'duplicate', 'other']);
+    const allowed = new Set(['spam', 'scam', 'inappropriate', 'hate', 'illegal', 'duplicate', 'other', 'post_closed']);
     if (!allowed.has(reason)) return { ok: false, error: { message: 'Selecione um motivo válido.' } };
 
     const detailsRaw = (payload.details == null) ? '' : String(payload.details);
@@ -952,6 +952,36 @@
     } catch (e) { return { ok: false, error: e }; }
   }
 
+  async function closePost(postId, payload = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase nÃ£o inicializado.' } };
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false, error: { message: 'ID de publicaÃ§Ã£o invÃ¡lido.' } };
+    const reason = String(payload.reason || 'owner_closed').trim().slice(0, 80) || 'owner_closed';
+
+    try {
+      const { data, error } = await client.rpc('kc_close_post', {
+        p_post_id: uuid,
+        p_reason: reason,
+      });
+      if (error) return { ok: false, error };
+      if (!data || data.ok === false) {
+        return {
+          ok: false,
+          code: (data && data.code) || 'UNKNOWN',
+          message: (data && data.message) || 'NÃ£o foi possÃ­vel encerrar a publicaÃ§Ã£o.',
+        };
+      }
+      return {
+        ok: true,
+        new_status: data.new_status || data.status || 'closed',
+        status: data.status || data.new_status || 'closed',
+        closed_at: data.closed_at || null,
+        message: data.message,
+      };
+    } catch (e) { return { ok: false, error: e }; }
+  }
+
   // ── Namespace ─────────────────────────────────────────────────────────────
   window._KCSA.postsWrite = {
     createPost,
@@ -961,6 +991,7 @@
     togglePostStatus,
     renewPost,
     bumpPost,
+    closePost,
   };
 
 })();

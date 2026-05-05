@@ -258,9 +258,13 @@ function applyPresentationRules(post, context = {}) {
   // UI: comentários compactos (ícone + número)
   if (p._kcCompactComments == null) p._kcCompactComments = true;
 
+  const isClosed = String(p.status || p.estado || '').trim().toLowerCase() === 'closed' || p.isClosed === true;
+  p.isClosed = isClosed;
+
   // Tempo Relativo (timeAgo)
-  if (p.created_at || p.timestamp) {
-    p._kcRelativeTime = _timeAgo(p.created_at || p.timestamp);
+  const effectiveTime = p.effective_at || p.effectiveAt || p.bumped_at || p.bumpedAt || p.created_at || p.createdAt || p.timestamp;
+  if (effectiveTime) {
+    p._kcRelativeTime = _timeAgo(effectiveTime);
   }
 
 
@@ -353,7 +357,7 @@ function applyPresentationRules(post, context = {}) {
   // V8.1.3.1.4: Unificação de CTA no footer de TODOS os módulos
   // Motivo: textos longos (ex.: "Reservar Vaga", "Inscrever-se") quebravam o layout do kc-card__footer no mobile.
   // Regra: sempre "Ver Mais".
-  p._kcCtaText = 'Ver Mais';
+  p._kcCtaText = isClosed ? 'Ver historico' : 'Ver Mais';
 
   // Verificação (V8.1.3.2)
   // - Agora é atributo do AUTOR (profiles.verified), mas mantemos compatibilidade com o legado.
@@ -576,6 +580,7 @@ function renderPostCard(post, options) {
   const emoji = (p.emoji || '✨');
 
   const moduleKey = String(p.modulo || '').toLowerCase();
+  const isClosed = p.isClosed === true || String(p.status || p.estado || '').trim().toLowerCase() === 'closed';
 
   const ts = (p.timestamp != null ? String(p.timestamp) : '');
 
@@ -590,6 +595,7 @@ function renderPostCard(post, options) {
 
   // V8.1.3.1.4: garante CTA curto e consistente (desktop + mobile)
   ctaText = 'Ver Mais';
+  if (isClosed) ctaText = 'Ver historico';
 
   const compactComments = true; // V8.1.2.4.5: padrão obrigatório (ícone + número)
 
@@ -609,6 +615,11 @@ function renderPostCard(post, options) {
     const modLabel = _getModuleLabel(p.modulo);
     const modIcon = _getModuleIconClass(p.modulo);
     badges.push(`<span class="kc-badge"><i class="${_escapeHtml(modIcon)}" aria-hidden="true"></i> ${_escapeHtml(modLabel)}</span>`);
+  }
+
+  // Status (Achados/Perdidos)
+  if (isClosed) {
+    badges.push('<span class="kc-badge kc-badge--closed"><i class="fas fa-lock" aria-hidden="true"></i> Encerrado</span>');
   }
 
   // Status (Achados/Perdidos)
@@ -735,8 +746,9 @@ function renderPostCard(post, options) {
 
   // Atributos para filtros/compatibilidade
   const attrs = [];
-  attrs.push(`class="kc-card${badgeHtml ? " kc-card--has-corner-badge" : ""}${isLegacyExample ? " kc-card--example" : ""}"`);
+  attrs.push(`class="kc-card${badgeHtml ? " kc-card--has-corner-badge" : ""}${isLegacyExample ? " kc-card--example" : ""}${isClosed ? " kc-card--closed" : ""}"`);
   if (id) attrs.push(`data-post-id="${_escapeHtml(id)}"`);
+  attrs.push(`data-status="${_escapeHtml(isClosed ? 'closed' : String(p.status || p.estado || 'published'))}"`);
   attrs.push(`data-verified="${_escapeHtml(String(!!p.verificado))}"`);
   if (moduleKey) attrs.push(`data-module="${_escapeHtml(String(moduleKey))}"`);
   const numericPrice = Number(p.preco != null ? p.preco : p.price);
@@ -790,6 +802,7 @@ function renderPostCard(post, options) {
   const votePostId = String(id);
   const votePostUuid = (p && p.uuid) ? String(p.uuid) : '';
   const voteUuidAttr = votePostUuid ? ` data-post-uuid="${encodeURIComponent(votePostUuid)}"` : '';
+  const voteDisabledAttr = isClosed ? ' disabled aria-disabled="true" title="Publicacao encerrada"' : '';
 
   return `
     <article ${attrs.join(' ')}>
@@ -822,11 +835,11 @@ function renderPostCard(post, options) {
       <div class="kc-card__footer">
         <div class="kc-card__interactions">
           <div class="kc-vote-box" data-kc-vote-box="true">
-            <button type="button" class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr} aria-label="Voto positivo">
+            <button type="button" class="hot" data-action="vote-hot" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr}${voteDisabledAttr} aria-label="Voto positivo">
               <i class="fas fa-fire" aria-hidden="true"></i>
             </button>
             <span class="kc-vote-score" data-kc-vote-score="true" aria-live="polite">${_escapeHtml(String(Number.isFinite(votos) ? votos : 0))}</span>
-            <button type="button" class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr} aria-label="Voto negativo">
+            <button type="button" class="cold" data-action="vote-cold" data-post-id="${encodeURIComponent(votePostId)}" data-post-legacy-id="${encodeURIComponent(String(id))}"${voteUuidAttr}${voteDisabledAttr} aria-label="Voto negativo">
               <i class="fas fa-snowflake" aria-hidden="true"></i>
             </button>
           </div>

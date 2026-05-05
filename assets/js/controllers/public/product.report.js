@@ -29,8 +29,10 @@
 
   // ── Estado ────────────────────────────────────────────────────────────────
   var _reportPopover = null;
+  var _closedReportButton = null;
 
   var REPORT_REASONS = [
+    { value: 'post_closed',   label: 'Publicacao encerrada',        icon: 'fas fa-lock' },
     { value: 'spam',          label: 'Spam / conteúdo repetitivo',   icon: 'fas fa-ban' },
     { value: 'scam',          label: 'Golpe / fraude',               icon: 'fas fa-exclamation-triangle' },
     { value: 'inappropriate', label: 'Conteúdo impróprio',           icon: 'fas fa-eye-slash' },
@@ -41,6 +43,93 @@
   ];
 
   // ── wireReportButton ──────────────────────────────────────────────────────
+  function shouldShowClosedReport(ctx) {
+    var status = String(ctx && ctx.postStatus || '').trim().toLowerCase();
+    if (status === 'closed') return false;
+    return ctx && ctx.isOwner !== true;
+  }
+
+  function upsertClosedReportButton(ctx, reportBtn) {
+    var actions = document.querySelector('.kc-product-actions');
+    var anchor = reportBtn || document.getElementById('reportButton');
+    if (!actions || !anchor) return;
+
+    if (!shouldShowClosedReport(ctx)) {
+      if (_closedReportButton && _closedReportButton.parentNode) _closedReportButton.parentNode.removeChild(_closedReportButton);
+      _closedReportButton = null;
+      return;
+    }
+
+    if (!_closedReportButton || !document.body.contains(_closedReportButton)) {
+      _closedReportButton = document.createElement('button');
+      _closedReportButton.type = 'button';
+      _closedReportButton.className = 'kc-btn-secondary';
+      _closedReportButton.id = 'closedReportButton';
+      _closedReportButton.setAttribute('data-action', 'report-post-closed');
+      _closedReportButton.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i> Relatar encerrado';
+      actions.insertBefore(_closedReportButton, anchor);
+    }
+
+    _closedReportButton.dataset.kcReportPostId = String(ctx.postId || '');
+    _closedReportButton.dataset.kcReportPostTitle = String(ctx.postTitle || 'Publicacao');
+
+    if (_closedReportButton.dataset.kcClosedReportBound === '1') return;
+    _closedReportButton.dataset.kcClosedReportBound = '1';
+    _closedReportButton.addEventListener('click', async function (e) {
+      var btn = e.currentTarget;
+      var postId = btn.dataset.kcReportPostId || '';
+      var prevHTML = btn.innerHTML;
+      var user = null;
+      var res = null;
+      e.preventDefault();
+      e.stopPropagation();
+
+      var driver = (window.KC_ENV && window.KC_ENV.driver) ? window.KC_ENV.driver : 'local';
+      if (driver !== 'supabase') {
+        try { showToast('Relatos disponiveis apenas no modo Supabase.', 'info', 2200); } catch (_) { }
+        return;
+      }
+
+      try {
+        if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+          user = await window.KCAPI.getCurrentUser();
+        }
+      } catch (_) { }
+
+      if (!user) {
+        try { showToast('Faca login para relatar encerramento.', 'info', 2200); } catch (_) { }
+        try { if (typeof window.kcOpenAuthModal === 'function') window.kcOpenAuthModal(); } catch (_) { }
+        return;
+      }
+
+      if (!window.confirm('Relatar esta publicacao como encerrada para a moderacao?')) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Enviando...';
+      try {
+        if (window.KCAPI && typeof window.KCAPI.reportPost === 'function') {
+          res = await window.KCAPI.reportPost(postId, {
+            reason: 'post_closed',
+            details: 'Usuario relatou que a publicacao deve ser encerrada.',
+          });
+        }
+      } catch (_) { }
+
+      btn.disabled = false;
+      btn.innerHTML = prevHTML;
+
+      if (res && res.ok) {
+        try { showToast('Relato enviado para a moderacao.', 'success', 2400); } catch (_) { }
+        return;
+      }
+
+      try {
+        var msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Nao foi possivel enviar o relato.';
+        showToast(msg, 'error', 2800);
+      } catch (_) { }
+    });
+  }
+
   function wireReportButton(ctx) {
     var btn = document.getElementById('reportButton');
     if (!btn) return;
@@ -48,6 +137,7 @@
     if (btn.dataset.kcReportBound === '1') {
       btn.dataset.kcReportPostId = String(ctx.postId || '');
       btn.dataset.kcReportPostTitle = String(ctx.postTitle || 'Publicação');
+      upsertClosedReportButton(ctx, btn);
       return;
     }
 
@@ -86,6 +176,8 @@
       if (!_reportPopover) _reportPopover = buildReportPopover();
       _reportPopover.open(payloadCtx, btn);
     });
+
+    upsertClosedReportButton(ctx, btn);
   }
 
   // ── buildReportPopover ────────────────────────────────────────────────────

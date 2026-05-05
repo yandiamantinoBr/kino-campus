@@ -10,7 +10,7 @@
   'use strict';
 
   const POSTS_LIMIT = 12;
-  const FEED_SNAPSHOT_VERSION = 3;
+  const FEED_SNAPSHOT_VERSION = 4;
   const NEW_CARD_HIGHLIGHT_MS = 1500;
   const FEED_CACHE_MAX_AGE_MS = 1000 * 60 * 10;
   const FEED_REVALIDATE_COOLDOWN_MS = 1000 * 45;
@@ -206,7 +206,7 @@
   }
 
   function getPostTimestampMs(raw) {
-    const ts = raw && (raw.created_at || raw.createdAt || raw.timestamp || raw.data);
+    const ts = raw && (raw.effective_at || raw.effectiveAt || raw.bumped_at || raw.bumpedAt || raw.created_at || raw.createdAt || raw.timestamp || raw.data);
     if (!ts) return 0;
     const ms = new Date(String(ts)).getTime();
     return Number.isFinite(ms) ? ms : 0;

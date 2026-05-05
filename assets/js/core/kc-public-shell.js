@@ -65,8 +65,9 @@
     return String((profile && (profile.display_name || profile.full_name)) || (user && user.email ? String(user.email).split('@')[0] : '') || 'Minha conta').trim();
   }
 
-  function getSnapshotAvatar() {
-    return '';
+  function getSnapshotAvatar(snapshot) {
+    const profile = snapshot && snapshot.profile ? snapshot.profile : null;
+    return String((profile && profile.avatar_url) || '').trim();
   }
 
   function buildHeaderAvatarMarkup(avatarUrl, display) {

@@ -58,6 +58,7 @@ describe('product.edit.js - owner actions', () => {
     expect(source).toContain("toggleBtn.id = 'togglePostStatusButton'");
     expect(source).toContain("renewBtn.id = 'renewPostButton'");
     expect(source).toContain("bumpBtn.id = 'bumpPostButton'");
+    expect(source).toContain("closeBtn.id = 'closePostButton'");
     expect(source).toContain("deleteBtn.id = 'deletePostButton'");
     expect(source).toContain("badge.id = 'ownerStatusBadge'");
   });
@@ -74,6 +75,8 @@ describe('product.edit.js - owner actions', () => {
     expect(source).toContain('window.KCAPI.togglePostStatus');
     expect(source).toContain('window.KCAPI.renewPost');
     expect(source).toContain('window.KCAPI.bumpPost');
+    expect(source).toContain('window.KCAPI.closePost');
+    expect(source).toContain("{ reason: 'owner_closed' }");
   });
 });
 

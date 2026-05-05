@@ -205,6 +205,19 @@ describe('applyPresentationRules ? shape b?sico', () => {
     });
     expect(output._kcVerifiedTag).toBe('@oficial');
   });
+
+  test('marca publicacao encerrada e usa horario efetivo', () => {
+    const output = pres().applyPresentationRules({
+      modulo: 'eventos',
+      status: 'closed',
+      titulo: 'Evento finalizado',
+      created_at: '2026-04-20T12:00:00.000Z',
+      bumped_at: '2026-05-01T10:00:00.000Z',
+    });
+    expect(output.isClosed).toBe(true);
+    expect(output._kcCtaText).toBe('Ver historico');
+    expect(output._kcRelativeTime).toBeTruthy();
+  });
 });
 
 describe('getDisplayMarkerTags', () => {
@@ -319,5 +332,27 @@ describe('renderPostCard', () => {
     expect(html).toContain('kc-card--example');
     expect(html).toContain('kc-cashback-badge');
     expect(html).toContain('Biblioteca Central');
+  });
+
+  test('renderiza card encerrado como historico sem bloquear comentarios', () => {
+    const html = pres().renderPostCard({
+      id: 'post-closed',
+      modulo: 'eventos',
+      categoria: 'eventos',
+      status: 'closed',
+      titulo: 'Workshop encerrado',
+      descricao: 'Evento ja finalizado',
+      votos: 4,
+      comentarios: 2,
+      created_at: '2026-04-20T12:00:00.000Z',
+      bumped_at: '2026-05-01T10:00:00.000Z',
+    });
+    expect(html).toContain('kc-card--closed');
+    expect(html).toContain('data-status="closed"');
+    expect(html).toContain('kc-badge--closed');
+    expect(html).toContain('Encerrado');
+    expect(html).toContain('Ver historico');
+    expect(html).toContain('disabled aria-disabled="true"');
+    expect(html).toContain('product.html?id=post-closed#comments');
   });
 });

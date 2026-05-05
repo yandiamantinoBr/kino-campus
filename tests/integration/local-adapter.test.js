@@ -83,6 +83,7 @@ describe('Local Adapter - Registro do driver', () => {
       'updatePost',
       'deletePost',
       'reportPost',
+      'closePost',
       'getComments',
       'addComment',
       'likeComment',
@@ -148,6 +149,11 @@ describe('Local Adapter - Stubs retornam valores seguros', () => {
 
   test('togglePostStatus retorna indisponivel no modo local', async () => {
     const result = await driver.togglePostStatus();
+    expect(result.code).toBe('UNAVAILABLE');
+  });
+
+  test('closePost retorna indisponivel no modo local', async () => {
+    const result = await driver.closePost();
     expect(result.code).toBe('UNAVAILABLE');
   });
 

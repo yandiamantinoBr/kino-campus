@@ -380,6 +380,7 @@ const { ENV } = window.KCAPI;
     togglePostStatus: window._KCSA.postsWrite.togglePostStatus,
     renewPost: window._KCSA.postsWrite.renewPost,
     bumpPost: window._KCSA.postsWrite.bumpPost,
+    closePost: window._KCSA.postsWrite.closePost,
     getTopContributors: window._KCSA.analytics.getTopContributors,
     trackCouponClick: window._KCSA.analytics.trackCouponClick,
     trackShare: window._KCSA.analytics.trackShare,

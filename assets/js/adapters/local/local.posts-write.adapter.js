@@ -287,6 +287,10 @@
     return { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
   }
 
+  async function closePost() {
+    return { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+  }
+
   window._KCLA.postsWrite = Object.freeze({
     createPost: createPost,
     updatePost: updatePost,
@@ -295,5 +299,6 @@
     togglePostStatus: togglePostStatus,
     renewPost: renewPost,
     bumpPost: bumpPost,
+    closePost: closePost,
   });
 }());

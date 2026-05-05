@@ -345,9 +345,15 @@
     }
     _deps.resumeContact(post);
     if (window._KCProduct.report && typeof window._KCProduct.report.wireReportButton === 'function') {
+      var reportAuthorId = (window._KCProduct.render && typeof window._KCProduct.render.getPostAuthorId === 'function')
+        ? window._KCProduct.render.getPostAuthorId(post)
+        : String(post && (post.autorId || post.authorId || post.author_id) || '').trim();
+      var reportUser = _deps.getUser ? _deps.getUser() : null;
       window._KCProduct.report.wireReportButton({
         postId: (post && post.uuid) ? post.uuid : post.id,
         postTitle: post.titulo || post.title || 'Publicação',
+        postStatus: post.status || post.estado || 'published',
+        isOwner: !!(reportUser && reportUser.id && reportAuthorId && String(reportUser.id) === String(reportAuthorId)),
       });
     }
   }

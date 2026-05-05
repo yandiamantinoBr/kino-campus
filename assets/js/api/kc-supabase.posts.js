@@ -482,8 +482,9 @@
              .order('last_comment_at', { ascending: false, nullsFirst: false })
              .order('created_at', { ascending: false });
       } else {
-        // Feed Recentes: bumped_at (impulso) tem prioridade, depois created_at
-        q = q.order('bumped_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
+        // Feed Recentes: a RPC usa COALESCE(bumped_at, created_at); este fallback
+        // mantem created_at no servidor e reordena a pagina carregada no cliente.
+        q = q.order('created_at', { ascending: false });
       }
 
       if (moduleEqValue) q = q.eq('module', moduleEqValue);
@@ -566,6 +567,14 @@
     }
 
     let rows = (res && Array.isArray(res.data)) ? res.data : [];
+    if (f.sortBy === 'recentes') {
+      rows = rows.slice().sort((a, b) => {
+        const aTime = new Date((a && (a.bumped_at || a.created_at)) || 0).getTime() || 0;
+        const bTime = new Date((b && (b.bumped_at || b.created_at)) || 0).getTime() || 0;
+        if (bTime !== aTime) return bTime - aTime;
+        return String((b && b.id) || '').localeCompare(String((a && a.id) || ''));
+      });
+    }
 
     // Fallback resiliente: se o filtro module via eq não retornar linhas,
     // tenta buscar sem filtro e filtra no client com normalização/aliases.

@@ -40,6 +40,22 @@
     return post.uuid || post.id || null;
   }
 
+  function clearPostSessionCaches() {
+    var store = window.KCSessionStore;
+    if (!store || typeof store.clearPrefix !== 'function') return;
+    try { store.clearPrefix('feeds', ''); } catch (_) { }
+    try { store.clearPrefix('my-posts', ''); } catch (_) { }
+    try { store.clearPrefix('profile-posts', ''); } catch (_) { }
+  }
+
+  function getClosedLabel(post) {
+    var moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
+    if (moduleKey === 'eventos') return 'Evento encerrado';
+    if (moduleKey === 'caronas') return 'Carona encerrada';
+    if (moduleKey === 'compra-venda') return 'Anuncio encerrado';
+    return 'Publicacao encerrada';
+  }
+
   function markPostAsEdited() {
     var titleEl = document.getElementById('postTitle');
     var existing;
@@ -248,9 +264,11 @@
     var isExpired;
     var isPublished;
     var isPending;
+    var isClosed;
     var toggleBtn;
     var renewBtn;
     var bumpBtn;
+    var closeBtn;
     var deleteBtn;
     var ownerStatusBadge;
     var reportBtn;
@@ -277,13 +295,14 @@
     isExpired = postStatus === 'expired';
     isPublished = postStatus === 'published';
     isPending = postStatus === 'pending';
+    isClosed = postStatus === 'closed';
 
     toggleBtn = document.createElement('button');
     toggleBtn.type = 'button';
     toggleBtn.className = 'kc-btn-secondary';
     toggleBtn.id = 'togglePostStatusButton';
     toggleBtn.setAttribute('data-post-status', postStatus);
-    if (isExpired || isPending) {
+    if (isExpired || isPending || isClosed) {
       toggleBtn.style.display = 'none';
     } else {
       toggleBtn.innerHTML = isHidden
@@ -296,7 +315,7 @@
     renewBtn.className = 'kc-btn-secondary';
     renewBtn.id = 'renewPostButton';
     renewBtn.innerHTML = '<i class="fas fa-rotate-right"></i> Renovar publicacao';
-    renewBtn.style.display = (isExpired || isHidden) ? '' : 'none';
+    renewBtn.style.display = (isExpired || isHidden) && !isClosed ? '' : 'none';
 
     bumpBtn = document.createElement('button');
     bumpBtn.type = 'button';
@@ -307,7 +326,7 @@
       var bumpedAt = post && (post.bumped_at || post.bumpedAt);
       var bumpCooldownMs = 1 * 24 * 60 * 60 * 1000;
       var bumpReady = !bumpedAt || (Date.now() - new Date(bumpedAt).getTime() >= bumpCooldownMs);
-      bumpBtn.style.display = isPublished ? '' : 'none';
+      bumpBtn.style.display = isPublished && !isClosed ? '' : 'none';
       if (bumpReady) {
         bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionar hoje';
       } else {
@@ -325,6 +344,13 @@
     deleteBtn.id = 'deletePostButton';
     deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Excluir';
 
+    closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'kc-btn-secondary';
+    closeBtn.id = 'closePostButton';
+    closeBtn.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i> Encerrar';
+    closeBtn.style.display = (!isPending && !isClosed && postStatus !== 'deleted') ? '' : 'none';
+
     ownerStatusBadge = document.getElementById('ownerStatusBadge');
     if (ownerStatusBadge) ownerStatusBadge.remove();
 
@@ -335,6 +361,17 @@
         badge.id = 'ownerStatusBadge';
         badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.3);color:#93c5fd;font-size:.9em;margin-bottom:12px;';
         badge.innerHTML = '<i class="fas fa-clock"></i><span>Esta publicacao esta <strong>em analise</strong> pela moderacao e nao aparece nos feeds ainda. Voce sera notificado quando for aprovada.</span>';
+        if (details) details.insertAdjacentElement('afterbegin', badge);
+      })();
+    } else if (isClosed) {
+      (function () {
+        if (document.getElementById('kcClosedStatusNote')) return;
+        var badge = document.createElement('div');
+        var details = document.querySelector('.kc-product-details');
+        badge.id = 'ownerStatusBadge';
+        badge.className = 'kc-product-status-note kc-product-status-note--closed';
+        badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(148,163,184,.14);border:1px solid rgba(148,163,184,.35);color:#cbd5e1;font-size:.9em;margin-bottom:12px;';
+        badge.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span>' + getClosedLabel(post) + ': ela continua no feed como historico, mas nao fica ativa.</span>';
         if (details) details.insertAdjacentElement('afterbegin', badge);
       })();
     } else if (isHidden || isExpired) {
@@ -374,6 +411,7 @@
     wrap.appendChild(bumpBtn);
     wrap.appendChild(renewBtn);
     wrap.appendChild(toggleBtn);
+    wrap.appendChild(closeBtn);
     wrap.appendChild(deleteBtn);
 
     reportBtn = document.getElementById('reportButton');
@@ -478,6 +516,7 @@
 
         post.status = nowHidden ? 'hidden' : 'published';
         post.estado = post.status;
+        clearPostSessionCaches();
 
         existingBadge = document.getElementById('ownerStatusBadge');
         if (existingBadge) existingBadge.remove();
@@ -498,6 +537,51 @@
       toggleBtn.innerHTML = prevHTML;
       errMsg = (res && res.error && res.error.message) ? String(res.error.message) : 'Nao foi possivel alterar o status do anuncio.';
       toast(errMsg, 'error', 2800);
+    });
+
+    closeBtn.addEventListener('click', async function () {
+      var confirmed;
+      var prevHTML;
+      var res = null;
+      var next;
+      var msg;
+
+      if (closeBtn.disabled) return;
+      confirmed = window.confirm('Encerrar esta publicacao? Ela continuara visivel como historico, mas nao ficara ativa no feed.');
+      if (!confirmed) return;
+
+      closeBtn.disabled = true;
+      prevHTML = closeBtn.innerHTML;
+      closeBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Encerrando...';
+
+      try {
+        if (window.KCAPI && typeof window.KCAPI.closePost === 'function') {
+          res = await window.KCAPI.closePost(getPostIdForMutation(post), { reason: 'owner_closed' });
+        }
+      } catch (_) { }
+
+      closeBtn.disabled = false;
+
+      if (res && res.ok) {
+        post.status = 'closed';
+        post.estado = 'closed';
+        post.isClosed = true;
+        post.effective_at = post.effective_at || post.bumped_at || post.created_at || post.createdAt || null;
+        post.effectiveAt = post.effectiveAt || post.effective_at;
+        clearPostSessionCaches();
+        toast(res.message || 'Publicacao encerrada.', 'success', 2400);
+        if (context && typeof context.renderPost === 'function') {
+          next = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
+            ? window.KCPostModel.from(post, { pageModule: post.modulo || post.module || '', view: 'product' })
+            : post;
+          context.renderPost(next);
+        }
+        return;
+      }
+
+      closeBtn.innerHTML = prevHTML;
+      msg = (res && (res.message || (res.error && res.error.message))) ? String(res.message || res.error.message) : 'Nao foi possivel encerrar a publicacao.';
+      toast(msg, 'error', 2800);
     });
 
     renewBtn.addEventListener('click', async function () {
@@ -528,6 +612,7 @@
       if (res && res.ok) {
         post.status = 'published';
         post.estado = 'published';
+        post.isClosed = false;
         renewBtn.style.display = 'none';
         toggleBtn.style.display = '';
         toggleBtn.setAttribute('data-post-status', 'published');
@@ -535,6 +620,7 @@
         bumpBtn.style.display = '';
         existingBadge = document.getElementById('ownerStatusBadge');
         if (existingBadge) existingBadge.remove();
+        clearPostSessionCaches();
         toast(res.message || 'Publicacao renovada! Disponivel por mais 30 dias.', 'success', 3000);
         return;
       }
@@ -564,7 +650,11 @@
         bumpBtn.disabled = true;
         bumpBtn.style.opacity = '0.55';
         bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionado!';
-        post.bumped_at = new Date().toISOString();
+        post.bumped_at = (res && res.bumped_at) || new Date().toISOString();
+        post.bumpedAt = post.bumped_at;
+        post.effective_at = post.bumped_at;
+        post.effectiveAt = post.bumped_at;
+        clearPostSessionCaches();
         toast(res.message || 'Anuncio impulsionado com sucesso!', 'success', 3000);
         return;
       }

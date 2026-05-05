@@ -1109,7 +1109,11 @@
 
     const createdAt = r.createdAt || r.created_at || null;
     const created_at = r.created_at || r.createdAt || null;
-    const timestamp = r.timestamp || createdAt || '';
+    const bumpedAt = r.bumpedAt || r.bumped_at || null;
+    const bumped_at = r.bumped_at || r.bumpedAt || null;
+    const effectiveAt = r.effectiveAt || r.effective_at || bumpedAt || createdAt || null;
+    const effective_at = r.effective_at || r.effectiveAt || bumped_at || created_at || null;
+    const timestamp = r.timestamp || effectiveAt || createdAt || '';
     const emoji = r.emoji || '✨';
 
     // V8.1.3.2: verificação passa a ser atributo do AUTOR (profiles.verified).
@@ -1125,6 +1129,7 @@
     const verificado = (Boolean(r.verificado ?? r.verified ?? false) || authorVerified);
 
     const status = String(r.status || '').trim().toLowerCase() || 'published';
+    const isClosed = status === 'closed';
     const visibility = String(r.visibility || meta.visibility || '').trim().toLowerCase() || 'public';
     const tagLabels = Array.isArray(r.tags) ? r.tags : [];
     const tagKeys = Array.isArray(r.tagKeys) ? r.tagKeys : (tagLabels.length ? tagLabels : []);
@@ -1159,9 +1164,14 @@
       // Datas (úteis para badges/ordenação; não quebra o contrato legado)
       createdAt,
       created_at,
+      bumpedAt,
+      bumped_at,
+      effectiveAt,
+      effective_at,
       emoji,
       verificado,
       status,
+      isClosed,
       visibility,
 
       // Autor (status)
@@ -1627,6 +1637,18 @@
       return { ok: false, code: 'UNAVAILABLE', message: 'Impulsionamento indisponível neste driver.' };
     }
     return driver.bumpPost(postId);
+  }
+
+  async function closePost(postId, payload = {}) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.closePost === 'function') {
+      return postsWriteModule.closePost(postId, payload, buildPostsWriteDeps());
+    }
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.closePost !== 'function') {
+      return { ok: false, code: 'UNAVAILABLE', message: 'Encerramento indisponivel neste driver.' };
+    }
+    return driver.closePost(postId, payload);
   }
 
   async function getTopContributors(period, module, limit) {
@@ -2304,6 +2326,7 @@
     togglePostStatus,
     renewPost,
     bumpPost,
+    closePost,
     getTopContributors,
     trackCouponClick,
     trackShare,
