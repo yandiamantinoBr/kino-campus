@@ -1,6 +1,6 @@
 # Guia de Desenvolvimento para IA — KinoCampus
 
-**Versão:** v71.0.0 · **Atualizado em:** 2026-05-05
+**Versão:** v72.0.0 · **Atualizado em:** 2026-05-05
 
 > **Leia este documento integralmente antes de qualquer modificação.**
 > Este guia é auto-contido: uma IA sem contexto anterior deve conseguir trabalhar
@@ -41,15 +41,15 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Testes | Jest (135 suites) + Playwright (8 suites E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v71)
+### Estado atual (v72)
 
 | Campo | Valor |
 |-------|-------|
-| Branch principal | `kinocampus-V71.0-foundations` |
-| Branch de features | `feature/v71.X.Y-descricao-curta` |
-| appVersion | `71.0.0` (v71 encerrada; patch PUBLIC-A11Y pontual documentado em `docs/qa/reports/`) |
+| Branch principal | `kinocampus-V72.0-foundations` |
+| Branch de features | `feature/v72.X.Y-descricao-curta` |
+| appVersion | `72.0.0` (v72 encerrada; patch PUBLIC-A11Y pontual documentado em `docs/qa/reports/`) |
 | frontendRuntimeVersion | `8.6.0` (constante canônica — **nunca alterar**) |
-| Jest | 135 suites · 3072 testes |
+| Jest | 135 suites · 3073 testes |
 | check:all | 5/5 validators verdes |
 | Itens validados (check:structure) | 156 |
 
@@ -94,25 +94,25 @@ kino-campus/
 ### Sequência exata — não pular etapas
 
 ```
-1. git checkout kinocampus-V71.0-foundations
+1. git checkout kinocampus-V72.0-foundations
 2. git pull
-3. git checkout -b feature/v71.X.Y-descricao-curta
+3. git checkout -b feature/v72.X.Y-descricao-curta
 4. [ implementar mudanças ]
 5. npm run check:all          ← DEVE ser 5/5 verdes
-   npm test                   ← DEVE ser ≥135/135 suites, ≥3072/3072 testes
+   npm test                   ← DEVE ser ≥135/135 suites, ≥3073/3073 testes
 6. git add <arquivos específicos>
 7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-8. git push -u origin feature/v71.X.Y-descricao-curta
+8. git push -u origin feature/v72.X.Y-descricao-curta
 9. gh pr create --title "..." --body "..."
 10. gh pr merge <número> --squash --delete-branch
-11. git checkout kinocampus-V71.0-foundations
+11. git checkout kinocampus-V72.0-foundations
 12. git pull
 ```
 
 ### Nomeação de branches
 
 ```
-feature/v71.X.Y-descricao-curta
+feature/v72.X.Y-descricao-curta
 
 Exemplos válidos:
   feature/v65.1.0-public-a11y-post-card-comments
@@ -281,7 +281,7 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 **O que verifica:**
 - `VERSION.json` existe e tem todos os 6 campos obrigatórios: `project`, `appVersion`, `frontendRuntimeVersion`, `branch`, `status`, `updatedAt`
 - `frontendRuntimeVersion` é exatamente `"8.6.0"` (constante canônica imutável)
-- `branch` é exatamente `"kinocampus-V71.0-foundations"`
+- `branch` é exatamente `"kinocampus-V72.0-foundations"`
 - `appVersion` tem formato semântico `X.Y.Z`
 - `updatedAt` tem formato `YYYY-MM-DD`
 - A string `'8.6.0'` aparece literalmente em ~17 arquivos JS (todos devem bater)
@@ -292,10 +292,10 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 // VERSION.json — campos obrigatórios
 {
   "project": "KinoCampus",
-  "appVersion": "71.0.0",
+  "appVersion": "72.0.0",
   "frontendRuntimeVersion": "8.6.0",
-  "branch": "kinocampus-V71.0-foundations",
-  "status": "v71 encerrada",
+  "branch": "kinocampus-V72.0-foundations",
+  "status": "v72 encerrada",
   "updatedAt": "2026-04-30"
 }
 ```
@@ -509,7 +509,7 @@ describe('MeuModulo', () => {
 
 **Nunca reduzir o número de suites ou de testes.**
 
-- Antes de commitar: `npm test` deve mostrar `≥135 passed, 135 total` e `≥3072 passed, 3072 total`
+- Antes de commitar: `npm test` deve mostrar `≥135 passed, 135 total` e `≥3073 passed, 3073 total`
 - Se uma nova suite é criada, a contagem sobe — o gate da suite nova deve ser documentado no commit
 - Nunca deletar suites existentes
 - Nunca comentar ou pular testes (`it.skip`, `describe.skip`) sem aprovação explícita
@@ -616,7 +616,7 @@ git commit -m "$(cat <<'EOF'
 fix(validator): adiciona components/ ao CANONICAL_JS
 
 carousel.js, toast.js e voting.js estavam faltando da lista de
-arquivos canônicos. Validator agora verifica 156 itens (baseline v71).
+arquivos canônicos. Validator agora verifica 156 itens (baseline v72).
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 EOF
@@ -677,7 +677,7 @@ git add -A
 | `innerHTML` sem `escapeHtml()` em conteúdo de usuário | Vulnerabilidade XSS direta |
 | Instalar dependências de produção (`npm install --save`) | Stack vanilla — sem npm em prod |
 | Usar React, Vue, Angular, TypeScript, Babel, Webpack, Vite | Stack imutável |
-| Push direto para `kinocampus-V71.0-foundations` | Branch protegida — fluxo via PR |
+| Push direto para `kinocampus-V72.0-foundations` | Branch protegida — fluxo via PR |
 | `git push --force` em qualquer branch | Proibido sem aprovação explícita |
 | `git commit --amend` em commits já publicados | Reescreve histórico público |
 
@@ -687,7 +687,7 @@ git add -A
 |----------|--------|
 | Deletar suites existentes | Reduz cobertura; vide regra de ouro |
 | `it.skip` ou `describe.skip` sem aprovação | Mascara falhas |
-| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 135/3072 |
+| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 135/3073 |
 | Commitar com `npm test` com falhas | Proibido terminantemente |
 
 ### Validators
@@ -719,7 +719,7 @@ git add -A
 | RPCs, triggers e funções PostgreSQL | `docs/rpc-catalog.md` |
 | Variáveis de ambiente, `KC_ENV`, Supabase, Vercel | `docs/env-vars.md` |
 | Tokens visuais, componentes CSS, popovers, responsividade | `docs/design-system.md` |
-| Estado atual da release v70, iterações, DoD | `RELATORIO-KINOCAMPUS-V70.md` |
+| Estado atual da release v72, iterações, DoD | `RELATORIO-KINOCAMPUS-V72.md` |
 | Histórico de releases e hotfixes | `CHANGELOG.md` |
 | Invariantes Vercel/Supabase de produção | `docs/ops/vercel-supabase-invariants.md` |
 | Índice de todos os documentos técnicos | `docs/index.md` |
@@ -773,6 +773,6 @@ npm run check:routes     # 22 rotas + CSS
 npm run check:hygiene    # 8.6.0, i18n B2, inline handlers, cadeias
 
 # Testes
-npm test                 # 135 suites · 3072 testes
+npm test                 # 135 suites · 3073 testes
 npm run test:e2e         # 8 suites Playwright · 51 testes
 ```

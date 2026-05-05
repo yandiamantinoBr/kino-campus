@@ -239,7 +239,7 @@
     if (!btn) return;
     if (isLoading) {
       _refreshOrigHtml = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Atualizando...';
       btn.classList.add('is-loading');
     } else {
       if (_refreshOrigHtml) btn.innerHTML = _refreshOrigHtml;
@@ -259,7 +259,7 @@
   function setLastSync() {
     const el = $('#admin-last-sync');
     if (!el) return;
-    el.innerHTML = '<i class="fas fa-circle-check" style="color:var(--kc-primary-brand);margin-right:5px;"></i>'
+    el.innerHTML = '<i class="fas fa-circle-check" style="color:var(--kc-primary-brand);margin-right:5px;" aria-hidden="true"></i>'
       + 'Atualizado em ' + new Date().toLocaleString('pt-BR')
       + ' &nbsp;<span style="opacity:.6;font-size:.78rem;">- clique para atualizar</span>';
   }
@@ -321,13 +321,13 @@
   function updateTitles(days) {
     var fullLabel = getPeriodLabel(days);
     var titles = [
-      ['#admin-moderation-title', '<i class="fas fa-shield-halved"></i> Moderação (' + fullLabel + ')'],
-      ['#admin-activity-title', '<i class="fas fa-chart-bar"></i> Atividade da plataforma (' + fullLabel + ')'],
-      ['#admin-community-title', '<i class="fas fa-users"></i> Comunidade (' + fullLabel + ')'],
-      ['#admin-trends-title', '<i class="fas fa-magnifying-glass-chart"></i> Tendências de busca (' + fullLabel + ')'],
-      ['#admin-audit-title', '<i class="fas fa-clock-rotate-left"></i> Audit log (' + fullLabel + ')'],
-      ['#admin-activity-pulse-title', '<i class="fas fa-wave-square"></i> Pulso diário (' + fullLabel + ')'],
-      ['#admin-module-share-title', '<i class="fas fa-table-cells"></i> Top módulos (' + fullLabel + ')']
+      ['#admin-moderation-title', '<i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação (' + fullLabel + ')'],
+      ['#admin-activity-title', '<i class="fas fa-chart-bar" aria-hidden="true"></i> Atividade da plataforma (' + fullLabel + ')'],
+      ['#admin-community-title', '<i class="fas fa-users" aria-hidden="true"></i> Comunidade (' + fullLabel + ')'],
+      ['#admin-trends-title', '<i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Tendências de busca (' + fullLabel + ')'],
+      ['#admin-audit-title', '<i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Audit log (' + fullLabel + ')'],
+      ['#admin-activity-pulse-title', '<i class="fas fa-wave-square" aria-hidden="true"></i> Pulso diário (' + fullLabel + ')'],
+      ['#admin-module-share-title', '<i class="fas fa-table-cells" aria-hidden="true"></i> Top módulos (' + fullLabel + ')']
     ];
 
     titles.forEach(function (entry) {
@@ -559,23 +559,23 @@
     // Atualiza títulos das seções com o período selecionado
     var activityTitle = $('#admin-activity-title');
     if (activityTitle) {
-      activityTitle.innerHTML = '<i class="fas fa-chart-bar"></i> Atividade da plataforma (' + fullLabel + ')';
+      activityTitle.innerHTML = '<i class="fas fa-chart-bar" aria-hidden="true"></i> Atividade da plataforma (' + fullLabel + ')';
     }
     var moderationTitle = $('#admin-moderation-title');
     if (moderationTitle) {
-      moderationTitle.innerHTML = '<i class="fas fa-shield-halved"></i> Moderação (' + fullLabel + ')';
+      moderationTitle.innerHTML = '<i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação (' + fullLabel + ')';
     }
     var communityTitle = $('#admin-community-title');
     if (communityTitle) {
-      communityTitle.innerHTML = '<i class="fas fa-users"></i> Comunidade (' + fullLabel + ')';
+      communityTitle.innerHTML = '<i class="fas fa-users" aria-hidden="true"></i> Comunidade (' + fullLabel + ')';
     }
     var trendsTitle = $('#admin-trends-title');
     if (trendsTitle) {
-      trendsTitle.innerHTML = '<i class="fas fa-magnifying-glass-chart"></i> Tendências de busca (' + fullLabel + ')';
+      trendsTitle.innerHTML = '<i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Tendências de busca (' + fullLabel + ')';
     }
     var auditTitle = $('#admin-audit-title');
     if (auditTitle) {
-      auditTitle.innerHTML = '<i class="fas fa-clock-rotate-left"></i> Audit log (' + fullLabel + ')';
+      auditTitle.innerHTML = '<i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Audit log (' + fullLabel + ')';
     }
 
     // Carrega todas as métricas em paralelo para melhor performance

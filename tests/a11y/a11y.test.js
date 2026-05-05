@@ -440,3 +440,19 @@ describe('v71.0.0 - icones decorativos em admin-dashboard.charts.js', () => {
     expect(charts).toContain('<i class="fas fa-chevron-up" aria-hidden="true"></i>');
   });
 });
+
+describe('v72.0.0 - icones decorativos em admin-dashboard.controller.js', () => {
+  test('14 icones decorativos de titulos de secao e feedback do dashboard admin ocultam-se para tecnologias assistivas', () => {
+    const ctrl = _fs.readFileSync(_path.join(_ROOT, 'assets/js/controllers/admin/admin-dashboard.controller.js'), 'utf8');
+
+    expect(ctrl).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Atualizando...');
+    expect(ctrl).toContain('<i class="fas fa-circle-check" style="color:var(--kc-primary-brand);margin-right:5px;" aria-hidden="true"></i>');
+    expect(ctrl).toContain('<i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação (');
+    expect(ctrl).toContain('<i class="fas fa-chart-bar" aria-hidden="true"></i> Atividade da plataforma (');
+    expect(ctrl).toContain('<i class="fas fa-users" aria-hidden="true"></i> Comunidade (');
+    expect(ctrl).toContain('<i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Tendências de busca (');
+    expect(ctrl).toContain('<i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Audit log (');
+    expect(ctrl).toContain('<i class="fas fa-wave-square" aria-hidden="true"></i> Pulso diário (');
+    expect(ctrl).toContain('<i class="fas fa-table-cells" aria-hidden="true"></i> Top módulos (');
+  });
+});

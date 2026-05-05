@@ -15,7 +15,7 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 - `v34-a11y-i18n-reconciliation-plan.md`: plano para reconciliar auditorias historicas de a11y/i18n com gaps atuais.
 - `rls-smoke.sql`: roteiro de validacao RLS.
 - `xss-payloads.md`: payloads de apoio para validacao de sanitizacao.
-- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider, template V44 search/FTS, template V45 CSS small change, template V46 public a11y, template V47 de selecao de readiness funcional, template V48 de redacao de evidencia externa, template V49 de freeze de escopo funcional, template V50 de intake funcional, template V51 de No-Go funcional, template V52 de rastreabilidade de gates, template V53 de manifesto de patch funcional e reports V56-V71 PUBLIC-A11Y.
+- `reports/`: reports ativos, template V26 de evidencia autenticada real, template V37 de gate de entrada funcional, template V38 de rollback, template V39 de candidato funcional, template V40 auth callback, template V41 profile/avatar, template V42 admin/moderacao, template V43 notification provider, template V44 search/FTS, template V45 CSS small change, template V46 public a11y, template V47 de selecao de readiness funcional, template V48 de redacao de evidencia externa, template V49 de freeze de escopo funcional, template V50 de intake funcional, template V51 de No-Go funcional, template V52 de rastreabilidade de gates, template V53 de manifesto de patch funcional e reports V56-V72 PUBLIC-A11Y.
 
 ## Historico preservado
 
@@ -68,5 +68,6 @@ Este diretorio contem os artefatos operacionais ativos de QA. Historico V8/V11/V
 42. Para a evidencia V69 de pull-to-refresh decorative icons, consulte `reports/report-v69-public-a11y-pull-to-refresh-icons.md`.
 43. Para a evidencia V70 de filters tab decorative icon, consulte `reports/report-v70-public-a11y-filters-tab-icon.md`.
 44. Para a evidencia V71 de admin dashboard charts decorative icons, consulte `reports/report-v71-public-a11y-admin-dashboard-charts-icons.md`.
-45. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
+45. Para a evidencia V72 de admin dashboard controller decorative icons, consulte `reports/report-v72-public-a11y-admin-dashboard-controller-icons.md`.
+46. Registre evidencias em `reports/` usando `_TEMPLATE-authenticated-run.md` e o padrao `report-v26-auth-runN.md`.
 45. Use `../archive/qa-legacy/_INDEX.md` apenas para rastreabilidade historica.

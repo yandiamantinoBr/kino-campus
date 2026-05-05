@@ -2,6 +2,28 @@
 
 ---
 
+## [72.0.0] - 2026-05-05 - PUBLIC-A11Y Admin Dashboard Controller Decorative Icons (v72.0.0)
+
+### Tema
+
+Patch funcional (14 linhas) para marcar como decorativos os 14 icones FontAwesome em
+admin-dashboard.controller.js: spinner de atualizacao, check de ultimo sync (inline style),
+e 12 titulos de secao (Moderacao, Atividade, Comunidade, Tendencias, Audit log, Pulso diario,
+Top modulos) — repetidos em dois locais distintos do controller. Todos ja possuem texto
+adjacente para tecnologias assistivas.
+A V72 nao altera CSS, HTML estatico, SQL, migrations, providers, secrets ou comportamento
+visual intencional.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v72.0.0 | 14 icones decorativos em admin-dashboard.controller.js recebem `aria-hidden="true"` |
+| v72.0.0 | `tests/a11y/a11y.test.js` cobre os titulos de secao e feedback do dashboard admin |
+| v72.0.0 | `docs/qa/reports/report-v72-public-a11y-admin-dashboard-controller-icons.md` criado |
+
+---
+
 ## [71.0.0] - 2026-05-05 - PUBLIC-A11Y Admin Dashboard Charts Decorative Icons (v71.0.0)
 
 ### Tema
