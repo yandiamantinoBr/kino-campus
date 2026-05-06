@@ -32,7 +32,7 @@
   var _closedReportButton = null;
 
   var REPORT_REASONS = [
-    { value: 'post_closed',   label: 'Publicacao encerrada',        icon: 'fas fa-lock' },
+    { value: 'post_closed',   label: 'Publica\u00E7\u00E3o encerrada',        icon: 'fas fa-lock' },
     { value: 'spam',          label: 'Spam / conteúdo repetitivo',   icon: 'fas fa-ban' },
     { value: 'scam',          label: 'Golpe / fraude',               icon: 'fas fa-exclamation-triangle' },
     { value: 'inappropriate', label: 'Conteúdo impróprio',           icon: 'fas fa-eye-slash' },
@@ -66,12 +66,12 @@
       _closedReportButton.className = 'kc-btn-secondary';
       _closedReportButton.id = 'closedReportButton';
       _closedReportButton.setAttribute('data-action', 'report-post-closed');
-      _closedReportButton.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i> Relatar encerrado';
+      _closedReportButton.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i> Relatar encerramento';
       actions.insertBefore(_closedReportButton, anchor);
     }
 
     _closedReportButton.dataset.kcReportPostId = String(ctx.postId || '');
-    _closedReportButton.dataset.kcReportPostTitle = String(ctx.postTitle || 'Publicacao');
+    _closedReportButton.dataset.kcReportPostTitle = String(ctx.postTitle || 'Publica\u00E7\u00E3o');
 
     if (_closedReportButton.dataset.kcClosedReportBound === '1') return;
     _closedReportButton.dataset.kcClosedReportBound = '1';
@@ -86,7 +86,7 @@
 
       var driver = (window.KC_ENV && window.KC_ENV.driver) ? window.KC_ENV.driver : 'local';
       if (driver !== 'supabase') {
-        try { showToast('Relatos disponiveis apenas no modo Supabase.', 'info', 2200); } catch (_) { }
+        try { showToast('Relatos dispon\u00EDveis apenas no modo Supabase.', 'info', 2200); } catch (_) { }
         return;
       }
 
@@ -97,12 +97,12 @@
       } catch (_) { }
 
       if (!user) {
-        try { showToast('Faca login para relatar encerramento.', 'info', 2200); } catch (_) { }
+        try { showToast('Fa\u00E7a login para relatar encerramento.', 'info', 2200); } catch (_) { }
         try { if (typeof window.kcOpenAuthModal === 'function') window.kcOpenAuthModal(); } catch (_) { }
         return;
       }
 
-      if (!window.confirm('Relatar esta publicacao como encerrada para a moderacao?')) return;
+      if (!window.confirm('Relatar esta publica\u00E7\u00E3o como encerrada para a modera\u00E7\u00E3o?')) return;
 
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Enviando...';
@@ -110,7 +110,7 @@
         if (window.KCAPI && typeof window.KCAPI.reportPost === 'function') {
           res = await window.KCAPI.reportPost(postId, {
             reason: 'post_closed',
-            details: 'Usuario relatou que a publicacao deve ser encerrada.',
+            details: 'Usu\u00E1rio relatou que a publica\u00E7\u00E3o deve ser encerrada.',
           });
         }
       } catch (_) { }
@@ -119,12 +119,12 @@
       btn.innerHTML = prevHTML;
 
       if (res && res.ok) {
-        try { showToast('Relato enviado para a moderacao.', 'success', 2400); } catch (_) { }
+        try { showToast('Relato enviado para a modera\u00E7\u00E3o.', 'success', 2400); } catch (_) { }
         return;
       }
 
       try {
-        var msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Nao foi possivel enviar o relato.';
+        var msg = (res && res.error && res.error.message) ? String(res.error.message) : 'N\u00E3o foi poss\u00EDvel enviar o relato.';
         showToast(msg, 'error', 2800);
       } catch (_) { }
     });

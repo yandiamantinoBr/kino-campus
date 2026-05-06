@@ -237,7 +237,7 @@
       return profileModule.readProfile(buildLocalProfileDeps());
     }
     const viewer = (MOCK_USERS_BY_ID && MOCK_USERS_BY_ID[LOCAL_RATING_VIEWER_ID]) || {};
-    const displayName = String(viewer.displayName || viewer.name || 'Voce').trim() || 'Voce';
+    const displayName = String(viewer.displayName || viewer.name || 'Voc\u00EA').trim() || 'Voc\u00EA';
     return {
       id: String(viewer.id || LOCAL_RATING_VIEWER_ID).trim() || LOCAL_RATING_VIEWER_ID,
       display_name: displayName,
@@ -371,18 +371,18 @@
   const upsertUserRating = createAsyncDelegate('ratings', 'upsertUserRating', buildLocalRatingsDeps, () => buildUnavailableResult('Avaliacoes locais indisponiveis.'), ensureObjectArg(0));
 
   const createPost = createAsyncDelegate('postsWrite', 'createPost', buildLocalPostsWriteDeps, () => null);
-  const updatePost = createAsyncDelegate('postsWrite', 'updatePost', buildLocalPostsWriteDeps, () => buildUnavailableResult('Edicao local indisponivel.'), ensureObjectArg(1));
-  const deletePost = createAsyncDelegate('postsWrite', 'deletePost', buildLocalPostsWriteDeps, () => buildUnavailableResult('Exclusao local indisponivel.'));
+  const updatePost = createAsyncDelegate('postsWrite', 'updatePost', buildLocalPostsWriteDeps, () => buildUnavailableResult('Edi\u00E7\u00E3o local indispon\u00EDvel.'), ensureObjectArg(1));
+  const deletePost = createAsyncDelegate('postsWrite', 'deletePost', buildLocalPostsWriteDeps, () => buildUnavailableResult('Exclus\u00E3o local indispon\u00EDvel.'));
   const reportPost = createAsyncDelegate('postsWrite', 'reportPost', buildLocalPostsWriteDeps, () => buildUnavailableResult('Denuncias disponiveis apenas no Supabase.'));
-  const togglePostStatus = createAsyncDelegate('postsWrite', 'togglePostStatus', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
-  const renewPost = createAsyncDelegate('postsWrite', 'renewPost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
-  const bumpPost = createAsyncDelegate('postsWrite', 'bumpPost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
-  const closePost = createAsyncDelegate('postsWrite', 'closePost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
-  const reactivatePost = createAsyncDelegate('postsWrite', 'reactivatePost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
+  const togglePostStatus = createAsyncDelegate('postsWrite', 'togglePostStatus', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indispon\u00EDvel no modo local.'));
+  const renewPost = createAsyncDelegate('postsWrite', 'renewPost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indispon\u00EDvel no modo local.'));
+  const bumpPost = createAsyncDelegate('postsWrite', 'bumpPost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indispon\u00EDvel no modo local.'));
+  const closePost = createAsyncDelegate('postsWrite', 'closePost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indispon\u00EDvel no modo local.'));
+  const reactivatePost = createAsyncDelegate('postsWrite', 'reactivatePost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indispon\u00EDvel no modo local.'));
 
   const getMyProfile = createAsyncDelegate('profile', 'getMyProfile', buildLocalProfileDeps, readLocalProfileSnapshot);
-  const updateMyProfile = createAsyncDelegate('profile', 'updateMyProfile', buildLocalProfileDeps, () => buildUnavailableResult('Perfil local indisponivel.'), ensureObjectArg(0));
-  const uploadProfileAvatar = createAsyncDelegate('profile', 'uploadProfileAvatar', buildLocalProfileDeps, () => buildUnavailableResult('Upload de avatar indisponivel no modo local.'));
+  const updateMyProfile = createAsyncDelegate('profile', 'updateMyProfile', buildLocalProfileDeps, () => buildUnavailableResult('Perfil local indispon\u00EDvel.'), ensureObjectArg(0));
+  const uploadProfileAvatar = createAsyncDelegate('profile', 'uploadProfileAvatar', buildLocalProfileDeps, () => buildUnavailableResult('Upload de avatar indispon\u00EDvel no modo local.'));
 
   const getSavedPostState = createAsyncDelegate('saved', 'getSavedPostState', buildLocalSavedDeps, () => ({ kinds: [] }));
   const clearSavedPostState = createAsyncDelegate('saved', 'clearSavedPostState', buildLocalSavedDeps, () => buildUnavailableResult('Salvos locais indisponiveis.'));
@@ -394,7 +394,7 @@
 
   const createHelpRequest = createAsyncDelegate('help', 'createHelpRequest', buildLocalHelpDeps, () => buildUnavailableResult('Pedidos de ajuda locais indisponiveis.'), ensureObjectArg(0));
   const listAdminHelpRequests = createAsyncDelegate('help', 'listAdminHelpRequests', buildLocalHelpDeps, (filters) => buildDefaultLocalAdminHelpListFallback(filters || {}), ensureObjectArg(0));
-  const updateAdminHelpRequest = createAsyncDelegate('help', 'updateAdminHelpRequest', buildLocalHelpDeps, () => buildUnavailableResult('Gestao local de pedidos de ajuda indisponivel.'), ensureObjectArg(1));
+  const updateAdminHelpRequest = createAsyncDelegate('help', 'updateAdminHelpRequest', buildLocalHelpDeps, () => buildUnavailableResult('Gest\u00E3o local de pedidos de ajuda indispon\u00EDvel.'), ensureObjectArg(1));
 
   const getNotificationPreferences = createAsyncDelegate('notifications', 'getNotificationPreferences', null, buildDefaultLocalNotificationPreferencesFallback);
   const updateNotificationPreferences = createAsyncDelegate('notifications', 'updateNotificationPreferences', null, () => buildUnavailableResult('Preferencias de notificacao locais indisponiveis.'), ensureObjectArg(0));

@@ -81,7 +81,7 @@
   function getSavedPostClearer(deps) {
     return (deps && typeof deps.clearSavedPostState === 'function')
       ? deps.clearSavedPostState
-      : async function () { return { ok: false, error: { message: 'Salvos locais indisponiveis.' } }; };
+      : async function () { return { ok: false, error: { message: 'Salvos locais indispon\u00EDveis.' } }; };
   }
 
   function readPostDrafts() {
@@ -125,7 +125,7 @@
     if (!raw.id) raw.id = existing.id || Date.now();
     if (!raw.authorId) raw.authorId = existing.authorId || viewerId;
     if (!raw.autor && !raw._legacyAuthorName) {
-      raw.autor = existing.autor || String(viewer.displayName || viewer.name || 'Voce').trim() || 'Voce';
+      raw.autor = existing.autor || String(viewer.displayName || viewer.name || 'Voc\u00EA').trim() || 'Voc\u00EA';
     }
     if (!raw.autorAvatar && !raw._legacyAuthorAvatar) {
       raw.autorAvatar = existing.autorAvatar || String(viewer.avatarUrl || viewer.avatar || '').trim();
@@ -182,7 +182,7 @@
       try {
         if (!writePostDrafts(existing)) throw new Error('LOCAL_WRITE_FAILED');
       } catch (err) {
-        var message = (err && err.message) ? String(err.message) : 'Falha ao persistir publicacao no localStorage.';
+        var message = (err && err.message) ? String(err.message) : 'Falha ao persistir publica\u00E7\u00E3o no localStorage.';
         var errorPayload = {
           code: 'LOCAL_STORAGE_SET_ITEM_FAILED',
           message: message,
@@ -209,7 +209,7 @@
 
   async function updatePost(postId, payload, deps) {
     var key = String(postId || '').trim();
-    if (!key) return { ok: false, error: { message: 'Post invalido para edicao.' } };
+    if (!key) return { ok: false, error: { message: 'Post inv\u00E1lido para edi\u00E7\u00E3o.' } };
 
     var config = getConfig(deps);
     var fetchJSON = getFetchJSON(deps);
@@ -228,12 +228,12 @@
     var index = drafts.findIndex(function (item) {
       return matchesPostIdentity(item, key, deps);
     });
-    if (index < 0) return { ok: false, error: { message: 'Publicacao nao encontrada.' } };
+    if (index < 0) return { ok: false, error: { message: 'Publica\u00E7\u00E3o n\u00E3o encontrada.' } };
 
     var nextDraft = preparePostForPersistence(payload, drafts[index], deps);
     drafts[index] = nextDraft;
     if (!writePostDrafts(drafts)) {
-      return { ok: false, error: { message: 'Nao foi possivel salvar alteracoes localmente.' } };
+      return { ok: false, error: { message: 'N\u00E3o foi poss\u00EDvel salvar altera\u00E7\u00F5es localmente.' } };
     }
 
     return { ok: true, data: normalizePost(nextDraft) };
@@ -241,7 +241,7 @@
 
   async function deletePost(postId, deps) {
     var key = String(postId || '').trim();
-    if (!key) return { ok: false, error: { message: 'Post invalido para exclusao.' } };
+    if (!key) return { ok: false, error: { message: 'Post inv\u00E1lido para exclus\u00E3o.' } };
 
     var config = getConfig(deps);
     var fetchJSON = getFetchJSON(deps);
@@ -258,10 +258,10 @@
       return !matchesPostIdentity(item, key, deps);
     });
     if (nextDrafts.length === drafts.length) {
-      return { ok: false, error: { message: 'Publicacao nao encontrada.' } };
+      return { ok: false, error: { message: 'Publica\u00E7\u00E3o n\u00E3o encontrada.' } };
     }
     if (!writePostDrafts(nextDrafts)) {
-      return { ok: false, error: { message: 'Nao foi possivel excluir a publicacao localmente.' } };
+      return { ok: false, error: { message: 'N\u00E3o foi poss\u00EDvel excluir a publica\u00E7\u00E3o localmente.' } };
     }
 
     try {
@@ -272,27 +272,27 @@
   }
 
   async function reportPost() {
-    return { ok: false, error: { message: 'Denuncias disponiveis apenas no Supabase.' } };
+    return { ok: false, error: { message: 'Den\u00FAncias dispon\u00EDveis apenas no Supabase.' } };
   }
 
   async function togglePostStatus() {
-    return { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+    return { ok: false, code: 'UNAVAILABLE', message: 'Indispon\u00EDvel no modo local.' };
   }
 
   async function renewPost() {
-    return { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+    return { ok: false, code: 'UNAVAILABLE', message: 'Indispon\u00EDvel no modo local.' };
   }
 
   async function bumpPost() {
-    return { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+    return { ok: false, code: 'UNAVAILABLE', message: 'Indispon\u00EDvel no modo local.' };
   }
 
   async function closePost() {
-    return { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+    return { ok: false, code: 'UNAVAILABLE', message: 'Indispon\u00EDvel no modo local.' };
   }
 
   async function reactivatePost() {
-    return { ok: false, code: 'UNAVAILABLE', message: 'Indisponivel no modo local.' };
+    return { ok: false, code: 'UNAVAILABLE', message: 'Indispon\u00EDvel no modo local.' };
   }
 
   window._KCLA.postsWrite = Object.freeze({

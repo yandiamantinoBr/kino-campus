@@ -155,7 +155,7 @@ describe('closed posts - contratos publicos JS', () => {
     expect(edit).toContain('clearPostSessionCaches');
     expect(report).toContain('closedReportButton');
     expect(report).toContain("reason: 'post_closed'");
-    expect(report).toContain('Relatar encerrado');
+    expect(report).toContain('Relatar encerramento');
     expect(controller).toContain("type: 'closed'");
     expect(controller).toContain('kc-product-cta--closed');
     expect(render).toContain('kc-product-status-note--closed');

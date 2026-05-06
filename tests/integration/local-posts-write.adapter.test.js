@@ -289,7 +289,7 @@ describe('local.posts-write.adapter.js - updatePost e deletePost', () => {
     const result = await postsWrite().deletePost('inexistente', buildDeps());
 
     expect(result.ok).toBe(false);
-    expect(result.error.message).toMatch(/nao encontrada/i);
+    expect(result.error.message).toMatch(/não encontrada/i);
   });
 
   test('deletePost faz DELETE remoto quando baseURL esta ativo', async () => {

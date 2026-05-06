@@ -86,7 +86,7 @@ describe('renderPostCard — acessibilidade (v9.4.2)', () => {
   test('link de comentarios usa comments_count no texto e nome acessivel', () => {
     if (!renderPostCard) return;
     const html = renderPostCard(makePost({ comments_count: 2 }));
-    expect(html).toContain('aria-label="Ver 2 comentarios do anuncio Produto de teste"');
+    expect(html).toContain('aria-label="Ver 2 comentários do anúncio Produto de teste"');
     expect(html).toContain('<span>2</span>');
   });
 

@@ -117,7 +117,7 @@
     if (!action) return false;
 
     if (action.type === 'closed') {
-      toast('Esta publicacao foi encerrada.', 'info', 2200);
+      toast('Esta publica\u00E7\u00E3o foi encerrada.', 'info', 2200);
       return true;
     }
 
@@ -165,7 +165,7 @@
         label: 'Encerrado',
         iconClass: 'fas fa-lock',
         handler: function () {
-          toast('Esta publicacao foi encerrada.', 'info', 2200);
+          toast('Esta publica\u00E7\u00E3o foi encerrada.', 'info', 2200);
         },
       };
     }
@@ -255,9 +255,9 @@
 
     return {
       type: 'safe_fallback',
-      label: 'Contato indisponivel',
+      label: 'Contato indispon\u00EDvel',
       handler: () => {
-        toast('Contato indisponivel para esta publicacao.', 'warn', 2400);
+        toast('Contato indispon\u00EDvel para esta publica\u00E7\u00E3o.', 'warn', 2400);
       }
     };
   }
@@ -316,7 +316,7 @@
             module: (currentPost && (currentPost.modulo || currentPost.module)) || null,
             category: (currentPost && (currentPost.categoria || currentPost.category)) || null,
           });
-          toast('Nao foi possivel executar esta acao agora.', 'error', 2400);
+          toast('N\u00E3o foi poss\u00EDvel executar esta a\u00E7\u00E3o agora.', 'error', 2400);
         }
       });
     }

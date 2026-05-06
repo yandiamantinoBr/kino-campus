@@ -249,7 +249,7 @@
           trackCurrentPostShare();
           toast('Link copiado!', 'info', 1800);
         }).catch(function () {
-          toast('Nao foi possivel copiar automaticamente. Tente novamente ou copie o link pela barra do navegador.', 'error', 2600);
+          toast('N\u00E3o foi poss\u00EDvel copiar automaticamente. Tente novamente ou copie o link pela barra do navegador.', 'error', 2600);
         });
       });
     }

@@ -345,6 +345,7 @@
     .kc-product-actions > .kc-share-wrap,
     .kc-product-actions > .kc-calendar-wrap {
       display: flex;
+      grid-column: auto !important;
       min-width: 0;
       width: 100%;
     }
@@ -363,6 +364,11 @@
       padding: 14px 20px;
       min-height: 52px;
       border-radius: 12px;
+    }
+
+    .kc-product-actions > :not(#primaryCta):not(.kc-share-popover-backdrop):not(.kc-save-popover-backdrop),
+    .kc-product-actions > #ownerActionsWrap > button {
+      grid-column: auto !important;
     }
 
     .kc-product-actions > button,
@@ -397,7 +403,7 @@
     }
 
     .kc-product-actions > #ownerActionsWrap {
-      display: contents;
+      display: contents !important;
     }
 
     /* Em telas muito pequenas, reduz fonte mas mantém nowrap para uniformidade */

@@ -87,7 +87,7 @@ describe('product.report.js — wireReportButton', () => {
 
   test('cria botao direto para relatar publicacao encerrada', () => {
     expect(source).toContain('closedReportButton');
-    expect(source).toContain('Relatar encerrado');
+    expect(source).toContain('Relatar encerramento');
     expect(source).toContain("reason: 'post_closed'");
     expect(source).toContain("status === 'closed'");
   });

@@ -370,10 +370,10 @@ function renderCommentCardHTML(id, containerId, raw, currentUserId, isAdmin, dep
         <button type="button" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" class="kc-like-comment-btn ${likeDisabled ? 'is-liked' : ''}" ${likeDisabled ? 'disabled aria-disabled="true"' : ''} style="background:none;border:none;cursor:${likeDisabled ? 'not-allowed' : 'pointer'};color:${likeStateColor};font-weight:${likeStateWeight};opacity:${likeDisabled ? '0.95' : '1'};padding:0;">
           <i class="fas fa-thumbs-up" aria-hidden="true"></i> ${c.likes || 0}${c.likedByMe ? ' - Curtido' : (c.canLike ? '' : ' - Entrar para curtir')}
         </button>
-        ${canReply ? `<button type="button" data-kc-comment-action="reply" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-primary-brand);padding:0;font-size:inherit;" title="Responder comentario"><i class="fas fa-reply" aria-hidden="true"></i> Responder</button>` : ''}
-        ${canEdit ? `<button type="button" data-kc-comment-action="edit" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);padding:0;font-size:inherit;" title="Editar comentario (disponivel por 1 minuto)"><i class="fas fa-pen" aria-hidden="true"></i> Editar</button>` : ''}
-        ${canDelete ? `<button type="button" data-kc-comment-action="delete" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:#ef9a9a;padding:0;font-size:inherit;" title="Excluir comentario"><i class="fas fa-trash" aria-hidden="true"></i> Excluir</button>` : ''}
-        ${canReport ? `<button type="button" data-kc-comment-action="report" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);padding:0;font-size:inherit;" title="Denunciar comentario"><i class="fas fa-flag" aria-hidden="true"></i> Denunciar</button>` : ''}
+        ${canReply ? `<button type="button" data-kc-comment-action="reply" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-primary-brand);padding:0;font-size:inherit;" title="Responder coment\u00E1rio"><i class="fas fa-reply" aria-hidden="true"></i> Responder</button>` : ''}
+        ${canEdit ? `<button type="button" data-kc-comment-action="edit" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);padding:0;font-size:inherit;" title="Editar coment\u00E1rio (dispon\u00EDvel por 1 minuto)"><i class="fas fa-pen" aria-hidden="true"></i> Editar</button>` : ''}
+        ${canDelete ? `<button type="button" data-kc-comment-action="delete" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:#ef9a9a;padding:0;font-size:inherit;" title="Excluir coment\u00E1rio"><i class="fas fa-trash" aria-hidden="true"></i> Excluir</button>` : ''}
+        ${canReport ? `<button type="button" data-kc-comment-action="report" data-post-id="${_esc(String(id))}" data-comment-id="${_esc(String(c.id))}" data-container="${_esc(containerId)}" style="background:none;border:none;cursor:pointer;color:var(--kc-text-dark-secondary);padding:0;font-size:inherit;" title="Denunciar coment\u00E1rio"><i class="fas fa-flag" aria-hidden="true"></i> Denunciar</button>` : ''}
       </div>
     </div>`;
 }
@@ -578,7 +578,7 @@ async function deleteComment(pid, cid, ctr) {
     try {
       const kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
         ? window.KCSupabase.getClient() : null;
-      if (!kcClient) { showToast('Nao foi possivel excluir.', 'error'); return; }
+      if (!kcClient) { showToast('N\u00E3o foi poss\u00EDvel excluir.', 'error'); return; }
       const user = await KCAPI.getCurrentUser();
       let query = kcClient.from('comments').delete().eq('id', cid);
       const profile = window.KCAPI && typeof window.KCAPI.getMyProfile === 'function'
@@ -586,13 +586,13 @@ async function deleteComment(pid, cid, ctr) {
       const isAdm = !!(profile && profile.is_admin);
       if (!isAdm && user) query = query.eq('author_id', user.id);
       const { error } = await query;
-      if (error) { showToast(error.message || 'Erro ao excluir comentario.', 'error'); return; }
+      if (error) { showToast(error.message || 'Erro ao excluir coment\u00E1rio.', 'error'); return; }
       if (KCAPI && typeof KCAPI.invalidateCommentsCache === 'function') KCAPI.invalidateCommentsCache(id);
       if (KCAPI && typeof KCAPI.invalidatePostAnalyticsCache === 'function') KCAPI.invalidatePostAnalyticsCache(id);
       if (String(_kcActiveReplyState.parentId || '') === String(cid || '')) clearActiveReplyState();
-      showToast('Comentario excluido.', 'info', 1800);
+      showToast('Coment\u00E1rio exclu\u00EDdo.', 'info', 1800);
       renderComments(id, ctr);
-    } catch (_) { showToast('Erro ao excluir comentario.', 'error'); }
+    } catch (_) { showToast('Erro ao excluir coment\u00E1rio.', 'error'); }
     return;
   }
 
@@ -610,7 +610,7 @@ async function deleteComment(pid, cid, ctr) {
 
   if (String(_kcActiveReplyState.parentId || '') === String(cid || '')) clearActiveReplyState();
   saveComments(id, comments);
-  showToast('Comentario excluido.', 'info', 1800);
+  showToast('Coment\u00E1rio exclu\u00EDdo.', 'info', 1800);
   renderComments(id, ctr);
 }
 
@@ -873,7 +873,7 @@ function recordCommentAudit(commentId) {
 async function submitComment(postId = null, containerId = 'commentsContainer', options = {}) {
   const resolved = postId != null ? String(postId) : getCurrentPostId();
   if (!resolved) {
-    showToast('Nao foi possivel identificar esta publicacao', 'error');
+    showToast('N\u00E3o foi poss\u00EDvel identificar esta publica\u00E7\u00E3o.', 'error');
     return;
   }
 
@@ -881,7 +881,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer', o
   const parentId = resolveCommentOptionParentId(options);
   const textarea = resolveCommentSubmitTextarea(id, options);
   if (!textarea || !String(textarea.value || '').trim()) {
-    showToast(parentId ? 'Por favor, escreva uma resposta' : 'Por favor, escreva um comentario', 'error');
+    showToast(parentId ? 'Por favor, escreva uma resposta.' : 'Por favor, escreva um coment\u00E1rio.', 'error');
     return;
   }
 
@@ -899,7 +899,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer', o
       if (typeof window.kcOpenAuthModal === 'function') {
         window.kcOpenAuthModal({ tab: 'login' });
       } else {
-        showToast('Faca login para comentar.', 'info');
+        showToast('Fa\u00E7a login para comentar.', 'info');
       }
       return;
     }
@@ -907,7 +907,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer', o
     KCAPI.addComment(id, text, parentId ? { parentId: parentId } : {}).then(function (res) {
       releaseCommentSubmitButton(submitBtn);
       if (!(res && res.ok)) {
-        const msg = (res && res.error && res.error.message) || 'Nao foi possivel comentar.';
+        const msg = (res && res.error && res.error.message) || 'N\u00E3o foi poss\u00EDvel comentar.';
         showToast(msg, 'error');
         return;
       }
@@ -916,7 +916,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer', o
       if (parentId) clearActiveReplyState();
       updateCommentPreview(id);
       renderComments(id, containerId);
-      showToast(parentId ? 'Resposta enviada!' : 'Comentario enviado!', 'info', 1800);
+      showToast(parentId ? 'Resposta enviada!' : 'Coment\u00E1rio enviado!', 'info', 1800);
 
       try {
         if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
@@ -929,14 +929,14 @@ async function submitComment(postId = null, containerId = 'commentsContainer', o
       recordCommentAudit((res.data && res.data.id) ? String(res.data.id) : id);
     }).catch(function () {
       releaseCommentSubmitButton(submitBtn);
-      showToast(parentId ? 'Erro ao enviar resposta.' : 'Erro ao enviar comentario.', 'error');
+      showToast(parentId ? 'Erro ao enviar resposta.' : 'Erro ao enviar coment\u00E1rio.', 'error');
     });
     return;
   }
 
   if (isProductionRuntime()) {
     releaseCommentSubmitButton(submitBtn);
-    showToast('Comentario bloqueado: em producao, use Supabase.', 'error');
+    showToast('Coment\u00E1rio bloqueado: em produ\u00E7\u00E3o, use Supabase.', 'error');
     return;
   }
 
@@ -969,12 +969,12 @@ async function submitComment(postId = null, containerId = 'commentsContainer', o
   const hasSession = !!(sessionUser && sessionUser.id);
   const authorName = hasSession
     ? (sessionAuthorName || 'Conta autenticada')
-    : (sessionAuthorName || authorInput?.value?.trim() || 'Anonimo');
+    : (sessionAuthorName || authorInput?.value?.trim() || 'An\u00F4nimo');
   const inserted = addComment(id, text, authorName, parentId ? { parentId: parentId } : {});
   releaseCommentSubmitButton(submitBtn);
 
   if (!inserted) {
-    showToast('Nao foi possivel responder este comentario.', 'error');
+    showToast('N\u00E3o foi poss\u00EDvel responder este coment\u00E1rio.', 'error');
     return;
   }
 
@@ -982,7 +982,7 @@ async function submitComment(postId = null, containerId = 'commentsContainer', o
   if (parentId) clearActiveReplyState();
   updateCommentPreview(id);
   renderComments(id, containerId);
-  showToast(parentId ? 'Resposta enviada!' : 'Comentario enviado!', 'info', 1800);
+  showToast(parentId ? 'Resposta enviada!' : 'Coment\u00E1rio enviado!', 'info', 1800);
   try {
     if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
       window.KCHomeCategories.trackEvent('comment', {

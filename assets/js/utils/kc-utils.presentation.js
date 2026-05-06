@@ -736,11 +736,11 @@ function renderPostCard(post, options) {
     : ((p.comments_count != null && p.comments_count !== '') ? p.comments_count : p.commentsCount);
   const comentarios = (rawComments != null && rawComments !== '') ? Number(rawComments) : 0;
   const commentsCount = Math.max(0, Number.isFinite(comentarios) ? comentarios : 0);
-  const commentsNoun = commentsCount === 1 ? 'comentario' : 'comentarios';
+  const commentsNoun = commentsCount === 1 ? 'coment\u00E1rio' : 'coment\u00E1rios';
   const commentsTitle = String(p.titulo || '').trim();
   const commentsFullLabel = commentsTitle
-    ? `Ver ${commentsCount} ${commentsNoun} do anuncio ${commentsTitle}`
-    : `Ver ${commentsCount} ${commentsNoun} do anuncio`;
+    ? `Ver ${commentsCount} ${commentsNoun} do an\u00FAncio ${commentsTitle}`
+    : `Ver ${commentsCount} ${commentsNoun} do an\u00FAncio`;
   const commentsShown = String(commentsCount);
   const commentsAria = ` aria-label="${_escapeHtml(commentsFullLabel)}"`;
 
@@ -802,7 +802,7 @@ function renderPostCard(post, options) {
   const votePostId = String(id);
   const votePostUuid = (p && p.uuid) ? String(p.uuid) : '';
   const voteUuidAttr = votePostUuid ? ` data-post-uuid="${encodeURIComponent(votePostUuid)}"` : '';
-  const voteDisabledAttr = isClosed ? ' disabled aria-disabled="true" title="Publicacao encerrada"' : '';
+  const voteDisabledAttr = isClosed ? ' disabled aria-disabled="true" title="Publica\u00E7\u00E3o encerrada"' : '';
 
   return `
     <article ${attrs.join(' ')}>

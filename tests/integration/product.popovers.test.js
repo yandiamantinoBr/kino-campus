@@ -68,7 +68,7 @@ describe('product.popovers.js - share wiring', () => {
     expect(source).toContain("document.getElementById('shareWhatsApp')");
     expect(source).toContain("window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer')");
     expect(source).toContain("toast('Link copiado!', 'info', 1800)");
-    expect(source).toContain("toast('Nao foi possivel copiar automaticamente. Tente novamente ou copie o link pela barra do navegador.', 'error', 2600)");
+    expect(source).toContain("toast('N\\u00E3o foi poss\\u00EDvel copiar automaticamente. Tente novamente ou copie o link pela barra do navegador.', 'error', 2600)");
   });
 });
 

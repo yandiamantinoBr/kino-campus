@@ -142,7 +142,8 @@ describe('product.edit.js - exports', () => {
 describe('product.css - layout proporcional das actions', () => {
   test('mantem grid de 2 colunas sem full-row em compartilhar/excluir', () => {
     expect(cssSource).toContain('.kc-product-actions > #ownerActionsWrap');
-    expect(cssSource).toContain('display: contents;');
+    expect(cssSource).toContain('display: contents !important;');
+    expect(cssSource).toContain('grid-column: auto !important;');
     expect(cssSource).toMatch(/#ownerActionsWrap > button \{\s*min-height: 44px;/);
     expect(cssSource).not.toContain('.kc-product-actions.kc-product-actions--has-calendar > .kc-share-wrap');
     expect(cssSource).not.toContain('#ownerActionsWrap > button:last-child:nth-child(odd)');

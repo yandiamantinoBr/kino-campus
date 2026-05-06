@@ -120,6 +120,6 @@ describe('kc-comments shadow cleanup', () => {
     ]);
     expect(isActiveReplyTarget('post-1', '1', 'commentsContainer')).toBe(false);
     expect(renderComments).toHaveBeenCalledWith('post-1', 'commentsContainer');
-    expect(showToast).toHaveBeenCalledWith('Comentario excluido.', 'info', 1800);
+    expect(showToast).toHaveBeenCalledWith('Comentário excluído.', 'info', 1800);
   });
 });
