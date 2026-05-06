@@ -341,10 +341,6 @@
       min-width: 0;
     }
 
-    .kc-product-actions.kc-product-actions--has-calendar > .kc-share-wrap {
-      grid-column: 1 / -1;
-    }
-
     .kc-product-actions > .kc-save-wrap,
     .kc-product-actions > .kc-share-wrap,
     .kc-product-actions > .kc-calendar-wrap {
@@ -386,7 +382,7 @@
       text-overflow: ellipsis;
     }
 
-    /* Botões de ações do dono (sub-grid dentro de .kc-product-actions) */
+    /* Botões de ações do dono participam do grid principal de 2 colunas. */
     #ownerActionsWrap > button {
       width: 100%;
       min-height: 48px;
@@ -400,8 +396,8 @@
       text-overflow: ellipsis;
     }
 
-    #ownerActionsWrap > button:last-child:nth-child(odd) {
-      grid-column: 1 / -1;
+    .kc-product-actions > #ownerActionsWrap {
+      display: contents;
     }
 
     /* Em telas muito pequenas, reduz fonte mas mantém nowrap para uniformidade */
@@ -1737,11 +1733,6 @@
         padding: 10px 12px;
         font-size: .92em;
         white-space: normal;
-      }
-
-      .kc-product-actions > #reportButton,
-      .kc-product-actions > #closedReportButton {
-        grid-column: 1 / -1;
       }
 
       .kc-seller-profile {

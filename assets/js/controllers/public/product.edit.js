@@ -5,7 +5,7 @@
  *
  * Dependencias em runtime:
  *   - window._KCProduct  - namespace criado por product.controller.js
- *   - window.KCAPI       - updatePost, deletePost, togglePostStatus, renewPost, bumpPost
+ *   - window.KCAPI       - updatePost, deletePost, togglePostStatus, renewPost, bumpPost, reactivatePost
  *   - window.KCPostModel - normalizacao do payload atualizado
  *   - window.kcOpenEditPostModal - modal principal de edicao, quando disponivel
  *   - window.showToast   - feedback visual
@@ -52,8 +52,8 @@
     var moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
     if (moduleKey === 'eventos') return 'Evento encerrado';
     if (moduleKey === 'caronas') return 'Carona encerrada';
-    if (moduleKey === 'compra-venda') return 'Anuncio encerrado';
-    return 'Publicacao encerrada';
+    if (moduleKey === 'compra-venda') return 'An\u00FAncio encerrado';
+    return 'Publica\u00E7\u00E3o encerrada';
   }
 
   function markPostAsEdited() {
@@ -209,7 +209,7 @@
       var msg;
 
       if (!editingPost || !isAuthor(editingPost, viewer)) {
-        status.textContent = 'Voce nao tem permissao para editar este post.';
+        status.textContent = 'Voc\u00EA n\u00E3o tem permiss\u00E3o para editar esta publica\u00E7\u00E3o.';
         return;
       }
 
@@ -231,12 +231,12 @@
         if (liveContext && typeof liveContext.renderPost === 'function') {
           liveContext.renderPost(next);
         }
-        toast('Publicacao atualizada com sucesso.', 'success', 2000);
+        toast('Publica\u00E7\u00E3o atualizada com sucesso.', 'success', 2000);
         close();
         return;
       }
 
-      msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Nao foi possivel atualizar a publicacao.';
+      msg = (res && res.error && res.error.message) ? String(res.error.message) : 'N\u00E3o foi poss\u00EDvel atualizar a publica\u00E7\u00E3o.';
       status.textContent = msg;
       toast(msg, 'error', 2400);
       saveBtn.disabled = false;
@@ -288,7 +288,7 @@
     wrap = document.createElement('div');
     wrap.id = 'ownerActionsWrap';
     wrap.className = 'kc-owner-actions-grid';
-    wrap.style.cssText = 'grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;';
+    wrap.style.cssText = 'display:contents;';
 
     editBtn = document.createElement('button');
     editBtn.type = 'button';
@@ -312,15 +312,15 @@
       toggleBtn.style.display = 'none';
     } else {
       toggleBtn.innerHTML = isHidden
-        ? '<i class="fas fa-eye"></i> Reativar anuncio'
-        : '<i class="fas fa-eye-slash"></i> Desabilitar anuncio';
+        ? '<i class="fas fa-eye"></i> Reativar an\u00FAncio'
+        : '<i class="fas fa-eye-slash"></i> Desabilitar an\u00FAncio';
     }
 
     renewBtn = document.createElement('button');
     renewBtn.type = 'button';
     renewBtn.className = 'kc-btn-secondary';
     renewBtn.id = 'renewPostButton';
-    renewBtn.innerHTML = '<i class="fas fa-rotate-right"></i> Renovar publicacao';
+    renewBtn.innerHTML = '<i class="fas fa-rotate-right"></i> Renovar publica\u00E7\u00E3o';
     renewBtn.style.display = (isExpired || isHidden) && !isClosed ? '' : 'none';
 
     bumpBtn = document.createElement('button');
@@ -338,7 +338,7 @@
       } else {
         var nextBump = new Date(new Date(bumpedAt).getTime() + bumpCooldownMs);
         bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionar hoje';
-        bumpBtn.title = 'Proximo impulso disponivel em ' + nextBump.toLocaleDateString('pt-BR');
+        bumpBtn.title = 'Pr\u00F3ximo impulso dispon\u00EDvel em ' + nextBump.toLocaleDateString('pt-BR');
         bumpBtn.disabled = true;
         bumpBtn.style.opacity = '0.55';
       }
@@ -354,8 +354,10 @@
     closeBtn.type = 'button';
     closeBtn.className = 'kc-btn-secondary';
     closeBtn.id = 'closePostButton';
-    closeBtn.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i> Encerrar';
-    closeBtn.style.display = (!isPending && !isClosed && postStatus !== 'deleted') ? '' : 'none';
+    closeBtn.innerHTML = isClosed
+      ? '<i class="fas fa-unlock" aria-hidden="true"></i> Reativar'
+      : '<i class="fas fa-lock" aria-hidden="true"></i> Encerrar';
+    closeBtn.style.display = (!isPending && postStatus !== 'deleted') ? '' : 'none';
 
     ownerStatusBadge = document.getElementById('ownerStatusBadge');
     if (ownerStatusBadge) ownerStatusBadge.remove();
@@ -366,7 +368,7 @@
         var details = document.querySelector('.kc-product-details');
         badge.id = 'ownerStatusBadge';
         badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.3);color:#93c5fd;font-size:.9em;margin-bottom:12px;';
-        badge.innerHTML = '<i class="fas fa-clock"></i><span>Esta publicacao esta <strong>em analise</strong> pela moderacao e nao aparece nos feeds ainda. Voce sera notificado quando for aprovada.</span>';
+        badge.innerHTML = '<i class="fas fa-clock"></i><span>Esta publica\u00E7\u00E3o est\u00E1 <strong>em an\u00E1lise</strong> pela modera\u00E7\u00E3o e ainda n\u00E3o aparece nos feeds. Voc\u00EA ser\u00E1 notificado quando for aprovada.</span>';
         if (details) details.insertAdjacentElement('afterbegin', badge);
       })();
     } else if (isClosed) {
@@ -377,7 +379,7 @@
         badge.id = 'ownerStatusBadge';
         badge.className = 'kc-product-status-note kc-product-status-note--closed';
         badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(148,163,184,.14);border:1px solid rgba(148,163,184,.35);color:#cbd5e1;font-size:.9em;margin-bottom:12px;';
-        badge.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span>' + getClosedLabel(post) + ': ela continua no feed como historico, mas nao fica ativa.</span>';
+        badge.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span>' + getClosedLabel(post) + ': continua vis\u00EDvel como hist\u00F3rico, mas n\u00E3o est\u00E1 ativa. Use Reativar para desfazer o encerramento.</span>';
         if (details) details.insertAdjacentElement('afterbegin', badge);
       })();
     } else if (isHidden || isExpired) {
@@ -389,10 +391,10 @@
           var expiresAt = post && (post.expires_at || post.expiresAt);
           var expiryStr = expiresAt ? ' em ' + new Date(expiresAt).toLocaleDateString('pt-BR') : '';
           badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(244,67,54,.10);border:1px solid rgba(244,67,54,.30);color:#ef9a9a;font-size:.9em;margin-bottom:12px;';
-          badge.innerHTML = '<i class="fas fa-calendar-xmark"></i><span>Este anuncio <strong>expirou</strong>' + expiryStr + ' e nao aparece nos feeds. Renove-o para voltar a aparecer.</span>';
+          badge.innerHTML = '<i class="fas fa-calendar-xmark"></i><span>Este an\u00FAncio <strong>expirou</strong>' + expiryStr + ' e n\u00E3o aparece nos feeds. Renove-o para voltar a aparecer.</span>';
         } else {
           badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
-          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este anuncio esta <strong>desabilitado</strong> e nao aparece nos feeds. Apenas voce consegue ver esta pagina.</span>';
+          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este an\u00FAncio est\u00E1 <strong>desabilitado</strong> e n\u00E3o aparece nos feeds. Apenas voc\u00EA consegue ver esta p\u00E1gina.</span>';
         }
         if (details) details.insertAdjacentElement('afterbegin', badge);
       })();
@@ -408,7 +410,7 @@
         details = document.querySelector('.kc-product-details');
         badge.id = 'ownerStatusBadge';
         badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.35);color:#ffc107;font-size:.9em;margin-bottom:12px;';
-        badge.innerHTML = '<i class="fas fa-clock"></i><span>Seu anuncio <strong>expira em ' + daysLeft + (daysLeft === 1 ? ' dia' : ' dias') + '</strong>. Renove-o para continuar aparecendo nos feeds.</span>';
+        badge.innerHTML = '<i class="fas fa-clock"></i><span>Seu an\u00FAncio <strong>expira em ' + daysLeft + (daysLeft === 1 ? ' dia' : ' dias') + '</strong>. Renove-o para continuar aparecendo nos feeds.</span>';
         if (details) details.insertAdjacentElement('afterbegin', badge);
       })();
     }
@@ -460,7 +462,7 @@
     });
 
     deleteBtn.addEventListener('click', async function () {
-      var confirmed = window.confirm('Tem certeza que deseja excluir esta publicacao?');
+      var confirmed = window.confirm('Tem certeza que deseja excluir esta publica\u00E7\u00E3o?');
       var res = null;
       var msg;
       if (!confirmed) return;
@@ -472,12 +474,12 @@
       } catch (_) { }
 
       if (res && res.ok) {
-        toast('Publicacao excluida com sucesso.', 'success', 2000);
+        toast('Publica\u00E7\u00E3o exclu\u00EDda com sucesso.', 'success', 2000);
         setTimeout(function () { window.location.href = 'index.html'; }, 300);
         return;
       }
 
-      msg = (res && res.error && res.error.message) ? String(res.error.message) : 'Nao foi possivel excluir a publicacao.';
+      msg = (res && res.error && res.error.message) ? String(res.error.message) : 'N\u00E3o foi poss\u00EDvel excluir a publica\u00E7\u00E3o.';
       toast(msg, 'error', 2800);
     });
 
@@ -506,7 +508,7 @@
 
       if (res && res._kcError === 'POST_LIMIT_REACHED') {
         toggleBtn.innerHTML = prevHTML;
-        toast(res.message || 'Voce atingiu o limite de publicacoes ativas. Desabilite outra publicacao antes de reativar esta.', 'error', 4000);
+        toast(res.message || 'Voc\u00EA atingiu o limite de publica\u00E7\u00F5es ativas. Desabilite outra publica\u00E7\u00E3o antes de reativar esta.', 'error', 4000);
         return;
       }
 
@@ -517,8 +519,8 @@
 
         toggleBtn.setAttribute('data-post-status', nowHidden ? 'hidden' : 'published');
         toggleBtn.innerHTML = nowHidden
-          ? '<i class="fas fa-eye"></i> Reativar anuncio'
-          : '<i class="fas fa-eye-slash"></i> Desabilitar anuncio';
+          ? '<i class="fas fa-eye"></i> Reativar an\u00FAncio'
+          : '<i class="fas fa-eye-slash"></i> Desabilitar an\u00FAncio';
 
         post.status = nowHidden ? 'hidden' : 'published';
         post.estado = post.status;
@@ -531,17 +533,17 @@
           var details = document.querySelector('.kc-product-details');
           badge.id = 'ownerStatusBadge';
           badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
-          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este anuncio esta <strong>desabilitado</strong> e nao aparece nos feeds. Apenas voce consegue ver esta pagina.</span>';
+          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este an\u00FAncio est\u00E1 <strong>desabilitado</strong> e n\u00E3o aparece nos feeds. Apenas voc\u00EA consegue ver esta p\u00E1gina.</span>';
           if (details) details.insertAdjacentElement('afterbegin', badge);
         }
 
-        toastMsg = nowHidden ? 'Anuncio desabilitado com sucesso.' : 'Anuncio reativado com sucesso.';
+        toastMsg = nowHidden ? 'An\u00FAncio desabilitado com sucesso.' : 'An\u00FAncio reativado com sucesso.';
         toast(toastMsg, 'success', 2500);
         return;
       }
 
       toggleBtn.innerHTML = prevHTML;
-      errMsg = (res && res.error && res.error.message) ? String(res.error.message) : 'Nao foi possivel alterar o status do anuncio.';
+      errMsg = (res && res.error && res.error.message) ? String(res.error.message) : 'N\u00E3o foi poss\u00EDvel alterar o status do an\u00FAncio.';
       toast(errMsg, 'error', 2800);
     });
 
@@ -551,17 +553,23 @@
       var res = null;
       var next;
       var msg;
+      var isReactivation;
 
       if (closeBtn.disabled) return;
-      confirmed = window.confirm('Encerrar esta publicacao? Ela continuara visivel como historico, mas nao ficara ativa no feed.');
+      isReactivation = String((post && (post.status || post.estado)) || postStatus || '').toLowerCase() === 'closed';
+      confirmed = window.confirm(isReactivation
+        ? 'Reativar esta publica\u00E7\u00E3o? Ela voltar\u00E1 a ficar ativa nos feeds.'
+        : 'Encerrar esta publica\u00E7\u00E3o? Ela continuar\u00E1 vis\u00EDvel como hist\u00F3rico, mas n\u00E3o ficar\u00E1 ativa no feed.');
       if (!confirmed) return;
 
       closeBtn.disabled = true;
       prevHTML = closeBtn.innerHTML;
-      closeBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Encerrando...';
+      closeBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> ' + (isReactivation ? 'Reativando...' : 'Encerrando...');
 
       try {
-        if (window.KCAPI && typeof window.KCAPI.closePost === 'function') {
+        if (isReactivation && window.KCAPI && typeof window.KCAPI.reactivatePost === 'function') {
+          res = await window.KCAPI.reactivatePost(getPostIdForMutation(post));
+        } else if (!isReactivation && window.KCAPI && typeof window.KCAPI.closePost === 'function') {
           res = await window.KCAPI.closePost(getPostIdForMutation(post), { reason: 'owner_closed' });
         }
       } catch (_) { }
@@ -569,13 +577,21 @@
       closeBtn.disabled = false;
 
       if (res && res.ok) {
-        post.status = 'closed';
-        post.estado = 'closed';
-        post.isClosed = true;
-        post.effective_at = post.effective_at || post.bumped_at || post.created_at || post.createdAt || null;
-        post.effectiveAt = post.effectiveAt || post.effective_at;
+        if (isReactivation) {
+          post.status = 'published';
+          post.estado = 'published';
+          post.isClosed = false;
+          post.expires_at = res.expires_at || post.expires_at || null;
+          post.expiresAt = post.expires_at;
+        } else {
+          post.status = 'closed';
+          post.estado = 'closed';
+          post.isClosed = true;
+          post.effective_at = post.effective_at || post.bumped_at || post.created_at || post.createdAt || null;
+          post.effectiveAt = post.effectiveAt || post.effective_at;
+        }
         clearPostSessionCaches();
-        toast(res.message || 'Publicacao encerrada.', 'success', 2400);
+        toast(res.message || (isReactivation ? 'Publica\u00E7\u00E3o reativada com sucesso.' : 'Publica\u00E7\u00E3o encerrada.'), 'success', 2400);
         if (context && typeof context.renderPost === 'function') {
           next = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
             ? window.KCPostModel.from(post, { pageModule: post.modulo || post.module || '', view: 'product' })
@@ -586,7 +602,9 @@
       }
 
       closeBtn.innerHTML = prevHTML;
-      msg = (res && (res.message || (res.error && res.error.message))) ? String(res.message || res.error.message) : 'Nao foi possivel encerrar a publicacao.';
+      msg = (res && (res.message || (res.error && res.error.message)))
+        ? String(res.message || res.error.message)
+        : (isReactivation ? 'N\u00E3o foi poss\u00EDvel reativar a publica\u00E7\u00E3o.' : 'N\u00E3o foi poss\u00EDvel encerrar a publica\u00E7\u00E3o.');
       toast(msg, 'error', 2800);
     });
 
@@ -611,7 +629,7 @@
 
       if (res && (res._kcError === 'POST_LIMIT_REACHED' || res.code === 'LIMIT_REACHED')) {
         renewBtn.innerHTML = prevHTML;
-        toast(res.message || 'Limite de publicacoes ativas atingido.', 'error', 4500);
+        toast(res.message || 'Limite de publica\u00E7\u00F5es ativas atingido.', 'error', 4500);
         return;
       }
 
@@ -622,17 +640,17 @@
         renewBtn.style.display = 'none';
         toggleBtn.style.display = '';
         toggleBtn.setAttribute('data-post-status', 'published');
-        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Desabilitar anuncio';
+        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Desabilitar an\u00FAncio';
         bumpBtn.style.display = '';
         existingBadge = document.getElementById('ownerStatusBadge');
         if (existingBadge) existingBadge.remove();
         clearPostSessionCaches();
-        toast(res.message || 'Publicacao renovada! Disponivel por mais 30 dias.', 'success', 3000);
+        toast(res.message || 'Publica\u00E7\u00E3o renovada. Dispon\u00EDvel por mais 30 dias.', 'success', 3000);
         return;
       }
 
       renewBtn.innerHTML = prevHTML;
-      msg = (res && res.message) || (res && res.error && res.error.message) || 'Nao foi possivel renovar a publicacao.';
+      msg = (res && res.message) || (res && res.error && res.error.message) || 'N\u00E3o foi poss\u00EDvel renovar a publica\u00E7\u00E3o.';
       toast(msg, 'error', 2800);
     });
 
@@ -661,14 +679,14 @@
         post.effective_at = post.bumped_at;
         post.effectiveAt = post.bumped_at;
         clearPostSessionCaches();
-        toast(res.message || 'Anuncio impulsionado com sucesso!', 'success', 3000);
+        toast(res.message || 'An\u00FAncio impulsionado com sucesso.', 'success', 3000);
         return;
       }
 
       bumpBtn.disabled = false;
       bumpBtn.style.opacity = '';
       bumpBtn.innerHTML = prevHTML;
-      msg = (res && res.message) || (res && res.error && res.error.message) || 'Nao foi possivel impulsionar agora.';
+      msg = (res && res.message) || (res && res.error && res.error.message) || 'N\u00E3o foi poss\u00EDvel impulsionar agora.';
       toast(msg, res && res.code === 'COOLDOWN_ACTIVE' ? 'warn' : 'error', 3500);
     });
   }

@@ -597,7 +597,7 @@
           <td data-label="Ações">
             <div class="kc-admin-actions">
               ${actionButton('Ocultar', 'hidden', '#ef6c00', p.status === 'hidden')}
-              ${actionButton('Restaurar', 'published', '#2e7d32', p.status === 'published')}
+              ${actionButton('Reativar', 'published', '#2e7d32', p.status === 'published')}
               ${actionButton('Encerrar', 'closed', '#64748b', p.status === 'closed')}
               ${actionButton('Deletar', 'deleted', '#b71c1c', p.status === 'deleted')}
             </div>
@@ -711,7 +711,7 @@
       if (state.sessionActions.length > 30) state.sessionActions.pop();
       renderPosts();
       renderSessionActions();
-      showFeedback(status === 'hidden' ? 'Post ocultado.' : status === 'published' ? 'Post restaurado/publicado.' : status === 'closed' ? 'Post encerrado.' : 'Post marcado como deletado.');
+      showFeedback(status === 'hidden' ? 'Post ocultado.' : status === 'published' ? 'Post reativado/publicado.' : status === 'closed' ? 'Post encerrado.' : 'Post marcado como deletado.');
       showToastSafe('Ação concluída com sucesso.', 'success', 1800);
       await fetchAuditLogs();
       return { ok: true };

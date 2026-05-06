@@ -481,9 +481,9 @@ describe('v74.0.0 - icones decorativos em admin-reports.controller.js', () => {
     expect(reports).toContain('<i class="fas fa-check-circle" style="font-size:3em;color:#4caf50;margin-bottom:10px;display:block;" aria-hidden="true"></i>');
     expect(reports).toContain('<i class="fas fa-file-alt" style="margin-right:6px;opacity:.6;" aria-hidden="true"></i>');
     expect(reports).toContain('<i class="fas fa-eye" aria-hidden="true"></i> Ver post');
-    expect(reports).toContain('<i class="fas fa-check" aria-hidden="true"></i> Fechar denu');
+    expect(reports).toContain('<i class="fas fa-check" aria-hidden="true"></i> Fechar den');
     expect(reports).toContain('<i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar');
-    expect(reports).toContain('<i class="fas fa-eye" aria-hidden="true"></i> Restaurar');
+    expect(reports).toContain('<i class="fas fa-eye" aria-hidden="true"></i> Reativar');
     expect(reports).toContain('<i class="fas fa-trash" aria-hidden="true"></i> Deletar');
     expect(reports).toContain('<i class="fas fa-check" style="color:#4caf50;" aria-hidden="true"></i> Todas as');
   });

@@ -56,8 +56,8 @@
     var moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
     if (moduleKey === 'eventos') return 'Evento encerrado';
     if (moduleKey === 'caronas') return 'Carona encerrada';
-    if (moduleKey === 'compra-venda') return 'Anuncio encerrado';
-    return 'Publicacao encerrada';
+    if (moduleKey === 'compra-venda') return 'An\u00FAncio encerrado';
+    return 'Publica\u00E7\u00E3o encerrada';
   }
 
   function syncClosedStatusNote(post, isClosed) {
@@ -69,7 +69,7 @@
     var note = document.createElement('div');
     note.id = 'kcClosedStatusNote';
     note.className = 'kc-product-status-note kc-product-status-note--closed';
-    note.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span><strong>' + esc(closedLabel(post)) + '.</strong> Esta publicacao fica visivel como historico, mas nao esta mais ativa.</span>';
+    note.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span><strong>' + esc(closedLabel(post)) + '.</strong> Esta publica\u00E7\u00E3o continua vis\u00EDvel como hist\u00F3rico, mas n\u00E3o est\u00E1 mais ativa. O dono pode reativ\u00E1-la a qualquer momento.</span>';
     details.insertAdjacentElement('afterbegin', note);
   }
 

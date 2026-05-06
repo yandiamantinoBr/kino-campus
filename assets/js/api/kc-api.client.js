@@ -1646,9 +1646,21 @@
     }
     const driver = getActiveDriver();
     if (!driver || typeof driver.closePost !== 'function') {
-      return { ok: false, code: 'UNAVAILABLE', message: 'Encerramento indisponivel neste driver.' };
+      return { ok: false, code: 'UNAVAILABLE', message: 'Encerramento indispon\u00EDvel neste driver.' };
     }
     return driver.closePost(postId, payload);
+  }
+
+  async function reactivatePost(postId) {
+    const postsWriteModule = getPostsWriteModule();
+    if (postsWriteModule && typeof postsWriteModule.reactivatePost === 'function') {
+      return postsWriteModule.reactivatePost(postId, buildPostsWriteDeps());
+    }
+    const driver = getActiveDriver();
+    if (!driver || typeof driver.reactivatePost !== 'function') {
+      return { ok: false, code: 'UNAVAILABLE', message: 'Reativa\u00E7\u00E3o indispon\u00EDvel neste driver.' };
+    }
+    return driver.reactivatePost(postId);
   }
 
   async function getTopContributors(period, module, limit) {
@@ -2198,7 +2210,7 @@
     if (notificationsModule && typeof notificationsModule.updateNotificationPreferences === 'function') {
       return notificationsModule.updateNotificationPreferences(preferences, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
     }
-    return { ok: false, error: { message: 'Preferencias de notificacao indisponiveis neste driver.' } };
+    return { ok: false, error: { message: 'Prefer\u00EAncias de notifica\u00E7\u00E3o indispon\u00EDveis neste driver.' } };
   }
 
   async function getNotificationChannelTargets() {
@@ -2214,7 +2226,7 @@
     if (notificationsModule && typeof notificationsModule.updateNotificationChannelTargets === 'function') {
       return notificationsModule.updateNotificationChannelTargets(targets, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
     }
-    return { ok: false, error: { message: 'Destinos privados de notificacao indisponiveis neste driver.' } };
+    return { ok: false, error: { message: 'Destinos privados de notifica\u00E7\u00E3o indispon\u00EDveis neste driver.' } };
   }
   // Notifications (v9.1.0)
 
@@ -2327,6 +2339,7 @@
     renewPost,
     bumpPost,
     closePost,
+    reactivatePost,
     getTopContributors,
     trackCouponClick,
     trackShare,

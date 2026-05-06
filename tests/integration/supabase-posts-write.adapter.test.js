@@ -549,6 +549,10 @@ describe('supabase.posts-write.adapter.js — exports window._KCSA.postsWrite', 
   test('exporta closePost', () => {
     expect(source).toContain('closePost,');
   });
+
+  test('exporta reactivatePost', () => {
+    expect(source).toContain('reactivatePost,');
+  });
 });
 
 describe('supabase.posts-write.adapter.js - closePost', () => {
@@ -566,5 +570,22 @@ describe('supabase.posts-write.adapter.js - closePost', () => {
     expect(source).toContain("new_status: data.new_status || data.status || 'closed'");
     expect(source).toContain("status: data.status || data.new_status || 'closed'");
     expect(source).toContain('closed_at: data.closed_at || null');
+  });
+});
+
+describe('supabase.posts-write.adapter.js - reactivatePost', () => {
+  test('define reactivatePost async', () => {
+    expect(source).toContain('async function reactivatePost(');
+  });
+
+  test('usa RPC kc_reactivate_post com post', () => {
+    expect(source).toContain("'kc_reactivate_post'");
+    expect(source).toContain('p_post_id: uuid');
+  });
+
+  test('normaliza retorno publicado para os contratos publicos', () => {
+    expect(source).toContain("new_status: data.new_status || data.status || 'published'");
+    expect(source).toContain("status: data.status || data.new_status || 'published'");
+    expect(source).toContain('expires_at: data.expires_at || null');
   });
 });

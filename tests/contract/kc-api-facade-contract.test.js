@@ -91,6 +91,7 @@ describe('kc-api.client.js - public domains frozen in the facade', () => {
       'renewPost,',
       'bumpPost,',
       'closePost,',
+      'reactivatePost,',
       'getTopContributors,',
       'trackCouponClick,',
       'trackShare,',
@@ -215,8 +216,8 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
     expect(source).toContain('return notificationsModule.getNotificationChannelTargets({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
     expect(source).toContain('return notificationsModule.updateNotificationChannelTargets(targets, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
     expect(source).toContain('window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === \'function\'');
-    expect(source).toContain("return { ok: false, error: { message: 'Preferencias de notificacao indisponiveis neste driver.' } };");
-    expect(source).toContain("return { ok: false, error: { message: 'Destinos privados de notificacao indisponiveis neste driver.' } };");
+    expect(source).toContain("return { ok: false, error: { message: 'Prefer\\u00EAncias de notifica\\u00E7\\u00E3o indispon\\u00EDveis neste driver.' } };");
+    expect(source).toContain("return { ok: false, error: { message: 'Destinos privados de notifica\\u00E7\\u00E3o indispon\\u00EDveis neste driver.' } };");
   });
 
   test('mantem fachada delegando saved/highlights via getSavedModule com fallback canonico', () => {
@@ -270,6 +271,8 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(source).toContain('return postsWriteModule.togglePostStatus(postId, buildPostsWriteDeps());');
     expect(source).toContain('return postsWriteModule.renewPost(postId, buildPostsWriteDeps());');
     expect(source).toContain('return postsWriteModule.bumpPost(postId, buildPostsWriteDeps());');
+    expect(source).toContain('return postsWriteModule.closePost(postId, payload, buildPostsWriteDeps());');
+    expect(source).toContain('return postsWriteModule.reactivatePost(postId, buildPostsWriteDeps());');
   });
 
   test('mantem delegacao para posts-feed via getPostsFeedModule e buildPostsFeedDeps', () => {

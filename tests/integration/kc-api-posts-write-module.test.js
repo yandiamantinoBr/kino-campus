@@ -3,7 +3,7 @@
  *
  * Cobre:
  * - IIFE registra window._KCAPI.postsWrite corretamente
- * - 8 metodos exportados existem
+ * - 9 metodos exportados existem
  * - enforceSupabaseOnProduction bloqueia createPost em producao sem supabase
  * - Fallbacks corretos quando driver nao disponivel
  * - Delegacao ao driver quando disponivel
@@ -33,9 +33,9 @@ describe('kc-api.posts-write.js — modulo IIFE e namespace', () => {
     expect(src).toContain('window._KCAPI.postsWrite = {');
   });
 
-  test('exporta os 8 metodos obrigatorios', () => {
+  test('exporta os 9 metodos obrigatorios', () => {
     const src = fs.readFileSync(POSTS_WRITE_PATH, 'utf8');
-    ['createPost', 'updatePost', 'deletePost', 'reportPost', 'togglePostStatus', 'renewPost', 'bumpPost', 'closePost']
+    ['createPost', 'updatePost', 'deletePost', 'reportPost', 'togglePostStatus', 'renewPost', 'bumpPost', 'closePost', 'reactivatePost']
       .forEach((m) => expect(src).toContain(m));
   });
 
@@ -122,6 +122,13 @@ describe('kc-api.posts-write.js — fallbacks sem driver', () => {
     expect(result.ok).toBe(false);
     expect(result.code).toBe('UNAVAILABLE');
   });
+
+  test('reactivatePost retorna UNAVAILABLE sem driver', async () => {
+    const deps = { getActiveDriver: () => null, ENV: {} };
+    const result = await postsWrite.reactivatePost('p1', deps);
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('UNAVAILABLE');
+  });
 });
 
 describe('kc-api.posts-write.js — delegacao ao driver', () => {
@@ -176,6 +183,14 @@ describe('kc-api.posts-write.js — delegacao ao driver', () => {
     const deps = { getActiveDriver: () => mockDriver, ENV: {} };
     const result = await postsWrite.closePost('p1', { reason: 'owner_closed' }, deps);
     expect(mockDriver.closePost).toHaveBeenCalledWith('p1', { reason: 'owner_closed' });
+    expect(result.ok).toBe(true);
+  });
+
+  test('reactivatePost delega ao driver', async () => {
+    const mockDriver = { reactivatePost: jest.fn().mockResolvedValue({ ok: true, status: 'published' }) };
+    const deps = { getActiveDriver: () => mockDriver, ENV: {} };
+    const result = await postsWrite.reactivatePost('p1', deps);
+    expect(mockDriver.reactivatePost).toHaveBeenCalledWith('p1');
     expect(result.ok).toBe(true);
   });
 });

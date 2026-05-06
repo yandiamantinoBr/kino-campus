@@ -15,6 +15,7 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
   let internalHardeningMigration;
   let rpcWrapperMigration;
   let isAdminAnonGrantMigration;
+  let reactivateMigration;
 
   beforeAll(() => {
     migration = read('supabase/migrations/v9.3.4.0_closed_posts_effective_feed.sql');
@@ -25,6 +26,7 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
     internalHardeningMigration = read('supabase/migrations/v9.3.4.5_internal_rpc_and_notification_rls_hardening.sql');
     rpcWrapperMigration = read('supabase/migrations/v9.3.4.6_security_definer_rpc_wrappers.sql');
     isAdminAnonGrantMigration = read('supabase/migrations/v9.3.4.7_grant_anon_is_admin_helper_wrapper.sql');
+    reactivateMigration = read('supabase/migrations/v9.3.4.8_reactivate_closed_posts.sql');
   });
 
   test('posts aceita closed como status historico publico', () => {
@@ -110,6 +112,16 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
     expect(isAdminAnonGrantMigration).toContain('grant execute on function kc_private.kc_is_admin(uuid) to anon');
     expect(isAdminAnonGrantMigration).toContain("notify pgrst, 'reload schema'");
   });
+
+  test('owner pode reativar publicacao encerrada por wrapper seguro', () => {
+    expect(reactivateMigration).toContain('create or replace function kc_private.kc_reactivate_post');
+    expect(reactivateMigration).toContain('create or replace function public.kc_reactivate_post');
+    expect(reactivateMigration).toContain('security invoker');
+    expect(reactivateMigration).toContain("'post_reactivated'");
+    expect(reactivateMigration).toContain("status = 'published'");
+    expect(reactivateMigration).toContain('grant execute on function public.kc_reactivate_post(uuid) to authenticated, service_role');
+    expect(reactivateMigration).toContain('revoke execute on function public.kc_reactivate_post(uuid) from public, anon');
+  });
 });
 
 describe('closed posts - contratos publicos JS', () => {
@@ -119,11 +131,14 @@ describe('closed posts - contratos publicos JS', () => {
     const supabase = read('assets/js/adapters/supabase/supabase.posts-write.adapter.js');
 
     expect(client).toContain('async function closePost(postId, payload = {})');
+    expect(client).toContain('async function reactivatePost(postId)');
     expect(client).toContain('bumpedAt');
     expect(client).toContain('effectiveAt');
     expect(client).toContain('isClosed');
     expect(write).toContain('async function closePost(postId, payload, deps)');
+    expect(write).toContain('async function reactivatePost(postId, deps)');
     expect(supabase).toContain("'kc_close_post'");
+    expect(supabase).toContain("'kc_reactivate_post'");
     expect(supabase).toContain("'post_closed'");
   });
 
@@ -135,6 +150,8 @@ describe('closed posts - contratos publicos JS', () => {
 
     expect(edit).toContain('closePostButton');
     expect(edit).toContain('window.KCAPI.closePost');
+    expect(edit).toContain('window.KCAPI.reactivatePost');
+    expect(edit).toContain('Reativar');
     expect(edit).toContain('clearPostSessionCaches');
     expect(report).toContain('closedReportButton');
     expect(report).toContain("reason: 'post_closed'");
@@ -170,6 +187,7 @@ describe('closed posts - contratos admin, shell e notificacoes', () => {
     expect(moderation).toContain("actionButton('Encerrar', 'closed'");
     expect(reports).toContain("post_closed: 'Encerramento'");
     expect(reports).toContain("data-action=\"closePost\"");
+    expect(reports).toContain('Reativar');
     expect(reports).toContain("setPostStatus(postId, 'closed', true)");
     expect(reportsHtml).toContain('<option value="post_closed">Encerramento</option>');
   });

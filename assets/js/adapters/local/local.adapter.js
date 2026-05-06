@@ -378,6 +378,7 @@
   const renewPost = createAsyncDelegate('postsWrite', 'renewPost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
   const bumpPost = createAsyncDelegate('postsWrite', 'bumpPost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
   const closePost = createAsyncDelegate('postsWrite', 'closePost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
+  const reactivatePost = createAsyncDelegate('postsWrite', 'reactivatePost', buildLocalPostsWriteDeps, () => buildUnavailableCode('Indisponivel no modo local.'));
 
   const getMyProfile = createAsyncDelegate('profile', 'getMyProfile', buildLocalProfileDeps, readLocalProfileSnapshot);
   const updateMyProfile = createAsyncDelegate('profile', 'updateMyProfile', buildLocalProfileDeps, () => buildUnavailableResult('Perfil local indisponivel.'), ensureObjectArg(0));
@@ -453,6 +454,7 @@
     renewPost,
     bumpPost,
     closePost,
+    reactivatePost,
     getTopContributors,
     trackCouponClick: asyncFalse,
     trackShare: asyncFalse,

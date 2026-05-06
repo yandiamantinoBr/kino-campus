@@ -604,18 +604,18 @@
         break;
       case 'closePost':
         if (!postId) return { ok: false, error: { message: 'post_id ausente para encerrar post.' } };
-        if (!window.confirm(`Encerrar este post e fechar denuncias abertas? "${postTitle || postId}".`)) {
+        if (!window.confirm(`Encerrar este post e fechar den\u00FAncias abertas? "${postTitle || postId}".`)) {
           return { ok: false, cancelled: true };
         }
         result = await setPostStatus(postId, 'closed', true);
         break;
       case 'restorePost':
-        if (!postId) return { ok: false, error: { message: 'post_id ausente para restaurar post.' } };
+        if (!postId) return { ok: false, error: { message: 'post_id ausente para reativar post.' } };
         result = await setPostStatus(postId, 'published');
         break;
       case 'deletePost':
         if (!postId) return { ok: false, error: { message: 'post_id ausente para deletar post.' } };
-        if (!window.confirm(`Deletar este post permanentemente? "${postTitle || postId}". Esta acao nao pode ser desfeita pelo painel.`)) {
+        if (!window.confirm(`Deletar este post permanentemente? "${postTitle || postId}". Esta a\u00E7\u00E3o n\u00E3o pode ser desfeita pelo painel.`)) {
           return { ok: false, cancelled: true };
         }
         result = await setPostStatus(postId, 'deleted');
@@ -692,13 +692,13 @@
     const loaded = Array.isArray(_reportsState.rows) ? _reportsState.rows.length : 0;
     if (!loaded && !_reportsState.totalCount) return '';
 
-    let counterText = `Exibindo ${loaded} denuncias filtradas.`;
+    let counterText = `Exibindo ${loaded} den\u00FAncias filtradas.`;
     if (_reportsState.totalCountKnown) {
-      counterText = `Exibindo ${loaded} de ${_reportsState.totalCount} denuncias filtradas.`;
+      counterText = `Exibindo ${loaded} de ${_reportsState.totalCount} den\u00FAncias filtradas.`;
     } else if (_reportsState.fallbackCapped) {
-      counterText = `Exibindo ${loaded}+ denuncias filtradas. O fallback RPC atual para em 500 registros.`;
+      counterText = `Exibindo ${loaded}+ den\u00FAncias filtradas. O fallback RPC atual para em 500 registros.`;
     } else if (_reportsState.hasMore) {
-      counterText = `Exibindo ${loaded}+ denuncias filtradas.`;
+      counterText = `Exibindo ${loaded}+ den\u00FAncias filtradas.`;
     }
 
     return `
@@ -711,7 +711,7 @@
     if (!_reportsState.hasMore && !_reportsState.fallbackCapped) return '';
 
     const note = _reportsState.fallbackCapped
-      ? '<p style="margin:10px 0 0;color:var(--kc-text-dark-secondary);font-size:.84em;">O fallback administrativo atingiu o limite de 500 registros. Para contagem completa, a consulta direta precisa estar disponivel.</p>'
+      ? '<p style="margin:10px 0 0;color:var(--kc-text-dark-secondary);font-size:.84em;">O fallback administrativo atingiu o limite de 500 registros. Para contagem completa, a consulta direta precisa estar dispon\u00EDvel.</p>'
       : '';
 
     const button = _reportsState.hasMore
@@ -749,13 +749,13 @@
     if (!append) setLoading(false);
 
     if (page.error) {
-      showToastSafe(getErrorMessage(page.error, 'Nao foi possivel carregar as denuncias.'), 'error', 3200);
+      showToastSafe(getErrorMessage(page.error, 'N\u00E3o foi poss\u00EDvel carregar as den\u00FAncias.'), 'error', 3200);
       if (!append && !_reportsState.rows.length) {
         renderSummary([]);
         container.innerHTML = `
           <div style="text-align:center;padding:40px;color:var(--kc-text-dark-secondary);">
             <i class="fas fa-exclamation-triangle" style="font-size:3em;color:#ff9800;margin-bottom:10px;display:block;" aria-hidden="true"></i>
-            <p style="font-size:1.1em;">Nao foi possivel carregar as denuncias agora.</p>
+            <p style="font-size:1.1em;">N\u00E3o foi poss\u00EDvel carregar as den\u00FAncias agora.</p>
           </div>`;
         syncShellModalState();
       }
@@ -805,7 +805,7 @@
       const post = postMap[pid] || {};
       const postTitleRaw = post.title || post.titulo || 'Post sem titulo';
       const postTitle = escHtmlAdmin(postTitleRaw);
-      const postStatus = String(post.status || 'indisponivel');
+      const postStatus = String(post.status || 'indispon\u00EDvel');
       const authorId = post.author_id || '';
 
       const reasonCounts = {};
@@ -863,17 +863,17 @@
             ${open.length > 0 ? `
             <button type="button" data-action="closeReports" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-check" aria-hidden="true"></i> Fechar denuncias
+              <i class="fas fa-check" aria-hidden="true"></i> Fechar den\u00FAncias
             </button>` : ''}
             ${postStatus === 'published' ? `
             <button type="button" data-action="hidePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
               <i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar
             </button>` : ''}
-            ${postStatus === 'hidden' ? `
+            ${postStatus === 'hidden' || postStatus === 'closed' ? `
             <button type="button" data-action="restorePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-eye" aria-hidden="true"></i> Restaurar
+              <i class="fas fa-eye" aria-hidden="true"></i> Reativar
             </button>` : ''}
             ${postStatus !== 'closed' && postStatus !== 'deleted' ? `
             <button type="button" data-action="closePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
@@ -883,7 +883,7 @@
             ${postStatus !== 'deleted' ? `
             <button type="button" data-action="deletePost" data-post-id="${escHtmlAdmin(pid)}" data-post-title="${escHtmlAdmin(postTitleRaw)}"
                     style="padding:7px 14px;background:#b71c1c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;"
-                    title="Esta acao nao pode ser desfeita pelo painel.">
+                    title="Esta a\u00E7\u00E3o n\u00E3o pode ser desfeita pelo painel.">
               <i class="fas fa-trash" aria-hidden="true"></i> Deletar
             </button>` : ''}
           </div>
@@ -902,7 +902,7 @@
             </thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>` : `<div style="color:var(--kc-text-dark-secondary);font-size:.9em;"><i class="fas fa-check" style="color:#4caf50;" aria-hidden="true"></i> Todas as denuncias deste post foram fechadas.</div>`}
+        </div>` : `<div style="color:var(--kc-text-dark-secondary);font-size:.9em;"><i class="fas fa-check" style="color:#4caf50;" aria-hidden="true"></i> Todas as den\u00FAncias deste post foram fechadas.</div>`}
       </div>`;
     }).join('');
 
@@ -1021,10 +1021,10 @@
                     style="padding:7px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
               <i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar
             </button>` : ''}
-            ${postStatus === 'hidden' ? `
+            ${postStatus === 'hidden' || postStatus === 'closed' ? `
             <button type="button" data-action="restorePost" data-post-id="${escape(pid)}"
                     style="padding:7px 14px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85em;display:inline-flex;align-items:center;gap:5px;">
-              <i class="fas fa-eye" aria-hidden="true"></i> Restaurar
+              <i class="fas fa-eye" aria-hidden="true"></i> Reativar
             </button>` : ''}
             ${postStatus !== 'closed' && postStatus !== 'deleted' ? `
             <button type="button" data-action="closePost" data-post-id="${escape(pid)}" data-post-title="${escape(postTitleRaw)}"

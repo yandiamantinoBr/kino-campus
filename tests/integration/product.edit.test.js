@@ -75,6 +75,7 @@ describe('product.edit.js - owner actions', () => {
   test('mantem grid proporcional: apenas botoes visiveis entram no sub-grid do dono', () => {
     expect(source).toContain('function appendVisibleAction(btn)');
     expect(source).toContain("if (!btn || btn.style.display === 'none') return;");
+    expect(source).toContain("wrap.style.cssText = 'display:contents;'");
     expect(source).toContain('appendVisibleAction(editBtn);');
     expect(source).toContain('appendVisibleAction(bumpBtn);');
     expect(source).toContain('appendVisibleAction(deleteBtn);');
@@ -93,6 +94,8 @@ describe('product.edit.js - owner actions', () => {
     expect(source).toContain('window.KCAPI.renewPost');
     expect(source).toContain('window.KCAPI.bumpPost');
     expect(source).toContain('window.KCAPI.closePost');
+    expect(source).toContain('window.KCAPI.reactivatePost');
+    expect(source).toContain('Reativar');
     expect(source).toContain("{ reason: 'owner_closed' }");
   });
 });
@@ -118,7 +121,7 @@ describe('product.edit.js - feedback e navegacao', () => {
   test('mantem feedbacks e redirect pos-exclusao', () => {
     expect(source).toContain('window.confirm(');
     expect(source).toContain("window.location.href = 'index.html'");
-    expect(source).toContain("toast('Publicacao excluida com sucesso.'");
+    expect(source).toContain("toast('Publica\\u00E7\\u00E3o exclu\\u00EDda com sucesso.'");
     expect(source).toContain("toast(msg, 'error', 2800);");
   });
 
@@ -137,19 +140,20 @@ describe('product.edit.js - exports', () => {
 });
 
 describe('product.css - layout proporcional das actions', () => {
-  test('corrige linhas impares e nao aplica padding nos wrappers mobile', () => {
-    expect(cssSource).toContain('.kc-product-actions.kc-product-actions--has-calendar > .kc-share-wrap');
-    expect(cssSource).toContain('#ownerActionsWrap > button:last-child:nth-child(odd)');
+  test('mantem grid de 2 colunas sem full-row em compartilhar/excluir', () => {
+    expect(cssSource).toContain('.kc-product-actions > #ownerActionsWrap');
+    expect(cssSource).toContain('display: contents;');
     expect(cssSource).toMatch(/#ownerActionsWrap > button \{\s*min-height: 44px;/);
-    expect(cssSource).toContain('.kc-product-actions > #reportButton');
-    expect(cssSource).toContain('.kc-product-actions > #closedReportButton');
+    expect(cssSource).not.toContain('.kc-product-actions.kc-product-actions--has-calendar > .kc-share-wrap');
+    expect(cssSource).not.toContain('#ownerActionsWrap > button:last-child:nth-child(odd)');
+    expect(cssSource).not.toContain('.kc-product-actions > #reportButton,\n      .kc-product-actions > #closedReportButton');
     expect(cssSource).not.toMatch(/\.kc-product-actions > \.kc-save-wrap,\s*\.kc-product-actions > \.kc-share-wrap,\s*\.kc-product-actions > \.kc-calendar-wrap,\s*\.kc-product-actions \.kc-btn-primary/);
   });
 });
 
 describe('product.calendar.js - estado de calendario nas actions', () => {
-  test('marca o grid quando o botao Marcar na Agenda esta presente', () => {
-    expect(calendarSource).toContain("actions.classList.remove('kc-product-actions--has-calendar')");
-    expect(calendarSource).toContain("primaryCta.parentNode.classList.add('kc-product-actions--has-calendar')");
+  test('nao usa classe de full-row para compartilhar quando calendario esta presente', () => {
+    expect(calendarSource).not.toContain('kc-product-actions--has-calendar');
+    expect(calendarSource).toContain('primaryCta.parentNode.insertBefore(wrap, primaryCta.nextSibling)');
   });
 });

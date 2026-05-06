@@ -4,7 +4,7 @@
   Sub-modulo do dominio posts-write para a fachada KCAPI.
   Registrado em window._KCAPI.postsWrite e carregado antes de kc-api.client.js.
 
-  Contrato preservado: os 8 metodos abaixo mantem exatamente a mesma
+  Contrato preservado: os 9 metodos abaixo mantem exatamente a mesma
   semantica das implementacoes previas em kc-api.client.js, incluindo
   o gate enforceSupabaseOnProduction para createPost e os guards de
   indisponibilidade de driver para os demais metodos de mutacao.
@@ -105,9 +105,17 @@
   async function closePost(postId, payload, deps) {
     const driver = getActiveDriverOrNull(deps);
     if (!driver || typeof driver.closePost !== 'function') {
-      return { ok: false, code: 'UNAVAILABLE', message: 'Encerramento indisponivel neste driver.' };
+      return { ok: false, code: 'UNAVAILABLE', message: 'Encerramento indispon\u00EDvel neste driver.' };
     }
     return driver.closePost(postId, payload || {});
+  }
+
+  async function reactivatePost(postId, deps) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.reactivatePost !== 'function') {
+      return { ok: false, code: 'UNAVAILABLE', message: 'Reativa\u00E7\u00E3o indispon\u00EDvel neste driver.' };
+    }
+    return driver.reactivatePost(postId);
   }
 
   window._KCAPI.postsWrite = {
@@ -119,5 +127,6 @@
     renewPost,
     bumpPost,
     closePost,
+    reactivatePost,
   };
 })();

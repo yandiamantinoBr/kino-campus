@@ -765,7 +765,7 @@
         return {
           ok: false,
           error: {
-            message: 'Nao foi possivel excluir a publicacao porque a remocao das midias falhou. Tente novamente.',
+            message: 'N\u00E3o foi poss\u00EDvel excluir a publica\u00E7\u00E3o porque a remo\u00E7\u00E3o das m\u00EDdias falhou. Tente novamente.',
             code: 'POST_MEDIA_STORAGE_CLEANUP_FAILED',
             details: cleanup,
           },
@@ -983,6 +983,35 @@
   }
 
   // ── Namespace ─────────────────────────────────────────────────────────────
+  async function reactivatePost(postId) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase n\u00E3o inicializado.' } };
+    const uuid = String(postId || '').trim();
+    if (!uuid) return { ok: false, error: { message: 'ID de publica\u00E7\u00E3o inv\u00E1lido.' } };
+
+    try {
+      const { data, error } = await client.rpc('kc_reactivate_post', { p_post_id: uuid });
+      if (error) return { ok: false, error };
+      if (!data || data.ok === false) {
+        return {
+          ok: false,
+          _kcError: data && data.code === 'LIMIT_REACHED' ? 'POST_LIMIT_REACHED' : undefined,
+          code: (data && data.code) || 'UNKNOWN',
+          message: (data && data.message) || 'N\u00E3o foi poss\u00EDvel reativar a publica\u00E7\u00E3o.',
+          limit: data && data.limit,
+          count: data && data.count,
+        };
+      }
+      return {
+        ok: true,
+        new_status: data.new_status || data.status || 'published',
+        status: data.status || data.new_status || 'published',
+        expires_at: data.expires_at || null,
+        message: data.message,
+      };
+    } catch (e) { return { ok: false, error: e }; }
+  }
+
   window._KCSA.postsWrite = {
     createPost,
     updatePost,
@@ -992,6 +1021,7 @@
     renewPost,
     bumpPost,
     closePost,
+    reactivatePost,
   };
 
 })();

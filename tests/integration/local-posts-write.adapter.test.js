@@ -125,12 +125,13 @@ describe('local.posts-write.adapter.js - contrato estatico', () => {
     expect(Object.isFrozen(postsWrite())).toBe(true);
   });
 
-  test('expoe exatamente 8 chaves publicas', () => {
+  test('expoe exatamente 9 chaves publicas', () => {
     expect(Object.keys(postsWrite()).sort()).toEqual([
       'bumpPost',
       'closePost',
       'createPost',
       'deletePost',
+      'reactivatePost',
       'renewPost',
       'reportPost',
       'togglePostStatus',
@@ -332,6 +333,11 @@ describe('local.posts-write.adapter.js - stubs de mutacao avancada', () => {
     const result = await postsWrite().closePost();
     expect(result.code).toBe('UNAVAILABLE');
   });
+
+  test('reactivatePost retorna UNAVAILABLE', async () => {
+    const result = await postsWrite().reactivatePost();
+    expect(result.code).toBe('UNAVAILABLE');
+  });
 });
 
 describe('local.posts-write.adapter.js - integracao com driver local', () => {
@@ -398,6 +404,19 @@ describe('local.posts-write.adapter.js - integracao com driver local', () => {
 
     expect(result.code).toBe('UNAVAILABLE');
     expect(stub.closePost).toHaveBeenCalled();
+  });
+
+  test('driver delega reactivatePost para o submodulo', async () => {
+    const stub = {
+      ...actualPostsWriteModule,
+      reactivatePost: jest.fn().mockResolvedValue({ ok: false, code: 'UNAVAILABLE' }),
+    };
+    window._KCLA.postsWrite = stub;
+
+    const result = await driver.reactivatePost('draft-1');
+
+    expect(result.code).toBe('UNAVAILABLE');
+    expect(stub.reactivatePost).toHaveBeenCalled();
   });
 
   test('driver retorna null quando createPost nao esta disponivel no submodulo', async () => {
