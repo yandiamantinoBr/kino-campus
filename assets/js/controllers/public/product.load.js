@@ -413,7 +413,7 @@
 
     if (window.KCLazyLoader && typeof window.KCLazyLoader.load === 'function') {
       var _commentPostId = id;
-      window.KCLazyLoader.load('assets/js/kc-comments.js', function () {
+      window.KCLazyLoader.load('assets/js/features/kc-comments.js', function () {
         if (typeof window.renderComments === 'function') {
           window.renderComments(_commentPostId, 'commentsContainer');
         }

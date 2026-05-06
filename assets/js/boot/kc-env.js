@@ -226,12 +226,12 @@
         const currentSrc = currentScript && currentScript.src ? String(currentScript.src) : '';
         if (currentSrc) {
           try {
-            s.src = new URL('kc-migrate.myposts.js', currentSrc).toString();
+            s.src = new URL('../legacy-shims/kc-migrate.myposts.js', currentSrc).toString();
           } catch (_) {
-            s.src = '/assets/js/kc-migrate.myposts.js';
+            s.src = '/assets/js/legacy-shims/kc-migrate.myposts.js';
           }
         } else {
-          s.src = '/assets/js/kc-migrate.myposts.js';
+          s.src = '/assets/js/legacy-shims/kc-migrate.myposts.js';
         }
 
         s.defer = true;
