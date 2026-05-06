@@ -9,10 +9,22 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'u
 describe('closed posts - contratos de dados e feed efetivo', () => {
   let migration;
   let grantsMigration;
+  let closeAuditFixMigration;
+  let rpcStorageHardeningMigration;
+  let unaccentSchemaMigration;
+  let internalHardeningMigration;
+  let rpcWrapperMigration;
+  let isAdminAnonGrantMigration;
 
   beforeAll(() => {
     migration = read('supabase/migrations/v9.3.4.0_closed_posts_effective_feed.sql');
     grantsMigration = read('supabase/migrations/v9.3.4.1_closed_posts_rpc_grants.sql');
+    closeAuditFixMigration = read('supabase/migrations/v9.3.4.2_fix_close_post_audit_payload.sql');
+    rpcStorageHardeningMigration = read('supabase/migrations/v9.3.4.3_security_advisor_rpc_storage_hardening.sql');
+    unaccentSchemaMigration = read('supabase/migrations/v9.3.4.4_unaccent_extension_schema.sql');
+    internalHardeningMigration = read('supabase/migrations/v9.3.4.5_internal_rpc_and_notification_rls_hardening.sql');
+    rpcWrapperMigration = read('supabase/migrations/v9.3.4.6_security_definer_rpc_wrappers.sql');
+    isAdminAnonGrantMigration = read('supabase/migrations/v9.3.4.7_grant_anon_is_admin_helper_wrapper.sql');
   });
 
   test('posts aceita closed como status historico publico', () => {
@@ -52,6 +64,51 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
   test('RPC de denuncia de encerramento nao e executavel por anon', () => {
     expect(grantsMigration).toContain('revoke execute on function public.kc_report_post(uuid, text, text) from public, anon');
     expect(grantsMigration).toContain('grant execute on function public.kc_report_post(uuid, text, text) to authenticated, service_role');
+  });
+
+  test('kc_close_post registra auditoria usando payload, nao metadata inexistente', () => {
+    expect(closeAuditFixMigration).toContain('create or replace function public.kc_close_post');
+    expect(closeAuditFixMigration).toContain('perform public.audit_log_insert');
+    expect(closeAuditFixMigration).toContain("'post_closed'");
+    expect(closeAuditFixMigration).not.toContain('actor_id, metadata');
+    expect(closeAuditFixMigration).not.toContain('entity_id, actor_id, metadata');
+  });
+
+  test('hardening remove listagem ampla do bucket e limita RPCs expostas', () => {
+    expect(rpcStorageHardeningMigration).toContain('drop policy if exists storage_kino_media_public_read on storage.objects');
+    expect(rpcStorageHardeningMigration).toContain('and p.prosecdef');
+    expect(rpcStorageHardeningMigration).toContain('revoke execute on function');
+    expect(rpcStorageHardeningMigration).toContain('kc_admin_set_post_status');
+    expect(rpcStorageHardeningMigration).toContain('kc_home_category_post_counts');
+  });
+
+  test('unaccent fica fora de public com wrapper estavel para buscas', () => {
+    expect(unaccentSchemaMigration).toContain('create schema if not exists extensions');
+    expect(unaccentSchemaMigration).toContain('alter extension unaccent set schema extensions');
+    expect(unaccentSchemaMigration).toContain('create or replace function public.kc_unaccent');
+    expect(unaccentSchemaMigration).toContain('extensions.unaccent');
+  });
+
+  test('tabelas internas de notificacao recebem policies e rotinas internas perdem execute publico', () => {
+    expect(internalHardeningMigration).toContain('notification_delivery_outbox_service_role_all');
+    expect(internalHardeningMigration).toContain('notification_dispatch_runtime_service_role_all');
+    expect(internalHardeningMigration).toContain('revoke execute on function');
+    expect(internalHardeningMigration).toContain('kc_claim_notification_delivery_batch');
+    expect(internalHardeningMigration).toContain('kc_record_notification_delivery_attempt');
+  });
+
+  test('RPCs publicas usam wrappers invoker e implementacao privada', () => {
+    expect(rpcWrapperMigration).toContain('create schema if not exists kc_private');
+    expect(rpcWrapperMigration).toContain("alter function public.%I(%s) set schema kc_private");
+    expect(rpcWrapperMigration).toContain('security invoker');
+    expect(rpcWrapperMigration).toContain('p.prosecdef');
+    expect(rpcWrapperMigration).toContain('kc_private.%I(%s)');
+  });
+
+  test('feed anonimo mantem execute no helper kc_is_admin usado por kc_can_read_post', () => {
+    expect(isAdminAnonGrantMigration).toContain('grant execute on function public.kc_is_admin(uuid) to anon');
+    expect(isAdminAnonGrantMigration).toContain('grant execute on function kc_private.kc_is_admin(uuid) to anon');
+    expect(isAdminAnonGrantMigration).toContain("notify pgrst, 'reload schema'");
   });
 });
 
