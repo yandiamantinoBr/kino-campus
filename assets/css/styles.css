@@ -7543,11 +7543,10 @@ textarea::placeholder {
   }
 }
 
-/* Header responsivo estavel: evita quebra de linha e variacao visual da busca. */
+/* Header responsivo estavel: preserva a navegacao textual e evita salto visual da busca. */
 @media (min-width: 769px) {
   .kc-header:not(.kc-header--admin) .kc-header-container {
-    flex-wrap: nowrap;
-    gap: clamp(8px, 0.8vw, 15px);
+    gap: clamp(10px, 1vw, 15px);
   }
 
   .kc-header:not(.kc-header--admin) .kc-logo,
@@ -7558,17 +7557,28 @@ textarea::placeholder {
   }
 
   .kc-header:not(.kc-header--admin) .kc-nav-links {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     flex-wrap: nowrap;
-    gap: clamp(6px, 0.55vw, 10px);
+    gap: clamp(7px, 0.7vw, 10px);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-nav-links a {
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
 
   .kc-header:not(.kc-header--admin) .kc-search-bar {
     box-sizing: border-box;
-    flex: 1 1 clamp(240px, 24vw, 420px);
-    width: clamp(240px, 24vw, 420px);
-    min-width: 240px;
-    max-width: 420px;
+    flex: 1 1 clamp(280px, 32vw, 660px);
+    width: clamp(280px, 32vw, 660px);
+    min-width: 280px;
+    max-width: 660px;
     transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease, background-color var(--transition-speed) ease;
   }
 
@@ -7618,92 +7628,94 @@ textarea::placeholder {
 }
 
 @media (min-width: 1500px) {
+  .kc-header:not(.kc-header--admin) .kc-header-container {
+    flex-wrap: wrap;
+  }
+
   .kc-header:not(.kc-header--admin) .kc-nav-links {
-    min-width: 720px;
+    max-width: min(52vw, 920px);
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-search-bar {
+    flex-basis: clamp(360px, 34vw, 680px);
+    width: clamp(360px, 34vw, 680px);
+    min-width: 360px;
+    max-width: 680px;
   }
 }
 
 @media (min-width: 769px) and (max-width: 1499px) {
+  .kc-header:not(.kc-header--admin) .kc-header-container {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "logo nav nav"
+      "search search actions";
+    align-items: center;
+    justify-content: stretch;
+    gap: 10px 14px;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo {
+    grid-area: logo;
+  }
+
   .kc-header:not(.kc-header--admin) .kc-nav-links {
-    gap: 6px;
+    grid-area: nav;
+    justify-self: end;
+    width: 100%;
+    max-width: 100%;
+    justify-content: flex-end;
   }
 
   .kc-header:not(.kc-header--admin) .kc-nav-links a {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 50%;
+    width: auto;
+    height: auto;
+    padding: 7px clamp(7px, 0.8vw, 10px);
+    justify-content: flex-start;
+    border-radius: 8px;
   }
 
   .kc-header:not(.kc-header--admin) .kc-nav-links a span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
     padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    overflow: visible;
+    clip: auto;
     white-space: nowrap;
     border: 0;
   }
 
   .kc-header:not(.kc-header--admin) .kc-search-bar {
-    flex-basis: clamp(260px, 28vw, 380px);
-    width: clamp(260px, 28vw, 380px);
-    min-width: 260px;
-    max-width: 380px;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1120px) {
-  .kc-header:not(.kc-header--admin) .kc-search-bar {
-    flex-basis: clamp(220px, 30vw, 320px);
-    width: clamp(220px, 30vw, 320px);
-    min-width: 220px;
-    max-width: 320px;
+    grid-area: search;
+    justify-self: start;
+    width: min(560px, 100%);
+    min-width: 0;
+    max-width: 560px;
+    flex: none;
   }
 
-  .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login.is-auth {
-    min-width: 79px;
-    padding: 4px 6px;
-  }
-
-  html.kc-auth-shell-cached .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login:not(.is-auth) {
-    min-width: 79px;
-    min-height: 32px;
-    padding: 4px 6px;
-  }
-
-  html.kc-auth-shell-cached .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login:not(.is-auth)::after {
-    display: none;
-  }
-
-  .kc-header:not(.kc-header--admin) .kc-header-user__name {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+  .kc-header:not(.kc-header--admin) .kc-user-actions {
+    grid-area: actions;
+    justify-self: end;
   }
 }
 
 @media (min-width: 769px) and (max-width: 900px) {
-  .kc-header:not(.kc-header--admin) .kc-logo-text {
-    display: none;
+  .kc-header:not(.kc-header--admin) .kc-nav-links {
+    justify-content: flex-start;
   }
 
-  .kc-header:not(.kc-header--admin) .kc-logo a {
-    gap: 0;
+  .kc-header:not(.kc-header--admin) .kc-nav-links a {
+    font-size: 0.8em;
+    padding: 6px 7px;
   }
 
   .kc-header:not(.kc-header--admin) .kc-search-bar {
-    flex-basis: clamp(220px, 32vw, 280px);
-    width: clamp(220px, 32vw, 280px);
+    width: min(460px, 100%);
+    max-width: 460px;
   }
 }
 
