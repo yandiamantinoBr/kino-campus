@@ -95,6 +95,17 @@ function kcNormalizePostVisibilityValue(value, fallback) {
   return String(fallback || 'community').trim().toLowerCase() === 'public' ? 'public' : 'community';
 }
 
+function kcGetModuloFilterForPage() {
+  const page = (window.location.pathname.split('/').pop() || '').toLowerCase();
+  if (page.includes('caronas')) return 'caronas';
+  if (page.includes('achados-perdidos')) return 'achados-perdidos';
+  if (page.includes('eventos')) return 'eventos';
+  if (page.includes('moradia')) return 'moradia';
+  if (page.includes('oportunidades')) return 'oportunidades';
+  if (page.includes('compra-venda')) return 'compra-venda';
+  return null;
+}
+
 function kcParseBRLNumber(input) {
   if (input == null) return null;
   const s = String(input).trim();
@@ -589,25 +600,18 @@ async function kcHandleCreateSubmit() {
   return (s && typeof s.handleCreateSubmit === 'function') ? s.handleCreateSubmit() : undefined;
 }
 function kcInitCreatePostTriggers() {
-  // Intercepta links e botões existentes
+  // Intercepta links e botoes existentes
   document.body.addEventListener('click', (e) => {
     const trigger = e.target.closest('a[href="create-post.html"], .kc-create-btn, .kc-create-post-btn');
     if (!trigger) return;
 
-    const href = String(trigger.getAttribute('href') || '').trim();
-    const isCreateLink = href.toLowerCase().includes('create-post.html');
+    // Com JS ativo, create-post.html funciona apenas como fallback de acesso direto.
+    // Os botoes devem abrir o modal ou o login, sem navegar para a pagina fallback.
+    e.preventDefault();
 
     // tenta inferir módulo atual pela página
     const mod = kcGetModuloFilterForPage();
-    const opened = kcOpenCreatePostModal(mod || null);
-
-    // Só bloqueia navegação se o modal abriu corretamente.
-    if (opened) {
-      e.preventDefault();
-    } else if (isCreateLink) {
-      // fallback explícito
-      window.location.href = href;
-    }
+    kcOpenCreatePostModal(mod || null);
   });
 
   // Autopen: se a pessoa abrir create-post.html direto

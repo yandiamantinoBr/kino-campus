@@ -55,3 +55,14 @@ test.describe('Criar Post — create-post.html', () => {
     expect(label).toBeTruthy();
   });
 });
+
+test.describe('Criar Post - gatilhos globais', () => {
+  test('botao Criar Publicacao da home abre modal sem navegar para fallback', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.locator('.kc-create-post-btn').click();
+
+    await expect(page).not.toHaveURL(/create-post\.html/);
+    await expect(page.locator('#kcCreatePostModalOverlay.active')).toBeVisible();
+    await expect(page.locator('#kcCreateModalTitle')).toContainText('Nova Publicação');
+  });
+});

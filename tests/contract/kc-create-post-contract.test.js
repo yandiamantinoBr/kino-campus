@@ -161,8 +161,11 @@ describe('kc-create-post — side channels and bootstrap', () => {
 
   test('keeps the trigger bootstrap and DOMContentLoaded wiring intact', () => {
     expect(source).toContain('function kcInitCreatePostTriggers() {');
+    expect(source).toContain('function kcGetModuloFilterForPage() {');
     expect(source).toContain("const trigger = e.target.closest('a[href=\"create-post.html\"], .kc-create-btn, .kc-create-post-btn');");
+    expect(source).toContain('e.preventDefault();');
     expect(source).toContain('const mod = kcGetModuloFilterForPage();');
+    expect(source).not.toContain('window.location.href = href;');
     expect(source).toContain("document.addEventListener('DOMContentLoaded', function () {");
     expect(source).toContain('kcInitCreatePostTriggers();');
   });
