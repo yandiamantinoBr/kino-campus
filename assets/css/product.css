@@ -341,6 +341,10 @@
       min-width: 0;
     }
 
+    .kc-product-actions.kc-product-actions--has-calendar > .kc-share-wrap {
+      grid-column: 1 / -1;
+    }
+
     .kc-product-actions > .kc-save-wrap,
     .kc-product-actions > .kc-share-wrap,
     .kc-product-actions > .kc-calendar-wrap {
@@ -396,13 +400,18 @@
       text-overflow: ellipsis;
     }
 
+    #ownerActionsWrap > button:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+
     /* Em telas muito pequenas, reduz fonte mas mantém nowrap para uniformidade */
     @media (max-width: 400px) {
       .kc-product-actions > button,
       .kc-product-actions > a,
       .kc-product-actions > .kc-save-wrap > button,
       .kc-product-actions > .kc-share-wrap > button,
-      .kc-product-actions > .kc-calendar-wrap > button {
+      .kc-product-actions > .kc-calendar-wrap > button,
+      #ownerActionsWrap > button {
         min-height: 44px;
         font-size: 0.82rem;
       }
@@ -1722,15 +1731,17 @@
         display: none;
       }
 
-      .kc-product-actions > .kc-save-wrap,
-      .kc-product-actions > .kc-share-wrap,
-      .kc-product-actions > .kc-calendar-wrap,
       .kc-product-actions .kc-btn-primary,
       .kc-product-actions .kc-btn-secondary {
         justify-content: center;
         padding: 10px 12px;
         font-size: .92em;
         white-space: normal;
+      }
+
+      .kc-product-actions > #reportButton,
+      .kc-product-actions > #closedReportButton {
+        grid-column: 1 / -1;
       }
 
       .kc-seller-profile {

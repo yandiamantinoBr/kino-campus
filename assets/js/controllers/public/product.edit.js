@@ -273,6 +273,11 @@
     var ownerStatusBadge;
     var reportBtn;
 
+    function appendVisibleAction(btn) {
+      if (!btn || btn.style.display === 'none') return;
+      wrap.appendChild(btn);
+    }
+
     if (!actions) return;
 
     canManage = isAuthor(post, user);
@@ -282,6 +287,7 @@
 
     wrap = document.createElement('div');
     wrap.id = 'ownerActionsWrap';
+    wrap.className = 'kc-owner-actions-grid';
     wrap.style.cssText = 'grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;';
 
     editBtn = document.createElement('button');
@@ -407,12 +413,12 @@
       })();
     }
 
-    wrap.appendChild(editBtn);
-    wrap.appendChild(bumpBtn);
-    wrap.appendChild(renewBtn);
-    wrap.appendChild(toggleBtn);
-    wrap.appendChild(closeBtn);
-    wrap.appendChild(deleteBtn);
+    appendVisibleAction(editBtn);
+    appendVisibleAction(bumpBtn);
+    appendVisibleAction(renewBtn);
+    appendVisibleAction(toggleBtn);
+    appendVisibleAction(closeBtn);
+    appendVisibleAction(deleteBtn);
 
     reportBtn = document.getElementById('reportButton');
     if (reportBtn && reportBtn.parentNode === actions) actions.insertBefore(wrap, reportBtn);

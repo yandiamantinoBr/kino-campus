@@ -173,6 +173,8 @@
 
     var prev = document.getElementById('kcEventCalendarWrap');
     if (prev) prev.remove();
+    var actions = document.querySelector('.kc-product-actions');
+    if (actions) actions.classList.remove('kc-product-actions--has-calendar');
 
     if (moduleKey !== 'eventos' || status === 'closed' || post.isClosed === true) return;
 
@@ -307,6 +309,7 @@
     var primaryCta = document.getElementById('primaryCta');
     if (primaryCta && primaryCta.parentNode) {
       primaryCta.parentNode.insertBefore(wrap, primaryCta.nextSibling);
+      if (primaryCta.parentNode.classList) primaryCta.parentNode.classList.add('kc-product-actions--has-calendar');
       wireCalendarPopover();
     }
   }

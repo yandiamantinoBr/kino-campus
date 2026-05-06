@@ -8,9 +8,17 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = path.resolve(__dirname, '../../assets/js/controllers/public/product.edit.js');
+const CALENDAR_SRC = path.resolve(__dirname, '../../assets/js/controllers/public/product.calendar.js');
+const CSS_SRC = path.resolve(__dirname, '../../assets/css/product.css');
 let source;
+let calendarSource;
+let cssSource;
 
-beforeAll(() => { source = fs.readFileSync(SRC, 'utf8'); });
+beforeAll(() => {
+  source = fs.readFileSync(SRC, 'utf8');
+  calendarSource = fs.readFileSync(CALENDAR_SRC, 'utf8');
+  cssSource = fs.readFileSync(CSS_SRC, 'utf8');
+});
 
 describe('product.edit.js - estrutura IIFE e namespace', () => {
   test('e uma IIFE (function)()', () => {
@@ -54,6 +62,7 @@ describe('product.edit.js - owner actions', () => {
   test('define upsertOwnerActions com os controles do dono', () => {
     expect(source).toContain('function upsertOwnerActions(post, user, context)');
     expect(source).toContain("wrap.id = 'ownerActionsWrap'");
+    expect(source).toContain("wrap.className = 'kc-owner-actions-grid'");
     expect(source).toContain("editBtn.id = 'editPostButton'");
     expect(source).toContain("toggleBtn.id = 'togglePostStatusButton'");
     expect(source).toContain("renewBtn.id = 'renewPostButton'");
@@ -61,6 +70,14 @@ describe('product.edit.js - owner actions', () => {
     expect(source).toContain("closeBtn.id = 'closePostButton'");
     expect(source).toContain("deleteBtn.id = 'deletePostButton'");
     expect(source).toContain("badge.id = 'ownerStatusBadge'");
+  });
+
+  test('mantem grid proporcional: apenas botoes visiveis entram no sub-grid do dono', () => {
+    expect(source).toContain('function appendVisibleAction(btn)');
+    expect(source).toContain("if (!btn || btn.style.display === 'none') return;");
+    expect(source).toContain('appendVisibleAction(editBtn);');
+    expect(source).toContain('appendVisibleAction(bumpBtn);');
+    expect(source).toContain('appendVisibleAction(deleteBtn);');
   });
 
   test('mantem o contrato de edit principal e o audit_log', () => {
@@ -116,5 +133,23 @@ describe('product.edit.js - feedback e navegacao', () => {
 describe('product.edit.js - exports', () => {
   test('exporta apenas o contrato usado pelo core', () => {
     expect(source).toContain('upsertOwnerActions: upsertOwnerActions');
+  });
+});
+
+describe('product.css - layout proporcional das actions', () => {
+  test('corrige linhas impares e nao aplica padding nos wrappers mobile', () => {
+    expect(cssSource).toContain('.kc-product-actions.kc-product-actions--has-calendar > .kc-share-wrap');
+    expect(cssSource).toContain('#ownerActionsWrap > button:last-child:nth-child(odd)');
+    expect(cssSource).toMatch(/#ownerActionsWrap > button \{\s*min-height: 44px;/);
+    expect(cssSource).toContain('.kc-product-actions > #reportButton');
+    expect(cssSource).toContain('.kc-product-actions > #closedReportButton');
+    expect(cssSource).not.toMatch(/\.kc-product-actions > \.kc-save-wrap,\s*\.kc-product-actions > \.kc-share-wrap,\s*\.kc-product-actions > \.kc-calendar-wrap,\s*\.kc-product-actions \.kc-btn-primary/);
+  });
+});
+
+describe('product.calendar.js - estado de calendario nas actions', () => {
+  test('marca o grid quando o botao Marcar na Agenda esta presente', () => {
+    expect(calendarSource).toContain("actions.classList.remove('kc-product-actions--has-calendar')");
+    expect(calendarSource).toContain("primaryCta.parentNode.classList.add('kc-product-actions--has-calendar')");
   });
 });
