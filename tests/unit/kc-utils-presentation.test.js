@@ -215,7 +215,7 @@ describe('applyPresentationRules ? shape b?sico', () => {
       bumped_at: '2026-05-01T10:00:00.000Z',
     });
     expect(output.isClosed).toBe(true);
-    expect(output._kcCtaText).toBe('Ver historico');
+    expect(output._kcCtaText).toBe('Ver hist\u00F3rico');
     expect(output._kcRelativeTime).toBeTruthy();
   });
 });
@@ -351,7 +351,7 @@ describe('renderPostCard', () => {
     expect(html).toContain('data-status="closed"');
     expect(html).toContain('kc-badge--closed');
     expect(html).toContain('Encerrado');
-    expect(html).toContain('Ver historico');
+    expect(html).toContain('Ver hist\u00F3rico');
     expect(html).toContain('disabled aria-disabled="true"');
     expect(html).toContain('product.html?id=post-closed#comments');
   });

@@ -16,6 +16,7 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
   let rpcWrapperMigration;
   let isAdminAnonGrantMigration;
   let reactivateMigration;
+  let expirationCloseMigration;
 
   beforeAll(() => {
     migration = read('supabase/migrations/v9.3.4.0_closed_posts_effective_feed.sql');
@@ -27,6 +28,7 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
     rpcWrapperMigration = read('supabase/migrations/v9.3.4.6_security_definer_rpc_wrappers.sql');
     isAdminAnonGrantMigration = read('supabase/migrations/v9.3.4.7_grant_anon_is_admin_helper_wrapper.sql');
     reactivateMigration = read('supabase/migrations/v9.3.4.8_reactivate_closed_posts.sql');
+    expirationCloseMigration = read('supabase/migrations/v9.3.4.9_expiration_closes_posts_and_deprioritizes_closed.sql');
   });
 
   test('posts aceita closed como status historico publico', () => {
@@ -122,6 +124,29 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
     expect(reactivateMigration).toContain('grant execute on function public.kc_reactivate_post(uuid) to authenticated, service_role');
     expect(reactivateMigration).toContain('revoke execute on function public.kc_reactivate_post(uuid) from public, anon');
   });
+
+  test('expiracao fecha posts e zera relevancia de encerrados', () => {
+    expect(expirationCloseMigration).toContain('create or replace function public.kc_expire_old_posts');
+    expect(expirationCloseMigration).toContain("set status = 'closed'");
+    expect(expirationCloseMigration).toContain("'auto_expired'");
+    expect(expirationCloseMigration).toContain("'closed_count'");
+    expect(expirationCloseMigration).toContain("'expired_count'");
+    expect(expirationCloseMigration).toContain('create or replace function public.kc_compute_highlight_score');
+    expect(expirationCloseMigration).toContain("if v_status <> 'published'");
+    expect(expirationCloseMigration).toContain('create or replace function public.kc_refresh_highlight_scores');
+    expect(expirationCloseMigration).toContain("where p.status = 'closed'");
+    expect(expirationCloseMigration).toContain('highlight_score = 0');
+    expect(expirationCloseMigration).toContain("'closed_from_expired'");
+    expect(expirationCloseMigration).toContain("'closed_from_stale_pending'");
+    expect(expirationCloseMigration).not.toContain('audit_log (action, entity_type, entity_id, metadata');
+  });
+
+  test('destaques prioriza publicados antes de encerrados', () => {
+    expect(expirationCloseMigration).toContain("case when p.status = 'closed' then 0 else 1 end as status_priority");
+    expect(expirationCloseMigration).toContain("case when v_sort = 'votos' then status_priority end desc nulls last");
+    expect(expirationCloseMigration).toContain("'status_priority', cursor_row.status_priority");
+    expect(expirationCloseMigration).toContain("and row(case when p.status = 'closed' then 0 else 1 end");
+  });
 });
 
 describe('closed posts - contratos publicos JS', () => {
@@ -169,11 +194,13 @@ describe('closed posts - contratos publicos JS', () => {
 
     expect(presentation).toContain('kc-card--closed');
     expect(presentation).toContain("data-status=\"${_escapeHtml(isClosed ? 'closed'");
-    expect(presentation).toContain('Ver historico');
+    expect(presentation).toContain('Ver hist\\u00F3rico');
     expect(presentation).toContain('disabled aria-disabled="true"');
     expect(feed).toContain('FEED_SNAPSHOT_VERSION = 4');
     expect(feed).toContain('raw.effective_at');
     expect(supabasePosts).toContain('a.bumped_at || a.created_at');
+    expect(supabasePosts).toContain(".in('status', ['published', 'closed'])");
+    expect(supabasePosts).toContain(".order('status', { ascending: false })");
   });
 });
 

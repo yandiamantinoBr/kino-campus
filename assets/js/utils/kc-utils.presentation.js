@@ -357,7 +357,7 @@ function applyPresentationRules(post, context = {}) {
   // V8.1.3.1.4: Unificação de CTA no footer de TODOS os módulos
   // Motivo: textos longos (ex.: "Reservar Vaga", "Inscrever-se") quebravam o layout do kc-card__footer no mobile.
   // Regra: sempre "Ver Mais".
-  p._kcCtaText = isClosed ? 'Ver historico' : 'Ver Mais';
+  p._kcCtaText = isClosed ? 'Ver hist\u00F3rico' : 'Ver Mais';
 
   // Verificação (V8.1.3.2)
   // - Agora é atributo do AUTOR (profiles.verified), mas mantemos compatibilidade com o legado.
@@ -595,7 +595,7 @@ function renderPostCard(post, options) {
 
   // V8.1.3.1.4: garante CTA curto e consistente (desktop + mobile)
   ctaText = 'Ver Mais';
-  if (isClosed) ctaText = 'Ver historico';
+  if (isClosed) ctaText = 'Ver hist\u00F3rico';
 
   const compactComments = true; // V8.1.2.4.5: padrão obrigatório (ícone + número)
 

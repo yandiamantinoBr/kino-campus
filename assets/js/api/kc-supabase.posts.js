@@ -470,12 +470,13 @@
       let q = client
         .from('posts')
         .select(selectStr)
-        .is('legacy_id', null);  // exclui posts de exemplo/demo do feed
+        .is('legacy_id', null)  // exclui posts de exemplo/demo do feed
+        .in('status', ['published', 'closed']);
 
       // Ordenação por tipo de feed
       if (f.sortBy === 'votos') {
-        // Feed Destaques: highlight_score composto, votos e data como tiebreaker
-        q = q.order('highlight_score', { ascending: false }).order('votos', { ascending: false }).order('created_at', { ascending: false });
+        // Feed Destaques: posts encerrados ficam abaixo dos publicados.
+        q = q.order('status', { ascending: false }).order('highlight_score', { ascending: false }).order('votos', { ascending: false }).order('created_at', { ascending: false });
       } else if (f.sortBy === 'comentados') {
         // Feed Comentados: posts com comentários ordenados pela data do último comentário
         q = q.not('last_comment_at', 'is', null)
