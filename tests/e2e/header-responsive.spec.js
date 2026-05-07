@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-async function seedAuthShell(page, path = '/eventos.html') {
+async function seedAuthShell(page, path = '/oportunidades.html') {
   await page.goto(path, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => {
     sessionStorage.setItem('kc:9.0.0:shell:auth-shell', JSON.stringify({
@@ -56,36 +56,44 @@ async function headerMetrics(page) {
 }
 
 test.describe('Header responsivo', () => {
-  test('mantem nomes da navegacao no desktop largo com busca estavel', async ({ page }) => {
+  test('mantem logo, navegacao, busca e usuario em uma linha no desktop largo', async ({ page }) => {
     await page.setViewportSize({ width: 1600, height: 900 });
     await seedAuthShell(page);
     await page.waitForSelector('.kc-user-actions .btn-login.is-auth');
 
     const metrics = await headerMetrics(page);
-    expect(metrics.header.height).toBeLessThanOrEqual(132);
+    expect(metrics.header.height).toBeLessThanOrEqual(88);
+    expect(metrics.nav.x - (metrics.logo.x + metrics.logo.width)).toBeLessThanOrEqual(18);
     expect(metrics.search.display).toBe('flex');
-    expect(metrics.search.width).toBeGreaterThanOrEqual(360);
+    expect(metrics.search.width).toBeGreaterThanOrEqual(280);
+    expect(metrics.search.width).toBeLessThanOrEqual(430);
     expect(metrics.actions.display).toBe('flex');
     expect(metrics.authText).toContain('Yan Diamantino');
     expect(metrics.navSpanWidths.some((width) => width > 40)).toBe(true);
+    expect(Math.abs(metrics.nav.y - metrics.logo.y)).toBeLessThanOrEqual(8);
+    expect(Math.abs(metrics.search.y - metrics.logo.y)).toBeLessThanOrEqual(8);
+    expect(Math.abs(metrics.actions.y - metrics.logo.y)).toBeLessThanOrEqual(8);
   });
 
   for (const width of [1366, 1024, 900, 769]) {
-    test(`mantem navegacao textual e reposiciona busca/acoes em ${width}px`, async ({ page }) => {
+    test(`mantem header em uma linha com links textuais em ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await seedAuthShell(page);
       await page.waitForSelector('.kc-user-actions .btn-login.is-auth');
 
       const metrics = await headerMetrics(page);
-      expect(metrics.header.height).toBeLessThanOrEqual(150);
+      expect(metrics.header.height).toBeLessThanOrEqual(88);
       expect(metrics.nav.display).toBe('flex');
+      expect(metrics.nav.x - (metrics.logo.x + metrics.logo.width)).toBeLessThanOrEqual(18);
       expect(metrics.search.display).toBe('flex');
-      expect(metrics.search.width).toBeGreaterThanOrEqual(width <= 900 ? 220 : 320);
+      expect(metrics.search.width).toBeGreaterThanOrEqual(width <= 1120 ? 200 : 260);
+      expect(metrics.search.width).toBeLessThanOrEqual(width <= 1120 ? 330 : 410);
       expect(metrics.actions.display).toBe('flex');
       expect(metrics.authText).toContain('Yan Diamantino');
       expect(metrics.navSpanWidths.some((spanWidth) => spanWidth > 40)).toBe(true);
-      expect(metrics.search.y).toBeGreaterThanOrEqual(metrics.nav.y);
-      expect(Math.abs(metrics.actions.y - metrics.search.y)).toBeLessThanOrEqual(6);
+      expect(Math.abs(metrics.nav.y - metrics.logo.y)).toBeLessThanOrEqual(8);
+      expect(Math.abs(metrics.search.y - metrics.logo.y)).toBeLessThanOrEqual(8);
+      expect(Math.abs(metrics.actions.y - metrics.logo.y)).toBeLessThanOrEqual(8);
     });
   }
 

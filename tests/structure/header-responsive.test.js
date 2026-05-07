@@ -10,22 +10,23 @@ const themeBoot = fs.readFileSync(path.join(ROOT, 'assets/js/boot/kc-theme-boot.
 describe('header responsive shell', () => {
   test('keeps desktop search sizing stable without focus jumps', () => {
     expect(styles).toContain('Header responsivo estavel');
-    expect(styles).toContain('flex: 1 1 clamp(280px, 32vw, 660px);');
-    expect(styles).toContain('width: clamp(280px, 32vw, 660px);');
+    expect(styles).toContain('flex-wrap: nowrap;');
+    expect(styles).toContain('flex: 0 1 clamp(320px, 21vw, 420px);');
+    expect(styles).toContain('max-width: 420px;');
     expect(styles).toContain('transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease, background-color var(--transition-speed) ease;');
     expect(styles).toContain('.kc-header:not(.kc-header--admin) .kc-search-bar:focus-within');
     expect(styles).toContain('transform: none;');
   });
 
-  test('keeps navigation labels visible on medium widths', () => {
+  test('keeps navigation labels beside the logo on medium widths', () => {
     expect(styles).toContain('@media (min-width: 769px) and (max-width: 1499px)');
-    expect(styles).toContain('grid-template-areas:');
-    expect(styles).toContain('"logo nav nav"');
-    expect(styles).toContain('"search search actions"');
+    expect(styles).toContain('max-width: min(42vw, 760px);');
+    expect(styles).toContain('justify-content: flex-start;');
     expect(styles).toContain('.kc-header:not(.kc-header--admin) .kc-nav-links a span');
     expect(styles).toContain('position: static;');
     expect(styles).toContain('overflow: visible;');
     expect(styles).toContain('clip: auto;');
+    expect(styles).toContain('margin-left: auto;');
   });
 
   test('marks cached auth shell early to avoid header layout jump', () => {
