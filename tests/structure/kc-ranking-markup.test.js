@@ -20,3 +20,15 @@ describe('module ranking markup', () => {
     expect(html).not.toContain("<script>document.addEventListener('DOMContentLoaded'");
   });
 });
+
+describe('ranking modal styles', () => {
+  test('mantem o botao primario do modal visivel no tema claro', () => {
+    const css = fs.readFileSync(path.resolve(__dirname, '..', '..', 'assets', 'css', 'styles.css'), 'utf8');
+
+    expect(css).toContain('.kc-ranking-modal__footer .kc-btn-primary');
+    expect(css).toContain('background: linear-gradient(135deg, var(--kc-primary-brand) 0%, #ff8a2a 100%);');
+    expect(css).toContain('color: #fff;');
+    expect(css).toContain(':root[data-theme="light"] .kc-ranking-modal__footer .kc-btn-primary');
+    expect(css).toContain('.kc-ranking-modal__footer .kc-btn-primary:focus-visible');
+  });
+});

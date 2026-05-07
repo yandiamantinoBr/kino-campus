@@ -1033,6 +1033,26 @@ main {
 }
 .kc-ranking-modal__footer .kc-btn-primary {
     width: 100%;
+    min-height: 54px;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--kc-primary-brand) 0%, #ff8a2a 100%);
+    color: #fff;
+    border: 1px solid rgba(255, 107, 0, 0.42);
+    box-shadow: 0 12px 28px rgba(255, 107, 0, 0.28);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+}
+.kc-ranking-modal__footer .kc-btn-primary:hover,
+.kc-ranking-modal__footer .kc-btn-primary:focus-visible {
+    color: #fff;
+    border-color: rgba(255, 138, 42, 0.7);
+    box-shadow: 0 16px 34px rgba(255, 107, 0, 0.34);
+}
+.kc-ranking-modal__footer .kc-btn-primary:focus-visible {
+    outline: 3px solid rgba(255, 107, 0, 0.25);
+    outline-offset: 3px;
+}
+:root[data-theme="light"] .kc-ranking-modal__footer .kc-btn-primary {
+    box-shadow: 0 10px 24px rgba(255, 107, 0, 0.24);
 }
 
 /* Ranking score table */
