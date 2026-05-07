@@ -61,6 +61,7 @@
     if (!store) return;
     if (!user || !user.id) {
       store.remove('shell', SHELL_SNAPSHOT_KEY);
+      setShellSnapshotClass(false);
       return;
     }
     store.set('shell', SHELL_SNAPSHOT_KEY, {
@@ -78,12 +79,20 @@
         onboarding_completed_at: profile.onboarding_completed_at || null,
       } : null,
     });
+    setShellSnapshotClass(true);
+  }
+
+  function setShellSnapshotClass(active) {
+    try {
+      document.documentElement.classList.toggle('kc-auth-shell-cached', active === true);
+    } catch (_) { }
   }
 
   function resolveShellState() {
     const user = getCurrentUser();
     const profile = getCurrentProfile();
     const snapshot = readShellSnapshot();
+    setShellSnapshotClass(!!(snapshot && snapshot.user && snapshot.user.id));
 
     if (user && user.id) {
       if (profile) return { user, profile, fromSnapshot: false };
@@ -345,6 +354,7 @@
     const emailInput = $('#kcExternalAccessEmail');
     if (!prompt) return;
     prompt.hidden = !show;
+    prompt.classList.toggle('is-visible', show === true);
     if (show && emailInput && email) emailInput.value = normalizeEmail(email);
   }
 
@@ -433,7 +443,12 @@
     });
     const tabs = $('.kc-auth-tabs', modal);
     if (tabs) tabs.style.display = (panel === 'user' || panel === 'external') ? 'none' : 'grid';
-    if (panel !== 'signup') toggleExternalAccessPrompt('', false);
+    if (panel === 'signup') {
+      const signupEmail = $('#kcAuthSignupEmail');
+      toggleExternalAccessPrompt(signupEmail ? signupEmail.value : '', true);
+    } else {
+      toggleExternalAccessPrompt('', false);
+    }
     setStatus('', 'info');
   }
 
@@ -478,8 +493,8 @@
           '<input id="kcAuthTermsAccepted" name="termsAccepted" type="checkbox" required />',
           '<span>Li e aceito os <a href="' + escapeHtml(buildRootHref('termos.html')) + '" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="' + escapeHtml(buildRootHref('privacidade.html')) + '" target="_blank" rel="noopener">Declaração de Privacidade</a>.</span>',
           '</label>',
-          '<div class="kc-auth-external-access" id="kcAuthExternalAccessPrompt" hidden>',
-          '<p>Não tem e-mail institucional UFG? Solicite uma análise de acesso externo para a comunidade KinoCampus.</p>',
+          '<div class="kc-auth-external-access" id="kcAuthExternalAccessPrompt">',
+          '<p><strong>Não tem e-mail institucional UFG?</strong> Solicite uma análise de acesso externo para participar da comunidade KinoCampus.</p>',
           '<button class="kc-auth-btn secondary" type="button" id="kcAuthExternalRequestBtn"><i class="fas fa-paper-plane"></i><span>Solicitar acesso externo</span></button>',
           '</div>',
         ].join(''));
@@ -986,6 +1001,16 @@
     }
   }
 
+  function applyCachedShellSnapshotToHeader() {
+    const snapshot = readShellSnapshot();
+    if (!snapshot || !snapshot.user || !snapshot.user.id) {
+      setShellSnapshotClass(false);
+      return;
+    }
+    setShellSnapshotClass(true);
+    refreshHeaderLabel(snapshot.user, snapshot.profile || null, { fromSnapshot: true });
+  }
+
   function handleAuthChange(event) {
     const detail = event && event.detail ? event.detail : {};
     const user = detail.user || null;
@@ -1033,6 +1058,15 @@
     });
     $('#kcAuthLoginForm').addEventListener('submit', function (event) { event.preventDefault(); doLogin(event.currentTarget); });
     $('#kcAuthSignupForm').addEventListener('submit', function (event) { event.preventDefault(); doSignup(event.currentTarget); });
+    const signupEmailInput = $('#kcAuthSignupEmail');
+    if (signupEmailInput && !signupEmailInput.dataset.externalSyncBound) {
+      signupEmailInput.dataset.externalSyncBound = '1';
+      signupEmailInput.addEventListener('input', function () {
+        const prompt = $('#kcAuthExternalAccessPrompt');
+        const externalEmail = $('#kcExternalAccessEmail');
+        if (prompt && !prompt.hidden && externalEmail) externalEmail.value = normalizeEmail(signupEmailInput.value);
+      });
+    }
     $('#kcExternalAccessForm').addEventListener('submit', function (event) { event.preventDefault(); doExternalAccessRequest(event.currentTarget); });
     $('#kcAuthForgotForm').addEventListener('submit', function (event) { event.preventDefault(); doForgotPassword(event.currentTarget); });
     $('#kcAuthResendForm').addEventListener('submit', function (event) { event.preventDefault(); doResendConfirmation(event.currentTarget); });
@@ -1069,6 +1103,7 @@
   function init() {
     if (renderState.inited) return;
     renderState.inited = true;
+    applyCachedShellSnapshotToHeader();
     ensureMobileMenuStructure();
     ensureModal();
     bindModalEvents();

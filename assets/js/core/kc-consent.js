@@ -95,6 +95,75 @@
     return isAdmin ? `../${file}` : file;
   }
 
+  function getRootHref(file) {
+    const isAdmin = String(window.location.pathname || '').indexOf('/admin/') >= 0;
+    const clean = String(file || '').replace(/^\/+/, '');
+    return isAdmin ? `../${clean}` : clean;
+  }
+
+  function initPlatformFooter() {
+    if ($('#kcPlatformFooter') || document.body?.dataset?.kcNoFooter === 'true') return;
+
+    const footer = document.createElement('footer');
+    footer.id = 'kcPlatformFooter';
+    footer.className = 'kc-platform-footer';
+    footer.setAttribute('aria-label', 'Rodapé do KinoCampus');
+    footer.innerHTML = [
+      '<div class="kc-platform-footer__inner">',
+      '  <section class="kc-platform-footer__brand">',
+      '    <a class="kc-platform-footer__brand-mark" href="' + getRootHref('index.html') + '" aria-label="KinoCampus - página inicial">',
+      '      <i class="fas fa-campground" aria-hidden="true"></i><span>Kino<span>Campus</span></span>',
+      '    </a>',
+      '    <p>Comunidade digital para publicar, encontrar e organizar oportunidades, eventos, moradias, caronas e itens úteis no contexto da UFG.</p>',
+      '  </section>',
+      '  <nav class="kc-platform-footer__column" aria-label="Navegação da comunidade">',
+      '    <h2>Comunidade</h2>',
+      '    <a href="' + getRootHref('index.html') + '">Início</a>',
+      '    <a href="' + getRootHref('achados-perdidos.html') + '">Achados e perdidos</a>',
+      '    <a href="' + getRootHref('eventos.html') + '">Eventos</a>',
+      '    <a href="' + getRootHref('oportunidades.html') + '">Oportunidades</a>',
+      '  </nav>',
+      '  <nav class="kc-platform-footer__column" aria-label="Módulos do KinoCampus">',
+      '    <h2>Módulos</h2>',
+      '    <a href="' + getRootHref('moradia.html') + '">Moradia</a>',
+      '    <a href="' + getRootHref('compra-venda-feed.html') + '">Compra e venda</a>',
+      '    <a href="' + getRootHref('caronas-feed.html') + '">Caronas</a>',
+      '    <a href="' + getRootHref('create-post.html') + '">Criar publicação</a>',
+      '  </nav>',
+      '  <nav class="kc-platform-footer__column" aria-label="Suporte e conta">',
+      '    <h2>Suporte</h2>',
+      '    <a href="' + getRootHref('ajuda.html') + '">Central de Ajuda</a>',
+      '    <a href="' + getRootHref('settings.html') + '">Configurações</a>',
+      '    <a href="' + getRootHref('my-posts.html') + '">Minhas publicações</a>',
+      '    <a href="mailto:contato@kinocampus.com.br">contato@kinocampus.com.br</a>',
+      '  </nav>',
+      '  <nav class="kc-platform-footer__column" aria-label="Transparência e privacidade">',
+      '    <h2>Transparência</h2>',
+      '    <a href="' + getLegalHref('privacidade.html') + '">Declaração de Privacidade</a>',
+      '    <a href="' + getLegalHref('termos.html') + '">Termos de Uso</a>',
+      '    <button type="button" data-kc-cookie-preferences>Preferências de cookies</button>',
+      '    <a href="' + getRootHref('admin/help-requests.html') + '">Solicitações de suporte</a>',
+      '  </nav>',
+      '</div>',
+      '<div class="kc-platform-footer__bottom">',
+      '  <span>© 2026 KinoCampus. Plataforma comunitária independente.</span>',
+      '  <div class="kc-platform-footer__legal">',
+      '    <a href="' + getRootHref('ajuda.html') + '">Contato</a>',
+      '    <a href="' + getLegalHref('privacidade.html') + '">Privacidade</a>',
+      '    <a href="' + getLegalHref('termos.html') + '">Termos de Uso</a>',
+      '    <button type="button" data-kc-cookie-preferences>Cookies</button>',
+      '  </div>',
+      '</div>',
+    ].join('');
+
+    const mobileNav = document.querySelector('.kc-mobile-nav');
+    if (mobileNav && mobileNav.parentNode) {
+      mobileNav.parentNode.insertBefore(footer, mobileNav);
+    } else {
+      document.body.appendChild(footer);
+    }
+  }
+
   function buildMarkup() {
     if ($('#kcConsentRoot')) return;
     const root = document.createElement('div');
@@ -244,6 +313,7 @@
 
   function init() {
     buildMarkup();
+    initPlatformFooter();
     bindEvents();
     if (!readPreferences()) setBannerVisible(true);
   }
