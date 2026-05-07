@@ -29,6 +29,13 @@
   // Guard 2: flag habilitada (padrão false — kill-switch seguro)
   if (!window.KCFF.isEnabled('telemetry.enabled')) return;
 
+  // Guard 3: telemetria cliente é opcional e exige consentimento LGPD.
+  if (
+    window.KCConsent &&
+    typeof window.KCConsent.hasConsent === 'function' &&
+    !window.KCConsent.hasConsent('analytics')
+  ) return;
+
   var MAX_ERRORS = 50;
 
   /** Endpoint de telemetria — configurável via KC_ENV. */

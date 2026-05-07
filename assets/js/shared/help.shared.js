@@ -11,6 +11,7 @@
     Object.freeze({ value: 'question', label: 'Dúvida' }),
     Object.freeze({ value: 'platform_issue', label: 'Problema na plataforma' }),
     Object.freeze({ value: 'account_access', label: 'Conta e acesso' }),
+    Object.freeze({ value: 'external_access', label: 'Solicitação de acesso externo' }),
     Object.freeze({ value: 'report', label: 'Denúncia' }),
     Object.freeze({ value: 'suggestion_praise', label: 'Sugestão ou elogio' }),
   ]);
@@ -61,6 +62,10 @@
       Object.freeze({ value: 'email_confirmation', label: 'Confirmação de e-mail' }),
       Object.freeze({ value: 'password', label: 'Senha' }),
       Object.freeze({ value: 'onboarding_settings', label: 'Onboarding e configurações' }),
+    ]),
+    external_access: Object.freeze([
+      Object.freeze({ value: 'non_institutional_email', label: 'E-mail não institucional' }),
+      Object.freeze({ value: 'partnership_access', label: 'Parceria ou projeto vinculado' }),
     ]),
     report: Object.freeze([
       Object.freeze({ value: 'post', label: 'Anúncio' }),
@@ -139,6 +144,14 @@
       Object.freeze({ value: 'settings_not_saving', label: 'Configurações não salvam' }),
       Object.freeze({ value: 'profile_visibility', label: 'Privacidade e visibilidade' }),
       Object.freeze({ value: 'avatar_profile', label: 'Foto, avatar ou emoji' }),
+    ]),
+    'external_access|non_institutional_email': Object.freeze([
+      Object.freeze({ value: 'has_context', label: 'Informou vínculo ou contexto' }),
+      Object.freeze({ value: 'needs_context', label: 'Contexto pendente' }),
+    ]),
+    'external_access|partnership_access': Object.freeze([
+      Object.freeze({ value: 'partner_project', label: 'Projeto parceiro' }),
+      Object.freeze({ value: 'community_guest', label: 'Convidado da comunidade' }),
     ]),
     'report|post': Object.freeze([
       Object.freeze({ value: 'fraud', label: 'Possível golpe' }),
@@ -265,6 +278,8 @@
     'account_access|email_confirmation': Object.freeze(['account_email', 'error_message']),
     'account_access|password': Object.freeze(['account_email', 'error_message']),
     'account_access|onboarding_settings': Object.freeze(['page_path', 'error_message']),
+    'external_access|non_institutional_email': Object.freeze(['account_email']),
+    'external_access|partnership_access': Object.freeze(['account_email']),
     'report|post': Object.freeze(['affected_module', 'content_link']),
     'report|profile_user': Object.freeze(['content_link']),
     'report|inappropriate_contact': Object.freeze(['content_link']),
@@ -369,6 +384,31 @@
       if (!metadata[key]) return;
       normalized[key] = trimText(metadata[key], key === 'route' ? 255 : 300);
     });
+
+    const directTextFields = Object.freeze({
+      request_kind: 60,
+      source: 80,
+      requester_name: 120,
+      affiliation_context: 180,
+      institutional_domain_hint: 180,
+    });
+    Object.keys(directTextFields).forEach((key) => {
+      if (!metadata[key]) return;
+      normalized[key] = trimText(metadata[key], directTextFields[key]);
+    });
+
+    if (metadata.email_notification && typeof metadata.email_notification === 'object' && !Array.isArray(metadata.email_notification)) {
+      const emailStatus = trimText(metadata.email_notification.status, 40);
+      if (emailStatus) {
+        normalized.email_notification = {
+          status: emailStatus,
+          provider: trimText(metadata.email_notification.provider, 40),
+          to: trimText(metadata.email_notification.to, 255),
+          sent_at: trimText(metadata.email_notification.sent_at, 80),
+          failed_at: trimText(metadata.email_notification.failed_at, 80),
+        };
+      }
+    }
 
     (Array.isArray(fields) ? fields : []).forEach((field) => {
       if (!field || !field.key) return;

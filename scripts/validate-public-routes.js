@@ -40,8 +40,10 @@ var PUBLIC_ROUTES = [
   { route: '/ods',                   file: 'ods.html' },
   { route: '/oportunidades',         file: 'oportunidades.html' },
   { route: '/profile',               file: 'profile.html' },
+  { route: '/privacidade',           file: 'privacidade.html' },
   { route: '/search-results',        file: 'search-results.html' },
   { route: '/settings',              file: 'settings.html' },
+  { route: '/termos',                file: 'termos.html' },
 ];
 
 var ADMIN_ROUTES = [

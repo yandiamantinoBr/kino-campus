@@ -5,11 +5,12 @@
   const HELP_PAGE_SIZE = 25;
   const QUERY_DEBOUNCE_MS = 250;
   const FALLBACK_TYPE_OPTIONS = Object.freeze([
-    Object.freeze({ value: 'question', label: 'Duvida' }),
+    Object.freeze({ value: 'question', label: 'Dúvida' }),
     Object.freeze({ value: 'platform_issue', label: 'Problema na plataforma' }),
     Object.freeze({ value: 'account_access', label: 'Conta e acesso' }),
-    Object.freeze({ value: 'report', label: 'Denuncia' }),
-    Object.freeze({ value: 'suggestion_praise', label: 'Sugestao ou elogio' }),
+    Object.freeze({ value: 'external_access', label: 'Solicitação de acesso externo' }),
+    Object.freeze({ value: 'report', label: 'Denúncia' }),
+    Object.freeze({ value: 'suggestion_praise', label: 'Sugestão ou elogio' }),
   ]);
   const FALLBACK_STATUS_VALUES = Object.freeze(['new', 'triaged', 'in_progress', 'resolved', 'archived']);
   const FALLBACK_PRIORITY_VALUES = Object.freeze(['low', 'normal', 'high', 'urgent']);
@@ -260,7 +261,16 @@
     if (metadata.expected_result) lines.push(`<div><strong>Resultado esperado</strong><span>${esc(metadata.expected_result)}</span></div>`);
     if (metadata.content_link) lines.push(`<div><strong>Link relacionado</strong><span>${esc(metadata.content_link)}</span></div>`);
     if (metadata.account_email) lines.push(`<div><strong>E-mail da conta</strong><span>${esc(metadata.account_email)}</span></div>`);
+    if (metadata.requester_name) lines.push(`<div><strong>Nome do solicitante</strong><span>${esc(metadata.requester_name)}</span></div>`);
+    if (metadata.affiliation_context) lines.push(`<div><strong>Vínculo ou contexto</strong><span>${esc(metadata.affiliation_context)}</span></div>`);
+    if (metadata.institutional_domain_hint) lines.push(`<div><strong>Domínios institucionais</strong><span>${esc(metadata.institutional_domain_hint)}</span></div>`);
     if (metadata.device_context) lines.push(`<div><strong>Dispositivo ou navegador</strong><span>${esc(metadata.device_context)}</span></div>`);
+    if (metadata.email_notification && typeof metadata.email_notification === 'object') {
+      const status = String(metadata.email_notification.status || '').trim();
+      const sentAt = String(metadata.email_notification.sent_at || metadata.email_notification.failed_at || '').trim();
+      const detail = [status, sentAt].filter(Boolean).join(' · ');
+      if (detail) lines.push(`<div><strong>E-mail automático</strong><span>${esc(detail)}</span></div>`);
+    }
 
     if (!lines.length) return '';
     return `<div class="kc-admin-help-meta">${lines.join('')}</div>`;

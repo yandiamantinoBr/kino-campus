@@ -2,6 +2,7 @@
   'use strict';
 
   const VERSION = '8.6.0';
+  const LEGAL_VERSION = '2026-05-07';
   const AUTH_INTENT_KEY = 'kc:auth:intents';
   const SHELL_SNAPSHOT_KEY = 'auth-shell';
   const SHELL_SNAPSHOT_MAX_AGE = 1000 * 60 * 60 * 12;
@@ -189,6 +190,7 @@
 
   function buildAdminHref() { return String(window.location.pathname || '').includes('/admin/') ? 'index.html' : 'admin/index.html'; }
   function buildHelpHref() { return String(window.location.pathname || '').includes('/admin/') ? '../ajuda.html' : 'ajuda.html'; }
+  function buildRootHref(file) { return String(window.location.pathname || '').includes('/admin/') ? `../${file}` : file; }
   function isOnboardingComplete(profile) {
     return shared && typeof shared.isOnboardingComplete === 'function'
       ? shared.isOnboardingComplete(profile || {})
@@ -338,6 +340,57 @@
     el.className = `kc-auth-status show ${tone || 'info'}`;
   }
 
+  function toggleExternalAccessPrompt(email, show) {
+    const prompt = $('#kcAuthExternalAccessPrompt');
+    const emailInput = $('#kcExternalAccessEmail');
+    if (!prompt) return;
+    prompt.hidden = !show;
+    if (show && emailInput && email) emailInput.value = normalizeEmail(email);
+  }
+
+  function buildLegalAcceptanceMetadata(email) {
+    const acceptedAt = new Date().toISOString();
+    return {
+      display_name: String(email || '').split('@')[0],
+      terms_accepted: true,
+      terms_version: LEGAL_VERSION,
+      privacy_version: LEGAL_VERSION,
+      legal_accepted_at: acceptedAt,
+      legal_acceptance_source: 'kc-auth-card',
+    };
+  }
+
+  async function syncLegalAcceptance(user) {
+    if (!user || !user.id) return false;
+    const meta = (user.user_metadata && typeof user.user_metadata === 'object') ? user.user_metadata : {};
+    if (meta.terms_accepted !== true) return false;
+    const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+      ? window.KCSupabase.getClient()
+      : null;
+    if (!client || typeof client.from !== 'function') return false;
+
+    const acceptedAt = String(meta.legal_accepted_at || meta.accepted_at || new Date().toISOString());
+    const payload = {
+      user_id: user.id,
+      terms_version: String(meta.terms_version || LEGAL_VERSION),
+      privacy_version: String(meta.privacy_version || LEGAL_VERSION),
+      accepted_at: acceptedAt,
+      source: String(meta.legal_acceptance_source || 'kc-auth-card'),
+      metadata: {
+        auth_metadata_synced: true,
+      },
+    };
+
+    try {
+      const result = await client
+        .from('user_legal_acceptances')
+        .upsert(payload, { onConflict: 'user_id,terms_version,privacy_version' });
+      return !(result && result.error);
+    } catch (_) {
+      return false;
+    }
+  }
+
   function getFocusable(root) {
     return $all('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])', root).filter((el) => !el.disabled && el.offsetParent !== null);
   }
@@ -379,7 +432,8 @@
       section.setAttribute('aria-hidden', active ? 'false' : 'true');
     });
     const tabs = $('.kc-auth-tabs', modal);
-    if (tabs) tabs.style.display = panel === 'user' ? 'none' : 'grid';
+    if (tabs) tabs.style.display = (panel === 'user' || panel === 'external') ? 'none' : 'grid';
+    if (panel !== 'signup') toggleExternalAccessPrompt('', false);
     setStatus('', 'info');
   }
 
@@ -411,6 +465,47 @@
     ].join('');
     document.body.appendChild(overlay);
     document.body.appendChild(modal);
+    enhanceAuthModal();
+  }
+
+  function enhanceAuthModal() {
+    const signupForm = $('#kcAuthSignupForm');
+    if (signupForm && !$('#kcAuthTermsAccepted')) {
+      const actions = $('.kc-auth-actions', signupForm);
+      if (actions) {
+        actions.insertAdjacentHTML('beforebegin', [
+          '<label class="kc-auth-legal">',
+          '<input id="kcAuthTermsAccepted" name="termsAccepted" type="checkbox" required />',
+          '<span>Li e aceito os <a href="' + escapeHtml(buildRootHref('termos.html')) + '" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="' + escapeHtml(buildRootHref('privacidade.html')) + '" target="_blank" rel="noopener">Declaração de Privacidade</a>.</span>',
+          '</label>',
+          '<div class="kc-auth-external-access" id="kcAuthExternalAccessPrompt" hidden>',
+          '<p>Não tem e-mail institucional UFG? Solicite uma análise de acesso externo para a comunidade KinoCampus.</p>',
+          '<button class="kc-auth-btn secondary" type="button" id="kcAuthExternalRequestBtn"><i class="fas fa-paper-plane"></i><span>Solicitar acesso externo</span></button>',
+          '</div>',
+        ].join(''));
+      }
+    }
+
+    const body = $('.kc-auth-body');
+    if (body && !$('#kcExternalAccessForm')) {
+      const externalPanel = document.createElement('section');
+      externalPanel.className = 'kc-auth-panel';
+      externalPanel.setAttribute('data-auth-panel', 'external');
+      externalPanel.setAttribute('style', 'display:none;');
+      externalPanel.setAttribute('aria-hidden', 'true');
+      externalPanel.innerHTML = [
+        '<form class="kc-auth-form" id="kcExternalAccessForm">',
+        '<p class="kc-auth-note">Preencha a solicitação para análise manual. Ela será enviada ao contato oficial do KinoCampus e ficará registrada na central administrativa.</p>',
+        '<div class="kc-auth-field"><label for="kcExternalAccessName">Nome completo</label><input id="kcExternalAccessName" name="name" type="text" autocomplete="name" maxlength="120" required /></div>',
+        '<div class="kc-auth-field"><label for="kcExternalAccessEmail">E-mail para retorno</label><input id="kcExternalAccessEmail" name="email" type="email" autocomplete="email" maxlength="255" required /></div>',
+        '<div class="kc-auth-field"><label for="kcExternalAccessAffiliation">Vínculo com a comunidade UFG ou KinoCampus</label><input id="kcExternalAccessAffiliation" name="affiliation" type="text" maxlength="180" placeholder="Ex.: parceiro, egresso, visitante, projeto vinculado" /></div>',
+        '<div class="kc-auth-field"><label for="kcExternalAccessReason">Por que você quer acessar?</label><textarea id="kcExternalAccessReason" name="reason" rows="4" maxlength="1200" required></textarea></div>',
+        '<div class="kc-auth-actions"><button class="kc-auth-btn primary" type="submit"><i class="fas fa-paper-plane"></i><span>Enviar solicitação</span></button></div>',
+        '</form>',
+        '<div class="kc-auth-links"><button type="button" class="kc-auth-link-btn" data-auth-link="signup">Voltar ao cadastro</button><button type="button" class="kc-auth-link-btn" data-auth-link="login">Voltar ao login</button></div>',
+      ].join('');
+      body.appendChild(externalPanel);
+    }
   }
 
   function ensureProfileDropdown() {
@@ -453,6 +548,7 @@
       onboardingPending ? `<a href="${escapeHtml(buildAccountSetupHref(buildCurrentPath()))}" class="kc-profile-dropdown__item"><i class="fas fa-list-check"></i><span>${_t('auth.dropdown-complete-signup', 'Completar cadastro')}</span></a>` : '',
       isAdmin ? `<a href="${escapeHtml(buildAdminHref())}" class="kc-profile-dropdown__item"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i><span>${_t('nav.admin', 'Administração')}</span></a>` : '',
       `<a href="${escapeHtml(buildHelpHref())}" class="kc-profile-dropdown__item"><i class="fas fa-circle-question"></i><span>${_t('auth.dropdown-help-center', 'Central de ajuda')}</span></a>`,
+      '<button type="button" class="kc-profile-dropdown__item" data-kc-cookie-preferences><i class="fas fa-shield-halved"></i><span>Preferências de cookies</span></button>',
       `<hr class="kc-profile-dropdown__divider" /><button type="button" class="kc-profile-dropdown__item kc-profile-dropdown__logout" id="kcDropdownLogoutBtn"><i class="fas fa-right-from-bracket"></i><span>${_t('auth.dropdown-logout', 'Sair da conta')}</span></button></nav>`
     ].join('');
   }
@@ -527,7 +623,10 @@
     ensureAccountNode('mobileMenuAccountSetupLink', 'a', '<i class="fas fa-list-check"></i><span>Completar cadastro</span>', 'kc-mobile-menu-account-link');
     ensureAccountNode('mobileMenuAdminLink', 'a', '<i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i><span>Administração</span>', 'kc-mobile-menu-account-link');
     ensureAccountNode('mobileMenuHelpLink', 'a', '<i class="fas fa-circle-question"></i><span>Central de ajuda</span>', 'kc-mobile-menu-account-link');
+    const cookiePrefsButton = ensureAccountNode('mobileMenuCookiePrefsBtn', 'button', '<i class="fas fa-shield-halved"></i><span>Preferências de cookies</span>', 'kc-mobile-menu-account-btn');
     const logoutButton = ensureAccountNode('mobileMenuLogoutBtn', 'button', '<i class="fas fa-right-from-bracket"></i><span>Sair da conta</span>', 'kc-mobile-menu-account-btn kc-mobile-menu-logout-btn');
+    cookiePrefsButton.type = 'button';
+    cookiePrefsButton.setAttribute('data-kc-cookie-preferences', '');
     logoutButton.type = 'button';
 
     const settingsLink = $('#mobileMenuSettingsLink');
@@ -627,6 +726,12 @@
 
   async function handlePostAuthSuccess(nextPath) {
     let profile = null;
+    let authUser = null;
+    try {
+      authUser = typeof window.KCAPI.getCurrentUser === 'function'
+        ? await window.KCAPI.getCurrentUser()
+        : getCurrentUser();
+    } catch (_) { }
     try {
       profile = typeof window.KCAPI.getCurrentProfile === 'function'
         ? window.KCAPI.getCurrentProfile()
@@ -643,6 +748,7 @@
           profile = await window.KCAPI.getMyProfile();
         }
       }
+      await syncLegalAcceptance(authUser);
     } catch (_) { profile = null; }
     closeModal();
     if (!isOnboardingComplete(profile) && !String(window.location.pathname || '').includes('account-setup.html')) {
@@ -676,18 +782,22 @@
     const email = normalizeEmail(form.email.value);
     const password = String(form.password.value || '');
     const confirm = String(form.confirm.value || '');
+    const termsAccepted = form.termsAccepted && form.termsAccepted.checked === true;
     if (!email || !password || !confirm) { setStatus(window.KCi18n ? window.KCi18n.t('auth.fill-all-fields') : 'Preencha todos os campos.', 'warn'); return; }
     if (password.length < 6) { setStatus(window.KCi18n ? window.KCi18n.t('auth.password-short') : 'Sua senha precisa ter pelo menos 6 caracteres.', 'warn'); return; }
     if (password !== confirm) { setStatus(window.KCi18n ? window.KCi18n.t('auth.password-mismatch') : 'As senhas não conferem.', 'warn'); return; }
     if (!isAllowedDomain(email, env.allowedDomains)) {
       const hint = formatAllowedDomains(env.allowedDomains);
-      setStatus(hint ? `Use um e-mail institucional de um domínio aceito (${hint}).` : 'Use um e-mail institucional válido.', 'warn');
+      setStatus(hint ? `Use um e-mail institucional de um domínio aceito (${hint}) ou solicite acesso externo.` : 'Use um e-mail institucional válido ou solicite acesso externo.', 'warn');
+      toggleExternalAccessPrompt(email, true);
       return;
     }
+    if (!termsAccepted) { setStatus('Aceite os Termos de Uso e a Declaração de Privacidade para criar sua conta.', 'warn'); return; }
+    toggleExternalAccessPrompt('', false);
     setStatus(window.KCi18n ? window.KCi18n.t('auth.creating-account') : 'Criando sua conta...', 'info');
     const result = await window.KCAPI.signUp(email, password, {
       emailRedirectTo: buildCallbackUrl(modalState.nextPath),
-      data: { display_name: email.split('@')[0] }
+      data: buildLegalAcceptanceMetadata(email)
     });
     if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.signup-failed') : 'Não foi possível criar sua conta.')), 'error'); return; }
     if (result.session) {
@@ -699,6 +809,68 @@
     const resend = $('#kcAuthResendEmail');
     if (resend) resend.value = email;
     setPanel('resend');
+  }
+
+  async function doExternalAccessRequest(form) {
+    if (!window.KCAPI || typeof window.KCAPI.createHelpRequest !== 'function') {
+      setStatus('O envio de solicitações não está disponível neste ambiente.', 'error');
+      return;
+    }
+    const name = String(form.name.value || '').trim();
+    const email = normalizeEmail(form.email.value);
+    const affiliation = String(form.affiliation.value || '').trim();
+    const reason = String(form.reason.value || '').trim();
+    if (!name || !email || !reason || reason.length < 10) {
+      setStatus('Informe nome, e-mail e uma justificativa com detalhes suficientes.', 'warn');
+      return;
+    }
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Enviando...</span>';
+    }
+    setStatus('Enviando solicitação de acesso externo...', 'info');
+
+    const payload = {
+      type: 'external_access',
+      topic: 'non_institutional_email',
+      subtopic: affiliation ? 'has_context' : 'needs_context',
+      subject: `Solicitação de acesso externo - ${name}`,
+      message: reason,
+      priority: 'normal',
+      page_path: buildCurrentPath(),
+      contact_email: email,
+      allow_contact: true,
+      metadata: {
+        request_kind: 'external_access',
+        source: 'kc-auth-non-ufg',
+        requester_name: name,
+        affiliation_context: affiliation,
+        institutional_domain_hint: formatAllowedDomains(readEnv().allowedDomains),
+        route: window.location.pathname || '/index.html',
+        user_agent: navigator.userAgent || '',
+      },
+    };
+
+    try {
+      const result = await window.KCAPI.createHelpRequest(payload);
+      if (!result || result.ok === false) {
+        setStatus((result && result.error && result.error.message) || 'Não foi possível enviar sua solicitação agora.', 'error');
+        return;
+      }
+      form.reset();
+      setStatus('Solicitação enviada com sucesso. O KinoCampus analisará seu acesso e responderá por e-mail.', 'success');
+      setTimeout(function () { setPanel('login'); }, 1400);
+    } catch (error) {
+      console.error('[KCAuthUI] external access request failed:', error);
+      setStatus('Não foi possível enviar sua solicitação agora.', 'error');
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i><span>Enviar solicitação</span>';
+      }
+    }
   }
 
   async function doForgotPassword(form) {
@@ -839,13 +1011,29 @@
       const tab = event.target.closest('[data-auth-tab]');
       if (tab) setPanel(String(tab.getAttribute('data-auth-tab') || 'login'));
       const link = event.target.closest('[data-auth-link]');
-      if (link) setPanel(String(link.getAttribute('data-auth-link') || 'login'));
+      if (link) {
+        const panel = String(link.getAttribute('data-auth-link') || 'login');
+        if (panel === 'external') {
+          const emailInput = $('#kcAuthSignupEmail');
+          const externalEmail = $('#kcExternalAccessEmail');
+          if (externalEmail && emailInput && emailInput.value) externalEmail.value = normalizeEmail(emailInput.value);
+        }
+        setPanel(panel);
+      }
+      const externalButton = event.target.closest('#kcAuthExternalRequestBtn');
+      if (externalButton) {
+        const emailInput = $('#kcAuthSignupEmail');
+        const externalEmail = $('#kcExternalAccessEmail');
+        if (externalEmail && emailInput && emailInput.value) externalEmail.value = normalizeEmail(emailInput.value);
+        setPanel('external');
+      }
     });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') closeModal();
     });
     $('#kcAuthLoginForm').addEventListener('submit', function (event) { event.preventDefault(); doLogin(event.currentTarget); });
     $('#kcAuthSignupForm').addEventListener('submit', function (event) { event.preventDefault(); doSignup(event.currentTarget); });
+    $('#kcExternalAccessForm').addEventListener('submit', function (event) { event.preventDefault(); doExternalAccessRequest(event.currentTarget); });
     $('#kcAuthForgotForm').addEventListener('submit', function (event) { event.preventDefault(); doForgotPassword(event.currentTarget); });
     $('#kcAuthResendForm').addEventListener('submit', function (event) { event.preventDefault(); doResendConfirmation(event.currentTarget); });
     $('#kcAuthLogoutBtn').addEventListener('click', doLogout);

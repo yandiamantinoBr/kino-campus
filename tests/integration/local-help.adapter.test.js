@@ -212,6 +212,37 @@ describe('local.help.adapter.js - createHelpRequest', () => {
     }));
   });
 
+  test('simula notificacao de acesso externo no fallback local', async () => {
+    const result = await help().createHelpRequest({
+      type: 'external_access',
+      topic: 'non_institutional_email',
+      subtopic: 'has_context',
+      subject: 'Solicitação de acesso externo',
+      message: 'Quero acessar como pesquisador convidado.',
+      contact_email: 'visitante@example.com',
+      metadata: {
+        request_kind: 'external_access',
+        requester_name: 'Visitante',
+      },
+    }, buildDeps());
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toEqual(expect.objectContaining({
+      type: 'external_access',
+      topic: 'non_institutional_email',
+      metadata: expect.objectContaining({
+        request_kind: 'external_access',
+        requester_name: 'Visitante',
+        email_notification: {
+          status: 'simulated_local',
+          provider: 'local',
+          to: 'contato@kinocampus.com.br',
+          sent_at: '2026-04-23T18:00:00.000Z',
+        },
+      }),
+    }));
+  });
+
   test('retorna erro quando a persistencia falha', async () => {
     const originalSetItem = global.localStorage.setItem;
     global.localStorage.setItem = () => { throw new Error('disk full'); };

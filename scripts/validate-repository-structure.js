@@ -105,6 +105,7 @@ var CANONICAL_JS = [
   // core/
   'assets/js/core/kc-i18n.js',
   'assets/js/core/kc-auth.ui.js',
+  'assets/js/core/kc-consent.js',
   'assets/js/core/kc-profiles.client.js',
   'assets/js/core/kc-theme.js',
   'assets/js/core/kc-notifications.js',
@@ -203,8 +204,10 @@ var PUBLIC_HTMLS = [
   'ods.html',
   'oportunidades.html',
   'profile.html',
+  'privacidade.html',
   'search-results.html',
   'settings.html',
+  'termos.html',
 ];
 
 var ADMIN_HTMLS = [

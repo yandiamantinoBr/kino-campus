@@ -71,6 +71,32 @@
     ].join(',');
   }
 
+  function isExternalAccessHelpRequest(row) {
+    const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    return String((row && row.type) || '').trim() === 'external_access'
+      || String(metadata.request_kind || '').trim() === 'external_access';
+  }
+
+  async function notifyExternalHelpRequest(client, row) {
+    if (!client || !row || !row.id || !isExternalAccessHelpRequest(row)) return { ok: true, skipped: true };
+    if (!client.functions || typeof client.functions.invoke !== 'function') {
+      return { ok: false, skipped: true, error: { message: 'Edge Functions indisponíveis no cliente Supabase.' } };
+    }
+    try {
+      const { data, error } = await client.functions.invoke('kc-help-request-notify', {
+        body: { help_request_id: row.id },
+      });
+      if (error) {
+        console.warn('[KCAPI][help] kc-help-request-notify:', error);
+        return { ok: false, error: { message: error.message || 'Não foi possível notificar por e-mail.' } };
+      }
+      return { ok: true, data: data || null };
+    } catch (e) {
+      console.warn('[KCAPI][help] kc-help-request-notify exceção:', e);
+      return { ok: false, error: { message: 'Não foi possível notificar por e-mail.' } };
+    }
+  }
+
   // ── API: Criar pedido de ajuda ─────────────────────────────────────────────
 
   async function createHelpRequest(payload = {}) {
@@ -110,7 +136,9 @@
         return { ok: false, error: { message: error.message || 'Não foi possível enviar o pedido de ajuda.' } };
       }
 
-      return { ok: true, data: data || insertPayload };
+      const createdRow = data || insertPayload;
+      const notification = await notifyExternalHelpRequest(client, createdRow);
+      return { ok: true, data: createdRow, notification };
     } catch (e) {
       console.error('[KCAPI][help] createHelpRequest exceção:', e);
       return { ok: false, error: { message: 'Não foi possível enviar o pedido de ajuda.' } };

@@ -25,6 +25,22 @@
   let mergeInFlight = null;
   let countsCache = { at: 0, rows: null };
   let affinityCache = { at: 0, rows: null };
+  let consentListenerBound = false;
+
+  function hasAnalyticsConsent() {
+    if (window.KCConsent && typeof window.KCConsent.hasConsent === 'function') {
+      return window.KCConsent.hasConsent('analytics');
+    }
+    return true;
+  }
+
+  function bindConsentLifecycle() {
+    if (consentListenerBound) return;
+    consentListenerBound = true;
+    window.addEventListener('kc:consentchange', function () {
+      if (hasAnalyticsConsent()) init();
+    });
+  }
 
   function getStorage() {
     try {
@@ -111,6 +127,7 @@
   }
 
   async function maybeMergeSessionAffinity() {
+    if (!hasAnalyticsConsent()) return false;
     if (!isSupabaseMode()) return false;
     if (mergeInFlight) return mergeInFlight;
 
@@ -145,6 +162,7 @@
   }
 
   async function flushPendingEvents() {
+    if (!hasAnalyticsConsent()) return false;
     if (!isSupabaseMode()) return false;
 
     await maybeMergeSessionAffinity();
@@ -240,6 +258,7 @@
   }
 
   async function fetchAffinityViaRpc() {
+    if (!hasAnalyticsConsent()) return null;
     const client = getClient();
     if (!client || typeof client.rpc !== 'function') return null;
 
@@ -257,6 +276,7 @@
   }
 
   async function getAffinityRows(force) {
+    if (!hasAnalyticsConsent()) return [];
     const now = Date.now();
     if (!force && affinityCache.rows && now - affinityCache.at < CACHE_TTL_MS) return affinityCache.rows;
 
@@ -276,6 +296,7 @@
   }
 
   function trackEvent(eventType, payload) {
+    if (!hasAnalyticsConsent()) return false;
     const categories = resolveCategories(payload);
     if (!categories.length) return false;
 
@@ -358,6 +379,10 @@
 
   function init() {
     if (initDone) return;
+    if (!hasAnalyticsConsent()) {
+      bindConsentLifecycle();
+      return;
+    }
     initDone = true;
     getSessionId();
     bindTrackingEvents();

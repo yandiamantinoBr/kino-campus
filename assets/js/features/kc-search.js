@@ -38,6 +38,13 @@
     return null;
   }
 
+  function hasAnalyticsConsent() {
+    if (window.KCConsent && typeof window.KCConsent.hasConsent === 'function') {
+      return window.KCConsent.hasConsent('analytics');
+    }
+    return true;
+  }
+
   function normalizeText(text) {
     if (KCUtils && typeof KCUtils.normalizeText === 'function') return KCUtils.normalizeText(text);
     return String(text || '')
@@ -275,6 +282,7 @@
   }
 
   async function flushPendingTrackedSearches() {
+    if (!hasAnalyticsConsent()) return false;
     if (!KCSearchAnalytics) return false;
     const storage = getSearchStorage();
     const pending = KCSearchAnalytics.consumeQueuedTerms(storage, TRACK_BATCH_SIZE);
@@ -297,6 +305,7 @@
   }
 
   function trackSearch(term, meta = {}) {
+    if (!hasAnalyticsConsent()) return false;
     const q = String(term || '').replace(/\s+/g, ' ').trim();
     if (!q || q.length < 2) return false;
 

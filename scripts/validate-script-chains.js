@@ -63,8 +63,10 @@ var PUBLIC_PAGES = [
   'ods.html',
   'oportunidades.html',
   'profile.html',
+  'privacidade.html',
   'search-results.html',
   'settings.html',
+  'termos.html',
 ];
 
 var ADMIN_PAGES = [

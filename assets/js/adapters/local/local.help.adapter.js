@@ -33,6 +33,7 @@
       if (legacyType === 'praise') return 'suggestion_praise';
       if (legacyType === 'report') return 'report';
       if (legacyType === 'account_access') return 'account_access';
+      if (legacyType === 'external_access') return 'external_access';
       if (legacyType === 'question') return 'question';
       return legacyType || 'question';
     }());
@@ -53,6 +54,10 @@
         if (legacyTopic === 'security') return 'password';
         if (legacyTopic === 'profile' || legacyTopic === 'contact') return 'onboarding_settings';
         return 'login_signup';
+      }
+      if (nextType === 'external_access') {
+        if (legacyTopic === 'partnership_access') return 'partnership_access';
+        return 'non_institutional_email';
       }
       if (nextType === 'report') {
         if (legacyTopic === 'profile') return 'profile_user';
@@ -145,9 +150,22 @@
     }
     var list = readHelpRequests(deps);
     var now = getNowIsoFn(deps)();
+    var metadata = {
+      ...(normalized.metadata && typeof normalized.metadata === 'object' ? normalized.metadata : {}),
+    };
+    if (normalized.type === 'external_access' || metadata.request_kind === 'external_access') {
+      metadata.request_kind = 'external_access';
+      metadata.email_notification = {
+        status: 'simulated_local',
+        provider: 'local',
+        to: 'contato@kinocampus.com.br',
+        sent_at: now,
+      };
+    }
     var row = {
       id: getBuildRequestIdFn(deps)(),
       ...normalized,
+      metadata: metadata,
       created_at: now,
       updated_at: now,
     };

@@ -473,6 +473,7 @@ describe('Local Adapter - getTopContributors', () => {
   });
 
   beforeEach(() => {
+    const recentRankingDate = (hoursAgo) => new Date(Date.now() - (hoursAgo * 60 * 60 * 1000)).toISOString();
     global.localStorage.clear();
     window.KCAPI.config.fallbackDatabaseURLs = ['/fake-db.json'];
     window.KCAPI.DEFAULTS.fallbackDatabaseURLs = ['/fake-db.json'];
@@ -485,7 +486,7 @@ describe('Local Adapter - getTopContributors', () => {
           authorAvatar: 'https://example.com/ana.png',
           votos: 2,
           comentarios: 1,
-          created_at: '2026-04-07T10:00:00Z',
+          created_at: recentRankingDate(4),
         },
         {
           id: 'm-2',
@@ -494,7 +495,7 @@ describe('Local Adapter - getTopContributors', () => {
           authorAvatar: 'https://example.com/ana.png',
           votos: 1,
           comentarios: 0,
-          created_at: '2026-04-07T12:00:00Z',
+          created_at: recentRankingDate(3),
         },
         {
           id: 'e-1',
@@ -503,7 +504,7 @@ describe('Local Adapter - getTopContributors', () => {
           authorAvatar: 'https://example.com/bruno.png',
           votos: 5,
           comentarios: 2,
-          created_at: '2026-04-07T09:00:00Z',
+          created_at: recentRankingDate(2),
         },
       ]
     });

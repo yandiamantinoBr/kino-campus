@@ -93,4 +93,50 @@ describe('KCHelpUtils', () => {
     expect(payload.status).toBe('new');
     expect(payload.contact_email).toBe('contato@kinocampus.com.br');
   });
+
+  test('normalizeHelpRequestInput preserves external access metadata safely', () => {
+    const payload = Help.normalizeHelpRequestInput({
+      type: 'external_access',
+      topic: 'non_institutional_email',
+      subtopic: 'has_context',
+      subject: 'Solicitação de acesso externo',
+      message: 'Sou pesquisador convidado e preciso acompanhar eventos.',
+      contact_email: ' convidado@example.com ',
+      metadata: {
+        request_kind: 'external_access',
+        source: 'kc-auth-non-ufg',
+        requester_name: ' Visitante Externo ',
+        affiliation_context: ' Projeto parceiro da UFG ',
+        institutional_domain_hint: '@ufg.br, @discente.ufg.br',
+        email_notification: {
+          status: 'simulated_local',
+          provider: 'local',
+          to: 'contato@kinocampus.com.br',
+          sent_at: '2026-05-07T12:00:00.000Z',
+        },
+        ignored_field: 'remove me',
+      },
+    });
+
+    expect(payload).toMatchObject({
+      type: 'external_access',
+      topic: 'non_institutional_email',
+      subtopic: 'has_context',
+      contact_email: 'convidado@example.com',
+      metadata: {
+        request_kind: 'external_access',
+        source: 'kc-auth-non-ufg',
+        requester_name: 'Visitante Externo',
+        affiliation_context: 'Projeto parceiro da UFG',
+        institutional_domain_hint: '@ufg.br, @discente.ufg.br',
+        email_notification: {
+          status: 'simulated_local',
+          provider: 'local',
+          to: 'contato@kinocampus.com.br',
+          sent_at: '2026-05-07T12:00:00.000Z',
+        },
+      },
+    });
+    expect(payload.metadata.ignored_field).toBeUndefined();
+  });
 });
