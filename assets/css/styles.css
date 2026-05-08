@@ -1295,6 +1295,102 @@ main {
     margin: 0 4px;
 }
 
+/* === Scroll Rail: indicadores de overflow horizontal (chevrons) ===
+ * Wrapper que envolve listas roláveis horizontalmente (kc-nav-links, kc-feed-tabs)
+ * e exibe setas estilo carrossel quando há conteúdo escondido às laterais.
+ * Reaproveita estética de .kc-carousel-btn em escala menor e tom neutro.
+ */
+.kc-scroll-rail {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.kc-scroll-rail > .kc-nav-links,
+.kc-scroll-rail > .kc-feed-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.kc-scroll-rail__btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--kc-border-dark);
+    background-color: var(--kc-surface-dark);
+    color: var(--kc-text-dark-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85em;
+    z-index: 5;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    transition: opacity var(--transition-speed) ease,
+                background-color var(--transition-speed) ease,
+                transform var(--transition-speed) ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.kc-scroll-rail__btn[hidden] {
+    display: none !important;
+}
+
+.kc-scroll-rail.is-overflow-start .kc-scroll-rail__btn--prev,
+.kc-scroll-rail.is-overflow-end .kc-scroll-rail__btn--next {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.kc-scroll-rail__btn:hover {
+    background-color: var(--kc-surface-dark-hover);
+    transform: translateY(-50%) scale(1.08);
+}
+
+.kc-scroll-rail__btn:focus-visible {
+    outline: 2px solid var(--kc-primary-brand);
+    outline-offset: 2px;
+}
+
+.kc-scroll-rail__btn--prev { left: -6px; }
+.kc-scroll-rail__btn--next { right: -6px; }
+
+/* Fades laterais sutis indicando "tem mais conteúdo" sem cobrir cliques */
+.kc-scroll-rail::before,
+.kc-scroll-rail::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 10px; /* respeita padding-bottom: 10px do kc-feed-tabs */
+    width: 28px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition-speed) ease;
+    z-index: 2;
+}
+.kc-scroll-rail::before {
+    left: 0;
+    background: linear-gradient(to right, var(--kc-background-dark), transparent);
+}
+.kc-scroll-rail::after {
+    right: 0;
+    background: linear-gradient(to left, var(--kc-background-dark), transparent);
+}
+.kc-scroll-rail.is-overflow-start::before { opacity: 1; }
+.kc-scroll-rail.is-overflow-end::after   { opacity: 1; }
+
+/* Esconder chevrons em mobile (drag-to-scroll touch já é natural; nav-links some) */
+@media (max-width: 768px) {
+    .kc-scroll-rail__btn { display: none !important; }
+    .kc-scroll-rail::before,
+    .kc-scroll-rail::after { display: none; }
+}
+
 /* Tabs de módulo (Minhas Publicações) — mesmo estilo visual dos feed-tabs */
 .kc-feed-tabs button[data-module] {
     white-space: nowrap;
@@ -11387,4 +11483,38 @@ a.kc-home-metric-card:hover {
   .kc-fab {
     display: none;
   }
+}
+
+/* ==========================================================================
+   v75.1 — Colapso ícone-só do kc-nav-links em larguras intermediárias
+   --------------------------------------------------------------------------
+   Quando o header fica apertado e o kc-search-bar começaria a "engolir" os
+   rótulos da navegação, escondemos progressivamente os <span> de texto e
+   mantemos apenas os ícones. Os ícones nunca são removidos antes do
+   breakpoint mobile (≤768px), onde toda a nav é substituída pelo
+   kc-mobile-nav. A nav passa a ter flex-shrink:0 para que o search-bar
+   reduza primeiro, conforme solicitado.
+   ========================================================================== */
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .kc-header:not(.kc-header--admin) .kc-nav-links {
+    flex-shrink: 0;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links a span {
+    display: none !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links a {
+    padding: 7px 9px;
+    gap: 0;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links a i {
+    font-size: 1.05em;
+  }
+}
+
+/* Hint visual sutil quando a nav está em modo ícone-só: tooltip nativo
+ * ativado via aria-label/title já existente nos <a>. Garantir foco visível. */
+.kc-nav-links a:focus-visible {
+  outline: 2px solid var(--kc-primary-brand);
+  outline-offset: 2px;
 }

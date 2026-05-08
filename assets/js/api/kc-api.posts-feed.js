@@ -108,6 +108,44 @@
     return driver.getPostsByAuthorId(authorId, params || {});
   }
 
+  /* v75.1: abas personalizadas para kc-feed-tabs (após o divider).
+   * Chama o RPC kc_get_personalized_tabs(p_session_id, p_limit). Falha
+   * silenciosa: se não houver driver Supabase ou ocorrer erro, retorna []
+   * — o controller manterá os links estáticos do HTML como fallback. */
+  async function getPersonalizedTabs(limit, deps) {
+    const envDriver = getEnvDriver(deps);
+    if (envDriver !== 'supabase') return [];
+    try {
+      const sb = (window.KCSupabase && typeof window.KCSupabase.getClient === 'function')
+        ? window.KCSupabase.getClient()
+        : (window.supabase && typeof window.supabase.createClient === 'function' ? null : null);
+      if (!sb) return [];
+
+      // session_id anônimo: tenta obter do KCSession (mesmo wrapper usado em outras RPCs)
+      let sessionId = null;
+      try {
+        if (window.KCSession && typeof window.KCSession.getAnonId === 'function') {
+          sessionId = window.KCSession.getAnonId();
+        } else if (window.localStorage) {
+          sessionId = window.localStorage.getItem('kc_anon_session_id') || null;
+        }
+      } catch (_) { /* ignore */ }
+
+      const { data, error } = await sb.rpc('kc_get_personalized_tabs', {
+        p_session_id: sessionId,
+        p_limit: Math.max(1, Math.min(Number(limit) || 8, 30)),
+      });
+      if (error) {
+        if (typeof console !== 'undefined') console.warn('[KCAPI] getPersonalizedTabs:', error.message || error);
+        return [];
+      }
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      if (typeof console !== 'undefined') console.warn('[KCAPI] getPersonalizedTabs exception:', e && e.message || e);
+      return [];
+    }
+  }
+
   window._KCAPI.postsFeed = {
     getPosts,
     searchPosts,
@@ -117,5 +155,6 @@
     checkDuplicatePost,
     getMyPosts,
     getPostsByAuthorId,
+    getPersonalizedTabs,
   };
 })();

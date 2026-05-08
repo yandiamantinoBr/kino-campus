@@ -284,6 +284,140 @@ function kcInitHorizontalDragAreas() {
   document.querySelectorAll(".kc-feed-tabs, .kc-ranking-users").forEach(kcEnableDragToScroll);
 }
 
+/* === v75.1: Indicadores de overflow horizontal (chevrons + fades) ===
+ * Aplica botões prev/next a um wrapper [data-kc-scroll-rail] que
+ * envolve um elemento rolável. Mostra o botão correspondente quando
+ * há conteúdo escondido naquela direção.
+ *
+ * HTML esperado:
+ *   <div class="kc-scroll-rail" data-kc-scroll-rail>
+ *     <button class="kc-scroll-rail__btn kc-scroll-rail__btn--prev"
+ *             data-kc-rail-prev hidden>...</button>
+ *     <ELEMENTO_ROLAVEL ...>...</ELEMENTO_ROLAVEL>
+ *     <button class="kc-scroll-rail__btn kc-scroll-rail__btn--next"
+ *             data-kc-rail-next hidden>...</button>
+ *   </div>
+ */
+function kcAttachScrollIndicators(rail) {
+  if (!rail || rail.__kcScrollRailAttached) return;
+  const scrollEl = rail.querySelector('.kc-nav-links, .kc-feed-tabs');
+  if (!scrollEl) return;
+
+  const btnPrev = rail.querySelector('[data-kc-rail-prev]');
+  const btnNext = rail.querySelector('[data-kc-rail-next]');
+  if (!btnPrev && !btnNext) return;
+
+  rail.__kcScrollRailAttached = true;
+
+  const update = () => {
+    const sl = scrollEl.scrollLeft;
+    const max = scrollEl.scrollWidth - scrollEl.clientWidth;
+    const hasOverflow = max > 4;
+    const atStart = sl <= 4;
+    const atEnd = sl >= max - 4;
+
+    rail.classList.toggle('is-overflow-start', hasOverflow && !atStart);
+    rail.classList.toggle('is-overflow-end', hasOverflow && !atEnd);
+
+    if (btnPrev) btnPrev.hidden = !hasOverflow || atStart;
+    if (btnNext) btnNext.hidden = !hasOverflow || atEnd;
+  };
+
+  const scrollByAmount = (dir) => {
+    const amount = Math.max(160, Math.floor(scrollEl.clientWidth * 0.7));
+    try {
+      scrollEl.scrollBy({ left: dir * amount, behavior: 'smooth' });
+    } catch (_) {
+      scrollEl.scrollLeft += dir * amount;
+    }
+  };
+
+  if (btnPrev) btnPrev.addEventListener('click', () => scrollByAmount(-1));
+  if (btnNext) btnNext.addEventListener('click', () => scrollByAmount(+1));
+
+  scrollEl.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+
+  // ResizeObserver: muda quando filhos são inseridos/removidos (ex.: hidratação personalizada)
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(update);
+    ro.observe(scrollEl);
+  }
+  if (typeof MutationObserver !== 'undefined') {
+    const mo = new MutationObserver(update);
+    mo.observe(scrollEl, { childList: true, subtree: false });
+  }
+
+  // Primeira medição (após paint p/ pegar layout final)
+  requestAnimationFrame(update);
+  setTimeout(update, 250);
+}
+
+/* Envolve automaticamente cada .kc-nav-links e .kc-feed-tabs em um wrapper
+ * .kc-scroll-rail com botões prev/next, evitando alterar 20+ HTMLs. */
+function kcWrapScrollRails() {
+  const SELECTOR = '.kc-nav-links, .kc-feed-tabs';
+  document.querySelectorAll(SELECTOR).forEach((el) => {
+    if (!el || el.__kcRailWrapped) return;
+    if (el.parentElement && el.parentElement.matches('[data-kc-scroll-rail]')) {
+      el.__kcRailWrapped = true;
+      return;
+    }
+    const rail = document.createElement('div');
+    rail.className = 'kc-scroll-rail';
+    rail.setAttribute('data-kc-scroll-rail', '');
+
+    const btnPrev = document.createElement('button');
+    btnPrev.type = 'button';
+    btnPrev.className = 'kc-scroll-rail__btn kc-scroll-rail__btn--prev';
+    btnPrev.setAttribute('data-kc-rail-prev', '');
+    btnPrev.setAttribute('aria-label', 'Rolar para o início');
+    btnPrev.hidden = true;
+    btnPrev.innerHTML = '<i class="fas fa-chevron-left" aria-hidden="true"></i>';
+
+    const btnNext = document.createElement('button');
+    btnNext.type = 'button';
+    btnNext.className = 'kc-scroll-rail__btn kc-scroll-rail__btn--next';
+    btnNext.setAttribute('data-kc-rail-next', '');
+    btnNext.setAttribute('aria-label', 'Rolar para o fim');
+    btnNext.hidden = true;
+    btnNext.innerHTML = '<i class="fas fa-chevron-right" aria-hidden="true"></i>';
+
+    const parent = el.parentNode;
+    parent.insertBefore(rail, el);
+    rail.appendChild(btnPrev);
+    rail.appendChild(el);
+    rail.appendChild(btnNext);
+    el.__kcRailWrapped = true;
+  });
+}
+
+function kcInitScrollIndicators() {
+  kcWrapScrollRails();
+  document.querySelectorAll('[data-kc-scroll-rail]').forEach(kcAttachScrollIndicators);
+}
+
+/* Para o modo ícone-só (kc-nav-links em larguras intermediárias), garante que
+ * cada link tenha aria-label/title derivados do <span>, permitindo tooltips
+ * nativos e leitura adequada por screen readers. */
+function kcEnsureNavA11yLabels() {
+  document.querySelectorAll('.kc-nav-links a').forEach((a) => {
+    if (a.dataset.kcA11yEnhanced === '1') return;
+    const span = a.querySelector('span');
+    if (!span) return;
+    const text = (span.textContent || '').trim();
+    if (!text) return;
+    if (!a.getAttribute('aria-label')) a.setAttribute('aria-label', text);
+    if (!a.getAttribute('title')) a.setAttribute('title', text);
+    a.dataset.kcA11yEnhanced = '1';
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.kcAttachScrollIndicators = kcAttachScrollIndicators;
+  window.kcInitScrollIndicators = kcInitScrollIndicators;
+}
+
 function kcInitHeroSwipe() {
   const carousel = document.querySelector(".kc-hero-carousel");
   if (!carousel) return;
@@ -520,6 +654,8 @@ document.addEventListener('DOMContentLoaded', () => {
   kcUpdateHeaderHeightVar();
   kcApplyResponsiveVars();
   kcInitHorizontalDragAreas();
+  kcEnsureNavA11yLabels();
+  kcInitScrollIndicators();
   kcInitHeroSwipe();
   kcPolishCardsForMobile();
   if (window.KCCore && typeof window.KCCore.initWhatsAppShare === 'function') window.KCCore.initWhatsAppShare();
