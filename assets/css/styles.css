@@ -1296,15 +1296,22 @@ main {
 }
 
 /* === Scroll Rail: indicadores de overflow horizontal (chevrons) ===
- * Wrapper que envolve listas roláveis horizontalmente (kc-nav-links, kc-feed-tabs)
- * e exibe setas estilo carrossel quando há conteúdo escondido às laterais.
- * Reaproveita estética de .kc-carousel-btn em escala menor e tom neutro.
+ * Wrapper que envolve listas roláveis horizontalmente (kc-nav-links, kc-feed-tabs).
+ *
+ * Abordagem (após dois bugs visuais): os chevrons são FLEX ITEMS REAIS no
+ * mesmo eixo do conteúdo rolável. Quando NÃO há overflow → display:none
+ * (não ocupam espaço). Quando há overflow → display:inline-flex (ocupam
+ * 32px na linha, ao lado do scroll). Sem position:absolute, sem z-index
+ * disputando, sem sobreposição com conteúdo, sem invasão vertical do
+ * que vem abaixo. Reaproveita estética de .kc-carousel-btn em escala menor.
  */
 .kc-scroll-rail {
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: stretch; /* o feed-tabs/nav-links domina a altura natural */
     min-width: 0;
+    /* margem do .kc-feed-tabs externalizada para o wrapper, evitando
+     * collapse estranho com o conteúdo abaixo (feed-list). */
 }
 
 .kc-scroll-rail > .kc-nav-links,
@@ -1314,29 +1321,25 @@ main {
 }
 
 .kc-scroll-rail__btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+    /* Flex item real, NÃO absolute. Só aparece quando há overflow naquela direção. */
+    display: none;
+    flex: 0 0 32px;
     width: 32px;
     height: 32px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
     border-radius: 50%;
     border: 1px solid var(--kc-border-dark);
     background-color: var(--kc-surface-dark);
     color: var(--kc-text-dark-primary);
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     font-size: 0.85em;
-    /* Z-index ALTO para não ficar atrás do último item da lista quando o scroll
-     * está no fim. O conteúdo abaixo (nav-links / feed-tabs) é forçado a z:1. */
-    z-index: 25;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    transition: opacity var(--transition-speed) ease,
-                background-color var(--transition-speed) ease,
+    transition: background-color var(--transition-speed) ease,
                 transform var(--transition-speed) ease;
-    opacity: 0;
-    pointer-events: none;
+    padding: 0;
+    line-height: 1;
 }
 
 .kc-scroll-rail__btn[hidden] {
@@ -1345,13 +1348,12 @@ main {
 
 .kc-scroll-rail.is-overflow-start .kc-scroll-rail__btn--prev,
 .kc-scroll-rail.is-overflow-end .kc-scroll-rail__btn--next {
-    opacity: 1;
-    pointer-events: auto;
+    display: inline-flex;
 }
 
 .kc-scroll-rail__btn:hover {
     background-color: var(--kc-surface-dark-hover);
-    transform: translateY(-50%) scale(1.08);
+    transform: scale(1.08);
 }
 
 .kc-scroll-rail__btn:focus-visible {
@@ -1359,58 +1361,19 @@ main {
     outline-offset: 2px;
 }
 
-.kc-scroll-rail__btn--prev { left: 2px; }
-.kc-scroll-rail__btn--next { right: 2px; }
+.kc-scroll-rail__btn--prev { margin-right: 6px; }
+.kc-scroll-rail__btn--next { margin-left: 6px; }
 
-/* Garante que o conteúdo rolável fique ABAIXO dos chevrons */
-.kc-scroll-rail > .kc-nav-links,
-.kc-scroll-rail > .kc-feed-tabs {
-    position: relative;
-    z-index: 1;
+/* O feed-tabs tem padding-bottom:10px decorativo; compensar para o
+ * chevron ficar visualmente alinhado ao MEIO dos chips, não ao centro
+ * do bloco com padding. */
+.kc-scroll-rail--tabs .kc-scroll-rail__btn {
+    margin-bottom: 10px;
 }
-
-/* Quando há overflow, cria um "respiro" interno para o último (ou primeiro)
- * item não ficar embaixo do chevron — chevron sempre legível, conteúdo nunca
- * embaralha visualmente com o botão. */
-.kc-scroll-rail.is-overflow-end > .kc-nav-links,
-.kc-scroll-rail.is-overflow-end > .kc-feed-tabs {
-    padding-right: 38px;
-}
-.kc-scroll-rail.is-overflow-start > .kc-nav-links,
-.kc-scroll-rail.is-overflow-start > .kc-feed-tabs {
-    padding-left: 38px;
-}
-
-/* Fades laterais sutis indicando "tem mais conteúdo" sem cobrir cliques.
- * Z-index entre o conteúdo (1) e os chevrons (25). */
-.kc-scroll-rail::before,
-.kc-scroll-rail::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 10px; /* respeita padding-bottom: 10px do kc-feed-tabs */
-    width: 36px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity var(--transition-speed) ease;
-    z-index: 10;
-}
-.kc-scroll-rail::before {
-    left: 0;
-    background: linear-gradient(to right, var(--kc-background-dark), transparent);
-}
-.kc-scroll-rail::after {
-    right: 0;
-    background: linear-gradient(to left, var(--kc-background-dark), transparent);
-}
-.kc-scroll-rail.is-overflow-start::before { opacity: 1; }
-.kc-scroll-rail.is-overflow-end::after   { opacity: 1; }
 
 /* Esconder chevrons em mobile (drag-to-scroll touch já é natural). */
 @media (max-width: 768px) {
     .kc-scroll-rail__btn { display: none !important; }
-    .kc-scroll-rail::before,
-    .kc-scroll-rail::after { display: none; }
     /* O wrapper que envolve a kc-nav-links some inteiro em mobile
      * (a nav já era display:none). Sem isso, o flex item vazio ainda
      * ocupava espaço entre o logo e o user-actions, quebrando o header
