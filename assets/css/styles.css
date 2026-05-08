@@ -1328,8 +1328,10 @@ main {
     align-items: center;
     justify-content: center;
     font-size: 0.85em;
-    z-index: 5;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    /* Z-index ALTO para não ficar atrás do último item da lista quando o scroll
+     * está no fim. O conteúdo abaixo (nav-links / feed-tabs) é forçado a z:1. */
+    z-index: 25;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     transition: opacity var(--transition-speed) ease,
                 background-color var(--transition-speed) ease,
                 transform var(--transition-speed) ease;
@@ -1357,21 +1359,41 @@ main {
     outline-offset: 2px;
 }
 
-.kc-scroll-rail__btn--prev { left: -6px; }
-.kc-scroll-rail__btn--next { right: -6px; }
+.kc-scroll-rail__btn--prev { left: 2px; }
+.kc-scroll-rail__btn--next { right: 2px; }
 
-/* Fades laterais sutis indicando "tem mais conteúdo" sem cobrir cliques */
+/* Garante que o conteúdo rolável fique ABAIXO dos chevrons */
+.kc-scroll-rail > .kc-nav-links,
+.kc-scroll-rail > .kc-feed-tabs {
+    position: relative;
+    z-index: 1;
+}
+
+/* Quando há overflow, cria um "respiro" interno para o último (ou primeiro)
+ * item não ficar embaixo do chevron — chevron sempre legível, conteúdo nunca
+ * embaralha visualmente com o botão. */
+.kc-scroll-rail.is-overflow-end > .kc-nav-links,
+.kc-scroll-rail.is-overflow-end > .kc-feed-tabs {
+    padding-right: 38px;
+}
+.kc-scroll-rail.is-overflow-start > .kc-nav-links,
+.kc-scroll-rail.is-overflow-start > .kc-feed-tabs {
+    padding-left: 38px;
+}
+
+/* Fades laterais sutis indicando "tem mais conteúdo" sem cobrir cliques.
+ * Z-index entre o conteúdo (1) e os chevrons (25). */
 .kc-scroll-rail::before,
 .kc-scroll-rail::after {
     content: "";
     position: absolute;
     top: 0;
     bottom: 10px; /* respeita padding-bottom: 10px do kc-feed-tabs */
-    width: 28px;
+    width: 36px;
     pointer-events: none;
     opacity: 0;
     transition: opacity var(--transition-speed) ease;
-    z-index: 2;
+    z-index: 10;
 }
 .kc-scroll-rail::before {
     left: 0;
@@ -1384,11 +1406,16 @@ main {
 .kc-scroll-rail.is-overflow-start::before { opacity: 1; }
 .kc-scroll-rail.is-overflow-end::after   { opacity: 1; }
 
-/* Esconder chevrons em mobile (drag-to-scroll touch já é natural; nav-links some) */
+/* Esconder chevrons em mobile (drag-to-scroll touch já é natural). */
 @media (max-width: 768px) {
     .kc-scroll-rail__btn { display: none !important; }
     .kc-scroll-rail::before,
     .kc-scroll-rail::after { display: none; }
+    /* O wrapper que envolve a kc-nav-links some inteiro em mobile
+     * (a nav já era display:none). Sem isso, o flex item vazio ainda
+     * ocupava espaço entre o logo e o user-actions, quebrando o header
+     * em 2 linhas. */
+    .kc-scroll-rail--nav { display: none !important; }
 }
 
 /* Tabs de módulo (Minhas Publicações) — mesmo estilo visual dos feed-tabs */
@@ -11486,34 +11513,33 @@ a.kc-home-metric-card:hover {
 }
 
 /* ==========================================================================
-   v75.1 — Colapso ícone-só do kc-nav-links em larguras intermediárias
+   v75.1 — Colapso PROGRESSIVO ícone-só do kc-nav-links
    --------------------------------------------------------------------------
-   Quando o header fica apertado e o kc-search-bar começaria a "engolir" os
-   rótulos da navegação, escondemos progressivamente os <span> de texto e
-   mantemos apenas os ícones. Os ícones nunca são removidos antes do
-   breakpoint mobile (≤768px), onde toda a nav é substituída pelo
-   kc-mobile-nav. A nav passa a ter flex-shrink:0 para que o search-bar
-   reduza primeiro, conforme solicitado.
+   Lógica: o JS (kcApplyProgressiveNavCollapse em kc-core.js) mede o
+   overflow real da nav e adiciona a classe `.is-icon-only` aos itens do
+   ÚLTIMO para o PRIMEIRO até caber. Assim, conforme o header aperta:
+     1) primeiro o último label some (Caronas → só ícone)
+     2) depois o penúltimo (Compra e Venda → só ícone)
+     3) e assim por diante até sobrar todos só com ícones
+   Os ícones nunca somem antes do breakpoint mobile (≤768px).
+   No desktop, a nav nunca shrinka antes da search-bar — o JS faz a redução.
    ========================================================================== */
 
-@media (min-width: 769px) and (max-width: 1100px) {
-  .kc-header:not(.kc-header--admin) .kc-nav-links {
-    flex-shrink: 0;
-  }
-  .kc-header:not(.kc-header--admin) .kc-nav-links a span {
-    display: none !important;
-  }
-  .kc-header:not(.kc-header--admin) .kc-nav-links a {
-    padding: 7px 9px;
-    gap: 0;
-  }
-  .kc-header:not(.kc-header--admin) .kc-nav-links a i {
-    font-size: 1.05em;
-  }
+.kc-nav-links a.is-icon-only span {
+  display: none;
+}
+.kc-nav-links a.is-icon-only {
+  padding: 7px 9px;
+  gap: 0;
+}
+.kc-nav-links a.is-icon-only i {
+  font-size: 1.05em;
 }
 
-/* Hint visual sutil quando a nav está em modo ícone-só: tooltip nativo
- * ativado via aria-label/title já existente nos <a>. Garantir foco visível. */
+/* No desktop o flex-basis natural já permite shrink; ao detectar overflow
+ * o JS aplica .is-icon-only progressivamente. Não forçamos flex-shrink:0
+ * porque isso fazia o conteúdo extravasar antes do JS agir. */
+
 .kc-nav-links a:focus-visible {
   outline: 2px solid var(--kc-primary-brand);
   outline-offset: 2px;

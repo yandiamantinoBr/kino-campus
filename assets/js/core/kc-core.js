@@ -365,6 +365,9 @@ function kcWrapScrollRails() {
     }
     const rail = document.createElement('div');
     rail.className = 'kc-scroll-rail';
+    // Modificador para o CSS distinguir wrapper de nav vs tabs (mobile-hide)
+    if (el.classList.contains('kc-nav-links')) rail.classList.add('kc-scroll-rail--nav');
+    if (el.classList.contains('kc-feed-tabs')) rail.classList.add('kc-scroll-rail--tabs');
     rail.setAttribute('data-kc-scroll-rail', '');
 
     const btnPrev = document.createElement('button');
@@ -397,6 +400,12 @@ function kcInitScrollIndicators() {
   document.querySelectorAll('[data-kc-scroll-rail]').forEach(kcAttachScrollIndicators);
 }
 
+if (typeof window !== 'undefined') {
+  window.kcApplyProgressiveNavCollapse = (typeof kcApplyProgressiveNavCollapse === 'function')
+    ? kcApplyProgressiveNavCollapse
+    : window.kcApplyProgressiveNavCollapse;
+}
+
 /* Para o modo ícone-só (kc-nav-links em larguras intermediárias), garante que
  * cada link tenha aria-label/title derivados do <span>, permitindo tooltips
  * nativos e leitura adequada por screen readers. */
@@ -410,6 +419,44 @@ function kcEnsureNavA11yLabels() {
     if (!a.getAttribute('aria-label')) a.setAttribute('aria-label', text);
     if (!a.getAttribute('title')) a.setAttribute('title', text);
     a.dataset.kcA11yEnhanced = '1';
+  });
+}
+
+/* === v75.1: Colapso progressivo de labels do kc-nav-links ===
+ * Mede o overflow real da nav e aplica .is-icon-only do ÚLTIMO item para o
+ * PRIMEIRO, até caber sem overflow. Em mobile (≤768px) a nav é display:none,
+ * então sai cedo. Idempotente — pode ser chamado em resize sem efeitos
+ * indesejados. */
+function kcApplyProgressiveNavCollapse() {
+  if (typeof window === 'undefined') return;
+  if (window.innerWidth <= 768) {
+    // Mobile: garante reset (caso volte de desktop com classes residuais)
+    document.querySelectorAll('.kc-nav-links a.is-icon-only').forEach((a) => {
+      a.classList.remove('is-icon-only');
+    });
+    return;
+  }
+
+  document.querySelectorAll('.kc-nav-links').forEach((nav) => {
+    const links = Array.from(nav.querySelectorAll(':scope > a'));
+    if (links.length === 0) return;
+
+    // 1) Reset: tudo com label visível, deixar o browser remediar layout
+    links.forEach((a) => a.classList.remove('is-icon-only'));
+
+    // 2) Esperar reflow e medir overflow
+    // requestAnimationFrame não é suficiente sozinho aqui porque modificamos
+    // estado e queremos medir DEPOIS do reflow. Forçamos leitura de scrollWidth
+    // (síncrono) que dispara reflow.
+    // Itera do último para o primeiro, escondendo label até caber.
+    for (let i = links.length - 1; i >= 0; i--) {
+      // Margem de tolerância: 2px contra erros de arredondamento
+      if (nav.scrollWidth <= nav.clientWidth + 2) break;
+      links[i].classList.add('is-icon-only');
+      // Forçar reflow para o próximo scrollWidth refletir a mudança
+      // (acessar offsetWidth força reflow síncrono)
+      void nav.offsetWidth;
+    }
   });
 }
 
@@ -656,6 +703,16 @@ document.addEventListener('DOMContentLoaded', () => {
   kcInitHorizontalDragAreas();
   kcEnsureNavA11yLabels();
   kcInitScrollIndicators();
+  kcApplyProgressiveNavCollapse();
+  // Re-medir após carregamento das fontes (Font Awesome muda larguras)
+  if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+    document.fonts.ready.then(() => {
+      kcApplyProgressiveNavCollapse();
+      if (typeof kcInitScrollIndicators === 'function') kcInitScrollIndicators();
+    }).catch(() => {});
+  } else {
+    setTimeout(kcApplyProgressiveNavCollapse, 400);
+  }
   kcInitHeroSwipe();
   kcPolishCardsForMobile();
   if (window.KCCore && typeof window.KCCore.initWhatsAppShare === 'function') window.KCCore.initWhatsAppShare();
@@ -664,6 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const onResize = kcDebounce(() => {
     kcUpdateHeaderHeightVar();
     kcApplyResponsiveVars();
+    kcApplyProgressiveNavCollapse();
     kcPolishCardsForMobile();
     kcInitImageFallbacks();
   }, 140);
