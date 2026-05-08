@@ -1775,11 +1775,25 @@ main {
     grid-template-columns: 100px 1fr;
     gap: 12px;
     padding: 12px;
+    /* Mantém o conteúdo (texto) ancorado ao topo quando a imagem fica
+     * mais alta por conta do aspect-ratio dinâmico. */
+    align-items: start;
 }
 
+/* === v75.1: Aspect-ratio dinâmico do image-wrapper ===
+ * A largura é fixada pelo grid (100px desktop / 84px mobile / 70px small).
+ * A altura é derivada da proporção da imagem real, snapada para um dos
+ * presets verticais padrão (1:1, 4:5, 3:4, 2:3, 9:16) via JS no onload
+ * — variável CSS --kc-card-image-ar é setada pelo kcInitCardImageAspect.
+ * Default 1:1 mantém comportamento atual antes do load (zero CLS visível
+ * para imagens já em cache; CLS mínimo para imagens novas, pois thumbs
+ * são pequenas e carregam rápido). */
 .kc-card__image-wrapper {
     width: 100px;
-    height: 100px;
+    aspect-ratio: var(--kc-card-image-ar, 1 / 1);
+    /* Não estica para preencher a row do grid quando a imagem é menos
+     * alta que o conteúdo — preserva proporção real da imagem. */
+    align-self: start;
     background-color: var(--kc-background-dark);
     display: flex;
     align-items: center;
@@ -1789,9 +1803,12 @@ main {
 }
 
 .kc-card__image-wrapper img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+    /* Preenche o wrapper inteiro com a proporção definida; cover recorta
+     * o excesso (sem barras pretas). Resolve o conflito histórico entre
+     * object-fit:contain (desktop) e object-fit:cover (mobile). */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     transition: transform var(--transition-speed) ease;
 }
 
@@ -3169,12 +3186,12 @@ main {
     .kc-card__main {
         grid-template-columns: 70px 1fr;
     }
-    
+
     .kc-card__image-wrapper {
         width: 70px;
-        height: 70px;
+        /* altura derivada do aspect-ratio dinâmico (--kc-card-image-ar) */
     }
-    
+
     .kc-card__footer {
         padding: 8px 10px;
     }
@@ -3549,9 +3566,9 @@ select:focus-visible {
     
     .kc-card__image-wrapper {
         width: 85px;
-        height: 85px;
+        /* altura derivada do aspect-ratio dinâmico */
     }
-    
+
     .kc-card__title {
         font-size: 0.95em;
         line-height: 1.3;
@@ -3748,9 +3765,9 @@ select:focus-visible {
     
     .kc-card__image-wrapper {
         width: 75px;
-        height: 75px;
+        /* altura derivada do aspect-ratio dinâmico */
     }
-    
+
     .kc-card__title {
         font-size: 0.9em;
     }
@@ -4928,10 +4945,10 @@ body.kc-scroll-locked {
     
     .kc-card__image-wrapper {
         width: 70px;
-        height: 70px;
         min-width: 70px;
+        /* altura derivada do aspect-ratio dinâmico */
     }
-    
+
     .kc-card__content {
         padding-left: 10px;
     }
@@ -5334,8 +5351,8 @@ header,
 
   .kc-card__image-wrapper {
     width: 78px;
-    height: 78px;
     border-radius: 12px;
+    /* altura derivada do aspect-ratio dinâmico */
   }
 
   .kc-card__title {
@@ -5392,7 +5409,7 @@ header,
   }
   .kc-card__image-wrapper {
     width: 70px;
-    height: 70px;
+    /* altura derivada do aspect-ratio dinâmico */
   }
 }
 
@@ -5672,7 +5689,7 @@ header,
 
   .kc-card__image-wrapper {
     width: 82px;
-    height: 82px;
+    /* altura derivada do aspect-ratio dinâmico */
   }
 
   .kc-card__content {
@@ -5816,8 +5833,8 @@ header,
 
   .kc-card__image-wrapper {
     width: 84px !important;
-    height: 84px !important;
     border-radius: 14px !important;
+    /* altura derivada do aspect-ratio dinâmico */
   }
 
   .kc-card__image-wrapper img {
@@ -6250,10 +6267,10 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
 
   .kc-card__image-wrapper {
     width: var(--kc-card-media) !important;
-    height: var(--kc-card-media) !important;
     min-width: var(--kc-card-media) !important;
     border-radius: 14px !important;
     overflow: hidden;
+    /* altura derivada do aspect-ratio dinâmico (--kc-card-image-ar) */
   }
 
   .kc-card__image-wrapper img {
@@ -6380,10 +6397,10 @@ textarea::placeholder {
   }
 
   .kc-card__image-wrapper {
-    /* largura já é definida nos breakpoints; altura passa a derivar da largura */
+    /* largura já é definida nos breakpoints; altura passa a derivar do
+     * aspect-ratio dinâmico (--kc-card-image-ar setado pelo JS). */
     height: auto !important;
-    aspect-ratio: 4 / 3;
-    min-height: calc(var(--kc-card-media) * 0.75);
+    aspect-ratio: var(--kc-card-image-ar, 1 / 1);
     /* placeholder neutro enquanto a imagem carrega */
     background-color: rgba(255, 255, 255, 0.04);
     contain: layout paint;
