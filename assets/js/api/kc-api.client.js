@@ -1493,6 +1493,14 @@
     }
     return driver.getFeedCursor(params);
   }
+  // v75.1 — Abas personalizadas do kc-feed-tabs (RPC kc_get_personalized_tabs).
+  async function getPersonalizedTabs(limit = 8) {
+    const postsFeedModule = getPostsFeedModule();
+    if (postsFeedModule && typeof postsFeedModule.getPersonalizedTabs === 'function') {
+      return postsFeedModule.getPersonalizedTabs(limit, buildPostsFeedDeps());
+    }
+    return [];
+  }
   // Ratings split (v11.33.1)
   // Implementacoes foram movidas para window._KCAPI.ratings (kc-api.ratings.js).
   // A fachada mantem os mesmos nomes/contratos e delega via getRatingsModule().
@@ -2326,6 +2334,7 @@
     getPosts,
     searchPosts,
     getFeedCursor,
+    getPersonalizedTabs,
     getUserRatingSummary,
     getUserRatingState,
     listUserRatings,
