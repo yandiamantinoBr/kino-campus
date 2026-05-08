@@ -1298,24 +1298,19 @@ main {
 /* === Scroll Rail: indicadores de overflow horizontal (chevrons) ===
  * Wrapper que envolve listas roláveis horizontalmente (kc-nav-links, kc-feed-tabs)
  * e exibe setas estilo carrossel quando há conteúdo escondido às laterais.
- *
- * IMPORTANTE: o wrapper NÃO é flex. Ele apenas estabelece um stacking
- * context (position:relative) para os chevrons posicionarem-se em cima
- * do elemento rolável. O filho (.kc-nav-links ou .kc-feed-tabs) preserva
- * 100% do seu layout original (flex + overflow-x:auto), enquanto os
- * chevrons FLUTUAM nas extremidades. Isso evita que o wrapper crie uma
- * "linha" extra acima do conteúdo.
+ * Reaproveita estética de .kc-carousel-btn em escala menor e tom neutro.
  */
 .kc-scroll-rail {
     position: relative;
-    /* Sem display:flex aqui. O filho rolável é o único elemento de fluxo. */
+    display: flex;
+    align-items: center;
+    min-width: 0;
 }
 
 .kc-scroll-rail > .kc-nav-links,
 .kc-scroll-rail > .kc-feed-tabs {
-    /* Mantém o display:flex/overflow-x:auto originais do filho.
-     * z-index:1 garante que fica abaixo dos chevrons (z:25). */
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .kc-scroll-rail__btn {
@@ -1367,27 +1362,16 @@ main {
 .kc-scroll-rail__btn--prev { left: 2px; }
 .kc-scroll-rail__btn--next { right: 2px; }
 
-/* O .kc-feed-tabs tem padding-bottom:10px (espaço de respiro).
- * Compensamos no chevron para ele ficar centralizado no MEIO dos chips,
- * não no centro do wrapper (que inclui o padding-bottom). */
-.kc-scroll-rail--tabs .kc-scroll-rail__btn {
-    top: calc(50% - 5px);
-}
-.kc-scroll-rail--tabs .kc-scroll-rail__btn:hover {
-    transform: translateY(-50%) scale(1.08);
-}
-
-/* O conteúdo rolável fica ABAIXO dos chevrons (z:25).
- * O posicionamento absolute do button já dispensa stacking explícito,
- * mas mantemos z-index:1 para clareza. */
+/* Garante que o conteúdo rolável fique ABAIXO dos chevrons */
 .kc-scroll-rail > .kc-nav-links,
 .kc-scroll-rail > .kc-feed-tabs {
     position: relative;
     z-index: 1;
 }
 
-/* Quando há overflow, "respiro" interno na borda relevante para que o
- * último (ou primeiro) item não fique embaixo do chevron. */
+/* Quando há overflow, cria um "respiro" interno para o último (ou primeiro)
+ * item não ficar embaixo do chevron — chevron sempre legível, conteúdo nunca
+ * embaralha visualmente com o botão. */
 .kc-scroll-rail.is-overflow-end > .kc-nav-links,
 .kc-scroll-rail.is-overflow-end > .kc-feed-tabs {
     padding-right: 38px;
@@ -1404,17 +1388,12 @@ main {
     content: "";
     position: absolute;
     top: 0;
-    bottom: 0;
+    bottom: 10px; /* respeita padding-bottom: 10px do kc-feed-tabs */
     width: 36px;
     pointer-events: none;
     opacity: 0;
     transition: opacity var(--transition-speed) ease;
     z-index: 10;
-}
-/* Para feed-tabs, respeita o padding-bottom:10px do conteúdo */
-.kc-scroll-rail--tabs::before,
-.kc-scroll-rail--tabs::after {
-    bottom: 10px;
 }
 .kc-scroll-rail::before {
     left: 0;
