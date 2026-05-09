@@ -7963,6 +7963,49 @@ textarea::placeholder {
   }
 }
 
+/* v75.1 FINAL: garante footer SEMPRE em uma linha em qualquer mobile.
+ * Regra colocada por ULTIMO no arquivo para vencer cascata sobre as
+ * regras de display:grid/flex-wrap:wrap espalhadas em max-width:576/380/360. */
+@media (max-width: 576px) {
+  .kc-card .kc-card__footer {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    grid-template-columns: none !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+  .kc-card .kc-card__footer .kc-card__interactions,
+  .kc-card .kc-card__footer .kc-card__actions {
+    grid-column: unset !important;
+    grid-row: unset !important;
+    width: auto !important;
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+  }
+  .kc-card .kc-card__footer .kc-card__interactions {
+    justify-content: flex-start !important;
+  }
+  .kc-card .kc-card__footer .kc-card__actions {
+    justify-content: flex-end !important;
+  }
+}
+@media (max-width: 380px) {
+  .kc-card .kc-card__footer .kc-action-button {
+    width: auto !important;
+    min-width: 70px !important;
+    padding: 0 12px !important;
+    font-size: 0.78em !important;
+  }
+}
+@media (max-width: 360px) {
+  .kc-card .kc-card__footer .kc-action-button {
+    min-width: 64px !important;
+    padding: 0 10px !important;
+    font-size: 0.76em !important;
+  }
+}
+
 /* v75.1: range intermediário 577-767px — logo-text estava sumindo aqui
  * (display:none herdado de @media max-width:767 sem regra de mostrar).
  * Agora mostra com tamanho compacto (igual ao breakpoint mobile, sem
