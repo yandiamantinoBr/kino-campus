@@ -594,8 +594,10 @@ function renderPostCard(post, options) {
     : 'Ver Mais';
 
   // V8.1.3.1.4: garante CTA curto e consistente (desktop + mobile)
+  // v75.1: CTA unificado em "Ver Mais" mesmo para posts encerrados
+  // (era "Ver historico" para encerrados, mas trocava o tamanho do
+  // botao no footer e atrapalhava o caber-em-uma-linha em mobile).
   ctaText = 'Ver Mais';
-  if (isClosed) ctaText = 'Ver hist\u00F3rico';
 
   const compactComments = true; // V8.1.2.4.5: padrão obrigatório (ícone + número)
 
