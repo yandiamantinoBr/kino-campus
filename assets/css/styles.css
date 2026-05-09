@@ -7988,14 +7988,16 @@ textarea::placeholder {
     font-size: 18px;
   }
 
-  /* Header em uma linha so. Em mobile o .kc-header-container vira
-   * display:grid em algum breakpoint -- forcamos flex aqui para que o
-   * nav-links possa shrinkar/crescer naturalmente. */
-  .kc-header-container {
+  /* Header em uma linha so. Em mobile o .kc-header:not(.kc-header--admin)
+   * .kc-header-container vira display:grid (regra mais especifica em
+   * @media max-width:768). Precisamos da mesma especificidade aqui +
+   * !important para sobrepor. */
+  .kc-header:not(.kc-header--admin) .kc-header-container {
     display: flex !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     gap: 8px !important;
+    grid-template-columns: none !important;
   }
 
   /* Esconde search-bar full e mantem so o circulo, liberando ~280px
@@ -8005,14 +8007,20 @@ textarea::placeholder {
   }
   .kc-header:not(.kc-header--admin) .kc-search-mobile-btn {
     display: inline-flex !important;
+    grid-column: unset !important;
   }
 
   /* Mostra kc-nav-links no header em modo icone-so.
    * flex:1 1 0 + min-width:0 garante que cresce/shrinka conforme
    * espaco disponivel (sem ficar reduzido a 1 icone como na 1a tentativa). */
   .kc-header:not(.kc-header--admin) .kc-nav-links,
-  .kc-scroll-rail--nav {
+  .kc-header:not(.kc-header--admin) .kc-scroll-rail--nav {
     display: flex !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-scroll-rail--nav {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    grid-column: unset !important;
   }
   .kc-header:not(.kc-header--admin) .kc-nav-links {
     flex: 1 1 0 !important;
@@ -8041,6 +8049,7 @@ textarea::placeholder {
   .kc-header:not(.kc-header--admin) .kc-user-actions,
   .kc-header:not(.kc-header--admin) .kc-logo {
     flex: 0 0 auto !important;
+    grid-column: unset !important;
   }
 }
 
