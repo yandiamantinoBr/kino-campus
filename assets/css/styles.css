@@ -7966,7 +7966,9 @@ textarea::placeholder {
 /* v75.1: range intermediário 577-767px — logo-text estava sumindo aqui
  * (display:none herdado de @media max-width:767 sem regra de mostrar).
  * Agora mostra com tamanho compacto (igual ao breakpoint mobile, sem
- * o subtítulo "COMUNIDADE UFG"). */
+ * o subtítulo "COMUNIDADE UFG"). E aproveita o espaço do search-bar
+ * full (que vira ícone circular) para mostrar a kc-nav-links em modo
+ * ícone-só, trazendo navegação ao header também nesse range. */
 @media (min-width: 577px) and (max-width: 767px) {
   .kc-logo-text {
     display: flex !important;
@@ -7984,6 +7986,56 @@ textarea::placeholder {
   }
   .kc-logo-mark i {
     font-size: 18px;
+  }
+
+  /* Header em uma linha so */
+  .kc-header-container {
+    flex-wrap: nowrap !important;
+  }
+
+  /* Esconde search-bar full e mantem so o circulo, liberando ~280px
+   * para os icones do nav */
+  .kc-header:not(.kc-header--admin) .kc-search-bar {
+    display: none !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-search-mobile-btn {
+    display: inline-flex !important;
+  }
+
+  /* Mostra kc-nav-links no header em modo icone-so.
+   * flex:1 1 0 + min-width:0 garante que cresce/shrinka conforme
+   * espaco disponivel (sem ficar reduzido a 1 icone como na 1a tentativa). */
+  .kc-header:not(.kc-header--admin) .kc-nav-links,
+  .kc-scroll-rail--nav {
+    display: flex !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+    gap: 2px !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    max-width: none !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links::-webkit-scrollbar {
+    display: none;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links a span {
+    display: none !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links a {
+    flex: 0 0 auto !important;
+    padding: 6px 8px !important;
+    gap: 0 !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links a i {
+    font-size: 1.05em !important;
+  }
+  /* user-actions e logo nao shrinkam */
+  .kc-header:not(.kc-header--admin) .kc-user-actions,
+  .kc-header:not(.kc-header--admin) .kc-logo {
+    flex: 0 0 auto !important;
   }
 }
 
