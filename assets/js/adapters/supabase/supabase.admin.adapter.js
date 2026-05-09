@@ -109,6 +109,7 @@
       return { ok: false, error: { message: 'Preencha assunto, descrição e e-mail de retorno.' } };
     }
 
+    // Payload base usado para fallback de notificação e como referência local
     const insertPayload = {
       user_id: user && user.id ? user.id : null,
       type: normalized.type,
@@ -124,19 +125,39 @@
       metadata: normalized.metadata || {},
     };
 
+    // v9.3.5.3: usa RPC kc_create_help_request (SECURITY DEFINER) em vez de
+    // .from('help_requests').insert(...) direto. O insert direto falhava com
+    // erro 42501 ("new row violates row-level security policy") para callers
+    // anon -- ate com WITH CHECK true. A RPC contorna o problema, valida o
+    // payload no servidor e propaga auth.uid() para autenticados.
+    const rpcPayload = {
+      type: insertPayload.type,
+      topic: insertPayload.topic,
+      subtopic: insertPayload.subtopic,
+      subject: insertPayload.subject,
+      message: insertPayload.message,
+      priority: insertPayload.priority,
+      page_path: insertPayload.page_path,
+      contact_email: insertPayload.contact_email,
+      allow_contact: insertPayload.allow_contact,
+      metadata: insertPayload.metadata,
+    };
+
     try {
-      const { data, error } = await client
-        .from('help_requests')
-        .insert(insertPayload)
-        .select('*')
-        .maybeSingle();
+      const { data, error } = await client.rpc('kc_create_help_request', { p_payload: rpcPayload });
 
       if (error) {
         console.error('[KCAPI][help] createHelpRequest:', error);
         return { ok: false, error: { message: error.message || 'Não foi possível enviar o pedido de ajuda.' } };
       }
 
-      const createdRow = data || insertPayload;
+      // RPC retorna [{ out_id, out_created_at }]
+      const row = Array.isArray(data) ? data[0] : data;
+      const createdRow = Object.assign({}, insertPayload, {
+        id: row && row.out_id ? row.out_id : null,
+        created_at: row && row.out_created_at ? row.out_created_at : null,
+      });
+
       const notification = await notifyExternalHelpRequest(client, createdRow);
       return { ok: true, data: createdRow, notification };
     } catch (e) {
