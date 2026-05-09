@@ -6774,47 +6774,60 @@ textarea::placeholder {
   height: var(--kc-card-footer-share-icon);
 }
 
-/* Mobile: evita sobreposição e melhora proporção (wrap inteligente) */
+/* Mobile: garante footer SEMPRE em uma única linha (sem wrap).
+ * v75.1: era flex-wrap:wrap + .kc-card__interactions{width:100%} +
+ * .kc-action-button{width:100%} (regras agressivas em outro bloco
+ * @media:576) que forçavam o footer a quebrar em 2 linhas. Agora
+ * sobrescrevemos com !important para garantir nowrap + tamanhos
+ * naturais, mesmo em S24 Ultra (~412px CSS) ou ate menos. */
 @media (max-width: 576px) {
   .kc-card__footer {
-    display: flex;
-    flex-wrap: wrap;
+    display: flex !important;
+    flex-wrap: nowrap !important;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-  }
-
-  .kc-card__interactions {
-    /* Interações podem encolher; prioridade é não esmagar as ações */
-    flex: 1 1 auto;
-    min-width: 0;
     gap: 8px;
   }
 
+  .kc-card__interactions {
+    width: auto !important; /* sobrescreve width:100% antigo */
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+
   .kc-card__actions {
-    /* Não deixa o bloco de ações encolher a ponto de "invadir" e gerar overlap.
-       Se não couber, ele quebra para a próxima linha (por causa do flex-wrap do footer). */
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     min-width: 0;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 8px;
   }
 
+  /* comment-link: tamanho do conteúdo */
   .kc-card__footer .kc-comment-link {
-    flex: 1 1 auto;
-    min-width: 86px;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0 10px;
   }
 
-  /* CTA: v75.1 -- agora compacto em mobile (era flex:1 1 auto que
-   * crescia ate ocupar toda a largura, parecendo um CTA agressivo).
-   * Vira tamanho-do-conteudo com min-width modesto, em par visual
-   * com o circulo do whatsapp. */
-  .kc-card__actions .kc-action-button {
-    flex: 0 0 auto;
+  /* CTA: compacto, NUNCA width:100% (era a causa de cair na 2a linha) */
+  .kc-card__actions .kc-action-button,
+  .kc-card__footer .kc-action-button {
+    width: auto !important;
+    flex: 0 0 auto !important;
     white-space: nowrap;
-    padding: 0 18px;
-    font-size: 0.85em;
-    min-width: 96px;
+    padding: 0 14px !important;
+    font-size: 0.82em !important;
+    min-width: 78px !important;
+    text-align: center;
+  }
+
+  /* Share WhatsApp menor (era 48px, agora 40px em mobile) */
+  .kc-card__footer .kc-share-whatsapp {
+    --kc-card-footer-share-size: 40px;
+    margin: 0;
+    flex: 0 0 auto;
   }
 
   /* Vote box ainda mais compacto no mobile */
