@@ -7940,7 +7940,9 @@ textarea::placeholder {
 /* v75.1: range intermediário 577-767px — logo-text estava sumindo aqui
  * (display:none herdado de @media max-width:767 sem regra de mostrar).
  * Agora mostra com tamanho compacto (igual ao breakpoint mobile, sem
- * o subtítulo "COMUNIDADE UFG"). */
+ * o subtítulo "COMUNIDADE UFG"). E aproveita o espaço sobrando para
+ * mostrar a kc-nav-links em modo ícone-só (sem labels), trazendo
+ * navegação ao header também nesse range. */
 @media (min-width: 577px) and (max-width: 767px) {
   .kc-logo-text {
     display: flex !important;
@@ -7958,6 +7960,37 @@ textarea::placeholder {
   }
   .kc-logo-mark i {
     font-size: 18px;
+  }
+
+  /* Mostra kc-nav-links no header em modo ícone-só.
+   * Override da regra global @media (max-width:768) que escondia. */
+  .kc-header:not(.kc-header--admin) .kc-nav-links,
+  .kc-scroll-rail--nav {
+    display: flex !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: none;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links::-webkit-scrollbar {
+    display: none;
+  }
+  /* Força modo ícone-só (esconde os <span> de texto) */
+  .kc-header:not(.kc-header--admin) .kc-nav-links a span {
+    display: none !important;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links a {
+    flex: 0 0 auto;
+    padding: 7px 9px;
+    gap: 0;
+    font-size: 1em;
+  }
+  .kc-header:not(.kc-header--admin) .kc-nav-links a i {
+    font-size: 1.1em;
   }
 }
 
