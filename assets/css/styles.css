@@ -113,7 +113,8 @@ header {
 .kc-logo a {
     display: flex;
     align-items: center;
-    gap: 10px;
+    /* v75.1: gap aumentado de 10px → 12px para "respiro" entre mark e text */
+    gap: 12px;
     text-decoration: none;
     transition: transform var(--transition-speed) ease;
 }
@@ -135,6 +136,10 @@ header {
     box-shadow: 0 10px 24px rgba(0,0,0,0.12);
     transform: rotate(-3deg);
     transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    /* v75.1: garante que o mark NUNCA seja espremido em flex containers
+     * apertados — sempre permanece quadrado com aspect-ratio:1/1. */
+    flex-shrink: 0;
+    aspect-ratio: 1 / 1;
 }
 
 .kc-logo a:hover .kc-logo-mark {
@@ -7929,6 +7934,30 @@ textarea::placeholder {
   }
   .kc-header:not(.kc-header--admin) .kc-logo a {
     gap: 0;
+  }
+}
+
+/* v75.1: range intermediário 577-767px — logo-text estava sumindo aqui
+ * (display:none herdado de @media max-width:767 sem regra de mostrar).
+ * Agora mostra com tamanho compacto (igual ao breakpoint mobile, sem
+ * o subtítulo "COMUNIDADE UFG"). */
+@media (min-width: 577px) and (max-width: 767px) {
+  .kc-logo-text {
+    display: flex !important;
+  }
+  .kc-logo-sub {
+    display: none;
+  }
+  .kc-logo-name {
+    font-size: 1.05rem;
+  }
+  .kc-logo-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+  .kc-logo-mark i {
+    font-size: 18px;
   }
 }
 
