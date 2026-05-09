@@ -827,7 +827,7 @@ function renderPostCard(post, options) {
           </div>
           <div class="kc-card__author"${authorId ? ' data-author-id="' + _escapeHtml(String(authorId)) + '"' : ''}>
             <img alt="${_escapeHtml(authorAvatarAlt)}" src="${_escapeHtml(authorAvatar)}"/>
-            <span>${_escapeHtml(authorPrefix)} <strong>${_escapeHtml(String(authorName))}</strong></span>
+            <span><span class="kc-card__author-prefix">${_escapeHtml(authorPrefix)} </span><strong>${_escapeHtml(String(authorName))}</strong></span>
             ${ratingHtml}
           </div>
         </div>

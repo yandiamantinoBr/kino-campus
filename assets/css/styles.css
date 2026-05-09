@@ -5879,6 +5879,12 @@ header,
     line-height: 1.25;
   }
 
+  /* v75.1: em mobile esconde o prefix "Anunciado por" / "Organizado por"
+   * deixando apenas o avatar + nome. Em desktop o texto continua. */
+  .kc-card__author-prefix {
+    display: none;
+  }
+
   .kc-card__title {
     font-size: 1.02em !important;
     -webkit-line-clamp: 2 !important;
