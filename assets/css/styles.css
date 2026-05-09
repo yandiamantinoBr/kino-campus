@@ -1900,6 +1900,26 @@ main {
     color: var(--kc-primary-brand);
 }
 
+/* === v75.1: Badges compactos em mobile (≤576px) ===
+ * Reduz padding/font para permitir 2-3 badges por linha em vez de 1 por
+ * linha. Sem essa regra, em mobile o gap+padding faz cada badge quebrar
+ * em sua própria linha (4 badges = 4 linhas verticais). Aqui ganhamos
+ * de 2 a 3 linhas por card. */
+@media (max-width: 576px) {
+    .kc-card__badges {
+        gap: 6px;
+        margin: 4px 0 6px 0;
+    }
+    .kc-card .kc-badge {
+        padding: 4px 9px;
+        font-size: 0.72em;
+        gap: 5px;
+    }
+    .kc-card .kc-badge i {
+        font-size: 0.85em;
+    }
+}
+
 .kc-badge--closed {
     background-color: rgba(148, 163, 184, 0.16);
     border-color: rgba(148, 163, 184, 0.35);
