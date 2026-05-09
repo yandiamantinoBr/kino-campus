@@ -6800,10 +6800,16 @@ textarea::placeholder {
     min-width: 86px;
   }
 
-  /* CTA ocupa o restante do bloco de ações (sem encostar no WhatsApp) */
+  /* CTA: v75.1 -- agora compacto em mobile (era flex:1 1 auto que
+   * crescia ate ocupar toda a largura, parecendo um CTA agressivo).
+   * Vira tamanho-do-conteudo com min-width modesto, em par visual
+   * com o circulo do whatsapp. */
   .kc-card__actions .kc-action-button {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     white-space: nowrap;
+    padding: 0 18px;
+    font-size: 0.85em;
+    min-width: 96px;
   }
 
   /* Vote box ainda mais compacto no mobile */
