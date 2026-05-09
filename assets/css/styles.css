@@ -6372,10 +6372,14 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
 }
 
 @media (max-width: 360px) {
-  .kc-card__footer { gap: 8px; }
+  .kc-card__footer { gap: 6px; }
+  /* v75.1: removido width:100%!important que forcava 2 linhas no card */
   .kc-card__footer .kc-action-button {
-    width: 100% !important;
+    width: auto !important;
     justify-content: center;
+    padding: 0 10px !important;
+    font-size: 0.76em !important;
+    min-width: 64px !important;
   }
 }
 
@@ -6856,13 +6860,20 @@ textarea::placeholder {
   }
 }
 
-/* Telas bem pequenas: ações quebram para baixo (sem overlap) */
+/* v75.1: telas <=380 mantem footer em uma linha (mesma logica do
+ * commit d511488). Removida a regra antiga que forcava .kc-card__actions
+ * a ocupar 100% da linha (flex:1 1 100%) -- isso causava o CTA cair
+ * em segunda linha. */
 @media (max-width: 380px) {
   .kc-card__actions {
-    flex: 1 1 100%;
+    flex: 0 1 auto;
   }
   .kc-card__actions .kc-action-button {
-    flex: 1 1 100%;
+    flex: 0 0 auto;
+    width: auto !important;
+    min-width: 72px !important;
+    padding: 0 12px !important;
+    font-size: 0.78em !important;
   }
 }
 
@@ -6933,10 +6944,12 @@ textarea::placeholder {
   }
 }
 
-/* Telas bem pequenas: ações descem para a linha de baixo (sem esmagar texto) */
+/* v75.1: telas <=380px continuam em UMA linha. Removida a regra antiga
+ * que forcava .kc-card__actions .kc-action-button { width: 100% !important }
+ * que era a causa do CTA cair em 2a linha em S24 Ultra/iPhone SE. */
 @media (max-width: 380px) {
   .kc-card__footer {
-    grid-template-columns: 1fr;
+    grid-template-columns: none;
   }
 
   .kc-card__actions {
@@ -6944,7 +6957,7 @@ textarea::placeholder {
   }
 
   .kc-card__actions .kc-action-button {
-    width: 100% !important;
+    width: auto !important;
     justify-content: center;
   }
 }
