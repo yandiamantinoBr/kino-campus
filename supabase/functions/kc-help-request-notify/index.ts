@@ -1,4 +1,25 @@
+// KinoCampus -- Edge Function: kc-help-request-notify (v9.3.5.5)
+//
+// Notifica novas solicitações de "acesso externo" enviando 2 e-mails:
+//   1. Admin (contato@kinocampus.com.br): nova solicitação para análise
+//   2. Solicitante (row.contact_email): ACK "Recebemos sua solicitação"
+//
+// Provedor de envio: SMTP direto via denomailer (Hostinger SMTP), o mesmo
+// usado pelo Supabase Auth. Não depende de Resend.
+//
+// Env vars necessárias (configuradas como secrets):
+//   - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (auto-injetadas)
+//   - KC_SMTP_HOST (default: smtp.hostinger.com)
+//   - KC_SMTP_PORT (default: 465)
+//   - KC_SMTP_USER (e-mail da caixa autenticada)
+//   - KC_SMTP_PASS (app password)
+//   - KC_SMTP_FROM_NAME (default: "Kino Campus")
+//   - KC_SMTP_FROM_EMAIL (default: contato@kinocampus.com.br)
+//   - KC_ADMIN_NOTIFICATION_EMAIL (default: contato@kinocampus.com.br)
+//   - KC_APP_BASE_URL (default: https://www.kinocampus.com.br)
+
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -20,8 +41,11 @@ type HelpRequestRow = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_APP_BASE_URL = "https://www.kinocampus.com.br";
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const NOTIFICATION_TO = "contato@kinocampus.com.br";
+const DEFAULT_ADMIN_TO = "contato@kinocampus.com.br";
+const DEFAULT_SMTP_HOST = "smtp.hostinger.com";
+const DEFAULT_SMTP_PORT = 465;
+const DEFAULT_FROM_NAME = "Kino Campus";
+const DEFAULT_FROM_EMAIL = "contato@kinocampus.com.br";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -36,19 +60,12 @@ function json(status: number, body: Record<string, unknown>) {
   });
 }
 
-function getRequiredEnv(name: string) {
-  const value = Deno.env.get(name)?.trim();
-  if (!value) throw new Error(`missing_env:${name}`);
-  return value;
-}
-
-function getOptionalEnv(name: string) {
-  const value = Deno.env.get(name)?.trim();
-  return value || null;
+function getEnv(name: string, fallback = "") {
+  return Deno.env.get(name)?.trim() || fallback;
 }
 
 function appBaseUrl() {
-  return (getOptionalEnv("KC_APP_BASE_URL") || DEFAULT_APP_BASE_URL).replace(/\/+$/, "");
+  return (getEnv("KC_APP_BASE_URL", DEFAULT_APP_BASE_URL)).replace(/\/+$/, "");
 }
 
 function asObject(value: unknown): JsonObject {
@@ -92,64 +109,154 @@ function hasSentNotification(row: HelpRequestRow) {
   return asText(emailNotification.status) === "sent";
 }
 
-function buildEmail(row: HelpRequestRow, baseUrl: string) {
+function brandedHeader() {
+  return `
+    <div style="background:#ff6b00;border-radius:14px;padding:24px;text-align:center;color:#fff;margin-bottom:24px">
+      <h1 style="margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-0.02em">KinoCampus</h1>
+      <p style="margin:6px 0 0;font-size:0.85rem;opacity:0.92;letter-spacing:0.15em;text-transform:uppercase">Comunidade UFG</p>
+    </div>`;
+}
+
+function brandedFooter() {
+  return `
+    <p style="font-size:0.85rem;color:#6b7280;margin-top:32px">
+      Equipe KinoCampus<br/>
+      <a href="https://www.kinocampus.com.br" style="color:#ff6b00">www.kinocampus.com.br</a>
+    </p>`;
+}
+
+function buildAdminEmail(row: HelpRequestRow, baseUrl: string) {
   const metadata = asObject(row.metadata);
   const requesterName = asText(metadata.requester_name) || "Pessoa interessada";
   const affiliation = asText(metadata.affiliation_context) || "Não informado";
   const route = asText(metadata.route) || asText(row.page_path) || "Não informado";
-  const adminUrl = `${baseUrl}/admin/help-requests.html`;
-  const subject = `[KinoCampus] Solicitação de acesso externo - ${truncate(requesterName, 80)}`;
-  const html = [
-    "<h1>Solicitação de acesso externo</h1>",
-    "<p>Uma pessoa sem e-mail institucional solicitou acesso ao KinoCampus.</p>",
-    "<ul>",
-    `<li><strong>Nome:</strong> ${escapeHtml(requesterName)}</li>`,
-    `<li><strong>E-mail:</strong> ${escapeHtml(row.contact_email)}</li>`,
-    `<li><strong>Vínculo/contexto:</strong> ${escapeHtml(affiliation)}</li>`,
-    `<li><strong>Origem:</strong> ${escapeHtml(route)}</li>`,
-    `<li><strong>Pedido:</strong> ${escapeHtml(row.message)}</li>`,
-    "</ul>",
-    `<p><a href="${escapeHtml(adminUrl)}">Abrir solicitações no admin</a></p>`,
-  ].join("");
+  const adminUrl = `${baseUrl}/admin/moderation.html`;
+  const subject = `[KinoCampus] Nova solicitação de acesso externo — ${truncate(requesterName, 80)}`;
+
+  const html = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:580px;margin:0 auto;color:#1f2937;line-height:1.55">
+      ${brandedHeader()}
+      <h2 style="color:#ff6b00;font-size:1.25rem;margin:0 0 12px">Nova solicitação de acesso externo</h2>
+      <p>Uma pessoa sem e-mail institucional UFG solicitou acesso à comunidade.</p>
+      <div style="background:#f3f4f6;border-radius:10px;padding:16px 18px;margin:16px 0">
+        <p style="margin:6px 0"><strong>Nome:</strong> ${escapeHtml(requesterName)}</p>
+        <p style="margin:6px 0"><strong>E-mail:</strong> <a href="mailto:${escapeHtml(row.contact_email)}" style="color:#ff6b00">${escapeHtml(row.contact_email)}</a></p>
+        <p style="margin:6px 0"><strong>Vínculo / contexto:</strong> ${escapeHtml(affiliation)}</p>
+        <p style="margin:6px 0"><strong>Origem:</strong> ${escapeHtml(route)}</p>
+      </div>
+      <h3 style="font-size:1rem;margin:18px 0 6px;color:#1f2937">Mensagem da pessoa</h3>
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:0.92rem;color:#374151;white-space:pre-wrap">${escapeHtml(row.message)}</div>
+      <p style="text-align:center;margin:28px 0">
+        <a href="${escapeHtml(adminUrl)}" style="display:inline-block;background:#ff6b00;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem">Abrir no admin</a>
+      </p>
+      <p style="font-size:0.85rem;color:#6b7280">No painel admin você pode <strong>aprovar</strong> (envia convite automaticamente por e-mail) ou <strong>recusar</strong> (registra a decisão e envia e-mail de retorno).</p>
+      ${brandedFooter()}
+    </div>`;
+
   const text = [
-    "Solicitação de acesso externo",
+    "KinoCampus — Nova solicitação de acesso externo",
+    "",
+    "Uma pessoa sem e-mail institucional UFG solicitou acesso à comunidade.",
     "",
     `Nome: ${requesterName}`,
     `E-mail: ${row.contact_email}`,
     `Vínculo/contexto: ${affiliation}`,
     `Origem: ${route}`,
-    `Pedido: ${row.message}`,
     "",
-    `Admin: ${adminUrl}`,
+    "Mensagem:",
+    row.message,
+    "",
+    `Painel admin: ${adminUrl}`,
+    "",
+    "Equipe KinoCampus",
   ].join("\n");
   return { subject, html, text };
 }
 
-async function readProviderBody(response: Response) {
-  const raw = await response.text();
-  if (!raw) return {};
+function buildAckEmail(row: HelpRequestRow) {
+  const metadata = asObject(row.metadata);
+  const requesterName = asText(metadata.requester_name);
+  const greeting = requesterName ? `Olá, ${escapeHtml(requesterName)}!` : "Olá!";
+  const subject = "KinoCampus — Recebemos sua solicitação de acesso";
+
+  const html = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1f2937;line-height:1.55">
+      ${brandedHeader()}
+      <h2 style="color:#ff6b00;font-size:1.3rem;margin:0 0 12px">Recebemos sua solicitação</h2>
+      <p>${greeting}</p>
+      <p>Sua <strong>solicitação de acesso à comunidade KinoCampus</strong> foi recebida e está em análise pela nossa equipe.</p>
+      <p>Você receberá um novo e-mail com a decisão nos próximos dias. Caso seja <strong>aprovada</strong>, virá com um link direto para criar sua conta.</p>
+      <p style="font-size:0.9rem;color:#6b7280">Se você não solicitou esse acesso, pode ignorar este e-mail.</p>
+      ${brandedFooter()}
+    </div>`;
+
+  const text = [
+    "KinoCampus — Recebemos sua solicitação",
+    "",
+    greeting,
+    "",
+    "Sua solicitação de acesso à comunidade KinoCampus foi recebida e está em análise.",
+    "",
+    "Você receberá um novo e-mail com a decisão nos próximos dias.",
+    "Caso seja aprovada, virá com um link direto para criar sua conta.",
+    "",
+    "Equipe KinoCampus",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+async function getSmtpClient() {
+  const host = getEnv("KC_SMTP_HOST", DEFAULT_SMTP_HOST);
+  const port = Number(getEnv("KC_SMTP_PORT", String(DEFAULT_SMTP_PORT)));
+  const user = getEnv("KC_SMTP_USER");
+  const pass = getEnv("KC_SMTP_PASS");
+  if (!user || !pass) throw new Error("missing_smtp_credentials");
+
+  return new SMTPClient({
+    connection: {
+      hostname: host,
+      port,
+      tls: port === 465,
+      auth: { username: user, password: pass },
+    },
+  });
+}
+
+async function sendEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  replyTo?: string;
+}) {
+  const fromName = getEnv("KC_SMTP_FROM_NAME", DEFAULT_FROM_NAME);
+  const fromEmail = getEnv("KC_SMTP_FROM_EMAIL", DEFAULT_FROM_EMAIL);
+  const client = await getSmtpClient();
   try {
-    return JSON.parse(raw) as JsonObject;
-  } catch (_) {
-    return { raw };
+    await client.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: opts.to,
+      subject: opts.subject,
+      content: opts.text,
+      html: opts.html,
+      ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+    });
+  } finally {
+    try { await client.close(); } catch (_) { /* ignore */ }
   }
 }
 
-async function updateEmailNotification(
+async function updateMetadata(
   supabase: ReturnType<typeof createClient>,
-  row: HelpRequestRow,
-  emailNotification: JsonObject,
+  rowId: string,
+  prevMetadata: JsonObject,
+  patch: JsonObject,
 ) {
-  const metadata = {
-    ...asObject(row.metadata),
-    email_notification: emailNotification,
-  };
-
+  const merged = { ...prevMetadata, ...patch };
   const { error } = await supabase
     .from("help_requests")
-    .update({ metadata })
-    .eq("id", row.id);
-
+    .update({ metadata: merged })
+    .eq("id", rowId);
   if (error) {
     console.error("[kc-help-request-notify] metadata update error:", error);
   }
@@ -159,7 +266,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
-
   if (req.method !== "POST") {
     return json(405, { ok: false, error: "method_not_allowed" });
   }
@@ -178,22 +284,17 @@ Deno.serve(async (req) => {
 
   let supabaseUrl = "";
   let serviceRoleKey = "";
-  let emailProvider = "";
-  let emailApiKey = "";
-  let emailFrom = "";
-  let emailReplyTo = "";
+  let adminTo = "";
   let baseUrl = "";
 
   try {
-    supabaseUrl = getRequiredEnv("SUPABASE_URL");
-    serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
-    emailProvider = (getOptionalEnv("KC_NOTIFICATION_EMAIL_PROVIDER") || "").toLowerCase();
-    emailApiKey = getOptionalEnv("KC_NOTIFICATION_EMAIL_API_KEY") || "";
-    emailFrom = getOptionalEnv("KC_NOTIFICATION_EMAIL_FROM") || "";
-    emailReplyTo = getOptionalEnv("KC_NOTIFICATION_EMAIL_REPLY_TO") || "";
+    supabaseUrl = getEnv("SUPABASE_URL");
+    serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRoleKey) throw new Error("missing_supabase_env");
+    adminTo = getEnv("KC_ADMIN_NOTIFICATION_EMAIL", DEFAULT_ADMIN_TO);
     baseUrl = appBaseUrl();
   } catch (error) {
-    console.error("[kc-help-request-notify] missing Supabase configuration:", error);
+    console.error("[kc-help-request-notify] missing Supabase env:", error);
     return json(500, { ok: false, error: "missing_server_configuration" });
   }
 
@@ -211,149 +312,92 @@ Deno.serve(async (req) => {
     console.error("[kc-help-request-notify] select error:", error);
     return json(500, { ok: false, error: "help_request_lookup_failed" });
   }
-
   if (!data) return json(404, { ok: false, error: "help_request_not_found" });
 
   const row = data as HelpRequestRow;
   if (!isExternalAccess(row)) {
     return json(400, { ok: false, error: "help_request_is_not_external_access" });
   }
-
   if (hasSentNotification(row)) {
     return json(200, { ok: true, skipped: true, reason: "already_sent" });
   }
 
-  if (emailProvider !== "resend" || !emailApiKey || !emailFrom) {
-    const failed = {
-      status: "failed",
-      provider: emailProvider || "missing",
-      to: NOTIFICATION_TO,
-      failed_at: new Date().toISOString(),
-      error_code: "missing_resend_configuration",
-      error_message: "Configure KC_NOTIFICATION_EMAIL_PROVIDER=resend, KC_NOTIFICATION_EMAIL_API_KEY e KC_NOTIFICATION_EMAIL_FROM.",
+  const prevMetadata = asObject(row.metadata);
+  const adminEmail = buildAdminEmail(row, baseUrl);
+  const ackEmail = buildAckEmail(row);
+  const requesterEmail = row.contact_email;
+
+  // 1. Tenta enviar para o admin
+  let adminResult: JsonObject;
+  try {
+    await sendEmail({
+      to: adminTo,
+      subject: adminEmail.subject,
+      html: adminEmail.html,
+      text: adminEmail.text,
+      replyTo: isEmailLike(requesterEmail) ? requesterEmail : undefined,
+    });
+    adminResult = {
+      status: "sent",
+      provider: "hostinger_smtp",
+      to: adminTo,
+      reply_to: isEmailLike(requesterEmail) ? requesterEmail : null,
+      sent_at: new Date().toISOString(),
     };
-    await updateEmailNotification(supabase, row, failed);
-    return json(500, { ok: false, error: "missing_resend_configuration" });
+  } catch (e) {
+    const msg = (e as Error)?.message || String(e);
+    console.error("[kc-help-request-notify] admin send error:", msg);
+    adminResult = {
+      status: "failed",
+      provider: "hostinger_smtp",
+      to: adminTo,
+      failed_at: new Date().toISOString(),
+      error_message: msg,
+    };
   }
 
-  const email = buildEmail(row, baseUrl);
-  const replyTo = isEmailLike(row.contact_email) ? row.contact_email : emailReplyTo;
+  // 2. Tenta enviar ACK para o solicitante (best effort, não falha o request)
+  let ackResult: JsonObject;
+  if (isEmailLike(requesterEmail)) {
+    try {
+      await sendEmail({
+        to: requesterEmail,
+        subject: ackEmail.subject,
+        html: ackEmail.html,
+        text: ackEmail.text,
+        replyTo: adminTo,
+      });
+      ackResult = {
+        status: "sent",
+        provider: "hostinger_smtp",
+        to: requesterEmail,
+        sent_at: new Date().toISOString(),
+      };
+    } catch (e) {
+      const msg = (e as Error)?.message || String(e);
+      console.error("[kc-help-request-notify] ack send error:", msg);
+      ackResult = {
+        status: "failed",
+        provider: "hostinger_smtp",
+        to: requesterEmail,
+        failed_at: new Date().toISOString(),
+        error_message: msg,
+      };
+    }
+  } else {
+    ackResult = { status: "skipped", reason: "no_valid_contact_email" };
+  }
 
-  const response = await fetch(RESEND_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${emailApiKey}`,
-    },
-    body: JSON.stringify({
-      from: emailFrom,
-      to: [NOTIFICATION_TO],
-      subject: email.subject,
-      html: email.html,
-      text: email.text,
-      ...(replyTo ? { reply_to: replyTo } : {}),
-    }),
+  await updateMetadata(supabase, row.id, prevMetadata, {
+    email_notification: adminResult,
+    ack_email: ackResult,
   });
 
-  const responseBody = await readProviderBody(response);
-  if (!response.ok) {
-    const failed = {
-      status: "failed",
-      provider: "resend",
-      to: NOTIFICATION_TO,
-      failed_at: new Date().toISOString(),
-      response_code: String(response.status),
-      response_body: responseBody,
-      error_code: "provider_http_error",
-      error_message: asText(responseBody.message) || asText(responseBody.error) || `HTTP ${response.status}`,
-    };
-    await updateEmailNotification(supabase, row, failed);
-    return json(502, { ok: false, error: "resend_failed", response_code: response.status });
-  }
-
-  const sent = {
-    status: "sent",
-    provider: "resend",
-    to: NOTIFICATION_TO,
-    reply_to: replyTo || null,
-    sent_at: new Date().toISOString(),
-    response_code: String(response.status),
-    response_body: responseBody,
-  };
-  await updateEmailNotification(supabase, row, sent);
-
-  // v9.3.5.4: também envia ACK ao solicitante ("Recebemos sua solicitação...")
-  // -- best effort, não falha o request se o ACK der erro.
-  let ackResult: JsonObject = { status: "skipped" };
-  if (isEmailLike(row.contact_email)) {
-    try {
-      const metadata = asObject(row.metadata);
-      const requesterName = asText(metadata.requester_name) || "";
-      const greeting = requesterName ? `Olá, ${requesterName}!` : "Olá!";
-      const ackSubject = "KinoCampus -- Recebemos sua solicitação de acesso";
-      const ackHtml = [
-        `<div style="font-family:system-ui,sans-serif;color:#1f2937;line-height:1.55;max-width:560px">`,
-        `<h1 style="color:#ff6b00;font-size:1.4rem;margin:0 0 16px">KinoCampus -- Solicitação recebida</h1>`,
-        `<p>${escapeHtml(greeting)}</p>`,
-        `<p>Recebemos sua solicitação de acesso ao <strong>KinoCampus</strong>. Nossa equipe vai analisar com cuidado nos próximos dias.</p>`,
-        `<p>Você receberá um novo e-mail com a decisão. Caso seja aprovada, virá com um link para criar sua conta.</p>`,
-        `<p style="color:#6b7280;font-size:0.85rem;margin-top:32px">Atenciosamente,<br/>Equipe KinoCampus</p>`,
-        `</div>`,
-      ].join("");
-      const ackText = [
-        "KinoCampus -- Solicitação recebida",
-        "",
-        greeting,
-        "",
-        "Recebemos sua solicitação de acesso ao KinoCampus. Nossa equipe vai analisar nos próximos dias.",
-        "Você receberá um novo e-mail com a decisão.",
-        "",
-        "Equipe KinoCampus",
-      ].join("\n");
-
-      const ackResponse = await fetch(RESEND_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${emailApiKey}` },
-        body: JSON.stringify({
-          from: emailFrom,
-          to: [row.contact_email],
-          subject: ackSubject,
-          html: ackHtml,
-          text: ackText,
-          reply_to: emailReplyTo || NOTIFICATION_TO,
-        }),
-      });
-      const ackBody = await readProviderBody(ackResponse);
-      ackResult = ackResponse.ok
-        ? {
-            status: "sent",
-            provider: "resend",
-            to: row.contact_email,
-            sent_at: new Date().toISOString(),
-            response_code: String(ackResponse.status),
-          }
-        : {
-            status: "failed",
-            provider: "resend",
-            to: row.contact_email,
-            failed_at: new Date().toISOString(),
-            response_code: String(ackResponse.status),
-            response_body: ackBody,
-            error_message: `HTTP ${ackResponse.status}`,
-          };
-
-      // Anexa ack_email no metadata (best effort, sem falhar o request)
-      try {
-        const merged = { ...asObject(row.metadata), email_notification: sent, ack_email: ackResult };
-        await supabase.from("help_requests").update({ metadata: merged }).eq("id", row.id);
-      } catch (e) {
-        console.error("[kc-help-request-notify] ack metadata update failed:", e);
-      }
-    } catch (e) {
-      console.error("[kc-help-request-notify] ack send exception:", e);
-      ackResult = { status: "exception", error_message: String(e && (e as Error).message || e) };
-    }
-  }
-
-  return json(200, { ok: true, help_request_id: row.id, email_notification: sent, ack_email: ackResult });
+  const adminOk = adminResult.status === "sent";
+  return json(adminOk ? 200 : 502, {
+    ok: adminOk,
+    help_request_id: row.id,
+    admin_notification: adminResult,
+    ack_email: ackResult,
+  });
 });

@@ -85,11 +85,21 @@ Não afeta a app password. App passwords são independentes.
 
 ## Próximos passos (opcionais)
 
-1. **Migrar `kc-help-request-notify` para usar Hostinger SMTP direto** via
-   `denomailer` — elimina a dependência opcional de Resend.
-2. **Customizar template "Confirm signup"** (envio durante cadastro) em
-   PT-BR com a mesma identidade do "Invite User".
-3. **Customizar template "Reset Password"** idem.
-4. **Adicionar SPF/DKIM/DMARC** verificados no DNS do `kinocampus.com.br`
+1. **Adicionar SPF/DKIM/DMARC** verificados no DNS do `kinocampus.com.br`
    para melhor deliverability (Hostinger já configura SPF básico; conferir
    em `Hostinger → Emails → Custom DKIM`).
+2. **Customizar mais templates de auth** (Magic Link, Change email address)
+   com o mesmo padrão visual aplicado em Invite/Confirm/Reset.
+
+## Histórico (v9.3.5.5)
+
+- ✅ `kc-help-request-notify` migrada para usar Hostinger SMTP direto
+  via `denomailer`. Envia 2 e-mails: notificação ao admin + ACK ao
+  solicitante. Não depende de Resend.
+- ✅ `kc-external-access-decide` (parte recusada) migrada para Hostinger
+  SMTP direto. Recusa envia e-mail real com identidade KinoCampus.
+- ✅ Secrets configurados: KC_SMTP_HOST, KC_SMTP_PORT, KC_SMTP_USER,
+  KC_SMTP_PASS, KC_SMTP_FROM_NAME, KC_SMTP_FROM_EMAIL,
+  KC_ADMIN_NOTIFICATION_EMAIL.
+- ✅ Templates Confirm signup e Reset password atualizados com identidade
+  visual KinoCampus (cabeçalho laranja + "Comunidade UFG" + botão laranja).
