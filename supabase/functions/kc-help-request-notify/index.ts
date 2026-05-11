@@ -206,33 +206,33 @@ function buildAckEmail(row: HelpRequestRow) {
 }
 
 /**
- * Encode a Subject header to RFC 2047 Base64 when it contains non-ASCII chars.
+ * Sanitize Subject header to pure ASCII.
  *
- * denomailer@1.6.0 has a buggy Q-encoding implementation that drops spaces and
- * mangles the `=?...?=` delimiters when the subject contains UTF-8 chars
- * (ç, ã, em-dash, etc). Result: Hostinger/Gmail show the raw encoded subject
- * and break the body parsing. By pre-encoding to Base64 (pure ASCII output),
- * denomailer no longer touches the value.
+ * denomailer@1.6.0 has two bugs that make encoded subjects unreadable:
+ *  - Q-encoding drops spaces and mangles `=?...?=` delimiters with UTF-8.
+ *  - Pre-encoded Base64 subjects (`=?UTF-8?B?...?=`) are wrapped/double-Q-encoded.
  *
- * Output format (per RFC 2047): `=?UTF-8?B?<base64>?=` folded at 75 chars.
+ * Workaround: strip diacritics + replace special punctuation with ASCII so the
+ * subject becomes pure printable ASCII without `=` or `?`. denomailer leaves
+ * pure-ASCII subjects untouched, which is what Hostinger/Gmail expect.
  */
 function encodeMimeSubject(subject: string): string {
-  const s = String(subject || "");
-  // Pure ASCII printable? Leave untouched.
-  if (/^[\x20-\x7E]*$/.test(s)) return s;
-  const bytes = new TextEncoder().encode(s);
-  let bin = "";
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  const b64 = btoa(bin);
-  // RFC 2047 max 75 chars per encoded-word incl. delimiters (10+2 = 12 overhead)
-  const MAX_B64 = 63;
-  if (b64.length <= MAX_B64) return `=?UTF-8?B?${b64}?=`;
-  const chunks: string[] = [];
-  for (let i = 0; i < b64.length; i += MAX_B64) {
-    chunks.push(`=?UTF-8?B?${b64.slice(i, i + MAX_B64)}?=`);
-  }
-  // Fold with CRLF + space (continuation line marker)
-  return chunks.join("\r\n ");
+  let s = String(subject || "");
+  // Replace special punctuation with ASCII equivalents BEFORE diacritic strip.
+  s = s
+    .replace(/[—–]/g, "-") // em-dash, en-dash -> hyphen
+    .replace(/[‘’‚‛]/g, "'") // smart single quotes
+    .replace(/[“”„‟]/g, '"') // smart double quotes
+    .replace(/…/g, "...") // ellipsis
+    .replace(/ /g, " "); // nbsp
+  // Strip diacritics (NFD: separate base char + combining mark, then drop marks).
+  s = s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  // Drop any remaining non-ASCII (cyrillic, emoji, etc.) so denomailer can't
+  // trigger its Q-encoder. Defensive: replace with `?` placeholder.
+  s = s.replace(/[^\x20-\x7E]/g, "?");
+  // Avoid `=?` sequence which denomailer might mistake for an encoded-word.
+  s = s.replace(/=\?/g, "= ?");
+  return s;
 }
 
 async function getSmtpClient() {
