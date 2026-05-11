@@ -264,6 +264,15 @@
       const data = res.data || {};
       let successMsg = '';
       if (decision === 'approved') {
+        if (data.invite_sent === false && data.invite_link) {
+          // SMTP falhou -> mostrar o link gerado para envio manual
+          showInviteLinkPrompt(data.invite_link, data.invite_sent_to || '', data.smtp_error || '');
+          successMsg = 'Solicitação aprovada. SMTP indisponível — link de convite gerado abaixo para envio manual.';
+          closeModal();
+          await refreshAll();
+          setFeedback(successMsg, 'warn');
+          return;
+        }
         successMsg = `Solicitação aprovada e convite enviado para ${data.invite_sent_to || 'o solicitante'}.`;
       } else {
         if (data.email_sent === false) {
@@ -299,6 +308,84 @@
     });
   }
 
+  // v9.3.5.4: quando SMTP falhar, mostra link de convite para envio manual
+  function showInviteLinkPrompt(link, email, smtpError) {
+    let area = $('#ext-access-invite-link-area');
+    if (!area) {
+      const panel = $('#external-access-panel');
+      if (!panel) return;
+      area = document.createElement('div');
+      area.id = 'ext-access-invite-link-area';
+      area.style.cssText = 'margin:14px 0;padding:14px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;';
+      // Insere antes do bloco de tabs
+      const tabs = $('#ext-access-tabs');
+      if (tabs && tabs.parentNode) tabs.parentNode.insertBefore(area, tabs);
+      else panel.appendChild(area);
+    }
+    const safeEmail = escapeHtml(email);
+    const safeLink = escapeHtml(link);
+    const errBlock = smtpError
+      ? `<p style="margin:6px 0;font-size:0.8em;color:var(--kc-text-dark-secondary);"><i class="fas fa-triangle-exclamation"></i> SMTP: <code style="background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px;">${escapeHtml(smtpError)}</code></p>`
+      : '';
+    area.innerHTML = `
+      <h4 style="margin:0 0 8px;color:#f59e0b;font-size:0.98em;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-link"></i> Link de convite gerado para ${safeEmail}
+      </h4>
+      <p style="margin:0 0 10px;font-size:0.85em;color:var(--kc-text-dark-secondary);">
+        O SMTP do Supabase Auth não conseguiu enviar automaticamente. Copie o link abaixo e envie pelo seu e-mail
+        (ex: contato@kinocampus.com.br). O link é válido por 7 dias e leva direto ao onboarding.
+      </p>
+      ${errBlock}
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+        <input type="text" readonly value="${safeLink}"
+          style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);font-size:0.8em;font-family:monospace;min-width:0;"
+          onclick="this.select();" />
+        <button type="button" class="kc-btn-primary" data-ext-copy-invite-link
+          style="padding:8px 14px;border-radius:6px;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+          <i class="fas fa-copy"></i> Copiar
+        </button>
+        <button type="button" class="kc-btn-secondary" data-ext-dismiss-invite-link
+          style="padding:8px 12px;border-radius:6px;cursor:pointer;flex-shrink:0;" title="Ocultar este aviso">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+    `;
+    area.style.display = 'block';
+    // Scroll suave até o link
+    setTimeout(() => { try { area.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {} }, 100);
+  }
+
+  function bindInviteLinkActions() {
+    document.addEventListener('click', (ev) => {
+      const copyBtn = ev.target.closest && ev.target.closest('[data-ext-copy-invite-link]');
+      if (copyBtn) {
+        const area = $('#ext-access-invite-link-area');
+        if (!area) return;
+        const input = area.querySelector('input[readonly]');
+        if (!input) return;
+        try {
+          input.select();
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(input.value);
+          } else {
+            document.execCommand('copy');
+          }
+          const original = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+          setTimeout(() => { copyBtn.innerHTML = original; }, 1800);
+        } catch (e) {
+          console.error('[admin-external-access] copy error:', e);
+        }
+        return;
+      }
+      const dismissBtn = ev.target.closest && ev.target.closest('[data-ext-dismiss-invite-link]');
+      if (dismissBtn) {
+        const area = $('#ext-access-invite-link-area');
+        if (area) area.style.display = 'none';
+      }
+    });
+  }
+
   function bindActionButtons() {
     document.addEventListener('click', (ev) => {
       const btn = ev.target.closest && ev.target.closest('.kc-ext-approve, .kc-ext-reject');
@@ -317,6 +404,7 @@
     bindTabs();
     bindActionButtons();
     bindModal();
+    bindInviteLinkActions();
     // Atraso curto para garantir que KCAPI esteja pronta
     setTimeout(() => { refreshAll(); }, 400);
   }

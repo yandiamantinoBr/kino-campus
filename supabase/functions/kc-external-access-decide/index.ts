@@ -241,54 +241,100 @@ Deno.serve(async (req) => {
 
     // Convite real via Supabase Auth (SMTP nativo)
     const redirectTo = `${baseUrl}/auth-callback.html`;
+    const userMetadata = {
+      is_invited_external: true,
+      external_access_request_id: row.out_id,
+      invited_by_admin_id: user.id,
+      admin_note: adminNote,
+    };
+
+    let inviteSent = false;
+    let inviteLink: string | null = null;
+    let inviteSendError: string | null = null;
+
+    // Tentativa 1: inviteUserByEmail (envia via SMTP)
     const inviteRes = await adminClient.auth.admin.inviteUserByEmail(requesterEmail, {
       redirectTo,
-      data: {
-        is_invited_external: true,
-        external_access_request_id: row.out_id,
-        invited_by_admin_id: user.id,
-        admin_note: adminNote,
-      },
+      data: userMetadata,
     });
 
-    if (inviteRes.error) {
-      // Caso ja exista (user previamente convidado/registrado): nao e erro fatal
+    if (!inviteRes.error) {
+      inviteSent = true;
+    } else {
       const msg = String(inviteRes.error.message || "");
       const alreadyExists = msg.includes("already been registered") ||
                              msg.includes("already registered") ||
                              msg.includes("email_exists");
-      if (!alreadyExists) {
-        console.error("[kc-external-access-decide] inviteUserByEmail error:", inviteRes.error);
-        // Atualiza metadata para retry futuro
+      if (alreadyExists) {
+        // E-mail ja registrado: ok, segue (whitelist ja foi feita acima)
+        inviteSent = true;
+      } else {
+        // SMTP falhou OU outro erro. Fallback: generateLink (nao depende de SMTP).
+        inviteSendError = msg;
+        console.warn("[kc-external-access-decide] inviteUserByEmail failed, falling back to generateLink:", msg);
         try {
-          await adminClient.from("help_requests").update({
-            metadata: {
-              ...metadata,
-              invite_email: {
-                status: "failed",
-                provider: "supabase_auth",
-                failed_at: new Date().toISOString(),
-                error_message: msg,
-              },
+          const linkRes = await adminClient.auth.admin.generateLink({
+            type: "invite",
+            email: requesterEmail,
+            options: {
+              redirectTo,
+              data: userMetadata,
             },
-          }).eq("id", row.out_id);
-        } catch (_) { /* noop */ }
-        return json(502, { ok: false, error: "invite_email_failed", detail: msg });
+          });
+          if (!linkRes.error && linkRes.data) {
+            // SDK retorna properties.action_link em alguns shapes
+            const props = (linkRes.data as { properties?: { action_link?: string } }).properties;
+            if (props && props.action_link) {
+              inviteLink = props.action_link;
+            }
+          } else if (linkRes.error) {
+            console.error("[kc-external-access-decide] generateLink also failed:", linkRes.error);
+          }
+        } catch (e) {
+          console.error("[kc-external-access-decide] generateLink exception:", e);
+        }
+
+        // Se nem inviteUserByEmail nem generateLink funcionaram, retorna erro
+        if (!inviteLink) {
+          try {
+            await adminClient.from("help_requests").update({
+              metadata: {
+                ...metadata,
+                invite_email: {
+                  status: "failed",
+                  provider: "supabase_auth",
+                  failed_at: new Date().toISOString(),
+                  error_message: msg,
+                },
+              },
+            }).eq("id", row.out_id);
+          } catch (_) { /* noop */ }
+          return json(502, { ok: false, error: "invite_email_failed", detail: msg });
+        }
       }
     }
 
     // Registra status do envio em metadata
+    const inviteMetaStatus = inviteSent
+      ? {
+          status: "sent",
+          provider: "supabase_auth",
+          sent_at: new Date().toISOString(),
+          redirect_to: redirectTo,
+        }
+      : {
+          status: "link_generated",
+          provider: "supabase_auth_manual_send",
+          generated_at: new Date().toISOString(),
+          redirect_to: redirectTo,
+          invite_link: inviteLink,
+          smtp_error: inviteSendError,
+          note: "SMTP nao configurado/falhou. Link de convite gerado para envio manual.",
+        };
+
     try {
       await adminClient.from("help_requests").update({
-        metadata: {
-          ...metadata,
-          invite_email: {
-            status: "sent",
-            provider: "supabase_auth",
-            sent_at: new Date().toISOString(),
-            redirect_to: redirectTo,
-          },
-        },
+        metadata: { ...metadata, invite_email: inviteMetaStatus },
       }).eq("id", row.out_id);
     } catch (e) {
       console.error("[kc-external-access-decide] metadata update error:", e);
@@ -299,7 +345,12 @@ Deno.serve(async (req) => {
       decision: "approved",
       help_request_id: row.out_id,
       invite_sent_to: requesterEmail,
-      message: "Convite enviado por e-mail via SMTP do Supabase Auth.",
+      invite_sent: inviteSent,
+      invite_link: inviteLink, // null se enviado por SMTP, URL se fallback manual
+      smtp_error: inviteSendError,
+      message: inviteSent
+        ? "Convite enviado por e-mail via SMTP."
+        : "Convite gerado (SMTP indisponivel). Copie o link e envie manualmente.",
     });
   }
 
