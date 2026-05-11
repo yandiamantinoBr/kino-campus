@@ -349,6 +349,67 @@
           </div>
         </div>
 
+        <!-- ── v9.3.5.4: Solicitações de Acesso Externo (Pendentes/Aprovadas/Recusadas) ── -->
+        <div class="kc-admin-panel" id="external-access-panel">
+          <h3><i class="fas fa-user-clock" style="color:var(--kc-primary-brand);margin-right:6px;"></i>Solicitações de Acesso Externo</h3>
+          <p>Solicitações enviadas pelo formulário "Solicitar acesso externo" do login (kc-auth-external-access). Aprove para enviar um convite real por e-mail, ou recuse para registrar a decisão.</p>
+
+          <div id="ext-access-feedback" class="kc-admin-invite-feedback" role="status"></div>
+
+          <div class="kc-admin-tabs" id="ext-access-tabs" role="tablist" style="display:flex;gap:6px;margin:12px 0 14px;flex-wrap:wrap;">
+            <button type="button" class="kc-admin-tab is-active" data-ext-tab="pending" role="tab" aria-selected="true">
+              <i class="fas fa-clock"></i> Pendentes <span class="kc-admin-tab-count" data-ext-count="pending">0</span>
+            </button>
+            <button type="button" class="kc-admin-tab" data-ext-tab="approved" role="tab" aria-selected="false">
+              <i class="fas fa-check"></i> Aprovadas <span class="kc-admin-tab-count" data-ext-count="approved">0</span>
+            </button>
+            <button type="button" class="kc-admin-tab" data-ext-tab="rejected" role="tab" aria-selected="false">
+              <i class="fas fa-xmark"></i> Recusadas <span class="kc-admin-tab-count" data-ext-count="rejected">0</span>
+            </button>
+            <button type="button" class="kc-admin-tab-refresh" id="ext-access-refresh" title="Atualizar lista" aria-label="Atualizar lista">
+              <i class="fas fa-rotate"></i>
+            </button>
+          </div>
+
+          <div id="ext-access-loading" style="display:none;color:var(--kc-text-dark-secondary);font-size:.9em;">
+            <i class="fas fa-spinner fa-spin"></i> Carregando solicitações...
+          </div>
+          <p id="ext-access-empty" style="display:none;color:var(--kc-text-dark-secondary);font-size:.9em;">
+            Nenhuma solicitação nesta categoria.
+          </p>
+          <div id="ext-access-list" class="kc-ext-access-list"></div>
+        </div>
+
+        <!-- Modal de confirmação (aprovar/recusar) -->
+        <div id="ext-access-modal" class="kc-modal" role="dialog" aria-modal="true" aria-labelledby="ext-modal-title" aria-hidden="true" style="display:none;">
+          <div class="kc-modal-backdrop" data-ext-modal-close></div>
+          <div class="kc-modal-card" style="max-width:520px;">
+            <div class="kc-modal-header">
+              <h3 id="ext-modal-title">Confirmar decisão</h3>
+              <button type="button" class="kc-modal-close" data-ext-modal-close aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="kc-modal-body">
+              <p id="ext-modal-summary" style="color:var(--kc-text-dark-secondary);font-size:.92em;margin-bottom:10px;"></p>
+              <label for="ext-modal-note" style="display:block;font-size:.88em;margin-bottom:6px;font-weight:600;">
+                Nota interna / observação (opcional)
+              </label>
+              <textarea id="ext-modal-note" rows="3" maxlength="500"
+                placeholder="Ex: vínculo confirmado via Linkedin / motivo da recusa"
+                style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);font-family:inherit;font-size:.9em;resize:vertical;min-height:60px;"></textarea>
+              <p style="font-size:.78em;color:var(--kc-text-dark-secondary);margin-top:6px;">
+                Aprovações enviam um e-mail de convite via SMTP do Supabase Auth.
+                Recusas enviam e-mail se Resend estiver configurado; senão ficam pendentes para reenvio.
+              </p>
+            </div>
+            <div class="kc-modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+              <button type="button" class="kc-btn-secondary" data-ext-modal-close>Cancelar</button>
+              <button type="button" id="ext-modal-confirm" class="kc-btn-primary">
+                <i class="fas fa-check"></i> Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>
@@ -419,6 +480,7 @@
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.0"></script>
   <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js"></script>
   <script defer src="../assets/js/controllers/admin/admin-invite.controller.js"></script>
+  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js"></script>
 </body>
 </html>
 

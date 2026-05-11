@@ -2153,6 +2153,23 @@
     return { ok: false, error: { message: 'Triagem de ajuda indisponível neste driver.' } };
   }
 
+  // v9.3.5.4: solicitacoes de acesso externo (admin)
+  async function listExternalAccessRequests(filters = {}) {
+    const driver = getActiveDriver();
+    if (driver && typeof driver.listExternalAccessRequests === 'function') {
+      return driver.listExternalAccessRequests(filters);
+    }
+    return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' }, items: [], total: 0 };
+  }
+
+  async function decideExternalAccessRequest(payload = {}) {
+    const driver = getActiveDriver();
+    if (driver && typeof driver.decideExternalAccessRequest === 'function') {
+      return driver.decideExternalAccessRequest(payload);
+    }
+    return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' } };
+  }
+
   // Notifications split (v11.32.2)
   window._KCAPI = window._KCAPI || {};
   window._KCAPI.notifications = window._KCAPI.notifications || {};
@@ -2386,6 +2403,8 @@
     createHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
+    listExternalAccessRequests,
+    decideExternalAccessRequest,
     getNotificationPreferences,
     updateNotificationPreferences,
     getNotificationChannelTargets,

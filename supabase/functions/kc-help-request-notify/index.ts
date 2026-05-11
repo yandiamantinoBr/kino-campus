@@ -282,5 +282,78 @@ Deno.serve(async (req) => {
   };
   await updateEmailNotification(supabase, row, sent);
 
-  return json(200, { ok: true, help_request_id: row.id, email_notification: sent });
+  // v9.3.5.4: também envia ACK ao solicitante ("Recebemos sua solicitação...")
+  // -- best effort, não falha o request se o ACK der erro.
+  let ackResult: JsonObject = { status: "skipped" };
+  if (isEmailLike(row.contact_email)) {
+    try {
+      const metadata = asObject(row.metadata);
+      const requesterName = asText(metadata.requester_name) || "";
+      const greeting = requesterName ? `Olá, ${requesterName}!` : "Olá!";
+      const ackSubject = "KinoCampus -- Recebemos sua solicitação de acesso";
+      const ackHtml = [
+        `<div style="font-family:system-ui,sans-serif;color:#1f2937;line-height:1.55;max-width:560px">`,
+        `<h1 style="color:#ff6b00;font-size:1.4rem;margin:0 0 16px">KinoCampus -- Solicitação recebida</h1>`,
+        `<p>${escapeHtml(greeting)}</p>`,
+        `<p>Recebemos sua solicitação de acesso ao <strong>KinoCampus</strong>. Nossa equipe vai analisar com cuidado nos próximos dias.</p>`,
+        `<p>Você receberá um novo e-mail com a decisão. Caso seja aprovada, virá com um link para criar sua conta.</p>`,
+        `<p style="color:#6b7280;font-size:0.85rem;margin-top:32px">Atenciosamente,<br/>Equipe KinoCampus</p>`,
+        `</div>`,
+      ].join("");
+      const ackText = [
+        "KinoCampus -- Solicitação recebida",
+        "",
+        greeting,
+        "",
+        "Recebemos sua solicitação de acesso ao KinoCampus. Nossa equipe vai analisar nos próximos dias.",
+        "Você receberá um novo e-mail com a decisão.",
+        "",
+        "Equipe KinoCampus",
+      ].join("\n");
+
+      const ackResponse = await fetch(RESEND_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${emailApiKey}` },
+        body: JSON.stringify({
+          from: emailFrom,
+          to: [row.contact_email],
+          subject: ackSubject,
+          html: ackHtml,
+          text: ackText,
+          reply_to: emailReplyTo || NOTIFICATION_TO,
+        }),
+      });
+      const ackBody = await readProviderBody(ackResponse);
+      ackResult = ackResponse.ok
+        ? {
+            status: "sent",
+            provider: "resend",
+            to: row.contact_email,
+            sent_at: new Date().toISOString(),
+            response_code: String(ackResponse.status),
+          }
+        : {
+            status: "failed",
+            provider: "resend",
+            to: row.contact_email,
+            failed_at: new Date().toISOString(),
+            response_code: String(ackResponse.status),
+            response_body: ackBody,
+            error_message: `HTTP ${ackResponse.status}`,
+          };
+
+      // Anexa ack_email no metadata (best effort, sem falhar o request)
+      try {
+        const merged = { ...asObject(row.metadata), email_notification: sent, ack_email: ackResult };
+        await supabase.from("help_requests").update({ metadata: merged }).eq("id", row.id);
+      } catch (e) {
+        console.error("[kc-help-request-notify] ack metadata update failed:", e);
+      }
+    } catch (e) {
+      console.error("[kc-help-request-notify] ack send exception:", e);
+      ackResult = { status: "exception", error_message: String(e && (e as Error).message || e) };
+    }
+  }
+
+  return json(200, { ok: true, help_request_id: row.id, email_notification: sent, ack_email: ackResult });
 });

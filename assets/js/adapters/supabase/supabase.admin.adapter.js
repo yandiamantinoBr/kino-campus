@@ -166,6 +166,75 @@
     }
   }
 
+  // ── API: Acesso externo (admin) ─────────────────────────────────────────
+  // v9.3.5.4: lista e decide solicitacoes de acesso externo
+
+  async function listExternalAccessRequests(filters = {}) {
+    const client = getClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' }, items: [], total: 0 };
+    const status = String(filters.status || 'pending').trim().toLowerCase();
+    const limit = Math.max(1, Math.min(200, Number(filters.limit) || 50));
+    const offset = Math.max(0, Number(filters.offset) || 0);
+    try {
+      const { data, error } = await client.rpc('kc_admin_list_external_access', {
+        p_status: status === 'all' ? null : status,
+        p_limit: limit,
+        p_offset: offset,
+      });
+      if (error) {
+        console.error('[KCAPI][external-access] list error:', error);
+        return { ok: false, error: { message: error.message || 'Falha ao listar solicitações.' }, items: [], total: 0 };
+      }
+      const rows = Array.isArray(data) ? data : [];
+      const total = rows.length ? Number(rows[0].out_total_count) || rows.length : 0;
+      const items = rows.map((r) => ({
+        id: r.out_id,
+        created_at: r.out_created_at,
+        admin_status: r.out_admin_status,
+        admin_decided_at: r.out_admin_decided_at,
+        admin_note: r.out_admin_note,
+        subject: r.out_subject,
+        message: r.out_message,
+        contact_email: r.out_contact_email,
+        requester_name: r.out_requester_name,
+        affiliation_context: r.out_affiliation_context,
+        metadata: r.out_metadata || {},
+      }));
+      return { ok: true, items, total, limit, offset };
+    } catch (e) {
+      console.error('[KCAPI][external-access] list exception:', e);
+      return { ok: false, error: { message: 'Falha ao listar solicitações.' }, items: [], total: 0 };
+    }
+  }
+
+  async function decideExternalAccessRequest(payload = {}) {
+    const client = getClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const helpRequestId = String(payload.help_request_id || '').toLowerCase().trim();
+    const decision = String(payload.decision || '').toLowerCase().trim();
+    const adminNote = String(payload.admin_note || '').trim() || null;
+    if (!helpRequestId) return { ok: false, error: { message: 'ID da solicitação inválido.' } };
+    if (decision !== 'approved' && decision !== 'rejected') {
+      return { ok: false, error: { message: 'Decisão inválida (esperado approved ou rejected).' } };
+    }
+    if (!client.functions || typeof client.functions.invoke !== 'function') {
+      return { ok: false, error: { message: 'Edge Functions indisponíveis.' } };
+    }
+    try {
+      const { data, error } = await client.functions.invoke('kc-external-access-decide', {
+        body: { help_request_id: helpRequestId, decision, admin_note: adminNote },
+      });
+      if (error) {
+        console.error('[KCAPI][external-access] decide error:', error);
+        return { ok: false, error: { message: (error && error.message) || 'Falha ao processar decisão.' } };
+      }
+      return { ok: true, data: data || null };
+    } catch (e) {
+      console.error('[KCAPI][external-access] decide exception:', e);
+      return { ok: false, error: { message: 'Falha ao processar decisão.' } };
+    }
+  }
+
   // ── API: Listar pedidos (admin) ────────────────────────────────────────────
 
   async function listAdminHelpRequests(filters = {}) {
@@ -281,5 +350,7 @@
     createHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
+    listExternalAccessRequests,
+    decideExternalAccessRequest,
   };
 })();
