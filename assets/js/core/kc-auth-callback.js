@@ -155,22 +155,31 @@
     });
   }
 
-  function showRecoveryForm() {
+  function showRecoveryForm(authType) {
+    var isInvite = authType === 'invite';
     setState({
       tone: 'success',
-      iconClass: 'fas fa-key',
-      title: 'Defina uma nova senha',
-      message: 'Seu link de recuperação foi validado. Escolha uma nova senha para continuar usando a plataforma.',
+      iconClass: isInvite ? 'fas fa-user-plus' : 'fas fa-key',
+      title: isInvite ? 'Bem-vindo(a) ao KinoCampus!' : 'Defina uma nova senha',
+      message: isInvite
+        ? 'Seu acesso foi confirmado. Para finalizar a criação da sua conta, escolha uma senha que você irá usar para entrar no KinoCampus.'
+        : 'Seu link de recuperação foi validado. Escolha uma nova senha para continuar usando a plataforma.',
       actionHref: '/index.html',
       actionLabel: '',
       showProgress: false,
       showCountdown: false,
       showResetPanel: true,
     });
+
+    var submitBtn = document.querySelector('#cbResetForm button[type="submit"] span');
+    if (submitBtn) {
+      submitBtn.textContent = isInvite ? 'Criar minha conta' : 'Salvar nova senha';
+    }
   }
 
-  async function handlePasswordResetSubmit(event, nextPath) {
+  async function handlePasswordResetSubmit(event, nextPath, authType) {
     event.preventDefault();
+    var isInvite = authType === 'invite';
     const password = $('cbResetPassword') ? String($('cbResetPassword').value || '').trim() : '';
     const confirm = $('cbResetConfirm') ? String($('cbResetConfirm').value || '').trim() : '';
 
@@ -178,8 +187,8 @@
       setState({
         tone: 'warn',
         iconClass: 'fas fa-key',
-        title: 'Defina uma senha mais forte',
-        message: 'Sua nova senha precisa ter pelo menos 6 caracteres.',
+        title: 'Escolha uma senha mais forte',
+        message: 'Sua senha precisa ter pelo menos 6 caracteres.',
         showResetPanel: true,
       });
       return;
@@ -189,8 +198,8 @@
       setState({
         tone: 'warn',
         iconClass: 'fas fa-key',
-        title: 'As senhas nao conferem',
-        message: 'Repita a mesma senha nos dois campos para concluir a redefinicao.',
+        title: 'As senhas não conferem',
+        message: 'Repita a mesma senha nos dois campos para continuar.',
         showResetPanel: true,
       });
       return;
@@ -199,19 +208,21 @@
     setState({
       tone: 'loading',
       iconClass: 'fas fa-spinner fa-spin',
-      title: 'Atualizando sua senha...',
-      message: 'Estamos salvando sua nova senha com seguranca.',
+      title: isInvite ? 'Criando sua conta...' : 'Atualizando sua senha...',
+      message: isInvite
+        ? 'Estamos finalizando o cadastro da sua conta no KinoCampus.'
+        : 'Estamos salvando sua nova senha com segurança.',
       showResetPanel: true,
     });
 
     const result = await window.KCAPI.updatePassword(password);
     if (!result || !result.ok) {
-      showErrorState((result && result.error && result.error.message) || 'Nao foi possivel atualizar sua senha.');
+      showErrorState((result && result.error && result.error.message) || (isInvite ? 'Não foi possível criar sua conta. Tente novamente.' : 'Não foi possível atualizar sua senha.'));
       $('cbResetForm').style.display = 'grid';
       return;
     }
 
-    await completeAuthFlow(nextPath, 'Senha atualizada com sucesso');
+    await completeAuthFlow(nextPath, isInvite ? 'Conta criada com sucesso' : 'Senha atualizada com sucesso');
   }
 
   async function init() {
@@ -253,13 +264,13 @@
         return;
       }
 
-      if (authType === 'recovery') {
-        showRecoveryForm();
+      if (authType === 'recovery' || authType === 'invite') {
+        showRecoveryForm(authType);
         const form = $('cbResetForm');
         if (form && !form.dataset.bound) {
           form.dataset.bound = '1';
           form.addEventListener('submit', function (event) {
-            handlePasswordResetSubmit(event, nextPath);
+            handlePasswordResetSubmit(event, nextPath, authType);
           });
         }
         return;

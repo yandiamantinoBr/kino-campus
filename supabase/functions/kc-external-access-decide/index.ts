@@ -124,6 +124,27 @@ function buildRejectionEmail(opts: { requesterName: string; adminNote: string | 
   return { subject, html, text };
 }
 
+/**
+ * Encode a Subject header to RFC 2047 Base64 when it contains non-ASCII chars.
+ * denomailer@1.6.0 mangles Q-encoded subjects with UTF-8 chars (ç, ã, em-dash).
+ * Pre-encoding to Base64 keeps the value pure ASCII so denomailer leaves it.
+ */
+function encodeMimeSubject(subject: string): string {
+  const s = String(subject || "");
+  if (/^[\x20-\x7E]*$/.test(s)) return s;
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const b64 = btoa(bin);
+  const MAX_B64 = 63;
+  if (b64.length <= MAX_B64) return `=?UTF-8?B?${b64}?=`;
+  const chunks: string[] = [];
+  for (let i = 0; i < b64.length; i += MAX_B64) {
+    chunks.push(`=?UTF-8?B?${b64.slice(i, i + MAX_B64)}?=`);
+  }
+  return chunks.join("\r\n ");
+}
+
 async function getSmtpClient() {
   const host = getEnv("KC_SMTP_HOST", DEFAULT_SMTP_HOST);
   const port = Number(getEnv("KC_SMTP_PORT", String(DEFAULT_SMTP_PORT)));
@@ -148,7 +169,7 @@ async function sendEmail(opts: { to: string; subject: string; html: string; text
     await client.send({
       from: `${fromName} <${fromEmail}>`,
       to: opts.to,
-      subject: opts.subject,
+      subject: encodeMimeSubject(opts.subject),
       content: opts.text,
       html: opts.html,
       ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),

@@ -205,6 +205,36 @@ function buildAckEmail(row: HelpRequestRow) {
   return { subject, html, text };
 }
 
+/**
+ * Encode a Subject header to RFC 2047 Base64 when it contains non-ASCII chars.
+ *
+ * denomailer@1.6.0 has a buggy Q-encoding implementation that drops spaces and
+ * mangles the `=?...?=` delimiters when the subject contains UTF-8 chars
+ * (ç, ã, em-dash, etc). Result: Hostinger/Gmail show the raw encoded subject
+ * and break the body parsing. By pre-encoding to Base64 (pure ASCII output),
+ * denomailer no longer touches the value.
+ *
+ * Output format (per RFC 2047): `=?UTF-8?B?<base64>?=` folded at 75 chars.
+ */
+function encodeMimeSubject(subject: string): string {
+  const s = String(subject || "");
+  // Pure ASCII printable? Leave untouched.
+  if (/^[\x20-\x7E]*$/.test(s)) return s;
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const b64 = btoa(bin);
+  // RFC 2047 max 75 chars per encoded-word incl. delimiters (10+2 = 12 overhead)
+  const MAX_B64 = 63;
+  if (b64.length <= MAX_B64) return `=?UTF-8?B?${b64}?=`;
+  const chunks: string[] = [];
+  for (let i = 0; i < b64.length; i += MAX_B64) {
+    chunks.push(`=?UTF-8?B?${b64.slice(i, i + MAX_B64)}?=`);
+  }
+  // Fold with CRLF + space (continuation line marker)
+  return chunks.join("\r\n ");
+}
+
 async function getSmtpClient() {
   const host = getEnv("KC_SMTP_HOST", DEFAULT_SMTP_HOST);
   const port = Number(getEnv("KC_SMTP_PORT", String(DEFAULT_SMTP_PORT)));
@@ -236,7 +266,7 @@ async function sendEmail(opts: {
     await client.send({
       from: `${fromName} <${fromEmail}>`,
       to: opts.to,
-      subject: opts.subject,
+      subject: encodeMimeSubject(opts.subject),
       content: opts.text,
       html: opts.html,
       ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
