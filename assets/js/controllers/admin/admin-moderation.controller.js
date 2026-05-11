@@ -302,9 +302,11 @@
     }
 
     if (!resolved) {
+      // v9.3.5.8: coluna 'content' foi renomeada para 'description'. Aliasamos
+      // como content no SELECT para manter o restante do controller compativel.
       let query = client
         .from('posts')
-        .select('id, legacy_id, title, content, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)', { count: 'exact' })
+        .select('id, legacy_id, title, content:description, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(state.offset, state.offset + PAGE_SIZE - 1);
 
@@ -314,7 +316,7 @@
         const authorIds = await searchAuthorIds(client, normalizedSearch);
         const clauses = [
           `title.ilike.%${normalizedSearch}%`,
-          `content.ilike.%${normalizedSearch}%`,
+          `description.ilike.%${normalizedSearch}%`,
           `legacy_id.ilike.%${normalizedSearch}%`,
         ];
         if (UUID_RE.test(normalizedSearch)) {

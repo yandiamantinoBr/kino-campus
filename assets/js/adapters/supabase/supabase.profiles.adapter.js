@@ -52,6 +52,46 @@
     return (patch && typeof patch === 'object' && !Array.isArray(patch)) ? { ...patch } : {};
   }
 
+  /**
+   * Rasteriza um Blob SVG para PNG via <canvas>. Usado para avatares-emoji
+   * (buildEmojiAvatarDataUrl gera SVG inline). Retorna Blob PNG quadrado de
+   * `size`×`size` ou `null` em caso de falha.
+   */
+  function rasterizeSvgBlobToPng(svgBlob, width, height) {
+    if (!svgBlob || typeof Image === 'undefined') return Promise.resolve(null);
+    const w = Number.isFinite(width) ? width : 400;
+    const h = Number.isFinite(height) ? height : 400;
+    return new Promise(function (resolve) {
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      let settled = false;
+      const finish = function (result) {
+        if (settled) return;
+        settled = true;
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        resolve(result);
+      };
+      img.onload = function () {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(function (out) {
+            finish(out || null);
+          }, 'image/png');
+        } catch (e) {
+          console.warn('[KCAPI][profile] rasterizeSvg failed:', e);
+          finish(null);
+        }
+      };
+      img.onerror = function () { finish(null); };
+      img.src = url;
+    });
+  }
+
   // ── uploadProfileAvatarToSupabaseStorage ──────────────────────────────────
   async function uploadProfileAvatarToSupabaseStorage(client, fileOrDataUrl, options) {
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
@@ -91,7 +131,21 @@
 
     if (!blob) return { ok: false, error: { message: 'Formato de imagem inválido para avatar.' } };
 
-    const mime = String(blob.type || '').toLowerCase();
+    let mime = String(blob.type || '').toLowerCase();
+
+    // Avatar emoji (gerado por buildEmojiAvatarDataUrl) chega como SVG.
+    // Rasterizamos para PNG via canvas antes da validação para manter o
+    // pipeline uniforme (allowedTypes restringe a JPG/PNG/WEBP/GIF) e
+    // evitar SVG no Storage (vetor com risco de XSS embutido).
+    if (mime === 'image/svg+xml') {
+      const png = await rasterizeSvgBlobToPng(blob, 400, 400);
+      if (!png) {
+        return { ok: false, error: { message: 'Não foi possível gerar o avatar emoji. Tente novamente.' } };
+      }
+      blob = png;
+      mime = 'image/png';
+    }
+
     if (!allowedTypes.has(mime)) {
       return { ok: false, error: { message: 'Use uma imagem JPG, PNG ou WEBP para o avatar.' } };
     }
