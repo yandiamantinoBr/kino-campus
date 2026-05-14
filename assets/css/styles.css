@@ -12036,6 +12036,10 @@ a.kc-home-metric-card:hover {
 }
 
 @media (max-width: 768px) {
+  .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut {
+    display: none !important;
+  }
+
   body:not(.kc-chat-route) .kc-chat-mobile-fab {
     display: inline-flex;
   }
