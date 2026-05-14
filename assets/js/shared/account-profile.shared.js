@@ -204,6 +204,12 @@
       label: 'Avisos da plataforma',
       description: 'Comunicados importantes do KinoCampus.',
       iconClass: 'fas fa-bell'
+    }),
+    Object.freeze({
+      value: 'direct_message',
+      label: 'Mensagens diretas',
+      description: 'Quando alguém envia uma mensagem para você.',
+      iconClass: 'fas fa-envelope'
     })
   ]);
 

@@ -50,12 +50,17 @@
       case 'post_expired': return 'fas fa-clock';
       case 'post_reported': return 'fas fa-flag';
       case 'system': return 'fas fa-info-circle';
+      case 'direct_message': return 'fas fa-envelope';
       default: return 'fas fa-bell';
     }
   }
 
   function notifLink(notif) {
     var data = notif && notif.data ? notif.data : {};
+    // v9.3.5.10: chat → mensagens.html#c/<conversation_id>
+    if (notif && notif.type === 'direct_message' && data.conversation_id) {
+      return 'mensagens.html#c/' + encodeURIComponent(data.conversation_id);
+    }
     if (!data.post_id) return null;
     if (window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function') {
       return window.KCUtils.buildProductDetailHref(data.post_id);

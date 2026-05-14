@@ -360,6 +360,16 @@
         : '<i class="fas fa-list-check"></i> Completar cadastro';
     }
 
+    // v9.3.5.10: bot\u00e3o "Conversar" \u2014 s\u00f3 aparece quando N\u00c3O \u00e9 o dono e h\u00e1 um user logado
+    var chatBtn = select(deps, '#profile-chat-btn');
+    if (chatBtn && profile && profile.id) {
+      var showChat = !ownerView && state.user && state.user.id;
+      chatBtn.style.display = showChat ? 'inline-flex' : 'none';
+      if (showChat) {
+        chatBtn.href = 'mensagens.html?with=' + encodeURIComponent(profile.id);
+      }
+    }
+
     var nameEl = select(deps, '#profile-display-name');
     if (nameEl) nameEl.textContent = name;
     if (typeof document !== 'undefined' && document) {
