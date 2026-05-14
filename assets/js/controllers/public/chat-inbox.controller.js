@@ -42,6 +42,7 @@
     isLoadingMore: false,
     isSending: false,
     pendingFile: null,
+    previewObjectUrl: null,
     rtChannel: null,
     blocked: { i_blocked: false, they_blocked: false },
   };
@@ -139,15 +140,17 @@
     return esc(getInitials(name));
   }
 
-  function mediaUrl(path) {
-    if (!path) return null;
+  function mediaState(path) {
+    if (!path) return { status: 'missing', url: null };
     var cached = signedMediaCache.get(path);
     var now = Date.now();
-    if (cached && cached.url && cached.expiresAt > now) return cached.url;
-    if (cached && cached.pending) return null;
-    if (cached && cached.failedAt && (now - cached.failedAt) < 30000) return null;
+    if (cached && cached.url && cached.expiresAt > now) return { status: 'ready', url: cached.url };
+    if (cached && cached.pending) return { status: 'loading', url: null };
+    if (cached && cached.failedAt && (now - cached.failedAt) < 30000) {
+      return { status: 'failed', url: null };
+    }
     loadSignedMediaUrl(path);
-    return null;
+    return { status: 'loading', url: null };
   }
 
   function loadSignedMediaUrl(path) {
@@ -156,6 +159,7 @@
     Promise.resolve(window.KCAPI.chat.getSignedUrl(path, 3600)).then(function (url) {
       if (!url || typeof url !== 'string') {
         signedMediaCache.set(path, { url: null, pending: false, failedAt: Date.now(), expiresAt: 0 });
+        renderMessagesList();
         return;
       }
       signedMediaCache.set(path, {
@@ -166,7 +170,19 @@
       renderMessagesList();
     }).catch(function () {
       signedMediaCache.set(path, { url: null, pending: false, failedAt: Date.now(), expiresAt: 0 });
+      renderMessagesList();
     });
+  }
+
+  async function cleanupUploadedChatImage(path) {
+    if (!path || !window.KCAPI || !window.KCAPI.chat || typeof window.KCAPI.chat.deleteUploadedMedia !== 'function') return;
+    try { await window.KCAPI.chat.deleteUploadedMedia(path); } catch (_) {}
+  }
+
+  function clearPreviewObjectUrl() {
+    if (!state.previewObjectUrl || !window.URL || typeof window.URL.revokeObjectURL !== 'function') return;
+    try { window.URL.revokeObjectURL(state.previewObjectUrl); } catch (_) {}
+    state.previewObjectUrl = null;
   }
 
   function isPaneMobile() {
@@ -224,6 +240,7 @@
   }
 
   function cleanup() {
+    clearPreviewObjectUrl();
     if (state.rtChannel && window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.unsubscribeChat === 'function') {
       try { window.KCAPI.chat.unsubscribeChat(state.rtChannel); } catch (_) {}
       state.rtChannel = null;
@@ -492,6 +509,22 @@
       img.addEventListener('click', function () {
         window.open(img.getAttribute('data-image-full'), '_blank', 'noopener');
       });
+      img.addEventListener('error', function () {
+        var path = img.getAttribute('data-image-path');
+        if (!path) return;
+        signedMediaCache.set(path, { url: null, pending: false, failedAt: Date.now(), expiresAt: 0 });
+        renderMessagesList();
+      });
+    });
+
+    Array.prototype.forEach.call(wrap.querySelectorAll('[data-media-retry]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var path = btn.getAttribute('data-media-retry');
+        if (!path) return;
+        signedMediaCache.delete(path);
+        loadSignedMediaUrl(path);
+        renderMessagesList();
+      });
     });
   }
 
@@ -503,11 +536,13 @@
     if (m.deleted_at) {
       content = '<em>Mensagem apagada</em>';
     } else if (m.message_type === 'image' && m.media_path) {
-      var url = mediaUrl(m.media_path);
-      if (url) {
-        content += '<img class="kc-chat-msg__image" src="' + esc(url) + '" data-image-full="' + esc(url) + '" alt="Imagem" />';
+      var media = mediaState(m.media_path);
+      if (media.status === 'ready' && media.url) {
+        content += '<img class="kc-chat-msg__image" src="' + esc(media.url) + '" data-image-full="' + esc(media.url) + '" data-image-path="' + esc(m.media_path) + '" alt="Imagem" />';
+      } else if (media.status === 'failed') {
+        content += '<button type="button" class="kc-chat-msg__image-placeholder is-error" data-media-retry="' + esc(m.media_path) + '"><i class="fas fa-image"></i><span>Imagem indisponível. Tentar novamente</span></button>';
       } else {
-        content += '<div class="kc-chat-msg__image-placeholder"><i class="fas fa-image"></i><span>Carregando imagem...</span></div>';
+        content += '<div class="kc-chat-msg__image-placeholder" aria-busy="true"><i class="fas fa-image"></i><span>Carregando imagem...</span></div>';
       }
       if (m.content) {
         content += '<div>' + esc(m.content) + '</div>';
@@ -597,6 +632,7 @@
           media_path: up.data.path,
         });
         if (!sendImg || !sendImg.ok) {
+          await cleanupUploadedChatImage(up.data && up.data.path);
           toast((sendImg && sendImg.error && sendImg.error.message) || 'Falha ao enviar imagem.', 'error');
           return;
         }
@@ -650,8 +686,10 @@
     if (!composer) return;
     var existing = composer.querySelector('.kc-chat-composer__preview');
     if (existing) existing.remove();
+    clearPreviewObjectUrl();
     if (!state.pendingFile) return;
     var url = URL.createObjectURL(state.pendingFile);
+    state.previewObjectUrl = url;
     var preview = document.createElement('div');
     preview.className = 'kc-chat-composer__preview';
     preview.innerHTML =

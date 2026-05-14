@@ -66,6 +66,7 @@
     uploadChatImage: safe('uploadChatImage'),
     getPublicUrl: sync('getPublicUrl', null),
     getSignedUrl: safe('getSignedUrl'),
+    deleteUploadedMedia: safe('deleteUploadedMedia'),
     listConversations: safe('listConversations'),
     listMessages: safe('listMessages'),
     markRead: safe('markRead'),

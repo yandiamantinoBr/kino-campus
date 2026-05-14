@@ -59,6 +59,7 @@ describe('KCAPI - API Client', () => {
     expect(api.chat).toBeDefined();
     expect(typeof api.chat).toBe('object');
     expect(typeof api.chat.listConversations).toBe('function');
+    expect(typeof api.chat.deleteUploadedMedia).toBe('function');
     expect(Object.isFrozen(api)).toBe(true);
   });
 

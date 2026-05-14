@@ -26,6 +26,7 @@
     uploadChatImage: notSupported,
     getPublicUrl: function () { return null; },
     getSignedUrl: function () { return Promise.resolve(null); },
+    deleteUploadedMedia: notSupported,
     listConversations: function () { return Promise.resolve({ ok: true, data: [] }); },
     listMessages: function () { return Promise.resolve({ ok: true, data: [] }); },
     markRead: notSupported,
