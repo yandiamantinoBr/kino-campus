@@ -4,6 +4,7 @@
   "rewrites": [
     { "source": "/product.html", "destination": "/api/og-product" },
     { "source": "/", "destination": "/index.html" },
+    { "source": "/mensagens", "destination": "/mensagens.html" },
     { "source": "/auth/callback", "destination": "/auth-callback.html" }
   ],
   "headers": [

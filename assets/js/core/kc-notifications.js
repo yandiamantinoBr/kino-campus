@@ -12,6 +12,7 @@
   var _activeBell = null;
   var _activeUserId = '';
   var _authListenerBound = false;
+  var _chatRuntimePromise = null;
 
   var _handleBellClick = null;
   var _handleDocumentClick = null;
@@ -167,6 +168,128 @@
       badge.textContent = '0';
       badge.style.display = 'none';
     }
+  }
+
+  function getAssetPrefix() {
+    var script = document.currentScript || document.querySelector('script[src*="kc-notifications.js"]');
+    var src = script ? String(script.getAttribute('src') || '') : '';
+    var marker = 'assets/js/core/kc-notifications.js';
+    var index = src.indexOf(marker);
+    return index >= 0 ? src.slice(0, index) : '';
+  }
+
+  function versionedAsset(path) {
+    return getAssetPrefix() + path + '?v=9.3.5.14';
+  }
+
+  function chatHref() {
+    return window.location.pathname.indexOf('/admin/') >= 0 ? '../mensagens.html' : 'mensagens.html';
+  }
+
+  function hasScript(path) {
+    return !!document.querySelector('script[src*="' + path + '"]');
+  }
+
+  function loadScriptOnce(path) {
+    if (hasScript(path)) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = versionedAsset(path);
+      script.defer = true;
+      script.onload = function () { resolve(); };
+      script.onerror = function () { reject(new Error('Falha ao carregar ' + path)); };
+      document.head.appendChild(script);
+    });
+  }
+
+  function hasChatRuntime() {
+    return !!(window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.unreadTotal === 'function');
+  }
+
+  function ensureChatRuntime() {
+    if (hasChatRuntime()) return Promise.resolve(true);
+    if (_chatRuntimePromise) return _chatRuntimePromise;
+
+    var driver = String((window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver) || 'local').toLowerCase();
+    var adapterPath = driver === 'supabase'
+      ? 'assets/js/adapters/supabase/supabase.chat.adapter.js'
+      : 'assets/js/adapters/local/local.chat.adapter.js';
+
+    _chatRuntimePromise = loadScriptOnce('assets/js/api/kc-api.chat.js')
+      .then(function () { return loadScriptOnce(adapterPath); })
+      .then(function () { return hasChatRuntime(); })
+      .catch(function (error) {
+        console.warn('[KCNotifications] chat runtime indisponível:', error);
+        return false;
+      });
+
+    return _chatRuntimePromise;
+  }
+
+  function ensureChatEntryPoints() {
+    var href = chatHref();
+    document.querySelectorAll('.kc-user-actions').forEach(function (actions) {
+      if (!actions || actions.querySelector('.kc-chat-shortcut')) return;
+      var link = document.createElement('a');
+      link.className = 'icon-btn kc-chat-shortcut';
+      link.href = href;
+      link.setAttribute('aria-label', 'Mensagens');
+      link.setAttribute('title', 'Mensagens');
+      link.innerHTML = '<i class="fas fa-envelope" aria-hidden="true"></i><span class="kc-chat-shortcut__badge" hidden>0</span>';
+      var bell = actions.querySelector('#kcNotifBell, .kc-notif-bell');
+      if (bell && bell.parentNode === actions) {
+        bell.insertAdjacentElement('afterend', link);
+      } else {
+        actions.insertBefore(link, actions.firstChild);
+      }
+    });
+
+    if (!document.querySelector('.kc-chat-mobile-fab')) {
+      var mobile = document.createElement('a');
+      mobile.className = 'kc-chat-mobile-fab';
+      mobile.href = href;
+      mobile.setAttribute('aria-label', 'Mensagens');
+      mobile.innerHTML = '<i class="fas fa-envelope" aria-hidden="true"></i><span class="kc-chat-shortcut__badge" hidden>0</span>';
+      document.body.appendChild(mobile);
+    }
+  }
+
+  function updateChatBadge(count) {
+    var total = Number(count) > 0 ? Number(count) : 0;
+    document.querySelectorAll('.kc-chat-shortcut__badge').forEach(function (badge) {
+      if (total > 0) {
+        badge.textContent = total > 99 ? '99+' : String(total);
+        badge.hidden = false;
+      } else {
+        badge.textContent = '0';
+        badge.hidden = true;
+      }
+    });
+  }
+
+  function refreshChatUnreadCount(countOverride) {
+    ensureChatEntryPoints();
+    if (!_activeUserId) {
+      updateChatBadge(0);
+      return Promise.resolve(0);
+    }
+    if (Number.isFinite(Number(countOverride))) {
+      updateChatBadge(Number(countOverride));
+      return Promise.resolve(Number(countOverride));
+    }
+    return ensureChatRuntime().then(function (ready) {
+      if (!ready || !window.KCAPI || !window.KCAPI.chat || typeof window.KCAPI.chat.unreadTotal !== 'function') {
+        updateChatBadge(0);
+        return 0;
+      }
+      return Promise.resolve(window.KCAPI.chat.unreadTotal()).then(function (total) {
+        updateChatBadge(total || 0);
+        return total || 0;
+      });
+    }).catch(function () {
+      updateChatBadge(0);
+      return 0;
+    });
   }
 
   function ensureDropdown() {
@@ -548,6 +671,7 @@
       if (_dropdownOpen) renderDropdown();
       writeNotificationSnapshot();
       fetchUnreadCount();
+      if (event.previous && event.previous.type === 'direct_message') refreshChatUnreadCount();
       return;
     }
 
@@ -558,6 +682,7 @@
     if (_dropdownOpen) renderDropdown();
     writeNotificationSnapshot();
     fetchUnreadCount();
+    if (notif.type === 'direct_message') refreshChatUnreadCount();
   }
 
   function activate(bell, user) {
@@ -572,6 +697,7 @@
 
     hydrateNotificationSnapshot(_activeUserId);
     fetchUnreadCount();
+    refreshChatUnreadCount();
 
     if (user && user.id && window.KCAPI && typeof window.KCAPI.subscribeNotifications === 'function') {
       _channel = window.KCAPI.subscribeNotifications(user.id, onRealtimeNotification);
@@ -622,6 +748,7 @@
   function deactivateForUser(userId) {
     if (userId) clearNotificationSnapshot(userId);
     destroy();
+    updateChatBadge(0);
     var bell = $('#kcNotifBell');
     if (bell) bell.style.display = 'none';
   }
@@ -645,12 +772,20 @@
       }
       activateForUser(targetBell, user);
       fetchUnreadCount();
+      refreshChatUnreadCount();
     });
   }
 
   function init() {
+    ensureChatEntryPoints();
     var bell = $('#kcNotifBell');
-    if (!bell) return;
+    if (!bell) {
+      document.addEventListener('kc:chat:unread-changed', function (event) {
+        var detail = event && event.detail ? event.detail : {};
+        refreshChatUnreadCount(detail.total);
+      });
+      return;
+    }
 
     bindAuthListener(bell);
 
@@ -668,6 +803,7 @@
             }
             activateForUser(bell, user);
             fetchUnreadCount();
+            refreshChatUnreadCount();
           } else if (_activeUserId) {
             deactivateForUser(_activeUserId);
           }
@@ -679,6 +815,11 @@
     if (!snapshotUser || !snapshotUser.id) {
       bell.style.display = 'none';
     }
+
+    document.addEventListener('kc:chat:unread-changed', function (event) {
+      var detail = event && event.detail ? event.detail : {};
+      refreshChatUnreadCount(detail.total);
+    });
   }
 
   function destroy() {

@@ -84,28 +84,9 @@
     unsubscribeChat: sync('unsubscribeChat'),
   };
 
-  window._KCAPI.chat = chatFacade;
-
-  // Auto-registra em window.KCAPI quando kc-api.client.js terminar de carregar
-  function exposeOnFacade() {
-    if (window.KCAPI) {
-      window.KCAPI.chat = chatFacade;
-    }
-  }
-  if (window.KCAPI) {
-    exposeOnFacade();
-  } else {
-    document.addEventListener('kc:apiready', exposeOnFacade, { once: true });
-    // Fallback: polling curto
-    var tries = 0;
-    var iv = setInterval(function () {
-      tries += 1;
-      if (window.KCAPI) {
-        exposeOnFacade();
-        clearInterval(iv);
-      } else if (tries > 50) {
-        clearInterval(iv);
-      }
-    }, 100);
-  }
+  var target = window._KCAPI.chat || {};
+  Object.keys(chatFacade).forEach(function (key) {
+    target[key] = chatFacade[key];
+  });
+  window._KCAPI.chat = target;
 })();

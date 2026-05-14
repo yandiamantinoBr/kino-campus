@@ -33,6 +33,7 @@ beforeAll(() => {
   require('../../assets/js/adapters/supabase/supabase.posts-read.adapter.js');
   require('../../assets/js/adapters/supabase/supabase.posts-write.adapter.js');
   require('../../assets/js/adapters/supabase/supabase.profiles.adapter.js');
+  require('../../assets/js/adapters/supabase/supabase.chat.adapter.js');
   require('../../assets/js/adapters/supabase/supabase.adapter.js');
 });
 
@@ -56,6 +57,11 @@ describe('Supabase Adapter - getFeedCursor', () => {
   test('registra o driver com getFeedCursor disponível', () => {
     expect(window.KCAPI.registerAdapter).toHaveBeenCalledWith('supabase', expect.any(Object));
     expect(typeof driver.getFeedCursor).toBe('function');
+  });
+
+  test('registra o sub-adapter de chat no driver Supabase', () => {
+    expect(driver.chat).toBe(window._KCSA.chat);
+    expect(typeof driver.chat.unreadTotal).toBe('function');
   });
 
   test('normaliza posts do payload e preserva nextCursor/hasMore', async () => {

@@ -391,6 +391,16 @@
     'aria-label.profile-configure':     'Configurar perfil',
     'aria-label.profile-legacy-badge':  'Perfil de exemplo',
     'aria-label.profile-tabs':          'Seções do perfil',
+    'aria-label.start-chat':            'Iniciar conversa',
+
+    // Mensagens
+    'aria-label.chat-list':             'Lista de conversas',
+    'aria-label.chat-conversation':     'Conversa',
+    'aria-label.chat-back':             'Voltar para a lista de conversas',
+    'aria-label.chat-profile':          'Ver perfil',
+    'aria-label.chat-block':            'Bloquear conversa',
+    'aria-label.chat-attach':           'Anexar imagem',
+    'aria-label.chat-send':             'Enviar mensagem',
 
     // Calendário de eventos
     'aria-label.calendar-expand':       'Expandir calendário',
@@ -445,6 +455,7 @@
     'aria-label.filter-mod-status':        'Filtrar por status de moderação',
     'aria-label.filter-mod-global-module': 'Módulo — limite global',
     'aria-label.filter-mod-user-module':   'Módulo — limite por usuário',
+    'aria-label.refresh-list':             'Atualizar lista',
 
     // ── Placeholder estático (v12.7.1 — fase 2 i18n runtime) ──────────────────
     // Busca principal por módulo
@@ -494,6 +505,8 @@
 
     // Comentário
     'placeholder.comment':              'Deixe o seu comentário',
+    'placeholder.chat-message':         'Escreva uma mensagem...',
+    'placeholder.external-access-note': 'Adicione uma observação para a resposta ao solicitante.',
 
     // Admin banners
     'placeholder.banner-pill':          'ex: Destaque',
@@ -541,7 +554,13 @@
     'tooltip.filter-module':            'Filtrar por módulo',
     'tooltip.period-filter':            'Período',
     'tooltip.refresh':                  'Recarregar dados',
+    'tooltip.refresh-list':             'Atualizar lista',
     'tooltip.remove-global-limit':      'Remover override global (volta ao padrão de 5)',
+    // Mensagens
+    'tooltip.chat-profile':             'Ver perfil',
+    'tooltip.chat-block':               'Bloquear conversa',
+    'tooltip.chat-attach':              'Anexar imagem',
+    'tooltip.chat-send':                'Enviar mensagem',
     // Admin banners
     'tooltip.color-start':              'Escolher cor inicial',
     'tooltip.color-end':                'Escolher cor final',

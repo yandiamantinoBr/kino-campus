@@ -28,7 +28,7 @@
   <header class="kc-header">
     <div class="kc-header-container">
       <div class="kc-logo">
-        <a href="index.html" aria-label="KinoCampus — Comunidade UFG">
+        <a href="index.html" aria-label="KinoCampus — Comunidade UFG" data-i18n-aria-label="aria-label.logo-home">
           <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
           <span class="kc-logo-text">
             <span class="kc-logo-name">Kino<span>Campus</span></span>
@@ -37,11 +37,11 @@
         </a>
       </div>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;">
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications" style="display:none;">
           <i class="fas fa-bell"></i>
           <span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span>
         </button>
-        <button class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+        <button class="theme-toggle" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle">
           <i class="fas fa-sun"></i>
         </button>
         <a class="btn-login" href="#login">Login/Cadastro</a>
@@ -54,7 +54,7 @@
       <div class="kc-chat-page" id="kcChatPage" data-pane="list">
 
         <!-- ── Sidebar: lista de conversas ───────────────────────────────── -->
-        <aside class="kc-chat-sidebar" id="kcChatSidebar" aria-label="Lista de conversas">
+        <aside class="kc-chat-sidebar" id="kcChatSidebar" aria-label="Lista de conversas" data-i18n-aria-label="aria-label.chat-list">
           <div class="kc-chat-sidebar__header">
             <h1 class="kc-chat-sidebar__title">Mensagens</h1>
             <p class="kc-chat-sidebar__subtitle">Suas conversas diretas no KinoCampus</p>
@@ -86,7 +86,7 @@
         </aside>
 
         <!-- ── Painel da conversa ────────────────────────────────────────── -->
-        <section class="kc-chat-panel" id="kcChatPanel" aria-label="Conversa">
+        <section class="kc-chat-panel" id="kcChatPanel" aria-label="Conversa" data-i18n-aria-label="aria-label.chat-conversation">
 
           <!-- Estado: nenhuma conversa selecionada -->
           <div class="kc-chat-empty" id="kcChatEmptyPanel">
@@ -101,7 +101,7 @@
           <!-- Conversa ativa (oculto até selecionar) -->
           <div id="kcChatActiveConv" style="display:none; flex:1; flex-direction:column; min-height:0;">
             <header class="kc-chat-panel__header">
-              <button class="kc-chat-panel__back" id="kcChatBackBtn" aria-label="Voltar para lista">
+              <button class="kc-chat-panel__back" id="kcChatBackBtn" aria-label="Voltar para lista" data-i18n-aria-label="aria-label.chat-back">
                 <i class="fas fa-arrow-left"></i>
               </button>
               <div class="kc-chat-panel__avatar" id="kcChatPeerAvatar"></div>
@@ -110,10 +110,10 @@
                 <span class="kc-chat-panel__status" id="kcChatPeerStatus"></span>
               </div>
               <div class="kc-chat-panel__actions">
-                <button class="kc-chat-panel__action-btn" id="kcChatViewProfileBtn" title="Ver perfil" aria-label="Ver perfil">
+                <button class="kc-chat-panel__action-btn" id="kcChatViewProfileBtn" title="Ver perfil" data-i18n-tooltip="tooltip.chat-profile" aria-label="Ver perfil" data-i18n-aria-label="aria-label.chat-profile">
                   <i class="fas fa-user"></i>
                 </button>
-                <button class="kc-chat-panel__action-btn" id="kcChatBlockBtn" title="Bloquear" aria-label="Bloquear usuário">
+                <button class="kc-chat-panel__action-btn" id="kcChatBlockBtn" title="Bloquear" data-i18n-tooltip="tooltip.chat-block" aria-label="Bloquear usuário" data-i18n-aria-label="aria-label.chat-block">
                   <i class="fas fa-ban"></i>
                 </button>
               </div>
@@ -131,7 +131,7 @@
 
             <!-- Composer -->
             <form class="kc-chat-composer" id="kcChatComposer" autocomplete="off">
-              <button type="button" class="kc-chat-composer__btn" id="kcChatAttachBtn" title="Anexar imagem" aria-label="Anexar imagem">
+              <button type="button" class="kc-chat-composer__btn" id="kcChatAttachBtn" title="Anexar imagem" data-i18n-tooltip="tooltip.chat-attach" aria-label="Anexar imagem" data-i18n-aria-label="aria-label.chat-attach">
                 <i class="fas fa-paperclip"></i>
               </button>
               <input type="file" id="kcChatFileInput" accept="image/*" style="display:none" />
@@ -140,9 +140,10 @@
                 class="kc-chat-composer__input"
                 rows="1"
                 placeholder="Escreva uma mensagem..."
+                data-i18n-placeholder="placeholder.chat-message"
                 maxlength="4000"
               ></textarea>
-              <button type="submit" class="kc-chat-composer__btn kc-chat-composer__btn--send" id="kcChatSendBtn" disabled title="Enviar" aria-label="Enviar mensagem">
+              <button type="submit" class="kc-chat-composer__btn kc-chat-composer__btn--send" id="kcChatSendBtn" disabled title="Enviar" data-i18n-tooltip="tooltip.chat-send" aria-label="Enviar mensagem" data-i18n-aria-label="aria-label.chat-send">
                 <i class="fas fa-paper-plane"></i>
               </button>
             </form>

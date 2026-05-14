@@ -236,7 +236,7 @@ describe('closed posts - contratos admin, shell e notificacoes', () => {
     expect(notifications).toContain('function readNotificationSnapshot(userId)');
     expect(notifications).toContain('function writeNotificationSnapshot()');
     expect(notifications).toContain("document.addEventListener('kc:authchange'");
-    expect(notifications).toContain('openDropdown();\n    fetchNotifications();');
+    expect(notifications).toMatch(/openDropdown\(\);\r?\n\s{4}fetchNotifications\(\);/);
     expect(notifications).not.toContain('setTimeout(checkAuth, 600)');
   });
 });
