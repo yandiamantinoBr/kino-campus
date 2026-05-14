@@ -29,6 +29,19 @@ describe('chat continuity contract', () => {
     expect(source).not.toContain('getPublicUrl');
   });
 
+  test('chat image failures have retry fallback and upload cleanup', () => {
+    const controller = read('assets/js/controllers/public/chat-inbox.controller.js');
+    const facade = read('assets/js/api/kc-api.chat.js');
+    const supabaseAdapter = read('assets/js/adapters/supabase/supabase.chat.adapter.js');
+
+    expect(controller).toContain('data-media-retry');
+    expect(controller).toContain('Imagem indisponível. Tentar novamente');
+    expect(controller).toContain('cleanupUploadedChatImage');
+    expect(controller).toContain('revokeObjectURL');
+    expect(facade).toContain('deleteUploadedMedia');
+    expect(supabaseAdapter).toContain('client.storage.from(bucket).remove([path])');
+  });
+
   test('mensagens has the short Vercel route rewrite', () => {
     const source = read('vercel.json');
     expect(source).toContain('"source": "/mensagens"');

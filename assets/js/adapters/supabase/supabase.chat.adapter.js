@@ -202,6 +202,19 @@
     return (s && s.data && s.data.signedUrl) ? s.data.signedUrl : null;
   }
 
+  async function deleteUploadedMedia(path) {
+    var client = getClient();
+    if (!client || !path) return { ok: false };
+    var bucket = getBucketName();
+    try {
+      var r = await client.storage.from(bucket).remove([path]);
+      if (r && r.error) return { ok: false, error: { message: r.error.message } };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: { message: (e && e.message) || String(e) } };
+    }
+  }
+
   // ── list_conversations ───────────────────────────────────────────────────
 
   async function listConversations(opts) {
@@ -433,6 +446,7 @@
     uploadChatImage: uploadChatImage,
     getPublicUrl: getPublicUrl,
     getSignedUrl: getSignedUrl,
+    deleteUploadedMedia: deleteUploadedMedia,
     listConversations: listConversations,
     listMessages: listMessages,
     markRead: markRead,

@@ -62,6 +62,7 @@ describe('Supabase Adapter - getFeedCursor', () => {
   test('registra o sub-adapter de chat no driver Supabase', () => {
     expect(driver.chat).toBe(window._KCSA.chat);
     expect(typeof driver.chat.unreadTotal).toBe('function');
+    expect(typeof driver.chat.deleteUploadedMedia).toBe('function');
   });
 
   test('normaliza posts do payload e preserva nextCursor/hasMore', async () => {

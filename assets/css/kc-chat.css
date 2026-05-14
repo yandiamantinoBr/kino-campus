@@ -355,11 +355,25 @@
   background: rgba(0, 0, 0, 0.16);
   margin: -2px 0 6px;
   font-size: 0.82rem;
+  text-align: center;
+  font: inherit;
+  padding: 0 14px;
+  appearance: none;
 }
 
 .kc-chat-msg__image-placeholder i {
   font-size: 1.25rem;
   color: var(--kc-primary-brand);
+}
+
+.kc-chat-msg__image-placeholder.is-error {
+  cursor: pointer;
+  border-color: rgba(255, 82, 82, 0.44);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-chat-msg__image-placeholder.is-error i {
+  color: var(--kc-red-alert, #ff5252);
 }
 
 .kc-chat-msg__meta {
