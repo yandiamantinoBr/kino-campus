@@ -11983,3 +11983,60 @@ a.kc-home-metric-card:hover {
 .kc-admin-invite-feedback.is-error   { color: #ef4444; }
 .kc-admin-invite-feedback.is-warn    { color: #f59e0b; }
 .kc-admin-invite-feedback.is-info    { color: var(--kc-text-dark-secondary); }
+
+/* Mensagens: atalho persistente no header e no mobile. */
+.kc-chat-shortcut,
+.kc-chat-mobile-fab {
+  position: relative;
+}
+
+.kc-chat-shortcut__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--kc-primary-brand);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--kc-surface-dark);
+}
+
+.kc-chat-shortcut__badge[hidden] {
+  display: none !important;
+}
+
+.kc-chat-mobile-fab {
+  display: none;
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  z-index: 210;
+  width: 50px;
+  height: 50px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #fff;
+  background: var(--kc-primary-brand);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 14px 34px rgba(255, 107, 0, 0.34);
+}
+
+.kc-chat-mobile-fab i {
+  font-size: 1.15rem;
+}
+
+@media (max-width: 768px) {
+  body:not(.kc-chat-route) .kc-chat-mobile-fab {
+    display: inline-flex;
+  }
+}

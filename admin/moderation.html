@@ -366,7 +366,7 @@
             <button type="button" class="kc-admin-tab" data-ext-tab="rejected" role="tab" aria-selected="false">
               <i class="fas fa-xmark"></i> Recusadas <span class="kc-admin-tab-count" data-ext-count="rejected">0</span>
             </button>
-            <button type="button" class="kc-admin-tab-refresh" id="ext-access-refresh" title="Atualizar lista" aria-label="Atualizar lista">
+            <button type="button" class="kc-admin-tab-refresh" id="ext-access-refresh" title="Atualizar lista" data-i18n-tooltip="tooltip.refresh-list" aria-label="Atualizar lista" data-i18n-aria-label="aria-label.refresh-list">
               <i class="fas fa-rotate"></i>
             </button>
           </div>
@@ -386,7 +386,7 @@
           <div class="kc-modal-card" style="max-width:520px;">
             <div class="kc-modal-header">
               <h3 id="ext-modal-title">Confirmar decisão</h3>
-              <button type="button" class="kc-modal-close" data-ext-modal-close aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+              <button type="button" class="kc-modal-close" data-ext-modal-close aria-label="Fechar" data-i18n-aria-label="aria-label.close"><i class="fas fa-xmark"></i></button>
             </div>
             <div class="kc-modal-body">
               <p id="ext-modal-summary" style="color:var(--kc-text-dark-secondary);font-size:.92em;margin-bottom:10px;"></p>
@@ -395,6 +395,7 @@
               </label>
               <textarea id="ext-modal-note" rows="3" maxlength="500"
                 placeholder="Ex: vínculo confirmado via Linkedin / motivo da recusa"
+                data-i18n-placeholder="placeholder.external-access-note"
                 style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);font-family:inherit;font-size:.9em;resize:vertical;min-height:60px;"></textarea>
               <p style="font-size:.78em;color:var(--kc-text-dark-secondary);margin-top:6px;">
                 Aprovações enviam um e-mail de convite via SMTP do Supabase Auth.
@@ -483,4 +484,3 @@
   <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js"></script>
 </body>
 </html>
-

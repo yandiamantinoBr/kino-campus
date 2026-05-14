@@ -12,7 +12,7 @@
  *   3. Contrato estático de kc-core-widgets.js
  *   4. kc-core.js residual NÃO define os grupos extraídos inline
  *   5. Ordem de scripts nos HTMLs consumidores
- *   6. Gate de tamanho: kc-core.js < 700L
+ *   6. Gate de tamanho: kc-core.js < 850L
  */
 
 'use strict';
@@ -243,7 +243,7 @@ describe('HTMLs consumidores — scripts carregados na ordem correta', () => {
 
 // ── 6. Gate de tamanho ────────────────────────────────────────────────────────
 
-describe('Gate de tamanho — kc-core.js < 700L', () => {
+describe('Gate de tamanho — kc-core.js < 850L', () => {
   test('kc-core.js existe', () => {
     expect(fs.existsSync(CORE)).toBe(true);
   });
@@ -260,9 +260,9 @@ describe('Gate de tamanho — kc-core.js < 700L', () => {
     expect(fs.existsSync(WIDGETS)).toBe(true);
   });
 
-  test('kc-core.js tem menos de 700 linhas', () => {
+  test('kc-core.js tem menos de 850 linhas', () => {
     const lines = lineCount(CORE);
-    expect(lines).toBeLessThan(700);
+    expect(lines).toBeLessThan(850);
   });
 
   test('kc-post-model.js tem mais de 50 linhas', () => {

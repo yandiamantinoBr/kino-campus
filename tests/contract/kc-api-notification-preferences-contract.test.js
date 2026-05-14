@@ -103,6 +103,7 @@ describe('KCAPI notification preferences contract', () => {
       vote_on_post: { in_app: true, email: false, whatsapp: false },
       post_expired: { in_app: true, email: false, whatsapp: false },
       post_reported: { in_app: true, email: false, whatsapp: false },
+      direct_message: { in_app: true, email: false, whatsapp: false },
       system: { in_app: true, email: false, whatsapp: false },
     });
   });

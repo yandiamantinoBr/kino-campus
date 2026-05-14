@@ -347,10 +347,12 @@ const { ENV } = window.KCAPI;
   window._KCSA.posts = window._KCSA.posts || {};
   window._KCSA.postsWrite = window._KCSA.postsWrite || {};
   window._KCSA.profiles = window._KCSA.profiles || {};
+  window._KCSA.chat = window._KCSA.chat || {};
 
   // Driver Supabase (V8.1.7.2+)
   const driverSupabase = Object.freeze({
     name: 'supabase',
+    chat: window._KCSA.chat,
     getPosts: window._KCSA.posts.getPosts,
     searchPosts: window._KCSA.posts.searchPosts,
     getFeedCursor: window._KCSA.posts.getFeedCursor,

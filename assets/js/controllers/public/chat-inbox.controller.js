@@ -45,6 +45,7 @@
     rtChannel: null,
     blocked: { i_blocked: false, they_blocked: false },
   };
+  const signedMediaCache = new Map();
 
   // ── Utilitários ─────────────────────────────────────────────────────────
 
@@ -140,10 +141,32 @@
 
   function mediaUrl(path) {
     if (!path) return null;
-    if (window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.getPublicUrl === 'function') {
-      return window.KCAPI.chat.getPublicUrl(path);
-    }
+    var cached = signedMediaCache.get(path);
+    var now = Date.now();
+    if (cached && cached.url && cached.expiresAt > now) return cached.url;
+    if (cached && cached.pending) return null;
+    if (cached && cached.failedAt && (now - cached.failedAt) < 30000) return null;
+    loadSignedMediaUrl(path);
     return null;
+  }
+
+  function loadSignedMediaUrl(path) {
+    if (!path || !window.KCAPI || !window.KCAPI.chat || typeof window.KCAPI.chat.getSignedUrl !== 'function') return;
+    signedMediaCache.set(path, { pending: true, expiresAt: 0 });
+    Promise.resolve(window.KCAPI.chat.getSignedUrl(path, 3600)).then(function (url) {
+      if (!url || typeof url !== 'string') {
+        signedMediaCache.set(path, { url: null, pending: false, failedAt: Date.now(), expiresAt: 0 });
+        return;
+      }
+      signedMediaCache.set(path, {
+        url: url,
+        pending: false,
+        expiresAt: Date.now() + (55 * 60 * 1000),
+      });
+      renderMessagesList();
+    }).catch(function () {
+      signedMediaCache.set(path, { url: null, pending: false, failedAt: Date.now(), expiresAt: 0 });
+    });
   }
 
   function isPaneMobile() {
@@ -483,6 +506,8 @@
       var url = mediaUrl(m.media_path);
       if (url) {
         content += '<img class="kc-chat-msg__image" src="' + esc(url) + '" data-image-full="' + esc(url) + '" alt="Imagem" />';
+      } else {
+        content += '<div class="kc-chat-msg__image-placeholder"><i class="fas fa-image"></i><span>Carregando imagem...</span></div>';
       }
       if (m.content) {
         content += '<div>' + esc(m.content) + '</div>';

@@ -31,9 +31,10 @@ beforeAll(() => {
   require('../../assets/js/api/kc-api.ratings.js');
   require('../../assets/js/api/kc-api.posts-feed.js');
   require('../../assets/js/api/kc-api.posts-write.js');
-  require('../../assets/js/api/kc-api.profiles.js');
+    require('../../assets/js/api/kc-api.profiles.js');
     require('../../assets/js/api/kc-api.related.js');
     require('../../assets/js/api/kc-api.auth.js');
+  require('../../assets/js/api/kc-api.chat.js');
   require('../../assets/js/api/kc-api.client.js');
 });
 
@@ -51,6 +52,13 @@ describe('KCAPI - API Client', () => {
   });
 
   test('KCAPI esta congelado', () => {
+    expect(Object.isFrozen(api)).toBe(true);
+  });
+
+  test('KCAPI expõe chat sem quebrar o objeto congelado', () => {
+    expect(api.chat).toBeDefined();
+    expect(typeof api.chat).toBe('object');
+    expect(typeof api.chat.listConversations).toBe('function');
     expect(Object.isFrozen(api)).toBe(true);
   });
 

@@ -10,7 +10,8 @@
     { href: 'moradia.html', icon: 'fas fa-home', label: 'Moradia' },
     { href: 'oportunidades.html', icon: 'fas fa-briefcase', label: 'Oportunidades' },
     { href: 'compra-venda-feed.html', icon: 'fas fa-shopping-bag', label: 'Compra e Venda' },
-    { href: 'caronas-feed.html', icon: 'fas fa-car', label: 'Caronas' }
+    { href: 'caronas-feed.html', icon: 'fas fa-car', label: 'Caronas' },
+    { href: 'mensagens.html', icon: 'fas fa-envelope', label: 'Mensagens' }
   ];
   const SHELL_SNAPSHOT_KEY = 'auth-shell';
   const SHELL_SNAPSHOT_MAX_AGE = 1000 * 60 * 60 * 12;
@@ -25,6 +26,7 @@
     'my-posts.html',
     'profile.html',
     'settings.html',
+    'mensagens.html',
     'account-setup.html',
     'auth-callback.html',
     'ods.html'

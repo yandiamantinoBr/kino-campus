@@ -2335,6 +2335,10 @@
     return { ok: false, error: 'DRIVER_NAO_SUPORTA' };
   }
 
+  window._KCAPI = window._KCAPI || {};
+  const chat = window._KCAPI.chat || {};
+  window._KCAPI.chat = chat;
+
   window.KCAPI = Object.freeze({
     VERSION,
     ENV,
@@ -2418,6 +2422,9 @@
     getUnreadNotificationCount,
     subscribeNotifications,
     unsubscribeNotifications,
+
+    // Mensagens diretas (v9.3.5.14)
+    chat,
 
     // Convites externos (v9.1.0.3)
     inviteExternalUser,
