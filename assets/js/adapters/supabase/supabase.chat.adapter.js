@@ -185,14 +185,6 @@
     return { ok: true, data: { path: path, bucket: bucket } };
   }
 
-  function getPublicUrl(path) {
-    var client = getClient();
-    if (!client || !path) return null;
-    var bucket = getBucketName();
-    var pub = client.storage.from(bucket).getPublicUrl(path);
-    return (pub && pub.data && pub.data.publicUrl) ? pub.data.publicUrl : null;
-  }
-
   async function getSignedUrl(path, expiresInSeconds) {
     var client = getClient();
     if (!client || !path) return null;
@@ -444,7 +436,6 @@
     startConversation: startConversation,
     sendMessage: sendMessage,
     uploadChatImage: uploadChatImage,
-    getPublicUrl: getPublicUrl,
     getSignedUrl: getSignedUrl,
     deleteUploadedMedia: deleteUploadedMedia,
     listConversations: listConversations,

@@ -399,6 +399,7 @@
     'aria-label.chat-back':             'Voltar para a lista de conversas',
     'aria-label.chat-profile':          'Ver perfil',
     'aria-label.chat-block':            'Bloquear conversa',
+    'aria-label.chat-search-conversation': 'Buscar conversa',
     'aria-label.chat-attach':           'Anexar imagem',
     'aria-label.chat-send':             'Enviar mensagem',
 
@@ -505,6 +506,7 @@
 
     // Comentário
     'placeholder.comment':              'Deixe o seu comentário',
+    'placeholder.chat-search-conversation': 'Buscar conversa',
     'placeholder.chat-message':         'Escreva uma mensagem...',
     'placeholder.external-access-note': 'Adicione uma observação para a resposta ao solicitante.',
 
