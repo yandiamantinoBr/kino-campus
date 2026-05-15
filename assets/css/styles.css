@@ -7249,6 +7249,8 @@ textarea::placeholder {
 
 .kc-notif-bell {
   position: relative;
+  isolation: isolate;
+  overflow: visible;
   color: var(--kc-text-dark-secondary);
   background: transparent;
   border: none;
@@ -7286,18 +7288,25 @@ textarea::placeholder {
 }
 
 .kc-notif-bell > i {
+  position: relative;
+  z-index: 1;
   line-height: 1;
   pointer-events: none;
 }
 
 .kc-notif-badge {
   position: absolute;
+  z-index: 2;
   top: 0;
   right: 0;
   transform: translate(28%, -28%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
+  box-sizing: border-box;
   border-radius: 999px;
   background: var(--kc-primary-brand);
   color: #fff;
