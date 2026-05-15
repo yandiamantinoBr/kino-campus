@@ -24,7 +24,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '9.3.5.10';
+  const VERSION = '9.3.5.15';
   const PAGE_SIZE_CONV = 50;
   const PAGE_SIZE_MSG = 50;
 
@@ -45,6 +45,9 @@
     previewObjectUrl: null,
     rtChannel: null,
     blocked: { i_blocked: false, they_blocked: false },
+    conversationQuery: '',
+    inboxReloadTimer: null,
+    pendingActiveUnread: 0,
   };
   const signedMediaCache = new Map();
 
@@ -185,6 +188,51 @@
     state.previewObjectUrl = null;
   }
 
+  function draftKey(convId) {
+    var uid = state.me && state.me.id ? state.me.id : 'anon';
+    return 'kc:chat:draft:' + uid + ':' + convId;
+  }
+
+  function getDraft(convId) {
+    if (!convId || !window.localStorage) return '';
+    try { return window.localStorage.getItem(draftKey(convId)) || ''; } catch (_) { return ''; }
+  }
+
+  function saveDraft(convId) {
+    if (!convId || !window.localStorage) return;
+    var input = $('kcChatInput');
+    var value = input ? String(input.value || '') : '';
+    try {
+      if (value.trim()) window.localStorage.setItem(draftKey(convId), value);
+      else window.localStorage.removeItem(draftKey(convId));
+    } catch (_) {}
+  }
+
+  function clearDraft(convId) {
+    if (!convId || !window.localStorage) return;
+    try { window.localStorage.removeItem(draftKey(convId)); } catch (_) {}
+  }
+
+  function isNearBottom() {
+    var wrap = $('kcChatMessages');
+    if (!wrap) return true;
+    return (wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight) < 120;
+  }
+
+  function setJumpVisible(visible) {
+    var btn = $('kcChatJumpBtn');
+    if (!btn) return;
+    btn.hidden = !visible;
+  }
+
+  function scheduleLoadConversations() {
+    if (state.inboxReloadTimer) clearTimeout(state.inboxReloadTimer);
+    state.inboxReloadTimer = setTimeout(function () {
+      state.inboxReloadTimer = null;
+      loadConversations();
+    }, 220);
+  }
+
   function isPaneMobile() {
     return window.matchMedia('(max-width: 1023px)').matches;
   }
@@ -240,6 +288,11 @@
   }
 
   function cleanup() {
+    if (state.inboxReloadTimer) {
+      clearTimeout(state.inboxReloadTimer);
+      state.inboxReloadTimer = null;
+    }
+    saveDraft(state.activeConvId);
     clearPreviewObjectUrl();
     if (state.rtChannel && window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.unsubscribeChat === 'function') {
       try { window.KCAPI.chat.unsubscribeChat(state.rtChannel); } catch (_) {}
@@ -278,7 +331,28 @@
         '</div>';
       return;
     }
-    var html = state.conversations.map(function (c) {
+    var query = String(state.conversationQuery || '').trim().toLowerCase();
+    var visibleConversations = query
+      ? state.conversations.filter(function (c) {
+        var haystack = [
+          c.other_display_name,
+          c.last_message_preview,
+          c.last_message_type === 'image' ? 'imagem foto anexo' : ''
+        ].join(' ').toLowerCase();
+        return haystack.indexOf(query) >= 0;
+      })
+      : state.conversations;
+
+    if (visibleConversations.length === 0) {
+      list.innerHTML = '<div class="kc-chat-empty" style="height:100%">' +
+        '<div class="kc-chat-empty__icon"><i class="fas fa-search"></i></div>' +
+        '<h2 class="kc-chat-empty__title">Nenhuma conversa encontrada</h2>' +
+        '<p class="kc-chat-empty__body">Tente buscar pelo nome da pessoa ou por um trecho da mensagem.</p>' +
+        '</div>';
+      return;
+    }
+
+    var html = visibleConversations.map(function (c) {
       var preview = c.last_message_preview || (c.last_message_type === 'image' ? '[imagem]' : 'Sem mensagens ainda');
       var time = formatTime(c.last_message_at);
       var badge = c.unread_count > 0
@@ -359,7 +433,12 @@
 
   async function selectConversation(convId) {
     if (!convId) return;
+    if (state.activeConvId && state.activeConvId !== convId) {
+      saveDraft(state.activeConvId);
+    }
     state.activeConvId = convId;
+    state.pendingActiveUnread = 0;
+    setJumpVisible(false);
     setHash('c/' + convId);
     setActivePane('conversation');
 
@@ -397,14 +476,10 @@
     // Marca como lida (até a última msg)
     if (state.messages.length > 0) {
       var last = state.messages[state.messages.length - 1];
-      await window.KCAPI.chat.markRead(convId, last.message_id);
-      // Zera unread local
-      if (conv) {
-        conv.unread_count = 0;
-        renderConversationsList();
-        dispatchUnreadChange();
-      }
+      await markActiveConversationRead(last.message_id);
     }
+
+    restoreActiveDraft();
 
     // Foca composer
     setTimeout(function () {
@@ -464,6 +539,27 @@
     if (wrap) {
       wrap.scrollTop = wrap.scrollHeight - prevHeight;
     }
+  }
+
+  async function markActiveConversationRead(messageId) {
+    if (!state.activeConvId || !window.KCAPI || !window.KCAPI.chat) return;
+    try { await window.KCAPI.chat.markRead(state.activeConvId, messageId || null); } catch (_) {}
+    var conv = state.convById.get(state.activeConvId);
+    if (conv) {
+      conv.unread_count = 0;
+      renderConversationsList();
+      dispatchUnreadChange();
+    }
+    state.pendingActiveUnread = 0;
+    setJumpVisible(false);
+  }
+
+  function restoreActiveDraft() {
+    var input = $('kcChatInput');
+    if (!input || !state.activeConvId) return;
+    input.value = getDraft(state.activeConvId);
+    autoGrow();
+    updateSendBtnState();
   }
 
   function renderMessagesList() {
@@ -580,8 +676,9 @@
     if (wrap) wrap.scrollTop = wrap.scrollHeight;
   }
 
-  function appendMessage(m) {
+  function appendMessage(m, opts) {
     if (!m || state.messagesById.has(m.message_id || m.id)) return;
+    var options = opts || {};
     var normalized = {
       message_id: m.message_id || m.id,
       sender_id: m.sender_id,
@@ -595,7 +692,7 @@
     state.messagesById.set(normalized.message_id, normalized);
     state.messages.push(normalized);
     renderMessagesList();
-    scrollToBottom();
+    if (options.scroll !== false) scrollToBottom();
   }
 
   // ── Composer (enviar) ───────────────────────────────────────────────────
@@ -669,6 +766,7 @@
 
       // Limpa composer
       if (input) input.value = '';
+      clearDraft(state.activeConvId);
       autoGrow();
       state.pendingFile = null;
       renderComposerPreview();
@@ -845,14 +943,18 @@
       var msg = payload.new;
       // Só processa se sou participante de alguma conversa minha (RLS já garante)
       if (msg.conversation_id === state.activeConvId) {
-        appendMessage(msg);
-        // Marca como lida se for de outro user
+        var shouldScroll = (state.me && msg.sender_id === state.me.id) || isNearBottom();
+        appendMessage(msg, { scroll: shouldScroll });
         if (state.me && msg.sender_id !== state.me.id) {
-          window.KCAPI.chat.markRead(state.activeConvId, msg.message_id || msg.id);
+          if (shouldScroll) {
+            markActiveConversationRead(msg.message_id || msg.id);
+          } else {
+            state.pendingActiveUnread += 1;
+            setJumpVisible(true);
+          }
         }
       }
-      // Atualiza inbox (recarrega)
-      loadConversations();
+      scheduleLoadConversations();
     } else if (eventType === 'UPDATE' && payload.new) {
       // Mensagem editada ou deletada
       var m = state.messagesById.get(payload.new.id);
@@ -865,7 +967,7 @@
       }
     } else if (eventType.indexOf('CONVERSATION_') === 0) {
       // Atualização em chat_conversations (last_message_*, etc.)
-      loadConversations();
+      scheduleLoadConversations();
     }
   }
 
@@ -890,11 +992,17 @@
     var blockBtn = $('kcChatBlockBtn');
     var unblockBtn = $('kcChatUnblockBtn');
     var messages = $('kcChatMessages');
+    var searchInput = $('kcChatConversationSearch');
+    var jumpBtn = $('kcChatJumpBtn');
 
     if (form) form.addEventListener('submit', handleSubmit);
 
     if (input) {
-      input.addEventListener('input', function () { autoGrow(); updateSendBtnState(); });
+      input.addEventListener('input', function () {
+        autoGrow();
+        updateSendBtnState();
+        saveDraft(state.activeConvId);
+      });
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
@@ -918,8 +1026,11 @@
 
     if (backBtn) {
       backBtn.addEventListener('click', function () {
+        saveDraft(state.activeConvId);
         state.activeConvId = null;
         state.activePeer = null;
+        state.pendingActiveUnread = 0;
+        setJumpVisible(false);
         setHash('');
         setActivePane('list');
         var empty = $('kcChatEmptyPanel');
@@ -947,6 +1058,25 @@
         if (messages.scrollTop < 80 && state.hasMoreMessages && !state.isLoadingMore) {
           loadMoreMessages();
         }
+        if (state.pendingActiveUnread > 0 && isNearBottom()) {
+          var last = state.messages[state.messages.length - 1];
+          markActiveConversationRead(last && last.message_id);
+        }
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        state.conversationQuery = String(searchInput.value || '');
+        renderConversationsList();
+      });
+    }
+
+    if (jumpBtn) {
+      jumpBtn.addEventListener('click', function () {
+        scrollToBottom();
+        var last = state.messages[state.messages.length - 1];
+        markActiveConversationRead(last && last.message_id);
       });
     }
 
