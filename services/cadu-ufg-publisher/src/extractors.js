@@ -10,9 +10,16 @@ function buildWebyUrl(source, item, type) {
   return source.baseUrl;
 }
 
+function cleanTitle(value) {
+  return normalizeWhitespace(value)
+    .replace(/\s*[|-]\s*UFG\s*-\s*Universidade Federal de Goi[aá]s.*$/i, '')
+    .replace(/\s*[|-]\s*Universidade Federal de Goi[aá]s.*$/i, '')
+    .replace(/\s*[|-]\s*UFG\s*$/i, '');
+}
+
 function normalizeWebyItem(source, item, type = 'news') {
   const html = String(item.text || item.body || item.summary || '');
-  const title = normalizeWhitespace(decodeEntities(item.title || item.name || ''));
+  const title = cleanTitle(decodeEntities(item.title || item.name || ''));
   const text = stripHtml(html || item.summary || '');
   const sourceUrl = buildWebyUrl(source, item, type);
   const updatedAt = item.updated_at || item.date_begin_at || item.created_at || item.published_at || '';
@@ -45,7 +52,7 @@ function extractMeta(html, name) {
 
 function extractHtmlDocument(source, url, html) {
   const titleMatch = String(html || '').match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const title = normalizeWhitespace(extractMeta(html, 'og:title') || (titleMatch ? stripHtml(titleMatch[1]) : ''));
+  const title = cleanTitle(extractMeta(html, 'og:title') || (titleMatch ? stripHtml(titleMatch[1]) : ''));
   const description = normalizeWhitespace(extractMeta(html, 'description') || extractMeta(html, 'og:description'));
   const articleMatch = String(html || '').match(/<article[^>]*>([\s\S]*?)<\/article>/i);
   const mainMatch = String(html || '').match(/<main[^>]*>([\s\S]*?)<\/main>/i);
@@ -71,6 +78,7 @@ function extractHtmlDocument(source, url, html) {
 }
 
 module.exports = {
+  cleanTitle,
   extractHtmlDocument,
   normalizeWebyItem,
 };

@@ -1,6 +1,7 @@
 'use strict';
 
 const { analyzeTemporalRelevance, classifyItem } = require('../../services/cadu-ufg-publisher/src/classifier');
+const { cleanTitle } = require('../../services/cadu-ufg-publisher/src/extractors');
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
 const { collectReviews, formatReviews } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
@@ -8,6 +9,11 @@ const { StateStore } = require('../../services/cadu-ufg-publisher/src/state');
 const { parseFeed, parseSitemap } = require('../../services/cadu-ufg-publisher/src/xml');
 
 describe('cadu-ufg-publisher', () => {
+  test('extractor strips UFG site suffix from titles', () => {
+    expect(cleanTitle('PRPI UFG divulga quatro editais abertos da Fapeg | UFG - Universidade Federal de Goiás'))
+      .toBe('PRPI UFG divulga quatro editais abertos da Fapeg');
+  });
+
   test('parseSitemap extracts loc and lastmod', () => {
     const parsed = parseSitemap(`
       <urlset>
