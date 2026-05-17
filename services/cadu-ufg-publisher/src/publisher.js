@@ -7,6 +7,19 @@ function required(name, value) {
   return value;
 }
 
+function normalizeImages(payload) {
+  const values = Array.isArray(payload.imagens) ? payload.imagens : (Array.isArray(payload.images) ? payload.images : []);
+  return values.map((value) => {
+    try {
+      const url = new URL(String(value || '').trim());
+      if (!/^https?:$/.test(url.protocol)) return '';
+      return url.toString();
+    } catch (_) {
+      return '';
+    }
+  }).filter(Boolean).slice(0, 5);
+}
+
 class SupabasePublisher {
   constructor(config) {
     this.url = required('CADU_SUPABASE_URL', config.supabaseUrl).replace(/\/+$/, '');
@@ -100,12 +113,51 @@ class SupabasePublisher {
     }
     const data = JSON.parse(text);
     const post = Array.isArray(data) ? data[0] : data;
+    const media = post && post.id ? await this.insertPostMedia(post.id, normalizeImages(payload)) : { ok: true, count: 0 };
     return {
       ok: true,
       post,
+      media,
       pending: post && post.status === 'pending',
       pendingReason: post && post.moderation_reason ? post.moderation_reason : '',
     };
+  }
+
+  async insertPostMedia(postId, images) {
+    if (!Array.isArray(images) || !images.length) return { ok: true, count: 0 };
+    const rows = images.map((url, index) => ({
+      post_id: postId,
+      url,
+      is_cover: index === 0,
+      sort_order: index,
+    }));
+    const response = await fetch(`${this.url}/rest/v1/post_media`, {
+      method: 'POST',
+      headers: {
+        ...this.headers(),
+        prefer: 'return=minimal',
+      },
+      body: JSON.stringify(rows),
+    });
+    if (response.ok) return { ok: true, count: rows.length };
+
+    const text = await response.text();
+    if (!text.toLowerCase().includes('sort_order')) {
+      return { ok: false, count: 0, error: text.slice(0, 300) };
+    }
+
+    const compatRows = rows.map(({ sort_order, ...rest }) => rest);
+    const compatResponse = await fetch(`${this.url}/rest/v1/post_media`, {
+      method: 'POST',
+      headers: {
+        ...this.headers(),
+        prefer: 'return=minimal',
+      },
+      body: JSON.stringify(compatRows),
+    });
+    if (compatResponse.ok) return { ok: true, count: compatRows.length };
+    const compatText = await compatResponse.text();
+    return { ok: false, count: 0, error: compatText.slice(0, 300) };
   }
 }
 

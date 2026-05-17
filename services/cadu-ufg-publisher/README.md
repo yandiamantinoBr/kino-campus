@@ -27,6 +27,8 @@ O publicador usa Auth REST do Supabase com a conta dedicada do Cadu, sincroniza 
 
 - `eventos`: local, data/hora detectadas, link oficial e `link_as_cta`;
 - `oportunidades`: area, modalidade presencial por padrao, contato e link oficial.
+- descricao em Markdown seguro (`**negrito**`, listas e link oficial unico), compatível com o preview/render do Kino;
+- imagem de capa quando a fonte oficial expõe `image`, `image_url` ou `og:image`; a URL entra em `post_media` como capa.
 
 Para reduzir falso positivo, o fluxo e hibrido:
 

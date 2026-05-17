@@ -90,12 +90,16 @@ describe('cadu-ufg-publisher', () => {
       text: 'Contato: monitoria@ufg.br. Local: Campus Samambaia. Prazo ate 20/05/2026.',
       updatedAt: '2026-05-17',
       pdfLinks: ['https://prograd.ufg.br/edital.pdf'],
+      imageUrl: 'https://prograd.ufg.br/assets/cover.jpg',
     };
     const classification = classifyItem(item, { tier: 1 }, { now: '2026-05-17T12:00:00-03:00' });
     const payload = mapToKinoPayload(item, classification, { runId: 'test-run' });
     expect(payload.modulo).toBe('oportunidades');
     expect(payload.titulo.length).toBeLessThanOrEqual(80);
     expect(payload.descricao.length).toBeLessThanOrEqual(2000);
+    expect(payload.descricao).toContain('**📌 Resumo**');
+    expect(payload.descricao).toContain('[pagina oficial da UFG]');
+    expect(payload.imagens).toEqual(['https://prograd.ufg.br/assets/cover.jpg']);
     expect(payload.metadata.source_url).toBe(item.sourceUrl);
     expect(payload.metadata.link_as_cta).toBe(true);
     expect(payload.metadata.deadline_date).toBe('2026-05-20');

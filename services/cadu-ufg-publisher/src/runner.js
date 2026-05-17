@@ -190,6 +190,9 @@ async function processSource(context, source) {
       const result = await publisher.createPost(payload);
       if (result && result.ok) {
         context.publishedThisRun += 1;
+        if (result.media && result.media.ok === false) {
+          stats.errors.push(`media:${hydrated.sourceUrl}: ${result.media.error || 'post_media_insert_failed'}`);
+        }
         if (result.pending) {
           stats.pending += 1;
           state.mark(key, {

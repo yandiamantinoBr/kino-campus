@@ -30,35 +30,68 @@ function detectLocation(text, sourceName) {
   return normalizeWhitespace(match ? match[1] : source || 'UFG');
 }
 
+function formatDatePt(isoDate) {
+  const match = String(isoDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
+}
+
+function validRemoteImageUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (!/^https?:$/.test(url.protocol)) return '';
+    return url.toString();
+  } catch (_) {
+    return '';
+  }
+}
+
+function buildImageList(item) {
+  return uniq([
+    item.imageUrl,
+    item.raw && item.raw.image,
+    item.raw && item.raw.image_url,
+    item.raw && item.raw.cover,
+  ].map(validRemoteImageUrl)).slice(0, 1);
+}
+
 function buildDescription(item, classification, summaryText = '') {
   const original = normalizeWhitespace(summaryText || item.summary || item.text || '');
   const chunks = [];
   const isOpportunity = classification.module === 'oportunidades';
-  chunks.push(isOpportunity ? '📌 Resumo' : '📅 Resumo');
-  chunks.push(clamp(original, 850));
+  const sourceLabel = 'pagina oficial da UFG';
+  const sourceLink = item.sourceUrl ? `[${sourceLabel}](${item.sourceUrl})` : sourceLabel;
+  const deadlineDate = classification.temporal && classification.temporal.deadlineDate
+    ? formatDatePt(classification.temporal.deadlineDate)
+    : '';
+  const eventDate = classification.temporal && classification.temporal.eventDate
+    ? formatDatePt(classification.temporal.eventDate)
+    : '';
+  const audience = pickSentence(original, /(quem pode|publico|estudantes|discente|candidato|servidor|comunidade|pesquisador|docente)/i);
+  const deadline = pickSentence(original, /(prazo|inscricoes?|ate o dia|periodo|cronograma|submiss)/i);
+
+  chunks.push(isOpportunity ? '**📌 Resumo**' : '**📅 Resumo**');
+  chunks.push(clamp(original, 650));
 
   if (classification.hasDeadline) {
-    const deadlineDate = classification.temporal && classification.temporal.deadlineDate
-      ? classification.temporal.deadlineDate.split('-').reverse().join('/')
-      : '';
     chunks.push(deadlineDate
-      ? `⏰ Prazo: ${deadlineDate}. Confira as regras no link oficial.`
-      : '⏰ Prazo: confira a data e as regras no link oficial.');
+      ? `**⏰ Prazo:** ${deadlineDate}. Confira regras, etapas e eventuais retificacoes no link oficial.`
+      : '**⏰ Prazo:** confira datas, regras e cronograma no link oficial.');
+  } else if (eventDate) {
+    chunks.push(`**🗓️ Data:** ${eventDate}. Confira horario/local no link oficial.`);
   }
 
   if (classification.hasPdf) {
-    const audience = pickSentence(original, /(quem pode|publico|estudantes|discente|candidato|servidor|comunidade)/i);
-    const deadline = pickSentence(original, /(prazo|inscricoes?|ate o dia|periodo|cronograma)/i);
     chunks.push([
-      '📄 Edital',
-      `Quem pode participar: ${audience || 'confira os requisitos no edital oficial.'}`,
-      `Prazo: ${deadline || 'confira o cronograma no edital oficial.'}`,
-      'Inscricao: use o link oficial da UFG.',
-      'Atencao: o edital oficial prevalece sobre este resumo.',
+      '**📄 Edital**',
+      `- **Quem pode participar:** ${audience || 'confira os requisitos no edital oficial.'}`,
+      `- **Prazo/cronograma:** ${deadline || deadlineDate || 'confira o cronograma no edital oficial.'}`,
+      `- **Inscricao:** use a ${sourceLink}.`,
+      '- **Atencao:** o edital oficial prevalece sobre este resumo.',
     ].join('\n'));
+  } else {
+    chunks.push(`**🔗 Fonte oficial:** ${sourceLink}`);
   }
 
-  chunks.push(`🔗 Fonte oficial: ${item.sourceUrl}`);
   return clamp(chunks.filter(Boolean).join('\n\n'), 2000);
 }
 
@@ -73,6 +106,7 @@ function mapToKinoPayload(item, classification, options = {}) {
   const title = clamp(item.title, 80);
   const description = buildDescription(item, classification, options.summaryText);
   const sourceUrl = item.sourceUrl;
+  const images = buildImageList(item);
   const tags = uniq([
     'UFG',
     item.sourceName,
@@ -116,7 +150,7 @@ function mapToKinoPayload(item, classification, options = {}) {
       localizacao: detectLocation(text, item.sourceName),
       visibility: 'public',
       tags,
-      imagens: [],
+      imagens: images,
       metadata: {
         ...metadata,
         subcategory: '',
@@ -149,7 +183,7 @@ function mapToKinoPayload(item, classification, options = {}) {
     remuneracao: '',
     visibility: 'public',
     tags,
-    imagens: [],
+    imagens: images,
     metadata: {
       ...metadata,
       subcategory: slugify(area),

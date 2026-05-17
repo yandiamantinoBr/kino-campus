@@ -126,6 +126,16 @@ Antes de publicar, sempre confira se a acao ainda esta vigente. O classificador 
 
 Se Yan pedir um post manual por audio, valide a data antes de montar o texto e avise quando a oportunidade ja passou.
 
+## Formato Do Post
+
+Use o mesmo padrao visual que o modal do Kino renderiza:
+
+- titulo ate 80 caracteres;
+- descricao em Markdown seguro, com `**Resumo**`, `**Prazo**`, lista de edital e link oficial unico;
+- emojis apenas como marcadores uteis;
+- imagem de capa da fonte oficial quando existir `image`, `image_url` ou `og:image`;
+- nunca publique um bloco bruto copiado da pagina sem resumir e organizar.
+
 ## Editais e PDFs
 
 Quando houver PDF:
