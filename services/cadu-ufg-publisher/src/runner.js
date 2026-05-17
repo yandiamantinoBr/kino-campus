@@ -1,0 +1,266 @@
+'use strict';
+
+const { classifyItem } = require('./classifier');
+const { loadConfig } = require('./config');
+const { extractHtmlDocument, normalizeWebyItem } = require('./extractors');
+const { HttpClient } = require('./http-client');
+const { mapToKinoPayload } = require('./mapper');
+const { summarizeWithDeepSeek } = require('./model');
+const { notify } = require('./notifier');
+const { extractPdfText } = require('./pdf');
+const { SupabasePublisher } = require('./publisher');
+const { isAllowedByRobots, parseRobotsTxt } = require('./robots');
+const { loadSources, selectSources } = require('./sources');
+const { StateStore } = require('./state');
+const { canonicalizeUrl, nowIso, sha256 } = require('./utils');
+const { parseFeed, parseSitemap } = require('./xml');
+
+async function discoverFromWebyJson(http, source, maxItems) {
+  const items = [];
+  for (const endpoint of ['news.json', 'events.json']) {
+    try {
+      const url = `${source.baseUrl}/${endpoint}?per_page=${maxItems}&sort=updated_at&direction=desc`;
+      const { data } = await http.json(url);
+      const records = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+      records.slice(0, maxItems).forEach((record) => items.push(normalizeWebyItem(source, record, endpoint.startsWith('events') ? 'event' : 'news')));
+    } catch (_) {
+      // Some UFG sites expose only one endpoint. Fallbacks handle the rest.
+    }
+  }
+  return items;
+}
+
+async function discoverFromSitemap(http, source, robots, maxItems) {
+  const sitemapUrl = robots.sitemaps && robots.sitemaps[0]
+    ? robots.sitemaps[0]
+    : `${source.baseUrl}/sitemap.xml`;
+  if (!isAllowedByRobots(sitemapUrl, robots)) return [];
+  const { text } = await http.text(sitemapUrl, { accept: 'application/xml,text/xml,*/*' });
+  const parsed = parseSitemap(text);
+  return parsed.urls
+    .filter((entry) => /\/(n|e|p)\//.test(entry.loc) || /edital|evento|noticia|news/i.test(entry.loc))
+    .slice(0, maxItems)
+    .map((entry) => ({
+      sourceId: source.id,
+      sourceName: source.name,
+      sourceUrl: canonicalizeUrl(entry.loc, source.baseUrl),
+      title: '',
+      summary: '',
+      text: '',
+      updatedAt: entry.lastmod || '',
+      type: 'sitemap',
+      pdfLinks: [],
+      raw: entry,
+    }));
+}
+
+async function discoverFromFeed(http, source, maxItems) {
+  try {
+    const { text } = await http.text(`${source.baseUrl}/feed`, { accept: 'application/rss+xml,application/atom+xml,application/xml,text/xml,*/*' });
+    return parseFeed(text).slice(0, maxItems).map((entry) => ({
+      id: `${source.id}:feed:${entry.url}`,
+      sourceId: source.id,
+      sourceName: source.name,
+      sourceUrl: canonicalizeUrl(entry.url, source.baseUrl),
+      title: entry.title,
+      summary: entry.summary,
+      text: entry.summary,
+      updatedAt: entry.updatedAt || '',
+      type: 'feed',
+      pdfLinks: [],
+      raw: entry,
+    }));
+  } catch (_) {
+    return [];
+  }
+}
+
+async function hydrateItem(http, source, item, robots) {
+  if (item.text && item.title) return item;
+  if (!item.sourceUrl || !isAllowedByRobots(item.sourceUrl, robots)) return item;
+  const { text } = await http.text(item.sourceUrl);
+  const htmlDoc = extractHtmlDocument(source, item.sourceUrl, text);
+  return {
+    ...item,
+    ...htmlDoc,
+    id: item.id || htmlDoc.id,
+    updatedAt: item.updatedAt || htmlDoc.updatedAt,
+  };
+}
+
+async function validateSource(http, source) {
+  try {
+    const robotsUrl = `${source.baseUrl}/robots.txt`;
+    const { text } = await http.text(robotsUrl, { accept: 'text/plain,*/*' });
+    return { ok: true, robots: parseRobotsTxt(text) };
+  } catch (error) {
+    return { ok: false, error: error.message, robots: parseRobotsTxt('') };
+  }
+}
+
+function itemKey(item) {
+  return sha256(`${item.sourceUrl}\n${item.title}\n${item.updatedAt}`);
+}
+
+async function processSource(context, source) {
+  const { http, config, state, dryRun, publisher, runId } = context;
+  const stats = { source: source.id, discovered: 0, published: 0, review: 0, discarded: 0, skipped: 0, disabled: false, errors: [] };
+  const validation = await validateSource(http, source);
+  if (!validation.ok) {
+    stats.disabled = true;
+    stats.errors.push(`robots: ${validation.error}`);
+    return stats;
+  }
+
+  const robots = validation.robots;
+  let candidates = [];
+  const maxItems = config.maxItemsPerSource;
+  candidates = candidates.concat(await discoverFromWebyJson(http, source, maxItems));
+  if (candidates.length < maxItems) candidates = candidates.concat(await discoverFromFeed(http, source, maxItems));
+  if (candidates.length < maxItems) {
+    try {
+      candidates = candidates.concat(await discoverFromSitemap(http, source, robots, maxItems));
+    } catch (error) {
+      stats.errors.push(`sitemap: ${error.message}`);
+    }
+  }
+
+  const byUrl = new Map();
+  candidates.forEach((candidate) => {
+    if (candidate.sourceUrl && !byUrl.has(candidate.sourceUrl)) byUrl.set(candidate.sourceUrl, candidate);
+  });
+  const uniqueCandidates = Array.from(byUrl.values()).slice(0, maxItems);
+  stats.discovered = uniqueCandidates.length;
+
+  for (const candidate of uniqueCandidates) {
+    try {
+      const hydrated = await hydrateItem(http, source, candidate, robots);
+      const key = itemKey(hydrated);
+      if (state.has(key)) {
+        stats.skipped += 1;
+        continue;
+      }
+
+      const classification = classifyItem(hydrated, source);
+      if (classification.decision === 'discard') {
+        stats.discarded += 1;
+        state.mark(key, { decision: 'discard', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence });
+        continue;
+      }
+
+      if (classification.hasPdf && hydrated.pdfLinks && hydrated.pdfLinks[0]) {
+        try {
+          const pdf = await extractPdfText(config, hydrated.pdfLinks[0]);
+          if (pdf.text) {
+            hydrated.pdfText = pdf.text;
+            hydrated.text = `${hydrated.text}\n\n${pdf.text}`;
+          } else if (pdf.skippedReason) {
+            stats.errors.push(`pdf:${hydrated.pdfLinks[0]}: ${pdf.skippedReason}`);
+          }
+        } catch (error) {
+          stats.errors.push(`pdf:${hydrated.pdfLinks[0]}: ${error.message}`);
+        }
+      }
+
+      let summaryText = '';
+      try {
+        summaryText = await summarizeWithDeepSeek(config, hydrated, classification);
+      } catch (error) {
+        stats.errors.push(`model:${hydrated.sourceUrl}: ${error.message}`);
+      }
+
+      const payload = mapToKinoPayload(hydrated, classification, { runId, summaryText });
+      if (classification.decision === 'review') {
+        stats.review += 1;
+        state.mark(key, { decision: 'review', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, payload });
+        continue;
+      }
+
+      if (dryRun) {
+        stats.published += 1;
+        state.mark(key, { decision: 'dry-run-publish', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, payload });
+        continue;
+      }
+
+      if (context.publishedThisRun >= config.maxPublishPerRun) {
+        stats.review += 1;
+        state.mark(key, { decision: 'review:publish-cap', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, payload });
+        continue;
+      }
+
+      const result = await publisher.createPost(payload);
+      if (result && result.ok) {
+        context.publishedThisRun += 1;
+        stats.published += 1;
+        state.mark(key, { decision: 'published', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, postId: result.post && result.post.id });
+      } else {
+        stats.review += 1;
+        stats.errors.push(`publish:${hydrated.sourceUrl}: ${(result && result.code) || 'unknown'}`);
+        state.mark(key, { decision: 'review:publish-failed', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, payload, error: result });
+      }
+    } catch (error) {
+      stats.errors.push(`${candidate.sourceUrl || source.id}: ${error.message}`);
+    }
+  }
+
+  return stats;
+}
+
+function buildDigest(run) {
+  const totals = run.sources.reduce((acc, item) => {
+    ['discovered', 'published', 'review', 'discarded', 'skipped'].forEach((key) => { acc[key] += item[key] || 0; });
+    if (item.disabled) acc.disabled += 1;
+    acc.errors += (item.errors || []).length;
+    return acc;
+  }, { discovered: 0, published: 0, review: 0, discarded: 0, skipped: 0, disabled: 0, errors: 0 });
+
+  return [
+    `Run: ${run.id}`,
+    `Modo: ${run.mode}${run.dryRun ? ' (dry-run)' : ''}`,
+    `Descobertos: ${totals.discovered}`,
+    `Publicados: ${totals.published}`,
+    `Para revisao: ${totals.review}`,
+    `Descartados: ${totals.discarded}`,
+    `Duplicados/ignorados: ${totals.skipped}`,
+    `Fontes desabilitadas nesta execucao: ${totals.disabled}`,
+    `Erros: ${totals.errors}`,
+  ].join('\n');
+}
+
+async function runCadu(options = {}) {
+  const config = loadConfig();
+  const mode = options.mode || 'quick';
+  const dryRun = options.dryRun !== false && !options.publish;
+  const runId = `cadu-${mode}-${Date.now()}`;
+  const http = new HttpClient({ userAgent: config.userAgent, timeoutMs: config.requestTimeoutMs, minDelayMs: config.minDelayMs });
+  const state = new StateStore(options.statePath || config.statePath).load();
+  const sources = selectSources(loadSources(config.sourcePath), mode, options.sources || []);
+  const publisher = dryRun ? null : new SupabasePublisher(config);
+  const context = { config, dryRun, http, publisher, runId, state, publishedThisRun: 0 };
+  const run = { id: runId, mode, dryRun, startedAt: nowIso(), sources: [] };
+
+  for (const source of sources) {
+    const stats = await processSource(context, source);
+    run.sources.push(stats);
+  }
+
+  run.finishedAt = nowIso();
+  state.addRun(run);
+  state.save();
+
+  const digest = buildDigest(run);
+  if (!dryRun || options.notifyDryRun) {
+    await notify(config, 'Cadu Bot - curadoria UFG', digest);
+  }
+
+  return { run, digest };
+}
+
+module.exports = {
+  buildDigest,
+  discoverFromFeed,
+  discoverFromSitemap,
+  discoverFromWebyJson,
+  runCadu,
+  validateSource,
+};

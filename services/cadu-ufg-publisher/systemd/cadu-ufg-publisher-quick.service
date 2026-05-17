@@ -1,0 +1,11 @@
+[Unit]
+Description=Cadu UFG Publisher quick run
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=cadu
+WorkingDirectory=/opt/kino-campus
+Environment=CADU_ENV_FILE=/opt/kino-campus/services/cadu-ufg-publisher/.env.local
+ExecStart=/usr/bin/npm run cadu:publish:quick

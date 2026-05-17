@@ -16,7 +16,12 @@
     "check:scripts": "node scripts/validate-script-chains.js",
     "check:routes": "node scripts/validate-public-routes.js",
     "check:version": "node scripts/validate-version-map.js",
-    "check:all": "npm run check:version && npm run check:structure && npm run check:scripts && npm run check:routes && npm run check:hygiene && npm test"
+    "check:all": "npm run check:version && npm run check:structure && npm run check:scripts && npm run check:routes && npm run check:hygiene && npm test",
+    "cadu:dry-run": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=quick",
+    "cadu:dry-run:full": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=full",
+    "cadu:publish:quick": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=quick",
+    "cadu:publish:full": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=full",
+    "test:cadu": "jest tests/unit/cadu-ufg-publisher.test.js --runInBand"
   },
   "repository": {
     "type": "git",

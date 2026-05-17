@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Cadu UFG Publisher full crawl four times per week
+
+[Timer]
+OnCalendar=Mon,Wed,Fri,Sat 06:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

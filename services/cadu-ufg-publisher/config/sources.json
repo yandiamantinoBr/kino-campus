@@ -1,0 +1,33 @@
+{
+  "sources": [
+    { "id": "ufg", "name": "UFG", "baseUrl": "https://ufg.br", "tier": 1, "quick": true },
+    { "id": "secom", "name": "SECOM", "baseUrl": "https://secom.ufg.br", "tier": 1, "quick": true },
+    { "id": "prograd", "name": "PROGRAD", "baseUrl": "https://prograd.ufg.br", "tier": 1, "quick": true },
+    { "id": "proex", "name": "PROEX", "baseUrl": "https://proex.ufg.br", "tier": 1, "quick": true },
+    { "id": "prpi", "name": "PRPI", "baseUrl": "https://prpi.ufg.br", "tier": 1, "quick": true },
+    { "id": "verbena", "name": "Instituto Verbena", "baseUrl": "https://institutoverbena.ufg.br", "tier": 1, "quick": true },
+    { "id": "ciar", "name": "CIAR", "baseUrl": "https://ciar.ufg.br", "tier": 2, "quick": true },
+    { "id": "centro-linguas", "name": "Centro de Linguas", "baseUrl": "https://centrodelinguas.ufg.br", "tier": 2, "quick": false },
+    { "id": "cl", "name": "Centro de Linguas", "baseUrl": "https://cl.ufg.br", "tier": 2, "quick": false },
+    { "id": "face", "name": "FACE", "baseUrl": "https://face.ufg.br", "tier": 2, "quick": false },
+    { "id": "direito", "name": "Faculdade de Direito", "baseUrl": "https://direito.ufg.br", "tier": 2, "quick": false },
+    { "id": "fe", "name": "Faculdade de Educacao", "baseUrl": "https://fe.ufg.br", "tier": 2, "quick": false },
+    { "id": "fef", "name": "FEFD", "baseUrl": "https://fef.ufg.br", "tier": 2, "quick": false },
+    { "id": "farmacia", "name": "Faculdade de Farmacia", "baseUrl": "https://farmacia.ufg.br", "tier": 2, "quick": false },
+    { "id": "filosofia", "name": "Faculdade de Filosofia", "baseUrl": "https://filosofia.ufg.br", "tier": 2, "quick": false },
+    { "id": "emac", "name": "EMAC", "baseUrl": "https://emac.ufg.br", "tier": 3, "quick": false },
+    { "id": "fcs", "name": "FCS", "baseUrl": "https://fcs.ufg.br", "tier": 3, "quick": false },
+    { "id": "fh", "name": "Faculdade de Historia", "baseUrl": "https://fh.ufg.br", "tier": 3, "quick": false },
+    { "id": "letras", "name": "Faculdade de Letras", "baseUrl": "https://letras.ufg.br", "tier": 3, "quick": false },
+    { "id": "inf", "name": "Instituto de Informatica", "baseUrl": "https://inf.ufg.br", "tier": 3, "quick": false },
+    { "id": "ime", "name": "IME", "baseUrl": "https://ime.ufg.br", "tier": 3, "quick": false },
+    { "id": "if", "name": "Instituto de Fisica", "baseUrl": "https://if.ufg.br", "tier": 3, "quick": false },
+    { "id": "iq", "name": "Instituto de Quimica", "baseUrl": "https://iq.ufg.br", "tier": 3, "quick": false },
+    { "id": "icb", "name": "ICB", "baseUrl": "https://icb.ufg.br", "tier": 3, "quick": false },
+    { "id": "iesa", "name": "IESA", "baseUrl": "https://iesa.ufg.br", "tier": 3, "quick": false },
+    { "id": "fanut", "name": "FANUT", "baseUrl": "https://fanut.ufg.br", "tier": 3, "quick": false },
+    { "id": "agro", "name": "Escola de Agronomia", "baseUrl": "https://agro.ufg.br", "tier": 3, "quick": false },
+    { "id": "vet", "name": "Veterinaria e Zootecnia", "baseUrl": "https://vet.ufg.br", "tier": 3, "quick": false },
+    { "id": "fau", "name": "FAU", "baseUrl": "https://fau.ufg.br", "tier": 3, "quick": false }
+  ]
+}
