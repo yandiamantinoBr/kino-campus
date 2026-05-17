@@ -21,6 +21,7 @@
     "cadu:dry-run:full": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=full",
     "cadu:publish:quick": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=quick",
     "cadu:publish:full": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=full",
+    "cadu:reviews": "node services/cadu-ufg-publisher/src/reviews.js",
     "test:cadu": "jest tests/unit/cadu-ufg-publisher.test.js --runInBand"
   },
   "repository": {

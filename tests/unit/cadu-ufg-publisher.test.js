@@ -2,6 +2,7 @@
 
 const { classifyItem } = require('../../services/cadu-ufg-publisher/src/classifier');
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
+const { collectReviews, formatReviews } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
 const { parseFeed, parseSitemap } = require('../../services/cadu-ufg-publisher/src/xml');
 
@@ -71,5 +72,18 @@ describe('cadu-ufg-publisher', () => {
     expect(row.author_id).toBe('user-1');
     expect(row.module).toBe('oportunidades');
     expect(row.metadata.source_url).toBe(item.sourceUrl);
+  });
+
+  test('reviews helper lists review decisions only', () => {
+    const items = collectReviews({
+      seen: {
+        a: { decision: 'discard', title: 'Nao entra' },
+        b: { decision: 'review', title: 'Edital para revisar', sourceUrl: 'https://ufg.br/n/2', updatedAt: '2026-05-17T10:00:00Z' },
+        c: { decision: 'review:publish-failed', title: 'Falha de publish', sourceUrl: 'https://ufg.br/n/3', updatedAt: '2026-05-17T11:00:00Z' },
+      },
+    });
+    expect(items).toHaveLength(2);
+    expect(items[0].title).toBe('Falha de publish');
+    expect(formatReviews(items)).toContain('Edital para revisar');
   });
 });
