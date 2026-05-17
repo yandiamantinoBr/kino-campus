@@ -115,6 +115,17 @@ Exclua:
 - conteudo sem data/fonte clara;
 - item antigo sem inscricao ou utilidade atual.
 
+### Temporalidade
+
+Antes de publicar, sempre confira se a acao ainda esta vigente. O classificador detecta prazos em formatos como `20/05/2026`, `04 a 11 de maio` e `4-11/05`.
+
+- prazo/inscricao vencido: `discard`;
+- evento com data passada: `discard`;
+- prazo futuro: pode seguir para `publish` ou `review`, conforme score;
+- data ambigua ou sem contexto claro: manter em `review`.
+
+Se Yan pedir um post manual por audio, valide a data antes de montar o texto e avise quando a oportunidade ja passou.
+
 ## Editais e PDFs
 
 Quando houver PDF:

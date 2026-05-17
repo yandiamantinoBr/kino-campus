@@ -9,7 +9,7 @@ Servico de curadoria para o Cadu Bot buscar publicacoes relevantes em sites da U
 - `npm run cadu:publish:quick`: publica itens de alta confianca das fontes rapidas.
 - `npm run cadu:publish:full`: publica itens de alta confianca de todas as fontes.
 
-O modo padrao e sempre dry-run. Publicacao real exige `--publish` e credenciais em `services/cadu-ufg-publisher/.env.local` ou variaveis de ambiente.
+O modo padrao e sempre dry-run. Publicacao real exige `--publish` e credenciais em `services/cadu-ufg-publisher/.env.local` ou variaveis de ambiente. Dry-run nao marca itens publicaveis como ja processados, para nao bloquear uma publicacao real posterior.
 
 ## Seguranca Operacional
 
@@ -33,6 +33,8 @@ Para reduzir falso positivo, o fluxo e hibrido:
 - `publish`: score >= 0.78;
 - `review`: score entre 0.55 e 0.77;
 - `discard`: score abaixo de 0.55.
+
+Prazos vencidos derrubam o item para `discard`, mesmo quando o score textual seria alto. Datas detectadas ficam em `metadata.deadline_date`, `metadata.event_date_detected` e `metadata.temporal_status`.
 
 Itens de revisao ficam no arquivo de estado local para auditoria e podem ser enviados no digest.
 

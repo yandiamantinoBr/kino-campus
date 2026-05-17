@@ -1,6 +1,6 @@
 'use strict';
 
-const { classifyItem } = require('../../services/cadu-ufg-publisher/src/classifier');
+const { analyzeTemporalRelevance, classifyItem } = require('../../services/cadu-ufg-publisher/src/classifier');
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
 const { collectReviews, formatReviews } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
@@ -50,6 +50,36 @@ describe('cadu-ufg-publisher', () => {
     expect(result.category).toBe('monitoria');
   });
 
+  test('classifier discards expired signup windows', () => {
+    const item = {
+      title: 'Quer trabalhar com redes sociais na UFG?',
+      summary: 'Inscricoes de 04 a 11 de maio para estudantes da UFG.',
+      text: 'Processo seletivo com bolsa para redes sociais.',
+      updatedAt: '2026-05-04',
+      pdfLinks: [],
+    };
+    const result = classifyItem(item, { tier: 1 }, { now: '2026-05-17T12:00:00-03:00' });
+
+    expect(result.temporal.expired).toBe(true);
+    expect(result.temporal.deadlineDate).toBe('2026-05-11');
+    expect(result.decision).toBe('discard');
+  });
+
+  test('temporal analysis keeps future deadlines eligible', () => {
+    const item = {
+      title: 'Edital de monitoria para estudantes da UFG',
+      summary: 'Inscricoes ate 20/05/2026.',
+      text: 'Processo seletivo com bolsa.',
+      updatedAt: '2026-05-17',
+    };
+    const temporal = analyzeTemporalRelevance(item, { now: '2026-05-17T12:00:00-03:00' });
+    const result = classifyItem(item, { tier: 1 }, { now: '2026-05-17T12:00:00-03:00' });
+
+    expect(temporal.expired).toBe(false);
+    expect(temporal.deadlineDate).toBe('2026-05-20');
+    expect(['publish', 'review']).toContain(result.decision);
+  });
+
   test('mapper keeps Kino modal fields and one official link', () => {
     const item = {
       id: 'ufg:1',
@@ -61,13 +91,14 @@ describe('cadu-ufg-publisher', () => {
       updatedAt: '2026-05-17',
       pdfLinks: ['https://prograd.ufg.br/edital.pdf'],
     };
-    const classification = classifyItem(item, { tier: 1 });
+    const classification = classifyItem(item, { tier: 1 }, { now: '2026-05-17T12:00:00-03:00' });
     const payload = mapToKinoPayload(item, classification, { runId: 'test-run' });
     expect(payload.modulo).toBe('oportunidades');
     expect(payload.titulo.length).toBeLessThanOrEqual(80);
     expect(payload.descricao.length).toBeLessThanOrEqual(2000);
     expect(payload.metadata.source_url).toBe(item.sourceUrl);
     expect(payload.metadata.link_as_cta).toBe(true);
+    expect(payload.metadata.deadline_date).toBe('2026-05-20');
 
     const row = toPostgrestInsert(payload, 'user-1');
     expect(row.author_id).toBe('user-1');

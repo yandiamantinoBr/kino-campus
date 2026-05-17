@@ -38,7 +38,12 @@ function buildDescription(item, classification, summaryText = '') {
   chunks.push(clamp(original, 850));
 
   if (classification.hasDeadline) {
-    chunks.push('⏰ Prazo: confira a data e as regras no link oficial.');
+    const deadlineDate = classification.temporal && classification.temporal.deadlineDate
+      ? classification.temporal.deadlineDate.split('-').reverse().join('/')
+      : '';
+    chunks.push(deadlineDate
+      ? `⏰ Prazo: ${deadlineDate}. Confira as regras no link oficial.`
+      : '⏰ Prazo: confira a data e as regras no link oficial.');
   }
 
   if (classification.hasPdf) {
@@ -86,6 +91,9 @@ function mapToKinoPayload(item, classification, options = {}) {
     original_title: item.title,
     edital_pdf_url: (item.pdfLinks && item.pdfLinks[0]) || '',
     confidence_score: classification.confidence,
+    deadline_date: (classification.temporal && classification.temporal.deadlineDate) || '',
+    event_date_detected: (classification.temporal && classification.temporal.eventDate) || '',
+    temporal_status: classification.temporal && classification.temporal.expired ? classification.temporal.reason : 'current_or_unknown',
     cadu_run_id: options.runId || '',
     link: sourceUrl,
     link_as_cta: true,
