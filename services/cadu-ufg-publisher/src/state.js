@@ -18,7 +18,9 @@ class StateStore {
   }
 
   has(key) {
-    return Boolean(this.data.seen[key]);
+    const entry = this.data.seen[key];
+    if (!entry) return false;
+    return !(typeof entry.decision === 'string' && entry.decision.startsWith('dry-run'));
   }
 
   mark(key, value) {

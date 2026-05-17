@@ -4,6 +4,7 @@ const { classifyItem } = require('../../services/cadu-ufg-publisher/src/classifi
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
 const { collectReviews, formatReviews } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
+const { StateStore } = require('../../services/cadu-ufg-publisher/src/state');
 const { parseFeed, parseSitemap } = require('../../services/cadu-ufg-publisher/src/xml');
 
 describe('cadu-ufg-publisher', () => {
@@ -85,5 +86,14 @@ describe('cadu-ufg-publisher', () => {
     expect(items).toHaveLength(2);
     expect(items[0].title).toBe('Falha de publish');
     expect(formatReviews(items)).toContain('Edital para revisar');
+  });
+
+  test('state ignores dry-run publish markers for real publishes', () => {
+    const state = new StateStore('unused');
+    state.mark('dry', { decision: 'dry-run-publish' });
+    state.mark('published', { decision: 'published' });
+
+    expect(state.has('dry')).toBe(false);
+    expect(state.has('published')).toBe(true);
   });
 });

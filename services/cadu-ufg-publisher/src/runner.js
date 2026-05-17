@@ -178,7 +178,6 @@ async function processSource(context, source) {
 
       if (dryRun) {
         stats.published += 1;
-        state.mark(key, { decision: 'dry-run-publish', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, payload });
         continue;
       }
 
