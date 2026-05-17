@@ -159,6 +159,44 @@ class SupabasePublisher {
     const compatText = await compatResponse.text();
     return { ok: false, count: 0, error: compatText.slice(0, 300) };
   }
+
+  async replacePostMedia(postId, images) {
+    const deleteResponse = await fetch(`${this.url}/rest/v1/post_media?post_id=eq.${encodeURIComponent(postId)}`, {
+      method: 'DELETE',
+      headers: {
+        ...this.headers(),
+        prefer: 'return=minimal',
+      },
+    });
+    if (!deleteResponse.ok) {
+      const text = await deleteResponse.text();
+      return { ok: false, count: 0, error: text.slice(0, 300) };
+    }
+    return this.insertPostMedia(postId, images);
+  }
+
+  async updatePost(postId, payload) {
+    if (!this.session) await this.signIn();
+    const row = toPostgrestInsert(payload, this.session.user.id);
+    delete row.author_id;
+
+    const response = await fetch(`${this.url}/rest/v1/posts?id=eq.${encodeURIComponent(postId)}`, {
+      method: 'PATCH',
+      headers: {
+        ...this.headers(),
+        prefer: 'return=representation',
+      },
+      body: JSON.stringify(row),
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(`Post update failed: HTTP ${response.status} ${text.slice(0, 500)}`);
+    }
+    const data = JSON.parse(text);
+    const post = Array.isArray(data) ? data[0] : data;
+    const media = await this.replacePostMedia(postId, normalizeImages(payload));
+    return { ok: true, post, media };
+  }
 }
 
 module.exports = {

@@ -40,6 +40,8 @@ Prazos vencidos derrubam o item para `discard`, mesmo quando o score textual ser
 
 Itens de revisao ficam no arquivo de estado local para auditoria e podem ser enviados no digest.
 
+`SupabasePublisher.updatePost(postId, payload)` existe para reparar uma publicacao propria pendente sem criar duplicata; ele atualiza `posts` e substitui `post_media`.
+
 ## Systemd
 
 Use os templates em `systemd/` no VPS, ajustando `WorkingDirectory`, usuario e caminho do Node conforme a instalacao.
