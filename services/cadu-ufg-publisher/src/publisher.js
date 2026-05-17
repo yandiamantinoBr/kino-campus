@@ -99,7 +99,13 @@ class SupabasePublisher {
       throw new Error(`Post insert failed: HTTP ${response.status} ${text.slice(0, 500)}`);
     }
     const data = JSON.parse(text);
-    return { ok: true, post: Array.isArray(data) ? data[0] : data };
+    const post = Array.isArray(data) ? data[0] : data;
+    return {
+      ok: true,
+      post,
+      pending: post && post.status === 'pending',
+      pendingReason: post && post.moderation_reason ? post.moderation_reason : '',
+    };
   }
 }
 

@@ -8,7 +8,10 @@ function collectReviews(stateData, limit = 20) {
   const seen = (stateData && stateData.seen) || {};
   return Object.entries(seen)
     .map(([key, value]) => ({ key, ...(value || {}) }))
-    .filter((item) => String(item.decision || '').startsWith('review'))
+    .filter((item) => {
+      const decision = String(item.decision || '');
+      return decision.startsWith('review') || decision === 'pending';
+    })
     .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
     .slice(0, limit);
 }
@@ -19,8 +22,9 @@ function formatReviews(items) {
     `${index + 1}. ${item.title || '(sem titulo)'}`,
     `   decisao: ${item.decision || 'review'}`,
     `   confianca: ${item.confidence == null ? 'n/a' : item.confidence}`,
+    item.pendingReason ? `   moderacao: ${item.pendingReason}` : '',
     `   fonte: ${item.sourceUrl || 'n/a'}`,
-  ].join('\n')).join('\n\n');
+  ].filter(Boolean).join('\n')).join('\n\n');
 }
 
 if (require.main === module) {

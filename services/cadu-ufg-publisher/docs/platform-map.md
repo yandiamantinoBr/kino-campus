@@ -56,6 +56,7 @@ Por isso:
 Use linguagem objetiva:
 
 - `publicados`: itens enviados ao Kino.
+- `pendentes de moderacao`: itens criados no banco, mas ainda aguardando liberacao/admin/trust score.
 - `revisao`: itens bons, mas com incerteza.
 - `descartados`: itens sem relevancia suficiente.
 - `fontes desabilitadas`: sites inacessiveis ou sem permissao de crawling naquela execucao.

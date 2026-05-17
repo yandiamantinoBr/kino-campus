@@ -104,7 +104,7 @@ function itemKey(item) {
 
 async function processSource(context, source) {
   const { http, config, state, dryRun, publisher, runId } = context;
-  const stats = { source: source.id, discovered: 0, published: 0, review: 0, discarded: 0, skipped: 0, disabled: false, errors: [] };
+  const stats = { source: source.id, discovered: 0, published: 0, pending: 0, review: 0, discarded: 0, skipped: 0, disabled: false, errors: [] };
   const validation = await validateSource(http, source);
   if (!validation.ok) {
     stats.disabled = true;
@@ -191,8 +191,20 @@ async function processSource(context, source) {
       const result = await publisher.createPost(payload);
       if (result && result.ok) {
         context.publishedThisRun += 1;
-        stats.published += 1;
-        state.mark(key, { decision: 'published', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, postId: result.post && result.post.id });
+        if (result.pending) {
+          stats.pending += 1;
+          state.mark(key, {
+            decision: 'pending',
+            sourceUrl: hydrated.sourceUrl,
+            title: hydrated.title,
+            confidence: classification.confidence,
+            postId: result.post && result.post.id,
+            pendingReason: result.pendingReason || '',
+          });
+        } else {
+          stats.published += 1;
+          state.mark(key, { decision: 'published', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, postId: result.post && result.post.id });
+        }
       } else {
         stats.review += 1;
         stats.errors.push(`publish:${hydrated.sourceUrl}: ${(result && result.code) || 'unknown'}`);
@@ -208,17 +220,18 @@ async function processSource(context, source) {
 
 function buildDigest(run) {
   const totals = run.sources.reduce((acc, item) => {
-    ['discovered', 'published', 'review', 'discarded', 'skipped'].forEach((key) => { acc[key] += item[key] || 0; });
+    ['discovered', 'published', 'pending', 'review', 'discarded', 'skipped'].forEach((key) => { acc[key] += item[key] || 0; });
     if (item.disabled) acc.disabled += 1;
     acc.errors += (item.errors || []).length;
     return acc;
-  }, { discovered: 0, published: 0, review: 0, discarded: 0, skipped: 0, disabled: 0, errors: 0 });
+  }, { discovered: 0, published: 0, pending: 0, review: 0, discarded: 0, skipped: 0, disabled: 0, errors: 0 });
 
   return [
     `Run: ${run.id}`,
     `Modo: ${run.mode}${run.dryRun ? ' (dry-run)' : ''}`,
     `Descobertos: ${totals.discovered}`,
     `Publicados: ${totals.published}`,
+    `Pendentes de moderacao: ${totals.pending}`,
     `Para revisao: ${totals.review}`,
     `Descartados: ${totals.discarded}`,
     `Duplicados/ignorados: ${totals.skipped}`,

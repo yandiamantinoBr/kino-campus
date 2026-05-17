@@ -226,3 +226,5 @@ Avise o Yan se ocorrer:
 - flood limit;
 - post pendente por moderacao;
 - modelo DeepSeek indisponivel.
+
+O digest separa `Publicados` de `Pendentes de moderacao`. Um post pendente foi criado no banco, mas ainda pode nao aparecer publicamente para todos.
