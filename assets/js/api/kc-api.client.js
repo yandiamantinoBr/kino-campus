@@ -1143,6 +1143,12 @@
       ? r.ratingCount
       : (r.rating_count != null ? r.rating_count : (authorProfile && authorProfile.rating_count != null ? authorProfile.rating_count : 0));
     const ratingCount = Math.max(0, parseInt(String(ratingCountRaw != null ? ratingCountRaw : 0), 10) || 0);
+    const normalizedImages = (() => {
+      const direct = Array.isArray(r.imagens) ? r.imagens : (Array.isArray(r.images) ? r.images : []);
+      const fallback = pickFirstNonEmpty([r.cover_url, r.coverUrl, r.image_url, r.imageUrl, meta.cover_url, meta.coverUrl, meta.image_url, meta.imageUrl]);
+      const values = direct.length ? direct : (fallback ? [fallback] : []);
+      return values.map((value) => String(value || '').trim()).filter(Boolean);
+    })();
 
     if (authorProfile) {
       authorProfile.rating_avg = Number.isFinite(rating) ? rating : null;
@@ -1195,7 +1201,10 @@
       condicao: r.condicao || r.condition || null,
       precoOriginal: (r.precoOriginal != null ? r.precoOriginal : null),
       precoTexto: r.precoTexto || r.priceText || null,
-      imagens: Array.isArray(r.imagens) ? r.imagens : (Array.isArray(r.images) ? r.images : null),
+      imagens: normalizedImages,
+      images: normalizedImages,
+      cover_url: r.cover_url || r.coverUrl || normalizedImages[0] || '',
+      coverUrl: r.coverUrl || r.cover_url || normalizedImages[0] || '',
       // Metadata (JSONB/local): mantém subcategory e labels para filtros
       metadata: meta,
       authorProfile,

@@ -39,8 +39,10 @@ function loadConfig() {
     reviewBeforePublish: process.env.CADU_REVIEW_BEFORE_PUBLISH !== 'false',
     reviewPreviewLimit: Number(process.env.CADU_REVIEW_PREVIEW_LIMIT || 5),
     maxPdfBytes: Number(process.env.CADU_MAX_PDF_BYTES || 25 * 1024 * 1024),
+    maxImageBytes: Number(process.env.CADU_MAX_IMAGE_BYTES || 6 * 1024 * 1024),
     supabaseUrl: process.env.CADU_SUPABASE_URL || process.env.SUPABASE_URL,
     supabaseAnonKey: process.env.CADU_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,
+    supabaseStorageBucket: process.env.CADU_SUPABASE_STORAGE_BUCKET || 'kino-media',
     kinoEmail: process.env.CADU_KINO_EMAIL,
     kinoPassword: process.env.CADU_KINO_PASSWORD,
     telegramBotToken: process.env.CADU_TELEGRAM_BOT_TOKEN,
@@ -51,6 +53,7 @@ function loadConfig() {
     emailTo: process.env.CADU_EMAIL_TO || 'contato@kinocampus.com.br',
     deepseekApiKey,
     deepseekBaseUrl: process.env.CADU_DEEPSEEK_BASE_URL,
+    deepseekEndpoint: process.env.CADU_DEEPSEEK_ENDPOINT,
     deepseekModel: process.env.CADU_DEEPSEEK_MODEL,
     useModel: useModelEnv ? useModelEnv === 'true' : Boolean(deepseekApiKey),
   };

@@ -77,6 +77,23 @@ describe('KCAPI - API Client', () => {
 
   // ── 3. ENV ───────────────────────────────────────────────────────────
 
+  describe('normalizePost media fallbacks', () => {
+    test('promove metadata.image_url para imagens/images/cover_url', () => {
+      const post = api.normalizePost({
+        id: 'post-1',
+        module: 'eventos',
+        category: 'academicos',
+        title: 'Seminario EaD',
+        description: 'Evento oficial',
+        metadata: { image_url: 'https://cdn.example.com/cover.jpg' },
+      });
+
+      expect(post.imagens).toEqual(['https://cdn.example.com/cover.jpg']);
+      expect(post.images).toEqual(['https://cdn.example.com/cover.jpg']);
+      expect(post.cover_url).toBe('https://cdn.example.com/cover.jpg');
+    });
+  });
+
   describe('ENV', () => {
     test('possui propriedade driver', () => {
       expect(api.ENV).toHaveProperty('driver');

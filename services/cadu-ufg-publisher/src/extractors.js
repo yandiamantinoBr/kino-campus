@@ -33,14 +33,38 @@ function extractFirstImageUrl(html, baseUrl) {
   return match ? resolveAssetUrl(match[1], baseUrl) : '';
 }
 
+function extractLinksFromHtml(html, baseUrl) {
+  const links = [];
+  const seen = new Set();
+  String(html || '').replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, labelHtml) => {
+    const url = canonicalizeUrl(href, baseUrl);
+    if (!url || seen.has(url)) return '';
+    seen.add(url);
+    links.push({
+      url,
+      label: normalizeWhitespace(stripHtml(labelHtml || '')),
+    });
+    return '';
+  });
+
+  extractUrls(String(html || '')).forEach((rawUrl) => {
+    const url = canonicalizeUrl(rawUrl, baseUrl);
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    links.push({ url, label: '' });
+  });
+
+  return links;
+}
+
 function normalizeWebyItem(source, item, type = 'news') {
   const html = String(item.text || item.body || item.summary || '');
   const title = cleanTitle(decodeEntities(item.title || item.name || ''));
   const text = stripHtml(html || item.summary || '');
   const sourceUrl = buildWebyUrl(source, item, type);
   const updatedAt = item.updated_at || item.date_begin_at || item.created_at || item.published_at || '';
-  const rawLinks = extractUrls(html);
-  const pdfLinks = rawLinks.filter((url) => /\.pdf(?:$|[?#])/i.test(url)).map((url) => canonicalizeUrl(url, sourceUrl));
+  const extractedLinks = extractLinksFromHtml(html, sourceUrl);
+  const pdfLinks = extractedLinks.map((link) => link.url).filter((url) => /\.pdf(?:$|[?#])/i.test(url));
 
   return {
     id: `${source.id}:${type}:${item.id || item.slug || sourceUrl}`,
@@ -55,6 +79,7 @@ function normalizeWebyItem(source, item, type = 'news') {
     updatedAt,
     type,
     pdfLinks,
+    extractedLinks,
     raw: item,
   };
 }
@@ -73,8 +98,8 @@ function extractHtmlDocument(source, url, html) {
   const articleMatch = String(html || '').match(/<article[^>]*>([\s\S]*?)<\/article>/i);
   const mainMatch = String(html || '').match(/<main[^>]*>([\s\S]*?)<\/main>/i);
   const contentHtml = articleMatch ? articleMatch[1] : (mainMatch ? mainMatch[1] : html);
-  const links = Array.from(String(html || '').matchAll(/href=["']([^"']+)["']/gi)).map((m) => canonicalizeUrl(m[1], url));
-  const pdfLinks = links.filter((link) => /\.pdf(?:$|[?#])/i.test(link));
+  const extractedLinks = extractLinksFromHtml(html, url);
+  const pdfLinks = extractedLinks.map((link) => link.url).filter((link) => /\.pdf(?:$|[?#])/i.test(link));
 
   return {
     id: `${source.id}:html:${url}`,
@@ -89,12 +114,14 @@ function extractHtmlDocument(source, url, html) {
     updatedAt: '',
     type: 'html',
     pdfLinks,
+    extractedLinks,
     raw: {},
   };
 }
 
 module.exports = {
   cleanTitle,
+  extractLinksFromHtml,
   extractHtmlDocument,
   extractFirstImageUrl,
   normalizeWebyItem,

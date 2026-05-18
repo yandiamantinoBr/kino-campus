@@ -27,10 +27,10 @@ O publicador usa Auth REST do Supabase com a conta dedicada do Cadu, sincroniza 
 
 - `eventos`: local, data/hora detectadas, link oficial e `link_as_cta`;
 - `oportunidades`: area, modalidade presencial por padrao, contato e link oficial.
-- descricao em Markdown seguro (`**negrito**`, listas e link oficial unico), compatível com o preview/render do Kino;
-- imagem de capa quando a fonte oficial expõe `image`, `image_url` ou `og:image`; a URL entra em `post_media` como capa.
+- descricao em Markdown seguro (`**negrito**`, listas e links oficiais essenciais), compatível com o preview/render do Kino;
+- imagem de capa quando a fonte oficial expõe `image`, `image_url` ou `og:image`; o Cadu baixa a imagem remota, sobe para o bucket `kino-media` e grava a URL publica em `post_media` como capa. Se o upload falhar, usa a URL remota como fallback e reporta em `media.uploads`.
 
-O Cadu tambem inclui cronograma detectado em frases com prazo, inscricao, recurso, resultado ou homologacao, e usa categoria `pesquisa` para PRPI, PIBIC/PIVIC, Fapeg, iniciacao cientifica e mobilidade academica.
+O Cadu tambem inclui `Datas importantes` em frases com prazo, inscricao, recurso, resultado ou homologacao, evita repetir o cronograma do resumo e usa categoria `pesquisa` para PRPI, PIBIC/PIVIC, Fapeg, iniciacao cientifica e mobilidade academica.
 
 Para reduzir falso positivo, o fluxo e hibrido:
 

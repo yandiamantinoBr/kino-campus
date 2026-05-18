@@ -133,10 +133,12 @@ Se Yan pedir um post manual por audio, valide a data antes de montar o texto e a
 Use o mesmo padrao visual que o modal do Kino renderiza:
 
 - titulo ate 80 caracteres;
-- descricao em Markdown seguro, com `**Resumo**`, `**Prazo**`, lista de edital e link oficial unico;
+- descricao em Markdown seguro, entrando direto no conteudo acionavel, sem titulo redundante de `Resumo`;
+- fonte oficial dinamica, como `[Fonte oficial: CIAR/UFG](...)` ou `[Fonte oficial: Instituto Verbena](...)`;
+- links individuais de editais/documentos quando a pagina oficial listar varios;
 - cronograma explicito quando houver datas de inscricao, recurso, homologacao, resultado ou submissao;
 - emojis apenas como marcadores uteis;
-- imagem de capa da fonte oficial quando existir `image`, `image_url` ou `og:image`;
+- imagem de capa da fonte oficial quando existir `image`, `image_url` ou `og:image`; o publisher deve preferir URL do bucket `kino-media` em `post_media`, nao hotlink remoto;
 - nunca publique um bloco bruto copiado da pagina sem resumir e organizar.
 
 ## Editais e PDFs
@@ -152,16 +154,20 @@ Quando houver PDF:
 Formato recomendado:
 
 ```text
-📌 Resumo
-...
-
 📄 Edital
 Quem pode participar: ...
 Prazo: ...
 Inscricao: use o link oficial da UFG.
 Atencao: o edital oficial prevalece sobre este resumo.
 
-🔗 Fonte oficial: https://...
+📄 Editais e documentos:
+- [Edital PIBIC](https://...)
+
+📋 Datas importantes
+- Inscricoes: ...
+- Resultado preliminar: ...
+
+🔗 [Fonte oficial: PRPI/UFG](https://...)
 ```
 
 ## Comandos Para O Yan No Telegram
@@ -200,8 +206,12 @@ CADU_TELEGRAM_CHAT_ID=
 CADU_RESEND_API_KEY=
 CADU_EMAIL_TO=contato@kinocampus.com.br
 CADU_USE_MODEL=true
+CADU_DEEPSEEK_MODEL=deepseek-v4-flash
+CADU_DEEPSEEK_BASE_URL=https://api.deepseek.com
 CADU_REVIEW_BEFORE_PUBLISH=true
 CADU_FETCH_PROXY_TEMPLATE=
+CADU_SUPABASE_STORAGE_BUCKET=kino-media
+CADU_MAX_IMAGE_BYTES=6291456
 CADU_MAX_ITEMS_PER_SOURCE=15
 CADU_MAX_PUBLISH_PER_RUN=3
 CADU_PDFTOTEXT_PATH=pdftotext

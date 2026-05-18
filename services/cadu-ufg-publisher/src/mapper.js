@@ -13,6 +13,11 @@ const {
   uniq,
 } = require('./utils');
 
+const ICON_DEADLINE = '\u23F0';
+const ICON_DOCUMENT = '\u{1F4C4}';
+const ICON_LINK = '\u{1F517}';
+const ICON_SCHEDULE = '\u{1F4CB}';
+
 function detectArea(text) {
   const normalized = normalizeText(text);
   if (/direito|juridic/.test(normalized)) return 'Direito';
@@ -55,6 +60,20 @@ function normalizeMarkdownText(value) {
     .map(normalizeWhitespace)
     .filter(Boolean)
     .join('\n');
+}
+
+function markdownLink(label, url) {
+  const cleanLabel = normalizeWhitespace(label || '');
+  if (!cleanLabel || !url) return cleanLabel || '';
+  return `[${cleanLabel.replace(/[[\]]/g, '')}](${url})`;
+}
+
+function buildSourceLabel(item) {
+  const name = normalizeWhitespace((item && item.sourceName) || 'UFG');
+  if (!name || /^ufg$/i.test(name)) return 'Fonte oficial: UFG';
+  if (/ufg/i.test(name) || /verbena/i.test(name)) return `Fonte oficial: ${name}`;
+  if (/^[A-Z0-9]{2,8}$/.test(name)) return `Fonte oficial: ${name}/UFG`;
+  return `Fonte oficial: ${name}`;
 }
 
 function isGenericInstitutionalText(value) {
@@ -139,6 +158,36 @@ function extractScheduleEntries(text, limit = 5) {
   return candidates.slice(0, limit);
 }
 
+function countDateMentions(text) {
+  return (String(text || '').match(/\b[0-3]?\d[\/.-][01]?\d(?:[\/.-](?:20)?\d{2})?\b|\b[0-3]?\d\s+de\s+[A-Za-z\xc0-\xff]+/g) || []).length;
+}
+
+function removeScheduleLikeLines(text) {
+  const lines = String(text || '').split(/\n+/).map(normalizeWhitespace).filter(Boolean);
+  if (lines.length < 2) return normalizeWhitespace(text);
+  const datePattern = /\b[0-3]?\d[\/.-][01]?\d(?:[\/.-](?:20)?\d{2})?\b|\b[0-3]?\d\s+de\s+[A-Za-z\xc0-\xff]+/i;
+  const contextPattern = /\b(inscric|submiss|prazo|cronograma|resultado|recurso|matricula|homolog|entrevista|prova|periodo|chamada)\w*/i;
+  const kept = lines.filter((line) => !(datePattern.test(line) && contextPattern.test(line)));
+  return kept.length ? kept.join('\n') : '';
+}
+
+function inferScheduleLabel(entry) {
+  const text = normalizeText(entry);
+  if (/resultado.*final/.test(text)) return 'Resultado final';
+  if (/resultado.*preliminar/.test(text)) return 'Resultado preliminar';
+  if (/inscric|submiss|candidat/.test(text)) return 'Inscricoes';
+  if (/recurso/.test(text)) return 'Recursos';
+  if (/homolog/.test(text)) return 'Homologacao';
+  if (/entrevista/.test(text)) return 'Entrevistas';
+  if (/prova/.test(text)) return 'Provas';
+  if (/matricula/.test(text)) return 'Matricula';
+  return 'Data';
+}
+
+function formatScheduleEntries(entries) {
+  return entries.map((entry) => `- **${inferScheduleLabel(entry)}:** ${entry}`);
+}
+
 function extractPdfLabel(url, index) {
   try {
     const pathname = new URL(url).pathname;
@@ -150,12 +199,37 @@ function extractPdfLabel(url, index) {
   }
 }
 
+function normalizeDocumentLinks(item) {
+  const byUrl = new Map();
+  const extracted = Array.isArray(item.extractedLinks) ? item.extractedLinks : [];
+
+  extracted.forEach((link) => {
+    const url = typeof link === 'string' ? link : link && link.url;
+    if (!url || byUrl.has(url)) return;
+    const label = typeof link === 'object' ? link.label : '';
+    if (/\.pdf(?:$|[?#])/i.test(url) || /edital|chamada|fapeg|pibic|pivic|mobilidade|documento/i.test(label || url)) {
+      byUrl.set(url, { url, label: normalizeWhitespace(label || '') });
+    }
+  });
+
+  (Array.isArray(item.pdfLinks) ? item.pdfLinks : []).forEach((url, index) => {
+    if (!url || byUrl.has(url)) return;
+    byUrl.set(url, { url, label: extractPdfLabel(url, index) });
+  });
+
+  return Array.from(byUrl.values()).slice(0, 6).map((link, index) => ({
+    url: link.url,
+    label: clamp(link.label || extractPdfLabel(link.url, index), 90),
+  }));
+}
+
 function buildDescription(item, classification, summaryText = '') {
   const fullText = normalizeMarkdownText(`${item.summary || ''}\n${item.text || ''}`);
-  const original = selectLeadSummary(summaryText, item, fullText);
+  const schedule = extractScheduleEntries(fullText);
+  const originalRaw = selectLeadSummary(summaryText, item, fullText);
+  const original = schedule.length && countDateMentions(originalRaw) >= 2 ? removeScheduleLikeLines(originalRaw) : originalRaw;
   const chunks = [];
-  const isOpportunity = classification.module === 'oportunidades';
-  const sourceLabel = 'pagina oficial da UFG';
+  const sourceLabel = buildSourceLabel(item);
   const sourceLink = item.sourceUrl ? `[${sourceLabel}](${item.sourceUrl})` : sourceLabel;
   const deadlineDate = classification.temporal && classification.temporal.deadlineDate
     ? formatDatePt(classification.temporal.deadlineDate)
@@ -165,48 +239,52 @@ function buildDescription(item, classification, summaryText = '') {
     : '';
   const audience = pickSentence(fullText || original, /(quem pode|publico|estudantes|discente|candidato|servidor|comunidade|pesquisador|docente|proponente|coordenador)/i);
   const deadline = pickSentence(fullText || original, /(prazo|inscricoes?|ate o dia|periodo|cronograma|submiss|homolog|resultado|recurso)/i);
-  const schedule = extractScheduleEntries(fullText || original);
   const pdfLinks = Array.isArray(item.pdfLinks) ? item.pdfLinks.filter(Boolean) : [];
+  const documentLinks = normalizeDocumentLinks(item);
 
-  chunks.push(isOpportunity ? '**📌 Resumo**' : '**📅 Resumo**');
-  chunks.push(clamp(original, 650));
+  if (original) chunks.push(clamp(original, 650));
 
   if (classification.hasDeadline) {
     chunks.push(deadlineDate
-      ? `**⏰ Prazo:** ${deadlineDate}. Confira regras, etapas e eventuais retificacoes no link oficial.`
-      : '**⏰ Prazo:** confira datas, regras e cronograma no link oficial.');
+      ? `**${ICON_DEADLINE} Prazo:** ${deadlineDate}. Confira regras, etapas e eventuais retificacoes no link oficial.`
+      : `**${ICON_DEADLINE} Prazo:** confira datas, regras e cronograma no link oficial.`);
   } else if (eventDate) {
-    chunks.push(`**🗓️ Data:** ${eventDate}. Confira horario/local no link oficial.`);
+    chunks.push(`**${ICON_SCHEDULE} Data:** ${eventDate}. Confira horario/local no link oficial.`);
   }
 
   if (classification.hasPdf) {
     chunks.push([
-      '**📄 Edital**',
+      `**${ICON_DOCUMENT} Edital**`,
       `- **Quem pode participar:** ${audience || 'confira os requisitos no edital oficial.'}`,
       `- **Prazo/cronograma:** ${deadline || deadlineDate || 'confira o cronograma no edital oficial.'}`,
       `- **Inscricao:** use a ${sourceLink}.`,
       '- **Atencao:** o edital oficial prevalece sobre este resumo.',
     ].join('\n'));
   } else {
-    chunks.push(`**🔗 Fonte oficial:** ${sourceLink}`);
+    chunks.push(`**${ICON_LINK} ${sourceLink}**`);
   }
 
-  if (classification.hasPdf && pdfLinks.length > 1) {
+  if (classification.hasPdf && documentLinks.length) {
     chunks.push([
-      `**Documentos encontrados:** ${pdfLinks.length} PDFs oficiais.`,
-      ...pdfLinks.slice(0, 4).map((url, index) => `- ${extractPdfLabel(url, index)}`),
+      `**${ICON_DOCUMENT} Editais e documentos:**`,
+      ...documentLinks.map((link) => `- ${markdownLink(link.label, link.url)}`),
+    ].join('\n'));
+  } else if (classification.hasPdf && pdfLinks.length > 1) {
+    chunks.push([
+      `**${ICON_DOCUMENT} Editais e documentos:**`,
+      ...pdfLinks.slice(0, 4).map((url, index) => `- ${markdownLink(extractPdfLabel(url, index), url)}`),
     ].join('\n'));
   }
 
   if (schedule.length) {
     chunks.push([
-      '**Cronograma detectado**',
-      ...schedule.map((entry) => `- ${entry}`),
+      `**${ICON_SCHEDULE} Datas importantes**`,
+      ...formatScheduleEntries(schedule),
     ].join('\n'));
   }
 
   if (classification.hasPdf) {
-    chunks.push(`**Fonte oficial:** ${sourceLink}`);
+    chunks.push(`**${ICON_LINK} ${sourceLink}**`);
   }
 
   return clampMarkdown(chunks.filter(Boolean).join('\n\n'), 2000);
@@ -242,7 +320,10 @@ function mapToKinoPayload(item, classification, options = {}) {
     original_title: item.title,
     edital_pdf_url: (item.pdfLinks && item.pdfLinks[0]) || '',
     edital_pdf_urls: Array.isArray(item.pdfLinks) ? item.pdfLinks.slice(0, 10) : [],
+    extracted_links: Array.isArray(item.extractedLinks) ? item.extractedLinks.slice(0, 12) : [],
+    official_document_urls: normalizeDocumentLinks(item).map((link) => link.url),
     image_url: images[0] || '',
+    cover_url: images[0] || '',
     confidence_score: classification.confidence,
     deadline_date: (classification.temporal && classification.temporal.deadlineDate) || '',
     event_date_detected: (classification.temporal && classification.temporal.eventDate) || '',

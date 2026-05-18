@@ -1,10 +1,12 @@
 'use strict';
 
 const { analyzeTemporalRelevance, classifyItem } = require('../../services/cadu-ufg-publisher/src/classifier');
-const { cleanTitle, extractFirstImageUrl, normalizeWebyItem } = require('../../services/cadu-ufg-publisher/src/extractors');
+const { cleanTitle, extractFirstImageUrl, extractLinksFromHtml, normalizeWebyItem } = require('../../services/cadu-ufg-publisher/src/extractors');
 const { HttpClient } = require('../../services/cadu-ufg-publisher/src/http-client');
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
+const { resolveDeepSeekEndpoint } = require('../../services/cadu-ufg-publisher/src/model');
 const { splitMessage } = require('../../services/cadu-ufg-publisher/src/notifier');
+const { SupabasePublisher } = require('../../services/cadu-ufg-publisher/src/publisher');
 const { evaluatePayloadQuality } = require('../../services/cadu-ufg-publisher/src/quality');
 const { collectReviews, formatReviews, resolveReviewKey } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
@@ -36,6 +38,18 @@ describe('cadu-ufg-publisher', () => {
       text: 'Inscricoes abertas',
     });
     expect(item.imageUrl).toBe('https://files.cercomp.ufg.br/img.png');
+  });
+
+  test('extractor preserves individual edital links with labels', () => {
+    const links = extractLinksFromHtml(`
+      <a href="/files/Edital-PIBIC.pdf">Edital PIBIC</a>
+      <a href="https://fapeg.go.gov.br/chamada-1">Chamada Fapeg</a>
+    `, 'https://prpi.ufg.br/n/1');
+
+    expect(links).toEqual(expect.arrayContaining([
+      { url: 'https://prpi.ufg.br/files/Edital-PIBIC.pdf', label: 'Edital PIBIC' },
+      { url: 'https://fapeg.go.gov.br/chamada-1', label: 'Chamada Fapeg' },
+    ]));
   });
 
   test('parseSitemap extracts loc and lastmod', () => {
@@ -141,10 +155,11 @@ describe('cadu-ufg-publisher', () => {
     expect(payload.modulo).toBe('oportunidades');
     expect(payload.titulo.length).toBeLessThanOrEqual(80);
     expect(payload.descricao.length).toBeLessThanOrEqual(2000);
-    expect(payload.descricao).toContain('**📌 Resumo**');
-    expect(payload.descricao).toContain('[pagina oficial da UFG]');
+    expect(payload.descricao).not.toContain('Resumo');
+    expect(payload.descricao).toContain('[Fonte oficial: PROGRAD/UFG]');
     expect(payload.imagens).toEqual(['https://prograd.ufg.br/assets/cover.jpg']);
     expect(payload.metadata.source_url).toBe(item.sourceUrl);
+    expect(payload.metadata.cover_url).toBe('https://prograd.ufg.br/assets/cover.jpg');
     expect(payload.metadata.link_as_cta).toBe(true);
     expect(payload.metadata.deadline_date).toBe('2026-05-20');
 
@@ -182,14 +197,21 @@ describe('cadu-ufg-publisher', () => {
         'https://prpi.ufg.br/files/Edital-PIVIC.pdf',
         'https://prpi.ufg.br/files/Edital-Mobilidade.pdf',
       ],
+      extractedLinks: [
+        { url: 'https://prpi.ufg.br/files/Edital-PIBIC.pdf', label: 'Edital PIBIC' },
+        { url: 'https://prpi.ufg.br/files/Edital-PIVIC.pdf', label: 'Edital PIVIC' },
+        { url: 'https://fapeg.go.gov.br/chamada-mobilidade', label: 'Chamada Mobilidade Fapeg' },
+      ],
     };
     const classification = classifyItem(item, { tier: 1 }, { now: '2026-05-18T12:00:00-03:00' });
     const payload = mapToKinoPayload(item, classification, { runId: 'test-run' });
     expect(payload.categoriaKey).toBe('pesquisa');
-    expect(payload.descricao).toContain('Cronograma detectado');
+    expect(payload.descricao).toContain('Datas importantes');
     expect(payload.descricao).toContain('Resultado final em 29/05/2026');
-    expect(payload.descricao).toContain('3 PDFs oficiais');
+    expect(payload.descricao).toContain('[Edital PIBIC](https://prpi.ufg.br/files/Edital-PIBIC.pdf)');
+    expect(payload.descricao).toContain('[Chamada Mobilidade Fapeg](https://fapeg.go.gov.br/chamada-mobilidade)');
     expect(payload.metadata.edital_pdf_urls).toHaveLength(3);
+    expect(payload.metadata.official_document_urls).toContain('https://fapeg.go.gov.br/chamada-mobilidade');
   });
 
   test('mapper replaces generic institutional model summaries with actionable source details', () => {
@@ -248,6 +270,51 @@ describe('cadu-ufg-publisher', () => {
       'missing_deadline_context',
       'missing_schedule_dates',
     ]));
+  });
+
+  test('DeepSeek endpoint accepts official base URL or explicit v1 base URL', () => {
+    expect(resolveDeepSeekEndpoint({})).toBe('https://api.deepseek.com/chat/completions');
+    expect(resolveDeepSeekEndpoint({ deepseekBaseUrl: 'https://api.deepseek.com/v1' }))
+      .toBe('https://api.deepseek.com/v1/chat/completions');
+    expect(resolveDeepSeekEndpoint({ deepseekEndpoint: 'https://proxy.local/chat/completions' }))
+      .toBe('https://proxy.local/chat/completions');
+  });
+
+  test('publisher uploads remote cover images to Supabase Storage before post_media', async () => {
+    const originalFetch = global.fetch;
+    const calls = [];
+    global.fetch = jest.fn(async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+      if (String(url).startsWith('https://source.local')) {
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: (name) => (String(name).toLowerCase() === 'content-type' ? 'image/jpeg' : null) },
+          arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
+        };
+      }
+      return { ok: true, status: 200, text: async () => '{"Key":"ok"}' };
+    });
+
+    try {
+      const publisher = new SupabasePublisher({
+        supabaseUrl: 'https://project.supabase.co',
+        supabaseAnonKey: 'anon',
+        kinoEmail: 'cadu@example.com',
+        kinoPassword: 'secret',
+        supabaseStorageBucket: 'kino-media',
+        maxImageBytes: 1024,
+      });
+      publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+      const prepared = await publisher.prepareImagesForPost('post-1', ['https://source.local/cover.jpg']);
+
+      expect(prepared.images[0]).toMatch(/^https:\/\/project\.supabase\.co\/storage\/v1\/object\/public\/kino-media\/post-media\//);
+      expect(prepared.uploads[0].ok).toBe(true);
+      expect(calls[1].url).toContain('/storage/v1/object/kino-media/post-media/');
+      expect(calls[1].options.headers['content-type']).toBe('image/jpeg');
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   test('telegram notifier chunks long review messages', () => {

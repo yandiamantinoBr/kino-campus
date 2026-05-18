@@ -41,7 +41,7 @@ function evaluatePayloadQuality(item, classification, payload) {
     warnings.push('generic_summary');
   }
 
-  if (pdfLinks.length > 1 && !/\bdocumentos encontrados\b|\bpdfs oficiais\b|\bvarios editais\b|\bmultiplos editais\b/.test(normalizedDescription)) {
+  if (pdfLinks.length > 1 && !/\bdocumentos encontrados\b|\beditais e documentos\b|\bpdfs oficiais\b|\bvarios editais\b|\bmultiplos editais\b/.test(normalizedDescription)) {
     warnings.push('missing_multiple_documents');
   }
 
