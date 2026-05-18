@@ -24,9 +24,11 @@
 (function () {
   'use strict';
 
-  const VERSION = '9.3.5.15';
+  const VERSION = '9.3.5.16';
   const PAGE_SIZE_CONV = 50;
   const PAGE_SIZE_MSG = 50;
+  const AUTH_BOOT_TIMEOUT_MS = 8000;
+  const CHAT_REQUEST_TIMEOUT_MS = 12000;
 
   const state = {
     me: null,
@@ -47,6 +49,13 @@
     blocked: { i_blocked: false, they_blocked: false },
     conversationQuery: '',
     inboxReloadTimer: null,
+    authRestartTimer: null,
+    bootPromise: null,
+    eventsBound: false,
+    beforeUnloadBound: false,
+    initialRouteApplied: false,
+    conversationLoadToken: 0,
+    messageLoadToken: 0,
     pendingActiveUnread: 0,
   };
   const signedMediaCache = new Map();
@@ -242,49 +251,195 @@
     if (page) page.setAttribute('data-pane', pane);
   }
 
+  function makeTimeoutError(label) {
+    var err = new Error(label || 'timeout');
+    err.code = 'KC_TIMEOUT';
+    return err;
+  }
+
+  function withTimeout(promise, ms, label) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        reject(makeTimeoutError(label));
+      }, ms);
+
+      function finish(fn, value) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        fn(value);
+      }
+
+      Promise.resolve(promise).then(function (value) {
+        finish(resolve, value);
+      }, function (err) {
+        finish(reject, err);
+      });
+    });
+  }
+
+  function normalizeAuthUser(user) {
+    if (!user || !user.id) return null;
+    return {
+      id: String(user.id),
+      email: user.email || '',
+    };
+  }
+
+  function readCachedAuthUser() {
+    if (!window.KCSupabase) return null;
+    try {
+      if (typeof window.KCSupabase.getUser === 'function') {
+        var user = normalizeAuthUser(window.KCSupabase.getUser());
+        if (user) return user;
+      }
+    } catch (_) {}
+    try {
+      if (typeof window.KCSupabase.getSession === 'function') {
+        var session = window.KCSupabase.getSession();
+        var sessionUser = normalizeAuthUser(session && session.user);
+        if (sessionUser) return sessionUser;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async function resolveCurrentUser() {
+    var cached = readCachedAuthUser();
+    if (cached) return { user: cached, timedOut: false };
+
+    if (!window.KCSupabase || typeof window.KCSupabase.getCurrentUser !== 'function') {
+      return { user: null, timedOut: false };
+    }
+
+    try {
+      var user = await withTimeout(
+        window.KCSupabase.getCurrentUser(),
+        AUTH_BOOT_TIMEOUT_MS,
+        'auth_timeout'
+      );
+      return { user: normalizeAuthUser(user), timedOut: false };
+    } catch (err) {
+      var fallback = readCachedAuthUser();
+      if (fallback) return { user: fallback, timedOut: true };
+      console.warn('[chat] getCurrentUser timeout/falhou:', err && err.message || err);
+      return { user: null, timedOut: !!(err && err.code === 'KC_TIMEOUT'), error: err };
+    }
+  }
+
+  function resetSessionState() {
+    state.me = null;
+    state.profile = null;
+    state.conversations = [];
+    state.convById.clear();
+    state.activeConvId = null;
+    state.activePeer = null;
+    state.messages = [];
+    state.messagesById.clear();
+    state.hasMoreMessages = false;
+    state.isLoadingMessages = false;
+    state.isLoadingMore = false;
+    state.isSending = false;
+    state.pendingFile = null;
+    state.blocked = { i_blocked: false, they_blocked: false };
+    state.pendingActiveUnread = 0;
+    state.initialRouteApplied = false;
+    state.conversationLoadToken += 1;
+    state.messageLoadToken += 1;
+    signedMediaCache.clear();
+    clearPreviewObjectUrl();
+    setJumpVisible(false);
+    setActivePane('list');
+    setHash('');
+    var empty = $('kcChatEmptyPanel');
+    var active = $('kcChatActiveConv');
+    if (empty) empty.style.display = 'flex';
+    if (active) active.style.display = 'none';
+  }
+
   // ── Auth + boot ─────────────────────────────────────────────────────────
 
   async function init() {
     bindEvents();
+    if (state.bootPromise) return state.bootPromise;
 
-    var user = null;
-    if (window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
-      user = await window.KCSupabase.getCurrentUser();
+    state.bootPromise = boot().finally(function () {
+      state.bootPromise = null;
+    });
+    return state.bootPromise;
+  }
+
+  async function boot() {
+    var auth = await resolveCurrentUser();
+    if (!auth.user || !auth.user.id) {
+      renderEmptyList(auth.timedOut ? 'auth_timeout' : 'login_required');
+      return;
     }
+    await startForUser(auth.user);
+  }
+
+  async function startForUser(user) {
+    user = normalizeAuthUser(user);
     if (!user || !user.id) {
       renderEmptyList('login_required');
       return;
     }
-    state.me = { id: user.id, email: user.email || '' };
+
+    var nextId = String(user.id);
+    var currentId = state.me && state.me.id ? String(state.me.id) : '';
+
+    if (currentId && currentId !== nextId) {
+      cleanup();
+      resetSessionState();
+    }
+
+    state.me = { id: nextId, email: user.email || (state.me && state.me.email) || '' };
 
     // Carrega perfil próprio
-    if (window.KCAPI && typeof window.KCAPI.getMyProfile === 'function') {
-      try { state.profile = await window.KCAPI.getMyProfile(); } catch (_) {}
+    if (!state.profile && window.KCAPI && typeof window.KCAPI.getMyProfile === 'function') {
+      try {
+        state.profile = await withTimeout(
+          window.KCAPI.getMyProfile(),
+          CHAT_REQUEST_TIMEOUT_MS,
+          'profile_timeout'
+        );
+      } catch (err) {
+        console.warn('[chat] getMyProfile timeout/falhou:', err && err.message || err);
+      }
     }
 
     // Inicia subscribe realtime
-    if (window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.subscribeChat === 'function') {
+    if (!state.rtChannel && window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.subscribeChat === 'function') {
       state.rtChannel = window.KCAPI.chat.subscribeChat(state.me.id, handleRealtime);
     }
 
     // Carrega conversas
-    await loadConversations();
+    var loaded = await loadConversations();
 
     // Verifica query ?with=<user_id> → inicia conversa
-    var withParam = getQuery('with');
-    if (withParam) {
-      await openConversationWith(withParam);
-    } else {
-      // Verifica hash #c/<conv_id> → abre conversa direto
-      var hash = getHash();
-      if (hash.indexOf('c/') === 0) {
-        var cid = hash.slice(2);
-        if (cid) selectConversation(cid);
+    if (loaded && !state.initialRouteApplied) {
+      state.initialRouteApplied = true;
+      var withParam = getQuery('with');
+      if (withParam) {
+        await openConversationWith(withParam);
+      } else {
+        // Verifica hash #c/<conv_id> → abre conversa direto
+        var hash = getHash();
+        if (hash.indexOf('c/') === 0) {
+          var cid = hash.slice(2);
+          if (cid) selectConversation(cid);
+        }
       }
     }
 
     // Cleanup ao sair
-    window.addEventListener('beforeunload', cleanup);
+    if (!state.beforeUnloadBound) {
+      state.beforeUnloadBound = true;
+      window.addEventListener('beforeunload', cleanup);
+    }
   }
 
   function cleanup() {
@@ -305,19 +460,36 @@
   async function loadConversations() {
     if (!window.KCAPI || !window.KCAPI.chat) {
       renderEmptyList('error');
-      return;
+      return false;
     }
-    var r = await window.KCAPI.chat.listConversations({ limit: PAGE_SIZE_CONV });
+    if (!state.me || !state.me.id) return false;
+
+    var token = ++state.conversationLoadToken;
+    var r = null;
+    try {
+      r = await withTimeout(
+        window.KCAPI.chat.listConversations({ limit: PAGE_SIZE_CONV }),
+        CHAT_REQUEST_TIMEOUT_MS,
+        'chat_list_conversations_timeout'
+      );
+    } catch (err) {
+      if (token !== state.conversationLoadToken) return false;
+      console.warn('[chat] listConversations timeout/falhou:', err && err.message || err);
+      renderEmptyList('timeout');
+      return false;
+    }
+    if (token !== state.conversationLoadToken) return false;
     if (!r || !r.ok) {
       console.warn('[chat] listConversations failed:', r && r.error);
       renderEmptyList('error');
-      return;
+      return false;
     }
     state.conversations = r.data || [];
     state.convById.clear();
     state.conversations.forEach(function (c) { state.convById.set(c.conversation_id, c); });
     renderConversationsList();
     dispatchUnreadChange();
+    return true;
   }
 
   function renderConversationsList() {
@@ -399,6 +571,12 @@
         '<div class="kc-chat-empty__icon"><i class="fas fa-user-lock"></i></div>' +
         '<h2 class="kc-chat-empty__title">Faça login para ver suas mensagens</h2>' +
         '<p class="kc-chat-empty__body"><a href="index.html" style="color:var(--kc-primary-brand);font-weight:700;">Voltar ao início</a></p>' +
+        '</div>';
+    } else if (reason === 'timeout' || reason === 'auth_timeout') {
+      html = '<div class="kc-chat-empty" style="height:100%">' +
+        '<div class="kc-chat-empty__icon"><i class="fas fa-wifi"></i></div>' +
+        '<h2 class="kc-chat-empty__title">Conexão lenta</h2>' +
+        '<p class="kc-chat-empty__body">Não foi possível carregar suas mensagens agora. Tente atualizar a página em alguns instantes.</p>' +
         '</div>';
     } else {
       html = '<div class="kc-chat-empty" style="height:100%">' +
@@ -505,10 +683,27 @@
   async function loadMessages() {
     if (!state.activeConvId) return;
     state.isLoadingMessages = true;
-    var r = await window.KCAPI.chat.listMessages(state.activeConvId, { limit: PAGE_SIZE_MSG });
+    var convId = state.activeConvId;
+    var token = ++state.messageLoadToken;
+    var r = null;
+    try {
+      r = await withTimeout(
+        window.KCAPI.chat.listMessages(convId, { limit: PAGE_SIZE_MSG }),
+        CHAT_REQUEST_TIMEOUT_MS,
+        'chat_list_messages_timeout'
+      );
+    } catch (err) {
+      if (token !== state.messageLoadToken || convId !== state.activeConvId) return;
+      state.isLoadingMessages = false;
+      toast('Erro ao carregar mensagens.', 'error');
+      renderMessagesError();
+      return;
+    }
+    if (token !== state.messageLoadToken || convId !== state.activeConvId) return;
     state.isLoadingMessages = false;
     if (!r || !r.ok) {
       toast('Erro ao carregar mensagens.', 'error');
+      renderMessagesError();
       return;
     }
     state.messages = r.data || [];
@@ -522,10 +717,20 @@
     if (state.isLoadingMore || !state.hasMoreMessages || state.messages.length === 0) return;
     state.isLoadingMore = true;
     var oldestTs = state.messages[0].created_at;
-    var r = await window.KCAPI.chat.listMessages(state.activeConvId, {
-      limit: PAGE_SIZE_MSG,
-      before_ts: oldestTs,
-    });
+    var r = null;
+    try {
+      r = await withTimeout(
+        window.KCAPI.chat.listMessages(state.activeConvId, {
+          limit: PAGE_SIZE_MSG,
+          before_ts: oldestTs,
+        }),
+        CHAT_REQUEST_TIMEOUT_MS,
+        'chat_list_more_messages_timeout'
+      );
+    } catch (_) {
+      state.isLoadingMore = false;
+      return;
+    }
     state.isLoadingMore = false;
     if (!r || !r.ok) return;
     var older = r.data || [];
@@ -622,6 +827,16 @@
         renderMessagesList();
       });
     });
+  }
+
+  function renderMessagesError() {
+    var wrap = $('kcChatMessages');
+    if (!wrap) return;
+    wrap.innerHTML = '<div class="kc-chat-empty" style="height:100%;flex:1;">' +
+      '<div class="kc-chat-empty__icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+      '<h2 class="kc-chat-empty__title">Não foi possível carregar</h2>' +
+      '<p class="kc-chat-empty__body">Tente abrir a conversa novamente em alguns instantes.</p>' +
+      '</div>';
   }
 
   function renderMessageBubble(m) {
@@ -980,9 +1195,53 @@
     } catch (_) {}
   }
 
+  function scheduleAuthRestart(user) {
+    if (state.authRestartTimer) clearTimeout(state.authRestartTimer);
+    state.authRestartTimer = setTimeout(function () {
+      state.authRestartTimer = null;
+      var hadActiveUser = !!(state.me && state.me.id);
+      cleanup();
+      if (hadActiveUser) resetSessionState();
+      startForUser(user).catch(function (err) {
+        console.warn('[chat] restart auth falhou:', err && err.message || err);
+        renderEmptyList('error');
+      });
+    }, 80);
+  }
+
+  function handleAuthChange(event) {
+    var detail = event && event.detail ? event.detail : {};
+    var eventName = String(detail.event || '').toUpperCase();
+    var nextUser = normalizeAuthUser(detail.user);
+    var currentId = state.me && state.me.id ? String(state.me.id) : '';
+
+    if (eventName === 'SIGNED_OUT') {
+      if (state.authRestartTimer) {
+        clearTimeout(state.authRestartTimer);
+        state.authRestartTimer = null;
+      }
+      cleanup();
+      resetSessionState();
+      renderEmptyList('login_required');
+      return;
+    }
+
+    if (!nextUser || !nextUser.id) return;
+
+    if (currentId && currentId === String(nextUser.id)) {
+      state.me.email = nextUser.email || state.me.email || '';
+      return;
+    }
+
+    scheduleAuthRestart(nextUser);
+  }
+
   // ── Eventos ─────────────────────────────────────────────────────────────
 
   function bindEvents() {
+    if (state.eventsBound) return;
+    state.eventsBound = true;
+
     var form = $('kcChatComposer');
     var input = $('kcChatInput');
     var attachBtn = $('kcChatAttachBtn');
@@ -1080,11 +1339,8 @@
       });
     }
 
-    // Reage a auth changes
-    document.addEventListener('kc:authchange', function () {
-      // Re-init suave se logout
-      window.location.reload();
-    });
+    // Reage a auth changes sem recarregar a pagina em refresh de token.
+    document.addEventListener('kc:authchange', handleAuthChange);
   }
 
   // ── Bootstrap ───────────────────────────────────────────────────────────
