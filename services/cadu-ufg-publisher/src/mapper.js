@@ -57,6 +57,44 @@ function normalizeMarkdownText(value) {
     .join('\n');
 }
 
+function isGenericInstitutionalText(value) {
+  const text = normalizeText(value);
+  return /universidade gratuita|mais de\s+\d+\s+mil alunos|ensino pesquisa e extensao|ensino extensao e pesquisa|uma das (maiores|melhores) universidades|instituicao federal de ensino/.test(text);
+}
+
+function pickActionableSentences(text, limit = 4) {
+  const sentences = String(text || '')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map(normalizeWhitespace)
+    .filter(Boolean);
+  const picked = [];
+  const seen = new Set();
+  const actionPattern = /\b(edital|chamada|inscric|submiss|prazo|cronograma|resultado|recurso|homolog|bolsa|vagas|pibic|pivic|fapeg|mobilidade|pesquisa|selecao)\w*/i;
+  const datePattern = /\b[0-3]?\d[\/.-][01]?\d(?:[\/.-](?:20)?\d{2})?\b|\b[0-3]?\d\s+de\s+[A-Za-z\xc0-\xff]+/i;
+
+  sentences.forEach((sentence) => {
+    if (picked.length >= limit) return;
+    if (!actionPattern.test(sentence) && !datePattern.test(sentence)) return;
+    const key = normalizeText(sentence);
+    if (seen.has(key)) return;
+    seen.add(key);
+    picked.push(clamp(sentence, 260));
+  });
+
+  return picked.join('\n');
+}
+
+function selectLeadSummary(summaryText, item, fullText) {
+  const modelSummary = normalizeMarkdownText(summaryText || '');
+  if (modelSummary && !isGenericInstitutionalText(modelSummary)) return modelSummary;
+
+  const actionable = pickActionableSentences(fullText);
+  if (actionable) return actionable;
+
+  if (modelSummary) return modelSummary;
+  return normalizeMarkdownText(item.summary || item.text || '');
+}
+
 function clampMarkdown(value, maxLength) {
   const text = String(value || '').normalize('NFKC').trim();
   if (text.length <= maxLength) return text;
@@ -113,8 +151,8 @@ function extractPdfLabel(url, index) {
 }
 
 function buildDescription(item, classification, summaryText = '') {
-  const original = normalizeMarkdownText(summaryText || item.summary || item.text || '');
   const fullText = normalizeMarkdownText(`${item.summary || ''}\n${item.text || ''}`);
+  const original = selectLeadSummary(summaryText, item, fullText);
   const chunks = [];
   const isOpportunity = classification.module === 'oportunidades';
   const sourceLabel = 'pagina oficial da UFG';

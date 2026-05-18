@@ -36,9 +36,12 @@ Para reduzir falso positivo, o fluxo e hibrido:
 
 - `review:preview`: score >= 0.78 quando `CADU_REVIEW_BEFORE_PUBLISH` nao for `false`;
 - `review`: score entre 0.55 e 0.77;
+- `review:quality`: score alto, mas o payload falhou em alguma checagem editorial automatica;
 - `discard`: score abaixo de 0.55.
 
 Por padrao, o Cadu envia preview por Telegram/e-mail antes de publicar. Para publicar automaticamente itens de alta confianca, defina `CADU_REVIEW_BEFORE_PUBLISH=false`.
+
+A guarda de qualidade barra auto-publicacao quando encontra resumo institucional generico em item acionavel, falta de contexto para multiplos PDFs, falta de prazo/cronograma, divergencia de link oficial ou imagem invalida. Nesses casos o digest mostra `Avisos de qualidade` para o operador aprovar, rejeitar ou pedir nova extracao.
 
 Para aprovar um item revisado:
 

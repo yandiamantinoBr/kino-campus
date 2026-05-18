@@ -5,6 +5,7 @@ const { cleanTitle, extractFirstImageUrl, normalizeWebyItem } = require('../../s
 const { HttpClient } = require('../../services/cadu-ufg-publisher/src/http-client');
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
 const { splitMessage } = require('../../services/cadu-ufg-publisher/src/notifier');
+const { evaluatePayloadQuality } = require('../../services/cadu-ufg-publisher/src/quality');
 const { collectReviews, formatReviews, resolveReviewKey } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
 const { StateStore } = require('../../services/cadu-ufg-publisher/src/state');
@@ -189,6 +190,64 @@ describe('cadu-ufg-publisher', () => {
     expect(payload.descricao).toContain('Resultado final em 29/05/2026');
     expect(payload.descricao).toContain('3 PDFs oficiais');
     expect(payload.metadata.edital_pdf_urls).toHaveLength(3);
+  });
+
+  test('mapper replaces generic institutional model summaries with actionable source details', () => {
+    const item = {
+      id: 'prpi:generic',
+      sourceName: 'PRPI',
+      sourceUrl: 'https://prpi.ufg.br/n/generic',
+      title: 'PRPI divulga quatro editais abertos da Fapeg',
+      summary: 'UFG divulga editais para pesquisa.',
+      text: [
+        'Edital PIBIC recebe inscricoes ate 18/05/2026.',
+        'Edital PIVIC tem resultado preliminar em 26/05/2026.',
+        'Edital de mobilidade internacional tem resultado final em 29/05/2026.',
+      ].join('\n'),
+      pdfLinks: [
+        'https://prpi.ufg.br/files/Edital-PIBIC.pdf',
+        'https://prpi.ufg.br/files/Edital-PIVIC.pdf',
+      ],
+    };
+    const classification = classifyItem(item, { tier: 1 }, { now: '2026-05-18T12:00:00-03:00' });
+    const payload = mapToKinoPayload(item, classification, {
+      runId: 'test-run',
+      summaryText: 'A UFG e uma universidade gratuita, com mais de 35 mil alunos.',
+    });
+
+    expect(payload.descricao).not.toContain('35 mil alunos');
+    expect(payload.descricao).toContain('Edital PIBIC');
+    expect(payload.descricao).toContain('Edital PIVIC');
+  });
+
+  test('quality guard flags generic summaries and missing multi-document context', () => {
+    const item = {
+      title: 'PRPI divulga quatro editais abertos da Fapeg',
+      summary: '',
+      text: 'Inscricoes ate 18/05/2026. Resultado em 26/05/2026.',
+      sourceUrl: 'https://prpi.ufg.br/n/1',
+      pdfLinks: ['https://prpi.ufg.br/a.pdf', 'https://prpi.ufg.br/b.pdf'],
+    };
+    const classification = {
+      hasPdf: true,
+      hasDeadline: true,
+      module: 'oportunidades',
+      category: 'pesquisa',
+    };
+    const payload = {
+      descricao: 'A UFG e uma universidade gratuita, com mais de 35 mil alunos.',
+      imagens: [],
+      metadata: { source_url: item.sourceUrl },
+    };
+
+    const quality = evaluatePayloadQuality(item, classification, payload);
+    expect(quality.ok).toBe(false);
+    expect(quality.warnings).toEqual(expect.arrayContaining([
+      'generic_summary',
+      'missing_multiple_documents',
+      'missing_deadline_context',
+      'missing_schedule_dates',
+    ]));
   });
 
   test('telegram notifier chunks long review messages', () => {

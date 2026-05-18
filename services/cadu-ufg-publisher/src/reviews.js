@@ -23,6 +23,9 @@ function formatReviews(items) {
     `${index + 1}. [${String(item.key || '').slice(0, 12)}] ${item.title || '(sem titulo)'}`,
     `   decisao: ${item.decision || 'review'}`,
     `   confianca: ${item.confidence == null ? 'n/a' : item.confidence}`,
+    item.payload && item.payload.metadata && item.payload.metadata.quality_warnings && item.payload.metadata.quality_warnings.length
+      ? `   avisos: ${item.payload.metadata.quality_warnings.join(', ')}`
+      : '',
     item.module || item.category ? `   modulo/categoria: ${item.module || 'n/a'}/${item.category || 'n/a'}` : '',
     item.pendingReason ? `   moderacao: ${item.pendingReason}` : '',
     `   fonte: ${item.sourceUrl || 'n/a'}`,

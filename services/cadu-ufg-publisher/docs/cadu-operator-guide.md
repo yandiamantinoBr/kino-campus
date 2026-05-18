@@ -10,6 +10,7 @@ O comportamento padrao e conservador:
 
 - publicar automaticamente apenas itens de alta confianca;
 - mandar itens duvidosos para revisao;
+- mandar itens com `review:quality` para revisao mesmo quando o score for alto;
 - descartar conteudos institucionais sem acao clara;
 - nunca inventar prazo, requisito, contato ou beneficio;
 - sempre apontar para a fonte oficial.
@@ -253,3 +254,14 @@ Avise o Yan se ocorrer:
 - modelo DeepSeek indisponivel.
 
 O digest separa `Publicados` de `Pendentes de moderacao`. Um post pendente foi criado no banco, mas ainda pode nao aparecer publicamente para todos.
+
+## Avisos De Qualidade
+
+Quando o digest mostrar `review:quality` ou `Avisos de qualidade`, nao aprove no automatico. Revise o Markdown e, se necessario, rode nova extracao. Os avisos atuais sao:
+
+- `generic_summary`: resumo institucional generico em item que deveria trazer dados acionaveis.
+- `missing_multiple_documents`: ha mais de um PDF, mas a descricao nao explicita os documentos.
+- `missing_deadline_context`: o classificador encontrou prazo, mas a descricao nao trouxe contexto de prazo/inscricao.
+- `missing_schedule_dates`: a fonte tem varias datas, mas a descricao nao trouxe cronograma suficiente.
+- `source_url_mismatch`: link oficial divergente.
+- `invalid_image_url`: imagem do payload nao e uma URL HTTP/HTTPS valida.

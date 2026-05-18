@@ -9,6 +9,7 @@ const { summarizeWithDeepSeek } = require('./model');
 const { notify } = require('./notifier');
 const { extractPdfText } = require('./pdf');
 const { SupabasePublisher } = require('./publisher');
+const { evaluatePayloadQuality } = require('./quality');
 const { isAllowedByRobots, parseRobotsTxt } = require('./robots');
 const { loadSources, selectSources } = require('./sources');
 const { StateStore } = require('./state');
@@ -116,6 +117,7 @@ function buildReviewItem(key, hydrated, classification, payload, decision) {
     category: payload.categoriaKey || classification.category,
     sourceUrl: hydrated.sourceUrl,
     preview: String(payload.descricao || '').slice(0, 1400),
+    qualityWarnings: payload.metadata && payload.metadata.quality_warnings,
   };
 }
 
@@ -209,8 +211,19 @@ async function processSource(context, source) {
       }
 
       const payload = mapToKinoPayload(hydrated, classification, { runId, summaryText });
+      const quality = evaluatePayloadQuality(hydrated, classification, payload);
+      payload.metadata = {
+        ...(payload.metadata || {}),
+        quality_warnings: quality.warnings,
+      };
+
       if (classification.decision === 'review') {
         markForReview(context, stats, key, hydrated, classification, payload, 'review');
+        continue;
+      }
+
+      if (!quality.ok) {
+        markForReview(context, stats, key, hydrated, classification, payload, 'review:quality');
         continue;
       }
 
@@ -290,6 +303,9 @@ function buildDigest(run) {
       lines.push('');
       lines.push(`${index + 1}. [${item.key}] ${item.title || '(sem titulo)'}`);
       lines.push(`Modulo/categoria: ${item.module}/${item.category} | confianca: ${item.confidence}`);
+      if (item.qualityWarnings && item.qualityWarnings.length) {
+        lines.push(`Avisos de qualidade: ${item.qualityWarnings.join(', ')}`);
+      }
       lines.push(`Fonte: ${item.sourceUrl}`);
       lines.push('Markdown proposto:');
       lines.push(item.preview);
