@@ -46,6 +46,33 @@ function inferImageContentType(response, url) {
   return '';
 }
 
+function isMissingImageUrlColumn(text) {
+  const lower = String(text || '').toLowerCase();
+  return lower.includes('image_url') && (
+    lower.includes('column') ||
+    lower.includes('schema cache') ||
+    lower.includes('could not find')
+  );
+}
+
+function withoutImageUrl(row) {
+  const copy = { ...(row || {}) };
+  delete copy.image_url;
+  return copy;
+}
+
+function withCoverImage(row, imageUrl) {
+  const next = { ...(row || {}) };
+  const cover = String(imageUrl || '').trim();
+  next.image_url = cover || null;
+  next.metadata = {
+    ...((row && row.metadata && typeof row.metadata === 'object') ? row.metadata : {}),
+    image_url: cover,
+    cover_url: cover,
+  };
+  return next;
+}
+
 class SupabasePublisher {
   constructor(config) {
     this.url = required('CADU_SUPABASE_URL', config.supabaseUrl).replace(/\/+$/, '');
@@ -131,7 +158,7 @@ class SupabasePublisher {
       return { ok: false, code: 'POST_LIMIT_REACHED', limit };
     }
 
-    const response = await fetch(`${this.url}/rest/v1/posts`, {
+    let response = await fetch(`${this.url}/rest/v1/posts`, {
       method: 'POST',
       headers: {
         ...this.headers(),
@@ -139,7 +166,18 @@ class SupabasePublisher {
       },
       body: JSON.stringify(row),
     });
-    const text = await response.text();
+    let text = await response.text();
+    if (!response.ok && isMissingImageUrlColumn(text)) {
+      response = await fetch(`${this.url}/rest/v1/posts`, {
+        method: 'POST',
+        headers: {
+          ...this.headers(),
+          prefer: 'return=representation',
+        },
+        body: JSON.stringify(withoutImageUrl(row)),
+      });
+      text = await response.text();
+    }
     if (!response.ok) {
       if (text.includes('flood_limit_exceeded')) {
         return { ok: false, code: 'FLOOD_LIMIT', message: 'Limite de 3 publicacoes por hora atingido.' };
@@ -149,6 +187,11 @@ class SupabasePublisher {
     const data = JSON.parse(text);
     const post = Array.isArray(data) ? data[0] : data;
     const prepared = post && post.id ? await this.prepareImagesForPost(post.id, normalizeImages(payload)) : { images: [], uploads: [] };
+    if (post && post.id && prepared.images[0]) {
+      await this.updatePostCoverImage(post.id, row, prepared.images[0]);
+      post.image_url = prepared.images[0];
+      post.metadata = withCoverImage(row, prepared.images[0]).metadata;
+    }
     const media = post && post.id ? await this.insertPostMedia(post.id, prepared.images) : { ok: true, count: 0 };
     return {
       ok: true,
@@ -218,6 +261,39 @@ class SupabasePublisher {
     return { images: out, uploads };
   }
 
+  async updatePostCoverImage(postId, row, imageUrl) {
+    const patch = withCoverImage(row, imageUrl);
+    const response = await fetch(`${this.url}/rest/v1/posts?id=eq.${encodeURIComponent(postId)}`, {
+      method: 'PATCH',
+      headers: {
+        ...this.headers(),
+        prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        image_url: patch.image_url,
+        metadata: patch.metadata,
+      }),
+    });
+    if (response.ok) return { ok: true };
+
+    const text = await response.text();
+    if (isMissingImageUrlColumn(text)) {
+      const compatResponse = await fetch(`${this.url}/rest/v1/posts?id=eq.${encodeURIComponent(postId)}`, {
+        method: 'PATCH',
+        headers: {
+          ...this.headers(),
+          prefer: 'return=minimal',
+        },
+        body: JSON.stringify({ metadata: patch.metadata }),
+      });
+      if (compatResponse.ok) return { ok: true, compat: true };
+      const compatText = await compatResponse.text();
+      return { ok: false, error: compatText.slice(0, 300) };
+    }
+
+    return { ok: false, error: text.slice(0, 300) };
+  }
+
   async insertPostMedia(postId, images) {
     if (!Array.isArray(images) || !images.length) return { ok: true, count: 0 };
     const rows = images.map((url, index) => ({
@@ -275,7 +351,7 @@ class SupabasePublisher {
     const row = toPostgrestInsert(payload, this.session.user.id);
     delete row.author_id;
 
-    const response = await fetch(`${this.url}/rest/v1/posts?id=eq.${encodeURIComponent(postId)}`, {
+    let response = await fetch(`${this.url}/rest/v1/posts?id=eq.${encodeURIComponent(postId)}`, {
       method: 'PATCH',
       headers: {
         ...this.headers(),
@@ -283,13 +359,29 @@ class SupabasePublisher {
       },
       body: JSON.stringify(row),
     });
-    const text = await response.text();
+    let text = await response.text();
+    if (!response.ok && isMissingImageUrlColumn(text)) {
+      response = await fetch(`${this.url}/rest/v1/posts?id=eq.${encodeURIComponent(postId)}`, {
+        method: 'PATCH',
+        headers: {
+          ...this.headers(),
+          prefer: 'return=representation',
+        },
+        body: JSON.stringify(withoutImageUrl(row)),
+      });
+      text = await response.text();
+    }
     if (!response.ok) {
       throw new Error(`Post update failed: HTTP ${response.status} ${text.slice(0, 500)}`);
     }
     const data = JSON.parse(text);
     const post = Array.isArray(data) ? data[0] : data;
     const prepared = await this.prepareImagesForPost(postId, normalizeImages(payload));
+    if (prepared.images[0]) {
+      await this.updatePostCoverImage(postId, row, prepared.images[0]);
+      post.image_url = prepared.images[0];
+      post.metadata = withCoverImage(row, prepared.images[0]).metadata;
+    }
     const media = await this.replacePostMedia(postId, prepared.images);
     return { ok: true, post, media: { ...media, uploads: prepared.uploads } };
   }
@@ -298,6 +390,7 @@ class SupabasePublisher {
 module.exports = {
   encodeStoragePath,
   inferImageContentType,
+  isMissingImageUrlColumn,
   normalizeImages,
   SupabasePublisher,
 };

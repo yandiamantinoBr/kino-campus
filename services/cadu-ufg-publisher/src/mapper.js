@@ -403,6 +403,8 @@ function toPostgrestInsert(payload, userId) {
   const metadata = payload.metadata || {};
   const moduleDB = payload.modulo || payload.module;
   const categoryDB = payload.categoriaKey || payload.category || payload.categoria;
+  const images = Array.isArray(payload.imagens) ? payload.imagens : (Array.isArray(payload.images) ? payload.images : []);
+  const imageUrl = metadata.cover_url || metadata.image_url || payload.cover_url || payload.image_url || images[0] || null;
   return {
     author_id: userId,
     title: payload.titulo || payload.title,
@@ -411,9 +413,12 @@ function toPostgrestInsert(payload, userId) {
     location: payload.localizacao || '',
     module: moduleDB,
     category: categoryDB,
+    image_url: imageUrl || null,
     visibility: payload.visibility || metadata.visibility || 'public',
     metadata: {
       ...metadata,
+      image_url: metadata.image_url || imageUrl || '',
+      cover_url: metadata.cover_url || imageUrl || '',
       tags: payload.tags || [],
       categoryKey: categoryDB,
       categoryLabel: payload.categoriaLabel || payload.categoria || categoryDB,

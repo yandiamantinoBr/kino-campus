@@ -36,7 +36,8 @@ async function fetchPost(id) {
     return null;
   }
 
-  const select = 'id,legacy_id,title,description,price,module,category,location,metadata,post_media(url,is_cover)';
+  const select = 'id,legacy_id,title,description,price,module,category,location,image_url,metadata,post_media(url,is_cover)';
+  const selectCompat = 'id,legacy_id,title,description,price,module,category,location,metadata,post_media(url,is_cover)';
   const headers = {
     apikey: key,
     Authorization: 'Bearer ' + key,
@@ -47,9 +48,11 @@ async function fetchPost(id) {
   const isUuid = UUID_RE.test(id);
   const filter = isUuid ? `id=eq.${id}` : `legacy_id=eq.${id}`;
   const endpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${filter}&status=eq.published&limit=1`;
+  const endpointCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${filter}&status=eq.published&limit=1`;
 
   try {
-    const resp = await fetch(endpoint, { headers });
+    let resp = await fetch(endpoint, { headers });
+    if (!resp.ok && resp.status === 400) resp = await fetch(endpointCompat, { headers });
     if (!resp.ok) return null;
     const rows = await resp.json();
     if (rows && rows.length > 0) return rows[0];
@@ -57,7 +60,9 @@ async function fetchPost(id) {
     // If UUID lookup found nothing, try legacy_id fallback
     if (isUuid) {
       const fallback = `${url}/rest/v1/posts?select=${encodeURI(select)}&legacy_id=eq.${id}&status=eq.published&limit=1`;
-      const resp2 = await fetch(fallback, { headers });
+      const fallbackCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&legacy_id=eq.${id}&status=eq.published&limit=1`;
+      let resp2 = await fetch(fallback, { headers });
+      if (!resp2.ok && resp2.status === 400) resp2 = await fetch(fallbackCompat, { headers });
       if (!resp2.ok) return null;
       const rows2 = await resp2.json();
       return (rows2 && rows2.length > 0) ? rows2[0] : null;
@@ -70,6 +75,10 @@ async function fetchPost(id) {
 }
 
 function getPostImage(post) {
+  if (post && post.image_url) return String(post.image_url);
+  const metadata = post && post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+  const metadataImage = metadata.cover_url || metadata.coverUrl || metadata.image_url || metadata.imageUrl;
+  if (metadataImage) return String(metadataImage);
   const media = post.post_media;
   if (!Array.isArray(media) || media.length === 0) return null;
   // Prefer cover image

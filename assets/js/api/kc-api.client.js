@@ -1203,6 +1203,8 @@
       precoTexto: r.precoTexto || r.priceText || null,
       imagens: normalizedImages,
       images: normalizedImages,
+      image_url: r.image_url || r.imageUrl || normalizedImages[0] || '',
+      imageUrl: r.imageUrl || r.image_url || normalizedImages[0] || '',
       cover_url: r.cover_url || r.coverUrl || normalizedImages[0] || '',
       coverUrl: r.coverUrl || r.cover_url || normalizedImages[0] || '',
       // Metadata (JSONB/local): mantém subcategory e labels para filtros

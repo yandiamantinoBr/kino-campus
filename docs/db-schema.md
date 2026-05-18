@@ -54,6 +54,7 @@
 | `location` | TEXT | Localização textual |
 | `module` | TEXT | `'compra-venda'` / `'caronas'` / `'moradia'` / `'eventos'` / `'oportunidades'` / `'achados-perdidos'` |
 | `category` | TEXT | Label da categoria selecionada |
+| `image_url` | TEXT | URL canônica da imagem de capa; fallback direto quando `post_media`/OG não resolvem |
 | `metadata` | JSONB | Dados extras do módulo (tipo, topico, status, etc.) |
 | `status` | TEXT | `'published'` / `'hidden'` / `'expired'` / `'pending'` / `'deleted'` |
 | `visibility` | TEXT | `'public'` / `'private'` |

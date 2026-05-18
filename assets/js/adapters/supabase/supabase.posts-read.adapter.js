@@ -120,19 +120,29 @@
       });
     }
 
+    const metadata = (row.metadata && typeof row.metadata === 'object') ? row.metadata : {};
+    const fallbackImageUrl = pickFirstNonEmpty([
+      row.image_url,
+      row.imageUrl,
+      metadata && metadata.cover_url,
+      metadata && metadata.coverUrl,
+      metadata && metadata.image_url,
+      metadata && metadata.imageUrl,
+    ]);
+
     let imageUrls = [];
     if (allImages) {
       const set = new Set();
       ordered.forEach((m) => {
         if (m && m.url) set.add(String(m.url));
       });
+      if (!set.size && fallbackImageUrl) set.add(String(fallbackImageUrl));
       imageUrls = Array.from(set);
     } else {
       const cover = ordered.find((m) => m && m.is_cover && m.url) || ordered.find((m) => m && m.url) || null;
-      imageUrls = (cover && cover.url) ? [String(cover.url)] : [];
+      imageUrls = (cover && cover.url) ? [String(cover.url)] : (fallbackImageUrl ? [String(fallbackImageUrl)] : []);
     }
 
-    const metadata = (row.metadata && typeof row.metadata === 'object') ? row.metadata : {};
     const authorId = row.author_id || (author && author.id) || null;
     const categoriaLabel = (metadata && (metadata.categoria || metadata.categoriaLabel || metadata.categoryLabel))
       ? String(metadata.categoria || metadata.categoriaLabel || metadata.categoryLabel)
@@ -219,6 +229,10 @@
 
       imagens: imageUrls,
       images: imageUrls,
+      image_url: row.image_url || fallbackImageUrl || '',
+      imageUrl: row.imageUrl || row.image_url || fallbackImageUrl || '',
+      cover_url: row.image_url || fallbackImageUrl || '',
+      coverUrl: row.imageUrl || row.image_url || fallbackImageUrl || '',
 
       comentarios: (Array.isArray(row.comments) && row.comments[0] && row.comments[0].count != null) ? row.comments[0].count : 0,
       rating: Number.isFinite(ratingAverage) && ratingCount > 0 ? ratingAverage : null,
@@ -261,14 +275,15 @@
     return doNormalizePost(raw);
   }
 
-  function buildSupabasePostSelect(client, includeVerified = true, includeComments = true) {
+  function buildSupabasePostSelect(client, includeVerified = true, includeComments = true, includeImageUrl = true) {
     const profileFields = includeVerified
       ? 'id, display_name, full_name, avatar_url, verified, rating_avg, rating_count'
       : 'id, display_name, full_name, avatar_url, rating_avg, rating_count';
     const commentsField = includeComments ? ', comments(count)' : '';
+    const imageUrlField = includeImageUrl ? 'image_url, ' : '';
     return client
       .from('posts')
-      .select(`id, legacy_id, author_id, title, description, price, location, module, category, status, visibility, metadata, created_at, votos, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`)
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, ${imageUrlField}status, visibility, metadata, created_at, votos, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`)
       .limit(1);
   }
 
@@ -324,18 +339,27 @@
     const runPostQueryWithFallback = async (field, value) => {
       let includeVerified = true;
       let includeComments = true;
+      let includeImageUrl = true;
 
-      let res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+      let res = await buildSupabasePostSelect(client, includeVerified, includeComments, includeImageUrl).eq(field, value).maybeSingle();
+      if (res && res.error && isMissingImageUrlColumnError(res.error)) {
+        includeImageUrl = false;
+        res = await buildSupabasePostSelect(client, includeVerified, includeComments, includeImageUrl).eq(field, value).maybeSingle();
+      }
       if (res && res.error && isMissingVerifiedColumnError(res.error)) {
         includeVerified = false;
-        res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+        res = await buildSupabasePostSelect(client, includeVerified, includeComments, includeImageUrl).eq(field, value).maybeSingle();
       }
       if (res && res.error && includeComments && isMissingCommentsEmbedError(res.error)) {
         includeComments = false;
-        res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+        res = await buildSupabasePostSelect(client, includeVerified, includeComments, includeImageUrl).eq(field, value).maybeSingle();
+        if (res && res.error && includeImageUrl && isMissingImageUrlColumnError(res.error)) {
+          includeImageUrl = false;
+          res = await buildSupabasePostSelect(client, includeVerified, includeComments, includeImageUrl).eq(field, value).maybeSingle();
+        }
         if (res && res.error && includeVerified && isMissingVerifiedColumnError(res.error)) {
           includeVerified = false;
-          res = await buildSupabasePostSelect(client, includeVerified, includeComments).eq(field, value).maybeSingle();
+          res = await buildSupabasePostSelect(client, includeVerified, includeComments, includeImageUrl).eq(field, value).maybeSingle();
         }
       }
 
@@ -381,14 +405,15 @@
   }
 
 
-  function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true) {
+  function buildSupabasePostsQuery(client, includeVerified = true, includeComments = true, includeImageUrl = true) {
     const profileFields = includeVerified
       ? 'id, display_name, full_name, avatar_url, verified, rating_avg, rating_count'
       : 'id, display_name, full_name, avatar_url, rating_avg, rating_count';
     const commentsField = includeComments ? ', comments(count)' : '';
+    const imageUrlField = includeImageUrl ? 'image_url, ' : '';
     return client
       .from('posts')
-      .select(`id, legacy_id, author_id, title, description, price, location, module, category, status, visibility, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`);
+      .select(`id, legacy_id, author_id, title, description, price, location, module, category, ${imageUrlField}status, visibility, metadata, created_at, profiles:author_id (${profileFields}), post_media (id, url, is_cover)${commentsField}`);
   }
 
   // Compat: caso o schema ainda não tenha profiles.verified (antes do update v8.1.3.2)
@@ -400,6 +425,16 @@
     if (!err) return false;
     const msg = String(err.message || err.details || err.hint || '').toLowerCase();
     return msg.includes('verified') && msg.includes('does not exist');
+  }
+
+  function isMissingImageUrlColumnError(err) {
+    if (!err) return false;
+    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
+    return msg.includes('image_url') && (
+      msg.includes('does not exist') ||
+      msg.includes('could not find') ||
+      msg.includes('schema cache')
+    );
   }
 
   function normalizeSupabaseFilters(filters) {
@@ -522,15 +557,23 @@
     const status = String(params.status || '').trim().toLowerCase();
 
     try {
-      let query = client
+      const buildQuery = (includeImageUrl) => client
         .from('posts')
-        .select('id, legacy_id, title, created_at, status, visibility, module, category, votos, view_count, share_count, coupon_clicks, expires_at')
+        .select(includeImageUrl
+          ? 'id, legacy_id, title, created_at, status, visibility, module, category, image_url, votos, view_count, share_count, coupon_clicks, expires_at'
+          : 'id, legacy_id, title, created_at, status, visibility, module, category, votos, view_count, share_count, coupon_clicks, expires_at')
         .eq('author_id', user.id)
         .order('created_at', { ascending: false })
         .range(from, to);
 
+      let query = buildQuery(true);
       if (status) query = query.eq('status', status);
-      const { data, error } = await query;
+      let { data, error } = await query;
+      if (error && isMissingImageUrlColumnError(error)) {
+        query = buildQuery(false);
+        if (status) query = query.eq('status', status);
+        ({ data, error } = await query);
+      }
       if (error) {
         console.error('[KCAPI][profile] getMyPosts:', error);
         return [];
@@ -546,6 +589,8 @@
         visibility: row.visibility || 'public',
         module: row.module || '',
         category: row.category || '',
+        image_url: row.image_url || '',
+        cover_url: row.image_url || '',
         votos: row.votos || 0,
         view_count: row.view_count || 0,
         share_count: row.share_count || 0,
@@ -571,13 +616,20 @@
     const to = from + limit - 1;
 
     try {
-      const { data, error } = await client
+      const buildQuery = (includeImageUrl) => client
         .from('posts')
-        .select('id, legacy_id, title, created_at, status, visibility, module, category')
+        .select(includeImageUrl
+          ? 'id, legacy_id, title, created_at, status, visibility, module, category, image_url'
+          : 'id, legacy_id, title, created_at, status, visibility, module, category')
         .eq('author_id', author)
         .eq('status', 'published')
         .order('created_at', { ascending: false })
         .range(from, to);
+
+      let { data, error } = await buildQuery(true);
+      if (error && isMissingImageUrlColumnError(error)) {
+        ({ data, error } = await buildQuery(false));
+      }
 
       if (error) {
         console.error('[KCAPI][profile] getPostsByAuthorId:', error);
@@ -594,6 +646,8 @@
         visibility: row.visibility || 'public',
         module: row.module || '',
         category: row.category || '',
+        image_url: row.image_url || '',
+        cover_url: row.image_url || '',
       }));
     } catch (e) {
       console.error('[KCAPI][profile] getPostsByAuthorId exceção:', e);
@@ -609,23 +663,31 @@
 
     let includeVerified = true;
     let includeComments = false;
+    let includeImageUrl = true;
 
     try {
-      let query = buildSupabasePostsQuery(client, includeVerified, includeComments)
+      let query = buildSupabasePostsQuery(client, includeVerified, includeComments, includeImageUrl)
         .in('id', orderedIds)
         .eq('status', 'published');
       let response = await query;
 
+      if (response && response.error && isMissingImageUrlColumnError(response.error)) {
+        includeImageUrl = false;
+        response = await buildSupabasePostsQuery(client, includeVerified, includeComments, includeImageUrl)
+          .in('id', orderedIds)
+          .eq('status', 'published');
+      }
+
       if (response && response.error && isMissingVerifiedColumnError(response.error)) {
         includeVerified = false;
-        response = await buildSupabasePostsQuery(client, includeVerified, includeComments)
+        response = await buildSupabasePostsQuery(client, includeVerified, includeComments, includeImageUrl)
           .in('id', orderedIds)
           .eq('status', 'published');
       }
 
       if (response && response.error && includeComments && isMissingCommentsEmbedError(response.error)) {
         includeComments = false;
-        response = await buildSupabasePostsQuery(client, includeVerified, includeComments)
+        response = await buildSupabasePostsQuery(client, includeVerified, includeComments, includeImageUrl)
           .in('id', orderedIds)
           .eq('status', 'published');
       }

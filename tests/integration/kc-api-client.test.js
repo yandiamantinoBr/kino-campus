@@ -78,7 +78,7 @@ describe('KCAPI - API Client', () => {
   // ── 3. ENV ───────────────────────────────────────────────────────────
 
   describe('normalizePost media fallbacks', () => {
-    test('promove metadata.image_url para imagens/images/cover_url', () => {
+    test('promove metadata.image_url para imagens/images/cover_url/image_url', () => {
       const post = api.normalizePost({
         id: 'post-1',
         module: 'eventos',
@@ -91,6 +91,7 @@ describe('KCAPI - API Client', () => {
       expect(post.imagens).toEqual(['https://cdn.example.com/cover.jpg']);
       expect(post.images).toEqual(['https://cdn.example.com/cover.jpg']);
       expect(post.cover_url).toBe('https://cdn.example.com/cover.jpg');
+      expect(post.image_url).toBe('https://cdn.example.com/cover.jpg');
     });
   });
 

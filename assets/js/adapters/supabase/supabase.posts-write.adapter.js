@@ -312,6 +312,40 @@
     return null;
   }
 
+  function isMissingImageUrlColumnError(err) {
+    if (!err) return false;
+    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
+    return msg.includes('image_url') && (
+      msg.includes('does not exist') ||
+      msg.includes('could not find') ||
+      msg.includes('schema cache')
+    );
+  }
+
+  function resolveFirstImageUrl(images) {
+    const list = Array.isArray(images) ? images : [];
+    for (let i = 0; i < list.length; i += 1) {
+      const url = String((list[i] && list[i].url) || list[i] || '').trim();
+      if (/^https?:\/\//i.test(url)) return url;
+    }
+    return '';
+  }
+
+  async function updatePostCoverImage(client, postId, metadata, imageUrl) {
+    const cover = String(imageUrl || '').trim();
+    const nextMetadata = {
+      ...((metadata && typeof metadata === 'object') ? metadata : {}),
+      image_url: cover,
+      cover_url: cover,
+    };
+    const patch = { image_url: cover || null, metadata: nextMetadata };
+    let result = await client.from('posts').update(patch).eq('id', postId).select('id').maybeSingle();
+    if (result && result.error && isMissingImageUrlColumnError(result.error)) {
+      result = await client.from('posts').update({ metadata: nextMetadata }).eq('id', postId).select('id').maybeSingle();
+    }
+    return result;
+  }
+
   async function createPost(data) {
     createPostDiagnostics.clear();
 
@@ -476,6 +510,13 @@
         return null;
       }
       uploaded = Array.isArray(uploadResult.uploaded) ? uploadResult.uploaded : [];
+      const coverImageUrl = resolveFirstImageUrl(uploaded);
+      if (coverImageUrl) {
+        const coverUpdate = await updatePostCoverImage(client, postId, parsed.metadata, coverImageUrl);
+        if (coverUpdate && coverUpdate.error) {
+          console.warn('[KCAPI][Supabase] image_url fallback update falhou:', coverUpdate.error);
+        }
+      }
 
       // 4) Insere mídias (post_media) com capa + ordem
       if (Array.isArray(uploaded) && uploaded.length) {
@@ -667,6 +708,8 @@
         console.error('[KCAPI][Supabase] syncPostMedia insert post_media falhou:', mr.error);
       }
     }
+
+    return validFinal;
   }
 
   async function updatePost(postId, payload) {
@@ -714,7 +757,12 @@
       // Always sync — even if empty (user might have removed all images)
       const newImages = Array.isArray(parsed.images) ? parsed.images : [];
       try {
-        await syncPostMediaForUpdate(client, postUuid, user.id, newImages);
+        const finalImages = await syncPostMediaForUpdate(client, postUuid, user.id, newImages);
+        const coverImageUrl = resolveFirstImageUrl(finalImages);
+        const coverUpdate = await updatePostCoverImage(client, postUuid, parsed.data.metadata, coverImageUrl);
+        if (coverUpdate && coverUpdate.error) {
+          console.warn('[KCAPI][Supabase] updatePost image_url fallback update falhou:', coverUpdate.error);
+        }
       } catch (imgErr) {
         console.error('[KCAPI][Supabase] updatePost syncPostMedia erro:', imgErr);
         // Non-blocking: text fields were saved, image sync failed partially

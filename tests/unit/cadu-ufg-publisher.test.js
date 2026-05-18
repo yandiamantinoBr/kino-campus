@@ -4,7 +4,7 @@ const { analyzeTemporalRelevance, classifyItem } = require('../../services/cadu-
 const { cleanTitle, extractFirstImageUrl, extractLinksFromHtml, normalizeWebyItem } = require('../../services/cadu-ufg-publisher/src/extractors');
 const { HttpClient } = require('../../services/cadu-ufg-publisher/src/http-client');
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
-const { resolveDeepSeekEndpoint } = require('../../services/cadu-ufg-publisher/src/model');
+const { resolveDeepSeekEndpoint, resolveDeepSeekModel } = require('../../services/cadu-ufg-publisher/src/model');
 const { splitMessage } = require('../../services/cadu-ufg-publisher/src/notifier');
 const { SupabasePublisher } = require('../../services/cadu-ufg-publisher/src/publisher');
 const { evaluatePayloadQuality } = require('../../services/cadu-ufg-publisher/src/quality');
@@ -166,6 +166,8 @@ describe('cadu-ufg-publisher', () => {
     const row = toPostgrestInsert(payload, 'user-1');
     expect(row.author_id).toBe('user-1');
     expect(row.module).toBe('oportunidades');
+    expect(row.image_url).toBe('https://prograd.ufg.br/assets/cover.jpg');
+    expect(row.metadata.image_url).toBe('https://prograd.ufg.br/assets/cover.jpg');
     expect(row.metadata.source_url).toBe(item.sourceUrl);
   });
 
@@ -278,6 +280,13 @@ describe('cadu-ufg-publisher', () => {
       .toBe('https://api.deepseek.com/v1/chat/completions');
     expect(resolveDeepSeekEndpoint({ deepseekEndpoint: 'https://proxy.local/chat/completions' }))
       .toBe('https://proxy.local/chat/completions');
+  });
+
+  test('DeepSeek model resolves deprecated aliases to the current flash model', () => {
+    expect(resolveDeepSeekModel({})).toBe('deepseek-v4-flash');
+    expect(resolveDeepSeekModel({ deepseekModel: 'deepseek-chat' })).toBe('deepseek-v4-flash');
+    expect(resolveDeepSeekModel({ deepseekModel: 'deepseek-reasoner' })).toBe('deepseek-v4-flash');
+    expect(resolveDeepSeekModel({ deepseekModel: 'deepseek-v4-pro' })).toBe('deepseek-v4-pro');
   });
 
   test('publisher uploads remote cover images to Supabase Storage before post_media', async () => {

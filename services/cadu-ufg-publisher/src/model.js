@@ -14,6 +14,13 @@ function resolveDeepSeekEndpoint(config) {
   }
 }
 
+function resolveDeepSeekModel(config) {
+  const raw = String(config.deepseekModel || '').trim();
+  if (!raw) return 'deepseek-v4-flash';
+  if (raw === 'deepseek-chat' || raw === 'deepseek-reasoner') return 'deepseek-v4-flash';
+  return raw;
+}
+
 async function summarizeWithDeepSeek(config, item, classification) {
   if (!config.deepseekApiKey || !config.useModel) return '';
 
@@ -40,7 +47,7 @@ async function summarizeWithDeepSeek(config, item, classification) {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: config.deepseekModel || 'deepseek-v4-flash',
+      model: resolveDeepSeekModel(config),
       temperature: 0.2,
       thinking: { type: 'disabled' },
       messages: [
@@ -60,5 +67,6 @@ async function summarizeWithDeepSeek(config, item, classification) {
 
 module.exports = {
   resolveDeepSeekEndpoint,
+  resolveDeepSeekModel,
   summarizeWithDeepSeek,
 };

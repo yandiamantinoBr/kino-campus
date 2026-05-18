@@ -138,7 +138,7 @@ Use o mesmo padrao visual que o modal do Kino renderiza:
 - links individuais de editais/documentos quando a pagina oficial listar varios;
 - cronograma explicito quando houver datas de inscricao, recurso, homologacao, resultado ou submissao;
 - emojis apenas como marcadores uteis;
-- imagem de capa da fonte oficial quando existir `image`, `image_url` ou `og:image`; o publisher deve preferir URL do bucket `kino-media` em `post_media`, nao hotlink remoto;
+- imagem de capa da fonte oficial quando existir `image`, `image_url` ou `og:image`; o publisher deve preferir URL do bucket `kino-media` em `posts.image_url`, `metadata.image_url`/`cover_url` e `post_media`, nao hotlink remoto;
 - nunca publique um bloco bruto copiado da pagina sem resumir e organizar.
 
 ## Editais e PDFs
@@ -208,6 +208,7 @@ CADU_EMAIL_TO=contato@kinocampus.com.br
 CADU_USE_MODEL=true
 CADU_DEEPSEEK_MODEL=deepseek-v4-flash
 CADU_DEEPSEEK_BASE_URL=https://api.deepseek.com
+CADU_DEEPSEEK_ENDPOINT=
 CADU_REVIEW_BEFORE_PUBLISH=true
 CADU_FETCH_PROXY_TEMPLATE=
 CADU_SUPABASE_STORAGE_BUCKET=kino-media
@@ -216,6 +217,8 @@ CADU_MAX_ITEMS_PER_SOURCE=15
 CADU_MAX_PUBLISH_PER_RUN=3
 CADU_PDFTOTEXT_PATH=pdftotext
 ```
+
+Use `CADU_DEEPSEEK_ENDPOINT` apenas se o ambiente/proxy exigir uma rota completa diferente, por exemplo uma rota compatÃ­vel `/v1/chat/completions`. A configuracao oficial atual do DeepSeek usa `CADU_DEEPSEEK_BASE_URL=https://api.deepseek.com`.
 
 Proteger:
 
