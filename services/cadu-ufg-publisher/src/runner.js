@@ -102,6 +102,45 @@ function itemKey(item) {
   return sha256(`${item.sourceUrl}\n${item.title}\n${item.updatedAt}`);
 }
 
+function shortReviewKey(key) {
+  return String(key || '').slice(0, 12);
+}
+
+function buildReviewItem(key, hydrated, classification, payload, decision) {
+  return {
+    key: shortReviewKey(key),
+    title: hydrated.title,
+    decision,
+    confidence: classification.confidence,
+    module: payload.modulo || classification.module,
+    category: payload.categoriaKey || classification.category,
+    sourceUrl: hydrated.sourceUrl,
+    preview: String(payload.descricao || '').slice(0, 1400),
+  };
+}
+
+function markForReview(context, stats, key, hydrated, classification, payload, decision) {
+  const reviewDecision = decision || 'review';
+  stats.review += 1;
+  stateMarkReview(context.state, key, hydrated, classification, payload, reviewDecision);
+  if (!stats.reviewItems) stats.reviewItems = [];
+  if (stats.reviewItems.length < context.config.reviewPreviewLimit) {
+    stats.reviewItems.push(buildReviewItem(key, hydrated, classification, payload, reviewDecision));
+  }
+}
+
+function stateMarkReview(state, key, hydrated, classification, payload, decision) {
+  state.mark(key, {
+    decision,
+    sourceUrl: hydrated.sourceUrl,
+    title: hydrated.title,
+    confidence: classification.confidence,
+    module: classification.module,
+    category: classification.category,
+    payload,
+  });
+}
+
 async function processSource(context, source) {
   const { http, config, state, dryRun, publisher, runId } = context;
   const stats = { source: source.id, discovered: 0, published: 0, pending: 0, review: 0, discarded: 0, skipped: 0, disabled: false, errors: [] };
@@ -171,8 +210,7 @@ async function processSource(context, source) {
 
       const payload = mapToKinoPayload(hydrated, classification, { runId, summaryText });
       if (classification.decision === 'review') {
-        stats.review += 1;
-        state.mark(key, { decision: 'review', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, payload });
+        markForReview(context, stats, key, hydrated, classification, payload, 'review');
         continue;
       }
 
@@ -181,9 +219,13 @@ async function processSource(context, source) {
         continue;
       }
 
+      if (config.reviewBeforePublish) {
+        markForReview(context, stats, key, hydrated, classification, payload, 'review:preview');
+        continue;
+      }
+
       if (context.publishedThisRun >= config.maxPublishPerRun) {
-        stats.review += 1;
-        state.mark(key, { decision: 'review:publish-cap', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, payload });
+        markForReview(context, stats, key, hydrated, classification, payload, 'review:publish-cap');
         continue;
       }
 
@@ -208,9 +250,8 @@ async function processSource(context, source) {
           state.mark(key, { decision: 'published', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, postId: result.post && result.post.id });
         }
       } else {
-        stats.review += 1;
         stats.errors.push(`publish:${hydrated.sourceUrl}: ${(result && result.code) || 'unknown'}`);
-        state.mark(key, { decision: 'review:publish-failed', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, payload, error: result });
+        markForReview(context, stats, key, hydrated, classification, payload, 'review:publish-failed');
       }
     } catch (error) {
       stats.errors.push(`${candidate.sourceUrl || source.id}: ${error.message}`);
@@ -228,7 +269,7 @@ function buildDigest(run) {
     return acc;
   }, { discovered: 0, published: 0, pending: 0, review: 0, discarded: 0, skipped: 0, disabled: 0, errors: 0 });
 
-  return [
+  const lines = [
     `Run: ${run.id}`,
     `Modo: ${run.mode}${run.dryRun ? ' (dry-run)' : ''}`,
     `Descobertos: ${totals.discovered}`,
@@ -239,7 +280,25 @@ function buildDigest(run) {
     `Duplicados/ignorados: ${totals.skipped}`,
     `Fontes desabilitadas nesta execucao: ${totals.disabled}`,
     `Erros: ${totals.errors}`,
-  ].join('\n');
+  ];
+
+  const reviewItems = run.sources.flatMap((source) => source.reviewItems || []).slice(0, 6);
+  if (reviewItems.length) {
+    lines.push('');
+    lines.push('Previews para revisao/aprovacao:');
+    reviewItems.forEach((item, index) => {
+      lines.push('');
+      lines.push(`${index + 1}. [${item.key}] ${item.title || '(sem titulo)'}`);
+      lines.push(`Modulo/categoria: ${item.module}/${item.category} | confianca: ${item.confidence}`);
+      lines.push(`Fonte: ${item.sourceUrl}`);
+      lines.push('Markdown proposto:');
+      lines.push(item.preview);
+      lines.push(`Para aprovar: npm run cadu:reviews -- --approve=${item.key}`);
+      lines.push(`Para rejeitar: npm run cadu:reviews -- --reject=${item.key}`);
+    });
+  }
+
+  return lines.join('\n');
 }
 
 async function runCadu(options = {}) {
@@ -247,10 +306,16 @@ async function runCadu(options = {}) {
   const mode = options.mode || 'quick';
   const dryRun = options.dryRun !== false && !options.publish;
   const runId = `cadu-${mode}-${Date.now()}`;
-  const http = new HttpClient({ userAgent: config.userAgent, timeoutMs: config.requestTimeoutMs, minDelayMs: config.minDelayMs });
+  const http = new HttpClient({
+    userAgent: config.userAgent,
+    timeoutMs: config.requestTimeoutMs,
+    minDelayMs: config.minDelayMs,
+    fetchProxyTemplate: config.fetchProxyTemplate,
+    hostAliases: config.hostAliases,
+  });
   const state = new StateStore(options.statePath || config.statePath).load();
   const sources = selectSources(loadSources(config.sourcePath), mode, options.sources || []);
-  const publisher = dryRun ? null : new SupabasePublisher(config);
+  const publisher = (dryRun || config.reviewBeforePublish) ? null : new SupabasePublisher(config);
   const context = { config, dryRun, http, publisher, runId, state, publishedThisRun: 0 };
   const run = { id: runId, mode, dryRun, startedAt: nowIso(), sources: [] };
 

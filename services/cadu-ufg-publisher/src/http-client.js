@@ -7,6 +7,8 @@ class HttpClient {
     this.userAgent = options.userAgent || 'CaduKinoCampusBot/1.0 (+contato@kinocampus.com.br)';
     this.timeoutMs = Number(options.timeoutMs || DEFAULT_TIMEOUT_MS);
     this.minDelayMs = Number(options.minDelayMs || 900);
+    this.fetchProxyTemplate = String(options.fetchProxyTemplate || '').trim();
+    this.hostAliases = options.hostAliases && typeof options.hostAliases === 'object' ? options.hostAliases : {};
     this.lastRequestByHost = new Map();
   }
 
@@ -20,7 +22,34 @@ class HttpClient {
     this.lastRequestByHost.set(host, Date.now());
   }
 
-  async fetch(url, options = {}) {
+  buildProxyUrl(url) {
+    if (!this.fetchProxyTemplate) return '';
+    const raw = String(url || '');
+    return this.fetchProxyTemplate
+      .replace(/\{rawUrl\}/g, raw)
+      .replace(/\{url\}/g, encodeURIComponent(raw));
+  }
+
+  buildAliasUrl(url) {
+    let original;
+    try {
+      original = new URL(url);
+    } catch (_) {
+      return '';
+    }
+    const alias = this.hostAliases[original.host] || this.hostAliases[original.hostname];
+    if (!alias) return '';
+    try {
+      const aliasUrl = new URL(/^https?:\/\//i.test(alias) ? alias : `${original.protocol}//${alias}`);
+      original.protocol = aliasUrl.protocol;
+      original.host = aliasUrl.host;
+      return original.toString();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  async fetchDirect(url, options = {}) {
     await this.waitForHost(url);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeoutMs || this.timeoutMs);
@@ -38,6 +67,32 @@ class HttpClient {
       return response;
     } finally {
       clearTimeout(timeout);
+    }
+  }
+
+  async fetch(url, options = {}) {
+    try {
+      return await this.fetchDirect(url, options);
+    } catch (error) {
+      const aliasUrl = this.buildAliasUrl(url);
+      if (aliasUrl && aliasUrl !== url) {
+        try {
+          const response = await this.fetchDirect(aliasUrl, options);
+          response.caduResolvedUrl = aliasUrl;
+          return response;
+        } catch (_) {
+          // Proxy fallback below still gets a chance.
+        }
+      }
+
+      const proxyUrl = this.buildProxyUrl(url);
+      if (proxyUrl) {
+        const response = await this.fetchDirect(proxyUrl, options);
+        response.caduResolvedUrl = proxyUrl;
+        return response;
+      }
+
+      throw error;
     }
   }
 

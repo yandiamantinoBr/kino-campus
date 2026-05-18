@@ -43,6 +43,7 @@
     if (canonical.includes('emprego')) return 'emprego';
     if (canonical.includes('freelancer')) return 'freelancer';
     if (canonical.includes('monitor')) return 'monitoria';
+    if (canonical.includes('pesquis') || canonical.includes('pibic') || canonical.includes('pivic')) return 'pesquisa';
     if (canonical.includes('volunt')) return 'voluntariado';
     return canonical;
   }

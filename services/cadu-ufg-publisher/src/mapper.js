@@ -9,6 +9,7 @@ const {
   parseTime,
   sha256,
   slugify,
+  stripHtml,
   uniq,
 } = require('./utils');
 
@@ -21,6 +22,7 @@ function detectArea(text) {
   if (/engenharia|arquitetura/.test(normalized)) return 'Engenharia';
   if (/letras|linguas|idioma/.test(normalized)) return 'Linguas';
   if (/arte|musica|danca|teatro/.test(normalized)) return 'Artes';
+  if (/pesquisa|pibic|pivic|fapeg|iniciacao cientifica|mobilidade/.test(normalized)) return 'Pesquisa';
   return 'Academica';
 }
 
@@ -45,6 +47,24 @@ function validRemoteImageUrl(value) {
   }
 }
 
+function normalizeMarkdownText(value) {
+  return String(stripHtml(value || '') || '')
+    .normalize('NFKC')
+    .replace(/\r\n?/g, '\n')
+    .split(/\n+/)
+    .map(normalizeWhitespace)
+    .filter(Boolean)
+    .join('\n');
+}
+
+function clampMarkdown(value, maxLength) {
+  const text = String(value || '').normalize('NFKC').trim();
+  if (text.length <= maxLength) return text;
+  const sliced = text.slice(0, Math.max(0, maxLength - 1));
+  const boundary = Math.max(sliced.lastIndexOf('\n\n'), sliced.lastIndexOf('\n'), sliced.lastIndexOf(' '));
+  return `${(boundary > 80 ? sliced.slice(0, boundary) : sliced).trim()}...`;
+}
+
 function buildImageList(item) {
   return uniq([
     item.imageUrl,
@@ -54,8 +74,47 @@ function buildImageList(item) {
   ].map(validRemoteImageUrl)).slice(0, 1);
 }
 
+function extractScheduleEntries(text, limit = 5) {
+  const candidates = [];
+  const seen = new Set();
+  const chunks = String(text || '')
+    .normalize('NFKC')
+    .split(/(?<=[.!?])\s+|\n+|;/)
+    .map(normalizeWhitespace)
+    .filter(Boolean);
+  const datePattern = /\b(?:[0-3]?\d[\/.-][01]?\d(?:[\/.-](?:20)?\d{2})?|[0-3]?\d\s+(?:a|ate|-)\s*[0-3]?\d(?:[\/.-][01]?\d|\s+de\s+[a-zçãéíóú]+)|[0-3]?\d\s+de\s+[a-zçãéíóú]+(?:\s+de\s+(?:20)?\d{2})?)\b/ig;
+  const contextPattern = /\b(inscric|submiss|prazo|cronograma|resultado|recurso|matricula|homolog|entrevista|prova|periodo|chamada|divulga)\w*/i;
+
+  chunks.forEach((chunk) => {
+    if (!datePattern.test(chunk)) {
+      datePattern.lastIndex = 0;
+      return;
+    }
+    datePattern.lastIndex = 0;
+    if (!contextPattern.test(chunk) && candidates.length >= 2) return;
+    const key = chunk.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    candidates.push(clamp(chunk, 220));
+  });
+
+  return candidates.slice(0, limit);
+}
+
+function extractPdfLabel(url, index) {
+  try {
+    const pathname = new URL(url).pathname;
+    const last = pathname.split('/').filter(Boolean).pop() || '';
+    const decoded = decodeURIComponent(last).replace(/\.pdf$/i, '').replace(/[-_]+/g, ' ');
+    return clamp(normalizeWhitespace(decoded) || `documento ${index + 1}`, 80);
+  } catch (_) {
+    return `documento ${index + 1}`;
+  }
+}
+
 function buildDescription(item, classification, summaryText = '') {
-  const original = normalizeWhitespace(summaryText || item.summary || item.text || '');
+  const original = normalizeMarkdownText(summaryText || item.summary || item.text || '');
+  const fullText = normalizeMarkdownText(`${item.summary || ''}\n${item.text || ''}`);
   const chunks = [];
   const isOpportunity = classification.module === 'oportunidades';
   const sourceLabel = 'pagina oficial da UFG';
@@ -66,8 +125,10 @@ function buildDescription(item, classification, summaryText = '') {
   const eventDate = classification.temporal && classification.temporal.eventDate
     ? formatDatePt(classification.temporal.eventDate)
     : '';
-  const audience = pickSentence(original, /(quem pode|publico|estudantes|discente|candidato|servidor|comunidade|pesquisador|docente)/i);
-  const deadline = pickSentence(original, /(prazo|inscricoes?|ate o dia|periodo|cronograma|submiss)/i);
+  const audience = pickSentence(fullText || original, /(quem pode|publico|estudantes|discente|candidato|servidor|comunidade|pesquisador|docente|proponente|coordenador)/i);
+  const deadline = pickSentence(fullText || original, /(prazo|inscricoes?|ate o dia|periodo|cronograma|submiss|homolog|resultado|recurso)/i);
+  const schedule = extractScheduleEntries(fullText || original);
+  const pdfLinks = Array.isArray(item.pdfLinks) ? item.pdfLinks.filter(Boolean) : [];
 
   chunks.push(isOpportunity ? '**📌 Resumo**' : '**📅 Resumo**');
   chunks.push(clamp(original, 650));
@@ -92,7 +153,25 @@ function buildDescription(item, classification, summaryText = '') {
     chunks.push(`**🔗 Fonte oficial:** ${sourceLink}`);
   }
 
-  return clamp(chunks.filter(Boolean).join('\n\n'), 2000);
+  if (classification.hasPdf && pdfLinks.length > 1) {
+    chunks.push([
+      `**Documentos encontrados:** ${pdfLinks.length} PDFs oficiais.`,
+      ...pdfLinks.slice(0, 4).map((url, index) => `- ${extractPdfLabel(url, index)}`),
+    ].join('\n'));
+  }
+
+  if (schedule.length) {
+    chunks.push([
+      '**Cronograma detectado**',
+      ...schedule.map((entry) => `- ${entry}`),
+    ].join('\n'));
+  }
+
+  if (classification.hasPdf) {
+    chunks.push(`**Fonte oficial:** ${sourceLink}`);
+  }
+
+  return clampMarkdown(chunks.filter(Boolean).join('\n\n'), 2000);
 }
 
 function pickSentence(text, pattern) {
@@ -124,6 +203,8 @@ function mapToKinoPayload(item, classification, options = {}) {
     content_hash: sha256(`${item.title}\n${item.text}`),
     original_title: item.title,
     edital_pdf_url: (item.pdfLinks && item.pdfLinks[0]) || '',
+    edital_pdf_urls: Array.isArray(item.pdfLinks) ? item.pdfLinks.slice(0, 10) : [],
+    image_url: images[0] || '',
     confidence_score: classification.confidence,
     deadline_date: (classification.temporal && classification.temporal.deadlineDate) || '',
     event_date_detected: (classification.temporal && classification.temporal.eventDate) || '',

@@ -49,6 +49,7 @@ Pagina principal: `oportunidades.html`.
 Categorias aceitas:
 
 - `monitoria`: monitorias, tutoria, selecao de bolsistas de ensino.
+- `pesquisa`: editais PRPI, PIBIC/PIVIC, Fapeg, iniciacao cientifica, pesquisa, mobilidade academica.
 - `estagios`: estagio, trainee, oportunidade de estagio.
 - `voluntariado`: extensao, voluntariado, projetos com chamada para participar.
 - `empregos`: emprego, vaga, contratacao, concurso com vinculo profissional.
@@ -132,6 +133,7 @@ Use o mesmo padrao visual que o modal do Kino renderiza:
 
 - titulo ate 80 caracteres;
 - descricao em Markdown seguro, com `**Resumo**`, `**Prazo**`, lista de edital e link oficial unico;
+- cronograma explicito quando houver datas de inscricao, recurso, homologacao, resultado ou submissao;
 - emojis apenas como marcadores uteis;
 - imagem de capa da fonte oficial quando existir `image`, `image_url` ou `og:image`;
 - nunca publique um bloco bruto copiado da pagina sem resumir e organizar.
@@ -196,7 +198,9 @@ CADU_TELEGRAM_BOT_TOKEN=
 CADU_TELEGRAM_CHAT_ID=
 CADU_RESEND_API_KEY=
 CADU_EMAIL_TO=contato@kinocampus.com.br
-CADU_USE_MODEL=false
+CADU_USE_MODEL=true
+CADU_REVIEW_BEFORE_PUBLISH=true
+CADU_FETCH_PROXY_TEMPLATE=
 CADU_MAX_ITEMS_PER_SOURCE=15
 CADU_MAX_PUBLISH_PER_RUN=3
 CADU_PDFTOTEXT_PATH=pdftotext

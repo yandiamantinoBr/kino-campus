@@ -179,7 +179,7 @@ const CATEGORY_GROUP_MAP = {
 
 | GroupId | Label | Obrigatorio | Multipla selecao | Opcoes |
 |---|---|---|---|---|
-| `tipo` | Tipo | Sim | Nao | Estagio, Emprego, Freelancer, Monitoria, Voluntariado |
+| `tipo` | Tipo | Sim | Nao | Estagio, Emprego, Freelancer, Monitoria, Pesquisa, Voluntariado |
 
 ### Campos adicionais
 

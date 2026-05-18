@@ -4,7 +4,7 @@
 
 - `index.html`: home e feed geral.
 - `eventos.html`: eventos academicos, culturais, esportivos, workshops e sustentabilidade.
-- `oportunidades.html`: monitoria, estagio, emprego, voluntariado e freelancer.
+- `oportunidades.html`: monitoria, pesquisa, estagio, emprego, voluntariado e freelancer.
 - `create-post.html`: fallback de criacao de post.
 - `product.html`: detalhe de publicacao.
 - `search-results.html`: busca.
@@ -57,7 +57,7 @@ Use linguagem objetiva:
 
 - `publicados`: itens enviados ao Kino.
 - `pendentes de moderacao`: itens criados no banco, mas ainda aguardando liberacao/admin/trust score.
-- `revisao`: itens bons, mas com incerteza.
+- `revisao`: itens bons, itens de alta confianca aguardando aprovacao do Yan, ou itens com incerteza.
 - `descartados`: itens sem relevancia suficiente.
 - `fontes desabilitadas`: sites inacessiveis ou sem permissao de crawling naquela execucao.
 - `duplicados`: itens ja vistos pelo state local.

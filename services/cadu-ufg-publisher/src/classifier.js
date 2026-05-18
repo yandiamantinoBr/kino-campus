@@ -6,7 +6,8 @@ const INCLUDE_TERMS = [
   'edital', 'chamada', 'processo seletivo', 'inscricao', 'inscricoes', 'selecao',
   'bolsa', 'bolsas', 'monitoria', 'estagio', 'vagas', 'curso', 'oficina',
   'palestra', 'seminario', 'congresso', 'evento', 'extensao', 'voluntariado',
-  'pibic', 'pivic', 'probec', 'mobilidade', 'calendario academico', 'prazo',
+  'pibic', 'pivic', 'probec', 'prpi', 'pesquisa', 'iniciacao cientifica',
+  'mobilidade', 'calendario academico', 'prazo',
 ];
 
 const EXCLUDE_TERMS = [
@@ -170,6 +171,15 @@ function analyzeTemporalRelevance(item, options = {}) {
 
 function detectOpportunityCategory(text) {
   if (has(text, 'estagio')) return 'estagios';
+  if (
+    has(text, 'pesquisa') ||
+    has(text, 'iniciacao cientifica') ||
+    has(text, 'pibic') ||
+    has(text, 'pivic') ||
+    has(text, 'prpi') ||
+    has(text, 'fapeg') ||
+    has(text, 'mobilidade internacional')
+  ) return 'pesquisa';
   if (has(text, 'monitoria')) return 'monitoria';
   if (has(text, 'voluntariado') || has(text, 'voluntario')) return 'voluntariado';
   if (has(text, 'emprego') || has(text, 'trabalho') || has(text, 'contratacao')) return 'empregos';
@@ -204,7 +214,7 @@ function classifyItem(item, source = {}, options = {}) {
   if (temporal.expired) score = Math.min(score, 0.49);
   score = Math.max(0, Math.min(1, Number(score.toFixed(2))));
 
-  const opportunitySignals = ['edital', 'chamada', 'processo seletivo', 'bolsa', 'monitoria', 'estagio', 'vagas', 'selecao', 'pibic', 'pivic', 'probec'];
+  const opportunitySignals = ['edital', 'chamada', 'processo seletivo', 'bolsa', 'monitoria', 'estagio', 'vagas', 'selecao', 'pibic', 'pivic', 'probec', 'pesquisa', 'fapeg', 'mobilidade'];
   const eventSignals = ['evento', 'curso', 'oficina', 'palestra', 'seminario', 'congresso', 'mostra', 'festival'];
   const opportunityScore = opportunitySignals.filter((term) => has(text, term)).length;
   const eventScore = eventSignals.filter((term) => has(text, term)).length;

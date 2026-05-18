@@ -167,6 +167,7 @@
               { key: 'empregos', label: 'Emprego' },
               { key: 'freelancer', label: 'Freelancer' },
               { key: 'monitoria', label: 'Monitoria' },
+              { key: 'pesquisa', label: 'Pesquisa' },
               { key: 'voluntariado', label: 'Voluntariado' },
             ]
           }

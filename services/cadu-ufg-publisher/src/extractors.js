@@ -17,6 +17,22 @@ function cleanTitle(value) {
     .replace(/\s*[|-]\s*UFG\s*$/i, '');
 }
 
+function resolveAssetUrl(value, baseUrl) {
+  const raw = decodeEntities(String(value || '').trim());
+  if (!raw || raw.startsWith('data:') || raw.startsWith('blob:') || raw.startsWith('mailto:')) return '';
+  if (/^https?:\/\//i.test(raw)) return canonicalizeUrl(raw);
+  if (/^\/\//.test(raw)) return canonicalizeUrl(`https:${raw}`);
+  return canonicalizeUrl(raw, baseUrl);
+}
+
+function extractFirstImageUrl(html, baseUrl) {
+  const metaImage = extractMeta(html, 'og:image') || extractMeta(html, 'twitter:image');
+  const fromMeta = resolveAssetUrl(metaImage, baseUrl);
+  if (fromMeta) return fromMeta;
+  const match = String(html || '').match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
+  return match ? resolveAssetUrl(match[1], baseUrl) : '';
+}
+
 function normalizeWebyItem(source, item, type = 'news') {
   const html = String(item.text || item.body || item.summary || '');
   const title = cleanTitle(decodeEntities(item.title || item.name || ''));
@@ -35,7 +51,7 @@ function normalizeWebyItem(source, item, type = 'news') {
     summary: normalizeWhitespace(stripHtml(item.summary || '')),
     text,
     html,
-    imageUrl: canonicalizeUrl(item.image || item.image_url || '', sourceUrl),
+    imageUrl: resolveAssetUrl(item.image || item.image_url || item.cover || '', sourceUrl),
     updatedAt,
     type,
     pdfLinks,
@@ -69,7 +85,7 @@ function extractHtmlDocument(source, url, html) {
     summary: description,
     text: stripHtml(contentHtml),
     html,
-    imageUrl: canonicalizeUrl(extractMeta(html, 'og:image'), url),
+    imageUrl: extractFirstImageUrl(html, url),
     updatedAt: '',
     type: 'html',
     pdfLinks,
@@ -80,5 +96,7 @@ function extractHtmlDocument(source, url, html) {
 module.exports = {
   cleanTitle,
   extractHtmlDocument,
+  extractFirstImageUrl,
   normalizeWebyItem,
+  resolveAssetUrl,
 };

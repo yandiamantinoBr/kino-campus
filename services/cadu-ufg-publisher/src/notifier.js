@@ -16,12 +16,31 @@ async function postJson(url, body, headers = {}) {
 async function sendTelegram(config, message) {
   if (!config.telegramBotToken || !config.telegramChatId) return { skipped: true, channel: 'telegram' };
   const url = `https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`;
-  await postJson(url, {
-    chat_id: config.telegramChatId,
-    text: message,
-    disable_web_page_preview: true,
-  });
-  return { ok: true, channel: 'telegram' };
+  const chunks = splitMessage(message, 3900);
+  for (const chunk of chunks) {
+    await postJson(url, {
+      chat_id: config.telegramChatId,
+      text: chunk,
+      disable_web_page_preview: true,
+    });
+  }
+  return { ok: true, channel: 'telegram', count: chunks.length };
+}
+
+function splitMessage(message, maxLength) {
+  const text = String(message || '');
+  if (text.length <= maxLength) return [text];
+  const chunks = [];
+  let rest = text;
+  while (rest.length > maxLength) {
+    const slice = rest.slice(0, maxLength);
+    const boundary = Math.max(slice.lastIndexOf('\n\n'), slice.lastIndexOf('\n'), slice.lastIndexOf(' '));
+    const cut = boundary > 1200 ? boundary : maxLength;
+    chunks.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) chunks.push(rest);
+  return chunks;
 }
 
 async function sendEmail(config, subject, message) {
@@ -69,4 +88,5 @@ module.exports = {
   notify,
   sendEmail,
   sendTelegram,
+  splitMessage,
 };

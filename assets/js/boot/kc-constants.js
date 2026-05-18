@@ -62,6 +62,8 @@
       'freelancer': 'Freelancer',
       'monitoria': 'Monitoria',
       'monitorias': 'Monitoria',
+      'pesquisa': 'Pesquisa',
+      'pesquisas': 'Pesquisa',
       'voluntariado': 'Voluntariado',
       'voluntariados': 'Voluntariado',
       'bolsa': 'Bolsa',

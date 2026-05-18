@@ -1,17 +1,40 @@
 'use strict';
 
 const { analyzeTemporalRelevance, classifyItem } = require('../../services/cadu-ufg-publisher/src/classifier');
-const { cleanTitle } = require('../../services/cadu-ufg-publisher/src/extractors');
+const { cleanTitle, extractFirstImageUrl, normalizeWebyItem } = require('../../services/cadu-ufg-publisher/src/extractors');
+const { HttpClient } = require('../../services/cadu-ufg-publisher/src/http-client');
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
-const { collectReviews, formatReviews } = require('../../services/cadu-ufg-publisher/src/reviews');
+const { splitMessage } = require('../../services/cadu-ufg-publisher/src/notifier');
+const { collectReviews, formatReviews, resolveReviewKey } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
 const { StateStore } = require('../../services/cadu-ufg-publisher/src/state');
+const { normalizeWhitespace } = require('../../services/cadu-ufg-publisher/src/utils');
 const { parseFeed, parseSitemap } = require('../../services/cadu-ufg-publisher/src/xml');
 
 describe('cadu-ufg-publisher', () => {
   test('extractor strips UFG site suffix from titles', () => {
     expect(cleanTitle('PRPI UFG divulga quatro editais abertos da Fapeg | UFG - Universidade Federal de Goiás'))
       .toBe('PRPI UFG divulga quatro editais abertos da Fapeg');
+  });
+
+  test('normalizeWhitespace preserves Portuguese accents while normalizing width and spacing', () => {
+    expect(normalizeWhitespace('  Iniciação   científica para estudantes da UFG  ')).toBe('Iniciação científica para estudantes da UFG');
+    expect(normalizeWhitespace('edital： pesquisa')).toBe('edital: pesquisa');
+  });
+
+  test('extractor keeps absolute image URLs and resolves relative images', () => {
+    expect(extractFirstImageUrl('<img src="https://files.cercomp.ufg.br/cover.jpg">', 'https://ufg.br/n/1'))
+      .toBe('https://files.cercomp.ufg.br/cover.jpg');
+    expect(extractFirstImageUrl('<img src="/media/cover.jpg">', 'https://prograd.ufg.br/n/1'))
+      .toBe('https://prograd.ufg.br/media/cover.jpg');
+
+    const item = normalizeWebyItem({ id: 'ufg', name: 'UFG', baseUrl: 'https://ufg.br' }, {
+      id: 1,
+      title: 'Edital',
+      image: 'https://files.cercomp.ufg.br/img.png',
+      text: 'Inscricoes abertas',
+    });
+    expect(item.imageUrl).toBe('https://files.cercomp.ufg.br/img.png');
   });
 
   test('parseSitemap extracts loc and lastmod', () => {
@@ -54,6 +77,20 @@ describe('cadu-ufg-publisher', () => {
     expect(['publish', 'review']).toContain(result.decision);
     expect(result.module).toBe('oportunidades');
     expect(result.category).toBe('monitoria');
+  });
+
+  test('classifier maps research and PRPI/Fapeg calls to pesquisa', () => {
+    const item = {
+      title: 'PRPI divulga editais Fapeg para pesquisa',
+      summary: 'Chamadas de iniciacao cientifica com inscricoes ate 29/05/2026.',
+      text: 'Editais PIBIC, PIVIC e mobilidade internacional para pesquisadores da UFG.',
+      updatedAt: '2026-05-18',
+      pdfLinks: ['https://prpi.ufg.br/edital.pdf'],
+    };
+    const result = classifyItem(item, { tier: 1 }, { now: '2026-05-18T12:00:00-03:00' });
+    expect(result.module).toBe('oportunidades');
+    expect(result.category).toBe('pesquisa');
+    expect(['publish', 'review']).toContain(result.decision);
   });
 
   test('classifier discards expired signup windows', () => {
@@ -127,6 +164,55 @@ describe('cadu-ufg-publisher', () => {
     expect(items).toHaveLength(2);
     expect(items[0].title).toBe('Falha de publish');
     expect(formatReviews(items)).toContain('Edital para revisar');
+    expect(resolveReviewKey({ seen: { abcdef1234567890: { decision: 'review' } } }, 'abcdef123456')).toBe('abcdef1234567890');
+  });
+
+  test('mapper adds schedule and multiple official PDF labels to markdown preview', () => {
+    const item = {
+      id: 'prpi:1',
+      sourceName: 'PRPI',
+      sourceUrl: 'https://prpi.ufg.br/n/1',
+      title: 'PRPI divulga editais Fapeg para pesquisa',
+      summary: 'Editais para pesquisa com cronograma detalhado.',
+      text: 'Inscricoes ate 18/05/2026. Resultado preliminar em 26/05/2026. Resultado final em 29/05/2026.',
+      updatedAt: '2026-05-18',
+      pdfLinks: [
+        'https://prpi.ufg.br/files/Edital-PIBIC.pdf',
+        'https://prpi.ufg.br/files/Edital-PIVIC.pdf',
+        'https://prpi.ufg.br/files/Edital-Mobilidade.pdf',
+      ],
+    };
+    const classification = classifyItem(item, { tier: 1 }, { now: '2026-05-18T12:00:00-03:00' });
+    const payload = mapToKinoPayload(item, classification, { runId: 'test-run' });
+    expect(payload.categoriaKey).toBe('pesquisa');
+    expect(payload.descricao).toContain('Cronograma detectado');
+    expect(payload.descricao).toContain('Resultado final em 29/05/2026');
+    expect(payload.descricao).toContain('3 PDFs oficiais');
+    expect(payload.metadata.edital_pdf_urls).toHaveLength(3);
+  });
+
+  test('telegram notifier chunks long review messages', () => {
+    const chunks = splitMessage(['a'.repeat(2000), 'b'.repeat(2000), 'c'.repeat(2000)].join('\n\n'), 3900);
+    expect(chunks.length).toBeGreaterThan(1);
+    chunks.forEach((chunk) => expect(chunk.length).toBeLessThanOrEqual(3900));
+  });
+
+  test('http client retries through configured proxy on network failure', async () => {
+    const originalFetch = global.fetch;
+    const calls = [];
+    global.fetch = jest.fn(async (url) => {
+      calls.push(String(url));
+      if (calls.length === 1) throw new TypeError('fetch failed');
+      return { ok: true, status: 200, text: async () => 'ok' };
+    });
+    try {
+      const client = new HttpClient({ minDelayMs: 0, fetchProxyTemplate: 'https://proxy.local/read?url={url}' });
+      const response = await client.fetch('https://proex.ufg.br/robots.txt');
+      expect(response.ok).toBe(true);
+      expect(calls[1]).toBe('https://proxy.local/read?url=https%3A%2F%2Fproex.ufg.br%2Frobots.txt');
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   test('state ignores dry-run publish markers for real publishes', () => {

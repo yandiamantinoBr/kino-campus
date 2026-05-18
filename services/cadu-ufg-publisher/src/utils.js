@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 
 function normalizeWhitespace(value) {
-  return String(value || '').replace(/\s+/g, ' ').trim();
+  return String(value || '').normalize('NFKC').replace(/\s+/g, ' ').trim();
 }
 
 function stripAccents(value) {

@@ -7,7 +7,10 @@ async function summarizeWithDeepSeek(config, item, classification) {
 
   const prompt = [
     'Resuma para uma publicacao do Kino Campus em portugues do Brasil.',
-    'Retorne apenas texto curto, sem markdown pesado, com informacoes acionaveis.',
+    'Retorne apenas texto curto em Markdown seguro, sem HTML.',
+    'Priorize informacoes acionaveis: quem pode participar, prazos, cronograma, inscricao, beneficios/bolsas, numero de editais e documentos citados.',
+    'Ignore frases institucionais genericas quando houver dados especificos de edital, chamada ou evento.',
+    'Se houver varios editais, diga isso claramente sem inventar links ou requisitos.',
     'Use emojis com moderacao.',
     `Modulo: ${classification.module}`,
     `Categoria: ${classification.category}`,

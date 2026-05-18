@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { safeJsonParse } = require('./utils');
 
 function loadEnvFile(filePath) {
   if (!filePath || !fs.existsSync(filePath)) return;
@@ -21,6 +22,9 @@ function loadEnvFile(filePath) {
 function loadConfig() {
   const serviceRoot = path.resolve(__dirname, '..');
   loadEnvFile(process.env.CADU_ENV_FILE || path.join(serviceRoot, '.env.local'));
+  const deepseekApiKey = process.env.CADU_DEEPSEEK_API_KEY;
+  const useModelEnv = String(process.env.CADU_USE_MODEL || '').trim().toLowerCase();
+
   return {
     serviceRoot,
     sourcePath: process.env.CADU_SOURCE_PATH || path.join(serviceRoot, 'config/sources.json'),
@@ -28,8 +32,12 @@ function loadConfig() {
     userAgent: process.env.CADU_USER_AGENT || 'CaduKinoCampusBot/1.0 (+contato@kinocampus.com.br)',
     requestTimeoutMs: Number(process.env.CADU_REQUEST_TIMEOUT_MS || 20000),
     minDelayMs: Number(process.env.CADU_MIN_DELAY_MS || 900),
+    fetchProxyTemplate: process.env.CADU_FETCH_PROXY_TEMPLATE || '',
+    hostAliases: safeJsonParse(process.env.CADU_HOST_ALIASES || '{}', {}),
     maxItemsPerSource: Number(process.env.CADU_MAX_ITEMS_PER_SOURCE || 15),
     maxPublishPerRun: Number(process.env.CADU_MAX_PUBLISH_PER_RUN || 3),
+    reviewBeforePublish: process.env.CADU_REVIEW_BEFORE_PUBLISH !== 'false',
+    reviewPreviewLimit: Number(process.env.CADU_REVIEW_PREVIEW_LIMIT || 5),
     maxPdfBytes: Number(process.env.CADU_MAX_PDF_BYTES || 25 * 1024 * 1024),
     supabaseUrl: process.env.CADU_SUPABASE_URL || process.env.SUPABASE_URL,
     supabaseAnonKey: process.env.CADU_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,
@@ -41,10 +49,10 @@ function loadConfig() {
     emailWebhookUrl: process.env.CADU_EMAIL_WEBHOOK_URL,
     emailFrom: process.env.CADU_EMAIL_FROM,
     emailTo: process.env.CADU_EMAIL_TO || 'contato@kinocampus.com.br',
-    deepseekApiKey: process.env.CADU_DEEPSEEK_API_KEY,
+    deepseekApiKey,
     deepseekBaseUrl: process.env.CADU_DEEPSEEK_BASE_URL,
     deepseekModel: process.env.CADU_DEEPSEEK_MODEL,
-    useModel: process.env.CADU_USE_MODEL === 'true',
+    useModel: useModelEnv ? useModelEnv === 'true' : Boolean(deepseekApiKey),
   };
 }
 

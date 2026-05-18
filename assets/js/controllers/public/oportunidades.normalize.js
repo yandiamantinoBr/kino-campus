@@ -157,11 +157,13 @@ function normalizeOpportunityType(value, sourceText) {
   if (direct.includes('empreg')) return 'emprego';
   if (direct.includes('freela') || direct.includes('freelancer')) return 'freelancer';
   if (direct.includes('monitor')) return 'monitoria';
+  if (direct.includes('pesquis') || direct.includes('pibic') || direct.includes('pivic')) return 'pesquisa';
   if (direct.includes('volunt')) return 'voluntariado';
 
   const haystack = normalizeText(sourceText);
   if (haystack.includes('freelancer') || haystack.includes('freela')) return 'freelancer';
   if (haystack.includes('monitoria') || haystack.includes('monitor ')) return 'monitoria';
+  if (haystack.includes('pesquisa') || haystack.includes('pibic') || haystack.includes('pivic') || haystack.includes('iniciacao cientifica')) return 'pesquisa';
   if (haystack.includes('volunt')) return 'voluntariado';
   if (haystack.includes('estagio') || haystack.includes('trainee')) return 'estagio';
   if (haystack.includes('emprego') || haystack.includes('clt') || haystack.includes('vaga')) return 'emprego';
