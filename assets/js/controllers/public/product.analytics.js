@@ -29,6 +29,34 @@
     return !!postAuthorId && postAuthorId === String(user.id).trim();
   }
 
+  function isAdminProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    return profile.is_admin === true
+      || profile.isAdmin === true
+      || profile.admin === true
+      || String(profile.role || '').toLowerCase() === 'admin';
+  }
+
+  function resolveCurrentProfile(context, fallbackUser) {
+    var profile = fallbackUser && fallbackUser.profile;
+    if (context && typeof context.getCurrentProfile === 'function') {
+      try { profile = context.getCurrentProfile() || profile || null; } catch (_) { }
+    }
+    if (!profile && window.KCAPI && typeof window.KCAPI.getCurrentProfile === 'function') {
+      try { profile = window.KCAPI.getCurrentProfile() || null; } catch (_) { }
+    }
+    if (!profile && window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+      try { profile = window.KCProfiles.getCurrentProfile() || null; } catch (_) { }
+    }
+    return profile || null;
+  }
+
+  function canViewAuthorAnalytics(post, user, context) {
+    if (isAuthor(post, user)) return true;
+    return isAdminProfile(resolveCurrentProfile(context, user))
+      || isAdminProfile(user && user.app_metadata);
+  }
+
   function getPostIdForMutation(post) {
     if (!post) return null;
     return post.uuid || post.id || null;
@@ -65,8 +93,8 @@
       statBadge('fas fa-hand-pointer', result.coupon_clicks, 'Cliques CTA');
   }
 
-  function renderAuthorAnalytics(post, user) {
-    if (!isAuthor(post, user)) return;
+  function renderAuthorAnalytics(post, user, context) {
+    if (!canViewAuthorAnalytics(post, user, context)) return;
     var details = document.querySelector('.kc-product-details');
     if (!details) return;
 

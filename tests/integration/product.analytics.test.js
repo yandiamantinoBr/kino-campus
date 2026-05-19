@@ -31,6 +31,8 @@ describe('product.analytics.js - helpers locais', () => {
     expect(source).toContain('function esc(str)');
     expect(source).toContain('window.KCUtils.escapeHtml');
     expect(source).toContain('function isAuthor(post, user)');
+    expect(source).toContain('function isAdminProfile(profile)');
+    expect(source).toContain('function canViewAuthorAnalytics(post, user, context)');
     expect(source).toContain('function getPostIdForMutation(post)');
   });
 
@@ -54,8 +56,8 @@ describe('product.analytics.js - render do painel', () => {
   });
 
   test('define renderAuthorAnalytics com auth gate e contrato KCAPI', () => {
-    expect(source).toContain('function renderAuthorAnalytics(post, user)');
-    expect(source).toContain("if (!isAuthor(post, user)) return;");
+    expect(source).toContain('function renderAuthorAnalytics(post, user, context)');
+    expect(source).toContain("if (!canViewAuthorAnalytics(post, user, context)) return;");
     expect(source).toContain("panel.id = 'kcAuthorAnalytics'");
     expect(source).toContain("window.KCAPI.getPostAnalytics");
     expect(source).toContain("window.KCAPI.getCachedPostAnalytics");

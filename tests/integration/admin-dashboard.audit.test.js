@@ -333,10 +333,12 @@ describe('admin-dashboard.audit.js - contrato estatico', () => {
     expect(auditSource).not.toMatch(/import\s+/);
   });
 
-  test('expoe exatamente 9 chaves publicas', () => {
+  test('expoe exatamente 13 chaves publicas', () => {
     const audit = loadAuditModule();
     expect(Object.keys(audit).sort()).toEqual([
+      'bindAuditControls',
       'enableExport',
+      'exportAuditCSV',
       'exportPDF',
       'exportXLSX',
       'filterAudit',
@@ -344,6 +346,8 @@ describe('admin-dashboard.audit.js - contrato estatico', () => {
       'loadActorsById',
       'loadAuditLog',
       'loadMoreAudit',
+      'normalizeAuditFilters',
+      'readAuditFilters',
       'renderAuditRows'
     ]);
   });
@@ -361,6 +365,7 @@ describe('admin-dashboard.controller.js - contrato do split audit', () => {
     expect(controllerSource).toContain("window._KCAD.audit.enableExport(buildAuditDeps())");
     expect(controllerSource).toContain("window._KCAD.audit.loadMoreAudit(buildAuditDeps())");
     expect(controllerSource).toContain("window._KCAD.audit.filterAudit(buildAuditDeps())");
+    expect(controllerSource).toContain("window._KCAD.audit.bindAuditControls(buildAuditDeps())");
   });
 
   test('removeu o corpo de exportacao/audit do core', () => {

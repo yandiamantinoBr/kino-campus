@@ -45,6 +45,8 @@ describe('product.edit.js - estado local e helpers', () => {
     expect(source).toContain('var editUI = null;');
     expect(source).toContain('function toast(message, type, duration)');
     expect(source).toContain('function isAuthor(post, user)');
+    expect(source).toContain('function isAdminProfile(profile)');
+    expect(source).toContain('function canManagePost(post, user, context)');
     expect(source).toContain('function getPostIdForMutation(post)');
     expect(source).toContain('function markPostAsEdited()');
     expect(source).toContain('function buildEditPayload(form, sourcePost)');
@@ -81,10 +83,9 @@ describe('product.edit.js - owner actions', () => {
     expect(source).toContain('appendVisibleAction(deleteBtn);');
   });
 
-  test('mantem o contrato de edit principal e o audit_log', () => {
+  test('mantem o contrato de edit principal sem inserir audit_log direto pelo client', () => {
     expect(source).toContain('window.kcOpenEditPostModal');
-    expect(source).toContain("action: 'post_edited'");
-    expect(source).toContain("client.from('audit_log').insert");
+    expect(source).not.toContain("client.from('audit_log').insert");
     expect(source).toContain('markPostAsEdited();');
   });
 
@@ -96,7 +97,7 @@ describe('product.edit.js - owner actions', () => {
     expect(source).toContain('window.KCAPI.closePost');
     expect(source).toContain('window.KCAPI.reactivatePost');
     expect(source).toContain('Reativar');
-    expect(source).toContain("{ reason: 'owner_closed' }");
+    expect(source).toContain("adminManaging ? 'admin_closed' : 'owner_closed'");
   });
 });
 

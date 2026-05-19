@@ -332,10 +332,13 @@
       window._KCProduct.edit.upsertOwnerActions(post, _deps.getUser(), {
         renderPost: function (p) { return renderPost(p); },
         getCurrentUser: function () { return _deps ? _deps.getUser() : null; },
+        getCurrentProfile: function () { return _deps ? _deps.getProfile() : null; },
       });
     }
     if (window._KCProduct.analytics && typeof window._KCProduct.analytics.renderAuthorAnalytics === 'function') {
-      window._KCProduct.analytics.renderAuthorAnalytics(post, _deps.getUser());
+      window._KCProduct.analytics.renderAuthorAnalytics(post, _deps.getUser(), {
+        getCurrentProfile: function () { return _deps ? _deps.getProfile() : null; },
+      });
     }
     if (window._KCProduct.save && typeof window._KCProduct.save.bindSavedActions === 'function') {
       window._KCProduct.save.bindSavedActions(post, function () { return _deps ? _deps.getUser() : null; });

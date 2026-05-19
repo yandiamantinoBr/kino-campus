@@ -144,6 +144,78 @@
     }
   }
 
+  function hasAdminProfileFlag(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    return profile.is_admin === true
+      || profile.isAdmin === true
+      || profile.admin === true
+      || String(profile.role || '').toLowerCase() === 'admin';
+  }
+
+  async function getCurrentProfileForAdminCheck(client, user) {
+    if (hasAdminProfileFlag(user && user.profile)) return user.profile;
+
+    try {
+      if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+        const currentProfile = window.KCProfiles.getCurrentProfile();
+        if (currentProfile && String(currentProfile.id || (user && user.id) || '') === String((user && user.id) || '')) {
+          return currentProfile;
+        }
+      }
+    } catch (_) { }
+
+    try {
+      if (window.KCAPI && typeof window.KCAPI.getCurrentProfile === 'function') {
+        const apiProfile = window.KCAPI.getCurrentProfile();
+        if (apiProfile && String(apiProfile.id || (user && user.id) || '') === String((user && user.id) || '')) {
+          return apiProfile;
+        }
+      }
+    } catch (_) { }
+
+    if (!client || !user || !user.id) return null;
+    try {
+      const result = await client.from('profiles').select('id, is_admin').eq('id', user.id).maybeSingle();
+      if (!result || result.error) return null;
+      return result.data || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function canManagePostRow(client, user, postRow) {
+    const authorId = String((postRow && postRow.author_id) || '').trim();
+    const userId = String((user && user.id) || '').trim();
+    const isOwner = !!authorId && !!userId && authorId === userId;
+    if (isOwner) return { ok: true, isOwner: true, isAdmin: false, isAdminOverride: false, authorId };
+
+    const profile = await getCurrentProfileForAdminCheck(client, user);
+    const isAdmin = hasAdminProfileFlag(profile) || hasAdminProfileFlag(user && user.app_metadata);
+    return {
+      ok: !!isAdmin,
+      isOwner: false,
+      isAdmin,
+      isAdminOverride: !!isAdmin,
+      authorId,
+    };
+  }
+
+  async function recordPostAuditEvent(client, postId, action, payload) {
+    if (!client || !postId || !action) return;
+    try {
+      const result = await client.rpc('kc_record_post_audit_event', {
+        p_post_id: postId,
+        p_action: action,
+        p_payload: payload || {},
+      });
+      if (result && result.error) {
+        console.warn('[KCAPI][Supabase] kc_record_post_audit_event falhou:', result.error);
+      }
+    } catch (error) {
+      console.warn('[KCAPI][Supabase] kc_record_post_audit_event excecao:', error);
+    }
+  }
+
   function parsePriceMaybe(v) {
     if (v == null || v === '') return null;
     if (typeof v === 'number' && Number.isFinite(v)) return v;
@@ -730,21 +802,21 @@
     if (!postUuid) return kcApiError('Post inválido para edição.');
 
     try {
-      // 1) Ownership check
+      // 1) Permission check (author or admin)
       const own = await client.from('posts').select('id, author_id').eq('id', postUuid).maybeSingle();
       if (own && own.error) {
         console.error('[KCAPI][Supabase] updatePost ownership check erro:', own.error);
         return kcApiError('Não foi possível validar permissão de edição.');
       }
       if (!own || !own.data) return kcApiError('Publicação não encontrada.');
-      if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('Você não pode editar este post.');
+      const permission = await canManagePostRow(client, user, own.data);
+      if (!permission.ok) return kcApiError('Você não pode editar este post.');
 
       // 2) Update post fields (text, metadata, etc.)
       const upd = await client
         .from('posts')
         .update(parsed.data)
         .eq('id', postUuid)
-        .eq('author_id', user.id)
         .select('id')
         .maybeSingle();
 
@@ -767,6 +839,11 @@
         console.error('[KCAPI][Supabase] updatePost syncPostMedia erro:', imgErr);
         // Non-blocking: text fields were saved, image sync failed partially
       }
+
+      await recordPostAuditEvent(client, postUuid, 'post_edited', {
+        source: permission.isAdminOverride ? 'admin_update' : 'owner_update',
+        fields: Object.keys(parsed.data || {}),
+      });
 
       const getPostByIdFn2 = window._KCSA && window._KCSA.posts && typeof window._KCSA.posts.getPostById === 'function' ? window._KCSA.posts.getPostById : null;
       const updated = getPostByIdFn2 ? await getPostByIdFn2(postUuid) : null;
@@ -796,7 +873,8 @@
         return kcApiError('Não foi possível validar permissão de exclusão.');
       }
       if (!own || !own.data) return kcApiError('Publicação não encontrada.');
-      if (String(own.data.author_id || '') !== String(user.id || '')) return kcApiError('Você não pode excluir este post.');
+      const permission = await canManagePostRow(client, user, own.data);
+      if (!permission.ok) return kcApiError('Você não pode excluir este post.');
 
       const media = await client.from('post_media').select('id, url').eq('post_id', postUuid);
       if (media && media.error) {
@@ -820,7 +898,7 @@
         };
       }
 
-      const del = await client.from('posts').delete().eq('id', postUuid).eq('author_id', user.id);
+      const del = await client.from('posts').delete().eq('id', postUuid);
       if (del && del.error) {
         console.error('[KCAPI][Supabase] deletePost erro:', del.error);
         return kcApiError('Não foi possível excluir a publicação.');

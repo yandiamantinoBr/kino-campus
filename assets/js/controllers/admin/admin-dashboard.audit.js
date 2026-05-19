@@ -147,6 +147,19 @@
     getStateBucket().exportBound = !!value;
   }
 
+  function getAuditControlsBound(deps) {
+    if (deps && typeof deps.getAuditControlsBound === 'function') return deps.getAuditControlsBound();
+    return !!getStateBucket().auditControlsBound;
+  }
+
+  function setAuditControlsBound(deps, value) {
+    if (deps && typeof deps.setAuditControlsBound === 'function') {
+      deps.setAuditControlsBound(value);
+      return;
+    }
+    getStateBucket().auditControlsBound = !!value;
+  }
+
   function getXlsxLoadPromise(deps) {
     if (deps && typeof deps.getXlsxLoadPromise === 'function') return deps.getXlsxLoadPromise();
     return getStateBucket().xlsxLoadPromise || null;
@@ -261,6 +274,67 @@
     return code === '42725' || message.includes('is not unique') || message.includes('ambiguous');
   }
 
+  function normalizeAuditFilters(input) {
+    var source = (input && typeof input === 'object' && !Array.isArray(input)) ? input : { action: input };
+    var action = String(source.action || source.actionFilter || 'all').trim() || 'all';
+    var entityType = String(source.entityType || source.entity_type || 'all').trim() || 'all';
+    var actorQuery = String(source.actorQuery || source.actor_query || '').trim();
+    return {
+      action: action,
+      entityType: entityType,
+      actorQuery: actorQuery,
+    };
+  }
+
+  function readAuditFilters(deps) {
+    var actionEl = select(deps, '#admin-audit-filter');
+    var entityEl = select(deps, '#admin-audit-entity-filter');
+    var actorEl = select(deps, '#admin-audit-actor-filter');
+    return normalizeAuditFilters({
+      action: actionEl ? actionEl.value : 'all',
+      entityType: entityEl ? entityEl.value : 'all',
+      actorQuery: actorEl ? actorEl.value : '',
+    });
+  }
+
+  function auditFiltersLabel(filters) {
+    var f = normalizeAuditFilters(filters);
+    var parts = [];
+    if (f.action && f.action !== 'all') parts.push('ação ' + f.action);
+    if (f.entityType && f.entityType !== 'all') parts.push('entidade ' + f.entityType);
+    if (f.actorQuery) parts.push('ator "' + f.actorQuery + '"');
+    return parts.length ? parts.join(' · ') : 'sem filtros ativos';
+  }
+
+  function compactAuditPayload(payload) {
+    var source = payload && typeof payload === 'object' ? payload : null;
+    var parts = [];
+    var keys;
+    if (!source) return '';
+    if (source.source) parts.push('origem: ' + source.source);
+    if (source.old_status || source.new_status) {
+      parts.push('status: ' + (source.old_status || '-') + ' → ' + (source.new_status || '-'));
+    } else if ((source.before && source.before.status) || (source.after && source.after.status)) {
+      parts.push('status: ' + ((source.before && source.before.status) || '-') + ' → ' + ((source.after && source.after.status) || '-'));
+    }
+    if (source.reason) parts.push('motivo: ' + source.reason);
+    if (Array.isArray(source.fields) && source.fields.length) parts.push('campos: ' + source.fields.join(', '));
+    if (source.post_author_id) parts.push('autor do post: ' + String(source.post_author_id).slice(0, 8) + '...');
+    if (parts.length) return parts.join(' | ');
+    try {
+      keys = Object.keys(source);
+      if (keys.length) return JSON.stringify(source).slice(0, 220);
+    } catch (_) { }
+    return '';
+  }
+
+  function renderAuditSummary(rows, filters, deps) {
+    var el = select(deps, '#admin-audit-summary');
+    var list = Array.isArray(rows) ? rows : [];
+    if (!el) return;
+    el.textContent = list.length + (list.length === 1 ? ' evento carregado' : ' eventos carregados') + ' · ' + auditFiltersLabel(filters);
+  }
+
   function setAuditLoadMoreState(options, deps) {
     options = options || {};
     var btn = select(deps, '#admin-audit-load-more');
@@ -318,29 +392,38 @@
   async function loadAuditLog(client, limit, offset, actionFilter, since) {
     limit = limit || 20;
     offset = offset || 0;
+    var filters = normalizeAuditFilters(actionFilter);
 
     function filterRows(rows) {
       var sinceMs = since ? new Date(since).getTime() : 0;
+      var actorQuery = String(filters.actorQuery || '').toLowerCase();
       return (rows || []).filter(function (row) {
         if (!row) return false;
-        if (actionFilter && actionFilter !== 'all' && row.action !== actionFilter) return false;
+        if (filters.action && filters.action !== 'all' && row.action !== filters.action) return false;
+        if (filters.entityType && filters.entityType !== 'all' && row.entity_type !== filters.entityType) return false;
+        if (actorQuery && String(row.actor_id || '').toLowerCase().indexOf(actorQuery) === -1) return false;
         if (sinceMs && row.created_at && new Date(row.created_at).getTime() < sinceMs) return false;
         return true;
       });
     }
 
     try {
+      var canUseDirectActorFilter = !filters.actorQuery || UUID_RE.test(filters.actorQuery);
       var query = client.from('audit_log')
-        .select('created_at, action, entity_type, actor_id')
+        .select('created_at, action, entity_type, entity_id, actor_id, payload')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
-      if (actionFilter && actionFilter !== 'all') query = query.eq('action', actionFilter);
+      if (filters.action && filters.action !== 'all') query = query.eq('action', filters.action);
+      if (filters.entityType && filters.entityType !== 'all') query = query.eq('entity_type', filters.entityType);
+      if (filters.actorQuery && canUseDirectActorFilter) query = query.eq('actor_id', filters.actorQuery);
       if (since) query = query.gte('created_at', since);
 
-      var result = await query;
-      if (!result.error) return Array.isArray(result.data) ? result.data : [];
-      if (!isPermissionError(result.error)) {
-        console.warn('[Admin audit] Direct query failed:', result.error.message || result.error);
+      if (canUseDirectActorFilter) {
+        var result = await query;
+        if (!result.error) return Array.isArray(result.data) ? result.data : [];
+        if (!isPermissionError(result.error)) {
+          console.warn('[Admin audit] Direct query failed:', result.error.message || result.error);
+        }
       }
     } catch (error) {
       console.warn('[Admin audit] Direct query exception:', error && error.message ? error.message : error);
@@ -348,9 +431,9 @@
 
     try {
       var rpc = await client.rpc('kc_admin_list_audit_logs', {
-        p_entity_type: 'all',
-        p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
-        p_actor_query: null,
+        p_entity_type: filters.entityType && filters.entityType !== 'all' ? filters.entityType : 'all',
+        p_action: filters.action && filters.action !== 'all' ? filters.action : 'all',
+        p_actor_query: filters.actorQuery || null,
         p_limit: limit,
         p_offset: offset,
         p_since: since || null
@@ -365,9 +448,9 @@
 
     try {
       var legacyRpc = await client.rpc('kc_admin_list_audit_logs', {
-        p_entity_type: 'all',
-        p_action: actionFilter && actionFilter !== 'all' ? actionFilter : 'all',
-        p_actor_query: null,
+        p_entity_type: filters.entityType && filters.entityType !== 'all' ? filters.entityType : 'all',
+        p_action: filters.action && filters.action !== 'all' ? filters.action : 'all',
+        p_actor_query: filters.actorQuery || null,
         p_limit: Math.max(limit + offset, 150)
       });
       if (!legacyRpc.error && Array.isArray(legacyRpc.data)) {
@@ -387,7 +470,12 @@
     var a = String(action || '').toLowerCase();
     var cls = 'kc-audit-badge--default';
     var label = action || '-';
-    if (a.includes('delet')) { cls = 'kc-audit-badge--deleted'; label = 'Deletado'; }
+    if (a.includes('edited')) { cls = 'kc-audit-badge--restored'; label = 'Editado'; }
+    else if (a.includes('renew')) { cls = 'kc-audit-badge--restored'; label = 'Renovado'; }
+    else if (a.includes('bump')) { cls = 'kc-audit-badge--restored'; label = 'Impulsionado'; }
+    else if (a.includes('reactivat')) { cls = 'kc-audit-badge--restored'; label = 'Reativado'; }
+    else if (a === 'post_closed') { cls = 'kc-audit-badge--hidden'; label = 'Encerrado'; }
+    else if (a.includes('delet')) { cls = 'kc-audit-badge--deleted'; label = 'Deletado'; }
     else if (a.includes('hidden') || a.includes('oculto')) { cls = 'kc-audit-badge--hidden'; label = 'Ocultado'; }
     else if (a.includes('restored') || a.includes('restaur')) { cls = 'kc-audit-badge--restored'; label = 'Restaurado'; }
     else if (a.includes('report') || a.includes('closed')) { cls = 'kc-audit-badge--report'; label = 'Denúncia'; }
@@ -408,14 +496,19 @@
       ? list.map(function (row) {
           var entity = String((row && row.entity_type) || '-');
           var entityDisplay = entity.length > 28 ? entity.slice(0, 25) + '...' : entity;
+          var entityId = String((row && row.entity_id) || '');
+          var entityIdDisplay = entityId ? (entityId.length > 14 ? entityId.slice(0, 8) + '...' : entityId) : '-';
+          var details = compactAuditPayload(row && row.payload);
           return '<tr>'
             + '<td data-label="Data" style="white-space:nowrap;">' + escHtml(deps, formatDateTimeBRValue(deps, row && row.created_at)) + '</td>'
             + '<td data-label="Ação">' + auditActionBadge(row && row.action, deps) + '</td>'
             + '<td data-label="Entidade" title="' + escHtml(deps, entity) + '"><code>' + escHtml(deps, entityDisplay) + '</code></td>'
-            + '<td data-label="Autor" title="' + escHtml(deps, row && row.actor_id ? row.actor_id : '') + '">' + escHtml(deps, getActorDisplay(row && row.actor_id, deps)) + '</td>'
+            + '<td data-label="ID" title="' + escHtml(deps, entityId) + '"><code>' + escHtml(deps, entityIdDisplay) + '</code></td>'
+            + '<td data-label="Ator" title="' + escHtml(deps, row && row.actor_id ? row.actor_id : '') + '">' + escHtml(deps, getActorDisplay(row && row.actor_id, deps)) + '</td>'
+            + '<td data-label="Detalhes" title="' + escHtml(deps, details) + '">' + escHtml(deps, details || '-') + '</td>'
             + '</tr>';
         }).join('')
-      : '<tr><td colspan="4" style="padding:20px 8px;"><p class="kc-empty" style="margin:0;color:var(--kc-text-dark-secondary);">Nenhum resultado.</p></td></tr>';
+      : '<tr><td colspan="6" style="padding:20px 8px;"><p class="kc-empty" style="margin:0;color:var(--kc-text-dark-secondary);">Nenhum resultado.</p></td></tr>';
 
     if (append) {
       auditBody.insertAdjacentHTML('beforeend', html);
@@ -429,6 +522,11 @@
       disabled: list.length < pageSize,
       label: list.length < pageSize ? 'Fim do histórico' : null
     }, deps);
+    renderAuditSummary(
+      append ? ((getData(deps) && Array.isArray(getData(deps).auditRows)) ? getData(deps).auditRows.concat(list) : list) : list,
+      readAuditFilters(deps),
+      deps
+    );
   }
 
   function loadScript(url, timeoutMs) {
@@ -620,13 +718,15 @@
 
   function buildAuditRows(data, deps) {
     return [
-      ['Data', 'Ação', 'Entidade', 'Autor'],
+      ['Data', 'Ação', 'Entidade', 'Entity ID', 'Ator', 'Detalhes'],
       ...(data.auditRows || []).map(function (row) {
         return [
           formatDateTimeBRValue(deps, row && row.created_at),
           row && row.action ? row.action : '-',
           row && row.entity_type ? row.entity_type : '-',
-          getActorDisplay(row && row.actor_id, deps)
+          row && row.entity_id ? row.entity_id : '',
+          getActorDisplay(row && row.actor_id, deps),
+          compactAuditPayload(row && row.payload)
         ];
       })
     ];
@@ -664,7 +764,7 @@
     XLSX.utils.book_append_sheet(workbook, alertsSheet, 'Alertas');
 
     var auditSheet = XLSX.utils.aoa_to_sheet(buildAuditRows(data, deps));
-    auditSheet['!cols'] = [{ wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 26 }];
+    auditSheet['!cols'] = [{ wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 38 }, { wch: 26 }, { wch: 64 }];
     XLSX.utils.book_append_sheet(workbook, auditSheet, 'Audit log');
 
     XLSX.writeFile(workbook, buildExportFilename('xlsx', data.periodDays));
@@ -888,7 +988,9 @@
       return formatDateTimeBRValue(deps, row && row.created_at) + ' | ' +
         String((row && row.action) || '-') + ' | ' +
         String((row && row.entity_type) || '-') + ' | ' +
-        getActorDisplay(row && row.actor_id, deps);
+        String((row && row.entity_id) || '-') + ' | ' +
+        getActorDisplay(row && row.actor_id, deps) + ' | ' +
+        (compactAuditPayload(row && row.payload) || '-');
     });
     if (!auditLines.length) {
       doc.setFontSize(9);
@@ -917,13 +1019,84 @@
     doc.save(buildExportFilename('pdf', data.periodDays));
   }
 
+  function csvCell(value) {
+    var text = String(value == null ? '' : value);
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  function buildAuditExportFilename(extension, data) {
+    var stamp = new Date().toISOString().slice(0, 10);
+    var period = data && data.periodDays ? String(data.periodDays) + 'd' : 'selecionado';
+    return 'kc-audit-log-' + period + '-' + stamp + '.' + extension;
+  }
+
+  function exportAuditCSV(data, deps) {
+    var rows = buildAuditRows(data || { auditRows: [] }, deps);
+    var csv = rows.map(function (row) {
+      return row.map(csvCell).join(',');
+    }).join('\r\n');
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = buildAuditExportFilename('csv', data || {});
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(function () {
+      try { document.body.removeChild(link); } catch (_) { }
+      try { URL.revokeObjectURL(url); } catch (_) { }
+    }, 0);
+  }
+
+  function bindAuditControls(deps) {
+    var loadMoreBtn = select(deps, '#admin-audit-load-more');
+    var actionFilter = select(deps, '#admin-audit-filter');
+    var entityFilter = select(deps, '#admin-audit-entity-filter');
+    var actorFilter = select(deps, '#admin-audit-actor-filter');
+    var applyBtn = select(deps, '#admin-audit-apply-filter');
+    var clearBtn = select(deps, '#admin-audit-clear-filter');
+    var csvBtn = select(deps, '#admin-audit-export-csv');
+
+    if (getAuditControlsBound(deps)) return;
+    setAuditControlsBound(deps, true);
+
+    if (loadMoreBtn) loadMoreBtn.addEventListener('click', function () { loadMoreAudit(deps); });
+    if (actionFilter) actionFilter.addEventListener('change', function () { filterAudit(deps); });
+    if (entityFilter) entityFilter.addEventListener('change', function () { filterAudit(deps); });
+    if (applyBtn) applyBtn.addEventListener('click', function () { filterAudit(deps); });
+    if (actorFilter) {
+      actorFilter.addEventListener('keydown', function (event) {
+        if (event && event.key === 'Enter') filterAudit(deps);
+      });
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        if (actionFilter) actionFilter.value = 'all';
+        if (entityFilter) entityFilter.value = 'all';
+        if (actorFilter) actorFilter.value = '';
+        filterAudit(deps);
+      });
+    }
+    if (csvBtn) {
+      csvBtn.disabled = !getData(deps);
+      csvBtn.addEventListener('click', function () {
+        var data = getData(deps);
+        if (!data) return;
+        exportAuditCSV(data, deps);
+      });
+    }
+  }
+
   function enableExport(deps) {
     var xlsxBtn = select(deps, '#admin-export-xlsx');
     var pdfBtn = select(deps, '#admin-export-pdf');
+    var csvBtn = select(deps, '#admin-audit-export-csv');
     var currentData = getData(deps);
 
     if (xlsxBtn) xlsxBtn.disabled = !currentData;
     if (pdfBtn) pdfBtn.disabled = !currentData;
+    if (csvBtn) csvBtn.disabled = !currentData;
     if (getExportBound(deps)) return;
     setExportBound(deps, true);
 
@@ -971,8 +1144,7 @@
   async function loadMoreAudit(deps) {
     var client = getClient(deps);
     if (!client) return;
-    var filterEl = select(deps, '#admin-audit-filter');
-    var actionFilter = filterEl ? filterEl.value : 'all';
+    var auditFilters = readAuditFilters(deps);
     var periodDays = getSelectedPeriodDaysValue(deps);
     var since = getPeriodRangeValue(deps, periodDays).since;
     var btn = select(deps, '#admin-audit-load-more');
@@ -980,7 +1152,7 @@
     setAuditLoadMoreState({ visible: true, disabled: true, label: 'Carregando...', preserveLabel: true }, deps);
 
     try {
-      var rows = await loadAuditLog(client, pageSize, getAuditOffset(deps), actionFilter, since, deps);
+      var rows = await loadAuditLog(client, pageSize, getAuditOffset(deps), auditFilters, since, deps);
       await loadActorsById(client, rows.map(function (row) { return row && row.actor_id; }), deps);
       setAuditOffset(deps, getAuditOffset(deps) + rows.length);
       renderAuditRows(rows, true, deps);
@@ -991,6 +1163,7 @@
       if (data && data.auditRows) {
         data.auditRows = data.auditRows.concat(rows);
         setData(deps, data);
+        renderAuditSummary(data.auditRows, auditFilters, deps);
       }
     } catch (error) {
       console.error('[Admin audit] loadMore:', error);
@@ -1005,18 +1178,18 @@
   async function filterAudit(deps) {
     var client = getClient(deps);
     if (!client) return;
-    var filterEl = select(deps, '#admin-audit-filter');
-    var actionFilter = filterEl ? filterEl.value : 'all';
+    var auditFilters = readAuditFilters(deps);
     var periodDays = getSelectedPeriodDaysValue(deps);
     var since = getPeriodRangeValue(deps, periodDays).since;
     var pageSize = getAuditPageSize(deps);
     setAuditOffset(deps, 0);
 
     try {
-      var rows = await loadAuditLog(client, pageSize, 0, actionFilter, since, deps);
+      var rows = await loadAuditLog(client, pageSize, 0, auditFilters, since, deps);
       await loadActorsById(client, rows.map(function (row) { return row && row.actor_id; }), deps);
       setAuditOffset(deps, rows.length);
       renderAuditRows(rows, false, deps);
+      renderAuditSummary(rows, auditFilters, deps);
       if (!rows.length) {
         setAuditLoadMoreState({ visible: true, disabled: true, label: 'Sem mais resultados', preserveLabel: true }, deps);
       }
@@ -1031,7 +1204,9 @@
   }
 
   window._KCAD.audit = {
+    bindAuditControls: bindAuditControls,
     enableExport: enableExport,
+    exportAuditCSV: exportAuditCSV,
     exportPDF: exportPDF,
     exportXLSX: exportXLSX,
     filterAudit: filterAudit,
@@ -1039,6 +1214,8 @@
     loadActorsById: loadActorsById,
     loadAuditLog: loadAuditLog,
     loadMoreAudit: loadMoreAudit,
+    normalizeAuditFilters: normalizeAuditFilters,
+    readAuditFilters: readAuditFilters,
     renderAuditRows: renderAuditRows
   };
 })();

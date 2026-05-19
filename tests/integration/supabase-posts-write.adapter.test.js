@@ -378,8 +378,9 @@ describe('supabase.posts-write.adapter.js — updatePost', () => {
     expect(source).toContain('async function updatePost(');
   });
 
-  test('faz ownership check lendo author_id antes de atualizar', () => {
+  test('faz permission check lendo author_id antes de atualizar', () => {
     expect(source).toContain('author_id');
+    expect(source).toContain('async function canManagePostRow');
     expect(source).toContain('[KCAPI][Supabase] updatePost');
   });
 
@@ -399,6 +400,12 @@ describe('supabase.posts-write.adapter.js — updatePost', () => {
   test('retorna { ok: true, data: updated } em caso de sucesso', () => {
     expect(source).toContain('ok: true, data: updated');
   });
+
+  test('registra edicao em audit RPC apos update', () => {
+    expect(source).toContain('async function recordPostAuditEvent');
+    expect(source).toContain("'kc_record_post_audit_event'");
+    expect(source).toContain("'post_edited'");
+  });
 });
 
 describe('supabase.posts-write.adapter.js — deletePost', () => {
@@ -406,8 +413,9 @@ describe('supabase.posts-write.adapter.js — deletePost', () => {
     expect(source).toContain('async function deletePost(');
   });
 
-  test('faz ownership check antes de excluir', () => {
+  test('faz permission check antes de excluir', () => {
     expect(source).toContain('[KCAPI][Supabase] deletePost');
+    expect(source).toContain('const permission = await canManagePostRow(client, user, own.data);');
   });
 
   test('chama resolvePostUuid para obter UUID', () => {

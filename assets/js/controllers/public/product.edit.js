@@ -35,6 +35,42 @@
     return !!postAuthorId && postAuthorId === String(user.id).trim();
   }
 
+  function isAdminProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    return profile.is_admin === true
+      || profile.isAdmin === true
+      || profile.admin === true
+      || String(profile.role || '').toLowerCase() === 'admin';
+  }
+
+  function resolveCurrentProfile(context, fallbackUser) {
+    var profile = fallbackUser && fallbackUser.profile;
+    if (context && typeof context.getCurrentProfile === 'function') {
+      try {
+        profile = context.getCurrentProfile() || profile || null;
+      } catch (_) { }
+    }
+    if (!profile && window.KCAPI && typeof window.KCAPI.getCurrentProfile === 'function') {
+      try { profile = window.KCAPI.getCurrentProfile() || null; } catch (_) { }
+    }
+    if (!profile && window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+      try { profile = window.KCProfiles.getCurrentProfile() || null; } catch (_) { }
+    }
+    return profile || null;
+  }
+
+  function canManagePost(post, user, context) {
+    var viewer = resolveCurrentUser(context, user);
+    if (isAuthor(post, viewer)) return true;
+    return isAdminProfile(resolveCurrentProfile(context, viewer))
+      || isAdminProfile(viewer && viewer.app_metadata);
+  }
+
+  function isAdminManagingPost(post, user, context) {
+    var viewer = resolveCurrentUser(context, user);
+    return !isAuthor(post, viewer) && canManagePost(post, viewer, context);
+  }
+
   function getPostIdForMutation(post) {
     if (!post) return null;
     return post.uuid || post.id || null;
@@ -208,7 +244,7 @@
       var next;
       var msg;
 
-      if (!editingPost || !isAuthor(editingPost, viewer)) {
+      if (!editingPost || !canManagePost(editingPost, viewer, liveContext)) {
         status.textContent = 'Voc\u00EA n\u00E3o tem permiss\u00E3o para editar esta publica\u00E7\u00E3o.';
         return;
       }
@@ -256,6 +292,7 @@
   function upsertOwnerActions(post, user, context) {
     var actions = document.querySelector('.kc-product-actions');
     var canManage;
+    var adminManaging;
     var existing;
     var wrap;
     var editBtn;
@@ -280,7 +317,8 @@
 
     if (!actions) return;
 
-    canManage = isAuthor(post, user);
+    canManage = canManagePost(post, user, context);
+    adminManaging = isAdminManagingPost(post, user, context);
     existing = document.getElementById('ownerActionsWrap');
     if (existing) existing.remove();
     if (!canManage) return;
@@ -288,6 +326,7 @@
     wrap = document.createElement('div');
     wrap.id = 'ownerActionsWrap';
     wrap.className = 'kc-owner-actions-grid';
+    wrap.dataset.kcAdminManaging = adminManaging ? '1' : '0';
     wrap.style.cssText = 'display:contents;';
 
     editBtn = document.createElement('button');
@@ -331,7 +370,7 @@
     (function () {
       var bumpedAt = post && (post.bumped_at || post.bumpedAt);
       var bumpCooldownMs = 1 * 24 * 60 * 60 * 1000;
-      var bumpReady = !bumpedAt || (Date.now() - new Date(bumpedAt).getTime() >= bumpCooldownMs);
+      var bumpReady = adminManaging || !bumpedAt || (Date.now() - new Date(bumpedAt).getTime() >= bumpCooldownMs);
       bumpBtn.style.display = isPublished && !isClosed ? '' : 'none';
       if (bumpReady) {
         bumpBtn.innerHTML = '<i class="fas fa-rocket"></i> Impulsionar hoje';
@@ -368,7 +407,7 @@
         var details = document.querySelector('.kc-product-details');
         badge.id = 'ownerStatusBadge';
         badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.3);color:#93c5fd;font-size:.9em;margin-bottom:12px;';
-        badge.innerHTML = '<i class="fas fa-clock"></i><span>Esta publica\u00E7\u00E3o est\u00E1 <strong>em an\u00E1lise</strong> pela modera\u00E7\u00E3o e ainda n\u00E3o aparece nos feeds. Voc\u00EA ser\u00E1 notificado quando for aprovada.</span>';
+        badge.innerHTML = '<i class="fas fa-clock"></i><span>Esta publica\u00E7\u00E3o est\u00E1 <strong>em an\u00E1lise</strong> pela modera\u00E7\u00E3o e ainda n\u00E3o aparece nos feeds. ' + (adminManaging ? 'Voc\u00EA est\u00E1 gerenciando como administrador.' : 'Voc\u00EA ser\u00E1 notificado quando for aprovada.') + '</span>';
         if (details) details.insertAdjacentElement('afterbegin', badge);
       })();
     } else if (isClosed) {
@@ -394,7 +433,7 @@
           badge.innerHTML = '<i class="fas fa-calendar-xmark"></i><span>Este an\u00FAncio <strong>expirou</strong>' + expiryStr + ' e n\u00E3o aparece nos feeds. Renove-o para voltar a aparecer.</span>';
         } else {
           badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
-          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este an\u00FAncio est\u00E1 <strong>desabilitado</strong> e n\u00E3o aparece nos feeds. Apenas voc\u00EA consegue ver esta p\u00E1gina.</span>';
+          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este an\u00FAncio est\u00E1 <strong>desabilitado</strong> e n\u00E3o aparece nos feeds. ' + (adminManaging ? 'Autores e administradores conseguem acessar esta p\u00E1gina.' : 'Apenas voc\u00EA consegue ver esta p\u00E1gina.') + '</span>';
         }
         if (details) details.insertAdjacentElement('afterbegin', badge);
       })();
@@ -432,23 +471,10 @@
           var next = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
             ? window.KCPostModel.from(updatedData, { pageModule: updatedData.modulo || '', view: 'product' })
             : updatedData;
-          var viewer = resolveCurrentUser(context, user);
           if (context && typeof context.renderPost === 'function') {
             context.renderPost(next);
           }
           markPostAsEdited();
-          try {
-            var client = window.KCSupabase && window.KCSupabase.getClient ? window.KCSupabase.getClient() : null;
-            var uid = viewer && viewer.id;
-            if (client && uid) {
-              await client.from('audit_log').insert({
-                action: 'post_edited',
-                entity_type: 'posts',
-                entity_id: String(post.uuid || post.id || ''),
-                actor_id: uid,
-              });
-            }
-          } catch (_) { }
         });
         return;
       }
@@ -533,7 +559,7 @@
           var details = document.querySelector('.kc-product-details');
           badge.id = 'ownerStatusBadge';
           badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,108,0,.12);border:1px solid rgba(239,108,0,.3);color:#ef6c00;font-size:.9em;margin-bottom:12px;';
-          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este an\u00FAncio est\u00E1 <strong>desabilitado</strong> e n\u00E3o aparece nos feeds. Apenas voc\u00EA consegue ver esta p\u00E1gina.</span>';
+          badge.innerHTML = '<i class="fas fa-eye-slash"></i><span>Este an\u00FAncio est\u00E1 <strong>desabilitado</strong> e n\u00E3o aparece nos feeds. ' + (adminManaging ? 'Autores e administradores conseguem acessar esta p\u00E1gina.' : 'Apenas voc\u00EA consegue ver esta p\u00E1gina.') + '</span>';
           if (details) details.insertAdjacentElement('afterbegin', badge);
         }
 
@@ -570,7 +596,7 @@
         if (isReactivation && window.KCAPI && typeof window.KCAPI.reactivatePost === 'function') {
           res = await window.KCAPI.reactivatePost(getPostIdForMutation(post));
         } else if (!isReactivation && window.KCAPI && typeof window.KCAPI.closePost === 'function') {
-          res = await window.KCAPI.closePost(getPostIdForMutation(post), { reason: 'owner_closed' });
+          res = await window.KCAPI.closePost(getPostIdForMutation(post), { reason: adminManaging ? 'admin_closed' : 'owner_closed' });
         }
       } catch (_) { }
 

@@ -8,6 +8,7 @@
   var _adminRankingExpanded = false;
   var AUDIT_PAGE_SIZE = 20;
   var _exportBound = false;
+  var _auditControlsBound = false;
   var _periodRefreshTimer = null;
   var _activeRefreshController = null;
   var _refreshRequestSeq = 0;
@@ -89,6 +90,8 @@
       setAuditOffset: function (nextOffset) { _auditOffset = Number(nextOffset) || 0; },
       getExportBound: function () { return _exportBound; },
       setExportBound: function (nextValue) { _exportBound = !!nextValue; },
+      getAuditControlsBound: function () { return _auditControlsBound; },
+      setAuditControlsBound: function (nextValue) { _auditControlsBound = !!nextValue; },
       getXlsxLoadPromise: function () { return _xlsxLoadPromise; },
       setXlsxLoadPromise: function (promise) { _xlsxLoadPromise = promise || null; },
       getJspdfLoadPromise: function () { return _jspdfLoadPromise; },
@@ -481,6 +484,12 @@
       : [];
   }
 
+  function readAuditFilters() {
+    return (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.readAuditFilters === 'function')
+      ? window._KCAD.audit.readAuditFilters(buildAuditDeps())
+      : 'all';
+  }
+
   function renderSearchTrends(trends, periodDays) {
     if (window._KCAD && window._KCAD.charts && typeof window._KCAD.charts.renderSearchTrends === 'function') {
       window._KCAD.charts.renderSearchTrends(trends, periodDays, buildChartsDeps());
@@ -536,6 +545,12 @@
   function enableExport() {
     if (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.enableExport === 'function') {
       window._KCAD.audit.enableExport(buildAuditDeps());
+    }
+  }
+
+  function bindAuditControls() {
+    if (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.bindAuditControls === 'function') {
+      window._KCAD.audit.bindAuditControls(buildAuditDeps());
     }
   }
 
@@ -609,7 +624,7 @@
       loadUsersNew(client, since),
       loadVotesCount(client, since),
       loadSavedPostsCount(client, since),
-      loadAuditLog(client, AUDIT_PAGE_SIZE, 0, 'all', since),
+      loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
       loadSearchTrendsData(client, since),
       loadDailyMetrics(client, since, signal),
     ]);
@@ -774,11 +789,7 @@
     var lastSyncEl = $('#admin-last-sync');
     if (lastSyncEl) lastSyncEl.addEventListener('click', refreshDashboard);
 
-    var loadMoreBtn = $('#admin-audit-load-more');
-    if (loadMoreBtn) loadMoreBtn.addEventListener('click', loadMoreAudit);
-
-    var auditFilter = $('#admin-audit-filter');
-    if (auditFilter) auditFilter.addEventListener('change', filterAudit);
+    bindAuditControls();
 
     // Period filter triggers full dashboard reload
     var periodFilter = $('#admin-period-filter');

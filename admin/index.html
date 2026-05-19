@@ -368,7 +368,41 @@
     }
 
     .kc-admin-audit-wrap table {
-      min-width: 560px;
+      min-width: 860px;
+    }
+
+    .kc-admin-audit-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .kc-admin-audit-controls select,
+    .kc-admin-audit-controls input,
+    .kc-admin-audit-controls button {
+      min-height: 38px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      font-size: .85rem;
+    }
+
+    .kc-admin-audit-controls button {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .kc-admin-audit-summary {
+      margin: -2px 0 10px;
+      color: var(--kc-text-dark-secondary);
+      font-size: .82rem;
     }
 
     th,
@@ -767,14 +801,31 @@
 
             <section class="kc-admin-section">
               <h3 id="admin-audit-title"><i class="fas fa-clock-rotate-left"></i> Audit log</h3>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
-                <select id="admin-audit-filter" style="padding:6px 10px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;">
+              <div class="kc-admin-audit-controls" aria-label="Filtros do audit log" data-i18n-aria-label="aria-label.audit-log-filters">
+                <select id="admin-audit-filter" title="Filtrar por ação" data-i18n-tooltip="tooltip.audit-action-filter">
                   <option value="all">Todas as ações</option>
                   <option value="post_status_changed">Status alterado</option>
+                  <option value="post_edited">Post editado</option>
+                  <option value="post_closed">Post encerrado</option>
+                  <option value="post_reactivated">Post reativado</option>
+                  <option value="post_renewed">Post renovado</option>
+                  <option value="post_bumped">Post impulsionado</option>
                   <option value="post_deleted">Post deletado</option>
                   <option value="report_closed">Denúncia fechada</option>
                 </select>
+                <select id="admin-audit-entity-filter" title="Filtrar por entidade" data-i18n-tooltip="tooltip.audit-entity-filter">
+                  <option value="all">Todas as entidades</option>
+                  <option value="posts">Posts</option>
+                  <option value="reports">Denúncias</option>
+                  <option value="profiles">Perfis</option>
+                  <option value="system">Sistema</option>
+                </select>
+                <input id="admin-audit-actor-filter" type="search" autocomplete="off" placeholder="Ator: nome ou UUID" aria-label="Filtrar por ator" data-i18n-placeholder="placeholder.audit-actor-filter" data-i18n-aria-label="aria-label.audit-actor-filter">
+                <button type="button" id="admin-audit-apply-filter"><i class="fas fa-filter"></i> Filtrar</button>
+                <button type="button" id="admin-audit-clear-filter"><i class="fas fa-eraser"></i> Limpar</button>
+                <button type="button" id="admin-audit-export-csv" disabled><i class="fas fa-file-csv"></i> CSV</button>
               </div>
+              <div id="admin-audit-summary" class="kc-admin-audit-summary" aria-live="polite"></div>
               <div class="kc-admin-audit-wrap">
                 <table role="table" aria-label="Audit log de ações administrativas" data-i18n-aria-label="aria-label.audit-log">
                   <thead>
@@ -782,7 +833,9 @@
                       <th>Data</th>
                       <th>Ação</th>
                       <th>Entidade</th>
-                      <th>Autor</th>
+                      <th>ID</th>
+                      <th>Ator</th>
+                      <th>Detalhes</th>
                     </tr>
                   </thead>
                   <tbody id="admin-audit-body"></tbody>
@@ -965,4 +1018,3 @@
     <script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.0"></script>
 </body>
 </html>
-
