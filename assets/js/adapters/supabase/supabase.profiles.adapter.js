@@ -57,38 +57,103 @@
    * (buildEmojiAvatarDataUrl gera SVG inline). Retorna Blob PNG quadrado de
    * `size`×`size` ou `null` em caso de falha.
    */
-  function rasterizeSvgBlobToPng(svgBlob, width, height) {
-    if (!svgBlob || typeof Image === 'undefined') return Promise.resolve(null);
+  function blobToDataUrl(blob) {
+    if (!blob || typeof FileReader === 'undefined') return Promise.resolve('');
+    return new Promise(function (resolve) {
+      try {
+        const reader = new FileReader();
+        reader.onload = function () { resolve(String(reader.result || '')); };
+        reader.onerror = function () { resolve(''); };
+        reader.readAsDataURL(blob);
+      } catch (_) {
+        resolve('');
+      }
+    });
+  }
+
+  function canvasToPngBlob(canvas) {
+    if (!canvas) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      const fallback = function () {
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          const media = window._KCSA && window._KCSA.media;
+          resolve(media && typeof media.dataUrlToBlob === 'function' ? media.dataUrlToBlob(dataUrl) : null);
+        } catch (_) {
+          resolve(null);
+        }
+      };
+
+      if (typeof canvas.toBlob !== 'function') {
+        fallback();
+        return;
+      }
+
+      try {
+        canvas.toBlob(function (out) {
+          if (out) resolve(out);
+          else fallback();
+        }, 'image/png');
+      } catch (_) {
+        fallback();
+      }
+    });
+  }
+
+  async function rasterizeSvgBlobToPng(svgBlob, width, height) {
+    if (!svgBlob || typeof Image === 'undefined') return null;
     const w = Number.isFinite(width) ? width : 400;
     const h = Number.isFinite(height) ? height : 400;
+
+    // Use data: first because production CSP allows data: images. A blob: URL is
+    // still kept as a fallback for older browsers/FileReader failures.
+    const dataUrl = await blobToDataUrl(svgBlob);
+
     return new Promise(function (resolve) {
-      const url = URL.createObjectURL(svgBlob);
+      let url = '';
+      const src = dataUrl || (function () {
+        try {
+          url = URL.createObjectURL(svgBlob);
+          return url;
+        } catch (_) {
+          return '';
+        }
+      }());
+      if (!src) {
+        resolve(null);
+        return;
+      }
+
       const img = new Image();
       let settled = false;
       const finish = function (result) {
         if (settled) return;
         settled = true;
-        try { URL.revokeObjectURL(url); } catch (_) {}
+        if (url) {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+        }
         resolve(result);
       };
-      img.onload = function () {
+      img.onload = async function () {
         try {
           const canvas = document.createElement('canvas');
           canvas.width = w;
           canvas.height = h;
           const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            finish(null);
+            return;
+          }
           ctx.clearRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob(function (out) {
-            finish(out || null);
-          }, 'image/png');
+          finish(await canvasToPngBlob(canvas));
         } catch (e) {
           console.warn('[KCAPI][profile] rasterizeSvg failed:', e);
           finish(null);
         }
       };
       img.onerror = function () { finish(null); };
-      img.src = url;
+      img.src = src;
     });
   }
 

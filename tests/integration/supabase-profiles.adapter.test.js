@@ -141,6 +141,18 @@ describe('supabase.profiles.adapter.js — uploadProfileAvatarToSupabaseStorage'
     expect(source).toContain("'Use uma imagem JPG, PNG ou WEBP para o avatar.'");
   });
 
+  test('rasteriza avatar SVG por data URL antes de cair para blob URL', () => {
+    expect(source).toContain('function blobToDataUrl(');
+    expect(source).toContain('await blobToDataUrl(svgBlob)');
+    expect(source).toContain('img.src = src');
+  });
+
+  test('tem fallback canvas.toDataURL quando canvas.toBlob falha', () => {
+    expect(source).toContain('function canvasToPngBlob(');
+    expect(source).toContain("canvas.toDataURL('image/png')");
+    expect(source).toContain('media.dataUrlToBlob(dataUrl)');
+  });
+
   test('valida magic bytes via window._KCSA.media.checkImageMagicBytes', () => {
     expect(source).toContain('window._KCSA.media.checkImageMagicBytes(blob)');
     expect(source).toContain("'O arquivo não é uma imagem válida.'");
