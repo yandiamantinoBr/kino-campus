@@ -670,9 +670,12 @@
             error = { message: rpc.data.message || fallbackMsg };
           }
         } else {
+          const patch = status === 'published'
+            ? { status, moderation_reason: null }
+            : { status };
           const res = await client
             .from('posts')
-            .update({ status })
+            .update(patch)
             .eq('id', postId)
             .select('id');
           error = res ? res.error : null;

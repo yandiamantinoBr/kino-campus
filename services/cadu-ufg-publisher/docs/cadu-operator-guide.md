@@ -305,7 +305,21 @@ O Kino tem dois limites diferentes:
 
 O erro `FLOOD_LIMIT` vem de `post_flood_limits`/`kc_anti_spam_gate()`. Administradores ajustam isso em `/admin/moderation.html`, painel **Limites de Publicacoes**, bloco **Ritmo de publicacao por janela**.
 
+O erro `POST_LIMIT_REACHED` vem de `post_limits` e controla publicacoes ativas, nao ritmo por hora. Se aparecer para o Cadu, confira o painel **Limites de Publicacoes** para a conta `yan1nakamura+cadu.kinocampus@gmail.com` ou `cadu.bot@kinocampus.com.br`.
+
 Para o Cadu, prefira override por usuario em vez de aumentar o padrao global. O valor inicial recomendado e `10 posts / 60 min`, mantendo dry-run e revisao antes de publicar.
+
+## Reparos Seguros
+
+Use apenas estes metodos do publisher oficial:
+
+- `createPost(payload)`: cria uma publicacao nova pelo contrato completo do mapper.
+- `safeUpdatePost(postId, fields)`: repara campos e faz merge seguro de `metadata`; nunca use `PATCH` REST direto para metadata parcial.
+- `publishPost(postId, options)`: promove para `published`, limpa `moderation_reason` e preserva a metadata existente.
+
+Nunca envie objetos brutos para `image_url`; se um helper retornar `{ url: "..." }`, passe o objeto inteiro para `prepareImagesForPost()` ou extraia `.url`. O publisher normaliza string, `{ url }`, `{ imageUrl }`, `{ image_url }`, `{ coverUrl }` e `{ cover_url }`, e nunca deve gravar `[object Object]`.
+
+Para imagens, o fluxo ideal e: manter URL externa como fallback em `posts.image_url`, `metadata.image_url` e `metadata.cover_url`; tentar upload para `kino-media`; se o upload falhar, publicar com a URL externa e reportar `media.uploads[].error` no digest. Se o erro for `storage_upload_http_403`, a policy `storage_kino_media_cadu_post_media_insert` ainda nao foi aplicada por um owner do projeto Supabase.
 
 ## Avisos De Qualidade
 
@@ -324,7 +338,8 @@ Quando o digest mostrar `review:quality` ou `Avisos de qualidade`, nao aprove no
 - `missing_category_metadata`: faltou categoria/categoriaKey/categoryKey.
 - `missing_tag_metadata`: faltou `metadata.tags` ou `metadata.tagKeys`.
 - `missing_free_flag`: faltou `metadata.gratuito=true`.
-- `missing_event_datetime`: evento sem `metadata.data_evento` ou `metadata.hora_evento`.
+- `missing_event_date`: evento sem `metadata.data_evento` (bloqueante).
+- `missing_event_time`: evento sem `metadata.hora_evento` (aviso leve; nao bloqueia quando a data existe).
 - `missing_work_mode`: oportunidade sem `metadata.modalidadeTrabalho`.
 - `source_url_mismatch`: link oficial divergente.
 - `invalid_image_url`: imagem do payload nao e uma URL HTTP/HTTPS valida.

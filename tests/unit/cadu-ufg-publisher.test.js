@@ -6,7 +6,7 @@ const { HttpClient } = require('../../services/cadu-ufg-publisher/src/http-clien
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
 const { resolveDeepSeekEndpoint, resolveDeepSeekModel } = require('../../services/cadu-ufg-publisher/src/model');
 const { splitMessage } = require('../../services/cadu-ufg-publisher/src/notifier');
-const { normalizeImages, SupabasePublisher } = require('../../services/cadu-ufg-publisher/src/publisher');
+const { imageUrlFromCandidate, normalizeImages, SupabasePublisher } = require('../../services/cadu-ufg-publisher/src/publisher');
 const { evaluatePayloadQuality } = require('../../services/cadu-ufg-publisher/src/quality');
 const { collectReviews, formatReviews, resolveReviewKey } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
@@ -415,6 +415,49 @@ describe('cadu-ufg-publisher', () => {
     expect(quality.warnings).toEqual([]);
   });
 
+  test('quality guard treats missing event time as non-blocking when date exists', () => {
+    const item = {
+      sourceUrl: 'https://eventos.ufg.br/n/1',
+      title: 'Seminario academico com inscricoes abertas',
+      summary: 'Evento gratuito da UFG.',
+      text: 'O seminario ocorre em 10/06/2026. Contato: eventos@ufg.br.',
+      pdfLinks: [],
+    };
+    const classification = {
+      hasPdf: false,
+      hasDeadline: false,
+      module: 'eventos',
+      category: 'academicos',
+    };
+    const payload = {
+      descricao: 'Evento gratuito da UFG em 10/06/2026.\n\nFonte: [https://eventos.ufg.br/n/1](https://eventos.ufg.br/n/1)',
+      imagens: ['https://eventos.ufg.br/cover.jpg'],
+      modulo: 'eventos',
+      metadata: {
+        source_url: item.sourceUrl,
+        contato: 'eventos@ufg.br',
+        link: item.sourceUrl,
+        link_as_cta: true,
+        actionLabel: 'Acessar evento',
+        actionKey: 'acessar-evento',
+        area: 'Academicos',
+        areaKey: 'academicos',
+        categoria: 'Academicos',
+        categoriaKey: 'academicos',
+        categoryKey: 'academicos',
+        tags: ['UFG', 'Academicos'],
+        tagKeys: ['ufg', 'academicos'],
+        gratuito: true,
+        data_evento: '2026-06-10',
+      },
+    };
+
+    const quality = evaluatePayloadQuality(item, classification, payload);
+    expect(quality.warnings).toContain('missing_event_time');
+    expect(quality.blockingWarnings).not.toContain('missing_event_time');
+    expect(quality.ok).toBe(true);
+  });
+
   test('Weby JSON discovery paginates news and events before sorting candidates', async () => {
     const calls = [];
     const http = {
@@ -540,6 +583,64 @@ describe('cadu-ufg-publisher', () => {
       'https://source.local/cover.jpg',
       'https://source.local/meta.png',
     ]);
+  });
+
+  test('publisher accepts object-shaped image candidates and never emits object strings', async () => {
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    publisher.uploadImageToStorage = jest.fn(async () => {
+      throw new Error('storage_upload_http_403');
+    });
+
+    expect(imageUrlFromCandidate({ url: 'https://source.local/cover.jpg' })).toBe('https://source.local/cover.jpg');
+    const prepared = await publisher.prepareImagesForPost('post-1', [{ url: 'https://source.local/cover.jpg' }]);
+
+    expect(prepared.images).toEqual(['https://source.local/cover.jpg']);
+    expect(prepared.images[0]).not.toBe('[object Object]');
+    expect(prepared.uploads[0].source_url).toBe('https://source.local/cover.jpg');
+  });
+
+  test('safeUpdatePost merges metadata and does not delete media when no image is provided', async () => {
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    publisher.getPost = jest.fn(async () => ({
+      id: 'post-1',
+      metadata: {
+        link: 'https://old.local',
+        link_as_cta: true,
+        nested: { a: 1 },
+      },
+    }));
+    publisher.patchPost = jest.fn(async (postId, row) => ({ id: postId, ...row }));
+    publisher.replacePostMedia = jest.fn();
+
+    const result = await publisher.safeUpdatePost('post-1', {
+      status: 'published',
+      moderation_reason: null,
+      metadata: { contato: 'contato@ufg.br', nested: { b: 2 } },
+    });
+
+    const patch = publisher.patchPost.mock.calls[0][1];
+    expect(patch.status).toBe('published');
+    expect(patch.moderation_reason).toBeNull();
+    expect(patch.metadata).toMatchObject({
+      link: 'https://old.local',
+      link_as_cta: true,
+      contato: 'contato@ufg.br',
+      nested: { a: 1, b: 2 },
+    });
+    expect(publisher.replacePostMedia).not.toHaveBeenCalled();
+    expect(result.media.skipped).toBe(true);
   });
 
   test('telegram notifier chunks long review messages', () => {

@@ -119,8 +119,10 @@ function evaluatePayloadQuality(item, classification, payload) {
     warnings.push('missing_free_flag');
   }
 
-  if (moduleKey === 'eventos' && (!String(metadata.data_evento || '').trim() || !String(metadata.hora_evento || '').trim())) {
-    warnings.push('missing_event_datetime');
+  if (moduleKey === 'eventos' && !String(metadata.data_evento || '').trim()) {
+    warnings.push('missing_event_date');
+  } else if (moduleKey === 'eventos' && !String(metadata.hora_evento || '').trim()) {
+    warnings.push('missing_event_time');
   }
 
   if (moduleKey === 'oportunidades' && !String(metadata.modalidadeTrabalho || payload.modalidadeTrabalho || '').trim()) {
@@ -133,9 +135,11 @@ function evaluatePayloadQuality(item, classification, payload) {
     warnings.push('invalid_image_url');
   }
 
+  const blockingWarnings = warnings.filter((warning) => warning !== 'missing_event_time');
   return {
-    ok: warnings.length === 0,
+    ok: blockingWarnings.length === 0,
     warnings,
+    blockingWarnings,
   };
 }
 

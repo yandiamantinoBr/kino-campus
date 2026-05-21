@@ -16,7 +16,39 @@ function required(name, value) {
   return value;
 }
 
+function imageUrlFromCandidate(value) {
+  const raw = (() => {
+    if (value && typeof value === 'object') {
+      return value.url
+        || value.publicUrl
+        || value.public_url
+        || value.image_url
+        || value.imageUrl
+        || value.cover_url
+        || value.coverUrl
+        || value.href
+        || value.source
+        || value.src
+        || '';
+    }
+    return value;
+  })();
+  try {
+    const url = new URL(String(raw || '').trim());
+    if (!/^https?:$/.test(url.protocol)) return '';
+    return url.toString();
+  } catch (_) {
+    return '';
+  }
+}
+
+function normalizeImageValues(values) {
+  return Array.from(new Set((values || []).map(imageUrlFromCandidate).filter(Boolean))).slice(0, 5);
+}
+
 function normalizeImages(payload) {
+  if (Array.isArray(payload)) return normalizeImageValues(payload);
+  if (!payload || typeof payload !== 'object') return normalizeImageValues([payload]);
   const metadata = payload && payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {};
   const values = [
     ...(Array.isArray(payload.imagens) ? payload.imagens : []),
@@ -30,15 +62,29 @@ function normalizeImages(payload) {
     metadata.cover_url,
     metadata.coverUrl,
   ];
-  return Array.from(new Set(values.map((value) => {
-    try {
-      const url = new URL(String(value || '').trim());
-      if (!/^https?:$/.test(url.protocol)) return '';
-      return url.toString();
-    } catch (_) {
-      return '';
+  return normalizeImageValues(values);
+}
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function mergeMetadata(base, patch) {
+  const result = { ...(isPlainObject(base) ? base : {}) };
+  if (!isPlainObject(patch)) return result;
+  Object.entries(patch).forEach(([key, value]) => {
+    if (value === undefined) return;
+    if (isPlainObject(value) && isPlainObject(result[key])) {
+      result[key] = mergeMetadata(result[key], value);
+    } else {
+      result[key] = value;
     }
-  }).filter(Boolean))).slice(0, 5);
+  });
+  return result;
+}
+
+function stripUndefined(row) {
+  return Object.fromEntries(Object.entries(row || {}).filter(([, value]) => value !== undefined));
 }
 
 function encodeStoragePath(path) {
@@ -75,7 +121,7 @@ function withoutImageUrl(row) {
 
 function withCoverImage(row, imageUrl) {
   const next = { ...(row || {}) };
-  const cover = String(imageUrl || '').trim();
+  const cover = imageUrlFromCandidate(imageUrl);
   next.image_url = cover || null;
   next.metadata = {
     ...((row && row.metadata && typeof row.metadata === 'object') ? row.metadata : {}),
@@ -263,8 +309,10 @@ class SupabasePublisher {
   }
 
   async uploadImageToStorage(postId, url, index) {
-    const image = await this.downloadRemoteImage(url);
-    const hash = sha256(url).slice(0, 12);
+    const sourceUrl = imageUrlFromCandidate(url);
+    if (!sourceUrl) throw new Error('invalid_image_url');
+    const image = await this.downloadRemoteImage(sourceUrl);
+    const hash = sha256(sourceUrl).slice(0, 12);
     const safePostId = slugify(postId, 80) || 'post';
     const objectPath = `post-media/${this.session.user.id}/${safePostId}/cadu-${index + 1}-${hash}.${image.ext}`;
     const encodedPath = encodeStoragePath(objectPath);
@@ -290,11 +338,12 @@ class SupabasePublisher {
       const originalUrl = images[index];
       try {
         const storedUrl = await this.uploadImageToStorage(postId, originalUrl, index);
-        uploads.push({ ok: true, source: originalUrl, url: storedUrl });
+        uploads.push({ ok: true, source: originalUrl, source_url: imageUrlFromCandidate(originalUrl), url: storedUrl });
         out.push(storedUrl);
       } catch (error) {
-        uploads.push({ ok: false, source: originalUrl, error: error.message });
-        out.push(originalUrl);
+        const fallbackUrl = imageUrlFromCandidate(originalUrl);
+        uploads.push({ ok: false, source: originalUrl, source_url: fallbackUrl, error: error.message });
+        if (fallbackUrl) out.push(fallbackUrl);
       }
     }
     return { images: out, uploads };
@@ -385,11 +434,104 @@ class SupabasePublisher {
     return this.insertPostMedia(postId, images);
   }
 
-  async updatePost(postId, payload) {
+  async getPost(postId) {
     if (!this.session) await this.signIn();
-    const row = toPostgrestInsert(payload, this.session.user.id);
-    delete row.author_id;
+    const response = await fetch(`${this.url}/rest/v1/posts?id=eq.${encodeURIComponent(postId)}&select=*`, {
+      method: 'GET',
+      headers: {
+        ...this.headers(),
+        accept: 'application/json',
+      },
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`Post fetch failed: HTTP ${response.status} ${text.slice(0, 500)}`);
+    const data = JSON.parse(text);
+    const post = Array.isArray(data) ? data[0] : data;
+    return post || null;
+  }
 
+  buildSafePatch(current, fields) {
+    const input = fields && typeof fields === 'object' ? fields : {};
+    const patch = {};
+    const has = (key) => Object.prototype.hasOwnProperty.call(input, key);
+    const pick = (...keys) => {
+      for (const key of keys) {
+        if (has(key)) return input[key];
+      }
+      return undefined;
+    };
+
+    const title = pick('title', 'titulo');
+    const description = pick('description', 'descricao');
+    const price = pick('price', 'preco');
+    const location = pick('location', 'localizacao');
+    const moduleName = pick('module', 'modulo');
+    const category = pick('category', 'categoriaKey', 'categoryKey', 'categoria');
+    const visibility = pick('visibility');
+    const status = pick('status');
+    const expiresAt = pick('expires_at', 'expiresAt');
+    const moderationReason = pick('moderation_reason', 'moderationReason');
+
+    if (title !== undefined) patch.title = String(title || '').trim();
+    if (description !== undefined) patch.description = String(description || '').trim();
+    if (price !== undefined) patch.price = price == null ? null : Number(price);
+    if (location !== undefined) patch.location = String(location || '').trim();
+    if (moduleName !== undefined) patch.module = String(moduleName || '').trim();
+    if (category !== undefined) patch.category = String(category || '').trim();
+    if (visibility !== undefined) patch.visibility = String(visibility || '').trim() || 'public';
+    if (status !== undefined) patch.status = String(status || '').trim();
+    if (expiresAt !== undefined) patch.expires_at = expiresAt || null;
+    if (moderationReason !== undefined) patch.moderation_reason = moderationReason || null;
+
+    const candidateImages = normalizeImages(input);
+    if (candidateImages[0]) patch.image_url = candidateImages[0];
+
+    const metadataPatch = {};
+    if (isPlainObject(input.metadata)) Object.assign(metadataPatch, input.metadata);
+    [
+      'contato',
+      'link',
+      'link_as_cta',
+      'actionLabel',
+      'actionKey',
+      'gratuito',
+      'area',
+      'areaLabel',
+      'areaKey',
+      'modalidadeTrabalho',
+      'remuneracao',
+      'tags',
+      'tagKeys',
+      'categoria',
+      'categoriaKey',
+      'categoryKey',
+      'categoryLabel',
+      'subcategory',
+      'subcategoryKey',
+      'subcategoryLabel',
+      'data_evento',
+      'hora_evento',
+      'source_url',
+      'source_host',
+      'source_unit',
+      'source_id',
+      'confidence_score',
+      'deadline_date',
+      'event_date_detected',
+      'temporal_status',
+      'cadu_run_id',
+    ].forEach((key) => {
+      if (has(key)) metadataPatch[key] = input[key];
+    });
+    if (candidateImages[0]) {
+      metadataPatch.image_url = candidateImages[0];
+      metadataPatch.cover_url = candidateImages[0];
+    }
+    patch.metadata = mergeMetadata(current && current.metadata, metadataPatch);
+    return stripUndefined(patch);
+  }
+
+  async patchPost(postId, row) {
     let response = await fetch(`${this.url}/rest/v1/posts?id=eq.${encodeURIComponent(postId)}`, {
       method: 'PATCH',
       headers: {
@@ -414,8 +556,20 @@ class SupabasePublisher {
       throw new Error(`Post update failed: HTTP ${response.status} ${text.slice(0, 500)}`);
     }
     const data = JSON.parse(text);
-    const post = Array.isArray(data) ? data[0] : data;
-    const prepared = await this.prepareImagesForPost(postId, normalizeImages(payload));
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  async safeUpdatePost(postId, fields) {
+    if (!this.session) await this.signIn();
+    const current = await this.getPost(postId);
+    if (!current) throw new Error(`Post not found: ${postId}`);
+    const row = this.buildSafePatch(current, fields);
+    const post = await this.patchPost(postId, row);
+    const imageCandidates = normalizeImages(fields);
+    if (!imageCandidates.length) {
+      return { ok: true, post, media: { ok: true, count: 0, uploads: [], skipped: true } };
+    }
+    const prepared = await this.prepareImagesForPost(postId, imageCandidates);
     if (prepared.images[0]) {
       await this.updatePostCoverImage(postId, row, prepared.images[0]);
       post.image_url = prepared.images[0];
@@ -424,12 +578,33 @@ class SupabasePublisher {
     const media = await this.replacePostMedia(postId, prepared.images);
     return { ok: true, post, media: { ...media, uploads: prepared.uploads } };
   }
+
+  async updatePost(postId, payload) {
+    const row = toPostgrestInsert(payload, this.session && this.session.user ? this.session.user.id : '');
+    delete row.author_id;
+    return this.safeUpdatePost(postId, row);
+  }
+
+  async publishPost(postId, options = {}) {
+    return this.safeUpdatePost(postId, {
+      ...(options && typeof options === 'object' ? options : {}),
+      status: 'published',
+      moderation_reason: null,
+      metadata: {
+        ...((options && options.metadata && typeof options.metadata === 'object') ? options.metadata : {}),
+        published_by_cadu: true,
+        published_by_cadu_at: new Date().toISOString(),
+      },
+    });
+  }
 }
 
 module.exports = {
   encodeStoragePath,
+  imageUrlFromCandidate,
   inferImageContentType,
   isMissingImageUrlColumn,
+  mergeMetadata,
   normalizeImages,
   SupabasePublisher,
 };

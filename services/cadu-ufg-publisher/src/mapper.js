@@ -120,10 +120,28 @@ function inferActionLabel(item, classification, actionUrlCount) {
   return 'Acessar oportunidade';
 }
 
+function scoreActionLink(link, item, classification) {
+  const url = String((link && link.url) || '').trim();
+  if (!url) return -1;
+  const label = normalizeText((link && link.label) || '');
+  const haystack = normalizeText(`${label} ${url}`);
+  let score = 0;
+  if (!/\.pdf(?:$|[?#])/i.test(url)) score += 20;
+  if (classification.hasPdf && /\b(edital|editais|chamada|fapeg|confap|sparkx|pibic|pivic|mobilidade)\b/.test(haystack)) score += 35;
+  if (/\b(inscric|submiss|formulario|forms\.gle|eventos?|evento|even3|plateia|candidat)\w*/.test(haystack)) score += 30;
+  if (classification.module === 'eventos' && /\b(evento|inscric|formulario|forms\.gle|even3|plateia)\w*/.test(haystack)) score += 20;
+  if (classification.module === 'oportunidades' && /\b(edital|chamada|bolsa|vaga|selecao|processo|fapeg|confap)\w*/.test(haystack)) score += 20;
+  if (/\b(clique aqui|saiba mais|acesse aqui)\b/.test(label)) score -= 8;
+  if (item && item.sourceUrl && url === item.sourceUrl) score -= 5;
+  return score;
+}
+
 function buildActionMetadata(item, classification, documentLinks) {
-  const preferredDocument = (documentLinks || []).find((link) => !/\.pdf(?:$|[?#])/i.test(link.url))
-    || (documentLinks || [])[0]
-    || null;
+  const candidates = (documentLinks || [])
+    .filter((link) => link && link.url)
+    .map((link, index) => ({ ...link, _index: index, _score: scoreActionLink(link, item, classification) }))
+    .sort((a, b) => (b._score - a._score) || (a._index - b._index));
+  const preferredDocument = candidates.find((link) => link._score >= 20) || candidates[0] || null;
   const link = preferredDocument && preferredDocument.url ? preferredDocument.url : item.sourceUrl;
   const actionLabel = inferActionLabel(item, classification, (documentLinks || []).length);
   return {

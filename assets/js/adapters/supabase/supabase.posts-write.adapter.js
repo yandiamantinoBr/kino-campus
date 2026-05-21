@@ -421,6 +421,25 @@
     return '';
   }
 
+  function isPlainObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function mergePostMetadata(base, patch) {
+    const result = Object.assign({}, isPlainObject(base) ? base : {});
+    if (!isPlainObject(patch)) return result;
+    Object.keys(patch).forEach(function (key) {
+      const value = patch[key];
+      if (value === undefined) return;
+      if (isPlainObject(value) && isPlainObject(result[key])) {
+        result[key] = mergePostMetadata(result[key], value);
+      } else {
+        result[key] = value;
+      }
+    });
+    return result;
+  }
+
   async function updatePostCoverImage(client, postId, metadata, imageUrl) {
     const cover = String(imageUrl || '').trim();
     const nextMetadata = {
@@ -842,13 +861,14 @@
 
     try {
       // 1) Permission check (author or admin)
-      const own = await client.from('posts').select('id, author_id').eq('id', postUuid).maybeSingle();
+      const own = await client.from('posts').select('id, author_id, metadata').eq('id', postUuid).maybeSingle();
       if (own && own.error) {
         console.error('[KCAPI][Supabase] updatePost ownership check erro:', own.error);
         return kcApiError('Não foi possível validar permissão de edição.');
       }
       if (!own || !own.data) return kcApiError('Publicação não encontrada.');
       const permission = await canManagePostRow(client, user, own.data);
+      parsed.data.metadata = mergePostMetadata(own.data.metadata, parsed.data.metadata);
       if (!permission.ok) return kcApiError('Você não pode editar este post.');
 
       // 2) Update post fields (text, metadata, etc.)

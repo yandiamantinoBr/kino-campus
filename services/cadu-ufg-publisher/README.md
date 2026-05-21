@@ -67,6 +67,10 @@ Itens de revisao ficam no arquivo de estado local para auditoria e podem ser env
 
 `SupabasePublisher.updatePost(postId, payload)` existe para reparar uma publicacao propria pendente sem criar duplicata; ele atualiza `posts` e substitui `post_media`.
 
+Para reparos parciais, use `SupabasePublisher.safeUpdatePost(postId, fields)`: ele busca a publicacao atual, faz merge seguro de `metadata` e aplica um unico PATCH. Para promover um post pendente, use `SupabasePublisher.publishPost(postId, options)`, que define `status='published'`, limpa `moderation_reason` e preserva os metadados existentes.
+
+`prepareImagesForPost(postId, images)` aceita URLs em string ou objetos com `url`, `imageUrl`, `image_url`, `coverUrl` ou `cover_url`. O retorno canonico e `{ images: string[], uploads: [...] }`; use sempre `images[0]` como string de capa e consulte `uploads` para diagnosticar fallback de Storage.
+
 Se DNS do container/VPS falhar para alguma fonte, configure `CADU_FETCH_PROXY_TEMPLATE` com uma URL proxy que aceite `{url}` codificado ou `{rawUrl}` literal. Tambem existe `CADU_HOST_ALIASES` em JSON para trocar host antes do fallback.
 
 ## Systemd
