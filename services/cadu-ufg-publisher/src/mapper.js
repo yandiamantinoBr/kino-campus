@@ -80,12 +80,58 @@ function markdownLink(label, url) {
   return `[${cleanLabel.replace(/[[\]]/g, '')}](${url})`;
 }
 
+function markdownUrlLink(url) {
+  const cleanUrl = validRemoteImageUrl(url);
+  return cleanUrl ? `[${cleanUrl}](${cleanUrl})` : '';
+}
+
+const CATEGORY_LABELS = {
+  academicos: 'Academicos',
+  culturais: 'Culturais',
+  empregos: 'Empregos',
+  esportivos: 'Esportivos',
+  estagios: 'Estagios',
+  festas: 'Festas',
+  freelancer: 'Freelancer',
+  monitoria: 'Monitoria',
+  pesquisa: 'Pesquisa',
+  sustentabilidade: 'Sustentabilidade',
+  voluntariado: 'Voluntariado',
+  workshops: 'Workshops',
+};
+
+function categoryLabel(category) {
+  return CATEGORY_LABELS[category] || normalizeWhitespace(category || '');
+}
+
 function buildSourceLabel(item) {
   const name = normalizeWhitespace((item && item.sourceName) || 'UFG');
   if (!name || /^ufg$/i.test(name)) return 'Fonte oficial: UFG';
   if (/ufg/i.test(name) || /verbena/i.test(name)) return `Fonte oficial: ${name}`;
   if (/^[A-Z0-9]{2,8}$/.test(name)) return `Fonte oficial: ${name}/UFG`;
   return `Fonte oficial: ${name}`;
+}
+
+function inferActionLabel(item, classification, actionUrlCount) {
+  const text = normalizeText(`${item.title || ''}\n${item.summary || ''}\n${item.text || ''}`);
+  if (classification.hasPdf) return actionUrlCount > 1 ? 'Acessar editais' : 'Acessar edital';
+  if (/\binscric|submiss|formulario|candidat/.test(text)) return 'Realizar inscricao';
+  if (classification.module === 'eventos') return 'Acessar evento';
+  return 'Acessar oportunidade';
+}
+
+function buildActionMetadata(item, classification, documentLinks) {
+  const preferredDocument = (documentLinks || []).find((link) => !/\.pdf(?:$|[?#])/i.test(link.url))
+    || (documentLinks || [])[0]
+    || null;
+  const link = preferredDocument && preferredDocument.url ? preferredDocument.url : item.sourceUrl;
+  const actionLabel = inferActionLabel(item, classification, (documentLinks || []).length);
+  return {
+    link,
+    link_as_cta: true,
+    actionLabel,
+    actionKey: slugify(actionLabel),
+  };
 }
 
 function isGenericInstitutionalText(value) {
@@ -242,7 +288,7 @@ function buildDescription(item, classification, summaryText = '') {
   const original = schedule.length && countDateMentions(originalRaw) >= 2 ? removeScheduleLikeLines(originalRaw) : originalRaw;
   const chunks = [];
   const sourceLabel = buildSourceLabel(item);
-  const sourceLink = item.sourceUrl ? `[${sourceLabel}](${item.sourceUrl})` : sourceLabel;
+  const sourceLink = item.sourceUrl ? `${sourceLabel}: ${markdownUrlLink(item.sourceUrl)}` : sourceLabel;
   const deadlineDate = classification.temporal && classification.temporal.deadlineDate
     ? formatDatePt(classification.temporal.deadlineDate)
     : '';
@@ -279,12 +325,12 @@ function buildDescription(item, classification, summaryText = '') {
   if (classification.hasPdf && documentLinks.length) {
     chunks.push([
       `**${ICON_DOCUMENT} Editais e documentos:**`,
-      ...documentLinks.map((link) => `- ${markdownLink(link.label, link.url)}`),
+      ...documentLinks.map((link) => `- ${link.label ? `**${link.label}:** ` : ''}${markdownUrlLink(link.url)}`),
     ].join('\n'));
   } else if (classification.hasPdf && pdfLinks.length > 1) {
     chunks.push([
       `**${ICON_DOCUMENT} Editais e documentos:**`,
-      ...pdfLinks.slice(0, 4).map((url, index) => `- ${markdownLink(extractPdfLabel(url, index), url)}`),
+      ...pdfLinks.slice(0, 4).map((url, index) => `- **${extractPdfLabel(url, index)}:** ${markdownUrlLink(url)}`),
     ].join('\n'));
   }
 
@@ -314,13 +360,22 @@ function mapToKinoPayload(item, classification, options = {}) {
   const description = buildDescription(item, classification, options.summaryText);
   const sourceUrl = item.sourceUrl;
   const images = buildImageList(item);
+  const documentLinks = normalizeDocumentLinks(item);
+  const action = buildActionMetadata(item, classification, documentLinks);
+  const category = classification.category || (classification.module === 'eventos' ? 'academicos' : 'monitoria');
+  const categoryText = categoryLabel(category);
   const tags = uniq([
     'UFG',
     item.sourceName,
-    classification.category,
-    classification.hasPdf ? 'edital' : '',
-    classification.hasDeadline ? 'prazo' : '',
+    categoryText,
+    classification.hasPdf ? 'Edital' : '',
+    classification.hasDeadline ? 'Prazo' : '',
   ]).slice(0, 8);
+  const tagKeys = tags.map((tag) => slugify(tag)).filter(Boolean);
+  const emails = extractEmails(text);
+  const contato = emails[0] || 'Ver link oficial da UFG';
+  const area = classification.module === 'eventos' ? categoryText : detectArea(text);
+  const areaKey = slugify(area);
 
   const metadata = {
     source_url: sourceUrl,
@@ -341,8 +396,21 @@ function mapToKinoPayload(item, classification, options = {}) {
     event_date_detected: (classification.temporal && classification.temporal.eventDate) || '',
     temporal_status: classification.temporal && classification.temporal.expired ? classification.temporal.reason : 'current_or_unknown',
     cadu_run_id: options.runId || '',
-    link: sourceUrl,
-    link_as_cta: true,
+    contato,
+    link: action.link,
+    link_as_cta: action.link_as_cta,
+    actionLabel: action.actionLabel,
+    actionKey: action.actionKey,
+    gratuito: true,
+    area,
+    areaLabel: area,
+    areaKey,
+    tags,
+    tagKeys,
+    categoria: categoryText,
+    categoriaKey: category,
+    categoryKey: category,
+    categoryLabel: categoryText,
     visibility: 'public',
   };
 
@@ -354,8 +422,9 @@ function mapToKinoPayload(item, classification, options = {}) {
     return {
       modulo: 'eventos',
       moduloLabel: 'Eventos',
-      categoria: classification.category,
-      categoriaKey: classification.category,
+      categoria: category,
+      categoriaLabel: categoryText,
+      categoriaKey: category,
       subcategoria: '',
       subcategoriaKey: '',
       titulo: title,
@@ -364,49 +433,43 @@ function mapToKinoPayload(item, classification, options = {}) {
       localizacao: detectLocation(text, item.sourceName),
       visibility: 'public',
       tags,
+      tagKeys,
       imagens: images,
       metadata: {
         ...metadata,
         subcategory: '',
-        categoriaKey: classification.category,
         data_evento: date,
         hora_evento: time,
-        gratuito: true,
       },
     };
   }
 
-  const emails = extractEmails(text);
-  const area = detectArea(text);
-  const category = classification.category || 'monitoria';
   return {
     modulo: 'oportunidades',
     moduloLabel: 'Oportunidades',
     categoria: category,
+    categoriaLabel: categoryText,
     categoriaKey: category,
     subcategoria: slugify(area),
     subcategoriaKey: slugify(area),
     titulo: title,
     descricao: description,
-    preco: null,
+    preco: 0,
     localizacao: detectLocation(text, item.sourceName),
     area: area,
-    areaKey: slugify(area),
+    areaKey,
     modalidadeTrabalho: 'Presencial',
-    contato: emails[0] || 'Ver link oficial da UFG',
+    contato,
     remuneracao: '',
     visibility: 'public',
     tags,
+    tagKeys,
     imagens: images,
     metadata: {
       ...metadata,
       subcategory: slugify(area),
-      area,
-      areaLabel: area,
-      areaKey: slugify(area),
       workMode: 'presencial',
       workModeLabel: 'Presencial',
-      contato: emails[0] || 'Ver link oficial da UFG',
       remuneracao: '',
       modalidadeTrabalho: 'Presencial',
     },
@@ -419,6 +482,11 @@ function toPostgrestInsert(payload, userId) {
   const categoryDB = payload.categoriaKey || payload.category || payload.categoria;
   const images = Array.isArray(payload.imagens) ? payload.imagens : (Array.isArray(payload.images) ? payload.images : []);
   const imageUrl = metadata.cover_url || metadata.image_url || payload.cover_url || payload.image_url || images[0] || null;
+  const tags = Array.isArray(payload.tags) ? payload.tags : (Array.isArray(metadata.tags) ? metadata.tags : []);
+  const tagKeys = Array.isArray(payload.tagKeys) ? payload.tagKeys : (Array.isArray(metadata.tagKeys) ? metadata.tagKeys : tags.map((tag) => slugify(tag)).filter(Boolean));
+  const categoryLabelValue = payload.categoriaLabel || payload.categoryLabel || metadata.categoryLabel || metadata.categoria || payload.categoria || categoryDB;
+  const subcategoryKey = payload.subcategoriaKey || metadata.subcategoryKey || metadata.subcategoriaKey || metadata.subcategory || '';
+  const subcategoryLabel = payload.subcategoriaLabel || metadata.subcategoryLabel || metadata.subcategoria || payload.subcategoria || '';
   return {
     author_id: userId,
     title: payload.titulo || payload.title,
@@ -433,11 +501,25 @@ function toPostgrestInsert(payload, userId) {
       ...metadata,
       image_url: metadata.image_url || imageUrl || '',
       cover_url: metadata.cover_url || imageUrl || '',
-      tags: payload.tags || [],
+      tags,
+      tagKeys,
+      contato: metadata.contato || payload.contato || 'Ver link oficial da UFG',
+      link: metadata.link || payload.link || '',
+      link_as_cta: metadata.link_as_cta !== undefined ? !!metadata.link_as_cta : !!payload.link_as_cta,
+      actionLabel: metadata.actionLabel || payload.actionLabel || '',
+      actionKey: metadata.actionKey || payload.actionKey || '',
+      gratuito: metadata.gratuito !== undefined ? !!metadata.gratuito : !!payload.gratuito,
+      area: metadata.area || payload.area || '',
+      areaLabel: metadata.areaLabel || payload.areaLabel || metadata.area || payload.area || '',
+      areaKey: metadata.areaKey || payload.areaKey || '',
+      modalidadeTrabalho: metadata.modalidadeTrabalho || payload.modalidadeTrabalho || '',
+      remuneracao: metadata.remuneracao || payload.remuneracao || '',
+      categoria: metadata.categoria || categoryLabelValue,
+      categoriaKey: metadata.categoriaKey || categoryDB,
       categoryKey: categoryDB,
-      categoryLabel: payload.categoriaLabel || payload.categoria || categoryDB,
-      subcategoryKey: payload.subcategoriaKey || '',
-      subcategoryLabel: payload.subcategoriaLabel || payload.subcategoria || '',
+      categoryLabel: categoryLabelValue,
+      subcategoryKey,
+      subcategoryLabel,
     },
   };
 }

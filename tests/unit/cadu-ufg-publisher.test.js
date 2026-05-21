@@ -235,11 +235,22 @@ describe('cadu-ufg-publisher', () => {
     expect(payload.titulo.length).toBeLessThanOrEqual(80);
     expect(payload.descricao.length).toBeLessThanOrEqual(2000);
     expect(payload.descricao).not.toContain('Resumo');
-    expect(payload.descricao).toContain('[Fonte oficial: PROGRAD/UFG]');
+    expect(payload.descricao).toContain('Fonte oficial: PROGRAD/UFG: [https://prograd.ufg.br/n/1](https://prograd.ufg.br/n/1)');
     expect(payload.imagens).toEqual(['https://prograd.ufg.br/assets/cover.jpg']);
     expect(payload.metadata.source_url).toBe(item.sourceUrl);
+    expect(payload.metadata.link).toBe('https://prograd.ufg.br/edital.pdf');
     expect(payload.metadata.cover_url).toBe('https://prograd.ufg.br/assets/cover.jpg');
     expect(payload.metadata.link_as_cta).toBe(true);
+    expect(payload.metadata.actionLabel).toBe('Acessar edital');
+    expect(payload.metadata.actionKey).toBe('acessar-edital');
+    expect(payload.metadata.contato).toBe('monitoria@ufg.br');
+    expect(payload.metadata.area).toBe('Academica');
+    expect(payload.metadata.areaKey).toBe('academica');
+    expect(payload.metadata.categoria).toBe('Monitoria');
+    expect(payload.metadata.categoriaKey).toBe('monitoria');
+    expect(payload.metadata.categoryKey).toBe('monitoria');
+    expect(payload.metadata.gratuito).toBe(true);
+    expect(payload.metadata.tagKeys).toEqual(expect.arrayContaining(['ufg', 'prograd', 'monitoria', 'edital', 'prazo']));
     expect(payload.metadata.deadline_date).toBe('2026-05-20');
 
     const row = toPostgrestInsert(payload, 'user-1');
@@ -248,6 +259,9 @@ describe('cadu-ufg-publisher', () => {
     expect(row.image_url).toBe('https://prograd.ufg.br/assets/cover.jpg');
     expect(row.metadata.image_url).toBe('https://prograd.ufg.br/assets/cover.jpg');
     expect(row.metadata.source_url).toBe(item.sourceUrl);
+    expect(row.metadata.link).toBe('https://prograd.ufg.br/edital.pdf');
+    expect(row.metadata.actionLabel).toBe('Acessar edital');
+    expect(row.metadata.tagKeys).toEqual(expect.arrayContaining(['monitoria']));
   });
 
   test('mapper preserves Weby event begin_at as event date and time metadata', () => {
@@ -306,8 +320,10 @@ describe('cadu-ufg-publisher', () => {
     expect(payload.categoriaKey).toBe('pesquisa');
     expect(payload.descricao).toContain('Datas importantes');
     expect(payload.descricao).toContain('Resultado final em 29/05/2026');
-    expect(payload.descricao).toContain('[Edital PIBIC](https://prpi.ufg.br/files/Edital-PIBIC.pdf)');
-    expect(payload.descricao).toContain('[Chamada Mobilidade Fapeg](https://fapeg.go.gov.br/chamada-mobilidade)');
+    expect(payload.descricao).toContain('**Edital PIBIC:** [https://prpi.ufg.br/files/Edital-PIBIC.pdf](https://prpi.ufg.br/files/Edital-PIBIC.pdf)');
+    expect(payload.descricao).toContain('**Chamada Mobilidade Fapeg:** [https://fapeg.go.gov.br/chamada-mobilidade](https://fapeg.go.gov.br/chamada-mobilidade)');
+    expect(payload.metadata.link).toBe('https://fapeg.go.gov.br/chamada-mobilidade');
+    expect(payload.metadata.actionLabel).toBe('Acessar editais');
     expect(payload.metadata.edital_pdf_urls).toHaveLength(3);
     expect(payload.metadata.official_document_urls).toContain('https://fapeg.go.gov.br/chamada-mobilidade');
   });
@@ -368,7 +384,35 @@ describe('cadu-ufg-publisher', () => {
       'missing_deadline_context',
       'missing_schedule_dates',
       'missing_image_url',
+      'missing_contact',
+      'missing_cta_link',
+      'missing_link_as_cta',
+      'missing_action_metadata',
+      'missing_area_metadata',
+      'missing_category_metadata',
+      'missing_tag_metadata',
+      'missing_free_flag',
+      'missing_work_mode',
     ]));
+  });
+
+  test('quality guard accepts complete Kino modal metadata', () => {
+    const item = {
+      id: 'ufg:complete',
+      sourceName: 'PROGRAD',
+      sourceUrl: 'https://prograd.ufg.br/n/1',
+      title: 'Edital de monitoria para estudantes da UFG',
+      summary: 'Inscricoes abertas para monitoria.',
+      text: 'Contato: monitoria@ufg.br. Prazo ate 20/05/2026.',
+      pdfLinks: ['https://prograd.ufg.br/edital.pdf'],
+      imageUrl: 'https://prograd.ufg.br/assets/cover.jpg',
+    };
+    const classification = classifyItem(item, { tier: 1 }, { now: '2026-05-17T12:00:00-03:00' });
+    const payload = mapToKinoPayload(item, classification, { runId: 'test-run' });
+    const quality = evaluatePayloadQuality(item, classification, payload);
+
+    expect(quality.ok).toBe(true);
+    expect(quality.warnings).toEqual([]);
   });
 
   test('Weby JSON discovery paginates news and events before sorting candidates', async () => {

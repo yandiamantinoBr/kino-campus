@@ -41,6 +41,12 @@ Campos obrigatorios/esperados:
 - `metadata.hora_evento`: `HH:mm` quando detectado.
 - `metadata.link`: URL oficial.
 - `metadata.link_as_cta`: `true`.
+- `metadata.actionLabel`: texto do botao, como `Acessar evento` ou `Realizar inscricao`.
+- `metadata.actionKey`: slug do botao, como `acessar-evento`.
+- `metadata.contato`: email detectado, ou `Ver link oficial da UFG`.
+- `metadata.area` / `metadata.areaKey`: area/categoria visivel.
+- `metadata.tags` / `metadata.tagKeys`: tags e chaves normalizadas para filtros.
+- `metadata.categoria`, `metadata.categoriaKey` e `metadata.categoryKey`: sempre preenchidos.
 - `metadata.gratuito`: `true` salvo evidencia clara de preco.
 
 ### Oportunidades
@@ -65,6 +71,23 @@ Campos obrigatorios/esperados:
 - `contato`: email detectado, ou `Ver link oficial da UFG`.
 - `metadata.link`: URL oficial.
 - `metadata.link_as_cta`: `true`.
+- `metadata.actionLabel`: texto do botao, como `Acessar edital`, `Acessar editais` ou `Realizar inscricao`.
+- `metadata.actionKey`: slug do botao.
+- `metadata.gratuito`: `true`.
+- `metadata.tags` / `metadata.tagKeys`: tags e chaves normalizadas para filtros.
+- `metadata.categoria`, `metadata.categoriaKey` e `metadata.categoryKey`: sempre preenchidos.
+
+## Markdown E Links
+
+O Kino renderiza links Markdown. Para URLs oficiais e documentos, use a URL completa tambem como texto visivel:
+
+```md
+[https://testeanpad.org.br](https://testeanpad.org.br)
+```
+
+Evite deixar URL solta sem `[]()`, porque ela pode aparecer como texto puro. Quando precisar contextualizar, escreva o contexto antes e deixe a URL clicavel visivel: `Fonte oficial: [https://...](https://...)`.
+
+`metadata.link` e a URL de acao do botao principal. `metadata.source_url` e a URL da fonte original para auditoria. Quando houver inscricao, formulario, edital ou pagina externa mais acionavel, `metadata.link` deve apontar para essa acao; se nao houver, use a propria fonte oficial.
 
 ## Fontes UFG
 
@@ -282,5 +305,15 @@ Quando o digest mostrar `review:quality` ou `Avisos de qualidade`, nao aprove no
 - `missing_deadline_context`: o classificador encontrou prazo, mas a descricao nao trouxe contexto de prazo/inscricao.
 - `missing_schedule_dates`: a fonte tem varias datas, mas a descricao nao trouxe cronograma suficiente.
 - `missing_image_url`: nao foi encontrada imagem de capa segura; revise antes de publicar para evitar placeholder.
+- `missing_contact`: faltou `metadata.contato`.
+- `missing_cta_link`: faltou `metadata.link` HTTP/HTTPS.
+- `missing_link_as_cta`: `metadata.link_as_cta` nao esta `true`.
+- `missing_action_metadata`: faltou `metadata.actionLabel` ou `metadata.actionKey`.
+- `missing_area_metadata`: faltou `metadata.area` ou `metadata.areaKey`.
+- `missing_category_metadata`: faltou categoria/categoriaKey/categoryKey.
+- `missing_tag_metadata`: faltou `metadata.tags` ou `metadata.tagKeys`.
+- `missing_free_flag`: faltou `metadata.gratuito=true`.
+- `missing_event_datetime`: evento sem `metadata.data_evento` ou `metadata.hora_evento`.
+- `missing_work_mode`: oportunidade sem `metadata.modalidadeTrabalho`.
 - `source_url_mismatch`: link oficial divergente.
 - `invalid_image_url`: imagem do payload nao e uma URL HTTP/HTTPS valida.

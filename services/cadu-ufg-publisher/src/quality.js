@@ -34,10 +34,26 @@ function hasValidRemoteImages(payload) {
   });
 }
 
+function getPayloadMeta(payload) {
+  const metadata = payload && payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {};
+  return metadata;
+}
+
+function hasHttpUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return /^https?:$/.test(url.protocol);
+  } catch (_) {
+    return false;
+  }
+}
+
 function evaluatePayloadQuality(item, classification, payload) {
   const warnings = [];
   const description = String(payload.descricao || payload.description || '');
   const normalizedDescription = normalizeText(description);
+  const metadata = getPayloadMeta(payload);
+  const moduleKey = String(payload.modulo || payload.module || classification.module || '').trim();
   const sourceText = `${item.title || ''}\n${item.summary || ''}\n${item.text || ''}`;
   const normalizedSource = normalizeText(sourceText);
   const pdfLinks = Array.isArray(item.pdfLinks) ? item.pdfLinks.filter(Boolean) : [];
@@ -66,8 +82,49 @@ function evaluatePayloadQuality(item, classification, payload) {
     warnings.push('missing_schedule_dates');
   }
 
-  if (item.sourceUrl && payload.metadata && payload.metadata.source_url !== item.sourceUrl) {
+  if (item.sourceUrl && metadata.source_url !== item.sourceUrl) {
     warnings.push('source_url_mismatch');
+  }
+
+  if (!String(metadata.contato || payload.contato || '').trim()) {
+    warnings.push('missing_contact');
+  }
+
+  if (!hasHttpUrl(metadata.link || payload.link)) {
+    warnings.push('missing_cta_link');
+  }
+
+  if (metadata.link_as_cta !== true) {
+    warnings.push('missing_link_as_cta');
+  }
+
+  if (!String(metadata.actionLabel || payload.actionLabel || '').trim() || !String(metadata.actionKey || payload.actionKey || '').trim()) {
+    warnings.push('missing_action_metadata');
+  }
+
+  if (!String(metadata.area || payload.area || '').trim() || !String(metadata.areaKey || payload.areaKey || '').trim()) {
+    warnings.push('missing_area_metadata');
+  }
+
+  if (!String(metadata.categoria || metadata.categoryLabel || payload.categoriaLabel || payload.categoria || '').trim()
+    || !String(metadata.categoriaKey || metadata.categoryKey || payload.categoriaKey || payload.category || '').trim()) {
+    warnings.push('missing_category_metadata');
+  }
+
+  if (!Array.isArray(metadata.tags) || !metadata.tags.length || !Array.isArray(metadata.tagKeys) || !metadata.tagKeys.length) {
+    warnings.push('missing_tag_metadata');
+  }
+
+  if (metadata.gratuito !== true) {
+    warnings.push('missing_free_flag');
+  }
+
+  if (moduleKey === 'eventos' && (!String(metadata.data_evento || '').trim() || !String(metadata.hora_evento || '').trim())) {
+    warnings.push('missing_event_datetime');
+  }
+
+  if (moduleKey === 'oportunidades' && !String(metadata.modalidadeTrabalho || payload.modalidadeTrabalho || '').trim()) {
+    warnings.push('missing_work_mode');
   }
 
   if (!imageUrls(payload).length) {
@@ -86,5 +143,6 @@ module.exports = {
   countDates,
   evaluatePayloadQuality,
   hasGenericBoilerplate,
+  hasHttpUrl,
   imageUrls,
 };

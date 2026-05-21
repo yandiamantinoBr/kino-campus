@@ -179,7 +179,7 @@
         }
         return {
           type: 'external_link',
-          label: 'Acessar link',
+          label: String(meta.actionLabel || '').trim() || 'Acessar link',
           href: ctaUrl,
           target: '_blank',
           rel: 'noopener noreferrer'
