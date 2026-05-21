@@ -11,6 +11,12 @@ Servico de curadoria para o Cadu Bot buscar publicacoes relevantes em sites da U
 
 O modo padrao e sempre dry-run. Publicacao real exige `--publish` e credenciais em `services/cadu-ufg-publisher/.env.local` ou variaveis de ambiente. Dry-run nao marca itens publicaveis como ja processados, para nao bloquear uma publicacao real posterior.
 
+## Documentacao Operacional
+
+- `docs/cadu-operator-guide.md`: guia de operacao do Cadu Bot.
+- `docs/platform-map.md`: mapa dos modulos e contrato de publicacao do Kino Campus.
+- `docs/cadu-technical-feedback-request.md`: pauta tecnica para o Cadu devolver diagnosticos, arquivos redigidos, exemplos reais e propostas de melhoria.
+
 ## Seguranca Operacional
 
 Antes de instalar no VPS, rotacione as credenciais que foram compartilhadas no chat. Depois:
