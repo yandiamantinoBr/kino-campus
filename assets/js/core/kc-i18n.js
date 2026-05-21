@@ -458,6 +458,12 @@
     'aria-label.filter-mod-status':        'Filtrar por status de moderação',
     'aria-label.filter-mod-global-module': 'Módulo — limite global',
     'aria-label.filter-mod-user-module':   'Módulo — limite por usuário',
+    'aria-label.admin-flood-global-module': 'Módulo — ritmo global',
+    'aria-label.admin-flood-global-max':    'Máximo de publicações na janela global',
+    'aria-label.admin-flood-global-window': 'Janela global em minutos',
+    'aria-label.admin-flood-user-module':   'Módulo — ritmo por usuário',
+    'aria-label.admin-flood-user-max':      'Máximo de publicações na janela do usuário',
+    'aria-label.admin-flood-user-window':   'Janela do usuário em minutos',
     'aria-label.refresh-list':             'Atualizar lista',
 
     // ── Placeholder estático (v12.7.1 — fase 2 i18n runtime) ──────────────────

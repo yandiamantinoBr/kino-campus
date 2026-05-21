@@ -336,6 +336,17 @@
     return { ok: false, error: { message: String(message || 'Operação não concluída.') } };
   }
 
+  function formatFloodLimitMessage(check) {
+    const limit = check && Number.isFinite(Number(check.limit || check.max_posts)) ? Number(check.limit || check.max_posts) : 3;
+    const count = check && Number.isFinite(Number(check.count)) ? Number(check.count) : 0;
+    const windowMinutes = check && Number.isFinite(Number(check.window_minutes)) ? Number(check.window_minutes) : 60;
+    const resetAt = check && check.reset_at ? new Date(check.reset_at) : null;
+    const resetText = resetAt && !Number.isNaN(resetAt.getTime())
+      ? ` Tente novamente após ${resetAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`
+      : '';
+    return `Limite de ${limit} publicações a cada ${windowMinutes} minutos atingido (${count}/${limit}).${resetText}`;
+  }
+
   function enforceSupabaseOnProduction(operationName) {
     const env = getENV();
     if (!env.isProduction) return null;
@@ -392,6 +403,13 @@
       msg.includes('could not find') ||
       msg.includes('schema cache')
     );
+  }
+
+  function isFunctionMissing(error) {
+    if (!error) return false;
+    const code = String(error.code || '');
+    const message = String(error.message || error.details || error.hint || '').toLowerCase();
+    return code === '42883' || (message.includes('function') && message.includes('does not exist'));
   }
 
   function resolveFirstImageUrl(images) {
@@ -460,6 +478,25 @@
     // ── Verificação de limite de publicações ativas ─────────
     try {
       const moduleForLimit = (parsed && parsed.moduleDB) ? String(parsed.moduleDB).trim() : null;
+      const floodCheck = await client.rpc('kc_check_post_flood_limit', {
+        p_user_id: user.id,
+        p_module: moduleForLimit || null,
+      });
+      if (floodCheck && !floodCheck.error && floodCheck.data && floodCheck.data.ok === false) {
+        const floodMsg = formatFloodLimitMessage(floodCheck.data);
+        createPostDiagnostics.set('FLOOD_LIMIT', {
+          message: floodMsg,
+          code: 'FLOOD_LIMIT',
+          limit: floodCheck.data.limit || floodCheck.data.max_posts,
+          count: floodCheck.data.count,
+          window_minutes: floodCheck.data.window_minutes,
+          reset_at: floodCheck.data.reset_at,
+        }, { module: moduleForLimit });
+        return { _kcError: 'FLOOD_LIMIT', message: floodMsg, limit: floodCheck.data };
+      } else if (floodCheck && floodCheck.error && !isFunctionMissing(floodCheck.error)) {
+        console.warn('[KCAPI][Supabase] kc_check_post_flood_limit falhou (fallback para trigger):', floodCheck.error);
+      }
+
       const limitCheck = await client.rpc('kc_check_post_limit', {
         p_user_id: user.id,
         p_module: moduleForLimit || null,
@@ -538,9 +575,11 @@
         // v9.3.2: detectar flood control (trigger kc_anti_spam_gate)
         var insErrMsg = String((ins.error && ins.error.message) || '');
         if (insErrMsg.includes('flood_limit_exceeded')) {
+          const floodHint = String((ins.error && (ins.error.hint || ins.error.details)) || '');
+          const dynamicMessage = floodHint.match(/Limite de .+? atingido\./i);
           return {
             _kcError: 'FLOOD_LIMIT',
-            message: 'Limite de 3 publicações por hora atingido. Aguarde antes de publicar novamente.',
+            message: dynamicMessage ? dynamicMessage[0] : 'Limite de publicações por janela atingido. Aguarde antes de publicar novamente.',
           };
         }
         createPostDiagnostics.set('POST_INSERT', ins.error, {

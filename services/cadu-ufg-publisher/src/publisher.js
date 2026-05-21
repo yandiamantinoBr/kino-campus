@@ -162,9 +162,36 @@ class SupabasePublisher {
     return data || { ok: true };
   }
 
+  async checkPostFloodLimit(moduleName) {
+    const response = await fetch(`${this.url}/rest/v1/rpc/kc_check_post_flood_limit`, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({ p_user_id: this.session.user.id, p_module: moduleName || null }),
+    });
+    if (!response.ok) return { ok: true, skipped: true };
+    const data = await response.json();
+    return data || { ok: true };
+  }
+
+  formatFloodLimitMessage(check) {
+    const limit = Number(check && (check.limit || check.max_posts)) || 3;
+    const count = Number(check && check.count) || 0;
+    const windowMinutes = Number(check && check.window_minutes) || 60;
+    return `Limite de ${limit} publicacoes a cada ${windowMinutes} minutos atingido (${count}/${limit}).`;
+  }
+
   async createPost(payload) {
     if (!this.session) await this.signIn();
     const row = toPostgrestInsert(payload, this.session.user.id);
+    const floodLimit = await this.checkPostFloodLimit(row.module);
+    if (floodLimit && floodLimit.ok === false) {
+      return {
+        ok: false,
+        code: 'FLOOD_LIMIT',
+        message: this.formatFloodLimitMessage(floodLimit),
+        limit: floodLimit,
+      };
+    }
     const limit = await this.checkPostLimit(row.module);
     if (limit && limit.ok === false) {
       return { ok: false, code: 'POST_LIMIT_REACHED', limit };
@@ -192,7 +219,7 @@ class SupabasePublisher {
     }
     if (!response.ok) {
       if (text.includes('flood_limit_exceeded')) {
-        return { ok: false, code: 'FLOOD_LIMIT', message: 'Limite de 3 publicacoes por hora atingido.' };
+        return { ok: false, code: 'FLOOD_LIMIT', message: 'Limite de publicacoes por janela atingido.' };
       }
       throw new Error(`Post insert failed: HTTP ${response.status} ${text.slice(0, 500)}`);
     }

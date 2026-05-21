@@ -262,6 +262,40 @@ Verifica se usuário pode criar/renovar post no módulo.
 
 ---
 
+### `kc_check_post_flood_limit(p_user_id uuid, p_module text) → JSONB`
+
+Verifica se usuário pode criar novo post dentro da janela móvel de anti-spam.
+
+**Chamado internamente em:** `kc_anti_spam_gate`, `supabase.posts-write.adapter.js` e `services/cadu-ufg-publisher/src/publisher.js`.
+
+**Retorno:** `{ "ok": true, "count": 2, "limit": 10, "window_minutes": 60, "remaining": 8 }` ou `{ "ok": false, "count": 10, "limit": 10, "window_minutes": 60, "reset_at": "..." }`.
+
+---
+
+### `kc_admin_set_post_flood_limit(p_user_id uuid, p_module text, p_max_posts int, p_window_minutes int) → JSONB`
+
+Configura, via admin, o limite de ritmo de criação de posts. `p_user_id=NULL` aplica globalmente; `p_module=NULL` aplica a todos os módulos.
+
+**Chamado em:** `/admin/moderation.html`, painel "Limites de Publicações".
+
+**Audit:** registra `post_flood_limit_changed` em `audit_log`.
+
+---
+
+### `kc_admin_get_post_flood_limits() → JSONB`
+
+Lista overrides de ritmo de publicação para o painel admin.
+
+---
+
+### `kc_admin_delete_post_flood_limit(p_limit_id uuid) → JSONB`
+
+Remove override de ritmo de publicação.
+
+**Audit:** registra `post_flood_limit_deleted` em `audit_log`.
+
+---
+
 ### `kc_get_top_contributors(p_period text, p_module text, p_limit int) → JSONB`
 
 Ranking dos usuários mais ativos.

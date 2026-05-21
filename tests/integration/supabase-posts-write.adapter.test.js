@@ -301,6 +301,13 @@ describe('supabase.posts-write.adapter.js — createPost', () => {
     expect(source).toContain('POST_LIMIT_REACHED');
   });
 
+  test('verifica limite de ritmo via kc_check_post_flood_limit RPC', () => {
+    expect(source).toContain("'kc_check_post_flood_limit'");
+    expect(source).toContain('formatFloodLimitMessage');
+    expect(source).toContain("'FLOOD_LIMIT'");
+    expect(source).toContain('window_minutes');
+  });
+
   test('detecta flood_limit_exceeded e retorna _kcError FLOOD_LIMIT', () => {
     expect(source).toContain('flood_limit_exceeded');
     expect(source).toContain("'FLOOD_LIMIT'");

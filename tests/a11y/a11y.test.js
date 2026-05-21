@@ -326,6 +326,7 @@ describe('v61.0.0 - botoes dinamicos JS', () => {
     expect(invite).toContain('<button type="button" class="kc-admin-invite-revoke"');
     expect(moderation).toContain('<button type="button" data-action="${action}"');
     expect(moderation).toContain('<button type="button" class="kc-admin-actions" data-limit-delete=');
+    expect(moderation).toContain('<button type="button" class="kc-admin-actions" data-flood-limit-delete=');
   });
 });
 

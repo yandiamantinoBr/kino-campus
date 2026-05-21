@@ -879,6 +879,7 @@
   const limitsState = {
     selectedUser: null, // { id, name }
     limits: [],
+    floodLimits: [],
   };
 
   function showLimitsFeedback(msg, isError) {
@@ -932,6 +933,64 @@
         </td>
       </tr>`;
     }).join('');
+  }
+
+  async function fetchPostFloodLimits() {
+    const client = getClient();
+    if (!client) return;
+    const tbody = $('#post-flood-limits-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>';
+    try {
+      const { data, error } = await client.rpc('kc_admin_get_post_flood_limits');
+      if (error) {
+        const msg = isFunctionMissing(error)
+          ? 'Migration de ritmo ainda não aplicada no Supabase.'
+          : String(error.message || 'Falha ao carregar ritmos');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">${escape(msg)}</td></tr>`;
+        return;
+      }
+      const limits = (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
+      limitsState.floodLimits = limits;
+      renderPostFloodLimits(limits);
+    } catch (error) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">Erro: ${escape(String(error && error.message || error || 'Falha ao carregar ritmos'))}</td></tr>`;
+    }
+  }
+
+  function renderPostFloodLimits(limits) {
+    const tbody = $('#post-flood-limits-body');
+    if (!tbody) return;
+    if (!limits || !limits.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Nenhum ritmo configurado. O padrão anti-spam é 3 posts por 60 minutos.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = limits.map((row) => {
+      const userName = row.user_name ? escape(row.user_name) : '<em style="color:var(--kc-text-dark-secondary)">Global (todos)</em>';
+      const moduleName = row.module ? escape(row.module) : '<em style="color:var(--kc-text-dark-secondary)">Todos os módulos</em>';
+      const createdAt = row.created_at ? new Date(row.created_at).toLocaleDateString('pt-BR') : '—';
+      const maxPosts = Number.isFinite(Number(row.max_posts)) ? Number(row.max_posts) : 0;
+      const windowMinutes = Number.isFinite(Number(row.window_minutes)) ? Number(row.window_minutes) : 60;
+      return `<tr>
+        <td data-label="Usuário">${userName}</td>
+        <td data-label="Módulo">${moduleName}</td>
+        <td data-label="Ritmo"><strong>${escape(String(maxPosts))}</strong> posts / ${escape(String(windowMinutes))} min</td>
+        <td data-label="Criado em">${createdAt}</td>
+        <td data-label="Ações">
+          <button type="button" class="kc-admin-actions" data-flood-limit-delete="${escape(String(row.id))}" style="padding:5px 10px;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:.8em;background:#c0392b;">
+            <i class="fas fa-trash" aria-hidden="true"></i> Remover
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function parseLimitNumber(selector, options) {
+    const el = $(selector);
+    const value = el ? parseInt(el.value, 10) : NaN;
+    const min = options && Number.isFinite(options.min) ? options.min : 0;
+    const max = options && Number.isFinite(options.max) ? options.max : 1000;
+    if (!Number.isFinite(value) || value < min || value > max) return null;
+    return value;
   }
 
   async function saveGlobalLimit() {
@@ -992,6 +1051,63 @@
     await fetchPostLimits();
   }
 
+  async function saveFloodLimit(scope) {
+    const client = getClient();
+    if (!client) return;
+    const isUser = scope === 'user';
+    if (isUser && !limitsState.selectedUser) {
+      showLimitsFeedback('Selecione um usuário antes de salvar o ritmo.', true);
+      return;
+    }
+    const moduleEl = isUser ? $('#flood-user-module') : $('#flood-global-module');
+    const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
+    const maxPosts = parseLimitNumber(isUser ? '#flood-user-max' : '#flood-global-max', { min: 0, max: 1000 });
+    const windowMinutes = parseLimitNumber(isUser ? '#flood-user-window' : '#flood-global-window', { min: 1, max: 10080 });
+    if (maxPosts == null) { showLimitsFeedback('Informe um máximo válido de posts entre 0 e 1000.', true); return; }
+    if (windowMinutes == null) { showLimitsFeedback('Informe uma janela válida entre 1 minuto e 7 dias.', true); return; }
+
+    const btn = isUser ? $('#flood-user-save') : $('#flood-global-save');
+    const original = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando…'; }
+    const { data, error } = await client.rpc('kc_admin_set_post_flood_limit', {
+      p_user_id: isUser ? limitsState.selectedUser.id : null,
+      p_module: mod || null,
+      p_max_posts: maxPosts,
+      p_window_minutes: windowMinutes,
+    });
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+    if (error || (data && data.ok === false)) {
+      showLimitsFeedback('Erro: ' + String((error && error.message) || (data && data.message) || error || 'Falha ao salvar ritmo'), true);
+      return;
+    }
+    showLimitsFeedback(isUser ? `Ritmo salvo para ${limitsState.selectedUser.name}.` : 'Ritmo global salvo com sucesso!', false);
+    await fetchPostFloodLimits();
+    await fetchAuditLogs();
+  }
+
+  async function deleteGlobalFloodLimit() {
+    const client = getClient();
+    if (!client) return;
+    const moduleEl = $('#flood-global-module');
+    const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
+    const match = limitsState.floodLimits.find((r) => !r.user_id && (mod ? r.module === mod : !r.module));
+    if (!match) { showLimitsFeedback('Nenhum ritmo global encontrado para remover.', true); return; }
+    await deleteFloodLimitById(match.id);
+  }
+
+  async function deleteFloodLimitById(limitId) {
+    const client = getClient();
+    if (!client) return;
+    const { data, error } = await client.rpc('kc_admin_delete_post_flood_limit', { p_limit_id: limitId });
+    if (error || (data && data.ok === false)) {
+      showLimitsFeedback('Erro: ' + String((error && error.message) || (data && data.message) || error || 'Falha ao remover ritmo'), true);
+      return;
+    }
+    showLimitsFeedback('Ritmo removido com sucesso.', false);
+    await fetchPostFloodLimits();
+    await fetchAuditLogs();
+  }
+
   async function searchUsersForLimit(query) {
     const client = getClient();
     if (!client || !query || query.length < 2) return [];
@@ -1016,6 +1132,18 @@
     const limitsRefresh = $('#post-limits-refresh');
     if (limitsRefresh) limitsRefresh.addEventListener('click', fetchPostLimits);
 
+    const floodGlobalSave = $('#flood-global-save');
+    if (floodGlobalSave) floodGlobalSave.addEventListener('click', () => saveFloodLimit('global'));
+
+    const floodGlobalDelete = $('#flood-global-delete');
+    if (floodGlobalDelete) floodGlobalDelete.addEventListener('click', deleteGlobalFloodLimit);
+
+    const floodUserSave = $('#flood-user-save');
+    if (floodUserSave) floodUserSave.addEventListener('click', () => saveFloodLimit('user'));
+
+    const floodRefresh = $('#post-flood-limits-refresh');
+    if (floodRefresh) floodRefresh.addEventListener('click', fetchPostFloodLimits);
+
     const limitsBody = $('#post-limits-body');
     if (limitsBody) {
       limitsBody.addEventListener('click', async (ev) => {
@@ -1025,6 +1153,18 @@
         if (!lid) return;
         if (!window.confirm('Remover este override de limite?')) return;
         await deleteLimitById(lid);
+      });
+    }
+
+    const floodLimitsBody = $('#post-flood-limits-body');
+    if (floodLimitsBody) {
+      floodLimitsBody.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('[data-flood-limit-delete]');
+        if (!btn) return;
+        const lid = btn.getAttribute('data-flood-limit-delete');
+        if (!lid) return;
+        if (!window.confirm('Remover este limite de ritmo?')) return;
+        await deleteFloodLimitById(lid);
       });
     }
 
@@ -1089,7 +1229,7 @@
     bindEvents();
     bindPostLimitsEvents();
     renderSessionActions();
-    await Promise.all([fetchPosts(true), fetchAuditLogs(), fetchPostLimits()]);
+    await Promise.all([fetchPosts(true), fetchAuditLogs(), fetchPostLimits(), fetchPostFloodLimits()]);
   }
 
   document.addEventListener('DOMContentLoaded', boot);

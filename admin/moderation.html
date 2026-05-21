@@ -152,8 +152,8 @@
 
         <!-- ── Painel de Limites de Publicações ─────────────────────── -->
         <div class="kc-admin-panel" id="post-limits-panel">
-          <h3 style="margin:0 0 4px;font-size:1em;"><i class="fas fa-layer-group" style="color:var(--kc-primary-brand);margin-right:6px;"></i>Limite de Publicações Ativas</h3>
-          <p style="margin:0 0 14px;color:var(--kc-text-dark-secondary);font-size:.88em;">Controle quantas publicações ativas cada usuário pode ter por módulo. O padrão é 5 se nenhum limite for definido.</p>
+          <h3 style="margin:0 0 4px;font-size:1em;"><i class="fas fa-layer-group" style="color:var(--kc-primary-brand);margin-right:6px;" aria-hidden="true"></i>Limites de Publicações</h3>
+          <p style="margin:0 0 14px;color:var(--kc-text-dark-secondary);font-size:.88em;">Controle limites ativos por módulo e o ritmo de novas publicações por janela. O padrão ativo é 5; o padrão anti-spam é 3 posts por 60 minutos.</p>
 
           <div id="post-limits-feedback" role="status" style="display:none;margin-bottom:10px;border-radius:8px;padding:9px 13px;font-size:.88em;"></div>
 
@@ -163,6 +163,13 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <select id="limit-global-module" aria-label="Módulo — limite global" data-i18n-aria-label="aria-label.filter-mod-global-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
                 <option value="">Todos os módulos</option>
+                <option value="eventos">Eventos</option>
+                <option value="oportunidades">Oportunidades</option>
+                <option value="moradia">Moradia</option>
+                <option value="compra-venda">Compra e Venda</option>
+                <option value="caronas">Caronas</option>
+                <option value="achados-perdidos">Achados e Perdidos</option>
+                <option value="ods">ODS</option>
                 <option value="alugueis">Aluguéis</option>
                 <option value="vendas">Vendas</option>
                 <option value="servicos">Serviços</option>
@@ -185,6 +192,13 @@
               </div>
               <select id="limit-user-module" aria-label="Módulo — limite por usuário" data-i18n-aria-label="aria-label.filter-mod-user-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
                 <option value="">Todos os módulos</option>
+                <option value="eventos">Eventos</option>
+                <option value="oportunidades">Oportunidades</option>
+                <option value="moradia">Moradia</option>
+                <option value="compra-venda">Compra e Venda</option>
+                <option value="caronas">Caronas</option>
+                <option value="achados-perdidos">Achados e Perdidos</option>
+                <option value="ods">ODS</option>
                 <option value="alugueis">Aluguéis</option>
                 <option value="vendas">Vendas</option>
                 <option value="servicos">Serviços</option>
@@ -218,6 +232,80 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Limite de ritmo / flood control -->
+          <div style="border:1px solid var(--kc-border-dark);border-radius:8px;padding:12px 14px;margin:16px 0 14px;">
+            <h4 style="margin:0 0 6px;font-size:.92em;font-weight:600;">Ritmo de publicação por janela</h4>
+            <p style="margin:0 0 12px;color:var(--kc-text-dark-secondary);font-size:.84em;">Este é o limite que bloqueia sequências como as do Cadu Bot. Use usuário específico para liberar um bot confiável sem afrouxar o padrão de todos.</p>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+              <strong style="font-size:.86em;min-width:92px;">Global</strong>
+              <select id="flood-global-module" aria-label="Módulo — ritmo global" data-i18n-aria-label="aria-label.admin-flood-global-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
+                <option value="">Todos os módulos</option>
+                <option value="eventos">Eventos</option>
+                <option value="oportunidades">Oportunidades</option>
+                <option value="moradia">Moradia</option>
+                <option value="compra-venda">Compra e Venda</option>
+                <option value="caronas">Caronas</option>
+                <option value="achados-perdidos">Achados e Perdidos</option>
+                <option value="ods">ODS</option>
+                <option value="alugueis">Aluguéis</option>
+                <option value="vendas">Vendas</option>
+                <option value="servicos">Serviços</option>
+                <option value="vagas">Vagas</option>
+                <option value="achados">Achados e Perdidos (legado)</option>
+              </select>
+              <input id="flood-global-max" type="number" min="0" max="1000" value="3" aria-label="Máximo de publicações na janela global" data-i18n-aria-label="aria-label.admin-flood-global-max" style="width:82px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+              <span style="font-size:.84em;color:var(--kc-text-dark-secondary);">posts a cada</span>
+              <input id="flood-global-window" type="number" min="1" max="10080" value="60" aria-label="Janela global em minutos" data-i18n-aria-label="aria-label.admin-flood-global-window" style="width:88px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+              <span style="font-size:.84em;color:var(--kc-text-dark-secondary);">min</span>
+              <button id="flood-global-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save" aria-hidden="true"></i> Salvar ritmo global</button>
+              <button id="flood-global-delete" style="padding:7px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.88em;cursor:pointer;"><i class="fas fa-trash" aria-hidden="true"></i> Remover</button>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <strong style="font-size:.86em;min-width:92px;">Usuário</strong>
+              <select id="flood-user-module" aria-label="Módulo — ritmo por usuário" data-i18n-aria-label="aria-label.admin-flood-user-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
+                <option value="">Todos os módulos</option>
+                <option value="eventos">Eventos</option>
+                <option value="oportunidades">Oportunidades</option>
+                <option value="moradia">Moradia</option>
+                <option value="compra-venda">Compra e Venda</option>
+                <option value="caronas">Caronas</option>
+                <option value="achados-perdidos">Achados e Perdidos</option>
+                <option value="ods">ODS</option>
+                <option value="alugueis">Aluguéis</option>
+                <option value="vendas">Vendas</option>
+                <option value="servicos">Serviços</option>
+                <option value="vagas">Vagas</option>
+                <option value="achados">Achados e Perdidos (legado)</option>
+              </select>
+              <input id="flood-user-max" type="number" min="0" max="1000" value="10" aria-label="Máximo de publicações na janela do usuário" data-i18n-aria-label="aria-label.admin-flood-user-max" style="width:82px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+              <span style="font-size:.84em;color:var(--kc-text-dark-secondary);">posts a cada</span>
+              <input id="flood-user-window" type="number" min="1" max="10080" value="60" aria-label="Janela do usuário em minutos" data-i18n-aria-label="aria-label.admin-flood-user-window" style="width:88px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+              <span style="font-size:.84em;color:var(--kc-text-dark-secondary);">min</span>
+              <button id="flood-user-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save" aria-hidden="true"></i> Salvar ritmo do usuário selecionado</button>
+            </div>
+          </div>
+
+          <h4 style="margin:0 0 8px;font-size:.92em;font-weight:600;">Ritmos salvos</h4>
+          <button id="post-flood-limits-refresh" style="margin-bottom:8px;padding:5px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.83em;cursor:pointer;"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar ritmos</button>
+          <div class="kc-admin-posts-table-wrap">
+            <table class="kc-admin-posts-table" style="min-width:700px;">
+              <thead>
+                <tr>
+                  <th>Usuário</th>
+                  <th>Módulo</th>
+                  <th>Ritmo</th>
+                  <th>Criado em</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="post-flood-limits-body">
+                <tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="kc-admin-panel">
@@ -230,10 +318,15 @@
               <option value="posts">posts</option>
               <option value="reports">reports</option>
               <option value="invites">invites</option>
+              <option value="post_limits">post_limits</option>
+              <option value="post_flood_limits">post_flood_limits</option>
             </select>
             <select id="audit-action-filter" aria-label="Filtrar por ação" data-i18n-aria-label="aria-label.filter-action">
               <option value="all">Todas ações</option>
               <option value="post_status_changed">post_status_changed</option>
+              <option value="post_limit_changed">post_limit_changed</option>
+              <option value="post_flood_limit_changed">post_flood_limit_changed</option>
+              <option value="post_flood_limit_deleted">post_flood_limit_deleted</option>
               <option value="report_closed">report_closed</option>
               <option value="post_deleted">post_deleted</option>
               <option value="invite_sent">invite_sent</option>
@@ -479,7 +572,7 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
-  <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.1"></script>
+  <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.2"></script>
   <script defer src="../assets/js/controllers/admin/admin-invite.controller.js?v=8.6.1"></script>
   <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.1"></script>
 </body>

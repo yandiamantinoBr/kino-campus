@@ -257,6 +257,25 @@
 
 ---
 
+### `post_flood_limits` — Limites de Ritmo de Publicação
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `user_id` | UUID | NULL = default global; UUID = configuração por usuário |
+| `module` | TEXT | Módulo alvo (NULL = todos) |
+| `max_posts` | INTEGER | Número máximo de posts criados dentro da janela |
+| `window_minutes` | INTEGER | Janela móvel em minutos |
+| `created_by` | UUID | Admin que criou/alterou o limite |
+| `created_at` | TIMESTAMPTZ | |
+| `updated_at` | TIMESTAMPTZ | |
+
+**Default:** 3 posts a cada 60 minutos por usuário, preservado como fallback quando não há override.
+**Uso:** trigger `kc_anti_spam_gate()` e RPC `kc_check_post_flood_limit(...)`.
+**Admin:** configurável em `/admin/moderation.html`, no painel de limites.
+
+---
+
 ### `search_queries` — Analytics de Busca
 
 | Coluna | Tipo | Descrição |

@@ -296,6 +296,17 @@ Avise o Yan se ocorrer:
 
 O digest separa `Publicados` de `Pendentes de moderacao`. Um post pendente foi criado no banco, mas ainda pode nao aparecer publicamente para todos.
 
+## Limite De Ritmo
+
+O Kino tem dois limites diferentes:
+
+- `post_limits`: controla quantas publicacoes ativas um usuario pode manter.
+- `post_flood_limits`: controla quantas publicacoes novas podem ser criadas dentro de uma janela movel.
+
+O erro `FLOOD_LIMIT` vem de `post_flood_limits`/`kc_anti_spam_gate()`. Administradores ajustam isso em `/admin/moderation.html`, painel **Limites de Publicacoes**, bloco **Ritmo de publicacao por janela**.
+
+Para o Cadu, prefira override por usuario em vez de aumentar o padrao global. O valor inicial recomendado e `10 posts / 60 min`, mantendo dry-run e revisao antes de publicar.
+
 ## Avisos De Qualidade
 
 Quando o digest mostrar `review:quality` ou `Avisos de qualidade`, nao aprove no automatico. Revise o Markdown e, se necessario, rode nova extracao. Os avisos atuais sao:
