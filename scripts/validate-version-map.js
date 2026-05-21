@@ -27,7 +27,7 @@ var REQUIRED_FIELDS = [
   'updatedAt',
 ];
 
-var CANONICAL_RUNTIME_VERSION = '8.6.0';
+var CANONICAL_RUNTIME_VERSION = '8.6.1';
 var CANONICAL_BRANCH          = 'kinocampus-V75.0-foundations';
 
 var errors = [];

@@ -1,5 +1,5 @@
 /*
-  KinoCampus - kc-banners.js (v9.2.3.0)
+  KinoCampus - kc-banners.js (v9.2.4.0)
   Carrega os banners ativos do Supabase e substitui o
   carrossel estatico da index.html.
   Fallback: mantem os banners hardcoded se o Supabase falhar
@@ -61,6 +61,12 @@
       '</svg>',
     ].join(''),
   };
+
+  const BANNER_CACHE_SCOPE = 'home';
+  const BANNER_CACHE_KEY = 'hero-banners:v1';
+  const BANNER_CACHE_VERSION = 1;
+  const BANNER_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
+  const BANNER_CACHE_STALE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
   function esc(str) {
     return String(str || '')
@@ -183,6 +189,110 @@
     if (el) el.classList.remove('kc-hero-loading');
   }
 
+  function getSessionStore() {
+    return root.KCSessionStore && typeof root.KCSessionStore.get === 'function'
+      ? root.KCSessionStore
+      : null;
+  }
+
+  function normalizeBannerRow(row) {
+    const source = row && typeof row === 'object' ? row : {};
+    return {
+      id: source.id == null ? '' : String(source.id),
+      pill_text: String(source.pill_text || ''),
+      title: String(source.title || ''),
+      subtitle: String(source.subtitle || ''),
+      button_text: String(source.button_text || ''),
+      button_url: String(source.button_url || ''),
+      icon_class: String(source.icon_class || ''),
+      gradient_from: String(source.gradient_from || ''),
+      gradient_to: String(source.gradient_to || ''),
+      sort_order: Number(source.sort_order) || 0,
+    };
+  }
+
+  function normalizeBannerRows(rows) {
+    return Array.isArray(rows) ? rows.map(normalizeBannerRow).filter((row) => row.title) : [];
+  }
+
+  function buildBannerSignature(rows) {
+    const normalized = normalizeBannerRows(rows);
+    return JSON.stringify(normalized.map((row) => [
+      row.id,
+      row.pill_text,
+      row.title,
+      row.subtitle,
+      row.button_text,
+      row.button_url,
+      row.icon_class,
+      row.gradient_from,
+      row.gradient_to,
+      row.sort_order,
+    ]));
+  }
+
+  function getCachedBanners() {
+    const store = getSessionStore();
+    if (!store || typeof store.get !== 'function') return null;
+
+    const cached = store.get(BANNER_CACHE_SCOPE, BANNER_CACHE_KEY, {
+      maxAge: BANNER_CACHE_STALE_MAX_AGE_MS,
+      removeExpired: true,
+    });
+    const value = cached && cached.value && typeof cached.value === 'object' ? cached.value : null;
+    if (!value || Number(value.version) !== BANNER_CACHE_VERSION) return null;
+
+    const banners = normalizeBannerRows(value.banners);
+    if (!banners.length) return null;
+
+    const signature = String(value.signature || buildBannerSignature(banners));
+    const age = Number(cached.age) || 0;
+    return {
+      banners,
+      signature,
+      age,
+      isFresh: age <= BANNER_CACHE_MAX_AGE_MS,
+    };
+  }
+
+  function persistBanners(rows, signature) {
+    const store = getSessionStore();
+    const banners = normalizeBannerRows(rows);
+    if (!store || typeof store.set !== 'function' || !banners.length) return false;
+
+    return store.set(BANNER_CACHE_SCOPE, BANNER_CACHE_KEY, {
+      version: BANNER_CACHE_VERSION,
+      banners,
+      signature: String(signature || buildBannerSignature(banners)),
+    });
+  }
+
+  function renderBannerRows(rows, signature, doc) {
+    const targetDoc = doc || (typeof document !== 'undefined' ? document : null);
+    if (!targetDoc) return false;
+
+    const banners = normalizeBannerRows(rows);
+    const slidesEl = targetDoc.getElementById('kc-hero-slides');
+    const dotsEl = targetDoc.getElementById('kc-carousel-dots');
+    if (!banners.length || !slidesEl || !dotsEl) return false;
+
+    const nextSignature = String(signature || buildBannerSignature(banners));
+    if (slidesEl.dataset.kcBannersSignature !== nextSignature) {
+      slidesEl.innerHTML = banners.map((banner, index) => buildBannerHTML(banner, index === 0)).join('');
+      dotsEl.innerHTML = buildDotsHTML(banners.length);
+      slidesEl.dataset.kcBannersSignature = nextSignature;
+    }
+
+    bindHeroCTAInteractions(targetDoc);
+    if (typeof root.kcRefreshHeroCarousel === 'function') {
+      root.kcRefreshHeroCarousel();
+    } else if (typeof root.showSlide === 'function') {
+      root.showSlide(0);
+    }
+    removeSkeletonClass();
+    return true;
+  }
+
   async function loadBanners() {
     const env = root.KC_ENV || {};
     const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
@@ -193,10 +303,21 @@
       return;
     }
 
+    const cached = getCachedBanners();
+    const renderedCached = !!(cached && renderBannerRows(cached.banners, cached.signature));
+    if (cached && cached.isFresh) return;
+
     const client = root.KCSupabase && typeof root.KCSupabase.getClient === 'function'
       ? root.KCSupabase.getClient()
       : null;
-    if (!client) return;
+    if (!client) {
+      if (!renderedCached) {
+        hydrateExistingBanners();
+        bindHeroCTAInteractions();
+        removeSkeletonClass();
+      }
+      return;
+    }
 
     try {
       const { data, error } = await client
@@ -208,38 +329,33 @@
 
       if (error) {
         console.warn('[KC Banners] Erro ao carregar banners do Supabase:', error.message || error);
-        hydrateExistingBanners();
-        removeSkeletonClass();
+        if (!renderedCached) {
+          hydrateExistingBanners();
+          removeSkeletonClass();
+        }
         return;
       }
       if (!Array.isArray(data) || !data.length) {
-        hydrateExistingBanners();
-        removeSkeletonClass();
+        if (!renderedCached) {
+          hydrateExistingBanners();
+          removeSkeletonClass();
+        }
         return;
       }
 
-      const slidesEl = document.getElementById('kc-hero-slides');
-      const dotsEl = document.getElementById('kc-carousel-dots');
-      if (!slidesEl || !dotsEl) {
+      const rows = normalizeBannerRows(data);
+      const signature = buildBannerSignature(rows);
+      if (!renderBannerRows(rows, signature)) {
         removeSkeletonClass();
         return;
       }
-
-      slidesEl.innerHTML = data.map((banner, index) => buildBannerHTML(banner, index === 0)).join('');
-      dotsEl.innerHTML = buildDotsHTML(data.length);
-      bindHeroCTAInteractions(document);
-
-      if (typeof root.kcRefreshHeroCarousel === 'function') {
-        root.kcRefreshHeroCarousel();
-      } else if (typeof root.showSlide === 'function') {
-        root.showSlide(0);
-      }
-
-      removeSkeletonClass();
+      persistBanners(rows, signature);
     } catch (e) {
       console.warn('[KC Banners] Excecao ao carregar banners:', e && e.message || e);
-      hydrateExistingBanners();
-      removeSkeletonClass();
+      if (!renderedCached) {
+        hydrateExistingBanners();
+        removeSkeletonClass();
+      }
     }
   }
 
@@ -273,6 +389,11 @@
     getHeroIconKey,
     buildMobileIllustration,
     buildBannerHTML,
+    buildBannerSignature,
+    normalizeBannerRows,
+    getCachedBanners,
+    persistBanners,
+    renderBannerRows,
     hydrateExistingBanners,
     bindHeroCTAInteractions,
   };

@@ -68,6 +68,7 @@ describe('kc-feed.controller — public API surface', () => {
   test('KCControllers.createFeedPager é uma função', () => {
     expect(typeof window.KCControllers.createFeedPager).toBe('function');
   });
+
 });
 
 describe('kc-feed.controller — source contracts', () => {
@@ -135,6 +136,15 @@ describe('kc-feed.controller — source contracts', () => {
     expect(source).toMatch(/new\s+Set\s*\(\s*\)/);
   });
 });
+
+
+
+  test('preserva DOM em pagehide persistido para bfcache', () => {
+    const controllerSource = fs.readFileSync(CONTROLLER_PATH, 'utf8');
+    expect(controllerSource).toContain('function pauseForBfcache()');
+    expect(controllerSource).toContain('event.persisted');
+    expect(controllerSource).toContain("window.addEventListener('pageshow', onPageShow)");
+  });
 
 describe('kc-feed.controller — KCSessionStore integration', () => {
   let sessionStore;

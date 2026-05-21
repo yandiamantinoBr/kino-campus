@@ -36,6 +36,54 @@ describe('KCBanners', () => {
     expect(html).toContain('<svg');
   });
 
+  test('buildBannerSignature normaliza dados para cache de sessao', () => {
+    const rows = Banners.normalizeBannerRows([
+      {
+        id: 3,
+        pill_text: 'Destaque',
+        title: 'Evento UFG',
+        subtitle: 'Inscricoes abertas',
+        button_text: 'Ver',
+        button_url: 'eventos.html',
+        icon_class: 'fas fa-calendar-alt',
+        gradient_from: '#111',
+        gradient_to: '#222',
+        sort_order: '2',
+      },
+      { id: 4, title: '' },
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe('3');
+    expect(rows[0].sort_order).toBe(2);
+    expect(Banners.buildBannerSignature(rows)).toContain('Evento UFG');
+  });
+
+  test('renderBannerRows marca assinatura e evita re-render igual', () => {
+    document.body.innerHTML = [
+      '<div class="kc-hero-carousel kc-hero-loading">',
+      '<div id="kc-hero-slides"></div>',
+      '<div id="kc-carousel-dots"></div>',
+      '</div>',
+    ].join('');
+
+    const rows = [{
+      title: 'Banner cacheado',
+      pill_text: 'Novo',
+      subtitle: 'Resumo',
+      button_text: 'Abrir',
+      button_url: 'eventos.html',
+      icon_class: 'fas fa-calendar-alt',
+      gradient_from: '#111',
+      gradient_to: '#222',
+    }];
+    const signature = Banners.buildBannerSignature(rows);
+
+    expect(Banners.renderBannerRows(rows, signature, document)).toBe(true);
+    expect(document.getElementById('kc-hero-slides').dataset.kcBannersSignature).toBe(signature);
+    expect(document.querySelector('.kc-hero-carousel').classList.contains('kc-hero-loading')).toBe(false);
+  });
+
   test('hydrateExistingBanners upgrades static banners that only have the desktop illustration', () => {
     document.body.innerHTML = [
       '<div class="kc-hero-banner">',

@@ -78,10 +78,17 @@
 
   function clearPostSessionCaches() {
     var store = window.KCSessionStore;
-    if (!store || typeof store.clearPrefix !== 'function') return;
-    try { store.clearPrefix('feeds', ''); } catch (_) { }
-    try { store.clearPrefix('my-posts', ''); } catch (_) { }
-    try { store.clearPrefix('profile-posts', ''); } catch (_) { }
+    if (store && typeof store.clearPrefix === 'function') {
+      try { store.clearPrefix('feeds', ''); } catch (_) { }
+      try { store.clearPrefix('my-posts', ''); } catch (_) { }
+      try { store.clearPrefix('profile-posts', ''); } catch (_) { }
+      try { store.clearPrefix('product-detail', ''); } catch (_) { }
+    }
+    try {
+      if (window._KCProduct && window._KCProduct.load && typeof window._KCProduct.load.invalidateProductDetailCache === 'function') {
+        window._KCProduct.load.invalidateProductDetailCache(window.kcCurrentPostContext || null);
+      }
+    } catch (_) { }
   }
 
   function getClosedLabel(post) {
@@ -267,6 +274,7 @@
         if (liveContext && typeof liveContext.renderPost === 'function') {
           liveContext.renderPost(next);
         }
+        clearPostSessionCaches();
         toast('Publica\u00E7\u00E3o atualizada com sucesso.', 'success', 2000);
         close();
         return;
@@ -474,6 +482,7 @@
           if (context && typeof context.renderPost === 'function') {
             context.renderPost(next);
           }
+          clearPostSessionCaches();
           markPostAsEdited();
         });
         return;
@@ -500,6 +509,7 @@
       } catch (_) { }
 
       if (res && res.ok) {
+        clearPostSessionCaches();
         toast('Publica\u00E7\u00E3o exclu\u00EDda com sucesso.', 'success', 2000);
         setTimeout(function () { window.location.href = 'index.html'; }, 300);
         return;

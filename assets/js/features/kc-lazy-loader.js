@@ -11,26 +11,36 @@
   var _loaded = {};
   var _pending = {};
 
+  function withAssetVersion(src) {
+    var raw = String(src || '').trim();
+    var version = String((window.KC_ENV && (window.KC_ENV.version || window.KC_ENV.APP_VERSION)) || '').trim();
+    if (!raw || !version) return raw;
+    if (!/^(?:\.\/|\.\.\/|\/)?assets\//.test(raw)) return raw;
+    if (/[?&]v=/.test(raw)) return raw;
+    return raw + (raw.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(version);
+  }
+
   function load(src, callback) {
-    if (_loaded[src]) {
+    var resolvedSrc = withAssetVersion(src);
+    if (_loaded[resolvedSrc]) {
       if (callback) callback();
       return;
     }
-    if (_pending[src]) {
-      if (callback) _pending[src].push(callback);
+    if (_pending[resolvedSrc]) {
+      if (callback) _pending[resolvedSrc].push(callback);
       return;
     }
-    _pending[src] = callback ? [callback] : [];
+    _pending[resolvedSrc] = callback ? [callback] : [];
     var s = document.createElement('script');
-    s.src = src;
+    s.src = resolvedSrc;
     s.onload = function () {
-      _loaded[src] = true;
-      var cbs = _pending[src] || [];
-      delete _pending[src];
+      _loaded[resolvedSrc] = true;
+      var cbs = _pending[resolvedSrc] || [];
+      delete _pending[resolvedSrc];
       cbs.forEach(function (cb) { try { cb(); } catch (e) { /* silenciar */ } });
     };
     s.onerror = function () {
-      delete _pending[src];
+      delete _pending[resolvedSrc];
     };
     document.head.appendChild(s);
   }
@@ -64,5 +74,5 @@
     events.forEach(function (ev) { el.addEventListener(ev, handler, { once: true, passive: true }); });
   }
 
-  window.KCLazyLoader = Object.freeze({ load: load, onVisible: onVisible, onInteraction: onInteraction });
+  window.KCLazyLoader = Object.freeze({ load: load, onVisible: onVisible, onInteraction: onInteraction, withAssetVersion: withAssetVersion });
 }());

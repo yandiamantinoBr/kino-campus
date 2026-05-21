@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
-const canonicalVersion = '8.6.0';
+const canonicalVersion = '8.6.1';
 const profileControllerLineGate = 700;
 
 // Pisos de regressao da trilha B2 — estabelecidos em v12.7.3.
@@ -168,10 +168,10 @@ function runVersionChecks() {
 
   // Nota v17.3.0: checks do README removidos — "Mapa de Versão Canônica" foi
   // extraído do README para VERSION.json + ai-development-guide.md (drift resolvido).
-  // A versão canônica 8.6.0 continua validada pelo loop de versionFiles acima.
+  // A versão canônica 8.6.1 continua validada pelo loop de versionFiles acima.
 
   const changelog = read('CHANGELOG.md');
-  if (!new RegExp(`^## \\[${escapeRegExp(canonicalVersion)}\\] - 2026-03-30$`, 'm').test(changelog)) {
+  if (!new RegExp(`^## \\[${escapeRegExp(canonicalVersion)}\\] - 2026-05-21`, 'm').test(changelog)) {
     errors.push(`CHANGELOG.md is missing the top entry for ${canonicalVersion}`);
   }
 }

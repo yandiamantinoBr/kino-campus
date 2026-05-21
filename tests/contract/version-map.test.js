@@ -41,8 +41,8 @@ describe('VERSION.json — integridade', function () {
     expect(VERSION.frontendRuntimeVersion).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  test('campo "frontendRuntimeVersion" é "8.6.0" (versão canônica)', function () {
-    expect(VERSION.frontendRuntimeVersion).toBe('8.6.0');
+  test('campo "frontendRuntimeVersion" é "8.6.1" (versão canônica)', function () {
+    expect(VERSION.frontendRuntimeVersion).toBe('8.6.1');
   });
 
   test('campo "branch" é "kinocampus-V75.0-foundations"', function () {
@@ -103,7 +103,7 @@ describe('validate-version-map.js — integridade do script', function () {
 
   test('valida consistência com frontendRuntimeVersion canônica', function () {
     expect(SCRIPT).toContain('CANONICAL_RUNTIME_VERSION');
-    expect(SCRIPT).toContain('8.6.0');
+    expect(SCRIPT).toContain('8.6.1');
   });
 
   test('valida consistência com kc-env.js', function () {

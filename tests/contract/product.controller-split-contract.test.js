@@ -47,6 +47,14 @@ describe('product.load.js - renderPost delega para sub-modulos', () => {
     expect(loadSource).toContain('window._KCProduct.save.refreshSavedState(post)');
     expect(loadSource).toContain('window._KCProduct.report.wireReportButton(');
   });
+
+  test('mantem cache curto de detalhe do post e invalidacao publica', () => {
+    expect(loadSource).toContain('PRODUCT_DETAIL_CACHE_MAX_AGE_MS = 5 * 60 * 1000');
+    expect(loadSource).toContain("PRODUCT_DETAIL_CACHE_SCOPE = 'product-detail'");
+    expect(loadSource).toContain('function getCachedProductDetail(id)');
+    expect(loadSource).toContain('function invalidateProductDetailCache(postOrId)');
+    expect(loadSource).toContain('invalidateProductDetailCache:    invalidateProductDetailCache');
+  });
 });
 
 describe('product.controller.js - bootstrap delega wiring para sub-modulos', () => {
@@ -97,14 +105,14 @@ describe('_product.html - ordem canonica dos scripts do split', () => {
 
   test('carrega todos os sub-modulos com defer', () => {
     orderedScripts.forEach((src) => {
-      expect(htmlSource).toContain(`<script defer src="${src}"></script>`);
+      expect(htmlSource).toContain(`<script defer src="${src}?v=8.6.1"></script>`);
     });
   });
 
   test('preserva a ordem incremental do core para os sub-modulos', () => {
     let lastIndex = -1;
     orderedScripts.forEach((src) => {
-      const currentIndex = htmlSource.indexOf(`<script defer src="${src}"></script>`);
+      const currentIndex = htmlSource.indexOf(`<script defer src="${src}?v=8.6.1"></script>`);
       expect(currentIndex).toBeGreaterThan(lastIndex);
       lastIndex = currentIndex;
     });

@@ -2,6 +2,16 @@
 
 ---
 
+## [8.6.1] - 2026-05-21 - Performance e Navegacao Phase 1
+
+### Tema
+
+Patch funcional para versionar assets locais, preparar cache HTTP seguro na Vercel,
+cachear banners e detalhes de publicacao por sessao, ajustar retorno via bfcache e
+endurecer o Service Worker mantendo a flag `sw.enabled` como kill-switch.
+
+---
+
 ## [75.0.0] - 2026-05-05 - PUBLIC-A11Y kc-ranking Decorative Icons (v75.0.0)
 
 ### Tema

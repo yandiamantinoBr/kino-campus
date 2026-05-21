@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '8.6.0';
+  const VERSION = '8.6.1';
   const LEGAL_VERSION = '2026-05-07';
   const AUTH_INTENT_KEY = 'kc:auth:intents';
   const SHELL_SNAPSHOT_KEY = 'auth-shell';

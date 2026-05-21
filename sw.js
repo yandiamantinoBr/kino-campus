@@ -1,37 +1,45 @@
 /**
- * KinoCampus Service Worker — v12.11.0
+ * KinoCampus Service Worker - v12.12.0
  *
  * Estrategia:
- *   - Shell local (CSS + JS core): cache-first com atualização em background
+ *   - Shell local versionado (CSS + JS core): stale-while-revalidate
  *   - Recursos externos (Supabase, CDN, Fonts): passthrough (sem cache)
- *   - Demais requisicoes GET: network-first com cache de fallback
+ *   - Navegacoes HTML: network-first com fallback controlado
+ *   - Demais requisicoes GET: passthrough (sem cache)
  *
  * Ativado somente quando KCFF.isEnabled('sw.enabled') === true (kill-switch).
- * Por padrão disabled; habilitar via KC_ENV.flags.sw.enabled = true.
+ * Por padrao disabled; habilitar via KC_ENV.flags.sw.enabled = true.
  *
  * Atualizar CACHE_VERSION a cada release que muda os shell assets.
  */
 
 'use strict';
 
-var CACHE_VERSION = 'kc-shell-v12.11.0';
+var CACHE_VERSION = 'kc-shell-v12.12.0';
+var RUNTIME_VERSION = '8.6.1';
+var ASSET_CACHE = CACHE_VERSION + ':assets';
+var PAGE_CACHE = CACHE_VERSION + ':pages';
+
+function asset(path) {
+  return path + '?v=' + RUNTIME_VERSION;
+}
 
 var SHELL_ASSETS = [
-  '/',
-  '/assets/css/styles.css',
-  '/assets/css/kc-public-shell.css',
-  '/assets/js/boot/kc-constants.js',
-  '/assets/js/boot/kc-env.js',
-  '/assets/js/boot/kc-feature-flags.js',
-  '/assets/js/core/kc-i18n.js',
-  '/assets/js/kc-utils.string.js',
-  '/assets/js/kc-utils.format.js',
-  '/assets/js/kc-utils.dom.js',
-  '/assets/js/kc-utils.js',
-  '/assets/js/core/kc-core.js',
+  asset('/assets/css/styles.css'),
+  asset('/assets/css/kc-public-shell.css'),
+  asset('/assets/js/boot/kc-constants.js'),
+  asset('/assets/js/boot/kc-env.js'),
+  asset('/assets/js/boot/kc-feature-flags.js'),
+  asset('/assets/js/boot/kc-sw-register.js'),
+  asset('/assets/js/core/kc-i18n.js'),
+  asset('/assets/js/utils/kc-utils.string.js'),
+  asset('/assets/js/utils/kc-utils.format.js'),
+  asset('/assets/js/utils/kc-utils.dom.js'),
+  asset('/assets/js/utils/kc-utils.js'),
+  asset('/assets/js/core/kc-core.js'),
 ];
 
-/** Padrões que nunca devem ser cacheados (Supabase, CDNs, Fonts). */
+/** Padroes que nunca devem ser cacheados (Supabase, CDNs, Fonts). */
 var PASSTHROUGH_PATTERNS = [
   /supabase\.co/,
   /cdn\.jsdelivr\.net/,
@@ -45,17 +53,78 @@ function isPassthrough(url) {
   return PASSTHROUGH_PATTERNS.some(function (p) { return p.test(url); });
 }
 
-// ── install: pré-cacheia o shell ─────────────────────────────────────────────
+function isSameOrigin(url) {
+  try { return new URL(url).origin === self.location.origin; } catch (_) { return false; }
+}
+
+function isVersionedAsset(request) {
+  try {
+    var url = new URL(request.url);
+    return url.origin === self.location.origin
+      && /^\/assets\/.+\.(?:js|css|woff2?|png|jpe?g|webp|svg)$/i.test(url.pathname)
+      && url.searchParams.has('v');
+  } catch (_) {
+    return false;
+  }
+}
+
+function cacheableResponse(response) {
+  return response && response.status === 200 && (response.type === 'basic' || response.type === 'default');
+}
+
+function staleWhileRevalidate(request) {
+  return caches.open(ASSET_CACHE).then(function (cache) {
+    return cache.match(request).then(function (cached) {
+      var networkFetch = fetch(request).then(function (response) {
+        if (cacheableResponse(response)) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      }).catch(function () {
+        return cached;
+      });
+      return cached || networkFetch;
+    });
+  });
+}
+
+function networkFirstNavigation(event) {
+  return caches.open(PAGE_CACHE).then(function (cache) {
+    var request = event.request;
+    var preload = event.preloadResponse || Promise.resolve(null);
+    return preload.then(function (preloaded) {
+      if (preloaded && cacheableResponse(preloaded)) {
+        cache.put(request, preloaded.clone());
+        return preloaded;
+      }
+      return fetch(request).then(function (response) {
+        if (cacheableResponse(response)) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      });
+    }).catch(function () {
+      return cache.match(request).then(function (cached) {
+        if (cached) return cached;
+        return cache.match('/index.html').then(function (indexFallback) {
+          return indexFallback || new Response('Offline', {
+            status: 503,
+            statusText: 'Offline',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          });
+        });
+      });
+    });
+  });
+}
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
-    caches.open(CACHE_VERSION)
+    caches.open(ASSET_CACHE)
       .then(function (cache) { return cache.addAll(SHELL_ASSETS); })
       .then(function () { return self.skipWaiting(); })
   );
 });
-
-// ── activate: remove caches de versões anteriores ────────────────────────────
 
 self.addEventListener('activate', function (event) {
   event.waitUntil(
@@ -63,41 +132,40 @@ self.addEventListener('activate', function (event) {
       .then(function (keys) {
         return Promise.all(
           keys
-            .filter(function (k) { return k !== CACHE_VERSION; })
+            .filter(function (k) { return k.indexOf(CACHE_VERSION) !== 0; })
             .map(function (k) { return caches.delete(k); })
         );
+      })
+      .then(function () {
+        if (self.registration && self.registration.navigationPreload) {
+          return self.registration.navigationPreload.enable();
+        }
+        return null;
       })
       .then(function () { return self.clients.claim(); })
   );
 });
 
-// ── fetch: cache-first para shell; passthrough para externos ─────────────────
-
 self.addEventListener('fetch', function (event) {
   var request = event.request;
 
-  // Ignora métodos não-GET e chrome-extension
   if (request.method !== 'GET') return;
   if (request.url.indexOf('chrome-extension') === 0) return;
 
-  // Passthrough para recursos externos (Supabase, CDNs, Fonts)
-  if (isPassthrough(request.url)) {
+  if (isPassthrough(request.url) || !isSameOrigin(request.url)) {
     event.respondWith(fetch(request));
     return;
   }
 
-  // Cache-first: serve do cache, atualiza em background se encontrado
-  event.respondWith(
-    caches.open(CACHE_VERSION).then(function (cache) {
-      return cache.match(request).then(function (cached) {
-        var networkFetch = fetch(request).then(function (response) {
-          if (response && response.status === 200) {
-            cache.put(request, response.clone());
-          }
-          return response;
-        });
-        return cached || networkFetch;
-      });
-    })
-  );
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirstNavigation(event));
+    return;
+  }
+
+  if (isVersionedAsset(request)) {
+    event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+
+  event.respondWith(fetch(request));
 });

@@ -25,7 +25,7 @@ describe('kc-api.client.js - source shape', () => {
 
     expect(preamble).toContain('(function () {');
     expect(preamble).toContain("'use strict';");
-    expect(source).toContain("const VERSION = '8.6.0';");
+    expect(source).toContain("const VERSION = '8.6.1';");
     expect(source).toContain('window.KCAPI = Object.freeze({');
     expect(source.trim().endsWith('})();')).toBe(true);
   });

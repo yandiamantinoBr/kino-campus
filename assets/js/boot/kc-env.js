@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Environment Bootstrap (V8.6.0)
+  KinoCampus - Environment Bootstrap (V8.6.1)
 
   Objetivo:
   - Fonte Única de Verdade para configuração do app (Driver Pattern).
@@ -29,7 +29,8 @@
   // V8.2.6.0: fix carregamento de publicações — compat comments em kc-supabase.client.js
   // V8.2.6.2: guardrails de contrato Vercel/Supabase e higiene de release
   // V8.6.0: fix XSS escHtmlAdmin, headers HSTS/Permissions-Policy, version unification
-  const VERSION = '8.6.0';
+  // V8.6.1: navigation performance phase 1, asset cache busting
+  const VERSION = '8.6.1';
 
   const DEFAULT_ENV = {
     // versões (compat)
@@ -232,6 +233,9 @@
           }
         } else {
           s.src = '/assets/js/legacy-shims/kc-migrate.myposts.js';
+        }
+        if (s.src && s.src.indexOf('?v=') === -1 && s.src.indexOf('&v=') === -1) {
+          s.src += (s.src.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(VERSION);
         }
 
         s.defer = true;

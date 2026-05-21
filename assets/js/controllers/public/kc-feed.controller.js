@@ -789,8 +789,37 @@
     const onLoadMoreClick = () => { loadNextPage(); };
     const onRetryClick = () => { loadNextPage(); };
     const onRealtimeClick = () => { renderPendingRealtimePosts(); };
-    const onPageHide = () => { destroy(); };
+    const onPageHide = (event) => {
+      persistSnapshot();
+      if (event && event.persisted) {
+        pauseForBfcache();
+        return;
+      }
+      destroy();
+    };
+    const onPageShow = (event) => {
+      if (!event || !event.persisted || state.destroyed) return;
+      startRealtime();
+      if (state.revalidateTimer) clearTimeout(state.revalidateTimer);
+      state.revalidateTimer = window.setTimeout(revalidateSnapshot, 80);
+      try {
+        if (typeof kcInitVoteStates === 'function') kcInitVoteStates();
+      } catch (_) { }
+    };
     let api = null;
+
+    function pauseForBfcache() {
+      if (state.revalidateTimer) {
+        clearTimeout(state.revalidateTimer);
+        state.revalidateTimer = null;
+      }
+      try {
+        if (state.realtimeSub && typeof state.realtimeSub.unsubscribe === 'function') {
+          state.realtimeSub.unsubscribe();
+        }
+      } catch (_) { }
+      state.realtimeSub = null;
+    }
 
     function destroy() {
       if (state.destroyed) return;
@@ -804,6 +833,7 @@
       try { pagerUI.retryBtn.removeEventListener('click', onRetryClick); } catch (_) { }
       try { realtimeUI.btn.removeEventListener('click', onRealtimeClick); } catch (_) { }
       try { window.removeEventListener('pagehide', onPageHide); } catch (_) { }
+      try { window.removeEventListener('pageshow', onPageShow); } catch (_) { }
       try {
         if (state.realtimeSub && typeof state.realtimeSub.unsubscribe === 'function') {
           state.realtimeSub.unsubscribe();
@@ -829,6 +859,7 @@
     pagerUI.retryBtn.addEventListener('click', onRetryClick);
     realtimeUI.btn.addEventListener('click', onRealtimeClick);
     window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
 
     // Initialize pull-to-refresh
     if (typeof window.KCPullToRefresh !== 'undefined') {

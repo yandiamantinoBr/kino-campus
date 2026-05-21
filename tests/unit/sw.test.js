@@ -29,8 +29,9 @@ describe('sw.js — integridade', function () {
     expect(match[1]).toMatch(/^kc-shell-v\d+\.\d+\.\d+$/);
   });
 
-  test('SHELL_ASSETS inclui a raiz "/"', function () {
-    expect(SW).toContain("'/'");
+  test('SHELL_ASSETS nao pre-cacheia HTML estatico', function () {
+    expect(SW).not.toContain("'/'");
+    expect(SW).toContain("request.mode === 'navigate'");
   });
 
   test('SHELL_ASSETS inclui os arquivos CSS obrigatórios', function () {
@@ -67,6 +68,12 @@ describe('sw.js — integridade', function () {
     expect(SW).toContain("'install'");
     expect(SW).toContain("'activate'");
     expect(SW).toContain("'fetch'");
+  });
+
+  test('usa navigation preload e assets versionados', function () {
+    expect(SW).toContain('navigationPreload.enable()');
+    expect(SW).toContain('url.searchParams.has');
+    expect(SW).toContain("var RUNTIME_VERSION = '8.6.1'");
   });
 
   test('skipWaiting e clients.claim presentes', function () {

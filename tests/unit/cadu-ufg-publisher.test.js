@@ -88,7 +88,7 @@ describe('cadu-ufg-publisher', () => {
       text: 'Processo seletivo com bolsa e edital em PDF.',
       pdfLinks: ['https://ufg.br/edital.pdf'],
     };
-    const result = classifyItem(item, { tier: 1 });
+    const result = classifyItem(item, { tier: 1 }, { now: '2026-05-18T12:00:00-03:00' });
     expect(['publish', 'review']).toContain(result.decision);
     expect(result.module).toBe('oportunidades');
     expect(result.category).toBe('monitoria');

@@ -104,7 +104,7 @@ function validateChain(relPage, chain) {
   var positions = chain.map(function (script) {
     return {
       script: script,
-      pos: content.indexOf('src="' + script + '"'),
+      pos: content.indexOf(script),
     };
   });
 

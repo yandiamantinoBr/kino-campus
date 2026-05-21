@@ -37,6 +37,13 @@
   window._KCProduct = window._KCProduct || {};
 
   var _deps = null;
+  var PRODUCT_DETAIL_CACHE_VERSION = 1;
+  var PRODUCT_DETAIL_CACHE_SCOPE = 'product-detail';
+  var PRODUCT_DETAIL_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
+  var PRODUCT_DETAIL_CACHE_STALE_MAX_AGE_MS = 30 * 60 * 1000;
+  var _pendingPostLoads = {};
+  var _commentsLoadedForId = '';
+  var _trackedViewIds = {};
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -55,6 +62,196 @@
     try {
       if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
         window.KCHomeCategories.trackEvent(eventType, { post: post });
+      }
+    } catch (_) {}
+  }
+
+  function getSessionStore() {
+    return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
+      ? window.KCSessionStore
+      : null;
+  }
+
+  function getEnvDriver() {
+    var env = window.KC_ENV || {};
+    return String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
+  }
+
+  function getProductCacheKey(id) {
+    return getEnvDriver() + ':' + String(id || '').trim();
+  }
+
+  function collectPostCacheAliases(id, raw, post) {
+    var aliases = [];
+
+    function add(value) {
+      var text = String(value || '').trim();
+      if (text && aliases.indexOf(text) === -1) aliases.push(text);
+    }
+
+    add(id);
+    add(raw && raw.id);
+    add(raw && raw.uuid);
+    add(raw && raw.legacy_id);
+    add(raw && raw.legacyId);
+    add(post && post.id);
+    add(post && post.uuid);
+    add(post && post.legacy_id);
+    add(post && post.legacyId);
+    return aliases;
+  }
+
+  function buildProductSignature(post) {
+    var source = (post && typeof post === 'object') ? post : {};
+    return JSON.stringify([
+      source.uuid || '',
+      source.id || '',
+      source.status || source.estado || '',
+      source.updated_at || source.updatedAt || '',
+      source.bumped_at || source.bumpedAt || '',
+      source.effective_at || source.effectiveAt || '',
+      source.expires_at || source.expiresAt || '',
+      source.titulo || source.title || '',
+      source.descricao || source.description || '',
+      source.preco || source.price || '',
+      source.image_url || source.imageUrl || source.cover_url || source.coverUrl || '',
+      source.authorName || source.autor || source.author || '',
+      source.authorAvatar || source.autorAvatar || '',
+    ]);
+  }
+
+  function getCachedProductDetail(id) {
+    var store = getSessionStore();
+    var cached;
+    var value;
+    var post;
+    var age;
+    if (!id || !store || typeof store.get !== 'function') return null;
+
+    cached = store.get(PRODUCT_DETAIL_CACHE_SCOPE, getProductCacheKey(id), {
+      maxAge: PRODUCT_DETAIL_CACHE_STALE_MAX_AGE_MS,
+      removeExpired: true,
+    });
+    value = cached && cached.value && typeof cached.value === 'object' ? cached.value : null;
+    if (!value || Number(value.version) !== PRODUCT_DETAIL_CACHE_VERSION) return null;
+
+    post = value.post && typeof value.post === 'object' ? value.post : null;
+    if (!post) return null;
+
+    age = Number(cached.age) || 0;
+    return {
+      raw: value.raw && typeof value.raw === 'object' ? value.raw : post,
+      post: post,
+      signature: String(value.signature || buildProductSignature(post)),
+      age: age,
+      isFresh: age <= PRODUCT_DETAIL_CACHE_MAX_AGE_MS,
+    };
+  }
+
+  function persistProductDetailCache(id, raw, post) {
+    var store = getSessionStore();
+    var payload;
+    var signature;
+    if (!id || !post || !store || typeof store.set !== 'function') return false;
+
+    signature = buildProductSignature(post);
+    payload = {
+      version: PRODUCT_DETAIL_CACHE_VERSION,
+      raw: raw && typeof raw === 'object' ? raw : null,
+      post: post,
+      signature: signature,
+    };
+
+    collectPostCacheAliases(id, raw, post).forEach(function (alias) {
+      try { store.set(PRODUCT_DETAIL_CACHE_SCOPE, getProductCacheKey(alias), payload); } catch (_) { }
+    });
+    return true;
+  }
+
+  function invalidateProductDetailCache(postOrId) {
+    var store = getSessionStore();
+    if (!store) return false;
+
+    if (!postOrId) {
+      if (typeof store.clearPrefix === 'function') {
+        try { store.clearPrefix(PRODUCT_DETAIL_CACHE_SCOPE, ''); return true; } catch (_) { return false; }
+      }
+      return false;
+    }
+
+    collectPostCacheAliases(
+      typeof postOrId === 'object' ? null : postOrId,
+      typeof postOrId === 'object' ? postOrId : null,
+      typeof postOrId === 'object' ? postOrId : null
+    ).forEach(function (alias) {
+      try {
+        if (typeof store.remove === 'function') {
+          store.remove(PRODUCT_DETAIL_CACHE_SCOPE, getProductCacheKey(alias));
+        }
+      } catch (_) { }
+    });
+    return true;
+  }
+
+  function normalizeProductPost(raw) {
+    return (window.KCPostModel && typeof window.KCPostModel.from === 'function')
+      ? window.KCPostModel.from(raw, { pageModule: (raw && raw.modulo) || '', view: 'product' })
+      : ((window.KCAPI && typeof window.KCAPI.normalizePost === 'function') ? window.KCAPI.normalizePost(raw) : raw);
+  }
+
+  function applyCurrentPostUuid(post, raw) {
+    var postUuid = (post && post.uuid) ? String(post.uuid) : ((raw && raw.uuid) ? String(raw.uuid) : null);
+    window.kcCurrentPostUuid = postUuid;
+    if (postUuid) document.body.setAttribute('data-post-uuid', postUuid);
+  }
+
+  async function fetchRenderablePost(id) {
+    var requestKey = getProductCacheKey(id);
+    if (_pendingPostLoads[requestKey]) return _pendingPostLoads[requestKey];
+
+    _pendingPostLoads[requestKey] = (async function () {
+      var raw = null;
+      var post = null;
+      if (window.KCAPI && typeof window.KCAPI.getPostById === 'function') {
+        raw = await window.KCAPI.getPostById(id);
+      }
+      if (!raw) return null;
+
+      post = normalizeProductPost(raw);
+      post = await enrichPostAuthorFromProfile(post);
+      return { raw: raw, post: post };
+    }()).finally(function () {
+      delete _pendingPostLoads[requestKey];
+    });
+
+    return _pendingPostLoads[requestKey];
+  }
+
+  function loadProductComments(postId) {
+    var id = String(postId || '').trim();
+    if (!id || _commentsLoadedForId === id) return;
+    _commentsLoadedForId = id;
+
+    if (window.KCLazyLoader && typeof window.KCLazyLoader.load === 'function') {
+      window.KCLazyLoader.load('assets/js/features/kc-comments.js', function () {
+        if (typeof window.renderComments === 'function') {
+          window.renderComments(id, 'commentsContainer');
+        }
+      });
+    } else if (typeof window.renderComments === 'function') {
+      window.renderComments(id, 'commentsContainer');
+    }
+  }
+
+  function trackProductViewOnce(post, fallbackId) {
+    var viewPostId = (post && post.uuid) ? post.uuid : (post && post.id) || fallbackId;
+    var key = String(viewPostId || '').trim();
+    if (!key || _trackedViewIds[key]) return;
+    _trackedViewIds[key] = true;
+
+    try {
+      if (window.KCAPI && typeof window.KCAPI.trackView === 'function') {
+        window.KCAPI.trackView(viewPostId).catch(function () {});
       }
     } catch (_) {}
   }
@@ -366,6 +563,13 @@
   async function loadPost() {
     if (!_deps) return;
     var id = _deps.getParam('id');
+    var cached;
+    var renderedCached = false;
+    var renderedSignature = '';
+    var viewerPromise;
+    var fetchPromise;
+    var fetched;
+    var R3;
     if (!id) {
       var R2 = window._KCProduct.render;
       if (R2) R2.showNotFound();
@@ -380,50 +584,46 @@
     if (author) author.setAttribute('data-post-id', id);
     if (text) text.setAttribute('data-post-id', id);
 
-    var raw = null;
-    try {
-      if (window.KCAPI && typeof window.KCAPI.getPostById === 'function') {
-        raw = await window.KCAPI.getPostById(id);
-      }
-    } catch (_) {}
+    cached = getCachedProductDetail(id);
+    viewerPromise = refreshViewerState().catch(function () {});
+    fetchPromise = (!cached || !cached.isFresh) ? fetchRenderablePost(id).catch(function () { return null; }) : Promise.resolve(null);
 
-    if (!raw) {
-      var R3 = window._KCProduct.render;
-      if (R3) R3.showNotFound();
+    if (cached && cached.post) {
+      applyCurrentPostUuid(cached.post, cached.raw);
+      renderedSignature = cached.signature || buildProductSignature(cached.post);
+      renderPost(cached.post);
+      renderedCached = true;
+      loadProductComments(id);
+      trackProductViewOnce(cached.post, id);
+    }
+
+    await viewerPromise;
+    if (renderedCached && _deps.getPost()) {
+      renderPost(_deps.getPost());
+    }
+
+    if (cached && cached.isFresh) return;
+
+    fetched = await fetchPromise;
+    if (!fetched || !fetched.post) {
+      if (!renderedCached) {
+        R3 = window._KCProduct.render;
+        if (R3) R3.showNotFound();
+      }
       return;
     }
 
-    await refreshViewerState();
-
-    var post = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
-      ? window.KCPostModel.from(raw, { pageModule: (raw && raw.modulo) || '', view: 'product' })
-      : ((window.KCAPI && typeof window.KCAPI.normalizePost === 'function') ? window.KCAPI.normalizePost(raw) : raw);
-
-    post = await enrichPostAuthorFromProfile(post);
-
-    var postUuid = (post && post.uuid) ? String(post.uuid) : ((raw && raw.uuid) ? String(raw.uuid) : null);
-    window.kcCurrentPostUuid = postUuid;
-    if (postUuid) document.body.setAttribute('data-post-uuid', postUuid);
-
-    renderPost(post);
-
-    try {
-      var viewPostId = (post && post.uuid) ? post.uuid : (post && post.id);
-      if (viewPostId && window.KCAPI && typeof window.KCAPI.trackView === 'function') {
-        window.KCAPI.trackView(viewPostId).catch(function () {});
-      }
-    } catch (_) {}
-
-    if (window.KCLazyLoader && typeof window.KCLazyLoader.load === 'function') {
-      var _commentPostId = id;
-      window.KCLazyLoader.load('assets/js/features/kc-comments.js', function () {
-        if (typeof window.renderComments === 'function') {
-          window.renderComments(_commentPostId, 'commentsContainer');
-        }
-      });
-    } else if (typeof window.renderComments === 'function') {
-      window.renderComments(id, 'commentsContainer');
+    applyCurrentPostUuid(fetched.post, fetched.raw);
+    persistProductDetailCache(id, fetched.raw, fetched.post);
+    if (!renderedCached || buildProductSignature(fetched.post) !== renderedSignature) {
+      renderPost(fetched.post);
+    } else {
+      _deps.setPost(fetched.post);
+      window.kcCurrentPostContext = fetched.post;
     }
+
+    loadProductComments(id);
+    trackProductViewOnce(fetched.post, id);
   }
 
   // ── init ─────────────────────────────────────────────────────────────────────
@@ -445,6 +645,9 @@
     applyCommentComposerSessionState: applyCommentComposerSessionState,
     loadSellerAuthorStats:           loadSellerAuthorStats,
     enrichPostAuthorFromProfile:     enrichPostAuthorFromProfile,
+    getCachedProductDetail:          getCachedProductDetail,
+    persistProductDetailCache:       persistProductDetailCache,
+    invalidateProductDetailCache:    invalidateProductDetailCache,
     refreshViewerState:              refreshViewerState,
     renderPost:                      renderPost,
     loadPost:                        loadPost,
