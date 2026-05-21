@@ -79,8 +79,10 @@ Fontes rapidas (`quick`):
 - PRPI: `https://prpi.ufg.br`
 - Instituto Verbena: `https://institutoverbena.ufg.br`
 - CIAR: `https://ciar.ufg.br`
+- PRAE: `https://prae.ufg.br`
+- SRI: `https://sri.ufg.br`
 
-Fontes completas incluem faculdades, institutos e orgaos. Se uma fonte falhar em DNS, `robots.txt`, sitemap ou feed, marque como desabilitada naquela execucao e reporte no digest. Nao force crawling bloqueado.
+Fontes completas incluem faculdades, institutos, orgaos e subsites relevantes da FACE. Se uma fonte falhar em DNS, `robots.txt`, sitemap ou feed, marque como desabilitada naquela execucao e reporte no digest. Nao force crawling bloqueado.
 
 ## Como Descobrir Conteudos
 
@@ -91,6 +93,8 @@ Ordem preferida:
 3. `/feed` RSS/Atom
 4. `sitemap.xml`
 5. HTML somente como fallback
+
+O runner oficial pagina o Weby JSON com `page=N`, ordena candidatos por data e usa `CADU_WEBY_MAX_PAGES` para controlar profundidade. O padrao conservador e `2`; aumente apenas depois de um dry-run porque cada pagina extra amplia volume de revisao.
 
 Nunca acesse uma rota bloqueada por `robots.txt`.
 
@@ -214,6 +218,7 @@ CADU_FETCH_PROXY_TEMPLATE=
 CADU_SUPABASE_STORAGE_BUCKET=kino-media
 CADU_MAX_IMAGE_BYTES=6291456
 CADU_MAX_ITEMS_PER_SOURCE=15
+CADU_WEBY_MAX_PAGES=2
 CADU_MAX_PUBLISH_PER_RUN=3
 CADU_PDFTOTEXT_PATH=pdftotext
 ```
@@ -276,5 +281,6 @@ Quando o digest mostrar `review:quality` ou `Avisos de qualidade`, nao aprove no
 - `missing_multiple_documents`: ha mais de um PDF, mas a descricao nao explicita os documentos.
 - `missing_deadline_context`: o classificador encontrou prazo, mas a descricao nao trouxe contexto de prazo/inscricao.
 - `missing_schedule_dates`: a fonte tem varias datas, mas a descricao nao trouxe cronograma suficiente.
+- `missing_image_url`: nao foi encontrada imagem de capa segura; revise antes de publicar para evitar placeholder.
 - `source_url_mismatch`: link oficial divergente.
 - `invalid_image_url`: imagem do payload nao e uma URL HTTP/HTTPS valida.

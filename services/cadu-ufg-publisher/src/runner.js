@@ -13,22 +13,59 @@ const { evaluatePayloadQuality } = require('./quality');
 const { isAllowedByRobots, parseRobotsTxt } = require('./robots');
 const { loadSources, selectSources } = require('./sources');
 const { StateStore } = require('./state');
-const { canonicalizeUrl, nowIso, sha256 } = require('./utils');
+const { canonicalizeUrl, normalizeText, nowIso, sha256, uniq } = require('./utils');
 const { parseFeed, parseSitemap } = require('./xml');
 
-async function discoverFromWebyJson(http, source, maxItems) {
+function parseWebyRecords(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data && data.items)) return data.items;
+  if (Array.isArray(data && data.data)) return data.data;
+  if (Array.isArray(data && data.news)) return data.news;
+  if (Array.isArray(data && data.events)) return data.events;
+  return [];
+}
+
+function candidateSortValue(item) {
+  const raw = String(
+    (item && (item.updatedAt || item.dateBeginAt || item.dateEndAt))
+    || (item && item.raw && (item.raw.updated_at || item.raw.date_begin_at || item.raw.begin_at || item.raw.date_end_at || item.raw.end_at))
+    || ''
+  );
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sortCandidates(items) {
+  return (Array.isArray(items) ? items : [])
+    .slice()
+    .sort((left, right) => candidateSortValue(right) - candidateSortValue(left));
+}
+
+async function discoverFromWebyJson(http, source, maxItems, options = {}) {
   const items = [];
+  const maxPages = Math.max(1, Number(options.maxPages || 1));
+  const perPage = Math.max(1, Math.min(Number(options.perPage || maxItems || 10), 50));
   for (const endpoint of ['news.json', 'events.json']) {
+    const seenPageSignatures = new Set();
     try {
-      const url = `${source.baseUrl}/${endpoint}?per_page=${maxItems}&sort=updated_at&direction=desc`;
-      const { data } = await http.json(url);
-      const records = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
-      records.slice(0, maxItems).forEach((record) => items.push(normalizeWebyItem(source, record, endpoint.startsWith('events') ? 'event' : 'news')));
+      for (let page = 1; page <= maxPages; page += 1) {
+        const url = `${source.baseUrl}/${endpoint}?per_page=${perPage}&page=${page}&order=updated_at&direction=desc`;
+        const { data } = await http.json(url);
+        const records = parseWebyRecords(data);
+        if (!records.length) break;
+
+        const pageSignature = sha256(records.map((record) => record && (record.id || record.slug || record.title || record.name)).join('|'));
+        if (seenPageSignatures.has(pageSignature)) break;
+        seenPageSignatures.add(pageSignature);
+
+        records.slice(0, perPage).forEach((record) => items.push(normalizeWebyItem(source, record, endpoint.startsWith('events') ? 'event' : 'news')));
+        if (records.length < perPage) break;
+      }
     } catch (_) {
       // Some UFG sites expose only one endpoint. Fallbacks handle the rest.
     }
   }
-  return items;
+  return sortCandidates(items);
 }
 
 async function discoverFromSitemap(http, source, robots, maxItems) {
@@ -99,8 +136,24 @@ async function validateSource(http, source) {
   }
 }
 
-function itemKey(item) {
-  return sha256(`${item.sourceUrl}\n${item.title}\n${item.updatedAt}`);
+function itemKeys(item) {
+  const source = item && typeof item === 'object' ? item : {};
+  const canonicalUrl = canonicalizeUrl(source.sourceUrl || '');
+  const title = normalizeText(source.title || '');
+  const content = normalizeText(`${source.title || ''}\n${source.summary || ''}\n${source.text || ''}`).slice(0, 4000);
+  const primaryDoc = Array.isArray(source.pdfLinks) && source.pdfLinks[0] ? canonicalizeUrl(source.pdfLinks[0]) : '';
+  const dateKey = source.dateEndAt || source.updatedAt || source.dateBeginAt || '';
+  const raw = source.raw && typeof source.raw === 'object' ? source.raw : {};
+  const rawId = raw.site_id && raw.id ? `weby:${raw.site_id}:${raw.id}` : '';
+  const base = canonicalUrl || `${source.sourceId || ''}:${source.id || ''}:${title}`;
+  const keys = [
+    `item:${sha256(`${base}\n${title}\n${dateKey}`)}`,
+    canonicalUrl ? `url:${sha256(canonicalUrl)}` : '',
+    rawId ? `raw:${sha256(rawId)}` : '',
+    title && (primaryDoc || dateKey) ? `title-doc-date:${sha256(`${title}\n${primaryDoc}\n${dateKey}`)}` : '',
+    content.length > 80 ? `content:${sha256(content)}` : '',
+  ];
+  return uniq(keys);
 }
 
 function shortReviewKey(key) {
@@ -121,17 +174,17 @@ function buildReviewItem(key, hydrated, classification, payload, decision) {
   };
 }
 
-function markForReview(context, stats, key, hydrated, classification, payload, decision) {
+function markForReview(context, stats, key, hydrated, classification, payload, decision, aliases = []) {
   const reviewDecision = decision || 'review';
   stats.review += 1;
-  stateMarkReview(context.state, key, hydrated, classification, payload, reviewDecision);
+  stateMarkReview(context.state, key, hydrated, classification, payload, reviewDecision, aliases);
   if (!stats.reviewItems) stats.reviewItems = [];
   if (stats.reviewItems.length < context.config.reviewPreviewLimit) {
     stats.reviewItems.push(buildReviewItem(key, hydrated, classification, payload, reviewDecision));
   }
 }
 
-function stateMarkReview(state, key, hydrated, classification, payload, decision) {
+function stateMarkReview(state, key, hydrated, classification, payload, decision, aliases = []) {
   state.mark(key, {
     decision,
     sourceUrl: hydrated.sourceUrl,
@@ -140,7 +193,7 @@ function stateMarkReview(state, key, hydrated, classification, payload, decision
     module: classification.module,
     category: classification.category,
     payload,
-  });
+  }, aliases);
 }
 
 async function processSource(context, source) {
@@ -156,7 +209,7 @@ async function processSource(context, source) {
   const robots = validation.robots;
   let candidates = [];
   const maxItems = config.maxItemsPerSource;
-  candidates = candidates.concat(await discoverFromWebyJson(http, source, maxItems));
+  candidates = candidates.concat(await discoverFromWebyJson(http, source, maxItems, { maxPages: config.webyMaxPages }));
   if (candidates.length < maxItems) candidates = candidates.concat(await discoverFromFeed(http, source, maxItems));
   if (candidates.length < maxItems) {
     try {
@@ -170,14 +223,16 @@ async function processSource(context, source) {
   candidates.forEach((candidate) => {
     if (candidate.sourceUrl && !byUrl.has(candidate.sourceUrl)) byUrl.set(candidate.sourceUrl, candidate);
   });
-  const uniqueCandidates = Array.from(byUrl.values()).slice(0, maxItems);
+  const uniqueCandidates = sortCandidates(Array.from(byUrl.values())).slice(0, maxItems);
   stats.discovered = uniqueCandidates.length;
 
   for (const candidate of uniqueCandidates) {
     try {
       const hydrated = await hydrateItem(http, source, candidate, robots);
-      const key = itemKey(hydrated);
-      if (state.has(key)) {
+      const keys = itemKeys(hydrated);
+      const key = keys[0];
+      const aliases = keys.slice(1);
+      if (state.hasAny(keys)) {
         stats.skipped += 1;
         continue;
       }
@@ -185,7 +240,7 @@ async function processSource(context, source) {
       const classification = classifyItem(hydrated, source);
       if (classification.decision === 'discard') {
         stats.discarded += 1;
-        state.mark(key, { decision: 'discard', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence });
+        state.mark(key, { decision: 'discard', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence }, aliases);
         continue;
       }
 
@@ -218,12 +273,12 @@ async function processSource(context, source) {
       };
 
       if (classification.decision === 'review') {
-        markForReview(context, stats, key, hydrated, classification, payload, 'review');
+        markForReview(context, stats, key, hydrated, classification, payload, 'review', aliases);
         continue;
       }
 
       if (!quality.ok) {
-        markForReview(context, stats, key, hydrated, classification, payload, 'review:quality');
+        markForReview(context, stats, key, hydrated, classification, payload, 'review:quality', aliases);
         continue;
       }
 
@@ -233,12 +288,12 @@ async function processSource(context, source) {
       }
 
       if (config.reviewBeforePublish) {
-        markForReview(context, stats, key, hydrated, classification, payload, 'review:preview');
+        markForReview(context, stats, key, hydrated, classification, payload, 'review:preview', aliases);
         continue;
       }
 
       if (context.publishedThisRun >= config.maxPublishPerRun) {
-        markForReview(context, stats, key, hydrated, classification, payload, 'review:publish-cap');
+        markForReview(context, stats, key, hydrated, classification, payload, 'review:publish-cap', aliases);
         continue;
       }
 
@@ -257,14 +312,14 @@ async function processSource(context, source) {
             confidence: classification.confidence,
             postId: result.post && result.post.id,
             pendingReason: result.pendingReason || '',
-          });
+          }, aliases);
         } else {
           stats.published += 1;
-          state.mark(key, { decision: 'published', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, postId: result.post && result.post.id });
+          state.mark(key, { decision: 'published', sourceUrl: hydrated.sourceUrl, title: hydrated.title, confidence: classification.confidence, postId: result.post && result.post.id }, aliases);
         }
       } else {
         stats.errors.push(`publish:${hydrated.sourceUrl}: ${(result && result.code) || 'unknown'}`);
-        markForReview(context, stats, key, hydrated, classification, payload, 'review:publish-failed');
+        markForReview(context, stats, key, hydrated, classification, payload, 'review:publish-failed', aliases);
       }
     } catch (error) {
       stats.errors.push(`${candidate.sourceUrl || source.id}: ${error.message}`);

@@ -7,7 +7,10 @@ const INCLUDE_TERMS = [
   'bolsa', 'bolsas', 'monitoria', 'estagio', 'vagas', 'curso', 'oficina',
   'palestra', 'seminario', 'congresso', 'evento', 'extensao', 'voluntariado',
   'pibic', 'pivic', 'probec', 'prpi', 'pesquisa', 'iniciacao cientifica',
-  'mobilidade', 'calendario academico', 'prazo',
+  'mobilidade', 'calendario academico', 'prazo', 'programacao', 'capacitacao',
+  'espaco das profissoes', 'profissoes', 'mestrado', 'doutorado',
+  'pos-graduacao', 'pos graduacao', 'aluno especial', 'residencia',
+  'professor substituto',
 ];
 
 const EXCLUDE_TERMS = [
@@ -58,7 +61,18 @@ function todayIso(now) {
 }
 
 function referenceYear(item, today) {
-  const updated = String(item.updatedAt || item.raw?.updated_at || item.raw?.created_at || '');
+  const updated = String(
+    item.updatedAt
+    || item.dateBeginAt
+    || item.dateEndAt
+    || item.raw?.updated_at
+    || item.raw?.date_begin_at
+    || item.raw?.begin_at
+    || item.raw?.date_end_at
+    || item.raw?.end_at
+    || item.raw?.created_at
+    || ''
+  );
   const match = updated.match(/\b(20\d{2})\b/);
   if (match) return match[1];
   return today.slice(0, 4);
@@ -129,13 +143,40 @@ function latestIso(values) {
   return values.filter(Boolean).sort().pop() || '';
 }
 
+function uniqValues(values) {
+  return Array.from(new Set((values || []).filter(Boolean)));
+}
+
+function isoDateFromValue(value) {
+  const raw = String(value || '').trim();
+  const match = raw.match(/(20\d{2})-(\d{2})-(\d{2})/);
+  if (!match) return '';
+  return validIsoDate(match[1], match[2], match[3]);
+}
+
+function hasActionableDateEndContext(rawText) {
+  const text = normalizeText(rawText);
+  return /\b(edital|chamada|processo seletivo|inscric\w*|submiss\w*|prazo|encerra\w*|termina\w*|candidat\w*|bolsa|vagas|mobilidade|pibic|pivic|pesquisa|formulario|profissoes)\b/.test(text);
+}
+
 function analyzeTemporalRelevance(item, options = {}) {
   const rawText = `${item.title || ''} ${item.summary || ''} ${item.text || ''}`;
   const today = todayIso(options.now);
   const fallbackYear = referenceYear(item, today);
   const candidates = extractDateCandidates(rawText, fallbackYear);
-  const deadlineDate = latestIso(candidates.filter((candidate) => candidate.isDeadline).map((candidate) => candidate.iso));
-  const eventDate = latestIso(candidates.filter((candidate) => candidate.isEvent).map((candidate) => candidate.iso));
+  const rawDateBegin = isoDateFromValue(item.dateBeginAt || item.raw?.date_begin_at || item.raw?.begin_at);
+  const rawDateEnd = isoDateFromValue(item.dateEndAt || item.raw?.date_end_at || item.raw?.end_at);
+  const isEventItem = String(item.type || '').toLowerCase() === 'event';
+  const deadlineValues = candidates.filter((candidate) => candidate.isDeadline).map((candidate) => candidate.iso);
+  const eventValues = candidates.filter((candidate) => candidate.isEvent).map((candidate) => candidate.iso);
+
+  if (rawDateEnd && hasActionableDateEndContext(rawText)) deadlineValues.push(rawDateEnd);
+  if (rawDateBegin && isEventItem) eventValues.push(rawDateBegin);
+  if (rawDateEnd && isEventItem) eventValues.push(rawDateEnd);
+
+  const deadlineDate = latestIso(deadlineValues);
+  const eventDate = latestIso(eventValues);
+  const dates = uniqValues(candidates.map((candidate) => candidate.iso).concat([rawDateBegin, rawDateEnd]));
 
   if (deadlineDate && deadlineDate < today) {
     return {
@@ -144,7 +185,7 @@ function analyzeTemporalRelevance(item, options = {}) {
       today,
       deadlineDate,
       eventDate,
-      dates: candidates.map((candidate) => candidate.iso),
+      dates,
     };
   }
 
@@ -155,7 +196,7 @@ function analyzeTemporalRelevance(item, options = {}) {
       today,
       deadlineDate,
       eventDate,
-      dates: candidates.map((candidate) => candidate.iso),
+      dates,
     };
   }
 
@@ -165,7 +206,7 @@ function analyzeTemporalRelevance(item, options = {}) {
     today,
     deadlineDate,
     eventDate,
-    dates: candidates.map((candidate) => candidate.iso),
+    dates,
   };
 }
 
@@ -178,7 +219,13 @@ function detectOpportunityCategory(text) {
     has(text, 'pivic') ||
     has(text, 'prpi') ||
     has(text, 'fapeg') ||
-    has(text, 'mobilidade internacional')
+    has(text, 'mobilidade internacional') ||
+    has(text, 'mestrado') ||
+    has(text, 'doutorado') ||
+    has(text, 'pos-graduacao') ||
+    has(text, 'pos graduacao') ||
+    has(text, 'aluno especial') ||
+    has(text, 'residencia')
   ) return 'pesquisa';
   if (has(text, 'monitoria')) return 'monitoria';
   if (has(text, 'voluntariado') || has(text, 'voluntario')) return 'voluntariado';
@@ -200,10 +247,11 @@ function classifyItem(item, source = {}, options = {}) {
   const text = normalizeText(`${item.title} ${item.summary} ${item.text}`);
   const includeHits = INCLUDE_TERMS.filter((term) => has(text, term));
   const excludeHits = EXCLUDE_TERMS.filter((term) => has(text, term));
-  const hasDeadline = /\b(prazo|ate o dia|inscricoes? ate|encerra|termina)\b/i.test(text);
   const hasPdf = Array.isArray(item.pdfLinks) && item.pdfLinks.length > 0;
+  const isEventItem = String(item.type || '').toLowerCase() === 'event';
   const sourceBoost = Math.max(0, (5 - Number(source.tier || 3)) * 0.04);
   const temporal = analyzeTemporalRelevance(item, options);
+  const hasDeadline = /\b(prazo|ate o dia|inscricoes? ate|encerra|termina)\b/i.test(text) || Boolean(temporal.deadlineDate);
 
   let score = 0.18 + sourceBoost;
   score += Math.min(includeHits.length * 0.09, 0.45);
@@ -214,12 +262,12 @@ function classifyItem(item, source = {}, options = {}) {
   if (temporal.expired) score = Math.min(score, 0.49);
   score = Math.max(0, Math.min(1, Number(score.toFixed(2))));
 
-  const opportunitySignals = ['edital', 'chamada', 'processo seletivo', 'bolsa', 'monitoria', 'estagio', 'vagas', 'selecao', 'pibic', 'pivic', 'probec', 'pesquisa', 'fapeg', 'mobilidade'];
-  const eventSignals = ['evento', 'curso', 'oficina', 'palestra', 'seminario', 'congresso', 'mostra', 'festival'];
+  const opportunitySignals = ['edital', 'chamada', 'processo seletivo', 'bolsa', 'monitoria', 'estagio', 'vagas', 'selecao', 'pibic', 'pivic', 'probec', 'pesquisa', 'fapeg', 'mobilidade', 'mestrado', 'doutorado', 'residencia', 'professor substituto'];
+  const eventSignals = ['evento', 'curso', 'oficina', 'palestra', 'seminario', 'congresso', 'mostra', 'festival', 'programacao', 'profissoes', 'espaco das profissoes'];
   const opportunityScore = opportunitySignals.filter((term) => has(text, term)).length;
   const eventScore = eventSignals.filter((term) => has(text, term)).length;
 
-  const module = opportunityScore > eventScore ? 'oportunidades' : 'eventos';
+  const module = isEventItem ? 'eventos' : (opportunityScore > eventScore ? 'oportunidades' : 'eventos');
   const category = module === 'oportunidades' ? detectOpportunityCategory(text) : detectEventCategory(text);
   const decision = score >= 0.78 ? 'publish' : (score >= 0.55 ? 'review' : 'discard');
 

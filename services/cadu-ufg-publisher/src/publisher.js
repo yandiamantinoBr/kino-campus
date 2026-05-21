@@ -17,8 +17,20 @@ function required(name, value) {
 }
 
 function normalizeImages(payload) {
-  const values = Array.isArray(payload.imagens) ? payload.imagens : (Array.isArray(payload.images) ? payload.images : []);
-  return values.map((value) => {
+  const metadata = payload && payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {};
+  const values = [
+    ...(Array.isArray(payload.imagens) ? payload.imagens : []),
+    ...(Array.isArray(payload.images) ? payload.images : []),
+    payload.image_url,
+    payload.imageUrl,
+    payload.cover_url,
+    payload.coverUrl,
+    metadata.image_url,
+    metadata.imageUrl,
+    metadata.cover_url,
+    metadata.coverUrl,
+  ];
+  return Array.from(new Set(values.map((value) => {
     try {
       const url = new URL(String(value || '').trim());
       if (!/^https?:$/.test(url.protocol)) return '';
@@ -26,7 +38,7 @@ function normalizeImages(payload) {
     } catch (_) {
       return '';
     }
-  }).filter(Boolean).slice(0, 5);
+  }).filter(Boolean))).slice(0, 5);
 }
 
 function encodeStoragePath(path) {

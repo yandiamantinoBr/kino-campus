@@ -35,6 +35,7 @@ function loadConfig() {
     fetchProxyTemplate: process.env.CADU_FETCH_PROXY_TEMPLATE || '',
     hostAliases: safeJsonParse(process.env.CADU_HOST_ALIASES || '{}', {}),
     maxItemsPerSource: Number(process.env.CADU_MAX_ITEMS_PER_SOURCE || 15),
+    webyMaxPages: Number(process.env.CADU_WEBY_MAX_PAGES || 2),
     maxPublishPerRun: Number(process.env.CADU_MAX_PUBLISH_PER_RUN || 3),
     reviewBeforePublish: process.env.CADU_REVIEW_BEFORE_PUBLISH !== 'false',
     reviewPreviewLimit: Number(process.env.CADU_REVIEW_PREVIEW_LIMIT || 5),

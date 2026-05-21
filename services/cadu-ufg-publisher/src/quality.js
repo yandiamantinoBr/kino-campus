@@ -11,8 +11,19 @@ function hasGenericBoilerplate(text) {
   return /universidade gratuita|mais de\s+\d+\s+mil alunos|ensino pesquisa e extensao|ensino extensao e pesquisa|uma das (maiores|melhores) universidades|instituicao federal de ensino/.test(normalized);
 }
 
+function imageUrls(payload) {
+  const metadata = payload && payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {};
+  return [
+    ...(Array.isArray(payload && payload.imagens) ? payload.imagens : []),
+    payload && payload.image_url,
+    payload && payload.cover_url,
+    metadata.image_url,
+    metadata.cover_url,
+  ].filter(Boolean);
+}
+
 function hasValidRemoteImages(payload) {
-  const images = Array.isArray(payload.imagens) ? payload.imagens : [];
+  const images = imageUrls(payload);
   return images.every((image) => {
     try {
       const url = new URL(String(image || ''));
@@ -59,7 +70,9 @@ function evaluatePayloadQuality(item, classification, payload) {
     warnings.push('source_url_mismatch');
   }
 
-  if (!hasValidRemoteImages(payload)) {
+  if (!imageUrls(payload).length) {
+    warnings.push('missing_image_url');
+  } else if (!hasValidRemoteImages(payload)) {
     warnings.push('invalid_image_url');
   }
 
@@ -73,4 +86,5 @@ module.exports = {
   countDates,
   evaluatePayloadQuality,
   hasGenericBoilerplate,
+  imageUrls,
 };

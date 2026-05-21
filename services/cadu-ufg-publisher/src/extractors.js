@@ -5,7 +5,11 @@ const { canonicalizeUrl, decodeEntities, extractUrls, normalizeWhitespace, strip
 function buildWebyUrl(source, item, type) {
   if (item.redirect_url) return canonicalizeUrl(item.redirect_url, source.baseUrl);
   if (item.url) return canonicalizeUrl(item.url, source.baseUrl);
-  if (item.slug && item.id) return canonicalizeUrl(`/${type === 'event' ? 'e' : 'n'}/${item.id}-${item.slug}`, source.baseUrl);
+  if (item.slug && item.id) {
+    const slug = String(item.slug);
+    const segment = slug.startsWith(`${item.id}-`) ? slug : `${item.id}-${slug}`;
+    return canonicalizeUrl(`/${type === 'event' ? 'e' : 'n'}/${segment}`, source.baseUrl);
+  }
   if (item.slug) return canonicalizeUrl(`/n/${item.slug}`, source.baseUrl);
   return source.baseUrl;
 }
@@ -58,11 +62,11 @@ function extractLinksFromHtml(html, baseUrl) {
 }
 
 function normalizeWebyItem(source, item, type = 'news') {
-  const html = String(item.text || item.body || item.summary || '');
+  const html = String(item.text || item.body || item.information || item.summary || '');
   const title = cleanTitle(decodeEntities(item.title || item.name || ''));
   const text = stripHtml(html || item.summary || '');
   const sourceUrl = buildWebyUrl(source, item, type);
-  const updatedAt = item.updated_at || item.date_begin_at || item.created_at || item.published_at || '';
+  const updatedAt = item.updated_at || item.date_begin_at || item.begin_at || item.created_at || item.published_at || '';
   const extractedLinks = extractLinksFromHtml(html, sourceUrl);
   const pdfLinks = extractedLinks.map((link) => link.url).filter((url) => /\.pdf(?:$|[?#])/i.test(url));
 
@@ -72,11 +76,14 @@ function normalizeWebyItem(source, item, type = 'news') {
     sourceName: source.name,
     sourceUrl,
     title,
-    summary: normalizeWhitespace(stripHtml(item.summary || '')),
+    summary: normalizeWhitespace(stripHtml(item.summary || item.information || '')),
     text,
     html,
     imageUrl: resolveAssetUrl(item.image || item.image_url || item.cover || '', sourceUrl),
     updatedAt,
+    dateBeginAt: item.date_begin_at || item.begin_at || '',
+    dateEndAt: item.date_end_at || item.end_at || '',
+    categoryList: Array.isArray(item.category_list) ? item.category_list : [],
     type,
     pdfLinks,
     extractedLinks,

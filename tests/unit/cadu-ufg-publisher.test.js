@@ -6,10 +6,11 @@ const { HttpClient } = require('../../services/cadu-ufg-publisher/src/http-clien
 const { mapToKinoPayload, toPostgrestInsert } = require('../../services/cadu-ufg-publisher/src/mapper');
 const { resolveDeepSeekEndpoint, resolveDeepSeekModel } = require('../../services/cadu-ufg-publisher/src/model');
 const { splitMessage } = require('../../services/cadu-ufg-publisher/src/notifier');
-const { SupabasePublisher } = require('../../services/cadu-ufg-publisher/src/publisher');
+const { normalizeImages, SupabasePublisher } = require('../../services/cadu-ufg-publisher/src/publisher');
 const { evaluatePayloadQuality } = require('../../services/cadu-ufg-publisher/src/quality');
 const { collectReviews, formatReviews, resolveReviewKey } = require('../../services/cadu-ufg-publisher/src/reviews');
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
+const { discoverFromWebyJson } = require('../../services/cadu-ufg-publisher/src/runner');
 const { StateStore } = require('../../services/cadu-ufg-publisher/src/state');
 const { normalizeWhitespace } = require('../../services/cadu-ufg-publisher/src/utils');
 const { parseFeed, parseSitemap } = require('../../services/cadu-ufg-publisher/src/xml');
@@ -38,6 +39,27 @@ describe('cadu-ufg-publisher', () => {
       text: 'Inscricoes abertas',
     });
     expect(item.imageUrl).toBe('https://files.cercomp.ufg.br/img.png');
+  });
+
+  test('extractor normalizes Weby event JSON fields', () => {
+    const item = normalizeWebyItem({ id: 'ufg', name: 'UFG', baseUrl: 'https://ufg.br' }, {
+      id: 39107,
+      slug: '39107-concerto-cenico-a-vida-do-heroi',
+      name: 'Concerto Cenico - A Vida do Heroi',
+      information: '<p>Evento cultural da UFG.</p>',
+      image: 'https://files.cercomp.ufg.br/weby/up/1/o/evento.jpeg',
+      begin_at: '2026-05-22T20:00:00.000-03:00',
+      end_at: '2026-05-22T21:30:00.000-03:00',
+      kind: 'regional',
+    }, 'event');
+
+    expect(item.type).toBe('event');
+    expect(item.sourceUrl).toBe('https://ufg.br/e/39107-concerto-cenico-a-vida-do-heroi');
+    expect(item.title).toBe('Concerto Cenico - A Vida do Heroi');
+    expect(item.text).toContain('Evento cultural da UFG.');
+    expect(item.dateBeginAt).toBe('2026-05-22T20:00:00.000-03:00');
+    expect(item.dateEndAt).toBe('2026-05-22T21:30:00.000-03:00');
+    expect(item.imageUrl).toBe('https://files.cercomp.ufg.br/weby/up/1/o/evento.jpeg');
   });
 
   test('extractor preserves individual edital links with labels', () => {
@@ -108,6 +130,47 @@ describe('cadu-ufg-publisher', () => {
     expect(['publish', 'review']).toContain(result.decision);
   });
 
+  test('classifier keeps Weby events as eventos even when text mentions estagio', () => {
+    const item = {
+      type: 'event',
+      title: 'XIX Seminario de Estagio Supervisionado',
+      summary: 'Evento academico da Faculdade de Historia.',
+      text: 'Seminario com inscricoes para apresentacao de trabalhos.',
+      dateBeginAt: '2026-06-10T19:00:00.000-03:00',
+    };
+    const result = classifyItem(item, { tier: 3 }, { now: '2026-05-21T12:00:00-03:00' });
+
+    expect(result.module).toBe('eventos');
+    expect(result.category).toBe('academicos');
+  });
+
+  test('classifier sends pos-graduacao and aluno especial opportunities to pesquisa', () => {
+    const item = {
+      title: 'Processo seletivo para aluno especial de mestrado',
+      summary: 'Inscricoes abertas para disciplinas da pos-graduacao.',
+      text: 'Edital de selecao para mestrado e doutorado com prazo ate 10/06/2026.',
+      updatedAt: '2026-05-21',
+      pdfLinks: ['https://ppgadm.face.ufg.br/edital.pdf'],
+    };
+    const result = classifyItem(item, { tier: 3 }, { now: '2026-05-21T12:00:00-03:00' });
+
+    expect(result.module).toBe('oportunidades');
+    expect(result.category).toBe('pesquisa');
+  });
+
+  test('classifier promotes Espaco das Profissoes to review instead of discard', () => {
+    const item = {
+      title: 'Espaco das Profissoes apresenta oportunidades para o futuro',
+      summary: 'Evento segue ate 25/05/2026 com programacao para estudantes.',
+      text: 'Estandes mostram cursos de graduacao e oportunidades da Universidade Federal de Goias.',
+      updatedAt: '2026-05-21',
+    };
+    const result = classifyItem(item, { tier: 1 }, { now: '2026-05-21T12:00:00-03:00' });
+
+    expect(result.module).toBe('eventos');
+    expect(['publish', 'review']).toContain(result.decision);
+  });
+
   test('classifier discards expired signup windows', () => {
     const item = {
       title: 'Quer trabalhar com redes sociais na UFG?',
@@ -120,6 +183,22 @@ describe('cadu-ufg-publisher', () => {
 
     expect(result.temporal.expired).toBe(true);
     expect(result.temporal.deadlineDate).toBe('2026-05-11');
+    expect(result.decision).toBe('discard');
+  });
+
+  test('classifier uses Weby date_end_at as actionable deadline context', () => {
+    const item = {
+      title: 'Edital MARCA seleciona estudantes para mobilidade internacional',
+      summary: 'Inscricoes abertas para estudantes da UFG interessados em mobilidade.',
+      text: 'Processo seletivo com edital e formulario de candidatura.',
+      dateBeginAt: '2026-05-10T08:00:00.000-03:00',
+      dateEndAt: '2026-05-18T23:59:00.000-03:00',
+      pdfLinks: ['https://sri.ufg.br/edital.pdf'],
+    };
+    const result = classifyItem(item, { tier: 1 }, { now: '2026-05-21T12:00:00-03:00' });
+
+    expect(result.temporal.deadlineDate).toBe('2026-05-18');
+    expect(result.temporal.expired).toBe(true);
     expect(result.decision).toBe('discard');
   });
 
@@ -169,6 +248,23 @@ describe('cadu-ufg-publisher', () => {
     expect(row.image_url).toBe('https://prograd.ufg.br/assets/cover.jpg');
     expect(row.metadata.image_url).toBe('https://prograd.ufg.br/assets/cover.jpg');
     expect(row.metadata.source_url).toBe(item.sourceUrl);
+  });
+
+  test('mapper preserves Weby event begin_at as event date and time metadata', () => {
+    const item = normalizeWebyItem({ id: 'ufg', name: 'UFG', baseUrl: 'https://ufg.br' }, {
+      id: 39107,
+      slug: '39107-concerto-cenico-a-vida-do-heroi',
+      name: 'Concerto Cenico - A Vida do Heroi',
+      information: '<p>Evento cultural da UFG.</p>',
+      begin_at: '2026-05-22T20:00:00.000-03:00',
+      image: 'https://files.cercomp.ufg.br/weby/up/1/o/evento.jpeg',
+    }, 'event');
+    const classification = classifyItem(item, { tier: 1 }, { now: '2026-05-21T12:00:00-03:00' });
+    const payload = mapToKinoPayload(item, classification, { runId: 'test-run' });
+
+    expect(payload.modulo).toBe('eventos');
+    expect(payload.metadata.data_evento).toBe('2026-05-22');
+    expect(payload.metadata.hora_evento).toBe('20:00');
   });
 
   test('reviews helper lists review decisions only', () => {
@@ -271,7 +367,69 @@ describe('cadu-ufg-publisher', () => {
       'missing_multiple_documents',
       'missing_deadline_context',
       'missing_schedule_dates',
+      'missing_image_url',
     ]));
+  });
+
+  test('Weby JSON discovery paginates news and events before sorting candidates', async () => {
+    const calls = [];
+    const http = {
+      json: jest.fn(async (url) => {
+        calls.push(url);
+        const parsed = new URL(url);
+        const page = parsed.searchParams.get('page');
+        if (url.includes('/news.json') && page === '1') {
+          return {
+            data: { news: [{
+              id: 1,
+              slug: '1-noticia-antiga',
+              title: 'Noticia antiga',
+              text: '<p>Edital antigo</p>',
+              updated_at: '2026-05-19T10:00:00.000-03:00',
+            }] },
+          };
+        }
+        if (url.includes('/news.json') && page === '2') {
+          return {
+            data: { news: [{
+              id: 2,
+              slug: '2-noticia-recente',
+              title: 'Noticia recente',
+              text: '<p>Edital recente</p>',
+              updated_at: '2026-05-21T10:00:00.000-03:00',
+            }] },
+          };
+        }
+        if (url.includes('/events.json') && page === '1') {
+          return {
+            data: { events: [{
+              id: 3,
+              slug: '3-evento',
+              name: 'Evento UFG',
+              information: '<p>Programacao aberta</p>',
+              begin_at: '2026-05-22T20:00:00.000-03:00',
+            }] },
+          };
+        }
+      return { data: [] };
+      }),
+    };
+
+    const items = await discoverFromWebyJson(http, { id: 'ufg', name: 'UFG', baseUrl: 'https://ufg.br' }, 1, {
+      maxPages: 2,
+      perPage: 1,
+    });
+
+    expect(calls).toEqual(expect.arrayContaining([
+      'https://ufg.br/news.json?per_page=1&page=1&order=updated_at&direction=desc',
+      'https://ufg.br/news.json?per_page=1&page=2&order=updated_at&direction=desc',
+      'https://ufg.br/events.json?per_page=1&page=1&order=updated_at&direction=desc',
+    ]));
+    expect(items.map((item) => item.title)).toEqual([
+      'Evento UFG',
+      'Noticia recente',
+      'Noticia antiga',
+    ]);
   });
 
   test('DeepSeek endpoint accepts official base URL or explicit v1 base URL', () => {
@@ -326,6 +484,20 @@ describe('cadu-ufg-publisher', () => {
     }
   });
 
+  test('publisher normalizes direct and metadata cover image URLs', () => {
+    expect(normalizeImages({
+      imagens: ['https://source.local/cover.jpg'],
+      image_url: 'https://source.local/cover.jpg',
+      metadata: {
+        image_url: 'https://source.local/meta.png',
+        cover_url: 'javascript:alert(1)',
+      },
+    })).toEqual([
+      'https://source.local/cover.jpg',
+      'https://source.local/meta.png',
+    ]);
+  });
+
   test('telegram notifier chunks long review messages', () => {
     const chunks = splitMessage(['a'.repeat(2000), 'b'.repeat(2000), 'c'.repeat(2000)].join('\n\n'), 3900);
     expect(chunks.length).toBeGreaterThan(1);
@@ -357,5 +529,14 @@ describe('cadu-ufg-publisher', () => {
 
     expect(state.has('dry')).toBe(false);
     expect(state.has('published')).toBe(true);
+  });
+
+  test('state aliases prevent cross-source duplicate publications', () => {
+    const state = new StateStore('unused');
+    state.mark('item:primary', { decision: 'review' }, ['url:portal', 'raw:weby']);
+
+    expect(state.has('url:portal')).toBe(true);
+    expect(state.hasAny(['url:unit', 'raw:weby'])).toBe(true);
+    expect(Object.keys(state.data.seen)).toEqual(['item:primary']);
   });
 });

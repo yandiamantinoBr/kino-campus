@@ -42,6 +42,18 @@ function formatDatePt(isoDate) {
   return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
 }
 
+function isoDateFromDateTime(value) {
+  const match = String(value || '').match(/(20\d{2}-\d{2}-\d{2})/);
+  return match ? match[1] : '';
+}
+
+function timeFromDateTime(value) {
+  const raw = String(value || '');
+  const match = raw.match(/(?:T|\s)([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b/)
+    || raw.match(/\b([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b/);
+  return match ? `${match[1]}:${match[2]}` : '';
+}
+
 function validRemoteImageUrl(value) {
   try {
     const url = new URL(String(value || '').trim());
@@ -335,8 +347,10 @@ function mapToKinoPayload(item, classification, options = {}) {
   };
 
   if (classification.module === 'eventos') {
-    const date = parseBrazilianDate(text);
-    const time = parseTime(text);
+    const date = (classification.temporal && classification.temporal.eventDate)
+      || isoDateFromDateTime(item.dateBeginAt)
+      || parseBrazilianDate(text);
+    const time = timeFromDateTime(item.dateBeginAt) || parseTime(text);
     return {
       modulo: 'eventos',
       moduloLabel: 'Eventos',
