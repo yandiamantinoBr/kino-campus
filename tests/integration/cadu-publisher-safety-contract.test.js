@@ -32,7 +32,9 @@ describe('Cadu publisher safety contract', () => {
   });
 
   test('publisher exposes safe update and publish paths', () => {
-    expect(publisher).toContain('async safeUpdatePost(postId, fields)');
+    expect(publisher).toContain('async safeUpdatePost(postId, fields, options = {})');
+    expect(publisher).toContain('async caduEditPost(postId, fields, options = {})');
+    expect(publisher).toContain('async mergeMetadata(postId, changes, options = {})');
     expect(publisher).toContain('async publishPost(postId, options = {})');
     expect(publisher).toContain('mergeMetadata(current && current.metadata, metadataPatch)');
     expect(publisher).toContain("moderation_reason: null");
@@ -41,7 +43,15 @@ describe('Cadu publisher safety contract', () => {
   test('publisher normalizes object image candidates before storage or fallback', () => {
     expect(publisher).toContain('function imageUrlFromCandidate(value)');
     expect(publisher).toContain("value.url");
-    expect(publisher).toContain("if (fallbackUrl) out.push(fallbackUrl)");
+    expect(publisher).toContain("if (allowExternalFallback && fallbackUrl) out.push(fallbackUrl)");
+    expect(publisher).toContain('allowExternalImageFallback');
+  });
+
+  test('publisher serializes cadu edits and validates post-patch state', () => {
+    expect(publisher).toContain('postEditLocks = new Map');
+    expect(publisher).toContain('async withPostEditLock(postId, task)');
+    expect(publisher).toContain('validatePostPatch(post, row, changedFields = {})');
+    expect(publisher).toContain("code: 'POST_VALIDATE_FAILED'");
   });
 
   test('event time warning is non-blocking when event date exists', () => {

@@ -314,12 +314,18 @@ Para o Cadu, prefira override por usuario em vez de aumentar o padrao global. O 
 Use apenas estes metodos do publisher oficial:
 
 - `createPost(payload)`: cria uma publicacao nova pelo contrato completo do mapper.
-- `safeUpdatePost(postId, fields)`: repara campos e faz merge seguro de `metadata`; nunca use `PATCH` REST direto para metadata parcial.
+- `caduEditPost(postId, fields, options)`: repara campos, faz merge seguro de `metadata`, prepara imagem antes do PATCH, serializa edicoes por post e valida o estado final.
+- `mergeMetadata(postId, changes, options)`: altera apenas `metadata` sem substituir o objeto inteiro.
+- `safeUpdatePost(postId, fields, options)`: alias conservador para `caduEditPost`; nunca use `PATCH` REST direto para metadata parcial.
 - `publishPost(postId, options)`: promove para `published`, limpa `moderation_reason` e preserva a metadata existente.
 
 Nunca envie objetos brutos para `image_url`; se um helper retornar `{ url: "..." }`, passe o objeto inteiro para `prepareImagesForPost()` ou extraia `.url`. O publisher normaliza string, `{ url }`, `{ imageUrl }`, `{ image_url }`, `{ coverUrl }` e `{ cover_url }`, e nunca deve gravar `[object Object]`.
 
 Para imagens, o fluxo ideal e: manter URL externa como fallback em `posts.image_url`, `metadata.image_url` e `metadata.cover_url`; tentar upload para `kino-media`; se o upload falhar, publicar com a URL externa e reportar `media.uploads[].error` no digest. Se o erro for `storage_upload_http_403`, a policy `storage_kino_media_cadu_post_media_insert` ainda nao foi aplicada por um owner do projeto Supabase.
+
+Para imagens enviadas pelo Yan no Telegram, a URL do arquivo e temporaria e pode conter token. Use essa URL apenas como fonte de upload e chame `caduEditPost(..., { allowExternalImageFallback: false })`. Se o Storage falhar, o publisher retorna `IMAGE_UPLOAD_FAILED` e nao grava a URL temporaria no Kino.
+
+Guia completo para edicao segura: `docs/cadu-edicao-posts-para-codex.md`.
 
 ## Avisos De Qualidade
 

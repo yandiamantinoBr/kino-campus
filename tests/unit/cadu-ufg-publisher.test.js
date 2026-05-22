@@ -605,6 +605,101 @@ describe('cadu-ufg-publisher', () => {
     expect(prepared.uploads[0].source_url).toBe('https://source.local/cover.jpg');
   });
 
+  test('publisher can disable external image fallback for temporary Telegram images', async () => {
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    publisher.uploadImageToStorage = jest.fn(async () => {
+      throw new Error('storage_upload_http_403');
+    });
+
+    const prepared = await publisher.prepareImagesForPost(
+      'post-1',
+      [{ url: 'https://api.telegram.org/file/bot-token/photos/photo.jpg' }],
+      { allowExternalFallback: false },
+    );
+
+    expect(prepared.images).toEqual([]);
+    expect(prepared.uploads[0].source_url).toBe('https://api.telegram.org/file/bot-token/photos/photo.jpg');
+  });
+
+  test('patchPost fetches the post when return=representation returns an empty array', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn(async () => ({ ok: true, status: 200, text: async () => '[]' }));
+    try {
+      const publisher = new SupabasePublisher({
+        supabaseUrl: 'https://project.supabase.co',
+        supabaseAnonKey: 'anon',
+        kinoEmail: 'cadu@example.com',
+        kinoPassword: 'secret',
+      });
+      publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+      publisher.getPost = jest.fn(async () => ({ id: 'post-1', metadata: { kept: true } }));
+
+      const result = await publisher.patchPost('post-1', { title: 'Novo titulo' });
+
+      expect(result).toEqual({ id: 'post-1', metadata: { kept: true } });
+      expect(publisher.getPost).toHaveBeenCalledWith('post-1');
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  test('caduEditPost prepares image before patching and validates the final row', async () => {
+    const order = [];
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    publisher.getPost = jest.fn()
+      .mockResolvedValueOnce({ id: 'post-1', image_url: 'https://old.local/old.jpg', metadata: { link: 'https://old.local' } })
+      .mockResolvedValueOnce({
+        id: 'post-1',
+        image_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
+        metadata: {
+          link: 'https://new.local',
+          image_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
+          cover_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
+        },
+      });
+    publisher.getPostMedia = jest.fn(async () => [{ url: 'https://old.local/old.jpg' }]);
+    publisher.prepareImagesForPost = jest.fn(async () => {
+      order.push('prepare');
+      return {
+        images: ['https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg'],
+        uploads: [{ ok: true }],
+      };
+    });
+    publisher.patchPost = jest.fn(async (postId, row) => {
+      order.push('patch');
+      return { id: postId, ...row };
+    });
+    publisher.replacePostMedia = jest.fn(async () => {
+      order.push('media');
+      return { ok: true, count: 1 };
+    });
+
+    const result = await publisher.caduEditPost('post-1', {
+      metadata: { link: 'https://new.local' },
+      images: ['https://source.local/cover.jpg'],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(order).toEqual(['prepare', 'patch', 'media']);
+    expect(publisher.patchPost.mock.calls[0][1].metadata).toMatchObject({
+      link: 'https://new.local',
+      image_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
+      cover_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
+    });
+  });
+
   test('safeUpdatePost merges metadata and does not delete media when no image is provided', async () => {
     const publisher = new SupabasePublisher({
       supabaseUrl: 'https://project.supabase.co',
@@ -613,14 +708,26 @@ describe('cadu-ufg-publisher', () => {
       kinoPassword: 'secret',
     });
     publisher.session = { access_token: 'token', user: { id: 'user-1' } };
-    publisher.getPost = jest.fn(async () => ({
-      id: 'post-1',
-      metadata: {
-        link: 'https://old.local',
-        link_as_cta: true,
-        nested: { a: 1 },
-      },
-    }));
+    publisher.getPost = jest.fn()
+      .mockResolvedValueOnce({
+        id: 'post-1',
+        metadata: {
+          link: 'https://old.local',
+          link_as_cta: true,
+          nested: { a: 1 },
+        },
+      })
+      .mockResolvedValueOnce({
+        id: 'post-1',
+        status: 'published',
+        moderation_reason: null,
+        metadata: {
+          link: 'https://old.local',
+          link_as_cta: true,
+          contato: 'contato@ufg.br',
+          nested: { a: 1, b: 2 },
+        },
+      });
     publisher.patchPost = jest.fn(async (postId, row) => ({ id: postId, ...row }));
     publisher.replacePostMedia = jest.fn();
 
@@ -631,6 +738,7 @@ describe('cadu-ufg-publisher', () => {
     });
 
     const patch = publisher.patchPost.mock.calls[0][1];
+    expect(result.ok).toBe(true);
     expect(patch.status).toBe('published');
     expect(patch.moderation_reason).toBeNull();
     expect(patch.metadata).toMatchObject({
@@ -641,6 +749,55 @@ describe('cadu-ufg-publisher', () => {
     });
     expect(publisher.replacePostMedia).not.toHaveBeenCalled();
     expect(result.media.skipped).toBe(true);
+  });
+
+  test('caduEditPost serializes concurrent edits for the same post', async () => {
+    const order = [];
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    publisher.getPost = jest.fn(async () => ({ id: 'post-1', metadata: {} }));
+    publisher.patchPost = jest.fn(async (postId, row) => {
+      order.push(`patch-start-${row.metadata.label}`);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      order.push(`patch-end-${row.metadata.label}`);
+      return { id: postId, ...row };
+    });
+    publisher.validatePostPatch = jest.fn((post, row) => ({ ok: true, errors: [], post: { id: 'post-1', ...row } }));
+    publisher.replacePostMedia = jest.fn();
+
+    await Promise.all([
+      publisher.caduEditPost('post-1', { metadata: { label: 'a' } }),
+      publisher.caduEditPost('post-1', { metadata: { label: 'b' } }),
+    ]);
+
+    expect(order).toEqual(['patch-start-a', 'patch-end-a', 'patch-start-b', 'patch-end-b']);
+  });
+
+  test('mergeMetadata method performs a safe metadata-only edit', async () => {
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    publisher.getPost = jest.fn()
+      .mockResolvedValueOnce({ id: 'post-1', metadata: { link_as_cta: true } })
+      .mockResolvedValueOnce({ id: 'post-1', metadata: { link_as_cta: true, contato: 'cadu@ufg.br' } });
+    publisher.patchPost = jest.fn(async (postId, row) => ({ id: postId, ...row }));
+
+    const result = await publisher.mergeMetadata('post-1', { contato: 'cadu@ufg.br' });
+
+    expect(result.ok).toBe(true);
+    expect(publisher.patchPost.mock.calls[0][1].metadata).toMatchObject({
+      link_as_cta: true,
+      contato: 'cadu@ufg.br',
+    });
   });
 
   test('telegram notifier chunks long review messages', () => {

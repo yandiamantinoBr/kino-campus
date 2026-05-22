@@ -83,6 +83,18 @@ function mergeMetadata(base, patch) {
   return result;
 }
 
+function hasOwn(value, key) {
+  return Object.prototype.hasOwnProperty.call(value || {}, key);
+}
+
+function metadataContains(actual, expected) {
+  if (isPlainObject(expected)) {
+    if (!isPlainObject(actual)) return false;
+    return Object.entries(expected).every(([key, value]) => metadataContains(actual[key], value));
+  }
+  return JSON.stringify(actual) === JSON.stringify(expected);
+}
+
 function stripUndefined(row) {
   return Object.fromEntries(Object.entries(row || {}).filter(([, value]) => value !== undefined));
 }
@@ -141,6 +153,7 @@ class SupabasePublisher {
     this.maxImageBytes = Number(config.maxImageBytes || 6 * 1024 * 1024);
     this.userAgent = config.userAgent || 'CaduKinoCampusBot/1.0 (+contato@kinocampus.com.br)';
     this.session = null;
+    this.postEditLocks = new Map();
   }
 
   authHeaders(token) {
@@ -331,7 +344,8 @@ class SupabasePublisher {
     return `${this.url}/storage/v1/object/public/${encodeURIComponent(this.storageBucket)}/${encodedPath}`;
   }
 
-  async prepareImagesForPost(postId, images) {
+  async prepareImagesForPost(postId, images, options = {}) {
+    const allowExternalFallback = options.allowExternalFallback !== false;
     const uploads = [];
     const out = [];
     for (let index = 0; index < images.length; index += 1) {
@@ -343,7 +357,7 @@ class SupabasePublisher {
       } catch (error) {
         const fallbackUrl = imageUrlFromCandidate(originalUrl);
         uploads.push({ ok: false, source: originalUrl, source_url: fallbackUrl, error: error.message });
-        if (fallbackUrl) out.push(fallbackUrl);
+        if (allowExternalFallback && fallbackUrl) out.push(fallbackUrl);
       }
     }
     return { images: out, uploads };
@@ -432,6 +446,24 @@ class SupabasePublisher {
       return { ok: false, count: 0, error: text.slice(0, 300) };
     }
     return this.insertPostMedia(postId, images);
+  }
+
+  async getPostMedia(postId) {
+    const response = await fetch(`${this.url}/rest/v1/post_media?post_id=eq.${encodeURIComponent(postId)}&select=*&order=sort_order.asc`, {
+      method: 'GET',
+      headers: {
+        ...this.headers(),
+        accept: 'application/json',
+      },
+    });
+    const text = await response.text();
+    if (!response.ok) return [];
+    try {
+      const data = JSON.parse(text);
+      return Array.isArray(data) ? data : [];
+    } catch (_) {
+      return [];
+    }
   }
 
   async getPost(postId) {
@@ -555,28 +587,146 @@ class SupabasePublisher {
     if (!response.ok) {
       throw new Error(`Post update failed: HTTP ${response.status} ${text.slice(0, 500)}`);
     }
-    const data = JSON.parse(text);
-    return Array.isArray(data) ? data[0] : data;
+    const data = text ? JSON.parse(text) : null;
+    const post = Array.isArray(data) ? data[0] : data;
+    if (post && post.id) return post;
+    return this.getPost(postId);
   }
 
-  async safeUpdatePost(postId, fields) {
+  async withPostEditLock(postId, task) {
+    const key = String(postId || '').trim();
+    const previous = this.postEditLocks.get(key) || Promise.resolve();
+    let release;
+    const queued = previous.catch(() => {}).then(() => new Promise((resolve) => { release = resolve; }));
+    this.postEditLocks.set(key, queued);
+    await previous.catch(() => {});
+    try {
+      return await task();
+    } finally {
+      if (typeof release === 'function') release();
+      if (this.postEditLocks.get(key) === queued) this.postEditLocks.delete(key);
+    }
+  }
+
+  validatePostPatch(post, row, changedFields = {}) {
+    const errors = [];
+    const checkScalar = (key) => {
+      if (!hasOwn(row, key)) return;
+      const expected = row[key] == null ? null : String(row[key]);
+      const actual = post && post[key] == null ? null : String(post && post[key]);
+      if (actual !== expected) errors.push(`mismatch_${key}`);
+    };
+    ['title', 'description', 'location', 'module', 'category', 'status', 'visibility', 'image_url'].forEach(checkScalar);
+    if (hasOwn(row, 'moderation_reason')) {
+      const expected = row.moderation_reason == null ? null : String(row.moderation_reason);
+      const actual = post && post.moderation_reason == null ? null : String(post && post.moderation_reason);
+      if (actual !== expected) errors.push('mismatch_moderation_reason');
+    }
+
+    const metadata = isPlainObject(post && post.metadata) ? post.metadata : {};
+    Object.entries(changedFields).forEach(([key, expected]) => {
+      const actual = metadata[key];
+      if (!metadataContains(actual, expected)) errors.push(`mismatch_metadata_${key}`);
+    });
+    if (hasOwn(row, 'image_url') && row.image_url) {
+      if (metadata.image_url !== row.image_url) errors.push('mismatch_metadata_image_url');
+      if (metadata.cover_url !== row.image_url) errors.push('mismatch_metadata_cover_url');
+    }
+    return {
+      ok: errors.length === 0,
+      errors,
+      post,
+    };
+  }
+
+  async safeUpdatePost(postId, fields, options = {}) {
+    return this.caduEditPost(postId, fields, options);
+  }
+
+  async caduEditPost(postId, fields, options = {}) {
     if (!this.session) await this.signIn();
-    const current = await this.getPost(postId);
-    if (!current) throw new Error(`Post not found: ${postId}`);
-    const row = this.buildSafePatch(current, fields);
-    const post = await this.patchPost(postId, row);
-    const imageCandidates = normalizeImages(fields);
-    if (!imageCandidates.length) {
-      return { ok: true, post, media: { ok: true, count: 0, uploads: [], skipped: true } };
-    }
-    const prepared = await this.prepareImagesForPost(postId, imageCandidates);
-    if (prepared.images[0]) {
-      await this.updatePostCoverImage(postId, row, prepared.images[0]);
-      post.image_url = prepared.images[0];
-      post.metadata = withCoverImage(row, prepared.images[0]).metadata;
-    }
-    const media = await this.replacePostMedia(postId, prepared.images);
-    return { ok: true, post, media: { ...media, uploads: prepared.uploads } };
+    return this.withPostEditLock(postId, async () => {
+      const current = await this.getPost(postId);
+      if (!current) throw new Error(`Post not found: ${postId}`);
+
+      const imageCandidates = normalizeImages(fields);
+      const allowExternalFallback = options.allowExternalImageFallback !== false;
+      const row = this.buildSafePatch(current, fields);
+      const changedMetadata = isPlainObject(fields && fields.metadata) ? fields.metadata : {};
+      let prepared = { images: [], uploads: [] };
+      let previousMedia = [];
+
+      if (imageCandidates.length) {
+        previousMedia = await this.getPostMedia(postId);
+        prepared = await this.prepareImagesForPost(postId, imageCandidates, { allowExternalFallback });
+        if (!prepared.images[0]) {
+          return {
+            ok: false,
+            code: 'IMAGE_UPLOAD_FAILED',
+            message: allowExternalFallback
+              ? 'Nao foi possivel preparar uma imagem valida para o post.'
+              : 'Upload da imagem falhou e fallback externo esta desativado.',
+            post: current,
+            media: { ok: false, count: 0, uploads: prepared.uploads },
+          };
+        }
+        const coverPatch = withCoverImage(row, prepared.images[0]);
+        row.image_url = coverPatch.image_url;
+        row.metadata = coverPatch.metadata;
+      }
+
+      const post = await this.patchPost(postId, row);
+      let media = { ok: true, count: 0, uploads: prepared.uploads, skipped: true };
+
+      if (imageCandidates.length) {
+        media = await this.replacePostMedia(postId, prepared.images);
+        if (!media.ok) {
+          await this.patchPost(postId, {
+            image_url: current.image_url || null,
+            metadata: isPlainObject(current.metadata) ? current.metadata : {},
+          }).catch(() => {});
+          const previousUrls = previousMedia.map((item) => item && item.url).filter(Boolean);
+          await this.replacePostMedia(postId, previousUrls).catch(() => {});
+          return {
+            ok: false,
+            code: 'POST_MEDIA_SYNC_FAILED',
+            message: 'A imagem foi preparada, mas a sincronizacao de post_media falhou. O post foi restaurado para a capa anterior quando possivel.',
+            post: current,
+            media: { ...media, uploads: prepared.uploads },
+          };
+        }
+      }
+
+      const fresh = await this.getPost(postId);
+      const expectedMetadata = {
+        ...changedMetadata,
+      };
+      if (row.image_url) {
+        expectedMetadata.image_url = row.image_url;
+        expectedMetadata.cover_url = row.image_url;
+      }
+      const validation = this.validatePostPatch(fresh, row, expectedMetadata);
+      if (!validation.ok) {
+        return {
+          ok: false,
+          code: 'POST_VALIDATE_FAILED',
+          message: 'O post foi salvo, mas a validacao posterior encontrou divergencias.',
+          post: validation.post || post,
+          validation,
+          media: { ...media, uploads: prepared.uploads },
+        };
+      }
+      return {
+        ok: true,
+        post: fresh || post,
+        validation,
+        media: { ...media, uploads: prepared.uploads },
+      };
+    });
+  }
+
+  async mergeMetadata(postId, changes, options = {}) {
+    return this.caduEditPost(postId, { metadata: changes || {} }, options);
   }
 
   async updatePost(postId, payload) {

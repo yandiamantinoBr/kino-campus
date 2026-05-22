@@ -396,16 +396,21 @@ describe('local.posts-read.adapter.js - listas resumidas e ranking', () => {
   });
 
   test('getTopContributors agrega score por autor e respeita filtro de modulo', async () => {
-    const result = await postsRead().getTopContributors('month', 'moradia', 10, buildDeps());
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-05-01T12:00:00Z'));
+    try {
+      const result = await postsRead().getTopContributors('month', 'moradia', 10, buildDeps());
 
-    expect(result).toEqual([
-      expect.objectContaining({
-        user_id: 'USER_01',
-        display_name: 'Ana Moradia',
-        posts_count: 1,
-        rank: 1,
-      }),
-    ]);
+      expect(result).toEqual([
+        expect.objectContaining({
+          user_id: 'USER_01',
+          display_name: 'Ana Moradia',
+          posts_count: 1,
+          rank: 1,
+        }),
+      ]);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   test('getTopContributors ignora posts fora do periodo', async () => {
