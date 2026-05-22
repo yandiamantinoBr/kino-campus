@@ -1,6 +1,6 @@
 # Otimizacao De Performance E Navegacao
 
-Atualizado em: 2026-05-21
+Atualizado em: 2026-05-22
 
 ## Objetivo
 
@@ -68,6 +68,24 @@ Rollback: reverter o bloco `pagehide/pageshow` em `kc-feed.controller.js`.
 - Navigation preload foi preparado para reduzir custo quando o SW for ativado.
 
 Rollback: manter `sw.enabled=false`. Se ja estiver ativo no navegador, subir novo deploy com versao de cache diferente ou remover o registro.
+
+## Fase 1.1 Implementada
+
+### Ordem Inteligente Do `kc-nav-links`
+
+- `assets/js/features/kc-nav-links-personalized.js` reordena somente os links existentes da navegacao principal.
+- A ordem estatica do HTML permanece como fallback imediato e como rollback visual.
+- O calculo usa sinais ja existentes:
+  - `KCAPI.getPersonalizedTabs()`, que combina afinidade pessoal, `highlight_score`, recencia e volume;
+  - `KCHomeCategories.getCategoryCounts()`, para volume atual por modulo/categoria;
+  - `kc_nav_module_affinity_v1`, afinidade local de cliques no proprio menu, apenas com consentimento de analytics.
+- Pesos no cliente: 62% sinais pessoais/trending, 33% volume global e 5% estabilidade da ordem original.
+- Cache de sessao: `kc:navLinksOrder:v1`, TTL de 10 minutos.
+- Sem consentimento de analytics, o script nao usa afinidade pessoal; ele pode usar apenas sinais globais ou manter a ordem estatica.
+
+Risco: mudanca de ordem pode surpreender usuarios muito acostumados com a posicao fixa. A mitigacao e manter a ordem estatica se nao houver sinais e preservar dimensoes/classes dos links.
+
+Rollback: remover as tags de `kc-nav-links-personalized.js` dos HTMLs publicos ou limpar `kc:navLinksOrder:v1` e `kc_nav_module_affinity_v1` no navegador.
 
 ## Validacao Da Fase 1
 

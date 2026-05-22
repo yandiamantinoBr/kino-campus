@@ -20,6 +20,8 @@ Métricas administrativas devem ser agregadas por padrão. A plataforma não dev
 | `kc_home_category_affinity_v1` | `localStorage` | Preferências locais de módulos/categorias da home. | Analytics | Local, com TTL operacional | Privacidade e Analytics |
 | `kc_home_category_queue_v1` | `localStorage` | Fila local de eventos de afinidade. | Analytics | Até sincronizar | Privacidade e Analytics |
 | `kc_home_category_session_v1` | `localStorage` | Sessão pseudônima para afinidade de categorias. | Analytics | Até limpeza local | Privacidade e Analytics |
+| `kc_nav_module_affinity_v1` | `localStorage` | Preferência local de módulos clicados no menu principal. | Analytics | Local, com TTL operacional indireto | Personalização do `kc-nav-links` |
+| `kc:navLinksOrder:v1` | `sessionStorage` | Cache de 10 minutos da ordem calculada do menu principal. | Operacional | Sessão do navegador | Navegação |
 | `kc_privacy_analytics_session_v1` | `localStorage` | Sessão pseudônima para eventos opcionais; no banco só vira hash SHA-256. | Necessário para consentimento; analytics para eventos opcionais | Até limpeza local | Privacidade e Analytics |
 | `kc_privacy_consent_recorded_v1` | `localStorage` | Evita reenviar o mesmo estado de consentimento toda visita. | Necessário | Até mudança de consentimento | Não exibido diretamente |
 | `search_queries` | Supabase | Busca agregada usada no Dashboard. | Analytics | 6 meses | Dashboard e Privacidade |
@@ -70,6 +72,15 @@ Se a migration ainda não foi aplicada, o card mostra alerta e aponta para a pá
 - filtros por período, evento, página e módulo;
 - exportação XLSX e PDF.
 
+
+Se `kc_admin_privacy_analytics` retornar `PGRST202` porque a migration ainda não chegou ao Supabase ou o schema cache ainda não recarregou, a página não deve quebrar. O controller tenta, nesta ordem:
+
+1. RPC `kc_admin_privacy_analytics`;
+2. leitura direta das tabelas `privacy_analytics_events` e `privacy_consent_events`, se já existirem;
+3. modo de compatibilidade com `search_queries`, `post_view_events` e `hero_banners`.
+
+O modo de compatibilidade mostra buscas, views de posts e banners cadastrados, mas CTR real de banners e consentimento agregado dependem da migration completa.
+
 ### Moderação, Denúncias, Banners E Ajuda
 
 Essas áreas podem usar os agregados para entender picos de uso:
@@ -112,3 +123,4 @@ Regras:
 - `rg "document\\.cookie|Set-Cookie|cookieStore"` deve continuar sem ocorrências no código da plataforma.
 - `kc-search.js` e `kc-home-categories.js` devem retornar `false` quando `KCConsent` não estiver disponível.
 - Eventos opcionais devem falhar silenciosamente se a RPC ainda não existir.
+- `kc-nav-links-personalized.js` deve manter a ordem estática como fallback e usar sinais pessoais apenas com consentimento de analytics.

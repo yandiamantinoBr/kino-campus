@@ -52,6 +52,22 @@
       admin: 'Privacidade e Analytics',
     },
     {
+      name: 'kc_nav_module_affinity_v1',
+      storage: 'localStorage',
+      purpose: 'Guarda afinidade local de cliques no menu principal.',
+      consent: 'Analytics',
+      retention: 'Local com TTL operacional',
+      admin: 'Navegacao principal',
+    },
+    {
+      name: 'kc:navLinksOrder:v1',
+      storage: 'sessionStorage',
+      purpose: 'Cache de 10 minutos da ordem calculada do menu principal.',
+      consent: 'Operacional',
+      retention: 'Sessao do navegador',
+      admin: 'Navegacao principal',
+    },
+    {
       name: 'privacy_analytics_events',
       storage: 'Supabase',
       purpose: 'Eventos opcionais agregáveis para admin.',
@@ -195,12 +211,127 @@
     };
   }
 
-  async function loadData() {
-    const client = getClient();
-    if (!client || typeof client.rpc !== 'function') {
-      throw new Error('Supabase client não disponível.');
-    }
-    const filters = readFilters();
+  function isMissingRpcError(error) {
+    const code = String(error && error.code || '').trim();
+    const message = String(error && (error.message || error.details || error.hint) || '').toLowerCase();
+    return code === 'PGRST202'
+      || code === '42883'
+      || (message.includes('kc_admin_privacy_analytics') && message.includes('schema cache'))
+      || (message.includes('could not find the function') && message.includes('kc_admin_privacy_analytics'));
+  }
+
+  function isMissingTableError(error) {
+    const code = String(error && error.code || '').trim();
+    const message = String(error && (error.message || error.details || error.hint) || '').toLowerCase();
+    return code === '42P01'
+      || code === 'PGRST205'
+      || message.includes('could not find the table')
+      || message.includes('does not exist');
+  }
+
+  function matchesFilters(row, filters) {
+    if (!row || !filters) return false;
+    if (filters.eventName && filters.eventName !== 'all' && row.event_name !== filters.eventName) return false;
+    if (filters.pagePath && filters.pagePath !== 'all' && row.page_path !== filters.pagePath) return false;
+    if (filters.moduleKey && filters.moduleKey !== 'all' && row.module_key !== filters.moduleKey) return false;
+    return true;
+  }
+
+  function sessionKey(row, index) {
+    return String(row.session_hash || row.session_id || row.session || row.id || ('row-' + index));
+  }
+
+  function aggregateEventRows(rows, consentRows, filters, options) {
+    const sourceRows = (Array.isArray(rows) ? rows : []).filter(function (row) {
+      return matchesFilters(row, filters);
+    });
+    const eventMap = new Map();
+    const pageMap = new Map();
+    const bannerMap = new Map();
+    const sessions = new Set();
+
+    sourceRows.forEach(function (row, index) {
+      const eventName = String(row.event_name || 'unknown');
+      const pagePath = String(row.page_path || '-');
+      const session = sessionKey(row, index);
+      sessions.add(session);
+
+      if (!eventMap.has(eventName)) eventMap.set(eventName, { event_name: eventName, events: 0, sessionsSet: new Set() });
+      const eventEntry = eventMap.get(eventName);
+      eventEntry.events += 1;
+      eventEntry.sessionsSet.add(session);
+
+      if (!pageMap.has(pagePath)) pageMap.set(pagePath, { page_path: pagePath, events: 0, sessionsSet: new Set() });
+      const pageEntry = pageMap.get(pagePath);
+      pageEntry.events += 1;
+      pageEntry.sessionsSet.add(session);
+
+      if (row.entity_type === 'banner') {
+        const key = String(row.entity_id || (row.metadata && row.metadata.entity_label) || 'banner');
+        if (!bannerMap.has(key)) {
+          bannerMap.set(key, { entity_id: key, label: key || 'Banner', impressions: 0, clicks: 0, ctr: 0 });
+        }
+        const bannerEntry = bannerMap.get(key);
+        if (row.metadata && row.metadata.entity_label) bannerEntry.label = row.metadata.entity_label;
+        if (eventName === 'banner_impression') bannerEntry.impressions += 1;
+        if (eventName === 'banner_click') bannerEntry.clicks += 1;
+      }
+    });
+
+    const byEvent = Array.from(eventMap.values()).map(function (row) {
+      return { event_name: row.event_name, events: row.events, sessions: row.sessionsSet.size };
+    }).sort(function (left, right) {
+      return right.events - left.events || String(left.event_name).localeCompare(String(right.event_name), 'pt-BR');
+    });
+
+    const byPage = Array.from(pageMap.values()).map(function (row) {
+      return { page_path: row.page_path, events: row.events, sessions: row.sessionsSet.size };
+    }).sort(function (left, right) {
+      return right.events - left.events || String(left.page_path).localeCompare(String(right.page_path), 'pt-BR');
+    }).slice(0, 30);
+
+    const banners = Array.from(bannerMap.values()).map(function (row) {
+      const impressions = Number(row.impressions) || 0;
+      const clicks = Number(row.clicks) || 0;
+      return Object.assign({}, row, {
+        ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+      });
+    }).sort(function (left, right) {
+      return right.ctr - left.ctr || right.clicks - left.clicks || right.impressions - left.impressions;
+    });
+
+    const consentList = Array.isArray(consentRows) ? consentRows : [];
+    return {
+      ok: true,
+      generated_at: new Date().toISOString(),
+      since: filters.since,
+      totals: {
+        events: sourceRows.length,
+        sessions: sessions.size,
+        searches: sourceRows.filter(function (row) { return row.event_name === 'search'; }).length,
+        banner_impressions: sourceRows.filter(function (row) { return row.event_name === 'banner_impression'; }).length,
+        banner_clicks: sourceRows.filter(function (row) { return row.event_name === 'banner_click'; }).length,
+        help_submits: sourceRows.filter(function (row) { return row.event_name === 'help_submit'; }).length,
+        report_submits: sourceRows.filter(function (row) { return row.event_name === 'report_submit'; }).length,
+      },
+      consent: {
+        updates: consentList.length,
+        analytics_accepted: consentList.filter(function (row) { return row.analytics_enabled === true || row.analytics === true; }).length,
+        analytics_rejected: consentList.filter(function (row) { return row.analytics_enabled === false || row.analytics === false; }).length,
+        preferences_accepted: consentList.filter(function (row) { return row.preferences_enabled === true || row.preferences === true; }).length,
+      },
+      by_event: byEvent,
+      by_page: byPage,
+      banners,
+      rows: sourceRows.slice(0, filters.limit),
+      filters,
+      source_mode: options && options.sourceMode || 'rpc',
+      notice: options && options.notice || '',
+    };
+  }
+
+  async function loadDataViaRpcFallbackAware(client, filters) {
+    if (!client || typeof client.rpc !== 'function') throw new Error('Supabase client indisponivel.');
     const response = await client.rpc('kc_admin_privacy_analytics', {
       p_since: filters.since,
       p_event_name: filters.eventName,
@@ -214,10 +345,180 @@
     if (!data || data.ok === false) {
       const code = data && data.code ? data.code : 'RPC_UNAVAILABLE';
       throw new Error(code === 'FORBIDDEN'
-        ? 'A RPC retornou acesso negado para este usuário.'
-        : 'A RPC de privacidade ainda não está disponível. Rode a migration v9.3.5.16 no Supabase.');
+        ? 'A RPC retornou acesso negado para este usuario.'
+        : 'A RPC de privacidade ainda nao esta disponivel. Rode a migration v9.3.5.16 no Supabase.');
     }
-    return Object.assign({}, data, { filters });
+    return Object.assign({}, data, { filters, source_mode: 'rpc' });
+  }
+
+  async function loadDirectPrivacyRows(client, filters) {
+    try {
+      let query = client
+        .from('privacy_analytics_events')
+        .select('created_at,event_name,page_path,entity_type,entity_id,module_key,metadata,session_hash')
+        .gte('created_at', filters.since)
+        .order('created_at', { ascending: false })
+        .limit(Math.max(1, Math.min(filters.limit, 1000)));
+      if (filters.eventName !== 'all') query = query.eq('event_name', filters.eventName);
+      if (filters.pagePath !== 'all') query = query.eq('page_path', filters.pagePath);
+      if (filters.moduleKey !== 'all') query = query.eq('module_key', filters.moduleKey);
+      const result = await query;
+      if (result && result.error) {
+        if (isMissingTableError(result.error)) return null;
+        throw result.error;
+      }
+
+      let consentRows = [];
+      try {
+        const consentResult = await client
+          .from('privacy_consent_events')
+          .select('created_at,preferences_enabled,analytics_enabled')
+          .gte('created_at', filters.since)
+          .limit(5000);
+        if (consentResult && !consentResult.error && Array.isArray(consentResult.data)) {
+          consentRows = consentResult.data;
+        }
+      } catch (_) { }
+
+      return aggregateEventRows(result && result.data || [], consentRows, filters, {
+        sourceMode: 'direct_privacy_tables',
+        notice: 'RPC ausente; usando tabelas de privacidade diretamente.',
+      });
+    } catch (error) {
+      if (isMissingTableError(error)) return null;
+      throw error;
+    }
+  }
+
+  async function safeSelectRows(builder) {
+    try {
+      const result = await builder();
+      if (result && result.error) return [];
+      return Array.isArray(result && result.data) ? result.data : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function loadLegacyAnalyticsRows(client, filters) {
+    const rows = [];
+    const includeSearch = filters.eventName === 'all' || filters.eventName === 'search';
+    const includeViews = filters.eventName === 'all' || filters.eventName === 'post_open';
+    const pageAllowsSearch = filters.pagePath === 'all' || filters.pagePath === 'search-results.html';
+    const pageAllowsViews = filters.pagePath === 'all' || filters.pagePath === '_product.html' || filters.pagePath === 'product.html';
+
+    if (includeSearch && pageAllowsSearch && filters.moduleKey === 'all') {
+      const searchRows = await safeSelectRows(function () {
+        return client
+          .from('search_queries')
+          .select('id,term,session_id,created_at')
+          .gte('created_at', filters.since)
+          .order('created_at', { ascending: false })
+          .limit(Math.max(1, Math.min(filters.limit, 1000)));
+      });
+      searchRows.forEach(function (row) {
+        rows.push({
+          created_at: row.created_at,
+          event_name: 'search',
+          page_path: 'search-results.html',
+          entity_type: 'search',
+          entity_id: row.term || '',
+          module_key: '',
+          metadata: { source_table: 'search_queries' },
+          session_hash: row.session_id || row.id || '',
+        });
+      });
+    }
+
+    if (includeViews && pageAllowsViews) {
+      let viewRows = await safeSelectRows(function () {
+        return client
+          .from('post_view_events')
+          .select('id,post_id,session_id,created_at,posts(module,title)')
+          .gte('created_at', filters.since)
+          .order('created_at', { ascending: false })
+          .limit(Math.max(1, Math.min(filters.limit, 1000)));
+      });
+      if (!viewRows.length) {
+        viewRows = await safeSelectRows(function () {
+          return client
+            .from('post_view_events')
+            .select('id,post_id,session_id,created_at')
+            .gte('created_at', filters.since)
+            .order('created_at', { ascending: false })
+            .limit(Math.max(1, Math.min(filters.limit, 1000)));
+        });
+      }
+      viewRows.forEach(function (row) {
+        const post = row.posts && !Array.isArray(row.posts) ? row.posts : {};
+        const moduleKey = String(post.module || '');
+        if (filters.moduleKey !== 'all' && moduleKey !== filters.moduleKey) return;
+        rows.push({
+          created_at: row.created_at,
+          event_name: 'post_open',
+          page_path: '_product.html',
+          entity_type: 'post',
+          entity_id: row.post_id || '',
+          module_key: moduleKey,
+          metadata: { source_table: 'post_view_events', post_title: post.title || '' },
+          session_hash: row.session_id || row.id || '',
+        });
+      });
+    }
+
+    rows.sort(function (left, right) {
+      return new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime();
+    });
+
+    const data = aggregateEventRows(rows, [], filters, {
+      sourceMode: 'legacy_fallback',
+      notice: 'Migration/RPC de privacidade pendente; exibindo compatibilidade com buscas e views existentes.',
+    });
+
+    if (filters.eventName === 'all' || filters.eventName === 'banner_impression' || filters.eventName === 'banner_click') {
+      const bannerRows = await safeSelectRows(function () {
+        return client
+          .from('hero_banners')
+          .select('id,title,is_active,sort_order')
+          .order('sort_order', { ascending: true })
+          .limit(50);
+      });
+      if (bannerRows.length && !data.banners.length) {
+        data.banners = bannerRows.map(function (banner) {
+          return {
+            entity_id: banner.id,
+            label: banner.title || 'Banner',
+            impressions: 0,
+            clicks: 0,
+            ctr: 0,
+          };
+        });
+      }
+    }
+
+    return data;
+  }
+
+  async function loadData() {
+    const client = getClient();
+    const filters = readFilters();
+    if (!client) {
+      return aggregateEventRows([], [], filters, {
+        sourceMode: 'no_client',
+        notice: 'Supabase client indisponivel; exibindo inventario local.',
+      });
+    }
+    try {
+      return await loadDataViaRpcFallbackAware(client, filters);
+    } catch (error) {
+      if (!isMissingRpcError(error)) {
+        console.warn('[Admin Privacy Analytics] RPC falhou; tentando fallback:', error && error.message || error);
+      }
+    }
+
+    const direct = await loadDirectPrivacyRows(client, filters);
+    if (direct) return direct;
+    return loadLegacyAnalyticsRows(client, filters);
   }
 
   function metricCard(icon, label, value, subtitle) {
@@ -316,7 +617,10 @@
     ], 'Sem eventos detalhados.');
 
     const updated = $('#privacyLastSync');
-    if (updated) updated.textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR');
+    if (updated) {
+      const suffix = data && data.notice ? ' - ' + data.notice : '';
+      updated.textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR') + suffix;
+    }
   }
 
   function exportRows(data) {

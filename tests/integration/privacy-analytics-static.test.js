@@ -16,6 +16,7 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
       'assets/js/features/kc-search.js',
       'assets/js/features/kc-home-categories.js',
       'assets/js/features/kc-privacy-analytics.js',
+      'assets/js/features/kc-nav-links-personalized.js',
       'assets/js/api/kc-supabase.client.js',
     ];
     files.forEach((file) => {
@@ -45,12 +46,25 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
   test('admin possui pagina dedicada, nav e exportacao', () => {
     const page = read('admin/privacy-analytics.html');
     const dashboard = read('admin/index.html');
+    const controller = read('assets/js/controllers/admin/admin-privacy-analytics.controller.js');
     expect(page).toContain('Privacidade e Analytics');
     expect(page).toContain('privacyExportXlsx');
     expect(page).toContain('privacyExportPdf');
     expect(page).toContain('../assets/js/controllers/admin/admin-export.shared.js?v=8.6.1');
-    expect(page).toContain('../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.1');
-    expect(dashboard).toContain('admin-dashboard.privacy.js?v=8.6.1');
+    expect(page).toContain('../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.2');
+    expect(dashboard).toContain('admin-dashboard.privacy.js?v=8.6.2');
     expect(dashboard).toContain('privacy-analytics.html');
+    expect(controller).toContain('isMissingRpcError');
+    expect(controller).toContain('loadLegacyAnalyticsRows');
+  });
+
+  test('menu principal carrega personalizacao isolada sem editar a estrutura base', () => {
+    const index = read('index.html');
+    const script = read('assets/js/features/kc-nav-links-personalized.js');
+    expect(index).toContain('assets/js/features/kc-nav-links-personalized.js?v=8.6.2');
+    expect(script).toContain('kc:navLinksOrder:v1');
+    expect(script).toContain('KCAPI.getPersonalizedTabs');
+    expect(script).toContain('KCHomeCategories.getCategoryCounts');
+    expect(script).toContain('applyOrderToNav');
   });
 });
