@@ -31,7 +31,7 @@
     if (window.KCConsent && typeof window.KCConsent.hasConsent === 'function') {
       return window.KCConsent.hasConsent('analytics');
     }
-    return true;
+    return false;
   }
 
   function bindConsentLifecycle() {
@@ -310,6 +310,18 @@
 
     recordLocal(entries);
     scheduleFlush(60);
+
+    try {
+      if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+        const first = categories[0] || {};
+        const privacyEvent = eventType === 'post_open' ? 'post_open' : 'category_click';
+        window.KCPrivacyAnalytics.track(privacyEvent, {
+          module_key: first.moduleKey || '',
+          category_key: first.categoryKey || '',
+          source: eventType,
+        }).catch(function () {});
+      }
+    } catch (_) { }
 
     try {
       window.dispatchEvent(new CustomEvent('kc:home-categories-tracked', {

@@ -135,6 +135,16 @@
   }
 
   /* Registra clique para alimentar o algoritmo na próxima visita. */
+  function hasAnalyticsConsent() {
+    try {
+      return !!(window.KCConsent
+        && typeof window.KCConsent.hasConsent === 'function'
+        && window.KCConsent.hasConsent('analytics'));
+    } catch (_) {
+      return false;
+    }
+  }
+
   function attachClickTracking(container) {
     if (!container || container.__kcTrackingAttached) return;
     container.__kcTrackingAttached = true;
@@ -144,6 +154,17 @@
       const moduleKey = a.getAttribute('data-kc-tab-module') || '';
       const categoryKey = a.getAttribute('data-kc-tab-category') || '';
       if (!moduleKey) return;
+      if (!hasAnalyticsConsent()) return;
+      try {
+        if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+          window.KCPrivacyAnalytics.track('category_click', {
+            module_key: moduleKey,
+            category_key: categoryKey,
+            source: 'personalized_tab',
+            href: a.href,
+          }).catch(function () {});
+        }
+      } catch (_) { }
       try {
         const sb = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
           ? window.KCSupabase.getClient() : null;

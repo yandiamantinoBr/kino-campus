@@ -117,8 +117,9 @@
   function buildBannerHTML(banner, isActive) {
     const gradStyle = `background: linear-gradient(90deg, ${esc(banner.gradient_from)}, ${esc(banner.gradient_to)});`;
     const iconKey = getHeroIconKey(banner.icon_class);
+    const bannerId = banner.id || banner.banner_id || banner.title || '';
     return [
-      `<div class="kc-hero-banner${isActive ? ' active' : ''}" data-hero-icon="${esc(iconKey)}" style="${gradStyle}">`,
+      `<div class="kc-hero-banner${isActive ? ' active' : ''}" data-hero-icon="${esc(iconKey)}" data-kc-banner-id="${esc(bannerId)}" data-kc-banner-title="${esc(banner.title)}" style="${gradStyle}">`,
       '<div class="kc-hero-inner">',
       '<div class="kc-hero-content">',
       `<span class="kc-hero-pill">${esc(banner.pill_text)}</span>`,

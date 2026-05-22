@@ -259,6 +259,17 @@
       }
 
       setStatus('Pedido enviado com sucesso. Obrigado por ajudar a melhorar o KinoCampus.', 'success');
+      try {
+        if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+          window.KCPrivacyAnalytics.track('help_submit', {
+            source: 'help_form',
+            status: 'submitted',
+            reason: payload.type || '',
+            category: payload.topic || '',
+            page_path: payload.page_path || '/ajuda.html',
+          }).catch(function () {});
+        }
+      } catch (_) { }
       const form = $('#helpRequestForm');
       if (form) form.reset();
       renderOptions($('#helpType'), Help.HELP_TYPE_OPTIONS || [], 'Selecione a categoria principal');
@@ -329,6 +340,14 @@
 
     prefillContext();
     initPullToRefresh();
+    try {
+      if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+        window.KCPrivacyAnalytics.track('help_open', {
+          source: 'help_page',
+          page_path: '/ajuda.html',
+        }).catch(function () {});
+      }
+    } catch (_) { }
   }
 
   window.KCHelpRefresh = refreshHelpPage;

@@ -739,6 +739,7 @@
         <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
         <a href="help-requests.html" class="kc-admin-nav__link"><i class="fas fa-life-ring"></i> Pedidos de ajuda</a>
+        <a href="privacy-analytics.html" class="kc-admin-nav__link"><i class="fas fa-shield-heart"></i> Privacidade</a>
       </nav>
       <div class="kc-user-actions">
         <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
@@ -775,6 +776,7 @@
                 <a href="moderation.html"><i class="fas fa-shield-halved"></i> Ir para Moderação</a>
                 <a href="reports.html"><i class="fas fa-flag"></i> Ir para Denúncias</a>
                 <a href="banners.html"><i class="fas fa-images"></i> Gerenciar Banners</a>
+                <a href="privacy-analytics.html"><i class="fas fa-shield-heart"></i> Privacidade</a>
               </div>
             </section>
 
@@ -788,6 +790,11 @@
 
             <div class="kc-admin-section-title" id="admin-community-title"><i class="fas fa-users"></i> Comunidade</div>
             <div class="kc-admin-grid" id="admin-community-metrics"></div>
+
+            <div class="kc-admin-section-title" id="admin-privacy-title"><i class="fas fa-shield-heart"></i> Privacidade e métricas</div>
+            <div class="kc-admin-grid" id="admin-privacy-metrics">
+              <article class="kc-admin-card"><div class="kc-admin-card__label"><i class="fas fa-spinner fa-spin"></i> Carregando privacidade</div><strong>...</strong></article>
+            </div>
 
             <section class="kc-admin-section">
               <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca</h3>
@@ -952,6 +959,7 @@
     <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
     <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
     <a href="help-requests.html"><i class="fas fa-life-ring"></i><span>Ajuda</span></a>
+    <a href="privacy-analytics.html"><i class="fas fa-shield-heart"></i><span>Privac.</span></a>
   </nav>
 
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
@@ -1015,6 +1023,7 @@
     <script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.1"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.1"></script>
     <script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>
+    <script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.1"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.1"></script>
 </body>
 </html>

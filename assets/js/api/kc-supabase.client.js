@@ -495,6 +495,23 @@
   }
 
   // Expõe internals para sub-módulos (runtime late-binding)
+  function ensurePrivacyAnalyticsScript() {
+    try {
+      if (typeof document === 'undefined') return;
+      if (window.KCPrivacyAnalytics || document.querySelector('script[data-kc-privacy-analytics="true"]')) return;
+      const current = document.currentScript;
+      const currentSrc = current && current.src ? String(current.src) : '';
+      const script = document.createElement('script');
+      script.defer = true;
+      script.async = false;
+      script.src = currentSrc
+        ? currentSrc.replace(/assets\/js\/api\/kc-supabase\.client\.js(?:\?[^#]*)?$/i, 'assets/js/features/kc-privacy-analytics.js?v=8.6.1')
+        : 'assets/js/features/kc-privacy-analytics.js?v=8.6.1';
+      script.setAttribute('data-kc-privacy-analytics', 'true');
+      (document.head || document.documentElement).appendChild(script);
+    } catch (_) { }
+  }
+
   window._KCSupabaseInternal = Object.freeze({ getClient: getClient, readEnv: readEnv });
 
   // Stubs — preenchidos pelos sub-módulos (kc-supabase.posts.js, kc-supabase.ratings.js)
@@ -547,6 +564,7 @@
   // Boot automático (sem bloquear render)
   try {
     // inicia o mais cedo possível
+    ensurePrivacyAnalyticsScript();
     init();
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } catch (err) { console.warn('[KCSupabase] Boot falhou:', err && err.message || err); }

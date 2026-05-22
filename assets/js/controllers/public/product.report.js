@@ -120,6 +120,16 @@
 
       if (res && res.ok) {
         try { showToast('Relato enviado para a modera\u00E7\u00E3o.', 'success', 2400); } catch (_) { }
+        try {
+          if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+            window.KCPrivacyAnalytics.track('report_submit', {
+              entity_type: 'post',
+              entity_id: postId,
+              reason: 'post_closed',
+              source: 'closed_report_button',
+            }).catch(function () {});
+          }
+        } catch (_) { }
         return;
       }
 
@@ -445,6 +455,16 @@
         statusEl.textContent = 'Denúncia registrada. Obrigado!';
         statusEl.style.color = 'var(--kc-green-check, #22c55e)';
         try { showToast('Denúncia registrada. Obrigado!', 'success', 2200); } catch (_) { }
+        try {
+          if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+            window.KCPrivacyAnalytics.track('report_submit', {
+              entity_type: 'post',
+              entity_id: currentPostId,
+              reason: currentReason,
+              source: 'report_popover',
+            }).catch(function () {});
+          }
+        } catch (_) { }
         setTimeout(closePopover, 900);
         return;
       }

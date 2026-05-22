@@ -42,7 +42,7 @@
     if (window.KCConsent && typeof window.KCConsent.hasConsent === 'function') {
       return window.KCConsent.hasConsent('analytics');
     }
-    return true;
+    return false;
   }
 
   function normalizeText(text) {
@@ -312,6 +312,15 @@
     try {
       if (window.KCHomeCategories && typeof window.KCHomeCategories.trackEvent === 'function') {
         window.KCHomeCategories.trackEvent('search', { term: q, meta });
+      }
+    } catch (_) {}
+
+    try {
+      if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+        window.KCPrivacyAnalytics.track('search', {
+          value: q,
+          source: meta && meta.source ? meta.source : 'search',
+        }).catch(function () {});
       }
     } catch (_) {}
 
