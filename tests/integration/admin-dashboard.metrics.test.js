@@ -131,11 +131,12 @@ describe('admin-dashboard.metrics.js - contrato estatico', () => {
     expect(metricsSource).not.toMatch(/import\s+/);
   });
 
-  test('expõe exatamente 17 chaves publicas', () => {
+  test('expoe exatamente 19 chaves publicas', () => {
     const metrics = loadMetricsModule();
     expect(Object.keys(metrics).sort()).toEqual([
       'checkAccess',
       'classifyTermToModule',
+      'loadActiveSessions15m',
       'loadAuditEventRows',
       'loadCommentsCount',
       'loadDailyMetrics',
@@ -149,6 +150,7 @@ describe('admin-dashboard.metrics.js - contrato estatico', () => {
       'loadSearchTrendsData',
       'loadUsersNew',
       'loadUsersTotal',
+      'loadVisiblePostsCount',
       'loadVotesCount',
       'queryCreatedAtRows'
     ]);
@@ -166,6 +168,8 @@ describe('admin-dashboard.controller.js - contrato do split metrics', () => {
     expect(controllerSource).toContain("window._KCAD.metrics.classifyTermToModule(term)");
     expect(controllerSource).toContain("window._KCAD.metrics.loadReportMetrics(client, since)");
     expect(controllerSource).toContain("window._KCAD.metrics.loadSearchTrendsData(client, since)");
+    expect(controllerSource).toContain("window._KCAD.metrics.loadVisiblePostsCount(client)");
+    expect(controllerSource).toContain("window._KCAD.metrics.loadActiveSessions15m(client)");
     expect(controllerSource).toContain("window._KCAD.metrics.loadDailyMetrics(client, since, signal)");
   });
 
@@ -181,15 +185,25 @@ describe('admin-dashboard.controller.js - contrato do split metrics', () => {
 });
 
 describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
+  test('inclui o bloco executivo antes das metricas operacionais', () => {
+    const executiveTitle = htmlSource.indexOf('id="admin-executive-title"');
+    const executiveGrid = htmlSource.indexOf('id="admin-executive-metrics"');
+    const moderationTitle = htmlSource.indexOf('id="admin-moderation-title"');
+
+    expect(executiveTitle).toBeGreaterThan(-1);
+    expect(executiveGrid).toBeGreaterThan(executiveTitle);
+    expect(moderationTitle).toBeGreaterThan(executiveGrid);
+  });
+
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> privacy -> controller', () => {
     const orderedScripts = [
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.1"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.2"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.3"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.3"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.1"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.3"></script>'
     ];
 
     let lastIndex = -1;
@@ -346,6 +360,65 @@ describe('window._KCAD.metrics - comportamento', () => {
 
     const rows = await metrics.loadAuditEventRows(client, '2026-04-01T00:00:00Z');
     expect(rows).toEqual([{ created_at: '2026-04-05T10:00:00Z' }]);
+  });
+
+  test('loadVisiblePostsCount conta apenas status visiveis publicamente', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      fromHandler(state) {
+        if (state.table === 'posts' && state.select && state.select.options && state.select.options.head) {
+          expect(state.in).toEqual([{ field: 'status', value: ['published', 'closed'] }]);
+          return { data: null, error: null, count: 7 };
+        }
+        return { data: [], error: null, count: 0 };
+      }
+    });
+
+    await expect(metrics.loadVisiblePostsCount(client)).resolves.toBe(7);
+  });
+
+  test('loadActiveSessions15m prefere RPC de privacidade agregada', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      rpcHandler(name, args) {
+        expect(name).toBe('kc_admin_privacy_analytics');
+        expect(args.p_limit).toBe(1);
+        return { data: { ok: true, totals: { sessions: 4 } }, error: null };
+      }
+    });
+
+    await expect(metrics.loadActiveSessions15m(client)).resolves.toMatchObject({
+      value: 4,
+      available: true,
+      source: 'privacy_rpc'
+    });
+  });
+
+  test('loadActiveSessions15m cai para eventos legados quando RPC e tabela nova falham', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      fromHandler(state) {
+        if (state.table === 'privacy_analytics_events') {
+          return { data: null, error: { code: '42P01', message: 'missing table' } };
+        }
+        if (state.table === 'search_queries') {
+          return { data: [{ id: 's1', session_id: 'A' }, { id: 's2', session_id: 'A' }], error: null };
+        }
+        if (state.table === 'post_view_events') {
+          return { data: [{ id: 'v1', session_id: 'B' }], error: null };
+        }
+        return { data: [], error: null };
+      },
+      rpcHandler() {
+        return { data: null, error: { code: '42883', message: 'function missing' } };
+      }
+    });
+
+    await expect(metrics.loadActiveSessions15m(client)).resolves.toMatchObject({
+      value: 2,
+      available: true,
+      source: 'legacy_events'
+    });
   });
 
   test('loadDailyMetrics usa a serie do RPC quando disponivel', async () => {

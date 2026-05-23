@@ -630,6 +630,8 @@
       ['Data final', formatDateBRValue(deps, data.periodEnd)],
       [],
       ['Seção', 'Métrica', 'Valor'],
+      ['Resumo agora', 'Ativos agora', data.activeSessions15m && data.activeSessions15m.available ? toNumberValue(deps, data.activeSessions15m.value) : 'Indisponível'],
+      ['Resumo agora', 'Publicações visíveis', toNumberValue(deps, data.visiblePosts)],
       ['Moderação', 'Denúncias abertas', toNumberValue(deps, data.reportMetrics && data.reportMetrics.open)],
       ['Moderação', 'Total de denúncias', toNumberValue(deps, data.reportMetrics && data.reportMetrics.total)],
       ['Moderação', 'Posts ocultados', toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden)],
@@ -746,10 +748,12 @@
         inicio: formatDateBRValue(deps, data.periodStart),
         fim: formatDateBRValue(deps, data.periodEnd),
         audit_action: auditFilters.action || 'all',
-        audit_entity: auditFilters.entity || 'all',
-        audit_actor: auditFilters.actor || '',
+        audit_entity: auditFilters.entityType || auditFilters.entity || 'all',
+        audit_actor: auditFilters.actorQuery || auditFilters.actor || '',
       },
       kpis: [
+        { label: 'Ativos agora', value: data.activeSessions15m && data.activeSessions15m.available ? toNumberValue(deps, data.activeSessions15m.value) : 'Indisponivel', detail: 'sessoes agregadas 15min' },
+        { label: 'Publicacoes visiveis', value: toNumberValue(deps, data.visiblePosts), detail: 'published + closed' },
         { label: 'Denuncias abertas', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.open), detail: periodLabel },
         { label: 'Total de denuncias', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
         { label: 'Posts ocultados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
@@ -765,6 +769,9 @@
           rows: [
             { Indicador: 'Janela analisada', Valor: formatDateBRValue(deps, data.periodStart) + ' ate ' + formatDateBRValue(deps, data.periodEnd) },
             { Indicador: 'Periodo', Valor: periodLabel },
+            { Indicador: 'Ativos agora', Valor: data.activeSessions15m && data.activeSessions15m.available ? String(data.activeSessions15m.value) : 'Indisponivel' },
+            { Indicador: 'Fonte ativos agora', Valor: data.activeSessions15m ? (data.activeSessions15m.source || '-') : '-' },
+            { Indicador: 'Publicacoes visiveis', Valor: toNumberValue(deps, data.visiblePosts) },
             { Indicador: 'Alertas operacionais', Valor: (data.alerts || []).length },
             { Indicador: 'Eventos no audit log', Valor: (data.auditRows || []).length },
           ],
@@ -783,7 +790,7 @@
           }),
         },
         {
-          title: 'Top modulos',
+          title: 'Modulos',
           rows: (data.moduleShareRows || []).map(function (row) {
             return {
               Modulo: row.label || row.module || '',
@@ -813,6 +820,29 @@
               Descricao: alert && alert.body ? alert.body : '',
             };
           }),
+        },
+        {
+          title: 'Saude/Admin',
+          rows: [
+            {
+              Indicador: 'Coleta de ativos 15min',
+              Estado: data.activeSessions15m && data.activeSessions15m.available ? (data.activeSessions15m.label || 'Disponivel') : 'Indisponivel',
+              Fonte: data.activeSessions15m ? (data.activeSessions15m.source || '-') : '-',
+              Observacao: data.activeSessions15m ? (data.activeSessions15m.note || '') : ''
+            },
+            {
+              Indicador: 'Rotas admin',
+              Estado: '6 paginas oficiais',
+              Fonte: 'manifesto admin',
+              Observacao: 'Dashboard, Moderacao, Denuncias, Banners, Ajuda e Privacidade'
+            },
+            {
+              Indicador: 'Exportacoes',
+              Estado: 'PDF executivo + XLSX completo',
+              Fonte: 'KCAdminExport',
+              Observacao: 'Dados sanitizados e filtros preservados'
+            }
+          ]
         },
         {
           title: 'Audit log',

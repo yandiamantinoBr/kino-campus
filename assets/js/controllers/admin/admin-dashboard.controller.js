@@ -251,7 +251,7 @@
   }
 
   // Marca/desmarca grids de métrica em estado de loading
-  var GRID_IDS = ['admin-metrics', 'admin-activity-metrics', 'admin-community-metrics'];
+  var GRID_IDS = ['admin-executive-metrics', 'admin-metrics', 'admin-activity-metrics', 'admin-community-metrics'];
   function setGridsLoading(isLoading) {
     GRID_IDS.forEach(function(id) {
       var el = document.getElementById(id);
@@ -272,6 +272,15 @@
       ? window._KCAD.metrics.checkAccess()
       : Promise.resolve({ ok: false, message: 'Modulo de metrics do dashboard indisponivel.' });
   }
+  function formatMetricValue(value) {
+    if (value === null || typeof value === 'undefined' || value === '') return '--';
+    var parsed = Number(value);
+    if (Number.isFinite(parsed) && String(value).trim() !== '') {
+      return parsed.toLocaleString('pt-BR');
+    }
+    return String(value);
+  }
+
   function metricCard(icon, label, value, opts) {
     opts = opts || {};
     var href = opts.href || null;
@@ -280,7 +289,7 @@
     var cardStyle = highlight ? ' style="border-color:rgba(255,107,0,.5);"' : '';
     var inner = '<div class="kc-admin-card__label" title="' + escHtmlAdmin(label) + '">'
       + '<i class="' + icon + '"></i> ' + escHtmlAdmin(label) + '</div>'
-      + '<strong>' + Number(value || 0) + '</strong>';
+      + '<strong>' + escHtmlAdmin(formatMetricValue(value)) + '</strong>';
     if (subtitle) {
       inner += '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:4px;">' + escHtmlAdmin(subtitle) + '</div>';
     }
@@ -324,6 +333,7 @@
   function updateTitles(days) {
     var fullLabel = getPeriodLabel(days);
     var titles = [
+      ['#admin-executive-title', '<i class="fas fa-gauge-high" aria-hidden="true"></i> Resumo agora (' + fullLabel + ')'],
       ['#admin-moderation-title', '<i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação (' + fullLabel + ')'],
       ['#admin-activity-title', '<i class="fas fa-chart-bar" aria-hidden="true"></i> Atividade da plataforma (' + fullLabel + ')'],
       ['#admin-community-title', '<i class="fas fa-users" aria-hidden="true"></i> Comunidade (' + fullLabel + ')'],
@@ -430,6 +440,12 @@
       : Promise.resolve(0);
   }
 
+  function loadVisiblePostsCount(client) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadVisiblePostsCount === 'function')
+      ? window._KCAD.metrics.loadVisiblePostsCount(client)
+      : Promise.resolve(0);
+  }
+
   function loadUsersTotal(client) {
     return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadUsersTotal === 'function')
       ? window._KCAD.metrics.loadUsersTotal(client)
@@ -452,6 +468,12 @@
     return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadSavedPostsCount === 'function')
       ? window._KCAD.metrics.loadSavedPostsCount(client, since)
       : Promise.resolve(0);
+  }
+
+  function loadActiveSessions15m(client) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadActiveSessions15m === 'function')
+      ? window._KCAD.metrics.loadActiveSessions15m(client)
+      : Promise.resolve({ value: null, available: false, source: 'unavailable', label: 'Indisponivel', note: 'Modulo de metricas indisponivel.' });
   }
 
   function loadSearchTrendsData(client, since) {
@@ -605,10 +627,12 @@
       commentsCount,
       searchCount,
       postsTotal,
+      visiblePosts,
       usersTotal,
       usersNew,
       votesCount,
       savedPostsCount,
+      activeSessions15m,
       auditRows,
       trends,
       dailyMetrics,
@@ -620,10 +644,12 @@
       loadCommentsCount(client, since),
       loadSearchCount(client, since),
       loadPostsTotal(client),
+      loadVisiblePostsCount(client),
       loadUsersTotal(client),
       loadUsersNew(client, since),
       loadVotesCount(client, since),
       loadSavedPostsCount(client, since),
+      loadActiveSessions15m(client),
       loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
       loadSearchTrendsData(client, since),
       loadDailyMetrics(client, since, signal),
@@ -653,6 +679,24 @@
         })
       : [];
 
+    // ── Renderiza resumo executivo ──
+    var activeMetric = activeSessions15m || {};
+    var healthValue = activeMetric.available
+      ? (activeMetric.source === 'privacy_rpc' ? 'OK' : 'Fallback')
+      : 'Atenção';
+    var healthSubtitle = activeMetric.available
+      ? (activeMetric.note || 'Coleta agregada operacional.')
+      : (activeMetric.note || 'Coleta agregada indisponível.');
+    var executiveMetrics = $('#admin-executive-metrics');
+    if (executiveMetrics) {
+      executiveMetrics.innerHTML = [
+        metricCard('fas fa-users-viewfinder', 'Ativos agora', activeMetric.available ? activeMetric.value : '--', { subtitle: activeMetric.available ? 'Sessões agregadas nos últimos 15min' : 'Sem dado agregado agora', href: 'privacy-analytics.html' }),
+        metricCard('fas fa-eye', 'Publicações visíveis', visiblePosts, { subtitle: 'Published + closed no feed público' }),
+        metricCard('fas fa-flag', 'Denúncias abertas', reportMetrics.open, { href: 'reports.html', highlight: true, subtitle: 'Prioridade operacional' }),
+        metricCard('fas fa-stethoscope', 'Saúde da coleta', healthValue, { subtitle: healthSubtitle, href: 'privacy-analytics.html' }),
+      ].join('');
+    }
+
     // ── Renderiza métricas de moderação ──
     throwIfAborted(signal);
     const metrics = $('#admin-metrics');
@@ -670,10 +714,13 @@
     if (activityMetrics) {
       activityMetrics.innerHTML = [
         metricCard('fas fa-layer-group',      'Total de posts',    postsTotal),
+        metricCard('fas fa-eye',              'Posts visíveis',    visiblePosts),
         metricCard('fas fa-plus-circle',      'Posts publicados',  postsCreated),
         metricCard('fas fa-pen-to-square',    'Posts editados',    postsEdited),
         metricCard('fas fa-comment',          'Comentários',       commentsCount),
         metricCard('fas fa-magnifying-glass', 'Buscas',            searchCount),
+        metricCard('fas fa-thumbs-up',        'Votos',             votesCount),
+        metricCard('fas fa-bookmark',         'Posts salvos',      savedPostsCount),
       ].join('');
     }
 
@@ -683,8 +730,8 @@
       communityMetrics.innerHTML = [
         metricCard('fas fa-users',       'Total de usuários',                   usersTotal),
         metricCard('fas fa-user-plus',   'Novos usuários (' + shortLabel + ')', usersNew),
-        metricCard('fas fa-thumbs-up',   'Votos (' + shortLabel + ')',          votesCount),
-        metricCard('fas fa-bookmark',    'Posts salvos (' + shortLabel + ')',   savedPostsCount),
+        metricCard('fas fa-users-viewfinder', 'Sessões ativas 15min', activeMetric.available ? activeMetric.value : '--', { subtitle: activeMetric.label || 'Agregado' }),
+        metricCard('fas fa-chart-line',   'Interações (' + shortLabel + ')',     votesCount + savedPostsCount + commentsCount, { subtitle: 'Votos + salvos + comentários' }),
       ].join('');
     }
 
@@ -701,8 +748,8 @@
 
     _data = {
       reportMetrics, postStatusMetrics,
-      postsCreated, postsEdited, commentsCount, searchCount, postsTotal,
-      usersTotal, usersNew, votesCount, savedPostsCount,
+      postsCreated, postsEdited, commentsCount, searchCount, postsTotal, visiblePosts,
+      usersTotal, usersNew, votesCount, savedPostsCount, activeSessions15m,
       auditRows, trends, periodDays,
       dailyMetrics, dailySummary, moduleShareRows, alerts,
       periodLabel: fullLabel,

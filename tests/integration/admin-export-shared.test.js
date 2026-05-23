@@ -76,9 +76,10 @@ describe('admin-export.shared.js', () => {
     });
 
     expect(savedWorkbook.filename).toBe('relatorio.xlsx');
-    expect(savedWorkbook.workbook.Sheets.map((sheet) => sheet.name)).toEqual(['Resumo', 'Filtros', 'Eventos recentes']);
+    expect(savedWorkbook.workbook.Sheets.map((sheet) => sheet.name)).toEqual(['Resumo', 'Filtros', 'KPIs', 'Eventos recentes']);
     expect(savedWorkbook.workbook.Sheets[1].worksheet.rows).toEqual([{ Filtro: 'Page Path', Valor: '/admin' }, { Filtro: 'Access Token', Valor: '[removido]' }]);
-    expect(savedWorkbook.workbook.Sheets[2].worksheet.rows).toEqual([{ 'Event Name': 'search' }]);
+    expect(savedWorkbook.workbook.Sheets[2].worksheet.rows).toEqual([{ Indicador: 'Eventos', Valor: '2', Contexto: '' }]);
+    expect(savedWorkbook.workbook.Sheets[3].worksheet.rows).toEqual([{ 'Event Name': 'search' }]);
   });
 
   test('gera PDF com identidade KinoCampus e salva arquivo', async () => {

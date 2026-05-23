@@ -119,6 +119,21 @@
       });
   }
 
+  function minutesAgo(minutes) {
+    var date = new Date();
+    date.setMinutes(date.getMinutes() - (Number(minutes) || 15));
+    return date.toISOString();
+  }
+
+  function distinctSessionCount(rows) {
+    var sessions = new Set();
+    (rows || []).forEach(function (row, index) {
+      var id = row && (row.session_hash || row.session_id || row.session || row.id);
+      sessions.add(String(id || ('row-' + index)));
+    });
+    return sessions.size;
+  }
+
   async function checkAccess() {
     if (!window.KCAPI || typeof window.KCAPI.getCurrentUser !== 'function') {
       return { ok: false, message: 'Sessao administrativa indisponivel.' };
@@ -286,6 +301,23 @@
     return 0;
   }
 
+  async function loadVisiblePostsCount(client) {
+    try {
+      var result = await client.from('posts')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['published', 'closed']);
+      if (!result.error) return result.count || 0;
+
+      var fallback = await client.from('posts')
+        .select('id,status')
+        .in('status', ['published', 'closed'])
+        .limit(5000);
+      if (!fallback.error && Array.isArray(fallback.data)) return fallback.data.length;
+    } catch (_) { }
+
+    return 0;
+  }
+
   async function loadUsersTotal(client) {
     try {
       var result = await client.from('profiles').select('id', { count: 'exact', head: true });
@@ -326,6 +358,84 @@
     } catch (_) { }
 
     return 0;
+  }
+
+  async function loadActiveSessions15m(client) {
+    var since = minutesAgo(15);
+    var unavailable = {
+      value: null,
+      available: false,
+      source: 'unavailable',
+      label: 'Indisponivel',
+      note: 'Sem telemetria agregada disponivel nos ultimos 15 minutos.',
+      since: since
+    };
+
+    try {
+      var rpc = await client.rpc('kc_admin_privacy_analytics', {
+        p_since: since,
+        p_event_name: 'all',
+        p_page_path: 'all',
+        p_module_key: 'all',
+        p_limit: 1,
+        p_offset: 0
+      });
+      if (!rpc.error && rpc.data && rpc.data.ok !== false && rpc.data.totals) {
+        return {
+          value: Number(rpc.data.totals.sessions) || 0,
+          available: true,
+          source: 'privacy_rpc',
+          label: 'RPC',
+          note: 'Sessoes agregadas nos ultimos 15 minutos.',
+          since: since
+        };
+      }
+    } catch (_) { }
+
+    try {
+      var direct = await client.from('privacy_analytics_events')
+        .select('id,session_hash,created_at')
+        .gte('created_at', since)
+        .limit(5000);
+      if (!direct.error && Array.isArray(direct.data)) {
+        return {
+          value: distinctSessionCount(direct.data),
+          available: true,
+          source: 'privacy_table',
+          label: 'Tabela',
+          note: 'Fallback por privacy_analytics_events.',
+          since: since
+        };
+      }
+    } catch (_) { }
+
+    try {
+      var legacy = await Promise.all([
+        client.from('search_queries')
+          .select('id,session_id,created_at')
+          .gte('created_at', since)
+          .limit(2500),
+        client.from('post_view_events')
+          .select('id,session_id,created_at')
+          .gte('created_at', since)
+          .limit(2500)
+      ]);
+      var rows = [];
+      if (legacy[0] && !legacy[0].error && Array.isArray(legacy[0].data)) rows = rows.concat(legacy[0].data);
+      if (legacy[1] && !legacy[1].error && Array.isArray(legacy[1].data)) rows = rows.concat(legacy[1].data);
+      if (rows.length || (legacy[0] && !legacy[0].error) || (legacy[1] && !legacy[1].error)) {
+        return {
+          value: distinctSessionCount(rows),
+          available: true,
+          source: 'legacy_events',
+          label: 'Fallback',
+          note: 'Estimativa por buscas e views recentes.',
+          since: since
+        };
+      }
+    } catch (_) { }
+
+    return unavailable;
   }
 
   async function loadAuditEventRows(client, since) {
@@ -501,10 +611,12 @@
     loadCommentsCount: loadCommentsCount,
     loadSearchCount: loadSearchCount,
     loadPostsTotal: loadPostsTotal,
+    loadVisiblePostsCount: loadVisiblePostsCount,
     loadUsersTotal: loadUsersTotal,
     loadUsersNew: loadUsersNew,
     loadVotesCount: loadVotesCount,
     loadSavedPostsCount: loadSavedPostsCount,
+    loadActiveSessions15m: loadActiveSessions15m,
     loadAuditEventRows: loadAuditEventRows,
     loadSearchTrendsData: loadSearchTrendsData,
     queryCreatedAtRows: queryCreatedAtRows,

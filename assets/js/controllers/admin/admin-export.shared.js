@@ -262,6 +262,7 @@
         };
       })));
       appendSheet(XLSX, workbook, 'Filtros', normalized.filters.length ? normalized.filters : [{ Filtro: 'Todos', Valor: 'Sem filtros adicionais' }]);
+      appendSheet(XLSX, workbook, 'KPIs', normalized.kpis.length ? normalized.kpis : [{ Indicador: 'Sem KPIs', Valor: '', Contexto: '' }]);
       normalized.sections.forEach(function (section, index) {
         appendSheet(XLSX, workbook, section.title || ('Dados ' + (index + 1)), section.rows);
       });
@@ -340,22 +341,84 @@
         }
       }
 
+      function drawKpiCards(rows) {
+        const list = Array.isArray(rows) && rows.length ? rows : [{ Indicador: 'Sem KPIs', Valor: '', Contexto: '' }];
+        const gap = 12;
+        const columns = 2;
+        const cardWidth = (pageWidth - margin * 2 - gap) / columns;
+        const cardHeight = 58;
+
+        list.slice(0, 8).forEach(function (row, index) {
+          const col = index % columns;
+          const x = margin + (col * (cardWidth + gap));
+          if (col === 0) addPageIfNeeded(cardHeight + 12);
+          const yCard = y;
+          doc.setDrawColor(BRAND.border[0], BRAND.border[1], BRAND.border[2]);
+          doc.setFillColor(255, 255, 255);
+          doc.rect(x, yCard, cardWidth, cardHeight, 'FD');
+          setFillColor(doc, BRAND.light);
+          doc.rect(x, yCard, 5, cardHeight, 'F');
+          setTextColor(doc, BRAND.muted);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.text(truncate(row.Indicador || 'Indicador', 34), x + 14, yCard + 18);
+          setTextColor(doc, BRAND.dark);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(16);
+          doc.text(truncate(row.Valor, 18), x + 14, yCard + 38);
+          if (row.Contexto) {
+            setTextColor(doc, BRAND.muted);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            doc.text(truncate(row.Contexto, 36), x + 14, yCard + 50);
+          }
+          if (col === columns - 1 || index === Math.min(list.length, 8) - 1) y += cardHeight + 12;
+        });
+        if (list.length > 8) {
+          addPageIfNeeded(18);
+          setTextColor(doc, BRAND.muted);
+          doc.setFontSize(8);
+          doc.text('KPIs adicionais disponiveis no XLSX.', margin, y);
+          y += 18;
+        }
+      }
+
       function drawRows(rows, maxRows) {
         const list = Array.isArray(rows) && rows.length ? rows : [{ Status: 'Sem dados para os filtros selecionados' }];
-        list.slice(0, maxRows || MAX_PDF_ROWS).forEach(function (row) {
-          const text = Object.keys(row).map(function (key) {
-            const value = sanitizeExportValue(row[key], key);
-            return titleCaseLabel(key) + ': ' + value;
-          }).join('  |  ');
-          const lines = doc.splitTextToSize(text, pageWidth - margin * 2);
-          addPageIfNeeded(lines.length * 11 + 12);
+        const headers = Object.keys(list[0]).slice(0, 4);
+        const colWidth = (pageWidth - margin * 2) / Math.max(headers.length, 1);
+
+        addPageIfNeeded(28);
+        setFillColor(doc, BRAND.dark);
+        doc.rect(margin, y, pageWidth - margin * 2, 22, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(255, 255, 255);
+        headers.forEach(function (header, index) {
+          doc.text(truncate(titleCaseLabel(header), 18), margin + (index * colWidth) + 8, y + 14);
+        });
+        y += 22;
+
+        list.slice(0, maxRows || MAX_PDF_ROWS).forEach(function (row, rowIndex) {
+          const cellLines = headers.map(function (header) {
+            return doc.splitTextToSize(sanitizeExportValue(row[header], header), colWidth - 14);
+          });
+          const lineCount = Math.max.apply(null, cellLines.map(function (lines) { return lines.length; }).concat([1]));
+          const rowHeight = Math.max(24, lineCount * 10 + 12);
+          addPageIfNeeded(rowHeight + 4);
+          if (rowIndex % 2 === 0) {
+            doc.setFillColor(249, 250, 251);
+            doc.rect(margin, y, pageWidth - margin * 2, rowHeight, 'F');
+          }
           doc.setDrawColor(BRAND.border[0], BRAND.border[1], BRAND.border[2]);
-          doc.line(margin, y - 4, pageWidth - margin, y - 4);
+          doc.rect(margin, y, pageWidth - margin * 2, rowHeight, 'S');
           setTextColor(doc, BRAND.dark);
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8.5);
-          doc.text(lines, margin, y + 8);
-          y += lines.length * 11 + 14;
+          doc.setFontSize(7.5);
+          cellLines.forEach(function (lines, index) {
+            doc.text(lines, margin + (index * colWidth) + 8, y + 13);
+          });
+          y += rowHeight;
         });
         if (list.length > (maxRows || MAX_PDF_ROWS)) {
           addPageIfNeeded(18);
@@ -383,7 +446,7 @@
 
       if (normalized.kpis.length) {
         drawSectionTitle('Resumo executivo');
-        drawRows(normalized.kpis, 18);
+        drawKpiCards(normalized.kpis);
       }
 
       normalized.sections.forEach(function (section) {
