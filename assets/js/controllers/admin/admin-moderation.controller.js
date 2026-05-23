@@ -731,6 +731,117 @@
     select.innerHTML = statuses.map((s) => `<option value="${s}">${s === 'all' ? 'Todos status' : s}</option>`).join('');
   }
 
+  function buildModerationExportReport() {
+    const posts = Array.isArray(state.posts) ? state.posts : [];
+    const auditRows = Array.isArray(state.audit.rows) ? state.audit.rows : [];
+    const activeLimits = Array.isArray(limitsState.limits) ? limitsState.limits : [];
+    const floodLimits = Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : [];
+    const statusCounts = posts.reduce((acc, post) => {
+      const key = String(post && post.status || 'desconhecido');
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      title: 'KinoCampus - Moderacao Admin',
+      subtitle: 'Posts filtrados, limites ativos, ritmo de publicacao e audit log da selecao atual',
+      source: 'admin/moderation.html',
+      filters: {
+        status: state.statusFilter || 'all',
+        busca: state.search || '',
+        audit_entity_type: state.audit.entityType || 'all',
+        audit_action: state.audit.action || 'all',
+        audit_actor: state.audit.actorQuery || '',
+        audit_page_size: state.audit.pageSize || 25,
+      },
+      kpis: {
+        posts_carregados: posts.length,
+        posts_filtrados_total: state.totalCount || posts.length,
+        audit_rows_na_pagina: auditRows.length,
+        limites_ativos: activeLimits.length,
+        limites_de_ritmo: floodLimits.length,
+        acoes_da_sessao: state.sessionActions.length,
+      },
+      sections: [
+        {
+          title: 'Distribuicao de status',
+          rows: Object.keys(statusCounts).map((status) => ({ status, total: statusCounts[status] })),
+        },
+        {
+          title: 'Posts filtrados',
+          rows: posts.map((post) => ({
+            id: post.id,
+            titulo: post.title || post.content || '',
+            autor: post.author_name || post.author_id || '',
+            modulo: post.module || '',
+            categoria: post.category || '',
+            status: post.status || '',
+            atualizado_em: fmtDate(post.updated_at || post.created_at),
+          })),
+        },
+        {
+          title: 'Limites de publicacoes ativas',
+          rows: activeLimits.map((row) => ({
+            id: row.id,
+            usuario: row.user_name || 'Global',
+            user_id: row.user_id || '',
+            modulo: row.module || 'Todos',
+            max_ativas: row.max_active,
+            criado_em: fmtDate(row.created_at),
+          })),
+        },
+        {
+          title: 'Limites de ritmo e flood',
+          rows: floodLimits.map((row) => ({
+            id: row.id,
+            usuario: row.user_name || 'Global',
+            user_id: row.user_id || '',
+            modulo: row.module || 'Todos',
+            max_posts: row.max_posts,
+            janela_minutos: row.window_minutes,
+            criado_em: fmtDate(row.created_at),
+          })),
+        },
+        {
+          title: 'Audit log filtrado',
+          rows: auditRows.map((row) => {
+            const actorId = String(row.actor_id || '');
+            const actor = state.audit.actorsById && state.audit.actorsById[actorId];
+            return {
+              data: fmtDate(row.created_at),
+              acao: row.action || '',
+              entidade: [row.entity_type || '', row.entity_id || ''].filter(Boolean).join(':'),
+              ator: actor ? (actor.display_name || actor.full_name || actor.email || actorId) : actorId,
+              detalhes: row.details || row.metadata || '',
+            };
+          }),
+        },
+        {
+          title: 'Acoes recentes nesta sessao',
+          rows: state.sessionActions.map((item) => ({
+            post_id: item.postId,
+            acao: item.action,
+            data: fmtDate(item.timestamp),
+          })),
+        },
+      ],
+    };
+  }
+
+  async function handleModerationExport(kind) {
+    if (!window.KCAdminExport) {
+      showToastSafe('Exportador admin indisponivel.', 'error');
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const report = buildModerationExportReport();
+    if (kind === 'pdf') {
+      await window.KCAdminExport.exportReportPDF('kc-admin-moderacao-' + date + '.pdf', report);
+    } else {
+      await window.KCAdminExport.exportReportXLSX('kc-admin-moderacao-' + date + '.xlsx', report);
+    }
+  }
+
   function bindEvents() {
     const body = $('#moderation-posts-body');
     if (body) {
@@ -788,6 +899,11 @@
 
     const loadMore = $('#moderation-load-more');
     if (loadMore) loadMore.addEventListener('click', () => fetchPosts(false));
+
+    const exportXlsx = $('#moderation-export-xlsx');
+    if (exportXlsx) exportXlsx.addEventListener('click', () => handleModerationExport('xlsx').catch(console.error));
+    const exportPdf = $('#moderation-export-pdf');
+    if (exportPdf) exportPdf.addEventListener('click', () => handleModerationExport('pdf').catch(console.error));
 
     const auditEntity = $('#audit-entity-type-filter');
     if (auditEntity) {

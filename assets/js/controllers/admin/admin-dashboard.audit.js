@@ -732,7 +732,109 @@
     ];
   }
 
+  function buildDashboardExportReport(data, deps) {
+    var periodLabel = data.periodLabel || getPeriodLabelValue(deps, data.periodDays || 30);
+    var auditFilters = {};
+    try { auditFilters = readAuditFilters(deps) || {}; } catch (_) { auditFilters = {}; }
+    return {
+      title: 'KinoCampus - Relatorio Executivo Admin',
+      subtitle: 'Dashboard administrativo consolidado',
+      period: periodLabel,
+      source: 'Dashboard Admin',
+      filters: {
+        periodo: periodLabel,
+        inicio: formatDateBRValue(deps, data.periodStart),
+        fim: formatDateBRValue(deps, data.periodEnd),
+        audit_action: auditFilters.action || 'all',
+        audit_entity: auditFilters.entity || 'all',
+        audit_actor: auditFilters.actor || '',
+      },
+      kpis: [
+        { label: 'Denuncias abertas', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.open), detail: periodLabel },
+        { label: 'Total de denuncias', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
+        { label: 'Posts ocultados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
+        { label: 'Posts deletados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.deleted), detail: periodLabel },
+        { label: 'Buscas registradas', value: toNumberValue(deps, data.searchCount), detail: periodLabel },
+        { label: 'Votos', value: toNumberValue(deps, data.votesCount), detail: periodLabel },
+        { label: 'Novos usuarios', value: toNumberValue(deps, data.usersNew), detail: periodLabel },
+        { label: 'Posts salvos', value: toNumberValue(deps, data.savedPostsCount), detail: periodLabel },
+      ],
+      sections: [
+        {
+          title: 'Resumo executivo',
+          rows: [
+            { Indicador: 'Janela analisada', Valor: formatDateBRValue(deps, data.periodStart) + ' ate ' + formatDateBRValue(deps, data.periodEnd) },
+            { Indicador: 'Periodo', Valor: periodLabel },
+            { Indicador: 'Alertas operacionais', Valor: (data.alerts || []).length },
+            { Indicador: 'Eventos no audit log', Valor: (data.auditRows || []).length },
+          ],
+        },
+        {
+          title: 'Pulso diario',
+          rows: (data.dailyMetrics || []).map(function (row) {
+            return {
+              Dia: row.label || row.day || '',
+              Posts: toNumberValue(deps, row.posts_count),
+              Comentarios: toNumberValue(deps, row.comments_count),
+              Buscas: toNumberValue(deps, row.searches_count),
+              Votos: toNumberValue(deps, row.votes_count),
+              Acoes_admin: toNumberValue(deps, row.admin_actions_count),
+            };
+          }),
+        },
+        {
+          title: 'Top modulos',
+          rows: (data.moduleShareRows || []).map(function (row) {
+            return {
+              Modulo: row.label || row.module || '',
+              Participacao: String(row.share || 0) + '%',
+              Buscas: toNumberValue(deps, row.count),
+              Termos: Array.isArray(row.topTerms) ? row.topTerms.join(', ') : '',
+            };
+          }),
+        },
+        {
+          title: 'Tendencias',
+          rows: (data.trends || []).slice(0, 50).map(function (item, index) {
+            return {
+              Posicao: index + 1,
+              Termo: item && item.term ? item.term : '',
+              Contagem: toNumberValue(deps, item && item.count),
+              Modulo: getModuleLabelValue(deps, classifyTermToModuleValue(deps, item && item.term)),
+            };
+          }),
+        },
+        {
+          title: 'Alertas',
+          rows: (data.alerts || []).map(function (alert) {
+            return {
+              Tom: alert && alert.tone ? alert.tone : 'neutral',
+              Titulo: alert && alert.title ? alert.title : '',
+              Descricao: alert && alert.body ? alert.body : '',
+            };
+          }),
+        },
+        {
+          title: 'Audit log',
+          rows: (data.auditRows || []).map(function (row) {
+            return {
+              Data: formatDateTimeBRValue(deps, row && row.created_at),
+              Acao: row && row.action ? row.action : '-',
+              Entidade: row && row.entity_type ? row.entity_type : '-',
+              Entity_id: row && row.entity_id ? row.entity_id : '',
+              Ator: getActorDisplay(row && row.actor_id, deps),
+              Detalhes: compactAuditPayload(row && row.payload),
+            };
+          }),
+        },
+      ],
+    };
+  }
+
   async function exportXLSX(data, deps) {
+    if (window.KCAdminExport && typeof window.KCAdminExport.exportReportXLSX === 'function') {
+      return window.KCAdminExport.exportReportXLSX(buildExportFilename('xlsx', data.periodDays), buildDashboardExportReport(data, deps));
+    }
     await ensureXLSX(deps);
     var XLSX = window.XLSX;
     var workbook = XLSX.utils.book_new();
@@ -771,6 +873,9 @@
   }
 
   async function exportPDF(data, deps) {
+    if (window.KCAdminExport && typeof window.KCAdminExport.exportReportPDF === 'function') {
+      return window.KCAdminExport.exportReportPDF(buildExportFilename('pdf', data.periodDays), buildDashboardExportReport(data, deps));
+    }
     await ensureJsPDF(deps);
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

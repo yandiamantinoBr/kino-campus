@@ -718,6 +718,61 @@
   // ─────────────────────────────────────────────────────────────
   // Init
   // ─────────────────────────────────────────────────────────────
+  function buildBannersExportReport() {
+    const rows = Array.isArray(banners) ? banners : [];
+    const active = rows.filter((banner) => banner && banner.is_active).length;
+    const inactive = rows.length - active;
+    const impressions = rows.reduce((sum, banner) => sum + (Number(banner && (banner.impressions || banner.impression_count)) || 0), 0);
+    const clicks = rows.reduce((sum, banner) => sum + (Number(banner && (banner.clicks || banner.click_count)) || 0), 0);
+    return {
+      title: 'KinoCampus - Banners Admin',
+      subtitle: 'Banners configurados, status, ordem e metricas disponiveis',
+      source: 'admin/banners.html',
+      filters: { status: 'todos', ordenacao: 'sort_order' },
+      kpis: {
+        banners_total: rows.length,
+        banners_ativos: active,
+        banners_inativos: inactive,
+        impressoes_registradas: impressions,
+        cliques_registrados: clicks,
+        ctr_percentual: impressions ? ((clicks / impressions) * 100).toFixed(2) + '%' : '0%',
+      },
+      sections: [
+        {
+          title: 'Banners',
+          rows: rows.map((banner) => ({
+            id: banner.id,
+            titulo: banner.title || '',
+            subtitulo: banner.subtitle || '',
+            status: banner.is_active ? 'Ativo' : 'Inativo',
+            ordem: banner.sort_order,
+            botao: banner.button_text || '',
+            url: banner.button_url || '',
+            icone: banner.icon_class || '',
+            gradiente: [banner.gradient_from, banner.gradient_to].filter(Boolean).join(' -> '),
+            impressoes: banner.impressions || banner.impression_count || 0,
+            cliques: banner.clicks || banner.click_count || 0,
+            atualizado_em: fmtDate(banner.updated_at || banner.created_at),
+          })),
+        },
+      ],
+    };
+  }
+
+  async function handleBannersExport(kind) {
+    if (!window.KCAdminExport) {
+      toast('Exportador admin indisponivel.', 'error');
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const report = buildBannersExportReport();
+    if (kind === 'pdf') {
+      await window.KCAdminExport.exportReportPDF('kc-admin-banners-' + date + '.pdf', report);
+    } else {
+      await window.KCAdminExport.exportReportXLSX('kc-admin-banners-' + date + '.xlsx', report);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', async function () {
     const env = window.KC_ENV || {};
     if (String(env.DATA_DRIVER || env.driver || 'local').toLowerCase() !== 'supabase') {
@@ -740,6 +795,10 @@
 
     document.getElementById('btn-add-banner').addEventListener('click', () => openModal(null));
     document.getElementById('btn-refresh').addEventListener('click', loadBanners);
+    const exportXlsx = document.getElementById('banners-export-xlsx');
+    if (exportXlsx) exportXlsx.addEventListener('click', () => handleBannersExport('xlsx').catch(console.error));
+    const exportPdf = document.getElementById('banners-export-pdf');
+    if (exportPdf) exportPdf.addEventListener('click', () => handleBannersExport('pdf').catch(console.error));
     if (modalClose) modalClose.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); });
     if (modalCancel) modalCancel.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); });
     if (modalSave) modalSave.addEventListener('click', (e) => { e.stopPropagation(); onSave(); });

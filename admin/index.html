@@ -796,6 +796,15 @@
               <article class="kc-admin-card"><div class="kc-admin-card__label"><i class="fas fa-spinner fa-spin"></i> Carregando privacidade</div><strong>...</strong></article>
             </div>
 
+            <section class="kc-admin-section" id="admin-health-section">
+              <div class="kc-admin-section__eyebrow">Saude do Admin</div>
+              <h3><i class="fas fa-stethoscope"></i> Status operacional</h3>
+              <p class="kc-admin-section__intro">Leitura rapida das rotas admin, exportacoes e RPCs criticas usadas pelo painel.</p>
+              <div id="admin-health-list" class="kc-admin-kpi-strip">
+                <div class="kc-admin-empty">Verificando saude administrativa...</div>
+              </div>
+            </section>
+
             <section class="kc-admin-section">
               <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca</h3>
               <div class="kc-trend-module-title"><i class="fas fa-list-ol"></i> Top termos buscados</div>
@@ -1018,9 +1027,10 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
+    <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.2"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.1"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.1"></script>
+    <script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.2"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.1"></script>
     <script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>

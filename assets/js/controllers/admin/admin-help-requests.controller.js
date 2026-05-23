@@ -494,6 +494,87 @@
     }
   }
 
+  function buildHelpExportReport() {
+    const rows = Array.isArray(state.rows) ? state.rows : [];
+    const statusCounts = rows.reduce((acc, row) => {
+      const key = String(row && row.status || 'unknown');
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const typeCounts = rows.reduce((acc, row) => {
+      const key = String(row && row.type || 'unknown');
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    return {
+      title: 'KinoCampus - Pedidos de ajuda Admin',
+      subtitle: 'Solicitacoes filtradas, status, prioridade, origem e decisoes operacionais',
+      source: 'admin/help-requests.html',
+      filters: {
+        status: state.filters.status || 'all',
+        tipo: state.filters.type || 'all',
+        prioridade: state.filters.priority || 'all',
+        busca: state.filters.query || '',
+        total_filtrado: state.pagination.totalCount || rows.length,
+      },
+      kpis: {
+        pedidos_carregados: rows.length,
+        pedidos_filtrados_total: state.pagination.totalCount || rows.length,
+        urgentes_na_tela: rows.filter((row) => row && row.priority === 'urgent').length,
+        em_andamento: rows.filter((row) => row && row.status === 'in_progress').length,
+        novos: rows.filter((row) => row && row.status === 'new').length,
+      },
+      sections: [
+        {
+          title: 'Resumo por status',
+          rows: Object.keys(statusCounts).map((status) => ({ status, total: statusCounts[status] })),
+        },
+        {
+          title: 'Resumo por categoria',
+          rows: Object.keys(typeCounts).map((type) => ({
+            categoria: buildLabel(Help.HELP_TYPE_LABELS, type, type),
+            type_key: type,
+            total: typeCounts[type],
+          })),
+        },
+        {
+          title: 'Pedidos filtrados',
+          rows: rows.map((row) => {
+            const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+            return {
+              id: row.id,
+              criado_em: formatDateTime(row.created_at),
+              status: row.status || '',
+              prioridade: row.priority || '',
+              categoria: buildLabel(Help.HELP_TYPE_LABELS, row.type, row.type || ''),
+              tema: row.topic || '',
+              subtipo: buildSubtopicLabel(row),
+              assunto: row.subject || row.title || '',
+              pagina_origem: row.page_path || metadata.page_path || '',
+              modulo_afetado: metadata.affected_module || '',
+              contato_autorizado: row.allow_contact === false ? 'Nao' : 'Sim',
+              email_contato: row.contact_email || '',
+            };
+          }),
+        },
+      ],
+    };
+  }
+
+  async function handleHelpExport(kind) {
+    if (!window.KCAdminExport) {
+      showToast('Exportador admin indisponivel.', 'error');
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const report = buildHelpExportReport();
+    if (kind === 'pdf') {
+      await window.KCAdminExport.exportReportPDF('kc-admin-ajuda-' + date + '.pdf', report);
+    } else {
+      await window.KCAdminExport.exportReportXLSX('kc-admin-ajuda-' + date + '.xlsx', report);
+    }
+  }
+
   function bindEvents() {
     if (eventsBound) return;
     eventsBound = true;
@@ -519,6 +600,11 @@
         loadRows({ limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE) });
       });
     }
+
+    const exportXlsx = $('#helpExportXlsx');
+    if (exportXlsx) exportXlsx.addEventListener('click', () => handleHelpExport('xlsx').catch(console.error));
+    const exportPdf = $('#helpExportPdf');
+    if (exportPdf) exportPdf.addEventListener('click', () => handleHelpExport('pdf').catch(console.error));
 
     document.addEventListener('click', function (event) {
       const target = event.target && event.target.closest ? event.target.closest('[data-help-save],[data-help-load-more]') : null;

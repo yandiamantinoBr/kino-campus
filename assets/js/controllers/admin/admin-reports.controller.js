@@ -1060,6 +1060,93 @@
     container.innerHTML = html;
   }
 
+  function buildReportsExportReport() {
+    const reports = Array.isArray(_reportsState.rows) ? _reportsState.rows : [];
+    const grouped = reports.reduce((acc, report) => {
+      const postId = String(report && report.post_id || 'sem_post');
+      if (!acc[postId]) acc[postId] = { post_id: postId, total: 0, abertas: 0, fechadas: 0, motivos: {} };
+      acc[postId].total += 1;
+      if (report.status === 'open') acc[postId].abertas += 1;
+      else acc[postId].fechadas += 1;
+      const reason = String(report.reason || 'other');
+      acc[postId].motivos[reason] = (acc[postId].motivos[reason] || 0) + 1;
+      return acc;
+    }, {});
+
+    const reasonCounts = reports.reduce((acc, report) => {
+      const reason = String(report && report.reason || 'other');
+      acc[reason] = (acc[reason] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      title: 'KinoCampus - Denuncias Admin',
+      subtitle: 'Denuncias agrupadas por post, motivos e status conforme filtros atuais',
+      source: 'admin/reports.html',
+      filters: {
+        status: _filters.status || 'open',
+        motivo: _filters.reason || 'all',
+        total_conhecido: _reportsState.totalCountKnown ? 'sim' : 'nao',
+      },
+      kpis: {
+        denuncias_carregadas: reports.length,
+        denuncias_filtradas_total: _reportsState.totalCount || reports.length,
+        denuncias_abertas: reports.filter((row) => row && row.status === 'open').length,
+        denuncias_fechadas: reports.filter((row) => row && row.status !== 'open').length,
+        posts_agrupados: Object.keys(grouped).length,
+      },
+      sections: [
+        {
+          title: 'Resumo por motivo',
+          rows: Object.keys(reasonCounts).map((reason) => ({
+            motivo: reasonLabel(reason),
+            reason_key: reason,
+            total: reasonCounts[reason],
+          })),
+        },
+        {
+          title: 'Resumo por post',
+          rows: Object.keys(grouped).map((postId) => {
+            const row = grouped[postId];
+            return {
+              post_id: row.post_id,
+              total: row.total,
+              abertas: row.abertas,
+              fechadas: row.fechadas,
+              motivos: Object.keys(row.motivos).map((reason) => reasonLabel(reason) + ': ' + row.motivos[reason]).join('; '),
+            };
+          }),
+        },
+        {
+          title: 'Denuncias filtradas',
+          rows: reports.map((report) => ({
+            id: report.id,
+            post_id: report.post_id,
+            motivo: reasonLabel(report.reason),
+            status: report.status,
+            detalhes: report.details || '',
+            reporter_id: report.reporter_id || '',
+            criado_em: formatDate(report.created_at),
+          })),
+        },
+      ],
+    };
+  }
+
+  async function handleReportsExport(kind) {
+    if (!window.KCAdminExport) {
+      showToastSafe('Exportador admin indisponivel.', 'error');
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const report = buildReportsExportReport();
+    if (kind === 'pdf') {
+      await window.KCAdminExport.exportReportPDF('kc-admin-denuncias-' + date + '.pdf', report);
+    } else {
+      await window.KCAdminExport.exportReportXLSX('kc-admin-denuncias-' + date + '.xlsx', report);
+    }
+  }
+
   function setupEventDelegation() {
     if (handlersBound) return;
     handlersBound = true;
@@ -1094,6 +1181,10 @@
     const reasonFilter = $('#reports-reason-filter');
     if (statusFilter) statusFilter.addEventListener('change', () => render());
     if (reasonFilter)  reasonFilter.addEventListener('change', () => render());
+    const exportXlsx = $('#reports-export-xlsx');
+    if (exportXlsx) exportXlsx.addEventListener('click', () => handleReportsExport('xlsx').catch(console.error));
+    const exportPdf = $('#reports-export-pdf');
+    if (exportPdf) exportPdf.addEventListener('click', () => handleReportsExport('pdf').catch(console.error));
   }
 
   // ---- Boot ----

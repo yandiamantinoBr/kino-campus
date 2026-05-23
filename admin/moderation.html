@@ -123,6 +123,8 @@
             <select id="moderation-status-filter" aria-label="Filtrar por status de moderação" data-i18n-aria-label="aria-label.filter-mod-status"></select>
             <input id="moderation-search" type="search" placeholder="Buscar por título, ID, nome ou nickname" data-i18n-placeholder="placeholder.admin-mod-search" />
             <button id="moderation-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
+            <button id="moderation-export-xlsx" type="button"><i class="fas fa-file-excel"></i> XLSX</button>
+            <button id="moderation-export-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
           </div>
         </div>
 
@@ -574,8 +576,9 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
-  <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.3"></script>
   <script defer src="../assets/js/controllers/admin/admin-invite.controller.js?v=8.6.1"></script>
-  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.1"></script>
+  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.2"></script>
 </body>
 </html>

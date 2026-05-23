@@ -21,31 +21,8 @@ const path = require('path');
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const MODULE_PATH = path.join(ROOT_DIR, 'assets/js/core/kc-i18n.js');
 const source = fs.readFileSync(MODULE_PATH, 'utf8');
-
-const htmlFiles = [
-  'account-setup.html',
-  'achados-perdidos.html',
-  'ajuda.html',
-  'auth-callback.html',
-  'caronas-feed.html',
-  'compra-venda-feed.html',
-  'create-post.html',
-  'eventos.html',
-  'index.html',
-  'moradia.html',
-  'my-posts.html',
-  'ods.html',
-  'oportunidades.html',
-  'profile.html',
-  'search-results.html',
-  'settings.html',
-  '_product.html',
-  'admin/banners.html',
-  'admin/help-requests.html',
-  'admin/index.html',
-  'admin/moderation.html',
-  'admin/reports.html',
-];
+const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
+const htmlFiles = PAGE_MANIFEST.ALL_HTML_PAGES;
 
 function resetAndLoad() {
   jest.resetModules();
@@ -191,7 +168,7 @@ describe('v12.7.2 — helper applyTooltips', () => {
 
 describe('v12.7.2 — marcacao declarativa nos 22 HTMLs', () => {
   test('os 22 HTMLs canonicos estao listados', () => {
-    expect(htmlFiles).toHaveLength(22);
+    expect(htmlFiles).toHaveLength(PAGE_MANIFEST.ALL_HTML_PAGES.length);
   });
 
   test('toda tag com title estatico nao-vazio tem data-i18n-tooltip correspondente', () => {

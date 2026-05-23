@@ -8,30 +8,8 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.notifications.js');
-const HTML_FILES = [
-  'account-setup.html',
-  'achados-perdidos.html',
-  'ajuda.html',
-  'auth-callback.html',
-  'caronas-feed.html',
-  'compra-venda-feed.html',
-  'create-post.html',
-  'eventos.html',
-  'index.html',
-  'moradia.html',
-  'my-posts.html',
-  'ods.html',
-  'oportunidades.html',
-  'profile.html',
-  'search-results.html',
-  'settings.html',
-  '_product.html',
-  'admin/banners.html',
-  'admin/help-requests.html',
-  'admin/index.html',
-  'admin/moderation.html',
-  'admin/reports.html',
-];
+const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
+const HTML_FILES = PAGE_MANIFEST.ALL_HTML_PAGES;
 
 let source;
 

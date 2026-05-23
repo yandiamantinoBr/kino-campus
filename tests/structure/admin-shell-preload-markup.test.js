@@ -1,18 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
 
 function read(relativePath) {
   return fs.readFileSync(path.join(__dirname, '..', '..', relativePath), 'utf8');
 }
 
 describe('admin shell preload hardening', () => {
-  const adminPages = [
-    'admin/index.html',
-    'admin/moderation.html',
-    'admin/reports.html',
-    'admin/banners.html',
-    'admin/help-requests.html'
-  ];
+  const adminPages = PAGE_MANIFEST.ADMIN_PAGES;
 
   test('admin pages share the same html preload classes and no longer inline boot cleanup', () => {
     adminPages.forEach((relativePath) => {

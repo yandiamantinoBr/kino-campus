@@ -16,31 +16,8 @@ const path = require('path');
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const MODULE_PATH = path.join(ROOT_DIR, 'assets/js/core/kc-i18n.js');
 const source = fs.readFileSync(MODULE_PATH, 'utf8');
-
-const htmlFiles = [
-  'account-setup.html',
-  'achados-perdidos.html',
-  'ajuda.html',
-  'auth-callback.html',
-  'caronas-feed.html',
-  'compra-venda-feed.html',
-  'create-post.html',
-  'eventos.html',
-  'index.html',
-  'moradia.html',
-  'my-posts.html',
-  'ods.html',
-  'oportunidades.html',
-  'profile.html',
-  'search-results.html',
-  'settings.html',
-  '_product.html',
-  'admin/banners.html',
-  'admin/help-requests.html',
-  'admin/index.html',
-  'admin/moderation.html',
-  'admin/reports.html',
-];
+const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
+const htmlFiles = PAGE_MANIFEST.ALL_HTML_PAGES;
 
 const B2_GATE = {
   minLines: 800,
@@ -122,7 +99,7 @@ describe('v12.7.3 — gate B2: kc-i18n.js integridade', () => {
 
 describe('v12.7.3 — gate B2: totais de markings nos 22 HTMLs', () => {
   test('os 22 HTMLs canonicos estao listados', () => {
-    expect(htmlFiles).toHaveLength(22);
+    expect(htmlFiles).toHaveLength(PAGE_MANIFEST.ALL_HTML_PAGES.length);
   });
 
   test(`data-i18n-aria-label: pelo menos ${B2_GATE.minAriaMarkings} marcacoes nos 22 HTMLs`, () => {

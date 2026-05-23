@@ -185,7 +185,7 @@ describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
     const orderedScripts = [
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.1"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.1"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.2"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',

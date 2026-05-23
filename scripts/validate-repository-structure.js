@@ -18,6 +18,7 @@
 
 var fs   = require('fs');
 var path = require('path');
+var PAGE_MANIFEST = require('./admin-pages.manifest');
 
 var ROOT   = path.resolve(__dirname, '..');
 var errors = [];
@@ -184,39 +185,13 @@ var SCRIPTS = [
   'scripts/validate-repository-structure.js',
   'scripts/validate-script-chains.js',
   'scripts/validate-public-routes.js',
+  'scripts/admin-pages.manifest.js',
 ];
 
 // ── HTMLs públicos canônicos ──────────────────────────────────────────────────
 
-var PUBLIC_HTMLS = [
-  'index.html',
-  '_product.html',
-  'account-setup.html',
-  'achados-perdidos.html',
-  'ajuda.html',
-  'auth-callback.html',
-  'caronas-feed.html',
-  'compra-venda-feed.html',
-  'create-post.html',
-  'eventos.html',
-  'moradia.html',
-  'my-posts.html',
-  'ods.html',
-  'oportunidades.html',
-  'profile.html',
-  'privacidade.html',
-  'search-results.html',
-  'settings.html',
-  'termos.html',
-];
-
-var ADMIN_HTMLS = [
-  'admin/index.html',
-  'admin/banners.html',
-  'admin/help-requests.html',
-  'admin/moderation.html',
-  'admin/reports.html',
-];
+var PUBLIC_HTMLS = PAGE_MANIFEST.PUBLIC_PAGES;
+var ADMIN_HTMLS = PAGE_MANIFEST.ADMIN_PAGES;
 
 // ─────────────────────────────────────────────────────────────────────────────
 

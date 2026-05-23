@@ -19,6 +19,7 @@ const ADMIN_PAGES = [
   { path: '/admin/banners.html',       name: 'Admin Banners' },
   { path: '/admin/reports.html',       name: 'Admin Denúncias' },
   { path: '/admin/help-requests.html', name: 'Admin Ajuda' },
+  { path: '/admin/privacy-analytics.html', name: 'Admin Privacidade' },
 ];
 
 for (const { path, name } of ADMIN_PAGES) {

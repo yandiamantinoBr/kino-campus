@@ -14,6 +14,7 @@
 
 var fs   = require('fs');
 var path = require('path');
+var PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
 
 var ROOT  = path.resolve(__dirname, '../..');
 var SW    = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
@@ -122,17 +123,8 @@ describe('kc-sw-register.js — contrato', function () {
 
 describe('HTML chain — kc-sw-register injetado após kc-feature-flags', function () {
 
-  var publicPages = [
-    'index.html', '_product.html', 'account-setup.html', 'achados-perdidos.html',
-    'ajuda.html', 'auth-callback.html', 'caronas-feed.html', 'compra-venda-feed.html',
-    'create-post.html', 'eventos.html', 'moradia.html', 'my-posts.html',
-    'ods.html', 'oportunidades.html', 'profile.html', 'search-results.html', 'settings.html',
-  ];
-
-  var adminPages = [
-    'admin/index.html', 'admin/banners.html', 'admin/help-requests.html',
-    'admin/moderation.html', 'admin/reports.html',
-  ];
+  var publicPages = PAGE_MANIFEST.PUBLIC_PAGES;
+  var adminPages = PAGE_MANIFEST.ADMIN_PAGES;
 
   publicPages.forEach(function (page) {
     test('página pública "' + page + '" inclui kc-sw-register.js após kc-feature-flags.js', function () {

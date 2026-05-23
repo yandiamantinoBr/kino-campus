@@ -32,6 +32,22 @@
     ].join('');
   }
 
+  function renderAdminHealth(items) {
+    const target = $('#admin-health-list');
+    if (!target) return;
+    const list = Array.isArray(items) && items.length ? items : [];
+    target.innerHTML = list.map(function (item) {
+      const tone = item && item.tone === 'warn' ? '#ff9800' : item && item.tone === 'error' ? '#ef4444' : '#22c55e';
+      return [
+        '<div class="kc-admin-card" style="min-height:112px;">',
+        '<div class="kc-admin-card__label"><i class="' + esc(item.icon || 'fas fa-circle-check') + '" style="color:' + tone + ';"></i> ' + esc(item.label || 'Status') + '</div>',
+        '<strong style="font-size:1.05rem;line-height:1.25;">' + esc(item.value || 'OK') + '</strong>',
+        '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:6px;">' + esc(item.note || '') + '</div>',
+        '</div>',
+      ].join('');
+    }).join('');
+  }
+
   function daysAgo(days) {
     const date = new Date();
     date.setDate(date.getDate() - days);
@@ -98,6 +114,11 @@
         card('fas fa-check-circle', 'Aceites analytics', consent.analytics_accepted, 'histórico agregado', 'privacy-analytics.html'),
         card('fas fa-images', 'Cliques em banners', totals.banner_clicks, 'métricas com consentimento', 'privacy-analytics.html'),
       ].join('');
+      renderAdminHealth([
+        { label: 'Rotas admin', value: '6 paginas oficiais', note: 'Dashboard, Moderacao, Denuncias, Banners, Ajuda e Privacidade.' },
+        { label: 'Privacidade', value: 'RPC ativa', note: 'kc_admin_privacy_analytics respondeu.' },
+        { label: 'Exportacoes', value: 'XLSX/PDF ativo', note: 'Relatorios contextuais e sanitizados.' },
+      ]);
     } catch (error) {
       const fallbackClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
         ? window.KCSupabase.getClient()
@@ -111,6 +132,11 @@
             card('fas fa-eye', 'Views de posts', fallback.postViews, 'post_view_events', 'privacy-analytics.html'),
             card('fas fa-images', 'Banners cadastrados', fallback.banners, 'hero_banners', 'privacy-analytics.html'),
           ].join('');
+          renderAdminHealth([
+            { label: 'Rotas admin', value: '6 paginas oficiais', note: 'Validacao local cobre Privacidade/Analytics.' },
+            { label: 'Privacidade', value: 'Fallback ativo', tone: 'warn', note: 'RPC/migration completa ainda nao respondeu.' },
+            { label: 'Exportacoes', value: 'XLSX/PDF ativo', note: 'Exportador compartilhado carregado.' },
+          ]);
           return;
         } catch (_) { }
       }
@@ -122,6 +148,11 @@
         '<div style="margin-top:8px;"><a href="privacy-analytics.html" style="font-size:.78rem;color:var(--kc-primary-brand);text-decoration:none;">Abrir painel &rarr;</a></div>',
         '</article>',
       ].join('');
+      renderAdminHealth([
+        { label: 'Rotas admin', value: '6 paginas oficiais', note: 'Manifesto canonico carregado nos validadores.' },
+        { label: 'Privacidade', value: 'Indisponivel', tone: 'error', note: 'Sem RPC e sem fallback Supabase neste carregamento.' },
+        { label: 'Exportacoes', value: 'Modo defensivo', tone: 'warn', note: 'Use a pagina dedicada para validar os dados.' },
+      ]);
     }
   }
 

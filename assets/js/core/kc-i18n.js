@@ -321,6 +321,7 @@
     'meta-title.admin-index':          'KinoCampus - Dashboard Admin',
     'meta-title.admin-moderation':     'KinoCampus - Moderação Admin',
     'meta-title.admin-reports':        'KinoCampus - Denúncias Admin',
+    'meta-title.admin-privacy-analytics': 'KinoCampus - Privacidade e Analytics Admin',
 
     'meta-description.account-setup':       'Complete sua conta no KinoCampus — comunidade universitária da UFG.',
     'meta-description.achados-perdidos':    'Achados e Perdidos da UFG. Encontrou ou perdeu algo no campus? Publique no KinoCampus e ajude a comunidade.',
@@ -346,6 +347,7 @@
     'meta-description.admin-index':         'Painel administrativo do KinoCampus — comunidade universitária da UFG.',
     'meta-description.admin-moderation':    'Modere publicações e conteúdos reportados no painel administrativo do KinoCampus.',
     'meta-description.admin-reports':       'Analise denúncias recebidas no painel administrativo do KinoCampus.',
+    'meta-description.admin-privacy-analytics': 'Acompanhe consentimento, armazenamento local e analytics agregados do KinoCampus.',
 
     // ── Alt text estático ──────────────────────────────────────────────────────
     'alt.avatar-preview':        'Preview do avatar',
@@ -534,6 +536,7 @@
     'placeholder.admin-user-search':    'Buscar usuário por nome, e-mail ou nickname…',
     'placeholder.admin-actor-filter':   'Filtrar por actor_id, nome ou nickname',
     'placeholder.audit-actor-filter':   'Ator: nome ou UUID',
+    'placeholder.privacy-page-filter':  'Filtrar por página',
     'placeholder.admin-invite-email':   'E-mail do convidado (ex: usuario@gmail.com)',
     'placeholder.admin-invite-reason':  'Motivo do convite (opcional)',
     'placeholder.admin-limit-max':      'Máx.',
@@ -563,6 +566,7 @@
     'tooltip.filter-report-status':     'Filtrar por status da denúncia',
     'tooltip.filter-reason':            'Filtrar por motivo',
     'tooltip.filter-module':            'Filtrar por módulo',
+    'tooltip.privacy-event-filter':     'Filtrar por tipo de evento de privacidade',
     'tooltip.period-filter':            'Período',
     'tooltip.audit-action-filter':      'Filtrar por ação',
     'tooltip.audit-entity-filter':      'Filtrar por entidade',

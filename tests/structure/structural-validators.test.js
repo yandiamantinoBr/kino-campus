@@ -16,6 +16,7 @@ var ROOT         = path.resolve(__dirname, '../..');
 var STRUCT_SCRIPT = fs.readFileSync(path.join(ROOT, 'scripts', 'validate-repository-structure.js'), 'utf8');
 var CHAINS_SCRIPT = fs.readFileSync(path.join(ROOT, 'scripts', 'validate-script-chains.js'), 'utf8');
 var ROUTES_SCRIPT = fs.readFileSync(path.join(ROOT, 'scripts', 'validate-public-routes.js'), 'utf8');
+var PAGE_MANIFEST = require(path.join(ROOT, 'scripts', 'admin-pages.manifest.js'));
 
 // ── 1. validate-repository-structure.js ─────────────────────────────────────
 
@@ -55,7 +56,7 @@ describe('validate-repository-structure.js — integridade', function () {
     expect(STRUCT_SCRIPT).toContain('PUBLIC_HTMLS');
     expect(STRUCT_SCRIPT).toContain('ADMIN_HTMLS');
     expect(STRUCT_SCRIPT).toContain('index.html');
-    expect(STRUCT_SCRIPT).toContain('admin/index.html');
+    expect(PAGE_MANIFEST.ADMIN_PAGES).toContain('admin/privacy-analytics.html');
   });
 
   test('sai com código 0 em sucesso, 1 em falha', function () {
@@ -92,9 +93,9 @@ describe('validate-script-chains.js — integridade', function () {
   test('lista 17 páginas públicas e 5 admin', function () {
     expect(CHAINS_SCRIPT).toContain('PUBLIC_PAGES');
     expect(CHAINS_SCRIPT).toContain('ADMIN_PAGES');
-    expect(CHAINS_SCRIPT).toContain('index.html');
-    expect(CHAINS_SCRIPT).toContain('admin/index.html');
-    expect(CHAINS_SCRIPT).toContain('oportunidades.html');
+    expect(CHAINS_SCRIPT).toContain('PAGE_MANIFEST.PUBLIC_PAGES');
+    expect(CHAINS_SCRIPT).toContain('PAGE_MANIFEST.ADMIN_PAGES');
+    expect(PAGE_MANIFEST.ADMIN_PAGES).toHaveLength(6);
   });
 
   test('valida posição (indexOf) e ordem', function () {
@@ -121,17 +122,8 @@ describe('validate-script-chains.js — cadeia real nos 22 HTMLs', function () {
     'boot/kc-telemetry.js',
   ];
 
-  var publicPages = [
-    'index.html', '_product.html', 'account-setup.html', 'achados-perdidos.html',
-    'ajuda.html', 'auth-callback.html', 'caronas-feed.html', 'compra-venda-feed.html',
-    'create-post.html', 'eventos.html', 'moradia.html', 'my-posts.html',
-    'ods.html', 'oportunidades.html', 'profile.html', 'search-results.html', 'settings.html',
-  ];
-
-  var adminPages = [
-    'admin/index.html', 'admin/banners.html', 'admin/help-requests.html',
-    'admin/moderation.html', 'admin/reports.html',
-  ];
+  var publicPages = PAGE_MANIFEST.PUBLIC_PAGES;
+  var adminPages = PAGE_MANIFEST.ADMIN_PAGES;
 
   publicPages.forEach(function (page) {
     test('pública "' + page + '" — cadeia de boot em ordem', function () {
@@ -176,8 +168,9 @@ describe('validate-public-routes.js — integridade', function () {
   test('define 17 rotas públicas e 5 admin', function () {
     expect(ROUTES_SCRIPT).toContain('PUBLIC_ROUTES');
     expect(ROUTES_SCRIPT).toContain('ADMIN_ROUTES');
-    expect(ROUTES_SCRIPT).toContain("route: '/'");
-    expect(ROUTES_SCRIPT).toContain("route: '/admin'");
+    expect(ROUTES_SCRIPT).toContain('PAGE_MANIFEST.PUBLIC_ROUTES');
+    expect(ROUTES_SCRIPT).toContain('PAGE_MANIFEST.ADMIN_ROUTES');
+    expect(PAGE_MANIFEST.ADMIN_ROUTES.map(function (route) { return route.file; })).toContain('admin/privacy-analytics.html');
   });
 
   test('valida existência dos HTMLs', function () {
@@ -207,14 +200,7 @@ describe('validate-public-routes.js — integridade', function () {
 
 describe('validate-public-routes.js — rotas reais existem', function () {
 
-  var allPages = [
-    'index.html', '_product.html', 'account-setup.html', 'achados-perdidos.html',
-    'ajuda.html', 'auth-callback.html', 'caronas-feed.html', 'compra-venda-feed.html',
-    'create-post.html', 'eventos.html', 'moradia.html', 'my-posts.html',
-    'ods.html', 'oportunidades.html', 'profile.html', 'search-results.html', 'settings.html',
-    'admin/index.html', 'admin/banners.html', 'admin/help-requests.html',
-    'admin/moderation.html', 'admin/reports.html',
-  ];
+  var allPages = PAGE_MANIFEST.PUBLIC_PAGES.concat(PAGE_MANIFEST.ADMIN_PAGES);
 
   allPages.forEach(function (page) {
     test('"' + page + '" existe e tem conteúdo', function () {

@@ -4,31 +4,8 @@ const path = require('path');
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const MODULE_PATH = path.join(ROOT_DIR, 'assets/js/core/kc-i18n.js');
 const source = fs.readFileSync(MODULE_PATH, 'utf8');
-
-const htmlFiles = [
-  'account-setup.html',
-  'achados-perdidos.html',
-  'ajuda.html',
-  'auth-callback.html',
-  'caronas-feed.html',
-  'compra-venda-feed.html',
-  'create-post.html',
-  'eventos.html',
-  'index.html',
-  'moradia.html',
-  'my-posts.html',
-  'ods.html',
-  'oportunidades.html',
-  'profile.html',
-  'search-results.html',
-  'settings.html',
-  '_product.html',
-  'admin/banners.html',
-  'admin/help-requests.html',
-  'admin/index.html',
-  'admin/moderation.html',
-  'admin/reports.html',
-];
+const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
+const htmlFiles = PAGE_MANIFEST.ALL_HTML_PAGES;
 
 function resetAndLoad() {
   jest.resetModules();
@@ -103,7 +80,7 @@ describe('kc-i18n.js - metadata runtime contract', () => {
 
 describe('HTML - marcacao declarativa de metadata e alt', () => {
   test('os 22 HTMLs declaram title e description i18n no elemento raiz', () => {
-    expect(htmlFiles).toHaveLength(22);
+    expect(htmlFiles).toHaveLength(PAGE_MANIFEST.ALL_HTML_PAGES.length);
 
     htmlFiles.forEach((relPath) => {
       const html = readHtml(relPath);

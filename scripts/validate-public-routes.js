@@ -18,41 +18,15 @@
 
 var fs   = require('fs');
 var path = require('path');
+var PAGE_MANIFEST = require('./admin-pages.manifest');
 
 var ROOT   = path.resolve(__dirname, '..');
 var errors = [];
 
 // ── Rotas públicas canônicas ──────────────────────────────────────────────────
 
-var PUBLIC_ROUTES = [
-  { route: '/',                     file: 'index.html' },
-  { route: '/_product',             file: '_product.html' },
-  { route: '/account-setup',        file: 'account-setup.html' },
-  { route: '/achados-perdidos',      file: 'achados-perdidos.html' },
-  { route: '/ajuda',                 file: 'ajuda.html' },
-  { route: '/auth-callback',         file: 'auth-callback.html' },
-  { route: '/caronas-feed',          file: 'caronas-feed.html' },
-  { route: '/compra-venda-feed',     file: 'compra-venda-feed.html' },
-  { route: '/create-post',           file: 'create-post.html' },
-  { route: '/eventos',               file: 'eventos.html' },
-  { route: '/moradia',               file: 'moradia.html' },
-  { route: '/my-posts',              file: 'my-posts.html' },
-  { route: '/ods',                   file: 'ods.html' },
-  { route: '/oportunidades',         file: 'oportunidades.html' },
-  { route: '/profile',               file: 'profile.html' },
-  { route: '/privacidade',           file: 'privacidade.html' },
-  { route: '/search-results',        file: 'search-results.html' },
-  { route: '/settings',              file: 'settings.html' },
-  { route: '/termos',                file: 'termos.html' },
-];
-
-var ADMIN_ROUTES = [
-  { route: '/admin',                 file: 'admin/index.html' },
-  { route: '/admin/banners',         file: 'admin/banners.html' },
-  { route: '/admin/help-requests',   file: 'admin/help-requests.html' },
-  { route: '/admin/moderation',      file: 'admin/moderation.html' },
-  { route: '/admin/reports',         file: 'admin/reports.html' },
-];
+var PUBLIC_ROUTES = PAGE_MANIFEST.PUBLIC_ROUTES;
+var ADMIN_ROUTES = PAGE_MANIFEST.ADMIN_ROUTES;
 
 // ── CSS e assets obrigatórios ─────────────────────────────────────────────────
 

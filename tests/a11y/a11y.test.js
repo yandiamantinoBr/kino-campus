@@ -228,15 +228,8 @@ describe('Atributos ARIA em HTML estático (index.html)', () => {
 const _fs = require('fs');
 const _path = require('path');
 const _ROOT = _path.resolve(__dirname, '../..');
-
-const _htmlFiles = [
-  'account-setup.html', 'achados-perdidos.html', 'ajuda.html', 'auth-callback.html',
-  'caronas-feed.html', 'compra-venda-feed.html', 'create-post.html', 'eventos.html',
-  'index.html', 'moradia.html', 'my-posts.html', 'ods.html', 'oportunidades.html',
-  'profile.html', 'search-results.html', 'settings.html', '_product.html',
-  'admin/banners.html', 'admin/help-requests.html', 'admin/index.html',
-  'admin/moderation.html', 'admin/reports.html',
-];
+const _PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
+const _htmlFiles = _PAGE_MANIFEST.ALL_HTML_PAGES;
 
 function _readHtml(relPath) {
   return _fs.readFileSync(_path.join(_ROOT, relPath), 'utf8');
@@ -244,7 +237,7 @@ function _readHtml(relPath) {
 
 describe('v12.8.1 — a11y B3: estrutura de documento nos 22 HTMLs', () => {
   test('os 22 HTMLs estao listados', () => {
-    expect(_htmlFiles).toHaveLength(22);
+    expect(_htmlFiles).toHaveLength(_PAGE_MANIFEST.ALL_HTML_PAGES.length);
   });
 
   test('todos os 22 HTMLs tem exatamente um <h1> (A1 + A2)', () => {

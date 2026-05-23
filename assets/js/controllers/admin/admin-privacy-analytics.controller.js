@@ -641,8 +641,47 @@
     return 'kc-privacidade-analytics-' + days + 'd-' + new Date().toISOString().slice(0, 10) + '.' + ext;
   }
 
+  function buildPrivacyExportReport() {
+    const data = state.data || {};
+    const totals = data.totals || {};
+    const consent = data.consent || {};
+    const filters = data.filters || readFilters();
+    return {
+      title: 'KinoCampus - Privacidade e Analytics',
+      subtitle: 'Metricas agregadas, consentimento, inventario e eventos opcionais filtrados',
+      source: data.source_mode || 'admin/privacy-analytics.html',
+      filters: {
+        periodo_dias: filters.days || 30,
+        desde: filters.since || '',
+        evento: filters.eventName || 'all',
+        pagina: filters.pagePath || 'all',
+        modulo: filters.moduleKey || 'all',
+      },
+      kpis: {
+        eventos_opcionais: totals.events || 0,
+        sessoes_agregadas: totals.sessions || 0,
+        buscas: totals.searches || 0,
+        impressoes_banners: totals.banner_impressions || 0,
+        cliques_banners: totals.banner_clicks || 0,
+        consentimentos: consent.updates || 0,
+        analytics_aceitos: consent.analytics_accepted || 0,
+        analytics_rejeitados: consent.analytics_rejected || 0,
+      },
+      sections: [
+        { title: 'Eventos por tipo', rows: data.by_event || [] },
+        { title: 'Paginas', rows: data.by_page || [] },
+        { title: 'Banners', rows: data.banners || [] },
+        { title: 'Eventos detalhados', rows: exportRows(data) },
+        { title: 'Inventario de armazenamento', rows: INVENTORY_ROWS },
+      ],
+    };
+  }
+
   async function handleExportXLSX() {
     if (!state.data || !window.KCAdminExport) return;
+    if (typeof window.KCAdminExport.exportReportXLSX === 'function') {
+      return window.KCAdminExport.exportReportXLSX(buildExportFilename('xlsx'), buildPrivacyExportReport());
+    }
     const totals = state.data.totals || {};
     const consent = state.data.consent || {};
     await window.KCAdminExport.exportXLSX(buildExportFilename('xlsx'), [
@@ -669,6 +708,9 @@
 
   async function handleExportPDF() {
     if (!state.data || !window.KCAdminExport) return;
+    if (typeof window.KCAdminExport.exportReportPDF === 'function') {
+      return window.KCAdminExport.exportReportPDF(buildExportFilename('pdf'), buildPrivacyExportReport());
+    }
     const totals = state.data.totals || {};
     const consent = state.data.consent || {};
     await window.KCAdminExport.exportPDF(buildExportFilename('pdf'), 'KinoCampus - Privacidade e Analytics', [

@@ -13,6 +13,7 @@
 
 var fs   = require('fs');
 var path = require('path');
+var PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
 
 var ROOT = path.resolve(__dirname, '../..');
 var TEL  = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'boot', 'kc-telemetry.js'), 'utf8');
@@ -92,17 +93,8 @@ describe('kc-telemetry.js — integridade', function () {
 
 describe('HTML chain — kc-telemetry injetado após kc-sw-register', function () {
 
-  var publicPages = [
-    'index.html', '_product.html', 'account-setup.html', 'achados-perdidos.html',
-    'ajuda.html', 'auth-callback.html', 'caronas-feed.html', 'compra-venda-feed.html',
-    'create-post.html', 'eventos.html', 'moradia.html', 'my-posts.html',
-    'ods.html', 'oportunidades.html', 'profile.html', 'search-results.html', 'settings.html',
-  ];
-
-  var adminPages = [
-    'admin/index.html', 'admin/banners.html', 'admin/help-requests.html',
-    'admin/moderation.html', 'admin/reports.html',
-  ];
+  var publicPages = PAGE_MANIFEST.PUBLIC_PAGES;
+  var adminPages = PAGE_MANIFEST.ADMIN_PAGES;
 
   publicPages.forEach(function (page) {
     test('pública "' + page + '" — kc-telemetry.js após kc-sw-register.js', function () {

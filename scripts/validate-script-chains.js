@@ -23,6 +23,7 @@
 
 var fs   = require('fs');
 var path = require('path');
+var PAGE_MANIFEST = require('./admin-pages.manifest');
 
 var ROOT   = path.resolve(__dirname, '..');
 var errors = [];
@@ -47,35 +48,8 @@ var BOOT_CHAIN_ADMIN = [
 
 // ── Páginas ───────────────────────────────────────────────────────────────────
 
-var PUBLIC_PAGES = [
-  'index.html',
-  '_product.html',
-  'account-setup.html',
-  'achados-perdidos.html',
-  'ajuda.html',
-  'auth-callback.html',
-  'caronas-feed.html',
-  'compra-venda-feed.html',
-  'create-post.html',
-  'eventos.html',
-  'moradia.html',
-  'my-posts.html',
-  'ods.html',
-  'oportunidades.html',
-  'profile.html',
-  'privacidade.html',
-  'search-results.html',
-  'settings.html',
-  'termos.html',
-];
-
-var ADMIN_PAGES = [
-  'admin/index.html',
-  'admin/banners.html',
-  'admin/help-requests.html',
-  'admin/moderation.html',
-  'admin/reports.html',
-];
+var PUBLIC_PAGES = PAGE_MANIFEST.PUBLIC_PAGES;
+var ADMIN_PAGES = PAGE_MANIFEST.ADMIN_PAGES;
 
 // ─────────────────────────────────────────────────────────────────────────────
 

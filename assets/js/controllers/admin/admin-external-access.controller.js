@@ -151,9 +151,21 @@
     root.innerHTML = items.map(renderItem).join('');
   }
 
+  function isSupabaseAdminApiReady() {
+    const env = window.KCAPI && window.KCAPI.ENV ? window.KCAPI.ENV : {};
+    const driver = String(env.driver || env.DATA_DRIVER || '').toLowerCase();
+    return driver === 'supabase'
+      && !!(window.KCAPI && typeof window.KCAPI.listExternalAccessRequests === 'function')
+      && !!(window.KCAPI && typeof window.KCAPI.decideExternalAccessRequest === 'function');
+  }
+
   async function fetchByStatus(status) {
     if (!window.KCAPI || typeof window.KCAPI.listExternalAccessRequests !== 'function') {
       setFeedback('KCAPI.listExternalAccessRequests indisponível.', 'error');
+      return { items: [], total: 0 };
+    }
+    if (!isSupabaseAdminApiReady()) {
+      setFeedback('Solicitações externas exigem o modo Supabase.', 'warn');
       return { items: [], total: 0 };
     }
     const res = await window.KCAPI.listExternalAccessRequests({ status, limit: 100 });
@@ -246,6 +258,10 @@
   async function confirmModalDecision() {
     const { id, decision } = STATE.modal;
     if (!id || !decision) return;
+    if (!isSupabaseAdminApiReady()) {
+      setFeedback('Solicitações externas exigem o modo Supabase.', 'warn');
+      return;
+    }
     const note = String(($('#ext-modal-note') || {}).value || '').trim();
     const confirmBtn = $('#ext-modal-confirm');
     if (confirmBtn) confirmBtn.disabled = true;
