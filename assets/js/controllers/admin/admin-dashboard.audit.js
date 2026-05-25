@@ -738,124 +738,153 @@
     var periodLabel = data.periodLabel || getPeriodLabelValue(deps, data.periodDays || 30);
     var auditFilters = {};
     try { auditFilters = readAuditFilters(deps) || {}; } catch (_) { auditFilters = {}; }
+    var periodStart = formatDateBRValue(deps, data.periodStart);
+    var periodEnd = formatDateBRValue(deps, data.periodEnd);
+    var activeSessions = data.activeSessions15m || {};
+    var activeAvailable = activeSessions && activeSessions.available;
     return {
-      title: 'KinoCampus - Relatorio Executivo Admin',
+      title: 'KinoCampus - Relatório Executivo Admin',
       subtitle: 'Dashboard administrativo consolidado',
       period: periodLabel,
-      source: 'Dashboard Admin',
+      source: 'admin/index.html — Dashboard Admin',
       filters: {
         periodo: periodLabel,
-        inicio: formatDateBRValue(deps, data.periodStart),
-        fim: formatDateBRValue(deps, data.periodEnd),
+        inicio: periodStart,
+        fim: periodEnd,
         audit_action: auditFilters.action || 'all',
-        audit_entity: auditFilters.entityType || auditFilters.entity || 'all',
+        audit_entity_type: auditFilters.entityType || auditFilters.entity || 'all',
         audit_actor: auditFilters.actorQuery || auditFilters.actor || '',
       },
       kpis: [
-        { label: 'Ativos agora', value: data.activeSessions15m && data.activeSessions15m.available ? toNumberValue(deps, data.activeSessions15m.value) : 'Indisponivel', detail: 'sessoes agregadas 15min' },
-        { label: 'Publicacoes visiveis', value: toNumberValue(deps, data.visiblePosts), detail: 'published + closed' },
-        { label: 'Denuncias abertas', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.open), detail: periodLabel },
-        { label: 'Total de denuncias', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
+        { label: 'Ativos agora', value: activeAvailable ? toNumberValue(deps, activeSessions.value) : 'Indisponível', detail: 'sessões agregadas em 15 min' },
+        { label: 'Publicações visíveis', value: toNumberValue(deps, data.visiblePosts), detail: 'published + closed' },
+        { label: 'Denúncias abertas', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.open), detail: periodLabel },
+        { label: 'Total de denúncias', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
         { label: 'Posts ocultados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
         { label: 'Posts deletados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.deleted), detail: periodLabel },
         { label: 'Buscas registradas', value: toNumberValue(deps, data.searchCount), detail: periodLabel },
         { label: 'Votos', value: toNumberValue(deps, data.votesCount), detail: periodLabel },
-        { label: 'Novos usuarios', value: toNumberValue(deps, data.usersNew), detail: periodLabel },
+        { label: 'Novos usuários', value: toNumberValue(deps, data.usersNew), detail: periodLabel },
         { label: 'Posts salvos', value: toNumberValue(deps, data.savedPostsCount), detail: periodLabel },
       ],
       sections: [
         {
           title: 'Resumo executivo',
+          note: 'Indicadores principais da seleção atual do Dashboard.',
           rows: [
-            { Indicador: 'Janela analisada', Valor: formatDateBRValue(deps, data.periodStart) + ' ate ' + formatDateBRValue(deps, data.periodEnd) },
-            { Indicador: 'Periodo', Valor: periodLabel },
-            { Indicador: 'Ativos agora', Valor: data.activeSessions15m && data.activeSessions15m.available ? String(data.activeSessions15m.value) : 'Indisponivel' },
-            { Indicador: 'Fonte ativos agora', Valor: data.activeSessions15m ? (data.activeSessions15m.source || '-') : '-' },
-            { Indicador: 'Publicacoes visiveis', Valor: toNumberValue(deps, data.visiblePosts) },
-            { Indicador: 'Alertas operacionais', Valor: (data.alerts || []).length },
-            { Indicador: 'Eventos no audit log', Valor: (data.auditRows || []).length },
+            { indicador: 'Janela analisada', valor: periodStart + ' até ' + periodEnd, contexto: periodLabel },
+            { indicador: 'Ativos agora', valor: activeAvailable ? String(activeSessions.value) : 'Indisponível', contexto: activeSessions.source || '-' },
+            { indicador: 'Publicações visíveis', valor: toNumberValue(deps, data.visiblePosts), contexto: 'Posts publicados ou encerrados visíveis' },
+            { indicador: 'Denúncias abertas', valor: toNumberValue(deps, data.reportMetrics && data.reportMetrics.open), contexto: periodLabel },
+            { indicador: 'Buscas registradas', valor: toNumberValue(deps, data.searchCount), contexto: periodLabel },
+            { indicador: 'Novos usuários', valor: toNumberValue(deps, data.usersNew), contexto: periodLabel },
+            { indicador: 'Posts salvos', valor: toNumberValue(deps, data.savedPostsCount), contexto: periodLabel },
+            { indicador: 'Votos', valor: toNumberValue(deps, data.votesCount), contexto: periodLabel },
+            { indicador: 'Alertas operacionais', valor: (data.alerts || []).length, contexto: 'Alertas do Dashboard' },
+            { indicador: 'Eventos no audit log', valor: (data.auditRows || []).length, contexto: 'Linhas carregadas no painel' },
           ],
+          columns: ['indicador', 'valor', 'contexto'],
+          maxPdfRows: 12,
         },
         {
-          title: 'Pulso diario',
+          title: 'Pulso diário',
+          note: 'Atividade consolidada por dia para posts, comentários, buscas, votos e ações administrativas.',
           rows: (data.dailyMetrics || []).map(function (row) {
             return {
-              Dia: row.label || row.day || '',
-              Posts: toNumberValue(deps, row.posts_count),
-              Comentarios: toNumberValue(deps, row.comments_count),
-              Buscas: toNumberValue(deps, row.searches_count),
-              Votos: toNumberValue(deps, row.votes_count),
-              Acoes_admin: toNumberValue(deps, row.admin_actions_count),
+              dia: row.label || row.day || '',
+              posts: toNumberValue(deps, row.posts_count),
+              comentarios: toNumberValue(deps, row.comments_count),
+              buscas: toNumberValue(deps, row.searches_count),
+              votos: toNumberValue(deps, row.votes_count),
+              acoes_admin: toNumberValue(deps, row.admin_actions_count),
+              total: toNumberValue(deps, row.total_count),
             };
           }),
+          pdfColumns: ['dia', 'total', 'buscas', 'acoes_admin'],
+          xlsxColumns: ['dia', 'posts', 'comentarios', 'buscas', 'votos', 'acoes_admin', 'total'],
+          maxPdfRows: 18,
         },
         {
-          title: 'Modulos',
+          title: 'Módulos',
           rows: (data.moduleShareRows || []).map(function (row) {
             return {
-              Modulo: row.label || row.module || '',
-              Participacao: String(row.share || 0) + '%',
-              Buscas: toNumberValue(deps, row.count),
-              Termos: Array.isArray(row.topTerms) ? row.topTerms.join(', ') : '',
+              modulo: row.label || row.module || '',
+              participacao_percentual: String(row.share || 0) + '%',
+              volume: toNumberValue(deps, row.count),
+              top_termos: Array.isArray(row.topTerms) ? row.topTerms.join(', ') : '',
             };
           }),
+          pdfColumns: ['modulo', 'participacao_percentual', 'volume'],
+          xlsxColumns: ['modulo', 'participacao_percentual', 'volume', 'top_termos'],
+          maxPdfRows: 12,
         },
         {
-          title: 'Tendencias',
+          title: 'Tendências',
           rows: (data.trends || []).slice(0, 50).map(function (item, index) {
             return {
-              Posicao: index + 1,
-              Termo: item && item.term ? item.term : '',
-              Contagem: toNumberValue(deps, item && item.count),
-              Modulo: getModuleLabelValue(deps, classifyTermToModuleValue(deps, item && item.term)),
+              posicao: index + 1,
+              termo: item && item.term ? item.term : '',
+              buscas: toNumberValue(deps, item && item.count),
+              modulo: getModuleLabelValue(deps, classifyTermToModuleValue(deps, item && item.term)),
             };
           }),
+          columns: ['posicao', 'termo', 'buscas', 'modulo'],
+          maxPdfRows: 20,
         },
         {
           title: 'Alertas',
           rows: (data.alerts || []).map(function (alert) {
             return {
-              Tom: alert && alert.tone ? alert.tone : 'neutral',
-              Titulo: alert && alert.title ? alert.title : '',
-              Descricao: alert && alert.body ? alert.body : '',
+              tom: alert && alert.tone ? alert.tone : 'neutral',
+              titulo: alert && alert.title ? alert.title : '',
+              descricao: alert && alert.body ? alert.body : '',
             };
           }),
+          pdfColumns: ['tom', 'titulo', 'descricao'],
+          xlsxColumns: ['tom', 'titulo', 'descricao'],
+          maxPdfRows: 12,
         },
         {
-          title: 'Saude/Admin',
+          title: 'Saúde/Admin',
           rows: [
             {
-              Indicador: 'Coleta de ativos 15min',
-              Estado: data.activeSessions15m && data.activeSessions15m.available ? (data.activeSessions15m.label || 'Disponivel') : 'Indisponivel',
-              Fonte: data.activeSessions15m ? (data.activeSessions15m.source || '-') : '-',
-              Observacao: data.activeSessions15m ? (data.activeSessions15m.note || '') : ''
+              indicador: 'Coleta de ativos 15min',
+              estado: activeAvailable ? (activeSessions.label || 'Disponível') : 'Indisponível',
+              fonte: activeSessions.source || '-',
+              observacao: activeSessions.note || ''
             },
             {
-              Indicador: 'Rotas admin',
-              Estado: '6 paginas oficiais',
-              Fonte: 'manifesto admin',
-              Observacao: 'Dashboard, Moderacao, Denuncias, Banners, Ajuda e Privacidade'
+              indicador: 'Rotas admin',
+              estado: '6 páginas oficiais',
+              fonte: 'manifesto admin',
+              observacao: 'Dashboard, Moderação, Denúncias, Banners, Ajuda e Privacidade'
             },
             {
-              Indicador: 'Exportacoes',
-              Estado: 'PDF executivo + XLSX completo',
-              Fonte: 'KCAdminExport',
-              Observacao: 'Dados sanitizados e filtros preservados'
+              indicador: 'Exportações',
+              estado: 'PDF executivo + XLSX completo',
+              fonte: 'KCAdminExport',
+              observacao: 'Dados sanitizados e filtros preservados'
             }
-          ]
+          ],
+          columns: ['indicador', 'estado', 'fonte', 'observacao'],
+          maxPdfRows: 8,
         },
         {
           title: 'Audit log',
+          note: 'Amostra dos eventos administrativos carregados no Dashboard para o período e filtros selecionados.',
           rows: (data.auditRows || []).map(function (row) {
             return {
-              Data: formatDateTimeBRValue(deps, row && row.created_at),
-              Acao: row && row.action ? row.action : '-',
-              Entidade: row && row.entity_type ? row.entity_type : '-',
-              Entity_id: row && row.entity_id ? row.entity_id : '',
-              Ator: getActorDisplay(row && row.actor_id, deps),
-              Detalhes: compactAuditPayload(row && row.payload),
+              data: formatDateTimeBRValue(deps, row && row.created_at),
+              acao: row && row.action ? row.action : '-',
+              entidade: row && row.entity_type ? row.entity_type : '-',
+              entity_id: row && row.entity_id ? row.entity_id : '',
+              ator: getActorDisplay(row && row.actor_id, deps),
+              detalhes: compactAuditPayload(row && row.payload),
             };
           }),
+          pdfColumns: ['data', 'acao', 'entidade', 'ator'],
+          xlsxColumns: ['data', 'acao', 'entidade', 'entity_id', 'ator', 'detalhes'],
+          maxPdfRows: 30,
         },
       ],
     };
@@ -873,7 +902,7 @@
 
     var summarySheet = XLSX.utils.aoa_to_sheet(buildSummarySheetRows(data, periodLabel, generatedAt, deps));
     summarySheet['!cols'] = [{ wch: 20 }, { wch: 28 }, { wch: 16 }];
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resumo');
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resumo Executivo');
 
     var trendsSheet = XLSX.utils.aoa_to_sheet(buildTrendRows(data, deps));
     trendsSheet['!cols'] = [{ wch: 8 }, { wch: 28 }, { wch: 10 }, { wch: 20 }];
@@ -889,7 +918,7 @@
 
     var modulesSheet = XLSX.utils.aoa_to_sheet(buildModuleRows(data, deps));
     modulesSheet['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 42 }];
-    XLSX.utils.book_append_sheet(workbook, modulesSheet, 'Top módulos');
+    XLSX.utils.book_append_sheet(workbook, modulesSheet, 'Módulos');
 
     var alertsSheet = XLSX.utils.aoa_to_sheet(buildAlertRows(data));
     alertsSheet['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 64 }];

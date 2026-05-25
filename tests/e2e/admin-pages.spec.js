@@ -1,14 +1,14 @@
 /**
  * admin-pages.spec.js — KinoCampus E2E v12.9.1
  *
- * Verifica que as 5 páginas admin carregam corretamente e têm estrutura
+ * Verifica que as 6 páginas admin carregam corretamente e têm estrutura
  * WCAG básica (HTTP 200, skip link, <main id="kc-main">, exatamente 1 <h1>).
  *
  * Nota: as páginas admin podem redirecionar via JS (sem sessão de admin),
  * mas o HTTP server responde 200 para o HTML estático — os testes verificam
  * somente a camada estática servida.
  *
- * 5 testes (um por página admin).
+ * 6 testes (um por página admin).
  */
 
 const { test, expect } = require('@playwright/test');

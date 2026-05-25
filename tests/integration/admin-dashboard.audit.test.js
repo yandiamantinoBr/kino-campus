@@ -381,7 +381,7 @@ describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
     const orderedScripts = [
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.3"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.3"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.5"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',
@@ -657,11 +657,11 @@ describe('window._KCAD.audit - comportamento', () => {
     expect(writeFile).toHaveBeenCalledTimes(1);
     const workbook = writeFile.mock.calls[0][0];
     expect(workbook.sheets.map((sheet) => sheet.name)).toEqual([
-      'Resumo',
+      'Resumo Executivo',
       'Tendências',
       'Pulso diário',
       'Séries',
-      'Top módulos',
+      'Módulos',
       'Alertas',
       'Audit log'
     ]);

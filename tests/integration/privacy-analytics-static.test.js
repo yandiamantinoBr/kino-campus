@@ -50,7 +50,7 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     expect(page).toContain('Privacidade e Analytics');
     expect(page).toContain('privacyExportXlsx');
     expect(page).toContain('privacyExportPdf');
-    expect(page).toContain('../assets/js/controllers/admin/admin-export.shared.js?v=8.6.4');
+    expect(page).toContain('../assets/js/controllers/admin/admin-export.shared.js?v=8.6.5');
     expect(page).toContain('../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.2');
     expect(dashboard).toContain('admin-dashboard.privacy.js?v=8.6.2');
     expect(dashboard).toContain('privacy-analytics.html');

@@ -445,6 +445,7 @@
     'aria-label.filter-action':         'Filtrar por ação',
     'aria-label.records-per-page':      'Registros por página',
     'aria-label.banner-modal-close':    'Fechar',
+    'aria-label.banners-metrics-period': 'Período das métricas de banners',
 
     // My posts popover
     'aria-label.my-posts-save-close':   'Fechar',
@@ -544,6 +545,7 @@
     // ── Tooltips (atributo title em botões, selects e links) ──────────────
     // Tema
     'tooltip.theme-toggle':             'Alternar tema',
+    'tooltip.banners-metrics-period':   'Período das métricas',
     // Ranking / info
     'tooltip.how-it-works':             'Como funciona?',
     'tooltip.how-ranking-works':        'Como funciona o ranking?',

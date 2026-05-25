@@ -17,6 +17,8 @@
   const LOG_TAG = '[KC][ADMIN_REPORTS]';
   const REPORTS_PAGE_SIZE = 50;
   const MAX_RPC_REPORTS = 500;
+  const EXPORT_ROW_LIMIT = 2000;
+  const EXPORT_PAGE_SIZE = 250;
 
   // ---- Helpers ----
 
@@ -659,6 +661,27 @@
 
   function reasonLabel(r) { return REASON_LABELS[r] || r; }
 
+  const REPORT_STATUS_LABELS = {
+    all: 'Todas',
+    open: 'Em aberto',
+    closed: 'Fechadas',
+  };
+
+  function reportStatusLabel(status) {
+    return REPORT_STATUS_LABELS[status] || status || 'Indisponível';
+  }
+
+  function postStatusLabel(status) {
+    const labels = {
+      published: 'Publicado',
+      pending: 'Pendente',
+      hidden: 'Oculto',
+      closed: 'Encerrado',
+      deleted: 'Deletado',
+    };
+    return labels[status] || status || 'Indisponível';
+  }
+
 
   function renderSummary(reports) {
     const box = $('#reports-summary');
@@ -1060,11 +1083,94 @@
     container.innerHTML = html;
   }
 
-  function buildReportsExportReport() {
-    const reports = Array.isArray(_reportsState.rows) ? _reportsState.rows : [];
+  async function fetchReportsForExport(warnings) {
+    const client = getClient();
+    const fallbackRows = Array.isArray(_reportsState.rows) ? _reportsState.rows : [];
+    if (!client) {
+      warnings.push('Supabase client indisponível; export usando apenas as denúncias carregadas na tela.');
+      return { rows: fallbackRows, totalCount: _reportsState.totalCount || fallbackRows.length, totalCountKnown: _reportsState.totalCountKnown, source: 'screen' };
+    }
+
+    const rows = [];
+    let totalCount = 0;
+    try {
+      for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
+        const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
+        const { data, error, count } = await buildReportsQuery(client, offset, limit);
+        if (error) throw error;
+        const chunk = Array.isArray(data) ? data : [];
+        if (offset === 0) totalCount = Number.isFinite(Number(count)) ? Number(count) : chunk.length;
+        rows.push(...chunk);
+        if (chunk.length < limit || (totalCount && rows.length >= totalCount)) break;
+      }
+      if (totalCount > rows.length) warnings.push(`Export de denúncias limitado a ${rows.length} de ${totalCount} registros filtrados.`);
+      return { rows, totalCount: totalCount || rows.length, totalCountKnown: true, source: 'direct' };
+    } catch (error) {
+      if (!isPermissionError(error)) warnings.push('Consulta direta de denúncias falhou; tentando fallback RPC.');
+    }
+
+    try {
+      const rpc = await client.rpc('kc_admin_list_reports', {
+        p_status: _filters.status,
+        p_reason: _filters.reason,
+        p_limit: EXPORT_ROW_LIMIT,
+      });
+      if (rpc && !rpc.error && Array.isArray(rpc.data)) {
+        const rpcRows = rpc.data.slice(0, EXPORT_ROW_LIMIT);
+        if (rpc.data.length >= EXPORT_ROW_LIMIT) warnings.push(`Fallback RPC limitado aos ${EXPORT_ROW_LIMIT} registros mais recentes dos filtros atuais.`);
+        return { rows: rpcRows, totalCount: rpcRows.length, totalCountKnown: rpc.data.length < EXPORT_ROW_LIMIT, source: 'rpc' };
+      }
+      if (rpc && rpc.error) warnings.push('Fallback RPC de denúncias falhou; export usando a página carregada.');
+    } catch (rpcError) {
+      warnings.push('Fallback RPC de denúncias falhou; export usando a página carregada.');
+    }
+
+    return { rows: fallbackRows, totalCount: _reportsState.totalCount || fallbackRows.length, totalCountKnown: _reportsState.totalCountKnown, source: 'screen' };
+  }
+
+  async function collectReportsExportData() {
+    const warnings = [];
+    const reportPayload = await fetchReportsForExport(warnings);
+    const reports = reportPayload.rows;
+    const postIds = [...new Set(reports.map((row) => row && row.post_id).filter(Boolean))];
+    const reporterIds = [...new Set(reports.map((row) => row && row.reporter_id).filter(Boolean))];
+    let postMap = {};
+    let reporterMap = {};
+    try { postMap = await loadPostTitles(postIds); } catch (_) { warnings.push('Não foi possível carregar títulos/status dos posts para o export.'); }
+    try { reporterMap = await loadReporterNames(reporterIds); } catch (_) { warnings.push('Não foi possível carregar nomes dos denunciantes para o export.'); }
+    return {
+      reports,
+      totalCount: reportPayload.totalCount,
+      totalCountKnown: reportPayload.totalCountKnown,
+      source: reportPayload.source,
+      postMap,
+      reporterMap,
+      warnings,
+    };
+  }
+
+  function buildReportsExportReport(exportData) {
+    exportData = exportData || {};
+    const reports = Array.isArray(exportData.reports) ? exportData.reports : (Array.isArray(_reportsState.rows) ? _reportsState.rows : []);
+    const postMap = exportData.postMap || {};
+    const reporterMap = exportData.reporterMap || {};
+    const warnings = Array.isArray(exportData.warnings) ? exportData.warnings : [];
+    const totalCount = Number.isFinite(Number(exportData.totalCount)) ? Number(exportData.totalCount) : (_reportsState.totalCount || reports.length);
+    const totalCountKnown = typeof exportData.totalCountKnown === 'boolean' ? exportData.totalCountKnown : _reportsState.totalCountKnown;
     const grouped = reports.reduce((acc, report) => {
       const postId = String(report && report.post_id || 'sem_post');
-      if (!acc[postId]) acc[postId] = { post_id: postId, total: 0, abertas: 0, fechadas: 0, motivos: {} };
+      const post = postMap[postId] || {};
+      if (!acc[postId]) {
+        acc[postId] = {
+          post_id: postId,
+          post_titulo: post.title || post.titulo || 'Post removido',
+          post_status: postStatusLabel(post.status),
+          total: 0,
+          abertas: 0,
+          fechadas: 0,
+          motivos: {},
+        };
+      }
       acc[postId].total += 1;
       if (report.status === 'open') acc[postId].abertas += 1;
       else acc[postId].fechadas += 1;
@@ -1079,71 +1185,135 @@
       return acc;
     }, {});
 
+    const statusCounts = reports.reduce((acc, report) => {
+      const status = String(report && report.status || 'unknown');
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const reportRows = reports.map((report) => {
+      const post = postMap[String(report && report.post_id || '')] || {};
+      const reporter = reporterMap[String(report && report.reporter_id || '')] || {};
+      return {
+        id: report.id,
+        post_id: report.post_id,
+        post_titulo: post.title || post.titulo || 'Post removido',
+        post_status: postStatusLabel(post.status),
+        motivo: reasonLabel(report.reason),
+        reason_key: report.reason || '',
+        status: reportStatusLabel(report.status),
+        detalhes: report.details || '',
+        reporter_nome: reporter.name || '',
+        reporter_id: report.reporter_id || '',
+        criado_em: formatDate(report.created_at),
+      };
+    });
+
+    const sections = [
+      {
+        title: 'Resumo por motivo',
+        rows: Object.keys(reasonCounts).map((reason) => ({
+          motivo: reasonLabel(reason),
+          reason_key: reason,
+          total: reasonCounts[reason],
+        })),
+        pdfColumns: ['motivo', 'total'],
+        xlsxColumns: ['motivo', 'reason_key', 'total'],
+        maxPdfRows: 12,
+      },
+      {
+        title: 'Distribuição por status',
+        rows: Object.keys(statusCounts).map((status) => ({
+          status: reportStatusLabel(status),
+          total: statusCounts[status],
+        })),
+        columns: ['status', 'total'],
+        maxPdfRows: 8,
+      },
+      {
+        title: 'Resumo por post',
+        rows: Object.keys(grouped).map((postId) => {
+          const row = grouped[postId];
+          return {
+            post_id: row.post_id,
+            post_titulo: row.post_titulo,
+            post_status: row.post_status,
+            total: row.total,
+            abertas: row.abertas,
+            fechadas: row.fechadas,
+            motivos: Object.keys(row.motivos).map((reason) => reasonLabel(reason) + ': ' + row.motivos[reason]).join('; '),
+          };
+        }).sort((left, right) => right.abertas - left.abertas || right.total - left.total),
+        pdfColumns: ['post_titulo', 'post_status', 'total', 'abertas'],
+        xlsxColumns: ['post_id', 'post_titulo', 'post_status', 'total', 'abertas', 'fechadas', 'motivos'],
+        maxPdfRows: 25,
+      },
+      {
+        title: 'Denúncias filtradas',
+        note: 'PDF mostra uma amostra executiva; XLSX contém os registros filtrados coletados até o limite de segurança.',
+        rows: reportRows,
+        pdfColumns: ['criado_em', 'motivo', 'status', 'post_titulo'],
+        xlsxColumns: ['id', 'post_id', 'post_titulo', 'post_status', 'motivo', 'reason_key', 'status', 'detalhes', 'reporter_nome', 'reporter_id', 'criado_em'],
+        maxPdfRows: 40,
+      },
+    ];
+
+    if (warnings.length) {
+      sections.push({
+        title: 'Avisos de exportação',
+        rows: warnings.map((warning, index) => ({ item: index + 1, aviso: warning })),
+        columns: [{ key: 'item', label: '#' }, { key: 'aviso', label: 'Aviso' }],
+        maxPdfRows: 20,
+      });
+    }
+
     return {
-      title: 'KinoCampus - Denuncias Admin',
-      subtitle: 'Denuncias agrupadas por post, motivos e status conforme filtros atuais',
-      source: 'admin/reports.html',
+      title: 'KinoCampus - Denúncias Admin',
+      subtitle: 'Denúncias agrupadas por post, motivos e status conforme filtros atuais',
+      source: 'admin/reports.html — export completo dos filtros atuais',
       filters: {
-        status: _filters.status || 'open',
-        motivo: _filters.reason || 'all',
-        total_conhecido: _reportsState.totalCountKnown ? 'sim' : 'nao',
+        status: reportStatusLabel(_filters.status || 'open'),
+        motivo: _filters.reason && _filters.reason !== 'all' ? reasonLabel(_filters.reason) : 'Todos os motivos',
+        total_conhecido: totalCountKnown ? 'sim' : 'não',
+        origem: exportData.source || 'screen',
       },
       kpis: {
         denuncias_carregadas: reports.length,
-        denuncias_filtradas_total: _reportsState.totalCount || reports.length,
+        denuncias_filtradas_total: totalCount,
         denuncias_abertas: reports.filter((row) => row && row.status === 'open').length,
         denuncias_fechadas: reports.filter((row) => row && row.status !== 'open').length,
         posts_agrupados: Object.keys(grouped).length,
       },
-      sections: [
-        {
-          title: 'Resumo por motivo',
-          rows: Object.keys(reasonCounts).map((reason) => ({
-            motivo: reasonLabel(reason),
-            reason_key: reason,
-            total: reasonCounts[reason],
-          })),
-        },
-        {
-          title: 'Resumo por post',
-          rows: Object.keys(grouped).map((postId) => {
-            const row = grouped[postId];
-            return {
-              post_id: row.post_id,
-              total: row.total,
-              abertas: row.abertas,
-              fechadas: row.fechadas,
-              motivos: Object.keys(row.motivos).map((reason) => reasonLabel(reason) + ': ' + row.motivos[reason]).join('; '),
-            };
-          }),
-        },
-        {
-          title: 'Denuncias filtradas',
-          rows: reports.map((report) => ({
-            id: report.id,
-            post_id: report.post_id,
-            motivo: reasonLabel(report.reason),
-            status: report.status,
-            detalhes: report.details || '',
-            reporter_id: report.reporter_id || '',
-            criado_em: formatDate(report.created_at),
-          })),
-        },
-      ],
+      sections,
     };
   }
 
   async function handleReportsExport(kind) {
     if (!window.KCAdminExport) {
-      showToastSafe('Exportador admin indisponivel.', 'error');
+      showToastSafe('Exportador admin indisponível.', 'error');
       return;
     }
     const date = new Date().toISOString().slice(0, 10);
-    const report = buildReportsExportReport();
-    if (kind === 'pdf') {
-      await window.KCAdminExport.exportReportPDF('kc-admin-denuncias-' + date + '.pdf', report);
-    } else {
-      await window.KCAdminExport.exportReportXLSX('kc-admin-denuncias-' + date + '.xlsx', report);
+    const btn = kind === 'pdf' ? $('#reports-export-pdf') : $('#reports-export-xlsx');
+    const original = btn ? btn.innerHTML : '';
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...';
+      }
+      showToastSafe('Preparando relatório com os filtros atuais...', 'info', 2200);
+      const exportData = await collectReportsExportData();
+      const report = buildReportsExportReport(exportData);
+      if (kind === 'pdf') {
+        await window.KCAdminExport.exportReportPDF('kc-admin-denuncias-' + date + '.pdf', report);
+      } else {
+        await window.KCAdminExport.exportReportXLSX('kc-admin-denuncias-' + date + '.xlsx', report);
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
     }
   }
 

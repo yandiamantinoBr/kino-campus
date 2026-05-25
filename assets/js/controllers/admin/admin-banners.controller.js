@@ -30,6 +30,9 @@
   // ─────────────────────────────────────────────────────────────
   let banners    = [];     // array de hero_banner rows
   let dragSrcIdx = null;   // índice do item sendo arrastado
+  const BANNER_ANALYTICS_LIMIT = 5000;
+  const BANNER_AUDIT_EXPORT_LIMIT = 800;
+  const BANNER_METRIC_EVENTS = ['banner_impression', 'banner_click'];
 
   // ─────────────────────────────────────────────────────────────
   // Utilitários
@@ -54,6 +57,23 @@
         hour: '2-digit', minute: '2-digit'
       }).format(new Date(iso));
     } catch (_) { return iso; }
+  }
+
+  function toNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function formatPercent(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '0,00%';
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+  }
+
+  function getMetricsPeriodDays() {
+    const select = document.getElementById('banners-metrics-period');
+    const value = select ? Number(select.value) : 30;
+    return [7, 30, 90, 365].includes(value) ? value : 30;
   }
 
   let toastTimer = null;
@@ -718,58 +738,248 @@
   // ─────────────────────────────────────────────────────────────
   // Init
   // ─────────────────────────────────────────────────────────────
-  function buildBannersExportReport() {
+  async function fetchBannerMetrics(periodDays, warnings) {
+    const client = getClient();
+    const metrics = new Map();
     const rows = Array.isArray(banners) ? banners : [];
+
+    function ensureMetric(key, banner) {
+      const safeKey = String(key || (banner && banner.id) || (banner && banner.title) || 'banner');
+      if (!metrics.has(safeKey)) {
+        metrics.set(safeKey, {
+          banner_id: banner && banner.id ? banner.id : safeKey,
+          titulo: banner && banner.title ? banner.title : safeKey,
+          impressoes: 0,
+          cliques: 0,
+          origem_metricas: 'privacy_analytics_events',
+        });
+      }
+      return metrics.get(safeKey);
+    }
+
+    const byId = new Map();
+    const byTitle = new Map();
+    rows.forEach((banner) => {
+      if (!banner) return;
+      byId.set(String(banner.id || ''), banner);
+      byTitle.set(String(banner.title || '').trim().toLowerCase(), banner);
+    });
+
+    if (client) {
+      try {
+        const since = new Date(Date.now() - (periodDays * 24 * 60 * 60 * 1000)).toISOString();
+        const { data, error } = await client
+          .from('privacy_analytics_events')
+          .select('event_name, entity_id, metadata, created_at')
+          .eq('entity_type', 'banner')
+          .in('event_name', BANNER_METRIC_EVENTS)
+          .gte('created_at', since)
+          .order('created_at', { ascending: false })
+          .range(0, BANNER_ANALYTICS_LIMIT - 1);
+
+        if (error) throw error;
+        const eventRows = Array.isArray(data) ? data : [];
+        eventRows.forEach((event) => {
+          const metadata = event && event.metadata && typeof event.metadata === 'object' ? event.metadata : {};
+          const entityId = String(event && event.entity_id || metadata.entity_id || metadata.banner_id || '').trim();
+          const label = String(metadata.entity_label || '').trim();
+          const banner = byId.get(entityId) || byTitle.get(label.toLowerCase()) || null;
+          const metric = ensureMetric(banner ? banner.id : (entityId || label), banner || { id: entityId || label, title: label || entityId || 'Banner sem identificação' });
+          if (event.event_name === 'banner_impression') metric.impressoes += 1;
+          if (event.event_name === 'banner_click') metric.cliques += 1;
+        });
+        if (eventRows.length >= BANNER_ANALYTICS_LIMIT) warnings.push(`Métricas de banners limitadas aos ${BANNER_ANALYTICS_LIMIT} eventos mais recentes do período.`);
+        if (eventRows.length) return metrics;
+      } catch (error) {
+        warnings.push('Não foi possível carregar métricas de privacidade dos banners; usando contadores salvos no cadastro quando existirem.');
+      }
+    } else {
+      warnings.push('Supabase client indisponível; métricas de banners usam apenas contadores carregados na tela.');
+    }
+
+    rows.forEach((banner) => {
+      const metric = ensureMetric(banner && banner.id, banner);
+      metric.impressoes = toNumber(banner && (banner.impressions || banner.impression_count));
+      metric.cliques = toNumber(banner && (banner.clicks || banner.click_count));
+      metric.origem_metricas = 'hero_banners';
+    });
+    return metrics;
+  }
+
+  async function fetchBannerAuditForExport(warnings) {
+    const rows = [];
+    const bannerRows = Array.isArray(banners) ? banners : [];
+    for (const banner of bannerRows) {
+      if (!banner || !banner.id || rows.length >= BANNER_AUDIT_EXPORT_LIMIT) break;
+      try {
+        const auditRows = await fetchAudit(banner.id);
+        (auditRows || []).forEach((row) => {
+          if (rows.length >= BANNER_AUDIT_EXPORT_LIMIT) return;
+          rows.push({
+            banner_id: banner.id,
+            titulo: banner.title || '',
+            acao: row.action || '',
+            editor: row.editor_name || '',
+            data: fmtDate(row.changed_at),
+            snapshot: row.snapshot || {},
+          });
+        });
+      } catch (_) {
+        warnings.push('Não foi possível carregar auditoria de um ou mais banners.');
+      }
+    }
+    if (rows.length >= BANNER_AUDIT_EXPORT_LIMIT) warnings.push(`Auditoria de banners limitada aos ${BANNER_AUDIT_EXPORT_LIMIT} eventos mais recentes carregáveis.`);
+    return rows;
+  }
+
+  async function collectBannersExportData() {
+    const warnings = [];
+    const periodDays = getMetricsPeriodDays();
+    const [metricMap, auditRows] = await Promise.all([
+      fetchBannerMetrics(periodDays, warnings),
+      fetchBannerAuditForExport(warnings),
+    ]);
+    return { periodDays, metricMap, auditRows, warnings };
+  }
+
+  function buildBannersExportReport(exportData) {
+    exportData = exportData || {};
+    const rows = Array.isArray(banners) ? banners : [];
+    const periodDays = exportData.periodDays || getMetricsPeriodDays();
+    const metricMap = exportData.metricMap || new Map();
+    const auditRows = Array.isArray(exportData.auditRows) ? exportData.auditRows : [];
+    const warnings = Array.isArray(exportData.warnings) ? exportData.warnings : [];
     const active = rows.filter((banner) => banner && banner.is_active).length;
     const inactive = rows.length - active;
-    const impressions = rows.reduce((sum, banner) => sum + (Number(banner && (banner.impressions || banner.impression_count)) || 0), 0);
-    const clicks = rows.reduce((sum, banner) => sum + (Number(banner && (banner.clicks || banner.click_count)) || 0), 0);
+    const metricRows = rows.map((banner) => {
+      const metric = metricMap.get(String(banner && banner.id || '')) || {};
+      const impressions = toNumber(metric.impressoes);
+      const clicks = toNumber(metric.cliques);
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+      return {
+        banner_id: banner.id,
+        titulo: banner.title || '',
+        status: banner.is_active ? 'Ativo' : 'Inativo',
+        ordem: banner.sort_order,
+        impressoes: impressions,
+        cliques: clicks,
+        ctr: formatPercent(ctr),
+        origem_metricas: metric.origem_metricas || 'sem dados',
+      };
+    });
+    const impressions = metricRows.reduce((sum, row) => sum + toNumber(row.impressoes), 0);
+    const clicks = metricRows.reduce((sum, row) => sum + toNumber(row.cliques), 0);
+    const ctr = impressions ? ((clicks / impressions) * 100) : 0;
+    const configRows = rows.map((banner) => ({
+      id: banner.id,
+      titulo: banner.title || '',
+      subtitulo: banner.subtitle || '',
+      status: banner.is_active ? 'Ativo' : 'Inativo',
+      ordem: banner.sort_order,
+      botao: banner.button_text || '',
+      url: banner.button_url || '',
+      icone: banner.icon_class || '',
+      gradiente: [banner.gradient_from, banner.gradient_to].filter(Boolean).join(' → '),
+      atualizado_em: fmtDate(banner.updated_at || banner.created_at),
+    }));
+    const validationRows = rows.map((banner) => ({
+      banner_id: banner.id,
+      titulo: banner.title || '',
+      status: banner.is_active ? 'Ativo' : 'Inativo',
+      tem_titulo: banner.title ? 'sim' : 'não',
+      tem_cta: banner.button_text && banner.button_url ? 'sim' : 'não',
+      tem_gradiente: banner.gradient_from && banner.gradient_to ? 'sim' : 'não',
+      observacao: !banner.button_url ? 'Sem URL de CTA' : '',
+    }));
+    const sections = [
+      {
+        title: 'Métricas por banner',
+        note: `Métricas opcionais coletadas no período selecionado: ${periodDays} dias.`,
+        rows: metricRows.slice().sort((left, right) => toNumber(right.cliques) - toNumber(left.cliques) || toNumber(right.impressoes) - toNumber(left.impressoes)),
+        pdfColumns: ['titulo', 'status', 'cliques', 'ctr'],
+        xlsxColumns: ['banner_id', 'titulo', 'status', 'ordem', 'impressoes', 'cliques', 'ctr', 'origem_metricas'],
+        maxPdfRows: 25,
+      },
+      {
+        title: 'Configuração dos banners',
+        rows: configRows,
+        pdfColumns: ['titulo', 'status', 'ordem', 'botao'],
+        xlsxColumns: ['id', 'titulo', 'subtitulo', 'status', 'ordem', 'botao', 'url', 'icone', 'gradiente', 'atualizado_em'],
+        maxPdfRows: 25,
+      },
+      {
+        title: 'Validações',
+        rows: validationRows,
+        pdfColumns: ['titulo', 'status', 'tem_cta', 'observacao'],
+        xlsxColumns: ['banner_id', 'titulo', 'status', 'tem_titulo', 'tem_cta', 'tem_gradiente', 'observacao'],
+        maxPdfRows: 25,
+      },
+      {
+        title: 'Auditoria',
+        rows: auditRows.map((row) => ({
+          banner_id: row.banner_id,
+          titulo: row.titulo,
+          acao: row.acao,
+          editor: row.editor,
+          data: row.data,
+          snapshot: row.snapshot,
+        })),
+        pdfColumns: ['data', 'acao', 'titulo', 'editor'],
+        xlsxColumns: ['banner_id', 'titulo', 'acao', 'editor', 'data', 'snapshot'],
+        maxPdfRows: 30,
+      },
+    ];
+    if (warnings.length) {
+      sections.push({
+        title: 'Avisos de exportação',
+        rows: warnings.map((warning, index) => ({ item: index + 1, aviso: warning })),
+        columns: [{ key: 'item', label: '#' }, { key: 'aviso', label: 'Aviso' }],
+        maxPdfRows: 20,
+      });
+    }
     return {
       title: 'KinoCampus - Banners Admin',
-      subtitle: 'Banners configurados, status, ordem e metricas disponiveis',
-      source: 'admin/banners.html',
-      filters: { status: 'todos', ordenacao: 'sort_order' },
+      subtitle: 'Banners configurados, status, ordem e métricas disponíveis',
+      source: 'admin/banners.html — configuração, desempenho e auditoria',
+      filters: { status: 'todos', ordenacao: 'sort_order', periodo_metricas: `${periodDays} dias` },
       kpis: {
         banners_total: rows.length,
         banners_ativos: active,
         banners_inativos: inactive,
         impressoes_registradas: impressions,
         cliques_registrados: clicks,
-        ctr_percentual: impressions ? ((clicks / impressions) * 100).toFixed(2) + '%' : '0%',
+        ctr_percentual: formatPercent(ctr),
       },
-      sections: [
-        {
-          title: 'Banners',
-          rows: rows.map((banner) => ({
-            id: banner.id,
-            titulo: banner.title || '',
-            subtitulo: banner.subtitle || '',
-            status: banner.is_active ? 'Ativo' : 'Inativo',
-            ordem: banner.sort_order,
-            botao: banner.button_text || '',
-            url: banner.button_url || '',
-            icone: banner.icon_class || '',
-            gradiente: [banner.gradient_from, banner.gradient_to].filter(Boolean).join(' -> '),
-            impressoes: banner.impressions || banner.impression_count || 0,
-            cliques: banner.clicks || banner.click_count || 0,
-            atualizado_em: fmtDate(banner.updated_at || banner.created_at),
-          })),
-        },
-      ],
+      sections,
     };
   }
 
   async function handleBannersExport(kind) {
     if (!window.KCAdminExport) {
-      toast('Exportador admin indisponivel.', 'error');
+      toast('Exportador admin indisponível.', 'error');
       return;
     }
     const date = new Date().toISOString().slice(0, 10);
-    const report = buildBannersExportReport();
-    if (kind === 'pdf') {
-      await window.KCAdminExport.exportReportPDF('kc-admin-banners-' + date + '.pdf', report);
-    } else {
-      await window.KCAdminExport.exportReportXLSX('kc-admin-banners-' + date + '.xlsx', report);
+    const btn = kind === 'pdf' ? document.getElementById('banners-export-pdf') : document.getElementById('banners-export-xlsx');
+    const original = btn ? btn.innerHTML : '';
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...';
+      }
+      toast('Preparando relatório de banners...', 'success');
+      const exportData = await collectBannersExportData();
+      const report = buildBannersExportReport(exportData);
+      if (kind === 'pdf') {
+        await window.KCAdminExport.exportReportPDF('kc-admin-banners-' + date + '.pdf', report);
+      } else {
+        await window.KCAdminExport.exportReportXLSX('kc-admin-banners-' + date + '.xlsx', report);
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
     }
   }
 

@@ -433,6 +433,12 @@
           </div>
           <div class="kc-admin-toolbar">
             <button type="button" id="btn-refresh"><i class="fas fa-rotate"></i> Atualizar</button>
+            <select id="banners-metrics-period" title="Período das métricas" data-i18n-tooltip="tooltip.banners-metrics-period" aria-label="Período das métricas de banners" data-i18n-aria-label="aria-label.banners-metrics-period">
+              <option value="7">7 dias</option>
+              <option value="30" selected>30 dias</option>
+              <option value="90">90 dias</option>
+              <option value="365">365 dias</option>
+            </select>
             <button type="button" id="banners-export-xlsx"><i class="fas fa-file-excel"></i> XLSX</button>
             <button type="button" id="banners-export-pdf"><i class="fas fa-file-pdf"></i> PDF</button>
             <button type="button" id="btn-add-banner" class="kc-btn-brand"><i class="fas fa-plus"></i> Novo Banner</button>
@@ -624,7 +630,7 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
-  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.4"></script>
-  <script defer src="../assets/js/controllers/admin/admin-banners.controller.js?v=8.6.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.5"></script>
+  <script defer src="../assets/js/controllers/admin/admin-banners.controller.js?v=8.6.5"></script>
 </body>
 </html>
