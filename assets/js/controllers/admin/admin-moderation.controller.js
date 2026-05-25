@@ -1,13 +1,24 @@
 /*
   KinoCampus — Admin Moderation Controller (V8.1.11.0)
-  Moderacao de posts + observabilidade (audit log).
+  Moderação de posts + observabilidade (audit log).
 */
 (function () {
   'use strict';
 
   const PAGE_SIZE = 25;
   const SEARCH_DEBOUNCE_MS = 350;
+  const EXPORT_ROW_LIMIT = 2000;
+  const EXPORT_PAGE_SIZE = 250;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const STATUS_LABELS = Object.freeze({
+    all: 'Todos',
+    published: 'Publicado',
+    pending: 'Pendente',
+    hidden: 'Oculto',
+    closed: 'Encerrado',
+    deleted: 'Deletado',
+    unknown: 'Desconhecido',
+  });
   let _isBusy = false;
   let _searchDebounceTimer = null;
   const state = {
@@ -571,6 +582,52 @@
     try { return new Date(iso).toLocaleString('pt-BR'); } catch (_) { return iso; }
   }
 
+  function statusLabel(status) {
+    const key = String(status || 'unknown').toLowerCase();
+    return STATUS_LABELS[key] || status || STATUS_LABELS.unknown;
+  }
+
+  function getAuthorName(post) {
+    if (!post) return '';
+    if (post.author_name) return post.author_name;
+    if (post.author && (post.author.display_name || post.author.full_name)) {
+      return post.author.display_name || post.author.full_name;
+    }
+    return post.author_id || '';
+  }
+
+  function moduleLabel(moduleKey) {
+    const labels = {
+      eventos: 'Eventos',
+      oportunidades: 'Oportunidades',
+      moradia: 'Moradia',
+      'compra-venda': 'Compra e Venda',
+      caronas: 'Caronas',
+      'achados-perdidos': 'Achados e Perdidos',
+      ods: 'ODS',
+      alugueis: 'Aluguéis',
+      vendas: 'Vendas',
+      servicos: 'Serviços',
+      vagas: 'Vagas',
+      achados: 'Achados e Perdidos (legado)',
+    };
+    return labels[moduleKey] || moduleKey || 'Todos';
+  }
+
+  function summarizeAuditPayload(payload) {
+    if (!payload || typeof payload !== 'object') return '';
+    const parts = [];
+    if (payload.old_status || payload.new_status) {
+      parts.push([payload.old_status, payload.new_status].filter(Boolean).join(' → '));
+    }
+    if (payload.module) parts.push('Módulo: ' + payload.module);
+    if (payload.reason) parts.push('Motivo: ' + payload.reason);
+    if (payload.max_active != null) parts.push('Máx. ativas: ' + payload.max_active);
+    if (payload.max_posts != null) parts.push('Máx. posts: ' + payload.max_posts);
+    if (payload.window_minutes != null) parts.push('Janela: ' + payload.window_minutes + ' min');
+    return parts.slice(0, 4).join(' | ');
+  }
+
   function actionButton(label, action, color, disabled) {
     return `<button type="button" data-action="${action}" style="background:${color};" ${disabled ? 'disabled' : ''}>${label}</button>`;
   }
@@ -731,23 +788,346 @@
     select.innerHTML = statuses.map((s) => `<option value="${s}">${s === 'all' ? 'Todos status' : s}</option>`).join('');
   }
 
-  function buildModerationExportReport() {
-    const posts = Array.isArray(state.posts) ? state.posts : [];
-    const auditRows = Array.isArray(state.audit.rows) ? state.audit.rows : [];
-    const activeLimits = Array.isArray(limitsState.limits) ? limitsState.limits : [];
-    const floodLimits = Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : [];
+  async function fetchPostsForExport(client, warnings) {
+    const normalizedSearch = sanitizeSearchTerm(state.search);
+    const statusFilter = state.statusFilter !== 'all' ? state.statusFilter : null;
+    const rows = [];
+    let totalCount = 0;
+    let resolvedViaRpc = false;
+
+    try {
+      for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
+        const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
+        const rpc = await client.rpc('kc_admin_search_posts_full', {
+          p_query: normalizedSearch || null,
+          p_status: statusFilter,
+          p_limit: limit,
+          p_offset: offset,
+        });
+        if (!rpc || rpc.error || !Array.isArray(rpc.data)) {
+          if (rpc && rpc.error && !isFunctionMissing(rpc.error)) warnings.push('RPC de posts falhou; export usando fallback direto.');
+          break;
+        }
+        resolvedViaRpc = true;
+        const chunk = rpc.data.map(mapRpcPost);
+        if (offset === 0) totalCount = rpc.data.length ? Number(rpc.data[0].total_count || 0) : 0;
+        rows.push(...chunk);
+        if (chunk.length < limit || (totalCount && rows.length >= totalCount)) break;
+      }
+    } catch (error) {
+      warnings.push('Falha ao buscar posts via RPC; export usando fallback direto.');
+    }
+
+    if (resolvedViaRpc) {
+      if (totalCount > rows.length) warnings.push(`Export de posts limitado a ${rows.length} de ${totalCount} registros filtrados.`);
+      return { rows, totalCount: totalCount || rows.length, source: 'rpc' };
+    }
+
+    try {
+      const authorIds = normalizedSearch ? await searchAuthorIds(client, normalizedSearch) : [];
+      for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
+        const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
+        let query = client
+          .from('posts')
+          .select('id, legacy_id, title, content:description, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+
+        if (statusFilter) query = query.eq('status', statusFilter);
+        if (normalizedSearch) {
+          const clauses = [
+            `title.ilike.%${normalizedSearch}%`,
+            `description.ilike.%${normalizedSearch}%`,
+            `legacy_id.ilike.%${normalizedSearch}%`,
+          ];
+          if (UUID_RE.test(normalizedSearch)) clauses.push(`id.eq.${normalizedSearch}`);
+          if (authorIds.length) clauses.push(`author_id.in.(${authorIds.join(',')})`);
+          query = query.or(clauses.join(','));
+        }
+
+        const { data, error, count } = await query;
+        if (error) throw error;
+        if (offset === 0) totalCount = Number.isFinite(Number(count)) ? Number(count) : 0;
+        const chunk = data || [];
+        rows.push(...chunk);
+        if (chunk.length < limit || (totalCount && rows.length >= totalCount)) break;
+      }
+      if (totalCount > rows.length) warnings.push(`Export de posts limitado a ${rows.length} de ${totalCount} registros filtrados.`);
+      return { rows, totalCount: totalCount || rows.length, source: 'direct' };
+    } catch (error) {
+      warnings.push('Não foi possível buscar todos os posts filtrados; export usando a página carregada.');
+      return {
+        rows: Array.isArray(state.posts) ? state.posts : [],
+        totalCount: state.totalCount || (Array.isArray(state.posts) ? state.posts.length : 0),
+        source: 'state_fallback',
+      };
+    }
+  }
+
+  async function fetchAuditRowsForExport(client, warnings) {
+    const actorQuery = String(state.audit.actorQuery || '').trim();
+    const actorQueryIsUuid = actorQuery && UUID_RE.test(actorQuery);
+    const actorQueryLower = actorQuery.toLowerCase();
+    const rows = [];
+    let resolvedViaRpc = false;
+
+    try {
+      for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
+        const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
+        const rpc = await client.rpc('kc_admin_list_audit_logs', {
+          p_entity_type: state.audit.entityType,
+          p_action: state.audit.action,
+          p_actor_query: actorQuery || null,
+          p_limit: limit,
+          p_offset: offset,
+        });
+        if (!rpc || rpc.error || !Array.isArray(rpc.data)) {
+          if (rpc && rpc.error) warnings.push('RPC de audit log falhou; export usando fallback direto.');
+          break;
+        }
+        resolvedViaRpc = true;
+        rows.push(...rpc.data);
+        if (rpc.data.length < limit) break;
+      }
+    } catch (error) {
+      warnings.push('Falha ao buscar audit log via RPC; export usando fallback direto.');
+    }
+
+    if (!resolvedViaRpc) {
+      try {
+        for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
+          const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
+          let query = client
+            .from('audit_log')
+            .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+
+          if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
+          if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
+          if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
+
+          const { data, error } = await query;
+          if (error) throw error;
+          const chunk = data || [];
+          rows.push(...chunk);
+          if (chunk.length < limit) break;
+        }
+      } catch (error) {
+        warnings.push('Não foi possível buscar todo o audit log filtrado; export usando a página carregada.');
+        rows.splice(0, rows.length, ...(Array.isArray(state.audit.rows) ? state.audit.rows : []));
+      }
+    }
+
+    let actorsById = await loadActorsById(rows.map((row) => row.actor_id).filter(Boolean));
+    let filteredRows = rows;
+    if (actorQuery && !actorQueryIsUuid) {
+      filteredRows = rows.filter((row) => {
+        const actorId = String(row.actor_id || '').toLowerCase();
+        const actor = actorsById[String(row.actor_id || '')] || null;
+        const displayName = String(actor && actor.display_name || '').toLowerCase();
+        const fullName = String(actor && actor.full_name || '').toLowerCase();
+        return actorId.includes(actorQueryLower)
+          || displayName.includes(actorQueryLower)
+          || fullName.includes(actorQueryLower);
+      });
+    }
+    if (filteredRows.length >= EXPORT_ROW_LIMIT) warnings.push(`Audit log limitado aos ${EXPORT_ROW_LIMIT} registros mais recentes dos filtros atuais.`);
+    return { rows: filteredRows, actorsById, source: resolvedViaRpc ? 'rpc' : 'direct' };
+  }
+
+  async function fetchPostLimitsForExport(client, warnings) {
+    try {
+      const { data, error } = await client.rpc('kc_admin_get_post_limits');
+      if (error) throw error;
+      return (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
+    } catch (error) {
+      warnings.push('Não foi possível atualizar limites ativos para o export; usando dados carregados.');
+      return Array.isArray(limitsState.limits) ? limitsState.limits : [];
+    }
+  }
+
+  async function fetchPostFloodLimitsForExport(client, warnings) {
+    try {
+      const { data, error } = await client.rpc('kc_admin_get_post_flood_limits');
+      if (error) throw error;
+      return (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
+    } catch (error) {
+      warnings.push('Não foi possível atualizar limites de ritmo para o export; usando dados carregados.');
+      return Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : [];
+    }
+  }
+
+  async function collectModerationExportData() {
+    const client = getClient();
+    const warnings = [];
+    if (!client) {
+      warnings.push('Supabase client indisponível; export usando apenas dados carregados na tela.');
+      return {
+        posts: Array.isArray(state.posts) ? state.posts : [],
+        postsTotalCount: state.totalCount || 0,
+        auditRows: Array.isArray(state.audit.rows) ? state.audit.rows : [],
+        actorsById: state.audit.actorsById || {},
+        activeLimits: Array.isArray(limitsState.limits) ? limitsState.limits : [],
+        floodLimits: Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : [],
+        warnings,
+      };
+    }
+
+    const [postsPayload, auditPayload, activeLimits, floodLimits] = await Promise.all([
+      fetchPostsForExport(client, warnings),
+      fetchAuditRowsForExport(client, warnings),
+      fetchPostLimitsForExport(client, warnings),
+      fetchPostFloodLimitsForExport(client, warnings),
+    ]);
+
+    return {
+      posts: postsPayload.rows,
+      postsTotalCount: postsPayload.totalCount,
+      postsSource: postsPayload.source,
+      auditRows: auditPayload.rows,
+      auditSource: auditPayload.source,
+      actorsById: auditPayload.actorsById,
+      activeLimits,
+      floodLimits,
+      warnings,
+    };
+  }
+
+  function buildModerationExportReport(exportData) {
+    exportData = exportData || {};
+    const posts = Array.isArray(exportData.posts) ? exportData.posts : (Array.isArray(state.posts) ? state.posts : []);
+    const auditRows = Array.isArray(exportData.auditRows) ? exportData.auditRows : (Array.isArray(state.audit.rows) ? state.audit.rows : []);
+    const activeLimits = Array.isArray(exportData.activeLimits) ? exportData.activeLimits : (Array.isArray(limitsState.limits) ? limitsState.limits : []);
+    const floodLimits = Array.isArray(exportData.floodLimits) ? exportData.floodLimits : (Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : []);
+    const actorsById = exportData.actorsById || state.audit.actorsById || {};
+    const warnings = Array.isArray(exportData.warnings) ? exportData.warnings : [];
+    const postsTotalCount = Number.isFinite(Number(exportData.postsTotalCount)) ? Number(exportData.postsTotalCount) : (state.totalCount || posts.length);
     const statusCounts = posts.reduce((acc, post) => {
       const key = String(post && post.status || 'desconhecido');
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
+    const sections = [
+      {
+        title: 'Distribuição de status',
+        rows: Object.keys(statusCounts).map((status) => ({
+          status: statusLabel(status),
+          total: statusCounts[status],
+        })),
+        columns: [{ key: 'status', label: 'Status' }, { key: 'total', label: 'Total' }],
+        maxPdfRows: 12,
+      },
+      {
+        title: 'Posts filtrados',
+        note: 'PDF mostra uma amostra executiva; XLSX contém os registros filtrados coletados até o limite de segurança.',
+        rows: posts.map((post) => ({
+          post_id: post.id,
+          legacy_id: post.legacy_id || '',
+          titulo: post.title || post.content || '',
+          autor: getAuthorName(post),
+          modulo: moduleLabel(post.module),
+          categoria: post.category || '',
+          status: statusLabel(post.status),
+          criado_em: fmtDate(post.created_at),
+          atualizado_em: fmtDate(post.updated_at || post.created_at),
+        })),
+        pdfColumns: [
+          { key: 'titulo', label: 'Título' },
+          { key: 'status', label: 'Status' },
+          { key: 'autor', label: 'Autor' },
+          { key: 'atualizado_em', label: 'Atualizado em' },
+        ],
+        xlsxColumns: [
+          { key: 'post_id', label: 'ID do post' },
+          { key: 'legacy_id', label: 'ID legado' },
+          { key: 'titulo', label: 'Título' },
+          { key: 'autor', label: 'Autor' },
+          { key: 'modulo', label: 'Módulo' },
+          { key: 'categoria', label: 'Categoria' },
+          { key: 'status', label: 'Status' },
+          { key: 'criado_em', label: 'Criado em' },
+          { key: 'atualizado_em', label: 'Atualizado em' },
+        ],
+        maxPdfRows: 30,
+      },
+      {
+        title: 'Limites ativos',
+        rows: activeLimits.map((row) => ({
+          id: row.id,
+          usuario: row.user_name || 'Global',
+          user_id: row.user_id || '',
+          modulo: moduleLabel(row.module),
+          max_ativas: row.max_active,
+          criado_em: fmtDate(row.created_at),
+        })),
+        pdfColumns: ['usuario', 'modulo', 'max_ativas', 'criado_em'],
+        xlsxColumns: ['id', 'usuario', 'user_id', 'modulo', 'max_ativas', 'criado_em'],
+        maxPdfRows: 40,
+      },
+      {
+        title: 'Limites de ritmo',
+        rows: floodLimits.map((row) => ({
+          id: row.id,
+          usuario: row.user_name || 'Global',
+          user_id: row.user_id || '',
+          modulo: moduleLabel(row.module),
+          max_posts: row.max_posts,
+          janela_minutos: row.window_minutes,
+          criado_em: fmtDate(row.created_at),
+        })),
+        pdfColumns: ['usuario', 'modulo', 'max_posts', 'janela_minutos'],
+        xlsxColumns: ['id', 'usuario', 'user_id', 'modulo', 'max_posts', 'janela_minutos', 'criado_em'],
+        maxPdfRows: 40,
+      },
+      {
+        title: 'Audit log filtrado',
+        note: 'Eventos administrativos relacionados aos filtros atuais.',
+        rows: auditRows.map((row) => {
+          const actorId = String(row.actor_id || '');
+          const actor = actorsById && actorsById[actorId];
+          return {
+            data: fmtDate(row.created_at),
+            acao: row.action || '',
+            entidade: row.entity_type || '',
+            entity_id: row.entity_id || '',
+            ator: actor ? (actor.display_name || actor.full_name || actorId) : (actorId || 'system/service_role'),
+            actor_id: actorId,
+            detalhes: summarizeAuditPayload(row.payload),
+            payload: formatPayload(row.payload),
+          };
+        }),
+        pdfColumns: ['data', 'acao', 'entidade', 'ator'],
+        xlsxColumns: ['data', 'acao', 'entidade', 'entity_id', 'ator', 'actor_id', 'detalhes', 'payload'],
+        maxPdfRows: 35,
+      },
+      {
+        title: 'Ações da sessão',
+        rows: state.sessionActions.map((item) => ({
+          post_id: item.postId,
+          acao: statusLabel(item.action),
+          data: fmtDate(item.timestamp),
+        })),
+        columns: ['post_id', 'acao', 'data'],
+        maxPdfRows: 20,
+      },
+    ];
+
+    if (warnings.length) {
+      sections.push({
+        title: 'Avisos de exportação',
+        rows: warnings.map((warning, index) => ({ item: index + 1, aviso: warning })),
+        columns: [{ key: 'item', label: '#' }, { key: 'aviso', label: 'Aviso' }],
+        maxPdfRows: 20,
+      });
+    }
 
     return {
-      title: 'KinoCampus - Moderacao Admin',
-      subtitle: 'Posts filtrados, limites ativos, ritmo de publicacao e audit log da selecao atual',
-      source: 'admin/moderation.html',
+      title: 'KinoCampus - Moderação Admin',
+      subtitle: 'Posts filtrados, limites ativos, ritmo de publicação e audit log da seleção atual',
+      source: 'admin/moderation.html — export completo dos filtros atuais',
       filters: {
-        status: state.statusFilter || 'all',
+        status: statusLabel(state.statusFilter || 'all'),
         busca: state.search || '',
         audit_entity_type: state.audit.entityType || 'all',
         audit_action: state.audit.action || 'all',
@@ -756,89 +1136,42 @@
       },
       kpis: {
         posts_carregados: posts.length,
-        posts_filtrados_total: state.totalCount || posts.length,
+        posts_filtrados_total: postsTotalCount,
         audit_rows_na_pagina: auditRows.length,
         limites_ativos: activeLimits.length,
         limites_de_ritmo: floodLimits.length,
         acoes_da_sessao: state.sessionActions.length,
       },
-      sections: [
-        {
-          title: 'Distribuicao de status',
-          rows: Object.keys(statusCounts).map((status) => ({ status, total: statusCounts[status] })),
-        },
-        {
-          title: 'Posts filtrados',
-          rows: posts.map((post) => ({
-            id: post.id,
-            titulo: post.title || post.content || '',
-            autor: post.author_name || post.author_id || '',
-            modulo: post.module || '',
-            categoria: post.category || '',
-            status: post.status || '',
-            atualizado_em: fmtDate(post.updated_at || post.created_at),
-          })),
-        },
-        {
-          title: 'Limites de publicacoes ativas',
-          rows: activeLimits.map((row) => ({
-            id: row.id,
-            usuario: row.user_name || 'Global',
-            user_id: row.user_id || '',
-            modulo: row.module || 'Todos',
-            max_ativas: row.max_active,
-            criado_em: fmtDate(row.created_at),
-          })),
-        },
-        {
-          title: 'Limites de ritmo e flood',
-          rows: floodLimits.map((row) => ({
-            id: row.id,
-            usuario: row.user_name || 'Global',
-            user_id: row.user_id || '',
-            modulo: row.module || 'Todos',
-            max_posts: row.max_posts,
-            janela_minutos: row.window_minutes,
-            criado_em: fmtDate(row.created_at),
-          })),
-        },
-        {
-          title: 'Audit log filtrado',
-          rows: auditRows.map((row) => {
-            const actorId = String(row.actor_id || '');
-            const actor = state.audit.actorsById && state.audit.actorsById[actorId];
-            return {
-              data: fmtDate(row.created_at),
-              acao: row.action || '',
-              entidade: [row.entity_type || '', row.entity_id || ''].filter(Boolean).join(':'),
-              ator: actor ? (actor.display_name || actor.full_name || actor.email || actorId) : actorId,
-              detalhes: row.details || row.metadata || '',
-            };
-          }),
-        },
-        {
-          title: 'Acoes recentes nesta sessao',
-          rows: state.sessionActions.map((item) => ({
-            post_id: item.postId,
-            acao: item.action,
-            data: fmtDate(item.timestamp),
-          })),
-        },
-      ],
+      sections,
     };
   }
 
   async function handleModerationExport(kind) {
     if (!window.KCAdminExport) {
-      showToastSafe('Exportador admin indisponivel.', 'error');
+      showToastSafe('Exportador admin indisponível.', 'error');
       return;
     }
     const date = new Date().toISOString().slice(0, 10);
-    const report = buildModerationExportReport();
-    if (kind === 'pdf') {
-      await window.KCAdminExport.exportReportPDF('kc-admin-moderacao-' + date + '.pdf', report);
-    } else {
-      await window.KCAdminExport.exportReportXLSX('kc-admin-moderacao-' + date + '.xlsx', report);
+    const btn = kind === 'pdf' ? $('#moderation-export-pdf') : $('#moderation-export-xlsx');
+    const original = btn ? btn.innerHTML : '';
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...';
+      }
+      showToastSafe('Preparando relatório com os filtros atuais...', 'info', 2200);
+      const exportData = await collectModerationExportData();
+      const report = buildModerationExportReport(exportData);
+      if (kind === 'pdf') {
+        await window.KCAdminExport.exportReportPDF('kc-admin-moderacao-' + date + '.pdf', report);
+      } else {
+        await window.KCAdminExport.exportReportXLSX('kc-admin-moderacao-' + date + '.xlsx', report);
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
     }
   }
 

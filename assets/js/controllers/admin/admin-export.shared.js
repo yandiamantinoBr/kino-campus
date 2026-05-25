@@ -13,6 +13,113 @@
   const SENSITIVE_KEY_RE = /(token|cookie|authorization|apikey|api_key|password|secret|refresh|access_token|refresh_token|user_agent|user-agent|ip_address|ip\b)/i;
   const MAX_CELL_LENGTH = 1200;
   const MAX_PDF_ROWS = 60;
+  const LABELS_PT_BR = Object.freeze({
+    acao: 'Ação',
+    acoes_da_sessao: 'Ações da sessão',
+    actor_id: 'ID do ator',
+    audit_action: 'Ação do audit log',
+    audit_actor: 'Ator do audit log',
+    audit_entity: 'Entidade do audit log',
+    audit_entity_type: 'Entidade do audit log',
+    audit_page_size: 'Registros por página',
+    audit_rows_na_pagina: 'Registros do audit log',
+    atualizado_em: 'Atualizado em',
+    author_id: 'ID do autor',
+    categoria: 'Categoria',
+    contexto: 'Contexto',
+    created_at: 'Criado em',
+    criado_em: 'Criado em',
+    data: 'Data',
+    detalhes: 'Detalhes',
+    entidade: 'Entidade',
+    entity_id: 'ID da entidade',
+    entity_type: 'Tipo de entidade',
+    event_name: 'Evento',
+    events: 'Eventos',
+    filtro: 'Filtro',
+    generated_at: 'Gerado em',
+    id: 'ID',
+    janela_minutos: 'Janela (min)',
+    legacy_id: 'ID legado',
+    limit: 'Limite',
+    limites_ativos: 'Limites ativos',
+    limites_de_ritmo: 'Limites de ritmo',
+    max_active: 'Máx. ativas',
+    max_ativas: 'Máx. ativas',
+    max_posts: 'Máx. posts',
+    metadata: 'Metadados',
+    modulo: 'Módulo',
+    module: 'Módulo',
+    page_path: 'Página',
+    payload: 'Payload',
+    post_id: 'ID do post',
+    posts_carregados: 'Posts carregados',
+    posts_filtrados_total: 'Posts filtrados no total',
+    relatorio: 'Relatório',
+    search: 'Busca',
+    status: 'Status',
+    subtitle: 'Subtítulo',
+    title: 'Título',
+    titulo: 'Título',
+    total: 'Total',
+    updated_at: 'Atualizado em',
+    url: 'URL',
+    user_id: 'ID do usuário',
+    usuario: 'Usuário',
+    valor: 'Valor',
+    window_minutes: 'Janela (min)'
+  });
+  const WORD_LABELS_PT_BR = Object.freeze({
+    acao: 'Ação',
+    acoes: 'Ações',
+    actor: 'Ator',
+    admin: 'Admin',
+    atualizado: 'Atualizado',
+    busca: 'Busca',
+    categoria: 'Categoria',
+    criado: 'Criado',
+    data: 'Data',
+    de: 'de',
+    do: 'do',
+    da: 'da',
+    em: 'em',
+    entidade: 'Entidade',
+    exportacao: 'Exportação',
+    filtro: 'Filtro',
+    filtros: 'Filtros',
+    flood: 'Flood',
+    id: 'ID',
+    janela: 'Janela',
+    kpi: 'KPI',
+    kpis: 'KPIs',
+    limite: 'Limite',
+    limites: 'Limites',
+    max: 'Máx.',
+    modulo: 'Módulo',
+    modulos: 'Módulos',
+    pagina: 'Página',
+    paginas: 'Páginas',
+    por: 'por',
+    publicacao: 'Publicação',
+    publicacoes: 'Publicações',
+    relatorio: 'Relatório',
+    ritmo: 'Ritmo',
+    secao: 'Seção',
+    selecao: 'Seleção',
+    sessao: 'Sessão',
+    status: 'Status',
+    usuario: 'Usuário',
+    usuarios: 'Usuários'
+  });
+
+  function normalizeUnicode(value) {
+    const text = String(value == null ? '' : value);
+    return typeof text.normalize === 'function' ? text.normalize('NFC') : text;
+  }
+
+  function normalizeKey(key) {
+    return normalizeUnicode(key).replace(/[^a-zA-Z0-9_-]+/g, '_').toLowerCase();
+  }
 
   function getAssetPrefix() {
     const path = String(window.location && window.location.pathname || '');
@@ -51,7 +158,7 @@
     } catch (_) {
       await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
     }
-    if (!window.XLSX) throw new Error('XLSX indisponivel');
+    if (!window.XLSX) throw new Error('XLSX indisponível');
     return window.XLSX;
   }
 
@@ -63,20 +170,28 @@
     } catch (_) {
       await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
     }
-    if (!window.jspdf || !window.jspdf.jsPDF) throw new Error('jsPDF indisponivel');
+    if (!window.jspdf || !window.jspdf.jsPDF) throw new Error('jsPDF indisponível');
     return window.jspdf.jsPDF;
   }
 
   function titleCaseLabel(key) {
-    return String(key || 'valor')
+    const normalizedKey = normalizeKey(key || 'valor');
+    if (LABELS_PT_BR[normalizedKey]) return LABELS_PT_BR[normalizedKey];
+    return normalizedKey
       .replace(/[_-]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .replace(/\b\w/g, function (letter) { return letter.toUpperCase(); }) || 'Valor';
+      .split(' ')
+      .map(function (word, index) {
+        if (WORD_LABELS_PT_BR[word]) return WORD_LABELS_PT_BR[word];
+        if (index > 0 && /^(a|as|de|do|da|dos|das|e|em|por)$/.test(word)) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(' ') || 'Valor';
   }
 
   function truncate(value, limit) {
-    const text = String(value == null ? '' : value);
+    const text = normalizeUnicode(value == null ? '' : value);
     const max = Number.isFinite(limit) ? limit : MAX_CELL_LENGTH;
     return text.length > max ? text.slice(0, max - 3) + '...' : text;
   }
@@ -89,12 +204,43 @@
       return typeof item === 'object' && item !== null ? sanitizeExportObject(item) : sanitizeExportValue(item);
     }).join('; '));
     if (typeof value === 'object') return truncate(JSON.stringify(sanitizeExportObject(value)));
-    return truncate(value);
+    return truncate(normalizeUnicode(value));
   }
 
-  function sanitizeExportObject(row) {
+  function normalizeColumn(column) {
+    if (!column) return null;
+    if (typeof column === 'string') {
+      return { key: column, label: titleCaseLabel(column) };
+    }
+    if (typeof column === 'object') {
+      const key = column.key || column.field || column.name;
+      if (!key) return null;
+      return {
+        key: String(key),
+        label: normalizeUnicode(column.label || titleCaseLabel(key)),
+        width: column.width || null
+      };
+    }
+    return null;
+  }
+
+  function normalizeColumns(columns) {
+    return (Array.isArray(columns) ? columns : [])
+      .map(normalizeColumn)
+      .filter(Boolean);
+  }
+
+  function sanitizeExportObject(row, columns) {
     if (!row || typeof row !== 'object') return row;
     const clean = {};
+    const normalizedColumns = normalizeColumns(columns);
+    if (normalizedColumns.length) {
+      normalizedColumns.forEach(function (column) {
+        if (SENSITIVE_KEY_RE.test(column.key)) return;
+        clean[column.label] = sanitizeExportValue(row[column.key], column.key);
+      });
+      return clean;
+    }
     Object.keys(row).forEach(function (key) {
       if (SENSITIVE_KEY_RE.test(key)) return;
       clean[titleCaseLabel(key)] = sanitizeExportValue(row[key], key);
@@ -102,10 +248,10 @@
     return clean;
   }
 
-  function normalizeRows(rows) {
+  function normalizeRows(rows, columns) {
     return Array.isArray(rows) ? rows.map(function (row) {
       if (!row || typeof row !== 'object') return { Valor: sanitizeExportValue(row) };
-      return sanitizeExportObject(row);
+      return sanitizeExportObject(row, columns);
     }) : [];
   }
 
@@ -136,10 +282,17 @@
 
   function normalizeSections(sections) {
     return (Array.isArray(sections) ? sections : []).map(function (section) {
+      const columns = normalizeColumns(section && section.columns);
+      const pdfColumns = normalizeColumns(section && (section.pdfColumns || section.columns));
+      const xlsxColumns = normalizeColumns(section && (section.xlsxColumns || section.columns));
       return {
-        title: String(section && (section.title || section.name) || 'Dados'),
-        rows: normalizeRows(section && section.rows),
-        note: String(section && section.note || ''),
+        title: normalizeUnicode(section && (section.title || section.name) || 'Dados'),
+        rows: Array.isArray(section && section.rows) ? section.rows : [],
+        columns,
+        pdfColumns,
+        xlsxColumns,
+        maxPdfRows: Number(section && section.maxPdfRows) || null,
+        note: normalizeUnicode(section && section.note || ''),
       };
     });
   }
@@ -147,8 +300,8 @@
   function normalizeReport(report) {
     const safeReport = report && typeof report === 'object' ? report : {};
     const generatedAt = safeReport.generatedAt || new Date().toISOString();
-    const title = String(safeReport.title || 'Relatorio administrativo KinoCampus');
-    const subtitle = String(safeReport.subtitle || 'Exportacao contextual do painel admin');
+    const title = normalizeUnicode(safeReport.title || 'Relatório administrativo KinoCampus');
+    const subtitle = normalizeUnicode(safeReport.subtitle || 'Exportação contextual do painel admin');
     const filters = normalizeFilters(safeReport.filters || {});
     const kpis = normalizeKpis(safeReport.kpis || {});
     const sections = normalizeSections(safeReport.sections || []);
@@ -156,7 +309,7 @@
       title,
       subtitle,
       generatedAt,
-      source: String(safeReport.source || 'Painel Admin KinoCampus'),
+      source: normalizeUnicode(safeReport.source || 'Painel Admin KinoCampus'),
       filters,
       kpis,
       sections,
@@ -187,8 +340,8 @@
     worksheet['!freeze'] = { xSplit: 0, ySplit: 1 };
   }
 
-  function appendSheet(XLSX, workbook, name, rows) {
-    const normalized = normalizeRows(rows);
+  function appendSheet(XLSX, workbook, name, rows, columns) {
+    const normalized = normalizeRows(rows, columns);
     const safeRows = normalized.length ? normalized : [{ Status: 'Sem dados para os filtros selecionados' }];
     const worksheet = XLSX.utils.json_to_sheet(safeRows);
     applyWorksheetLayout(worksheet, safeRows);
@@ -208,7 +361,7 @@
     report.sections.forEach(function (section) {
       lines.push('');
       lines.push(section.title);
-      const rows = section.rows || [];
+      const rows = normalizeRows(section.rows || [], section.xlsxColumns.length ? section.xlsxColumns : section.columns);
       const headers = rows.length ? Object.keys(rows[0]) : ['Status'];
       lines.push(headers.map(csvCell).join(','));
       (rows.length ? rows : [{ Status: 'Sem dados' }]).forEach(function (row) {
@@ -248,27 +401,27 @@
         CreatedDate: new Date(normalized.generatedAt),
       };
 
-      appendSheet(XLSX, workbook, 'Resumo', [{
-        Relatorio: normalized.title,
+      appendSheet(XLSX, workbook, 'Resumo Executivo', [{
+        relatorio: normalized.title,
         Contexto: normalized.subtitle,
         Fonte: normalized.source,
         Gerado_em: new Date(normalized.generatedAt).toLocaleString('pt-BR'),
       }].concat(normalized.kpis.map(function (row) {
         return {
-          Relatorio: row.Indicador,
+          relatorio: row.Indicador,
           Contexto: row.Valor,
           Fonte: row.Contexto,
           Gerado_em: '',
         };
       })));
-      appendSheet(XLSX, workbook, 'Filtros', normalized.filters.length ? normalized.filters : [{ Filtro: 'Todos', Valor: 'Sem filtros adicionais' }]);
-      appendSheet(XLSX, workbook, 'KPIs', normalized.kpis.length ? normalized.kpis : [{ Indicador: 'Sem KPIs', Valor: '', Contexto: '' }]);
+      appendSheet(XLSX, workbook, 'Filtros Aplicados', normalized.filters.length ? normalized.filters : [{ Filtro: 'Todos', Valor: 'Sem filtros adicionais' }]);
+      appendSheet(XLSX, workbook, 'Indicadores', normalized.kpis.length ? normalized.kpis : [{ Indicador: 'Sem KPIs', Valor: '', Contexto: '' }]);
       normalized.sections.forEach(function (section, index) {
-        appendSheet(XLSX, workbook, section.title || ('Dados ' + (index + 1)), section.rows);
+        appendSheet(XLSX, workbook, section.title || ('Dados ' + (index + 1)), section.rows, section.xlsxColumns.length ? section.xlsxColumns : section.columns);
       });
       XLSX.writeFile(workbook, filename);
     } catch (error) {
-      console.warn('[KCAdminExport] XLSX avancado indisponivel, usando CSV simples:', error);
+      console.warn('[KCAdminExport] XLSX avançado indisponível, usando CSV simples:', error);
       downloadText(filename.replace(/\.xlsx$/i, '.csv'), buildFallbackCsv(normalized), 'text/csv;charset=utf-8');
     }
   }
@@ -329,7 +482,7 @@
         setTextColor(doc, BRAND.dark);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.text(String(title || 'Secao'), margin, y);
+        doc.text(String(title || 'Seção'), margin, y);
         y += 15;
         if (note) {
           setTextColor(doc, BRAND.muted);
@@ -378,13 +531,14 @@
           addPageIfNeeded(18);
           setTextColor(doc, BRAND.muted);
           doc.setFontSize(8);
-          doc.text('KPIs adicionais disponiveis no XLSX.', margin, y);
+          doc.text('KPIs adicionais disponíveis no XLSX.', margin, y);
           y += 18;
         }
       }
 
-      function drawRows(rows, maxRows) {
-        const list = Array.isArray(rows) && rows.length ? rows : [{ Status: 'Sem dados para os filtros selecionados' }];
+      function drawRows(rows, maxRows, columns) {
+        const normalizedRows = normalizeRows(rows, columns);
+        const list = normalizedRows.length ? normalizedRows : [{ Status: 'Sem dados para os filtros selecionados' }];
         const headers = Object.keys(list[0]).slice(0, 4);
         const colWidth = (pageWidth - margin * 2) / Math.max(headers.length, 1);
 
@@ -424,7 +578,7 @@
           addPageIfNeeded(18);
           setTextColor(doc, BRAND.muted);
           doc.setFontSize(8);
-          doc.text('PDF resumido: ' + (list.length - (maxRows || MAX_PDF_ROWS)) + ' linhas adicionais disponiveis no XLSX.', margin, y);
+          doc.text('PDF resumido: ' + (list.length - (maxRows || MAX_PDF_ROWS)) + ' linhas adicionais disponíveis no XLSX.', margin, y);
           y += 18;
         }
       }
@@ -451,21 +605,21 @@
 
       normalized.sections.forEach(function (section) {
         drawSectionTitle(section.title, section.note);
-        drawRows(section.rows, MAX_PDF_ROWS);
+        drawRows(section.rows, section.maxPdfRows || MAX_PDF_ROWS, section.pdfColumns.length ? section.pdfColumns : section.columns);
       });
 
       addPdfFooter(doc);
       doc.save(filename);
     } catch (error) {
-      console.warn('[KCAdminExport] PDF avancado indisponivel, usando TXT simples:', error);
+      console.warn('[KCAdminExport] PDF avançado indisponível, usando TXT simples:', error);
       downloadText(filename.replace(/\.pdf$/i, '.txt'), buildFallbackCsv(normalized), 'text/plain;charset=utf-8');
     }
   }
 
   async function exportXLSX(filename, sheets) {
     return exportReportXLSX(filename, {
-      title: 'KinoCampus - Exportacao Admin',
-      subtitle: 'Exportacao contextual',
+      title: 'KinoCampus - Exportação Admin',
+      subtitle: 'Exportação contextual',
       sections: (Array.isArray(sheets) ? sheets : []).map(function (sheet) {
         return { title: sheet && (sheet.title || sheet.name) || 'Dados', rows: sheet && sheet.rows || [] };
       }),
@@ -474,8 +628,8 @@
 
   async function exportPDF(filename, title, sections) {
     return exportReportPDF(filename, {
-      title: title || 'KinoCampus - Exportacao Admin',
-      subtitle: 'Relatorio administrativo',
+      title: title || 'KinoCampus - Exportação Admin',
+      subtitle: 'Relatório administrativo',
       sections: (Array.isArray(sections) ? sections : []).map(function (section) {
         return { title: section && (section.title || section.name) || 'Dados', rows: section && section.rows || [] };
       }),
@@ -488,6 +642,7 @@
     sanitizeExportValue,
     sanitizeExportObject,
     normalizeRows,
+    normalizeColumns,
     exportReportXLSX,
     exportReportPDF,
     exportXLSX,

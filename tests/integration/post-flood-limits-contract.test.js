@@ -56,6 +56,17 @@ describe('post flood limits admin contract', () => {
     expect(controller).toContain('data-flood-limit-delete="${escape(String(row.id))}"');
   });
 
+  test('admin moderation export collects complete filtered data with safe caps', () => {
+    expect(controller).toContain('const EXPORT_ROW_LIMIT = 2000');
+    expect(controller).toContain('async function collectModerationExportData');
+    expect(controller).toContain('async function fetchPostsForExport');
+    expect(controller).toContain('async function fetchAuditRowsForExport');
+    expect(controller).toContain("'kc_admin_search_posts_full'");
+    expect(controller).toContain("'kc_admin_list_audit_logs'");
+    expect(controller).toContain("title: 'Posts filtrados'");
+    expect(controller).toContain("title: 'Avisos de exportação'");
+  });
+
   test('Cadu publisher checks flood limits before insert', () => {
     expect(publisher).toContain('async checkPostFloodLimit');
     expect(publisher).toContain('/rest/v1/rpc/kc_check_post_flood_limit');

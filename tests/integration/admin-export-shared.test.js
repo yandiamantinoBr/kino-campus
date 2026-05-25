@@ -37,7 +37,7 @@ describe('admin-export.shared.js', () => {
       status: 'published',
     });
     expect(clean).toEqual({
-      Title: 'Post',
+      'Título': 'Post',
       Status: 'published',
     });
   });
@@ -45,7 +45,16 @@ describe('admin-export.shared.js', () => {
   test('normaliza linhas com labels legiveis', () => {
     const exporter = loadExporter();
     const rows = exporter.normalizeRows([{ post_id: 'abc', created_at: '2026-05-23' }]);
-    expect(rows[0]).toEqual({ 'Post Id': 'abc', 'Created At': '2026-05-23' });
+    expect(rows[0]).toEqual({ 'ID do post': 'abc', 'Criado em': '2026-05-23' });
+  });
+
+  test('respeita colunas explicitas com labels PT-BR', () => {
+    const exporter = loadExporter();
+    const rows = exporter.normalizeRows(
+      [{ max_posts: 10, window_minutes: 60, ignored: 'fora' }],
+      [{ key: 'max_posts', label: 'Máx. posts' }, 'window_minutes']
+    );
+    expect(rows[0]).toEqual({ 'Máx. posts': '10', 'Janela (min)': '60' });
   });
 
   test('gera workbook XLSX com resumo, filtros e abas contextuais sanitizadas', async () => {
@@ -65,7 +74,7 @@ describe('admin-export.shared.js', () => {
     };
 
     await exporter.exportReportXLSX('relatorio.xlsx', {
-      title: 'Relatorio Admin',
+      title: 'Relatório Admin',
       source: 'Teste',
       filters: { page_path: '/admin', access_token: 'secret' },
       kpis: [{ label: 'Eventos', value: 2 }],
@@ -76,10 +85,10 @@ describe('admin-export.shared.js', () => {
     });
 
     expect(savedWorkbook.filename).toBe('relatorio.xlsx');
-    expect(savedWorkbook.workbook.Sheets.map((sheet) => sheet.name)).toEqual(['Resumo', 'Filtros', 'KPIs', 'Eventos recentes']);
-    expect(savedWorkbook.workbook.Sheets[1].worksheet.rows).toEqual([{ Filtro: 'Page Path', Valor: '/admin' }, { Filtro: 'Access Token', Valor: '[removido]' }]);
+    expect(savedWorkbook.workbook.Sheets.map((sheet) => sheet.name)).toEqual(['Resumo Executivo', 'Filtros Aplicados', 'Indicadores', 'Eventos recentes']);
+    expect(savedWorkbook.workbook.Sheets[1].worksheet.rows).toEqual([{ Filtro: 'Página', Valor: '/admin' }, { Filtro: 'Access Token', Valor: '[removido]' }]);
     expect(savedWorkbook.workbook.Sheets[2].worksheet.rows).toEqual([{ Indicador: 'Eventos', Valor: '2', Contexto: '' }]);
-    expect(savedWorkbook.workbook.Sheets[3].worksheet.rows).toEqual([{ 'Event Name': 'search' }]);
+    expect(savedWorkbook.workbook.Sheets[3].worksheet.rows).toEqual([{ Evento: 'search' }]);
   });
 
   test('gera PDF com identidade KinoCampus e salva arquivo', async () => {
@@ -108,7 +117,7 @@ describe('admin-export.shared.js', () => {
     window.jspdf = { jsPDF: FakePDF };
 
     await exporter.exportReportPDF('relatorio.pdf', {
-      title: 'Relatorio Admin',
+      title: 'Relatório Admin',
       subtitle: 'Resumo contextual',
       filters: { periodo: '30 dias' },
       sections: [{ title: 'Dados', rows: [{ post_id: 'abc' }] }],
