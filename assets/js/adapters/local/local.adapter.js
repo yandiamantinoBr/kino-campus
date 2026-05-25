@@ -395,6 +395,7 @@
   const createHelpRequest = createAsyncDelegate('help', 'createHelpRequest', buildLocalHelpDeps, () => buildUnavailableResult('Pedidos de ajuda locais indisponiveis.'), ensureObjectArg(0));
   const listAdminHelpRequests = createAsyncDelegate('help', 'listAdminHelpRequests', buildLocalHelpDeps, (filters) => buildDefaultLocalAdminHelpListFallback(filters || {}), ensureObjectArg(0));
   const updateAdminHelpRequest = createAsyncDelegate('help', 'updateAdminHelpRequest', buildLocalHelpDeps, () => buildUnavailableResult('Gest\u00E3o local de pedidos de ajuda indispon\u00EDvel.'), ensureObjectArg(1));
+  const processAccountErasure = createAsyncDelegate('help', 'processAccountErasure', buildLocalHelpDeps, () => buildUnavailableResult('Fluxo LGPD local indisponivel.'), ensureObjectArg(0));
 
   const getNotificationPreferences = createAsyncDelegate('notifications', 'getNotificationPreferences', null, buildDefaultLocalNotificationPreferencesFallback);
   const updateNotificationPreferences = createAsyncDelegate('notifications', 'updateNotificationPreferences', null, () => buildUnavailableResult('Preferencias de notificacao locais indisponiveis.'), ensureObjectArg(0));
@@ -446,6 +447,7 @@
     createHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
+    processAccountErasure,
     getNotificationPreferences,
     updateNotificationPreferences,
     getNotificationChannelTargets,

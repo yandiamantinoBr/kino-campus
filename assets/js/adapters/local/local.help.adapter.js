@@ -228,9 +228,70 @@
     return { ok: true, data: list[index] };
   }
 
+  async function processAccountErasure(payload, deps) {
+    var input = (payload && typeof payload === 'object') ? payload : {};
+    var action = String(input.action || 'diagnose').trim();
+    var targetEmail = String(input.target_email || '').trim().toLowerCase();
+    var helpRequestId = String(input.help_request_id || '').trim();
+    var list = readHelpRequests(deps);
+    var row = list.find(function (item) {
+      return String((item && item.id) || '') === helpRequestId;
+    }) || null;
+    if (!targetEmail && row) {
+      var metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+      targetEmail = String(metadata.account_email || row.contact_email || '').trim().toLowerCase();
+    }
+    if (!targetEmail || targetEmail.indexOf('@') < 0) {
+      return { ok: false, error: { message: 'Informe o e-mail da conta para o fluxo LGPD.' } };
+    }
+    var now = getNowIsoFn(deps)();
+    var emailHash = 'local-' + targetEmail.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+    var request = {
+      id: 'lgpd_' + (helpRequestId || 'local') + '_' + emailHash.slice(-8),
+      help_request_id: helpRequestId || null,
+      email_hash: emailHash,
+      status: action === 'erase_confirmed' ? 'erased' : (action === 'apply_reversible' ? 'pending_confirmation' : 'diagnosed'),
+      counts: {
+        help_requests: row ? 1 : 0,
+      },
+      metadata: {
+        simulated_local: true,
+        updated_at: now,
+      },
+    };
+    if (row && action === 'apply_reversible') {
+      row.status = 'in_progress';
+      row.metadata = {
+        ...(row.metadata && typeof row.metadata === 'object' ? row.metadata : {}),
+        lgpd_erasure: {
+          request_id: request.id,
+          email_hash: emailHash,
+          stage: 'pending_confirmation',
+          updated_at: now,
+        },
+      };
+      writeHelpRequests(list);
+    }
+    return {
+      ok: true,
+      action: action,
+      request: request,
+      diagnostics: {
+        user_found: false,
+        counts: request.counts,
+        warnings: ['local_driver_simulation'],
+      },
+      target: {
+        email_hash: emailHash,
+        user_found: false,
+      },
+    };
+  }
+
   window._KCLA.help = Object.freeze({
     createHelpRequest: createHelpRequest,
     listAdminHelpRequests: listAdminHelpRequests,
     updateAdminHelpRequest: updateAdminHelpRequest,
+    processAccountErasure: processAccountErasure,
   });
 }());

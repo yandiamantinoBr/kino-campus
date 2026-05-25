@@ -99,10 +99,11 @@ describe('local.help.adapter.js - contrato estatico', () => {
     expect(Object.isFrozen(help())).toBe(true);
   });
 
-  test('expoe exatamente 3 chaves publicas', () => {
+  test('expoe exatamente 4 chaves publicas', () => {
     expect(Object.keys(help()).sort()).toEqual([
       'createHelpRequest',
       'listAdminHelpRequests',
+      'processAccountErasure',
       'updateAdminHelpRequest',
     ]);
   });
@@ -457,6 +458,36 @@ describe('local.help.adapter.js - updateAdminHelpRequest', () => {
       global.localStorage.setItem = originalSetItem;
     }
   });
+
+  test('simula fluxo LGPD de ocultacao reversivel no driver local', async () => {
+    const result = await help().processAccountErasure({
+      action: 'apply_reversible',
+      help_request_id: 'help_01',
+      target_email: 'help@example.com',
+    }, buildDeps({ getNowIso: () => '2026-04-23T20:00:00.000Z' }));
+
+    expect(result).toEqual(expect.objectContaining({
+      ok: true,
+      action: 'apply_reversible',
+      request: expect.objectContaining({
+        status: 'pending_confirmation',
+        email_hash: expect.stringContaining('local-help-example-com'),
+      }),
+      diagnostics: expect.objectContaining({
+        warnings: ['local_driver_simulation'],
+      }),
+    }));
+
+    const stored = JSON.parse(global.localStorage.getItem('kc_help_requests') || '[]');
+    expect(stored[0]).toEqual(expect.objectContaining({
+      status: 'in_progress',
+      metadata: expect.objectContaining({
+        lgpd_erasure: expect.objectContaining({
+          stage: 'pending_confirmation',
+        }),
+      }),
+    }));
+  });
 });
 
 describe('local.help.adapter.js - integracao com driver local', () => {
@@ -504,5 +535,19 @@ describe('local.help.adapter.js - integracao com driver local', () => {
       data: { id: 'help_driver', status: 'resolved' },
     });
     expect(stub.updateAdminHelpRequest).toHaveBeenCalledWith('help_driver', { status: 'resolved' }, expect.any(Object));
+  });
+
+  test('driver delega processAccountErasure para o submodulo', async () => {
+    const stub = {
+      ...actualHelpModule,
+      processAccountErasure: jest.fn().mockResolvedValue({ ok: true, action: 'diagnose' }),
+    };
+    window._KCLA.help = stub;
+
+    await expect(driver.processAccountErasure({ action: 'diagnose' })).resolves.toEqual({
+      ok: true,
+      action: 'diagnose',
+    });
+    expect(stub.processAccountErasure).toHaveBeenCalledWith({ action: 'diagnose' }, expect.any(Object));
   });
 });

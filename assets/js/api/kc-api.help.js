@@ -44,6 +44,14 @@
     return driver.updateAdminHelpRequest(id, patch);
   }
 
+  async function processAccountErasure(payload = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.processAccountErasure !== 'function') {
+      return { ok: false, error: { message: 'Fluxo LGPD indisponivel neste driver.' } };
+    }
+    return driver.processAccountErasure(payload);
+  }
+
   async function inviteExternalUser(email, note, deps = {}) {
     const driver = getActiveDriverOrNull(deps);
     if (!driver || typeof driver.inviteExternalUser !== 'function') {
@@ -70,6 +78,7 @@
     createHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
+    processAccountErasure,
     inviteExternalUser,
     getInvites,
     revokeInvite,

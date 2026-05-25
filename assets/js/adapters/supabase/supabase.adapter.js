@@ -397,6 +397,7 @@ const { ENV } = window.KCAPI;
     createHelpRequest: window._KCSA.admin.createHelpRequest,
     listAdminHelpRequests: window._KCSA.admin.listAdminHelpRequests,
     updateAdminHelpRequest: window._KCSA.admin.updateAdminHelpRequest,
+    processAccountErasure: window._KCSA.admin.processAccountErasure,
     listExternalAccessRequests: window._KCSA.admin.listExternalAccessRequests,
     decideExternalAccessRequest: window._KCSA.admin.decideExternalAccessRequest,
     getNotificationPreferences: window._KCSA.notifications.getNotificationPreferences,

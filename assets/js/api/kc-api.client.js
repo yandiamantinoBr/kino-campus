@@ -2166,6 +2166,14 @@
     return { ok: false, error: { message: 'Triagem de ajuda indisponível neste driver.' } };
   }
 
+  async function processAccountErasure(payload = {}) {
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.processAccountErasure === 'function') {
+      return helpModule.processAccountErasure(payload, { getActiveDriver });
+    }
+    return { ok: false, error: { message: 'Fluxo LGPD indisponivel neste driver.' } };
+  }
+
   // v9.3.5.4: solicitacoes de acesso externo (admin)
   async function listExternalAccessRequests(filters = {}) {
     const driver = getActiveDriver();
@@ -2420,6 +2428,7 @@
     createHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
+    processAccountErasure,
     listExternalAccessRequests,
     decideExternalAccessRequest,
     getNotificationPreferences,

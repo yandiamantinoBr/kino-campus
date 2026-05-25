@@ -144,6 +144,7 @@
       Object.freeze({ value: 'settings_not_saving', label: 'Configurações não salvam' }),
       Object.freeze({ value: 'profile_visibility', label: 'Privacidade e visibilidade' }),
       Object.freeze({ value: 'avatar_profile', label: 'Foto, avatar ou emoji' }),
+      Object.freeze({ value: 'account_deletion', label: 'Exclusão de conta e dados' }),
     ]),
     'external_access|non_institutional_email': Object.freeze([
       Object.freeze({ value: 'has_context', label: 'Informou vínculo ou contexto' }),
@@ -277,7 +278,7 @@
     'account_access|login_signup': Object.freeze(['account_email', 'error_message']),
     'account_access|email_confirmation': Object.freeze(['account_email', 'error_message']),
     'account_access|password': Object.freeze(['account_email', 'error_message']),
-    'account_access|onboarding_settings': Object.freeze(['page_path', 'error_message']),
+    'account_access|onboarding_settings': Object.freeze(['account_email', 'page_path', 'error_message']),
     'external_access|non_institutional_email': Object.freeze(['account_email']),
     'external_access|partnership_access': Object.freeze(['account_email']),
     'report|post': Object.freeze(['affected_module', 'content_link']),

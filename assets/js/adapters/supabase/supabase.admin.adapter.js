@@ -319,7 +319,15 @@
     if (Object.prototype.hasOwnProperty.call(patch, 'status')) updates.status = String(patch.status || '').trim() || 'new';
     if (Object.prototype.hasOwnProperty.call(patch, 'priority')) updates.priority = String(patch.priority || '').trim() || 'normal';
     if (Object.prototype.hasOwnProperty.call(patch, 'metadata') && patch.metadata && typeof patch.metadata === 'object') {
-      updates.metadata = patch.metadata;
+      const current = await client
+        .from('help_requests')
+        .select('metadata')
+        .eq('id', targetId)
+        .maybeSingle();
+      const currentMetadata = current && current.data && current.data.metadata && typeof current.data.metadata === 'object'
+        ? current.data.metadata
+        : {};
+      updates.metadata = { ...currentMetadata, ...patch.metadata };
     }
 
     if (!Object.keys(updates).length) {
@@ -346,10 +354,35 @@
     }
   }
 
+  async function processAccountErasure(payload = {}) {
+    const client = getClient();
+    if (!client) return { ok: false, error: { message: 'Supabase nao inicializado.' } };
+    if (!client.functions || typeof client.functions.invoke !== 'function') {
+      return { ok: false, error: { message: 'Edge Functions indisponiveis.' } };
+    }
+    const input = payload && typeof payload === 'object' ? payload : {};
+    const action = String(input.action || '').trim();
+    if (!action) return { ok: false, error: { message: 'Acao LGPD invalida.' } };
+    try {
+      const { data, error } = await client.functions.invoke('kc-account-erasure', {
+        body: input,
+      });
+      if (error) {
+        console.error('[KCAPI][lgpd] kc-account-erasure:', error);
+        return { ok: false, error: { message: error.message || 'Falha no fluxo LGPD.' } };
+      }
+      return data || { ok: true };
+    } catch (e) {
+      console.error('[KCAPI][lgpd] kc-account-erasure excecao:', e);
+      return { ok: false, error: { message: 'Falha no fluxo LGPD.' } };
+    }
+  }
+
   window._KCSA.admin = {
     createHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
+    processAccountErasure,
     listExternalAccessRequests,
     decideExternalAccessRequest,
   };

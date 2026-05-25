@@ -29,6 +29,7 @@
       hasMore: false,
       isLoadingMore: false,
     },
+    erasureResults: {},
     requestToken: 0,
   };
 
@@ -276,6 +277,115 @@
     return `<div class="kc-admin-help-meta">${lines.join('')}</div>`;
   }
 
+  function normalizeSearchText(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
+  function getLgpdTargetEmail(row) {
+    const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    return String(metadata.account_email || row.contact_email || '').trim().toLowerCase();
+  }
+
+  function isLgpdErasureRequest(row) {
+    if (!row || typeof row !== 'object') return false;
+    const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const text = normalizeSearchText([
+      row.type,
+      row.topic,
+      row.subtopic,
+      row.subject,
+      row.message,
+      row.contact_email,
+      metadata.account_email,
+      metadata.request_kind,
+    ].join(' '));
+    const hasErasureSignal = /(lgpd|artigo 18|exclusao|excluir|eliminacao|eliminar|remocao|remover|dados cadastrais|apagar conta|deletar conta)/.test(text);
+    const isAccountRequest = String(row.type || '').trim() === 'account_access';
+    return hasErasureSignal || (isAccountRequest && /(conta|dados|perfil)/.test(text) && /(excl|remov|elimin|apag|delet)/.test(text));
+  }
+
+  function summarizeCounts(counts) {
+    const input = counts && typeof counts === 'object' ? counts : {};
+    const labels = {
+      profiles: 'Perfil',
+      posts: 'Publicacoes',
+      post_media: 'Midias',
+      comments: 'Comentarios',
+      post_votes: 'Votos',
+      saved_posts: 'Salvos',
+      reports: 'Denuncias',
+      help_requests: 'Pedidos de ajuda',
+      chat_conversations: 'Conversas',
+      chat_messages: 'Mensagens',
+      notification_preferences: 'Preferencias',
+      privacy_analytics_events: 'Analytics',
+      privacy_consent_events: 'Consentimentos',
+    };
+    const keys = Object.keys(labels);
+    return keys
+      .filter((key) => input[key] !== undefined)
+      .map((key) => `<span class="kc-admin-help-chip"><strong>${esc(labels[key])}</strong> ${esc(input[key])}</span>`)
+      .join('');
+  }
+
+  function buildEmailDraftPreview(result) {
+    const draft = result && result.email && result.email.draft ? result.email.draft : null;
+    if (!draft || !draft.text) return '';
+    return [
+      '<details class="kc-admin-lgpd-email">',
+      '  <summary><i class="fas fa-envelope-open-text" aria-hidden="true"></i> Ver e-mail de confirmacao</summary>',
+      `  <pre>${esc(draft.text)}</pre>`,
+      '</details>',
+    ].join('');
+  }
+
+  function buildLgpdPanel(row) {
+    if (!isLgpdErasureRequest(row)) return '';
+    const targetEmail = getLgpdTargetEmail(row);
+    const result = state.erasureResults[String(row.id || '')] || null;
+    const request = result && result.request ? result.request : null;
+    const diagnostics = result && result.diagnostics ? result.diagnostics : null;
+    const countsHtml = diagnostics && diagnostics.counts ? summarizeCounts(diagnostics.counts) : '';
+    const status = request && request.status ? String(request.status) : 'nao iniciado';
+    const expectedPhrase = targetEmail ? `EXCLUIR ${targetEmail}` : 'EXCLUIR email@dominio';
+    const warning = result && Array.isArray(result.warnings) && result.warnings.length
+      ? `<p class="kc-admin-lgpd-warning">${esc(result.warnings.join(' | '))}</p>`
+      : '';
+    const emailDraft = buildEmailDraftPreview(result);
+
+    return [
+      '<section class="kc-admin-lgpd-panel" data-lgpd-panel>',
+      '  <div class="kc-admin-lgpd-panel__head">',
+      '    <div>',
+      '      <strong><i class="fas fa-shield-heart" aria-hidden="true"></i> Solicitação LGPD</strong>',
+      '      <p>Fluxo seguro: diagnosticar, ocultar de forma reversível, pedir confirmação e só então executar a eliminação irreversível.</p>',
+      '    </div>',
+      `    <span class="kc-admin-help-chip"><i class="fas fa-circle-info" aria-hidden="true"></i>${esc(status)}</span>`,
+      '  </div>',
+      '  <div class="kc-admin-help-meta">',
+      `    <div><strong>E-mail alvo</strong><span>${esc(targetEmail || 'Não informado')}</span></div>`,
+      `    <div><strong>Confirmação irreversível</strong><span>${esc(expectedPhrase)}</span></div>`,
+      '  </div>',
+      countsHtml ? `<div class="kc-admin-lgpd-counts">${countsHtml}</div>` : '',
+      warning,
+      emailDraft,
+      '  <div class="kc-admin-lgpd-actions">',
+      '    <button type="button" data-lgpd-action="diagnose"><i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Preparar diagnóstico</button>',
+      '    <button type="button" data-lgpd-action="apply_reversible"><i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar conta e pedir confirmação</button>',
+      '    <button type="button" data-lgpd-action="generate_receipt"><i class="fas fa-receipt" aria-hidden="true"></i> Gerar recibo interno</button>',
+      '    <button type="button" data-lgpd-export><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Exportar relatório LGPD</button>',
+      '  </div>',
+      '  <div class="kc-admin-lgpd-danger">',
+      `    <label><span>Digite exatamente <code>${esc(expectedPhrase)}</code></span><input type="text" data-lgpd-confirmation placeholder="${esc(expectedPhrase)}" autocomplete="off" /></label>`,
+      '    <button type="button" data-lgpd-action="erase_confirmed"><i class="fas fa-user-slash" aria-hidden="true"></i> Executar exclusão confirmada</button>',
+      '  </div>',
+      '</section>',
+    ].join('');
+  }
+
   function buildPaginationCard() {
     const totalCount = Math.max(0, toFiniteNumber(state.pagination.totalCount, state.rows.length));
     const loadedCount = Array.isArray(state.rows) ? state.rows.length : 0;
@@ -351,6 +461,7 @@
         `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Nao' : 'Sim'}</span></div>`,
         '  </div>',
         metadataSummary,
+        buildLgpdPanel(row),
         '  <div class="kc-admin-help-actions">',
         `    <label><span class="sr-only">Status</span><select data-help-status><option value="new"${row.status === 'new' ? ' selected' : ''}>Novo</option><option value="triaged"${row.status === 'triaged' ? ' selected' : ''}>Triado</option><option value="in_progress"${row.status === 'in_progress' ? ' selected' : ''}>Em andamento</option><option value="resolved"${row.status === 'resolved' ? ' selected' : ''}>Resolvido</option><option value="archived"${row.status === 'archived' ? ' selected' : ''}>Arquivado</option></select></label>`,
         `    <label><span class="sr-only">Urgencia</span><select data-help-priority><option value="low"${row.priority === 'low' ? ' selected' : ''}>Baixa</option><option value="normal"${row.priority === 'normal' ? ' selected' : ''}>Normal</option><option value="high"${row.priority === 'high' ? ' selected' : ''}>Alta</option><option value="urgent"${row.priority === 'urgent' ? ' selected' : ''}>Urgente</option></select></label>`,
@@ -575,6 +686,103 @@
     }
   }
 
+  function buildLgpdExportReport(row) {
+    const result = state.erasureResults[String(row && row.id || '')] || {};
+    const diagnostics = result.diagnostics || {};
+    const counts = diagnostics.counts && typeof diagnostics.counts === 'object' ? diagnostics.counts : {};
+    return {
+      title: 'KinoCampus - Relatorio LGPD',
+      subtitle: 'Solicitacao de remocao de conta e dados cadastrais',
+      source: 'admin/help-requests.html',
+      filters: {
+        help_request_id: row && row.id || '',
+        status: row && row.status || '',
+        email_hash: result.target && result.target.email_hash || '',
+      },
+      kpis: {
+        usuario_encontrado: result.target && result.target.user_found ? 'Sim' : 'Nao',
+        posts: counts.posts || 0,
+        midias: counts.post_media || 0,
+        comentarios: counts.comments || 0,
+        pedidos_de_ajuda: counts.help_requests || 0,
+      },
+      sections: [
+        {
+          title: 'Solicitacao',
+          rows: [{
+            id: row && row.id || '',
+            criado_em: formatDateTime(row && row.created_at),
+            status: row && row.status || '',
+            prioridade: row && row.priority || '',
+            assunto: row && row.subject || '',
+          }],
+        },
+        {
+          title: 'Diagnostico',
+          rows: Object.keys(counts).map((key) => ({ dado: key, total: counts[key] })),
+        },
+        {
+          title: 'Recibo',
+          rows: [result.receipt || (result.request && result.request.receipt) || {}],
+        },
+      ],
+    };
+  }
+
+  async function exportLgpdReport(row) {
+    if (!window.KCAdminExport) {
+      showToast('Exportador admin indisponivel.', 'error');
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    await window.KCAdminExport.exportReportPDF(`kc-lgpd-${date}.pdf`, buildLgpdExportReport(row));
+  }
+
+  async function handleLgpdAction(card, action) {
+    const id = String(card && card.getAttribute('data-help-id') || '').trim();
+    if (!id) return;
+    const row = state.rows.find((item) => String(item && item.id || '') === id);
+    if (!row) return;
+    const targetEmail = getLgpdTargetEmail(row);
+    const confirmation = String(card.querySelector('[data-lgpd-confirmation]')?.value || '').trim();
+    if (action === 'erase_confirmed' && confirmation !== `EXCLUIR ${targetEmail}`) {
+      showToast('Digite a frase de confirmacao exatamente como exibida antes da exclusao irreversivel.', 'error');
+      return;
+    }
+    const button = card.querySelector(`[data-lgpd-action="${action}"]`);
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Processando...';
+    }
+    try {
+      const result = await window.KCAPI.processAccountErasure({
+        action,
+        help_request_id: id,
+        target_email: targetEmail,
+        confirmation_phrase: confirmation,
+      });
+      if (!result || result.ok === false) {
+        showToast((result && result.error && result.error.message) || result.error || 'Nao foi possivel processar o fluxo LGPD.', 'error');
+        return;
+      }
+      state.erasureResults[id] = result;
+      showToast(action === 'erase_confirmed' ? 'Exclusao LGPD confirmada.' : 'Fluxo LGPD atualizado.', 'success');
+      if (action === 'apply_reversible' || action === 'erase_confirmed') {
+        await loadRows({ limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE) });
+      } else {
+        renderRows(state.rows);
+      }
+    } catch (error) {
+      console.error('[AdminHelp] lgpd action failed:', error);
+      showToast('Nao foi possivel processar o fluxo LGPD.', 'error');
+    } finally {
+      if (button) {
+        button.disabled = false;
+        renderRows(state.rows);
+      }
+    }
+  }
+
   function bindEvents() {
     if (eventsBound) return;
     eventsBound = true;
@@ -607,7 +815,7 @@
     if (exportPdf) exportPdf.addEventListener('click', () => handleHelpExport('pdf').catch(console.error));
 
     document.addEventListener('click', function (event) {
-      const target = event.target && event.target.closest ? event.target.closest('[data-help-save],[data-help-load-more]') : null;
+      const target = event.target && event.target.closest ? event.target.closest('[data-help-save],[data-help-load-more],[data-lgpd-action],[data-lgpd-export]') : null;
       if (!target) return;
 
       if (target.hasAttribute('data-help-load-more')) {
@@ -619,6 +827,22 @@
       }
 
       const card = target.closest('[data-help-id]');
+      if (target.hasAttribute('data-lgpd-action')) {
+        event.preventDefault();
+        if (card) {
+          handleLgpdAction(card, String(target.getAttribute('data-lgpd-action') || '')).catch(console.error);
+        }
+        return;
+      }
+
+      if (target.hasAttribute('data-lgpd-export')) {
+        event.preventDefault();
+        const id = String(card && card.getAttribute('data-help-id') || '').trim();
+        const row = state.rows.find((item) => String(item && item.id || '') === id);
+        if (row) exportLgpdReport(row).catch(console.error);
+        return;
+      }
+
       if (card) saveRow(card);
     });
   }

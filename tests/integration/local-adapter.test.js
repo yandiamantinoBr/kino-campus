@@ -105,6 +105,7 @@ describe('Local Adapter - Registro do driver', () => {
       'createHelpRequest',
       'listAdminHelpRequests',
       'updateAdminHelpRequest',
+      'processAccountErasure',
       'getNotificationPreferences',
       'updateNotificationPreferences',
       'getNotificationChannelTargets',

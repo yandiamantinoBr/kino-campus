@@ -125,6 +125,7 @@ describe('kc-api.client.js - public domains frozen in the facade', () => {
       'createHelpRequest,',
       'listAdminHelpRequests,',
       'updateAdminHelpRequest,',
+      'processAccountErasure,',
       'getNotificationPreferences,',
       'updateNotificationPreferences,',
       'getNotificationChannelTargets,',
@@ -199,6 +200,7 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
     expect(source).toContain('return helpModule.createHelpRequest(payload, { getActiveDriver });');
     expect(source).toContain('return helpModule.listAdminHelpRequests(filters, { getActiveDriver });');
     expect(source).toContain('return helpModule.updateAdminHelpRequest(id, patch, { getActiveDriver });');
+    expect(source).toContain('return helpModule.processAccountErasure(payload, { getActiveDriver });');
     expect(source).toContain('return helpModule.inviteExternalUser(email, note, { getActiveDriver });');
     expect(source).toContain('return helpModule.getInvites({ getActiveDriver });');
     expect(source).toContain('return helpModule.revokeInvite(email, { getActiveDriver });');

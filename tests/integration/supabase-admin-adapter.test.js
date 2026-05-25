@@ -16,6 +16,21 @@ beforeAll(() => {
   source = fs.readFileSync(ADAPTER_PATH, 'utf8');
 });
 
+describe('supabase.admin.adapter.js - fluxo LGPD account erasure', () => {
+  test('exporta processAccountErasure', () => {
+    expect(source).toContain('processAccountErasure,');
+  });
+
+  test('invoca Edge Function kc-account-erasure', () => {
+    expect(source).toContain("client.functions.invoke('kc-account-erasure'");
+  });
+
+  test('faz merge de metadata antes de atualizar help_requests', () => {
+    expect(source).toContain(".select('metadata')");
+    expect(source).toContain('updates.metadata = { ...currentMetadata, ...patch.metadata };');
+  });
+});
+
 describe('supabase.admin.adapter.js — estrutura IIFE e namespace', () => {
   test('é uma IIFE (function)()', () => {
     expect(source).toMatch(/\(function\s*\(\)\s*\{/);
