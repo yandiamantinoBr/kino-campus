@@ -61,6 +61,8 @@ KinoCampus
   - `generate_receipt`: returns the internal receipt for admin export.
   - `erase_confirmed`: requires the exact typed phrase `EXCLUIR {email}` and then runs irreversible erasure.
 - `/admin/help-requests.html`: shows an LGPD panel only for requests that mention account removal, data deletion or LGPD.
+- E-mail visual template: `supabase/templates/kino-account-erasure-confirmation-email.html`.
+- Deploy checklist: `docs/privacy/account-erasure-supabase-deploy.md`.
 
 ## Rollback
 

@@ -6,6 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 const MIGRATION = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260525143000_lgpd_account_erasure_requests.sql'), 'utf8');
 const EDGE = fs.readFileSync(path.join(ROOT, 'supabase/functions/kc-account-erasure/index.ts'), 'utf8');
+const EMAIL_TEMPLATE = fs.readFileSync(path.join(ROOT, 'supabase/templates/kino-account-erasure-confirmation-email.html'), 'utf8');
 const HELP_HTML = fs.readFileSync(path.join(ROOT, 'admin/help-requests.html'), 'utf8');
 const HELP_CONTROLLER = fs.readFileSync(path.join(ROOT, 'assets/js/controllers/admin/admin-help-requests.controller.js'), 'utf8');
 const RUNBOOK = fs.readFileSync(path.join(ROOT, 'docs/privacy/account-erasure-runbook.md'), 'utf8');
@@ -68,5 +69,13 @@ describe('LGPD account erasure - admin help UI', () => {
     expect(RUNBOOK).toContain('Deleting the Auth user directly');
     expect(RUNBOOK).toContain('CONFIRMO A EXCLUSAO DA MINHA CONTA KINOCAMPUS');
     expect(RUNBOOK).toContain('Rollback is available only before `erase_confirmed`');
+  });
+
+  test('mantem template visual versionado para o e-mail LGPD', () => {
+    expect(EMAIL_TEMPLATE).toContain('Confirme a remoção da sua conta');
+    expect(EMAIL_TEMPLATE).toContain('KinoCampus');
+    expect(EMAIL_TEMPLATE).toContain('Comunidade UFG');
+    expect(EMAIL_TEMPLATE).toContain('{{ email }}');
+    expect(EMAIL_TEMPLATE).toContain('CONFIRMO A EXCLUSÃO DA MINHA CONTA KINOCAMPUS');
   });
 });

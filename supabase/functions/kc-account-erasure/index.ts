@@ -11,7 +11,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 type JsonObject = Record<string, unknown>;
-type SupabaseClientLike = ReturnType<typeof createClient>;
+type SupabaseClientLike = any;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
@@ -176,46 +176,84 @@ function resolveTargetEmail(body: JsonObject, helpRequest: JsonObject | null) {
 
 function buildConfirmationEmail(email: string) {
   const subject = "Confirmacao de solicitacao de remocao de conta - KinoCampus";
-  const phrase = "CONFIRMO A EXCLUSAO DA MINHA CONTA KINOCAMPUS";
+  const phrase = "CONFIRMO A EXCLUSÃO DA MINHA CONTA KINOCAMPUS";
   const baseUrl = getEnv("KC_APP_BASE_URL", DEFAULT_APP_BASE_URL).replace(/\/+$/, "");
   const text = [
-    "Ola.",
+    "Olá.",
     "",
-    `Recebemos sua solicitacao de remocao da conta associada ao e-mail ${email}, com fundamento nos direitos previstos na LGPD.`,
+    `Recebemos sua solicitação de remoção da conta associada ao e-mail ${email}, com fundamento nos direitos previstos na LGPD.`,
     "",
-    "Por seguranca, antes de executar a eliminacao irreversivel dos dados cadastrais, precisamos confirmar que a solicitacao partiu do titular da conta. Enquanto isso, iniciaremos o tratamento interno do pedido e poderemos restringir a visibilidade de dados vinculados a conta quando aplicavel.",
+    "Por segurança, antes de executar a eliminação irreversível dos dados cadastrais, precisamos confirmar que a solicitação partiu do titular da conta. Enquanto isso, iniciaremos o tratamento interno do pedido e poderemos restringir a visibilidade de dados vinculados à conta quando aplicável.",
     "",
-    "Para confirmar a exclusao definitiva, responda este e-mail com a frase:",
+    "Para confirmar a exclusão definitiva, responda este e-mail com a frase:",
     "",
     phrase,
     "",
-    "Apos a confirmacao, a conta sera removida e os dados cadastrais serao eliminados ou anonimizados conforme a Politica de Privacidade do KinoCampus e as hipoteses legais de retencao minima para seguranca, auditoria e exercicio regular de direitos.",
+    "Após a confirmação, a conta será removida e os dados cadastrais serão eliminados ou anonimizados conforme a Política de Privacidade do KinoCampus e as hipóteses legais de retenção mínima para segurança, auditoria e exercício regular de direitos.",
     "",
-    "Caso tenha duvidas ou queira algum esclarecimento adicional, responda este e-mail ou entre em contato por contato@kinocampus.com.br.",
+    "Caso tenha dúvidas ou queira algum esclarecimento adicional, responda este e-mail ou entre em contato por contato@kinocampus.com.br.",
     "",
-    "Agradecemos por ter usado o KinoCampus. Caso queira voltar futuramente, sera possivel criar uma nova conta na plataforma.",
+    "Agradecemos por ter usado o KinoCampus. Caso queira voltar futuramente, será possível criar uma nova conta na plataforma.",
     "",
     "Atenciosamente,",
     "KinoCampus",
     baseUrl,
   ].join("\n");
 
-  const html = `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:620px;margin:0 auto;color:#1f2937;line-height:1.55">
-      <div style="background:#ff6b00;border-radius:14px;padding:24px;text-align:center;color:#fff;margin-bottom:24px">
-        <h1 style="margin:0;font-size:1.6rem">KinoCampus</h1>
-        <p style="margin:6px 0 0;font-size:.85rem;letter-spacing:.15em;text-transform:uppercase">Comunidade UFG</p>
-      </div>
-      <p>Ola.</p>
-      <p>Recebemos sua solicitacao de remocao da conta associada ao e-mail <strong>${escapeHtml(email)}</strong>, com fundamento nos direitos previstos na LGPD.</p>
-      <p>Por seguranca, antes de executar a eliminacao irreversivel dos dados cadastrais, precisamos confirmar que a solicitacao partiu do titular da conta. Enquanto isso, iniciaremos o tratamento interno do pedido e poderemos restringir a visibilidade de dados vinculados a conta quando aplicavel.</p>
-      <p>Para confirmar a exclusao definitiva, responda este e-mail com a frase:</p>
-      <pre style="background:#111827;color:#fff;border-radius:10px;padding:12px;white-space:pre-wrap">${phrase}</pre>
-      <p>Apos a confirmacao, a conta sera removida e os dados cadastrais serao eliminados ou anonimizados conforme a Politica de Privacidade do KinoCampus e as hipoteses legais de retencao minima para seguranca, auditoria e exercicio regular de direitos.</p>
-      <p>Caso tenha duvidas, responda este e-mail ou entre em contato por <a href="mailto:contato@kinocampus.com.br" style="color:#ff6b00">contato@kinocampus.com.br</a>.</p>
-      <p>Agradecemos por ter usado o KinoCampus. Caso queira voltar futuramente, sera possivel criar uma nova conta na plataforma.</p>
-      <p style="color:#6b7280">Atenciosamente,<br/>KinoCampus<br/><a href="${escapeHtml(baseUrl)}" style="color:#ff6b00">${escapeHtml(baseUrl)}</a></p>
-    </div>`;
+  const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirmação de remoção de conta - KinoCampus</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f8fb;font-family:Arial,'Helvetica Neue',sans-serif;color:#1f2937;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f7f8fb;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #eceff5;">
+          <tr>
+            <td style="padding:28px 32px;background:linear-gradient(135deg,#fff4ec,#ffffff);border-bottom:1px solid #eceff5;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="width:48px;height:48px;border-radius:14px;background:#ff7c00;color:#ffffff;text-align:center;font-size:22px;font-weight:800;line-height:48px;">K</td>
+                  <td style="padding-left:14px;">
+                    <div style="font-size:22px;font-weight:800;color:#111827;line-height:1;">KinoCampus</div>
+                    <div style="margin-top:6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#6b7280;">Comunidade UFG</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <div style="font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#ff7c00;">Privacidade e LGPD</div>
+              <h1 style="margin:12px 0 12px;font-size:28px;line-height:1.18;color:#111827;">Confirme a remoção da sua conta</h1>
+              <p style="margin:0 0 18px;font-size:16px;line-height:1.7;color:#4b5563;">Olá. Recebemos sua solicitação de remoção da conta associada ao e-mail <strong style="color:#111827;">${escapeHtml(email)}</strong>, com fundamento nos direitos previstos na LGPD.</p>
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#4b5563;">Por segurança, antes de executar a eliminação irreversível dos dados cadastrais, precisamos confirmar que a solicitação partiu do titular da conta.</p>
+              <div style="margin:24px 0;padding:18px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;">
+                <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#7c2d12;">Para confirmar a exclusão definitiva, responda este e-mail com a frase abaixo:</p>
+                <div style="padding:14px 16px;border-radius:14px;background:#111827;color:#ffffff;font-size:14px;font-weight:800;letter-spacing:.02em;line-height:1.5;">${escapeHtml(phrase)}</div>
+              </div>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#4b5563;">Após a confirmação, a conta será removida e os dados cadastrais serão eliminados ou anonimizados conforme a Política de Privacidade do KinoCampus e as hipóteses legais de retenção mínima para segurança, auditoria e exercício regular de direitos.</p>
+              <p style="margin:0 0 22px;font-size:15px;line-height:1.7;color:#4b5563;">Enquanto a confirmação não é recebida, iniciaremos o tratamento interno do pedido e poderemos restringir a visibilidade de dados vinculados à conta quando aplicável.</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:26px 0;">
+                <tr><td><a href="mailto:contato@kinocampus.com.br" style="display:inline-block;padding:13px 20px;border-radius:999px;background:#ff7c00;color:#ffffff;text-decoration:none;font-weight:800;">Falar com o KinoCampus</a></td></tr>
+              </table>
+              <p style="margin:0;font-size:13px;line-height:1.7;color:#6b7280;">Agradecemos por ter usado o KinoCampus. Caso queira voltar futuramente, será possível criar uma nova conta na plataforma.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:22px 32px;background:#f9fafb;border-top:1px solid #eceff5;">
+              <p style="margin:0;font-size:13px;line-height:1.6;color:#6b7280;">Equipe KinoCampus<br /><a href="${escapeHtml(baseUrl)}" style="color:#ff7c00;text-decoration:none;">${escapeHtml(baseUrl)}</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   return { subject, text, html, phrase };
 }
@@ -745,7 +783,7 @@ Deno.serve(async (req) => {
       diagnostics,
     });
     if (!erase.ok) return json(Number(erase.status) || 409, erase as Record<string, unknown>);
-    return json(200, { ok: true, action, diagnostics, ...erase, target: { email_hash: emailHash, user_found: Boolean(userId) } });
+    return json(200, { ...erase, ok: true, action, diagnostics, target: { email_hash: emailHash, user_found: Boolean(userId) } });
   } catch (error) {
     console.error("[kc-account-erasure] failed:", error);
     return json(500, {
