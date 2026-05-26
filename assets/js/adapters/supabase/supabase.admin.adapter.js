@@ -369,7 +369,16 @@
       });
       if (error) {
         console.error('[KCAPI][lgpd] kc-account-erasure:', error);
-        return { ok: false, error: { message: error.message || 'Falha no fluxo LGPD.' } };
+        let edgeBody = null;
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            edgeBody = await error.context.json();
+          }
+        } catch (_) { /* ignore */ }
+        const message = edgeBody && (edgeBody.detail || edgeBody.message || edgeBody.error)
+          ? String(edgeBody.detail || edgeBody.message || edgeBody.error)
+          : String(error.message || 'Falha no fluxo LGPD.');
+        return { ok: false, error: { message, body: edgeBody || null } };
       }
       return data || { ok: true };
     } catch (e) {

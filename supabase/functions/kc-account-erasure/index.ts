@@ -42,6 +42,20 @@ function normalizeEmail(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
 
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    const text = safeString(value, 4000);
+    if (text) return text;
+  }
+  return "";
+}
+
+function extractEmailFromText(value: unknown) {
+  const text = String(value || "");
+  const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return normalizeEmail(match?.[0] || "");
+}
+
 function asObject(value: unknown): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as JsonObject;
@@ -166,8 +180,23 @@ async function getHelpRequest(adminClient: SupabaseClientLike, helpRequestId: st
 
 function resolveTargetEmail(body: JsonObject, helpRequest: JsonObject | null) {
   const metadata = asObject(helpRequest?.metadata);
+  const requestText = [
+    helpRequest?.contact_email,
+    helpRequest?.message,
+    helpRequest?.subject,
+    metadata.account_email,
+    metadata.email,
+  ].join(" ");
   return normalizeEmail(
-    body.target_email ||
+    firstString(
+      body.target_email,
+      body.targetEmail,
+      asObject(body.target).email,
+      asObject(body.help_request).contact_email,
+      metadata.account_email,
+      helpRequest?.contact_email,
+      extractEmailFromText(requestText),
+    ) ||
     metadata.account_email ||
     helpRequest?.contact_email ||
     "",
@@ -708,8 +737,14 @@ Deno.serve(async (req) => {
   let body: JsonObject;
   try { body = await req.json(); } catch { return json(400, { ok: false, error: "invalid_json" }); }
 
-  const action = safeString(body.action, 40);
-  const helpRequestId = safeString(body.help_request_id, 80);
+  const action = safeString(body.action || body.actionKey, 40);
+  const helpRequestId = safeString(
+    body.help_request_id ||
+    body.helpRequestId ||
+    asObject(body.help_request).id ||
+    asObject(body.helpRequest).id,
+    80,
+  );
   if (helpRequestId && !UUID_RE.test(helpRequestId)) return json(400, { ok: false, error: "invalid_help_request_id" });
   if (!["diagnose", "apply_reversible", "generate_receipt", "erase_confirmed"].includes(action)) {
     return json(400, { ok: false, error: "invalid_action" });
@@ -779,7 +814,7 @@ Deno.serve(async (req) => {
       email,
       emailHash,
       adminUserId: user.id,
-      confirmationPhrase: safeString(body.confirmation_phrase, 320),
+      confirmationPhrase: safeString(body.confirmation_phrase || body.confirmationPhrase, 320),
       diagnostics,
     });
     if (!erase.ok) return json(Number(erase.status) || 409, erase as Record<string, unknown>);

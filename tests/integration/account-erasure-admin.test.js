@@ -43,6 +43,13 @@ describe('LGPD account erasure - Edge Function', () => {
     expect(EDGE).toContain('confirmation_phrase_mismatch');
   });
 
+  test('aceita aliases do frontend e extrai e-mail do texto do pedido', () => {
+    expect(EDGE).toContain('body.helpRequestId');
+    expect(EDGE).toContain('body.targetEmail');
+    expect(EDGE).toContain('body.confirmationPhrase');
+    expect(EDGE).toContain('extractEmailFromText(requestText)');
+  });
+
   test('oculta posts, remove storage e apaga Auth user no final', () => {
     expect(EDGE).toContain('updateOwnedPostsReversible');
     expect(EDGE).toContain('status: "hidden"');
@@ -63,6 +70,14 @@ describe('LGPD account erasure - admin help UI', () => {
       'Exportar relatório LGPD',
       'Executar exclusão confirmada',
     ].forEach((label) => expect(HELP_CONTROLLER).toContain(label));
+  });
+
+  test('envia payload redundante e exporta relatorio LGPD detalhado', () => {
+    expect(HELP_CONTROLLER).toContain('helpRequestId: id');
+    expect(HELP_CONTROLLER).toContain('targetEmail');
+    expect(HELP_CONTROLLER).toContain('help_request: row');
+    expect(HELP_CONTROLLER).toContain('Diagnóstico de dados vinculados');
+    expect(HELP_CONTROLLER).toContain('Base legal e orientações');
   });
 
   test('documenta procedimento manual e confirmacao por e-mail', () => {

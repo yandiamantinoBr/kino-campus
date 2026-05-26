@@ -25,6 +25,13 @@ describe('supabase.admin.adapter.js - fluxo LGPD account erasure', () => {
     expect(source).toContain("client.functions.invoke('kc-account-erasure'");
   });
 
+  test('extrai mensagem estruturada de erro da Edge Function', () => {
+    expect(source).toContain('error.context');
+    expect(source).toContain('edgeBody.detail');
+    expect(source).toContain('edgeBody.message');
+    expect(source).toContain('edgeBody.error');
+  });
+
   test('faz merge de metadata antes de atualizar help_requests', () => {
     expect(source).toContain(".select('metadata')");
     expect(source).toContain('updates.metadata = { ...currentMetadata, ...patch.metadata };');

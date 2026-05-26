@@ -286,7 +286,11 @@
 
   function getLgpdTargetEmail(row) {
     const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
-    return String(metadata.account_email || row.contact_email || '').trim().toLowerCase();
+    const explicit = String(metadata.account_email || metadata.email || row.contact_email || '').trim().toLowerCase();
+    if (explicit) return explicit;
+    const haystack = [row && row.subject, row && row.message, row && row.topic].join(' ');
+    const match = haystack.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    return String(match && match[0] || '').trim().toLowerCase();
   }
 
   function isLgpdErasureRequest(row) {
@@ -690,40 +694,185 @@
     const result = state.erasureResults[String(row && row.id || '')] || {};
     const diagnostics = result.diagnostics || {};
     const counts = diagnostics.counts && typeof diagnostics.counts === 'object' ? diagnostics.counts : {};
+    const request = result.request || {};
+    const receipt = result.receipt || request.receipt || {};
+    const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const requestMetadata = request && request.metadata && typeof request.metadata === 'object' ? request.metadata : {};
+    const targetEmail = getLgpdTargetEmail(row);
+    const target = result.target || {};
+    const countLabels = {
+      profiles: 'Perfil cadastral',
+      posts: 'Publicações',
+      post_media: 'Mídias de publicações',
+      comments: 'Comentários',
+      post_votes: 'Votos realizados',
+      saved_posts: 'Publicações salvas',
+      reports: 'Denúncias registradas',
+      help_requests: 'Pedidos de ajuda',
+      chat_conversations: 'Conversas',
+      chat_messages: 'Mensagens',
+      notification_preferences: 'Preferências de notificação',
+      privacy_analytics_events: 'Eventos opcionais de analytics',
+      privacy_consent_events: 'Histórico de consentimento',
+    };
+    const statusLabels = {
+      diagnosed: 'Diagnóstico preparado',
+      pending_confirmation: 'Aguardando confirmação do titular',
+      reversible_applied: 'Ocultação reversível aplicada',
+      erased: 'Exclusão confirmada executada',
+      cancelled: 'Cancelado',
+      failed: 'Falhou',
+    };
+    const status = request.status || (result.action === 'diagnose' ? 'diagnosed' : 'não iniciado');
+    const warnings = []
+      .concat(Array.isArray(result.warnings) ? result.warnings : [])
+      .concat(Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [])
+      .concat(Array.isArray(requestMetadata.warnings) ? requestMetadata.warnings : [])
+      .filter(Boolean);
+    const countsRows = Object.keys(countLabels).map((key) => ({
+      categoria: countLabels[key],
+      chave_tecnica: key,
+      quantidade: Number(counts[key]) || 0,
+      tratamento_previsto: key === 'posts' || key === 'post_media'
+        ? 'Ocultar e anonimizar/remover conforme confirmação'
+        : key === 'privacy_analytics_events' || key === 'privacy_consent_events'
+          ? 'Manter apenas o mínimo agregado ou anonimizado quando aplicável'
+          : 'Eliminar, anonimizar ou reter minimamente conforme hipótese legal',
+    }));
+    const steps = [
+      {
+        etapa: '1. Validação da solicitação',
+        status: result.ok === false ? 'Falhou' : 'Disponível',
+        detalhe: 'Confere se há e-mail alvo e se a solicitação está vinculada ao pedido de ajuda.',
+      },
+      {
+        etapa: '2. Diagnóstico de dados',
+        status: diagnostics && diagnostics.counts ? 'Preparado' : 'Pendente',
+        detalhe: 'Levanta perfil, publicações, mídias, comentários, votos, salvos, mensagens, consentimentos e analytics vinculados.',
+      },
+      {
+        etapa: '3. Ocultação reversível',
+        status: request.reversible_applied_at ? 'Aplicada' : 'Pendente',
+        detalhe: 'Remove visibilidade pública enquanto aguarda confirmação final do titular.',
+      },
+      {
+        etapa: '4. Confirmação do titular',
+        status: request.confirmed_at ? 'Confirmada' : 'Aguardando resposta',
+        detalhe: 'Exige resposta por e-mail antes da eliminação irreversível.',
+      },
+      {
+        etapa: '5. Exclusão/anonimização final',
+        status: request.erased_at || receipt.erased_at ? 'Executada' : 'Pendente',
+        detalhe: 'Executa limpeza de Auth, dados cadastrais, mídias e vínculos pessoais quando confirmado.',
+      },
+    ];
     return {
-      title: 'KinoCampus - Relatorio LGPD',
-      subtitle: 'Solicitacao de remocao de conta e dados cadastrais',
+      title: 'KinoCampus - Relatório LGPD',
+      subtitle: 'Solicitação de remoção de conta e dados cadastrais',
       source: 'admin/help-requests.html',
       filters: {
-        help_request_id: row && row.id || '',
-        status: row && row.status || '',
-        email_hash: result.target && result.target.email_hash || '',
+        pedido_de_ajuda: row && row.id || '',
+        status_do_pedido: row && row.status || '',
+        status_lgpd: statusLabels[status] || status,
+        e_mail_alvo: targetEmail || 'Não informado',
+        hash_do_e_mail: target.email_hash || request.email_hash || '',
       },
       kpis: {
-        usuario_encontrado: result.target && result.target.user_found ? 'Sim' : 'Nao',
-        posts: counts.posts || 0,
-        midias: counts.post_media || 0,
-        comentarios: counts.comments || 0,
+        usuário_encontrado: target.user_found ? 'Sim' : 'Não',
+        publicações: counts.posts || 0,
+        mídias: counts.post_media || 0,
+        comentários: counts.comments || 0,
+        mensagens: counts.chat_messages || 0,
         pedidos_de_ajuda: counts.help_requests || 0,
       },
       sections: [
         {
-          title: 'Solicitacao',
+          title: 'Dados da solicitação',
+          pdfColumns: ['campo', 'valor'],
+          xlsxColumns: ['campo', 'valor'],
           rows: [{
-            id: row && row.id || '',
-            criado_em: formatDateTime(row && row.created_at),
-            status: row && row.status || '',
-            prioridade: row && row.priority || '',
-            assunto: row && row.subject || '',
+            campo: 'Pedido de ajuda',
+            valor: row && row.id || '',
+          }, {
+            campo: 'Criado em',
+            valor: formatDateTime(row && row.created_at),
+          }, {
+            campo: 'Status do pedido',
+            valor: row && row.status || '',
+          }, {
+            campo: 'Prioridade',
+            valor: row && row.priority || '',
+          }, {
+            campo: 'Tipo',
+            valor: buildLabel(Help.HELP_TYPE_LABELS, row && row.type, row && row.type || ''),
+          }, {
+            campo: 'Assunto',
+            valor: row && (row.subject || row.title) || '',
+          }, {
+            campo: 'E-mail informado',
+            valor: targetEmail || 'Não informado',
+          }, {
+            campo: 'Mensagem do titular',
+            valor: row && row.message || '',
           }],
         },
         {
-          title: 'Diagnostico',
-          rows: Object.keys(counts).map((key) => ({ dado: key, total: counts[key] })),
+          title: 'Diagnóstico de dados vinculados',
+          pdfColumns: ['categoria', 'quantidade', 'tratamento_previsto'],
+          xlsxColumns: ['categoria', 'chave_tecnica', 'quantidade', 'tratamento_previsto'],
+          maxPdfRows: 14,
+          rows: countsRows,
         },
         {
-          title: 'Recibo',
-          rows: [result.receipt || (result.request && result.request.receipt) || {}],
+          title: 'Andamento do fluxo LGPD',
+          pdfColumns: ['etapa', 'status', 'detalhe'],
+          xlsxColumns: ['etapa', 'status', 'detalhe'],
+          rows: steps,
+        },
+        {
+          title: 'Recibo interno',
+          pdfColumns: ['campo', 'valor'],
+          xlsxColumns: ['campo', 'valor'],
+          rows: [{
+            campo: 'Status LGPD',
+            valor: statusLabels[status] || status,
+          }, {
+            campo: 'Confirmação solicitada em',
+            valor: formatDateTime(request.confirmation_requested_at),
+          }, {
+            campo: 'Ocultação reversível em',
+            valor: formatDateTime(request.reversible_applied_at),
+          }, {
+            campo: 'Confirmado em',
+            valor: formatDateTime(request.confirmed_at),
+          }, {
+            campo: 'Eliminado/anonimizado em',
+            valor: formatDateTime(request.erased_at || receipt.erased_at),
+          }, {
+            campo: 'Hash do e-mail',
+            valor: target.email_hash || request.email_hash || receipt.email_hash || '',
+          }, {
+            campo: 'Observações',
+            valor: warnings.length ? warnings.join(' | ') : 'Sem avisos registrados.',
+          }],
+        },
+        {
+          title: 'Base legal e orientações',
+          pdfColumns: ['item', 'descrição'],
+          xlsxColumns: ['item', 'descrição'],
+          rows: [{
+            item: 'Direito solicitado',
+            descrição: 'Eliminação de dados pessoais tratados com consentimento ou quando aplicável, nos termos do art. 18, VI, da LGPD.',
+          }, {
+            item: 'Confirmação obrigatória',
+            descrição: 'A exclusão irreversível exige confirmação enviada pelo e-mail titular antes da execução final.',
+          }, {
+            item: 'Retenção mínima',
+            descrição: 'Podem ser mantidos registros mínimos de auditoria, hash do e-mail, datas, contagens e recibo interno para segurança e exercício regular de direitos.',
+          }, {
+            item: 'Publicações e conteúdo',
+            descrição: 'Conteúdos vinculados ao titular devem ficar ocultos da comunidade e ser anonimizados ou removidos após confirmação final.',
+          }],
         },
       ],
     };
@@ -733,6 +882,25 @@
     if (!window.KCAdminExport) {
       showToast('Exportador admin indisponivel.', 'error');
       return;
+    }
+    const id = String(row && row.id || '');
+    const targetEmail = getLgpdTargetEmail(row);
+    if (window.KCAPI && typeof window.KCAPI.processAccountErasure === 'function' && (!state.erasureResults[id] || !state.erasureResults[id].diagnostics)) {
+      const result = await window.KCAPI.processAccountErasure({
+        action: 'diagnose',
+        actionKey: 'diagnose',
+        help_request_id: id,
+        helpRequestId: id,
+        target_email: targetEmail,
+        targetEmail,
+        help_request: row,
+      });
+      if (result && result.ok !== false) {
+        state.erasureResults[id] = result;
+        renderRows(state.rows);
+      } else if (result && result.error && result.error.message) {
+        showToast(result.error.message, 'error');
+      }
     }
     const date = new Date().toISOString().slice(0, 10);
     await window.KCAdminExport.exportReportPDF(`kc-lgpd-${date}.pdf`, buildLgpdExportReport(row));
@@ -757,9 +925,14 @@
     try {
       const result = await window.KCAPI.processAccountErasure({
         action,
+        actionKey: action,
         help_request_id: id,
+        helpRequestId: id,
         target_email: targetEmail,
+        targetEmail,
         confirmation_phrase: confirmation,
+        confirmationPhrase: confirmation,
+        help_request: row,
       });
       if (!result || result.ok === false) {
         showToast((result && result.error && result.error.message) || result.error || 'Nao foi possivel processar o fluxo LGPD.', 'error');
