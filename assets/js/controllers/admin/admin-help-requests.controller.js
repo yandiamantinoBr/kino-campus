@@ -14,6 +14,15 @@
   ]);
   const FALLBACK_STATUS_VALUES = Object.freeze(['new', 'triaged', 'in_progress', 'resolved', 'archived']);
   const FALLBACK_PRIORITY_VALUES = Object.freeze(['low', 'normal', 'high', 'urgent']);
+  const LGPD_STATUS_LABELS = Object.freeze({
+    diagnosed: 'Diagnóstico preparado',
+    pending_confirmation: 'Aguardando confirmação',
+    reversible_applied: 'Ocultação reversível aplicada',
+    erased: 'Exclusão executada',
+    cancelled: 'Cancelado',
+    failed: 'Falhou',
+    'não iniciado': 'Não iniciado',
+  });
 
   const state = {
     rows: [],
@@ -79,7 +88,7 @@
   function showError(message) {
     const error = $('#admin-error');
     if (!error) return;
-    error.textContent = String(message || 'Nao foi possivel carregar os pedidos de ajuda.');
+    error.textContent = String(message || 'Não foi possível carregar os pedidos de ajuda.');
     error.style.display = 'block';
   }
 
@@ -348,17 +357,17 @@
     const input = counts && typeof counts === 'object' ? counts : {};
     const labels = {
       profiles: 'Perfil',
-      posts: 'Publicacoes',
-      post_media: 'Midias',
-      comments: 'Comentarios',
+      posts: 'Publicações',
+      post_media: 'Mídias',
+      comments: 'Comentários',
       post_votes: 'Votos',
       saved_posts: 'Salvos',
-      reports: 'Denuncias',
+      reports: 'Denúncias',
       help_requests: 'Pedidos de ajuda',
       chat_conversations: 'Conversas',
       chat_messages: 'Mensagens',
-      notification_preferences: 'Preferencias',
-      privacy_analytics_events: 'Analytics',
+      notification_preferences: 'Preferências',
+      privacy_analytics_events: 'Eventos de analytics',
       privacy_consent_events: 'Consentimentos',
     };
     const keys = Object.keys(labels);
@@ -373,7 +382,7 @@
     if (!draft || !draft.text) return '';
     return [
       '<details class="kc-admin-lgpd-email">',
-      '  <summary><i class="fas fa-envelope-open-text" aria-hidden="true"></i> Ver e-mail de confirmacao</summary>',
+      '  <summary><i class="fas fa-envelope-open-text" aria-hidden="true"></i> Ver e-mail de confirmação</summary>',
       `  <pre>${esc(draft.text)}</pre>`,
       '</details>',
     ].join('');
@@ -386,7 +395,8 @@
     const request = result && result.request ? result.request : null;
     const diagnostics = result && result.diagnostics ? result.diagnostics : null;
     const countsHtml = diagnostics && diagnostics.counts ? summarizeCounts(diagnostics.counts) : '';
-    const status = request && request.status ? String(request.status) : 'nao iniciado';
+    const status = request && request.status ? String(request.status) : 'não iniciado';
+    const statusLabel = buildLabel(LGPD_STATUS_LABELS, status, status);
     const erasedAt = request && request.erased_at || result && result.receipt && result.receipt.erased_at || '';
     const canClose = erasedAt
       ? 'Sim, após revisar o recibo interno.'
@@ -395,7 +405,7 @@
         : diagnostics && diagnostics.counts
           ? 'Não. Fluxo sem confirmação final.'
           : 'Não. Diagnóstico pendente.';
-    const expectedPhrase = targetEmail ? `EXCLUIR ${targetEmail}` : 'EXCLUIR email@dominio';
+    const expectedPhrase = targetEmail ? `EXCLUIR ${targetEmail}` : 'EXCLUIR email@domínio';
     const warning = result && Array.isArray(result.warnings) && result.warnings.length
       ? `<p class="kc-admin-lgpd-warning">${esc(result.warnings.join(' | '))}</p>`
       : '';
@@ -408,7 +418,7 @@
       '      <strong><i class="fas fa-shield-heart" aria-hidden="true"></i> Solicitação LGPD</strong>',
       '      <p>Fluxo seguro: diagnosticar, ocultar de forma reversível, pedir confirmação e só então executar a eliminação irreversível.</p>',
       '    </div>',
-      `    <span class="kc-admin-help-chip"><i class="fas fa-circle-info" aria-hidden="true"></i>${esc(status)}</span>`,
+      `    <span class="kc-admin-help-chip"><i class="fas fa-circle-info" aria-hidden="true"></i>${esc(statusLabel)}</span>`,
       '  </div>',
       '  <div class="kc-admin-help-meta">',
       `    <div><strong>E-mail alvo</strong><span>${esc(targetEmail || 'Não informado')}</span></div>`,
@@ -439,8 +449,8 @@
     if (!totalCount && !loadedCount) return '';
 
     const helperText = state.pagination.hasMore
-      ? 'Filtros aplicados no servidor. Carregue a proxima pagina para continuar.'
-      : 'Todos os resultados disponiveis para os filtros atuais ja foram carregados.';
+      ? 'Filtros aplicados no servidor. Carregue a próxima página para continuar.'
+      : 'Todos os resultados disponíveis para os filtros atuais já foram carregados.';
     const buttonHtml = state.pagination.hasMore
       ? [
         '<button',
@@ -481,9 +491,9 @@
       const priorityLabel = buildLabel(Help.HELP_PRIORITY_LABELS, row.priority, row.priority);
       const statusLabel = buildLabel(Help.HELP_STATUS_LABELS, row.status, row.status);
       const subtopicLabel = buildSubtopicLabel(row);
-      const pagePath = String((row && row.page_path) || '').trim() || 'Nao informado';
+      const pagePath = String((row && row.page_path) || '').trim() || 'Não informado';
       const subject = String(row.subject || '').trim() || 'Sem assunto';
-      const message = String(row.message || '').trim() || 'Sem descricao';
+      const message = String(row.message || '').trim() || 'Sem descrição';
       const contactEmail = String(row.contact_email || '').trim() || 'Sem e-mail';
       const metadataChips = buildMetadataChips(row);
       const metadataSummary = buildMetadataSummary(row);
@@ -503,15 +513,15 @@
         `    <div><strong>Tema</strong><span>${esc(topicLabel)}</span></div>`,
         `    <div><strong>Subtipo</strong><span>${esc(subtopicLabel)}</span></div>`,
         `    <div><strong>E-mail</strong><span>${esc(contactEmail)}</span></div>`,
-        `    <div><strong>Pagina afetada</strong><span>${esc(pagePath)}</span></div>`,
+        `    <div><strong>Página afetada</strong><span>${esc(pagePath)}</span></div>`,
         `    <div><strong>Criado em</strong><span>${esc(formatDateTime(row.created_at))}</span></div>`,
-        `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Nao' : 'Sim'}</span></div>`,
+        `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Não' : 'Sim'}</span></div>`,
         '  </div>',
         metadataSummary,
         buildLgpdPanel(row),
         '  <div class="kc-admin-help-actions">',
         `    <label><span class="sr-only">Status</span><select data-help-status><option value="new"${row.status === 'new' ? ' selected' : ''}>Novo</option><option value="triaged"${row.status === 'triaged' ? ' selected' : ''}>Triado</option><option value="in_progress"${row.status === 'in_progress' ? ' selected' : ''}>Em andamento</option><option value="resolved"${row.status === 'resolved' ? ' selected' : ''}>Resolvido</option><option value="archived"${row.status === 'archived' ? ' selected' : ''}>Arquivado</option></select></label>`,
-        `    <label><span class="sr-only">Urgencia</span><select data-help-priority><option value="low"${row.priority === 'low' ? ' selected' : ''}>Baixa</option><option value="normal"${row.priority === 'normal' ? ' selected' : ''}>Normal</option><option value="high"${row.priority === 'high' ? ' selected' : ''}>Alta</option><option value="urgent"${row.priority === 'urgent' ? ' selected' : ''}>Urgente</option></select></label>`,
+        `    <label><span class="sr-only">Urgência</span><select data-help-priority><option value="low"${row.priority === 'low' ? ' selected' : ''}>Baixa</option><option value="normal"${row.priority === 'normal' ? ' selected' : ''}>Normal</option><option value="high"${row.priority === 'high' ? ' selected' : ''}>Alta</option><option value="urgent"${row.priority === 'urgent' ? ' selected' : ''}>Urgente</option></select></label>`,
         '    <button type="button" data-help-save><i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar triagem</button>',
         '  </div>',
         '</article>',
@@ -595,10 +605,10 @@
       if (requestToken !== state.requestToken) return;
       console.error('[AdminHelp] load failed:', error);
       if (append) {
-        showToast('Nao foi possivel carregar mais pedidos de ajuda.', 'error');
+        showToast('Não foi possível carregar mais pedidos de ajuda.', 'error');
         renderRows(state.rows);
       } else {
-        showError('Nao foi possivel carregar os pedidos de ajuda.');
+        showError('Não foi possível carregar os pedidos de ajuda.');
       }
     } finally {
       if (requestToken !== state.requestToken) return;
@@ -617,11 +627,11 @@
     const validStatuses = getValidStatuses();
     const validPriorities = getValidPriorities();
     if (validStatuses.indexOf(status) < 0) {
-      showToast('Status invalido para triagem.', 'error');
+      showToast('Status inválido para triagem.', 'error');
       return;
     }
     if (validPriorities.indexOf(priority) < 0) {
-      showToast('Urgencia invalida para triagem.', 'error');
+      showToast('Urgência inválida para triagem.', 'error');
       return;
     }
 
@@ -634,7 +644,7 @@
     try {
       const result = await window.KCAPI.updateAdminHelpRequest(id, { status, priority });
       if (!result || result.ok === false) {
-        showToast((result && result.error && result.error.message) || 'Nao foi possivel salvar a triagem.', 'error');
+        showToast((result && result.error && result.error.message) || 'Não foi possível salvar a triagem.', 'error');
         return;
       }
       showToast('Triagem atualizada.', 'success');
@@ -643,7 +653,7 @@
       });
     } catch (error) {
       console.error('[AdminHelp] save failed:', error);
-      showToast('Nao foi possivel salvar a triagem.', 'error');
+      showToast('Não foi possível salvar a triagem.', 'error');
     } finally {
       if (button) {
         button.disabled = false;
@@ -666,7 +676,7 @@
     }, {});
     return {
       title: 'KinoCampus - Pedidos de ajuda Admin',
-      subtitle: 'Solicitacoes filtradas, status, prioridade, origem e decisoes operacionais',
+      subtitle: 'Solicitações filtradas, status, prioridade, origem e decisões operacionais',
       source: 'admin/help-requests.html',
       filters: {
         status: state.filters.status || 'all',
@@ -710,7 +720,7 @@
               assunto: row.subject || row.title || '',
               pagina_origem: row.page_path || metadata.page_path || '',
               modulo_afetado: metadata.affected_module || '',
-              contato_autorizado: row.allow_contact === false ? 'Nao' : 'Sim',
+              contato_autorizado: row.allow_contact === false ? 'Não' : 'Sim',
               email_contato: row.contact_email || '',
             };
           }),
@@ -721,7 +731,7 @@
 
   async function handleHelpExport(kind) {
     if (!window.KCAdminExport) {
-      showToast('Exportador admin indisponivel.', 'error');
+      showToast('Exportador admin indisponível.', 'error');
       return;
     }
     const date = new Date().toISOString().slice(0, 10);
@@ -971,7 +981,7 @@
 
   async function exportLgpdReport(row) {
     if (!window.KCAdminExport) {
-      showToast('Exportador admin indisponivel.', 'error');
+      showToast('Exportador admin indisponível.', 'error');
       return;
     }
     const id = String(row && row.id || '');
@@ -1015,7 +1025,7 @@
     const targetEmail = getLgpdTargetEmail(row);
     const confirmation = String(card.querySelector('[data-lgpd-confirmation]')?.value || '').trim();
     if (action === 'erase_confirmed' && confirmation !== `EXCLUIR ${targetEmail}`) {
-      showToast('Digite a frase de confirmacao exatamente como exibida antes da exclusao irreversivel.', 'error');
+      showToast('Digite a frase de confirmação exatamente como exibida antes da exclusão irreversível.', 'error');
       return;
     }
     const button = card.querySelector(`[data-lgpd-action="${action}"]`);
@@ -1040,7 +1050,7 @@
         return;
       }
       state.erasureResults[id] = result;
-      showToast(action === 'erase_confirmed' ? 'Exclusao LGPD confirmada.' : 'Fluxo LGPD atualizado.', 'success');
+      showToast(action === 'erase_confirmed' ? 'Exclusão LGPD confirmada.' : 'Fluxo LGPD atualizado.', 'success');
       if (action === 'apply_reversible' || action === 'erase_confirmed') {
         await loadRows({ limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE) });
       } else {

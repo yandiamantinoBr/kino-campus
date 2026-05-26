@@ -245,7 +245,7 @@
       key: 'account_email',
       label: 'E-mail da conta afetada',
       type: 'email',
-      placeholder: 'voce@ufg.br',
+      placeholder: 'seu.email@ufg.br',
       maxLength: 255,
     }),
     device_context: Object.freeze({

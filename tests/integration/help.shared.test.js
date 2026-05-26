@@ -1,6 +1,16 @@
 const Help = require('../../assets/js/shared/help.shared.js');
 
 describe('KCHelpUtils', () => {
+  test('mantém rótulos públicos em português brasileiro com acentuação correta', () => {
+    expect(Help.HELP_TYPE_LABELS.question).toBe('Dúvida');
+    expect(Help.HELP_TYPE_LABELS.external_access).toBe('Solicitação de acesso externo');
+    expect(Help.HELP_TYPE_LABELS.report).toBe('Denúncia');
+    expect(Help.HELP_MODULE_LABELS.index).toBe('Página inicial');
+    expect(Help.HELP_MODULE_LABELS.settings).toBe('Configurações');
+    expect(Help.HELP_TOPIC_LABELS.slow_performance).toBe('Lentidão');
+    expect(Help.HELP_TOPIC_LABELS.create_edit_post).toBe('Criar ou editar publicação');
+  });
+
   test('getHelpTopicOptions returns coherent topics for platform issues', () => {
     const results = Help.getHelpTopicOptions('platform_issue');
 

@@ -71,6 +71,12 @@ describe('LGPD account erasure - admin help UI', () => {
   test('painel LGPD aparece em help-requests e tem os botoes esperados', () => {
     expect(HELP_HTML).toContain('kc-admin-lgpd-panel');
     expect(HELP_CONTROLLER).toContain('function isLgpdErasureRequest');
+    expect(HELP_CONTROLLER).toContain('LGPD_STATUS_LABELS');
+    expect(HELP_CONTROLLER).toContain('Não iniciado');
+    expect(HELP_CONTROLLER).toContain('Publicações');
+    expect(HELP_CONTROLLER).toContain('Mídias');
+    expect(HELP_CONTROLLER).toContain('Comentários');
+    expect(HELP_CONTROLLER).toContain('Denúncias');
     [
       'Preparar diagnóstico',
       'Ocultar conta e pedir confirmação',

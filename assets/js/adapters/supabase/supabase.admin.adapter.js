@@ -356,13 +356,13 @@
 
   async function processAccountErasure(payload = {}) {
     const client = getClient();
-    if (!client) return { ok: false, error: { message: 'Supabase nao inicializado.' } };
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
     if (!client.functions || typeof client.functions.invoke !== 'function') {
-      return { ok: false, error: { message: 'Edge Functions indisponiveis.' } };
+      return { ok: false, error: { message: 'Edge Functions indisponíveis.' } };
     }
     const input = payload && typeof payload === 'object' ? payload : {};
     const action = String(input.action || '').trim();
-    if (!action) return { ok: false, error: { message: 'Acao LGPD invalida.' } };
+    if (!action) return { ok: false, error: { message: 'Ação LGPD inválida.' } };
     try {
       const { data, error } = await client.functions.invoke('kc-account-erasure', {
         body: input,
@@ -382,7 +382,7 @@
       }
       return data || { ok: true };
     } catch (e) {
-      console.error('[KCAPI][lgpd] kc-account-erasure excecao:', e);
+      console.error('[KCAPI][lgpd] kc-account-erasure exceção:', e);
       return { ok: false, error: { message: 'Falha no fluxo LGPD.' } };
     }
   }
