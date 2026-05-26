@@ -245,7 +245,7 @@ function resolveTargetEmail(body: JsonObject, helpRequest: JsonObject | null) {
 }
 
 function buildConfirmationEmail(email: string) {
-  const subject = "Confirmacao de solicitacao de remocao de conta - KinoCampus";
+  const subject = "Confirmação de solicitação de remoção de conta - KinoCampus";
   const phrase = "CONFIRMO A EXCLUSÃO DA MINHA CONTA KINOCAMPUS";
   const baseUrl = getEnv("KC_APP_BASE_URL", DEFAULT_APP_BASE_URL).replace(/\/+$/, "");
   const text = [
