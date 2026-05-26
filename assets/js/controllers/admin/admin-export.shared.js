@@ -42,17 +42,21 @@
     created_at: 'Criado em',
     criado_em: 'Criado em',
     data: 'Data',
+    dados_excluidos: 'Dados excluídos',
     detalhes: 'Detalhes',
+    descricao: 'Descrição',
     entidade: 'Entidade',
     entity_id: 'ID da entidade',
     entity_type: 'Tipo de entidade',
     event_name: 'Evento',
     events: 'Eventos',
+    e_mail_alvo: 'E-mail alvo',
     filtro: 'Filtro',
     fechadas: 'Fechadas',
     generated_at: 'Gerado em',
     gradiente: 'Gradiente',
     id: 'ID',
+    hash_do_e_mail: 'Hash do e-mail',
     icone: 'Ícone',
     impressao: 'Impressão',
     impressoes: 'Impressões',
@@ -68,6 +72,7 @@
     max_ativas: 'Máx. ativas',
     max_posts: 'Máx. posts',
     metadata: 'Metadados',
+    midias: 'Mídias',
     motivo: 'Motivo',
     motivos: 'Motivos',
     modulo: 'Módulo',
@@ -80,6 +85,7 @@
     payload: 'Payload',
     periodo: 'Período',
     posicao: 'Posição',
+    pode_fechar: 'Pode fechar?',
     post_id: 'ID do post',
     post_status: 'Status do post',
     post_titulo: 'Título do post',
@@ -91,6 +97,7 @@
     reporter_nome: 'Denunciante',
     search: 'Busca',
     status: 'Status',
+    status_lgpd: 'Status LGPD',
     subtitle: 'Subtítulo',
     subtitulo: 'Subtítulo',
     termo: 'Termo',
@@ -105,6 +112,8 @@
     url: 'URL',
     user_id: 'ID do usuário',
     usuario: 'Usuário',
+    usuario_auth_encontrado: 'Usuário Auth encontrado',
+    usuario_encontrado: 'Usuário encontrado',
     valor: 'Valor',
     window_minutes: 'Janela (min)'
   });
@@ -171,7 +180,12 @@
   }
 
   function normalizeKey(key) {
-    return normalizeUnicode(key).replace(/[^a-zA-Z0-9_-]+/g, '_').toLowerCase();
+    return normalizeUnicode(key)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toLowerCase();
   }
 
   function getAssetPrefix() {

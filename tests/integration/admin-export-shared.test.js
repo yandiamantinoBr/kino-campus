@@ -48,6 +48,12 @@ describe('admin-export.shared.js', () => {
     expect(rows[0]).toEqual({ 'ID do post': 'abc', 'Criado em': '2026-05-23' });
   });
 
+  test('normaliza chaves acentuadas sem quebrar labels PT-BR', () => {
+    const exporter = loadExporter();
+    const rows = exporter.normalizeRows([{ 'usuário_encontrado': 'Sim', publicações: 2, descrição: 'Texto' }]);
+    expect(rows[0]).toEqual({ 'Usuário encontrado': 'Sim', 'Publicações': '2', 'Descrição': 'Texto' });
+  });
+
   test('respeita colunas explicitas com labels PT-BR', () => {
     const exporter = loadExporter();
     const rows = exporter.normalizeRows(

@@ -56,6 +56,12 @@ function extractEmailFromText(value: unknown) {
   return normalizeEmail(match?.[0] || "");
 }
 
+function extractUuidFromText(value: unknown) {
+  const text = safeString(value, 4000);
+  const match = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}/i);
+  return match?.[0]?.toLowerCase() || "";
+}
+
 function asObject(value: unknown): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as JsonObject;
@@ -176,6 +182,41 @@ async function getHelpRequest(adminClient: SupabaseClientLike, helpRequestId: st
     .maybeSingle();
   if (error) throw error;
   return data || null;
+}
+
+async function findLatestHelpRequestByEmail(adminClient: SupabaseClientLike, email: string) {
+  const cleanEmail = normalizeEmail(email);
+  if (!EMAIL_RE.test(cleanEmail)) return null;
+
+  const direct = await adminClient
+    .from("help_requests")
+    .select("*")
+    .eq("contact_email", cleanEmail)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (direct.error && direct.error.code !== "PGRST116") throw direct.error;
+  if (direct.data) return direct.data;
+
+  const metadata = await adminClient
+    .from("help_requests")
+    .select("*")
+    .eq("metadata->>account_email", cleanEmail)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (metadata.error && metadata.error.code !== "PGRST116") throw metadata.error;
+  if (metadata.data) return metadata.data;
+
+  const text = await adminClient
+    .from("help_requests")
+    .select("*")
+    .ilike("message", `%${cleanEmail}%`)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (text.error && text.error.code !== "PGRST116") throw text.error;
+  return text.data || null;
 }
 
 function resolveTargetEmail(body: JsonObject, helpRequest: JsonObject | null) {
@@ -366,9 +407,24 @@ async function upsertWorkflow(
 
 async function buildDiagnostics(adminClient: SupabaseClientLike, userId: string | null, email: string) {
   if (!userId) {
+    const helpRequests = await safeCount(adminClient, "help_requests", (query) => query.eq("contact_email", email));
     return {
       user_found: false,
-      counts: {},
+      counts: {
+        profiles: 0,
+        posts: 0,
+        post_media: 0,
+        comments: 0,
+        post_votes: 0,
+        saved_posts: 0,
+        reports: 0,
+        help_requests: helpRequests.count,
+        chat_conversations: 0,
+        chat_messages: 0,
+        notification_preferences: 0,
+        privacy_analytics_events: 0,
+        privacy_consent_events: 0,
+      },
       warnings: ["auth_user_not_found"],
     };
   }
@@ -738,22 +794,25 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json(400, { ok: false, error: "invalid_json" }); }
 
   const action = safeString(body.action || body.actionKey, 40);
-  const helpRequestId = safeString(
-    body.help_request_id ||
-    body.helpRequestId ||
-    asObject(body.help_request).id ||
+  const rawHelpRequestId = firstString(
+    body.help_request_id,
+    body.helpRequestId,
+    asObject(body.help_request).id,
     asObject(body.helpRequest).id,
-    80,
   );
-  if (helpRequestId && !UUID_RE.test(helpRequestId)) return json(400, { ok: false, error: "invalid_help_request_id" });
+  let helpRequestId = extractUuidFromText(rawHelpRequestId);
   if (!["diagnose", "apply_reversible", "generate_receipt", "erase_confirmed"].includes(action)) {
     return json(400, { ok: false, error: "invalid_action" });
   }
 
   try {
-    const helpRequest = await getHelpRequest(adminClient, helpRequestId || null);
+    let helpRequest = await getHelpRequest(adminClient, helpRequestId || null);
     const email = resolveTargetEmail(body, helpRequest);
     if (!EMAIL_RE.test(email)) return json(400, { ok: false, error: "valid_target_email_required" });
+    if (!helpRequest) {
+      helpRequest = await findLatestHelpRequestByEmail(adminClient, email);
+      helpRequestId = extractUuidFromText(helpRequest?.id) || "";
+    }
     const emailHash = await sha256Hex(email);
     const authUser = await findAuthUserByEmail(adminClient, email);
     const userId = authUser?.id ? String(authUser.id) : null;

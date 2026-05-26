@@ -354,6 +354,14 @@
     const diagnostics = result && result.diagnostics ? result.diagnostics : null;
     const countsHtml = diagnostics && diagnostics.counts ? summarizeCounts(diagnostics.counts) : '';
     const status = request && request.status ? String(request.status) : 'nao iniciado';
+    const erasedAt = request && request.erased_at || result && result.receipt && result.receipt.erased_at || '';
+    const canClose = erasedAt
+      ? 'Sim, após revisar o recibo interno.'
+      : status === 'pending_confirmation' || status === 'reversible_applied'
+        ? 'Não. Aguardar confirmação final do titular.'
+        : diagnostics && diagnostics.counts
+          ? 'Não. Fluxo sem confirmação final.'
+          : 'Não. Diagnóstico pendente.';
     const expectedPhrase = targetEmail ? `EXCLUIR ${targetEmail}` : 'EXCLUIR email@dominio';
     const warning = result && Array.isArray(result.warnings) && result.warnings.length
       ? `<p class="kc-admin-lgpd-warning">${esc(result.warnings.join(' | '))}</p>`
@@ -372,6 +380,8 @@
       '  <div class="kc-admin-help-meta">',
       `    <div><strong>E-mail alvo</strong><span>${esc(targetEmail || 'Não informado')}</span></div>`,
       `    <div><strong>Confirmação irreversível</strong><span>${esc(expectedPhrase)}</span></div>`,
+      `    <div><strong>Dados excluídos</strong><span>${erasedAt ? 'Sim' : 'Não'}</span></div>`,
+      `    <div><strong>Pode fechar?</strong><span>${esc(canClose)}</span></div>`,
       '  </div>',
       countsHtml ? `<div class="kc-admin-lgpd-counts">${countsHtml}</div>` : '',
       warning,
@@ -724,15 +734,32 @@
       failed: 'Falhou',
     };
     const status = request.status || (result.action === 'diagnose' ? 'diagnosed' : 'não iniciado');
+    const hasDiagnostics = Boolean(diagnostics && diagnostics.counts);
+    const erasedAt = request.erased_at || receipt.erased_at || '';
+    const confirmationRequestedAt = request.confirmation_requested_at || '';
+    const userFoundKnown = Object.prototype.hasOwnProperty.call(target, 'user_found');
+    const userFoundLabel = userFoundKnown
+      ? (target.user_found ? 'Sim' : 'Não')
+      : (row && row.user_id ? 'Vinculado ao pedido; diagnóstico pendente' : 'Não verificado');
+    const canCloseLabel = erasedAt
+      ? 'Sim, após revisar o recibo interno'
+      : status === 'pending_confirmation' || status === 'reversible_applied'
+        ? 'Não. Aguardar confirmação final do titular por e-mail.'
+        : hasDiagnostics
+          ? 'Não. Fluxo ainda sem confirmação final.'
+          : 'Não. Prepare o diagnóstico antes de concluir.';
+    const dataDeletedLabel = erasedAt ? 'Sim' : 'Não';
     const warnings = []
       .concat(Array.isArray(result.warnings) ? result.warnings : [])
       .concat(Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [])
       .concat(Array.isArray(requestMetadata.warnings) ? requestMetadata.warnings : [])
       .filter(Boolean);
+    if (!hasDiagnostics) warnings.push('Diagnóstico ainda não executado ou não carregado no painel.');
+    if (!erasedAt) warnings.push('Exclusão definitiva ainda não executada.');
     const countsRows = Object.keys(countLabels).map((key) => ({
       categoria: countLabels[key],
       chave_tecnica: key,
-      quantidade: Number(counts[key]) || 0,
+      quantidade: hasDiagnostics ? (Number(counts[key]) || 0) : 'A verificar',
       tratamento_previsto: key === 'posts' || key === 'post_media'
         ? 'Ocultar e anonimizar/remover conforme confirmação'
         : key === 'privacy_analytics_events' || key === 'privacy_consent_events'
@@ -778,12 +805,12 @@
         hash_do_e_mail: target.email_hash || request.email_hash || '',
       },
       kpis: {
-        usuário_encontrado: target.user_found ? 'Sim' : 'Não',
-        publicações: counts.posts || 0,
-        mídias: counts.post_media || 0,
-        comentários: counts.comments || 0,
-        mensagens: counts.chat_messages || 0,
-        pedidos_de_ajuda: counts.help_requests || 0,
+        usuario_auth_encontrado: userFoundLabel,
+        dados_excluidos: dataDeletedLabel,
+        pode_fechar: canCloseLabel,
+        publicacoes: hasDiagnostics ? (counts.posts || 0) : 'A verificar',
+        midias: hasDiagnostics ? (counts.post_media || 0) : 'A verificar',
+        pedidos_de_ajuda: hasDiagnostics ? (counts.help_requests || 0) : 'A verificar',
       },
       sections: [
         {
@@ -817,6 +844,29 @@
           }],
         },
         {
+          title: 'Status administrativo atual',
+          note: 'Esta seção evita conclusão indevida: solicitação LGPD só deve ser fechada como resolvida após confirmação final e execução do fluxo irreversível, ou se o titular cancelar formalmente o pedido.',
+          pdfColumns: ['campo', 'valor'],
+          xlsxColumns: ['campo', 'valor'],
+          rows: [{
+            campo: 'Usuário localizado no Auth',
+            valor: userFoundLabel,
+          }, {
+            campo: 'Dados definitivamente excluídos',
+            valor: dataDeletedLabel,
+          }, {
+            campo: 'Pode fechar a solicitação agora?',
+            valor: canCloseLabel,
+          }, {
+            campo: 'Próxima ação recomendada',
+            valor: erasedAt
+              ? 'Revisar recibo, registrar fechamento e responder ao titular.'
+              : confirmationRequestedAt
+                ? 'Aguardar resposta do titular com a frase de confirmação antes da exclusão definitiva.'
+                : 'Executar “Ocultar conta e pedir confirmação” após validar o diagnóstico.',
+          }],
+        },
+        {
           title: 'Diagnóstico de dados vinculados',
           pdfColumns: ['categoria', 'quantidade', 'tratamento_previsto'],
           xlsxColumns: ['categoria', 'chave_tecnica', 'quantidade', 'tratamento_previsto'],
@@ -838,7 +888,7 @@
             valor: statusLabels[status] || status,
           }, {
             campo: 'Confirmação solicitada em',
-            valor: formatDateTime(request.confirmation_requested_at),
+            valor: formatDateTime(confirmationRequestedAt),
           }, {
             campo: 'Ocultação reversível em',
             valor: formatDateTime(request.reversible_applied_at),
@@ -847,7 +897,7 @@
             valor: formatDateTime(request.confirmed_at),
           }, {
             campo: 'Eliminado/anonimizado em',
-            valor: formatDateTime(request.erased_at || receipt.erased_at),
+            valor: formatDateTime(erasedAt),
           }, {
             campo: 'Hash do e-mail',
             valor: target.email_hash || request.email_hash || receipt.email_hash || '',
@@ -858,20 +908,20 @@
         },
         {
           title: 'Base legal e orientações',
-          pdfColumns: ['item', 'descrição'],
-          xlsxColumns: ['item', 'descrição'],
+          pdfColumns: ['item', 'descricao'],
+          xlsxColumns: ['item', 'descricao'],
           rows: [{
             item: 'Direito solicitado',
-            descrição: 'Eliminação de dados pessoais tratados com consentimento ou quando aplicável, nos termos do art. 18, VI, da LGPD.',
+            descricao: 'Eliminação de dados pessoais tratados com consentimento ou quando aplicável, nos termos do art. 18, VI, da LGPD.',
           }, {
             item: 'Confirmação obrigatória',
-            descrição: 'A exclusão irreversível exige confirmação enviada pelo e-mail titular antes da execução final.',
+            descricao: 'A exclusão irreversível exige confirmação enviada pelo e-mail titular antes da execução final.',
           }, {
             item: 'Retenção mínima',
-            descrição: 'Podem ser mantidos registros mínimos de auditoria, hash do e-mail, datas, contagens e recibo interno para segurança e exercício regular de direitos.',
+            descricao: 'Podem ser mantidos registros mínimos de auditoria, hash do e-mail, datas, contagens e recibo interno para segurança e exercício regular de direitos.',
           }, {
             item: 'Publicações e conteúdo',
-            descrição: 'Conteúdos vinculados ao titular devem ficar ocultos da comunidade e ser anonimizados ou removidos após confirmação final.',
+            descricao: 'Conteúdos vinculados ao titular devem ficar ocultos da comunidade e ser anonimizados ou removidos após confirmação final.',
           }],
         },
       ],

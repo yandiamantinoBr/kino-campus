@@ -47,6 +47,8 @@ describe('LGPD account erasure - Edge Function', () => {
     expect(EDGE).toContain('body.helpRequestId');
     expect(EDGE).toContain('body.targetEmail');
     expect(EDGE).toContain('body.confirmationPhrase');
+    expect(EDGE).toContain('extractUuidFromText');
+    expect(EDGE).toContain('findLatestHelpRequestByEmail');
     expect(EDGE).toContain('extractEmailFromText(requestText)');
   });
 
@@ -77,6 +79,8 @@ describe('LGPD account erasure - admin help UI', () => {
     expect(HELP_CONTROLLER).toContain('targetEmail');
     expect(HELP_CONTROLLER).toContain('help_request: row');
     expect(HELP_CONTROLLER).toContain('Diagnóstico de dados vinculados');
+    expect(HELP_CONTROLLER).toContain('Status administrativo atual');
+    expect(HELP_CONTROLLER).toContain('Pode fechar a solicitação agora?');
     expect(HELP_CONTROLLER).toContain('Base legal e orientações');
   });
 
