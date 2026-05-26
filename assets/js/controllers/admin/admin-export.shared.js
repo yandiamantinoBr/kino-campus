@@ -28,6 +28,7 @@
     abertas: 'Abertas',
     acoes_admin: 'Ações admin',
     ator: 'Ator',
+    auth: 'Auth',
     aviso: 'Aviso',
     banners_ativos: 'Banners ativos',
     banners_inativos: 'Banners inativos',
@@ -52,6 +53,7 @@
     events: 'Eventos',
     e_mail_alvo: 'E-mail alvo',
     filtro: 'Filtro',
+    fechamento: 'Fechamento',
     fechadas: 'Fechadas',
     generated_at: 'Gerado em',
     gradiente: 'Gradiente',
@@ -83,6 +85,7 @@
     participacao: 'Participação',
     participacao_percentual: 'Participação (%)',
     payload: 'Payload',
+    pedidos_de_ajuda: 'Pedidos de ajuda',
     periodo: 'Período',
     posicao: 'Posição',
     pode_fechar: 'Pode fechar?',
@@ -96,12 +99,15 @@
     reporter_id: 'ID do denunciante',
     reporter_nome: 'Denunciante',
     search: 'Busca',
+    solicitacao: 'Solicitação',
     status: 'Status',
+    status_final: 'Status final',
     status_lgpd: 'Status LGPD',
     subtitle: 'Subtítulo',
     subtitulo: 'Subtítulo',
     termo: 'Termo',
     termos: 'Termos',
+    tratamento_previsto: 'Tratamento',
     top_termos: 'Top termos',
     title: 'Título',
     titulo: 'Título',
@@ -566,7 +572,7 @@
         const gap = 12;
         const columns = 2;
         const cardWidth = (pageWidth - margin * 2 - gap) / columns;
-        const cardHeight = 58;
+        const cardHeight = 66;
 
         list.slice(0, 8).forEach(function (row, index) {
           const col = index % columns;
@@ -584,13 +590,14 @@
           doc.text(truncate(row.Indicador || 'Indicador', 34), x + 14, yCard + 18);
           setTextColor(doc, BRAND.dark);
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(16);
-          doc.text(truncate(row.Valor, 18), x + 14, yCard + 38);
+          doc.setFontSize(13);
+          const valueLines = doc.splitTextToSize(truncate(row.Valor, 52), cardWidth - 28).slice(0, 2);
+          doc.text(valueLines, x + 14, yCard + 36);
           if (row.Contexto) {
             setTextColor(doc, BRAND.muted);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7);
-            doc.text(truncate(row.Contexto, 36), x + 14, yCard + 50);
+            doc.text(truncate(row.Contexto, 36), x + 14, yCard + 56);
           }
           if (col === columns - 1 || index === Math.min(list.length, 8) - 1) y += cardHeight + 12;
         });
@@ -607,7 +614,16 @@
         const normalizedRows = normalizeRows(rows, columns);
         const list = normalizedRows.length ? normalizedRows : [{ Status: 'Sem dados para os filtros selecionados' }];
         const headers = Object.keys(list[0]).slice(0, 4);
-        const colWidth = (pageWidth - margin * 2) / Math.max(headers.length, 1);
+        const normalizedColumns = normalizeColumns(columns);
+        const visibleColumns = normalizedColumns.length ? normalizedColumns.slice(0, headers.length) : [];
+        const totalWeight = visibleColumns.reduce(function (sum, column) {
+          return sum + (Number(column.width) > 0 ? Number(column.width) : 1);
+        }, 0) || headers.length || 1;
+        const tableWidth = pageWidth - margin * 2;
+        const columnWidths = headers.map(function (_header, index) {
+          const weight = visibleColumns[index] && Number(visibleColumns[index].width) > 0 ? Number(visibleColumns[index].width) : 1;
+          return tableWidth * (weight / totalWeight);
+        });
 
         addPageIfNeeded(28);
         setFillColor(doc, BRAND.dark);
@@ -616,13 +632,14 @@
         doc.setFontSize(7.5);
         doc.setTextColor(255, 255, 255);
         headers.forEach(function (header, index) {
-          doc.text(truncate(titleCaseLabel(header), 18), margin + (index * colWidth) + 8, y + 14);
+          const xHeader = margin + columnWidths.slice(0, index).reduce(function (sum, value) { return sum + value; }, 0);
+          doc.text(truncate(titleCaseLabel(header), 22), xHeader + 8, y + 14);
         });
         y += 22;
 
         list.slice(0, maxRows || MAX_PDF_ROWS).forEach(function (row, rowIndex) {
-          const cellLines = headers.map(function (header) {
-            return doc.splitTextToSize(sanitizeExportValue(row[header], header), colWidth - 14);
+          const cellLines = headers.map(function (header, index) {
+            return doc.splitTextToSize(sanitizeExportValue(row[header], header), columnWidths[index] - 14);
           });
           const lineCount = Math.max.apply(null, cellLines.map(function (lines) { return lines.length; }).concat([1]));
           const rowHeight = Math.max(24, lineCount * 10 + 12);
@@ -637,7 +654,8 @@
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(7.5);
           cellLines.forEach(function (lines, index) {
-            doc.text(lines, margin + (index * colWidth) + 8, y + 13);
+            const xCell = margin + columnWidths.slice(0, index).reduce(function (sum, value) { return sum + value; }, 0);
+            doc.text(lines, xCell + 8, y + 13);
           });
           y += rowHeight;
         });
@@ -648,6 +666,7 @@
           doc.text('PDF resumido: ' + (list.length - (maxRows || MAX_PDF_ROWS)) + ' linhas adicionais disponíveis no XLSX.', margin, y);
           y += 18;
         }
+        y += 10;
       }
 
       addPdfHeader(doc, normalized, pageWidth);

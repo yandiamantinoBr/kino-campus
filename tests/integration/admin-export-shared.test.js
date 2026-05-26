@@ -50,8 +50,8 @@ describe('admin-export.shared.js', () => {
 
   test('normaliza chaves acentuadas sem quebrar labels PT-BR', () => {
     const exporter = loadExporter();
-    const rows = exporter.normalizeRows([{ 'usuário_encontrado': 'Sim', publicações: 2, descrição: 'Texto' }]);
-    expect(rows[0]).toEqual({ 'Usuário encontrado': 'Sim', 'Publicações': '2', 'Descrição': 'Texto' });
+    const rows = exporter.normalizeRows([{ 'usuário_encontrado': 'Sim', publicações: 2, descrição: 'Texto', status_final: 'Pendente', solicitacao: 'abc' }]);
+    expect(rows[0]).toEqual({ 'Usuário encontrado': 'Sim', 'Publicações': '2', 'Descrição': 'Texto', 'Status final': 'Pendente', 'Solicitação': 'abc' });
   });
 
   test('respeita colunas explicitas com labels PT-BR', () => {

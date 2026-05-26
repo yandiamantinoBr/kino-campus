@@ -107,6 +107,39 @@
     window.alert(text);
   }
 
+  function friendlyLgpdErrorMessage(error) {
+    const raw = String(
+      error && typeof error === 'object'
+        ? (error.message || error.error || error.detail || '')
+        : (error || '')
+    ).trim();
+    const code = raw.toLowerCase();
+    const body = error && typeof error === 'object' && error.body && typeof error.body === 'object'
+      ? String(error.body.error || error.body.message || '').toLowerCase()
+      : '';
+    const value = [code, body].filter(Boolean).join(' ');
+    if (value.indexOf('invalid_session') >= 0 || value.indexOf('missing authorization') >= 0 || value.indexOf('unauthorized') >= 0) {
+      return 'Sua sessão administrativa expirou ou foi trocada. Entre novamente com uma conta administradora e recarregue esta página.';
+    }
+    if (value.indexOf('not_authorized') >= 0) {
+      return 'A sessão atual não tem permissão de administrador para executar este fluxo LGPD.';
+    }
+    if (value.indexOf('invalid_help_request_id') >= 0) {
+      return 'O pedido de ajuda não foi localizado no fluxo LGPD. Recarregue a página e tente novamente pelo cartão correto da solicitação.';
+    }
+    if (value.indexOf('valid_target_email_required') >= 0) {
+      return 'Não foi possível identificar o e-mail alvo da conta. Confira o campo de e-mail do pedido de ajuda.';
+    }
+    if (value.indexOf('confirmation_phrase_mismatch') >= 0) {
+      return 'A frase de confirmação irreversível não confere com o e-mail alvo.';
+    }
+    if (value.indexOf('auth_user_not_found') >= 0) {
+      return 'O usuário não foi localizado no Auth. Revise o diagnóstico antes de concluir.';
+    }
+    if (raw) return raw;
+    return 'Não foi possível processar o fluxo LGPD. Recarregue a página e confirme que você está logado como administrador.';
+  }
+
   async function checkAdminAccess() {
     const driver = window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver;
     if (driver === 'local') return true;
@@ -117,7 +150,7 @@
 
     const user = await window.KCAPI.getCurrentUser();
     if (!user) {
-      showError('Voce precisa estar autenticado para acessar este painel.');
+      showError('Você precisa estar autenticado para acessar este painel.');
       return false;
     }
 
@@ -125,7 +158,7 @@
       ? window.KCSupabase.getClient()
       : null;
     if (!client) {
-      showError('Supabase client nao disponivel.');
+      showError('Supabase client não disponível.');
       return false;
     }
 
@@ -136,7 +169,7 @@
       .maybeSingle();
 
     if (profileResult && profileResult.error) {
-      showError('Nao foi possivel validar seu acesso administrativo.');
+      showError('Não foi possível validar seu acesso administrativo.');
       return false;
     }
 
@@ -805,9 +838,9 @@
         hash_do_e_mail: target.email_hash || request.email_hash || '',
       },
       kpis: {
-        usuario_auth_encontrado: userFoundLabel,
-        dados_excluidos: dataDeletedLabel,
-        pode_fechar: canCloseLabel,
+        auth: userFoundKnown ? (target.user_found ? 'Encontrado' : 'Não encontrado') : 'Pendente',
+        status_final: dataDeletedLabel === 'Sim' ? 'Executado' : 'Pendente',
+        fechamento: erasedAt ? 'Pode fechar' : 'Não fechar',
         publicacoes: hasDiagnostics ? (counts.posts || 0) : 'A verificar',
         midias: hasDiagnostics ? (counts.post_media || 0) : 'A verificar',
         pedidos_de_ajuda: hasDiagnostics ? (counts.help_requests || 0) : 'A verificar',
@@ -815,7 +848,7 @@
       sections: [
         {
           title: 'Dados da solicitação',
-          pdfColumns: ['campo', 'valor'],
+          pdfColumns: [{ key: 'campo', width: 1 }, { key: 'valor', width: 2.2 }],
           xlsxColumns: ['campo', 'valor'],
           rows: [{
             campo: 'Pedido de ajuda',
@@ -846,7 +879,7 @@
         {
           title: 'Status administrativo atual',
           note: 'Esta seção evita conclusão indevida: solicitação LGPD só deve ser fechada como resolvida após confirmação final e execução do fluxo irreversível, ou se o titular cancelar formalmente o pedido.',
-          pdfColumns: ['campo', 'valor'],
+          pdfColumns: [{ key: 'campo', width: 1 }, { key: 'valor', width: 2.2 }],
           xlsxColumns: ['campo', 'valor'],
           rows: [{
             campo: 'Usuário localizado no Auth',
@@ -868,20 +901,28 @@
         },
         {
           title: 'Diagnóstico de dados vinculados',
-          pdfColumns: ['categoria', 'quantidade', 'tratamento_previsto'],
+          pdfColumns: [
+            { key: 'categoria', width: 1.2 },
+            { key: 'quantidade', width: 0.7 },
+            { key: 'tratamento_previsto', label: 'Tratamento', width: 2.2 },
+          ],
           xlsxColumns: ['categoria', 'chave_tecnica', 'quantidade', 'tratamento_previsto'],
           maxPdfRows: 14,
           rows: countsRows,
         },
         {
           title: 'Andamento do fluxo LGPD',
-          pdfColumns: ['etapa', 'status', 'detalhe'],
+          pdfColumns: [
+            { key: 'etapa', width: 1.25 },
+            { key: 'status', width: 0.8 },
+            { key: 'detalhe', width: 2.1 },
+          ],
           xlsxColumns: ['etapa', 'status', 'detalhe'],
           rows: steps,
         },
         {
           title: 'Recibo interno',
-          pdfColumns: ['campo', 'valor'],
+          pdfColumns: [{ key: 'campo', width: 1 }, { key: 'valor', width: 2.2 }],
           xlsxColumns: ['campo', 'valor'],
           rows: [{
             campo: 'Status LGPD',
@@ -908,7 +949,7 @@
         },
         {
           title: 'Base legal e orientações',
-          pdfColumns: ['item', 'descricao'],
+          pdfColumns: [{ key: 'item', width: 1 }, { key: 'descricao', label: 'Descrição', width: 2.4 }],
           xlsxColumns: ['item', 'descricao'],
           rows: [{
             item: 'Direito solicitado',
@@ -936,6 +977,11 @@
     const id = String(row && row.id || '');
     const targetEmail = getLgpdTargetEmail(row);
     if (window.KCAPI && typeof window.KCAPI.processAccountErasure === 'function' && (!state.erasureResults[id] || !state.erasureResults[id].diagnostics)) {
+      const allowed = await checkAdminAccess();
+      if (!allowed) {
+        showToast('Entre novamente com uma conta administradora antes de preparar o relatório LGPD.', 'error');
+        return;
+      }
       const result = await window.KCAPI.processAccountErasure({
         action: 'diagnose',
         actionKey: 'diagnose',
@@ -949,7 +995,7 @@
         state.erasureResults[id] = result;
         renderRows(state.rows);
       } else if (result && result.error && result.error.message) {
-        showToast(result.error.message, 'error');
+        showToast(friendlyLgpdErrorMessage(result.error), 'error');
       }
     }
     const date = new Date().toISOString().slice(0, 10);
@@ -961,6 +1007,11 @@
     if (!id) return;
     const row = state.rows.find((item) => String(item && item.id || '') === id);
     if (!row) return;
+    const allowed = await checkAdminAccess();
+    if (!allowed) {
+      showToast('Entre novamente com uma conta administradora antes de executar o fluxo LGPD.', 'error');
+      return;
+    }
     const targetEmail = getLgpdTargetEmail(row);
     const confirmation = String(card.querySelector('[data-lgpd-confirmation]')?.value || '').trim();
     if (action === 'erase_confirmed' && confirmation !== `EXCLUIR ${targetEmail}`) {
@@ -985,7 +1036,7 @@
         help_request: row,
       });
       if (!result || result.ok === false) {
-        showToast((result && result.error && result.error.message) || result.error || 'Nao foi possivel processar o fluxo LGPD.', 'error');
+        showToast(friendlyLgpdErrorMessage(result && result.error), 'error');
         return;
       }
       state.erasureResults[id] = result;
@@ -997,7 +1048,7 @@
       }
     } catch (error) {
       console.error('[AdminHelp] lgpd action failed:', error);
-      showToast('Nao foi possivel processar o fluxo LGPD.', 'error');
+      showToast(friendlyLgpdErrorMessage(error), 'error');
     } finally {
       if (button) {
         button.disabled = false;

@@ -78,6 +78,10 @@ describe('LGPD account erasure - admin help UI', () => {
     expect(HELP_CONTROLLER).toContain('helpRequestId: id');
     expect(HELP_CONTROLLER).toContain('targetEmail');
     expect(HELP_CONTROLLER).toContain('help_request: row');
+    expect(HELP_CONTROLLER).toContain('friendlyLgpdErrorMessage');
+    expect(HELP_CONTROLLER).toContain('Sua sessão administrativa expirou ou foi trocada');
+    expect(HELP_CONTROLLER).toContain('invalid_help_request_id');
+    expect(HELP_CONTROLLER).toContain('O pedido de ajuda não foi localizado no fluxo LGPD');
     expect(HELP_CONTROLLER).toContain('Diagnóstico de dados vinculados');
     expect(HELP_CONTROLLER).toContain('Status administrativo atual');
     expect(HELP_CONTROLLER).toContain('Pode fechar a solicitação agora?');
