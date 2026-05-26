@@ -80,6 +80,20 @@ function escapeHtml(value: unknown) {
     .replaceAll("'", "&#39;");
 }
 
+function encodeMimeSubject(subject: string): string {
+  let value = String(subject || "").normalize("NFKC");
+  value = value
+    .replace(/[—–]/g, "-")
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„‟]/g, '"')
+    .replace(/…/g, "...")
+    .replace(/\u00a0/g, " ");
+  value = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  value = value.replace(/[^\x20-\x7E]/g, "?");
+  value = value.replace(/=\?/g, "= ?");
+  return value;
+}
+
 async function sha256Hex(value: string) {
   const encoded = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", encoded);
@@ -107,7 +121,7 @@ async function sendEmail(opts: { to: string; subject: string; html: string; text
     await client.send({
       from: `${getEnv("KC_SMTP_FROM_NAME", DEFAULT_FROM_NAME)} <${getEnv("KC_SMTP_FROM_EMAIL", DEFAULT_FROM_EMAIL)}>`,
       to: opts.to,
-      subject: opts.subject,
+      subject: encodeMimeSubject(opts.subject),
       content: opts.text,
       html: opts.html,
       replyTo: getEnv("KC_ADMIN_NOTIFICATION_EMAIL", DEFAULT_FROM_EMAIL),

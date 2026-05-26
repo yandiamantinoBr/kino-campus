@@ -43,6 +43,12 @@ describe('LGPD account erasure - Edge Function', () => {
     expect(EDGE).toContain('confirmation_phrase_mismatch');
   });
 
+  test('protege assunto SMTP contra MIME cru em clientes de e-mail', () => {
+    expect(EDGE).toContain('function encodeMimeSubject');
+    expect(EDGE).toContain('subject: encodeMimeSubject(opts.subject)');
+    expect(EDGE).toContain('replace(/[^\\x20-\\x7E]/g, "?")');
+  });
+
   test('aceita aliases do frontend e extrai e-mail do texto do pedido', () => {
     expect(EDGE).toContain('body.helpRequestId');
     expect(EDGE).toContain('body.targetEmail');
