@@ -446,6 +446,9 @@
     'aria-label.records-per-page':      'Registros por página',
     'aria-label.banner-modal-close':    'Fechar',
     'aria-label.banners-metrics-period': 'Período das métricas de banners',
+    'aria-label.privacy-event-log-filters': 'Filtros dos eventos recentes',
+    'aria-label.privacy-event-log-prev': 'Página anterior dos eventos recentes',
+    'aria-label.privacy-event-log-next': 'Próxima página dos eventos recentes',
 
     // My posts popover
     'aria-label.my-posts-save-close':   'Fechar',
@@ -538,6 +541,7 @@
     'placeholder.admin-actor-filter':   'Filtrar por actor_id, nome ou nickname',
     'placeholder.audit-actor-filter':   'Ator: nome ou UUID',
     'placeholder.privacy-page-filter':  'Filtrar por página',
+    'placeholder.privacy-event-log-search': 'Filtrar evento, página, módulo ou entidade',
     'placeholder.admin-invite-email':   'E-mail do convidado (ex: usuario@gmail.com)',
     'placeholder.admin-invite-reason':  'Motivo do convite (opcional)',
     'placeholder.admin-limit-max':      'Máx.',

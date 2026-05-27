@@ -13,6 +13,7 @@
   const SENSITIVE_KEY_RE = /(token|cookie|authorization|apikey|api_key|password|secret|refresh|access_token|refresh_token|user_agent|user-agent|ip_address|ip\b)/i;
   const MAX_CELL_LENGTH = 1200;
   const MAX_PDF_ROWS = 60;
+  const MAX_PDF_CELL_LINES = 3;
   const LABELS_PT_BR = Object.freeze({
     acao: 'Ação',
     acoes_da_sessao: 'Ações da sessão',
@@ -39,6 +40,7 @@
     cliques_registrados: 'Cliques registrados',
     comentarios: 'Comentários',
     categoria: 'Categoria',
+    chave_evento: 'Chave do evento',
     contexto: 'Contexto',
     created_at: 'Criado em',
     criado_em: 'Criado em',
@@ -53,6 +55,7 @@
     events: 'Eventos',
     e_mail_alvo: 'E-mail alvo',
     filtro: 'Filtro',
+    filtro_eventos_recentes: 'Filtro dos eventos recentes',
     fechamento: 'Fechamento',
     fechadas: 'Fechadas',
     generated_at: 'Gerado em',
@@ -87,6 +90,7 @@
     payload: 'Payload',
     pedidos_de_ajuda: 'Pedidos de ajuda',
     periodo: 'Período',
+    periodo_dias: 'Período (dias)',
     posicao: 'Posição',
     pode_fechar: 'Pode fechar?',
     post_id: 'ID do post',
@@ -180,9 +184,45 @@
     usuarios: 'Usuários'
   });
 
+  function repairMojibake(value) {
+    let text = String(value == null ? '' : value);
+    if (!/[ÃÂ]|â[€\u0080-\u009f]/.test(text)) return text;
+    const replacements = [
+      ['Ã¡', 'á'], ['Ã ', 'à'], ['Ã¢', 'â'], ['Ã£', 'ã'], ['Ã¤', 'ä'],
+      ['Ã©', 'é'], ['Ãª', 'ê'], ['Ã¨', 'è'],
+      ['Ã­', 'í'], ['Ã®', 'î'], ['Ã¬', 'ì'],
+      ['Ã³', 'ó'], ['Ã´', 'ô'], ['Ãµ', 'õ'], ['Ã²', 'ò'],
+      ['Ãº', 'ú'], ['Ã¼', 'ü'], ['Ã¹', 'ù'],
+      ['Ã§', 'ç'],
+      ['Ã', 'Á'], ['Ã€', 'À'], ['Ã‚', 'Â'], ['Ãƒ', 'Ã'],
+      ['Ã‰', 'É'], ['ÃŠ', 'Ê'], ['Ã', 'Í'],
+      ['Ã“', 'Ó'], ['Ã”', 'Ô'], ['Ã•', 'Õ'],
+      ['Ãš', 'Ú'], ['Ã‡', 'Ç'],
+      ['Âº', 'º'], ['Âª', 'ª'], ['Â°', '°'], ['Â', ''],
+      ['â€œ', '“'], ['â€', '”'], ['â€\x9d', '”'],
+      ['â€˜', '‘'], ['â€™', '’'], ['â€“', '–'],
+      ['â€”', '—'], ['â€¢', '•'], ['â€¦', '…'],
+    ];
+    replacements.forEach(function (pair) {
+      text = text.split(pair[0]).join(pair[1]);
+    });
+    return text;
+  }
+
   function normalizeUnicode(value) {
-    const text = String(value == null ? '' : value);
+    const text = repairMojibake(value);
     return typeof text.normalize === 'function' ? text.normalize('NFC') : text;
+  }
+
+  function pdfLines(doc, value, width, maxLines) {
+    const text = String(value == null ? '' : value);
+    const lines = doc.splitTextToSize(normalizeUnicode(text), Math.max(24, width || 120));
+    const limit = Math.max(1, Number(maxLines) || MAX_PDF_CELL_LINES);
+    if (lines.length <= limit) return lines;
+    const clipped = lines.slice(0, limit);
+    const last = clipped[clipped.length - 1] || '';
+    clipped[clipped.length - 1] = truncate(last, Math.max(8, last.length)).replace(/\.*$/, '') + '...';
+    return clipped;
   }
 
   function normalizeKey(key) {
@@ -516,7 +556,7 @@
     doc.text(BRAND.name, 42, 31);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text(report.title, 42, 52);
+    doc.text(pdfLines(doc, report.title, pageWidth - 84, 2), 42, 50);
   }
 
   function addPdfFooter(doc) {
@@ -555,13 +595,14 @@
         setTextColor(doc, BRAND.dark);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.text(String(title || 'Seção'), margin, y);
-        y += 15;
+        const titleLines = pdfLines(doc, String(title || 'Seção'), pageWidth - margin * 2, 2);
+        doc.text(titleLines, margin, y);
+        y += titleLines.length * 12 + 3;
         if (note) {
           setTextColor(doc, BRAND.muted);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8);
-          const lines = doc.splitTextToSize(String(note), pageWidth - margin * 2);
+          const lines = pdfLines(doc, String(note), pageWidth - margin * 2, 3);
           doc.text(lines, margin, y);
           y += lines.length * 10 + 6;
         }
@@ -587,17 +628,17 @@
           setTextColor(doc, BRAND.muted);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8);
-          doc.text(truncate(row.Indicador || 'Indicador', 34), x + 14, yCard + 18);
+          doc.text(pdfLines(doc, truncate(row.Indicador || 'Indicador', 48), cardWidth - 28, 1), x + 14, yCard + 18);
           setTextColor(doc, BRAND.dark);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(13);
-          const valueLines = doc.splitTextToSize(truncate(row.Valor, 52), cardWidth - 28).slice(0, 2);
+          const valueLines = pdfLines(doc, truncate(row.Valor, 64), cardWidth - 28, 2);
           doc.text(valueLines, x + 14, yCard + 36);
           if (row.Contexto) {
             setTextColor(doc, BRAND.muted);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7);
-            doc.text(truncate(row.Contexto, 36), x + 14, yCard + 56);
+            doc.text(pdfLines(doc, truncate(row.Contexto, 42), cardWidth - 28, 1), x + 14, yCard + 56);
           }
           if (col === columns - 1 || index === Math.min(list.length, 8) - 1) y += cardHeight + 12;
         });
@@ -639,7 +680,7 @@
 
         list.slice(0, maxRows || MAX_PDF_ROWS).forEach(function (row, rowIndex) {
           const cellLines = headers.map(function (header, index) {
-            return doc.splitTextToSize(sanitizeExportValue(row[header], header), columnWidths[index] - 14);
+            return pdfLines(doc, sanitizeExportValue(row[header], header), columnWidths[index] - 14, MAX_PDF_CELL_LINES);
           });
           const lineCount = Math.max.apply(null, cellLines.map(function (lines) { return lines.length; }).concat([1]));
           const rowHeight = Math.max(24, lineCount * 10 + 12);
@@ -663,7 +704,7 @@
           addPageIfNeeded(18);
           setTextColor(doc, BRAND.muted);
           doc.setFontSize(8);
-          doc.text('PDF resumido: ' + (list.length - (maxRows || MAX_PDF_ROWS)) + ' linhas adicionais disponíveis no XLSX.', margin, y);
+          doc.text(pdfLines(doc, 'PDF resumido: ' + (list.length - (maxRows || MAX_PDF_ROWS)) + ' linhas adicionais disponíveis no XLSX.', pageWidth - margin * 2, 2), margin, y);
           y += 18;
         }
         y += 10;
@@ -674,10 +715,12 @@
       setTextColor(doc, BRAND.muted);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.text(normalized.subtitle, margin, y);
-      y += 14;
-      doc.text('Fonte: ' + normalized.source + ' | Gerado em ' + new Date(normalized.generatedAt).toLocaleString('pt-BR'), margin, y);
-      y += 22;
+      const subtitleLines = pdfLines(doc, normalized.subtitle, pageWidth - margin * 2, 2);
+      doc.text(subtitleLines, margin, y);
+      y += subtitleLines.length * 11 + 4;
+      const sourceLines = pdfLines(doc, 'Fonte: ' + normalized.source + ' | Gerado em ' + new Date(normalized.generatedAt).toLocaleString('pt-BR'), pageWidth - margin * 2, 2);
+      doc.text(sourceLines, margin, y);
+      y += sourceLines.length * 11 + 12;
 
       if (normalized.filters.length) {
         drawSectionTitle('Filtros aplicados');

@@ -54,6 +54,12 @@ describe('admin-export.shared.js', () => {
     expect(rows[0]).toEqual({ 'Usuário encontrado': 'Sim', 'Publicações': '2', 'Descrição': 'Texto', 'Status final': 'Pendente', 'Solicitação': 'abc' });
   });
 
+  test('repara mojibake comum em labels e valores exportados', () => {
+    const exporter = loadExporter();
+    const rows = exporter.normalizeRows([{ title: 'RelatÃ³rio de PÃ¡ginas', observacao: 'UsuÃ¡rio sem sessÃ£o' }]);
+    expect(rows[0]).toEqual({ 'Título': 'Relatório de Páginas', 'Observação': 'Usuário sem sessão' });
+  });
+
   test('respeita colunas explicitas com labels PT-BR', () => {
     const exporter = loadExporter();
     const rows = exporter.normalizeRows(

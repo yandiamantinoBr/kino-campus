@@ -4,6 +4,9 @@
   const state = {
     data: null,
     loading: false,
+    recentPage: 1,
+    recentPageSize: 25,
+    recentQuery: '',
   };
 
   const EVENT_LABELS = Object.freeze({
@@ -120,6 +123,23 @@
     return date.toLocaleString('pt-BR');
   }
 
+  function normalizeSearchText(value) {
+    return String(value == null ? '' : value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function eventLabel(eventName) {
+    return EVENT_LABELS[eventName] || eventName || '-';
+  }
+
+  function entityLabel(row) {
+    if (!row || !row.entity_type) return '-';
+    return row.entity_type + ':' + (row.entity_id || '-');
+  }
+
   function daysAgo(days) {
     const date = new Date();
     date.setDate(date.getDate() - Math.max(1, Number(days) || 30));
@@ -206,7 +226,7 @@
       eventName: $('#privacyEventFilter')?.value || 'all',
       pagePath: String($('#privacyPageFilter')?.value || '').trim() || 'all',
       moduleKey: $('#privacyModuleFilter')?.value || 'all',
-      limit: 500,
+      limit: 1000,
       offset: 0,
     };
   }
@@ -581,16 +601,78 @@
     }).join('');
   }
 
+  function resetRecentPagination() {
+    state.recentPage = 1;
+  }
+
+  function getFilteredEventRows(data) {
+    const rows = Array.isArray(data && data.rows) ? data.rows : [];
+    const query = normalizeSearchText(state.recentQuery);
+    if (!query) return rows;
+    return rows.filter(function (row) {
+      const haystack = [
+        formatDateTime(row.created_at),
+        eventLabel(row.event_name),
+        row.event_name || '',
+        row.page_path || '',
+        row.module_key || '',
+        entityLabel(row),
+        row.metadata && row.metadata.entity_label || '',
+        row.metadata && row.metadata.post_title || '',
+        row.metadata && row.metadata.source_table || '',
+      ].map(normalizeSearchText).join(' ');
+      return haystack.includes(query);
+    });
+  }
+
+  function getPagedEventRows(data) {
+    const rows = getFilteredEventRows(data);
+    const pageSize = Math.max(1, Math.min(100, Number(state.recentPageSize) || 25));
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.max(1, Math.min(Number(state.recentPage) || 1, totalPages));
+    if (page !== state.recentPage) state.recentPage = page;
+    const startIndex = (page - 1) * pageSize;
+    const pageRows = rows.slice(startIndex, startIndex + pageSize);
+    return {
+      rows: pageRows,
+      total,
+      page,
+      pageSize,
+      totalPages,
+      start: total ? startIndex + 1 : 0,
+      end: total ? startIndex + pageRows.length : 0,
+    };
+  }
+
+  function renderEventLog(data) {
+    const page = getPagedEventRows(data);
+    renderRows('privacyEventLogBody', page.rows, [
+      { value: function (row) { return formatDateTime(row.created_at); } },
+      { value: function (row) { return eventLabel(row.event_name); } },
+      { value: 'page_path' },
+      { value: 'module_key' },
+      { value: function (row) { return entityLabel(row); } },
+    ], state.recentQuery ? 'Nenhum evento corresponde ao filtro local.' : 'Sem eventos detalhados.');
+
+    const count = $('#privacyEventLogCount');
+    if (count) {
+      count.textContent = 'Mostrando ' + formatNumber(page.start) + '-' + formatNumber(page.end) + ' de ' + formatNumber(page.total);
+    }
+    const prev = $('#privacyEventLogPrev');
+    const next = $('#privacyEventLogNext');
+    if (prev) prev.disabled = page.page <= 1;
+    if (next) next.disabled = page.page >= page.totalPages;
+  }
+
   function renderData(data) {
     const byEvent = Array.isArray(data.by_event) ? data.by_event : [];
     const byPage = Array.isArray(data.by_page) ? data.by_page : [];
     const banners = Array.isArray(data.banners) ? data.banners : [];
-    const rows = Array.isArray(data.rows) ? data.rows : [];
-
     renderSummary(data);
     renderInventory();
     renderRows('privacyEventsBody', byEvent, [
-      { value: function (row) { return EVENT_LABELS[row.event_name] || row.event_name; } },
+      { value: function (row) { return eventLabel(row.event_name); } },
       { value: function (row) { return formatNumber(row.events); } },
       { value: function (row) { return formatNumber(row.sessions); } },
     ], 'Nenhum evento opcional registrado.');
@@ -608,13 +690,7 @@
       { value: function (row) { return formatPercent(row.ctr); } },
     ], 'Nenhuma métrica de banner registrada.');
 
-    renderRows('privacyEventLogBody', rows, [
-      { value: function (row) { return formatDateTime(row.created_at); } },
-      { value: function (row) { return EVENT_LABELS[row.event_name] || row.event_name; } },
-      { value: 'page_path' },
-      { value: 'module_key' },
-      { value: function (row) { return row.entity_type ? row.entity_type + ':' + (row.entity_id || '-') : '-'; } },
-    ], 'Sem eventos detalhados.');
+    renderEventLog(data);
 
     const updated = $('#privacyLastSync');
     if (updated) {
@@ -624,14 +700,15 @@
   }
 
   function exportRows(data) {
-    const rows = Array.isArray(data.rows) ? data.rows : [];
+    const rows = getFilteredEventRows(data);
     return rows.map(function (row) {
       return {
         criado_em: formatDateTime(row.created_at),
-        evento: EVENT_LABELS[row.event_name] || row.event_name,
+        evento: eventLabel(row.event_name),
+        chave_evento: row.event_name || '',
         pagina: row.page_path || '',
         modulo: row.module_key || '',
-        entidade: row.entity_type ? row.entity_type + ':' + (row.entity_id || '') : '',
+        entidade: entityLabel(row),
       };
     });
   }
@@ -646,33 +723,107 @@
     const totals = data.totals || {};
     const consent = data.consent || {};
     const filters = data.filters || readFilters();
+    const eventRows = exportRows(data);
+    const noticeRows = [];
+    if (data.notice) noticeRows.push({ aviso: data.notice });
+    if (state.recentQuery) {
+      noticeRows.push({ aviso: 'Eventos recentes filtrados localmente por: ' + state.recentQuery });
+    }
     return {
-      title: 'KinoCampus - Privacidade e Analytics',
-      subtitle: 'Metricas agregadas, consentimento, inventario e eventos opcionais filtrados',
-      source: data.source_mode || 'admin/privacy-analytics.html',
+      title: 'KinoCampus - Relatório de Privacidade e Analytics',
+      subtitle: 'Métricas agregadas, consentimento, inventário e eventos opcionais filtrados',
+      source: 'admin/privacy-analytics.html (' + (data.source_mode || 'indisponível') + ')',
       filters: {
-        periodo_dias: filters.days || 30,
+        período_dias: filters.days || 30,
         desde: filters.since || '',
-        evento: filters.eventName || 'all',
-        pagina: filters.pagePath || 'all',
-        modulo: filters.moduleKey || 'all',
+        evento: filters.eventName === 'all' ? 'Todos os eventos' : eventLabel(filters.eventName),
+        página: filters.pagePath || 'all',
+        módulo: filters.moduleKey || 'all',
+        filtro_eventos_recentes: state.recentQuery || 'Sem filtro local',
       },
-      kpis: {
-        eventos_opcionais: totals.events || 0,
-        sessoes_agregadas: totals.sessions || 0,
-        buscas: totals.searches || 0,
-        impressoes_banners: totals.banner_impressions || 0,
-        cliques_banners: totals.banner_clicks || 0,
-        consentimentos: consent.updates || 0,
-        analytics_aceitos: consent.analytics_accepted || 0,
-        analytics_rejeitados: consent.analytics_rejected || 0,
-      },
+      kpis: [
+        { label: 'Eventos opcionais', value: totals.events || 0, context: 'Com consentimento analytics' },
+        { label: 'Sessões agregadas', value: totals.sessions || 0, context: 'Sem identificação individual' },
+        { label: 'Buscas', value: totals.searches || 0, context: 'Eventos de busca no período' },
+        { label: 'Impressões de banners', value: totals.banner_impressions || 0, context: 'Eventos banner_impression' },
+        { label: 'Cliques em banners', value: totals.banner_clicks || 0, context: 'Eventos banner_click' },
+        { label: 'Consentimentos registrados', value: consent.updates || 0, context: 'Histórico agregado' },
+        { label: 'Analytics aceitos', value: consent.analytics_accepted || 0, context: 'Consentimento opcional aceito' },
+        { label: 'Analytics rejeitados', value: consent.analytics_rejected || 0, context: 'Consentimento opcional recusado' },
+      ],
       sections: [
-        { title: 'Eventos por tipo', rows: data.by_event || [] },
-        { title: 'Paginas', rows: data.by_page || [] },
-        { title: 'Banners', rows: data.banners || [] },
-        { title: 'Eventos detalhados', rows: exportRows(data) },
-        { title: 'Inventario de armazenamento', rows: INVENTORY_ROWS },
+        {
+          title: 'Eventos por tipo',
+          rows: data.by_event || [],
+          columns: [
+            { key: 'event_name', label: 'Evento' },
+            { key: 'events', label: 'Eventos' },
+            { key: 'sessions', label: 'Sessões' },
+          ],
+        },
+        {
+          title: 'Páginas',
+          rows: data.by_page || [],
+          columns: [
+            { key: 'page_path', label: 'Página' },
+            { key: 'events', label: 'Eventos' },
+            { key: 'sessions', label: 'Sessões' },
+          ],
+        },
+        {
+          title: 'Banners',
+          rows: data.banners || [],
+          columns: [
+            { key: 'label', label: 'Banner' },
+            { key: 'impressions', label: 'Impressões' },
+            { key: 'clicks', label: 'Cliques' },
+            { key: 'ctr', label: 'CTR (%)' },
+          ],
+        },
+        {
+          title: 'Eventos recentes',
+          rows: eventRows,
+          pdfColumns: [
+            { key: 'criado_em', label: 'Quando' },
+            { key: 'evento', label: 'Evento' },
+            { key: 'pagina', label: 'Página' },
+            { key: 'modulo', label: 'Módulo' },
+          ],
+          xlsxColumns: [
+            { key: 'criado_em', label: 'Quando' },
+            { key: 'evento', label: 'Evento' },
+            { key: 'chave_evento', label: 'Chave do evento' },
+            { key: 'pagina', label: 'Página' },
+            { key: 'modulo', label: 'Módulo' },
+            { key: 'entidade', label: 'Entidade' },
+          ],
+          maxPdfRows: 40,
+        },
+        {
+          title: 'Inventário de cookies e armazenamento',
+          rows: INVENTORY_ROWS,
+          pdfColumns: [
+            { key: 'name', label: 'Nome' },
+            { key: 'storage', label: 'Armazenamento' },
+            { key: 'consent', label: 'Consentimento' },
+            { key: 'retention', label: 'Retenção' },
+          ],
+          xlsxColumns: [
+            { key: 'name', label: 'Nome' },
+            { key: 'storage', label: 'Armazenamento' },
+            { key: 'purpose', label: 'Finalidade' },
+            { key: 'consent', label: 'Consentimento' },
+            { key: 'retention', label: 'Retenção' },
+            { key: 'admin', label: 'Uso no admin' },
+          ],
+          maxPdfRows: 20,
+        },
+        {
+          title: 'Avisos',
+          rows: noticeRows,
+          columns: [{ key: 'aviso', label: 'Aviso' }],
+          maxPdfRows: 10,
+        },
       ],
     };
   }
@@ -691,7 +842,7 @@
           eventos: totals.events || 0,
           sessoes: totals.sessions || 0,
           buscas: totals.searches || 0,
-          impressoes_banners: totals.banner_impressions || 0,
+          impressões_banners: totals.banner_impressions || 0,
           cliques_banners: totals.banner_clicks || 0,
           consentimentos: consent.updates || 0,
           analytics_aceitos: consent.analytics_accepted || 0,
@@ -699,10 +850,10 @@
         }],
       },
       { name: 'Eventos', rows: state.data.by_event || [] },
-      { name: 'Paginas', rows: state.data.by_page || [] },
+      { name: 'Páginas', rows: state.data.by_page || [] },
       { name: 'Banners', rows: state.data.banners || [] },
       { name: 'Detalhado', rows: exportRows(state.data) },
-      { name: 'Inventario', rows: INVENTORY_ROWS },
+      { name: 'Inventário', rows: INVENTORY_ROWS },
     ]);
   }
 
@@ -720,8 +871,8 @@
           eventos: totals.events || 0,
           sessoes: totals.sessions || 0,
           buscas: totals.searches || 0,
-          banners: (totals.banner_clicks || 0) + ' cliques / ' + (totals.banner_impressions || 0) + ' impressoes',
-          consentimento: (consent.analytics_accepted || 0) + ' aceites / ' + (consent.analytics_rejected || 0) + ' rejeicoes',
+          banners: (totals.banner_clicks || 0) + ' cliques / ' + (totals.banner_impressions || 0) + ' impressões',
+          consentimento: (consent.analytics_accepted || 0) + ' aceites / ' + (consent.analytics_rejected || 0) + ' rejeições',
         }],
       },
       { title: 'Eventos por tipo', rows: state.data.by_event || [] },
@@ -759,21 +910,61 @@
 
   function bindEvents() {
     const refreshButton = $('#privacyRefreshButton');
-    if (refreshButton) refreshButton.addEventListener('click', refresh);
+    if (refreshButton) refreshButton.addEventListener('click', function () {
+      resetRecentPagination();
+      refresh();
+    });
     const xlsx = $('#privacyExportXlsx');
     if (xlsx) xlsx.addEventListener('click', function () { handleExportXLSX().catch(console.error); });
     const pdf = $('#privacyExportPdf');
     if (pdf) pdf.addEventListener('click', function () { handleExportPDF().catch(console.error); });
     ['privacyPeriodFilter', 'privacyEventFilter', 'privacyModuleFilter'].forEach(function (id) {
       const el = $('#' + id);
-      if (el) el.addEventListener('change', refresh);
+      if (el) el.addEventListener('change', function () {
+        resetRecentPagination();
+        refresh();
+      });
     });
     const page = $('#privacyPageFilter');
     if (page) {
       let timer = null;
       page.addEventListener('input', function () {
         window.clearTimeout(timer);
-        timer = window.setTimeout(refresh, 350);
+        timer = window.setTimeout(function () {
+          resetRecentPagination();
+          refresh();
+        }, 350);
+      });
+    }
+    const recentSearch = $('#privacyEventLogSearch');
+    if (recentSearch) {
+      recentSearch.addEventListener('input', function () {
+        state.recentQuery = String(recentSearch.value || '').trim();
+        resetRecentPagination();
+        if (state.data) renderEventLog(state.data);
+      });
+    }
+    const pageSize = $('#privacyEventLogPageSize');
+    if (pageSize) {
+      state.recentPageSize = Number(pageSize.value || 25) || 25;
+      pageSize.addEventListener('change', function () {
+        state.recentPageSize = Number(pageSize.value || 25) || 25;
+        resetRecentPagination();
+        if (state.data) renderEventLog(state.data);
+      });
+    }
+    const prev = $('#privacyEventLogPrev');
+    if (prev) {
+      prev.addEventListener('click', function () {
+        state.recentPage = Math.max(1, Number(state.recentPage || 1) - 1);
+        if (state.data) renderEventLog(state.data);
+      });
+    }
+    const next = $('#privacyEventLogNext');
+    if (next) {
+      next.addEventListener('click', function () {
+        state.recentPage = Number(state.recentPage || 1) + 1;
+        if (state.data) renderEventLog(state.data);
       });
     }
   }

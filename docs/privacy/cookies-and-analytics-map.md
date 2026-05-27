@@ -20,8 +20,8 @@ Métricas administrativas devem ser agregadas por padrão. A plataforma não dev
 | `kc_home_category_affinity_v1` | `localStorage` | Preferências locais de módulos/categorias da home. | Analytics | Local, com TTL operacional | Privacidade e Analytics |
 | `kc_home_category_queue_v1` | `localStorage` | Fila local de eventos de afinidade. | Analytics | Até sincronizar | Privacidade e Analytics |
 | `kc_home_category_session_v1` | `localStorage` | Sessão pseudônima para afinidade de categorias. | Analytics | Até limpeza local | Privacidade e Analytics |
-| `kc_nav_module_affinity_v1` | `localStorage` | Preferência local de módulos clicados no menu principal. | Analytics | Local, com TTL operacional indireto | Personalização do `kc-nav-links` |
-| `kc:navLinksOrder:v1` | `sessionStorage` | Cache de 10 minutos da ordem calculada do menu principal. | Operacional | Sessão do navegador | Navegação |
+| `kc_nav_module_affinity_v1` | `localStorage` | Preferência local de módulos clicados no menu principal. | Analytics | Local, com TTL operacional indireto | Telemetria consentida do `kc-nav-links` |
+| `kc:navLinksOrder:v1` | `sessionStorage` | Cache legado da antiga ordem calculada do menu principal. O código atual não usa essa chave para reordenar o DOM. | Operacional legado | Até expirar/limpeza local | Não usado visualmente |
 | `kc_privacy_analytics_session_v1` | `localStorage` | Sessão pseudônima para eventos opcionais; no banco só vira hash SHA-256. | Necessário para consentimento; analytics para eventos opcionais | Até limpeza local | Privacidade e Analytics |
 | `kc_privacy_consent_recorded_v1` | `localStorage` | Evita reenviar o mesmo estado de consentimento toda visita. | Necessário | Até mudança de consentimento | Não exibido diretamente |
 | `search_queries` | Supabase | Busca agregada usada no Dashboard. | Analytics | 6 meses | Dashboard e Privacidade |
@@ -68,7 +68,7 @@ Se a migration ainda não foi aplicada, o card mostra alerta e aponta para a pá
 - eventos por tipo;
 - eventos por página;
 - banners com impressões, cliques e CTR;
-- eventos recentes sem session hash exposto;
+- eventos recentes sem session hash exposto, com filtro local e paginação;
 - filtros por período, evento, página e módulo;
 - exportação XLSX e PDF.
 
@@ -123,4 +123,4 @@ Regras:
 - `rg "document\\.cookie|Set-Cookie|cookieStore"` deve continuar sem ocorrências no código da plataforma.
 - `kc-search.js` e `kc-home-categories.js` devem retornar `false` quando `KCConsent` não estiver disponível.
 - Eventos opcionais devem falhar silenciosamente se a RPC ainda não existir.
-- `kc-nav-links-personalized.js` deve manter a ordem estática como fallback e usar sinais pessoais apenas com consentimento de analytics.
+- `kc-nav-links-personalized.js` deve manter a ordem fixa do HTML sem reordenar o DOM; com consentimento de analytics, registra apenas cliques agregáveis no menu.

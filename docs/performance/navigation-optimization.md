@@ -71,21 +71,16 @@ Rollback: manter `sw.enabled=false`. Se ja estiver ativo no navegador, subir nov
 
 ## Fase 1.1 Implementada
 
-### Ordem Inteligente Do `kc-nav-links`
+### Ordem Fixa Do `kc-nav-links`
 
-- `assets/js/features/kc-nav-links-personalized.js` reordena somente os links existentes da navegacao principal.
-- A ordem estatica do HTML permanece como fallback imediato e como rollback visual.
-- O calculo usa sinais ja existentes:
-  - `KCAPI.getPersonalizedTabs()`, que combina afinidade pessoal, `highlight_score`, recencia e volume;
-  - `KCHomeCategories.getCategoryCounts()`, para volume atual por modulo/categoria;
-  - `kc_nav_module_affinity_v1`, afinidade local de cliques no proprio menu, apenas com consentimento de analytics.
-- Pesos no cliente: 62% sinais pessoais/trending, 33% volume global e 5% estabilidade da ordem original.
-- Cache de sessao: `kc:navLinksOrder:v1`, TTL de 10 minutos.
-- Sem consentimento de analytics, o script nao usa afinidade pessoal; ele pode usar apenas sinais globais ou manter a ordem estatica.
+- O HTML base das paginas publicas agora ja nasce na ordem atual do produto, iniciando por `Eventos`.
+- `assets/js/features/kc-nav-links-personalized.js` nao reordena mais o DOM, nao consulta RPCs para montar ordem visual e ignora o cache legado `kc:navLinksOrder:v1`.
+- Com consentimento de analytics, o script continua registrando cliques agregaveis no menu em `KCPrivacyAnalytics` e em `kc_nav_module_affinity_v1`.
+- Sem consentimento de analytics, a ordem continua fixa e nenhuma telemetria opcional e enviada.
 
-Risco: mudanca de ordem pode surpreender usuarios muito acostumados com a posicao fixa. A mitigacao e manter a ordem estatica se nao houver sinais e preservar dimensoes/classes dos links.
+Risco mitigado: elimina o salto visual em que o usuario via a ordem antiga por alguns instantes antes da hidratacao.
 
-Rollback: remover as tags de `kc-nav-links-personalized.js` dos HTMLs publicos ou limpar `kc:navLinksOrder:v1` e `kc_nav_module_affinity_v1` no navegador.
+Rollback: reverter a ordem dos links nos HTMLs publicos e restaurar a versao anterior de `kc-nav-links-personalized.js`.
 
 ## Validacao Da Fase 1
 

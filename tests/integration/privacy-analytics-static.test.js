@@ -50,21 +50,62 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     expect(page).toContain('Privacidade e Analytics');
     expect(page).toContain('privacyExportXlsx');
     expect(page).toContain('privacyExportPdf');
-    expect(page).toContain('../assets/js/controllers/admin/admin-export.shared.js?v=8.6.5');
-    expect(page).toContain('../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.2');
+    expect(page).toContain('privacyEventLogSearch');
+    expect(page).toContain('privacyEventLogPageSize');
+    expect(page).toContain('privacyEventLogPrev');
+    expect(page).toContain('privacyEventLogNext');
+    expect(page).toContain('privacyEventLogCount');
+    expect(page).toContain('../assets/js/controllers/admin/admin-export.shared.js?v=8.6.6');
+    expect(page).toContain('../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.3');
     expect(dashboard).toContain('admin-dashboard.privacy.js?v=8.6.2');
     expect(dashboard).toContain('privacy-analytics.html');
     expect(controller).toContain('isMissingRpcError');
     expect(controller).toContain('loadLegacyAnalyticsRows');
+    expect(controller).toContain('getFilteredEventRows');
+    expect(controller).toContain('getPagedEventRows');
+    expect(controller).toContain('KinoCampus - Relatório de Privacidade e Analytics');
+    expect(controller).toContain('Inventário de cookies e armazenamento');
+    expect(controller).toContain('Eventos recentes');
   });
 
-  test('menu principal carrega personalizacao isolada sem editar a estrutura base', () => {
-    const index = read('index.html');
+  test('menu principal nasce na ordem fixa atual e nao reordena visualmente pelo JavaScript', () => {
     const script = read('assets/js/features/kc-nav-links-personalized.js');
-    expect(index).toContain('assets/js/features/kc-nav-links-personalized.js?v=8.6.2');
-    expect(script).toContain('kc:navLinksOrder:v1');
-    expect(script).toContain('KCAPI.getPersonalizedTabs');
-    expect(script).toContain('KCHomeCategories.getCategoryCounts');
-    expect(script).toContain('applyOrderToNav');
+    const expectedOrder = [
+      'eventos.html',
+      'oportunidades.html',
+      'moradia.html',
+      'compra-venda-feed.html',
+      'caronas-feed.html',
+      'achados-perdidos.html',
+    ];
+    [
+      '_product.html',
+      'achados-perdidos.html',
+      'caronas-feed.html',
+      'compra-venda-feed.html',
+      'create-post.html',
+      'eventos.html',
+      'index.html',
+      'moradia.html',
+      'my-posts.html',
+      'ods.html',
+      'oportunidades.html',
+      'privacidade.html',
+      'search-results.html',
+      'termos.html',
+    ].forEach((file) => {
+      const html = read(file);
+      expect(html).toContain('assets/js/features/kc-nav-links-personalized.js?v=8.6.3');
+      const nav = html.match(/<nav class="kc-nav-links"[\s\S]*?<\/nav>/);
+      expect(nav).toBeTruthy();
+      const hrefs = Array.from(nav[0].matchAll(/<a\b[^>]*href="([^"]+)"/g)).map((match) => match[1]);
+      expect(hrefs.slice(0, expectedOrder.length)).toEqual(expectedOrder);
+    });
+    expect(script).not.toContain('kc:navLinksOrder:v1');
+    expect(script).not.toContain('KCAPI.getPersonalizedTabs');
+    expect(script).not.toContain('KCHomeCategories.getCategoryCounts');
+    expect(script).not.toContain('applyOrderToNav');
+    expect(script).not.toContain('appendChild');
+    expect(script).toContain('KCPrivacyAnalytics.track');
   });
 });

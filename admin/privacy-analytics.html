@@ -23,6 +23,14 @@
     .kc-admin-toolbar input { min-width:min(260px, 100%); }
     .kc-admin-toolbar button { cursor:pointer; }
     .kc-admin-toolbar button:disabled { opacity:.55; cursor:not-allowed; }
+    .kc-privacy-event-log-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 12px; }
+    .kc-privacy-event-log-search { flex:1 1 260px; min-width:min(320px, 100%); }
+    .kc-privacy-event-log-search input,
+    .kc-privacy-event-log-size select { width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--kc-border-dark); background:var(--kc-surface-dark); color:var(--kc-text-dark-primary); font:inherit; box-sizing:border-box; }
+    .kc-privacy-event-log-size { flex:0 0 150px; }
+    .kc-privacy-event-log-pager { display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:var(--kc-text-dark-secondary); font-size:.9rem; }
+    .kc-privacy-event-log-pager button { width:36px; height:36px; border-radius:10px; border:1px solid var(--kc-border-dark); background:var(--kc-surface-dark); color:var(--kc-text-dark-primary); cursor:pointer; }
+    .kc-privacy-event-log-pager button:disabled { opacity:.5; cursor:not-allowed; }
     #admin-loading { display:flex; align-items:center; justify-content:center; gap:12px; padding:64px 0; color:var(--kc-text-dark-secondary); }
     #admin-error { display:none; padding:14px 16px; border-radius:14px; border:1px solid rgba(255,98,98,.4); background:rgba(255,98,98,.12); color:#ffb0b0; margin-bottom:16px; }
     #admin-content { display:none; }
@@ -51,6 +59,8 @@
       .kc-admin-toolbar input,
       .kc-admin-toolbar button,
       .kc-admin-toolbar a { flex:1 1 150px; }
+      .kc-privacy-event-log-size { flex:1 1 150px; }
+      .kc-privacy-event-log-pager { width:100%; justify-content:space-between; }
     }
   </style>
 </head>
@@ -192,6 +202,25 @@
           <section class="kc-privacy-section">
             <h2><i class="fas fa-list"></i> Eventos recentes</h2>
             <p>Últimos eventos sem session hash, IP, user-agent bruto ou qualquer cookie cru.</p>
+            <div class="kc-privacy-event-log-tools" aria-label="Filtros dos eventos recentes" data-i18n-aria-label="aria-label.privacy-event-log-filters">
+              <label class="kc-privacy-event-log-search">
+                <span class="sr-only">Filtrar eventos recentes</span>
+                <input id="privacyEventLogSearch" type="search" placeholder="Filtrar evento, página, módulo ou entidade" data-i18n-placeholder="placeholder.privacy-event-log-search" autocomplete="off" />
+              </label>
+              <label class="kc-privacy-event-log-size">
+                <span class="sr-only">Linhas por página</span>
+                <select id="privacyEventLogPageSize">
+                  <option value="25" selected>25 linhas</option>
+                  <option value="50">50 linhas</option>
+                  <option value="100">100 linhas</option>
+                </select>
+              </label>
+              <div class="kc-privacy-event-log-pager">
+                <button id="privacyEventLogPrev" type="button" aria-label="Página anterior dos eventos recentes" data-i18n-aria-label="aria-label.privacy-event-log-prev"><i class="fas fa-chevron-left"></i></button>
+                <span id="privacyEventLogCount">Mostrando 0-0 de 0</span>
+                <button id="privacyEventLogNext" type="button" aria-label="Próxima página dos eventos recentes" data-i18n-aria-label="aria-label.privacy-event-log-next"><i class="fas fa-chevron-right"></i></button>
+              </div>
+            </div>
             <div class="kc-privacy-table-wrap">
               <table class="kc-privacy-table">
                 <thead><tr><th>Quando</th><th>Evento</th><th>Página</th><th>Módulo</th><th>Entidade</th></tr></thead>
@@ -268,7 +297,7 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
-  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.5"></script>
-  <script defer src="../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.6"></script>
+  <script defer src="../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.3"></script>
 </body>
 </html>
