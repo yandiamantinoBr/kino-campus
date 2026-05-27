@@ -1,5 +1,6 @@
 {
   "buildCommand": "node scripts/inject-env.js",
+  "installCommand": "npm ci --omit=dev --no-audit --no-fund",
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/product.html", "destination": "/api/og-product" },
