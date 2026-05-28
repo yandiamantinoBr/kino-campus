@@ -5,6 +5,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const MIGRATION = path.join(ROOT, 'supabase/migrations/20260521201102_admin_configurable_post_flood_limits.sql');
+const FIX_MIGRATION = path.join(ROOT, 'supabase/migrations/20260528092946_fix_cadu_flood_limit_admin_controls.sql');
 const ADMIN_HTML = path.join(ROOT, 'admin/moderation.html');
 const ADMIN_CONTROLLER = path.join(ROOT, 'assets/js/controllers/admin/admin-moderation.controller.js');
 const CADU_PUBLISHER = path.join(ROOT, 'services/cadu-ufg-publisher/src/publisher.js');
@@ -21,6 +22,7 @@ describe('post flood limits admin contract', () => {
 
   beforeAll(() => {
     sql = read(MIGRATION);
+    sql += '\n' + read(FIX_MIGRATION);
     html = read(ADMIN_HTML);
     controller = read(ADMIN_CONTROLLER);
     publisher = read(CADU_PUBLISHER);
@@ -32,12 +34,15 @@ describe('post flood limits admin contract', () => {
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.kc_admin_set_post_flood_limit');
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.kc_admin_get_post_flood_limits');
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.kc_admin_delete_post_flood_limit');
+    expect(sql).toContain('create table if not exists public.post_flood_resets');
+    expect(sql).toContain('create or replace function public.kc_admin_reset_post_flood_limit');
   });
 
   test('anti-spam trigger uses configurable limit instead of hardcoded 3/hour', () => {
-    expect(sql).toContain('v_flood_check := public.kc_check_post_flood_limit(NEW.author_id, NEW.module);');
+    expect(sql).toContain('v_flood_check := kc_private.kc_compute_post_flood_check(new.author_id, new.module);');
     expect(sql).toContain('flood_limit_exceeded');
     expect(sql).toContain('window_minutes');
+    expect(sql).toContain('AUTH_REQUIRED');
   });
 
   test('admin moderation page exposes flood limit controls', () => {
@@ -45,6 +50,7 @@ describe('post flood limits admin contract', () => {
     expect(html).toContain('id="flood-user-module"');
     expect(html).toContain('id="flood-global-max"');
     expect(html).toContain('id="flood-user-window"');
+    expect(html).toContain('id="flood-user-reset"');
     expect(html).toContain('id="post-flood-limits-body"');
     expect(html).toContain('post_flood_limits');
   });
@@ -53,6 +59,8 @@ describe('post flood limits admin contract', () => {
     expect(controller).toContain("'kc_admin_get_post_flood_limits'");
     expect(controller).toContain("'kc_admin_set_post_flood_limit'");
     expect(controller).toContain("'kc_admin_delete_post_flood_limit'");
+    expect(controller).toContain("'kc_admin_reset_post_flood_limit'");
+    expect(controller).toContain('async function resetUserFloodLimit');
     expect(controller).toContain('data-flood-limit-delete="${escape(String(row.id))}"');
   });
 

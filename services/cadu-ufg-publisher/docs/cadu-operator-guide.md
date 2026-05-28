@@ -307,7 +307,9 @@ O erro `FLOOD_LIMIT` vem de `post_flood_limits`/`kc_anti_spam_gate()`. Administr
 
 O erro `POST_LIMIT_REACHED` vem de `post_limits` e controla publicacoes ativas, nao ritmo por hora. Se aparecer para o Cadu, confira o painel **Limites de Publicacoes** para a conta `yan1nakamura+cadu.kinocampus@gmail.com` ou `cadu.bot@kinocampus.com.br`.
 
-Para o Cadu, prefira override por usuario em vez de aumentar o padrao global. O valor inicial recomendado e `10 posts / 60 min`, mantendo dry-run e revisao antes de publicar.
+Para o Cadu, prefira override por usuario em vez de aumentar o padrao global. Em 28/05/2026, as contas `yan1nakamura+cadu.kinocampus@gmail.com` e `cadu.bot@kinocampus.com.br` ficaram configuradas com `30 posts / 60 min` e reset administrativo aplicado. Se o bot voltar a bater em `FLOOD_LIMIT`, pare as tentativas em lote, peca ao admin para usar **Resetar bloqueio do usuario** no painel de moderacao e rode uma nova checagem antes de publicar.
+
+O reset administrativo nao apaga posts e nao reduz seguranca global: ele cria um marcador em `post_flood_resets` para ignorar publicacoes anteriores ao reset dentro da janela atual. Novos posts continuam contando normalmente depois do reset.
 
 ## Reparos Seguros
 

@@ -1549,6 +1549,39 @@
     await fetchAuditLogs();
   }
 
+  async function resetUserFloodLimit() {
+    const client = getClient();
+    if (!client) return;
+    if (!limitsState.selectedUser) {
+      showLimitsFeedback('Selecione um usuário antes de resetar o bloqueio.', true);
+      return;
+    }
+    const moduleEl = $('#flood-user-module');
+    const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
+    const label = limitsState.selectedUser.name || limitsState.selectedUser.id;
+    const scopeLabel = mod ? ` no módulo ${mod}` : '';
+    if (!window.confirm(`Resetar o bloqueio de ritmo de ${label}${scopeLabel}? Isso permite nova publicação imediatamente.`)) return;
+
+    const btn = $('#flood-user-reset');
+    const original = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Resetando…'; }
+    const { data, error } = await client.rpc('kc_admin_reset_post_flood_limit', {
+      p_user_id: limitsState.selectedUser.id,
+      p_module: mod || null,
+      p_reason: 'admin_moderation_panel',
+    });
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+    if (error || (data && data.ok === false)) {
+      showLimitsFeedback('Erro: ' + String((error && error.message) || (data && data.message) || error || 'Falha ao resetar bloqueio'), true);
+      return;
+    }
+    const check = data && data.check ? data.check : {};
+    const remaining = Number.isFinite(Number(check.remaining)) ? Number(check.remaining) : null;
+    showLimitsFeedback(`Bloqueio resetado para ${label}. ${remaining != null ? `${remaining} publicação(ões) disponíveis na janela atual.` : 'O usuário pode tentar publicar novamente.'}`, false);
+    await fetchPostFloodLimits();
+    await fetchAuditLogs();
+  }
+
   async function deleteGlobalFloodLimit() {
     const client = getClient();
     if (!client) return;
@@ -1604,6 +1637,9 @@
 
     const floodUserSave = $('#flood-user-save');
     if (floodUserSave) floodUserSave.addEventListener('click', () => saveFloodLimit('user'));
+
+    const floodUserReset = $('#flood-user-reset');
+    if (floodUserReset) floodUserReset.addEventListener('click', resetUserFloodLimit);
 
     const floodRefresh = $('#post-flood-limits-refresh');
     if (floodRefresh) floodRefresh.addEventListener('click', fetchPostFloodLimits);
