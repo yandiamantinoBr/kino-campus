@@ -254,10 +254,19 @@
     }
 
     var drafts = readPostDrafts();
-    var nextDrafts = drafts.filter(function (item) {
-      return !matchesPostIdentity(item, key, deps);
+    var found = false;
+    var deletedAt = new Date().toISOString();
+    var nextDrafts = drafts.map(function (item) {
+      if (!matchesPostIdentity(item, key, deps)) return item;
+      found = true;
+      return Object.assign({}, item, {
+        status: 'deleted',
+        estado: 'deleted',
+        updated_at: deletedAt,
+        updatedAt: deletedAt,
+      });
     });
-    if (nextDrafts.length === drafts.length) {
+    if (!found) {
       return { ok: false, error: { message: 'Publica\u00E7\u00E3o n\u00E3o encontrada.' } };
     }
     if (!writePostDrafts(nextDrafts)) {
@@ -268,7 +277,7 @@
       await getSavedPostClearer(deps)(key);
     } catch (_) { }
 
-    return { ok: true };
+    return { ok: true, status: 'deleted', softDeleted: true };
   }
 
   async function reportPost() {

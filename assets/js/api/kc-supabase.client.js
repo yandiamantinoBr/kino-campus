@@ -455,6 +455,112 @@
     };
   }
 
+  function normalizePostChangePayload(payload) {
+    const eventType = String((payload && payload.eventType) || (payload && payload.type) || '').toUpperCase();
+    const row = (payload && payload.new && typeof payload.new === 'object')
+      ? payload.new
+      : ((payload && payload.old && typeof payload.old === 'object') ? payload.old : null);
+    const oldRow = (payload && payload.old && typeof payload.old === 'object') ? payload.old : null;
+    if (!row) return null;
+
+    const nextStatus = String(row.status || '').trim().toLowerCase();
+    const previousStatus = String(oldRow && oldRow.status || '').trim().toLowerCase();
+    let type = 'updated';
+    if (eventType === 'INSERT') type = 'created';
+    else if (eventType === 'DELETE') type = 'purged';
+    else if (nextStatus && nextStatus !== previousStatus) {
+      type = (nextStatus === 'deleted' || nextStatus === 'hidden') ? 'soft_deleted' : 'status_changed';
+    }
+
+    return {
+      type,
+      source: 'realtime',
+      postId: row.id || row.uuid || '',
+      legacyId: row.legacy_id || row.legacyId || '',
+      module: row.module || row.modulo || '',
+      status: nextStatus,
+      updated_at: row.updated_at || row.updatedAt || '',
+      row,
+      payload,
+    };
+  }
+
+  function subscribePostChanges(options = {}) {
+    const opt = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const { driver } = readEnv();
+    if (driver !== 'supabase') return noopSubscription();
+
+    const client = getClient();
+    if (!client || typeof client.channel !== 'function') return noopSubscription();
+
+    const moduleSet = normalizeModuleFilter(opt.filter || opt.module || null);
+    const channelKey = Array.from(moduleSet).sort().join('-') || 'global';
+    const channelName = `posts-changes-${channelKey}`;
+
+    function shouldNotify(change) {
+      if (!change) return false;
+      if (!moduleSet.size) return true;
+      const mk = String(change.module || '').trim().toLowerCase();
+      return !!mk && moduleSet.has(mk);
+    }
+
+    function notify(change) {
+      if (!shouldNotify(change)) return;
+      try {
+        if (window.KCPostFreshness && typeof window.KCPostFreshness.emit === 'function') {
+          window.KCPostFreshness.emit(change);
+        }
+      } catch (_) { }
+      try { if (typeof opt.onChange === 'function') opt.onChange(change); } catch (_) { }
+    }
+
+    const channel = client.channel(channelName);
+    try {
+      channel.on('broadcast', { event: 'post_change' }, (payload) => {
+        const source = payload && payload.payload ? payload.payload : payload;
+        const change = {
+          type: source && source.type || 'updated',
+          source: 'realtime-broadcast',
+          postId: source && (source.postId || source.post_id || source.id || source.uuid) || '',
+          legacyId: source && (source.legacyId || source.legacy_id) || '',
+          module: source && (source.module || source.modulo) || '',
+          status: source && (source.status || source.new_status) || '',
+          updated_at: source && (source.updated_at || source.updatedAt) || '',
+        };
+        notify(change);
+      });
+    } catch (_) { }
+
+    try {
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'posts' },
+        (payload) => {
+          notify(normalizePostChangePayload(payload));
+        }
+      );
+
+      if (typeof channel.subscribe === 'function') {
+        channel.subscribe((status) => {
+          try { if (typeof opt.onStatus === 'function') opt.onStatus(status); } catch (_) { }
+        });
+      }
+    } catch (e) {
+      try { if (typeof opt.onError === 'function') opt.onError(e); } catch (_) { }
+      return noopSubscription();
+    }
+
+    let unsubscribed = false;
+    return {
+      unsubscribe: function () {
+        if (unsubscribed) return;
+        unsubscribed = true;
+        try { if (typeof channel.unsubscribe === 'function') channel.unsubscribe(); } catch (_) { }
+        try { if (typeof client.removeChannel === 'function') client.removeChannel(channel); } catch (_) { }
+      }
+    };
+  }
+
   function onAuthStateChange(callback) {
     const client = getClient();
     if (!client || !client.auth || typeof client.auth.onAuthStateChange !== 'function') {
@@ -536,6 +642,7 @@
     signOut,
     onAuthStateChange,
     subscribeNewPosts,
+    subscribePostChanges,
     // Delegações para sub-módulos (kc-supabase.posts.js)
     getPosts:     function (p) { return window.KCSupabase._posts && typeof window.KCSupabase._posts.getPosts === 'function' ? window.KCSupabase._posts.getPosts(p) : Promise.resolve([]); },
     getPostById:  function (id) { return window.KCSupabase._posts && typeof window.KCSupabase._posts.getPostById === 'function' ? window.KCSupabase._posts.getPostById(id) : Promise.resolve(null); },
@@ -555,6 +662,12 @@
       subscribeNewPosts: function (options) {
         if (window.KCSupabase && typeof window.KCSupabase.subscribeNewPosts === 'function') {
           return window.KCSupabase.subscribeNewPosts(options);
+        }
+        return noopSubscription();
+      },
+      subscribePostChanges: function (options) {
+        if (window.KCSupabase && typeof window.KCSupabase.subscribePostChanges === 'function') {
+          return window.KCSupabase.subscribePostChanges(options);
         }
         return noopSubscription();
       },

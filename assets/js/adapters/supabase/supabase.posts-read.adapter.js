@@ -568,10 +568,12 @@
 
       let query = buildQuery(true);
       if (status) query = query.eq('status', status);
+      else query = query.neq('status', 'deleted');
       let { data, error } = await query;
       if (error && isMissingImageUrlColumnError(error)) {
         query = buildQuery(false);
         if (status) query = query.eq('status', status);
+        else query = query.neq('status', 'deleted');
         ({ data, error } = await query);
       }
       if (error) {

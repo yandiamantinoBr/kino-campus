@@ -452,7 +452,7 @@
       .slice()
       .sort(function (left, right) { return parsePostTime(right) - parsePostTime(left); })
       .filter(function (post) {
-        if (!statusFilter) return true;
+        if (!statusFilter) return String((post && post.status) || 'published').trim().toLowerCase() !== 'deleted';
         return String((post && post.status) || 'published').trim().toLowerCase() === statusFilter;
       })
       .map(function (post) { return mapPostSummary(post); });

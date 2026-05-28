@@ -54,6 +54,9 @@ describe('product.load.js - renderPost delega para sub-modulos', () => {
     expect(loadSource).toContain('function getCachedProductDetail(id)');
     expect(loadSource).toContain('function invalidateProductDetailCache(postOrId)');
     expect(loadSource).toContain('invalidateProductDetailCache:    invalidateProductDetailCache');
+    expect(loadSource).toContain('fetchPromise = fetchRenderablePost(id)');
+    expect(loadSource).toContain('KCPostFreshness.subscribe');
+    expect(loadSource).toContain('function isRenderableProductPost(post)');
   });
 });
 

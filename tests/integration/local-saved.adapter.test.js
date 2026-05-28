@@ -363,7 +363,7 @@ describe('local.saved.adapter.js - integracao com driver local', () => {
       { post_id: 'saved-post-1', kind: 'favorite', created_at: '2026-04-20T10:00:00Z', updated_at: '2026-04-20T10:00:00Z' },
     ]));
 
-    await expect(driver.deletePost('saved-post-1')).resolves.toEqual({ ok: true });
+    await expect(driver.deletePost('saved-post-1')).resolves.toEqual(expect.objectContaining({ ok: true, status: 'deleted', softDeleted: true }));
     await expect(driver.getSavedPostState('saved-post-1')).resolves.toEqual({ kinds: [] });
   });
 });

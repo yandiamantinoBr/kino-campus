@@ -12,8 +12,9 @@
   const POSTS_LIMIT = 12;
   const FEED_SNAPSHOT_VERSION = 4;
   const NEW_CARD_HIGHLIGHT_MS = 1500;
-  const FEED_CACHE_MAX_AGE_MS = 1000 * 60 * 10;
+  const FEED_CACHE_MAX_AGE_MS = 1000 * 60 * 2;
   const FEED_REVALIDATE_COOLDOWN_MS = 1000 * 45;
+  const FEED_FOCUS_REVALIDATE_MS = 1000 * 30;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let activePager = null;
 
@@ -435,12 +436,15 @@
       pendingIds: new Set(),
       pendingRealtimePosts: [],
       realtimeSub: null,
+      postChangesSub: null,
       destroyed: false,
       lastError: null,
       observer: null,
       snapshotAge: 0,
       lastSnapshotAt: 0,
       revalidateTimer: null,
+      freshnessTimer: null,
+      freshnessUnsub: null,
       requestParams: initialRequestParams,
     };
     const pagePath = String(window.location.pathname || '').trim() || '/';
@@ -452,6 +456,8 @@
     function persistSnapshot() {
       const store = getSessionStore();
       if (!store || typeof store.set !== 'function' || !state.renderedPosts.length) return;
+      state.lastSnapshotAt = Date.now();
+      state.snapshotAge = 0;
       store.set('feeds', getSnapshotKey(), {
         version: FEED_SNAPSHOT_VERSION,
         cursor: state.cursor,
@@ -496,6 +502,11 @@
         : ((window.KCAPI && typeof window.KCAPI.normalizePost === 'function') ? window.KCAPI.normalizePost(raw) : (raw || {}));
     }
 
+    function isRenderableFeedPost(post) {
+      const status = String(post && (post.status || post.estado) || 'published').trim().toLowerCase();
+      return !status || status === 'published' || status === 'closed';
+    }
+
     function appendRenderedPosts(posts, mode) {
       const batch = Array.isArray(posts) ? posts.filter(Boolean) : [];
       if (!batch.length || state.destroyed) return;
@@ -522,6 +533,41 @@
 
       persistSnapshot();
       reapplyFiltersAndSearch();
+    }
+
+    function replaceRenderedPosts(posts, nextMeta) {
+      const batch = Array.isArray(posts) ? posts.filter(isRenderableFeedPost) : [];
+      state.renderedPosts = [];
+      state.seenIds.clear();
+      state.pendingIds.clear();
+      container.innerHTML = '';
+      batch.forEach((post, idx) => {
+        markSeenIdentity(state, post, post, idx);
+      });
+      if (batch.length) {
+        container.insertAdjacentHTML('beforeend', batch.map((post) => window.KCUtils.renderPostCard(post, { pageModule })).join(''));
+        state.renderedPosts = batch.slice();
+      }
+      if (nextMeta && typeof nextMeta === 'object') {
+        state.nextCursor = nextMeta.nextCursor || null;
+        state.hasMore = nextMeta.hasMore === true;
+        state.done = !state.hasMore;
+      }
+      if (state.done) setStatus('done', 'Fim da lista');
+      else setStatus('idle', '');
+      clearPendingRealtime();
+      if (batch.length) persistSnapshot();
+      else clearSnapshot();
+      reapplyFiltersAndSearch();
+    }
+
+    function buildRenderedSignature(posts) {
+      return (Array.isArray(posts) ? posts : []).map((post) => {
+        const id = String(post && (post.uuid || post.id || post.legacyId || post.legacy_id) || '');
+        const status = String(post && (post.status || post.estado) || '');
+        const updated = String(post && (post.updated_at || post.updatedAt || post.bumped_at || post.bumpedAt || '') || '');
+        return [id, status, updated].join(':');
+      }).join('|');
     }
 
     function clearPendingRealtime() {
@@ -588,7 +634,7 @@
         clearSnapshot();
         return false;
       }
-      const posts = snapshot && Array.isArray(snapshot.posts) ? snapshot.posts.filter(Boolean) : [];
+      const posts = snapshot && Array.isArray(snapshot.posts) ? snapshot.posts.filter(Boolean).filter(isRenderableFeedPost) : [];
       if (!posts.length) return false;
 
       state.cursor = snapshot.cursor ? String(snapshot.cursor) : null;
@@ -645,18 +691,18 @@
           ...(Array.isArray(userRaw) ? userRaw.map((p) => ({ ...(p || {}), _kcUserPost: true })) : []),
           ...dbPosts
         ];
-        const normalized = rawPosts.map(normalizePost).filter(Boolean);
-        const fresh = [];
+        const normalized = rawPosts.map(normalizePost).filter(Boolean).filter(isRenderableFeedPost);
+        const nextMeta = {
+          nextCursor: response && response.nextCursor ? String(response.nextCursor) : null,
+          hasMore: !!(response && response.hasMore === true),
+        };
 
-        normalized.forEach((post, idx) => {
-          if (hasSeenIdentity(state, post, rawPosts[idx] || post, idx)) return;
-          fresh.push({ post, raw: rawPosts[idx] || post });
-        });
-
-        if (fresh.length) {
-          fresh.forEach((entry) => state.pendingRealtimePosts.push(entry));
-          realtimeUI.update(state.pendingRealtimePosts.length);
+        if (buildRenderedSignature(normalized) !== buildRenderedSignature(state.renderedPosts)) {
+          replaceRenderedPosts(normalized, nextMeta);
         } else {
+          state.nextCursor = nextMeta.nextCursor;
+          state.hasMore = nextMeta.hasMore;
+          state.done = !state.hasMore;
           persistSnapshot();
         }
       } catch (_) { }
@@ -689,6 +735,24 @@
       realtimeUI.update(state.pendingRealtimePosts.length);
     }
 
+    function scheduleFreshnessRefresh(reason) {
+      if (state.destroyed) return;
+      if (state.freshnessTimer) clearTimeout(state.freshnessTimer);
+      state.freshnessTimer = window.setTimeout(function () {
+        state.freshnessTimer = null;
+        if (state.destroyed || !api || typeof api.refresh !== 'function') return;
+        api.refresh({ requestParams: state.requestParams, reason: reason || 'freshness' });
+      }, 120);
+    }
+
+    function handlePostChange(change) {
+      if (!change || state.destroyed) return;
+      const changeModule = String(change.module || '').trim().toLowerCase();
+      if (moduleKeys.length && changeModule && moduleKeys.indexOf(changeModule) === -1) return;
+      if (change.type === 'created') return;
+      scheduleFreshnessRefresh(change.type || 'post_change');
+    }
+
     function startRealtime() {
       if (!useRealtime || state.destroyed) return;
       if (!window.KCRealtime || typeof window.KCRealtime.subscribeNewPosts !== 'function') return;
@@ -699,6 +763,13 @@
           onPost: handleRealtimePost,
           onError: function (err) { warn('[KCControllers] Realtime do feed falhou.', err); },
         });
+        if (typeof window.KCRealtime.subscribePostChanges === 'function') {
+          state.postChangesSub = window.KCRealtime.subscribePostChanges({
+            filter: moduleKeys.length ? { module: moduleKeys } : null,
+            onChange: handlePostChange,
+            onError: function (err) { warn('[KCControllers] Realtime de mudancas falhou.', err); },
+          });
+        }
       } catch (e) {
         warn('[KCControllers] Não foi possível iniciar Realtime do feed.', e);
       }
@@ -742,7 +813,7 @@
           ...(Array.isArray(dbPosts) ? dbPosts : [])
         ];
 
-        const normalized = rawPosts.map(normalizePost);
+        const normalized = rawPosts.map(normalizePost).map((post) => isRenderableFeedPost(post) ? post : null);
         const fresh = [];
         normalized.forEach((post, idx) => {
           const raw = rawPosts[idx];
@@ -806,6 +877,13 @@
         if (typeof kcInitVoteStates === 'function') kcInitVoteStates();
       } catch (_) { }
     };
+    const onFocus = () => {
+      if (state.destroyed) return;
+      const age = Date.now() - (state.lastSnapshotAt || 0);
+      if (age < FEED_FOCUS_REVALIDATE_MS) return;
+      if (state.revalidateTimer) clearTimeout(state.revalidateTimer);
+      state.revalidateTimer = window.setTimeout(revalidateSnapshot, 80);
+    };
     let api = null;
 
     function pauseForBfcache() {
@@ -818,7 +896,13 @@
           state.realtimeSub.unsubscribe();
         }
       } catch (_) { }
+      try {
+        if (state.postChangesSub && typeof state.postChangesSub.unsubscribe === 'function') {
+          state.postChangesSub.unsubscribe();
+        }
+      } catch (_) { }
       state.realtimeSub = null;
+      state.postChangesSub = null;
     }
 
     function destroy() {
@@ -828,16 +912,29 @@
         clearTimeout(state.revalidateTimer);
         state.revalidateTimer = null;
       }
+      if (state.freshnessTimer) {
+        clearTimeout(state.freshnessTimer);
+        state.freshnessTimer = null;
+      }
 
       try { pagerUI.loadMoreBtn.removeEventListener('click', onLoadMoreClick); } catch (_) { }
       try { pagerUI.retryBtn.removeEventListener('click', onRetryClick); } catch (_) { }
       try { realtimeUI.btn.removeEventListener('click', onRealtimeClick); } catch (_) { }
       try { window.removeEventListener('pagehide', onPageHide); } catch (_) { }
       try { window.removeEventListener('pageshow', onPageShow); } catch (_) { }
+      try { window.removeEventListener('focus', onFocus); } catch (_) { }
       try {
         if (state.realtimeSub && typeof state.realtimeSub.unsubscribe === 'function') {
           state.realtimeSub.unsubscribe();
         }
+      } catch (_) { }
+      try {
+        if (state.postChangesSub && typeof state.postChangesSub.unsubscribe === 'function') {
+          state.postChangesSub.unsubscribe();
+        }
+      } catch (_) { }
+      try {
+        if (typeof state.freshnessUnsub === 'function') state.freshnessUnsub();
       } catch (_) { }
       try {
         if (state.observer) {
@@ -847,6 +944,8 @@
       } catch (_) { }
 
       state.realtimeSub = null;
+      state.postChangesSub = null;
+      state.freshnessUnsub = null;
       clearPendingRealtime();
 
       try { pagerUI.wrap.remove(); } catch (_) { }
@@ -860,6 +959,10 @@
     realtimeUI.btn.addEventListener('click', onRealtimeClick);
     window.addEventListener('pagehide', onPageHide);
     window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('focus', onFocus);
+    if (window.KCPostFreshness && typeof window.KCPostFreshness.subscribe === 'function') {
+      state.freshnessUnsub = window.KCPostFreshness.subscribe(handlePostChange);
+    }
 
     // Initialize pull-to-refresh
     if (typeof window.KCPullToRefresh !== 'undefined') {

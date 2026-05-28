@@ -84,7 +84,8 @@ describe('kc-feed.controller — source contracts', () => {
 
   test('FEED_CACHE_MAX_AGE_MS é definido (10 min em ms)', () => {
     expect(source).toMatch(/FEED_CACHE_MAX_AGE_MS\s*=/);
-    expect(source).toContain('1000 * 60 * 10');
+    expect(source).toContain('1000 * 60 * 2');
+    expect(source).toContain('FEED_FOCUS_REVALIDATE_MS');
   });
 
   test('UUID_RE regex está presente para validação de IDs', () => {
@@ -134,6 +135,10 @@ describe('kc-feed.controller — source contracts', () => {
   test('padrão anti-duplicação usa Set (seenIds)', () => {
     expect(source).toContain('seenIds');
     expect(source).toMatch(/new\s+Set\s*\(\s*\)/);
+    expect(source).toContain('replaceRenderedPosts');
+    expect(source).toContain('buildRenderedSignature');
+    expect(source).toContain('KCPostFreshness.subscribe');
+    expect(source).toContain('subscribePostChanges');
   });
 });
 

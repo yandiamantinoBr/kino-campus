@@ -768,6 +768,18 @@
         post.status = status;
         post.updated_at = new Date().toISOString();
       }
+      try {
+        if (window.KCPostFreshness && typeof window.KCPostFreshness.emit === 'function') {
+          window.KCPostFreshness.emit({
+            type: (status === 'hidden' || status === 'deleted' || status === 'pending') ? 'soft_deleted' : 'status_changed',
+            source: 'admin-moderation',
+            postId,
+            module: post && post.module,
+            status,
+            updated_at: post && post.updated_at,
+          });
+        }
+      } catch (_) { }
 
       state.sessionActions.unshift({ postId, action: status, timestamp: new Date().toISOString() });
       if (state.sessionActions.length > 30) state.sessionActions.pop();

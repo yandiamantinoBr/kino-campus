@@ -278,8 +278,10 @@ describe('local.posts-write.adapter.js - updatePost e deletePost', () => {
 
     const result = await postsWrite().deletePost('draft-1', buildDeps({ clearSavedPostState }));
 
-    expect(result).toEqual({ ok: true });
-    expect(JSON.parse(global.localStorage.getItem('kc_user_posts') || '[]')).toEqual([]);
+    expect(result).toEqual(expect.objectContaining({ ok: true, status: 'deleted', softDeleted: true }));
+    expect(JSON.parse(global.localStorage.getItem('kc_user_posts') || '[]')).toEqual([
+      expect.objectContaining({ id: 'draft-1', status: 'deleted' }),
+    ]);
     expect(clearSavedPostState).toHaveBeenCalledWith('draft-1');
   });
 

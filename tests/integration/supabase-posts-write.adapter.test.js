@@ -442,6 +442,15 @@ describe('supabase.posts-write.adapter.js — deletePost', () => {
   test('retorna { ok: true } em caso de sucesso', () => {
     expect(source).toContain('return { ok: true };');
   });
+
+  test('deletePost agora retorna soft delete antes do caminho legado de hard delete', () => {
+    const softIndex = source.indexOf('softDeleted: true');
+    const mediaIndex = source.indexOf("from('post_media').select('id, url')");
+    expect(softIndex).toBeGreaterThan(-1);
+    expect(mediaIndex).toBeGreaterThan(-1);
+    expect(softIndex).toBeLessThan(mediaIndex);
+    expect(source).toContain("'post_soft_deleted'");
+  });
 });
 
 describe('supabase.posts-write.adapter.js — reportPost', () => {

@@ -77,6 +77,12 @@
   }
 
   function clearPostSessionCaches() {
+    if (window.KCPostFreshness && typeof window.KCPostFreshness.clearContentCaches === 'function') {
+      try {
+        window.KCPostFreshness.clearContentCaches({ scopes: ['feeds', 'product-detail', 'my-posts', 'profile-posts', 'profile'] });
+        return;
+      } catch (_) { }
+    }
     var store = window.KCSessionStore;
     if (store && typeof store.clearPrefix === 'function') {
       try { store.clearPrefix('feeds', ''); } catch (_) { }

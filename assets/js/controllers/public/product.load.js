@@ -44,6 +44,8 @@
   var _pendingPostLoads = {};
   var _commentsLoadedForId = '';
   var _trackedViewIds = {};
+  var _freshnessUnsub = null;
+  var _freshnessTimer = null;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -197,6 +199,11 @@
     return (window.KCPostModel && typeof window.KCPostModel.from === 'function')
       ? window.KCPostModel.from(raw, { pageModule: (raw && raw.modulo) || '', view: 'product' })
       : ((window.KCAPI && typeof window.KCAPI.normalizePost === 'function') ? window.KCAPI.normalizePost(raw) : raw);
+  }
+
+  function isRenderableProductPost(post) {
+    var status = String(post && (post.status || post.estado) || 'published').trim().toLowerCase();
+    return !status || status === 'published' || status === 'closed';
   }
 
   function applyCurrentPostUuid(post, raw) {
@@ -585,8 +592,12 @@
     if (text) text.setAttribute('data-post-id', id);
 
     cached = getCachedProductDetail(id);
+    if (cached && cached.post && !isRenderableProductPost(cached.post)) {
+      invalidateProductDetailCache(cached.post || id);
+      cached = null;
+    }
     viewerPromise = refreshViewerState().catch(function () {});
-    fetchPromise = (!cached || !cached.isFresh) ? fetchRenderablePost(id).catch(function () { return null; }) : Promise.resolve(null);
+    fetchPromise = fetchRenderablePost(id).catch(function () { return { error: true }; });
 
     if (cached && cached.post) {
       applyCurrentPostUuid(cached.post, cached.raw);
@@ -602,14 +613,23 @@
       renderPost(_deps.getPost());
     }
 
-    if (cached && cached.isFresh) return;
-
     fetched = await fetchPromise;
+    if (fetched && fetched.error) {
+      if (renderedCached) return;
+      R3 = window._KCProduct.render;
+      if (R3) R3.showNotFound();
+      return;
+    }
     if (!fetched || !fetched.post) {
-      if (!renderedCached) {
-        R3 = window._KCProduct.render;
-        if (R3) R3.showNotFound();
-      }
+      invalidateProductDetailCache(id);
+      R3 = window._KCProduct.render;
+      if (R3) R3.showNotFound();
+      return;
+    }
+    if (!isRenderableProductPost(fetched.post)) {
+      invalidateProductDetailCache(fetched.post || id);
+      R3 = window._KCProduct.render;
+      if (R3) R3.showNotFound();
       return;
     }
 
@@ -630,6 +650,32 @@
 
   function init(deps) {
     _deps = deps;
+    if (!_freshnessUnsub && window.KCPostFreshness && typeof window.KCPostFreshness.subscribe === 'function') {
+      _freshnessUnsub = window.KCPostFreshness.subscribe(function (change) {
+        if (!_deps || !change) return;
+        var current = _deps.getPost ? _deps.getPost() : null;
+        var currentId = String((current && (current.uuid || current.id || current.legacyId || current.legacy_id)) || window.kcCurrentPostUuid || window.kcCurrentPostId || '').trim();
+        var changedIds = [
+          change.postId,
+          change.uuid,
+          change.legacyId,
+        ].map(function (value) { return String(value || '').trim(); }).filter(Boolean);
+        if (!currentId || changedIds.indexOf(currentId) === -1) return;
+
+        invalidateProductDetailCache(current || currentId);
+        if (change.type === 'soft_deleted' || change.type === 'purged' || change.status === 'deleted' || change.status === 'hidden' || change.status === 'pending') {
+          var R = window._KCProduct.render;
+          if (R) R.showNotFound();
+          return;
+        }
+
+        if (_freshnessTimer) clearTimeout(_freshnessTimer);
+        _freshnessTimer = window.setTimeout(function () {
+          _freshnessTimer = null;
+          loadPost();
+        }, 120);
+      });
+    }
   }
 
   // ── Namespace público ─────────────────────────────────────────────────────────

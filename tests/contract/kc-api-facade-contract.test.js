@@ -266,15 +266,16 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
   test('mantem delegacao para posts-write via getPostsWriteModule e buildPostsWriteDeps', () => {
     expect(source).toContain('function getPostsWriteModule()');
     expect(source).toContain('function buildPostsWriteDeps()');
-    expect(source).toContain('return postsWriteModule.createPost(body, buildPostsWriteDeps());');
-    expect(source).toContain('return postsWriteModule.updatePost(postId, payload, buildPostsWriteDeps());');
-    expect(source).toContain('return postsWriteModule.deletePost(postId, buildPostsWriteDeps());');
+    expect(source).toContain('postsWriteModule.createPost(body, buildPostsWriteDeps())');
+    expect(source).toContain('postsWriteModule.updatePost(postId, payload, buildPostsWriteDeps())');
+    expect(source).toContain('postsWriteModule.deletePost(postId, buildPostsWriteDeps())');
     expect(source).toContain('return postsWriteModule.reportPost(postId, payload, buildPostsWriteDeps());');
-    expect(source).toContain('return postsWriteModule.togglePostStatus(postId, buildPostsWriteDeps());');
-    expect(source).toContain('return postsWriteModule.renewPost(postId, buildPostsWriteDeps());');
-    expect(source).toContain('return postsWriteModule.bumpPost(postId, buildPostsWriteDeps());');
-    expect(source).toContain('return postsWriteModule.closePost(postId, payload, buildPostsWriteDeps());');
-    expect(source).toContain('return postsWriteModule.reactivatePost(postId, buildPostsWriteDeps());');
+    expect(source).toContain('postsWriteModule.togglePostStatus(postId, buildPostsWriteDeps())');
+    expect(source).toContain('postsWriteModule.renewPost(postId, buildPostsWriteDeps())');
+    expect(source).toContain('postsWriteModule.bumpPost(postId, buildPostsWriteDeps())');
+    expect(source).toContain('postsWriteModule.closePost(postId, payload, buildPostsWriteDeps())');
+    expect(source).toContain('postsWriteModule.reactivatePost(postId, buildPostsWriteDeps())');
+    expect(source).toContain('function emitPostMutation');
   });
 
   test('mantem delegacao para posts-feed via getPostsFeedModule e buildPostsFeedDeps', () => {

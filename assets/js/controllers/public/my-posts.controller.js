@@ -415,8 +415,36 @@
   }
 
   function handleRenew(uuid) {
+    var api = window.KCAPI;
+    if (!api || typeof api.renewPost !== 'function') { showToastMsg('Servico nao disponivel.', 'error'); return; }
+
+    var postIdx = state.posts.findIndex(function (p) { return (p.uuid || p.id) === uuid; });
+    if (postIdx < 0) return;
+
+    showToastMsg('Renovando publicacao...', 'info', 1500);
+
+    api.renewPost(uuid).then(function (res) {
+      var data = res || {};
+      if (data && data.ok === false) {
+        showToastMsg((data.error && data.error.message) || data.message || 'Nao foi possivel renovar.', 'error');
+        return;
+      }
+      state.posts[postIdx] = Object.assign({}, state.posts[postIdx], {
+        status: 'published',
+        expires_at: (data && data.expires_at) || null,
+      });
+      showToastMsg((data && data.message) || 'Publicacao renovada com sucesso!', 'info', 2500);
+      renderTabs();
+      renderPostsList(state.activeModule);
+    }).catch(function () {
+      showToastMsg('Nao foi possivel renovar a publicacao.', 'error');
+    });
+  }
+
+  function handleRenewLegacy(uuid) {
     var kcClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
-      ? window.KCSupabase.getClient() : null;
+      ? window.KCSupabase.getClient()
+      : null;
     if (!kcClient) { showToastMsg('Serviço não disponível.', 'error'); return; }
 
     var postIdx = state.posts.findIndex(function (p) { return (p.uuid || p.id) === uuid; });
@@ -625,6 +653,11 @@
         if (kcClient) {
           kcClient.from('posts').update({ status: 'deleted' }).eq('id', uuid).then(function (r) {
             if (!r.error) {
+              try {
+                if (window.KCPostFreshness && typeof window.KCPostFreshness.emit === 'function') {
+                  window.KCPostFreshness.emit({ type: 'soft_deleted', source: 'my-posts', postId: uuid, status: 'deleted' });
+                }
+              } catch (_) { }
               state.posts.splice(postIdx, 1);
               showToastMsg('Publicação excluída.', 'info', 2000);
               renderTabs();

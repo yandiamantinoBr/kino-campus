@@ -926,7 +926,7 @@
     if (!postUuid) return kcApiError('Post inválido para exclusão.');
 
     try {
-      const own = await client.from('posts').select('id, author_id').eq('id', postUuid).maybeSingle();
+      const own = await client.from('posts').select('id, author_id, legacy_id, module, status, metadata').eq('id', postUuid).maybeSingle();
       if (own && own.error) {
         console.error('[KCAPI][Supabase] deletePost ownership check erro:', own.error);
         return kcApiError('Não foi possível validar permissão de exclusão.');
@@ -934,6 +934,44 @@
       if (!own || !own.data) return kcApiError('Publicação não encontrada.');
       const permission = await canManagePostRow(client, user, own.data);
       if (!permission.ok) return kcApiError('Você não pode excluir este post.');
+
+      const currentMetadata = (own.data.metadata && typeof own.data.metadata === 'object' && !Array.isArray(own.data.metadata))
+        ? own.data.metadata
+        : {};
+      const deletedAt = new Date().toISOString();
+      const softDeletedMetadata = Object.assign({}, currentMetadata, {
+        deleted_at: deletedAt,
+        deleted_by: user.id,
+        delete_mode: 'soft',
+      });
+      const upd = await client.from('posts')
+        .update({
+          status: 'deleted',
+          metadata: softDeletedMetadata,
+          updated_at: deletedAt,
+        })
+        .eq('id', postUuid)
+        .select('id, legacy_id, module, status, updated_at')
+        .maybeSingle();
+      if (upd && upd.error) {
+        console.error('[KCAPI][Supabase] deletePost soft delete erro:', upd.error);
+        return kcApiError('Nao foi possivel remover a publicacao da comunidade.');
+      }
+      await recordPostAuditEvent(client, postUuid, 'post_soft_deleted', {
+        source: permission.isAdminOverride ? 'admin_delete' : 'owner_delete',
+      });
+      return {
+        ok: true,
+        status: 'deleted',
+        softDeleted: true,
+        data: (upd && upd.data) ? upd.data : {
+          id: postUuid,
+          legacy_id: own.data.legacy_id || null,
+          module: own.data.module || null,
+          status: 'deleted',
+          updated_at: deletedAt,
+        },
+      };
 
       const media = await client.from('post_media').select('id, url').eq('post_id', postUuid);
       if (media && media.error) {

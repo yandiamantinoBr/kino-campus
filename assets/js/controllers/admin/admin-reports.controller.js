@@ -641,6 +641,24 @@
       return { ok: false, error: verification.error || { message: 'Persistência não confirmada.' } };
     }
 
+    try {
+      const statusByAction = {
+        hidePost: 'hidden',
+        closePost: 'closed',
+        restorePost: 'published',
+        deletePost: 'deleted',
+      };
+      const nextStatus = statusByAction[action] || '';
+      if (nextStatus && window.KCPostFreshness && typeof window.KCPostFreshness.emit === 'function') {
+        window.KCPostFreshness.emit({
+          type: (nextStatus === 'hidden' || nextStatus === 'deleted') ? 'soft_deleted' : 'status_changed',
+          source: 'admin-reports',
+          postId,
+          status: nextStatus,
+        });
+      }
+    } catch (_) { }
+
     await render();
     showToastSafe('Ação concluída com sucesso.', 'success', 1800);
     return result;

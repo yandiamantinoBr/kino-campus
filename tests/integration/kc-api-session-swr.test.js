@@ -129,4 +129,42 @@ describe('KCAPI product session SWR', () => {
     expect(refreshed[0].likes).toBe(1);
     expect(supabaseDriver.getComments).toHaveBeenCalledTimes(2);
   });
+
+  test('KCSessionStore expose getStore e clearScopes compativeis', () => {
+    expect(window.KCSessionStore).toBeTruthy();
+    expect(window.KCSessionStore.getStore()).toBe(window.KCSessionStore);
+
+    window.KCSessionStore.set('feeds', 'a', { ok: true });
+    window.KCSessionStore.set('product-detail', 'b', { ok: true });
+    expect(window.KCSessionStore.get('feeds', 'a').value.ok).toBe(true);
+
+    const removed = window.KCSessionStore.clearScopes(['feeds', 'product-detail']);
+    expect(removed).toBeGreaterThanOrEqual(2);
+    expect(window.KCSessionStore.get('feeds', 'a')).toBe(null);
+    expect(window.KCSessionStore.get('product-detail', 'b')).toBe(null);
+  });
+
+  test('KCPostFreshness sanitiza payload e limpa caches de conteudo', () => {
+    window.KCSessionStore.set('feeds', 'snapshot', { posts: [{ id: 'p1' }] });
+    window.KCSessionStore.set('product-detail', 'supabase:p1', { post: { id: 'p1' } });
+
+    const received = [];
+    const off = window.KCPostFreshness.subscribe((change) => received.push(change));
+    const normalized = window.KCPostFreshness.emit({
+      type: 'soft_deleted',
+      postId: 'p1',
+      module: 'eventos',
+      status: 'deleted',
+      title: 'Titulo sensivel',
+      email: 'aluno@ufg.br',
+    });
+    off();
+
+    expect(normalized.type).toBe('soft_deleted');
+    expect(normalized.title).toBeUndefined();
+    expect(normalized.email).toBeUndefined();
+    expect(received).toHaveLength(1);
+    expect(window.KCSessionStore.get('feeds', 'snapshot')).toBe(null);
+    expect(window.KCSessionStore.get('product-detail', 'supabase:p1')).toBe(null);
+  });
 });

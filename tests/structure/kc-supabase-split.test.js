@@ -167,6 +167,7 @@ describe('kc-supabase.client.js — facade pública preservada', () => {
     'signOut',
     'onAuthStateChange',
     'subscribeNewPosts',
+    'subscribePostChanges',
   ];
 
   PUBLIC_METHODS.forEach(fn => {
