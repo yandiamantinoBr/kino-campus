@@ -167,14 +167,27 @@
     ].join('');
   }
 
-  /* ── Data do evento de um post ────────────────────────── */
-  function getEventDate(post) {
-    // Usa data_evento da metadata (campo do formulário) ou data/hora, fallback para created_at
+  /* ── Datas do evento (início e término) ───────────────── */
+  function getEventStartDate(post) {
+    // Data de início. SEM fallback para created_at: um evento sem data não deve ser
+    // posicionado no dia da publicação (some do calendário, em vez de aparecer errado).
     var m = post.metadata || {};
     var d = m.data_evento || m.data || null;
     if (d && /^\d{4}-\d{2}-\d{2}/.test(String(d))) return String(d).slice(0, 10);
-    if (post.created_at) return String(post.created_at).slice(0, 10);
     return null;
+  }
+
+  function getEventEndDate(post) {
+    // Data de término (eventos de vários dias). Default = início (evento de um dia).
+    var start = getEventStartDate(post);
+    var m = post.metadata || {};
+    var d = m.data_fim_evento || m.data_fim || null;
+    if (d && /^\d{4}-\d{2}-\d{2}/.test(String(d))) {
+      var end = String(d).slice(0, 10);
+      if (start && end < start) return start; // guarda contra término anterior ao início
+      return end;
+    }
+    return start;
   }
 
   function getEventCategory(post) {
@@ -239,7 +252,13 @@
 
   /* ── Filtros de data ──────────────────────────────────── */
   function eventsForDate(dateStr) {
-    return calState.events.filter(function (p) { return getEventDate(p) === dateStr; });
+    // Evento aparece em todos os dias do intervalo [início, término] (multi-dia).
+    return calState.events.filter(function (p) {
+      var start = getEventStartDate(p);
+      if (!start) return false;
+      var end = getEventEndDate(p) || start;
+      return start <= dateStr && dateStr <= end;
+    });
   }
 
   function weekDays(year, month, day) {

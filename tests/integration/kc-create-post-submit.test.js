@@ -177,6 +177,12 @@ describe('kc-create-post.submit.js — campos ativos e payload', () => {
   test('normaliza visibilidade via kcNormalizePostVisibilityValue()', () => {
     expect(source).toContain('kcNormalizePostVisibilityValue(');
   });
+
+  test('eventos: persiste data_fim_evento e valida término >= início', () => {
+    expect(source).toContain("data_fim_evento: (kcCreateState.moduleKey === 'eventos')");
+    expect(source).toContain("kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'data_fim', '')");
+    expect(source).toContain('A data de término não pode ser anterior à data de início.');
+  });
 });
 
 // ─── 6. Resolvers de domínio ─────────────────────────────────────────────────

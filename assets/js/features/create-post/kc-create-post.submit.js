@@ -148,6 +148,7 @@
       const activeEntrega = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'entrega', '');
       const activeCondicao = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'condicao', '');
       const activeDataEvento = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'data', '');
+      const activeDataFimEvento = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'data_fim', '');
       const activeHoraEvento = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'hora', '');
       const activeLink = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'link', '');
       const activeModalidadeTrabalho = kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'modalidadeTrabalho', '');
@@ -156,6 +157,12 @@
       const activeLinkAsCta = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'link_as_cta', false);
       const activeGratuito = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'gratuito', false);
       const activeSustentavel = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'sustentavel', false);
+
+      // Eventos: a data de término não pode ser anterior à data de início.
+      if (kcCreateState.moduleKey === 'eventos' && activeDataEvento && activeDataFimEvento && activeDataFimEvento < activeDataEvento) {
+        showToast('A data de término não pode ser anterior à data de início.', 'warn', 2800);
+        return;
+      }
 
       const categoryGroupId = schema.categoryGroupId;
       const rawCatKey = categoryGroupId ? kcCreateState.selections[categoryGroupId] : '';
@@ -485,6 +492,7 @@
           entrega: activeEntrega,
           // eventos: data, hora, link e gratuito
           data_evento: (kcCreateState.moduleKey === 'eventos') ? activeDataEvento : '',
+          data_fim_evento: (kcCreateState.moduleKey === 'eventos') ? activeDataFimEvento : '',
           hora_evento: (kcCreateState.moduleKey === 'eventos') ? activeHoraEvento : '',
           link: (kcCreateState.moduleKey === 'eventos' || kcCreateState.moduleKey === 'oportunidades') ? activeLink : '',
           link_as_cta: activeLinkAsCta,

@@ -130,7 +130,8 @@
 
     if (moduleKey === 'eventos') {
       fields.push({ type: 'text', name: 'localizacao', label: 'Local', placeholder: 'Ex: Centro de Eventos', required: true });
-      fields.push({ type: 'date', name: 'data', label: 'Data (opcional)', required: false });
+      fields.push({ type: 'date', name: 'data', label: 'Data de início do evento', required: false, hint: 'Eventos com data aparecem na data certa do calendário. Deixe em branco só se a data ainda não estiver definida.' });
+      fields.push({ type: 'date', name: 'data_fim', label: 'Data de término (opcional)', required: false, hint: 'Preencha para eventos de vários dias (ex.: exposições, cursos, períodos de inscrição).' });
       fields.push({ type: 'time', name: 'hora', label: 'Horário (opcional)', required: false });
       fields.push({ type: 'url', name: 'link', label: 'Link/Inscrição (opcional)', placeholder: 'https://…', required: false });
       fields.push({ type: 'checkbox', name: 'link_as_cta', label: 'Usar link como botão principal do anúncio', required: false });

@@ -541,6 +541,7 @@ function kcOpenEditPostModal(post, callback) {
     horario: md.horario || '',
     vagas: md.vagas || '',
     data: md.data_evento || md.data || '',
+    data_fim: md.data_fim_evento || md.data_fim || '',
     hora: md.hora_evento || md.hora || '',
     link: md.link || '',
     link_as_cta: !!(md.link_as_cta),
