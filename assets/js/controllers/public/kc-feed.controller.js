@@ -697,6 +697,14 @@
           hasMore: !!(response && response.hasMore === true),
         };
 
+        // Revalidação em segundo plano que volta vazia (blip de rede ou erro
+        // transitório resolvido para []) NÃO deve apagar o feed já renderizado —
+        // isso causava o feed "sumir / não carregar". Um feed genuinamente vazio
+        // é confirmado por refresh explícito (ex.: pull-to-refresh) ou reload.
+        if (!normalized.length && state.renderedPosts.length) {
+          return;
+        }
+
         if (buildRenderedSignature(normalized) !== buildRenderedSignature(state.renderedPosts)) {
           replaceRenderedPosts(normalized, nextMeta);
         } else {
