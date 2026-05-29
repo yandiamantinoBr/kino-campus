@@ -1,0 +1,299 @@
+/* ============================================================================
+   KinoCampus — Visualizador de imagem em tela cheia (lightbox) — v8.6.1
+   Página de produto (_product.html). Recurso isolado em arquivo próprio para
+   não invalidar o cache imutável de product.css ao ser lançado.
+
+   - Overlay fixo acima de toda a UI (z-index > 10030 usado no app)
+   - Imagem com transform (zoom/pan) controlado por product.lightbox.js
+   - Cores fixas (independente do tema) — convenção de visualizadores escuros
+   - iOS-safe: sem backdrop-filter; respeita safe-area-insets
+   ========================================================================== */
+
+/* ── Afford ância no main image da galeria ─────────────────────────────────── */
+.kc-gallery-main.kc-zoomable {
+  cursor: zoom-in;
+}
+
+.kc-gallery-main.kc-zoomable #mainImage {
+  cursor: zoom-in;
+}
+
+.kc-zoom-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: zoom-in;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.kc-gallery-main.kc-zoomable .kc-zoom-hint {
+  display: inline-flex;
+}
+
+.kc-zoom-hint:hover,
+.kc-zoom-hint:focus-visible {
+  background: rgba(255, 107, 0, 0.92);
+  transform: scale(1.06);
+  outline: none;
+}
+
+/* ── Lock de scroll do body enquanto o overlay está aberto ─────────────────── */
+body.kc-lightbox-lock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ── Overlay ───────────────────────────────────────────────────────────────── */
+.kc-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 16, 0.94);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kc-lightbox[hidden] {
+  display: none;
+}
+
+.kc-lightbox.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.kc-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  cursor: zoom-out;
+}
+
+/* ── Palco da imagem ───────────────────────────────────────────────────────── */
+.kc-lightbox__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  cursor: zoom-in;
+}
+
+.kc-lightbox__stage.is-zoomed {
+  cursor: grab;
+}
+
+.kc-lightbox__stage.is-panning {
+  cursor: grabbing;
+}
+
+.kc-lightbox__img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: center center;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  transition: transform 0.2s ease;
+}
+
+.kc-lightbox__img.is-gesturing {
+  transition: none;
+}
+
+.kc-lightbox__img.is-switching {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+/* ── Barra superior (contador + ações) ─────────────────────────────────────── */
+.kc-lightbox__toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-right, 0px) + 14px) 12px
+    calc(env(safe-area-inset-left, 0px) + 14px);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+.kc-lightbox__toolbar > * {
+  pointer-events: auto;
+}
+
+.kc-lightbox__counter {
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.kc-lightbox__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Botões ────────────────────────────────────────────────────────────────── */
+.kc-lightbox__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(20, 24, 33, 0.72);
+  color: #fff;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.kc-lightbox__btn:hover,
+.kc-lightbox__btn:focus-visible {
+  background: rgba(255, 107, 0, 0.92);
+  outline: none;
+}
+
+.kc-lightbox__btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55);
+}
+
+.kc-lightbox__btn:active {
+  transform: scale(0.94);
+}
+
+.kc-lightbox__btn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── Navegação lateral (prev/next) ─────────────────────────────────────────── */
+.kc-lightbox__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(20, 24, 33, 0.62);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.kc-lightbox__nav:hover,
+.kc-lightbox__nav:focus-visible {
+  background: rgba(255, 107, 0, 0.92);
+  outline: none;
+}
+
+.kc-lightbox__nav:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55);
+}
+
+.kc-lightbox__nav--prev {
+  left: calc(env(safe-area-inset-left, 0px) + 14px);
+}
+
+.kc-lightbox__nav--next {
+  right: calc(env(safe-area-inset-right, 0px) + 14px);
+}
+
+.kc-lightbox__nav[hidden] {
+  display: none;
+}
+
+.kc-lightbox__nav[disabled] {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── Responsivo ────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .kc-lightbox__nav {
+    width: 46px;
+    height: 46px;
+    font-size: 1.05rem;
+    top: auto;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    transform: none;
+  }
+
+  .kc-lightbox__nav--prev {
+    left: calc(env(safe-area-inset-left, 0px) + 16px);
+  }
+
+  .kc-lightbox__nav--next {
+    right: calc(env(safe-area-inset-right, 0px) + 16px);
+  }
+
+  .kc-lightbox__btn {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* ── Acessibilidade: movimento reduzido ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .kc-lightbox,
+  .kc-lightbox__img,
+  .kc-lightbox__btn,
+  .kc-lightbox__nav,
+  .kc-zoom-hint {
+    transition: none !important;
+  }
+}
