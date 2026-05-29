@@ -245,35 +245,46 @@ describe('kc-create-post.fields.js — módulo moradia', () => {
 
 // ─── 8. Módulo eventos ───────────────────────────────────────────────────────
 describe('kc-create-post.fields.js — módulo eventos', () => {
+  // Slice delimitado exatamente ao bloco de eventos (robusto a mudanças de tamanho,
+  // ex.: adição de hints e do campo data_fim).
+  function eventosSlice() {
+    const start = source.indexOf("moduleKey === 'eventos'");
+    const end = source.indexOf("moduleKey === 'achados-perdidos'", start);
+    return source.slice(start, end === -1 ? start + 2000 : end);
+  }
+
   test("cobre o moduleKey 'eventos'", () => {
     expect(source).toContain("moduleKey === 'eventos'");
   });
 
   test('inclui campo localizacao, data e hora', () => {
-    const idx = source.indexOf("moduleKey === 'eventos'");
-    const slice = source.slice(idx, idx + 600);
+    const slice = eventosSlice();
     expect(slice).toContain("name: 'localizacao'");
     expect(slice).toContain("name: 'data'");
     expect(slice).toContain("name: 'hora'");
   });
 
+  test('inclui data de início e data de término (eventos multi-dia)', () => {
+    const slice = eventosSlice();
+    expect(slice).toContain("name: 'data'");
+    expect(slice).toContain("name: 'data_fim'");
+    expect(slice).toContain("type: 'date'");
+  });
+
   test('inclui campo link e link_as_cta', () => {
-    const idx = source.indexOf("moduleKey === 'eventos'");
-    const slice = source.slice(idx, idx + 800);
+    const slice = eventosSlice();
     expect(slice).toContain("name: 'link'");
     expect(slice).toContain("name: 'link_as_cta'");
   });
 
   test('inclui checkbox gratuito', () => {
-    const idx = source.indexOf("moduleKey === 'eventos'");
-    const slice = source.slice(idx, idx + 900);
+    const slice = eventosSlice();
     expect(slice).toContain("name: 'gratuito'");
     expect(slice).toContain("type: 'checkbox'");
   });
 
   test('adiciona campo preco apenas se não gratuito', () => {
-    const idx = source.indexOf("moduleKey === 'eventos'");
-    const slice = source.slice(idx, idx + 1100);
+    const slice = eventosSlice();
     expect(slice).toContain('values.gratuito');
     expect(slice).toContain("name: 'preco'");
   });

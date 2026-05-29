@@ -132,6 +132,26 @@ describe('kc-events-calendar — contrato estático (fonte)', () => {
   test('detalhe do dia linka para product.html?id=', () => {
     expect(source).toContain('product.html?id=');
   });
+
+  test('suporta eventos de vários dias (início + término)', () => {
+    expect(source).toContain('getEventStartDate');
+    expect(source).toContain('getEventEndDate');
+    expect(source).toContain('data_fim_evento');
+  });
+
+  test('eventsForDate cobre o intervalo [início, término]', () => {
+    expect(source).toContain('start <= dateStr && dateStr <= end');
+  });
+
+  test('não posiciona eventos sem data (getEventStartDate sem fallback para created_at)', () => {
+    const idx = source.indexOf('function getEventStartDate');
+    expect(idx).toBeGreaterThan(-1);
+    const slice = source.slice(idx, idx + 520);
+    // O comentário cita "created_at", mas não pode existir acesso real de fallback.
+    expect(slice).not.toContain('post.created_at');
+    expect(slice).not.toContain('source.created_at');
+    expect(slice).toContain('return null;');
+  });
 });
 
 // ── 2. Runtime (jsdom) ───────────────────────────────────────────────────────
@@ -196,6 +216,65 @@ describe('kc-events-calendar — runtime (jsdom)', () => {
     window.KCEventsCalendar.mount(el);
 
     expect(document.querySelectorAll('#kcCalModal').length).toBe(1);
+  });
+});
+
+// ── 2b. Runtime: eventos multi-dia (span) e exclusão de eventos sem data ──────
+
+describe('kc-events-calendar — runtime: eventos multi-dia', () => {
+  function fakeSupabase(events) {
+    const chain = {
+      select: function () { return chain; },
+      eq: function () { return chain; },
+      order: function () { return chain; },
+      limit: function () { return Promise.resolve({ data: events, error: null }); },
+    };
+    return { getClient: function () { return { from: function () { return chain; } }; } };
+  }
+
+  beforeEach(() => {
+    delete window.KCEventsCalendar;
+    delete window.KCSupabase;
+    delete window.KCSessionStore;
+    delete window.KCi18n;
+    delete window.KCOverlayLock;
+    document.body.innerHTML = '';
+    try { localStorage.clear(); } catch (_) { /* noop */ }
+  });
+
+  test('evento de vários dias ocupa todo o intervalo; evento sem data é ignorado', async () => {
+    // Datas no mês corrente (independente da data real de execução).
+    const now = new Date();
+    const day = function (n) {
+      return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(n).padStart(2, '0');
+    };
+    window.KCSupabase = fakeSupabase([
+      { id: 1, title: 'Exposição', category: 'culturais', metadata: { data_evento: day(10), data_fim_evento: day(12) }, created_at: day(1) },
+      { id: 2, title: 'Sem data', category: 'academicos', metadata: {}, created_at: day(5) },
+    ]);
+
+    loadModule();
+    const el = document.createElement('div');
+    el.setAttribute('data-kc-cal-mount', '');
+    document.body.appendChild(el);
+    window.KCEventsCalendar.mount(el);
+
+    // Deixa o fetch (Promise) resolver e re-renderizar o grid.
+    await new Promise((r) => setTimeout(r, 0));
+
+    const grid = document.querySelector('[data-kc-cal-grid]');
+    const hasEvents = function (n) {
+      const cell = grid.querySelector('[data-kc-cal-day="' + day(n) + '"]');
+      return !!cell && /kc-cal-day--has-events/.test(cell.className);
+    };
+
+    // Evento de 10 a 12 → marca 10, 11 e 12, mas não o 13.
+    expect(hasEvents(10)).toBe(true);
+    expect(hasEvents(11)).toBe(true);
+    expect(hasEvents(12)).toBe(true);
+    expect(hasEvents(13)).toBe(false);
+    // Evento sem data não é posicionado pelo created_at (dia 5 fica livre).
+    expect(hasEvents(5)).toBe(false);
   });
 });
 

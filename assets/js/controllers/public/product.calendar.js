@@ -177,6 +177,7 @@
 
     var meta = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
     var dataEvento = String(meta.data_evento || '').trim();
+    var dataFimEvento = String(meta.data_fim_evento || meta.data_fim || '').trim();
     var horaEvento = String(meta.hora_evento || '').trim();
     var localizacao = String(meta.localizacao || '').trim();
     var titulo = String(post.titulo || post.title || '').trim();
@@ -194,7 +195,22 @@
     var timeParts = horaEvento ? horaEvento.split(':') : null;
     var hasTime = timeParts && timeParts.length >= 2;
 
-    if (hasTime) {
+    var fimParts = dataFimEvento ? dataFimEvento.split('-') : null;
+    var isMultiDay = !!(fimParts && fimParts.length === 3 && dataFimEvento > dataEvento);
+
+    if (isMultiDay) {
+      // Evento de vários dias → all-day spanning. DTEND é exclusivo: soma 1 dia ao fim.
+      startStr = dateParts[0] + dateParts[1] + dateParts[2];
+      startIso = dateParts[0] + '-' + dateParts[1] + '-' + dateParts[2];
+      var endSpan = new Date(fimParts[0] + '-' + fimParts[1] + '-' + fimParts[2]);
+      endSpan.setDate(endSpan.getDate() + 1);
+      endStr = String(endSpan.getFullYear()) +
+        String(endSpan.getMonth() + 1).padStart(2, '0') +
+        String(endSpan.getDate()).padStart(2, '0');
+      endIso = String(endSpan.getFullYear()) + '-' +
+        String(endSpan.getMonth() + 1).padStart(2, '0') + '-' +
+        String(endSpan.getDate()).padStart(2, '0');
+    } else if (hasTime) {
       var hh = String(timeParts[0]).padStart(2, '0');
       var mm = String(timeParts[1]).padStart(2, '0');
       startStr = dateParts[0] + dateParts[1] + dateParts[2] + 'T' + hh + mm + '00';
