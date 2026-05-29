@@ -1,7 +1,10 @@
 /*
-  eventos.controller.js — Static contract tests (v11.26.2)
-  Verifica KCFeedFilters, date presets, categorias de evento,
-  KCSupabase.getClient() e dataset attrs.
+  eventos.controller.js — Static contract tests (v76.1)
+  Verifica KCFeedFilters, date presets, rail mobile (kcEventosSectionOverlay,
+  KCOverlayLock 'eventos-section-modal') e dataset attrs do feed.
+
+  NOTA: o calendário foi extraído para assets/js/features/kc-events-calendar.js;
+  seus contratos vivem agora em tests/integration/kc-events-calendar.test.js.
 */
 
 const fs = require('fs');
@@ -20,18 +23,6 @@ function buildMinimalFeedFilters() {
     updateSearchParams: jest.fn(),
     writePresetParam: jest.fn(),
     writeTextParam: jest.fn(),
-  };
-}
-
-function buildMinimalSupabase() {
-  const mockChain = {
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    order: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-  };
-  return {
-    getClient: jest.fn(() => ({ from: jest.fn(() => mockChain) })),
   };
 }
 
@@ -64,40 +55,12 @@ describe('eventos.controller — source contracts', () => {
     expect(source).toContain("'past'");
   });
 
-  test('categoria sustentabilidade presente', () => {
-    expect(source).toContain('sustentabilidade');
-  });
-
-  test('categoria academicos presente', () => {
-    expect(source).toContain('academicos');
-  });
-
-  test('categoria culturais presente', () => {
-    expect(source).toContain('culturais');
-  });
-
-  test('categoria esportivos presente', () => {
-    expect(source).toContain('esportivos');
-  });
-
-  test('categoria workshops presente', () => {
-    expect(source).toContain('workshops');
-  });
-
-  test('categoria festas presente', () => {
-    expect(source).toContain('festas');
-  });
-
   test('usa dataset attr data-kc-eventos-date-preset', () => {
     expect(source).toContain('data-kc-eventos-date-preset');
   });
 
   test('usa dataset attr data-kc-eventos-section', () => {
     expect(source).toContain('data-kc-eventos-section');
-  });
-
-  test('usa dataset attr data-kc-cal-grid', () => {
-    expect(source).toContain('data-kc-cal-grid');
   });
 
   test('usa dataset attr data-kc-event-date', () => {
@@ -108,31 +71,8 @@ describe('eventos.controller — source contracts', () => {
     expect(source).toContain('kcEventosSectionOverlay');
   });
 
-  test('usa KCSupabase.getClient()', () => {
-    expect(source).toContain('getClient()');
-  });
-
-  test('consulta tabela posts com module eventos', () => {
-    expect(source).toContain("'posts'");
-    expect(source).toContain("'eventos'");
-  });
-
-  test('define STORAGE_KEY para calendário', () => {
-    expect(source).toContain('STORAGE_KEY');
-    expect(source).toContain('kc_events_calendar_month');
-  });
-
-  test('define array de meses em pt-BR', () => {
-    expect(source).toContain('Janeiro');
-    expect(source).toContain('Dezembro');
-  });
-
-  test('usa KCOverlayLock.lock para scroll lock no modal calendário (iOS)', () => {
-    expect(source).toContain("KCOverlayLock.lock('eventos-cal-modal')");
-  });
-
-  test('usa KCOverlayLock.unlock ao fechar modal calendário (iOS)', () => {
-    expect(source).toContain("KCOverlayLock.unlock('eventos-cal-modal')");
+  test('injeta feed do módulo eventos', () => {
+    expect(source).toContain("module: 'eventos'");
   });
 
   test('usa KCOverlayLock.lock para scroll lock no modal de seção/filtros (iOS)', () => {
@@ -143,27 +83,11 @@ describe('eventos.controller — source contracts', () => {
     expect(source).toContain("KCOverlayLock.unlock('eventos-section-modal')");
   });
 
-  test('define SECTION_CACHE_KEY para cache SWR do calendário', () => {
-    expect(source).toContain('SECTION_CACHE_KEY');
-    expect(source).toContain("'eventos:calendar'");
-  });
-
-  test('define SECTION_CACHE_MAX_AGE_MS para TTL do cache', () => {
-    expect(source).toContain('SECTION_CACHE_MAX_AGE_MS');
-  });
-
-  test('usa getSessionStore para obter store de sessão', () => {
-    expect(source).toContain('getSessionStore');
-  });
-
-  test('restaura eventos do cache via restoreCachedEvents', () => {
-    expect(source).toContain('restoreCachedEvents');
-    expect(source).toContain('store.get(');
-  });
-
-  test('persiste eventos no cache via persistCachedEvents', () => {
-    expect(source).toContain('persistCachedEvents');
-    expect(source).toContain('store.set(');
+  test('NÃO contém mais a lógica do calendário (migrada para o módulo compartilhado)', () => {
+    // Guard-rail: garante que a extração foi efetiva e não há duplicação de fonte.
+    expect(source).not.toContain('kc_events_calendar_month');
+    expect(source).not.toContain("'eventos:calendar'");
+    expect(source).not.toContain('data-kc-cal-grid');
   });
 });
 
@@ -181,7 +105,6 @@ describe('eventos.controller — runtime: carregamento sem lançar', () => {
     document.body.innerHTML = '';
 
     window.KCFeedFilters = buildMinimalFeedFilters();
-    window.KCSupabase = buildMinimalSupabase();
   });
 
   test('não lança ao carregar com dependências mínimas', () => {

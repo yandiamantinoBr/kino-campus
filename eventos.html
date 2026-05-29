@@ -161,57 +161,10 @@
     <!-- Sidebar -->
     <aside class="kc-sidebar kc-sidebar--eventos">
 
-      <!-- Calendário -->
-      <div class="kc-sidebar-section kc-sidebar-section--cal" data-kc-eventos-section="calendario">
-        <div class="kc-sidebar-section-head">
-          <h3><i class="fas fa-calendar-alt"></i> Calendário</h3>
-          <button class="kc-cal-expand-btn" type="button" data-kc-cal-expand aria-label="Expandir calendário" data-i18n-aria-label="aria-label.calendar-expand">
-            <i class="fas fa-expand-alt"></i> Expandir
-          </button>
-        </div>
-
-        <!-- Seletor de visualização -->
-        <div class="kc-cal-view-tabs" role="tablist" aria-label="Modo de visualização do calendário" data-i18n-aria-label="aria-label.calendar-view">
-          <button class="active" type="button" role="tab" data-kc-cal-view="month" aria-selected="true">Mensal</button>
-          <button type="button" role="tab" data-kc-cal-view="week" aria-selected="false">Semanal</button>
-          <button type="button" role="tab" data-kc-cal-view="day" aria-selected="false">Diário</button>
-        </div>
-
-        <!-- Navegação de período -->
-        <div class="kc-events-calendar" data-kc-events-calendar>
-          <button type="button" class="kc-cal-nav" data-kc-cal-prev aria-label="Período anterior" data-i18n-aria-label="aria-label.calendar-prev">
-            <i class="fas fa-chevron-left"></i>
-          </button>
-          <div class="kc-cal-display">
-            <i class="fas fa-calendar kc-cal-icon"></i>
-            <span class="kc-cal-month" data-kc-cal-month>Carregando…</span>
-          </div>
-          <button type="button" class="kc-cal-nav" data-kc-cal-next aria-label="Próximo período" data-i18n-aria-label="aria-label.calendar-next">
-            <i class="fas fa-chevron-right"></i>
-          </button>
-        </div>
-
-        <!-- Grid do calendário -->
-        <div class="kc-cal-grid" data-kc-cal-grid aria-live="polite">
-          <div class="kc-cal-loading"><i class="fas fa-spinner fa-spin"></i></div>
-        </div>
-
-        <!-- Detalhe do dia selecionado -->
-        <div class="kc-cal-day-detail" data-kc-cal-day-detail style="display:none;">
-          <div class="kc-cal-day-detail-title" data-kc-cal-day-detail-title></div>
-          <div class="kc-cal-day-detail-events" data-kc-cal-day-detail-events></div>
-        </div>
-
-        <!-- Legenda de categorias -->
-        <div class="kc-cal-legend">
-          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#4caf50"></span><span>Sustentabilidade</span></div>
-          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#2196f3"></span><span>Acadêmicos</span></div>
-          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#9c27b0"></span><span>Culturais</span></div>
-          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#ff9800"></span><span>Esportivos</span></div>
-          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#00bcd4"></span><span>Workshops</span></div>
-          <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#e91e63"></span><span>Festas</span></div>
-        </div>
-      </div>
+      <!-- Calendário — componente compartilhado (assets/js/features/kc-events-calendar.js).
+           FONTE ÚNICA sincronizada com /index.html; o markup é injetado pelo módulo.
+           data-kc-cal-rail="calendario" integra a seção ao rail mobile desta página. -->
+      <div class="kc-sidebar-section kc-sidebar-section--cal" data-kc-cal-mount data-kc-cal-rail="calendario"></div>
 
       <div class="kc-sidebar-section" data-kc-eventos-section="dates">
         <h3><i class="fas fa-calendar-day"></i> Data</h3>
@@ -319,42 +272,8 @@
   </div>
   <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>
 
-  <!-- Calendário expandido (modal) -->
-  <div id="kcCalModal" class="kc-cal-modal" role="dialog" aria-modal="true" aria-label="Calendário de Eventos" aria-hidden="true" data-i18n-aria-label="aria-label.calendar-modal">
-    <div class="kc-cal-modal-card">
-      <div class="kc-cal-modal-header">
-        <h2><i class="fas fa-calendar-alt"></i> Calendário de Eventos</h2>
-        <button class="kc-cal-modal-close" type="button" data-kc-cal-modal-close aria-label="Fechar" data-i18n-aria-label="aria-label.calendar-modal-close"><i class="fas fa-times"></i></button>
-      </div>
-      <div class="kc-cal-modal-controls">
-        <div class="kc-cal-view-tabs" role="tablist" data-kc-cal-modal-viewtabs>
-          <button type="button" role="tab" data-kc-cal-modal-view="month">Mensal</button>
-          <button type="button" role="tab" data-kc-cal-modal-view="week">Semanal</button>
-          <button type="button" role="tab" data-kc-cal-modal-view="day">Diário</button>
-        </div>
-        <div class="kc-events-calendar kc-events-calendar--modal">
-          <button type="button" class="kc-cal-nav" data-kc-cal-modal-prev aria-label="Anterior" data-i18n-aria-label="aria-label.calendar-modal-prev"><i class="fas fa-chevron-left"></i></button>
-          <div class="kc-cal-display"><i class="fas fa-calendar kc-cal-icon"></i><span class="kc-cal-month" data-kc-cal-month-modal>—</span></div>
-          <button type="button" class="kc-cal-nav" data-kc-cal-modal-next aria-label="Próximo" data-i18n-aria-label="aria-label.calendar-modal-next"><i class="fas fa-chevron-right"></i></button>
-        </div>
-      </div>
-      <div class="kc-cal-modal-body">
-        <div class="kc-cal-grid kc-cal-grid--modal" data-kc-cal-grid-modal></div>
-        <div class="kc-cal-day-detail kc-cal-day-detail--modal" data-kc-cal-day-detail-modal style="display:none;">
-          <div class="kc-cal-day-detail-title" data-kc-cal-day-detail-title-modal></div>
-          <div class="kc-cal-day-detail-events" data-kc-cal-day-detail-events-modal></div>
-        </div>
-      </div>
-      <div class="kc-cal-modal-legend">
-        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#4caf50"></span><span>Sustentabilidade</span></div>
-        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#2196f3"></span><span>Acadêmicos</span></div>
-        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#9c27b0"></span><span>Culturais</span></div>
-        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#ff9800"></span><span>Esportivos</span></div>
-        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#00bcd4"></span><span>Workshops</span></div>
-        <div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#e91e63"></span><span>Festas</span></div>
-      </div>
-    </div>
-  </div>
+  <!-- Calendário expandido (modal #kcCalModal) — injetado em runtime por
+       assets/js/features/kc-events-calendar.js (fonte única, compartilhada com /index.html). -->
 
   <script defer src="assets/js/boot/kc-constants.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-i18n.js?v=8.6.1"></script>
@@ -436,6 +355,7 @@
   <script defer src="assets/js/features/kc-search.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
   <script defer src="assets/js/controllers/public/kc-feed.controller.js?v=8.6.1"></script>
+  <script defer src="assets/js/features/kc-events-calendar.js?v=8.6.1"></script>
   <script defer src="assets/js/controllers/public/eventos.controller.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
