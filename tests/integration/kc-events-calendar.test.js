@@ -1,0 +1,239 @@
+/*
+  kc-events-calendar.js — Contratos do componente compartilhado do Calendário (v76.1)
+
+  Cobre:
+   - Contrato estático da fonte (namespace, API, dados, cache SWR, Supabase, i18n)
+   - Runtime em jsdom: mount injeta markup + modal, idempotência, rail, sem lançar
+   - Integração HTML: eventos.html e index.html carregam o módulo e têm o mount
+
+  Estes contratos migraram de eventos.controller.test.js quando o calendário foi
+  extraído para a FONTE ÚNICA assets/js/features/kc-events-calendar.js, garantindo
+  que o mesmo calendário apareça sincronizado em /eventos.html e /index.html.
+*/
+
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOT         = path.resolve(__dirname, '..', '..');
+const MODULE_PATH  = path.join(ROOT, 'assets', 'js', 'features', 'kc-events-calendar.js');
+const EVENTOS_HTML = path.join(ROOT, 'eventos.html');
+const INDEX_HTML   = path.join(ROOT, 'index.html');
+
+function loadModule() {
+  const code = fs.readFileSync(MODULE_PATH, 'utf8');
+  // eslint-disable-next-line no-eval
+  (0, eval)(code);
+}
+
+// ── 1. Contrato estático da fonte ────────────────────────────────────────────
+
+describe('kc-events-calendar — contrato estático (fonte)', () => {
+  const source = fs.readFileSync(MODULE_PATH, 'utf8');
+
+  test('arquivo existe', () => {
+    expect(fs.existsSync(MODULE_PATH)).toBe(true);
+  });
+
+  test('usa IIFE com "use strict"', () => {
+    expect(source).toMatch(/['"]use strict['"]/u);
+    expect(source).toMatch(/\(function\s*\(\)\s*\{/);
+  });
+
+  test('registra namespace window.KCEventsCalendar', () => {
+    expect(source).toContain('window.KCEventsCalendar');
+  });
+
+  const PUBLIC_API = ['mount', 'init', 'refresh', 'open', 'close', 'isReady'];
+  PUBLIC_API.forEach((fn) => {
+    test('expõe API pública: ' + fn, () => {
+      expect(source).toContain(fn + ':');
+    });
+  });
+
+  // Dados / categorias
+  ['sustentabilidade', 'academicos', 'culturais', 'esportivos', 'workshops', 'festas'].forEach((cat) => {
+    test('categoria presente: ' + cat, () => {
+      expect(source).toContain(cat);
+    });
+  });
+
+  test('define array de meses em pt-BR', () => {
+    expect(source).toContain('Janeiro');
+    expect(source).toContain('Dezembro');
+  });
+
+  test('define STORAGE_KEY do calendário', () => {
+    expect(source).toContain('STORAGE_KEY');
+    expect(source).toContain('kc_events_calendar_month');
+  });
+
+  // Cache SWR
+  test('define SECTION_CACHE_KEY do calendário', () => {
+    expect(source).toContain('SECTION_CACHE_KEY');
+    expect(source).toContain("'eventos:calendar'");
+  });
+
+  test('define SECTION_CACHE_MAX_AGE_MS (TTL)', () => {
+    expect(source).toContain('SECTION_CACHE_MAX_AGE_MS');
+  });
+
+  test('usa getSessionStore + restore/persist de cache', () => {
+    expect(source).toContain('getSessionStore');
+    expect(source).toContain('restoreCachedEvents');
+    expect(source).toContain('store.get(');
+    expect(source).toContain('persistCachedEvents');
+    expect(source).toContain('store.set(');
+  });
+
+  // Supabase
+  test('usa KCSupabase.getClient()', () => {
+    expect(source).toContain('getClient()');
+  });
+
+  test('consulta tabela posts com module eventos', () => {
+    expect(source).toContain("'posts'");
+    expect(source).toContain("'eventos'");
+  });
+
+  // Scroll-lock iOS no modal expandido
+  test('usa KCOverlayLock.lock/unlock no modal calendário (iOS)', () => {
+    expect(source).toContain("KCOverlayLock.lock('eventos-cal-modal')");
+    expect(source).toContain("KCOverlayLock.unlock('eventos-cal-modal')");
+  });
+
+  // Hooks de DOM / dataset
+  test('usa dataset attr data-kc-cal-grid (sidebar + modal)', () => {
+    expect(source).toContain('data-kc-cal-grid');
+    expect(source).toContain('data-kc-cal-grid-modal');
+  });
+
+  test('auto-monta via [data-kc-cal-mount]', () => {
+    expect(source).toContain('data-kc-cal-mount');
+  });
+
+  // Markup âncora (templates)
+  ['kc-sidebar-section--cal', 'kc-cal-view-tabs', 'data-kc-cal-expand', 'kc-cal-legend', 'kc-cal-modal', 'data-kc-cal-month'].forEach((sel) => {
+    test('template contém: ' + sel, () => {
+      expect(source).toContain(sel);
+    });
+  });
+
+  test('reaplica i18n em markup injetado (KCi18n)', () => {
+    expect(source).toContain('KCi18n');
+    expect(source).toContain('applyAriaLabels');
+  });
+
+  test('auto-inicializa via DOMContentLoaded', () => {
+    expect(source).toContain("addEventListener('DOMContentLoaded', autoMount)");
+  });
+
+  test('detalhe do dia linka para product.html?id=', () => {
+    expect(source).toContain('product.html?id=');
+  });
+});
+
+// ── 2. Runtime (jsdom) ───────────────────────────────────────────────────────
+
+describe('kc-events-calendar — runtime (jsdom)', () => {
+  beforeEach(() => {
+    delete window.KCEventsCalendar;
+    delete window.KCSupabase;
+    delete window.KCSessionStore;
+    delete window.KCOverlayLock;
+    delete window.KCi18n;
+    document.body.innerHTML = '';
+    try { localStorage.clear(); } catch (_) { /* noop */ }
+  });
+
+  test('não lança ao carregar sem dependências opcionais', () => {
+    expect(() => loadModule()).not.toThrow();
+  });
+
+  test('expõe window.KCEventsCalendar com API funcional', () => {
+    loadModule();
+    expect(window.KCEventsCalendar).toBeDefined();
+    ['mount', 'init', 'refresh', 'open', 'close', 'isReady'].forEach((fn) => {
+      expect(typeof window.KCEventsCalendar[fn]).toBe('function');
+    });
+  });
+
+  test('mount injeta o markup da seção e o modal no body', () => {
+    loadModule();
+    const el = document.createElement('div');
+    el.setAttribute('data-kc-cal-mount', '');
+    document.body.appendChild(el);
+
+    window.KCEventsCalendar.mount(el);
+
+    expect(el.getAttribute('data-kc-cal-mounted')).toBe('1');
+    expect(el.className).toContain('kc-sidebar-section--cal');
+    expect(el.innerHTML).toContain('data-kc-cal-grid');
+    expect(el.innerHTML).toContain('kc-cal-view-tabs');
+    expect(document.getElementById('kcCalModal')).not.toBeNull();
+  });
+
+  test('data-kc-cal-rail vira data-kc-eventos-section (integração com rail mobile)', () => {
+    loadModule();
+    const el = document.createElement('div');
+    el.setAttribute('data-kc-cal-mount', '');
+    el.setAttribute('data-kc-cal-rail', 'calendario');
+    document.body.appendChild(el);
+
+    window.KCEventsCalendar.mount(el);
+
+    expect(el.getAttribute('data-kc-eventos-section')).toBe('calendario');
+  });
+
+  test('mount é idempotente (não duplica o modal)', () => {
+    loadModule();
+    const el = document.createElement('div');
+    el.setAttribute('data-kc-cal-mount', '');
+    document.body.appendChild(el);
+
+    window.KCEventsCalendar.mount(el);
+    window.KCEventsCalendar.mount(el);
+
+    expect(document.querySelectorAll('#kcCalModal').length).toBe(1);
+  });
+});
+
+// ── 3. Integração HTML (eventos.html + index.html) ───────────────────────────
+
+describe('kc-events-calendar — integração HTML', () => {
+  const eventosHtml = fs.readFileSync(EVENTOS_HTML, 'utf8');
+  const indexHtml   = fs.readFileSync(INDEX_HTML, 'utf8');
+
+  test('eventos.html carrega o módulo (com cache-buster)', () => {
+    expect(eventosHtml).toContain('assets/js/features/kc-events-calendar.js');
+    expect(eventosHtml).toMatch(/kc-events-calendar\.js\?v=/u);
+  });
+
+  test('eventos.html tem ponto de montagem com rail', () => {
+    expect(eventosHtml).toContain('data-kc-cal-mount');
+    expect(eventosHtml).toContain('data-kc-cal-rail="calendario"');
+  });
+
+  test('eventos.html NÃO tem mais o markup inline do calendário (evita duplicação)', () => {
+    // O grid só deve existir como template no módulo, não embutido na página.
+    expect(eventosHtml).not.toContain('data-kc-cal-grid');
+  });
+
+  test('index.html carrega o módulo (com cache-buster)', () => {
+    expect(indexHtml).toContain('assets/js/features/kc-events-calendar.js');
+    expect(indexHtml).toMatch(/kc-events-calendar\.js\?v=/u);
+  });
+
+  test('index.html tem ponto de montagem na sidebar', () => {
+    expect(indexHtml).toContain('data-kc-cal-mount');
+    expect(indexHtml).toContain('kc-sidebar-section--cal');
+  });
+
+  test('index.html: calendário posicionado após kc-community-impact-section', () => {
+    const idxCommunity = indexHtml.indexOf('kc-community-impact-section');
+    const idxCal       = indexHtml.indexOf('data-kc-cal-mount');
+    expect(idxCommunity).toBeGreaterThan(-1);
+    expect(idxCal).toBeGreaterThan(idxCommunity);
+  });
+});
