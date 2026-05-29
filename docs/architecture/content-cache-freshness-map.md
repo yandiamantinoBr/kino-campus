@@ -29,6 +29,8 @@ Interface publica:
 - `window.KCPostFreshness.emit(change)`
 - `window.KCPostFreshness.subscribe(handler)`
 - `window.KCPostFreshness.clearContentCaches({ postId, scopes })`
+- `window.KCRealtime.subscribePostChanges({ onChange })` (assina `postgres_changes`)
+- Broadcast cross-cliente (tópico `kc-posts-changes`) é transporte interno do barramento `KCPostFreshness` (em `kc-api.client.js`): `emitPostFreshness` publica mudanças de origem local e o receptor faz `dispatch` em todos os clientes abertos.
 
 Eventos aceitos:
 
@@ -59,8 +61,14 @@ O payload e sanitizado: nao transporta titulo, descricao, e-mail, metadata compl
 2. A fachada emite `KCPostFreshness`.
 3. A aba atual limpa caches de conteudo e atualiza a tela.
 4. Outras abas recebem por `BroadcastChannel` ou `localStorage`.
-5. Outros navegadores recebem por Supabase Realtime quando disponivel.
-6. Ao focar a pagina apos cerca de 30s, o feed revalida a primeira pagina para cobrir falhas de Realtime.
+5. Outros navegadores/dispositivos/usuarios recebem por **broadcast** do Supabase Realtime no topico fixo `kc-posts-changes` (emitido pelo barramento `KCPostFreshness` para mudancas de origem local). O broadcast NAO passa pela RLS, entao alcanca todos os clientes abertos mesmo quando o post vira `deleted` (que a RLS esconde de `postgres_changes`).
+6. Como rede de seguranca, o feed revalida a primeira pagina ao **focar**, ao **ficar visivel** (`visibilitychange`, cobrindo troca de aba e retorno no mobile) e no retorno via bfcache (`pageshow`).
+
+## Propagacao cross-cliente (broadcast) e RLS
+
+`postgres_changes` respeita a RLS: quando um post vira `deleted`, os demais usuarios deixam de poder le-lo e o evento de UPDATE e filtrado para eles (so o autor/admin recebem). Por isso, quem faz a mutacao tambem **publica um broadcast** no topico `kc-posts-changes` (transporte Realtime interno do `KCPostFreshness`), que nao passa pela RLS e alcanca todos os clientes abertos imediatamente.
+
+Anti-loop: `emitPostFreshness` so publica no Realtime mudancas de **origem local** (source diferente de `realtime*`/`broadcast`/`remote`). Mudancas recebidas via broadcast reentram no barramento com `source='realtime-broadcast'` e nao sao re-publicadas.
 
 ## Exclusao comum
 
