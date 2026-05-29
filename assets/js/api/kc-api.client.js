@@ -1038,6 +1038,20 @@
       }
     } catch (_) { }
 
+    // Propaga para OUTROS navegadores/dispositivos/usuários via Realtime broadcast.
+    // Só mudanças de origem local são publicadas; as recebidas via realtime têm
+    // source 'realtime-broadcast' e são ignoradas aqui (evita loop entre clientes).
+    try {
+      const freshSource = String((payload && payload.source) || '').toLowerCase();
+      const isLocalOrigin = !!freshSource
+        && freshSource.indexOf('realtime') === -1
+        && freshSource !== 'broadcast'
+        && freshSource !== 'remote';
+      if (isLocalOrigin) {
+        publishRealtimeFreshness(payload);
+      }
+    } catch (_) { }
+
     return payload;
   }
 
@@ -1047,6 +1061,71 @@
     return function () {
       postFreshnessSubscribers.delete(handler);
     };
+  }
+
+  // ── Transporte cross-cliente via Supabase Realtime broadcast ──────────────
+  // Tópico fixo, NÃO filtrado por RLS (ao contrário de postgres_changes, que
+  // esconde posts 'deleted' dos demais). Quem altera/exclui publica; quem está
+  // com a página aberta recebe na hora. Anti-loop: o receptor faz dispatch
+  // direto (não re-emite), e emitPostFreshness só publica mudanças de origem local.
+  const POST_FRESHNESS_RT_TOPIC = 'kc-posts-changes';
+  let postFreshnessRtChannel = null;
+
+  function getSupabaseClientForFreshness() {
+    try {
+      return (window.KCSupabase && typeof window.KCSupabase.getClient === 'function')
+        ? window.KCSupabase.getClient()
+        : null;
+    } catch (_) { return null; }
+  }
+
+  function ensureRealtimeFreshnessChannel() {
+    if (postFreshnessRtChannel) return postFreshnessRtChannel;
+    const client = getSupabaseClientForFreshness();
+    if (!client || typeof client.channel !== 'function') return null;
+    try {
+      const ch = client.channel(POST_FRESHNESS_RT_TOPIC, { config: { broadcast: { self: false } } });
+      ch.on('broadcast', { event: 'post_change' }, (msg) => {
+        const src = (msg && msg.payload) ? msg.payload : msg;
+        if (!src) return;
+        const payload = normalizePostFreshnessChange({
+          type: src.type,
+          eventId: src.eventId,
+          postId: src.postId,
+          legacyId: src.legacyId,
+          module: src.module,
+          status: src.status,
+          updated_at: src.updated_at,
+          source: 'realtime-broadcast',
+        });
+        if (payload.origin === POST_FRESHNESS_TAB_ID) return;
+        dispatchPostFreshness(payload);
+      });
+      ch.subscribe();
+      postFreshnessRtChannel = ch;
+    } catch (_) { postFreshnessRtChannel = null; }
+    return postFreshnessRtChannel;
+  }
+
+  function publishRealtimeFreshness(payload) {
+    try {
+      const ch = ensureRealtimeFreshnessChannel();
+      if (!ch || typeof ch.send !== 'function') return false;
+      ch.send({
+        type: 'broadcast',
+        event: 'post_change',
+        payload: {
+          type: payload.type,
+          eventId: payload.eventId,
+          postId: payload.postId,
+          legacyId: payload.legacyId,
+          module: payload.module,
+          status: payload.status,
+          updated_at: payload.updated_at,
+        },
+      });
+      return true;
+    } catch (_) { return false; }
   }
 
   function setupPostFreshnessTransports() {
@@ -1076,6 +1155,15 @@
   }
 
   setupPostFreshnessTransports();
+  // Inicia o canal de broadcast assim que o cliente Supabase estiver disponível,
+  // para que páginas que apenas visualizam (sem mutar) recebam mudanças de outros.
+  try {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { setTimeout(ensureRealtimeFreshnessChannel, 0); }, { once: true });
+    } else {
+      setTimeout(ensureRealtimeFreshnessChannel, 0);
+    }
+  } catch (_) { }
 
   window.KCPostFreshness = Object.freeze({
     EVENT_NAME: POST_FRESHNESS_EVENT,

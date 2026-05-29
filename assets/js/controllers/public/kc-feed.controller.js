@@ -884,6 +884,15 @@
       if (state.revalidateTimer) clearTimeout(state.revalidateTimer);
       state.revalidateTimer = window.setTimeout(revalidateSnapshot, 80);
     };
+    // Revalida ao voltar para a aba/app (troca de aba sem perder foco da janela e
+    // retorno no mobile nao disparam 'focus'; 'visibilitychange' cobre esses casos).
+    const onVisibility = () => {
+      if (state.destroyed || document.visibilityState !== 'visible') return;
+      const age = Date.now() - (state.lastSnapshotAt || 0);
+      if (age < FEED_FOCUS_REVALIDATE_MS) return;
+      if (state.revalidateTimer) clearTimeout(state.revalidateTimer);
+      state.revalidateTimer = window.setTimeout(revalidateSnapshot, 80);
+    };
     let api = null;
 
     function pauseForBfcache() {
@@ -923,6 +932,7 @@
       try { window.removeEventListener('pagehide', onPageHide); } catch (_) { }
       try { window.removeEventListener('pageshow', onPageShow); } catch (_) { }
       try { window.removeEventListener('focus', onFocus); } catch (_) { }
+      try { document.removeEventListener('visibilitychange', onVisibility); } catch (_) { }
       try {
         if (state.realtimeSub && typeof state.realtimeSub.unsubscribe === 'function') {
           state.realtimeSub.unsubscribe();
@@ -960,6 +970,7 @@
     window.addEventListener('pagehide', onPageHide);
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
     if (window.KCPostFreshness && typeof window.KCPostFreshness.subscribe === 'function') {
       state.freshnessUnsub = window.KCPostFreshness.subscribe(handlePostChange);
     }
