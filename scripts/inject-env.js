@@ -192,6 +192,53 @@ if (content === original) {
   fs.writeFileSync(ENV_FILE, content, 'utf8');
 }
 
+// ── Cache-busting automático dos assets (?v=) ──────────────────────────────
+// Os assets (/assets/*) são servidos com cache imutável de 1 ano. Como o ?v dos
+// HTML é fixo, quem já visitou o site continua executando JS/CSS antigos por muito
+// tempo (causa de "atualização demora a aparecer / outro navegador funciona").
+// Aqui reescrevemos APENAS o valor de ?v= para um token do deploy. Trocar a query
+// string muda só a CHAVE de cache — o arquivo servido é o mesmo — então é seguro
+// e não pode quebrar o carregamento. Roda só em CI/deploy; a fonte fica com ?v fixo.
+function applyAssetCacheBust() {
+  if (!isCI) {
+    console.log('ℹ️  inject-env.js: cache-bust de assets ignorado (execução local).');
+    return;
+  }
+  const token = String(
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.VERCEL_DEPLOYMENT_ID ||
+    process.env.GITHUB_SHA ||
+    Date.now()
+  ).replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
+  if (!token) return;
+
+  const repoRoot = path.join(__dirname, '..');
+  let htmlFiles = [];
+  try {
+    htmlFiles = fs.readdirSync(repoRoot).filter((f) => /\.html$/i.test(f));
+  } catch (_) { htmlFiles = []; }
+
+  let changed = 0;
+  htmlFiles.forEach((file) => {
+    const fp = path.join(repoRoot, file);
+    let html;
+    try { html = fs.readFileSync(fp, 'utf8'); } catch (_) { return; }
+    // Substitui SOMENTE o valor de ?v= (não altera o caminho do arquivo).
+    const next = html.replace(/(\?v=)[0-9A-Za-z._-]+/g, `$1${token}`);
+    if (next !== html) {
+      try { fs.writeFileSync(fp, next, 'utf8'); changed++; } catch (_) { }
+    }
+  });
+  console.log(`🔄 inject-env.js: cache-bust de assets aplicado (?v=${token}) em ${changed} HTML.`);
+}
+
+try {
+  applyAssetCacheBust();
+} catch (cacheBustErr) {
+  // Nunca derruba o build por causa do cache-bust (degrada para o ?v fixo).
+  console.warn('⚠️  inject-env.js: cache-bust de assets falhou (ignorado):', (cacheBustErr && cacheBustErr.message) || cacheBustErr);
+}
+
 // ── Relatório ────────────────────────────────────────────────────────────────
 console.log('');
 console.log('✅ inject-env.js: kc-env.js atualizado com sucesso!');

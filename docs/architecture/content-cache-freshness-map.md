@@ -17,6 +17,14 @@ Este documento descreve quais camadas aceleram a navegacao do KinoCampus e qual 
 | `profile` / `profile-posts` | `sessionStorage` via `KCSessionStore` | Perfil e posts publicos por autor | SWR curto | Mutacoes, Realtime e foco da pagina |
 | `kc_user_posts` | `localStorage` legado/dev | Rascunhos/posts locais | Persistente local | Exclusao comum marca `status='deleted'` |
 | Service Worker | Cache Storage | Shell e assets versionados | Por versao do SW | Nao cacheia Supabase; continua sem ser fonte de dados |
+| HTTP cache do navegador | Disco/memoria do navegador | `/assets/*` (JS/CSS/icones) por `?v=` | **Imutavel, 1 ano** (`max-age=31536000, immutable`) | Troca do `?v=` (cache-bust automatico por deploy) |
+
+> **Cache-busting de assets (importante):** os arquivos em `/assets/*` sao servidos
+> com cache imutavel de 1 ano. Para que navegadores que ja visitaram recebam JS/CSS
+> atualizado (sem isso a "atualizacao demora a aparecer / outro navegador funciona"),
+> o build (`scripts/inject-env.js`) reescreve o `?v=` dos HTML para um token do deploy
+> (commit SHA). Trocar a query muda apenas a CHAVE de cache, nao o arquivo servido —
+> entao e seguro. A fonte no repo permanece com `?v=8.6.1` (validadores/testes inalterados).
 
 ## Dados que nao sao fonte de verdade de publicacao
 
