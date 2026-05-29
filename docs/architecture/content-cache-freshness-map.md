@@ -82,6 +82,28 @@ Anti-loop: `emitPostFreshness` so publica no Realtime mudancas de **origem local
 
 Exclusao feita pelo usuario nao apaga a linha de `posts`. Ela marca `status='deleted'`, registra metadados de remocao e tira a publicacao dos feeds publicos. Hard delete fica reservado para LGPD, manutencao administrativa ou limpeza controlada.
 
+## Ordenacao das abas do feed (home)
+
+A home (`/index.html`) tem 3 abas (`data-feed-tab`), cada uma com seu pager e um
+`sortBy` (mapeado em `index.controller.js`: destaques->votos, recentes, comentados).
+A ordenacao real e feita no banco pela RPC `kc_get_feed_cursor` (paginacao por cursor):
+
+- **Destaques** (`votos`): `status_priority` (publicados acima de encerrados) ->
+  `highlight_score` (relevancia) -> `votos` -> recencia. O `highlight_score` vem de
+  `kc_compute_highlight_score`:
+  `(votos*10 + salvos_destaque*8 + salvos_favorito*5 + comentarios*3 + bonus_comentario
+  + cliques_cupom*4 + shares*2) / (1 + idade_em_semanas)`.
+  Atualizado pelo gatilho de engajamento E pelo **cron horario**
+  `kc-refresh-highlight-scores` (migration `v9.3.5.17`) — o cron mantem o decaimento por
+  tempo atualizado e zera encerrados (sem ele, a aba ficava desatualizada).
+- **Recentes** (`recentes`): `effective_at = coalesce(bumped_at, created_at)`. O
+  "impulsionar" (`kc_bump_post`, cooldown 7 dias) seta `bumped_at` e sobe o post AQUI.
+- **Comentados** (`comentados`): `last_comment_at` desc, somente posts com comentario.
+
+A ordenacao e do servidor (cursor); o cliente NAO deve reordenar a pagina paginada
+(quebraria o cursor). Para mudar pesos de relevancia, ajustar `kc_compute_highlight_score`;
+para frescor, o cron acima.
+
 ## Rollback
 
 Se algum problema de consistencia aparecer:
