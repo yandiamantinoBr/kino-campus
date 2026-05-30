@@ -27,10 +27,11 @@ export function stripHtml(value: unknown): string {
 }
 
 // Texto normalizado para comparacoes/heuristicas (sem acento, minusculo).
+// NFD decompoe acentos; \p{Diacritic} remove as marcas (ASCII-safe no fonte).
 export function normalizeText(value: unknown): string {
   return String(value ?? "")
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
@@ -39,7 +40,7 @@ export function normalizeText(value: unknown): string {
 export function slugify(value: unknown, maxLength = 80): string {
   const base = String(value ?? "")
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
