@@ -116,3 +116,10 @@ describe('Cadu publish — cliente de referencia', () => {
     expect(client).not.toMatch(/service_role['"]\s*\)/);
   });
 });
+
+describe('posts.author_id default = auth.uid()', () => {
+  test('migration define o default auth.uid() para author_id', () => {
+    const sql = r('supabase/migrations/20260530130000_posts_author_id_default_authuid.sql');
+    expect(sql).toMatch(/alter table public\.posts\s+alter column author_id set default auth\.uid\(\)/i);
+  });
+});
