@@ -1,0 +1,25 @@
+-- KinoCampus 2026-05-30
+-- posts.author_id DEFAULT auth.uid()
+--
+-- Bug observado (Cadu nao conseguia publicar):
+--   O script do servidor (publish_auto.js) insere em public.posts SEM informar
+--   author_id. Como a coluna nao tinha default, author_id ia NULL. O gate
+--   anti-spam (trg_anti_spam_gate) chama kc_private.kc_compute_post_flood_check(
+--   NULL, modulo), que retorna {ok:false, code:'INVALID_USER'}, e a trigger
+--   levanta 'flood_limit_exceeded' — dai o sintoma "flood_limit_exceeded /
+--   INVALID_USER" em todo INSERT. (O limite de ritmo do Cadu em si esta correto:
+--   100/min resolve normalmente.)
+--
+-- Correcao:
+--   Definir DEFAULT auth.uid() — pratica padrao do Supabase e ja alinhada a RLS
+--   de INSERT (posts_insert_own: WITH CHECK (auth.uid() = author_id)). Assim, um
+--   insert autenticado que omite author_id passa a gravar o proprio usuario.
+--
+-- Seguranca/efeito:
+--   - Metadados apenas (instantaneo, sem reescrita de tabela).
+--   - Linhas existentes nao mudam.
+--   - Inserts que JA informam author_id (caminho humano via adapter e a Edge
+--     Function cadu-publish) ignoram o default — comportamento inalterado.
+--   - anon nao insere posts (RLS); auth.uid() seria NULL e a RLS barraria.
+
+alter table public.posts alter column author_id set default auth.uid();
