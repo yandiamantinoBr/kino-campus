@@ -85,6 +85,9 @@ describe('admin-export.shared.js', () => {
       },
     };
 
+    // Força o fallback SheetJS — o caminho ExcelJS é validado por amostra Node (jsdom não roda os sinks de download).
+    window.ExcelJS = { Workbook: function () { throw new Error('ExcelJS desabilitado no teste'); } };
+
     await exporter.exportReportXLSX('relatorio.xlsx', {
       title: 'Relatório Admin',
       source: 'Teste',
@@ -125,7 +128,9 @@ describe('admin-export.shared.js', () => {
       addPage() {}
       setPage() {}
       save(filename) { saved.push(filename); }
+      autoTable() { this.lastAutoTable = { finalY: 150 }; }
     }
+    FakePDF.API = { autoTable: function () {} };
     window.jspdf = { jsPDF: FakePDF };
 
     await exporter.exportReportPDF('relatorio.pdf', {

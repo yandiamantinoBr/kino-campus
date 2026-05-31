@@ -287,6 +287,40 @@
     return window.jspdf.jsPDF;
   }
 
+  async function ensureExcelJS() {
+    if (window.ExcelJS) return window.ExcelJS;
+    if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+      throw new Error('DOM indisponível para carregar ExcelJS');
+    }
+    const prefix = getAssetPrefix();
+    try {
+      await loadScript(prefix + 'assets/vendor/exceljs.min.js');
+    } catch (_) {
+      await loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js');
+    }
+    if (!window.ExcelJS) throw new Error('ExcelJS indisponível');
+    return window.ExcelJS;
+  }
+
+  async function ensureAutoTable() {
+    const JsPDF = await ensureJsPDF();
+    // O plugin se anexa ao prototype do jsPDF (doc.autoTable).
+    if (JsPDF.API && typeof JsPDF.API.autoTable === 'function') return JsPDF;
+    if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+      throw new Error('DOM indisponível para carregar jspdf-autotable');
+    }
+    const prefix = getAssetPrefix();
+    try {
+      await loadScript(prefix + 'assets/vendor/jspdf.plugin.autotable.min.js');
+    } catch (_) {
+      await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js');
+    }
+    if (!(JsPDF.API && typeof JsPDF.API.autoTable === 'function')) {
+      throw new Error('jspdf-autotable indisponível');
+    }
+    return JsPDF;
+  }
+
   function titleCaseLabel(key) {
     const normalizedKey = normalizeKey(key || 'valor');
     if (LABELS_PT_BR[normalizedKey]) return LABELS_PT_BR[normalizedKey];
@@ -502,39 +536,196 @@
     }, 0);
   }
 
+  // ── XLSX estilizado (ExcelJS) ───────────────────────────────────────────────
+  function argbColor(rgb, alpha) {
+    function h(n) { return ('0' + Math.max(0, Math.min(255, Number(n) || 0)).toString(16)).slice(-2).toUpperCase(); }
+    return (alpha || 'FF') + h(rgb[0]) + h(rgb[1]) + h(rgb[2]);
+  }
+
+  const ZEBRA_RGB = [249, 250, 251];
+
+  function downloadBlob(filename, blob) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    window.setTimeout(function () {
+      URL.revokeObjectURL(url);
+      if (link.parentNode) link.parentNode.removeChild(link);
+    }, 0);
+  }
+
+  function excelThinBorder() {
+    const edge = { style: 'thin', color: { argb: argbColor(BRAND.border) } };
+    return { top: edge, left: edge, bottom: edge, right: edge };
+  }
+
+  function coerceExcelCell(value) {
+    if (typeof value === 'string' && /^-?\d{1,12}$/.test(value)) {
+      const n = Number(value);
+      if (Number.isFinite(n)) return n;
+    }
+    return value == null ? '' : value;
+  }
+
+  function styleExcelHeaderRow(row) {
+    row.height = 22;
+    row.eachCell({ includeEmpty: true }, function (cell) {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argbColor(BRAND.orange) } };
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      cell.border = excelThinBorder();
+    });
+  }
+
+  function styleExcelBody(worksheet, firstDataRow) {
+    const border = excelThinBorder();
+    for (let r = firstDataRow; r <= worksheet.rowCount; r += 1) {
+      const row = worksheet.getRow(r);
+      const zebra = (r - firstDataRow) % 2 === 1;
+      row.eachCell({ includeEmpty: true }, function (cell) {
+        cell.border = border;
+        cell.alignment = { vertical: 'top', wrapText: true };
+        if (typeof cell.value === 'number') cell.numFmt = '#,##0';
+        if (zebra) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argbColor(ZEBRA_RGB) } };
+      });
+    }
+  }
+
+  function addExcelSection(workbook, name, columns, rows) {
+    const normalizedColumns = normalizeColumns(columns);
+    const normalizedRows = normalizeRows(rows, columns);
+    const safeRows = normalizedRows.length ? normalizedRows : [{ Status: 'Sem dados para os filtros selecionados' }];
+    const headers = normalizedColumns.length
+      ? normalizedColumns.map(function (column) { return column.label; })
+      : Object.keys(safeRows[0]);
+
+    const worksheet = workbook.addWorksheet(sheetName(name), { views: [{ state: 'frozen', ySplit: 1 }] });
+    worksheet.columns = headers.map(function (header, index) {
+      const sampleMax = safeRows.slice(0, 80).reduce(function (acc, row) {
+        return Math.max(acc, String(row && row[header] == null ? '' : row[header]).length);
+      }, String(header).length);
+      const declared = normalizedColumns[index] && Number(normalizedColumns[index].width) > 0
+        ? Number(normalizedColumns[index].width) * 12 : 0;
+      return { header: header, key: 'c' + index, width: Math.max(12, Math.min(54, Math.max(sampleMax + 2, declared))) };
+    });
+
+    styleExcelHeaderRow(worksheet.getRow(1));
+    safeRows.forEach(function (row) {
+      worksheet.addRow(headers.map(function (header) { return coerceExcelCell(row[header]); }));
+    });
+    styleExcelBody(worksheet, 2);
+    worksheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: Math.max(1, headers.length) } };
+    return worksheet;
+  }
+
+  function addExcelCover(workbook, normalized) {
+    const ws = workbook.addWorksheet('Resumo');
+    ws.columns = [{ width: 28 }, { width: 32 }, { width: 30 }, { width: 22 }];
+
+    ws.mergeCells('A1:D1');
+    const titleCell = ws.getCell('A1');
+    titleCell.value = BRAND.name + ' — ' + normalized.title;
+    titleCell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 16 };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argbColor(BRAND.orange) } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+    ws.getRow(1).height = 30;
+
+    ws.mergeCells('A2:D2');
+    const subCell = ws.getCell('A2');
+    subCell.value = normalized.subtitle;
+    subCell.font = { color: { argb: argbColor(BRAND.muted) }, size: 11, italic: true };
+
+    function metaRow(label, value) {
+      const row = ws.addRow([label, value]);
+      row.getCell(1).font = { bold: true, color: { argb: argbColor(BRAND.dark) } };
+      row.getCell(2).font = { color: { argb: argbColor(BRAND.dark) } };
+    }
+    ws.addRow([]);
+    metaRow('Fonte', normalized.source);
+    metaRow('Gerado em', new Date(normalized.generatedAt).toLocaleString('pt-BR'));
+
+    ws.addRow([]);
+    const kpiTitle = ws.addRow(['Indicadores']);
+    kpiTitle.getCell(1).font = { bold: true, size: 13, color: { argb: argbColor(BRAND.dark) } };
+    const kpiHeaderRow = ws.rowCount + 1;
+    ws.addRow(['Indicador', 'Valor', 'Contexto']);
+    styleExcelHeaderRow(ws.getRow(kpiHeaderRow));
+    (normalized.kpis.length ? normalized.kpis : [{ Indicador: 'Sem KPIs', Valor: '', Contexto: '' }]).forEach(function (row) {
+      ws.addRow([row.Indicador, coerceExcelCell(row.Valor), row.Contexto]);
+    });
+    styleExcelBody(ws, kpiHeaderRow + 1);
+
+    ws.addRow([]);
+    const filterTitle = ws.addRow(['Filtros aplicados']);
+    filterTitle.getCell(1).font = { bold: true, size: 13, color: { argb: argbColor(BRAND.dark) } };
+    const filterHeaderRow = ws.rowCount + 1;
+    ws.addRow(['Filtro', 'Valor']);
+    styleExcelHeaderRow(ws.getRow(filterHeaderRow));
+    (normalized.filters.length ? normalized.filters : [{ Filtro: 'Todos', Valor: 'Sem filtros adicionais' }]).forEach(function (row) {
+      ws.addRow([row.Filtro, row.Valor]);
+    });
+    styleExcelBody(ws, filterHeaderRow + 1);
+    return ws;
+  }
+
+  async function exportReportXLSXExcelJS(filename, normalized) {
+    const ExcelJSLib = await ensureExcelJS();
+    const workbook = new ExcelJSLib.Workbook();
+    workbook.creator = BRAND.name;
+    workbook.created = new Date(normalized.generatedAt);
+    workbook.title = normalized.title;
+
+    addExcelCover(workbook, normalized);
+    normalized.sections.forEach(function (section, index) {
+      addExcelSection(workbook, section.title || ('Dados ' + (index + 1)), section.xlsxColumns.length ? section.xlsxColumns : section.columns, section.rows);
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    downloadBlob(filename, new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  }
+
+  // Fallback SheetJS (sem estilo) — usado se o ExcelJS falhar.
+  async function exportReportXLSXSheetJS(filename, normalized) {
+    const XLSX = await ensureXLSX();
+    const workbook = XLSX.utils.book_new();
+    workbook.Props = {
+      Title: normalized.title,
+      Subject: normalized.subtitle,
+      Author: BRAND.name,
+      CreatedDate: new Date(normalized.generatedAt),
+    };
+    appendSheet(XLSX, workbook, 'Resumo Executivo', [{
+      relatorio: normalized.title,
+      Contexto: normalized.subtitle,
+      Fonte: normalized.source,
+      Gerado_em: new Date(normalized.generatedAt).toLocaleString('pt-BR'),
+    }].concat(normalized.kpis.map(function (row) {
+      return { relatorio: row.Indicador, Contexto: row.Valor, Fonte: row.Contexto, Gerado_em: '' };
+    })));
+    appendSheet(XLSX, workbook, 'Filtros Aplicados', normalized.filters.length ? normalized.filters : [{ Filtro: 'Todos', Valor: 'Sem filtros adicionais' }]);
+    appendSheet(XLSX, workbook, 'Indicadores', normalized.kpis.length ? normalized.kpis : [{ Indicador: 'Sem KPIs', Valor: '', Contexto: '' }]);
+    normalized.sections.forEach(function (section, index) {
+      appendSheet(XLSX, workbook, section.title || ('Dados ' + (index + 1)), section.rows, section.xlsxColumns.length ? section.xlsxColumns : section.columns);
+    });
+    XLSX.writeFile(workbook, filename);
+  }
+
   async function exportReportXLSX(filename, report) {
     const normalized = normalizeReport(report);
     try {
-      const XLSX = await ensureXLSX();
-      const workbook = XLSX.utils.book_new();
-      workbook.Props = {
-        Title: normalized.title,
-        Subject: normalized.subtitle,
-        Author: BRAND.name,
-        CreatedDate: new Date(normalized.generatedAt),
-      };
-
-      appendSheet(XLSX, workbook, 'Resumo Executivo', [{
-        relatorio: normalized.title,
-        Contexto: normalized.subtitle,
-        Fonte: normalized.source,
-        Gerado_em: new Date(normalized.generatedAt).toLocaleString('pt-BR'),
-      }].concat(normalized.kpis.map(function (row) {
-        return {
-          relatorio: row.Indicador,
-          Contexto: row.Valor,
-          Fonte: row.Contexto,
-          Gerado_em: '',
-        };
-      })));
-      appendSheet(XLSX, workbook, 'Filtros Aplicados', normalized.filters.length ? normalized.filters : [{ Filtro: 'Todos', Valor: 'Sem filtros adicionais' }]);
-      appendSheet(XLSX, workbook, 'Indicadores', normalized.kpis.length ? normalized.kpis : [{ Indicador: 'Sem KPIs', Valor: '', Contexto: '' }]);
-      normalized.sections.forEach(function (section, index) {
-        appendSheet(XLSX, workbook, section.title || ('Dados ' + (index + 1)), section.rows, section.xlsxColumns.length ? section.xlsxColumns : section.columns);
-      });
-      XLSX.writeFile(workbook, filename);
-    } catch (error) {
-      console.warn('[KCAdminExport] XLSX avançado indisponível, usando CSV simples:', error);
+      await exportReportXLSXExcelJS(filename, normalized);
+      return;
+    } catch (excelError) {
+      console.warn('[KCAdminExport] ExcelJS indisponível, tentando SheetJS:', excelError);
+    }
+    try {
+      await exportReportXLSXSheetJS(filename, normalized);
+      return;
+    } catch (sheetError) {
+      console.warn('[KCAdminExport] XLSX indisponível, usando CSV simples:', sheetError);
       downloadText(filename.replace(/\.xlsx$/i, '.csv'), buildFallbackCsv(normalized), 'text/csv;charset=utf-8');
     }
   }
@@ -576,7 +767,7 @@
   async function exportReportPDF(filename, report) {
     const normalized = normalizeReport(report);
     try {
-      const JsPDF = await ensureJsPDF();
+      const JsPDF = await ensureAutoTable();
       const doc = new JsPDF({ unit: 'pt', format: 'a4' });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -652,62 +843,54 @@
       }
 
       function drawRows(rows, maxRows, columns) {
-        const normalizedRows = normalizeRows(rows, columns);
-        const list = normalizedRows.length ? normalizedRows : [{ Status: 'Sem dados para os filtros selecionados' }];
-        const headers = Object.keys(list[0]).slice(0, 4);
         const normalizedColumns = normalizeColumns(columns);
-        const visibleColumns = normalizedColumns.length ? normalizedColumns.slice(0, headers.length) : [];
-        const totalWeight = visibleColumns.reduce(function (sum, column) {
+        const normalizedRows = normalizeRows(rows, columns);
+        const limit = maxRows || MAX_PDF_ROWS;
+        const fullList = normalizedRows.length ? normalizedRows : [{ Status: 'Sem dados para os filtros selecionados' }];
+        const list = fullList.slice(0, limit);
+        const headers = normalizedColumns.length
+          ? normalizedColumns.map(function (column) { return column.label; })
+          : Object.keys(list[0]).slice(0, 6);
+        const head = [headers];
+        const body = list.map(function (row) {
+          return headers.map(function (header) { return truncate(sanitizeExportValue(row[header], header), 600); });
+        });
+
+        const tableWidth = pageWidth - margin * 2;
+        const totalWeight = normalizedColumns.reduce(function (sum, column) {
           return sum + (Number(column.width) > 0 ? Number(column.width) : 1);
         }, 0) || headers.length || 1;
-        const tableWidth = pageWidth - margin * 2;
-        const columnWidths = headers.map(function (_header, index) {
-          const weight = visibleColumns[index] && Number(visibleColumns[index].width) > 0 ? Number(visibleColumns[index].width) : 1;
-          return tableWidth * (weight / totalWeight);
+        const columnStyles = {};
+        if (normalizedColumns.length) {
+          normalizedColumns.forEach(function (column, index) {
+            const weight = Number(column.width) > 0 ? Number(column.width) : 1;
+            columnStyles[index] = { cellWidth: tableWidth * (weight / totalWeight) };
+          });
+        }
+
+        doc.autoTable({
+          head: head,
+          body: body,
+          startY: y,
+          margin: { left: margin, right: margin, top: 90, bottom: 40 },
+          theme: 'grid',
+          styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 4, overflow: 'linebreak', textColor: BRAND.dark, lineColor: BRAND.border, lineWidth: 0.5, valign: 'top' },
+          headStyles: { fillColor: BRAND.orange, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+          alternateRowStyles: { fillColor: [249, 250, 251] },
+          columnStyles: columnStyles,
+          didDrawPage: function () { addPdfHeader(doc, normalized, pageWidth); },
         });
 
-        addPageIfNeeded(28);
-        setFillColor(doc, BRAND.dark);
-        doc.rect(margin, y, pageWidth - margin * 2, 22, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7.5);
-        doc.setTextColor(255, 255, 255);
-        headers.forEach(function (header, index) {
-          const xHeader = margin + columnWidths.slice(0, index).reduce(function (sum, value) { return sum + value; }, 0);
-          doc.text(truncate(titleCaseLabel(header), 22), xHeader + 8, y + 14);
-        });
-        y += 22;
-
-        list.slice(0, maxRows || MAX_PDF_ROWS).forEach(function (row, rowIndex) {
-          const cellLines = headers.map(function (header, index) {
-            return pdfLines(doc, sanitizeExportValue(row[header], header), columnWidths[index] - 14, MAX_PDF_CELL_LINES);
-          });
-          const lineCount = Math.max.apply(null, cellLines.map(function (lines) { return lines.length; }).concat([1]));
-          const rowHeight = Math.max(24, lineCount * 10 + 12);
-          addPageIfNeeded(rowHeight + 4);
-          if (rowIndex % 2 === 0) {
-            doc.setFillColor(249, 250, 251);
-            doc.rect(margin, y, pageWidth - margin * 2, rowHeight, 'F');
-          }
-          doc.setDrawColor(BRAND.border[0], BRAND.border[1], BRAND.border[2]);
-          doc.rect(margin, y, pageWidth - margin * 2, rowHeight, 'S');
-          setTextColor(doc, BRAND.dark);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7.5);
-          cellLines.forEach(function (lines, index) {
-            const xCell = margin + columnWidths.slice(0, index).reduce(function (sum, value) { return sum + value; }, 0);
-            doc.text(lines, xCell + 8, y + 13);
-          });
-          y += rowHeight;
-        });
-        if (list.length > (maxRows || MAX_PDF_ROWS)) {
+        y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 14;
+        if (fullList.length > limit) {
           addPageIfNeeded(18);
           setTextColor(doc, BRAND.muted);
+          doc.setFont('helvetica', 'normal');
           doc.setFontSize(8);
-          doc.text(pdfLines(doc, 'PDF resumido: ' + (list.length - (maxRows || MAX_PDF_ROWS)) + ' linhas adicionais disponíveis no XLSX.', pageWidth - margin * 2, 2), margin, y);
+          doc.text(pdfLines(doc, 'PDF resumido: ' + (fullList.length - limit) + ' linhas adicionais disponíveis no XLSX.', pageWidth - margin * 2, 2), margin, y);
           y += 18;
         }
-        y += 10;
+        y += 6;
       }
 
       addPdfHeader(doc, normalized, pageWidth);
@@ -768,6 +951,8 @@
   window.KCAdminExport = Object.freeze({
     ensureXLSX,
     ensureJsPDF,
+    ensureExcelJS,
+    ensureAutoTable,
     sanitizeExportValue,
     sanitizeExportObject,
     normalizeRows,
