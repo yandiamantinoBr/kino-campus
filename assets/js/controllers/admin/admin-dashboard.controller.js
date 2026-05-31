@@ -316,6 +316,29 @@
     return { text: (pct > 0 ? '+' : '') + pct + '%', dir: pct > 0 ? 'up' : 'down' };
   }
 
+  // Skeleton (estado de carregamento) — substitui o texto "Carregando…".
+  function skeletonCards(n) {
+    var card = '<article class="kc-admin-card kc-skeleton-card" aria-hidden="true">'
+      + '<div class="kc-skeleton" style="width:55%;height:10px;"></div>'
+      + '<div class="kc-skeleton" style="width:45%;height:26px;"></div>'
+      + '<div class="kc-skeleton" style="width:70%;height:10px;"></div>'
+      + '</article>';
+    var out = '';
+    for (var i = 0; i < (Number(n) || 3); i += 1) out += card;
+    return out;
+  }
+
+  function showDashboardSkeletons() {
+    var grids = [
+      ['#admin-executive-metrics', 4], ['#admin-metrics', 4], ['#admin-activity-metrics', 4],
+      ['#admin-community-metrics', 3], ['#admin-privacy-metrics', 4]
+    ];
+    grids.forEach(function (pair) {
+      var el = $(pair[0]);
+      if (el && el.children.length === 0) el.innerHTML = skeletonCards(pair[1]);
+    });
+  }
+
   function daysAgo(n) {
     const d = new Date();
     d.setDate(d.getDate() - n);
@@ -635,6 +658,7 @@
     // Carrega todas as métricas em paralelo para melhor performance
     stabilizeHeaderActions();
     updateTitles(periodDays);
+    showDashboardSkeletons();
 
     // Caminho preferido: 1 RPC agregada (kc_admin_dashboard_overview) substitui
     // ~19 consultas. Fallback defensivo: loaders individuais (se a RPC faltar/falhar).
@@ -817,6 +841,19 @@
         metricCard('fas fa-chart-line',   'Interações (' + shortLabel + ')',     votesCount + savedPostsCount + commentsCount, { subtitle: 'Votos + salvos + comentários', delta: deltaEngagement }),
       ].join('');
     }
+
+    // ── Privacidade + Saúde (vinculadas ao período + dados reais do overview) ──
+    var healthItems = [
+      { label: 'Métricas', value: overview ? 'RPC agregada' : 'Loaders', tone: overview ? null : 'warn', note: overview ? 'kc_admin_dashboard_overview respondeu (1 chamada).' : 'RPC indisponível; usando loaders individuais.' },
+      { label: 'Pulso diário', value: (dailyMetrics && dailyMetrics.length) ? (dailyMetrics.length + ' dias') : 'Sem dados', tone: (dailyMetrics && dailyMetrics.length) ? null : 'warn', note: 'Série de atividade consolidada por dia.' },
+      { label: 'Tendências', value: (trends && trends.length) ? (trends.length + ' termos') : 'Sem buscas', note: 'kc_admin_search_trends respondeu.' },
+      { label: 'Privacidade', value: 'Dados reais', note: 'Eventos/sessões de search_queries + post_view_events (sem perfil individual).' }
+    ];
+    try {
+      if (window._KCAD && window._KCAD.privacy && typeof window._KCAD.privacy.refresh === 'function') {
+        window._KCAD.privacy.refresh({ overview: overview ? overview.privacy : null, periodLabel: fullLabel, health: healthItems });
+      }
+    } catch (_) { }
 
     // ── Renderiza audit log ──
     renderAuditRows(auditRows, false);
