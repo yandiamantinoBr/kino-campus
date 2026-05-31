@@ -156,11 +156,47 @@
     }
   }
 
+  // Render period-aware a partir do bloco "privacy" da RPC agregada (overview),
+  // chamado pelo controller no fluxo de refresh (segue o filtro de período).
+  function renderFromOverview(privacyBlock, periodLabel) {
+    const target = $('#admin-privacy-metrics');
+    if (!target || !privacyBlock) return;
+    const label = periodLabel ? ('no período: ' + periodLabel) : 'no período';
+    target.innerHTML = [
+      card('fas fa-chart-simple', 'Eventos opcionais', privacyBlock.events, label, 'privacy-analytics.html'),
+      card('fas fa-users-viewfinder', 'Sessões agregadas', privacyBlock.sessions, 'distintas, sem perfil individual', 'privacy-analytics.html'),
+      card('fas fa-magnifying-glass', 'Buscas', privacyBlock.searches, 'consultas registradas', 'privacy-analytics.html'),
+      card('fas fa-eye', 'Views de posts', privacyBlock.post_views, 'visualizações registradas', 'privacy-analytics.html'),
+    ].join('');
+  }
+
+  function refresh(opts) {
+    opts = opts || {};
+    window._KCAD = window._KCAD || {};
+    window._KCAD.__privacyDriven = true;
+    if (opts.overview) {
+      renderFromOverview(opts.overview, opts.periodLabel);
+      renderAdminHealth(Array.isArray(opts.health) && opts.health.length
+        ? opts.health
+        : [{ label: 'Privacidade', value: 'Dados reais', note: 'Eventos/sessões agregados (sem perfil).' }]);
+      return;
+    }
+    loadPrivacySummary();
+  }
+
+  window._KCAD = window._KCAD || {};
+  window._KCAD.privacy = { refresh: refresh, loadPrivacySummary: loadPrivacySummary };
+
+  // Primeira pintura (fallback): só roda se o controller ainda não tiver assumido.
+  function autoFallback() {
+    if (window._KCAD && window._KCAD.__privacyDriven) return;
+    loadPrivacySummary();
+  }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
-      setTimeout(loadPrivacySummary, 700);
+      setTimeout(autoFallback, 700);
     }, { once: true });
   } else {
-    setTimeout(loadPrivacySummary, 700);
+    setTimeout(autoFallback, 700);
   }
 }());

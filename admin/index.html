@@ -204,6 +204,32 @@
       transition: opacity .2s;
     }
 
+    /* Skeletons (estado de carregamento) */
+    .kc-skeleton {
+      position: relative;
+      overflow: hidden;
+      background: var(--kc-border-dark);
+      border-radius: 6px;
+    }
+    .kc-skeleton::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .12), transparent);
+      animation: kc-skeleton-shimmer 1.25s infinite;
+    }
+    @keyframes kc-skeleton-shimmer {
+      100% { transform: translateX(100%); }
+    }
+    .kc-admin-card.kc-skeleton-card {
+      gap: 10px;
+      justify-content: center;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .kc-skeleton::after { animation: none; }
+    }
+
     .kc-admin-card {
       background: var(--kc-surface-dark);
       border: 1px solid var(--kc-border-dark);
@@ -773,10 +799,6 @@
                 <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
                 <button type="button" class="xlsx" id="admin-export-xlsx" disabled><i class="fas fa-file-excel"></i> XLSX</button>
                 <button type="button" class="pdf" id="admin-export-pdf" disabled><i class="fas fa-file-pdf"></i> PDF</button>
-                <a href="moderation.html"><i class="fas fa-shield-halved"></i> Ir para Moderação</a>
-                <a href="reports.html"><i class="fas fa-flag"></i> Ir para Denúncias</a>
-                <a href="banners.html"><i class="fas fa-images"></i> Gerenciar Banners</a>
-                <a href="privacy-analytics.html"><i class="fas fa-shield-heart"></i> Privacidade</a>
               </div>
             </section>
 
