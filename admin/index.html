@@ -901,15 +901,21 @@
               <div class="kc-admin-chart-shell">
                 <div class="kc-admin-chart-shell__header">
                   <span class="kc-admin-chart-shell__title">Séries por dia</span>
-                  <button type="button" id="admin-chart-expand-btn" class="kc-admin-chart-expand">
-                    <i class="fas fa-expand"></i> Expandir
-                  </button>
+                  <div class="kc-admin-chart-shell__actions">
+                    <button type="button" id="admin-series-config-btn" class="kc-admin-chart-expand" aria-expanded="false" aria-controls="admin-series-picker" title="Escolher quais séries exibir e suas cores" data-i18n-tooltip="tooltip.series-config">
+                      <i class="fas fa-sliders"></i> Configurar séries
+                    </button>
+                    <button type="button" id="admin-chart-expand-btn" class="kc-admin-chart-expand">
+                      <i class="fas fa-expand"></i> Expandir
+                    </button>
+                  </div>
                 </div>
                 <div id="admin-daily-activity-chart">
                   <div class="kc-admin-empty">Carregando gráfico...</div>
                 </div>
               </div>
               <div id="admin-daily-activity-legend" class="kc-admin-chart-legend"></div>
+              <div id="admin-series-picker" class="kc-series-picker" data-open="false" aria-label="Configurar séries do gráfico" data-i18n-aria-label="aria-label.series-picker"></div>
             </section>
 
             <section class="kc-admin-section">

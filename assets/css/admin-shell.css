@@ -436,6 +436,111 @@ body.kc-admin-page--dashboard .kc-admin-chart-legend__search {
   }
 }
 
+/* ── Seletor "Configurar séries" (escolher variáveis + cor) ── */
+body.kc-admin-page--dashboard .kc-admin-chart-shell__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker {
+  display: none;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 16px;
+  background: rgba(148, 163, 184, 0.06);
+}
+
+body.kc-admin-page--dashboard .kc-series-picker[data-open="true"] {
+  display: block;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__head strong {
+  font-size: 0.86rem;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__reset {
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  color: var(--kc-text-dark-primary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__reset:hover {
+  border-color: rgba(255, 107, 0, 0.45);
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__group {
+  margin-bottom: 8px;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__family {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--kc-text-dark-secondary);
+  margin: 8px 0 4px;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__row:hover {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__toggle {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--kc-primary-brand);
+  cursor: pointer;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.kc-admin-page--dashboard .kc-series-picker__color {
+  flex-shrink: 0;
+  width: 30px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
 body.kc-admin-page--dashboard .kc-admin-chart-modal-backdrop {
   position: fixed;
   inset: 0;

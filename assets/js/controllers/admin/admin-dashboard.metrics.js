@@ -587,7 +587,9 @@
       loadAuditEventRows(client, since),
       queryCreatedAtRows(client, 'saved_posts', since, 1500),
       queryCreatedAtRows(client, 'reports', since, 1500),
-      queryCreatedAtRows(client, 'profiles', since, 1500)
+      queryCreatedAtRows(client, 'profiles', since, 1500),
+      queryCreatedAtRows(client, 'post_view_events', since, 1500),
+      queryCreatedAtRows(client, 'comment_likes', since, 1500)
     ]);
     throwIfAborted(signal);
 
@@ -600,7 +602,9 @@
         admin_actions: eventSets[4],
         saves: eventSets[5],
         reports: eventSets[6],
-        signups: eventSets[7]
+        signups: eventSets[7],
+        post_views: eventSets[8],
+        comment_likes: eventSets[9]
       }, since, until);
     }
 

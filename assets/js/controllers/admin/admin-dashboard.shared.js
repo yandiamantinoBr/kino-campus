@@ -87,7 +87,10 @@
     'admin_actions_count',
     'saves_count',
     'reports_count',
-    'signups_count'
+    'signups_count',
+    'post_views_count',
+    'comment_likes_count',
+    'sessions_count'
   ]);
 
   function normalizeText(value) {
@@ -243,6 +246,9 @@
         saves_count: 0,
         reports_count: 0,
         signups_count: 0,
+        post_views_count: 0,
+        comment_likes_count: 0,
+        sessions_count: 0,
         total_count: 0
       };
       buckets.push(bucket);
@@ -275,6 +281,9 @@
           saves_count: 0,
           reports_count: 0,
           signups_count: 0,
+          post_views_count: 0,
+          comment_likes_count: 0,
+          sessions_count: 0,
           total_count: 0
         };
       }
@@ -321,6 +330,9 @@
     incrementRows(eventSets && eventSets.saves, 'saves_count');
     incrementRows(eventSets && eventSets.reports, 'reports_count');
     incrementRows(eventSets && eventSets.signups, 'signups_count');
+    incrementRows(eventSets && eventSets.post_views, 'post_views_count');
+    incrementRows(eventSets && eventSets.comment_likes, 'comment_likes_count');
+    incrementRows(eventSets && eventSets.sessions, 'sessions_count');
 
     return Object.keys(bucketMap).sort().map(function (dayKey) {
       var bucket = bucketMap[dayKey];

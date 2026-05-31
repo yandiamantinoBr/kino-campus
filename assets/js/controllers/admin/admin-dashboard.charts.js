@@ -4,14 +4,17 @@
   window._KCAD = window._KCAD || {};
 
   var DEFAULT_SERIES_META = [
-    { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group' },
-    { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment' },
-    { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass' },
-    { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up' },
-    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved' },
-    { key: 'saves_count', label: 'Salvos', color: '#ec4899', icon: 'fas fa-bookmark' },
-    { key: 'reports_count', label: 'Denúncias', color: '#ef4444', icon: 'fas fa-flag' },
-    { key: 'signups_count', label: 'Cadastros', color: '#14b8a6', icon: 'fas fa-user-plus' }
+    { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group', family: 'Conteúdo' },
+    { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment', family: 'Conteúdo' },
+    { key: 'post_views_count', label: 'Visualizações', color: '#3b82f6', icon: 'fas fa-eye', family: 'Alcance' },
+    { key: 'sessions_count', label: 'Sessões ativas', color: '#a855f7', icon: 'fas fa-wifi', family: 'Tráfego' },
+    { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up', family: 'Engajamento' },
+    { key: 'comment_likes_count', label: 'Curtidas em comentários', color: '#f43f5e', icon: 'fas fa-heart', family: 'Engajamento' },
+    { key: 'saves_count', label: 'Salvos', color: '#ec4899', icon: 'fas fa-bookmark', family: 'Intenção' },
+    { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass', family: 'Demanda' },
+    { key: 'signups_count', label: 'Cadastros', color: '#14b8a6', icon: 'fas fa-user-plus', family: 'Crescimento' },
+    { key: 'reports_count', label: 'Denúncias', color: '#ef4444', icon: 'fas fa-flag', family: 'Moderação' },
+    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved', family: 'Operação' }
   ];
 
   function getDashboardUtils() {
@@ -327,9 +330,17 @@
     return !!getHiddenSeries()[key];
   }
 
+  // Aplica as cores customizadas (salvas pelo admin) sobre o meta base.
+  function metaWithColors(deps) {
+    var colors = getStateBucket().seriesColors || {};
+    return getSeriesMeta(deps).map(function (meta) {
+      return colors[meta.key] ? Object.assign({}, meta, { color: colors[meta.key] }) : meta;
+    });
+  }
+
   function getVisibleSeriesMeta(deps) {
     var hidden = getHiddenSeries();
-    return getSeriesMeta(deps).filter(function (meta) { return !hidden[meta.key]; });
+    return metaWithColors(deps).filter(function (meta) { return !hidden[meta.key]; });
   }
 
   function toggleSeriesHidden(deps, key) {
@@ -344,6 +355,133 @@
     hidden[key] = true;
   }
 
+  // ── Preferências do admin (séries visíveis + cores), com persistência ──
+  // Semeia o estado inicial a partir das preferências salvas (ou do padrão),
+  // só uma vez e sem sobrescrever um estado já presente.
+  function seedPrefsIfNeeded(deps) {
+    var bucket = getStateBucket();
+    if (bucket.prefsSeeded) return;
+    bucket.prefsSeeded = true;
+
+    var prefs = (deps && typeof deps.getInitialChartPrefs === 'function' && deps.getInitialChartPrefs()) || {};
+    if (!bucket.seriesColors) {
+      bucket.seriesColors = (prefs.colors && typeof prefs.colors === 'object') ? Object.assign({}, prefs.colors) : {};
+    }
+    if (!bucket.hiddenSeries) {
+      var allKeys = getSeriesMeta(deps).map(function (m) { return m.key; });
+      var visible = (Array.isArray(prefs.visible) && prefs.visible.length)
+        ? prefs.visible
+        : (deps && typeof deps.getDefaultVisibleSeries === 'function' ? deps.getDefaultVisibleSeries() : allKeys);
+      var hidden = {};
+      allKeys.forEach(function (k) { if (visible.indexOf(k) === -1) hidden[k] = true; });
+      if (allKeys.length && allKeys.every(function (k) { return hidden[k]; })) hidden = {};
+      bucket.hiddenSeries = hidden;
+    }
+  }
+
+  function persistChartPrefs(deps) {
+    if (!deps || typeof deps.saveChartPrefs !== 'function') return;
+    var bucket = getStateBucket();
+    var hidden = bucket.hiddenSeries || {};
+    var visible = getSeriesMeta(deps).map(function (m) { return m.key; }).filter(function (k) { return !hidden[k]; });
+    try { deps.saveChartPrefs({ visible: visible, colors: bucket.seriesColors || {} }); } catch (_) { }
+  }
+
+  // Re-render + persistência + (se aberto) atualização do seletor.
+  function afterSeriesChange(deps) {
+    applyChartState(deps);
+    persistChartPrefs(deps);
+    var panel = select(deps, '#admin-series-picker');
+    if (panel && panel.getAttribute && panel.getAttribute('data-open') === 'true') renderSeriesPicker(deps);
+  }
+
+  function setSeriesColor(deps, key, hex) {
+    if (!key || !hex) return;
+    var bucket = getStateBucket();
+    bucket.seriesColors = bucket.seriesColors || {};
+    bucket.seriesColors[key] = hex;
+    applyChartState(deps);
+    persistChartPrefs(deps);
+  }
+
+  function resetChartPrefs(deps) {
+    var bucket = getStateBucket();
+    bucket.seriesColors = {};
+    var allKeys = getSeriesMeta(deps).map(function (m) { return m.key; });
+    var visible = (deps && typeof deps.getDefaultVisibleSeries === 'function') ? deps.getDefaultVisibleSeries() : allKeys;
+    var hidden = {};
+    allKeys.forEach(function (k) { if (visible.indexOf(k) === -1) hidden[k] = true; });
+    bucket.hiddenSeries = hidden;
+    afterSeriesChange(deps);
+  }
+
+  // Painel "Configurar séries": agrupado por família, com toggle + cor por série.
+  function renderSeriesPicker(deps) {
+    var panel = select(deps, '#admin-series-picker');
+    if (!panel) return;
+    var meta = metaWithColors(deps);
+    var hidden = getHiddenSeries();
+    var groups = [];
+    var byFamily = {};
+    meta.forEach(function (m) {
+      var fam = m.family || 'Outros';
+      if (!byFamily[fam]) { byFamily[fam] = []; groups.push(fam); }
+      byFamily[fam].push(m);
+    });
+    var html = '<div class="kc-series-picker__head"><strong>Séries do gráfico</strong>'
+      + '<button type="button" class="kc-series-picker__reset" id="admin-series-reset"><i class="fas fa-rotate-left" aria-hidden="true"></i> Restaurar padrão</button></div>';
+    groups.forEach(function (fam) {
+      html += '<div class="kc-series-picker__group"><div class="kc-series-picker__family">' + escHtml(deps, fam) + '</div>';
+      byFamily[fam].forEach(function (m) {
+        var on = !hidden[m.key];
+        html += '<label class="kc-series-picker__row">'
+          + '<input type="checkbox" class="kc-series-picker__toggle"' + (on ? ' checked' : '') + ' data-series-key="' + escHtml(deps, m.key) + '">'
+          + '<span class="kc-series-picker__name"><i class="' + escHtml(deps, m.icon) + '" style="color:' + m.color + ';"></i> ' + escHtml(deps, m.label) + '</span>'
+          + '<input type="color" class="kc-series-picker__color" value="' + escHtml(deps, m.color) + '" data-series-key="' + escHtml(deps, m.key) + '" aria-label="Cor da série ' + escHtml(deps, m.label) + '">'
+          + '</label>';
+      });
+      html += '</div>';
+    });
+    panel.innerHTML = html;
+  }
+
+  function bindSeriesPicker(deps) {
+    var btn = select(deps, '#admin-series-config-btn');
+    var panel = select(deps, '#admin-series-picker');
+
+    if (btn && (!btn.dataset || !btn.dataset.bound) && typeof btn.addEventListener === 'function') {
+      if (btn.dataset) btn.dataset.bound = 'true';
+      btn.addEventListener('click', function () {
+        if (!panel) return;
+        var open = panel.getAttribute && panel.getAttribute('data-open') === 'true';
+        var next = open ? 'false' : 'true';
+        if (typeof panel.setAttribute === 'function') panel.setAttribute('data-open', next);
+        if (typeof btn.setAttribute === 'function') btn.setAttribute('aria-expanded', next);
+        if (next === 'true') renderSeriesPicker(deps);
+      });
+    }
+
+    if (panel && (!panel.dataset || !panel.dataset.bound) && typeof panel.addEventListener === 'function') {
+      if (panel.dataset) panel.dataset.bound = 'true';
+      panel.addEventListener('change', function (event) {
+        var t = event && event.target;
+        if (!t || !t.classList) return;
+        var key = t.getAttribute && t.getAttribute('data-series-key');
+        if (t.classList.contains('kc-series-picker__toggle')) {
+          toggleSeriesHidden(deps, key);
+          afterSeriesChange(deps);
+        } else if (t.classList.contains('kc-series-picker__color')) {
+          setSeriesColor(deps, key, t.value);
+        }
+      });
+      panel.addEventListener('click', function (event) {
+        var t = event && event.target;
+        var reset = t && typeof t.closest === 'function' ? t.closest('#admin-series-reset') : null;
+        if (reset) { resetChartPrefs(deps); renderSeriesPicker(deps); }
+      });
+    }
+  }
+
   function normalizeLegend(value) {
     var utils = getDashboardUtils();
     if (typeof utils.normalizeText === 'function') return utils.normalizeText(value);
@@ -353,7 +491,7 @@
   function buildDailyActivityLegendMarkup(series, deps, options) {
     options = options || {};
     var totals = getSeriesTotals(series, deps);
-    var allMeta = getSeriesMeta(deps);
+    var allMeta = metaWithColors(deps);
     var query = options.query != null ? String(options.query) : '';
     var normalizedQuery = normalizeLegend(query);
     var withSearch = options.withSearch && allMeta.length >= LEGEND_SEARCH_THRESHOLD;
@@ -537,7 +675,7 @@
       var key = btn.getAttribute('data-series-key');
       if (!key) return;
       toggleSeriesHidden(deps, key);
-      applyChartState(deps);
+      afterSeriesChange(deps);
     });
 
     legendEl.addEventListener('input', function (event) {
@@ -653,6 +791,8 @@
       });
     }
 
+    bindSeriesPicker(deps);
+
     var body = document && document.body ? document.body : null;
     if (body && !body.dataset.adminChartEscBound) {
       body.dataset.adminChartEscBound = 'true';
@@ -667,6 +807,7 @@
     var legend = select(deps, '#admin-daily-activity-legend');
     var expandBtn = select(deps, '#admin-chart-expand-btn');
     if (!chart || !legend) return;
+    seedPrefsIfNeeded(deps);
 
     if (!Array.isArray(series) || !series.length) {
       chart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
@@ -756,6 +897,9 @@
     try {
       var users = await api.getTopContributors(period, module, limit);
       if ((signal && signal.aborted) || requestSeq !== getRankingRequestSeq(deps)) return;
+
+      // Guarda o ranking carregado para a exportação (seção Top Contribuidores).
+      getStateBucket().lastRanking = Array.isArray(users) ? users : [];
 
       var showAllBtn = select(deps, '#admin-ranking-show-all');
       if (!users || !users.length) {

@@ -437,6 +437,7 @@
     // Admin
     'aria-label.admin-nav':             'Navegação admin',
     'aria-label.admin-insights':        'Insights do dashboard',
+    'aria-label.series-picker':         'Configurar séries do gráfico',
     'aria-label.audit-log':             'Audit log de ações administrativas',
     'aria-label.audit-log-filters':     'Filtros do audit log',
     'aria-label.audit-actor-filter':    'Filtrar por ator',
@@ -574,6 +575,7 @@
     'tooltip.filter-module':            'Filtrar por módulo',
     'tooltip.privacy-event-filter':     'Filtrar por tipo de evento de privacidade',
     'tooltip.period-filter':            'Período',
+    'tooltip.series-config':            'Escolher quais séries exibir e suas cores',
     'tooltip.audit-action-filter':      'Filtrar por ação',
     'tooltip.audit-entity-filter':      'Filtrar por entidade',
     'tooltip.refresh':                  'Recarregar dados',
