@@ -70,3 +70,38 @@ describe('kc-feed.controller.js — revalidação vazia não esvazia o feed', ()
     expect(s).toContain('!normalized.length && state.renderedPosts.length');
   });
 });
+
+describe('cache-bust cobre subpastas servidas (admin/)', () => {
+  test('inject-env coleta HTML recursivamente — não apenas a raiz', () => {
+    const src = read(INJECT);
+    expect(src).toContain('collectHtmlFiles');
+    // Garante que a coleta NÃO é mais limitada à raiz do repositório.
+    expect(src).not.toMatch(/readdirSync\(repoRoot\)\s*\.filter/);
+  });
+
+  test('a varredura encontra TODAS as páginas admin/*.html', () => {
+    // Replica a varredura de inject-env.js para travar a cobertura do admin/.
+    const SKIP = new Set([
+      'node_modules', '.git', '.github', '.vercel', '.claude', 'tests', 'test',
+      'docs', 'services', 'supabase', 'scripts', 'output', 'coverage', '.export-samples',
+    ]);
+    function walk(dir, depth, acc) {
+      if (depth > 4) return acc;
+      let entries = [];
+      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return acc; }
+      entries.forEach((e) => {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (SKIP.has(e.name) || e.name.startsWith('.')) return;
+          walk(full, depth + 1, acc);
+        } else if (/\.html$/i.test(e.name)) {
+          acc.push(full);
+        }
+      });
+      return acc;
+    }
+    const files = walk(ROOT, 0, []).map((f) => f.replace(/\\/g, '/'));
+    expect(files.some((f) => f.endsWith('/admin/index.html'))).toBe(true);
+    expect(files.filter((f) => /\/admin\//.test(f)).length).toBeGreaterThanOrEqual(6);
+  });
+});

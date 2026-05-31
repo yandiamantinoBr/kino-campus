@@ -213,14 +213,32 @@ function applyAssetCacheBust() {
   if (!token) return;
 
   const repoRoot = path.join(__dirname, '..');
-  let htmlFiles = [];
-  try {
-    htmlFiles = fs.readdirSync(repoRoot).filter((f) => /\.html$/i.test(f));
-  } catch (_) { htmlFiles = []; }
+  // Coleta o HTML servido em TODA a árvore (raiz + subpastas como admin/).
+  // Antes o cache-bust só cobria a raiz, então admin/*.html ficava com ?v fixo
+  // e os usuários recorrentes nunca recebiam o JS/CSS novo do painel admin.
+  const SKIP_DIRS = new Set([
+    'node_modules', '.git', '.github', '.vercel', '.claude', 'tests', 'test',
+    'docs', 'services', 'supabase', 'scripts', 'output', 'coverage', '.export-samples',
+  ]);
+  function collectHtmlFiles(dir, depth, acc) {
+    if (depth > 4) return acc;
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return acc; }
+    entries.forEach((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) return;
+        collectHtmlFiles(full, depth + 1, acc);
+      } else if (/\.html$/i.test(entry.name)) {
+        acc.push(full);
+      }
+    });
+    return acc;
+  }
+  const htmlFiles = collectHtmlFiles(repoRoot, 0, []);
 
   let changed = 0;
-  htmlFiles.forEach((file) => {
-    const fp = path.join(repoRoot, file);
+  htmlFiles.forEach((fp) => {
     let html;
     try { html = fs.readFileSync(fp, 'utf8'); } catch (_) { return; }
     // Substitui SOMENTE o valor de ?v= (não altera o caminho do arquivo).
