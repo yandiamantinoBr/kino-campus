@@ -19,9 +19,9 @@ describe('kc_admin_dashboard_overview — migration', () => {
     sql = r('supabase/migrations/20260531120000_admin_dashboard_overview_rpc.sql');
   });
 
-  test('cria a função agregada com SECURITY DEFINER e search_path vazio', () => {
+  test('cria a função agregada com SECURITY INVOKER e search_path vazio', () => {
     expect(sql).toContain('create or replace function public.kc_admin_dashboard_overview');
-    expect(sql).toContain('security definer');
+    expect(sql).toContain('security invoker');
     expect(sql).toContain("set search_path = ''");
   });
 

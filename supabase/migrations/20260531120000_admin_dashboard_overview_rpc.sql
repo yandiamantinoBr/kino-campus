@@ -20,7 +20,7 @@ create or replace function public.kc_admin_dashboard_overview(
 returns jsonb
 language plpgsql
 stable
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
