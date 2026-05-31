@@ -31,7 +31,10 @@
     { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment' },
     { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass' },
     { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up' },
-    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved' }
+    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved' },
+    { key: 'saves_count', label: 'Salvos', color: '#ec4899', icon: 'fas fa-bookmark' },
+    { key: 'reports_count', label: 'Denúncias', color: '#ef4444', icon: 'fas fa-flag' },
+    { key: 'signups_count', label: 'Cadastros', color: '#14b8a6', icon: 'fas fa-user-plus' }
   ];
   function $(sel, root) { return (root || document).querySelector(sel); }
 

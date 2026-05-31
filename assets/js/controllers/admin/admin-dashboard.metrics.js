@@ -584,7 +584,10 @@
       queryCreatedAtRows(client, 'comments', since, 1500),
       queryCreatedAtRows(client, 'search_queries', since, 1500),
       queryCreatedAtRows(client, 'post_votes', since, 1500),
-      loadAuditEventRows(client, since)
+      loadAuditEventRows(client, since),
+      queryCreatedAtRows(client, 'saved_posts', since, 1500),
+      queryCreatedAtRows(client, 'reports', since, 1500),
+      queryCreatedAtRows(client, 'profiles', since, 1500)
     ]);
     throwIfAborted(signal);
 
@@ -594,7 +597,10 @@
         comments: eventSets[1],
         searches: eventSets[2],
         votes: eventSets[3],
-        admin_actions: eventSets[4]
+        admin_actions: eventSets[4],
+        saves: eventSets[5],
+        reports: eventSets[6],
+        signups: eventSets[7]
       }, since, until);
     }
 
