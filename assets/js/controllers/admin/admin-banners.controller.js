@@ -983,6 +983,13 @@
     }
   }
 
+  function showLoadingSkeletons() {
+    const list = document.getElementById('banners-list');
+    if (list && !list.children.length) {
+      list.innerHTML = '<div class="kc-skeleton" style="height:84px;border-radius:14px;margin-bottom:12px;"></div>'.repeat(4);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', async function () {
     const env = window.KC_ENV || {};
     if (String(env.DATA_DRIVER || env.driver || 'local').toLowerCase() !== 'supabase') {
@@ -996,6 +1003,7 @@
       setLoadedState(true);
       return;
     }
+    showLoadingSkeletons();
 
     const modalBackdrop = document.getElementById('banner-modal');
     const modalCard = modalBackdrop ? modalBackdrop.querySelector('.kc-modal') : null;

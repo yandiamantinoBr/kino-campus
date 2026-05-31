@@ -16,21 +16,21 @@ const ROOT = path.resolve(__dirname, '../..');
 const r = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
 describe('Fase B — skeletons de carregamento', () => {
-  let html;
+  let css;
   let ctrl;
   beforeAll(() => {
-    html = r('admin/index.html');
+    css = r('assets/css/admin-shell.css');
     ctrl = r('assets/js/controllers/admin/admin-dashboard.controller.js');
   });
 
-  test('admin/index.html traz o CSS de shimmer (.kc-skeleton + keyframes + card)', () => {
-    expect(html).toContain('.kc-skeleton');
-    expect(html).toContain('@keyframes kc-skeleton-shimmer');
-    expect(html).toContain('.kc-admin-card.kc-skeleton-card');
+  test('admin-shell.css traz o CSS de shimmer compartilhado (.kc-skeleton + keyframes + card)', () => {
+    expect(css).toContain('.kc-skeleton');
+    expect(css).toContain('@keyframes kc-skeleton-shimmer');
+    expect(css).toContain('.kc-admin-card.kc-skeleton-card');
   });
 
   test('respeita prefers-reduced-motion (sem animação)', () => {
-    expect(html).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*kc-skeleton::after[\s\S]*animation:\s*none/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*kc-skeleton::after[\s\S]*animation:\s*none/);
   });
 
   test('controller define helpers de skeleton e os usa no início do load', () => {

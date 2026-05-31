@@ -1778,6 +1778,13 @@
     }
   }
 
+  function showLoadingSkeletons() {
+    const posts = $('#moderation-posts-body');
+    if (posts && !posts.children.length) {
+      posts.innerHTML = '<tr><td colspan="99" style="padding:8px 0;border:0;"><div class="kc-skeleton" style="height:20px;"></div></td></tr>'.repeat(6);
+    }
+  }
+
   async function boot() {
     setLoading(true);
     initStatusFilter();
@@ -1789,6 +1796,7 @@
     }
 
     $('#admin-content').style.display = 'block';
+    showLoadingSkeletons();
     bindEvents();
     bindPostLimitsEvents();
     renderSessionActions();
