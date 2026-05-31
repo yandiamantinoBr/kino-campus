@@ -56,6 +56,15 @@ describe('exports executivos admin - dashboard, denuncias e banners', () => {
     expect(source).toContain('periodo_metricas');
   });
 
+  test('moderacao inclui acesso externo (convites/solicitacoes) no export', () => {
+    const source = read('assets/js/controllers/admin/admin-moderation.controller.js');
+    expect(source).toContain('async function fetchExternalAccessForExport(warnings)');
+    expect(source).toContain('listExternalAccessRequests');
+    expect(source).toContain("title: 'Acesso externo'");
+    expect(source).toContain('externalAccess');
+    expect(source).toContain('function extAccessStatusLabel');
+  });
+
   test('exportador compartilhado preserva acentos, sanitizacao e labels administrativos', () => {
     const source = read('assets/js/controllers/admin/admin-export.shared.js');
 

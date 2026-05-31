@@ -970,6 +970,26 @@
     }
   }
 
+  // Coleta as solicitações de acesso externo (mesma fonte do painel da página).
+  async function fetchExternalAccessForExport(warnings) {
+    try {
+      if (!window.KCAPI || typeof window.KCAPI.listExternalAccessRequests !== 'function') return [];
+      const statuses = ['pending', 'approved', 'rejected'];
+      const results = await Promise.all(statuses.map((status) => {
+        return Promise.resolve(window.KCAPI.listExternalAccessRequests({ status, limit: 100 }))
+          .catch(() => null);
+      }));
+      let items = [];
+      results.forEach((res) => {
+        if (res && res.ok !== false && Array.isArray(res.items)) items = items.concat(res.items);
+      });
+      return items;
+    } catch (error) {
+      warnings.push('Não foi possível coletar solicitações de acesso externo para o export.');
+      return [];
+    }
+  }
+
   async function collectModerationExportData() {
     const client = getClient();
     const warnings = [];
@@ -982,15 +1002,17 @@
         actorsById: state.audit.actorsById || {},
         activeLimits: Array.isArray(limitsState.limits) ? limitsState.limits : [],
         floodLimits: Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : [],
+        externalAccess: [],
         warnings,
       };
     }
 
-    const [postsPayload, auditPayload, activeLimits, floodLimits] = await Promise.all([
+    const [postsPayload, auditPayload, activeLimits, floodLimits, externalAccess] = await Promise.all([
       fetchPostsForExport(client, warnings),
       fetchAuditRowsForExport(client, warnings),
       fetchPostLimitsForExport(client, warnings),
       fetchPostFloodLimitsForExport(client, warnings),
+      fetchExternalAccessForExport(warnings),
     ]);
 
     return {
@@ -1002,8 +1024,14 @@
       actorsById: auditPayload.actorsById,
       activeLimits,
       floodLimits,
+      externalAccess,
       warnings,
     };
+  }
+
+  function extAccessStatusLabel(status) {
+    const map = { pending: 'Pendente', approved: 'Aprovada', rejected: 'Recusada' };
+    return map[String(status || '').toLowerCase()] || (status || 'Pendente');
   }
 
   function buildModerationExportReport(exportData) {
@@ -1014,6 +1042,7 @@
     const floodLimits = Array.isArray(exportData.floodLimits) ? exportData.floodLimits : (Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : []);
     const actorsById = exportData.actorsById || state.audit.actorsById || {};
     const warnings = Array.isArray(exportData.warnings) ? exportData.warnings : [];
+    const externalAccess = Array.isArray(exportData.externalAccess) ? exportData.externalAccess : [];
     const postsTotalCount = Number.isFinite(Number(exportData.postsTotalCount)) ? Number(exportData.postsTotalCount) : (state.totalCount || posts.length);
     const statusCounts = posts.reduce((acc, post) => {
       const key = String(post && post.status || 'desconhecido');
@@ -1125,6 +1154,40 @@
       },
     ];
 
+    if (externalAccess.length) {
+      sections.push({
+        title: 'Acesso externo',
+        note: 'Solicitações de acesso externo (convites) exibidas no painel — pendentes, aprovadas e recusadas.',
+        rows: externalAccess.map((req) => ({
+          solicitante: (req && req.requester_name) || 'Solicitante',
+          email: (req && req.contact_email) || '',
+          status: extAccessStatusLabel(req && req.admin_status),
+          vinculo: (req && req.affiliation_context) || '',
+          mensagem: (req && req.message) || '',
+          criado_em: fmtDate(req && req.created_at),
+          decidido_em: (req && req.admin_decided_at) ? fmtDate(req.admin_decided_at) : '',
+          nota_admin: (req && req.admin_note) || '',
+        })),
+        pdfColumns: [
+          { key: 'solicitante', label: 'Solicitante' },
+          { key: 'email', label: 'E-mail' },
+          { key: 'status', label: 'Status' },
+          { key: 'criado_em', label: 'Criado em' },
+        ],
+        xlsxColumns: [
+          { key: 'solicitante', label: 'Solicitante' },
+          { key: 'email', label: 'E-mail' },
+          { key: 'status', label: 'Status' },
+          { key: 'vinculo', label: 'Vínculo' },
+          { key: 'mensagem', label: 'Mensagem' },
+          { key: 'criado_em', label: 'Criado em' },
+          { key: 'decidido_em', label: 'Decidido em' },
+          { key: 'nota_admin', label: 'Nota do admin' },
+        ],
+        maxPdfRows: 30,
+      });
+    }
+
     if (warnings.length) {
       sections.push({
         title: 'Avisos de exportação',
@@ -1136,7 +1199,7 @@
 
     return {
       title: 'KinoCampus - Moderação Admin',
-      subtitle: 'Posts filtrados, limites ativos, ritmo de publicação e audit log da seleção atual',
+      subtitle: 'Posts filtrados, limites ativos, ritmo de publicação, audit log e solicitações de acesso externo da seleção atual',
       source: 'admin/moderation.html — export completo dos filtros atuais',
       filters: {
         status: statusLabel(state.statusFilter || 'all'),
