@@ -636,46 +636,11 @@
     stabilizeHeaderActions();
     updateTitles(periodDays);
 
-    const [
-      reportMetrics,
-      postStatusMetrics,
-      postsCreated,
-      postsEdited,
-      commentsCount,
-      searchCount,
-      postsTotal,
-      visiblePosts,
-      usersTotal,
-      usersNew,
-      votesCount,
-      savedPostsCount,
-      activeSessions15m,
-      auditRows,
-      trends,
-      dailyMetrics,
-    ] = await Promise.all([
-      loadReportMetrics(client, since),
-      loadPostStatusMetrics(client, since),
-      loadPostsCreated(client, since),
-      loadPostsEdited(client, since),
-      loadCommentsCount(client, since),
-      loadSearchCount(client, since),
-      loadPostsTotal(client),
-      loadVisiblePostsCount(client),
-      loadUsersTotal(client),
-      loadUsersNew(client, since),
-      loadVotesCount(client, since),
-      loadSavedPostsCount(client, since),
-      loadActiveSessions15m(client),
-      loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
-      loadSearchTrendsData(client, since),
-      loadDailyMetrics(client, since, signal),
-    ]);
-    throwIfAborted(signal);
-
-    // ── Variação % vs janela anterior (deltas dos KPIs) ──────────────────────
-    // Conta criados em [prevSince, since) para comparar com a janela atual.
+    // Caminho preferido: 1 RPC agregada (kc_admin_dashboard_overview) substitui
+    // ~19 consultas. Fallback defensivo: loaders individuais (se a RPC faltar/falhar).
+    var until = (periodRange && periodRange.until) || new Date().toISOString();
     var prevSince = daysAgo(periodDays * 2);
+
     function prevWindowCount(table) {
       return client.from(table)
         .select('id', { count: 'exact', head: true })
@@ -684,19 +649,96 @@
         .then(function (r) { return (r && !r.error && typeof r.count === 'number') ? r.count : 0; })
         .catch(function () { return 0; });
     }
-    var prevCounts = await Promise.all([
-      prevWindowCount('profiles'),
-      prevWindowCount('posts'),
-      prevWindowCount('comments'),
-      prevWindowCount('post_votes'),
-      prevWindowCount('saved_posts'),
-    ]);
+
+    var reportMetrics, postStatusMetrics, postsCreated, postsEdited, commentsCount,
+      searchCount, postsTotal, visiblePosts, usersTotal, usersNew, votesCount,
+      savedPostsCount, activeSessions15m, auditRows, trends, dailyMetrics;
+    var deltaUsersNew = null, deltaPostsCreated = null, deltaEngagement = null;
+
+    var overview = null;
+    try {
+      var ovResp = await client.rpc('kc_admin_dashboard_overview', {
+        p_since: since, p_until: until, p_prev_since: prevSince
+      });
+      if (ovResp && !ovResp.error && ovResp.data && ovResp.data.ok !== false) overview = ovResp.data;
+    } catch (_) { overview = null; }
     throwIfAborted(signal);
-    var deltaUsersNew = computeDelta(usersNew, prevCounts[0]);
-    var deltaPostsCreated = computeDelta(postsCreated, prevCounts[1]);
-    var curEngagement = (Number(votesCount) || 0) + (Number(savedPostsCount) || 0) + (Number(commentsCount) || 0);
-    var prevEngagement = (Number(prevCounts[2]) || 0) + (Number(prevCounts[3]) || 0) + (Number(prevCounts[4]) || 0);
-    var deltaEngagement = computeDelta(curEngagement, prevEngagement);
+
+    if (overview) {
+      var ovReports = overview.reports || {};
+      var ovPosts = overview.posts || {};
+      var ovEng = overview.engagement || {};
+      var ovUsers = overview.users || {};
+      reportMetrics = { open: Number(ovReports.open) || 0, total: Number(ovReports.total) || 0 };
+      postStatusMetrics = { hidden: Number(ovPosts.hidden) || 0, deleted: Number(ovPosts.deleted) || 0 };
+      postsCreated = Number(ovPosts.created) || 0;
+      postsEdited = Number(ovPosts.edited) || 0;
+      postsTotal = Number(ovPosts.total) || 0;
+      visiblePosts = Number(ovPosts.visible) || 0;
+      commentsCount = Number(ovEng.comments) || 0;
+      votesCount = Number(ovEng.votes) || 0;
+      savedPostsCount = Number(ovEng.saves) || 0;
+      searchCount = Number((overview.privacy || {}).searches) || 0;
+      usersTotal = Number(ovUsers.total) || 0;
+      usersNew = Number(ovUsers.new) || 0;
+      activeSessions15m = {
+        value: Number(overview.active_15m) || 0,
+        available: true,
+        source: 'overview_rpc',
+        label: 'RPC',
+        note: 'Sessões distintas nos últimos 15 min (RPC agregada).'
+      };
+      deltaUsersNew = computeDelta(usersNew, Number(ovUsers.prev_new) || 0);
+      deltaPostsCreated = computeDelta(postsCreated, Number(ovPosts.prev_created) || 0);
+      deltaEngagement = computeDelta(
+        votesCount + savedPostsCount + commentsCount,
+        (Number(ovEng.prev_votes) || 0) + (Number(ovEng.prev_saves) || 0) + (Number(ovEng.prev_comments) || 0)
+      );
+
+      var ovRest = await Promise.all([
+        loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
+        loadSearchTrendsData(client, since),
+        loadDailyMetrics(client, since, signal),
+      ]);
+      auditRows = ovRest[0];
+      trends = ovRest[1];
+      dailyMetrics = ovRest[2];
+    } else {
+      var full = await Promise.all([
+        loadReportMetrics(client, since),
+        loadPostStatusMetrics(client, since),
+        loadPostsCreated(client, since),
+        loadPostsEdited(client, since),
+        loadCommentsCount(client, since),
+        loadSearchCount(client, since),
+        loadPostsTotal(client),
+        loadVisiblePostsCount(client),
+        loadUsersTotal(client),
+        loadUsersNew(client, since),
+        loadVotesCount(client, since),
+        loadSavedPostsCount(client, since),
+        loadActiveSessions15m(client),
+        loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
+        loadSearchTrendsData(client, since),
+        loadDailyMetrics(client, since, signal),
+      ]);
+      reportMetrics = full[0]; postStatusMetrics = full[1]; postsCreated = full[2]; postsEdited = full[3];
+      commentsCount = full[4]; searchCount = full[5]; postsTotal = full[6]; visiblePosts = full[7];
+      usersTotal = full[8]; usersNew = full[9]; votesCount = full[10]; savedPostsCount = full[11];
+      activeSessions15m = full[12]; auditRows = full[13]; trends = full[14]; dailyMetrics = full[15];
+
+      var prevCounts = await Promise.all([
+        prevWindowCount('profiles'), prevWindowCount('posts'), prevWindowCount('comments'),
+        prevWindowCount('post_votes'), prevWindowCount('saved_posts'),
+      ]);
+      deltaUsersNew = computeDelta(usersNew, prevCounts[0]);
+      deltaPostsCreated = computeDelta(postsCreated, prevCounts[1]);
+      deltaEngagement = computeDelta(
+        (Number(votesCount) || 0) + (Number(savedPostsCount) || 0) + (Number(commentsCount) || 0),
+        (Number(prevCounts[2]) || 0) + (Number(prevCounts[3]) || 0) + (Number(prevCounts[4]) || 0)
+      );
+    }
+    throwIfAborted(signal);
 
     _auditOffset = auditRows.length;
 
