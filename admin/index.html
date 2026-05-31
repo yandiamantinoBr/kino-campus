@@ -204,31 +204,8 @@
       transition: opacity .2s;
     }
 
-    /* Skeletons (estado de carregamento) */
-    .kc-skeleton {
-      position: relative;
-      overflow: hidden;
-      background: var(--kc-border-dark);
-      border-radius: 6px;
-    }
-    .kc-skeleton::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      transform: translateX(-100%);
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .12), transparent);
-      animation: kc-skeleton-shimmer 1.25s infinite;
-    }
-    @keyframes kc-skeleton-shimmer {
-      100% { transform: translateX(100%); }
-    }
-    .kc-admin-card.kc-skeleton-card {
-      gap: 10px;
-      justify-content: center;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .kc-skeleton::after { animation: none; }
-    }
+    /* Skeletons de carregamento → movidos para assets/css/admin-shell.css
+       (.kc-skeleton compartilhado por todas as páginas /admin). */
 
     .kc-admin-card {
       background: var(--kc-surface-dark);
@@ -760,7 +737,7 @@
         </a>
       </div>
       <nav class="kc-admin-nav" aria-label="Navegação admin" data-i18n-aria-label="aria-label.admin-nav">
-        <a href="index.html" class="kc-admin-nav__link active"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <a href="index.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-chart-line"></i> Dashboard</a>
         <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
         <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
         <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>

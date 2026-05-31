@@ -1131,6 +1131,17 @@
     });
   }
 
+  function showLoadingSkeletons() {
+    const summary = $('#helpSummary');
+    if (summary && !summary.children.length) {
+      summary.innerHTML = '<div class="kc-skeleton" style="height:60px;border-radius:14px;"></div>'.repeat(4);
+    }
+    const list = $('#helpRequestsList');
+    if (list && !list.children.length) {
+      list.innerHTML = '<div class="kc-skeleton" style="height:84px;border-radius:14px;margin-bottom:12px;"></div>'.repeat(4);
+    }
+  }
+
   async function init() {
     populateTypeFilter();
     bindEvents();
@@ -1141,6 +1152,7 @@
       return;
     }
 
+    showLoadingSkeletons();
     await loadRows();
   }
 

@@ -1377,6 +1377,18 @@
 
   // ---- Boot ----
 
+  // Skeletons de carregamento (consistente com o Dashboard) enquanto os dados chegam.
+  function showLoadingSkeletons() {
+    const summary = $('#reports-summary');
+    if (summary && !summary.children.length) {
+      summary.innerHTML = '<div class="kc-skeleton" style="height:64px;border-radius:14px;"></div>'.repeat(4);
+    }
+    const container = $('#admin-reports-container');
+    if (container && !container.children.length) {
+      container.innerHTML = '<div class="kc-skeleton" style="height:96px;border-radius:14px;margin-bottom:12px;"></div>'.repeat(3);
+    }
+  }
+
   async function boot() {
     syncShellModalState();
     setLoading(true);
@@ -1388,6 +1400,7 @@
     }
 
     $('#admin-content').style.display = 'block';
+    showLoadingSkeletons();
     setupEventDelegation();
     await render();
   }

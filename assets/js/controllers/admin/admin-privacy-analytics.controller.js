@@ -969,9 +969,17 @@
     }
   }
 
+  function showLoadingSkeletons() {
+    const summary = $('#privacySummary');
+    if (summary && !summary.children.length) {
+      summary.innerHTML = '<div class="kc-skeleton" style="height:64px;border-radius:14px;"></div>'.repeat(4);
+    }
+  }
+
   function init() {
     bindEvents();
     renderInventory();
+    showLoadingSkeletons();
     refresh();
   }
 
