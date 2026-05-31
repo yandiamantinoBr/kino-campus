@@ -5,6 +5,8 @@
   let _data = null;
   let _auditOffset = 0;
   let _chartModalReturnFocus = null;
+  let _chartPrefs = null;
+  let _saveChartPrefsTimer = null;
   var _adminRankingExpanded = false;
   var AUDIT_PAGE_SIZE = 20;
   var _exportBound = false;
@@ -27,15 +29,20 @@
   window._KCAD.audit = window._KCAD.audit || {};
   window._KCAD.charts = window._KCAD.charts || {};
   var SERIES_META = [
-    { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group' },
-    { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment' },
-    { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass' },
-    { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up' },
-    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved' },
-    { key: 'saves_count', label: 'Salvos', color: '#ec4899', icon: 'fas fa-bookmark' },
-    { key: 'reports_count', label: 'Denúncias', color: '#ef4444', icon: 'fas fa-flag' },
-    { key: 'signups_count', label: 'Cadastros', color: '#14b8a6', icon: 'fas fa-user-plus' }
+    { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group', family: 'Conteúdo' },
+    { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment', family: 'Conteúdo' },
+    { key: 'post_views_count', label: 'Visualizações', color: '#3b82f6', icon: 'fas fa-eye', family: 'Alcance' },
+    { key: 'sessions_count', label: 'Sessões ativas', color: '#a855f7', icon: 'fas fa-wifi', family: 'Tráfego' },
+    { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up', family: 'Engajamento' },
+    { key: 'comment_likes_count', label: 'Curtidas em comentários', color: '#f43f5e', icon: 'fas fa-heart', family: 'Engajamento' },
+    { key: 'saves_count', label: 'Salvos', color: '#ec4899', icon: 'fas fa-bookmark', family: 'Intenção' },
+    { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass', family: 'Demanda' },
+    { key: 'signups_count', label: 'Cadastros', color: '#14b8a6', icon: 'fas fa-user-plus', family: 'Crescimento' },
+    { key: 'reports_count', label: 'Denúncias', color: '#ef4444', icon: 'fas fa-flag', family: 'Moderação' },
+    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved', family: 'Operação' }
   ];
+  // Séries visíveis por padrão quando o admin ainda não tem preferência salva.
+  var DEFAULT_VISIBLE_SERIES = ['post_views_count', 'sessions_count', 'posts_count', 'comments_count', 'signups_count'];
   function $(sel, root) { return (root || document).querySelector(sel); }
 
   function getClient() {
@@ -99,6 +106,15 @@
       setXlsxLoadPromise: function (promise) { _xlsxLoadPromise = promise || null; },
       getJspdfLoadPromise: function () { return _jspdfLoadPromise; },
       setJspdfLoadPromise: function (promise) { _jspdfLoadPromise = promise || null; },
+      getVisibleSeriesKeys: function () {
+        var st = (window._KCAD && window._KCAD.__adminChartsState) || {};
+        var hidden = st.hiddenSeries || {};
+        return SERIES_META.map(function (m) { return m.key; }).filter(function (k) { return !hidden[k]; });
+      },
+      getRankingRows: function () {
+        var st = (window._KCAD && window._KCAD.__adminChartsState) || {};
+        return Array.isArray(st.lastRanking) ? st.lastRanking : [];
+      },
       getActorCache: function () { return _actorsById; }
     };
   }
@@ -123,8 +139,49 @@
       setRankingExpanded: function (nextValue) { _adminRankingExpanded = !!nextValue; },
       getRankingRequestSeq: function () { return _rankingRequestSeq; },
       setRankingRequestSeq: function (nextValue) { _rankingRequestSeq = Number(nextValue) || 0; },
+      getInitialChartPrefs: function () { return _chartPrefs; },
+      getDefaultVisibleSeries: function () { return DEFAULT_VISIBLE_SERIES.slice(); },
+      saveChartPrefs: saveChartPrefs,
       showStatusToast: showStatusToast
     };
+  }
+
+  var CHART_PREFS_STORAGE_KEY = 'kc_admin_chart_prefs_v1';
+
+  // Carrega as preferências do gráfico do admin atual (servidor → fallback localStorage).
+  async function loadChartPrefs() {
+    try {
+      var client = getClient();
+      if (client && typeof client.rpc === 'function') {
+        var resp = await client.rpc('kc_admin_get_chart_prefs');
+        if (resp && !resp.error && resp.data && resp.data.ok !== false && resp.data.prefs) {
+          _chartPrefs = resp.data.prefs;
+          try { window.localStorage.setItem(CHART_PREFS_STORAGE_KEY, JSON.stringify(_chartPrefs)); } catch (_) { }
+          return;
+        }
+      }
+    } catch (_) { }
+    try {
+      var raw = window.localStorage.getItem(CHART_PREFS_STORAGE_KEY);
+      if (raw) _chartPrefs = JSON.parse(raw);
+    } catch (_) { _chartPrefs = null; }
+  }
+
+  // Salva (debounced) as preferências: localStorage imediato + RPC no servidor.
+  function saveChartPrefs(prefs) {
+    if (!prefs || typeof prefs !== 'object') return;
+    _chartPrefs = prefs;
+    try { window.localStorage.setItem(CHART_PREFS_STORAGE_KEY, JSON.stringify(prefs)); } catch (_) { }
+    if (_saveChartPrefsTimer) window.clearTimeout(_saveChartPrefsTimer);
+    _saveChartPrefsTimer = window.setTimeout(function () {
+      _saveChartPrefsTimer = null;
+      try {
+        var client = getClient();
+        if (client && typeof client.rpc === 'function') {
+          client.rpc('kc_admin_save_chart_prefs', { p_prefs: prefs }).then(function () { }, function () { });
+        }
+      } catch (_) { }
+    }, 600);
   }
 
   function stabilizeHeaderActions() {
@@ -994,6 +1051,7 @@
       });
     }
 
+    await loadChartPrefs();
     await refreshDashboard();
   }
 

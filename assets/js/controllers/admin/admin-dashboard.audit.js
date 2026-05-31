@@ -742,6 +742,47 @@
     var periodEnd = formatDateBRValue(deps, data.periodEnd);
     var activeSessions = data.activeSessions15m || {};
     var activeAvailable = activeSessions && activeSessions.available;
+
+    // Séries dinâmicas: o relatório reflete exatamente as séries escolhidas no gráfico.
+    var seriesMetaList = (typeof deps.getSeriesMeta === 'function' && deps.getSeriesMeta()) || [];
+    var metaByKey = {};
+    seriesMetaList.forEach(function (m) { metaByKey[m.key] = m; });
+    var visibleSeriesKeys = (typeof deps.getVisibleSeriesKeys === 'function' && deps.getVisibleSeriesKeys()) || [];
+    if (!visibleSeriesKeys.length) visibleSeriesKeys = seriesMetaList.map(function (m) { return m.key; });
+    var pulseColumns = [{ key: 'dia', label: 'Dia' }].concat(visibleSeriesKeys.map(function (k) {
+      return { key: k, label: (metaByKey[k] && metaByKey[k].label) || k };
+    })).concat([{ key: 'total', label: 'Total' }]);
+    var pulseRows = (data.dailyMetrics || []).map(function (row) {
+      var r = { dia: row.label || row.day || '', total: toNumberValue(deps, row.total_count) };
+      visibleSeriesKeys.forEach(function (k) { r[k] = toNumberValue(deps, row[k]); });
+      return r;
+    });
+    var seriesTotalsRows = visibleSeriesKeys.map(function (k) {
+      return {
+        serie: (metaByKey[k] && metaByKey[k].label) || k,
+        total: (data.dailyMetrics || []).reduce(function (s, row) { return s + toNumberValue(deps, row[k]); }, 0)
+      };
+    });
+    var rankingRows = (typeof deps.getRankingRows === 'function' && deps.getRankingRows()) || [];
+    var rankingSection = {
+      title: 'Top Contribuidores',
+      note: 'Ranking de engajamento conforme o período e o módulo selecionados no painel.',
+      rows: rankingRows.map(function (u, i) {
+        return {
+          posicao: toNumberValue(deps, u && u.rank) || (i + 1),
+          usuario: (u && u.display_name) ? u.display_name : 'Usuário',
+          score: toNumberValue(deps, u && u.score),
+          publicacoes: toNumberValue(deps, u && u.posts_count),
+          votos: toNumberValue(deps, u && u.votes_received),
+          comentarios: toNumberValue(deps, u && u.comments_count),
+          penalidades: toNumberValue(deps, u && u.penalties)
+        };
+      }),
+      pdfColumns: [{ key: 'posicao', label: '#' }, { key: 'usuario', label: 'Usuário' }, { key: 'score', label: 'Score' }, { key: 'publicacoes', label: 'Posts' }],
+      xlsxColumns: [{ key: 'posicao', label: '#' }, { key: 'usuario', label: 'Usuário' }, { key: 'score', label: 'Score' }, { key: 'publicacoes', label: 'Posts' }, { key: 'votos', label: 'Votos' }, { key: 'comentarios', label: 'Comentários' }, { key: 'penalidades', label: 'Penalidades' }],
+      maxPdfRows: 20
+    };
+
     return {
       title: 'KinoCampus - Relatório Executivo Admin',
       subtitle: 'Dashboard administrativo consolidado',
@@ -788,21 +829,17 @@
         },
         {
           title: 'Pulso diário',
-          note: 'Atividade consolidada por dia para posts, comentários, buscas, votos e ações administrativas.',
-          rows: (data.dailyMetrics || []).map(function (row) {
-            return {
-              dia: row.label || row.day || '',
-              posts: toNumberValue(deps, row.posts_count),
-              comentarios: toNumberValue(deps, row.comments_count),
-              buscas: toNumberValue(deps, row.searches_count),
-              votos: toNumberValue(deps, row.votes_count),
-              acoes_admin: toNumberValue(deps, row.admin_actions_count),
-              total: toNumberValue(deps, row.total_count),
-            };
-          }),
-          pdfColumns: ['dia', 'total', 'buscas', 'acoes_admin'],
-          xlsxColumns: ['dia', 'posts', 'comentarios', 'buscas', 'votos', 'acoes_admin', 'total'],
+          note: 'Atividade diária das séries selecionadas no gráfico do Dashboard.',
+          rows: pulseRows,
+          columns: pulseColumns,
           maxPdfRows: 18,
+        },
+        {
+          title: 'Séries (totais no período)',
+          note: 'Soma de cada série visível no período selecionado.',
+          rows: seriesTotalsRows,
+          columns: [{ key: 'serie', label: 'Série' }, { key: 'total', label: 'Total' }],
+          maxPdfRows: 14,
         },
         {
           title: 'Módulos',
@@ -869,6 +906,7 @@
           columns: ['indicador', 'estado', 'fonte', 'observacao'],
           maxPdfRows: 8,
         },
+        rankingSection,
         {
           title: 'Audit log',
           note: 'Amostra dos eventos administrativos carregados no Dashboard para o período e filtros selecionados.',

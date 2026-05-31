@@ -15,7 +15,11 @@ describe('exports executivos admin - dashboard, denuncias e banners', () => {
     expect(source).toContain("Publicações visíveis");
     expect(source).toContain("Denúncias abertas");
     expect(source).toContain("Saúde/Admin");
-    expect(source).toContain("pdfColumns: ['dia', 'total', 'buscas', 'acoes_admin']");
+    // Pulso diário agora reflete as séries escolhidas pelo admin (colunas dinâmicas).
+    expect(source).toContain('getVisibleSeriesKeys');
+    expect(source).toContain('var pulseColumns');
+    expect(source).toContain("title: 'Séries (totais no período)'");
+    expect(source).toContain("title: 'Top Contribuidores'");
     expect(source).toContain("xlsxColumns: ['data', 'acao', 'entidade', 'entity_id', 'ator', 'detalhes']");
   });
 

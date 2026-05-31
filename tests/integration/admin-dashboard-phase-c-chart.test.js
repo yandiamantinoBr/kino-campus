@@ -120,11 +120,11 @@ describe('Fase C — séries e pulso (shared.js)', () => {
   beforeEach(() => { reset(); utils = require(SHARED); });
   afterEach(reset);
 
-  test('SERIES_KEYS inclui as 8 séries', () => {
-    expect(utils.SERIES_KEYS).toEqual([
+  test('SERIES_KEYS inclui as 8 séries originais (catálogo ampliado na rodada 2)', () => {
+    [
       'posts_count', 'comments_count', 'searches_count', 'votes_count',
       'admin_actions_count', 'saves_count', 'reports_count', 'signups_count'
-    ]);
+    ].forEach(function (k) { expect(utils.SERIES_KEYS).toContain(k); });
   });
 
   test('buildDailyMetricsFromEventSets agrega as novas séries', () => {
