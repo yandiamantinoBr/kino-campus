@@ -287,16 +287,33 @@
     var highlight = opts.highlight && Number(value || 0) > 0;
     var subtitle = opts.subtitle || null;
     var cardStyle = highlight ? ' style="border-color:rgba(255,107,0,.5);"' : '';
+    var titleAttr = opts.tooltip ? ' title="' + escHtmlAdmin(opts.tooltip) + '"' : '';
+    var valueLine = '<strong>' + escHtmlAdmin(formatMetricValue(value)) + '</strong>';
+    if (opts.delta && opts.delta.text) {
+      var deltaColor = opts.delta.dir === 'up' ? '#16a34a' : (opts.delta.dir === 'down' ? '#dc2626' : 'var(--kc-text-dark-secondary)');
+      var deltaArrow = opts.delta.dir === 'up' ? '&uarr;' : (opts.delta.dir === 'down' ? '&darr;' : '&rarr;');
+      valueLine += ' <span style="font-size:.72rem;font-weight:600;margin-left:6px;color:' + deltaColor + ';" title="Variação vs período anterior">' + deltaArrow + ' ' + escHtmlAdmin(opts.delta.text) + '</span>';
+    }
     var inner = '<div class="kc-admin-card__label" title="' + escHtmlAdmin(label) + '">'
       + '<i class="' + icon + '"></i> ' + escHtmlAdmin(label) + '</div>'
-      + '<strong>' + escHtmlAdmin(formatMetricValue(value)) + '</strong>';
+      + valueLine;
     if (subtitle) {
       inner += '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:4px;">' + escHtmlAdmin(subtitle) + '</div>';
     }
     if (href) {
       inner += '<div style="margin-top:8px;"><a href="' + escHtmlAdmin(href) + '" style="font-size:.78rem;color:var(--kc-primary-brand);text-decoration:none;">Ver detalhes &rarr;</a></div>';
     }
-    return '<article class="kc-admin-card"' + cardStyle + '>' + inner + '</article>';
+    return '<article class="kc-admin-card"' + cardStyle + titleAttr + '>' + inner + '</article>';
+  }
+
+  // Variação percentual de um KPI vs a janela imediatamente anterior.
+  function computeDelta(current, previous) {
+    var cur = Number(current) || 0;
+    var prev = Number(previous) || 0;
+    if (prev <= 0) return null;
+    var pct = Math.round(((cur - prev) / prev) * 100);
+    if (pct === 0) return { text: '0%', dir: 'flat' };
+    return { text: (pct > 0 ? '+' : '') + pct + '%', dir: pct > 0 ? 'up' : 'down' };
   }
 
   function daysAgo(n) {
@@ -656,6 +673,31 @@
     ]);
     throwIfAborted(signal);
 
+    // ── Variação % vs janela anterior (deltas dos KPIs) ──────────────────────
+    // Conta criados em [prevSince, since) para comparar com a janela atual.
+    var prevSince = daysAgo(periodDays * 2);
+    function prevWindowCount(table) {
+      return client.from(table)
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', prevSince)
+        .lt('created_at', since)
+        .then(function (r) { return (r && !r.error && typeof r.count === 'number') ? r.count : 0; })
+        .catch(function () { return 0; });
+    }
+    var prevCounts = await Promise.all([
+      prevWindowCount('profiles'),
+      prevWindowCount('posts'),
+      prevWindowCount('comments'),
+      prevWindowCount('post_votes'),
+      prevWindowCount('saved_posts'),
+    ]);
+    throwIfAborted(signal);
+    var deltaUsersNew = computeDelta(usersNew, prevCounts[0]);
+    var deltaPostsCreated = computeDelta(postsCreated, prevCounts[1]);
+    var curEngagement = (Number(votesCount) || 0) + (Number(savedPostsCount) || 0) + (Number(commentsCount) || 0);
+    var prevEngagement = (Number(prevCounts[2]) || 0) + (Number(prevCounts[3]) || 0) + (Number(prevCounts[4]) || 0);
+    var deltaEngagement = computeDelta(curEngagement, prevEngagement);
+
     _auditOffset = auditRows.length;
 
     // ── Resolve nomes dos atores do audit log ──
@@ -690,7 +732,7 @@
     var executiveMetrics = $('#admin-executive-metrics');
     if (executiveMetrics) {
       executiveMetrics.innerHTML = [
-        metricCard('fas fa-users-viewfinder', 'Ativos agora', activeMetric.available ? activeMetric.value : '--', { subtitle: activeMetric.available ? 'Sessões agregadas nos últimos 15min' : 'Sem dado agregado agora', href: 'privacy-analytics.html' }),
+        metricCard('fas fa-users-viewfinder', 'Ativos agora', activeMetric.available ? activeMetric.value : '--', { subtitle: activeMetric.available ? 'Sessões agregadas nos últimos 15min' : 'Sem dado agregado agora', href: 'privacy-analytics.html', tooltip: 'Sessões anônimas distintas com atividade nos últimos 15 minutos (não identifica usuários).' }),
         metricCard('fas fa-eye', 'Publicações visíveis', visiblePosts, { subtitle: 'Published + closed no feed público' }),
         metricCard('fas fa-flag', 'Denúncias abertas', reportMetrics.open, { href: 'reports.html', highlight: true, subtitle: 'Prioridade operacional' }),
         metricCard('fas fa-stethoscope', 'Saúde da coleta', healthValue, { subtitle: healthSubtitle, href: 'privacy-analytics.html' }),
@@ -715,7 +757,7 @@
       activityMetrics.innerHTML = [
         metricCard('fas fa-layer-group',      'Total de posts',    postsTotal),
         metricCard('fas fa-eye',              'Posts visíveis',    visiblePosts),
-        metricCard('fas fa-plus-circle',      'Posts publicados',  postsCreated),
+        metricCard('fas fa-plus-circle',      'Posts publicados',  postsCreated, { delta: deltaPostsCreated }),
         metricCard('fas fa-pen-to-square',    'Posts editados',    postsEdited),
         metricCard('fas fa-comment',          'Comentários',       commentsCount),
         metricCard('fas fa-magnifying-glass', 'Buscas',            searchCount),
@@ -729,9 +771,8 @@
     if (communityMetrics) {
       communityMetrics.innerHTML = [
         metricCard('fas fa-users',       'Total de usuários',                   usersTotal),
-        metricCard('fas fa-user-plus',   'Novos usuários (' + shortLabel + ')', usersNew),
-        metricCard('fas fa-users-viewfinder', 'Sessões ativas 15min', activeMetric.available ? activeMetric.value : '--', { subtitle: activeMetric.label || 'Agregado' }),
-        metricCard('fas fa-chart-line',   'Interações (' + shortLabel + ')',     votesCount + savedPostsCount + commentsCount, { subtitle: 'Votos + salvos + comentários' }),
+        metricCard('fas fa-user-plus',   'Novos usuários (' + shortLabel + ')', usersNew, { delta: deltaUsersNew }),
+        metricCard('fas fa-chart-line',   'Interações (' + shortLabel + ')',     votesCount + savedPostsCount + commentsCount, { subtitle: 'Votos + salvos + comentários', delta: deltaEngagement }),
       ].join('');
     }
 
