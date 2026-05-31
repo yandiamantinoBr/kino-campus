@@ -84,7 +84,10 @@
     'comments_count',
     'searches_count',
     'votes_count',
-    'admin_actions_count'
+    'admin_actions_count',
+    'saves_count',
+    'reports_count',
+    'signups_count'
   ]);
 
   function normalizeText(value) {
@@ -237,6 +240,9 @@
         searches_count: 0,
         votes_count: 0,
         admin_actions_count: 0,
+        saves_count: 0,
+        reports_count: 0,
+        signups_count: 0,
         total_count: 0
       };
       buckets.push(bucket);
@@ -266,6 +272,9 @@
           searches_count: 0,
           votes_count: 0,
           admin_actions_count: 0,
+          saves_count: 0,
+          reports_count: 0,
+          signups_count: 0,
           total_count: 0
         };
       }
@@ -309,6 +318,9 @@
     incrementRows(eventSets && eventSets.searches, 'searches_count');
     incrementRows(eventSets && eventSets.votes, 'votes_count');
     incrementRows(eventSets && eventSets.admin_actions, 'admin_actions_count');
+    incrementRows(eventSets && eventSets.saves, 'saves_count');
+    incrementRows(eventSets && eventSets.reports, 'reports_count');
+    incrementRows(eventSets && eventSets.signups, 'signups_count');
 
     return Object.keys(bucketMap).sort().map(function (dayKey) {
       var bucket = bucketMap[dayKey];
@@ -327,7 +339,13 @@
         peakDay: null,
         peakTotal: 0,
         averageTotal: 0,
-        lastDayTotal: 0
+        lastDayTotal: 0,
+        worstDay: null,
+        worstTotal: 0,
+        activeDays: 0,
+        totalDays: 0,
+        momentumPct: null,
+        momentumDir: 'flat'
       };
     }
 
@@ -339,22 +357,52 @@
     });
 
     var peakDay = rows[0];
+    var worstDay = rows[0];
+    var activeDays = 0;
     rows.forEach(function (row) {
-      if ((Number(row.total_count) || 0) > (Number(peakDay.total_count) || 0)) {
-        peakDay = row;
-      }
+      var total = Number(row.total_count) || 0;
+      if (total > (Number(peakDay.total_count) || 0)) peakDay = row;
+      if (total < (Number(worstDay.total_count) || 0)) worstDay = row;
+      if (total > 0) activeDays += 1;
     });
 
     var totalAll = rows.reduce(function (sum, row) {
       return sum + (Number(row.total_count) || 0);
     }, 0);
 
+    // Momentum: soma da segunda metade do período vs. a primeira metade
+    // (dia central ignorado em séries ímpares para não enviesar a comparação).
+    var mid = Math.floor(rows.length / 2);
+    var firstHalf = 0;
+    var secondHalf = 0;
+    rows.forEach(function (row, index) {
+      var total = Number(row.total_count) || 0;
+      if (index < mid) firstHalf += total;
+      else if (rows.length % 2 === 1 && index === mid) { /* dia central: ignora */ }
+      else secondHalf += total;
+    });
+    var momentumPct = null;
+    var momentumDir = 'flat';
+    if (mid > 0 && firstHalf > 0) {
+      momentumPct = Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
+      momentumDir = momentumPct > 0 ? 'up' : (momentumPct < 0 ? 'down' : 'flat');
+    } else if (mid > 0 && firstHalf === 0 && secondHalf > 0) {
+      momentumPct = 100;
+      momentumDir = 'up';
+    }
+
     return {
       totals: totals,
       peakDay: peakDay,
       peakTotal: Number(peakDay.total_count) || 0,
       averageTotal: rows.length ? Math.round((totalAll / rows.length) * 10) / 10 : 0,
-      lastDayTotal: Number(rows[rows.length - 1].total_count) || 0
+      lastDayTotal: Number(rows[rows.length - 1].total_count) || 0,
+      worstDay: worstDay,
+      worstTotal: Number(worstDay.total_count) || 0,
+      activeDays: activeDays,
+      totalDays: rows.length,
+      momentumPct: momentumPct,
+      momentumDir: momentumDir
     };
   }
 

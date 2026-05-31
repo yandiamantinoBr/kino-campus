@@ -313,6 +313,129 @@ body.kc-admin-page--dashboard .kc-admin-chart-legend__total {
   font-weight: 700;
 }
 
+/* ── Gráfico diário interativo (hover/tooltip + legenda clicável/buscável) ── */
+body.kc-admin-page--dashboard #admin-daily-activity-chart {
+  position: relative;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-hit {
+  cursor: crosshair;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-tooltip {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  min-width: 132px;
+  max-width: 230px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.28);
+  font-size: 0.78rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-tooltip__date {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--kc-text-dark-primary);
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-tooltip__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.7;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-tooltip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-tooltip__name {
+  flex: 1;
+  color: var(--kc-text-dark-secondary);
+  white-space: nowrap;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-tooltip__val {
+  font-weight: 700;
+  color: var(--kc-text-dark-primary);
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-legend__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+body.kc-admin-page--dashboard button.kc-admin-chart-legend__item {
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+body.kc-admin-page--dashboard button.kc-admin-chart-legend__item:hover {
+  border-color: rgba(255, 107, 0, 0.45);
+}
+
+body.kc-admin-page--dashboard button.kc-admin-chart-legend__item:focus-visible {
+  outline: 2px solid var(--kc-primary-brand);
+  outline-offset: 2px;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-legend__item.is-hidden {
+  opacity: 0.42;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-legend__item.is-hidden .kc-admin-chart-legend__label {
+  text-decoration: line-through;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-legend__search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  color: var(--kc-text-dark-secondary);
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-legend__search {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kc-text-dark-primary);
+  font-size: 0.82rem;
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.kc-admin-page--dashboard .kc-admin-chart-tooltip,
+  body.kc-admin-page--dashboard button.kc-admin-chart-legend__item {
+    transition: none;
+  }
+}
+
 body.kc-admin-page--dashboard .kc-admin-chart-modal-backdrop {
   position: fixed;
   inset: 0;
