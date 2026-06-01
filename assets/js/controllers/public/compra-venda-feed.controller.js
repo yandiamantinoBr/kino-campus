@@ -364,7 +364,13 @@
   function matchesSummary(summary, options) {
     const config = options || {};
     const current = filterState();
-    if (current.query && !String(summary.searchText || '').includes(norm(current.query))) return false;
+    if (current.query) {
+      const shared = (typeof window !== 'undefined' && window.KCSearchShared) ? window.KCSearchShared : null;
+      const queryOk = shared && typeof shared.matchesQueryText === 'function'
+        ? shared.matchesQueryText(summary.searchText || '', current.query)
+        : String(summary.searchText || '').includes(norm(current.query));
+      if (!queryOk) return false;
+    }
     if (!config.ignoreCategory && current.category && current.category !== 'todas' && current.category !== 'toda' && summary.categoryKey !== current.category) return false;
     if (!config.ignoreCategory) {
       if (state.cats.size === 0) return false;

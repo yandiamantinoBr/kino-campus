@@ -294,6 +294,30 @@
     return score;
   }
 
+  function matchesQueryText(text, query, options) {
+    var normalizedQuery = normalizeText(query);
+    if (!normalizedQuery) return true;
+
+    var opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    var expandedTerms = Array.isArray(opts.expandedTerms) && opts.expandedTerms.length
+      ? uniqueTerms(opts.expandedTerms)
+      : expandQueryTerms(normalizedQuery);
+    if (!expandedTerms.length) return false;
+
+    if (matchesExpandedTerms(text, expandedTerms)) return true;
+
+    var threshold = Number.isFinite(Number(opts.threshold)) ? Number(opts.threshold) : FUZZY_THRESHOLD;
+    var normalized = normalizeText(text);
+    if (!normalized) return false;
+
+    for (var i = 0; i < expandedTerms.length; i += 1) {
+      var term = expandedTerms[i];
+      if (term.length < 3 || normalized.indexOf(term) !== -1) continue;
+      if (fuzzyBestSimilarity(term, normalized) >= threshold) return true;
+    }
+    return false;
+  }
+
   function scorePost(post, params) {
     var p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
     var q = String(p.q || p.query || '').trim();
@@ -426,6 +450,7 @@
     levenshtein: levenshtein,
     trigramSimilarity: trigramSimilarity,
     fuzzyBestSimilarity: fuzzyBestSimilarity,
+    matchesQueryText: matchesQueryText,
     scorePost: scorePost,
     searchCollection: searchCollection
   };

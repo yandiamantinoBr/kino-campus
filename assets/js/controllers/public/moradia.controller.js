@@ -179,6 +179,9 @@
   function queryMatches(summary, query) {
     const normalizedQuery = norm(query);
     if (!normalizedQuery) return true;
+    if (window.KCSearchShared && typeof window.KCSearchShared.matchesQueryText === 'function') {
+      return window.KCSearchShared.matchesQueryText(summary.searchText || '', normalizedQuery);
+    }
     return String(summary.searchText || '').includes(normalizedQuery);
   }
 

@@ -71,6 +71,8 @@
   function queryMatches(text, query) {
     const q = normalizeText(query);
     if (!q) return true;
+    const shared = (typeof window !== 'undefined' && window.KCSearchShared) ? window.KCSearchShared : null;
+    if (shared && typeof shared.matchesQueryText === 'function') return shared.matchesQueryText(text, q);
     const t = normalizeText(text);
     return t.includes(q);
   }

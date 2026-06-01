@@ -157,6 +157,13 @@ describe('KCSearchShared', () => {
       expect(SearchShared.fuzzyBestSimilarity('xy', 'qualquer texto')).toBe(0); // token < 3 ignorado
     });
 
+    test('matchesQueryText reaproveita sinônimos e fuzzy em filtros locais', () => {
+      expect(SearchShared.matchesQueryText('23º CONPEEX - Congresso de Pesquisa', 'conpex')).toBe(true);
+      expect(SearchShared.matchesQueryText('Grupo de estudo em Matemática Aplicada', 'matemtica')).toBe(true);
+      expect(SearchShared.matchesQueryText('Kitnet próxima ao Campus Samambaia', 'quarto')).toBe(true);
+      expect(SearchShared.matchesQueryText('Vendo quadro branco pequeno', 'quarto')).toBe(false);
+    });
+
     test('searchCollection encontra posts mesmo com erro de digitação', () => {
       const list = [
         { id: 'a', title: 'CONPEEX 2024 - Congresso de Pesquisa', module: 'eventos' },

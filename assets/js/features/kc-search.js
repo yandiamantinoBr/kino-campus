@@ -240,6 +240,10 @@
       let matches = false;
       if (!q) {
         matches = true;
+      } else if (searchShared && typeof searchShared.matchesQueryText === 'function') {
+        matches = searchShared.matchesQueryText([title, description, categorySource].join(' '), q, {
+          expandedTerms: expandedTerms,
+        });
       } else {
         expandedTerms.forEach((term) => {
           if (matches) return;

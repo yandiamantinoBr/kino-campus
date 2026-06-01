@@ -1,10 +1,9 @@
 'use strict';
 
 /**
- * Tendências de busca — classificação data-driven (termo → módulo pelo conteúdo).
- * Cobre: migration do RPC classificado; resolveTermModule (server-first com
- * limiar de confiança + reserva por dicionário); wiring no loader/render; e o
- * dicionário reserva ampliado.
+ * Search trends: data-driven classification (term -> module by post content).
+ * Covers the classified RPC migration, server-first resolveTermModule, dashboard
+ * wiring, fallback dictionary and fuzzy typo tolerance.
  */
 
 const fs = require('fs');
@@ -14,13 +13,13 @@ const ROOT = path.resolve(__dirname, '../..');
 const r = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const SHARED = path.join(ROOT, 'assets/js/controllers/admin/admin-dashboard.shared.js');
 
-describe('Tendências — migration do RPC classificado', () => {
+describe('Tendencias - migration do RPC classificado', () => {
   let sql;
   beforeAll(() => {
     sql = r('supabase/migrations/20260531200000_admin_search_trends_classified.sql');
   });
 
-  test('cria o par público (INVOKER) → kc_private (DEFINER)', () => {
+  test('cria o par publico (INVOKER) -> kc_private (DEFINER)', () => {
     expect(sql).toContain('create function kc_private.kc_admin_search_trends_classified');
     expect(sql).toContain('create function public.kc_admin_search_trends_classified');
     expect(sql).toContain('security definer');
@@ -28,7 +27,7 @@ describe('Tendências — migration do RPC classificado', () => {
     expect(sql).toContain('select * from kc_private.kc_admin_search_trends_classified($1, $2)');
   });
 
-  test('classifica por conteúdo dos posts (título/descrição) → módulo dominante', () => {
+  test('classifica por conteudo dos posts (titulo/descricao) -> modulo dominante', () => {
     expect(sql).toContain('module text');
     expect(sql).toContain('module_confidence numeric');
     expect(sql).toContain('join public.posts p');
@@ -43,35 +42,34 @@ describe('Tendências — migration do RPC classificado', () => {
   });
 });
 
-describe('Tendências — resolveTermModule (server-first + reserva)', () => {
+describe('Tendencias - resolveTermModule (server-first + reserva)', () => {
   let utils;
   beforeAll(() => { utils = require(SHARED); });
 
-  test('usa o módulo do servidor quando a confiança é alta', () => {
+  test('usa o modulo do servidor quando a confianca e alta', () => {
     expect(utils.resolveTermModule({ term: 'conpeex', module: 'eventos', module_confidence: 0.8 }, {})).toBe('eventos');
   });
 
-  test('cai no dicionário quando a confiança do servidor é baixa', () => {
-    // "livro" casa eventos por conteúdo com baixa confiança, mas o dicionário acerta livros
+  test('cai no dicionario quando a confianca do servidor e baixa', () => {
     expect(utils.resolveTermModule({ term: 'livro', module: 'eventos', module_confidence: 0.43 }, {})).toBe('livros');
   });
 
-  test('usa o dicionário quando o servidor não classificou', () => {
+  test('usa o dicionario quando o servidor nao classificou', () => {
     expect(utils.resolveTermModule({ term: 'celular', module: null }, {})).toBe('compra-venda');
   });
 
-  test('usa o servidor de baixa confiança como último recurso (sem palavra-chave)', () => {
+  test('usa o servidor de baixa confianca como ultimo recurso (sem palavra-chave)', () => {
     expect(utils.resolveTermModule({ term: 'zzznaoexiste', module: 'caronas', module_confidence: 0.3 }, {})).toBe('caronas');
   });
 
-  test('aggregateTrendsByModule respeita o módulo do servidor', () => {
+  test('aggregateTrendsByModule respeita o modulo do servidor', () => {
     const rows = utils.aggregateTrendsByModule([{ term: 'qualquer', count: 3, module: 'eventos', module_confidence: 0.9 }], {});
     expect(rows[0].module).toBe('eventos');
   });
 });
 
-describe('Tendências — wiring + dicionário ampliado', () => {
-  test('loader chama o RPC classificado e preserva o módulo', () => {
+describe('Tendencias - wiring + dicionario ampliado', () => {
+  test('loader chama o RPC classificado e preserva o modulo', () => {
     const src = r('assets/js/controllers/admin/admin-dashboard.metrics.js');
     expect(src).toContain("client.rpc('kc_admin_search_trends_classified'");
     expect(src).toContain('function canonicalizeClassifiedTrends');
@@ -87,7 +85,7 @@ describe('Tendências — wiring + dicionário ampliado', () => {
     expect(r('admin/index.html')).toContain('id="admin-trends-coverage"');
   });
 
-  test('dicionário reserva ganhou termos de eventos/oportunidades', () => {
+  test('dicionario reserva ganhou termos de eventos/oportunidades', () => {
     const utils = require(SHARED);
     expect(utils.MODULE_KEYWORDS.eventos).toContain('conpeex');
     expect(utils.MODULE_KEYWORDS.eventos).toContain('sbpc');
@@ -95,16 +93,22 @@ describe('Tendências — wiring + dicionário ampliado', () => {
   });
 });
 
-describe('Tendências — classificador tolerante a typos (pg_trgm)', () => {
-  const fuzzySql = r('supabase/migrations/20260531210000_search_trends_classifier_fuzzy.sql');
+describe('Tendencias - classificador tolerante a typos (pg_trgm)', () => {
+  const fuzzySql = r('supabase/migrations/20260601172451_search_fuzzy_query_terms_threshold.sql');
 
   test('usa word_similarity (pg_trgm, schema extensions) com limiar', () => {
     expect(fuzzySql).toContain('create or replace function kc_private.kc_admin_search_trends_classified');
-    expect(fuzzySql).toContain('extensions.word_similarity(t.term, coalesce(p.title');
-    expect(fuzzySql).toContain('>= 0.5');
+    expect(fuzzySql).toContain('extensions.word_similarity(t.term, p.fuzzy_text)');
+    expect(fuzzySql).toContain('>= 0.68');
   });
 
-  test('mantém o ilike (substring) como caminho principal', () => {
+  test('inclui campos semanticos dos posts no caminho fuzzy', () => {
+    expect(fuzzySql).toContain('posts_semantic as');
+    expect(fuzzySql).toContain('public.kc_posts_search_tags_text');
+    expect(fuzzySql).toContain('public.kc_posts_search_subcategory');
+  });
+
+  test('mantem o ilike (substring) como caminho principal', () => {
     expect(fuzzySql).toContain('p.title ilike');
     expect(fuzzySql).toContain('p.description ilike');
   });

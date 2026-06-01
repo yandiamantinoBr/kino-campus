@@ -424,6 +424,9 @@ function categoryMatches(summary, selectedCategory) {
 function queryMatches(summary, query) {
   const normalized = normalizeText(query);
   if (!normalized) return true;
+  if (window.KCSearchShared && typeof window.KCSearchShared.matchesQueryText === 'function') {
+    return window.KCSearchShared.matchesQueryText(summary.searchText || '', normalized);
+  }
   return String(summary.searchText || '').includes(normalized);
 }
 
