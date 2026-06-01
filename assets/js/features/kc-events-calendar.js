@@ -1,7 +1,11 @@
 /* ============================================================================
-   KinoCampus — kc-events-calendar.js (V76.1)
+   KinoCampus — kc-events-calendar.js (V76.2)
    Componente COMPARTILHADO do Calendário de Eventos (seção da sidebar + modal
    expandido). Fonte única consumida por eventos.html e index.html.
+
+   v76.2: a consulta de eventos passou a filtrar status visível (published/closed)
+   e excluir posts demo (legacy_id), e o calendário agora revalida ao vivo via
+   window.KCPostFreshness + visibilitychange/focus (some deleted/hidden na hora).
 
    ⚑ SINCRONIZAÇÃO: este arquivo é a ÚNICA fonte do calendário. Para alterar o
      calendário (markup, comportamento, dados, categorias), edite SOMENTE este
@@ -37,8 +41,11 @@
   var STORAGE_KEY = 'kc_events_calendar_month';
 
   /* ── Cache de sessão (SWR) ────────────────────────────── */
-  var SECTION_CACHE_KEY = 'eventos:calendar';
+  // v2: invalida caches antigos que podiam conter posts deleted/hidden (antes do
+  // filtro de status). Evita um flash de eventos inválidos no 1º load pós-deploy.
+  var SECTION_CACHE_KEY = 'eventos:calendar:v2';
   var SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10; // 10 min
+  var FOCUS_REVALIDATE_MS = 1000 * 30;           // só refaz por foco/aba se > 30s
 
   function getSessionStore() {
     return (window.KCSessionStore && typeof window.KCSessionStore.getStore === 'function')
@@ -74,6 +81,7 @@
     events:       [],
     loaded:       false,
     loading:      false,
+    lastFetchAt:  0,
     selectedDate: null,
   };
 
@@ -233,6 +241,8 @@
       .from('posts')
       .select('id, title, category, metadata, created_at')
       .eq('module', 'eventos')
+      .is('legacy_id', null)                  // exclui posts de exemplo/demo (igual ao feed)
+      .in('status', ['published', 'closed'])  // só status visíveis — remove deleted/hidden
       .order('created_at', { ascending: false })
       .limit(500)
       .then(function (res) {
@@ -242,12 +252,67 @@
           persistCachedEvents(calState.events);
         }
         calState.loading = false;
+        calState.lastFetchAt = Date.now();
         renderCalendarAll();
       })
       .catch(function () {
         calState.loading = false;
         renderCalendarAll();
       });
+  }
+
+  /* ── Revalidação ao vivo (frescor de posts + retomada de aba) ──
+     O calendário busca uma vez e cacheia por 10 min; sem isto, deletar/esconder/
+     editar/criar um evento com a página aberta não refletiria. Espelha o feed
+     (kc-feed.controller.js), que assina window.KCPostFreshness e revalida ao focar. */
+  var _refreshTimer = null;
+  var _freshUnsub   = null;
+
+  function scheduleRefresh() {
+    if (_refreshTimer) clearTimeout(_refreshTimer);
+    _refreshTimer = setTimeout(function run() {
+      // Se um fetch está em voo, reagenda para não perder a atualização.
+      if (calState.loading) { _refreshTimer = setTimeout(run, 200); return; }
+      _refreshTimer = null;
+      fetchEvents();
+    }, 150);
+  }
+
+  function handleFreshness(change) {
+    if (!change) return;
+    // Só mudanças de eventos afetam o calendário (module ausente ⇒ não filtra).
+    var mod = String(change.module || '').trim().toLowerCase();
+    if (mod && mod !== 'eventos') return;
+    scheduleRefresh(); // qualquer mudança (deletar/esconder/editar/criar) re-busca
+  }
+
+  function onCalendarVisible() {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    // Por foco/aba, só revalida se passou tempo suficiente (frescor já cobre o resto).
+    if (Date.now() - (calState.lastFetchAt || 0) < FOCUS_REVALIDATE_MS) return;
+    scheduleRefresh();
+  }
+
+  function onCalendarPageShow(e) {
+    if (e && e.persisted) scheduleRefresh(); // restauração de bfcache
+  }
+
+  function bindLiveRefresh() {
+    if (window.KCPostFreshness && typeof window.KCPostFreshness.subscribe === 'function') {
+      _freshUnsub = window.KCPostFreshness.subscribe(handleFreshness);
+    }
+    document.addEventListener('visibilitychange', onCalendarVisible);
+    window.addEventListener('focus', onCalendarVisible);
+    window.addEventListener('pageshow', onCalendarPageShow);
+  }
+
+  function destroy() {
+    try { if (typeof _freshUnsub === 'function') _freshUnsub(); } catch (_) {}
+    _freshUnsub = null;
+    if (_refreshTimer) { clearTimeout(_refreshTimer); _refreshTimer = null; }
+    try { document.removeEventListener('visibilitychange', onCalendarVisible); } catch (_) {}
+    try { window.removeEventListener('focus', onCalendarVisible); } catch (_) {}
+    try { window.removeEventListener('pageshow', onCalendarPageShow); } catch (_) {}
   }
 
   /* ── Filtros de data ──────────────────────────────────── */
@@ -630,6 +695,9 @@
     renderCalendarAll();
     restoreCachedEvents();
     fetchEvents();
+
+    // Mantém o calendário em sincronia com mudanças de posts e retorno de aba.
+    bindLiveRefresh();
   }
 
   /* ── Mount: prepara um ponto de montagem e inicializa ─── */
@@ -661,12 +729,13 @@
 
   /* ── API pública ──────────────────────────────────────── */
   window.KCEventsCalendar = {
-    version: '76.1',
+    version: '76.2',
     mount: mount,
     init: init,
     refresh: fetchEvents,
     open: openCalModal,
     close: closeCalModal,
+    destroy: destroy,
     isReady: function () { return _inited; },
   };
 

@@ -1,5 +1,5 @@
 /*
-  kc-events-calendar.js — Contratos do componente compartilhado do Calendário (v76.1)
+  kc-events-calendar.js — Contratos do componente compartilhado do Calendário (v76.2)
 
   Cobre:
    - Contrato estático da fonte (namespace, API, dados, cache SWR, Supabase, i18n)
@@ -45,7 +45,7 @@ describe('kc-events-calendar — contrato estático (fonte)', () => {
     expect(source).toContain('window.KCEventsCalendar');
   });
 
-  const PUBLIC_API = ['mount', 'init', 'refresh', 'open', 'close', 'isReady'];
+  const PUBLIC_API = ['mount', 'init', 'refresh', 'open', 'close', 'destroy', 'isReady'];
   PUBLIC_API.forEach((fn) => {
     test('expõe API pública: ' + fn, () => {
       expect(source).toContain(fn + ':');
@@ -70,9 +70,9 @@ describe('kc-events-calendar — contrato estático (fonte)', () => {
   });
 
   // Cache SWR
-  test('define SECTION_CACHE_KEY do calendário', () => {
+  test('define SECTION_CACHE_KEY do calendário (v2 invalida cache pré-filtro de status)', () => {
     expect(source).toContain('SECTION_CACHE_KEY');
-    expect(source).toContain("'eventos:calendar'");
+    expect(source).toContain("'eventos:calendar:v2'");
   });
 
   test('define SECTION_CACHE_MAX_AGE_MS (TTL)', () => {
@@ -95,6 +95,19 @@ describe('kc-events-calendar — contrato estático (fonte)', () => {
   test('consulta tabela posts com module eventos', () => {
     expect(source).toContain("'posts'");
     expect(source).toContain("'eventos'");
+  });
+
+  test('filtra por status visível e exclui posts demo (legacy_id) — bug deleted/hidden', () => {
+    expect(source).toContain(".in('status', ['published', 'closed'])");
+    expect(source).toContain(".is('legacy_id', null)");
+  });
+
+  test('revalida ao vivo via KCPostFreshness + visibilitychange/focus/pageshow', () => {
+    expect(source).toContain('KCPostFreshness');
+    expect(source).toContain('subscribe(handleFreshness)');
+    expect(source).toContain("addEventListener('visibilitychange'");
+    expect(source).toContain("addEventListener('focus'");
+    expect(source).toContain("addEventListener('pageshow'");
   });
 
   // Scroll-lock iOS no modal expandido
@@ -226,6 +239,8 @@ describe('kc-events-calendar — runtime: eventos multi-dia', () => {
     const chain = {
       select: function () { return chain; },
       eq: function () { return chain; },
+      is: function () { return chain; },
+      in: function () { return chain; },
       order: function () { return chain; },
       limit: function () { return Promise.resolve({ data: events, error: null }); },
     };
@@ -275,6 +290,78 @@ describe('kc-events-calendar — runtime: eventos multi-dia', () => {
     expect(hasEvents(13)).toBe(false);
     // Evento sem data não é posicionado pelo created_at (dia 5 fica livre).
     expect(hasEvents(5)).toBe(false);
+  });
+});
+
+// ── 2c. Runtime: atualização ao vivo (frescor de posts) ──────────────────────
+
+describe('kc-events-calendar — runtime: atualização ao vivo', () => {
+  function countingSupabase(getEvents) {
+    let calls = 0;
+    function makeChain() {
+      const chain = {
+        select: () => chain,
+        eq: () => chain,
+        is: () => chain,
+        in: () => chain,
+        order: () => chain,
+        limit: () => { calls += 1; return Promise.resolve({ data: getEvents(), error: null }); },
+      };
+      return chain;
+    }
+    return {
+      getCalls: () => calls,
+      api: { getClient: () => ({ from: () => makeChain() }) },
+    };
+  }
+
+  let captured;
+  let counter;
+
+  beforeEach(() => {
+    delete window.KCEventsCalendar;
+    delete window.KCSupabase;
+    delete window.KCSessionStore;
+    delete window.KCi18n;
+    delete window.KCOverlayLock;
+    delete window.KCPostFreshness;
+    captured = null;
+    document.body.innerHTML = '';
+    try { localStorage.clear(); } catch (_) { /* noop */ }
+
+    counter = countingSupabase(() => []);
+    window.KCSupabase = counter.api;
+    window.KCPostFreshness = { subscribe: (fn) => { captured = fn; return () => {}; } };
+  });
+
+  afterEach(() => {
+    try { if (window.KCEventsCalendar) window.KCEventsCalendar.destroy(); } catch (_) { /* noop */ }
+    delete window.KCPostFreshness;
+  });
+
+  const tick = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  test('assina KCPostFreshness e re-busca quando um evento muda (deletar/esconder)', async () => {
+    loadModule();
+    const el = document.createElement('div');
+    el.setAttribute('data-kc-cal-mount', '');
+    document.body.appendChild(el);
+    window.KCEventsCalendar.mount(el);
+
+    await tick(0);
+    expect(typeof captured).toBe('function');   // assinou o frescor
+    expect(counter.getCalls()).toBe(1);         // fetch inicial
+
+    // Evento deletado/escondido → calendário re-busca (debounce ~150ms) e o filtro
+    // de status no servidor garante que o post some.
+    captured({ module: 'eventos', type: 'soft_deleted' });
+    await tick(300);
+    expect(counter.getCalls()).toBe(2);
+
+    // Mudança de outro módulo não dispara re-busca.
+    captured({ module: 'caronas', type: 'soft_deleted' });
+    await tick(300);
+    expect(counter.getCalls()).toBe(2);
   });
 });
 
