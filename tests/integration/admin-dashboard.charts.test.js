@@ -276,7 +276,7 @@ describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.3"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.5"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.1"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.4"></script>',
       '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.3"></script>'
@@ -288,6 +288,14 @@ describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
       expect(currentIndex).toBeGreaterThan(lastIndex);
       lastIndex = currentIndex;
     });
+  });
+
+  test('expõe paginação e filtros locais nas tendências de busca', () => {
+    expect(htmlSource).toContain('id="admin-trends-query"');
+    expect(htmlSource).toContain('id="admin-trends-page-size"');
+    expect(htmlSource).toContain('id="admin-trends-prev"');
+    expect(htmlSource).toContain('id="admin-trends-next"');
+    expect(htmlSource).toContain('id="admin-trends-summary"');
   });
 });
 
@@ -343,6 +351,101 @@ describe('window._KCAD.charts - comportamento', () => {
     expect(listEl.innerHTML).toContain('quartos');
     expect(modulesEl.innerHTML).toContain('Por módulo');
     expect(modulesEl.innerHTML).toContain('kc-trend-module-badge');
+  });
+
+  test('renderSearchTrends pagina termos e permite navegar para mais resultados', () => {
+    const charts = loadChartsModule();
+    const listEl = createElement();
+    const modulesEl = createElement();
+    const summaryEl = createElement();
+    const pageLabelEl = createElement();
+    const prevEl = createElement();
+    const nextEl = createElement();
+    const sizeEl = createElement({ value: '10' });
+    const queryEl = createElement();
+    const coverageEl = createElement();
+    const deps = createDeps({
+      elements: {
+        '#admin-trends-list': listEl,
+        '#admin-trends-modules': modulesEl,
+        '#admin-trends-summary': summaryEl,
+        '#admin-trends-page-label': pageLabelEl,
+        '#admin-trends-prev': prevEl,
+        '#admin-trends-next': nextEl,
+        '#admin-trends-page-size': sizeEl,
+        '#admin-trends-query': queryEl,
+        '#admin-trends-coverage': coverageEl
+      }
+    });
+
+    const rows = Array.from({ length: 12 }, (_, index) => ({
+      term: 'termo-' + (index + 1),
+      count: 30 - index,
+      module: 'moradia',
+      module_confidence: 1
+    }));
+
+    charts.renderSearchTrends(rows, 30, deps);
+
+    expect(listEl.innerHTML).toContain('termo-10');
+    expect(listEl.innerHTML).not.toContain('termo-11');
+    expect(summaryEl.textContent).toContain('Mostrando 1-10 de 12 termos');
+    expect(pageLabelEl.textContent).toContain('1 de 2');
+    expect(nextEl.disabled).toBe(false);
+
+    nextEl.getListener('click')();
+
+    expect(listEl.innerHTML).toContain('termo-11');
+    expect(listEl.innerHTML).not.toContain('termo-1</span>');
+    expect(summaryEl.textContent).toContain('Mostrando 11-12 de 12 termos');
+  });
+
+  test('renderSearchTrends filtra por modulo ao clicar no agrupamento', () => {
+    const charts = loadChartsModule();
+    const listEl = createElement();
+    const modulesEl = createElement();
+    const summaryEl = createElement();
+    const pageLabelEl = createElement();
+    const prevEl = createElement();
+    const nextEl = createElement();
+    const sizeEl = createElement({ value: '10' });
+    const queryEl = createElement();
+    const coverageEl = createElement();
+    const deps = createDeps({
+      elements: {
+        '#admin-trends-list': listEl,
+        '#admin-trends-modules': modulesEl,
+        '#admin-trends-summary': summaryEl,
+        '#admin-trends-page-label': pageLabelEl,
+        '#admin-trends-prev': prevEl,
+        '#admin-trends-next': nextEl,
+        '#admin-trends-page-size': sizeEl,
+        '#admin-trends-query': queryEl,
+        '#admin-trends-coverage': coverageEl
+      }
+    });
+
+    charts.renderSearchTrends([
+      { term: 'quarto', count: 5, module: 'moradia', module_confidence: 1 },
+      { term: 'celular', count: 3, module: 'compra-venda', module_confidence: 1 }
+    ], 30, deps);
+
+    modulesEl.getListener('click')({
+      target: {
+        closest() {
+          return {
+            getAttribute(name) {
+              return name === 'data-trend-module' ? 'moradia' : null;
+            }
+          };
+        }
+      }
+    });
+
+    expect(listEl.innerHTML).toContain('quarto');
+    expect(listEl.innerHTML).not.toContain('celular');
+    expect(summaryEl.textContent).toContain('filtro: Moradia');
+    expect(modulesEl.innerHTML).toContain('is-active');
   });
 
   test('renderDailyActivitySummary monta os KPIs do pulso', () => {

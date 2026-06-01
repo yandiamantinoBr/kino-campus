@@ -200,7 +200,7 @@ describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.3"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.5"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.1"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.4"></script>',
       '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.3"></script>'
@@ -337,6 +337,32 @@ describe('window._KCAD.metrics - comportamento', () => {
     ]));
   });
 
+  test('loadSearchTrendsData preserva mais de 10 termos para a paginacao local', async () => {
+    global.setTimeout = function () { return 0; };
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      rpcHandler(name) {
+        if (name === 'kc_admin_search_trends_classified') {
+          return {
+            data: Array.from({ length: 12 }, (_, index) => ({
+              term: 'termo ' + String(index + 1),
+              count: 20 - index,
+              module: index % 2 === 0 ? 'eventos' : 'moradia',
+              module_confidence: 1
+            })),
+            error: null
+          };
+        }
+        return { data: [], error: null };
+      }
+    });
+
+    const rows = await metrics.loadSearchTrendsData(client, '2026-04-01T00:00:00Z');
+    expect(rows).toHaveLength(12);
+    expect(rows[0]).toMatchObject({ term: 'termo 1', module: 'eventos' });
+    expect(rows[11]).toMatchObject({ term: 'termo 12', module: 'moradia' });
+  });
+
   test('loadAuditEventRows usa o fallback legacy quando necessario', async () => {
     const metrics = loadMetricsModule();
     const client = makeClient({
@@ -360,6 +386,13 @@ describe('window._KCAD.metrics - comportamento', () => {
 
     const rows = await metrics.loadAuditEventRows(client, '2026-04-01T00:00:00Z');
     expect(rows).toEqual([{ created_at: '2026-04-05T10:00:00Z' }]);
+  });
+
+  test('loadSearchTrendsData solicita janela ampla para paginação local', () => {
+    const source = fs.readFileSync(METRICS_PATH, 'utf8');
+    expect(source).toContain('var SEARCH_TRENDS_MAX_ROWS = 100');
+    expect(source).toContain('var clsArgs = { p_limit: 100 }');
+    expect(source).toContain('var rpcArgs = { p_limit: 100 }');
   });
 
   test('loadVisiblePostsCount conta apenas status visiveis publicamente', async () => {

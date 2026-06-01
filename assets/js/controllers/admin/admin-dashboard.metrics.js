@@ -15,6 +15,7 @@
   'use strict';
 
   window._KCAD = window._KCAD || {};
+  var SEARCH_TRENDS_MAX_ROWS = 100;
 
   function getDashboardUtils() {
     return window.KCAdminDashboardUtils || {};
@@ -96,7 +97,7 @@
 
     return Object.entries(frequency)
       .sort(function (a, b) { return b[1] - a[1]; })
-      .slice(0, 10)
+      .slice(0, SEARCH_TRENDS_MAX_ROWS)
       .map(function (entry) {
         return { term: entry[0], count: entry[1] };
       });
@@ -113,7 +114,7 @@
 
     return Object.entries(frequency)
       .sort(function (a, b) { return b[1] - a[1]; })
-      .slice(0, 10)
+      .slice(0, SEARCH_TRENDS_MAX_ROWS)
       .map(function (entry) {
         return { term: entry[0], count: entry[1] };
       });
@@ -141,7 +142,7 @@
     return Object.keys(byTerm)
       .map(function (k) { return byTerm[k]; })
       .sort(function (a, b) { return b.count - a.count; })
-      .slice(0, 10)
+      .slice(0, SEARCH_TRENDS_MAX_ROWS)
       .map(function (e) {
         return { term: e.term, count: e.count, module: e.module, module_confidence: e.module_confidence };
       });
@@ -518,7 +519,7 @@
 
     // Caminho preferido: RPC classificado (termo → módulo pelo conteúdo dos posts).
     try {
-      var clsArgs = { p_limit: 25 };
+      var clsArgs = { p_limit: 100 };
       if (since) clsArgs.p_since = since;
       var clsResult = await Promise.race([
         client.rpc('kc_admin_search_trends_classified', clsArgs),
@@ -532,7 +533,7 @@
     }
 
     try {
-      var rpcArgs = { p_limit: 20 };
+      var rpcArgs = { p_limit: 100 };
       if (since) rpcArgs.p_since = since;
 
       var rpcPromise = client.rpc('kc_admin_search_trends', rpcArgs);
@@ -563,7 +564,7 @@
         var rawQuery = client.from('search_queries')
           .select('term')
           .order('created_at', { ascending: false })
-          .limit(1000);
+          .limit(5000);
         if (since) rawQuery = rawQuery.gte('created_at', since);
 
         var raw = await rawQuery;

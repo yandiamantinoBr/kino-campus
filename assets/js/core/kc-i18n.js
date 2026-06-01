@@ -450,6 +450,10 @@
     'aria-label.privacy-event-log-filters': 'Filtros dos eventos recentes',
     'aria-label.privacy-event-log-prev': 'Página anterior dos eventos recentes',
     'aria-label.privacy-event-log-next': 'Próxima página dos eventos recentes',
+    'aria-label.admin-trends-filters':   'Filtros das tendências de busca',
+    'aria-label.admin-trends-query':     'Filtrar tendências de busca',
+    'aria-label.admin-trends-page-size': 'Linhas por página em tendências de busca',
+    'aria-label.admin-trends-pagination': 'Paginação das tendências de busca',
 
     // My posts popover
     'aria-label.my-posts-save-close':   'Fechar',
@@ -543,6 +547,7 @@
     'placeholder.audit-actor-filter':   'Ator: nome ou UUID',
     'placeholder.privacy-page-filter':  'Filtrar por página',
     'placeholder.privacy-event-log-search': 'Filtrar evento, página, módulo ou entidade',
+    'placeholder.admin-trends-query':   'Filtrar termo, módulo ou entidade',
     'placeholder.admin-invite-email':   'E-mail do convidado (ex: usuario@gmail.com)',
     'placeholder.admin-invite-reason':  'Motivo do convite (opcional)',
     'placeholder.admin-limit-max':      'Máx.',

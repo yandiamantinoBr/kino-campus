@@ -561,6 +561,105 @@
       margin-bottom: 8px;
     }
 
+    .kc-trends-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      margin: 10px 0 12px;
+    }
+
+    .kc-trends-toolbar input,
+    .kc-trends-toolbar select {
+      min-height: 38px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-size: .86rem;
+      min-width: 0;
+    }
+
+    .kc-trends-toolbar select {
+      width: 132px;
+    }
+
+    .kc-trend-summary {
+      margin: 10px 0 0;
+      color: var(--kc-text-dark-secondary);
+      font-size: .82rem;
+    }
+
+    .kc-trend-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .kc-trend-pagination button,
+    .kc-trend-module-badge {
+      cursor: pointer;
+    }
+
+    .kc-trend-pagination button {
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark);
+      color: var(--kc-text-dark-primary);
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-size: .82rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kc-trend-pagination button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .kc-trend-page-label {
+      color: var(--kc-text-dark-secondary);
+      font-size: .82rem;
+    }
+
+    .kc-trend-module-badge.is-active {
+      border-color: rgba(255, 107, 0, .65);
+      background: rgba(255, 107, 0, .12);
+      box-shadow: 0 8px 18px rgba(255, 107, 0, .08);
+    }
+
+    .kc-trend-module-badge:focus-visible,
+    .kc-trend-pagination button:focus-visible,
+    .kc-trends-toolbar input:focus-visible,
+    .kc-trends-toolbar select:focus-visible {
+      outline: 2px solid rgba(255, 107, 0, .55);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 560px) {
+      .kc-trends-toolbar {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .kc-trends-toolbar select {
+        width: 100%;
+      }
+
+      .kc-trend-item {
+        align-items: flex-start;
+      }
+
+      .kc-trend-term {
+        min-width: 0;
+        flex: 1;
+      }
+    }
+
     .kc-admin-alert-list {
       list-style: none;
       margin: 0;
@@ -799,20 +898,34 @@
             </div>
 
             <section class="kc-admin-section" id="admin-health-section">
-              <div class="kc-admin-section__eyebrow">Saude do Admin</div>
+              <div class="kc-admin-section__eyebrow">Sa&uacute;de do Admin</div>
               <h3><i class="fas fa-stethoscope"></i> Status operacional</h3>
-              <p class="kc-admin-section__intro">Leitura rapida das rotas admin, exportacoes e RPCs criticas usadas pelo painel.</p>
+              <p class="kc-admin-section__intro">Leitura r&aacute;pida das rotas admin, exporta&ccedil;&otilde;es e RPCs cr&iacute;ticas usadas pelo painel.</p>
               <div id="admin-health-list" class="kc-admin-kpi-strip">
-                <div class="kc-admin-empty">Verificando saude administrativa...</div>
+                <div class="kc-admin-empty">Verificando sa&uacute;de administrativa...</div>
               </div>
             </section>
 
             <section class="kc-admin-section">
               <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca</h3>
               <div class="kc-trend-module-title"><i class="fas fa-list-ol"></i> Top termos buscados <span id="admin-trends-coverage" class="kc-trend-coverage"></span></div>
+              <div class="kc-trends-toolbar" aria-label="Filtros das tend&ecirc;ncias de busca" data-i18n-aria-label="aria-label.admin-trends-filters">
+                <input id="admin-trends-query" type="search" autocomplete="off" placeholder="Filtrar termo, m&oacute;dulo ou entidade" aria-label="Filtrar tend&ecirc;ncias de busca" data-i18n-placeholder="placeholder.admin-trends-query" data-i18n-aria-label="aria-label.admin-trends-query">
+                <select id="admin-trends-page-size" aria-label="Linhas por p&aacute;gina em tend&ecirc;ncias de busca" data-i18n-aria-label="aria-label.admin-trends-page-size">
+                  <option value="10" selected>10 por p&aacute;gina</option>
+                  <option value="25">25 por p&aacute;gina</option>
+                  <option value="50">50 por p&aacute;gina</option>
+                </select>
+              </div>
               <ul class="kc-trend-list" id="admin-trends-list">
                 <li class="kc-trend-empty">Carregando...</li>
               </ul>
+              <div id="admin-trends-summary" class="kc-trend-summary" aria-live="polite"></div>
+              <div id="admin-trends-pagination" class="kc-trend-pagination" aria-label="Pagina&ccedil;&atilde;o das tend&ecirc;ncias de busca" data-i18n-aria-label="aria-label.admin-trends-pagination">
+                <button type="button" id="admin-trends-prev"><i class="fas fa-chevron-left"></i> Anterior</button>
+                <span id="admin-trends-page-label" class="kc-trend-page-label">P&aacute;gina 1 de 1</span>
+                <button type="button" id="admin-trends-next">Pr&oacute;xima <i class="fas fa-chevron-right"></i></button>
+              </div>
               <div id="admin-trends-modules" class="kc-trend-modules" style="display:none;">
               </div>
             </section>
@@ -1039,7 +1152,7 @@
     <script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.3"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.5"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.1"></script>
+    <script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.4"></script>
     <script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.3"></script>

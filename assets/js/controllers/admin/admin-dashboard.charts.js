@@ -106,6 +106,27 @@
     return window._KCAD.__adminChartsState;
   }
 
+  function getTrendState() {
+    var bucket = getStateBucket();
+    bucket.searchTrends = bucket.searchTrends || {
+      rows: [],
+      periodDays: 30,
+      page: 1,
+      pageSize: 10,
+      module: '',
+      query: ''
+    };
+    return bucket.searchTrends;
+  }
+
+  function normalizeSearchText(value) {
+    return String(value == null ? '' : value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
   function getData(deps) {
     if (deps && typeof deps.getData === 'function') return deps.getData();
     return getStateBucket().data || null;
@@ -271,6 +292,225 @@
     }
 
     renderSearchTrendsByModule(trends, periodDays, deps);
+  }
+
+  function hydrateTrendRows(trends, deps) {
+    return (Array.isArray(trends) ? trends : []).map(function (trend) {
+      var row = Object.assign({}, trend || {});
+      row.__module = resolveTermModuleValue(deps, trend);
+      row.__moduleLabel = row.__module ? getModuleLabelValue(deps, row.__module) : '';
+      row.__searchText = normalizeSearchText([
+        row.term || '',
+        row.__module || '',
+        row.__moduleLabel || '',
+        row.entity || '',
+        row.entity_type || '',
+        row.post_title || ''
+      ].join(' '));
+      return row;
+    });
+  }
+
+  function getFilteredTrendRows(state) {
+    var query = normalizeSearchText(state.query || '');
+    var moduleFilter = String(state.module || '');
+    return (state.rows || []).filter(function (row) {
+      if (moduleFilter && row.__module !== moduleFilter) return false;
+      if (query && String(row.__searchText || '').indexOf(query) === -1) return false;
+      return true;
+    });
+  }
+
+  function bindSearchTrendControls(deps) {
+    var state = getTrendState();
+    var queryInput = select(deps, '#admin-trends-query');
+    var pageSizeSelect = select(deps, '#admin-trends-page-size');
+    var prevBtn = select(deps, '#admin-trends-prev');
+    var nextBtn = select(deps, '#admin-trends-next');
+    var modulesEl = select(deps, '#admin-trends-modules');
+
+    if (queryInput && !queryInput.dataset.bound) {
+      queryInput.dataset.bound = 'true';
+      queryInput.addEventListener('input', function () {
+        state.query = queryInput.value || '';
+        state.page = 1;
+        renderSearchTrendPage(deps);
+      });
+    }
+
+    if (pageSizeSelect && !pageSizeSelect.dataset.bound) {
+      pageSizeSelect.dataset.bound = 'true';
+      pageSizeSelect.addEventListener('change', function () {
+        var value = Number(pageSizeSelect.value) || 10;
+        state.pageSize = Math.max(5, Math.min(value, 50));
+        state.page = 1;
+        renderSearchTrendPage(deps);
+      });
+    }
+
+    if (prevBtn && !prevBtn.dataset.bound) {
+      prevBtn.dataset.bound = 'true';
+      prevBtn.addEventListener('click', function () {
+        state.page = Math.max(1, (Number(state.page) || 1) - 1);
+        renderSearchTrendPage(deps);
+      });
+    }
+
+    if (nextBtn && !nextBtn.dataset.bound) {
+      nextBtn.dataset.bound = 'true';
+      nextBtn.addEventListener('click', function () {
+        state.page = (Number(state.page) || 1) + 1;
+        renderSearchTrendPage(deps);
+      });
+    }
+
+    if (modulesEl && !modulesEl.dataset.bound) {
+      modulesEl.dataset.bound = 'true';
+      modulesEl.addEventListener('click', function (event) {
+        var target = event && event.target && typeof event.target.closest === 'function'
+          ? event.target.closest('[data-trend-module]')
+          : null;
+        if (!target) return;
+        state.module = target.getAttribute('data-trend-module') || '';
+        state.page = 1;
+        renderSearchTrendPage(deps);
+      });
+    }
+  }
+
+  function renderSearchTrendsByModule(trends, periodDays, deps) {
+    var container = select(deps, '#admin-trends-modules');
+    if (!container) return;
+
+    var moduleData = aggregateTrendsByModule(trends, deps);
+    var state = getTrendState();
+    if (!moduleData.length) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+
+    container.style.display = 'flex';
+    var periodLabel = getPeriodLabelValue(deps, periodDays || 30);
+    var totalCount = moduleData.reduce(function (acc, row) {
+      return acc + (Number(row.count) || 0);
+    }, 0);
+    var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells" aria-hidden="true"></i> Por módulo (' + escHtml(deps, periodLabel) + ') - clique para filtrar</div>';
+    var allButton = '<button type="button" class="kc-trend-module-badge' + (!state.module ? ' is-active' : '') + '" data-trend-module="" aria-pressed="' + (!state.module ? 'true' : 'false') + '" title="Mostrar todos os módulos">'
+      + '<i class="fas fa-layer-group"></i> Todos'
+      + '<span class="kc-badge-count">' + totalCount + '</span>'
+      + '</button>';
+
+    container.innerHTML = titleHtml + allButton + moduleData.map(function (moduleRow) {
+      var topTerms = moduleRow.terms.slice(0, 3).map(function (term) {
+        return escHtml(deps, term);
+      }).join(', ');
+
+      return '<button type="button" class="kc-trend-module-badge' + (state.module === moduleRow.module ? ' is-active' : '') + '" data-trend-module="' + escHtml(deps, moduleRow.module || '') + '" aria-pressed="' + (state.module === moduleRow.module ? 'true' : 'false') + '" title="' + escHtml(deps, topTerms || 'Filtrar por módulo') + '">'
+        + '<i class="' + escHtml(deps, moduleRow.icon || getModuleIconValue(deps, moduleRow.module)) + '"></i> ' + escHtml(deps, moduleRow.label || getModuleLabelValue(deps, moduleRow.module))
+        + '<span class="kc-badge-count">' + (Number(moduleRow.count) || 0) + '</span>'
+        + '</button>';
+    }).join('');
+  }
+
+  function renderSearchTrendPage(deps) {
+    var state = getTrendState();
+    var trendsList = select(deps, '#admin-trends-list');
+    if (!trendsList) return;
+
+    var filteredRows = getFilteredTrendRows(state);
+    var pageSize = Math.max(5, Math.min(Number(state.pageSize) || 10, 50));
+    var totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+    state.page = Math.max(1, Math.min(Number(state.page) || 1, totalPages));
+
+    var startIndex = (state.page - 1) * pageSize;
+    var pageRows = filteredRows.slice(startIndex, startIndex + pageSize);
+    var max = Math.max.apply(null, filteredRows.map(function (trend) {
+      return Number(trend && trend.count) || 1;
+    }).concat([1]));
+
+    if (!filteredRows.length) {
+      trendsList.innerHTML = '<li class="kc-trend-empty">Nenhum termo encontrado para os filtros atuais.</li>';
+    } else {
+      trendsList.innerHTML = pageRows.map(function (trend, index) {
+        var pct = Math.round(((Number(trend && trend.count) || 0) / max) * 100);
+        var modKey = trend.__module;
+        var modBadge = modKey
+          ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtml(deps, trend.__moduleLabel || getModuleLabelValue(deps, modKey)) + '"><i class="' + escHtml(deps, getModuleIconValue(deps, modKey)) + '"></i></span>'
+          : '';
+
+        return '<li class="kc-trend-item">'
+          + '<span class="kc-trend-rank">' + (startIndex + index + 1) + '</span>'
+          + '<span class="kc-trend-term">' + escHtml(deps, String((trend && trend.term) || '')) + modBadge + '</span>'
+          + '<div class="kc-trend-bar-wrap"><div class="kc-trend-bar" style="width:' + pct + '%"></div></div>'
+          + '<span class="kc-trend-count">' + (Number(trend && trend.count) || 0) + '</span>'
+          + '</li>';
+      }).join('');
+    }
+
+    var summaryEl = select(deps, '#admin-trends-summary');
+    if (summaryEl) {
+      var from = filteredRows.length ? startIndex + 1 : 0;
+      var to = Math.min(startIndex + pageSize, filteredRows.length);
+      var moduleText = state.module ? ' - filtro: ' + getModuleLabelValue(deps, state.module) : '';
+      var queryText = state.query ? ' - busca: "' + String(state.query).trim() + '"' : '';
+      summaryEl.textContent = 'Mostrando ' + from + '-' + to + ' de ' + filteredRows.length + ' termos' + moduleText + queryText + '.';
+    }
+
+    var pageLabel = select(deps, '#admin-trends-page-label');
+    if (pageLabel) pageLabel.textContent = 'Página ' + state.page + ' de ' + totalPages;
+
+    var prevBtn = select(deps, '#admin-trends-prev');
+    if (prevBtn) prevBtn.disabled = state.page <= 1;
+    var nextBtn = select(deps, '#admin-trends-next');
+    if (nextBtn) nextBtn.disabled = state.page >= totalPages;
+
+    var pageSizeSelect = select(deps, '#admin-trends-page-size');
+    if (pageSizeSelect && String(pageSizeSelect.value || '') !== String(pageSize)) pageSizeSelect.value = String(pageSize);
+
+    renderSearchTrendsByModule(state.rows, state.periodDays, deps);
+  }
+
+  function renderSearchTrends(trends, periodDays, deps) {
+    var trendsList = select(deps, '#admin-trends-list');
+    if (!trendsList) return;
+
+    var state = getTrendState();
+    state.rows = hydrateTrendRows(trends, deps);
+    state.periodDays = periodDays || 30;
+    state.page = 1;
+    state.module = '';
+    state.query = '';
+    state.pageSize = Math.max(5, Math.min(Number(state.pageSize) || 10, 50));
+
+    var queryInput = select(deps, '#admin-trends-query');
+    if (queryInput) queryInput.value = '';
+
+    bindSearchTrendControls(deps);
+
+    if (!state.rows.length) {
+      trendsList.innerHTML = '<li class="kc-trend-empty">Nenhuma busca registrada ainda. As buscas feitas na plataforma aparecerão aqui.</li>';
+      var modContainer = select(deps, '#admin-trends-modules');
+      if (modContainer) {
+        modContainer.style.display = 'none';
+        modContainer.innerHTML = '';
+      }
+      var coverageEmpty = select(deps, '#admin-trends-coverage');
+      if (coverageEmpty) coverageEmpty.textContent = '';
+      var summaryEmpty = select(deps, '#admin-trends-summary');
+      if (summaryEmpty) summaryEmpty.textContent = 'Sem termos no período selecionado.';
+      return;
+    }
+
+    var classifiedCount = state.rows.reduce(function (acc, t) {
+      return acc + (t.__module ? 1 : 0);
+    }, 0);
+    var coverageEl = select(deps, '#admin-trends-coverage');
+    if (coverageEl) {
+      coverageEl.textContent = Math.round((classifiedCount / state.rows.length) * 100) + '% classificados';
+    }
+
+    renderSearchTrendPage(deps);
   }
 
   function renderDailyActivitySummary(summary, deps) {
