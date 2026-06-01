@@ -541,6 +541,14 @@ body.kc-admin-page--dashboard .kc-series-picker__color {
   cursor: pointer;
 }
 
+/* Indicador de cobertura de classificação na seção Tendências de busca */
+body.kc-admin-page--dashboard .kc-trend-coverage {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--kc-text-dark-secondary);
+  margin-left: 6px;
+}
+
 /* ── Skeletons de carregamento (compartilhado por todas as páginas /admin) ── */
 body.kc-admin-page .kc-skeleton {
   position: relative;
