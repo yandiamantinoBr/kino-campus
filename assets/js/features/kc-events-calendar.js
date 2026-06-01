@@ -120,6 +120,7 @@
       '  <div class="kc-cal-display">',
       '    <i class="fas fa-calendar kc-cal-icon"></i>',
       '    <span class="kc-cal-month" data-kc-cal-month>Carregando…</span>',
+      '    <button type="button" class="kc-cal-today-btn" data-kc-cal-today aria-label="Voltar para hoje" data-i18n-aria-label="aria-label.calendar-today" hidden>Hoje</button>',
       '  </div>',
       '  <button type="button" class="kc-cal-nav" data-kc-cal-next aria-label="Próximo período" data-i18n-aria-label="aria-label.calendar-next">',
       '    <i class="fas fa-chevron-right"></i>',
@@ -156,7 +157,7 @@
       '      </div>',
       '      <div class="kc-events-calendar kc-events-calendar--modal">',
       '        <button type="button" class="kc-cal-nav" data-kc-cal-modal-prev aria-label="Anterior" data-i18n-aria-label="aria-label.calendar-modal-prev"><i class="fas fa-chevron-left"></i></button>',
-      '        <div class="kc-cal-display"><i class="fas fa-calendar kc-cal-icon"></i><span class="kc-cal-month" data-kc-cal-month-modal>—</span></div>',
+      '        <div class="kc-cal-display"><i class="fas fa-calendar kc-cal-icon"></i><span class="kc-cal-month" data-kc-cal-month-modal>—</span><button type="button" class="kc-cal-today-btn" data-kc-cal-today aria-label="Voltar para hoje" data-i18n-aria-label="aria-label.calendar-today" hidden>Hoje</button></div>',
       '        <button type="button" class="kc-cal-nav" data-kc-cal-modal-next aria-label="Próximo" data-i18n-aria-label="aria-label.calendar-modal-next"><i class="fas fa-chevron-right"></i></button>',
       '      </div>',
       '    </div>',
@@ -198,9 +199,23 @@
     return start;
   }
 
+  // Normaliza a chave de categoria para casar com CATEGORIES (cores/legenda):
+  // minúsculas, sem acentos e singular → plural oficial (academico → academicos).
+  function normalizeCategoryKey(raw) {
+    var key = String(raw == null ? '' : raw).toLowerCase().trim();
+    if (typeof key.normalize === 'function') {
+      key = key.normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '');
+    }
+    var ALIASES = {
+      academico: 'academicos', cultural: 'culturais', esportivo: 'esportivos',
+      workshop: 'workshops', festa: 'festas',
+    };
+    return ALIASES[key] || key;
+  }
+
   function getEventCategory(post) {
     var m = post.metadata || {};
-    return (m.subcategoryKey || m.categoryKey || m.categoria || post.category || 'outros').toLowerCase();
+    return normalizeCategoryKey(m.subcategoryKey || m.categoryKey || m.categoria || post.category || 'outros');
   }
 
   /* ── Busca eventos do Supabase ────────────────────────── */
@@ -486,6 +501,10 @@
       b.disabled = calState.view === 'month' && atMax;
     });
 
+    // Botão "Hoje": aparece só quando não se está no período atual.
+    var viewingToday = isViewingToday();
+    $all('[data-kc-cal-today]').forEach(function (b) { b.hidden = viewingToday; });
+
     renderInto(grid, gridModal);
     bindDayClick(grid);
     bindDayClick(gridModal);
@@ -569,10 +588,38 @@
     renderCalendarAll();
   }
 
+  /* ── "Hoje": volta rápido ao período atual ────────────── */
+  function isViewingToday() {
+    var t = new Date();
+    if (calState.view === 'month') {
+      return calState.year === t.getFullYear() && calState.month === t.getMonth();
+    }
+    var todayYMD = toYMD(t.getFullYear(), t.getMonth(), t.getDate());
+    if (calState.view === 'week') {
+      return weekDays(calState.year, calState.month, calState.day).indexOf(todayYMD) !== -1;
+    }
+    return toYMD(calState.year, calState.month, calState.day) === todayYMD;
+  }
+
+  function navigateToToday() {
+    var t = new Date();
+    calState.year = t.getFullYear();
+    calState.month = t.getMonth();
+    calState.day = t.getDate();
+    try {
+      localStorage.setItem(STORAGE_KEY, calState.year + '-' + padZ(calState.month + 1));
+    } catch (_) {}
+    renderCalendarAll();
+  }
+
   /* ── Modal expandido ──────────────────────────────────── */
+  var _modalReturnFocus = null; // elemento que abriu o modal (foco volta ao fechar)
+
   function openCalModal() {
     var modal = $('#' + MODAL_ID);
     if (!modal) return;
+    // Guarda o foco atual ANTES de qualquer mudança (devolvido no fechamento).
+    _modalReturnFocus = (typeof document !== 'undefined' && document.activeElement) || null;
     modal.setAttribute('aria-hidden', 'false');
     modal.classList.add('is-open');
     // Usa KCOverlayLock para garantir scroll lock correto no iOS Safari:
@@ -582,6 +629,9 @@
     }
     syncModalViewTabs();
     renderCalendarAll();
+    // Move o foco para dentro do modal (acessibilidade de teclado).
+    var closeBtn = $('[data-kc-cal-modal-close]');
+    if (closeBtn && typeof closeBtn.focus === 'function') { try { closeBtn.focus(); } catch (_) {} }
   }
 
   function closeCalModal() {
@@ -592,6 +642,24 @@
     if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
       window.KCOverlayLock.unlock('eventos-cal-modal');
     }
+    // Devolve o foco ao elemento que abriu o modal (ex.: botão "Expandir").
+    if (_modalReturnFocus && typeof _modalReturnFocus.focus === 'function') {
+      try { _modalReturnFocus.focus(); } catch (_) {}
+    }
+    _modalReturnFocus = null;
+  }
+
+  // Focus trap: mantém o Tab/Shift+Tab dentro do modal enquanto aberto.
+  function trapModalFocus(e) {
+    if (e.key !== 'Tab') return;
+    var modal = $('#' + MODAL_ID);
+    if (!modal || !modal.classList.contains('is-open')) return;
+    var focusables = $all('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])', modal)
+      .filter(function (el) { return !el.disabled && !el.hidden; });
+    if (!focusables.length) return;
+    var first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 
   function syncViewTabs(view) {
@@ -678,6 +746,11 @@
       });
     });
 
+    // Botão "Hoje" (sidebar + modal)
+    $all('[data-kc-cal-today]').forEach(function (b) {
+      b.addEventListener('click', navigateToToday);
+    });
+
     // Expand btn
     var expandBtn = $('[data-kc-cal-expand]');
     if (expandBtn) expandBtn.addEventListener('click', openCalModal);
@@ -688,6 +761,7 @@
     var modalEl = $('#' + MODAL_ID);
     if (modalEl) {
       modalEl.addEventListener('click', function (e) { if (e.target === modalEl) closeCalModal(); });
+      modalEl.addEventListener('keydown', trapModalFocus); // focus trap (a11y)
     }
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeCalModal(); });
 

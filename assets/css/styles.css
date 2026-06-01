@@ -8947,6 +8947,32 @@ textarea::placeholder {
   text-overflow: ellipsis;
 }
 
+/* Botão "Hoje" — volta ao período atual; oculto quando já se está nele */
+.kc-cal-today-btn {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  background: rgba(241, 91, 41, 0.1);
+  color: var(--kc-primary-brand);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.kc-cal-today-btn:hover {
+  background: rgba(241, 91, 41, 0.18);
+  border-color: var(--kc-primary-brand);
+}
+
+.kc-cal-today-btn[hidden] {
+  display: none;
+}
+
 .kc-housing-section-modal {
   width: min(520px, 100%);
 }
