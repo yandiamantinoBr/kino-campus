@@ -23,7 +23,7 @@
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { CaduItem, validateItem } from "./schema.ts";
 import { deepMergeMetadata, mapItemToPost } from "./mapper.ts";
-import { lightHash, validRemoteImageUrl } from "./util.ts";
+import { canPersistExternalImageUrl, lightHash, validRemoteImageUrl } from "./util.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -32,6 +32,7 @@ const SITE_URL = (Deno.env.get("KC_APP_BASE_URL") || "https://www.kinocampus.com
 
 const STORAGE_BUCKET = "kino-media";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_IMAGE_COUNT = 5;
 const USER_AGENT = "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)";
 
 const CORS_HEADERS = {
@@ -92,11 +93,12 @@ async function uploadCover(
   userId: string,
   postId: string,
   sourceUrl: string,
+  index = 0,
 ): Promise<string> {
   const clean = validRemoteImageUrl(sourceUrl);
   if (!clean) return "";
   const { bytes, contentType, ext } = await downloadImage(clean);
-  const path = `post-media/${userId}/${postId}/cadu-1-${lightHash(clean)}.${ext}`;
+  const path = `post-media/${userId}/${postId}/cadu-${index + 1}-${lightHash(clean)}.${ext}`;
   const { error } = await admin.storage.from(STORAGE_BUCKET).upload(path, bytes, {
     contentType,
     upsert: true,
@@ -106,19 +108,104 @@ async function uploadCover(
   return data?.publicUrl || "";
 }
 
-// Aplica a capa ao post: posts.image_url + metadata + post_media (best-effort).
+interface PreparedImage {
+  source: string;
+  url: string;
+  uploaded: boolean;
+  fallback: boolean;
+  error?: string;
+}
+
+async function prepareFinalImages(
+  admin: SupabaseClient,
+  userId: string,
+  postId: string,
+  candidates: string[],
+  allowExternalFallback: boolean,
+): Promise<{ images: string[]; uploads: PreparedImage[] }> {
+  const cleanCandidates = Array.from(new Set(candidates.map(validRemoteImageUrl).filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
+  const images: string[] = [];
+  const uploads: PreparedImage[] = [];
+
+  for (let index = 0; index < cleanCandidates.length; index += 1) {
+    const candidate = cleanCandidates[index];
+    try {
+      const storageUrl = await uploadCover(admin, userId, postId, candidate, index);
+      if (storageUrl) {
+        images.push(storageUrl);
+        uploads.push({ source: candidate, url: storageUrl, uploaded: true, fallback: false });
+        continue;
+      }
+      throw new Error("storage_url_empty");
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e);
+      if (allowExternalFallback && canPersistExternalImageUrl(candidate)) {
+        images.push(candidate);
+        uploads.push({ source: candidate, url: candidate, uploaded: false, fallback: true, error });
+      } else {
+        uploads.push({ source: candidate, url: "", uploaded: false, fallback: false, error });
+      }
+    }
+  }
+
+  return { images: Array.from(new Set(images)).slice(0, MAX_IMAGE_COUNT), uploads };
+}
+
+// Aplica galeria ao post: posts.image_url + metadata + post_media (best-effort).
+async function applyImages(
+  admin: SupabaseClient,
+  postId: string,
+  imageUrls: string[],
+  currentMetadata: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const cleanUrls = Array.from(new Set(imageUrls.map(validRemoteImageUrl).filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
+  if (!cleanUrls.length) return currentMetadata || {};
+
+  const coverUrl = cleanUrls[0];
+  const metadata = deepMergeMetadata(currentMetadata, {
+    image_url: coverUrl,
+    cover_url: coverUrl,
+    gallery_image_urls: cleanUrls,
+  });
+  const { data: previousPost } = await admin
+    .from("posts")
+    .select("image_url,metadata")
+    .eq("id", postId)
+    .maybeSingle();
+  const { data: previousMedia } = await admin
+    .from("post_media")
+    .select("post_id,url,is_cover,sort_order")
+    .eq("post_id", postId);
+  try {
+    await admin.from("posts").update({ image_url: coverUrl, metadata }).eq("id", postId);
+    await admin.from("post_media").delete().eq("post_id", postId);
+    await admin.from("post_media").insert(
+      cleanUrls.map((url, index) => ({ post_id: postId, url, is_cover: index === 0, sort_order: index })),
+    );
+  } catch (_) {
+    if (previousPost) {
+      await admin
+        .from("posts")
+        .update({ image_url: previousPost.image_url || null, metadata: previousPost.metadata || {} })
+        .eq("id", postId)
+        .then(() => {}, () => {});
+    }
+    if (Array.isArray(previousMedia) && previousMedia.length) {
+      await admin.from("post_media").insert(previousMedia).then(() => {}, () => {});
+    }
+    return (previousPost?.metadata as Record<string, unknown>) || currentMetadata || {};
+  }
+  return metadata;
+}
+
+// Compatibilidade interna para checks antigos: capa unica = galeria com uma imagem.
 async function applyCover(
   admin: SupabaseClient,
   postId: string,
   coverUrl: string,
   currentMetadata: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const metadata = deepMergeMetadata(currentMetadata, { image_url: coverUrl, cover_url: coverUrl });
-  await admin.from("posts").update({ image_url: coverUrl, metadata }).eq("id", postId);
-  try {
-    await admin.from("post_media").insert({ post_id: postId, url: coverUrl, is_cover: true, sort_order: 0 });
-  } catch (_) { /* galeria e best-effort; image_url ja garante a capa */ }
-  return metadata;
+  return applyImages(admin, postId, [coverUrl], currentMetadata);
 }
 
 async function isTrustedPublisher(admin: SupabaseClient, userId: string): Promise<boolean> {
@@ -202,29 +289,45 @@ async function handlePublish(admin: SupabaseClient, userId: string, body: Record
     return json(500, { ok: false, code: "INSERT_FAILED", message: error?.message || "Falha ao inserir o post." });
   }
 
-  // Imagem: sobe para o Storage; em caso de falha, mantem a URL externa (fallback).
-  const media: { uploaded: boolean; cover_url: string; error?: string } = {
+  // Imagens: sobe para o Storage; em caso de falha por imagem, mantem URL externa
+  // apenas quando ela for estavel. A primeira imagem final e sempre a capa.
+  const media: {
+    uploaded: boolean;
+    uploaded_count: number;
+    cover_url: string;
+    images: string[];
+    uploads: PreparedImage[];
+    error?: string;
+  } = {
     uploaded: false,
+    uploaded_count: 0,
     cover_url: String(post.image_url || ""),
+    images: [],
+    uploads: [],
   };
-  const candidate = mapped.images[0] || "";
-  if (candidate) {
+  const candidates = mapped.images || [];
+  if (candidates.length) {
     try {
-      const storageUrl = await uploadCover(admin, userId, post.id, candidate);
-      if (storageUrl) {
-        post.metadata = await applyCover(admin, post.id, storageUrl, post.metadata || {});
-        post.image_url = storageUrl;
-        media.uploaded = true;
-        media.cover_url = storageUrl;
+      const prepared = await prepareFinalImages(
+        admin,
+        userId,
+        post.id,
+        candidates,
+        item.allowExternalImageFallback !== false,
+      );
+      media.uploads = prepared.uploads;
+      media.images = prepared.images;
+      media.uploaded_count = prepared.uploads.filter((img) => img.uploaded).length;
+      media.uploaded = media.uploaded_count > 0;
+      if (prepared.images.length) {
+        post.metadata = await applyImages(admin, post.id, prepared.images, post.metadata || {});
+        post.image_url = prepared.images[0];
+        media.cover_url = prepared.images[0];
+      } else {
+        media.error = prepared.uploads.find((img) => img.error)?.error || "image_prepare_failed";
       }
     } catch (e) {
       media.error = e instanceof Error ? e.message : String(e);
-      // fallback: garante image_url externo + post_media
-      try {
-        post.metadata = await applyCover(admin, post.id, candidate, post.metadata || {});
-        post.image_url = candidate;
-        media.cover_url = candidate;
-      } catch (_) { /* ignore */ }
     }
   }
 
@@ -234,6 +337,7 @@ async function handlePublish(admin: SupabaseClient, userId: string, body: Record
     source_url: mapped.dedup.sourceUrl,
     source_id: mapped.dedup.sourceId,
     image_uploaded: media.uploaded,
+    image_count: media.images.length,
   });
 
   const pending = post.status === "pending";
@@ -285,27 +389,43 @@ async function handleEdit(admin: SupabaseClient, userId: string, body: Record<st
     if (updErr) return json(500, { ok: false, code: "UPDATE_FAILED", message: updErr.message });
   }
 
-  // Troca de imagem (opcional).
-  const newImage = validRemoteImageUrl((body.image as string) || (Array.isArray(body.images) ? body.images[0] : ""));
+  // Troca de imagens (opcional). A primeira imagem final vira capa; as demais
+  // entram em post_media como galeria ordenada.
+  const newImages = Array.from(new Set([
+    validRemoteImageUrl(body.image),
+    ...(Array.isArray(body.images) ? body.images.map(validRemoteImageUrl) : []),
+  ].filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
   let coverUrl = String(current.image_url || "");
   let uploaded = false;
-  if (newImage) {
+  let imageCount = 0;
+  let imageError = "";
+  let imageUploads: PreparedImage[] = [];
+  if (newImages.length) {
     const baseMeta = (update.metadata as Record<string, unknown>) || current.metadata || {};
     try {
-      const storageUrl = await uploadCover(admin, userId, postId, newImage);
-      if (storageUrl) {
-        await applyCover(admin, postId, storageUrl, baseMeta);
-        coverUrl = storageUrl;
-        uploaded = true;
+      const prepared = await prepareFinalImages(
+        admin,
+        userId,
+        postId,
+        newImages,
+        body.allowExternalImageFallback !== false,
+      );
+      imageUploads = prepared.uploads;
+      uploaded = prepared.uploads.some((img) => img.uploaded);
+      imageCount = prepared.images.length;
+      if (prepared.images.length) {
+        await applyImages(admin, postId, prepared.images, baseMeta);
+        coverUrl = prepared.images[0];
+      } else {
+        imageError = prepared.uploads.find((img) => img.error)?.error || "image_prepare_failed";
       }
-    } catch (_) {
-      await applyCover(admin, postId, newImage, baseMeta);
-      coverUrl = newImage;
+    } catch (e) {
+      imageError = e instanceof Error ? e.message : String(e);
     }
   }
 
   const { data: fresh } = await admin.from("posts").select("id,status,module,image_url").eq("id", postId).maybeSingle();
-  audit(admin, "cadu_post_edited", postId, userId, { fields: Object.keys(update), image_changed: !!newImage });
+  audit(admin, "cadu_post_edited", postId, userId, { fields: Object.keys(update), image_changed: !!newImages.length, image_count: imageCount });
   return json(200, {
     ok: true,
     code: "UPDATED",
@@ -313,6 +433,9 @@ async function handleEdit(admin: SupabaseClient, userId: string, body: Record<st
     status: fresh?.status || current.status,
     image_url: coverUrl,
     image_uploaded: uploaded,
+    image_count: imageCount,
+    media: { uploaded, cover_url: coverUrl, images_count: imageCount, uploads: imageUploads },
+    image_error: imageError,
     url: postUrl(String(fresh?.module || current.module)),
   });
 }

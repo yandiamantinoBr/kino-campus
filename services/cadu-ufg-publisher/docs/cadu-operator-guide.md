@@ -43,7 +43,8 @@ Campos obrigatorios/esperados:
 - `metadata.link_as_cta`: `true`.
 - `metadata.actionLabel`: texto do botao, como `Acessar evento` ou `Realizar inscricao`.
 - `metadata.actionKey`: slug do botao, como `acessar-evento`.
-- `metadata.contato`: email detectado, ou `Ver link oficial da UFG`.
+- `metadata.contato`: email institucional detectado. Se nao houver contato real,
+  nao invente; o link oficial deve ser o caminho de esclarecimento.
 - `metadata.area` / `metadata.areaKey`: area/categoria visivel.
 - `metadata.tags` / `metadata.tagKeys`: tags e chaves normalizadas para filtros.
 - `metadata.categoria`, `metadata.categoriaKey` e `metadata.categoryKey`: sempre preenchidos.
@@ -68,7 +69,8 @@ Campos obrigatorios/esperados:
 - `descricao`: maximo 2000 caracteres.
 - `areaAtuacao` / `metadata.area`: area detectada, como `Academica`, `Saude`, `Direito`, `Tecnologia`, `Linguas`.
 - `modalidadeTrabalho`: `Presencial` por padrao quando a fonte nao disser outro modo.
-- `contato`: email detectado, ou `Ver link oficial da UFG`.
+- `contato`: email institucional detectado. Se nao houver contato real, deixe
+  vazio e garanta que `metadata.link` aponte para a fonte oficial/edital.
 - `metadata.link`: URL oficial.
 - `metadata.link_as_cta`: `true`.
 - `metadata.actionLabel`: texto do botao, como `Acessar edital`, `Acessar editais` ou `Realizar inscricao`.
@@ -88,6 +90,79 @@ O Kino renderiza links Markdown. Para URLs oficiais e documentos, use a URL comp
 Evite deixar URL solta sem `[]()`, porque ela pode aparecer como texto puro. Quando precisar contextualizar, escreva o contexto antes e deixe a URL clicavel visivel: `Fonte oficial: [https://...](https://...)`.
 
 `metadata.link` e a URL de acao do botao principal. `metadata.source_url` e a URL da fonte original para auditoria. Quando houver inscricao, formulario, edital ou pagina externa mais acionavel, `metadata.link` deve apontar para essa acao; se nao houver, use a propria fonte oficial.
+
+## Workflow Atual Do Cadu
+
+O fluxo operacional recomendado e:
+
+1. `cadu-curador-v4.2.js`: coleta Weby/Instagram e gera candidatos.
+2. `formatador-ia.js`: gera `formattedDescription` com Markdown final.
+3. `publish_auto_v5.js`: envia o item inteiro para `cadu-publish`.
+4. `cadu-publish`: valida, deduplica, completa metadata, sobe a imagem e publica.
+
+O publicador deve repassar `formattedDescription`; se ele enviar apenas
+`description: rec.text`, o endpoint perde a formatacao rica e volta a publicar
+texto cru. O endpoint ja preserva `formattedDescription` quando ela for boa e
+completa `actionLabel/actionKey` quando o Cadu esquecer.
+
+Para Instagram, a imagem de `cdninstagram.com` serve como fonte temporaria para
+upload, mas nao deve ser gravada como capa definitiva. Prefira imagem oficial do
+Weby/UFG; se so existir CDN temporaria e o upload falhar, publique sem capa ou
+mande para revisao manual.
+
+## Enriquecimento Ativo Antes De Publicar
+
+Quando Yan pedir para "buscar mais informacoes", "confirmar", "ver melhor" ou
+quando a fonte estiver incompleta, o Cadu deve fazer uma passada ativa de
+enriquecimento antes de formatar/publicar. O objetivo e consolidar fatos, nao
+substituir a fonte oficial por suposicao.
+
+Ordem obrigatoria de consulta:
+
+1. **Fonte oficial principal**: abra `sourceUrl`, `news.json`/`events.json`,
+   `og:image`, PDFs e links de edital/formulario citados na pagina.
+2. **Site oficial relacionado**: se o item veio do Portal UFG, procure a unidade
+   responsavel (`sourceName`, dominio da faculdade/pro-reitoria, pagina do evento
+   ou edital). Use essa fonte para complementar data, local, contato e documentos.
+3. **Instagram oficial da unidade/evento**: use `scan-ig-browser.js` apenas para
+   perfis oficiais. Compare por titulo, palavras-chave e data. Caption do
+   Instagram e dado complementar; imagem de CDN so deve virar capa se o upload
+   para `kino-media` funcionar.
+4. **Web aberta**: use busca web apenas quando as fontes oficiais nao bastarem.
+   Priorize dominios `.ufg.br`, `goias.gov.br`, plataformas oficiais de evento
+   (`Plateia`, `Even3`, `forms.gle` quando linkado pela UFG) e paginas do orgao.
+   Nao use blog, repost ou agregador como fato principal.
+
+Saida minima do enriquecimento no item enviado ao endpoint:
+
+```json
+{
+  "enrichmentSources": [
+    { "url": "https://...", "label": "Fonte oficial UFG", "type": "official" },
+    { "url": "https://instagram.com/...", "label": "Instagram oficial", "type": "instagram" }
+  ],
+  "images": [
+    "https://files.cercomp.ufg.br/weby/up/.../capa.jpg",
+    "https://files.cercomp.ufg.br/weby/up/.../programacao.png"
+  ],
+  "formattedDescription": "Markdown final com datas, local, CTA e fonte."
+}
+```
+
+Regras de decisao:
+
+- conflito de data, prazo, local ou valor entre fontes: mande para revisao e
+  explique o conflito no digest;
+- fonte oficial sem contato: deixe `contato` vazio; nao use fallback generico
+  como se fosse contato real;
+- fonte oficial com varias imagens uteis: envie ate 5 URLs em `images`, com a
+  capa desejada primeiro. O endpoint salva a primeira como capa e as demais em
+  `post_media`;
+- imagem de Instagram/Telegram: use apenas como fonte de upload; se o retorno
+  trouxer `media.uploads[].fallback=false` e erro de upload, procure imagem
+  oficial ou publique sem capa;
+- fatos de web aberta devem aparecer em `enrichmentSources`, mas a descricao
+  deve deixar a fonte oficial da UFG como referencia principal.
 
 ## Fontes UFG
 

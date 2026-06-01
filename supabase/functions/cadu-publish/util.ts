@@ -83,6 +83,36 @@ export function validRemoteImageUrl(value: unknown): string {
   }
 }
 
+export function isSvgUrl(value: unknown): boolean {
+  try {
+    const url = new URL(String(value ?? "").trim());
+    return /\.svg$/i.test(url.pathname);
+  } catch (_) {
+    return false;
+  }
+}
+
+export function isTemporaryOrSocialImageUrl(value: unknown): boolean {
+  try {
+    const url = new URL(String(value ?? "").trim());
+    const host = url.hostname.toLowerCase();
+    return /(^|\.)cdninstagram\.com$/.test(host) ||
+      /(^|\.)fbcdn\.net$/.test(host) ||
+      /(^|\.)instagram\.com$/.test(host) ||
+      /(^|\.)cdn-telegram\.org$/.test(host) ||
+      /(^|\.)telegram\.org$/.test(host);
+  } catch (_) {
+    return false;
+  }
+}
+
+export function canPersistExternalImageUrl(value: unknown): boolean {
+  const clean = validRemoteImageUrl(value);
+  if (!clean) return false;
+  if (isSvgUrl(clean)) return false;
+  return !isTemporaryOrSocialImageUrl(clean);
+}
+
 export function hostOf(value: unknown): string {
   try {
     return new URL(String(value ?? "")).host;
