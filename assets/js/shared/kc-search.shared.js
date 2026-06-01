@@ -25,7 +25,26 @@
     calculo: ['matematica', 'exatas'],
     iphone: ['apple', 'ios', 'celular apple'],
     dell: ['notebook dell', 'laptop dell'],
-    jbl: ['fone jbl', 'headphone jbl', 'audio jbl']
+    jbl: ['fone jbl', 'headphone jbl', 'audio jbl'],
+    // Eventos / acadêmico (UFG/Goiânia)
+    conpeex: ['congresso', 'pesquisa', 'extensao', 'ensino', 'evento'],
+    sbpc: ['ciencia', 'congresso', 'pesquisa', 'evento'],
+    congresso: ['conpeex', 'simposio', 'seminario', 'jornada', 'evento'],
+    evento: ['palestra', 'workshop', 'feira', 'semana', 'festival', 'minicurso'],
+    palestra: ['evento', 'seminario', 'workshop'],
+    hackathon: ['hacka', 'maratona', 'programacao', 'evento'],
+    // Oportunidades
+    vaga: ['emprego', 'oportunidade', 'estagio', 'trabalho'],
+    bolsa: ['bolsista', 'monitoria', 'auxilio', 'iniciacao cientifica'],
+    monitoria: ['tutoria', 'bolsa', 'estagio'],
+    // Moradia
+    quarto: ['republica', 'moradia', 'kitnet', 'aluguel'],
+    moradia: ['republica', 'quarto', 'aluguel', 'kitnet', 'apartamento'],
+    aluguel: ['moradia', 'kitnet', 'republica', 'quarto'],
+    republica: ['moradia', 'quarto', 'kitnet'],
+    // Compra e venda / livros
+    tablet: ['ipad', 'celular', 'galaxy tab'],
+    apostila: ['livro', 'material didatico', 'resumo']
   };
 
   function normalizeText(text) {
@@ -174,6 +193,107 @@
     return score;
   }
 
+  // ── Similaridade fuzzy (tolerância a erros de digitação / palavras parciais) ──
+  // Limiar calibrado: typos reais ficam ~0.70–0.90; palavras distintas ~0.43–0.55.
+  var FUZZY_THRESHOLD = 0.6;
+
+  function levenshtein(a, b) {
+    a = String(a == null ? '' : a);
+    b = String(b == null ? '' : b);
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    var prev = [];
+    var j;
+    for (j = 0; j <= b.length; j += 1) prev[j] = j;
+    for (var i = 1; i <= a.length; i += 1) {
+      var cur = [i];
+      for (var k = 1; k <= b.length; k += 1) {
+        var cost = a.charAt(i - 1) === b.charAt(k - 1) ? 0 : 1;
+        cur[k] = Math.min(prev[k] + 1, cur[k - 1] + 1, prev[k - 1] + cost);
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  function trigrams(value) {
+    var s = normalizeText(value);
+    if (!s) return [];
+    var padded = '  ' + s + ' ';
+    var out = [];
+    for (var i = 0; i < padded.length - 2; i += 1) out.push(padded.substr(i, 3));
+    return out;
+  }
+
+  // Coeficiente de Dice sobre conjuntos de 3-gramas (estilo pg_trgm). 0..1.
+  function trigramSimilarity(a, b) {
+    var ta = trigrams(a);
+    var tb = trigrams(b);
+    if (!ta.length || !tb.length) return 0;
+    var setA = {};
+    var setB = {};
+    var i;
+    for (i = 0; i < ta.length; i += 1) setA[ta[i]] = true;
+    for (i = 0; i < tb.length; i += 1) setB[tb[i]] = true;
+    var keysA = Object.keys(setA);
+    var keysB = Object.keys(setB);
+    var common = 0;
+    for (i = 0; i < keysA.length; i += 1) if (setB[keysA[i]]) common += 1;
+    return (2 * common) / (keysA.length + keysB.length);
+  }
+
+  // Melhor similaridade do token contra cada palavra do texto (combina trigrama + edição).
+  function fuzzyBestSimilarity(token, text) {
+    var t = normalizeText(token);
+    if (t.length < 3) return 0;
+    var words = normalizeText(text).split(/\s+/);
+    var best = 0;
+    for (var i = 0; i < words.length; i += 1) {
+      var w = words[i];
+      if (w.length < 3) continue;
+      // Trigrama (Dice) é mais discriminante que distância de edição para evitar
+      // falsos positivos (ex.: quarto≈quadro, matematica≈informatica).
+      var sim = trigramSimilarity(t, w);
+      if (sim > best) best = sim;
+      if (best >= 0.999) break;
+    }
+    return best;
+  }
+
+  // Pontua matches fuzzy (apenas para termos que NÃO casaram exatamente — evita dupla contagem).
+  function scoreFuzzyField(text, terms, weight) {
+    var normalized = normalizeText(text);
+    if (!normalized) return 0;
+    var score = 0;
+    for (var i = 0; i < terms.length; i += 1) {
+      var term = terms[i];
+      if (term.length < 3 || normalized.indexOf(term) !== -1) continue;
+      var sim = fuzzyBestSimilarity(term, normalized);
+      if (sim >= FUZZY_THRESHOLD) score += sim * weight;
+    }
+    return score;
+  }
+
+  function scoreFuzzyTags(tags, terms, weight) {
+    var normalizedTags = normalizeArray(tags);
+    if (!normalizedTags.length) return 0;
+    var score = 0;
+    for (var i = 0; i < terms.length; i += 1) {
+      var term = terms[i];
+      if (term.length < 3) continue;
+      var best = 0;
+      var exact = false;
+      for (var j = 0; j < normalizedTags.length; j += 1) {
+        if (normalizedTags[j].indexOf(term) !== -1 || term.indexOf(normalizedTags[j]) !== -1) { exact = true; break; }
+        var sim = trigramSimilarity(term, normalizedTags[j]);
+        if (sim > best) best = sim;
+      }
+      if (!exact && best >= FUZZY_THRESHOLD) score += best * weight;
+    }
+    return score;
+  }
+
   function scorePost(post, params) {
     var p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
     var q = String(p.q || p.query || '').trim();
@@ -210,6 +330,12 @@
     score += scoreTextMatches(description, expandedTerms, 1.3);
     score += scoreTextMatches(category, expandedTerms, 1.1);
     score += scoreTextMatches(subcategory, expandedTerms, 1.1);
+
+    // Passe fuzzy nos campos-chave (typos / palavras incompletas) — peso < exato.
+    score += scoreFuzzyField(title, expandedTerms, 2.2);
+    score += scoreFuzzyField(category, expandedTerms, 1.0);
+    score += scoreFuzzyField(subcategory, expandedTerms, 1.0);
+    score += scoreFuzzyTags(tags, expandedTerms, 1.6);
 
     return score;
   }
@@ -297,6 +423,9 @@
     expandSynonyms: expandSynonyms,
     expandQueryTerms: expandQueryTerms,
     matchesExpandedTerms: matchesExpandedTerms,
+    levenshtein: levenshtein,
+    trigramSimilarity: trigramSimilarity,
+    fuzzyBestSimilarity: fuzzyBestSimilarity,
     scorePost: scorePost,
     searchCollection: searchCollection
   };
