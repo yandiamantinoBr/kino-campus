@@ -58,6 +58,7 @@ export interface MappedPost {
 
 const ICON_DOCUMENT = "\u{1F4C4}";
 const ICON_LINK = "\u{1F517}";
+const MAX_IMAGE_COUNT = 5;
 
 function detectArea(text: string): string {
   const n = normalizeText(text);
@@ -123,6 +124,28 @@ function normalizeDocumentLinks(item: CaduItem): Array<{ url: string; label: str
     byUrl.set(url, { url, label: `documento ${index + 1}` });
   });
   return Array.from(byUrl.values()).slice(0, 6);
+}
+
+function normalizeEnrichmentSources(item: CaduItem): Array<{ url: string; label: string; type: string }> {
+  const out = new Map<string, { url: string; label: string; type: string }>();
+  const sourceUrl = validRemoteImageUrl(item.sourceUrl);
+  if (sourceUrl) {
+    out.set(sourceUrl, {
+      url: sourceUrl,
+      label: normalizeWhitespace(item.sourceName) || "Fonte oficial",
+      type: "official",
+    });
+  }
+  (Array.isArray(item.enrichmentSources) ? item.enrichmentSources : []).forEach((source) => {
+    const url = typeof source === "string" ? validRemoteImageUrl(source) : validRemoteImageUrl(source?.url);
+    if (!url || out.has(url)) return;
+    out.set(url, {
+      url,
+      label: typeof source === "object" ? clamp(source.label || "", 90) : "",
+      type: typeof source === "object" ? slugify(source.type || "supplemental", 40) : "supplemental",
+    });
+  });
+  return Array.from(out.values()).slice(0, 12);
 }
 
 function buildDescription(item: CaduItem): string {
@@ -211,9 +234,20 @@ function pickActionLink(item: CaduItem, module: string, documentLinks: Array<{ u
 }
 
 function buildImageList(item: CaduItem): string[] {
-  return uniq(
-    [item.image, ...(Array.isArray(item.images) ? item.images : [])].map(validRemoteImageUrl),
-  ).filter((url) => url && !isSvgUrl(url)).slice(0, 1);
+  const raw = item.raw && typeof item.raw === "object" ? item.raw as Record<string, unknown> : {};
+  const candidates = [
+    item.image,
+    item.imageUrl,
+    item.image_url,
+    item.cover,
+    raw.image,
+    raw.image_url,
+    raw.cover,
+    ...(Array.isArray(item.images) ? item.images : []),
+  ];
+  return uniq(candidates.map(validRemoteImageUrl))
+    .filter((url) => url && !isSvgUrl(url))
+    .slice(0, MAX_IMAGE_COUNT);
 }
 
 export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}): MappedPost {
@@ -227,7 +261,9 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const sourceId = String(item.sourceId || "");
   const images = buildImageList(item);
   const safeExternalImage = images.find(canPersistExternalImageUrl) || "";
+  const safeGalleryImages = images.filter(canPersistExternalImageUrl);
   const documentLinks = normalizeDocumentLinks(item);
+  const enrichmentSources = normalizeEnrichmentSources(item);
   const actionLink = pickActionLink(item, module, documentLinks);
   const actionLabel = inferActionLabel(item, module, documentLinks);
   const actionKey = slugify(item.actionKey || actionLabel);
@@ -251,8 +287,11 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     original_title: normalizeWhitespace(item.title),
     image_url: safeExternalImage,
     cover_url: safeExternalImage,
+    gallery_image_urls: safeGalleryImages,
     edital_pdf_urls: Array.isArray(item.pdfLinks) ? item.pdfLinks.slice(0, 10) : [],
     official_document_urls: documentLinks.map((l) => l.url),
+    enrichment_sources: enrichmentSources,
+    enrichment_checked_at: item.enrichmentCheckedAt || "",
     cadu_run_id: options.runId || "",
     cadu_published: true,
     contato,

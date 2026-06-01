@@ -82,7 +82,11 @@ describe('Cadu publish — Edge Function', () => {
     expect(index).toContain('findExisting');
     expect(index).toContain('code: "DUPLICATE"');
     expect(index).toContain('uploadCover');
+    expect(index).toContain('prepareFinalImages');
+    expect(index).toContain('applyImages');
     expect(index).toContain('post-media/');
+    expect(index).toContain('gallery_image_urls');
+    expect(index).toContain('sort_order: index');
   });
 
   test('mapper preenche data_fim_evento, modalidade e merge profundo', () => {
@@ -101,13 +105,15 @@ describe('Cadu publish — Edge Function', () => {
     expect(mapper).toContain('inferActionLabel');
   });
 
-  test('nao persiste CDN temporaria ou SVG como capa final quando upload falha', () => {
+  test('nao persiste CDN temporaria ou SVG como imagem final quando upload falha', () => {
     const util = r('supabase/functions/cadu-publish/util.ts');
     expect(util).toContain('canPersistExternalImageUrl');
     expect(util).toContain('cdninstagram');
     expect(util).toContain('isSvgUrl');
     expect(index).toContain('canPersistExternalImageUrl(candidate)');
-    expect(index).toContain('canPersistExternalImageUrl(newImage)');
+    expect(mapper).toContain('MAX_IMAGE_COUNT');
+    expect(mapper).toContain('item.imageUrl');
+    expect(mapper).toContain('gallery_image_urls');
   });
 
   test('schema cobre os 6 modulos', () => {

@@ -110,6 +110,60 @@ upload, mas nao deve ser gravada como capa definitiva. Prefira imagem oficial do
 Weby/UFG; se so existir CDN temporaria e o upload falhar, publique sem capa ou
 mande para revisao manual.
 
+## Enriquecimento Ativo Antes De Publicar
+
+Quando Yan pedir para "buscar mais informacoes", "confirmar", "ver melhor" ou
+quando a fonte estiver incompleta, o Cadu deve fazer uma passada ativa de
+enriquecimento antes de formatar/publicar. O objetivo e consolidar fatos, nao
+substituir a fonte oficial por suposicao.
+
+Ordem obrigatoria de consulta:
+
+1. **Fonte oficial principal**: abra `sourceUrl`, `news.json`/`events.json`,
+   `og:image`, PDFs e links de edital/formulario citados na pagina.
+2. **Site oficial relacionado**: se o item veio do Portal UFG, procure a unidade
+   responsavel (`sourceName`, dominio da faculdade/pro-reitoria, pagina do evento
+   ou edital). Use essa fonte para complementar data, local, contato e documentos.
+3. **Instagram oficial da unidade/evento**: use `scan-ig-browser.js` apenas para
+   perfis oficiais. Compare por titulo, palavras-chave e data. Caption do
+   Instagram e dado complementar; imagem de CDN so deve virar capa se o upload
+   para `kino-media` funcionar.
+4. **Web aberta**: use busca web apenas quando as fontes oficiais nao bastarem.
+   Priorize dominios `.ufg.br`, `goias.gov.br`, plataformas oficiais de evento
+   (`Plateia`, `Even3`, `forms.gle` quando linkado pela UFG) e paginas do orgao.
+   Nao use blog, repost ou agregador como fato principal.
+
+Saida minima do enriquecimento no item enviado ao endpoint:
+
+```json
+{
+  "enrichmentSources": [
+    { "url": "https://...", "label": "Fonte oficial UFG", "type": "official" },
+    { "url": "https://instagram.com/...", "label": "Instagram oficial", "type": "instagram" }
+  ],
+  "images": [
+    "https://files.cercomp.ufg.br/weby/up/.../capa.jpg",
+    "https://files.cercomp.ufg.br/weby/up/.../programacao.png"
+  ],
+  "formattedDescription": "Markdown final com datas, local, CTA e fonte."
+}
+```
+
+Regras de decisao:
+
+- conflito de data, prazo, local ou valor entre fontes: mande para revisao e
+  explique o conflito no digest;
+- fonte oficial sem contato: deixe `contato` vazio; nao use fallback generico
+  como se fosse contato real;
+- fonte oficial com varias imagens uteis: envie ate 5 URLs em `images`, com a
+  capa desejada primeiro. O endpoint salva a primeira como capa e as demais em
+  `post_media`;
+- imagem de Instagram/Telegram: use apenas como fonte de upload; se o retorno
+  trouxer `media.uploads[].fallback=false` e erro de upload, procure imagem
+  oficial ou publique sem capa;
+- fatos de web aberta devem aparecer em `enrichmentSources`, mas a descricao
+  deve deixar a fonte oficial da UFG como referencia principal.
+
 ## Fontes UFG
 
 O arquivo `services/cadu-ufg-publisher/config/sources.json` define as fontes.

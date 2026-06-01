@@ -71,8 +71,8 @@ async function caduPublish(item, options = {}) {
 }
 
 /** Edita um post do Cadu (texto, metadata e/ou imagem). */
-async function caduEdit(postId, { fields, metadata, image, images } = {}) {
-  return callEndpoint({ action: 'edit', postId, fields, metadata, image, images });
+async function caduEdit(postId, { fields, metadata, image, images, allowExternalImageFallback } = {}) {
+  return callEndpoint({ action: 'edit', postId, fields, metadata, image, images, allowExternalImageFallback });
 }
 
 /** Lista posts do Cadu para saber o que ja foi postado / esta pendente. */
@@ -117,10 +117,18 @@ async function _demo() {
     linkAsCta: true,
     actionLabel: 'Realizar inscrição',
     image: 'https://files.cercomp.ufg.br/weby/up/exemplo/capa.jpg',
+    images: [
+      'https://files.cercomp.ufg.br/weby/up/exemplo/capa.jpg',
+      'https://files.cercomp.ufg.br/weby/up/exemplo/programacao.jpg',
+    ],
     allowExternalImageFallback: true,
     sourceUrl: 'https://eventos.ufg.br/exemplo',
     sourceId: 'eventos-ufg-2026-semana-tec',
     sourceName: 'Eventos UFG',
+    enrichmentSources: [
+      { url: 'https://eventos.ufg.br/exemplo', label: 'Fonte oficial UFG', type: 'official' },
+      { url: 'https://instagram.com/eventosufg', label: 'Instagram oficial', type: 'instagram' },
+    ],
   });
   console.log('Evento:', evento.code, evento.post_id, evento.url);
 
@@ -134,9 +142,17 @@ async function _demo() {
     contato: 'rh@empresa.com.br',
     remuneracao: '4500,00',
     link: 'https://empresa.com.br/vaga',
+    images: [
+      'https://files.cercomp.ufg.br/weby/up/oportunidades/vaga-capa.jpg',
+      'https://files.cercomp.ufg.br/weby/up/oportunidades/vaga-card.jpg',
+    ],
     sourceUrl: 'https://oportunidades.ufg.br/vaga-123',
     sourceId: 'op-ufg-vaga-123',
     sourceName: 'Oportunidades UFG',
+    enrichmentSources: [
+      { url: 'https://oportunidades.ufg.br/vaga-123', label: 'Fonte oficial', type: 'official' },
+      { url: 'https://empresa.com.br/vaga', label: 'Pagina da vaga', type: 'registration' },
+    ],
     pdfLinks: [
       'https://files.cercomp.ufg.br/edital-1.pdf',
       'https://files.cercomp.ufg.br/edital-2.pdf',

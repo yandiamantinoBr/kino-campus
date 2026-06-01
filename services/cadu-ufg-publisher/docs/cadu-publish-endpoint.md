@@ -70,8 +70,8 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `linkAsCta`    | boolean         | usar o link como botao principal (default: true se houver link) |
 | `actionLabel`  | string          | texto do botao principal; se faltar, o endpoint infere `Acessar edital`, `Realizar inscricao`, `Acessar evento` etc. |
 | `actionKey`    | string          | slug do botao; se faltar, e derivado de `actionLabel` |
-| `image`        | URL             | capa (sera baixada e re-hospedada em `kino-media`) |
-| `images`       | URL[]           | alternativa a `image` |
+| `image`        | URL             | capa preferida (sera baixada e re-hospedada em `kino-media`) |
+| `images`       | URL[]           | galeria, ate 5 imagens; a primeira vira capa |
 | `allowExternalImageFallback` | boolean | quando `false`, nunca grava URL externa se o upload para Storage falhar |
 | `tags`         | string[]        | complementa as tags derivadas |
 | `sourceUrl`    | URL             | fonte oficial (usado em dedup) |
@@ -79,6 +79,7 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `sourceName`   | string          | ex.: "Eventos UFG" |
 | `pdfLinks`     | URL[]           | editais/anexos (entram em "Editais e documentos") |
 | `extractedLinks` | (string\|{url,label})[] | links extras |
+| `enrichmentSources` | (string\|{url,label,type})[] | fontes consultadas no enriquecimento: site oficial, Instagram oficial, web complementar |
 | `visibility`   | `public`\|`community` | default `public` |
 
 Resposta:
@@ -91,7 +92,13 @@ Resposta:
   "status": "published",
   "url": "https://www.kinocampus.com.br/eventos.html",
   "image_url": "https://.../kino-media/post-media/<uid>/<post>/cadu-1-xxxx.jpg",
-  "media": { "uploaded": true, "cover_url": "https://..." },
+  "media": {
+    "uploaded": true,
+    "uploaded_count": 2,
+    "cover_url": "https://...",
+    "images": ["https://.../capa.jpg", "https://.../programacao.png"],
+    "uploads": []
+  },
   "warnings": []
 }
 ```
@@ -104,7 +111,8 @@ Resposta:
   "postId": "uuid",
   "fields":   { "title": "...", "description": "...", "status": "published" },
   "metadata": { "link": "https://...", "link_as_cta": true },
-  "image": "https://.../nova-capa.jpg"
+  "image": "https://.../nova-capa.jpg",
+  "images": ["https://.../nova-capa.jpg", "https://.../programacao.jpg"]
 }
 ```
 
@@ -145,16 +153,22 @@ Resposta: `{ ok, exists, post_id, status }`.
 | `INSERT_FAILED` / `UPDATE_FAILED` / `LIST_FAILED` | 500 | erro no banco (ver `message`) |
 | `INTERNAL_ERROR`   | 500  | excecao inesperada |
 
-## Imagem
+## Imagens
 
-- O endpoint baixa a `image`/`images[0]` e re-hospeda em `kino-media`
-  (`post-media/<uid>/<post_id>/...`), gravando `posts.image_url`,
-  `metadata.image_url`, `metadata.cover_url` e `post_media(is_cover=true)`.
-- Se o upload falhar (ex.: fonte indisponivel), mantem a **URL externa** como
-  fallback apenas quando ela e estavel (por exemplo `files.cercomp.ufg.br` ou
-  dominio oficial HTTP/HTTPS). SVG, Instagram CDN, Facebook CDN e URLs temporarias
-  de Telegram nao viram capa definitiva; nesses casos o retorno traz
-  `media.uploaded=false` e `media.error`, e o Cadu deve procurar imagem oficial.
+- O endpoint baixa `image` e `images[]`, re-hospeda ate 5 imagens em
+  `kino-media` (`post-media/<uid>/<post_id>/...`) e grava:
+  - `posts.image_url` com a primeira imagem final;
+  - `metadata.image_url` e `metadata.cover_url` com a capa;
+  - `metadata.gallery_image_urls` com a galeria final;
+  - `post_media` com `is_cover=true` na primeira e `sort_order` crescente.
+- A primeira URL enviada deve ser sempre a capa preferida. As demais devem ser
+  imagens complementares realmente uteis, como programacao, card oficial ou
+  banner do edital.
+- Se o upload de alguma imagem falhar, o endpoint usa fallback externo apenas
+  quando a URL e estavel (por exemplo `files.cercomp.ufg.br` ou dominio oficial
+  HTTP/HTTPS). SVG, Instagram CDN, Facebook CDN e URLs temporarias de Telegram
+  nao viram capa/galeria definitiva; nesses casos o retorno traz detalhes em
+  `media.uploads[]`, e o Cadu deve procurar imagem oficial ou publicar sem capa.
 
 ## Contrato para o formatador IA
 

@@ -147,6 +147,9 @@ export interface CaduItem {
   actionLabel?: string;
   actionKey?: string;
   image?: string;
+  imageUrl?: string;
+  image_url?: string;
+  cover?: string;
   images?: string[];
   imageSource?: string;
   allowExternalImageFallback?: boolean;
@@ -156,6 +159,7 @@ export interface CaduItem {
   sourceName?: string;
   pdfLinks?: string[];
   extractedLinks?: Array<string | { url?: string; label?: string }>;
+  enrichmentSources?: Array<string | { url?: string; label?: string; type?: string }>;
   visibility?: string;
   // campos especificos de outros modulos
   regiao?: string;
