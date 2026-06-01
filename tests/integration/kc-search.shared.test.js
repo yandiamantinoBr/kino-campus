@@ -138,4 +138,55 @@ describe('KCSearchShared', () => {
       expect(results[1].id).toBe('1');
     });
   });
+
+  describe('fuzzy matching (tolerância a erros)', () => {
+    test('trigramSimilarity é alto para typos próximos e baixo para termos distintos', () => {
+      expect(SearchShared.trigramSimilarity('conpex', 'conpeex')).toBeGreaterThanOrEqual(0.6);
+      expect(SearchShared.trigramSimilarity('notbook', 'notebook')).toBeGreaterThanOrEqual(0.6);
+      expect(SearchShared.trigramSimilarity('celular', 'conpeex')).toBeLessThan(0.3);
+    });
+
+    test('levenshtein conta a distância de edição', () => {
+      expect(SearchShared.levenshtein('conpex', 'conpeex')).toBe(1);
+      expect(SearchShared.levenshtein('abc', 'abc')).toBe(0);
+      expect(SearchShared.levenshtein('', 'abc')).toBe(3);
+    });
+
+    test('fuzzyBestSimilarity casa o token contra a melhor palavra do texto', () => {
+      expect(SearchShared.fuzzyBestSimilarity('conpex', 'CONPEEX 2024 congresso')).toBeGreaterThanOrEqual(0.6);
+      expect(SearchShared.fuzzyBestSimilarity('xy', 'qualquer texto')).toBe(0); // token < 3 ignorado
+    });
+
+    test('searchCollection encontra posts mesmo com erro de digitação', () => {
+      const list = [
+        { id: 'a', title: 'CONPEEX 2024 - Congresso de Pesquisa', module: 'eventos' },
+        { id: 'b', title: 'Notebook Dell i5', module: 'compra-venda' }
+      ];
+      expect(SearchShared.searchCollection(list, { q: 'conpex' }).map((p) => p.id)).toContain('a');
+      expect(SearchShared.searchCollection(list, { q: 'notbook' }).map((p) => p.id)).toContain('b');
+    });
+
+    test('match exato rankeia acima de match fuzzy', () => {
+      const list = [
+        { id: 'exact', title: 'Conpeex', module: 'eventos' },
+        { id: 'fuzzy', title: 'Conpex evento', module: 'eventos' }
+      ];
+      const results = SearchShared.searchCollection(list, { q: 'conpeex' });
+      expect(results[0].id).toBe('exact');
+    });
+  });
+
+  describe('expansão semântica (sinônimos enriquecidos)', () => {
+    test('conpeex expande para congresso/pesquisa', () => {
+      expect(SearchShared.expandSynonyms('conpeex')).toEqual(expect.arrayContaining(['conpeex', 'congresso', 'pesquisa']));
+    });
+
+    test('quarto expande para república/moradia', () => {
+      expect(SearchShared.expandSynonyms('quarto')).toEqual(expect.arrayContaining(['quarto', 'republica', 'moradia']));
+    });
+
+    test('mantém os sinônimos legados', () => {
+      expect(SearchShared.expandSynonyms('notebook')).toEqual(expect.arrayContaining(['notebook', 'laptop', 'computador']));
+    });
+  });
 });
