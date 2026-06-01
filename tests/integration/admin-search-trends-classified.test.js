@@ -94,3 +94,18 @@ describe('Tendências — wiring + dicionário ampliado', () => {
     expect(utils.MODULE_KEYWORDS.oportunidades).toContain('bolsista');
   });
 });
+
+describe('Tendências — classificador tolerante a typos (pg_trgm)', () => {
+  const fuzzySql = r('supabase/migrations/20260531210000_search_trends_classifier_fuzzy.sql');
+
+  test('usa word_similarity (pg_trgm, schema extensions) com limiar', () => {
+    expect(fuzzySql).toContain('create or replace function kc_private.kc_admin_search_trends_classified');
+    expect(fuzzySql).toContain('extensions.word_similarity(t.term, coalesce(p.title');
+    expect(fuzzySql).toContain('>= 0.5');
+  });
+
+  test('mantém o ilike (substring) como caminho principal', () => {
+    expect(fuzzySql).toContain('p.title ilike');
+    expect(fuzzySql).toContain('p.description ilike');
+  });
+});
