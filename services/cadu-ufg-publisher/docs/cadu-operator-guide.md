@@ -43,7 +43,8 @@ Campos obrigatorios/esperados:
 - `metadata.link_as_cta`: `true`.
 - `metadata.actionLabel`: texto do botao, como `Acessar evento` ou `Realizar inscricao`.
 - `metadata.actionKey`: slug do botao, como `acessar-evento`.
-- `metadata.contato`: email detectado, ou `Ver link oficial da UFG`.
+- `metadata.contato`: email institucional detectado. Se nao houver contato real,
+  nao invente; o link oficial deve ser o caminho de esclarecimento.
 - `metadata.area` / `metadata.areaKey`: area/categoria visivel.
 - `metadata.tags` / `metadata.tagKeys`: tags e chaves normalizadas para filtros.
 - `metadata.categoria`, `metadata.categoriaKey` e `metadata.categoryKey`: sempre preenchidos.
@@ -68,7 +69,8 @@ Campos obrigatorios/esperados:
 - `descricao`: maximo 2000 caracteres.
 - `areaAtuacao` / `metadata.area`: area detectada, como `Academica`, `Saude`, `Direito`, `Tecnologia`, `Linguas`.
 - `modalidadeTrabalho`: `Presencial` por padrao quando a fonte nao disser outro modo.
-- `contato`: email detectado, ou `Ver link oficial da UFG`.
+- `contato`: email institucional detectado. Se nao houver contato real, deixe
+  vazio e garanta que `metadata.link` aponte para a fonte oficial/edital.
 - `metadata.link`: URL oficial.
 - `metadata.link_as_cta`: `true`.
 - `metadata.actionLabel`: texto do botao, como `Acessar edital`, `Acessar editais` ou `Realizar inscricao`.
@@ -88,6 +90,25 @@ O Kino renderiza links Markdown. Para URLs oficiais e documentos, use a URL comp
 Evite deixar URL solta sem `[]()`, porque ela pode aparecer como texto puro. Quando precisar contextualizar, escreva o contexto antes e deixe a URL clicavel visivel: `Fonte oficial: [https://...](https://...)`.
 
 `metadata.link` e a URL de acao do botao principal. `metadata.source_url` e a URL da fonte original para auditoria. Quando houver inscricao, formulario, edital ou pagina externa mais acionavel, `metadata.link` deve apontar para essa acao; se nao houver, use a propria fonte oficial.
+
+## Workflow Atual Do Cadu
+
+O fluxo operacional recomendado e:
+
+1. `cadu-curador-v4.2.js`: coleta Weby/Instagram e gera candidatos.
+2. `formatador-ia.js`: gera `formattedDescription` com Markdown final.
+3. `publish_auto_v5.js`: envia o item inteiro para `cadu-publish`.
+4. `cadu-publish`: valida, deduplica, completa metadata, sobe a imagem e publica.
+
+O publicador deve repassar `formattedDescription`; se ele enviar apenas
+`description: rec.text`, o endpoint perde a formatacao rica e volta a publicar
+texto cru. O endpoint ja preserva `formattedDescription` quando ela for boa e
+completa `actionLabel/actionKey` quando o Cadu esquecer.
+
+Para Instagram, a imagem de `cdninstagram.com` serve como fonte temporaria para
+upload, mas nao deve ser gravada como capa definitiva. Prefira imagem oficial do
+Weby/UFG; se so existir CDN temporaria e o upload falhar, publique sem capa ou
+mande para revisao manual.
 
 ## Fontes UFG
 

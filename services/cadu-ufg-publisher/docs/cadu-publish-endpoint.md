@@ -52,6 +52,7 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `module`       | string (obrig.) | `eventos`, `oportunidades`, `moradia`, `compra-venda`, `caronas`, `achados-perdidos` |
 | `title`        | string (obrig.) | max 80 chars |
 | `description`  | string          | usa este; senao `summary`/`text`. Vira markdown e recebe fonte + documentos |
+| `formattedDescription` | string | descricao final ja revisada pelo formatador IA; quando for boa, o endpoint preserva o Markdown e so completa fonte/documentos ausentes |
 | `summary`/`text` | string        | fallback de descricao |
 | `category`     | string (key)    | ex.: `academicos`, `empregos`, `estagios`. Default por modulo |
 | `location`     | string          | Local (eventos) / Cidade-Campus (oportunidades) |
@@ -67,8 +68,11 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `gratuito`     | boolean         | eventos |
 | `link`         | URL             | CTA / inscricao |
 | `linkAsCta`    | boolean         | usar o link como botao principal (default: true se houver link) |
+| `actionLabel`  | string          | texto do botao principal; se faltar, o endpoint infere `Acessar edital`, `Realizar inscricao`, `Acessar evento` etc. |
+| `actionKey`    | string          | slug do botao; se faltar, e derivado de `actionLabel` |
 | `image`        | URL             | capa (sera baixada e re-hospedada em `kino-media`) |
 | `images`       | URL[]           | alternativa a `image` |
+| `allowExternalImageFallback` | boolean | quando `false`, nunca grava URL externa se o upload para Storage falhar |
 | `tags`         | string[]        | complementa as tags derivadas |
 | `sourceUrl`    | URL             | fonte oficial (usado em dedup) |
 | `sourceId`     | string          | id estavel da fonte (usado em dedup/idempotencia) |
@@ -107,6 +111,9 @@ Resposta:
 - `metadata` faz **merge profundo** (nao apaga `cover_url`, `tags`, `data_evento`, etc.).
 - `fields.status = "published"` publica um pendente e limpa `moderation_reason`.
 - Edita apenas posts cujo `author_id` e o do Cadu.
+- Quando `image` for URL temporaria (Telegram, Instagram CDN, token assinado),
+  use `allowExternalImageFallback=false` no cliente. Se o upload falhar, a capa
+  anterior e preservada em vez de gravar URL temporaria no Kino.
 
 ### `list` — o que ja foi postado / pendente
 
@@ -144,7 +151,26 @@ Resposta: `{ ok, exists, post_id, status }`.
   (`post-media/<uid>/<post_id>/...`), gravando `posts.image_url`,
   `metadata.image_url`, `metadata.cover_url` e `post_media(is_cover=true)`.
 - Se o upload falhar (ex.: fonte indisponivel), mantem a **URL externa** como
-  fallback (`media.uploaded=false`, `media.error` no retorno).
+  fallback apenas quando ela e estavel (por exemplo `files.cercomp.ufg.br` ou
+  dominio oficial HTTP/HTTPS). SVG, Instagram CDN, Facebook CDN e URLs temporarias
+  de Telegram nao viram capa definitiva; nesses casos o retorno traz
+  `media.uploaded=false` e `media.error`, e o Cadu deve procurar imagem oficial.
+
+## Contrato para o formatador IA
+
+O formatador pode devolver `formattedDescription`. O endpoint preserva essa
+descricao quando ela tem conteudo acionavel e Markdown seguro. Isso evita o erro
+operacional de o Cadu montar um texto bom e o publicador substituir por texto
+bruto da fonte.
+
+Regras praticas:
+
+- envie `formattedDescription` no mesmo item que sera publicado;
+- mantenha links como `[https://...](https://...)`;
+- nao envie HTML;
+- inclua prazo/data, publico-alvo, CTA e contato real quando existir;
+- se nao houver contato real, deixe `contato` vazio e use a fonte oficial como
+  caminho de esclarecimento.
 
 ## Modulos
 

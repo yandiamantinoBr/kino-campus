@@ -126,6 +126,8 @@ export interface CaduItem {
   type?: string;
   title?: string;
   description?: string;
+  formattedDescription?: string;
+  formatted_description?: string;
   summary?: string;
   text?: string;
   category?: string;
@@ -142,8 +144,12 @@ export interface CaduItem {
   gratuito?: boolean;
   link?: string;
   linkAsCta?: boolean;
+  actionLabel?: string;
+  actionKey?: string;
   image?: string;
   images?: string[];
+  imageSource?: string;
+  allowExternalImageFallback?: boolean;
   tags?: string[];
   sourceUrl?: string;
   sourceId?: string;

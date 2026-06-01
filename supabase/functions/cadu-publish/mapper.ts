@@ -34,6 +34,8 @@ import {
   stripHtml,
   timeFromAny,
   uniq,
+  canPersistExternalImageUrl,
+  isSvgUrl,
   validRemoteImageUrl,
 } from "./util.ts";
 
@@ -81,6 +83,24 @@ function markdownUrlLink(url: unknown): string {
   return clean ? `[${clean}](${clean})` : "";
 }
 
+function normalizeMarkdownInput(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .replace(/\r\n?/g, "\n")
+    .split(/\n+/)
+    .map(normalizeWhitespace)
+    .filter(Boolean)
+    .join("\n");
+}
+
+function isUsefulFormattedDescription(value: unknown): boolean {
+  const text = normalizeMarkdownInput(value);
+  if (text.length < 140) return false;
+  const normalized = normalizeText(text);
+  if (/universidade gratuita|mais de\s+\d+\s+mil alunos|ensino pesquisa e extensao/.test(normalized)) return false;
+  return /\*\*|\[[^\]]+\]\(https?:\/\/|prazo|inscric|edital|evento|bolsa|curso|palestra|sele[cç][aã]o|submiss/i.test(text);
+}
+
 function buildSourceLabel(sourceName: string): string {
   const name = normalizeWhitespace(sourceName || "UFG");
   if (!name || /^ufg$/i.test(name)) return "Fonte oficial: UFG";
@@ -106,17 +126,23 @@ function normalizeDocumentLinks(item: CaduItem): Array<{ url: string; label: str
 }
 
 function buildDescription(item: CaduItem): string {
+  const formatted = normalizeMarkdownInput(item.formattedDescription || item.formatted_description || "");
   const lead = normalizeWhitespace(
     stripHtml(item.description || item.summary || item.text || ""),
   );
   const chunks: string[] = [];
-  if (lead) chunks.push(clamp(lead, 1400));
 
   const sourceUrl = validRemoteImageUrl(item.sourceUrl);
   const sourceLabel = buildSourceLabel(String(item.sourceName || ""));
-  const alreadyHasSource = sourceUrl && lead.includes(sourceUrl);
+  const alreadyHasSource = sourceUrl && (formatted.includes(sourceUrl) || lead.includes(sourceUrl));
 
   const documentLinks = normalizeDocumentLinks(item);
+  if (formatted && isUsefulFormattedDescription(formatted)) {
+    chunks.push(clampMarkdown(formatted, 1700));
+  } else if (lead) {
+    chunks.push(clamp(lead, 1400));
+  }
+
   if (documentLinks.length) {
     chunks.push(
       [
@@ -145,18 +171,49 @@ function buildTags(item: CaduItem, categoryText: string, area: string): { tags: 
   return { tags: base, tagKeys };
 }
 
-function pickActionLink(item: CaduItem, documentLinks: Array<{ url: string }>): string {
+function inferActionLabel(item: CaduItem, module: string, documentLinks: Array<{ url: string }>): string {
+  const explicit = normalizeWhitespace(item.actionLabel);
+  if (explicit) return clamp(explicit, 42);
+  const text = normalizeText(`${item.title || ""}\n${item.summary || ""}\n${item.text || ""}\n${item.description || ""}\n${item.formattedDescription || ""}`);
+  if (documentLinks.length > 1) return "Acessar editais";
+  if (documentLinks.length === 1 && /\.pdf(?:$|[?#])/i.test(documentLinks[0].url)) return "Acessar edital";
+  if (/\binscric|submiss|formulario|candidat/.test(text)) return "Realizar inscricao";
+  if (module === "eventos") return "Acessar evento";
+  if (module === "oportunidades") return "Acessar oportunidade";
+  return "Acessar link";
+}
+
+function scoreActionLink(item: CaduItem, module: string, link: { url: string; label?: string }, index: number): number {
+  const url = validRemoteImageUrl(link.url);
+  if (!url) return -1000;
+  const label = normalizeText(link.label || "");
+  const haystack = normalizeText(`${label} ${url}`);
+  let score = 0;
+  if (!/\.pdf(?:$|[?#])/i.test(url)) score += 20;
+  if (/\b(edital|editais|chamada|fapeg|confap|sparkx|pibic|pivic|mobilidade|processo|selecao)\b/.test(haystack)) score += 35;
+  if (/\b(inscric|submiss|formulario|forms\.gle|eventos?|evento|even3|plateia|candidat)\w*/.test(haystack)) score += 30;
+  if (module === "eventos" && /\b(evento|inscric|formulario|forms\.gle|even3|plateia)\w*/.test(haystack)) score += 20;
+  if (module === "oportunidades" && /\b(edital|chamada|bolsa|vaga|selecao|processo|fapeg|confap)\w*/.test(haystack)) score += 20;
+  if (/\b(clique aqui|saiba mais|acesse aqui)\b/.test(label)) score -= 8;
+  if (item.sourceUrl && url === item.sourceUrl) score -= 5;
+  return score - (index * 0.01);
+}
+
+function pickActionLink(item: CaduItem, module: string, documentLinks: Array<{ url: string; label?: string }>): string {
   const explicit = validRemoteImageUrl(item.link);
   if (explicit) return explicit;
-  const firstDoc = documentLinks.find((l) => validRemoteImageUrl(l.url));
-  if (firstDoc) return validRemoteImageUrl(firstDoc.url);
+  const ranked = documentLinks
+    .map((link, index) => ({ url: validRemoteImageUrl(link.url), score: scoreActionLink(item, module, link, index) }))
+    .filter((link) => link.url)
+    .sort((a, b) => b.score - a.score);
+  if (ranked[0] && ranked[0].score >= 0) return ranked[0].url;
   return validRemoteImageUrl(item.sourceUrl);
 }
 
 function buildImageList(item: CaduItem): string[] {
   return uniq(
     [item.image, ...(Array.isArray(item.images) ? item.images : [])].map(validRemoteImageUrl),
-  ).slice(0, 1);
+  ).filter((url) => url && !isSvgUrl(url)).slice(0, 1);
 }
 
 export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}): MappedPost {
@@ -169,8 +226,11 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const sourceUrl = String(item.sourceUrl || "");
   const sourceId = String(item.sourceId || "");
   const images = buildImageList(item);
+  const safeExternalImage = images.find(canPersistExternalImageUrl) || "";
   const documentLinks = normalizeDocumentLinks(item);
-  const actionLink = pickActionLink(item, documentLinks);
+  const actionLink = pickActionLink(item, module, documentLinks);
+  const actionLabel = inferActionLabel(item, module, documentLinks);
+  const actionKey = slugify(item.actionKey || actionLabel);
 
   const categoryKey = slugify(item.category) || DEFAULT_CATEGORY[module] || "";
   const categoryText = categoryLabel(categoryKey);
@@ -189,8 +249,8 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     source_id: sourceId,
     content_hash: lightHash(`${item.title || ""}\n${item.text || item.description || ""}`),
     original_title: normalizeWhitespace(item.title),
-    image_url: images[0] || "",
-    cover_url: images[0] || "",
+    image_url: safeExternalImage,
+    cover_url: safeExternalImage,
     edital_pdf_urls: Array.isArray(item.pdfLinks) ? item.pdfLinks.slice(0, 10) : [],
     official_document_urls: documentLinks.map((l) => l.url),
     cadu_run_id: options.runId || "",
@@ -198,6 +258,8 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     contato,
     link: actionLink,
     link_as_cta: linkAsCta,
+    actionLabel,
+    actionKey,
     visibility,
   };
 
@@ -218,7 +280,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const metadata: Record<string, unknown> = { ...commonMeta };
 
   if (module === "eventos") {
-    const gratuito = item.gratuito !== undefined ? !!item.gratuito : false;
+    const gratuito = item.gratuito !== undefined ? !!item.gratuito : true;
     if (gratuito) price = 0;
 
     // Datas: explicitas tem prioridade; senao tenta intervalo e data unica do texto.
@@ -256,6 +318,8 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     const remuneracaoText = normalizeWhitespace(item.remuneracao);
     const remunValue = parseBRLNumber(item.remuneracao as unknown);
     if (remunValue != null) price = remunValue;
+    const gratuito = item.gratuito !== undefined ? !!item.gratuito : true;
+    if (gratuito && price == null) price = 0;
 
     Object.assign(metadata, {
       subcategory: areaKey,
@@ -273,6 +337,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       regimeContratacao: regime.label,
       remuneracao: remuneracaoText,
       opportunityType: type,
+      gratuito,
     });
     if (wm.label) {
       const extra = uniq([...(tags as string[]), wm.label, regime.label]).slice(0, 10);
@@ -316,7 +381,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     location,
     module,
     category: categoryKey,
-    image_url: images[0] || null,
+    image_url: safeExternalImage || null,
     visibility,
     metadata,
   };

@@ -23,7 +23,7 @@
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { CaduItem, validateItem } from "./schema.ts";
 import { deepMergeMetadata, mapItemToPost } from "./mapper.ts";
-import { lightHash, validRemoteImageUrl } from "./util.ts";
+import { canPersistExternalImageUrl, lightHash, validRemoteImageUrl } from "./util.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -115,9 +115,18 @@ async function applyCover(
 ): Promise<Record<string, unknown>> {
   const metadata = deepMergeMetadata(currentMetadata, { image_url: coverUrl, cover_url: coverUrl });
   await admin.from("posts").update({ image_url: coverUrl, metadata }).eq("id", postId);
+  const { data: previousMedia } = await admin
+    .from("post_media")
+    .select("post_id,url,is_cover,sort_order")
+    .eq("post_id", postId);
   try {
+    await admin.from("post_media").delete().eq("post_id", postId);
     await admin.from("post_media").insert({ post_id: postId, url: coverUrl, is_cover: true, sort_order: 0 });
-  } catch (_) { /* galeria e best-effort; image_url ja garante a capa */ }
+  } catch (_) {
+    if (Array.isArray(previousMedia) && previousMedia.length) {
+      await admin.from("post_media").insert(previousMedia).then(() => {}, () => {});
+    }
+  }
   return metadata;
 }
 
@@ -219,12 +228,15 @@ async function handlePublish(admin: SupabaseClient, userId: string, body: Record
       }
     } catch (e) {
       media.error = e instanceof Error ? e.message : String(e);
-      // fallback: garante image_url externo + post_media
-      try {
-        post.metadata = await applyCover(admin, post.id, candidate, post.metadata || {});
-        post.image_url = candidate;
-        media.cover_url = candidate;
-      } catch (_) { /* ignore */ }
+      // fallback: grava URL externa apenas quando ela e estavel. CDN de Instagram,
+      // Telegram e SVG nao viram capa definitiva se o upload falhar.
+      if (canPersistExternalImageUrl(candidate) && item.allowExternalImageFallback !== false) {
+        try {
+          post.metadata = await applyCover(admin, post.id, candidate, post.metadata || {});
+          post.image_url = candidate;
+          media.cover_url = candidate;
+        } catch (_) { /* ignore */ }
+      }
     }
   }
 
@@ -289,6 +301,7 @@ async function handleEdit(admin: SupabaseClient, userId: string, body: Record<st
   const newImage = validRemoteImageUrl((body.image as string) || (Array.isArray(body.images) ? body.images[0] : ""));
   let coverUrl = String(current.image_url || "");
   let uploaded = false;
+  let imageError = "";
   if (newImage) {
     const baseMeta = (update.metadata as Record<string, unknown>) || current.metadata || {};
     try {
@@ -298,9 +311,12 @@ async function handleEdit(admin: SupabaseClient, userId: string, body: Record<st
         coverUrl = storageUrl;
         uploaded = true;
       }
-    } catch (_) {
-      await applyCover(admin, postId, newImage, baseMeta);
-      coverUrl = newImage;
+    } catch (e) {
+      imageError = e instanceof Error ? e.message : String(e);
+      if (canPersistExternalImageUrl(newImage)) {
+        await applyCover(admin, postId, newImage, baseMeta);
+        coverUrl = newImage;
+      }
     }
   }
 
@@ -313,6 +329,7 @@ async function handleEdit(admin: SupabaseClient, userId: string, body: Record<st
     status: fresh?.status || current.status,
     image_url: coverUrl,
     image_uploaded: uploaded,
+    image_error: imageError,
     url: postUrl(String(fresh?.module || current.module)),
   });
 }

@@ -92,6 +92,24 @@ describe('Cadu publish — Edge Function', () => {
     expect(mapper).toContain('deepMergeMetadata');
   });
 
+  test('mapper preserva descricao formatada e metadata de CTA do formatador', () => {
+    expect(schema).toContain('formattedDescription?: string');
+    expect(mapper).toContain('isUsefulFormattedDescription');
+    expect(mapper).toContain('item.formattedDescription');
+    expect(mapper).toContain('actionLabel');
+    expect(mapper).toContain('actionKey');
+    expect(mapper).toContain('inferActionLabel');
+  });
+
+  test('nao persiste CDN temporaria ou SVG como capa final quando upload falha', () => {
+    const util = r('supabase/functions/cadu-publish/util.ts');
+    expect(util).toContain('canPersistExternalImageUrl');
+    expect(util).toContain('cdninstagram');
+    expect(util).toContain('isSvgUrl');
+    expect(index).toContain('canPersistExternalImageUrl(candidate)');
+    expect(index).toContain('canPersistExternalImageUrl(newImage)');
+  });
+
   test('schema cobre os 6 modulos', () => {
     ['eventos', 'oportunidades', 'moradia', 'compra-venda', 'caronas', 'achados-perdidos'].forEach((m) => {
       expect(schema).toContain(`"${m}"`);
