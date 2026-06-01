@@ -75,6 +75,16 @@
     return null;
   }
 
+  // Módulo do termo priorizando a classificação por conteúdo (servidor) e caindo
+  // no dicionário; reusa KCAdminDashboardUtils.resolveTermModule quando disponível.
+  function resolveTermModuleValue(deps, trend) {
+    var utils = getDashboardUtils();
+    if (typeof utils.resolveTermModule === 'function') {
+      return utils.resolveTermModule(trend, window.KC_CONSTANTS || {});
+    }
+    return classifyTermToModuleValue(deps, trend && trend.term);
+  }
+
   function getSeriesMeta(deps) {
     if (deps && typeof deps.getSeriesMeta === 'function') {
       var seriesMeta = deps.getSeriesMeta();
@@ -228,6 +238,8 @@
         modContainer.style.display = 'none';
         modContainer.innerHTML = '';
       }
+      var coverageEmpty = select(deps, '#admin-trends-coverage');
+      if (coverageEmpty) coverageEmpty.textContent = '';
       return;
     }
 
@@ -237,7 +249,7 @@
 
     trendsList.innerHTML = trends.map(function (trend, index) {
       var pct = Math.round(((Number(trend && trend.count) || 0) / max) * 100);
-      var modKey = classifyTermToModuleValue(deps, trend && trend.term);
+      var modKey = resolveTermModuleValue(deps, trend);
       var modBadge = modKey
         ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtml(deps, getModuleLabelValue(deps, modKey)) + '"><i class="' + escHtml(deps, getModuleIconValue(deps, modKey)) + '"></i></span>'
         : '';
@@ -249,6 +261,14 @@
         + '<span class="kc-trend-count">' + (Number(trend && trend.count) || 0) + '</span>'
         + '</li>';
     }).join('');
+
+    var classifiedCount = trends.reduce(function (acc, t) {
+      return acc + (resolveTermModuleValue(deps, t) ? 1 : 0);
+    }, 0);
+    var coverageEl = select(deps, '#admin-trends-coverage');
+    if (coverageEl) {
+      coverageEl.textContent = Math.round((classifiedCount / trends.length) * 100) + '% classificados';
+    }
 
     renderSearchTrendsByModule(trends, periodDays, deps);
   }

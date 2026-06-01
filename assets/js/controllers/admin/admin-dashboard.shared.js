@@ -53,8 +53,8 @@
     'compra-venda': Object.freeze(['celular', 'smartphone', 'notebook', 'laptop', 'computador', 'roupa', 'movel', 'eletronico', 'venda', 'compro', 'iphone', 'tablet', 'monitor', 'cadeira', 'bicicleta', 'bike', 'fone', 'headphone', 'airpod', 'jbl', 'tv', 'geladeira', 'fogao', 'mesa', 'cama', 'colchao', 'camera', 'drone', 'video', 'game', 'calcado', 'tenis', 'maquina', 'impressora']),
     moradia: Object.freeze(['casa', 'quarto', 'republica', 'kitnet', 'apartamento', 'aluguel', 'moradia', 'dividir', 'alugar', 'imovel', 'vaga', 'hospedagem', 'room', 'flat', 'pensao', 'villaggio', 'morar', 'condominio', 'studio', 'andar']),
     caronas: Object.freeze(['carona', 'ida', 'volta', 'transporte', 'passagem', 'onibus', 'conducao', 'van', 'moto', 'buser', 'uber', '99', 'indriver', 'carpool', 'boleia']),
-    eventos: Object.freeze(['evento', 'palestra', 'workshop', 'semana', 'feira', 'festival', 'show', 'apresentacao', 'cerimonia', 'congresso', 'simposio', 'seminario', 'aula', 'minicurso', 'encontro', 'reuniao', 'hackathon', 'exposicao', 'teatro']),
-    oportunidades: Object.freeze(['estagio', 'emprego', 'vaga', 'monitoria', 'bolsa', 'freelancer', 'trainee', 'trabalho', 'oportunidade', 'job', 'contratando', 'recrutamento', 'residencia', 'pesquisa', 'iniciacao', 'seletivo', 'curriculo', 'clf']),
+    eventos: Object.freeze(['evento', 'palestra', 'workshop', 'semana', 'feira', 'festival', 'show', 'apresentacao', 'cerimonia', 'congresso', 'simposio', 'seminario', 'aula', 'minicurso', 'encontro', 'reuniao', 'hackathon', 'exposicao', 'teatro', 'conpeex', 'sbpc', 'sarau', 'jornada', 'premio', 'olimpiada', 'coloquio', 'roda de conversa']),
+    oportunidades: Object.freeze(['estagio', 'emprego', 'vaga', 'monitoria', 'bolsa', 'bolsista', 'freelancer', 'trainee', 'trabalho', 'oportunidade', 'job', 'contratando', 'recrutamento', 'residencia', 'pesquisa', 'iniciacao', 'seletivo', 'curriculo', 'clf', 'tutoria', 'concurso', 'edital', 'plantao', 'extensao']),
     'achados-perdidos': Object.freeze(['perdido', 'achado', 'encontrei', 'perdi', 'carteira', 'chave', 'oculos', 'mochila', 'documento', 'identidade', 'rg', 'cpf', 'passaporte', 'cartao', 'anel', 'relogio', 'airpod', 'fone', 'chaves', 'perda', 'achou', 'celular perdido']),
     livros: Object.freeze(['livro', 'apostila', 'calculo', 'exatas', 'didatico', 'material', 'caderno', 'atlas', 'manual', 'engenharia', 'quimica', 'fisica', 'biologia', 'historia', 'matematica', 'literatura', 'pdf', 'estudo', 'prova', 'gabarito'])
   });
@@ -160,11 +160,28 @@
     return bestScore > 0 ? bestModule : null;
   }
 
+  // Confiança mínima para confiar na classificação por conteúdo (servidor);
+  // abaixo disso, o dicionário curado tende a ser mais correto.
+  var MODULE_CONFIDENCE_THRESHOLD = 0.5;
+
+  // Resolve o módulo de um termo de tendência priorizando:
+  // 1) o módulo do servidor (conteúdo dos posts) quando a confiança é boa;
+  // 2) o dicionário de palavras-chave (reserva curada);
+  // 3) o módulo do servidor de baixa confiança como último recurso.
+  function resolveTermModule(item, constants) {
+    var serverModule = item && item.module ? String(item.module) : null;
+    var confidence = item ? Number(item.module_confidence) : 0;
+    if (serverModule && confidence >= MODULE_CONFIDENCE_THRESHOLD) return serverModule;
+    var keywordModule = classifyTermToModule(item && item.term, constants);
+    if (keywordModule) return keywordModule;
+    return serverModule || null;
+  }
+
   function aggregateTrendsByModule(trends, constants) {
     var grouped = {};
 
     (trends || []).forEach(function (item) {
-      var moduleKey = classifyTermToModule(item && item.term, constants);
+      var moduleKey = resolveTermModule(item, constants);
       if (!moduleKey) return;
       if (!grouped[moduleKey]) {
         grouped[moduleKey] = {
@@ -488,6 +505,7 @@
     buildOperationalAlerts: buildOperationalAlerts,
     canonicalizeTerm: canonicalizeTerm,
     classifyTermToModule: classifyTermToModule,
+    resolveTermModule: resolveTermModule,
     createDailyBuckets: createDailyBuckets,
     formatDayLabel: formatDayLabel,
     normalizeText: normalizeText,

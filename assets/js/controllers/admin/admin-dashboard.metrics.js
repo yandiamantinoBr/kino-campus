@@ -119,6 +119,34 @@
       });
   }
 
+  // Como canonicalizeTrendsList, mas preserva o módulo classificado pelo servidor
+  // (mantendo o módulo da variante de maior contagem ao fundir sinônimos/plural).
+  function canonicalizeClassifiedTrends(list) {
+    var byTerm = {};
+    (list || []).forEach(function (item) {
+      var canonical = canonicalizeTerm(item && item.term);
+      if (!canonical) return;
+      var count = Number(item && item.count) || 1;
+      if (!byTerm[canonical]) {
+        byTerm[canonical] = { term: canonical, count: 0, module: null, module_confidence: 0, _topCount: -1 };
+      }
+      var agg = byTerm[canonical];
+      agg.count += count;
+      if (item && item.module && count > agg._topCount) {
+        agg._topCount = count;
+        agg.module = String(item.module);
+        agg.module_confidence = Number(item.module_confidence) || 0;
+      }
+    });
+    return Object.keys(byTerm)
+      .map(function (k) { return byTerm[k]; })
+      .sort(function (a, b) { return b.count - a.count; })
+      .slice(0, 10)
+      .map(function (e) {
+        return { term: e.term, count: e.count, module: e.module, module_confidence: e.module_confidence };
+      });
+  }
+
   function minutesAgo(minutes) {
     var date = new Date();
     date.setMinutes(date.getMinutes() - (Number(minutes) || 15));
@@ -487,6 +515,21 @@
 
   async function loadSearchTrendsData(client, since) {
     var trends = [];
+
+    // Caminho preferido: RPC classificado (termo → módulo pelo conteúdo dos posts).
+    try {
+      var clsArgs = { p_limit: 25 };
+      if (since) clsArgs.p_since = since;
+      var clsResult = await Promise.race([
+        client.rpc('kc_admin_search_trends_classified', clsArgs),
+        new Promise(function (_, reject) { setTimeout(function () { reject(new Error('timeout')); }, 8000); })
+      ]);
+      if (clsResult && !clsResult.error && Array.isArray(clsResult.data) && clsResult.data.length > 0) {
+        return canonicalizeClassifiedTrends(clsResult.data);
+      }
+    } catch (clsError) {
+      console.warn('[Admin trends] RPC classificado indisponível, usando legado:', clsError && clsError.message);
+    }
 
     try {
       var rpcArgs = { p_limit: 20 };
