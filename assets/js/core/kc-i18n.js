@@ -410,6 +410,7 @@
     'aria-label.calendar-view':         'Modo de visualização do calendário',
     'aria-label.calendar-prev':         'Período anterior',
     'aria-label.calendar-next':         'Próximo período',
+    'aria-label.calendar-today':        'Voltar para hoje',
     'aria-label.calendar-modal':        'Calendário de Eventos',
     'aria-label.calendar-modal-close':  'Fechar',
     'aria-label.calendar-modal-prev':   'Anterior',

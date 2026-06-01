@@ -110,6 +110,21 @@ describe('kc-events-calendar — contrato estático (fonte)', () => {
     expect(source).toContain("addEventListener('pageshow'");
   });
 
+  test('possui botão "Hoje" e navegação para o período atual', () => {
+    expect(source).toContain('data-kc-cal-today');
+    expect(source).toContain('navigateToToday');
+    expect(source).toContain('isViewingToday');
+  });
+
+  test('modal expandido tem focus trap + retorno de foco (a11y)', () => {
+    expect(source).toContain('trapModalFocus');
+    expect(source).toContain('_modalReturnFocus');
+  });
+
+  test('normaliza a chave de categoria (singular/acentos → chave oficial)', () => {
+    expect(source).toContain('normalizeCategoryKey');
+  });
+
   // Scroll-lock iOS no modal expandido
   test('usa KCOverlayLock.lock/unlock no modal calendário (iOS)', () => {
     expect(source).toContain("KCOverlayLock.lock('eventos-cal-modal')");
@@ -362,6 +377,92 @@ describe('kc-events-calendar — runtime: atualização ao vivo', () => {
     captured({ module: 'caronas', type: 'soft_deleted' });
     await tick(300);
     expect(counter.getCalls()).toBe(2);
+  });
+});
+
+// ── 2d. Runtime: a11y do modal + botão Hoje + categoria ──────────────────────
+
+describe('kc-events-calendar — runtime: UX/a11y (modal, Hoje, categoria)', () => {
+  function fakeSupabase(events) {
+    const chain = {
+      select: () => chain, eq: () => chain, is: () => chain, in: () => chain,
+      order: () => chain,
+      limit: () => Promise.resolve({ data: events, error: null }),
+    };
+    return { getClient: () => ({ from: () => chain }) };
+  }
+
+  function mountCalendar() {
+    const el = document.createElement('div');
+    el.setAttribute('data-kc-cal-mount', '');
+    document.body.appendChild(el);
+    window.KCEventsCalendar.mount(el);
+    return el;
+  }
+
+  beforeEach(() => {
+    delete window.KCEventsCalendar;
+    delete window.KCSupabase;
+    delete window.KCSessionStore;
+    delete window.KCi18n;
+    delete window.KCOverlayLock;
+    delete window.KCPostFreshness;
+    document.body.innerHTML = '';
+    try { localStorage.clear(); } catch (_) { /* noop */ }
+  });
+
+  afterEach(() => {
+    try { if (window.KCEventsCalendar) window.KCEventsCalendar.destroy(); } catch (_) { /* noop */ }
+  });
+
+  test('modal: abrir move o foco para dentro; fechar devolve ao gatilho', () => {
+    loadModule();
+    const el = mountCalendar();
+
+    const expandBtn = el.querySelector('[data-kc-cal-expand]');
+    expandBtn.focus();
+    expect(document.activeElement).toBe(expandBtn);
+
+    window.KCEventsCalendar.open();
+    const closeBtn = document.querySelector('[data-kc-cal-modal-close]');
+    expect(document.activeElement).toBe(closeBtn);
+
+    window.KCEventsCalendar.close();
+    expect(document.activeElement).toBe(expandBtn);
+  });
+
+  test('botão "Hoje": oculto no período atual, aparece ao navegar e volta para hoje', () => {
+    loadModule();
+    const el = mountCalendar();
+
+    const todayBtn = el.querySelector('[data-kc-cal-today]');
+    expect(todayBtn).not.toBeNull();
+    expect(todayBtn.hidden).toBe(true); // começa no mês atual
+
+    el.querySelector('[data-kc-cal-next]').click(); // navega para o próximo mês
+    expect(todayBtn.hidden).toBe(false);
+
+    todayBtn.click(); // volta para hoje
+    expect(todayBtn.hidden).toBe(true);
+  });
+
+  test('categoria "academico" (singular) recebe a cor de academicos (dot não-cinza)', async () => {
+    const now = new Date();
+    const day = (n) => now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(n).padStart(2, '0');
+    window.KCSupabase = fakeSupabase([
+      { id: 9, title: 'Aula inaugural', category: 'academico', metadata: { data_evento: day(15) }, created_at: day(1) },
+    ]);
+
+    loadModule();
+    mountCalendar();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const cell = document.querySelector('[data-kc-cal-day="' + day(15) + '"]');
+    expect(cell).not.toBeNull();
+    const dot = cell.querySelector('.kc-cal-event-dot');
+    expect(dot).not.toBeNull();
+    // academicos = #2196f3 (azul) — não o cinza fallback (#888) de categoria desconhecida.
+    expect(dot.getAttribute('style')).toContain('#2196f3');
   });
 });
 
