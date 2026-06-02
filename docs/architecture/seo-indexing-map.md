@@ -7,6 +7,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 - Publicacoes: `public.posts` no Supabase.
 - Paginas canonicas publicas: HTML estatico na raiz do projeto.
 - Detalhes de publicacao: `/product.html?id={uuid}`, servido por `api/og-product.js`.
+- Fallback/app shell de detalhe: `_product.html`, mantido como `noindex`.
 - Sitemap publico: `/sitemap.xml`, servido por `api/sitemap.js`.
 - Politica de crawlers: `/robots.txt`.
 - Mapa auxiliar para agentes: `/llms.txt`.
@@ -26,7 +27,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 | `/ods.html` | `https://www.kinocampus.com.br/ods.html` | Contexto institucional e impacto |
 | `/privacidade.html` | `https://www.kinocampus.com.br/privacidade.html` | Politica de privacidade |
 | `/termos.html` | `https://www.kinocampus.com.br/termos.html` | Termos de uso |
-| `/product.html?id={uuid}` | URL com ID da publicacao | Publicacoes com `status=published` |
+| `/product.html?id={uuid}` | URL com ID da publicacao | Publicacoes com `status=published`, nao expiradas e com conteudo minimo |
 
 ## Paginas nao indexaveis
 
@@ -45,26 +46,35 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 ## Dados estruturados
 
 - `assets/js/boot/kc-seo-structured-data.js` injeta JSON-LD para paginas publicas indexaveis.
-- Tipos usados: `Organization`, `WebSite`, `SearchAction`, `WebPage`, `CollectionPage`, `ContactPage`, `PrivacyPolicy` e `BreadcrumbList`.
-- `api/og-product.js` injeta JSON-LD server-side para publicacoes publicas, usando `WebPage` + `CreativeWork`.
+- Tipos usados nas paginas: `Organization`, `WebSite`, `SearchAction`, `WebPage`, `CollectionPage`, `ContactPage`, `PrivacyPolicy`, `BreadcrumbList` e `ItemList`.
+- `api/og-product.js` injeta JSON-LD server-side para publicacoes publicas.
+- Tipos ricos de publicacao sao usados apenas quando os dados suficientes existem e tambem aparecem no HTML:
+  - `Event` para eventos com data.
+  - `JobPosting` para oportunidades com link de candidatura e prazo.
+  - `Product` + `Offer` para compra/venda com preco.
+  - `CreativeWork` como fallback seguro.
 
 ## Sitemap
 
 `api/sitemap.js` monta XML com:
 
 - paginas publicas estaveis;
-- ate 1000 publicacoes `published` mais recentes/atualizadas, usando `updated_at` ou `created_at`.
+- ate 1000 publicacoes `published` mais recentes/atualizadas, usando `updated_at` ou `created_at`;
+- imagens principais em `<image:image>` quando a URL de imagem publica for valida;
+- filtro de expiracao por `expires_at` ou datas de encerramento em `metadata`.
 
 Se o Supabase estiver indisponivel, o sitemap ainda responde com as paginas estaticas para nao quebrar rastreamento.
 
 ## IA e agentes
 
-- `robots.txt` permite rastreamento publico por `OAI-SearchBot`, `ChatGPT-User` e `GPTBot`, mantendo areas privadas bloqueadas.
+- `robots.txt` permite rastreamento publico por `OAI-SearchBot` e `ChatGPT-User`, mantendo areas privadas bloqueadas.
+- `GPTBot` fica bloqueado por padrao para separar descoberta em busca/assistente de uso amplo em treinamento.
 - `llms.txt` e apenas um mapa auxiliar; nao deve ser tratado como fator garantido de ranking.
 - A visibilidade real depende principalmente de conteudo publico claro, links internos, sitemap, metadados e qualidade das publicacoes.
 
 ## Monitoramento recomendado
 
+- Executar `npm run seo:audit` antes de releases com mudancas em paginas publicas, sitemap ou robots.
 - Google Search Console: enviar `https://www.kinocampus.com.br/sitemap.xml`.
 - Bing Webmaster Tools: enviar o mesmo sitemap.
 - Validar publicacoes importantes com URL Inspection depois de publicar.

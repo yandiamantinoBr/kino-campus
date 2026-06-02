@@ -40,6 +40,7 @@ describe('SEO e indexacao publica', () => {
     expect(robots).toContain('User-agent: OAI-SearchBot');
     expect(robots).toContain('User-agent: ChatGPT-User');
     expect(robots).toContain('User-agent: GPTBot');
+    expect(robots).toMatch(/User-agent:\s*GPTBot\s+Disallow:\s*\//);
     expect(robots).toContain('Disallow: /admin/');
     expect(robots).toContain('Disallow: /search-results.html');
   });
@@ -53,6 +54,9 @@ describe('SEO e indexacao publica', () => {
     expect(sitemap).toContain('/eventos.html');
     expect(sitemap).toContain('/oportunidades.html');
     expect(sitemap).toContain('status=eq.published');
+    expect(sitemap).toContain('expires_at');
+    expect(sitemap).toContain('xmlns:image');
+    expect(sitemap).toContain('<image:image>');
     expect(sitemap).toContain('/product.html?id=');
     expect(sitemap).toContain('application/xml; charset=utf-8');
   });
@@ -63,7 +67,7 @@ describe('SEO e indexacao publica', () => {
     expect(llms).toContain('KinoCampus');
     expect(llms).toContain('https://www.kinocampus.com.br/sitemap.xml');
     expect(llms).toContain('/admin/');
-    expect(llms).toContain('Publicações públicas');
+    expect(llms).toContain('## Publicações');
   });
 
   test('paginas publicas tem canonical, robots index e JSON-LD compartilhado', () => {
@@ -74,6 +78,14 @@ describe('SEO e indexacao publica', () => {
       expect(html).toContain('<meta property="og:locale" content="pt_BR" />');
       expect(html).toContain('assets/js/boot/kc-seo-structured-data.js?v=8.6.1');
     });
+  });
+
+  test('ods.html tem H1 e Open Graph completos no HTML inicial', () => {
+    const html = read('ods.html');
+
+    expect(html).toContain('<h1 id="kcOdsTitle">ODS e impacto comunitário no KinoCampus</h1>');
+    expect(html).toContain('<meta property="og:title" content="ODS e impacto comunitário — KinoCampus" />');
+    expect(html).toContain('<meta property="og:image" content="https://www.kinocampus.com.br/api/og-image?type=ods" />');
   });
 
   test('paginas operacionais ficam fora do indice publico', () => {
@@ -91,15 +103,35 @@ describe('SEO e indexacao publica', () => {
     expect(source).toContain('search-results.html?q={search_term_string}');
     expect(source).toContain("'@type': 'BreadcrumbList'");
     expect(source).toContain("'@type': 'Organization'");
+    expect(source).toContain("'@type': 'ItemList'");
   });
 
-  test('SSR de product.html injeta canonical, robots indexavel e JSON-LD do post', () => {
+  test('SSR de product.html injeta conteudo inicial, canonical, robots e JSON-LD rico', () => {
     const source = read('api/og-product.js');
 
     expect(source).toContain('replaceOrInsertCanonical');
     expect(source).toContain('replaceOrInsertRobots');
     expect(source).toContain('replaceOrInsertProductJsonLd');
+    expect(source).toContain('injectVisibleProductContent');
+    expect(source).toContain('postTitle');
+    expect(source).toContain('postDescription');
+    expect(source).toContain('specsGrid');
     expect(source).toContain("index,follow,max-image-preview:large,max-snippet:-1");
     expect(source).toContain("'@type': 'CreativeWork'");
+    expect(source).toContain("'@type': 'Event'");
+    expect(source).toContain("'@type': 'JobPosting'");
+    expect(source).toContain("'@type': 'Product'");
+    expect(source).toContain('shouldIndexPost');
+    expect(source).toContain("status || '').toLowerCase() !== 'published'");
+  });
+
+  test('auditoria local de SEO esta disponivel', () => {
+    const pkg = JSON.parse(read('package.json'));
+    const audit = read('scripts/seo-audit.js');
+
+    expect(pkg.scripts['seo:audit']).toBe('node scripts/seo-audit.js');
+    expect(audit).toContain('auditRobots');
+    expect(audit).toContain('auditSitemap');
+    expect(audit).toContain('GPTBot');
   });
 });

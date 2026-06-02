@@ -44,6 +44,32 @@ function isoDate(value) {
   return date.toISOString();
 }
 
+function isFutureOrUnknown(value) {
+  if (!value) return true;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return true;
+  return date.getTime() >= Date.now() - 24 * 60 * 60 * 1000;
+}
+
+function metadataOf(post) {
+  return post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)
+    ? post.metadata
+    : {};
+}
+
+function getPostImage(post) {
+  const metadata = metadataOf(post);
+  const image = post.image_url || metadata.cover_url || metadata.coverUrl || metadata.image_url || metadata.imageUrl || '';
+  return /^https?:\/\/[^\s"'<>]+\.(?:png|jpe?g|webp|gif|avif)(?:[?#][^\s"'<>]*)?$/i.test(String(image))
+    ? String(image)
+    : '';
+}
+
+function getPostExpiry(post) {
+  const metadata = metadataOf(post);
+  return post.expires_at || metadata.deadline_date || metadata.validThrough || metadata.data_encerramento || '';
+}
+
 function buildUrlNode(entry) {
   return [
     '  <url>',
@@ -51,6 +77,7 @@ function buildUrlNode(entry) {
     entry.lastmod ? `    <lastmod>${escapeXml(isoDate(entry.lastmod))}</lastmod>` : '',
     entry.changefreq ? `    <changefreq>${escapeXml(entry.changefreq)}</changefreq>` : '',
     entry.priority ? `    <priority>${escapeXml(entry.priority)}</priority>` : '',
+    entry.image ? `    <image:image>\n      <image:loc>${escapeXml(entry.image)}</image:loc>\n    </image:image>` : '',
     '  </url>',
   ].filter(Boolean).join('\n');
 }
@@ -59,25 +86,39 @@ async function fetchPublishedPostRoutes() {
   const { url, key } = getSupabaseConfig();
   if (!url || !key) return [];
 
-  const endpoint = `${url}/rest/v1/posts?select=id,updated_at,created_at&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
+  const select = 'id,title,updated_at,created_at,expires_at,status,image_url,metadata';
+  const selectCompat = 'id,title,updated_at,created_at,expires_at,status,metadata';
+  const endpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
+  const endpointCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
   try {
-    const response = await fetch(endpoint, {
+    let response = await fetch(endpoint, {
       headers: {
         apikey: key,
         Authorization: `Bearer ${key}`,
         Accept: 'application/json',
       },
     });
+    if (!response.ok && response.status === 400) {
+      response = await fetch(endpointCompat, {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          Accept: 'application/json',
+        },
+      });
+    }
     if (!response.ok) return [];
     const rows = await response.json();
     if (!Array.isArray(rows)) return [];
     return rows
-      .filter((post) => post && post.id)
+      .filter((post) => post && post.id && String(post.status || '').toLowerCase() === 'published')
+      .filter((post) => isFutureOrUnknown(getPostExpiry(post)))
       .map((post) => ({
         path: `/product.html?id=${encodeURIComponent(String(post.id))}`,
         lastmod: post.updated_at || post.created_at,
         changefreq: 'weekly',
         priority: '0.7',
+        image: getPostImage(post),
       }));
   } catch (_) {
     return [];
@@ -95,7 +136,7 @@ export default async function handler(req, res) {
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
     routes.map(buildUrlNode).join('\n'),
     '</urlset>',
     '',

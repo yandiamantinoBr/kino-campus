@@ -1,35 +1,53 @@
 # KinoCampus
 
-> Plataforma comunitária independente para a comunidade da Universidade Federal de Goiás (UFG), com publicações de eventos, oportunidades, moradia, compra e venda, caronas e achados/perdidos.
+> Plataforma comunitária independente para a comunidade da Universidade Federal de Goiás (UFG), com publicações públicas sobre eventos, oportunidades, moradia, compra e venda, caronas e achados/perdidos.
 
 Base canônica: https://www.kinocampus.com.br/
 Sitemap: https://www.kinocampus.com.br/sitemap.xml
 Idioma principal: pt-BR
 Contato público: contato@kinocampus.com.br
 
+## Como usar este arquivo
+
+Este arquivo é um mapa auxiliar para agentes e ferramentas de IA. A fonte primária de descoberta continua sendo `robots.txt`, `sitemap.xml`, links internos e metadados estruturados das páginas públicas.
+
 ## Páginas públicas principais
 
-- [Início](https://www.kinocampus.com.br/): visão geral e publicações recentes da comunidade.
-- [Eventos](https://www.kinocampus.com.br/eventos.html): eventos acadêmicos, culturais, esportivos e institucionais.
-- [Oportunidades](https://www.kinocampus.com.br/oportunidades.html): bolsas, editais, estágios, empregos, monitorias e chamadas acadêmicas.
-- [Moradia](https://www.kinocampus.com.br/moradia.html): quartos, repúblicas, imóveis e anúncios de moradia para estudantes.
-- [Compra e venda](https://www.kinocampus.com.br/compra-venda-feed.html): itens úteis no contexto universitário.
-- [Caronas](https://www.kinocampus.com.br/caronas-feed.html): ofertas e pedidos de carona.
-- [Achados e perdidos](https://www.kinocampus.com.br/achados-perdidos.html): itens perdidos ou encontrados.
-- [Central de ajuda](https://www.kinocampus.com.br/ajuda.html): suporte, dúvidas e pedidos administrativos.
-- [Declaração de Privacidade](https://www.kinocampus.com.br/privacidade.html): política de privacidade, cookies e tratamento de dados.
-- [Termos de Uso](https://www.kinocampus.com.br/termos.html): regras de uso da plataforma.
+- [Início](https://www.kinocampus.com.br/) — visão geral da plataforma, módulos e publicações recentes.
+- [Eventos](https://www.kinocampus.com.br/eventos.html) — eventos acadêmicos, culturais, esportivos e institucionais.
+- [Oportunidades](https://www.kinocampus.com.br/oportunidades.html) — bolsas, editais, estágios, empregos, monitorias e chamadas acadêmicas.
+- [Moradia](https://www.kinocampus.com.br/moradia.html) — quartos, repúblicas, imóveis e anúncios de moradia para estudantes.
+- [Compra e venda](https://www.kinocampus.com.br/compra-venda-feed.html) — itens úteis no contexto universitário.
+- [Caronas](https://www.kinocampus.com.br/caronas-feed.html) — ofertas e pedidos de carona.
+- [Achados e perdidos](https://www.kinocampus.com.br/achados-perdidos.html) — itens perdidos ou encontrados.
+- [Central de ajuda](https://www.kinocampus.com.br/ajuda.html) — suporte, dúvidas e pedidos administrativos.
+- [ODS](https://www.kinocampus.com.br/ods.html) — relação da plataforma com sustentabilidade e impacto comunitário.
+- [Declaração de Privacidade](https://www.kinocampus.com.br/privacidade.html) — privacidade, cookies, dados pessoais e direitos dos titulares.
+- [Termos de Uso](https://www.kinocampus.com.br/termos.html) — regras de uso da plataforma.
 
-## O que indexar
+## Publicações
 
-- Páginas públicas listadas acima.
-- Publicações públicas com `status=published`, disponíveis em `https://www.kinocampus.com.br/product.html?id={id}` e referenciadas no sitemap.
+As publicações públicas são disponibilizadas em:
+
+`https://www.kinocampus.com.br/product.html?id={id}`
+
+Use somente publicações presentes no sitemap e com `status=published`. Publicações ocultas, excluídas, pendentes, privadas ou expiradas não devem ser tratadas como fonte pública.
 
 ## O que não usar como fonte pública
 
 - `/admin/`
-- páginas de autenticação, configuração, mensagens, perfil privado, criação de publicação e resultados internos de busca.
+- páginas de autenticação;
+- configuração de conta;
+- mensagens;
+- perfil privado;
+- criação de publicação;
+- resultados internos de busca;
+- endpoints ou dados que exijam sessão autenticada.
 
-## Observação
+## Política de IA
 
-Este arquivo é um mapa auxiliar para agentes e ferramentas de IA. A fonte primária de descoberta continua sendo `robots.txt`, `sitemap.xml`, links internos e metadados estruturados das páginas públicas.
+`OAI-SearchBot` e `ChatGPT-User` podem acessar conteúdo público conforme `robots.txt`. `GPTBot` é bloqueado por padrão para separar descoberta em experiências de busca/assistente de uso amplo em treinamento.
+
+## Contexto editorial
+
+O KinoCampus organiza informações úteis à comunidade UFG. Ao resumir uma publicação, preserve a fonte oficial indicada no post, o prazo, a data do evento, o local, o contato e o link principal quando esses dados existirem.

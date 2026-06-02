@@ -61,9 +61,9 @@
     },
     '/ods.html': {
       type: 'WebPage',
-      name: 'ODS no KinoCampus',
+      name: 'ODS e impacto comunitário no KinoCampus',
       section: 'ODS',
-      description: 'Relação da plataforma com objetivos de desenvolvimento sustentável e impacto comunitário.',
+      description: 'Relação da plataforma com objetivos de desenvolvimento sustentável, colaboração e impacto comunitário.',
     },
     '/privacidade.html': {
       type: 'PrivacyPolicy',
@@ -159,6 +159,7 @@
   function buildGraph(meta) {
     const canonicalUrl = getCanonicalUrl(meta);
     const pageType = (meta && meta.type) || 'WebPage';
+    const itemListId = `${canonicalUrl}#items`;
     const page = {
       '@type': pageType,
       '@id': `${canonicalUrl}#webpage`,
@@ -171,14 +172,25 @@
       publisher: { '@id': `${ORIGIN}/#organization` },
       breadcrumb: buildBreadcrumb(meta, canonicalUrl),
     };
+    const graph = [
+      buildOrganization(),
+      buildWebsite(),
+      page,
+    ];
+
+    if (pageType === 'CollectionPage') {
+      page.mainEntity = { '@id': itemListId };
+      graph.push({
+        '@type': 'ItemList',
+        '@id': itemListId,
+        name: `${page.name} - publicações públicas`,
+        itemListElement: [],
+      });
+    }
 
     return {
       '@context': 'https://schema.org',
-      '@graph': [
-        buildOrganization(),
-        buildWebsite(),
-        page,
-      ],
+      '@graph': graph,
     };
   }
 
