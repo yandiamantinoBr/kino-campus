@@ -455,6 +455,9 @@
     'aria-label.admin-trends-query':     'Filtrar tendências de busca',
     'aria-label.admin-trends-page-size': 'Linhas por página em tendências de busca',
     'aria-label.admin-trends-pagination': 'Paginação das tendências de busca',
+    'aria-label.search-results-filters': 'Filtros dos resultados de busca',
+    'aria-label.search-results-module':  'Filtrar por módulo',
+    'aria-label.search-results-sort':    'Ordenar resultados',
 
     // My posts popover
     'aria-label.my-posts-save-close':   'Fechar',

@@ -137,6 +137,35 @@ describe('KCSearchShared', () => {
       expect(results[0].id).toBe('4');
       expect(results[1].id).toBe('1');
     });
+
+    test('supports search result filters for closed and non-public posts', () => {
+      const list = [
+        { id: 'active', title: 'CONPEEX Congresso de Pesquisa', module: 'eventos', status: 'published', created_at: '2026-06-01T10:00:00Z' },
+        { id: 'closed', title: 'CONPEEX Congresso encerrado', module: 'eventos', status: 'closed', created_at: '2026-06-02T10:00:00Z' },
+        { id: 'hidden', title: 'CONPEEX oculto', module: 'eventos', status: 'hidden', created_at: '2026-06-03T10:00:00Z' },
+        { id: 'expired-date', title: 'CONPEEX com prazo vencido', module: 'eventos', status: 'published', metadata: { data_evento: '2026-05-01' } },
+      ];
+
+      const results = SearchShared.searchCollection(list, {
+        q: 'conpeex',
+        hideClosed: true,
+        publicOnly: true,
+        now: '2026-06-02T12:00:00Z',
+        limit: 10,
+      });
+
+      expect(results.map((post) => post.id)).toEqual(['active']);
+    });
+
+    test('supports recent and engagement sorting modes', () => {
+      const list = [
+        { id: 'older-popular', title: 'CONPEEX congresso', module: 'eventos', votos: 8, view_count: 100, created_at: '2026-05-01T10:00:00Z' },
+        { id: 'newer', title: 'CONPEEX congresso', module: 'eventos', votos: 1, view_count: 0, created_at: '2026-06-01T10:00:00Z' },
+      ];
+
+      expect(SearchShared.searchCollection(list, { q: 'conpeex', sortBy: 'recent', limit: 10 })[0].id).toBe('newer');
+      expect(SearchShared.searchCollection(list, { q: 'conpeex', sortBy: 'engagement', limit: 10 })[0].id).toBe('older-popular');
+    });
   });
 
   describe('fuzzy matching (tolerância a erros)', () => {

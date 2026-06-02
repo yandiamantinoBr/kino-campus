@@ -16,6 +16,18 @@
   let kcDbPosts = null;
   let dropdownDebounceTimer = null;
   let searchFlushTimer = null;
+  let searchResultsRequestSeq = 0;
+
+  const SEARCH_RESULTS_LIMIT = 120;
+  const SEARCH_RESULTS_MODULES = [
+    { key: '', label: 'Todos' },
+    { key: 'eventos', label: 'Eventos' },
+    { key: 'oportunidades', label: 'Oportunidades' },
+    { key: 'moradia', label: 'Moradia' },
+    { key: 'compra-venda', label: 'Compra e venda' },
+    { key: 'caronas', label: 'Caronas' },
+    { key: 'achados-perdidos', label: 'Achados/Perdidos' }
+  ];
 
   const MEMORY_STORAGE = (function () {
     const state = {};
@@ -208,7 +220,11 @@
         category: options.category || options.categoria || null,
         subcategory: options.subcategory || options.subcategoria || null,
         limit: options.limit != null ? options.limit : 50,
-        minScore: options.minScore != null ? options.minScore : 0.3
+        minScore: options.minScore != null ? options.minScore : 0.3,
+        publicOnly: options.publicOnly === true,
+        hideClosed: options.hideClosed === true,
+        hideEnded: options.hideEnded === true,
+        sortBy: options.sortBy || options.sort_by || 'relevance'
       });
     }
 
@@ -375,6 +391,180 @@
     return file === 'search-results.html' || !!document.getElementById('searchResultsList');
   }
 
+  function normalizeModuleKey(value) {
+    return normalizeText(value)
+      .replace(/\s+/g, '-')
+      .replace(/^compra-e-venda$/, 'compra-venda')
+      .replace(/^achados-perdidos$/, 'achados-perdidos');
+  }
+
+  function getPostModuleKey(post) {
+    const meta = post && post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+    return normalizeModuleKey(
+      (post && (post.module || post.modulo || post.moduloKey || post.moduleKey)) ||
+      meta.module || meta.modulo || ''
+    );
+  }
+
+  function getModuleLabel(key) {
+    const normalized = normalizeModuleKey(key);
+    const option = SEARCH_RESULTS_MODULES.find((item) => item.key === normalized);
+    return option ? option.label : (key ? String(key) : 'Todos');
+  }
+
+  function getResultControls() {
+    return {
+      module: document.getElementById('searchResultsModuleFilter'),
+      hideClosed: document.getElementById('searchResultsHideClosed'),
+      sort: document.getElementById('searchResultsSort'),
+      clear: document.getElementById('searchResultsClearFilters'),
+      active: document.getElementById('searchResultsActiveFilters')
+    };
+  }
+
+  function readResultFilters() {
+    const controls = getResultControls();
+    const urlModule = getQueryParam('module') || getQueryParam('modulo') || '';
+    const urlSort = getQueryParam('sort') || '';
+    const urlClosed = getQueryParam('closed');
+    const urlHideClosed = getQueryParam('hideClosed');
+    const hideClosedFromUrl = urlClosed === '1' || urlHideClosed === '1' || urlHideClosed === 'true';
+
+    return {
+      module: normalizeModuleKey(controls.module ? controls.module.value : urlModule),
+      hideClosed: controls.hideClosed ? controls.hideClosed.checked : hideClosedFromUrl,
+      sortBy: controls.sort ? controls.sort.value : (urlSort || 'relevance')
+    };
+  }
+
+  function initializeResultControlsFromUrl() {
+    const controls = getResultControls();
+    const moduleParam = getQueryParam('module') || getQueryParam('modulo') || '';
+    const sortParam = getQueryParam('sort') || 'relevance';
+    const closedParam = getQueryParam('closed');
+    const hideClosedParam = getQueryParam('hideClosed');
+
+    if (controls.module) controls.module.value = normalizeModuleKey(moduleParam);
+    if (controls.sort) controls.sort.value = ['relevance', 'recent', 'engagement'].includes(sortParam) ? sortParam : 'relevance';
+    if (controls.hideClosed) {
+      controls.hideClosed.checked = closedParam === '1' || hideClosedParam === '1' || hideClosedParam === 'true';
+    }
+  }
+
+  function writeResultFiltersToUrl(query, filters) {
+    if (!window.history || typeof window.history.replaceState !== 'function') return;
+    const url = new URL(window.location.href);
+    const q = String(query || '').trim();
+    if (q) url.searchParams.set('q', q);
+    else url.searchParams.delete('q');
+
+    if (filters.module) url.searchParams.set('module', filters.module);
+    else url.searchParams.delete('module');
+    url.searchParams.delete('modulo');
+
+    if (filters.sortBy && filters.sortBy !== 'relevance') url.searchParams.set('sort', filters.sortBy);
+    else url.searchParams.delete('sort');
+
+    if (filters.hideClosed) url.searchParams.set('closed', '1');
+    else url.searchParams.delete('closed');
+    url.searchParams.delete('hideClosed');
+
+    window.history.replaceState({}, '', url.toString());
+  }
+
+  function scoreResultsForQuery(results, query) {
+    const searchShared = getSearchShared();
+    const list = Array.isArray(results) ? results : [];
+    if (!searchShared || typeof searchShared.scorePost !== 'function') {
+      return list.map((post) => Object.assign({}, post));
+    }
+    const expandedTerms = typeof searchShared.expandQueryTerms === 'function'
+      ? searchShared.expandQueryTerms(query)
+      : null;
+    return list.map((post) => {
+      const current = Number(post && post.relevanceScore);
+      const score = Number.isFinite(current) && current > 0
+        ? current
+        : searchShared.scorePost(post, { q: query, expandedTerms });
+      return Object.assign({}, post, { relevanceScore: score });
+    });
+  }
+
+  function filterAndSortResults(rawResults, query, filters) {
+    const searchShared = getSearchShared();
+    let list = scoreResultsForQuery(rawResults, query)
+      .filter((post) => {
+        if (!post) return false;
+        if (filters.module && getPostModuleKey(post) !== filters.module) return false;
+        if (searchShared && typeof searchShared.isPostHiddenFromPublic === 'function' && searchShared.isPostHiddenFromPublic(post)) return false;
+        if (filters.hideClosed && searchShared && typeof searchShared.isPostClosedOrEnded === 'function') {
+          return !searchShared.isPostClosedOrEnded(post);
+        }
+        return true;
+      });
+
+    if (searchShared && typeof searchShared.sortSearchResults === 'function') {
+      list = searchShared.sortSearchResults(list, { sortBy: filters.sortBy });
+    }
+    return list;
+  }
+
+  function updateResultsControlsState(rawResults, filteredResults, filters) {
+    const controls = getResultControls();
+    const rawList = Array.isArray(rawResults) ? rawResults : [];
+    const visibleList = Array.isArray(filteredResults) ? filteredResults : [];
+    const moduleCounts = rawList.reduce((acc, post) => {
+      const key = getPostModuleKey(post);
+      if (!key) return acc;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    if (controls.module) {
+      SEARCH_RESULTS_MODULES.forEach((item) => {
+        const option = controls.module.querySelector(`option[value="${item.key}"]`);
+        if (!option) return;
+        const count = item.key ? (moduleCounts[item.key] || 0) : rawList.length;
+        option.textContent = item.key ? `${item.label} (${count})` : `${item.label} (${rawList.length})`;
+        option.disabled = !!item.key && count === 0;
+      });
+    }
+
+    if (controls.active) {
+      const parts = [];
+      if (filters.module) parts.push(`Módulo: ${getModuleLabel(filters.module)}`);
+      if (filters.hideClosed) parts.push('Encerradas ocultas');
+      if (filters.sortBy === 'recent') parts.push('Mais recentes');
+      if (filters.sortBy === 'engagement') parts.push('Maior engajamento');
+      controls.active.textContent = parts.length
+        ? `${parts.join(' · ')} · ${visibleList.length} resultado(s) visível(is)`
+        : 'Sem filtros adicionais';
+    }
+  }
+
+  function bindResultsControls() {
+    const controls = getResultControls();
+    const searchInput = document.getElementById('searchInput');
+    const rerender = () => renderResultsToPage(searchInput ? searchInput.value : getQueryParam('q'));
+
+    ['module', 'hideClosed', 'sort'].forEach((key) => {
+      const el = controls[key];
+      if (!el || el.dataset.kcSearchBound === '1') return;
+      el.dataset.kcSearchBound = '1';
+      el.addEventListener('change', rerender);
+    });
+
+    if (controls.clear && controls.clear.dataset.kcSearchBound !== '1') {
+      controls.clear.dataset.kcSearchBound = '1';
+      controls.clear.addEventListener('click', () => {
+        if (controls.module) controls.module.value = '';
+        if (controls.hideClosed) controls.hideClosed.checked = false;
+        if (controls.sort) controls.sort.value = 'relevance';
+        rerender();
+      });
+    }
+  }
+
   function buildResultCard(raw) {
     const post = normalizeAnyPost(raw);
     const modeled = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
@@ -405,6 +595,7 @@
   }
 
   async function renderResultsToPage(query) {
+    const requestSeq = ++searchResultsRequestSeq;
     const listEl = document.getElementById('searchResultsList');
     if (!listEl) return;
 
@@ -413,40 +604,45 @@
     const noEl = document.getElementById('noResults');
     const countEl = document.getElementById('resultsCount');
 
-    if (titleEl) titleEl.textContent = q ? `“${q}”` : '';
+    if (titleEl) titleEl.textContent = q ? `"${q}"` : '';
 
     if (!q) {
       listEl.innerHTML = '';
       if (noEl) noEl.style.display = 'block';
       if (countEl) countEl.textContent = '0';
+      updateResultsControlsState([], [], readResultFilters());
       return;
     }
 
-    const moduleParam = getQueryParam('module') || getQueryParam('modulo');
     const categoryParam = getQueryParam('category') || getQueryParam('categoria');
     const subcategoryParam = getQueryParam('subcategory') || getQueryParam('subcategoria');
 
     let results = [];
     try {
       if (KCAPI && typeof KCAPI.searchPosts === 'function') {
-        const params = { q, limit: 50 };
-        if (moduleParam) params.module = moduleParam;
+        const params = { q, limit: SEARCH_RESULTS_LIMIT };
         if (categoryParam) params.category = categoryParam;
         if (subcategoryParam) params.subcategory = subcategoryParam;
         results = await KCAPI.searchPosts(params);
       } else {
-        results = await searchPosts(q, { limit: 50, minScore: 0.2 });
+        results = await searchPosts(q, { limit: SEARCH_RESULTS_LIMIT, minScore: 0.2 });
       }
     } catch (error) {
       console.error('[KinoCampus] Busca falhou:', error);
       results = [];
     }
 
-    const safeResults = Array.isArray(results) ? results : [];
-    listEl.innerHTML = safeResults.map(buildResultCard).join('\n');
+    if (requestSeq !== searchResultsRequestSeq) return;
 
-    if (noEl) noEl.style.display = safeResults.length ? 'none' : 'block';
-    if (countEl) countEl.textContent = String(safeResults.length);
+    const safeResults = Array.isArray(results) ? results : [];
+    const filters = readResultFilters();
+    writeResultFiltersToUrl(q, filters);
+    const filteredResults = filterAndSortResults(safeResults, q, filters);
+    updateResultsControlsState(safeResults, filteredResults, filters);
+    listEl.innerHTML = filteredResults.map(buildResultCard).join('\n');
+
+    if (noEl) noEl.style.display = filteredResults.length ? 'none' : 'block';
+    if (countEl) countEl.textContent = String(filteredResults.length);
   }
 
   function getOrCreateDropdown() {
@@ -580,6 +776,7 @@
         results = await searchPosts(q, { limit: 8, minScore: 0.2 });
       }
       if (!Array.isArray(results)) results = [];
+      results = filterAndSortResults(results, q, { module: '', hideClosed: true, sortBy: 'relevance' }).slice(0, 8);
       positionDropdown(dropdown, searchBarEl);
       renderDropdown(dropdown, results, q);
     } catch (_) {
@@ -610,6 +807,8 @@
     if (resultsPage) {
       const qParam = getQueryParam('q');
       if (searchInput && qParam) searchInput.value = qParam;
+      initializeResultControlsFromUrl();
+      bindResultsControls();
       renderResultsToPage(searchInput ? searchInput.value : qParam);
       if (qParam && qParam.trim().length >= 2) {
         trackSearch(qParam.trim(), { source: 'results-load' });

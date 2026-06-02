@@ -383,6 +383,139 @@
     return a < b ? 1 : -1;
   }
 
+  function getMetadata(post) {
+    return (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata))
+      ? post.metadata
+      : {};
+  }
+
+  function getPostStatus(post) {
+    var meta = getMetadata(post);
+    return normalizeText(getFirstText(post, ['status', 'situacao']) || meta.status || '');
+  }
+
+  function isPostHiddenFromPublic(post) {
+    var status = getPostStatus(post);
+    return ['hidden', 'deleted', 'archived', 'pending', 'rejected'].indexOf(status) !== -1;
+  }
+
+  function parsePostDate(value, endOfDay) {
+    if (value == null || value === '') return 0;
+    var text = String(value).trim();
+    if (!text) return 0;
+    if (endOfDay && /^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      text += 'T23:59:59';
+    }
+    var time = Date.parse(text);
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  function getPostTimestamp(post) {
+    if (!post) return 0;
+    var meta = getMetadata(post);
+    return parsePostDate(
+      post.bumped_at || post.bumpedAt || post.updated_at || post.updatedAt ||
+      post.created_at || post.createdAt || post.timestamp || post.criadoEm ||
+      meta.bumped_at || meta.updated_at || meta.created_at,
+      false
+    );
+  }
+
+  function getPostEndTime(post) {
+    if (!post) return 0;
+    var meta = getMetadata(post);
+    return parsePostDate(
+      post.expires_at || post.expiresAt || post.date_end_at || post.dateEndAt ||
+      post.deadline_date || post.deadlineDate || post.event_date || post.eventDate ||
+      meta.expires_at || meta.expiresAt || meta.date_end_at || meta.dateEndAt ||
+      meta.deadline_date || meta.deadlineDate || meta.event_date_detected ||
+      meta.event_date || meta.data_evento || meta.data_fim || meta.end_at,
+      true
+    );
+  }
+
+  function isPostClosedOrEnded(post, nowValue) {
+    var status = getPostStatus(post);
+    if (['closed', 'expired', 'deleted', 'hidden', 'archived'].indexOf(status) !== -1) return true;
+    var endTime = getPostEndTime(post);
+    if (!endTime) return false;
+    var nowTime = nowValue != null ? parsePostDate(nowValue, false) : Date.now();
+    return endTime < nowTime;
+  }
+
+  function getCommentsCount(post) {
+    if (!post) return 0;
+    if (Number.isFinite(Number(post.comentarios))) return Number(post.comentarios);
+    if (Number.isFinite(Number(post.comment_count))) return Number(post.comment_count);
+    if (Number.isFinite(Number(post.commentCount))) return Number(post.commentCount);
+    if (Array.isArray(post.comments) && post.comments[0] && Number.isFinite(Number(post.comments[0].count))) {
+      return Number(post.comments[0].count);
+    }
+    return 0;
+  }
+
+  function getPostEngagement(post) {
+    if (!post) return 0;
+    var meta = getMetadata(post);
+    var votes = Number(post.votos || post.votes || post.vote_count || post.voteCount || 0);
+    var views = Number(post.view_count || post.viewCount || meta.view_count || 0);
+    var shares = Number(post.share_count || post.shareCount || meta.share_count || 0);
+    var clicks = Number(post.coupon_clicks || post.couponClicks || meta.coupon_clicks || 0);
+    var saves = Number(post.saved_count || post.savedCount || meta.saved_count || 0);
+    var highlight = Number(post.highlight_score || post.highlightScore || 0);
+    var comments = getCommentsCount(post);
+    return (
+      (Number.isFinite(votes) ? votes * 3 : 0) +
+      (Number.isFinite(comments) ? comments * 2 : 0) +
+      (Number.isFinite(shares) ? shares * 2 : 0) +
+      (Number.isFinite(saves) ? saves * 2 : 0) +
+      (Number.isFinite(clicks) ? clicks * 1.5 : 0) +
+      (Number.isFinite(highlight) ? highlight * 2 : 0) +
+      (Number.isFinite(views) ? views * 0.08 : 0)
+    );
+  }
+
+  function normalizeSortBy(value) {
+    var raw = normalizeText(value || 'relevance');
+    if (['recent', 'recentes', 'mais-recentes', 'mais recentes', 'data'].indexOf(raw) !== -1) return 'recent';
+    if (['engagement', 'engajamento', 'popular', 'populares', 'mais acessadas'].indexOf(raw) !== -1) return 'engagement';
+    return 'relevance';
+  }
+
+  function sortSearchResults(results, params) {
+    var p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
+    var mode = normalizeSortBy(p.sortBy || p.sort_by || p.sort);
+    var nowValue = p.now || p.nowValue || null;
+    var list = Array.isArray(results) ? results.slice() : [];
+
+    list.sort(function (left, right) {
+      var leftEnded = isPostClosedOrEnded(left, nowValue) ? 1 : 0;
+      var rightEnded = isPostClosedOrEnded(right, nowValue) ? 1 : 0;
+      var leftScore = Number(left && left.relevanceScore || 0);
+      var rightScore = Number(right && right.relevanceScore || 0);
+      var leftEngagement = getPostEngagement(left);
+      var rightEngagement = getPostEngagement(right);
+      var dateDiff = getPostTimestamp(right) - getPostTimestamp(left);
+
+      if (mode === 'recent') {
+        if (dateDiff !== 0) return dateDiff;
+        if (rightScore !== leftScore) return rightScore - leftScore;
+      } else if (mode === 'engagement') {
+        if (rightEngagement !== leftEngagement) return rightEngagement - leftEngagement;
+        if (rightScore !== leftScore) return rightScore - leftScore;
+        if (dateDiff !== 0) return dateDiff;
+      } else {
+        if (rightScore !== leftScore) return rightScore - leftScore;
+        if (leftEnded !== rightEnded) return leftEnded - rightEnded;
+        if (dateDiff !== 0) return dateDiff;
+      }
+
+      return compareIdDesc(left && (left.id || left.uuid), right && (right.id || right.uuid));
+    });
+
+    return list;
+  }
+
   function matchesSearchFilters(post, params) {
     var p = (params && typeof params === 'object' && !Array.isArray(params)) ? params : {};
     var rawModule = p.module != null ? p.module : (p.modulo != null ? p.modulo : null);
@@ -399,6 +532,8 @@
     if (moduleFilters.length && moduleFilters.indexOf(postModule) === -1) return false;
     if (categoryFilter && postCategory !== categoryFilter) return false;
     if (subcategoryFilter && postSubcategory !== subcategoryFilter) return false;
+    if (p.publicOnly === true && isPostHiddenFromPublic(post)) return false;
+    if ((p.hideClosed === true || p.hideEnded === true) && isPostClosedOrEnded(post, p.now || p.nowValue)) return false;
     return true;
   }
 
@@ -424,20 +559,7 @@
       }
     }
 
-    out.sort(function (left, right) {
-      var scoreDiff = Number(right.relevanceScore || 0) - Number(left.relevanceScore || 0);
-      if (scoreDiff !== 0) return scoreDiff;
-
-      var dateDiff = compareDateDesc(
-        left && (left.created_at || left.createdAt || left.timestamp || left.criadoEm),
-        right && (right.created_at || right.createdAt || right.timestamp || right.criadoEm)
-      );
-      if (dateDiff !== 0) return dateDiff;
-
-      return compareIdDesc(left && (left.id || left.uuid), right && (right.id || right.uuid));
-    });
-
-    return out.slice(0, limit);
+    return sortSearchResults(out, p).slice(0, limit);
   }
 
   return {
@@ -452,6 +574,13 @@
     fuzzyBestSimilarity: fuzzyBestSimilarity,
     matchesQueryText: matchesQueryText,
     scorePost: scorePost,
+    getPostStatus: getPostStatus,
+    getPostTimestamp: getPostTimestamp,
+    getPostEndTime: getPostEndTime,
+    getPostEngagement: getPostEngagement,
+    isPostClosedOrEnded: isPostClosedOrEnded,
+    isPostHiddenFromPublic: isPostHiddenFromPublic,
+    sortSearchResults: sortSearchResults,
     searchCollection: searchCollection
   };
 }));
