@@ -36,8 +36,8 @@ async function fetchPost(id) {
     return null;
   }
 
-  const select = 'id,legacy_id,title,description,price,module,category,location,image_url,metadata,post_media(url,is_cover)';
-  const selectCompat = 'id,legacy_id,title,description,price,module,category,location,metadata,post_media(url,is_cover)';
+  const select = 'id,legacy_id,title,description,price,module,category,location,image_url,metadata,created_at,updated_at,post_media(url,is_cover)';
+  const selectCompat = 'id,legacy_id,title,description,price,module,category,location,metadata,created_at,updated_at,post_media(url,is_cover)';
   const headers = {
     apikey: key,
     Authorization: 'Bearer ' + key,
@@ -144,6 +144,83 @@ function replaceTitleTag(html, newTitle) {
   return html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(newTitle)}</title>`);
 }
 
+function replaceOrInsertCanonical(html, canonicalUrl) {
+  const escaped = escapeHtml(canonicalUrl);
+  if (/<link\s+rel="canonical"/i.test(html)) {
+    return html.replace(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i, `<link rel="canonical" href="${escaped}" />`);
+  }
+  return html.replace('</head>', `  <link rel="canonical" href="${escaped}" />\n</head>`);
+}
+
+function replaceOrInsertRobots(html, content) {
+  const escaped = escapeHtml(content);
+  if (/<meta\s+name="robots"/i.test(html)) {
+    return html.replace(/<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i, `<meta name="robots" content="${escaped}" />`);
+  }
+  return html.replace('</head>', `  <meta name="robots" content="${escaped}" />\n</head>`);
+}
+
+function buildProductJsonLd(post, values) {
+  const entity = {
+    '@type': 'CreativeWork',
+    '@id': `${values.url}#post`,
+    name: values.title,
+    description: values.description,
+    url: values.url,
+    image: values.image,
+    inLanguage: 'pt-BR',
+    datePublished: post.created_at || undefined,
+    dateModified: post.updated_at || post.created_at || undefined,
+    about: [
+      post.module ? { '@type': 'Thing', name: getCategoryLabel(post.module) } : null,
+      post.category ? { '@type': 'Thing', name: String(post.category) } : null,
+    ].filter(Boolean),
+  };
+
+  if (post.location) entity.contentLocation = { '@type': 'Place', name: String(post.location) };
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': 'https://www.kinocampus.com.br/#organization',
+        name: 'KinoCampus',
+        url: 'https://www.kinocampus.com.br/',
+        logo: 'https://www.kinocampus.com.br/assets/favicon.svg',
+      },
+      {
+        '@type': 'WebSite',
+        '@id': 'https://www.kinocampus.com.br/#website',
+        name: 'KinoCampus',
+        url: 'https://www.kinocampus.com.br/',
+        inLanguage: 'pt-BR',
+        publisher: { '@id': 'https://www.kinocampus.com.br/#organization' },
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${values.url}#webpage`,
+        url: values.url,
+        name: values.title,
+        description: values.description,
+        isPartOf: { '@id': 'https://www.kinocampus.com.br/#website' },
+        inLanguage: 'pt-BR',
+        image: values.image,
+        mainEntity: { '@id': `${values.url}#post` },
+      },
+      entity,
+    ],
+  };
+}
+
+function replaceOrInsertProductJsonLd(html, data) {
+  const script = `<script type="application/ld+json" data-kc-product-structured-data="true">${JSON.stringify(data)}</script>`;
+  if (/data-kc-product-structured-data="true"/i.test(html)) {
+    return html.replace(/<script\s+type="application\/ld\+json"\s+data-kc-product-structured-data="true">[\s\S]*?<\/script>/i, script);
+  }
+  return html.replace('</head>', `  ${script}\n</head>`);
+}
+
 export default async function handler(req, res) {
   console.log('[og-product] Handler invoked — id:', req.query.id || '(none)');
   const html = getProductHtml();
@@ -184,6 +261,7 @@ export default async function handler(req, res) {
     const ogImageFallback = `${baseUrl}/api/og-image?type=${post.module || 'product'}`;
     const ogImage = getPostImage(post) || ogImageFallback;
     const ogUrl = `${baseUrl}/product.html?id=${post.id}`;
+    const canonicalUrl = ogUrl;
 
     // Replace OG meta tags
     let modified = html;
@@ -196,6 +274,8 @@ export default async function handler(req, res) {
     modified = replaceMetaContent(modified, 'name', 'twitter:title', ogTitle);
     modified = replaceMetaContent(modified, 'name', 'twitter:description', ogDesc);
     modified = replaceMetaContent(modified, 'name', 'twitter:image', ogImage);
+    modified = replaceOrInsertCanonical(modified, canonicalUrl);
+    modified = replaceOrInsertRobots(modified, 'index,follow,max-image-preview:large,max-snippet:-1');
 
     // Add og:locale if not present
     if (!modified.includes('og:locale')) {
@@ -213,6 +293,13 @@ export default async function handler(req, res) {
       /(<meta\s+name="description"\s+content=")([^"]*)(")/i,
       `$1${escapeHtml(ogDesc)}$3`
     );
+
+    modified = replaceOrInsertProductJsonLd(modified, buildProductJsonLd(post, {
+      url: canonicalUrl,
+      title: ogTitle,
+      description: ogDesc,
+      image: ogImage,
+    }));
 
     // Cache at CDN level: 5 min cache, stale-while-revalidate for 10 min
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');

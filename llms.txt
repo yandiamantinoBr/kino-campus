@@ -1,0 +1,35 @@
+# KinoCampus
+
+> Plataforma comunitária independente para a comunidade da Universidade Federal de Goiás (UFG), com publicações de eventos, oportunidades, moradia, compra e venda, caronas e achados/perdidos.
+
+Base canônica: https://www.kinocampus.com.br/
+Sitemap: https://www.kinocampus.com.br/sitemap.xml
+Idioma principal: pt-BR
+Contato público: contato@kinocampus.com.br
+
+## Páginas públicas principais
+
+- [Início](https://www.kinocampus.com.br/): visão geral e publicações recentes da comunidade.
+- [Eventos](https://www.kinocampus.com.br/eventos.html): eventos acadêmicos, culturais, esportivos e institucionais.
+- [Oportunidades](https://www.kinocampus.com.br/oportunidades.html): bolsas, editais, estágios, empregos, monitorias e chamadas acadêmicas.
+- [Moradia](https://www.kinocampus.com.br/moradia.html): quartos, repúblicas, imóveis e anúncios de moradia para estudantes.
+- [Compra e venda](https://www.kinocampus.com.br/compra-venda-feed.html): itens úteis no contexto universitário.
+- [Caronas](https://www.kinocampus.com.br/caronas-feed.html): ofertas e pedidos de carona.
+- [Achados e perdidos](https://www.kinocampus.com.br/achados-perdidos.html): itens perdidos ou encontrados.
+- [Central de ajuda](https://www.kinocampus.com.br/ajuda.html): suporte, dúvidas e pedidos administrativos.
+- [Declaração de Privacidade](https://www.kinocampus.com.br/privacidade.html): política de privacidade, cookies e tratamento de dados.
+- [Termos de Uso](https://www.kinocampus.com.br/termos.html): regras de uso da plataforma.
+
+## O que indexar
+
+- Páginas públicas listadas acima.
+- Publicações públicas com `status=published`, disponíveis em `https://www.kinocampus.com.br/product.html?id={id}` e referenciadas no sitemap.
+
+## O que não usar como fonte pública
+
+- `/admin/`
+- páginas de autenticação, configuração, mensagens, perfil privado, criação de publicação e resultados internos de busca.
+
+## Observação
+
+Este arquivo é um mapa auxiliar para agentes e ferramentas de IA. A fonte primária de descoberta continua sendo `robots.txt`, `sitemap.xml`, links internos e metadados estruturados das páginas públicas.

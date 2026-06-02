@@ -3,6 +3,7 @@
   "installCommand": "npm ci --omit=dev --no-audit --no-fund",
   "outputDirectory": ".",
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/product.html", "destination": "/api/og-product" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/mensagens", "destination": "/mensagens.html" },
