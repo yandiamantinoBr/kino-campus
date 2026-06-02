@@ -6,7 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 const r = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-describe('Busca fuzzy em filtros locais com #searchInput', () => {
+describe('Busca fuzzy em filtros locais sem ocupar o #searchInput global', () => {
   test('search.js usa KCSearchShared.matchesQueryText no filtro de cards', () => {
     const source = r('assets/js/features/kc-search.js');
     expect(source).toContain('searchShared.matchesQueryText');
@@ -16,6 +16,12 @@ describe('Busca fuzzy em filtros locais com #searchInput', () => {
     const source = r('assets/js/features/kc-filters.js');
     expect(source).toContain('window.KCSearchShared');
     expect(source).toContain('shared.matchesQueryText');
+  });
+
+  test('kc-filters reserva #searchInput para a busca global do header', () => {
+    const source = r('assets/js/features/kc-filters.js');
+    expect(source).toContain('searchInputId: "kcLocalSearchInput"');
+    expect(source).not.toContain('searchInputId: "searchInput"');
   });
 
   test('feeds modulares com filtro próprio não ficam presos em includes puro', () => {

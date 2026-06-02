@@ -418,7 +418,8 @@
       hideClosed: document.getElementById('searchResultsHideClosed'),
       sort: document.getElementById('searchResultsSort'),
       clear: document.getElementById('searchResultsClearFilters'),
-      active: document.getElementById('searchResultsActiveFilters')
+      active: document.getElementById('searchResultsActiveFilters'),
+      count: document.getElementById('searchResultsVisibleSummary')
     };
   }
 
@@ -530,6 +531,14 @@
       });
     }
 
+    if (controls.count) {
+      const total = rawList.length;
+      const visible = visibleList.length;
+      controls.count.textContent = total === visible
+        ? `${visible} resultado(s)`
+        : `${visible} de ${total} resultado(s)`;
+    }
+
     if (controls.active) {
       const parts = [];
       if (filters.module) parts.push(`Módulo: ${getModuleLabel(filters.module)}`);
@@ -537,8 +546,8 @@
       if (filters.sortBy === 'recent') parts.push('Mais recentes');
       if (filters.sortBy === 'engagement') parts.push('Maior engajamento');
       controls.active.textContent = parts.length
-        ? `${parts.join(' · ')} · ${visibleList.length} resultado(s) visível(is)`
-        : 'Sem filtros adicionais';
+        ? parts.join(' · ')
+        : 'Todos os módulos · Mais relevantes';
     }
   }
 
@@ -799,7 +808,6 @@
     const searchBarEl = searchInput ? searchInput.closest('.kc-search-bar') : null;
     const searchButton = document.querySelector('.kc-search-bar button');
     const resultsPage = isResultsPage();
-    const hasPageFilter = (!resultsPage) && (typeof window.filterPosts === 'function');
     const dropdown = (!resultsPage && searchBarEl) ? getOrCreateDropdown() : null;
 
     bindSearchFlushLifecycle();
@@ -838,12 +846,6 @@
           return;
         }
 
-        if (hasPageFilter) {
-          window.filterPosts(q);
-        } else {
-          filterCurrentPageCards(q);
-        }
-
         if (dropdown) {
           clearTimeout(dropdownDebounceTimer);
           dropdownDebounceTimer = setTimeout(() => updateDropdown(q, dropdown, searchBarEl), 180);
@@ -867,12 +869,6 @@
           return;
         }
 
-        if (hasPageFilter) {
-          trackSearch(q, { source: 'page-filter-submit' });
-          window.filterPosts(q);
-          return;
-        }
-
         navigateToResults(q, { source: 'search-enter' });
       });
 
@@ -892,12 +888,6 @@
         if (resultsPage) {
           trackSearch(q, { source: 'results-submit' });
           renderResultsToPage(q);
-          return;
-        }
-
-        if (hasPageFilter) {
-          trackSearch(q, { source: 'page-filter-submit' });
-          window.filterPosts(q);
           return;
         }
 

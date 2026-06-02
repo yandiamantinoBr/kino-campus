@@ -9,7 +9,7 @@
   const KCUtils = (typeof window !== 'undefined' && window.KCUtils) ? window.KCUtils : null;
   const DEFAULTS = {
     tabsSelector: ".kc-feed-tabs a",
-    searchInputId: "searchInput",
+    searchInputId: "kcLocalSearchInput",
     cardSelector: ".kc-card",
     titleSelector: ".kc-card__title",
     descSelector: ".kc-card__description-preview",

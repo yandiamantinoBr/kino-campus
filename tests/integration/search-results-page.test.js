@@ -14,6 +14,8 @@ describe('search-results.html', () => {
     expect(html).toContain('id="searchResultsSort"');
     expect(html).toContain('id="searchResultsHideClosed"');
     expect(html).toContain('id="searchResultsActiveFilters"');
+    expect(html).toContain('id="searchResultsVisibleSummary"');
+    expect(html).toContain('kc-search-results-controls__summary');
     expect(html).toContain('data-i18n-aria-label="aria-label.search-results-filters"');
   });
 
@@ -21,7 +23,7 @@ describe('search-results.html', () => {
     const html = read('search-results.html');
 
     expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.2');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.2');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.3');
   });
 });
 
@@ -34,5 +36,14 @@ describe('kc-search.js search results controller', () => {
     expect(source).toContain('isPostClosedOrEnded');
     expect(source).toContain('writeResultFiltersToUrl(q, filters)');
     expect(source).toContain('SEARCH_RESULTS_LIMIT = 120');
+  });
+
+  test('keeps the header search global outside the results page', () => {
+    const source = read('assets/js/features/kc-search.js');
+
+    expect(source).not.toContain('const hasPageFilter');
+    expect(source).not.toContain("source: 'page-filter-submit'");
+    expect(source).toContain("navigateToResults(q, { source: 'search-enter' })");
+    expect(source).toContain("navigateToResults(q, { source: 'search-button' })");
   });
 });

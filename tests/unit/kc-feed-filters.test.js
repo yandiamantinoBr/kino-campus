@@ -174,6 +174,7 @@ describe('kcFilters URL bootstrap', () => {
         <a data-category="culturais" href="#culturais">Culturais</a>
       </div>
       <input id="searchInput" />
+      <input id="kcLocalSearchInput" />
       <div id="noResults"></div>
     `;
     document.body.setAttribute('data-kc-filters', 'tab-search');
@@ -189,13 +190,14 @@ describe('kcFilters URL bootstrap', () => {
     }));
   });
 
-  test('init restaura query e categoria a partir da URL', () => {
+  test('init restaura query e categoria sem ocupar a busca global do header', () => {
     require('../../assets/js/features/kc-feed-filters.js');
     require('../../assets/js/features/kc-filters.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     expect(window.kcFilters.getState().query).toBe('feira');
     expect(window.kcFilters.getState().category).toBe('culturais');
-    expect(document.getElementById('searchInput').value).toBe('feira');
+    expect(document.getElementById('searchInput').value).toBe('');
+    expect(document.getElementById('kcLocalSearchInput').value).toBe('feira');
   });
 });
