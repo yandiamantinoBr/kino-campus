@@ -80,6 +80,14 @@ describe('SEO e indexacao publica', () => {
     });
   });
 
+  test('home contem verificacao do Google Search Console', () => {
+    const html = read('index.html');
+    const audit = read('scripts/seo-audit.js');
+
+    expect(html).toContain('<meta name="google-site-verification" content="pUhcnFNqCxds-Z6VQcj7g5-IbIcEwSVZ9b2l4_OHIcc" />');
+    expect(audit).toContain('GOOGLE_SITE_VERIFICATION');
+  });
+
   test('ods.html tem H1 e Open Graph completos no HTML inicial', () => {
     const html = read('ods.html');
 

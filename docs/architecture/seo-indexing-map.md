@@ -10,6 +10,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 - Fallback/app shell de detalhe: `_product.html`, mantido como `noindex`.
 - Sitemap publico: `/sitemap.xml`, servido por `api/sitemap.js`.
 - Politica de crawlers: `/robots.txt`.
+- Verificacao Google Search Console por HTML tag: `index.html` (`google-site-verification`).
 - Mapa auxiliar para agentes: `/llms.txt`.
 
 ## Paginas indexaveis

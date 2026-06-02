@@ -5,6 +5,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
+const GOOGLE_SITE_VERIFICATION = 'pUhcnFNqCxds-Z6VQcj7g5-IbIcEwSVZ9b2l4_OHIcc';
 
 const INDEXABLE = {
   'index.html': '/',
@@ -92,6 +93,12 @@ function auditSitemap(errors) {
   if (!sitemap.includes('expires_at')) errors.push('api/sitemap.js: filtro/consulta de expiracao ausente.');
 }
 
+function auditSearchConsoleVerification(errors) {
+  const html = read('index.html');
+  const verification = match(html, /<meta\s+name=["']google-site-verification["']\s+content=["']([^"']*)/i).trim();
+  if (verification !== GOOGLE_SITE_VERIFICATION) errors.push('index.html: meta google-site-verification ausente ou incorreta.');
+}
+
 function main() {
   const errors = [];
   const warnings = [];
@@ -100,6 +107,7 @@ function main() {
   NOINDEX.forEach((file) => auditNoindex(file, errors));
   auditRobots(errors);
   auditSitemap(errors);
+  auditSearchConsoleVerification(errors);
 
   const summary = {
     checkedAt: new Date().toISOString(),
