@@ -25,6 +25,10 @@ evitar capas quebradas mesmo quando o script externo variar.
 O endpoint `supabase/functions/cadu-publish` agora:
 
 - aceita `formattedDescription` e preserva esse Markdown quando ele e acionavel;
+- bloqueia `QUALITY_BLOCKED` antes do insert quando detectar evento passado,
+  prazo vencido, release institucional/biografico, credito CMS, descricao fraca,
+  score abaixo de `0.70`, imagem temporaria/SVG como unica opcao ou Instagram
+  sem fonte oficial complementar;
 - completa `metadata.actionLabel` e `metadata.actionKey` quando o Cadu nao enviar;
 - usa `gratuito=true` por padrao para `eventos` e `oportunidades`;
 - aceita ate 5 imagens em `images[]`, salva a primeira como capa e as demais em
@@ -51,6 +55,13 @@ O endpoint `supabase/functions/cadu-publish` agora:
    scanner permitido e o browser autenticado (`scan-ig-browser.js`).
 6. Se o endpoint retornar `media.uploaded=false` com `media.error`, nao recrie
    o post em loop. Corrija a imagem via `edit` ou mande para revisao.
+7. O threshold de auto-publicacao local deve ser `0.70`. Itens entre `0.55` e
+   `0.69` entram em revisao, mesmo que parecam promissores.
+8. Antes de publicar, chame `check` com `sourceId` e `sourceUrl`; depois envie
+   `score`, `dates`, `formattedDescription`, `images`, `enrichmentSources` e
+   `enrichmentCheckedAt`.
+9. Se o endpoint retornar `QUALITY_BLOCKED`, nao reenvie em loop. Corrija a
+   fonte, enriquecimento, imagem ou descricao e rode dry-run novamente.
 
 ## Regra de enriquecimento ativo
 

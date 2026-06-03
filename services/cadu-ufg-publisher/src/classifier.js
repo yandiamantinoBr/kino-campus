@@ -16,6 +16,12 @@ const INCLUDE_TERMS = [
 const EXCLUDE_TERMS = [
   'nota de pesar', 'luto oficial', 'visita institucional', 'reuniao institucional',
   'homenagem', 'posse', 'balanco de gestao', 'relatorio de gestao',
+  'marca presenca', 'marcou presenca', 'participa de encontro', 'recebe alunos',
+  'se engaja', 'reune autoridades', 'e finalista', 'fica em 3', 'homenageia',
+  'conquista', 'estao na china', 'recebe expoente', 'reconhece os destaques',
+  'prospecta acordos', 'trajetoria academica', 'trajetoria profissional',
+  'perfil do servidor', 'perfil da servidora', 'servidor em destaque',
+  'historia de vida', 'conheca o servidor',
 ];
 
 const MONTHS = {
@@ -35,6 +41,14 @@ const MONTHS = {
 
 function has(text, term) {
   return text.includes(normalizeText(term));
+}
+
+function hasStrongActionSignal(text) {
+  return /\b(edital|chamada|processo seletivo|inscric\w*|submiss\w*|formulario|candidat\w*|prazo|bolsa|vagas?|monitoria|estagio|professor substituto|concurso publico|curso|oficina|palestra|seminario|congresso|matricula|resultado|recurso)\b/.test(text);
+}
+
+function isInstitutionalRelease(text) {
+  return /\b(marca presenca|marcou presenca|participa de encontro|recebe alunos|se engaja|reune autoridades|e finalista|fica em 3|homenageia|conquista|estao na china|recebe expoente|reconhece os destaques|prospecta acordos|visita institucional|reuniao institucional|trajetoria academica|trajetoria profissional|perfil do servidor|perfil da servidora|servidor em destaque|historia de vida|conheca o servidor)\b/.test(text);
 }
 
 function toYear(value, fallbackYear) {
@@ -252,6 +266,7 @@ function classifyItem(item, source = {}, options = {}) {
   const sourceBoost = Math.max(0, (5 - Number(source.tier || 3)) * 0.04);
   const temporal = analyzeTemporalRelevance(item, options);
   const hasDeadline = /\b(prazo|ate o dia|inscricoes? ate|encerra|termina)\b/i.test(text) || Boolean(temporal.deadlineDate);
+  const institutionalRelease = isInstitutionalRelease(text) && !hasStrongActionSignal(text);
 
   let score = 0.18 + sourceBoost;
   score += Math.min(includeHits.length * 0.09, 0.45);
@@ -260,6 +275,7 @@ function classifyItem(item, source = {}, options = {}) {
   if (/ufg|prograd|proex|prpi|secom|verbena/.test(text)) score += 0.04;
   score -= Math.min(excludeHits.length * 0.2, 0.5);
   if (temporal.expired) score = Math.min(score, 0.49);
+  if (institutionalRelease) score = Math.min(score, 0.39);
   score = Math.max(0, Math.min(1, Number(score.toFixed(2))));
 
   const opportunitySignals = ['edital', 'chamada', 'processo seletivo', 'bolsa', 'monitoria', 'estagio', 'vagas', 'selecao', 'pibic', 'pivic', 'probec', 'pesquisa', 'fapeg', 'mobilidade', 'mestrado', 'doutorado', 'residencia', 'professor substituto'];
@@ -276,7 +292,11 @@ function classifyItem(item, source = {}, options = {}) {
     confidence: score,
     module,
     category,
-    reasons: uniq(includeHits.concat(excludeHits.map((term) => `exclude:${term}`), temporal.expired ? [`expired:${temporal.reason}`] : [])),
+    reasons: uniq(includeHits.concat(
+      excludeHits.map((term) => `exclude:${term}`),
+      institutionalRelease ? ['exclude:institutional_release'] : [],
+      temporal.expired ? [`expired:${temporal.reason}`] : [],
+    )),
     hasDeadline: hasDeadline || Boolean(temporal.deadlineDate),
     hasPdf,
     temporal,

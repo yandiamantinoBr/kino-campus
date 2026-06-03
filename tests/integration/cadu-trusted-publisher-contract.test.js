@@ -78,6 +78,21 @@ describe('Cadu publish — Edge Function', () => {
     expect(index).toContain('case "check"');
   });
 
+  test('bloqueia publicacao de baixa qualidade antes do insert', () => {
+    expect(index).toContain('evaluateCaduPublishQuality');
+    expect(index).toContain('code: "QUALITY_BLOCKED"');
+    expect(index).toContain('blockingWarnings');
+    expect(index).toContain('event_past');
+    expect(index).toContain('deadline_past');
+    expect(index).toContain('institutional_or_biographical_release');
+    expect(index).toContain('cms_credits_in_description');
+    expect(index).toContain('weak_description');
+    expect(index).toContain('only_temporary_or_svg_images');
+    expect(index).toContain('instagram_without_official_source');
+    expect(index.indexOf('const quality = evaluateCaduPublishQuality')).toBeLessThan(index.indexOf('if (options.dryRun)'));
+    expect(index.indexOf('const quality = evaluateCaduPublishQuality')).toBeLessThan(index.indexOf('admin.from("posts").insert'));
+  });
+
   test('publica com dedup e upload de imagem com fallback', () => {
     expect(index).toContain('findExisting');
     expect(index).toContain('code: "DUPLICATE"');
@@ -98,7 +113,11 @@ describe('Cadu publish — Edge Function', () => {
 
   test('mapper preserva descricao formatada e metadata de CTA do formatador', () => {
     expect(schema).toContain('formattedDescription?: string');
+    expect(schema).toContain('score?: number | string');
+    expect(schema).toContain('dates?: Record<string, unknown>');
+    expect(schema).toContain('enrichmentCheckedAt?: string');
     expect(mapper).toContain('isUsefulFormattedDescription');
+    expect(mapper).toContain('stripCmsCreditLines');
     expect(mapper).toContain('item.formattedDescription');
     expect(mapper).toContain('actionLabel');
     expect(mapper).toContain('actionKey');
@@ -133,6 +152,9 @@ describe('Cadu publish — cliente de referencia', () => {
     expect(client).toContain('/functions/v1/cadu-publish');
     expect(client).toContain('signInWithPassword');
     expect(client).toContain('SUPABASE_ANON_KEY');
+    expect(client).toContain('async function caduPublishIfNew');
+    expect(client).toContain("code === 'QUALITY_BLOCKED'");
+    expect(client).toContain("sourceId: item.sourceId, sourceUrl: item.sourceUrl");
   });
 
   test('NAO referencia a service_role no cliente', () => {

@@ -85,10 +85,22 @@ async function caduCheck({ sourceId, sourceUrl }) {
   return callEndpoint({ action: 'check', sourceId, sourceUrl });
 }
 
+async function caduPublishIfNew(item, options = {}) {
+  const dup = await caduCheck({ sourceId: item.sourceId, sourceUrl: item.sourceUrl });
+  if (dup && dup.exists) {
+    return { ok: false, code: 'DUPLICATE', post_id: dup.post_id, status: dup.status };
+  }
+  const result = await caduPublish(item, options);
+  if (result && result.code === 'QUALITY_BLOCKED') {
+    console.error('[cadu-publish] QUALITY_BLOCKED:', result.quality && result.quality.blockingWarnings);
+  }
+  return result;
+}
+
 // Exemplo de uso (rode com: node publish_via_endpoint.example.js)
 async function _demo() {
   // 1) Dedup antes de publicar
-  const dup = await caduCheck({ sourceUrl: 'https://eventos.ufg.br/exemplo' });
+  const dup = await caduCheck({ sourceId: 'eventos-ufg-2026-semana-tec', sourceUrl: 'https://eventos.ufg.br/exemplo' });
   if (dup.exists) {
     console.log('Ja publicado:', dup.post_id, dup.status);
     return;
@@ -169,4 +181,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { caduPublish, caduEdit, caduList, caduCheck };
+module.exports = { caduPublish, caduEdit, caduList, caduCheck, caduPublishIfNew };

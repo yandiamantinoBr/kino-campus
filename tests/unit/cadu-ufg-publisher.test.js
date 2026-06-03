@@ -171,6 +171,21 @@ describe('cadu-ufg-publisher', () => {
     expect(['publish', 'review']).toContain(result.decision);
   });
 
+  test('classifier discards institutional releases without concrete action', () => {
+    const item = {
+      title: 'PRPI/UFG se engaja no Espaco das Profissoes 2026',
+      summary: 'Equipe marca presenca e recebe alunos durante evento institucional.',
+      text: 'A unidade reune autoridades, reconhece os destaques e apresenta a trajetoria academica de servidores.',
+      updatedAt: '2026-06-03',
+      pdfLinks: [],
+    };
+    const result = classifyItem(item, { tier: 1 }, { now: '2026-06-03T12:00:00-03:00' });
+
+    expect(result.decision).toBe('discard');
+    expect(result.confidence).toBeLessThanOrEqual(0.39);
+    expect(result.reasons).toContain('exclude:institutional_release');
+  });
+
   test('classifier discards expired signup windows', () => {
     const item = {
       title: 'Quer trabalhar com redes sociais na UFG?',

@@ -130,6 +130,8 @@ export interface CaduItem {
   formatted_description?: string;
   summary?: string;
   text?: string;
+  score?: number | string;
+  dates?: Record<string, unknown>;
   category?: string;
   location?: string;
   price?: number | string;
@@ -160,6 +162,7 @@ export interface CaduItem {
   pdfLinks?: string[];
   extractedLinks?: Array<string | { url?: string; label?: string }>;
   enrichmentSources?: Array<string | { url?: string; label?: string; type?: string }>;
+  enrichmentCheckedAt?: string;
   visibility?: string;
   // campos especificos de outros modulos
   regiao?: string;

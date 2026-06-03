@@ -100,6 +100,13 @@ O fluxo operacional recomendado e:
 3. `publish_auto_v5.js`: envia o item inteiro para `cadu-publish`.
 4. `cadu-publish`: valida, deduplica, completa metadata, sobe a imagem e publica.
 
+Regras de auto-publicacao:
+
+- threshold local minimo: `0.70`; itens entre `0.55` e `0.69` ficam em revisao;
+- antes de publicar, chame `check` com `sourceId` e `sourceUrl`;
+- envie `score`, `dates`, `formattedDescription`, `images`, `enrichmentSources` e `enrichmentCheckedAt`;
+- se `cadu-publish` retornar `QUALITY_BLOCKED`, nao reenvie em loop. Corrija/enriqueca o item e rode dry-run novamente.
+
 O publicador deve repassar `formattedDescription`; se ele enviar apenas
 `description: rec.text`, o endpoint perde a formatacao rica e volta a publicar
 texto cru. O endpoint ja preserva `formattedDescription` quando ela for boa e
@@ -163,6 +170,12 @@ Regras de decisao:
   oficial ou publique sem capa;
 - fatos de web aberta devem aparecer em `enrichmentSources`, mas a descricao
   deve deixar a fonte oficial da UFG como referencia principal.
+
+Padrao minimo do JSON de run:
+
+- contagens: `published`, `qualityBlocked`, `expiredBlocked`, `institutionalBlocked`, `duplicates`, `imageFailures`, `enrichmentFailures`;
+- por item: `sourceId`, `sourceUrl`, `post_id`, `score`, `decision`, `quality.blockingWarnings`, `media.uploads`, `enrichmentSources`;
+- nunca grave chaves, tokens, cookies, headers de autorizacao ou URLs temporarias com token fora do log tecnico local.
 
 ## Fontes UFG
 
@@ -426,3 +439,15 @@ Quando o digest mostrar `review:quality` ou `Avisos de qualidade`, nao aprove no
 - `missing_work_mode`: oportunidade sem `metadata.modalidadeTrabalho`.
 - `source_url_mismatch`: link oficial divergente.
 - `invalid_image_url`: imagem do payload nao e uma URL HTTP/HTTPS valida.
+
+Avisos bloqueantes retornados diretamente pelo endpoint `cadu-publish` como `QUALITY_BLOCKED`:
+
+- `source_marks_expired`: o proprio curador marcou o item como expirado.
+- `event_past`: evento com data de encerramento/inicio anterior a hoje e sem data futura.
+- `deadline_past`: oportunidade com prazo vencido e sem data futura relevante.
+- `institutional_or_biographical_release`: release institucional/biografico sem acao concreta para o usuario.
+- `cms_credits_in_description`: a descricao ainda contem creditos de CMS (`Texto:`, `Fotos:`, `Por ...`).
+- `weak_description`: descricao curta/crua, sem link e informacao acionavel suficiente.
+- `score_below_auto_publish_threshold`: score informado abaixo de `0.70`.
+- `only_temporary_or_svg_images`: candidatas de imagem eram apenas temporarias ou SVG.
+- `instagram_without_official_source`: item veio apenas de Instagram, sem fonte oficial complementar.

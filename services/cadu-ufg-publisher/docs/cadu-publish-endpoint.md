@@ -54,6 +54,8 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `description`  | string          | usa este; senao `summary`/`text`. Vira markdown e recebe fonte + documentos |
 | `formattedDescription` | string | descricao final ja revisada pelo formatador IA; quando for boa, o endpoint preserva o Markdown e so completa fonte/documentos ausentes |
 | `summary`/`text` | string        | fallback de descricao |
+| `score`        | number\|string | score do curador; se informado e menor que `0.70`, o endpoint bloqueia auto-publicacao |
+| `dates`        | object          | datas detectadas pelo curador; usadas como sinal auxiliar, mas o endpoint recalcula os checks basicos |
 | `category`     | string (key)    | ex.: `academicos`, `empregos`, `estagios`. Default por modulo |
 | `location`     | string          | Local (eventos) / Cidade-Campus (oportunidades) |
 | `price`        | number\|string  | aceita `"1.234,56"` ou `1234.56` |
@@ -80,6 +82,7 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `pdfLinks`     | URL[]           | editais/anexos (entram em "Editais e documentos") |
 | `extractedLinks` | (string\|{url,label})[] | links extras |
 | `enrichmentSources` | (string\|{url,label,type})[] | fontes consultadas no enriquecimento: site oficial, Instagram oficial, web complementar |
+| `enrichmentCheckedAt` | ISO datetime | quando o enriquecimento ativo foi feito |
 | `visibility`   | `public`\|`community` | default `public` |
 
 Resposta:
@@ -87,7 +90,7 @@ Resposta:
 ```json
 {
   "ok": true,
-  "code": "PUBLISHED",            // ou "PENDING" (flood), "DUPLICATE", "DRY_RUN", "VALIDATION_FAILED"
+  "code": "PUBLISHED",            // ou "PENDING" (flood), "DUPLICATE", "DRY_RUN", "VALIDATION_FAILED", "QUALITY_BLOCKED"
   "post_id": "uuid",
   "status": "published",
   "url": "https://www.kinocampus.com.br/eventos.html",
@@ -102,6 +105,23 @@ Resposta:
   "warnings": []
 }
 ```
+
+Quando a barreira editorial bloquear o item, o endpoint **nao cria post** e retorna HTTP 200 com `ok:false`:
+
+```json
+{
+  "ok": false,
+  "code": "QUALITY_BLOCKED",
+  "message": "O item nao passou na barreira de qualidade editorial do Cadu.",
+  "quality": {
+    "blockingWarnings": ["event_past", "weak_description"],
+    "warnings": ["event_past", "weak_description"],
+    "recommendation": "Corrija o item, consulte fonte oficial complementar e rode dry-run antes de reenviar para publicacao."
+  }
+}
+```
+
+Bloqueios atuais: evento passado, prazo vencido, release institucional/biografico sem acao concreta, credito CMS na descricao, descricao fraca/crua, score informado abaixo de `0.70`, somente imagens temporarias/SVG e item originado apenas de Instagram sem fonte oficial complementar.
 
 ### `edit` — edita um post do Cadu
 

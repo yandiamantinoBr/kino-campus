@@ -23,7 +23,20 @@
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { CaduItem, validateItem } from "./schema.ts";
 import { deepMergeMetadata, mapItemToPost } from "./mapper.ts";
-import { canPersistExternalImageUrl, lightHash, validRemoteImageUrl } from "./util.ts";
+import {
+  canPersistExternalImageUrl,
+  hostOf,
+  isoDateFromAny,
+  isSvgUrl,
+  isTemporaryOrSocialImageUrl,
+  lightHash,
+  normalizeText,
+  normalizeWhitespace,
+  parseBrazilianDate,
+  parseDateRange,
+  stripHtml,
+  validRemoteImageUrl,
+} from "./util.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -60,6 +73,248 @@ const MODULE_PAGE: Record<string, string> = {
 function postUrl(module: string): string {
   const page = MODULE_PAGE[module] || "index.html";
   return `${SITE_URL}/${page}`;
+}
+
+interface PublishQuality {
+  ok: boolean;
+  warnings: string[];
+  blockingWarnings: string[];
+  recommendation: string;
+}
+
+const MONTHS_PT: Record<string, string> = {
+  janeiro: "01",
+  fevereiro: "02",
+  marco: "03",
+  abril: "04",
+  maio: "05",
+  junho: "06",
+  julho: "07",
+  agosto: "08",
+  setembro: "09",
+  outubro: "10",
+  novembro: "11",
+  dezembro: "12",
+};
+
+function serverTodayIso(): string {
+  const forced = Deno.env.get("CADU_NOW_ISO") || "";
+  const date = forced ? new Date(forced) : new Date();
+  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
+}
+
+function validIsoDate(value: unknown): string {
+  const raw = String(value || "").trim();
+  const iso = isoDateFromAny(raw) || parseBrazilianDate(raw);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const date = new Date(`${iso}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10) === iso ? iso : "";
+}
+
+function datePartsToIso(day: string, month: string, year: string, fallbackYear: string): string {
+  const y = String(year || fallbackYear);
+  const yy = y.length === 2 ? `20${y}` : y;
+  const iso = `${yy.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  return validIsoDate(iso);
+}
+
+function extractTextDates(value: unknown, today: string): string[] {
+  const text = normalizeText(stripHtml(value || ""));
+  const fallbackYear = today.slice(0, 4);
+  const out: string[] = [];
+  let match: RegExpExecArray | null;
+
+  const add = (iso: string) => {
+    if (iso && !out.includes(iso)) out.push(iso);
+  };
+
+  const namedRange = /\b([0-3]?\d)\s*(?:a|ate|-)\s*([0-3]?\d)\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+((?:20)?\d{2}))?\b/g;
+  while ((match = namedRange.exec(text))) {
+    add(datePartsToIso(match[2], MONTHS_PT[match[3]] || "", match[4] || "", fallbackYear));
+  }
+
+  const named = /\b([0-3]?\d)\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+((?:20)?\d{2}))?\b/g;
+  while ((match = named.exec(text))) {
+    add(datePartsToIso(match[1], MONTHS_PT[match[2]] || "", match[3] || "", fallbackYear));
+  }
+
+  const numericRange = /\b([0-3]?\d)[\/.-]([01]?\d)(?:[\/.-]((?:20)?\d{2}))?\s*(?:a|ate|-)\s*([0-3]?\d)[\/.-]([01]?\d)(?:[\/.-]((?:20)?\d{2}))?\b/g;
+  while ((match = numericRange.exec(text))) {
+    add(datePartsToIso(match[4], match[5], match[6] || match[3] || "", fallbackYear));
+  }
+
+  const numeric = /\b([0-3]?\d)[\/.-]([01]?\d)(?:[\/.-]((?:20)?\d{2}))?\b/g;
+  while ((match = numeric.exec(text))) {
+    add(datePartsToIso(match[1], match[2], match[3] || "", fallbackYear));
+  }
+
+  return out.sort();
+}
+
+function dateValuesFromUnknown(value: unknown): string[] {
+  const out: string[] = [];
+  const add = (candidate: unknown) => {
+    const iso = validIsoDate(candidate);
+    if (iso && !out.includes(iso)) out.push(iso);
+  };
+  const walk = (candidate: unknown) => {
+    if (!candidate) return;
+    if (typeof candidate === "string" || typeof candidate === "number") {
+      add(candidate);
+      return;
+    }
+    if (Array.isArray(candidate)) {
+      candidate.forEach(walk);
+      return;
+    }
+    if (typeof candidate === "object") {
+      Object.entries(candidate as Record<string, unknown>).forEach(([key, val]) => {
+        if (/date|data|latest|future|past|deadline|event/i.test(key)) walk(val);
+      });
+    }
+  };
+  walk(value);
+  return out.sort();
+}
+
+function hasCmsCreditLine(value: unknown): boolean {
+  return String(value || "")
+    .normalize("NFKC")
+    .split(/\r?\n+/)
+    .map((line) => normalizeWhitespace(stripHtml(line)))
+    .filter(Boolean)
+    .some((line) =>
+      /^(texto|fotos?|foto|imagens?|imagem|reportagem|edicao|edição)\s*:\s*[^:]{2,120}$/i.test(line) ||
+      /^por\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ' .-]{2,80}\*?$/u.test(line)
+    );
+}
+
+function hasStrongActionSignal(value: unknown): boolean {
+  return /\b(edital|chamada|processo seletivo|inscric\w*|submiss\w*|formulario|candidat\w*|prazo|bolsa|vagas?|monitoria|estagio|professor substituto|concurso publico|curso|oficina|palestra|seminario|congresso|matricula|resultado|recurso)\b/.test(normalizeText(value));
+}
+
+function hasInstitutionalOnlySignal(value: unknown): boolean {
+  return /\b(marca presenca|marcou presenca|participa de encontro|recebe alunos|se engaja|reune autoridades|e finalista|fica em 3|homenageia|conquista|estao na china|recebe expoente|reconhece os destaques|prospecta acordos|visita institucional|reuniao institucional|trajetoria academica|trajetoria profissional|perfil do servidor|perfil da servidora|servidor em destaque|historia de vida|conheca o servidor)\b/.test(normalizeText(value));
+}
+
+function hasActionableMarkdownDescription(value: unknown): boolean {
+  const text = normalizeWhitespace(stripHtml(value || ""));
+  const normalized = normalizeText(text);
+  if (text.length < 160) return false;
+  if (!/\[[^\]]{3,}\]\(https?:\/\/[^)]+\)/i.test(String(value || "")) && !/https?:\/\/\S+/i.test(text)) return false;
+  return /\b(prazo|data|inscric\w*|edital|evento|local|publico|requisit|bolsa|curso|oficina|palestra|selecao|submiss|fonte oficial|documentos?)\b/.test(normalized);
+}
+
+function imageCandidatesFromItem(item: CaduItem): string[] {
+  const raw = item.raw && typeof item.raw === "object" ? item.raw as Record<string, unknown> : {};
+  return Array.from(new Set([
+    item.image,
+    item.imageUrl,
+    item.image_url,
+    item.cover,
+    raw.image,
+    raw.image_url,
+    raw.cover,
+    ...(Array.isArray(item.images) ? item.images : []),
+  ].map(validRemoteImageUrl).filter(Boolean)));
+}
+
+function isInstagramUrl(value: unknown): boolean {
+  const host = hostOf(value).toLowerCase();
+  return /(^|\.)instagram\.com$/.test(host) || /(^|\.)cdninstagram\.com$/.test(host);
+}
+
+function hasOfficialNonInstagramSource(item: CaduItem): boolean {
+  const sources = [
+    item.sourceUrl,
+    ...(Array.isArray(item.enrichmentSources)
+      ? item.enrichmentSources.map((source) => typeof source === "string" ? source : source?.url)
+      : []),
+  ].filter(Boolean);
+  return sources.some((source) => {
+    const host = hostOf(source).toLowerCase();
+    if (!host || /(^|\.)instagram\.com$/.test(host) || /(^|\.)cdninstagram\.com$/.test(host)) return false;
+    return /(^|\.)ufg\.br$/.test(host) || /gov\.br$/.test(host) || /even3\.com\.br$/.test(host) || /forms\.gle$/.test(host);
+  });
+}
+
+function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof mapItemToPost>): PublishQuality {
+  const warnings: string[] = [];
+  const blockingWarnings: string[] = [];
+  const today = serverTodayIso();
+  const row = mapped.row;
+  const metadata = row.metadata || {};
+  const description = String(row.description || "");
+  const fullText = [
+    item.title,
+    item.summary,
+    item.text,
+    item.description,
+    item.formattedDescription,
+    row.description,
+  ].filter(Boolean).join("\n");
+  const allDates = Array.from(new Set([
+    ...extractTextDates(fullText, today),
+    ...dateValuesFromUnknown(item.dates),
+    validIsoDate(item.dateStart),
+    validIsoDate(item.dateEnd),
+    validIsoDate(metadata.data_evento),
+    validIsoDate(metadata.data_fim_evento),
+    validIsoDate(metadata.deadline_date),
+    parseDateRange(fullText).end,
+  ].filter(Boolean))).sort();
+  const futureDates = allDates.filter((date) => date >= today);
+  const latestDate = allDates[allDates.length - 1] || "";
+  const hasDeadlineContext = /\b(prazo|ate|inscric\w*|submiss\w*|encerra\w*|termina\w*|periodo|candidat\w*|matricula|recurso)\b/.test(normalizeText(fullText));
+  const explicitExpired = !!(
+    item.dates && typeof item.dates === "object" &&
+    ((item.dates as Record<string, unknown>).isExpired === true || (item.dates as Record<string, unknown>).expired === true)
+  );
+
+  const block = (warning: string) => {
+    if (!blockingWarnings.includes(warning)) blockingWarnings.push(warning);
+  };
+  const warn = (warning: string) => {
+    if (!warnings.includes(warning)) warnings.push(warning);
+  };
+
+  if (explicitExpired) block("source_marks_expired");
+  if (row.module === "eventos") {
+    const end = validIsoDate(metadata.data_fim_evento) || validIsoDate(item.dateEnd);
+    const start = validIsoDate(metadata.data_evento) || validIsoDate(item.dateStart);
+    if (end && end < today) block("event_past");
+    else if (start && start < today && !end && !futureDates.length) block("event_past");
+    else if (!start && latestDate && latestDate < today && !futureDates.length) block("event_past");
+  } else if (hasDeadlineContext && latestDate && latestDate < today && !futureDates.length) {
+    block("deadline_past");
+  }
+
+  if (hasInstitutionalOnlySignal(fullText) && !hasStrongActionSignal(fullText)) block("institutional_or_biographical_release");
+  if (hasCmsCreditLine(description)) block("cms_credits_in_description");
+  if (!hasActionableMarkdownDescription(description)) block("weak_description");
+
+  const numericScore = Number(item.score);
+  if (Number.isFinite(numericScore) && numericScore < 0.7) block("score_below_auto_publish_threshold");
+
+  const rawImages = imageCandidatesFromItem(item);
+  if (rawImages.length && rawImages.every((url) => isSvgUrl(url) || isTemporaryOrSocialImageUrl(url)) && !mapped.images.some(canPersistExternalImageUrl)) {
+    block("only_temporary_or_svg_images");
+  }
+  if (isInstagramUrl(item.sourceUrl) && !hasOfficialNonInstagramSource(item)) block("instagram_without_official_source");
+  if (!mapped.images.length) warn("missing_image_candidates");
+  if (!Array.isArray(item.enrichmentSources) || !item.enrichmentSources.length) warn("missing_enrichment_sources");
+
+  warnings.push(...blockingWarnings.filter((warning) => !warnings.includes(warning)));
+  return {
+    ok: blockingWarnings.length === 0,
+    warnings,
+    blockingWarnings,
+    recommendation: blockingWarnings.length
+      ? "Corrija o item, consulte fonte oficial complementar e rode dry-run antes de reenviar para publicacao."
+      : "Item apto para tentativa de publicacao pelo endpoint do Cadu.",
+  };
 }
 
 const IMAGE_EXT: Record<string, string> = {
@@ -279,8 +534,26 @@ async function handlePublish(admin: SupabaseClient, userId: string, body: Record
     });
   }
 
+  const quality = evaluateCaduPublishQuality(item, mapped);
+  if (!quality.ok) {
+    return json(200, {
+      ok: false,
+      code: "QUALITY_BLOCKED",
+      message: "O item nao passou na barreira de qualidade editorial do Cadu.",
+      quality,
+      row: options.dryRun ? mapped.row : undefined,
+      warnings: [...validation.warnings, ...mapped.warnings, ...quality.warnings],
+    });
+  }
+
   if (options.dryRun) {
-    return json(200, { ok: true, code: "DRY_RUN", row: mapped.row, warnings: [...validation.warnings, ...mapped.warnings] });
+    return json(200, {
+      ok: true,
+      code: "DRY_RUN",
+      row: mapped.row,
+      quality,
+      warnings: [...validation.warnings, ...mapped.warnings, ...quality.warnings],
+    });
   }
 
   const insertRow = { ...mapped.row, author_id: userId, status: "published" };
@@ -351,7 +624,8 @@ async function handlePublish(admin: SupabaseClient, userId: string, body: Record
     url: postUrl(String(post.module)),
     image_url: post.image_url || "",
     media,
-    warnings: [...validation.warnings, ...mapped.warnings],
+    quality,
+    warnings: [...validation.warnings, ...mapped.warnings, ...quality.warnings],
   });
 }
 
