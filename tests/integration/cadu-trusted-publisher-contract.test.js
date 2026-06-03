@@ -89,6 +89,8 @@ describe('Cadu publish — Edge Function', () => {
     expect(index).toContain('weak_description');
     expect(index).toContain('only_temporary_or_svg_images');
     expect(index).toContain('instagram_without_official_source');
+    expect(index).toContain('hasConcretePublishActionSignal');
+    expect(index).toContain('hasInstitutionalOnlySignal(item.title)');
     expect(index.indexOf('const quality = evaluateCaduPublishQuality')).toBeLessThan(index.indexOf('if (options.dryRun)'));
     expect(index.indexOf('const quality = evaluateCaduPublishQuality')).toBeLessThan(index.indexOf('admin.from("posts").insert'));
   });

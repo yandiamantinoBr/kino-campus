@@ -175,6 +175,19 @@ Padrao minimo do JSON de run:
 
 - contagens: `published`, `qualityBlocked`, `expiredBlocked`, `institutionalBlocked`, `duplicates`, `imageFailures`, `enrichmentFailures`;
 - por item: `sourceId`, `sourceUrl`, `post_id`, `score`, `decision`, `quality.blockingWarnings`, `media.uploads`, `enrichmentSources`;
+- `items` deve guardar todos os itens avaliados na run, nao apenas os candidatos
+  publicaveis. Se o arquivo ficar grande, separe em `publishableItems`,
+  `reviewItems` e `discardedItems`, mas preserve `sourceId`, `sourceUrl`,
+  `score`, `dates`, `decision`, `reason`, `images` e `enrichmentSources`;
+- `publishedItems` deve guardar `post_id`, `status`, `sourceId`, `sourceUrl`,
+  `score`, `dates`, `images`, `quality`, `media` e o retorno bruto sanitizado do
+  endpoint. Apenas titulo/source/status nao e suficiente para auditoria;
+- `duplicateItems` deve guardar o criterio que bateu (`sourceId`, `sourceUrl`,
+  `content_hash` ou titulo similar), o post existente quando retornado pelo
+  endpoint e o payload candidato sanitizado;
+- `sources` deve ser uma lista por fonte/handle com `kind`, `url` ou `handle`,
+  `status`, `itemsFound`, `itemsUsed`, `durationMs` e `error`, nao somente uma
+  string resumida;
 - nunca grave chaves, tokens, cookies, headers de autorizacao ou URLs temporarias com token fora do log tecnico local.
 
 ## Fontes UFG
@@ -231,6 +244,11 @@ Exclua:
 - conteudo duplicado;
 - conteudo sem data/fonte clara;
 - item antigo sem inscricao ou utilidade atual.
+- titulos institucionais como `prospecta acordos`, `reconhece os destaques`,
+  `esta na China para evento`, `recebe expoente` ou `expoente nacional`. A
+  palavra `evento`, sozinha, nao torna esse material publicavel. Sem inscricao,
+  edital, chamada, prazo, vaga, bolsa ou outro CTA concreto, mande para revisao
+  ou descarte.
 
 ### Temporalidade
 

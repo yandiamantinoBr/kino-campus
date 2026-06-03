@@ -186,6 +186,28 @@ describe('cadu-ufg-publisher', () => {
     expect(result.reasons).toContain('exclude:institutional_release');
   });
 
+  test('classifier does not let broad event words rescue institutional titles', () => {
+    const cases = [
+      'UFG prospecta acordos durante o 1 Forum de Reitores Brasil-Africa',
+      'Cerimonia reconhece os destaques goianos da Olimpiada Brasileira de Informatica',
+      'Vice-reitora e professora estao na China para evento sobre IA',
+    ];
+
+    for (const title of cases) {
+      const result = classifyItem({
+        title,
+        summary: 'Noticia institucional informa participacao de representantes da UFG em evento.',
+        text: 'A materia registra agenda institucional, reconhecimento de destaques e repercussao academica da universidade.',
+        updatedAt: '2026-06-03',
+        pdfLinks: [],
+      }, { tier: 1 }, { now: '2026-06-03T12:00:00-03:00' });
+
+      expect(result.decision).toBe('discard');
+      expect(result.confidence).toBeLessThanOrEqual(0.39);
+      expect(result.reasons).toContain('exclude:institutional_release');
+    }
+  });
+
   test('classifier discards expired signup windows', () => {
     const item = {
       title: 'Quer trabalhar com redes sociais na UFG?',

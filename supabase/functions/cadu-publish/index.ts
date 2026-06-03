@@ -195,8 +195,12 @@ function hasStrongActionSignal(value: unknown): boolean {
   return /\b(edital|chamada|processo seletivo|inscric\w*|submiss\w*|formulario|candidat\w*|prazo|bolsa|vagas?|monitoria|estagio|professor substituto|concurso publico|curso|oficina|palestra|seminario|congresso|matricula|resultado|recurso)\b/.test(normalizeText(value));
 }
 
+function hasConcretePublishActionSignal(value: unknown): boolean {
+  return /\b(edital|chamada|processo seletivo|inscric\w*|submiss\w*|formulario|candidat\w*|prazo|bolsa|vagas?|monitoria|estagio|professor substituto|concurso publico|matricula|recurso)\b/.test(normalizeText(value));
+}
+
 function hasInstitutionalOnlySignal(value: unknown): boolean {
-  return /\b(marca presenca|marcou presenca|participa de encontro|recebe alunos|se engaja|reune autoridades|e finalista|fica em 3|homenageia|conquista|estao na china|recebe expoente|reconhece os destaques|prospecta acordos|visita institucional|reuniao institucional|trajetoria academica|trajetoria profissional|perfil do servidor|perfil da servidora|servidor em destaque|historia de vida|conheca o servidor)\b/.test(normalizeText(value));
+  return /\b(marca presenca|marcou presenca|participa de encontro|recebe alunos|se engaja|reune autoridades|e finalista|fica em 3|homenageia|conquista|estao na china|recebe expoente|expoente nacional|reconhece os destaques|prospecta acordos|visita institucional|reuniao institucional|trajetoria academica|trajetoria profissional|perfil do servidor|perfil da servidora|servidor em destaque|historia de vida|conheca o servidor)\b/.test(normalizeText(value));
 }
 
 function hasActionableMarkdownDescription(value: unknown): boolean {
@@ -291,7 +295,10 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
     block("deadline_past");
   }
 
-  if (hasInstitutionalOnlySignal(fullText) && !hasStrongActionSignal(fullText)) block("institutional_or_biographical_release");
+  if (
+    (hasInstitutionalOnlySignal(item.title) && !hasConcretePublishActionSignal(fullText)) ||
+    (hasInstitutionalOnlySignal(fullText) && !hasStrongActionSignal(fullText))
+  ) block("institutional_or_biographical_release");
   if (hasCmsCreditLine(description)) block("cms_credits_in_description");
   if (!hasActionableMarkdownDescription(description)) block("weak_description");
 
