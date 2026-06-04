@@ -6,6 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 const GOOGLE_SITE_VERIFICATION = 'pUhcnFNqCxds-Z6VQcj7g5-IbIcEwSVZ9b2l4_OHIcc';
+const GA4_MEASUREMENT_ID = 'G-P9RKYHPB7Z';
 
 const INDEXABLE = {
   'index.html': '/',
@@ -99,6 +100,46 @@ function auditSearchConsoleVerification(errors) {
   if (verification !== GOOGLE_SITE_VERIFICATION) errors.push('index.html: meta google-site-verification ausente ou incorreta.');
 }
 
+function hasMojibake(text) {
+  return /(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]?|â[\u0080-\u00bf\u20ac]|�)/.test(String(text || ''));
+}
+
+function auditPublicEncoding(errors) {
+  const files = [
+    ...Object.keys(INDEXABLE),
+    ...NOINDEX,
+    'llms.txt',
+    'robots.txt',
+    'assets/js/boot/kc-seo-structured-data.js',
+  ];
+  files.forEach((file) => {
+    if (hasMojibake(read(file))) errors.push(`${file}: possivel mojibake em texto publico/SEO.`);
+  });
+}
+
+function auditGoogleTag(errors) {
+  const tag = read('assets/js/boot/kc-google-tag.js');
+  if (!tag.includes(GA4_MEASUREMENT_ID)) errors.push('kc-google-tag.js: Measurement ID GA4 ausente ou incorreto.');
+  if (!tag.includes("window.gtag('consent', 'default', consentPayload(false));")) {
+    errors.push('kc-google-tag.js: Consent Mode default denied ausente.');
+  }
+  if (!tag.includes("window.KCConsent.hasConsent('analytics')")) {
+    errors.push('kc-google-tag.js: integracao com KCConsent analytics ausente.');
+  }
+  Object.keys(INDEXABLE).concat(NOINDEX).forEach((file) => {
+    const html = read(file);
+    if (!html.includes('assets/js/boot/kc-google-tag.js?v=8.6.1')) {
+      errors.push(`${file}: tag GA4 consent-aware ausente.`);
+    }
+    const consentIndex = html.indexOf('assets/js/core/kc-consent.js?v=8.6.1');
+    const googleIndex = html.indexOf('assets/js/boot/kc-google-tag.js?v=8.6.1');
+    const telemetryIndex = html.indexOf('assets/js/boot/kc-telemetry.js?v=8.6.1');
+    if (consentIndex !== -1 && googleIndex !== -1 && telemetryIndex !== -1 && !(consentIndex < googleIndex && googleIndex < telemetryIndex)) {
+      errors.push(`${file}: ordem de scripts consent -> google-tag -> telemetry incorreta.`);
+    }
+  });
+}
+
 function main() {
   const errors = [];
   const warnings = [];
@@ -108,11 +149,18 @@ function main() {
   auditRobots(errors);
   auditSitemap(errors);
   auditSearchConsoleVerification(errors);
+  auditGoogleTag(errors);
+  auditPublicEncoding(errors);
 
   const summary = {
     checkedAt: new Date().toISOString(),
     indexablePages: Object.keys(INDEXABLE).length,
     noindexPages: NOINDEX.length,
+    integrations: {
+      googleSearchConsoleVerification: true,
+      googleAnalytics4MeasurementId: GA4_MEASUREMENT_ID,
+      consentAwareGoogleTag: true,
+    },
     warnings,
     errors,
   };

@@ -12,6 +12,8 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 - Politica de crawlers: `/robots.txt`.
 - Verificacao Google Search Console por HTML tag: `index.html` (`google-site-verification`).
 - Mapa auxiliar para agentes: `/llms.txt`.
+- Google Analytics 4 consent-aware: `assets/js/boot/kc-google-tag.js`.
+- Runbook operacional: `docs/ops/google-search-console-analytics-runbook.md`.
 
 ## Paginas indexaveis
 
@@ -80,3 +82,5 @@ Se o Supabase estiver indisponivel, o sitemap ainda responde com as paginas esta
 - Bing Webmaster Tools: enviar o mesmo sitemap.
 - Validar publicacoes importantes com URL Inspection depois de publicar.
 - Revisar periodicamente se posts `hidden`, `deleted` ou `pending` nao aparecem no sitemap.
+- GA4: acompanhar tempo real, aquisicao de trafego e paginas/telas depois do deploy de producao.
+- APIs Google: usar apenas server-side quando houver necessidade de dashboard consolidado; nao guardar tokens OAuth no frontend.

@@ -140,6 +140,24 @@ describe('SEO e indexacao publica', () => {
     expect(pkg.scripts['seo:audit']).toBe('node scripts/seo-audit.js');
     expect(audit).toContain('auditRobots');
     expect(audit).toContain('auditSitemap');
+    expect(audit).toContain('auditGoogleTag');
+    expect(audit).toContain('auditPublicEncoding');
+    expect(audit).toContain('G-P9RKYHPB7Z');
     expect(audit).toContain('GPTBot');
+  });
+
+  test('textos publicos de SEO e IA nao contem mojibake', () => {
+    const files = [
+      'llms.txt',
+      'robots.txt',
+      'assets/js/boot/kc-seo-structured-data.js',
+      ...Object.keys(INDEXABLE_PAGES),
+      ...NOINDEX_PAGES,
+    ];
+    const mojibake = /(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]?|â[\u0080-\u00bf\u20ac]|�)/;
+
+    files.forEach((file) => {
+      expect(read(file)).not.toMatch(mojibake);
+    });
   });
 });
