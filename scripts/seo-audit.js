@@ -18,6 +18,7 @@ const INDEXABLE = {
   'achados-perdidos.html': '/achados-perdidos.html',
   'ajuda.html': '/ajuda.html',
   'ods.html': '/ods.html',
+  'transparencia.html': '/transparencia.html',
   'privacidade.html': '/privacidade.html',
   'termos.html': '/termos.html',
 };

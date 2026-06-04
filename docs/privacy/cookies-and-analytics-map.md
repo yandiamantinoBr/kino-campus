@@ -48,6 +48,10 @@ O payload é sanitizado no cliente e validado novamente no Supabase. Chaves sens
 
 ## Admin
 
+## Transparencia Publica
+
+O rodape publico aponta para `transparencia.html`, `privacidade.html`, `termos.html`, preferencias de cookies e `ajuda.html#solicitacoes-suporte`. Nenhum link publico deve levar diretamente para `admin/help-requests.html`; essa rota continua reservada ao painel administrativo.
+
 ### Dashboard
 
 O Dashboard mostra um card compacto “Privacidade e métricas” com:

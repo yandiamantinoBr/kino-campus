@@ -75,6 +75,14 @@ const MODULES = {
     accent: '#FF6B00',
     rgb: '255,107,0',
   },
+  transparencia: {
+    title: 'Transparência',
+    description: 'Privacidade, termos, cookies, suporte e direitos LGPD em um só lugar.',
+    emoji: '🛡️',
+    tag: 'PRIVACIDADE E CONFIANÇA',
+    accent: '#FF6B00',
+    rgb: '255,107,0',
+  },
   product: {
     title: 'Anúncio na Plataforma',
     description: 'Confira este anúncio na plataforma da comunidade universitária da UFG.',

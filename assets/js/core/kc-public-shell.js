@@ -26,6 +26,7 @@
     'my-posts.html',
     'profile.html',
     'settings.html',
+    'transparencia.html',
     'mensagens.html',
     'account-setup.html',
     'auth-callback.html',

@@ -19,6 +19,7 @@ const PUBLIC_PAGES = Object.freeze([
   'privacidade.html',
   'search-results.html',
   'settings.html',
+  'transparencia.html',
   'termos.html',
 ]);
 

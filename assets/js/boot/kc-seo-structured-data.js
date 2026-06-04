@@ -71,6 +71,12 @@
       section: 'Privacidade',
       description: 'Informações sobre privacidade, cookies, dados pessoais e direitos dos titulares.',
     },
+    '/transparencia.html': {
+      type: 'WebPage',
+      name: 'Central de Transparência do KinoCampus',
+      section: 'Transparência',
+      description: 'Mapa público de privacidade, termos, cookies, suporte e direitos LGPD no KinoCampus.',
+    },
     '/termos.html': {
       type: 'WebPage',
       name: 'Termos de Uso do KinoCampus',

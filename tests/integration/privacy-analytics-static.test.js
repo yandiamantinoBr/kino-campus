@@ -93,6 +93,7 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
       'privacidade.html',
       'search-results.html',
       'termos.html',
+      'transparencia.html',
     ].forEach((file) => {
       const html = read(file);
       expect(html).toContain('assets/js/features/kc-nav-links-personalized.js?v=8.6.3');
@@ -107,5 +108,14 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     expect(script).not.toContain('applyOrderToNav');
     expect(script).not.toContain('appendChild');
     expect(script).toContain('KCPrivacyAnalytics.track');
+  });
+
+  test('rodape publico de transparencia nao aponta para painel admin', () => {
+    const consent = read('assets/js/core/kc-consent.js');
+
+    expect(consent).toContain('Central de Transparência');
+    expect(consent).toContain("getLegalHref('transparencia.html')");
+    expect(consent).toContain("getRootHref('ajuda.html#solicitacoes-suporte')");
+    expect(consent).not.toContain("getRootHref('admin/help-requests.html')");
   });
 });

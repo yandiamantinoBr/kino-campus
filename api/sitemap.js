@@ -10,6 +10,7 @@ const STATIC_ROUTES = [
   { path: '/achados-perdidos.html', changefreq: 'daily', priority: '0.8' },
   { path: '/ajuda.html', changefreq: 'monthly', priority: '0.5' },
   { path: '/ods.html', changefreq: 'monthly', priority: '0.5' },
+  { path: '/transparencia.html', changefreq: 'monthly', priority: '0.5' },
   { path: '/privacidade.html', changefreq: 'monthly', priority: '0.4' },
   { path: '/termos.html', changefreq: 'monthly', priority: '0.4' },
 ];

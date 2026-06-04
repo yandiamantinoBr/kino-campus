@@ -28,6 +28,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 | `/achados-perdidos.html` | `https://www.kinocampus.com.br/achados-perdidos.html` | Colecao publica de achados e perdidos |
 | `/ajuda.html` | `https://www.kinocampus.com.br/ajuda.html` | Suporte e contato |
 | `/ods.html` | `https://www.kinocampus.com.br/ods.html` | Contexto institucional e impacto |
+| `/transparencia.html` | `https://www.kinocampus.com.br/transparencia.html` | Hub de transparencia, privacidade, cookies e suporte |
 | `/privacidade.html` | `https://www.kinocampus.com.br/privacidade.html` | Politica de privacidade |
 | `/termos.html` | `https://www.kinocampus.com.br/termos.html` | Termos de uso |
 | `/product.html?id={uuid}` | URL com ID da publicacao | Publicacoes com `status=published`, nao expiradas e com conteudo minimo |
@@ -84,3 +85,4 @@ Se o Supabase estiver indisponivel, o sitemap ainda responde com as paginas esta
 - Revisar periodicamente se posts `hidden`, `deleted` ou `pending` nao aparecem no sitemap.
 - GA4: acompanhar tempo real, aquisicao de trafego e paginas/telas depois do deploy de producao.
 - APIs Google: usar apenas server-side quando houver necessidade de dashboard consolidado; nao guardar tokens OAuth no frontend.
+- Transparencia publica: manter `/transparencia.html`, `/privacidade.html`, `/termos.html` e `/ajuda.html#solicitacoes-suporte` consistentes entre rodape, sitemap, `llms.txt` e auditoria SEO.

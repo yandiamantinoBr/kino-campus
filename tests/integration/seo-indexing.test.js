@@ -16,6 +16,7 @@ const INDEXABLE_PAGES = {
   'achados-perdidos.html': 'https://www.kinocampus.com.br/achados-perdidos.html',
   'ajuda.html': 'https://www.kinocampus.com.br/ajuda.html',
   'ods.html': 'https://www.kinocampus.com.br/ods.html',
+  'transparencia.html': 'https://www.kinocampus.com.br/transparencia.html',
   'privacidade.html': 'https://www.kinocampus.com.br/privacidade.html',
   'termos.html': 'https://www.kinocampus.com.br/termos.html',
 };
@@ -53,6 +54,7 @@ describe('SEO e indexacao publica', () => {
     expect(sitemap).toContain('STATIC_ROUTES');
     expect(sitemap).toContain('/eventos.html');
     expect(sitemap).toContain('/oportunidades.html');
+    expect(sitemap).toContain('/transparencia.html');
     expect(sitemap).toContain('status=eq.published');
     expect(sitemap).toContain('expires_at');
     expect(sitemap).toContain('xmlns:image');
@@ -68,6 +70,7 @@ describe('SEO e indexacao publica', () => {
     expect(llms).toContain('https://www.kinocampus.com.br/sitemap.xml');
     expect(llms).toContain('/admin/');
     expect(llms).toContain('## Publicações');
+    expect(llms).toContain('https://www.kinocampus.com.br/transparencia.html');
   });
 
   test('paginas publicas tem canonical, robots index e JSON-LD compartilhado', () => {
@@ -112,6 +115,7 @@ describe('SEO e indexacao publica', () => {
     expect(source).toContain("'@type': 'BreadcrumbList'");
     expect(source).toContain("'@type': 'Organization'");
     expect(source).toContain("'@type': 'ItemList'");
+    expect(source).toContain('/transparencia.html');
   });
 
   test('SSR de product.html injeta conteudo inicial, canonical, robots e JSON-LD rico', () => {
