@@ -450,6 +450,10 @@
     'aria-label.records-per-page':      'Registros por página',
     'aria-label.banner-modal-close':    'Fechar',
     'aria-label.banners-metrics-period': 'Período das métricas de banners',
+    'aria-label.feed-ads-metric-window': 'Período das métricas dos anúncios de feed',
+    'aria-label.feed-ads-filter-query':  'Buscar campanhas de anúncio',
+    'aria-label.feed-ads-filter-status': 'Filtrar anúncios por status',
+    'aria-label.feed-ads-filter-module': 'Filtrar anúncios por módulo',
     'aria-label.privacy-event-log-filters': 'Filtros dos eventos recentes',
     'aria-label.privacy-event-log-prev': 'Página anterior dos eventos recentes',
     'aria-label.privacy-event-log-next': 'Próxima página dos eventos recentes',
@@ -552,6 +556,7 @@
     'placeholder.feed-ad-target-url':   'https://...',
     'placeholder.feed-ad-tags':         'ex: bolsa, edital, curso, evento',
     'placeholder.feed-ad-notes':        'Contrato, responsável, valor combinado ou observação de curadoria.',
+    'placeholder.feed-ads-filter-query': 'Buscar por campanha, anunciante ou URL',
 
     // Admin help-requests / moderation
     'placeholder.admin-help-search':    'Buscar por assunto, e-mail ou página',

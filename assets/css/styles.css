@@ -1879,8 +1879,19 @@ main {
 }
 
 .kc-sidebar-section--ads {
+    scroll-margin-top: 96px;
+    contain: layout paint;
+}
+
+.kc-sidebar-section--ads-top {
+    position: relative;
+}
+
+.kc-sidebar-section--ads-sticky {
     position: sticky;
     top: 92px;
+    z-index: 1;
+    align-self: start;
 }
 
 .kc-ad-sidebar-head {

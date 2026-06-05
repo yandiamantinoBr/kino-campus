@@ -49,12 +49,10 @@ describe('KCAds feed monetization', () => {
     expect(html).toContain('Bolsa para estudantes');
   });
 
-  test('insere anuncio inline depois dos primeiros cards', () => {
+  test('insere anuncios inline a cada 6 publicacoes', () => {
     document.body.innerHTML = [
       '<div class="kc-feed-list">',
-      '<article class="kc-card">1</article>',
-      '<article class="kc-card">2</article>',
-      '<article class="kc-card">3</article>',
+      Array.from({ length: 12 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
       '</div>',
     ].join('');
 
@@ -66,8 +64,45 @@ describe('KCAds feed monetization', () => {
     }], { module_key: 'eventos' });
 
     expect(ok).toBe(true);
-    expect(document.querySelectorAll('.kc-ad-card--inline')).toHaveLength(1);
-    expect(document.querySelector('.kc-feed-list').children[2].className).toContain('kc-ad-card');
+    expect(document.querySelectorAll('.kc-ad-card--inline')).toHaveLength(2);
+    expect(document.querySelector('.kc-feed-list').children[6].className).toContain('kc-ad-card');
+    expect(document.querySelector('.kc-feed-list').children[13].className).toContain('kc-ad-card');
+    expect(KCAds.getInlineSlotCount(18)).toBe(3);
+  });
+
+  test('renderiza anuncios laterais em bloco inicial e bloco sticky final', () => {
+    document.body.innerHTML = [
+      '<main><aside class="kc-sidebar">',
+      '<section class="kc-sidebar-section" id="one">Resumo</section>',
+      '<section class="kc-sidebar-section" id="two">Filtros</section>',
+      '</aside></main>',
+    ].join('');
+
+    const ok = KCAds.renderAsideAds([
+      { id: 'ad-1', title: 'Topo', target_url: 'https://example.com/a', placements: ['feed_aside'] },
+      { id: 'ad-2', title: 'Sticky', target_url: 'https://example.com/b', placements: ['feed_aside'] },
+    ], { module_key: 'eventos' }, document);
+
+    expect(ok).toBe(true);
+    expect(document.querySelector('[data-kc-ad-aside="top"]')).toBeTruthy();
+    expect(document.querySelector('[data-kc-ad-aside="sticky"]')).toBeTruthy();
+    expect(document.querySelector('.kc-sidebar').lastElementChild.getAttribute('data-kc-ad-aside')).toBe('sticky');
+  });
+
+  test('adiciona UTMs em URLs externas de campanha', () => {
+    const url = KCAds.buildTrackedTargetUrl({
+      id: 'ad-1',
+      name: 'Curso parceiro UFG',
+      title: 'Curso',
+      target_url: 'https://parceiro.example/path?x=1',
+      placements: ['feed_inline'],
+    }, 'feed_inline');
+
+    expect(url).toContain('utm_source=kinocampus');
+    expect(url).toContain('utm_medium=feed_ad');
+    expect(url).toContain('utm_campaign=curso-parceiro-ufg');
+    expect(url).toContain('utm_content=feed_inline');
+    expect(url).toContain('kc_ad_id=ad-1');
   });
 
   test('seleciona feed_aside por contexto de modulo', () => {
@@ -122,5 +157,26 @@ describe('KCAds feed monetization', () => {
     expect(sql).toContain("'ad_impression'");
     expect(sql).toContain("'ad_click'");
     expect(sql).toContain('ENABLE ROW LEVEL SECURITY');
+  });
+
+  test('admin de banners contem controles de anuncios de feed', () => {
+    const html = read('admin/banners.html');
+    const controller = read('assets/js/controllers/admin/admin-feed-ads.controller.js');
+
+    [
+      'feed-ads-metric-window',
+      'feed-ads-summary',
+      'ad-image-file',
+      'ad-image-upload',
+      'ad-tracking-preview',
+      'feed-ads-filter-query',
+      'feed-ads-filter-status',
+      'feed-ads-filter-module',
+    ].forEach((id) => {
+      expect(html).toContain('id="' + id + '"');
+    });
+    expect(controller).toContain('uploadAdImage');
+    expect(controller).toContain('getMetricWindowDays');
+    expect(controller).toContain('url_rastreavel');
   });
 });

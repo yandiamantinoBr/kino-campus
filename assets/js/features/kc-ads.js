@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Feed Ads (v9.3.6.0)
+  KinoCampus - Feed Ads (v9.3.6.1)
   Renderiza anuncios contextuais proprios em paginas de feed.
   Nao carrega rede externa e nao usa perfil individual por padrao.
 */
@@ -10,14 +10,14 @@
 }(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null), function (root) {
   'use strict';
 
-  const VERSION = '9.3.6.0';
+  const VERSION = '9.3.6.1';
   const CACHE_SCOPE = 'ads';
   const CACHE_VERSION = 1;
   const CACHE_MAX_AGE_MS = 5 * 60 * 1000;
   const CACHE_STALE_MAX_AGE_MS = 30 * 60 * 1000;
-  const INLINE_AFTER_FIRST = 2;
-  const INLINE_INTERVAL = 8;
-  const INLINE_MAX_PER_LIST = 2;
+  const INLINE_AFTER_FIRST = 6;
+  const INLINE_INTERVAL = 6;
+  const INLINE_MAX_PER_LIST = 8;
   const safeSetTimeout = typeof root.setTimeout === 'function'
     ? root.setTimeout.bind(root)
     : (typeof setTimeout === 'function' ? setTimeout : function (fn) {
@@ -215,6 +215,32 @@
     }
   }
 
+  function slugForUtm(value) {
+    return normalizeKey(value)
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'campanha';
+  }
+
+  function buildTrackedTargetUrl(ad, placement) {
+    const safe = normalizeAdRow(ad);
+    const href = safe.target_url || '';
+    if (!href) return '';
+    try {
+      const base = root.location && root.location.origin ? root.location.origin : 'https://www.kinocampus.com.br';
+      const url = new URL(href, base);
+      if (root.location && url.origin === root.location.origin) return url.pathname + url.search;
+      url.searchParams.set('utm_source', 'kinocampus');
+      url.searchParams.set('utm_medium', 'feed_ad');
+      url.searchParams.set('utm_campaign', slugForUtm(safe.name || safe.title || safe.id));
+      url.searchParams.set('utm_content', placement || 'feed_ad');
+      if (safe.id) url.searchParams.set('kc_ad_id', safe.id);
+      return url.href;
+    } catch (_) {
+      return href;
+    }
+  }
+
   function shouldRenderAside() {
     if (typeof root.matchMedia === 'function') {
       return root.matchMedia('(min-width: 1024px)').matches;
@@ -223,9 +249,14 @@
     return true;
   }
 
+  function getInlineSlotCount(cardsLength) {
+    const count = Math.floor(Math.max(0, Number(cardsLength) || 0) / INLINE_INTERVAL);
+    return Math.max(0, Math.min(INLINE_MAX_PER_LIST, count));
+  }
+
   function buildAdHTML(ad, placement) {
     const safe = normalizeAdRow(ad);
-    const href = safe.target_url || '#';
+    const href = buildTrackedTargetUrl(safe, placement) || safe.target_url || '#';
     const external = isExternalUrl(href);
     const sponsor = safe.advertiser_name || safe.sponsor_label || 'Patrocinado';
     const label = safe.sponsor_label || 'Publicidade';
@@ -263,23 +294,25 @@
       delete container.dataset.kcAdsSignature;
       return false;
     }
-    const selected = selectAdsForPlacement(ads, 'feed_inline', context, INLINE_MAX_PER_LIST);
+    const slotCount = getInlineSlotCount(cards.length);
+    const selected = selectAdsForPlacement(ads, 'feed_inline', context, slotCount || 1);
     if (!selected.length) return false;
+    const slotAds = Array.from({ length: slotCount }, function (_, index) {
+      return selected[index % selected.length];
+    });
     const signature = [
       cards.length,
-      selected.map((ad) => ad.id).join('|'),
+      slotAds.map((ad) => ad.id).join('|'),
     ].join(':');
     if (container.dataset.kcAdsSignature === signature
-      && container.querySelectorAll('.kc-ad-card--inline[data-kc-managed-ad="true"]').length === selected.length) {
+      && container.querySelectorAll('.kc-ad-card--inline[data-kc-managed-ad="true"]').length === slotAds.length) {
       bindTracking(container);
       return true;
     }
     removeManagedInlineAds(container);
 
-    selected.forEach((ad, index) => {
-      const targetIndex = index === 0
-        ? Math.min(INLINE_AFTER_FIRST - 1, cards.length - 1)
-        : Math.min((INLINE_AFTER_FIRST - 1) + (INLINE_INTERVAL * index), cards.length - 1);
+    slotAds.forEach((ad, index) => {
+      const targetIndex = Math.min((INLINE_INTERVAL * (index + 1)) - 1, cards.length - 1);
       const anchor = cards[targetIndex];
       if (anchor) anchor.insertAdjacentHTML('afterend', buildAdHTML(ad, 'feed_inline'));
     });
@@ -288,32 +321,56 @@
     return true;
   }
 
-  function renderAsideAds(ads, context, doc) {
-    const targetDoc = doc || root.document;
-    if (!shouldRenderAside()) return false;
-    if (!targetDoc || !ads || !ads.length) return false;
-    const sidebar = targetDoc.querySelector('main .kc-sidebar');
-    if (!sidebar) return false;
-    const selected = selectAdsForPlacement(ads, 'feed_aside', context, 2);
-    if (!selected.length) return false;
+  function removeManagedAsideAds(targetDoc) {
+    if (!targetDoc || !targetDoc.querySelectorAll) return;
+    targetDoc
+      .querySelectorAll('[data-kc-ad-aside], [data-kc-ad-aside="true"]')
+      .forEach((node) => node.remove());
+  }
 
-    let section = sidebar.querySelector('[data-kc-ad-aside="true"]');
+  function renderAsideSection(sidebar, targetDoc, slot, ad) {
+    if (!sidebar || !targetDoc || !ad) return null;
+    let section = sidebar.querySelector('[data-kc-ad-aside="' + slot + '"]');
     if (!section) {
       section = targetDoc.createElement('section');
-      section.className = 'kc-sidebar-section kc-sidebar-section--ads';
-      section.setAttribute('data-kc-ad-aside', 'true');
-      const first = sidebar.querySelector('.kc-sidebar-section');
-      if (first && first.nextSibling) sidebar.insertBefore(section, first.nextSibling);
-      else sidebar.appendChild(section);
+      section.setAttribute('data-kc-ad-aside', slot);
     }
+    section.className = 'kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-' + slot;
     section.innerHTML = [
       '<div class="kc-ad-sidebar-head">',
       '<h3><i class="fas fa-rectangle-ad" aria-hidden="true"></i> Publicidade</h3>',
       '<span>Patrocinado</span>',
       '</div>',
-      selected.map((ad) => buildAdHTML(ad, 'feed_aside')).join(''),
+      buildAdHTML(ad, 'feed_aside'),
     ].join('');
-    bindTracking(section);
+    if (slot === 'top') {
+      const first = sidebar.querySelector('.kc-sidebar-section:not([data-kc-ad-aside])');
+      if (!section.parentNode) {
+        if (first && first.nextSibling) sidebar.insertBefore(section, first.nextSibling);
+        else sidebar.appendChild(section);
+      }
+    } else {
+      sidebar.appendChild(section);
+    }
+    return section;
+  }
+
+  function renderAsideAds(ads, context, doc) {
+    const targetDoc = doc || root.document;
+    if (!shouldRenderAside()) {
+      removeManagedAsideAds(targetDoc);
+      return false;
+    }
+    if (!targetDoc || !ads || !ads.length) return false;
+    const sidebar = targetDoc.querySelector('main .kc-sidebar');
+    if (!sidebar) return false;
+    const selected = selectAdsForPlacement(ads, 'feed_aside', context, 2);
+    if (!selected.length) return false;
+    sidebar.querySelectorAll('[data-kc-ad-aside="true"]').forEach((node) => node.remove());
+    const top = renderAsideSection(sidebar, targetDoc, 'top', selected[0]);
+    const sticky = renderAsideSection(sidebar, targetDoc, 'sticky', selected[1] || selected[0]);
+    bindTracking(top);
+    bindTracking(sticky);
     return true;
   }
 
@@ -473,6 +530,9 @@
     isFeedPage,
     getPageModule,
     selectAdsForPlacement,
+    slugForUtm,
+    buildTrackedTargetUrl,
+    getInlineSlotCount,
     buildAdHTML,
     renderInlineAds,
     renderAsideAds,

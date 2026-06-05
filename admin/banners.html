@@ -390,7 +390,30 @@
     .kc-feed-ads-admin__head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
     .kc-feed-ads-admin__head h2 { margin:0 0 6px; display:flex; align-items:center; gap:10px; color:var(--kc-text-dark-primary); }
     .kc-feed-ads-admin__head p { margin:0; color:var(--kc-text-dark-secondary); max-width:760px; line-height:1.5; }
-    .kc-feed-ads-toolbar { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .kc-feed-ads-toolbar {
+      display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center;
+      padding:8px; border:1px solid var(--kc-border-dark); border-radius:14px;
+      background:rgba(255,255,255,.025);
+    }
+    .kc-feed-ads-toolbar button,
+    .kc-feed-ads-toolbar select {
+      min-height:38px; border:1px solid var(--kc-border-dark); border-radius:10px;
+      background:var(--kc-surface-dark); color:var(--kc-text-dark-primary); padding:8px 11px;
+      font-weight:700;
+    }
+    .kc-feed-ads-toolbar button { cursor:pointer; }
+    .kc-feed-ads-toolbar button:hover { color:var(--kc-primary-brand); border-color:var(--kc-primary-brand); }
+    .kc-feed-ads-summary {
+      display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin:0 0 18px;
+    }
+    .kc-feed-ads-kpi {
+      border:1px solid var(--kc-border-dark); border-radius:16px; padding:14px;
+      background:linear-gradient(180deg, rgba(255,124,0,.08), rgba(255,255,255,.02));
+      min-height:86px;
+    }
+    .kc-feed-ads-kpi span { display:block; color:var(--kc-text-dark-secondary); font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
+    .kc-feed-ads-kpi strong { display:block; color:var(--kc-text-dark-primary); font-size:1.5rem; margin-top:7px; }
+    .kc-feed-ads-kpi small { display:block; color:var(--kc-text-dark-secondary); margin-top:4px; line-height:1.35; }
     .kc-feed-ads-grid { display:grid; grid-template-columns:minmax(0, 1fr) minmax(280px, .72fr); gap:18px; align-items:start; }
     .kc-feed-ads-form,
     .kc-feed-ads-panel {
@@ -407,6 +430,38 @@
     .kc-feed-ads-checks label {
       display:inline-flex; align-items:center; gap:7px; border:1px solid var(--kc-border-dark);
       border-radius:999px; padding:8px 10px; color:var(--kc-text-dark-secondary); font-size:.86rem;
+      background:rgba(255,255,255,.02); cursor:pointer; transition:border-color .16s ease, color .16s ease, background .16s ease;
+    }
+    .kc-feed-ads-checks label:has(input:checked) {
+      border-color:rgba(255,124,0,.65); color:var(--kc-text-dark-primary);
+      background:rgba(255,124,0,.12);
+    }
+    .kc-feed-ads-upload {
+      margin-top:8px; padding:10px; border:1px dashed rgba(255,124,0,.35);
+      border-radius:12px; background:rgba(255,124,0,.06);
+    }
+    .kc-feed-ads-upload input { width:100%; color:var(--kc-text-dark-secondary); }
+    .kc-feed-ads-upload-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:9px; }
+    .kc-feed-ads-upload-actions button {
+      border:1px solid rgba(255,124,0,.45); background:rgba(255,124,0,.12);
+      color:var(--kc-primary-brand); border-radius:9px; padding:8px 10px; cursor:pointer; font-weight:800;
+    }
+    .kc-feed-ads-upload-status { color:var(--kc-text-dark-secondary); font-size:.82rem; line-height:1.35; }
+    .kc-feed-ads-tracking-box {
+      margin-top:10px; padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(59,130,246,.25); background:rgba(59,130,246,.08);
+      color:var(--kc-text-dark-secondary); font-size:.84rem; line-height:1.45; word-break:break-word;
+    }
+    .kc-feed-ads-note {
+      color:var(--kc-text-dark-secondary); font-size:.82rem; line-height:1.45; margin:6px 0 0;
+    }
+    .kc-feed-ads-filters {
+      display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:12px;
+    }
+    .kc-feed-ads-filters input,
+    .kc-feed-ads-filters select {
+      width:100%; min-height:38px; border:1px solid var(--kc-border-dark); border-radius:10px;
+      background:var(--kc-background-dark); color:var(--kc-text-dark-primary); padding:8px 10px;
     }
     .kc-feed-ads-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; flex-wrap:wrap; }
     .kc-feed-ads-list { display:flex; flex-direction:column; gap:12px; }
@@ -426,6 +481,10 @@
     .kc-feed-ad-status.active { color:#22c55e; }
     .kc-feed-ad-status.paused { color:#f59e0b; }
     .kc-feed-ad-status.archived { color:#94a3b8; }
+    .kc-feed-ad-tracking {
+      margin-top:9px; padding-top:9px; border-top:1px solid var(--kc-border-dark);
+      color:var(--kc-text-dark-secondary); font-size:.78rem; word-break:break-word;
+    }
     .kc-feed-ad-actions { display:flex; gap:6px; flex-shrink:0; }
     .kc-feed-ad-actions button { border:1px solid var(--kc-border-dark); background:transparent; color:var(--kc-text-dark-secondary); border-radius:9px; padding:8px; cursor:pointer; }
     .kc-feed-ad-actions button:hover { color:var(--kc-primary-brand); border-color:var(--kc-primary-brand); }
@@ -438,8 +497,12 @@
     @media (max-width: 900px) {
       .kc-feed-ads-admin__head { flex-direction:column; }
       .kc-feed-ads-toolbar { justify-content:flex-start; }
+      .kc-feed-ads-summary { grid-template-columns:repeat(2, minmax(0, 1fr)); }
       .kc-feed-ads-grid { grid-template-columns:1fr; }
       .kc-feed-ads-fields { grid-template-columns:1fr; }
+    }
+    @media (max-width: 520px) {
+      .kc-feed-ads-summary { grid-template-columns:1fr; }
     }
 
   </style>
@@ -516,12 +579,24 @@
               <p>Cadastre campanhas contextuais para aparecerem entre publicações e na lateral dos feeds. Elas são rotuladas como publicidade e não aparecem em páginas de produto.</p>
             </div>
             <div class="kc-feed-ads-toolbar">
+              <select id="feed-ads-metric-window" aria-label="Período das métricas dos anúncios de feed" data-i18n-aria-label="aria-label.feed-ads-metric-window">
+                <option value="7">7 dias</option>
+                <option value="30" selected>30 dias</option>
+                <option value="90">90 dias</option>
+                <option value="365">365 dias</option>
+              </select>
               <button type="button" id="feed-ads-refresh"><i class="fas fa-rotate"></i> Atualizar anúncios</button>
               <button type="button" id="feed-ads-export-xlsx"><i class="fas fa-file-excel"></i> XLSX</button>
               <button type="button" id="feed-ads-export-pdf"><i class="fas fa-file-pdf"></i> PDF</button>
             </div>
           </div>
           <div class="kc-feed-ads-error" id="feed-ads-error" role="alert"></div>
+          <div class="kc-feed-ads-summary" id="feed-ads-summary" aria-live="polite">
+            <div class="kc-feed-ads-kpi"><span>Campanhas</span><strong>0</strong><small>Total filtrado</small></div>
+            <div class="kc-feed-ads-kpi"><span>Ativas</span><strong>0</strong><small>Prontas para exibição</small></div>
+            <div class="kc-feed-ads-kpi"><span>Cliques</span><strong>0</strong><small>Período selecionado</small></div>
+            <div class="kc-feed-ads-kpi"><span>CTR</span><strong>0,00%</strong><small>Cliques / impressões</small></div>
+          </div>
           <div class="kc-feed-ads-grid">
             <form class="kc-feed-ads-form" id="feed-ad-form">
               <h3><i class="fas fa-pen-to-square"></i> Campanha</h3>
@@ -546,10 +621,20 @@
                 <label class="kc-form-field">
                   <span>Imagem</span>
                   <input id="ad-image-url" type="url" placeholder="https://..." data-i18n-placeholder="placeholder.feed-ad-image-url" />
+                  <div class="kc-feed-ads-upload">
+                    <input id="ad-image-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+                    <div class="kc-feed-ads-upload-actions">
+                      <button type="button" id="ad-image-upload"><i class="fas fa-upload"></i> Enviar imagem</button>
+                      <span class="kc-feed-ads-upload-status" id="ad-image-upload-status">Cole uma URL ou envie uma imagem para o storage.</span>
+                    </div>
+                  </div>
                 </label>
                 <label class="kc-form-field">
                   <span>URL de destino</span>
                   <input id="ad-target-url" type="url" placeholder="https://..." data-i18n-placeholder="placeholder.feed-ad-target-url" required />
+                  <div class="kc-feed-ads-tracking-box" id="ad-tracking-preview">
+                    Links externos receberão UTMs para acompanhamento pelo anunciante.
+                  </div>
                 </label>
                 <label class="kc-form-field">
                   <span>CTA</span>
@@ -615,6 +700,25 @@
             </form>
             <section class="kc-feed-ads-panel">
               <h3><i class="fas fa-list-check"></i> Campanhas cadastradas</h3>
+              <div class="kc-feed-ads-filters">
+                <input id="feed-ads-filter-query" type="search" placeholder="Buscar por campanha, anunciante ou URL" data-i18n-placeholder="placeholder.feed-ads-filter-query" aria-label="Buscar campanhas de anúncio" data-i18n-aria-label="aria-label.feed-ads-filter-query" />
+                <select id="feed-ads-filter-status" aria-label="Filtrar por status" data-i18n-aria-label="aria-label.feed-ads-filter-status">
+                  <option value="">Todos os status</option>
+                  <option value="active">Ativas</option>
+                  <option value="paused">Pausadas</option>
+                  <option value="draft">Rascunhos</option>
+                  <option value="archived">Arquivadas</option>
+                </select>
+                <select id="feed-ads-filter-module" aria-label="Filtrar por módulo" data-i18n-aria-label="aria-label.feed-ads-filter-module">
+                  <option value="">Todos os módulos</option>
+                  <option value="eventos">Eventos</option>
+                  <option value="oportunidades">Oportunidades</option>
+                  <option value="moradia">Moradia</option>
+                  <option value="compra-venda">Compra e venda</option>
+                  <option value="caronas">Caronas</option>
+                  <option value="achados-perdidos">Achados e perdidos</option>
+                </select>
+              </div>
               <div class="kc-feed-ads-list" id="feed-ads-list">
                 <div class="kc-skeleton" style="height:96px;border-radius:14px;"></div>
                 <div class="kc-skeleton" style="height:96px;border-radius:14px;"></div>
@@ -801,9 +905,9 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
-  <script defer src="../assets/js/features/kc-ads.js?v=8.6.1"></script>
+  <script defer src="../assets/js/features/kc-ads.js?v=8.6.2"></script>
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.5"></script>
   <script defer src="../assets/js/controllers/admin/admin-banners.controller.js?v=8.6.5"></script>
-  <script defer src="../assets/js/controllers/admin/admin-feed-ads.controller.js?v=8.6.1"></script>
+  <script defer src="../assets/js/controllers/admin/admin-feed-ads.controller.js?v=8.6.2"></script>
 </body>
 </html>
