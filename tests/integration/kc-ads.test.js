@@ -175,6 +175,12 @@ describe('KCAds feed monetization', () => {
     window.KCConsent = { hasConsent: (key) => key === 'advertising' };
     document.body.innerHTML = '<div class="kc-feed-list"><article class="kc-card">1</article></div>';
 
+    expect(KCAds.maybeLoadAutoAds({
+      status: 'active',
+      auto_ads_enabled: true,
+      adsense_client_id: 'ca-pub-2776499020194231',
+    })).toBe(false);
+
     const rendered = KCAds.renderAllAds([], { module_key: 'eventos' }, document, {
       status: 'active',
       auto_ads_enabled: true,
@@ -201,8 +207,27 @@ describe('KCAds feed monetization', () => {
     expect(ok).toBe(true);
     expect(document.querySelector('[data-kc-ad-aside="top"]')).toBeTruthy();
     expect(document.querySelector('[data-kc-ad-aside="sticky"]')).toBeTruthy();
+    expect(document.querySelector('[data-kc-ad-aside="top"] .kc-ad-card').getAttribute('data-kc-ad-placement')).toBe('feed_aside_top');
+    expect(document.querySelector('[data-kc-ad-aside="sticky"] .kc-ad-card').getAttribute('data-kc-ad-placement')).toBe('feed_aside_sticky');
     expect(document.querySelector('.kc-sidebar').firstElementChild.getAttribute('data-kc-ad-aside')).toBe('top');
     expect(document.querySelector('.kc-sidebar').lastElementChild.getAttribute('data-kc-ad-aside')).toBe('sticky');
+  });
+
+  test('não duplica a mesma campanha lateral quando só há uma elegível', () => {
+    document.body.innerHTML = [
+      '<main><aside class="kc-sidebar">',
+      '<section class="kc-sidebar-section" id="one">Resumo</section>',
+      '</aside></main>',
+    ].join('');
+
+    const ok = KCAds.renderAsideAds([
+      { id: 'ad-1', title: 'Única campanha', target_url: 'https://example.com/a', placements: ['feed_aside'], frequency_cap_per_session: 1 },
+    ], { module_key: 'eventos' }, document);
+
+    expect(ok).toBe(true);
+    expect(document.querySelector('[data-kc-ad-aside="top"]')).toBeTruthy();
+    expect(document.querySelector('[data-kc-ad-aside="sticky"]')).toBeFalsy();
+    expect(document.querySelectorAll('.kc-ad-card--aside[data-kc-ad-id="ad-1"]')).toHaveLength(1);
   });
 
   test('adiciona UTMs em URLs externas de campanha', () => {

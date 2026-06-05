@@ -418,9 +418,10 @@
     return Math.max(0, Math.min(INLINE_MAX_PER_LIST, count));
   }
 
-  function buildAdHTML(ad, placement) {
+  function buildAdHTML(ad, placement, slotPlacement) {
     const safe = normalizeAdRow(ad);
-    const href = buildTrackedTargetUrl(safe, placement) || safe.target_url || '#';
+    const metricPlacement = slotPlacement || placement;
+    const href = buildTrackedTargetUrl(safe, metricPlacement) || safe.target_url || '#';
     const external = isExternalUrl(href);
     const sponsor = safe.advertiser_name || safe.sponsor_label || 'Patrocinado';
     const label = safe.sponsor_label || 'Publicidade';
@@ -428,7 +429,7 @@
       ? `<a class="kc-ad-card__media" href="${esc(href)}" rel="sponsored noopener noreferrer"${external ? ' target="_blank"' : ''}><img src="${esc(safe.image_url)}" alt="${esc(safe.title)}" loading="lazy" decoding="async"></a>`
       : '<div class="kc-ad-card__media kc-ad-card__media--fallback" aria-hidden="true"><i class="fas fa-bullhorn"></i></div>';
     return [
-      `<article class="kc-ad-card kc-ad-card--${placement === 'feed_aside' ? 'aside' : 'inline'}" data-kc-managed-ad="true" data-kc-ad-id="${esc(safe.id)}" data-kc-ad-placement="${esc(placement)}" data-kc-ad-title="${esc(safe.title)}">`,
+      `<article class="kc-ad-card kc-ad-card--${placement === 'feed_aside' ? 'aside' : 'inline'}" data-kc-managed-ad="true" data-kc-ad-id="${esc(safe.id)}" data-kc-ad-placement="${esc(metricPlacement)}" data-kc-ad-title="${esc(safe.title)}">`,
       '<div class="kc-ad-card__label">',
       `<span>${esc(label)}</span>`,
       `<small>${esc(sponsor)}</small>`,
@@ -481,7 +482,7 @@
 
   function maybeLoadAutoAds(config) {
     const cfg = normalizeAdConfig(config);
-    if (!cfg.enabled || cfg.status !== 'active' || !cfg.auto_ads_enabled || !hasAdvertisingConsent()) return false;
+    if (!isFeedPage() || !cfg.enabled || cfg.status !== 'active' || !cfg.auto_ads_enabled || !hasAdvertisingConsent()) return false;
     return loadAdsenseScriptOnce(cfg);
   }
 
@@ -510,7 +511,7 @@
     if (mode === 'adsense_fallback' && !hasDirect && hasAdsense) {
       return { provider: 'adsense', html: buildAdsenseHTML(cfg, slotPlacement) };
     }
-    if (hasDirect) return { provider: 'direct', html: buildAdHTML(ad, placement) };
+    if (hasDirect) return { provider: 'direct', html: buildAdHTML(ad, placement, slotPlacementFor(slotPlacement)) };
     if (mode === 'adsense_fallback' && hasAdsense) return { provider: 'adsense', html: buildAdsenseHTML(cfg, slotPlacement) };
     return { provider: 'off', html: '' };
   }
@@ -615,7 +616,7 @@
     if (!selected.length && !canRenderAdsense(cfg, 'feed_aside_top') && !canRenderAdsense(cfg, 'feed_aside_sticky')) return false;
     sidebar.querySelectorAll('[data-kc-ad-aside="true"]').forEach((node) => node.remove());
     const top = renderAsideSection(sidebar, targetDoc, 'top', selected[0] || null, cfg);
-    const sticky = renderAsideSection(sidebar, targetDoc, 'sticky', selected[1] || selected[0] || null, cfg);
+    const sticky = renderAsideSection(sidebar, targetDoc, 'sticky', selected[1] || null, cfg);
     bindTracking(top);
     bindTracking(sticky);
     pushAdsenseSlots(top);
