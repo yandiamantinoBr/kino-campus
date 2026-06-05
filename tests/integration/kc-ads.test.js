@@ -187,7 +187,7 @@ describe('KCAds feed monetization', () => {
   });
 
   test('migration AdSense define settings, RPCs e audit log canonico', () => {
-    const sql = read('supabase/migrations/20260605143000_adsense_admin_monetization.sql');
+    const sql = read('supabase/migrations/20260605182346_adsense_admin_monetization_runtime.sql');
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.ad_network_settings');
     expect(sql).toContain('public.kc_get_feed_ad_config');
     expect(sql).toContain('public.kc_admin_get_ad_network_settings');
@@ -196,6 +196,19 @@ describe('KCAds feed monetization', () => {
     expect(sql).toContain("'ad_campaign_created'");
     expect(sql).toContain("'ad_network_settings_updated'");
     expect(sql).toContain('ca-pub-2776499020194231');
+  });
+
+  test('migration AdSense cobre indices de FKs monitorados pelos advisors', () => {
+    const sql = read('supabase/migrations/20260605182516_adsense_fk_indexes.sql');
+    [
+      'idx_ad_campaigns_created_by',
+      'idx_ad_campaigns_updated_by',
+      'idx_ad_campaign_audit_changed_by',
+      'idx_ad_network_settings_updated_by',
+      'idx_privacy_analytics_events_user_id',
+    ].forEach((indexName) => {
+      expect(sql).toContain(indexName);
+    });
   });
 
   test('admin de banners contem controles de anuncios de feed', () => {
