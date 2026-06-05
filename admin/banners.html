@@ -6,7 +6,7 @@
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
-  <title>KinoCampus - Gerenciar Banners</title>
+  <title>KinoCampus - Banners e anúncios</title>
   <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
@@ -386,6 +386,62 @@
     #kc-banners-toast.success { border-left: 4px solid #22c55e; }
     #kc-banners-toast.error   { border-left: 4px solid #ef4444; }
 
+    .kc-feed-ads-admin { margin-top: 28px; border-top: 1px solid var(--kc-border-dark); padding-top: 24px; }
+    .kc-feed-ads-admin__head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
+    .kc-feed-ads-admin__head h2 { margin:0 0 6px; display:flex; align-items:center; gap:10px; color:var(--kc-text-dark-primary); }
+    .kc-feed-ads-admin__head p { margin:0; color:var(--kc-text-dark-secondary); max-width:760px; line-height:1.5; }
+    .kc-feed-ads-toolbar { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .kc-feed-ads-grid { display:grid; grid-template-columns:minmax(0, 1fr) minmax(280px, .72fr); gap:18px; align-items:start; }
+    .kc-feed-ads-form,
+    .kc-feed-ads-panel {
+      background:var(--kc-surface-dark);
+      border:1px solid var(--kc-border-dark);
+      border-radius:16px;
+      padding:16px;
+    }
+    .kc-feed-ads-form h3,
+    .kc-feed-ads-panel h3 { margin:0 0 12px; font-size:1rem; display:flex; align-items:center; gap:8px; }
+    .kc-feed-ads-fields { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+    .kc-feed-ads-fields .span-2 { grid-column:1 / -1; }
+    .kc-feed-ads-checks { display:flex; flex-wrap:wrap; gap:8px; }
+    .kc-feed-ads-checks label {
+      display:inline-flex; align-items:center; gap:7px; border:1px solid var(--kc-border-dark);
+      border-radius:999px; padding:8px 10px; color:var(--kc-text-dark-secondary); font-size:.86rem;
+    }
+    .kc-feed-ads-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; flex-wrap:wrap; }
+    .kc-feed-ads-list { display:flex; flex-direction:column; gap:12px; }
+    .kc-feed-ad-item {
+      border:1px solid var(--kc-border-dark); border-radius:14px; padding:12px;
+      background:rgba(255,255,255,.02);
+    }
+    .kc-feed-ad-item__top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .kc-feed-ad-item strong { color:var(--kc-text-dark-primary); display:block; margin-bottom:4px; }
+    .kc-feed-ad-item small { color:var(--kc-text-dark-secondary); display:block; line-height:1.35; }
+    .kc-feed-ad-badges { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+    .kc-feed-ad-badges span {
+      border-radius:999px; padding:4px 8px; font-size:.74rem; color:var(--kc-text-dark-secondary);
+      background:var(--kc-background-dark); border:1px solid var(--kc-border-dark);
+    }
+    .kc-feed-ad-status { font-weight:800; }
+    .kc-feed-ad-status.active { color:#22c55e; }
+    .kc-feed-ad-status.paused { color:#f59e0b; }
+    .kc-feed-ad-status.archived { color:#94a3b8; }
+    .kc-feed-ad-actions { display:flex; gap:6px; flex-shrink:0; }
+    .kc-feed-ad-actions button { border:1px solid var(--kc-border-dark); background:transparent; color:var(--kc-text-dark-secondary); border-radius:9px; padding:8px; cursor:pointer; }
+    .kc-feed-ad-actions button:hover { color:var(--kc-primary-brand); border-color:var(--kc-primary-brand); }
+    .kc-feed-ads-preview { margin-top:14px; }
+    .kc-feed-ads-preview .kc-ad-card { max-width:620px; }
+    .kc-feed-ads-error {
+      display:none; margin-bottom:12px; border:1px solid rgba(245,158,11,.35);
+      background:rgba(245,158,11,.12); color:#fbbf24; border-radius:10px; padding:10px 12px;
+    }
+    @media (max-width: 900px) {
+      .kc-feed-ads-admin__head { flex-direction:column; }
+      .kc-feed-ads-toolbar { justify-content:flex-start; }
+      .kc-feed-ads-grid { grid-template-columns:1fr; }
+      .kc-feed-ads-fields { grid-template-columns:1fr; }
+    }
+
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.1" />
 </head>
@@ -428,8 +484,8 @@
         <!-- Hero -->
         <section class="kc-admin-hero">
           <div>
-            <h1><i class="fas fa-images"></i> Gerenciar Banners</h1>
-            <p>Edite, reordene, ative ou desative os banners do carrossel da página inicial.</p>
+            <h1><i class="fas fa-images"></i> Banners e anúncios</h1>
+            <p>Edite o carrossel da página inicial e gerencie campanhas contextuais para os feeds.</p>
           </div>
           <div class="kc-admin-toolbar">
             <button type="button" id="btn-refresh"><i class="fas fa-rotate"></i> Atualizar</button>
@@ -452,6 +508,120 @@
           <i class="fas fa-images" style="font-size:2.4rem;opacity:.35;display:block;margin-bottom:12px;"></i>
           Nenhum banner cadastrado. Clique em <strong>Novo Banner</strong> para começar.
         </div>
+
+        <section class="kc-feed-ads-admin" id="feed-ads-admin" aria-labelledby="feed-ads-title">
+          <div class="kc-feed-ads-admin__head">
+            <div>
+              <h2 id="feed-ads-title"><i class="fas fa-rectangle-ad"></i> Anúncios de feed</h2>
+              <p>Cadastre campanhas contextuais para aparecerem entre publicações e na lateral dos feeds. Elas são rotuladas como publicidade e não aparecem em páginas de produto.</p>
+            </div>
+            <div class="kc-feed-ads-toolbar">
+              <button type="button" id="feed-ads-refresh"><i class="fas fa-rotate"></i> Atualizar anúncios</button>
+              <button type="button" id="feed-ads-export-xlsx"><i class="fas fa-file-excel"></i> XLSX</button>
+              <button type="button" id="feed-ads-export-pdf"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
+          </div>
+          <div class="kc-feed-ads-error" id="feed-ads-error" role="alert"></div>
+          <div class="kc-feed-ads-grid">
+            <form class="kc-feed-ads-form" id="feed-ad-form">
+              <h3><i class="fas fa-pen-to-square"></i> Campanha</h3>
+              <input type="hidden" id="ad-id" />
+              <div class="kc-feed-ads-fields">
+                <label class="kc-form-field">
+                  <span>Nome interno</span>
+                  <input id="ad-name" type="text" placeholder="ex: Vestibular parceiro - junho" data-i18n-placeholder="placeholder.feed-ad-name" maxlength="140" required />
+                </label>
+                <label class="kc-form-field">
+                  <span>Anunciante</span>
+                  <input id="ad-advertiser" type="text" placeholder="ex: Centro Acadêmico, empresa ou projeto" data-i18n-placeholder="placeholder.feed-ad-advertiser" maxlength="140" />
+                </label>
+                <label class="kc-form-field span-2">
+                  <span>Título visível</span>
+                  <input id="ad-title" type="text" placeholder="ex: Bolsas abertas para estudantes UFG" data-i18n-placeholder="placeholder.feed-ad-title" maxlength="160" required />
+                </label>
+                <label class="kc-form-field span-2">
+                  <span>Descrição</span>
+                  <textarea id="ad-description" rows="2" maxlength="320" placeholder="Resumo curto, objetivo e transparente." data-i18n-placeholder="placeholder.feed-ad-description"></textarea>
+                </label>
+                <label class="kc-form-field">
+                  <span>Imagem</span>
+                  <input id="ad-image-url" type="url" placeholder="https://..." data-i18n-placeholder="placeholder.feed-ad-image-url" />
+                </label>
+                <label class="kc-form-field">
+                  <span>URL de destino</span>
+                  <input id="ad-target-url" type="url" placeholder="https://..." data-i18n-placeholder="placeholder.feed-ad-target-url" required />
+                </label>
+                <label class="kc-form-field">
+                  <span>CTA</span>
+                  <input id="ad-cta-label" type="text" value="Saiba mais" maxlength="60" />
+                </label>
+                <label class="kc-form-field">
+                  <span>Status</span>
+                  <select id="ad-status">
+                    <option value="draft">Rascunho</option>
+                    <option value="active">Ativo</option>
+                    <option value="paused">Pausado</option>
+                    <option value="archived">Arquivado</option>
+                  </select>
+                </label>
+                <fieldset class="kc-form-field span-2">
+                  <legend>Posições</legend>
+                  <div class="kc-feed-ads-checks">
+                    <label><input type="checkbox" name="ad-placement" value="feed_inline" checked /> Entre publicações</label>
+                    <label><input type="checkbox" name="ad-placement" value="feed_aside" /> Lateral direita</label>
+                  </div>
+                </fieldset>
+                <fieldset class="kc-form-field span-2">
+                  <legend>Módulos</legend>
+                  <div class="kc-feed-ads-checks">
+                    <label><input type="checkbox" name="ad-module" value="eventos" /> Eventos</label>
+                    <label><input type="checkbox" name="ad-module" value="oportunidades" /> Oportunidades</label>
+                    <label><input type="checkbox" name="ad-module" value="moradia" /> Moradia</label>
+                    <label><input type="checkbox" name="ad-module" value="compra-venda" /> Compra e venda</label>
+                    <label><input type="checkbox" name="ad-module" value="caronas" /> Caronas</label>
+                    <label><input type="checkbox" name="ad-module" value="achados-perdidos" /> Achados e perdidos</label>
+                  </div>
+                </fieldset>
+                <label class="kc-form-field span-2">
+                  <span>Tags contextuais</span>
+                  <input id="ad-tags" type="text" placeholder="ex: bolsa, edital, curso, evento" data-i18n-placeholder="placeholder.feed-ad-tags" />
+                </label>
+                <label class="kc-form-field">
+                  <span>Prioridade</span>
+                  <input id="ad-priority" type="number" value="0" step="1" />
+                </label>
+                <label class="kc-form-field">
+                  <span>Limite por sessão</span>
+                  <input id="ad-frequency-cap" type="number" value="4" min="0" step="1" />
+                </label>
+                <label class="kc-form-field">
+                  <span>Início</span>
+                  <input id="ad-starts-at" type="datetime-local" />
+                </label>
+                <label class="kc-form-field">
+                  <span>Fim</span>
+                  <input id="ad-ends-at" type="datetime-local" />
+                </label>
+                <label class="kc-form-field span-2">
+                  <span>Observações internas</span>
+                  <textarea id="ad-notes" rows="2" maxlength="1000" placeholder="Contrato, responsável, valor combinado ou observação de curadoria." data-i18n-placeholder="placeholder.feed-ad-notes"></textarea>
+                </label>
+              </div>
+              <div class="kc-feed-ads-actions">
+                <button type="button" class="kc-btn kc-btn-secondary" id="feed-ad-reset">Limpar</button>
+                <button type="submit" class="kc-btn kc-btn-primary-action"><i class="fas fa-floppy-disk"></i> Salvar anúncio</button>
+              </div>
+              <div class="kc-feed-ads-preview" id="feed-ad-preview"></div>
+            </form>
+            <section class="kc-feed-ads-panel">
+              <h3><i class="fas fa-list-check"></i> Campanhas cadastradas</h3>
+              <div class="kc-feed-ads-list" id="feed-ads-list">
+                <div class="kc-skeleton" style="height:96px;border-radius:14px;"></div>
+                <div class="kc-skeleton" style="height:96px;border-radius:14px;"></div>
+              </div>
+            </section>
+          </div>
+        </section>
       </section>
     </div>
   </main>
@@ -631,7 +801,9 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
+  <script defer src="../assets/js/features/kc-ads.js?v=8.6.1"></script>
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.5"></script>
   <script defer src="../assets/js/controllers/admin/admin-banners.controller.js?v=8.6.5"></script>
+  <script defer src="../assets/js/controllers/admin/admin-feed-ads.controller.js?v=8.6.1"></script>
 </body>
 </html>

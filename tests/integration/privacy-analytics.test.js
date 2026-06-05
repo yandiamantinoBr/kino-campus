@@ -62,6 +62,35 @@ describe('kc-privacy-analytics.js', () => {
     expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('token');
   });
 
+  test('aceita eventos agregados de anuncios sem dados sensiveis', async () => {
+    const rpc = jest.fn(() => Promise.resolve({ data: { ok: true }, error: null }));
+    window.KCConsent = { hasConsent: jest.fn(() => true) };
+    window.KCSupabase = { getClient: () => ({ rpc }) };
+
+    const api = loadPrivacyAnalytics();
+    const result = await api.track('ad_click', {
+      entity_type: 'ad_campaign',
+      entity_id: 'ad-1',
+      entity_label: 'Campanha teste',
+      source: 'feed_inline',
+      token: 'nao-exportar',
+      email: 'nao@exportar.test',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_event_name: 'ad_click',
+      p_entity_type: 'ad_campaign',
+      p_entity_id: 'ad-1',
+    });
+    expect(rpc.mock.calls[0][1].p_metadata).toMatchObject({
+      entity_label: 'Campanha teste',
+      source: 'feed_inline',
+    });
+    expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('token');
+    expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('email');
+  });
+
   test('registra consentimento uma vez por assinatura de preferencias', async () => {
     const rpc = jest.fn(() => Promise.resolve({ data: { ok: true }, error: null }));
     window.KCSupabase = { getClient: () => ({ rpc }) };

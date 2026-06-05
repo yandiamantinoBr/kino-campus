@@ -544,6 +544,14 @@
     'placeholder.banner-icon':          'ex: fas fa-calendar-alt',
     'placeholder.banner-grad-from':     '#4F46E5',
     'placeholder.banner-grad-to':       '#7C3AED',
+    'placeholder.feed-ad-name':         'ex: Vestibular parceiro - junho',
+    'placeholder.feed-ad-advertiser':   'ex: Centro Acadêmico, empresa ou projeto',
+    'placeholder.feed-ad-title':        'ex: Bolsas abertas para estudantes UFG',
+    'placeholder.feed-ad-description':  'Resumo curto, objetivo e transparente.',
+    'placeholder.feed-ad-image-url':    'https://...',
+    'placeholder.feed-ad-target-url':   'https://...',
+    'placeholder.feed-ad-tags':         'ex: bolsa, edital, curso, evento',
+    'placeholder.feed-ad-notes':        'Contrato, responsável, valor combinado ou observação de curadoria.',
 
     // Admin help-requests / moderation
     'placeholder.admin-help-search':    'Buscar por assunto, e-mail ou página',

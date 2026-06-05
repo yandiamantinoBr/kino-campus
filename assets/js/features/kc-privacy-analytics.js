@@ -18,6 +18,8 @@
     'post_open',
     'banner_impression',
     'banner_click',
+    'ad_impression',
+    'ad_click',
     'help_open',
     'help_submit',
     'report_submit',
