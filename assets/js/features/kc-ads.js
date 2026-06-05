@@ -15,9 +15,11 @@
   const CACHE_VERSION = 1;
   const CACHE_MAX_AGE_MS = 5 * 60 * 1000;
   const CACHE_STALE_MAX_AGE_MS = 30 * 60 * 1000;
+  const FREQUENCY_STORAGE_KEY = 'kc_ad_frequency_v1';
   const INLINE_AFTER_FIRST = 6;
   const INLINE_INTERVAL = 6;
   const INLINE_MAX_PER_LIST = 8;
+  let frequencyMemory = {};
   const safeSetTimeout = typeof root.setTimeout === 'function'
     ? root.setTimeout.bind(root)
     : (typeof setTimeout === 'function' ? setTimeout : function (fn) {
@@ -98,6 +100,9 @@
   function normalizeAdRow(row) {
     const source = row && typeof row === 'object' ? row : {};
     const placements = asArray(source.placements).filter((item) => VALID_PLACEMENTS.indexOf(item) >= 0);
+    const frequencyCap = source.frequency_cap_per_session == null || source.frequency_cap_per_session === ''
+      ? 4
+      : Math.max(0, Math.floor(Number(source.frequency_cap_per_session) || 0));
     return {
       id: source.id == null ? '' : String(source.id),
       name: String(source.name || ''),
@@ -113,6 +118,7 @@
       module_keys: asArray(source.module_keys).map(normalizeKey),
       tags: asArray(source.tags).map(normalizeKey),
       priority: Number(source.priority) || 0,
+      frequency_cap_per_session: frequencyCap,
       starts_at: source.starts_at || '',
       ends_at: source.ends_at || '',
     };
@@ -278,12 +284,90 @@
     return ad.module_keys.indexOf(moduleKey) >= 0;
   }
 
+  function readFrequencyState() {
+    try {
+      const raw = root.sessionStorage && root.sessionStorage.getItem(FREQUENCY_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (_) {
+      return frequencyMemory;
+    }
+  }
+
+  function writeFrequencyState(state) {
+    const safe = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+    frequencyMemory = safe;
+    try {
+      if (root.sessionStorage) root.sessionStorage.setItem(FREQUENCY_STORAGE_KEY, JSON.stringify(safe));
+    } catch (_) { }
+  }
+
+  function getFrequencyCount(adId) {
+    const key = String(adId || '');
+    if (!key) return 0;
+    const state = readFrequencyState();
+    return Math.max(0, Number(state[key]) || 0);
+  }
+
+  function incrementFrequencyCount(adId) {
+    const key = String(adId || '');
+    if (!key) return 0;
+    const state = readFrequencyState();
+    state[key] = getFrequencyCount(key) + 1;
+    writeFrequencyState(state);
+    return state[key];
+  }
+
+  function clearFrequencyCaps() {
+    frequencyMemory = {};
+    try {
+      if (root.sessionStorage) root.sessionStorage.removeItem(FREQUENCY_STORAGE_KEY);
+    } catch (_) { }
+  }
+
+  function adWithinFrequencyCap(ad) {
+    const safe = normalizeAdRow(ad);
+    const cap = Number(safe.frequency_cap_per_session) || 0;
+    if (!safe.id || cap <= 0) return true;
+    return getFrequencyCount(safe.id) < cap;
+  }
+
   function selectAdsForPlacement(ads, placement, context, max) {
     const limit = Math.max(1, Number(max) || 1);
     return normalizeAdRows(ads)
       .filter((ad) => adMatchesPlacement(ad, placement) && adMatchesContext(ad, context || {}))
+      .filter(adWithinFrequencyCap)
       .sort((left, right) => (right.priority - left.priority) || left.title.localeCompare(right.title, 'pt-BR'))
       .slice(0, limit);
+  }
+
+  function buildInlineSlotAds(selected, slotCount) {
+    const ads = normalizeAdRows(selected);
+    const total = Math.max(0, Number(slotCount) || 0);
+    if (!total) return [];
+    if (!ads.length) return Array.from({ length: total }, function () { return null; });
+    const planned = {};
+    const slots = [];
+    let cursor = 0;
+    let guard = 0;
+    while (slots.length < total && guard < total * Math.max(ads.length, 1) * 2) {
+      const ad = ads[cursor % ads.length];
+      cursor += 1;
+      guard += 1;
+      const cap = Number(ad.frequency_cap_per_session) || 0;
+      const used = getFrequencyCount(ad.id) + (planned[ad.id] || 0);
+      if (cap > 0 && used >= cap) {
+        if (ads.every(function (item) {
+          const itemCap = Number(item.frequency_cap_per_session) || 0;
+          return itemCap > 0 && getFrequencyCount(item.id) + (planned[item.id] || 0) >= itemCap;
+        })) break;
+        continue;
+      }
+      planned[ad.id] = (planned[ad.id] || 0) + 1;
+      slots.push(ad);
+    }
+    while (slots.length < total) slots.push(null);
+    return slots;
   }
 
   function isExternalUrl(url) {
@@ -386,10 +470,19 @@
     script.async = true;
     script.crossOrigin = 'anonymous';
     script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(cfg.adsense_client_id);
-    const firstScript = root.document.getElementsByTagName('script')[0];
-    if (firstScript && firstScript.parentNode) firstScript.parentNode.insertBefore(script, firstScript);
-    else root.document.head.appendChild(script);
-    return true;
+    if (root.document.head) {
+      root.document.head.appendChild(script);
+    } else {
+      const firstScript = root.document.getElementsByTagName('script')[0];
+      if (firstScript && firstScript.parentNode) firstScript.parentNode.insertBefore(script, firstScript);
+    }
+    return !!script.parentNode;
+  }
+
+  function maybeLoadAutoAds(config) {
+    const cfg = normalizeAdConfig(config);
+    if (!cfg.enabled || cfg.status !== 'active' || !cfg.auto_ads_enabled || !hasAdvertisingConsent()) return false;
+    return loadAdsenseScriptOnce(cfg);
   }
 
   function pushAdsenseSlots(scope) {
@@ -439,9 +532,7 @@
     const slotCount = getInlineSlotCount(cards.length);
     const selected = selectAdsForPlacement(ads, 'feed_inline', context, slotCount || 1);
     if (!selected.length && !canRenderAdsense(cfg, 'feed_inline')) return false;
-    const slotAds = Array.from({ length: slotCount }, function (_, index) {
-      return selected.length ? selected[index % selected.length] : null;
-    });
+    const slotAds = buildInlineSlotAds(selected, slotCount);
     const slotRenders = slotAds.map((ad) => {
       return resolveSlotRender(ad, 'feed_inline', 'feed_inline', cfg);
     }).filter((item) => item && item.html);
@@ -537,7 +628,8 @@
     if (!targetDoc || !isFeedPage()) return false;
     const feedLists = Array.from(targetDoc.querySelectorAll('.kc-feed-list'));
     const cfg = normalizeAdConfig(config || defaultAdConfig());
-    let rendered = renderAsideAds(ads, context, targetDoc, cfg);
+    let rendered = maybeLoadAutoAds(cfg);
+    rendered = renderAsideAds(ads, context, targetDoc, cfg) || rendered;
     feedLists.forEach((container) => {
       rendered = renderInlineAds(container, ads, context, cfg) || rendered;
     });
@@ -545,6 +637,12 @@
   }
 
   const trackedImpressions = new Set();
+
+  function recordLocalImpression(adNode) {
+    if (!adNode) return 0;
+    const adId = adNode.getAttribute('data-kc-ad-id') || '';
+    return incrementFrequencyCount(adId);
+  }
 
   function trackAd(eventName, adNode) {
     if (!adNode || !root.KCPrivacyAnalytics || typeof root.KCPrivacyAnalytics.track !== 'function') return;
@@ -583,6 +681,7 @@
         const key = card.getAttribute('data-kc-ad-id') + ':' + card.getAttribute('data-kc-ad-placement');
         if (trackedImpressions.has(key)) return;
         trackedImpressions.add(key);
+        recordLocalImpression(card);
         trackAd('ad_impression', card);
       });
       return;
@@ -594,6 +693,7 @@
         const key = card.getAttribute('data-kc-ad-id') + ':' + card.getAttribute('data-kc-ad-placement');
         if (!trackedImpressions.has(key)) {
           trackedImpressions.add(key);
+          recordLocalImpression(card);
           trackAd('ad_impression', card);
         }
         obs.unobserve(card);
@@ -722,6 +822,10 @@
     defaultAdConfig,
     buildAdsenseHTML,
     canRenderAdsense,
+    maybeLoadAutoAds,
+    getFrequencyCount,
+    incrementFrequencyCount,
+    clearFrequencyCaps,
     loadAndRender,
   });
 }));

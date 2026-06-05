@@ -11,8 +11,11 @@ function read(file) {
 describe('KCAds feed monetization', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    document.head.innerHTML = '';
+    window.sessionStorage.clear();
     window.history.replaceState({}, '', '/eventos.html');
     window.KCConsent = { hasConsent: () => false };
+    KCAds.clearFrequencyCaps();
   });
 
   test('normaliza campanhas e remove URLs perigosas', () => {
@@ -50,7 +53,7 @@ describe('KCAds feed monetization', () => {
     expect(html).toContain('Bolsa para estudantes');
   });
 
-  test('insere anuncios inline a cada 6 publicacoes', () => {
+  test('insere anúncios inline a cada 6 publicações', () => {
     document.body.innerHTML = [
       '<div class="kc-feed-list">',
       Array.from({ length: 12 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
@@ -59,7 +62,7 @@ describe('KCAds feed monetization', () => {
 
     const ok = KCAds.renderInlineAds(document.querySelector('.kc-feed-list'), [{
       id: 'ad-1',
-      title: 'Anuncio',
+      title: 'Anúncio',
       target_url: 'https://example.com',
       placements: ['feed_inline'],
     }], { module_key: 'eventos' });
@@ -94,9 +97,95 @@ describe('KCAds feed monetization', () => {
     expect(slot).toBeTruthy();
     expect(slot.getAttribute('data-ad-client')).toBe('ca-pub-2776499020194231');
     expect(slot.getAttribute('data-ad-slot')).toBe('1234567890');
+    const script = document.querySelector('#kcAdsenseScript');
+    expect(script).toBeTruthy();
+    expect(script.parentElement).toBe(document.head);
   });
 
-  test('renderiza anuncios laterais em bloco inicial e bloco sticky final', () => {
+  test('carrega Auto ads apenas em feed com consentimento de publicidade', () => {
+    const config = KCAds.normalizeAdConfig({
+      status: 'active',
+      auto_ads_enabled: true,
+      adsense_client_id: 'ca-pub-2776499020194231',
+      placement_modes: {
+        feed_inline: 'adsense_fallback',
+        feed_aside_top: 'adsense_fallback',
+        feed_aside_sticky: 'adsense_fallback',
+      },
+      adsense_slots: {},
+    });
+
+    expect(KCAds.maybeLoadAutoAds(config)).toBe(false);
+    expect(document.querySelector('#kcAdsenseScript')).toBeFalsy();
+
+    window.KCConsent = { hasConsent: (key) => key === 'advertising' };
+    expect(KCAds.maybeLoadAutoAds(config)).toBe(true);
+
+    const script = document.querySelector('#kcAdsenseScript');
+    expect(script).toBeTruthy();
+    expect(script.parentElement).toBe(document.head);
+    expect(script.getAttribute('src')).toContain('client=ca-pub-2776499020194231');
+  });
+
+  test('respeita limite de impressões por sessão em campanhas próprias', () => {
+    KCAds.incrementFrequencyCount('ad-capped');
+    const selected = KCAds.selectAdsForPlacement([
+      {
+        id: 'ad-capped',
+        title: 'Campanha limitada',
+        target_url: 'https://example.com/a',
+        placements: ['feed_inline'],
+        priority: 100,
+        frequency_cap_per_session: 1,
+      },
+      {
+        id: 'ad-open',
+        title: 'Campanha disponível',
+        target_url: 'https://example.com/b',
+        placements: ['feed_inline'],
+        priority: 1,
+        frequency_cap_per_session: 1,
+      },
+    ], 'feed_inline', { module_key: 'eventos' }, 2);
+
+    expect(selected.map((ad) => ad.id)).toEqual(['ad-open']);
+  });
+
+  test('não duplica campanha acima do limite por sessão no mesmo render', () => {
+    document.body.innerHTML = [
+      '<div class="kc-feed-list">',
+      Array.from({ length: 12 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
+      '</div>',
+    ].join('');
+
+    const ok = KCAds.renderInlineAds(document.querySelector('.kc-feed-list'), [{
+      id: 'ad-capped',
+      title: 'Campanha limitada',
+      target_url: 'https://example.com/a',
+      placements: ['feed_inline'],
+      frequency_cap_per_session: 1,
+    }], { module_key: 'eventos' });
+
+    expect(ok).toBe(true);
+    expect(document.querySelectorAll('.kc-ad-card--inline[data-kc-ad-id="ad-capped"]')).toHaveLength(1);
+  });
+
+  test('Auto ads não carrega em páginas bloqueadas mesmo com consentimento', () => {
+    window.history.replaceState({}, '', '/product.html?id=post-1');
+    window.KCConsent = { hasConsent: (key) => key === 'advertising' };
+    document.body.innerHTML = '<div class="kc-feed-list"><article class="kc-card">1</article></div>';
+
+    const rendered = KCAds.renderAllAds([], { module_key: 'eventos' }, document, {
+      status: 'active',
+      auto_ads_enabled: true,
+      adsense_client_id: 'ca-pub-2776499020194231',
+    });
+
+    expect(rendered).toBe(false);
+    expect(document.querySelector('#kcAdsenseScript')).toBeFalsy();
+  });
+
+  test('renderiza anúncios laterais em bloco inicial e bloco sticky final', () => {
     document.body.innerHTML = [
       '<main><aside class="kc-sidebar">',
       '<section class="kc-sidebar-section" id="one">Resumo</section>',
@@ -209,6 +298,23 @@ describe('KCAds feed monetization', () => {
     ].forEach((indexName) => {
       expect(sql).toContain(indexName);
     });
+  });
+
+  test('migration de anuncios expõe frequency cap no RPC publico', () => {
+    const sql = read('supabase/migrations/20260605184519_adsense_frequency_cap_contract.sql');
+    expect(sql).toContain('frequency_cap_per_session INTEGER');
+    expect(sql).toContain('c.frequency_cap_per_session');
+    expect(sql).toContain('public.kc_get_feed_ads');
+  });
+
+  test('migration de anúncios consolida RLS de campanhas sem SELECT duplicado', () => {
+    const sql = read('supabase/migrations/20260605185313_ads_rls_policy_consolidation.sql');
+    expect(sql).toContain('DROP POLICY IF EXISTS ad_campaigns_admin_all');
+    expect(sql).toContain('CREATE POLICY ad_campaigns_read_active_anon');
+    expect(sql).toContain('CREATE POLICY ad_campaigns_read_authenticated');
+    expect(sql).toContain('CREATE POLICY ad_campaigns_admin_insert');
+    expect(sql).toContain('CREATE POLICY ad_campaigns_admin_update');
+    expect(sql).toContain('CREATE POLICY ad_campaigns_admin_delete');
   });
 
   test('admin de banners contem controles de anuncios de feed', () => {
