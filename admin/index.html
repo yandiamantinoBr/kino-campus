@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
   <title>KinoCampus - Dashboard Admin</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.1" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.4" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     .kc-admin-page main.kc-main-content {
@@ -897,6 +897,11 @@
               <article class="kc-admin-card"><div class="kc-admin-card__label"><i class="fas fa-spinner fa-spin"></i> Carregando privacidade</div><strong>...</strong></article>
             </div>
 
+            <div class="kc-admin-section-title" id="admin-monetization-title"><i class="fas fa-rectangle-ad"></i> Monetização</div>
+            <div class="kc-admin-grid" id="admin-monetization-metrics">
+              <article class="kc-admin-card"><div class="kc-admin-card__label"><i class="fas fa-spinner fa-spin"></i> Carregando monetização</div><strong>...</strong></article>
+            </div>
+
             <section class="kc-admin-section" id="admin-health-section">
               <div class="kc-admin-section__eyebrow">Sa&uacute;de do Admin</div>
               <h3><i class="fas fa-stethoscope"></i> Status operacional</h3>
@@ -942,6 +947,12 @@
                   <option value="post_renewed">Post renovado</option>
                   <option value="post_bumped">Post impulsionado</option>
                   <option value="post_deleted">Post deletado</option>
+                  <option value="ad_campaign_created">Campanha criada</option>
+                  <option value="ad_campaign_updated">Campanha atualizada</option>
+                  <option value="ad_campaign_activated">Campanha ativada</option>
+                  <option value="ad_campaign_paused">Campanha pausada</option>
+                  <option value="ad_campaign_archived">Campanha arquivada</option>
+                  <option value="ad_network_settings_updated">Configuração de anúncios</option>
                   <option value="report_closed">Denúncia fechada</option>
                 </select>
                 <select id="admin-audit-entity-filter" title="Filtrar por entidade" data-i18n-tooltip="tooltip.audit-entity-filter">
@@ -949,6 +960,8 @@
                   <option value="posts">Posts</option>
                   <option value="reports">Denúncias</option>
                   <option value="profiles">Perfis</option>
+                  <option value="ad_campaigns">Campanhas de anúncio</option>
+                  <option value="ad_network_settings">Configuração de anúncios</option>
                   <option value="system">Sistema</option>
                 </select>
                 <input id="admin-audit-actor-filter" type="search" autocomplete="off" placeholder="Ator: nome ou UUID" aria-label="Filtrar por ator" data-i18n-placeholder="placeholder.audit-actor-filter" data-i18n-aria-label="aria-label.audit-actor-filter">
@@ -1106,8 +1119,8 @@
   <script defer src="../assets/js/boot/kc-env.js?v=8.6.1"></script>
   <script defer src="../assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
   <script defer src="../assets/js/boot/kc-sw-register.js?v=8.6.1"></script>
-  <script defer src="../assets/js/core/kc-consent.js?v=8.6.1"></script>
-  <script defer src="../assets/js/boot/kc-google-tag.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-consent.js?v=8.6.4"></script>
+  <script defer src="../assets/js/boot/kc-google-tag.js?v=8.6.4"></script>
   <script defer src="../assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="../assets/js/api/kc-supabase.client.js?v=8.6.1"></script>
@@ -1150,12 +1163,12 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
     <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.5"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.3"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.5"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.4"></script>
+    <script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.6"></script>
+    <script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.6"></script>
+    <script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.6"></script>
+    <script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.6"></script>
     <script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>
     <script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.3"></script>
+    <script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.6"></script>
 </body>
 </html>

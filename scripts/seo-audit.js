@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const fs = require('fs');
 const path = require('path');
@@ -102,7 +102,7 @@ function auditSearchConsoleVerification(errors) {
 }
 
 function hasMojibake(text) {
-  return /(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]?|â[\u0080-\u00bf\u20ac]|�)/.test(String(text || ''));
+  return /(?:Ãƒ[\u0080-\u00bf]|Ã‚[\u0080-\u00bf]?|Ã¢[\u0080-\u00bf\u20ac]|ï¿½)/.test(String(text || ''));
 }
 
 function auditPublicEncoding(errors) {
@@ -121,19 +121,22 @@ function auditPublicEncoding(errors) {
 function auditGoogleTag(errors) {
   const tag = read('assets/js/boot/kc-google-tag.js');
   if (!tag.includes(GA4_MEASUREMENT_ID)) errors.push('kc-google-tag.js: Measurement ID GA4 ausente ou incorreto.');
-  if (!tag.includes("window.gtag('consent', 'default', consentPayload(false));")) {
+  if (!tag.includes("window.gtag('consent', 'default', consentPayload(false, false));")) {
     errors.push('kc-google-tag.js: Consent Mode default denied ausente.');
   }
   if (!tag.includes("window.KCConsent.hasConsent('analytics')")) {
     errors.push('kc-google-tag.js: integracao com KCConsent analytics ausente.');
   }
+  if (!tag.includes("window.KCConsent.hasConsent('advertising')")) {
+    errors.push('kc-google-tag.js: integracao com KCConsent advertising ausente.');
+  }
   Object.keys(INDEXABLE).concat(NOINDEX).forEach((file) => {
     const html = read(file);
-    if (!html.includes('assets/js/boot/kc-google-tag.js?v=8.6.1')) {
+    if (!html.includes('assets/js/boot/kc-google-tag.js?v=8.6.4')) {
       errors.push(`${file}: tag GA4 consent-aware ausente.`);
     }
-    const consentIndex = html.indexOf('assets/js/core/kc-consent.js?v=8.6.1');
-    const googleIndex = html.indexOf('assets/js/boot/kc-google-tag.js?v=8.6.1');
+    const consentIndex = html.indexOf('assets/js/core/kc-consent.js?v=8.6.4');
+    const googleIndex = html.indexOf('assets/js/boot/kc-google-tag.js?v=8.6.4');
     const telemetryIndex = html.indexOf('assets/js/boot/kc-telemetry.js?v=8.6.1');
     if (consentIndex !== -1 && googleIndex !== -1 && telemetryIndex !== -1 && !(consentIndex < googleIndex && googleIndex < telemetryIndex)) {
       errors.push(`${file}: ordem de scripts consent -> google-tag -> telemetry incorreta.`);

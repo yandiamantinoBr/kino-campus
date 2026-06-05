@@ -4,7 +4,7 @@
  * Revisão profunda /admin/ (rodada 2) — gráfico customizável + relatório coerente.
  * Cobre:
  *  - Migrations: 3 novas séries (views/curtidas/sessões) e preferências por admin.
- *  - Catálogo de 11 séries (shared/controller/charts) + famílias.
+ *  - Catálogo de 13 séries (shared/controller/charts) + famílias.
  *  - Customização: seed das prefs (séries visíveis + cores) aplicado ao gráfico;
  *    painel "Configurar séries"; persistência via RPCs; contrato de 10 chaves.
  *  - Exportação coerente (séries dinâmicas + Top Contribuidores) — wiring.
@@ -29,7 +29,9 @@ const META11 = [
   { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass', family: 'Demanda' },
   { key: 'signups_count', label: 'Cadastros', color: '#14b8a6', icon: 'fas fa-user-plus', family: 'Crescimento' },
   { key: 'reports_count', label: 'Denúncias', color: '#ef4444', icon: 'fas fa-flag', family: 'Moderação' },
-  { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved', family: 'Operação' }
+  { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved', family: 'Operação' },
+  { key: 'ad_clicks_count', label: 'Cliques em anúncios', color: '#f59e0b', icon: 'fas fa-arrow-pointer', family: 'Monetização' },
+  { key: 'ad_impressions_count', label: 'Impressões de anúncios', color: '#fb923c', icon: 'fas fa-rectangle-ad', family: 'Monetização' }
 ];
 
 const SERIES = [
@@ -107,23 +109,24 @@ describe('Rodada 2 — migrations', () => {
   });
 });
 
-describe('Rodada 2 — catálogo de 11 séries', () => {
-  test('SERIES_KEYS tem as 11 séries', () => {
+describe('Rodada 2 — catálogo de 13 séries', () => {
+  test('SERIES_KEYS tem as 13 séries', () => {
     reset();
     const utils = require(SHARED);
-    expect(utils.SERIES_KEYS).toHaveLength(11);
-    ['post_views_count', 'comment_likes_count', 'sessions_count'].forEach((k) => expect(utils.SERIES_KEYS).toContain(k));
+    expect(utils.SERIES_KEYS).toHaveLength(13);
+    ['post_views_count', 'comment_likes_count', 'sessions_count', 'ad_clicks_count', 'ad_impressions_count'].forEach((k) => expect(utils.SERIES_KEYS).toContain(k));
     reset();
   });
 
   test('controller e charts têm SERIES_META/DEFAULT_SERIES_META com famílias', () => {
     const ctrl = r('assets/js/controllers/admin/admin-dashboard.controller.js');
     const charts = r('assets/js/controllers/admin/admin-dashboard.charts.js');
-    ['Visualizações', 'Sessões ativas', 'Curtidas em comentários'].forEach((label) => {
+    ['Visualizações', 'Sessões ativas', 'Curtidas em comentários', 'Cliques em anúncios', 'Impressões de anúncios'].forEach((label) => {
       expect(ctrl).toContain(label);
       expect(charts).toContain(label);
     });
     expect(ctrl).toContain("family: 'Tráfego'");
+    expect(ctrl).toContain("family: 'Monetização'");
     expect(ctrl).toContain('var DEFAULT_VISIBLE_SERIES');
   });
 });

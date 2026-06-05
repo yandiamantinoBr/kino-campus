@@ -90,7 +90,9 @@
     'signups_count',
     'post_views_count',
     'comment_likes_count',
-    'sessions_count'
+    'sessions_count',
+    'ad_clicks_count',
+    'ad_impressions_count'
   ]);
 
   function normalizeText(value) {
@@ -266,6 +268,8 @@
         post_views_count: 0,
         comment_likes_count: 0,
         sessions_count: 0,
+        ad_clicks_count: 0,
+        ad_impressions_count: 0,
         total_count: 0
       };
       buckets.push(bucket);
@@ -301,6 +305,8 @@
           post_views_count: 0,
           comment_likes_count: 0,
           sessions_count: 0,
+          ad_clicks_count: 0,
+          ad_impressions_count: 0,
           total_count: 0
         };
       }
@@ -350,6 +356,8 @@
     incrementRows(eventSets && eventSets.post_views, 'post_views_count');
     incrementRows(eventSets && eventSets.comment_likes, 'comment_likes_count');
     incrementRows(eventSets && eventSets.sessions, 'sessions_count');
+    incrementRows(eventSets && eventSets.ad_clicks, 'ad_clicks_count');
+    incrementRows(eventSets && eventSets.ad_impressions, 'ad_impressions_count');
 
     return Object.keys(bucketMap).sort().map(function (dayKey) {
       var bucket = bucketMap[dayKey];
@@ -445,6 +453,15 @@
     var searches = Number(data.searches || 0);
     var auditEvents = Number(data.auditEvents || 0);
     var peakTotal = Number(data.peakTotal || 0);
+    var ads = data.ads && typeof data.ads === 'object' ? data.ads : {};
+    var adMetrics = ads.metrics || {};
+    var adSettings = ads.settings || {};
+    var adCampaigns = ads.campaigns || {};
+    var adClicks = Number(adMetrics.clicks || 0);
+    var adImpressions = Number(adMetrics.impressions || 0);
+    var activeCampaigns = Number(adCampaigns.active || 0);
+    var activeWithoutImpressions = Number(ads.active_without_impressions || 0);
+    var expiredActive = Number(ads.expired_active || 0);
 
     if (openReports > 0) {
       alerts.push({
@@ -475,6 +492,46 @@
         tone: 'positive',
         title: 'Pico operacional identificado',
         body: 'O maior pulso diário somou ' + peakTotal + ' eventos consolidados.'
+      });
+    }
+
+    if (activeCampaigns > 0 && adImpressions === 0) {
+      alerts.push({
+        tone: 'warning',
+        title: 'Campanhas sem entrega',
+        body: activeCampaigns + ' campanha(s) ativa(s) ainda não geraram impressões no período.'
+      });
+    }
+
+    if (activeWithoutImpressions > 0) {
+      alerts.push({
+        tone: 'warning',
+        title: 'Publicidade precisa de revisão',
+        body: activeWithoutImpressions + ' campanha(s) ativa(s) estão sem impressão registrada no período.'
+      });
+    }
+
+    if (expiredActive > 0) {
+      alerts.push({
+        tone: 'warning',
+        title: 'Campanha expirada ainda ativa',
+        body: expiredActive + ' campanha(s) passaram da data final e continuam marcadas como ativas.'
+      });
+    }
+
+    if (adSettings.status === 'active' && adSettings.auto_ads_enabled) {
+      alerts.push({
+        tone: 'info',
+        title: 'AdSense Auto ads requer exclusões',
+        body: 'Se Auto ads estiver ativo no AdSense, mantenha exclusões para produto, admin e páginas privadas.'
+      });
+    }
+
+    if (adClicks > 0) {
+      alerts.push({
+        tone: 'positive',
+        title: 'Publicidade com cliques',
+        body: adClicks + ' clique(s) em anúncios foram registrados no período.'
       });
     }
 

@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const fs = require('fs');
 const path = require('path');
@@ -131,12 +131,13 @@ describe('admin-dashboard.metrics.js - contrato estatico', () => {
     expect(metricsSource).not.toMatch(/import\s+/);
   });
 
-  test('expoe exatamente 19 chaves publicas', () => {
+  test('expoe exatamente 20 chaves publicas', () => {
     const metrics = loadMetricsModule();
     expect(Object.keys(metrics).sort()).toEqual([
       'checkAccess',
       'classifyTermToModule',
       'loadActiveSessions15m',
+      'loadAdOverview',
       'loadAuditEventRows',
       'loadCommentsCount',
       'loadDailyMetrics',
@@ -170,6 +171,7 @@ describe('admin-dashboard.controller.js - contrato do split metrics', () => {
     expect(controllerSource).toContain("window._KCAD.metrics.loadSearchTrendsData(client, since)");
     expect(controllerSource).toContain("window._KCAD.metrics.loadVisiblePostsCount(client)");
     expect(controllerSource).toContain("window._KCAD.metrics.loadActiveSessions15m(client)");
+    expect(controllerSource).toContain("window._KCAD.metrics.loadAdOverview(client, since)");
     expect(controllerSource).toContain("window._KCAD.metrics.loadDailyMetrics(client, since, signal)");
   });
 
@@ -197,13 +199,13 @@ describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
 
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> privacy -> controller', () => {
     const orderedScripts = [
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.1"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.3"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.5"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.4"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.6"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.6"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.6"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.6"></script>',
       '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
       '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.3"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.6"></script>'
     ];
 
     let lastIndex = -1;
@@ -388,7 +390,7 @@ describe('window._KCAD.metrics - comportamento', () => {
     expect(rows).toEqual([{ created_at: '2026-04-05T10:00:00Z' }]);
   });
 
-  test('loadSearchTrendsData solicita janela ampla para paginação local', () => {
+  test('loadSearchTrendsData solicita janela ampla para paginaÃ§Ã£o local', () => {
     const source = fs.readFileSync(METRICS_PATH, 'utf8');
     expect(source).toContain('var SEARCH_TRENDS_MAX_ROWS = 100');
     expect(source).toContain('var clsArgs = { p_limit: 100 }');
@@ -451,6 +453,35 @@ describe('window._KCAD.metrics - comportamento', () => {
       value: 2,
       available: true,
       source: 'legacy_events'
+    });
+  });
+
+  test('loadAdOverview normaliza RPC de monetizacao para cards e alertas', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      rpcHandler(name) {
+        if (name === 'kc_admin_ads_overview') {
+          return {
+            data: {
+              ok: true,
+              settings: { status: 'active', provider: 'hybrid', auto_ads_enabled: false },
+              campaigns: { total: 3, active: 2, active_without_impressions: 1, expired_active: 1 },
+              metrics: { impressions: 120, clicks: 6, ctr: 5 }
+            },
+            error: null
+          };
+        }
+        return { data: [], error: null };
+      }
+    });
+
+    await expect(metrics.loadAdOverview(client, '2026-04-20T00:00:00Z')).resolves.toMatchObject({
+      source: 'rpc',
+      settings: { status: 'active', provider: 'hybrid' },
+      campaigns: { total: 3, active: 2 },
+      metrics: { impressions: 120, clicks: 6, ctr: 5 },
+      active_without_impressions: 1,
+      expired_active: 1
     });
   });
 

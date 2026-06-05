@@ -557,6 +557,9 @@
     'placeholder.feed-ad-tags':         'ex: bolsa, edital, curso, evento',
     'placeholder.feed-ad-notes':        'Contrato, responsável, valor combinado ou observação de curadoria.',
     'placeholder.feed-ads-filter-query': 'Buscar por campanha, anunciante ou URL',
+    'placeholder.adsense-client-id':    'ca-pub-...',
+    'placeholder.adsense-slot':         'data-ad-slot',
+    'placeholder.adsense-notes':        'Ex.: aprovação no AdSense, slots criados, restrições de página e orientações para anunciantes.',
 
     // Admin help-requests / moderation
     'placeholder.admin-help-search':    'Buscar por assunto, e-mail ou página',

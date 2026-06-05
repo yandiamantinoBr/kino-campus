@@ -1,12 +1,13 @@
 (function () {
   'use strict';
 
-  const VERSION = '2026-05-07';
+  const VERSION = '2026-06-05';
   const STORAGE_KEY = 'kc_consent_v1';
   const DEFAULT_PREFERENCES = Object.freeze({
     necessary: true,
     preferences: false,
     analytics: false,
+    advertising: false,
   });
 
   const state = {
@@ -34,6 +35,7 @@
       necessary: true,
       preferences: source.preferences === true,
       analytics: source.analytics === true,
+      advertising: source.advertising === true,
       updatedAt: String(source.updatedAt || ''),
       source: String(source.source || ''),
     };
@@ -175,7 +177,7 @@
       '<section class="kc-consent-banner" id="kcConsentBanner" role="dialog" aria-live="polite" aria-label="Aviso de privacidade e cookies" data-i18n-aria-label="aria-label.privacy-cookie-notice" hidden>',
       '  <div class="kc-consent-banner__content">',
       '    <strong><i class="fas fa-shield-halved" aria-hidden="true"></i> Privacidade no KinoCampus</strong>',
-      '    <p>Usamos dados necessários para manter a plataforma funcionando. Com sua autorização, também usamos preferências e métricas para melhorar a experiência.</p>',
+      '    <p>Usamos dados necessários para manter a plataforma funcionando. Com sua autorização, também usamos preferências, métricas e publicidade controlada para melhorar a experiência.</p>',
       '    <div class="kc-consent-banner__links">',
       `      <a href="${getLegalHref('privacidade.html')}">Declaração de Privacidade</a>`,
       `      <a href="${getLegalHref('termos.html')}">Termos de Uso</a>`,
@@ -208,7 +210,11 @@
       '        <span><strong>Métricas</strong><small>Ajudam a entender buscas, categorias e uso agregado para melhorar o KinoCampus.</small></span>',
       '        <input type="checkbox" id="kcConsentAnalytics" />',
       '      </label>',
-      '      <p class="kc-consent-modal__note">Não usamos cookies de marketing nesta fase. Veja a <a href="' + getLegalHref('privacidade.html') + '">Declaração de Privacidade</a> e os <a href="' + getLegalHref('termos.html') + '">Termos de Uso</a>.</p>',
+      '      <label class="kc-consent-option">',
+      '        <span><strong>Publicidade</strong><small>Permite carregar redes de anúncios como Google AdSense. A personalização individual fica desativada nesta fase.</small></span>',
+      '        <input type="checkbox" id="kcConsentAdvertising" />',
+      '      </label>',
+      '      <p class="kc-consent-modal__note">Anúncios próprios contextuais podem aparecer sem rastrear seu perfil individual. Redes externas, como AdSense, só carregam com publicidade aceita. Veja a <a href="' + getLegalHref('privacidade.html') + '">Declaração de Privacidade</a> e os <a href="' + getLegalHref('termos.html') + '">Termos de Uso</a>.</p>',
       '    </div>',
       '    <footer class="kc-consent-modal__footer">',
       '      <button type="button" class="kc-consent-btn kc-consent-btn--ghost" data-consent-reject>Rejeitar opcionais</button>',
@@ -239,8 +245,10 @@
       const prefs = readPreferences() || DEFAULT_PREFERENCES;
       const preferencesInput = $('#kcConsentPreferences');
       const analyticsInput = $('#kcConsentAnalytics');
+      const advertisingInput = $('#kcConsentAdvertising');
       if (preferencesInput) preferencesInput.checked = prefs.preferences === true;
       if (analyticsInput) analyticsInput.checked = prefs.analytics === true;
+      if (advertisingInput) advertisingInput.checked = prefs.advertising === true;
       setTimeout(function () {
         const target = $('#kcConsentPreferences') || $('[data-consent-save]');
         if (target && typeof target.focus === 'function') target.focus();
@@ -249,13 +257,13 @@
   }
 
   function acceptAll(source) {
-    writePreferences({ preferences: true, analytics: true }, source || 'accept_all');
+    writePreferences({ preferences: true, analytics: true, advertising: true }, source || 'accept_all');
     setBannerVisible(false);
     setModalVisible(false);
   }
 
   function rejectOptional(source) {
-    writePreferences({ preferences: false, analytics: false }, source || 'reject_optional');
+    writePreferences({ preferences: false, analytics: false, advertising: false }, source || 'reject_optional');
     setBannerVisible(false);
     setModalVisible(false);
   }
@@ -264,6 +272,7 @@
     writePreferences({
       preferences: $('#kcConsentPreferences')?.checked === true,
       analytics: $('#kcConsentAnalytics')?.checked === true,
+      advertising: $('#kcConsentAdvertising')?.checked === true,
     }, 'custom');
     setBannerVisible(false);
     setModalVisible(false);

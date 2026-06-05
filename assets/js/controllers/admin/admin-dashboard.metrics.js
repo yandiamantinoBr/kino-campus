@@ -602,6 +602,96 @@
     return [];
   }
 
+  async function queryAdEventRows(client, since, eventName, limit) {
+    try {
+      var query = client.from('privacy_analytics_events')
+        .select('created_at,event_name,entity_id')
+        .eq('entity_type', 'ad_campaign')
+        .eq('event_name', eventName)
+        .order('created_at', { ascending: false })
+        .limit(limit || 2000);
+      if (since) query = query.gte('created_at', since);
+      var result = await query;
+      if (!result.error && Array.isArray(result.data)) return result.data;
+    } catch (_) { }
+
+    return [];
+  }
+
+  async function loadAdOverview(client, since) {
+    var empty = {
+      ok: true,
+      source: 'fallback',
+      settings: { status: 'disabled', provider: 'direct', auto_ads_enabled: false },
+      campaigns: { total: 0, active: 0, paused: 0, draft: 0, archived: 0 },
+      metrics: { impressions: 0, clicks: 0, ctr: 0 },
+      active_without_impressions: 0,
+      expired_active: 0
+    };
+    if (!client) return empty;
+
+    try {
+      var rpc = await client.rpc('kc_admin_ads_overview', { p_since: since || null });
+      if (!rpc.error && rpc.data && rpc.data.ok !== false) {
+        var next = Object.assign({}, empty, rpc.data, { source: 'rpc' });
+        next.settings = Object.assign({}, empty.settings, next.settings || {});
+        next.campaigns = Object.assign({}, empty.campaigns, next.campaigns || {});
+        next.metrics = Object.assign({}, empty.metrics, next.metrics || {});
+        next.active_without_impressions = Number(
+          next.active_without_impressions || next.campaigns.active_without_impressions || 0
+        );
+        next.expired_active = Number(next.expired_active || next.campaigns.expired_active || 0);
+        return next;
+      }
+    } catch (_) { }
+
+    var campaigns = [];
+    try {
+      var campaignResult = await client.from('ad_campaigns')
+        .select('id,status,ends_at')
+        .limit(2000);
+      if (!campaignResult.error && Array.isArray(campaignResult.data)) campaigns = campaignResult.data;
+    } catch (_) { }
+
+    var settings = empty.settings;
+    try {
+      var settingsRpc = await client.rpc('kc_admin_get_ad_network_settings');
+      if (!settingsRpc.error && settingsRpc.data && settingsRpc.data.ok !== false && settingsRpc.data.settings) {
+        settings = settingsRpc.data.settings;
+      }
+    } catch (_) { }
+
+    var impressions = await queryAdEventRows(client, since, 'ad_impression', 5000);
+    var clicks = await queryAdEventRows(client, since, 'ad_click', 5000);
+    var impressionIds = new Set(impressions.map(function (row) { return String(row && row.entity_id || ''); }).filter(Boolean));
+    var counts = campaigns.reduce(function (acc, row) {
+      var status = String(row && row.status || 'draft');
+      acc.total += 1;
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, { total: 0, active: 0, paused: 0, draft: 0, archived: 0 });
+    var now = Date.now();
+    var activeWithoutImpressions = campaigns.filter(function (row) {
+      return row && row.status === 'active' && !impressionIds.has(String(row.id || ''));
+    }).length;
+    var expiredActive = campaigns.filter(function (row) {
+      return row && row.status === 'active' && row.ends_at && new Date(row.ends_at).getTime() < now;
+    }).length;
+    return {
+      ok: true,
+      source: 'fallback',
+      settings: settings,
+      campaigns: counts,
+      metrics: {
+        impressions: impressions.length,
+        clicks: clicks.length,
+        ctr: impressions.length ? Math.round((clicks.length / impressions.length) * 10000) / 100 : 0,
+      },
+      active_without_impressions: activeWithoutImpressions,
+      expired_active: expiredActive,
+    };
+  }
+
   async function loadDailyMetrics(client, since, signal) {
     var utils = getDashboardUtils();
     var until = new Date().toISOString();
@@ -633,7 +723,9 @@
       queryCreatedAtRows(client, 'reports', since, 1500),
       queryCreatedAtRows(client, 'profiles', since, 1500),
       queryCreatedAtRows(client, 'post_view_events', since, 1500),
-      queryCreatedAtRows(client, 'comment_likes', since, 1500)
+      queryCreatedAtRows(client, 'comment_likes', since, 1500),
+      queryAdEventRows(client, since, 'ad_click', 1500),
+      queryAdEventRows(client, since, 'ad_impression', 1500)
     ]);
     throwIfAborted(signal);
 
@@ -648,7 +740,9 @@
         reports: eventSets[6],
         signups: eventSets[7],
         post_views: eventSets[8],
-        comment_likes: eventSets[9]
+        comment_likes: eventSets[9],
+        ad_clicks: eventSets[10],
+        ad_impressions: eventSets[11]
       }, since, until);
     }
 
@@ -671,6 +765,7 @@
     loadVotesCount: loadVotesCount,
     loadSavedPostsCount: loadSavedPostsCount,
     loadActiveSessions15m: loadActiveSessions15m,
+    loadAdOverview: loadAdOverview,
     loadAuditEventRows: loadAuditEventRows,
     loadSearchTrendsData: loadSearchTrendsData,
     queryCreatedAtRows: queryCreatedAtRows,

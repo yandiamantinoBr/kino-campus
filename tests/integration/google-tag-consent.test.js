@@ -33,14 +33,15 @@ describe('Google tag e consentimento LGPD', () => {
     expect(vercel).toContain('https://region1.google-analytics.com');
   });
 
-  test('script usa Consent Mode negado por padrao e libera analytics apenas por KCConsent', () => {
+  test('script usa Consent Mode negado por padrao e libera analytics/publicidade por KCConsent', () => {
     const source = read('assets/js/boot/kc-google-tag.js');
 
     expect(source).toContain("MEASUREMENT_ID = 'G-P9RKYHPB7Z'");
-    expect(source).toContain("window.gtag('consent', 'default', consentPayload(false));");
-    expect(source).toContain("gtag('consent', 'update', consentPayload(granted));");
+    expect(source).toContain("window.gtag('consent', 'default', consentPayload(false, false));");
+    expect(source).toContain("gtag('consent', 'update', consentPayload(analyticsGranted, advertisingGranted));");
     expect(source).toContain("window.KCConsent.hasConsent('analytics')");
-    expect(source).toContain("ad_storage: 'denied'");
+    expect(source).toContain("window.KCConsent.hasConsent('advertising')");
+    expect(source).toContain("ad_storage: advertisingGranted ? 'granted' : 'denied'");
     expect(source).toContain("ad_user_data: 'denied'");
     expect(source).toContain("ad_personalization: 'denied'");
   });

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
   <title>KinoCampus - Banners e anúncios</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.1" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.4" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     /* ── Layout base ── */
@@ -406,6 +406,60 @@
     .kc-feed-ads-summary {
       display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin:0 0 18px;
     }
+    .kc-ad-network-panel {
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;
+      padding:16px;
+      margin:0 0 18px;
+      background:linear-gradient(135deg, rgba(255,107,0,.08), rgba(255,255,255,.025));
+      display:grid;
+      gap:14px;
+    }
+    .kc-ad-network-panel__head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .kc-ad-network-panel h3 { margin:0 0 6px; display:flex; align-items:center; gap:8px; }
+    .kc-ad-network-panel p { margin:0; color:var(--kc-text-dark-secondary); line-height:1.5; max-width:78ch; }
+    .kc-ad-network-status {
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:.82rem;
+      color:var(--kc-text-dark-secondary);
+      background:rgba(255,255,255,.04);
+    }
+    .kc-ad-network-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+    .kc-ad-network-grid .span-3 { grid-column:1 / -1; }
+    .kc-ad-network-actions { display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+    .kc-ad-network-checklist {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+    .kc-ad-network-check {
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:14px;
+      padding:12px;
+      background:rgba(255,255,255,.035);
+      color:var(--kc-text-dark-secondary);
+      font-size:.84rem;
+      line-height:1.4;
+    }
+    .kc-ad-network-check strong { display:block; color:var(--kc-text-dark-primary); margin-bottom:4px; }
+    .kc-ad-network-check[data-ok="true"] strong { color:#86efac; }
+    .kc-ad-network-check[data-ok="false"] {
+      border-color:rgba(245,158,11,.45);
+      background:rgba(245,158,11,.08);
+    }
+    .kc-ad-network-check[data-ok="false"] strong { color:#fbbf24; }
     .kc-feed-ads-kpi {
       border:1px solid var(--kc-border-dark); border-radius:16px; padding:14px;
       background:linear-gradient(180deg, rgba(255,124,0,.08), rgba(255,255,255,.02));
@@ -498,6 +552,9 @@
       .kc-feed-ads-admin__head { flex-direction:column; }
       .kc-feed-ads-toolbar { justify-content:flex-start; }
       .kc-feed-ads-summary { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .kc-ad-network-grid,
+      .kc-ad-network-checklist { grid-template-columns:1fr; }
+      .kc-ad-network-grid .span-3 { grid-column:auto; }
       .kc-feed-ads-grid { grid-template-columns:1fr; }
       .kc-feed-ads-fields { grid-template-columns:1fr; }
     }
@@ -597,6 +654,93 @@
             <div class="kc-feed-ads-kpi"><span>Cliques</span><strong>0</strong><small>Período selecionado</small></div>
             <div class="kc-feed-ads-kpi"><span>CTR</span><strong>0,00%</strong><small>Cliques / impressões</small></div>
           </div>
+          <section class="kc-ad-network-panel" aria-labelledby="ad-network-title">
+            <div class="kc-ad-network-panel__head">
+              <div>
+                <h3 id="ad-network-title"><i class="fab fa-google"></i> Configuração AdSense</h3>
+                <p>Controle quando os slots do Google AdSense podem substituir ou complementar campanhas próprias. Auto ads permanece desligado por padrão para preservar as páginas de produto e áreas privadas.</p>
+              </div>
+              <span class="kc-ad-network-status" id="ad-network-status-label">Carregando configuração...</span>
+            </div>
+            <div class="kc-ad-network-grid">
+              <label class="kc-form-field">
+                <span>Status</span>
+                <select id="ad-network-status">
+                  <option value="disabled">Desativado</option>
+                  <option value="testing">Teste interno</option>
+                  <option value="active">Ativo</option>
+                </select>
+              </label>
+              <label class="kc-form-field">
+                <span>Provider</span>
+                <select id="ad-network-provider">
+                  <option value="direct">Somente anúncios próprios</option>
+                  <option value="hybrid">Híbrido</option>
+                  <option value="adsense">AdSense</option>
+                </select>
+              </label>
+              <label class="kc-form-field">
+                <span>Client ID AdSense</span>
+                <input id="ad-network-client-id" type="text" value="ca-pub-2776499020194231" placeholder="ca-pub-..." data-i18n-placeholder="placeholder.adsense-client-id" />
+              </label>
+              <label class="kc-form-field">
+                <span>Inline</span>
+                <select id="ad-mode-feed-inline">
+                  <option value="direct_only">Próprio</option>
+                  <option value="adsense_fallback">Próprio + AdSense fallback</option>
+                  <option value="adsense_only">Só AdSense</option>
+                  <option value="off">Desligado</option>
+                </select>
+              </label>
+              <label class="kc-form-field">
+                <span>Lateral topo</span>
+                <select id="ad-mode-feed-aside-top">
+                  <option value="direct_only">Próprio</option>
+                  <option value="adsense_fallback">Próprio + AdSense fallback</option>
+                  <option value="adsense_only">Só AdSense</option>
+                  <option value="off">Desligado</option>
+                </select>
+              </label>
+              <label class="kc-form-field">
+                <span>Lateral sticky</span>
+                <select id="ad-mode-feed-aside-sticky">
+                  <option value="direct_only">Próprio</option>
+                  <option value="adsense_fallback">Próprio + AdSense fallback</option>
+                  <option value="adsense_only">Só AdSense</option>
+                  <option value="off">Desligado</option>
+                </select>
+              </label>
+              <label class="kc-form-field">
+                <span>Slot inline</span>
+                <input id="ad-slot-feed-inline" type="text" inputmode="numeric" placeholder="data-ad-slot" data-i18n-placeholder="placeholder.adsense-slot" />
+              </label>
+              <label class="kc-form-field">
+                <span>Slot lateral topo</span>
+                <input id="ad-slot-feed-aside-top" type="text" inputmode="numeric" placeholder="data-ad-slot" data-i18n-placeholder="placeholder.adsense-slot" />
+              </label>
+              <label class="kc-form-field">
+                <span>Slot lateral sticky</span>
+                <input id="ad-slot-feed-aside-sticky" type="text" inputmode="numeric" placeholder="data-ad-slot" data-i18n-placeholder="placeholder.adsense-slot" />
+              </label>
+              <label class="kc-form-field span-3">
+                <span>Observações da rede</span>
+                <textarea id="ad-network-notes" rows="2" maxlength="1000" placeholder="Ex.: aprovação no AdSense, slots criados, restrições de página e orientações para anunciantes." data-i18n-placeholder="placeholder.adsense-notes"></textarea>
+              </label>
+              <label class="kc-form-field span-3" style="display:flex;gap:10px;align-items:center;flex-direction:row;">
+                <input id="ad-network-auto-ads" type="checkbox" />
+                <span>Permitir Auto ads no futuro somente se as exclusões de página estiverem configuradas no AdSense.</span>
+              </label>
+            </div>
+            <div class="kc-ad-network-checklist" id="ad-network-checklist" aria-live="polite">
+              <div class="kc-ad-network-check"><strong>Consentimento</strong>AdSense só carrega com publicidade aceita.</div>
+              <div class="kc-ad-network-check"><strong>Produto/Admin</strong>Sem script de anúncios nessas páginas.</div>
+              <div class="kc-ad-network-check"><strong>ads.txt</strong>Arquivo público configurado para o publisher.</div>
+            </div>
+            <div class="kc-ad-network-actions">
+              <button type="button" class="kc-btn kc-btn-secondary" id="ad-network-reset"><i class="fas fa-rotate-left"></i> Restaurar padrão</button>
+              <button type="button" class="kc-btn kc-btn-primary-action" id="ad-network-save"><i class="fas fa-floppy-disk"></i> Salvar AdSense</button>
+            </div>
+          </section>
           <div class="kc-feed-ads-grid">
             <form class="kc-feed-ads-form" id="feed-ad-form">
               <h3><i class="fas fa-pen-to-square"></i> Campanha</h3>
@@ -863,8 +1007,8 @@
   <script defer src="../assets/js/boot/kc-env.js?v=8.6.1"></script>
   <script defer src="../assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
   <script defer src="../assets/js/boot/kc-sw-register.js?v=8.6.1"></script>
-  <script defer src="../assets/js/core/kc-consent.js?v=8.6.1"></script>
-  <script defer src="../assets/js/boot/kc-google-tag.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-consent.js?v=8.6.4"></script>
+  <script defer src="../assets/js/boot/kc-google-tag.js?v=8.6.4"></script>
   <script defer src="../assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="../assets/js/api/kc-supabase.client.js?v=8.6.1"></script>
@@ -905,9 +1049,9 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
-  <script defer src="../assets/js/features/kc-ads.js?v=8.6.2"></script>
+  <script defer src="../assets/js/features/kc-ads.js?v=8.6.4"></script>
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.5"></script>
   <script defer src="../assets/js/controllers/admin/admin-banners.controller.js?v=8.6.5"></script>
-  <script defer src="../assets/js/controllers/admin/admin-feed-ads.controller.js?v=8.6.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-feed-ads.controller.js?v=8.6.4"></script>
 </body>
 </html>

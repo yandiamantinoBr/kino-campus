@@ -197,6 +197,7 @@
       prefs.version || '',
       prefs.preferences === true ? '1' : '0',
       prefs.analytics === true ? '1' : '0',
+      prefs.advertising === true ? '1' : '0',
       prefs.source || '',
       String(prefs.updatedAt || '').slice(0, 19),
     ].join('|');

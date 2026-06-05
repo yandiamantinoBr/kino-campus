@@ -1,7 +1,7 @@
 /*
-  KinoCampus - Feed Ads (v9.3.6.1)
-  Renderiza anuncios contextuais proprios em paginas de feed.
-  Nao carrega rede externa e nao usa perfil individual por padrao.
+  KinoCampus - Feed Ads (v9.3.7.0)
+  Renderiza anuncios contextuais proprios e slots AdSense controlados em paginas de feed.
+  Nao usa perfil individual por padrao.
 */
 (function (root, factory) {
   const api = factory(root || {});
@@ -10,7 +10,7 @@
 }(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null), function (root) {
   'use strict';
 
-  const VERSION = '9.3.6.1';
+  const VERSION = '9.3.7.0';
   const CACHE_SCOPE = 'ads';
   const CACHE_VERSION = 1;
   const CACHE_MAX_AGE_MS = 5 * 60 * 1000;
@@ -41,7 +41,11 @@
   });
 
   const BLOCKED_PATH_RE = /\/(?:admin\/|product\.html|_product\.html|create-post\.html|my-posts\.html|profile\.html|settings\.html|mensagens\.html|account-setup\.html|auth-callback\.html|privacidade\.html|termos\.html|ajuda\.html|transparencia\.html)/i;
+  const ADSENSE_CLIENT_FALLBACK = 'ca-pub-2776499020194231';
+  const ADSENSE_SCRIPT_ID = 'kcAdsenseScript';
   const VALID_PLACEMENTS = ['feed_inline', 'feed_aside'];
+  const VALID_SLOT_PLACEMENTS = ['feed_inline', 'feed_aside_top', 'feed_aside_sticky'];
+  const VALID_PROVIDER_MODES = ['direct_only', 'adsense_fallback', 'adsense_only', 'off'];
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -61,6 +65,10 @@
         .filter(Boolean);
     }
     return [];
+  }
+
+  function asPlainObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   }
 
   function normalizeKey(value) {
@@ -114,6 +122,78 @@
     return (Array.isArray(rows) ? rows : [])
       .map(normalizeAdRow)
       .filter((ad) => ad.id && ad.title && ad.target_url);
+  }
+
+  function normalizeProviderMode(value) {
+    const mode = String(value || '').trim().toLowerCase();
+    return VALID_PROVIDER_MODES.indexOf(mode) >= 0 ? mode : 'direct_only';
+  }
+
+  function normalizeAdConfig(raw) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const data = source.settings && typeof source.settings === 'object' ? source.settings : source;
+    const enabled = source.enabled === true || data.enabled === true || data.status === 'active';
+    const placementModes = asPlainObject(data.placement_modes);
+    const adsenseSlots = asPlainObject(data.adsense_slots);
+    const modes = {};
+    VALID_SLOT_PLACEMENTS.forEach((placement) => {
+      modes[placement] = normalizeProviderMode(placementModes[placement]);
+    });
+    return {
+      ok: source.ok !== false,
+      enabled,
+      provider: String(data.provider || 'direct'),
+      status: String(data.status || (enabled ? 'active' : 'disabled')),
+      adsense_client_id: String(data.adsense_client_id || data.adsenseClientId || ADSENSE_CLIENT_FALLBACK).trim(),
+      auto_ads_enabled: data.auto_ads_enabled === true,
+      placement_modes: modes,
+      adsense_slots: VALID_SLOT_PLACEMENTS.reduce((acc, placement) => {
+        acc[placement] = String(adsenseSlots[placement] || '').trim();
+        return acc;
+      }, {}),
+    };
+  }
+
+  function defaultAdConfig() {
+    return normalizeAdConfig({
+      enabled: false,
+      status: 'disabled',
+      provider: 'direct',
+      adsense_client_id: ADSENSE_CLIENT_FALLBACK,
+      placement_modes: {
+        feed_inline: 'direct_only',
+        feed_aside_top: 'direct_only',
+        feed_aside_sticky: 'direct_only',
+      },
+      adsense_slots: {},
+    });
+  }
+
+  function slotPlacementFor(placement, slot) {
+    if (placement === 'feed_aside') {
+      return slot === 'sticky' ? 'feed_aside_sticky' : 'feed_aside_top';
+    }
+    return VALID_SLOT_PLACEMENTS.indexOf(placement) >= 0 ? placement : 'feed_inline';
+  }
+
+  function hasAdvertisingConsent() {
+    try {
+      return !!(root.KCConsent
+        && typeof root.KCConsent.hasConsent === 'function'
+        && root.KCConsent.hasConsent('advertising'));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function canRenderAdsense(config, slotPlacement) {
+    const cfg = normalizeAdConfig(config);
+    const slot = cfg.adsense_slots[slotPlacement] || '';
+    return !!(cfg.enabled
+      && cfg.status === 'active'
+      && cfg.adsense_client_id
+      && slot
+      && hasAdvertisingConsent());
   }
 
   function getPagePath() {
@@ -281,13 +361,75 @@
     ].join('');
   }
 
+  function buildAdsenseHTML(config, slotPlacement) {
+    const cfg = normalizeAdConfig(config);
+    const placement = slotPlacementFor(slotPlacement);
+    const slot = cfg.adsense_slots[placement] || '';
+    if (!slot) return '';
+    const aside = placement.indexOf('feed_aside') === 0;
+    return [
+      `<article class="kc-ad-card kc-ad-card--${aside ? 'aside' : 'inline'} kc-ad-card--adsense" data-kc-managed-ad="true" data-kc-ad-provider="adsense" data-kc-ad-placement="${esc(placement)}">`,
+      '<div class="kc-ad-card__label"><span>Publicidade</span><small>Google AdSense</small></div>',
+      '<div class="kc-ad-card__body kc-ad-card__body--adsense">',
+      `<ins class="adsbygoogle" style="display:block" data-ad-client="${esc(cfg.adsense_client_id)}" data-ad-slot="${esc(slot)}" data-ad-format="auto" data-full-width-responsive="true"></ins>`,
+      '</div>',
+      '</article>',
+    ].join('');
+  }
+
+  function loadAdsenseScriptOnce(config) {
+    const cfg = normalizeAdConfig(config);
+    if (!root.document || !cfg.adsense_client_id || !hasAdvertisingConsent()) return false;
+    if (root.document.getElementById(ADSENSE_SCRIPT_ID)) return true;
+    const script = root.document.createElement('script');
+    script.id = ADSENSE_SCRIPT_ID;
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(cfg.adsense_client_id);
+    const firstScript = root.document.getElementsByTagName('script')[0];
+    if (firstScript && firstScript.parentNode) firstScript.parentNode.insertBefore(script, firstScript);
+    else root.document.head.appendChild(script);
+    return true;
+  }
+
+  function pushAdsenseSlots(scope) {
+    const target = scope || root.document;
+    if (!target || !hasAdvertisingConsent()) return;
+    const slots = Array.from(target.querySelectorAll ? target.querySelectorAll('ins.adsbygoogle:not([data-kc-adsense-pushed])') : []);
+    slots.forEach((slot) => {
+      slot.setAttribute('data-kc-adsense-pushed', 'true');
+      try {
+        root.adsbygoogle = root.adsbygoogle || [];
+        root.adsbygoogle.push({});
+      } catch (_) { }
+    });
+  }
+
+  function resolveSlotRender(ad, placement, slotPlacement, config) {
+    const cfg = normalizeAdConfig(config);
+    const mode = cfg.placement_modes[slotPlacementFor(slotPlacement)] || 'direct_only';
+    const hasDirect = !!ad;
+    const hasAdsense = canRenderAdsense(cfg, slotPlacementFor(slotPlacement));
+    if (mode === 'off') return { provider: 'off', html: '' };
+    if (mode === 'adsense_only') {
+      return hasAdsense ? { provider: 'adsense', html: buildAdsenseHTML(cfg, slotPlacement) } : { provider: 'off', html: '' };
+    }
+    if (mode === 'adsense_fallback' && !hasDirect && hasAdsense) {
+      return { provider: 'adsense', html: buildAdsenseHTML(cfg, slotPlacement) };
+    }
+    if (hasDirect) return { provider: 'direct', html: buildAdHTML(ad, placement) };
+    if (mode === 'adsense_fallback' && hasAdsense) return { provider: 'adsense', html: buildAdsenseHTML(cfg, slotPlacement) };
+    return { provider: 'off', html: '' };
+  }
+
   function removeManagedInlineAds(container) {
     if (!container) return;
     container.querySelectorAll('.kc-ad-card--inline[data-kc-managed-ad="true"]').forEach((node) => node.remove());
   }
 
-  function renderInlineAds(container, ads, context) {
-    if (!container || !ads || !ads.length) return false;
+  function renderInlineAds(container, ads, context, config) {
+    const cfg = normalizeAdConfig(config || defaultAdConfig());
+    if (!container) return false;
     const cards = Array.from(container.children).filter((node) => node.classList && node.classList.contains('kc-card'));
     if (cards.length < INLINE_AFTER_FIRST) {
       removeManagedInlineAds(container);
@@ -296,28 +438,41 @@
     }
     const slotCount = getInlineSlotCount(cards.length);
     const selected = selectAdsForPlacement(ads, 'feed_inline', context, slotCount || 1);
-    if (!selected.length) return false;
+    if (!selected.length && !canRenderAdsense(cfg, 'feed_inline')) return false;
     const slotAds = Array.from({ length: slotCount }, function (_, index) {
-      return selected[index % selected.length];
+      return selected.length ? selected[index % selected.length] : null;
     });
+    const slotRenders = slotAds.map((ad) => {
+      return resolveSlotRender(ad, 'feed_inline', 'feed_inline', cfg);
+    }).filter((item) => item && item.html);
+    if (!slotRenders.length) {
+      removeManagedInlineAds(container);
+      delete container.dataset.kcAdsSignature;
+      return false;
+    }
+    if (slotRenders.some((item) => item.provider === 'adsense')) {
+      loadAdsenseScriptOnce(cfg);
+    }
     const signature = [
       cards.length,
-      slotAds.map((ad) => ad.id).join('|'),
+      slotRenders.map((item, index) => item.provider + ':' + (slotAds[index] ? slotAds[index].id : 'adsense')).join('|'),
     ].join(':');
     if (container.dataset.kcAdsSignature === signature
-      && container.querySelectorAll('.kc-ad-card--inline[data-kc-managed-ad="true"]').length === slotAds.length) {
+      && container.querySelectorAll('.kc-ad-card--inline[data-kc-managed-ad="true"]').length === slotRenders.length) {
       bindTracking(container);
+      pushAdsenseSlots(container);
       return true;
     }
     removeManagedInlineAds(container);
 
-    slotAds.forEach((ad, index) => {
+    slotRenders.forEach((item, index) => {
       const targetIndex = Math.min((INLINE_INTERVAL * (index + 1)) - 1, cards.length - 1);
       const anchor = cards[targetIndex];
-      if (anchor) anchor.insertAdjacentHTML('afterend', buildAdHTML(ad, 'feed_inline'));
+      if (anchor) anchor.insertAdjacentHTML('afterend', item.html);
     });
     container.dataset.kcAdsSignature = signature;
     bindTracking(container);
+    pushAdsenseSlots(container);
     return true;
   }
 
@@ -328,8 +483,12 @@
       .forEach((node) => node.remove());
   }
 
-  function renderAsideSection(sidebar, targetDoc, slot, ad) {
-    if (!sidebar || !targetDoc || !ad) return null;
+  function renderAsideSection(sidebar, targetDoc, slot, ad, config) {
+    if (!sidebar || !targetDoc) return null;
+    const slotPlacement = slotPlacementFor('feed_aside', slot);
+    const rendered = resolveSlotRender(ad, 'feed_aside', slotPlacement, config || defaultAdConfig());
+    if (!rendered.html) return null;
+    if (rendered.provider === 'adsense') loadAdsenseScriptOnce(config);
     let section = sidebar.querySelector('[data-kc-ad-aside="' + slot + '"]');
     if (!section) {
       section = targetDoc.createElement('section');
@@ -339,48 +498,48 @@
     section.innerHTML = [
       '<div class="kc-ad-sidebar-head">',
       '<h3><i class="fas fa-rectangle-ad" aria-hidden="true"></i> Publicidade</h3>',
-      '<span>Patrocinado</span>',
+      '<span>' + (rendered.provider === 'adsense' ? 'AdSense' : 'Patrocinado') + '</span>',
       '</div>',
-      buildAdHTML(ad, 'feed_aside'),
+      rendered.html,
     ].join('');
     if (slot === 'top') {
-      const first = sidebar.querySelector('.kc-sidebar-section:not([data-kc-ad-aside])');
-      if (!section.parentNode) {
-        if (first && first.nextSibling) sidebar.insertBefore(section, first.nextSibling);
-        else sidebar.appendChild(section);
-      }
+      if (sidebar.firstElementChild !== section) sidebar.insertBefore(section, sidebar.firstElementChild);
     } else {
       sidebar.appendChild(section);
     }
     return section;
   }
 
-  function renderAsideAds(ads, context, doc) {
+  function renderAsideAds(ads, context, doc, config) {
     const targetDoc = doc || root.document;
+    const cfg = normalizeAdConfig(config || defaultAdConfig());
     if (!shouldRenderAside()) {
       removeManagedAsideAds(targetDoc);
       return false;
     }
-    if (!targetDoc || !ads || !ads.length) return false;
+    if (!targetDoc) return false;
     const sidebar = targetDoc.querySelector('main .kc-sidebar');
     if (!sidebar) return false;
     const selected = selectAdsForPlacement(ads, 'feed_aside', context, 2);
-    if (!selected.length) return false;
+    if (!selected.length && !canRenderAdsense(cfg, 'feed_aside_top') && !canRenderAdsense(cfg, 'feed_aside_sticky')) return false;
     sidebar.querySelectorAll('[data-kc-ad-aside="true"]').forEach((node) => node.remove());
-    const top = renderAsideSection(sidebar, targetDoc, 'top', selected[0]);
-    const sticky = renderAsideSection(sidebar, targetDoc, 'sticky', selected[1] || selected[0]);
+    const top = renderAsideSection(sidebar, targetDoc, 'top', selected[0] || null, cfg);
+    const sticky = renderAsideSection(sidebar, targetDoc, 'sticky', selected[1] || selected[0] || null, cfg);
     bindTracking(top);
     bindTracking(sticky);
+    pushAdsenseSlots(top);
+    pushAdsenseSlots(sticky);
     return true;
   }
 
-  function renderAllAds(ads, context, doc) {
+  function renderAllAds(ads, context, doc, config) {
     const targetDoc = doc || root.document;
     if (!targetDoc || !isFeedPage()) return false;
     const feedLists = Array.from(targetDoc.querySelectorAll('.kc-feed-list'));
-    let rendered = renderAsideAds(ads, context, targetDoc);
+    const cfg = normalizeAdConfig(config || defaultAdConfig());
+    let rendered = renderAsideAds(ads, context, targetDoc, cfg);
     feedLists.forEach((container) => {
-      rendered = renderInlineAds(container, ads, context) || rendered;
+      rendered = renderInlineAds(container, ads, context, cfg) || rendered;
     });
     return rendered;
   }
@@ -458,7 +617,23 @@
     return normalizeAdRows(response && response.data);
   }
 
-  function observeFeeds(ads, context) {
+  async function fetchAdConfig(context) {
+    const client = getClient();
+    if (!client || typeof client.rpc !== 'function') return defaultAdConfig();
+    try {
+      const response = await client.rpc('kc_get_feed_ad_config', {
+        p_page_path: context.page_path,
+        p_module_key: context.module_key,
+        p_placement: null,
+      });
+      if (response && response.error) return defaultAdConfig();
+      return normalizeAdConfig(response && response.data);
+    } catch (_) {
+      return defaultAdConfig();
+    }
+  }
+
+  function observeFeeds(ads, context, config) {
     if (!root.document || !root.MutationObserver) return;
     const lists = Array.from(root.document.querySelectorAll('.kc-feed-list'));
     lists.forEach((list) => {
@@ -468,7 +643,7 @@
       const observer = new root.MutationObserver(function () {
         safeClearTimeout(timer);
         timer = safeSetTimeout(function () {
-          renderInlineAds(list, ads, context);
+          renderInlineAds(list, ads, context, config);
         }, 120);
       });
       observer.observe(list, { childList: true });
@@ -483,21 +658,27 @@
       search_query: getSearchQuery(),
     };
     const cached = getCachedAds(context);
+    const config = await fetchAdConfig(context);
     if (cached && cached.ads.length) {
-      renderAllAds(cached.ads, context);
-      observeFeeds(cached.ads, context);
+      renderAllAds(cached.ads, context, null, config);
+      observeFeeds(cached.ads, context, config);
       if (cached.isFresh) return { ok: true, source: 'cache' };
     }
     try {
       const ads = await fetchAds(context);
-      if (ads.length) {
+      if (ads.length || config.enabled) {
         persistAds(context, ads);
-        renderAllAds(ads, context);
-        observeFeeds(ads, context);
+        renderAllAds(ads, context, null, config);
+        observeFeeds(ads, context, config);
       }
       return { ok: true, source: 'supabase', count: ads.length };
     } catch (error) {
       if (cached && cached.ads.length) return { ok: true, source: 'stale-cache', error };
+      if (config.enabled) {
+        renderAllAds([], context, null, config);
+        observeFeeds([], context, config);
+        return { ok: true, source: 'adsense-config', error };
+      }
       return { ok: false, error };
     }
   }
@@ -537,6 +718,10 @@
     renderInlineAds,
     renderAsideAds,
     renderAllAds,
+    normalizeAdConfig,
+    defaultAdConfig,
+    buildAdsenseHTML,
+    canRenderAdsense,
     loadAndRender,
   });
 }));

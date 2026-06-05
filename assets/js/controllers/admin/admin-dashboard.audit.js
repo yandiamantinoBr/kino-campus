@@ -479,6 +479,8 @@
     else if (a.includes('hidden') || a.includes('oculto')) { cls = 'kc-audit-badge--hidden'; label = 'Ocultado'; }
     else if (a.includes('restored') || a.includes('restaur')) { cls = 'kc-audit-badge--restored'; label = 'Restaurado'; }
     else if (a.includes('report') || a.includes('closed')) { cls = 'kc-audit-badge--report'; label = 'Denúncia'; }
+    else if (a.includes('ad_network')) { cls = 'kc-audit-badge--restored'; label = 'AdSense'; }
+    else if (a.includes('ad_campaign')) { cls = 'kc-audit-badge--restored'; label = 'Anúncio'; }
     else if (a.includes('status')) { cls = 'kc-audit-badge--hidden'; label = 'Status'; }
     return '<span class="kc-audit-badge ' + cls + '" title="' + escHtml(deps, action || '') + '">' + escHtml(deps, label) + '</span>';
   }
@@ -742,6 +744,10 @@
     var periodEnd = formatDateBRValue(deps, data.periodEnd);
     var activeSessions = data.activeSessions15m || {};
     var activeAvailable = activeSessions && activeSessions.available;
+    var adOverview = data.adOverview || {};
+    var adSettings = adOverview.settings || {};
+    var adCampaigns = adOverview.campaigns || {};
+    var adMetrics = adOverview.metrics || {};
 
     // Séries dinâmicas: o relatório reflete exatamente as séries escolhidas no gráfico.
     var seriesMetaList = (typeof deps.getSeriesMeta === 'function' && deps.getSeriesMeta()) || [];
@@ -807,6 +813,8 @@
         { label: 'Votos', value: toNumberValue(deps, data.votesCount), detail: periodLabel },
         { label: 'Novos usuários', value: toNumberValue(deps, data.usersNew), detail: periodLabel },
         { label: 'Posts salvos', value: toNumberValue(deps, data.savedPostsCount), detail: periodLabel },
+        { label: 'Campanhas ativas', value: toNumberValue(deps, adCampaigns.active), detail: 'monetização' },
+        { label: 'Cliques em anúncios', value: toNumberValue(deps, adMetrics.clicks), detail: 'CTR ' + (adMetrics.ctr || 0) + '%' },
       ],
       sections: [
         {
@@ -821,6 +829,9 @@
             { indicador: 'Novos usuários', valor: toNumberValue(deps, data.usersNew), contexto: periodLabel },
             { indicador: 'Posts salvos', valor: toNumberValue(deps, data.savedPostsCount), contexto: periodLabel },
             { indicador: 'Votos', valor: toNumberValue(deps, data.votesCount), contexto: periodLabel },
+            { indicador: 'Modo de anúncios', valor: adSettings.status || 'disabled', contexto: adSettings.provider || 'direct' },
+            { indicador: 'Campanhas ativas', valor: toNumberValue(deps, adCampaigns.active), contexto: 'Monetização' },
+            { indicador: 'Cliques em anúncios', valor: toNumberValue(deps, adMetrics.clicks), contexto: 'CTR ' + (adMetrics.ctr || 0) + '%' },
             { indicador: 'Alertas operacionais', valor: (data.alerts || []).length, contexto: 'Alertas do Dashboard' },
             { indicador: 'Eventos no audit log', valor: (data.auditRows || []).length, contexto: 'Linhas carregadas no painel' },
           ],
@@ -867,6 +878,20 @@
           }),
           columns: ['posicao', 'termo', 'buscas', 'modulo'],
           maxPdfRows: 20,
+        },
+        {
+          title: 'Monetização',
+          note: 'Resumo de campanhas próprias, AdSense controlado e eventos agregados de publicidade.',
+          rows: [
+            { indicador: 'Status AdSense', valor: adSettings.status || 'disabled', contexto: adSettings.provider || 'direct' },
+            { indicador: 'Auto ads', valor: adSettings.auto_ads_enabled ? 'Ativado' : 'Desativado', contexto: 'Recomendado: desativado' },
+            { indicador: 'Campanhas totais', valor: toNumberValue(deps, adCampaigns.total), contexto: 'ad_campaigns' },
+            { indicador: 'Campanhas ativas', valor: toNumberValue(deps, adCampaigns.active), contexto: 'disponíveis para feed' },
+            { indicador: 'Impressões', valor: toNumberValue(deps, adMetrics.impressions), contexto: periodLabel },
+            { indicador: 'Cliques', valor: toNumberValue(deps, adMetrics.clicks), contexto: 'CTR ' + (adMetrics.ctr || 0) + '%' },
+          ],
+          columns: ['indicador', 'valor', 'contexto'],
+          maxPdfRows: 8,
         },
         {
           title: 'Alertas',

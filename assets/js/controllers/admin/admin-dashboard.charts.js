@@ -14,7 +14,9 @@
     { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass', family: 'Demanda' },
     { key: 'signups_count', label: 'Cadastros', color: '#14b8a6', icon: 'fas fa-user-plus', family: 'Crescimento' },
     { key: 'reports_count', label: 'Denúncias', color: '#ef4444', icon: 'fas fa-flag', family: 'Moderação' },
-    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved', family: 'Operação' }
+    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved', family: 'Operação' },
+    { key: 'ad_clicks_count', label: 'Cliques em anúncios', color: '#f59e0b', icon: 'fas fa-arrow-pointer', family: 'Monetização' },
+    { key: 'ad_impressions_count', label: 'Impressões de anúncios', color: '#fb923c', icon: 'fas fa-rectangle-ad', family: 'Monetização' }
   ];
 
   function getDashboardUtils() {

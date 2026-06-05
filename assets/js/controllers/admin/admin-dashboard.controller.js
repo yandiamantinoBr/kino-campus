@@ -39,10 +39,12 @@
     { key: 'searches_count', label: 'Buscas', color: '#8b5cf6', icon: 'fas fa-magnifying-glass', family: 'Demanda' },
     { key: 'signups_count', label: 'Cadastros', color: '#14b8a6', icon: 'fas fa-user-plus', family: 'Crescimento' },
     { key: 'reports_count', label: 'Denúncias', color: '#ef4444', icon: 'fas fa-flag', family: 'Moderação' },
-    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved', family: 'Operação' }
+    { key: 'admin_actions_count', label: 'Ações admin', color: '#f97316', icon: 'fas fa-shield-halved', family: 'Operação' },
+    { key: 'ad_clicks_count', label: 'Cliques em anúncios', color: '#f59e0b', icon: 'fas fa-arrow-pointer', family: 'Monetização' },
+    { key: 'ad_impressions_count', label: 'Impressões de anúncios', color: '#fb923c', icon: 'fas fa-rectangle-ad', family: 'Monetização' }
   ];
   // Séries visíveis por padrão quando o admin ainda não tem preferência salva.
-  var DEFAULT_VISIBLE_SERIES = ['post_views_count', 'sessions_count', 'posts_count', 'comments_count', 'signups_count'];
+  var DEFAULT_VISIBLE_SERIES = ['post_views_count', 'sessions_count', 'posts_count', 'comments_count', 'signups_count', 'ad_clicks_count'];
   function $(sel, root) { return (root || document).querySelector(sel); }
 
   function getClient() {
@@ -311,7 +313,7 @@
   }
 
   // Marca/desmarca grids de métrica em estado de loading
-  var GRID_IDS = ['admin-executive-metrics', 'admin-metrics', 'admin-activity-metrics', 'admin-community-metrics'];
+  var GRID_IDS = ['admin-executive-metrics', 'admin-metrics', 'admin-activity-metrics', 'admin-community-metrics', 'admin-monetization-metrics'];
   function setGridsLoading(isLoading) {
     GRID_IDS.forEach(function(id) {
       var el = document.getElementById(id);
@@ -339,6 +341,12 @@
       return parsed.toLocaleString('pt-BR');
     }
     return String(value);
+  }
+
+  function formatPercentMetric(value) {
+    var parsed = Number(value);
+    if (!Number.isFinite(parsed)) return '0,00%';
+    return parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
   }
 
   function metricCard(icon, label, value, opts) {
@@ -391,7 +399,7 @@
   function showDashboardSkeletons() {
     var grids = [
       ['#admin-executive-metrics', 4], ['#admin-metrics', 4], ['#admin-activity-metrics', 4],
-      ['#admin-community-metrics', 3], ['#admin-privacy-metrics', 4]
+      ['#admin-community-metrics', 3], ['#admin-privacy-metrics', 4], ['#admin-monetization-metrics', 4]
     ];
     grids.forEach(function (pair) {
       var el = $(pair[0]);
@@ -437,6 +445,7 @@
       ['#admin-moderation-title', '<i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação (' + fullLabel + ')'],
       ['#admin-activity-title', '<i class="fas fa-chart-bar" aria-hidden="true"></i> Atividade da plataforma (' + fullLabel + ')'],
       ['#admin-community-title', '<i class="fas fa-users" aria-hidden="true"></i> Comunidade (' + fullLabel + ')'],
+      ['#admin-monetization-title', '<i class="fas fa-rectangle-ad" aria-hidden="true"></i> Monetização (' + fullLabel + ')'],
       ['#admin-trends-title', '<i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Tendências de busca (' + fullLabel + ')'],
       ['#admin-audit-title', '<i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Audit log (' + fullLabel + ')'],
       ['#admin-activity-pulse-title', '<i class="fas fa-wave-square" aria-hidden="true"></i> Pulso diário (' + fullLabel + ')'],
@@ -574,6 +583,19 @@
     return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadActiveSessions15m === 'function')
       ? window._KCAD.metrics.loadActiveSessions15m(client)
       : Promise.resolve({ value: null, available: false, source: 'unavailable', label: 'Indisponivel', note: 'Modulo de metricas indisponivel.' });
+  }
+
+  function loadAdOverview(client, since) {
+    return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadAdOverview === 'function')
+      ? window._KCAD.metrics.loadAdOverview(client, since)
+      : Promise.resolve({
+          source: 'unavailable',
+          settings: { status: 'disabled', provider: 'direct', auto_ads_enabled: false },
+          campaigns: { total: 0, active: 0 },
+          metrics: { impressions: 0, clicks: 0, ctr: 0 },
+          active_without_impressions: 0,
+          expired_active: 0,
+        });
   }
 
   function loadSearchTrendsData(client, since) {
@@ -736,7 +758,7 @@
 
     var reportMetrics, postStatusMetrics, postsCreated, postsEdited, commentsCount,
       searchCount, postsTotal, visiblePosts, usersTotal, usersNew, votesCount,
-      savedPostsCount, activeSessions15m, auditRows, trends, dailyMetrics;
+      savedPostsCount, activeSessions15m, adOverview, auditRows, trends, dailyMetrics;
     var deltaUsersNew = null, deltaPostsCreated = null, deltaEngagement = null;
 
     var overview = null;
@@ -783,10 +805,12 @@
         loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
         loadSearchTrendsData(client, since),
         loadDailyMetrics(client, since, signal),
+        loadAdOverview(client, since),
       ]);
       auditRows = ovRest[0];
       trends = ovRest[1];
       dailyMetrics = ovRest[2];
+      adOverview = ovRest[3];
     } else {
       var full = await Promise.all([
         loadReportMetrics(client, since),
@@ -805,11 +829,12 @@
         loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
         loadSearchTrendsData(client, since),
         loadDailyMetrics(client, since, signal),
+        loadAdOverview(client, since),
       ]);
       reportMetrics = full[0]; postStatusMetrics = full[1]; postsCreated = full[2]; postsEdited = full[3];
       commentsCount = full[4]; searchCount = full[5]; postsTotal = full[6]; visiblePosts = full[7];
       usersTotal = full[8]; usersNew = full[9]; votesCount = full[10]; savedPostsCount = full[11];
-      activeSessions15m = full[12]; auditRows = full[13]; trends = full[14]; dailyMetrics = full[15];
+      activeSessions15m = full[12]; auditRows = full[13]; trends = full[14]; dailyMetrics = full[15]; adOverview = full[16];
 
       var prevCounts = await Promise.all([
         prevWindowCount('profiles'), prevWindowCount('posts'), prevWindowCount('comments'),
@@ -843,7 +868,8 @@
           deletedPosts: postStatusMetrics.deleted,
           searches: searchCount,
           auditEvents: auditRows.length,
-          peakTotal: dailySummary ? dailySummary.peakTotal : 0
+          peakTotal: dailySummary ? dailySummary.peakTotal : 0,
+          ads: adOverview
         })
       : [];
 
@@ -902,12 +928,32 @@
       ].join('');
     }
 
+    // ── Monetização ──
+    var ads = adOverview || {};
+    var adSettings = ads.settings || {};
+    var adCampaigns = ads.campaigns || {};
+    var adMetrics = ads.metrics || {};
+    var adMode = (adSettings.status === 'active' ? 'Ativo' : (adSettings.status === 'testing' ? 'Em teste' : 'Desativado'));
+    var adProvider = adSettings.provider === 'hybrid'
+      ? 'híbrido'
+      : (adSettings.provider === 'adsense' ? 'AdSense' : 'próprio');
+    var monetizationMetrics = $('#admin-monetization-metrics');
+    if (monetizationMetrics) {
+      monetizationMetrics.innerHTML = [
+        metricCard('fab fa-google', 'Modo de anúncios', adMode, { subtitle: 'Provider ' + adProvider, href: 'banners.html#feed-ads-admin' }),
+        metricCard('fas fa-bullhorn', 'Campanhas ativas', Number(adCampaigns.active) || 0, { subtitle: (Number(adCampaigns.total) || 0) + ' campanhas no total', href: 'banners.html#feed-ads-admin' }),
+        metricCard('fas fa-arrow-pointer', 'Cliques em anúncios', Number(adMetrics.clicks) || 0, { subtitle: 'CTR ' + formatPercentMetric(adMetrics.ctr), href: 'banners.html#feed-ads-admin' }),
+        metricCard('fas fa-rectangle-ad', 'Impressões de anúncios', Number(adMetrics.impressions) || 0, { subtitle: fullLabel }),
+      ].join('');
+    }
+
     // ── Privacidade + Saúde (vinculadas ao período + dados reais do overview) ──
     var healthItems = [
       { label: 'Métricas', value: overview ? 'RPC agregada' : 'Loaders', tone: overview ? null : 'warn', note: overview ? 'kc_admin_dashboard_overview respondeu (1 chamada).' : 'RPC indisponível; usando loaders individuais.' },
       { label: 'Pulso diário', value: (dailyMetrics && dailyMetrics.length) ? (dailyMetrics.length + ' dias') : 'Sem dados', tone: (dailyMetrics && dailyMetrics.length) ? null : 'warn', note: 'Série de atividade consolidada por dia.' },
       { label: 'Tendências', value: (trends && trends.length) ? (trends.length + ' termos') : 'Sem buscas', note: 'kc_admin_search_trends respondeu.' },
-      { label: 'Privacidade', value: 'Dados reais', note: 'Eventos/sessões de search_queries + post_view_events (sem perfil individual).' }
+      { label: 'Privacidade', value: 'Dados reais', note: 'Eventos/sessões de search_queries + post_view_events (sem perfil individual).' },
+      { label: 'Monetização', value: ads.source === 'rpc' ? 'RPC agregada' : 'Fallback', tone: ads.source === 'rpc' ? null : 'warn', note: 'Campanhas, AdSense e eventos agregados de publicidade.' }
     ];
     try {
       if (window._KCAD && window._KCAD.privacy && typeof window._KCAD.privacy.refresh === 'function') {
@@ -930,7 +976,7 @@
       reportMetrics, postStatusMetrics,
       postsCreated, postsEdited, commentsCount, searchCount, postsTotal, visiblePosts,
       usersTotal, usersNew, votesCount, savedPostsCount, activeSessions15m,
-      auditRows, trends, periodDays,
+      adOverview, auditRows, trends, periodDays,
       dailyMetrics, dailySummary, moduleShareRows, alerts,
       periodLabel: fullLabel,
       periodStart: since,

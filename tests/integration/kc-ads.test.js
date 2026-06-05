@@ -12,6 +12,7 @@ describe('KCAds feed monetization', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     window.history.replaceState({}, '', '/eventos.html');
+    window.KCConsent = { hasConsent: () => false };
   });
 
   test('normaliza campanhas e remove URLs perigosas', () => {
@@ -70,6 +71,31 @@ describe('KCAds feed monetization', () => {
     expect(KCAds.getInlineSlotCount(18)).toBe(3);
   });
 
+  test('renderiza slot AdSense apenas quando publicidade foi aceita', () => {
+    document.body.innerHTML = [
+      '<div class="kc-feed-list">',
+      Array.from({ length: 6 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
+      '</div>',
+    ].join('');
+
+    const config = KCAds.normalizeAdConfig({
+      status: 'active',
+      adsense_client_id: 'ca-pub-2776499020194231',
+      placement_modes: { feed_inline: 'adsense_only' },
+      adsense_slots: { feed_inline: '1234567890' },
+    });
+
+    expect(KCAds.renderInlineAds(document.querySelector('.kc-feed-list'), [], { module_key: 'eventos' }, config)).toBe(false);
+    expect(document.querySelector('ins.adsbygoogle')).toBeFalsy();
+
+    window.KCConsent = { hasConsent: (key) => key === 'advertising' };
+    expect(KCAds.renderInlineAds(document.querySelector('.kc-feed-list'), [], { module_key: 'eventos' }, config)).toBe(true);
+    const slot = document.querySelector('ins.adsbygoogle');
+    expect(slot).toBeTruthy();
+    expect(slot.getAttribute('data-ad-client')).toBe('ca-pub-2776499020194231');
+    expect(slot.getAttribute('data-ad-slot')).toBe('1234567890');
+  });
+
   test('renderiza anuncios laterais em bloco inicial e bloco sticky final', () => {
     document.body.innerHTML = [
       '<main><aside class="kc-sidebar">',
@@ -86,6 +112,7 @@ describe('KCAds feed monetization', () => {
     expect(ok).toBe(true);
     expect(document.querySelector('[data-kc-ad-aside="top"]')).toBeTruthy();
     expect(document.querySelector('[data-kc-ad-aside="sticky"]')).toBeTruthy();
+    expect(document.querySelector('.kc-sidebar').firstElementChild.getAttribute('data-kc-ad-aside')).toBe('top');
     expect(document.querySelector('.kc-sidebar').lastElementChild.getAttribute('data-kc-ad-aside')).toBe('sticky');
   });
 
@@ -159,6 +186,18 @@ describe('KCAds feed monetization', () => {
     expect(sql).toContain('ENABLE ROW LEVEL SECURITY');
   });
 
+  test('migration AdSense define settings, RPCs e audit log canonico', () => {
+    const sql = read('supabase/migrations/20260605143000_adsense_admin_monetization.sql');
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.ad_network_settings');
+    expect(sql).toContain('public.kc_get_feed_ad_config');
+    expect(sql).toContain('public.kc_admin_get_ad_network_settings');
+    expect(sql).toContain('public.kc_admin_save_ad_network_settings');
+    expect(sql).toContain('public.kc_admin_ads_overview');
+    expect(sql).toContain("'ad_campaign_created'");
+    expect(sql).toContain("'ad_network_settings_updated'");
+    expect(sql).toContain('ca-pub-2776499020194231');
+  });
+
   test('admin de banners contem controles de anuncios de feed', () => {
     const html = read('admin/banners.html');
     const controller = read('assets/js/controllers/admin/admin-feed-ads.controller.js');
@@ -172,11 +211,19 @@ describe('KCAds feed monetization', () => {
       'feed-ads-filter-query',
       'feed-ads-filter-status',
       'feed-ads-filter-module',
+      'ad-network-status',
+      'ad-network-client-id',
+      'ad-mode-feed-inline',
+      'ad-mode-feed-aside-top',
+      'ad-mode-feed-aside-sticky',
+      'ad-network-save',
     ].forEach((id) => {
       expect(html).toContain('id="' + id + '"');
     });
     expect(controller).toContain('uploadAdImage');
     expect(controller).toContain('getMetricWindowDays');
+    expect(controller).toContain('fetchAdNetworkSettings');
+    expect(controller).toContain('saveAdNetworkSettings');
     expect(controller).toContain('url_rastreavel');
   });
 });

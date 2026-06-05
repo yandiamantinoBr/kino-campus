@@ -7,9 +7,12 @@
 
   const METRIC_EVENTS = ['ad_impression', 'ad_click'];
   const METRIC_LIMIT = 5000;
+  const ADSENSE_CLIENT_ID = 'ca-pub-2776499020194231';
+  const PROVIDER_MODES = ['direct_only', 'adsense_fallback', 'adsense_only', 'off'];
   let campaigns = [];
   let filteredCampaigns = [];
   let metrics = new Map();
+  let adNetworkSettings = defaultAdNetworkSettings();
 
   function $(id) {
     return document.getElementById(id);
@@ -125,6 +128,176 @@
     return [7, 30, 90, 365].indexOf(value) >= 0 ? value : 30;
   }
 
+  function normalizeMode(value) {
+    const mode = String(value || '').trim().toLowerCase();
+    return PROVIDER_MODES.indexOf(mode) >= 0 ? mode : 'direct_only';
+  }
+
+  function defaultAdNetworkSettings() {
+    return {
+      provider: 'direct',
+      status: 'disabled',
+      adsense_client_id: ADSENSE_CLIENT_ID,
+      auto_ads_enabled: false,
+      placement_modes: {
+        feed_inline: 'direct_only',
+        feed_aside_top: 'direct_only',
+        feed_aside_sticky: 'direct_only',
+      },
+      adsense_slots: {
+        feed_inline: '',
+        feed_aside_top: '',
+        feed_aside_sticky: '',
+      },
+      notes: '',
+    };
+  }
+
+  function normalizeAdNetworkSettings(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    const row = source.settings && typeof source.settings === 'object' ? source.settings : source;
+    const defaults = defaultAdNetworkSettings();
+    const modes = row.placement_modes && typeof row.placement_modes === 'object' ? row.placement_modes : {};
+    const slots = row.adsense_slots && typeof row.adsense_slots === 'object' ? row.adsense_slots : {};
+    return {
+      provider: ['direct', 'adsense', 'hybrid'].indexOf(String(row.provider || '')) >= 0 ? String(row.provider) : defaults.provider,
+      status: ['disabled', 'testing', 'active'].indexOf(String(row.status || '')) >= 0 ? String(row.status) : defaults.status,
+      adsense_client_id: String(row.adsense_client_id || defaults.adsense_client_id).trim(),
+      auto_ads_enabled: row.auto_ads_enabled === true,
+      placement_modes: {
+        feed_inline: normalizeMode(modes.feed_inline),
+        feed_aside_top: normalizeMode(modes.feed_aside_top),
+        feed_aside_sticky: normalizeMode(modes.feed_aside_sticky),
+      },
+      adsense_slots: {
+        feed_inline: String(slots.feed_inline || '').trim(),
+        feed_aside_top: String(slots.feed_aside_top || '').trim(),
+        feed_aside_sticky: String(slots.feed_aside_sticky || '').trim(),
+      },
+      notes: String(row.notes || ''),
+      updated_at: row.updated_at || '',
+    };
+  }
+
+  function modeLabel(value) {
+    return ({
+      direct_only: 'Somente anúncios próprios',
+      adsense_fallback: 'AdSense como fallback',
+      adsense_only: 'Somente AdSense',
+      off: 'Desligado',
+    })[normalizeMode(value)] || 'Somente anúncios próprios';
+  }
+
+  function providerLabel(value) {
+    return ({
+      direct: 'Anúncios próprios',
+      adsense: 'Google AdSense',
+      hybrid: 'Híbrido',
+    })[String(value || '')] || 'Anúncios próprios';
+  }
+
+  function statusLabelNetwork(value) {
+    return ({
+      disabled: 'Desativado',
+      testing: 'Em teste',
+      active: 'Ativo',
+    })[String(value || '')] || 'Desativado';
+  }
+
+  function setFieldValue(id, value) {
+    const el = $(id);
+    if (el) el.value = value == null ? '' : String(value);
+  }
+
+  function collectAdNetworkPayload() {
+    return normalizeAdNetworkSettings({
+      provider: ($('ad-network-provider') || {}).value || 'direct',
+      status: ($('ad-network-status') || {}).value || 'disabled',
+      adsense_client_id: ($('ad-network-client-id') || {}).value || ADSENSE_CLIENT_ID,
+      auto_ads_enabled: !!(($('ad-network-auto-ads') || {}).checked),
+      placement_modes: {
+        feed_inline: ($('ad-mode-feed-inline') || {}).value || 'direct_only',
+        feed_aside_top: ($('ad-mode-feed-aside-top') || {}).value || 'direct_only',
+        feed_aside_sticky: ($('ad-mode-feed-aside-sticky') || {}).value || 'direct_only',
+      },
+      adsense_slots: {
+        feed_inline: ($('ad-slot-feed-inline') || {}).value || '',
+        feed_aside_top: ($('ad-slot-feed-aside-top') || {}).value || '',
+        feed_aside_sticky: ($('ad-slot-feed-aside-sticky') || {}).value || '',
+      },
+      notes: ($('ad-network-notes') || {}).value || '',
+    });
+  }
+
+  function renderAdNetworkStatus(source) {
+    const settings = normalizeAdNetworkSettings(source || collectAdNetworkPayload());
+    const label = $('ad-network-status-label');
+    const checklist = $('ad-network-checklist');
+    const adsensePlacements = Object.keys(settings.placement_modes).filter(function (key) {
+      return ['adsense_fallback', 'adsense_only'].indexOf(settings.placement_modes[key]) >= 0;
+    });
+    const configuredSlots = adsensePlacements.filter(function (key) { return settings.adsense_slots[key]; });
+    if (label) {
+      label.textContent = statusLabelNetwork(settings.status) + ' · ' + providerLabel(settings.provider);
+      label.style.borderColor = settings.status === 'active' ? 'rgba(34,197,94,.45)' : 'rgba(255,255,255,.16)';
+      label.style.color = settings.status === 'active' ? '#86efac' : '';
+    }
+    if (!checklist) return;
+    const rows = [
+      {
+        title: 'Consentimento',
+        body: 'AdSense só carrega quando o visitante aceita publicidade nas preferências.',
+        ok: true,
+      },
+      {
+        title: 'Slots manuais',
+        body: adsensePlacements.length
+          ? configuredSlots.length + ' de ' + adsensePlacements.length + ' placement(s) com slot configurado.'
+          : 'Nenhum placement depende de AdSense no modo atual.',
+        ok: !adsensePlacements.length || configuredSlots.length === adsensePlacements.length,
+      },
+      {
+        title: 'Auto ads',
+        body: settings.auto_ads_enabled
+          ? 'Auto ads está marcado. Use exclusões no AdSense para produto, admin e páginas privadas.'
+          : 'Auto ads desligado. O KinoCampus controla os slots de feed manualmente.',
+        ok: !settings.auto_ads_enabled,
+      },
+      {
+        title: 'ads.txt',
+        body: 'Arquivo público ads.txt aponta para o publisher ca-pub-2776499020194231.',
+        ok: true,
+      },
+      {
+        title: 'Páginas bloqueadas',
+        body: 'Produto, admin, autenticação, perfil, mensagens, termos, privacidade e ajuda não carregam AdSense.',
+        ok: true,
+      },
+    ];
+    checklist.innerHTML = rows.map(function (item) {
+      return '<div class="kc-ad-network-check" data-ok="' + (item.ok ? 'true' : 'false') + '">'
+        + '<strong><i class="fas fa-' + (item.ok ? 'check-circle' : 'triangle-exclamation') + '"></i> ' + esc(item.title) + '</strong>'
+        + esc(item.body)
+        + '</div>';
+    }).join('');
+  }
+
+  function applyAdNetworkSettings(settings) {
+    adNetworkSettings = normalizeAdNetworkSettings(settings);
+    setFieldValue('ad-network-status', adNetworkSettings.status);
+    setFieldValue('ad-network-provider', adNetworkSettings.provider);
+    setFieldValue('ad-network-client-id', adNetworkSettings.adsense_client_id);
+    setFieldValue('ad-mode-feed-inline', adNetworkSettings.placement_modes.feed_inline);
+    setFieldValue('ad-mode-feed-aside-top', adNetworkSettings.placement_modes.feed_aside_top);
+    setFieldValue('ad-mode-feed-aside-sticky', adNetworkSettings.placement_modes.feed_aside_sticky);
+    setFieldValue('ad-slot-feed-inline', adNetworkSettings.adsense_slots.feed_inline);
+    setFieldValue('ad-slot-feed-aside-top', adNetworkSettings.adsense_slots.feed_aside_top);
+    setFieldValue('ad-slot-feed-aside-sticky', adNetworkSettings.adsense_slots.feed_aside_sticky);
+    setFieldValue('ad-network-notes', adNetworkSettings.notes);
+    if ($('ad-network-auto-ads')) $('ad-network-auto-ads').checked = !!adNetworkSettings.auto_ads_enabled;
+    renderAdNetworkStatus(adNetworkSettings);
+  }
+
   function getFilters() {
     return {
       query: normalizeKey(($('feed-ads-filter-query') || {}).value || ''),
@@ -204,6 +377,29 @@
       });
     } catch (_) { }
     return next;
+  }
+
+  async function fetchAdNetworkSettings() {
+    const client = getClient();
+    if (!client) return defaultAdNetworkSettings();
+    try {
+      const response = await client.rpc('kc_admin_get_ad_network_settings');
+      if (response && response.error) throw response.error;
+      if (response && response.data && response.data.ok === false) throw new Error(response.data.code || 'FORBIDDEN');
+      return normalizeAdNetworkSettings(response && response.data);
+    } catch (error) {
+      console.warn('[Feed ads] Configuração AdSense indisponível:', error && (error.message || error));
+      return defaultAdNetworkSettings();
+    }
+  }
+
+  async function saveAdNetworkSettings(payload) {
+    const client = getClient();
+    if (!client) throw new Error('Cliente Supabase indisponível.');
+    const response = await client.rpc('kc_admin_save_ad_network_settings', { p_data: payload });
+    if (response && response.error) throw response.error;
+    if (response && response.data && response.data.ok === false) throw new Error(response.data.code || 'Falha ao salvar configuração.');
+    return normalizeAdNetworkSettings(response && response.data);
   }
 
   async function saveCampaign(payload) {
@@ -456,9 +652,10 @@
   async function loadAll() {
     showError('');
     try {
-      const result = await Promise.all([fetchCampaigns(), fetchMetrics()]);
+      const result = await Promise.all([fetchCampaigns(), fetchMetrics(), fetchAdNetworkSettings()]);
       campaigns = result[0];
       metrics = result[1];
+      applyAdNetworkSettings(result[2]);
       renderList();
     } catch (error) {
       campaigns = [];
@@ -496,6 +693,15 @@
     const active = visibleCampaigns.filter(function (campaign) { return campaign.status === 'active'; }).length;
     const impressions = rows.reduce(function (sum, row) { return sum + (Number(row.impressoes) || 0); }, 0);
     const clicks = rows.reduce(function (sum, row) { return sum + (Number(row.cliques) || 0); }, 0);
+    const network = normalizeAdNetworkSettings(adNetworkSettings);
+    const networkRows = [
+      { campo: 'Status', valor: statusLabelNetwork(network.status), contexto: providerLabel(network.provider) },
+      { campo: 'Client ID AdSense', valor: network.adsense_client_id || '-', contexto: 'Publisher público' },
+      { campo: 'Auto ads', valor: network.auto_ads_enabled ? 'Ativado' : 'Desativado', contexto: 'Padrão recomendado: desativado' },
+      { campo: 'Feed inline', valor: modeLabel(network.placement_modes.feed_inline), contexto: network.adsense_slots.feed_inline || 'sem slot' },
+      { campo: 'Lateral superior', valor: modeLabel(network.placement_modes.feed_aside_top), contexto: network.adsense_slots.feed_aside_top || 'sem slot' },
+      { campo: 'Lateral sticky', valor: modeLabel(network.placement_modes.feed_aside_sticky), contexto: network.adsense_slots.feed_aside_sticky || 'sem slot' },
+    ];
     return {
       title: 'KinoCampus - Anúncios de feed',
       subtitle: 'Campanhas contextuais, status e desempenho agregado',
@@ -514,8 +720,16 @@
         impressoes_registradas: impressions,
         cliques_registrados: clicks,
         ctr_percentual: formatPercent(impressions ? (clicks / impressions) * 100 : 0),
+        modo_adsense: statusLabelNetwork(network.status),
       },
       sections: [
+        {
+          title: 'Configuração AdSense',
+          note: 'Resumo administrativo dos modos por placement. Slots reais podem ficar vazios enquanto a conta aguarda aprovação.',
+          rows: networkRows,
+          columns: ['campo', 'valor', 'contexto'],
+          maxPdfRows: 8,
+        },
         {
           title: 'Campanhas',
           rows,
@@ -565,6 +779,43 @@
     $('feed-ads-metric-window').addEventListener('change', loadAll);
     $('feed-ads-export-xlsx').addEventListener('click', function () { exportReport('xlsx').catch(console.error); });
     $('feed-ads-export-pdf').addEventListener('click', function () { exportReport('pdf').catch(console.error); });
+    const networkSave = $('ad-network-save');
+    if (networkSave) {
+      networkSave.addEventListener('click', async function () {
+        try {
+          const saved = await saveAdNetworkSettings(collectAdNetworkPayload());
+          applyAdNetworkSettings(saved);
+          toast('Configuração de AdSense salva.', 'success');
+        } catch (error) {
+          toast('Erro ao salvar AdSense: ' + (error.message || error), 'error');
+        }
+      });
+    }
+    const networkReset = $('ad-network-reset');
+    if (networkReset) {
+      networkReset.addEventListener('click', function () {
+        applyAdNetworkSettings(defaultAdNetworkSettings());
+        toast('Configuração local restaurada. Clique em Salvar para persistir.', 'success');
+      });
+    }
+    [
+      'ad-network-status',
+      'ad-network-provider',
+      'ad-network-client-id',
+      'ad-mode-feed-inline',
+      'ad-mode-feed-aside-top',
+      'ad-mode-feed-aside-sticky',
+      'ad-slot-feed-inline',
+      'ad-slot-feed-aside-top',
+      'ad-slot-feed-aside-sticky',
+      'ad-network-notes',
+      'ad-network-auto-ads',
+    ].forEach(function (id) {
+      const field = $(id);
+      if (!field) return;
+      const eventName = id === 'ad-network-notes' || id === 'ad-network-client-id' || id.indexOf('ad-slot-') === 0 ? 'input' : 'change';
+      field.addEventListener(eventName, function () { renderAdNetworkStatus(); });
+    });
     ['feed-ads-filter-query', 'feed-ads-filter-status', 'feed-ads-filter-module'].forEach(function (id) {
       const field = $(id);
       if (!field) return;
@@ -616,6 +867,7 @@
     if (!$('feed-ads-admin')) return;
     bindEvents();
     resetForm();
+    applyAdNetworkSettings(defaultAdNetworkSettings());
     setTimeout(loadAll, 700);
   });
 }());

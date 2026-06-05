@@ -1929,6 +1929,24 @@ main {
     font-size: 0.98rem;
 }
 
+.kc-ad-card--adsense .kc-ad-card__body {
+    display: block;
+    min-height: 118px;
+}
+
+.kc-ad-card--adsense.kc-ad-card--aside .kc-ad-card__body {
+    min-height: 250px;
+}
+
+.kc-ad-card--adsense .adsbygoogle {
+    width: 100%;
+    min-height: 118px;
+}
+
+.kc-ad-card--adsense.kc-ad-card--aside .adsbygoogle {
+    min-height: 250px;
+}
+
 .kc-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);

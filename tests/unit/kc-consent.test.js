@@ -29,14 +29,17 @@ describe('kc-consent.js', () => {
       necessary: true,
       preferences: true,
       analytics: true,
+      advertising: true,
       source: 'accept_all',
     });
     expect(window.KCConsent.hasConsent('analytics')).toBe(true);
+    expect(window.KCConsent.hasConsent('advertising')).toBe(true);
     expect(banner.hidden).toBe(true);
 
     window.KCConsent.rejectOptional('reject_optional');
     expect(window.KCConsent.hasConsent('preferences')).toBe(false);
     expect(window.KCConsent.hasConsent('analytics')).toBe(false);
+    expect(window.KCConsent.hasConsent('advertising')).toBe(false);
 
     window.KCConsent.openPreferences();
 
