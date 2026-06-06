@@ -18,6 +18,9 @@ describe('exports executivos admin - dashboard, denuncias e banners', () => {
     // Pulso diário agora reflete as séries escolhidas pelo admin (colunas dinâmicas).
     expect(source).toContain('getVisibleSeriesKeys');
     expect(source).toContain('var pulseColumns');
+    expect(source).toContain('var pulseChartSeries');
+    expect(source).toContain("title: 'Pulso operacional'");
+    expect(source).toContain("type: 'line'");
     expect(source).toContain("title: 'Séries (totais no período)'");
     expect(source).toContain("title: 'Top Contribuidores'");
     expect(source).toContain("xlsxColumns: ['data', 'acao', 'entidade', 'entity_id', 'ator', 'detalhes']");
@@ -73,6 +76,8 @@ describe('exports executivos admin - dashboard, denuncias e banners', () => {
     expect(source).toContain("participacao_percentual: 'Participação (%)'");
     expect(source).toContain("post_titulo: 'Título do post'");
     expect(source).toContain("reporter_nome: 'Denunciante'");
+    expect(source).toContain('function drawLineChart(chart)');
+    expect(source).toContain('function addExcelChartSheet(workbook, section)');
     expect(source).toContain("return typeof text.normalize === 'function' ? text.normalize('NFC') : text;");
     expect(source).toContain('SENSITIVE_KEY_RE');
   });

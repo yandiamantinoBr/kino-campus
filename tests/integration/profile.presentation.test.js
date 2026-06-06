@@ -242,7 +242,7 @@ describe('profile.html - ordem canonica dos scripts do split', () => {
       '<script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>',
       '<script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>',
       '<script defer src="assets/js/controllers/public/profile.presentation.js?v=8.6.1"></script>',
-      '<script defer src="assets/js/controllers/public/profile.collections.js?v=8.6.1"></script>',
+      '<script defer src="assets/js/controllers/public/profile.collections.js?v=8.6.2"></script>',
       '<script defer src="assets/js/controllers/public/profile.ratings.js?v=8.6.1"></script>',
       '<script defer src="assets/js/controllers/public/profile.flow.js?v=8.6.1"></script>',
       '<script defer src="assets/js/controllers/public/profile.controller.js?v=8.6.1"></script>'

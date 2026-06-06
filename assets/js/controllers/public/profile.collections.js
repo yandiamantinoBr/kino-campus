@@ -279,12 +279,40 @@
 
         (Array.isArray(result && result.data) ? result.data : []).forEach(function (post) {
           if (!post || !post.id) return;
-          postsById[String(post.id)] = Object.assign({}, post, {
+          var normalizedPost = Object.assign({}, post, {
             titulo: post.title || ''
           });
+          postsById[String(post.id)] = normalizedPost;
+          if (post.legacy_id) postsById[String(post.legacy_id)] = normalizedPost;
         });
       } catch (error) {
         console.warn('[Profile] fetchPostsByIds:', error);
+      }
+
+      var missing = batch.filter(function (id) { return !postsById[String(id)]; });
+      if (!missing.length) continue;
+
+      try {
+        var legacyResult = await client
+          .from('posts')
+          .select('id, legacy_id, title')
+          .in('legacy_id', missing);
+
+        if (legacyResult && legacyResult.error) {
+          console.warn('[Profile] fetchPostsByIds legacy:', legacyResult.error);
+          continue;
+        }
+
+        (Array.isArray(legacyResult && legacyResult.data) ? legacyResult.data : []).forEach(function (post) {
+          if (!post || !post.id) return;
+          var normalizedPost = Object.assign({}, post, {
+            titulo: post.title || ''
+          });
+          postsById[String(post.id)] = normalizedPost;
+          if (post.legacy_id) postsById[String(post.legacy_id)] = normalizedPost;
+        });
+      } catch (error) {
+        console.warn('[Profile] fetchPostsByIds legacy:', error);
       }
     }
 
@@ -485,12 +513,14 @@
         var commentPayload = await loadProfileComments(client, authorId, { limit: 8 });
         commentPayload.forEach(function (comment) {
           var post = comment.post || {};
+          var hasPost = !!(post && (post.id || post.legacy_id));
           activities.push({
             type: 'comment',
             date: comment.created_at,
             body: String(comment.body || '').slice(0, 120),
-            title: post.title || post.titulo || 'Post',
-            postId: post.legacy_id || post.id || comment.post_id || ''
+            title: hasPost ? (post.title || post.titulo || 'Publica\u00e7\u00e3o') : 'Publica\u00e7\u00e3o removida ou indispon\u00edvel',
+            postId: hasPost ? (post.legacy_id || post.id || comment.post_id || '') : '',
+            postAvailable: hasPost
           });
         });
       } catch (_) { }
@@ -508,7 +538,7 @@
 
     if (list) {
       list.innerHTML = activities.slice(0, 20).map(function (item) {
-        var postUrl = _buildPostDetailHref(item.postId || '', deps);
+        var postUrl = item.postAvailable === false ? '' : _buildPostDetailHref(item.postId || '', deps);
         if (item.type === 'post') {
           return [
             '<div class="kc-profile-activity-item">',
@@ -530,7 +560,7 @@
           '<div class="kc-profile-activity-item">',
           '<div class="kc-profile-activity-icon"><i class="fas fa-comment"></i></div>',
           '<div class="kc-profile-activity-content">',
-          '<div class="kc-profile-activity-label">Comentou em <a href="' + _esc(postUrl, deps) + '">' + _esc(item.title, deps) + '</a></div>',
+          '<div class="kc-profile-activity-label">Comentou em ' + (postUrl ? '<a href="' + _esc(postUrl, deps) + '">' + _esc(item.title, deps) + '</a>' : '<span>' + _esc(item.title, deps) + '</span>') + '</div>',
           preview,
           '<div class="kc-profile-activity-meta" style="margin-top:4px;">' + _esc(_fmtRelative(item.date, deps), deps) + '</div>',
           '</div>',

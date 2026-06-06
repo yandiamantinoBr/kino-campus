@@ -763,6 +763,13 @@
       visibleSeriesKeys.forEach(function (k) { r[k] = toNumberValue(deps, row[k]); });
       return r;
     });
+    var pulseChartSeries = visibleSeriesKeys.map(function (k) {
+      return {
+        key: k,
+        label: (metaByKey[k] && metaByKey[k].label) || k,
+        color: (metaByKey[k] && metaByKey[k].color) || '#ff6b00'
+      };
+    });
     var seriesTotalsRows = visibleSeriesKeys.map(function (k) {
       return {
         serie: (metaByKey[k] && metaByKey[k].label) || k,
@@ -839,10 +846,18 @@
           maxPdfRows: 12,
         },
         {
-          title: 'Pulso diário',
+          title: 'Pulso operacional',
           note: 'Atividade diária das séries selecionadas no gráfico do Dashboard.',
           rows: pulseRows,
           columns: pulseColumns,
+          chart: {
+            type: 'line',
+            xKey: 'dia',
+            xLabel: 'Dia',
+            yLabel: 'Eventos',
+            rows: pulseRows,
+            series: pulseChartSeries
+          },
           maxPdfRows: 18,
         },
         {

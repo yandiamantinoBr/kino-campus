@@ -14,6 +14,16 @@
   const MAX_CELL_LENGTH = 1200;
   const MAX_PDF_ROWS = 60;
   const MAX_PDF_CELL_LINES = 3;
+  const CHART_PALETTE = Object.freeze([
+    [255, 107, 0],
+    [37, 99, 235],
+    [22, 163, 74],
+    [147, 51, 234],
+    [220, 38, 38],
+    [8, 145, 178],
+    [202, 138, 4],
+    [79, 70, 229],
+  ]);
   const LABELS_PT_BR = Object.freeze({
     acao: 'Ação',
     acoes_da_sessao: 'Ações da sessão',
@@ -408,6 +418,51 @@
     }) : [];
   }
 
+  function parseChartColor(value, index) {
+    if (Array.isArray(value) && value.length >= 3) {
+      return [
+        Math.max(0, Math.min(255, Number(value[0]) || 0)),
+        Math.max(0, Math.min(255, Number(value[1]) || 0)),
+        Math.max(0, Math.min(255, Number(value[2]) || 0)),
+      ];
+    }
+    const text = String(value || '').trim();
+    const hex = text.charAt(0) === '#' ? text.slice(1) : text;
+    if (/^[0-9a-f]{6}$/i.test(hex)) {
+      return [
+        parseInt(hex.slice(0, 2), 16),
+        parseInt(hex.slice(2, 4), 16),
+        parseInt(hex.slice(4, 6), 16),
+      ];
+    }
+    return CHART_PALETTE[Math.abs(Number(index) || 0) % CHART_PALETTE.length];
+  }
+
+  function normalizeChart(chart, fallbackRows) {
+    if (!chart || typeof chart !== 'object') return null;
+    const rows = Array.isArray(chart.rows) ? chart.rows : (Array.isArray(fallbackRows) ? fallbackRows : []);
+    const series = (Array.isArray(chart.series) ? chart.series : [])
+      .map(function (item, index) {
+        const key = item && (item.key || item.field || item.name);
+        if (!key) return null;
+        return {
+          key: String(key),
+          label: normalizeUnicode((item && item.label) || titleCaseLabel(key)),
+          color: parseChartColor(item && item.color, index),
+        };
+      })
+      .filter(Boolean);
+    if (!rows.length || !series.length) return null;
+    return {
+      type: String(chart.type || 'line'),
+      xKey: String(chart.xKey || chart.labelKey || 'label'),
+      xLabel: normalizeUnicode(chart.xLabel || titleCaseLabel(chart.xKey || 'label')),
+      yLabel: normalizeUnicode(chart.yLabel || 'Total'),
+      rows,
+      series,
+    };
+  }
+
   function normalizeFilters(filters) {
     if (!filters || typeof filters !== 'object') return [];
     return Object.keys(filters).map(function (key) {
@@ -444,6 +499,7 @@
         columns,
         pdfColumns,
         xlsxColumns,
+        chart: normalizeChart(section && section.chart, section && section.rows),
         maxPdfRows: Number(section && section.maxPdfRows) || null,
         note: normalizeUnicode(section && section.note || ''),
       };
@@ -677,6 +733,90 @@
     return ws;
   }
 
+  function buildSparkline(values) {
+    const blocks = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+    const list = (Array.isArray(values) ? values : []).map(function (value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    });
+    if (!list.length) return '';
+    const max = Math.max.apply(null, list.concat([1]));
+    return list.map(function (value) {
+      const index = Math.max(0, Math.min(blocks.length - 1, Math.round((value / max) * (blocks.length - 1))));
+      return blocks[index];
+    }).join('');
+  }
+
+  function addExcelChartSheet(workbook, section) {
+    if (!section || !section.chart) return null;
+    const chart = section.chart;
+    const ws = workbook.addWorksheet(sheetName('Gráfico - ' + section.title), { views: [{ state: 'frozen', ySplit: 5 }] });
+    ws.columns = [{ width: 24 }, { width: 14 }, { width: 14 }, { width: 42 }, { width: 18 }];
+
+    ws.mergeCells('A1:E1');
+    const title = ws.getCell('A1');
+    title.value = section.title;
+    title.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 15 };
+    title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argbColor(BRAND.orange) } };
+    title.alignment = { vertical: 'middle', horizontal: 'left' };
+    ws.getRow(1).height = 28;
+
+    ws.mergeCells('A2:E2');
+    ws.getCell('A2').value = section.note || 'Visualização operacional das séries selecionadas.';
+    ws.getCell('A2').font = { color: { argb: argbColor(BRAND.muted) }, italic: true };
+    ws.getCell('A3').value = 'Eixo horizontal';
+    ws.getCell('B3').value = chart.xLabel;
+    ws.getCell('D3').value = 'Eixo vertical';
+    ws.getCell('E3').value = chart.yLabel;
+
+    const summaryHeader = ws.getRow(5);
+    summaryHeader.values = ['Série', 'Total', 'Pico', 'Tendência', 'Último valor'];
+    styleExcelHeaderRow(summaryHeader);
+
+    chart.series.forEach(function (serie, index) {
+      const values = chart.rows.map(function (row) {
+        const n = Number(row && row[serie.key]);
+        return Number.isFinite(n) ? n : 0;
+      });
+      const total = values.reduce(function (sum, value) { return sum + value; }, 0);
+      const peak = values.reduce(function (max, value) { return Math.max(max, value); }, 0);
+      const row = ws.addRow([serie.label, total, peak, buildSparkline(values), values.length ? values[values.length - 1] : 0]);
+      row.eachCell({ includeEmpty: true }, function (cell) {
+        cell.border = excelThinBorder();
+        cell.alignment = { vertical: 'middle', wrapText: true };
+      });
+      row.getCell(1).font = { bold: true, color: { argb: argbColor(serie.color) } };
+      row.getCell(4).font = { color: { argb: argbColor(serie.color) }, size: 14 };
+      if (index % 2 === 1) {
+        row.eachCell({ includeEmpty: true }, function (cell) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argbColor(ZEBRA_RGB) } };
+        });
+      }
+    });
+
+    ws.addRow([]);
+    const dataTitle = ws.addRow(['Dados do gráfico']);
+    dataTitle.getCell(1).font = { bold: true, size: 12, color: { argb: argbColor(BRAND.dark) } };
+    const headerRow = ws.addRow([chart.xLabel].concat(chart.series.map(function (serie) { return serie.label; })));
+    styleExcelHeaderRow(headerRow);
+    chart.rows.forEach(function (item, rowIndex) {
+      const row = ws.addRow([sanitizeExportValue(item && item[chart.xKey])].concat(chart.series.map(function (serie) {
+        return coerceExcelCell(sanitizeExportValue(item && item[serie.key], serie.key));
+      })));
+      row.eachCell({ includeEmpty: true }, function (cell) {
+        cell.border = excelThinBorder();
+        cell.alignment = { vertical: 'middle', wrapText: true };
+      });
+      if (rowIndex % 2 === 1) {
+        row.eachCell({ includeEmpty: true }, function (cell) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argbColor(ZEBRA_RGB) } };
+        });
+      }
+    });
+    ws.autoFilter = { from: { row: headerRow.number, column: 1 }, to: { row: headerRow.number, column: Math.max(1, chart.series.length + 1) } };
+    return ws;
+  }
+
   async function exportReportXLSXExcelJS(filename, normalized) {
     const ExcelJSLib = await ensureExcelJS();
     const workbook = new ExcelJSLib.Workbook();
@@ -686,6 +826,7 @@
 
     addExcelCover(workbook, normalized);
     normalized.sections.forEach(function (section, index) {
+      if (section.chart) addExcelChartSheet(workbook, section);
       addExcelSection(workbook, section.title || ('Dados ' + (index + 1)), section.xlsxColumns.length ? section.xlsxColumns : section.columns, section.rows);
     });
 
@@ -714,6 +855,18 @@
     appendSheet(XLSX, workbook, 'Filtros Aplicados', normalized.filters.length ? normalized.filters : [{ Filtro: 'Todos', Valor: 'Sem filtros adicionais' }]);
     appendSheet(XLSX, workbook, 'Indicadores', normalized.kpis.length ? normalized.kpis : [{ Indicador: 'Sem KPIs', Valor: '', Contexto: '' }]);
     normalized.sections.forEach(function (section, index) {
+      if (section.chart) {
+        appendSheet(XLSX, workbook, 'Gráfico - ' + section.title, section.chart.series.map(function (serie) {
+          const values = section.chart.rows.map(function (row) { return Number(row && row[serie.key]) || 0; });
+          return {
+            serie: serie.label,
+            total: values.reduce(function (sum, value) { return sum + value; }, 0),
+            pico: values.reduce(function (max, value) { return Math.max(max, value); }, 0),
+            tendencia: buildSparkline(values),
+            ultimo_valor: values.length ? values[values.length - 1] : 0
+          };
+        }), ['serie', 'total', 'pico', 'tendencia', 'ultimo_valor']);
+      }
       appendSheet(XLSX, workbook, section.title || ('Dados ' + (index + 1)), section.rows, section.xlsxColumns.length ? section.xlsxColumns : section.columns);
     });
     XLSX.writeFile(workbook, filename);
@@ -899,6 +1052,110 @@
         y += 6;
       }
 
+      function drawLineChart(chart) {
+        if (!chart || !Array.isArray(chart.rows) || !chart.rows.length || !Array.isArray(chart.series) || !chart.series.length) return;
+        const chartHeight = 190;
+        const legendRows = Math.ceil(chart.series.length / 2);
+        const legendHeight = Math.max(18, legendRows * 16);
+        addPageIfNeeded(chartHeight + legendHeight + 26);
+
+        const chartX = margin;
+        const chartY = y;
+        const chartWidth = pageWidth - margin * 2;
+        const padLeft = 42;
+        const padRight = 14;
+        const padTop = 18;
+        const padBottom = 32;
+        const innerWidth = chartWidth - padLeft - padRight;
+        const innerHeight = chartHeight - padTop - padBottom;
+        const rows = chart.rows;
+        const series = chart.series;
+        let maxValue = 0;
+
+        rows.forEach(function (row) {
+          series.forEach(function (serie) {
+            const value = Number(row && row[serie.key]);
+            if (Number.isFinite(value)) maxValue = Math.max(maxValue, value);
+          });
+        });
+        maxValue = Math.max(maxValue, 1);
+
+        doc.setDrawColor(BRAND.border[0], BRAND.border[1], BRAND.border[2]);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(chartX, chartY, chartWidth, chartHeight, 'FD');
+
+        setTextColor(doc, BRAND.muted);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        for (let i = 0; i <= 4; i += 1) {
+          const ratio = i / 4;
+          const value = Math.round(maxValue * (1 - ratio));
+          const gridY = chartY + padTop + (innerHeight * ratio);
+          doc.setDrawColor(229, 231, 235);
+          doc.line(chartX + padLeft, gridY, chartX + chartWidth - padRight, gridY);
+          doc.text(String(value), chartX + 8, gridY + 2.5);
+        }
+
+        doc.setDrawColor(156, 163, 175);
+        doc.line(chartX + padLeft, chartY + padTop, chartX + padLeft, chartY + padTop + innerHeight);
+        doc.line(chartX + padLeft, chartY + padTop + innerHeight, chartX + chartWidth - padRight, chartY + padTop + innerHeight);
+
+        const step = rows.length > 1 ? innerWidth / (rows.length - 1) : innerWidth;
+        series.forEach(function (serie) {
+          const color = parseChartColor(serie.color);
+          doc.setDrawColor(color[0], color[1], color[2]);
+          doc.setFillColor(color[0], color[1], color[2]);
+          doc.setLineWidth(1.6);
+          let previous = null;
+          rows.forEach(function (row, index) {
+            const value = Math.max(0, Number(row && row[serie.key]) || 0);
+            const pointX = chartX + padLeft + (step * index);
+            const pointY = chartY + padTop + innerHeight - ((value / maxValue) * innerHeight);
+            if (previous) doc.line(previous.x, previous.y, pointX, pointY);
+            previous = { x: pointX, y: pointY };
+          });
+          doc.setLineWidth(0.8);
+          rows.forEach(function (row, index) {
+            const value = Math.max(0, Number(row && row[serie.key]) || 0);
+            const pointX = chartX + padLeft + (step * index);
+            const pointY = chartY + padTop + innerHeight - ((value / maxValue) * innerHeight);
+            doc.circle(pointX, pointY, 1.6, 'F');
+          });
+        });
+
+        setTextColor(doc, BRAND.muted);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        rows.forEach(function (row, index) {
+          if (rows.length > 9 && index !== 0 && index !== rows.length - 1 && index % Math.ceil(rows.length / 6) !== 0) return;
+          const pointX = chartX + padLeft + (step * index);
+          const label = sanitizeExportValue(row && row[chart.xKey]);
+          doc.text(pdfLines(doc, label, 34, 1), pointX, chartY + chartHeight - 10, { align: 'center' });
+        });
+
+        doc.setFontSize(8);
+        doc.text(chart.yLabel || 'Total', chartX + 8, chartY + 12);
+        doc.text(chart.xLabel || 'Dia', chartX + chartWidth - padRight, chartY + chartHeight - 10, { align: 'right' });
+
+        y += chartHeight + 10;
+        const legendWidth = (chartWidth - 12) / 2;
+        series.forEach(function (serie, index) {
+          const col = index % 2;
+          const row = Math.floor(index / 2);
+          const lx = margin + (col * (legendWidth + 12));
+          const ly = y + (row * 16);
+          const color = parseChartColor(serie.color, index);
+          doc.setFillColor(color[0], color[1], color[2]);
+          doc.circle(lx + 4, ly + 4, 3, 'F');
+          setTextColor(doc, BRAND.dark);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          const total = chart.rows.reduce(function (sum, item) { return sum + (Number(item && item[serie.key]) || 0); }, 0);
+          doc.text(pdfLines(doc, serie.label + ': ' + total, legendWidth - 16, 1), lx + 12, ly + 6);
+        });
+        y += legendHeight + 10;
+      }
+
       addPdfHeader(doc, normalized, pageWidth);
 
       setTextColor(doc, BRAND.muted);
@@ -923,6 +1180,7 @@
 
       normalized.sections.forEach(function (section) {
         drawSectionTitle(section.title, section.note);
+        if (section.chart) drawLineChart(section.chart);
         drawRows(section.rows, section.maxPdfRows || MAX_PDF_ROWS, section.pdfColumns.length ? section.pdfColumns : section.columns);
       });
 

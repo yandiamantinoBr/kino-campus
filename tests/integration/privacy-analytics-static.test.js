@@ -55,7 +55,7 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     expect(page).toContain('privacyEventLogPrev');
     expect(page).toContain('privacyEventLogNext');
     expect(page).toContain('privacyEventLogCount');
-    expect(page).toContain('../assets/js/controllers/admin/admin-export.shared.js?v=8.6.6');
+    expect(page).toContain('../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9');
     expect(page).toContain('../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.3');
     expect(dashboard).toContain('admin-dashboard.privacy.js?v=8.6.2');
     expect(dashboard).toContain('privacy-analytics.html');

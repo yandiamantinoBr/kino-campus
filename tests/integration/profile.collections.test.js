@@ -305,6 +305,13 @@ describe('profile.controller.js - contrato do split collections', () => {
     expect(controllerSource).not.toContain('var commentPayload = await loadProfileComments(client, authorId, { limit: 8 });');
     expect(controllerSource).not.toContain("'<div class=\"kc-profile-activity-item\">'");
   });
+
+  test('atividades resolvem posts de comentarios por id e legacy_id', () => {
+    expect(moduleSource).toContain(".in('id', batch)");
+    expect(moduleSource).toContain(".in('legacy_id', missing)");
+    expect(moduleSource).toContain('postAvailable');
+    expect(moduleSource).toContain('Publica\\u00e7\\u00e3o removida ou indispon\\u00edvel');
+  });
 });
 
 describe('profile.html - ordem canonica dos scripts do split collections', () => {
@@ -312,7 +319,7 @@ describe('profile.html - ordem canonica dos scripts do split collections', () =>
     const orderedScripts = [
       '<script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>',
       '<script defer src="assets/js/controllers/public/profile.presentation.js?v=8.6.1"></script>',
-      '<script defer src="assets/js/controllers/public/profile.collections.js?v=8.6.1"></script>',
+      '<script defer src="assets/js/controllers/public/profile.collections.js?v=8.6.2"></script>',
       '<script defer src="assets/js/controllers/public/profile.ratings.js?v=8.6.1"></script>',
       '<script defer src="assets/js/controllers/public/profile.flow.js?v=8.6.1"></script>',
       '<script defer src="assets/js/controllers/public/profile.controller.js?v=8.6.1"></script>'

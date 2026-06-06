@@ -21,6 +21,15 @@ const KC_VOTE_CACHE_MAX_ENTRIES = 250;
 let KC_VOTE_SESSION_HYDRATED_FOR = null;
 let KC_VOTE_SESSION_WRITE_TIMER = null;
 
+function kcIsSupabaseRuntime() {
+  if (typeof isSupabaseRuntime === 'function') return isSupabaseRuntime();
+  try {
+    return !!(window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver === 'supabase');
+  } catch (_) {
+    return false;
+  }
+}
+
 function kcMyVotesCacheGet(postId) {
   return KC_MY_VOTES_CACHE.has(postId) ? KC_MY_VOTES_CACHE.get(postId) : undefined;
 }
@@ -77,7 +86,7 @@ function kcGetVoteCacheIdentity() {
       if (currentUser && currentUser.id) return `supabase:${currentUser.id}`;
     }
   } catch (_) { }
-  return (typeof isSupabaseRuntime === 'function' && isSupabaseRuntime()) ? 'supabase:anon' : 'local';
+  return kcIsSupabaseRuntime() ? 'supabase:anon' : 'local';
 }
 
 function kcGetVoteDirectionsSessionKey() {
@@ -345,7 +354,7 @@ function kcGetVisibleVotePostIds() {
 }
 
 async function kcRefreshVisibleScores(options = {}) {
-  if (!isSupabaseRuntime()) return;
+  if (!kcIsSupabaseRuntime()) return;
 
   const ids = kcGetVisibleVotePostIds();
   if (!ids.length) return;
@@ -380,7 +389,7 @@ async function kcRefreshVisibleScores(options = {}) {
 }
 
 function kcInitVotesRealtime() {
-  if (!isSupabaseRuntime()) return;
+  if (!kcIsSupabaseRuntime()) return;
   if (kcVotesRealtimeChannel) return;
 
   const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
@@ -444,7 +453,7 @@ function vote(button, type) {
   }
 
   // Se Supabase está ativo e não há usuário logado, abre o modal de login
-  if (isSupabaseRuntime()) {
+  if (kcIsSupabaseRuntime()) {
     const currentUser = window.KCSupabase && typeof window.KCSupabase.getUser === 'function'
       ? window.KCSupabase.getUser()
       : null;
@@ -458,7 +467,7 @@ function vote(button, type) {
     }
   }
 
-  if (!isSupabaseRuntime()) {
+  if (!kcIsSupabaseRuntime()) {
     const localState = kcReadVoteState(voteBox);
     const nextDirection = localState.direction === type ? null : type;
     let nextScore = localState.score;
@@ -540,7 +549,7 @@ function vote(button, type) {
 }
 
 async function kcInitVoteStates() {
-  if (!isSupabaseRuntime()) return;
+  if (!kcIsSupabaseRuntime()) return;
   kcEnsureVoteSessionHydrated();
 
   // 1. Aplica do cache imediatamente (sem esperar DB)

@@ -12,14 +12,15 @@
   <script src="assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
   <link rel="stylesheet" href="assets/css/styles.css?v=8.6.4" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.6.1" />
+  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.6.2" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     body.kc-chat-route { margin: 0; background: var(--kc-background-dark); }
     .kc-chat-page-wrap {
       max-width: 1180px;
       margin: 0 auto;
-      height: calc(100vh - var(--kc-header-h, 64px));
+      height: calc(100vh - var(--kc-header-height, 64px));
+      height: calc(100dvh - var(--kc-header-height, 64px));
     }
   </style>
 </head>
@@ -37,6 +38,23 @@
           </span>
         </a>
       </div>
+      <nav class="kc-nav-links" aria-label="Navegação principal" data-i18n-aria-label="aria-label.nav-main">
+        <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
+        <a href="oportunidades.html"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
+        <a href="moradia.html"><i class="fas fa-home"></i><span>Moradia</span></a>
+        <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i><span>Compra e Venda</span></a>
+        <a href="caronas-feed.html"><i class="fas fa-car"></i><span>Caronas</span></a>
+        <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
+      </nav>
+      <div class="kc-search-bar" id="kcSearchBar">
+        <input id="searchInput" aria-label="Pesquisar" placeholder="Busque por itens, eventos, vagas na UFG..." type="search" data-i18n-aria-label="aria-label.search-input" data-i18n-placeholder="placeholder.search-main" />
+        <button aria-label="Buscar" type="button" data-i18n-aria-label="aria-label.search-submit">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+      <button class="kc-search-mobile-btn" id="kcSearchMobileBtn" aria-label="Buscar" data-i18n-aria-label="aria-label.search-submit" type="button">
+        <i class="fas fa-search"></i>
+      </button>
       <div class="kc-user-actions">
         <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications" style="display:none;">
           <i class="fas fa-bell"></i>
@@ -229,10 +247,17 @@
   <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/shared/account-profile.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
+  <script defer src="assets/js/components/voting.js?v=8.6.2"></script>
+  <script defer src="assets/js/core/kc-core.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-public-shell.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
+  <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
+  <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
+  <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
+  <script defer src="assets/js/features/kc-search.js?v=8.6.3"></script>
+  <script defer src="assets/js/features/kc-search-modal.js?v=8.6.1"></script>
   <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=8.6.1"></script>
 </body>
 </html>
