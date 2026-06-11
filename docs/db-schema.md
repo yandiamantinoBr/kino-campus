@@ -1,10 +1,10 @@
 # KinoCampus — Schema do Banco de Dados
 
-**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `83` migrations em `supabase/migrations/`
+**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `132` migrations SQL em `supabase/migrations/`
 
-> **Estado documental:** v75.0.0 (2026-05-05). As anotações de versão ao longo deste documento (`v9.x.x`, `v9.1.x`, `v11.x.x`, etc.) são marcadores históricos que indicam quando cada tabela, coluna ou trigger foi introduzido — não indicam a versão atual do repositório. O estado ativo do banco reflete as 83 migrations versionadas em `supabase/migrations/`.
+> **Estado documental:** v75.1.0 (2026-06-11). As anotações de versão ao longo deste documento (`v9.x.x`, `v9.1.x`, `v11.x.x`, etc.) são marcadores históricos que indicam quando cada tabela, coluna ou trigger foi introduzido — não indicam a versão atual do repositório. O inventário local reflete 132 migrations SQL versionadas em `supabase/migrations/`; a reconciliação com o histórico remoto do Supabase deve ser feita antes de qualquer nova migration operacional.
 
-> Atualização documental da v28.0.0 em 28/04/2026: o repositório mantém pendências operacionais separadas para `extension_in_public` (`unaccent`) e `auth_leaked_password_protection`. Não mover extensão nem alterar Auth Dashboard por migration improvisada; seguir `docs/ops/v19-operational-runbook.md` e `docs/ops/v28-unaccent-fts-dependency-audit.md`.
+> Atualização operacional em 2026-06-11: o advisor remoto indicou `auth_leaked_password_protection` como WARN; `extension_in_public` (`unaccent`) não apareceu como advisor ativo nessa leitura, mas segue como histórico/watchlist. Não mover extensão nem alterar Auth Dashboard por migration improvisada; seguir `docs/ops/v19-operational-runbook.md` e `docs/ops/v28-unaccent-fts-dependency-audit.md`.
 
 ## Tabelas Principais
 

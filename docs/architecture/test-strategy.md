@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v16.9.0 · **Atualizado em:** 2026-04-27
+**Versão:** v75.1.0 · **Atualizado em:** 2026-06-11
 
-> Documenta as 135 suites Jest + 8 suites Playwright: o que cada uma cobre,
+> Documenta as 168 suites Jest + 9 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -11,12 +11,12 @@
 
 1. [Filosofia](#1-filosofia)
 2. [Métricas atuais](#2-métricas-atuais)
-3. [Diretório unit/ — 22 suites](#3-diretório-unit--22-suites)
-4. [Diretório integration/ — 90 suites](#4-diretório-integration--90-suites)
-5. [Diretório contract/ — 7 suites](#5-diretório-contract--7-suites)
-6. [Diretório structure/ — 10 suites](#6-diretório-structure--10-suites)
+3. [Diretório unit/ — 25 suites](#3-diretório-unit--25-suites)
+4. [Diretório integration/ — 118 suites](#4-diretório-integration--118-suites)
+5. [Diretório contract/ — 8 suites](#5-diretório-contract--8-suites)
+6. [Diretório structure/ — 12 suites](#6-diretório-structure--12-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
-8. [E2E com Playwright — 8 suites](#8-e2e-com-playwright--8-suites)
+8. [E2E com Playwright — 9 specs](#8-e2e-com-playwright--9-specs)
 9. [Como adicionar novos testes](#9-como-adicionar-novos-testes)
 10. [Regras de manutenção](#10-regras-de-manutenção)
 
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 135 suites Jest rodam em ~5 segundos sem network, sem browser, sem Supabase real |
+| **Execução rápida** | Todos os 168 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -49,28 +49,30 @@
 
 | Diretório | Suites | Domínio principal |
 |-----------|--------|------------------|
-| `tests/unit/` | **22** | Módulos utilitários individuais |
-| `tests/integration/` | **90** | Controllers, adapters, sub-módulos KCAPI |
-| `tests/contract/` | **7** | Contratos públicos e formas de exports |
-| `tests/structure/` | **10** | Estrutura HTML, namespaces, cadeia de scripts |
+| `tests/unit/` | **25** | Módulos utilitários individuais |
+| `tests/integration/` | **118** | Controllers, adapters, sub-módulos KCAPI |
+| `tests/contract/` | **8** | Contratos públicos e formas de exports |
+| `tests/structure/` | **12** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
-| `tests/e2e/` | **8** | Playwright (browser real, HTTP real) |
-| **Total** | **143** | (135 Jest + 8 Playwright) |
+| `tests/e2e/` | **9** | Playwright (browser real, HTTP real) |
+| **Total** | **177** | (168 Jest + 9 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 135 suites · 3076 testes
-Playwright: 8 suites · 51 testes
+Jest: 168 suites · 3512 testes
+Playwright: 9 specs · 59 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥135 passed, 135 total` e `≥3076 passed, 3076 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥168 passed, 168 total` e `≥3512 passed, 3512 total`.
 
 ---
 
-## 3. Diretório unit/ — 22 suites
+## 3. Diretório unit/ — 25 suites
 
 Cobre módulos utilitários individuais — funções puras, sem dependências de DOM ou browser.
+
+A tabela abaixo destaca as suites principais; a contagem canônica vem do filesystem e do resultado do Jest.
 
 | Suite | Módulo testado | O que cobre |
 |-------|---------------|------------|
@@ -99,9 +101,11 @@ Cobre módulos utilitários individuais — funções puras, sem dependências d
 
 ---
 
-## 4. Diretório integration/ — 90 suites
+## 4. Diretório integration/ — 118 suites
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
+
+A tabela abaixo é agrupada por domínio e não lista todos os 118 arquivos individualmente.
 
 ### Sub-grupo: Controllers públicos (6 suites)
 
@@ -235,13 +239,14 @@ Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módu
 
 ---
 
-## 5. Diretório contract/ — 7 suites
+## 5. Diretório contract/ — 8 suites
 
 Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falha se um método for removido ou renomeado, mesmo sem quebrar a funcionalidade aparente.
 
 | Suite | O que trava |
 |-------|------------|
 | `admin-banners-access-contract.test.js` | Shape do contrato de acesso admin a banners |
+| `chat-continuity-contract.test.js` | Contrato de continuidade de conversa/chat |
 | `kc-api-facade-contract.test.js` | Todos os 100 membros exportados de `window.KCAPI` |
 | `kc-api-notification-preferences-contract.test.js` | Contrato de preferências de notificação (6 tipos, 3 canais) |
 | `kc-api-notifications-contract.test.js` | Contrato do sub-módulo `window._KCAPI.notifications` |
@@ -251,20 +256,22 @@ Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falh
 
 ---
 
-## 6. Diretório structure/ — 10 suites
+## 6. Diretório structure/ — 12 suites
 
 Verifica estrutura de HTML, namespaces de módulos e cadeias de scripts — sem rodar código de negócio.
 
 | Suite | O que verifica |
 |-------|---------------|
 | `admin-shell-preload-markup.test.js` | Markup de preload no shell admin, `<link rel="preload">` |
-| `check-scripts.test.js` | Cadeia de scripts em cada um dos 22 HTMLs (ordem, prefixos, `?v=8.6.0`) |
+| `check-scripts.test.js` | Cadeia de scripts em cada um dos 26 HTMLs canônicos (ordem, prefixos, `?v=8.6.1`) |
 | `feed-empty-clear-markup.test.js` | Markup de estado vazio nos feeds |
+| `header-responsive.test.js` | Estrutura responsiva do header publico |
 | `kc-core-split.test.js` | Namespaces `_KCCore.*` no split do core |
 | `kc-ranking-markup.test.js` | Markup HTML do componente de ranking |
 | `kc-supabase-split.test.js` | Namespaces `_KCSA.*` no split do adapter Supabase |
 | `oportunidades-split.test.js` | Namespaces `_KCOpNormalize.*` no split do normalizador de oportunidades |
 | `product-controller-split.test.js` | Namespaces `_KCProduct.*` e ordem dos scripts em `_product.html` |
+| `product-lightbox.test.js` | Markup e contrato estrutural do lightbox de produto |
 | `product-popover-hardening.test.js` | Hardening de popovers na página de produto |
 | `structural-validators.test.js` | Os 5 validators: chamadas e contratos das funções principais |
 
@@ -277,14 +284,14 @@ Verifica conformidade com WCAG 2.1 AA: estrutura de documento, marcações i18n,
 | Suite | O que verifica |
 |-------|---------------|
 | `a11y.test.js` | `<h1>` único por página, skip link `<a href="#kc-main">`, `<main id="kc-main">`, `<nav aria-label>` |
-| `i18n-aria-placeholder.test.js` | ≥189 marcações `data-i18n-aria-label` + ≥59 `data-i18n-placeholder` nos 22 HTMLs |
+| `i18n-aria-placeholder.test.js` | ≥189 marcações `data-i18n-aria-label` + ≥59 `data-i18n-placeholder` nos HTMLs canônicos |
 | `i18n-b2-gate.test.js` | Gate B2: `kc-i18n.js` ≥440 chaves únicas, ≥800 linhas; thresholds dos 5 tipos de marcação |
-| `i18n-metadata.test.js` | `data-i18n-title` + `data-i18n-description` em todos os 22 HTMLs; `data-i18n-alt` em imagens |
-| `i18n-tooltip.test.js` | ≥55 marcações `data-i18n-tooltip` nos 22 HTMLs |
+| `i18n-metadata.test.js` | `data-i18n-title` + `data-i18n-description` nos HTMLs canônicos; `data-i18n-alt` em imagens |
+| `i18n-tooltip.test.js` | ≥55 marcações `data-i18n-tooltip` nos HTMLs canônicos |
 
 ---
 
-## 8. E2E com Playwright — 8 suites
+## 8. E2E com Playwright — 9 specs
 
 Rodam no browser real (Chromium) contra um servidor HTTP local (`http-server` na porta 4000). Não fazem chamadas reais ao Supabase — usam o driver local.
 
@@ -294,8 +301,9 @@ Rodam no browser real (Chromium) contra um servidor HTTP local (`http-server` na
 | `pages-load.spec.js` | home, compra-venda, caronas, eventos, busca | Status 200 + estrutura WCAG básica por página |
 | `a11y-e2e.spec.js` | homepage (DOM vivo) | `lang="pt-BR"`, nav aria-label, theme-toggle, skip link no Tab, carousel, `kc-ranking-info-btn` |
 | `create-post.spec.js` | `/create-post` | Status 200, h1/skip/main, lang, nav aria-label, busca, theme-toggle |
+| `header-responsive.spec.js` | paginas publicas principais | Responsividade e navegacao do header |
 | `product-detail.spec.js` | `/_product.html` | Editor rich-text (Negrito/Itálico aria-label), input do autor, sharePopover, `renderPostCard` |
-| `admin-pages.spec.js` | 5 páginas admin | Dashboard, Moderação, Banners, Denúncias, Ajuda — 200 + skip link + h1 + main |
+| `admin-pages.spec.js` | 6 páginas admin | Dashboard, Moderação, Banners, Denúncias, Ajuda, Privacidade/Analytics — 200 + skip link + h1 + main |
 | `admin-moderation.spec.js` | `/admin/moderation.html` | Status 200, estrutura, 3 selects A5 com `aria-label`, nav com `aria-label` |
 | `remaining-pages.spec.js` | moradia, oportunidades, achados-perdidos, ods, my-posts, profile, settings | Status 200 + estrutura WCAG |
 
@@ -455,8 +463,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥135 passed, 135 total
-  Tests:       ≥3076 passed, 3076 total
+  Test Suites: ≥168 passed, 168 total
+  Tests:       ≥3512 passed, 3512 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

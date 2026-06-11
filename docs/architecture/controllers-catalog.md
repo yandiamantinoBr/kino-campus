@@ -1,8 +1,12 @@
 # Catálogo de Controllers — KinoCampus
 
-**Versão:** v16.0.0  
-**Data:** 2026-04-26  
-**Criado em:** v16.5.0
+**Versão:** v75.1.0
+**Data:** 2026-06-11
+**Criado em:** v16.5.0; reancorado em v75.1.0
+
+> **Estado atual:** `assets/js/controllers/` contém 48 controllers: 33 públicos e 15 admin.
+> O corpo deste catálogo preserva descrições criadas ao longo da v16 e deve ser ampliado quando
+> novos controllers receberem documentação detalhada.
 
 > **Como ler este catálogo (para IA):**  
 > Controllers são as folhas do grafo de dependências — nunca são importados por outros módulos.  
@@ -15,11 +19,11 @@
 
 ## Índice
 
-- [Controllers Públicos](#controllers-públicos) — 31 arquivos em `controllers/public/`
+- [Controllers Públicos](#controllers-públicos) — 33 arquivos em `controllers/public/`
   - [kc-feed.controller.js — Helper Compartilhado](#kc-feedcontrollerjs--helper-compartilhado)
   - [index.controller.js — Home](#indexcontrollerjs--home)
   - [Feeds Temáticos (6 módulos)](#feeds-temáticos-6-módulos)
-  - [product.*.js — Produto (9 arquivos)](#productjs--produto-9-arquivos)
+  - [product.*.js — Produto (12 arquivos)](#productjs--produto-12-arquivos)
   - [profile.*.js — Perfil (5 arquivos)](#profilejs--perfil-5-arquivos)
   - [create-post.controller.js](#create-postcontrollerjs)
   - [my-posts.controller.js](#my-postscontrollerjs)
@@ -28,8 +32,8 @@
   - [help.controller.js](#helpcontrollerjs)
   - [ods.controller.js](#odscontrollerjs)
   - [oportunidades.normalize.js — Normalizador](#oportunidadesnormalizejs--normalizador)
-- [Controllers Admin](#controllers-admin) — 10 arquivos em `controllers/admin/`
-  - [admin-dashboard.*.js — Dashboard (5 arquivos)](#admin-dashboardjs--dashboard-5-arquivos)
+- [Controllers Admin](#controllers-admin) — 15 arquivos em `controllers/admin/`
+  - [admin-dashboard.*.js — Dashboard (6 arquivos)](#admin-dashboardjs--dashboard-6-arquivos)
   - [admin-banners.controller.js](#admin-bannerscontrollerjs)
   - [admin-help-requests.controller.js](#admin-help-requestscontrollerjs)
   - [admin-invite.controller.js](#admin-invitecontrollerjs)
@@ -40,7 +44,7 @@
 
 ## Controllers Públicos
 
-> `assets/js/controllers/public/` — 31 arquivos servindo 17 páginas HTML públicas.
+> `assets/js/controllers/public/` — 33 arquivos servindo páginas públicas e auxiliares de produto/perfil.
 
 ---
 
@@ -193,7 +197,7 @@ local onde foi encontrado/perdido e data do ocorrido.
 
 ---
 
-### `product.*.js` — Produto (9 arquivos)
+### `product.*.js` — Produto (12 arquivos)
 
 A página `_product.html` tem a arquitetura de controller mais complexa do projeto:
 1 controller principal + 8 módulos auxiliares. Todos carregados em sequência.
@@ -507,11 +511,11 @@ em arquivo separado para manter o controller principal limpo.
 
 ## Controllers Admin
 
-> `assets/js/controllers/admin/` — 10 arquivos servindo 5 páginas HTML admin.
+> `assets/js/controllers/admin/` — 15 arquivos servindo 6 páginas HTML admin.
 
 ---
 
-### `admin-dashboard.*.js` — Dashboard (5 arquivos)
+### `admin-dashboard.*.js` — Dashboard (6 arquivos)
 
 A página `admin/index.html` tem 1 controller principal + 4 auxiliares com dados do dashboard.
 

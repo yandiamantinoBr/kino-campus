@@ -2,6 +2,25 @@
 
 ---
 
+## [75.1.0] - 2026-05-21 - Performance Phase 1 e Observabilidade
+
+### Tema
+
+Baseline atual do app registrada em `VERSION.json`: `appVersion=75.1.0`,
+`frontendRuntimeVersion=8.6.1`, branch `kinocampus-V75.0-foundations`,
+status `v75.1 performance phase 1`.
+
+### Entregaveis
+
+| Iteracao | Entrega |
+|----------|---------|
+| v75.1.0 | Cache HTTP seguro para `/assets/*`, cache-bust por deploy e runtime frontend `8.6.1` |
+| v75.1.0 | Navegacao/cache documentados em `docs/performance/navigation-optimization.md` e `docs/architecture/content-cache-freshness-map.md` |
+| v75.1.0 | Vercel Web Analytics e Vercel Speed Insights instalados; PR #549 mergeado em 2026-06-11 e deployado em producao no commit `dc7468d` |
+| v75.1.0 | Baseline verificada em 168 suites Jest / 3512 testes e 9 specs Playwright / 59 testes listados |
+
+---
+
 ## [8.6.1] - 2026-05-21 - Performance e Navegacao Phase 1
 
 ### Tema

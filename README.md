@@ -1,4 +1,4 @@
-# Kino Campus - v75.0.0
+# Kino Campus - v75.1.0
 
 > Plataforma de comunidade universitária exclusiva para a Universidade Federal de Goiás (UFG).
 
@@ -7,7 +7,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
 **Branch principal:** `kinocampus-V75.0-foundations`
 
-**Status atual:** v11-v75 ENCERRADAS OK
+**Status atual:** v75.1 performance phase 1 em producao, com runtime frontend 8.6.1.
 
 ---
 
@@ -20,7 +20,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 135 suites · 3076 testes; Playwright: 8 suites E2E (51 testes) |
+| Testes | Jest: 168 suites · 3512 testes; Playwright: 9 specs E2E (59 testes listados) |
 
 ## Documentação Técnica
 
@@ -30,8 +30,8 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 |-----------|----------|
 | [docs/index.md](docs/index.md) | Índice completo de todos os documentos técnicos |
 | [docs/architecture/ai-development-guide.md](docs/architecture/ai-development-guide.md) | **Guia de comportamento para IA** — workflow, padrões JS, validators, testes, o que nunca fazer |
-| [docs/architecture/module-catalog.md](docs/architecture/module-catalog.md) | Catálogo de ~84 módulos JS com namespace, páginas, dependências e testes |
-| [docs/architecture/controllers-catalog.md](docs/architecture/controllers-catalog.md) | 41 controllers com responsabilidade e chamadas KCAPI |
+| [docs/architecture/module-catalog.md](docs/architecture/module-catalog.md) | Catalogo de modulos JS com namespace, paginas, dependencias e testes |
+| [docs/architecture/controllers-catalog.md](docs/architecture/controllers-catalog.md) | 48 controllers com responsabilidade e chamadas KCAPI |
 | [docs/architecture/data-flow-guide.md](docs/architecture/data-flow-guide.md) | Fluxo de dados ponta a ponta: controller → KCAPI → adapter → Supabase |
 | [docs/api-contract.md](docs/api-contract.md) | Contrato público da KCAPI |
 | [docs/db-schema.md](docs/db-schema.md) | Tabelas, políticas RLS, índices e Storage do Supabase |
@@ -44,6 +44,7 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 
 | Versão | Relatório | Tema |
 |--------|-----------|------|
+| V75.1 | [CHANGELOG.md](CHANGELOG.md) | Performance phase 1, runtime 8.6.1 e Speed Insights |
 | V75 | [RELATORIO-KINOCAMPUS-V75.md](RELATORIO-KINOCAMPUS-V75.md) | PUBLIC-A11Y kc-ranking decorative icons |
 | V74 | [RELATORIO-KINOCAMPUS-V74.md](RELATORIO-KINOCAMPUS-V74.md) | PUBLIC-A11Y admin-reports decorative icons |
 | V73 | [RELATORIO-KINOCAMPUS-V73.md](RELATORIO-KINOCAMPUS-V73.md) | PUBLIC-A11Y kc-comments decorative icons |
@@ -76,7 +77,7 @@ Acesse `http://localhost:5500/index.html`.
 
 ### 1) Migrations
 
-Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **83 arquivos**, incluindo as 2 migrations da v10, a migration operacional `v9.3.3.0_supabase_operational_rls_fk.sql`, a trilha `v11.20.1.0_notification_preferences.sql`, a fundação `v11.20.2.0_notification_delivery_outbox.sql`, a promoção do canal de e-mail `v11.21.0.0_notification_email_channel.sql`, a camada privada do canal WhatsApp `v11.21.1.0_notification_whatsapp_channel.sql` e o scheduler `v11.22.0.0_notification_dispatch_scheduler.sql`.
+Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **132 arquivos**, incluindo as 2 migrations da v10, a migration operacional `v9.3.3.0_supabase_operational_rls_fk.sql`, a trilha `v11.20.1.0_notification_preferences.sql`, a fundação `v11.20.2.0_notification_delivery_outbox.sql`, a promoção do canal de e-mail `v11.21.0.0_notification_email_channel.sql`, a camada privada do canal WhatsApp `v11.21.1.0_notification_whatsapp_channel.sql` e o scheduler `v11.22.0.0_notification_dispatch_scheduler.sql`.
 
 No banco principal atual, as 2 migrations da v10 já foram aplicadas. Use a lista abaixo para ambientes novos, bancos recriados ou staging separado.
 
@@ -230,7 +231,7 @@ Se surgir SQL fora do fluxo oficial:
 
 ```bash
 npm run check:all          # 5 validators: version, structure, scripts, routes, hygiene
-npm test                   # Jest: 135 suites · 3076 testes
+npm test                   # Jest: 168 suites · 3512 testes
 npm test -- --runInBand    # sequencial (mais lento, mais estável em CI)
 ```
 

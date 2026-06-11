@@ -32,7 +32,7 @@
 
 ## Grupo boot/
 
-> **Cadeia de inicialização obrigatória.** Todos os 22 HTMLs carregam os 6 módulos nesta
+> **Cadeia de inicialização obrigatória.** Os 26 HTMLs canônicos validados carregam a cadeia de boot nesta
 > ordem. Nenhum outro módulo do projeto pode ser carregado antes deles.
 
 ---
@@ -44,7 +44,7 @@
 | Grupo | boot |
 | Namespace | `window.KC_CONSTANTS` |
 | Padrão | IIFE + `Object.freeze` |
-| Páginas | **Todas as 22** (boot obrigatório) |
+| Páginas | **Todos os 26 HTMLs canônicos** (boot obrigatório) |
 
 **Responsabilidade:** Define todas as constantes globais imutáveis da plataforma: nomes dos 6
 módulos temáticos, URLs de rotas, limites de upload, tamanhos de paginação, configurações de
@@ -71,7 +71,7 @@ cache e identificadores de módulo. É a fonte de verdade para qualquer valor co
 | Grupo | boot |
 | Namespace | `window.KC_ENV` |
 | Padrão | Script imperativo + atribuição direta |
-| Páginas | **Todas as 22** (boot obrigatório) |
+| Páginas | **Todos os 26 HTMLs canônicos** (boot obrigatório) |
 
 **Responsabilidade:** Configura o ambiente de runtime: driver de dados (`'supabase'` ou `'local'`),
 endpoints do Supabase, chave pública, flags de ambiente e modo de desenvolvimento. É injetado
@@ -103,7 +103,7 @@ o arquivo físico foi removido em v15.5.0.
 | Grupo | boot |
 | Namespace | `window.KCFF` |
 | Padrão | IIFE + `Object.freeze` |
-| Páginas | **Todas as 22** (boot obrigatório) |
+| Páginas | **Todos os 26 HTMLs canônicos** (boot obrigatório) |
 
 **Responsabilidade:** Gerencia feature flags booleanos que controlam comportamentos opcionais da
 plataforma por ambiente. Lê os flags de `window.KC_ENV.flags` e os expõe como propriedades
@@ -128,7 +128,7 @@ booleanas imutáveis via `window.KCFF`.
 | Grupo | boot |
 | Namespace | *(sem namespace global)* |
 | Padrão | Script imperativo IIFE |
-| Páginas | **Todas as 22** (boot obrigatório) |
+| Páginas | **Todos os 26 HTMLs canônicos** (boot obrigatório) |
 
 **Responsabilidade:** Registra o Service Worker (`sw.js`) no browser se `serviceWorker` estiver
 disponível. Verifica se KCFF permite o SW antes de registrar. Emite evento
@@ -151,7 +151,7 @@ disponível. Verifica se KCFF permite o SW antes de registrar. Emite evento
 | Grupo | boot |
 | Namespace | *(sem namespace global)* |
 | Padrão | Script imperativo IIFE |
-| Páginas | **Todas as 22** (boot obrigatório) |
+| Páginas | **Todos os 26 HTMLs canônicos** (boot obrigatório) |
 
 **Responsabilidade:** Captura erros não tratados (`window.onerror`, `unhandledrejection`) e os
 registra via console estruturado (e futuramente via endpoint de telemetria). Protege a UX de
@@ -174,7 +174,7 @@ falhas silenciosas.
 | Grupo | boot |
 | Namespace | *(sem namespace global)* |
 | Padrão | Script imperativo (sem IIFE — executa imediatamente) |
-| Páginas | **Todas as 22** (boot obrigatório) |
+| Páginas | **Todos os 26 HTMLs canônicos** (boot obrigatório) |
 
 **Responsabilidade:** Aplica o tema (claro/escuro) imediatamente ao carregar, antes do render da
 página, evitando flash de tema incorreto (FOUC). Lê a preferência do `localStorage` e da media
@@ -866,7 +866,7 @@ baseado em `window.KC_ENV.driver`.
 | Páginas | `admin/index.html`, `admin/banners.html`, `admin/help-requests.html`, `admin/moderation.html`, `admin/reports.html` |
 
 **Responsabilidade:** Shell admin: navbar, header com identidade do admin, menu de navegação
-entre seções admin, logout. Equivalente a `kc-public-shell.js` mas para as 5 páginas admin.
+entre seções admin, logout. Equivalente a `kc-public-shell.js` mas para as 6 páginas admin.
 
 **Exports públicos:** Nenhum (manipula DOM do shell admin)
 
@@ -2151,17 +2151,17 @@ contagem de votos de um post e voto atual do usuário.
 | boot/kc-sw-register.js | boot | *(nenhum)* | todas 22 | unit/sw.test.js |
 | boot/kc-telemetry.js | boot | *(nenhum)* | todas 22 | unit/telemetry.test.js |
 | boot/kc-theme-boot.js | boot | *(nenhum)* | todas 22 | a11y/a11y.test.js |
-| core/kc-i18n.js | core | `window.KCi18n` | 17 públicas | unit/kc-i18n.test.js |
+| core/kc-i18n.js | core | `window.KCi18n` | públicas | unit/kc-i18n.test.js |
 | core/kc-auth.ui.js | core | `window.KCAccountProfileUtils` | autenticadas | integration/profile.* |
 | core/kc-profiles.client.js | core | `window.KCProfilesClient` | autenticadas | integration/profile.* |
 | core/kc-theme.js | core | *(nenhum)* | todas | a11y/a11y.test.js |
 | core/kc-notifications.js | core | `window.KCNotifications` | autenticadas | integration/kc-notifications-dropdown |
 | core/kc-auth-callback.js | core | *(nenhum)* | auth-callback.html | integration/kc-api-auth-module |
-| core/kc-core.js | core | `window.KCCore` | 17 públicas | structure/kc-core-split |
+| core/kc-core.js | core | `window.KCCore` | públicas | structure/kc-core-split |
 | core/kc-post-model.js | core | `window.KCPostModel` | feed+produto | integration/kc-api-posts-write |
 | core/kc-user-posts.js | core | `window.kcUserPosts` | my-posts, profile | integration/kc-api-posts-read |
-| core/kc-core-widgets.js | core | `window.KCCore` (augmenta) | 17 públicas | structure/kc-core-split |
-| core/kc-public-shell.js | core | *(nenhum)* | 17 públicas | structure/admin-shell-preload |
+| core/kc-core-widgets.js | core | `window.KCCore` (augmenta) | públicas | structure/kc-core-split |
+| core/kc-public-shell.js | core | *(nenhum)* | públicas selecionadas | structure/admin-shell-preload |
 | api/kc-supabase.client.js | api | `window.KCSupabase` | autenticadas | integration/kc-supabase-client |
 | api/kc-supabase.posts.js | api | `window._KCSPosts` | feeds | structure/kc-supabase-split |
 | api/kc-supabase.ratings.js | api | `window._KCSRatings` | _product.html | structure/kc-supabase-split |
@@ -2177,7 +2177,7 @@ contagem de votos de um post e voto atual do usuário.
 | api/kc-api.related.js | api | `window._KCAPI_rel` | _product.html | integration/kc-api-related-module |
 | api/kc-api.saved.js | api | `window._KCAPI_saved` | produto+my-posts | integration/kc-api-saved-module |
 | api/kc-api.client.js | api | `window.KCAPI` | autenticadas | integration/kc-api-client |
-| api/admin-shell.js | api | *(nenhum)* | 5 admin | structure/admin-shell-preload |
+| api/admin-shell.js | api | *(nenhum)* | 6 admin | structure/admin-shell-preload |
 | utils/kc-utils.string.js | utils | `window._KCU_str` | todas | unit/kc-utils-expanded |
 | utils/kc-utils.format.js | utils | `window._KCU_fmt` | todas | unit/kc-utils-format |
 | utils/kc-utils.dom.js | utils | `window._KCU_dom` | todas | unit/kc-utils-dom |
@@ -2234,9 +2234,9 @@ contagem de votos de um post e voto atual do usuário.
 | adapters/supabase/supabase.saved.adapter.js | supabase | `window.KCSupabaseSavedAdapter` | produto+my-posts | integration/supabase-saved-adapter |
 | adapters/supabase/supabase.votes.adapter.js | supabase | `window.KCSupabaseVotesAdapter` | feeds+produto | integration/supabase-votes-adapter |
 
-**Total documentado: ~84 módulos** (boot + core + api + utils + features + create-post + shared + legacy + components + adapters)
+**Inventario atual:** 149 arquivos JS em `assets/js/`. Este catalogo documenta os grupos, contratos e modulos principais; use `docs/architecture/repository-structure.md` para contagens completas.
 
-*Controllers (31 public + 10 admin = 41) documentados em `docs/architecture/controllers-catalog.md`*
+*Controllers (33 public + 15 admin = 48) documentados em `docs/architecture/controllers-catalog.md`*
 
 ---
 
@@ -2246,7 +2246,7 @@ contagem de votos de um post e voto atual do usuário.
 ORDEM DE CARREGAMENTO (boot → utils → api → core → adapters → features → components → controllers)
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│ BOOT (obrigatório em todos os 22 HTMLs)                             │
+│ BOOT (obrigatório nos 26 HTMLs canônicos)                           │
 │  kc-constants → kc-env → kc-feature-flags → kc-sw-register         │
 │  → kc-telemetry → kc-theme-boot                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -2309,8 +2309,8 @@ ORDEM DE CARREGAMENTO (boot → utils → api → core → adapters → features
          ↓
 ┌─────────────────────────────────────────────────────────────────────┐
 │ CONTROLLERS (um por página)                                         │
-│  controllers/public/<pagina>.controller.js (31 arquivos)            │
-│  controllers/admin/<pagina>.controller.js  (10 arquivos)            │
+│  controllers/public/<pagina>.controller.js (33 arquivos)            │
+│  controllers/admin/<pagina>.controller.js  (15 arquivos)            │
 │  [documentados em controllers-catalog.md]                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```

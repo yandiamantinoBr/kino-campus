@@ -1,500 +1,2059 @@
-# Referência de Carregamento de Scripts — KinoCampus
+# Referencia de Carregamento de Scripts - KinoCampus
 
-**Versão:** v16.0.0  
-**Data:** 2026-04-26  
-**Criado em:** v16.6.0  
-**Gerado a partir de:** leitura real dos 22 HTMLs via Node.js
+**Versao:** v75.1.0
+**Data:** 2026-06-11
+**Criado em:** v16.6.0; regenerado em v75.1.0
+**Gerado a partir de:** `scripts/admin-pages.manifest.js` + leitura real dos HTMLs canonicos
 
-> **Dados ao vivo:** Este documento foi gerado lendo os `<script src="...">` de cada HTML em ordem
-> exata de carregamento. Os números de posição são determinísticos — o browser executa os scripts
-> `defer` na ordem em que aparecem no HTML.
-
----
-
-## 1. Cadeia Base Comum (posições 1–49)
-
-**Idêntica nos 22 HTMLs** (admin usa `../assets/js/` em vez de `assets/js/`).
-
-| Pos | Script | Grupo |
-|-----|--------|-------|
-| 1 | `boot/kc-theme-boot.js?v=8.6.0` | boot |
-| 2 | `boot/kc-constants.js` | boot |
-| 3 | `core/kc-i18n.js` | core |
-| 4 | `utils/kc-utils.string.js` | utils |
-| 5 | `utils/kc-utils.format.js` | utils |
-| 6 | `utils/kc-utils.dom.js` | utils |
-| 7 | `utils/kc-utils.identity.js` | utils |
-| 8 | `utils/kc-utils.taxonomy.js` | utils |
-| 9 | `utils/kc-utils.location.js` | utils |
-| 10 | `utils/kc-utils.presentation.js` | utils |
-| 11 | `utils/kc-utils.js` | utils (facade) |
-| 12 | `boot/kc-env.js` | boot |
-| 13 | `boot/kc-feature-flags.js` | boot |
-| 14 | `boot/kc-sw-register.js` | boot |
-| 15 | `boot/kc-telemetry.js` | boot |
-| 16 | `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` | CDN externo |
-| 17 | `api/kc-supabase.client.js` | api |
-| 18 | `api/kc-supabase.posts.js` | api |
-| 19 | `api/kc-supabase.ratings.js` | api |
-| 20 | `api/kc-api.notifications.js` | api |
-| 21 | `api/kc-api.saved.js` | api |
-| 22 | `api/kc-api.help.js` | api |
-| 23 | `api/kc-api.posts-read.js` | api |
-| 24 | `api/kc-api.comments-votes.js` | api |
-| 25 | `api/kc-api.ratings.js` | api |
-| 26 | `api/kc-api.posts-feed.js` | api |
-| 27 | `api/kc-api.posts-write.js` | api |
-| 28 | `api/kc-api.profiles.js` | api |
-| 29 | `api/kc-api.related.js` | api |
-| 30 | `api/kc-api.auth.js` | api |
-| 31 | `api/kc-api.client.js` | api (facade KCAPI) |
-| 32 | `adapters/local/local.notifications.adapter.js` | local |
-| 33 | `adapters/local/local.ratings.adapter.js` | local |
-| 34 | `adapters/local/local.saved.adapter.js` | local |
-| 35 | `adapters/local/local.posts-read.adapter.js` | local |
-| 36 | `adapters/local/local.posts-write.adapter.js` | local |
-| 37 | `adapters/local/local.profile.adapter.js` | local |
-| 38 | `adapters/local/local.help.adapter.js` | local |
-| 39 | `adapters/supabase/supabase.analytics.adapter.js` | supabase |
-| 40 | `adapters/supabase/supabase.admin.adapter.js` | supabase |
-| 41 | `adapters/supabase/supabase.comments.adapter.js` | supabase |
-| 42 | `adapters/supabase/supabase.votes.adapter.js` | supabase |
-| 43 | `adapters/supabase/supabase.media.adapter.js` | supabase |
-| 44 | `adapters/supabase/supabase.posts-read.adapter.js` | supabase |
-| 45 | `adapters/supabase/supabase.saved.adapter.js` | supabase |
-| 46 | `adapters/supabase/supabase.notifications.adapter.js` | supabase |
-| 47 | `adapters/supabase/supabase.posts-write.adapter.js` | supabase |
-| 48 | `adapters/supabase/supabase.profiles.adapter.js` | supabase |
-| 49 | `adapters/supabase/supabase.adapter.js` | supabase (base) |
-
-**Observações da cadeia base:**
-- `kc-i18n.js` é carregado na posição 3 — antes dos utils — porque é uma dependência precoce do shell
-- Os submódulos `kc-utils.*.js` (4–10) são carregados ANTES da facade `kc-utils.js` (11)
-- `kc-env.js` (12) é carregado APÓS os utils — ao contrário do que o nome "boot" sugere. A ordem real é: kc-theme-boot → kc-constants → utils → kc-env → kc-feature-flags → kc-sw-register → kc-telemetry
-- `kc-api.client.js` (31) é sempre o **último** script da camada API
-- `local.adapter.js` (base) **não aparece** na cadeia — apenas os adapters específicos
-- `supabase.adapter.js` (49) é carregado **por último** entre os adapters — é a base dos adapters supabase
+> Esta referencia lista os scripts em ordem apos normalizar o prefixo `../` das paginas admin.
+> O gate executavel continua sendo `npm run check:scripts`, que valida a cadeia de boot em 26 HTMLs.
 
 ---
 
-## 2. Scripts Específicos por Página
+## 1. Escopo
 
-### Cadeia Padrão de Feed (posições 50–80)
-
-Usada por: `achados-perdidos.html`, `caronas-feed.html`, `compra-venda-feed.html`,
-`eventos.html`, `moradia.html` (80 scripts cada)
-
-| Pos | Script | Grupo |
-|-----|--------|-------|
-| 50 | `core/kc-profiles.client.js` | core |
-| 51 | `components/toast.js` | components |
-| 52 | `components/carousel.js` | components |
-| 53 | `components/voting.js` | components |
-| 54 | `core/kc-post-model.js` | core |
-| 55 | `core/kc-user-posts.js` | core |
-| 56 | `core/kc-core-widgets.js` | core |
-| 57 | `core/kc-core.js` | core |
-| 58 | `features/create-post/kc-create-post.schema.js` | create-post |
-| 59 | `features/create-post/kc-create-post.js` | create-post |
-| 60 | `features/create-post/kc-create-post.media.js` | create-post |
-| 61 | `features/create-post/kc-create-post.resolvers.js` | create-post |
-| 62 | `features/create-post/kc-create-post.fields.js` | create-post |
-| 63 | `features/create-post/kc-create-post.submit.js` | create-post |
-| 64 | `features/create-post/kc-create-post.render.js` | create-post |
-| 65 | `core/kc-auth.ui.js` | core |
-| 66 | `core/kc-notifications.js` | core |
-| 67 | `features/kc-pull-to-refresh.js` | features |
-| 68 | `controllers/public/kc-feed.controller.js` | controller |
-| 69 | `controllers/public/<modulo>-feed.controller.js` | controller |
-| 70 | `core/kc-theme.js` | core |
-| 71 | `features/kc-filters.js` | features |
-| 72 | `features/kc-feed-filters.js` | features |
-| 73 | `shared/search-analytics.shared.js` | shared |
-| 74 | `shared/home-categories.shared.js` | shared |
-| 75 | `features/kc-home-categories.js` | features |
-| 76 | `shared/kc-search.shared.js` | shared |
-| 77 | `features/kc-search.js` | features |
-| 78 | `features/kc-search-modal.js` | features |
-| 79 | `features/kc-lazy-loader.js` | features |
-| 80 | `features/kc-ranking.js` | features |
-
-> **Observação:** O create-post inline (posições 58–64) está presente em **todos** os feeds
-> porque cada página tem um modal de "nova publicação". O controller do feed (69) é carregado
-> ANTES de kc-theme, kc-filters e o bloco de search.
+- HTMLs canonicos validados: 26
+- Publicos no manifest: 20
+- Admin no manifest: 6
+- Cadeia de boot validada: 5 scripts em ordem relativa
+- Runtime canônico atual: `8.6.1` (`VERSION.json`); alguns scripts mantêm cache-busters específicos conforme o HTML real.
 
 ---
 
-### `index.html` (79 scripts)
+## 2. Cadeia de Boot Validada
 
-Scripts após a cadeia base (posição 50+):
+A cadeia abaixo deve aparecer em todos os 26 HTMLs canonicos, nesta ordem relativa. Outros scripts podem existir antes, depois ou entre grupos, desde que esta sequencia seja preservada.
 
-| Pos | Script |
-|-----|--------|
-| 50 | `core/kc-profiles.client.js` |
-| 51 | `controllers/public/create-post.controller.js` ← carregado antes dos components! |
-| 52 | `components/toast.js` |
-| 53 | `components/carousel.js` |
-| 54 | `components/voting.js` |
-| 55–64 | *(core e create-post — igual ao feed padrão)* |
-| 65 | `core/kc-auth.ui.js` |
-| 66 | `core/kc-notifications.js` |
-| 67 | `core/kc-theme.js` |
-| 68 | `shared/search-analytics.shared.js` |
-| 69 | `shared/home-categories.shared.js` |
-| 70 | `features/kc-home-categories.js` |
-| 71 | `shared/kc-search.shared.js` |
-| 72 | `features/kc-search.js` |
-| 73 | `features/kc-pull-to-refresh.js` |
-| 74 | `features/kc-ranking.js` |
-| 75 | `controllers/public/kc-feed.controller.js` |
-| 76 | `controllers/public/index.controller.js` |
-| 77 | `features/kc-banners.js` |
-| 78 | `features/kc-search-modal.js` |
-
-> **Observação:** `create-post.controller.js` aparece em `index.html` na posição 51 — para
-> o modal de quick-create da home. A home NÃO carrega kc-filters nem kc-feed-filters (sem filtros
-> de módulo na home — o filtro é por category grid). `kc-banners.js` é carregado por último.
+| Ordem | Script |
+|---:|---|
+| 1 | `assets/js/boot/kc-constants.js` |
+| 2 | `assets/js/boot/kc-env.js` |
+| 3 | `assets/js/boot/kc-feature-flags.js` |
+| 4 | `assets/js/boot/kc-sw-register.js` |
+| 5 | `assets/js/boot/kc-telemetry.js` |
 
 ---
 
-### `_product.html` (86 scripts)
+## 3. Scripts por Pagina
 
-Scripts após a cadeia base (posição 50+):
+Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o prefixo `../` das paginas admin.
 
-| Pos | Script |
-|-----|--------|
-| 50 | `shared/account-profile.shared.js` |
-| 51 | `core/kc-profiles.client.js` |
-| 52 | `components/toast.js` |
-| 53 | `components/carousel.js` |
-| 54 | `components/voting.js` |
-| 55–65 | *(core e create-post inline — igual ao feed padrão)* |
-| 66 | `features/kc-lazy-loader.js` |
-| 67 | `core/kc-auth.ui.js` |
-| 68 | `core/kc-notifications.js` |
-| 69 | `controllers/public/product.controller.js` |
-| 70 | `controllers/public/product.render.js` |
-| 71 | `controllers/public/product.load.js` |
-| 72 | `controllers/public/product.report.js` |
-| 73 | `controllers/public/product.related.js` |
-| 74 | `controllers/public/product.calendar.js` |
-| 75 | `controllers/public/product.save.js` |
-| 76 | `controllers/public/product.ratings.js` |
-| 77 | `controllers/public/product.edit.js` |
-| 78 | `controllers/public/product.analytics.js` |
-| 79 | `controllers/public/product.popovers.js` |
-| 80 | `core/kc-theme.js` |
-| 81 | `shared/search-analytics.shared.js` |
-| 82 | `shared/home-categories.shared.js` |
-| 83 | `features/kc-home-categories.js` |
-| 84 | `shared/kc-search.shared.js` |
-| 85 | `features/kc-search.js` |
-| 86 | `features/kc-search-modal.js` |
+### `index.html` (89 scripts)
 
-> **Observação:** Os 9 auxiliares do produto (69–79) são carregados antes de `kc-theme.js`
-> e do bloco de search. `kc-comments.js` não aparece explicitamente — o sistema de comentários
-> é inicializado pelo `product.controller.js` via `KCComments.init()`.
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+16. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+17. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+19. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+20. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+21. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+22. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+23. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+24. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+26. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+38. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+58. `assets/js/controllers/public/create-post.controller.js?v=8.6.1` (controllers)
+59. `assets/js/components/toast.js?v=8.6.1` (components)
+60. `assets/js/components/carousel.js?v=8.6.1` (components)
+61. `assets/js/components/voting.js?v=8.6.1` (components)
+62. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+63. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+64. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+65. `assets/js/core/kc-core.js?v=8.6.1` (core)
+66. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+71. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+72. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+73. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+74. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+75. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+76. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+77. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+78. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+79. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+80. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+81. `assets/js/features/kc-search.js?v=8.6.3` (features)
+82. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+83. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+84. `assets/js/controllers/public/kc-feed.controller.js?v=8.6.1` (controllers)
+85. `assets/js/features/kc-feed-tabs-personalized.js?v=8.6.1` (features)
+86. `assets/js/controllers/public/index.controller.js?v=8.6.1` (controllers)
+87. `assets/js/features/kc-events-calendar.js?v=8.6.4` (features)
+88. `assets/js/features/kc-banners.js?v=8.6.1` (features)
+89. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+
+### `_product.html` (93 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+13. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+14. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+15. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+18. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+19. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+20. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+21. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+22. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+37. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+56. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+57. `assets/js/components/toast.js?v=8.6.1` (components)
+58. `assets/js/components/carousel.js?v=8.6.1` (components)
+59. `assets/js/components/voting.js?v=8.6.1` (components)
+60. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+61. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+62. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core.js?v=8.6.1` (core)
+64. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+65. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+71. `assets/js/features/kc-lazy-loader.js?v=8.6.1` (features)
+72. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+73. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+74. `assets/js/controllers/public/product.controller.js?v=8.6.1` (controllers)
+75. `assets/js/controllers/public/product.render.js?v=8.6.1` (controllers)
+76. `assets/js/controllers/public/product.load.js?v=8.6.1` (controllers)
+77. `assets/js/controllers/public/product.report.js?v=8.6.1` (controllers)
+78. `assets/js/controllers/public/product.related.js?v=8.6.1` (controllers)
+79. `assets/js/controllers/public/product.calendar.js?v=8.6.1` (controllers)
+80. `assets/js/controllers/public/product.save.js?v=8.6.1` (controllers)
+81. `assets/js/controllers/public/product.ratings.js?v=8.6.1` (controllers)
+82. `assets/js/controllers/public/product.edit.js?v=8.6.1` (controllers)
+83. `assets/js/controllers/public/product.analytics.js?v=8.6.1` (controllers)
+84. `assets/js/controllers/public/product.popovers.js?v=8.6.1` (controllers)
+85. `assets/js/controllers/public/product.lightbox.js?v=8.6.1` (controllers)
+86. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+87. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+88. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+89. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+90. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+91. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+92. `assets/js/features/kc-search.js?v=8.6.3` (features)
+93. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+
+### `account-setup.html` (61 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+13. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+14. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+15. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+18. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+19. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+20. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+21. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+22. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+37. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+56. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+57. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
+58. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+59. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+60. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+61. `assets/js/controllers/public/account-setup.controller.js?v=8.6.1` (controllers)
+
+### `achados-perdidos.html` (88 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+16. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+17. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+19. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+20. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+21. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+22. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+23. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+24. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+26. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+38. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+58. `assets/js/components/toast.js?v=8.6.1` (components)
+59. `assets/js/components/carousel.js?v=8.6.1` (components)
+60. `assets/js/components/voting.js?v=8.6.1` (components)
+61. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+62. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+64. `assets/js/core/kc-core.js?v=8.6.1` (core)
+65. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+71. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+72. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+73. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+74. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+75. `assets/js/controllers/public/kc-feed.controller.js?v=8.6.1` (controllers)
+76. `assets/js/controllers/public/achados-perdidos.controller.js?v=8.6.1` (controllers)
+77. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+78. `assets/js/features/kc-filters.js?v=8.6.2` (features)
+79. `assets/js/features/kc-feed-filters.js?v=8.6.1` (features)
+80. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+81. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+82. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+83. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+84. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+85. `assets/js/features/kc-search.js?v=8.6.3` (features)
+86. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+87. `assets/js/features/kc-lazy-loader.js?v=8.6.1` (features)
+88. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+
+### `ajuda.html` (71 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+16. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+19. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+20. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+21. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+22. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+23. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+38. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/shared/help.shared.js?v=8.6.2` (shared)
+57. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+58. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+59. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+60. `assets/js/components/voting.js?v=8.6.2` (components)
+61. `assets/js/core/kc-core.js?v=8.6.1` (core)
+62. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
+63. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+64. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+65. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+66. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+67. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+68. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+69. `assets/js/features/kc-search.js?v=8.6.3` (features)
+70. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+71. `assets/js/controllers/public/help.controller.js?v=8.6.1` (controllers)
+
+### `auth-callback.html` (61 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+13. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+14. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+15. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+18. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+19. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+20. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+21. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+22. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+37. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+56. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+57. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
+58. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+59. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+60. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+61. `assets/js/core/kc-auth-callback.js?v=8.6.1` (core)
+
+### `caronas-feed.html` (88 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+16. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+17. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+19. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+20. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+21. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+22. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+23. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+24. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+26. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+38. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+58. `assets/js/components/toast.js?v=8.6.1` (components)
+59. `assets/js/components/carousel.js?v=8.6.1` (components)
+60. `assets/js/components/voting.js?v=8.6.1` (components)
+61. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+62. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+64. `assets/js/core/kc-core.js?v=8.6.1` (core)
+65. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+71. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+72. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+73. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+74. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+75. `assets/js/controllers/public/kc-feed.controller.js?v=8.6.1` (controllers)
+76. `assets/js/controllers/public/caronas-feed.controller.js?v=8.6.1` (controllers)
+77. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+78. `assets/js/features/kc-filters.js?v=8.6.2` (features)
+79. `assets/js/features/kc-feed-filters.js?v=8.6.1` (features)
+80. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+81. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+82. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+83. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+84. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+85. `assets/js/features/kc-search.js?v=8.6.3` (features)
+86. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+87. `assets/js/features/kc-lazy-loader.js?v=8.6.1` (features)
+88. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+
+### `compra-venda-feed.html` (88 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+16. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+17. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+19. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+20. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+21. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+22. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+23. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+24. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+26. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+38. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+58. `assets/js/components/toast.js?v=8.6.1` (components)
+59. `assets/js/components/carousel.js?v=8.6.1` (components)
+60. `assets/js/components/voting.js?v=8.6.1` (components)
+61. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+62. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+64. `assets/js/core/kc-core.js?v=8.6.1` (core)
+65. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+71. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+72. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+73. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+74. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+75. `assets/js/controllers/public/kc-feed.controller.js?v=8.6.1` (controllers)
+76. `assets/js/controllers/public/compra-venda-feed.controller.js?v=8.6.1` (controllers)
+77. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+78. `assets/js/features/kc-filters.js?v=8.6.2` (features)
+79. `assets/js/features/kc-feed-filters.js?v=8.6.1` (features)
+80. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+81. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+82. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+83. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+84. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+85. `assets/js/features/kc-search.js?v=8.6.3` (features)
+86. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+87. `assets/js/features/kc-lazy-loader.js?v=8.6.1` (features)
+88. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+
+### `create-post.html` (77 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+13. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+14. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+15. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+18. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+19. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+20. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+21. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+22. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+37. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+38. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+57. `assets/js/components/toast.js?v=8.6.1` (components)
+58. `assets/js/components/carousel.js?v=8.6.1` (components)
+59. `assets/js/components/voting.js?v=8.6.1` (components)
+60. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+61. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+62. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core.js?v=8.6.1` (core)
+64. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+65. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+71. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+72. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+73. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+74. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+75. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+76. `assets/js/features/kc-search.js?v=8.6.3` (features)
+77. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+
+### `eventos.html` (89 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+16. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+17. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+19. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+20. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+21. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+22. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+23. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+24. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+26. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+38. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+58. `assets/js/components/toast.js?v=8.6.1` (components)
+59. `assets/js/components/carousel.js?v=8.6.1` (components)
+60. `assets/js/components/voting.js?v=8.6.1` (components)
+61. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+62. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+64. `assets/js/core/kc-core.js?v=8.6.1` (core)
+65. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+71. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+72. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+73. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+74. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+75. `assets/js/features/kc-filters.js?v=8.6.2` (features)
+76. `assets/js/features/kc-feed-filters.js?v=8.6.1` (features)
+77. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+78. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+79. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+80. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+81. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+82. `assets/js/features/kc-search.js?v=8.6.3` (features)
+83. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+84. `assets/js/controllers/public/kc-feed.controller.js?v=8.6.1` (controllers)
+85. `assets/js/features/kc-events-calendar.js?v=8.6.4` (features)
+86. `assets/js/controllers/public/eventos.controller.js?v=8.6.1` (controllers)
+87. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+88. `assets/js/features/kc-lazy-loader.js?v=8.6.1` (features)
+89. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+
+### `moradia.html` (88 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+16. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+17. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+19. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+20. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+21. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+22. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+23. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+24. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+26. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+38. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+58. `assets/js/components/toast.js?v=8.6.1` (components)
+59. `assets/js/components/carousel.js?v=8.6.1` (components)
+60. `assets/js/components/voting.js?v=8.6.1` (components)
+61. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+62. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+64. `assets/js/core/kc-core.js?v=8.6.1` (core)
+65. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+71. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+72. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+73. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+74. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+75. `assets/js/features/kc-filters.js?v=8.6.2` (features)
+76. `assets/js/features/kc-feed-filters.js?v=8.6.1` (features)
+77. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+78. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+79. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+80. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+81. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+82. `assets/js/features/kc-search.js?v=8.6.3` (features)
+83. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+84. `assets/js/controllers/public/kc-feed.controller.js?v=8.6.1` (controllers)
+85. `assets/js/controllers/public/moradia.controller.js?v=8.6.1` (controllers)
+86. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+87. `assets/js/features/kc-lazy-loader.js?v=8.6.1` (features)
+88. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+
+### `my-posts.html` (81 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+13. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+14. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+15. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+18. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+19. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+20. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+21. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+22. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+37. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+56. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+57. `assets/js/components/toast.js?v=8.6.1` (components)
+58. `assets/js/components/carousel.js?v=8.6.1` (components)
+59. `assets/js/components/voting.js?v=8.6.1` (components)
+60. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+61. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+62. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core.js?v=8.6.1` (core)
+64. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+65. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+71. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+72. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+73. `assets/js/controllers/public/my-posts.controller.js?v=8.6.1` (controllers)
+74. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+75. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+76. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+77. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+78. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+79. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+80. `assets/js/features/kc-search.js?v=8.6.3` (features)
+81. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+
+### `ods.html` (82 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+16. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+19. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+20. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+21. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+22. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+23. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+38. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+57. `assets/js/components/toast.js?v=8.6.1` (components)
+58. `assets/js/components/carousel.js?v=8.6.1` (components)
+59. `assets/js/components/voting.js?v=8.6.1` (components)
+60. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+61. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+62. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core.js?v=8.6.1` (core)
+64. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+65. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+71. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+72. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+73. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+74. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+75. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+76. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+77. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+78. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+79. `assets/js/features/kc-search.js?v=8.6.3` (features)
+80. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+81. `assets/js/shared/ods.shared.js?v=8.6.1` (shared)
+82. `assets/js/controllers/public/ods.controller.js?v=8.6.1` (controllers)
+
+### `oportunidades.html` (89 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+16. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+17. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+19. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+20. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+21. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+22. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+23. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+24. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+26. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+38. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+58. `assets/js/components/toast.js?v=8.6.1` (components)
+59. `assets/js/components/carousel.js?v=8.6.1` (components)
+60. `assets/js/components/voting.js?v=8.6.1` (components)
+61. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+62. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+64. `assets/js/core/kc-core.js?v=8.6.1` (core)
+65. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+71. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+72. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+73. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+74. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+75. `assets/js/features/kc-filters.js?v=8.6.2` (features)
+76. `assets/js/features/kc-feed-filters.js?v=8.6.1` (features)
+77. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+78. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+79. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+80. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+81. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+82. `assets/js/features/kc-search.js?v=8.6.3` (features)
+83. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+84. `assets/js/controllers/public/kc-feed.controller.js?v=8.6.1` (controllers)
+85. `assets/js/controllers/public/oportunidades.normalize.js?v=8.6.1` (controllers)
+86. `assets/js/controllers/public/oportunidades.controller.js?v=8.6.1` (controllers)
+87. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+88. `assets/js/features/kc-lazy-loader.js?v=8.6.1` (features)
+89. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+
+### `profile.html` (75 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+13. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+14. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+15. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+18. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+19. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+20. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+21. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+22. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+37. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+56. `assets/js/features/kc-comments.js?v=8.6.1` (features)
+57. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+58. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+59. `assets/js/components/voting.js?v=8.6.2` (components)
+60. `assets/js/core/kc-core.js?v=8.6.1` (core)
+61. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
+62. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+63. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+64. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+65. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+66. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+67. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+68. `assets/js/features/kc-search.js?v=8.6.3` (features)
+69. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+70. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+71. `assets/js/controllers/public/profile.presentation.js?v=8.6.1` (controllers)
+72. `assets/js/controllers/public/profile.collections.js?v=8.6.2` (controllers)
+73. `assets/js/controllers/public/profile.ratings.js?v=8.6.1` (controllers)
+74. `assets/js/controllers/public/profile.flow.js?v=8.6.1` (controllers)
+75. `assets/js/controllers/public/profile.controller.js?v=8.6.1` (controllers)
+
+### `privacidade.html` (64 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+16. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+19. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+20. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+21. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+22. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+23. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+38. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/shared/help.shared.js?v=8.6.2` (shared)
+58. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+59. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+60. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+61. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
+62. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+63. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+64. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+
+### `search-results.html` (80 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+13. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+14. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+15. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+16. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+19. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+20. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+21. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+22. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+23. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+38. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+57. `assets/js/components/toast.js?v=8.6.1` (components)
+58. `assets/js/components/carousel.js?v=8.6.1` (components)
+59. `assets/js/components/voting.js?v=8.6.1` (components)
+60. `assets/js/core/kc-post-model.js?v=8.6.1` (core)
+61. `assets/js/core/kc-user-posts.js?v=8.6.1` (core)
+62. `assets/js/core/kc-core-widgets.js?v=8.6.1` (core)
+63. `assets/js/core/kc-core.js?v=8.6.1` (core)
+64. `assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1` (features)
+65. `assets/js/features/create-post/kc-create-post.js?v=8.6.1` (features)
+66. `assets/js/features/create-post/kc-create-post.media.js?v=8.6.1` (features)
+67. `assets/js/features/create-post/kc-create-post.resolvers.js?v=8.6.1` (features)
+68. `assets/js/features/create-post/kc-create-post.fields.js?v=8.6.1` (features)
+69. `assets/js/features/create-post/kc-create-post.submit.js?v=8.6.1` (features)
+70. `assets/js/features/create-post/kc-create-post.render.js?v=8.6.1` (features)
+71. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+72. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+73. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+74. `assets/js/shared/home-categories.shared.js?v=8.6.1` (shared)
+75. `assets/js/features/kc-home-categories.js?v=8.6.1` (features)
+76. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+77. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+78. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+79. `assets/js/features/kc-search.js?v=8.6.3` (features)
+80. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+
+### `settings.html` (69 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+13. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+14. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+15. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+18. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+19. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+20. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+21. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+22. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+37. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+56. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+57. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+58. `assets/js/components/voting.js?v=8.6.2` (components)
+59. `assets/js/core/kc-core.js?v=8.6.1` (core)
+60. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
+61. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+62. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+63. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+64. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+65. `assets/js/shared/search-analytics.shared.js?v=8.6.1` (shared)
+66. `assets/js/shared/kc-search.shared.js?v=8.6.2` (shared)
+67. `assets/js/features/kc-search.js?v=8.6.3` (features)
+68. `assets/js/features/kc-search-modal.js?v=8.6.1` (features)
+69. `assets/js/controllers/public/settings.controller.js?v=8.6.1` (controllers)
+
+### `transparencia.html` (64 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+16. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+19. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+20. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+21. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+22. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+23. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+38. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/shared/help.shared.js?v=8.6.2` (shared)
+58. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+59. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+60. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+61. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
+62. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+63. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+64. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+
+### `termos.html` (64 scripts)
+
+1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
+2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+3. `https://cdn.vercel-insights.com/v1/script.js` (external)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+12. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+13. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+14. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+15. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+16. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+17. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+18. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+19. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+20. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+21. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+22. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+23. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+24. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+25. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+36. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+37. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+38. `assets/js/features/kc-nav-links-personalized.js?v=8.6.3` (features)
+39. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+55. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+56. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+57. `assets/js/shared/help.shared.js?v=8.6.2` (shared)
+58. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
+59. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+60. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+61. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
+62. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+63. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+64. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+
+### `admin/index.html` (67 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+4. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+5. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+6. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+12. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+13. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+14. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+15. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+17. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+18. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+19. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+20. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+21. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+22. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+24. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+36. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+37. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+55. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
+56. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+57. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+58. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+59. `assets/js/api/admin-shell.js?v=8.6.1` (api)
+60. `assets/js/controllers/admin/admin-export.shared.js?v=8.6.9` (controllers)
+61. `assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.6` (controllers)
+62. `assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.6` (controllers)
+63. `assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.7` (controllers)
+64. `assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.6` (controllers)
+65. `assets/js/features/kc-ranking.js?v=8.6.1` (features)
+66. `assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2` (controllers)
+67. `assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.6` (controllers)
+
+### `admin/moderation.html` (62 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+4. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+5. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+6. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+12. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+13. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+14. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+15. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+17. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+18. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+19. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+20. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+21. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+22. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+24. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+36. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+37. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+55. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+56. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+57. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+58. `assets/js/api/admin-shell.js?v=8.6.1` (api)
+59. `assets/js/controllers/admin/admin-export.shared.js?v=8.6.9` (controllers)
+60. `assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.4` (controllers)
+61. `assets/js/controllers/admin/admin-invite.controller.js?v=8.6.1` (controllers)
+62. `assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.2` (controllers)
+
+### `admin/reports.html` (60 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+4. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+5. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+6. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+12. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+13. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+14. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+15. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+17. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+18. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+19. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+20. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+21. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+22. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+24. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+36. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+37. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+55. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+56. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+57. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+58. `assets/js/api/admin-shell.js?v=8.6.1` (api)
+59. `assets/js/controllers/admin/admin-export.shared.js?v=8.6.9` (controllers)
+60. `assets/js/controllers/admin/admin-reports.controller.js?v=8.6.5` (controllers)
+
+### `admin/banners.html` (62 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+4. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+5. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+6. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+12. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+13. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+14. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+15. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+17. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+18. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+19. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+20. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+21. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+22. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+24. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+36. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+37. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+55. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+56. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+57. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+58. `assets/js/api/admin-shell.js?v=8.6.1` (api)
+59. `assets/js/features/kc-ads.js?v=8.6.5` (features)
+60. `assets/js/controllers/admin/admin-export.shared.js?v=8.6.9` (controllers)
+61. `assets/js/controllers/admin/admin-banners.controller.js?v=8.6.5` (controllers)
+62. `assets/js/controllers/admin/admin-feed-ads.controller.js?v=8.6.5` (controllers)
+
+### `admin/help-requests.html` (61 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+4. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+5. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+6. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+12. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+13. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+14. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+15. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+17. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+18. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+19. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+20. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+21. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+22. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+24. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.help.js?v=8.6.2` (api)
+27. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+36. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+37. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.help.adapter.js?v=8.6.2` (adapters)
+43. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.5` (adapters)
+45. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/shared/help.shared.js?v=8.6.3` (shared)
+55. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+56. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+57. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+58. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+59. `assets/js/api/admin-shell.js?v=8.6.1` (api)
+60. `assets/js/controllers/admin/admin-export.shared.js?v=8.6.9` (controllers)
+61. `assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.9` (controllers)
+
+### `admin/privacy-analytics.html` (60 scripts)
+
+1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
+2. `https://cdn.vercel-insights.com/v1/script.js` (external)
+3. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
+4. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
+5. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
+6. `assets/js/utils/kc-utils.format.js?v=8.6.1` (utils)
+7. `assets/js/utils/kc-utils.dom.js?v=8.6.1` (utils)
+8. `assets/js/utils/kc-utils.identity.js?v=8.6.1` (utils)
+9. `assets/js/utils/kc-utils.taxonomy.js?v=8.6.1` (utils)
+10. `assets/js/utils/kc-utils.location.js?v=8.6.1` (utils)
+11. `assets/js/utils/kc-utils.presentation.js?v=8.6.1` (utils)
+12. `assets/js/features/kc-card-image-aspect.js?v=8.6.1` (features)
+13. `assets/js/utils/kc-utils.js?v=8.6.1` (utils)
+14. `assets/js/boot/kc-env.js?v=8.6.1` (boot)
+15. `assets/js/boot/kc-feature-flags.js?v=8.6.1` (boot)
+16. `assets/js/boot/kc-sw-register.js?v=8.6.1` (boot)
+17. `assets/js/core/kc-consent.js?v=8.6.4` (core)
+18. `assets/js/boot/kc-google-tag.js?v=8.6.4` (boot)
+19. `assets/js/boot/kc-telemetry.js?v=8.6.1` (boot)
+20. `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (external)
+21. `assets/js/api/kc-supabase.client.js?v=8.6.1` (api)
+22. `assets/js/api/kc-supabase.posts.js?v=8.6.1` (api)
+23. `assets/js/api/kc-supabase.ratings.js?v=8.6.1` (api)
+24. `assets/js/api/kc-api.notifications.js?v=8.6.1` (api)
+25. `assets/js/api/kc-api.saved.js?v=8.6.1` (api)
+26. `assets/js/api/kc-api.help.js?v=8.6.1` (api)
+27. `assets/js/api/kc-api.posts-read.js?v=8.6.1` (api)
+28. `assets/js/api/kc-api.comments-votes.js?v=8.6.1` (api)
+29. `assets/js/api/kc-api.ratings.js?v=8.6.1` (api)
+30. `assets/js/api/kc-api.posts-feed.js?v=8.6.1` (api)
+31. `assets/js/api/kc-api.posts-write.js?v=8.6.1` (api)
+32. `assets/js/api/kc-api.profiles.js?v=8.6.1` (api)
+33. `assets/js/api/kc-api.related.js?v=8.6.1` (api)
+34. `assets/js/api/kc-api.auth.js?v=8.6.1` (api)
+35. `assets/js/api/kc-api.client.js?v=8.6.1` (api)
+36. `assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1` (adapters)
+37. `assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1` (adapters)
+38. `assets/js/adapters/local/local.saved.adapter.js?v=8.6.1` (adapters)
+39. `assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1` (adapters)
+40. `assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1` (adapters)
+41. `assets/js/adapters/local/local.profile.adapter.js?v=8.6.1` (adapters)
+42. `assets/js/adapters/local/local.help.adapter.js?v=8.6.1` (adapters)
+43. `assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1` (adapters)
+44. `assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1` (adapters)
+45. `assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1` (adapters)
+46. `assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1` (adapters)
+47. `assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1` (adapters)
+48. `assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1` (adapters)
+49. `assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1` (adapters)
+50. `assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1` (adapters)
+51. `assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1` (adapters)
+52. `assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1` (adapters)
+53. `assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1` (adapters)
+54. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
+55. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
+56. `assets/js/core/kc-notifications.js?v=8.6.1` (core)
+57. `assets/js/core/kc-theme.js?v=8.6.1` (core)
+58. `assets/js/api/admin-shell.js?v=8.6.1` (api)
+59. `assets/js/controllers/admin/admin-export.shared.js?v=8.6.9` (controllers)
+60. `assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.3` (controllers)
 
 ---
 
-### `oportunidades.html` (81 scripts)
+## 4. Regras de Manutencao
 
-Igual ao feed padrão + `oportunidades.normalize.js` entre o feed controller e o controller principal:
-
-| Pos | Script |
-|-----|--------|
-| 76 | `controllers/public/kc-feed.controller.js` |
-| 77 | `controllers/public/oportunidades.normalize.js` |
-| 78 | `controllers/public/oportunidades.controller.js` |
-| 79 | `features/kc-search-modal.js` |
-| 80 | `features/kc-lazy-loader.js` |
-| 81 | `features/kc-ranking.js` |
-
----
-
-### `create-post.html` (71 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50–64 | *(cadeia padrão: kc-profiles.client → toast/carousel/voting → core → create-post.*)* |
-| 65 | `core/kc-auth.ui.js` |
-| 66 | `core/kc-notifications.js` |
-| 67 | `core/kc-theme.js` |
-| 68 | `shared/search-analytics.shared.js` |
-| 69 | `shared/kc-search.shared.js` |
-| 70 | `features/kc-search.js` |
-| 71 | `features/kc-search-modal.js` |
-
-> **Observação:** `create-post.html` **não carrega** `controllers/public/create-post.controller.js`
-> explicitamente. Os módulos `features/create-post/*.js` atuam como o controller desta página.
-> `create-post.controller.js` é carregado apenas em `index.html` (modal quick-create).
-> Também ausente: kc-filters, kc-feed-filters, kc-pull-to-refresh, kc-ranking, kc-banners.
-
----
-
-### `profile.html` (63 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50 | `shared/account-profile.shared.js` |
-| 51 | `features/kc-comments.js` |
-| 52 | `core/kc-profiles.client.js` |
-| 53 | `features/kc-pull-to-refresh.js` |
-| 54 | `core/kc-public-shell.js` |
-| 55 | `core/kc-auth.ui.js` |
-| 56 | `core/kc-notifications.js` |
-| 57 | `core/kc-theme.js` |
-| 58 | `features/kc-ranking.js` |
-| 59 | `controllers/public/profile.presentation.js` |
-| 60 | `controllers/public/profile.collections.js` |
-| 61 | `controllers/public/profile.ratings.js` |
-| 62 | `controllers/public/profile.flow.js` |
-| 63 | `controllers/public/profile.controller.js` |
-
-> **Observação:** `profile.html` carrega `kc-public-shell.js` (posição 54) e `kc-comments.js`
-> (51) mas NÃO carrega toast/carousel/voting/kc-core/create-post. É uma das páginas mais leves
-> em termos de scripts carregados (63 no total).
-
----
-
-### `my-posts.html` (75 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50 | `shared/account-profile.shared.js` |
-| 51 | `core/kc-profiles.client.js` |
-| 52–64 | *(toast/carousel/voting + core + create-post.*)* |
-| 65 | `core/kc-auth.ui.js` |
-| 66 | `core/kc-notifications.js` |
-| 67 | `legacy-shims/kc-migrate.myposts.js` ← shim de migração |
-| 68 | `controllers/public/my-posts.controller.js` |
-| 69 | `core/kc-theme.js` |
-| 70 | `shared/search-analytics.shared.js` |
-| 71 | `shared/home-categories.shared.js` |
-| 72 | `features/kc-home-categories.js` |
-| 73 | `shared/kc-search.shared.js` |
-| 74 | `features/kc-search.js` |
-| 75 | `features/kc-search-modal.js` |
-
----
-
-### `settings.html` (57 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50 | `shared/account-profile.shared.js` |
-| 51 | `core/kc-profiles.client.js` |
-| 52 | `features/kc-pull-to-refresh.js` |
-| 53 | `core/kc-public-shell.js` |
-| 54 | `core/kc-auth.ui.js` |
-| 55 | `core/kc-notifications.js` |
-| 56 | `core/kc-theme.js` |
-| 57 | `controllers/public/settings.controller.js` |
-
----
-
-### `account-setup.html` (56 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50 | `shared/account-profile.shared.js` |
-| 51 | `core/kc-profiles.client.js` |
-| 52 | `core/kc-public-shell.js` |
-| 53 | `core/kc-auth.ui.js` |
-| 54 | `core/kc-notifications.js` |
-| 55 | `core/kc-theme.js` |
-| 56 | `controllers/public/account-setup.controller.js` |
-
----
-
-### `ajuda.html` (58 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50 | `shared/help.shared.js` |
-| 51 | `shared/account-profile.shared.js` |
-| 52 | `core/kc-profiles.client.js` |
-| 53 | `features/kc-pull-to-refresh.js` |
-| 54 | `core/kc-public-shell.js` |
-| 55 | `core/kc-auth.ui.js` |
-| 56 | `core/kc-notifications.js` |
-| 57 | `core/kc-theme.js` |
-| 58 | `controllers/public/help.controller.js` |
-
----
-
-### `auth-callback.html` (56 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50 | `shared/account-profile.shared.js` |
-| 51 | `core/kc-profiles.client.js` |
-| 52 | `core/kc-public-shell.js` |
-| 53 | `core/kc-auth.ui.js` |
-| 54 | `core/kc-notifications.js` |
-| 55 | `core/kc-theme.js` |
-| 56 | `core/kc-auth-callback.js` |
-
----
-
-### `ods.html` (75 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50–66 | *(cadeia padrão sem pull-to-refresh e sem account-profile)* |
-| 67 | `core/kc-theme.js` |
-| 68 | `shared/search-analytics.shared.js` |
-| 69 | `shared/home-categories.shared.js` |
-| 70 | `features/kc-home-categories.js` |
-| 71 | `shared/kc-search.shared.js` |
-| 72 | `features/kc-search.js` |
-| 73 | `features/kc-search-modal.js` |
-| 74 | `shared/ods.shared.js` |
-| 75 | `controllers/public/ods.controller.js` |
-
----
-
-### `search-results.html` (73 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50–66 | *(cadeia padrão)* |
-| 67 | `core/kc-theme.js` |
-| 68 | `shared/home-categories.shared.js` |
-| 69 | `features/kc-home-categories.js` |
-| 70 | `shared/search-analytics.shared.js` |
-| 71 | `shared/kc-search.shared.js` |
-| 72 | `features/kc-search.js` |
-| 73 | `features/kc-search-modal.js` |
-
-> **Observação:** Sem controller separado — `kc-search.js` age como controller desta página.
-
----
-
-### `admin/index.html` (61 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 1–49 | *(cadeia base com `../assets/js/` prefix)* |
-| 50 | `../assets/js/core/kc-profiles.client.js` |
-| 51 | `../assets/js/features/kc-pull-to-refresh.js` |
-| 52 | `../assets/js/core/kc-auth.ui.js` |
-| 53 | `../assets/js/core/kc-notifications.js` |
-| 54 | `../assets/js/core/kc-theme.js` |
-| 55 | `../assets/js/api/admin-shell.js?v=8.6.0` |
-| 56 | `../assets/js/controllers/admin/admin-dashboard.shared.js` |
-| 57 | `../assets/js/controllers/admin/admin-dashboard.metrics.js` |
-| 58 | `../assets/js/controllers/admin/admin-dashboard.audit.js` |
-| 59 | `../assets/js/controllers/admin/admin-dashboard.charts.js` |
-| 60 | `../assets/js/features/kc-ranking.js` |
-| 61 | `../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.0` |
-
----
-
-### `admin/banners.html` (55 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50–53 | *(kc-profiles.client, kc-auth.ui, kc-notifications, kc-theme)* |
-| 54 | `../assets/js/api/admin-shell.js?v=8.6.0` |
-| 55 | `../assets/js/controllers/admin/admin-banners.controller.js?v=8.6.0` |
-
----
-
-### `admin/help-requests.html` (56 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50 | `../assets/js/shared/help.shared.js` |
-| 51–53 | *(kc-profiles.client, kc-auth.ui, kc-notifications, kc-theme)* |
-| 55 | `../assets/js/api/admin-shell.js?v=8.6.0` |
-| 56 | `../assets/js/controllers/admin/admin-help-requests.controller.js` |
-
----
-
-### `admin/moderation.html` (56 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50–53 | *(kc-profiles.client, kc-auth.ui, kc-notifications, kc-theme)* |
-| 54 | `../assets/js/api/admin-shell.js?v=8.6.0` |
-| 55 | `../assets/js/controllers/admin/admin-moderation.controller.js` |
-| 56 | `../assets/js/controllers/admin/admin-invite.controller.js` |
-
-> **Observação:** `admin-invite.controller.js` é carregado junto com `admin-moderation.controller.js`
-> na página de moderação (posição 56).
-
----
-
-### `admin/reports.html` (55 scripts)
-
-| Pos | Script |
-|-----|--------|
-| 50–53 | *(kc-profiles.client, kc-auth.ui, kc-notifications, kc-theme)* |
-| 54 | `../assets/js/api/admin-shell.js?v=8.6.0` |
-| 55 | `../assets/js/controllers/admin/admin-reports.controller.js` |
-
----
-
-## 3. Tabela Resumo — Scripts por Página
-
-| HTML | Total Scripts | Controller Principal | Scripts Únicos (após posição 49) |
-|------|---------------|---------------------|-----------------------------------|
-| `index.html` | 79 | `index.controller.js` | create-post.controller (51), banners (77) |
-| `_product.html` | 86 | `product.controller.js` + 8 aux | 9 auxiliares de produto (69–79) |
-| `account-setup.html` | 56 | `account-setup.controller.js` | kc-public-shell (52) |
-| `achados-perdidos.html` | 80 | `achados-perdidos.controller.js` | feed padrão |
-| `ajuda.html` | 58 | `help.controller.js` | help.shared (50), kc-public-shell (54) |
-| `auth-callback.html` | 56 | `kc-auth-callback.js` | kc-public-shell (52) |
-| `caronas-feed.html` | 80 | `caronas-feed.controller.js` | feed padrão |
-| `compra-venda-feed.html` | 80 | `compra-venda-feed.controller.js` | feed padrão |
-| `create-post.html` | 71 | *(kc-create-post.js)* | sem filters/rank/shell |
-| `eventos.html` | 80 | `eventos.controller.js` | feed padrão |
-| `moradia.html` | 80 | `moradia.controller.js` | feed padrão |
-| `my-posts.html` | 75 | `my-posts.controller.js` | kc-migrate.myposts.js (67) |
-| `ods.html` | 75 | `ods.controller.js` | ods.shared (74) |
-| `oportunidades.html` | 81 | `oportunidades.controller.js` | oportunidades.normalize (77) |
-| `profile.html` | 63 | `profile.controller.js` + 4 aux | kc-comments (51), kc-public-shell (54) |
-| `search-results.html` | 73 | *(kc-search.js)* | sem pull-to-refresh/rank/banners |
-| `settings.html` | 57 | `settings.controller.js` | kc-public-shell (53) |
-| `admin/index.html` | 61 | `admin-dashboard.controller.js` + 4 aux | admin-shell (55), 4 aux dashboard |
-| `admin/banners.html` | 55 | `admin-banners.controller.js` | admin-shell (54) |
-| `admin/help-requests.html` | 56 | `admin-help-requests.controller.js` | help.shared (50), admin-shell (55) |
-| `admin/moderation.html` | 56 | `admin-moderation.controller.js` | admin-shell (54), admin-invite (56) |
-| `admin/reports.html` | 55 | `admin-reports.controller.js` | admin-shell (54) |
-
----
-
-## 4. Padrões Notáveis
-
-### 4.1 Scripts presentes em TODOS os 22 HTMLs (posições 1–49)
-A cadeia base de 49 scripts é universal. Qualquer modificação nela impacta os 22 HTMLs.
-
-### 4.2 Scripts presentes em páginas específicas
-
-| Script | Páginas |
-|--------|---------|
-| `core/kc-public-shell.js` | auth-callback, ajuda, account-setup, profile, settings |
-| `features/kc-pull-to-refresh.js` | todos os feeds + profile + ajuda + settings + admin/index |
-| `features/kc-ranking.js` | todos os feeds + index + profile + admin/index |
-| `features/kc-banners.js` | apenas `index.html` |
-| `features/kc-comments.js` | apenas `profile.html` |
-| `features/kc-filters.js` | feeds temáticos + oportunidades |
-| `components/carousel.js` | feeds + index + _product + create-post + my-posts + ods + search |
-| `api/admin-shell.js` | todas as 5 páginas admin |
-| `legacy-shims/kc-migrate.myposts.js` | apenas `my-posts.html` |
-| `shared/ods.shared.js` | apenas `ods.html` |
-
-### 4.3 Regra de adição de scripts
-Ao adicionar um novo `<script>` a um HTML:
-1. Nunca inserir ANTES da posição 31 (kc-api.client.js) sem análise das dependências
-2. Scripts de feature: inserir após a posição 66 (`kc-notifications.js`)
-3. Controllers: sempre o ÚLTIMO ou um dos últimos scripts do HTML
-4. Atualizar `scripts/validate-script-chains.js` se a cadeia de boot for afetada
-
-### 4.4 Versioning via query string
-Alguns scripts admin usam `?v=8.6.0` na URL para controle de cache:
-- `kc-theme-boot.js?v=8.6.0` — presente em todos os HTMLs
-- `admin-shell.js?v=8.6.0` — apenas admin
-- `admin-dashboard.controller.js?v=8.6.0` — apenas admin/index.html
-- `admin-banners.controller.js?v=8.6.0` — apenas admin/banners.html
+- A cadeia `kc-constants.js -> kc-env.js -> kc-feature-flags.js -> kc-sw-register.js -> kc-telemetry.js` e validada por `npm run check:scripts`.
+- Alteracoes em scripts de boot, cache-bust ou ordem de carregamento devem passar por `npm run check:all`.
+- Controllers devem permanecer no final da pagina ou imediatamente apos seus auxiliares.
+- Paginas admin usam `../assets/js/...` no HTML, mas esta referencia mostra caminhos normalizados para comparacao.

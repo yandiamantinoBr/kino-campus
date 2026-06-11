@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v75.0.0
-**Data:** 2026-05-05
-**Atualizado em:** v75.0.0 - patch PUBLIC-A11Y kc-ranking decorative icons e janela raiz V71-V75
+**Versao:** v75.1.0
+**Data:** 2026-06-11
+**Atualizado em:** v75.1.0 - performance phase 1, Speed Insights e reancoragem documental
 
 ---
 
@@ -10,7 +10,7 @@
 
 KinoCampus e uma plataforma HTML5 + CSS3 + Vanilla JS, sem framework, sem bundler e sem transpilador.
 O runtime e servido como arquivos estaticos via Vercel, com scripts carregados por `<script defer>`
-em ordem deterministica nos 22 HTMLs canonicos.
+em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 
 **Stack imutavel:**
 
@@ -19,13 +19,13 @@ em ordem deterministica nos 22 HTMLs canonicos.
 | Frontend | HTML5 + CSS3 + Vanilla JS (IIFE + `window.*`) |
 | Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime) |
 | Hosting | Vercel (`vercel.json`) |
-| Runtime JS | `frontendRuntimeVersion=8.6.0` |
-| appVersion | `75.0.0` |
+| Runtime JS | `frontendRuntimeVersion=8.6.1` |
+| appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 135 suites / 3076 testes + Playwright 8 suites E2E |
+| Testes | Jest 168 suites / 3512 testes + Playwright 9 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
-V75 e uma versao funcional pequena. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
+V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
 janela operacional atual: archive consolidado, planning ativo com ledger pos-V23, QA ativo separado do
 historico, worktree Claude arquivada, runbook QA real V25, templates de evidencia V26, gate visual/a11y V27,
 auditoria unaccent/FTS V28, checklist Supabase Advisor V29, checklist de sandbox para providers V30, matriz
@@ -50,7 +50,7 @@ patch PUBLIC-A11Y dos 11 icones decorativos do ranking e modulos em admin-dashbo
 patch PUBLIC-A11Y dos 14 icones decorativos de titulos de secao e feedback em admin-dashboard.controller.js V72,
 patch PUBLIC-A11Y dos 9 icones decorativos de acoes e estados em kc-comments.js V73,
 patch PUBLIC-A11Y dos 18 icones decorativos de acoes e estados em admin-reports.controller.js V74 e
-patch PUBLIC-A11Y dos 18 icones decorativos de avatares, acoes e estados em kc-ranking.js V75.
+patch PUBLIC-A11Y dos 18 icones decorativos de avatares, acoes e estados em kc-ranking.js V75, e performance phase 1 com runtime 8.6.1 em V75.1.
 
 ---
 
@@ -60,27 +60,29 @@ patch PUBLIC-A11Y dos 18 icones decorativos de avatares, acoes e estados em kc-r
 kino-campus/
 |-- assets/
 |   |-- js/
-|   |   |-- boot/                  6 arquivos
-|   |   |-- core/                  11 arquivos
-|   |   |-- api/                   16 arquivos
+|   |   |-- boot/                  9 arquivos
+|   |   |-- core/                  12 arquivos
+|   |   |-- api/                   17 arquivos
 |   |   |-- utils/                 8 arquivos
-|   |   |-- features/              10 arquivos + create-post/
+|   |   |-- features/              16 arquivos + create-post/
 |   |   |   `-- create-post/       7 arquivos
 |   |   |-- shared/                7 arquivos
 |   |   |-- legacy-shims/          1 arquivo
 |   |   |-- components/            3 arquivos
 |   |   |-- adapters/
-|   |   |   |-- local/             8 arquivos
-|   |   |   `-- supabase/          11 arquivos
+|   |   |   |-- local/             9 arquivos
+|   |   |   `-- supabase/          12 arquivos
 |   |   `-- controllers/
-|   |       |-- public/            31 arquivos
-|   |       `-- admin/             10 arquivos
+|   |       |-- public/            33 arquivos
+|   |       `-- admin/             15 arquivos
 |   |-- css/
 |   |   |-- styles.css
 |   |   |-- kc-theme-boot.css
 |   |   |-- kc-public-shell.css
 |   |   |-- admin-shell.css
+|   |   |-- kc-chat.css
 |   |   |-- product.css
+|   |   |-- product-lightbox.css
 |   |   `-- future-split/          5 stubs nao carregados em producao
 |   `-- images/
 |-- docs/
@@ -95,13 +97,13 @@ kino-campus/
 |   |-- planning/                  backlog e roteiros V18+
 |   `-- qa/                        QA ativo
 |-- tests/
-|   |-- unit/
-|   |-- integration/
-|   |-- contract/
-|   |-- structure/
-|   |-- a11y/
+|   |-- unit/                     25 suites
+|   |-- integration/              118 suites
+|   |-- contract/                 8 suites
+|   |-- structure/                12 suites
+|   |-- a11y/                     5 suites
 |   |-- fixtures/
-|   `-- e2e/
+|   `-- e2e/                      9 specs
 |-- scripts/
 |   |-- validate-version-map.js
 |   |-- validate-repository-structure.js
@@ -109,9 +111,9 @@ kino-campus/
 |   |-- validate-public-routes.js
 |   |-- hygiene-check.js
 |   `-- inject-env.js
-|-- admin/                         5 HTMLs admin
-|-- *.html                         17 HTMLs publicos
-|-- supabase/
+|-- admin/                         6 HTMLs admin
+|-- *.html                         21 HTMLs na raiz
+|-- supabase/                      132 migrations SQL locais
 |-- sw.js
 |-- vercel.json
 |-- package.json
@@ -134,19 +136,19 @@ Todo modulo deve permanecer em um dos grupos canonicos abaixo.
 
 | Grupo | Arquivos | Responsabilidade |
 |---|---:|---|
-| `assets/js/boot/` | 6 | Cadeia de inicializacao compartilhada por todos os HTMLs |
-| `assets/js/core/` | 11 | Runtime central: i18n, auth UI, perfil, tema, notificacoes, widgets e shell publico |
-| `assets/js/api/` | 16 | Cliente Supabase, submodulos KCAPI e facade `window.KCAPI` |
+| `assets/js/boot/` | 9 | Cadeia de inicializacao compartilhada por todos os HTMLs, SEO, Google Tag e Speed Insights |
+| `assets/js/core/` | 12 | Runtime central: i18n, auth UI, consentimento, perfil, tema, notificacoes, widgets e shell publico |
+| `assets/js/api/` | 17 | Cliente Supabase, submodulos KCAPI, chat e facade `window.KCAPI` |
 | `assets/js/utils/` | 8 | Helpers de string, formatacao, DOM, identidade, taxonomia, localizacao e apresentacao |
-| `assets/js/features/` | 10 | Comentarios, busca, filtros, banners, ranking, lazy loading e pull-to-refresh |
+| `assets/js/features/` | 16 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading e pull-to-refresh |
 | `assets/js/features/create-post/` | 7 | Orquestracao, schema, campos, render, midia, resolvers e submit de criacao |
 | `assets/js/shared/` | 7 | Dados compartilhados entre paginas e modulos |
 | `assets/js/legacy-shims/` | 1 | Shim transitorio de migracao de posts do usuario |
 | `assets/js/components/` | 3 | Componentes reutilizaveis: carousel, toast e voting |
-| `assets/js/adapters/local/` | 8 | Persistencia localStorage por dominio |
-| `assets/js/adapters/supabase/` | 11 | Persistencia Supabase por dominio |
-| `assets/js/controllers/public/` | 31 | Controllers das 17 paginas publicas |
-| `assets/js/controllers/admin/` | 10 | Controllers das 5 paginas admin |
+| `assets/js/adapters/local/` | 9 | Persistencia localStorage por dominio |
+| `assets/js/adapters/supabase/` | 12 | Persistencia Supabase por dominio |
+| `assets/js/controllers/public/` | 33 | Controllers das paginas publicas e auxiliares de produto/perfil |
+| `assets/js/controllers/admin/` | 15 | Controllers das paginas admin e shards auxiliares |
 
 ### Cadeia de boot obrigatoria
 
@@ -188,7 +190,9 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/kc-theme-boot.css` | Producao | Tema inicial carregado cedo |
 | `assets/css/kc-public-shell.css` | Producao | Shell publico |
 | `assets/css/admin-shell.css` | Producao | Shell admin |
+| `assets/css/kc-chat.css` | Producao | UI de conversa/chat |
 | `assets/css/product.css` | Producao | Pagina de produto |
+| `assets/css/product-lightbox.css` | Producao | Lightbox de midia da pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
 O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V28 mapeia risco SQL de busca sem alterar migrations; V29 define evidencias operacionais para Supabase Advisor sem tocar dashboard; V30 define sandbox de providers de notificacao sem configurar secrets; V31 organiza triagem autenticada sem executar QA real; V32 define quando Playwright E2E e evidencia obrigatoria; V33 separa falha LHCI de ambiente de regressao real; V34 reconcilia a11y/i18n antes de backlog funcional; V35 define readiness e rollback antes de qualquer CSS; V36 consolida a sequencia segura para implementacoes futuras; V37 exige gate de entrada com filescope, evidencia e rollback antes de qualquer patch funcional; V38 detalha evidencia e classificacao de rollback antes de runtime, CSS, HTML, SQL, provider ou config; V39 classifica candidatos funcionais antes da primeira implementacao futura; V40 detalha o candidato P0 de signup/callback real; V41 detalha o candidato P0 de avatar/profile storage; V42 detalha o candidato P1 de admin/moderacao; V43 detalha o candidato P1 de provider sandbox email/WhatsApp; V44 detalha o candidato P1 de unaccent/FTS isolado; V45 detalha o candidato P2 de ajuste CSS pequeno; V46 detalha o candidato P2 de copy/a11y/i18n pontual; V47 consolida a fila para selecao da primeira implementacao funcional; V48 define coleta/redacao de evidencias externas sem secrets; V49 congela escopo antes de qualquer branch funcional; V50 define o intake final antes da primeira branch funcional; V51 registra No-Go quando gates/evidencias ainda bloqueiam implementacao; V52 consolida rastreabilidade Go/No-Go antes da branch funcional; V53 define manifesto de filescope/teste/rollback antes do primeiro patch funcional; V54 executa um patch PUBLIC-A11Y pequeno no HTML gerado por `renderPostCard`; V55 complementa o mesmo componente com nome acessivel no badge de avaliacao; V56 marca icones decorativos de badges/preco/exemplo/verificacao; V57 normaliza o `alt` do avatar de autor; V58 tipa os botoes do modal de busca mobile e marca seus icones como decorativos; V59 adiciona nome acessivel ao input do modal e marca o icone de busca como decorativo; V61 tipa botoes dinamicos de comentarios e marca seus icones como decorativos.
@@ -249,14 +253,15 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 
 | Comando | Responsabilidade esperada |
 |---|---|
-| `npm run check:version` | Valida `VERSION.json`, branch canonica e runtime JS `8.6.0` |
-| `npm run check:structure` | Valida 156 itens estruturais + raiz `assets/js/` limpa |
-| `npm run check:scripts` | Valida cadeias de scripts nos 22 HTMLs |
-| `npm run check:routes` | Valida 17 rotas publicas + 5 admin |
+| `npm run check:version` | Valida `VERSION.json`, branch canonica e runtime JS `8.6.1` |
+| `npm run check:structure` | Valida 162 itens estruturais + raiz `assets/js/` limpa |
+| `npm run check:scripts` | Valida cadeias de scripts nos 26 HTMLs canonicos |
+| `npm run check:routes` | Valida 20 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantem 135/135 suites e 3076/3076 testes Jest |
-| `npm run test:e2e` | Evidencia Playwright; depende de ambiente local/provider |
+| `npm test` | Mantem 168/168 suites e 3512/3512 testes Jest |
+| `npx playwright test --list` | Lista 9 specs / 59 testes Playwright sem exigir ambiente local ativo |
+| `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 
 ---
@@ -265,7 +270,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 
 | Regra | Motivo |
 |---|---|
-| Manter `frontendRuntimeVersion=8.6.0` ate release funcional coordenado | Evita drift entre app documental e runtime JS |
+| Manter `frontendRuntimeVersion=8.6.1` ate release funcional coordenado | Evita drift entre app documental e runtime JS |
 | Usar `git mv` ao mover arquivos rastreados | Preserva historico Git |
 | Nao editar JS funcional, CSS de producao, HTMLs ou migrations em versoes documentais | Preserva estabilidade da plataforma |
 | Atualizar validadores quando a estrutura canonica mudar | Mantem `check:all` como fonte operacional |
