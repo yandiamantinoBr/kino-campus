@@ -66,6 +66,20 @@ Playwright: 9 specs · 59 testes listados
 
 **Regra imutável:** `npm test` DEVE sempre retornar `≥168 passed, 168 total` e `≥3512 passed, 3512 total`.
 
+### Gate CI essencial
+
+O workflow `.github/workflows/essential-validation.yml` roda em pull requests e pushes para `kinocampus-V75.0-foundations`:
+
+- `npm run check:version`
+- `npm run check:structure`
+- `npm run check:scripts`
+- `npm run check:routes`
+- `npm run check:hygiene`
+- `npm test -- --runInBand`
+- `npx playwright test --list`
+
+Esse gate cobre validação estrutural, Jest completo e inventário Playwright sem exigir browser real ou deploy.
+
 ---
 
 ## 3. Diretório unit/ — 25 suites
