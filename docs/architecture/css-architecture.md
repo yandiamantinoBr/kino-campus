@@ -1,8 +1,8 @@
 # Arquitetura CSS — KinoCampus
 
-**Versão:** v16.10.0 · **Atualizado em:** 2026-04-27
+**Versão:** v75.1.0 · **Atualizado em:** 2026-06-11
 
-> Documenta os 5 arquivos CSS de produção, quais páginas cada um serve,
+> Documenta os 7 arquivos CSS de produção, quais páginas cada um serve,
 > os 5 stubs `future-split/` e as convenções de desenvolvimento.
 
 ---
@@ -10,7 +10,7 @@
 ## Índice
 
 1. [Visão geral](#1-visão-geral)
-2. [Arquivos de produção — 5 arquivos](#2-arquivos-de-produção--5-arquivos)
+2. [Arquivos de produção — 7 arquivos](#2-arquivos-de-produção--7-arquivos)
 3. [CSS por página](#3-css-por-página)
 4. [Convenções CSS](#4-convenções-css)
 5. [future-split/ — 5 stubs](#5-future-split--5-stubs)
@@ -20,15 +20,17 @@
 
 ## 1. Visão geral
 
-O CSS do KinoCampus é **Vanilla CSS — sem preprocessador, sem CSS-in-JS, sem framework de UI**. Todo estilo de produção está em 5 arquivos carregados via `<link rel="stylesheet">` nos HTMLs canônicos.
+O CSS do KinoCampus é **Vanilla CSS — sem preprocessador, sem CSS-in-JS, sem framework de UI**. Todo estilo de produção está em 7 arquivos carregados via `<link rel="stylesheet">` nos HTMLs canônicos.
 
 ```
 assets/css/
-├── styles.css           ← 10.582 linhas — CSS principal (17 páginas públicas)
-├── kc-theme-boot.css    ←    213 linhas — prevenção de flash de tema (22 páginas)
-├── kc-public-shell.css  ←    943 linhas — shell de páginas com autenticação (5 páginas)
-├── admin-shell.css      ←  1.011 linhas — shell das 5 páginas admin
-├── product.css          ←  1.752 linhas — página de detalhe de produto (1 página)
+├── styles.css           ← 10.767 linhas — CSS principal
+├── kc-theme-boot.css    ←    183 linhas — prevenção de flash de tema
+├── kc-public-shell.css  ←    804 linhas — shell de páginas com autenticação
+├── admin-shell.css      ←  1.074 linhas — shell das 6 páginas admin
+├── kc-chat.css          ←    613 linhas — UI de conversa/chat
+├── product.css          ←  1.577 linhas — página de detalhe de produto
+├── product-lightbox.css ←    261 linhas — lightbox de mídia do produto
 └── future-split/                          — 5 stubs NÃO carregados em produção
     ├── 00-tokens.css    ←     23 linhas — placeholder: design tokens
     ├── 01-base.css      ←     25 linhas — placeholder: reset e tipografia
@@ -37,15 +39,15 @@ assets/css/
     └── 04-pages.css     ←     29 linhas — placeholder: overrides de página
 ```
 
-**Total em produção:** ~14.501 linhas · 5 arquivos
+**Total em produção:** ~15.279 linhas · 7 arquivos
 
 ---
 
-## 2. Arquivos de produção — 5 arquivos
+## 2. Arquivos de produção — 7 arquivos
 
-### `styles.css` — 10.582 linhas
+### `styles.css` — 10.767 linhas
 
-**Escopo:** CSS principal da plataforma. Carregado em todas as 17 páginas públicas.
+**Escopo:** CSS principal da plataforma. Carregado nas páginas públicas e também em páginas admin que compartilham tokens/layout base.
 
 **Conteúdo:**
 - **Design tokens** — variáveis CSS em `:root`:
@@ -76,9 +78,9 @@ assets/css/
 
 ---
 
-### `kc-theme-boot.css` — 213 linhas
+### `kc-theme-boot.css` — 183 linhas
 
-**Escopo:** Prevenção de flash de tema e CLS (Cumulative Layout Shift). Carregado em **todos os 22 HTMLs** — é o primeiro arquivo CSS carregado.
+**Escopo:** Prevenção de flash de tema e CLS (Cumulative Layout Shift). Carregado nos **26 HTMLs canônicos** — é o primeiro arquivo CSS carregado.
 
 **Conteúdo:**
 - `.kc-theme-preload *` — desativa transições CSS durante aplicação inicial do tema
@@ -87,13 +89,13 @@ assets/css/
 - `html.kc-loading .kc-feed-list` — reserva espaço do feed para evitar layout shift
 - Transições suaves na revelação pós-carregamento
 
-**Por que é carregado em todos os 22 HTMLs:** o mecanismo de prevenção de flash precisa estar ativo antes de qualquer renderização, inclusive em páginas admin.
+**Por que é carregado em todos os HTMLs canônicos:** o mecanismo de prevenção de flash precisa estar ativo antes de qualquer renderização, inclusive em páginas admin.
 
 ---
 
-### `kc-public-shell.css` — 943 linhas
+### `kc-public-shell.css` — 804 linhas
 
-**Escopo:** Shell de páginas que requerem autenticação ou têm estrutura específica de perfil/configurações. Carregado em 5 páginas públicas.
+**Escopo:** Shell de páginas que requerem autenticação, políticas ou estrutura específica de perfil/configurações. Carregado em páginas públicas selecionadas.
 
 **Conteúdo:**
 - Layout e componentes específicos do shell público autenticado
@@ -102,13 +104,13 @@ assets/css/
 - Setup de conta (wizard de configuração inicial)
 - Layout da página de ajuda
 
-**Páginas:** `auth-callback.html`, `ajuda.html`, `account-setup.html`, `profile.html`, `settings.html`
+**Páginas:** `auth-callback.html`, `ajuda.html`, `account-setup.html`, `profile.html`, `settings.html`, `privacidade.html`, `transparencia.html`, `termos.html`
 
 ---
 
-### `admin-shell.css` — 1.011 linhas
+### `admin-shell.css` — 1.074 linhas
 
-**Escopo:** Shell exclusivo das 5 páginas administrativas. Carregado via prefixo `../` (path relativo de `admin/`).
+**Escopo:** Shell exclusivo das 6 páginas administrativas. Carregado via prefixo `../` (path relativo de `admin/`).
 
 **Conteúdo:**
 - Layout do painel admin (sidebar, header admin, áreas de conteúdo)
@@ -117,11 +119,17 @@ assets/css/
 - Componentes de relatórios e denúncias
 - Componentes do dashboard (cards de métricas, gráficos SVG, audit log)
 
-**Páginas:** `admin/index.html`, `admin/moderation.html`, `admin/banners.html`, `admin/reports.html`, `admin/help-requests.html`
+**Páginas:** `admin/index.html`, `admin/moderation.html`, `admin/banners.html`, `admin/reports.html`, `admin/help-requests.html`, `admin/privacy-analytics.html`
 
 ---
 
-### `product.css` — 1.752 linhas
+### `kc-chat.css` — 613 linhas
+
+**Escopo:** UI de conversa/chat. Carregado quando fluxos de mensagens precisam do layout dedicado.
+
+---
+
+### `product.css` — 1.577 linhas
 
 **Escopo:** CSS exclusivo da página de detalhe de produto/publicação. Carregado apenas em `_product.html`.
 
@@ -137,63 +145,68 @@ assets/css/
 
 ---
 
-## 3. CSS por página
+### `product-lightbox.css` — 261 linhas
 
-### Páginas públicas (17 páginas)
+**Escopo:** CSS exclusivo do lightbox de mídia da página de produto. Carregado apenas em `_product.html`.
 
-| Página | styles.css | kc-theme-boot.css | kc-public-shell.css | product.css |
-|--------|:----------:|:-----------------:|:-------------------:|:-----------:|
-| `index.html` | ✅ | ✅ | — | — |
-| `_product.html` | ✅ | ✅ | — | ✅ |
-| `compra-venda-feed.html` | ✅ | ✅ | — | — |
-| `caronas-feed.html` | ✅ | ✅ | — | — |
-| `moradia.html` | ✅ | ✅ | — | — |
-| `eventos.html` | ✅ | ✅ | — | — |
-| `oportunidades.html` | ✅ | ✅ | — | — |
-| `achados-perdidos.html` | ✅ | ✅ | — | — |
-| `ods.html` | ✅ | ✅ | — | — |
-| `busca.html` | ✅ | ✅ | — | — |
-| `my-posts.html` | ✅ | ✅ | — | — |
-| `create-post.html` | ✅ | ✅ | — | — |
-| `login.html` | ✅ | ✅ | — | — |
-| `profile.html` | ✅ | ✅ | ✅ | — |
-| `settings.html` | ✅ | ✅ | ✅ | — |
-| `account-setup.html` | ✅ | ✅ | ✅ | — |
-| `ajuda.html` | ✅ | ✅ | ✅ | — |
-| `auth-callback.html` | ✅ | ✅ | ✅ | — |
+---
 
-### Páginas admin (5 páginas)
+## 3. CSS por pagina
 
-| Página | admin-shell.css | kc-theme-boot.css |
-|--------|:---------------:|:-----------------:|
-| `admin/index.html` | ✅ | ✅ (via `../`) |
-| `admin/moderation.html` | ✅ | ✅ (via `../`) |
-| `admin/banners.html` | ✅ | ✅ (via `../`) |
-| `admin/reports.html` | ✅ | ✅ (via `../`) |
-| `admin/help-requests.html` | ✅ | ✅ (via `../`) |
+Matriz gerada a partir dos 26 HTMLs canonicos listados em `scripts/admin-pages.manifest.js`.
 
-> **Nota:** Páginas admin não carregam `styles.css` — usam `admin-shell.css` como único CSS de conteúdo.
+| Pagina | `styles.css` | `kc-theme-boot.css` | `kc-public-shell.css` | `admin-shell.css` | `kc-chat.css` | `product.css` | `product-lightbox.css` |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `index.html` | sim | sim | - | - | - | - | - |
+| `_product.html` | sim | sim | - | - | - | sim | sim |
+| `account-setup.html` | sim | sim | sim | - | - | - | - |
+| `achados-perdidos.html` | sim | sim | - | - | - | - | - |
+| `ajuda.html` | sim | sim | sim | - | - | - | - |
+| `auth-callback.html` | sim | sim | sim | - | - | - | - |
+| `caronas-feed.html` | sim | sim | - | - | - | - | - |
+| `compra-venda-feed.html` | sim | sim | - | - | - | - | - |
+| `create-post.html` | sim | sim | - | - | - | - | - |
+| `eventos.html` | sim | sim | - | - | - | - | - |
+| `moradia.html` | sim | sim | - | - | - | - | - |
+| `my-posts.html` | sim | sim | - | - | - | - | - |
+| `ods.html` | sim | sim | - | - | - | - | - |
+| `oportunidades.html` | sim | sim | - | - | - | - | - |
+| `profile.html` | sim | sim | sim | - | - | - | - |
+| `privacidade.html` | sim | sim | sim | - | - | - | - |
+| `search-results.html` | sim | sim | - | - | - | - | - |
+| `settings.html` | sim | sim | sim | - | - | - | - |
+| `transparencia.html` | sim | sim | sim | - | - | - | - |
+| `termos.html` | sim | sim | sim | - | - | - | - |
+| `admin/index.html` | sim | sim | - | sim | - | - | - |
+| `admin/moderation.html` | sim | sim | - | sim | - | - | - |
+| `admin/reports.html` | sim | sim | - | sim | - | - | - |
+| `admin/banners.html` | sim | sim | - | sim | - | - | - |
+| `admin/help-requests.html` | sim | sim | - | sim | - | - | - |
+| `admin/privacy-analytics.html` | sim | sim | - | sim | - | - | - |
+
+> Nota: `mensagens.html` existe na raiz, mas ainda nao faz parte do manifest canonico validado por `check:scripts`/`check:routes`.
 
 ### Tag de carregamento no HTML
 
 ```html
 <!-- Páginas públicas (raiz) -->
-<link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.0" />
-<link rel="stylesheet" href="assets/css/styles.css?v=8.6.0" />
+<link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.1" />
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.1" />
 
 <!-- Páginas com public shell -->
-<link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.0" />
-<link rel="stylesheet" href="assets/css/styles.css?v=8.6.0" />
-<link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.0" />
+<link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.1" />
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.1" />
+<link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
 
 <!-- Página de produto -->
-<link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.0" />
-<link rel="stylesheet" href="assets/css/styles.css?v=8.6.0" />
-<link rel="stylesheet" href="assets/css/product.css?v=8.6.0" />
+<link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.1" />
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.1" />
+<link rel="stylesheet" href="assets/css/product.css?v=8.6.1" />
+<link rel="stylesheet" href="assets/css/product-lightbox.css?v=8.6.1" />
 
 <!-- Páginas admin (path relativo com ../) -->
-<link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.0" />
-<link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.0" />
+<link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1" />
+<link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.1" />
 ```
 
 ---
@@ -303,7 +316,7 @@ Os arquivos em `assets/css/future-split/` são **placeholders documentais** cria
 
 ### Por que existem
 
-A motivação é separar o monolítico `styles.css` (10.582 linhas) em módulos menores para:
+A motivação é separar o monolítico `styles.css` (10.767 linhas) em módulos menores para:
 - Facilitar manutenção e localização de estilos
 - Habilitar loading crítico seletivo (ex: carregar apenas tokens + base nas páginas simples)
 - Alinhar a estrutura CSS com a estrutura JS modular
@@ -312,8 +325,8 @@ A motivação é separar o monolítico `styles.css` (10.582 linhas) em módulos 
 
 O split de `styles.css` em `future-split/` **não foi executado** porque requer:
 1. Auditoria completa de todos os seletores para identificar onde cada regra pertence
-2. Teste visual em todas as 22 páginas (sem E2E visual automatizado atualmente)
-3. Atualização dos `<link>` em todos os 22 HTMLs
+2. Teste visual em todas as 26 páginas canônicas (sem E2E visual automatizado atualmente)
+3. Atualização dos `<link>` em todos os 26 HTMLs canônicos
 4. Atualização do `check:routes` e `check:structure` para os novos arquivos
 5. Aprovação explícita — é uma mudança de alto risco
 
@@ -343,7 +356,7 @@ O split de `styles.css` em `future-split/` **não foi executado** porque requer:
 ❌ Adicionar estilos inline via style="" nos HTMLs
    → Viola separação de responsabilidades; difícil manutenção
 
-❌ Criar um 6º arquivo CSS de produção sem aprovação explícita
+❌ Criar um 8º arquivo CSS de produção sem aprovação explícita
    → O padrão de carregamento (check:routes) precisaria ser atualizado
 
 ❌ Usar !important exceto em casos de override de terceiros documentados
@@ -358,7 +371,7 @@ O split de `styles.css` em `future-split/` **não foi executado** porque requer:
 Todos os arquivos CSS são servidos com cache-busting via query string:
 
 ```html
-<link rel="stylesheet" href="assets/css/styles.css?v=8.6.0" />
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.1" />
 ```
 
-O valor `8.6.0` corresponde ao `frontendRuntimeVersion` constante (nunca alterar). A invalidação de cache em produção é feita pelo Vercel automaticamente a cada deploy.
+O valor `8.6.1` corresponde ao `frontendRuntimeVersion` atual. A invalidação de cache em produção também é feita pelo Vercel a cada deploy.

@@ -1,5 +1,7 @@
 # RELATORIO KINOCAMPUS V75 — PUBLIC-A11Y kc-ranking Decorative Icons
 
+> Nota 2026-06-11: este relatorio e historico da v75.0.0. O estado operacional atual do repositorio esta em `VERSION.json` (`appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`) e no `CHANGELOG.md`.
+
 **Versao:** 75.0.0
 **Data:** 2026-05-05
 **Branch:** kinocampus-V75.0-foundations

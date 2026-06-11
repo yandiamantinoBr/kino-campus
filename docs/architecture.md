@@ -6,21 +6,21 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v16.11.0** — contagens pós-V15 (reorganização completa de `assets/js/`).
+> **Atualizado em v75.1.0 (2026-06-11)** — contagens pós-performance phase 1 e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
-| páginas HTML públicas na raiz | `17` |
-| páginas HTML administrativas | `5` |
-| total de páginas HTML | `22` |
-| módulos JS em `assets/js/` (13 grupos canônicos) | `~84` |
-| controllers em `assets/js/controllers/` (public + admin) | `41` |
-| adapters em `assets/js/adapters/` (local + supabase) | `19` |
+| páginas HTML públicas na raiz | `21` |
+| páginas HTML administrativas | `6` |
+| total de páginas HTML | `27` |
+| arquivos JS em `assets/js/` (13 grupos canônicos) | `149` |
+| controllers em `assets/js/controllers/` (public + admin) | `48` |
+| adapters em `assets/js/adapters/` (local + supabase) | `21` |
 | componentes em `assets/js/components/` | `3` |
-| arquivos CSS em `assets/css/` (produção) | `5` |
-| suites de teste Jest em `tests/` | `135` |
-| testes Jest totais | `3076` |
-| suites E2E Playwright | `8` |
+| arquivos CSS em `assets/css/` (produção) | `7` |
+| suites de teste Jest em `tests/` | `168` |
+| testes Jest totais | `3512` |
+| specs E2E Playwright | `9` |
 
 ## Princípio estrutural
 
@@ -59,37 +59,40 @@ Em produção, o build `node scripts/inject-env.js` injeta os valores e força o
 
 ## Camadas do app
 
-### Camada 1 - bootstrap (`assets/js/boot/`, 6 módulos)
+### Camada 1 - bootstrap (`assets/js/boot/`, 9 módulos)
 
 - `assets/js/boot/kc-constants.js`
 - `assets/js/boot/kc-env.js`
 - `assets/js/boot/kc-feature-flags.js`
+- `assets/js/boot/kc-google-tag.js`
+- `assets/js/boot/kc-seo-structured-data.js`
+- `assets/js/boot/kc-speed-insights.js`
 - `assets/js/boot/kc-sw-register.js`
 - `assets/js/boot/kc-telemetry.js`
 - `assets/js/boot/kc-theme-boot.js`
 - `assets/css/kc-theme-boot.css`
 
-### Camada 2 - utils e API (`assets/js/utils/` + `assets/js/api/`, 24 módulos)
+### Camada 2 - utils e API (`assets/js/utils/` + `assets/js/api/`, 25 módulos)
 
 - `assets/js/utils/kc-utils.js` + sub-módulos `kc-utils.string.js`, `kc-utils.format.js`, `kc-utils.dom.js`, `kc-utils.identity.js`, `kc-utils.taxonomy.js`, `kc-utils.location.js`, `kc-utils.presentation.js`
-- `assets/js/api/kc-api.client.js` (fachada) + sub-módulos `kc-api.posts-feed.js`, `kc-api.posts-read.js`, `kc-api.posts-write.js`, `kc-api.auth.js`, `kc-api.profiles.js`, `kc-api.notifications.js`, `kc-api.comments-votes.js`, `kc-api.ratings.js`, `kc-api.related.js`, `kc-api.saved.js`, `kc-api.help.js`, `kc-supabase-facade.js`, `kc-i18n.js`
+- `assets/js/api/kc-api.client.js` (fachada) + sub-módulos `kc-api.posts-feed.js`, `kc-api.posts-read.js`, `kc-api.posts-write.js`, `kc-api.auth.js`, `kc-api.profiles.js`, `kc-api.notifications.js`, `kc-api.comments-votes.js`, `kc-api.ratings.js`, `kc-api.related.js`, `kc-api.saved.js`, `kc-api.help.js`, `kc-api.chat.js`, `kc-supabase.client.js`, `kc-supabase.posts.js`, `kc-supabase.ratings.js`, `admin-shell.js`
 
-### Camada 3 - adapters (`assets/js/adapters/`, 19 módulos)
+### Camada 3 - adapters (`assets/js/adapters/`, 21 módulos)
 
-- Local (8): `local.adapter.js`, `local.posts-read.adapter.js`, `local.posts-write.adapter.js`, `local.notifications.adapter.js`, `local.ratings.adapter.js`, `local.saved.adapter.js`, `local.profile.adapter.js`, `local.help.adapter.js`
-- Supabase (11): `supabase.adapter.js`, `supabase.posts-read.adapter.js`, `supabase.posts-write.adapter.js`, `supabase.profiles.adapter.js`, `supabase.notifications.adapter.js`, `supabase.comments.adapter.js`, `supabase.votes.adapter.js`, `supabase.saved.adapter.js`, `supabase.media.adapter.js`, `supabase.analytics.adapter.js`, `supabase.admin.adapter.js`
+- Local (9): `local.adapter.js`, `local.posts-read.adapter.js`, `local.posts-write.adapter.js`, `local.notifications.adapter.js`, `local.ratings.adapter.js`, `local.saved.adapter.js`, `local.profile.adapter.js`, `local.help.adapter.js`, `local.chat.adapter.js`
+- Supabase (12): `supabase.adapter.js`, `supabase.posts-read.adapter.js`, `supabase.posts-write.adapter.js`, `supabase.profiles.adapter.js`, `supabase.notifications.adapter.js`, `supabase.comments.adapter.js`, `supabase.votes.adapter.js`, `supabase.saved.adapter.js`, `supabase.media.adapter.js`, `supabase.analytics.adapter.js`, `supabase.admin.adapter.js`, `supabase.chat.adapter.js`
 
 ### Camada 4 - core e features compartilhadas (`assets/js/core/` + `assets/js/features/` + `assets/js/shared/`)
 
-- Core (11): `kc-auth-callback.js`, `kc-auth.ui.js`, `kc-core.js`, `kc-core-widgets.js`, `kc-notifications.js`, `kc-post-model.js`, `kc-profiles.client.js`, `kc-public-shell.js`, `kc-theme.js`, `kc-user-posts.js`, `kc-supabase.client.js`
-- Features (17): `kc-create-post.js` + 6 sub-módulos; `kc-feed.controller.js`, `kc-search.shared.js`, `kc-lazy-loader.js`, outros
-- Shared (7): `kc-banners.js`, `kc-comments.shared.js`, `kc-ranking.js`, outros
+- Core (12): `kc-auth-callback.js`, `kc-auth.ui.js`, `kc-consent.js`, `kc-core.js`, `kc-core-widgets.js`, `kc-i18n.js`, `kc-notifications.js`, `kc-post-model.js`, `kc-profiles.client.js`, `kc-public-shell.js`, `kc-theme.js`, `kc-user-posts.js`
+- Features (23): `kc-create-post.js` + 6 sub-módulos; `kc-ads.js`, `kc-events-calendar.js`, `kc-privacy-analytics.js`, `kc-search.js`, `kc-lazy-loader.js`, outros
+- Shared (7): `account-profile.shared.js`, `help.shared.js`, `home-categories.shared.js`, `kc-comments.shared.js`, `kc-search.shared.js`, `ods.shared.js`, `search-analytics.shared.js`
 
-### Camada 5 - controllers de página (`assets/js/controllers/`, 41 controllers)
+### Camada 5 - controllers de página (`assets/js/controllers/`, 48 controllers)
 
-Públicos (31): um controller principal por página pública + auxiliares (`product.*.js` ×8, `profile.*.js` ×4)
+Públicos (33): um controller principal por página pública + auxiliares (`product.*.js` ×11, `profile.*.js` ×4)
 
-Admin (10): `admin-dashboard.controller.js` + 3 auxiliares (`metrics`, `audit`, `charts`, `shared`) + `admin-moderation.controller.js`, `admin-reports.controller.js`, `admin-banners.controller.js`, `admin-help-requests.controller.js`, `admin-invite.controller.js`
+Admin (15): `admin-dashboard.controller.js` + auxiliares (`metrics`, `audit`, `charts`, `privacy`, `shared`, `export`) + `admin-moderation.controller.js`, `admin-reports.controller.js`, `admin-banners.controller.js`, `admin-help-requests.controller.js`, `admin-invite.controller.js`, `admin-external-access.controller.js`, `admin-feed-ads.controller.js`, `admin-privacy-analytics.controller.js`
 
 ## Fluxos principais
 
@@ -171,11 +174,13 @@ A linha v10 consolidou:
 
 | Arquivo | Tamanho aprox. | Papel |
 |---------|----------------|-------|
-| `assets/css/styles.css` | `235.4 KB` | base global de layout, componentes e tema |
-| `assets/css/product.css` | `43.4 KB` | especificidades da página de produto |
-| `assets/css/admin-shell.css` | `26.3 KB` | shell e responsividade do admin |
-| `assets/css/kc-public-shell.css` | `16.8 KB` | páginas públicas compartilhadas e superfícies de perfil |
-| `assets/css/kc-theme-boot.css` | `5.6 KB` | CSS crítico anti-FOUC |
+| `assets/css/styles.css` | `281.0 KB` | base global de layout, componentes e tema |
+| `assets/css/product.css` | `44.3 KB` | especificidades da página de produto |
+| `assets/css/admin-shell.css` | `33.2 KB` | shell e responsividade do admin |
+| `assets/css/kc-public-shell.css` | `20.0 KB` | páginas públicas compartilhadas e superfícies de perfil |
+| `assets/css/kc-chat.css` | `16.0 KB` | UI de conversa/chat |
+| `assets/css/kc-theme-boot.css` | `5.8 KB` | CSS crítico anti-FOUC |
+| `assets/css/product-lightbox.css` | `7.9 KB` | lightbox de mídia da página de produto |
 
 ## Regras de equivalência
 
@@ -191,5 +196,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 
 - **v16.11.0 (2026-04-27):** contagens e caminhos atualizados para refletir a estrutura pós-V15 (13 grupos canônicos, 41 controllers, 19 adapters, 134 suites). Monolitos técnicos decompostos entre v11–v15.
 - **v17.5.0 (2026-04-28):** estrutura documental reorganizada — diretórios históricos `audits`, `legacy` e `releases` sob `docs/` consolidados em `docs/archive/` com 10 subdirs canônicos. README.md reduzido de 534L para 159L.
-- `frontendRuntimeVersion` permanece em `8.6.0` (constante canônica imutável).
+- **v75.1.0 (2026-06-11):** estado operacional verificado em `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`, 168 suites Jest / 3512 testes e 9 specs Playwright listadas.
+- `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

@@ -1,6 +1,6 @@
 # Guia de Desenvolvimento para IA — KinoCampus
 
-**Versão:** v75.0.0 · **Atualizado em:** 2026-05-05
+**Versão:** v75.1.0 · **Atualizado em:** 2026-06-11
 
 > **Leia este documento integralmente antes de qualquer modificação.**
 > Este guia é auto-contido: uma IA sem contexto anterior deve conseguir trabalhar
@@ -38,52 +38,52 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Backend | Supabase (PostgreSQL + Auth + Storage + Edge Functions + Realtime) | — |
 | Hosting | Vercel | `vercel.json` é imutável sem aprovação explícita |
 | Build | `node scripts/inject-env.js` | Substitui placeholders `__KC_*__` nas variáveis |
-| Testes | Jest (135 suites) + Playwright (8 suites E2E) | Nunca reduzir contagem |
+| Testes | Jest (168 suites) + Playwright (9 specs E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v75)
+### Estado atual (v75.1)
 
 | Campo | Valor |
 |-------|-------|
 | Branch principal | `kinocampus-V75.0-foundations` |
 | Branch de features | `feature/v75.X.Y-descricao-curta` |
-| appVersion | `75.0.0` (v75 encerrada; patch PUBLIC-A11Y pontual documentado em `docs/qa/reports/`) |
-| frontendRuntimeVersion | `8.6.0` (constante canônica — **nunca alterar**) |
-| Jest | 135 suites · 3076 testes |
+| appVersion | `75.1.0` (performance phase 1; Speed Insights mergeado no PR #549) |
+| frontendRuntimeVersion | `8.6.1` (constante canonica do runtime atual) |
+| Jest | 168 suites · 3512 testes |
 | check:all | 5/5 validators verdes |
-| Itens validados (check:structure) | 156 |
+| Itens validados (check:structure) | 162 |
 
 ### Onde fica cada coisa
 
 ```
 kino-campus/
 ├── assets/js/                  ← Todo JavaScript do frontend
-│   ├── boot/          (6)      ← kc-constants.js, kc-env.js, kc-feature-flags.js, ...
-│   ├── core/         (11)      ← kc-auth.ui.js, kc-notifications.js, kc-core.js, ...
-│   ├── api/          (16)      ← kc-api.client.js (fachada KCAPI) + sub-módulos
+│   ├── boot/          (9)      ← kc-constants.js, kc-env.js, kc-feature-flags.js, ...
+│   ├── core/         (12)      ← kc-auth.ui.js, kc-notifications.js, kc-core.js, ...
+│   ├── api/          (17)      ← kc-api.client.js (fachada KCAPI) + sub-módulos
 │   ├── utils/         (8)      ← kc-utils.js + sub-módulos _KCU.*
-│   ├── features/     (10)      ← funcionalidades de página: feed, search, create, ...
+│   ├── features/     (16)      ← funcionalidades de página: feed, search, create, ...
 │   ├── features/create-post/ (7)
 │   ├── shared/        (7)      ← componentes reutilizáveis entre páginas
 │   ├── legacy-shims/  (1)      ← compatibilidade retroativa
 │   ├── components/    (3)      ← carousel.js, toast.js, voting.js
-│   ├── adapters/local/   (8)   ← driver de dados local (localStorage + JSON)
-│   └── adapters/supabase/(11)  ← driver de dados Supabase (produção)
+│   ├── adapters/local/   (9)   ← driver de dados local (localStorage + JSON)
+│   └── adapters/supabase/(12)  ← driver de dados Supabase (produção)
 │   controllers/
-│   ├── public/       (31)      ← 1 controller por página pública
-│   └── admin/        (10)      ← controllers das 5 páginas admin
-├── assets/css/                 ← 5 arquivos CSS de produção
+│   ├── public/       (33)      ← controllers das páginas públicas
+│   └── admin/        (15)      ← controllers das páginas admin
+├── assets/css/                 ← 7 arquivos CSS de produção
 ├── assets/css/future-split/    ← stubs não carregados (não modificar)
 ├── data/database.json          ← fixture para driver local
 ├── docs/                       ← Toda documentação técnica
 ├── scripts/                    ← 5 validators + inject-env.js
-├── tests/                      ← 135 suites Jest
-│   ├── unit/         (22)
-│   ├── integration/  (90)
-│   ├── contract/      (7)
-│   ├── structure/    (10)
+├── tests/                      ← 168 suites Jest
+│   ├── unit/         (25)
+│   ├── integration/ (118)
+│   ├── contract/      (8)
+│   ├── structure/    (12)
 │   ├── a11y/          (5)
-│   └── e2e/           (8)      ← Playwright
+│   └── e2e/           (9)      ← Playwright specs
 └── VERSION.json                ← Fonte de verdade de versão
 ```
 
@@ -99,7 +99,7 @@ kino-campus/
 3. git checkout -b feature/v75.X.Y-descricao-curta
 4. [ implementar mudanças ]
 5. npm run check:all          ← DEVE ser 5/5 verdes
-   npm test                   ← DEVE ser ≥135/135 suites, ≥3076/3076 testes
+   npm test                   ← DEVE ser ≥168/168 suites, ≥3512/3512 testes
 6. git add <arquivos específicos>
 7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 8. git push -u origin feature/v75.X.Y-descricao-curta
@@ -115,13 +115,13 @@ kino-campus/
 feature/v75.X.Y-descricao-curta
 
 Exemplos válidos:
-  feature/v65.1.0-public-a11y-post-card-comments
-  feature/v65.2.0-public-a11y-card-labels
-  feature/v65.3.0-public-a11y-rendered-content
+  feature/v75.1.1-docs-sync
+  feature/v75.2.0-public-a11y-follow-up
+  feature/v75.3.0-admin-privacy-analytics
 
 Proibido:
   main, master, develop, fix/..., hotfix/...
-  Qualquer nome sem o prefixo feature/v70.X.Y-
+  Qualquer nome sem o prefixo feature/v75.X.Y-
 ```
 
 ### Regras do PR
@@ -136,7 +136,7 @@ Proibido:
 
 ```bash
 npm run check:all    # OBRIGATÓRIO — deve exibir 5 "OK" em sequência
-npm test             # OBRIGATÓRIO — deve exibir "135 passed, 135 total"
+npm test             # OBRIGATÓRIO — deve exibir "168 passed, 168 total"
 ```
 
 Se qualquer check falhar → corrigir antes de commitar. Nunca commitar com falha.
@@ -175,7 +175,7 @@ window.MeuModulo = new MeuModulo();
 
 ```javascript
 // ✅ CORRETO
-window.KC_CONSTANTS = Object.freeze({ VERSION: '8.6.0', ... });
+window.KC_CONSTANTS = Object.freeze({ VERSION: '8.6.1', ... });
 window.KCAPI = Object.freeze({ getPosts, createPost, signIn, ... });
 window.KCUtils = Object.freeze({ escapeHtml, normalizeText, ... });
 
@@ -280,11 +280,11 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 
 **O que verifica:**
 - `VERSION.json` existe e tem todos os 6 campos obrigatórios: `project`, `appVersion`, `frontendRuntimeVersion`, `branch`, `status`, `updatedAt`
-- `frontendRuntimeVersion` é exatamente `"8.6.0"` (constante canônica imutável)
+- `frontendRuntimeVersion` é exatamente `"8.6.1"` (constante canônica atual do runtime)
 - `branch` é exatamente `"kinocampus-V75.0-foundations"`
 - `appVersion` tem formato semântico `X.Y.Z`
 - `updatedAt` tem formato `YYYY-MM-DD`
-- A string `'8.6.0'` aparece literalmente em ~17 arquivos JS (todos devem bater)
+- A string `'8.6.1'` aparece literalmente nos arquivos JS versionados do runtime (todos devem bater)
 
 **Como corrigir:**
 
@@ -292,15 +292,15 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 // VERSION.json — campos obrigatórios
 {
   "project": "KinoCampus",
-  "appVersion": "75.0.0",
-  "frontendRuntimeVersion": "8.6.0",
+  "appVersion": "75.1.0",
+  "frontendRuntimeVersion": "8.6.1",
   "branch": "kinocampus-V75.0-foundations",
-  "status": "v75 encerrada",
-  "updatedAt": "2026-05-05"
+  "status": "v75.1 performance phase 1",
+  "updatedAt": "2026-05-21"
 }
 ```
 
-Nunca altere `frontendRuntimeVersion` — é `8.6.0` para sempre nesta baseline.
+Nunca altere `frontendRuntimeVersion` sem release coordenado — a baseline atual é `8.6.1`.
 
 ---
 
@@ -308,9 +308,9 @@ Nunca altere `frontendRuntimeVersion` — é `8.6.0` para sempre nesta baseline.
 
 **O que verifica:**
 - Todos os diretórios em `REQUIRED_DIRS` existem (inclui `assets/js/components`)
-- Todos os 72 arquivos em `CANONICAL_JS` existem nos seus caminhos exatos
+- Todos os arquivos em `CANONICAL_JS` existem nos seus caminhos exatos
 - A raiz `assets/js/` está **vazia** (zero arquivos `.js` direto na raiz)
-- Total: **156 itens verificados**
+- Total: **162 itens verificados**
 
 **Como corrigir se falhar:**
 
@@ -341,7 +341,7 @@ var CANONICAL_JS = [
 ### `check:scripts` — `scripts/validate-script-chains.js`
 
 **O que verifica:**
-- Os 22 HTMLs canônicos contêm a cadeia de boot obrigatória **na ordem correta**:
+- Os 26 HTMLs canônicos contêm a cadeia de boot obrigatória **na ordem correta**:
   ```
   assets/js/boot/kc-constants.js
   assets/js/boot/kc-env.js
@@ -357,20 +357,20 @@ var CANONICAL_JS = [
 → Reordenar as tags <script defer> para que kc-constants.js venha primeiro.
 
 [validate-script-chains] ERRO: _events.html — kc-feature-flags.js não encontrado
-→ Adicionar <script defer src="../assets/js/boot/kc-feature-flags.js?v=8.6.0"></script>
+→ Adicionar <script defer src="../assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
    (prefixo ../ para páginas em subdiretórios, assets/ para páginas na raiz)
 ```
 
 **Padrão de tag script em páginas da raiz:**
 ```html
-<script defer src="assets/js/boot/kc-constants.js?v=8.6.0"></script>
-<script defer src="assets/js/boot/kc-env.js?v=8.6.0"></script>
+<script defer src="assets/js/boot/kc-constants.js?v=8.6.1"></script>
+<script defer src="assets/js/boot/kc-env.js?v=8.6.1"></script>
 ```
 
 **Padrão de tag script em páginas admin (`admin/*.html`):**
 ```html
-<script defer src="../assets/js/boot/kc-constants.js?v=8.6.0"></script>
-<script defer src="../assets/js/boot/kc-env.js?v=8.6.0"></script>
+<script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
+<script defer src="../assets/js/boot/kc-env.js?v=8.6.1"></script>
 ```
 
 ---
@@ -378,7 +378,7 @@ var CANONICAL_JS = [
 ### `check:routes` — `scripts/validate-public-routes.js`
 
 **O que verifica:**
-- 22 rotas declaradas em `vercel.json` correspondem aos 22 arquivos HTML existentes
+- 26 rotas declaradas em `vercel.json` correspondem aos 26 arquivos HTML existentes
 - CSS de produção (`styles.css`, `kc-theme-boot.css`, etc.) está presente
 
 **Como corrigir:**
@@ -401,18 +401,18 @@ var CANONICAL_JS = [
 
 | Gate | O que verifica |
 |------|----------------|
-| `runVersionChecks()` | String `'8.6.0'` em ~17 arquivos JS canônicos |
-| `runI18nB2GateChecks()` | `kc-i18n.js` ≥440 chaves, ≥800 linhas; 22 HTMLs com ≥189 `data-i18n-aria-label`, ≥59 `data-i18n-placeholder`, ≥55 `data-i18n-tooltip`, ≥5 `data-i18n-alt` |
-| `runKcUtilsChainChecks()` | Cadeia `kc-utils.string → format → dom → identity → taxonomy → location → presentation → kc-utils.js` em 22 HTMLs |
-| `runInlineHandlerChecks()` | Nenhum `on*=` inline nos 22 HTMLs (`onclick=`, `onsubmit=`, etc.) |
+| `runVersionChecks()` | String `'8.6.1'` nos arquivos JS versionados do runtime |
+| `runI18nB2GateChecks()` | `kc-i18n.js` ≥440 chaves, ≥800 linhas; HTMLs canônicos com `data-i18n-aria-label`, `data-i18n-placeholder`, `data-i18n-tooltip` e `data-i18n-alt` |
+| `runKcUtilsChainChecks()` | Cadeia `kc-utils.string → format → dom → identity → taxonomy → location → presentation → kc-utils.js` nos HTMLs canônicos |
+| `runInlineHandlerChecks()` | Nenhum `on*=` inline nos HTMLs canônicos (`onclick=`, `onsubmit=`, etc.) |
 | `runScriptChainChecks()` | Cadeias canônicas: local adapters, supabase adapters, admin-dashboard, profile |
 | `runA11yStructureChecks()` | `<h1>` único por página, skip link, `<main id="kc-main">`, nav com `aria-label` |
 
 **Como corrigir cada gate:**
 
 ```
-Hygiene FAILED: kc-api.client.js — string '8.6.0' não encontrada
-→ O arquivo perdeu a declaração VERSION = '8.6.0'. Restaurar a constante.
+Hygiene FAILED: kc-api.client.js — string '8.6.1' não encontrada
+→ O arquivo perdeu a declaração VERSION = '8.6.1'. Restaurar a constante.
 
 Hygiene FAILED: _eventos.html — inline handler detectado: onclick="..."
 → Remover o atributo onclick e usar addEventListener() no JS.
@@ -473,7 +473,7 @@ const path = require('path');
 
 // Configurar globals necessários (simular browser)
 global.window = {};
-global.window.KC_CONSTANTS = { VERSION: '8.6.0' };
+global.window.KC_CONSTANTS = { VERSION: '8.6.1' };
 
 // Carregar o módulo sendo testado
 eval(fs.readFileSync(
@@ -509,7 +509,7 @@ describe('MeuModulo', () => {
 
 **Nunca reduzir o número de suites ou de testes.**
 
-- Antes de commitar: `npm test` deve mostrar `≥135 passed, 135 total` e `≥3076 passed, 3076 total`
+- Antes de commitar: `npm test` deve mostrar `≥168 passed, 168 total` e `≥3512 passed, 3512 total`
 - Se uma nova suite é criada, a contagem sobe — o gate da suite nova deve ser documentado no commit
 - Nunca deletar suites existentes
 - Nunca comentar ou pular testes (`it.skip`, `describe.skip`) sem aprovação explícita
@@ -538,9 +538,9 @@ describe('MeuModulo', () => {
 |---------|-----------|
 | Arquitetura geral | `docs/architecture.md` |
 | Estrutura do repositório | `docs/architecture/repository-structure.md` |
-| Catálogo de módulos (~84) | `docs/architecture/module-catalog.md` |
-| Catálogo de controllers (41) | `docs/architecture/controllers-catalog.md` |
-| Ordem de scripts nos 22 HTMLs | `docs/architecture/script-loading-reference.md` |
+| Catálogo de módulos | `docs/architecture/module-catalog.md` |
+| Catálogo de controllers (48) | `docs/architecture/controllers-catalog.md` |
+| Ordem de scripts nos 26 HTMLs | `docs/architecture/script-loading-reference.md` |
 | Fluxo de dados ponta a ponta | `docs/architecture/data-flow-guide.md` |
 | Este guia (comportamento de IA) | `docs/architecture/ai-development-guide.md` |
 | Estratégia de testes | `docs/architecture/test-strategy.md` |
@@ -616,7 +616,7 @@ git commit -m "$(cat <<'EOF'
 fix(validator): adiciona components/ ao CANONICAL_JS
 
 carousel.js, toast.js e voting.js estavam faltando da lista de
-arquivos canônicos. Validator agora verifica 156 itens (baseline v72).
+arquivos canônicos. Validator agora verifica 162 itens (baseline v75.1).
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 EOF
@@ -687,7 +687,7 @@ git add -A
 |----------|--------|
 | Deletar suites existentes | Reduz cobertura; vide regra de ouro |
 | `it.skip` ou `describe.skip` sem aprovação | Mascara falhas |
-| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 135/3076 |
+| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 168/3512 |
 | Commitar com `npm test` com falhas | Proibido terminantemente |
 
 ### Validators
@@ -697,7 +697,7 @@ git add -A
 | Commitar com `check:all` falhando | Proibido terminantemente |
 | Remover entradas de `CANONICAL_JS` | Reduz gate de integridade |
 | Remover entradas de `REQUIRED_DIRS` | Idem |
-| Alterar `frontendRuntimeVersion` | Constante canônica = `8.6.0` para sempre |
+| Alterar `frontendRuntimeVersion` | Constante canônica atual = `8.6.1`; exige release coordenado |
 | Rebaixar thresholds dos validators | Enfraquece a proteção estrutural |
 
 ---
@@ -711,7 +711,7 @@ git add -A
 | Quais scripts cada HTML carrega e em que ordem | `docs/architecture/script-loading-reference.md` |
 | Como os dados fluem de controller → KCAPI → adapter → banco | `docs/architecture/data-flow-guide.md` |
 | Estrutura do repositório, grupos JS, namespaces, delta de versões | `docs/architecture/repository-structure.md` |
-| Onde adicionar novos testes, estrutura das 135 suites | `docs/architecture/test-strategy.md` |
+| Onde adicionar novos testes, estrutura das 168 suites | `docs/architecture/test-strategy.md` |
 | CSS em produção, `future-split/`, convenções | `docs/architecture/css-architecture.md` |
 | Arquitetura geral, camadas, hotspots | `docs/architecture.md` |
 | Métodos públicos de KCAPI, contratos de retorno | `docs/api-contract.md` |
@@ -767,12 +767,12 @@ npm run check:all
 
 # Individualmente
 npm run check:version    # VERSION.json válido
-npm run check:structure  # 156 itens + raiz limpa
-npm run check:scripts    # cadeia de boot nos 22 HTMLs
-npm run check:routes     # 22 rotas + CSS
-npm run check:hygiene    # 8.6.0, i18n B2, inline handlers, cadeias
+npm run check:structure  # 162 itens + raiz limpa
+npm run check:scripts    # cadeia de boot nos 26 HTMLs
+npm run check:routes     # 26 rotas + CSS
+npm run check:hygiene    # 8.6.1, i18n B2, inline handlers, cadeias
 
 # Testes
-npm test                 # 135 suites · 3076 testes
-npm run test:e2e         # 8 suites Playwright · 51 testes
+npm test                 # 168 suites · 3512 testes
+npx playwright test --list # 9 specs Playwright · 59 testes listados
 ```
