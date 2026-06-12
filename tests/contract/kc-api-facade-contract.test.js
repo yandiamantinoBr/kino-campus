@@ -11,10 +11,12 @@ const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.client.js');
 const DIAGNOSTICS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.diagnostics.js');
 const SESSION_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.session.js');
 const FILTERS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.filters.js');
+const AUTHORS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.authors.js');
 let source;
 let diagnosticsSource;
 let sessionSource;
 let filtersSource;
+let authorsSource;
 let facadeBlock;
 
 const EXPECTED_KCAPI_MEMBERS = [
@@ -160,6 +162,7 @@ beforeAll(() => {
   diagnosticsSource = fs.readFileSync(DIAGNOSTICS_SRC, 'utf8');
   sessionSource = fs.readFileSync(SESSION_SRC, 'utf8');
   filtersSource = fs.readFileSync(FILTERS_SRC, 'utf8');
+  authorsSource = fs.readFileSync(AUTHORS_SRC, 'utf8');
 
   const facadeStart = source.indexOf('window.KCAPI = Object.freeze({');
   const globalsStart = source.indexOf('window.getLastCreatePostError = getLastCreatePostError;');
@@ -183,7 +186,7 @@ describe('kc-api.client.js - source shape', () => {
   });
 
   test('mantem kc-api.client.js abaixo do limite de crescimento antes da proxima decomposicao', () => {
-    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(1800);
+    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(1710);
   });
 
   test('mantem KCAPI como fachada publica principal e _KCAPI como namespace interno', () => {
@@ -203,6 +206,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.diagnostics = window._KCAPI.diagnostics || {};');
     expect(source).toContain('window._KCAPI.session = window._KCAPI.session || {};');
     expect(source).toContain('window._KCAPI.filters = window._KCAPI.filters || {};');
+    expect(source).toContain('window._KCAPI.authors = window._KCAPI.authors || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -210,6 +214,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(facadeBlock).not.toContain('window._KCAPI.diagnostics');
     expect(facadeBlock).not.toContain('window._KCAPI.session');
     expect(facadeBlock).not.toContain('window._KCAPI.filters');
+    expect(facadeBlock).not.toContain('window._KCAPI.authors');
   });
 });
 
@@ -324,9 +329,9 @@ describe('kc-api.client.js - public domains frozen in the facade', () => {
       'getMyPosts,',
       'getPostsByAuthorId,',
       'getRelatedPosts,',
-      'MOCK_USERS,',
-      'MOCK_USERS_BY_ID,',
-      'MOCK_USERS_LIST,',
+      'get MOCK_USERS() { return getMockUsers(); },',
+      'get MOCK_USERS_BY_ID() { return getMockUsersById(); },',
+      'get MOCK_USERS_LIST() { return getMockUsersList(); },',
       'getAuthorById,',
       'filterPosts,',
       'normalizePost,',
@@ -551,5 +556,22 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(filtersSource).toContain('function matchesAdvancedRequestParams(post, params) {');
     expect(filtersSource).toContain("const FEED_DATE_TIMEZONE = 'America/Sao_Paulo';");
     expect(filtersSource).toContain('window._KCAPI.filters = Object.freeze({');
+  });
+
+  test('mantem autores mock delegados para kc-api.authors.js sem indice local na fachada', () => {
+    expect(source).toContain('function getAuthorsModule()');
+    expect(source).toContain("throw new Error('KCAPI authors module not loaded.');");
+    expect(source).toContain('return getAuthorsModule().MOCK_USERS;');
+    expect(source).toContain('return getAuthorsModule().MOCK_USERS_BY_ID;');
+    expect(source).toContain('return getAuthorsModule().MOCK_USERS_LIST;');
+    expect(source).toContain('return getAuthorsModule().getAuthorById(id);');
+    expect(source).toContain('return getAuthorsModule().resolveAuthorId(legacyName, legacyAvatarUrl);');
+    expect(source).not.toContain('const MOCK_USERS = Object.freeze({');
+    expect(source).not.toContain('const LEGACY_AUTHOR_INDEX =');
+    expect(source).not.toContain('function normalizeUserProfile(user) {');
+    expect(authorsSource).toContain('const MOCK_USERS = Object.freeze({');
+    expect(authorsSource).toContain('const LEGACY_AUTHOR_INDEX =');
+    expect(authorsSource).toContain('function normalizeUserProfile(user) {');
+    expect(authorsSource).toContain('window._KCAPI.authors = Object.freeze({');
   });
 });

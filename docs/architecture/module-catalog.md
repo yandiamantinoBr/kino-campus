@@ -920,13 +920,39 @@ oportunidades, achados/perdidos, faixa de preço e presets de data em `America/S
 
 ---
 
+### `api/kc-api.authors.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | api |
+| Namespace | `window._KCAPI.authors` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | Todas as páginas que carregam `kc-api.client.js` |
+
+**Responsabilidade:** Usuarios mock, indices por ID e resolucao de autor legado usados pela
+fachada `window.KCAPI`, por adapters locais e pela normalizacao de posts.
+
+**Exports internos:** `MOCK_USERS`, `MOCK_USERS_BY_ID`, `MOCK_USERS_LIST`, `getAuthorById()`,
+`normalizeUserProfile()` e `resolveAuthorId()`.
+
+**Dependências em runtime:** `window._KCAPI`.
+
+**Consumido por:** `window.KCAPI.MOCK_USERS*`, `window.KCAPI.getAuthorById()` e
+`normalizePost()` para resolver `authorId` a partir de `autor`/`autorAvatar` legados.
+
+**Testes:** `tests/integration/kc-api-authors-module.test.js`,
+`tests/integration/kc-api-client.test.js`,
+`tests/contract/kc-api-facade-contract.test.js`
+
+---
+
 ### `api/kc-api.client.js`
 
 | Campo | Valor |
 |-------|-------|
 | Grupo | api |
 | Namespace | `window.KCAPI` |
-| Padrão | IIFE + `Object.freeze` (1769 linhas — facade central) |
+| Padrão | IIFE + `Object.freeze` (1698 linhas — facade central) |
 | Páginas | **Todas as páginas autenticadas** |
 
 **Responsabilidade:** Facade central da API do KinoCampus. Agrega submódulos KCAPI
@@ -2285,6 +2311,7 @@ contagem de votos de um post e voto atual do usuário.
 | api/kc-api.diagnostics.js | api | `window._KCAPI.diagnostics` | create+autenticadas | integration/kc-api-diagnostics-module |
 | api/kc-api.session.js | api | `window._KCAPI.session` | autenticadas+feeds | integration/kc-api-session-module |
 | api/kc-api.filters.js | api | `window._KCAPI.filters` | feeds+busca local | integration/kc-api-filters-module |
+| api/kc-api.authors.js | api | `window._KCAPI.authors` | autenticadas+local | integration/kc-api-authors-module |
 | api/kc-api.client.js | api | `window.KCAPI` | autenticadas | integration/kc-api-client |
 | api/admin-shell.js | api | *(nenhum)* | 6 admin | structure/admin-shell-preload |
 | utils/kc-utils.string.js | utils | `window._KCU_str` | todas | unit/kc-utils-expanded |
@@ -2377,7 +2404,7 @@ ORDEM DE CARREGAMENTO (boot → utils → api → core → adapters → features
 │  kc-api.auth + kc-api.comments-votes + kc-api.help                 │
 │  + kc-api.notifications + kc-api.posts-feed + kc-api.posts-read     │
 │  + kc-api.posts-write + kc-api.profiles + kc-api.ratings            │
-│  + kc-api.related + kc-api.saved → kc-api.client (facade)          │
+│  + kc-api.related + kc-api.saved + kc-api.authors → kc-api.client  │
 └─────────────────────────────────────────────────────────────────────┘
          ↓
 ┌──────────────────────────┐  ┌──────────────────────────────────────┐

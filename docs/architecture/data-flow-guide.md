@@ -68,7 +68,7 @@
 | **HTML** | 27 arquivos `.html` no repositorio; 26 canonicos validados | Carrega scripts em ordem correta via `<script defer>` |
 | **Boot** | `boot/` (9 arquivos) | `KC_CONSTANTS`, `KC_ENV`, `KCFF`, SEO/analytics, SW, telemetria |
 | **Utils** | `utils/` (8 arquivos) | `KCUtils.escapeHtml`, formatação, dates, slugify |
-| **KCAPI** | `api/` (20 arquivos) | Fachada única — contrato público, sub-módulos, driver selection |
+| **KCAPI** | `api/` (21 arquivos) | Fachada única — contrato público, sub-módulos, driver selection |
 | **Adapters** | `adapters/local/` + `adapters/supabase/` (21 arquivos) | Implementações concretas por driver |
 | **Core** | `core/` (12 arquivos) | i18n, profiles, consentimento, notificações UI, shell |
 | **Controller** | `controllers/` (48 arquivos) | Orquestra UI, chama KCAPI, renderiza resultados |

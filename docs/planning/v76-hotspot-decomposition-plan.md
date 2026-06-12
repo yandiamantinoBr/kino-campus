@@ -1,6 +1,6 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.3.0
+**Versao:** v76.4.0
 **Data:** 2026-06-12
 **Escopo:** planejamento tecnico + status da primeira extracao JS; sem alterar CSS, SQL, secrets, provider ou deploy
 
@@ -13,7 +13,7 @@ hotspots ainda relevantes do frontend:
 
 | Hotspot | Estado atual medido em 2026-06-12 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 1.769 linhas / 75.366 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 1.698 linhas / 67.863 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -79,7 +79,7 @@ normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e e
 | `normalizeErrorForDiagnostics` + helpers de erro | baixa dependencia externa, teste unitario claro | **Concluido em v76.1.0**; preservar mensagens publicas usadas por UI/admin |
 | `KCSessionStore` / `KCPostFreshness` | responsabilidade isolavel, ja exposta como `window.*` proprio | **Concluido em v76.2.0**; preservar eventos, storage keys e deduplicacao |
 | filtros/date presets de feed | logica pura, coberta por `kc-api-client.test.js` | **Concluido em v76.3.0**; preservar paridade entre modulos e datas |
-| mocks/normalizacao de autores | reduz peso do facade | alto risco de fixtures e fallback local; fazer depois dos anteriores |
+| mocks/normalizacao de autores | reduz peso do facade | **Concluido em v76.4.0**; preservar fixtures `MOCK_USERS`, aliases publicos e resolucao por autor/avatar legado |
 | `normalizePost` | grande valor, mas contrato sensivel | so depois de snapshot de casos atuais em teste |
 
 ### 3.4 Gates obrigatorios para qualquer PR JS
@@ -193,6 +193,10 @@ Realtime broadcast e ordem de carregamento.
 `assets/js/api/kc-api.filters.js`, preservando os 107 membros de `window.KCAPI`, paridade dos
 `requestParams` locais e ordem de carregamento nos 27 carregadores reais.
 
-Proxima entrega recomendada apos JS-D: escolher mocks/normalizacao de autores ou preparar snapshot
-dedicado para `normalizePost`; o report JS-A classifica `normalizePost` como alto risco por ser
-contrato transversal.
+**Status v76.4.0:** JS-E extraiu `MOCK_USERS`, indices e resolucao de autor legado para
+`assets/js/api/kc-api.authors.js`, preservando os 107 membros de `window.KCAPI`, getters publicos
+`MOCK_USERS*`, `getAuthorById()` e ordem de carregamento nos 27 carregadores reais.
+
+Proxima entrega recomendada apos JS-E: preparar snapshot dedicado para `normalizePost` antes de
+qualquer extracao. O report JS-A classifica `normalizePost` como alto risco por ser contrato
+transversal.
