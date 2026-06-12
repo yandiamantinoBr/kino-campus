@@ -497,6 +497,15 @@ function runDeployInvariantChecks() {
     if (!csp.includes("script-src 'self' https://cdn.jsdelivr.net")) {
       errors.push('vercel.json CSP must preserve script-src compatibility for the Supabase/browser runtime');
     }
+    if (!csp.includes("object-src 'none'")) {
+      errors.push("vercel.json CSP must keep object-src 'none'");
+    }
+    if (!csp.includes("base-uri 'self'")) {
+      errors.push("vercel.json CSP must keep base-uri 'self'");
+    }
+    if (!csp.includes("form-action 'self'")) {
+      errors.push("vercel.json CSP must keep form-action 'self'");
+    }
   }
 
   const kcEnv = read('assets/js/boot/kc-env.js');

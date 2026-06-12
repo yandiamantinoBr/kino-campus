@@ -11,6 +11,13 @@ function read(file) {
   return fs.readFileSync(file, 'utf8');
 }
 
+function getGlobalCsp(config) {
+  const globalHeaders = (config.headers || []).find((item) => item.source === '/(.*)');
+  const headers = globalHeaders ? globalHeaders.headers || [] : [];
+  const cspHeader = headers.find((item) => item.key === 'Content-Security-Policy');
+  return cspHeader ? cspHeader.value : '';
+}
+
 describe('security hardening contract', () => {
   let sql;
 
@@ -60,5 +67,14 @@ describe('security hardening contract', () => {
     const config = JSON.parse(read(VERCEL_CONFIG));
     expect(config.buildCommand).toBe('node scripts/inject-env.js');
     expect(config.installCommand).toBe('npm ci --omit=dev --no-audit --no-fund');
+  });
+
+  test('vercel CSP keeps baseline hardening directives', () => {
+    const config = JSON.parse(read(VERCEL_CONFIG));
+    const csp = getGlobalCsp(config);
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("base-uri 'self'");
+    expect(csp).toContain("form-action 'self'");
   });
 });
