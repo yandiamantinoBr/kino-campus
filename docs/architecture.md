@@ -6,20 +6,20 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.1.0 (2026-06-12)** — contagens apos extracao de `kc-api.diagnostics.js` e runtime frontend `8.6.1`.
+> **Atualizado em v76.2.0 (2026-06-12)** — contagens apos extracao de `kc-api.session.js` e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
 | páginas HTML públicas na raiz | `21` |
 | páginas HTML administrativas | `6` |
 | total de páginas HTML | `27` |
-| arquivos JS em `assets/js/` (13 grupos canônicos) | `150` |
+| arquivos JS em `assets/js/` (13 grupos canônicos) | `151` |
 | controllers em `assets/js/controllers/` (public + admin) | `48` |
 | adapters em `assets/js/adapters/` (local + supabase) | `21` |
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `7` |
-| suites de teste Jest em `tests/` | `169` |
-| testes Jest totais | `3524` |
+| suites de teste Jest em `tests/` | `170` |
+| testes Jest totais | `3535` |
 | specs E2E Playwright | `9` |
 
 ## Princípio estrutural
@@ -75,7 +75,7 @@ Em produção, o build `node scripts/inject-env.js` injeta os valores e força o
 ### Camada 2 - utils e API (`assets/js/utils/` + `assets/js/api/`, 26 módulos)
 
 - `assets/js/utils/kc-utils.js` + sub-módulos `kc-utils.string.js`, `kc-utils.format.js`, `kc-utils.dom.js`, `kc-utils.identity.js`, `kc-utils.taxonomy.js`, `kc-utils.location.js`, `kc-utils.presentation.js`
-- `assets/js/api/kc-api.client.js` (fachada) + sub-módulos `kc-api.posts-feed.js`, `kc-api.posts-read.js`, `kc-api.posts-write.js`, `kc-api.auth.js`, `kc-api.profiles.js`, `kc-api.notifications.js`, `kc-api.comments-votes.js`, `kc-api.ratings.js`, `kc-api.related.js`, `kc-api.saved.js`, `kc-api.diagnostics.js`, `kc-api.help.js`, `kc-api.chat.js`, `kc-supabase.client.js`, `kc-supabase.posts.js`, `kc-supabase.ratings.js`, `admin-shell.js`
+- `assets/js/api/kc-api.client.js` (fachada) + sub-módulos `kc-api.posts-feed.js`, `kc-api.posts-read.js`, `kc-api.posts-write.js`, `kc-api.auth.js`, `kc-api.profiles.js`, `kc-api.notifications.js`, `kc-api.comments-votes.js`, `kc-api.ratings.js`, `kc-api.related.js`, `kc-api.saved.js`, `kc-api.diagnostics.js`, `kc-api.session.js`, `kc-api.help.js`, `kc-api.chat.js`, `kc-supabase.client.js`, `kc-supabase.posts.js`, `kc-supabase.ratings.js`, `admin-shell.js`
 
 ### Camada 3 - adapters (`assets/js/adapters/`, 21 módulos)
 
@@ -158,11 +158,11 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.1.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`.
+> **Atualizado em v76.2.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
-| fachada de API | `assets/js/api/kc-api.client.js` (2.809L / 119KB) | ⚠️ Parcialmente decomposto em sub-módulos `_KCAPI.*`; diagnostics de create-post extraido para `kc-api.diagnostics.js`; facade ainda concentra bootstrap, normalização, caches, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
+| fachada de API | `assets/js/api/kc-api.client.js` (2.433L / 105KB) | ⚠️ Parcialmente decomposto em sub-módulos `_KCAPI.*`; diagnostics e session/freshness extraidos; facade ainda concentra bootstrap, normalização, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
 | adapter Supabase | `assets/js/adapters/supabase/supabase.adapter.js` (~420L) | ✅ Decomposto em 11 sub-adapters `_KCSA.*` | acoplamento com banco, RLS, RPCs |
 | detalhe de publicação | `assets/js/controllers/public/product.controller.js` | ✅ Decomposto em 8 auxiliares `_KCProduct.*` | UI crítica e estado compartilhado |
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
@@ -196,7 +196,8 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 
 - **v16.11.0 (2026-04-27):** contagens e caminhos atualizados para refletir a estrutura pós-V15 (13 grupos canônicos, 41 controllers, 19 adapters, 134 suites). Monolitos técnicos decompostos entre v11–v15.
 - **v17.5.0 (2026-04-28):** estrutura documental reorganizada — diretórios históricos `audits`, `legacy` e `releases` sob `docs/` consolidados em `docs/archive/` com 10 subdirs canônicos. README.md reduzido de 534L para 159L.
-- **v75.1.0 (2026-06-11):** estado operacional verificado em `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`, 169 suites Jest / 3524 testes e 9 specs Playwright listadas.
-- **v76.1.0 (2026-06-12):** `kc-api.diagnostics.js` extraido, `assets/js/` sobe para 150 arquivos, `assets/js/api/` para 18 arquivos e Jest para 169 suites / 3524 testes.
+- **v75.1.0 (2026-06-11):** performance phase 1 consolidada em `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1` e branch operacional `kinocampus-V75.0-foundations`.
+- **v76.1.0 (2026-06-12):** `kc-api.diagnostics.js` extraido para diagnostics de create-post, mantendo 107 membros publicos de `window.KCAPI`.
+- **v76.2.0 (2026-06-12):** `kc-api.session.js` extraido para `KCSessionStore`/`KCPostFreshness`, `assets/js/` sobe para 151 arquivos, `assets/js/api/` para 19 arquivos e Jest para 170 suites / 3535 testes.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

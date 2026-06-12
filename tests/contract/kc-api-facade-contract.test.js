@@ -9,8 +9,10 @@ const path = require('path');
 
 const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.client.js');
 const DIAGNOSTICS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.diagnostics.js');
+const SESSION_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.session.js');
 let source;
 let diagnosticsSource;
+let sessionSource;
 let facadeBlock;
 
 const EXPECTED_KCAPI_MEMBERS = [
@@ -154,6 +156,7 @@ function extractFacadeMembers(block) {
 beforeAll(() => {
   source = fs.readFileSync(SRC, 'utf8');
   diagnosticsSource = fs.readFileSync(DIAGNOSTICS_SRC, 'utf8');
+  sessionSource = fs.readFileSync(SESSION_SRC, 'utf8');
 
   const facadeStart = source.indexOf('window.KCAPI = Object.freeze({');
   const globalsStart = source.indexOf('window.getLastCreatePostError = getLastCreatePostError;');
@@ -177,7 +180,7 @@ describe('kc-api.client.js - source shape', () => {
   });
 
   test('mantem kc-api.client.js abaixo do limite de crescimento antes da proxima decomposicao', () => {
-    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(2825);
+    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(2450);
   });
 
   test('mantem KCAPI como fachada publica principal e _KCAPI como namespace interno', () => {
@@ -195,11 +198,13 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.related = window._KCAPI.related || {};');
     expect(source).toContain('window._KCAPI.auth = window._KCAPI.auth || {};');
     expect(source).toContain('window._KCAPI.diagnostics = window._KCAPI.diagnostics || {};');
+    expect(source).toContain('window._KCAPI.session = window._KCAPI.session || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
     expect(facadeBlock).not.toContain('window._KCAPI.postsRead');
     expect(facadeBlock).not.toContain('window._KCAPI.diagnostics');
+    expect(facadeBlock).not.toContain('window._KCAPI.session');
   });
 });
 
@@ -509,5 +514,24 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(diagnosticsSource).toContain('let lastCreatePostError = null;');
     expect(diagnosticsSource).toContain('function normalizeErrorForDiagnostics(err) {');
     expect(diagnosticsSource).toContain('window._KCAPI.diagnostics = Object.freeze({');
+  });
+
+  test('mantem session/freshness delegados para kc-api.session.js sem estado local na fachada', () => {
+    expect(source).toContain('function getSessionModule()');
+    expect(source).toContain("throw new Error('KCAPI session module not loaded.');");
+    expect(source).toContain('return getSessionModule().getCachedSessionPayload(scope, key, maxAgeMs, staleMaxAgeMs, options);');
+    expect(source).toContain('return getSessionModule().persistSessionPayload(scope, key, data, signature);');
+    expect(source).toContain('return getSessionModule().removeSessionCache(scope, key);');
+    expect(source).toContain('return getSessionModule().clearSessionCachePrefix(scope, keyPrefix);');
+    expect(source).toContain('return getSessionModule().withPendingSessionRequest(bucket, key, factory);');
+    expect(source).not.toContain("const SESSION_STORE_VERSION = '9.0.0';");
+    expect(source).not.toContain("const POST_FRESHNESS_EVENT = 'kc:post-freshness';");
+    expect(source).not.toContain('const postFreshnessSubscribers = new Set();');
+    expect(source).not.toContain('function normalizePostFreshnessChange(change) {');
+    expect(sessionSource).toContain("const SESSION_STORE_VERSION = '9.0.0';");
+    expect(sessionSource).toContain("const POST_FRESHNESS_EVENT = 'kc:post-freshness';");
+    expect(sessionSource).toContain('const postFreshnessSubscribers = new Set();');
+    expect(sessionSource).toContain('function normalizePostFreshnessChange(change) {');
+    expect(sessionSource).toContain('window._KCAPI.session = Object.freeze({');
   });
 });

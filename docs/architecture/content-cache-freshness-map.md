@@ -38,7 +38,7 @@ Interface publica:
 - `window.KCPostFreshness.subscribe(handler)`
 - `window.KCPostFreshness.clearContentCaches({ postId, scopes })`
 - `window.KCRealtime.subscribePostChanges({ onChange })` (assina `postgres_changes`)
-- Broadcast cross-cliente (tópico `kc-posts-changes`) é transporte interno do barramento `KCPostFreshness` (em `kc-api.client.js`): `emitPostFreshness` publica mudanças de origem local e o receptor faz `dispatch` em todos os clientes abertos.
+- Broadcast cross-cliente (tópico `kc-posts-changes`) é transporte interno do barramento `KCPostFreshness` (em `kc-api.session.js`): `emitPostFreshness` publica mudanças de origem local e o receptor faz `dispatch` em todos os clientes abertos.
 
 Eventos aceitos:
 

@@ -4,7 +4,7 @@
 
   Estratégia: leitura estática dos fontes (sem DOM). O broadcast do Supabase
   Realtime exige 2 clientes ao vivo, então aqui cobrimos o contrato/anti-loop:
-   - KCPostFreshness (kc-api.client.js) transporta via broadcast 'kc-posts-changes'
+  - KCPostFreshness (kc-api.session.js) transporta via broadcast 'kc-posts-changes'
    - emitPostFreshness publica no Realtime apenas para origem local (anti-loop)
    - feed revalida em visibilitychange (troca de aba / retorno no mobile)
    - deletePost é soft-delete (status 'deleted' + metadata)
@@ -17,16 +17,16 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const API = path.join(ROOT, 'assets', 'js', 'api', 'kc-api.client.js');
+const SESSION = path.join(ROOT, 'assets', 'js', 'api', 'kc-api.session.js');
 const FEED = path.join(ROOT, 'assets', 'js', 'controllers', 'public', 'kc-feed.controller.js');
 const DELETE_ADAPTER = path.join(ROOT, 'assets', 'js', 'adapters', 'supabase', 'supabase.posts-write.adapter.js');
 const DOC = path.join(ROOT, 'docs', 'architecture', 'content-cache-freshness-map.md');
 
 function read(p) { return fs.readFileSync(p, 'utf8'); }
 
-describe('Broadcast cross-cliente — kc-api.client.js (KCPostFreshness)', () => {
+describe('Broadcast cross-cliente — kc-api.session.js (KCPostFreshness)', () => {
   let s;
-  beforeAll(() => { s = read(API); });
+  beforeAll(() => { s = read(SESSION); });
 
   test('define o tópico fixo kc-posts-changes', () => {
     expect(s).toContain("POST_FRESHNESS_RT_TOPIC = 'kc-posts-changes'");
