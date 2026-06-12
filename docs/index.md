@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.6` (extracao de normalizacao de posts, runtime `8.6.1`)
+- linha de trabalho atual: `v76.7` (normalizadores de rating extraidos para `kc-api.ratings.js`, runtime `8.6.1`)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
@@ -12,13 +12,13 @@
 | Arquivo | Uso principal |
 |---|---|
 | [architecture.md](./architecture.md) | arquitetura atual do frontend, camadas, hotspots, contagens e regras de equivalencia |
-| [architecture/repository-structure.md](./architecture/repository-structure.md) | estrutura atual do repositorio pos-V22, reancorada em v76.6 |
+| [architecture/repository-structure.md](./architecture/repository-structure.md) | estrutura atual do repositorio pos-V22, reancorada em v76.7 |
 | [architecture/module-catalog.md](./architecture/module-catalog.md) | catalogo de ~130 modulos JS com namespace, paginas e dependencias *(v16.3.0-v16.4.0)* |
 | [architecture/controllers-catalog.md](./architecture/controllers-catalog.md) | catalogo de 48 controllers com responsabilidade e KCAPI calls *(v16.5.0; contagem v75.1)* |
 | [architecture/script-loading-reference.md](./architecture/script-loading-reference.md) | ordem de carregamento de scripts em 26 HTMLs *(v16.6.0; contagem v76.6)* |
 | [architecture/data-flow-guide.md](./architecture/data-flow-guide.md) | fluxo de dados ponta a ponta: usuario -> controller -> KCAPI -> adapter -> Supabase *(v16.7.0)* |
 | [architecture/ai-development-guide.md](./architecture/ai-development-guide.md) | guia de comportamento para IA: leia antes de qualquer modificacao *(v16.8.0, reancorado em V75)* |
-| [architecture/test-strategy.md](./architecture/test-strategy.md) | estrategia de 174 suites: onde adicionar testes, regras de manutencao *(v16.9.0; contagem v76.6)* |
+| [architecture/test-strategy.md](./architecture/test-strategy.md) | estrategia de 174 suites: onde adicionar testes, regras de manutencao *(v16.9.0; contagem v76.7)* |
 | [architecture/css-architecture.md](./architecture/css-architecture.md) | CSS em producao + `future-split/` explicado *(v16.10.0)* |
 | [api-contract.md](./api-contract.md) | contrato publico da `KCAPI`, metodos expostos e semantica de retorno |
 | [db-schema.md](./db-schema.md) | tabelas, politicas, indices, storage, cron jobs e notas de estado do banco |
@@ -72,6 +72,7 @@
 | [qa/reports/report-v76-kcapi-filters-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-filters-extraction-2026-06-12.md) | evidencia V76 da extracao de filtros avancados/date presets para `window._KCAPI.filters` |
 | [qa/reports/report-v76-kcapi-authors-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-authors-extraction-2026-06-12.md) | evidencia V76 da extracao de autores mock/indices para `window._KCAPI.authors` |
 | [qa/reports/report-v76-kcapi-posts-normalize-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-posts-normalize-extraction-2026-06-12.md) | evidencia V76 da extracao de `KCAPI.normalizePost` para `window._KCAPI.postsNormalize` |
+| [qa/reports/report-v76-kcapi-ratings-normalize-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-ratings-normalize-extraction-2026-06-12.md) | evidencia V76 da extracao dos normalizadores `normalizeUserRating*` para `window._KCAPI.ratings` |
 | [qa/reports/report-v76-kcapi-session-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-session-extraction-2026-06-12.md) | evidencia V76 da extracao de `KCSessionStore`/`KCPostFreshness` para `window._KCAPI.session` |
 | [qa/reports/report-v76-kcapi-diagnostics-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-diagnostics-extraction-2026-06-12.md) | evidencia V76 da extracao de diagnostics para `window._KCAPI.diagnostics` |
 | [qa/reports/report-v76-kcapi-public-surface-2026-06-12.md](./qa/reports/report-v76-kcapi-public-surface-2026-06-12.md) | snapshot V76 da superficie publica `window.KCAPI` antes de decomposicao JS |
@@ -136,5 +137,5 @@ el.innerHTML = window.KCUtils.escapeHtml(userContent);
 ## Observacoes de baseline
 
 - Baseline reancorado para v75.0.0 em 2026-05-05. Estrutura documental consolidada em `docs/archive/` em v17.5.0; pendencias ativas mapeadas em `docs/planning/` em v18, operacionalizadas em runbooks v19, separadas entre QA ativo/historico em v20, com worktrees locais fora do indice em v21, politica de relatorios raiz em v22, `repository-structure.md` reancorado em v23, ledger pos-V23 criado em v24, runbook de QA real criado em v25, templates de evidencia QA real normalizados em v26, gate visual/a11y pre-CSS definido em v27, auditoria unaccent/FTS pre-migration criada em v28, checklist de evidencias Supabase Advisor criado em v29, checklist de sandbox para providers de notificacao criado em v30, matriz de triagem autenticada criada em v31, politica de gate E2E criada em v32, politica LHCI criada em v33, plano de reconciliacao a11y/i18n criado em v34, ledger de readiness CSS criado em v35, roadmap de readiness criado em v36, gate de entrada funcional criado em v37, gate de evidencia de rollback criado em v38, matriz de candidatos funcionais criada em v39, dossie AUTH-CB-01 criado em v40, dossie PROFILE-AV-01 criado em v41, dossie ADMIN-MOD-01 criado em v42, dossie NOTIF-SB-01 criado em v43, dossie SEARCH-FTS-01 criado em v44, dossie CSS-SM-01 criado em v45, dossie PUBLIC-A11Y-01 criado em v46, consolidacao de readiness funcional criada em v47, pacote de evidencias externas sem secrets criado em v48, freeze de escopo funcional criado em v49, intake de implementacao funcional criado em v50, registro de No-Go funcional criado em v51, matriz de rastreabilidade de gates criada em v52, manifesto de patch funcional criado em v53, patch PUBLIC-A11Y de comentarios do card criado em v54, patch PUBLIC-A11Y do badge de avaliacao criado em v55, patch PUBLIC-A11Y de icones decorativos criado em v56, patch PUBLIC-A11Y do alt do avatar de autor criado em v57, patch PUBLIC-A11Y dos controles do modal de busca mobile criado em v58, patch PUBLIC-A11Y do input do modal de busca mobile criado em v59, patch PUBLIC-A11Y dos botoes dinamicos de comentarios criado em v60, patch PUBLIC-A11Y de `type="button"` em botoes dinamicos publicos/admin criado em v61, patch PUBLIC-A11Y de icones decorativos admin criado em v62, patch PUBLIC-A11Y de icones do carregar mais em pedidos admin criado em v63, patch PUBLIC-A11Y de icones de feedback/loading em convites admin criado em v64, patch PUBLIC-A11Y de icones decorativos em pedidos de ajuda admin criado em v65, patch PUBLIC-A11Y de icones decorativos em banners admin criado em v66, patch PUBLIC-A11Y dos icones residuais em moderacao admin criado em v67, patch PUBLIC-A11Y dos icones de spinner do shard audit do dashboard admin criado em v68, patch PUBLIC-A11Y dos icones decorativos do indicador de pull-to-refresh criado em v69, patch PUBLIC-A11Y do icone decorativo da aba `Todas` dos filtros publicos criado em v70, patch PUBLIC-A11Y dos 11 icones decorativos do ranking e modulos em admin-dashboard.charts.js criado em v71, patch PUBLIC-A11Y dos 14 icones decorativos de titulos de secao e feedback em admin-dashboard.controller.js criado em v72, patch PUBLIC-A11Y dos 9 icones decorativos de acoes e estados em kc-comments.js criado em v73, patch PUBLIC-A11Y dos 18 icones decorativos de acoes e estados em admin-reports.controller.js criado em v74 e patch PUBLIC-A11Y dos 18 icones decorativos de avatares, acoes e estados em kc-ranking.js criado em v75.
-- Estado operacional atual: `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`, 174 suites Jest / 3567 testes e 9 specs Playwright / 59 testes listados.
+- Estado operacional atual: `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`, 174 suites Jest / 3570 testes e 9 specs Playwright / 59 testes listados.
 - `frontendRuntimeVersion` atual e `8.6.1` (constante canonica no runtime).

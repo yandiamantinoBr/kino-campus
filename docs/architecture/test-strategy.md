@@ -1,6 +1,6 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.6.0 · **Atualizado em:** 2026-06-12
+**Versão:** v76.7.0 · **Atualizado em:** 2026-06-12
 
 > Documenta as 174 suites Jest + 9 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 174 suites · 3567 testes
+Jest: 174 suites · 3570 testes
 Playwright: 9 specs · 59 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥174 passed, 174 total` e `≥3567 passed, 3567 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥174 passed, 174 total` e `≥3570 passed, 3570 total`.
 
 ### Gate CI essencial
 
@@ -182,7 +182,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 124 arquivos indi
 | `kc-api-posts-read-module.test.js` | `kc-api.posts-read.js` | `getPostAnalytics`, SWR de analytics, `trackView` |
 | `kc-api-posts-write-module.test.js` | `kc-api.posts-write.js` | `createPost`, `updatePost`, `deletePost`, `reportPost` |
 | `kc-api-profiles-module.test.js` | `kc-api.profiles.js` | `getCurrentProfile`, `getProfileById`, `syncProfile` |
-| `kc-api-ratings-module.test.js` | `kc-api.ratings.js` | `getUserRatingSummary`, `upsertUserRating` |
+| `kc-api-ratings-module.test.js` | `kc-api.ratings.js` | Operacoes de rating e normalizadores `normalizeUserRating*` |
 | `kc-api-related-module.test.js` | `kc-api.related.js` | `rankRelatedPosts`, algoritmo de scoring |
 | `kc-api-saved-module.test.js` | `kc-api.saved.js` | `getSavedPostState`, `getMySavedPosts`, highlights |
 | `kc-api-session-swr.test.js` | sessão + SWR | Cache de sessão, invalidação, TTL |
@@ -484,7 +484,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥174 passed, 174 total
-  Tests:       ≥3567 passed, 3567 total
+  Tests:       ≥3570 passed, 3570 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

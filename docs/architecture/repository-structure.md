@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v76.6.0
+**Versao:** v76.7.0
 **Data:** 2026-06-12
-**Atualizado em:** v76.6.0 - extracao de `normalizePost` e reancoragem de contagens
+**Atualizado em:** v76.7.0 - extracao dos normalizadores de rating e reancoragem de contagens
 
 ---
 
@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 174 suites / 3567 testes + Playwright 9 specs E2E |
+| Testes | Jest 174 suites / 3570 testes + Playwright 9 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -49,8 +49,9 @@ patch PUBLIC-A11Y do icone decorativo da aba `Todas` dos filtros publicos V70,
 patch PUBLIC-A11Y dos 11 icones decorativos do ranking e modulos em admin-dashboard.charts.js V71,
 patch PUBLIC-A11Y dos 14 icones decorativos de titulos de secao e feedback em admin-dashboard.controller.js V72,
 patch PUBLIC-A11Y dos 9 icones decorativos de acoes e estados em kc-comments.js V73,
-patch PUBLIC-A11Y dos 18 icones decorativos de acoes e estados em admin-reports.controller.js V74 e
-patch PUBLIC-A11Y dos 18 icones decorativos de avatares, acoes e estados em kc-ranking.js V75, e performance phase 1 com runtime 8.6.1 em V75.1.
+patch PUBLIC-A11Y dos 18 icones decorativos de acoes e estados em admin-reports.controller.js V74,
+patch PUBLIC-A11Y dos 18 icones decorativos de avatares, acoes e estados em kc-ranking.js V75,
+performance phase 1 com runtime 8.6.1 em V75.1, decomposicao V76 de diagnostics/session/filters/authors/posts-normalize e normalizadores de rating em V76.7.
 
 ---
 
@@ -138,7 +139,7 @@ Todo modulo deve permanecer em um dos grupos canonicos abaixo.
 |---|---:|---|
 | `assets/js/boot/` | 9 | Cadeia de inicializacao compartilhada por todos os HTMLs, SEO, Google Tag e Speed Insights |
 | `assets/js/core/` | 12 | Runtime central: i18n, auth UI, consentimento, perfil, tema, notificacoes, widgets e shell publico |
-| `assets/js/api/` | 20 | Cliente Supabase, submodulos KCAPI, diagnostics, chat e facade `window.KCAPI` |
+| `assets/js/api/` | 22 | Cliente Supabase, submodulos KCAPI, diagnostics, chat e facade `window.KCAPI` |
 | `assets/js/utils/` | 8 | Helpers de string, formatacao, DOM, identidade, taxonomia, localizacao e apresentacao |
 | `assets/js/features/` | 16 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading e pull-to-refresh |
 | `assets/js/features/create-post/` | 7 | Orquestracao, schema, campos, render, midia, resolvers e submit de criacao |
@@ -259,7 +260,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:routes` | Valida 20 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantem 174/174 suites e 3567/3567 testes Jest |
+| `npm test` | Mantem 174/174 suites e 3570/3570 testes Jest |
 | `npx playwright test --list` | Lista 9 specs / 59 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |

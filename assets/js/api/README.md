@@ -14,7 +14,7 @@ Camada de API: facade principal, sub-módulos de domínio e cliente Supabase.
 | `kc-api.comments-votes.js` | `window._KCAPI.commentsVotes` | Comentários e votos |
 | `kc-api.notifications.js` | `window._KCAPI.notifications` | Notificações |
 | `kc-api.profiles.js` | `window._KCAPI.profiles` | Perfis de usuário |
-| `kc-api.ratings.js` | `window._KCAPI.ratings` | Avaliações |
+| `kc-api.ratings.js` | `window._KCAPI.ratings` | Avaliacoes e normalizacao de payloads de rating |
 | `kc-api.related.js` | `window._KCAPI.related` | Posts relacionados |
 | `kc-api.saved.js` | `window._KCAPI.saved` | Posts salvos |
 | `kc-api.diagnostics.js` | `window._KCAPI.diagnostics` | Diagnosticos de create-post |
@@ -34,4 +34,4 @@ Camada de API: facade principal, sub-módulos de domínio e cliente Supabase.
 - `kc-api.client.js` não pode ser reduzido abaixo de 700L (é registry/facade)
 
 ## Status
-**Consolidado desde V15.** Os arquivos ja residem em `assets/js/api/`, sao carregados via `<script defer>` e fazem parte do `CANONICAL_JS` quando aplicavel.
+**Consolidado desde V15.** Os arquivos ja residem em `assets/js/api/`, sao carregados via `<script defer>` e fazem parte do `CANONICAL_JS` quando aplicavel. Em v76.7, `kc-api.ratings.js` passou a concentrar os normalizadores `normalizeUserRating*`, mantendo `window.KCAPI.normalizeUserRating*` como wrappers publicos na fachada.
