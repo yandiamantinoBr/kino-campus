@@ -70,6 +70,7 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - opcionalmente `REPORTS_THRESHOLD`
   - opcionalmente `REPORTS_NOTIFY_COOLDOWN_HOURS`
 - O contrato dessa função não deve ser alterado nesta fase; o foco aqui é apenas manter a rastreabilidade operacional.
+- Estado remoto verificado (2026-06-11): a função não aparece na lista de Edge Functions deployadas no projeto Supabase principal. O trigger `trg_notify_admin_reports_threshold` (migration `v8.1.11.1`) está aplicado mas opera em fail-closed: sem `app.settings.kc_notify_function_url`, `app.settings.kc_notify_function_auth_token` e `app.settings.kc_notify_hmac_secret` configurados no banco, nenhuma requisição externa é disparada. Não publicar a função nem configurar esses settings sem antes definir o destino do webhook e gerar `KC_NOTIFY_HMAC_SECRET` forte.
 ## 7. Edge Function de dispatch externo de notificações
 
 - A função `supabase/functions/kc-dispatch-notification-outbox/index.ts` depende de:
