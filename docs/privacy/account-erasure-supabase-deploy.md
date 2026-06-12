@@ -1,6 +1,6 @@
 # Deploy Supabase do fluxo LGPD
 
-Este checklist aplica a migration `account_erasure_requests` e publica a Edge Function `kc-account-erasure` no projeto Supabase `wacyrkwhkvzwkqpolrbg`.
+Este checklist aplica a migration `account_erasure_requests` e publica a Edge Function `kc-account-erasure` no projeto Supabase `Kino Campus` (`project_ref` redigido).
 
 ## Pré-requisitos
 

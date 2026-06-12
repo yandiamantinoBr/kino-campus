@@ -12,6 +12,11 @@ Padronizar a coleta de evidencia para pendencias operacionais do Supabase antes 
 `auth_leaked_password_protection`, avatar storage policies e scheduler de notificacoes. Este documento
 nao autoriza alteracao; ele define o que precisa ser comprovado, redigido e anexado.
 
+Atualizacao V75 (2026-06-12): `docs/qa/reports/report-v75-supabase-unaccent-extension-schema-2026-06-12.md`
+confirmou, por MCP Supabase read-only, `unaccent` instalado no schema `extensions` e ausencia de
+lint `extension_in_public` no Advisor de seguranca. O unico lint de seguranca retornado foi
+`auth_leaked_password_protection`.
+
 ---
 
 ## 2. Regras de Evidencia
