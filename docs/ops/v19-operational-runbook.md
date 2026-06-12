@@ -21,6 +21,12 @@
 Tipo: configuracao Supabase Dashboard. Para padronizar evidencia, use tambem
 `docs/ops/v29-supabase-advisor-evidence-checklist.md`.
 
+Verificacao V75 (2026-06-11): a Management API retornou
+`password_hibp_enabled=false` para o projeto remoto `Kino Campus` (`project_ref`
+redigido). A documentacao oficial do Supabase descreve a protecao como uma checagem
+HaveIBeenPwned Pwned Passwords disponivel no plano Pro ou superior. Este item segue
+operacionalmente pendente e nao deve ser corrigido por migration.
+
 Checklist:
 
 1. Abrir Supabase Dashboard do projeto.
@@ -28,6 +34,7 @@ Checklist:
 3. Confirmar estado de leaked password protection.
 4. Ativar apenas se o plano/projeto permitir.
 5. Registrar evidencia em `docs/qa/reports/report-v19-auth-run1.md` ou equivalente.
+6. Para leitura via Management API, filtrar apenas campos `leak|pwn|hibp` e nunca registrar tokens.
 
 Rollback: retornar a configuracao anterior no dashboard e registrar motivo.
 
