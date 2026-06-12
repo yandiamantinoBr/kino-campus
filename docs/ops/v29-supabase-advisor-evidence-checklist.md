@@ -28,11 +28,16 @@ nao autoriza alteracao; ele define o que precisa ser comprovado, redigido e anex
 
 ## 3. Auth Dashboard
 
+Verificacao V75 (2026-06-11): `docs/qa/reports/report-v75-supabase-auth-password-protection-2026-06-11.md`
+registrou leitura restrita da Management API com `password_hibp_enabled=false`, sem alterar
+dashboard e sem registrar token ou `project_ref` bruto. O item permanece Go condicionado para
+ativacao operacional com aprovacao explicita.
+
 | Item | Evidencia minima | Status |
 |---|---|---|
 | Projeto correto selecionado | Nome/ambiente redigido | Pendente |
 | Auth/Security acessivel | Print redigido da tela ou descricao auditavel | Pendente |
-| `auth_leaked_password_protection` | Estado atual: ativo/inativo/indisponivel | Pendente |
+| `auth_leaked_password_protection` | Estado atual: ativo/inativo/indisponivel | Confirmado inativo em V75 |
 | Plano do projeto permite ativacao | Confirmacao visual ou bloqueio documentado | Pendente |
 | Rollback conhecido | Caminho para retornar estado anterior | Pendente |
 

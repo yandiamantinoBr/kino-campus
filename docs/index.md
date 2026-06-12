@@ -66,6 +66,7 @@
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
+| [qa/reports/report-v75-supabase-auth-password-protection-2026-06-11.md](./qa/reports/report-v75-supabase-auth-password-protection-2026-06-11.md) | evidencia V75 de `password_hibp_enabled=false` no Supabase Auth remoto |
 | [qa/reports/report-v75-public-a11y-kc-ranking-icons.md](./qa/reports/report-v75-public-a11y-kc-ranking-icons.md) | evidencia do patch PUBLIC-A11Y nos 18 icones decorativos em kc-ranking.js |
 | [qa/reports/report-v74-public-a11y-admin-reports-icons.md](./qa/reports/report-v74-public-a11y-admin-reports-icons.md) | evidencia do patch PUBLIC-A11Y nos 18 icones decorativos em admin-reports.controller.js |
 | [qa/reports/report-v73-public-a11y-kc-comments-icons.md](./qa/reports/report-v73-public-a11y-kc-comments-icons.md) | evidencia do patch PUBLIC-A11Y nos 9 icones decorativos em kc-comments.js |
