@@ -8,6 +8,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 | Arquivo | Uso |
 |---|---|
 | `_TEMPLATE-authenticated-run.md` | Template V26 para rodada autenticada real com redacao de evidencias |
+| `report-v75-notification-provider-status-2026-06-11.md` | Evidencia V75 do estado real dos providers Resend/Twilio no Supabase remoto |
 
 ## Padrão de entrada
 
