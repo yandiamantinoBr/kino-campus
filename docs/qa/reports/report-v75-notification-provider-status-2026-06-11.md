@@ -2,7 +2,7 @@
 
 **Data:** 2026-06-11 America/Sao_Paulo  
 **Escopo:** verificacao de estado real dos providers externos de notificacao  
-**Ambiente:** Supabase remoto `Kino Campus` (`wacyrkwhkvzwkqpolrbg`)  
+**Ambiente:** Supabase remoto `Kino Campus` (`project_ref` redigido)
 **Canal:** email e WhatsApp  
 
 ---
@@ -28,8 +28,8 @@ Confirmar se Resend e Twilio estao operacionalmente ativos no projeto remoto ou 
 Comandos/ferramentas usados:
 
 - `supabase projects list --output json`
-- `supabase functions list --project-ref wacyrkwhkvzwkqpolrbg --output json --dns-resolver native`
-- `supabase secrets list --project-ref wacyrkwhkvzwkqpolrbg --output json --dns-resolver native`
+- `supabase functions list --project-ref <redigido> --output json --dns-resolver native`
+- `supabase secrets list --project-ref <redigido> --output json --dns-resolver native`
 - Supabase MCP `_list_edge_functions`
 - Supabase MCP `_get_edge_function` para `kc-dispatch-notification-outbox`
 

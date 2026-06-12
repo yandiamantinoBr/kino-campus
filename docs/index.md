@@ -64,6 +64,7 @@
 | [ops/v29-supabase-advisor-evidence-checklist.md](./ops/v29-supabase-advisor-evidence-checklist.md) | checklist de evidencias Supabase Advisor sem secrets |
 | [ops/v30-notification-provider-sandbox-checklist.md](./ops/v30-notification-provider-sandbox-checklist.md) | checklist de sandbox/go-live para providers de email e WhatsApp |
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
+| [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
 | [qa/reports/report-v75-public-a11y-kc-ranking-icons.md](./qa/reports/report-v75-public-a11y-kc-ranking-icons.md) | evidencia do patch PUBLIC-A11Y nos 18 icones decorativos em kc-ranking.js |
 | [qa/reports/report-v74-public-a11y-admin-reports-icons.md](./qa/reports/report-v74-public-a11y-admin-reports-icons.md) | evidencia do patch PUBLIC-A11Y nos 18 icones decorativos em admin-reports.controller.js |
