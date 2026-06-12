@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.8.0 (2026-06-12)** — contagens apos inventario CSS-A de ownership e runtime frontend `8.6.1`.
+> **Atualizado em v76.9.0 (2026-06-12)** — contagens apos inventario CSS-A, baseline CSS-B visual/cascade e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -158,7 +158,7 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.8.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md` e `docs/planning/v76-css-ownership-inventory.md`.
+> **Atualizado em v76.9.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
@@ -168,7 +168,7 @@ A linha v10 consolidou:
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
 | utilitários globais | `assets/js/utils/kc-utils.js` (~440L) | ✅ Decomposto em 7 sub-módulos `_KCU.*` | impacto transversal amplo |
 | admin dashboard | `assets/js/controllers/admin/admin-dashboard.controller.js` | ✅ Decomposto em 3 auxiliares `_KCAD.*` | KPIs, ranking, audit log e export |
-| design system global | `assets/css/styles.css` (12.282L / 287.760 bytes) | ⚠️ Monolito preservado; CSS-A mapeou 1.774 regras / 1.995 seletores; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
+| design system global | `assets/css/styles.css` (12.282L / 287.760 bytes) | ⚠️ Monolito preservado; CSS-A mapeou 1.774 regras / 1.995 seletores; CSS-B capturou 24 screenshots anonimos; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
 
 ## Arquitetura CSS
 
@@ -184,6 +184,8 @@ A linha v10 consolidou:
 
 Inventario CSS-A: `npm run audit:css` e
 `docs/planning/v76-css-ownership-inventory.md` classificam ownership antes de qualquer split.
+Baseline CSS-B: `npm run audit:css-baseline` e
+`docs/planning/v76-css-visual-baseline.md` capturam evidencia visual/cascade anonima antes de mudancas CSS.
 
 ## Regras de equivalência
 
@@ -208,5 +210,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.6.0 (2026-06-12):** `kc-api.posts-normalize.js` extraido para `window._KCAPI.postsNormalize`, mantendo `KCAPI.normalizePost` como delegacao publica; `assets/js/` sobe para 154 arquivos, `assets/js/api/` para 22 arquivos e Jest sobe para 174 suites / 3567 testes.
 - **v76.7.0 (2026-06-12):** `kc-api.ratings.js` passa a concentrar os normalizadores `normalizeUserRating*`, mantendo `KCAPI.normalizeUserRating*` como wrappers publicos; `kc-api.client.js` reduz para 1.508 linhas / 58.290 bytes e Jest sobe para 174 suites / 3570 testes.
 - **v76.8.0 (2026-06-12):** CSS-A adiciona `scripts/audit-css-ownership.js`, `npm run audit:css` e `docs/planning/v76-css-ownership-inventory.md`; `styles.css` permanece sem alteracao de cascade, com 1.774 regras / 1.995 seletores parseados.
+- **v76.9.0 (2026-06-12):** CSS-B adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md`; a rodada local capturou 24 screenshots em 12 rotas x 2 viewports, com 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.
