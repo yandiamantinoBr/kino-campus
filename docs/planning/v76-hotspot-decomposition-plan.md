@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.7.0
+**Versao:** v76.8.0
 **Data:** 2026-06-12
-**Escopo:** planejamento tecnico + status das extracoes JS V76; sem alterar CSS, SQL, secrets, provider ou deploy
+**Escopo:** planejamento tecnico + status das extracoes JS V76 e inventario CSS-A; sem alterar CSS runtime, SQL, secrets, provider ou deploy
 
 ---
 
@@ -127,6 +127,12 @@ Antes de ativar `future-split/`, fazer um inventario de seletores de `styles.css
 
 Esse inventario pode ser documental ou assistido por script, mas nao deve alterar CSS.
 
+**Status v76.8.0:** CSS-A concluido em
+`docs/planning/v76-css-ownership-inventory.md`, com suporte de
+`scripts/audit-css-ownership.js` (`npm run audit:css`). O parse atual registra 1.774 regras e
+1.995 seletores em `styles.css`, sem mover seletores, sem alterar HTML e sem carregar
+`future-split/`.
+
 ### 4.4 Gates obrigatorios para qualquer PR CSS
 
 - Gate V27 de visual/a11y com rotas afetadas.
@@ -178,7 +184,7 @@ Escolher uma das duas, nunca ambas no mesmo PR:
 | Opcao | Entrega | Por que agora |
 |---|---|---|
 | JS-A | Report de superficie publica `window.KCAPI` e mapa dos blocos residuais no facade | prepara extracao sem mudar runtime |
-| CSS-A | Inventario de ownership de seletores de `styles.css` | prepara split sem alterar cascade |
+| CSS-A | Inventario de ownership de seletores de `styles.css` | **Concluido em v76.8.0**; prepara split sem alterar cascade |
 
 **Status 2026-06-12:** JS-A foi entregue em
 `docs/qa/reports/report-v76-kcapi-public-surface-2026-06-12.md`, com snapshot de 107 membros
@@ -215,6 +221,11 @@ delegacao publica, os snapshots pre-extracao e a ordem de carregamento nos 27 ca
 reduzindo `buildRatingsDeps()` a `getActiveDriver` e ampliando a suite
 `kc-api-ratings-module.test.js` para cobrir normalizacao direta.
 
-Proxima entrega recomendada apos JS-H: escolher uma das duas frentes, sem misturar no mesmo PR:
-inventario CSS de ownership de `styles.css` ou inventario residual menor da fachada `KCAPI`
-focado apenas em wrappers/bootstrap que ainda nao pertencem a submodulos.
+**Status v76.8.0:** CSS-A criou o inventario de ownership de `styles.css` em
+`docs/planning/v76-css-ownership-inventory.md` e o script `npm run audit:css`, registrando
+12.282 linhas / 287.760 bytes, 1.774 regras parseadas, 1.995 seletores parseados e candidatos
+para `admin-shell.css`, `product.css`, `kc-public-shell.css` e `kc-chat.css` sem alterar cascade.
+
+Proxima entrega recomendada apos CSS-A: escolher uma das duas frentes, sem misturar no mesmo PR:
+baseline visual CSS-B antes de qualquer extracao real, ou inventario residual menor da fachada
+`KCAPI` focado apenas em wrappers/bootstrap que ainda nao pertencem a submodulos.
