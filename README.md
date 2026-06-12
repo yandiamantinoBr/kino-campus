@@ -126,6 +126,11 @@ Em produção, `driver = "supabase"` é obrigatório. `local` é apenas para des
 
 ### 5) Edge Functions
 
+Verificacao remota V75 (2026-06-11): no projeto Supabase `Kino Campus`,
+`kc-dispatch-notification-outbox` esta ativa e `notify-admin-reports-threshold` nao aparece
+na lista remota de Edge Functions. A funcao de reports continua versionada no repo, mas nao
+deve ser publicada sem validar secrets, contrato de chamada e impacto operacional.
+
 **notify-admin-reports-threshold**
 
 ```bash

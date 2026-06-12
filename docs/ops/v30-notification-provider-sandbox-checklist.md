@@ -30,6 +30,13 @@ pre-requisitos e criterios de Go/No-Go.
 
 ## 3. Inventario por Canal
 
+Nota de verificacao V75 (2026-06-11): a rodada sem envio em
+`docs/qa/reports/report-v75-notification-provider-status-2026-06-11.md` confirmou que
+`kc-dispatch-notification-outbox` esta ativa no Supabase remoto, mas os secrets de provider
+`KC_NOTIFICATION_EMAIL_*` e `KC_NOTIFICATION_WHATSAPP_*` ainda nao existem no projeto.
+Portanto, Resend e Twilio permanecem em No-Go tecnico para ativacao ate existir sandbox,
+destino controlado, opt-in aplicavel e rollback documentado.
+
 ### Email
 
 | Item | Evidencia minima | Status |

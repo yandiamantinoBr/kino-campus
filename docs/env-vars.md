@@ -94,9 +94,15 @@ Configuradas no dashboard do Supabase quando exigidas pelas Edge Functions e aut
 
 ### Edge Functions relevantes
 
+Inventario versionado no repo. O estado remoto deve ser confirmado antes de qualquer deploy.
+
 - `notify-admin-reports-threshold`
 - `kc-invite-user`
 - `kc-dispatch-notification-outbox`
+
+Verificacao V75 (2026-06-11): `kc-dispatch-notification-outbox` estava ativa no projeto
+Supabase remoto, enquanto `notify-admin-reports-threshold` nao apareceu na lista remota de
+Edge Functions. Nao publicar ou configurar secrets dessa funcao sem nova validacao operacional.
 
 Para publicar:
 
