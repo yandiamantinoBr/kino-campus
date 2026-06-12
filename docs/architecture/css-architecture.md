@@ -1,10 +1,10 @@
 # Arquitetura CSS - KinoCampus
 
-**Versao:** v76.8.0
+**Versao:** v76.9.0
 **Atualizado em:** 2026-06-12
 
-> Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`
-> e status dos stubs `assets/css/future-split/`.
+> Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
+> baseline visual CSS-B e status dos stubs `assets/css/future-split/`.
 
 ---
 
@@ -112,13 +112,33 @@ dedicado com prova de ordem, comparacao visual e rollback.
 
 ---
 
-## 6. Regras para mudar CSS
+## 6. Baseline CSS-B
+
+O baseline visual/cascade canonico da etapa CSS-B esta em
+[`docs/planning/v76-css-visual-baseline.md`](../planning/v76-css-visual-baseline.md).
+
+Comando:
+
+```bash
+npm run audit:css-baseline
+```
+
+A rodada de 2026-06-12 capturou 24 screenshots em `output/playwright/css-baseline/`:
+12 rotas em desktop `1366x900` e mobile `390x844`, com 0 respostas falhas, 0 overflow horizontal,
+0 erros de console/pagina e 0 carregamentos de `future-split/`.
+
+Limitacao: o baseline admin atual e anonimo/sem sessao. Ele cobre o shell estatico e o gate admin,
+mas nao substitui baseline autenticado antes de mover seletores visiveis apenas no dashboard real.
+
+---
+
+## 7. Regras para mudar CSS
 
 Antes de qualquer mudanca real de CSS:
 
 1. identificar bucket de ownership em `docs/planning/v76-css-ownership-inventory.md`;
 2. definir filescope CSS-only ou justificar por que HTML/JS tambem precisa mudar;
-3. aplicar Gate V27 para baseline visual/a11y nas rotas afetadas;
+3. aplicar Gate V27 e `npm run audit:css-baseline` para baseline visual/a11y nas rotas afetadas;
 4. aplicar politica V32 para decidir Playwright E2E obrigatorio;
 5. aplicar politica V33 quando a mudanca impactar Lighthouse/LHCI;
 6. registrar rollback simples, sem dashboard, secret ou migration;
@@ -134,16 +154,17 @@ Nao fazer:
 
 ---
 
-## 7. Comandos uteis
+## 8. Comandos uteis
 
 ```bash
 npm run audit:css
 npm run audit:css -- --json
+npm run audit:css-baseline
 npm run check:structure
 npm run check:scripts
 npm run check:hygiene
 npm run check:all
 ```
 
-`npm run audit:css` e informativo. Ele nao substitui baseline visual, mas reduz deriva entre
-documentacao e estado real do filesystem.
+`npm run audit:css` e informativo e classifica ownership. `npm run audit:css-baseline` gera
+evidencia visual local em `output/`, sem commitar screenshots.

@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.8` (inventario CSS-A de ownership de `styles.css`, runtime `8.6.1`)
+- linha de trabalho atual: `v76.9` (baseline CSS-B visual/cascade de `styles.css`, runtime `8.6.1`)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
@@ -12,14 +12,14 @@
 | Arquivo | Uso principal |
 |---|---|
 | [architecture.md](./architecture.md) | arquitetura atual do frontend, camadas, hotspots, contagens e regras de equivalencia |
-| [architecture/repository-structure.md](./architecture/repository-structure.md) | estrutura atual do repositorio pos-V22, reancorada em v76.8 |
+| [architecture/repository-structure.md](./architecture/repository-structure.md) | estrutura atual do repositorio pos-V22, reancorada em v76.9 |
 | [architecture/module-catalog.md](./architecture/module-catalog.md) | catalogo de ~130 modulos JS com namespace, paginas e dependencias *(v16.3.0-v16.4.0)* |
 | [architecture/controllers-catalog.md](./architecture/controllers-catalog.md) | catalogo de 48 controllers com responsabilidade e KCAPI calls *(v16.5.0; contagem v75.1)* |
 | [architecture/script-loading-reference.md](./architecture/script-loading-reference.md) | ordem de carregamento de scripts em 26 HTMLs *(v16.6.0; contagem v76.6)* |
 | [architecture/data-flow-guide.md](./architecture/data-flow-guide.md) | fluxo de dados ponta a ponta: usuario -> controller -> KCAPI -> adapter -> Supabase *(v16.7.0)* |
 | [architecture/ai-development-guide.md](./architecture/ai-development-guide.md) | guia de comportamento para IA: leia antes de qualquer modificacao *(v16.8.0, reancorado em V75)* |
 | [architecture/test-strategy.md](./architecture/test-strategy.md) | estrategia de 174 suites: onde adicionar testes, regras de manutencao *(v16.9.0; contagem v76.7)* |
-| [architecture/css-architecture.md](./architecture/css-architecture.md) | CSS em producao, ownership de `styles.css` e `future-split/` *(v76.8)* |
+| [architecture/css-architecture.md](./architecture/css-architecture.md) | CSS em producao, ownership de `styles.css`, baseline CSS-B e `future-split/` *(v76.9)* |
 | [api-contract.md](./api-contract.md) | contrato publico da `KCAPI`, metodos expostos e semantica de retorno |
 | [db-schema.md](./db-schema.md) | tabelas, politicas, indices, storage, cron jobs e notas de estado do banco |
 | [rpc-catalog.md](./rpc-catalog.md) | catalogo de RPCs, triggers e funcoes PostgreSQL usadas pelo app |
@@ -61,6 +61,7 @@
 | [planning/v53-functional-patch-manifest.md](./planning/v53-functional-patch-manifest.md) | manifesto de filescope/teste/rollback antes do primeiro patch funcional |
 | [planning/v76-hotspot-decomposition-plan.md](./planning/v76-hotspot-decomposition-plan.md) | plano de decomposicao segura dos hotspots `kc-api.client.js` e `styles.css` |
 | [planning/v76-css-ownership-inventory.md](./planning/v76-css-ownership-inventory.md) | inventario CSS-A de ownership de `styles.css` antes de split ou extracao |
+| [planning/v76-css-visual-baseline.md](./planning/v76-css-visual-baseline.md) | baseline CSS-B visual/cascade antes de split de `styles.css` |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
 | [audits/README.md](./audits/README.md) | indice de auditorias tecnicas pontuais (read-only + validacao contra producao) |
 | [audits/audit-v3-actual-state-2026-06-11.md](./audits/audit-v3-actual-state-2026-06-11.md) | V3 - comparacao entre V1/V2 e o estado real apos 9 PRs mergeados em 72h (2026-06-11) |
@@ -75,6 +76,7 @@
 | [qa/reports/report-v76-kcapi-posts-normalize-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-posts-normalize-extraction-2026-06-12.md) | evidencia V76 da extracao de `KCAPI.normalizePost` para `window._KCAPI.postsNormalize` |
 | [qa/reports/report-v76-kcapi-ratings-normalize-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-ratings-normalize-extraction-2026-06-12.md) | evidencia V76 da extracao dos normalizadores `normalizeUserRating*` para `window._KCAPI.ratings` |
 | [qa/reports/report-v76-css-ownership-inventory-2026-06-12.md](./qa/reports/report-v76-css-ownership-inventory-2026-06-12.md) | evidencia V76 do inventario CSS-A de ownership de `styles.css` |
+| [qa/reports/report-v76-css-visual-baseline-2026-06-12.md](./qa/reports/report-v76-css-visual-baseline-2026-06-12.md) | evidencia V76 do baseline CSS-B visual/cascade antes de split de `styles.css` |
 | [qa/reports/report-v76-kcapi-session-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-session-extraction-2026-06-12.md) | evidencia V76 da extracao de `KCSessionStore`/`KCPostFreshness` para `window._KCAPI.session` |
 | [qa/reports/report-v76-kcapi-diagnostics-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-diagnostics-extraction-2026-06-12.md) | evidencia V76 da extracao de diagnostics para `window._KCAPI.diagnostics` |
 | [qa/reports/report-v76-kcapi-public-surface-2026-06-12.md](./qa/reports/report-v76-kcapi-public-surface-2026-06-12.md) | snapshot V76 da superficie publica `window.KCAPI` antes de decomposicao JS |

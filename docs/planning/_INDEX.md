@@ -29,6 +29,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v53-functional-patch-manifest.md` | Manifesto V53 de filescope, risco, teste e rollback antes do primeiro patch funcional |
 | `v76-hotspot-decomposition-plan.md` | Plano V76 para decomposicao segura de `kc-api.client.js` e `styles.css` sem misturar trilhas JS/CSS |
 | `v76-css-ownership-inventory.md` | Inventario CSS-A de ownership de `styles.css` antes de split, extracao ou ativacao de `future-split/` |
+| `v76-css-visual-baseline.md` | Baseline CSS-B visual/cascade para rotas publicas, usuario/chat e admin estatico antes de qualquer split real |
 
 ## Regras
 

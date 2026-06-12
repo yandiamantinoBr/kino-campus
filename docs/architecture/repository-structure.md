@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v76.8.0
+**Versao:** v76.9.0
 **Data:** 2026-06-12
-**Atualizado em:** v76.8.0 - inventario CSS-A de ownership de `styles.css`
+**Atualizado em:** v76.9.0 - baseline CSS-B visual/cascade de `styles.css`
 
 ---
 
@@ -51,7 +51,7 @@ patch PUBLIC-A11Y dos 14 icones decorativos de titulos de secao e feedback em ad
 patch PUBLIC-A11Y dos 9 icones decorativos de acoes e estados em kc-comments.js V73,
 patch PUBLIC-A11Y dos 18 icones decorativos de acoes e estados em admin-reports.controller.js V74,
 patch PUBLIC-A11Y dos 18 icones decorativos de avatares, acoes e estados em kc-ranking.js V75,
-performance phase 1 com runtime 8.6.1 em V75.1, decomposicao V76 de diagnostics/session/filters/authors/posts-normalize e normalizadores de rating em V76.7, inventario CSS-A de ownership de `styles.css` em V76.8.
+performance phase 1 com runtime 8.6.1 em V75.1, decomposicao V76 de diagnostics/session/filters/authors/posts-normalize e normalizadores de rating em V76.7, inventario CSS-A de ownership de `styles.css` em V76.8 e baseline CSS-B visual/cascade em V76.9.
 
 ---
 
@@ -112,6 +112,7 @@ kino-campus/
 |   |-- validate-public-routes.js
 |   |-- hygiene-check.js
 |   |-- audit-css-ownership.js
+|   |-- capture-css-visual-baseline.js
 |   `-- inject-env.js
 |-- admin/                         6 HTMLs admin
 |-- *.html                         21 HTMLs na raiz
@@ -197,7 +198,7 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/product-lightbox.css` | Producao | Lightbox de midia da pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
-O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css` sem alterar cascade, HTML ou `future-split/`.
+O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css`; V76.9 adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md` para capturar baseline anonimo sem alterar cascade, HTML ou `future-split/`.
 
 ---
 

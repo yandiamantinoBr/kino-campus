@@ -137,11 +137,16 @@ Nao carregar `future-split/` em producao ate que um PR dedicado prove equivalenc
 
 ## 8. Proxima etapa recomendada
 
-Escolher uma trilha unica:
+Atualizacao v76.9.0: a trilha **CSS-B baseline visual** foi executada em
+`docs/planning/v76-css-visual-baseline.md` e registrada em
+`docs/qa/reports/report-v76-css-visual-baseline-2026-06-12.md`.
 
-1. **CSS-B baseline visual:** capturar desktop/mobile para home, `_product.html`, `my-posts.html`,
-   `mensagens.html`, `profile.html`, `settings.html` e as 6 paginas admin. Sem alterar CSS.
-2. **JS residual menor:** inventario de wrappers/bootstrap restantes em `kc-api.client.js`, sem tocar CSS.
+Escolher uma trilha unica para a proxima entrega:
 
-Se a escolha for CSS runtime, usar CSS-B primeiro. Nao iniciar extracao de seletores diretamente a
-partir deste inventario.
+1. **CSS-C micro-split:** apenas para seletor visivel nas rotas cobertas pelo baseline anonimo, com
+   before/after e rollback.
+2. **CSS-B admin autenticado:** capturar dashboard admin real antes de mover seletores que so
+   aparecem no estado autenticado.
+3. **JS residual menor:** inventario de wrappers/bootstrap restantes em `kc-api.client.js`, sem tocar CSS.
+
+Nao iniciar extracao ampla de seletores diretamente a partir deste inventario.

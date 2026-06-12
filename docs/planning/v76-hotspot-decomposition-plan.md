@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.8.0
+**Versao:** v76.9.0
 **Data:** 2026-06-12
-**Escopo:** planejamento tecnico + status das extracoes JS V76 e inventario CSS-A; sem alterar CSS runtime, SQL, secrets, provider ou deploy
+**Escopo:** planejamento tecnico + status das extracoes JS V76, inventario CSS-A e baseline CSS-B; sem alterar CSS runtime, SQL, secrets, provider ou deploy
 
 ---
 
@@ -133,6 +133,12 @@ Esse inventario pode ser documental ou assistido por script, mas nao deve altera
 1.995 seletores em `styles.css`, sem mover seletores, sem alterar HTML e sem carregar
 `future-split/`.
 
+**Status v76.9.0:** CSS-B concluido em
+`docs/planning/v76-css-visual-baseline.md`, com suporte de
+`scripts/capture-css-visual-baseline.js` (`npm run audit:css-baseline`). A rodada local gerou
+24 screenshots em 12 rotas x 2 viewports, com 0 respostas falhas, 0 overflow horizontal, 0 erros de
+console/pagina e 0 carregamentos de `future-split/`.
+
 ### 4.4 Gates obrigatorios para qualquer PR CSS
 
 - Gate V27 de visual/a11y com rotas afetadas.
@@ -185,6 +191,7 @@ Escolher uma das duas, nunca ambas no mesmo PR:
 |---|---|---|
 | JS-A | Report de superficie publica `window.KCAPI` e mapa dos blocos residuais no facade | prepara extracao sem mudar runtime |
 | CSS-A | Inventario de ownership de seletores de `styles.css` | **Concluido em v76.8.0**; prepara split sem alterar cascade |
+| CSS-B | Baseline visual/cascade anonimo antes de split de `styles.css` | **Concluido em v76.9.0**; cria evidencia antes/depois para micro-splits futuros |
 
 **Status 2026-06-12:** JS-A foi entregue em
 `docs/qa/reports/report-v76-kcapi-public-surface-2026-06-12.md`, com snapshot de 107 membros
@@ -221,11 +228,12 @@ delegacao publica, os snapshots pre-extracao e a ordem de carregamento nos 27 ca
 reduzindo `buildRatingsDeps()` a `getActiveDriver` e ampliando a suite
 `kc-api-ratings-module.test.js` para cobrir normalizacao direta.
 
-**Status v76.8.0:** CSS-A criou o inventario de ownership de `styles.css` em
-`docs/planning/v76-css-ownership-inventory.md` e o script `npm run audit:css`, registrando
-12.282 linhas / 287.760 bytes, 1.774 regras parseadas, 1.995 seletores parseados e candidatos
-para `admin-shell.css`, `product.css`, `kc-public-shell.css` e `kc-chat.css` sem alterar cascade.
+**Status v76.9.0:** CSS-A criou o inventario de ownership de `styles.css` em
+`docs/planning/v76-css-ownership-inventory.md` e CSS-B criou baseline visual/cascade anonimo em
+`docs/planning/v76-css-visual-baseline.md`, com 24 capturas em 12 rotas x 2 viewports e 0
+carregamentos de `future-split/`. Nenhum seletor foi movido.
 
-Proxima entrega recomendada apos CSS-A: escolher uma das duas frentes, sem misturar no mesmo PR:
-baseline visual CSS-B antes de qualquer extracao real, ou inventario residual menor da fachada
-`KCAPI` focado apenas em wrappers/bootstrap que ainda nao pertencem a submodulos.
+Proxima entrega recomendada apos CSS-B: escolher uma das tres frentes, sem misturar no mesmo PR:
+CSS-C micro-split apenas para seletor visivel no baseline anonimo, CSS-B autenticado para dashboard
+admin real, ou inventario residual menor da fachada `KCAPI` focado apenas em wrappers/bootstrap que
+ainda nao pertencem a submodulos.
