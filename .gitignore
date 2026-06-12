@@ -1,12 +1,13 @@
 .playwright-cli/
 .vercel/
-output/playwright/profile-*/
+
+# Generated local test/evidence output. Canonical QA evidence belongs in docs/qa/reports/.
+output/
 
 # Lighthouse CI (v12.10.0)
 .lighthouseci/
 
 # Playwright E2E (v12.9.0)
-output/playwright-report/
 test-results/
 playwright/.cache/
 
