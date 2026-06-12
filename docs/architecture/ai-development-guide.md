@@ -1,6 +1,6 @@
 # Guia de Desenvolvimento para IA — KinoCampus
 
-**Versão:** v76.5.0 · **Atualizado em:** 2026-06-12
+**Versão:** v76.6.0 · **Atualizado em:** 2026-06-12
 
 > **Leia este documento integralmente antes de qualquer modificação.**
 > Este guia é auto-contido: uma IA sem contexto anterior deve conseguir trabalhar
@@ -38,10 +38,10 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Backend | Supabase (PostgreSQL + Auth + Storage + Edge Functions + Realtime) | — |
 | Hosting | Vercel | `vercel.json` é imutável sem aprovação explícita |
 | Build | `node scripts/inject-env.js` | Substitui placeholders `__KC_*__` nas variáveis |
-| Testes | Jest (173 suites) + Playwright (9 specs E2E) | Nunca reduzir contagem |
+| Testes | Jest (174 suites) + Playwright (9 specs E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v76.5)
+### Estado atual (v76.6)
 
 | Campo | Valor |
 |-------|-------|
@@ -49,9 +49,9 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Branch de features | `feature/v75.X.Y-descricao-curta` |
 | appVersion | `75.1.0` (performance phase 1; Speed Insights mergeado no PR #549) |
 | frontendRuntimeVersion | `8.6.1` (constante canonica do runtime atual) |
-| Jest | 173 suites · 3559 testes |
+| Jest | 174 suites · 3567 testes |
 | check:all | 5/5 validators verdes |
-| Itens validados (check:structure) | 166 |
+| Itens validados (check:structure) | 167 |
 
 ### Onde fica cada coisa
 
@@ -60,7 +60,7 @@ kino-campus/
 ├── assets/js/                  ← Todo JavaScript do frontend
 │   ├── boot/          (9)      ← kc-constants.js, kc-env.js, kc-feature-flags.js, ...
 │   ├── core/         (12)      ← kc-auth.ui.js, kc-notifications.js, kc-core.js, ...
-│   ├── api/          (20)      ← kc-api.client.js (fachada KCAPI) + sub-módulos
+│   ├── api/          (22)      ← kc-api.client.js (fachada KCAPI) + sub-módulos
 │   ├── utils/         (8)      ← kc-utils.js + sub-módulos _KCU.*
 │   ├── features/     (16)      ← funcionalidades de página: feed, search, create, ...
 │   ├── features/create-post/ (7)
@@ -77,9 +77,9 @@ kino-campus/
 ├── data/database.json          ← fixture para driver local
 ├── docs/                       ← Toda documentação técnica
 ├── scripts/                    ← 5 validators + inject-env.js
-├── tests/                      ← 173 suites Jest
+├── tests/                      ← 174 suites Jest
 │   ├── unit/         (25)
-│   ├── integration/ (123)
+│   ├── integration/ (124)
 │   ├── contract/      (8)
 │   ├── structure/    (12)
 │   ├── a11y/          (5)
@@ -99,7 +99,7 @@ kino-campus/
 3. git checkout -b feature/v75.X.Y-descricao-curta
 4. [ implementar mudanças ]
 5. npm run check:all          ← DEVE ser 5/5 verdes
-   npm test                   ← DEVE ser ≥173/173 suites, ≥3559/3559 testes
+   npm test                   ← DEVE ser ≥174/174 suites, ≥3567/3567 testes
 6. git add <arquivos específicos>
 7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 8. git push -u origin feature/v75.X.Y-descricao-curta
@@ -136,7 +136,7 @@ Proibido:
 
 ```bash
 npm run check:all    # OBRIGATÓRIO — deve exibir 5 "OK" em sequência
-npm test             # OBRIGATÓRIO — deve exibir "173 passed, 173 total"
+npm test             # OBRIGATÓRIO — deve exibir "174 passed, 174 total"
 ```
 
 Se qualquer check falhar → corrigir antes de commitar. Nunca commitar com falha.
@@ -509,7 +509,7 @@ describe('MeuModulo', () => {
 
 **Nunca reduzir o número de suites ou de testes.**
 
-- Antes de commitar: `npm test` deve mostrar `≥173 passed, 173 total` e `≥3559 passed, 3559 total`
+- Antes de commitar: `npm test` deve mostrar `≥174 passed, 174 total` e `≥3567 passed, 3567 total`
 - Se uma nova suite é criada, a contagem sobe — o gate da suite nova deve ser documentado no commit
 - Nunca deletar suites existentes
 - Nunca comentar ou pular testes (`it.skip`, `describe.skip`) sem aprovação explícita
@@ -616,7 +616,7 @@ git commit -m "$(cat <<'EOF'
 fix(validator): adiciona components/ ao CANONICAL_JS
 
 carousel.js, toast.js e voting.js estavam faltando da lista de
-arquivos canônicos. Validator agora verifica 166 itens (baseline v76.4).
+arquivos canônicos. Validator agora verifica 167 itens (baseline v76.6).
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 EOF
@@ -687,7 +687,7 @@ git add -A
 |----------|--------|
 | Deletar suites existentes | Reduz cobertura; vide regra de ouro |
 | `it.skip` ou `describe.skip` sem aprovação | Mascara falhas |
-| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 173/3559 |
+| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 174/3567 |
 | Commitar com `npm test` com falhas | Proibido terminantemente |
 
 ### Validators
@@ -711,7 +711,7 @@ git add -A
 | Quais scripts cada HTML carrega e em que ordem | `docs/architecture/script-loading-reference.md` |
 | Como os dados fluem de controller → KCAPI → adapter → banco | `docs/architecture/data-flow-guide.md` |
 | Estrutura do repositório, grupos JS, namespaces, delta de versões | `docs/architecture/repository-structure.md` |
-| Onde adicionar novos testes, estrutura das 173 suites | `docs/architecture/test-strategy.md` |
+| Onde adicionar novos testes, estrutura das 174 suites | `docs/architecture/test-strategy.md` |
 | CSS em produção, `future-split/`, convenções | `docs/architecture/css-architecture.md` |
 | Arquitetura geral, camadas, hotspots | `docs/architecture.md` |
 | Métodos públicos de KCAPI, contratos de retorno | `docs/api-contract.md` |
@@ -773,6 +773,6 @@ npm run check:routes     # 26 rotas + CSS
 npm run check:hygiene    # 8.6.1, i18n B2, inline handlers, cadeias
 
 # Testes
-npm test                 # 173 suites · 3559 testes
+npm test                 # 174 suites · 3567 testes
 npx playwright test --list # 9 specs Playwright · 59 testes listados
 ```

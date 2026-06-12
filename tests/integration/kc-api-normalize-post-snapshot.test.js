@@ -44,6 +44,7 @@ function loadKCAPI() {
   require('../../assets/js/api/kc-api.session.js');
   require('../../assets/js/api/kc-api.filters.js');
   require('../../assets/js/api/kc-api.authors.js');
+  require('../../assets/js/api/kc-api.posts-normalize.js');
   require('../../assets/js/api/kc-api.client.js');
 
   return window.KCAPI;

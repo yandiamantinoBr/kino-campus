@@ -68,7 +68,7 @@
 | **HTML** | 27 arquivos `.html` no repositorio; 26 canonicos validados | Carrega scripts em ordem correta via `<script defer>` |
 | **Boot** | `boot/` (9 arquivos) | `KC_CONSTANTS`, `KC_ENV`, `KCFF`, SEO/analytics, SW, telemetria |
 | **Utils** | `utils/` (8 arquivos) | `KCUtils.escapeHtml`, formatação, dates, slugify |
-| **KCAPI** | `api/` (21 arquivos) | Fachada única — contrato público, sub-módulos, driver selection |
+| **KCAPI** | `api/` (22 arquivos) | Fachada única — contrato público, sub-módulos, driver selection |
 | **Adapters** | `adapters/local/` + `adapters/supabase/` (21 arquivos) | Implementações concretas por driver |
 | **Core** | `core/` (12 arquivos) | i18n, profiles, consentimento, notificações UI, shell |
 | **Controller** | `controllers/` (48 arquivos) | Orquestra UI, chama KCAPI, renderiza resultados |
@@ -630,6 +630,7 @@ KCAPI.unsubscribeNotifications(channel); // ao sair da página
 | Notificações | `assets/js/api/kc-api.notifications.js` | `window._KCAPI.notifications` |
 | Diagnosticos create-post | `assets/js/api/kc-api.diagnostics.js` | `window._KCAPI.diagnostics` |
 | Session cache/freshness | `assets/js/api/kc-api.session.js` | `window._KCAPI.session`, `window.KCSessionStore`, `window.KCPostFreshness` |
+| Normalizacao de posts | `assets/js/api/kc-api.posts-normalize.js` | `window._KCAPI.postsNormalize` |
 | Adapter local (facade) | `assets/js/adapters/local/local.adapter.js` | — |
 | Adapter Supabase (facade) | `assets/js/adapters/supabase/supabase.adapter.js` | — |
 | Cliente Supabase (auth + sessão) | `assets/js/api/kc-supabase-facade.js` | `window.KCSupabase` |

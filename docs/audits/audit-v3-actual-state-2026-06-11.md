@@ -24,7 +24,7 @@ critico ou alto.
 | PR #549 do Vercel Bot aberto | Mergeado em PR #551 (`dc7468d Install Vercel Speed Insights`) |
 | CI sem Jest/validators | Resolvido em PR #551 (`0f42a62 ci: add essential validation gate`) - novo workflow `.github/workflows/essential-validation.yml` |
 | CSP frouxa | Endurecida em PR #552 (`fafc2ea security: harden baseline csp directives`) - inclui `va.vercel-scripts.com` e `vitals.vercel-insights.com` |
-| Drift de testes 135/3076 vs contagem real atual | Resolvido em #550; estado atual pos-V76 confirmado em 173/3559 |
+| Drift de testes 135/3076 vs contagem real atual | Resolvido em #550; estado atual pos-V76 confirmado em 174/3567 |
 | Tokens em env vars Windows | Runbook pronto em PR #554 (`93c75d5 docs: add token rotation runbook`) - execucao manual pendente |
 | `notify-admin-reports-threshold` nao deployada | Confirmado; estado remoto documentado em `docs/ops/vercel-supabase-invariants.md:73-75` (PR #558) |
 | `auth_leaked_password_protection` desabilitado | Confirmado em `docs/qa/reports/report-v75-supabase-auth-password-protection-2026-06-11.md` (PR #555) |
@@ -59,7 +59,7 @@ abaixo.
 | `frontendRuntimeVersion` | `8.6.1` | `VERSION.json:4` |
 | Status | `v75.1 performance phase 1` | `VERSION.json:6` |
 | Validators | 5/5 verdes (version, structure, scripts, routes, hygiene) | `npm run check:all` |
-| Jest | 173 suites / 3559 testes passed | `npm test` |
+| Jest | 174 suites / 3567 testes passed | `npm test` |
 | Playwright | 9 specs / 59 testes | `npx playwright test --list` |
 | Migrations | 132 arquivos em `supabase/migrations/` | `Get-ChildItem` |
 | HTMLs | 27 (21 publicos + 6 admin) | `check:routes` |
@@ -109,11 +109,11 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 
 | # | Achado V1/V2 | Status atual | Evidencia | Severidade residual |
 |---|---|---|---|---|
-| A1 | `kc-api.client.js` 67KB / 1.698 linhas | **Parcialmente reduzido em runtime**; diagnostics, session/freshness, filters/date presets e authors/mocks extraidos para submodulos, contrato publico preservado em 107 membros | `docs/planning/v76-hotspot-decomposition-plan.md`; reports V76 de public surface, diagnostics, session, filters e authors | Alto (evolucao) |
+| A1 | `kc-api.client.js` 60KB / 1.529 linhas | **Parcialmente reduzido em runtime**; diagnostics, session/freshness, filters/date presets, authors/mocks e normalizacao de posts extraidos para submodulos, contrato publico preservado em 107 membros | `docs/planning/v76-hotspot-decomposition-plan.md`; reports V76 de public surface, diagnostics, session, filters, authors, snapshot e posts-normalize | Alto (evolucao) |
 | A2 | `styles.css` 287KB | **Nao tocado em runtime**; stubs `future-split/` seguem nao carregados e plano V76 define gates | `docs/planning/v76-hotspot-decomposition-plan.md` | Alto (evolucao) |
 | A3 | Migrations > 20KB com seed embutido (17 celulas) | **Nao tocado** - `v8.2.6.0_fix_module_loading.sql` (341 linhas) segue com 44 posts seed | Confirmado por `Get-ChildItem` em migrations | Alto (cosmetic/documental) |
 | A4 | CI nao roda validators/Jest | **Resolvido** | `.github/workflows/essential-validation.yml` (PR #551) roda 5 validators + Jest + Playwright list em todo PR | Nenhum |
-| A5 | Drift de testes 135 vs 173 | **Resolvido** | README:23, ai-development-guide:52, architecture.md:22 dizem 173/3559 apos o snapshot V76; Playwright 9/59 | Nenhum |
+| A5 | Drift de testes 135 vs 174 | **Resolvido** | README:23, ai-development-guide:52, architecture.md:22 dizem 174/3567 apos a extracao V76; Playwright 9/59 | Nenhum |
 | A6 | Cross-region Supabase Oregon x Vercel gru1 | **Aceitavel** | Latencia ~150-200ms documentada em V1; nao justifica migracao | Medio |
 
 ### 3.3 Falsos positivos da V1/V2
@@ -146,7 +146,7 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 
 | Item | Razao | Acao |
 |---|---|---|
-| `kc-api.client.js` 67KB / 1.698 linhas | Ja tem sub-modulos `_KCAPI.*` extraidos; diagnostics, session/freshness, filters/date presets e authors/mocks sairam da fachada; fachada principal segue relevante | Usar `docs/planning/v76-hotspot-decomposition-plan.md`; snapshot de `normalizePost` concluido em v76.5, proximo passo recomendado: extracao para sub-modulo proprio |
+| `kc-api.client.js` 60KB / 1.529 linhas | Ja tem sub-modulos `_KCAPI.*` extraidos; diagnostics, session/freshness, filters/date presets, authors/mocks e normalizacao de posts sairam da fachada; fachada principal segue relevante | Usar `docs/planning/v76-hotspot-decomposition-plan.md`; proximo passo recomendado: inventario de helpers residuais de rating/normalizacao antes de novo split |
 | `styles.css` 287KB | Stubs em `assets/css/future-split/` estao documentados mas nao carregados | Usar `docs/planning/v76-hotspot-decomposition-plan.md`; split real requer baseline visual + gate V27 + ledger V35 + dossie V45 |
 | `unaccent` em `public` schema | **Nao ativo em 2026-06-12**: extensao instalada em `extensions`; wrapper/FTS seguem intocados | Nenhuma migration nesta etapa; manter V28 como referencia se Advisor voltar |
 | CHANGELOG encoding V9-V9.3.1 | UTF-8 salvo como latin1 em ~10 entradas historicas | Cosmético, conviver ou corrigir com script de re-encoding |

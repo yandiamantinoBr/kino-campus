@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.5.0 · **Atualizado em:** 2026-06-12
+**Versão:** v76.6.0 · **Atualizado em:** 2026-06-12
 
-> Documenta as 173 suites Jest + 9 specs Playwright: o que cada uma cobre,
+> Documenta as 174 suites Jest + 9 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -12,7 +12,7 @@
 1. [Filosofia](#1-filosofia)
 2. [Métricas atuais](#2-métricas-atuais)
 3. [Diretório unit/ — 25 suites](#3-diretório-unit--25-suites)
-4. [Diretório integration/ — 123 suites](#4-diretório-integration--123-suites)
+4. [Diretório integration/ — 124 suites](#4-diretório-integration--124-suites)
 5. [Diretório contract/ — 8 suites](#5-diretório-contract--8-suites)
 6. [Diretório structure/ — 12 suites](#6-diretório-structure--12-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 173 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todos os 174 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -50,21 +50,21 @@
 | Diretório | Suites | Domínio principal |
 |-----------|--------|------------------|
 | `tests/unit/` | **25** | Módulos utilitários individuais |
-| `tests/integration/` | **123** | Controllers, adapters, sub-módulos KCAPI |
+| `tests/integration/` | **124** | Controllers, adapters, sub-módulos KCAPI |
 | `tests/contract/` | **8** | Contratos públicos e formas de exports |
 | `tests/structure/` | **12** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
 | `tests/e2e/` | **9** | Playwright (browser real, HTTP real) |
-| **Total** | **182** | (173 Jest + 9 Playwright specs) |
+| **Total** | **183** | (174 Jest + 9 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 173 suites · 3559 testes
+Jest: 174 suites · 3567 testes
 Playwright: 9 specs · 59 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥173 passed, 173 total` e `≥3559 passed, 3559 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥174 passed, 174 total` e `≥3567 passed, 3567 total`.
 
 ### Gate CI essencial
 
@@ -115,11 +115,11 @@ A tabela abaixo destaca as suites principais; a contagem canônica vem do filesy
 
 ---
 
-## 4. Diretório integration/ — 123 suites
+## 4. Diretório integration/ — 124 suites
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
 
-A tabela abaixo é agrupada por domínio e não lista todos os 121 arquivos individualmente.
+A tabela abaixo é agrupada por domínio e não lista todos os 124 arquivos individualmente.
 
 ### Sub-grupo: Controllers públicos (6 suites)
 
@@ -163,7 +163,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 121 arquivos indi
 | `admin-dashboard.metrics.test.js` | `admin-dashboard.metrics.js` | Métricas de posts, usuários, relatórios |
 | `admin-dashboard.shared.test.js` | `admin-dashboard.shared.js` | Utilitários compartilhados do dashboard admin |
 
-### Sub-grupo: KCAPI sub-módulos (17 suites)
+### Sub-grupo: KCAPI sub-módulos (18 suites)
 
 | Suite | Sub-módulo | O que cobre |
 |-------|-----------|------------|
@@ -171,6 +171,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 121 arquivos indi
 | `kc-api-authors-module.test.js` | `kc-api.authors.js` | `MOCK_USERS`, aliases publicos, resolucao legado e ordem HTML |
 | `kc-api-client.test.js` | `kc-api.client.js` | Fachada principal: `registerAdapter`, `getActiveDriver`, diagnósticos |
 | `kc-api-normalize-post-snapshot.test.js` | `KCAPI.normalizePost` | Snapshots pre-extracao de aliases, datas, autor legado, midia e regra `compra-venda` |
+| `kc-api-posts-normalize-module.test.js` | `kc-api.posts-normalize.js` | Delegacao de `normalizePost`, helper `pickFirstNonEmpty` e ordem HTML |
 | `kc-api-comments-votes-module.test.js` | `kc-api.comments-votes.js` | Comentários, votos, SWR de comments |
 | `kc-api-diagnostics-module.test.js` | `kc-api.diagnostics.js` | Estado de diagnóstico de create-post, resumo de payload e ordem HTML |
 | `kc-api-session-module.test.js` | `kc-api.session.js` | `KCSessionStore`, `KCPostFreshness`, storage keys, dedupe e ordem HTML |
@@ -482,8 +483,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥173 passed, 173 total
-  Tests:       ≥3559 passed, 3559 total
+  Test Suites: ≥174 passed, 174 total
+  Tests:       ≥3567 passed, 3567 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

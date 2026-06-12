@@ -12,11 +12,13 @@ const DIAGNOSTICS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.diag
 const SESSION_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.session.js');
 const FILTERS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.filters.js');
 const AUTHORS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.authors.js');
+const POSTS_NORMALIZE_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.posts-normalize.js');
 let source;
 let diagnosticsSource;
 let sessionSource;
 let filtersSource;
 let authorsSource;
+let postsNormalizeSource;
 let facadeBlock;
 
 const EXPECTED_KCAPI_MEMBERS = [
@@ -163,6 +165,7 @@ beforeAll(() => {
   sessionSource = fs.readFileSync(SESSION_SRC, 'utf8');
   filtersSource = fs.readFileSync(FILTERS_SRC, 'utf8');
   authorsSource = fs.readFileSync(AUTHORS_SRC, 'utf8');
+  postsNormalizeSource = fs.readFileSync(POSTS_NORMALIZE_SRC, 'utf8');
 
   const facadeStart = source.indexOf('window.KCAPI = Object.freeze({');
   const globalsStart = source.indexOf('window.getLastCreatePostError = getLastCreatePostError;');
@@ -186,7 +189,7 @@ describe('kc-api.client.js - source shape', () => {
   });
 
   test('mantem kc-api.client.js abaixo do limite de crescimento antes da proxima decomposicao', () => {
-    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(1710);
+    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(1545);
   });
 
   test('mantem KCAPI como fachada publica principal e _KCAPI como namespace interno', () => {
@@ -207,6 +210,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.session = window._KCAPI.session || {};');
     expect(source).toContain('window._KCAPI.filters = window._KCAPI.filters || {};');
     expect(source).toContain('window._KCAPI.authors = window._KCAPI.authors || {};');
+    expect(source).toContain('window._KCAPI.postsNormalize = window._KCAPI.postsNormalize || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
@@ -215,6 +219,7 @@ describe('kc-api.client.js - source shape', () => {
     expect(facadeBlock).not.toContain('window._KCAPI.session');
     expect(facadeBlock).not.toContain('window._KCAPI.filters');
     expect(facadeBlock).not.toContain('window._KCAPI.authors');
+    expect(facadeBlock).not.toContain('window._KCAPI.postsNormalize');
   });
 });
 
@@ -573,5 +578,18 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(authorsSource).toContain('const LEGACY_AUTHOR_INDEX =');
     expect(authorsSource).toContain('function normalizeUserProfile(user) {');
     expect(authorsSource).toContain('window._KCAPI.authors = Object.freeze({');
+  });
+
+  test('mantem normalizePost delegado para kc-api.posts-normalize.js sem corpo local na fachada', () => {
+    expect(source).toContain('function getPostsNormalizeModule()');
+    expect(source).toContain("throw new Error('KCAPI posts normalize module not loaded.');");
+    expect(source).toContain('return getPostsNormalizeModule().normalizePost(raw, {');
+    expect(source).toContain('defaultAvatar: (window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) ||');
+    expect(source).not.toContain('function pickFirstNonEmpty(values) {');
+    expect(source).not.toContain("const actionish = ['vendo', 'compro', 'troco'");
+    expect(postsNormalizeSource).toContain('function normalizePost(raw, deps = {})');
+    expect(postsNormalizeSource).toContain('function pickFirstNonEmpty(values) {');
+    expect(postsNormalizeSource).toContain("const actionish = ['vendo', 'compro', 'troco'");
+    expect(postsNormalizeSource).toContain('window._KCAPI.postsNormalize = Object.freeze({');
   });
 });

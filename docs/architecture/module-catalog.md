@@ -16,7 +16,7 @@
 
 - [Grupo boot/](#grupo-boot) — 6 módulos
 - [Grupo core/](#grupo-core) — 11 módulos
-- [Grupo api/](#grupo-api) — 20 módulos
+- [Grupo api/](#grupo-api) — 21 módulos
 - [Grupo utils/](#grupo-utils) — 8 módulos
 - [Grupo features/](#grupo-features) — 10 módulos *(v16.4.0)*
 - [Grupo features/create-post/](#grupo-featurescreate-post) — 7 módulos *(v16.4.0)*
@@ -946,13 +946,40 @@ fachada `window.KCAPI`, por adapters locais e pela normalizacao de posts.
 
 ---
 
+### `api/kc-api.posts-normalize.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | api |
+| Namespace | `window._KCAPI.postsNormalize` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | Todas as páginas que carregam `kc-api.client.js` |
+
+**Responsabilidade:** Normalizacao de posts usada por `window.KCAPI.normalizePost`. Centraliza
+aliases snake/camel, datas efetivas, autor legado, midia/metadata, valores default e a regra de
+`compra-venda` que converte a acao em subcategoria de produto.
+
+**Exports internos:** `normalizePost()` e `pickFirstNonEmpty()`.
+
+**Dependências em runtime:** `window._KCAPI`; a fachada injeta `resolveAuthorId()` e
+`KC_CONSTANTS.DEFAULT_AVATAR_SVG` como dependencias explicitas.
+
+**Consumido por:** `window.KCAPI.normalizePost()` e fluxos que leem posts via adapters local/Supabase.
+
+**Testes:** `tests/integration/kc-api-posts-normalize-module.test.js`,
+`tests/integration/kc-api-normalize-post-snapshot.test.js`,
+`tests/integration/kc-api-client.test.js`,
+`tests/contract/kc-api-facade-contract.test.js`
+
+---
+
 ### `api/kc-api.client.js`
 
 | Campo | Valor |
 |-------|-------|
 | Grupo | api |
 | Namespace | `window.KCAPI` |
-| Padrão | IIFE + `Object.freeze` (1698 linhas — facade central) |
+| Padrão | IIFE + `Object.freeze` (1529 linhas — facade central) |
 | Páginas | **Todas as páginas autenticadas** |
 
 **Responsabilidade:** Facade central da API do KinoCampus. Agrega submódulos KCAPI
@@ -2312,6 +2339,7 @@ contagem de votos de um post e voto atual do usuário.
 | api/kc-api.session.js | api | `window._KCAPI.session` | autenticadas+feeds | integration/kc-api-session-module |
 | api/kc-api.filters.js | api | `window._KCAPI.filters` | feeds+busca local | integration/kc-api-filters-module |
 | api/kc-api.authors.js | api | `window._KCAPI.authors` | autenticadas+local | integration/kc-api-authors-module |
+| api/kc-api.posts-normalize.js | api | `window._KCAPI.postsNormalize` | autenticadas+local | integration/kc-api-posts-normalize-module |
 | api/kc-api.client.js | api | `window.KCAPI` | autenticadas | integration/kc-api-client |
 | api/admin-shell.js | api | *(nenhum)* | 6 admin | structure/admin-shell-preload |
 | utils/kc-utils.string.js | utils | `window._KCU_str` | todas | unit/kc-utils-expanded |
@@ -2404,7 +2432,8 @@ ORDEM DE CARREGAMENTO (boot → utils → api → core → adapters → features
 │  kc-api.auth + kc-api.comments-votes + kc-api.help                 │
 │  + kc-api.notifications + kc-api.posts-feed + kc-api.posts-read     │
 │  + kc-api.posts-write + kc-api.profiles + kc-api.ratings            │
-│  + kc-api.related + kc-api.saved + kc-api.authors → kc-api.client  │
+│  + kc-api.related + kc-api.saved + kc-api.authors                  │
+│  + kc-api.posts-normalize → kc-api.client                          │
 └─────────────────────────────────────────────────────────────────────┘
          ↓
 ┌──────────────────────────┐  ┌──────────────────────────────────────┐

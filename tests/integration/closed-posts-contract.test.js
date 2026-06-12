@@ -152,14 +152,15 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
 describe('closed posts - contratos publicos JS', () => {
   test('API e adapters expõem closePost e normalizam tempo efetivo', () => {
     const client = read('assets/js/api/kc-api.client.js');
+    const postsNormalize = read('assets/js/api/kc-api.posts-normalize.js');
     const write = read('assets/js/api/kc-api.posts-write.js');
     const supabase = read('assets/js/adapters/supabase/supabase.posts-write.adapter.js');
 
     expect(client).toContain('async function closePost(postId, payload = {})');
     expect(client).toContain('async function reactivatePost(postId)');
-    expect(client).toContain('bumpedAt');
-    expect(client).toContain('effectiveAt');
-    expect(client).toContain('isClosed');
+    expect(postsNormalize).toContain('bumpedAt');
+    expect(postsNormalize).toContain('effectiveAt');
+    expect(postsNormalize).toContain('isClosed');
     expect(write).toContain('async function closePost(postId, payload, deps)');
     expect(write).toContain('async function reactivatePost(postId, deps)');
     expect(supabase).toContain("'kc_close_post'");

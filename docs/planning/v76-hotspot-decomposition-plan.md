@@ -1,6 +1,6 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.5.0
+**Versao:** v76.6.0
 **Data:** 2026-06-12
 **Escopo:** planejamento tecnico + status da primeira extracao JS; sem alterar CSS, SQL, secrets, provider ou deploy
 
@@ -13,7 +13,7 @@ hotspots ainda relevantes do frontend:
 
 | Hotspot | Estado atual medido em 2026-06-12 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 1.698 linhas / 67.863 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 1.529 linhas / 60.149 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -55,6 +55,7 @@ O arquivo principal ja delega parte do dominio para submodulos `_KCAPI.*`:
 | diagnostics create-post | `assets/js/api/kc-api.diagnostics.js` |
 | filtros/date presets | `assets/js/api/kc-api.filters.js` |
 | autores mock/indices | `assets/js/api/kc-api.authors.js` |
+| normalizacao de posts | `assets/js/api/kc-api.posts-normalize.js` |
 | help/admin help | `assets/js/api/kc-api.help.js` |
 | notifications | `assets/js/api/kc-api.notifications.js` |
 | chat | `assets/js/api/kc-api.chat.js` |
@@ -81,7 +82,7 @@ normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e e
 | `KCSessionStore` / `KCPostFreshness` | responsabilidade isolavel, ja exposta como `window.*` proprio | **Concluido em v76.2.0**; preservar eventos, storage keys e deduplicacao |
 | filtros/date presets de feed | logica pura, coberta por `kc-api-client.test.js` | **Concluido em v76.3.0**; preservar paridade entre modulos e datas |
 | mocks/normalizacao de autores | reduz peso do facade | **Concluido em v76.4.0**; preservar fixtures `MOCK_USERS`, aliases publicos e resolucao por autor/avatar legado |
-| `normalizePost` | grande valor, mas contrato sensivel | **Snapshot pre-extracao concluido em v76.5.0**; proxima entrega pode extrair sem mudar o contrato |
+| `normalizePost` | grande valor, mas contrato sensivel | **Concluido em v76.6.0**; preservar snapshots e delegacao publica `KCAPI.normalizePost` |
 
 ### 3.4 Gates obrigatorios para qualquer PR JS
 
@@ -203,5 +204,9 @@ Realtime broadcast e ordem de carregamento.
 datas efetivas, autor legado via `kc-api.authors.js`, midia/metadata e a regra de
 `compra-venda` que converte acao em subcategoria de produto.
 
-Proxima entrega recomendada apos JS-F: extrair `normalizePost` para sub-modulo proprio sem
-alterar os snapshots, mantendo `window.KCAPI.normalizePost` como delegacao publica.
+**Status v76.6.0:** JS-G extraiu `normalizePost` e `pickFirstNonEmpty` para
+`assets/js/api/kc-api.posts-normalize.js`, preservando `window.KCAPI.normalizePost` como
+delegacao publica, os snapshots pre-extracao e a ordem de carregamento nos 27 carregadores reais.
+
+Proxima entrega recomendada apos JS-G: inventariar os helpers residuais de rating/normalizacao ainda
+residentes no facade e escolher um recorte puro, com snapshot antes de qualquer extracao adicional.
