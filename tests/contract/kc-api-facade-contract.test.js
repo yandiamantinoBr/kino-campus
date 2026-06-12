@@ -8,7 +8,9 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.client.js');
+const DIAGNOSTICS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.diagnostics.js');
 let source;
+let diagnosticsSource;
 let facadeBlock;
 
 const EXPECTED_KCAPI_MEMBERS = [
@@ -151,6 +153,7 @@ function extractFacadeMembers(block) {
 
 beforeAll(() => {
   source = fs.readFileSync(SRC, 'utf8');
+  diagnosticsSource = fs.readFileSync(DIAGNOSTICS_SRC, 'utf8');
 
   const facadeStart = source.indexOf('window.KCAPI = Object.freeze({');
   const globalsStart = source.indexOf('window.getLastCreatePostError = getLastCreatePostError;');
@@ -174,7 +177,7 @@ describe('kc-api.client.js - source shape', () => {
   });
 
   test('mantem kc-api.client.js abaixo do limite de crescimento antes da proxima decomposicao', () => {
-    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(2900);
+    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(2825);
   });
 
   test('mantem KCAPI como fachada publica principal e _KCAPI como namespace interno', () => {
@@ -191,10 +194,12 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain('window._KCAPI.profiles = window._KCAPI.profiles || {};');
     expect(source).toContain('window._KCAPI.related = window._KCAPI.related || {};');
     expect(source).toContain('window._KCAPI.auth = window._KCAPI.auth || {};');
+    expect(source).toContain('window._KCAPI.diagnostics = window._KCAPI.diagnostics || {};');
     expect(facadeBlock).not.toContain('window._KCAPI.notifications');
     expect(facadeBlock).not.toContain('window._KCAPI.saved');
     expect(facadeBlock).not.toContain('window._KCAPI.help');
     expect(facadeBlock).not.toContain('window._KCAPI.postsRead');
+    expect(facadeBlock).not.toContain('window._KCAPI.diagnostics');
   });
 });
 
@@ -490,5 +495,19 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(source).toContain('window.setLastCreatePostError = setLastCreatePostError;');
     expect(source).toContain('window.clearLastCreatePostError = clearLastCreatePostError;');
     expect(source).toContain('window.summarizeCreatePayloadForDiagnostics = summarizeCreatePayloadForDiagnostics;');
+  });
+
+  test('mantem diagnosticos delegados para kc-api.diagnostics.js sem estado local na fachada', () => {
+    expect(source).toContain('function getDiagnosticsModule()');
+    expect(source).toContain("throw new Error('KCAPI diagnostics module not loaded.');");
+    expect(source).toContain('return getDiagnosticsModule().summarizeCreatePayloadForDiagnostics(parsed);');
+    expect(source).toContain('return getDiagnosticsModule().setLastCreatePostError(stage, err, context);');
+    expect(source).toContain('return getDiagnosticsModule().clearLastCreatePostError();');
+    expect(source).toContain('return getDiagnosticsModule().getLastCreatePostError();');
+    expect(source).not.toContain('let lastCreatePostError = null;');
+    expect(source).not.toContain('function normalizeErrorForDiagnostics(err) {');
+    expect(diagnosticsSource).toContain('let lastCreatePostError = null;');
+    expect(diagnosticsSource).toContain('function normalizeErrorForDiagnostics(err) {');
+    expect(diagnosticsSource).toContain('window._KCAPI.diagnostics = Object.freeze({');
   });
 });

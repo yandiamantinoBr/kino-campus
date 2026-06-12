@@ -4,6 +4,7 @@
 **Escopo:** JS-A do plano `docs/planning/v76-hotspot-decomposition-plan.md`
 **Tipo:** contrato estatico + analise documental
 **Runtime alterado:** nao
+**Follow-up:** JS-B extraido em `report-v76-kcapi-diagnostics-extraction-2026-06-12.md`
 
 ---
 
@@ -22,7 +23,7 @@ snapshot executavel.
 
 | Fonte | Evidencia |
 |---|---|
-| `assets/js/api/kc-api.client.js` | 2.846 linhas / 120.212 bytes |
+| `assets/js/api/kc-api.client.js` | 2.846 linhas / 120.212 bytes no baseline JS-A; 2.809 linhas / 119.106 bytes apos JS-B |
 | Export principal | `window.KCAPI = Object.freeze({` inicia na linha 2706 |
 | Bloco exportado | linhas 2706-2840 |
 | Aliases globais de diagnostico | linhas 2841-2844 |
@@ -70,6 +71,7 @@ mas sim o volume de responsabilidades ainda residentes no arquivo central.
 | `window._KCAPI.help` | `assets/js/api/kc-api.help.js` | delegado |
 | `window._KCAPI.notifications` | `assets/js/api/kc-api.notifications.js` | delegado |
 | `window._KCAPI.chat` | `assets/js/api/kc-api.chat.js` | passthrough via `chat` |
+| `window._KCAPI.diagnostics` | `assets/js/api/kc-api.diagnostics.js` | delegado apos JS-B |
 
 ---
 
@@ -99,7 +101,8 @@ mas sim o volume de responsabilidades ainda residentes no arquivo central.
 - extrai estaticamente os membros do bloco `window.KCAPI = Object.freeze({ ... })`;
 - compara a lista extraida com o snapshot canonico de 107 membros;
 - valida que a lista canonica tem exatamente 107 entradas;
-- adiciona guarda de crescimento para manter `kc-api.client.js` com no maximo 2.900 linhas antes da proxima decomposicao.
+- adicionou guarda de crescimento para manter `kc-api.client.js` com no maximo 2.900 linhas no JS-A;
+- apos JS-B, o limite contratual foi reduzido para 2.825 linhas e o bloco de diagnostics saiu da fachada.
 
 Isso torna a proxima extracao mais segura: qualquer remocao, rename, alias ou crescimento relevante
 do facade passa a exigir atualizacao explicita do teste de contrato.
@@ -111,7 +114,7 @@ do facade passa a exigir atualizacao explicita do teste de contrato.
 **Nao extrair `normalizePost` primeiro.** Apesar de ser o maior valor tecnico, ele e o contrato mais
 sensivel do facade e alimenta cards, produto, busca, analytics, saved posts e modo local.
 
-Melhor primeira extracao real:
+Melhor primeira extracao real, agora executada em JS-B:
 
 1. `normalizeErrorForDiagnostics`, `summarizeCreatePayloadForDiagnostics` e helpers de create-post diagnostics;
 2. depois `KCSessionStore`, apenas com contrato explicito de storage keys e deduplicacao;
@@ -131,6 +134,14 @@ Resultado: **passou**.
 
 Contrato KCAPI: 1 suite / 23 testes passed.
 
-Jest completo: 168 suites / 3515 testes passed.
+Jest completo: 169 suites / 3524 testes passed.
 
 Gates completos do PR devem incluir `npm run check:all` antes do merge.
+
+---
+
+## 9. Follow-up JS-B
+
+`docs/qa/reports/report-v76-kcapi-diagnostics-extraction-2026-06-12.md` registra a primeira
+extracao real do plano: `window._KCAPI.diagnostics`, 27 HTMLs reais com script antes da fachada,
+107 membros publicos preservados e contagem documentada em 169 suites / 3524 testes.

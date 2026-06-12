@@ -17,6 +17,7 @@ Camada de API: facade principal, sub-módulos de domínio e cliente Supabase.
 | `kc-api.ratings.js` | `window._KCAPI.ratings` | Avaliações |
 | `kc-api.related.js` | `window._KCAPI.related` | Posts relacionados |
 | `kc-api.saved.js` | `window._KCAPI.saved` | Posts salvos |
+| `kc-api.diagnostics.js` | `window._KCAPI.diagnostics` | Diagnosticos de create-post |
 | `kc-api.help.js` | `window._KCAPI.help` | Central de ajuda |
 | `kc-supabase.client.js` | `window.KCSupabase` | Cliente Supabase + facade |
 | `kc-supabase.posts.js` | `window.KCSupabase._posts` | Posts via Supabase |
@@ -25,7 +26,7 @@ Camada de API: facade principal, sub-módulos de domínio e cliente Supabase.
 
 ## Regras
 - `kc-supabase.client.js` ANTES dos sub-módulos supabase
-- Sub-módulos `kc-api.*.js` carregados APÓS `kc-api.client.js`
+- Sub-módulos `kc-api.*.js` carregados ANTES de `kc-api.client.js`
 - `kc-api.client.js` não pode ser reduzido abaixo de 700L (é registry/facade)
 
 ## Status
