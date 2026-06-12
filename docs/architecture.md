@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.4.0 (2026-06-12)** — contagens apos extracao de `kc-api.authors.js` e runtime frontend `8.6.1`.
+> **Atualizado em v76.5.0 (2026-06-12)** — contagens apos snapshot dedicado de `normalizePost` e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -18,8 +18,8 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | adapters em `assets/js/adapters/` (local + supabase) | `21` |
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `7` |
-| suites de teste Jest em `tests/` | `172` |
-| testes Jest totais | `3555` |
+| suites de teste Jest em `tests/` | `173` |
+| testes Jest totais | `3559` |
 | specs E2E Playwright | `9` |
 
 ## Princípio estrutural
@@ -158,7 +158,7 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.4.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`.
+> **Atualizado em v76.5.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
@@ -201,5 +201,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.2.0 (2026-06-12):** `kc-api.session.js` extraido para `KCSessionStore`/`KCPostFreshness`, `assets/js/` sobe para 151 arquivos, `assets/js/api/` para 19 arquivos e Jest para 170 suites / 3535 testes.
 - **v76.3.0 (2026-06-12):** `kc-api.filters.js` extraido para filtros avancados/date presets de `KCAPI.filterPosts`, `assets/js/` sobe para 152 arquivos, `assets/js/api/` para 20 arquivos e Jest para 171 suites / 3545 testes.
 - **v76.4.0 (2026-06-12):** `kc-api.authors.js` extraido para `MOCK_USERS`, indices e resolucao de autor legado, `assets/js/` sobe para 153 arquivos, `assets/js/api/` para 21 arquivos e Jest para 172 suites / 3555 testes.
+- **v76.5.0 (2026-06-12):** snapshot dedicado de `KCAPI.normalizePost` criado antes da extracao, cobrindo aliases snake/camel, datas efetivas, autor legado, midia e regra de `compra-venda`; Jest sobe para 173 suites / 3559 testes.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.
