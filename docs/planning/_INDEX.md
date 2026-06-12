@@ -27,6 +27,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v51-functional-no-go-register.md` | Registro V51 de No-Go para bloquear implementacao funcional sem gates/evidencias completos |
 | `v52-functional-gate-traceability.md` | Matriz V52 de rastreabilidade entre gates, evidencias e decisao Go/No-Go |
 | `v53-functional-patch-manifest.md` | Manifesto V53 de filescope, risco, teste e rollback antes do primeiro patch funcional |
+| `v76-hotspot-decomposition-plan.md` | Plano V76 para decomposicao segura de `kc-api.client.js` e `styles.css` sem misturar trilhas JS/CSS |
 
 ## Regras
 
