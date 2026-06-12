@@ -132,6 +132,7 @@ var CANONICAL_JS = [
   'assets/js/api/kc-api.related.js',
   'assets/js/api/kc-api.saved.js',
   'assets/js/api/kc-api.diagnostics.js',
+  'assets/js/api/kc-api.session.js',
   'assets/js/api/kc-api.client.js',
   // utils/
   'assets/js/utils/kc-utils.string.js',

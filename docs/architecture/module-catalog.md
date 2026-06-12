@@ -864,13 +864,41 @@ resumo seguro de payload e leitura/limpeza do último erro reportado pelo fluxo 
 
 ---
 
+### `api/kc-api.session.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | api |
+| Namespace | `window._KCAPI.session`, `window.KCSessionStore`, `window.KCPostFreshness` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | Todas as páginas que carregam `kc-api.client.js` |
+
+**Responsabilidade:** Cache de sessão, helpers SWR e barramento de freshness de posts. Mantém
+as chaves `kc:9.0.0:*`, o evento `kc:post-freshness`, o canal `kc-post-freshness-v1` e o
+broadcast Realtime `kc-posts-changes`.
+
+**Exports públicos:** `window.KCSessionStore.*`, `window.KCPostFreshness.*` e helpers internos em
+`window._KCAPI.session` usados pela fachada.
+
+**Dependências em runtime:** `window._KCAPI`, `window.sessionStorage`, `window.localStorage`,
+`window.KCSupabase` quando Realtime está disponível.
+
+**Consumido por:** `window.KCAPI`, controllers com SWR, feed/produto/my-posts/profile e listeners
+de atualização de conteúdo.
+
+**Testes:** `tests/integration/kc-api-session-module.test.js`,
+`tests/integration/kc-api-session-swr.test.js`,
+`tests/contract/kc-api-facade-contract.test.js`
+
+---
+
 ### `api/kc-api.client.js`
 
 | Campo | Valor |
 |-------|-------|
 | Grupo | api |
 | Namespace | `window.KCAPI` |
-| Padrão | IIFE + `Object.freeze` (2809 linhas — facade central) |
+| Padrão | IIFE + `Object.freeze` (2433 linhas — facade central) |
 | Páginas | **Todas as páginas autenticadas** |
 
 **Responsabilidade:** Facade central da API do KinoCampus. Agrega submódulos KCAPI
@@ -2227,6 +2255,7 @@ contagem de votos de um post e voto atual do usuário.
 | api/kc-api.saved.js | api | `window._KCAPI_saved` | produto+my-posts | integration/kc-api-saved-module |
 | api/kc-api.chat.js | api | `window._KCAPI.chat` | mensagens+autenticadas | contract/chat-continuity |
 | api/kc-api.diagnostics.js | api | `window._KCAPI.diagnostics` | create+autenticadas | integration/kc-api-diagnostics-module |
+| api/kc-api.session.js | api | `window._KCAPI.session` | autenticadas+feeds | integration/kc-api-session-module |
 | api/kc-api.client.js | api | `window.KCAPI` | autenticadas | integration/kc-api-client |
 | api/admin-shell.js | api | *(nenhum)* | 6 admin | structure/admin-shell-preload |
 | utils/kc-utils.string.js | utils | `window._KCU_str` | todas | unit/kc-utils-expanded |

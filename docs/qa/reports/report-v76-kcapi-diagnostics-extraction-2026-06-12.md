@@ -101,6 +101,9 @@ Nao iniciar pelo normalizador principal. O proximo corte seguro e preparar contr
 - deduplicacao de pending requests;
 - fallback quando `BroadcastChannel` ou `localStorage` falham.
 
+**Status 2026-06-12:** o corte `KCSessionStore`/`KCPostFreshness` foi executado no JS-C e
+registrado em `docs/qa/reports/report-v76-kcapi-session-extraction-2026-06-12.md`.
+
 ---
 
 ## 7. Validacao executada

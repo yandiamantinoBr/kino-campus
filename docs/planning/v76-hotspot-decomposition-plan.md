@@ -1,6 +1,6 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.1.0
+**Versao:** v76.2.0
 **Data:** 2026-06-12
 **Escopo:** planejamento tecnico + status da primeira extracao JS; sem alterar CSS, SQL, secrets, provider ou deploy
 
@@ -13,7 +13,7 @@ hotspots ainda relevantes do frontend:
 
 | Hotspot | Estado atual medido em 2026-06-12 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 2.809 linhas / 119.106 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 2.433 linhas / 105.409 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -76,7 +76,7 @@ normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e e
 | Candidato | Motivo | Bloqueio |
 |---|---|---|
 | `normalizeErrorForDiagnostics` + helpers de erro | baixa dependencia externa, teste unitario claro | **Concluido em v76.1.0**; preservar mensagens publicas usadas por UI/admin |
-| `KCSessionStore` / `KCPostFreshness` | responsabilidade isolavel, ja exposta como `window.*` proprio | preservar eventos e storage keys |
+| `KCSessionStore` / `KCPostFreshness` | responsabilidade isolavel, ja exposta como `window.*` proprio | **Concluido em v76.2.0**; preservar eventos, storage keys e deduplicacao |
 | filtros/date presets de feed | logica pura, coberta por `kc-api-client.test.js` | precisa manter paridade entre modulos e datas |
 | mocks/normalizacao de autores | reduz peso do facade | alto risco de fixtures e fallback local; fazer depois dos anteriores |
 | `normalizePost` | grande valor, mas contrato sensivel | so depois de snapshot de casos atuais em teste |
@@ -184,6 +184,10 @@ publicos de `window.KCAPI` e reforco em `tests/contract/kc-api-facade-contract.t
 `assets/js/api/kc-api.diagnostics.js`, preservando os 107 membros de `window.KCAPI`, aliases
 globais e ordem de carregamento nos HTMLs reais.
 
-Proxima entrega recomendada apos JS-B: isolar `KCSessionStore`/`KCPostFreshness` somente depois de
-um contrato explicito de storage keys, eventos e deduplicacao. Nao iniciar por `normalizePost`; o
-report JS-A classifica esse bloco como alto risco por ser contrato transversal.
+**Status v76.2.0:** JS-C extraiu `KCSessionStore`, `KCPostFreshness` e helpers SWR para
+`assets/js/api/kc-api.session.js`, com contrato explicito de storage keys, eventos, deduplicacao,
+Realtime broadcast e ordem de carregamento.
+
+Proxima entrega recomendada apos JS-C: escolher um recorte menor de filtros/date presets ou mocks de
+autor, sem iniciar por `normalizePost`; o report JS-A classifica `normalizePost` como alto risco por
+ser contrato transversal.

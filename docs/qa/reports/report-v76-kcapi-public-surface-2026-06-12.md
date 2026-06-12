@@ -4,7 +4,8 @@
 **Escopo:** JS-A do plano `docs/planning/v76-hotspot-decomposition-plan.md`
 **Tipo:** contrato estatico + analise documental
 **Runtime alterado:** nao
-**Follow-up:** JS-B extraido em `report-v76-kcapi-diagnostics-extraction-2026-06-12.md`
+**Follow-up:** JS-B extraido em `report-v76-kcapi-diagnostics-extraction-2026-06-12.md`;
+JS-C extraido em `report-v76-kcapi-session-extraction-2026-06-12.md`
 
 ---
 
@@ -23,7 +24,7 @@ snapshot executavel.
 
 | Fonte | Evidencia |
 |---|---|
-| `assets/js/api/kc-api.client.js` | 2.846 linhas / 120.212 bytes no baseline JS-A; 2.809 linhas / 119.106 bytes apos JS-B |
+| `assets/js/api/kc-api.client.js` | 2.846 linhas / 120.212 bytes no baseline JS-A; 2.809 linhas / 119.106 bytes apos JS-B; 2.433 linhas / 105.409 bytes apos JS-C |
 | Export principal | `window.KCAPI = Object.freeze({` inicia na linha 2706 |
 | Bloco exportado | linhas 2706-2840 |
 | Aliases globais de diagnostico | linhas 2841-2844 |
@@ -72,6 +73,7 @@ mas sim o volume de responsabilidades ainda residentes no arquivo central.
 | `window._KCAPI.notifications` | `assets/js/api/kc-api.notifications.js` | delegado |
 | `window._KCAPI.chat` | `assets/js/api/kc-api.chat.js` | passthrough via `chat` |
 | `window._KCAPI.diagnostics` | `assets/js/api/kc-api.diagnostics.js` | delegado apos JS-B |
+| `window._KCAPI.session` | `assets/js/api/kc-api.session.js` | delegado apos JS-C |
 
 ---
 
@@ -82,8 +84,8 @@ mas sim o volume de responsabilidades ainda residentes no arquivo central.
 | Env/bootstrap | 20-78 | `readEnv`, normalizacao de `KC_ENV`, aliases Supabase e fallback local | Medio: toca boot e modo local/prod |
 | Diagnostico create-post | 81-141 | normalizacao de erro e `lastCreatePostError` | Baixo/medio: bom primeiro candidato com teste dedicado |
 | Filtros avancados/feed | 172-778 | normalizacao de filtros, presets de data, matching por modulo | Medio/alto: muito codigo puro, mas amplo impacto nos 6 feeds |
-| Session cache/SWR | 801-890 e 1176-1212 | `KCSessionStore`, cache stale-while-revalidate, pending requests | Medio: storage keys e deduplicacao precisam de contrato |
-| Post freshness/broadcast | 925-1168 | eventos cross-tab, localStorage, BroadcastChannel, Supabase Realtime broadcast | Alto: side effects e eventos entre abas |
+| Session cache/SWR | delegado apos JS-C | `KCSessionStore`, cache stale-while-revalidate, pending requests | Resolvido em `kc-api.session.js` com contrato de storage keys e deduplicacao |
+| Post freshness/broadcast | delegado apos JS-C | eventos cross-tab, localStorage, BroadcastChannel, Supabase Realtime broadcast | Resolvido em `kc-api.session.js` com teste de Realtime broadcast |
 | Mock users/author index | 1228-1346 | usuarios mockados, lista congelada e indice legado de autor | Medio: fallback local e fixtures |
 | `normalizePost` | 1361-1526 | contrato canonico de post, aliases legados e midia | Alto: muitos consumidores e testes dependentes |
 | Rating normalizers | 1535-1583 | normalizacao de rating summary/state/list | Medio: contrato publico, mas recorte menor |
@@ -114,11 +116,11 @@ do facade passa a exigir atualizacao explicita do teste de contrato.
 **Nao extrair `normalizePost` primeiro.** Apesar de ser o maior valor tecnico, ele e o contrato mais
 sensivel do facade e alimenta cards, produto, busca, analytics, saved posts e modo local.
 
-Melhor primeira extracao real, agora executada em JS-B:
+Ordem de extracao segura atual:
 
 1. `normalizeErrorForDiagnostics`, `summarizeCreatePayloadForDiagnostics` e helpers de create-post diagnostics;
-2. depois `KCSessionStore`, apenas com contrato explicito de storage keys e deduplicacao;
-3. depois filtros/presets de feed, com testes por modulo;
+2. `KCSessionStore`/`KCPostFreshness`, com contrato explicito de storage keys, eventos e deduplicacao;
+3. proximo: filtros/presets de feed, com testes por modulo;
 4. por ultimo `normalizePost`, depois de snapshot de casos reais e aliases legados.
 
 ---
@@ -145,3 +147,10 @@ Gates completos do PR devem incluir `npm run check:all` antes do merge.
 `docs/qa/reports/report-v76-kcapi-diagnostics-extraction-2026-06-12.md` registra a primeira
 extracao real do plano: `window._KCAPI.diagnostics`, 27 HTMLs reais com script antes da fachada,
 107 membros publicos preservados e contagem documentada em 169 suites / 3524 testes.
+
+## 10. Follow-up JS-C
+
+`docs/qa/reports/report-v76-kcapi-session-extraction-2026-06-12.md` registra a segunda extracao
+real do plano: `window._KCAPI.session`, `window.KCSessionStore`, `window.KCPostFreshness`, 27 HTMLs
+reais com script antes da fachada, 107 membros publicos preservados e contagem documentada em
+170 suites / 3535 testes.
