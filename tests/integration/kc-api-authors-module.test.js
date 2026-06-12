@@ -19,6 +19,7 @@ function loadFreshAuthorsModule() {
   jest.resetModules();
   delete window._KCAPI;
   require('../../assets/js/api/kc-api.authors.js');
+  require('../../assets/js/api/kc-api.posts-normalize.js');
   return window._KCAPI.authors;
 }
 

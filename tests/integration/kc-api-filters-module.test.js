@@ -20,6 +20,7 @@ function loadFreshFiltersModule() {
   delete window._KCAPI;
   require('../../assets/js/api/kc-api.filters.js');
   require('../../assets/js/api/kc-api.authors.js');
+  require('../../assets/js/api/kc-api.posts-normalize.js');
   return window._KCAPI.filters;
 }
 
@@ -138,6 +139,7 @@ describe('kc-api.filters.js - module contract', () => {
 
   test('preserva KCAPI.filterPosts como delegacao publica', () => {
     require('../../assets/js/api/kc-api.authors.js');
+  require('../../assets/js/api/kc-api.posts-normalize.js');
     require('../../assets/js/api/kc-api.client.js');
 
     const posts = [

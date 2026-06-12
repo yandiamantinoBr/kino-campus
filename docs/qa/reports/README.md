@@ -8,6 +8,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 | Arquivo | Uso |
 |---|---|
 | `_TEMPLATE-authenticated-run.md` | Template V26 para rodada autenticada real com redacao de evidencias |
+| `report-v76-kcapi-posts-normalize-extraction-2026-06-12.md` | Evidencia V76 da extracao de `KCAPI.normalizePost` para `window._KCAPI.postsNormalize` |
 | `report-v76-kcapi-normalize-post-snapshot-2026-06-12.md` | Evidencia V76 do snapshot pre-extracao de `KCAPI.normalizePost` |
 | `report-v76-kcapi-authors-extraction-2026-06-12.md` | Evidencia V76 da extracao de autores mock/indices para `window._KCAPI.authors` |
 | `report-v76-kcapi-filters-extraction-2026-06-12.md` | Evidencia V76 da extracao de filtros avancados/date presets para `window._KCAPI.filters` |

@@ -53,7 +53,8 @@ Resultados:
 - `npm run check:all` passou, incluindo versionamento, estrutura, scripts, rotas, higiene e Jest.
 - Playwright listou 59 testes em 9 arquivos.
 
-## Proximo recorte recomendado
+## Estado posterior
 
-Extrair `normalizePost` para sub-modulo proprio, mantendo `window.KCAPI.normalizePost` como delegacao
+O recorte recomendado foi executado em v76.6.0: `normalizePost` passou a viver em
+`assets/js/api/kc-api.posts-normalize.js`, mantendo `window.KCAPI.normalizePost` como delegacao
 publica e usando estes snapshots como gate de equivalencia.
