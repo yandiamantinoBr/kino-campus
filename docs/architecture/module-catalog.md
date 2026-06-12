@@ -16,7 +16,7 @@
 
 - [Grupo boot/](#grupo-boot) — 6 módulos
 - [Grupo core/](#grupo-core) — 11 módulos
-- [Grupo api/](#grupo-api) — 18 módulos
+- [Grupo api/](#grupo-api) — 20 módulos
 - [Grupo utils/](#grupo-utils) — 8 módulos
 - [Grupo features/](#grupo-features) — 10 módulos *(v16.4.0)*
 - [Grupo features/create-post/](#grupo-featurescreate-post) — 7 módulos *(v16.4.0)*
@@ -892,13 +892,41 @@ de atualização de conteúdo.
 
 ---
 
+### `api/kc-api.filters.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | api |
+| Namespace | `window._KCAPI.filters` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | Todas as páginas que carregam `kc-api.client.js` |
+
+**Responsabilidade:** Filtros avançados e date presets usados por `window.KCAPI.filterPosts`.
+Centraliza a paridade local dos envelopes `requestParams` para marketplace, caronas, moradia,
+oportunidades, achados/perdidos, faixa de preço e presets de data em `America/Sao_Paulo`.
+
+**Exports internos:** `filterPosts()`, `matchesAdvancedRequestParams()`, `matchesDatePresetFilter()`,
+`normalizeDatePreset()`, `getEventDateKey()`, `getDateKeyInZone()`, `getCurrentDateKey()`,
+`normalizeFilterText()` e `slugifyFilterKey()`.
+
+**Dependências em runtime:** `window._KCAPI`, `window.KCUtils` quando disponível e
+`window.KCFeedFilters` quando disponível para reutilizar a semântica compartilhada de date presets.
+
+**Consumido por:** `window.KCAPI.filterPosts`.
+
+**Testes:** `tests/integration/kc-api-filters-module.test.js`,
+`tests/integration/kc-api-client.test.js`,
+`tests/contract/kc-api-facade-contract.test.js`
+
+---
+
 ### `api/kc-api.client.js`
 
 | Campo | Valor |
 |-------|-------|
 | Grupo | api |
 | Namespace | `window.KCAPI` |
-| Padrão | IIFE + `Object.freeze` (2433 linhas — facade central) |
+| Padrão | IIFE + `Object.freeze` (1769 linhas — facade central) |
 | Páginas | **Todas as páginas autenticadas** |
 
 **Responsabilidade:** Facade central da API do KinoCampus. Agrega submódulos KCAPI
@@ -2256,6 +2284,7 @@ contagem de votos de um post e voto atual do usuário.
 | api/kc-api.chat.js | api | `window._KCAPI.chat` | mensagens+autenticadas | contract/chat-continuity |
 | api/kc-api.diagnostics.js | api | `window._KCAPI.diagnostics` | create+autenticadas | integration/kc-api-diagnostics-module |
 | api/kc-api.session.js | api | `window._KCAPI.session` | autenticadas+feeds | integration/kc-api-session-module |
+| api/kc-api.filters.js | api | `window._KCAPI.filters` | feeds+busca local | integration/kc-api-filters-module |
 | api/kc-api.client.js | api | `window.KCAPI` | autenticadas | integration/kc-api-client |
 | api/admin-shell.js | api | *(nenhum)* | 6 admin | structure/admin-shell-preload |
 | utils/kc-utils.string.js | utils | `window._KCU_str` | todas | unit/kc-utils-expanded |

@@ -19,6 +19,7 @@ Camada de API: facade principal, sub-módulos de domínio e cliente Supabase.
 | `kc-api.saved.js` | `window._KCAPI.saved` | Posts salvos |
 | `kc-api.diagnostics.js` | `window._KCAPI.diagnostics` | Diagnosticos de create-post |
 | `kc-api.session.js` | `window._KCAPI.session`, `window.KCSessionStore`, `window.KCPostFreshness` | Cache de sessao e freshness de posts |
+| `kc-api.filters.js` | `window._KCAPI.filters` | Filtros avancados e date presets de `KCAPI.filterPosts` |
 | `kc-api.help.js` | `window._KCAPI.help` | Central de ajuda |
 | `kc-supabase.client.js` | `window.KCSupabase` | Cliente Supabase + facade |
 | `kc-supabase.posts.js` | `window.KCSupabase._posts` | Posts via Supabase |

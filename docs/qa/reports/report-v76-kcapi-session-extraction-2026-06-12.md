@@ -71,6 +71,6 @@ Resultado medido:
 
 ## Proximo recorte recomendado
 
-Nao iniciar por `normalizePost`. A proxima entrega deve escolher um bloco menor e menos transversal,
-preferencialmente filtros/date presets ou mocks/normalizacao de autores, com contrato estatico antes
-da extracao.
+O recorte seguinte foi executado em JS-D com `kc-api.filters.js`. Nao iniciar por `normalizePost`
+sem snapshot dedicado. A proxima entrega deve escolher mocks/normalizacao de autores ou preparar
+contrato estatico para a propria normalizacao antes da extracao.
