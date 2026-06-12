@@ -18,6 +18,7 @@
     "check:routes": "node scripts/validate-public-routes.js",
     "check:version": "node scripts/validate-version-map.js",
     "check:all": "npm run check:version && npm run check:structure && npm run check:scripts && npm run check:routes && npm run check:hygiene && npm test",
+    "audit:css": "node scripts/audit-css-ownership.js",
     "cadu:dry-run": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=quick",
     "cadu:dry-run:full": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=full",
     "cadu:publish:quick": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=quick",

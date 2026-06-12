@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v76.7.0
+**Versao:** v76.8.0
 **Data:** 2026-06-12
-**Atualizado em:** v76.7.0 - extracao dos normalizadores de rating e reancoragem de contagens
+**Atualizado em:** v76.8.0 - inventario CSS-A de ownership de `styles.css`
 
 ---
 
@@ -51,7 +51,7 @@ patch PUBLIC-A11Y dos 14 icones decorativos de titulos de secao e feedback em ad
 patch PUBLIC-A11Y dos 9 icones decorativos de acoes e estados em kc-comments.js V73,
 patch PUBLIC-A11Y dos 18 icones decorativos de acoes e estados em admin-reports.controller.js V74,
 patch PUBLIC-A11Y dos 18 icones decorativos de avatares, acoes e estados em kc-ranking.js V75,
-performance phase 1 com runtime 8.6.1 em V75.1, decomposicao V76 de diagnostics/session/filters/authors/posts-normalize e normalizadores de rating em V76.7.
+performance phase 1 com runtime 8.6.1 em V75.1, decomposicao V76 de diagnostics/session/filters/authors/posts-normalize e normalizadores de rating em V76.7, inventario CSS-A de ownership de `styles.css` em V76.8.
 
 ---
 
@@ -111,6 +111,7 @@ kino-campus/
 |   |-- validate-script-chains.js
 |   |-- validate-public-routes.js
 |   |-- hygiene-check.js
+|   |-- audit-css-ownership.js
 |   `-- inject-env.js
 |-- admin/                         6 HTMLs admin
 |-- *.html                         21 HTMLs na raiz
@@ -196,7 +197,7 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/product-lightbox.css` | Producao | Lightbox de midia da pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
-O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V28 mapeia risco SQL de busca sem alterar migrations; V29 define evidencias operacionais para Supabase Advisor sem tocar dashboard; V30 define sandbox de providers de notificacao sem configurar secrets; V31 organiza triagem autenticada sem executar QA real; V32 define quando Playwright E2E e evidencia obrigatoria; V33 separa falha LHCI de ambiente de regressao real; V34 reconcilia a11y/i18n antes de backlog funcional; V35 define readiness e rollback antes de qualquer CSS; V36 consolida a sequencia segura para implementacoes futuras; V37 exige gate de entrada com filescope, evidencia e rollback antes de qualquer patch funcional; V38 detalha evidencia e classificacao de rollback antes de runtime, CSS, HTML, SQL, provider ou config; V39 classifica candidatos funcionais antes da primeira implementacao futura; V40 detalha o candidato P0 de signup/callback real; V41 detalha o candidato P0 de avatar/profile storage; V42 detalha o candidato P1 de admin/moderacao; V43 detalha o candidato P1 de provider sandbox email/WhatsApp; V44 detalha o candidato P1 de unaccent/FTS isolado; V45 detalha o candidato P2 de ajuste CSS pequeno; V46 detalha o candidato P2 de copy/a11y/i18n pontual; V47 consolida a fila para selecao da primeira implementacao funcional; V48 define coleta/redacao de evidencias externas sem secrets; V49 congela escopo antes de qualquer branch funcional; V50 define o intake final antes da primeira branch funcional; V51 registra No-Go quando gates/evidencias ainda bloqueiam implementacao; V52 consolida rastreabilidade Go/No-Go antes da branch funcional; V53 define manifesto de filescope/teste/rollback antes do primeiro patch funcional; V54 executa um patch PUBLIC-A11Y pequeno no HTML gerado por `renderPostCard`; V55 complementa o mesmo componente com nome acessivel no badge de avaliacao; V56 marca icones decorativos de badges/preco/exemplo/verificacao; V57 normaliza o `alt` do avatar de autor; V58 tipa os botoes do modal de busca mobile e marca seus icones como decorativos; V59 adiciona nome acessivel ao input do modal e marca o icone de busca como decorativo; V61 tipa botoes dinamicos de comentarios e marca seus icones como decorativos.
+O split CSS segue pendente de execucao funcional. V27 define o gate visual/a11y minimo antes de qualquer alteracao CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css` sem alterar cascade, HTML ou `future-split/`.
 
 ---
 

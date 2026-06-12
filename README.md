@@ -33,6 +33,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | [docs/architecture/module-catalog.md](docs/architecture/module-catalog.md) | Catalogo de modulos JS com namespace, paginas, dependencias e testes |
 | [docs/architecture/controllers-catalog.md](docs/architecture/controllers-catalog.md) | 48 controllers com responsabilidade e chamadas KCAPI |
 | [docs/architecture/data-flow-guide.md](docs/architecture/data-flow-guide.md) | Fluxo de dados ponta a ponta: controller → KCAPI → adapter → Supabase |
+| [docs/architecture/css-architecture.md](docs/architecture/css-architecture.md) | CSS de producao, ownership de `styles.css` e status de `future-split/` |
 | [docs/api-contract.md](docs/api-contract.md) | Contrato público da KCAPI |
 | [docs/db-schema.md](docs/db-schema.md) | Tabelas, políticas RLS, índices e Storage do Supabase |
 

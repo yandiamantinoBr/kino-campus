@@ -8,6 +8,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 | Arquivo | Uso |
 |---|---|
 | `_TEMPLATE-authenticated-run.md` | Template V26 para rodada autenticada real com redacao de evidencias |
+| `report-v76-css-ownership-inventory-2026-06-12.md` | Evidencia V76 do inventario CSS-A de ownership de `styles.css` |
 | `report-v76-kcapi-ratings-normalize-extraction-2026-06-12.md` | Evidencia V76 da extracao dos normalizadores `normalizeUserRating*` para `window._KCAPI.ratings` |
 | `report-v76-kcapi-posts-normalize-extraction-2026-06-12.md` | Evidencia V76 da extracao de `KCAPI.normalizePost` para `window._KCAPI.postsNormalize` |
 | `report-v76-kcapi-normalize-post-snapshot-2026-06-12.md` | Evidencia V76 do snapshot pre-extracao de `KCAPI.normalizePost` |
