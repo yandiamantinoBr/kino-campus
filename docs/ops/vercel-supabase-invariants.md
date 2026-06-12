@@ -16,6 +16,13 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - `object-src 'none'`, `base-uri 'self'` e `form-action 'self'` para reduzir superfície de plugin, base URL e envio de formulários
 - Em previews protegidos, o script de feedback `https://vercel.live/_next-live/feedback/feedback.js` pode aparecer bloqueado pela CSP atual; isso não deve ser tratado como regressão funcional automática sem evidência de impacto real no app.
 
+### Cache dinamico de SEO
+
+- `/sitemap.xml` reescreve para `api/sitemap.js`, que define cache de CDN com `s-maxage=900, stale-while-revalidate=3600`.
+- `/product.html?id=...` reescreve para `api/og-product.js`; produto publicado resolvido define `s-maxage=300, stale-while-revalidate=600`.
+- `/api/og-image` define cache de 1 dia para browser/CDN e `stale-while-revalidate` longo para a Vercel.
+- Em Vercel, `s-maxage` e `stale-while-revalidate` podem ser consumidos pelo CDN e nao aparecer no `Cache-Control` entregue ao browser; valide cache dinamico com probes repetidos e `X-Vercel-Cache`, nao apenas com o header visivel.
+
 ## 2. scripts/inject-env.js
 
 - O script injeta placeholders em `assets/js/boot/kc-env.js` antes do deploy.

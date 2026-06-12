@@ -11,6 +11,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 | `report-v75-notification-provider-status-2026-06-11.md` | Evidencia V75 do estado real dos providers Resend/Twilio no Supabase remoto |
 | `report-v75-supabase-auth-password-protection-2026-06-11.md` | Evidencia V75 de `password_hibp_enabled=false` no Supabase Auth remoto |
 | `report-v75-generated-output-cleanup-2026-06-11.md` | Evidencia V75 da remocao de artefatos gerados do indice Git |
+| `report-v75-vercel-cache-control-2026-06-11.md` | Evidencia V75 de cache efetivo para sitemap e Open Graph na Vercel |
 
 ## Padrão de entrada
 
