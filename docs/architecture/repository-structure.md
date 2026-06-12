@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v76.3.0
+**Versao:** v76.4.0
 **Data:** 2026-06-12
-**Atualizado em:** v76.3.0 - extracao de `kc-api.filters.js` e reancoragem de contagens
+**Atualizado em:** v76.4.0 - extracao de `kc-api.authors.js` e reancoragem de contagens
 
 ---
 
@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 171 suites / 3545 testes + Playwright 9 specs E2E |
+| Testes | Jest 172 suites / 3555 testes + Playwright 9 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -62,7 +62,7 @@ kino-campus/
 |   |-- js/
 |   |   |-- boot/                  9 arquivos
 |   |   |-- core/                  12 arquivos
-|   |   |-- api/                   20 arquivos
+|   |   |-- api/                   21 arquivos
 |   |   |-- utils/                 8 arquivos
 |   |   |-- features/              16 arquivos + create-post/
 |   |   |   `-- create-post/       7 arquivos
@@ -98,7 +98,7 @@ kino-campus/
 |   `-- qa/                        QA ativo
 |-- tests/
 |   |-- unit/                     25 suites
-|   |-- integration/              121 suites
+|   |-- integration/              122 suites
 |   |-- contract/                 8 suites
 |   |-- structure/                12 suites
 |   |-- a11y/                     5 suites
@@ -254,12 +254,12 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | Comando | Responsabilidade esperada |
 |---|---|
 | `npm run check:version` | Valida `VERSION.json`, branch canonica e runtime JS `8.6.1` |
-| `npm run check:structure` | Valida 165 itens estruturais + raiz `assets/js/` limpa |
+| `npm run check:structure` | Valida 166 itens estruturais + raiz `assets/js/` limpa |
 | `npm run check:scripts` | Valida cadeias de scripts nos 26 HTMLs canonicos |
 | `npm run check:routes` | Valida 20 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantem 171/171 suites e 3545/3545 testes Jest |
+| `npm test` | Mantem 172/172 suites e 3555/3555 testes Jest |
 | `npx playwright test --list` | Lista 9 specs / 59 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |

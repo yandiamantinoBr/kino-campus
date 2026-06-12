@@ -3,7 +3,7 @@
 
   Objetivo (Fase 1 - Saneamento):
   - Simular chamadas de API em um ponto único (sem frameworks).
-  - Normalizar usuários (MOCK_USERS) e posts (contrato padrão com authorId).
+  - Delegar usuarios mock e normalizar posts (contrato padrao com authorId).
   - Manter compatibilidade com modo estático (data/database.json) e localStorage.
 
   Exposição:
@@ -148,6 +148,38 @@
     return getFiltersModule().filterPosts(posts, params);
   }
 
+  // Authors split (V76): mock users and legacy author lookup live in window._KCAPI.authors.
+  window._KCAPI = window._KCAPI || {};
+  window._KCAPI.authors = window._KCAPI.authors || {};
+
+  function getAuthorsModule() {
+    const authors = window._KCAPI && window._KCAPI.authors;
+    if (!authors || typeof authors.getAuthorById !== 'function') {
+      throw new Error('KCAPI authors module not loaded.');
+    }
+    return authors;
+  }
+
+  function getMockUsers() {
+    return getAuthorsModule().MOCK_USERS;
+  }
+
+  function getMockUsersById() {
+    return getAuthorsModule().MOCK_USERS_BY_ID;
+  }
+
+  function getMockUsersList() {
+    return getAuthorsModule().MOCK_USERS_LIST;
+  }
+
+  function getAuthorById(id) {
+    return getAuthorsModule().getAuthorById(id);
+  }
+
+  function resolveAuthorId(legacyName, legacyAvatarUrl) {
+    return getAuthorsModule().resolveAuthorId(legacyName, legacyAvatarUrl);
+  }
+
 
   const DEFAULTS = {
     baseURL: '',
@@ -211,77 +243,6 @@
   // buildPostAnalyticsSignature, normalizeCommentsPayload, buildCommentsSignature
   // movidos para os sub-módulos kc-api.posts-read.js e kc-api.comments-votes.js.
 
-  /**
-   * MOCK_USERS (extraído do database.json da V6.1.0)
-   * - IDs estáveis (USER_01..USER_42) para preparar o futuro backend.
-   * - USER_SELF é um perfil local para posts criados pelo usuário.
-   */
-  const MOCK_USERS = Object.freeze({
-    'USER_01': { id: 'USER_01', displayName: 'Rafael Almeida', avatarUrl: 'https://i.pravatar.cc/150?img=12' }, // USER_01: Rafael Almeida (img=12)
-    'USER_02': { id: 'USER_02', displayName: 'Fernanda Lima', avatarUrl: 'https://i.pravatar.cc/150?img=35' }, // USER_02: Fernanda Lima (img=35)
-    'USER_03': { id: 'USER_03', displayName: 'Ricardo Souza', avatarUrl: 'https://i.pravatar.cc/150?img=28' }, // USER_03: Ricardo Souza (img=28)
-    'USER_04': { id: 'USER_04', displayName: 'Camila Rodrigues', avatarUrl: 'https://i.pravatar.cc/150?img=42' }, // USER_04: Camila Rodrigues (img=42)
-    'USER_05': { id: 'USER_05', displayName: 'Beatriz Santos', avatarUrl: 'https://i.pravatar.cc/150?img=48' }, // USER_05: Beatriz Santos (img=48)
-    'USER_06': { id: 'USER_06', displayName: 'Thiago Alves', avatarUrl: 'https://i.pravatar.cc/150?img=52' }, // USER_06: Thiago Alves (img=52)
-    'USER_07': { id: 'USER_07', displayName: 'Gabriela Mendes', avatarUrl: 'https://i.pravatar.cc/150?img=60' }, // USER_07: Gabriela Mendes (img=60)
-    'USER_08': { id: 'USER_08', displayName: 'Felipe Costa', avatarUrl: 'https://i.pravatar.cc/150?img=65' }, // USER_08: Felipe Costa (img=65)
-    'USER_09': { id: 'USER_09', displayName: 'Maria Souza', avatarUrl: 'https://i.pravatar.cc/150?img=25' }, // USER_09: Maria Souza (img=25)
-    'USER_10': { id: 'USER_10', displayName: 'João Pedro', avatarUrl: 'https://i.pravatar.cc/150?img=33' }, // USER_10: João Pedro (img=33)
-    'USER_11': { id: 'USER_11', displayName: 'Carlos Silva', avatarUrl: 'https://i.pravatar.cc/150?img=15' }, // USER_11: Carlos Silva (img=15)
-    'USER_12': { id: 'USER_12', displayName: 'Ana Paula', avatarUrl: 'https://i.pravatar.cc/150?img=20' }, // USER_12: Ana Paula (img=20)
-    'USER_13': { id: 'USER_13', displayName: 'TechCorp RH', avatarUrl: 'https://i.pravatar.cc/150?img=50' }, // USER_13: TechCorp RH (img=50)
-    'USER_14': { id: 'USER_14', displayName: 'Startup XYZ', avatarUrl: 'https://i.pravatar.cc/150?img=55' }, // USER_14: Startup XYZ (img=55)
-    'USER_15': { id: 'USER_15', displayName: 'Lucas Mendes', avatarUrl: 'https://i.pravatar.cc/150?img=22' }, // USER_15: Lucas Mendes (img=22)
-    'USER_16': { id: 'USER_16', displayName: 'Mariana Costa', avatarUrl: 'https://i.pravatar.cc/150?img=30' }, // USER_16: Mariana Costa (img=30)
-    'USER_17': { id: 'USER_17', displayName: 'UFG Eventos', avatarUrl: 'https://i.pravatar.cc/150?img=45' }, // USER_17: UFG Eventos (img=45)
-    'USER_18': { id: 'USER_18', displayName: 'Pedro Henrique', avatarUrl: 'https://i.pravatar.cc/150?img=40' }, // USER_18: Pedro Henrique (img=40)
-    'USER_19': { id: 'USER_19', displayName: 'Carlos Henrique', avatarUrl: 'https://i.pravatar.cc/150?img=13' }, // USER_19: Carlos Henrique (img=13)
-    'USER_20': { id: 'USER_20', displayName: 'Mariana Costa', avatarUrl: 'https://i.pravatar.cc/150?img=25' }, // USER_20: Mariana Costa (img=25)
-    'USER_21': { id: 'USER_21', displayName: 'Rafael Santos', avatarUrl: 'https://i.pravatar.cc/150?img=40' }, // USER_21: Rafael Santos (img=40)
-    'USER_22': { id: 'USER_22', displayName: 'Juliana Oliveira', avatarUrl: 'https://i.pravatar.cc/150?img=45' }, // USER_22: Juliana Oliveira (img=45)
-    'USER_23': { id: 'USER_23', displayName: 'Pedro Almeida', avatarUrl: 'https://i.pravatar.cc/150?img=50' }, // USER_23: Pedro Almeida (img=50)
-    'USER_24': { id: 'USER_24', displayName: 'Amanda Silva', avatarUrl: 'https://i.pravatar.cc/150?img=55' }, // USER_24: Amanda Silva (img=55)
-    'USER_25': { id: 'USER_25', displayName: 'Fernando Santos', avatarUrl: 'https://i.pravatar.cc/150?img=35' }, // USER_25: Fernando Santos (img=35)
-    'USER_26': { id: 'USER_26', displayName: 'Beatriz Lima', avatarUrl: 'https://i.pravatar.cc/150?img=36' }, // USER_26: Beatriz Lima (img=36)
-    'USER_27': { id: 'USER_27', displayName: 'Roberto Oliveira', avatarUrl: 'https://i.pravatar.cc/150?img=37' }, // USER_27: Roberto Oliveira (img=37)
-    'USER_28': { id: 'USER_28', displayName: 'Amanda Rodrigues', avatarUrl: 'https://i.pravatar.cc/150?img=38' }, // USER_28: Amanda Rodrigues (img=38)
-    'USER_29': { id: 'USER_29', displayName: 'CA Ciências Ambientais', avatarUrl: 'https://i.pravatar.cc/150?img=14' }, // USER_29: CA Ciências Ambientais (img=14)
-    'USER_30': { id: 'USER_30', displayName: 'Instituto de Informática', avatarUrl: 'https://i.pravatar.cc/150?img=15' }, // USER_30: Instituto de Informática (img=15)
-    'USER_31': { id: 'USER_31', displayName: 'Pró-Reitoria de Extensão', avatarUrl: 'https://i.pravatar.cc/150?img=16' }, // USER_31: Pró-Reitoria de Extensão (img=16)
-    'USER_32': { id: 'USER_32', displayName: 'Atlética UFG', avatarUrl: 'https://i.pravatar.cc/150?img=17' }, // USER_32: Atlética UFG (img=17)
-    'USER_33': { id: 'USER_33', displayName: 'DCE UFG', avatarUrl: 'https://i.pravatar.cc/150?img=18' }, // USER_33: DCE UFG (img=18)
-    'USER_34': { id: 'USER_34', displayName: 'Maria Silva', avatarUrl: 'https://i.pravatar.cc/150?img=26' }, // USER_34: Maria Silva (img=26)
-    'USER_35': { id: 'USER_35', displayName: 'Pedro Henrique', avatarUrl: 'https://i.pravatar.cc/150?img=27' }, // USER_35: Pedro Henrique (img=27)
-    'USER_36': { id: 'USER_36', displayName: 'Júlia Martins', avatarUrl: 'https://i.pravatar.cc/150?img=28' }, // USER_36: Júlia Martins (img=28)
-    'USER_37': { id: 'USER_37', displayName: 'TechStart Soluções', avatarUrl: 'https://i.pravatar.cc/150?img=30' }, // USER_37: TechStart Soluções (img=30)
-    'USER_38': { id: 'USER_38', displayName: 'Digital Marketing Agency', avatarUrl: 'https://i.pravatar.cc/150?img=31' }, // USER_38: Digital Marketing Agency (img=31)
-    'USER_39': { id: 'USER_39', displayName: 'Lucas Ferreira', avatarUrl: 'https://i.pravatar.cc/150?img=32' }, // USER_39: Lucas Ferreira (img=32)
-    'USER_40': { id: 'USER_40', displayName: 'Instituto de Matemática - UFG', avatarUrl: 'https://i.pravatar.cc/150?img=33' }, // USER_40: Instituto de Matemática - UFG (img=33)
-    'USER_41': { id: 'USER_41', displayName: 'ONG Educação para Todos', avatarUrl: 'https://i.pravatar.cc/150?img=34' }, // USER_41: ONG Educação para Todos (img=34)
-    'USER_42': { id: 'USER_42', displayName: 'Maria Souza', avatarUrl: 'https://i.pravatar.cc/150?img=16' }, // USER_42: Maria Souza (img=16)
-
-    // Perfil do próprio usuário (posts criados via modal / localStorage)
-    'USER_SELF': { id: 'USER_SELF', displayName: 'Você', avatarUrl: '' },
-  });
-
-  const MOCK_USERS_LIST = Object.freeze(Object.values(MOCK_USERS));
-  const MOCK_USERS_BY_ID = Object.freeze(MOCK_USERS_LIST.reduce((acc, u) => {
-    acc[u.id] = u;
-    return acc;
-  }, {}));
-
-  // Índice auxiliar (legado) para resolver authorId a partir de autor + avatar.
-  const LEGACY_AUTHOR_INDEX = (() => {
-    const idx = Object.create(null);
-    MOCK_USERS_LIST.forEach((u) => {
-      // chave "nome::avatar" (mais segura)
-      idx[`${u.displayName}::${u.avatarUrl}`] = u.id;
-      // fallback: só nome (caso algum lugar não tenha avatar)
-      if (!idx[u.displayName]) idx[u.displayName] = u.id;
-    });
-    return Object.freeze(idx);
-  })();
-
   function setConfig(partial) {
     if (!partial) return;
     if (typeof partial.baseURL === 'string') cfg.baseURL = partial.baseURL;
@@ -310,38 +271,6 @@
     const base = (cfg.baseURL || '').replace(/\/$/, '');
     const p = String(path || '').replace(/^\//, '');
     return base ? (base + '/' + p) : p; // relativo quando baseURL vazio
-  }
-
-  // ---------- Normalização: USERS ----------
-  // Compatibilidade: internamente o MOCK_USERS usa {displayName, avatarUrl} (legado).
-  // Para o frontend, expomos também {name, avatar} para padronização do contrato.
-  function normalizeUserProfile(u) {
-    if (!u) return null;
-    const name = u.name || u.displayName || '';
-    const avatar = u.avatar || u.avatarUrl || '';
-    return Object.freeze({
-      id: u.id,
-      // novo (preferencial)
-      name,
-      avatar,
-      // legado (mantido)
-      displayName: name,
-      avatarUrl: avatar,
-    });
-  }
-
-  function getAuthorById(id) {
-    return normalizeUserProfile(MOCK_USERS_BY_ID[String(id)]) || null;
-  }
-
-  function resolveAuthorId(legacyName, legacyAvatarUrl) {
-    const name = (legacyName || '').toString().trim();
-    const avatar = (legacyAvatarUrl || '').toString().trim();
-    if (name && avatar) {
-      return LEGACY_AUTHOR_INDEX[`${name}::${avatar}`] || LEGACY_AUTHOR_INDEX[name] || null;
-    }
-    if (name) return LEGACY_AUTHOR_INDEX[name] || null;
-    return null;
   }
 
   // ---------- Normalização: POSTS ----------
@@ -637,7 +566,7 @@
     const posts = anuncios.map(normalizePost);
     return {
       version: VERSION,
-      users: MOCK_USERS_LIST,
+      users: getMockUsersList(),
       posts,
     };
   }
@@ -1742,12 +1671,12 @@
 
 
     // Users
-    MOCK_USERS,
+    get MOCK_USERS() { return getMockUsers(); },
 
     apiURL,
     DEFAULTS,
-    MOCK_USERS_BY_ID,
-    MOCK_USERS_LIST,
+    get MOCK_USERS_BY_ID() { return getMockUsersById(); },
+    get MOCK_USERS_LIST() { return getMockUsersList(); },
 
     getAuthorById,
 

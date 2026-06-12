@@ -19,6 +19,7 @@ function loadFreshFiltersModule() {
   jest.resetModules();
   delete window._KCAPI;
   require('../../assets/js/api/kc-api.filters.js');
+  require('../../assets/js/api/kc-api.authors.js');
   return window._KCAPI.filters;
 }
 
@@ -136,6 +137,7 @@ describe('kc-api.filters.js - module contract', () => {
   });
 
   test('preserva KCAPI.filterPosts como delegacao publica', () => {
+    require('../../assets/js/api/kc-api.authors.js');
     require('../../assets/js/api/kc-api.client.js');
 
     const posts = [
@@ -155,21 +157,24 @@ describe('kc-api.filters.js - module contract', () => {
 });
 
 describe('kc-api.filters.js - html loading order', () => {
-  test('os carregadores reais incluem filters entre session e kc-api.client.js', () => {
+  test('os carregadores reais incluem filters antes de authors e kc-api.client.js', () => {
     HTML_FILES_WITH_CLIENT.forEach((file) => {
       const html = fs.readFileSync(path.resolve(__dirname, '..', '..', file), 'utf8');
       const diagnosticsIdx = html.indexOf('kc-api.diagnostics.js');
       const sessionIdx = html.indexOf('kc-api.session.js');
       const filtersIdx = html.indexOf('kc-api.filters.js');
+      const authorsIdx = html.indexOf('kc-api.authors.js');
       const clientIdx = html.indexOf('kc-api.client.js');
 
       expect(diagnosticsIdx).toBeGreaterThan(-1);
       expect(sessionIdx).toBeGreaterThan(-1);
       expect(filtersIdx).toBeGreaterThan(-1);
+      expect(authorsIdx).toBeGreaterThan(-1);
       expect(clientIdx).toBeGreaterThan(-1);
       expect(diagnosticsIdx).toBeLessThan(sessionIdx);
       expect(sessionIdx).toBeLessThan(filtersIdx);
-      expect(filtersIdx).toBeLessThan(clientIdx);
+      expect(filtersIdx).toBeLessThan(authorsIdx);
+      expect(authorsIdx).toBeLessThan(clientIdx);
     });
   });
 });

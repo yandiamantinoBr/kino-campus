@@ -73,10 +73,11 @@ Resultados:
 
 ## Proximo recorte recomendado
 
-O proximo recorte JS deve evitar misturar CSS ou drivers. As opcoes mais seguras agora sao:
+Atualizacao v76.4.0: mocks/normalizacao de autores foram extraidos em
+`report-v76-kcapi-authors-extraction-2026-06-12.md`.
 
-- mocks/normalizacao de autores, com snapshot dos fixtures locais;
-- preparacao de snapshot dedicado para `normalizePost` antes de qualquer extracao.
+O proximo recorte JS deve evitar misturar CSS ou drivers. A opcao mais segura agora e preparar
+snapshot dedicado para `normalizePost` antes de qualquer extracao.
 
 `normalizePost` continua sendo o ponto de maior risco porque normaliza o contrato transversal de posts
 consumido por feed, produto, perfil, salvos e adapters.
