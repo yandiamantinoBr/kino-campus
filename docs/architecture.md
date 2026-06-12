@@ -158,17 +158,17 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v16.11.0** — todos os monolitos abaixo foram decompostos entre v11 e v15.
+> **Atualizado em v75.1.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
-| fachada de API | `assets/js/api/kc-api.client.js` (~2410L) | ✅ Decomposto em 11 sub-módulos `_KCAPI.*` | compatibilidade entre drivers e contrato público |
+| fachada de API | `assets/js/api/kc-api.client.js` (2.846L / 120KB) | ⚠️ Parcialmente decomposto em sub-módulos `_KCAPI.*`; facade ainda concentra bootstrap, normalização, caches, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
 | adapter Supabase | `assets/js/adapters/supabase/supabase.adapter.js` (~420L) | ✅ Decomposto em 11 sub-adapters `_KCSA.*` | acoplamento com banco, RLS, RPCs |
 | detalhe de publicação | `assets/js/controllers/public/product.controller.js` | ✅ Decomposto em 8 auxiliares `_KCProduct.*` | UI crítica e estado compartilhado |
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
 | utilitários globais | `assets/js/utils/kc-utils.js` (~440L) | ✅ Decomposto em 7 sub-módulos `_KCU.*` | impacto transversal amplo |
 | admin dashboard | `assets/js/controllers/admin/admin-dashboard.controller.js` | ✅ Decomposto em 3 auxiliares `_KCAD.*` | KPIs, ranking, audit log e export |
-| design system global | `assets/css/styles.css` (~10.582L) | ⚠️ Monolito preservado (stubs em `future-split/`) | alto risco de regressão visual transversal |
+| design system global | `assets/css/styles.css` (12.282L / 287KB) | ⚠️ Monolito preservado; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
 
 ## Arquitetura CSS
 

@@ -109,8 +109,8 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 
 | # | Achado V1/V2 | Status atual | Evidencia | Severidade residual |
 |---|---|---|---|---|
-| A1 | `kc-api.client.js` 120KB / 2.846 linhas | **Nao tocado** - monolitico | Confirmado em filesystem | Alto (evolucao) |
-| A2 | `styles.css` 287KB | **Nao tocado** - stubs `future-split/` nao carregados | Confirmado em filesystem | Alto (evolucao) |
+| A1 | `kc-api.client.js` 120KB / 2.846 linhas | **Nao tocado em runtime**; plano V76 criado para decomposicao segura | `docs/planning/v76-hotspot-decomposition-plan.md` | Alto (evolucao) |
+| A2 | `styles.css` 287KB | **Nao tocado em runtime**; stubs `future-split/` seguem nao carregados e plano V76 define gates | `docs/planning/v76-hotspot-decomposition-plan.md` | Alto (evolucao) |
 | A3 | Migrations > 20KB com seed embutido (17 celulas) | **Nao tocado** - `v8.2.6.0_fix_module_loading.sql` (341 linhas) segue com 44 posts seed | Confirmado por `Get-ChildItem` em migrations | Alto (cosmetic/documental) |
 | A4 | CI nao roda validators/Jest | **Resolvido** | `.github/workflows/essential-validation.yml` (PR #551) roda 5 validators + Jest + Playwright list em todo PR | Nenhum |
 | A5 | Drift de testes 135 vs 168 | **Resolvido** | README:23, ai-development-guide:52, architecture.md:22 ja dizem 168/3512; filesystem 168/3513; Playwright 9/59 | Nenhum |
@@ -146,8 +146,8 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 
 | Item | Razao | Acao |
 |---|---|---|
-| `kc-api.client.js` 120KB / 2.846 linhas | Ja tem sub-modulos `_KCAPI.*` extraidos; fachada principal segue grande | Decomposicao continua em PRs pequenos e coesos |
-| `styles.css` 287KB | Stubs em `assets/css/future-split/` estao documentados mas nao carregados | Split real requer baseline visual + gate V27 + ledger V35 + dossiê V45 |
+| `kc-api.client.js` 120KB / 2.846 linhas | Ja tem sub-modulos `_KCAPI.*` extraidos; fachada principal segue grande | Usar `docs/planning/v76-hotspot-decomposition-plan.md`; proximo passo recomendado: report de superficie publica `window.KCAPI` |
+| `styles.css` 287KB | Stubs em `assets/css/future-split/` estao documentados mas nao carregados | Usar `docs/planning/v76-hotspot-decomposition-plan.md`; split real requer baseline visual + gate V27 + ledger V35 + dossie V45 |
 | `unaccent` em `public` schema | **Nao ativo em 2026-06-12**: extensao instalada em `extensions`; wrapper/FTS seguem intocados | Nenhuma migration nesta etapa; manter V28 como referencia se Advisor voltar |
 | CHANGELOG encoding V9-V9.3.1 | UTF-8 salvo como latin1 em ~10 entradas historicas | Cosmético, conviver ou corrigir com script de re-encoding |
 

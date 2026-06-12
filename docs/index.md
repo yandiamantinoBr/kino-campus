@@ -59,6 +59,7 @@
 | [planning/v51-functional-no-go-register.md](./planning/v51-functional-no-go-register.md) | registro de No-Go quando gates/evidencias bloquearem implementacao |
 | [planning/v52-functional-gate-traceability.md](./planning/v52-functional-gate-traceability.md) | matriz de rastreabilidade dos gates antes da branch funcional |
 | [planning/v53-functional-patch-manifest.md](./planning/v53-functional-patch-manifest.md) | manifesto de filescope/teste/rollback antes do primeiro patch funcional |
+| [planning/v76-hotspot-decomposition-plan.md](./planning/v76-hotspot-decomposition-plan.md) | plano de decomposicao segura dos hotspots `kc-api.client.js` e `styles.css` |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
 | [audits/README.md](./audits/README.md) | indice de auditorias tecnicas pontuais (read-only + validacao contra producao) |
 | [audits/audit-v3-actual-state-2026-06-11.md](./audits/audit-v3-actual-state-2026-06-11.md) | V3 - comparacao entre V1/V2 e o estado real apos 9 PRs mergeados em 72h (2026-06-11) |
