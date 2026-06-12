@@ -28,6 +28,7 @@ critico ou alto.
 | Tokens em env vars Windows | Runbook pronto em PR #554 (`93c75d5 docs: add token rotation runbook`) - execucao manual pendente |
 | `notify-admin-reports-threshold` nao deployada | Confirmado; estado remoto documentado em `docs/ops/vercel-supabase-invariants.md:73-75` (PR #558) |
 | `auth_leaked_password_protection` desabilitado | Confirmado em `docs/qa/reports/report-v75-supabase-auth-password-protection-2026-06-11.md` (PR #555) |
+| `extension_in_public` para `unaccent` | Encerrado em 2026-06-12: `unaccent` esta em `extensions`; Advisor sem lint ativo |
 | Cache dinamico de sitemap/OG sem probe | Probe empirica em `docs/qa/reports/report-v75-vercel-cache-control-2026-06-11.md` (PR #557) |
 | Artefatos gerados no git | Limpos em PR #556 (`e5fdc5d chore: stop tracking generated output artifacts`) |
 
@@ -66,7 +67,7 @@ abaixo.
 
 ### 2.3 Supabase remoto
 
-Projeto: `wacyrkwhkvzwkqpolrbg` (Kino Campus, West US/Oregon, criado 2025-12-14).
+Projeto: `Kino Campus` (`project_ref` redigido; West US/Oregon, criado 2025-12-14).
 
 | Edge Function | Versao deployada | Status |
 |---|---|---|
@@ -121,11 +122,11 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 |---|---|---|
 | V2 §0 | "Bug `controladores/` vs `controllers/` em producao" | **Refutado em V2 §0 V3** - prod serve `assets/js/controllers/...` (EN), identico ao repo |
 
-### 3.4 Pendentes de confirmacao
+### 3.4 Pendentes de confirmacao e encerramentos posteriores
 
 | # | Item | O que falta verificar | Como verificar | Risco |
 |---|---|---|---|---|
-| P1 | `extension_in_public` para `unaccent` | Estado real no `pg_extension` | `select extname, nspname from pg_extension e join pg_namespace n on e.extnamespace = n.oid` (read-only) | Medio (Advisor residual) |
+| P1 | `extension_in_public` para `unaccent` | **Encerrado em 2026-06-12**: `unaccent` esta no schema `extensions` | `docs/qa/reports/report-v75-supabase-unaccent-extension-schema-2026-06-12.md` | Sem warning ativo; manter watchlist se Advisor voltar |
 | P2 | Cadu publisher rodando em cron real | Host onde roda + logs | Confirmar via logs Supabase ou host externo | Baixo |
 | P3 | 248 docs `.md` com `75.0.0` ou `8.6.0` | **Ja verificado nesta V3** - todos sao historicos legitimos (CHANGELOG, archive, planning, reports v71-v75) | `grep -r` em 2026-06-11 23:42 | Nenhum |
 
@@ -147,7 +148,7 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 |---|---|---|
 | `kc-api.client.js` 120KB / 2.846 linhas | Ja tem sub-modulos `_KCAPI.*` extraidos; fachada principal segue grande | Decomposicao continua em PRs pequenos e coesos |
 | `styles.css` 287KB | Stubs em `assets/css/future-split/` estao documentados mas nao carregados | Split real requer baseline visual + gate V27 + ledger V35 + dossiê V45 |
-| `unaccent` em `public` schema | 3 camadas acopladas (extensao, wrapper `kc_unaccent`, indice FTS) | Spike isolado seguindo `docs/ops/v28-unaccent-fts-dependency-audit.md` + `docs/ops/v19-operational-runbook.md:41-56` |
+| `unaccent` em `public` schema | **Nao ativo em 2026-06-12**: extensao instalada em `extensions`; wrapper/FTS seguem intocados | Nenhuma migration nesta etapa; manter V28 como referencia se Advisor voltar |
 | CHANGELOG encoding V9-V9.3.1 | UTF-8 salvo como latin1 em ~10 entradas historicas | Cosmético, conviver ou corrigir com script de re-encoding |
 
 ### 4.3 Sem pendencia (resolvidas em 2026-06-08/11)
@@ -172,6 +173,7 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 - Vercel projects - total via `vercel projects ls` com `$env:VERCEL_TOKEN`
 - Vercel producao (cache dinamico) - probe real em `https://www.kinocampus.com.br/sitemap.xml`
 - Supabase remoto (Edge Functions, Auth config) - total via `supabase functions list` e Management API com `$env:SUPABASE_ACCESS_TOKEN`
+- Supabase remoto (`unaccent` extension schema) - total via MCP Supabase read-only em 2026-06-12; `unaccent` esta em `extensions`
 - Drift documental - grep global em 248 .md
 - Validators + Jest + Playwright list - execucao local
 
@@ -180,7 +182,6 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 - Performance real em prod (LCP, FCP, TBT) - requer browser real
 - Console de erros JS em prod - requer browser real
 - LHCI run em CI - requer GitHub Actions (ultimo run em 2026-06-12 02:49 UTC, link em PR #558)
-- `extension_in_public` no `pg_extension` - requer `supabase db query` ou SQL Editor (nao executado para manter read-only)
 - Cadu cron em host externo - sem acesso ao host
 - Chat em uso real em prod - requer login autenticado
 

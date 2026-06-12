@@ -6,6 +6,11 @@
 
 > Atualização operacional em 2026-06-11: o advisor remoto indicou `auth_leaked_password_protection` como WARN; `extension_in_public` (`unaccent`) não apareceu como advisor ativo nessa leitura, mas segue como histórico/watchlist. Não mover extensão nem alterar Auth Dashboard por migration improvisada; seguir `docs/ops/v19-operational-runbook.md` e `docs/ops/v28-unaccent-fts-dependency-audit.md`.
 
+> Atualizacao operacional em 2026-06-12: probe read-only no Supabase remoto confirmou `unaccent`
+> instalado em `extensions` (`extversion=1.1`) e Advisor de seguranca sem lint `extension_in_public`.
+> O residual ativo de seguranca continua sendo `auth_leaked_password_protection`; nao aplicar
+> migration para `unaccent` no estado atual.
+
 ## Tabelas Principais
 
 ### `profiles` — Perfis de Usuário

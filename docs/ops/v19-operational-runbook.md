@@ -42,6 +42,11 @@ Rollback: retornar a configuracao anterior no dashboard e registrar motivo.
 
 Tipo: risco SQL/FTS.
 
+Estado V75 (2026-06-12): verificacao read-only no Supabase remoto confirmou `unaccent` no schema
+`extensions` (`extversion=1.1`) e Advisor de seguranca sem lint `extension_in_public`. Nao ha
+SQL/migration a aplicar para esse item no estado atual; manter este runbook como procedimento se o
+Advisor voltar a apontar o warning.
+
 Nao executar diretamente em producao. A busca usa `unaccent` em migrations v9.2.x e helpers `kc_unaccent`.
 Ver tambem `docs/ops/v28-unaccent-fts-dependency-audit.md` antes de planejar qualquer migration.
 

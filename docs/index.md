@@ -69,6 +69,7 @@
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
 | [qa/reports/report-v75-supabase-auth-password-protection-2026-06-11.md](./qa/reports/report-v75-supabase-auth-password-protection-2026-06-11.md) | evidencia V75 de `password_hibp_enabled=false` no Supabase Auth remoto |
+| [qa/reports/report-v75-supabase-unaccent-extension-schema-2026-06-12.md](./qa/reports/report-v75-supabase-unaccent-extension-schema-2026-06-12.md) | evidencia V75 de `unaccent` instalado no schema `extensions` no Supabase remoto |
 | [qa/reports/report-v75-generated-output-cleanup-2026-06-11.md](./qa/reports/report-v75-generated-output-cleanup-2026-06-11.md) | evidencia V75 da limpeza de artefatos gerados em `output/` |
 | [qa/reports/report-v75-vercel-cache-control-2026-06-11.md](./qa/reports/report-v75-vercel-cache-control-2026-06-11.md) | evidencia V75 de cache efetivo para sitemap e Open Graph na Vercel |
 | [qa/reports/report-v75-public-a11y-kc-ranking-icons.md](./qa/reports/report-v75-public-a11y-kc-ranking-icons.md) | evidencia do patch PUBLIC-A11Y nos 18 icones decorativos em kc-ranking.js |

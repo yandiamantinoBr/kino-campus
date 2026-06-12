@@ -4,6 +4,11 @@
 **Atualizado em:** 2026-04-28
 **Escopo:** auditoria estatica; sem executar SQL, sem alterar migrations
 
+> Atualizacao V75 (2026-06-12): verificacao read-only no Supabase remoto confirmou
+> `unaccent` instalado no schema `extensions` (`extversion=1.1`) e o Advisor de seguranca
+> nao retornou `extension_in_public`. Esta auditoria permanece como referencia de impacto
+> caso o Advisor volte a apontar o item ou caso a trilha FTS/search precise de migration futura.
+
 ---
 
 ## 1. Objetivo
