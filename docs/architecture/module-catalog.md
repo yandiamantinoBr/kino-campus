@@ -16,7 +16,7 @@
 
 - [Grupo boot/](#grupo-boot) — 6 módulos
 - [Grupo core/](#grupo-core) — 11 módulos
-- [Grupo api/](#grupo-api) — 16 módulos
+- [Grupo api/](#grupo-api) — 18 módulos
 - [Grupo utils/](#grupo-utils) — 8 módulos
 - [Grupo features/](#grupo-features) — 10 módulos *(v16.4.0)*
 - [Grupo features/create-post/](#grupo-featurescreate-post) — 7 módulos *(v16.4.0)*
@@ -815,17 +815,66 @@ salvos do usuário.
 
 ---
 
+### `api/kc-api.chat.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | api |
+| Namespace | `window._KCAPI.chat` |
+| Padrão | IIFE + facade compartilhado |
+| Páginas | `mensagens.html` e páginas autenticadas que expõem chat |
+
+**Responsabilidade:** Facade de chat 1-a-1. Delega para o driver ativo local/Supabase e mantém
+`window.KCAPI.chat.*` como a superfície pública usada por controllers e UI.
+
+**Exports públicos:** `startConversation`, `sendMessage`, `uploadChatImage`, `deleteUploadedMedia`,
+`listConversations`, `listMessages`, `markRead`, `unreadTotal`, `subscribeChat` e helpers correlatos.
+
+**Dependências em runtime:** `window.KCAPI.ENV`, `window._KCSA.chat`, `window._KCAL.chat`
+
+**Consumido por:** `window.KCAPI.chat`, UI de mensagens e notificações de conversa.
+
+**Testes:** `tests/contract/chat-continuity-contract.test.js`,
+`tests/integration/kc-api-client.test.js`
+
+---
+
+### `api/kc-api.diagnostics.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | api |
+| Namespace | `window._KCAPI.diagnostics` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | Todas as páginas que carregam `kc-api.client.js` |
+
+**Responsabilidade:** Estado e helpers de diagnóstico de create-post: normalização de erro,
+resumo seguro de payload e leitura/limpeza do último erro reportado pelo fluxo de publicação.
+
+**Exports públicos:** `normalizeErrorForDiagnostics()`, `summarizeCreatePayloadForDiagnostics()`,
+`setLastCreatePostError()`, `clearLastCreatePostError()`, `getLastCreatePostError()`
+
+**Dependências em runtime:** `window._KCAPI`
+
+**Consumido por:** `window.KCAPI` e aliases globais de diagnóstico mantidos pela fachada.
+
+**Testes:** `tests/integration/kc-api-diagnostics-module.test.js`,
+`tests/contract/kc-api-facade-contract.test.js`,
+`tests/integration/kc-api-client.test.js`
+
+---
+
 ### `api/kc-api.client.js`
 
 | Campo | Valor |
 |-------|-------|
 | Grupo | api |
 | Namespace | `window.KCAPI` |
-| Padrão | IIFE + `Object.freeze` (2410 linhas — facade central) |
+| Padrão | IIFE + `Object.freeze` (2809 linhas — facade central) |
 | Páginas | **Todas as páginas autenticadas** |
 
-**Responsabilidade:** Facade central da API do KinoCampus. Agrega todos os 14 submódulos KCAPI
-(`_KCAPI_*`) e expõe uma interface pública unificada com roteamento para o driver correto
+**Responsabilidade:** Facade central da API do KinoCampus. Agrega submódulos KCAPI
+(`_KCAPI.*`) e expõe uma interface pública unificada com roteamento para o driver correto
 (`local` ou `supabase`) via padrão Strategy. É o único ponto de acesso à camada de dados para
 controllers e features.
 
@@ -841,7 +890,7 @@ controllers e features.
 - `window.KCAPI.getUser()` — usuário logado
 - `window.KCAPI.login()` / `logout()` — autenticação
 
-**Dependências em runtime:** Todos os `window._KCAPI_*` submódulos, `window.KC_ENV`,
+**Dependências em runtime:** Todos os `window._KCAPI.*` submódulos, `window.KC_ENV`,
 adapters local e supabase
 
 **Consumido por:** Todos os controllers públicos e admin, features, shared modules
@@ -850,7 +899,7 @@ adapters local e supabase
 `tests/contract/kc-api-facade-contract.test.js`,
 `tests/integration/kc-api-session-swr.test.js`
 
-**Observações:** Arquivo mais longo do projeto (2410 linhas). Nunca alterar sem rodar `check:all`
+**Observações:** Arquivo JS mais longo do projeto (2809 linhas). Nunca alterar sem rodar `check:all`
 + `npm test`. O padrão Driver é implementado aqui: cada método delega para o adapter correto
 baseado em `window.KC_ENV.driver`.
 
@@ -2176,6 +2225,8 @@ contagem de votos de um post e voto atual do usuário.
 | api/kc-api.ratings.js | api | `window._KCAPI_rat` | _product.html | integration/kc-api-ratings-module |
 | api/kc-api.related.js | api | `window._KCAPI_rel` | _product.html | integration/kc-api-related-module |
 | api/kc-api.saved.js | api | `window._KCAPI_saved` | produto+my-posts | integration/kc-api-saved-module |
+| api/kc-api.chat.js | api | `window._KCAPI.chat` | mensagens+autenticadas | contract/chat-continuity |
+| api/kc-api.diagnostics.js | api | `window._KCAPI.diagnostics` | create+autenticadas | integration/kc-api-diagnostics-module |
 | api/kc-api.client.js | api | `window.KCAPI` | autenticadas | integration/kc-api-client |
 | api/admin-shell.js | api | *(nenhum)* | 6 admin | structure/admin-shell-preload |
 | utils/kc-utils.string.js | utils | `window._KCU_str` | todas | unit/kc-utils-expanded |

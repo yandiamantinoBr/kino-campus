@@ -1,8 +1,8 @@
 # Estrutura do Repositorio - KinoCampus
 
-**Versao:** v75.1.0
-**Data:** 2026-06-11
-**Atualizado em:** v75.1.0 - performance phase 1, Speed Insights e reancoragem documental
+**Versao:** v76.1.0
+**Data:** 2026-06-12
+**Atualizado em:** v76.1.0 - extracao de `kc-api.diagnostics.js` e reancoragem de contagens
 
 ---
 
@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 168 suites / 3515 testes + Playwright 9 specs E2E |
+| Testes | Jest 169 suites / 3524 testes + Playwright 9 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -62,7 +62,7 @@ kino-campus/
 |   |-- js/
 |   |   |-- boot/                  9 arquivos
 |   |   |-- core/                  12 arquivos
-|   |   |-- api/                   17 arquivos
+|   |   |-- api/                   18 arquivos
 |   |   |-- utils/                 8 arquivos
 |   |   |-- features/              16 arquivos + create-post/
 |   |   |   `-- create-post/       7 arquivos
@@ -98,7 +98,7 @@ kino-campus/
 |   `-- qa/                        QA ativo
 |-- tests/
 |   |-- unit/                     25 suites
-|   |-- integration/              118 suites
+|   |-- integration/              119 suites
 |   |-- contract/                 8 suites
 |   |-- structure/                12 suites
 |   |-- a11y/                     5 suites
@@ -138,7 +138,7 @@ Todo modulo deve permanecer em um dos grupos canonicos abaixo.
 |---|---:|---|
 | `assets/js/boot/` | 9 | Cadeia de inicializacao compartilhada por todos os HTMLs, SEO, Google Tag e Speed Insights |
 | `assets/js/core/` | 12 | Runtime central: i18n, auth UI, consentimento, perfil, tema, notificacoes, widgets e shell publico |
-| `assets/js/api/` | 17 | Cliente Supabase, submodulos KCAPI, chat e facade `window.KCAPI` |
+| `assets/js/api/` | 18 | Cliente Supabase, submodulos KCAPI, diagnostics, chat e facade `window.KCAPI` |
 | `assets/js/utils/` | 8 | Helpers de string, formatacao, DOM, identidade, taxonomia, localizacao e apresentacao |
 | `assets/js/features/` | 16 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading e pull-to-refresh |
 | `assets/js/features/create-post/` | 7 | Orquestracao, schema, campos, render, midia, resolvers e submit de criacao |
@@ -254,12 +254,12 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | Comando | Responsabilidade esperada |
 |---|---|
 | `npm run check:version` | Valida `VERSION.json`, branch canonica e runtime JS `8.6.1` |
-| `npm run check:structure` | Valida 162 itens estruturais + raiz `assets/js/` limpa |
+| `npm run check:structure` | Valida 163 itens estruturais + raiz `assets/js/` limpa |
 | `npm run check:scripts` | Valida cadeias de scripts nos 26 HTMLs canonicos |
 | `npm run check:routes` | Valida 20 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantem 168/168 suites e 3515/3515 testes Jest |
+| `npm test` | Mantem 169/169 suites e 3524/3524 testes Jest |
 | `npx playwright test --list` | Lista 9 specs / 59 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |

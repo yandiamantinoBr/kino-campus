@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.0.0
+**Versao:** v76.1.0
 **Data:** 2026-06-12
-**Escopo:** planejamento tecnico; sem alterar runtime, CSS, HTML, SQL, secrets, provider ou deploy
+**Escopo:** planejamento tecnico + status da primeira extracao JS; sem alterar CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -13,7 +13,7 @@ hotspots ainda relevantes do frontend:
 
 | Hotspot | Estado atual medido em 2026-06-12 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 2.846 linhas / 120.212 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 2.809 linhas / 119.106 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -52,6 +52,7 @@ O arquivo principal ja delega parte do dominio para submodulos `_KCAPI.*`:
 | ratings | `assets/js/api/kc-api.ratings.js` |
 | related | `assets/js/api/kc-api.related.js` |
 | saved | `assets/js/api/kc-api.saved.js` |
+| diagnostics create-post | `assets/js/api/kc-api.diagnostics.js` |
 | help/admin help | `assets/js/api/kc-api.help.js` |
 | notifications | `assets/js/api/kc-api.notifications.js` |
 | chat | `assets/js/api/kc-api.chat.js` |
@@ -74,7 +75,7 @@ normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e e
 
 | Candidato | Motivo | Bloqueio |
 |---|---|---|
-| `normalizeErrorForDiagnostics` + helpers de erro | baixa dependencia externa, teste unitario claro | nao mudar mensagens publicas usadas por UI/admin |
+| `normalizeErrorForDiagnostics` + helpers de erro | baixa dependencia externa, teste unitario claro | **Concluido em v76.1.0**; preservar mensagens publicas usadas por UI/admin |
 | `KCSessionStore` / `KCPostFreshness` | responsabilidade isolavel, ja exposta como `window.*` proprio | preservar eventos e storage keys |
 | filtros/date presets de feed | logica pura, coberta por `kc-api-client.test.js` | precisa manter paridade entre modulos e datas |
 | mocks/normalizacao de autores | reduz peso do facade | alto risco de fixtures e fallback local; fazer depois dos anteriores |
@@ -179,7 +180,10 @@ Escolher uma das duas, nunca ambas no mesmo PR:
 `docs/qa/reports/report-v76-kcapi-public-surface-2026-06-12.md`, com snapshot de 107 membros
 publicos de `window.KCAPI` e reforco em `tests/contract/kc-api-facade-contract.test.js`.
 
-Proxima entrega recomendada apos JS-A: extrair apenas o bloco de diagnostico de create-post
-(`normalizeErrorForDiagnostics`, `summarizeCreatePayloadForDiagnostics` e helpers relacionados),
-com teste dedicado. Nao iniciar por `normalizePost`; o report JS-A classifica esse bloco como alto
-risco por ser contrato transversal.
+**Status v76.1.0:** JS-B extraiu o bloco de diagnostico de create-post para
+`assets/js/api/kc-api.diagnostics.js`, preservando os 107 membros de `window.KCAPI`, aliases
+globais e ordem de carregamento nos HTMLs reais.
+
+Proxima entrega recomendada apos JS-B: isolar `KCSessionStore`/`KCPostFreshness` somente depois de
+um contrato explicito de storage keys, eventos e deduplicacao. Nao iniciar por `normalizePost`; o
+report JS-A classifica esse bloco como alto risco por ser contrato transversal.
