@@ -82,6 +82,9 @@ secret, migration ou deploy manual especial.
 
 ## Proxima etapa recomendada
 
-Executar CSS-B baseline visual antes de qualquer extracao CSS real. Se a proxima entrega nao for
-visual, escolher o inventario residual menor de wrappers/bootstrap em `kc-api.client.js`, sem
-misturar JS e CSS no mesmo PR.
+CSS-B baseline visual foi executado em `report-v76-css-visual-baseline-2026-06-12.md`.
+O inventario residual JS-I foi executado em
+`report-v76-kcapi-residual-inventory-2026-06-12.md`.
+
+Proxima entrega deve escolher uma trilha unica: CSS-C micro-split com before/after, CSS-B admin
+autenticado ou JS-I.1 external access admin sem tocar CSS.

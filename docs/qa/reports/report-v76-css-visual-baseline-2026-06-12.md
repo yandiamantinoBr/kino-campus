@@ -115,5 +115,9 @@ Ainda nao esta aprovado:
 - fazer split amplo de `styles.css`;
 - misturar mudanca CSS com decomposicao JS de `kc-api.client.js`.
 
+Atualizacao v76.10.0: o inventario residual JS-I da fachada `KCAPI` foi entregue em
+`docs/qa/reports/report-v76-kcapi-residual-inventory-2026-06-12.md`.
+
 Proxima entrega recomendada: CSS-C micro-split com before/after apenas para seletores cobertos por
-este baseline, ou uma rodada CSS-B autenticada se o candidato for admin.
+este baseline, rodada CSS-B autenticada se o candidato for admin, ou JS-I.1 external access admin
+sem tocar CSS.
