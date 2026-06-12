@@ -60,6 +60,8 @@
 | [planning/v52-functional-gate-traceability.md](./planning/v52-functional-gate-traceability.md) | matriz de rastreabilidade dos gates antes da branch funcional |
 | [planning/v53-functional-patch-manifest.md](./planning/v53-functional-patch-manifest.md) | manifesto de filescope/teste/rollback antes do primeiro patch funcional |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
+| [audits/README.md](./audits/README.md) | indice de auditorias tecnicas pontuais (read-only + validacao contra producao) |
+| [audits/audit-v3-actual-state-2026-06-11.md](./audits/audit-v3-actual-state-2026-06-11.md) | V3 - comparacao entre V1/V2 e o estado real apos 9 PRs mergeados em 72h (2026-06-11) |
 | [ops/v28-unaccent-fts-dependency-audit.md](./ops/v28-unaccent-fts-dependency-audit.md) | auditoria estatica de dependencias `unaccent`/FTS antes de migration |
 | [ops/v29-supabase-advisor-evidence-checklist.md](./ops/v29-supabase-advisor-evidence-checklist.md) | checklist de evidencias Supabase Advisor sem secrets |
 | [ops/v30-notification-provider-sandbox-checklist.md](./ops/v30-notification-provider-sandbox-checklist.md) | checklist de sandbox/go-live para providers de email e WhatsApp |
