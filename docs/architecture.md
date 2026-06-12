@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.9.0 (2026-06-12)** — contagens apos inventario CSS-A, baseline CSS-B visual/cascade e runtime frontend `8.6.1`.
+> **Atualizado em v76.10.0 (2026-06-12)** — contagens apos inventario CSS-A, baseline CSS-B visual/cascade, inventario residual JS-I da fachada `KCAPI` e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -158,11 +158,11 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.9.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
+> **Atualizado em v76.10.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
-| fachada de API | `assets/js/api/kc-api.client.js` (1.508L / 58KB) | ⚠️ Parcialmente decomposto em sub-módulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalizacao de posts e normalizadores de rating extraidos; facade ainda concentra bootstrap, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
+| fachada de API | `assets/js/api/kc-api.client.js` (1.509L / 58.340 bytes) | ⚠️ Parcialmente decomposto em sub-módulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalizacao de posts e normalizadores de rating extraidos; JS-I mede 107 membros publicos, 145 funcoes, 98 wrappers exportados/globais e 17 namespaces `_KCAPI.*`; facade ainda concentra bootstrap, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
 | adapter Supabase | `assets/js/adapters/supabase/supabase.adapter.js` (~420L) | ✅ Decomposto em 11 sub-adapters `_KCSA.*` | acoplamento com banco, RLS, RPCs |
 | detalhe de publicação | `assets/js/controllers/public/product.controller.js` | ✅ Decomposto em 8 auxiliares `_KCProduct.*` | UI crítica e estado compartilhado |
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
@@ -186,6 +186,10 @@ Inventario CSS-A: `npm run audit:css` e
 `docs/planning/v76-css-ownership-inventory.md` classificam ownership antes de qualquer split.
 Baseline CSS-B: `npm run audit:css-baseline` e
 `docs/planning/v76-css-visual-baseline.md` capturam evidencia visual/cascade anonima antes de mudancas CSS.
+
+Inventario JS-I: `npm run audit:kcapi-residual` e
+`docs/planning/v76-kcapi-residual-inventory.md` classificam os buckets residuais da fachada `KCAPI`
+antes de novas extracoes runtime.
 
 ## Regras de equivalência
 
@@ -211,5 +215,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.7.0 (2026-06-12):** `kc-api.ratings.js` passa a concentrar os normalizadores `normalizeUserRating*`, mantendo `KCAPI.normalizeUserRating*` como wrappers publicos; `kc-api.client.js` reduz para 1.508 linhas / 58.290 bytes e Jest sobe para 174 suites / 3570 testes.
 - **v76.8.0 (2026-06-12):** CSS-A adiciona `scripts/audit-css-ownership.js`, `npm run audit:css` e `docs/planning/v76-css-ownership-inventory.md`; `styles.css` permanece sem alteracao de cascade, com 1.774 regras / 1.995 seletores parseados.
 - **v76.9.0 (2026-06-12):** CSS-B adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md`; a rodada local capturou 24 screenshots em 12 rotas x 2 viewports, com 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
+- **v76.10.0 (2026-06-12):** JS-I adiciona `scripts/audit-kcapi-facade-residual.js`, `npm run audit:kcapi-residual` e `docs/planning/v76-kcapi-residual-inventory.md`; a rodada local mediu 107 membros publicos, 145 declaracoes `function`, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 13 buckets residuais sem alterar runtime.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

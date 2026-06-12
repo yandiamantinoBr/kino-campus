@@ -5,7 +5,8 @@
 **Tipo:** contrato estatico + analise documental
 **Runtime alterado:** nao
 **Follow-up:** JS-B extraido em `report-v76-kcapi-diagnostics-extraction-2026-06-12.md`;
-JS-C extraido em `report-v76-kcapi-session-extraction-2026-06-12.md`
+JS-C extraido em `report-v76-kcapi-session-extraction-2026-06-12.md`;
+JS-I inventariado em `report-v76-kcapi-residual-inventory-2026-06-12.md`
 
 ---
 
@@ -163,3 +164,11 @@ reais com script antes da fachada, 107 membros publicos preservados e contagem d
 real do plano: `window._KCAPI.filters`, `KCAPI.filterPosts` preservado como metodo publico,
 27 HTMLs reais com script entre `kc-api.session.js` e `kc-api.client.js`, 107 membros publicos
 preservados e contagem documentada em 171 suites / 3545 testes.
+
+## 12. Follow-up JS-I
+
+`docs/qa/reports/report-v76-kcapi-residual-inventory-2026-06-12.md` registra o inventario residual
+atual da fachada apos as extracoes V76: 1.509 linhas / 58.340 bytes, 107 membros publicos,
+145 declaracoes `function`, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 13 buckets
+residuais. Este follow-up substitui a secao antiga de blocos residuais como fonte para proximas
+extracoes.

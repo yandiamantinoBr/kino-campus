@@ -141,12 +141,17 @@ Atualizacao v76.9.0: a trilha **CSS-B baseline visual** foi executada em
 `docs/planning/v76-css-visual-baseline.md` e registrada em
 `docs/qa/reports/report-v76-css-visual-baseline-2026-06-12.md`.
 
+Atualizacao v76.10.0: a trilha **JS-I inventario residual da fachada KCAPI** foi executada em
+`docs/planning/v76-kcapi-residual-inventory.md` e registrada em
+`docs/qa/reports/report-v76-kcapi-residual-inventory-2026-06-12.md`.
+
 Escolher uma trilha unica para a proxima entrega:
 
 1. **CSS-C micro-split:** apenas para seletor visivel nas rotas cobertas pelo baseline anonimo, com
    before/after e rollback.
 2. **CSS-B admin autenticado:** capturar dashboard admin real antes de mover seletores que so
    aparecem no estado autenticado.
-3. **JS residual menor:** inventario de wrappers/bootstrap restantes em `kc-api.client.js`, sem tocar CSS.
+3. **JS-I.1 external access admin:** mover apenas 2 wrappers / 14 linhas, com teste de driver fallback,
+   sem tocar CSS.
 
 Nao iniciar extracao ampla de seletores diretamente a partir deste inventario.

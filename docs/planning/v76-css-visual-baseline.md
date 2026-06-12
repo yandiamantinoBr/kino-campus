@@ -119,6 +119,7 @@ Escolher uma trilha unica:
    cobertas pelo baseline anonimo atual, ou se houver baseline autenticado adicional.
 2. **CSS-B admin autenticado:** capturar dashboard admin real com credenciais controladas, caso o
    proximo candidato seja `admin-shell.css`.
-3. **JS residual menor:** inventario de wrappers/bootstrap restantes em `kc-api.client.js`, sem tocar CSS.
+3. **JS-I.1 external access admin:** seguir o inventario residual em
+   `docs/planning/v76-kcapi-residual-inventory.md`, movendo apenas 2 wrappers / 14 linhas, sem tocar CSS.
 
 Nao iniciar extracao ampla de `styles.css` diretamente a partir deste baseline.

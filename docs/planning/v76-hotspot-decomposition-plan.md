@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.9.0
+**Versao:** v76.10.0
 **Data:** 2026-06-12
-**Escopo:** planejamento tecnico + status das extracoes JS V76, inventario CSS-A e baseline CSS-B; sem alterar CSS runtime, SQL, secrets, provider ou deploy
+**Escopo:** planejamento tecnico + status das extracoes JS V76, inventario residual JS-I, inventario CSS-A e baseline CSS-B; sem alterar runtime, CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -13,7 +13,7 @@ hotspots ainda relevantes do frontend:
 
 | Hotspot | Estado atual medido em 2026-06-12 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 1.508 linhas / 58.290 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 1.509 linhas / 58.340 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -62,6 +62,12 @@ O arquivo principal ja delega parte do dominio para submodulos `_KCAPI.*`:
 
 O risco residual nao e ausencia de modularizacao. O risco e o arquivo central ainda concentrar bootstrap,
 normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e exposicao final do contrato.
+
+**Status v76.10.0:** JS-I concluido em
+`docs/planning/v76-kcapi-residual-inventory.md`, com suporte de
+`scripts/audit-kcapi-facade-residual.js` (`npm run audit:kcapi-residual`). O parse atual registra
+107 membros publicos, 145 declaracoes `function`, 98 wrappers exportados/globais, 17 namespaces
+`_KCAPI.*` inicializados e 13 buckets residuais. Nenhum runtime, HTML, CSS ou adapter foi alterado.
 
 ### 3.2 Ordem permitida
 
@@ -185,11 +191,13 @@ Para entregas documentais como este plano, `npm run check:structure`, `npm run c
 
 ## 7. Proxima entrega recomendada
 
-Escolher uma das duas, nunca ambas no mesmo PR:
+Historico das frentes preparatorias e opcoes de continuidade, mantendo a regra de nunca misturar
+JS e CSS no mesmo PR:
 
 | Opcao | Entrega | Por que agora |
 |---|---|---|
 | JS-A | Report de superficie publica `window.KCAPI` e mapa dos blocos residuais no facade | prepara extracao sem mudar runtime |
+| JS-I | Inventario residual automatizado da fachada `KCAPI` | **Concluido em v76.10.0**; prioriza proximas extracoes pequenas |
 | CSS-A | Inventario de ownership de seletores de `styles.css` | **Concluido em v76.8.0**; prepara split sem alterar cascade |
 | CSS-B | Baseline visual/cascade anonimo antes de split de `styles.css` | **Concluido em v76.9.0**; cria evidencia antes/depois para micro-splits futuros |
 
@@ -233,7 +241,11 @@ reduzindo `buildRatingsDeps()` a `getActiveDriver` e ampliando a suite
 `docs/planning/v76-css-visual-baseline.md`, com 24 capturas em 12 rotas x 2 viewports e 0
 carregamentos de `future-split/`. Nenhum seletor foi movido.
 
-Proxima entrega recomendada apos CSS-B: escolher uma das tres frentes, sem misturar no mesmo PR:
-CSS-C micro-split apenas para seletor visivel no baseline anonimo, CSS-B autenticado para dashboard
-admin real, ou inventario residual menor da fachada `KCAPI` focado apenas em wrappers/bootstrap que
-ainda nao pertencem a submodulos.
+**Status v76.10.0:** JS-I criou o inventario residual automatizado da fachada `KCAPI` em
+`docs/planning/v76-kcapi-residual-inventory.md` e registrou evidencia em
+`docs/qa/reports/report-v76-kcapi-residual-inventory-2026-06-12.md`.
+
+Proxima entrega recomendada apos JS-I: escolher uma frente unica, sem misturar no mesmo PR:
+JS-I.1 external access admin (2 wrappers / 14 linhas), JS-I.2 notification fallbacks (2 builders /
+40 linhas), CSS-C micro-split apenas para seletor visivel no baseline anonimo, ou CSS-B autenticado
+para dashboard admin real.
