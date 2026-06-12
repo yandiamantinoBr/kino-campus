@@ -13,6 +13,7 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - `script-src` e `script-src-elem` com `self` e `https://cdn.jsdelivr.net`
   - `style-src` com `self`, `unsafe-inline` e `https://cdnjs.cloudflare.com`
   - `connect-src` com `self`, `https://*.supabase.co` e `wss://*.supabase.co`
+  - `object-src 'none'`, `base-uri 'self'` e `form-action 'self'` para reduzir superfície de plugin, base URL e envio de formulários
 - Em previews protegidos, o script de feedback `https://vercel.live/_next-live/feedback/feedback.js` pode aparecer bloqueado pela CSP atual; isso não deve ser tratado como regressão funcional automática sem evidência de impacto real no app.
 
 ## 2. scripts/inject-env.js
