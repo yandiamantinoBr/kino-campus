@@ -8,6 +8,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 | Arquivo | Uso |
 |---|---|
 | `_TEMPLATE-authenticated-run.md` | Template V26 para rodada autenticada real com redacao de evidencias |
+| `report-v76-kcapi-public-surface-2026-06-12.md` | Snapshot V76 da superficie publica `window.KCAPI` e blocos residuais antes de decomposicao JS |
 | `report-v75-notification-provider-status-2026-06-11.md` | Evidencia V75 do estado real dos providers Resend/Twilio no Supabase remoto |
 | `report-v75-supabase-auth-password-protection-2026-06-11.md` | Evidencia V75 de `password_hibp_enabled=false` no Supabase Auth remoto |
 | `report-v75-supabase-unaccent-extension-schema-2026-06-12.md` | Evidencia V75 de `unaccent` instalado no schema `extensions` no Supabase remoto |

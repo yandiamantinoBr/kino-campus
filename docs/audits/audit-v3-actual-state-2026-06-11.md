@@ -24,7 +24,7 @@ critico ou alto.
 | PR #549 do Vercel Bot aberto | Mergeado em PR #551 (`dc7468d Install Vercel Speed Insights`) |
 | CI sem Jest/validators | Resolvido em PR #551 (`0f42a62 ci: add essential validation gate`) - novo workflow `.github/workflows/essential-validation.yml` |
 | CSP frouxa | Endurecida em PR #552 (`fafc2ea security: harden baseline csp directives`) - inclui `va.vercel-scripts.com` e `vitals.vercel-insights.com` |
-| Drift de testes 135/3076 vs 168/3512 (real) | Resolvido em #550; realidade confirmada em 168/3513 |
+| Drift de testes 135/3076 vs contagem real atual | Resolvido em #550; estado atual pos-V76 confirmado em 168/3515 |
 | Tokens em env vars Windows | Runbook pronto em PR #554 (`93c75d5 docs: add token rotation runbook`) - execucao manual pendente |
 | `notify-admin-reports-threshold` nao deployada | Confirmado; estado remoto documentado em `docs/ops/vercel-supabase-invariants.md:73-75` (PR #558) |
 | `auth_leaked_password_protection` desabilitado | Confirmado em `docs/qa/reports/report-v75-supabase-auth-password-protection-2026-06-11.md` (PR #555) |
@@ -59,7 +59,7 @@ abaixo.
 | `frontendRuntimeVersion` | `8.6.1` | `VERSION.json:4` |
 | Status | `v75.1 performance phase 1` | `VERSION.json:6` |
 | Validators | 5/5 verdes (version, structure, scripts, routes, hygiene) | `npm run check:all` |
-| Jest | 168 suites / 3513 testes passed | `npm test` |
+| Jest | 168 suites / 3515 testes passed | `npm test` |
 | Playwright | 9 specs / 59 testes | `npx playwright test --list` |
 | Migrations | 132 arquivos em `supabase/migrations/` | `Get-ChildItem` |
 | HTMLs | 27 (21 publicos + 6 admin) | `check:routes` |
@@ -113,7 +113,7 @@ Projeto: `kino-campus` (team `yannakamurabrs-projects`, regiao `gru1`).
 | A2 | `styles.css` 287KB | **Nao tocado em runtime**; stubs `future-split/` seguem nao carregados e plano V76 define gates | `docs/planning/v76-hotspot-decomposition-plan.md` | Alto (evolucao) |
 | A3 | Migrations > 20KB com seed embutido (17 celulas) | **Nao tocado** - `v8.2.6.0_fix_module_loading.sql` (341 linhas) segue com 44 posts seed | Confirmado por `Get-ChildItem` em migrations | Alto (cosmetic/documental) |
 | A4 | CI nao roda validators/Jest | **Resolvido** | `.github/workflows/essential-validation.yml` (PR #551) roda 5 validators + Jest + Playwright list em todo PR | Nenhum |
-| A5 | Drift de testes 135 vs 168 | **Resolvido** | README:23, ai-development-guide:52, architecture.md:22 ja dizem 168/3512; filesystem 168/3513; Playwright 9/59 | Nenhum |
+| A5 | Drift de testes 135 vs 168 | **Resolvido** | README:23, ai-development-guide:52, architecture.md:22 dizem 168/3515 apos o snapshot V76; Playwright 9/59 | Nenhum |
 | A6 | Cross-region Supabase Oregon x Vercel gru1 | **Aceitavel** | Latencia ~150-200ms documentada em V1; nao justifica migracao | Medio |
 
 ### 3.3 Falsos positivos da V1/V2

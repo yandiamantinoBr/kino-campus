@@ -19,7 +19,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `7` |
 | suites de teste Jest em `tests/` | `168` |
-| testes Jest totais | `3512` |
+| testes Jest totais | `3515` |
 | specs E2E Playwright | `9` |
 
 ## Princípio estrutural
@@ -196,6 +196,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 
 - **v16.11.0 (2026-04-27):** contagens e caminhos atualizados para refletir a estrutura pós-V15 (13 grupos canônicos, 41 controllers, 19 adapters, 134 suites). Monolitos técnicos decompostos entre v11–v15.
 - **v17.5.0 (2026-04-28):** estrutura documental reorganizada — diretórios históricos `audits`, `legacy` e `releases` sob `docs/` consolidados em `docs/archive/` com 10 subdirs canônicos. README.md reduzido de 534L para 159L.
-- **v75.1.0 (2026-06-11):** estado operacional verificado em `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`, 168 suites Jest / 3512 testes e 9 specs Playwright listadas.
+- **v75.1.0 (2026-06-11):** estado operacional verificado em `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`, 168 suites Jest / 3515 testes e 9 specs Playwright listadas.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

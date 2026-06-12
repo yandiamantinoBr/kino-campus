@@ -175,6 +175,11 @@ Escolher uma das duas, nunca ambas no mesmo PR:
 | JS-A | Report de superficie publica `window.KCAPI` e mapa dos blocos residuais no facade | prepara extracao sem mudar runtime |
 | CSS-A | Inventario de ownership de seletores de `styles.css` | prepara split sem alterar cascade |
 
-Se a meta for reduzir risco antes de mexer em codigo, a melhor proxima entrega e **JS-A**: ela cria
-um snapshot objetivo do contrato publico e evita que uma extracao futura quebre controllers, adapters
-ou testes de forma silenciosa.
+**Status 2026-06-12:** JS-A foi entregue em
+`docs/qa/reports/report-v76-kcapi-public-surface-2026-06-12.md`, com snapshot de 107 membros
+publicos de `window.KCAPI` e reforco em `tests/contract/kc-api-facade-contract.test.js`.
+
+Proxima entrega recomendada apos JS-A: extrair apenas o bloco de diagnostico de create-post
+(`normalizeErrorForDiagnostics`, `summarizeCreatePayloadForDiagnostics` e helpers relacionados),
+com teste dedicado. Nao iniciar por `normalizePost`; o report JS-A classifica esse bloco como alto
+risco por ser contrato transversal.

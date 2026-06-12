@@ -11,6 +11,144 @@ const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.client.js');
 let source;
 let facadeBlock;
 
+const EXPECTED_KCAPI_MEMBERS = [
+  'VERSION',
+  'ENV',
+  'config',
+  'registerAdapter',
+  'activeDriver',
+  'setConfig',
+  'fetchJSON',
+  'getDatabaseRaw',
+  'getDatabaseNormalized',
+  'getPosts',
+  'searchPosts',
+  'getFeedCursor',
+  'getPersonalizedTabs',
+  'getUserRatingSummary',
+  'getUserRatingState',
+  'listUserRatings',
+  'upsertUserRating',
+  'getPostById',
+  'createPost',
+  'updatePost',
+  'deletePost',
+  'reportPost',
+  'togglePostStatus',
+  'renewPost',
+  'bumpPost',
+  'closePost',
+  'reactivatePost',
+  'getTopContributors',
+  'trackCouponClick',
+  'trackShare',
+  'trackView',
+  'getCachedPostAnalytics',
+  'refreshPostAnalytics',
+  'invalidatePostAnalyticsCache',
+  'getPostAnalytics',
+  'checkDuplicatePost',
+  'getCachedComments',
+  'refreshComments',
+  'invalidateCommentsCache',
+  'getComments',
+  'addComment',
+  'likeComment',
+  'votePost',
+  'getMyVote',
+  'getMyProfile',
+  'updateMyProfile',
+  'uploadProfileAvatar',
+  'getMyPosts',
+  'getPostsByAuthorId',
+  'getRelatedPosts',
+  'getSavedPostState',
+  'setSavedPostState',
+  'clearSavedPostState',
+  'getMySavedPosts',
+  'getMySavedPostsCount',
+  'getProfileHighlights',
+  'getProfileHighlightsCount',
+  'createHelpRequest',
+  'listAdminHelpRequests',
+  'updateAdminHelpRequest',
+  'processAccountErasure',
+  'listExternalAccessRequests',
+  'decideExternalAccessRequest',
+  'getNotificationPreferences',
+  'updateNotificationPreferences',
+  'getNotificationChannelTargets',
+  'updateNotificationChannelTargets',
+  'getNotifications',
+  'markNotificationsRead',
+  'markAllNotificationsRead',
+  'clearNotifications',
+  'getUnreadNotificationCount',
+  'subscribeNotifications',
+  'unsubscribeNotifications',
+  'chat',
+  'inviteExternalUser',
+  'getInvites',
+  'revokeInvite',
+  'getCurrentUser',
+  'signIn',
+  'signUp',
+  'resendConfirmation',
+  'requestPasswordReset',
+  'updatePassword',
+  'login',
+  'logout',
+  'getCurrentProfile',
+  'getProfileById',
+  'syncProfile',
+  'getLastCreatePostError',
+  'setLastCreatePostError',
+  'clearLastCreatePostError',
+  'summarizeCreatePayloadForDiagnostics',
+  'rankRelatedPosts',
+  'MOCK_USERS',
+  'apiURL',
+  'DEFAULTS',
+  'MOCK_USERS_BY_ID',
+  'MOCK_USERS_LIST',
+  'getAuthorById',
+  'filterPosts',
+  'normalizePost',
+  'normalizeUserRatingSummary',
+  'normalizeUserRatingEntry',
+  'normalizeUserRatingState',
+  'normalizeUserRatingList',
+  'isBackendEnabled',
+];
+
+function extractFacadeMembers(block) {
+  return block.split(/\r?\n/u).reduce((members, line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('window.KCAPI') || trimmed === '});') {
+      return members;
+    }
+
+    const getter = trimmed.match(/^get\s+([A-Za-z0-9_$]+)\s*\(/u);
+    if (getter) {
+      members.push(getter[1]);
+      return members;
+    }
+
+    const alias = trimmed.match(/^([A-Za-z0-9_$]+)\s*:/u);
+    if (alias) {
+      members.push(alias[1]);
+      return members;
+    }
+
+    const shorthand = trimmed.match(/^([A-Za-z0-9_$]+),$/u);
+    if (shorthand) {
+      members.push(shorthand[1]);
+    }
+
+    return members;
+  }, []);
+}
+
 beforeAll(() => {
   source = fs.readFileSync(SRC, 'utf8');
 
@@ -28,6 +166,15 @@ describe('kc-api.client.js - source shape', () => {
     expect(source).toContain("const VERSION = '8.6.1';");
     expect(source).toContain('window.KCAPI = Object.freeze({');
     expect(source.trim().endsWith('})();')).toBe(true);
+  });
+
+  test('mantem snapshot completo dos 107 membros publicos de window.KCAPI', () => {
+    expect(extractFacadeMembers(facadeBlock)).toEqual(EXPECTED_KCAPI_MEMBERS);
+    expect(EXPECTED_KCAPI_MEMBERS).toHaveLength(107);
+  });
+
+  test('mantem kc-api.client.js abaixo do limite de crescimento antes da proxima decomposicao', () => {
+    expect(source.split(/\r?\n/u).length).toBeLessThanOrEqual(2900);
   });
 
   test('mantem KCAPI como fachada publica principal e _KCAPI como namespace interno', () => {

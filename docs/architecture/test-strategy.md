@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 168 suites · 3512 testes
+Jest: 168 suites · 3515 testes
 Playwright: 9 specs · 59 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥168 passed, 168 total` e `≥3512 passed, 3512 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥168 passed, 168 total` e `≥3515 passed, 3515 total`.
 
 ### Gate CI essencial
 
@@ -261,7 +261,7 @@ Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falh
 |-------|------------|
 | `admin-banners-access-contract.test.js` | Shape do contrato de acesso admin a banners |
 | `chat-continuity-contract.test.js` | Contrato de continuidade de conversa/chat |
-| `kc-api-facade-contract.test.js` | Todos os 100 membros exportados de `window.KCAPI` |
+| `kc-api-facade-contract.test.js` | Snapshot dos 107 membros exportados de `window.KCAPI` e guarda de crescimento do facade |
 | `kc-api-notification-preferences-contract.test.js` | Contrato de preferências de notificação (6 tipos, 3 canais) |
 | `kc-api-notifications-contract.test.js` | Contrato do sub-módulo `window._KCAPI.notifications` |
 | `kc-create-post-contract.test.js` | Exports públicos do módulo de criação de post |
@@ -478,7 +478,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥168 passed, 168 total
-  Tests:       ≥3512 passed, 3512 total
+  Tests:       ≥3515 passed, 3515 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.
