@@ -37,6 +37,7 @@ beforeAll(() => {
   require('../../assets/js/api/kc-api.chat.js');
   require('../../assets/js/api/kc-api.diagnostics.js');
   require('../../assets/js/api/kc-api.session.js');
+  require('../../assets/js/api/kc-api.filters.js');
   require('../../assets/js/api/kc-api.client.js');
 });
 

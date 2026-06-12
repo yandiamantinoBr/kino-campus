@@ -24,7 +24,7 @@ snapshot executavel.
 
 | Fonte | Evidencia |
 |---|---|
-| `assets/js/api/kc-api.client.js` | 2.846 linhas / 120.212 bytes no baseline JS-A; 2.809 linhas / 119.106 bytes apos JS-B; 2.433 linhas / 105.409 bytes apos JS-C |
+| `assets/js/api/kc-api.client.js` | 2.846 linhas / 120.212 bytes no baseline JS-A; 2.809 linhas / 119.106 bytes apos JS-B; 2.433 linhas / 105.409 bytes apos JS-C; 1.769 linhas / 75.366 bytes apos JS-D |
 | Export principal | `window.KCAPI = Object.freeze({` inicia na linha 2706 |
 | Bloco exportado | linhas 2706-2840 |
 | Aliases globais de diagnostico | linhas 2841-2844 |
@@ -74,6 +74,7 @@ mas sim o volume de responsabilidades ainda residentes no arquivo central.
 | `window._KCAPI.chat` | `assets/js/api/kc-api.chat.js` | passthrough via `chat` |
 | `window._KCAPI.diagnostics` | `assets/js/api/kc-api.diagnostics.js` | delegado apos JS-B |
 | `window._KCAPI.session` | `assets/js/api/kc-api.session.js` | delegado apos JS-C |
+| `window._KCAPI.filters` | `assets/js/api/kc-api.filters.js` | delegado apos JS-D |
 
 ---
 
@@ -86,6 +87,7 @@ mas sim o volume de responsabilidades ainda residentes no arquivo central.
 | Filtros avancados/feed | 172-778 | normalizacao de filtros, presets de data, matching por modulo | Medio/alto: muito codigo puro, mas amplo impacto nos 6 feeds |
 | Session cache/SWR | delegado apos JS-C | `KCSessionStore`, cache stale-while-revalidate, pending requests | Resolvido em `kc-api.session.js` com contrato de storage keys e deduplicacao |
 | Post freshness/broadcast | delegado apos JS-C | eventos cross-tab, localStorage, BroadcastChannel, Supabase Realtime broadcast | Resolvido em `kc-api.session.js` com teste de Realtime broadcast |
+| Filtros/date presets | delegado apos JS-D | `filterPosts`, requestParams avancados, date presets em `America/Sao_Paulo` | Resolvido em `kc-api.filters.js` com contrato runtime e ordem HTML |
 | Mock users/author index | 1228-1346 | usuarios mockados, lista congelada e indice legado de autor | Medio: fallback local e fixtures |
 | `normalizePost` | 1361-1526 | contrato canonico de post, aliases legados e midia | Alto: muitos consumidores e testes dependentes |
 | Rating normalizers | 1535-1583 | normalizacao de rating summary/state/list | Medio: contrato publico, mas recorte menor |
@@ -154,3 +156,10 @@ extracao real do plano: `window._KCAPI.diagnostics`, 27 HTMLs reais com script a
 real do plano: `window._KCAPI.session`, `window.KCSessionStore`, `window.KCPostFreshness`, 27 HTMLs
 reais com script antes da fachada, 107 membros publicos preservados e contagem documentada em
 170 suites / 3535 testes.
+
+## 11. Follow-up JS-D
+
+`docs/qa/reports/report-v76-kcapi-filters-extraction-2026-06-12.md` registra a terceira extracao
+real do plano: `window._KCAPI.filters`, `KCAPI.filterPosts` preservado como metodo publico,
+27 HTMLs reais com script entre `kc-api.session.js` e `kc-api.client.js`, 107 membros publicos
+preservados e contagem documentada em 171 suites / 3545 testes.
