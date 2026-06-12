@@ -13,12 +13,14 @@ const SESSION_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.session.
 const FILTERS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.filters.js');
 const AUTHORS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.authors.js');
 const POSTS_NORMALIZE_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.posts-normalize.js');
+const RATINGS_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.ratings.js');
 let source;
 let diagnosticsSource;
 let sessionSource;
 let filtersSource;
 let authorsSource;
 let postsNormalizeSource;
+let ratingsSource;
 let facadeBlock;
 
 const EXPECTED_KCAPI_MEMBERS = [
@@ -166,6 +168,7 @@ beforeAll(() => {
   filtersSource = fs.readFileSync(FILTERS_SRC, 'utf8');
   authorsSource = fs.readFileSync(AUTHORS_SRC, 'utf8');
   postsNormalizeSource = fs.readFileSync(POSTS_NORMALIZE_SRC, 'utf8');
+  ratingsSource = fs.readFileSync(RATINGS_SRC, 'utf8');
 
   const facadeStart = source.indexOf('window.KCAPI = Object.freeze({');
   const globalsStart = source.indexOf('window.getLastCreatePostError = getLastCreatePostError;');
@@ -464,12 +467,42 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
   });
 
   test('mantem delegacao para ratings via getRatingsModule e buildRatingsDeps', () => {
+    const ratingsDepsStart = source.indexOf('function buildRatingsDeps()');
+    const ratingsDepsEnd = source.indexOf('async function getUserRatingSummary', ratingsDepsStart);
+    const ratingsDepsBlock = source.slice(ratingsDepsStart, ratingsDepsEnd);
+
     expect(source).toContain('function getRatingsModule()');
     expect(source).toContain('function buildRatingsDeps()');
+    expect(ratingsDepsBlock).toContain('getActiveDriver,');
+    expect(ratingsDepsBlock).not.toContain('normalizeUserRatingSummary');
+    expect(ratingsDepsBlock).not.toContain('normalizeUserRatingEntry');
+    expect(ratingsDepsBlock).not.toContain('normalizeUserRatingState');
+    expect(ratingsDepsBlock).not.toContain('normalizeUserRatingList');
     expect(source).toContain('return ratingsModule.getUserRatingSummary(userId, buildRatingsDeps());');
     expect(source).toContain('return ratingsModule.getUserRatingState(params, buildRatingsDeps());');
     expect(source).toContain('return ratingsModule.listUserRatings(userId, options, buildRatingsDeps());');
     expect(source).toContain('return ratingsModule.upsertUserRating(payload, buildRatingsDeps());');
+  });
+
+  test('mantem normalizadores de rating como wrappers publicos para kc-api.ratings.js', () => {
+    expect(source).toContain('function normalizeUserRatingSummary(raw, fallbackUserId) {');
+    expect(source).toContain('return ratingsModule.normalizeUserRatingSummary(raw, fallbackUserId);');
+    expect(source).toContain('function normalizeUserRatingEntry(raw) {');
+    expect(source).toContain('return ratingsModule.normalizeUserRatingEntry(raw);');
+    expect(source).toContain('function normalizeUserRatingState(raw, fallbackTargetUserId, fallbackContextPostId) {');
+    expect(source).toContain('return ratingsModule.normalizeUserRatingState(raw, fallbackTargetUserId, fallbackContextPostId);');
+    expect(source).toContain('function normalizeUserRatingList(raw, fallbackPage, fallbackLimit) {');
+    expect(source).toContain('return ratingsModule.normalizeUserRatingList(raw, fallbackPage, fallbackLimit);');
+
+    expect(source).not.toContain('const averageRaw = source.average != null ? source.average : source.rating_avg;');
+    expect(source).not.toContain('const reviewer = (source.reviewer && typeof source.reviewer ===');
+    expect(source).not.toContain('source.hasMore === true || source.has_more === true');
+
+    expect(ratingsSource).toContain('function normalizeUserRatingSummary(raw, fallbackUserId)');
+    expect(ratingsSource).toContain('function normalizeUserRatingEntry(raw)');
+    expect(ratingsSource).toContain('function normalizeUserRatingState(raw, fallbackTargetUserId, fallbackContextPostId)');
+    expect(ratingsSource).toContain('function normalizeUserRatingList(raw, fallbackPage, fallbackLimit)');
+    expect(ratingsSource).toContain('window._KCAPI.ratings = {');
   });
 
   test('mantem cache de sessao e deduplicacao para analytics do produto via getPostsReadModule', () => {

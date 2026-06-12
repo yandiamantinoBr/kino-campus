@@ -16,7 +16,7 @@
 
 - [Grupo boot/](#grupo-boot) — 6 módulos
 - [Grupo core/](#grupo-core) — 11 módulos
-- [Grupo api/](#grupo-api) — 21 módulos
+- [Grupo api/](#grupo-api) — 22 módulos
 - [Grupo utils/](#grupo-utils) — 8 módulos
 - [Grupo features/](#grupo-features) — 10 módulos *(v16.4.0)*
 - [Grupo features/create-post/](#grupo-featurescreate-post) — 7 módulos *(v16.4.0)*
@@ -752,21 +752,27 @@ inicial de conta, atualizar avatar.
 | Campo | Valor |
 |-------|-------|
 | Grupo | api |
-| Namespace | `window._KCAPI_rat` |
-| Padrão | IIFE + `Object.freeze` |
-| Páginas | `_product.html` |
+| Namespace | `window._KCAPI.ratings` |
+| Padrão | IIFE + objeto literal |
+| Páginas | Todas as páginas que carregam `kc-api.client.js` |
 
-**Responsabilidade:** Submódulo KCAPI de ratings: buscar rating de um post, submeter avaliação
-do usuário, calcular média de ratings.
+**Responsabilidade:** Submódulo KCAPI de avaliacoes entre usuarios. Centraliza as operacoes
+`getUserRatingSummary`, `getUserRatingState`, `listUserRatings` e `upsertUserRating`, alem dos
+normalizadores `normalizeUserRatingSummary`, `normalizeUserRatingEntry`, `normalizeUserRatingState`
+e `normalizeUserRatingList` usados pela fachada publica.
 
-**Exports públicos:** `window._KCAPI_rat.getPostRating()`,
-`window._KCAPI_rat.submitRating()`, `window._KCAPI_rat.getUserRating()`
+**Exports internos:** `window._KCAPI.ratings.normalizeUserRatingSummary()`,
+`normalizeUserRatingEntry()`, `normalizeUserRatingState()`, `normalizeUserRatingList()`,
+`getUserRatingSummary()`, `getUserRatingState()`, `listUserRatings()` e `upsertUserRating()`.
 
-**Dependências em runtime:** `window.KC_ENV`, adapters
+**Dependências em runtime:** `window._KCAPI` e dependencia injetada `getActiveDriver`.
 
-**Consumido por:** `window.KCAPI`, controller de produto
+**Consumido por:** `window.KCAPI.getUserRating*`, `window.KCAPI.listUserRatings`,
+`window.KCAPI.upsertUserRating` e wrappers publicos `window.KCAPI.normalizeUserRating*`.
 
-**Testes:** `tests/integration/kc-api-ratings-module.test.js`
+**Testes:** `tests/integration/kc-api-ratings-module.test.js`,
+`tests/integration/kc-api-client.test.js`,
+`tests/contract/kc-api-facade-contract.test.js`
 
 ---
 
@@ -979,7 +985,7 @@ aliases snake/camel, datas efetivas, autor legado, midia/metadata, valores defau
 |-------|-------|
 | Grupo | api |
 | Namespace | `window.KCAPI` |
-| Padrão | IIFE + `Object.freeze` (1529 linhas — facade central) |
+| Padrão | IIFE + `Object.freeze` (1508 linhas - facade central) |
 | Páginas | **Todas as páginas autenticadas** |
 
 **Responsabilidade:** Facade central da API do KinoCampus. Agrega submódulos KCAPI
@@ -1008,8 +1014,8 @@ adapters local e supabase
 `tests/contract/kc-api-facade-contract.test.js`,
 `tests/integration/kc-api-session-swr.test.js`
 
-**Observações:** Arquivo JS mais longo do projeto (2809 linhas). Nunca alterar sem rodar `check:all`
-+ `npm test`. O padrão Driver é implementado aqui: cada método delega para o adapter correto
+**Observações:** Facade JS mais sensivel do projeto (1.508 linhas em v76.7). Nunca alterar sem rodar
+`check:all` e `npm test`. O padrão Driver é implementado aqui: cada método delega para o adapter correto
 baseado em `window.KC_ENV.driver`.
 
 ---
@@ -2331,7 +2337,7 @@ contagem de votos de um post e voto atual do usuário.
 | api/kc-api.posts-read.js | api | `window._KCAPI_read` | feed+produto | integration/kc-api-posts-read-module |
 | api/kc-api.posts-write.js | api | `window._KCAPI_write` | create+my-posts | integration/kc-api-posts-write-module |
 | api/kc-api.profiles.js | api | `window._KCAPI_prof` | profile+setup | integration/kc-api-profiles-module |
-| api/kc-api.ratings.js | api | `window._KCAPI_rat` | _product.html | integration/kc-api-ratings-module |
+| api/kc-api.ratings.js | api | `window._KCAPI.ratings` | autenticadas | integration/kc-api-ratings-module |
 | api/kc-api.related.js | api | `window._KCAPI_rel` | _product.html | integration/kc-api-related-module |
 | api/kc-api.saved.js | api | `window._KCAPI_saved` | produto+my-posts | integration/kc-api-saved-module |
 | api/kc-api.chat.js | api | `window._KCAPI.chat` | mensagens+autenticadas | contract/chat-continuity |

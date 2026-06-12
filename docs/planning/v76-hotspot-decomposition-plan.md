@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.6.0
+**Versao:** v76.7.0
 **Data:** 2026-06-12
-**Escopo:** planejamento tecnico + status da primeira extracao JS; sem alterar CSS, SQL, secrets, provider ou deploy
+**Escopo:** planejamento tecnico + status das extracoes JS V76; sem alterar CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -13,7 +13,7 @@ hotspots ainda relevantes do frontend:
 
 | Hotspot | Estado atual medido em 2026-06-12 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 1.529 linhas / 60.149 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 1.508 linhas / 58.290 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -83,6 +83,7 @@ normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e e
 | filtros/date presets de feed | logica pura, coberta por `kc-api-client.test.js` | **Concluido em v76.3.0**; preservar paridade entre modulos e datas |
 | mocks/normalizacao de autores | reduz peso do facade | **Concluido em v76.4.0**; preservar fixtures `MOCK_USERS`, aliases publicos e resolucao por autor/avatar legado |
 | `normalizePost` | grande valor, mas contrato sensivel | **Concluido em v76.6.0**; preservar snapshots e delegacao publica `KCAPI.normalizePost` |
+| normalizadores `normalizeUserRating*` | helpers puros ja acoplados ao modulo de ratings | **Concluido em v76.7.0**; preservar wrappers publicos `KCAPI.normalizeUserRating*` |
 
 ### 3.4 Gates obrigatorios para qualquer PR JS
 
@@ -208,5 +209,12 @@ datas efetivas, autor legado via `kc-api.authors.js`, midia/metadata e a regra d
 `assets/js/api/kc-api.posts-normalize.js`, preservando `window.KCAPI.normalizePost` como
 delegacao publica, os snapshots pre-extracao e a ordem de carregamento nos 27 carregadores reais.
 
-Proxima entrega recomendada apos JS-G: inventariar os helpers residuais de rating/normalizacao ainda
-residentes no facade e escolher um recorte puro, com snapshot antes de qualquer extracao adicional.
+**Status v76.7.0:** JS-H moveu os normalizadores `normalizeUserRatingSummary`,
+`normalizeUserRatingEntry`, `normalizeUserRatingState` e `normalizeUserRatingList` para
+`assets/js/api/kc-api.ratings.js`, preservando os wrappers publicos em `window.KCAPI`,
+reduzindo `buildRatingsDeps()` a `getActiveDriver` e ampliando a suite
+`kc-api-ratings-module.test.js` para cobrir normalizacao direta.
+
+Proxima entrega recomendada apos JS-H: escolher uma das duas frentes, sem misturar no mesmo PR:
+inventario CSS de ownership de `styles.css` ou inventario residual menor da fachada `KCAPI`
+focado apenas em wrappers/bootstrap que ainda nao pertencem a submodulos.

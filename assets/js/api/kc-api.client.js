@@ -293,65 +293,48 @@
   }
 
   function normalizeUserRatingSummary(raw, fallbackUserId) {
-    const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
-    const averageRaw = source.average != null ? source.average : source.rating_avg;
-    const average = (averageRaw != null && averageRaw !== '') ? Number(averageRaw) : null;
-    const countRaw = source.count != null ? source.count : source.rating_count;
-    const count = Math.max(0, parseInt(String(countRaw != null ? countRaw : 0), 10) || 0);
-    return {
-      userId: String(source.userId || source.user_id || fallbackUserId || '').trim() || null,
-      average: Number.isFinite(average) ? average : null,
-      count,
-    };
+    const ratingsModule = getRatingsModule();
+    if (ratingsModule && typeof ratingsModule.normalizeUserRatingSummary === 'function') {
+      return ratingsModule.normalizeUserRatingSummary(raw, fallbackUserId);
+    }
+    return { userId: String(fallbackUserId || '').trim() || null, average: null, count: 0 };
   }
 
   function normalizeUserRatingEntry(raw) {
-    const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
-    const reviewer = (source.reviewer && typeof source.reviewer === 'object' && !Array.isArray(source.reviewer))
-      ? source.reviewer
-      : {};
-    const rating = parseInt(String(source.rating != null ? source.rating : 0), 10);
-    return {
-      id: String(source.id || '').trim() || null,
-      targetUserId: String(source.targetUserId || source.target_user_id || '').trim() || null,
-      raterUserId: String(source.raterUserId || source.rater_user_id || '').trim() || null,
-      contextPostId: String(source.contextPostId || source.context_post_id || '').trim() || null,
-      rating: Number.isFinite(rating) ? Math.max(1, Math.min(5, rating)) : 0,
-      comment: String(source.comment || '').trim(),
-      createdAt: source.createdAt || source.created_at || null,
-      updatedAt: source.updatedAt || source.updated_at || null,
-      reviewer: {
-        id: String(reviewer.id || '').trim() || null,
-        displayName: String(reviewer.displayName || reviewer.display_name || '').trim() || 'Membro da comunidade',
-        avatarUrl: String(reviewer.avatarUrl || reviewer.avatar_url || '').trim() || null,
-        public: reviewer.public === true,
-      },
-    };
+    const ratingsModule = getRatingsModule();
+    if (ratingsModule && typeof ratingsModule.normalizeUserRatingEntry === 'function') {
+      return ratingsModule.normalizeUserRatingEntry(raw);
+    }
+    return null;
   }
 
   function normalizeUserRatingState(raw, fallbackTargetUserId, fallbackContextPostId) {
-    const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+    const ratingsModule = getRatingsModule();
+    if (ratingsModule && typeof ratingsModule.normalizeUserRatingState === 'function') {
+      return ratingsModule.normalizeUserRatingState(raw, fallbackTargetUserId, fallbackContextPostId);
+    }
     return {
-      targetUserId: String(source.targetUserId || source.target_user_id || fallbackTargetUserId || '').trim() || null,
-      contextPostId: String(source.contextPostId || source.context_post_id || fallbackContextPostId || '').trim() || null,
-      canRate: source.canRate === true || source.can_rate === true,
-      reason: String(source.reason || 'UNKNOWN').trim() || 'UNKNOWN',
-      myRating: (source.myRating || source.my_rating) ? normalizeUserRatingEntry(source.myRating || source.my_rating) : null,
+      targetUserId: String(fallbackTargetUserId || '').trim() || null,
+      contextPostId: String(fallbackContextPostId || '').trim() || null,
+      canRate: false,
+      reason: 'UNKNOWN',
+      myRating: null,
     };
   }
 
   function normalizeUserRatingList(raw, fallbackPage, fallbackLimit) {
-    const source = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
-    const items = Array.isArray(source.items) ? source.items.map(normalizeUserRatingEntry).filter(Boolean) : [];
-    const page = Math.max(1, parseInt(String(source.page != null ? source.page : fallbackPage), 10) || 1);
-    const limit = Math.max(1, parseInt(String(source.limit != null ? source.limit : fallbackLimit), 10) || 10);
-    const total = Math.max(0, parseInt(String(source.total != null ? source.total : items.length), 10) || 0);
+    const ratingsModule = getRatingsModule();
+    if (ratingsModule && typeof ratingsModule.normalizeUserRatingList === 'function') {
+      return ratingsModule.normalizeUserRatingList(raw, fallbackPage, fallbackLimit);
+    }
+    const page = Math.max(1, parseInt(String(fallbackPage), 10) || 1);
+    const limit = Math.max(1, parseInt(String(fallbackLimit), 10) || 10);
     return {
-      items,
+      items: [],
       page,
       limit,
-      total,
-      hasMore: source.hasMore === true || source.has_more === true,
+      total: 0,
+      hasMore: false,
     };
   }
 
@@ -489,10 +472,6 @@
   function buildRatingsDeps() {
     return {
       getActiveDriver,
-      normalizeUserRatingSummary,
-      normalizeUserRatingEntry,
-      normalizeUserRatingState,
-      normalizeUserRatingList,
     };
   }
 

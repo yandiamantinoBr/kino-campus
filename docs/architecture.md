@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.6.0 (2026-06-12)** — contagens apos extracao de `normalizePost` e runtime frontend `8.6.1`.
+> **Atualizado em v76.7.0 (2026-06-12)** — contagens apos extracao dos normalizadores de rating e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -19,7 +19,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `7` |
 | suites de teste Jest em `tests/` | `174` |
-| testes Jest totais | `3567` |
+| testes Jest totais | `3570` |
 | specs E2E Playwright | `9` |
 
 ## Princípio estrutural
@@ -158,11 +158,11 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.6.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`.
+> **Atualizado em v76.7.0 / 2026-06-12** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
-| fachada de API | `assets/js/api/kc-api.client.js` (1.529L / 60KB) | ⚠️ Parcialmente decomposto em sub-módulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks e normalizacao de posts extraidos; facade ainda concentra bootstrap, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
+| fachada de API | `assets/js/api/kc-api.client.js` (1.508L / 58KB) | ⚠️ Parcialmente decomposto em sub-módulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalizacao de posts e normalizadores de rating extraidos; facade ainda concentra bootstrap, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
 | adapter Supabase | `assets/js/adapters/supabase/supabase.adapter.js` (~420L) | ✅ Decomposto em 11 sub-adapters `_KCSA.*` | acoplamento com banco, RLS, RPCs |
 | detalhe de publicação | `assets/js/controllers/public/product.controller.js` | ✅ Decomposto em 8 auxiliares `_KCProduct.*` | UI crítica e estado compartilhado |
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
@@ -203,5 +203,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.4.0 (2026-06-12):** `kc-api.authors.js` extraido para `MOCK_USERS`, indices e resolucao de autor legado, `assets/js/` sobe para 153 arquivos, `assets/js/api/` para 21 arquivos e Jest para 172 suites / 3555 testes.
 - **v76.5.0 (2026-06-12):** snapshot dedicado de `KCAPI.normalizePost` criado antes da extracao, cobrindo aliases snake/camel, datas efetivas, autor legado, midia e regra de `compra-venda`; Jest sobe para 173 suites / 3559 testes.
 - **v76.6.0 (2026-06-12):** `kc-api.posts-normalize.js` extraido para `window._KCAPI.postsNormalize`, mantendo `KCAPI.normalizePost` como delegacao publica; `assets/js/` sobe para 154 arquivos, `assets/js/api/` para 22 arquivos e Jest sobe para 174 suites / 3567 testes.
+- **v76.7.0 (2026-06-12):** `kc-api.ratings.js` passa a concentrar os normalizadores `normalizeUserRating*`, mantendo `KCAPI.normalizeUserRating*` como wrappers publicos; `kc-api.client.js` reduz para 1.508 linhas / 58.290 bytes e Jest sobe para 174 suites / 3570 testes.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.
