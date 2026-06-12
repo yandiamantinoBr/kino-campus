@@ -75,9 +75,8 @@ Resultados:
 - Playwright listou 59 testes em 9 arquivos.
 - `kc-api.client.js` ficou abaixo do novo limite de 1.710 linhas.
 
-## Proximo recorte recomendado
+## Status posterior
 
-O proximo recorte JS deve preparar snapshot dedicado para `normalizePost` antes de qualquer extracao.
-
-`normalizePost` continua sendo o ponto de maior risco porque normaliza o contrato transversal de posts
-consumido por feed, produto, perfil, salvos, busca e adapters.
+O snapshot dedicado de `normalizePost` foi preparado no recorte JS-F
+(`report-v76-kcapi-normalize-post-snapshot-2026-06-12.md`). A proxima entrega JS pode extrair
+`normalizePost` para sub-modulo proprio, mantendo a delegacao publica em `window.KCAPI.normalizePost`.

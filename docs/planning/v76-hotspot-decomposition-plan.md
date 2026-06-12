@@ -1,6 +1,6 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.4.0
+**Versao:** v76.5.0
 **Data:** 2026-06-12
 **Escopo:** planejamento tecnico + status da primeira extracao JS; sem alterar CSS, SQL, secrets, provider ou deploy
 
@@ -54,6 +54,7 @@ O arquivo principal ja delega parte do dominio para submodulos `_KCAPI.*`:
 | saved | `assets/js/api/kc-api.saved.js` |
 | diagnostics create-post | `assets/js/api/kc-api.diagnostics.js` |
 | filtros/date presets | `assets/js/api/kc-api.filters.js` |
+| autores mock/indices | `assets/js/api/kc-api.authors.js` |
 | help/admin help | `assets/js/api/kc-api.help.js` |
 | notifications | `assets/js/api/kc-api.notifications.js` |
 | chat | `assets/js/api/kc-api.chat.js` |
@@ -80,7 +81,7 @@ normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e e
 | `KCSessionStore` / `KCPostFreshness` | responsabilidade isolavel, ja exposta como `window.*` proprio | **Concluido em v76.2.0**; preservar eventos, storage keys e deduplicacao |
 | filtros/date presets de feed | logica pura, coberta por `kc-api-client.test.js` | **Concluido em v76.3.0**; preservar paridade entre modulos e datas |
 | mocks/normalizacao de autores | reduz peso do facade | **Concluido em v76.4.0**; preservar fixtures `MOCK_USERS`, aliases publicos e resolucao por autor/avatar legado |
-| `normalizePost` | grande valor, mas contrato sensivel | so depois de snapshot de casos atuais em teste |
+| `normalizePost` | grande valor, mas contrato sensivel | **Snapshot pre-extracao concluido em v76.5.0**; proxima entrega pode extrair sem mudar o contrato |
 
 ### 3.4 Gates obrigatorios para qualquer PR JS
 
@@ -197,6 +198,10 @@ Realtime broadcast e ordem de carregamento.
 `assets/js/api/kc-api.authors.js`, preservando os 107 membros de `window.KCAPI`, getters publicos
 `MOCK_USERS*`, `getAuthorById()` e ordem de carregamento nos 27 carregadores reais.
 
-Proxima entrega recomendada apos JS-E: preparar snapshot dedicado para `normalizePost` antes de
-qualquer extracao. O report JS-A classifica `normalizePost` como alto risco por ser contrato
-transversal.
+**Status v76.5.0:** JS-F adicionou snapshot dedicado de `KCAPI.normalizePost` em
+`tests/integration/kc-api-normalize-post-snapshot.test.js`, cobrindo aliases snake/camel,
+datas efetivas, autor legado via `kc-api.authors.js`, midia/metadata e a regra de
+`compra-venda` que converte acao em subcategoria de produto.
+
+Proxima entrega recomendada apos JS-F: extrair `normalizePost` para sub-modulo proprio sem
+alterar os snapshots, mantendo `window.KCAPI.normalizePost` como delegacao publica.
