@@ -49,11 +49,6 @@ const MUTATION_BRIDGE = new Set([
   'emitPostMutation',
 ]);
 
-const ADMIN_EXTERNAL_ACCESS = new Set([
-  'listExternalAccessRequests',
-  'decideExternalAccessRequest',
-]);
-
 const NOTIFICATION_FALLBACKS = new Set([
   'buildFallbackNotificationPreferences',
   'buildFallbackNotificationChannelTargets',
@@ -312,7 +307,6 @@ function extractFunctions(source, publicMembers) {
 function classifyFunction(name, block, publicMembers) {
   if (BOOTSTRAP_CORE.has(name)) return 'bootstrap-driver-core';
   if (MUTATION_BRIDGE.has(name)) return 'post-mutation-bridge';
-  if (ADMIN_EXTERNAL_ACCESS.has(name)) return 'admin-external-access-direct-driver';
   if (NOTIFICATION_FALLBACKS.has(name)) return 'notification-fallback-builders';
   if (/^get[A-Za-z0-9_$]+Module$/u.test(name)) return 'module-accessors';
   if (/^build[A-Za-z0-9_$]+Deps$/u.test(name)) return 'dependency-builders';
@@ -388,17 +382,8 @@ function buildCandidates(functions) {
 
   return [
     {
-      id: 'admin-external-access',
-      priority: 'P1',
-      title: 'Mover wrappers diretos de external access admin para submodulo',
-      functions: ['listExternalAccessRequests', 'decideExternalAccessRequest'],
-      target: 'assets/js/api/kc-api.help.js ou novo kc-api.admin-access.js',
-      rationale: 'Ainda chamam o driver diretamente no facade e nao passam por namespace _KCAPI dedicado.',
-      risk: 'Medio: fluxo admin/autenticado; exige contrato estatico e teste de driver fallback.',
-    },
-    {
       id: 'notification-fallbacks',
-      priority: 'P2',
+      priority: 'P1',
       title: 'Mover builders de fallback de notificacao para kc-api.notifications.js',
       functions: ['buildFallbackNotificationPreferences', 'buildFallbackNotificationChannelTargets'],
       target: 'assets/js/api/kc-api.notifications.js',

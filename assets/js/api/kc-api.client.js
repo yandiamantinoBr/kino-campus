@@ -1181,17 +1181,17 @@
 
   // v9.3.5.4: solicitacoes de acesso externo (admin)
   async function listExternalAccessRequests(filters = {}) {
-    const driver = getActiveDriver();
-    if (driver && typeof driver.listExternalAccessRequests === 'function') {
-      return driver.listExternalAccessRequests(filters);
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.listExternalAccessRequests === 'function') {
+      return helpModule.listExternalAccessRequests(filters, { getActiveDriver });
     }
     return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' }, items: [], total: 0 };
   }
 
   async function decideExternalAccessRequest(payload = {}) {
-    const driver = getActiveDriver();
-    if (driver && typeof driver.decideExternalAccessRequest === 'function') {
-      return driver.decideExternalAccessRequest(payload);
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule.decideExternalAccessRequest === 'function') {
+      return helpModule.decideExternalAccessRequest(payload, { getActiveDriver });
     }
     return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' } };
   }

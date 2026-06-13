@@ -40,6 +40,8 @@ describe('kc-api.help.js - exported help/invites domain', () => {
       'listAdminHelpRequests,',
       'updateAdminHelpRequest,',
       'processAccountErasure,',
+      'listExternalAccessRequests,',
+      'decideExternalAccessRequest,',
       'inviteExternalUser,',
       'getInvites,',
       'revokeInvite,',
@@ -56,6 +58,9 @@ describe('kc-api.help.js - exported help/invites domain', () => {
     expect(source).toContain("return { ok: false, error: { message: 'Triagem de ajuda indisponível neste driver.' } };");
     expect(source).toContain("return { ok: false, error: 'DRIVER_NAO_SUPORTA' };");
     expect(source).toContain("return { ok: false, error: { message: 'Fluxo LGPD indisponivel neste driver.' } };");
+    expect(source).toContain("return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' }, items: [], total: 0 };");
+    expect(source).toContain("return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' } };");
+    expect(source).toContain('items: [], total: 0');
     expect(source).toContain('return { data: [], error: null };');
     expect(source).toContain('return [];');
   });
@@ -65,6 +70,8 @@ describe('kc-api.help.js - exported help/invites domain', () => {
     expect(source).toContain('return driver.listAdminHelpRequests(filters);');
     expect(source).toContain('return driver.updateAdminHelpRequest(id, patch);');
     expect(source).toContain('return driver.processAccountErasure(payload);');
+    expect(source).toContain('return driver.listExternalAccessRequests(filters);');
+    expect(source).toContain('return driver.decideExternalAccessRequest(payload);');
     expect(source).toContain('return driver.inviteExternalUser(email, note);');
     expect(source).toContain('return driver.getInvites();');
     expect(source).toContain('return driver.revokeInvite(email);');

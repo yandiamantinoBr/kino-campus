@@ -1,6 +1,6 @@
 # Guia de Desenvolvimento para IA — KinoCampus
 
-**Versão:** v76.6.0 · **Atualizado em:** 2026-06-12
+**Versão:** v76.11.0 · **Atualizado em:** 2026-06-13
 
 > **Leia este documento integralmente antes de qualquer modificação.**
 > Este guia é auto-contido: uma IA sem contexto anterior deve conseguir trabalhar
@@ -38,10 +38,10 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Backend | Supabase (PostgreSQL + Auth + Storage + Edge Functions + Realtime) | — |
 | Hosting | Vercel | `vercel.json` é imutável sem aprovação explícita |
 | Build | `node scripts/inject-env.js` | Substitui placeholders `__KC_*__` nas variáveis |
-| Testes | Jest (174 suites) + Playwright (9 specs E2E) | Nunca reduzir contagem |
+| Testes | Jest (175 suites) + Playwright (9 specs E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v76.6)
+### Estado atual (v76.11)
 
 | Campo | Valor |
 |-------|-------|
@@ -49,7 +49,7 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Branch de features | `feature/v75.X.Y-descricao-curta` |
 | appVersion | `75.1.0` (performance phase 1; Speed Insights mergeado no PR #549) |
 | frontendRuntimeVersion | `8.6.1` (constante canonica do runtime atual) |
-| Jest | 174 suites · 3567 testes |
+| Jest | 175 suites · 3574 testes |
 | check:all | 5/5 validators verdes |
 | Itens validados (check:structure) | 167 |
 
@@ -77,10 +77,10 @@ kino-campus/
 ├── data/database.json          ← fixture para driver local
 ├── docs/                       ← Toda documentação técnica
 ├── scripts/                    ← 5 validators + inject-env.js
-├── tests/                      ← 174 suites Jest
+├── tests/                      ← 175 suites Jest
 │   ├── unit/         (25)
 │   ├── integration/ (124)
-│   ├── contract/      (8)
+│   ├── contract/      (9)
 │   ├── structure/    (12)
 │   ├── a11y/          (5)
 │   └── e2e/           (9)      ← Playwright specs
@@ -99,7 +99,7 @@ kino-campus/
 3. git checkout -b feature/v75.X.Y-descricao-curta
 4. [ implementar mudanças ]
 5. npm run check:all          ← DEVE ser 5/5 verdes
-   npm test                   ← DEVE ser ≥174/174 suites, ≥3567/3567 testes
+   npm test                   ← DEVE ser ≥175/175 suites, ≥3574/3574 testes
 6. git add <arquivos específicos>
 7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 8. git push -u origin feature/v75.X.Y-descricao-curta
@@ -136,7 +136,7 @@ Proibido:
 
 ```bash
 npm run check:all    # OBRIGATÓRIO — deve exibir 5 "OK" em sequência
-npm test             # OBRIGATÓRIO — deve exibir "174 passed, 174 total"
+npm test             # OBRIGATÓRIO — deve exibir "175 passed, 175 total"
 ```
 
 Se qualquer check falhar → corrigir antes de commitar. Nunca commitar com falha.
@@ -509,7 +509,7 @@ describe('MeuModulo', () => {
 
 **Nunca reduzir o número de suites ou de testes.**
 
-- Antes de commitar: `npm test` deve mostrar `≥174 passed, 174 total` e `≥3567 passed, 3567 total`
+- Antes de commitar: `npm test` deve mostrar `≥175 passed, 175 total` e `≥3574 passed, 3574 total`
 - Se uma nova suite é criada, a contagem sobe — o gate da suite nova deve ser documentado no commit
 - Nunca deletar suites existentes
 - Nunca comentar ou pular testes (`it.skip`, `describe.skip`) sem aprovação explícita
@@ -687,7 +687,7 @@ git add -A
 |----------|--------|
 | Deletar suites existentes | Reduz cobertura; vide regra de ouro |
 | `it.skip` ou `describe.skip` sem aprovação | Mascara falhas |
-| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 174/3567 |
+| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 175/3574 |
 | Commitar com `npm test` com falhas | Proibido terminantemente |
 
 ### Validators
@@ -711,7 +711,7 @@ git add -A
 | Quais scripts cada HTML carrega e em que ordem | `docs/architecture/script-loading-reference.md` |
 | Como os dados fluem de controller → KCAPI → adapter → banco | `docs/architecture/data-flow-guide.md` |
 | Estrutura do repositório, grupos JS, namespaces, delta de versões | `docs/architecture/repository-structure.md` |
-| Onde adicionar novos testes, estrutura das 174 suites | `docs/architecture/test-strategy.md` |
+| Onde adicionar novos testes, estrutura das 175 suites | `docs/architecture/test-strategy.md` |
 | CSS em produção, `future-split/`, convenções | `docs/architecture/css-architecture.md` |
 | Arquitetura geral, camadas, hotspots | `docs/architecture.md` |
 | Métodos públicos de KCAPI, contratos de retorno | `docs/api-contract.md` |
@@ -773,6 +773,6 @@ npm run check:routes     # 26 rotas + CSS
 npm run check:hygiene    # 8.6.1, i18n B2, inline handlers, cadeias
 
 # Testes
-npm test                 # 174 suites · 3567 testes
+npm test                 # 175 suites · 3574 testes
 npx playwright test --list # 9 specs Playwright · 59 testes listados
 ```
