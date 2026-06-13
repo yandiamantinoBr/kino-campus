@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.7.0 · **Atualizado em:** 2026-06-12
+**Versão:** v76.11.0 · **Atualizado em:** 2026-06-13
 
-> Documenta as 174 suites Jest + 9 specs Playwright: o que cada uma cobre,
+> Documenta as 175 suites Jest + 9 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -13,7 +13,7 @@
 2. [Métricas atuais](#2-métricas-atuais)
 3. [Diretório unit/ — 25 suites](#3-diretório-unit--25-suites)
 4. [Diretório integration/ — 124 suites](#4-diretório-integration--124-suites)
-5. [Diretório contract/ — 8 suites](#5-diretório-contract--8-suites)
+5. [Diretório contract/ — 9 suites](#5-diretório-contract--9-suites)
 6. [Diretório structure/ — 12 suites](#6-diretório-structure--12-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
 8. [E2E com Playwright — 9 specs](#8-e2e-com-playwright--9-specs)
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 174 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todos os 175 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -51,20 +51,20 @@
 |-----------|--------|------------------|
 | `tests/unit/` | **25** | Módulos utilitários individuais |
 | `tests/integration/` | **124** | Controllers, adapters, sub-módulos KCAPI |
-| `tests/contract/` | **8** | Contratos públicos e formas de exports |
+| `tests/contract/` | **9** | Contratos públicos e formas de exports |
 | `tests/structure/` | **12** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
 | `tests/e2e/` | **9** | Playwright (browser real, HTTP real) |
-| **Total** | **183** | (174 Jest + 9 Playwright specs) |
+| **Total** | **184** | (175 Jest + 9 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 174 suites · 3570 testes
+Jest: 175 suites · 3574 testes
 Playwright: 9 specs · 59 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥174 passed, 174 total` e `≥3570 passed, 3570 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥175 passed, 175 total` e `≥3574 passed, 3574 total`.
 
 ### Gate CI essencial
 
@@ -259,7 +259,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 124 arquivos indi
 
 ---
 
-## 5. Diretório contract/ — 8 suites
+## 5. Diretório contract/ — 9 suites
 
 Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falha se um método for removido ou renomeado, mesmo sem quebrar a funcionalidade aparente.
 
@@ -267,6 +267,7 @@ Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falh
 |-------|------------|
 | `admin-banners-access-contract.test.js` | Shape do contrato de acesso admin a banners |
 | `chat-continuity-contract.test.js` | Contrato de continuidade de conversa/chat |
+| `kc-api-external-access-contract.test.js` | Delegacao e fallback dos wrappers admin de external access via `window._KCAPI.help` |
 | `kc-api-facade-contract.test.js` | Snapshot dos 107 membros exportados de `window.KCAPI` e guarda de crescimento do facade |
 | `kc-api-notification-preferences-contract.test.js` | Contrato de preferências de notificação (6 tipos, 3 canais) |
 | `kc-api-notifications-contract.test.js` | Contrato do sub-módulo `window._KCAPI.notifications` |
@@ -483,8 +484,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥174 passed, 174 total
-  Tests:       ≥3570 passed, 3570 total
+  Test Suites: ≥175 passed, 175 total
+  Tests:       ≥3574 passed, 3574 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

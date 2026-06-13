@@ -376,6 +376,8 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
     expect(source).toContain('return helpModule.listAdminHelpRequests(filters, { getActiveDriver });');
     expect(source).toContain('return helpModule.updateAdminHelpRequest(id, patch, { getActiveDriver });');
     expect(source).toContain('return helpModule.processAccountErasure(payload, { getActiveDriver });');
+    expect(source).toContain('return helpModule.listExternalAccessRequests(filters, { getActiveDriver });');
+    expect(source).toContain('return helpModule.decideExternalAccessRequest(payload, { getActiveDriver });');
     expect(source).toContain('return helpModule.inviteExternalUser(email, note, { getActiveDriver });');
     expect(source).toContain('return helpModule.getInvites({ getActiveDriver });');
     expect(source).toContain('return helpModule.revokeInvite(email, { getActiveDriver });');

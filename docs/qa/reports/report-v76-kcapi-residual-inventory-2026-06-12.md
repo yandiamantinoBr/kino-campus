@@ -133,3 +133,29 @@ Resultados:
 | `npm run check:hygiene` | passou; runtime `8.6.1` |
 | `npm run check:all` | passou; 174 suites / 3570 testes Jest |
 | `npx playwright test --list` | passou; 59 testes em 9 arquivos |
+
+---
+
+## 8. Atualizacao posterior v76.11.0
+
+Em 2026-06-13, a entrega JS-I.1 executou o menor candidato runtime deste inventario:
+`KCAPI.listExternalAccessRequests` e `KCAPI.decideExternalAccessRequest` passaram a delegar para
+`window._KCAPI.help`, com `getActiveDriver` injetado pelo facade e fallback preservado para driver
+sem suporte.
+
+Novo inventario residual apos JS-I.1:
+
+| Metrica | Valor |
+|---|---:|
+| `assets/js/api/kc-api.client.js` | 1.509 linhas / 58.399 bytes |
+| Membros publicos `window.KCAPI` | 107 |
+| Declaracoes `function` | 145 |
+| Wrappers exportados/globais | 98 |
+| Namespaces `_KCAPI.*` inicializados | 17 |
+| Buckets residuais | 12 |
+
+O candidato `admin-external-access-direct-driver` foi resolvido. A proxima prioridade runtime
+medida pelo script passou a ser `notification-fallback-builders` (2 funcoes / 40 linhas), seguida
+por `post-mutation-bridge` (3 funcoes / 23 linhas) e `bootstrap-driver-core` como P3 de alto risco.
+
+Evidencia dedicada: `docs/qa/reports/report-v76-kcapi-external-access-extraction-2026-06-13.md`.

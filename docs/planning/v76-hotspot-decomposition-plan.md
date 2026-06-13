@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.10.0
-**Data:** 2026-06-12
-**Escopo:** planejamento tecnico + status das extracoes JS V76, inventario residual JS-I, inventario CSS-A e baseline CSS-B; sem alterar runtime, CSS, SQL, secrets, provider ou deploy
+**Versao:** v76.11.0
+**Data:** 2026-06-13
+**Escopo:** planejamento tecnico + status das extracoes JS V76, inventario residual JS-I, extracao JS-I.1, inventario CSS-A e baseline CSS-B; sem alterar CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -11,9 +11,9 @@
 Converter os achados A1/A2 das auditorias V1/V2/V3 em uma trilha executavel para reduzir os dois
 hotspots ainda relevantes do frontend:
 
-| Hotspot | Estado atual medido em 2026-06-12 | Risco principal |
+| Hotspot | Estado atual medido em 2026-06-13 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 1.509 linhas / 58.340 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 1.509 linhas / 58.399 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -68,6 +68,12 @@ normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e e
 `scripts/audit-kcapi-facade-residual.js` (`npm run audit:kcapi-residual`). O parse atual registra
 107 membros publicos, 145 declaracoes `function`, 98 wrappers exportados/globais, 17 namespaces
 `_KCAPI.*` inicializados e 13 buckets residuais. Nenhum runtime, HTML, CSS ou adapter foi alterado.
+
+**Status v76.11.0:** JS-I.1 concluiu a extracao controlada dos wrappers admin de external access:
+`KCAPI.listExternalAccessRequests` e `KCAPI.decideExternalAccessRequest` continuam publicos, mas
+agora delegam para `window._KCAPI.help` com `getActiveDriver` injetado. O bucket direto
+`admin-external-access-direct-driver` saiu do inventario; o parse atual registra 12 buckets
+residuais e promove `notification-fallback-builders` para P1.
 
 ### 3.2 Ordem permitida
 
@@ -198,6 +204,7 @@ JS e CSS no mesmo PR:
 |---|---|---|
 | JS-A | Report de superficie publica `window.KCAPI` e mapa dos blocos residuais no facade | prepara extracao sem mudar runtime |
 | JS-I | Inventario residual automatizado da fachada `KCAPI` | **Concluido em v76.10.0**; prioriza proximas extracoes pequenas |
+| JS-I.1 | Delegacao de external access admin para `kc-api.help.js` | **Concluido em v76.11.0**; preserva contrato publico e fallback de driver |
 | CSS-A | Inventario de ownership de seletores de `styles.css` | **Concluido em v76.8.0**; prepara split sem alterar cascade |
 | CSS-B | Baseline visual/cascade anonimo antes de split de `styles.css` | **Concluido em v76.9.0**; cria evidencia antes/depois para micro-splits futuros |
 
@@ -245,7 +252,11 @@ carregamentos de `future-split/`. Nenhum seletor foi movido.
 `docs/planning/v76-kcapi-residual-inventory.md` e registrou evidencia em
 `docs/qa/reports/report-v76-kcapi-residual-inventory-2026-06-12.md`.
 
+**Status v76.11.0:** JS-I.1 moveu a decisao de driver de external access admin para
+`assets/js/api/kc-api.help.js`, preservou `window.KCAPI` com 107 membros publicos e adicionou
+`tests/contract/kc-api-external-access-contract.test.js` para cobrir delegacao e fallback.
+
 Proxima entrega recomendada apos JS-I: escolher uma frente unica, sem misturar no mesmo PR:
-JS-I.1 external access admin (2 wrappers / 14 linhas), JS-I.2 notification fallbacks (2 builders /
-40 linhas), CSS-C micro-split apenas para seletor visivel no baseline anonimo, ou CSS-B autenticado
-para dashboard admin real.
+JS-I.2 notification fallbacks (2 builders / 40 linhas), post-mutation bridge (3 helpers / 23 linhas),
+CSS-C micro-split apenas para seletor visivel no baseline anonimo, ou CSS-B autenticado para dashboard
+admin real.

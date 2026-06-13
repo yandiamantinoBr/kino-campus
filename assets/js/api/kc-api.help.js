@@ -4,7 +4,7 @@
   Sub-modulo do dominio help-requests e invites para a fachada KCAPI.
   Registrado em window._KCAPI.help e carregado antes de kc-api.client.js.
 
-  Contrato preservado: as 6 funcoes abaixo mantem exatamente a mesma
+  Contrato preservado: as funcoes abaixo mantem exatamente a mesma
   semantica das implementacoes previas em kc-api.client.js, incluindo
   fallbacks de indisponibilidade por driver.
 */
@@ -52,6 +52,22 @@
     return driver.processAccountErasure(payload);
   }
 
+  async function listExternalAccessRequests(filters = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (driver && typeof driver.listExternalAccessRequests === 'function') {
+      return driver.listExternalAccessRequests(filters);
+    }
+    return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' }, items: [], total: 0 };
+  }
+
+  async function decideExternalAccessRequest(payload = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (driver && typeof driver.decideExternalAccessRequest === 'function') {
+      return driver.decideExternalAccessRequest(payload);
+    }
+    return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' } };
+  }
+
   async function inviteExternalUser(email, note, deps = {}) {
     const driver = getActiveDriverOrNull(deps);
     if (!driver || typeof driver.inviteExternalUser !== 'function') {
@@ -79,6 +95,8 @@
     listAdminHelpRequests,
     updateAdminHelpRequest,
     processAccountErasure,
+    listExternalAccessRequests,
+    decideExternalAccessRequest,
     inviteExternalUser,
     getInvites,
     revokeInvite,

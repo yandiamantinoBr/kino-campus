@@ -8,6 +8,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 | Arquivo | Uso |
 |---|---|
 | `_TEMPLATE-authenticated-run.md` | Template V26 para rodada autenticada real com redacao de evidencias |
+| `report-v76-kcapi-external-access-extraction-2026-06-13.md` | Evidencia V76 da extracao JS-I.1 de external access admin para `window._KCAPI.help` |
 | `report-v76-kcapi-residual-inventory-2026-06-12.md` | Evidencia V76 do inventario residual JS-I da fachada `KCAPI` sem alteracao de runtime |
 | `report-v76-css-visual-baseline-2026-06-12.md` | Evidencia V76 do baseline CSS-B visual/cascade antes de split de `styles.css` |
 | `report-v76-css-ownership-inventory-2026-06-12.md` | Evidencia V76 do inventario CSS-A de ownership de `styles.css` |
