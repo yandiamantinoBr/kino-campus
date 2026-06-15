@@ -1,8 +1,8 @@
 # V76 CSS-B - Baseline Visual Pre-Split de `styles.css`
 
-**Versão:** v76.14.0
+**Versão:** v76.15.0
 **Data:** 2026-06-15
-**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C; sem alterar HTML, runtime ou `future-split/`
+**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C.2; sem alterar HTML, runtime ou `future-split/`
 
 ---
 
@@ -126,10 +126,22 @@ recursos externos oscilaram com `ERR_CONNECTION_RESET` e a própria repetição 
 hashes diferentes em rotas não tocadas. A evidência detalhada está em
 `docs/qa/reports/report-v76-css-admin-nav-micro-split-2026-06-15.md`.
 
+Atualização v76.15.0: o baseline foi usado em CSS-C.2 para mover os seletores administrativos
+remanescentes de `styles.css` para `admin-shell.css`. Foram geradas três rodadas locais:
+
+- `output/playwright/css-baseline/v76-css-c2-admin-overlap-before-2026-06-15/`
+- `output/playwright/css-baseline/v76-css-c2-admin-overlap-after-2026-06-15/`
+- `output/playwright/css-baseline/v76-css-c2-admin-overlap-repeat-2026-06-15/`
+
+As três rodadas capturaram 24 screenshots, 0 respostas falhas, 0 overflow horizontal e 0
+carregamentos de `future-split/`. Nesta etapa, os hashes ficaram estáveis: 0 diferenças entre
+antes/depois e 0 diferenças entre depois/repetição. A evidência detalhada está em
+`docs/qa/reports/report-v76-css-admin-overlap-micro-split-2026-06-15.md`.
+
 Escolher uma trilha unica:
 
-1. **CSS-C.2 micro-split com evidência antes/depois:** apenas se o seletor estiver visível nas rotas
-   cobertas pelo baseline anonimo atual, ou se houver baseline autenticado adicional.
+1. **CSS-C.3 micro-split com evidência antes/depois:** apenas se o seletor estiver visível nas rotas
+   cobertas pelo baseline anônimo atual, ou se houver baseline autenticado adicional.
 2. **CSS-B admin autenticado:** capturar dashboard admin real com credenciais controladas, caso o
    proximo candidato seja `admin-shell.css`.
 3. **JS documental:** investigar o bucket residual `bootstrap-driver-core` sem extração imediata.

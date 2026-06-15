@@ -5283,12 +5283,6 @@ body.kc-scroll-locked {
         padding: 0 12px;
     }
 
-    /* Admin page: restore centering overridden by rule above */
-    .kc-admin-page .kc-admin-wrapper {
-        margin-left: auto !important;
-        margin-right: auto !important;
-    }
-
     .kc-ad-card__body {
         grid-template-columns: minmax(82px, 30vw) minmax(0, 1fr);
         gap: 10px;
@@ -11846,66 +11840,6 @@ a.kc-home-metric-card:hover {
   outline-offset: 2px;
 }
 
-/* ==========================================================================
-   v9.3.5.4 — Seção "Solicitações de Acesso Externo" no admin/moderation
-   ========================================================================== */
-
-.kc-admin-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--kc-border-dark);
-  background: var(--kc-surface-dark);
-  color: var(--kc-text-dark-secondary);
-  font-size: 0.85em;
-  cursor: pointer;
-  transition: all var(--transition-speed) ease;
-  font-family: inherit;
-}
-.kc-admin-tab:hover {
-  background: var(--kc-surface-dark-hover);
-  color: var(--kc-text-dark-primary);
-}
-.kc-admin-tab.is-active {
-  background: var(--kc-primary-brand);
-  color: #fff;
-  border-color: var(--kc-primary-brand);
-}
-.kc-admin-tab-count {
-  display: inline-flex;
-  min-width: 22px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
-  font-size: 0.78em;
-  font-weight: 700;
-  justify-content: center;
-}
-.kc-admin-tab:not(.is-active) .kc-admin-tab-count {
-  background: var(--kc-background-dark);
-  color: var(--kc-text-dark-secondary);
-}
-.kc-admin-tab-refresh {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--kc-border-dark);
-  background: var(--kc-surface-dark);
-  color: var(--kc-text-dark-secondary);
-  cursor: pointer;
-  margin-left: auto;
-  transition: all var(--transition-speed) ease;
-}
-.kc-admin-tab-refresh:hover {
-  background: var(--kc-surface-dark-hover);
-  color: var(--kc-text-dark-primary);
-}
-
 .kc-ext-access-list {
   display: flex;
   flex-direction: column;
@@ -12092,12 +12026,6 @@ a.kc-home-metric-card:hover {
 }
 .kc-modal-body { overflow-y: auto; }
 .kc-modal-footer { border-top: 1px solid var(--kc-border-dark); }
-
-/* Feedback statuses */
-.kc-admin-invite-feedback.is-success { color: #22c55e; }
-.kc-admin-invite-feedback.is-error   { color: #ef4444; }
-.kc-admin-invite-feedback.is-warn    { color: #f59e0b; }
-.kc-admin-invite-feedback.is-info    { color: var(--kc-text-dark-secondary); }
 
 /* Mensagens: atalho persistente no header e no mobile. */
 .kc-chat-shortcut,

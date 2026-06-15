@@ -327,6 +327,73 @@ body.kc-admin-page .kc-admin-audit-wrap {
   overflow-x: auto;
 }
 
+body.kc-admin-page .kc-admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  font-family: inherit;
+}
+
+body.kc-admin-page .kc-admin-tab:hover {
+  background: var(--kc-surface-dark-hover);
+  color: var(--kc-text-dark-primary);
+}
+
+body.kc-admin-page .kc-admin-tab.is-active {
+  background: var(--kc-primary-brand);
+  color: #fff;
+  border-color: var(--kc-primary-brand);
+}
+
+body.kc-admin-page .kc-admin-tab-count {
+  display: inline-flex;
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 0.78em;
+  font-weight: 700;
+  justify-content: center;
+}
+
+body.kc-admin-page .kc-admin-tab:not(.is-active) .kc-admin-tab-count {
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-secondary);
+}
+
+body.kc-admin-page .kc-admin-tab-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+  color: var(--kc-text-dark-secondary);
+  cursor: pointer;
+  margin-left: auto;
+  transition: all var(--transition-speed) ease;
+}
+
+body.kc-admin-page .kc-admin-tab-refresh:hover {
+  background: var(--kc-surface-dark-hover);
+  color: var(--kc-text-dark-primary);
+}
+
+body.kc-admin-page .kc-admin-invite-feedback.is-success { color: #22c55e; }
+body.kc-admin-page .kc-admin-invite-feedback.is-error { color: #ef4444; }
+body.kc-admin-page .kc-admin-invite-feedback.is-warn { color: #f59e0b; }
+body.kc-admin-page .kc-admin-invite-feedback.is-info { color: var(--kc-text-dark-secondary); }
+
 body.kc-admin-page .kc-mobile-nav {
   z-index: 1200;
 }
@@ -920,6 +987,11 @@ body.kc-admin-page--dashboard .kc-admin-chart-modal__body .kc-admin-chart-shell 
     --kc-admin-wrapper-padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     --kc-admin-modal-viewport-gap: 12px;
     --kc-admin-chart-modal-viewport-gap: 12px;
+  }
+
+  body.kc-admin-page .kc-admin-wrapper {
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 
   body.kc-admin-page .kc-header--admin .kc-admin-nav {

@@ -8,6 +8,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 | Arquivo | Uso |
 |---|---|
 | `_TEMPLATE-authenticated-run.md` | Template V26 para rodada autenticada real com redacao de evidencias |
+| `report-v76-css-admin-overlap-micro-split-2026-06-15.md` | Evidência V76 CSS-C.2 do micro-split do overlap admin remanescente de `styles.css` para `admin-shell.css` |
 | `report-v76-css-admin-nav-micro-split-2026-06-15.md` | Evidência V76 CSS-C do micro-split da navegação admin de `styles.css` para `admin-shell.css` |
 | `report-v76-kcapi-post-mutation-bridge-extraction-2026-06-15.md` | Evidência V76 da extração JS-I.3 da ponte de mutação/freshness de posts para `window._KCAPI.postsWrite` |
 | `report-v76-kcapi-notification-fallbacks-extraction-2026-06-15.md` | Evidência V76 da extração JS-I.2 dos fallbacks canônicos de notificação para `window._KCAPI.notifications` |

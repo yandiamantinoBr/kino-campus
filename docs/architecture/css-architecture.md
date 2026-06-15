@@ -1,10 +1,10 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.14.0
+**Versão:** v76.15.0
 **Atualizado em:** 2026-06-15
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
-> baseline visual CSS-B/C, micro-split da navegação admin e status dos stubs `assets/css/future-split/`.
+> baseline visual CSS-B/C, micro-splits admin CSS-C/C.2 e status dos stubs `assets/css/future-split/`.
 
 ---
 
@@ -15,9 +15,9 @@ Todos os estilos de producao sao carregados por `<link rel="stylesheet">` direta
 
 ```text
 assets/css/
-|-- styles.css              12.161 linhas / 284.046 bytes
+|-- styles.css              12.089 linhas / 281.919 bytes
 |-- product.css              1.784 linhas / 45.373 bytes
-|-- admin-shell.css          1.399 linhas / 36.459 bytes
+|-- admin-shell.css          1.471 linhas / 38.565 bytes
 |-- kc-public-shell.css        943 linhas / 20.456 bytes
 |-- kc-chat.css                710 linhas / 16.367 bytes
 |-- product-lightbox.css       299 linhas / 8.064 bytes
@@ -25,10 +25,10 @@ assets/css/
 `-- future-split/             5 stubs documentais, nao carregados
 ```
 
-**Total CSS de producao:** 17.509 linhas / 416.720 bytes.
+**Total CSS de producao:** 17.509 linhas / 416.699 bytes.
 
-O monólito `styles.css` segue sendo o principal hotspot visual: 12.161 linhas, 284.046 bytes,
-1.753 regras parseadas e 1.974 seletores parseados por `npm run audit:css`.
+O monólito `styles.css` segue sendo o principal hotspot visual: 12.089 linhas, 281.919 bytes,
+1.741 regras parseadas e 1.962 seletores parseados por `npm run audit:css`.
 
 ---
 
@@ -79,16 +79,16 @@ Resumo do parse:
 |---|---:|---:|---|
 | Tokens e tema | 15 | 11 | permanece global |
 | Base, reset e a11y | 29 | 29 | permanece global |
-| Layout e navegacao globais | 336 | 229 | permanece global |
+| Layout e navegacao globais | 328 | 224 | permanece global |
 | Feed, cards e ranking | 282 | 189 | permanece global |
-| Componentes compartilhados | 260 | 242 | global; candidato a `future-split` apos prova |
-| Admin overlap | 12 | 12 | reduzido em CSS-C; remanescente exige análise própria |
-| Produto overlap | 7 | 4 | candidato a `product.css`/`product-lightbox.css` apos baseline |
-| Public shell/profile/legal overlap | 137 | 134 | candidato a `kc-public-shell.css` apos baseline |
+| Componentes compartilhados | 261 | 243 | global; candidato a `future-split` após prova |
+| Admin overlap | 0 | 0 | encerrado em CSS-C.2 |
+| Produto overlap | 7 | 4 | bloqueado para split simples; `.kc-save-popover*` também atende `my-posts.html` |
+| Public shell/profile/legal overlap | 136 | 133 | candidato a `kc-public-shell.css` após baseline |
 | Chat overlap | 7 | 7 | candidato condicional a `kc-chat.css` |
 | Create-post/modal/uploader | 8 | 10 | permanece global ate existir rota CSS ou split aprovado |
 | Modulos publicos de pagina | 146 | 141 | bloqueado para split futuro |
-| Revisao manual | 523 | 389 | revisao manual obrigatoria antes de mover |
+| Revisao manual | 522 | 388 | revisao manual obrigatoria antes de mover |
 
 Qualquer PR de extracao CSS deve partir desse inventario, mas tambem precisa revisar o seletor real
 e a rota afetada. A classificacao e heuristica, nao uma autorizacao automatica de movimento.
@@ -132,6 +132,11 @@ antes/depois/repetida em `output/playwright/css-baseline/v76-css-c-admin-nav-*`.
 tiveram 24 capturas, 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
 Os hashes foram tratados como apoio, não como prova única, porque recursos externos oscilaram com
 `ERR_CONNECTION_RESET` entre capturas.
+
+Ainda em 2026-06-15, CSS-C.2 usou o mesmo mecanismo para remover o restante do bucket admin de
+`styles.css`. As rodadas `v76-css-c2-admin-overlap-before-*`, `after-*` e `repeat-*` tiveram 24
+capturas, 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`; os hashes
+ficaram estáveis, com 0 diferenças entre antes/depois e depois/repetição.
 
 Limitacao: o baseline admin atual e anonimo/sem sessao. Ele cobre o shell estatico e o gate admin,
 mas nao substitui baseline autenticado antes de mover seletores visiveis apenas no dashboard real.
