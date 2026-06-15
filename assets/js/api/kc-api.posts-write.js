@@ -50,6 +50,35 @@
 
   // ── Métodos públicos ───────────────────────────────────────────
 
+  function isPostMutationOk(result) {
+    return !!result && result.ok !== false && !result.error;
+  }
+
+  function getPostMutationData(result, fallback) {
+    if (result && result.data && typeof result.data === 'object') return result.data;
+    if (fallback && typeof fallback === 'object') return fallback;
+    return {};
+  }
+
+  function emitPostMutation(type, postId, result, fallback, deps) {
+    const postFreshness = (deps && deps.postFreshness && typeof deps.postFreshness === 'object')
+      ? deps.postFreshness
+      : window.KCPostFreshness;
+    if (!isPostMutationOk(result) || !postFreshness || typeof postFreshness.emit !== 'function') return;
+    const data = getPostMutationData(result, fallback);
+    const status = result.status || result.new_status || data.status || data.estado || data.new_status || '';
+    const moduleKey = data.module || data.modulo || data.moduleKey || (fallback && (fallback.module || fallback.modulo || fallback.moduleKey)) || '';
+    postFreshness.emit({
+      type,
+      source: 'api',
+      postId: postId || data.uuid || data.id || result.id || result.uuid,
+      legacyId: data.legacy_id || data.legacyId || result.legacy_id || result.legacyId,
+      module: moduleKey,
+      status,
+      updated_at: data.updated_at || data.updatedAt || result.updated_at || result.updatedAt,
+    });
+  }
+
   async function createPost(body, deps) {
     const policyError = enforceSupabaseOnProduction('createPost', deps);
     if (policyError) return policyError;
@@ -128,5 +157,8 @@
     bumpPost,
     closePost,
     reactivatePost,
+    emitPostMutation,
+    isPostMutationOk,
+    getPostMutationData,
   };
 })();

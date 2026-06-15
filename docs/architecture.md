@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.12.0 (2026-06-15)** — contagens apos inventario CSS-A, baseline CSS-B visual/cascade, inventario residual JS-I, extracoes JS-I.1/JS-I.2 na fachada `KCAPI` e runtime frontend `8.6.1`.
+> **Atualizado em v76.13.0 (2026-06-15)** — contagens após inventário CSS-A, baseline CSS-B visual/cascade, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3 na fachada `KCAPI` e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -19,7 +19,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `7` |
 | suites de teste Jest em `tests/` | `175` |
-| testes Jest totais | `3574` |
+| testes Jest totais | `3577` |
 | specs E2E Playwright | `9` |
 
 ## Princípio estrutural
@@ -158,11 +158,11 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.12.0 / 2026-06-15** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a proxima decomposicao segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
+> **Atualizado em v76.13.0 / 2026-06-15** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
-| fachada de API | `assets/js/api/kc-api.client.js` (1.479L / 57.288 bytes) | ⚠️ Parcialmente decomposto em sub-módulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalizacao de posts, normalizadores de rating, external access admin e notification fallbacks extraidos; JS-I mede 107 membros publicos, 143 funcoes, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 11 buckets residuais; facade ainda concentra bootstrap, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
+| fachada de API | `assets/js/api/kc-api.client.js` (1.459L / 56.513 bytes) | Parcialmente decomposto em submódulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalização de posts, normalizadores de rating, external access admin, notification fallbacks e post mutation bridge extraídos; JS-I mede 107 membros públicos, 141 funções, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 10 buckets residuais; facade ainda concentra bootstrap, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
 | adapter Supabase | `assets/js/adapters/supabase/supabase.adapter.js` (~420L) | ✅ Decomposto em 11 sub-adapters `_KCSA.*` | acoplamento com banco, RLS, RPCs |
 | detalhe de publicação | `assets/js/controllers/public/product.controller.js` | ✅ Decomposto em 8 auxiliares `_KCProduct.*` | UI crítica e estado compartilhado |
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
@@ -216,7 +216,8 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.8.0 (2026-06-12):** CSS-A adiciona `scripts/audit-css-ownership.js`, `npm run audit:css` e `docs/planning/v76-css-ownership-inventory.md`; `styles.css` permanece sem alteracao de cascade, com 1.774 regras / 1.995 seletores parseados.
 - **v76.9.0 (2026-06-12):** CSS-B adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md`; a rodada local capturou 24 screenshots em 12 rotas x 2 viewports, com 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
 - **v76.10.0 (2026-06-12):** JS-I adiciona `scripts/audit-kcapi-facade-residual.js`, `npm run audit:kcapi-residual` e `docs/planning/v76-kcapi-residual-inventory.md`; a rodada local mediu 107 membros publicos, 145 declaracoes `function`, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 13 buckets residuais sem alterar runtime.
-- **v76.11.0 (2026-06-13):** JS-I.1 move a decisao de driver de external access admin para `assets/js/api/kc-api.help.js`, preserva `KCAPI.listExternalAccessRequests`/`KCAPI.decideExternalAccessRequest`, remove o bucket direto `admin-external-access-direct-driver` do inventario residual e adiciona `tests/contract/kc-api-external-access-contract.test.js`; Jest sobe para 175 suites / 3574 testes.
-- **v76.12.0 (2026-06-15):** JS-I.2 remove `buildFallbackNotificationPreferences` e `buildFallbackNotificationChannelTargets` da fachada `KCAPI`; os defaults canonicos permanecem em `assets/js/api/kc-api.notifications.js`, o inventario residual cai para 143 declaracoes `function` e 11 buckets, e Jest permanece em 175 suites / 3574 testes.
+- **v76.11.0 (2026-06-13):** JS-I.1 move a decisão de driver de external access admin para `assets/js/api/kc-api.help.js`, preserva `KCAPI.listExternalAccessRequests`/`KCAPI.decideExternalAccessRequest`, remove o bucket direto `admin-external-access-direct-driver` do inventário residual e adiciona `tests/contract/kc-api-external-access-contract.test.js`; Jest sobe para 175 suites / 3574 testes.
+- **v76.12.0 (2026-06-15):** JS-I.2 remove `buildFallbackNotificationPreferences` e `buildFallbackNotificationChannelTargets` da fachada `KCAPI`; os defaults canônicos permanecem em `assets/js/api/kc-api.notifications.js`, o inventário residual cai para 143 declarações `function` e 11 buckets, e Jest permanece em 175 suites / 3574 testes.
+- **v76.13.0 (2026-06-15):** JS-I.3 remove `emitPostMutation`, `isPostMutationOk` e `getPostMutationData` da fachada `KCAPI`; a ponte de freshness de mutações passa para `assets/js/api/kc-api.posts-write.js`, o inventário residual cai para 141 declarações `function` e 10 buckets, e Jest sobe para 175 suites / 3577 testes.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

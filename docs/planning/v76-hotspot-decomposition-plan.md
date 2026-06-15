@@ -1,8 +1,8 @@
-# V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
+# V76 - Plano de Decomposição Segura dos Hotspots JS/CSS
 
-**Versao:** v76.12.0
+**Versão:** v76.13.0
 **Data:** 2026-06-15
-**Escopo:** planejamento tecnico + status das extracoes JS V76, inventario residual JS-I, extracoes JS-I.1/JS-I.2, inventario CSS-A e baseline CSS-B; sem alterar CSS, SQL, secrets, provider ou deploy
+**Escopo:** planejamento técnico + status das extrações JS V76, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3, inventário CSS-A e baseline CSS-B; sem alterar CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -13,7 +13,7 @@ hotspots ainda relevantes do frontend:
 
 | Hotspot | Estado atual medido em 2026-06-15 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 1.479 linhas / 57.288 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 1.459 linhas / 56.513 bytes | regressão de contrato público `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -75,12 +75,20 @@ agora delegam para `window._KCAPI.help` com `getActiveDriver` injetado. O bucket
 `admin-external-access-direct-driver` saiu do inventario; o parse atual registra 12 buckets
 residuais e promove `notification-fallback-builders` para P1.
 
-**Status v76.12.0:** JS-I.2 removeu os builders privados de fallback de notificacao da fachada:
+**Status v76.12.0:** JS-I.2 removeu os builders privados de fallback de notificação da fachada:
 `buildFallbackNotificationPreferences` e `buildFallbackNotificationChannelTargets` permanecem
-concentrados em `window._KCAPI.notifications`, enquanto os wrappers publicos de preferencias e
-destinos privados continuam em `window.KCAPI`. O parse atual registra 107 membros publicos,
-143 declaracoes `function`, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 11 buckets
+concentrados em `window._KCAPI.notifications`, enquanto os wrappers públicos de preferências e
+destinos privados continuam em `window.KCAPI`. O parse atual registra 107 membros públicos,
+143 declarações `function`, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 11 buckets
 residuais; `post-mutation-bridge` passa a ser o menor candidato runtime.
+
+**Status v76.13.0:** JS-I.3 removeu a ponte privada `emitPostMutation` da fachada. Os helpers
+`isPostMutationOk`, `getPostMutationData` e `emitPostMutation` agora ficam em
+`window._KCAPI.postsWrite`; `buildPostsWriteDeps()` injeta `postFreshness: window.KCPostFreshness`
+e a ordem de emissão após o retorno do driver foi preservada. O parse atual registra 107 membros
+públicos, 141 declarações `function`, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e
+10 buckets residuais. O único candidato JS restante listado pelo script é `bootstrap-driver-core`,
+mantido como P3 e sem extração imediata.
 
 ### 3.2 Ordem permitida
 
@@ -202,19 +210,20 @@ Para entregas documentais como este plano, `npm run check:structure`, `npm run c
 
 ---
 
-## 7. Proxima entrega recomendada
+## 7. Próxima entrega recomendada
 
-Historico das frentes preparatorias e opcoes de continuidade, mantendo a regra de nunca misturar
+Histórico das frentes preparatórias e opções de continuidade, mantendo a regra de nunca misturar
 JS e CSS no mesmo PR:
 
-| Opcao | Entrega | Por que agora |
+| Opção | Entrega | Por que agora |
 |---|---|---|
-| JS-A | Report de superficie publica `window.KCAPI` e mapa dos blocos residuais no facade | prepara extracao sem mudar runtime |
-| JS-I | Inventario residual automatizado da fachada `KCAPI` | **Concluido em v76.10.0**; prioriza proximas extracoes pequenas |
-| JS-I.1 | Delegacao de external access admin para `kc-api.help.js` | **Concluido em v76.11.0**; preserva contrato publico e fallback de driver |
-| JS-I.2 | Remocao dos builders privados de notification fallbacks do facade | **Concluido em v76.12.0**; defaults canonicos ficam em `kc-api.notifications.js` |
-| CSS-A | Inventario de ownership de seletores de `styles.css` | **Concluido em v76.8.0**; prepara split sem alterar cascade |
-| CSS-B | Baseline visual/cascade anonimo antes de split de `styles.css` | **Concluido em v76.9.0**; cria evidencia antes/depois para micro-splits futuros |
+| JS-A | Report de superfície pública `window.KCAPI` e mapa dos blocos residuais no facade | prepara extração sem mudar runtime |
+| JS-I | Inventário residual automatizado da fachada `KCAPI` | **Concluído em v76.10.0**; prioriza próximas extrações pequenas |
+| JS-I.1 | Delegação de external access admin para `kc-api.help.js` | **Concluído em v76.11.0**; preserva contrato público e fallback de driver |
+| JS-I.2 | Remoção dos builders privados de notification fallbacks do facade | **Concluído em v76.12.0**; defaults canônicos ficam em `kc-api.notifications.js` |
+| JS-I.3 | Remoção da ponte `emitPostMutation` do facade | **Concluído em v76.13.0**; eventos de freshness ficam em `kc-api.posts-write.js` |
+| CSS-A | Inventário de ownership de seletores de `styles.css` | **Concluído em v76.8.0**; prepara split sem alterar cascade |
+| CSS-B | Baseline visual/cascade anônimo antes de split de `styles.css` | **Concluído em v76.9.0**; cria evidência antes/depois para micro-splits futuros |
 
 **Status 2026-06-12:** JS-A foi entregue em
 `docs/qa/reports/report-v76-kcapi-public-surface-2026-06-12.md`, com snapshot de 107 membros
@@ -260,15 +269,20 @@ carregamentos de `future-split/`. Nenhum seletor foi movido.
 `docs/planning/v76-kcapi-residual-inventory.md` e registrou evidencia em
 `docs/qa/reports/report-v76-kcapi-residual-inventory-2026-06-12.md`.
 
-**Status v76.11.0:** JS-I.1 moveu a decisao de driver de external access admin para
-`assets/js/api/kc-api.help.js`, preservou `window.KCAPI` com 107 membros publicos e adicionou
-`tests/contract/kc-api-external-access-contract.test.js` para cobrir delegacao e fallback.
+**Status v76.11.0:** JS-I.1 moveu a decisão de driver de external access admin para
+`assets/js/api/kc-api.help.js`, preservou `window.KCAPI` com 107 membros públicos e adicionou
+`tests/contract/kc-api-external-access-contract.test.js` para cobrir delegação e fallback.
 
 **Status v76.12.0:** JS-I.2 removeu `buildFallbackNotificationPreferences` e
 `buildFallbackNotificationChannelTargets` de `assets/js/api/kc-api.client.js`; os defaults e
-builders canonicos permanecem no submodulo `assets/js/api/kc-api.notifications.js`, com contratos
-de facade e submodulo reforcados.
+builders canônicos permanecem no submódulo `assets/js/api/kc-api.notifications.js`, com contratos
+de facade e submódulo reforçados.
 
-Proxima entrega recomendada apos JS-I: escolher uma frente unica, sem misturar no mesmo PR:
-post-mutation bridge (3 helpers / 23 linhas), CSS-C micro-split apenas para seletor visivel no
-baseline anonimo, ou CSS-B autenticado para dashboard admin real.
+**Status v76.13.0:** JS-I.3 removeu `emitPostMutation`, `isPostMutationOk` e
+`getPostMutationData` da fachada `KCAPI`; os helpers agora ficam em
+`assets/js/api/kc-api.posts-write.js`, com eventos de freshness preservados e contrato público
+inalterado.
+
+Próxima entrega recomendada após JS-I: escolher uma frente única, sem misturar no mesmo PR:
+CSS-C micro-split apenas para seletor visível no baseline anônimo, CSS-B autenticado para dashboard
+admin real ou investigação documental do `bootstrap-driver-core` sem extração imediata.

@@ -3,7 +3,7 @@
  *
  * Cobre:
  * - IIFE registra window._KCAPI.postsWrite corretamente
- * - 9 metodos exportados existem
+ * - 9 métodos públicos e ponte de mutação exportados existem
  * - enforceSupabaseOnProduction bloqueia createPost em producao sem supabase
  * - Fallbacks corretos quando driver nao disponivel
  * - Delegacao ao driver quando disponivel
@@ -33,9 +33,11 @@ describe('kc-api.posts-write.js — modulo IIFE e namespace', () => {
     expect(src).toContain('window._KCAPI.postsWrite = {');
   });
 
-  test('exporta os 9 metodos obrigatorios', () => {
+  test('exporta os 9 métodos obrigatórios e a ponte de mutação', () => {
     const src = fs.readFileSync(POSTS_WRITE_PATH, 'utf8');
     ['createPost', 'updatePost', 'deletePost', 'reportPost', 'togglePostStatus', 'renewPost', 'bumpPost', 'closePost', 'reactivatePost']
+      .forEach((m) => expect(src).toContain(m));
+    ['emitPostMutation', 'isPostMutationOk', 'getPostMutationData']
       .forEach((m) => expect(src).toContain(m));
   });
 
@@ -49,6 +51,70 @@ describe('kc-api.posts-write.js — modulo IIFE e namespace', () => {
   test('reimplementa kcApiError localmente', () => {
     const src = fs.readFileSync(POSTS_WRITE_PATH, 'utf8');
     expect(src).toContain('function kcApiError(message)');
+  });
+});
+
+describe('kc-api.posts-write.js - ponte de mutação de posts', () => {
+  let postsWrite;
+
+  beforeEach(() => {
+    jest.resetModules();
+    global.window = {};
+    require('../../assets/js/api/kc-api.posts-write.js');
+    postsWrite = window._KCAPI.postsWrite;
+  });
+
+  test('emite evento de freshness preservando campos canônicos', () => {
+    const postFreshness = { emit: jest.fn() };
+    postsWrite.emitPostMutation('status_changed', null, {
+      ok: true,
+      data: {
+        uuid: 'post-uuid',
+        legacy_id: 'post-legacy',
+        modulo: 'beneficios',
+        estado: 'published',
+        updated_at: '2026-06-15T03:00:00.000Z',
+      },
+    }, {}, { postFreshness });
+
+    expect(postFreshness.emit).toHaveBeenCalledWith({
+      type: 'status_changed',
+      source: 'api',
+      postId: 'post-uuid',
+      legacyId: 'post-legacy',
+      module: 'beneficios',
+      status: 'published',
+      updated_at: '2026-06-15T03:00:00.000Z',
+    });
+  });
+
+  test('usa fallback quando result.data não traz objeto de post', () => {
+    const postFreshness = { emit: jest.fn() };
+    postsWrite.emitPostMutation('created', null, {
+      ok: true,
+      id: 'result-id',
+      legacyId: 'legacy-result',
+    }, {
+      moduleKey: 'moradia',
+      status: 'draft',
+    }, { postFreshness });
+
+    expect(postFreshness.emit).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'created',
+      postId: 'result-id',
+      legacyId: 'legacy-result',
+      module: 'moradia',
+      status: 'draft',
+    }));
+  });
+
+  test('não emite evento para resultado inválido ou freshness ausente', () => {
+    const postFreshness = { emit: jest.fn() };
+    postsWrite.emitPostMutation('updated', 'p1', { ok: false }, {}, { postFreshness });
+    postsWrite.emitPostMutation('updated', 'p1', { ok: true, error: { message: 'x' } }, {}, { postFreshness });
+    postsWrite.emitPostMutation('updated', 'p1', { ok: true }, {}, {});
+
+    expect(postFreshness.emit).not.toHaveBeenCalled();
   });
 });
 

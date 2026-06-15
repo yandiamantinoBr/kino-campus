@@ -8,9 +8,10 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 | Arquivo | Uso |
 |---|---|
 | `_TEMPLATE-authenticated-run.md` | Template V26 para rodada autenticada real com redacao de evidencias |
-| `report-v76-kcapi-notification-fallbacks-extraction-2026-06-15.md` | Evidencia V76 da extracao JS-I.2 dos fallbacks canonicos de notificacao para `window._KCAPI.notifications` |
-| `report-v76-kcapi-external-access-extraction-2026-06-13.md` | Evidencia V76 da extracao JS-I.1 de external access admin para `window._KCAPI.help` |
-| `report-v76-kcapi-residual-inventory-2026-06-12.md` | Evidencia V76 do inventario residual JS-I da fachada `KCAPI` sem alteracao de runtime |
+| `report-v76-kcapi-post-mutation-bridge-extraction-2026-06-15.md` | Evidência V76 da extração JS-I.3 da ponte de mutação/freshness de posts para `window._KCAPI.postsWrite` |
+| `report-v76-kcapi-notification-fallbacks-extraction-2026-06-15.md` | Evidência V76 da extração JS-I.2 dos fallbacks canônicos de notificação para `window._KCAPI.notifications` |
+| `report-v76-kcapi-external-access-extraction-2026-06-13.md` | Evidência V76 da extração JS-I.1 de external access admin para `window._KCAPI.help` |
+| `report-v76-kcapi-residual-inventory-2026-06-12.md` | Evidência V76 do inventário residual JS-I da fachada `KCAPI` sem alteração de runtime |
 | `report-v76-css-visual-baseline-2026-06-12.md` | Evidencia V76 do baseline CSS-B visual/cascade antes de split de `styles.css` |
 | `report-v76-css-ownership-inventory-2026-06-12.md` | Evidencia V76 do inventario CSS-A de ownership de `styles.css` |
 | `report-v76-kcapi-ratings-normalize-extraction-2026-06-12.md` | Evidencia V76 da extracao dos normalizadores `normalizeUserRating*` para `window._KCAPI.ratings` |
