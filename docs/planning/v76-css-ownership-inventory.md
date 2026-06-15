@@ -1,8 +1,8 @@
 # V76 CSS-A - Inventario de Ownership de `styles.css`
 
-**Versão:** v76.14.0
+**Versão:** v76.15.0
 **Data:** 2026-06-15
-**Escopo:** inventário documental + status pós-CSS-C; o inventário original não alterou CSS, e a atualização v76.14.0 registra o micro-split admin já evidenciado
+**Escopo:** inventário documental + status pós-CSS-C.2; o inventário original não alterou CSS, e as atualizações v76.14.0/v76.15.0 registram os micro-splits admin já evidenciados
 
 ---
 
@@ -66,18 +66,18 @@ baseline V27 e evidencia por rota.
 
 | Bucket | Regras | Seletores | Linhas cobertas | Ranges principais | Target |
 |---|---:|---:|---:|---|---|
-| Tokens e tema | 15 | 11 | 86 | L3-L29, L1059-L1061, L4840-L4844, L5394-L5400 | Permanece global |
-| Admin overlap | 24 | 20 | 123 | L5287-L5290, L10250-L10290, L10297-L10304, L10315-L10319 | Candidato a `admin-shell.css` |
+| Tokens e tema | 15 | 11 | 86 | L3-L29, L1059-L1061, L4840-L4844, L5388-L5394 | Permanece global |
+| Admin overlap | 0 | 0 | 0 | - | Encerrado em CSS-C.2 |
 | Produto overlap | 7 | 4 | 35 | L1554-L1573, L1701-L1708, L1714-L1722 | Candidato a `product.css`/`product-lightbox.css` |
-| Public shell/profile/legal overlap | 137 | 134 | 845 | L495-L501, L518-L528, L534-L539, L1188-L1202 | Candidato a `kc-public-shell.css` |
-| Chat overlap | 7 | 7 | 51 | L12224-L12281 | Candidato condicional a `kc-chat.css` |
+| Public shell/profile/legal overlap | 136 | 133 | 842 | L495-L501, L518-L528, L534-L539, L1188-L1202 | Candidato a `kc-public-shell.css` |
+| Chat overlap | 7 | 7 | 51 | L12031-L12088 | Candidato condicional a `kc-chat.css` |
 | Create-post/modal/uploader | 8 | 10 | 61 | L2844-L2869, L4722-L4742, L4889-L4898, L4937-L4944 | Permanece global por ora |
 | Modulos publicos de pagina | 146 | 141 | 815 | L1433-L1485, L1496-L1510, L1514-L1550, L2783-L2816 | Bloqueado para split futuro |
 | Feed, cards e ranking | 282 | 189 | 1.496 | L223-L320, L603-L613, L745-L787, L809-L1058 | Permanece global |
-| Layout e navegacao globais | 336 | 229 | 1.838 | L92-L220, L324-L349, L463-L492, L503-L516 | Permanece global |
+| Layout e navegacao globais | 328 | 224 | 1.807 | L92-L220, L324-L349, L463-L492, L503-L516 | Permanece global |
 | Base, reset e a11y | 29 | 29 | 134 | L31-L35, L39-L89, L1350-L1352, L1364-L1367 | Permanece global |
-| Componentes compartilhados | 260 | 242 | 1.581 | L352-L459, L721-L742, L1203-L1205, L1209-L1211 | Global; candidato a `future-split` apos prova |
-| Revisao manual | 523 | 389 | 2.924 | L573-L600, L615-L719, L789-L806, L1206-L1208 | Revisao manual obrigatoria |
+| Componentes compartilhados | 261 | 243 | 1.586 | L352-L459, L721-L742, L1203-L1205, L1209-L1211 | Global; candidato a `future-split` após prova |
+| Revisão manual | 522 | 388 | 2.919 | L573-L600, L615-L719, L789-L806, L1206-L1208 | Revisão manual obrigatória |
 
 O bucket "Revisao manual" e esperado em um monolito antigo: inclui blocos sem prefixo suficiente,
 secoes historicas com comentarios amplos, hero, rails e patches responsivos que nao devem ser
@@ -108,14 +108,14 @@ Estes grupos sao candidatos, nao mudancas aprovadas:
 
 | Arquivo ja carregado | Candidato em `styles.css` | Risco |
 |---|---:|---|
-| `admin-shell.css` | 24 regras / 20 seletores / 123 linhas | admin tambem depende de `styles.css`; mover nav/header exige screenshots das 6 paginas admin |
-| `product.css` ou `product-lightbox.css` | 7 regras / 4 seletores / 35 linhas | blocos de save popover podem ser usados fora de `_product.html`; validar my-posts antes |
-| `kc-public-shell.css` | 137 regras / 134 seletores / 845 linhas | profile/settings/legal compartilham header e auth UI; alto risco de cascade |
+| `admin-shell.css` | 0 regras / 0 seletores / 0 linhas | bucket encerrado em CSS-C.2; novos moves admin exigem nova análise de seletor |
+| `product.css` ou `product-lightbox.css` | 7 regras / 4 seletores / 35 linhas | bloqueado para split simples: `.kc-save-popover*` também atende `my-posts.html`, que não carrega `product.css` |
+| `kc-public-shell.css` | 136 regras / 133 seletores / 842 linhas | profile/settings/legal compartilham header e auth UI; alto risco de cascade |
 | `kc-chat.css` | 7 regras / 7 seletores / 51 linhas | atalhos de chat aparecem fora da rota `mensagens.html`; nao mover sem confirmar comportamento global |
 
-O primeiro recorte mais seguro parece ser **inventario visual + micro-PR admin nav**, porque os
-seletores `.kc-admin-nav*` tem prefixo claro e `admin-shell.css` ja e carregado pelas 6 paginas admin.
-Mesmo assim, o PR seguinte deve ser CSS-only, com baseline desktop/mobile das 6 rotas admin.
+O recorte admin foi encerrado em duas etapas CSS-only: CSS-C moveu `.kc-admin-nav*`, e CSS-C.2
+moveu os seletores administrativos remanescentes. O próximo recorte não deve reaproveitar a
+heurística de produto sem alterar o carregamento de `my-posts.html`.
 
 ---
 
@@ -152,10 +152,17 @@ ou `future-split/`. A nova rodada de `npm run audit:css` mede `styles.css` com 1
 36.459 bytes; o bucket `Admin overlap` cai para 12 regras / 12 seletores / 63 linhas.
 A evidência está em `docs/qa/reports/report-v76-css-admin-nav-micro-split-2026-06-15.md`.
 
+Atualização v76.15.0: a trilha **CSS-C.2 micro-split admin overlap** moveu `.kc-admin-tab*`,
+`.kc-admin-tab-refresh*`, `.kc-admin-invite-feedback.is-*` e o ajuste mobile de `.kc-admin-wrapper`
+para `assets/css/admin-shell.css`. A nova rodada de `npm run audit:css` mede `styles.css` com
+12.089 linhas, 281.919 bytes, 1.741 regras e 1.962 seletores; `admin-shell.css` passa a
+1.471 linhas / 38.565 bytes; o bucket `Admin overlap` cai para 0 regras / 0 seletores / 0 linhas.
+A evidência está em `docs/qa/reports/report-v76-css-admin-overlap-micro-split-2026-06-15.md`.
+
 Escolher uma trilha unica para a proxima entrega:
 
-1. **CSS-C.2 micro-split:** apenas para outro seletor visível nas rotas cobertas pelo baseline
-   anônimo, com before/after e rollback.
+1. **CSS-C.3 micro-split:** apenas após confirmar que o candidato não depende de rota que não carrega
+   o CSS de destino; `Produto overlap` fica bloqueado enquanto `my-posts.html` depender de `.kc-save-popover*`.
 2. **CSS-B admin autenticado:** capturar dashboard admin real antes de mover seletores que so
    aparecem no estado autenticado.
 3. **JS documental:** investigar `bootstrap-driver-core` sem extração imediata, porque o candidato

@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposição Segura dos Hotspots JS/CSS
 
-**Versão:** v76.14.0
+**Versão:** v76.15.0
 **Data:** 2026-06-15
-**Escopo:** planejamento técnico + status das extrações JS V76, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3, inventário CSS-A, baseline CSS-B e micro-split CSS-C; sem alterar SQL, secrets, provider ou deploy
+**Escopo:** planejamento técnico + status das extrações JS V76, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3, inventário CSS-A, baseline CSS-B e micro-splits CSS-C/C.2; sem alterar SQL, secrets, provider ou deploy
 
 ---
 
@@ -14,7 +14,7 @@ hotspots ainda relevantes do frontend:
 | Hotspot | Estado atual medido em 2026-06-15 | Risco principal |
 |---|---:|---|
 | `assets/js/api/kc-api.client.js` | 1.459 linhas / 56.513 bytes | regressão de contrato público `window.KCAPI`, paridade local/supabase e fluxos autenticados |
-| `assets/css/styles.css` | 12.161 linhas / 284.046 bytes | regressão visual transversal em páginas públicas/admin e quebra de cascade |
+| `assets/css/styles.css` | 12.089 linhas / 281.919 bytes | regressão visual transversal em páginas públicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
 Este plano nao autoriza split imediato. Ele define a ordem, os gates e os criterios de No-Go para
@@ -172,6 +172,15 @@ registra `styles.css` com 12.161 linhas, 284.046 bytes, 1.753 regras e 1.974 sel
 `Admin overlap` cai para 12 regras / 12 seletores / 63 linhas. A evidência está em
 `docs/qa/reports/report-v76-css-admin-nav-micro-split-2026-06-15.md`.
 
+**Status v76.15.0:** CSS-C.2 moveu o restante do bucket `Admin overlap` para
+`assets/css/admin-shell.css`, incluindo `.kc-admin-tab*`, `.kc-admin-tab-refresh*`,
+`.kc-admin-invite-feedback.is-*` e o ajuste mobile de `.kc-admin-wrapper`. O parse atual registra
+`styles.css` com 12.089 linhas, 281.919 bytes, 1.741 regras e 1.962 seletores; o bucket
+`Admin overlap` cai para 0 regras / 0 seletores / 0 linhas. O candidato de produto foi bloqueado
+para split simples porque `.kc-save-popover*` também atende `my-posts.html`, que não carrega
+`product.css`. A evidência está em
+`docs/qa/reports/report-v76-css-admin-overlap-micro-split-2026-06-15.md`.
+
 ### 4.4 Gates obrigatorios para qualquer PR CSS
 
 - Gate V27 de visual/a11y com rotas afetadas.
@@ -231,6 +240,7 @@ JS e CSS no mesmo PR:
 | CSS-A | Inventário de ownership de seletores de `styles.css` | **Concluído em v76.8.0**; prepara split sem alterar cascade |
 | CSS-B | Baseline visual/cascade anônimo antes de split de `styles.css` | **Concluído em v76.9.0**; cria evidência antes/depois para micro-splits futuros |
 | CSS-C | Micro-split da navegação admin | **Concluído em v76.14.0**; `.kc-admin-nav*` agora fica em `admin-shell.css` |
+| CSS-C.2 | Micro-split do overlap admin remanescente | **Concluído em v76.15.0**; `Admin overlap` zerado em `styles.css` |
 
 **Status 2026-06-12:** JS-A foi entregue em
 `docs/qa/reports/report-v76-kcapi-public-surface-2026-06-12.md`, com snapshot de 107 membros
@@ -294,6 +304,11 @@ inalterado.
 reduzindo `styles.css` para 12.161 linhas / 284.046 bytes e mantendo 24 capturas de baseline com
 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
 
-Próxima entrega recomendada: escolher uma frente única, sem misturar no mesmo PR: CSS-C.2 para
-outro seletor pequeno e visível no baseline anônimo, CSS-B autenticado para dashboard admin real ou
+**Status v76.15.0:** CSS-C.2 moveu o bucket `Admin overlap` remanescente para
+`assets/css/admin-shell.css`, reduzindo `styles.css` para 12.089 linhas / 281.919 bytes,
+1.741 regras / 1.962 seletores e mantendo 24 capturas de baseline com 0 respostas falhas,
+0 overflow horizontal e 0 carregamentos de `future-split/`.
+
+Próxima entrega recomendada: escolher uma frente única, sem misturar no mesmo PR: CSS-C.3 em
+`Chat overlap` se o atalho global for preservado, CSS-B autenticado para dashboard admin real ou
 investigação documental do `bootstrap-driver-core` sem extração imediata.
