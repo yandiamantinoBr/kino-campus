@@ -1,8 +1,8 @@
 # V76 CSS-B - Baseline Visual Pre-Split de `styles.css`
 
-**Versao:** v76.9.0
-**Data:** 2026-06-12
-**Escopo:** baseline visual/cascade automatizado; sem alterar CSS, HTML, cascade, runtime ou `future-split/`
+**Versão:** v76.14.0
+**Data:** 2026-06-15
+**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C; sem alterar HTML, runtime ou `future-split/`
 
 ---
 
@@ -113,13 +113,25 @@ No-Go para CSS-C:
 
 ## 6. Proxima etapa recomendada
 
+Atualização v76.14.0: o baseline foi usado em CSS-C para mover `.kc-admin-nav*` de
+`styles.css` para `admin-shell.css`. Foram geradas três rodadas locais:
+
+- `output/playwright/css-baseline/v76-css-c-admin-nav-before-2026-06-15/`
+- `output/playwright/css-baseline/v76-css-c-admin-nav-after-2026-06-15/`
+- `output/playwright/css-baseline/v76-css-c-admin-nav-after-repeat-2026-06-15/`
+
+As três rodadas capturaram 24 screenshots, 0 respostas falhas, 0 overflow horizontal e 0
+carregamentos de `future-split/`. Os hashes não foram tratados como prova pixel-perfect porque
+recursos externos oscilaram com `ERR_CONNECTION_RESET` e a própria repetição pós-mudança gerou
+hashes diferentes em rotas não tocadas. A evidência detalhada está em
+`docs/qa/reports/report-v76-css-admin-nav-micro-split-2026-06-15.md`.
+
 Escolher uma trilha unica:
 
-1. **CSS-C micro-split com evidencia antes/depois:** apenas se o seletor estiver visivel nas rotas
+1. **CSS-C.2 micro-split com evidência antes/depois:** apenas se o seletor estiver visível nas rotas
    cobertas pelo baseline anonimo atual, ou se houver baseline autenticado adicional.
 2. **CSS-B admin autenticado:** capturar dashboard admin real com credenciais controladas, caso o
    proximo candidato seja `admin-shell.css`.
-3. **JS-I.1 external access admin:** seguir o inventario residual em
-   `docs/planning/v76-kcapi-residual-inventory.md`, movendo apenas 2 wrappers / 14 linhas, sem tocar CSS.
+3. **JS documental:** investigar o bucket residual `bootstrap-driver-core` sem extração imediata.
 
 Nao iniciar extracao ampla de `styles.css` diretamente a partir deste baseline.

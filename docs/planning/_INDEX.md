@@ -27,10 +27,10 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v51-functional-no-go-register.md` | Registro V51 de No-Go para bloquear implementacao funcional sem gates/evidencias completos |
 | `v52-functional-gate-traceability.md` | Matriz V52 de rastreabilidade entre gates, evidencias e decisao Go/No-Go |
 | `v53-functional-patch-manifest.md` | Manifesto V53 de filescope, risco, teste e rollback antes do primeiro patch funcional |
-| `v76-hotspot-decomposition-plan.md` | Plano V76 para decomposicao segura de `kc-api.client.js` e `styles.css` sem misturar trilhas JS/CSS |
+| `v76-hotspot-decomposition-plan.md` | Plano V76 para decomposição segura de `kc-api.client.js` e `styles.css`, atualizado após CSS-C |
 | `v76-kcapi-residual-inventory.md` | Inventário JS-I dos buckets residuais da fachada `KCAPI`, atualizado após JS-I.3 e sem novo candidato JS pequeno equivalente |
-| `v76-css-ownership-inventory.md` | Inventario CSS-A de ownership de `styles.css` antes de split, extracao ou ativacao de `future-split/` |
-| `v76-css-visual-baseline.md` | Baseline CSS-B visual/cascade para rotas publicas, usuario/chat e admin estatico antes de qualquer split real |
+| `v76-css-ownership-inventory.md` | Inventário CSS-A/C de ownership de `styles.css`, atualizado após o micro-split da navegação admin |
+| `v76-css-visual-baseline.md` | Baseline CSS-B/C visual/cascade para rotas públicas, usuário/chat e admin estático antes/depois de micro-splits |
 
 ## Regras
 

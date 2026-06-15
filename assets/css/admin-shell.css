@@ -119,6 +119,128 @@ body.kc-admin-page .kc-header--admin .kc-admin-nav {
   justify-content: center;
 }
 
+/* Admin navigation base moved from styles.css in V76 CSS-C. */
+.kc-admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.kc-admin-nav::-webkit-scrollbar { display: none; }
+
+.kc-admin-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  color: var(--kc-text-dark-secondary);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all var(--transition-speed) ease;
+  flex-shrink: 0;
+}
+
+.kc-admin-nav__link:hover {
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  text-decoration: none;
+  border-color: var(--kc-border-dark);
+}
+
+.kc-admin-nav__link.active {
+  background: rgba(255, 107, 0, 0.12);
+  color: var(--kc-primary-brand);
+  border-color: rgba(255, 107, 0, 0.25);
+  font-weight: 600;
+}
+
+.kc-admin-nav__back {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.kc-header--admin .kc-header-container {
+  flex-wrap: nowrap !important;
+  gap: 10px;
+}
+
+.kc-header--admin .kc-admin-nav {
+  flex: 1 1 0%;
+  min-width: 0;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.kc-header--admin .kc-user-actions {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  flex-shrink: 0 !important;
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .kc-header--admin .kc-admin-nav { gap: 2px; }
+
+  .kc-admin-nav__link {
+    padding: 6px 8px;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .kc-header--admin .kc-admin-nav { display: none; }
+
+  .kc-admin-nav__link {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    gap: 5px;
+  }
+
+  .kc-admin-nav__link i { font-size: 0.85em; }
+
+  .kc-header--admin .kc-header-container {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .kc-header--admin .kc-user-actions {
+    flex-shrink: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .kc-header--admin .kc-logo {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .kc-header--admin .kc-header-container {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .kc-header--admin .kc-header-user__name,
+  .kc-header--admin .kc-header-user__verified {
+    display: none;
+  }
+
+  .kc-header--admin .kc-user-actions a.btn-login.is-auth {
+    padding: 3px 6px;
+  }
+}
+
 body.kc-admin-page .kc-header--admin .kc-user-actions {
   position: relative;
   z-index: 4;

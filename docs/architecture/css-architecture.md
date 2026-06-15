@@ -1,10 +1,10 @@
 # Arquitetura CSS - KinoCampus
 
-**Versao:** v76.9.0
-**Atualizado em:** 2026-06-12
+**Versão:** v76.14.0
+**Atualizado em:** 2026-06-15
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
-> baseline visual CSS-B e status dos stubs `assets/css/future-split/`.
+> baseline visual CSS-B/C, micro-split da navegação admin e status dos stubs `assets/css/future-split/`.
 
 ---
 
@@ -15,9 +15,9 @@ Todos os estilos de producao sao carregados por `<link rel="stylesheet">` direta
 
 ```text
 assets/css/
-|-- styles.css              12.282 linhas / 287.760 bytes
+|-- styles.css              12.161 linhas / 284.046 bytes
 |-- product.css              1.784 linhas / 45.373 bytes
-|-- admin-shell.css          1.277 linhas / 34.043 bytes
+|-- admin-shell.css          1.399 linhas / 36.459 bytes
 |-- kc-public-shell.css        943 linhas / 20.456 bytes
 |-- kc-chat.css                710 linhas / 16.367 bytes
 |-- product-lightbox.css       299 linhas / 8.064 bytes
@@ -25,10 +25,10 @@ assets/css/
 `-- future-split/             5 stubs documentais, nao carregados
 ```
 
-**Total CSS de producao:** 17.508 linhas / 418.018 bytes.
+**Total CSS de producao:** 17.509 linhas / 416.720 bytes.
 
-O monolito `styles.css` segue sendo o principal hotspot visual: 12.282 linhas, 287.760 bytes,
-1.774 regras parseadas e 1.995 seletores parseados por `npm run audit:css`.
+O monólito `styles.css` segue sendo o principal hotspot visual: 12.161 linhas, 284.046 bytes,
+1.753 regras parseadas e 1.974 seletores parseados por `npm run audit:css`.
 
 ---
 
@@ -36,7 +36,7 @@ O monolito `styles.css` segue sendo o principal hotspot visual: 12.282 linhas, 2
 
 | Arquivo | Escopo atual | Carga |
 |---|---|---|
-| `styles.css` | tokens, base, layout global, componentes, feed, cards, ranking, modulos publicos e patches responsivos | 27 HTMLs descobertos |
+| `styles.css` | tokens, base, layout global, componentes, feed, cards, ranking, módulos públicos e patches responsivos remanescentes | 27 HTMLs descobertos |
 | `kc-theme-boot.css` | CSS critico anti-FOUC/CLS durante aplicacao inicial de tema | 27 HTMLs descobertos |
 | `admin-shell.css` | shell e componentes das 6 paginas admin | 6 HTMLs admin |
 | `kc-public-shell.css` | profile, settings, account setup, legal/privacidade/transparencia, ajuda e mensagens | 9 paginas, 10 links |
@@ -82,7 +82,7 @@ Resumo do parse:
 | Layout e navegacao globais | 336 | 229 | permanece global |
 | Feed, cards e ranking | 282 | 189 | permanece global |
 | Componentes compartilhados | 260 | 242 | global; candidato a `future-split` apos prova |
-| Admin overlap | 24 | 20 | candidato a `admin-shell.css` apos baseline |
+| Admin overlap | 12 | 12 | reduzido em CSS-C; remanescente exige análise própria |
 | Produto overlap | 7 | 4 | candidato a `product.css`/`product-lightbox.css` apos baseline |
 | Public shell/profile/legal overlap | 137 | 134 | candidato a `kc-public-shell.css` apos baseline |
 | Chat overlap | 7 | 7 | candidato condicional a `kc-chat.css` |
@@ -112,7 +112,7 @@ dedicado com prova de ordem, comparacao visual e rollback.
 
 ---
 
-## 6. Baseline CSS-B
+## 6. Baseline CSS-B/C
 
 O baseline visual/cascade canonico da etapa CSS-B esta em
 [`docs/planning/v76-css-visual-baseline.md`](../planning/v76-css-visual-baseline.md).
@@ -126,6 +126,12 @@ npm run audit:css-baseline
 A rodada de 2026-06-12 capturou 24 screenshots em `output/playwright/css-baseline/`:
 12 rotas em desktop `1366x900` e mobile `390x844`, com 0 respostas falhas, 0 overflow horizontal,
 0 erros de console/pagina e 0 carregamentos de `future-split/`.
+
+Em 2026-06-15, CSS-C usou o mesmo mecanismo para o micro-split `.kc-admin-nav*`, com rodadas
+antes/depois/repetida em `output/playwright/css-baseline/v76-css-c-admin-nav-*`. As três rodadas
+tiveram 24 capturas, 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
+Os hashes foram tratados como apoio, não como prova única, porque recursos externos oscilaram com
+`ERR_CONNECTION_RESET` entre capturas.
 
 Limitacao: o baseline admin atual e anonimo/sem sessao. Ele cobre o shell estatico e o gate admin,
 mas nao substitui baseline autenticado antes de mover seletores visiveis apenas no dashboard real.
