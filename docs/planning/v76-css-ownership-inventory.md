@@ -1,8 +1,8 @@
 # V76 CSS-A - Inventario de Ownership de `styles.css`
 
-**Versao:** v76.8.0
-**Data:** 2026-06-12
-**Escopo:** inventario documental + script assistivo; sem alterar CSS, HTML, cascade, runtime ou `future-split/`
+**Versão:** v76.14.0
+**Data:** 2026-06-15
+**Escopo:** inventário documental + status pós-CSS-C; o inventário original não alterou CSS, e a atualização v76.14.0 registra o micro-split admin já evidenciado
 
 ---
 
@@ -145,13 +145,20 @@ Atualizacao v76.10.0: a trilha **JS-I inventario residual da fachada KCAPI** foi
 `docs/planning/v76-kcapi-residual-inventory.md` e registrada em
 `docs/qa/reports/report-v76-kcapi-residual-inventory-2026-06-12.md`.
 
+Atualização v76.14.0: a trilha **CSS-C micro-split admin nav** moveu o bloco `.kc-admin-nav*`
+de `assets/css/styles.css` para `assets/css/admin-shell.css`, sem alterar HTML, JS, ordem de links
+ou `future-split/`. A nova rodada de `npm run audit:css` mede `styles.css` com 12.161 linhas,
+284.046 bytes, 1.753 regras e 1.974 seletores; `admin-shell.css` passa a 1.399 linhas /
+36.459 bytes; o bucket `Admin overlap` cai para 12 regras / 12 seletores / 63 linhas.
+A evidência está em `docs/qa/reports/report-v76-css-admin-nav-micro-split-2026-06-15.md`.
+
 Escolher uma trilha unica para a proxima entrega:
 
-1. **CSS-C micro-split:** apenas para seletor visivel nas rotas cobertas pelo baseline anonimo, com
-   before/after e rollback.
+1. **CSS-C.2 micro-split:** apenas para outro seletor visível nas rotas cobertas pelo baseline
+   anônimo, com before/after e rollback.
 2. **CSS-B admin autenticado:** capturar dashboard admin real antes de mover seletores que so
    aparecem no estado autenticado.
-3. **JS-I.1 external access admin:** mover apenas 2 wrappers / 14 linhas, com teste de driver fallback,
-   sem tocar CSS.
+3. **JS documental:** investigar `bootstrap-driver-core` sem extração imediata, porque o candidato
+   JS residual é P3 e tem custo/risco maior que micro-splits CSS pequenos.
 
 Nao iniciar extracao ampla de seletores diretamente a partir deste inventario.

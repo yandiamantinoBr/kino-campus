@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.13.0 (2026-06-15)** — contagens após inventário CSS-A, baseline CSS-B visual/cascade, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3 na fachada `KCAPI` e runtime frontend `8.6.1`.
+> **Atualizado em v76.14.0 (2026-06-15)** — contagens após inventário CSS-A, baseline CSS-B/C visual/cascade, micro-split CSS-C da navegação admin, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3 na fachada `KCAPI` e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -158,7 +158,7 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.13.0 / 2026-06-15** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
+> **Atualizado em v76.14.0 / 2026-06-15** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
@@ -168,15 +168,15 @@ A linha v10 consolidou:
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
 | utilitários globais | `assets/js/utils/kc-utils.js` (~440L) | ✅ Decomposto em 7 sub-módulos `_KCU.*` | impacto transversal amplo |
 | admin dashboard | `assets/js/controllers/admin/admin-dashboard.controller.js` | ✅ Decomposto em 3 auxiliares `_KCAD.*` | KPIs, ranking, audit log e export |
-| design system global | `assets/css/styles.css` (12.282L / 287.760 bytes) | ⚠️ Monolito preservado; CSS-A mapeou 1.774 regras / 1.995 seletores; CSS-B capturou 24 screenshots anonimos; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
+| design system global | `assets/css/styles.css` (12.161L / 284.046 bytes) | ⚠️ Monólito reduzido em CSS-C; `.kc-admin-nav*` passou para `admin-shell.css`; CSS-A/C mede 1.753 regras / 1.974 seletores; CSS-B/C capturou 24 screenshots por rodada; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
 
 ## Arquitetura CSS
 
 | Arquivo | Tamanho aprox. | Papel |
 |---------|----------------|-------|
-| `assets/css/styles.css` | `281.0 KB` | base global de layout, componentes e tema |
+| `assets/css/styles.css` | `277.4 KB` | base global de layout, componentes e tema |
 | `assets/css/product.css` | `44.3 KB` | especificidades da página de produto |
-| `assets/css/admin-shell.css` | `33.2 KB` | shell e responsividade do admin |
+| `assets/css/admin-shell.css` | `35.6 KB` | shell, navegação e responsividade do admin |
 | `assets/css/kc-public-shell.css` | `20.0 KB` | páginas públicas compartilhadas e superfícies de perfil |
 | `assets/css/kc-chat.css` | `16.0 KB` | UI de conversa/chat |
 | `assets/css/kc-theme-boot.css` | `5.8 KB` | CSS crítico anti-FOUC |
@@ -184,8 +184,8 @@ A linha v10 consolidou:
 
 Inventario CSS-A: `npm run audit:css` e
 `docs/planning/v76-css-ownership-inventory.md` classificam ownership antes de qualquer split.
-Baseline CSS-B: `npm run audit:css-baseline` e
-`docs/planning/v76-css-visual-baseline.md` capturam evidencia visual/cascade anonima antes de mudancas CSS.
+Baseline CSS-B/C: `npm run audit:css-baseline` e
+`docs/planning/v76-css-visual-baseline.md` capturam evidência visual/cascade anônima antes/depois de mudanças CSS pequenas.
 
 Inventario JS-I: `npm run audit:kcapi-residual` e
 `docs/planning/v76-kcapi-residual-inventory.md` classificam os buckets residuais da fachada `KCAPI`
@@ -219,5 +219,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.11.0 (2026-06-13):** JS-I.1 move a decisão de driver de external access admin para `assets/js/api/kc-api.help.js`, preserva `KCAPI.listExternalAccessRequests`/`KCAPI.decideExternalAccessRequest`, remove o bucket direto `admin-external-access-direct-driver` do inventário residual e adiciona `tests/contract/kc-api-external-access-contract.test.js`; Jest sobe para 175 suites / 3574 testes.
 - **v76.12.0 (2026-06-15):** JS-I.2 remove `buildFallbackNotificationPreferences` e `buildFallbackNotificationChannelTargets` da fachada `KCAPI`; os defaults canônicos permanecem em `assets/js/api/kc-api.notifications.js`, o inventário residual cai para 143 declarações `function` e 11 buckets, e Jest permanece em 175 suites / 3574 testes.
 - **v76.13.0 (2026-06-15):** JS-I.3 remove `emitPostMutation`, `isPostMutationOk` e `getPostMutationData` da fachada `KCAPI`; a ponte de freshness de mutações passa para `assets/js/api/kc-api.posts-write.js`, o inventário residual cai para 141 declarações `function` e 10 buckets, e Jest sobe para 175 suites / 3577 testes.
+- **v76.14.0 (2026-06-15):** CSS-C move `.kc-admin-nav*` de `styles.css` para `admin-shell.css`; `styles.css` reduz para 12.161 linhas / 284.046 bytes, `admin-shell.css` sobe para 1.399 linhas / 36.459 bytes, e o bucket `Admin overlap` cai para 12 regras / 12 seletores / 63 linhas.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.
