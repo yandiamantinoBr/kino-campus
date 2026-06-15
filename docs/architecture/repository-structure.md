@@ -82,6 +82,7 @@ kino-campus/
 |   |   |-- kc-public-shell.css
 |   |   |-- admin-shell.css
 |   |   |-- kc-chat.css
+|   |   |-- kc-chat-shortcut.css
 |   |   |-- product.css
 |   |   |-- product-lightbox.css
 |   |   `-- future-split/          5 stubs nao carregados em producao
@@ -195,11 +196,12 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/kc-public-shell.css` | Producao | Shell publico |
 | `assets/css/admin-shell.css` | Producao | Shell admin |
 | `assets/css/kc-chat.css` | Producao | UI de conversa/chat |
+| `assets/css/kc-chat-shortcut.css` | Producao | Atalho global de mensagens injetado por notificacoes |
 | `assets/css/product.css` | Producao | Pagina de produto |
 | `assets/css/product-lightbox.css` | Producao | Lightbox de midia da pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
-O split CSS segue pendente de execução funcional. V27 define o gate visual/a11y mínimo antes de qualquer alteração CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css`; V76.9 adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md` para capturar baseline anônimo sem alterar cascade, HTML ou `future-split/`. V76.10 adiciona `scripts/audit-kcapi-facade-residual.js`, `npm run audit:kcapi-residual` e `docs/planning/v76-kcapi-residual-inventory.md` para classificar os buckets residuais da fachada `KCAPI`; V76.11 move external access admin para `kc-api.help.js`; V76.12 move os builders canônicos de notification fallbacks para `kc-api.notifications.js`; V76.13 move a ponte `emitPostMutation` para `kc-api.posts-write.js` e deixa `bootstrap-driver-core` como único candidato JS residual listado, sem extração imediata.
+O split CSS segue controlado por gates. V27 define o gate visual/a11y mínimo antes de qualquer alteração CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css`; V76.9 adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md` para capturar baseline anônimo sem alterar cascade, HTML ou `future-split/`. V76.10 adiciona `scripts/audit-kcapi-facade-residual.js`, `npm run audit:kcapi-residual` e `docs/planning/v76-kcapi-residual-inventory.md` para classificar os buckets residuais da fachada `KCAPI`; V76.11 move external access admin para `kc-api.help.js`; V76.12 move os builders canônicos de notification fallbacks para `kc-api.notifications.js`; V76.13 move a ponte `emitPostMutation` para `kc-api.posts-write.js`; V76.14/V76.15 encerram `Admin overlap`; V76.17 encerra `Chat overlap` com `kc-chat-shortcut.css`; `bootstrap-driver-core` continua como candidato JS residual listado, sem extração imediata.
 
 ---
 

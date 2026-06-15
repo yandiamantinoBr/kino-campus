@@ -72,7 +72,7 @@ kino-campus/
 │   controllers/
 │   ├── public/       (33)      ← controllers das páginas públicas
 │   └── admin/        (15)      ← controllers das páginas admin
-├── assets/css/                 ← 7 arquivos CSS de produção
+├── assets/css/                 ← 8 arquivos CSS de produção
 ├── assets/css/future-split/    ← stubs não carregados (não modificar)
 ├── data/database.json          ← fixture para driver local
 ├── docs/                       ← Toda documentação técnica

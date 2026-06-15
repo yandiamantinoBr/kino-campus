@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.15.0 (2026-06-15)** — contagens após inventário CSS-A, baseline CSS-B/C visual/cascade, micro-splits CSS-C/C.2 admin, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3 na fachada `KCAPI` e runtime frontend `8.6.1`.
+> **Atualizado em v76.17.0 (2026-06-15)** — contagens após inventário CSS-A, baseline CSS-B/C visual/cascade, micro-splits CSS-C/C.2/C.3, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3 na fachada `KCAPI` e runtime frontend `8.6.1`.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -17,9 +17,9 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | controllers em `assets/js/controllers/` (public + admin) | `48` |
 | adapters em `assets/js/adapters/` (local + supabase) | `21` |
 | componentes em `assets/js/components/` | `3` |
-| arquivos CSS em `assets/css/` (produção) | `7` |
+| arquivos CSS em `assets/css/` (produção) | `8` |
 | suites de teste Jest em `tests/` | `175` |
-| testes Jest totais | `3577` |
+| testes Jest totais | `3578` |
 | specs E2E Playwright | `9` |
 
 ## Princípio estrutural
@@ -158,7 +158,7 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.15.0 / 2026-06-15** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
+> **Atualizado em v76.17.0 / 2026-06-15** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
@@ -168,17 +168,18 @@ A linha v10 consolidou:
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
 | utilitários globais | `assets/js/utils/kc-utils.js` (~440L) | ✅ Decomposto em 7 sub-módulos `_KCU.*` | impacto transversal amplo |
 | admin dashboard | `assets/js/controllers/admin/admin-dashboard.controller.js` | ✅ Decomposto em 3 auxiliares `_KCAD.*` | KPIs, ranking, audit log e export |
-| design system global | `assets/css/styles.css` (12.089L / 281.919 bytes) | ⚠️ Monólito reduzido em CSS-C/C.2; `.kc-admin-nav*` e o overlap admin remanescente passaram para `admin-shell.css`; CSS-A/C mede 1.741 regras / 1.962 seletores; CSS-B/C capturou 24 screenshots por rodada; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
+| design system global | `assets/css/styles.css` (12.028L / 280.599 bytes) | ⚠️ Monólito reduzido em CSS-C/C.2/C.3; `.kc-admin-nav*` e o overlap admin passaram para `admin-shell.css`, e o atalho global de mensagens passou para `kc-chat-shortcut.css`; CSS-A/C mede 1.734 regras / 1.954 seletores; CSS-B/C capturou 24 screenshots por rodada; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
 
 ## Arquitetura CSS
 
 | Arquivo | Tamanho aprox. | Papel |
 |---------|----------------|-------|
-| `assets/css/styles.css` | `275.3 KB` | base global de layout, componentes e tema |
+| `assets/css/styles.css` | `274.0 KB` | base global de layout, componentes e tema |
 | `assets/css/product.css` | `44.3 KB` | especificidades da página de produto |
 | `assets/css/admin-shell.css` | `37.7 KB` | shell, navegação e responsividade do admin |
 | `assets/css/kc-public-shell.css` | `20.0 KB` | páginas públicas compartilhadas e superfícies de perfil |
 | `assets/css/kc-chat.css` | `16.0 KB` | UI de conversa/chat |
+| `assets/css/kc-chat-shortcut.css` | `1.3 KB` | atalho global de mensagens injetado por notificações |
 | `assets/css/kc-theme-boot.css` | `5.8 KB` | CSS crítico anti-FOUC |
 | `assets/css/product-lightbox.css` | `7.9 KB` | lightbox de mídia da página de produto |
 
@@ -221,5 +222,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.13.0 (2026-06-15):** JS-I.3 remove `emitPostMutation`, `isPostMutationOk` e `getPostMutationData` da fachada `KCAPI`; a ponte de freshness de mutações passa para `assets/js/api/kc-api.posts-write.js`, o inventário residual cai para 141 declarações `function` e 10 buckets, e Jest sobe para 175 suites / 3577 testes.
 - **v76.14.0 (2026-06-15):** CSS-C move `.kc-admin-nav*` de `styles.css` para `admin-shell.css`; `styles.css` reduz para 12.161 linhas / 284.046 bytes, `admin-shell.css` sobe para 1.399 linhas / 36.459 bytes, e o bucket `Admin overlap` cai para 12 regras / 12 seletores / 63 linhas.
 - **v76.15.0 (2026-06-15):** CSS-C.2 move `.kc-admin-tab*`, `.kc-admin-tab-refresh*`, `.kc-admin-invite-feedback.is-*` e o ajuste mobile de `.kc-admin-wrapper` para `admin-shell.css`; `styles.css` reduz para 12.089 linhas / 281.919 bytes, `admin-shell.css` sobe para 1.471 linhas / 38.565 bytes, e o bucket `Admin overlap` cai para 0 regras / 0 seletores / 0 linhas.
+- **v76.17.0 (2026-06-15):** CSS-C.3 move o atalho global de mensagens para `assets/css/kc-chat-shortcut.css`, carregado nas 27 páginas com `kc-notifications.js`; `styles.css` reduz para 12.028 linhas / 280.599 bytes, 1.734 regras / 1.954 seletores, e o bucket `Chat overlap` cai para 0 regras / 0 seletores / 0 linhas.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

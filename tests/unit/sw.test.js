@@ -37,6 +37,7 @@ describe('sw.js — integridade', function () {
 
   test('SHELL_ASSETS inclui os arquivos CSS obrigatórios', function () {
     expect(SW).toContain('/assets/css/styles.css');
+    expect(SW).toContain('/assets/css/kc-chat-shortcut.css');
     expect(SW).toContain('/assets/css/kc-public-shell.css');
   });
 

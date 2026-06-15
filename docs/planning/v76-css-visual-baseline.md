@@ -1,8 +1,8 @@
 # V76 CSS-B - Baseline Visual Pre-Split de `styles.css`
 
-**Versão:** v76.15.0
+**Versão:** v76.17.0
 **Data:** 2026-06-15
-**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C.2; sem alterar HTML, runtime ou `future-split/`
+**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C.3; sem ativar `future-split/`
 
 ---
 
@@ -138,12 +138,27 @@ carregamentos de `future-split/`. Nesta etapa, os hashes ficaram estáveis: 0 di
 antes/depois e 0 diferenças entre depois/repetição. A evidência detalhada está em
 `docs/qa/reports/report-v76-css-admin-overlap-micro-split-2026-06-15.md`.
 
+Atualização v76.17.0: o baseline foi usado em CSS-C.3 para mover o atalho global de mensagens de
+`styles.css` para `assets/css/kc-chat-shortcut.css`, carregado nas 27 páginas que já carregavam
+`assets/js/core/kc-notifications.js`. Foram geradas três rodadas locais:
+
+- `output/playwright/css-baseline/v76-css-c3-chat-shortcut-before-2026-06-15/`
+- `output/playwright/css-baseline/v76-css-c3-chat-shortcut-after-2026-06-15/`
+- `output/playwright/css-baseline/v76-css-c3-chat-shortcut-repeat-2026-06-15/`
+
+As três rodadas capturaram 24 screenshots, 0 respostas falhas, 0 overflow horizontal e 0
+carregamentos de `future-split/`. Os hashes ficaram estáveis: 0 diferenças entre antes/depois e
+0 diferenças entre depois/repetição. A checagem no navegador interno confirmou que `index.html` e
+`mensagens.html` carregam `kc-chat-shortcut.css`, mantêm `.kc-chat-shortcut` e `.kc-chat-mobile-fab`
+no DOM e preservam `position: relative` no atalho. A evidência detalhada está em
+`docs/qa/reports/report-v76-css-chat-shortcut-micro-split-2026-06-15.md`.
+
 Escolher uma trilha unica:
 
-1. **CSS-C.3 micro-split com evidência antes/depois:** apenas se o seletor estiver visível nas rotas
-   cobertas pelo baseline anônimo atual, ou se houver baseline autenticado adicional.
-2. **CSS-B admin autenticado:** capturar dashboard admin real com credenciais controladas, caso o
+1. **CSS-B admin autenticado:** capturar dashboard admin real com credenciais controladas, caso o
    proximo candidato seja `admin-shell.css`.
+2. **Public shell micro-split:** só mover um subgrupo de `Public shell/profile/legal overlap` se as
+   rotas afetadas carregarem `kc-public-shell.css` e tiverem baseline específico.
 3. **JS documental:** investigar o bucket residual `bootstrap-driver-core` sem extração imediata.
 
 Nao iniciar extracao ampla de `styles.css` diretamente a partir deste baseline.

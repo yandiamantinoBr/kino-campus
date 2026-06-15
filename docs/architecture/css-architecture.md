@@ -1,10 +1,10 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.15.0
+**Versão:** v76.17.0
 **Atualizado em:** 2026-06-15
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
-> baseline visual CSS-B/C, micro-splits admin CSS-C/C.2 e status dos stubs `assets/css/future-split/`.
+> baseline visual CSS-B/C, micro-splits CSS-C/C.2/C.3 e status dos stubs `assets/css/future-split/`.
 
 ---
 
@@ -15,20 +15,21 @@ Todos os estilos de producao sao carregados por `<link rel="stylesheet">` direta
 
 ```text
 assets/css/
-|-- styles.css              12.089 linhas / 281.919 bytes
+|-- styles.css              12.028 linhas / 280.599 bytes
 |-- product.css              1.784 linhas / 45.373 bytes
-|-- admin-shell.css          1.471 linhas / 38.565 bytes
+|-- admin-shell.css          1.471 linhas / 38.653 bytes
 |-- kc-public-shell.css        943 linhas / 20.456 bytes
 |-- kc-chat.css                710 linhas / 16.367 bytes
 |-- product-lightbox.css       299 linhas / 8.064 bytes
 |-- kc-theme-boot.css          213 linhas / 5.955 bytes
+|-- kc-chat-shortcut.css        60 linhas / 1.327 bytes
 `-- future-split/             5 stubs documentais, nao carregados
 ```
 
-**Total CSS de producao:** 17.509 linhas / 416.699 bytes.
+**Total CSS de producao:** 17.508 linhas / 416.794 bytes.
 
-O monólito `styles.css` segue sendo o principal hotspot visual: 12.089 linhas, 281.919 bytes,
-1.741 regras parseadas e 1.962 seletores parseados por `npm run audit:css`.
+O monólito `styles.css` segue sendo o principal hotspot visual: 12.028 linhas, 280.599 bytes,
+1.734 regras parseadas e 1.954 seletores parseados por `npm run audit:css`.
 
 ---
 
@@ -38,6 +39,7 @@ O monólito `styles.css` segue sendo o principal hotspot visual: 12.089 linhas, 
 |---|---|---|
 | `styles.css` | tokens, base, layout global, componentes, feed, cards, ranking, módulos públicos e patches responsivos remanescentes | 27 HTMLs descobertos |
 | `kc-theme-boot.css` | CSS critico anti-FOUC/CLS durante aplicacao inicial de tema | 27 HTMLs descobertos |
+| `kc-chat-shortcut.css` | atalho global de mensagens injetado por `kc-notifications.js` | 27 HTMLs descobertos |
 | `admin-shell.css` | shell e componentes das 6 paginas admin | 6 HTMLs admin |
 | `kc-public-shell.css` | profile, settings, account setup, legal/privacidade/transparencia, ajuda e mensagens | 9 paginas, 10 links |
 | `product.css` | detalhe de publicacao/produto | `_product.html` |
@@ -57,6 +59,7 @@ Fonte: `npm run audit:css`, que varre os HTMLs da raiz e de `admin/`.
 |---|---|---:|
 | `styles.css` | `8.6.4 x27` | 27 |
 | `kc-theme-boot.css` | `8.6.1 x27` | 27 |
+| `kc-chat-shortcut.css` | `8.6.1 x27` | 27 |
 | `admin-shell.css` | `8.6.1 x6` | 6 |
 | `kc-public-shell.css` | `8.6.1 x10` | 9 |
 | `product.css` | `8.6.1 x1` | 1 |
@@ -85,7 +88,7 @@ Resumo do parse:
 | Admin overlap | 0 | 0 | encerrado em CSS-C.2 |
 | Produto overlap | 7 | 4 | bloqueado para split simples; `.kc-save-popover*` também atende `my-posts.html` |
 | Public shell/profile/legal overlap | 136 | 133 | candidato a `kc-public-shell.css` após baseline |
-| Chat overlap | 7 | 7 | candidato condicional a `kc-chat.css` |
+| Chat overlap | 0 | 0 | encerrado em CSS-C.3; atalho global em `kc-chat-shortcut.css` |
 | Create-post/modal/uploader | 8 | 10 | permanece global ate existir rota CSS ou split aprovado |
 | Modulos publicos de pagina | 146 | 141 | bloqueado para split futuro |
 | Revisao manual | 522 | 388 | revisao manual obrigatoria antes de mover |
@@ -137,6 +140,11 @@ Ainda em 2026-06-15, CSS-C.2 usou o mesmo mecanismo para remover o restante do b
 `styles.css`. As rodadas `v76-css-c2-admin-overlap-before-*`, `after-*` e `repeat-*` tiveram 24
 capturas, 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`; os hashes
 ficaram estáveis, com 0 diferenças entre antes/depois e depois/repetição.
+
+CSS-C.3 usou o mesmo mecanismo para remover o bucket `Chat overlap` de `styles.css` e criar
+`kc-chat-shortcut.css`. As rodadas `v76-css-c3-chat-shortcut-before-*`, `after-*` e `repeat-*`
+tiveram 24 capturas, 0 respostas falhas, 0 overflow horizontal, 0 carregamentos de `future-split/`
+e 0 diferenças de hash entre antes/depois e depois/repetição.
 
 Limitacao: o baseline admin atual e anonimo/sem sessao. Ele cobre o shell estatico e o gate admin,
 mas nao substitui baseline autenticado antes de mover seletores visiveis apenas no dashboard real.

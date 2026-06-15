@@ -26,6 +26,7 @@ function asset(path) {
 
 var SHELL_ASSETS = [
   asset('/assets/css/styles.css'),
+  asset('/assets/css/kc-chat-shortcut.css'),
   asset('/assets/css/kc-public-shell.css'),
   asset('/assets/js/boot/kc-constants.js'),
   asset('/assets/js/boot/kc-env.js'),

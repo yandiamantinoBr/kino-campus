@@ -17,7 +17,7 @@ const BUCKETS = [
   {
     id: 'admin-overlap',
     label: 'Admin overlap',
-    target: 'Candidato a admin-shell.css apos baseline visual',
+    target: 'Encerrado em CSS-C.2; admin-shell.css',
   },
   {
     id: 'product-overlap',
@@ -32,7 +32,7 @@ const BUCKETS = [
   {
     id: 'chat-overlap',
     label: 'Chat overlap',
-    target: 'Candidato a kc-chat.css somente se nao for atalho global',
+    target: 'Encerrado em CSS-C.3; atalho global em kc-chat-shortcut.css',
   },
   {
     id: 'create-post-modal-uploader',
