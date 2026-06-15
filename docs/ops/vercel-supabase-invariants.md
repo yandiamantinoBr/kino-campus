@@ -70,7 +70,10 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - opcionalmente `REPORTS_THRESHOLD`
   - opcionalmente `REPORTS_NOTIFY_COOLDOWN_HOURS`
 - O contrato dessa função não deve ser alterado nesta fase; o foco aqui é apenas manter a rastreabilidade operacional.
-- Estado remoto verificado (2026-06-11): a função não aparece na lista de Edge Functions deployadas no projeto Supabase principal. O trigger `trg_notify_admin_reports_threshold` (migration `v8.1.11.1`) está aplicado mas opera em fail-closed: sem `app.settings.kc_notify_function_url`, `app.settings.kc_notify_function_auth_token` e `app.settings.kc_notify_hmac_secret` configurados no banco, nenhuma requisição externa é disparada. Não publicar a função nem configurar esses settings sem antes definir o destino do webhook e gerar `KC_NOTIFY_HMAC_SECRET` forte.
+- Estado remoto verificado (2026-06-15): a função foi publicada no projeto Supabase principal (`wacyrkwhkvzwkqpolrbg`) como Edge Function `ACTIVE`, versão 1, `verify_jwt=true`, sha `374ec4256c0daf825ce1976fdf6afc58ee818ab20ddb743cde149dc5655a4476`.
+- A decisão operacional desta etapa foi **deploy-only**: não houve configuração de webhook, secret HMAC, app base URL, trigger settings ou alteração de migration. A checagem de secrets remotos confirmou ausência de `KC_NOTIFY_HMAC_SECRET`, `ADMIN_REPORTS_WEBHOOK_URL` e `KC_APP_BASE_URL`; portanto o alerta de threshold permanece deliberadamente não ativado.
+- O trigger `trg_notify_admin_reports_threshold` (migration `v8.1.11.1`) deve continuar operando em fail-closed enquanto não houver destino de webhook controlado, segredo HMAC forte e settings de banco (`app.settings.kc_notify_function_url`, `app.settings.kc_notify_function_auth_token`, `app.settings.kc_notify_hmac_secret`) validados. Não configurar esses settings apenas porque a function agora existe no remoto.
+
 ## 7. Edge Function de dispatch externo de notificações
 
 - A função `supabase/functions/kc-dispatch-notification-outbox/index.ts` depende de:

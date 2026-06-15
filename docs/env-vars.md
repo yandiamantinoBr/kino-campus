@@ -100,11 +100,15 @@ Inventario versionado no repo. O estado remoto deve ser confirmado antes de qual
 - `kc-invite-user`
 - `kc-dispatch-notification-outbox`
 
-Verificacao V75 (2026-06-11): `kc-dispatch-notification-outbox` estava ativa no projeto
-Supabase remoto, enquanto `notify-admin-reports-threshold` nao apareceu na lista remota de
-Edge Functions. Nao publicar ou configurar secrets dessa funcao sem nova validacao operacional.
+Verificação V76 (2026-06-15): `notify-admin-reports-threshold` foi publicada no projeto
+Supabase remoto (`wacyrkwhkvzwkqpolrbg`) como Edge Function `ACTIVE`, versão 1,
+`verify_jwt=true`, sha `374ec4256c0daf825ce1976fdf6afc58ee818ab20ddb743cde149dc5655a4476`.
+A publicação foi intencionalmente **deploy-only**: `KC_NOTIFY_HMAC_SECRET`,
+`ADMIN_REPORTS_WEBHOOK_URL` e `KC_APP_BASE_URL` seguem ausentes nos secrets remotos,
+e nenhum setting de banco foi configurado nesta etapa. Não ativar o envio real antes de
+definir webhook controlado, HMAC forte e settings `app.settings.kc_notify_*`.
 
-Para publicar:
+Para publicar ou republicar:
 
 ```bash
 supabase functions deploy notify-admin-reports-threshold

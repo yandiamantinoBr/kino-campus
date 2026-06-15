@@ -72,6 +72,7 @@
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
+| [qa/reports/report-v76-notify-admin-reports-threshold-deploy-2026-06-15.md](./qa/reports/report-v76-notify-admin-reports-threshold-deploy-2026-06-15.md) | evidência V76 do deploy controlado da Edge Function `notify-admin-reports-threshold`, mantendo alerta em No-Go/fail-closed |
 | [qa/reports/report-v76-kcapi-filters-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-filters-extraction-2026-06-12.md) | evidencia V76 da extracao de filtros avancados/date presets para `window._KCAPI.filters` |
 | [qa/reports/report-v76-kcapi-authors-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-authors-extraction-2026-06-12.md) | evidencia V76 da extracao de autores mock/indices para `window._KCAPI.authors` |
 | [qa/reports/report-v76-kcapi-posts-normalize-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-posts-normalize-extraction-2026-06-12.md) | evidencia V76 da extracao de `KCAPI.normalizePost` para `window._KCAPI.postsNormalize` |
