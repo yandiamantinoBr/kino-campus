@@ -57,6 +57,7 @@ describe('kc-api.notifications.js - exported notification domain', () => {
     expect(source).toContain('buildDefaultNotificationPreferences');
     expect(source).toContain('buildDefaultNotificationChannelTargets');
     expect(source).toContain('comment_on_post: { in_app: true, email: false, whatsapp: false }');
+    expect(source).toContain('direct_message: { in_app: true, email: false, whatsapp: false }');
     expect(source).toContain("metadata: { country_code: '55' }");
   });
 
