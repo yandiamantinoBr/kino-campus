@@ -314,6 +314,7 @@
     'meta-title.privacidade':          'Declaração de Privacidade - KinoCampus',
     'meta-title.search-results':       'Resultados de Busca - KinoCampus',
     'meta-title.settings':             'KinoCampus - Configurações',
+    'meta-title.sobre':                'Sobre o KinoCampus - Comunidade UFG',
     'meta-title.transparencia':         'Transparência - KinoCampus',
     'meta-title.termos':               'Termos de Uso - KinoCampus',
     'meta-title.product':              'KinoCampus - Detalhes',
@@ -341,6 +342,7 @@
     'meta-description.privacidade':         'Declaração de Privacidade do KinoCampus: dados tratados, finalidades, direitos dos titulares, cookies e contato.',
     'meta-description.search-results':      'Busca no KinoCampus — encontre publicações, eventos, oportunidades e mais na comunidade da UFG.',
     'meta-description.settings':            'Configurações da sua conta no KinoCampus — comunidade universitária da UFG.',
+    'meta-description.sobre':               'Conheça o KinoCampus: plataforma comunitária independente da UFG, sua missão, governança, processo de curadoria e canais oficiais.',
     'meta-description.transparencia':        'Central de Transparência do KinoCampus: privacidade, termos, cookies, suporte, LGPD e canais de contato.',
     'meta-description.termos':              'Termos de Uso do KinoCampus: regras da comunidade, conta, publicações, moderação e responsabilidades.',
     'meta-description.product':             'KinoCampus — plataforma da comunidade universitária da UFG. Compra e venda, caronas, moradia, eventos, oportunidades e achados/perdidos entre estudantes.',
@@ -372,6 +374,7 @@
     'aria-label.close':                 'Fechar',
     'aria-label.privacy-cookie-notice': 'Aviso de privacidade e cookies',
     'aria-label.close-cookie-preferences': 'Fechar preferências de cookies',
+    'aria-label.about-kinocampus':     'Sobre o KinoCampus',
 
     // Feed / module rails
     'aria-label.feed-sort':             'Ordenação do feed',
@@ -384,6 +387,12 @@
     'aria-label.opportunity-rail':      'Seções rápidas de oportunidades',
     'aria-label.caronas-rail':          'Seções do painel lateral',
     'aria-label.eventos-rail':          'Seções do painel lateral',
+    'aria-label.events-context':        'Contexto sobre eventos',
+    'aria-label.opportunities-context': 'Contexto sobre oportunidades',
+    'aria-label.housing-context':       'Contexto sobre moradia',
+    'aria-label.marketplace-context':   'Contexto sobre compra e venda',
+    'aria-label.rides-context':         'Contexto sobre caronas',
+    'aria-label.lostfound-context':     'Contexto sobre achados e perdidos',
 
     // Home carousel e modais
     'aria-label.carousel-prev':         'Slide anterior',

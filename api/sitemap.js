@@ -8,6 +8,7 @@ const STATIC_ROUTES = [
   { path: '/compra-venda-feed.html', changefreq: 'daily', priority: '0.8' },
   { path: '/caronas-feed.html', changefreq: 'daily', priority: '0.8' },
   { path: '/achados-perdidos.html', changefreq: 'daily', priority: '0.8' },
+  { path: '/sobre.html', changefreq: 'monthly', priority: '0.6' },
   { path: '/ajuda.html', changefreq: 'monthly', priority: '0.5' },
   { path: '/ods.html', changefreq: 'monthly', priority: '0.5' },
   { path: '/transparencia.html', changefreq: 'monthly', priority: '0.5' },

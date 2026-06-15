@@ -77,6 +77,12 @@
       section: 'Transparência',
       description: 'Mapa público de privacidade, termos, cookies, suporte e direitos LGPD no KinoCampus.',
     },
+    '/sobre.html': {
+      type: 'AboutPage',
+      name: 'Sobre o KinoCampus',
+      section: 'Sobre',
+      description: 'Missao, governanca, curadoria, privacidade, publicidade e canais oficiais do KinoCampus.',
+    },
     '/termos.html': {
       type: 'WebPage',
       name: 'Termos de Uso do KinoCampus',
@@ -112,14 +118,49 @@
       '@type': 'Organization',
       '@id': `${ORIGIN}/#organization`,
       name: SITE_NAME,
+      alternateName: 'Kino Campus',
       url: ORIGIN,
       logo: `${ORIGIN}/assets/favicon.svg`,
+      description: 'Plataforma comunitaria independente para a comunidade da Universidade Federal de Goias.',
+      foundingDate: '2025',
+      founder: {
+        '@type': 'Person',
+        name: 'Yan Diamantino',
+        jobTitle: 'Responsavel operacional do KinoCampus',
+        affiliation: {
+          '@type': 'CollegeOrUniversity',
+          name: 'Universidade Federal de Goias',
+          sameAs: 'https://www.ufg.br/',
+        },
+      },
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Goiania',
+        addressRegion: 'GO',
+        addressCountry: 'BR',
+      },
       contactPoint: {
         '@type': 'ContactPoint',
         contactType: 'customer support',
         email: 'contato@kinocampus.com.br',
         availableLanguage: 'pt-BR',
       },
+      sameAs: [
+        'https://github.com/yandiamantinoBr/kino-campus',
+      ],
+      areaServed: {
+        '@type': 'Place',
+        name: 'Universidade Federal de Goias',
+      },
+      knowsAbout: [
+        'Universidade Federal de Goias',
+        'Eventos universitarios',
+        'Oportunidades academicas',
+        'Moradia estudantil',
+        'Compra e venda universitaria',
+        'Caronas universitarias',
+        'Achados e perdidos',
+      ],
     };
   }
 

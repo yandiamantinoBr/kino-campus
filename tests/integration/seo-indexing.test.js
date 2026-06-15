@@ -14,6 +14,7 @@ const INDEXABLE_PAGES = {
   'compra-venda-feed.html': 'https://www.kinocampus.com.br/compra-venda-feed.html',
   'caronas-feed.html': 'https://www.kinocampus.com.br/caronas-feed.html',
   'achados-perdidos.html': 'https://www.kinocampus.com.br/achados-perdidos.html',
+  'sobre.html': 'https://www.kinocampus.com.br/sobre.html',
   'ajuda.html': 'https://www.kinocampus.com.br/ajuda.html',
   'ods.html': 'https://www.kinocampus.com.br/ods.html',
   'transparencia.html': 'https://www.kinocampus.com.br/transparencia.html',
@@ -54,6 +55,7 @@ describe('SEO e indexacao publica', () => {
     expect(sitemap).toContain('STATIC_ROUTES');
     expect(sitemap).toContain('/eventos.html');
     expect(sitemap).toContain('/oportunidades.html');
+    expect(sitemap).toContain('/sobre.html');
     expect(sitemap).toContain('/transparencia.html');
     expect(sitemap).toContain('status=eq.published');
     expect(sitemap).toContain('expires_at');
@@ -70,6 +72,7 @@ describe('SEO e indexacao publica', () => {
     expect(llms).toContain('https://www.kinocampus.com.br/sitemap.xml');
     expect(llms).toContain('/admin/');
     expect(llms).toContain('## Publicações');
+    expect(llms).toContain('https://www.kinocampus.com.br/sobre.html');
     expect(llms).toContain('https://www.kinocampus.com.br/transparencia.html');
   });
 
@@ -114,6 +117,9 @@ describe('SEO e indexacao publica', () => {
     expect(source).toContain('search-results.html?q={search_term_string}');
     expect(source).toContain("'@type': 'BreadcrumbList'");
     expect(source).toContain("'@type': 'Organization'");
+    expect(source).toContain("type: 'AboutPage'");
+    expect(source).toContain('Yan Diamantino');
+    expect(source).toContain('Universidade Federal de Goias');
     expect(source).toContain("'@type': 'ItemList'");
     expect(source).toContain('/transparencia.html');
   });

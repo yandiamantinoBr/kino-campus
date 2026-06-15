@@ -26,6 +26,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 | `/compra-venda-feed.html` | `https://www.kinocampus.com.br/compra-venda-feed.html` | Colecao publica de compra e venda |
 | `/caronas-feed.html` | `https://www.kinocampus.com.br/caronas-feed.html` | Colecao publica de caronas |
 | `/achados-perdidos.html` | `https://www.kinocampus.com.br/achados-perdidos.html` | Colecao publica de achados e perdidos |
+| `/sobre.html` | `https://www.kinocampus.com.br/sobre.html` | Missao, governanca, curadoria e autoria da plataforma |
 | `/ajuda.html` | `https://www.kinocampus.com.br/ajuda.html` | Suporte e contato |
 | `/ods.html` | `https://www.kinocampus.com.br/ods.html` | Contexto institucional e impacto |
 | `/transparencia.html` | `https://www.kinocampus.com.br/transparencia.html` | Hub de transparencia, privacidade, cookies e suporte |
@@ -50,7 +51,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 ## Dados estruturados
 
 - `assets/js/boot/kc-seo-structured-data.js` injeta JSON-LD para paginas publicas indexaveis.
-- Tipos usados nas paginas: `Organization`, `WebSite`, `SearchAction`, `WebPage`, `CollectionPage`, `ContactPage`, `PrivacyPolicy`, `BreadcrumbList` e `ItemList`.
+- Tipos usados nas paginas: `Organization`, `WebSite`, `SearchAction`, `WebPage`, `AboutPage`, `CollectionPage`, `ContactPage`, `PrivacyPolicy`, `BreadcrumbList` e `ItemList`.
 - `api/og-product.js` injeta JSON-LD server-side para publicacoes publicas.
 - Tipos ricos de publicacao sao usados apenas quando os dados suficientes existem e tambem aparecem no HTML:
   - `Event` para eventos com data.
@@ -85,4 +86,4 @@ Se o Supabase estiver indisponivel, o sitemap ainda responde com as paginas esta
 - Revisar periodicamente se posts `hidden`, `deleted` ou `pending` nao aparecem no sitemap.
 - GA4: acompanhar tempo real, aquisicao de trafego e paginas/telas depois do deploy de producao.
 - APIs Google: usar apenas server-side quando houver necessidade de dashboard consolidado; nao guardar tokens OAuth no frontend.
-- Transparencia publica: manter `/transparencia.html`, `/privacidade.html`, `/termos.html` e `/ajuda.html#solicitacoes-suporte` consistentes entre rodape, sitemap, `llms.txt` e auditoria SEO.
+- Transparencia publica: manter `/sobre.html`, `/transparencia.html`, `/privacidade.html`, `/termos.html` e `/ajuda.html#solicitacoes-suporte` consistentes entre rodape, sitemap, `llms.txt` e auditoria SEO.

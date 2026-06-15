@@ -16,6 +16,7 @@ const INDEXABLE = {
   'compra-venda-feed.html': '/compra-venda-feed.html',
   'caronas-feed.html': '/caronas-feed.html',
   'achados-perdidos.html': '/achados-perdidos.html',
+  'sobre.html': '/sobre.html',
   'ajuda.html': '/ajuda.html',
   'ods.html': '/ods.html',
   'transparencia.html': '/transparencia.html',

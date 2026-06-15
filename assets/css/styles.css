@@ -607,6 +607,47 @@ main {
     margin-bottom: 20px;
 }
 
+.kc-editorial-intro,
+.kc-module-intro {
+    background: linear-gradient(135deg, rgba(255, 107, 0, 0.10), rgba(65, 181, 211, 0.08));
+    border: 1px solid rgba(255, 107, 0, 0.20);
+    border-radius: 18px;
+    padding: clamp(18px, 3vw, 26px);
+    margin: 0 0 20px;
+    color: var(--kc-text-dark-primary);
+}
+
+.kc-editorial-intro h2,
+.kc-module-intro h2 {
+    margin: 0 0 10px;
+    font-size: clamp(1.15rem, 2.2vw, 1.55rem);
+    line-height: 1.25;
+}
+
+.kc-editorial-intro p,
+.kc-module-intro p {
+    margin: 0;
+    color: var(--kc-text-dark-secondary);
+    line-height: 1.65;
+}
+
+.kc-editorial-intro p + p,
+.kc-module-intro p + p {
+    margin-top: 10px;
+}
+
+.kc-editorial-intro a,
+.kc-module-intro a {
+    color: var(--kc-primary-brand);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.kc-editorial-intro a:hover,
+.kc-module-intro a:hover {
+    text-decoration: underline;
+}
+
 .kc-hero-slides {
     position: relative;
     width: 100%;
