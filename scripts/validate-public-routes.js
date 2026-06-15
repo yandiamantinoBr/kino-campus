@@ -32,6 +32,7 @@ var ADMIN_ROUTES = PAGE_MANIFEST.ADMIN_ROUTES;
 
 var STATIC_ASSETS = [
   'assets/css/styles.css',
+  'assets/css/kc-chat-shortcut.css',
   'assets/css/kc-public-shell.css',
   'assets/css/kc-theme-boot.css',
 ];

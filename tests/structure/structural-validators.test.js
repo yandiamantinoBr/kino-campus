@@ -181,6 +181,7 @@ describe('validate-public-routes.js — integridade', function () {
   test('valida CSS assets estáticos', function () {
     expect(ROUTES_SCRIPT).toContain('STATIC_ASSETS');
     expect(ROUTES_SCRIPT).toContain('styles.css');
+    expect(ROUTES_SCRIPT).toContain('kc-chat-shortcut.css');
     expect(ROUTES_SCRIPT).toContain('kc-public-shell.css');
   });
 
@@ -213,6 +214,10 @@ describe('validate-public-routes.js — rotas reais existem', function () {
 
   test('assets/css/styles.css existe', function () {
     expect(fs.existsSync(path.join(ROOT, 'assets/css/styles.css'))).toBe(true);
+  });
+
+  test('assets/css/kc-chat-shortcut.css existe', function () {
+    expect(fs.existsSync(path.join(ROOT, 'assets/css/kc-chat-shortcut.css'))).toBe(true);
   });
 
   test('assets/css/kc-public-shell.css existe', function () {

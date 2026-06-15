@@ -1,8 +1,8 @@
 # V76 CSS-A - Inventario de Ownership de `styles.css`
 
-**Versão:** v76.15.0
+**Versão:** v76.17.0
 **Data:** 2026-06-15
-**Escopo:** inventário documental + status pós-CSS-C.2; o inventário original não alterou CSS, e as atualizações v76.14.0/v76.15.0 registram os micro-splits admin já evidenciados
+**Escopo:** inventário documental + status pós-CSS-C.3; o inventário original não alterou CSS, e as atualizações v76.14.0/v76.15.0/v76.17.0 registram os micro-splits já evidenciados
 
 ---
 
@@ -26,16 +26,17 @@ Fonte: `npm run audit:css` (`scripts/audit-css-ownership.js`).
 
 | Arquivo CSS de producao | Linhas | Bytes |
 |---|---:|---:|
-| `assets/css/styles.css` | 12.282 | 287.760 |
+| `assets/css/styles.css` | 12.028 | 280.599 |
 | `assets/css/product.css` | 1.784 | 45.373 |
-| `assets/css/admin-shell.css` | 1.277 | 34.043 |
+| `assets/css/admin-shell.css` | 1.471 | 38.653 |
 | `assets/css/kc-public-shell.css` | 943 | 20.456 |
 | `assets/css/kc-chat.css` | 710 | 16.367 |
 | `assets/css/product-lightbox.css` | 299 | 8.064 |
 | `assets/css/kc-theme-boot.css` | 213 | 5.955 |
-| **Total CSS de producao** | **17.508** | **418.018** |
+| `assets/css/kc-chat-shortcut.css` | 60 | 1.327 |
+| **Total CSS de producao** | **17.508** | **416.794** |
 
-`styles.css` foi parseado em 1.774 regras de estilo e 1.995 seletores.
+`styles.css` foi parseado em 1.734 regras de estilo e 1.954 seletores.
 
 ---
 
@@ -70,7 +71,7 @@ baseline V27 e evidencia por rota.
 | Admin overlap | 0 | 0 | 0 | - | Encerrado em CSS-C.2 |
 | Produto overlap | 7 | 4 | 35 | L1554-L1573, L1701-L1708, L1714-L1722 | Candidato a `product.css`/`product-lightbox.css` |
 | Public shell/profile/legal overlap | 136 | 133 | 842 | L495-L501, L518-L528, L534-L539, L1188-L1202 | Candidato a `kc-public-shell.css` |
-| Chat overlap | 7 | 7 | 51 | L12031-L12088 | Candidato condicional a `kc-chat.css` |
+| Chat overlap | 0 | 0 | 0 | - | Encerrado em CSS-C.3; atalho global em `kc-chat-shortcut.css` |
 | Create-post/modal/uploader | 8 | 10 | 61 | L2844-L2869, L4722-L4742, L4889-L4898, L4937-L4944 | Permanece global por ora |
 | Modulos publicos de pagina | 146 | 141 | 815 | L1433-L1485, L1496-L1510, L1514-L1550, L2783-L2816 | Bloqueado para split futuro |
 | Feed, cards e ranking | 282 | 189 | 1.496 | L223-L320, L603-L613, L745-L787, L809-L1058 | Permanece global |
@@ -111,7 +112,8 @@ Estes grupos sao candidatos, nao mudancas aprovadas:
 | `admin-shell.css` | 0 regras / 0 seletores / 0 linhas | bucket encerrado em CSS-C.2; novos moves admin exigem nova análise de seletor |
 | `product.css` ou `product-lightbox.css` | 7 regras / 4 seletores / 35 linhas | bloqueado para split simples: `.kc-save-popover*` também atende `my-posts.html`, que não carrega `product.css` |
 | `kc-public-shell.css` | 136 regras / 133 seletores / 842 linhas | profile/settings/legal compartilham header e auth UI; alto risco de cascade |
-| `kc-chat.css` | 7 regras / 7 seletores / 51 linhas | atalhos de chat aparecem fora da rota `mensagens.html`; nao mover sem confirmar comportamento global |
+| `kc-chat.css` | 0 regras / 0 seletores / 0 linhas | UI dedicada da conversa; não recebeu o atalho global |
+| `kc-chat-shortcut.css` | 0 regras / 0 seletores / 0 linhas | bucket encerrado; arquivo novo carregado nas 27 páginas que já carregavam `kc-notifications.js` |
 
 O recorte admin foi encerrado em duas etapas CSS-only: CSS-C moveu `.kc-admin-nav*`, e CSS-C.2
 moveu os seletores administrativos remanescentes. O próximo recorte não deve reaproveitar a
@@ -159,12 +161,21 @@ para `assets/css/admin-shell.css`. A nova rodada de `npm run audit:css` mede `st
 1.471 linhas / 38.565 bytes; o bucket `Admin overlap` cai para 0 regras / 0 seletores / 0 linhas.
 A evidência está em `docs/qa/reports/report-v76-css-admin-overlap-micro-split-2026-06-15.md`.
 
+Atualização v76.17.0: a trilha **CSS-C.3 micro-split chat shortcut** confirmou que o candidato
+`Chat overlap` era o atalho global criado por `assets/js/core/kc-notifications.js`, não CSS local de
+`mensagens.html`. Por isso, o bloco saiu de `assets/css/styles.css` para o novo
+`assets/css/kc-chat-shortcut.css`, carregado nas 27 páginas que já carregavam `kc-notifications.js`.
+A nova rodada de `npm run audit:css` mede `styles.css` com 12.028 linhas, 280.599 bytes, 1.734 regras
+e 1.954 seletores; `kc-chat-shortcut.css` tem 60 linhas / 1.327 bytes; o bucket `Chat overlap` cai para
+0 regras / 0 seletores / 0 linhas. A evidência está em
+`docs/qa/reports/report-v76-css-chat-shortcut-micro-split-2026-06-15.md`.
+
 Escolher uma trilha unica para a proxima entrega:
 
-1. **CSS-C.3 micro-split:** apenas após confirmar que o candidato não depende de rota que não carrega
-   o CSS de destino; `Produto overlap` fica bloqueado enquanto `my-posts.html` depender de `.kc-save-popover*`.
-2. **CSS-B admin autenticado:** capturar dashboard admin real antes de mover seletores que so
+1. **CSS-B admin autenticado:** capturar dashboard admin real antes de mover seletores que só
    aparecem no estado autenticado.
+2. **Public shell micro-split:** só mover um subgrupo de `Public shell/profile/legal overlap` após
+   confirmar que todas as rotas afetadas carregam `kc-public-shell.css`.
 3. **JS documental:** investigar `bootstrap-driver-core` sem extração imediata, porque o candidato
    JS residual é P3 e tem custo/risco maior que micro-splits CSS pequenos.
 
