@@ -43,12 +43,6 @@ const BOOTSTRAP_CORE = new Set([
   'getActiveDriver',
 ]);
 
-const MUTATION_BRIDGE = new Set([
-  'isPostMutationOk',
-  'getPostMutationData',
-  'emitPostMutation',
-]);
-
 const GLOBAL_ALIASES = new Set([
   'getLastCreatePostError',
   'setLastCreatePostError',
@@ -301,7 +295,6 @@ function extractFunctions(source, publicMembers) {
 
 function classifyFunction(name, block, publicMembers) {
   if (BOOTSTRAP_CORE.has(name)) return 'bootstrap-driver-core';
-  if (MUTATION_BRIDGE.has(name)) return 'post-mutation-bridge';
   if (/^get[A-Za-z0-9_$]+Module$/u.test(name)) return 'module-accessors';
   if (/^build[A-Za-z0-9_$]+Deps$/u.test(name)) return 'dependency-builders';
   if (/^normalizeUserRating/u.test(name)) return 'rating-normalizer-wrappers';
@@ -376,22 +369,13 @@ function buildCandidates(functions) {
 
   return [
     {
-      id: 'post-mutation-bridge',
-      priority: 'P1',
-      title: 'Reavaliar ponte emitPostMutation apos wrappers de posts-write',
-      functions: ['isPostMutationOk', 'getPostMutationData', 'emitPostMutation'],
-      target: 'assets/js/api/kc-api.posts-write.js',
-      rationale: 'A ponte de eventos de mutacao ainda vive no facade por compatibilidade com fallbacks de escrita.',
-      risk: 'Medio/alto: eventos publicos de freshness e UI de posts podem depender da ordem atual.',
-    },
-    {
       id: 'bootstrap-driver-core',
       priority: 'P3',
       title: 'Manter bootstrap/env/driver no facade por enquanto',
       functions: ['readEnv', 'setConfig', 'withTimeout', 'fetchJSON', 'apiURL', 'getDatabaseRaw', 'getDatabaseNormalized', 'registerAdapter', 'getActiveDriver'],
-      target: 'Sem extracao imediata',
-      rationale: 'E a base de boot local/supabase e tem maior raio de regressao.',
-      risk: 'Alto: qualquer mudanca pode afetar todas as paginas e drivers.',
+      target: 'Sem extração imediata',
+      rationale: 'É a base de boot local/supabase e tem maior raio de regressão.',
+      risk: 'Alto: qualquer mudança pode afetar todas as páginas e drivers.',
     },
   ].map((candidate) => {
     const present = candidate.functions

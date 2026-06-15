@@ -706,17 +706,22 @@ posts relacionados, posts salvos do usuário, histórico de visualizações.
 | Campo | Valor |
 |-------|-------|
 | Grupo | api |
-| Namespace | `window._KCAPI_write` |
-| Padrão | IIFE + `Object.freeze` |
-| Páginas | `create-post.html`, `my-posts.html` |
+| Namespace | `window._KCAPI.postsWrite` |
+| Padrão | IIFE + namespace `_KCAPI.*` |
+| Páginas | carregado antes de `kc-api.client.js` nos HTMLs que usam `KCAPI` |
 
 **Responsabilidade:** Submódulo KCAPI de escrita de publicações: criar, editar, deletar post,
-upload de mídia, moderação básica (report).
+denunciar post, alternar status, renovar, impulsionar, encerrar, reativar e montar eventos de
+freshness de mutações de posts.
 
-**Exports públicos:** `window._KCAPI_write.createPost()`, `window._KCAPI_write.updatePost()`,
-`window._KCAPI_write.deletePost()`, `window._KCAPI_write.reportPost()`
+**Exports públicos:** `window._KCAPI.postsWrite.createPost()`,
+`window._KCAPI.postsWrite.updatePost()`, `window._KCAPI.postsWrite.deletePost()`,
+`window._KCAPI.postsWrite.reportPost()`, `window._KCAPI.postsWrite.togglePostStatus()`,
+`window._KCAPI.postsWrite.renewPost()`, `window._KCAPI.postsWrite.bumpPost()`,
+`window._KCAPI.postsWrite.closePost()`, `window._KCAPI.postsWrite.reactivatePost()` e
+`window._KCAPI.postsWrite.emitPostMutation()`.
 
-**Dependências em runtime:** `window.KC_ENV`, `window.KC_CONSTANTS`, adapters
+**Dependências em runtime:** `getActiveDriver`, `ENV` e `postFreshness` injetados pela fachada
 
 **Consumido por:** `window.KCAPI`, features/create-post, kc-user-posts
 
@@ -2335,7 +2340,7 @@ contagem de votos de um post e voto atual do usuário.
 | api/kc-api.notifications.js | api | `window._KCAPI_notif` | autenticadas | integration/kc-api-notifications-module |
 | api/kc-api.posts-feed.js | api | `window._KCAPI_feed` | feeds | integration/kc-api-posts-feed-module |
 | api/kc-api.posts-read.js | api | `window._KCAPI_read` | feed+produto | integration/kc-api-posts-read-module |
-| api/kc-api.posts-write.js | api | `window._KCAPI_write` | create+my-posts | integration/kc-api-posts-write-module |
+| api/kc-api.posts-write.js | api | `window._KCAPI.postsWrite` | KCAPI posts write | integration/kc-api-posts-write-module |
 | api/kc-api.profiles.js | api | `window._KCAPI_prof` | profile+setup | integration/kc-api-profiles-module |
 | api/kc-api.ratings.js | api | `window._KCAPI.ratings` | autenticadas | integration/kc-api-ratings-module |
 | api/kc-api.related.js | api | `window._KCAPI_rel` | _product.html | integration/kc-api-related-module |

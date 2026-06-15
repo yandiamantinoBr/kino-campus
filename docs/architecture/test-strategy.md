@@ -1,6 +1,6 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.12.0 · **Atualizado em:** 2026-06-15
+**Versão:** v76.13.0 · **Atualizado em:** 2026-06-15
 
 > Documenta as 175 suites Jest + 9 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 175 suites · 3574 testes
+Jest: 175 suites · 3577 testes
 Playwright: 9 specs · 59 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥175 passed, 175 total` e `≥3574 passed, 3574 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥175 passed, 175 total` e `≥3577 passed, 3577 total`.
 
 ### Gate CI essencial
 
@@ -180,7 +180,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 124 arquivos indi
 | `kc-api-notifications-module.test.js` | `kc-api.notifications.js` | Preferências, subscribe/unsubscribe, contador |
 | `kc-api-posts-feed-module.test.js` | `kc-api.posts-feed.js` | `getFeedCursor`, `getPosts`, `searchPosts`, `getPostById` |
 | `kc-api-posts-read-module.test.js` | `kc-api.posts-read.js` | `getPostAnalytics`, SWR de analytics, `trackView` |
-| `kc-api-posts-write-module.test.js` | `kc-api.posts-write.js` | `createPost`, `updatePost`, `deletePost`, `reportPost` |
+| `kc-api-posts-write-module.test.js` | `kc-api.posts-write.js` | `createPost`, `updatePost`, `deletePost`, `reportPost`, ponte `emitPostMutation` |
 | `kc-api-profiles-module.test.js` | `kc-api.profiles.js` | `getCurrentProfile`, `getProfileById`, `syncProfile` |
 | `kc-api-ratings-module.test.js` | `kc-api.ratings.js` | Operacoes de rating e normalizadores `normalizeUserRating*` |
 | `kc-api-related-module.test.js` | `kc-api.related.js` | `rankRelatedPosts`, algoritmo de scoring |
@@ -485,7 +485,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥175 passed, 175 total
-  Tests:       ≥3574 passed, 3574 total
+  Tests:       ≥3577 passed, 3577 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

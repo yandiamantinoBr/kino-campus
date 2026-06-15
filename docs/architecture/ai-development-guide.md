@@ -49,7 +49,7 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Branch de features | `feature/v75.X.Y-descricao-curta` |
 | appVersion | `75.1.0` (performance phase 1; Speed Insights mergeado no PR #549) |
 | frontendRuntimeVersion | `8.6.1` (constante canonica do runtime atual) |
-| Jest | 175 suites · 3574 testes |
+| Jest | 175 suites · 3577 testes |
 | check:all | 5/5 validators verdes |
 | Itens validados (check:structure) | 167 |
 
@@ -99,7 +99,7 @@ kino-campus/
 3. git checkout -b feature/v75.X.Y-descricao-curta
 4. [ implementar mudanças ]
 5. npm run check:all          ← DEVE ser 5/5 verdes
-   npm test                   ← DEVE ser ≥175/175 suites, ≥3574/3574 testes
+   npm test                   ← DEVE ser ≥175/175 suites, ≥3577/3577 testes
 6. git add <arquivos específicos>
 7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 8. git push -u origin feature/v75.X.Y-descricao-curta
@@ -773,6 +773,6 @@ npm run check:routes     # 26 rotas + CSS
 npm run check:hygiene    # 8.6.1, i18n B2, inline handlers, cadeias
 
 # Testes
-npm test                 # 175 suites · 3574 testes
+npm test                 # 175 suites · 3577 testes
 npx playwright test --list # 9 specs Playwright · 59 testes listados
 ```

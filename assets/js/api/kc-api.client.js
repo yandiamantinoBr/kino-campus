@@ -527,33 +527,13 @@
   }
 
   function buildPostsWriteDeps() {
-    return { getActiveDriver, ENV };
+    return { getActiveDriver, ENV, postFreshness: window.KCPostFreshness };
   }
 
-  function isPostMutationOk(result) {
-    return !!result && result.ok !== false && !result.error;
-  }
-
-  function getPostMutationData(result, fallback) {
-    if (result && result.data && typeof result.data === 'object') return result.data;
-    if (fallback && typeof fallback === 'object') return fallback;
-    return {};
-  }
-
-  function emitPostMutation(type, postId, result, fallback) {
-    if (!isPostMutationOk(result) || !window.KCPostFreshness || typeof window.KCPostFreshness.emit !== 'function') return;
-    const data = getPostMutationData(result, fallback);
-    const status = result.status || result.new_status || data.status || data.estado || data.new_status || '';
-    const moduleKey = data.module || data.modulo || data.moduleKey || (fallback && (fallback.module || fallback.modulo || fallback.moduleKey)) || '';
-    window.KCPostFreshness.emit({
-      type,
-      source: 'api',
-      postId: postId || data.uuid || data.id || result.id || result.uuid,
-      legacyId: data.legacy_id || data.legacyId || result.legacy_id || result.legacyId,
-      module: moduleKey,
-      status,
-      updated_at: data.updated_at || data.updatedAt || result.updated_at || result.updatedAt,
-    });
+  function emitPostsWriteMutation(type, postId, result, fallback) {
+    const postsWriteModule = getPostsWriteModule();
+    if (!postsWriteModule || typeof postsWriteModule.emitPostMutation !== 'function') return;
+    postsWriteModule.emitPostMutation(type, postId, result, fallback, buildPostsWriteDeps());
   }
 
   async function createPost(body) {
@@ -561,13 +541,13 @@
     const postsWriteModule = getPostsWriteModule();
     if (postsWriteModule && typeof postsWriteModule.createPost === 'function') {
       result = await postsWriteModule.createPost(body, buildPostsWriteDeps());
-      emitPostMutation('created', null, result, body);
+      emitPostsWriteMutation('created', null, result, body);
       return result;
     }
     const policyError = enforceSupabaseOnProduction('createPost');
     if (policyError) return policyError;
     result = await getActiveDriver().createPost(body);
-    emitPostMutation('created', null, result, body);
+    emitPostsWriteMutation('created', null, result, body);
     return result;
   }
   async function updatePost(postId, payload) {
@@ -575,12 +555,12 @@
     const postsWriteModule = getPostsWriteModule();
     if (postsWriteModule && typeof postsWriteModule.updatePost === 'function') {
       result = await postsWriteModule.updatePost(postId, payload, buildPostsWriteDeps());
-      emitPostMutation('updated', postId, result, payload);
+      emitPostsWriteMutation('updated', postId, result, payload);
       return result;
     }
     if (!getActiveDriver().updatePost) return kcApiError('Edição indisponível neste driver.');
     result = await getActiveDriver().updatePost(postId, payload);
-    emitPostMutation('updated', postId, result, payload);
+    emitPostsWriteMutation('updated', postId, result, payload);
     return result;
   }
   async function deletePost(postId) {
@@ -588,12 +568,12 @@
     const postsWriteModule = getPostsWriteModule();
     if (postsWriteModule && typeof postsWriteModule.deletePost === 'function') {
       result = await postsWriteModule.deletePost(postId, buildPostsWriteDeps());
-      emitPostMutation(result && result.softDeleted === false ? 'purged' : 'soft_deleted', postId, result, { status: 'deleted' });
+      emitPostsWriteMutation(result && result.softDeleted === false ? 'purged' : 'soft_deleted', postId, result, { status: 'deleted' });
       return result;
     }
     if (!getActiveDriver().deletePost) return kcApiError('Exclusão indisponível neste driver.');
     result = await getActiveDriver().deletePost(postId);
-    emitPostMutation(result && result.softDeleted === false ? 'purged' : 'soft_deleted', postId, result, { status: 'deleted' });
+    emitPostsWriteMutation(result && result.softDeleted === false ? 'purged' : 'soft_deleted', postId, result, { status: 'deleted' });
     return result;
   }
   async function reportPost(postId, payload) {
@@ -611,7 +591,7 @@
     const postsWriteModule = getPostsWriteModule();
     if (postsWriteModule && typeof postsWriteModule.togglePostStatus === 'function') {
       result = await postsWriteModule.togglePostStatus(postId, buildPostsWriteDeps());
-      emitPostMutation('status_changed', postId, result, {});
+      emitPostsWriteMutation('status_changed', postId, result, {});
       return result;
     }
     const driver = getActiveDriver();
@@ -619,7 +599,7 @@
       return { ok: false, code: 'UNAVAILABLE', message: 'Toggle de status indisponível neste driver.' };
     }
     result = await driver.togglePostStatus(postId);
-    emitPostMutation('status_changed', postId, result, {});
+    emitPostsWriteMutation('status_changed', postId, result, {});
     return result;
   }
   async function renewPost(postId) {
@@ -627,7 +607,7 @@
     const postsWriteModule = getPostsWriteModule();
     if (postsWriteModule && typeof postsWriteModule.renewPost === 'function') {
       result = await postsWriteModule.renewPost(postId, buildPostsWriteDeps());
-      emitPostMutation('updated', postId, result, {});
+      emitPostsWriteMutation('updated', postId, result, {});
       return result;
     }
     const driver = getActiveDriver();
@@ -635,7 +615,7 @@
       return { ok: false, code: 'UNAVAILABLE', message: 'Renovação indisponível neste driver.' };
     }
     result = await driver.renewPost(postId);
-    emitPostMutation('updated', postId, result, {});
+    emitPostsWriteMutation('updated', postId, result, {});
     return result;
   }
   async function bumpPost(postId) {
@@ -643,7 +623,7 @@
     const postsWriteModule = getPostsWriteModule();
     if (postsWriteModule && typeof postsWriteModule.bumpPost === 'function') {
       result = await postsWriteModule.bumpPost(postId, buildPostsWriteDeps());
-      emitPostMutation('updated', postId, result, {});
+      emitPostsWriteMutation('updated', postId, result, {});
       return result;
     }
     const driver = getActiveDriver();
@@ -651,7 +631,7 @@
       return { ok: false, code: 'UNAVAILABLE', message: 'Impulsionamento indisponível neste driver.' };
     }
     result = await driver.bumpPost(postId);
-    emitPostMutation('updated', postId, result, {});
+    emitPostsWriteMutation('updated', postId, result, {});
     return result;
   }
 
@@ -660,7 +640,7 @@
     const postsWriteModule = getPostsWriteModule();
     if (postsWriteModule && typeof postsWriteModule.closePost === 'function') {
       result = await postsWriteModule.closePost(postId, payload, buildPostsWriteDeps());
-      emitPostMutation('status_changed', postId, result, { status: 'closed' });
+      emitPostsWriteMutation('status_changed', postId, result, { status: 'closed' });
       return result;
     }
     const driver = getActiveDriver();
@@ -668,7 +648,7 @@
       return { ok: false, code: 'UNAVAILABLE', message: 'Encerramento indispon\u00EDvel neste driver.' };
     }
     result = await driver.closePost(postId, payload);
-    emitPostMutation('status_changed', postId, result, { status: 'closed' });
+    emitPostsWriteMutation('status_changed', postId, result, { status: 'closed' });
     return result;
   }
 
@@ -677,7 +657,7 @@
     const postsWriteModule = getPostsWriteModule();
     if (postsWriteModule && typeof postsWriteModule.reactivatePost === 'function') {
       result = await postsWriteModule.reactivatePost(postId, buildPostsWriteDeps());
-      emitPostMutation('status_changed', postId, result, { status: 'published' });
+      emitPostsWriteMutation('status_changed', postId, result, { status: 'published' });
       return result;
     }
     const driver = getActiveDriver();
@@ -685,7 +665,7 @@
       return { ok: false, code: 'UNAVAILABLE', message: 'Reativa\u00E7\u00E3o indispon\u00EDvel neste driver.' };
     }
     result = await driver.reactivatePost(postId);
-    emitPostMutation('status_changed', postId, result, { status: 'published' });
+    emitPostsWriteMutation('status_changed', postId, result, { status: 'published' });
     return result;
   }
 

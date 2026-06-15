@@ -446,6 +446,7 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
   test('mantem delegacao para posts-write via getPostsWriteModule e buildPostsWriteDeps', () => {
     expect(source).toContain('function getPostsWriteModule()');
     expect(source).toContain('function buildPostsWriteDeps()');
+    expect(source).toContain('postFreshness: window.KCPostFreshness');
     expect(source).toContain('postsWriteModule.createPost(body, buildPostsWriteDeps())');
     expect(source).toContain('postsWriteModule.updatePost(postId, payload, buildPostsWriteDeps())');
     expect(source).toContain('postsWriteModule.deletePost(postId, buildPostsWriteDeps())');
@@ -455,7 +456,11 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(source).toContain('postsWriteModule.bumpPost(postId, buildPostsWriteDeps())');
     expect(source).toContain('postsWriteModule.closePost(postId, payload, buildPostsWriteDeps())');
     expect(source).toContain('postsWriteModule.reactivatePost(postId, buildPostsWriteDeps())');
-    expect(source).toContain('function emitPostMutation');
+    expect(source).toContain('function emitPostsWriteMutation');
+    expect(source).toContain('postsWriteModule.emitPostMutation(type, postId, result, fallback, buildPostsWriteDeps())');
+    expect(source).not.toContain('function emitPostMutation');
+    expect(source).not.toContain('function isPostMutationOk');
+    expect(source).not.toContain('function getPostMutationData');
   });
 
   test('mantem delegacao para posts-feed via getPostsFeedModule e buildPostsFeedDeps', () => {

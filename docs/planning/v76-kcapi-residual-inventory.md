@@ -1,38 +1,44 @@
-# V76 JS-I - Inventario Residual da Fachada `KCAPI`
+# V76 JS-I - Inventário Residual da Fachada `KCAPI`
 
-**Versao:** v76.12.0
+**Versão:** v76.13.0
 **Data:** 2026-06-15
-**Escopo:** inventario documental + script assistivo; inclui status JS-I.1 external access e JS-I.2 notification fallbacks; sem alterar HTML, CSS, SQL, secrets, provider ou deploy
+**Escopo:** inventário documental + script assistivo; inclui status JS-I.1 external access, JS-I.2 notification fallbacks e JS-I.3 post mutation bridge; sem alterar HTML, CSS, SQL, secrets, provider ou deploy
 
 ---
 
-## 1. Decisao
+## 1. Decisão
 
-Esta entrega mantem a etapa JS-I do plano V76: medir o que ainda reside na fachada
-`assets/js/api/kc-api.client.js` depois das extracoes de diagnostics, session/freshness, filters,
+Esta entrega mantém a etapa JS-I do plano V76: medir o que ainda reside na fachada
+`assets/js/api/kc-api.client.js` depois das extrações de diagnostics, session/freshness, filters,
 authors, posts-normalize e normalizadores de ratings.
 
-O objetivo inicial foi criar um inventario reproduzivel que separasse wrappers, bootstrap, builders
-de dependencia e candidatos pequenos para as proximas PRs. Em v76.11.0, o primeiro candidato
+O objetivo inicial foi criar um inventário reproduzível que separasse wrappers, bootstrap, builders
+de dependência e candidatos pequenos para as próximas PRs. Em v76.11.0, o primeiro candidato
 runtime JS-I.1 foi executado: os wrappers `listExternalAccessRequests` e
-`decideExternalAccessRequest` continuam publicos em `window.KCAPI`, mas agora delegam para
+`decideExternalAccessRequest` continuam públicos em `window.KCAPI`, mas agora delegam para
 `window._KCAPI.help` com fallback de driver preservado.
 
 Em v76.12.0, JS-I.2 removeu da fachada os builders privados
 `buildFallbackNotificationPreferences` e `buildFallbackNotificationChannelTargets`. Os defaults
-canonicos de preferencias e destinos privados agora ficam concentrados em
-`window._KCAPI.notifications`; os membros publicos `KCAPI.getNotificationPreferences` e
-`KCAPI.getNotificationChannelTargets` continuam expostos e preservam a delegacao/fallback por
-dependencia injetada.
+canônicos de preferências e destinos privados agora ficam concentrados em
+`window._KCAPI.notifications`; os membros públicos `KCAPI.getNotificationPreferences` e
+`KCAPI.getNotificationChannelTargets` continuam expostos e preservam a delegação/fallback por
+dependência injetada.
+
+Em v76.13.0, JS-I.3 removeu da fachada a ponte privada `emitPostMutation` e seus helpers
+`isPostMutationOk` e `getPostMutationData`. A lógica de freshness das mutações de posts agora vive
+em `window._KCAPI.postsWrite`, com `postFreshness: window.KCPostFreshness` injetado pela fachada e
+ordem de emissão preservada após o retorno do driver ativo.
 
 No-Go mantido:
 
-- nenhum metodo de `window.KCAPI` foi removido, renomeado ou reordenado;
+- nenhum método de `window.KCAPI` foi removido, renomeado ou reordenado;
 - nenhum HTML teve ordem de `<script>` alterada;
 - nenhum adapter local/Supabase foi alterado;
-- nenhuma regra CSS, migration ou configuracao de provider foi tocada;
-- nenhum fallback publico foi removido; os fallbacks canonicos de notificacao apenas mudaram de dono.
-- nenhum fluxo admin foi alterado fora da camada de delegacao KCAPI.
+- nenhuma regra CSS, migration ou configuração de provider foi tocada;
+- nenhum fallback público foi removido; os fallbacks canônicos de notificação apenas mudaram de dono;
+- nenhum evento público de freshness foi removido; a ponte de mutação apenas mudou de dono;
+- nenhum fluxo admin foi alterado fora da camada de delegação KCAPI.
 
 ---
 
@@ -69,14 +75,14 @@ Fonte: `npm run audit:kcapi-residual` em 2026-06-15.
 | Metrica | Valor |
 |---|---:|
 | Arquivo medido | `assets/js/api/kc-api.client.js` |
-| Linhas | 1.479 |
-| Bytes | 57.288 |
-| Membros publicos `window.KCAPI` | 107 |
-| Declaracoes `function` | 143 |
+| Linhas | 1.459 |
+| Bytes | 56.513 |
+| Membros públicos `window.KCAPI` | 107 |
+| Declarações `function` | 141 |
 | Wrappers exportados/globais | 98 |
 | Namespaces `_KCAPI.*` inicializados | 17 |
-| Inicio do bloco publico | L1338 |
-| Fim do bloco publico | L1472 |
+| Início do bloco público | L1318 |
+| Fim do bloco público | L1452 |
 
 Os 17 namespaces atuais sao:
 
@@ -111,8 +117,7 @@ Os 17 namespaces atuais sao:
 | `module-accessors` | 16 | 90 | 0 | 16 | 0 | 11 |
 | `dependency-builders` | 8 | 45 | 0 | 0 | 0 | 0 |
 | `rating-normalizer-wrappers` | 4 | 42 | 4 | 4 | 0 | 1 |
-| `internal-helpers` | 8 | 24 | 0 | 8 | 0 | 0 |
-| `post-mutation-bridge` | 3 | 23 | 0 | 0 | 0 | 0 |
+| `internal-helpers` | 9 | 29 | 0 | 9 | 0 | 0 |
 | `author-public-wrappers` | 5 | 15 | 1 | 5 | 0 | 0 |
 | `diagnostics-global-wrappers` | 4 | 12 | 4 | 4 | 0 | 0 |
 | `public-normalizer-filter-wrappers` | 2 | 9 | 2 | 2 | 0 | 0 |
@@ -120,13 +125,14 @@ Os 17 namespaces atuais sao:
 
 Leitura:
 
-- o maior volume residual e wrapper publico de delegacao, nao logica de dominio nova;
-- 80 wrappers ja delegam para submodulos e devem ser reduzidos apenas quando houver padrao seguro
-  para preservar fallback e assinatura publica;
+- o maior volume residual é wrapper público de delegação, não lógica de domínio nova;
+- 80 wrappers já delegam para submódulos e devem ser reduzidos apenas quando houver padrão seguro
+  para preservar fallback e assinatura pública;
 - `bootstrap-driver-core` continua sendo alto risco porque concentra env, driver e base de dados;
 - JS-I.1 removeu o bucket direto `admin-external-access-direct-driver`;
 - JS-I.2 removeu o bucket `notification-fallback-builders` da fachada;
-- o proximo candidato runtime pequeno passa a ser `post-mutation-bridge`.
+- JS-I.3 removeu o bucket `post-mutation-bridge` da fachada;
+- não há novo candidato JS pequeno equivalente; `bootstrap-driver-core` segue como P3 de alto risco.
 
 ---
 
@@ -134,33 +140,35 @@ Leitura:
 
 | Prioridade | Candidato | Linhas | Target | Risco |
 |---|---|---:|---|---|
-| Concluido | JS-I.1 external access admin para `kc-api.help.js` | 14 | `assets/js/api/kc-api.help.js` | Concluido em v76.11.0 com contrato dedicado de driver e fallback |
-| Concluido | JS-I.2 notification fallbacks em `kc-api.notifications.js` | 40 | `assets/js/api/kc-api.notifications.js` | Concluido em v76.12.0; defaults canonicos preservados no submodulo |
-| P1 | Reavaliar ponte `emitPostMutation` apos wrappers de posts-write | 23 | `assets/js/api/kc-api.posts-write.js` | Medio/alto: eventos publicos de freshness e UI podem depender da ordem atual |
-| P3 | Manter bootstrap/env/driver no facade por enquanto | 114 | sem extracao imediata | Alto: qualquer mudanca afeta todas as paginas e drivers |
+| Concluído | JS-I.1 external access admin para `kc-api.help.js` | 14 | `assets/js/api/kc-api.help.js` | Concluído em v76.11.0 com contrato dedicado de driver e fallback |
+| Concluído | JS-I.2 notification fallbacks em `kc-api.notifications.js` | 40 | `assets/js/api/kc-api.notifications.js` | Concluído em v76.12.0; defaults canônicos preservados no submódulo |
+| Concluído | JS-I.3 post mutation bridge em `kc-api.posts-write.js` | 23 | `assets/js/api/kc-api.posts-write.js` | Concluído em v76.13.0; eventos de freshness preservados no submódulo |
+| P3 | Manter bootstrap/env/driver no facade por enquanto | 114 | sem extração imediata | Alto: qualquer mudança afeta todas as páginas e drivers |
 
 Detalhe dos candidatos:
 
 | Candidato | Funcoes | Linhas no facade |
 |---|---|---|
-| external access admin | `listExternalAccessRequests`, `decideExternalAccessRequest` | **Concluido em v76.11.0**; wrappers continuam em L1183-L1197, agora delegando para `window._KCAPI.help` |
-| notification fallbacks | `buildFallbackNotificationPreferences`, `buildFallbackNotificationChannelTargets` | **Concluido em v76.12.0**; builders removidos da fachada e preservados em `window._KCAPI.notifications` |
-| post mutation bridge | `isPostMutationOk`, `getPostMutationData`, `emitPostMutation` | L533-L557 |
+| external access admin | `listExternalAccessRequests`, `decideExternalAccessRequest` | **Concluído em v76.11.0**; wrappers continuam em L1183-L1197, agora delegando para `window._KCAPI.help` |
+| notification fallbacks | `buildFallbackNotificationPreferences`, `buildFallbackNotificationChannelTargets` | **Concluído em v76.12.0**; builders removidos da fachada e preservados em `window._KCAPI.notifications` |
+| post mutation bridge | `isPostMutationOk`, `getPostMutationData`, `emitPostMutation` | **Concluído em v76.13.0**; helpers removidos da fachada e preservados em `window._KCAPI.postsWrite` |
 | bootstrap/env/driver | `readEnv`, `setConfig`, `withTimeout`, `fetchJSON`, `apiURL`, `getDatabaseRaw`, `getDatabaseNormalized`, `registerAdapter`, `getActiveDriver` | L22-L400 |
 
 ---
 
-## 6. Proxima etapa recomendada
+## 6. Próxima etapa recomendada
 
-A proxima PR runtime mais objetiva passa a ser **post-mutation bridge**:
+Após JS-I.3, não há outro candidato JS pequeno com o mesmo custo-benefício. A próxima PR mais
+prudente deve escolher uma frente única:
 
-- reavaliar somente `isPostMutationOk`, `getPostMutationData` e `emitPostMutation`;
-- preservar eventos publicos consumidos por freshness/UI;
-- manter os wrappers publicos de escrita de posts com assinatura atual;
-- nao tocar UI admin, CSS, HTML, providers ou dispatch de notificacao.
+- manter `bootstrap-driver-core` sem extração imediata e avançar para CSS-C apenas com dossiê
+  visual específico;
+- executar CSS-B autenticado para dashboard/admin real antes de qualquer split visual;
+- abrir uma investigação documental de `bootstrap-driver-core`, sem editar runtime no primeiro
+  passo.
 
-Se a prioridade for reduzir risco transversal antes de mover mais codigo, a alternativa e congelar
-esta medicao como baseline e avancar para CSS-C apenas com dossie visual especifico.
+Se a prioridade for reduzir risco transversal antes de mover mais código, a alternativa é congelar
+esta medição como baseline e avançar para CSS-C apenas com dossiê visual específico.
 
 Continuam bloqueados para PR ampla:
 
