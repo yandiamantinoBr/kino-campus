@@ -49,11 +49,6 @@ const MUTATION_BRIDGE = new Set([
   'emitPostMutation',
 ]);
 
-const NOTIFICATION_FALLBACKS = new Set([
-  'buildFallbackNotificationPreferences',
-  'buildFallbackNotificationChannelTargets',
-]);
-
 const GLOBAL_ALIASES = new Set([
   'getLastCreatePostError',
   'setLastCreatePostError',
@@ -307,7 +302,6 @@ function extractFunctions(source, publicMembers) {
 function classifyFunction(name, block, publicMembers) {
   if (BOOTSTRAP_CORE.has(name)) return 'bootstrap-driver-core';
   if (MUTATION_BRIDGE.has(name)) return 'post-mutation-bridge';
-  if (NOTIFICATION_FALLBACKS.has(name)) return 'notification-fallback-builders';
   if (/^get[A-Za-z0-9_$]+Module$/u.test(name)) return 'module-accessors';
   if (/^build[A-Za-z0-9_$]+Deps$/u.test(name)) return 'dependency-builders';
   if (/^normalizeUserRating/u.test(name)) return 'rating-normalizer-wrappers';
@@ -382,17 +376,8 @@ function buildCandidates(functions) {
 
   return [
     {
-      id: 'notification-fallbacks',
-      priority: 'P1',
-      title: 'Mover builders de fallback de notificacao para kc-api.notifications.js',
-      functions: ['buildFallbackNotificationPreferences', 'buildFallbackNotificationChannelTargets'],
-      target: 'assets/js/api/kc-api.notifications.js',
-      rationale: 'Sao helpers de dominio de notificacao ainda residentes no facade, com dependencia explicita de KCAccountProfileUtils.',
-      risk: 'Medio: preservar defaults de preferencias/destinos privados e mensagens de indisponibilidade.',
-    },
-    {
       id: 'post-mutation-bridge',
-      priority: 'P2',
+      priority: 'P1',
       title: 'Reavaliar ponte emitPostMutation apos wrappers de posts-write',
       functions: ['isPostMutationOk', 'getPostMutationData', 'emitPostMutation'],
       target: 'assets/js/api/kc-api.posts-write.js',

@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposicao Segura dos Hotspots JS/CSS
 
-**Versao:** v76.11.0
-**Data:** 2026-06-13
-**Escopo:** planejamento tecnico + status das extracoes JS V76, inventario residual JS-I, extracao JS-I.1, inventario CSS-A e baseline CSS-B; sem alterar CSS, SQL, secrets, provider ou deploy
+**Versao:** v76.12.0
+**Data:** 2026-06-15
+**Escopo:** planejamento tecnico + status das extracoes JS V76, inventario residual JS-I, extracoes JS-I.1/JS-I.2, inventario CSS-A e baseline CSS-B; sem alterar CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -11,9 +11,9 @@
 Converter os achados A1/A2 das auditorias V1/V2/V3 em uma trilha executavel para reduzir os dois
 hotspots ainda relevantes do frontend:
 
-| Hotspot | Estado atual medido em 2026-06-13 | Risco principal |
+| Hotspot | Estado atual medido em 2026-06-15 | Risco principal |
 |---|---:|---|
-| `assets/js/api/kc-api.client.js` | 1.509 linhas / 58.399 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
+| `assets/js/api/kc-api.client.js` | 1.479 linhas / 57.288 bytes | regressao de contrato publico `window.KCAPI`, paridade local/supabase e fluxos autenticados |
 | `assets/css/styles.css` | 12.282 linhas / 287.760 bytes | regressao visual transversal em paginas publicas/admin e quebra de cascade |
 | `assets/css/future-split/` | 5 stubs / 135 linhas totais | ativacao prematura sem prova de equivalencia visual |
 
@@ -74,6 +74,13 @@ normalizacao, caches, mocks, wrappers, fallback local/supabase, diagnosticos e e
 agora delegam para `window._KCAPI.help` com `getActiveDriver` injetado. O bucket direto
 `admin-external-access-direct-driver` saiu do inventario; o parse atual registra 12 buckets
 residuais e promove `notification-fallback-builders` para P1.
+
+**Status v76.12.0:** JS-I.2 removeu os builders privados de fallback de notificacao da fachada:
+`buildFallbackNotificationPreferences` e `buildFallbackNotificationChannelTargets` permanecem
+concentrados em `window._KCAPI.notifications`, enquanto os wrappers publicos de preferencias e
+destinos privados continuam em `window.KCAPI`. O parse atual registra 107 membros publicos,
+143 declaracoes `function`, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 11 buckets
+residuais; `post-mutation-bridge` passa a ser o menor candidato runtime.
 
 ### 3.2 Ordem permitida
 
@@ -205,6 +212,7 @@ JS e CSS no mesmo PR:
 | JS-A | Report de superficie publica `window.KCAPI` e mapa dos blocos residuais no facade | prepara extracao sem mudar runtime |
 | JS-I | Inventario residual automatizado da fachada `KCAPI` | **Concluido em v76.10.0**; prioriza proximas extracoes pequenas |
 | JS-I.1 | Delegacao de external access admin para `kc-api.help.js` | **Concluido em v76.11.0**; preserva contrato publico e fallback de driver |
+| JS-I.2 | Remocao dos builders privados de notification fallbacks do facade | **Concluido em v76.12.0**; defaults canonicos ficam em `kc-api.notifications.js` |
 | CSS-A | Inventario de ownership de seletores de `styles.css` | **Concluido em v76.8.0**; prepara split sem alterar cascade |
 | CSS-B | Baseline visual/cascade anonimo antes de split de `styles.css` | **Concluido em v76.9.0**; cria evidencia antes/depois para micro-splits futuros |
 
@@ -256,7 +264,11 @@ carregamentos de `future-split/`. Nenhum seletor foi movido.
 `assets/js/api/kc-api.help.js`, preservou `window.KCAPI` com 107 membros publicos e adicionou
 `tests/contract/kc-api-external-access-contract.test.js` para cobrir delegacao e fallback.
 
+**Status v76.12.0:** JS-I.2 removeu `buildFallbackNotificationPreferences` e
+`buildFallbackNotificationChannelTargets` de `assets/js/api/kc-api.client.js`; os defaults e
+builders canonicos permanecem no submodulo `assets/js/api/kc-api.notifications.js`, com contratos
+de facade e submodulo reforcados.
+
 Proxima entrega recomendada apos JS-I: escolher uma frente unica, sem misturar no mesmo PR:
-JS-I.2 notification fallbacks (2 builders / 40 linhas), post-mutation bridge (3 helpers / 23 linhas),
-CSS-C micro-split apenas para seletor visivel no baseline anonimo, ou CSS-B autenticado para dashboard
-admin real.
+post-mutation bridge (3 helpers / 23 linhas), CSS-C micro-split apenas para seletor visivel no
+baseline anonimo, ou CSS-B autenticado para dashboard admin real.

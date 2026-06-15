@@ -1206,54 +1206,18 @@
     return (notifications && typeof notifications === 'object') ? notifications : null;
   }
 
-  function buildFallbackNotificationPreferences() {
+  async function getNotificationPreferences() {
     const notificationsModule = getNotificationsModule();
+    if (notificationsModule && typeof notificationsModule.getNotificationPreferences === 'function') {
+      return notificationsModule.getNotificationPreferences({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
+    }
     if (notificationsModule && typeof notificationsModule.buildFallbackNotificationPreferences === 'function') {
       return notificationsModule.buildFallbackNotificationPreferences({ accountProfileUtils: window.KCAccountProfileUtils });
     }
     if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === 'function') {
       return window.KCAccountProfileUtils.buildDefaultNotificationPreferences();
     }
-    return {
-      comment_on_post: { in_app: true, email: false, whatsapp: false },
-      comment_reply: { in_app: true, email: false, whatsapp: false },
-      vote_on_post: { in_app: true, email: false, whatsapp: false },
-      post_expired: { in_app: true, email: false, whatsapp: false },
-      post_reported: { in_app: true, email: false, whatsapp: false },
-      system: { in_app: true, email: false, whatsapp: false },
-    };
-  }
-
-  function buildFallbackNotificationChannelTargets() {
-    const notificationsModule = getNotificationsModule();
-    if (notificationsModule && typeof notificationsModule.buildFallbackNotificationChannelTargets === 'function') {
-      return notificationsModule.buildFallbackNotificationChannelTargets({ accountProfileUtils: window.KCAccountProfileUtils });
-    }
-    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === 'function') {
-      return window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets();
-    }
-    return {
-      whatsapp: {
-        channel: 'whatsapp',
-        destination: '',
-        country_code: '55',
-        local_number: '',
-        consent_granted: false,
-        consent_at: null,
-        configured: false,
-        ready: false,
-        display: '',
-        metadata: { country_code: '55' },
-      },
-    };
-  }
-
-  async function getNotificationPreferences() {
-    const notificationsModule = getNotificationsModule();
-    if (notificationsModule && typeof notificationsModule.getNotificationPreferences === 'function') {
-      return notificationsModule.getNotificationPreferences({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
-    }
-    return buildFallbackNotificationPreferences();
+    return {};
   }
 
   async function updateNotificationPreferences(preferences = {}) {
@@ -1269,7 +1233,13 @@
     if (notificationsModule && typeof notificationsModule.getNotificationChannelTargets === 'function') {
       return notificationsModule.getNotificationChannelTargets({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });
     }
-    return buildFallbackNotificationChannelTargets();
+    if (notificationsModule && typeof notificationsModule.buildFallbackNotificationChannelTargets === 'function') {
+      return notificationsModule.buildFallbackNotificationChannelTargets({ accountProfileUtils: window.KCAccountProfileUtils });
+    }
+    if (window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === 'function') {
+      return window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets();
+    }
+    return {};
   }
 
   async function updateNotificationChannelTargets(targets = {}) {

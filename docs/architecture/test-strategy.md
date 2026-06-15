@@ -1,6 +1,6 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.11.0 · **Atualizado em:** 2026-06-13
+**Versão:** v76.12.0 · **Atualizado em:** 2026-06-15
 
 > Documenta as 175 suites Jest + 9 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.

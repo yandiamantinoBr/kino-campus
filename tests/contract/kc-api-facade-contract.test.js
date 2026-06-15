@@ -386,14 +386,17 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
     expect(source).toContain('return { data: [], error: null };');
   });
 
-  test('mantem fallback canonico para preferencias e destinos privados de notificacao', () => {
+  test('mantem fallback canonico de notificacao concentrado no submodulo', () => {
     expect(source).toContain('function getNotificationsModule() {');
-    expect(source).toContain('function buildFallbackNotificationPreferences() {');
-    expect(source).toContain('function buildFallbackNotificationChannelTargets() {');
+    expect(source).not.toContain('function buildFallbackNotificationPreferences() {');
+    expect(source).not.toContain('function buildFallbackNotificationChannelTargets() {');
     expect(source).toContain('return notificationsModule.getNotificationPreferences({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
     expect(source).toContain('return notificationsModule.updateNotificationPreferences(preferences, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
     expect(source).toContain('return notificationsModule.getNotificationChannelTargets({ getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
     expect(source).toContain('return notificationsModule.updateNotificationChannelTargets(targets, { getActiveDriver, accountProfileUtils: window.KCAccountProfileUtils });');
+    expect(source).toContain('return notificationsModule.buildFallbackNotificationPreferences({ accountProfileUtils: window.KCAccountProfileUtils });');
+    expect(source).toContain('return notificationsModule.buildFallbackNotificationChannelTargets({ accountProfileUtils: window.KCAccountProfileUtils });');
+    expect(source).toContain('window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationPreferences === \'function\'');
     expect(source).toContain('window.KCAccountProfileUtils && typeof window.KCAccountProfileUtils.buildDefaultNotificationChannelTargets === \'function\'');
     expect(source).toContain("return { ok: false, error: { message: 'Prefer\\u00EAncias de notifica\\u00E7\\u00E3o indispon\\u00EDveis neste driver.' } };");
     expect(source).toContain("return { ok: false, error: { message: 'Destinos privados de notifica\\u00E7\\u00E3o indispon\\u00EDveis neste driver.' } };");
