@@ -17,6 +17,7 @@ const INDEXABLE = {
   'caronas-feed.html': '/caronas-feed.html',
   'achados-perdidos.html': '/achados-perdidos.html',
   'sobre.html': '/sobre.html',
+  'editorial.html': '/editorial.html',
   'ajuda.html': '/ajuda.html',
   'ods.html': '/ods.html',
   'transparencia.html': '/transparencia.html',
@@ -62,6 +63,7 @@ function auditHtml(file, expectedRoute, errors, warnings) {
   const ogTitle = match(html, /<meta\s+property=["']og:title["']\s+content=["']([^"']*)/i).trim();
   const ogDescription = match(html, /<meta\s+property=["']og:description["']\s+content=["']([^"']*)/i).trim();
   const ogImage = match(html, /<meta\s+property=["']og:image["']\s+content=["']([^"']*)/i).trim();
+  const rssLink = /<link\s+rel=["']alternate["'][^>]+type=["']application\/rss\+xml["'][^>]+href=["']https:\/\/www\.kinocampus\.com\.br\/feed\.xml["']/i.test(html);
 
   if (!title || title.length < 8 || title.length > 70) errors.push(`${file}: title ausente ou fora do intervalo recomendado.`);
   if (!description || description.length < 70 || description.length > 180) warnings.push(`${file}: meta description deveria ter entre 70 e 180 caracteres.`);
@@ -69,6 +71,7 @@ function auditHtml(file, expectedRoute, errors, warnings) {
   if (!/\bindex\b/i.test(robots) || /\bnoindex\b/i.test(robots)) errors.push(`${file}: robots deveria permitir indexacao.`);
   if (!h1 || h1.length < 4) errors.push(`${file}: H1 ausente ou vazio.`);
   if (!ogTitle || !ogDescription || !ogImage) errors.push(`${file}: Open Graph incompleto.`);
+  if (!rssLink) errors.push(`${file}: link RSS publico ausente.`);
 }
 
 function auditNoindex(file, errors) {
@@ -91,9 +94,21 @@ function auditRobots(errors) {
 function auditSitemap(errors) {
   const sitemap = read('api/sitemap.js');
   if (!sitemap.includes('xmlns:image')) errors.push('api/sitemap.js: namespace de imagem ausente.');
+  if (!sitemap.includes('/editorial.html')) errors.push('api/sitemap.js: pagina editorial ausente.');
   if (!sitemap.includes('status=eq.published')) errors.push('api/sitemap.js: filtro de published ausente.');
   if (!sitemap.includes('/product.html?id=')) errors.push('api/sitemap.js: URL canonica de publicacao ausente.');
   if (!sitemap.includes('expires_at')) errors.push('api/sitemap.js: filtro/consulta de expiracao ausente.');
+}
+
+function auditRssFeed(errors) {
+  const vercel = read('vercel.json');
+  const feed = read('api/feed.js');
+  if (!vercel.includes('"source": "/feed.xml"')) errors.push('vercel.json: rewrite /feed.xml ausente.');
+  if (!feed.includes('<rss version="2.0"')) errors.push('api/feed.js: raiz RSS 2.0 ausente.');
+  if (!feed.includes('application/rss+xml; charset=utf-8')) errors.push('api/feed.js: content-type RSS ausente.');
+  if (!feed.includes('limit=30')) errors.push('api/feed.js: limite de itens RSS ausente.');
+  if (!feed.includes('status=eq.published')) errors.push('api/feed.js: filtro de published ausente.');
+  if (!feed.includes('/product.html?id=')) errors.push('api/feed.js: URL canonica de publicacao ausente.');
 }
 
 function auditSearchConsoleVerification(errors) {
@@ -153,6 +168,7 @@ function main() {
   NOINDEX.forEach((file) => auditNoindex(file, errors));
   auditRobots(errors);
   auditSitemap(errors);
+  auditRssFeed(errors);
   auditSearchConsoleVerification(errors);
   auditGoogleTag(errors);
   auditPublicEncoding(errors);

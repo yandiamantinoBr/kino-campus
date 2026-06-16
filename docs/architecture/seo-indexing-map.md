@@ -9,6 +9,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 - Detalhes de publicacao: `/product.html?id={uuid}`, servido por `api/og-product.js`.
 - Fallback/app shell de detalhe: `_product.html`, mantido como `noindex`.
 - Sitemap publico: `/sitemap.xml`, servido por `api/sitemap.js`.
+- Feed RSS publico: `/feed.xml`, servido por `api/feed.js`.
 - Politica de crawlers: `/robots.txt`.
 - Verificacao Google Search Console por HTML tag: `index.html` (`google-site-verification`).
 - Mapa auxiliar para agentes: `/llms.txt`.
@@ -27,6 +28,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 | `/caronas-feed.html` | `https://www.kinocampus.com.br/caronas-feed.html` | Colecao publica de caronas |
 | `/achados-perdidos.html` | `https://www.kinocampus.com.br/achados-perdidos.html` | Colecao publica de achados e perdidos |
 | `/sobre.html` | `https://www.kinocampus.com.br/sobre.html` | Missao, governanca, curadoria e autoria da plataforma |
+| `/editorial.html` | `https://www.kinocampus.com.br/editorial.html` | Politica editorial, fontes, correcao e separacao entre conteudo e publicidade |
 | `/ajuda.html` | `https://www.kinocampus.com.br/ajuda.html` | Suporte e contato |
 | `/ods.html` | `https://www.kinocampus.com.br/ods.html` | Contexto institucional e impacto |
 | `/transparencia.html` | `https://www.kinocampus.com.br/transparencia.html` | Hub de transparencia, privacidade, cookies e suporte |
@@ -70,6 +72,17 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 
 Se o Supabase estiver indisponivel, o sitemap ainda responde com as paginas estaticas para nao quebrar rastreamento.
 
+## RSS publico
+
+`api/feed.js` monta `/feed.xml` com:
+
+- ate 30 publicacoes `published` mais recentes;
+- links canonicos em `/product.html?id={id}`;
+- descricoes higienizadas, sem HTML bruto;
+- filtro de expiracao equivalente ao sitemap.
+
+Se o Supabase estiver indisponivel ou sem variaveis de ambiente, o endpoint ainda responde com um RSS 2.0 valido sem itens, para nao quebrar leitores nem validadores.
+
 ## IA e agentes
 
 - `robots.txt` permite rastreamento publico por `OAI-SearchBot` e `ChatGPT-User`, mantendo areas privadas bloqueadas.
@@ -86,4 +99,4 @@ Se o Supabase estiver indisponivel, o sitemap ainda responde com as paginas esta
 - Revisar periodicamente se posts `hidden`, `deleted` ou `pending` nao aparecem no sitemap.
 - GA4: acompanhar tempo real, aquisicao de trafego e paginas/telas depois do deploy de producao.
 - APIs Google: usar apenas server-side quando houver necessidade de dashboard consolidado; nao guardar tokens OAuth no frontend.
-- Transparencia publica: manter `/sobre.html`, `/transparencia.html`, `/privacidade.html`, `/termos.html` e `/ajuda.html#solicitacoes-suporte` consistentes entre rodape, sitemap, `llms.txt` e auditoria SEO.
+- Transparencia publica: manter `/sobre.html`, `/editorial.html`, `/transparencia.html`, `/privacidade.html`, `/termos.html` e `/ajuda.html#solicitacoes-suporte` consistentes entre rodape, sitemap, RSS, `llms.txt` e auditoria SEO.
