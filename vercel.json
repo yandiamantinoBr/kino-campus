@@ -4,6 +4,7 @@
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/feed.xml", "destination": "/api/feed" },
     { "source": "/product.html", "destination": "/api/og-product" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/mensagens", "destination": "/mensagens.html" },

@@ -15,6 +15,7 @@ const INDEXABLE_PAGES = {
   'caronas-feed.html': 'https://www.kinocampus.com.br/caronas-feed.html',
   'achados-perdidos.html': 'https://www.kinocampus.com.br/achados-perdidos.html',
   'sobre.html': 'https://www.kinocampus.com.br/sobre.html',
+  'editorial.html': 'https://www.kinocampus.com.br/editorial.html',
   'ajuda.html': 'https://www.kinocampus.com.br/ajuda.html',
   'ods.html': 'https://www.kinocampus.com.br/ods.html',
   'transparencia.html': 'https://www.kinocampus.com.br/transparencia.html',
@@ -56,6 +57,7 @@ describe('SEO e indexacao publica', () => {
     expect(sitemap).toContain('/eventos.html');
     expect(sitemap).toContain('/oportunidades.html');
     expect(sitemap).toContain('/sobre.html');
+    expect(sitemap).toContain('/editorial.html');
     expect(sitemap).toContain('/transparencia.html');
     expect(sitemap).toContain('status=eq.published');
     expect(sitemap).toContain('expires_at');
@@ -73,6 +75,8 @@ describe('SEO e indexacao publica', () => {
     expect(llms).toContain('/admin/');
     expect(llms).toContain('## Publicações');
     expect(llms).toContain('https://www.kinocampus.com.br/sobre.html');
+    expect(llms).toContain('https://www.kinocampus.com.br/editorial.html');
+    expect(llms).toContain('https://www.kinocampus.com.br/feed.xml');
     expect(llms).toContain('https://www.kinocampus.com.br/transparencia.html');
   });
 
@@ -80,10 +84,24 @@ describe('SEO e indexacao publica', () => {
     Object.entries(INDEXABLE_PAGES).forEach(([file, canonical]) => {
       const html = read(file);
       expect(html).toContain(`<link rel="canonical" href="${canonical}" />`);
+      expect(html).toContain('<link rel="alternate" type="application/rss+xml" href="https://www.kinocampus.com.br/feed.xml" />');
       expect(html).toContain('<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />');
       expect(html).toContain('<meta property="og:locale" content="pt_BR" />');
       expect(html).toContain('assets/js/boot/kc-seo-structured-data.js?v=8.6.1');
     });
+  });
+
+  test('feed RSS publico esta roteado e filtra apenas publicacoes publicadas', () => {
+    const vercel = read('vercel.json');
+    const feed = read('api/feed.js');
+
+    expect(vercel).toContain('"source": "/feed.xml"');
+    expect(feed).toContain('<rss version="2.0"');
+    expect(feed).toContain('application/rss+xml; charset=utf-8');
+    expect(feed).toContain('limit=30');
+    expect(feed).toContain('status=eq.published');
+    expect(feed).toContain('/product.html?id=');
+    expect(feed).toContain('isFutureOrUnknown');
   });
 
   test('home contem verificacao do Google Search Console', () => {
@@ -118,6 +136,8 @@ describe('SEO e indexacao publica', () => {
     expect(source).toContain("'@type': 'BreadcrumbList'");
     expect(source).toContain("'@type': 'Organization'");
     expect(source).toContain("type: 'AboutPage'");
+    expect(source).toContain('/editorial.html');
+    expect(source).toContain('Política editorial do KinoCampus');
     expect(source).toContain('Yan Diamantino');
     expect(source).toContain('Universidade Federal de Goias');
     expect(source).toContain("'@type': 'ItemList'");
@@ -150,6 +170,7 @@ describe('SEO e indexacao publica', () => {
     expect(pkg.scripts['seo:audit']).toBe('node scripts/seo-audit.js');
     expect(audit).toContain('auditRobots');
     expect(audit).toContain('auditSitemap');
+    expect(audit).toContain('auditRssFeed');
     expect(audit).toContain('auditGoogleTag');
     expect(audit).toContain('auditPublicEncoding');
     expect(audit).toContain('G-P9RKYHPB7Z');

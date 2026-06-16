@@ -83,6 +83,12 @@
       section: 'Sobre',
       description: 'Missao, governanca, curadoria, privacidade, publicidade e canais oficiais do KinoCampus.',
     },
+    '/editorial.html': {
+      type: 'WebPage',
+      name: 'Política editorial do KinoCampus',
+      section: 'Política editorial',
+      description: 'Fontes, critérios de curadoria, correções, publicidade e responsabilidade editorial do KinoCampus.',
+    },
     '/termos.html': {
       type: 'WebPage',
       name: 'Termos de Uso do KinoCampus',

@@ -10,6 +10,7 @@ const PUBLIC_PAGES = Object.freeze([
   'caronas-feed.html',
   'compra-venda-feed.html',
   'create-post.html',
+  'editorial.html',
   'eventos.html',
   'moradia.html',
   'my-posts.html',

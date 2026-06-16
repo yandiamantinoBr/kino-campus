@@ -144,6 +144,7 @@
       '  <nav class="kc-platform-footer__column" aria-label="Transparência e privacidade">',
       '    <h2>Transparência</h2>',
       '    <a href="' + getLegalHref('transparencia.html') + '">Central de Transparência</a>',
+      '    <a href="' + getRootHref('editorial.html') + '">Política editorial</a>',
       '    <a href="' + getLegalHref('privacidade.html') + '">Declaração de Privacidade</a>',
       '    <a href="' + getLegalHref('termos.html') + '">Termos de Uso</a>',
       '    <button type="button" data-kc-cookie-preferences>Preferências de cookies</button>',
