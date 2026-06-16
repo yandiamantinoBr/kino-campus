@@ -181,15 +181,17 @@
     var isLegacy = isLegacyExamplePost(post);
     syncLegacyExampleMarker(galleryMain, isLegacy, 'Exemplo', 'kc-product-example-ribbon--gallery');
     var emoji = post.emoji || '✨';
+    var title = String(post.titulo || post.title || 'publicação').trim() || 'publicação';
+    var imageAlt = 'Imagem da publicação: ' + title;
     if (images && images.length) {
-      if (mainImg) { mainImg.src = images[0]; mainImg.style.display = 'block'; }
+      if (mainImg) { mainImg.src = images[0]; mainImg.alt = imageAlt; mainImg.style.display = 'block'; }
       if (emojiCover) emojiCover.style.display = 'none';
       if (thumbs) {
         thumbs.innerHTML = '';
         images.forEach(function (src, idx) {
           var img = document.createElement('img');
           img.src = src;
-          img.alt = 'Miniatura ' + (idx + 1);
+          img.alt = 'Miniatura ' + (idx + 1) + ' de ' + title;
           img.loading = 'lazy';
           img.decoding = 'async';
           img.className = 'kc-thumbnail' + (idx === 0 ? ' active' : '');
@@ -198,7 +200,7 @@
             var all = thumbs.querySelectorAll('.kc-thumbnail');
             all.forEach(function (t) { t.classList.remove('active'); });
             img.classList.add('active');
-            if (mainImg) mainImg.src = src;
+            if (mainImg) { mainImg.src = src; mainImg.alt = img.alt; }
           });
           thumbs.appendChild(img);
         });

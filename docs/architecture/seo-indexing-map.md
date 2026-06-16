@@ -59,7 +59,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
   - `Event` para eventos com data.
   - `JobPosting` para oportunidades com link de candidatura e prazo.
   - `Product` + `Offer` para compra/venda com preco.
-  - `CreativeWork` como fallback seguro.
+  - `Article` como fallback editorial para publicacoes comunitarias, com `headline`, `author`, `publisher`, secao, datas, `wordCount` e fonte original quando disponivel.
 
 ## Sitemap
 

@@ -125,6 +125,9 @@ describe('SEO e indexacao publica', () => {
       const html = read(file);
       expect(html).toContain('<meta name="robots" content="noindex');
       expect(html).toContain('<link rel="canonical" href="https://www.kinocampus.com.br/');
+      if (file === '_product.html') {
+        expect(html).toContain('<link rel="alternate" type="application/rss+xml" href="https://www.kinocampus.com.br/feed.xml" />');
+      }
     });
   });
 
@@ -155,7 +158,12 @@ describe('SEO e indexacao publica', () => {
     expect(source).toContain('postDescription');
     expect(source).toContain('specsGrid');
     expect(source).toContain("index,follow,max-image-preview:large,max-snippet:-1");
-    expect(source).toContain("'@type': 'CreativeWork'");
+    expect(source).toContain("'@type': 'Article'");
+    expect(source).toContain('mainEntityOfPage');
+    expect(source).toContain('articleSection');
+    expect(source).toContain('wordCount');
+    expect(source).toContain('isBasedOn');
+    expect(source).toContain('buildArticleAuthor');
     expect(source).toContain("'@type': 'Event'");
     expect(source).toContain("'@type': 'JobPosting'");
     expect(source).toContain("'@type': 'Product'");
