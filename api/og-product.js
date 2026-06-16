@@ -145,6 +145,12 @@ function clamp(value, max) {
   return `${text.slice(0, Math.max(0, max - 1)).trim()}…`;
 }
 
+function wordCount(value) {
+  const text = cleanText(value);
+  if (!text) return 0;
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
 function canonicalPostId(post) {
   return String((post && post.id) || (post && post.legacy_id) || '').trim();
 }
@@ -229,6 +235,18 @@ function getActionLink(post) {
     metadata.inscricao_url,
     metadata.registration_url,
     metadata.source_url,
+  ];
+  return candidates.find((url) => /^https?:\/\//i.test(String(url || ''))) || '';
+}
+
+function getSourceUrl(post, values) {
+  const metadata = metadataOf(post);
+  const candidates = [
+    metadata.source_url,
+    metadata.sourceUrl,
+    metadata.original_url,
+    metadata.originalUrl,
+    values && values.actionLink,
   ];
   return candidates.find((url) => /^https?:\/\//i.test(String(url || ''))) || '';
 }
@@ -424,23 +442,59 @@ function injectVisibleProductContent(html, post, values) {
   return modified;
 }
 
-function buildCreativeWork(post, values) {
+function buildArticleAuthor(post, values) {
+  const metadata = metadataOf(post);
+  const sourceUrl = getSourceUrl(post, values);
+  const name = cleanText(
+    metadata.source_unit
+      || metadata.sourceUnit
+      || metadata.orgao
+      || metadata.organizer
+      || metadata.publisher
+      || metadata.author_name
+      || metadata.authorName
+      || metadata.source_author
+      || metadata.sourceAuthor
+      || 'Comunidade UFG'
+  );
+  const author = {
+    '@type': 'Organization',
+    name: name || 'Comunidade UFG',
+  };
+  if (sourceUrl) author.url = sourceUrl;
+  return author;
+}
+
+function buildArticle(post, values) {
+  const metadata = metadataOf(post);
+  const body = cleanText(post.description);
+  const sourceUrl = getSourceUrl(post, values);
   const entity = {
-    '@type': 'CreativeWork',
-    '@id': `${values.canonicalUrl}#post`,
+    '@type': 'Article',
+    '@id': `${values.canonicalUrl}#article`,
+    mainEntityOfPage: { '@id': `${values.canonicalUrl}#webpage` },
+    headline: values.title,
     name: values.title,
     description: values.description,
+    articleBody: body || undefined,
+    articleSection: values.categoryLabel,
     url: values.canonicalUrl,
-    image: values.image,
+    image: [values.image],
     inLanguage: 'pt-BR',
     datePublished: isoDate(post.created_at) || undefined,
     dateModified: isoDate(post.updated_at || post.created_at) || undefined,
+    author: buildArticleAuthor(post, values),
+    publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+    isAccessibleForFree: true,
+    wordCount: wordCount(body) || undefined,
     about: [
       post.module ? { '@type': 'Thing', name: getCategoryLabel(post.module, post.category) } : null,
       post.category ? { '@type': 'Thing', name: beautifyKey(post.category) } : null,
     ].filter(Boolean),
   };
   if (post.location) entity.contentLocation = { '@type': 'Place', name: String(post.location) };
+  if (sourceUrl) entity.isBasedOn = sourceUrl;
+  if (metadata.source_id || metadata.sourceId) entity.identifier = String(metadata.source_id || metadata.sourceId);
   return entity;
 }
 
@@ -540,7 +594,7 @@ function removeUndefined(value) {
 }
 
 function buildProductJsonLd(post, values) {
-  const richEntity = buildEvent(post, values) || buildJobPosting(post, values) || buildProduct(post, values) || buildCreativeWork(post, values);
+  const richEntity = buildEvent(post, values) || buildJobPosting(post, values) || buildProduct(post, values) || buildArticle(post, values);
   const graph = [
     {
       '@type': 'Organization',
