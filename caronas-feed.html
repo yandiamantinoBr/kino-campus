@@ -98,10 +98,6 @@
     <h1 class="kc-sr-only">Caronas</h1>
 <!-- Feed Section -->
 <section class="kc-feed-section">
-<section class="kc-module-intro" aria-label="Contexto sobre caronas" data-i18n-aria-label="aria-label.rides-context">
-<h2>Caronas para a rotina universitária</h2>
-<p>Procure ou ofereça caronas para câmpus da UFG, bairros de Goiânia, cidades próximas, rodoviária, aeroporto e trajetos recorrentes. Publicações claras devem informar origem, destino, data, horário, contribuição sugerida e forma de contato, sempre com acordo direto entre usuários.</p>
-</section>
 <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
 <i class="fas fa-car"></i>
                 Caronas
@@ -166,7 +162,16 @@
 </div>
 </section>
 <!-- Sidebar -->
-<aside class="kc-sidebar kc-sidebar--caronas" data-kc-caronas-sidebar="true">
+<aside class="kc-sidebar kc-sidebar--caronas kc-sidebar--contextual" data-kc-caronas-sidebar="true">
+  <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="caronas">
+    <h3><i class="fas fa-circle-info"></i> Caronas na rotina UFG</h3>
+    <p class="kc-sidebar-help">Ofertas e pedidos para câmpus, bairros de Goiânia, cidades próximas, rodoviária e aeroporto.</p>
+    <details class="kc-sidebar-context">
+      <summary>Ver informações úteis</summary>
+      <p>Publicações claras devem informar origem, destino, data, horário, contribuição sugerida e forma de contato, sempre com acordo direto entre usuários.</p>
+      <a href="termos.html">Ver regras da comunidade</a>
+    </details>
+  </div>
 
   <!-- Filtros -->
   <div class="kc-sidebar-section" data-kc-caronas-section="filters">

@@ -209,7 +209,8 @@ describe('KCAds feed monetization', () => {
     expect(document.querySelector('[data-kc-ad-aside="sticky"]')).toBeTruthy();
     expect(document.querySelector('[data-kc-ad-aside="top"] .kc-ad-card').getAttribute('data-kc-ad-placement')).toBe('feed_aside_top');
     expect(document.querySelector('[data-kc-ad-aside="sticky"] .kc-ad-card').getAttribute('data-kc-ad-placement')).toBe('feed_aside_sticky');
-    expect(document.querySelector('.kc-sidebar').firstElementChild.getAttribute('data-kc-ad-aside')).toBe('top');
+    expect(document.querySelector('.kc-sidebar').firstElementChild.id).toBe('one');
+    expect(document.querySelector('#one').nextElementSibling.getAttribute('data-kc-ad-aside')).toBe('top');
     expect(document.querySelector('.kc-sidebar').lastElementChild.getAttribute('data-kc-ad-aside')).toBe('sticky');
   });
 
@@ -226,8 +227,10 @@ describe('KCAds feed monetization', () => {
 
     expect(ok).toBe(true);
     expect(document.querySelector('[data-kc-ad-aside="top"]')).toBeTruthy();
-    expect(document.querySelector('[data-kc-ad-aside="sticky"]')).toBeFalsy();
-    expect(document.querySelectorAll('.kc-ad-card--aside[data-kc-ad-id="ad-1"]')).toHaveLength(1);
+    expect(document.querySelector('[data-kc-ad-aside="sticky"]')).toBeTruthy();
+    expect(document.querySelector('#one').nextElementSibling.getAttribute('data-kc-ad-aside')).toBe('top');
+    expect(document.querySelector('.kc-sidebar').lastElementChild.getAttribute('data-kc-ad-aside')).toBe('sticky');
+    expect(document.querySelectorAll('.kc-ad-card--aside[data-kc-ad-id="ad-1"]')).toHaveLength(2);
   });
 
   test('adiciona UTMs em URLs externas de campanha', () => {

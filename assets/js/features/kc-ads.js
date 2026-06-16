@@ -595,7 +595,14 @@
       rendered.html,
     ].join('');
     if (slot === 'top') {
-      if (sidebar.firstElementChild !== section) sidebar.insertBefore(section, sidebar.firstElementChild);
+      const firstContentSection = Array.from(sidebar.children || []).find((node) => {
+        return node !== section && !(node.getAttribute && node.getAttribute('data-kc-ad-aside'));
+      });
+      if (firstContentSection) {
+        sidebar.insertBefore(section, firstContentSection.nextSibling);
+      } else if (sidebar.firstElementChild !== section) {
+        sidebar.insertBefore(section, sidebar.firstElementChild);
+      }
     } else {
       sidebar.appendChild(section);
     }
@@ -615,8 +622,10 @@
     const selected = selectAdsForPlacement(ads, 'feed_aside', context, 2);
     if (!selected.length && !canRenderAdsense(cfg, 'feed_aside_top') && !canRenderAdsense(cfg, 'feed_aside_sticky')) return false;
     sidebar.querySelectorAll('[data-kc-ad-aside="true"]').forEach((node) => node.remove());
-    const top = renderAsideSection(sidebar, targetDoc, 'top', selected[0] || null, cfg);
-    const sticky = renderAsideSection(sidebar, targetDoc, 'sticky', selected[1] || null, cfg);
+    const topAd = selected[0] || null;
+    const stickyAd = selected[1] || (selected.length === 1 ? selected[0] : null);
+    const top = renderAsideSection(sidebar, targetDoc, 'top', topAd, cfg);
+    const sticky = renderAsideSection(sidebar, targetDoc, 'sticky', stickyAd, cfg);
     bindTracking(top);
     bindTracking(sticky);
     pushAdsenseSlots(top);

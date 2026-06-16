@@ -121,6 +121,7 @@
       '  <nav class="kc-platform-footer__column" aria-label="Navegação da plataforma">',
       '    <h2>Plataforma</h2>',
       '    <a href="' + getRootHref('index.html') + '">Início</a>',
+      '    <a href="' + getRootHref('sobre.html') + '">Sobre</a>',
       '    <a href="' + getRootHref('my-posts.html') + '">Minhas publicações</a>',
       '    <a href="' + getRootHref('create-post.html') + '">Criar publicação</a>',
       '  </nav>',
