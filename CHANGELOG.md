@@ -2,6 +2,41 @@
 
 ---
 
+## [v76.20] - 2026-06-17 - Página 404 institucional customizada
+
+### Tema
+
+Adição de `404.html` estática na raiz, servida automaticamente pela Vercel quando
+um recurso não existe. Substitui a 404 genérica do platform por uma página
+institucional com header da plataforma, mensagem clara, CTAs para início e
+Central de Ajuda, grid com os 6 módulos da comunidade UFG e rodapé com links
+institucionais.
+
+### Decisões
+
+- **Sem `vercel.json`**: a Vercel serve `404.html` da raiz automaticamente;
+  nenhuma rota/rewrite/header foi alterada.
+- **Aditiva e isolada**: nenhum arquivo existente modificado; não registrada
+  em `admin-pages.manifest.js` nem em `seo-audit.js` (404 é artefato de erro
+  HTTP, não rota pública de navegação).
+- **`noindex, follow, noarchive`**: não consome crawl budget; `follow` repassa
+  authority para os links internos (home + 6 módulos + institucionais).
+- **Sem JS de negócio**: carrega apenas shell mínimo (theme, i18n, consent,
+  google-tag, telemetry, public-shell). Zero adapters/APIs/Supabase — uma
+  página de erro nunca depende de backend.
+- **CSS escopado inline** reusando variáveis do tema (claro/escuro) via
+  `var(--kc-*)`; sem toque em `styles.css`.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.20 | `404.html` institucional com H1 único, skip link, grid responsivo a11y, footer estático |
+| v76.20 | `robots= noindex,follow,noarchive`; canonical aponta para `/` (não cria URL órfã) |
+| v76.20 | OG/Twitter meta completos reutilizando `?type=home` do handler OG existente |
+
+---
+
 ## [75.1.0] - 2026-05-21 - Performance Phase 1 e Observabilidade
 
 ### Tema

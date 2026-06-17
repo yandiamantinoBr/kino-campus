@@ -297,6 +297,7 @@
     'auth.dropdown-logout':            'Sair da conta',
 
     // ── Metadata runtime (title + meta description) ────────────────────────────
+    'meta-title.error-404':            'Página não encontrada - KinoCampus',
     'meta-title.account-setup':        'KinoCampus - Completar conta',
     'meta-title.achados-perdidos':     'Achados e Perdidos - KinoCampus',
     'meta-title.ajuda':                'KinoCampus - Central de ajuda',
@@ -326,6 +327,7 @@
     'meta-title.admin-reports':        'KinoCampus - Denúncias Admin',
     'meta-title.admin-privacy-analytics': 'KinoCampus - Privacidade e Analytics Admin',
 
+    'meta-description.error-404':            'Página não encontrada no KinoCampus. Volte ao início ou explore os módulos da comunidade UFG: eventos, oportunidades, moradia, compra e venda, caronas e achados e perdidos.',
     'meta-description.account-setup':       'Complete sua conta no KinoCampus — comunidade universitária da UFG.',
     'meta-description.achados-perdidos':    'Achados e Perdidos da UFG. Encontrou ou perdeu algo no campus? Publique no KinoCampus e ajude a comunidade.',
     'meta-description.ajuda':               'Central de ajuda do KinoCampus. Tire dúvidas sobre a plataforma da comunidade universitária da UFG.',
@@ -482,6 +484,10 @@
     // Navegação (v12.8.1 — trilha B3 a11y)
     'aria-label.nav-main':              'Navegação principal',
     'aria-label.nav-mobile':            'Menu mobile',
+    // 404 institucional (v76.20)
+    'aria-label.error-modules':         'Módulos da comunidade UFG',
+    'aria-label.footer-institutional':  'Rodapé institucional',
+    'aria-label.footer-links':          'Links institucionais',
 
     // Ranking info (v12.8.1 — trilha B3 a11y)
     'aria-label.how-ranking-works':     'Como funciona o ranking?',
