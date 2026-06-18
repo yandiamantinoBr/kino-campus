@@ -134,6 +134,51 @@ function auditPublicEncoding(errors) {
   });
 }
 
+function auditPublicImageAlt(errors) {
+  Object.keys(INDEXABLE).forEach((file) => {
+    const html = read(file);
+    const tags = html.match(/<img\b[^>]*>/gi) || [];
+    tags.forEach((tag, index) => {
+      const alt = tag.match(/\balt\s*=\s*(["'])(.*?)\1/i);
+      const decorative = /\baria-hidden\s*=\s*["']true["']/i.test(tag)
+        || /\brole\s*=\s*["'](?:presentation|none)["']/i.test(tag);
+      if (!alt) errors.push(`${file}: imagem estatica ${index + 1} sem atributo alt.`);
+      else if (!String(alt[2] || '').trim() && !decorative) errors.push(`${file}: imagem estatica ${index + 1} com alt vazio sem marcacao decorativa.`);
+    });
+  });
+
+  const cardRenderer = read('assets/js/utils/kc-utils.presentation.js');
+  if (!cardRenderer.includes('function buildPostImageAlt(post, moduleKey)')) {
+    errors.push('kc-utils.presentation.js: builder de alt contextual dos cards ausente.');
+  }
+  if (!cardRenderer.includes('Imagem da publicação: ${title}')) {
+    errors.push('kc-utils.presentation.js: alt descritivo por titulo ausente nos cards.');
+  }
+
+  const related = read('assets/js/controllers/public/product.related.js');
+  if (!related.includes('Imagem da publicação relacionada: ')) {
+    errors.push('product.related.js: alt contextual das imagens relacionadas ausente.');
+  }
+
+  const productTemplate = read('_product.html');
+  if (!productTemplate.includes('property="og:image:alt"') || !productTemplate.includes('name="twitter:image:alt"')) {
+    errors.push('_product.html: texto alternativo das imagens sociais ausente.');
+  }
+}
+
+function auditProductSsr(errors) {
+  const source = read('api/og-product.js');
+  if (!source.includes('const canonicalUrl = `${SITE_ORIGIN}/product.html?id=')) {
+    errors.push('api/og-product.js: canonical de produto nao esta ancorada no SITE_ORIGIN.');
+  }
+  if (source.includes("req.headers['x-forwarded-host']") || source.includes('req.headers.host')) {
+    errors.push('api/og-product.js: canonical nao deve depender do Host da requisicao.');
+  }
+  if (!source.includes('META_DESCRIPTION_MAX_LENGTH = 180') || !source.includes('SEO_TITLE_MAX_LENGTH = 70')) {
+    errors.push('api/og-product.js: limites de title/description SEO ausentes.');
+  }
+}
+
 function auditGoogleTag(errors) {
   const tag = read('assets/js/boot/kc-google-tag.js');
   if (!tag.includes(GA4_MEASUREMENT_ID)) errors.push('kc-google-tag.js: Measurement ID GA4 ausente ou incorreto.');
@@ -172,6 +217,8 @@ function main() {
   auditSearchConsoleVerification(errors);
   auditGoogleTag(errors);
   auditPublicEncoding(errors);
+  auditPublicImageAlt(errors);
+  auditProductSsr(errors);
 
   const summary = {
     checkedAt: new Date().toISOString(),

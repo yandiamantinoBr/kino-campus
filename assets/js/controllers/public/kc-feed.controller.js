@@ -449,6 +449,48 @@
     };
     const pagePath = String(window.location.pathname || '').trim() || '/';
 
+    function getPageEmptyState() {
+      const section = typeof container.closest === 'function' ? container.closest('section') : null;
+      return section && typeof section.querySelector === 'function' ? section.querySelector('#noResults') : null;
+    }
+
+    function removeGeneratedEmptyState() {
+      const generated = container.querySelector('[data-kc-feed-empty="true"]');
+      if (generated) generated.remove();
+    }
+
+    function syncFeedEmptyState() {
+      const isEmpty = state.hydrated && state.done && state.renderedPosts.length === 0;
+      const pageEmpty = getPageEmptyState();
+      if (pageEmpty) {
+        if (isEmpty) pageEmpty.style.display = '';
+        removeGeneratedEmptyState();
+        return;
+      }
+
+      removeGeneratedEmptyState();
+      if (!isEmpty) return;
+
+      const empty = document.createElement('div');
+      empty.className = 'kc-no-results';
+      empty.setAttribute('data-kc-feed-empty', 'true');
+
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-layer-group';
+      icon.setAttribute('aria-hidden', 'true');
+
+      const title = document.createElement('h3');
+      title.textContent = 'Nenhuma publicação disponível agora';
+
+      const description = document.createElement('p');
+      description.textContent = 'Consulte os módulos da comunidade UFG ou volte mais tarde para ver novas publicações.';
+
+      empty.appendChild(icon);
+      empty.appendChild(title);
+      empty.appendChild(description);
+      container.appendChild(empty);
+    }
+
     function getSnapshotKey() {
       return buildFeedSnapshotKey(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
     }
@@ -510,6 +552,7 @@
     function appendRenderedPosts(posts, mode) {
       const batch = Array.isArray(posts) ? posts.filter(Boolean) : [];
       if (!batch.length || state.destroyed) return;
+      removeGeneratedEmptyState();
       const html = batch.map((post) => window.KCUtils.renderPostCard(post, { pageModule })).join('');
       if (mode === 'prepend') {
         container.insertAdjacentHTML('afterbegin', html);
@@ -553,6 +596,8 @@
         state.hasMore = nextMeta.hasMore === true;
         state.done = !state.hasMore;
       }
+      state.hydrated = true;
+      syncFeedEmptyState();
       if (state.done) setStatus('done', 'Fim da lista');
       else setStatus('idle', '');
       clearPendingRealtime();
@@ -843,6 +888,8 @@
         if (fresh.length) {
           appendRenderedPosts(fresh, 'append');
         }
+
+        syncFeedEmptyState();
 
         if (state.done) {
           setStatus('done', 'Fim da lista');

@@ -128,6 +128,13 @@ describe('kc-feed.controller — source contracts', () => {
     expect(source).toContain('createFeedPager');
   });
 
+  test('renderiza estado vazio útil quando um feed público termina sem posts', () => {
+    expect(source).toContain('function syncFeedEmptyState()');
+    expect(source).toContain('Nenhuma publicação disponível agora');
+    expect(source).toContain('Consulte os módulos da comunidade UFG');
+    expect(source).toContain('data-kc-feed-empty');
+  });
+
   test('usa aria-live polite no banner de realtime', () => {
     expect(source).toContain("setAttribute('aria-live', 'polite')");
   });
@@ -190,6 +197,25 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
       sortBy: 'recentes',
     });
     expect(result && typeof result.then === 'function').toBe(true);
+  });
+
+  test('feed concluído sem posts mostra fallback útil no DOM', async () => {
+    window.KCUtils = { renderPostCard: jest.fn(() => '') };
+
+    const pager = await window.KCControllers.injectFeed({
+      containerSelector: '#feed-container',
+      module: null,
+      pageModule: '',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const empty = document.querySelector('[data-kc-feed-empty="true"]');
+    expect(empty).not.toBeNull();
+    expect(empty.textContent).toContain('Nenhuma publicação disponível agora');
+    expect(empty.textContent).toContain('Consulte os módulos da comunidade UFG');
+
+    pager.destroy();
+    delete window.KCUtils;
   });
 });
 

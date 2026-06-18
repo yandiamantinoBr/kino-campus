@@ -15,6 +15,7 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 - Mapa auxiliar para agentes: `/llms.txt`.
 - Google Analytics 4 consent-aware: `assets/js/boot/kc-google-tag.js`.
 - Runbook operacional: `docs/ops/google-search-console-analytics-runbook.md`.
+- Gate de prontidão AdSense/Search Console: `docs/ops/adsense-search-console-readiness-runbook.md`.
 
 ## Paginas indexaveis
 
@@ -55,6 +56,8 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 - `assets/js/boot/kc-seo-structured-data.js` injeta JSON-LD para paginas publicas indexaveis.
 - Tipos usados nas paginas: `Organization`, `WebSite`, `SearchAction`, `WebPage`, `AboutPage`, `CollectionPage`, `ContactPage`, `PrivacyPolicy`, `BreadcrumbList` e `ItemList`.
 - `api/og-product.js` injeta JSON-LD server-side para publicacoes publicas.
+- Canonical, imagem Open Graph de fallback, title e description de produto são
+  derivados do domínio oficial; o `Host` de preview não participa da canonical.
 - Tipos ricos de publicacao sao usados apenas quando os dados suficientes existem e tambem aparecem no HTML:
   - `Event` para eventos com data.
   - `JobPosting` para oportunidades com link de candidatura e prazo.
@@ -93,6 +96,8 @@ Se o Supabase estiver indisponivel ou sem variaveis de ambiente, o endpoint aind
 ## Monitoramento recomendado
 
 - Executar `npm run seo:audit` antes de releases com mudancas em paginas publicas, sitemap ou robots.
+- A auditoria também verifica `alt` das imagens estáticas indexáveis, os
+  contratos de `alt` dos cards/relacionados e a canonical fixa do SSR de produto.
 - Google Search Console: enviar `https://www.kinocampus.com.br/sitemap.xml`.
 - Bing Webmaster Tools: enviar o mesmo sitemap.
 - Validar publicacoes importantes com URL Inspection depois de publicar.
@@ -100,3 +105,6 @@ Se o Supabase estiver indisponivel ou sem variaveis de ambiente, o endpoint aind
 - GA4: acompanhar tempo real, aquisicao de trafego e paginas/telas depois do deploy de producao.
 - APIs Google: usar apenas server-side quando houver necessidade de dashboard consolidado; nao guardar tokens OAuth no frontend.
 - Transparencia publica: manter `/sobre.html`, `/editorial.html`, `/transparencia.html`, `/privacidade.html`, `/termos.html` e `/ajuda.html#solicitacoes-suporte` consistentes entre rodape, sitemap, RSS, `llms.txt` e auditoria SEO.
+- Solicitação de revisão AdSense: seguir
+  `docs/ops/adsense-search-console-readiness-runbook.md` e manter No-Go enquanto
+  qualquer gate local, de produção ou do Search Console estiver pendente.

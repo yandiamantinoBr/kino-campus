@@ -169,6 +169,28 @@ describe('SEO e indexacao publica', () => {
     expect(source).toContain("'@type': 'Product'");
     expect(source).toContain('shouldIndexPost');
     expect(source).toContain("status || '').toLowerCase() !== 'published'");
+    expect(source).toContain("const canonicalUrl = `${SITE_ORIGIN}/product.html?id=");
+    expect(source).not.toContain("req.headers['x-forwarded-host']");
+    expect(source).toContain('META_DESCRIPTION_MAX_LENGTH = 180');
+    expect(source).toContain('SEO_TITLE_MAX_LENGTH = 70');
+    expect(source).toContain("replaceMetaContent(modified, 'property', 'og:image:alt'");
+  });
+
+  test('feeds públicos têm estados vazios específicos e acionáveis', () => {
+    const expectations = {
+      'eventos.html': 'Nenhum evento corresponde aos filtros',
+      'oportunidades.html': 'Nenhuma oportunidade corresponde aos filtros',
+      'moradia.html': 'Nenhuma moradia corresponde aos filtros',
+      'compra-venda-feed.html': 'Nenhum item corresponde aos filtros',
+      'caronas-feed.html': 'Nenhuma carona corresponde aos filtros',
+      'achados-perdidos.html': 'Nenhum registro corresponde aos filtros',
+    };
+
+    Object.entries(expectations).forEach(([file, copy]) => {
+      const html = read(file);
+      expect(html).toContain(copy);
+      expect(html).toContain('Limpar Filtros');
+    });
   });
 
   test('auditoria local de SEO esta disponivel', () => {
@@ -181,6 +203,8 @@ describe('SEO e indexacao publica', () => {
     expect(audit).toContain('auditRssFeed');
     expect(audit).toContain('auditGoogleTag');
     expect(audit).toContain('auditPublicEncoding');
+    expect(audit).toContain('auditPublicImageAlt');
+    expect(audit).toContain('auditProductSsr');
     expect(audit).toContain('G-P9RKYHPB7Z');
     expect(audit).toContain('GPTBot');
   });

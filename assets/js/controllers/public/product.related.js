@@ -79,10 +79,15 @@
 
   function getRelatedImageHtml(post) {
     var images = Array.isArray(post && post.imagens) ? post.imagens : (Array.isArray(post && post.images) ? post.images : []);
-    var title = String(post && (post.titulo || post.title) || 'Imagem da publicação').trim() || 'Imagem da publicação';
+    var title = String(post && (post.titulo || post.title) || '').trim();
+    var descriptiveTitle = title.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9]/g, '').length >= 3;
+    var context = String(moduleLabel(post && (post.modulo || post.module)) || 'comunidade UFG').trim();
+    var imageAlt = descriptiveTitle
+      ? 'Imagem da publicação relacionada: ' + title
+      : 'Imagem de publicação relacionada em ' + context;
     var exampleBadge = isLegacyExamplePost(post) ? buildLegacyExampleBadgeHtml('Exemplo', 'kc-product-example-ribbon--related') : '';
     if (images.length) {
-      return '<div class="kc-related-card__media">' + exampleBadge + '<img src="' + esc(String(images[0])) + '" alt="' + esc(title) + '" loading="lazy" decoding="async" /></div>';
+      return '<div class="kc-related-card__media">' + exampleBadge + '<img src="' + esc(String(images[0])) + '" alt="' + esc(imageAlt) + '" loading="lazy" decoding="async" /></div>';
     }
 
     var emoji = String(post && post.emoji || '✨').trim() || '✨';

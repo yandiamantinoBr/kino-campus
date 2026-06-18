@@ -1,0 +1,46 @@
+'use strict';
+
+const { buildProductValues, shouldIndexPost } = require('../../api/og-product.js');
+
+function buildPost(overrides) {
+  return {
+    id: 'f45a772b-0a98-4dc1-9b38-209c2a0d1f10',
+    title: 'Semana acadêmica com oficinas e palestras abertas',
+    description: 'Programação organizada pela comunidade universitária com atividades gratuitas, datas confirmadas e participação aberta.',
+    module: 'eventos',
+    category: 'academico',
+    location: 'Campus Samambaia',
+    status: 'published',
+    metadata: {},
+    post_media: [],
+    ...overrides,
+  };
+}
+
+describe('metadados SEO de product.html', () => {
+  test('mantém canonical e imagem de fallback no domínio oficial', () => {
+    const values = buildProductValues(buildPost());
+
+    expect(values.canonicalUrl).toBe('https://www.kinocampus.com.br/product.html?id=f45a772b-0a98-4dc1-9b38-209c2a0d1f10');
+    expect(values.image).toBe('https://www.kinocampus.com.br/api/og-image?type=eventos');
+  });
+
+  test('limita title e description sem perder contexto editorial', () => {
+    const values = buildProductValues(buildPost({
+      title: 'Evento '.repeat(30),
+      description: 'Descrição detalhada da atividade universitária. '.repeat(20),
+    }));
+
+    expect(values.seoTitle.length).toBeLessThanOrEqual(70);
+    expect(values.description.length).toBeLessThanOrEqual(180);
+    expect(values.description).toContain('Eventos');
+    expect(values.description).toContain('Campus Samambaia');
+  });
+
+  test('não indexa item sem descrição real mesmo quando o prefixo é longo', () => {
+    const post = buildPost({ description: '', location: 'Campus Samambaia, Goiânia, Goiás' });
+    const values = buildProductValues(post);
+
+    expect(shouldIndexPost(post, values)).toBe(false);
+  });
+});

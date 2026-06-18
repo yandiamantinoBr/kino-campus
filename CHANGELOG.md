@@ -2,6 +2,38 @@
 
 ---
 
+## [v76.22] - 2026-06-17 - Resiliência de conteúdo público e metadata SEO
+
+### Tema
+
+Conclusão do P1 de adequação AdSense com textos alternativos contextuais,
+estados vazios úteis, canonical de produto fixa no domínio oficial e gate
+operacional para Search Console/AdSense.
+
+### Decisões
+
+- **Canonical independente do request Host**: previews continuam declarando a
+  URL oficial de produção, evitando duplicação e canonical divergente.
+- **Snippets previsíveis**: title SSR limitado a 70 caracteres e description a
+  180, preservando módulo, local e preço quando disponíveis.
+- **Alt contextual**: cards de feed e publicações relacionadas deixam de usar
+  título isolado ou emoji como texto alternativo.
+- **Estado vazio com contexto**: home e seis módulos oferecem informação útil
+  quando não há publicações ou filtros não retornam itens.
+- **Operação separada do runtime**: o runbook não ativa slots, Auto Ads,
+  credenciais, Search Console nem revisão remota.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.22 | canonical e imagens sociais de produto ancoradas em produção |
+| v76.22 | auditoria SEO ampliada para alt e contrato SSR |
+| v76.22 | estados vazios públicos específicos por módulo |
+| v76.22 | runbook de prontidão Search Console/AdSense |
+
+---
+
 ## [v76.21] - 2026-06-17 - Contrato de galeria do Cadu com seis imagens
 
 ### Tema
