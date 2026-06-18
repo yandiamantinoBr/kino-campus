@@ -30,111 +30,10 @@
   <link rel="stylesheet" href="assets/css/styles.css?v=8.6.4" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
+  <link rel="stylesheet" href="assets/css/kc-error-page.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <style>
-    /* kc-error-page: estilos escopados para a página 404.
-       Reaproveita variáveis do tema (claro/escuro) sem tocar styles.css. */
-    .kc-error-page { padding-block: clamp(2rem, 5vw, 4rem); }
-    .kc-error-hero {
-      max-width: 720px;
-      margin-inline: auto;
-      text-align: center;
-      padding-block: clamp(2rem, 6vw, 4rem) clamp(1.5rem, 4vw, 2.5rem);
-      padding-inline: clamp(1rem, 4vw, 2rem);
-    }
-    .kc-error-code {
-      font-size: clamp(3.5rem, 12vw, 6rem);
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -0.03em;
-      color: var(--kc-color-primary, #1d4ed8);
-      margin: 0 0 0.5rem;
-    }
-    .kc-error-page h1 {
-      font-size: clamp(1.5rem, 4vw, 2.25rem);
-      margin: 0 0 1rem;
-    }
-    .kc-error-lead {
-      font-size: clamp(1rem, 2.5vw, 1.125rem);
-      color: var(--kc-text-muted, #4b5563);
-      margin: 0 auto 1.75rem;
-      max-width: 48ch;
-      line-height: 1.6;
-    }
-    .kc-error-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      justify-content: center;
-      margin-bottom: 0.5rem;
-    }
-    .kc-error-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1rem;
-      max-width: 960px;
-      margin: clamp(2rem, 5vw, 3rem) auto 0;
-      padding-inline: clamp(1rem, 4vw, 2rem);
-    }
-    .kc-error-card {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      padding: clamp(1rem, 3vw, 1.5rem);
-      border: 1px solid var(--kc-border, #e5e7eb);
-      border-radius: 14px;
-      background: var(--kc-surface, #ffffff);
-      text-decoration: none;
-      color: inherit;
-      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-    }
-    .kc-error-card:hover,
-    .kc-error-card:focus-visible {
-      transform: translateY(-2px);
-      border-color: var(--kc-color-primary, #1d4ed8);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-    .kc-error-card-icon {
-      font-size: 1.5rem;
-      color: var(--kc-color-primary, #1d4ed8);
-    }
-    .kc-error-card-title { font-weight: 700; font-size: 1.05rem; }
-    .kc-error-card-desc { font-size: 0.9rem; color: var(--kc-text-muted, #6b7280); line-height: 1.45; }
-    @media (prefers-reduced-motion: reduce) {
-      .kc-error-card { transition: none; }
-    }
-    /* kc-footer: estilos escopados para o rodapé institucional da 404.
-       O rodapé não é injetado por JS nesta página; usa markup próprio. */
-    .kc-footer {
-      margin-top: clamp(2.5rem, 6vw, 4rem);
-      padding-block: clamp(1.5rem, 4vw, 2.25rem) clamp(1.5rem, 4vw, 2rem);
-      border-top: 1px solid var(--kc-border, #e5e7eb);
-      background: var(--kc-surface-muted, #f9fafb);
-    }
-    .kc-footer-inner {
-      max-width: 960px;
-      margin-inline: auto;
-      padding-inline: clamp(1rem, 4vw, 2rem);
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      align-items: center;
-      text-align: center;
-    }
-    .kc-footer-brand { font-weight: 700; margin: 0; }
-    .kc-footer-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 1.25rem;
-      justify-content: center;
-    }
-    .kc-footer-links a { color: var(--kc-color-primary, #1d4ed8); text-decoration: none; }
-    .kc-footer-links a:hover,
-    .kc-footer-links a:focus-visible { text-decoration: underline; }
-    .kc-footer-copy { font-size: 0.85rem; color: var(--kc-text-muted, #6b7280); margin: 0; }
-  </style>
 </head>
-<body class="kc-shell-page" data-kc-mobile-active="menu">
+<body class="kc-shell-page kc-error-shell-page" data-kc-mobile-active="menu">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
   <header class="kc-header">
     <div class="kc-header-container">
@@ -162,65 +61,68 @@
     </div>
   </header>
 
-  <main class="kc-main-content kc-error-page" id="kc-main">
-    <section class="kc-error-hero">
-      <p class="kc-error-code" aria-hidden="true">404</p>
-      <span class="kc-help-eyebrow">Erro 404</span>
-      <h1>Página não encontrada</h1>
-      <p class="kc-error-lead">O endereço que você acessou não existe ou foi movido. Volte ao início ou explore os módulos da comunidade UFG.</p>
-      <div class="kc-error-actions">
-        <a class="kc-btn-primary" href="index.html"><i class="fas fa-house"></i> Voltar ao início</a>
-        <a class="kc-btn-primary" href="ajuda.html"><i class="fas fa-life-ring"></i> Central de ajuda</a>
-      </div>
-    </section>
+  <main class="kc-error-page" id="kc-main">
+    <article class="kc-error-panel" aria-labelledby="kcErrorTitle">
+      <section class="kc-error-hero">
+        <div class="kc-error-visual" aria-hidden="true">
+          <p class="kc-error-code">404</p>
+          <span class="kc-error-path">rota não encontrada</span>
+        </div>
 
-    <section class="kc-error-grid" aria-label="Módulos da comunidade UFG" data-i18n-aria-label="aria-label.error-modules">
-      <a class="kc-error-card" href="eventos.html">
-        <i class="fas fa-calendar kc-error-card-icon" aria-hidden="true"></i>
-        <span class="kc-error-card-title">Eventos</span>
-        <span class="kc-error-card-desc">Culturais, acadêmicos, esportivos e de extensão da UFG.</span>
-      </a>
-      <a class="kc-error-card" href="oportunidades.html">
-        <i class="fas fa-briefcase kc-error-card-icon" aria-hidden="true"></i>
-        <span class="kc-error-card-title">Oportunidades</span>
-        <span class="kc-error-card-desc">Estágios, bolsas, editais, concursos e seleções.</span>
-      </a>
-      <a class="kc-error-card" href="moradia.html">
-        <i class="fas fa-home kc-error-card-icon" aria-hidden="true"></i>
-        <span class="kc-error-card-title">Moradia</span>
-        <span class="kc-error-card-desc">Repúblicas, quartos, sublocações e vagas compartilhadas.</span>
-      </a>
-      <a class="kc-error-card" href="compra-venda-feed.html">
-        <i class="fas fa-shopping-bag kc-error-card-icon" aria-hidden="true"></i>
-        <span class="kc-error-card-title">Compra e Venda</span>
-        <span class="kc-error-card-desc">Livros, equipamentos, materiais e itens entre estudantes.</span>
-      </a>
-      <a class="kc-error-card" href="caronas-feed.html">
-        <i class="fas fa-car kc-error-card-icon" aria-hidden="true"></i>
-        <span class="kc-error-card-title">Caronas</span>
-        <span class="kc-error-card-desc">Rotas entre cidades e campi, ida e volta compartilhadas.</span>
-      </a>
-      <a class="kc-error-card" href="achados-perdidos.html">
-        <i class="fas fa-search kc-error-card-icon" aria-hidden="true"></i>
-        <span class="kc-error-card-title">Achados e Perdidos</span>
-        <span class="kc-error-card-desc">Itens perdidos, achados e devolvidos pela comunidade.</span>
-      </a>
-    </section>
+        <div class="kc-error-copy">
+          <span class="kc-error-eyebrow"><i class="fas fa-location-dot" aria-hidden="true"></i> Você saiu da rota</span>
+          <h1 id="kcErrorTitle">Esta página não está por aqui</h1>
+          <p class="kc-error-lead">O endereço pode ter mudado, expirado ou sido digitado incorretamente. Você pode voltar ao início ou seguir direto para uma área da comunidade.</p>
+          <div class="kc-error-actions">
+            <a class="kc-error-action kc-error-action--primary" href="index.html"><i class="fas fa-house" aria-hidden="true"></i> Ir para o início</a>
+            <a class="kc-error-action" href="index.html" data-kc-error-back><i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar à página anterior</a>
+            <a class="kc-error-action" href="ajuda.html"><i class="fas fa-life-ring" aria-hidden="true"></i> Central de ajuda</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="kc-error-destinations" aria-labelledby="kcErrorDestinationsTitle">
+        <div class="kc-error-destinations__header">
+          <div>
+            <h2 id="kcErrorDestinationsTitle">Escolha um destino</h2>
+            <p>Continue navegando pelos módulos do KinoCampus.</p>
+          </div>
+        </div>
+        <div class="kc-error-grid">
+          <a class="kc-error-module" href="eventos.html">
+            <span class="kc-error-module__icon"><i class="fas fa-calendar" aria-hidden="true"></i></span>
+            <span class="kc-error-module__text"><span class="kc-error-module__title">Eventos</span><span class="kc-error-module__desc">Agenda acadêmica e cultural</span></span>
+            <i class="fas fa-chevron-right kc-error-module__arrow" aria-hidden="true"></i>
+          </a>
+          <a class="kc-error-module" href="oportunidades.html">
+            <span class="kc-error-module__icon"><i class="fas fa-briefcase" aria-hidden="true"></i></span>
+            <span class="kc-error-module__text"><span class="kc-error-module__title">Oportunidades</span><span class="kc-error-module__desc">Bolsas, estágios e editais</span></span>
+            <i class="fas fa-chevron-right kc-error-module__arrow" aria-hidden="true"></i>
+          </a>
+          <a class="kc-error-module" href="moradia.html">
+            <span class="kc-error-module__icon"><i class="fas fa-home" aria-hidden="true"></i></span>
+            <span class="kc-error-module__text"><span class="kc-error-module__title">Moradia</span><span class="kc-error-module__desc">Quartos, repúblicas e vagas</span></span>
+            <i class="fas fa-chevron-right kc-error-module__arrow" aria-hidden="true"></i>
+          </a>
+          <a class="kc-error-module" href="compra-venda-feed.html">
+            <span class="kc-error-module__icon"><i class="fas fa-shopping-bag" aria-hidden="true"></i></span>
+            <span class="kc-error-module__text"><span class="kc-error-module__title">Compra e Venda</span><span class="kc-error-module__desc">Itens úteis entre estudantes</span></span>
+            <i class="fas fa-chevron-right kc-error-module__arrow" aria-hidden="true"></i>
+          </a>
+          <a class="kc-error-module" href="caronas-feed.html">
+            <span class="kc-error-module__icon"><i class="fas fa-car" aria-hidden="true"></i></span>
+            <span class="kc-error-module__text"><span class="kc-error-module__title">Caronas</span><span class="kc-error-module__desc">Rotas compartilhadas</span></span>
+            <i class="fas fa-chevron-right kc-error-module__arrow" aria-hidden="true"></i>
+          </a>
+          <a class="kc-error-module" href="achados-perdidos.html">
+            <span class="kc-error-module__icon"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></span>
+            <span class="kc-error-module__text"><span class="kc-error-module__title">Achados e Perdidos</span><span class="kc-error-module__desc">Encontre ou devolva um item</span></span>
+            <i class="fas fa-chevron-right kc-error-module__arrow" aria-hidden="true"></i>
+          </a>
+        </div>
+      </section>
+    </article>
   </main>
-
-  <footer class="kc-footer" aria-label="Rodapé institucional" data-i18n-aria-label="aria-label.footer-institutional">
-    <div class="kc-footer-inner">
-      <p class="kc-footer-brand">KinoCampus &middot; Comunidade UFG</p>
-      <nav class="kc-footer-links" aria-label="Links institucionais" data-i18n-aria-label="aria-label.footer-links">
-        <a href="sobre.html">Sobre</a>
-        <a href="transparencia.html">Transparência</a>
-        <a href="privacidade.html">Privacidade</a>
-        <a href="termos.html">Termos</a>
-        <a href="ajuda.html">Ajuda</a>
-      </nav>
-      <p class="kc-footer-copy">Plataforma comunitária independente. Não representa oficialmente a UFG.</p>
-    </div>
-  </footer>
 
   <script defer src="assets/js/boot/kc-constants.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-i18n.js?v=8.6.1"></script>
@@ -259,5 +161,6 @@
   <script defer src="assets/js/core/kc-public-shell.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
+  <script defer src="assets/js/features/kc-error-page.js?v=8.6.1"></script>
 </body>
 </html>

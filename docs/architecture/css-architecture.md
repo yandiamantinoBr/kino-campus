@@ -1,7 +1,7 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.17.0
-**Atualizado em:** 2026-06-15
+**Versão:** v76.23.0
+**Atualizado em:** 2026-06-18
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
 > baseline visual CSS-B/C, micro-splits CSS-C/C.2/C.3 e status dos stubs `assets/css/future-split/`.
@@ -15,21 +15,23 @@ Todos os estilos de producao sao carregados por `<link rel="stylesheet">` direta
 
 ```text
 assets/css/
-|-- styles.css              12.028 linhas / 280.599 bytes
+|-- styles.css              12.112 linhas / 282.468 bytes
 |-- product.css              1.784 linhas / 45.373 bytes
 |-- admin-shell.css          1.471 linhas / 38.653 bytes
 |-- kc-public-shell.css        943 linhas / 20.456 bytes
 |-- kc-chat.css                710 linhas / 16.367 bytes
+|-- kc-error-page.css          374 linhas / 7.977 bytes
 |-- product-lightbox.css       299 linhas / 8.064 bytes
+|-- kc-sidebar-context.css     227 linhas / 5.227 bytes
 |-- kc-theme-boot.css          213 linhas / 5.955 bytes
-|-- kc-chat-shortcut.css        60 linhas / 1.327 bytes
+|-- kc-chat-shortcut.css        60 linhas / 1.387 bytes
 `-- future-split/             5 stubs documentais, nao carregados
 ```
 
-**Total CSS de producao:** 17.508 linhas / 416.794 bytes.
+**Total CSS de producao:** 18.193 linhas / 431.927 bytes.
 
-O monólito `styles.css` segue sendo o principal hotspot visual: 12.028 linhas, 280.599 bytes,
-1.734 regras parseadas e 1.954 seletores parseados por `npm run audit:css`.
+O monólito `styles.css` segue sendo o principal hotspot visual: 12.112 linhas, 282.468 bytes,
+1.748 regras parseadas e 1.968 seletores parseados por `npm run audit:css`.
 
 ---
 
@@ -37,11 +39,13 @@ O monólito `styles.css` segue sendo o principal hotspot visual: 12.028 linhas, 
 
 | Arquivo | Escopo atual | Carga |
 |---|---|---|
-| `styles.css` | tokens, base, layout global, componentes, feed, cards, ranking, módulos públicos e patches responsivos remanescentes | 27 HTMLs descobertos |
-| `kc-theme-boot.css` | CSS critico anti-FOUC/CLS durante aplicacao inicial de tema | 27 HTMLs descobertos |
-| `kc-chat-shortcut.css` | atalho global de mensagens injetado por `kc-notifications.js` | 27 HTMLs descobertos |
+| `styles.css` | tokens, base, layout global, componentes, feed, cards, ranking, módulos públicos e patches responsivos remanescentes | 30 HTMLs descobertos |
+| `kc-theme-boot.css` | CSS critico anti-FOUC/CLS durante aplicacao inicial de tema | 30 HTMLs descobertos |
+| `kc-chat-shortcut.css` | atalho global de mensagens injetado por `kc-notifications.js` | 30 HTMLs descobertos |
 | `admin-shell.css` | shell e componentes das 6 paginas admin | 6 HTMLs admin |
-| `kc-public-shell.css` | profile, settings, account setup, legal/privacidade/transparencia, ajuda e mensagens | 9 paginas, 10 links |
+| `kc-public-shell.css` | profile, settings, account setup, legal/privacidade/transparencia, ajuda, mensagens e 404 | 12 paginas, 13 links |
+| `kc-sidebar-context.css` | títulos de módulo, acionador mobile e diálogo contextual | 6 feeds de módulo |
+| `kc-error-page.css` | composição visual isolada da página de erro | `404.html` |
 | `product.css` | detalhe de publicacao/produto | `_product.html` |
 | `product-lightbox.css` | lightbox de midia do produto | `_product.html` |
 | `kc-chat.css` | UI dedicada de conversa | `mensagens.html` |
@@ -57,11 +61,13 @@ Fonte: `npm run audit:css`, que varre os HTMLs da raiz e de `admin/`.
 
 | CSS | Versao nos links | Paginas |
 |---|---|---:|
-| `styles.css` | `8.6.4 x27` | 27 |
-| `kc-theme-boot.css` | `8.6.1 x27` | 27 |
-| `kc-chat-shortcut.css` | `8.6.1 x27` | 27 |
+| `styles.css` | `8.6.4 x30` | 30 |
+| `kc-theme-boot.css` | `8.6.1 x30` | 30 |
+| `kc-chat-shortcut.css` | `8.6.1 x30` | 30 |
 | `admin-shell.css` | `8.6.1 x6` | 6 |
-| `kc-public-shell.css` | `8.6.1 x10` | 9 |
+| `kc-public-shell.css` | `8.6.1 x13` | 12 |
+| `kc-sidebar-context.css` | `8.6.1 x6` | 6 |
+| `kc-error-page.css` | `8.6.1 x1` | 1 |
 | `product.css` | `8.6.1 x1` | 1 |
 | `product-lightbox.css` | `8.6.1 x1` | 1 |
 | `kc-chat.css` | `8.6.2 x1` | 1 |

@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 177 suites / 3600 testes + Playwright 9 specs E2E |
+| Testes | Jest 180 suites / 3616 testes + Playwright 10 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -65,7 +65,7 @@ kino-campus/
 |   |   |-- core/                  12 arquivos
 |   |   |-- api/                   22 arquivos
 |   |   |-- utils/                 8 arquivos
-|   |   |-- features/              16 arquivos + create-post/
+|   |   |-- features/              18 arquivos + create-post/
 |   |   |   `-- create-post/       7 arquivos
 |   |   |-- shared/                7 arquivos
 |   |   |-- legacy-shims/          1 arquivo
@@ -83,6 +83,8 @@ kino-campus/
 |   |   |-- admin-shell.css
 |   |   |-- kc-chat.css
 |   |   |-- kc-chat-shortcut.css
+|   |   |-- kc-error-page.css
+|   |   |-- kc-sidebar-context.css
 |   |   |-- product.css
 |   |   |-- product-lightbox.css
 |   |   `-- future-split/          5 stubs nao carregados em producao
@@ -145,7 +147,7 @@ Todo modulo deve permanecer em um dos grupos canonicos abaixo.
 | `assets/js/core/` | 12 | Runtime central: i18n, auth UI, consentimento, perfil, tema, notificacoes, widgets e shell publico |
 | `assets/js/api/` | 22 | Cliente Supabase, submodulos KCAPI, diagnostics, chat e facade `window.KCAPI` |
 | `assets/js/utils/` | 8 | Helpers de string, formatacao, DOM, identidade, taxonomia, localizacao e apresentacao |
-| `assets/js/features/` | 16 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading e pull-to-refresh |
+| `assets/js/features/` | 18 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading, pull-to-refresh, contexto de módulos e página 404 |
 | `assets/js/features/create-post/` | 7 | Orquestracao, schema, campos, render, midia, resolvers e submit de criacao |
 | `assets/js/shared/` | 7 | Dados compartilhados entre paginas e modulos |
 | `assets/js/legacy-shims/` | 1 | Shim transitorio de migracao de posts do usuario |
@@ -197,6 +199,8 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/admin-shell.css` | Producao | Shell admin |
 | `assets/css/kc-chat.css` | Producao | UI de conversa/chat |
 | `assets/css/kc-chat-shortcut.css` | Producao | Atalho global de mensagens injetado por notificacoes |
+| `assets/css/kc-sidebar-context.css` | Producao | Títulos, acionador mobile e diálogo contextual dos seis módulos |
+| `assets/css/kc-error-page.css` | Producao | Layout isolado e responsivo da página 404 |
 | `assets/css/product.css` | Producao | Pagina de produto |
 | `assets/css/product-lightbox.css` | Producao | Lightbox de midia da pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
@@ -265,8 +269,8 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:routes` | Valida 20 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantém 177/177 suites e 3600/3600 testes Jest |
-| `npx playwright test --list` | Lista 9 specs / 59 testes Playwright sem exigir ambiente local ativo |
+| `npm test` | Mantém 180/180 suites e 3616/3616 testes Jest |
+| `npx playwright test --list` | Lista 10 specs / 67 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 

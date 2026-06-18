@@ -39,6 +39,7 @@
 <title>Moradia - KinoCampus</title>
 <link href="assets/css/styles.css?v=8.6.4" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
+<link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.1" />
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
 <body data-kc-filters="tab-search">
@@ -101,9 +102,9 @@
 <main class="kc-main-content" id="kc-main">
     <h1 class="kc-sr-only">Moradia</h1>
 <section class="kc-feed-section">
-<h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-<i class="fas fa-home"></i>
-                Moradia
+<h2 class="kc-module-heading">
+<span class="kc-module-heading__label"><i class="fas fa-home" aria-hidden="true"></i><span>Moradia</span></span>
+<button class="kc-context-info-btn" type="button" data-kc-context-open="moradia" aria-label="Informações sobre Moradia" data-i18n-aria-label="aria-label.context-moradia" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
             </h2>
 <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
 <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true"><i class="fas fa-fire"></i><span>Destaques</span></button>
@@ -151,16 +152,6 @@
 </div>
 </section>
 <aside class="kc-sidebar kc-sidebar--housing kc-sidebar--contextual" data-kc-housing-sidebar="true">
-<div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="moradia">
-<h3><i class="fas fa-circle-info"></i> Moradia perto da UFG</h3>
-<p class="kc-sidebar-help">Quartos, repúblicas, kitnets e apartamentos relacionados à rotina universitária.</p>
-<details class="kc-sidebar-context">
-<summary>Ver como comparar opções</summary>
-<p>Compare localização, faixa de aluguel, contato, condições do imóvel e proximidade dos câmpus. A negociação continua sendo responsabilidade direta dos usuários.</p>
-<a href="sobre.html">Como a plataforma organiza conteúdos</a>
-</details>
-</div>
-
 <div class="kc-sidebar-section" data-kc-housing-section="filters">
 <h3>
 <i class="fas fa-tags"></i>
@@ -253,6 +244,16 @@
         </div>
         <div class="kc-ranking-sidebar-users" data-kc-ranking-module="moradia"></div>
       </div>
+
+<div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="moradia">
+<h3><i class="fas fa-circle-info" aria-hidden="true"></i> Moradia perto da UFG</h3>
+<p class="kc-sidebar-help">Quartos, repúblicas, kitnets e apartamentos relacionados à rotina universitária.</p>
+<details class="kc-sidebar-context">
+<summary>Ver como comparar opções</summary>
+<p>Compare localização, faixa de aluguel, contato, condições do imóvel e proximidade dos câmpus. A negociação continua sendo responsabilidade direta dos usuários.</p>
+<a href="sobre.html">Como a plataforma organiza conteúdos</a>
+</details>
+</div>
 
 </aside>
 </main>
@@ -394,6 +395,7 @@
 <script defer src="assets/js/features/kc-search-modal.js?v=8.6.1"></script>
 <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
 <script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>
+<script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.1"></script>
 </body>
 </html>
 

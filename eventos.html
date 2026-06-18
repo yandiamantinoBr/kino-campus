@@ -40,6 +40,7 @@
   <title>Eventos - KinoCampus</title>
   <link href="assets/css/styles.css?v=8.6.4" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
+  <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.1" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
 
@@ -106,9 +107,9 @@
     <h1 class="kc-sr-only">Eventos</h1>
     <!-- Feed Section -->
     <section class="kc-feed-section">
-      <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-calendar"></i>
-        Eventos
+      <h2 class="kc-module-heading">
+        <span class="kc-module-heading__label"><i class="fas fa-calendar" aria-hidden="true"></i><span>Eventos</span></span>
+        <button class="kc-context-info-btn" type="button" data-kc-context-open="eventos" aria-label="Informações sobre Eventos" data-i18n-aria-label="aria-label.context-eventos" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
       </h2>
       <!-- Feed Tabs -->
       <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
@@ -168,16 +169,6 @@
     </section>
     <!-- Sidebar -->
     <aside class="kc-sidebar kc-sidebar--eventos kc-sidebar--contextual">
-      <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="eventos">
-        <h3><i class="fas fa-circle-info"></i> Eventos com contexto</h3>
-        <p class="kc-sidebar-help">Palestras, oficinas, semanas acadêmicas, congressos, atividades culturais e encontros ligados à UFG.</p>
-        <details class="kc-sidebar-context">
-          <summary>Ver critérios de curadoria</summary>
-          <p>As publicações priorizam data, local, link de inscrição, público-alvo e fonte oficial quando essas informações estão disponíveis.</p>
-          <a href="sobre.html">Como a curadoria funciona</a>
-        </details>
-      </div>
-
       <!-- Calendário — componente compartilhado (assets/js/features/kc-events-calendar.js).
            FONTE ÚNICA sincronizada com /index.html; o markup é injetado pelo módulo.
            data-kc-cal-rail="calendario" integra a seção ao rail mobile desta página. -->
@@ -234,6 +225,16 @@
           <button class="kc-ranking-info-btn" type="button" title="Como funciona?" data-i18n-tooltip="tooltip.how-it-works" data-kc-ranking-info><i class="fas fa-circle-info"></i></button>
         </div>
         <div class="kc-ranking-sidebar-users" data-kc-ranking-module="eventos"></div>
+      </div>
+
+      <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="eventos">
+        <h3><i class="fas fa-circle-info" aria-hidden="true"></i> Eventos com contexto</h3>
+        <p class="kc-sidebar-help">Palestras, oficinas, semanas acadêmicas, congressos, atividades culturais e encontros ligados à UFG.</p>
+        <details class="kc-sidebar-context">
+          <summary>Ver critérios de curadoria</summary>
+          <p>As publicações priorizam data, local, link de inscrição, público-alvo e fonte oficial quando essas informações estão disponíveis.</p>
+          <a href="sobre.html">Como a curadoria funciona</a>
+        </details>
       </div>
 
     </aside>
@@ -384,6 +385,7 @@
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>
+  <script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.1"></script>
 </body>
 
 </html>
