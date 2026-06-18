@@ -137,6 +137,13 @@ describe('Cadu publish — Edge Function', () => {
     expect(mapper).toContain('gallery_image_urls');
   });
 
+  test('limita a galeria canonica do endpoint a seis imagens', () => {
+    expect(mapper).toContain('export const MAX_IMAGE_COUNT = 6');
+    expect(index).toContain('import { deepMergeMetadata, mapItemToPost, MAX_IMAGE_COUNT } from "./mapper.ts"');
+    expect(index).toContain('.slice(0, MAX_IMAGE_COUNT)');
+    expect(mapper).toContain('.slice(0, MAX_IMAGE_COUNT)');
+  });
+
   test('schema cobre os 6 modulos', () => {
     ['eventos', 'oportunidades', 'moradia', 'compra-venda', 'caronas', 'achados-perdidos'].forEach((m) => {
       expect(schema).toContain(`"${m}"`);

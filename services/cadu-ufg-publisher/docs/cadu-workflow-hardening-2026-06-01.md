@@ -31,7 +31,7 @@ O endpoint `supabase/functions/cadu-publish` agora:
   sem fonte oficial complementar;
 - completa `metadata.actionLabel` e `metadata.actionKey` quando o Cadu nao enviar;
 - usa `gratuito=true` por padrao para `eventos` e `oportunidades`;
-- aceita ate 5 imagens em `images[]`, salva a primeira como capa e as demais em
+- aceita até 6 imagens em `images[]`, salva a primeira como capa e as demais em
   `post_media` com `sort_order`;
 - grava `metadata.gallery_image_urls` e `metadata.enrichment_sources` para
   auditoria do que foi consultado;
@@ -76,7 +76,7 @@ complementares antes de chamar o formatador:
    vinculada ao evento/edital.
 
 O item final deve incluir `enrichmentSources` com as URLs consultadas e `images`
-com ate 5 URLs uteis, colocando a melhor capa primeiro. Se houver conflito entre
+com até 6 URLs úteis, colocando a melhor capa primeiro. Se houver conflito entre
 fontes sobre prazo, local, data ou valor, o item vai para revisao e o digest deve
 explicar o conflito.
 
@@ -88,7 +88,7 @@ explicar o conflito.
   edital/formulario melhor.
 - `metadata.source_url` preserva a fonte oficial para deduplicacao.
 - Capa HTTP/HTTPS estavel, preferencialmente `files.cercomp.ufg.br` ou Storage.
-- Se houver mais imagens oficiais uteis, `images[]` contem ate 5 URLs e a capa
+- Se houver mais imagens oficiais úteis, `images[]` contém até 6 URLs e a capa
   fica na primeira posicao.
 - `enrichmentSources[]` registra fonte oficial, unidade, Instagram oficial e
   web oficial usada para complementar.

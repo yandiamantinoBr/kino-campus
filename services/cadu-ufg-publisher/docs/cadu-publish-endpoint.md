@@ -73,7 +73,7 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `actionLabel`  | string          | texto do botao principal; se faltar, o endpoint infere `Acessar edital`, `Realizar inscricao`, `Acessar evento` etc. |
 | `actionKey`    | string          | slug do botao; se faltar, e derivado de `actionLabel` |
 | `image`        | URL             | capa preferida (sera baixada e re-hospedada em `kino-media`) |
-| `images`       | URL[]           | galeria, ate 5 imagens; a primeira vira capa |
+| `images`       | URL[]           | galeria, até 6 imagens; a primeira vira capa |
 | `allowExternalImageFallback` | boolean | quando `false`, nunca grava URL externa se o upload para Storage falhar |
 | `tags`         | string[]        | complementa as tags derivadas |
 | `sourceUrl`    | URL             | fonte oficial (usado em dedup) |
@@ -175,7 +175,7 @@ Resposta: `{ ok, exists, post_id, status }`.
 
 ## Imagens
 
-- O endpoint baixa `image` e `images[]`, re-hospeda ate 5 imagens em
+- O endpoint baixa `image` e `images[]`, re-hospeda até 6 imagens em
   `kino-media` (`post-media/<uid>/<post_id>/...`) e grava:
   - `posts.image_url` com a primeira imagem final;
   - `metadata.image_url` e `metadata.cover_url` com a capa;

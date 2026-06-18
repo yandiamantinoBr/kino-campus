@@ -162,7 +162,7 @@ Regras de decisao:
   explique o conflito no digest;
 - fonte oficial sem contato: deixe `contato` vazio; nao use fallback generico
   como se fosse contato real;
-- fonte oficial com varias imagens uteis: envie ate 5 URLs em `images`, com a
+- fonte oficial com várias imagens úteis: envie até 6 URLs em `images`, com a
   capa desejada primeiro. O endpoint salva a primeira como capa e as demais em
   `post_media`;
 - imagem de Instagram/Telegram: use apenas como fonte de upload; se o retorno

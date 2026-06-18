@@ -1,5 +1,7 @@
 'use strict';
 
+const MAX_IMAGE_COUNT = 6;
+
 const { toPostgrestInsert } = require('./mapper');
 const { sha256, slugify } = require('./utils');
 
@@ -43,7 +45,8 @@ function imageUrlFromCandidate(value) {
 }
 
 function normalizeImageValues(values) {
-  return Array.from(new Set((values || []).map(imageUrlFromCandidate).filter(Boolean))).slice(0, 5);
+  return Array.from(new Set((values || []).map(imageUrlFromCandidate).filter(Boolean)))
+    .slice(0, MAX_IMAGE_COUNT);
 }
 
 function normalizeImages(payload) {
@@ -348,8 +351,9 @@ class SupabasePublisher {
     const allowExternalFallback = options.allowExternalFallback !== false;
     const uploads = [];
     const out = [];
-    for (let index = 0; index < images.length; index += 1) {
-      const originalUrl = images[index];
+    const candidates = normalizeImageValues(images);
+    for (let index = 0; index < candidates.length; index += 1) {
+      const originalUrl = candidates[index];
       try {
         const storedUrl = await this.uploadImageToStorage(postId, originalUrl, index);
         uploads.push({ ok: true, source: originalUrl, source_url: imageUrlFromCandidate(originalUrl), url: storedUrl });

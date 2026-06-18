@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.17` (CSS-C.3 micro-split do atalho global de mensagens, runtime `8.6.1`)
+- linha de trabalho atual: `v76.21` (contrato de seis imagens do Cadu, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
@@ -72,6 +72,7 @@
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
+| [qa/reports/report-v76-cadu-six-image-contract-2026-06-17.md](./qa/reports/report-v76-cadu-six-image-contract-2026-06-17.md) | evidência V76.21 do limite defensivo de seis imagens no publisher e na Edge Function do Cadu |
 | [qa/reports/report-v76-css-chat-shortcut-micro-split-2026-06-15.md](./qa/reports/report-v76-css-chat-shortcut-micro-split-2026-06-15.md) | evidência V76 CSS-C.3 do micro-split do atalho global de mensagens para `kc-chat-shortcut.css` |
 | [qa/reports/report-v76-notify-admin-reports-threshold-deploy-2026-06-15.md](./qa/reports/report-v76-notify-admin-reports-threshold-deploy-2026-06-15.md) | evidência V76 do deploy controlado da Edge Function `notify-admin-reports-threshold`, mantendo alerta em No-Go/fail-closed |
 | [qa/reports/report-v76-kcapi-filters-extraction-2026-06-12.md](./qa/reports/report-v76-kcapi-filters-extraction-2026-06-12.md) | evidencia V76 da extracao de filtros avancados/date presets para `window._KCAPI.filters` |
