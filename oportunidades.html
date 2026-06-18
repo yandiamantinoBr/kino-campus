@@ -40,6 +40,7 @@
     <title>Oportunidades - KinoCampus</title>
     <link href="assets/css/styles.css?v=8.6.4" rel="stylesheet" />
     <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
+    <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.1" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
 
@@ -106,9 +107,9 @@
     <h1 class="kc-sr-only">Oportunidades</h1>
         <!-- Feed Section -->
         <section class="kc-feed-section">
-            <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-briefcase"></i>
-                Oportunidades
+            <h2 class="kc-module-heading">
+                <span class="kc-module-heading__label"><i class="fas fa-briefcase" aria-hidden="true"></i><span>Oportunidades</span></span>
+                <button class="kc-context-info-btn" type="button" data-kc-context-open="oportunidades" aria-label="Informações sobre Oportunidades" data-i18n-aria-label="aria-label.context-oportunidades" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
             </h2>
             <!-- Feed Tabs -->
             <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
@@ -165,16 +166,6 @@
         </section>
         <!-- Sidebar -->
         <aside class="kc-sidebar kc-sidebar--opportunities kc-sidebar--contextual" data-kc-opp-sidebar="true">
-            <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="oportunidades">
-                <h3><i class="fas fa-circle-info"></i> Oportunidades verificáveis</h3>
-                <p class="kc-sidebar-help">Editais, bolsas, estágios, monitorias, seleções, pesquisa, extensão, mobilidade e vagas da comunidade UFG.</p>
-                <details class="kc-sidebar-context">
-                    <summary>Ver critérios de curadoria</summary>
-                    <p>A curadoria destaca prazos, requisitos, órgãos responsáveis, contatos e links oficiais para reduzir perda de oportunidades importantes.</p>
-                    <a href="sobre.html">Como a curadoria funciona</a>
-                </details>
-            </div>
-
             <div class="kc-sidebar-section" data-kc-opp-section="filters">
                 <h3>
                     <i class="fas fa-filter"></i>
@@ -290,6 +281,16 @@
                 <button class="kc-ranking-info-btn" type="button" title="Como funciona?" data-i18n-tooltip="tooltip.how-it-works" data-kc-ranking-info><i class="fas fa-circle-info"></i></button>
               </div>
               <div class="kc-ranking-sidebar-users" data-kc-ranking-module="oportunidades"></div>
+            </div>
+
+            <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="oportunidades">
+                <h3><i class="fas fa-circle-info" aria-hidden="true"></i> Oportunidades verificáveis</h3>
+                <p class="kc-sidebar-help">Editais, bolsas, estágios, monitorias, seleções, pesquisa, extensão, mobilidade e vagas da comunidade UFG.</p>
+                <details class="kc-sidebar-context">
+                    <summary>Ver critérios de curadoria</summary>
+                    <p>A curadoria destaca prazos, requisitos, órgãos responsáveis, contatos e links oficiais para reduzir perda de oportunidades importantes.</p>
+                    <a href="sobre.html">Como a curadoria funciona</a>
+                </details>
             </div>
 
         </aside>
@@ -436,6 +437,7 @@
     <script defer src="assets/js/features/kc-search-modal.js?v=8.6.1"></script>
     <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
     <script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>
+    <script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.1"></script>
 </body>
 
 </html>

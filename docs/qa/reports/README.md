@@ -7,6 +7,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 
 | Arquivo | Uso |
 |---|---|
+| `report-v76-context-sidebar-404-responsive-2026-06-18.md` | Evidência V76.23 do contexto responsivo dos seis módulos, diálogo acessível e reconstrução desktop/mobile da página 404 |
 | `report-v76-adsense-public-content-resilience-2026-06-17.md` | Evidência V76.22 de alt contextual, estados vazios públicos, canonical/snippets de produto e gate Search Console/AdSense |
 | `_TEMPLATE-authenticated-run.md` | Template V26 para rodada autenticada real com redacao de evidencias |
 | `report-v76-cadu-six-image-contract-2026-06-17.md` | Evidência V76.21 da consolidação do limite de seis imagens no pipeline confiável do Cadu |

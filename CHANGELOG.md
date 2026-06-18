@@ -2,6 +2,40 @@
 
 ---
 
+## [v76.23] - 2026-06-18 - Contexto responsivo dos módulos e reconstrução da 404
+
+### Tema
+
+Substituição do contexto editorial expandido no mobile por um acionador compacto
+ao lado do título dos seis módulos, com diálogo acessível compartilhado, e
+reconstrução visual/funcional da página 404.
+
+### Decisões
+
+- **Contexto abaixo do ranking no desktop**: os seis cards
+  `kc-sidebar-section--context` foram movidos fisicamente para o fim da sidebar,
+  imediatamente depois de `data-kc-ranking-sidebar`.
+- **Mobile sem sidebar expandida**: um botão `fa-circle-info` com rótulo i18n abre
+  o conteúdo contextual em diálogo com backdrop, Escape, trap/restauração de foco
+  e integração com `KCOverlayLock`.
+- **Título sem estilo inline**: os seis `h2` usam o contrato compartilhado
+  `kc-module-heading`, com iconografia decorativa e alvo mínimo de toque.
+- **404 isolada do grid global**: a página passa a usar `kc-error-page.css`, painel
+  central único, destinos compactos e ação de retorno condicionada ao referrer.
+- **Rodapé único**: removido o footer estático que duplicava o
+  `kc-platform-footer` injetado pelo runtime de consentimento.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.23 | `kc-sidebar-context.css/js` compartilhados pelos seis módulos |
+| v76.23 | diálogo contextual responsivo e acessível |
+| v76.23 | `kc-error-page.css/js` e nova composição da `404.html` |
+| v76.23 | 3 suites Jest e 8 cenários E2E de regressão |
+
+---
+
 ## [v76.22] - 2026-06-17 - Resiliência de conteúdo público e metadata SEO
 
 ### Tema

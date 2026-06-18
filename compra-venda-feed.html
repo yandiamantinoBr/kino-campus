@@ -34,6 +34,7 @@
 <title>Compra e Venda - KinoCampus</title>
 <link href="assets/css/styles.css?v=8.6.4" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
+<link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.1" />
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
 <body data-kc-filters="tab-search">
@@ -99,9 +100,9 @@
     <h1 class="kc-sr-only">Compra e Venda</h1>
 <!-- Feed Section -->
 <section class="kc-feed-section">
-<h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-<i class="fas fa-shopping-bag"></i>
-                Compra e Venda
+<h2 class="kc-module-heading">
+<span class="kc-module-heading__label"><i class="fas fa-shopping-bag" aria-hidden="true"></i><span>Compra e Venda</span></span>
+<button class="kc-context-info-btn" type="button" data-kc-context-open="compra-venda" aria-label="Informações sobre Compra e Venda" data-i18n-aria-label="aria-label.context-compra-venda" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
             </h2>
 <!-- Feed Tabs -->
 <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
@@ -154,16 +155,6 @@
 </section>
 <!-- Sidebar -->
 <aside class="kc-sidebar kc-sidebar--marketplace kc-sidebar--contextual" data-kc-market-sidebar="true">
-<div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="compra-venda">
-<h3><i class="fas fa-circle-info"></i> Compra e venda comunitária</h3>
-<p class="kc-sidebar-help">Livros, eletrônicos, materiais acadêmicos, bicicletas, móveis, roupas e itens úteis para a vida universitária.</p>
-<details class="kc-sidebar-context">
-<summary>Ver cuidados antes de negociar</summary>
-<p>O KinoCampus organiza anúncios e filtros; pagamentos, entrega, conferência do item e combinação final continuam sendo responsabilidade direta das pessoas envolvidas.</p>
-<a href="termos.html">Ver regras da comunidade</a>
-</details>
-</div>
-
 <div class="kc-sidebar-section" data-kc-market-section="filters">
 <h3>
 <i class="fas fa-filter"></i>
@@ -352,6 +343,16 @@
         <div class="kc-ranking-sidebar-users" data-kc-ranking-module="compra-venda"></div>
       </div>
 
+<div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="compra-venda">
+<h3><i class="fas fa-circle-info" aria-hidden="true"></i> Compra e venda comunitária</h3>
+<p class="kc-sidebar-help">Livros, eletrônicos, materiais acadêmicos, bicicletas, móveis, roupas e itens úteis para a vida universitária.</p>
+<details class="kc-sidebar-context">
+<summary>Ver cuidados antes de negociar</summary>
+<p>O KinoCampus organiza anúncios e filtros; pagamentos, entrega, conferência do item e combinação final continuam sendo responsabilidade direta das pessoas envolvidas.</p>
+<a href="termos.html">Ver regras da comunidade</a>
+</details>
+</div>
+
 </aside>
 </main>
 <!-- Mobile Navigation -->
@@ -495,6 +496,7 @@
 <script defer src="assets/js/features/kc-search-modal.js?v=8.6.1"></script>
 <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
 <script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>
+<script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.1"></script>
 </body>
 </html>
 

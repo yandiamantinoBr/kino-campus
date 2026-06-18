@@ -34,6 +34,7 @@
     <title>Achados e Perdidos - KinoCampus</title>
     <link href="assets/css/styles.css?v=8.6.4" rel="stylesheet" />
     <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
+    <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.1" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
 
@@ -98,9 +99,9 @@
     <main class="kc-main-content" id="kc-main">
     <h1 class="kc-sr-only">Achados e Perdidos</h1>
         <section class="kc-feed-section">
-            <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-search"></i>
-                Achados e Perdidos
+            <h2 class="kc-module-heading">
+                <span class="kc-module-heading__label"><i class="fas fa-search" aria-hidden="true"></i><span>Achados e Perdidos</span></span>
+                <button class="kc-context-info-btn" type="button" data-kc-context-open="achados-perdidos" aria-label="Informações sobre Achados e Perdidos" data-i18n-aria-label="aria-label.context-achados-perdidos" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
             </h2>
             <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
                 <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true"><i class="fas fa-fire"></i><span>Destaques</span></button>
@@ -150,16 +151,6 @@
         </section>
 
         <aside class="kc-sidebar kc-sidebar--lostfound kc-sidebar--contextual" data-kc-achados-sidebar="true">
-            <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="achados-perdidos">
-                <h3><i class="fas fa-circle-info"></i> Achados e perdidos</h3>
-                <p class="kc-sidebar-help">Objetos perdidos ou encontrados em bibliotecas, RU, centros acadêmicos, salas, laboratórios e áreas comuns.</p>
-                <details class="kc-sidebar-context">
-                    <summary>Ver boas práticas</summary>
-                    <p>Publique com descrição, local aproximado, data e contato. Evite expor dados sensíveis do item; combine a devolução por canal seguro.</p>
-                    <a href="termos.html">Ver regras da comunidade</a>
-                </details>
-            </div>
-
             <div class="kc-sidebar-section" data-kc-achados-section="filters">
                 <h3>
                     <i class="fas fa-sliders-h"></i>
@@ -267,6 +258,16 @@
                 <button class="kc-ranking-info-btn" type="button" title="Como funciona?" data-i18n-tooltip="tooltip.how-it-works" data-kc-ranking-info><i class="fas fa-circle-info"></i></button>
               </div>
               <div class="kc-ranking-sidebar-users" data-kc-ranking-module="achados-perdidos"></div>
+            </div>
+
+            <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="achados-perdidos">
+                <h3><i class="fas fa-circle-info" aria-hidden="true"></i> Achados e perdidos</h3>
+                <p class="kc-sidebar-help">Objetos perdidos ou encontrados em bibliotecas, RU, centros acadêmicos, salas, laboratórios e áreas comuns.</p>
+                <details class="kc-sidebar-context">
+                    <summary>Ver boas práticas</summary>
+                    <p>Publique com descrição, local aproximado, data e contato. Evite expor dados sensíveis do item; combine a devolução por canal seguro.</p>
+                    <a href="termos.html">Ver regras da comunidade</a>
+                </details>
             </div>
 
         </aside>
@@ -410,6 +411,7 @@
     <script defer src="assets/js/features/kc-search-modal.js?v=8.6.1"></script>
     <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
     <script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>
+    <script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.1"></script>
 </body>
 
 </html>
