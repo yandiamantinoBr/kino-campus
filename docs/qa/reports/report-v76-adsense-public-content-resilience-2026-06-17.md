@@ -3,7 +3,7 @@
 **Data:** 2026-06-17
 **Escopo:** feeds públicos, cards, SSR de produto e operação Search Console/AdSense
 **Tipo:** correção funcional de baixo risco + SEO + documentação operacional
-**Status:** PASSOU LOCALMENTE; CI REMOTO PENDENTE
+**Status:** PASSOU; PR #585 PRONTO PARA MERGE
 **Runtime alterado:** sim, somente renderização pública e metadata SSR
 
 ---
@@ -100,9 +100,11 @@ condicionado ao CI remoto integralmente verde.
 
 ## 7. Deploy e estado remoto
 
-- PR: pendente;
-- CI remoto: pendente;
-- deploy Vercel: pendente do merge;
+- PR: #585;
+- CI remoto: Validators/Jest/Playwright, Lighthouse, Vercel e Preview Comments
+  aprovados;
+- preview Vercel: publicado e aprovado;
+- deploy de produção: pendente do merge;
 - Search Console: nenhuma ação executada;
 - AdSense: nenhuma revisão ou ativação executada;
 - Supabase: nenhuma alteração.
