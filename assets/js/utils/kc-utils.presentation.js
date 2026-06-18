@@ -571,6 +571,17 @@ function renderMarkerTags(tags, options = {}) {
 // - Recebe um post normalizado (authorId)
 // - Busca autor via KCAPI.getAuthorById(post.authorId)
 // - Retorna HTML (string) do <article class="kc-card">...</article>
+function buildPostImageAlt(post, moduleKey) {
+  const p = post || {};
+  const title = String(p.titulo || p.title || '').trim();
+  const descriptiveTitle = title.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9]/g, '').length >= 3;
+  if (descriptiveTitle) return `Imagem da publicação: ${title}`;
+
+  const category = _getCategoryLabel(moduleKey, p.categoriaKey || p.categoria || p.category || '');
+  const context = String(_getModuleLabel(moduleKey) || category || 'comunidade UFG').trim();
+  return `Imagem de ${context} publicada no KinoCampus`;
+}
+
 function renderPostCard(post, options) {
   // Compat: alguns usos antigos podem passar index do Array.map como 2º arg
   const ctx = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
@@ -650,6 +661,7 @@ function renderPostCard(post, options) {
   // Imagem (quando existir), senão emoji (mantém Offline First)
   const images = Array.isArray(p.imagens) ? p.imagens : (Array.isArray(p.images) ? p.images : []);
   const imgSrc = images.length ? String(images[0]) : '';
+  const imageAlt = buildPostImageAlt(p, moduleKey);
   const productHref = id ? `product.html?id=${encodeURIComponent(id)}` : '#';
   const isLegacyExample = !!String(p.legacyId || p.legacy_id || '').trim();
   // Ribbon fora do image-wrapper para não ser cortado pelo overflow:hidden
@@ -658,7 +670,7 @@ function renderPostCard(post, options) {
     : '';
   const imageWrapperHtml = imgSrc
     ? `<a class="kc-card__image-wrapper" href="${productHref}" aria-label="Abrir anúncio ${_escapeHtml(String(p.titulo || ''))}">
-         <img alt="${_escapeHtml(String(p.titulo || 'Imagem'))}" src="${_escapeHtml(imgSrc)}" width="400" height="300" loading="lazy" decoding="async"/>
+         <img alt="${_escapeHtml(imageAlt)}" src="${_escapeHtml(imgSrc)}" width="400" height="300" loading="lazy" decoding="async"/>
        </a>`
     : `<a class="kc-card__image-wrapper kc-image-fallback" href="${productHref}" aria-label="Abrir anúncio ${_escapeHtml(String(p.titulo || ''))}" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">
          <span class="kc-card__emoji">${_escapeHtml(String(emoji))}</span>

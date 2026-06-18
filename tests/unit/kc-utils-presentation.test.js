@@ -295,6 +295,7 @@ describe('renderPostCard', () => {
 
     expect(html).toContain('<article class="kc-card');
     expect(html).toContain('Maria Clara');
+    expect(html).toContain('alt="Imagem da publicação: Quarto no setor norte"');
     expect(html).toContain('alt="Avatar de Maria Clara"');
     expect(html).toContain('<strong>Perto</strong>');
     expect(html).toContain('data-module="moradia"');
@@ -315,6 +316,20 @@ describe('renderPostCard', () => {
     });
     expect(html).toContain('data-testid=&quot;avatar&quot;');
     expect(html).toContain('Ver Mais');
+  });
+
+  test('usa contexto do módulo quando o título da imagem contém apenas emoji', () => {
+    const html = pres().renderPostCard({
+      id: 'post-image-fallback',
+      modulo: 'eventos',
+      categoria: 'eventos',
+      titulo: '✨',
+      descricao: 'Atividade aberta no campus',
+      imagens: ['https://example.com/evento.jpg'],
+    });
+
+    expect(html).toContain('alt="Imagem de Eventos publicada no KinoCampus"');
+    expect(html).not.toContain('alt="✨"');
   });
 
   test('marca exemplos legados e badge contextual quando presente', () => {

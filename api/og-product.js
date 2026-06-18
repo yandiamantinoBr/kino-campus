@@ -12,6 +12,8 @@ const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const INDEXABLE_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1';
 const NOINDEX_ROBOTS = 'noindex,follow,noarchive';
+const META_DESCRIPTION_MAX_LENGTH = 180;
+const SEO_TITLE_MAX_LENGTH = 70;
 
 let cachedHtml = null;
 
@@ -264,7 +266,7 @@ function shouldIndexPost(post, values) {
   if (isExpired(post)) return false;
   if (!canonicalPostId(post)) return false;
   if (!cleanText(values && values.title)) return false;
-  return cleanText(values && values.description).length >= 24;
+  return cleanText(post.description).length >= 24;
 }
 
 function paragraphHtml(text) {
@@ -291,26 +293,24 @@ function modulePage(moduleKey) {
   return pages[moduleKey] || 'index.html';
 }
 
-function buildProductValues(post, req) {
-  const host = (req && req.headers && (req.headers['x-forwarded-host'] || req.headers.host)) || 'www.kinocampus.com.br';
-  const baseUrl = `https://${host}`;
+function buildProductValues(post) {
   const id = canonicalPostId(post);
   const rawTitle = cleanText(post.title) || 'Publicação no KinoCampus';
-  const title = clamp(rawTitle, 90);
+  const title = clamp(rawTitle, 140);
   const categoryLabel = getCategoryLabel(post.module, post.category);
   const priceText = formatPrice(post.price);
   const cleanDescription = cleanText(post.description);
-  const prefix = [categoryLabel, priceText && priceText !== 'Gratuito' ? priceText : ''].filter(Boolean).join(' | ');
-  const description = clamp(prefix ? `${prefix} - ${cleanDescription}` : cleanDescription, 260)
+  const prefix = [categoryLabel, post.location, priceText && priceText !== 'Gratuito' ? priceText : ''].filter(Boolean).join(' | ');
+  const description = clamp(prefix ? `${prefix}: ${cleanDescription}` : cleanDescription, META_DESCRIPTION_MAX_LENGTH)
     || 'Publicação pública da comunidade universitária da UFG no KinoCampus.';
-  const imageFallback = `${baseUrl}/api/og-image?type=${encodeURIComponent(post.module || 'product')}`;
+  const imageFallback = `${SITE_ORIGIN}/api/og-image?type=${encodeURIComponent(post.module || 'product')}`;
   const image = getPostImage(post) || imageFallback;
-  const canonicalUrl = `${baseUrl}/product.html?id=${encodeURIComponent(id)}`;
+  const canonicalUrl = `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(id)}`;
 
   return {
     id,
     title,
-    seoTitle: `${title} - KinoCampus`,
+    seoTitle: clamp(`${title} - KinoCampus`, SEO_TITLE_MAX_LENGTH),
     description,
     rawDescription: String(post.description || '').trim(),
     categoryLabel,
@@ -668,15 +668,18 @@ function applyNoindexMeta(html, canonicalUrl) {
 
 function applyIndexableMeta(html, post, values) {
   let modified = html;
+  const imageAlt = `Imagem da publicação: ${values.title}`;
   modified = replaceMetaContent(modified, 'property', 'og:type', post.module === 'eventos' ? 'event' : 'article');
   modified = replaceMetaContent(modified, 'property', 'og:title', values.seoTitle);
   modified = replaceMetaContent(modified, 'property', 'og:description', values.description);
   modified = replaceMetaContent(modified, 'property', 'og:image', values.image);
+  modified = replaceMetaContent(modified, 'property', 'og:image:alt', imageAlt);
   modified = replaceMetaContent(modified, 'property', 'og:url', values.canonicalUrl);
   modified = replaceMetaContent(modified, 'name', 'twitter:card', 'summary_large_image');
   modified = replaceMetaContent(modified, 'name', 'twitter:title', values.seoTitle);
   modified = replaceMetaContent(modified, 'name', 'twitter:description', values.description);
   modified = replaceMetaContent(modified, 'name', 'twitter:image', values.image);
+  modified = replaceMetaContent(modified, 'name', 'twitter:image:alt', imageAlt);
   modified = replaceTitleTag(modified, values.seoTitle);
   modified = replaceOrInsertMetaDescription(modified, values.description);
   modified = replaceOrInsertCanonical(modified, values.canonicalUrl);
@@ -705,7 +708,7 @@ export default async function handler(req, res) {
       return res.send(applyNoindexMeta(html, `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(String(id))}`));
     }
 
-    const values = buildProductValues(post, req);
+    const values = buildProductValues(post);
     let modified = applyNoindexMeta(html, values.canonicalUrl);
     if (shouldIndexPost(post, values)) {
       modified = applyIndexableMeta(modified, post, values);

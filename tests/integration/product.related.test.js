@@ -69,6 +69,8 @@ describe('product.related.js — getRelatedImageHtml', () => {
     expect(source).toContain('kc-related-card__media');
     expect(source).toContain('loading="lazy"');
     expect(source).toContain('kc-product-example-ribbon--related');
+    expect(source).toContain('Imagem da publicação relacionada: ');
+    expect(source).toContain('Imagem de publicação relacionada em ');
   });
 });
 

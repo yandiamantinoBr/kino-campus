@@ -2,6 +2,9 @@
 
 Este runbook orienta como acompanhar indexação, tráfego orgânico, comportamento dos usuários e oportunidades de melhoria de SEO/IA no KinoCampus.
 
+Para o gate conjunto de deploy, inspeção de URLs e solicitação de revisão no
+AdSense, use também `docs/ops/adsense-search-console-readiness-runbook.md`.
+
 ## Decisão técnica
 
 - O site usa Google Analytics 4 com a tag `G-P9RKYHPB7Z`.
