@@ -3,7 +3,7 @@
 **Data:** 2026-06-17
 **Escopo:** publisher Node e Edge Function `cadu-publish`
 **Tipo:** correção funcional de baixo risco + contrato + documentação
-**Status:** PASSOU localmente
+**Status:** PASSOU E DEPLOYADO
 **Runtime alterado:** sim, apenas no pipeline confiável do Cadu
 
 ---
@@ -65,9 +65,33 @@ Os testes novos comprovam:
 
 ## 6. Deploy e rollback
 
-O merge do código não atualiza automaticamente a Edge Function remota. Após CI
-verde, o deploy deve usar o projeto Supabase canônico e ser seguido por consulta
-read-only de versão, status e hash, sem registrar secrets.
+O PR #583 foi mergeado em `9fc044b` após Validators/Jest/Playwright, Lighthouse,
+Vercel e Preview Comments aprovarem. Em seguida, a Edge Function foi publicada
+com preservação explícita da validação JWT interna:
+
+```bash
+supabase functions deploy cadu-publish \
+  --project-ref wacyrkwhkvzwkqpolrbg \
+  --use-api \
+  --no-verify-jwt \
+  --dns-resolver https
+```
+
+Estado remoto verificado sem expor secrets:
+
+| Campo | Antes | Depois |
+|---|---|---|
+| status | `ACTIVE` | `ACTIVE` |
+| versão | 6 | 7 |
+| `verify_jwt` | `false` | `false` |
+| ID | `3e673e37-c6b7-4203-bb9c-b042b0078670` | inalterado |
+| hash | `fe73252ed10ff19996f852690675222ff3091404e4c65275f899a7941b6f20aa` | `0d8a2cc4304f823e2e20083100f894751dd2464f659fbc1a823e33c1cf59e1cc` |
+
+Smoke test seguro, sem credencial e sem escrita:
+
+- requisição `OPTIONS`: HTTP 204;
+- `POST {"action":"check"}` sem `Authorization`: HTTP 401;
+- nenhuma publicação ou edição foi executada.
 
 Rollback de código: reverter o PR restaura o limite anterior. Rollback remoto:
 republicar a revisão anterior da função caso o smoke test operacional falhe.
