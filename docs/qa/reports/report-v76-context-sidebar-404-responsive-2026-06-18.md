@@ -65,6 +65,7 @@ dedicada e removeu o rodapé estático que coexistia com o
 | Browser desktop em `/eventos.html` | contexto abaixo do ranking, sidebar visível, acionador mobile oculto, sem overflow |
 | Browser desktop em `/404.html` | painel único, 6 destinos, 1 footer institucional, sem footer legado e sem overflow |
 | Console do navegador em `/eventos.html` e `/404.html` | nenhum warning ou error |
+| CI remoto do PR #586 | Validators/Jest/Playwright list, Lighthouse, Vercel e Preview Comments aprovados |
 
 ## Matriz E2E responsiva
 
