@@ -58,7 +58,7 @@ export interface MappedPost {
 
 const ICON_DOCUMENT = "\u{1F4C4}";
 const ICON_LINK = "\u{1F517}";
-const MAX_IMAGE_COUNT = 5;
+export const MAX_IMAGE_COUNT = 6;
 
 function detectArea(text: string): string {
   const n = normalizeText(text);

@@ -622,6 +622,36 @@ describe('cadu-ufg-publisher', () => {
     ]);
   });
 
+  test('publisher deduplicates and limits galleries to six valid images', () => {
+    const images = Array.from({ length: 7 }, (_, index) => `https://source.local/image-${index + 1}.jpg`);
+
+    expect(normalizeImages([
+      images[0],
+      { image_url: images[0] },
+      ...images.slice(1),
+      'javascript:alert(1)',
+    ])).toEqual(images.slice(0, 6));
+  });
+
+  test('prepareImagesForPost enforces the six-image limit for direct calls', async () => {
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    publisher.uploadImageToStorage = jest.fn(async (_postId, sourceUrl) => `https://storage.local/${sourceUrl.split('/').pop()}`);
+    const images = Array.from({ length: 7 }, (_, index) => `https://source.local/image-${index + 1}.jpg`);
+
+    const prepared = await publisher.prepareImagesForPost('post-1', images);
+
+    expect(prepared.images).toHaveLength(6);
+    expect(prepared.uploads).toHaveLength(6);
+    expect(publisher.uploadImageToStorage).toHaveBeenCalledTimes(6);
+    expect(publisher.uploadImageToStorage).not.toHaveBeenCalledWith('post-1', images[6], 6);
+  });
+
   test('publisher accepts object-shaped image candidates and never emits object strings', async () => {
     const publisher = new SupabasePublisher({
       supabaseUrl: 'https://project.supabase.co',

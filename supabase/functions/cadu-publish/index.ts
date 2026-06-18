@@ -22,7 +22,7 @@
 
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { CaduItem, validateItem } from "./schema.ts";
-import { deepMergeMetadata, mapItemToPost } from "./mapper.ts";
+import { deepMergeMetadata, mapItemToPost, MAX_IMAGE_COUNT } from "./mapper.ts";
 import {
   canPersistExternalImageUrl,
   hostOf,
@@ -45,7 +45,6 @@ const SITE_URL = (Deno.env.get("KC_APP_BASE_URL") || "https://www.kinocampus.com
 
 const STORAGE_BUCKET = "kino-media";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
-const MAX_IMAGE_COUNT = 5;
 const USER_AGENT = "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)";
 
 const CORS_HEADERS = {

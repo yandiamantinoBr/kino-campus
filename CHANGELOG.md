@@ -2,6 +2,36 @@
 
 ---
 
+## [v76.21] - 2026-06-17 - Contrato de galeria do Cadu com seis imagens
+
+### Tema
+
+Consolidação do limite de até seis imagens no publisher externo e na Edge
+Function `cadu-publish`, preservando a primeira imagem como capa e as demais em
+`post_media`.
+
+### Decisões
+
+- **Limite defensivo em todos os caminhos**: normalização, publicação, edição e
+  chamadas diretas de reparo truncam a galeria após validar e deduplicar URLs.
+- **Fonte única no runtime Deno**: `MAX_IMAGE_COUNT` é exportado pelo mapper e
+  consumido pelo endpoint, reduzindo risco de divergência interna.
+- **Sem alteração para usuários humanos**: o limite desta etapa é exclusivo do
+  pipeline confiável do Cadu; formulários públicos e migrations não mudaram.
+- **Sem deploy automático**: a Edge Function remota só deve ser atualizada após
+  merge, CI verde e conferência do estado remoto.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.21 | Publisher Node deduplica, preserva ordem e limita upload a seis imagens |
+| v76.21 | Edge Function e mapper compartilham `MAX_IMAGE_COUNT = 6` |
+| v76.21 | Testes cobrem sete entradas, duplicata, URL inválida e chamada direta |
+| v76.21 | Guias do endpoint, hardening e operação atualizados para até seis imagens |
+
+---
+
 ## [v76.20] - 2026-06-17 - Página 404 institucional customizada
 
 ### Tema
