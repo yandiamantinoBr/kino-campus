@@ -89,7 +89,7 @@ foram encontradas exclusivamente nesse arquivo.
 | `npm run seo:audit` | aprovado; 0 warnings / 0 errors |
 | `npm run check:all` | 180 suites / 3.622 testes / 3 snapshots aprovados |
 | Navegador desktop/mobile | ownership e métricas equivalentes; sem overflow |
-| CI do PR | pendente na criação deste relatório |
+| CI do PR #590 | validadores/Jest/lista Playwright, Lighthouse, Vercel e preview aprovados |
 
 ## Rollback
 
