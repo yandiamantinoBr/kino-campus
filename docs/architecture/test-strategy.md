@@ -1,6 +1,6 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.13.0 · **Atualizado em:** 2026-06-15
+**Versão:** v76.26.0 · **Atualizado em:** 2026-06-18
 
 > Documenta as 180 suites Jest + 10 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
@@ -11,10 +11,10 @@
 
 1. [Filosofia](#1-filosofia)
 2. [Métricas atuais](#2-métricas-atuais)
-3. [Diretório unit/ — 25 suites](#3-diretório-unit--25-suites)
-4. [Diretório integration/ — 124 suites](#4-diretório-integration--124-suites)
+3. [Diretório unit/ — 26 suites](#3-diretório-unit--26-suites)
+4. [Diretório integration/ — 126 suites](#4-diretório-integration--126-suites)
 5. [Diretório contract/ — 9 suites](#5-diretório-contract--9-suites)
-6. [Diretório structure/ — 12 suites](#6-diretório-structure--12-suites)
+6. [Diretório structure/ — 14 suites](#6-diretório-structure--14-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
 8. [E2E com Playwright — 10 specs](#8-e2e-com-playwright--10-specs)
 9. [Como adicionar novos testes](#9-como-adicionar-novos-testes)
@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 180 suites · 3616 testes
+Jest: 180 suites · 3619 testes
 Playwright: 10 specs · 68 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥180 passed, 180 total` e `≥3616 passed, 3616 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥180 passed, 180 total` e `≥3619 passed, 3619 total`.
 
 ### Gate CI essencial
 
@@ -82,7 +82,7 @@ Esse gate cobre validação estrutural, Jest completo e inventário Playwright s
 
 ---
 
-## 3. Diretório unit/ — 25 suites
+## 3. Diretório unit/ — 26 suites
 
 Cobre módulos utilitários individuais — funções puras, sem dependências de DOM ou browser.
 
@@ -115,7 +115,7 @@ A tabela abaixo destaca as suites principais; a contagem canônica vem do filesy
 
 ---
 
-## 4. Diretório integration/ — 124 suites
+## 4. Diretório integration/ — 126 suites
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
 
@@ -277,7 +277,7 @@ Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falh
 
 ---
 
-## 6. Diretório structure/ — 12 suites
+## 6. Diretório structure/ — 14 suites
 
 Verifica estrutura de HTML, namespaces de módulos e cadeias de scripts — sem rodar código de negócio.
 

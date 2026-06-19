@@ -20,7 +20,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 180 suites · 3616 testes; Playwright: 10 specs E2E (68 testes listados) |
+| Testes | Jest: 180 suites · 3619 testes; Playwright: 10 specs E2E (68 testes listados) |
 
 ## Documentação Técnica
 
