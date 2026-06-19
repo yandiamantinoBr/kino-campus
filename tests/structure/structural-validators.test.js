@@ -273,3 +273,34 @@ describe('CSS-C.4 — ownership legal em kc-public-shell.css', function () {
   });
 
 });
+
+// ── 7. CSS-C.5 — contrato dos badges de ranking do perfil ──────────────────
+
+describe('CSS-C.5 — ownership do ranking de perfil em kc-public-shell.css', function () {
+
+  var styles = fs.readFileSync(path.join(ROOT, 'assets/css/styles.css'), 'utf8');
+  var publicShell = fs.readFileSync(path.join(ROOT, 'assets/css/kc-public-shell.css'), 'utf8');
+  var profileHtml = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+  var baselineScript = fs.readFileSync(path.join(ROOT, 'scripts/capture-css-visual-baseline.js'), 'utf8');
+
+  test('profile.html carrega kc-public-shell.css após styles.css', function () {
+    var stylesPosition = profileHtml.indexOf('assets/css/styles.css');
+    var shellPosition = profileHtml.indexOf('assets/css/kc-public-shell.css');
+    expect(stylesPosition).toBeGreaterThan(-1);
+    expect(shellPosition).toBeGreaterThan(stylesPosition);
+  });
+
+  test('kc-profile-rank-badges pertence somente ao CSS público dedicado', function () {
+    expect(publicShell).toContain('.kc-profile-rank-badges {');
+    expect(publicShell).toContain('.kc-profile-rank-badges .kc-rank-badge {');
+    expect(styles).not.toContain('.kc-profile-rank-badges {');
+    expect(styles).not.toContain('.kc-profile-rank-badges .kc-rank-badge {');
+  });
+
+  test('baseline usa perfil público determinístico e registra métricas do badge', function () {
+    expect(baselineScript).toContain("path: '/profile.html?id=USER_01'");
+    expect(baselineScript).toContain("fixture: 'ranked-public-profile'");
+    expect(baselineScript).toContain('profileRankBadges:');
+    expect(baselineScript).toContain('document.fonts.ready');
+  });
+});
