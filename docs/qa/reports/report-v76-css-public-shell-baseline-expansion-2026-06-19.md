@@ -81,7 +81,7 @@ fixture explicitamente identificada, em vez de simular credenciais.
 | `npm run seo:audit` | aprovado; 0 warnings / 0 errors |
 | `npm run check:all` | 180 suites / 3.625 testes / 3 snapshots aprovados |
 | Baseline final | 21 rotas / 42 capturas; 0 HTTP fail, overflow, page error ou `future-split` |
-| CI do PR | pendente na criação deste relatório |
+| CI do PR #591 | validadores/Jest/lista Playwright, Lighthouse, Vercel e preview aprovados |
 
 ## Limites e próxima etapa
 
