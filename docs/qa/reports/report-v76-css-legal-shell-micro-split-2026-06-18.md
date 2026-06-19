@@ -67,6 +67,7 @@ padding superior de 28 px e raios de 18/16 px. Ambas carregaram
 | `npm run seo:audit` | aprovado; 0 warnings / 0 errors |
 | `npm run check:all` | 180 suites / 3.619 testes / 3 snapshots aprovados |
 | Navegador desktop/mobile | layout preservado; sem overflow ou erros de console |
+| CI do PR #589 | validadores/Jest/lista Playwright, Lighthouse, Vercel e preview aprovados |
 
 ## Rollback
 
