@@ -31,6 +31,7 @@
   <title>KinoCampus - Comunidade UFG</title>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script" />
   <link href="assets/css/styles.css?v=8.6.4" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
@@ -288,9 +289,12 @@
       </div>
     </section>
 
-    <aside class="kc-sidebar kc-sidebar--contextual">
+    <aside class="kc-sidebar kc-sidebar--contextual kc-sidebar--home-context">
       <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="home">
-        <h3><i class="fas fa-circle-info"></i> Sobre o KinoCampus</h3>
+        <h3 class="kc-home-context-heading">
+          <span class="kc-home-context-heading__label"><i class="fas fa-circle-info" aria-hidden="true"></i> Sobre o KinoCampus</span>
+          <button class="kc-context-info-btn" type="button" data-kc-context-open="home" aria-label="Informações sobre o KinoCampus" data-i18n-aria-label="aria-label.context-home" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
+        </h3>
         <p class="kc-sidebar-help">A comunidade UFG em um só lugar: eventos, oportunidades, moradia, compra e venda, caronas e achados/perdidos.</p>
         <details class="kc-sidebar-context">
           <summary>Ver contexto da plataforma</summary>
@@ -548,6 +552,7 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.3"></script>
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
+  <script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>
   <script defer src="assets/js/controllers/public/kc-feed.controller.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-feed-tabs-personalized.js?v=8.6.1"></script>

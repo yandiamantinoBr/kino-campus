@@ -9,6 +9,47 @@ const MODULE_PAGES = [
   ['caronas-feed.html', 'caronas', 'Informações sobre Caronas'],
 ];
 
+test.describe('V76.25 - Sobre o KinoCampus compacto no mobile', () => {
+  test('index abre o contexto completo em modal a partir da faixa compacta', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/index.html');
+
+    const section = page.locator('[data-kc-context-section="home"]');
+    const trigger = page.locator('[data-kc-context-open="home"]');
+    await expect(section).toBeVisible();
+    await expect(trigger).toBeVisible();
+    await expect(section.locator('.kc-sidebar-help')).toBeHidden();
+    await expect(section.locator('details')).toBeHidden();
+
+    const compactMetrics = await page.evaluate(() => {
+      const context = document.querySelector('[data-kc-context-section="home"]');
+      const button = document.querySelector('[data-kc-context-open="home"]');
+      return {
+        sectionHeight: context.getBoundingClientRect().height,
+        buttonHeight: button.getBoundingClientRect().height,
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+      };
+    });
+    expect(compactMetrics.sectionHeight).toBeLessThanOrEqual(52);
+    expect(compactMetrics.buttonHeight).toBeLessThanOrEqual(38);
+    expect(compactMetrics.scroll).toBeLessThanOrEqual(compactMetrics.client + 1);
+
+    await trigger.click();
+
+    const modal = page.locator('#kcSidebarContextModal');
+    await expect(modal).toHaveAttribute('aria-hidden', 'false');
+    await expect(modal.locator('#kcSidebarContextTitle')).toContainText('Sobre o KinoCampus');
+    await expect(modal.locator('.kc-sidebar-help')).toBeVisible();
+    await expect(modal.locator('details')).toBeVisible();
+    await expect(modal.locator('details')).not.toHaveAttribute('open', '');
+
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveAttribute('aria-hidden', 'true');
+    await expect(trigger).toBeFocused();
+  });
+});
+
 test.describe('V76.24 - contexto mobile compacto dos módulos', () => {
   for (const [pagePath, moduleKey, label] of MODULE_PAGES) {
     test(`${pagePath} abre o contexto compacto no mobile`, async ({ page }) => {

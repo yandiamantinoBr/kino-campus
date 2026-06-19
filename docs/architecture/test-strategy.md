@@ -16,7 +16,7 @@
 5. [Diretório contract/ — 9 suites](#5-diretório-contract--9-suites)
 6. [Diretório structure/ — 12 suites](#6-diretório-structure--12-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
-8. [E2E com Playwright — 9 specs](#8-e2e-com-playwright--9-specs)
+8. [E2E com Playwright — 10 specs](#8-e2e-com-playwright--10-specs)
 9. [Como adicionar novos testes](#9-como-adicionar-novos-testes)
 10. [Regras de manutenção](#10-regras-de-manutenção)
 
@@ -49,19 +49,19 @@
 
 | Diretório | Suites | Domínio principal |
 |-----------|--------|------------------|
-| `tests/unit/` | **25** | Módulos utilitários individuais |
-| `tests/integration/` | **124** | Controllers, adapters, sub-módulos KCAPI |
+| `tests/unit/` | **26** | Módulos utilitários individuais |
+| `tests/integration/` | **126** | Controllers, adapters, sub-módulos KCAPI |
 | `tests/contract/` | **9** | Contratos públicos e formas de exports |
-| `tests/structure/` | **12** | Estrutura HTML, namespaces, cadeia de scripts |
+| `tests/structure/` | **14** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
-| `tests/e2e/` | **9** | Playwright (browser real, HTTP real) |
-| **Total** | **184** | (175 Jest + 9 Playwright specs) |
+| `tests/e2e/` | **10** | Playwright (browser real, HTTP real) |
+| **Total** | **190** | (180 Jest + 10 Playwright specs) |
 
 ### Contagem canônica
 
 ```
 Jest: 180 suites · 3616 testes
-Playwright: 10 specs · 67 testes listados
+Playwright: 10 specs · 68 testes listados
 ```
 
 **Regra imutável:** `npm test` DEVE sempre retornar `≥180 passed, 180 total` e `≥3616 passed, 3616 total`.
@@ -312,7 +312,7 @@ Verifica conformidade com WCAG 2.1 AA: estrutura de documento, marcações i18n,
 
 ---
 
-## 8. E2E com Playwright — 9 specs
+## 8. E2E com Playwright — 10 specs
 
 Rodam no browser real (Chromium) contra um servidor HTTP local (`http-server` na porta 4000). Não fazem chamadas reais ao Supabase — usam o driver local.
 
@@ -323,6 +323,7 @@ Rodam no browser real (Chromium) contra um servidor HTTP local (`http-server` na
 | `a11y-e2e.spec.js` | homepage (DOM vivo) | `lang="pt-BR"`, nav aria-label, theme-toggle, skip link no Tab, carousel, `kc-ranking-info-btn` |
 | `create-post.spec.js` | `/create-post` | Status 200, h1/skip/main, lang, nav aria-label, busca, theme-toggle |
 | `header-responsive.spec.js` | paginas publicas principais | Responsividade e navegacao do header |
+| `context-404-responsive.spec.js` | home, 6 módulos e 404 | Contexto compacto mobile, diálogo acessível e layout responsivo da 404 |
 | `product-detail.spec.js` | `/_product.html` | Editor rich-text (Negrito/Itálico aria-label), input do autor, sharePopover, `renderPostCard` |
 | `admin-pages.spec.js` | 6 páginas admin | Dashboard, Moderação, Banners, Denúncias, Ajuda, Privacidade/Analytics — 200 + skip link + h1 + main |
 | `admin-moderation.spec.js` | `/admin/moderation.html` | Status 200, estrutura, 3 selects A5 com `aria-label`, nav com `aria-label` |

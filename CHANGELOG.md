@@ -2,6 +2,34 @@
 
 ---
 
+## [v76.25] - 2026-06-18 - Sobre o KinoCampus compacto no mobile
+
+### Tema
+
+Aplicação do mesmo padrão compacto dos seis módulos ao contexto editorial da
+home, preservando a leitura completa no desktop e sob demanda no mobile.
+
+### Decisões
+
+- **Redução mensurável**: o card mobile passa de aproximadamente 177 px para
+  uma faixa de 50 px, sem ocultar o acesso ao conteúdo institucional.
+- **Hierarquia consistente**: ícone em tile, gradiente sutil, sombra leve e
+  botão de 38 px repetem a linguagem visual dos títulos dos módulos.
+- **Conteúdo sob demanda**: descrição, contexto e link institucional migram no
+  mobile para o diálogo compartilhado, que mantém Escape e restauração de foco.
+- **Desktop preservado**: texto e `<details>` continuam expandidos visualmente na
+  sidebar; o acionador compacto permanece exclusivo do breakpoint mobile.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.25 | faixa compacta “Sobre o KinoCampus” na home mobile |
+| v76.25 | modal contextual compartilhado carregado pela `index.html` |
+| v76.25 | contrato E2E mobile e relatório visual dedicado |
+
+---
+
 ## [v76.24] - 2026-06-18 - Densidade mobile do contexto dos módulos
 
 ### Tema

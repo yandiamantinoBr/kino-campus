@@ -1,10 +1,11 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.24.0
+**Versão:** v76.25.0
 **Atualizado em:** 2026-06-18
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
-> baseline visual CSS-B/C, micro-splits CSS-C/C.2/C.3 e status dos stubs `assets/css/future-split/`.
+> baseline visual CSS-B/C, micro-splits CSS-C/C.2/C.3, contexto responsivo da
+> home/módulos e status dos stubs `assets/css/future-split/`.
 
 ---
 
@@ -22,13 +23,13 @@ assets/css/
 |-- kc-chat.css                710 linhas / 16.367 bytes
 |-- kc-error-page.css          374 linhas / 8.351 bytes
 |-- product-lightbox.css       299 linhas / 8.064 bytes
-|-- kc-sidebar-context.css     298 linhas / 7.304 bytes
+|-- kc-sidebar-context.css     354 linhas / 9.062 bytes
 |-- kc-theme-boot.css          213 linhas / 5.955 bytes
 |-- kc-chat-shortcut.css        60 linhas / 1.387 bytes
 `-- future-split/             5 stubs documentais, nao carregados
 ```
 
-**Total CSS de producao:** 18.264 linhas / 434.378 bytes.
+**Total CSS de producao:** 18.320 linhas / 436.136 bytes.
 
 O monólito `styles.css` segue sendo o principal hotspot visual: 12.112 linhas, 282.468 bytes,
 1.748 regras parseadas e 1.968 seletores parseados por `npm run audit:css`.
@@ -44,7 +45,7 @@ O monólito `styles.css` segue sendo o principal hotspot visual: 12.112 linhas, 
 | `kc-chat-shortcut.css` | atalho global de mensagens injetado por `kc-notifications.js` | 30 HTMLs descobertos |
 | `admin-shell.css` | shell e componentes das 6 paginas admin | 6 HTMLs admin |
 | `kc-public-shell.css` | profile, settings, account setup, legal/privacidade/transparencia, ajuda, mensagens e 404 | 12 paginas, 13 links |
-| `kc-sidebar-context.css` | títulos de módulo, acionador mobile e diálogo contextual | 6 feeds de módulo |
+| `kc-sidebar-context.css` | títulos de módulo, contexto compacto da home e diálogo contextual | home + 6 feeds de módulo |
 | `kc-error-page.css` | composição visual isolada da página de erro | `404.html` |
 | `product.css` | detalhe de publicacao/produto | `_product.html` |
 | `product-lightbox.css` | lightbox de midia do produto | `_product.html` |
@@ -66,7 +67,7 @@ Fonte: `npm run audit:css`, que varre os HTMLs da raiz e de `admin/`.
 | `kc-chat-shortcut.css` | `8.6.1 x30` | 30 |
 | `admin-shell.css` | `8.6.1 x6` | 6 |
 | `kc-public-shell.css` | `8.6.1 x13` | 12 |
-| `kc-sidebar-context.css` | `8.6.1 x6` | 6 |
+| `kc-sidebar-context.css` | `8.6.1 x7` | 7 |
 | `kc-error-page.css` | `8.6.1 x1` | 1 |
 | `product.css` | `8.6.1 x1` | 1 |
 | `product-lightbox.css` | `8.6.1 x1` | 1 |
