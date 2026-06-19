@@ -1,5 +1,5 @@
 /**
- * KinoCampus contextual module help (V76.23).
+ * KinoCampus contextual module help (V76.24).
  * Reuses each module's sidebar content in an accessible mobile dialog.
  */
 (function initKcSidebarContext(global) {
@@ -72,16 +72,17 @@
 
   function populateModal(modal, section) {
     var heading = section.querySelector('h3');
+    var contentRoot = section.querySelector('.kc-sidebar-section__body') || section;
     var title = heading ? heading.textContent.trim() : 'Sobre este módulo';
     var titleSlot = modal.querySelector('#kcSidebarContextTitle span');
     var body = modal.querySelector('[data-kc-context-modal-body]');
     titleSlot.textContent = title;
     body.innerHTML = '';
 
-    Array.prototype.forEach.call(section.children, function (child) {
-      if (child === heading) return;
+    Array.prototype.forEach.call(contentRoot.children, function (child) {
+      if (child === heading || (heading && child.contains(heading))) return;
       var clone = child.cloneNode(true);
-      if (clone.tagName === 'DETAILS') clone.open = true;
+      if (clone.tagName === 'DETAILS') clone.removeAttribute('open');
       body.appendChild(clone);
     });
   }

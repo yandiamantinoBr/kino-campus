@@ -1,4 +1,4 @@
-/* KinoCampus contextual module help (V76.23). */
+/* KinoCampus contextual module help (V76.24). */
 
 .kc-module-heading {
   display: flex;
@@ -181,12 +181,42 @@
 
 @media (max-width: 768px) {
   .kc-module-heading {
-    margin-bottom: 16px;
-    font-size: clamp(1.25rem, 6vw, 1.5rem);
+    min-height: 50px;
+    margin: 0 0 10px;
+    padding: 6px 7px 6px 10px;
+    border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 24%, var(--kc-border-dark));
+    border-radius: 14px;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--kc-primary-brand) 8%, var(--kc-surface-dark)),
+      color-mix(in srgb, var(--kc-secondary-brand) 5%, var(--kc-surface-dark)));
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.08);
+    font-size: clamp(1.12rem, 5.3vw, 1.32rem);
+  }
+
+  .kc-module-heading__label {
+    gap: 8px;
+  }
+
+  .kc-module-heading__label > i {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 26%, transparent);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--kc-primary-brand) 12%, transparent);
+    font-size: 0.78em;
   }
 
   .kc-context-info-btn {
     display: inline-flex;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--kc-primary-brand) 15%, var(--kc-surface-dark));
+    font-size: 0.92rem;
   }
 
   /* O botao ao lado do titulo e a representacao compacta do contexto no mobile. */
@@ -196,27 +226,68 @@
 
   .kc-sidebar-context-modal {
     align-items: flex-end;
-    padding: 0;
+    padding: 8px;
   }
 
   .kc-sidebar-context-modal__dialog {
     width: 100%;
-    max-height: 86vh;
-    max-height: 86dvh;
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    border-radius: 22px 22px 0 0;
+    max-height: 78vh;
+    max-height: 78dvh;
+    border-radius: 18px;
+  }
+
+  .kc-sidebar-context-modal__dialog::before {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 34px;
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--kc-text-dark-secondary) 45%, transparent);
+    content: '';
+    transform: translateX(-50%);
   }
 
   .kc-sidebar-context-modal__header {
-    padding: 17px 18px;
+    gap: 12px;
+    padding: 17px 14px 11px;
+  }
+
+  .kc-sidebar-context-modal__title {
+    gap: 8px;
+    font-size: 1rem;
+  }
+
+  .kc-sidebar-context-modal__close {
+    width: 36px;
+    height: 36px;
   }
 
   .kc-sidebar-context-modal__body {
-    max-height: calc(86vh - 75px);
-    max-height: calc(86dvh - 75px);
-    padding: 18px 18px calc(24px + env(safe-area-inset-bottom));
+    max-height: calc(78vh - 65px);
+    max-height: calc(78dvh - 65px);
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .kc-sidebar-context-modal__body .kc-sidebar-help {
+    margin-bottom: 10px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .kc-sidebar-context-modal__body .kc-sidebar-context {
+    padding: 11px 12px;
+    border-radius: 11px;
+  }
+
+  .kc-sidebar-context-modal__body .kc-sidebar-context summary {
+    font-size: 0.9rem;
+  }
+
+  .kc-sidebar-context-modal__body .kc-sidebar-context p {
+    margin: 9px 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
   }
 }
 

@@ -1,6 +1,6 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.23.0
+**Versão:** v76.24.0
 **Atualizado em:** 2026-06-18
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
@@ -20,15 +20,15 @@ assets/css/
 |-- admin-shell.css          1.471 linhas / 38.653 bytes
 |-- kc-public-shell.css        943 linhas / 20.456 bytes
 |-- kc-chat.css                710 linhas / 16.367 bytes
-|-- kc-error-page.css          374 linhas / 7.977 bytes
+|-- kc-error-page.css          374 linhas / 8.351 bytes
 |-- product-lightbox.css       299 linhas / 8.064 bytes
-|-- kc-sidebar-context.css     227 linhas / 5.227 bytes
+|-- kc-sidebar-context.css     298 linhas / 7.304 bytes
 |-- kc-theme-boot.css          213 linhas / 5.955 bytes
 |-- kc-chat-shortcut.css        60 linhas / 1.387 bytes
 `-- future-split/             5 stubs documentais, nao carregados
 ```
 
-**Total CSS de producao:** 18.193 linhas / 431.927 bytes.
+**Total CSS de producao:** 18.264 linhas / 434.378 bytes.
 
 O monólito `styles.css` segue sendo o principal hotspot visual: 12.112 linhas, 282.468 bytes,
 1.748 regras parseadas e 1.968 seletores parseados por `npm run audit:css`.

@@ -9,7 +9,7 @@ const MODULE_PAGES = [
   ['caronas-feed.html', 'caronas', 'Informações sobre Caronas'],
 ];
 
-test.describe('V76.23 - contexto responsivo dos módulos', () => {
+test.describe('V76.24 - contexto mobile compacto dos módulos', () => {
   for (const [pagePath, moduleKey, label] of MODULE_PAGES) {
     test(`${pagePath} abre o contexto compacto no mobile`, async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
@@ -18,12 +18,33 @@ test.describe('V76.23 - contexto responsivo dos módulos', () => {
       const trigger = page.locator(`[data-kc-context-open="${moduleKey}"]`);
       await expect(trigger).toBeVisible();
       await expect(page.locator('aside.kc-sidebar--contextual')).toBeHidden();
+
+      const compactMetrics = await page.evaluate((key) => {
+        const heading = document.querySelector('.kc-module-heading');
+        const button = document.querySelector(`[data-kc-context-open="${key}"]`);
+        const headingStyle = getComputedStyle(heading);
+        return {
+          headingHeight: heading.getBoundingClientRect().height,
+          headingMarginBottom: parseFloat(headingStyle.marginBottom),
+          buttonHeight: button.getBoundingClientRect().height,
+        };
+      }, moduleKey);
+      expect(compactMetrics.headingHeight).toBeLessThanOrEqual(52);
+      expect(compactMetrics.headingMarginBottom).toBeLessThanOrEqual(10);
+      expect(compactMetrics.buttonHeight).toBeLessThanOrEqual(38);
+
       await trigger.click();
 
       const modal = page.locator('#kcSidebarContextModal');
       await expect(modal).toHaveAttribute('aria-hidden', 'false');
       await expect(modal.locator('[role="dialog"]')).toBeVisible();
       await expect(modal.locator('[data-kc-context-modal-body]')).not.toBeEmpty();
+      await expect(modal.locator('[data-kc-context-modal-body] h3')).toHaveCount(0);
+      await expect(modal.locator('[data-kc-context-modal-body] [data-kc-sidebar-toggle]')).toHaveCount(0);
+      await expect(modal.locator('details')).not.toHaveAttribute('open', '');
+
+      const dialogHeight = await modal.locator('[role="dialog"]').evaluate((dialog) => dialog.getBoundingClientRect().height);
+      expect(dialogHeight).toBeLessThanOrEqual(280);
 
       await page.keyboard.press('Escape');
       await expect(modal).toHaveAttribute('aria-hidden', 'true');
