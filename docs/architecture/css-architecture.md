@@ -1,10 +1,10 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.27.0
+**Versão:** v76.28.0
 **Atualizado em:** 2026-06-19
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
-> baseline visual CSS-B/C, micro-splits CSS-C até C.5, contexto responsivo da
+> baseline visual CSS-B.1/C, micro-splits CSS-C até C.5, contexto responsivo da
 > home/módulos e status dos stubs `assets/css/future-split/`.
 
 ---
@@ -163,6 +163,11 @@ adicionou fixture determinística e métricas de flexbox, e moveu
 `.kc-profile-rank-badges*` para `kc-public-shell.css`. As três rodadas tiveram
 34 capturas, sem falha HTTP, overflow ou `future-split/`; posição, tamanho,
 direção, gap, alinhamento e shrink do badge permaneceram equivalentes.
+
+CSS-B.1 ampliou a matriz para 21 rotas / 42 capturas ao incluir 404, ajuda,
+callback e onboarding. Com isso, as 12 páginas que carregam
+`kc-public-shell.css` estão cobertas. O onboarding usa fixture local sem
+credencial real, e o manifesto registra `finalUrl` para detectar redirects.
 
 Limitacao: o baseline admin atual e anonimo/sem sessao. Ele cobre o shell estatico e o gate admin,
 mas nao substitui baseline autenticado antes de mover seletores visiveis apenas no dashboard real.

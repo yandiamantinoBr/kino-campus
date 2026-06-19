@@ -1,8 +1,8 @@
 # V76 CSS-A - Inventario de Ownership de `styles.css`
 
-**Versão:** v76.27.0
+**Versão:** v76.28.0
 **Data:** 2026-06-19
-**Escopo:** inventário documental + status pós-CSS-C.5; o inventário original não alterou CSS, e as atualizações posteriores registram os micro-splits já evidenciados
+**Escopo:** inventário documental + status pós-CSS-B.1; o inventário original não alterou CSS, e as atualizações posteriores registram os micro-splits e baselines evidenciados
 
 ---
 
@@ -189,12 +189,18 @@ métricas de layout. O bucket público caiu para 116 regras, 115 seletores e
 733 linhas. Evidência em
 `docs/qa/reports/report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md`.
 
+Atualização v76.28.0: a trilha **CSS-B.1 public shell completo** confirmou que
+o restante do bucket público é majoritariamente auth/header/menu global e não
+tem ownership fechado para novo split. O baseline passou a cobrir as 12 páginas
+consumidoras de `kc-public-shell.css`, em 21 rotas / 42 capturas. Evidência em
+`docs/qa/reports/report-v76-css-public-shell-baseline-expansion-2026-06-19.md`.
+
 Escolher uma trilha unica para a proxima entrega:
 
 1. **CSS-B admin autenticado:** capturar dashboard admin real antes de mover seletores que só
    aparecem no estado autenticado.
-2. **Public shell micro-split:** escolher outro subgrupo pequeno do overlap remanescente, com
-   ownership e baseline específicos; legal e ranking do perfil já foram encerrados.
+2. **Public shell:** manter auth/header/dropdown globais; só abrir novo recorte se uma revisão
+   manual provar ownership fechado além de legal e ranking do perfil já encerrados.
 3. **JS documental:** investigar `bootstrap-driver-core` sem extração imediata, porque o candidato
    JS residual é P3 e tem custo/risco maior que micro-splits CSS pequenos.
 

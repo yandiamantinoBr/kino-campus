@@ -304,3 +304,48 @@ describe('CSS-C.5 — ownership do ranking de perfil em kc-public-shell.css', fu
     expect(baselineScript).toContain('document.fonts.ready');
   });
 });
+
+// ── 8. CSS-B.1 — cobertura integral do public shell ────────────────────────
+
+describe('CSS-B.1 — baseline integral das rotas de kc-public-shell.css', function () {
+
+  var publicShellPages = [
+    '404.html',
+    'account-setup.html',
+    'ajuda.html',
+    'auth-callback.html',
+    'editorial.html',
+    'mensagens.html',
+    'privacidade.html',
+    'profile.html',
+    'settings.html',
+    'sobre.html',
+    'termos.html',
+    'transparencia.html',
+  ];
+  var baselineScript = fs.readFileSync(path.join(ROOT, 'scripts/capture-css-visual-baseline.js'), 'utf8');
+
+  test('as 12 páginas consumidoras carregam kc-public-shell.css após styles.css', function () {
+    publicShellPages.forEach(function (page) {
+      var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
+      var stylesPosition = html.indexOf('assets/css/styles.css');
+      var shellPosition = html.indexOf('assets/css/kc-public-shell.css');
+      expect(stylesPosition).toBeGreaterThan(-1);
+      expect(shellPosition).toBeGreaterThan(stylesPosition);
+    });
+  });
+
+  test('baseline inclui 404, ajuda, callback e onboarding', function () {
+    ['404.html', 'ajuda.html', 'auth-callback.html', 'account-setup.html'].forEach(function (page) {
+      expect(baselineScript).toContain("path: '/" + page + "'");
+    });
+  });
+
+  test('onboarding usa fixture local explícita sem credencial real', function () {
+    expect(baselineScript).toContain("fixture: 'authenticated-local-user'");
+    expect(baselineScript).toContain("id: 'USER_01'");
+    expect(baselineScript).toContain("localStorage.setItem('kc_local_profile'");
+    expect(baselineScript).toContain('finalUrl,');
+    expect(baselineScript).not.toContain('service_role');
+  });
+});

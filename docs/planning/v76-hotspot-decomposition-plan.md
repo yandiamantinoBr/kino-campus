@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposição Segura dos Hotspots JS/CSS
 
-**Versão:** v76.27.0
+**Versão:** v76.28.0
 **Data:** 2026-06-19
-**Escopo:** planejamento técnico + status das extrações JS V76, inventário residual JS-I, inventário CSS-A, baseline CSS-B e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
+**Escopo:** planejamento técnico + status das extrações JS V76, inventário residual JS-I, inventário CSS-A, baseline CSS-B.1 e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
 
 ---
 
@@ -202,6 +202,13 @@ pública válida com fixture determinística. `styles.css` cai para 11.982 linha
 279.971 bytes, 1.728 regras e 1.945 seletores; o bucket público cai para
 116 regras / 115 seletores / 733 linhas. Evidência em
 `docs/qa/reports/report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md`.
+
+**Status v76.28.0:** CSS-B.1 ampliou o baseline para 21 rotas / 42 capturas,
+incluindo 404, ajuda, callback e onboarding. As 12 páginas consumidoras de
+`kc-public-shell.css` agora têm cobertura desktop/mobile; o onboarding usa
+fixture local sem credencial real e `finalUrl` detecta redirects. Nenhum CSS ou
+runtime foi alterado. Evidência em
+`docs/qa/reports/report-v76-css-public-shell-baseline-expansion-2026-06-19.md`.
 
 ### 4.4 Gates obrigatorios para qualquer PR CSS
 
