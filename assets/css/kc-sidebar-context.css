@@ -1,4 +1,4 @@
-/* KinoCampus contextual module help (V76.24). */
+/* KinoCampus contextual module and home help (V76.25). */
 
 .kc-module-heading {
   display: flex;
@@ -55,6 +55,20 @@
 
 .kc-sidebar-section--context {
   scroll-margin-top: 96px;
+}
+
+.kc-home-context-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kc-home-context-heading__label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
 }
 
 .kc-sidebar-context-modal {
@@ -220,8 +234,50 @@
   }
 
   /* O botao ao lado do titulo e a representacao compacta do contexto no mobile. */
-  aside.kc-sidebar.kc-sidebar--contextual {
+  aside.kc-sidebar.kc-sidebar--contextual:not(.kc-sidebar--home-context) {
     display: none !important;
+  }
+
+  aside.kc-sidebar.kc-sidebar--contextual.kc-sidebar--home-context {
+    margin-bottom: 10px;
+  }
+
+  aside.kc-sidebar.kc-sidebar--home-context .kc-sidebar-section--context {
+    min-height: 50px;
+    margin: 0;
+    padding: 5px 6px 5px 9px !important;
+    border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 24%, var(--kc-border-dark));
+    border-radius: 14px;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--kc-primary-brand) 8%, var(--kc-surface-dark)),
+      color-mix(in srgb, var(--kc-secondary-brand) 5%, var(--kc-surface-dark)));
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.08);
+  }
+
+  .kc-sidebar--home-context .kc-home-context-heading {
+    min-height: 38px;
+    margin: 0;
+    font-size: clamp(1rem, 4.8vw, 1.16rem);
+    line-height: 1.2;
+  }
+
+  .kc-sidebar--home-context .kc-home-context-heading__label > i {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 26%, transparent);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--kc-primary-brand) 12%, transparent);
+    color: var(--kc-primary-brand);
+    font-size: 0.78em;
+  }
+
+  .kc-sidebar--home-context .kc-sidebar-help,
+  .kc-sidebar--home-context > .kc-sidebar-section--context > .kc-sidebar-context {
+    display: none;
   }
 
   .kc-sidebar-context-modal {

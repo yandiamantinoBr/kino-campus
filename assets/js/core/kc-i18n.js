@@ -387,6 +387,7 @@
     'aria-label.close-explanation':     'Fechar explicação',
     'aria-label.market-rail':           'Seções rápidas de compra e venda',
     'aria-label.lostfound-rail':        'Seções rápidas de achados e perdidos',
+    'aria-label.context-home':             'Informações sobre o KinoCampus',
     'aria-label.context-achados-perdidos': 'Informações sobre Achados e Perdidos',
     'aria-label.context-eventos':       'Informações sobre Eventos',
     'aria-label.context-moradia':       'Informações sobre Moradia',
