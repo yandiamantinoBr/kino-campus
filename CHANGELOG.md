@@ -2,6 +2,35 @@
 
 ---
 
+## [v76.26] - 2026-06-18 - CSS-C.4 das páginas legais
+
+### Tema
+
+Micro-split seguro do layout institucional/legal para o CSS público já
+carregado pelas cinco rotas consumidoras, sem alterar HTML ou runtime.
+
+### Decisões
+
+- **Ownership fechado**: `.kc-legal-*` aparece somente em `sobre`, `editorial`,
+  `transparencia`, `privacidade` e `termos`; todas carregam `kc-public-shell.css`
+  depois de `styles.css`.
+- **Movimento localizado**: 17 regras e 16 seletores saíram do monólito, fazendo
+  o bucket público cair de 136/133 para 119/117.
+- **Baseline ampliado**: as cinco rotas legais entraram no capturador canônico,
+  elevando a matriz de 24 para 34 screenshots por rodada.
+- **Equivalência comprovada**: as 10 capturas legais mantiveram hash idêntico
+  antes/depois; oscilações externas ficaram restritas a perfil/admin.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.26 | `.kc-legal-*` movido para `kc-public-shell.css` |
+| v76.26 | baseline visual com 17 rotas × 2 viewports |
+| v76.26 | contrato estrutural de ownership e ordem de carga |
+
+---
+
 ## [v76.25] - 2026-06-18 - Sobre o KinoCampus compacto no mobile
 
 ### Tema

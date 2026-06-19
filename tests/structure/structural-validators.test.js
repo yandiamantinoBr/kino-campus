@@ -233,3 +233,43 @@ describe('validate-public-routes.js — rotas reais existem', function () {
   });
 
 });
+
+// ── 6. CSS-C.4 — contrato das páginas legais ───────────────────────────────
+
+describe('CSS-C.4 — ownership legal em kc-public-shell.css', function () {
+
+  var legalPages = [
+    'sobre.html',
+    'editorial.html',
+    'transparencia.html',
+    'privacidade.html',
+    'termos.html',
+  ];
+  var styles = fs.readFileSync(path.join(ROOT, 'assets/css/styles.css'), 'utf8');
+  var publicShell = fs.readFileSync(path.join(ROOT, 'assets/css/kc-public-shell.css'), 'utf8');
+  var baselineScript = fs.readFileSync(path.join(ROOT, 'scripts/capture-css-visual-baseline.js'), 'utf8');
+
+  test('todas as páginas legais carregam kc-public-shell.css após styles.css', function () {
+    legalPages.forEach(function (page) {
+      var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
+      var stylesPosition = html.indexOf('assets/css/styles.css');
+      var shellPosition = html.indexOf('assets/css/kc-public-shell.css');
+      expect(stylesPosition).toBeGreaterThan(-1);
+      expect(shellPosition).toBeGreaterThan(stylesPosition);
+    });
+  });
+
+  test('bloco kc-legal pertence somente ao CSS público dedicado', function () {
+    expect(publicShell).toContain('.kc-legal-page {');
+    expect(publicShell).toContain('.kc-legal-section--wide {');
+    expect(styles).not.toContain('.kc-legal-page {');
+    expect(styles).not.toContain('.kc-legal-section--wide {');
+  });
+
+  test('baseline visual inclui as cinco rotas legais', function () {
+    legalPages.forEach(function (page) {
+      expect(baselineScript).toContain("path: '/" + page + "'");
+    });
+  });
+
+});

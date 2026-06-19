@@ -1,10 +1,10 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.25.0
+**Versão:** v76.26.0
 **Atualizado em:** 2026-06-18
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
-> baseline visual CSS-B/C, micro-splits CSS-C/C.2/C.3, contexto responsivo da
+> baseline visual CSS-B/C, micro-splits CSS-C até C.4, contexto responsivo da
 > home/módulos e status dos stubs `assets/css/future-split/`.
 
 ---
@@ -16,23 +16,23 @@ Todos os estilos de producao sao carregados por `<link rel="stylesheet">` direta
 
 ```text
 assets/css/
-|-- styles.css              12.112 linhas / 282.468 bytes
+|-- styles.css              12.005 linhas / 280.551 bytes
 |-- product.css              1.784 linhas / 45.373 bytes
 |-- admin-shell.css          1.471 linhas / 38.653 bytes
-|-- kc-public-shell.css        943 linhas / 20.456 bytes
+|-- kc-public-shell.css      1.053 linhas / 22.343 bytes
 |-- kc-chat.css                710 linhas / 16.367 bytes
 |-- kc-error-page.css          374 linhas / 8.351 bytes
 |-- product-lightbox.css       299 linhas / 8.064 bytes
-|-- kc-sidebar-context.css     354 linhas / 9.062 bytes
+|-- kc-sidebar-context.css     354 linhas / 9.125 bytes
 |-- kc-theme-boot.css          213 linhas / 5.955 bytes
 |-- kc-chat-shortcut.css        60 linhas / 1.387 bytes
 `-- future-split/             5 stubs documentais, nao carregados
 ```
 
-**Total CSS de producao:** 18.320 linhas / 436.136 bytes.
+**Total CSS de producao:** 18.323 linhas / 436.169 bytes.
 
-O monólito `styles.css` segue sendo o principal hotspot visual: 12.112 linhas, 282.468 bytes,
-1.748 regras parseadas e 1.968 seletores parseados por `npm run audit:css`.
+O monólito `styles.css` segue sendo o principal hotspot visual: 12.005 linhas, 280.551 bytes,
+1.731 regras parseadas e 1.948 seletores parseados por `npm run audit:css`.
 
 ---
 
@@ -89,16 +89,16 @@ Resumo do parse:
 |---|---:|---:|---|
 | Tokens e tema | 15 | 11 | permanece global |
 | Base, reset e a11y | 29 | 29 | permanece global |
-| Layout e navegacao globais | 328 | 224 | permanece global |
-| Feed, cards e ranking | 282 | 189 | permanece global |
+| Layout e navegacao globais | 341 | 237 | permanece global |
+| Feed, cards e ranking | 282 | 190 | permanece global |
 | Componentes compartilhados | 261 | 243 | global; candidato a `future-split` após prova |
 | Admin overlap | 0 | 0 | encerrado em CSS-C.2 |
 | Produto overlap | 7 | 4 | bloqueado para split simples; `.kc-save-popover*` também atende `my-posts.html` |
-| Public shell/profile/legal overlap | 136 | 133 | candidato a `kc-public-shell.css` após baseline |
+| Public shell/profile/legal overlap | 119 | 117 | legal encerrado em CSS-C.4; profile/shell remanescente exige novo recorte |
 | Chat overlap | 0 | 0 | encerrado em CSS-C.3; atalho global em `kc-chat-shortcut.css` |
 | Create-post/modal/uploader | 8 | 10 | permanece global ate existir rota CSS ou split aprovado |
 | Modulos publicos de pagina | 146 | 141 | bloqueado para split futuro |
-| Revisao manual | 522 | 388 | revisao manual obrigatoria antes de mover |
+| Revisao manual | 523 | 389 | revisao manual obrigatoria antes de mover |
 
 Qualquer PR de extracao CSS deve partir desse inventario, mas tambem precisa revisar o seletor real
 e a rota afetada. A classificacao e heuristica, nao uma autorizacao automatica de movimento.
@@ -152,6 +152,11 @@ CSS-C.3 usou o mesmo mecanismo para remover o bucket `Chat overlap` de `styles.c
 `kc-chat-shortcut.css`. As rodadas `v76-css-c3-chat-shortcut-before-*`, `after-*` e `repeat-*`
 tiveram 24 capturas, 0 respostas falhas, 0 overflow horizontal, 0 carregamentos de `future-split/`
 e 0 diferenças de hash entre antes/depois e depois/repetição.
+
+CSS-C.4 ampliou o baseline para 17 rotas e moveu `.kc-legal-*` para
+`kc-public-shell.css`. As três rodadas `v76-css-c4-legal-*` tiveram 34 capturas,
+0 respostas falhas, 0 overflow, 0 erros de console/página e 0 carregamentos de
+`future-split/`; as 10 capturas legais mantiveram hash idêntico antes/depois.
 
 Limitacao: o baseline admin atual e anonimo/sem sessao. Ele cobre o shell estatico e o gate admin,
 mas nao substitui baseline autenticado antes de mover seletores visiveis apenas no dashboard real.

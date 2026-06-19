@@ -189,6 +189,13 @@ permanece restrito à UI de `mensagens.html`. O parse atual registra `styles.css
 0 seletores / 0 linhas. A evidência está em
 `docs/qa/reports/report-v76-css-chat-shortcut-micro-split-2026-06-15.md`.
 
+**Status v76.26.0:** CSS-C.4 moveu `.kc-legal-*` para `assets/css/kc-public-shell.css` após
+fechar ownership nas cinco páginas legais. `styles.css` cai para 12.005 linhas / 280.551 bytes,
+1.731 regras e 1.948 seletores; o bucket público cai para 119 regras / 117 seletores / 752 linhas.
+O baseline canônico passa a 17 rotas / 34 capturas, com 0 diferenças de hash nas dez capturas
+legais antes/depois. Evidência em
+`docs/qa/reports/report-v76-css-legal-shell-micro-split-2026-06-18.md`.
+
 ### 4.4 Gates obrigatorios para qualquer PR CSS
 
 - Gate V27 de visual/a11y com rotas afetadas.

@@ -1,8 +1,8 @@
 # V76 CSS-B - Baseline Visual Pre-Split de `styles.css`
 
-**Versão:** v76.17.0
-**Data:** 2026-06-15
-**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C.3; sem ativar `future-split/`
+**Versão:** v76.26.0
+**Data:** 2026-06-18
+**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C.4; sem ativar `future-split/`
 
 ---
 
@@ -57,6 +57,7 @@ O manifesto registra, por rota e viewport:
 | Publicas core | `/`, `/_product.html` |
 | Usuario/chat | `/my-posts.html`, `/mensagens.html` |
 | Public shell | `/profile.html`, `/settings.html` |
+| Public legal | `/sobre.html`, `/editorial.html`, `/transparencia.html`, `/privacidade.html`, `/termos.html` |
 | Admin estatico/sem sessao | `/admin/index.html`, `/admin/moderation.html`, `/admin/reports.html`, `/admin/banners.html`, `/admin/help-requests.html`, `/admin/privacy-analytics.html` |
 
 Viewports:
@@ -69,6 +70,9 @@ Viewports:
 Observacao: as rotas admin foram capturadas no estado sem sessao. Isso prova o gate publico/admin
 estatico e o carregamento CSS das paginas, mas nao substitui uma futura rodada autenticada do
 dashboard admin real.
+
+Desde a V76.26, a execução canônica cobre 17 rotas × 2 viewports, totalizando
+34 screenshots. A seção seguinte preserva os números históricos da primeira rodada.
 
 ---
 
@@ -153,12 +157,19 @@ carregamentos de `future-split/`. Os hashes ficaram estáveis: 0 diferenças ent
 no DOM e preservam `position: relative` no atalho. A evidência detalhada está em
 `docs/qa/reports/report-v76-css-chat-shortcut-micro-split-2026-06-15.md`.
 
+Atualização v76.26.0: CSS-C.4 adicionou as cinco páginas legais ao capturador e
+moveu `.kc-legal-*` para `kc-public-shell.css`. As rodadas before/after/repeat
+produziram 34 capturas cada, sem falha HTTP, overflow, erro de console/página ou
+`future-split/`. As 10 capturas legais mantiveram hash idêntico antes/depois;
+oscilações em perfil/admin foram externas ao recorte e reapareceram na repetição.
+Evidência em `docs/qa/reports/report-v76-css-legal-shell-micro-split-2026-06-18.md`.
+
 Escolher uma trilha unica:
 
 1. **CSS-B admin autenticado:** capturar dashboard admin real com credenciais controladas, caso o
    proximo candidato seja `admin-shell.css`.
-2. **Public shell micro-split:** só mover um subgrupo de `Public shell/profile/legal overlap` se as
-   rotas afetadas carregarem `kc-public-shell.css` e tiverem baseline específico.
+2. **Public shell micro-split:** escolher outro subgrupo pequeno do overlap remanescente com mapa
+   de carga e baseline específico; o bloco legal já foi encerrado em CSS-C.4.
 3. **JS documental:** investigar o bucket residual `bootstrap-driver-core` sem extração imediata.
 
 Nao iniciar extracao ampla de `styles.css` diretamente a partir deste baseline.

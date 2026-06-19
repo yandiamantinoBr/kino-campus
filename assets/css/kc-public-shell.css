@@ -799,6 +799,116 @@ body.kc-settings-page .kc-settings-input {
   line-height: 1.7;
 }
 
+/* Legal and institutional pages (CSS-C.4 / V76.26). */
+.kc-legal-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+  width: min(1040px, calc(100% - 32px));
+  max-width: 1040px;
+  margin: 0 auto 40px;
+  align-items: start;
+}
+
+.kc-main-content.kc-legal-page {
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 28px;
+  padding-bottom: 48px;
+}
+
+.kc-legal-hero {
+  display: grid;
+  gap: 10px;
+  padding: 28px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 18px;
+  background: var(--kc-surface-dark);
+}
+
+.kc-legal-hero span {
+  color: var(--kc-primary-brand);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.kc-legal-hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  line-height: 1.08;
+}
+
+.kc-legal-hero p,
+.kc-legal-section p,
+.kc-legal-section li {
+  color: var(--kc-text-dark-secondary);
+  line-height: 1.75;
+}
+
+.kc-legal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.kc-legal-section {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+}
+
+.kc-legal-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.18rem;
+}
+
+.kc-legal-section h2 i {
+  color: var(--kc-primary-brand);
+}
+
+.kc-legal-section ul {
+  display: grid;
+  gap: 8px;
+  padding-left: 20px;
+}
+
+.kc-legal-section--wide {
+  grid-column: 1 / -1;
+}
+
+.kc-legal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.kc-legal-actions .kc-btn-primary {
+  color: #fff;
+  background: var(--kc-primary-brand);
+}
+
+@media (max-width: 760px) {
+  .kc-legal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kc-main-content.kc-legal-page {
+    padding-top: 18px;
+  }
+
+  .kc-legal-hero,
+  .kc-legal-section {
+    border-radius: 14px;
+  }
+}
+
 body.kc-auth-callback-route .kc-callback-page {
   min-height: auto;
   padding: 32px 0 0;
