@@ -44,6 +44,7 @@ sob demanda e reduzindo a altura inicial do diálogo.
 | `npm run check:all` | 180 suites / 3.616 testes / 3 snapshots aprovados |
 | Navegador mobile 390×844 | faixa 51,19 px; botão 37,99 px; sem overflow horizontal |
 | Modal no navegador | 193,15 px inicial; `<details>` recolhido; sem erros ou alertas no console |
+| CI do PR #587 | validadores/Jest/lista Playwright, Lighthouse, Vercel e preview aprovados |
 
 ## Rollback
 
