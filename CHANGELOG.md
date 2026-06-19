@@ -2,6 +2,34 @@
 
 ---
 
+## [v76.27] - 2026-06-19 - CSS-C.5 do ranking no perfil público
+
+### Tema
+
+Micro-split dos badges de ranking do perfil para o CSS público já carregado,
+com correção do cenário de perfil no baseline visual.
+
+### Decisões
+
+- **Ownership fechado**: `.kc-profile-rank-badges*` é criado somente no perfil
+  e passa a existir apenas em `kc-public-shell.css`.
+- **Baseline corrigido**: `/profile.html` sem identidade foi substituído por
+  `/profile.html?id=USER_01`, evitando que a captura validasse a home por engano.
+- **Fixture determinística**: o capturador injeta somente no ambiente de QA um
+  badge e avatar estáveis, aguarda fontes/imagens e registra métricas computadas.
+- **Equivalência comprovada**: direção, gap, alinhamento, shrink e posição foram
+  preservados em desktop/mobile; a captura mobile canônica manteve hash idêntico.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.27 | `.kc-profile-rank-badges*` movido para `kc-public-shell.css` |
+| v76.27 | baseline de perfil público determinístico com métricas de layout |
+| v76.27 | contrato estrutural de rota, ordem de carga e ownership |
+
+---
+
 ## [v76.26] - 2026-06-18 - CSS-C.4 das páginas legais
 
 ### Tema

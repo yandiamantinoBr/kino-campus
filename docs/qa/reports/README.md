@@ -7,6 +7,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 
 | Arquivo | Uso |
 |---|---|
+| `report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md` | Evidência V76.27 do micro-split `.kc-profile-rank-badges*` e da correção do baseline público de perfil |
 | `report-v76-css-legal-shell-micro-split-2026-06-18.md` | Evidência V76.26 do micro-split `.kc-legal-*` para o CSS público dedicado |
 | `report-v76-home-context-density-2026-06-18.md` | Evidência V76.25 da faixa compacta “Sobre o KinoCampus” e do modal contextual na home mobile |
 | `report-v76-mobile-context-density-2026-06-18.md` | Evidência V76.24 da faixa compacta e do bottom sheet contextual recolhido nos seis módulos mobile |

@@ -1,10 +1,10 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.26.0
-**Atualizado em:** 2026-06-18
+**Versão:** v76.27.0
+**Atualizado em:** 2026-06-19
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
-> baseline visual CSS-B/C, micro-splits CSS-C até C.4, contexto responsivo da
+> baseline visual CSS-B/C, micro-splits CSS-C até C.5, contexto responsivo da
 > home/módulos e status dos stubs `assets/css/future-split/`.
 
 ---
@@ -16,10 +16,10 @@ Todos os estilos de producao sao carregados por `<link rel="stylesheet">` direta
 
 ```text
 assets/css/
-|-- styles.css              12.005 linhas / 280.551 bytes
+|-- styles.css              11.982 linhas / 279.971 bytes
 |-- product.css              1.784 linhas / 45.373 bytes
 |-- admin-shell.css          1.471 linhas / 38.653 bytes
-|-- kc-public-shell.css      1.053 linhas / 22.343 bytes
+|-- kc-public-shell.css      1.078 linhas / 22.959 bytes
 |-- kc-chat.css                710 linhas / 16.367 bytes
 |-- kc-error-page.css          374 linhas / 8.351 bytes
 |-- product-lightbox.css       299 linhas / 8.064 bytes
@@ -29,10 +29,10 @@ assets/css/
 `-- future-split/             5 stubs documentais, nao carregados
 ```
 
-**Total CSS de producao:** 18.323 linhas / 436.169 bytes.
+**Total CSS de producao:** 18.325 linhas / 436.205 bytes.
 
-O monólito `styles.css` segue sendo o principal hotspot visual: 12.005 linhas, 280.551 bytes,
-1.731 regras parseadas e 1.948 seletores parseados por `npm run audit:css`.
+O monólito `styles.css` segue sendo o principal hotspot visual: 11.982 linhas, 279.971 bytes,
+1.728 regras parseadas e 1.945 seletores parseados por `npm run audit:css`.
 
 ---
 
@@ -94,7 +94,7 @@ Resumo do parse:
 | Componentes compartilhados | 261 | 243 | global; candidato a `future-split` após prova |
 | Admin overlap | 0 | 0 | encerrado em CSS-C.2 |
 | Produto overlap | 7 | 4 | bloqueado para split simples; `.kc-save-popover*` também atende `my-posts.html` |
-| Public shell/profile/legal overlap | 119 | 117 | legal encerrado em CSS-C.4; profile/shell remanescente exige novo recorte |
+| Public shell/profile/legal overlap | 116 | 115 | legal encerrado em CSS-C.4 e ranking de perfil em CSS-C.5; shell remanescente exige novo recorte |
 | Chat overlap | 0 | 0 | encerrado em CSS-C.3; atalho global em `kc-chat-shortcut.css` |
 | Create-post/modal/uploader | 8 | 10 | permanece global ate existir rota CSS ou split aprovado |
 | Modulos publicos de pagina | 146 | 141 | bloqueado para split futuro |
@@ -157,6 +157,12 @@ CSS-C.4 ampliou o baseline para 17 rotas e moveu `.kc-legal-*` para
 `kc-public-shell.css`. As três rodadas `v76-css-c4-legal-*` tiveram 34 capturas,
 0 respostas falhas, 0 overflow, 0 erros de console/página e 0 carregamentos de
 `future-split/`; as 10 capturas legais mantiveram hash idêntico antes/depois.
+
+CSS-C.5 corrigiu a rota do perfil no baseline para `/profile.html?id=USER_01`,
+adicionou fixture determinística e métricas de flexbox, e moveu
+`.kc-profile-rank-badges*` para `kc-public-shell.css`. As três rodadas tiveram
+34 capturas, sem falha HTTP, overflow ou `future-split/`; posição, tamanho,
+direção, gap, alinhamento e shrink do badge permaneceram equivalentes.
 
 Limitacao: o baseline admin atual e anonimo/sem sessao. Ele cobre o shell estatico e o gate admin,
 mas nao substitui baseline autenticado antes de mover seletores visiveis apenas no dashboard real.

@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposição Segura dos Hotspots JS/CSS
 
-**Versão:** v76.17.0
-**Data:** 2026-06-15
-**Escopo:** planejamento técnico + status das extrações JS V76, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3, inventário CSS-A, baseline CSS-B e micro-splits CSS-C/C.2/C.3; sem alterar SQL, secrets, provider ou deploy
+**Versão:** v76.27.0
+**Data:** 2026-06-19
+**Escopo:** planejamento técnico + status das extrações JS V76, inventário residual JS-I, inventário CSS-A, baseline CSS-B e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
 
 ---
 
@@ -195,6 +195,13 @@ fechar ownership nas cinco páginas legais. `styles.css` cai para 12.005 linhas 
 O baseline canônico passa a 17 rotas / 34 capturas, com 0 diferenças de hash nas dez capturas
 legais antes/depois. Evidência em
 `docs/qa/reports/report-v76-css-legal-shell-micro-split-2026-06-18.md`.
+
+**Status v76.27.0:** CSS-C.5 moveu `.kc-profile-rank-badges*` para
+`assets/css/kc-public-shell.css` e corrigiu o baseline de perfil para uma rota
+pública válida com fixture determinística. `styles.css` cai para 11.982 linhas /
+279.971 bytes, 1.728 regras e 1.945 seletores; o bucket público cai para
+116 regras / 115 seletores / 733 linhas. Evidência em
+`docs/qa/reports/report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md`.
 
 ### 4.4 Gates obrigatorios para qualquer PR CSS
 

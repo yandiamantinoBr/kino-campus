@@ -117,6 +117,22 @@ body.kc-profile-route .kc-profile-page {
   max-width: 940px;
 }
 
+/* Profile ranking badges container — placed between avatar and profile-info */
+.kc-profile-rank-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.kc-profile-rank-badges .kc-rank-badge {
+  font-size: 0.62em;
+  padding: 2px 5px;
+  border: 1.5px solid var(--kc-surface-dark);
+  border-radius: 8px;
+}
+
 body.kc-profile-route .kc-profile-inline-form__actions button {
   display: inline-flex;
   align-items: center;
@@ -1035,6 +1051,15 @@ body.kc-auth-callback-route .kc-callback-card {
 
   .kc-help-form-grid--nested {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .kc-profile-rank-badges {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-self: flex-start;
+    margin-top: 2px;
   }
 }
 

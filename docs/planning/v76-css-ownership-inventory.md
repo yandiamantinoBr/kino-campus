@@ -1,8 +1,8 @@
 # V76 CSS-A - Inventario de Ownership de `styles.css`
 
-**Versão:** v76.26.0
-**Data:** 2026-06-18
-**Escopo:** inventário documental + status pós-CSS-C.4; o inventário original não alterou CSS, e as atualizações posteriores registram os micro-splits já evidenciados
+**Versão:** v76.27.0
+**Data:** 2026-06-19
+**Escopo:** inventário documental + status pós-CSS-C.5; o inventário original não alterou CSS, e as atualizações posteriores registram os micro-splits já evidenciados
 
 ---
 
@@ -26,19 +26,19 @@ Fonte: `npm run audit:css` (`scripts/audit-css-ownership.js`).
 
 | Arquivo CSS de producao | Linhas | Bytes |
 |---|---:|---:|
-| `assets/css/styles.css` | 12.005 | 280.551 |
+| `assets/css/styles.css` | 11.982 | 279.971 |
 | `assets/css/product.css` | 1.784 | 45.373 |
 | `assets/css/admin-shell.css` | 1.471 | 38.653 |
-| `assets/css/kc-public-shell.css` | 1.053 | 22.343 |
+| `assets/css/kc-public-shell.css` | 1.078 | 22.959 |
 | `assets/css/kc-chat.css` | 710 | 16.367 |
 | `assets/css/kc-error-page.css` | 374 | 8.351 |
 | `assets/css/kc-sidebar-context.css` | 354 | 9.125 |
 | `assets/css/product-lightbox.css` | 299 | 8.064 |
 | `assets/css/kc-theme-boot.css` | 213 | 5.955 |
 | `assets/css/kc-chat-shortcut.css` | 60 | 1.327 |
-| **Total CSS de producao** | **18.323** | **436.169** |
+| **Total CSS de producao** | **18.325** | **436.205** |
 
-`styles.css` foi parseado em 1.731 regras de estilo e 1.948 seletores.
+`styles.css` foi parseado em 1.728 regras de estilo e 1.945 seletores.
 
 ---
 
@@ -74,7 +74,7 @@ baseline V27 e evidencia por rota.
 | Tokens e tema | 15 | 11 | 86 | L3-L29, L1059-L1061, L4840-L4844, L5388-L5394 | Permanece global |
 | Admin overlap | 0 | 0 | 0 | - | Encerrado em CSS-C.2 |
 | Produto overlap | 7 | 4 | 35 | L1554-L1573, L1701-L1708, L1714-L1722 | Candidato a `product.css`/`product-lightbox.css` |
-| Public shell/profile/legal overlap | 119 | 117 | 752 | L495-L501, L518-L528, L534-L539, L1254-L1268 | Legal encerrado em CSS-C.4; restante exige novo recorte |
+| Public shell/profile/legal overlap | 116 | 115 | 733 | L495-L501, L518-L528, L534-L539, L1254-L1268 | Legal encerrado em CSS-C.4 e ranking de perfil em CSS-C.5; restante exige novo recorte |
 | Chat overlap | 0 | 0 | 0 | - | Encerrado em CSS-C.3; atalho global em `kc-chat-shortcut.css` |
 | Create-post/modal/uploader | 8 | 10 | 61 | L2844-L2869, L4722-L4742, L4889-L4898, L4937-L4944 | Permanece global por ora |
 | Modulos publicos de pagina | 146 | 141 | 815 | L1433-L1485, L1496-L1510, L1514-L1550, L2783-L2816 | Bloqueado para split futuro |
@@ -115,7 +115,7 @@ Estes grupos sao candidatos, nao mudancas aprovadas:
 |---|---:|---|
 | `admin-shell.css` | 0 regras / 0 seletores / 0 linhas | bucket encerrado em CSS-C.2; novos moves admin exigem nova análise de seletor |
 | `product.css` ou `product-lightbox.css` | 7 regras / 4 seletores / 35 linhas | bloqueado para split simples: `.kc-save-popover*` também atende `my-posts.html`, que não carrega `product.css` |
-| `kc-public-shell.css` | 119 regras / 117 seletores / 752 linhas | `.kc-legal-*` encerrado em CSS-C.4; profile/header/auth remanescentes mantêm alto risco de cascade |
+| `kc-public-shell.css` | 116 regras / 115 seletores / 733 linhas | `.kc-legal-*` encerrado em CSS-C.4 e `.kc-profile-rank-badges*` em CSS-C.5; profile/header/auth remanescentes mantêm alto risco de cascade |
 | `kc-chat.css` | 0 regras / 0 seletores / 0 linhas | UI dedicada da conversa; não recebeu o atalho global |
 | `kc-chat-shortcut.css` | 0 regras / 0 seletores / 0 linhas | bucket encerrado; arquivo novo carregado nas 27 páginas que já carregavam `kc-notifications.js` |
 
@@ -182,12 +182,19 @@ desktop/mobile mantiveram hashes idênticos. O bucket público caiu para 119 reg
 117 seletores e 752 linhas. Evidência em
 `docs/qa/reports/report-v76-css-legal-shell-micro-split-2026-06-18.md`.
 
+Atualização v76.27.0: a trilha **CSS-C.5 micro-split ranking do perfil** moveu
+`.kc-profile-rank-badges*` para `kc-public-shell.css`. O baseline de perfil foi
+corrigido para uma identidade pública real, recebeu fixture determinística e
+métricas de layout. O bucket público caiu para 116 regras, 115 seletores e
+733 linhas. Evidência em
+`docs/qa/reports/report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md`.
+
 Escolher uma trilha unica para a proxima entrega:
 
 1. **CSS-B admin autenticado:** capturar dashboard admin real antes de mover seletores que só
    aparecem no estado autenticado.
 2. **Public shell micro-split:** escolher outro subgrupo pequeno do overlap remanescente, com
-   ownership e baseline específicos; o bloco legal já foi encerrado em CSS-C.4.
+   ownership e baseline específicos; legal e ranking do perfil já foram encerrados.
 3. **JS documental:** investigar `bootstrap-driver-core` sem extração imediata, porque o candidato
    JS residual é P3 e tem custo/risco maior que micro-splits CSS pequenos.
 

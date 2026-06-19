@@ -1,8 +1,8 @@
 # V76 CSS-B - Baseline Visual Pre-Split de `styles.css`
 
-**Versão:** v76.26.0
-**Data:** 2026-06-18
-**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C.4; sem ativar `future-split/`
+**Versão:** v76.27.0
+**Data:** 2026-06-19
+**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C.5; sem ativar `future-split/`
 
 ---
 
@@ -56,7 +56,7 @@ O manifesto registra, por rota e viewport:
 |---|---|
 | Publicas core | `/`, `/_product.html` |
 | Usuario/chat | `/my-posts.html`, `/mensagens.html` |
-| Public shell | `/profile.html`, `/settings.html` |
+| Public shell | `/profile.html?id=USER_01`, `/settings.html` |
 | Public legal | `/sobre.html`, `/editorial.html`, `/transparencia.html`, `/privacidade.html`, `/termos.html` |
 | Admin estatico/sem sessao | `/admin/index.html`, `/admin/moderation.html`, `/admin/reports.html`, `/admin/banners.html`, `/admin/help-requests.html`, `/admin/privacy-analytics.html` |
 
@@ -73,6 +73,10 @@ dashboard admin real.
 
 Desde a V76.26, a execução canônica cobre 17 rotas × 2 viewports, totalizando
 34 screenshots. A seção seguinte preserva os números históricos da primeira rodada.
+
+Desde a V76.27, o perfil usa uma identidade pública válida e uma fixture de QA
+determinística para avatar/badge. O manifesto também registra posição, tamanho,
+direção, gap, alinhamento e shrink de `.kc-profile-rank-badges`.
 
 ---
 
@@ -164,12 +168,20 @@ produziram 34 capturas cada, sem falha HTTP, overflow, erro de console/página o
 oscilações em perfil/admin foram externas ao recorte e reapareceram na repetição.
 Evidência em `docs/qa/reports/report-v76-css-legal-shell-micro-split-2026-06-18.md`.
 
+Atualização v76.27.0: CSS-C.5 corrigiu `/profile.html` sem identidade para
+`/profile.html?id=USER_01`, adicionou avatar/badge determinísticos apenas no
+capturador e esperas por fontes/imagens. As rodadas
+`v76-css-c5-profile-rank-*-deterministic-*` tiveram 34 capturas sem falha HTTP,
+overflow ou `future-split/`; as métricas do badge permaneceram equivalentes em
+desktop/mobile. Evidência em
+`docs/qa/reports/report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md`.
+
 Escolher uma trilha unica:
 
 1. **CSS-B admin autenticado:** capturar dashboard admin real com credenciais controladas, caso o
    proximo candidato seja `admin-shell.css`.
 2. **Public shell micro-split:** escolher outro subgrupo pequeno do overlap remanescente com mapa
-   de carga e baseline específico; o bloco legal já foi encerrado em CSS-C.4.
+   de carga e baseline específico; legal e ranking de perfil já foram encerrados.
 3. **JS documental:** investigar o bucket residual `bootstrap-driver-core` sem extração imediata.
 
 Nao iniciar extracao ampla de `styles.css` diretamente a partir deste baseline.

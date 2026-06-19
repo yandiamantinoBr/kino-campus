@@ -17,7 +17,12 @@ const ROUTES = Object.freeze([
   { id: 'product', path: '/_product.html', group: 'public-core' },
   { id: 'my-posts', path: '/my-posts.html', group: 'user' },
   { id: 'mensagens', path: '/mensagens.html', group: 'chat' },
-  { id: 'profile', path: '/profile.html', group: 'public-shell' },
+  {
+    id: 'profile',
+    path: '/profile.html?id=USER_01',
+    group: 'public-shell',
+    fixture: 'ranked-public-profile',
+  },
   { id: 'settings', path: '/settings.html', group: 'public-shell' },
   { id: 'sobre', path: '/sobre.html', group: 'public-legal' },
   { id: 'editorial', path: '/editorial.html', group: 'public-legal' },
@@ -228,6 +233,47 @@ function summarizeConsole(messages) {
     .slice(0, 10);
 }
 
+async function prepareDeterministicRouteState(page, route) {
+  if (route.fixture !== 'ranked-public-profile') return;
+
+  await page.waitForSelector('.kc-profile-avatar-wrap[data-user-id="USER_01"]', {
+    state: 'attached',
+    timeout: 5000,
+  });
+  await page.evaluate(() => {
+    const avatarWrap = document.querySelector('.kc-profile-avatar-wrap[data-user-id="USER_01"]');
+    const heroTop = avatarWrap && avatarWrap.closest('.kc-profile-hero-top');
+    if (!avatarWrap || !heroTop) throw new Error('profile-ranking-fixture-target-missing');
+
+    const avatar = avatarWrap.querySelector('img');
+    if (avatar) {
+      avatar.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">' +
+        '<rect width="160" height="160" rx="80" fill="#f1f1f1"/>' +
+        '<circle cx="80" cy="62" r="28" fill="#777"/>' +
+        '<path d="M32 145c4-34 23-51 48-51s44 17 48 51" fill="#777"/>' +
+        '</svg>'
+      );
+    }
+
+    let container = heroTop.querySelector('.kc-profile-rank-badges');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'kc-profile-rank-badges';
+      avatarWrap.insertAdjacentElement('afterend', container);
+    }
+
+    if (!container.querySelector('[data-rank-module="general"]')) {
+      const badge = document.createElement('span');
+      badge.className = 'kc-rank-badge';
+      badge.dataset.rankModule = 'general';
+      badge.title = 'Top 1 Geral';
+      badge.innerHTML = '<i class="fas fa-trophy" aria-hidden="true"></i>1';
+      container.appendChild(badge);
+    }
+  });
+}
+
 async function captureRoute(browser, options, route, viewport) {
   const outputPath = toOutputPath(options.outputDir, route, viewport);
   const context = await browser.newContext({
@@ -255,6 +301,13 @@ async function captureRoute(browser, options, route, viewport) {
     timeout: 30000,
   });
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  await prepareDeterministicRouteState(page, route);
+  await page.evaluate(() => (document.fonts && document.fonts.ready ? document.fonts.ready : undefined));
+  await page.waitForFunction(
+    () => Array.from(document.images).every((image) => image.complete),
+    null,
+    { timeout: 5000 }
+  ).catch(() => {});
   await page.addStyleTag({
     content: [
       '*, *::before, *::after {',
@@ -278,8 +331,11 @@ async function captureRoute(browser, options, route, viewport) {
     }));
     const main = document.querySelector('#kc-main, main');
     const header = document.querySelector('header, .kc-header');
+    const profileRankBadges = document.querySelector('.kc-profile-rank-badges');
     const mainRect = main ? main.getBoundingClientRect() : null;
     const headerRect = header ? header.getBoundingClientRect() : null;
+    const profileRankRect = profileRankBadges ? profileRankBadges.getBoundingClientRect() : null;
+    const profileRankStyle = profileRankBadges ? getComputedStyle(profileRankBadges) : null;
     const doc = document.documentElement;
     const body = document.body;
 
@@ -305,6 +361,17 @@ async function captureRoute(browser, options, route, viewport) {
         y: Math.round(headerRect.y),
         width: Math.round(headerRect.width),
         height: Math.round(headerRect.height),
+      } : null,
+      profileRankBadges: profileRankRect && profileRankStyle ? {
+        x: Math.round(profileRankRect.x),
+        y: Math.round(profileRankRect.y),
+        width: Math.round(profileRankRect.width),
+        height: Math.round(profileRankRect.height),
+        display: profileRankStyle.display,
+        flexDirection: profileRankStyle.flexDirection,
+        gap: profileRankStyle.gap,
+        alignSelf: profileRankStyle.alignSelf,
+        flexShrink: profileRankStyle.flexShrink,
       } : null,
     };
   });
