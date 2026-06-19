@@ -64,7 +64,7 @@ Cinco testes novos garantem que:
 | `npm run audit:kcapi-residual -- --json` | aprovado; `bootstrapCore` emitido |
 | Jest focado | 1 suite / 93 testes aprovados |
 | `npm run check:all` | 180 suites / 3.630 testes / 3 snapshots aprovados |
-| CI do PR | pendente na criação deste relatório |
+| CI do PR #592 | aprovado: validators/Jest/Playwright list, Lighthouse (4 páginas) e Vercel Preview |
 
 ## Próxima etapa
 
