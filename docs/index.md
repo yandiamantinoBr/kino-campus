@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.23` (contexto responsivo dos módulos e reconstrução da 404, runtime frontend `8.6.1` inalterado)
+- linha de trabalho atual: `v76.24` (densidade mobile do contexto dos módulos, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
@@ -73,6 +73,7 @@
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
+| [qa/reports/report-v76-mobile-context-density-2026-06-18.md](./qa/reports/report-v76-mobile-context-density-2026-06-18.md) | evidência V76.24 da compactação visual do título e bottom sheet contextual nos seis módulos |
 | [qa/reports/report-v76-context-sidebar-404-responsive-2026-06-18.md](./qa/reports/report-v76-context-sidebar-404-responsive-2026-06-18.md) | evidência V76.23 do contexto responsivo dos seis módulos e reconstrução da página 404 |
 | [qa/reports/report-v76-adsense-public-content-resilience-2026-06-17.md](./qa/reports/report-v76-adsense-public-content-resilience-2026-06-17.md) | evidência V76.22 de resiliência pública, metadata SEO e gate Search Console/AdSense |
 | [qa/reports/report-v76-cadu-six-image-contract-2026-06-17.md](./qa/reports/report-v76-cadu-six-image-contract-2026-06-17.md) | evidência V76.21 do limite defensivo de seis imagens no publisher e na Edge Function do Cadu |

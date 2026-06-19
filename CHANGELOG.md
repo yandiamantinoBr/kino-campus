@@ -2,6 +2,34 @@
 
 ---
 
+## [v76.24] - 2026-06-18 - Densidade mobile do contexto dos módulos
+
+### Tema
+
+Refinamento visual e de densidade do acesso contextual criado na V76.23,
+reduzindo altura, espaçamentos e conteúdo inicial do bottom sheet nos seis feeds.
+
+### Decisões
+
+- **Faixa integrada de 50 px**: título, ícone do módulo e botão de contexto agora
+  compartilham um card compacto com borda, gradiente sutil e sombra leve.
+- **Ação menos dominante**: botão de informação reduzido para 38 px e raio de
+  11 px, mantendo contraste, foco visível e área inequívoca de interação.
+- **Bottom sheet flutuante**: margem externa, raio de 18 px, indicador de arraste
+  e paddings menores melhoram hierarquia sem ocupar a tela inteira.
+- **Detalhes sob demanda**: o `<details>` do contexto abre recolhido; a descrição
+  principal continua visível e o conteúdo longo só expande por ação explícita.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.24 | refinamento mobile em `kc-sidebar-context.css` |
+| v76.24 | modal contextual inicia com detalhes recolhidos |
+| v76.24 | contratos Jest e E2E de densidade atualizados |
+
+---
+
 ## [v76.23] - 2026-06-18 - Contexto responsivo dos módulos e reconstrução da 404
 
 ### Tema
