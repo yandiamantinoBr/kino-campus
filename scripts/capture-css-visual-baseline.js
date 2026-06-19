@@ -24,6 +24,15 @@ const ROUTES = Object.freeze([
     fixture: 'ranked-public-profile',
   },
   { id: 'settings', path: '/settings.html', group: 'public-shell' },
+  {
+    id: 'account-setup',
+    path: '/account-setup.html',
+    group: 'public-shell',
+    fixture: 'authenticated-local-user',
+  },
+  { id: 'help', path: '/ajuda.html', group: 'public-shell' },
+  { id: 'auth-callback', path: '/auth-callback.html', group: 'public-shell' },
+  { id: 'not-found', path: '/404.html', group: 'public-error' },
   { id: 'sobre', path: '/sobre.html', group: 'public-legal' },
   { id: 'editorial', path: '/editorial.html', group: 'public-legal' },
   { id: 'transparencia', path: '/transparencia.html', group: 'public-legal' },
@@ -233,6 +242,43 @@ function summarizeConsole(messages) {
     .slice(0, 10);
 }
 
+async function prepareDeterministicContextState(context, route) {
+  if (route.fixture !== 'authenticated-local-user') return;
+
+  await context.addInitScript(() => {
+    const fixtureUser = Object.freeze({
+      id: 'USER_01',
+      email: 'fixture.user@discente.ufg.br',
+      user_metadata: Object.freeze({
+        display_name: 'Rafael Almeida',
+        full_name: 'Rafael Almeida',
+      }),
+    });
+    let supabaseFacade;
+
+    Object.defineProperty(window, 'KCSupabase', {
+      configurable: true,
+      get: function () { return supabaseFacade; },
+      set: function (value) {
+        supabaseFacade = value && typeof value === 'object' ? value : {};
+        supabaseFacade.getUser = function () { return fixtureUser; };
+        supabaseFacade.getCurrentUser = async function () { return fixtureUser; };
+      },
+    });
+
+    try {
+      localStorage.setItem('kc_local_profile', JSON.stringify({
+        id: fixtureUser.id,
+        user_id: fixtureUser.id,
+        display_name: 'Rafael Almeida',
+        email: fixtureUser.email,
+        profile_complete: false,
+        public_profile_enabled: true,
+      }));
+    } catch (_) {}
+  });
+}
+
 async function prepareDeterministicRouteState(page, route) {
   if (route.fixture !== 'ranked-public-profile') return;
 
@@ -284,6 +330,7 @@ async function captureRoute(browser, options, route, viewport) {
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
   });
+  await prepareDeterministicContextState(context, route);
 
   const page = await context.newPage();
   const consoleMessages = [];
@@ -375,12 +422,14 @@ async function captureRoute(browser, options, route, viewport) {
       } : null,
     };
   });
+  const finalUrl = page.url();
 
   await context.close();
   const screenshotBytes = fs.statSync(outputPath).size;
 
   return {
     route: route.path,
+    finalUrl,
     routeId: route.id,
     group: route.group,
     viewport: viewport.id,

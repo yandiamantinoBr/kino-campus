@@ -158,7 +158,7 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.27.0 / 2026-06-19** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
+> **Atualizado em v76.28.0 / 2026-06-19** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
@@ -168,7 +168,7 @@ A linha v10 consolidou:
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
 | utilitários globais | `assets/js/utils/kc-utils.js` (~440L) | ✅ Decomposto em 7 sub-módulos `_KCU.*` | impacto transversal amplo |
 | admin dashboard | `assets/js/controllers/admin/admin-dashboard.controller.js` | ✅ Decomposto em 3 auxiliares `_KCAD.*` | KPIs, ranking, audit log e export |
-| design system global | `assets/css/styles.css` (11.982L / 279.971 bytes) | ⚠️ Monólito reduzido até CSS-C.5; admin, atalho global de mensagens, `.kc-legal-*` e ranking do perfil passaram aos CSS dedicados já carregados; CSS-A/C mede 1.728 regras / 1.945 seletores; CSS-B/C cobre 17 rotas e 34 screenshots por rodada; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
+| design system global | `assets/css/styles.css` (11.982L / 279.971 bytes) | ⚠️ Monólito reduzido até CSS-C.5; admin, atalho global de mensagens, `.kc-legal-*` e ranking do perfil passaram aos CSS dedicados já carregados; CSS-A/C mede 1.728 regras / 1.945 seletores; CSS-B.1 cobre 21 rotas e 42 screenshots por rodada; `future-split/` segue como stub não carregado | alto risco de regressão visual transversal; exige gates V27/V35/V76 |
 
 ## Arquitetura CSS
 
@@ -225,5 +225,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.17.0 (2026-06-15):** CSS-C.3 move o atalho global de mensagens para `assets/css/kc-chat-shortcut.css`, carregado nas 27 páginas com `kc-notifications.js`; `styles.css` reduz para 12.028 linhas / 280.599 bytes, 1.734 regras / 1.954 seletores, e o bucket `Chat overlap` cai para 0 regras / 0 seletores / 0 linhas.
 - **v76.26.0 (2026-06-18):** CSS-C.4 move `.kc-legal-*` para `kc-public-shell.css`; `styles.css` reduz para 12.005 linhas / 280.551 bytes e 1.731 regras / 1.948 seletores, o bucket público cai para 119 regras / 117 seletores / 752 linhas e o baseline passa a 17 rotas / 34 capturas.
 - **v76.27.0 (2026-06-19):** CSS-C.5 move `.kc-profile-rank-badges*` para `kc-public-shell.css`, corrige o baseline para um perfil público determinístico e reduz `styles.css` para 11.982 linhas / 279.971 bytes e 1.728 regras / 1.945 seletores.
+- **v76.28.0 (2026-06-19):** CSS-B.1 inclui 404, ajuda, callback e onboarding no baseline, fecha cobertura das 12 páginas de `kc-public-shell.css` e eleva a matriz para 21 rotas / 42 capturas sem alterar CSS/runtime.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

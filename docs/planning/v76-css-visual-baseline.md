@@ -1,8 +1,8 @@
 # V76 CSS-B - Baseline Visual Pre-Split de `styles.css`
 
-**Versão:** v76.27.0
+**Versão:** v76.28.0
 **Data:** 2026-06-19
-**Escopo:** baseline visual/cascade automatizado e status pós-CSS-C.5; sem ativar `future-split/`
+**Escopo:** baseline visual/cascade automatizado e status pós-CSS-B.1; sem ativar `future-split/`
 
 ---
 
@@ -56,7 +56,8 @@ O manifesto registra, por rota e viewport:
 |---|---|
 | Publicas core | `/`, `/_product.html` |
 | Usuario/chat | `/my-posts.html`, `/mensagens.html` |
-| Public shell | `/profile.html?id=USER_01`, `/settings.html` |
+| Public shell | `/profile.html?id=USER_01`, `/settings.html`, `/account-setup.html`, `/ajuda.html`, `/auth-callback.html` |
+| Erro público | `/404.html` |
 | Public legal | `/sobre.html`, `/editorial.html`, `/transparencia.html`, `/privacidade.html`, `/termos.html` |
 | Admin estatico/sem sessao | `/admin/index.html`, `/admin/moderation.html`, `/admin/reports.html`, `/admin/banners.html`, `/admin/help-requests.html`, `/admin/privacy-analytics.html` |
 
@@ -71,8 +72,8 @@ Observacao: as rotas admin foram capturadas no estado sem sessao. Isso prova o g
 estatico e o carregamento CSS das paginas, mas nao substitui uma futura rodada autenticada do
 dashboard admin real.
 
-Desde a V76.26, a execução canônica cobre 17 rotas × 2 viewports, totalizando
-34 screenshots. A seção seguinte preserva os números históricos da primeira rodada.
+Desde a V76.28, a execução canônica cobre 21 rotas × 2 viewports, totalizando
+42 screenshots. A seção seguinte preserva os números históricos da primeira rodada.
 
 Desde a V76.27, o perfil usa uma identidade pública válida e uma fixture de QA
 determinística para avatar/badge. O manifesto também registra posição, tamanho,
@@ -176,12 +177,20 @@ overflow ou `future-split/`; as métricas do badge permaneceram equivalentes em
 desktop/mobile. Evidência em
 `docs/qa/reports/report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md`.
 
+Atualização v76.28.0: CSS-B.1 adicionou `/404.html`, `/ajuda.html`,
+`/auth-callback.html` e `/account-setup.html`, fechando cobertura das 12 páginas
+que carregam `kc-public-shell.css`. O onboarding usa fixture local explícita sem
+credencial real; o manifesto passou a registrar `finalUrl`. Três rodadas de
+21 rotas / 42 capturas ficaram sem falha HTTP, overflow, page error ou
+`future-split/`. Evidência em
+`docs/qa/reports/report-v76-css-public-shell-baseline-expansion-2026-06-19.md`.
+
 Escolher uma trilha unica:
 
 1. **CSS-B admin autenticado:** capturar dashboard admin real com credenciais controladas, caso o
    proximo candidato seja `admin-shell.css`.
-2. **Public shell micro-split:** escolher outro subgrupo pequeno do overlap remanescente com mapa
-   de carga e baseline específico; legal e ranking de perfil já foram encerrados.
+2. **Public shell:** não mover auth/header/dropdown global para o shell; só reabrir com ownership
+   fechado. As 12 páginas consumidoras já estão cobertas pelo baseline.
 3. **JS documental:** investigar o bucket residual `bootstrap-driver-core` sem extração imediata.
 
 Nao iniciar extracao ampla de `styles.css` diretamente a partir deste baseline.

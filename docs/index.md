@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.27` (CSS-C.5 do ranking no perfil público, runtime frontend `8.6.1` inalterado)
+- linha de trabalho atual: `v76.28` (CSS-B.1 do public shell completo, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
@@ -18,8 +18,8 @@
 | [architecture/script-loading-reference.md](./architecture/script-loading-reference.md) | ordem de carregamento de scripts em 26 HTMLs *(v16.6.0; contagem v76.6)* |
 | [architecture/data-flow-guide.md](./architecture/data-flow-guide.md) | fluxo de dados ponta a ponta: usuario -> controller -> KCAPI -> adapter -> Supabase *(v16.7.0)* |
 | [architecture/ai-development-guide.md](./architecture/ai-development-guide.md) | guia de comportamento para IA: leia antes de qualquer modificacao *(v16.8.0, reancorado em V75)* |
-| [architecture/test-strategy.md](./architecture/test-strategy.md) | estratégia de 180 suites: onde adicionar testes, regras de manutenção *(contagem v76.27)* |
-| [architecture/css-architecture.md](./architecture/css-architecture.md) | CSS em produção, ownership de `styles.css`, baseline CSS-B/C, CSS-C até C.5 e `future-split/` *(v76.27)* |
+| [architecture/test-strategy.md](./architecture/test-strategy.md) | estratégia de 180 suites: onde adicionar testes, regras de manutenção *(contagem v76.28)* |
+| [architecture/css-architecture.md](./architecture/css-architecture.md) | CSS em produção, ownership de `styles.css`, baseline CSS-B.1/C e `future-split/` *(v76.28)* |
 | [api-contract.md](./api-contract.md) | contrato publico da `KCAPI`, metodos expostos e semantica de retorno |
 | [db-schema.md](./db-schema.md) | tabelas, politicas, indices, storage, cron jobs e notas de estado do banco |
 | [rpc-catalog.md](./rpc-catalog.md) | catalogo de RPCs, triggers e funcoes PostgreSQL usadas pelo app |
@@ -59,7 +59,7 @@
 | [planning/v51-functional-no-go-register.md](./planning/v51-functional-no-go-register.md) | registro de No-Go quando gates/evidencias bloquearem implementacao |
 | [planning/v52-functional-gate-traceability.md](./planning/v52-functional-gate-traceability.md) | matriz de rastreabilidade dos gates antes da branch funcional |
 | [planning/v53-functional-patch-manifest.md](./planning/v53-functional-patch-manifest.md) | manifesto de filescope/teste/rollback antes do primeiro patch funcional |
-| [planning/v76-hotspot-decomposition-plan.md](./planning/v76-hotspot-decomposition-plan.md) | plano de decomposição segura dos hotspots `kc-api.client.js` e `styles.css`, atualizado após CSS-C.5 |
+| [planning/v76-hotspot-decomposition-plan.md](./planning/v76-hotspot-decomposition-plan.md) | plano de decomposição segura dos hotspots `kc-api.client.js` e `styles.css`, atualizado após CSS-B.1 |
 | [planning/v76-kcapi-residual-inventory.md](./planning/v76-kcapi-residual-inventory.md) | inventário residual JS-I da fachada `KCAPI` e próximos candidatos pequenos de extração |
 | [planning/v76-css-ownership-inventory.md](./planning/v76-css-ownership-inventory.md) | inventário CSS-A/C de ownership de `styles.css` após os micro-splits admin e chat shortcut |
 | [planning/v76-css-visual-baseline.md](./planning/v76-css-visual-baseline.md) | baseline CSS-B/C visual/cascade antes/depois de micro-splits de `styles.css` |
@@ -73,6 +73,7 @@
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
+| [qa/reports/report-v76-css-public-shell-baseline-expansion-2026-06-19.md](./qa/reports/report-v76-css-public-shell-baseline-expansion-2026-06-19.md) | evidência V76.28 da cobertura integral das 12 páginas de `kc-public-shell.css` |
 | [qa/reports/report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md](./qa/reports/report-v76-css-profile-ranking-shell-micro-split-2026-06-19.md) | evidência V76.27 do micro-split CSS-C.5 dos badges de ranking do perfil público |
 | [qa/reports/report-v76-css-legal-shell-micro-split-2026-06-18.md](./qa/reports/report-v76-css-legal-shell-micro-split-2026-06-18.md) | evidência V76.26 do micro-split CSS-C.4 das cinco páginas legais |
 | [qa/reports/report-v76-home-context-density-2026-06-18.md](./qa/reports/report-v76-home-context-density-2026-06-18.md) | evidência V76.25 da compactação do contexto “Sobre o KinoCampus” na home mobile |

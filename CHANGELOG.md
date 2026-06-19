@@ -2,6 +2,33 @@
 
 ---
 
+## [v76.28] - 2026-06-19 - CSS-B.1 do public shell completo
+
+### Tema
+
+Expansão do baseline visual para todas as páginas consumidoras de
+`kc-public-shell.css`, sem alterar CSS ou runtime.
+
+### Decisões
+
+- **Cobertura integral**: 404, ajuda, callback e onboarding entram na matriz,
+  elevando o baseline de 17/34 para 21 rotas/42 screenshots.
+- **Onboarding determinístico**: uma fixture local descartável mantém
+  `account-setup.html` autenticado sem senha, token ou sessão real.
+- **Redirecionamento observável**: o manifesto passa a registrar `finalUrl`.
+- **No-Go preservado**: auth, header, menu de conta e dropdown continuam globais;
+  nenhum novo split foi forçado sem ownership fechado.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.28 | quatro rotas adicionais no baseline CSS canônico |
+| v76.28 | fixture local segura para o onboarding |
+| v76.28 | contrato das 12 páginas de `kc-public-shell.css` |
+
+---
+
 ## [v76.27] - 2026-06-19 - CSS-C.5 do ranking no perfil público
 
 ### Tema
