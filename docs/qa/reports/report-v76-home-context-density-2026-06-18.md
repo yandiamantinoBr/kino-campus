@@ -45,6 +45,7 @@ o card original permanece completo e o acionador mobile fica oculto.
 | `npm run audit:css` | aprovado; CSS contextual carregado em 7 páginas |
 | `npm run seo:audit` | aprovado; 0 warnings / 0 errors |
 | `npm run check:all` | 180 suites / 3.616 testes / 3 snapshots aprovados |
+| CI do PR #588 | validadores/Jest/lista Playwright, Lighthouse, Vercel e preview aprovados |
 
 ## Rollback
 
