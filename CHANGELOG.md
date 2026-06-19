@@ -2,6 +2,34 @@
 
 ---
 
+## [v76.29] - 2026-06-19 - JS-I.4 do bootstrap-driver-core
+
+### Tema
+
+Investigação automatizada do último candidato residual da fachada KCAPI, sem
+alterar runtime ou contrato público.
+
+### Decisões
+
+- **No-Go mensurável**: 12 funções/131 linhas atravessam cinco domínios e seis
+  membros públicos; a extração continua bloqueada.
+- **Risco explícito**: ambiente, configuração, rede, fallback estático e registry
+  de drivers passam a ter sinais automatizados no JSON.
+- **Gates concretos**: 15 contratos obrigatórios substituem o rótulo genérico
+  “alto risco”.
+- **Próxima reavaliação**: `transport-config` somente após testes comportamentais
+  de configuração, timeout, HTTP e URL relativa.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.29 | dossiê automatizado `bootstrapCore` no auditor KCAPI |
+| v76.29 | matriz de cinco domínios e 15 gates |
+| v76.29 | cinco contratos estruturais sem mudança de runtime |
+
+---
+
 ## [v76.28] - 2026-06-19 - CSS-B.1 do public shell completo
 
 ### Tema

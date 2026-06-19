@@ -1,8 +1,8 @@
 # Estrutura do Repositório - KinoCampus
 
-**Versão:** v76.13.0
-**Data:** 2026-06-15
-**Atualizado em:** v76.13.0 - extração JS-I.3 de post mutation bridge para `kc-api.posts-write.js`
+**Versão:** v76.29.0
+**Data:** 2026-06-19
+**Atualizado em:** v76.29.0 - dossiê automatizado JS-I.4 do `bootstrap-driver-core`
 
 ---
 
@@ -205,7 +205,7 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/product-lightbox.css` | Producao | Lightbox de midia da pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
-O split CSS segue controlado por gates. V27 define o gate visual/a11y mínimo antes de qualquer alteração CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css`; V76.9 adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md` para capturar baseline anônimo sem alterar cascade, HTML ou `future-split/`. V76.10 adiciona `scripts/audit-kcapi-facade-residual.js`, `npm run audit:kcapi-residual` e `docs/planning/v76-kcapi-residual-inventory.md` para classificar os buckets residuais da fachada `KCAPI`; V76.11 move external access admin para `kc-api.help.js`; V76.12 move os builders canônicos de notification fallbacks para `kc-api.notifications.js`; V76.13 move a ponte `emitPostMutation` para `kc-api.posts-write.js`; V76.14/V76.15 encerram `Admin overlap`; V76.17 encerra `Chat overlap` com `kc-chat-shortcut.css`; V76.26 move `.kc-legal-*` e V76.27 move `.kc-profile-rank-badges*` para `kc-public-shell.css`; V76.28 amplia o baseline a 21 rotas / 42 capturas e cobre as 12 páginas consumidoras do shell. `bootstrap-driver-core` continua como candidato JS residual listado, sem extração imediata.
+O split CSS segue controlado por gates. V27 define o gate visual/a11y mínimo antes de qualquer alteração CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css`; V76.9 adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md` para capturar baseline anônimo sem alterar cascade, HTML ou `future-split/`. V76.10 adiciona `scripts/audit-kcapi-facade-residual.js`, `npm run audit:kcapi-residual` e `docs/planning/v76-kcapi-residual-inventory.md` para classificar os buckets residuais da fachada `KCAPI`; V76.11 move external access admin para `kc-api.help.js`; V76.12 move os builders canônicos de notification fallbacks para `kc-api.notifications.js`; V76.13 move a ponte `emitPostMutation` para `kc-api.posts-write.js`; V76.14/V76.15 encerram `Admin overlap`; V76.17 encerra `Chat overlap` com `kc-chat-shortcut.css`; V76.26 move `.kc-legal-*` e V76.27 move `.kc-profile-rank-badges*` para `kc-public-shell.css`; V76.28 amplia o baseline a 21 rotas / 42 capturas e cobre as 12 páginas consumidoras do shell. V76.29 classifica `bootstrap-driver-core` em cinco domínios e 15 gates, confirmando No-Go para extração runtime; `transport-config` só pode ser reavaliado após testes dedicados de paridade.
 
 ---
 

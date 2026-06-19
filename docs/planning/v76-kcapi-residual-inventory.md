@@ -1,8 +1,8 @@
 # V76 JS-I - Inventário Residual da Fachada `KCAPI`
 
-**Versão:** v76.13.0
-**Data:** 2026-06-15
-**Escopo:** inventário documental + script assistivo; inclui status JS-I.1 external access, JS-I.2 notification fallbacks e JS-I.3 post mutation bridge; sem alterar HTML, CSS, SQL, secrets, provider ou deploy
+**Versão:** v76.29.0
+**Data:** 2026-06-19
+**Escopo:** inventário documental + script assistivo; inclui status JS-I.1 a JS-I.3 e o dossiê automatizado JS-I.4 do `bootstrap-driver-core`; sem alterar runtime, HTML, CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -29,6 +29,10 @@ Em v76.13.0, JS-I.3 removeu da fachada a ponte privada `emitPostMutation` e seus
 `isPostMutationOk` e `getPostMutationData`. A lógica de freshness das mutações de posts agora vive
 em `window._KCAPI.postsWrite`, com `postFreshness: window.KCPostFreshness` injetado pela fachada e
 ordem de emissão preservada após o retorno do driver ativo.
+
+Em v76.29.0, JS-I.4 tornou o bucket `bootstrap-driver-core` auditável por domínio, função, sinal de
+risco e gate. O resultado é um No-Go explícito para extração runtime: as 12 funções / 131 linhas
+formam cinco domínios acoplados e exigem 15 gates antes de qualquer movimentação.
 
 No-Go mantido:
 
@@ -132,7 +136,8 @@ Leitura:
 - JS-I.1 removeu o bucket direto `admin-external-access-direct-driver`;
 - JS-I.2 removeu o bucket `notification-fallback-builders` da fachada;
 - JS-I.3 removeu o bucket `post-mutation-bridge` da fachada;
-- não há novo candidato JS pequeno equivalente; `bootstrap-driver-core` segue como P3 de alto risco.
+- JS-I.4 divide o bucket em cinco domínios, sem deixar função sem mapeamento, e registra 15 gates;
+- não há novo candidato JS pequeno equivalente; `bootstrap-driver-core` segue como P3 de alto risco e No-Go runtime.
 
 ---
 
@@ -143,7 +148,7 @@ Leitura:
 | Concluído | JS-I.1 external access admin para `kc-api.help.js` | 14 | `assets/js/api/kc-api.help.js` | Concluído em v76.11.0 com contrato dedicado de driver e fallback |
 | Concluído | JS-I.2 notification fallbacks em `kc-api.notifications.js` | 40 | `assets/js/api/kc-api.notifications.js` | Concluído em v76.12.0; defaults canônicos preservados no submódulo |
 | Concluído | JS-I.3 post mutation bridge em `kc-api.posts-write.js` | 23 | `assets/js/api/kc-api.posts-write.js` | Concluído em v76.13.0; eventos de freshness preservados no submódulo |
-| P3 | Manter bootstrap/env/driver no facade por enquanto | 114 | sem extração imediata | Alto: qualquer mudança afeta todas as páginas e drivers |
+| P3 | Manter bootstrap/env/driver no facade por enquanto | 131 | sem extração imediata | Alto: qualquer mudança afeta todas as páginas e drivers; No-Go confirmado em JS-I.4 |
 
 Detalhe dos candidatos:
 
@@ -152,20 +157,40 @@ Detalhe dos candidatos:
 | external access admin | `listExternalAccessRequests`, `decideExternalAccessRequest` | **Concluído em v76.11.0**; wrappers continuam em L1183-L1197, agora delegando para `window._KCAPI.help` |
 | notification fallbacks | `buildFallbackNotificationPreferences`, `buildFallbackNotificationChannelTargets` | **Concluído em v76.12.0**; builders removidos da fachada e preservados em `window._KCAPI.notifications` |
 | post mutation bridge | `isPostMutationOk`, `getPostMutationData`, `emitPostMutation` | **Concluído em v76.13.0**; helpers removidos da fachada e preservados em `window._KCAPI.postsWrite` |
-| bootstrap/env/driver | `readEnv`, `setConfig`, `withTimeout`, `fetchJSON`, `apiURL`, `getDatabaseRaw`, `getDatabaseNormalized`, `registerAdapter`, `getActiveDriver` | L22-L400 |
+| bootstrap/env/driver | `readEnv`, `bootstrapConfig`, `setConfig`, `withTimeout`, `fetchJSON`, `apiURL`, `kcApiError`, `enforceSupabaseOnProduction`, `getDatabaseRaw`, `getDatabaseNormalized`, `registerAdapter`, `getActiveDriver` | L22-L400 |
 
 ---
 
-## 6. Próxima etapa recomendada
+## 6. Dossiê JS-I.4 do bootstrap/driver core
 
-Após JS-I.3, não há outro candidato JS pequeno com o mesmo custo-benefício. A próxima PR mais
-prudente deve escolher uma frente única:
+| Domínio | Funções | Linhas | Exportadas | Decisão |
+|---|---:|---:|---:|---|
+| `environment-policy` | 3 | 69 | 0 | manter na fachada |
+| `transport-config` | 4 | 26 | 3 | manter na fachada |
+| `error-contract` | 1 | 3 | 0 | manter na fachada |
+| `static-database-fallback` | 2 | 25 | 2 | manter na fachada |
+| `adapter-registry` | 2 | 8 | 1 | manter na fachada |
 
-- manter `bootstrap-driver-core` sem extração imediata e avançar para CSS-C apenas com dossiê
-  visual específico;
+O script valida que nenhuma das 12 funções ficou sem domínio e expõe sinais de risco para leitura
+de ambiente/configuração mutável, rede, timers, base estática, normalização, registro de adapters,
+seleção de driver e política de produção. Os 15 gates cobrem paridade de ambiente, configuração,
+timeout/HTTP/URL, erro público, fallback estático, normalização, registro e precedência do driver.
+
+O contrato completo e as evidências ficam em:
+
+- `docs/planning/v76-kcapi-bootstrap-driver-core-dossier.md`;
+- `docs/qa/reports/report-v76-kcapi-bootstrap-driver-core-dossier-2026-06-19.md`.
+
+---
+
+## 7. Próxima etapa recomendada
+
+Após JS-I.4, não há autorização para extrair código desse núcleo. A próxima PR mais prudente deve
+escolher uma frente única:
+
 - executar CSS-B autenticado para dashboard/admin real antes de qualquer split visual;
-- abrir uma investigação documental de `bootstrap-driver-core`, sem editar runtime no primeiro
-  passo.
+- criar testes dedicados de paridade comportamental para `transport-config` (`setConfig`, timeout,
+  HTTP e URL relativa), ainda sem extração runtime.
 
 Se a prioridade for reduzir risco transversal antes de mover mais código, a alternativa é congelar
 esta medição como baseline e avançar para CSS-C apenas com dossiê visual específico.
@@ -179,7 +204,7 @@ Continuam bloqueados para PR ampla:
 
 ---
 
-## 7. Validacao esperada
+## 8. Validacao esperada
 
 Para esta entrega documental/script:
 

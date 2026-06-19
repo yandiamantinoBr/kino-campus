@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposição Segura dos Hotspots JS/CSS
 
-**Versão:** v76.28.0
+**Versão:** v76.29.0
 **Data:** 2026-06-19
-**Escopo:** planejamento técnico + status das extrações JS V76, inventário residual JS-I, inventário CSS-A, baseline CSS-B.1 e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
+**Escopo:** planejamento técnico + status das extrações JS V76, dossiê JS-I.4 do bootstrap/driver core, inventário CSS-A, baseline CSS-B.1 e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
 
 ---
 
@@ -89,6 +89,12 @@ e a ordem de emissão após o retorno do driver foi preservada. O parse atual re
 públicos, 141 declarações `function`, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e
 10 buckets residuais. O único candidato JS restante listado pelo script é `bootstrap-driver-core`,
 mantido como P3 e sem extração imediata.
+
+**Status v76.29.0:** JS-I.4 classifica as 12 funções / 131 linhas de `bootstrap-driver-core` em
+cinco domínios (`environment-policy`, `transport-config`, `error-contract`,
+`static-database-fallback` e `adapter-registry`), sem funções órfãs, e automatiza 15 gates. A
+decisão é No-Go para extração runtime. `transport-config` é apenas o primeiro domínio a ser
+reavaliado depois de testes dedicados de paridade; não é uma autorização de split.
 
 ### 3.2 Ordem permitida
 
@@ -266,6 +272,7 @@ JS e CSS no mesmo PR:
 | JS-I.1 | Delegação de external access admin para `kc-api.help.js` | **Concluído em v76.11.0**; preserva contrato público e fallback de driver |
 | JS-I.2 | Remoção dos builders privados de notification fallbacks do facade | **Concluído em v76.12.0**; defaults canônicos ficam em `kc-api.notifications.js` |
 | JS-I.3 | Remoção da ponte `emitPostMutation` do facade | **Concluído em v76.13.0**; eventos de freshness ficam em `kc-api.posts-write.js` |
+| JS-I.4 | Dossiê automatizado do `bootstrap-driver-core` | **Concluído em v76.29.0**; cinco domínios, 15 gates e No-Go para extração runtime |
 | CSS-A | Inventário de ownership de seletores de `styles.css` | **Concluído em v76.8.0**; prepara split sem alterar cascade |
 | CSS-B | Baseline visual/cascade anônimo antes de split de `styles.css` | **Concluído em v76.9.0**; cria evidência antes/depois para micro-splits futuros |
 | CSS-C | Micro-split da navegação admin | **Concluído em v76.14.0**; `.kc-admin-nav*` agora fica em `admin-shell.css` |
@@ -330,6 +337,11 @@ de facade e submódulo reforçados.
 `assets/js/api/kc-api.posts-write.js`, com eventos de freshness preservados e contrato público
 inalterado.
 
+**Status v76.29.0:** JS-I.4 ampliou `audit:kcapi-residual` com o dossiê automatizado do
+`bootstrap-driver-core`: 12 funções / 131 linhas, cinco domínios, 15 gates e zero funções sem
+mapeamento. A decisão continua sendo manter o núcleo na fachada; a única continuidade JS permitida
+é criar testes comportamentais de paridade, começando por `transport-config`.
+
 **Status v76.14.0:** CSS-C moveu o bloco `.kc-admin-nav*` para `assets/css/admin-shell.css`,
 reduzindo `styles.css` para 12.161 linhas / 284.046 bytes e mantendo 24 capturas de baseline com
 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
@@ -345,6 +357,6 @@ reduzindo `styles.css` para 12.161 linhas / 284.046 bytes e mantendo 24 capturas
 0 overflow horizontal, 0 carregamentos de `future-split/` e 0 diferenças de hash.
 
 Próxima entrega recomendada: escolher uma frente única, sem misturar no mesmo PR: CSS-B autenticado
-para dashboard admin real, micro-split pequeno de `Public shell/profile/legal overlap` somente se o
-carregamento por rota for fechado, ou investigação documental do `bootstrap-driver-core` sem extração
-imediata.
+para dashboard admin real ou testes dedicados de paridade de `transport-config`. O
+`bootstrap-driver-core` permanece bloqueado para extração runtime até que os 15 gates estejam
+cobertos.

@@ -11,12 +11,14 @@
 
 var fs   = require('fs');
 var path = require('path');
+var childProcess = require('child_process');
 
 var ROOT         = path.resolve(__dirname, '../..');
 var STRUCT_SCRIPT = fs.readFileSync(path.join(ROOT, 'scripts', 'validate-repository-structure.js'), 'utf8');
 var CHAINS_SCRIPT = fs.readFileSync(path.join(ROOT, 'scripts', 'validate-script-chains.js'), 'utf8');
 var ROUTES_SCRIPT = fs.readFileSync(path.join(ROOT, 'scripts', 'validate-public-routes.js'), 'utf8');
 var PAGE_MANIFEST = require(path.join(ROOT, 'scripts', 'admin-pages.manifest.js'));
+var KCAPI_RESIDUAL_AUDIT = path.join(ROOT, 'scripts', 'audit-kcapi-facade-residual.js');
 
 // ── 1. validate-repository-structure.js ─────────────────────────────────────
 
@@ -347,5 +349,75 @@ describe('CSS-B.1 — baseline integral das rotas de kc-public-shell.css', funct
     expect(baselineScript).toContain("localStorage.setItem('kc_local_profile'");
     expect(baselineScript).toContain('finalUrl,');
     expect(baselineScript).not.toContain('service_role');
+  });
+});
+
+// ── 9. JS-I.4 — dossiê do bootstrap-driver-core ────────────────────────────
+
+describe('JS-I.4 — dossiê automatizado do bootstrap-driver-core', function () {
+
+  var report;
+
+  beforeAll(function () {
+    report = JSON.parse(childProcess.execFileSync(process.execPath, [KCAPI_RESIDUAL_AUDIT, '--json'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    }));
+  });
+
+  test('mantém decisão No-Go para as 12 funções e 131 linhas', function () {
+    expect(report.bootstrapCore.decision).toBe('no-go-runtime-extraction');
+    expect(report.bootstrapCore.functionCount).toBe(12);
+    expect(report.bootstrapCore.totalLines).toBe(131);
+    expect(report.bootstrapCore.unmappedFunctions).toEqual([]);
+    expect(report.candidates[0].totalLines).toBe(131);
+  });
+
+  test('separa o core em cinco domínios com decisão keep-in-facade', function () {
+    var domains = report.bootstrapCore.domains;
+    expect(domains.map(function (entry) { return entry.domain; })).toEqual([
+      'environment-policy',
+      'transport-config',
+      'error-contract',
+      'static-database-fallback',
+      'adapter-registry',
+    ]);
+    domains.forEach(function (entry) {
+      expect(entry.decision).toBe('keep-in-facade');
+      expect(entry.functionCount).toBeGreaterThan(0);
+    });
+  });
+
+  test('preserva o mapa exato das funções por domínio', function () {
+    var names = report.bootstrapCore.domains.reduce(function (acc, entry) {
+      acc[entry.domain] = entry.functions.map(function (fn) { return fn.name; });
+      return acc;
+    }, {});
+    expect(names['environment-policy']).toEqual(['readEnv', 'bootstrapConfig', 'enforceSupabaseOnProduction']);
+    expect(names['transport-config']).toEqual(['setConfig', 'withTimeout', 'fetchJSON', 'apiURL']);
+    expect(names['error-contract']).toEqual(['kcApiError']);
+    expect(names['static-database-fallback']).toEqual(['getDatabaseRaw', 'getDatabaseNormalized']);
+    expect(names['adapter-registry']).toEqual(['registerAdapter', 'getActiveDriver']);
+  });
+
+  test('expõe sinais de risco críticos sem interpretar runtime', function () {
+    var functions = report.bootstrapCore.domains.flatMap(function (entry) { return entry.functions; });
+    var byName = functions.reduce(function (acc, fn) { acc[fn.name] = fn; return acc; }, {});
+    expect(byName.readEnv.riskSignals).toContain('readsEnvironment');
+    expect(byName.setConfig.riskSignals).toContain('mutatesMutableConfig');
+    expect(byName.withTimeout.riskSignals).toContain('usesTimers');
+    expect(byName.fetchJSON.riskSignals).toContain('usesNetwork');
+    expect(byName.getDatabaseNormalized.riskSignals).toContain('normalizesDomainData');
+    expect(byName.registerAdapter.riskSignals).toContain('mutatesAdapterRegistry');
+    expect(byName.getActiveDriver.riskSignals).toContain('selectsDriver');
+  });
+
+  test('lista 15 gates antes de reavaliar transport-config', function () {
+    expect(report.bootstrapCore.requiredGateCount).toBe(15);
+    expect(report.bootstrapCore.requiredGates).toContain('production-fail-closed-policy');
+    expect(report.bootstrapCore.requiredGates).toContain('local-supabase-environment-parity');
+    expect(report.bootstrapCore.requiredGates).toContain('adapter-registration-order');
+    expect(report.bootstrapCore.recommendation.nextAction).toBe('add-dedicated-parity-tests-before-any-extraction');
+    expect(report.bootstrapCore.recommendation.firstDomainToReassess).toBe('transport-config');
   });
 });

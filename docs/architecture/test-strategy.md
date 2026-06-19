@@ -1,6 +1,6 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.28.0 · **Atualizado em:** 2026-06-19
+**Versão:** v76.29.0 · **Atualizado em:** 2026-06-19
 
 > Documenta as 180 suites Jest + 10 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 180 suites · 3625 testes
+Jest: 180 suites · 3630 testes
 Playwright: 10 specs · 68 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥180 passed, 180 total` e `≥3625 passed, 3625 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥180 passed, 180 total` e `≥3630 passed, 3630 total`.
 
 ### Gate CI essencial
 
