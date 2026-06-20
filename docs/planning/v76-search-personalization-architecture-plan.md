@@ -1,10 +1,10 @@
 # V76.32 — Plano de busca orientada ao schema e personalização responsável
 
 **Data:** 2026-06-19  
-**Estado:** execução incremental; UX estruturada V76.40 disponível sob duas flags desligadas
+**Estado:** execução incremental; UX estruturada V76.40 e dossiê SQL/RPC V76.41 concluídos sem migration
 
 **Escopo:** `/search-results.html`, `kcSearchDropdown`, campos de criação, perfil de preferências, ranking e governança  
-**Fora do gate V76.40:** SQL, migrations, providers, secrets, deploy, perfil e alteração de dados reais
+**Fora do gate V76.41:** migration, SQL remoto, providers, secrets, deploy, perfil e alteração de dados reais
 
 > **Execução V76.33 (2026-06-19):** a Fase 0/PR-A foi materializada em
 > `assets/js/shared/kc-search-fields.shared.js`, ainda sem carregamento por HTML.
@@ -52,6 +52,11 @@
 > consulta. O pipeline 1.2 aceita sinais ignorados, prioriza módulo explícito e
 > entrega apenas facetas agregadas de módulos allowlisted. Resultados e dropdown
 > explicam vazios; E2E cobre remoção/restauração e mobile sem overflow.
+
+> **Execução V76.41 (2026-06-20):** PR-H inventaria o RPC/FTS/RLS local e fixa
+> um contrato versionado derivado do registry, com whitelist, limites, matriz RLS,
+> `EXPLAIN`, timeout e rollback R3. O Docker engine estava indisponível; portanto a
+> decisão é Go documental / No-Go para migration e nenhum SQL foi aplicado.
 
 ## 1. Decisão executiva
 
@@ -409,7 +414,7 @@ Rollout: canário interno, percentual pequeno e expansão por gate; migration ad
 6. **PR-F — executado:** snapshot gerado do registry e lazy loading sob flag desligada.
 7. **PR-G.1 — executado:** piloto em busca/dropdown sob duas flags, com fallback integral para o legado.
 8. **PR-G.2 — executado:** chips removíveis, facetas e zero-results sob as mesmas flags.
-9. **PR-H:** dossiê SQL/RPC isolado, RLS, explain e rollback R3.
+9. **PR-H — executado documentalmente:** contrato SQL/RPC isolado, RLS, explain e rollback R3; migration bloqueada até prova em banco descartável.
 10. **PR-I:** dropdown combobox, cancelamento e performance real.
 11. **PR-J:** preferências explícitas, consentimento e direitos.
 12. **PR-K:** afinidade local opt-in; sincronização somente após gates.
@@ -458,8 +463,10 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-H** sem tocar produção: produzir dossiê de SQL/RPC em banco isolado,
-com desenho aditivo, RLS, `EXPLAIN`, timeout, rollback R3 e critérios mensuráveis de
-Go/No-Go. A V76.40 mantém `search.structuredRuntime=false` e
-`search.structuredPilot=false` por padrão. Migration remota, coleta comportamental,
-perfil pessoal e reranking seguem bloqueados.
+Executar **PR-I** sem tocar produção: elevar o dropdown ao padrão ARIA combobox,
+cancelar respostas obsoletas e medir a performance real do frontend. Em paralelo, o
+PR-H só pode avançar de desenho para SQL quando Docker e banco local descartável
+permitirem aplicar todas as migrations, executar matriz RLS, `EXPLAIN` e rollback R3.
+As flags `search.structuredRuntime=false` e `search.structuredPilot=false` permanecem
+desligadas; migration remota, coleta comportamental, perfil pessoal e reranking seguem
+bloqueados.

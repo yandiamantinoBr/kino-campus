@@ -1,0 +1,237 @@
+# V76.41 — dossiê SQL/RPC isolado da busca estruturada
+
+**Data:** 2026-06-20
+**Escopo:** desenho verificável; nenhum SQL aplicado
+**Decisão atual:** **Go documental / No-Go para migration**
+
+Este documento não é uma migration, não é procedimento de deploy e não autoriza acesso
+ao banco remoto. Ele transforma o registry da busca em contrato de entrada para um futuro
+RPC, registra riscos do SQL atual e define as provas mínimas que precisam acontecer em um
+banco descartável antes de qualquer alteração em `supabase/migrations/`.
+
+## 1. Resultado do inventário
+
+| Item | Evidência local | Conclusão |
+|---|---|---|
+| Esteira SQL | 132 arquivos em `supabase/migrations/` | fonte canônica preservada |
+| RPC atual | `public.kc_search_posts_fts(text,text[],text,text,text,int)` | manter intacto durante o piloto |
+| Segurança do RPC | ausência de `SECURITY DEFINER` na última definição | comportamento padrão é invoker; confirmar em `pg_proc` |
+| Grants do RPC | `GRANT EXECUTE` para `anon` e `authenticated` na criação | não há `REVOKE ... FROM PUBLIC` no arquivo inicial; estado remoto deve ser consultado no banco isolado |
+| RLS de posts | `posts_select_public_anon` e `posts_select_authenticated` chamam `kc_can_read_post` | RPC invoker deve continuar sujeito às policies |
+| FTS | GIN funcional parcial `idx_posts_fts`, `legacy_id IS NULL` | reutilizar antes de propor índice novo |
+| Metadados | não há GIN genérico de `posts.metadata` nas migrations | índice novo depende de plano e volume medidos |
+| API local | apenas `public` e `graphql_public` expostos | core futuro deve ficar em schema privado |
+| Tooling | Supabase CLI 2.105.0 e Docker CLI 29.4.1 | versões registradas |
+| Banco local | Docker Desktop engine indisponível em 2026-06-20 | migrations, RLS, explain e rollback não executados |
+| PostgreSQL local | configurado para major 17; `psql` não está no PATH | usar `supabase db`/container após iniciar o engine |
+
+O helper legado `public.kc_can_read_post` é `SECURITY DEFINER` com `search_path=public`.
+Ele está fora deste patch e não deve ser reescrito junto da busca. O banco isolado deve
+confirmar proprietário, privilégios e resolução de nomes antes de um hardening separado.
+
+## 2. Contrato proposto, sem implementação SQL
+
+O artefato machine-readable é
+`tests/fixtures/search-structured-rpc-contract.v1.json`. Ele deriva os seis módulos, os
+grupos e os campos filtráveis de `kc-search-registry.generated.js`; não replica opções nem
+taxonomias em SQL.
+
+Desenho candidato:
+
+```sql
+-- Assinatura de desenho; NÃO executar fora do banco isolado.
+private.kc_search_posts_structured_core_v1(
+  p_q text,
+  p_terms text[],
+  p_module text,
+  p_category text,
+  p_subcategory text,
+  p_filters jsonb,
+  p_limit integer
+)
+
+public.kc_search_posts_structured_v1(
+  p_q text,
+  p_terms text[],
+  p_module text,
+  p_category text,
+  p_subcategory text,
+  p_filters jsonb,
+  p_limit integer
+) RETURNS SETOF jsonb
+LANGUAGE sql STABLE SECURITY INVOKER
+SET search_path = ''
+```
+
+O wrapper público deve usar nomes totalmente qualificados, chamar somente o core privado e
+preservar a RLS do usuário chamador. Antes de qualquer grant:
+
+```sql
+REVOKE ALL ON FUNCTION public.kc_search_posts_structured_v1(
+  text, text[], text, text, text, jsonb, integer
+) FROM PUBLIC;
+```
+
+Somente depois de a matriz RLS passar, um candidato de migration poderá conceder `EXECUTE`
+a `anon` e `authenticated`. O core privado não recebe grant para papéis da API. O nome
+versionado evita overload ambíguo no PostgREST e permite comparar com o RPC legado sem
+substituí-lo.
+
+## 3. Validação de entrada e abuso
+
+- módulo obrigatório quando houver filtros; somente os seis IDs do snapshot;
+- objetos `groups` e `fields` aceitam apenas chaves da whitelist daquele módulo;
+- operador deve pertencer à classe do campo (`enum`, `set`, `boolean`, faixa, data, hora ou
+  localização); texto livre não vira predicado SQL;
+- chaves desconhecidas, tipos errados e operadores incompatíveis falham fechados com erro de
+  argumento, sem fallback silencioso;
+- sem concatenação de SQL, `EXECUTE`, nomes de coluna fornecidos pelo cliente ou JSONPath
+  fornecido pelo cliente;
+- limites: consulta 160 caracteres, 24 termos de 64 caracteres, JSON 8 KiB, 20 valores por
+  chave e 50 resultados;
+- `contato`, `link`, `link_as_cta` e atributos sensíveis permanecem proibidos;
+- o retorno mantém o payload compatível com `kc_search_posts_fts`, sem ecoar consulta, plano,
+  preferências ou diagnóstico interno.
+
+## 4. Mapeamento schema-aware
+
+| Módulo | Grupos | Campos filtráveis |
+|---|---|---|
+| Achados e perdidos | `status`, `tipo` | `entrega`, `localizacao`, `recompensa` |
+| Caronas | `tipo` | `contribuicao`, `destino`, `horario`, `marcadoresCarona`, `origem`, `vagas` |
+| Compra e venda | `categoria`, `acao` | `condicao`, `localizacao`, `preco` |
+| Eventos | `topico` | `data`, `data_fim`, `gratuito`, `hora`, `localizacao`, `preco` |
+| Moradia | `tipo` | `localizacao`, `marcadoresMoradia`, `orcamento`, `preco`, `regiao` |
+| Oportunidades | `tipo` | `areaAtuacao`, `localizacao`, `modalidadeTrabalho`, `regimeContratacao`, `remuneracao` |
+
+O RPC não deve receber os labels como verdade de banco. Chaves canônicas são comparadas com
+os paths já declarados no registry. Faixas numéricas e datas precisam de parsing tipado e
+comparação, nunca `ILIKE` sobre JSON serializado. Campos indexáveis entram no documento FTS;
+campos apenas filtráveis não entram automaticamente no índice textual.
+
+## 5. Matriz RLS obrigatória
+
+O teste é feito com usuários sintéticos e posts sintéticos, alternando claims/roles. Não usar
+IDs, textos ou dumps reais.
+
+| Ator | Linha | Esperado |
+|---|---|---|
+| anon | published + public | visível |
+| anon | published + community | invisível |
+| anon | pending + public | invisível |
+| authenticated não autor | published + public/community | visível |
+| authenticated não autor | hidden | invisível |
+| autor | própria linha hidden/community | visível |
+| admin sintético | linha hidden de terceiro | visível |
+
+Cada caso executa o RPC legado e o candidato. O candidato não pode ampliar o conjunto que a
+consulta direta a `public.posts` permite sob o mesmo papel. Também devem ser inspecionados
+`relrowsecurity`, `prosecdef`, `proconfig`, proprietário e `aclexplode(proacl)`.
+
+## 6. Plano de execução isolada
+
+Pré-condições:
+
+1. Docker Desktop engine ativo e sem projeto Supabase de produção ligado ao diretório.
+2. Banco local descartável criado pela CLI e todas as 132 migrations aplicadas.
+3. `SHOW server_version` e `SHOW server_version_num` anexados à evidência.
+4. Dataset sintético pequeno para exatidão e dataset sintético escalado (10k e 50k posts)
+   para planos; nenhuma informação real.
+5. Baseline do RPC legado salvo antes de criar objetos candidatos.
+
+Sessão de prova:
+
+```sql
+BEGIN;
+SET LOCAL statement_timeout = '1500ms';
+SET LOCAL lock_timeout = '500ms';
+SET LOCAL idle_in_transaction_session_timeout = '10s';
+-- criar somente objetos candidatos versionados no banco descartável;
+-- executar paridade, matriz RLS e EXPLAIN;
+ROLLBACK;
+```
+
+Índices `CONCURRENTLY` não podem ser criados dentro dessa transação. Um índice candidato só
+pode ir para uma rodada separada, ainda descartável, depois que o plano sem índice provar a
+necessidade. A evidência deve registrar DDL, tamanho, tempo de criação, bloqueios e plano antes
+e depois.
+
+## 7. EXPLAIN e critérios de desempenho
+
+Executar `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` para:
+
+- texto exato, com e sem acento;
+- typo atendido por `pg_trgm`;
+- módulo + grupo categórico seletivo;
+- cada classe de campo (enum/set/boolean/número/data/hora/localização);
+- filtros combinados e zero resultados;
+- anon, authenticated e autor, pois RLS pode alterar o plano;
+- 10k e 50k linhas, com distribuição documentada.
+
+Go exige zero timeout, zero ampliação RLS, paridade total nas consultas legadas, 100% do corpus
+estruturado esperado e p95 do candidato no máximo 20% acima do legado para consultas sem filtro.
+Para consultas seletivas em 50k linhas, o plano não pode remover mais de 80% das linhas somente
+depois de um scan completo. Esse critério não obriga índice em tabela pequena: a escolha do
+planner prevalece e deve ser justificada por buffers/linhas reais.
+
+## 8. Índices: decisão adiada por evidência
+
+O GIN `idx_posts_fts` já cobre o documento textual e deve ser testado primeiro. Não criar GIN
+genérico sobre `metadata`. Se uma classe de filtro falhar no gate, comparar nesta ordem:
+
+1. expressão B-tree parcial para igualdade/faixa realmente seletiva;
+2. índice composto começando por predicados usados em conjunto (`module`, visibilidade/status);
+3. GIN somente para arrays/containment com operador compatível;
+4. nenhuma mudança se o ganho não superar custo de escrita/tamanho.
+
+Toda proposta precisa repetir exatamente o predicado parcial usado pela consulta. O advisor de
+índice é sinal, não autorização.
+
+## 9. Rollback R3
+
+Antes de qualquer migration candidata:
+
+1. manter `public.kc_search_posts_fts` e a chamada atual de `KCAPI.searchPosts` intactos;
+2. manter as flags `search.structuredRuntime` e `search.structuredPilot` desligadas;
+3. revogar `EXECUTE` do RPC novo e invalidar o cache de schema do PostgREST;
+4. direcionar canário ao RPC legado sem deploy de dados;
+5. remover wrapper/core versionados e somente os índices criados por essa rodada;
+6. executar novamente a matriz RLS e o hash do baseline legado;
+7. confirmar ausência dos objetos candidatos em `pg_proc`/`pg_indexes`.
+
+Se existir índice `CONCURRENTLY`, seu drop é um passo operacional separado e não entra em uma
+transação de migration. Dados pessoais nunca fazem parte deste candidato; portanto o rollback
+não depende de restaurar perfil ou eventos comportamentais.
+
+## 10. Gates Go/No-Go
+
+| Gate | Estado em 2026-06-20 |
+|---|---|
+| Contrato registry/RPC versionado | passou estaticamente |
+| Nenhuma migration candidata no repo | passou |
+| Docker/banco descartável | bloqueado: engine parado |
+| 132 migrations aplicadas | pendente |
+| Estado real de grants/proprietário | pendente |
+| Matriz RLS executada | pendente |
+| Paridade legado/candidato | pendente |
+| EXPLAIN com buffers em 10k/50k | pendente |
+| Rollback R3 executado | pendente |
+
+Decisão: o desenho pode orientar o próximo experimento, mas SQL de produção, migration, grant,
+ativação de flag e troca de RPC continuam em **No-Go**.
+
+## 11. Fontes primárias verificadas
+
+- [Supabase — Full Text Search](https://supabase.com/docs/guides/database/full-text-search)
+- [Supabase — Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- [Supabase — Securing your API](https://supabase.com/docs/guides/api/securing-your-api)
+- [Supabase — Database inspection](https://supabase.com/docs/guides/database/inspect)
+- [Supabase Changelog](https://supabase.com/changelog): mudança de 28/04/2026 exige grants explícitos para novos objetos expostos.
+- [PostgreSQL — Full Text Search](https://www.postgresql.org/docs/current/textsearch.html)
+- [PostgreSQL — EXPLAIN](https://www.postgresql.org/docs/current/using-explain.html)
+- [PostgreSQL — GIN](https://www.postgresql.org/docs/current/gin.html)
+- [PostgreSQL — pg_trgm](https://www.postgresql.org/docs/current/pgtrgm.html)
+
+O navegador de pesquisa retornou 403 durante esta rodada; as páginas oficiais foram consultadas
+diretamente por HTTPS. Isso não altera os gates: a prova decisiva continua sendo o banco local
+descartável, não documentação externa.
