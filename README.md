@@ -20,7 +20,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Hosting | Vercel |
 | Domínio | `kinocampus.com.br` |
 | Build | `node scripts/inject-env.js` |
-| Testes | Jest: 189 suites · 3767 testes; Playwright: 11 specs E2E (70 testes listados) |
+| Testes | Jest: 189 suites · 3772 testes; Playwright: 11 specs E2E (74 testes listados) |
 
 ## Documentação Técnica
 
@@ -237,7 +237,7 @@ Se surgir SQL fora do fluxo oficial:
 
 ```bash
 npm run check:all          # 6 gates: version, structure, scripts, routes, hygiene, search registry
-npm test                   # Jest: 189 suites · 3767 testes
+npm test                   # Jest: 189 suites · 3772 testes
 npm run benchmark:search-shadow # 12 cenários sintéticos, sem consultas reais
 npm run check:search-registry   # confirma paridade do snapshot gerado
 npm test -- --runInBand    # sequencial (mais lento, mais estável em CI)

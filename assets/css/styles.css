@@ -305,11 +305,16 @@ header {
 }
 
 .kc-search-dropdown__footer {
+    display: block;
+    width: 100%;
     padding: 8px 14px;
     text-align: center;
     font-size: 0.82em;
+    font-family: inherit;
     color: var(--kc-primary-brand);
+    border: 0;
     border-top: 1px solid var(--kc-border-dark);
+    background: transparent;
     cursor: pointer;
     font-weight: 600;
     transition: background var(--transition-speed) ease;

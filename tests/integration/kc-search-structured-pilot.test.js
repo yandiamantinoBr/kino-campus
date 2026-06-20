@@ -65,6 +65,48 @@ describe('piloto estruturado da busca', () => {
     page.dom.window.close();
   });
 
+  test('entrega chips e facetas sanitizados sem expor a consulta', async () => {
+    const page = createPilotPage(enabledFlags, () => ({
+      plan: { module: 'oportunidades', intent: 'estagios' },
+      comparison: { intentApplied: true, supportedFilters: ['workMode'], deferredFilters: [] },
+      candidate: [{ id: 'structured-b', relevanceScore: 17 }],
+      legacy: [{ id: 'legacy-a', relevanceScore: 4 }],
+      facets: { modules: { oportunidades: 1 }, total: 1 }
+    }));
+    page.window.KCSearchQueryParser.parse = jest.fn(() => ({ filters: { workMode: 'remoto' } }));
+    const onState = jest.fn();
+    const result = await page.window.kcSearch.applyStructuredPilot('estágio remoto computação', posts, { onState });
+    expect(result.map((post) => post.id)).toEqual(['structured-b']);
+    expect(onState).toHaveBeenCalledWith(expect.objectContaining({
+      active: true,
+      chips: expect.arrayContaining([
+        { signal: 'module', label: 'Módulo: Oportunidades' },
+        { signal: 'intent', label: 'Tipo: Estágios' },
+        { signal: 'filter:workMode', label: 'Modalidade: Remoto' }
+      ]),
+      facets: { modules: { oportunidades: 1 }, total: 1 }
+    }));
+    expect(JSON.stringify(onState.mock.calls)).not.toContain('estágio remoto computação');
+    page.dom.window.close();
+  });
+
+  test('consulta estruturada sem candidatos ainda produz estado explicável', async () => {
+    const page = createPilotPage(enabledFlags, () => ({
+      plan: { module: 'eventos', intent: 'academicos' },
+      comparison: { intentApplied: true, supportedFilters: [], deferredFilters: ['registrationStatus'] },
+      candidate: [], legacy: [], facets: { modules: {}, total: 0 }
+    }));
+    page.window.KCSearchQueryParser.parse = jest.fn(() => ({ filters: { registrationStatus: 'open' } }));
+    const onState = jest.fn();
+    await expect(page.window.kcSearch.applyStructuredPilot('evento acadêmico inscrições abertas', [], { onState }))
+      .resolves.toEqual([]);
+    expect(page.window.KCSearchShadowPipeline.runShadow).toHaveBeenCalled();
+    expect(onState).toHaveBeenCalledWith(expect.objectContaining({
+      active: true, candidateCount: 0, deferred: ['Inscrições']
+    }));
+    page.dom.window.close();
+  });
+
   test('consulta sem módulo, intenção ou filtro mantém resultados legados', async () => {
     const page = createPilotPage(enabledFlags, () => ({
       plan: { module: null },

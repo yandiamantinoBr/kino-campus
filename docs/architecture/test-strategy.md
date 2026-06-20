@@ -1,6 +1,6 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.39.0 · **Atualizado em:** 2026-06-20
+**Versão:** v76.40.0 · **Atualizado em:** 2026-06-20
 
 > Documenta as 189 suites Jest + 11 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 189 suites · 3767 testes
-Playwright: 11 specs · 70 testes listados
+Jest: 189 suites · 3772 testes
+Playwright: 11 specs · 74 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥189 passed, 189 total` e `≥3767 passed, 3767 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥189 passed, 189 total` e `≥3772 passed, 3772 total`.
 
 ### Gate CI essencial
 
@@ -244,9 +244,9 @@ A tabela abaixo é agrupada por domínio e não lista todos os 131 arquivos indi
 | `kc-search.shared.test.js` | `kc-search.shared.js`: busca compartilhada entre páginas |
 | `kc-search-query-parser.test.js` | Parser offline: corpus, variantes, limites e ausência de PII |
 | `kc-search-shadow-benchmark.test.js` | Benchmark por módulo: recall, precisão, falso positivo, estabilidade, latência e privacidade |
-| `kc-search-shadow-pipeline.test.js` | Comparação offline legado/candidato, filtros estruturados, determinismo e saída sanitizada |
+| `kc-search-shadow-pipeline.test.js` | Comparação offline, filtros, sinais ignorados, módulo explícito, facetas agregadas, determinismo e saída sanitizada |
 | `kc-search-structured-runtime-loader.test.js` | Flag desligada, ordem local, idempotência, URL versionada e fallback legado |
-| `kc-search-structured-pilot.test.js` | Seleção por sinal estruturado, políticas por superfície e fallback integral em inconsistência ou falha |
+| `kc-search-structured-pilot.test.js` | Seleção por sinal, chips/facetas sanitizados, zero candidato explicável e fallback integral em falha |
 | `kc-supabase-client.test.js` | `kc-supabase.client.js`: client facade Supabase |
 | `my-posts-swr.test.js` | `my-posts.controller.js`: SWR de "Meus Posts" |
 | `notification-delivery-foundation.test.js` | Fundação do sistema de entrega de notificações |
@@ -337,7 +337,7 @@ Rodam no browser real (Chromium) contra um servidor HTTP local (`http-server` na
 | `admin-pages.spec.js` | 6 páginas admin | Dashboard, Moderação, Banners, Denúncias, Ajuda, Privacidade/Analytics — 200 + skip link + h1 + main |
 | `admin-moderation.spec.js` | `/admin/moderation.html` | Status 200, estrutura, 3 selects A5 com `aria-label`, nav com `aria-label` |
 | `remaining-pages.spec.js` | moradia, oportunidades, achados-perdidos, ods, my-posts, profile, settings | Status 200 + estrutura WCAG |
-| `search-structured-pilot.spec.js` | busca dedicada e dropdown da home | Rede zero com flags desligadas; carregamento lazy local e dropdown funcional com as duas flags ligadas |
+| `search-structured-pilot.spec.js` | busca dedicada e dropdown da home | Rede zero, runtime lazy, chips removíveis, facetas, zero-results, dropdown explicável e mobile sem overflow |
 
 ### Como rodar os E2E
 
@@ -496,7 +496,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥189 passed, 189 total
-  Tests:       ≥3767 passed, 3767 total
+  Tests:       ≥3772 passed, 3772 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

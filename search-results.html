@@ -186,6 +186,96 @@
             white-space: normal;
         }
 
+        .kc-search-structured {
+            display: grid;
+            gap: 10px;
+            margin: -6px 0 18px;
+            padding: 13px 15px;
+            border: 1px solid rgba(255,124,0,.28);
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255,124,0,.10), rgba(255,124,0,.035));
+        }
+
+        .kc-search-structured[hidden],
+        .kc-search-structured__note[hidden],
+        .kc-search-structured__restore[hidden],
+        .kc-search-results-empty-actions [hidden] {
+            display: none !important;
+        }
+
+        .kc-search-structured__header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .kc-search-structured__header > i {
+            color: var(--primary-orange);
+        }
+
+        .kc-search-structured__copy {
+            display: grid;
+            gap: 2px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .kc-search-structured__copy strong {
+            color: var(--kc-text-dark);
+            font-size: .86rem;
+        }
+
+        .kc-search-structured__copy span,
+        .kc-search-structured__note {
+            color: var(--kc-text-dark-secondary);
+            font-size: .78rem;
+            line-height: 1.4;
+        }
+
+        .kc-search-structured__chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        .kc-search-structured-chip,
+        .kc-search-structured__restore {
+            min-height: 34px;
+            border-radius: 999px;
+            font: inherit;
+            font-size: .8rem;
+            font-weight: 750;
+            cursor: pointer;
+        }
+
+        .kc-search-structured-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 11px;
+            border: 1px solid rgba(255,124,0,.4);
+            color: var(--kc-text-dark);
+            background: var(--kc-surface-dark);
+        }
+
+        .kc-search-structured-chip:hover,
+        .kc-search-structured-chip:focus-visible {
+            border-color: var(--primary-orange);
+            background: rgba(255,124,0,.12);
+        }
+
+        .kc-search-structured-chip i {
+            color: var(--primary-orange);
+            font-size: .72rem;
+        }
+
+        .kc-search-structured__restore {
+            padding: 5px 11px;
+            border: 0;
+            color: var(--primary-orange);
+            background: transparent;
+        }
+
         @media (max-width: 760px) {
             .kc-search-results-controls {
                 align-items: stretch;
@@ -226,6 +316,20 @@
                 align-self: stretch;
                 border-radius: 10px;
             }
+
+            .kc-search-structured {
+                margin-top: -8px;
+                padding: 11px 12px;
+            }
+
+            .kc-search-structured__header {
+                align-items: flex-start;
+            }
+
+            .kc-search-structured-chip {
+                min-height: 36px;
+                max-width: 100%;
+            }
         }
 
         @media (max-width: 360px) {
@@ -248,6 +352,37 @@
             font-size: 2em;
             opacity: 0.5;
             margin-bottom: 10px;
+        }
+
+        #noResults h2 {
+            margin: 0 0 8px;
+            color: var(--kc-text-dark);
+            font-size: 1.05rem;
+        }
+
+        .kc-search-results-empty-actions {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .kc-search-results-empty-actions button,
+        .kc-search-results-empty-actions a {
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 13px;
+            border: 1px solid var(--kc-border-dark);
+            border-radius: 10px;
+            background: var(--kc-bg-dark);
+            color: var(--kc-text-dark);
+            font: inherit;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -348,9 +483,28 @@
             <div class="kc-search-results-active" id="searchResultsActiveFilters">Todos os m&oacute;dulos &middot; Mais relevantes</div>
         </section>
 
+        <section class="kc-search-structured" id="searchResultsStructured" aria-labelledby="searchResultsStructuredTitle" aria-live="polite" hidden>
+            <div class="kc-search-structured__header">
+                <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                <div class="kc-search-structured__copy">
+                    <strong id="searchResultsStructuredTitle">Crit&eacute;rios entendidos</strong>
+                    <span>Remova um crit&eacute;rio para ampliar os resultados. Nada disso &eacute; salvo no seu perfil.</span>
+                </div>
+                <button class="kc-search-structured__restore" id="searchResultsStructuredRestore" type="button" hidden>Reaplicar</button>
+            </div>
+            <div class="kc-search-structured__chips" id="searchResultsStructuredChips"></div>
+            <p class="kc-search-structured__note" id="searchResultsStructuredNote" hidden></p>
+        </section>
+
         <div id="noResults">
-            <i class="fas fa-search"></i>
-            <p>Nenhuma publicação corresponde à busca. Revise os termos ou consulte os módulos do KinoCampus.</p>
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <h2>Nenhuma publica&ccedil;&atilde;o encontrada</h2>
+            <p id="noResultsMessage">Nenhuma publicação corresponde à busca. Revise os termos ou consulte os módulos do KinoCampus.</p>
+            <div class="kc-search-results-empty-actions">
+                <button id="searchResultsRelaxStructured" type="button" hidden>Remover crit&eacute;rios entendidos</button>
+                <button id="searchResultsRestoreStructured" type="button" hidden>Reaplicar crit&eacute;rios</button>
+                <a href="index.html">Explorar o KinoCampus</a>
+            </div>
         </div>
 
         <div class="kc-feed-list" id="searchResultsList"></div>

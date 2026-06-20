@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.39.0 (2026-06-20)** — inclui piloto estruturado de resultados/dropdown sob duas flags desligadas; runtime frontend `8.6.1` inalterado.
+> **Atualizado em v76.40.0 (2026-06-20)** — inclui chips removíveis, facetas agregadas e zero-results explicável sob duas flags desligadas; runtime frontend `8.6.1` inalterado.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -19,7 +19,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `10` |
 | suites de teste Jest em `tests/` | `189` |
-| testes Jest totais | `3767` |
+| testes Jest totais | `3772` |
 | specs E2E Playwright | `11` |
 
 ## Princípio estrutural
@@ -239,5 +239,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.37.0 (2026-06-20):** aplica intenção/tempo/status no shadow e adiciona benchmark sintético 12/12, sem ativação pública.
 - **v76.38.0 (2026-06-20):** gera snapshot imutável do registry e prepara lazy runtime sob flag desligada, sem alterar resultados.
 - **v76.39.0 (2026-06-20):** integra seleção estruturada em resultados/dropdown sob duas flags desligadas, com fallback e E2E de rede.
+- **v76.40.0 (2026-06-20):** expõe critérios estruturados removíveis, facetas agregadas e estados vazios explicáveis sob as mesmas flags.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.
