@@ -11,6 +11,7 @@ describe('snapshot gerado do registry de busca', () => {
   test('está sincronizado com schema, builder e políticas de projeção', () => {
     expect(Generator.checkSnapshot()).toBe(true);
     expect(Snapshot.sourceHash).toBe(Generator.sourceHash());
+    expect(Generator.normalizeSource('schema\r\nbuilder\rpolicies\n')).toBe('schema\nbuilder\npolicies\n');
   });
 
   test('é UMD, versionado e profundamente imutável', () => {

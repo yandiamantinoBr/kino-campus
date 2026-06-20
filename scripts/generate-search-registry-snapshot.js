@@ -13,8 +13,12 @@ const SOURCE_FILES = [
   'assets/js/shared/kc-search-fields.shared.js'
 ];
 
+function normalizeSource(value) {
+  return String(value || '').replace(/\r\n?/g, '\n');
+}
+
 function readSource(relativePath) {
-  return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
+  return normalizeSource(fs.readFileSync(path.join(ROOT, relativePath), 'utf8'));
 }
 
 function buildRegistry() {
@@ -93,4 +97,7 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { SOURCE_FILES, TARGET, buildRegistry, checkSnapshot, generateSnapshot, generateSource, sourceHash };
+module.exports = {
+  SOURCE_FILES, TARGET, buildRegistry, checkSnapshot, generateSnapshot,
+  generateSource, normalizeSource, sourceHash
+};

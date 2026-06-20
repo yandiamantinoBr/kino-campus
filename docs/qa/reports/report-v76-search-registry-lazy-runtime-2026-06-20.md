@@ -12,7 +12,8 @@ combina suas estruturas com as políticas de `KCSearchFieldRegistry` e gera
 
 O artefato minificado possui 25.597 bytes, é UMD, profundamente congelado e não contém data de
 geração. Seu hash SHA-256 cobre os três arquivos-fonte; por isso a saída é
-determinística e qualquer alteração relevante exige regeneração explícita.
+determinística entre Windows/Linux e qualquer alteração relevante exige regeneração
+explícita. Finais de linha são normalizados antes de execução e hash.
 
 `npm run check:search-registry` compara bytes gerados e versionados. O comando foi
 incluído em `check:all`, tornando drift uma falha de CI.
