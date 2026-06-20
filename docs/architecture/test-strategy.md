@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.37.0 · **Atualizado em:** 2026-06-20
+**Versão:** v76.38.0 · **Atualizado em:** 2026-06-20
 
-> Documenta as 186 suites Jest + 10 specs Playwright: o que cada uma cobre,
+> Documenta as 188 suites Jest + 10 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -12,8 +12,8 @@
 1. [Filosofia](#1-filosofia)
 2. [Métricas atuais](#2-métricas-atuais)
 3. [Diretório unit/ — 26 suites](#3-diretório-unit--26-suites)
-4. [Diretório integration/ — 129 suites](#4-diretório-integration--129-suites)
-5. [Diretório contract/ — 12 suites](#5-diretório-contract--12-suites)
+4. [Diretório integration/ — 130 suites](#4-diretório-integration--130-suites)
+5. [Diretório contract/ — 13 suites](#5-diretório-contract--13-suites)
 6. [Diretório structure/ — 14 suites](#6-diretório-structure--14-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
 8. [E2E com Playwright — 10 specs](#8-e2e-com-playwright--10-specs)
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 186 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todos os 188 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -50,21 +50,21 @@
 | Diretório | Suites | Domínio principal |
 |-----------|--------|------------------|
 | `tests/unit/` | **26** | Módulos utilitários individuais |
-| `tests/integration/` | **129** | Controllers, adapters, sub-módulos KCAPI, parser, pipeline e benchmark shadow |
-| `tests/contract/` | **12** | Contratos públicos, exports e registro de campos de busca |
+| `tests/integration/` | **130** | Controllers, adapters, sub-módulos KCAPI, parser, pipeline, benchmark e lazy runtime |
+| `tests/contract/` | **13** | Contratos públicos, exports, registro e snapshot gerado de busca |
 | `tests/structure/` | **14** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
 | `tests/e2e/` | **10** | Playwright (browser real, HTTP real) |
-| **Total** | **196** | (186 Jest + 10 Playwright specs) |
+| **Total** | **198** | (188 Jest + 10 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 186 suites · 3750 testes
+Jest: 188 suites · 3761 testes
 Playwright: 10 specs · 68 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥186 passed, 186 total` e `≥3750 passed, 3750 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥188 passed, 188 total` e `≥3761 passed, 3761 total`.
 
 ### Gate CI essencial
 
@@ -115,11 +115,11 @@ A tabela abaixo destaca as suites principais; a contagem canônica vem do filesy
 
 ---
 
-## 4. Diretório integration/ — 129 suites
+## 4. Diretório integration/ — 130 suites
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
 
-A tabela abaixo é agrupada por domínio e não lista todos os 129 arquivos individualmente.
+A tabela abaixo é agrupada por domínio e não lista todos os 130 arquivos individualmente.
 
 ### Sub-grupo: Controllers públicos (6 suites)
 
@@ -245,6 +245,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 129 arquivos indi
 | `kc-search-query-parser.test.js` | Parser offline: corpus, variantes, limites e ausência de PII |
 | `kc-search-shadow-benchmark.test.js` | Benchmark por módulo: recall, precisão, falso positivo, estabilidade, latência e privacidade |
 | `kc-search-shadow-pipeline.test.js` | Comparação offline legado/candidato, filtros estruturados, determinismo e saída sanitizada |
+| `kc-search-structured-runtime-loader.test.js` | Flag desligada, ordem local, idempotência, URL versionada e fallback legado |
 | `kc-supabase-client.test.js` | `kc-supabase.client.js`: client facade Supabase |
 | `my-posts-swr.test.js` | `my-posts.controller.js`: SWR de "Meus Posts" |
 | `notification-delivery-foundation.test.js` | Fundação do sistema de entrega de notificações |
@@ -262,7 +263,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 129 arquivos indi
 
 ---
 
-## 5. Diretório contract/ — 12 suites
+## 5. Diretório contract/ — 13 suites
 
 Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falha se um método for removido ou renomeado, mesmo sem quebrar a funcionalidade aparente.
 
@@ -278,6 +279,7 @@ Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falh
 | `kc-api-transport-config-contract.test.js` | Configuração, timeout, URL e erros do transporte KCAPI |
 | `kc-create-post-contract.test.js` | Exports públicos do módulo de criação de post |
 | `kc-search-field-registry-contract.test.js` | Derivação dos campos, paths, condicionais, privacidade e corpus dourado |
+| `kc-search-registry-snapshot-contract.test.js` | Paridade byte a byte, hash, imutabilidade, privacidade e ausência dos HTMLs |
 | `product.controller-split-contract.test.js` | Cadeia de scripts do `_product.html` e namespaces `_KCProduct.*` |
 | `version-map.test.js` | Campos de `VERSION.json` e consistência de `frontendRuntimeVersion` |
 
@@ -491,8 +493,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥186 passed, 186 total
-  Tests:       ≥3750 passed, 3750 total
+  Test Suites: ≥188 passed, 188 total
+  Tests:       ≥3761 passed, 3761 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

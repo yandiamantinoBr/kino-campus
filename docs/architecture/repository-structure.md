@@ -1,8 +1,8 @@
 # Estrutura do Repositório - KinoCampus
 
-**Versão:** v76.37.0
+**Versão:** v76.38.0
 **Data:** 2026-06-20
-**Atualizado em:** v76.37.0 - semântica temporal/status e benchmark shadow
+**Atualizado em:** v76.38.0 - snapshot verificável e lazy runtime de busca
 
 ---
 
@@ -22,8 +22,8 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 186 suites / 3750 testes + Playwright 10 specs E2E |
-| Gates locais | `npm run check:all` com 5 validadores |
+| Testes | Jest 188 suites / 3761 testes + Playwright 10 specs E2E |
+| Gates locais | `npm run check:all` com 6 gates |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
 janela operacional atual: archive consolidado, planning ativo com ledger pos-V23, QA ativo separado do
@@ -67,7 +67,7 @@ kino-campus/
 |   |   |-- utils/                 8 arquivos
 |   |   |-- features/              18 arquivos + create-post/
 |   |   |   `-- create-post/       7 arquivos
-|   |   |-- shared/                10 arquivos
+|   |   |-- shared/                11 arquivos
 |   |   |-- legacy-shims/          1 arquivo
 |   |   |-- components/            3 arquivos
 |   |   |-- adapters/
@@ -102,8 +102,8 @@ kino-campus/
 |   `-- qa/                        QA ativo
 |-- tests/
 |   |-- unit/                     26 suites
-|   |-- integration/              129 suites
-|   |-- contract/                 12 suites
+|   |-- integration/              130 suites
+|   |-- contract/                 13 suites
 |   |-- structure/                14 suites
 |   |-- a11y/                     5 suites
 |   |-- fixtures/
@@ -118,6 +118,7 @@ kino-campus/
 |   |-- capture-css-visual-baseline.js
 |   |-- audit-kcapi-facade-residual.js
 |   |-- benchmark-search-shadow.js
+|   |-- generate-search-registry-snapshot.js
 |   `-- inject-env.js
 |-- admin/                         6 HTMLs admin
 |-- *.html                         21 HTMLs na raiz
@@ -150,7 +151,7 @@ Todo modulo deve permanecer em um dos grupos canonicos abaixo.
 | `assets/js/utils/` | 8 | Helpers de string, formatacao, DOM, identidade, taxonomia, localizacao e apresentacao |
 | `assets/js/features/` | 18 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading, pull-to-refresh, contexto de módulos e página 404 |
 | `assets/js/features/create-post/` | 7 | Orquestracao, schema, campos, render, midia, resolvers e submit de criacao |
-| `assets/js/shared/` | 10 | Dados e contratos compartilhados, incluindo registry, parser e pipeline shadow de busca ainda não carregados |
+| `assets/js/shared/` | 11 | Dados e contratos compartilhados, incluindo registry, snapshot gerado, parser e pipeline shadow carregáveis somente sob flag |
 | `assets/js/legacy-shims/` | 1 | Shim transitorio de migracao de posts do usuario |
 | `assets/js/components/` | 3 | Componentes reutilizaveis: carousel, toast e voting |
 | `assets/js/adapters/local/` | 9 | Persistencia localStorage por dominio |
@@ -269,8 +270,9 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:scripts` | Valida cadeias de scripts nos 28 HTMLs canonicos |
 | `npm run check:routes` | Valida 22 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
-| `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantém 186/186 suites e 3750/3750 testes Jest |
+| `npm run check:all` | Executa os 5 validadores estruturais, paridade do snapshot e Jest |
+| `npm run check:search-registry` | Falha se o snapshot divergir de schema, builder ou políticas |
+| `npm test` | Mantém 188/188 suites e 3761/3761 testes Jest |
 | `npm run benchmark:search-shadow` | Mede 12 cenários sintéticos dos seis módulos, sem dados reais |
 | `npx playwright test --list` | Lista 10 specs / 68 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |

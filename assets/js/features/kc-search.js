@@ -12,11 +12,22 @@
 
   const DB_FALLBACK_URL = 'data/database.json';
   const TRACK_BATCH_SIZE = 12;
+  const SEARCH_SCRIPT_SRC = (document.currentScript && document.currentScript.src)
+    ? String(document.currentScript.src)
+    : '';
+  const STRUCTURED_SEARCH_ASSETS = [
+    { file: 'kc-search-registry.generated.js', global: 'KCSearchFieldRegistrySnapshot' },
+    { file: 'kc-search-fields.shared.js', global: 'KCSearchFieldRegistry' },
+    { file: 'kc-search-query-parser.shared.js', global: 'KCSearchQueryParser' },
+    { file: 'kc-search-shadow-pipeline.shared.js', global: 'KCSearchShadowPipeline' }
+  ];
 
   let kcDbPosts = null;
   let dropdownDebounceTimer = null;
   let searchFlushTimer = null;
   let searchResultsRequestSeq = 0;
+  let structuredSearchRuntimePromise = null;
+  const structuredAssetPromises = {};
 
   const SEARCH_RESULTS_LIMIT = 120;
   const SEARCH_RESULTS_MODULES = [
@@ -48,6 +59,79 @@
     const shared = (typeof window !== 'undefined' && window.KCSearchShared) ? window.KCSearchShared : null;
     if (shared && typeof shared.searchCollection === 'function') return shared;
     return null;
+  }
+
+  function isStructuredSearchRuntimeEnabled() {
+    return !!(window.KCFF && typeof window.KCFF.isEnabled === 'function' &&
+      window.KCFF.isEnabled('search.structuredRuntime', false));
+  }
+
+  function resolveStructuredSearchAsset(file) {
+    let src = `/assets/js/shared/${file}`;
+    if (SEARCH_SCRIPT_SRC) {
+      try { src = new URL(`../shared/${file}`, SEARCH_SCRIPT_SRC).toString(); } catch (_) {}
+    }
+    const version = String((window.KC_ENV && (window.KC_ENV.version || window.KC_ENV.APP_VERSION)) || '').trim();
+    if (version && !/[?&]v=/.test(src)) {
+      src += `${src.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`;
+    }
+    return src;
+  }
+
+  function loadStructuredSearchAsset(asset) {
+    if (window[asset.global]) return Promise.resolve(window[asset.global]);
+    const src = resolveStructuredSearchAsset(asset.file);
+    if (structuredAssetPromises[src]) return structuredAssetPromises[src];
+    structuredAssetPromises[src] = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      const timer = window.setTimeout(() => reject(new Error(`KC_SEARCH_RUNTIME_TIMEOUT:${asset.file}`)), 6000);
+      script.src = src;
+      script.async = false;
+      script.dataset.kcSearchRuntime = asset.file;
+      script.onload = function () {
+        window.clearTimeout(timer);
+        if (window[asset.global]) resolve(window[asset.global]);
+        else reject(new Error(`KC_SEARCH_RUNTIME_GLOBAL_MISSING:${asset.global}`));
+      };
+      script.onerror = function () {
+        window.clearTimeout(timer);
+        reject(new Error(`KC_SEARCH_RUNTIME_LOAD_FAILED:${asset.file}`));
+      };
+      (document.head || document.documentElement).appendChild(script);
+    });
+    return structuredAssetPromises[src];
+  }
+
+  function buildStructuredSearchRuntime() {
+    const snapshot = window.KCSearchFieldRegistrySnapshot;
+    const projector = window.KCSearchFieldRegistry;
+    const parser = window.KCSearchQueryParser;
+    const pipeline = window.KCSearchShadowPipeline;
+    if (!snapshot || !snapshot.registry || !projector || typeof projector.projectCollection !== 'function' ||
+        !parser || typeof parser.parse !== 'function' || !pipeline || typeof pipeline.runShadow !== 'function') {
+      throw new Error('KC_SEARCH_RUNTIME_CONTRACT_INVALID');
+    }
+    return Object.freeze({
+      snapshotVersion: snapshot.snapshotVersion,
+      sourceHash: snapshot.sourceHash,
+      registry: snapshot.registry,
+      projector,
+      parser,
+      pipeline
+    });
+  }
+
+  function loadStructuredSearchRuntime() {
+    if (!isStructuredSearchRuntimeEnabled()) return Promise.resolve(null);
+    if (structuredSearchRuntimePromise) return structuredSearchRuntimePromise;
+    structuredSearchRuntimePromise = STRUCTURED_SEARCH_ASSETS.reduce(
+      (promise, asset) => promise.then(() => loadStructuredSearchAsset(asset)),
+      Promise.resolve()
+    ).then(buildStructuredSearchRuntime).catch((error) => {
+      try { console.warn('[KinoCampus] Runtime estruturado indisponível; busca legada preservada.', error); } catch (_) {}
+      return null;
+    });
+    return structuredSearchRuntimePromise;
   }
 
   function hasAnalyticsConsent() {
@@ -771,6 +855,7 @@
   }
 
   async function updateDropdown(query, dropdown, searchBarEl) {
+    loadStructuredSearchRuntime();
     const q = String(query || '').trim();
     if (q.length < 2) {
       closeDropdown();
@@ -813,6 +898,7 @@
     bindSearchFlushLifecycle();
 
     if (resultsPage) {
+      loadStructuredSearchRuntime();
       const qParam = getQueryParam('q');
       if (searchInput && qParam) searchInput.value = qParam;
       initializeResultControlsFromUrl();
@@ -907,6 +993,7 @@
     filter: filterCurrentPageCards,
     globalSearch,
     loadDatabase: loadDbPosts,
+    loadStructuredRuntime: loadStructuredSearchRuntime,
     navigateToResults,
     track: trackSearch,
     flushPending: flushPendingTrackedSearches,
@@ -915,6 +1002,9 @@
       getSearchSessionId,
       getSearchStorage,
       insertTrackedTerms,
+      isStructuredSearchRuntimeEnabled,
+      loadStructuredSearchRuntime,
+      resolveStructuredSearchAsset,
       navigateToResults,
       trackSearch
     }

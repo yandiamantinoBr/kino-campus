@@ -20,7 +20,7 @@
 - [Grupo utils/](#grupo-utils) — 8 módulos
 - [Grupo features/](#grupo-features) — 10 módulos *(v16.4.0)*
 - [Grupo features/create-post/](#grupo-featurescreate-post) — 7 módulos *(v16.4.0)*
-- [Grupo shared/](#grupo-shared) — 7 módulos *(v16.4.0)*
+- [Grupo shared/](#grupo-shared) — 11 módulos *(v76.38)*
 - [Grupo legacy-shims/](#grupo-legacy-shims) — 1 módulo *(v16.4.0)*
 - [Grupo components/](#grupo-components) — 3 módulos *(v16.4.0)*
 - [Grupo adapters/local/](#grupo-adapterslocal) — 8 módulos *(v16.4.0)*
@@ -1819,6 +1819,63 @@ carregados, estado de edição em andamento, e helpers de formatação de coment
 
 ---
 
+### `shared/kc-search-fields.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Namespace | `window.KCSearchFieldRegistry` |
+| Páginas | Nenhuma estaticamente; lazy sob flag |
+
+**Responsabilidade:** deriva campos, grupos, paths e políticas de privacidade do
+contrato real de criação e projeta posts para busca estruturada.
+
+**Testes:** `tests/contract/kc-search-field-registry-contract.test.js`
+
+---
+
+### `shared/kc-search-query-parser.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Namespace | `window.KCSearchQueryParser` |
+| Páginas | Nenhuma estaticamente; lazy sob flag |
+
+**Responsabilidade:** interpreta módulo, intenção e filtros pt-BR de forma
+determinística, sem perfil, rede ou analytics.
+
+**Testes:** `tests/integration/kc-search-query-parser.test.js`
+
+---
+
+### `shared/kc-search-registry.generated.js`
+
+| Campo | Valor |
+|-------|-------|
+| Namespace | `window.KCSearchFieldRegistrySnapshot` |
+| Páginas | Nenhuma estaticamente; lazy sob `search.structuredRuntime` |
+
+**Responsabilidade:** snapshot imutável e determinístico do registry, com hash dos
+arquivos-fonte e paridade exigida por `npm run check:search-registry`.
+
+**Testes:** `tests/contract/kc-search-registry-snapshot-contract.test.js`
+
+---
+
+### `shared/kc-search-shadow-pipeline.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Namespace | `window.KCSearchShadowPipeline` |
+| Páginas | Nenhuma estaticamente; lazy sob flag |
+
+**Responsabilidade:** compõe parser, projeção e busca para comparação sanitizada do
+legado com candidato estruturado. V76.38 ainda não o executa em resultados públicos.
+
+**Testes:** `tests/integration/kc-search-shadow-pipeline.test.js`,
+`tests/integration/kc-search-shadow-benchmark.test.js`
+
+---
+
 ### `shared/kc-search.shared.js`
 
 | Campo | Valor |
@@ -2382,6 +2439,10 @@ contagem de votos de um post e voto atual do usuário.
 | shared/help.shared.js | shared | `window.KCHelpShared` | ajuda+admin | integration/help.shared |
 | shared/home-categories.shared.js | shared | `window.KCHomeCategoriesShared` | index.html | integration/home-categories.shared |
 | shared/kc-comments.shared.js | shared | `window.KCCommentsShared` | produto+feeds | integration/kc-comments.shared |
+| shared/kc-search-fields.shared.js | shared | `window.KCSearchFieldRegistry` | lazy/flag | contract/kc-search-field-registry |
+| shared/kc-search-query-parser.shared.js | shared | `window.KCSearchQueryParser` | lazy/flag | integration/kc-search-query-parser |
+| shared/kc-search-registry.generated.js | shared | `window.KCSearchFieldRegistrySnapshot` | lazy/flag | contract/kc-search-registry-snapshot |
+| shared/kc-search-shadow-pipeline.shared.js | shared | `window.KCSearchShadowPipeline` | lazy/flag | integration/kc-search-shadow-pipeline |
 | shared/kc-search.shared.js | shared | `window.KCSearchShared` | search+modal | integration/kc-search.shared |
 | shared/ods.shared.js | shared | `window.KCODSShared` | ods.html | integration/ods.shared |
 | shared/search-analytics.shared.js | shared | `window.KCSearchAnalytics` | search-results | integration/search-analytics.shared |
@@ -2409,7 +2470,7 @@ contagem de votos de um post e voto atual do usuário.
 | adapters/supabase/supabase.saved.adapter.js | supabase | `window.KCSupabaseSavedAdapter` | produto+my-posts | integration/supabase-saved-adapter |
 | adapters/supabase/supabase.votes.adapter.js | supabase | `window.KCSupabaseVotesAdapter` | feeds+produto | integration/supabase-votes-adapter |
 
-**Inventario atual:** 159 arquivos JS em `assets/js/`. Este catalogo documenta os grupos, contratos e modulos principais; use `docs/architecture/repository-structure.md` para contagens completas.
+**Inventario atual:** 160 arquivos JS em `assets/js/`. Este catalogo documenta os grupos, contratos e modulos principais; use `docs/architecture/repository-structure.md` para contagens completas.
 
 *Controllers (33 public + 15 admin = 48) documentados em `docs/architecture/controllers-catalog.md`*
 
