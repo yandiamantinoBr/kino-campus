@@ -2,6 +2,23 @@
 
 ---
 
+## [v76.39] - 2026-06-20 - piloto estruturado sob flags
+
+### Adicionado
+
+- `search.structuredPilot=false` separa carregamento do runtime e alteração de resultados.
+- Resultados e dropdown aplicam o pipeline somente quando as duas flags estão ligadas.
+- Consulta sem sinal, contrato inconsistente, erro ou runtime ausente preservam o legado.
+- Dois E2E cobrem rede zero com defaults e carregamento real dos quatro assets com flags de teste.
+- Gate do snapshot compara conteúdo normalizado e deixa de acusar drift falso entre CRLF/LF no Windows.
+
+### Segurança
+
+- As duas flags permanecem desligadas; avisos não reproduzem o termo pesquisado.
+- Sem migration, RPC, Supabase, perfil, analytics, personalização ou ativação em produção.
+
+---
+
 ## [v76.38] - 2026-06-20 - snapshot e lazy runtime da busca
 
 ### Adicionado

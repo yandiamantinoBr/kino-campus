@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.38.0 · **Atualizado em:** 2026-06-20
+**Versão:** v76.39.0 · **Atualizado em:** 2026-06-20
 
-> Documenta as 188 suites Jest + 10 specs Playwright: o que cada uma cobre,
+> Documenta as 189 suites Jest + 11 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -12,11 +12,11 @@
 1. [Filosofia](#1-filosofia)
 2. [Métricas atuais](#2-métricas-atuais)
 3. [Diretório unit/ — 26 suites](#3-diretório-unit--26-suites)
-4. [Diretório integration/ — 130 suites](#4-diretório-integration--130-suites)
+4. [Diretório integration/ — 131 suites](#4-diretório-integration--131-suites)
 5. [Diretório contract/ — 13 suites](#5-diretório-contract--13-suites)
 6. [Diretório structure/ — 14 suites](#6-diretório-structure--14-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
-8. [E2E com Playwright — 10 specs](#8-e2e-com-playwright--10-specs)
+8. [E2E com Playwright — 11 specs](#8-e2e-com-playwright--11-specs)
 9. [Como adicionar novos testes](#9-como-adicionar-novos-testes)
 10. [Regras de manutenção](#10-regras-de-manutenção)
 
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 188 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todos os 189 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -50,21 +50,21 @@
 | Diretório | Suites | Domínio principal |
 |-----------|--------|------------------|
 | `tests/unit/` | **26** | Módulos utilitários individuais |
-| `tests/integration/` | **130** | Controllers, adapters, sub-módulos KCAPI, parser, pipeline, benchmark e lazy runtime |
+| `tests/integration/` | **131** | Controllers, adapters, sub-módulos KCAPI, parser, pipeline, benchmark, lazy runtime e piloto estruturado |
 | `tests/contract/` | **13** | Contratos públicos, exports, registro e snapshot gerado de busca |
 | `tests/structure/` | **14** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
-| `tests/e2e/` | **10** | Playwright (browser real, HTTP real) |
-| **Total** | **198** | (188 Jest + 10 Playwright specs) |
+| `tests/e2e/` | **11** | Playwright (browser real, HTTP real) |
+| **Total** | **200** | (189 Jest + 11 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 188 suites · 3761 testes
-Playwright: 10 specs · 68 testes listados
+Jest: 189 suites · 3767 testes
+Playwright: 11 specs · 70 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥188 passed, 188 total` e `≥3761 passed, 3761 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥189 passed, 189 total` e `≥3767 passed, 3767 total`.
 
 ### Gate CI essencial
 
@@ -115,11 +115,11 @@ A tabela abaixo destaca as suites principais; a contagem canônica vem do filesy
 
 ---
 
-## 4. Diretório integration/ — 130 suites
+## 4. Diretório integration/ — 131 suites
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
 
-A tabela abaixo é agrupada por domínio e não lista todos os 130 arquivos individualmente.
+A tabela abaixo é agrupada por domínio e não lista todos os 131 arquivos individualmente.
 
 ### Sub-grupo: Controllers públicos (6 suites)
 
@@ -246,6 +246,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 130 arquivos indi
 | `kc-search-shadow-benchmark.test.js` | Benchmark por módulo: recall, precisão, falso positivo, estabilidade, latência e privacidade |
 | `kc-search-shadow-pipeline.test.js` | Comparação offline legado/candidato, filtros estruturados, determinismo e saída sanitizada |
 | `kc-search-structured-runtime-loader.test.js` | Flag desligada, ordem local, idempotência, URL versionada e fallback legado |
+| `kc-search-structured-pilot.test.js` | Seleção por sinal estruturado, políticas por superfície e fallback integral em inconsistência ou falha |
 | `kc-supabase-client.test.js` | `kc-supabase.client.js`: client facade Supabase |
 | `my-posts-swr.test.js` | `my-posts.controller.js`: SWR de "Meus Posts" |
 | `notification-delivery-foundation.test.js` | Fundação do sistema de entrega de notificações |
@@ -320,7 +321,7 @@ Verifica conformidade com WCAG 2.1 AA: estrutura de documento, marcações i18n,
 
 ---
 
-## 8. E2E com Playwright — 10 specs
+## 8. E2E com Playwright — 11 specs
 
 Rodam no browser real (Chromium) contra um servidor HTTP local (`http-server` na porta 4000). Não fazem chamadas reais ao Supabase — usam o driver local.
 
@@ -336,6 +337,7 @@ Rodam no browser real (Chromium) contra um servidor HTTP local (`http-server` na
 | `admin-pages.spec.js` | 6 páginas admin | Dashboard, Moderação, Banners, Denúncias, Ajuda, Privacidade/Analytics — 200 + skip link + h1 + main |
 | `admin-moderation.spec.js` | `/admin/moderation.html` | Status 200, estrutura, 3 selects A5 com `aria-label`, nav com `aria-label` |
 | `remaining-pages.spec.js` | moradia, oportunidades, achados-perdidos, ods, my-posts, profile, settings | Status 200 + estrutura WCAG |
+| `search-structured-pilot.spec.js` | busca dedicada e dropdown da home | Rede zero com flags desligadas; carregamento lazy local e dropdown funcional com as duas flags ligadas |
 
 ### Como rodar os E2E
 
@@ -493,8 +495,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥188 passed, 188 total
-  Tests:       ≥3761 passed, 3761 total
+  Test Suites: ≥189 passed, 189 total
+  Tests:       ≥3767 passed, 3767 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.
