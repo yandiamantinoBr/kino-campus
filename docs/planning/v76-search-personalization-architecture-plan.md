@@ -34,6 +34,12 @@
 > recall/precisão/estabilidade de 100% e zero falso positivo. Data de carona e status
 > de inscrição permanecem diferidos porque o schema não oferece campo confiável.
 
+> **Execução V76.38 (2026-06-20):** PR-F gera snapshot UMD imutável do registry,
+> com hash dos três arquivos-fonte e gate de paridade no `check:all`. `kc-search.js`
+> prepara lazy loading sequencial, idempotente e fail-safe sob a nova flag
+> `search.structuredRuntime=false`. No estado canônico há zero requisição adicional;
+> mesmo com a flag ligada, o pipeline ainda não altera resultados.
+
 ## 1. Decisão executiva
 
 O KinoCampus deve evoluir a busca em duas trilhas separadas e sequenciais:
@@ -387,7 +393,7 @@ Rollout: canário interno, percentual pequeno e expansão por gate; migration ad
 3. **PR-C — executado:** parser determinístico offline; sem ativação.
 4. **PR-D — executado:** composição shadow e saída sanitizada.
 5. **PR-E — executado:** intenção, tempo/status e benchmark sintético por módulo.
-6. **PR-F:** snapshot gerado do registry e lazy loading sob flag desligada.
+6. **PR-F — executado:** snapshot gerado do registry e lazy loading sob flag desligada.
 7. **PR-G:** piloto em busca/dropdown, chips, facetas e zero-results sob flag.
 8. **PR-H:** dossiê SQL/RPC isolado, RLS, explain e rollback R3.
 9. **PR-I:** dropdown combobox, cancelamento e performance real.
@@ -438,8 +444,8 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-F**, ainda sem migration e sem ativação: gerar um snapshot imutável do
-registry a partir do schema/builder, validar paridade em CI e desenhar o lazy loading
-somente para as superfícies de busca. Isso evita carregar o builder completo nas 16
-páginas que usam `kc-search.shared.js`. Coleta comportamental, perfil, SQL pessoal e
-reranking seguem bloqueados.
+Executar **PR-G** sem migration: integrar o pipeline como piloto somente quando
+`search.structuredRuntime=true`, preservando retorno legado em falha e permitindo
+comparação/fallback por superfície. A flag canônica continua desligada até evidência
+E2E de `/search-results.html` e `kcSearchDropdown`. Coleta comportamental, perfil,
+SQL pessoal e reranking seguem bloqueados.

@@ -2,6 +2,24 @@
 
 ---
 
+## [v76.38] - 2026-06-20 - snapshot e lazy runtime da busca
+
+### Adicionado
+
+- Snapshot UMD imutável do registry, gerado deterministicamente a partir de schema, builder e políticas.
+- Hash SHA-256 e gate `check:search-registry` impedem drift entre formulários e busca.
+- `kc-search.js` prepara carregamento sequencial dos quatro contratos estruturados sob `search.structuredRuntime=false`.
+- O loader é idempotente, usa somente assets locais versionados e preserva a busca legada em timeout, erro ou contrato inválido.
+- 11 contratos cobrem paridade, imutabilidade, privacidade, rede zero, ordem, concorrência e fallback.
+
+### Segurança
+
+- A flag nasce desligada; nenhum HTML referencia o snapshot e nenhuma requisição adicional ocorre no estado canônico.
+- O runtime carregado ainda não executa `runShadow` nem altera resultados.
+- Nenhuma migration, Supabase, perfil, analytics, consentimento ou personalização foi modificada.
+
+---
+
 ## [v76.37] - 2026-06-20 - semântica temporal e benchmark shadow
 
 ### Adicionado

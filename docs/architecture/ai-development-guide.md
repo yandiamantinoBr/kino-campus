@@ -13,7 +13,7 @@
 1. [Contexto do projeto](#1-contexto-do-projeto)
 2. [Workflow obrigatório por iteração](#2-workflow-obrigatório-por-iteração)
 3. [Padrões obrigatórios de código JS](#3-padrões-obrigatórios-de-código-js)
-4. [Os 5 validators — o que verifica e como corrigir](#4-os-5-validators--o-que-verifica-e-como-corrigir)
+4. [Os 6 gates — o que verifica e como corrigir](#4-os-6-gates--o-que-verifica-e-como-corrigir)
 5. [Testes — como adicionar e rodar](#5-testes--como-adicionar-e-rodar)
 6. [Documentação — como atualizar](#6-documentação--como-atualizar)
 7. [Comunicação e commits](#7-comunicação-e-commits)
@@ -38,10 +38,10 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Backend | Supabase (PostgreSQL + Auth + Storage + Edge Functions + Realtime) | — |
 | Hosting | Vercel | `vercel.json` é imutável sem aprovação explícita |
 | Build | `node scripts/inject-env.js` | Substitui placeholders `__KC_*__` nas variáveis |
-| Testes | Jest (177 suites) + Playwright (9 specs E2E) | Nunca reduzir contagem |
+| Testes | Jest (188 suites) + Playwright (10 specs E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v76.11)
+### Estado atual (v76.38)
 
 | Campo | Valor |
 |-------|-------|
@@ -49,9 +49,9 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Branch de features | `feature/v75.X.Y-descricao-curta` |
 | appVersion | `75.1.0` (performance phase 1; Speed Insights mergeado no PR #549) |
 | frontendRuntimeVersion | `8.6.1` (constante canonica do runtime atual) |
-| Jest | 177 suites · 3600 testes |
-| check:all | 5/5 validators verdes |
-| Itens validados (check:structure) | 167 |
+| Jest | 188 suites · 3761 testes |
+| check:all | 6 gates verdes |
+| Itens validados (check:structure) | 169 |
 
 ### Onde fica cada coisa
 
@@ -64,7 +64,7 @@ kino-campus/
 │   ├── utils/         (8)      ← kc-utils.js + sub-módulos _KCU.*
 │   ├── features/     (16)      ← funcionalidades de página: feed, search, create, ...
 │   ├── features/create-post/ (7)
-│   ├── shared/        (7)      ← componentes reutilizáveis entre páginas
+│   ├── shared/       (11)      ← componentes reutilizáveis entre páginas
 │   ├── legacy-shims/  (1)      ← compatibilidade retroativa
 │   ├── components/    (3)      ← carousel.js, toast.js, voting.js
 │   ├── adapters/local/   (9)   ← driver de dados local (localStorage + JSON)
@@ -76,14 +76,14 @@ kino-campus/
 ├── assets/css/future-split/    ← stubs não carregados (não modificar)
 ├── data/database.json          ← fixture para driver local
 ├── docs/                       ← Toda documentação técnica
-├── scripts/                    ← 5 validators + inject-env.js
-├── tests/                      ← 177 suites Jest
-│   ├── unit/         (25)
-│   ├── integration/ (124)
-│   ├── contract/      (9)
-│   ├── structure/    (12)
+├── scripts/                    ← validators, auditorias e geradores
+├── tests/                      ← 188 suites Jest
+│   ├── unit/         (26)
+│   ├── integration/ (130)
+│   ├── contract/     (13)
+│   ├── structure/    (14)
 │   ├── a11y/          (5)
-│   └── e2e/           (9)      ← Playwright specs
+│   └── e2e/          (10)      ← Playwright specs
 └── VERSION.json                ← Fonte de verdade de versão
 ```
 
@@ -264,14 +264,14 @@ document.getElementById('btn-publicar').addEventListener('click', handleClick);
 
 ---
 
-## 4. Os 5 validators — o que verifica e como corrigir
+## 4. Os 6 gates — o que verifica e como corrigir
 
 ### Executar todos de uma vez
 
 ```bash
 npm run check:all
 # Equivalente a:
-npm run check:version && npm run check:structure && npm run check:scripts && npm run check:routes && npm run check:hygiene && npm test
+npm run check:version && npm run check:structure && npm run check:scripts && npm run check:routes && npm run check:hygiene && npm run check:search-registry && npm test
 ```
 
 ---
@@ -423,6 +423,14 @@ Hygiene FAILED: kc-utils chain inválida em _product.html
 Hygiene FAILED: i18n B2 gate — kc-i18n.js tem 430 chaves (mínimo: 440)
 → Não remover chaves do dicionário i18n. Restaurar as chaves removidas.
 ```
+
+---
+
+### `check:search-registry` — `scripts/generate-search-registry-snapshot.js --check`
+
+**O que verifica:** o snapshot lazy de busca é exatamente a saída determinística do
+schema, builder e políticas atuais. Se falhar, revise a mudança e execute
+`npm run generate:search-registry`; nunca edite o arquivo gerado manualmente.
 
 ---
 
