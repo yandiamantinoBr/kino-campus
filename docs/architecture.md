@@ -158,11 +158,11 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.28.0 / 2026-06-19** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
+> **Atualizado em v76.29.0 / 2026-06-19** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-kcapi-bootstrap-driver-core-dossier.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
-| fachada de API | `assets/js/api/kc-api.client.js` (1.459L / 56.513 bytes) | Parcialmente decomposto em submódulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalização de posts, normalizadores de rating, external access admin, notification fallbacks e post mutation bridge extraídos; JS-I mede 107 membros públicos, 141 funções, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 10 buckets residuais; facade ainda concentra bootstrap, wrappers e contrato público | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
+| fachada de API | `assets/js/api/kc-api.client.js` (1.459L / 56.513 bytes) | Parcialmente decomposto em submódulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalização de posts, normalizadores de rating, external access admin, notification fallbacks e post mutation bridge extraídos; JS-I mede 107 membros públicos, 141 funções, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 10 buckets residuais; JS-I.4 classifica o núcleo bootstrap em 12 funções / 131 linhas, cinco domínios e 15 gates, com No-Go runtime | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
 | adapter Supabase | `assets/js/adapters/supabase/supabase.adapter.js` (~420L) | ✅ Decomposto em 11 sub-adapters `_KCSA.*` | acoplamento com banco, RLS, RPCs |
 | detalhe de publicação | `assets/js/controllers/public/product.controller.js` | ✅ Decomposto em 8 auxiliares `_KCProduct.*` | UI crítica e estado compartilhado |
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
@@ -190,7 +190,8 @@ Baseline CSS-B/C: `npm run audit:css-baseline` e
 
 Inventario JS-I: `npm run audit:kcapi-residual` e
 `docs/planning/v76-kcapi-residual-inventory.md` classificam os buckets residuais da fachada `KCAPI`
-antes de novas extracoes runtime.
+antes de novas extracoes runtime. Em JS-I.4, o mesmo comando valida o dossiê do
+`bootstrap-driver-core`, seus cinco domínios e 15 gates.
 
 ## Regras de equivalência
 
@@ -226,5 +227,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.26.0 (2026-06-18):** CSS-C.4 move `.kc-legal-*` para `kc-public-shell.css`; `styles.css` reduz para 12.005 linhas / 280.551 bytes e 1.731 regras / 1.948 seletores, o bucket público cai para 119 regras / 117 seletores / 752 linhas e o baseline passa a 17 rotas / 34 capturas.
 - **v76.27.0 (2026-06-19):** CSS-C.5 move `.kc-profile-rank-badges*` para `kc-public-shell.css`, corrige o baseline para um perfil público determinístico e reduz `styles.css` para 11.982 linhas / 279.971 bytes e 1.728 regras / 1.945 seletores.
 - **v76.28.0 (2026-06-19):** CSS-B.1 inclui 404, ajuda, callback e onboarding no baseline, fecha cobertura das 12 páginas de `kc-public-shell.css` e eleva a matriz para 21 rotas / 42 capturas sem alterar CSS/runtime.
+- **v76.29.0 (2026-06-19):** JS-I.4 transforma o `bootstrap-driver-core` em dossiê automatizado de 12 funções / 131 linhas, cinco domínios e 15 gates; a decisão é No-Go para extração runtime.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

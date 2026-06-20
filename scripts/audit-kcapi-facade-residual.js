@@ -43,6 +43,52 @@ const BOOTSTRAP_CORE = new Set([
   'getActiveDriver',
 ]);
 
+const BOOTSTRAP_DOMAINS = Object.freeze({
+  'environment-policy': Object.freeze({
+    risk: 'critical',
+    functions: Object.freeze(['readEnv', 'bootstrapConfig', 'enforceSupabaseOnProduction']),
+    requiredGates: Object.freeze([
+      'local-supabase-environment-parity',
+      'production-fail-closed-policy',
+      'KC_ENV-alias-normalization',
+    ]),
+  }),
+  'transport-config': Object.freeze({
+    risk: 'high',
+    functions: Object.freeze(['setConfig', 'withTimeout', 'fetchJSON', 'apiURL']),
+    requiredGates: Object.freeze([
+      'public-setConfig-contract',
+      'timeout-rejection-contract',
+      'HTTP-error-mapping',
+      'relative-baseURL-resolution',
+    ]),
+  }),
+  'error-contract': Object.freeze({
+    risk: 'medium',
+    functions: Object.freeze(['kcApiError']),
+    requiredGates: Object.freeze(['public-error-shape-contract']),
+  }),
+  'static-database-fallback': Object.freeze({
+    risk: 'high',
+    functions: Object.freeze(['getDatabaseRaw', 'getDatabaseNormalized']),
+    requiredGates: Object.freeze([
+      'database-json-fallback-order',
+      'normalizePost-parity',
+      'mock-author-parity',
+    ]),
+  }),
+  'adapter-registry': Object.freeze({
+    risk: 'critical',
+    functions: Object.freeze(['registerAdapter', 'getActiveDriver']),
+    requiredGates: Object.freeze([
+      'adapter-registration-order',
+      'local-driver-fallback',
+      'supabase-driver-selection',
+      'missing-adapter-fail-fast',
+    ]),
+  }),
+});
+
 const GLOBAL_ALIASES = new Set([
   'getLastCreatePostError',
   'setLastCreatePostError',
@@ -314,6 +360,16 @@ function buildFunctionFlags(name, block) {
     hasUnavailableFallback: /ok:\s*false|return\s+\[\]|return\s+null|return\s+0|UNAVAILABLE|DRIVER_NAO_SUPORTA|Modo local/u.test(block),
     mutatesFacadeState: /cfg\.|_adapters|window\._KCAPI|window\.KCAPI|window\.get/u.test(block),
     exportedAlias: GLOBAL_ALIASES.has(name),
+    readsEnvironment: /\bENV\b|window\.KC_ENV|APP_ENV|DATA_DRIVER|SUPABASE_/u.test(block),
+    readsMutableConfig: /\bcfg\b/u.test(block),
+    mutatesMutableConfig: /cfg\.[A-Za-z0-9_$]+\s*=/u.test(block),
+    usesNetwork: /\bfetch\s*\(/u.test(block),
+    usesTimers: /setTimeout\s*\(|clearTimeout\s*\(/u.test(block),
+    usesStaticDatabase: /fallbackDatabaseURLs|database\.json|getDatabaseRaw/u.test(block),
+    normalizesDomainData: /normalizePost\s*\(|getMockUsersList\s*\(/u.test(block),
+    mutatesAdapterRegistry: /_adapters\s*\[[^\]]+\]\s*=/u.test(block),
+    selectsDriver: /ENV\.driver|_adapters\['supabase'\]|_adapters\['local'\]/u.test(block),
+    enforcesProductionPolicy: /PRODUCTION_REQUIRES_SUPABASE|ENV\.isProduction/u.test(block),
   };
 }
 
@@ -372,7 +428,7 @@ function buildCandidates(functions) {
       id: 'bootstrap-driver-core',
       priority: 'P3',
       title: 'Manter bootstrap/env/driver no facade por enquanto',
-      functions: ['readEnv', 'setConfig', 'withTimeout', 'fetchJSON', 'apiURL', 'getDatabaseRaw', 'getDatabaseNormalized', 'registerAdapter', 'getActiveDriver'],
+      functions: Array.from(BOOTSTRAP_CORE),
       target: 'Sem extração imediata',
       rationale: 'É a base de boot local/supabase e tem maior raio de regressão.',
       risk: 'Alto: qualquer mudança pode afetar todas as páginas e drivers.',
@@ -394,6 +450,71 @@ function buildCandidates(functions) {
   });
 }
 
+function buildBootstrapCoreDossier(functions) {
+  const byName = new Map(functions.map((fn) => [fn.name, fn]));
+  const signalKeys = [
+    'readsEnvironment',
+    'readsMutableConfig',
+    'mutatesMutableConfig',
+    'usesNetwork',
+    'usesTimers',
+    'usesStaticDatabase',
+    'normalizesDomainData',
+    'mutatesAdapterRegistry',
+    'selectsDriver',
+    'enforcesProductionPolicy',
+  ];
+
+  const domains = Object.entries(BOOTSTRAP_DOMAINS).map(([domain, meta]) => {
+    const present = meta.functions.map((name) => byName.get(name)).filter(Boolean);
+    const requiredGates = Array.from(meta.requiredGates);
+    return {
+      domain,
+      risk: meta.risk,
+      decision: 'keep-in-facade',
+      functions: present.map((fn) => ({
+        name: fn.name,
+        lines: fn.lines,
+        startLine: fn.startLine,
+        endLine: fn.endLine,
+        exported: fn.exported,
+        riskSignals: signalKeys.filter((key) => fn.flags[key]),
+      })),
+      functionCount: present.length,
+      totalLines: present.reduce((sum, fn) => sum + fn.lines, 0),
+      exportedFunctions: present.filter((fn) => fn.exported).map((fn) => fn.name),
+      requiredGates,
+    };
+  });
+
+  const mappedNames = new Set(domains.flatMap((domain) => domain.functions.map((fn) => fn.name)));
+  const bootstrapFunctions = functions.filter((fn) => fn.bucket === 'bootstrap-driver-core');
+  const uniqueGates = Array.from(new Set(domains.flatMap((domain) => domain.requiredGates)));
+
+  return {
+    decision: 'no-go-runtime-extraction',
+    rationale: 'The bucket crosses environment policy, mutable config, transport, static fallback and driver selection.',
+    functionCount: bootstrapFunctions.length,
+    totalLines: bootstrapFunctions.reduce((sum, fn) => sum + fn.lines, 0),
+    exportedFunctions: bootstrapFunctions.filter((fn) => fn.exported).map((fn) => fn.name),
+    domainCount: domains.length,
+    domains,
+    unmappedFunctions: bootstrapFunctions.filter((fn) => !mappedNames.has(fn.name)).map((fn) => fn.name),
+    requiredGateCount: uniqueGates.length,
+    requiredGates: uniqueGates,
+    recommendation: {
+      nextAction: 'add-dedicated-parity-tests-before-any-extraction',
+      firstDomainToReassess: 'transport-config',
+      blockedReasons: [
+        'public-setConfig-and-registerAdapter-contracts',
+        'local-supabase-driver-order',
+        'production-fail-closed-policy',
+        'static-database-normalization-parity',
+      ],
+    },
+  };
+}
+
 function buildReport() {
   const source = readText(FACADE_PATH);
   const facade = extractFacadeMembers(source);
@@ -403,6 +524,7 @@ function buildReport() {
   const namespaces = extractNamespaces(source);
   const modules = buildModuleInventory();
   const candidates = buildCandidates(functions);
+  const bootstrapCore = buildBootstrapCoreDossier(functions);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -421,6 +543,7 @@ function buildReport() {
     modules,
     buckets,
     candidates,
+    bootstrapCore,
     functions,
   };
 }
@@ -445,6 +568,26 @@ function toMarkdown(report) {
   lines.push('|---|---:|---:|---:|---:|---:|---:|');
   report.buckets.forEach((bucket) => {
     lines.push(`| ${bucket.bucket} | ${bucket.functions} | ${bucket.lines} | ${bucket.exported} | ${bucket.delegatesToModule} | ${bucket.usesActiveDriver} | ${bucket.hasUnavailableFallback} |`);
+  });
+  lines.push('');
+
+  lines.push('## Bootstrap driver core dossier');
+  lines.push('');
+  lines.push(`- Decision: \`${report.bootstrapCore.decision}\``);
+  lines.push(`- Functions: ${report.bootstrapCore.functionCount}`);
+  lines.push(`- Lines: ${report.bootstrapCore.totalLines}`);
+  lines.push(`- Domains: ${report.bootstrapCore.domainCount}`);
+  lines.push(`- Required gates: ${report.bootstrapCore.requiredGateCount}`);
+  lines.push('');
+  lines.push('| Domain | Risk | Functions | Lines | Exported | Decision |');
+  lines.push('|---|---|---:|---:|---|---|');
+  report.bootstrapCore.domains.forEach((domain) => {
+    lines.push(`| ${domain.domain} | ${domain.risk} | ${domain.functionCount} | ${domain.totalLines} | ${domain.exportedFunctions.join(', ') || '-'} | ${domain.decision} |`);
+  });
+  lines.push('');
+  lines.push('Required gates:');
+  report.bootstrapCore.requiredGates.forEach((gate) => {
+    lines.push(`- \`${gate}\``);
   });
   lines.push('');
 
