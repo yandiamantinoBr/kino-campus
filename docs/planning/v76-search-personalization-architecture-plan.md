@@ -13,6 +13,11 @@
 > consultas, três por módulo. O próximo candidato passa a ser PR-B, projeção local
 > atrás de flag, sem personalização e sem SQL.
 
+> **Execução V76.34 (2026-06-20):** PR-B implementa a projeção no driver local
+> sob `search.schemaFields=false`. O projetor exclui campos restritos, anexa um
+> documento imutável e o ranking compartilhado só o considera quando presente.
+> A ativação por HTML, parser de intenção, facetas e Supabase continuam bloqueados.
+
 ## 1. Decisão executiva
 
 O KinoCampus deve evoluir a busca em duas trilhas separadas e sequenciais:
@@ -415,7 +420,8 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-B**, ainda sem migration: usar `KCSearchFieldRegistry` para construir
-uma projeção estruturada no driver local, atrás de flag desligada por padrão, e
-avaliá-la contra o corpus dourado. Coleta comportamental, perfil, SQL pessoal e
-reranking seguem bloqueados até os gates de privacidade, consentimento e banco isolado.
+Executar **PR-C**, ainda sem migration: criar o parser determinístico offline e
+avaliá-lo contra o corpus dourado, sem carregar o registry nos HTMLs. A futura
+ativação do asset precisa de orçamento de carregamento para as 16 páginas que usam
+`kc-search.shared.js`, pois apenas 12 carregam hoje o builder de criação. Coleta
+comportamental, perfil, SQL pessoal e reranking seguem bloqueados.

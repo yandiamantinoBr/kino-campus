@@ -57,6 +57,22 @@
         };
   }
 
+  function getSearchFieldRegistryLoader(deps) {
+    return (deps && typeof deps.getSearchFieldRegistry === 'function')
+      ? deps.getSearchFieldRegistry
+      : function () {
+          return (typeof window !== 'undefined' && window.KCSearchFieldRegistry && typeof window.KCSearchFieldRegistry.projectCollection === 'function')
+            ? window.KCSearchFieldRegistry
+            : null;
+        };
+  }
+
+  function isFeatureEnabled(deps, name) {
+    if (deps && typeof deps.isFeatureEnabled === 'function') return deps.isFeatureEnabled(name, false) === true;
+    return !!(typeof window !== 'undefined' && window.KCFF && typeof window.KCFF.isEnabled === 'function'
+      && window.KCFF.isEnabled(name, false));
+  }
+
   function getReadLocalUserPosts(deps) {
     return (deps && typeof deps.readLocalUserPosts === 'function')
       ? deps.readLocalUserPosts
@@ -319,6 +335,13 @@
       }
 
       var collection = await getSearchCollection(deps);
+      if (isFeatureEnabled(deps, 'search.schemaFields')) {
+        var loadSearchFieldRegistry = getSearchFieldRegistryLoader(deps);
+        var searchFieldRegistry = loadSearchFieldRegistry();
+        if (searchFieldRegistry && typeof searchFieldRegistry.projectCollection === 'function') {
+          collection = searchFieldRegistry.projectCollection(collection);
+        }
+      }
       return searchShared.searchCollection(collection, params);
     }
 

@@ -15,6 +15,7 @@
 
   var VERSION = '1.0.0';
   var COMMON_FIELDS = ['titulo', 'descricao'];
+  var LEGACY_SEARCH_FIELDS = ['titulo', 'descricao'];
 
   var MODULE_SCENARIOS = {
     'compra-venda': [
@@ -132,6 +133,80 @@
       if (out.indexOf(value) === -1) out.push(value);
     });
     return out;
+  }
+
+  function readPath(source, path) {
+    var current = source;
+    var parts = String(path || '').split('.').filter(Boolean);
+    for (var i = 0; i < parts.length; i += 1) {
+      if (!current || typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, parts[i])) {
+        return undefined;
+      }
+      current = current[parts[i]];
+    }
+    return current;
+  }
+
+  function appendProjectionValues(target, value) {
+    if (Array.isArray(value)) {
+      value.forEach(function (item) { appendProjectionValues(target, item); });
+      return target;
+    }
+    if (value === undefined || value === null || value === '') return target;
+    if (typeof value === 'object') return target;
+    var normalized = typeof value === 'string' ? value.trim() : value;
+    if (normalized === '') return target;
+    if (!target.some(function (item) { return item === normalized; })) target.push(normalized);
+    return target;
+  }
+
+  function readPolicyValues(post, fieldPolicy) {
+    var values = [];
+    (fieldPolicy.payloadPaths || []).forEach(function (path) {
+      appendProjectionValues(values, readPath(post, path));
+    });
+    return values;
+  }
+
+  function searchableTerms(fieldName, values) {
+    if (fieldName === 'gratuito') {
+      if (values.indexOf(true) !== -1) return ['gratuito', 'gratis'];
+      if (values.indexOf(false) !== -1) return ['pago'];
+    }
+    return values.map(function (value) { return String(value); });
+  }
+
+  function projectPost(post) {
+    var source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
+    var fields = {};
+    var filters = {};
+    var searchParts = [];
+
+    Object.keys(FIELD_POLICIES).forEach(function (fieldName) {
+      var fieldPolicy = FIELD_POLICIES[fieldName];
+      if (!fieldPolicy.indexable && !fieldPolicy.filterable) return;
+      var values = readPolicyValues(source, fieldPolicy);
+      if (!values.length) return;
+      fields[fieldName] = values;
+      if (fieldPolicy.filterable) filters[fieldName] = values;
+      if (fieldPolicy.indexable && LEGACY_SEARCH_FIELDS.indexOf(fieldName) === -1) {
+        searchParts = searchParts.concat(searchableTerms(fieldName, values));
+      }
+    });
+
+    return deepFreeze({
+      version: VERSION,
+      module: String(source.module || source.modulo || '').trim(),
+      searchText: unique(searchParts.map(function (value) { return String(value).trim(); }).filter(Boolean)).join(' '),
+      fields: fields,
+      filters: filters
+    });
+  }
+
+  function projectCollection(posts) {
+    return (Array.isArray(posts) ? posts : []).map(function (post) {
+      return Object.assign({}, post, { kcSearchProjection: projectPost(post) });
+    });
   }
 
   function assertDependencies(schema, fieldsApi) {
@@ -281,6 +356,8 @@
     FIELD_POLICIES: FIELD_POLICIES,
     buildRegistry: buildRegistry,
     validateRegistry: validateRegistry,
-    findField: findField
+    findField: findField,
+    projectPost: projectPost,
+    projectCollection: projectCollection
   });
 }));

@@ -213,6 +213,8 @@ function buildDeps(overrides = {}) {
     getDatabaseRaw: async () => ({ anuncios: seedPosts }),
     getDatabaseNormalized: async () => ({ posts: seedPosts.map((post) => ({ ...post })) }),
     getSearchShared: () => null,
+    getSearchFieldRegistry: () => null,
+    isFeatureEnabled: () => false,
     readLocalUserPosts: () => localPosts.map((post) => ({ ...post })),
     enrichPostWithRatings: (post) => ({ ...(post || {}), _enriched: true }),
     enrichPostsWithRatings: (posts) => (Array.isArray(posts) ? posts.map((post) => ({ ...(post || {}), _enriched: true })) : []),
@@ -319,6 +321,50 @@ describe('local.posts-read.adapter.js - leitura e busca', () => {
 
     expect(searchCollection).toHaveBeenCalledWith(expect.any(Array), { q: 'evento' });
     expect(result).toEqual([{ id: 'seed-2' }]);
+  });
+
+  test('flag desligada preserva a coleção original sem projetar', async () => {
+    const searchCollection = jest.fn().mockReturnValue([]);
+    const projectCollection = jest.fn();
+
+    await postsRead().searchPosts({ q: 'evento' }, buildDeps({
+      getSearchShared: () => ({ searchCollection }),
+      getSearchFieldRegistry: () => ({ projectCollection }),
+      isFeatureEnabled: () => false,
+    }));
+
+    expect(projectCollection).not.toHaveBeenCalled();
+    expect(searchCollection.mock.calls[0][0][0]).not.toHaveProperty('kcSearchProjection');
+  });
+
+  test('flag ligada projeta a coleção antes do ranking local', async () => {
+    const searchCollection = jest.fn().mockImplementation((posts) => posts);
+    const projectCollection = jest.fn().mockImplementation((posts) => posts.map((post) => ({
+      ...post,
+      kcSearchProjection: { searchText: 'projetado' },
+    })));
+
+    const result = await postsRead().searchPosts({ q: 'projetado' }, buildDeps({
+      getSearchShared: () => ({ searchCollection }),
+      getSearchFieldRegistry: () => ({ projectCollection }),
+      isFeatureEnabled: (name) => name === 'search.schemaFields',
+    }));
+
+    expect(projectCollection).toHaveBeenCalledTimes(1);
+    expect(searchCollection.mock.calls[0][0][0].kcSearchProjection.searchText).toBe('projetado');
+    expect(result[0]).toHaveProperty('kcSearchProjection');
+  });
+
+  test('flag ligada sem registry degrada para a busca anterior', async () => {
+    const searchCollection = jest.fn().mockReturnValue([{ id: 'legacy-result' }]);
+    const result = await postsRead().searchPosts({ q: 'evento' }, buildDeps({
+      getSearchShared: () => ({ searchCollection }),
+      getSearchFieldRegistry: () => null,
+      isFeatureEnabled: () => true,
+    }));
+
+    expect(result).toEqual([{ id: 'legacy-result' }]);
+    expect(searchCollection.mock.calls[0][0][0]).not.toHaveProperty('kcSearchProjection');
   });
 
   test('searchPosts faz fallback para getPosts quando nao ha search shared', async () => {

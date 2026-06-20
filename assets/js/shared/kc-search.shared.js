@@ -339,6 +339,11 @@
     var normalizedDescription = normalizeText(description);
     var normalizedCategory = normalizeText(category);
     var normalizedSubcategory = normalizeText(subcategory);
+    var projection = post && post.kcSearchProjection && typeof post.kcSearchProjection === 'object'
+      ? post.kcSearchProjection
+      : null;
+    var projectionText = projection ? String(projection.searchText || '') : '';
+    var normalizedProjection = normalizeText(projectionText);
 
     var score = 0;
 
@@ -348,18 +353,21 @@
     if (normalizedCategory && normalizedCategory.indexOf(normalizedQuery) !== -1) score += 1.5;
     if (normalizedSubcategory && normalizedSubcategory.indexOf(normalizedQuery) !== -1) score += 1.5;
     if (scoreTags(tags, [normalizedQuery], 2.2) > 0) score += 2.2;
+    if (normalizedProjection && normalizedProjection.indexOf(normalizedQuery) !== -1) score += 1.4;
 
     score += scoreTextMatches(title, expandedTerms, 3.4);
     score += scoreTags(tags, expandedTerms, 2.6);
     score += scoreTextMatches(description, expandedTerms, 1.3);
     score += scoreTextMatches(category, expandedTerms, 1.1);
     score += scoreTextMatches(subcategory, expandedTerms, 1.1);
+    score += scoreTextMatches(projectionText, expandedTerms, 1.2);
 
     // Passe fuzzy nos campos-chave (typos / palavras incompletas) — peso < exato.
     score += scoreFuzzyField(title, expandedTerms, 2.2);
     score += scoreFuzzyField(category, expandedTerms, 1.0);
     score += scoreFuzzyField(subcategory, expandedTerms, 1.0);
     score += scoreFuzzyTags(tags, expandedTerms, 1.6);
+    score += scoreFuzzyField(projectionText, expandedTerms, 0.8);
 
     return score;
   }

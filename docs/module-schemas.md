@@ -1,6 +1,6 @@
 # KinoCampus - Schemas dos Modulos (`window._KCCreatePost.schema.modules`)
 
-**Versão:** v76.33.0 · **Atualizado em:** 2026-06-19
+**Versão:** v76.34.0 · **Atualizado em:** 2026-06-20
 
 ## Como funciona
 
@@ -13,6 +13,11 @@ de `window._KCCreatePost.fields.buildFieldsForModule` o contrato
 `KCSearchFieldRegistry`. O asset ainda não é carregado por HTML e não muda a busca
 em produção; ele impede que futuras projeções local/Supabase criem uma taxonomia
 paralela aos formulários.
+
+Na V76.34, o registro também expõe `projectPost`/`projectCollection`. O driver
+local só anexa `kcSearchProjection` quando a flag `search.schemaFields` está
+explicitamente ativa. A flag padrão é `false` e o asset continua fora dos HTMLs,
+portanto não há mudança na busca pública desta etapa.
 
 Esse schema define:
 - `categoryGroupId`: qual `tagGroup` representa a categoria principal do post
