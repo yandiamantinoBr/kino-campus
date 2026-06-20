@@ -21,6 +21,7 @@
     "audit:css": "node scripts/audit-css-ownership.js",
     "audit:css-baseline": "node scripts/capture-css-visual-baseline.js",
     "audit:kcapi-residual": "node scripts/audit-kcapi-facade-residual.js",
+    "benchmark:search-shadow": "node scripts/benchmark-search-shadow.js",
     "cadu:dry-run": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=quick",
     "cadu:dry-run:full": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=full",
     "cadu:publish:quick": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=quick",

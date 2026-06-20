@@ -13,12 +13,18 @@
 }(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var SUPPORTED_FILTERS = [
     'area', 'areaText', 'category', 'condition', 'destination', 'employmentType',
-    'features', 'free', 'housingType', 'itemType', 'locationAlias', 'locationText',
-    'origin', 'price', 'priceMax', 'region', 'rewardMin', 'seatsMin', 'time', 'workMode'
+    'dayOfMonth', 'features', 'free', 'housingType', 'itemType', 'locationAlias',
+    'locationText', 'origin', 'price', 'priceMax', 'region', 'relativeDate',
+    'rewardMin', 'seatsMin', 'time', 'timePeriod', 'weekday', 'workMode'
   ];
+  var DEFERRED_FILTERS = ['registrationStatus'];
+  var WEEKDAY_INDEX = {
+    sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+    thursday: 4, friday: 5, saturday: 6
+  };
 
   function normalizeText(value) {
     return String(value == null ? '' : value)
@@ -81,7 +87,77 @@
     }).filter(Number.isFinite);
   }
 
-  function matchesFilter(post, key, expected) {
+  function dateKey(value) {
+    var text = String(value == null ? '' : value).trim();
+    var match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return match[1] + '-' + match[2] + '-' + match[3];
+    var parsed = Date.parse(text);
+    return Number.isFinite(parsed) ? new Date(parsed).toISOString().slice(0, 10) : '';
+  }
+
+  function dateNumber(value) {
+    var key = dateKey(value);
+    if (!key) return NaN;
+    var parts = key.split('-').map(Number);
+    return Date.UTC(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  function addDays(value, amount) {
+    var time = dateNumber(value);
+    if (!Number.isFinite(time)) return '';
+    return new Date(time + Number(amount || 0) * 86400000).toISOString().slice(0, 10);
+  }
+
+  function postDateRange(post) {
+    var starts = fieldValues(post, ['data']).map(dateKey).filter(Boolean);
+    var ends = fieldValues(post, ['data_fim']).map(dateKey).filter(Boolean);
+    if (!starts.length) return null;
+    var start = starts[0];
+    var end = ends[0] || start;
+    if (dateNumber(end) < dateNumber(start)) end = start;
+    return { start: start, end: end };
+  }
+
+  function rangeContainsDate(range, expected) {
+    if (!range) return false;
+    var value = dateNumber(expected);
+    return Number.isFinite(value) && value >= dateNumber(range.start) && value <= dateNumber(range.end);
+  }
+
+  function rangeHasDatePart(range, predicate) {
+    if (!range) return false;
+    var start = dateNumber(range.start);
+    var end = dateNumber(range.end);
+    var maxEnd = Math.min(end, start + 370 * 86400000);
+    for (var time = start; time <= maxEnd; time += 86400000) {
+      if (predicate(new Date(time))) return true;
+    }
+    return false;
+  }
+
+  function parseHour(value) {
+    var match = String(value == null ? '' : value).match(/\b([01]?\d|2[0-3])(?::([0-5]\d))?/);
+    return match ? Number(match[1]) : NaN;
+  }
+
+  function resolveReferenceDate(options) {
+    var explicit = options && (options.referenceDate || options.now || options.nowValue);
+    return dateKey(explicit || new Date().toISOString());
+  }
+
+  function canEvaluateFilter(posts, key, context) {
+    if (['relativeDate', 'weekday', 'dayOfMonth'].indexOf(key) !== -1) {
+      return !!context.referenceDate && posts.some(function (post) { return !!postDateRange(post); });
+    }
+    if (key === 'timePeriod') {
+      return posts.some(function (post) {
+        return fieldValues(post, ['hora', 'horario']).some(function (value) { return Number.isFinite(parseHour(value)); });
+      });
+    }
+    return true;
+  }
+
+  function matchesFilter(post, key, expected, context) {
     if (key === 'category' || key === 'housingType' || key === 'itemType') {
       return containsValue(categoryValues(post), expected);
     }
@@ -105,6 +181,27 @@
       return normalizeText(searchText).indexOf(normalizeText(expected)) !== -1;
     }
     if (key === 'time') return containsValue(fieldValues(post, ['horario', 'hora']), expected);
+    if (key === 'relativeDate') {
+      if (expected !== 'tomorrow') return false;
+      return rangeContainsDate(postDateRange(post), addDays(context.referenceDate, 1));
+    }
+    if (key === 'weekday') {
+      var weekday = WEEKDAY_INDEX[normalizeText(expected)];
+      return Number.isInteger(weekday) && rangeHasDatePart(postDateRange(post), function (date) {
+        return date.getUTCDay() === weekday;
+      });
+    }
+    if (key === 'dayOfMonth') {
+      return rangeHasDatePart(postDateRange(post), function (date) {
+        return date.getUTCDate() === Number(expected);
+      });
+    }
+    if (key === 'timePeriod') {
+      return fieldValues(post, ['hora', 'horario']).some(function (value) {
+        var hour = parseHour(value);
+        return expected === 'night' && Number.isFinite(hour) && (hour >= 18 || hour < 6);
+      });
+    }
     if (key === 'free') {
       return fieldValues(post, ['gratuito']).some(function (value) { return Boolean(value) === Boolean(expected); });
     }
@@ -123,17 +220,40 @@
     return true;
   }
 
-  function applySupportedFilters(posts, filters) {
+  function applySupportedFilters(posts, filters, options) {
     var source = filters && typeof filters === 'object' ? filters : {};
+    var list = Array.isArray(posts) ? posts : [];
+    var context = { referenceDate: resolveReferenceDate(options) };
     var keys = Object.keys(source);
-    var supported = keys.filter(function (key) { return SUPPORTED_FILTERS.indexOf(key) !== -1; });
-    var unsupported = keys.filter(function (key) { return SUPPORTED_FILTERS.indexOf(key) === -1; });
+    var supported = keys.filter(function (key) {
+      return SUPPORTED_FILTERS.indexOf(key) !== -1 && canEvaluateFilter(list, key, context);
+    });
+    var deferred = keys.filter(function (key) {
+      return DEFERRED_FILTERS.indexOf(key) !== -1 ||
+        (SUPPORTED_FILTERS.indexOf(key) !== -1 && !canEvaluateFilter(list, key, context));
+    });
+    var unsupported = keys.filter(function (key) {
+      return SUPPORTED_FILTERS.indexOf(key) === -1 && DEFERRED_FILTERS.indexOf(key) === -1;
+    });
     return {
-      posts: (Array.isArray(posts) ? posts : []).filter(function (post) {
-        return supported.every(function (key) { return matchesFilter(post, key, source[key]); });
+      posts: list.filter(function (post) {
+        return supported.every(function (key) { return matchesFilter(post, key, source[key], context); });
       }),
       supportedFilters: supported,
+      deferredFilters: deferred,
       unsupportedFilters: unsupported
+    };
+  }
+
+  function applyIntent(posts, moduleKey, intent) {
+    var target = normalizeKey(intent);
+    // Em moradia, "procuro quarto" descreve a necessidade do usuário, não uma
+    // publicação da categoria "procurando". O tipo estruturado continua dominante.
+    var filterable = target && target !== 'any' && moduleKey !== 'moradia';
+    if (!filterable) return { posts: posts, applied: false };
+    return {
+      posts: posts.filter(function (post) { return containsValue(categoryValues(post), target); }),
+      applied: true
     };
   }
 
@@ -165,16 +285,30 @@
     assertDependencies(options);
     var sourcePosts = Array.isArray(posts) ? posts : [];
     var limit = Math.max(1, Math.min(50, Number(options.limit) || 10));
+    var surface = options.surface === 'dropdown' ? 'dropdown' : 'results';
+    var publicOnly = options.publicOnly !== false;
+    var hideClosed = surface === 'dropdown' || options.hideClosed === true;
     var plan = options.parser.parse(query, { registry: options.registry });
-    var legacy = options.searchShared.searchCollection(sourcePosts, { q: query, limit: limit });
+    var searchPolicy = {
+      q: query,
+      limit: limit,
+      publicOnly: publicOnly,
+      hideClosed: hideClosed,
+      now: options.now || options.nowValue
+    };
+    var legacy = options.searchShared.searchCollection(sourcePosts, searchPolicy);
     var projected = options.projector.projectCollection(sourcePosts);
     var poolLimit = Math.max(50, limit * 5);
     var candidatePool = options.searchShared.searchCollection(projected, {
       q: query,
       module: plan.module || undefined,
-      limit: poolLimit
+      limit: poolLimit,
+      publicOnly: publicOnly,
+      hideClosed: hideClosed,
+      now: options.now || options.nowValue
     });
-    var filtered = applySupportedFilters(candidatePool, plan.filters);
+    var intent = applyIntent(candidatePool, plan.module, plan.intent);
+    var filtered = applySupportedFilters(intent.posts, plan.filters, options);
     var candidate = filtered.posts.slice(0, limit);
     var legacySummary = summarize(legacy);
     var candidateSummary = summarize(candidate);
@@ -195,8 +329,15 @@
         overlap: candidateIds.filter(function (id) { return legacyIds.indexOf(id) !== -1; }),
         entered: difference(candidateIds, legacyIds),
         exited: difference(legacyIds, candidateIds),
+        intentApplied: intent.applied,
         supportedFilters: filtered.supportedFilters,
+        deferredFilters: filtered.deferredFilters,
         unsupportedFilters: filtered.unsupportedFilters
+      },
+      policy: {
+        surface: surface,
+        publicOnly: publicOnly,
+        hideClosed: hideClosed
       }
     };
   }
@@ -204,6 +345,7 @@
   return Object.freeze({
     VERSION: VERSION,
     SUPPORTED_FILTERS: SUPPORTED_FILTERS.slice(),
+    DEFERRED_FILTERS: DEFERRED_FILTERS.slice(),
     applySupportedFilters: applySupportedFilters,
     runShadow: runShadow
   });

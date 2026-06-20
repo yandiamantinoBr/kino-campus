@@ -1,8 +1,8 @@
 # Estrutura do Repositório - KinoCampus
 
-**Versão:** v76.36.0
+**Versão:** v76.37.0
 **Data:** 2026-06-20
-**Atualizado em:** v76.36.0 - pipeline shadow offline da busca estruturada
+**Atualizado em:** v76.37.0 - semântica temporal/status e benchmark shadow
 
 ---
 
@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 185 suites / 3742 testes + Playwright 10 specs E2E |
+| Testes | Jest 186 suites / 3750 testes + Playwright 10 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -102,7 +102,7 @@ kino-campus/
 |   `-- qa/                        QA ativo
 |-- tests/
 |   |-- unit/                     26 suites
-|   |-- integration/              128 suites
+|   |-- integration/              129 suites
 |   |-- contract/                 12 suites
 |   |-- structure/                14 suites
 |   |-- a11y/                     5 suites
@@ -117,6 +117,7 @@ kino-campus/
 |   |-- audit-css-ownership.js
 |   |-- capture-css-visual-baseline.js
 |   |-- audit-kcapi-facade-residual.js
+|   |-- benchmark-search-shadow.js
 |   `-- inject-env.js
 |-- admin/                         6 HTMLs admin
 |-- *.html                         21 HTMLs na raiz
@@ -269,7 +270,8 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:routes` | Valida 22 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantém 185/185 suites e 3742/3742 testes Jest |
+| `npm test` | Mantém 186/186 suites e 3750/3750 testes Jest |
+| `npm run benchmark:search-shadow` | Mede 12 cenários sintéticos dos seis módulos, sem dados reais |
 | `npx playwright test --list` | Lista 10 specs / 68 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |

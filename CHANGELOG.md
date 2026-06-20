@@ -2,6 +2,24 @@
 
 ---
 
+## [v76.37] - 2026-06-20 - semântica temporal e benchmark shadow
+
+### Adicionado
+
+- `KCSearchShadowPipeline` 1.1 aplica intenção dos grupos de criação e separa políticas de encerramento de resultados/dropdown.
+- Datas de eventos suportam dia da semana, dia do mês e intervalos; horários suportam período noturno.
+- Filtros conhecidos sem campo confiável são declarados em `deferredFilters`, sem eliminação silenciosa.
+- Benchmark sintético executável cobre 12 cenários, dois por módulo, com recall, precisão, falsos positivos, estabilidade e latência.
+- O benchmark atingiu 12/12 casos, recall/precisão/estabilidade de 100% e zero falso positivo.
+
+### Segurança
+
+- A data de caronas permanece diferida porque o formulário não coleta esse dado; não há inferência pela data de publicação.
+- Relatórios do pipeline e benchmark não reproduzem consulta crua, descrição, contato ou link.
+- Assets continuam fora dos HTMLs; busca pública, Supabase, perfil, analytics e personalização permanecem inalterados.
+
+---
+
 ## [v76.36] - 2026-06-20 - pipeline shadow da busca estruturada
 
 ### Adicionado
