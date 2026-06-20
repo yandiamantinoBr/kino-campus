@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.35.0 · **Atualizado em:** 2026-06-20
+**Versão:** v76.36.0 · **Atualizado em:** 2026-06-20
 
-> Documenta as 184 suites Jest + 10 specs Playwright: o que cada uma cobre,
+> Documenta as 185 suites Jest + 10 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -12,7 +12,7 @@
 1. [Filosofia](#1-filosofia)
 2. [Métricas atuais](#2-métricas-atuais)
 3. [Diretório unit/ — 26 suites](#3-diretório-unit--26-suites)
-4. [Diretório integration/ — 127 suites](#4-diretório-integration--127-suites)
+4. [Diretório integration/ — 128 suites](#4-diretório-integration--128-suites)
 5. [Diretório contract/ — 12 suites](#5-diretório-contract--12-suites)
 6. [Diretório structure/ — 14 suites](#6-diretório-structure--14-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 184 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todos os 185 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -50,21 +50,21 @@
 | Diretório | Suites | Domínio principal |
 |-----------|--------|------------------|
 | `tests/unit/` | **26** | Módulos utilitários individuais |
-| `tests/integration/` | **127** | Controllers, adapters, sub-módulos KCAPI e parser de busca |
+| `tests/integration/` | **128** | Controllers, adapters, sub-módulos KCAPI, parser e pipeline shadow de busca |
 | `tests/contract/` | **12** | Contratos públicos, exports e registro de campos de busca |
 | `tests/structure/` | **14** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
 | `tests/e2e/` | **10** | Playwright (browser real, HTTP real) |
-| **Total** | **194** | (184 Jest + 10 Playwright specs) |
+| **Total** | **195** | (185 Jest + 10 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 184 suites · 3732 testes
+Jest: 185 suites · 3742 testes
 Playwright: 10 specs · 68 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥184 passed, 184 total` e `≥3732 passed, 3732 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥185 passed, 185 total` e `≥3742 passed, 3742 total`.
 
 ### Gate CI essencial
 
@@ -115,11 +115,11 @@ A tabela abaixo destaca as suites principais; a contagem canônica vem do filesy
 
 ---
 
-## 4. Diretório integration/ — 126 suites
+## 4. Diretório integration/ — 128 suites
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
 
-A tabela abaixo é agrupada por domínio e não lista todos os 126 arquivos individualmente.
+A tabela abaixo é agrupada por domínio e não lista todos os 128 arquivos individualmente.
 
 ### Sub-grupo: Controllers públicos (6 suites)
 
@@ -243,6 +243,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 126 arquivos indi
 | `kc-ranking-session.test.js` | Sessão de ranking, cache SWR |
 | `kc-search.shared.test.js` | `kc-search.shared.js`: busca compartilhada entre páginas |
 | `kc-search-query-parser.test.js` | Parser offline: corpus, variantes, limites e ausência de PII |
+| `kc-search-shadow-pipeline.test.js` | Comparação offline legado/candidato, filtros estruturados, determinismo e saída sanitizada |
 | `kc-supabase-client.test.js` | `kc-supabase.client.js`: client facade Supabase |
 | `my-posts-swr.test.js` | `my-posts.controller.js`: SWR de "Meus Posts" |
 | `notification-delivery-foundation.test.js` | Fundação do sistema de entrega de notificações |
@@ -489,8 +490,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥184 passed, 184 total
-  Tests:       ≥3732 passed, 3732 total
+  Test Suites: ≥185 passed, 185 total
+  Tests:       ≥3742 passed, 3742 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

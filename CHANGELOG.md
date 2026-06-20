@@ -2,6 +2,23 @@
 
 ---
 
+## [v76.36] - 2026-06-20 - pipeline shadow da busca estruturada
+
+### Adicionado
+
+- `KCSearchShadowPipeline` combina parser, registro, projeção e busca compartilhada em uma comparação offline entre legado e candidato estruturado.
+- Filtros suportados são aplicados de forma determinística; filtros ainda pendentes são reportados sem eliminar silenciosamente resultados.
+- A saída de diagnóstico contém apenas IDs, pontuações, plano sanitizado e diferenças de conjuntos.
+- 10 testes cobrem dependências, seis classes de filtro, determinismo, limite, imutabilidade e ausência de dados livres.
+
+### Segurança
+
+- O asset permanece fora de todos os HTMLs e não altera `/search-results.html`, `kcSearchDropdown`, Supabase, ranking público ou flags.
+- Consulta crua, conteúdo, contato e link não são incluídos na saída shadow.
+- Personalização e coleta comportamental permanecem em No-Go até consentimento, governança e contratos de dados próprios.
+
+---
+
 ## [v76.35] - 2026-06-20 - parser determinístico de consultas
 
 ### Adicionado

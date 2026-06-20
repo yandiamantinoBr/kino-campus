@@ -6,20 +6,20 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.35.0 (2026-06-20)** — inclui parser determinístico offline; runtime frontend `8.6.1` inalterado.
+> **Atualizado em v76.36.0 (2026-06-20)** — inclui comparação shadow da busca estruturada; runtime frontend `8.6.1` inalterado.
 
 | Item | Quantidade atual |
 |------|------------------|
 | páginas HTML públicas canônicas na raiz | `22` |
 | páginas HTML administrativas | `6` |
 | total de páginas HTML canônicas | `28` |
-| arquivos JS em `assets/js/` (10 grupos canônicos) | `158` |
+| arquivos JS em `assets/js/` (10 grupos canônicos) | `159` |
 | controllers em `assets/js/controllers/` (public + admin) | `48` |
 | adapters em `assets/js/adapters/` (local + supabase) | `21` |
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `10` |
-| suites de teste Jest em `tests/` | `184` |
-| testes Jest totais | `3732` |
+| suites de teste Jest em `tests/` | `185` |
+| testes Jest totais | `3742` |
 | specs E2E Playwright | `10` |
 
 ## Princípio estrutural
@@ -86,7 +86,7 @@ Em produção, o build `node scripts/inject-env.js` injeta os valores e força o
 
 - Core (12): `kc-auth-callback.js`, `kc-auth.ui.js`, `kc-consent.js`, `kc-core.js`, `kc-core-widgets.js`, `kc-i18n.js`, `kc-notifications.js`, `kc-post-model.js`, `kc-profiles.client.js`, `kc-public-shell.js`, `kc-theme.js`, `kc-user-posts.js`
 - Features (23): `kc-create-post.js` + 6 sub-módulos; `kc-ads.js`, `kc-events-calendar.js`, `kc-privacy-analytics.js`, `kc-search.js`, `kc-lazy-loader.js`, outros
-- Shared (9): `account-profile.shared.js`, `help.shared.js`, `home-categories.shared.js`, `kc-comments.shared.js`, `kc-search-fields.shared.js`, `kc-search-query-parser.shared.js`, `kc-search.shared.js`, `ods.shared.js`, `search-analytics.shared.js`
+- Shared (10): `account-profile.shared.js`, `help.shared.js`, `home-categories.shared.js`, `kc-comments.shared.js`, `kc-search-fields.shared.js`, `kc-search-query-parser.shared.js`, `kc-search-shadow-pipeline.shared.js`, `kc-search.shared.js`, `ods.shared.js`, `search-analytics.shared.js`
 
 ### Camada 5 - controllers de página (`assets/js/controllers/`, 48 controllers)
 
@@ -235,5 +235,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.33.0 (2026-06-19):** adiciona `KCSearchFieldRegistry` não carregado, corpus sintético de 18 consultas e 39 contratos; busca, HTML, SQL e personalização permanecem inalterados.
 - **v76.34.0 (2026-06-20):** adiciona projeção estruturada ao caminho local sob `search.schemaFields=false`, com fallback legado e nove contratos adicionais; Supabase e UI permanecem inalterados.
 - **v76.35.0 (2026-06-20):** adiciona parser pt-BR offline, valida 18 consultas principais e 22 variantes e mantém o asset fora dos HTMLs.
+- **v76.36.0 (2026-06-20):** adiciona pipeline shadow offline, compara legado/candidato com saída sanitizada e mantém o asset fora dos HTMLs.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

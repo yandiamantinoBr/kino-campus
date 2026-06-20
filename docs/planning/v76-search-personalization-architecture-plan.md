@@ -23,6 +23,11 @@
 > e filtros; 22/22 variantes preservaram módulo e intenção. Entrada desconhecida
 > não recebe classificação forçada e consultas são limitadas a 240 caracteres.
 
+> **Execução V76.36 (2026-06-20):** PR-D combina parser, registro, projeção e busca
+> compartilhada em pipeline shadow offline. A comparação não contém consulta crua,
+> contato, link ou conteúdo; filtros não suportados são explicitados e o asset segue
+> fora dos HTMLs, sem alterar resultado público, perfil, analytics ou Supabase.
+
 ## 1. Decisão executiva
 
 O KinoCampus deve evoluir a busca em duas trilhas separadas e sequenciais:
@@ -425,8 +430,9 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-D**, ainda sem migration: combinar parser e projeção em um pipeline
-shadow inteiramente testável, sem carregar assets nos HTMLs nem alterar resultados.
-A futura ativação precisa de orçamento de carregamento para as 16 páginas que usam
-`kc-search.shared.js`, pois apenas 12 carregam hoje o builder de criação. Coleta
-comportamental, perfil, SQL pessoal e reranking seguem bloqueados.
+Executar **PR-E**, ainda sem migration: ampliar o pipeline shadow com semântica
+temporal/status e um benchmark sintético maior que meça cobertura, falsos positivos,
+latência e estabilidade por módulo. A futura ativação precisa de orçamento de
+carregamento para as 16 páginas que usam `kc-search.shared.js`, pois apenas 12
+carregam hoje o builder de criação. Coleta comportamental, perfil, SQL pessoal e
+reranking seguem bloqueados.
