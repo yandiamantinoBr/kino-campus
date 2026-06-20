@@ -1,0 +1,115 @@
+{
+  "version": "1.0.0",
+  "locale": "pt-BR",
+  "purpose": "Corpus sintético para parser, filtros e avaliação offline; não contém consultas reais de usuários.",
+  "queries": [
+    {
+      "id": "moradia-budget-campus",
+      "query": "quarto até 900 perto do samambaia",
+      "variants": ["quarto ate 900 campus II", "qaurto 900 samambaia"],
+      "expected": { "module": "moradia", "intent": "oferta", "filters": { "housingType": "quartos", "priceMax": 900, "locationAlias": "campus-samambaia" } }
+    },
+    {
+      "id": "moradia-seeking-region",
+      "query": "procuro república setor universitário aceita pets",
+      "variants": ["procurando republica setor universitario pet"],
+      "expected": { "module": "moradia", "intent": "procurando", "filters": { "housingType": "republicas", "region": "setor-universitario", "features": ["aceita-pets"] } }
+    },
+    {
+      "id": "moradia-furnished",
+      "query": "apartamento mobiliado até 1500",
+      "variants": ["ap mobiliado maximo 1500"],
+      "expected": { "module": "moradia", "intent": "oferta", "filters": { "housingType": "apartamentos", "priceMax": 1500, "features": ["mobiliado"] } }
+    },
+    {
+      "id": "caronas-route-time",
+      "query": "carona samambaia centro amanhã 18h",
+      "variants": ["carona campus II pro centro amanha 18:00"],
+      "expected": { "module": "caronas", "intent": "any", "filters": { "origin": "campus-samambaia", "destination": "centro", "relativeDate": "tomorrow", "time": "18:00" } }
+    },
+    {
+      "id": "caronas-seeking-city",
+      "query": "procuro carona para cidade de goiás sexta",
+      "variants": ["preciso de carona p cidade de goias 6a"],
+      "expected": { "module": "caronas", "intent": "procuro", "filters": { "destination": "cidade-de-goias", "weekday": "friday" } }
+    },
+    {
+      "id": "caronas-offer-seats",
+      "query": "ofereço carona para aparecida com 3 vagas",
+      "variants": ["ofereco carona aparecida tres lugares"],
+      "expected": { "module": "caronas", "intent": "ofereco", "filters": { "destination": "aparecida-de-goiania", "seatsMin": 3 } }
+    },
+    {
+      "id": "opportunity-internship-remote",
+      "query": "estágio remoto computação",
+      "variants": ["estagio home office tecnologia", "estagio remto computacao"],
+      "expected": { "module": "oportunidades", "intent": "estagios", "filters": { "workMode": "remoto", "area": "tecnologia" } }
+    },
+    {
+      "id": "opportunity-research-scholarship",
+      "query": "bolsa de pesquisa para pós-graduação",
+      "variants": ["bolsa pesquisa pos graduacao"],
+      "expected": { "module": "oportunidades", "intent": "pesquisa", "filters": { "areaText": "pós-graduação" } }
+    },
+    {
+      "id": "opportunity-job-hybrid",
+      "query": "emprego híbrido clt em goiânia",
+      "variants": ["vaga hibrida CLT goiania"],
+      "expected": { "module": "oportunidades", "intent": "empregos", "filters": { "workMode": "hibrido", "employmentType": "clt", "locationAlias": "goiania" } }
+    },
+    {
+      "id": "events-free-weekend",
+      "query": "evento gratuito sábado campus colemar",
+      "variants": ["evento gratis sabado colemar natal e silva"],
+      "expected": { "module": "eventos", "intent": "any", "filters": { "free": true, "weekday": "saturday", "locationAlias": "campus-colemar" } }
+    },
+    {
+      "id": "events-workshop-open",
+      "query": "workshop com inscrições abertas",
+      "variants": ["work shop inscricoes abertas"],
+      "expected": { "module": "eventos", "intent": "workshops", "filters": { "registrationStatus": "open" } }
+    },
+    {
+      "id": "events-academic-date",
+      "query": "seminário acadêmico dia 25 à noite",
+      "variants": ["seminario academico 25 noturno"],
+      "expected": { "module": "eventos", "intent": "academicos", "filters": { "dayOfMonth": 25, "timePeriod": "night" } }
+    },
+    {
+      "id": "lost-wallet-library",
+      "query": "carteira perdida na biblioteca central",
+      "variants": ["perdi carteira biblioteca", "carteira peridida BC"],
+      "expected": { "module": "achados-perdidos", "intent": "perdidos", "filters": { "locationAlias": "biblioteca-central" } }
+    },
+    {
+      "id": "found-document-block",
+      "query": "achei documento no bloco b",
+      "variants": ["documento encontrado bloco B"],
+      "expected": { "module": "achados-perdidos", "intent": "encontrados", "filters": { "itemType": "documentos", "locationText": "bloco b" } }
+    },
+    {
+      "id": "lost-electronics-reward",
+      "query": "fone perdido com recompensa 50 reais",
+      "variants": ["perdi headphone recompensa R$ 50"],
+      "expected": { "module": "achados-perdidos", "intent": "perdidos", "filters": { "itemType": "eletronicos", "rewardMin": 50 } }
+    },
+    {
+      "id": "market-used-notebook-budget",
+      "query": "notebook usado até 2000",
+      "variants": ["notbook seminovo max 2 mil"],
+      "expected": { "module": "compra-venda", "intent": "vendo", "filters": { "category": "eletronicos", "condition": "usado", "priceMax": 2000 } }
+    },
+    {
+      "id": "market-seeking-book",
+      "query": "procuro livro de cálculo",
+      "variants": ["compro livro calculo", "quero apostila de cálculo"],
+      "expected": { "module": "compra-venda", "intent": "compro", "filters": { "category": "livros" } }
+    },
+    {
+      "id": "market-free-ticket",
+      "query": "vendo ingresso conpeex 30 reais",
+      "variants": ["ingresso CONPEEX R$30"],
+      "expected": { "module": "compra-venda", "intent": "vendo", "filters": { "category": "ingressos", "price": 30 } }
+    }
+  ]
+}

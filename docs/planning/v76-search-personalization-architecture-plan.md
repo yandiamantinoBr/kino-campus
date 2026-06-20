@@ -5,6 +5,14 @@
 **Escopo:** `/search-results.html`, `kcSearchDropdown`, campos de criação, perfil de preferências, ranking e governança  
 **Fora deste pacote:** runtime, HTML, CSS, SQL, migrations, providers, secrets, deploy e alteração de dados reais
 
+> **Execução V76.33 (2026-06-19):** a Fase 0/PR-A foi materializada em
+> `assets/js/shared/kc-search-fields.shared.js`, ainda sem carregamento por HTML.
+> O contrato deriva módulos, grupos, opções e campos condicionais do schema/builder
+> de criação; políticas manuais ficam limitadas a operadores, paths e privacidade.
+> O corpus sintético `tests/fixtures/search-golden-queries.v1.json` contém 18
+> consultas, três por módulo. O próximo candidato passa a ser PR-B, projeção local
+> atrás de flag, sem personalização e sem SQL.
+
 ## 1. Decisão executiva
 
 O KinoCampus deve evoluir a busca em duas trilhas separadas e sequenciais:
@@ -407,4 +415,7 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **Fase 0 + PR-A**, ainda sem migration: transformar este inventário em `KCSearchFieldRegistry`, golden queries e testes de paridade. Coleta comportamental, perfil, SQL pessoal e reranking seguem bloqueados até os gates de privacidade, consentimento e banco isolado.
+Executar **PR-B**, ainda sem migration: usar `KCSearchFieldRegistry` para construir
+uma projeção estruturada no driver local, atrás de flag desligada por padrão, e
+avaliá-la contra o corpus dourado. Coleta comportamental, perfil, SQL pessoal e
+reranking seguem bloqueados até os gates de privacidade, consentimento e banco isolado.

@@ -1,12 +1,18 @@
 # KinoCampus - Schemas dos Modulos (`window._KCCreatePost.schema.modules`)
 
-**Versão:** v16.11.0 · **Atualizado em:** 2026-04-27 · *nota de versão adicionada; conteúdo sem alterações funcionais*
+**Versão:** v76.33.0 · **Atualizado em:** 2026-06-19
 
 ## Como funciona
 
-Cada modulo tem um schema em `assets/js/kc-create-post.schema.js`, dentro de `window._KCCreatePost.schema.modules`.
+Cada módulo tem um schema em `assets/js/features/create-post/kc-create-post.schema.js`, dentro de `window._KCCreatePost.schema.modules`.
 
-O runtime principal `assets/js/kc-create-post.js` consome esse namespace e continua expondo o contrato local `KC_CREATE_SCHEMA` internamente.
+O runtime principal `assets/js/features/create-post/kc-create-post.js` consome esse namespace e continua expondo o contrato local `KC_CREATE_SCHEMA` internamente.
+
+Desde a V76.33, `assets/js/shared/kc-search-fields.shared.js` deriva deste schema e
+de `window._KCCreatePost.fields.buildFieldsForModule` o contrato
+`KCSearchFieldRegistry`. O asset ainda não é carregado por HTML e não muda a busca
+em produção; ele impede que futuras projeções local/Supabase criem uma taxonomia
+paralela aos formulários.
 
 Esse schema define:
 - `categoryGroupId`: qual `tagGroup` representa a categoria principal do post

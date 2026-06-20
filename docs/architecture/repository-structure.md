@@ -1,8 +1,8 @@
 # Estrutura do Repositório - KinoCampus
 
-**Versão:** v76.31.0
+**Versão:** v76.33.0
 **Data:** 2026-06-19
-**Atualizado em:** v76.31.0 - contratos comportamentais JS-I.6 de `adapter-registry`
+**Atualizado em:** v76.33.0 - contrato `KCSearchFieldRegistry` e corpus dourado
 
 ---
 
@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 182 suites / 3643 testes + Playwright 10 specs E2E |
+| Testes | Jest 183 suites / 3682 testes + Playwright 10 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -67,7 +67,7 @@ kino-campus/
 |   |   |-- utils/                 8 arquivos
 |   |   |-- features/              18 arquivos + create-post/
 |   |   |   `-- create-post/       7 arquivos
-|   |   |-- shared/                7 arquivos
+|   |   |-- shared/                8 arquivos
 |   |   |-- legacy-shims/          1 arquivo
 |   |   |-- components/            3 arquivos
 |   |   |-- adapters/
@@ -101,13 +101,13 @@ kino-campus/
 |   |-- planning/                  backlog e roteiros V18+
 |   `-- qa/                        QA ativo
 |-- tests/
-|   |-- unit/                     25 suites
-|   |-- integration/              124 suites
-|   |-- contract/                 9 suites
-|   |-- structure/                12 suites
+|   |-- unit/                     26 suites
+|   |-- integration/              126 suites
+|   |-- contract/                 12 suites
+|   |-- structure/                14 suites
 |   |-- a11y/                     5 suites
 |   |-- fixtures/
-|   `-- e2e/                      9 specs
+|   `-- e2e/                      10 specs
 |-- scripts/
 |   |-- validate-version-map.js
 |   |-- validate-repository-structure.js
@@ -149,7 +149,7 @@ Todo modulo deve permanecer em um dos grupos canonicos abaixo.
 | `assets/js/utils/` | 8 | Helpers de string, formatacao, DOM, identidade, taxonomia, localizacao e apresentacao |
 | `assets/js/features/` | 18 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading, pull-to-refresh, contexto de módulos e página 404 |
 | `assets/js/features/create-post/` | 7 | Orquestracao, schema, campos, render, midia, resolvers e submit de criacao |
-| `assets/js/shared/` | 7 | Dados compartilhados entre paginas e modulos |
+| `assets/js/shared/` | 8 | Dados e contratos compartilhados, incluindo `KCSearchFieldRegistry` ainda não carregado |
 | `assets/js/legacy-shims/` | 1 | Shim transitorio de migracao de posts do usuario |
 | `assets/js/components/` | 3 | Componentes reutilizaveis: carousel, toast e voting |
 | `assets/js/adapters/local/` | 9 | Persistencia localStorage por dominio |
@@ -269,7 +269,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:routes` | Valida 22 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantém 182/182 suites e 3643/3643 testes Jest |
+| `npm test` | Mantém 183/183 suites e 3682/3682 testes Jest |
 | `npx playwright test --list` | Lista 10 specs / 68 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
