@@ -7,6 +7,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 
 | Arquivo | Uso |
 |---|---|
+| `report-v76-kcapi-adapter-registry-contract-2026-06-19.md` | Evidência V76.31 dos quatro gates comportamentais de `adapter-registry` |
 | `report-v76-kcapi-transport-config-contract-2026-06-19.md` | Evidência V76.30 dos quatro gates comportamentais de `transport-config` |
 | `report-v76-kcapi-bootstrap-driver-core-dossier-2026-06-19.md` | Evidência V76.29 do dossiê automatizado e No-Go do `bootstrap-driver-core` |
 | `report-v76-css-public-shell-baseline-expansion-2026-06-19.md` | Evidência V76.28 da expansão CSS-B.1 para as 12 páginas consumidoras do public shell |

@@ -1,8 +1,8 @@
 # V76 JS-I - Inventário Residual da Fachada `KCAPI`
 
-**Versão:** v76.30.0
+**Versão:** v76.31.0
 **Data:** 2026-06-19
-**Escopo:** inventário documental + script assistivo; inclui JS-I.1 a JS-I.4 e contratos comportamentais JS-I.5 de `transport-config`; sem alterar runtime, HTML, CSS, SQL, secrets, provider ou deploy
+**Escopo:** inventário documental + script assistivo; inclui JS-I.1 a JS-I.4 e contratos comportamentais JS-I.5/JS-I.6; sem alterar runtime, HTML, CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -37,6 +37,10 @@ formam cinco domínios acoplados e exigem 15 gates antes de qualquer movimentaç
 Em v76.30.0, JS-I.5 adicionou oito contratos comportamentais para os quatro gates de
 `transport-config`. O auditor agora mede 4 gates cobertos / 11 pendentes; nenhuma função runtime
 foi movida ou alterada.
+
+Em v76.31.0, JS-I.6 adicionou cinco contratos comportamentais para os quatro gates de
+`adapter-registry`. O auditor passa a medir 8 gates cobertos / 7 pendentes, ainda sem alterar
+runtime.
 
 No-Go mantido:
 
@@ -184,6 +188,9 @@ JS-I.5 cobre integralmente os quatro gates de `transport-config`: contrato públ
 timeout, mapeamento de erro HTTP e resolução relativa de `baseURL`. Os outros 11 gates permanecem
 obrigatórios e o domínio continua na fachada.
 
+JS-I.6 cobre integralmente os quatro gates de `adapter-registry`: ordem/sobrescrita de registro,
+fallback local, seleção Supabase e falha explícita sem adapter. Sete gates permanecem obrigatórios.
+
 O contrato completo e as evidências ficam em:
 
 - `docs/planning/v76-kcapi-bootstrap-driver-core-dossier.md`;
@@ -193,12 +200,12 @@ O contrato completo e as evidências ficam em:
 
 ## 7. Próxima etapa recomendada
 
-Após JS-I.5, não há autorização para extrair código desse núcleo. A próxima PR mais prudente deve
+Após JS-I.6, não há autorização para extrair código desse núcleo. A próxima PR mais prudente deve
 escolher uma frente única:
 
 - executar CSS-B autenticado para dashboard/admin real antes de qualquer split visual;
-- reavaliar documentalmente a fronteira de `transport-config`, sem editar runtime, ou avançar na
-  cobertura dos 11 gates restantes.
+- cobrir `public-error-shape-contract` ou avançar nos seis gates de ambiente/fallback estático,
+  sem editar runtime.
 
 Se a prioridade for reduzir risco transversal antes de mover mais código, a alternativa é congelar
 esta medição como baseline e avançar para CSS-C apenas com dossiê visual específico.
