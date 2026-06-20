@@ -2,6 +2,22 @@
 
 ---
 
+## [v76.33] - 2026-06-19 - contrato de campos e corpus de busca
+
+### Adicionado
+
+- `KCSearchFieldRegistry` UMD deriva os seis módulos, grupos, opções e campos condicionais diretamente do schema/builder de criação.
+- Políticas versionadas registram operadores, paths de payload, indexação, filtros, agregação, preferências canônicas e classes de privacidade.
+- Corpus dourado sintético com 18 consultas, três por módulo, incluindo acentos, aliases e erros de digitação.
+- 39 contratos cobrem paridade, paths, campos condicionais, bloqueio de contato/link, preferências e higiene do corpus.
+
+### Segurança
+
+- O novo asset não é carregado por nenhum HTML; busca, ranking, perfil, SQL e telemetria permanecem inalterados.
+- Valores livres nunca viram preferência direta; localização/área/marcadores exigem valor canônico futuro.
+
+---
+
 ## [v76.32] - 2026-06-19 - busca e personalização responsável
 
 ### Planejamento

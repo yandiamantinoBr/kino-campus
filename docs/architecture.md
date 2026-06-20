@@ -6,21 +6,21 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.17.0 (2026-06-15)** — contagens após inventário CSS-A, baseline CSS-B/C visual/cascade, micro-splits CSS-C/C.2/C.3, inventário residual JS-I, extrações JS-I.1/JS-I.2/JS-I.3 na fachada `KCAPI` e runtime frontend `8.6.1`.
+> **Atualizado em v76.33.0 (2026-06-19)** — inclui o contrato ainda não carregado `KCSearchFieldRegistry`; runtime frontend `8.6.1` inalterado.
 
 | Item | Quantidade atual |
 |------|------------------|
-| páginas HTML públicas na raiz | `21` |
+| páginas HTML públicas canônicas na raiz | `22` |
 | páginas HTML administrativas | `6` |
-| total de páginas HTML | `27` |
-| arquivos JS em `assets/js/` (13 grupos canônicos) | `154` |
+| total de páginas HTML canônicas | `28` |
+| arquivos JS em `assets/js/` (10 grupos canônicos) | `157` |
 | controllers em `assets/js/controllers/` (public + admin) | `48` |
 | adapters em `assets/js/adapters/` (local + supabase) | `21` |
 | componentes em `assets/js/components/` | `3` |
-| arquivos CSS em `assets/css/` (produção) | `8` |
-| suites de teste Jest em `tests/` | `175` |
-| testes Jest totais | `3578` |
-| specs E2E Playwright | `9` |
+| arquivos CSS em `assets/css/` (produção) | `10` |
+| suites de teste Jest em `tests/` | `183` |
+| testes Jest totais | `3682` |
+| specs E2E Playwright | `10` |
 
 ## Princípio estrutural
 
@@ -86,7 +86,7 @@ Em produção, o build `node scripts/inject-env.js` injeta os valores e força o
 
 - Core (12): `kc-auth-callback.js`, `kc-auth.ui.js`, `kc-consent.js`, `kc-core.js`, `kc-core-widgets.js`, `kc-i18n.js`, `kc-notifications.js`, `kc-post-model.js`, `kc-profiles.client.js`, `kc-public-shell.js`, `kc-theme.js`, `kc-user-posts.js`
 - Features (23): `kc-create-post.js` + 6 sub-módulos; `kc-ads.js`, `kc-events-calendar.js`, `kc-privacy-analytics.js`, `kc-search.js`, `kc-lazy-loader.js`, outros
-- Shared (7): `account-profile.shared.js`, `help.shared.js`, `home-categories.shared.js`, `kc-comments.shared.js`, `kc-search.shared.js`, `ods.shared.js`, `search-analytics.shared.js`
+- Shared (8): `account-profile.shared.js`, `help.shared.js`, `home-categories.shared.js`, `kc-comments.shared.js`, `kc-search-fields.shared.js`, `kc-search.shared.js`, `ods.shared.js`, `search-analytics.shared.js`
 
 ### Camada 5 - controllers de página (`assets/js/controllers/`, 48 controllers)
 
@@ -231,5 +231,7 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.29.0 (2026-06-19):** JS-I.4 transforma o `bootstrap-driver-core` em dossiê automatizado de 12 funções / 131 linhas, cinco domínios e 15 gates; a decisão é No-Go para extração runtime.
 - **v76.30.0 (2026-06-19):** JS-I.5 adiciona oito contratos comportamentais para `transport-config`, cobre 4/15 gates do núcleo e mantém as quatro funções na fachada.
 - **v76.31.0 (2026-06-19):** JS-I.6 adiciona cinco contratos comportamentais para `adapter-registry`, eleva a cobertura para 8/15 gates e mantém seleção/registro na fachada.
+- **v76.32.0 (2026-06-19):** registra o plano de busca orientada ao schema e personalização responsável, sem alterar runtime.
+- **v76.33.0 (2026-06-19):** adiciona `KCSearchFieldRegistry` não carregado, corpus sintético de 18 consultas e 39 contratos; busca, HTML, SQL e personalização permanecem inalterados.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

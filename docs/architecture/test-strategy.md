@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.31.0 · **Atualizado em:** 2026-06-19
+**Versão:** v76.33.0 · **Atualizado em:** 2026-06-19
 
-> Documenta as 182 suites Jest + 10 specs Playwright: o que cada uma cobre,
+> Documenta as 183 suites Jest + 10 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -13,7 +13,7 @@
 2. [Métricas atuais](#2-métricas-atuais)
 3. [Diretório unit/ — 26 suites](#3-diretório-unit--26-suites)
 4. [Diretório integration/ — 126 suites](#4-diretório-integration--126-suites)
-5. [Diretório contract/ — 9 suites](#5-diretório-contract--9-suites)
+5. [Diretório contract/ — 12 suites](#5-diretório-contract--12-suites)
 6. [Diretório structure/ — 14 suites](#6-diretório-structure--14-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
 8. [E2E com Playwright — 10 specs](#8-e2e-com-playwright--10-specs)
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 182 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todos os 183 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -51,20 +51,20 @@
 |-----------|--------|------------------|
 | `tests/unit/` | **26** | Módulos utilitários individuais |
 | `tests/integration/` | **126** | Controllers, adapters, sub-módulos KCAPI |
-| `tests/contract/` | **9** | Contratos públicos e formas de exports |
+| `tests/contract/` | **12** | Contratos públicos, exports e registro de campos de busca |
 | `tests/structure/` | **14** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
 | `tests/e2e/` | **10** | Playwright (browser real, HTTP real) |
-| **Total** | **190** | (180 Jest + 10 Playwright specs) |
+| **Total** | **193** | (183 Jest + 10 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 182 suites · 3643 testes
+Jest: 183 suites · 3682 testes
 Playwright: 10 specs · 68 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥182 passed, 182 total` e `≥3643 passed, 3643 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥183 passed, 183 total` e `≥3682 passed, 3682 total`.
 
 ### Gate CI essencial
 
@@ -119,7 +119,7 @@ A tabela abaixo destaca as suites principais; a contagem canônica vem do filesy
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
 
-A tabela abaixo é agrupada por domínio e não lista todos os 124 arquivos individualmente.
+A tabela abaixo é agrupada por domínio e não lista todos os 126 arquivos individualmente.
 
 ### Sub-grupo: Controllers públicos (6 suites)
 
@@ -259,7 +259,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 124 arquivos indi
 
 ---
 
-## 5. Diretório contract/ — 9 suites
+## 5. Diretório contract/ — 12 suites
 
 Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falha se um método for removido ou renomeado, mesmo sem quebrar a funcionalidade aparente.
 
@@ -267,11 +267,14 @@ Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falh
 |-------|------------|
 | `admin-banners-access-contract.test.js` | Shape do contrato de acesso admin a banners |
 | `chat-continuity-contract.test.js` | Contrato de continuidade de conversa/chat |
+| `kc-api-adapter-registry-contract.test.js` | Registro, seleção, fallback e fail-fast dos adapters |
 | `kc-api-external-access-contract.test.js` | Delegacao e fallback dos wrappers admin de external access via `window._KCAPI.help` |
 | `kc-api-facade-contract.test.js` | Snapshot dos 107 membros exportados de `window.KCAPI` e guarda de crescimento do facade |
 | `kc-api-notification-preferences-contract.test.js` | Contrato de preferências de notificação (6 tipos, 3 canais) |
 | `kc-api-notifications-contract.test.js` | Contrato do sub-módulo `window._KCAPI.notifications` |
+| `kc-api-transport-config-contract.test.js` | Configuração, timeout, URL e erros do transporte KCAPI |
 | `kc-create-post-contract.test.js` | Exports públicos do módulo de criação de post |
+| `kc-search-field-registry-contract.test.js` | Derivação dos campos, paths, condicionais, privacidade e corpus dourado |
 | `product.controller-split-contract.test.js` | Cadeia de scripts do `_product.html` e namespaces `_KCProduct.*` |
 | `version-map.test.js` | Campos de `VERSION.json` e consistência de `frontendRuntimeVersion` |
 
@@ -485,8 +488,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥182 passed, 182 total
-  Tests:       ≥3643 passed, 3643 total
+  Test Suites: ≥183 passed, 183 total
+  Tests:       ≥3682 passed, 3682 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.
