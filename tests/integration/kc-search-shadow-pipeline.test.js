@@ -64,7 +64,7 @@ describe('KCSearchShadowPipeline — contrato', () => {
       .map((name) => path.join(ROOT, name))
       .concat(fs.readdirSync(path.join(ROOT, 'admin')).filter((name) => name.endsWith('.html'))
         .map((name) => path.join(ROOT, 'admin', name)));
-    expect(Pipeline.VERSION).toBe('1.1.0');
+    expect(Pipeline.VERSION).toBe('1.2.0');
     expect(source).toContain('root.KCSearchShadowPipeline = factory();');
     htmlFiles.forEach((file) => expect(fs.readFileSync(file, 'utf8')).not.toContain('kc-search-shadow-pipeline.shared.js'));
   });
@@ -152,6 +152,45 @@ describe('KCSearchShadowPipeline — contrato', () => {
     expect(result.candidate).toHaveLength(3);
   });
 
+  test('permite ignorar sinais removidos sem mutar o plano do parser', () => {
+    const posts = [
+      { id: 'event', title: 'Evento de programação', module: 'eventos', category: 'culturais' },
+      { id: 'job', title: 'Evento de programação profissional', module: 'oportunidades', category: 'empregos' }
+    ];
+    const parsed = Parser.parse('evento programação', { registry });
+    const result = Pipeline.runShadow('evento programação', posts, {
+      ...dependencies, ignoredSignals: { module: true }
+    });
+    expect(parsed.module).toBe('eventos');
+    expect(result.plan.module).toBeNull();
+    expect(result.candidate.map((row) => row.id)).toEqual(expect.arrayContaining(['event', 'job']));
+  });
+
+  test('filtro explícito de módulo prevalece sobre a inferência da consulta', () => {
+    const posts = [
+      { id: 'event', title: 'Evento cultural', module: 'eventos', category: 'culturais' },
+      { id: 'housing', title: 'Evento cultural na república', module: 'moradia', category: 'quartos' }
+    ];
+    const result = Pipeline.runShadow('evento cultural', posts, {
+      ...dependencies, moduleOverride: 'moradia'
+    });
+    expect(result.plan.module).toBe('moradia');
+    expect(result.candidate.map((row) => row.id)).toEqual(['housing']);
+    expect(result.policy.moduleOverride).toBe('moradia');
+  });
+
+  test('expõe somente contagens agregadas de módulos como facetas', () => {
+    const posts = [
+      { id: 'event', title: 'Programação aberta', module: 'eventos', category: 'culturais' },
+      { id: 'job', title: 'Programação aberta', module: 'oportunidades', category: 'empregos' },
+      { id: 'invalid', title: 'Programação aberta', module: 'constructor', category: 'externo' }
+    ];
+    const result = Pipeline.runShadow('programação', posts, dependencies);
+    expect(result.facets).toEqual({ modules: { eventos: 1, oportunidades: 1 }, total: 2 });
+    expect(JSON.stringify(result.facets)).not.toContain('Programação aberta');
+    expect(Object.prototype.hasOwnProperty.call(result.facets.modules, 'constructor')).toBe(false);
+  });
+
   test('aplica dia da semana e período noturno quando o evento possui campos confiáveis', () => {
     const posts = [
       {
@@ -196,8 +235,8 @@ describe('KCSearchShadowPipeline — contrato', () => {
     });
     expect(results.candidate.map((row) => row.id)).toEqual(expect.arrayContaining(['open', 'ended']));
     expect(results.candidate.map((row) => row.id)).not.toContain('hidden');
-    expect(results.policy).toEqual({ surface: 'results', publicOnly: true, hideClosed: false });
+    expect(results.policy).toEqual({ surface: 'results', publicOnly: true, hideClosed: false, moduleOverride: null });
     expect(dropdown.candidate.map((row) => row.id)).toEqual(['open']);
-    expect(dropdown.policy).toEqual({ surface: 'dropdown', publicOnly: true, hideClosed: true });
+    expect(dropdown.policy).toEqual({ surface: 'dropdown', publicOnly: true, hideClosed: true, moduleOverride: null });
   });
 });

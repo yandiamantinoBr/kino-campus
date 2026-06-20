@@ -15,6 +15,11 @@ describe('search-results.html', () => {
     expect(html).toContain('id="searchResultsHideClosed"');
     expect(html).toContain('id="searchResultsActiveFilters"');
     expect(html).toContain('id="searchResultsVisibleSummary"');
+    expect(html).toContain('id="searchResultsStructured"');
+    expect(html).toContain('id="searchResultsStructuredChips"');
+    expect(html).toContain('id="searchResultsStructuredRestore"');
+    expect(html).toContain('id="searchResultsRelaxStructured"');
+    expect(html).toContain('id="noResultsMessage"');
     expect(html).toContain('kc-search-results-controls__summary');
     expect(html).toContain('data-i18n-aria-label="aria-label.search-results-filters"');
   });
@@ -35,6 +40,9 @@ describe('kc-search.js search results controller', () => {
     expect(source).toContain('function filterAndSortResults');
     expect(source).toContain('isPostClosedOrEnded');
     expect(source).toContain('writeResultFiltersToUrl(q, filters)');
+    expect(source).toContain('function dismissStructuredSignal');
+    expect(source).toContain('function renderStructuredSearchState');
+    expect(source).toContain('moduleOverride: filters.module');
     expect(source).toContain('SEARCH_RESULTS_LIMIT = 120');
   });
 

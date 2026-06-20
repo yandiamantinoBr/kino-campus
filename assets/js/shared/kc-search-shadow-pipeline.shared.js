@@ -13,7 +13,7 @@
 }(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var SUPPORTED_FILTERS = [
     'area', 'areaText', 'category', 'condition', 'destination', 'employmentType',
     'dayOfMonth', 'features', 'free', 'housingType', 'itemType', 'locationAlias',
@@ -37,6 +37,39 @@
 
   function normalizeKey(value) {
     return normalizeText(value).replace(/\s+/g, '-');
+  }
+
+  function normalizeIgnoredSignals(options) {
+    var source = options && options.ignoredSignals && typeof options.ignoredSignals === 'object'
+      ? options.ignoredSignals
+      : {};
+    return {
+      module: source.module === true,
+      intent: source.intent === true,
+      filters: (Array.isArray(source.filters) ? source.filters : [])
+        .map(function (key) { return String(key || ''); })
+        .filter(function (key, index, list) { return key && list.indexOf(key) === index; })
+    };
+  }
+
+  function buildEffectivePlan(parsedPlan, options) {
+    var parsed = parsedPlan && typeof parsedPlan === 'object' ? parsedPlan : {};
+    var ignored = normalizeIgnoredSignals(options);
+    var registryModules = options && options.registry && options.registry.modules || {};
+    var requestedModule = normalizeKey(options && options.moduleOverride);
+    var moduleOverride = requestedModule && registryModules[requestedModule] ? requestedModule : null;
+    var filters = {};
+    Object.keys(parsed.filters || {}).forEach(function (key) {
+      if (ignored.filters.indexOf(key) === -1) filters[key] = parsed.filters[key];
+    });
+    return {
+      module: moduleOverride || (ignored.module ? null : parsed.module),
+      intent: ignored.intent ? null : parsed.intent,
+      filters: filters,
+      confidence: parsed.confidence,
+      moduleOverride: moduleOverride,
+      ignored: ignored
+    };
   }
 
   function flatten(values) {
@@ -270,6 +303,21 @@
     return rows.map(function (row) { return row.id; }).filter(Boolean);
   }
 
+  function moduleCounts(posts, registry) {
+    var allowedModules = registry && registry.modules && typeof registry.modules === 'object'
+      ? registry.modules
+      : {};
+    return (Array.isArray(posts) ? posts : []).reduce(function (counts, post) {
+      var projection = post && post.kcSearchProjection;
+      var key = normalizeKey(post && (post.module || post.modulo || post.moduleKey) ||
+        projection && projection.moduleKey);
+      if (key && Object.prototype.hasOwnProperty.call(allowedModules, key)) {
+        counts[key] = (Object.prototype.hasOwnProperty.call(counts, key) ? counts[key] : 0) + 1;
+      }
+      return counts;
+    }, {});
+  }
+
   function difference(left, right) {
     return left.filter(function (value) { return right.indexOf(value) === -1; });
   }
@@ -288,7 +336,8 @@
     var surface = options.surface === 'dropdown' ? 'dropdown' : 'results';
     var publicOnly = options.publicOnly !== false;
     var hideClosed = surface === 'dropdown' || options.hideClosed === true;
-    var plan = options.parser.parse(query, { registry: options.registry });
+    var parsedPlan = options.parser.parse(query, { registry: options.registry });
+    var plan = buildEffectivePlan(parsedPlan, options);
     var searchPolicy = {
       q: query,
       limit: limit,
@@ -309,6 +358,16 @@
     });
     var intent = applyIntent(candidatePool, plan.module, plan.intent);
     var filtered = applySupportedFilters(intent.posts, plan.filters, options);
+    var facetPool = options.searchShared.searchCollection(projected, {
+      q: query,
+      limit: Math.max(poolLimit, sourcePosts.length),
+      publicOnly: publicOnly,
+      hideClosed: hideClosed,
+      now: options.now || options.nowValue
+    });
+    var facetIntent = applyIntent(facetPool, plan.module, plan.intent);
+    var facetFiltered = applySupportedFilters(facetIntent.posts, plan.filters, options);
+    var facetModuleCounts = moduleCounts(facetFiltered.posts, options.registry);
     var candidate = filtered.posts.slice(0, limit);
     var legacySummary = summarize(legacy);
     var candidateSummary = summarize(candidate);
@@ -337,7 +396,14 @@
       policy: {
         surface: surface,
         publicOnly: publicOnly,
-        hideClosed: hideClosed
+        hideClosed: hideClosed,
+        moduleOverride: plan.moduleOverride
+      },
+      facets: {
+        modules: facetModuleCounts,
+        total: Object.keys(facetModuleCounts).reduce(function (total, key) {
+          return total + facetModuleCounts[key];
+        }, 0)
       }
     };
   }

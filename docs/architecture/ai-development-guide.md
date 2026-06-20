@@ -41,7 +41,7 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Testes | Jest (189 suites) + Playwright (11 specs E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v76.39)
+### Estado atual (v76.40)
 
 | Campo | Valor |
 |-------|-------|
@@ -49,7 +49,8 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Branch de features | `feature/v75.X.Y-descricao-curta` |
 | appVersion | `75.1.0` (performance phase 1; Speed Insights mergeado no PR #549) |
 | frontendRuntimeVersion | `8.6.1` (constante canonica do runtime atual) |
-| Jest | 189 suites · 3767 testes |
+| Jest | 189 suites · 3772 testes |
+| Playwright | 11 specs · 74 testes listados |
 | check:all | 6 gates verdes |
 | Itens validados (check:structure) | 169 |
 

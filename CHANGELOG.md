@@ -2,6 +2,24 @@
 
 ---
 
+## [v76.40] - 2026-06-20 - critérios removíveis e facetas estruturadas
+
+### Adicionado
+
+- A página de resultados mostra módulo, intenção e filtros suportados como chips removíveis quando o piloto está ativo.
+- Remoções valem somente para a consulta atual no navegador; `Reaplicar` restaura todos os sinais sem editar o texto.
+- O pipeline 1.2 aceita sinais ignorados, dá precedência ao módulo explícito e retorna somente contagens agregadas das facetas permitidas.
+- Estados vazios distinguem ausência geral de resultados de critérios estruturados restritivos; o dropdown encaminha ao ajuste completo.
+- Layout compacto e alvos de 36 px mantêm os chips operáveis no mobile sem overflow.
+
+### Segurança
+
+- As duas flags continuam desligadas por padrão; não há coleta, perfil, persistência, analytics, SQL ou migration.
+- Valores textuais livres não são reproduzidos nos chips e módulos fora do registry são excluídos das facetas.
+- Cinco contratos Jest e quatro cenários E2E adicionais cobrem remoção/restauração, facetas, estado vazio, dropdown e mobile.
+
+---
+
 ## [v76.39] - 2026-06-20 - piloto estruturado sob flags
 
 ### Adicionado

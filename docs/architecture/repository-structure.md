@@ -1,8 +1,8 @@
 # Estrutura do Repositório - KinoCampus
 
-**Versão:** v76.39.0
+**Versão:** v76.40.0
 **Data:** 2026-06-20
-**Atualizado em:** v76.39.0 - piloto estruturado de resultados e dropdown sob flags
+**Atualizado em:** v76.40.0 - chips removíveis, facetas e zero-results estruturados sob flags
 
 ---
 
@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 189 suites / 3767 testes + Playwright 11 specs E2E |
+| Testes | Jest 189 suites / 3772 testes + Playwright 11 specs E2E |
 | Gates locais | `npm run check:all` com 6 gates |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -272,9 +272,9 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 validadores estruturais, paridade do snapshot e Jest |
 | `npm run check:search-registry` | Falha se o snapshot divergir de schema, builder ou políticas |
-| `npm test` | Mantém 189/189 suites e 3767/3767 testes Jest |
+| `npm test` | Mantém 189/189 suites e 3772/3772 testes Jest |
 | `npm run benchmark:search-shadow` | Mede 12 cenários sintéticos dos seis módulos, sem dados reais |
-| `npx playwright test --list` | Lista 11 specs / 70 testes Playwright sem exigir ambiente local ativo |
+| `npx playwright test --list` | Lista 11 specs / 74 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 

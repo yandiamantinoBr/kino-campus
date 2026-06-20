@@ -1,10 +1,10 @@
 # V76.32 — Plano de busca orientada ao schema e personalização responsável
 
 **Data:** 2026-06-19  
-**Estado:** execução incremental; piloto V76.39 disponível sob duas flags desligadas
+**Estado:** execução incremental; UX estruturada V76.40 disponível sob duas flags desligadas
 
 **Escopo:** `/search-results.html`, `kcSearchDropdown`, campos de criação, perfil de preferências, ranking e governança  
-**Fora do gate V76.39:** HTML, CSS, SQL, migrations, providers, secrets, deploy e alteração de dados reais
+**Fora do gate V76.40:** SQL, migrations, providers, secrets, deploy, perfil e alteração de dados reais
 
 > **Execução V76.33 (2026-06-19):** a Fase 0/PR-A foi materializada em
 > `assets/js/shared/kc-search-fields.shared.js`, ainda sem carregamento por HTML.
@@ -46,6 +46,12 @@
 > estão ligadas. Sinal estruturado é obrigatório; IDs inconsistentes ou qualquer
 > falha restauram a lista legada. E2E confirma rede zero nos defaults e os quatro
 > assets locais, dropdown funcional e ausência de erros quando o piloto é ativado.
+
+> **Execução V76.40 (2026-06-20):** PR-G.2 torna módulo, intenção e filtros
+> suportados visíveis como chips removíveis, sem persistir escolhas ou editar a
+> consulta. O pipeline 1.2 aceita sinais ignorados, prioriza módulo explícito e
+> entrega apenas facetas agregadas de módulos allowlisted. Resultados e dropdown
+> explicam vazios; E2E cobre remoção/restauração e mobile sem overflow.
 
 ## 1. Decisão executiva
 
@@ -402,7 +408,7 @@ Rollout: canário interno, percentual pequeno e expansão por gate; migration ad
 5. **PR-E — executado:** intenção, tempo/status e benchmark sintético por módulo.
 6. **PR-F — executado:** snapshot gerado do registry e lazy loading sob flag desligada.
 7. **PR-G.1 — executado:** piloto em busca/dropdown sob duas flags, com fallback integral para o legado.
-8. **PR-G.2:** chips removíveis, facetas e zero-results sob as mesmas flags.
+8. **PR-G.2 — executado:** chips removíveis, facetas e zero-results sob as mesmas flags.
 9. **PR-H:** dossiê SQL/RPC isolado, RLS, explain e rollback R3.
 10. **PR-I:** dropdown combobox, cancelamento e performance real.
 11. **PR-J:** preferências explícitas, consentimento e direitos.
@@ -452,9 +458,8 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-G.2** sem migration: expor os filtros interpretados como chips
-removíveis, facetas coerentes e zero-results explicável somente quando
-`search.structuredRuntime=true` e `search.structuredPilot=true`. O piloto V76.39
-já integra `/search-results.html` e `kcSearchDropdown`, preserva o retorno legado
-em qualquer falha e mantém rede zero com as flags desligadas. Coleta comportamental,
-perfil, SQL pessoal e reranking seguem bloqueados.
+Executar **PR-H** sem tocar produção: produzir dossiê de SQL/RPC em banco isolado,
+com desenho aditivo, RLS, `EXPLAIN`, timeout, rollback R3 e critérios mensuráveis de
+Go/No-Go. A V76.40 mantém `search.structuredRuntime=false` e
+`search.structuredPilot=false` por padrão. Migration remota, coleta comportamental,
+perfil pessoal e reranking seguem bloqueados.

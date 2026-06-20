@@ -27,6 +27,9 @@
   let searchFlushTimer = null;
   let searchResultsRequestSeq = 0;
   let structuredSearchRuntimePromise = null;
+  let structuredDismissalQuery = '';
+  let structuredDismissedSignals = new Set();
+  let lastStructuredResultsView = null;
   const structuredAssetPromises = {};
 
   const SEARCH_RESULTS_LIMIT = 120;
@@ -39,6 +42,29 @@
     { key: 'caronas', label: 'Caronas' },
     { key: 'achados-perdidos', label: 'Achados/Perdidos' }
   ];
+  const STRUCTURED_FILTER_LABELS = Object.freeze({
+    area: 'Área', areaText: 'Área informada', category: 'Categoria', condition: 'Condição',
+    destination: 'Destino', employmentType: 'Vínculo', dayOfMonth: 'Dia do mês',
+    features: 'Características', free: 'Gratuito', housingType: 'Tipo de moradia',
+    itemType: 'Tipo de item', locationAlias: 'Local', locationText: 'Local informado',
+    origin: 'Origem', price: 'Preço', priceMax: 'Preço máximo', region: 'Região',
+    relativeDate: 'Data relativa', registrationStatus: 'Inscrições', rewardMin: 'Recompensa',
+    seatsMin: 'Vagas mínimas', time: 'Horário',
+    timePeriod: 'Período', weekday: 'Dia da semana', workMode: 'Modalidade'
+  });
+  const STRUCTURED_VALUE_LABELS = Object.freeze({
+    remoto: 'Remoto', hibrido: 'Híbrido', presencial: 'Presencial', clt: 'CLT',
+    tecnologia: 'Tecnologia', usado: 'Usado', 'semi-novo': 'Seminovo', novo: 'Novo',
+    night: 'Noturno', saturday: 'Sábado', sunday: 'Domingo', monday: 'Segunda-feira',
+    tuesday: 'Terça-feira', wednesday: 'Quarta-feira', thursday: 'Quinta-feira',
+    friday: 'Sexta-feira', 'campus-samambaia': 'Câmpus Samambaia', centro: 'Centro',
+    'setor-universitario': 'Setor Universitário', 'aceita-pets': 'Aceita pets',
+    mobiliado: 'Mobiliado', documentos: 'Documentos', eletronicos: 'Eletrônicos',
+    livros: 'Livros', ingressos: 'Ingressos', estagios: 'Estágios', empregos: 'Empregos',
+    academicos: 'Acadêmicos', workshops: 'Workshops', encontrados: 'Encontrados',
+    perdidos: 'Perdidos', compro: 'Compra', vendo: 'Venda', procuro: 'Procura',
+    ofereco: 'Oferta', procurando: 'Procura', oferta: 'Oferta'
+  });
 
   const MEMORY_STORAGE = (function () {
     const state = {};
@@ -143,12 +169,91 @@
     return String((post && (post.id || post.uuid || post.legacy_id || post.legacyId)) || '');
   }
 
+  function notifyStructuredPilotState(options, state) {
+    if (!options || typeof options.onState !== 'function') return;
+    try { options.onState(state); } catch (_) {}
+  }
+
+  function formatStructuredNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '';
+  }
+
+  function humanizeStructuredValue(value) {
+    const key = String(value == null ? '' : value).trim();
+    if (!key) return '';
+    if (STRUCTURED_VALUE_LABELS[key]) return STRUCTURED_VALUE_LABELS[key];
+    return key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()).slice(0, 48);
+  }
+
+  function formatStructuredFilterLabel(key, value) {
+    const base = STRUCTURED_FILTER_LABELS[key] || 'Critério';
+    if (key === 'free') return 'Gratuito';
+    if (key === 'priceMax') return `Até R$ ${formatStructuredNumber(value)}`;
+    if (key === 'price') return `Preço: R$ ${formatStructuredNumber(value)}`;
+    if (key === 'rewardMin') return `Recompensa: R$ ${formatStructuredNumber(value)} ou mais`;
+    if (key === 'seatsMin') return `${formatStructuredNumber(value)} vaga(s) ou mais`;
+    if (key === 'dayOfMonth') return `Dia ${formatStructuredNumber(value)}`;
+    if (key === 'time') return `Horário: ${String(value || '').slice(0, 5)}`;
+    if (key === 'features') {
+      const values = (Array.isArray(value) ? value : [value]).map(humanizeStructuredValue).filter(Boolean);
+      return values.length ? `${base}: ${values.join(', ')}` : base;
+    }
+    if (key === 'areaText' || key === 'locationText') return base;
+    const display = humanizeStructuredValue(value);
+    return display ? `${base}: ${display}` : base;
+  }
+
+  function countIgnoredSignals(ignored) {
+    if (!ignored || typeof ignored !== 'object') return 0;
+    return Number(ignored.module === true) + Number(ignored.intent === true) +
+      (Array.isArray(ignored.filters) ? ignored.filters.length : 0);
+  }
+
+  function buildStructuredSearchView(result, parsedPlan, options = {}) {
+    const plan = result && result.plan ? result.plan : {};
+    const comparison = result && result.comparison ? result.comparison : {};
+    const parsedFilters = parsedPlan && parsedPlan.filters && typeof parsedPlan.filters === 'object'
+      ? parsedPlan.filters
+      : {};
+    const chips = [];
+    if (plan.module && !options.moduleOverride) {
+      chips.push({ signal: 'module', label: `Módulo: ${getModuleLabel(plan.module)}` });
+    }
+    if (comparison.intentApplied === true && plan.intent) {
+      chips.push({ signal: 'intent', label: `Tipo: ${humanizeStructuredValue(plan.intent)}` });
+    }
+    (Array.isArray(comparison.supportedFilters) ? comparison.supportedFilters : []).forEach((key) => {
+      chips.push({ signal: `filter:${key}`, label: formatStructuredFilterLabel(key, parsedFilters[key]) });
+    });
+    const facets = result && result.facets && typeof result.facets === 'object' ? result.facets : {};
+    const modules = facets.modules && typeof facets.modules === 'object' ? facets.modules : {};
+    return Object.freeze({
+      available: true,
+      active: chips.length > 0,
+      chips: chips.map((chip) => Object.freeze(chip)),
+      deferred: (Array.isArray(comparison.deferredFilters) ? comparison.deferredFilters : [])
+        .map((key) => STRUCTURED_FILTER_LABELS[key] || 'Critério adicional'),
+      dismissedCount: countIgnoredSignals(options.ignoredSignals),
+      legacyCount: Array.isArray(result && result.legacy) ? result.legacy.length : 0,
+      candidateCount: Array.isArray(result && result.candidate) ? result.candidate.length : 0,
+      facets: Object.freeze({ modules: Object.freeze(Object.assign({}, modules)), total: Number(facets.total || 0) })
+    });
+  }
+
   async function applyStructuredSearchPilot(query, posts, options = {}) {
     const source = Array.isArray(posts) ? posts : [];
-    if (!isStructuredSearchPilotEnabled() || !source.length) return source;
+    if (!isStructuredSearchPilotEnabled()) {
+      notifyStructuredPilotState(options, Object.freeze({ available: false, active: false, chips: [] }));
+      return source;
+    }
     const runtime = await loadStructuredSearchRuntime();
-    if (!runtime) return source;
+    if (!runtime) {
+      notifyStructuredPilotState(options, Object.freeze({ available: false, active: false, chips: [] }));
+      return source;
+    }
     try {
+      const parsedPlan = runtime.parser.parse(query, { registry: runtime.registry });
       const result = runtime.pipeline.runShadow(query, source, {
         parser: runtime.parser,
         registry: runtime.registry,
@@ -157,10 +262,14 @@
         limit: Math.max(1, Math.min(120, Number(options.limit) || source.length || 1)),
         surface: options.surface === 'dropdown' ? 'dropdown' : 'results',
         hideClosed: options.hideClosed === true,
+        ignoredSignals: options.ignoredSignals,
+        moduleOverride: options.moduleOverride,
         now: options.now
       });
       const plan = result && result.plan ? result.plan : {};
       const comparison = result && result.comparison ? result.comparison : {};
+      const view = buildStructuredSearchView(result, parsedPlan, options);
+      notifyStructuredPilotState(options, view);
       const hasStructuredSignal = !!plan.module || comparison.intentApplied === true ||
         (Array.isArray(comparison.supportedFilters) && comparison.supportedFilters.length > 0);
       if (!hasStructuredSignal) return source;
@@ -172,8 +281,11 @@
         const post = byId.get(String(row.id || ''));
         return post ? Object.assign({}, post, { relevanceScore: Number(row.relevanceScore || 0) }) : null;
       }).filter(Boolean);
-      return selected.length === candidateRows.length ? selected : source;
+      if (selected.length === candidateRows.length) return selected;
+      notifyStructuredPilotState(options, Object.freeze({ available: false, active: false, chips: [], fallback: true }));
+      return source;
     } catch (_) {
+      notifyStructuredPilotState(options, Object.freeze({ available: false, active: false, chips: [], fallback: true }));
       try { console.warn('[KinoCampus] Piloto estruturado falhou; resultados legados preservados.'); } catch (_) {}
       return source;
     }
@@ -548,7 +660,14 @@
       sort: document.getElementById('searchResultsSort'),
       clear: document.getElementById('searchResultsClearFilters'),
       active: document.getElementById('searchResultsActiveFilters'),
-      count: document.getElementById('searchResultsVisibleSummary')
+      count: document.getElementById('searchResultsVisibleSummary'),
+      structured: document.getElementById('searchResultsStructured'),
+      structuredChips: document.getElementById('searchResultsStructuredChips'),
+      structuredNote: document.getElementById('searchResultsStructuredNote'),
+      structuredRestore: document.getElementById('searchResultsStructuredRestore'),
+      noResultsMessage: document.getElementById('noResultsMessage'),
+      noResultsRelax: document.getElementById('searchResultsRelaxStructured'),
+      noResultsRestore: document.getElementById('searchResultsRestoreStructured')
     };
   }
 
@@ -602,6 +721,96 @@
     window.history.replaceState({}, '', url.toString());
   }
 
+  function syncStructuredDismissalQuery(query) {
+    const normalized = String(query || '').trim();
+    if (normalized === structuredDismissalQuery) return;
+    structuredDismissalQuery = normalized;
+    structuredDismissedSignals = new Set();
+  }
+
+  function getStructuredIgnoredSignals(query) {
+    syncStructuredDismissalQuery(query);
+    return Object.freeze({
+      module: structuredDismissedSignals.has('module'),
+      intent: structuredDismissedSignals.has('intent'),
+      filters: Object.freeze(Array.from(structuredDismissedSignals)
+        .filter((signal) => signal.startsWith('filter:'))
+        .map((signal) => signal.slice(7)))
+    });
+  }
+
+  function dismissStructuredSignal(query, signal) {
+    syncStructuredDismissalQuery(query);
+    const key = String(signal || '');
+    if (key === 'module' || key === 'intent' || /^filter:[A-Za-z][A-Za-z0-9]*$/.test(key)) {
+      structuredDismissedSignals.add(key);
+    }
+  }
+
+  function restoreStructuredSignals(query) {
+    syncStructuredDismissalQuery(query);
+    structuredDismissedSignals.clear();
+  }
+
+  function clearElement(element) {
+    if (!element) return;
+    while (element.firstChild) element.removeChild(element.firstChild);
+  }
+
+  function renderStructuredSearchState(state) {
+    const controls = getResultControls();
+    lastStructuredResultsView = state && typeof state === 'object' ? state : null;
+    if (!controls.structured || !controls.structuredChips) return;
+    const visible = !!(state && state.available && (state.active || state.dismissedCount > 0));
+    controls.structured.hidden = !visible;
+    clearElement(controls.structuredChips);
+    if (!visible) return;
+
+    (Array.isArray(state.chips) ? state.chips : []).forEach((chip) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'kc-search-structured-chip';
+      button.dataset.kcStructuredSignal = chip.signal;
+      button.setAttribute('aria-label', `Remover critério ${chip.label}`);
+      const label = document.createElement('span');
+      label.textContent = chip.label;
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-xmark';
+      icon.setAttribute('aria-hidden', 'true');
+      button.appendChild(label);
+      button.appendChild(icon);
+      controls.structuredChips.appendChild(button);
+    });
+
+    if (controls.structuredNote) {
+      const deferred = Array.isArray(state.deferred) ? state.deferred : [];
+      controls.structuredNote.hidden = deferred.length === 0;
+      controls.structuredNote.textContent = deferred.length
+        ? `${deferred.join(', ')} ainda não funciona como filtro automático.`
+        : '';
+    }
+    if (controls.structuredRestore) controls.structuredRestore.hidden = !(state.dismissedCount > 0);
+  }
+
+  function updateNoResultsState(noElement, results, state) {
+    const controls = getResultControls();
+    const hasResults = Array.isArray(results) && results.length > 0;
+    if (noElement) noElement.style.display = hasResults ? 'none' : 'block';
+    if (hasResults) return;
+
+    let message = 'Nenhuma publicação corresponde à busca. Revise os termos ou consulte os módulos do KinoCampus.';
+    if (state && state.available && state.active) {
+      message = state.legacyCount > 0
+        ? 'Há publicações para o texto, mas nenhuma atende a todos os critérios entendidos. Remova um chip para ampliar a busca.'
+        : 'Nenhuma publicação atende aos critérios entendidos. Remova um chip ou simplifique a busca.';
+    } else if (state && state.dismissedCount > 0) {
+      message = 'Ainda não encontramos publicações após ampliar os critérios. Tente um termo mais geral ou reaplique os filtros.';
+    }
+    if (controls.noResultsMessage) controls.noResultsMessage.textContent = message;
+    if (controls.noResultsRelax) controls.noResultsRelax.hidden = !(state && state.active);
+    if (controls.noResultsRestore) controls.noResultsRestore.hidden = !(state && state.dismissedCount > 0);
+  }
+
   function scoreResultsForQuery(results, query) {
     const searchShared = getSearchShared();
     const list = Array.isArray(results) ? results : [];
@@ -639,24 +848,31 @@
     return list;
   }
 
-  function updateResultsControlsState(rawResults, filteredResults, filters) {
+  function updateResultsControlsState(rawResults, filteredResults, filters, structuredState) {
     const controls = getResultControls();
     const rawList = Array.isArray(rawResults) ? rawResults : [];
     const visibleList = Array.isArray(filteredResults) ? filteredResults : [];
-    const moduleCounts = rawList.reduce((acc, post) => {
+    const fallbackModuleCounts = rawList.reduce((acc, post) => {
       const key = getPostModuleKey(post);
       if (!key) return acc;
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
+    const structuredFacets = structuredState && structuredState.facets;
+    const moduleCounts = structuredFacets && structuredFacets.modules
+      ? structuredFacets.modules
+      : fallbackModuleCounts;
+    const facetTotal = structuredFacets && Number.isFinite(Number(structuredFacets.total))
+      ? Number(structuredFacets.total)
+      : rawList.length;
 
     if (controls.module) {
       SEARCH_RESULTS_MODULES.forEach((item) => {
         const option = controls.module.querySelector(`option[value="${item.key}"]`);
         if (!option) return;
-        const count = item.key ? (moduleCounts[item.key] || 0) : rawList.length;
-        option.textContent = item.key ? `${item.label} (${count})` : `${item.label} (${rawList.length})`;
-        option.disabled = !!item.key && count === 0;
+        const count = item.key ? (moduleCounts[item.key] || 0) : facetTotal;
+        option.textContent = item.key ? `${item.label} (${count})` : `${item.label} (${facetTotal})`;
+        option.disabled = !!item.key && count === 0 && filters.module !== item.key;
       });
     }
 
@@ -698,6 +914,38 @@
         if (controls.module) controls.module.value = '';
         if (controls.hideClosed) controls.hideClosed.checked = false;
         if (controls.sort) controls.sort.value = 'relevance';
+        rerender();
+      });
+    }
+
+    if (controls.structured && controls.structured.dataset.kcSearchBound !== '1') {
+      controls.structured.dataset.kcSearchBound = '1';
+      controls.structured.addEventListener('click', (event) => {
+        const button = event.target.closest && event.target.closest('[data-kc-structured-signal]');
+        if (!button) return;
+        dismissStructuredSignal(searchInput ? searchInput.value : getQueryParam('q'), button.dataset.kcStructuredSignal);
+        rerender();
+      });
+    }
+
+    const restore = () => {
+      restoreStructuredSignals(searchInput ? searchInput.value : getQueryParam('q'));
+      rerender();
+    };
+    [controls.structuredRestore, controls.noResultsRestore].forEach((button) => {
+      if (!button || button.dataset.kcSearchBound === '1') return;
+      button.dataset.kcSearchBound = '1';
+      button.addEventListener('click', restore);
+    });
+
+    if (controls.noResultsRelax && controls.noResultsRelax.dataset.kcSearchBound !== '1') {
+      controls.noResultsRelax.dataset.kcSearchBound = '1';
+      controls.noResultsRelax.addEventListener('click', () => {
+        (lastStructuredResultsView && Array.isArray(lastStructuredResultsView.chips)
+          ? lastStructuredResultsView.chips
+          : []).forEach((chip) => dismissStructuredSignal(
+            searchInput ? searchInput.value : getQueryParam('q'), chip.signal
+          ));
         rerender();
       });
     }
@@ -746,9 +994,10 @@
 
     if (!q) {
       listEl.innerHTML = '';
-      if (noEl) noEl.style.display = 'block';
       if (countEl) countEl.textContent = '0';
       updateResultsControlsState([], [], readResultFilters());
+      renderStructuredSearchState(null);
+      updateNoResultsState(noEl, [], null);
       return;
     }
 
@@ -774,18 +1023,24 @@
 
     const safeResults = Array.isArray(results) ? results : [];
     const filters = readResultFilters();
+    const ignoredSignals = getStructuredIgnoredSignals(q);
+    let structuredState = null;
     const pilotResults = await applyStructuredSearchPilot(q, safeResults, {
       surface: 'results',
       hideClosed: filters.hideClosed,
-      limit: SEARCH_RESULTS_LIMIT
+      limit: SEARCH_RESULTS_LIMIT,
+      ignoredSignals,
+      moduleOverride: filters.module,
+      onState: (state) => { structuredState = state; }
     });
     if (requestSeq !== searchResultsRequestSeq) return;
     writeResultFiltersToUrl(q, filters);
     const filteredResults = filterAndSortResults(pilotResults, q, filters);
-    updateResultsControlsState(safeResults, filteredResults, filters);
+    renderStructuredSearchState(structuredState);
+    updateResultsControlsState(pilotResults, filteredResults, filters, structuredState);
     listEl.innerHTML = filteredResults.map(buildResultCard).join('\n');
 
-    if (noEl) noEl.style.display = filteredResults.length ? 'none' : 'block';
+    updateNoResultsState(noEl, filteredResults, structuredState);
     if (countEl) countEl.textContent = String(filteredResults.length);
   }
 
@@ -830,14 +1085,28 @@
     return post && post.id ? `product.html?id=${encodeURIComponent(post.id)}` : '#';
   }
 
-  function renderDropdown(dropdown, results, query) {
+  function renderDropdown(dropdown, results, query, structuredState) {
     dropdown.innerHTML = '';
 
     if (!results.length) {
       const empty = document.createElement('div');
       empty.className = 'kc-search-dropdown__empty';
-      empty.textContent = `Nenhum resultado para "${query}"`;
+      empty.textContent = structuredState && structuredState.active
+        ? 'Nenhum resultado com os critérios entendidos.'
+        : `Nenhum resultado para "${query}"`;
       dropdown.appendChild(empty);
+      if (structuredState && structuredState.active) {
+        const summary = document.createElement('div');
+        summary.className = 'kc-search-dropdown__meta';
+        summary.textContent = structuredState.chips.slice(0, 3).map((chip) => chip.label).join(' · ');
+        dropdown.appendChild(summary);
+        const adjust = document.createElement('button');
+        adjust.type = 'button';
+        adjust.className = 'kc-search-dropdown__footer';
+        adjust.textContent = 'Ajustar filtros na busca →';
+        adjust.addEventListener('click', () => navigateToResults(query, { source: 'dropdown-empty-adjust' }));
+        dropdown.appendChild(adjust);
+      }
       dropdown.classList.add('active');
       return;
     }
@@ -921,10 +1190,16 @@
         results = await searchPosts(q, { limit: 8, minScore: 0.2 });
       }
       if (!Array.isArray(results)) results = [];
-      results = await applyStructuredSearchPilot(q, results, { surface: 'dropdown', hideClosed: true, limit: 8 });
+      let structuredState = null;
+      results = await applyStructuredSearchPilot(q, results, {
+        surface: 'dropdown',
+        hideClosed: true,
+        limit: 8,
+        onState: (state) => { structuredState = state; }
+      });
       results = filterAndSortResults(results, q, { module: '', hideClosed: true, sortBy: 'relevance' }).slice(0, 8);
       positionDropdown(dropdown, searchBarEl);
-      renderDropdown(dropdown, results, q);
+      renderDropdown(dropdown, results, q, structuredState);
     } catch (_) {
       closeDropdown();
     }
