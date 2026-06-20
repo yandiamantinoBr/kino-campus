@@ -46,7 +46,7 @@ comportamentais completos, mas permanecem `keep-in-facade`.
 | Contrato novo | 1 suite / 5 testes aprovados |
 | `npm run audit:kcapi-residual -- --json` | aprovado; 8 cobertos / 7 pendentes |
 | `npm run check:all` | 182 suites / 3.643 testes / 3 snapshots aprovados |
-| CI do PR | pendente na criação deste relatório |
+| CI do PR #594 | aprovado: validators/Jest/Playwright list, Lighthouse (4 páginas) e Vercel Preview |
 
 ## Próxima etapa
 
