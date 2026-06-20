@@ -1,0 +1,91 @@
+{
+  "version": "1.0.0",
+  "status": "design-only",
+  "productionAuthorized": false,
+  "rpc": {
+    "candidateName": "public.kc_search_posts_structured_v1",
+    "coreName": "private.kc_search_posts_structured_core_v1",
+    "legacyName": "public.kc_search_posts_fts",
+    "security": "invoker",
+    "searchPath": "",
+    "dynamicSqlAllowed": false,
+    "publicExecuteAllowed": false,
+    "roles": ["anon", "authenticated"],
+    "limits": {
+      "queryCharacters": 160,
+      "termCount": 24,
+      "termCharacters": 64,
+      "filterPayloadBytes": 8192,
+      "filterValuesPerKey": 20,
+      "resultRows": 50
+    }
+  },
+  "modules": {
+    "achados-perdidos": {
+      "groups": ["status", "tipo"],
+      "fields": ["entrega", "localizacao", "recompensa"]
+    },
+    "caronas": {
+      "groups": ["tipo"],
+      "fields": ["contribuicao", "destino", "horario", "marcadoresCarona", "origem", "vagas"]
+    },
+    "compra-venda": {
+      "groups": ["categoria", "acao"],
+      "fields": ["condicao", "localizacao", "preco"]
+    },
+    "eventos": {
+      "groups": ["topico"],
+      "fields": ["data", "data_fim", "gratuito", "hora", "localizacao", "preco"]
+    },
+    "moradia": {
+      "groups": ["tipo"],
+      "fields": ["localizacao", "marcadoresMoradia", "orcamento", "preco", "regiao"]
+    },
+    "oportunidades": {
+      "groups": ["tipo"],
+      "fields": ["areaAtuacao", "localizacao", "modalidadeTrabalho", "regimeContratacao", "remuneracao"]
+    }
+  },
+  "operators": {
+    "enum": ["eq", "in"],
+    "set": ["contains_any", "contains_all"],
+    "boolean": ["eq"],
+    "number-range": ["eq", "gte", "lte", "between"],
+    "date-range": ["eq", "gte", "lte", "between"],
+    "time": ["eq", "gte", "lte", "between"],
+    "location": ["eq", "in"]
+  },
+  "forbiddenFields": [
+    "contato",
+    "link",
+    "link_as_cta",
+    "email",
+    "phone",
+    "token",
+    "password",
+    "gender_identity",
+    "race_color",
+    "religiao",
+    "opiniao_politica",
+    "orientacao_sexual",
+    "deficiencia"
+  ],
+  "rlsMatrix": [
+    { "actor": "anon", "owner": false, "status": "published", "visibility": "public", "allowed": true },
+    { "actor": "anon", "owner": false, "status": "published", "visibility": "community", "allowed": false },
+    { "actor": "anon", "owner": false, "status": "pending", "visibility": "public", "allowed": false },
+    { "actor": "authenticated", "owner": false, "status": "published", "visibility": "public", "allowed": true },
+    { "actor": "authenticated", "owner": false, "status": "published", "visibility": "community", "allowed": true },
+    { "actor": "authenticated", "owner": false, "status": "hidden", "visibility": "public", "allowed": false },
+    { "actor": "authenticated", "owner": true, "status": "hidden", "visibility": "community", "allowed": true },
+    { "actor": "admin", "owner": false, "status": "hidden", "visibility": "community", "allowed": true }
+  ],
+  "databaseGates": {
+    "serverVersionRecorded": false,
+    "allMigrationsApplied": false,
+    "rlsMatrixExecuted": false,
+    "explainAnalyzeBuffersExecuted": false,
+    "legacyParityExecuted": false,
+    "rollbackR3Executed": false
+  }
+}

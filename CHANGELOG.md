@@ -2,6 +2,23 @@
 
 ---
 
+## [v76.41] - 2026-06-20 - dossiê SQL/RPC isolado da busca estruturada
+
+### Adicionado
+
+- Contrato machine-readable do RPC estruturado candidato, derivado do snapshot canônico dos seis módulos.
+- Dossiê com inventário do RPC/FTS/RLS atual, assinatura versionada sem overload, matriz de acesso, limites de abuso, plano de `EXPLAIN`, critérios Go/No-Go e rollback R3.
+- Template de evidência para catálogo, grants, RLS, paridade, planos em 10k/50k linhas e remoção completa do candidato.
+- Oito contratos Jest garantem a whitelist, excluem campos restritos e impedem que o desenho apareça como migration.
+
+### Segurança
+
+- Decisão permanece Go documental / No-Go para migration: o Docker engine local estava indisponível e nenhum SQL foi executado.
+- RPC legado, flags, Supabase remoto, dados, grants e runtime não foram alterados.
+- O candidato exige `SECURITY INVOKER`, `search_path=''`, nomes qualificados, revogação de `PUBLIC` e core em schema privado.
+
+---
+
 ## [v76.40] - 2026-06-20 - critérios removíveis e facetas estruturadas
 
 ### Adicionado
