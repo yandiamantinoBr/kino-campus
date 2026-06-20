@@ -89,6 +89,13 @@ const BOOTSTRAP_DOMAINS = Object.freeze({
   }),
 });
 
+const BOOTSTRAP_GATE_EVIDENCE = Object.freeze({
+  'public-setConfig-contract': 'tests/contract/kc-api-transport-config-contract.test.js',
+  'timeout-rejection-contract': 'tests/contract/kc-api-transport-config-contract.test.js',
+  'HTTP-error-mapping': 'tests/contract/kc-api-transport-config-contract.test.js',
+  'relative-baseURL-resolution': 'tests/contract/kc-api-transport-config-contract.test.js',
+});
+
 const GLOBAL_ALIASES = new Set([
   'getLastCreatePostError',
   'setLastCreatePostError',
@@ -465,9 +472,20 @@ function buildBootstrapCoreDossier(functions) {
     'enforcesProductionPolicy',
   ];
 
+  const buildGateCoverage = (gate) => {
+    const evidence = BOOTSTRAP_GATE_EVIDENCE[gate] || null;
+    const covered = Boolean(evidence && fs.existsSync(path.join(ROOT, evidence)));
+    return {
+      gate,
+      status: covered ? 'covered' : 'required',
+      evidence: covered ? evidence : null,
+    };
+  };
+
   const domains = Object.entries(BOOTSTRAP_DOMAINS).map(([domain, meta]) => {
     const present = meta.functions.map((name) => byName.get(name)).filter(Boolean);
     const requiredGates = Array.from(meta.requiredGates);
+    const gateCoverage = requiredGates.map(buildGateCoverage);
     return {
       domain,
       risk: meta.risk,
@@ -484,12 +502,16 @@ function buildBootstrapCoreDossier(functions) {
       totalLines: present.reduce((sum, fn) => sum + fn.lines, 0),
       exportedFunctions: present.filter((fn) => fn.exported).map((fn) => fn.name),
       requiredGates,
+      gateCoverage,
+      coveredGateCount: gateCoverage.filter((entry) => entry.status === 'covered').length,
+      remainingGateCount: gateCoverage.filter((entry) => entry.status === 'required').length,
     };
   });
 
   const mappedNames = new Set(domains.flatMap((domain) => domain.functions.map((fn) => fn.name)));
   const bootstrapFunctions = functions.filter((fn) => fn.bucket === 'bootstrap-driver-core');
   const uniqueGates = Array.from(new Set(domains.flatMap((domain) => domain.requiredGates)));
+  const gateCoverage = uniqueGates.map(buildGateCoverage);
 
   return {
     decision: 'no-go-runtime-extraction',
@@ -502,8 +524,12 @@ function buildBootstrapCoreDossier(functions) {
     unmappedFunctions: bootstrapFunctions.filter((fn) => !mappedNames.has(fn.name)).map((fn) => fn.name),
     requiredGateCount: uniqueGates.length,
     requiredGates: uniqueGates,
+    gateCoverage,
+    coveredGateCount: gateCoverage.filter((entry) => entry.status === 'covered').length,
+    remainingGateCount: gateCoverage.filter((entry) => entry.status === 'required').length,
+    remainingGates: gateCoverage.filter((entry) => entry.status === 'required').map((entry) => entry.gate),
     recommendation: {
-      nextAction: 'add-dedicated-parity-tests-before-any-extraction',
+      nextAction: 'reassess-transport-config-boundary-without-runtime-extraction',
       firstDomainToReassess: 'transport-config',
       blockedReasons: [
         'public-setConfig-and-registerAdapter-contracts',
@@ -578,6 +604,8 @@ function toMarkdown(report) {
   lines.push(`- Lines: ${report.bootstrapCore.totalLines}`);
   lines.push(`- Domains: ${report.bootstrapCore.domainCount}`);
   lines.push(`- Required gates: ${report.bootstrapCore.requiredGateCount}`);
+  lines.push(`- Covered gates: ${report.bootstrapCore.coveredGateCount}`);
+  lines.push(`- Remaining gates: ${report.bootstrapCore.remainingGateCount}`);
   lines.push('');
   lines.push('| Domain | Risk | Functions | Lines | Exported | Decision |');
   lines.push('|---|---|---:|---:|---|---|');
@@ -585,9 +613,10 @@ function toMarkdown(report) {
     lines.push(`| ${domain.domain} | ${domain.risk} | ${domain.functionCount} | ${domain.totalLines} | ${domain.exportedFunctions.join(', ') || '-'} | ${domain.decision} |`);
   });
   lines.push('');
-  lines.push('Required gates:');
-  report.bootstrapCore.requiredGates.forEach((gate) => {
-    lines.push(`- \`${gate}\``);
+  lines.push('| Gate | Status | Evidence |');
+  lines.push('|---|---|---|');
+  report.bootstrapCore.gateCoverage.forEach((entry) => {
+    lines.push(`| ${entry.gate} | ${entry.status} | ${entry.evidence ? `\`${entry.evidence}\`` : '-'} |`);
   });
   lines.push('');
 

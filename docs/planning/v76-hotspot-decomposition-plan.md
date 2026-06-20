@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposição Segura dos Hotspots JS/CSS
 
-**Versão:** v76.29.0
+**Versão:** v76.30.0
 **Data:** 2026-06-19
-**Escopo:** planejamento técnico + status das extrações JS V76, dossiê JS-I.4 do bootstrap/driver core, inventário CSS-A, baseline CSS-B.1 e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
+**Escopo:** planejamento técnico + status das extrações JS V76, dossiê JS-I.4 e contratos JS-I.5 do bootstrap/driver core, inventário CSS-A, baseline CSS-B.1 e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
 
 ---
 
@@ -95,6 +95,11 @@ cinco domínios (`environment-policy`, `transport-config`, `error-contract`,
 `static-database-fallback` e `adapter-registry`), sem funções órfãs, e automatiza 15 gates. A
 decisão é No-Go para extração runtime. `transport-config` é apenas o primeiro domínio a ser
 reavaliado depois de testes dedicados de paridade; não é uma autorização de split.
+
+**Status v76.30.0:** JS-I.5 adiciona oito testes comportamentais e cobre os quatro gates de
+`transport-config`: `setConfig`, timeout, erro HTTP e URL relativa. O auditor passa a registrar
+4/15 gates cobertos e 11 pendentes. A decisão global continua No-Go e nenhuma função runtime foi
+movida.
 
 ### 3.2 Ordem permitida
 
@@ -273,6 +278,7 @@ JS e CSS no mesmo PR:
 | JS-I.2 | Remoção dos builders privados de notification fallbacks do facade | **Concluído em v76.12.0**; defaults canônicos ficam em `kc-api.notifications.js` |
 | JS-I.3 | Remoção da ponte `emitPostMutation` do facade | **Concluído em v76.13.0**; eventos de freshness ficam em `kc-api.posts-write.js` |
 | JS-I.4 | Dossiê automatizado do `bootstrap-driver-core` | **Concluído em v76.29.0**; cinco domínios, 15 gates e No-Go para extração runtime |
+| JS-I.5 | Contratos comportamentais de `transport-config` | **Concluído em v76.30.0**; quatro gates cobertos, 11 pendentes e runtime inalterado |
 | CSS-A | Inventário de ownership de seletores de `styles.css` | **Concluído em v76.8.0**; prepara split sem alterar cascade |
 | CSS-B | Baseline visual/cascade anônimo antes de split de `styles.css` | **Concluído em v76.9.0**; cria evidência antes/depois para micro-splits futuros |
 | CSS-C | Micro-split da navegação admin | **Concluído em v76.14.0**; `.kc-admin-nav*` agora fica em `admin-shell.css` |
@@ -342,6 +348,10 @@ inalterado.
 mapeamento. A decisão continua sendo manter o núcleo na fachada; a única continuidade JS permitida
 é criar testes comportamentais de paridade, começando por `transport-config`.
 
+**Status v76.30.0:** JS-I.5 cobre os quatro gates de `transport-config` em suíte dedicada e faz o
+auditor expor evidência por gate. O domínio pode ser reavaliado documentalmente, mas continua
+`keep-in-facade`; 11 gates do núcleo seguem pendentes.
+
 **Status v76.14.0:** CSS-C moveu o bloco `.kc-admin-nav*` para `assets/css/admin-shell.css`,
 reduzindo `styles.css` para 12.161 linhas / 284.046 bytes e mantendo 24 capturas de baseline com
 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
@@ -357,6 +367,5 @@ reduzindo `styles.css` para 12.161 linhas / 284.046 bytes e mantendo 24 capturas
 0 overflow horizontal, 0 carregamentos de `future-split/` e 0 diferenças de hash.
 
 Próxima entrega recomendada: escolher uma frente única, sem misturar no mesmo PR: CSS-B autenticado
-para dashboard admin real ou testes dedicados de paridade de `transport-config`. O
-`bootstrap-driver-core` permanece bloqueado para extração runtime até que os 15 gates estejam
-cobertos.
+para dashboard admin real, reavaliação documental da fronteira de `transport-config` ou cobertura
+dos 11 gates restantes. O `bootstrap-driver-core` permanece bloqueado para extração runtime.

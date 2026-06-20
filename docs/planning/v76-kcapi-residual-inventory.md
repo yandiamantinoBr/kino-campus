@@ -1,8 +1,8 @@
 # V76 JS-I - Inventário Residual da Fachada `KCAPI`
 
-**Versão:** v76.29.0
+**Versão:** v76.30.0
 **Data:** 2026-06-19
-**Escopo:** inventário documental + script assistivo; inclui status JS-I.1 a JS-I.3 e o dossiê automatizado JS-I.4 do `bootstrap-driver-core`; sem alterar runtime, HTML, CSS, SQL, secrets, provider ou deploy
+**Escopo:** inventário documental + script assistivo; inclui JS-I.1 a JS-I.4 e contratos comportamentais JS-I.5 de `transport-config`; sem alterar runtime, HTML, CSS, SQL, secrets, provider ou deploy
 
 ---
 
@@ -33,6 +33,10 @@ ordem de emissão preservada após o retorno do driver ativo.
 Em v76.29.0, JS-I.4 tornou o bucket `bootstrap-driver-core` auditável por domínio, função, sinal de
 risco e gate. O resultado é um No-Go explícito para extração runtime: as 12 funções / 131 linhas
 formam cinco domínios acoplados e exigem 15 gates antes de qualquer movimentação.
+
+Em v76.30.0, JS-I.5 adicionou oito contratos comportamentais para os quatro gates de
+`transport-config`. O auditor agora mede 4 gates cobertos / 11 pendentes; nenhuma função runtime
+foi movida ou alterada.
 
 No-Go mantido:
 
@@ -176,6 +180,10 @@ de ambiente/configuração mutável, rede, timers, base estática, normalizaçã
 seleção de driver e política de produção. Os 15 gates cobrem paridade de ambiente, configuração,
 timeout/HTTP/URL, erro público, fallback estático, normalização, registro e precedência do driver.
 
+JS-I.5 cobre integralmente os quatro gates de `transport-config`: contrato público de `setConfig`,
+timeout, mapeamento de erro HTTP e resolução relativa de `baseURL`. Os outros 11 gates permanecem
+obrigatórios e o domínio continua na fachada.
+
 O contrato completo e as evidências ficam em:
 
 - `docs/planning/v76-kcapi-bootstrap-driver-core-dossier.md`;
@@ -185,12 +193,12 @@ O contrato completo e as evidências ficam em:
 
 ## 7. Próxima etapa recomendada
 
-Após JS-I.4, não há autorização para extrair código desse núcleo. A próxima PR mais prudente deve
+Após JS-I.5, não há autorização para extrair código desse núcleo. A próxima PR mais prudente deve
 escolher uma frente única:
 
 - executar CSS-B autenticado para dashboard/admin real antes de qualquer split visual;
-- criar testes dedicados de paridade comportamental para `transport-config` (`setConfig`, timeout,
-  HTTP e URL relativa), ainda sem extração runtime.
+- reavaliar documentalmente a fronteira de `transport-config`, sem editar runtime, ou avançar na
+  cobertura dos 11 gates restantes.
 
 Se a prioridade for reduzir risco transversal antes de mover mais código, a alternativa é congelar
 esta medição como baseline e avançar para CSS-C apenas com dossiê visual específico.

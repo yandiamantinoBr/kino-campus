@@ -412,12 +412,24 @@ describe('JS-I.4 — dossiê automatizado do bootstrap-driver-core', function ()
     expect(byName.getActiveDriver.riskSignals).toContain('selectsDriver');
   });
 
-  test('lista 15 gates antes de reavaliar transport-config', function () {
+  test('lista 15 gates e distingue a cobertura comportamental de transport-config', function () {
     expect(report.bootstrapCore.requiredGateCount).toBe(15);
+    expect(report.bootstrapCore.coveredGateCount).toBe(4);
+    expect(report.bootstrapCore.remainingGateCount).toBe(11);
     expect(report.bootstrapCore.requiredGates).toContain('production-fail-closed-policy');
     expect(report.bootstrapCore.requiredGates).toContain('local-supabase-environment-parity');
     expect(report.bootstrapCore.requiredGates).toContain('adapter-registration-order');
-    expect(report.bootstrapCore.recommendation.nextAction).toBe('add-dedicated-parity-tests-before-any-extraction');
+    expect(report.bootstrapCore.gateCoverage.filter(function (entry) {
+      return entry.status === 'covered';
+    }).map(function (entry) {
+      return entry.gate;
+    })).toEqual([
+      'public-setConfig-contract',
+      'timeout-rejection-contract',
+      'HTTP-error-mapping',
+      'relative-baseURL-resolution',
+    ]);
+    expect(report.bootstrapCore.recommendation.nextAction).toBe('reassess-transport-config-boundary-without-runtime-extraction');
     expect(report.bootstrapCore.recommendation.firstDomainToReassess).toBe('transport-config');
   });
 });

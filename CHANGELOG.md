@@ -2,6 +2,33 @@
 
 ---
 
+## [v76.30] - 2026-06-19 - JS-I.5 transport-config parity
+
+### Tema
+
+Contratos comportamentais do primeiro domínio do `bootstrap-driver-core`, sem
+alterar runtime ou contrato público.
+
+### Decisões
+
+- **Quatro gates cobertos**: `setConfig`, timeout, erro HTTP e URL relativa agora
+  têm evidência executável.
+- **No-Go preservado**: 11 dos 15 gates continuam pendentes; o núcleo permanece
+  na fachada.
+- **Auditoria rastreável**: JSON e Markdown distinguem gates cobertos e exigidos.
+- **Próxima ação**: reavaliar documentalmente a fronteira de `transport-config`,
+  ainda sem extração runtime.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.30 | suíte dedicada com 8 contratos comportamentais |
+| v76.30 | evidência automatizada de 4 gates cobertos / 11 pendentes |
+| v76.30 | baseline Jest de 181 suites / 3.638 testes |
+
+---
+
 ## [v76.29] - 2026-06-19 - JS-I.4 do bootstrap-driver-core
 
 ### Tema
