@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.31` (JS-I.6 de adapter-registry, runtime frontend `8.6.1` inalterado)
+- linha de trabalho atual: `v76.32` (planejamento de busca/personalização, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
@@ -64,6 +64,7 @@
 | [planning/v76-kcapi-bootstrap-driver-core-dossier.md](./planning/v76-kcapi-bootstrap-driver-core-dossier.md) | dossiê JS-I.4–JS-I.6 dos cinco domínios, 8 gates cobertos e 7 pendentes |
 | [planning/v76-css-ownership-inventory.md](./planning/v76-css-ownership-inventory.md) | inventário CSS-A/C de ownership de `styles.css` após os micro-splits admin e chat shortcut |
 | [planning/v76-css-visual-baseline.md](./planning/v76-css-visual-baseline.md) | baseline CSS-B/C visual/cascade antes/depois de micro-splits de `styles.css` |
+| [planning/v76-search-personalization-architecture-plan.md](./planning/v76-search-personalization-architecture-plan.md) | plano por fases para busca orientada ao schema, preferências, privacidade, métricas e rollback |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
 | [ops/adsense-search-console-readiness-runbook.md](./ops/adsense-search-console-readiness-runbook.md) | gate operacional para deploy, inspeção de URLs e revisão AdSense sem ativação automática |
 | [audits/README.md](./audits/README.md) | indice de auditorias tecnicas pontuais (read-only + validacao contra producao) |
@@ -74,6 +75,7 @@
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
+| [qa/reports/report-v76-search-personalization-planning-2026-06-19.md](./qa/reports/report-v76-search-personalization-planning-2026-06-19.md) | evidência V76.32 da auditoria e do planejamento de busca/personalização, sem mudança de runtime |
 | [qa/reports/report-v76-kcapi-adapter-registry-contract-2026-06-19.md](./qa/reports/report-v76-kcapi-adapter-registry-contract-2026-06-19.md) | evidência V76.31 dos contratos comportamentais de `adapter-registry` |
 | [qa/reports/report-v76-kcapi-transport-config-contract-2026-06-19.md](./qa/reports/report-v76-kcapi-transport-config-contract-2026-06-19.md) | evidência V76.30 dos contratos comportamentais de `transport-config` |
 | [qa/reports/report-v76-kcapi-bootstrap-driver-core-dossier-2026-06-19.md](./qa/reports/report-v76-kcapi-bootstrap-driver-core-dossier-2026-06-19.md) | evidência V76.29 do No-Go automatizado para extração do bootstrap/driver core |

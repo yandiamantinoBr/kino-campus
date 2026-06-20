@@ -2,6 +2,17 @@
 
 ---
 
+## [v76.32] - 2026-06-19 - busca e personalização responsável
+
+### Planejamento
+
+- Registrado o plano canônico de busca orientada aos campos dos seis módulos para `/search-results.html` e `kcSearchDropdown`.
+- Separadas as fases de índice estruturado, parser/facetas, preferências explícitas, afinidade local e sincronização opt-in, com flags, métricas, testes e rollback.
+- Proibido o uso de gênero, raça/cor, mensagens, denúncias, ajuda, contato, localização exata e inferências de atributos protegidos no ranking.
+- Mantidos runtime frontend `8.6.1`, HTML, CSS, JavaScript, SQL, dados e deploy inalterados nesta etapa documental.
+
+---
+
 ## [v76.31] - 2026-06-19 - JS-I.6 adapter-registry parity
 
 ### Tema
