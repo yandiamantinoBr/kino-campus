@@ -76,9 +76,13 @@ function generateSource() {
     `}));\n`;
 }
 
+function snapshotMatches(value) {
+  return normalizeSource(value) === normalizeSource(generateSource());
+}
+
 function checkSnapshot() {
   if (!fs.existsSync(TARGET)) return false;
-  return fs.readFileSync(TARGET, 'utf8') === generateSource();
+  return snapshotMatches(fs.readFileSync(TARGET, 'utf8'));
 }
 
 function main() {
@@ -99,5 +103,5 @@ if (require.main === module) main();
 
 module.exports = {
   SOURCE_FILES, TARGET, buildRegistry, checkSnapshot, generateSnapshot,
-  generateSource, normalizeSource, sourceHash
+  generateSource, normalizeSource, snapshotMatches, sourceHash
 };

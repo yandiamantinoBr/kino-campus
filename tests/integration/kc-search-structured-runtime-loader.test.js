@@ -96,7 +96,8 @@ describe('lazy loader do runtime estruturado de busca', () => {
     const resolve = page.window.kcSearch.__internals.resolveStructuredSearchAsset;
     expect(resolve('kc-search-registry.generated.js')).toBe('/assets/js/shared/kc-search-registry.generated.js?v=8.6.1');
     expect(SOURCE).toContain("window.KCFF.isEnabled('search.structuredRuntime', false)");
-    expect((SOURCE.match(/runShadow/g) || [])).toHaveLength(1);
+    expect(SOURCE).toContain("window.KCFF.isEnabled('search.structuredPilot', false)");
+    expect((SOURCE.match(/runtime\.pipeline\.runShadow/g) || [])).toHaveLength(1);
     page.dom.window.close();
   });
 });

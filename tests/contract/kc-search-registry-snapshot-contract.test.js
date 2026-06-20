@@ -12,6 +12,7 @@ describe('snapshot gerado do registry de busca', () => {
     expect(Generator.checkSnapshot()).toBe(true);
     expect(Snapshot.sourceHash).toBe(Generator.sourceHash());
     expect(Generator.normalizeSource('schema\r\nbuilder\rpolicies\n')).toBe('schema\nbuilder\npolicies\n');
+    expect(Generator.snapshotMatches(Generator.generateSource().replace(/\n/g, '\r\n'))).toBe(true);
   });
 
   test('é UMD, versionado e profundamente imutável', () => {
@@ -48,7 +49,8 @@ describe('snapshot gerado do registry de busca', () => {
   });
 
   test('geração é determinística e o snapshot não é carregado estaticamente', () => {
-    expect(Generator.generateSource()).toBe(fs.readFileSync(Generator.TARGET, 'utf8'));
+    expect(Generator.normalizeSource(fs.readFileSync(Generator.TARGET, 'utf8')))
+      .toBe(Generator.normalizeSource(Generator.generateSource()));
     expect(Generator.generateSource()).not.toMatch(/generatedAt|\d{4}-\d{2}-\d{2}T\d{2}:/);
     const htmlFiles = fs.readdirSync(ROOT).filter((name) => name.endsWith('.html'))
       .map((name) => path.join(ROOT, name))

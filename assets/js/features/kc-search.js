@@ -66,6 +66,11 @@
       window.KCFF.isEnabled('search.structuredRuntime', false));
   }
 
+  function isStructuredSearchPilotEnabled() {
+    return !!(window.KCFF && typeof window.KCFF.isEnabled === 'function' &&
+      window.KCFF.isEnabled('search.structuredPilot', false));
+  }
+
   function resolveStructuredSearchAsset(file) {
     let src = `/assets/js/shared/${file}`;
     if (SEARCH_SCRIPT_SRC) {
@@ -132,6 +137,46 @@
       return null;
     });
     return structuredSearchRuntimePromise;
+  }
+
+  function getStructuredPostId(post) {
+    return String((post && (post.id || post.uuid || post.legacy_id || post.legacyId)) || '');
+  }
+
+  async function applyStructuredSearchPilot(query, posts, options = {}) {
+    const source = Array.isArray(posts) ? posts : [];
+    if (!isStructuredSearchPilotEnabled() || !source.length) return source;
+    const runtime = await loadStructuredSearchRuntime();
+    if (!runtime) return source;
+    try {
+      const result = runtime.pipeline.runShadow(query, source, {
+        parser: runtime.parser,
+        registry: runtime.registry,
+        projector: runtime.projector,
+        searchShared: getSearchShared(),
+        limit: Math.max(1, Math.min(120, Number(options.limit) || source.length || 1)),
+        surface: options.surface === 'dropdown' ? 'dropdown' : 'results',
+        hideClosed: options.hideClosed === true,
+        now: options.now
+      });
+      const plan = result && result.plan ? result.plan : {};
+      const comparison = result && result.comparison ? result.comparison : {};
+      const hasStructuredSignal = !!plan.module || comparison.intentApplied === true ||
+        (Array.isArray(comparison.supportedFilters) && comparison.supportedFilters.length > 0);
+      if (!hasStructuredSignal) return source;
+
+      const byId = new Map(source.map((post) => [getStructuredPostId(post), post]));
+      const candidateRows = result && Array.isArray(result.candidate) ? result.candidate : [];
+      if (!candidateRows.length) return [];
+      const selected = candidateRows.map((row) => {
+        const post = byId.get(String(row.id || ''));
+        return post ? Object.assign({}, post, { relevanceScore: Number(row.relevanceScore || 0) }) : null;
+      }).filter(Boolean);
+      return selected.length === candidateRows.length ? selected : source;
+    } catch (_) {
+      try { console.warn('[KinoCampus] Piloto estruturado falhou; resultados legados preservados.'); } catch (_) {}
+      return source;
+    }
   }
 
   function hasAnalyticsConsent() {
@@ -729,8 +774,14 @@
 
     const safeResults = Array.isArray(results) ? results : [];
     const filters = readResultFilters();
+    const pilotResults = await applyStructuredSearchPilot(q, safeResults, {
+      surface: 'results',
+      hideClosed: filters.hideClosed,
+      limit: SEARCH_RESULTS_LIMIT
+    });
+    if (requestSeq !== searchResultsRequestSeq) return;
     writeResultFiltersToUrl(q, filters);
-    const filteredResults = filterAndSortResults(safeResults, q, filters);
+    const filteredResults = filterAndSortResults(pilotResults, q, filters);
     updateResultsControlsState(safeResults, filteredResults, filters);
     listEl.innerHTML = filteredResults.map(buildResultCard).join('\n');
 
@@ -870,6 +921,7 @@
         results = await searchPosts(q, { limit: 8, minScore: 0.2 });
       }
       if (!Array.isArray(results)) results = [];
+      results = await applyStructuredSearchPilot(q, results, { surface: 'dropdown', hideClosed: true, limit: 8 });
       results = filterAndSortResults(results, q, { module: '', hideClosed: true, sortBy: 'relevance' }).slice(0, 8);
       positionDropdown(dropdown, searchBarEl);
       renderDropdown(dropdown, results, q);
@@ -994,6 +1046,7 @@
     globalSearch,
     loadDatabase: loadDbPosts,
     loadStructuredRuntime: loadStructuredSearchRuntime,
+    applyStructuredPilot: applyStructuredSearchPilot,
     navigateToResults,
     track: trackSearch,
     flushPending: flushPendingTrackedSearches,
@@ -1002,7 +1055,9 @@
       getSearchSessionId,
       getSearchStorage,
       insertTrackedTerms,
+      applyStructuredSearchPilot,
       isStructuredSearchRuntimeEnabled,
+      isStructuredSearchPilotEnabled,
       loadStructuredSearchRuntime,
       resolveStructuredSearchAsset,
       navigateToResults,

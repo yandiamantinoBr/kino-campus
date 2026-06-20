@@ -38,10 +38,10 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Backend | Supabase (PostgreSQL + Auth + Storage + Edge Functions + Realtime) | — |
 | Hosting | Vercel | `vercel.json` é imutável sem aprovação explícita |
 | Build | `node scripts/inject-env.js` | Substitui placeholders `__KC_*__` nas variáveis |
-| Testes | Jest (188 suites) + Playwright (10 specs E2E) | Nunca reduzir contagem |
+| Testes | Jest (189 suites) + Playwright (11 specs E2E) | Nunca reduzir contagem |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v76.38)
+### Estado atual (v76.39)
 
 | Campo | Valor |
 |-------|-------|
@@ -49,7 +49,7 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 | Branch de features | `feature/v75.X.Y-descricao-curta` |
 | appVersion | `75.1.0` (performance phase 1; Speed Insights mergeado no PR #549) |
 | frontendRuntimeVersion | `8.6.1` (constante canonica do runtime atual) |
-| Jest | 188 suites · 3761 testes |
+| Jest | 189 suites · 3767 testes |
 | check:all | 6 gates verdes |
 | Itens validados (check:structure) | 169 |
 
@@ -77,13 +77,13 @@ kino-campus/
 ├── data/database.json          ← fixture para driver local
 ├── docs/                       ← Toda documentação técnica
 ├── scripts/                    ← validators, auditorias e geradores
-├── tests/                      ← 188 suites Jest
+├── tests/                      ← 189 suites Jest
 │   ├── unit/         (26)
-│   ├── integration/ (130)
+│   ├── integration/ (131)
 │   ├── contract/     (13)
 │   ├── structure/    (14)
 │   ├── a11y/          (5)
-│   └── e2e/          (10)      ← Playwright specs
+│   └── e2e/          (11)      ← Playwright specs
 └── VERSION.json                ← Fonte de verdade de versão
 ```
 

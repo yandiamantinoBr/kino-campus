@@ -56,6 +56,7 @@
       'telemetry.enabled': false,
       'search.schemaFields': false,
       'search.structuredRuntime': false,
+      'search.structuredPilot': false,
     },
     featureFlags: {},
 
