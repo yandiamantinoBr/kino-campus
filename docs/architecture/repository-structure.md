@@ -1,8 +1,8 @@
 # Estrutura do Repositório - KinoCampus
 
-**Versão:** v76.33.0
+**Versão:** v76.34.0
 **Data:** 2026-06-19
-**Atualizado em:** v76.33.0 - contrato `KCSearchFieldRegistry` e corpus dourado
+**Atualizado em:** v76.34.0 - projeção estruturada local sob flag desligada
 
 ---
 
@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 183 suites / 3682 testes + Playwright 10 specs E2E |
+| Testes | Jest 183 suites / 3691 testes + Playwright 10 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -269,7 +269,7 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:routes` | Valida 22 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantém 183/183 suites e 3682/3682 testes Jest |
+| `npm test` | Mantém 183/183 suites e 3691/3691 testes Jest |
 | `npx playwright test --list` | Lista 10 specs / 68 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |

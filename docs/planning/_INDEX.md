@@ -31,7 +31,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v76-kcapi-residual-inventory.md` | Inventário JS-I dos buckets residuais da fachada `KCAPI`, atualizado após JS-I.3 e sem novo candidato JS pequeno equivalente |
 | `v76-css-ownership-inventory.md` | Inventário CSS-A/C de ownership de `styles.css`, atualizado após os micro-splits admin e chat shortcut |
 | `v76-css-visual-baseline.md` | Baseline CSS-B/C visual/cascade para rotas públicas, usuário/chat e admin estático antes/depois de micro-splits CSS-C/C.2/C.3 |
-| `v76-search-personalization-architecture-plan.md` | Plano V76.32–V76.33 para busca orientada ao schema; PR-A de registro/corpus concluído e PR-B local como próximo gate |
+| `v76-search-personalization-architecture-plan.md` | Plano V76.32–V76.34; registro/corpus e projeção local sob flag concluídos, parser offline como próximo gate |
 
 ## Regras
 

@@ -63,6 +63,17 @@
     return shared && typeof shared.searchCollection === 'function' ? shared : null;
   }
 
+  function getSearchFieldRegistry() {
+    const registry = typeof window !== 'undefined' ? window.KCSearchFieldRegistry : null;
+    return registry && typeof registry.projectCollection === 'function' ? registry : null;
+  }
+
+  function isFeatureEnabled(name, fallback = false) {
+    return !!(window.KCFF && typeof window.KCFF.isEnabled === 'function'
+      ? window.KCFF.isEnabled(name, fallback)
+      : fallback);
+  }
+
   function readLocalUserPosts() {
     try {
       const raw = localStorage.getItem('kc_user_posts');
@@ -268,6 +279,8 @@
       getDatabaseRaw,
       getDatabaseNormalized,
       getSearchShared,
+      getSearchFieldRegistry,
+      isFeatureEnabled,
       getSearchCollection: getLocalSearchCollection,
       readLocalUserPosts,
       enrichPostWithRatings,

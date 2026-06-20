@@ -166,6 +166,25 @@ describe('KCSearchShared', () => {
       expect(SearchShared.searchCollection(list, { q: 'conpeex', sortBy: 'recent', limit: 10 })[0].id).toBe('newer');
       expect(SearchShared.searchCollection(list, { q: 'conpeex', sortBy: 'engagement', limit: 10 })[0].id).toBe('older-popular');
     });
+
+    test('usa a projeção estruturada quando ela foi anexada pelo driver', () => {
+      const list = [
+        {
+          id: 'remote-job',
+          title: 'Oportunidade para estudantes',
+          description: 'Confira os detalhes',
+          module: 'oportunidades',
+          kcSearchProjection: { searchText: 'Tecnologia Remoto CLT' }
+        }
+      ];
+
+      expect(SearchShared.searchCollection(list, { q: 'remoto' }).map((post) => post.id)).toEqual(['remote-job']);
+    });
+
+    test('sem projeção preserva o comportamento lexical anterior', () => {
+      const list = [{ id: 'legacy', title: 'Oportunidade para estudantes', module: 'oportunidades' }];
+      expect(SearchShared.searchCollection(list, { q: 'remoto' })).toEqual([]);
+    });
   });
 
   describe('fuzzy matching (tolerância a erros)', () => {

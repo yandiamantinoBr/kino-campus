@@ -54,6 +54,7 @@
     flags: {
       'sw.enabled': false,
       'telemetry.enabled': false,
+      'search.schemaFields': false,
     },
     featureFlags: {},
 

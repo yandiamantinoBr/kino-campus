@@ -1,6 +1,6 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.33.0 · **Atualizado em:** 2026-06-19
+**Versão:** v76.34.0 · **Atualizado em:** 2026-06-20
 
 > Documenta as 183 suites Jest + 10 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 183 suites · 3682 testes
+Jest: 183 suites · 3691 testes
 Playwright: 10 specs · 68 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥183 passed, 183 total` e `≥3682 passed, 3682 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥183 passed, 183 total` e `≥3691 passed, 3691 total`.
 
 ### Gate CI essencial
 
@@ -489,7 +489,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥183 passed, 183 total
-  Tests:       ≥3682 passed, 3682 total
+  Tests:       ≥3691 passed, 3691 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

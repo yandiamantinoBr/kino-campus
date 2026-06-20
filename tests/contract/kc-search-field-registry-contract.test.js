@@ -14,6 +14,7 @@ const FIELDS_PATH = path.join(ROOT, 'assets/js/features/create-post/kc-create-po
 const REGISTRY_PATH = path.join(ROOT, 'assets/js/shared/kc-search-fields.shared.js');
 const CORPUS_PATH = path.join(ROOT, 'tests/fixtures/search-golden-queries.v1.json');
 const PLAN_PATH = path.join(ROOT, 'docs/planning/v76-search-personalization-architecture-plan.md');
+const ENV_PATH = path.join(ROOT, 'assets/js/boot/kc-env.js');
 
 const SearchFieldRegistry = require(REGISTRY_PATH);
 const corpus = JSON.parse(fs.readFileSync(CORPUS_PATH, 'utf8'));
@@ -198,6 +199,57 @@ describe('KCSearchFieldRegistry — privacidade e preferências', () => {
       'gender_identity', 'race_color', 'orientacao_sexual', 'religiao',
       'opiniao_politica', 'deficiencia', 'token', 'password'
     ].forEach((forbidden) => expect(serialized).not.toContain(forbidden));
+  });
+
+  test('projeção inclui somente conteúdo pesquisável e filtros permitidos', () => {
+    const projection = SearchFieldRegistry.projectPost({
+      module: 'oportunidades',
+      title: 'Vaga de estágio',
+      description: 'Atuação em produto digital',
+      location: 'Câmpus Samambaia',
+      price: 1200,
+      metadata: {
+        areaLabel: 'Tecnologia',
+        workModeLabel: 'Remoto',
+        employmentTypeLabel: 'CLT',
+        contato: 'privado@example.com',
+        link: 'https://example.com/inscricao'
+      }
+    });
+
+    expect(projection.searchText).toContain('Tecnologia');
+    expect(projection.searchText).toContain('Remoto');
+    expect(projection.searchText).not.toContain('Vaga de estágio');
+    expect(projection.searchText).not.toContain('Atuação em produto digital');
+    expect(projection.searchText).not.toContain('privado@example.com');
+    expect(projection.searchText).not.toContain('https://example.com');
+    expect(projection.fields).not.toHaveProperty('contato');
+    expect(projection.fields).not.toHaveProperty('link');
+    expect(projection.filters.modalidadeTrabalho).toEqual(['Remoto']);
+  });
+
+  test('projeção traduz gratuidade sem expor outros booleanos operacionais', () => {
+    const free = SearchFieldRegistry.projectPost({ module: 'eventos', metadata: { gratuito: true, link_as_cta: true } });
+    const paid = SearchFieldRegistry.projectPost({ module: 'eventos', metadata: { gratuito: false } });
+
+    expect(free.searchText).toContain('gratuito gratis');
+    expect(free.fields).not.toHaveProperty('link_as_cta');
+    expect(paid.searchText).toContain('pago');
+  });
+
+  test('projectCollection não muta posts e congela cada projeção', () => {
+    const source = [{ id: 'p1', module: 'moradia', metadata: { regionLabel: 'Setor Universitário' } }];
+    const projected = SearchFieldRegistry.projectCollection(source);
+
+    expect(source[0]).not.toHaveProperty('kcSearchProjection');
+    expect(projected[0]).not.toBe(source[0]);
+    expect(projected[0].kcSearchProjection.searchText).toContain('Setor Universitário');
+    expect(Object.isFrozen(projected[0].kcSearchProjection)).toBe(true);
+  });
+
+  test('flag da projeção local existe desligada por padrão', () => {
+    const envSource = fs.readFileSync(ENV_PATH, 'utf8');
+    expect(envSource).toContain("'search.schemaFields': false");
   });
 });
 

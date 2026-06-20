@@ -2,6 +2,23 @@
 
 ---
 
+## [v76.34] - 2026-06-20 - projeção estruturada da busca local
+
+### Adicionado
+
+- `KCSearchFieldRegistry.projectPost/projectCollection` cria projeções imutáveis de texto e filtros permitidos.
+- O driver local aplica a projeção antes do ranking somente quando `search.schemaFields` está habilitada.
+- `KCSearchShared` reconhece a projeção com pesos inferiores aos campos lexicais principais.
+- Nove novos testes cobrem conteúdo, privacidade, flag off/on e fallback sem registry.
+
+### Segurança
+
+- A flag nasce desligada e o registry continua fora dos HTMLs.
+- `contato`, `link` e campos operacionais não entram na projeção.
+- Supabase, perfil, analytics, SQL, dropdown e filtros visuais permanecem inalterados.
+
+---
+
 ## [v76.33] - 2026-06-19 - contrato de campos e corpus de busca
 
 ### Adicionado

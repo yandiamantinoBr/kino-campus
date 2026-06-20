@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.33.0 (2026-06-19)** — inclui o contrato ainda não carregado `KCSearchFieldRegistry`; runtime frontend `8.6.1` inalterado.
+> **Atualizado em v76.34.0 (2026-06-20)** — inclui projeção estruturada local atrás de flag desligada; runtime frontend `8.6.1` inalterado.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -19,7 +19,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `10` |
 | suites de teste Jest em `tests/` | `183` |
-| testes Jest totais | `3682` |
+| testes Jest totais | `3691` |
 | specs E2E Playwright | `10` |
 
 ## Princípio estrutural
@@ -233,5 +233,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.31.0 (2026-06-19):** JS-I.6 adiciona cinco contratos comportamentais para `adapter-registry`, eleva a cobertura para 8/15 gates e mantém seleção/registro na fachada.
 - **v76.32.0 (2026-06-19):** registra o plano de busca orientada ao schema e personalização responsável, sem alterar runtime.
 - **v76.33.0 (2026-06-19):** adiciona `KCSearchFieldRegistry` não carregado, corpus sintético de 18 consultas e 39 contratos; busca, HTML, SQL e personalização permanecem inalterados.
+- **v76.34.0 (2026-06-20):** adiciona projeção estruturada ao caminho local sob `search.schemaFields=false`, com fallback legado e nove contratos adicionais; Supabase e UI permanecem inalterados.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.
