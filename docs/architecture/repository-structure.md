@@ -1,8 +1,8 @@
 # Estrutura do Repositório - KinoCampus
 
-**Versão:** v76.29.0
+**Versão:** v76.30.0
 **Data:** 2026-06-19
-**Atualizado em:** v76.29.0 - dossiê automatizado JS-I.4 do `bootstrap-driver-core`
+**Atualizado em:** v76.30.0 - contratos comportamentais JS-I.5 de `transport-config`
 
 ---
 
@@ -22,7 +22,7 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
 | Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 180 suites / 3616 testes + Playwright 10 specs E2E |
+| Testes | Jest 181 suites / 3638 testes + Playwright 10 specs E2E |
 | Gates locais | `npm run check:all` com 5 validadores |
 
 V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
@@ -205,7 +205,7 @@ Essa ordem e validada por `npm run check:scripts`.
 | `assets/css/product-lightbox.css` | Producao | Lightbox de midia da pagina de produto |
 | `assets/css/future-split/` | Stubs | Preparacao para split futuro; nao carregar em producao sem gate visual |
 
-O split CSS segue controlado por gates. V27 define o gate visual/a11y mínimo antes de qualquer alteração CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css`; V76.9 adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md` para capturar baseline anônimo sem alterar cascade, HTML ou `future-split/`. V76.10 adiciona `scripts/audit-kcapi-facade-residual.js`, `npm run audit:kcapi-residual` e `docs/planning/v76-kcapi-residual-inventory.md` para classificar os buckets residuais da fachada `KCAPI`; V76.11 move external access admin para `kc-api.help.js`; V76.12 move os builders canônicos de notification fallbacks para `kc-api.notifications.js`; V76.13 move a ponte `emitPostMutation` para `kc-api.posts-write.js`; V76.14/V76.15 encerram `Admin overlap`; V76.17 encerra `Chat overlap` com `kc-chat-shortcut.css`; V76.26 move `.kc-legal-*` e V76.27 move `.kc-profile-rank-badges*` para `kc-public-shell.css`; V76.28 amplia o baseline a 21 rotas / 42 capturas e cobre as 12 páginas consumidoras do shell. V76.29 classifica `bootstrap-driver-core` em cinco domínios e 15 gates, confirmando No-Go para extração runtime; `transport-config` só pode ser reavaliado após testes dedicados de paridade.
+O split CSS segue controlado por gates. V27 define o gate visual/a11y mínimo antes de qualquer alteração CSS; V35 define readiness e rollback antes de qualquer CSS; V45 detalha o candidato P2 de ajuste CSS pequeno; V76.8 adiciona `scripts/audit-css-ownership.js` e `docs/planning/v76-css-ownership-inventory.md` para classificar `styles.css`; V76.9 adiciona `scripts/capture-css-visual-baseline.js`, `npm run audit:css-baseline` e `docs/planning/v76-css-visual-baseline.md` para capturar baseline anônimo sem alterar cascade, HTML ou `future-split/`. V76.10 adiciona `scripts/audit-kcapi-facade-residual.js`, `npm run audit:kcapi-residual` e `docs/planning/v76-kcapi-residual-inventory.md` para classificar os buckets residuais da fachada `KCAPI`; V76.11 move external access admin para `kc-api.help.js`; V76.12 move os builders canônicos de notification fallbacks para `kc-api.notifications.js`; V76.13 move a ponte `emitPostMutation` para `kc-api.posts-write.js`; V76.14/V76.15 encerram `Admin overlap`; V76.17 encerra `Chat overlap` com `kc-chat-shortcut.css`; V76.26 move `.kc-legal-*` e V76.27 move `.kc-profile-rank-badges*` para `kc-public-shell.css`; V76.28 amplia o baseline a 21 rotas / 42 capturas e cobre as 12 páginas consumidoras do shell. V76.29 classifica `bootstrap-driver-core` em cinco domínios e 15 gates, confirmando No-Go para extração runtime. V76.30 cobre os quatro gates de `transport-config`, mas mantém o domínio na fachada enquanto 11 gates do núcleo permanecem pendentes.
 
 ---
 
@@ -264,13 +264,13 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | Comando | Responsabilidade esperada |
 |---|---|
 | `npm run check:version` | Valida `VERSION.json`, branch canonica e runtime JS `8.6.1` |
-| `npm run check:structure` | Valida 167 itens estruturais + raiz `assets/js/` limpa |
-| `npm run check:scripts` | Valida cadeias de scripts nos 26 HTMLs canonicos |
-| `npm run check:routes` | Valida 20 rotas publicas + 6 admin |
+| `npm run check:structure` | Valida 169 itens estruturais + raiz `assets/js/` limpa |
+| `npm run check:scripts` | Valida cadeias de scripts nos 28 HTMLs canonicos |
+| `npm run check:routes` | Valida 22 rotas publicas + 6 admin |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 gates acima |
-| `npm test` | Mantém 180/180 suites e 3616/3616 testes Jest |
-| `npx playwright test --list` | Lista 10 specs / 67 testes Playwright sem exigir ambiente local ativo |
+| `npm test` | Mantém 181/181 suites e 3638/3638 testes Jest |
+| `npx playwright test --list` | Lista 10 specs / 68 testes Playwright sem exigir ambiente local ativo |
 | `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 

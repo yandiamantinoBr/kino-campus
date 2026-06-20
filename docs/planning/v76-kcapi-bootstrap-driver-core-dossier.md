@@ -1,8 +1,8 @@
 # V76 JS-I.4 — Dossiê de `bootstrap-driver-core`
 
-**Versão:** v76.29.0
+**Versão:** v76.30.0
 **Data:** 2026-06-19
-**Escopo:** investigação documental e auditoria automatizada; sem alterar runtime, HTML, CSS, adapters, SQL, secrets ou deploy
+**Escopo:** investigação documental, auditoria automatizada e evidência comportamental JS-I.5; sem alterar runtime, HTML, CSS, adapters, SQL, secrets ou deploy
 
 ## 1. Decisão
 
@@ -110,11 +110,17 @@ O auditor registra 15 gates:
 14. seleção do driver Supabase;
 15. falha explícita sem adapter.
 
+**Status v76.30.0:** os quatro gates de `transport-config` estão cobertos por
+`tests/contract/kc-api-transport-config-contract.test.js`. Os outros 11 permanecem
+obrigatórios. A saída do auditor registra a evidência por gate e não altera a
+decisão global de No-Go.
+
 ## 6. Próxima ação permitida
 
-Antes de qualquer extração, adicionar testes comportamentais específicos de
-paridade. O primeiro domínio que pode ser reavaliado é `transport-config`, mas
-somente após cobrir `setConfig`, timeout, erros HTTP e resolução de URL.
+Os testes comportamentais de `transport-config` foram adicionados em JS-I.5. O
+domínio pode agora ser reavaliado documentalmente quanto a dependências, ordem de
+carregamento e rollback, mas continua com decisão `keep-in-facade`. Os 11 gates
+restantes bloqueiam qualquer extração do núcleo completo.
 
 Continuam bloqueados:
 
@@ -125,5 +131,6 @@ Continuam bloqueados:
 
 ## 7. Rollback
 
-Remover `bootstrapCore` do JSON/Markdown do auditor e os contratos estruturais
-correspondentes. Como não há alteração de runtime, não existe rollback remoto.
+Remover `bootstrapCore`/evidências do JSON/Markdown do auditor e os contratos
+estruturais/comportamentais correspondentes. Como não há alteração de runtime,
+não existe rollback remoto.

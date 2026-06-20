@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.29.0 · **Atualizado em:** 2026-06-19
+**Versão:** v76.30.0 · **Atualizado em:** 2026-06-19
 
-> Documenta as 180 suites Jest + 10 specs Playwright: o que cada uma cobre,
+> Documenta as 181 suites Jest + 10 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 180 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todos os 181 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 180 suites · 3630 testes
+Jest: 181 suites · 3638 testes
 Playwright: 10 specs · 68 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥180 passed, 180 total` e `≥3630 passed, 3630 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥181 passed, 181 total` e `≥3638 passed, 3638 total`.
 
 ### Gate CI essencial
 
@@ -485,8 +485,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥175 passed, 175 total
-  Tests:       ≥3616 passed, 3616 total
+  Test Suites: ≥181 passed, 181 total
+  Tests:       ≥3638 passed, 3638 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.
