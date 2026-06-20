@@ -6,7 +6,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 
 ## Estado atual do repositório
 
-> **Atualizado em v76.36.0 (2026-06-20)** — inclui comparação shadow da busca estruturada; runtime frontend `8.6.1` inalterado.
+> **Atualizado em v76.37.0 (2026-06-20)** — inclui semântica temporal/status e benchmark shadow; runtime frontend `8.6.1` inalterado.
 
 | Item | Quantidade atual |
 |------|------------------|
@@ -18,8 +18,8 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | adapters em `assets/js/adapters/` (local + supabase) | `21` |
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `10` |
-| suites de teste Jest em `tests/` | `185` |
-| testes Jest totais | `3742` |
+| suites de teste Jest em `tests/` | `186` |
+| testes Jest totais | `3750` |
 | specs E2E Playwright | `10` |
 
 ## Princípio estrutural
@@ -236,5 +236,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.34.0 (2026-06-20):** adiciona projeção estruturada ao caminho local sob `search.schemaFields=false`, com fallback legado e nove contratos adicionais; Supabase e UI permanecem inalterados.
 - **v76.35.0 (2026-06-20):** adiciona parser pt-BR offline, valida 18 consultas principais e 22 variantes e mantém o asset fora dos HTMLs.
 - **v76.36.0 (2026-06-20):** adiciona pipeline shadow offline, compara legado/candidato com saída sanitizada e mantém o asset fora dos HTMLs.
+- **v76.37.0 (2026-06-20):** aplica intenção/tempo/status no shadow e adiciona benchmark sintético 12/12, sem ativação pública.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

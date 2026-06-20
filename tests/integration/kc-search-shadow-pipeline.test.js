@@ -64,7 +64,7 @@ describe('KCSearchShadowPipeline — contrato', () => {
       .map((name) => path.join(ROOT, name))
       .concat(fs.readdirSync(path.join(ROOT, 'admin')).filter((name) => name.endsWith('.html'))
         .map((name) => path.join(ROOT, 'admin', name)));
-    expect(Pipeline.VERSION).toBe('1.0.0');
+    expect(Pipeline.VERSION).toBe('1.1.0');
     expect(source).toContain('root.KCSearchShadowPipeline = factory();');
     htmlFiles.forEach((file) => expect(fs.readFileSync(file, 'utf8')).not.toContain('kc-search-shadow-pipeline.shared.js'));
   });
@@ -102,7 +102,7 @@ describe('KCSearchShadowPipeline — contrato', () => {
     const result = Pipeline.runShadow('evento gratuito sábado campus colemar', posts, dependencies);
     expect(result.candidate.map((row) => row.id)).toEqual(['free']);
     expect(result.comparison.supportedFilters).toEqual(expect.arrayContaining(['free', 'locationAlias']));
-    expect(result.comparison.unsupportedFilters).toContain('weekday');
+    expect(result.comparison.deferredFilters).toContain('weekday');
   });
 
   test('mantém data relativa como não suportada sem eliminar rota válida', () => {
@@ -112,7 +112,7 @@ describe('KCSearchShadowPipeline — contrato', () => {
     }];
     const result = Pipeline.runShadow('carona samambaia centro amanhã 18h', posts, dependencies);
     expect(result.candidate.map((row) => row.id)).toEqual(['ride']);
-    expect(result.comparison.unsupportedFilters).toContain('relativeDate');
+    expect(result.comparison.deferredFilters).toContain('relativeDate');
   });
 
   test('saída não contém consulta crua, contato, link ou conteúdo do post', () => {
@@ -150,5 +150,54 @@ describe('KCSearchShadowPipeline — contrato', () => {
     const result = Pipeline.runShadow('evento cultural', posts, { ...dependencies, limit: 3 });
     expect(result.legacy).toHaveLength(3);
     expect(result.candidate).toHaveLength(3);
+  });
+
+  test('aplica dia da semana e período noturno quando o evento possui campos confiáveis', () => {
+    const posts = [
+      {
+        id: 'night', title: 'Seminário acadêmico', module: 'eventos', category: 'academicos',
+        metadata: { data_evento: '2026-06-24', data_fim_evento: '2026-06-26', hora_evento: '19:00' }
+      },
+      {
+        id: 'morning', title: 'Seminário acadêmico', module: 'eventos', category: 'academicos',
+        metadata: { data_evento: '2026-06-25', hora_evento: '09:00' }
+      }
+    ];
+    const result = Pipeline.runShadow('seminário acadêmico dia 25 à noite', posts, {
+      ...dependencies, referenceDate: '2026-06-20'
+    });
+    expect(result.candidate.map((row) => row.id)).toEqual(['night']);
+    expect(result.comparison.supportedFilters).toEqual(expect.arrayContaining(['dayOfMonth', 'timePeriod']));
+    expect(result.comparison.intentApplied).toBe(true);
+  });
+
+  test('usa intenção canônica dos grupos de criação para separar compra e venda', () => {
+    const posts = [
+      { id: 'buy', title: 'Procuro livro de cálculo', module: 'compra-venda', category: 'livros', metadata: { actionKey: 'compro' } },
+      { id: 'sell', title: 'Livro de cálculo disponível', module: 'compra-venda', category: 'livros', metadata: { actionKey: 'vendo' } }
+    ];
+    const result = Pipeline.runShadow('procuro livro de cálculo', posts, dependencies);
+    expect(result.candidate.map((row) => row.id)).toEqual(['buy']);
+    expect(result.comparison.intentApplied).toBe(true);
+    expect(result.comparison.exited).toContain('sell');
+  });
+
+  test('modela políticas distintas de encerramento para resultados e dropdown', () => {
+    const posts = [
+      { id: 'open', title: 'Evento cultural', module: 'eventos', category: 'culturais', metadata: { data_evento: '2026-06-22' } },
+      { id: 'ended', title: 'Evento cultural', module: 'eventos', category: 'culturais', metadata: { data_evento: '2026-06-18' } },
+      { id: 'hidden', title: 'Evento cultural', module: 'eventos', category: 'culturais', status: 'hidden' }
+    ];
+    const results = Pipeline.runShadow('evento cultural', posts, {
+      ...dependencies, now: '2026-06-20T12:00:00-03:00', surface: 'results'
+    });
+    const dropdown = Pipeline.runShadow('evento cultural', posts, {
+      ...dependencies, now: '2026-06-20T12:00:00-03:00', surface: 'dropdown'
+    });
+    expect(results.candidate.map((row) => row.id)).toEqual(expect.arrayContaining(['open', 'ended']));
+    expect(results.candidate.map((row) => row.id)).not.toContain('hidden');
+    expect(results.policy).toEqual({ surface: 'results', publicOnly: true, hideClosed: false });
+    expect(dropdown.candidate.map((row) => row.id)).toEqual(['open']);
+    expect(dropdown.policy).toEqual({ surface: 'dropdown', publicOnly: true, hideClosed: true });
   });
 });

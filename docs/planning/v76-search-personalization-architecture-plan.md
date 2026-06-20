@@ -28,6 +28,12 @@
 > contato, link ou conteúdo; filtros não suportados são explicitados e o asset segue
 > fora dos HTMLs, sem alterar resultado público, perfil, analytics ou Supabase.
 
+> **Execução V76.37 (2026-06-20):** PR-E aplica intenções canônicas dos grupos,
+> semântica temporal de eventos e políticas distintas de encerramento para resultados
+> e dropdown. O benchmark sintético cobre dois cenários por módulo e atingiu 12/12,
+> recall/precisão/estabilidade de 100% e zero falso positivo. Data de carona e status
+> de inscrição permanecem diferidos porque o schema não oferece campo confiável.
+
 ## 1. Decisão executiva
 
 O KinoCampus deve evoluir a busca em duas trilhas separadas e sequenciais:
@@ -376,15 +382,17 @@ Rollout: canário interno, percentual pequeno e expansão por gate; migration ad
 
 ## 17. Manifesto de PRs
 
-1. **PR-A:** registro, inventário gerado, golden set e testes; sem SQL.
-2. **PR-B:** projeção/filtros no driver local; sem personalização.
-3. **PR-C:** dossiê SQL, banco isolado, índices, RLS, explain e rollback R3.
-4. **PR-D:** RPC nova em shadow, flag desligada.
-5. **PR-E:** parser, chips, facetas e zero-results.
-6. **PR-F:** dropdown combobox, cancelamento e performance.
-7. **PR-G:** preferências explícitas, consentimento e direitos.
-8. **PR-H:** afinidade local opt-in.
-9. **PR-I:** sincronização/experimento após gates.
+1. **PR-A — executado:** registro, inventário gerado, golden set e testes; sem SQL.
+2. **PR-B — executado:** projeção/filtros no driver local; sem personalização.
+3. **PR-C — executado:** parser determinístico offline; sem ativação.
+4. **PR-D — executado:** composição shadow e saída sanitizada.
+5. **PR-E — executado:** intenção, tempo/status e benchmark sintético por módulo.
+6. **PR-F:** snapshot gerado do registry e lazy loading sob flag desligada.
+7. **PR-G:** piloto em busca/dropdown, chips, facetas e zero-results sob flag.
+8. **PR-H:** dossiê SQL/RPC isolado, RLS, explain e rollback R3.
+9. **PR-I:** dropdown combobox, cancelamento e performance real.
+10. **PR-J:** preferências explícitas, consentimento e direitos.
+11. **PR-K:** afinidade local opt-in; sincronização somente após gates.
 
 Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
@@ -430,9 +438,8 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-E**, ainda sem migration: ampliar o pipeline shadow com semântica
-temporal/status e um benchmark sintético maior que meça cobertura, falsos positivos,
-latência e estabilidade por módulo. A futura ativação precisa de orçamento de
-carregamento para as 16 páginas que usam `kc-search.shared.js`, pois apenas 12
-carregam hoje o builder de criação. Coleta comportamental, perfil, SQL pessoal e
+Executar **PR-F**, ainda sem migration e sem ativação: gerar um snapshot imutável do
+registry a partir do schema/builder, validar paridade em CI e desenhar o lazy loading
+somente para as superfícies de busca. Isso evita carregar o builder completo nas 16
+páginas que usam `kc-search.shared.js`. Coleta comportamental, perfil, SQL pessoal e
 reranking seguem bloqueados.

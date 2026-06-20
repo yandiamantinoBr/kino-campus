@@ -1,0 +1,135 @@
+{
+  "version": "1.0.0",
+  "locale": "pt-BR",
+  "purpose": "Benchmark sintético do pipeline shadow; não contém consultas ou perfis reais.",
+  "referenceDate": "2026-06-20",
+  "cases": [
+    {
+      "id": "moradia-budget-location",
+      "module": "moradia",
+      "query": "procuro quarto até 900 perto do samambaia",
+      "expectedIds": ["housing-affordable"],
+      "posts": [
+        { "id": "housing-affordable", "title": "Quarto disponível", "module": "moradia", "category": "quartos", "price": 850, "location": "Câmpus Samambaia" },
+        { "id": "housing-expensive", "title": "Quarto disponível", "module": "moradia", "category": "quartos", "price": 1500, "location": "Câmpus Samambaia" }
+      ]
+    },
+    {
+      "id": "moradia-features",
+      "module": "moradia",
+      "query": "apartamento mobiliado até 1500",
+      "expectedIds": ["housing-furnished"],
+      "posts": [
+        { "id": "housing-furnished", "title": "Apartamento disponível", "module": "moradia", "category": "apartamentos", "price": 1400, "metadata": { "housingFeatureKeys": ["mobiliado"] } },
+        { "id": "housing-empty", "title": "Apartamento disponível", "module": "moradia", "category": "apartamentos", "price": 1300 }
+      ]
+    },
+    {
+      "id": "caronas-route-time",
+      "module": "caronas",
+      "query": "carona samambaia centro amanhã 18h",
+      "expectedIds": ["ride-18"],
+      "expectedDeferredFilters": ["relativeDate"],
+      "posts": [
+        { "id": "ride-18", "title": "Carona disponível", "module": "caronas", "category": "ofereco", "metadata": { "origem": "Câmpus Samambaia", "destino": "Centro", "horario": "18:00" } },
+        { "id": "ride-17", "title": "Carona disponível", "module": "caronas", "category": "ofereco", "metadata": { "origem": "Câmpus Samambaia", "destino": "Centro", "horario": "17:00" } }
+      ]
+    },
+    {
+      "id": "caronas-intent-seats",
+      "module": "caronas",
+      "query": "ofereço carona para aparecida com 3 vagas",
+      "expectedIds": ["ride-offer-3"],
+      "posts": [
+        { "id": "ride-offer-3", "title": "Ofereço carona", "module": "caronas", "category": "ofereco", "metadata": { "destino": "Aparecida de Goiânia", "vagas": 3 } },
+        { "id": "ride-offer-2", "title": "Ofereço carona", "module": "caronas", "category": "ofereco", "metadata": { "destino": "Aparecida de Goiânia", "vagas": 2 } },
+        { "id": "ride-seeking", "title": "Procuro carona", "module": "caronas", "category": "procuro", "metadata": { "destino": "Aparecida de Goiânia", "vagas": 4 } }
+      ]
+    },
+    {
+      "id": "opportunity-remote-area",
+      "module": "oportunidades",
+      "query": "estágio remoto computação",
+      "expectedIds": ["job-remote"],
+      "posts": [
+        { "id": "job-remote", "title": "Estágio para estudantes", "module": "oportunidades", "category": "estagios", "metadata": { "areaKey": "tecnologia", "workMode": "remoto" } },
+        { "id": "job-onsite", "title": "Estágio em computação", "module": "oportunidades", "category": "estagios", "metadata": { "areaKey": "tecnologia", "workMode": "presencial" } }
+      ]
+    },
+    {
+      "id": "opportunity-hybrid-employment",
+      "module": "oportunidades",
+      "query": "emprego híbrido clt em goiânia",
+      "expectedIds": ["job-hybrid"],
+      "posts": [
+        { "id": "job-hybrid", "title": "Emprego em Goiânia", "module": "oportunidades", "category": "empregos", "location": "Goiânia", "metadata": { "workMode": "hibrido", "employmentType": "clt" } },
+        { "id": "job-freelance", "title": "Emprego em Goiânia", "module": "oportunidades", "category": "empregos", "location": "Goiânia", "metadata": { "workMode": "hibrido", "employmentType": "freelancer" } }
+      ]
+    },
+    {
+      "id": "events-weekday-free",
+      "module": "eventos",
+      "query": "evento gratuito sábado campus colemar",
+      "surface": "dropdown",
+      "expectedIds": ["event-free-saturday"],
+      "posts": [
+        { "id": "event-free-saturday", "title": "Evento no Câmpus Colemar", "module": "eventos", "category": "culturais", "location": "Câmpus Colemar", "metadata": { "gratuito": true, "data_evento": "2026-06-20" } },
+        { "id": "event-paid-saturday", "title": "Evento no Câmpus Colemar", "module": "eventos", "category": "culturais", "location": "Câmpus Colemar", "metadata": { "gratuito": false, "data_evento": "2026-06-20" } },
+        { "id": "event-free-sunday", "title": "Evento no Câmpus Colemar", "module": "eventos", "category": "culturais", "location": "Câmpus Colemar", "metadata": { "gratuito": true, "data_evento": "2026-06-21" } }
+      ]
+    },
+    {
+      "id": "events-day-night",
+      "module": "eventos",
+      "query": "seminário acadêmico dia 25 à noite",
+      "expectedIds": ["event-night"],
+      "posts": [
+        { "id": "event-night", "title": "Seminário acadêmico", "module": "eventos", "category": "academicos", "metadata": { "data_evento": "2026-06-25", "hora_evento": "19:00" } },
+        { "id": "event-morning", "title": "Seminário acadêmico", "module": "eventos", "category": "academicos", "metadata": { "data_evento": "2026-06-25", "hora_evento": "09:00" } },
+        { "id": "event-other-day", "title": "Seminário acadêmico", "module": "eventos", "category": "academicos", "metadata": { "data_evento": "2026-06-26", "hora_evento": "19:00" } }
+      ]
+    },
+    {
+      "id": "lost-found-document-location",
+      "module": "achados-perdidos",
+      "query": "achei documento no bloco b",
+      "expectedIds": ["found-document-b"],
+      "posts": [
+        { "id": "found-document-b", "title": "Documento encontrado", "module": "achados-perdidos", "category": "encontrados", "location": "Bloco B", "metadata": { "subcategory": "documentos" } },
+        { "id": "found-document-c", "title": "Documento encontrado", "module": "achados-perdidos", "category": "encontrados", "location": "Bloco C", "metadata": { "subcategory": "documentos" } },
+        { "id": "lost-document-b", "title": "Documento perdido", "module": "achados-perdidos", "category": "perdidos", "location": "Bloco B", "metadata": { "subcategory": "documentos" } }
+      ]
+    },
+    {
+      "id": "lost-reward",
+      "module": "achados-perdidos",
+      "query": "fone perdido com recompensa 50 reais",
+      "expectedIds": ["lost-reward-60"],
+      "posts": [
+        { "id": "lost-reward-60", "title": "Fone perdido", "module": "achados-perdidos", "category": "perdidos", "metadata": { "subcategory": "eletronicos", "recompensa": 60 } },
+        { "id": "lost-reward-20", "title": "Fone perdido", "module": "achados-perdidos", "category": "perdidos", "metadata": { "subcategory": "eletronicos", "recompensa": 20 } }
+      ]
+    },
+    {
+      "id": "market-condition-budget",
+      "module": "compra-venda",
+      "query": "notebook usado até 2000",
+      "expectedIds": ["market-used"],
+      "posts": [
+        { "id": "market-used", "title": "Notebook disponível", "module": "compra-venda", "category": "eletronicos", "price": 1800, "metadata": { "actionKey": "vendo", "condicao": "usado" } },
+        { "id": "market-expensive", "title": "Notebook disponível", "module": "compra-venda", "category": "eletronicos", "price": 2500, "metadata": { "actionKey": "vendo", "condicao": "usado" } },
+        { "id": "market-new", "title": "Notebook disponível", "module": "compra-venda", "category": "eletronicos", "price": 1500, "metadata": { "actionKey": "vendo", "condicao": "novo" } }
+      ]
+    },
+    {
+      "id": "market-buy-intent",
+      "module": "compra-venda",
+      "query": "procuro livro de cálculo",
+      "expectedIds": ["market-buy-book"],
+      "posts": [
+        { "id": "market-buy-book", "title": "Procuro livro de cálculo", "module": "compra-venda", "category": "livros", "metadata": { "actionKey": "compro" } },
+        { "id": "market-sell-book", "title": "Livro de cálculo disponível", "module": "compra-venda", "category": "livros", "metadata": { "actionKey": "vendo" } }
+      ]
+    }
+  ]
+}
