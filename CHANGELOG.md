@@ -2,6 +2,31 @@
 
 ---
 
+## [v76.31] - 2026-06-19 - JS-I.6 adapter-registry parity
+
+### Tema
+
+Contratos comportamentais do registro e seleção de adapters KCAPI, sem alterar
+runtime ou contrato público.
+
+### Decisões
+
+- **Quatro gates adicionais cobertos**: sobrescrita por chave, fallback local,
+  seleção Supabase e fail-fast agora têm evidência executável.
+- **Cobertura acumulada**: 8 dos 15 gates estão cobertos; sete permanecem.
+- **No-Go preservado**: `adapter-registry` continua `keep-in-facade`.
+- **Próximo gate**: `public-error-shape-contract`, por ser o menor restante.
+
+### Entregáveis
+
+| Iteração | Entrega |
+|----------|---------|
+| v76.31 | suíte dedicada com 5 contratos do registry |
+| v76.31 | evidência automatizada de 8 gates cobertos / 7 pendentes |
+| v76.31 | baseline Jest de 182 suites / 3.643 testes |
+
+---
+
 ## [v76.30] - 2026-06-19 - JS-I.5 transport-config parity
 
 ### Tema

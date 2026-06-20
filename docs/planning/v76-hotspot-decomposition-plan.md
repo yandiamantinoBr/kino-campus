@@ -1,8 +1,8 @@
 # V76 - Plano de Decomposição Segura dos Hotspots JS/CSS
 
-**Versão:** v76.30.0
+**Versão:** v76.31.0
 **Data:** 2026-06-19
-**Escopo:** planejamento técnico + status das extrações JS V76, dossiê JS-I.4 e contratos JS-I.5 do bootstrap/driver core, inventário CSS-A, baseline CSS-B.1 e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
+**Escopo:** planejamento técnico + status das extrações JS V76, dossiê JS-I.4 e contratos JS-I.5/JS-I.6 do bootstrap/driver core, inventário CSS-A, baseline CSS-B.1 e micro-splits CSS-C até C.5; sem alterar SQL, secrets, provider ou deploy
 
 ---
 
@@ -100,6 +100,10 @@ reavaliado depois de testes dedicados de paridade; não é uma autorização de 
 `transport-config`: `setConfig`, timeout, erro HTTP e URL relativa. O auditor passa a registrar
 4/15 gates cobertos e 11 pendentes. A decisão global continua No-Go e nenhuma função runtime foi
 movida.
+
+**Status v76.31.0:** JS-I.6 adiciona cinco testes comportamentais e cobre os quatro gates de
+`adapter-registry`: sobrescrita por chave, fallback local, seleção Supabase e fail-fast. O auditor
+passa a registrar 8/15 gates cobertos e 7 pendentes; o runtime permanece inalterado.
 
 ### 3.2 Ordem permitida
 
@@ -279,6 +283,7 @@ JS e CSS no mesmo PR:
 | JS-I.3 | Remoção da ponte `emitPostMutation` do facade | **Concluído em v76.13.0**; eventos de freshness ficam em `kc-api.posts-write.js` |
 | JS-I.4 | Dossiê automatizado do `bootstrap-driver-core` | **Concluído em v76.29.0**; cinco domínios, 15 gates e No-Go para extração runtime |
 | JS-I.5 | Contratos comportamentais de `transport-config` | **Concluído em v76.30.0**; quatro gates cobertos, 11 pendentes e runtime inalterado |
+| JS-I.6 | Contratos comportamentais de `adapter-registry` | **Concluído em v76.31.0**; oito gates acumulados, sete pendentes e runtime inalterado |
 | CSS-A | Inventário de ownership de seletores de `styles.css` | **Concluído em v76.8.0**; prepara split sem alterar cascade |
 | CSS-B | Baseline visual/cascade anônimo antes de split de `styles.css` | **Concluído em v76.9.0**; cria evidência antes/depois para micro-splits futuros |
 | CSS-C | Micro-split da navegação admin | **Concluído em v76.14.0**; `.kc-admin-nav*` agora fica em `admin-shell.css` |
@@ -352,6 +357,10 @@ mapeamento. A decisão continua sendo manter o núcleo na fachada; a única cont
 auditor expor evidência por gate. O domínio pode ser reavaliado documentalmente, mas continua
 `keep-in-facade`; 11 gates do núcleo seguem pendentes.
 
+**Status v76.31.0:** JS-I.6 cobre os quatro gates do registry em suíte isolada. `transport-config`
+e `adapter-registry` ficam completos quanto aos gates declarados, mas continuam na fachada; sete
+gates do núcleo seguem pendentes.
+
 **Status v76.14.0:** CSS-C moveu o bloco `.kc-admin-nav*` para `assets/css/admin-shell.css`,
 reduzindo `styles.css` para 12.161 linhas / 284.046 bytes e mantendo 24 capturas de baseline com
 0 respostas falhas, 0 overflow horizontal e 0 carregamentos de `future-split/`.
@@ -367,5 +376,5 @@ reduzindo `styles.css` para 12.161 linhas / 284.046 bytes e mantendo 24 capturas
 0 overflow horizontal, 0 carregamentos de `future-split/` e 0 diferenças de hash.
 
 Próxima entrega recomendada: escolher uma frente única, sem misturar no mesmo PR: CSS-B autenticado
-para dashboard admin real, reavaliação documental da fronteira de `transport-config` ou cobertura
-dos 11 gates restantes. O `bootstrap-driver-core` permanece bloqueado para extração runtime.
+para dashboard admin real ou cobertura de `public-error-shape-contract`/gates de ambiente e fallback
+estático. O `bootstrap-driver-core` permanece bloqueado para extração runtime.

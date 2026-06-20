@@ -412,10 +412,10 @@ describe('JS-I.4 — dossiê automatizado do bootstrap-driver-core', function ()
     expect(byName.getActiveDriver.riskSignals).toContain('selectsDriver');
   });
 
-  test('lista 15 gates e distingue a cobertura comportamental de transport-config', function () {
+  test('lista 15 gates e distingue a cobertura comportamental por domínio', function () {
     expect(report.bootstrapCore.requiredGateCount).toBe(15);
-    expect(report.bootstrapCore.coveredGateCount).toBe(4);
-    expect(report.bootstrapCore.remainingGateCount).toBe(11);
+    expect(report.bootstrapCore.coveredGateCount).toBe(8);
+    expect(report.bootstrapCore.remainingGateCount).toBe(7);
     expect(report.bootstrapCore.requiredGates).toContain('production-fail-closed-policy');
     expect(report.bootstrapCore.requiredGates).toContain('local-supabase-environment-parity');
     expect(report.bootstrapCore.requiredGates).toContain('adapter-registration-order');
@@ -428,8 +428,13 @@ describe('JS-I.4 — dossiê automatizado do bootstrap-driver-core', function ()
       'timeout-rejection-contract',
       'HTTP-error-mapping',
       'relative-baseURL-resolution',
+      'adapter-registration-order',
+      'local-driver-fallback',
+      'supabase-driver-selection',
+      'missing-adapter-fail-fast',
     ]);
-    expect(report.bootstrapCore.recommendation.nextAction).toBe('reassess-transport-config-boundary-without-runtime-extraction');
+    expect(report.bootstrapCore.recommendation.nextAction).toBe('cover-remaining-bootstrap-core-gates-without-runtime-extraction');
     expect(report.bootstrapCore.recommendation.firstDomainToReassess).toBe('transport-config');
+    expect(report.bootstrapCore.recommendation.nextDomainToCover).toBe('error-contract');
   });
 });

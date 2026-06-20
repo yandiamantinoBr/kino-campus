@@ -158,11 +158,11 @@ A linha v10 consolidou:
 
 ## Hotspots técnicos
 
-> **Atualizado em v76.30.0 / 2026-06-19** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-kcapi-bootstrap-driver-core-dossier.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
+> **Atualizado em v76.31.0 / 2026-06-19** — os hotspots abaixo usam contagens medidas no filesystem atual. Para a próxima decomposição segura, usar `docs/planning/v76-hotspot-decomposition-plan.md`, `docs/planning/v76-kcapi-residual-inventory.md`, `docs/planning/v76-kcapi-bootstrap-driver-core-dossier.md`, `docs/planning/v76-css-ownership-inventory.md` e `docs/planning/v76-css-visual-baseline.md`.
 
 | Área | Arquivo principal | Status pós-V15 | Risco residual |
 |------|-----------------|----------------|---------------|
-| fachada de API | `assets/js/api/kc-api.client.js` (1.459L / 56.513 bytes) | Parcialmente decomposto em submódulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalização de posts, normalizadores de rating, external access admin, notification fallbacks e post mutation bridge extraídos; JS-I mede 107 membros públicos, 141 funções, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 10 buckets residuais; JS-I.4 classifica o núcleo bootstrap em 12 funções / 131 linhas, cinco domínios e 15 gates; JS-I.5 cobre os quatro gates de `transport-config`, restando 11, com No-Go runtime | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
+| fachada de API | `assets/js/api/kc-api.client.js` (1.459L / 56.513 bytes) | Parcialmente decomposto em submódulos `_KCAPI.*`; diagnostics, session/freshness, filters/date presets, authors/mocks, normalização de posts, normalizadores de rating, external access admin, notification fallbacks e post mutation bridge extraídos; JS-I mede 107 membros públicos, 141 funções, 98 wrappers exportados/globais, 17 namespaces `_KCAPI.*` e 10 buckets residuais; JS-I.4 classifica o núcleo bootstrap em 12 funções / 131 linhas, cinco domínios e 15 gates; JS-I.5/JS-I.6 cobrem `transport-config` e `adapter-registry`, somando 8 gates cobertos e 7 pendentes, com No-Go runtime | compatibilidade entre drivers, `window.KCAPI` e fluxos autenticados |
 | adapter Supabase | `assets/js/adapters/supabase/supabase.adapter.js` (~420L) | ✅ Decomposto em 11 sub-adapters `_KCSA.*` | acoplamento com banco, RLS, RPCs |
 | detalhe de publicação | `assets/js/controllers/public/product.controller.js` | ✅ Decomposto em 8 auxiliares `_KCProduct.*` | UI crítica e estado compartilhado |
 | criação de publicação | `assets/js/features/create-post/kc-create-post.js` | ✅ Decomposto em 6 sub-módulos `_KCCreatePost.*` | formulário central, schemas dinâmicos |
@@ -191,8 +191,8 @@ Baseline CSS-B/C: `npm run audit:css-baseline` e
 Inventario JS-I: `npm run audit:kcapi-residual` e
 `docs/planning/v76-kcapi-residual-inventory.md` classificam os buckets residuais da fachada `KCAPI`
 antes de novas extracoes runtime. Em JS-I.4, o mesmo comando valida o dossiê do
-`bootstrap-driver-core`, seus cinco domínios e 15 gates. Em JS-I.5, a saída passa a rastrear
-4 gates cobertos e 11 pendentes com evidência executável.
+`bootstrap-driver-core`, seus cinco domínios e 15 gates. Em JS-I.5/JS-I.6, a saída passa a rastrear
+8 gates cobertos e 7 pendentes com evidência executável.
 
 ## Regras de equivalência
 
@@ -230,5 +230,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.28.0 (2026-06-19):** CSS-B.1 inclui 404, ajuda, callback e onboarding no baseline, fecha cobertura das 12 páginas de `kc-public-shell.css` e eleva a matriz para 21 rotas / 42 capturas sem alterar CSS/runtime.
 - **v76.29.0 (2026-06-19):** JS-I.4 transforma o `bootstrap-driver-core` em dossiê automatizado de 12 funções / 131 linhas, cinco domínios e 15 gates; a decisão é No-Go para extração runtime.
 - **v76.30.0 (2026-06-19):** JS-I.5 adiciona oito contratos comportamentais para `transport-config`, cobre 4/15 gates do núcleo e mantém as quatro funções na fachada.
+- **v76.31.0 (2026-06-19):** JS-I.6 adiciona cinco contratos comportamentais para `adapter-registry`, eleva a cobertura para 8/15 gates e mantém seleção/registro na fachada.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

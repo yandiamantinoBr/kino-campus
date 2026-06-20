@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.30` (JS-I.5 de transport-config, runtime frontend `8.6.1` inalterado)
+- linha de trabalho atual: `v76.31` (JS-I.6 de adapter-registry, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
@@ -12,13 +12,13 @@
 | Arquivo | Uso principal |
 |---|---|
 | [architecture.md](./architecture.md) | arquitetura atual do frontend, camadas, hotspots, contagens e regras de equivalencia |
-| [architecture/repository-structure.md](./architecture/repository-structure.md) | estrutura atual do repositório pós-V22, reancorada em v76.30 |
+| [architecture/repository-structure.md](./architecture/repository-structure.md) | estrutura atual do repositório pós-V22, reancorada em v76.31 |
 | [architecture/module-catalog.md](./architecture/module-catalog.md) | catalogo de ~130 modulos JS com namespace, paginas e dependencias *(v16.3.0-v16.4.0)* |
 | [architecture/controllers-catalog.md](./architecture/controllers-catalog.md) | catalogo de 48 controllers com responsabilidade e KCAPI calls *(v16.5.0; contagem v75.1)* |
 | [architecture/script-loading-reference.md](./architecture/script-loading-reference.md) | ordem de carregamento de scripts em 26 HTMLs *(v16.6.0; contagem v76.6)* |
 | [architecture/data-flow-guide.md](./architecture/data-flow-guide.md) | fluxo de dados ponta a ponta: usuario -> controller -> KCAPI -> adapter -> Supabase *(v16.7.0)* |
 | [architecture/ai-development-guide.md](./architecture/ai-development-guide.md) | guia de comportamento para IA: leia antes de qualquer modificacao *(v16.8.0, reancorado em V75)* |
-| [architecture/test-strategy.md](./architecture/test-strategy.md) | estratégia de 181 suites: onde adicionar testes, regras de manutenção *(contagem v76.30)* |
+| [architecture/test-strategy.md](./architecture/test-strategy.md) | estratégia de 182 suites: onde adicionar testes, regras de manutenção *(contagem v76.31)* |
 | [architecture/css-architecture.md](./architecture/css-architecture.md) | CSS em produção, ownership de `styles.css`, baseline CSS-B.1/C e `future-split/` *(v76.28)* |
 | [api-contract.md](./api-contract.md) | contrato publico da `KCAPI`, metodos expostos e semantica de retorno |
 | [db-schema.md](./db-schema.md) | tabelas, politicas, indices, storage, cron jobs e notas de estado do banco |
@@ -61,7 +61,7 @@
 | [planning/v53-functional-patch-manifest.md](./planning/v53-functional-patch-manifest.md) | manifesto de filescope/teste/rollback antes do primeiro patch funcional |
 | [planning/v76-hotspot-decomposition-plan.md](./planning/v76-hotspot-decomposition-plan.md) | plano de decomposição segura dos hotspots `kc-api.client.js` e `styles.css`, atualizado após JS-I.4 |
 | [planning/v76-kcapi-residual-inventory.md](./planning/v76-kcapi-residual-inventory.md) | inventário residual JS-I da fachada `KCAPI`, incluindo o No-Go automatizado de JS-I.4 |
-| [planning/v76-kcapi-bootstrap-driver-core-dossier.md](./planning/v76-kcapi-bootstrap-driver-core-dossier.md) | dossiê JS-I.4/JS-I.5 dos cinco domínios, 4 gates cobertos e 11 pendentes |
+| [planning/v76-kcapi-bootstrap-driver-core-dossier.md](./planning/v76-kcapi-bootstrap-driver-core-dossier.md) | dossiê JS-I.4–JS-I.6 dos cinco domínios, 8 gates cobertos e 7 pendentes |
 | [planning/v76-css-ownership-inventory.md](./planning/v76-css-ownership-inventory.md) | inventário CSS-A/C de ownership de `styles.css` após os micro-splits admin e chat shortcut |
 | [planning/v76-css-visual-baseline.md](./planning/v76-css-visual-baseline.md) | baseline CSS-B/C visual/cascade antes/depois de micro-splits de `styles.css` |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
@@ -74,6 +74,7 @@
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
+| [qa/reports/report-v76-kcapi-adapter-registry-contract-2026-06-19.md](./qa/reports/report-v76-kcapi-adapter-registry-contract-2026-06-19.md) | evidência V76.31 dos contratos comportamentais de `adapter-registry` |
 | [qa/reports/report-v76-kcapi-transport-config-contract-2026-06-19.md](./qa/reports/report-v76-kcapi-transport-config-contract-2026-06-19.md) | evidência V76.30 dos contratos comportamentais de `transport-config` |
 | [qa/reports/report-v76-kcapi-bootstrap-driver-core-dossier-2026-06-19.md](./qa/reports/report-v76-kcapi-bootstrap-driver-core-dossier-2026-06-19.md) | evidência V76.29 do No-Go automatizado para extração do bootstrap/driver core |
 | [qa/reports/report-v76-css-public-shell-baseline-expansion-2026-06-19.md](./qa/reports/report-v76-css-public-shell-baseline-expansion-2026-06-19.md) | evidência V76.28 da cobertura integral das 12 páginas de `kc-public-shell.css` |
@@ -162,5 +163,5 @@ el.innerHTML = window.KCUtils.escapeHtml(userContent);
 ## Observacoes de baseline
 
 - Baseline reancorado para v75.0.0 em 2026-05-05. Estrutura documental consolidada em `docs/archive/` em v17.5.0; pendências ativas mapeadas em `docs/planning/` em v18, operacionalizadas em runbooks v19, separadas entre QA ativo/histórico em v20, com worktrees locais fora do índice em v21, política de relatórios raiz em v22, `repository-structure.md` reancorado em v23, ledger pós-V23 criado em v24, runbook de QA real criado em v25, templates de evidência QA real normalizados em v26, gate visual/a11y pré-CSS definido em v27, auditoria unaccent/FTS pre-migration criada em v28, checklist de evidências Supabase Advisor criado em v29, checklist de sandbox para providers de notificação criado em v30, matriz de triagem autenticada criada em v31, política de gate E2E criada em v32, política LHCI criada em v33, plano de reconciliação a11y/i18n criado em v34, ledger de readiness CSS criado em v35, roadmap de readiness criado em v36, gate de entrada funcional criado em v37, gate de evidência de rollback criado em v38, matriz de candidatos funcionais criada em v39, dossiê AUTH-CB-01 criado em v40, dossiê PROFILE-AV-01 criado em v41, dossiê ADMIN-MOD-01 criado em v42, dossiê NOTIF-SB-01 criado em v43, dossiê SEARCH-FTS-01 criado em v44, dossiê CSS-SM-01 criado em v45, dossiê PUBLIC-A11Y-01 criado em v46, consolidação de readiness funcional criada em v47, pacote de evidências externas sem secrets criado em v48, freeze de escopo funcional criado em v49, intake de implementação funcional criado em v50, registro de No-Go funcional criado em v51, matriz de rastreabilidade de gates criada em v52, manifesto de patch funcional criado em v53, patches PUBLIC-A11Y v54-v75 executados, inventário residual JS-I da fachada `KCAPI` criado em v76.10, extração JS-I.1 de external access admin criada em v76.11, extração JS-I.2 dos fallbacks canônicos de notificação criada em v76.12, extração JS-I.3 da ponte de mutação/freshness de posts criada em v76.13, micro-split CSS-C da navegação admin criado em v76.14, micro-split CSS-C.2 do overlap admin criado em v76.15 e micro-split CSS-C.3 do atalho global de mensagens criado em v76.17.
-- Estado operacional atual: `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`, 181 suites Jest / 3638 testes e 10 specs Playwright / 68 testes listados.
+- Estado operacional atual: `appVersion=75.1.0`, `frontendRuntimeVersion=8.6.1`, 182 suites Jest / 3643 testes e 10 specs Playwright / 68 testes listados.
 - `frontendRuntimeVersion` atual e `8.6.1` (constante canonica no runtime).

@@ -94,6 +94,10 @@ const BOOTSTRAP_GATE_EVIDENCE = Object.freeze({
   'timeout-rejection-contract': 'tests/contract/kc-api-transport-config-contract.test.js',
   'HTTP-error-mapping': 'tests/contract/kc-api-transport-config-contract.test.js',
   'relative-baseURL-resolution': 'tests/contract/kc-api-transport-config-contract.test.js',
+  'adapter-registration-order': 'tests/contract/kc-api-adapter-registry-contract.test.js',
+  'local-driver-fallback': 'tests/contract/kc-api-adapter-registry-contract.test.js',
+  'supabase-driver-selection': 'tests/contract/kc-api-adapter-registry-contract.test.js',
+  'missing-adapter-fail-fast': 'tests/contract/kc-api-adapter-registry-contract.test.js',
 });
 
 const GLOBAL_ALIASES = new Set([
@@ -529,12 +533,12 @@ function buildBootstrapCoreDossier(functions) {
     remainingGateCount: gateCoverage.filter((entry) => entry.status === 'required').length,
     remainingGates: gateCoverage.filter((entry) => entry.status === 'required').map((entry) => entry.gate),
     recommendation: {
-      nextAction: 'reassess-transport-config-boundary-without-runtime-extraction',
+      nextAction: 'cover-remaining-bootstrap-core-gates-without-runtime-extraction',
       firstDomainToReassess: 'transport-config',
+      nextDomainToCover: 'error-contract',
       blockedReasons: [
-        'public-setConfig-and-registerAdapter-contracts',
-        'local-supabase-driver-order',
-        'production-fail-closed-policy',
+        'production-environment-policy-parity',
+        'public-error-shape-contract',
         'static-database-normalization-parity',
       ],
     },
