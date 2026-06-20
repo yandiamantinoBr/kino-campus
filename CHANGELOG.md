@@ -2,6 +2,23 @@
 
 ---
 
+## [v76.35] - 2026-06-20 - parser determinístico de consultas
+
+### Adicionado
+
+- `KCSearchQueryParser` UMD interpreta módulo, intenção, valores, datas, horários, locais e filtros em pt-BR.
+- Categorias e tipos são confrontados com as opções derivadas do `KCSearchFieldRegistry`.
+- Tolerância limitada a erros de digitação, aliases de câmpus/cidades e números escritos por extenso.
+- 41 testes cobrem as 18 consultas principais, 22 variantes, consultas vazias/desconhecidas, privacidade e limite de entrada.
+
+### Segurança
+
+- O parser permanece fora dos HTMLs e não recebe dados de perfil, sessão ou analytics.
+- Consultas sem sinal conhecido não são forçadas para um módulo.
+- Entrada limitada a 240 caracteres; nenhuma ativação de flag, Supabase ou UI.
+
+---
+
 ## [v76.34] - 2026-06-20 - projeção estruturada da busca local
 
 ### Adicionado
