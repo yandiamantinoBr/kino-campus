@@ -18,6 +18,11 @@
 > documento imutável e o ranking compartilhado só o considera quando presente.
 > A ativação por HTML, parser de intenção, facetas e Supabase continuam bloqueados.
 
+> **Execução V76.35 (2026-06-20):** PR-C adiciona parser determinístico offline,
+> sem carregamento por HTML. O corpus principal atingiu 18/18 em módulo, intenção
+> e filtros; 22/22 variantes preservaram módulo e intenção. Entrada desconhecida
+> não recebe classificação forçada e consultas são limitadas a 240 caracteres.
+
 ## 1. Decisão executiva
 
 O KinoCampus deve evoluir a busca em duas trilhas separadas e sequenciais:
@@ -420,8 +425,8 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-C**, ainda sem migration: criar o parser determinístico offline e
-avaliá-lo contra o corpus dourado, sem carregar o registry nos HTMLs. A futura
-ativação do asset precisa de orçamento de carregamento para as 16 páginas que usam
+Executar **PR-D**, ainda sem migration: combinar parser e projeção em um pipeline
+shadow inteiramente testável, sem carregar assets nos HTMLs nem alterar resultados.
+A futura ativação precisa de orçamento de carregamento para as 16 páginas que usam
 `kc-search.shared.js`, pois apenas 12 carregam hoje o builder de criação. Coleta
 comportamental, perfil, SQL pessoal e reranking seguem bloqueados.

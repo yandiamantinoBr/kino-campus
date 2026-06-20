@@ -2409,7 +2409,7 @@ contagem de votos de um post e voto atual do usuário.
 | adapters/supabase/supabase.saved.adapter.js | supabase | `window.KCSupabaseSavedAdapter` | produto+my-posts | integration/supabase-saved-adapter |
 | adapters/supabase/supabase.votes.adapter.js | supabase | `window.KCSupabaseVotesAdapter` | feeds+produto | integration/supabase-votes-adapter |
 
-**Inventario atual:** 157 arquivos JS em `assets/js/`. Este catalogo documenta os grupos, contratos e modulos principais; use `docs/architecture/repository-structure.md` para contagens completas.
+**Inventario atual:** 158 arquivos JS em `assets/js/`. Este catalogo documenta os grupos, contratos e modulos principais; use `docs/architecture/repository-structure.md` para contagens completas.
 
 *Controllers (33 public + 15 admin = 48) documentados em `docs/architecture/controllers-catalog.md`*
 
