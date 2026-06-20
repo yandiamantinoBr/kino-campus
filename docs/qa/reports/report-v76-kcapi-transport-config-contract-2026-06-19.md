@@ -48,7 +48,7 @@ repositório. A saída JSON/Markdown expõe `gateCoverage`, `coveredGateCount`,
 | Contrato novo | 1 suite / 8 testes aprovados |
 | `npm run audit:kcapi-residual -- --json` | aprovado; 4 cobertos / 11 pendentes |
 | `npm run check:all` | 181 suites / 3.638 testes / 3 snapshots aprovados |
-| CI do PR | pendente na criação deste relatório |
+| CI do PR #593 | aprovado: validators/Jest/Playwright list, Lighthouse (4 páginas) e Vercel Preview |
 
 ## Próxima etapa
 
