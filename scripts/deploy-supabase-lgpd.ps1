@@ -1,7 +1,7 @@
 param(
   [string]$ProjectRef = "wacyrkwhkvzwkqpolrbg",
   [string]$FunctionName = "kc-account-erasure",
-  [string]$MigrationFile = "supabase/migrations/20260525143000_lgpd_account_erasure_requests.sql",
+  [string]$MigrationFile = "supabase/migrations/_archive-v75/20260525143000_lgpd_account_erasure_requests.sql",
   [string]$MigrationName = "20260525143000_lgpd_account_erasure_requests",
   [switch]$DryRun
 )

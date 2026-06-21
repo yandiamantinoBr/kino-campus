@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('notification whatsapp channel', () => {
   test('migration cria destino privado separado e libera o resolvedor apenas com consentimento', () => {
-    const sql = read('supabase/migrations/v11.21.1.0_notification_whatsapp_channel.sql');
+    const sql = read('supabase/migrations/_archive-v75/v11.21.1.0_notification_whatsapp_channel.sql');
 
     expect(sql).toContain('create table if not exists public.notification_channel_targets');
     expect(sql).toContain("check (channel = any (array['whatsapp'::text]))");

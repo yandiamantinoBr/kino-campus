@@ -64,7 +64,7 @@ describe('chat continuity contract', () => {
   });
 
   test('chat migration refreshes preview after edit/delete and hardens media path ownership', () => {
-    const migration = read('supabase/migrations/v9.3.5.15_chat_preview_consistency.sql');
+    const migration = read('supabase/migrations/_archive-v75/v9.3.5.15_chat_preview_consistency.sql');
 
     expect(migration).toContain('kc_chat_refresh_conversation_preview');
     expect(migration).toContain('after update of content, media_path, edited_at, deleted_at');

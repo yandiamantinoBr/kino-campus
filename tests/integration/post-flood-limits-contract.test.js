@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
-const MIGRATION = path.join(ROOT, 'supabase/migrations/20260521201102_admin_configurable_post_flood_limits.sql');
-const FIX_MIGRATION = path.join(ROOT, 'supabase/migrations/20260528092946_fix_cadu_flood_limit_admin_controls.sql');
+const MIGRATION = path.join(ROOT, 'supabase/migrations/_archive-v75/20260521201102_admin_configurable_post_flood_limits.sql');
+const FIX_MIGRATION = path.join(ROOT, 'supabase/migrations/_archive-v75/20260528092946_fix_cadu_flood_limit_admin_controls.sql');
 const ADMIN_HTML = path.join(ROOT, 'admin/moderation.html');
 const ADMIN_CONTROLLER = path.join(ROOT, 'assets/js/controllers/admin/admin-moderation.controller.js');
 const CADU_PUBLISHER = path.join(ROOT, 'services/cadu-ufg-publisher/src/publisher.js');

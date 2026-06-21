@@ -14,7 +14,10 @@ const DOSSIER_PATH = path.join(ROOT, 'docs/planning/v76-search-sql-rpc-isolated-
 const EVIDENCE_PATH = path.join(ROOT, 'docs/qa/reports/_TEMPLATE-search-structured-rpc-evidence.md');
 const LOCAL_PROOF_PATH = path.join(ROOT, 'tests/sql/search-structured-v1-isolated-proof.sql');
 const LOCAL_REPORT_PATH = path.join(ROOT, 'docs/qa/reports/report-v76-search-sql-local-proof-2026-06-20.md');
-const MIGRATIONS_PATH = path.join(ROOT, 'supabase/migrations');
+// V76.47: as migrations legacy foram consolidadas na baseline
+// 00000000000001_baseline_v76.sql e arquivadas em _archive-v75/. Os testes que
+// inspecionam o RPC FTS continuam lendo os arquivos originais agora arquivados.
+const MIGRATIONS_PATH = path.join(ROOT, 'supabase/migrations/_archive-v75');
 const CURRENT_RPC_PATH = path.join(MIGRATIONS_PATH, '20260601172451_search_fuzzy_query_terms_threshold.sql');
 const INITIAL_RPC_PATH = path.join(MIGRATIONS_PATH, 'v9.2.0.0_search_posts_fts.sql');
 

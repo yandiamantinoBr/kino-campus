@@ -11,7 +11,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const sql = fs.readFileSync(
-  path.join(ROOT, 'supabase/migrations/20260531190000_db_hygiene_fk_indexes_rls_merge.sql'),
+  path.join(ROOT, 'supabase/migrations/_archive-v75/20260531190000_db_hygiene_fk_indexes_rls_merge.sql'),
   'utf8'
 );
 

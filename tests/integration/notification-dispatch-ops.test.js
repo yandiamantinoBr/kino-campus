@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('notification dispatch operational invariants', () => {
   test('migration versiona scheduler e log privado dos runs de dispatch', () => {
-    const sql = read('supabase/migrations/v11.22.0.0_notification_dispatch_scheduler.sql');
+    const sql = read('supabase/migrations/_archive-v75/v11.22.0.0_notification_dispatch_scheduler.sql');
 
     expect(sql).toContain('create table if not exists public.notification_dispatch_runtime');
     expect(sql).toContain('create table if not exists public.notification_dispatch_runs');
