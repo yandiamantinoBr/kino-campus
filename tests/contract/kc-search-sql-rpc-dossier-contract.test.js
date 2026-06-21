@@ -12,6 +12,8 @@ const CONTRACT_PATH = path.join(ROOT, 'tests/fixtures/search-structured-rpc-cont
 const SNAPSHOT_PATH = path.join(ROOT, 'assets/js/shared/kc-search-registry.generated.js');
 const DOSSIER_PATH = path.join(ROOT, 'docs/planning/v76-search-sql-rpc-isolated-dossier.md');
 const EVIDENCE_PATH = path.join(ROOT, 'docs/qa/reports/_TEMPLATE-search-structured-rpc-evidence.md');
+const LOCAL_PROOF_PATH = path.join(ROOT, 'tests/sql/search-structured-v1-isolated-proof.sql');
+const LOCAL_REPORT_PATH = path.join(ROOT, 'docs/qa/reports/report-v76-search-sql-local-proof-2026-06-20.md');
 const MIGRATIONS_PATH = path.join(ROOT, 'supabase/migrations');
 const CURRENT_RPC_PATH = path.join(MIGRATIONS_PATH, '20260601172451_search_fuzzy_query_terms_threshold.sql');
 const INITIAL_RPC_PATH = path.join(MIGRATIONS_PATH, 'v9.2.0.0_search_posts_fts.sql');
@@ -20,6 +22,8 @@ const contract = JSON.parse(fs.readFileSync(CONTRACT_PATH, 'utf8'));
 const snapshot = require(SNAPSHOT_PATH).registry;
 const dossier = fs.readFileSync(DOSSIER_PATH, 'utf8');
 const evidence = fs.readFileSync(EVIDENCE_PATH, 'utf8');
+const localProof = fs.readFileSync(LOCAL_PROOF_PATH, 'utf8');
+const localReport = fs.readFileSync(LOCAL_REPORT_PATH, 'utf8');
 
 describe('V76.41 — contrato SQL/RPC somente de desenho', () => {
   test('não autoriza produção, migration ou ativação', () => {
@@ -87,11 +91,30 @@ describe('V76.41 — contrato SQL/RPC somente de desenho', () => {
     ]));
   });
 
-  test('mantém todos os gates de banco explicitamente pendentes', () => {
+  test('mantém todos os gates de produção explicitamente desautorizados', () => {
     expect(Object.values(contract.databaseGates).every((value) => value === false)).toBe(true);
-    expect(dossier).toContain('Docker Desktop engine indisponível');
+    expect(dossier).toContain('cadeia canônica de migrations falhou');
+    expect(dossier).toContain('No-Go para migration');
     expect(evidence).toContain('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)');
     expect(evidence).toContain('Rollback R3 executado');
+  });
+
+  test('versiona um harness sintético fail-closed e reversível', () => {
+    expect(localProof).toContain('\\set ON_ERROR_STOP on');
+    expect(localProof).toContain("set statement_timeout = '1500ms'");
+    expect(localProof).toContain('KC_PROOF_RLS_PARITY_FAILURE');
+    expect(localProof).toContain('KC_PROOF_PUBLIC_EXECUTE');
+    expect(localProof).toContain('KC_PROOF_PERFORMANCE_REGRESSION');
+    expect(localProof).toContain('KC_PROOF rollback_r3=pass');
+    expect(localProof).toContain('candidate_migration_authorized=false');
+    expect(localProof).not.toMatch(/supabase\.co|project-ref|service_role_key/i);
+  });
+
+  test('registra a falha da cadeia canônica sem alegar validação remota', () => {
+    expect(localReport).toContain('PostgreSQL 17.10');
+    expect(localReport).toContain('public.post_media');
+    expect(localReport).toMatch(/Nenhum\s+projeto Supabase remoto foi consultado ou alterado/);
+    expect(localReport).toContain('**No-Go para migration; prova local concluída**');
   });
 
   test('registra os riscos observáveis do RPC atual sem inventar estado remoto', () => {
