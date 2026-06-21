@@ -422,7 +422,8 @@ Rollout: canário interno, percentual pequeno e expansão por gate; migration ad
 8. **PR-G.2 — executado:** chips removíveis, facetas e zero-results sob as mesmas flags.
 9. **PR-H — executado documentalmente:** contrato SQL/RPC isolado, RLS, explain e rollback R3; migration bloqueada até prova em banco descartável.
 10. **PR-I — executado:** dropdown combobox, cancelamento nos dois surfaces e performance real em memória.
-11. **PR-J:** preferências explícitas, consentimento e direitos.
+11. **PR-J — executado:** preferências explícitas locais, consentimentos separados,
+    modo não personalizado, exportação e exclusão; sem mudança de ranking.
 12. **PR-K:** afinidade local opt-in; sincronização somente após gates.
 
 Não misturar migration, perfil, ranking e redesign no mesmo PR.
@@ -469,8 +470,8 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-J** sem tocar personalização implícita: desenhar preferências explícitas,
-consentimento separado, modo não personalizado, exportação e exclusão antes de criar
-qualquer perfil. Em paralelo, o PR-H só pode avançar para SQL quando banco descartável
-permitir migrations, RLS, `EXPLAIN` e rollback R3. As flags estruturadas permanecem
-desligadas; migration remota, coleta comportamental e reranking seguem bloqueados.
+Executar **PR-K** usando exclusivamente o opt-in local entregue no PR-J: sinais
+categóricos mínimos, TTL/decaimento, teto pequeno, explicação e limpeza imediata.
+Consulta e filtros devem continuar dominando. O PR-H só pode avançar para SQL quando
+banco descartável permitir migrations, RLS, `EXPLAIN` e rollback R3. Migration remota,
+sincronização com conta e modelos aprendidos seguem bloqueados.

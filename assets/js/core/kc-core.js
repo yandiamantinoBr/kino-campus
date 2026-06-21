@@ -423,8 +423,9 @@ function kcEnsureNavA11yLabels() {
 }
 
 /* === v75.1: Colapso progressivo de labels do kc-nav-links ===
- * Mede o overflow real da nav e aplica .is-icon-only do ÚLTIMO item para o
- * PRIMEIRO, até caber sem overflow. Em mobile (≤768px) a nav é display:none,
+ * Mede o overflow real da nav e aplica .is-icon-only do ÚLTIMO item até o
+ * segundo. Mantém ao menos um rótulo textual no desktop; overflow residual
+ * usa o scroll horizontal já previsto pela nav. Em mobile (≤768px) a nav é display:none,
  * então sai cedo. Idempotente — pode ser chamado em resize sem efeitos
  * indesejados. */
 function kcApplyProgressiveNavCollapse() {
@@ -448,8 +449,8 @@ function kcApplyProgressiveNavCollapse() {
     // requestAnimationFrame não é suficiente sozinho aqui porque modificamos
     // estado e queremos medir DEPOIS do reflow. Forçamos leitura de scrollWidth
     // (síncrono) que dispara reflow.
-    // Itera do último para o primeiro, escondendo label até caber.
-    for (let i = links.length - 1; i >= 0; i--) {
+    // Itera do último até o segundo, preservando uma âncora textual.
+    for (let i = links.length - 1; i >= 1; i--) {
       // Margem de tolerância: 2px contra erros de arredondamento
       if (nav.scrollWidth <= nav.clientWidth + 2) break;
       links[i].classList.add('is-icon-only');
