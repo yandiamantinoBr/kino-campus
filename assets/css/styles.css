@@ -11785,7 +11785,7 @@ a.kc-home-metric-card:hover {
    ÚLTIMO para o PRIMEIRO até caber. Assim, conforme o header aperta:
      1) primeiro o último label some (Caronas → só ícone)
      2) depois o penúltimo (Compra e Venda → só ícone)
-     3) e assim por diante até sobrar todos só com ícones
+     3) e assim por diante, preservando ao menos o primeiro rótulo textual
    Os ícones nunca somem antes do breakpoint mobile (≤768px).
    No desktop, a nav nunca shrinka antes da search-bar — o JS faz a redução.
    ========================================================================== */

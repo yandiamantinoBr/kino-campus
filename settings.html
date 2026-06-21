@@ -65,6 +65,56 @@
 
       <div id="settingsStatus" class="kc-settings-status" role="status" aria-live="polite"></div>
 
+      <section id="settingsSearchPreferences" class="kc-settings-card kc-search-preferences-card" aria-labelledby="settingsSearchPreferencesTitle">
+        <div class="kc-search-preferences-heading">
+          <div>
+            <span class="kc-settings-eyebrow">Busca e descoberta</span>
+            <h2 id="settingsSearchPreferencesTitle">Suas preferências de busca</h2>
+            <p>Escolha explicitamente o que deseja priorizar. O padrão é não personalizado e nada desta seção é enviado para analytics ou vinculado à sua conta.</p>
+          </div>
+          <label class="kc-settings-pill kc-search-preferences-mode" for="settingsSearchPersonalized">
+            <input id="settingsSearchPersonalized" type="checkbox" />
+            <span id="settingsSearchModeLabel">Não personalizada</span>
+          </label>
+        </div>
+
+        <div id="settingsSearchPreferenceControls" class="kc-search-preferences-controls is-disabled">
+          <fieldset class="kc-search-preference-section">
+            <legend>Módulos que você quer priorizar</legend>
+            <p>Você pode selecionar qualquer combinação. A consulta e os filtros sempre continuarão dominando a ordem.</p>
+            <div id="settingsSearchModules" class="kc-search-preference-modules" aria-live="polite"></div>
+          </fieldset>
+
+          <div class="kc-search-preference-section">
+            <h3>Assuntos específicos</h3>
+            <p>As opções vêm dos mesmos campos canônicos usados ao criar uma publicação.</p>
+            <div id="settingsSearchTopics" class="kc-search-preference-topics" aria-live="polite"></div>
+          </div>
+
+          <div class="kc-settings-row kc-search-preferences-affinity">
+            <div>
+              <strong><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Afinidade local</strong>
+              <p>Permitir, separadamente, que interações futuras ajustem uma afinidade mínima neste navegador. Não inclui texto pesquisado, identidade ou dados sensíveis.</p>
+            </div>
+            <label class="kc-settings-pill" for="settingsSearchAffinity">
+              <input id="settingsSearchAffinity" type="checkbox" />
+              <span>Permitir</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="kc-search-preferences-privacy" role="note">
+          <i class="fas fa-shield-halved" aria-hidden="true"></i>
+          <p><strong>Controle local e revogável.</strong> Você pode exportar ou remover tudo a qualquer momento. Desativar a personalização também apaga a afinidade local.</p>
+        </div>
+        <div id="settingsSearchPreferencesStatus" class="kc-settings-status kc-search-preferences-status" role="status" aria-live="polite"></div>
+        <div class="kc-settings-actions-row">
+          <button id="settingsSaveSearchPreferences" type="button" class="kc-settings-btn is-primary"><i class="fas fa-floppy-disk"></i><span>Salvar preferências</span></button>
+          <button id="settingsExportSearchPreferences" type="button" class="kc-settings-btn"><i class="fas fa-file-export"></i><span>Exportar JSON</span></button>
+          <button id="settingsClearSearchPreferences" type="button" class="kc-settings-btn is-danger"><i class="fas fa-trash-can"></i><span>Remover dados locais</span></button>
+        </div>
+      </section>
+
       <section id="settingsGuest" class="kc-settings-card" style="display:none;">
         <h2>Entre para configurar sua conta</h2>
         <div class="kc-settings-actions-row">
@@ -280,8 +330,10 @@
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
   <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
+  <script defer src="assets/js/shared/kc-search-preferences.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.4"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
+  <script defer src="assets/js/controllers/public/search-preferences.controller.js?v=8.6.1"></script>
   <script defer src="assets/js/controllers/public/settings.controller.js?v=8.6.1"></script>
 </body>
 </html>
