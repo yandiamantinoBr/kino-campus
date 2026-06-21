@@ -1,7 +1,7 @@
 # V76.41 — dossiê SQL/RPC isolado da busca estruturada
 
 **Data:** 2026-06-20
-**Escopo:** desenho verificável; nenhum SQL aplicado
+**Escopo:** desenho verificável e prova em PostgreSQL local descartável; nenhum SQL remoto aplicado
 **Decisão atual:** **Go documental / No-Go para migration**
 
 Este documento não é uma migration, não é procedimento de deploy e não autoriza acesso
@@ -22,8 +22,8 @@ banco descartável antes de qualquer alteração em `supabase/migrations/`.
 | Metadados | não há GIN genérico de `posts.metadata` nas migrations | índice novo depende de plano e volume medidos |
 | API local | apenas `public` e `graphql_public` expostos | core futuro deve ficar em schema privado |
 | Tooling | Supabase CLI 2.105.0 e Docker CLI 29.4.1 | versões registradas |
-| Banco local | Docker Desktop engine indisponível em 2026-06-20 | migrations, RLS, explain e rollback não executados |
-| PostgreSQL local | configurado para major 17; `psql` não está no PATH | usar `supabase db`/container após iniciar o engine |
+| Banco local | Docker Desktop iniciado em 2026-06-20 | prova isolada executada; a cadeia canônica de migrations falhou antes do teste |
+| PostgreSQL local | PostgreSQL oficial 17.10 em contêiner descartável | RLS, explain, catálogo e rollback R3 executados somente com dados sintéticos |
 
 O helper legado `public.kc_can_read_post` é `SECURITY DEFINER` com `search_path=public`.
 Ele está fora deste patch e não deve ser reescrito junto da busca. O banco isolado deve
@@ -209,16 +209,31 @@ não depende de restaurar perfil ou eventos comportamentais.
 |---|---|
 | Contrato registry/RPC versionado | passou estaticamente |
 | Nenhuma migration candidata no repo | passou |
-| Docker/banco descartável | bloqueado: engine parado |
-| 132 migrations aplicadas | pendente |
-| Estado real de grants/proprietário | pendente |
-| Matriz RLS executada | pendente |
-| Paridade legado/candidato | pendente |
-| EXPLAIN com buffers em 10k/50k | pendente |
-| Rollback R3 executado | pendente |
+| Docker/banco descartável | passou em PostgreSQL 17.10 isolado |
+| 132 migrations aplicadas | falhou: nomes legados foram ignorados e `public.post_media` estava ausente na primeira migration timestamped |
+| Estado real de grants/proprietário | passou apenas no catálogo sintético; remoto não consultado |
+| Matriz RLS executada | passou 8/8 no harness isolado |
+| Paridade legado/candidato | passou 8/8 na matriz e no corpus estruturado |
+| EXPLAIN com buffers em 10k/50k | executado; timeout estrito de 1500 ms não atendido em 50k |
+| Rollback R3 executado | passou; hash legado e ausência dos objetos candidatos confirmados |
 
 Decisão: o desenho pode orientar o próximo experimento, mas SQL de produção, migration, grant,
 ativação de flag e troca de RPC continuam em **No-Go**.
+
+## 12. Adendo de execução local V76.45
+
+O harness reproduzível está em `tests/sql/search-structured-v1-isolated-proof.sql`; a
+evidência consolidada está em
+`docs/qa/reports/report-v76-search-sql-local-proof-2026-06-20.md`. A execução completa usou
+somente fixtures sintéticas, PostgreSQL 17.10 e papéis locais `anon`, `authenticated` e
+`service_role`.
+
+Resultados objetivos: matriz RLS 8/8, validações fail-closed 6/6, seis módulos cobertos,
+acento/typo aprovados, p95 relativo sem filtro dentro do teto de 20% e rollback R3 aprovado.
+O índice composto `(module, category) where legacy_id is null` foi rejeitado porque não foi
+escolhido pelo planner. O gate absoluto de 1500 ms falhou em 50 mil linhas, e a cadeia
+canônica de migrations não sobe do zero. Por esses dois motivos independentes, a decisão
+permanece No-Go para migration.
 
 ## 11. Fontes primárias verificadas
 
