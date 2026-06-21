@@ -294,7 +294,7 @@ describe('KCAds feed monetization', () => {
   });
 
   test('migration define tabela, RPCs e eventos de anuncios', () => {
-    const sql = read('supabase/migrations/20260605010000_feed_ads.sql');
+    const sql = read('supabase/migrations/_archive-v75/20260605010000_feed_ads.sql');
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.ad_campaigns');
     expect(sql).toContain('public.kc_get_feed_ads');
     expect(sql).toContain('public.kc_admin_save_ad_campaign');
@@ -304,7 +304,7 @@ describe('KCAds feed monetization', () => {
   });
 
   test('migration AdSense define settings, RPCs e audit log canonico', () => {
-    const sql = read('supabase/migrations/20260605182346_adsense_admin_monetization_runtime.sql');
+    const sql = read('supabase/migrations/_archive-v75/20260605182346_adsense_admin_monetization_runtime.sql');
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.ad_network_settings');
     expect(sql).toContain('public.kc_get_feed_ad_config');
     expect(sql).toContain('public.kc_admin_get_ad_network_settings');
@@ -316,7 +316,7 @@ describe('KCAds feed monetization', () => {
   });
 
   test('migration AdSense cobre indices de FKs monitorados pelos advisors', () => {
-    const sql = read('supabase/migrations/20260605182516_adsense_fk_indexes.sql');
+    const sql = read('supabase/migrations/_archive-v75/20260605182516_adsense_fk_indexes.sql');
     [
       'idx_ad_campaigns_created_by',
       'idx_ad_campaigns_updated_by',
@@ -329,14 +329,14 @@ describe('KCAds feed monetization', () => {
   });
 
   test('migration de anuncios expõe frequency cap no RPC publico', () => {
-    const sql = read('supabase/migrations/20260605184519_adsense_frequency_cap_contract.sql');
+    const sql = read('supabase/migrations/_archive-v75/20260605184519_adsense_frequency_cap_contract.sql');
     expect(sql).toContain('frequency_cap_per_session INTEGER');
     expect(sql).toContain('c.frequency_cap_per_session');
     expect(sql).toContain('public.kc_get_feed_ads');
   });
 
   test('migration de anúncios consolida RLS de campanhas sem SELECT duplicado', () => {
-    const sql = read('supabase/migrations/20260605185313_ads_rls_policy_consolidation.sql');
+    const sql = read('supabase/migrations/_archive-v75/20260605185313_ads_rls_policy_consolidation.sql');
     expect(sql).toContain('DROP POLICY IF EXISTS ad_campaigns_admin_all');
     expect(sql).toContain('CREATE POLICY ad_campaigns_read_active_anon');
     expect(sql).toContain('CREATE POLICY ad_campaigns_read_authenticated');

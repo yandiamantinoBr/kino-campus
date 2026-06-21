@@ -17,7 +17,7 @@ const r = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 describe('Cadu trusted publisher — migration', () => {
   let sql;
   beforeAll(() => {
-    sql = r('supabase/migrations/20260530120000_cadu_trusted_publisher_pipeline.sql');
+    sql = r('supabase/migrations/_archive-v75/20260530120000_cadu_trusted_publisher_pipeline.sql');
   });
 
   test('cria allowlist e helper interno', () => {
@@ -174,7 +174,7 @@ describe('Cadu publish — cliente de referencia', () => {
 
 describe('posts.author_id default = auth.uid()', () => {
   test('migration define o default auth.uid() para author_id', () => {
-    const sql = r('supabase/migrations/20260530130000_posts_author_id_default_authuid.sql');
+    const sql = r('supabase/migrations/_archive-v75/20260530130000_posts_author_id_default_authuid.sql');
     expect(sql).toMatch(/alter table public\.posts\s+alter column author_id set default auth\.uid\(\)/i);
   });
 });

@@ -7,6 +7,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 
 | Arquivo | Uso |
 |---|---|
+| `report-v76-migration-baseline-2026-06-21.md` | Evidência V76.47 da baseline consolidada que destrava `supabase db reset` (132 migrations legacy arquivadas, 1 baseline validada em PostgreSQL 17.6 local) |
 | `report-v76-docs-hygiene-2026-06-21.md` | Evidência V76.49 da higiene de drift em `docs/index.md`/`_INDEX.md` e do comentário esclarecedor da flag `search.personalization` |
 | `report-v76-search-session-standard-order-2026-06-21.md` | Evidência V76.46 do bypass efêmero de personalização por consulta |
 | `report-v76-search-sql-local-proof-2026-06-20.md` | Evidência V76.45 da matriz RLS, benchmark 10k/50k, índice rejeitado e rollback R3 em PostgreSQL 17.10 descartável |

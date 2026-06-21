@@ -86,7 +86,7 @@ function loadCharts() {
 
 describe('Rodada 2 — migrations', () => {
   test('Migration A adiciona 3 séries (views/curtidas/sessões) preservando o hardening', () => {
-    const sql = r('supabase/migrations/20260531160000_admin_daily_metrics_traffic_series.sql');
+    const sql = r('supabase/migrations/_archive-v75/20260531160000_admin_daily_metrics_traffic_series.sql');
     ['post_views_count', 'comment_likes_count', 'sessions_count'].forEach((k) => expect(sql).toContain(k));
     expect(sql).toContain('public.post_view_events');
     expect(sql).toContain('public.comment_likes');
@@ -97,7 +97,7 @@ describe('Rodada 2 — migrations', () => {
   });
 
   test('Migration B cria prefs por admin com RLS owner-only + RPCs INVOKER gated', () => {
-    const sql = r('supabase/migrations/20260531170000_admin_chart_prefs.sql');
+    const sql = r('supabase/migrations/_archive-v75/20260531170000_admin_chart_prefs.sql');
     expect(sql).toContain('create table if not exists public.kc_admin_chart_prefs');
     expect(sql).toContain('enable row level security');
     expect(sql).toMatch(/user_id = \(select auth\.uid\(\)\) and public\.kc_is_admin/);

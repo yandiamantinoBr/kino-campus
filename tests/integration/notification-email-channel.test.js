@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('notification email channel', () => {
   test('migration adiciona helpers de claim e registro atomico de attempt', () => {
-    const sql = read('supabase/migrations/v11.21.0.0_notification_email_channel.sql');
+    const sql = read('supabase/migrations/_archive-v75/v11.21.0.0_notification_email_channel.sql');
 
     expect(sql).toContain('create or replace function public.kc_claim_notification_delivery_batch(');
     expect(sql).toContain("for update skip locked");

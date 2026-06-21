@@ -7,7 +7,7 @@ function read(relativePath) {
 
 describe('notification delivery foundation', () => {
   test('migration cria outbox, attempts e helper canonico de emissao', () => {
-    const sql = read('supabase/migrations/v11.20.2.0_notification_delivery_outbox.sql');
+    const sql = read('supabase/migrations/_archive-v75/v11.20.2.0_notification_delivery_outbox.sql');
 
     expect(sql).toContain('create table if not exists public.notification_delivery_outbox');
     expect(sql).toContain('create table if not exists public.notification_delivery_attempts');

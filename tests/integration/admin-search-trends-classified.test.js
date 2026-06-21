@@ -16,7 +16,7 @@ const SHARED = path.join(ROOT, 'assets/js/controllers/admin/admin-dashboard.shar
 describe('Tendencias - migration do RPC classificado', () => {
   let sql;
   beforeAll(() => {
-    sql = r('supabase/migrations/20260531200000_admin_search_trends_classified.sql');
+    sql = r('supabase/migrations/_archive-v75/20260531200000_admin_search_trends_classified.sql');
   });
 
   test('cria o par publico (INVOKER) -> kc_private (DEFINER)', () => {
@@ -94,7 +94,7 @@ describe('Tendencias - wiring + dicionario ampliado', () => {
 });
 
 describe('Tendencias - classificador tolerante a typos (pg_trgm)', () => {
-  const fuzzySql = r('supabase/migrations/20260601172451_search_fuzzy_query_terms_threshold.sql');
+  const fuzzySql = r('supabase/migrations/_archive-v75/20260601172451_search_fuzzy_query_terms_threshold.sql');
 
   test('usa word_similarity (pg_trgm, schema extensions) com limiar', () => {
     expect(fuzzySql).toContain('create or replace function kc_private.kc_admin_search_trends_classified');

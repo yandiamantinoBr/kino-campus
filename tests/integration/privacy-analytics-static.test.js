@@ -33,7 +33,7 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
   });
 
   test('migration de privacidade usa RLS, hash de sessao e security definer seguro', () => {
-    const sql = read('supabase/migrations/v9.3.5.16_privacy_analytics.sql');
+    const sql = read('supabase/migrations/_archive-v75/v9.3.5.16_privacy_analytics.sql');
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.privacy_analytics_events');
     expect(sql).toContain('ALTER TABLE public.privacy_analytics_events ENABLE ROW LEVEL SECURITY');
     expect(sql).toContain('SECURITY DEFINER');

@@ -19,16 +19,16 @@ describe('closed posts - contratos de dados e feed efetivo', () => {
   let expirationCloseMigration;
 
   beforeAll(() => {
-    migration = read('supabase/migrations/v9.3.4.0_closed_posts_effective_feed.sql');
-    grantsMigration = read('supabase/migrations/v9.3.4.1_closed_posts_rpc_grants.sql');
-    closeAuditFixMigration = read('supabase/migrations/v9.3.4.2_fix_close_post_audit_payload.sql');
-    rpcStorageHardeningMigration = read('supabase/migrations/v9.3.4.3_security_advisor_rpc_storage_hardening.sql');
-    unaccentSchemaMigration = read('supabase/migrations/v9.3.4.4_unaccent_extension_schema.sql');
-    internalHardeningMigration = read('supabase/migrations/v9.3.4.5_internal_rpc_and_notification_rls_hardening.sql');
-    rpcWrapperMigration = read('supabase/migrations/v9.3.4.6_security_definer_rpc_wrappers.sql');
-    isAdminAnonGrantMigration = read('supabase/migrations/v9.3.4.7_grant_anon_is_admin_helper_wrapper.sql');
-    reactivateMigration = read('supabase/migrations/v9.3.4.8_reactivate_closed_posts.sql');
-    expirationCloseMigration = read('supabase/migrations/v9.3.4.9_expiration_closes_posts_and_deprioritizes_closed.sql');
+    migration = read('supabase/migrations/_archive-v75/v9.3.4.0_closed_posts_effective_feed.sql');
+    grantsMigration = read('supabase/migrations/_archive-v75/v9.3.4.1_closed_posts_rpc_grants.sql');
+    closeAuditFixMigration = read('supabase/migrations/_archive-v75/v9.3.4.2_fix_close_post_audit_payload.sql');
+    rpcStorageHardeningMigration = read('supabase/migrations/_archive-v75/v9.3.4.3_security_advisor_rpc_storage_hardening.sql');
+    unaccentSchemaMigration = read('supabase/migrations/_archive-v75/v9.3.4.4_unaccent_extension_schema.sql');
+    internalHardeningMigration = read('supabase/migrations/_archive-v75/v9.3.4.5_internal_rpc_and_notification_rls_hardening.sql');
+    rpcWrapperMigration = read('supabase/migrations/_archive-v75/v9.3.4.6_security_definer_rpc_wrappers.sql');
+    isAdminAnonGrantMigration = read('supabase/migrations/_archive-v75/v9.3.4.7_grant_anon_is_admin_helper_wrapper.sql');
+    reactivateMigration = read('supabase/migrations/_archive-v75/v9.3.4.8_reactivate_closed_posts.sql');
+    expirationCloseMigration = read('supabase/migrations/_archive-v75/v9.3.4.9_expiration_closes_posts_and_deprioritizes_closed.sql');
   });
 
   test('posts aceita closed como status historico publico', () => {

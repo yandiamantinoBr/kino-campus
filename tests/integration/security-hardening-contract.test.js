@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
-const MIGRATION = path.join(ROOT, 'supabase/migrations/20260526185914_security_invoker_rpc_hardening.sql');
+const MIGRATION = path.join(ROOT, 'supabase/migrations/_archive-v75/20260526185914_security_invoker_rpc_hardening.sql');
 const VERCEL_CONFIG = path.join(ROOT, 'vercel.json');
 
 function read(file) {

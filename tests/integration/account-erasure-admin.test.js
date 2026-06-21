@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
-const MIGRATION = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260525143000_lgpd_account_erasure_requests.sql'), 'utf8');
+const MIGRATION = fs.readFileSync(path.join(ROOT, 'supabase/migrations/_archive-v75/20260525143000_lgpd_account_erasure_requests.sql'), 'utf8');
 const EDGE = fs.readFileSync(path.join(ROOT, 'supabase/functions/kc-account-erasure/index.ts'), 'utf8');
 const EMAIL_TEMPLATE = fs.readFileSync(path.join(ROOT, 'supabase/templates/kino-account-erasure-confirmation-email.html'), 'utf8');
 const HELP_HTML = fs.readFileSync(path.join(ROOT, 'admin/help-requests.html'), 'utf8');

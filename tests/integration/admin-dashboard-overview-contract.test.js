@@ -16,7 +16,7 @@ const r = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 describe('kc_admin_dashboard_overview — migration', () => {
   let sql;
   beforeAll(() => {
-    sql = r('supabase/migrations/20260531120000_admin_dashboard_overview_rpc.sql');
+    sql = r('supabase/migrations/_archive-v75/20260531120000_admin_dashboard_overview_rpc.sql');
   });
 
   test('cria a função agregada com SECURITY INVOKER e search_path vazio', () => {

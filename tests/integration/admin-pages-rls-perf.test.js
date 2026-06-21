@@ -12,7 +12,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const sql = fs.readFileSync(
-  path.join(ROOT, 'supabase/migrations/20260531180000_admin_pages_rls_perf.sql'),
+  path.join(ROOT, 'supabase/migrations/_archive-v75/20260531180000_admin_pages_rls_perf.sql'),
   'utf8'
 );
 

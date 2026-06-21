@@ -10,7 +10,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const sql = fs.readFileSync(
-  path.join(ROOT, 'supabase/migrations/20260601172451_search_fuzzy_query_terms_threshold.sql'),
+  path.join(ROOT, 'supabase/migrations/_archive-v75/20260601172451_search_fuzzy_query_terms_threshold.sql'),
   'utf8'
 );
 

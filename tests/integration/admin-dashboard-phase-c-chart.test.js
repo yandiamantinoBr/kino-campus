@@ -84,7 +84,7 @@ function loadCharts() {
 describe('Fase C — migration daily_metrics estendida', () => {
   let sql;
   beforeAll(() => {
-    sql = r('supabase/migrations/20260531140000_admin_daily_metrics_extended_series.sql');
+    sql = r('supabase/migrations/_archive-v75/20260531140000_admin_daily_metrics_extended_series.sql');
   });
 
   test('recria o wrapper público e a implementação privada', () => {

@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
-const MIGRATION = path.join(ROOT, 'supabase/migrations/20260521222100_cadu_publisher_safety.sql');
+const MIGRATION = path.join(ROOT, 'supabase/migrations/_archive-v75/20260521222100_cadu_publisher_safety.sql');
 const PUBLISHER = path.join(ROOT, 'services/cadu-ufg-publisher/src/publisher.js');
 const QUALITY = path.join(ROOT, 'services/cadu-ufg-publisher/src/quality.js');
 
