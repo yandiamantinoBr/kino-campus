@@ -274,8 +274,8 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 | `npm run check:search-registry` | Falha se o snapshot divergir de schema, builder ou políticas |
 | `npm test` | Mantém 191/191 suites e 3784/3784 testes Jest |
 | `npm run benchmark:search-shadow` | Mede 12 cenários sintéticos dos seis módulos, sem dados reais |
-| `npx playwright test --list` | Lista 11 specs / 78 testes Playwright sem exigir ambiente local ativo |
-| `npm run test:e2e` | Executa Playwright; depende de ambiente local/provider |
+| `npx playwright test --list` | Lista 13 specs / 83 testes Playwright sem exigir ambiente local ativo (inventário) |
+| `npx playwright test` | Executa as 83 specs Playwright (chromium); sobe `http-server` via `webServer` automaticamente. Gate de regressão real desde V76.48 |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 
 ---

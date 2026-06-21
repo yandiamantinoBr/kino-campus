@@ -783,5 +783,6 @@ npm run check:hygiene    # 8.6.1, i18n B2, inline handlers, cadeias
 
 # Testes
 npm test                 # 177 suites · 3600 testes
-npx playwright test --list # 9 specs Playwright · 59 testes listados
+npx playwright test --list # inventário: 13 specs · 83 testes
+npx playwright test        # executa as 83 specs (chromium); webServer sobe http-server:4000
 ```

@@ -21,9 +21,9 @@ concurrency:
 
 jobs:
   validate:
-    name: Validators, Jest and Playwright list
+    name: Validators, Jest and Playwright
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -56,5 +56,16 @@ jobs:
       - name: Jest
         run: npm test -- --runInBand
 
-      - name: Playwright inventory
-        run: npx playwright test --list
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright E2E (chromium)
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: output/playwright-report
+          retention-days: 7
