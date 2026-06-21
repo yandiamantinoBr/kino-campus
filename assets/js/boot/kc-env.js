@@ -57,6 +57,11 @@
       'search.schemaFields': false,
       'search.structuredRuntime': false,
       'search.structuredPilot': false,
+      // Habilita apenas a UI/integração local de preferências e afinidade (PR-J/K).
+      // O efeito real de reranking só ocorre com consentimento explícito triplo:
+      // mode=personalized + consent.granted=true + localAffinityConsent=true
+      // (ver kc-search-preferences.shared.js / kc-search-affinity.shared.js).
+      // Sem consentimento, o fallback é sempre o ranking comum (fail-safe).
       'search.personalization': true,
     },
     featureFlags: {},

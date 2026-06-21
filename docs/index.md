@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.40` (critérios removíveis, facetas e zero-results estruturados sob duas flags desligadas por padrão, runtime frontend `8.6.1` inalterado)
+- linha de trabalho atual: `v76.46` (busca orientada ao schema e personalização responsável: registro, projeção, parser, pipeline shadow, snapshot, piloto estruturado, facetas, dossiê SQL/RPC isolado, combobox/cancelamento, preferências explícitas, afinidade local opt-in e toggle contextual de ordem padrão; SQL estruturado e migration seguem em No-Go até a cadeia canônica de migrations ser reparada, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
