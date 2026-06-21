@@ -31,7 +31,7 @@ Este diretorio concentra planos e inventarios ativos que ainda nao devem ser arq
 | `v76-kcapi-residual-inventory.md` | Inventário JS-I dos buckets residuais da fachada `KCAPI`, atualizado após JS-I.3 e sem novo candidato JS pequeno equivalente |
 | `v76-css-ownership-inventory.md` | Inventário CSS-A/C de ownership de `styles.css`, atualizado após os micro-splits admin e chat shortcut |
 | `v76-css-visual-baseline.md` | Baseline CSS-B/C visual/cascade para rotas públicas, usuário/chat e admin estático antes/depois de micro-splits CSS-C/C.2/C.3 |
-| `v76-search-personalization-architecture-plan.md` | Plano V76.32–V76.44; UX, SQL/RPC documental, combobox/cancelamento, preferências explícitas e afinidade local opt-in concluídos; prova Supabase descartável como próximo gate |
+| `v76-search-personalization-architecture-plan.md` | Plano V76.32–V76.50; UX, SQL/RPC documental, combobox/cancelamento, preferências explícitas e afinidade local opt-in concluídos; fase seguinte reparar a cadeia canônica de migrations e reavaliar o gate SQL por evidência |
 | `v76-search-sql-rpc-isolated-dossier.md` | Dossiê V76.41 do contrato RPC estruturado, RLS, explain, limites e rollback R3; No-Go para migration até prova em banco descartável |
 
 ## Regras
